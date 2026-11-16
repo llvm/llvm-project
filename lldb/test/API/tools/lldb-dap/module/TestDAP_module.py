@@ -141,3 +141,34 @@ class TestDAP_module(DAPTestCaseBase):
         self.assertIn(main_source_path, cu_paths, "Real path to main.cpp matches")
 
         session.continue_to_exit()
+
+    @skipIfWindows
+    def test_modules_paging(self):
+        """Test modules paging using startModule and moduleCount."""
+        session = self.build_and_create_session()
+        program = self.getBuildArtifact("a.out")
+        source = "main.cpp"
+        with session.configure(LaunchArgs(program)) as ctx:
+            breakpoint1_line = line_number(source, "// breakpoint 1")
+            bp_ids = session.resolve_source_breakpoints(source, [breakpoint1_line])
+        session.verify_stopped_on_breakpoint(bp_ids, after=ctx.process_event)
+
+        all_modules = list(session.get_modules().values())
+        self.assertGreater(len(all_modules), 1, "Expected multiple modules loaded")
+
+        page = session.get_modules(startModule=0, moduleCount=1)
+        self.assertEqual(len(page), 1)
+        module = next(iter(page.values()))
+        self.assertEqual(module.name, all_modules[0].name)
+        self.assertEqual(module.id, all_modules[0].id)
+
+        page = session.get_modules(startModule=1, moduleCount=1)
+        self.assertEqual(len(page), 1)
+        module = next(iter(page.values()))
+        self.assertEqual(module.name, all_modules[1].name)
+        self.assertEqual(module.id, all_modules[1].id)
+
+        page = session.get_modules(startModule=1, moduleCount=100)
+        self.assertEqual(len(page), len(all_modules) - 1)
+
+        session.continue_to_exit()

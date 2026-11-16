@@ -128,10 +128,6 @@ Enable optimizations that assume no NAN values.
 Enable FP math optimizations that assume the sign of 0 is insignificant.
 :::
 
-:::{option} --enable-no-trapping-fp-math
-Enable setting the FP exceptions build attribute not to use exceptions.
-:::
-
 :::{option} --stats
 Print statistics recorded by code-generation passes.
 :::

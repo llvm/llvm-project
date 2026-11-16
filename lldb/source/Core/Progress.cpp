@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <mutex>
 #include <optional>
+#include <utility>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -31,7 +32,7 @@ Progress::Progress(std::string title, std::string details,
                    Timeout<std::nano> minimum_report_time,
                    Progress::Origin origin)
     : m_total(total.value_or(Progress::kNonDeterministicTotal)),
-      m_minimum_report_time(minimum_report_time), m_title(title),
+      m_minimum_report_time(minimum_report_time), m_title(std::move(title)),
       m_progress_id(++g_id),
       m_debugger_id(debugger ? std::optional<user_id_t>(debugger->GetID())
                              : std::nullopt),

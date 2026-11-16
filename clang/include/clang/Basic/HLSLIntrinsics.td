@@ -65,6 +65,8 @@ def IntTy    : HLSLType<"int">;
 def UIntTy   : HLSLType<"uint">;
 def Int64Ty  : HLSLType<"int64_t">;
 def UInt64Ty : HLSLType<"uint64_t">;
+def Int8PackedTy : HLSLType<"int8_t4_packed">;
+def UInt8PackedTy : HLSLType<"uint8_t4_packed">;
 
 //===----------------------------------------------------------------------===//
 // Element type groups
@@ -326,7 +328,6 @@ def hlsl_abs : HLSLOneArgBuiltin<"abs", "__builtin_elementwise_abs"> {
 }];
   let VaryingTypes = SignedTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Unsigned abs is a constexpr identity - unsigned values are already non-negative.
@@ -344,7 +345,6 @@ function returns its input unchanged.
   let IsConstexpr = 1;
   let VaryingTypes = UnsignedIntTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Returns the arccosine of the input value, Val.
@@ -381,16 +381,29 @@ values representing the result of unsigned 64-bit integer addition.
 
 // Returns True if all components of the x parameter are non-zero;
 // otherwise, false.
-def hlsl_all : HLSLOneArgBuiltin<"all", "__builtin_hlsl_all"> {
+def hlsl_all : HLSLBuiltin<"all"> {
   let Doc = [{
 \fn bool all(T x)
 \brief Returns True if all components of the \a x parameter are non-zero;
 otherwise, false.
 \param x The input value.
 }];
+  let ParamNames = ["V"];
+  let Body = "return V != 0;";
+  let Args = [Varying];
   let ReturnType = BoolTy;
   let VaryingTypes = AllTypesWithBool;
-  let VaryingMatDims = [];
+  let VaryingScalar = 1;
+}
+
+def hlsl_all_vector : HLSLBuiltin<"all"> {
+  let ParamNames = ["V"];
+  let DetailFunc = "all_impl";
+  let Args = [Varying];
+  let ReturnType = BoolTy;
+  let VaryingTypes = AllTypesWithBool;
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
 }
 
 // Returns the boolean AND of two boolean scalars, vectors, or matrices.
@@ -405,16 +418,29 @@ produces a bool vector or matrix output.
 
 // Returns True if any components of the x parameter are non-zero;
 // otherwise, false.
-def hlsl_any : HLSLOneArgBuiltin<"any", "__builtin_hlsl_any"> {
+def hlsl_any : HLSLBuiltin<"any"> {
   let Doc = [{
 \fn bool any(T x)
 \brief Returns True if any components of the \a x parameter are non-zero;
 otherwise, false.
 \param x The input value.
 }];
+  let ParamNames = ["V"];
+  let Body = "return V != 0;";
+  let Args = [Varying];
   let ReturnType = BoolTy;
   let VaryingTypes = AllTypesWithBool;
-  let VaryingMatDims = [];
+  let VaryingScalar = 1;
+}
+
+def hlsl_any_vector : HLSLBuiltin<"any"> {
+  let ParamNames = ["V"];
+  let DetailFunc = "any_impl";
+  let Args = [Varying];
+  let ReturnType = BoolTy;
+  let VaryingTypes = AllTypesWithBool;
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
 }
 
 // Reinterprets a cast value (two 32-bit values) into a double.
@@ -427,6 +453,7 @@ def hlsl_asdouble : HLSLTwoArgBuiltin<"asdouble", "__builtin_hlsl_asdouble"> {
 }];
   let ReturnType = VaryingShape<DoubleTy>;
   let VaryingTypes = [UIntTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -509,7 +536,6 @@ However for values of NaN, the results are undefined.
 }];
   let VaryingTypes = AllNumericTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Discards the current pixel if the specified value is less than zero.
@@ -600,6 +626,7 @@ the screen-space x-coordinate.
 }];
   let ParamNames = ["input"];
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -649,6 +676,7 @@ the screen-space y-coordinate.
 }];
   let ParamNames = ["input"];
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -738,6 +766,7 @@ def hlsl_distance : HLSLBuiltin<"distance"> {
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -955,7 +984,7 @@ value, \a Val.
   let VaryingLongVector = 1;
 }
 
-// Returns the floating-point remainder of x/y (scalar overloads).
+// Returns the floating-point remainder of x/y.
 def hlsl_fmod : HLSLBuiltin<"fmod"> {
   let Doc = [{
 \fn T fmod(T x, T y)
@@ -972,17 +1001,8 @@ parameter.
   let ReturnType = Varying;
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingScalar = 1;
-  let VaryingMatDims = [];
-}
-
-// Returns the floating-point remainder of x/y (vector overloads).
-def hlsl_fmod_vec : HLSLBuiltin<"fmod"> {
-  let DetailFunc = "fmod_vec_impl";
-  let ParamNames = ["X", "Y"];
-  let Args = [Varying, Varying];
-  let ReturnType = Varying;
-  let VaryingTypes = [HalfTy, FloatTy];
   let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1091,6 +1111,34 @@ call.
   let IsConvergent = 1;
 }
 
+// Inserts a memory barrier with the specified memory and semantic flags.
+def hlsl_barrier : HLSLBuiltin<"Barrier", "__builtin_hlsl_barrier"> {
+  let Doc = [{
+\fn void Barrier(uint MemoryTypeFlags, uint SemanticFlags)
+\brief Inserts a memory barrier.
+\param MemoryTypeFlags The memory types affected by the barrier.
+\param SemanticFlags The synchronization and scope behavior.
+}];
+  let Args = [UIntTy, UIntTy];
+  let IsConvergent = 1;
+  let Availability = SM6_8;
+}
+
+// Determines if the specified value x is finite.
+def hlsl_isfinite : HLSLOneArgBuiltin<"isfinite", "__builtin_hlsl_elementwise_isfinite"> {
+  let Doc = [{
+\fn T isfinite(T x)
+\brief Determines if the specified value \a x  is finite.
+\param x The specified input value.
+
+Returns a value of the same size as the input, with a value set
+to False if the x parameter is +INF, -INF, NaN, or QNaN. Otherwise, True.
+}];
+  let ReturnType = VaryingShape<BoolTy>;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
+}
+
 // Determines if the specified value x is infinite.
 def hlsl_isinf : HLSLOneArgBuiltin<"isinf", "__builtin_hlsl_elementwise_isinf"> {
   let Doc = [{
@@ -1141,6 +1189,7 @@ This function uses the following formula: X * 2^Exp
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1162,6 +1211,7 @@ Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + ...).
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1263,7 +1313,7 @@ def hlsl_mad : HLSLThreeArgBuiltin<"mad", "__builtin_hlsl_mad"> {
 \param B The second addition value.
 }];
   let VaryingTypes = AllNumericTypes;
-  let VaryingMatDims = [];
+   let VaryingLongVector = 1;
 }
 
 // Returns the greater of X and Y.
@@ -1319,6 +1369,7 @@ Normalize is based on the following formula: x / length(x).
   let ParamNames = ["x"];
   let Body = "return x / length(x);";
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1342,6 +1393,17 @@ def hlsl_pow : HLSLTwoArgBuiltin<"pow", "__builtin_elementwise_pow"> {
 }];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingLongVector = 1;
+}
+
+def hlsl_quad_all : HLSLBuiltin<"QuadAll", "__builtin_hlsl_quad_all"> {
+  let Doc = [{
+\brief Returns true if the condition is true in all active lanes in the quad.
+\param Cond The condition to evaluate.
+}];
+  let Args = [BoolTy];
+  let ReturnType = BoolTy;
+  let IsConvergent = 1;
+  let Availability = SM6_7;
 }
 
 // Reads the value from the lane across the X axis of the quad.
@@ -1606,7 +1668,6 @@ Step is based on the following formula: (x >= y) ? 1 : 0
   let ParamNames = ["y", "x"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Returns the tangent of the input value, Val.
@@ -1859,6 +1920,65 @@ def hlsl_wave_is_first_lane :
   let Availability = SM6_0;
 }
 
+def hlsl_wave_multi_prefix_bit_and :
+    HLSLTwoArgBuiltin<"WaveMultiPrefixBitAnd",
+                      "__builtin_hlsl_wave_multi_prefix_bit_and"> {
+  let Args = [Varying, VectorType<UIntTy, 4>];
+  let VaryingTypes = AllIntTypes;
+  let VaryingLongVector = 1;
+  let IsConvergent = 1;
+  let Availability = SM6_5;
+}
+
+def hlsl_wave_multi_prefix_bit_or :
+    HLSLTwoArgBuiltin<"WaveMultiPrefixBitOr",
+                      "__builtin_hlsl_wave_multi_prefix_bit_or"> {
+  let Args = [Varying, VectorType<UIntTy, 4>];
+  let VaryingTypes = AllIntTypes;
+  let VaryingLongVector = 1;
+  let IsConvergent = 1;
+  let Availability = SM6_5;
+}
+
+def hlsl_wave_multi_prefix_bit_xor :
+    HLSLTwoArgBuiltin<"WaveMultiPrefixBitXor",
+                      "__builtin_hlsl_wave_multi_prefix_bit_xor"> {
+  let Args = [Varying, VectorType<UIntTy, 4>];
+  let VaryingTypes = AllIntTypes;
+  let VaryingLongVector = 1;
+  let IsConvergent = 1;
+  let Availability = SM6_5;
+}
+
+def hlsl_wave_multi_prefix_count_bits :
+    HLSLBuiltin<"WaveMultiPrefixCountBits",
+                "__builtin_hlsl_wave_multi_prefix_count_bits"> {
+  let Args = [BoolTy, VectorType<UIntTy, 4>];
+  let ReturnType = UIntTy;
+  let IsConvergent = 1;
+  let Availability = SM6_5;
+}
+
+def hlsl_wave_multi_prefix_product :
+    HLSLTwoArgBuiltin<"WaveMultiPrefixProduct",
+                      "__builtin_hlsl_wave_multi_prefix_product"> {
+  let Args = [Varying, VectorType<UIntTy, 4>];
+  let VaryingTypes = AllNumericTypes;
+  let VaryingLongVector = 1;
+  let IsConvergent = 1;
+  let Availability = SM6_5;
+}
+
+def hlsl_wave_multi_prefix_sum :
+    HLSLTwoArgBuiltin<"WaveMultiPrefixSum",
+                      "__builtin_hlsl_wave_multi_prefix_sum"> {
+  let Args = [Varying, VectorType<UIntTy, 4>];
+  let VaryingTypes = AllNumericTypes;
+  let VaryingLongVector = 1;
+  let IsConvergent = 1;
+  let Availability = SM6_5;
+}
+
 // Returns the count of bits set to 1 on prior lanes.
 def hlsl_wave_prefix_count_bits :
     HLSLBuiltin<"WavePrefixCountBits",
@@ -1916,4 +2036,18 @@ the specified wave.
   let IsConvergent = 1;
   let Availability = SM6_0;
   let VaryingMatDims = [];
+}
+
+// Reads the value from the first active lane in the wave.
+def hlsl_wave_read_lane_first :
+    HLSLOneArgBuiltin<"WaveReadLaneFirst",
+                      "__builtin_hlsl_wave_read_lane_first"> {
+  let Doc = [{
+\brief Returns the value from the active lane with the smallest index.
+\param Val The value to read.
+}];
+  let VaryingTypes = AllTypesWithBool;
+let VaryingLongVector = 1;
+let IsConvergent = 1;
+let Availability = SM6_0;
 }

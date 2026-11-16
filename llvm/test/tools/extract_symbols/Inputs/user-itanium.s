@@ -1,0 +1,8 @@
+	.text
+	.globl	_Z10HasPluginsv
+_Z10HasPluginsv:
+	callq	_ZN4llvm6detail27getRegistryLinkListInstanceINS_8RegistryIN5clang15PluginASTActionEJEEEEERNS0_23RegistryLinkListStorageIT_EEv
+	retq
+	.weak	_ZN4llvm8RegistryIN5clang15PluginASTActionEJEE5beginEv
+_ZN4llvm8RegistryIN5clang15PluginASTActionEJEE5beginEv:
+	retq

@@ -46,10 +46,17 @@ define void @positive_multiple_assume_uses() {
   ret void
 }
 
+; We don't bother handling this, zero-index GEP is a no-op that should be
+; optimized away.
 define void @positive_gep_assume_uses() {
 ; CHECK-LABEL: @positive_gep_assume_uses(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "ignore"(ptr poison, i64 8), "ignore"(ptr poison, i64 16) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "ignore"(ptr poison), "ignore"(ptr poison, i64 2) ]
+; CHECK-NEXT:    [[A:%.*]] = alloca { i8, i16 }, align 8
+; CHECK-NEXT:    [[B:%.*]] = getelementptr { i8, i16 }, ptr [[A]], i32 0, i32 0
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[B]], i64 8), "align"(ptr [[B]], i64 16) ]
+; CHECK-NEXT:    store { i8, i16 } zeroinitializer, ptr [[A]], align 2
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[B]]), "align"(ptr [[B]], i64 2) ]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca {i8, i16}
@@ -76,5 +83,59 @@ define void @positive_mixed_assume_uses() {
   call void @llvm.lifetime.end.p0(ptr %A)
   call void @llvm.assume(i1 true) ["nonnull"(ptr %A), "align"(ptr %A, i64 2), "nonnull"(ptr %A)]
   call void @llvm.assume(i1 true) ["nonnull"(ptr %A), "align"(ptr %A, i64 2), "nonnull"(ptr %A)]
+  ret void
+}
+
+declare void @use(i32)
+
+; Verify that lifetime.start and lifetime.end on an addrspace(5) alloca
+; alongside droppable users insert store undef in the pre-pass,
+; breaking loop-carried back-edge dependencies.
+define void @lifetime_addrspace5(i32 %val, i1 %c1, i1 %c2) {
+; CHECK-LABEL: @lifetime_addrspace5(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "ignore"(ptr addrspace(5) poison, i64 4) ]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[INIT:%.*]], label [[SKIP:%.*]]
+; CHECK:       init:
+; CHECK-NEXT:    br label [[READ:%.*]]
+; CHECK:       skip:
+; CHECK-NEXT:    br label [[READ]]
+; CHECK:       read:
+; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ [[VAL:%.*]], [[INIT]] ], [ undef, [[SKIP]] ]
+; CHECK-NEXT:    call void @use(i32 [[A_0]])
+; CHECK-NEXT:    br label [[CLEANUP:%.*]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = alloca i32, align 4, addrspace(5)
+  br label %loop
+
+loop:
+  call void @llvm.lifetime.start.p5(ptr addrspace(5) %a)
+  call void @llvm.assume(i1 true) ["align"(ptr addrspace(5) %a, i64 4)]
+  br i1 %c1, label %init, label %skip
+
+init:
+  store i32 %val, ptr addrspace(5) %a, align 4
+  br label %read
+
+skip:
+  br label %read
+
+read:
+  %v = load i32, ptr addrspace(5) %a, align 4
+  call void @use(i32 %v)
+  br label %cleanup
+
+cleanup:
+  call void @llvm.lifetime.end.p5(ptr addrspace(5) %a)
+  br i1 %c2, label %loop, label %exit
+
+exit:
   ret void
 }

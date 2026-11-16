@@ -209,6 +209,7 @@ _start:
 # RELOC-NEXT:   - Type:            CUSTOM
 # RELOC-NEXT:     Name:            linking
 # RELOC-NEXT:     Version:         2
+# RELOC-NEXT:     TargetArch:      wasm32
 # RELOC-NEXT:     SymbolTable:
 # RELOC-NEXT:       - Index:           0
 # RELOC-NEXT:         Kind:            FUNCTION

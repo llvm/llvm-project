@@ -217,6 +217,8 @@ enum class FrameProcedureOptions : uint32_t {
   SafeBuffers = 0x00002000,
   EncodedLocalBasePointerMask = 0x0000C000,
   EncodedParamBasePointerMask = 0x00030000,
+  EncodedPointersMask =
+      EncodedLocalBasePointerMask | EncodedParamBasePointerMask,
   ProfileGuidedOptimization = 0x00040000,
   ValidProfileCounts = 0x00080000,
   OptimizedForSpeed = 0x00100000,
@@ -618,6 +620,15 @@ enum class JumpTableEntrySize : uint16_t {
   UInt16ShiftLeft = 8,
   Int8ShiftLeft = 9,
   Int16ShiftLeft = 10,
+};
+
+/// Type of associated symbol in S_ASSOCIATION.
+///
+/// From `CV_AssociationKind_e` (cvconst.h).
+enum class AssociationKind : uint16_t {
+  None,
+  /// Associated symbol is the primary coroutine function.
+  Coroutine,
 };
 }
 }

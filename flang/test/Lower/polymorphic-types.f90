@@ -118,7 +118,7 @@ contains
   end function
 
 ! CHECK-LABEL: func.func @_QMpolymorphic_typesPret_polymorphic_allocatable() -> !fir.class<!fir.heap<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>>
-! CHECK: %[[MEM:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>> {bindc_name = "ret", uniq_name = "_QMpolymorphic_typesFret_polymorphic_allocatableEret"}
+! CHECK: %[[MEM:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>> <{bindc_name = "ret", uniq_name = "_QMpolymorphic_typesFret_polymorphic_allocatableEret"}>
 ! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>
 ! CHECK: %[[BOX:.*]] = fir.embox %[[ZERO]] : (!fir.heap<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>) -> !fir.class<!fir.heap<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>>
 ! CHECK: fir.store %[[BOX]] to %[[MEM]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>>>
@@ -131,7 +131,7 @@ contains
   end function
 
 ! CHECK-LABEL: func.func @_QMpolymorphic_typesPret_polymorphic_pointer() -> !fir.class<!fir.ptr<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>>
-! CHECK: %[[MEM:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>> {bindc_name = "ret", uniq_name = "_QMpolymorphic_typesFret_polymorphic_pointerEret"}
+! CHECK: %[[MEM:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>> <{bindc_name = "ret", uniq_name = "_QMpolymorphic_typesFret_polymorphic_pointerEret"}>
 ! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.ptr<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>
 ! CHECK: %[[BOX:.*]] = fir.embox %[[ZERO]] : (!fir.ptr<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>) -> !fir.class<!fir.ptr<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>>
 ! CHECK: fir.store %[[BOX]] to %[[MEM]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>>>
@@ -148,7 +148,7 @@ contains
   end function
 
 ! CHECK-LABEL: func.func @_QMpolymorphic_typesPret_unlimited_polymorphic_allocatable() -> !fir.class<!fir.heap<none>>
-! CHECK: %[[MEM:.*]] = fir.alloca !fir.class<!fir.heap<none>> {bindc_name = "ret", uniq_name = "_QMpolymorphic_typesFret_unlimited_polymorphic_allocatableEret"}
+! CHECK: %[[MEM:.*]] = fir.alloca !fir.class<!fir.heap<none>> <{bindc_name = "ret", uniq_name = "_QMpolymorphic_typesFret_unlimited_polymorphic_allocatableEret"}>
 ! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<none>
 ! CHECK: %[[BOX:.*]] = fir.embox %[[ZERO]] : (!fir.heap<none>) -> !fir.class<!fir.heap<none>>
 ! CHECK: fir.store %[[BOX]] to %[[MEM]] : !fir.ref<!fir.class<!fir.heap<none>>>
@@ -161,7 +161,7 @@ contains
   end function
 
 ! CHECK-LABEL: func.func @_QMpolymorphic_typesPret_unlimited_polymorphic_pointer() -> !fir.class<!fir.ptr<none>>
-! CHECK: %[[MEM:.*]] = fir.alloca !fir.class<!fir.ptr<none>> {bindc_name = "ret", uniq_name = "_QMpolymorphic_typesFret_unlimited_polymorphic_pointerEret"}
+! CHECK: %[[MEM:.*]] = fir.alloca !fir.class<!fir.ptr<none>> <{bindc_name = "ret", uniq_name = "_QMpolymorphic_typesFret_unlimited_polymorphic_pointerEret"}>
 ! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.ptr<none>
 ! CHECK: %[[BOX:.*]] = fir.embox %[[ZERO]] : (!fir.ptr<none>) -> !fir.class<!fir.ptr<none>>
 ! CHECK: fir.store %[[BOX]] to %[[MEM]] : !fir.ref<!fir.class<!fir.ptr<none>>>

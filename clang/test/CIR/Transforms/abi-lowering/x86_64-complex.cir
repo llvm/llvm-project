@@ -1,6 +1,6 @@
 // RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
 // RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 -cir-to-llvm -o - 2>/dev/null \
-// RUN:   | mlir-translate -mlir-to-llvmir --allow-unregistered-dialect \
+// RUN:   | cir-translate -mlir-to-llvmir --allow-unregistered-dialect \
 // RUN:   | FileCheck %s --check-prefix=LLVM
 
 !s16i = !cir.int<s, 16>
@@ -23,7 +23,7 @@ module attributes {
 
   // Both halves of a _Complex float share one SSE eightbyte, so it coerces to
   // a two-element vector rather than passing as a CIR complex.
-  cir.func @cfloat(%arg0: !cir.complex<!cir.float>) -> !cir.complex<!cir.float> {
+  cir.func @cfloat(%arg0: !cir.complex<!cir.float>) -> !cir.complex<!cir.float> requires_call_conv_lowering {
     cir.return %arg0 : !cir.complex<!cir.float>
   }
 
@@ -31,7 +31,7 @@ module attributes {
 
   // _Complex double needs two SSE eightbytes, so it becomes a register pair
   // and the arguments flatten.
-  cir.func @cdouble(%arg0: !cir.complex<!cir.double>) -> !cir.complex<!cir.double> {
+  cir.func @cdouble(%arg0: !cir.complex<!cir.double>) -> !cir.complex<!cir.double> requires_call_conv_lowering {
     cir.return %arg0 : !cir.complex<!cir.double>
   }
 
@@ -39,13 +39,13 @@ module attributes {
 
   // A _Complex of a sub-eightbyte integer packs both halves into one INTEGER
   // eightbyte.
-  cir.func @cshort(%arg0: !cir.complex<!s16i>) -> !cir.complex<!s16i> {
+  cir.func @cshort(%arg0: !cir.complex<!s16i>) -> !cir.complex<!s16i> requires_call_conv_lowering {
     cir.return %arg0 : !cir.complex<!s16i>
   }
 
   // CHECK: cir.func{{.*}} @cshort(%arg0: !u32i) -> !u32i
 
-  cir.func @cint(%arg0: !cir.complex<!s32i>) -> !cir.complex<!s32i> {
+  cir.func @cint(%arg0: !cir.complex<!s32i>) -> !cir.complex<!s32i> requires_call_conv_lowering {
     cir.return %arg0 : !cir.complex<!s32i>
   }
 
@@ -54,13 +54,13 @@ module attributes {
   // A complex x87 long double passes its argument in memory while the return
   // comes back as the st0/st1 pair.
   cir.func @clongdouble(%arg0: !cir.complex<!cir.long_double<!cir.f80>>)
-      -> !cir.complex<!cir.long_double<!cir.f80>> {
+      -> !cir.complex<!cir.long_double<!cir.f80>> requires_call_conv_lowering {
     cir.return %arg0 : !cir.complex<!cir.long_double<!cir.f80>>
   }
 
   // CHECK: cir.func{{.*}} @clongdouble(%arg0: !cir.ptr<!cir.complex<!cir.long_double<!cir.f80>>> {{.*}}llvm.byval = !cir.complex<!cir.long_double<!cir.f80>>{{.*}}) -> ![[X87PAIR]]
 
-  cir.func @call_cfloat(%arg0: !cir.complex<!cir.float>) -> !cir.complex<!cir.float> {
+  cir.func @call_cfloat(%arg0: !cir.complex<!cir.float>) -> !cir.complex<!cir.float> requires_call_conv_lowering {
     %0 = cir.call @cfloat(%arg0) : (!cir.complex<!cir.float>) -> !cir.complex<!cir.float>
     cir.return %0 : !cir.complex<!cir.float>
   }

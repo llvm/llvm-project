@@ -713,10 +713,6 @@ private:
     llvm::StringRef getCanonicalDIEName(DWARFDie Die, const DWARFFile &File,
                                         CompileUnit *Unit);
 
-    uint32_t hashFullyQualifiedName(DWARFDie DIE, CompileUnit &U,
-                                    const DWARFFile &File,
-                                    int RecurseDepth = 0);
-
     /// Helper for cloneDIE.
     void addObjCAccelerator(CompileUnit &Unit, const DIE *Die,
                             DwarfStringPoolEntryRef Name,

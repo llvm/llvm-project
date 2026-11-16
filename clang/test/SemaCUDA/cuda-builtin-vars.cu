@@ -33,6 +33,11 @@ void kernel(int *out) {
   out[i++] = gridDim.z;
   gridDim.z = 0; // expected-error {{no setter defined for property 'z'}}
 
+  __builtin_assume(threadIdx.x < 1024);
+  __builtin_assume(blockIdx.x < 1024);
+  __builtin_assume(blockDim.x < 1024);
+  __builtin_assume(gridDim.x < 1024);
+
   out[i++] = warpSize;
   warpSize = 0; // expected-error {{cannot assign to variable 'warpSize' with const-qualified type 'const int'}}
   // expected-note@__clang_cuda_builtin_vars.h:* {{variable 'warpSize' declared const here}}

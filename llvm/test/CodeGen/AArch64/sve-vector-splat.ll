@@ -730,7 +730,7 @@ define <vscale x 2 x half> @splat_nan_nxv2f16() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    dupm z0.h, #0x7e00
 ; CHECK-NEXT:    ret
-  ret <vscale x 2 x half> splat (half 0x7FF8000000000000)
+  ret <vscale x 2 x half> splat (half +qnan)
 }
 
 define <vscale x 4 x half> @splat_nan_nxv4f16() {
@@ -738,7 +738,7 @@ define <vscale x 4 x half> @splat_nan_nxv4f16() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    dupm z0.h, #0x7e00
 ; CHECK-NEXT:    ret
-  ret <vscale x 4 x half> splat (half 0x7FF8000000000000)
+  ret <vscale x 4 x half> splat (half +qnan)
 }
 
 define <vscale x 8 x half> @splat_nan_nxv8f16() {
@@ -746,7 +746,7 @@ define <vscale x 8 x half> @splat_nan_nxv8f16() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    dupm z0.h, #0x7e00
 ; CHECK-NEXT:    ret
-  ret <vscale x 8 x half> splat (half 0x7FF8000000000000)
+  ret <vscale x 8 x half> splat (half +qnan)
 }
 
 define <vscale x 2 x float> @splat_nan_nxv2f32() {
@@ -754,7 +754,7 @@ define <vscale x 2 x float> @splat_nan_nxv2f32() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, #0x7fc00000
 ; CHECK-NEXT:    ret
-  ret <vscale x 2 x float> splat (float 0x7FF8000000000000)
+  ret <vscale x 2 x float> splat (float +qnan)
 }
 
 define <vscale x 4 x float> @splat_nan_nxv4f32() {
@@ -762,7 +762,7 @@ define <vscale x 4 x float> @splat_nan_nxv4f32() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, #0x7fc00000
 ; CHECK-NEXT:    ret
-  ret <vscale x 4 x float> splat (float 0x7FF8000000000000)
+  ret <vscale x 4 x float> splat (float +qnan)
 }
 
 define <vscale x 2 x double> @splat_nan_nxv2f64() {
@@ -770,7 +770,7 @@ define <vscale x 2 x double> @splat_nan_nxv2f64() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, #0x7ff8000000000000
 ; CHECK-NEXT:    ret
-  ret <vscale x 2 x double> splat (double 0x7FF8000000000000)
+  ret <vscale x 2 x double> splat (double +qnan)
 }
 
 define <vscale x 2 x bfloat> @splat_nan_nxv2bf16() {
@@ -778,7 +778,7 @@ define <vscale x 2 x bfloat> @splat_nan_nxv2bf16() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.h, #32704 // =0x7fc0
 ; CHECK-NEXT:    ret
-  ret <vscale x 2 x bfloat> splat (bfloat 0x7FF8000000000000)
+  ret <vscale x 2 x bfloat> splat (bfloat +qnan)
 }
 
 define <vscale x 4 x bfloat> @splat_nan_nxv4bf16() {
@@ -786,7 +786,7 @@ define <vscale x 4 x bfloat> @splat_nan_nxv4bf16() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.h, #32704 // =0x7fc0
 ; CHECK-NEXT:    ret
-  ret <vscale x 4 x bfloat> splat (bfloat 0x7FF8000000000000)
+  ret <vscale x 4 x bfloat> splat (bfloat +qnan)
 }
 
 define <vscale x 8 x bfloat> @splat_nan_nxv8bf16() {
@@ -794,7 +794,7 @@ define <vscale x 8 x bfloat> @splat_nan_nxv8bf16() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.h, #32704 // =0x7fc0
 ; CHECK-NEXT:    ret
-  ret <vscale x 8 x bfloat> splat (bfloat 0x7FF8000000000000)
+  ret <vscale x 8 x bfloat> splat (bfloat +qnan)
 }
 
 define <vscale x 4 x i32> @splat_nxv4i32_fold(<vscale x 4 x i32> %x) {

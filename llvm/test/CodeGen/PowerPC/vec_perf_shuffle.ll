@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mcpu=g5 -ppc-disable-perfect-shuffle=false | not grep vperm
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mcpu=g5 -ppc-perfect-shuffle | not grep vperm
 
 ; TODO: Fix this case when disabling perfect shuffle
 

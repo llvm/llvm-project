@@ -3,12 +3,12 @@
 
 ; UNI: ALL VALUES UNIFORM
 ; DIV: DIVERGENT:   %cast = addrspacecast ptr addrspace(5) %alloca to ptr
-; DIV: DIVERGENT:   %cast.1 = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p5(ptr addrspace(5) %alloca)
+; DIV: DIVERGENT:   %cast.1 = addrspacecast nonnull ptr addrspace(5) %alloca to ptr
 define void @foo() {
   %alloca = alloca i32, align 4, addrspace(5)
   %cast = addrspacecast ptr addrspace(5) %alloca to ptr
   store i32 1, ptr %cast
-  %cast.1 = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p5(ptr addrspace(5) %alloca)
+  %cast.1 = addrspacecast nonnull ptr addrspace(5) %alloca to ptr
   store i32 2, ptr %cast.1
   ret void
 }

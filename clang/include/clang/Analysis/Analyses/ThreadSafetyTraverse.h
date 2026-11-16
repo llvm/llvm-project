@@ -645,35 +645,73 @@ protected:
     }
   }
 
+  // An anonymous struct/union member has no name to print. This includes the
+  // implicit member -fms-extensions adds for a tagged anonymous struct.
+  static bool isAnonymousProjection(const Project *E) {
+    return E->clangDecl()->getDeclName().isEmpty();
+  }
+
+  // Qualify with the nearest named record, skipping anonymous ones.
+  static void printQualifiedSlotName(const Project *E, StreamType &SS) {
+    const DeclContext *DC = E->clangDecl()->getDeclContext();
+    while (const auto *RD = dyn_cast<RecordDecl>(DC)) {
+      if (!RD->isAnonymousStructOrUnion())
+        break;
+      DC = RD->getParent();
+    }
+    if (const auto *ND = dyn_cast<NamedDecl>(DC)) {
+      ND->printQualifiedName(SS);
+      SS << "::";
+    }
+    SS << E->slotName();
+  }
+
+  static void printSlotName(const Project *E, StreamType &SS) {
+    if (E->isQualified())
+      printQualifiedSlotName(E, SS);
+    else
+      SS << E->slotName();
+  }
+
   void printProject(const Project *E, StreamType &SS) {
-    if (CStyle) {
-      // Omit the  this->
-      if (const auto *SAP = dyn_cast<SApply>(E->record())) {
-        if (const auto *V = dyn_cast<Variable>(SAP->sfun())) {
-          if (!SAP->isDelegation() && V->kind() == Variable::VK_SFun) {
-            SS << E->slotName();
-            return;
-          }
-        }
-      }
-      if (isa<Wildcard>(E->record())) {
-        // handle existentials
-        SS << "&";
-        SS << E->clangDecl()->getQualifiedNameAsString();
+    if (isAnonymousProjection(E)) {
+      self()->printSExpr(E->record(), SS, Prec_Postfix);
+      return;
+    }
+    // Skip anonymous members below this one too, keeping any arrow that
+    // reached them, so that "s-><anon>.lock" prints as "s->lock".
+    bool Arrow = E->isArrow();
+    const SExpr *Rec = E->record();
+    while (const auto *SAP = dyn_cast<SApply>(Rec)) {
+      const auto *P = dyn_cast<Project>(SAP->sfun());
+      if (!P || !isAnonymousProjection(P))
+        break;
+      Arrow |= P->isArrow();
+      Rec = P->record();
+    }
+    // Print only the field when the record has no name: `this` in C style, or
+    // the unnamed object of a namespace-scope anonymous union.
+    if (const auto *SAP = dyn_cast<SApply>(Rec)) {
+      const auto *V = dyn_cast<Variable>(SAP->sfun());
+      const auto *L = dyn_cast<LiteralPtr>(SAP->sfun());
+      if ((CStyle && V && V->kind() == Variable::VK_SFun) ||
+          (L && L->clangDecl() && L->clangDecl()->getDeclName().isEmpty())) {
+        printSlotName(E, SS);
         return;
       }
     }
-    self()->printSExpr(E->record(), SS, Prec_Postfix);
-    // A projection through an anonymous struct/union has no source-level name;
-    // to avoid stray dots ("x..y") just print the underlying record.
-    if (const auto *FD = dyn_cast<FieldDecl>(E->clangDecl()))
-      if (FD->isAnonymousStructOrUnion())
-        return;
-    if (CStyle && E->isArrow())
+    if (CStyle && isa<Wildcard>(Rec)) {
+      // handle existentials
+      SS << "&";
+      printQualifiedSlotName(E, SS);
+      return;
+    }
+    self()->printSExpr(Rec, SS, Prec_Postfix);
+    if (CStyle && Arrow)
       SS << "->";
     else
       SS << ".";
-    SS << E->slotName();
+    printSlotName(E, SS);
   }
 
   void printCall(const Call *E, StreamType &SS) {

@@ -28,8 +28,8 @@ flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
 
 #### Attributor, OpenMPOpt
 
-Johannes Doerfert \
-jdoerfert@llnl.gov (email), [jdoerfert](https://github.com/jdoerfert) (GitHub)
+Shilei Tian \
+<i@tianshilei.me>, <Shilei.Tian@amd.com> (email), [shiltian](https://github.com/shiltian) (GitHub)
 
 #### ConstraintElimination
 
@@ -135,6 +135,11 @@ jgorbe@google.com (email), [slackito](https://github.com/slackito) (GitHub)
 Philip Reames \
 listmail@philipreames.com (email), [preames](https://github.com/preames) (GitHub)
 
+#### SeparateConstOffsetFromGEP
+
+Krzysztof Drewniak \
+krzysdrewniak@gmail.com, Krzysztof.Drewniak@amd.com (email), [krzysz00](https://github.com/krzysz00) (Github)
+
 #### SLPVectorizer
 
 Alexey Bataev \
@@ -143,7 +148,9 @@ a.bataev@outlook.com (email), [alexey-bataev](https://github.com/alexey-bataev) 
 #### SROA, Mem2Reg
 
 Chandler Carruth \
-chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub)
+chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub) \
+Yonah Goldberg \
+ygoldberg@nvidia.com (email), [yonahgoldberg](https://github.com/yonahgoldberg) (GitHub)
 
 #### DFAJumpThreading
 
@@ -158,6 +165,11 @@ mnadeem@quicinc.com (email), [UsmanNadeem](https://github.com/UsmanNadeem) (Gith
 
 Vitaly Buka \
 vitalybuka@google.com (email), [vitalybuka](https://github.com/vitalybuka) (GitHub)
+
+#### CopyProf
+
+Snehasish Kumar \
+snehasishk@google.com (email), [snehasish](https://github.com/snehasish) (GitHub)
 
 #### NumericalStabilitySanitizer
 
@@ -210,6 +222,15 @@ i@maskray.me (email), [MaskRay](https://github.com/MaskRay) (GitHub)
 Reid Kleckner \
 rnk@llvm.org (email), [rnk](https://github.com/rnk) (GitHub)
 
+#### LightWeight Fault Isolation (LFI)
+
+Zachary Yedidia \
+zyedidia@gmail.com (email), [zyedidia](https://github.com/zyedidia) (GitHub) \
+Sharjeel Khan \
+sharjeelkhan@google.com (email), [Sharjeel-Khan](https://github.com/Sharjeel-Khan) \
+Nick Desaulniers \
+ndesaulniers@google.com (email), [nickdesaulniers](https://github.com/nickdesaulniers)
+
 ### Backends / Targets
 
 #### ARM and AArch64 backends
@@ -237,6 +258,8 @@ ties.stuij@arm.com (email), [stuij](https://github.com/stuij) (GitHub)
 
 Matt Arsenault \
 Matthew.Arsenault@amd.com, arsenm2@gmail.com (email), [arsenm](https://github.com/arsenm) (GitHub)
+Krzysztof Drewniak (AMDGPULowerBufferFatPointers and other buffer-related issues) \
+krzysdrewniak@gmail.com, Krzysztof.Drewniak@amd.com (email), [krzysz00](https://github.com/krzysz00) (Github)
 
 #### ARC backend
 
@@ -289,6 +312,15 @@ luweining@loongson.cn (email), [SixWeining](https://github.com/SixWeining) (GitH
 Min-Yih Hsu \
 min@myhsu.dev (email), [mshockwave](https://github.com/mshockwave) (GitHub)
 
+#### MIPS backend
+
+Weining Lu \
+luweining@loongson.cn (email), [SixWeining](https://github.com/SixWeining) (GitHub) \
+Ying Huang \
+yingopqq@gmail.com (email), [yingopq](https://github.com/yingopq) (GitHub) \
+Jiaxun Yang \
+jiaxun.yang@flygoat.com (email), [FlyGoat](https://github.com/FlyGoat) (GitHub)
+
 #### MSP430 backend
 
 Anton Korobeynikov \
@@ -301,7 +333,9 @@ jholewinski@nvidia.com (email), [jholewinski](https://github.com/jholewinski) (G
 Artem Belevich \
 tra@google.com (email), [Artem-B](https://github.com/Artem-B) (GitHub) \
 Alex MacLean \
-amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub)
+amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub) \
+Durgadoss R \
+durgadossr@nvidia.com (email), [durga4github](https://github.com/durga4github) (GitHub)
 
 #### PowerPC backend
 
@@ -327,7 +361,9 @@ asb@igalia.com (email), [asb](https://github.com/asb) (GitHub) \
 Craig Topper \
 craig.topper@sifive.com (email), [topperc](https://github.com/topperc) (GitHub) \
 Philip Reames \
-listmail@philipreames.com (email), [preames](https://github.com/preames) (GitHub)
+listmail@philipreames.com (email), [preames](https://github.com/preames) (GitHub) \
+Sam Elliott \
+aelliott@qti.qualcomm.com (email), [lenary](https://github.com/lenary) (GitHub)
 
 #### Sparc backend
 
@@ -566,6 +602,7 @@ Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- Se
 Chandler Carruth (chandlerc@gmail.com, chandlerc@google.com, [chandlerc](https://github.com/chandlerc)) -- ADT, Support, Inlining, CMake and library layering \
 Peter Collingbourne (peter@pcc.me.uk, [pcc](https://github.com/pcc)) -- LTO \
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
+Johannes Doerfert jdoerfert@llnl.gov (email), [jdoerfert](https://github.com/jdoerfert) (GitHub) -- Attributor, OpenMPOpt \
 Jake Ehrlich (jakehehrlich@google.com, [jakehehrlich](https://github.com/jakehehrlich)) -- llvm-objcopy and ObjCopy library \
 Hal Finkel (hfinkel@anl.gov, [hfinkel](https://github.com/hfinkel) -- AliasAnalysis \
 Justin Fargnoli (jfargnoli@nvidia.com, [justinfargnoli](https://github.com/justinfargnoli)) -- NVPTX backend \

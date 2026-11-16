@@ -19,7 +19,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -311,7 +310,6 @@ PreservedAnalyses CFGuardPass::run(Function &F, FunctionAnalysisManager &FAM) {
 }
 
 char CFGuard::ID = 0;
-INITIALIZE_PASS(CFGuard, "CFGuard", "CFGuard", false, false)
 
 FunctionPass *llvm::createCFGuardPass() { return new CFGuard(); }
 

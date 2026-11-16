@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple hexagon-unknown-elf -target-feature +hvx -target-feature +hvx-length64b -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple hexagon-unknown-elf -target-feature +hvx -target-feature +hvx-length64b -emit-llvm -o - %s | FileCheck %s %}
 
 typedef int v64 __attribute__((__vector_size__(64)))
     __attribute__((aligned(64)));

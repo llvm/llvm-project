@@ -2,10 +2,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu9.50 < %s | FileCheck -check-prefixes=GFX950,GFX950-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu9.50 < %s | FileCheck -check-prefixes=GFX950,GFX950-GISEL %s
 
-declare i32 @llvm.amdgcn.cvt.scalef32.sr.pk.fp4.f16(i32 %old, <2 x half> %src, i32 %seed, float %scale, i32 %dst_sel)
-declare i32 @llvm.amdgcn.cvt.scalef32.sr.pk.fp4.bf16(i32 %old, <2 x bfloat> %src, i32 %seed, float %scale, i32 %dst_sel)
-declare i32 @llvm.amdgcn.cvt.scalef32.sr.pk.fp4.f32(i32 %old, <2 x float> %src, i32 %seed, float %scale, i32 %dst_sel)
-
 define amdgpu_ps void @test_scalef32_sr_pk_fp4_f16_dst_sel_0(ptr addrspace(1) %out, <2 x half> %src, i32 %seed, float %scale) {
 ; GFX950-LABEL: test_scalef32_sr_pk_fp4_f16_dst_sel_0:
 ; GFX950:       ; %bb.0:

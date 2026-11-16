@@ -17,10 +17,7 @@
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 #include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 #include "llvm/Support/CommandLine.h"
-
-/// Force setting the no-alias attribute on fuction arguments when possible.
-static llvm::cl::opt<bool> forceNoAlias("force-no-alias", llvm::cl::Hidden,
-                                        llvm::cl::init(true));
+#include <vector>
 
 /// Disable the use of fake use for arguments.
 static llvm::cl::opt<bool> disableArgumentFakeUse("disable-argument-fake-use",
@@ -47,17 +44,10 @@ void addCfgConversionPass(mlir::PassManager &pm,
 
 void addMemoryAllocationOpt(mlir::PassManager &pm) {
   addNestedPassConditionally<mlir::func::FuncOp>(pm, disableFirMao, [&]() {
-    return fir::createMemoryAllocationOpt(
-        {dynamicArrayStackToHeapAllocation, arrayStackAllocationThreshold});
+    fir::MemoryAllocationOptOptions options;
+    options.dynamicArrayOnHeap = dynamicArrayStackToHeapAllocation;
+    return fir::createMemoryAllocationOpt(options);
   });
-}
-
-void addAllocationPlacement(mlir::PassManager &pm, bool stackArrays) {
-  fir::AllocationPlacementOptions options;
-  options.stackArrays = stackArrays;
-  options.smallArrayThresholdBytes = allocationPlacementSmallArraySize;
-  options.totalStackLimitBytes = allocationPlacementStackLimit;
-  pm.addPass(fir::createAllocationPlacement(options));
 }
 
 void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare) {
@@ -86,6 +76,22 @@ getEmissionKind(llvm::codegenoptions::DebugInfoKind kind) {
   }
 }
 
+static mlir::LLVM::DINameTableKind
+getNameTableKind(Fortran::frontend::CodeGenOptions::DebugNameTableKind kind) {
+  using NameTableKind = Fortran::frontend::CodeGenOptions::DebugNameTableKind;
+  switch (kind) {
+  case NameTableKind::None:
+    return mlir::LLVM::DINameTableKind::None;
+  case NameTableKind::Default:
+    return mlir::LLVM::DINameTableKind::Default;
+  case NameTableKind::GNU:
+    return mlir::LLVM::DINameTableKind::GNU;
+  case NameTableKind::Apple:
+    return mlir::LLVM::DINameTableKind::Apple;
+  }
+  llvm_unreachable("unknown debug name table kind");
+}
+
 void addDebugInfoPass(mlir::PassManager &pm,
                       const MLIRToLLVMPassPipelineConfig &config,
                       llvm::StringRef inputFilename) {
@@ -97,9 +103,11 @@ void addDebugInfoPass(mlir::PassManager &pm,
   options.dwarfVersion = config.DwarfVersion;
   options.splitDwarfFile = config.SplitDwarfFile;
   options.dwarfDebugFlags = config.DwarfDebugFlags;
+  options.nameTableKind = getNameTableKind(config.DebugNameTable);
   options.emitFakeUseForDebugVars =
       (config.OptLevel == llvm::OptimizationLevel::O0) &&
       !disableArgumentFakeUse;
+  options.boundsInStackSlots = config.OptLevel == llvm::OptimizationLevel::O0;
   addPassConditionally(pm, disableDebugInfo,
                        [&]() { return fir::createAddDebugInfoPass(options); });
 }
@@ -173,6 +181,21 @@ void registerDefaultInlinerPass(MLIRToLLVMPassPipelineConfig &config) {
       });
 }
 
+static std::vector<PassPipelineConfigCallback> &
+getPassPipelineConfigCallbacks() {
+  static std::vector<PassPipelineConfigCallback> callbacks;
+  return callbacks;
+}
+
+void registerPassPipelineConfigCallback(PassPipelineConfigCallback callback) {
+  getPassPipelineConfigCallbacks().push_back(std::move(callback));
+}
+
+void invokePassPipelineConfigCallbacks(MLIRToLLVMPassPipelineConfig &config) {
+  for (PassPipelineConfigCallback &callback : getPassPipelineConfigCallbacks())
+    callback(config);
+}
+
 void createDefaultFIRPreCFGOptimizerPassPipeline(
     mlir::PassManager &pm, MLIRToLLVMPassPipelineConfig &pc) {
   // simplify the IR
@@ -195,6 +218,11 @@ void createDefaultFIRPreCFGOptimizerPassPipeline(
   if (pc.LoopVersioning)
     pm.addPass(fir::createLoopVersioning());
 
+  if (pc.LoopTripCountVersioning)
+    pm.addPass(fir::createLoopTripCountVersioning(
+        {/*maxSectionExtent=*/loopTripCountVersioningMaxSectionExtent,
+         /*maxUnrolledOps=*/loopTripCountVersioningMaxUnrolledOps}));
+
   pm.addPass(mlir::createCSEPass());
 
   // Unconditional and ahead of the array allocation placement below: under
@@ -204,12 +232,15 @@ void createDefaultFIRPreCFGOptimizerPassPipeline(
   pm.addPass(fir::createCudaHeapAllocPromotion(
       fir::CudaHeapAllocPromotionOptions{pc.StackArrays}));
 
-  if (enableAllocationPlacement)
-    fir::addAllocationPlacement(pm, pc.StackArrays);
-  else if (pc.StackArrays)
-    pm.addPass(fir::createStackArrays());
-  else
-    fir::addMemoryAllocationOpt(pm);
+  if (enableAllocationPlacement) {
+    pm.addPass(fir::createAllocationPlacement());
+  } else if (pc.StackArrays || !disableFirMao) {
+    fir::AllocationPlacementOptions options;
+    options.legacy = true;
+    options.stackArrays = pc.StackArrays;
+    options.dynamicArrayOnHeap = dynamicArrayStackToHeapAllocation;
+    pm.addPass(fir::createAllocationPlacement(options));
+  }
 
   // FIR Inliner Callback
   pc.invokeFIRInlinerCallback(pm, pc.OptLevel);
@@ -249,7 +280,10 @@ void createDefaultFIRPostCFGOptimizerPassPipeline(
 
   pm.addPass(mlir::createSCFToControlFlowPass());
 
-  pm.addPass(mlir::createCanonicalizerPass(config));
+  if (pc.OptLevel == llvm::OptimizationLevel::O0)
+    pm.addPass(fir::createO0CanonicalizerPass());
+  else
+    pm.addPass(mlir::createCanonicalizerPass(config));
   pm.addPass(fir::createSimplifyRegionLite());
   if (!pc.SkipConvertComplexPow)
     pm.addPass(fir::createConvertComplexPow());
@@ -284,7 +318,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
 
   config.invokeHLFIROptEarlyEPCallbacks(pm, optLevel);
 
-  if (optLevel != llvm::OptimizationLevel::O0) {
+  if (config.optimizeArrayExpression) {
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createExpressionSimplification);
     addCanonicalizerPassWithoutRegionSimplification(pm);
@@ -297,7 +331,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
       pm, hlfir::createInlineElementals);
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, hlfir::createSeparateAllocatableAssign);
-  if (optLevel != llvm::OptimizationLevel::O0) {
+  if (config.optimizeArrayExpression) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
     pm.addPass(mlir::createCSEPass());
     // Run SimplifyHLFIRIntrinsics pass late after CSE,
@@ -317,32 +351,26 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
       addNestedPassToAllTopLevelOperations<PassConstructor>(
           pm, hlfir::createInlineHLFIRCopy);
     }
-  } else if (config.EnableOpenMPIsTargetDevice &&
-             enableOpenMP == EnableOpenMP::Full) {
-    // At O0, only inline scalar-to-array broadcasts when compiling for an
-    // OpenMP target device. This avoids emitting Fortran runtime calls
-    // (e.g. _FortranAAssign) that use malloc/free in device code generated
-    // by OpenMP target offloading. Restricting this to target-device
-    // compilation preserves the runtime call on the host at -O0 so that a
-    // line breakpoint on a scalar-to-array assignment hits once instead of
-    // once per element.
+  } else {
+    // Always attempt to inline scalar-to-array assignments, even when other
+    // array operations are left to the runtime.
     addNestedPassToAllTopLevelOperations(pm, [&]() {
       return hlfir::createInlineHLFIRAssign({/*onlyScalarRHS=*/true});
     });
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments(
-      {/*tryFusingAssignments=*/optLevel != llvm::OptimizationLevel::O0}));
+      {/*tryFusingAssignments=*/config.optimizeArrayExpression}));
 
   config.invokeHLFIROptLastEPCallbacks(pm, optLevel);
 
   pm.addPass(hlfir::createLowerHLFIRIntrinsics());
 
   hlfir::BufferizeHLFIROptions bufferizeOptions;
-  // For opt-for-speed, avoid running any of the loops resulting
+  // When expanding array operations, avoid running any of the loops resulting
   // from hlfir.elemental lowering, if the result is an empty array.
   // This helps to avoid long running loops for elementals with
   // shapes like (0, HUGE).
-  if (optLevel != llvm::OptimizationLevel::O0)
+  if (config.optimizeArrayExpression)
     bufferizeOptions.optimizeEmptyElementals = true;
   pm.addPass(hlfir::createBufferizeHLFIR(bufferizeOptions));
   // Run hlfir.assign inlining again after BufferizeHLFIR,
@@ -352,7 +380,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
   // TODO: we can remove the previous InlineHLFIRAssign, when
   // FIR AliasAnalysis is good enough to say that a temporary
   // array does not alias with any user object.
-  if (optLevel != llvm::OptimizationLevel::O0)
+  if (config.optimizeArrayExpression)
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createInlineHLFIRAssign);
   pm.addPass(hlfir::createConvertHLFIRtoFIR());
@@ -463,6 +491,7 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
        config.InstrumentFunctionExit, config.NoInfsFPMath, config.NoNaNsFPMath,
        config.ApproxFuncFPMath, config.NoSignedZerosFPMath, config.UnsafeFPMath,
        config.Reciprocals, config.PreferVectorWidth, config.UseSampleProfile,
+       config.DisableTailCalls, config.UniqueInternalLinkageNames,
        /*tuneCPU=*/"", setNoCapture, setNoAlias, setReadOnly}));
 
   if (config.EnableOpenMP) {

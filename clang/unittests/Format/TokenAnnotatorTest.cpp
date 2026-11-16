@@ -692,6 +692,36 @@ TEST_F(TokenAnnotatorTest, UnderstandsEnums) {
   ASSERT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_EnumLBrace);
   EXPECT_TOKEN(Tokens[3], tok::r_brace, TT_EnumRBrace);
+
+  auto Style = getLLVMStyle();
+  Style.AttributeMacros = {"AttributeA", "AttributeB"};
+  Tokens = annotate("enum class AttributeA AttributeB Enum {};", Style);
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_EnumLBrace);
+  EXPECT_TOKEN(Tokens[6], tok::r_brace, TT_EnumRBrace);
+
+  Tokens = annotate("enum class AttributeA [[nodiscard]] AttributeB Enum {};",
+                    Style);
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[10], tok::l_brace, TT_EnumLBrace);
+  EXPECT_TOKEN(Tokens[11], tok::r_brace, TT_EnumRBrace);
+
+  Tokens = annotate(
+      "enum class AttributeA __attribute__((nodiscard)) AttributeB Enum {};",
+      Style);
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[11], tok::l_brace, TT_EnumLBrace);
+  EXPECT_TOKEN(Tokens[12], tok::r_brace, TT_EnumRBrace);
+
+  Tokens = annotate("enum __attribute__((deprecated)) Foo {};");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_EnumLBrace);
+  EXPECT_TOKEN(Tokens[9], tok::r_brace, TT_EnumRBrace);
+
+  Tokens = annotate("enum __declspec(deprecated) Foo {};");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_EnumLBrace);
+  EXPECT_TOKEN(Tokens[7], tok::r_brace, TT_EnumRBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsExportBlock) {
@@ -2459,6 +2489,16 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   EXPECT_TOKEN(Tokens[3], tok::star, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[4], tok::l_square, TT_LambdaLSquare);
   EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_LambdaLBrace);
+
+  // The new declarator is not a lambda.
+  Tokens = annotate("x = new a *[]{};");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[5], tok::l_square, TT_ArraySubscriptLSquare);
+  Tokens = annotate("x = new (a) a *[]{};");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[8], tok::l_square, TT_ArraySubscriptLSquare);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsFunctionAnnotations) {
@@ -2910,7 +2950,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   // joined operators, we don't have a separate type, so we only test for their
   // precedence.
   std::pair<prec::Level, std::string> JoinedBinary[] = {
-      {prec::Comma, "->"},        {prec::Comma, "<->"},
+      {prec::Equality, "->"},     {prec::Equality, "<->"},
       {prec::Comma, "#-#"},       {prec::Comma, "#=#"},
       {prec::Assignment, "+="},   {prec::Assignment, "-="},
       {prec::Assignment, "*="},   {prec::Assignment, "/="},

@@ -1,8 +1,5 @@
 # HLSL IR Reference
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 

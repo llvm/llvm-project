@@ -162,7 +162,8 @@ public:
                : lldb::ChildCacheState::eRefetch;
   }
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t>
+  GetIndexOfChildWithName(llvm::StringRef name) override {
     // NSException has 4 members:
     //   NSString *name;
     //   NSString *reason;
@@ -172,10 +173,14 @@ public:
     static constexpr llvm::StringLiteral g_reason("reason");
     static constexpr llvm::StringLiteral g_userInfo("userInfo");
     static constexpr llvm::StringLiteral g_reserved("reserved");
-    if (name == g_name) return 0;
-    if (name == g_reason) return 1;
-    if (name == g_userInfo) return 2;
-    if (name == g_reserved) return 3;
+    if (name == g_name)
+      return 0;
+    if (name == g_reason)
+      return 1;
+    if (name == g_userInfo)
+      return 2;
+    if (name == g_reserved)
+      return 3;
     return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 

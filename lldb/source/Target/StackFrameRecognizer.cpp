@@ -12,6 +12,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Interpreter/Interfaces/ScriptedStackFrameRecognizerInterface.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -110,13 +111,13 @@ void StackFrameRecognizerManager::BumpGeneration() {
 }
 
 void StackFrameRecognizerManager::AddRecognizer(
-    StackFrameRecognizerSP recognizer, ConstString module,
-    llvm::ArrayRef<ConstString> symbols,
-    Mangled::NamePreference symbol_mangling, bool first_instruction_only) {
+    StackFrameRecognizerSP recognizer, std::string module,
+    std::vector<ConstString> symbols, Mangled::NamePreference symbol_mangling,
+    bool first_instruction_only) {
   m_recognizers.push_front({(uint32_t)m_recognizers.size(), recognizer, false,
-                            module, RegularExpressionSP(), symbols,
-                            RegularExpressionSP(), symbol_mangling,
-                            first_instruction_only, true});
+                            std::move(module), RegularExpressionSP(),
+                            std::move(symbols), RegularExpressionSP(),
+                            symbol_mangling, first_instruction_only, true});
   BumpGeneration();
 }
 
@@ -125,7 +126,7 @@ void StackFrameRecognizerManager::AddRecognizer(
     RegularExpressionSP symbol, Mangled::NamePreference symbol_mangling,
     bool first_instruction_only) {
   m_recognizers.push_front({(uint32_t)m_recognizers.size(), recognizer, true,
-                            ConstString(), module, std::vector<ConstString>(),
+                            std::string(), module, std::vector<ConstString>(),
                             symbol, symbol_mangling, first_instruction_only,
                             true});
   BumpGeneration();
@@ -150,8 +151,7 @@ void StackFrameRecognizerManager::ForEach(
                entry.symbol_mangling, true);
     } else {
       callback(entry.recognizer_id, entry.enabled, entry.recognizer->GetName(),
-               entry.module.GetCString(), entry.symbols, entry.symbol_mangling,
-               false);
+               entry.module, entry.symbols, entry.symbol_mangling, false);
     }
   }
 }
@@ -195,10 +195,13 @@ StackFrameRecognizerManager::GetRecognizerForFrame(StackFrameSP frame) {
   if (!module_sp)
     return StackFrameRecognizerSP();
   llvm::StringRef module_name = module_sp->GetFileSpec().GetFilename();
-  const Symbol *symbol = symctx.symbol;
-  if (!symbol)
+  Address start_addr;
+  if (symctx.symbol)
+    start_addr = symctx.symbol->GetAddress();
+  else if (symctx.function)
+    start_addr = symctx.function->GetAddress();
+  else
     return StackFrameRecognizerSP();
-  Address start_addr = symbol->GetAddress();
   Address current_addr = frame->GetFrameCodeAddress();
 
   // The symbol's start address may fall inside a non-executable function
@@ -212,9 +215,8 @@ StackFrameRecognizerManager::GetRecognizerForFrame(StackFrameSP frame) {
     if (!entry.enabled)
       continue;
 
-    if (entry.module)
-      if (entry.module != module_name)
-        continue;
+    if (!entry.module.empty() && entry.module != module_name)
+      continue;
 
     if (entry.module_regexp)
       if (!entry.module_regexp->Execute(module_name))

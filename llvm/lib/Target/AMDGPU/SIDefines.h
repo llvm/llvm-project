@@ -145,9 +145,6 @@ enum : uint64_t {
   // Is a packed VOP3P instruction.
   IsPacked = UINT64_C(1) << 49,
 
-  // Is a D16 buffer instruction.
-  D16Buf = UINT64_C(1) << 50,
-
   // FLAT instruction accesses FLAT_GLBL segment.
   FlatGlobal = UINT64_C(1) << 51,
 
@@ -340,9 +337,6 @@ template <typename... T> constexpr bool hasClampHi(const T &...O) {
 template <typename... T> constexpr bool isPacked(const T &...O) {
   return getTSFlags(O...) & DontUseRawTSFlags::IsPacked;
 }
-template <typename... T> constexpr bool isD16Buf(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::D16Buf;
-}
 template <typename... T> constexpr bool isFlatGlobal(const T &...O) {
   return getTSFlags(O...) & DontUseRawTSFlags::FlatGlobal;
 }
@@ -435,6 +429,7 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_FP64,
   OPERAND_REG_IMM_BF16,
   OPERAND_REG_IMM_FP16,
+  OPERAND_REG_IMM_NOINLINE_FP16,
   OPERAND_REG_IMM_V2BF16,
   OPERAND_REG_IMM_V2FP16,
   OPERAND_REG_IMM_V2FP16_SPLAT,
@@ -643,15 +638,24 @@ enum CPol {
 
   SWZ = 1 << 6, // Swizzle bit
 
-  SCAL = 1 << 11, // Scale offset bit
+  // Cache fill size
+  CFS_SHIFT = 7,
+  CFS_MASK = 0x3,
+  CFS = CFS_MASK << CFS_SHIFT,
+  CFS_256B = 0 << CFS_SHIFT,
+  CFS_128B = 1 << CFS_SHIFT,
+  CFS_64B = 2 << CFS_SHIFT,
+  CFS_32B = 3 << CFS_SHIFT,
 
-  ALL = TH | SCOPE | NV,
+  ALL = TH | SCOPE | NV | CFS,
+
+  SCAL = 1 << 9, // Scale offset bit
 
   // Helper bits
-  TH_TYPE_LOAD = 1 << 7,    // TH_LOAD policy
-  TH_TYPE_STORE = 1 << 8,   // TH_STORE policy
-  TH_TYPE_ATOMIC = 1 << 9,  // TH_ATOMIC policy
-  TH_REAL_BYPASS = 1 << 10, // is TH=3 bypass policy or not
+  TH_TYPE_LOAD = 1 << 27,   // TH_LOAD policy
+  TH_TYPE_STORE = 1 << 28,  // TH_STORE policy
+  TH_TYPE_ATOMIC = 1 << 29, // TH_ATOMIC policy
+  TH_REAL_BYPASS = 1 << 30, // is TH=3 bypass policy or not
 
   // Volatile (used to preserve/signal operation volatility for buffer
   // operations not a real instruction bit)
@@ -1362,11 +1366,20 @@ enum Type {
   NAMED_BARRIER_LAST = 16,
 };
 
-enum {
-  BARRIER_SCOPE_WORKGROUP = 0,
-};
-
 } // namespace Barrier
+
+namespace SyntheticAperture {
+/// Synthetic aperture numbers. This is OR'd with the high
+/// bits of the LDS aperture pointer.
+///
+/// NOTE: This is also documented in AMDGPUUsage.
+enum SyntheticAperture {
+  None = 0x00000000,
+
+  BARRIER = 0x00000001,
+};
+} // namespace SyntheticAperture
+
 } // namespace AMDGPU
 
 // clang-format off

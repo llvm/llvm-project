@@ -1,9 +1,6 @@
 # REQUIRES: lld, target-windows
 
 # Test that functions have the correct types.
-# This uses the same input as SymbolFile/PDB/func-symbols.test. However, DIA 
-# creates one named `Type` per function and uses identical UIDs for `Type` and
-# `Function`, whereas native creates one unnamed type per signature and has different UIDs.
 
 # RUN: split-file %s %t
 # RUN: %build --compiler=clang-cl --arch=32 --nodefaultlib -o %t.exe %t/main.cpp %t/second.cpp

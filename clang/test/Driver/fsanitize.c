@@ -23,6 +23,67 @@
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=leak,thread -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-SANT
 // CHECK-SANL-SANT: '-fsanitize=leak' not allowed with '-fsanitize=thread'
 
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=concurrency %s -### 2>&1 \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:   | FileCheck %s --check-prefix=CHECK-SANC-X64
+// CHECK-SANC-X64: "-fsanitize=concurrency"
+// CHECK-SANC-X64: libclang_rt.csan.a
+
+// RUN: %clang --target=amdgcn-amd-amdhsa -mcpu=gfx900 -nogpulib -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-AMDGPU
+// CHECK-SANC-AMDGPU: "-fsanitize=concurrency"
+
+// RUN: not %clang --target=amdgcn-amd-amdhsa -mcpu=gfx900:xnack+ -nogpulib -fsanitize=concurrency,address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-SANA
+// CHECK-SANC-SANA: '-fsanitize=concurrency' not allowed with '-fsanitize=address'
+
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=concurrency,undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-SANU
+// CHECK-SANC-SANU: '-fsanitize=concurrency' not allowed with '-fsanitize=undefined'
+
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=concurrency,integer %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-SANI
+// CHECK-SANC-SANI: '-fsanitize=concurrency' not allowed with '-fsanitize=integer'
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=concurrency -fsanitize-coverage=trace-pc-guard %s -### 2>&1 \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:   | FileCheck %s --check-prefix=CHECK-SANC-COV
+// CHECK-SANC-COV-NOT: libclang_rt.ubsan
+// CHECK-SANC-COV: libclang_rt.csan.a
+// CHECK-SANC-COV-NOT: libclang_rt.ubsan
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=concurrency -shared-libsan %s -### 2>&1 \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:   | FileCheck %s --check-prefix=CHECK-SANC-SHARED
+// CHECK-SANC-SHARED-NOT: libclang_rt.csan.a
+// CHECK-SANC-SHARED: libclang_rt.csan.so
+// CHECK-SANC-SHARED-NOT: libclang_rt.csan.a
+
+// RUN: not %clang --target=x86_64-linux-android -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-ANDROID
+// CHECK-SANC-ANDROID: unsupported option '-fsanitize=concurrency' for target 'x86_64-unknown-linux-android'
+
+// RUN: %clang --target=hexagon-unknown-linux-musl -fsanitize=concurrency %s -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-SANC-HEXAGON
+// CHECK-SANC-HEXAGON-NOT: error:
+// CHECK-SANC-HEXAGON: "-fsanitize=concurrency"
+// CHECK-SANC-HEXAGON: "--whole-archive" "{{.*}}libclang_rt.csan{{.*}}.a" "--no-whole-archive"
+// CHECK-SANC-HEXAGON-NOT: csan_offload
+
+// RUN: %clang --target=hexagon-unknown-linux-musl -fsanitize=concurrency -shared-libsan %s -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-SANC-HEXAGON-SHARED
+// CHECK-SANC-HEXAGON-SHARED-NOT: error:
+// CHECK-SANC-HEXAGON-SHARED: "-fsanitize=concurrency"
+// CHECK-SANC-HEXAGON-SHARED: libclang_rt.csan{{.*}}.so
+// CHECK-SANC-HEXAGON-SHARED-NOT: csan_offload
+
+// RUN: not %clang --target=hexagon-unknown-none-elf -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-HEXAGON-BAREMETAL
+// CHECK-SANC-HEXAGON-BAREMETAL: unsupported option '-fsanitize=concurrency'
+
+// RUN: not %clang --target=r600 -mcpu=cypress -nogpulib -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-R600
+// CHECK-SANC-R600: unsupported option '-fsanitize=concurrency' for target 'r600'
+// RUN: not %clang --target=amdgpu-amd-amdpal -mcpu=gfx900 -nogpulib -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-PAL
+// CHECK-SANC-PAL: unsupported option '-fsanitize=concurrency' for target 'amdgpu-amd-amdpal'
+// RUN: not %clang --target=amdgpu-mesa-mesa3d -mcpu=gfx900 -nogpulib -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-MESA
+// CHECK-SANC-MESA: unsupported option '-fsanitize=concurrency' for target 'amdgpu-mesa-mesa3d'
+// RUN: not %clang --target=spirv64-amd-amdhsa -nogpulib -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-SPIRV
+// CHECK-SANC-SPIRV: unsupported option '-fsanitize=concurrency' for target 'spirv64-amd-amdhsa'
+
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=leak,memory -pie -fno-rtti %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANL-SANM
 // CHECK-SANL-SANM: '-fsanitize=leak' not allowed with '-fsanitize=memory'
 
@@ -406,10 +467,12 @@
 
 // RUN: %clang --target=x86_64--freebsd -fsanitize=kernel-address %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-ADDRESS-FREEBSD
 // RUN: %clang --target=aarch64--freebsd -fsanitize=kernel-address %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-ADDRESS-FREEBSD
+// RUN: %clang --target=riscv64--freebsd -fsanitize=kernel-address %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-ADDRESS-FREEBSD
 // KERNEL-ADDRESS-FREEBSD: "-fsanitize=kernel-address"
 
 // RUN: %clang --target=x86_64--freebsd -fsanitize=kernel-memory %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-MEMORY-FREEBSD
 // RUN: %clang --target=aarch64--freebsd -fsanitize=kernel-memory %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-MEMORY-FREEBSD
+// RUN: %clang --target=riscv64--freebsd -fsanitize=kernel-memory %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-MEMORY-FREEBSD
 // KERNEL-MEMORY-FREEBSD: "-fsanitize=kernel-memory"
 
 // * NetBSD; please keep ordered as in Sanitizers.def *
@@ -511,6 +574,27 @@
 // RUN: %clang --target=x86_64-sie-ps5 -fsanitize=thread -nodefaultlibs -nostdlib  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-NOLIB-PS5
 // CHECK-TSAN-NOLIB-PS5-NOT: SceThreadSanitizer_nosubmission_stub_weak
 
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=type %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TYSAN-PS5
+// Make sure there are no *.{o,bc} or -l passed before the TySan library.
+// CHECK-TYSAN-PS5-NOT: {{(\.(o|bc)"? |-l).*-lSceTypeSanitizer_nosubmission_stub_weak}}
+// CHECK-TYSAN-PS5: --dependent-lib=libSceTypeSanitizer_nosubmission_stub_weak.a
+// CHECK-TYSAN-PS5-NOT: {{(\.(o|bc)"? |-l).*-lSceTypeSanitizer_nosubmission_stub_weak}}
+// CHECK-TYSAN-PS5: -lSceTypeSanitizer_nosubmission_stub_weak
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=type -nostdlib %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TYSAN-NOLIB-PS5
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=type -nodefaultlibs %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TYSAN-NOLIB-PS5
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=type -nodefaultlibs -nostdlib  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TYSAN-NOLIB-PS5
+// CHECK-TYSAN-NOLIB-PS5-NOT: SceTypeSanitizer_nosubmission_stub_weak
+
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-PS5
+// Make sure there are no *.{o,bc} or -l passed before the RtSan library.
+// CHECK-RTSAN-PS5-NOT: {{(\.(o|bc)"? |-l).*-lSceRealtimeSanitizer_nosubmission_stub_weak}}
+// CHECK-RTSAN-PS5: --dependent-lib=libSceRealtimeSanitizer_nosubmission_stub_weak.a
+// CHECK-RTSAN-PS5-NOT: {{(\.(o|bc)"? |-l).*-lSceRealtimeSanitizer_nosubmission_stub_weak}}
+// CHECK-RTSAN-PS5: -lSceRealtimeSanitizer_nosubmission_stub_weak
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=realtime -nostdlib %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-NOLIB-PS5
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=realtime -nodefaultlibs %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-NOLIB-PS5
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=realtime -nodefaultlibs -nostdlib  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-NOLIB-PS5
+// CHECK-RTSAN-NOLIB-PS5-NOT: SceRealtimeSanitizer_nosubmission_stub_weak
 
 // RUN: %clang --target=aarch64 -fsanitize=shadow-call-stack -ffixed-x18 %s -### 2>&1 | FileCheck %s --check-prefix=AARCH64-SCS
 // RUN: %clang --target=aarch64_be -fsanitize=shadow-call-stack -ffixed-x18 %s -### 2>&1 | FileCheck %s --check-prefix=AARCH64-SCS

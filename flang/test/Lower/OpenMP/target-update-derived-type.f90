@@ -4,6 +4,8 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa,nvptx64-nvidia-cuda %s -o - | FileCheck %s --check-prefix=MIXED
 ! RUN: %flang_fc1 -triple amdgcn-amd-amdhsa -emit-hlfir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=DEVICE
 
+!REQUIRES: amdgpu-registered-target
+
 module target_update_derived_type
   type :: wavefun
     real(8) :: ferwe
@@ -116,7 +118,7 @@ subroutine update_pointer(w)
   type(wavefun) :: w
 
   ! CHECK: %[[FERWE_MAP:.*]] = omp.map.info {{.*}} map_clauses(to)
-  ! CHECK: %[[PTR_MAP:.*]] = omp.map.info {{.*}} map_clauses(to) {{.*}}name("w%ptr")
+  ! CHECK: %[[PTR_MAP:.*]] = omp.map.info {{.*}} map_clauses(to) {{.*}}members({{.*}}name("w%ptr")
   ! CHECK: omp.target_update map_entries(%[[FERWE_MAP]], %[[PTR_MAP]],
   !$omp target update to(w%ferwe, w%ptr)
 end subroutine

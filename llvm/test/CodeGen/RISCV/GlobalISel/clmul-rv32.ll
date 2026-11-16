@@ -7,6 +7,7 @@
 ; RUN:   | FileCheck %s --check-prefix=RV32ZBKC
 
 declare i32 @llvm.clmul.i32(i32, i32)
+declare i32 @llvm.riscv.clmulh.i32(i32, i32)
 
 define i32 @clmul_i32(i32 %a, i32 %b) {
 ; RV32ZBC-LABEL: clmul_i32:
@@ -19,5 +20,19 @@ define i32 @clmul_i32(i32 %a, i32 %b) {
 ; RV32ZBKC-NEXT:    clmul a0, a0, a1
 ; RV32ZBKC-NEXT:    ret
   %r = call i32 @llvm.clmul.i32(i32 %a, i32 %b)
+  ret i32 %r
+}
+
+define i32 @clmulh_i32(i32 %a, i32 %b) {
+; RV32ZBC-LABEL: clmulh_i32:
+; RV32ZBC:       # %bb.0:
+; RV32ZBC-NEXT:    clmulh a0, a0, a1
+; RV32ZBC-NEXT:    ret
+;
+; RV32ZBKC-LABEL: clmulh_i32:
+; RV32ZBKC:       # %bb.0:
+; RV32ZBKC-NEXT:    clmulh a0, a0, a1
+; RV32ZBKC-NEXT:    ret
+  %r = call i32 @llvm.riscv.clmulh.i32(i32 %a, i32 %b)
   ret i32 %r
 }

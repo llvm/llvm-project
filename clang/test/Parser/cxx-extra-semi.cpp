@@ -2,8 +2,8 @@
 // RUN: %clang_cc1 -fsyntax-only -Wextra-semi -verify %s
 // RUN: %clang_cc1 -fsyntax-only -Wextra-semi -verify -std=c++11 %s
 // RUN: cp %s %t
-// RUN: %clang_cc1 -x c++ -Wextra-semi -fixit %t
-// RUN: %clang_cc1 -x c++ -Wextra-semi -Werror %t
+// RUN: %clang_cc1 -x c++ -Wextra-semi -fixit -DFIXIT %t
+// RUN: %clang_cc1 -x c++ -Wextra-semi -Werror -DFIXIT %t
 
 class A {
   void A1();
@@ -41,4 +41,28 @@ union B {
 #elif !defined(PEDANTIC)
 // expected-warning@-6{{extra ';' outside of a function is incompatible with C++98}}
 // expected-warning@-6{{extra ';' outside of a function is incompatible with C++98}}
+#endif
+
+#ifndef FIXIT
+namespace GH112377 {
+struct B { };
+struct Base {
+  Base(struct B;); // expected-error {{unexpected ';' before ')'}} \
+                   // expected-note {{member is declared here}}
+};
+
+class Forward : Base { // expected-note {{constrained by implicitly private inheritance here}} \
+                       // expected-note {{candidate constructor (the implicit copy constructor) not viable: cannot convert argument of incomplete type 'B' to 'const Forward' for 1st argument}} \
+                       // expected-note {{candidate constructor (the implicit move constructor) not viable: cannot convert argument of incomplete type 'B' to 'Forward' for 1st argument}} \
+                       // expected-note {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
+  using Base::Base;
+};
+
+class A : Forward {
+  A();
+};
+
+A::A() : Forward(B()) { } // expected-error {{'B' is a private member of 'GH112377::Base'}} \
+                          // expected-error {{no matching constructor for initialization of 'Forward'}}
+}
 #endif

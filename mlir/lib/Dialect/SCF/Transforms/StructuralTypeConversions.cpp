@@ -128,7 +128,7 @@ public:
                                 /*bodyBuilder=*/nullptr, op.getUnsignedCmp());
 
     // Reserve whatever attributes in the original op.
-    newOp->setAttrs(op->getAttrs());
+    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary().getValue());
 
     // We do not need the empty block created by rewriter.
     rewriter.eraseBlock(newOp.getBody(0));
@@ -155,7 +155,7 @@ public:
     IfOp newOp =
         IfOp::create(rewriter, op.getLoc(), dstTypes,
                      llvm::getSingleElement(adaptor.getCondition()), true);
-    newOp->setAttrs(op->getAttrs());
+    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary().getValue());
 
     // We do not need the empty blocks created by rewriter.
     rewriter.eraseBlock(newOp.elseBlock());
@@ -217,6 +217,30 @@ public:
     return newOp;
   }
 };
+
+class ConvertExecuteRegionOpTypes
+    : public Structural1ToNConversionPattern<ExecuteRegionOp,
+                                             ConvertExecuteRegionOpTypes> {
+public:
+  using Structural1ToNConversionPattern::Structural1ToNConversionPattern;
+
+  std::optional<ExecuteRegionOp>
+  convertSourceOp(ExecuteRegionOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter,
+                  TypeRange dstTypes) const {
+    // The entry block has no arguments, but the region may have further blocks
+    // whose arguments need converting.
+    if (failed(rewriter.convertRegionTypes(&op.getRegion(), *typeConverter)))
+      return std::nullopt;
+
+    auto newOp = ExecuteRegionOp::create(rewriter, op.getLoc(), dstTypes,
+                                         op.getNoInline());
+    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary().getValue());
+    rewriter.inlineRegionBefore(op.getRegion(), newOp.getRegion(),
+                                newOp.getRegion().end());
+    return newOp;
+  }
+};
 } // namespace
 
 namespace {
@@ -225,7 +249,7 @@ namespace {
 // appropriate type conversions / materializations, we need a dummy pattern.
 class ConvertYieldOpTypes : public OpConversionPattern<scf::YieldOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(scf::YieldOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -255,18 +279,19 @@ void mlir::scf::populateSCFStructuralTypeConversions(
     PatternBenefit benefit) {
   patterns.add<ConvertForOpTypes, ConvertIfOpTypes, ConvertYieldOpTypes,
                ConvertWhileOpTypes, ConvertConditionOpTypes,
-               ConvertIndexSwitchOpTypes>(typeConverter, patterns.getContext(),
-                                          benefit);
+               ConvertIndexSwitchOpTypes, ConvertExecuteRegionOpTypes>(
+      typeConverter, patterns.getContext(), benefit);
 }
 
 void mlir::scf::populateSCFStructuralTypeConversionTarget(
     const TypeConverter &typeConverter, ConversionTarget &target) {
-  target.addDynamicallyLegalOp<ForOp, IfOp, IndexSwitchOp>(
+  target.addDynamicallyLegalOp<ForOp, IfOp, IndexSwitchOp, ExecuteRegionOp>(
       [&](Operation *op) { return typeConverter.isLegal(op->getResults()); });
   target.addDynamicallyLegalOp<scf::YieldOp>([&](scf::YieldOp op) {
     // We only have conversions for a subset of ops that use scf.yield
     // terminators.
-    if (!isa<ForOp, IfOp, WhileOp, IndexSwitchOp>(op->getParentOp()))
+    if (!isa<ForOp, IfOp, WhileOp, IndexSwitchOp, ExecuteRegionOp>(
+            op->getParentOp()))
       return true;
     return typeConverter.isLegal(op.getOperands());
   });

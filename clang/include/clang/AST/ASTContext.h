@@ -183,6 +183,10 @@ enum class AlignRequirementKind {
 
   /// The alignment comes from an alignment attribute on a enum type.
   RequiredByEnum,
+
+  /// The type's natural alignment is preserved under #pragma pack in MSVC
+  /// record layout (e.g., vectors, x87 fp80).
+  ResistPragmaPack,
 };
 
 struct TypeInfo {
@@ -195,7 +199,8 @@ struct TypeInfo {
            AlignRequirementKind AlignRequirement)
       : Width(Width), Align(Align), AlignRequirement(AlignRequirement) {}
   bool isAlignRequired() {
-    return AlignRequirement != AlignRequirementKind::None;
+    return AlignRequirement != AlignRequirementKind::None &&
+           AlignRequirement != AlignRequirementKind::ResistPragmaPack;
   }
 };
 
@@ -209,13 +214,30 @@ struct TypeInfoChars {
                 AlignRequirementKind AlignRequirement)
       : Width(Width), Align(Align), AlignRequirement(AlignRequirement) {}
   bool isAlignRequired() {
-    return AlignRequirement != AlignRequirementKind::None;
+    return AlignRequirement != AlignRequirementKind::None &&
+           AlignRequirement != AlignRequirementKind::ResistPragmaPack;
   }
 };
 
 struct PFPField {
   CharUnits Offset;
   FieldDecl *Field;
+};
+
+/// UniquingSet info for pools keyed on a QualType and a bool. DenseMapInfo has
+/// no bool specialization, so we cannot use the default UniquingSetInfo.
+struct QualTypeBoolInfo {
+  using KeyTy = std::pair<QualType, bool>;
+
+  template <typename T> static KeyTy getKey(const T &N) { return N.getKey(); }
+
+  static unsigned getHashValue(const KeyTy &Key) {
+    return llvm::hash_combine(Key.first.getAsOpaquePtr(), Key.second);
+  }
+
+  template <typename T> static bool isEqual(const KeyTy &Key, const T &N) {
+    return Key == N.getKey();
+  }
 };
 
 /// Holds long-lived AST nodes (such as types and decls) that can be
@@ -225,12 +247,14 @@ class ASTContext : public RefCountedBase<ASTContext> {
 
   mutable SmallVector<Type *, 0> Types;
   mutable llvm::FoldingSet<ExtQuals> ExtQualNodes;
-  mutable llvm::FoldingSet<ComplexType> ComplexTypes;
-  mutable llvm::FoldingSet<PointerType> PointerTypes{GeneralTypesLog2InitSize};
-  mutable llvm::FoldingSet<AdjustedType> AdjustedTypes;
-  mutable llvm::FoldingSet<BlockPointerType> BlockPointerTypes;
-  mutable llvm::FoldingSet<LValueReferenceType> LValueReferenceTypes;
-  mutable llvm::FoldingSet<RValueReferenceType> RValueReferenceTypes;
+  mutable llvm::UniquingSet<ComplexType> ComplexTypes;
+  mutable llvm::UniquingSet<PointerType> PointerTypes{GeneralTypesLog2InitSize};
+  mutable llvm::UniquingSet<AdjustedType> AdjustedTypes;
+  mutable llvm::UniquingSet<BlockPointerType> BlockPointerTypes;
+  mutable llvm::UniquingSet<LValueReferenceType, QualTypeBoolInfo>
+      LValueReferenceTypes;
+  mutable llvm::UniquingSet<RValueReferenceType, QualTypeBoolInfo>
+      RValueReferenceTypes;
   mutable llvm::FoldingSet<MemberPointerType> MemberPointerTypes;
   mutable llvm::ContextualFoldingSet<ConstantArrayType, ASTContext &>
       ConstantArrayTypes;
@@ -259,27 +283,27 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<PackIndexingType, ASTContext &>
       DependentPackIndexingTypes;
 
-  mutable llvm::FoldingSet<TemplateTypeParmType> TemplateTypeParmTypes;
-  mutable llvm::FoldingSet<ObjCTypeParamType> ObjCTypeParamTypes;
-  mutable llvm::FoldingSet<SubstTemplateTypeParmType>
-    SubstTemplateTypeParmTypes;
+  mutable llvm::UniquingSet<TemplateTypeParmType> TemplateTypeParmTypes;
+  mutable llvm::UniquingSet<ObjCTypeParamType> ObjCTypeParamTypes;
+  mutable llvm::UniquingSet<SubstTemplateTypeParmType>
+      SubstTemplateTypeParmTypes;
   mutable llvm::FoldingSet<SubstTemplateTypeParmPackType>
     SubstTemplateTypeParmPackTypes;
   mutable llvm::FoldingSet<SubstBuiltinTemplatePackType>
       SubstBuiltinTemplatePackTypes;
   mutable llvm::ContextualFoldingSet<TemplateSpecializationType, ASTContext&>
     TemplateSpecializationTypes;
-  mutable llvm::FoldingSet<ParenType> ParenTypes{GeneralTypesLog2InitSize};
+  mutable llvm::UniquingSet<ParenType> ParenTypes{GeneralTypesLog2InitSize};
   mutable llvm::FoldingSet<TagTypeFoldingSetPlaceholder> TagTypes;
   mutable llvm::FoldingSet<FoldingSetPlaceholder<UnresolvedUsingType>>
       UnresolvedUsingTypes;
   mutable llvm::FoldingSet<UsingType> UsingTypes;
   mutable llvm::FoldingSet<FoldingSetPlaceholder<TypedefType>> TypedefTypes;
   mutable llvm::FoldingSet<DependentNameType> DependentNameTypes;
-  mutable llvm::FoldingSet<PackExpansionType> PackExpansionTypes;
+  mutable llvm::UniquingSet<PackExpansionType> PackExpansionTypes;
   mutable llvm::FoldingSet<ObjCObjectTypeImpl> ObjCObjectTypes;
-  mutable llvm::FoldingSet<ObjCObjectPointerType> ObjCObjectPointerTypes;
-  mutable llvm::FoldingSet<UnaryTransformType> UnaryTransformTypes;
+  mutable llvm::UniquingSet<ObjCObjectPointerType> ObjCObjectPointerTypes;
+  mutable llvm::UniquingSet<UnaryTransformType> UnaryTransformTypes;
   // An AutoType can have a dependency on another AutoType via its template
   // arguments. Since both dependent and dependency are on the same set,
   // we can end up in an infinite recursion when looking for a node if we used
@@ -289,15 +313,15 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::DenseMap<llvm::FoldingSetNodeIDRef, AutoType *> AutoTypes;
   mutable llvm::FoldingSet<DeducedTemplateSpecializationType>
     DeducedTemplateSpecializationTypes;
-  mutable llvm::FoldingSet<AtomicType> AtomicTypes;
+  mutable llvm::UniquingSet<AtomicType> AtomicTypes;
   mutable llvm::ContextualFoldingSet<AttributedType, ASTContext &>
       AttributedTypes;
-  mutable llvm::FoldingSet<PipeType> PipeTypes;
-  mutable llvm::FoldingSet<BitIntType> BitIntTypes;
+  mutable llvm::UniquingSet<PipeType, QualTypeBoolInfo> PipeTypes;
+  mutable llvm::UniquingSet<BitIntType> BitIntTypes;
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
       DependentBitIntTypes;
   mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
-  mutable llvm::FoldingSet<OverflowBehaviorType> OverflowBehaviorTypes;
+  mutable llvm::UniquingSet<OverflowBehaviorType> OverflowBehaviorTypes;
   mutable llvm::ContextualFoldingSet<HLSLAttributedResourceType, ASTContext &>
       HLSLAttributedResourceTypes;
   llvm::FoldingSet<HLSLInlineSpirvType> HLSLInlineSpirvTypes;
@@ -327,7 +351,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// Internal storage for NestedNameSpecifiers.
   ///
   /// This set is managed by the NestedNameSpecifier class.
-  mutable llvm::FoldingSet<NamespaceAndPrefixStorage>
+  mutable llvm::UniquingSet<NamespaceAndPrefixStorage>
       NamespaceAndPrefixStorages;
 
   /// A cache mapping from RecordDecls to ASTRecordLayouts.
@@ -525,11 +549,11 @@ class ASTContext : public RefCountedBase<ASTContext> {
   llvm::DenseMap<const CXXConstructorDecl *, ArrayRef<CXXDefaultArgExpr *>>
       CtorClosureDefaultArgs;
 
-  /// Keeps track of all declaration attributes.
+  /// Storage for the AttrVecs pointed to by Decl::Attrs.
   ///
-  /// Since so few decls have attrs, we keep them in a hash map instead of
-  /// wasting space in the Decl class.
-  llvm::DenseMap<const Decl*, AttrVec*> DeclAttrs;
+  /// A SpecificBumpPtrAllocator so that the vectors are destroyed when the
+  /// context dies without having to track them individually.
+  llvm::SpecificBumpPtrAllocator<AttrVec> DeclAttrAllocator;
 
   /// A mapping from non-redeclarable declarations in modules that were
   /// merged with other declarations to the canonical declaration that they were
@@ -851,7 +875,7 @@ public:
   };
 
   /// Returns the dynamic AST node parent map context.
-  ParentMapContext &getParentMapContext();
+  ParentMapContext &getParentMapContext() { return *ParentMapCtx; }
 
   // A traversal scope limits the parts of the AST visible to certain analyses.
   // RecursiveASTVisitor only visits specified children of TranslationUnitDecl.
@@ -1168,11 +1192,8 @@ public:
     return CommentCommandTraits;
   }
 
-  /// Retrieve the attributes for the given declaration.
-  AttrVec& getDeclAttrs(const Decl *D);
-
-  /// Erase the attributes corresponding to the given declaration.
-  void eraseDeclAttrs(const Decl *D);
+  /// Allocate an empty attribute vector with the lifetime of this context.
+  AttrVec *allocateAttrVec();
 
   ArrayRef<CXXDefaultArgExpr *>
   getCtorClosureDefaultArgs(const CXXConstructorDecl *CD);
@@ -1186,13 +1207,6 @@ public:
   /// Add an ExplicitInstantiationDecl for a given specialization.
   void addExplicitInstantiationDecl(const NamedDecl *Spec,
                                     ExplicitInstantiationDecl *EID);
-
-  /// If this variable is an instantiated static data member of a
-  /// class template specialization, returns the templated static data member
-  /// from which it was instantiated.
-  // FIXME: Remove ?
-  MemberSpecializationInfo *getInstantiatedFromStaticDataMember(
-                                                           const VarDecl *Var);
 
   /// Note that the static data member \p Inst is an instantiation of
   /// the static data member template \p Tmpl of a class template.
@@ -1371,6 +1385,7 @@ public:
   CanQualType BFloat16Ty;
   CanQualType Float16Ty; // C11 extension ISO/IEC TS 18661-3
   CanQualType VoidPtrTy, NullPtrTy;
+  CanQualType MetaInfoTy;
   CanQualType DependentTy, OverloadTy, BoundMemberTy, UnresolvedTemplateTy,
       UnknownAnyTy;
   CanQualType BuiltinFnTy;
@@ -1404,6 +1419,8 @@ public:
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
 #include "clang/Basic/SPIRVTypes.def"
 
@@ -1663,6 +1680,22 @@ public:
                          bool OrNull,
                          ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const;
 
+  /// Return a `CountAttributedType` whose count expression has not been parsed
+  /// yet, for use by a late-parsed bounds attribute. The result is *not*
+  /// uniqued, and must be completed with `completeCountAttributedType` once the
+  /// argument becomes parseable. Returns the node rather than a `QualType` so
+  /// the caller can retain it for completion.
+  CountAttributedType *getIncompleteCountAttributedType(QualType WrappedTy,
+                                                        bool CountInBytes,
+                                                        bool OrNull) const;
+
+  /// Supply the count expression and coupled declarations for a type created by
+  /// `getIncompleteCountAttributedType`. Enclosing types keep pointing at the
+  /// same node, so nothing above it needs rebuilding.
+  void completeCountAttributedType(
+      CountAttributedType *CATy, Expr *CountExpr,
+      ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const;
+
   /// Return a placeholder type for a late-parsed type attribute.
   /// This type wraps another type and holds the LateParsedAttribute
   /// that will be parsed later.
@@ -1872,14 +1905,18 @@ public:
   ///
   /// \pre \p ElementType must be a valid matrix element type (see
   /// MatrixType::isValidElementType).
-  QualType getConstantMatrixType(QualType ElementType, unsigned NumRows,
-                                 unsigned NumColumns) const;
+  QualType getConstantMatrixType(
+      QualType ElementType, unsigned NumRows, unsigned NumColumns,
+      std::optional<MatrixType::LayoutKind> Layout = std::nullopt) const;
 
   /// Return the unique reference to the matrix type of the specified element
   /// type and size
   QualType getDependentSizedMatrixType(QualType ElementType, Expr *RowExpr,
                                        Expr *ColumnExpr,
                                        SourceLocation AttrLoc) const;
+
+  QualType getMatrixTypeWithLayout(QualType T,
+                                   MatrixType::LayoutKind Layout) const;
 
   QualType getDependentAddressSpaceType(QualType PointeeType,
                                         Expr *AddrSpaceExpr,
@@ -3613,6 +3650,13 @@ public:
   /// it is not used.
   bool DeclMustBeEmitted(const Decl *D);
 
+  /// Determines if the global variable or function \p D is emitted on the side
+  /// of the CUDA/HIP compilation, i.e. host or device, that is being compiled,
+  /// based on its host/device related attributes.
+  ///
+  /// \returns false if CodeGen never emits \p D in this compilation.
+  bool shouldEmitCUDADecl(const ValueDecl *D) const;
+
   /// Visits all versions of a multiversioned function with the passed
   /// predicate.
   void forEachMultiversionedFunctionVersion(
@@ -3639,6 +3683,9 @@ public:
 
   void setStaticLocalNumber(const VarDecl *VD, unsigned Number);
   unsigned getStaticLocalNumber(const VarDecl *VD) const;
+
+  /// Ordinal for the next TopLevelStmtDecl; counts created and loaded ones.
+  unsigned NumTopLevelStmtDecls = 0;
 
   bool hasSeenTypeAwareOperatorNewOrDelete() const {
     return !TypeAwareOperatorNewAndDeletes.empty();
@@ -3949,7 +3996,7 @@ public:
   std::vector<PFPField> findPFPFields(QualType Ty) const;
 
   bool hasPFPFields(QualType Ty) const;
-  bool isPFPField(const FieldDecl *Field) const;
+  static bool isPFPField(const FieldDecl *Field);
 
   /// Returns whether this record's PFP fields (if any) are trivially
   /// copyable (i.e. may be memcpy'd). This may also return true if the

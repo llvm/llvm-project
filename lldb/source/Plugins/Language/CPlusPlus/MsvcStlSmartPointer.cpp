@@ -33,16 +33,23 @@ bool lldb_private::formatters::MsvcStlSmartPointerSummaryProvider(
   if (!ctrl_sp || !ptr_sp)
     return false;
 
-  DumpCxxSmartPtrPointerSummary(stream, *ptr_sp, options);
+  uint64_t ctrl_addr = ctrl_sp->GetValueAsUnsigned(0);
 
-  bool success;
-  uint64_t ctrl_addr = ctrl_sp->GetValueAsUnsigned(0, &success);
+  return DumpMsvcStlSmartPointerSummary(*ptr_sp, *ctrl_sp, ctrl_addr, stream,
+                                        options);
+}
+
+bool lldb_private::formatters::DumpMsvcStlSmartPointerSummary(
+    ValueObject &ptr, ValueObject &rep, uint64_t ctrl_addr, Stream &stream,
+    const TypeSummaryOptions &options) {
+  DumpCxxSmartPtrPointerSummary(stream, ptr, options);
+
   // Empty control field (expired)
-  if (!success || ctrl_addr == 0)
+  if (ctrl_addr == 0)
     return true;
 
   uint64_t uses = 0;
-  if (auto uses_sp = ctrl_sp->GetChildMemberWithName("_Uses")) {
+  if (auto uses_sp = rep.GetChildMemberWithName("_Uses")) {
     bool success;
     uses = uses_sp->GetValueAsUnsigned(0, &success);
     if (!success)
@@ -52,7 +59,7 @@ bool lldb_private::formatters::MsvcStlSmartPointerSummaryProvider(
   }
 
   // _Weaks is the number of weak references - (_Uses != 0).
-  if (auto weak_count_sp = ctrl_sp->GetChildMemberWithName("_Weaks")) {
+  if (auto weak_count_sp = rep.GetChildMemberWithName("_Weaks")) {
     bool success;
     uint64_t count = weak_count_sp->GetValueAsUnsigned(0, &success);
     if (!success)
@@ -77,7 +84,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
   ~MsvcStlSmartPointerSyntheticFrontEnd() override;
 
@@ -95,7 +102,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 private:
   lldb::ValueObjectSP m_value_ptr_sp;
@@ -163,7 +170,7 @@ lldb_private::formatters::MsvcStlSmartPointerSyntheticFrontEnd::Update() {
 
 llvm::Expected<size_t>
 lldb_private::formatters::MsvcStlSmartPointerSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+    GetIndexOfChildWithName(llvm::StringRef name) {
   if (name == "pointer")
     return 0;
 
@@ -263,7 +270,7 @@ lldb_private::formatters::MsvcStlUniquePtrSyntheticFrontEnd::Update() {
 
 llvm::Expected<size_t>
 lldb_private::formatters::MsvcStlUniquePtrSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+    GetIndexOfChildWithName(llvm::StringRef name) {
   if (name == "pointer")
     return 0;
   if (name == "deleter")

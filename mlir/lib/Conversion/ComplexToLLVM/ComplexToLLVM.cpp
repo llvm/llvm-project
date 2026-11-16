@@ -8,7 +8,7 @@
 
 #include "mlir/Conversion/ComplexToLLVM/ComplexToLLVM.h"
 
-#include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
+#include "mlir/Conversion/ArithAttrToLLVM/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ComplexCommon/DivisionConverter.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
@@ -83,7 +83,7 @@ struct AbsOpConversion : public ConvertOpToLLVMPattern<complex::AbsOp> {
         rewriter, loc, LLVM::FMulOp::create(rewriter, loc, real, real, fmf),
         LLVM::FMulOp::create(rewriter, loc, imag, imag, fmf), fmf);
 
-    rewriter.replaceOpWithNewOp<LLVM::SqrtOp>(op, sqNorm);
+    rewriter.replaceOpWithNewOp<LLVM::SqrtOp>(op, sqNorm, fmf);
     return success();
   }
 };

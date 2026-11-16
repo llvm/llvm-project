@@ -15,38 +15,38 @@ func.func @linear() {
 // converges.
 //
 // Under the current `FooAnalysis` implementation:
-//   - entry op after-state is 0 xor 7 = 7
-//   - bb0 terminator after-state is 7 xor 1 = 6
+//   - entry op after-state is 0 or 1 = 1
+//   - bb0 terminator after-state is 1 or 2 = 3
 //   - when the join block is first visited, only bb0 has contributed, so the
-//     join op transiently sees 6 xor 2 = 4
+//     join op transiently sees 3 or 12 = 15
 //   - once the other predecessor arrives, revisiting the join updates the
-//     final staged `foo_state` to 7 for the first op in the join block and it
-//     stays 7 for the following op
+//     final staged `foo_state` to 31 for the first op in the join block and it
+//     stays 31 for the following op
 //
 // But if a non-staged `BarAnalysis` observed bb2 after only bb0 had reached
-// it, bb2's first tagged op would transiently see 6 xor 2 = 4 and latch
+// it, bb2's first tagged op would transiently see 3 or 12 = 15 and latch
 // `bar_state = false`, poisoning later points. The staged run below must use
 // only the converged `FooState`, so `bar_state` stays true.
 //
 // CHECK-LABEL: func.func @requires_staged_bar()
 func.func @requires_staged_bar() {
-  // CHECK: "test.branch"()[^bb{{[0-9]+}}, ^bb{{[0-9]+}}] {bar_state = true, foo = 7 : ui64, foo_state = 7 : i64, tag = "annotate"} : () -> ()
-  "test.branch"() [^bb0, ^bb2] {tag = "annotate", foo = 7 : ui64} : () -> ()
+  // CHECK: "test.branch"()[^bb{{[0-9]+}}, ^bb{{[0-9]+}}] {bar_state = true, foo = 1 : ui64, foo_state = 1 : i64, tag = "annotate"} : () -> ()
+  "test.branch"() [^bb0, ^bb2] {tag = "annotate", foo = 1 : ui64} : () -> ()
 
 ^bb0:
-  // CHECK: "test.branch"()[^bb{{[0-9]+}}] {bar_state = true, foo = 1 : ui64, foo_state = 6 : i64, tag = "annotate"} : () -> ()
-  "test.branch"() [^bb1] {tag = "annotate", foo = 1 : ui64} : () -> ()
+  // CHECK: "test.branch"()[^bb{{[0-9]+}}] {bar_state = true, foo = 2 : ui64, foo_state = 3 : i64, tag = "annotate"} : () -> ()
+  "test.branch"() [^bb1] {tag = "annotate", foo = 2 : ui64} : () -> ()
 
 ^bb1:
-  // CHECK: "test.foo"() {bar_state = true, foo = 2 : ui64, foo_state = 7 : i64, tag = "annotate"} : () -> ()
-  "test.foo"() {tag = "annotate", foo = 2 : ui64} : () -> ()
-  // CHECK: "test.foo"() {bar_state = true, foo_state = 7 : i64, tag = "annotate"} : () -> ()
+  // CHECK: "test.foo"() {bar_state = true, foo = 12 : ui64, foo_state = 31 : i64, tag = "annotate"} : () -> ()
+  "test.foo"() {tag = "annotate", foo = 12 : ui64} : () -> ()
+  // CHECK: "test.foo"() {bar_state = true, foo_state = 31 : i64, tag = "annotate"} : () -> ()
   "test.foo"() {tag = "annotate"} : () -> ()
   return
 
 ^bb2:
-  // CHECK: "test.branch"()[^bb{{[0-9]+}}] {bar_state = true, foo = 2 : ui64, foo_state = 5 : i64, tag = "annotate"} : () -> ()
-  "test.branch"() [^bb1] {tag = "annotate", foo = 2 : ui64} : () -> ()
+  // CHECK: "test.branch"()[^bb{{[0-9]+}}] {bar_state = true, foo = 16 : ui64, foo_state = 17 : i64, tag = "annotate"} : () -> ()
+  "test.branch"() [^bb1] {tag = "annotate", foo = 16 : ui64} : () -> ()
 }
 
 // -----

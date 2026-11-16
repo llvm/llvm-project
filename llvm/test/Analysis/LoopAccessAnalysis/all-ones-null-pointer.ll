@@ -5,8 +5,8 @@ target datalayout = "po1:64:64"
 
 ; Tests with an address space that has an all-ones nullptr.
 
-; The step is negative and evaluating at the symbolic max BTC may wrap, so the
-; lowest accessed address is unknown and no runtime checks can be formed.
+; The step is negative and evaluating at the symbolic max BTC may wrap, so we
+; need a zero pointer as lower bound.
 define void @negative_step_all_ones_null(ptr addrspace(1) %P, ptr addrspace(1) %S) {
 ; CHECK-LABEL: 'negative_step_all_ones_null'
 ; CHECK-NEXT:    loop:
@@ -20,7 +20,7 @@ define void @negative_step_all_ones_null(ptr addrspace(1) %P, ptr addrspace(1) %
 ; CHECK-NEXT:        ptr addrspace(1) %S
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: (-4 + inttoptr (i64 -1 to ptr addrspace(1)))<nsw> High: (4 + %P))
+; CHECK-NEXT:          (Low: null High: (4 + %P))
 ; CHECK-NEXT:            Member: {%P,+,-4}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %S High: (4 + %S))

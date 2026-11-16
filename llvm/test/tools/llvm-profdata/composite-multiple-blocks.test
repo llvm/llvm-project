@@ -1,0 +1,33 @@
+; The fixture was written as a v105 composite ExtBinary profile for foo, then
+; edited once to prepend a one-byte unknown block before its LBR block.
+
+; Verify that inspection reports both blocks and that skipping the unknown
+; block preserves the following LBR payload.
+; RUN: llvm-profdata show --sample --show-composite-info-only \
+; RUN:   %S/Inputs/composite-prepended-unknown.profdata \
+; RUN:   | FileCheck %s --check-prefix=BLOCKS
+; RUN: llvm-profdata merge --sample --text \
+; RUN:   %S/Inputs/composite-prepended-unknown.profdata -o - \
+; RUN:   | FileCheck %s --check-prefix=PROFILE --match-full-lines \
+; RUN:   --strict-whitespace
+
+; Verify that re-emission reports the unknown block that cannot be preserved
+; while retaining the known LBR payload.
+; RUN: llvm-profdata merge --sample --extbinary \
+; RUN:   %S/Inputs/composite-prepended-unknown.profdata -o %t.reemitted 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=WARNING
+; RUN: llvm-profdata merge --sample --text %t.reemitted -o - \
+; RUN:   | FileCheck %s --check-prefix=PROFILE --match-full-lines \
+; RUN:   --strict-whitespace
+
+; BLOCKS: Function: foo
+; BLOCKS-NEXT:   Profile blocks: 2
+; BLOCKS-NEXT:   Type: 127 (unknown), Payload size: 1
+; BLOCKS-NEXT:   Type: 0 (LBR), Payload size: {{[1-9][0-9]*}}
+
+; WARNING: warning: {{.*}}:
+; WARNING-SAME: unknown composite profile blocks were ignored
+; WARNING-SAME: and will not be preserved
+
+; PROFILE:foo:10:1
+; PROFILE-NEXT: 0: 10

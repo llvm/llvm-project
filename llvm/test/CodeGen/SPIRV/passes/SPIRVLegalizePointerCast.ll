@@ -75,6 +75,16 @@ entry:
   ret void
 }
 
+define spir_func void @narrowStore(<1 x float> %v) #0 {
+; CHECK-LABEL: define spir_func void @narrowStore(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: call float @llvm.spv.bitcast.f32.v1f32(<1 x float>
+; CHECK: call <4 x float> @llvm.spv.insertelt.v4f32.v4f32.f32.i32(<4 x float>
+entry:
+  store <1 x float> %v, ptr addrspace(10) @OUTV, align 4
+  ret void
+}
+
 attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 
 @.str = private unnamed_addr constant [4 x i8] c"Buf\00", align 1
@@ -247,7 +257,7 @@ define void @byteBufferLoadFloat() {
 ; CHECK-LABEL: define void @byteBufferLoadFloat(
 ; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
 ; CHECK: load i8, ptr addrspace(11)
-; CHECK: bitcast i32 {{.*}} to float
+; CHECK: call float @llvm.spv.bitcast.f32.i32(i32 {{.*}})
 ; CHECK: store float {{.*}}, ptr addrspace(10) @outF
 entry:
   %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)

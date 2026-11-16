@@ -16,6 +16,7 @@
 #include "size_class_map.h"
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
@@ -448,6 +449,52 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, ReleaseToOS) {
   SizeClassAllocator.deallocate(ClassId, P);
   SizeClassAllocator.destroy(nullptr);
   EXPECT_GT(Allocator->releaseToOS(scudo::ReleaseToOS::ForceAll), 0U);
+}
+
+SCUDO_TYPED_TEST(ScudoPrimaryTest, ConcurrentReleaseToOSAndAllocate) {
+  using Primary = TestAllocator<TypeParam, scudo::DefaultSizeClassMap>;
+  std::unique_ptr<Primary> Allocator(new Primary);
+  Allocator->init(/*ReleaseToOsInterval=*/-1);
+
+  scudo::GlobalStats Stats;
+  Stats.init();
+
+  const scudo::uptr ClassId = Primary::SizeClassMap::getClassIdBySize(16384U);
+  typename Primary::SizeClassAllocatorT InitCache;
+  InitCache.init(&Stats, Allocator.get());
+  void *InitPtr = InitCache.allocate(ClassId);
+  ASSERT_NE(InitPtr, nullptr);
+  InitCache.deallocate(ClassId, InitPtr);
+  InitCache.destroy(&Stats);
+  scudo::StatCounters InitialCounters = {};
+  Stats.get(InitialCounters);
+
+  std::atomic<bool> Stop{false};
+  std::thread AllocThread([&]() {
+    typename Primary::SizeClassAllocatorT LocalCache;
+    LocalCache.init(&Stats, Allocator.get());
+    while (!Stop.load(std::memory_order_relaxed)) {
+      void *P = LocalCache.allocate(ClassId);
+      EXPECT_NE(P, nullptr);
+      LocalCache.deallocate(ClassId, P);
+      LocalCache.drain();
+    }
+    LocalCache.destroy(&Stats);
+  });
+
+  for (scudo::uptr I = 0; I < 1000U; ++I)
+    Allocator->releaseToOS(scudo::ReleaseToOS::ForceAll);
+
+  Stop.store(true, std::memory_order_relaxed);
+  AllocThread.join();
+
+  // Only one block of ClassId is ever live at a time, so concurrent ForceAll
+  // calls should reuse the existing freelist blocks rather than mapping more.
+  scudo::StatCounters FinalCounters = {};
+  Stats.get(FinalCounters);
+  EXPECT_EQ(FinalCounters[scudo::StatMapped],
+            InitialCounters[scudo::StatMapped]);
+  EXPECT_EQ(FinalCounters[scudo::StatFree], InitialCounters[scudo::StatFree]);
 }
 
 SCUDO_TYPED_TEST(ScudoPrimaryTest, MemoryGroup) {

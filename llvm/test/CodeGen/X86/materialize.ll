@@ -3,10 +3,10 @@
 ; RUN: llc -mtriple=x86_64-pc-win32 -mattr=+cmov %s -o - | FileCheck %s --check-prefix=CHECKWIN64
 
 ; RUN: llc -mtriple=i686-unknown-linux-gnu -mattr=+cmov %s -o /dev/null \
-; RUN:     -print-after postrapseudos -filter-print-funcs pr26023 2>&1 \
+; RUN:     -print-after post-ra-pseudos -filter-print-funcs pr26023 2>&1 \
 ; RUN:    | FileCheck %s --check-prefix=OPERAND32
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mattr=+cmov %s -o /dev/null \
-; RUN:     -print-after postrapseudos -filter-print-funcs one64_minsize 2>&1 \
+; RUN:     -print-after post-ra-pseudos -filter-print-funcs one64_minsize 2>&1 \
 ; RUN:    | FileCheck %s --check-prefix=OPERAND64
 
 define i32 @one32_nooptsize() {

@@ -241,6 +241,179 @@ struct LessAndEqComp {
 
 #if TEST_STD_VER >= 20
 
+template <typename T1, typename T2 = T1>
+concept HasOperatorEqual = requires(T1 t1, T2 t2) { t1 == t2; };
+
+template <typename T1, typename T2 = T1>
+concept HasOperatorGreaterThan = requires(T1 t1, T2 t2) { t1 > t2; };
+
+template <typename T1, typename T2 = T1>
+concept HasOperatorGreaterThanEqual = requires(T1 t1, T2 t2) { t1 >= t2; };
+template <typename T1, typename T2 = T1>
+concept HasOperatorLessThan = requires(T1 t1, T2 t2) { t1 < t2; };
+
+template <typename T1, typename T2 = T1>
+concept HasOperatorLessThanEqual = requires(T1 t1, T2 t2) { t1 <= t2; };
+
+template <typename T1, typename T2 = T1>
+concept HasOperatorNotEqual = requires(T1 t1, T2 t2) { t1 != t2; };
+
+template <typename T1, typename T2 = T1>
+concept HasOperatorSpaceship = requires(T1 t1, T2 t2) { t1 <=> t2; };
+
+#elif TEST_STD_VER >= 14
+
+template <typename T1, typename T2 = T1, typename = void>
+constexpr bool HasOperatorEqual = false;
+template <typename T1, typename T2>
+constexpr bool HasOperatorEqual<T1, T2, decltype((void)(std::declval<T1&>() == std::declval<T2&>()))> = true;
+
+template <typename T1, typename T2 = T1, typename = void>
+constexpr bool HasOperatorGreaterThan = false;
+template <typename T1, typename T2>
+constexpr bool HasOperatorGreaterThan<T1, T2, decltype((void)(std::declval<T1&>() > std::declval<T2&>()))> = true;
+
+template <typename T1, typename T2 = T1, typename = void>
+constexpr bool HasOperatorGreaterThanEqual = false;
+template <typename T1, typename T2>
+constexpr bool HasOperatorGreaterThanEqual<T1, T2, decltype((void)(std::declval<T1&>() >= std::declval<T2&>()))> = true;
+
+template <typename T1, typename T2 = T1, typename = void>
+constexpr bool HasOperatorLessThan = false;
+template <typename T1, typename T2>
+constexpr bool HasOperatorLessThan<T1, T2, decltype((void)(std::declval<T1&>() < std::declval<T2&>()))> = true;
+
+template <typename T1, typename T2 = T1, typename = void>
+constexpr bool HasOperatorLessThanEqual = false;
+template <typename T1, typename T2>
+constexpr bool HasOperatorLessThanEqual<T1, T2, decltype((void)(std::declval<T1&>() <= std::declval<T2&>()))> = true;
+
+template <typename T1, typename T2 = T1, typename = void>
+constexpr bool HasOperatorNotEqual = false;
+template <typename T1, typename T2>
+constexpr bool HasOperatorNotEqual<T1, T2, decltype((void)(std::declval<T1&>() != std::declval<T2&>()))> = true;
+
+#endif // TEST_STD_VER >= 20
+
+struct NonComparable {};
+
+#if TEST_STD_VER >= 14
+
+static_assert(!HasOperatorEqual<NonComparable>, "");
+static_assert(!HasOperatorGreaterThan<NonComparable>, "");
+static_assert(!HasOperatorGreaterThanEqual<NonComparable>, "");
+static_assert(!HasOperatorLessThan<NonComparable>, "");
+static_assert(!HasOperatorLessThanEqual<NonComparable>, "");
+static_assert(!HasOperatorNotEqual<NonComparable>, "");
+
+#endif // TEST_STD_VER >= 14
+
+#if TEST_STD_VER >= 20
+
+static_assert(!std::equality_comparable<NonComparable>);
+static_assert(!std::totally_ordered<NonComparable>);
+static_assert(!std::three_way_comparable<NonComparable>);
+static_assert(!HasOperatorSpaceship<NonComparable>);
+
+#endif // TEST_STD_VER >= 20
+
+class EqualityComparable {
+public:
+  TEST_CONSTEXPR EqualityComparable(int value) : value_(value) {};
+
+#if TEST_STD_VER >= 20
+  friend constexpr bool operator==(const EqualityComparable&, const EqualityComparable&) noexcept = default;
+#else
+  friend TEST_CONSTEXPR bool operator==(const EqualityComparable& lhs, const EqualityComparable& rhs) TEST_NOEXCEPT {
+    return lhs.value_ == rhs.value_;
+  }
+
+  friend TEST_CONSTEXPR bool operator!=(const EqualityComparable& lhs, const EqualityComparable& rhs) TEST_NOEXCEPT {
+    return !(lhs == rhs);
+  }
+#endif
+
+private:
+  int value_;
+};
+
+#if TEST_STD_VER >= 14
+
+static_assert(HasOperatorEqual<EqualityComparable>, "");
+static_assert(HasOperatorNotEqual<EqualityComparable>, "");
+static_assert(!HasOperatorGreaterThanEqual<EqualityComparable>, "");
+static_assert(!HasOperatorLessThan<EqualityComparable>, "");
+static_assert(!HasOperatorLessThanEqual<EqualityComparable>, "");
+
+#endif // TEST_STD_VER >= 14
+
+#if TEST_STD_VER >= 20
+
+static_assert(std::equality_comparable<EqualityComparable>);
+static_assert(!std::totally_ordered<EqualityComparable>);
+static_assert(!std::three_way_comparable<EqualityComparable>);
+static_assert(!HasOperatorSpaceship<EqualityComparable>);
+
+#endif // TEST_STD_VER >= 20
+
+class TotallyOrdered {
+public:
+  TEST_CONSTEXPR TotallyOrdered(int value) : value_(value) {};
+
+#if TEST_STD_VER >= 20
+  friend constexpr bool operator==(const TotallyOrdered&, const TotallyOrdered&) noexcept = default;
+#else
+  friend TEST_CONSTEXPR bool operator==(const TotallyOrdered& lhs, const TotallyOrdered& rhs) TEST_NOEXCEPT {
+    return lhs.value_ == rhs.value_;
+  }
+
+  friend TEST_CONSTEXPR bool operator!=(const TotallyOrdered& lhs, const TotallyOrdered& rhs) TEST_NOEXCEPT {
+    return !(lhs == rhs);
+  }
+#endif
+
+  friend TEST_CONSTEXPR bool operator<(const TotallyOrdered& lhs, const TotallyOrdered& rhs) TEST_NOEXCEPT {
+    return lhs.value_ < rhs.value_;
+  }
+
+  friend TEST_CONSTEXPR bool operator>(const TotallyOrdered& lhs, const TotallyOrdered& rhs) TEST_NOEXCEPT {
+    return rhs < lhs;
+  }
+
+  friend TEST_CONSTEXPR bool operator<=(const TotallyOrdered& lhs, const TotallyOrdered& rhs) TEST_NOEXCEPT {
+    return !(rhs < lhs);
+  }
+
+  friend TEST_CONSTEXPR bool operator>=(const TotallyOrdered& lhs, const TotallyOrdered& rhs) TEST_NOEXCEPT {
+    return !(lhs < rhs);
+  }
+
+private:
+  int value_;
+};
+
+#if TEST_STD_VER >= 14
+
+static_assert(HasOperatorEqual<TotallyOrdered>, "");
+static_assert(HasOperatorNotEqual<TotallyOrdered>, "");
+static_assert(HasOperatorGreaterThanEqual<TotallyOrdered>, "");
+static_assert(HasOperatorLessThan<TotallyOrdered>, "");
+static_assert(HasOperatorLessThanEqual<TotallyOrdered>, "");
+static_assert(HasOperatorNotEqual<TotallyOrdered>, "");
+
+#endif // TEST_STD_VER >= 14
+
+#if TEST_STD_VER >= 20
+
+static_assert(std::equality_comparable<TotallyOrdered>);
+static_assert(std::totally_ordered<TotallyOrdered>);
+static_assert(!std::three_way_comparable<TotallyOrdered>);
+static_assert(!HasOperatorSpaceship<TotallyOrdered>);
+
+#endif // TEST_STD_VER >= 20
+
+#if TEST_STD_VER >= 20
+
 struct StrongOrder {
   int value;
   constexpr StrongOrder(int v) : value(v) {}
@@ -268,49 +441,6 @@ struct PartialOrder {
   }
 };
 
-template <typename T1, typename T2 = T1>
-concept HasOperatorEqual = requires(T1 t1, T2 t2) { t1 == t2; };
-
-template <typename T1, typename T2 = T1>
-concept HasOperatorGreaterThan = requires(T1 t1, T2 t2) { t1 > t2; };
-
-template <typename T1, typename T2 = T1>
-concept HasOperatorGreaterThanEqual = requires(T1 t1, T2 t2) { t1 >= t2; };
-template <typename T1, typename T2 = T1>
-concept HasOperatorLessThan = requires(T1 t1, T2 t2) { t1 < t2; };
-
-template <typename T1, typename T2 = T1>
-concept HasOperatorLessThanEqual = requires(T1 t1, T2 t2) { t1 <= t2; };
-
-template <typename T1, typename T2 = T1>
-concept HasOperatorNotEqual = requires(T1 t1, T2 t2) { t1 != t2; };
-
-template <typename T1, typename T2 = T1>
-concept HasOperatorSpaceship = requires(T1 t1, T2 t2) { t1 <=> t2; };
-
-struct NonComparable {};
-static_assert(!std::equality_comparable<NonComparable>);
-static_assert(!HasOperatorEqual<NonComparable>);
-static_assert(!HasOperatorGreaterThan<NonComparable>);
-static_assert(!HasOperatorGreaterThanEqual<NonComparable>);
-static_assert(!HasOperatorLessThan<NonComparable>);
-static_assert(!HasOperatorLessThanEqual<NonComparable>);
-static_assert(!HasOperatorNotEqual<NonComparable>);
-static_assert(!HasOperatorSpaceship<NonComparable>);
-
-class EqualityComparable {
-public:
-  constexpr EqualityComparable(int value) : value_{value} {};
-
-  friend constexpr bool operator==(const EqualityComparable&, const EqualityComparable&) noexcept = default;
-
-private:
-  int value_;
-};
-static_assert(std::equality_comparable<EqualityComparable>);
-static_assert(HasOperatorEqual<EqualityComparable>);
-static_assert(HasOperatorNotEqual<EqualityComparable>);
-
 class ThreeWayComparable {
 public:
   constexpr ThreeWayComparable(int value) : value_{value} {};
@@ -332,11 +462,15 @@ static_assert(HasOperatorLessThanEqual<ThreeWayComparable>);
 static_assert(HasOperatorNotEqual<ThreeWayComparable>);
 static_assert(HasOperatorSpaceship<ThreeWayComparable>);
 
+#endif // TEST_STD_VER >= 20
+
+#if TEST_STD_VER >= 11
+
 // LWG4366: Heterogeneous comparison of expected may be ill-formed
 struct ImplicitBool {
   bool val;
   constexpr operator bool() const { return val; };
-  constexpr explicit operator bool() = delete;
+  explicit operator bool() = delete;
 
   struct E1 {
     int x;
@@ -349,6 +483,6 @@ struct ImplicitBool {
 
 constexpr ImplicitBool operator==(ImplicitBool::E1 lhs, ImplicitBool::E2 rhs) { return {lhs.x == rhs.y}; }
 
-#endif // TEST_STD_VER >= 20
+#endif // TEST_STD_VER >= 11
 
 #endif // TEST_COMPARISONS_H

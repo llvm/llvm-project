@@ -763,7 +763,8 @@ struct ForOpInterface
         rewriter, forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
         forOp.getStep(), castedInitArgs, /*bodyBuilder=*/nullptr,
         forOp.getUnsignedCmp());
-    newForOp->setAttrs(forOp->getAttrs());
+    newForOp->setDiscardableAttrs(
+        forOp->getDiscardableAttrDictionary().getValue());
     Block *loopBody = newForOp.getBody();
 
     // Set up new iter_args. The loop body uses tensors, so wrap the (memref)
@@ -1138,10 +1139,9 @@ struct YieldOpInterface
 
   AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
                                       const AnalysisState &state) const {
-    if (auto ifOp = dyn_cast<scf::IfOp>(op->getParentOp())) {
+    if (isa<scf::IfOp, scf::IndexSwitchOp>(op->getParentOp()))
       return {{op->getParentOp()->getResult(opOperand.getOperandNumber()),
                BufferRelation::Equivalent, /*isDefinite=*/false}};
-    }
     if (isa<scf::ExecuteRegionOp>(op->getParentOp()))
       return {{op->getParentOp()->getResult(opOperand.getOperandNumber()),
                BufferRelation::Equivalent}};
@@ -1227,6 +1227,16 @@ struct ForallOpInterface
     auto forallOp = cast<ForallOp>(op);
     return {
         {{forallOp.getTiedOpResult(&opOperand), BufferRelation::Equivalent}}};
+  }
+
+  AliasingOpOperandList
+  getAliasingOpOperands(Operation *op, Value value,
+                        const AnalysisState &state) const {
+    auto result = dyn_cast<OpResult>(value);
+    if (!result)
+      return {};
+    auto forallOp = cast<ForallOp>(op);
+    return {{forallOp.getTiedOpOperand(result), BufferRelation::Equivalent}};
   }
 
   bool isWritable(Operation *op, Value value,

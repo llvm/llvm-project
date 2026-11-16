@@ -26,6 +26,7 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Analysis/ConstantFolding.h"
@@ -762,7 +763,7 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
 
     // Zero-sized fields are not emitted, but their initializers may still
     // prevent emission of this struct as a constant.
-    if (isEmptyFieldForLayout(CGM.getContext(), Field)) {
+    if (CodeGenUtils::isEmptyFieldForLayout(CGM.getContext(), Field)) {
       if (Init && Init->HasSideEffects(CGM.getContext()))
         return false;
       continue;
@@ -925,7 +926,7 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
 
     // Don't emit anonymous bitfields or zero-sized fields.
     if (Field->isUnnamedBitField() ||
-        isEmptyFieldForLayout(CGM.getContext(), *Field))
+        CodeGenUtils::isEmptyFieldForLayout(CGM.getContext(), *Field))
       continue;
 
     // Emit the value of the initializer.
@@ -1885,8 +1886,9 @@ namespace {
         IndexValues[i] = llvm::ConstantInt::get(CGM.Int32Ty, Indices[i]);
       }
 
-      llvm::Constant *location = llvm::ConstantExpr::getInBoundsGetElementPtr(
-          BaseValueTy, Base, IndexValues);
+      llvm::Constant *location = llvm::ConstantExpr::getGetElementPtr(
+          CGM.getDataLayout(), BaseValueTy, Base, IndexValues,
+          llvm::GEPNoWrapFlags::inBounds());
 
       Locations.insert({placeholder, location});
     }
@@ -2084,6 +2086,26 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
       }
       return Res;
     }
+  }
+
+  if (destType->isConstantMatrixType() &&
+      isMatrixRowMajor(CGM.getLangOpts(), destType)) {
+    const auto *MT = destType->castAs<ConstantMatrixType>();
+    SmallVector<llvm::Constant *, 16> Inits(MT->getNumElementsFlattened());
+    for (unsigned Row = 0; Row != MT->getNumRows(); ++Row)
+      for (unsigned Col = 0; Col != MT->getNumColumns(); ++Col)
+        Inits[MT->getRowMajorFlattenedIndex(Row, Col)] =
+            C->getAggregateElement(MT->getColumnMajorFlattenedIndex(Row, Col));
+    llvm::Constant *MemoryValue = llvm::ConstantVector::get(Inits);
+    if (destType->isConstantMatrixBoolType()) {
+      llvm::Constant *Res = llvm::ConstantFoldCastOperand(
+          llvm::Instruction::ZExt, MemoryValue,
+          CGM.getTypes().convertTypeForLoadStore(destType),
+          CGM.getDataLayout());
+      assert(Res && "Constant folding must succeed");
+      return Res;
+    }
+    return MemoryValue;
   }
 
   return C;
@@ -2666,12 +2688,10 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
     unsigned NumElts = NumRows * NumCols;
     SmallVector<llvm::Constant *, 16> Inits(NumElts);
 
-    bool IsRowMajor = isMatrixRowMajor(CGM.getLangOpts(), DestType);
-
     for (unsigned Row = 0; Row != NumRows; ++Row) {
       for (unsigned Col = 0; Col != NumCols; ++Col) {
         const APValue &Elt = Value.getMatrixElt(Row, Col);
-        unsigned Idx = MT->getFlattenedIndex(Row, Col, IsRowMajor);
+        unsigned Idx = MT->getColumnMajorFlattenedIndex(Row, Col);
         if (Elt.isInt())
           Inits[Idx] =
               llvm::ConstantInt::get(CGM.getLLVMContext(), Elt.getInt());
@@ -2754,6 +2774,8 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
   }
   case APValue::MemberPointer:
     return CGM.getCXXABI().EmitMemberPointer(Value, DestType);
+  case APValue::Reflection:
+    llvm_unreachable("std::meta::info is consteval-only type");
   }
   llvm_unreachable("Unknown APValue kind");
 }
@@ -2821,7 +2843,7 @@ static llvm::Constant *EmitNullConstant(CodeGenModule &CGM,
 
       const auto *base = I.getType()->castAsCXXRecordDecl();
       // Ignore empty bases.
-      if (isEmptyRecordForLayout(CGM.getContext(), I.getType()) ||
+      if (CodeGenUtils::isEmptyRecordForLayout(CGM.getContext(), I.getType()) ||
           CGM.getContext()
               .getASTRecordLayout(base)
               .getNonVirtualSize()
@@ -2839,7 +2861,7 @@ static llvm::Constant *EmitNullConstant(CodeGenModule &CGM,
     // Fill in non-bitfields. (Bitfields always use a zero pattern, which we
     // will fill in later.)
     if (!Field->isBitField() &&
-        !isEmptyFieldForLayout(CGM.getContext(), Field)) {
+        !CodeGenUtils::isEmptyFieldForLayout(CGM.getContext(), Field)) {
       unsigned fieldIndex = layout.getLLVMFieldNo(Field);
       elements[fieldIndex] = CGM.EmitNullConstant(Field->getType());
     }
@@ -2859,7 +2881,7 @@ static llvm::Constant *EmitNullConstant(CodeGenModule &CGM,
     for (const auto &I : CXXR->vbases()) {
       const auto *base = I.getType()->castAsCXXRecordDecl();
       // Ignore empty bases.
-      if (isEmptyRecordForLayout(CGM.getContext(), I.getType()))
+      if (CodeGenUtils::isEmptyRecordForLayout(CGM.getContext(), I.getType()))
         continue;
 
       unsigned fieldIndex = layout.getVirtualBaseIndex(base);

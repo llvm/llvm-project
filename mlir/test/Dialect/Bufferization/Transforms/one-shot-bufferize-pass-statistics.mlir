@@ -1,4 +1,7 @@
 // REQUIRES: asserts
+// https://github.com/llvm/llvm-project/issues/124541
+// XFAIL: target-x86
+
 // RUN: mlir-opt %s -one-shot-bufferize="allow-unknown-ops" -mlir-pass-statistics 2>&1 | FileCheck %s
 
 // CHECK: OneShotBufferize

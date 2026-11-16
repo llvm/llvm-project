@@ -60,39 +60,39 @@ public:
     ASSERT_FP_EQ(func(-min_denormal), neg_zero);
   }
 
-  void testSubnormalTowardZero(NearbyIntFunc func) {
+  void testSubnormalTowardZero([[maybe_unused]] NearbyIntFunc func) {
     EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(func(min_denormal), zero);
     EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(func(-min_denormal), neg_zero);
   }
 
-  void testSubnormalToPosInf(NearbyIntFunc func) {
+  void testSubnormalToPosInf([[maybe_unused]] NearbyIntFunc func) {
     EXPECT_FP_EQ_ROUNDING_UPWARD(func(min_denormal), FPBits::one().get_val());
     EXPECT_FP_EQ_ROUNDING_UPWARD(func(-min_denormal), neg_zero);
   }
 
-  void testSubnormalToNegInf(NearbyIntFunc func) {
-    T negative_one = FPBits::one(Sign::NEG).get_val();
+  void testSubnormalToNegInf([[maybe_unused]] NearbyIntFunc func) {
+    [[maybe_unused]] T negative_one = FPBits::one(Sign::NEG).get_val();
     EXPECT_FP_EQ_ROUNDING_DOWNWARD(func(min_denormal), zero);
     EXPECT_FP_EQ_ROUNDING_DOWNWARD(func(-min_denormal), negative_one);
   }
 };
 
-#define LIST_NEARBYINT_TESTS(T, func)                                          \
-  using LlvmLibcNearbyIntTest = NearbyIntTestTemplate<T>;                      \
-  TEST_F(LlvmLibcNearbyIntTest, TestNaN) { testNaN(&func); }                   \
-  TEST_F(LlvmLibcNearbyIntTest, TestInfinities) { testInfinities(&func); }     \
-  TEST_F(LlvmLibcNearbyIntTest, TestZeroes) { testZeroes(&func); }             \
-  TEST_F(LlvmLibcNearbyIntTest, TestIntegers) { testIntegers(&func); }         \
-  TEST_F(LlvmLibcNearbyIntTest, TestSubnormalToNearest) {                      \
+#define LIST_NEARBYINT_TESTS(Name, T, func)                                    \
+  using LlvmLibc##Name##Test = NearbyIntTestTemplate<T>;                       \
+  TEST_F(LlvmLibc##Name##Test, TestNaN) { testNaN(&func); }                    \
+  TEST_F(LlvmLibc##Name##Test, TestInfinities) { testInfinities(&func); }      \
+  TEST_F(LlvmLibc##Name##Test, TestZeroes) { testZeroes(&func); }              \
+  TEST_F(LlvmLibc##Name##Test, TestIntegers) { testIntegers(&func); }          \
+  TEST_F(LlvmLibc##Name##Test, TestSubnormalToNearest) {                       \
     testSubnormalToNearest(&func);                                             \
   }                                                                            \
-  TEST_F(LlvmLibcNearbyIntTest, TestSubnormalTowardZero) {                     \
+  TEST_F(LlvmLibc##Name##Test, TestSubnormalTowardZero) {                      \
     testSubnormalTowardZero(&func);                                            \
   }                                                                            \
-  TEST_F(LlvmLibcNearbyIntTest, TestSubnormalToPosInf) {                       \
+  TEST_F(LlvmLibc##Name##Test, TestSubnormalToPosInf) {                        \
     testSubnormalToPosInf(&func);                                              \
   }                                                                            \
-  TEST_F(LlvmLibcNearbyIntTest, TestSubnormalToNegInf) {                       \
+  TEST_F(LlvmLibc##Name##Test, TestSubnormalToNegInf) {                        \
     testSubnormalToNegInf(&func);                                              \
   }
 

@@ -463,10 +463,9 @@ define <8 x i16> @test_vrev32Q16_undef(ptr %A) nounwind {
 define void @test_vrev64(ptr nocapture %source, ptr nocapture %dst) nounwind ssp {
 ; CHECK-SD-LABEL: test_vrev64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldr q0, [x0]
-; CHECK-SD-NEXT:    mov h1, v0[5]
-; CHECK-SD-NEXT:    st1.h { v0 }[6], [x1]
-; CHECK-SD-NEXT:    str h1, [x1, #2]
+; CHECK-SD-NEXT:    ldr d0, [x0, #8]
+; CHECK-SD-NEXT:    mov.h v0[0], v0[2]
+; CHECK-SD-NEXT:    str s0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_vrev64:
@@ -492,7 +491,6 @@ define void @float_vrev64(ptr nocapture %source, ptr nocapture %dest) nounwind n
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi.2d v0, #0000000000000000
 ; CHECK-SD-NEXT:    add x8, x0, #12
-; CHECK-SD-NEXT:    dup.4s v0, v0[0]
 ; CHECK-SD-NEXT:    ld1.s { v0 }[1], [x8]
 ; CHECK-SD-NEXT:    str q0, [x1, #176]
 ; CHECK-SD-NEXT:    ret
@@ -500,10 +498,9 @@ define void @float_vrev64(ptr nocapture %source, ptr nocapture %dest) nounwind n
 ; CHECK-GI-LABEL: float_vrev64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    movi d0, #0000000000000000
-; CHECK-GI-NEXT:    adrp x8, .LCPI36_0
 ; CHECK-GI-NEXT:    ldr q1, [x0]
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI36_0]
-; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v2
+; CHECK-GI-NEXT:    dup.4s v0, v0[0]
+; CHECK-GI-NEXT:    mov.s v0[1], v1[3]
 ; CHECK-GI-NEXT:    str q0, [x1, #176]
 ; CHECK-GI-NEXT:    ret
 entry:
