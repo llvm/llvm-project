@@ -74,7 +74,6 @@ name:            test3
 alignment:       16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 1, class: vecr }
 body:             |

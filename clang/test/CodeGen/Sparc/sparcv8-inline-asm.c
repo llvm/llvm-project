@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -triple sparc-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple sparc-unknown-unknown -emit-llvm %s -o - | FileCheck %s %}
 
-// CHECK: define{{.*}} float @fabsf(float noundef %a)
+// CHECK: define{{.*}} float @fabsf(float noundef %{{.*}})
 // CHECK: %{{.*}} = call float asm sideeffect "fabss $1, $0;", "=e,f,~{y}"(float %{{.*}})
 float fabsf(float a) {
   float res;

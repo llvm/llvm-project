@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaHexagon.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/STLExtras.h"
 #include <cstdint>
@@ -285,6 +287,20 @@ bool SemaHexagon::CheckHexagonBuiltinArgument(unsigned BuiltinID,
 bool SemaHexagon::CheckHexagonBuiltinFunctionCall(unsigned BuiltinID,
                                                   CallExpr *TheCall) {
   return CheckHexagonBuiltinArgument(BuiltinID, TheCall);
+}
+
+bool SemaHexagon::isHLXVectorType(QualType T) const {
+  const ASTContext &Context = getASTContext();
+  const TargetInfo &TI = Context.getTargetInfo();
+  if (TI.getTriple().getArch() != llvm::Triple::hexagon ||
+      !TI.hasFeature("hlx"))
+    return false;
+  const auto *VecT = T->getBaseElementTypeUnsafe()->getAs<VectorType>();
+  if (!VecT)
+    return false;
+  // HLX vectors are 2048 bytes long and vector pairs 4096 bytes.
+  uint64_t Size = Context.getTypeSizeInChars(VecT).getQuantity();
+  return Size == 2048 || Size == 4096;
 }
 
 } // namespace clang

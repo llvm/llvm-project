@@ -2,7 +2,7 @@
 
 
 ; CHECK-LABEL: @branch_ptr_var_same_alloca(
-; CHECK: [[GEP:%[0-9]+]] = getelementptr inbounds [256 x [64 x i32]], ptr addrspace(3) @branch_ptr_var_same_alloca.alloca, i32 0, i32 %{{[0-9]+}}
+; CHECK: [[GEP:%[0-9]+]] = getelementptr inbounds [256 x i8], ptr addrspace(3) @branch_ptr_var_same_alloca.alloca, i32 %{{[0-9]+}}
 
 ; CHECK: if:
 ; CHECK: %arrayidx0 = getelementptr inbounds [64 x i32], ptr addrspace(3) [[GEP]], i32 0, i32 %a
@@ -67,7 +67,7 @@ endif:
 }
 
 ; CHECK-LABEL: @one_phi_value(
-; CHECK: [[GEP0:%[0-9]+]] = getelementptr inbounds [256 x [64 x i32]], ptr addrspace(3) @one_phi_value.alloca, i32 0, i32 %{{[0-9]+}}
+; CHECK: [[GEP0:%[0-9]+]] = getelementptr inbounds [256 x i8], ptr addrspace(3) @one_phi_value.alloca, i32 %{{[0-9]+}}
 ; CHECK:  %arrayidx0 = getelementptr inbounds [64 x i32], ptr addrspace(3) [[GEP0]], i32 0, i32 %a
 
 ; CHECK: br label %exit

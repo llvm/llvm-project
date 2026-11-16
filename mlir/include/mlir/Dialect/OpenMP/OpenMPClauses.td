@@ -1759,18 +1759,21 @@ def OpenMP_SimdlenClause : OpenMP_SimdlenClauseSkip<>;
 
 class OpenMP_TaskReductionClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false
+    bit description = false, bit extraClassDeclaration = false,
+    bit boundedRecipeEffects = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let traits = [
     BlockArgOpenMPOpInterface
   ];
 
-  let arguments = (ins
+  let arguments = !con((ins
     Variadic<OpenMP_PointerLikeType>:$task_reduction_vars,
     OptionalAttr<DenseBoolArrayAttr>:$task_reduction_byref,
     OptionalAttr<SymbolRefArrayAttr>:$task_reduction_syms
-  );
+  ), !if(boundedRecipeEffects, (ins
+    UnitAttr:$task_reduction_assume_bounded_recipe_effects
+  ), (ins)));
 
   let description = [{
     The `task_reduction` clause specifies a reduction among tasks. For each list
@@ -1782,6 +1785,17 @@ class OpenMP_TaskReductionClauseSkip<
     symbols referring to reduction declarations in the `task_reduction_syms`
     attribute, and whether the reduction variable should be passed into the
     reduction region by value or by reference in `task_reduction_byref`.
+
+    The optional `task_reduction_assume_bounded_recipe_effects` unit attribute
+    asserts that all regions of every referenced reduction recipe may only read
+    or write the original variable and allocate, free, read or write private
+    accumulators.
+
+    These effects apply only to storage directly designated by the original
+    variables and their corresponding private block arguments. Recipes may not
+    access other storage, including globals or pointees reached by loading
+    pointers from these variables. Without the attribute, referenced reduction
+    recipes are assumed to have arbitrary memory effects.
   }];
 
   // Assembly format not defined because this clause must be processed together

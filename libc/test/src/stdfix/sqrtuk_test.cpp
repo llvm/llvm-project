@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SqrtTest.h"
+#include "test/src/stdfix/SqrtTest.h"
 
 #include "src/stdfix/sqrtuk.h"
 

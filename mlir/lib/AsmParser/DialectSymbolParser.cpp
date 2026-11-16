@@ -108,7 +108,6 @@ ParseResult Parser::parseDialectSymbolBody(StringRef &body,
     char c = *curPtr++;
     switch (c) {
     case '\0':
-      // This also handles the EOF case.
       if (!nestedPunctuation.empty())
         return emitPunctError();
       return emitError("unexpected nul or EOF in pretty dialect name");
@@ -121,7 +120,7 @@ ParseResult Parser::parseDialectSymbolBody(StringRef &body,
 
     case '-':
       // The sequence `->` is treated as special token.
-      if (*curPtr == '>')
+      if (curPtr != curBufferEnd && *curPtr == '>')
         ++curPtr;
       continue;
 

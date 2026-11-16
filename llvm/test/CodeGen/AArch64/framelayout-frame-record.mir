@@ -2,7 +2,6 @@
 
 ---
 name: TestFrameRecordLocation
-tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: true
 body: |
