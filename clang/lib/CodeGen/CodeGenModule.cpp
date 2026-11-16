@@ -3767,14 +3767,12 @@ void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
   if (isa<CXXMethodDecl>(FD) && !cast<CXXMethodDecl>(FD)->isStatic())
     return;
 
-  QualType FnType = GeneralizeFunctionType(getContext(), FD->getType(),
-                                           /*GeneralizePointers=*/false);
-  llvm::Metadata *MD = CreateMetadataIdentifierForType(FnType);
+  llvm::Metadata *MD = CreateMetadataIdentifierForCFIFnType(
+      FD->getType(), /*GeneralizePointers=*/false);
   F->addTypeMetadata(0, MD);
 
-  QualType GenPtrFnType = GeneralizeFunctionType(getContext(), FD->getType(),
-                                                 /*GeneralizePointers=*/true);
-  F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(GenPtrFnType));
+  F->addTypeMetadata(0, CreateMetadataIdentifierForCFIFnType(
+                            FD->getType(), /*GeneralizePointers=*/true));
 
   // Emit a hash-based bit set entry for cross-DSO calls.
   if (CodeGenOpts.SanitizeCfiCrossDso)
@@ -8770,8 +8768,10 @@ void CodeGenModule::EmitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *D) {
   }
 }
 
-llvm::Metadata *CodeGenModule::CreateMetadataIdentifierImpl(
-    QualType T, MetadataTypeMap &Map, StringRef Suffix, bool ForceString) {
+llvm::Metadata *
+CodeGenModule::CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
+                                            StringRef Suffix, bool ForceString,
+                                            bool NormalizeIntegers) {
   if (auto *FnType = T->getAs<FunctionProtoType>())
     T = getContext().getFunctionType(
         FnType->getReturnType(), FnType->getParamTypes(),
@@ -8784,10 +8784,10 @@ llvm::Metadata *CodeGenModule::CreateMetadataIdentifierImpl(
   if (ForceString || isExternallyVisible(T->getLinkage())) {
     std::string OutName;
     llvm::raw_string_ostream Out(OutName);
-    getCXXABI().getMangleContext().mangleCanonicalTypeName(
-        T, Out, getCodeGenOpts().SanitizeCfiICallNormalizeIntegers);
+    getCXXABI().getMangleContext().mangleCanonicalTypeName(T, Out,
+                                                           NormalizeIntegers);
 
-    if (getCodeGenOpts().SanitizeCfiICallNormalizeIntegers)
+    if (NormalizeIntegers)
       Out << ".normalized";
 
     Out << Suffix;
@@ -8801,13 +8801,24 @@ llvm::Metadata *CodeGenModule::CreateMetadataIdentifierImpl(
   return InternalId;
 }
 
-llvm::Metadata *CodeGenModule::CreateMetadataIdentifierForFnType(QualType T) {
-  assert(isa<FunctionType>(T));
-  T = GeneralizeFunctionType(
-      getContext(), T, getCodeGenOpts().SanitizeCfiICallGeneralizePointers);
-  if (getCodeGenOpts().SanitizeCfiICallGeneralizePointers)
-    return CreateMetadataIdentifierGeneralized(T);
-  return CreateMetadataIdentifierForType(T);
+llvm::Metadata *
+CodeGenModule::CreateMetadataIdentifierForCFIFnType(QualType T,
+                                                    bool GeneralizePointers) {
+  assert(T->isFunctionType());
+  T = GeneralizeFunctionType(getContext(), T, GeneralizePointers);
+  bool NormalizeIntegers = getCodeGenOpts().SanitizeCfiICallNormalizeIntegers;
+  if (GeneralizePointers)
+    return CreateMetadataIdentifierImpl(T, GeneralizedMetadataIdMap,
+                                        ".generalized", /*ForceString=*/false,
+                                        NormalizeIntegers);
+  return CreateMetadataIdentifierImpl(T, CfiICallMetadataIdMap, "",
+                                      /*ForceString=*/false, NormalizeIntegers);
+}
+
+llvm::Metadata *
+CodeGenModule::CreateMetadataIdentifierForCFIFnType(QualType T) {
+  return CreateMetadataIdentifierForCFIFnType(
+      T, getCodeGenOpts().SanitizeCfiICallGeneralizePointers);
 }
 
 llvm::Metadata *CodeGenModule::CreateMetadataIdentifierForType(QualType T) {
@@ -8817,11 +8828,6 @@ llvm::Metadata *CodeGenModule::CreateMetadataIdentifierForType(QualType T) {
 llvm::Metadata *
 CodeGenModule::CreateMetadataIdentifierForVirtualMemPtrType(QualType T) {
   return CreateMetadataIdentifierImpl(T, VirtualMetadataIdMap, ".virtual");
-}
-
-llvm::Metadata *CodeGenModule::CreateMetadataIdentifierGeneralized(QualType T) {
-  return CreateMetadataIdentifierImpl(T, GeneralizedMetadataIdMap,
-                                      ".generalized", /*ForceString=*/false);
 }
 
 // Applies C default argument promotions to a parameter type.
