@@ -1490,6 +1490,7 @@ void ByteCodeExecutor::processNativeFunResults(
   // Store the results in the bytecode memory
   for (unsigned resultIdx = 0; resultIdx < numResults; resultIdx++) {
     PDLValue::Kind resultKind = read<PDLValue::Kind>();
+    (void)resultKind;
     PDLValue result = results.getResults()[resultIdx];
     LDBG() << "  * Result: " << result;
     assert(result.getKind() == resultKind &&
@@ -1497,13 +1498,15 @@ void ByteCodeExecutor::processNativeFunResults(
            "result");
     // If the result is a range, we need to copy it over to the bytecodes
     // range memory.
-    if (resultKind == PDLValue::Kind::TypeRange) {
+    if (std::optional<TypeRange> typeRange =
+            llvm::dyn_cast_if_present<TypeRange>(result)) {
       unsigned rangeIndex = read();
-      typeRangeMemory[rangeIndex] = result.cast<TypeRange>();
+      typeRangeMemory[rangeIndex] = *typeRange;
       memory[read()] = &typeRangeMemory[rangeIndex];
-    } else if (resultKind == PDLValue::Kind::ValueRange) {
+    } else if (std::optional<ValueRange> valueRange =
+                   llvm::dyn_cast_if_present<ValueRange>(result)) {
       unsigned rangeIndex = read();
-      valueRangeMemory[rangeIndex] = result.cast<ValueRange>();
+      valueRangeMemory[rangeIndex] = *valueRange;
       memory[read()] = &valueRangeMemory[rangeIndex];
     } else {
       memory[read()] = result.getAsOpaquePointer();
