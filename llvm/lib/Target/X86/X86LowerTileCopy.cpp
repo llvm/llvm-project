@@ -75,7 +75,9 @@ static void emitACETileReload(MachineBasicBlock &MBB,
     addFrameReference(MIB, TileSS, Row * ACETileRowSize);
 
     // tilemovrow $row, %zmm, %tmm
+    // Each write merges into the tile; row 0 has nothing to merge with.
     BuildMI(MBB, MI, DL, TII->get(X86::TILEMOVROWtri), DstReg)
+        .addReg(DstReg, Row == 0 ? RegState::Undef : RegState::NoFlags)
         .addReg(ScratchZMM, RegState::Kill)
         .addImm(Row);
   }
@@ -152,10 +154,11 @@ static bool lowerTileCopy(MachineFunction &MF) {
 
       // Expand the tile spill/reload pseudos inserted by the register
       // allocator. getLoadStoreRegOpcode is the only place these are created,
-      // and it only does so for ACE targets.
+      // and it only does so for palette 2 tiles.
       unsigned Opcode = MI.getOpcode();
       if (Opcode == X86::ACE_TILESPILL || Opcode == X86::ACE_TILERELOAD) {
-        assert(ST.hasACEV1() && "ACE tile spill pseudo on non-ACE target");
+        assert(FuncInfo->getACEProgModel() == ACEProgModelEnum::ACE_ManagedRA &&
+               "ACE tile spill pseudo outside an ACE function");
         bool IsSpill = Opcode == X86::ACE_TILESPILL;
         // ACE_TILESPILL is (mem, tile), ACE_TILERELOAD is (tile, mem).
         MachineOperand &TileMO =
@@ -207,9 +210,9 @@ static bool lowerTileCopy(MachineFunction &MF) {
 
       const DebugLoc &DL = MI.getDebugLoc();
 
-      // ACE configures palette 2, which has no TILELOADD/TILESTORED, so copy
-      // the tile row-by-row through a scratch ZMM.
-      if (ST.hasACEV1()) {
+      // Palette 2 has no TILELOADD/TILESTORED, so copy the tile row-by-row
+      // through a scratch ZMM.
+      if (FuncInfo->getACEProgModel() == ACEProgModelEnum::ACE_ManagedRA) {
         Register ScratchZMM = findScratchZMM(MF, TRI, UsedRegs);
         int ZmmSS = -1;
         if (!ScratchZMM) {

@@ -812,6 +812,13 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     unsigned Opc = (Opcode == X86::PTILEMOVCOLtreV) ? X86::TILEMOVCOLtre
                                                     : X86::TILEMOVROWtre;
     MI.setDesc(TII->get(Opc));
+    // The write merges into the destination tile, which these intrinsics don't
+    // provide, so merge with undef. addOperand ties it, per the descriptor.
+    MI.insert(MI.operands_begin() + 1,
+              MachineOperand::CreateReg(MI.getOperand(0).getReg(),
+                                        /*isDef=*/false, /*isImp=*/false,
+                                        /*isKill=*/false, /*isDead=*/false,
+                                        /*isUndef=*/true));
     return true;
   }
   case X86::PTILESTOREDV: {

@@ -103,27 +103,29 @@ let SchedRW = [WriteSystem] in {
 }
 
 // TILEMOVCOL - Move Column from Vector to Tile
-let SchedRW = [WriteSystem] in {
+// Writes one column and keeps the rest, so $dst is a source too.
+let Constraints = "$src0 = $dst", SchedRW = [WriteSystem] in {
   def TILEMOVCOLtri : Ii8<0x2F, MRMSrcReg, (outs TILE:$dst),
-                          (ins VR512:$src, u8imm:$idx),
+                          (ins TILE:$src0, VR512:$src, u8imm:$idx),
                           "tilemovcol\t{$idx, $src, $dst|$dst, $src, $idx}", []>,
                           EVEX, PD, TA, REX_W, EVEX_V512;
 
   def TILEMOVCOLtre : I<0x4B, MRMSrcReg4VOp3, (outs TILE:$dst),
-                        (ins VR512:$src, GR32:$idx),
+                        (ins TILE:$src0, VR512:$src, GR32:$idx),
                         "tilemovcol\t{$idx, $src, $dst|$dst, $src, $idx}", []>,
                         EVEX, PD, T8, REX_W, VVVV, EVEX_V512;
 }
 
 // TILEMOVROW - Move Row from Vector to Tile
-let SchedRW = [WriteSystem] in {
+// Writes one row and keeps the rest, so $dst is a source too.
+let Constraints = "$src0 = $dst", SchedRW = [WriteSystem] in {
   def TILEMOVROWtri : Ii8<0x07, MRMSrcReg, (outs TILE:$dst),
-                          (ins VR512:$src, u8imm:$idx),
+                          (ins TILE:$src0, VR512:$src, u8imm:$idx),
                           "tilemovrow\t{$idx, $src, $dst|$dst, $src, $idx}", []>,
                           EVEX, PD, TA, REX_W, EVEX_V512;
 
   def TILEMOVROWtre : I<0x4A, MRMSrcReg4VOp3, (outs TILE:$dst),
-                        (ins VR512:$src, GR32:$idx),
+                        (ins TILE:$src0, VR512:$src, GR32:$idx),
                         "tilemovrow\t{$idx, $src, $dst|$dst, $src, $idx}", []>,
                         EVEX, PD, T8, REX_W, VVVV, EVEX_V512;
 }
