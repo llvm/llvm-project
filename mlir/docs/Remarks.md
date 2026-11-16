@@ -313,8 +313,10 @@ dropped, also when the replacement comes from another function or is the linking
 remark itself. A match indicates a relationship, not causality, and the IR may
 have changed since.
 
-Each query scans all pending and emitted remarks, and a broad query in a loop
-produces many links; a known ID links without a query through
+Queries with `at(loc)` use location indexes for emitted remarks and Final's
+pending candidates, then check the remaining criteria. Final builds its index
+on the first location query of each batch. Queries without a location scan all
+remarks. A broad query in a loop produces many links; a known ID links through
 `RemarkOpts::relatedTo(id)`. Each link is serialized as its own `RelatedTo`
 argument.
 
