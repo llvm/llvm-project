@@ -345,9 +345,18 @@ void ReachingDefInfo::print(raw_ostream &OS) {
   }
 }
 
-bool ReachingDefInfoWrapperPass::runOnMachineFunction(MachineFunction &mf) {
-  RDI.run(mf);
+bool ReachingDefInfoWrapperPass::runOnMachineFunction(MachineFunction &MF) {
+  RDI.releaseMemory();
+  PendingMF = &MF;
   return false;
+}
+
+ReachingDefInfo &ReachingDefInfoWrapperPass::getRDI() {
+  if (PendingMF) {
+    RDI.run(*PendingMF);
+    PendingMF = nullptr;
+  }
+  return RDI;
 }
 
 void ReachingDefInfo::releaseMemory() {
@@ -357,6 +366,7 @@ void ReachingDefInfo::releaseMemory() {
   MBBFrameObjsReachingDefs.clear();
   InstIds.clear();
   LiveRegs.clear();
+  TraversedMBBOrder.clear();
 }
 
 void ReachingDefInfo::reset() {
