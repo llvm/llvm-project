@@ -3338,9 +3338,11 @@ void InformationCache::initializeInformationCache(const Function &CF,
       FI.RWInsts.push_back(&I);
   }
 
-  if (F.hasFnAttribute(Attribute::AlwaysInline) &&
-      isInlineViable(F).isSuccess())
+  bool IsInlineable = F.hasFnAttribute(Attribute::AlwaysInline) &&
+                      isInlineViable(F).isSuccess();
+  if (IsInlineable)
     InlineableFunctions.insert(&F);
+  FI.IsExactOrInlineable = IsInlineable || F.hasExactDefinition();
 }
 
 void InformationCache::collectAssumeOnlyValues(FunctionInfo &FI) {

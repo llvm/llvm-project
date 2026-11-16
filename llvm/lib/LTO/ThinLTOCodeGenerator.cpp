@@ -555,14 +555,15 @@ static void resolvePrevailingInIndex(
 }
 
 // Initialize the TargetMachine builder for a given Triple
-static void initTMBuilder(TargetMachineBuilder &TMBuilder,
+static void initTMBuilder(const cl::LibraryOptionsContext &LibraryOptions,
+                          TargetMachineBuilder &TMBuilder,
                           const Triple &TheTriple) {
   if (TMBuilder.MCpu.empty())
     TMBuilder.MCpu = lto::getThinLTODefaultCPU(TheTriple);
   TMBuilder.TheTriple = std::move(TheTriple);
   // If data-sections is not explicitly set or unset, set data-sections by
   // default to match the behaviour of lld and gold plugin.
-  if (!codegen::getExplicitDataSections())
+  if (!codegen::getExplicitDataSections(LibraryOptions))
     TMBuilder.Options.DataSections = true;
 }
 
@@ -578,12 +579,13 @@ void ThinLTOCodeGenerator::addModule(StringRef Identifier, StringRef Data) {
   Triple TheTriple(TripleStr);
 
   if (Modules.empty())
-    initTMBuilder(TMBuilder, Triple(TheTriple));
+    initTMBuilder(LibraryOptions, TMBuilder, Triple(TheTriple));
   else if (TMBuilder.TheTriple != TheTriple) {
     if (!TMBuilder.TheTriple.isCompatibleWith(TheTriple))
       report_fatal_error("ThinLTO modules with incompatible triples not "
                          "supported");
-    initTMBuilder(TMBuilder, Triple(TMBuilder.TheTriple.merge(TheTriple)));
+    initTMBuilder(LibraryOptions, TMBuilder,
+                  Triple(TMBuilder.TheTriple.merge(TheTriple)));
   }
 
   Modules.emplace_back(std::move(*InputOrError));
@@ -873,7 +875,7 @@ void ThinLTOCodeGenerator::emitImports(Module &TheModule, StringRef OutputName,
 void ThinLTOCodeGenerator::internalize(Module &TheModule,
                                        ModuleSummaryIndex &Index,
                                        const lto::InputFile &File) {
-  initTMBuilder(TMBuilder, TheModule.getTargetTriple());
+  initTMBuilder(LibraryOptions, TMBuilder, TheModule.getTargetTriple());
   auto ModuleCount = Index.modulePaths().size();
   auto ModuleIdentifier = TheModule.getModuleIdentifier();
 
@@ -934,7 +936,7 @@ void ThinLTOCodeGenerator::internalize(Module &TheModule,
  * Perform post-importing ThinLTO optimizations.
  */
 void ThinLTOCodeGenerator::optimize(Module &TheModule) {
-  initTMBuilder(TMBuilder, TheModule.getTargetTriple());
+  initTMBuilder(LibraryOptions, TMBuilder, TheModule.getTargetTriple());
 
   // Optimize now
   optimizeModule(TheModule, *TMBuilder.create(), OptLevel, Freestanding,

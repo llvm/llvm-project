@@ -157,6 +157,20 @@ void SystemZXPLINKAsmPrinter::emitInstruction(const MachineInstr *MI) {
                     .addReg(0);
     break;
 
+  case SystemZ::XPLINK_STACKRESTORE: {
+    if (!StackRestoreStub)
+      StackRestoreStub = OutContext.createTempSymbol("stackrestore");
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::LARL)
+                                     .addReg(SystemZ::R3D)
+                                     .addExpr(MCSymbolRefExpr::create(
+                                         StackRestoreStub, OutContext)));
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(SystemZ::BASR).addReg(SystemZ::R3D).addReg(SystemZ::R3D));
+    emitCallInformation(CallType::BASR33);
+    return;
+  }
+
   case SystemZ::CallBASR_STACKEXT:
     EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BASR)
                                      .addReg(SystemZ::R3D)
@@ -267,6 +281,15 @@ void SystemZXPLINKAsmPrinter::emitXXStructorList(const DataLayout &DL,
       OutStreamer->emitValue(ADAFuncRefExpr, PointerSizeInBytes);
     }
   }
+}
+
+bool SystemZXPLINKAsmPrinter::doFinalization(Module &M) {
+  // The stack restore stub follows the last function. It must be emitted
+  // before the debug information is finalized, which may end the code section
+  // (emitEndOfAsmFile is too late).
+  if (StackRestoreStub)
+    emitStackRestoreStub();
+  return SystemZAsmPrinter::doFinalization(M);
 }
 
 void SystemZXPLINKAsmPrinter::emitEndOfAsmFile(Module &M) {
@@ -694,6 +717,51 @@ void SystemZXPLINKAsmPrinter::emitStartOfAsmFile(Module &M) {
       MainFn && !MainFn->isDeclaration())
     emitCELQMAIN(*MainFn);
   AsmPrinter::emitStartOfAsmFile(M);
+}
+
+// Emit the stack restore stub. A stack restore must copy the frame header
+// (which @@ALCAXP moved down with the stack pointer) to the restored stack
+// pointer, and no signal may be delivered while the stack pointer is changed
+// and the header is copied. Language Environment delays signals while a stub
+// runs, so this is done in a stub routine: it has a stub entry marker
+// (preceded by 8 bytes of padding, so that the entry is 16 bytes after the
+// start, like for a normal routine), no PPA1 and no save area. Like the stack
+// extension routine, it is called with BASR 3,3 and returns with B 2(3). It
+// gets the new stack pointer in R1. The new stack pointer is never below the
+// current one, and both are multiples of 32 apart (0 if no storage was
+// allocated), so copying the header in blocks of 32 bytes from the highest
+// block down never overwrites a block that is still to be copied.
+void SystemZXPLINKAsmPrinter::emitStackRestoreStub() {
+  const MCSubtargetInfo &STI = TM.getMCSubtargetInfo();
+  auto Emit = [&](const MCInst &Inst) {
+    OutStreamer->emitInstruction(Inst, STI);
+  };
+
+  OutStreamer->pushSection();
+  OutStreamer->switchSection(getObjFileLowering().getTextSection());
+  OutStreamer->emitValueToAlignment(Align(8));
+  OutStreamer->AddComment("XPLINK Stub Entry Padding");
+  OutStreamer->emitIntValue(0, 8);
+  OutStreamer->AddComment("XPLINK Stub Entry Marker");
+  OutStreamer->AddComment("Eyecatcher 0x00C300C500C500");
+  OutStreamer->emitIntValueInHex(0x00C300C500C500, 7);
+  OutStreamer->AddComment("Mark Type C'4'");
+  OutStreamer->emitInt8(0xF4);
+  OutStreamer->emitLabel(StackRestoreStub);
+
+  SystemZXPLINK64Registers Regs;
+  const int Bias = Regs.getStackPointerBias();
+  const int Block = 32;
+  for (int Off = Regs.getCallFrameSize() - Block; Off >= 0; Off -= Block)
+    Emit(MCInstBuilder(SystemZ::MVC)
+             .addReg(SystemZ::R1D)
+             .addImm(Bias + Off)
+             .addImm(Block)
+             .addReg(SystemZ::R4D)
+             .addImm(Bias + Off));
+  Emit(MCInstBuilder(SystemZ::LGR).addReg(SystemZ::R4D).addReg(SystemZ::R1D));
+  Emit(MCInstBuilder(SystemZ::B).addReg(SystemZ::R3D).addImm(2).addReg(0));
+  OutStreamer->popSection();
 }
 
 void SystemZXPLINKAsmPrinter::emitPPA2(Module &M) {
