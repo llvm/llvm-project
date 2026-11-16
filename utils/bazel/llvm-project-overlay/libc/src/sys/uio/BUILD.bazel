@@ -24,8 +24,8 @@ libc_function(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:types_ssize_t",
-        "//libc:types_struct_iovec",
+        "//libc/hdr/types:ssize_t",
+        "//libc/hdr/types:struct_iovec",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:readv",
@@ -43,8 +43,8 @@ libc_function(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:types_ssize_t",
-        "//libc:types_struct_iovec",
+        "//libc/hdr/types:ssize_t",
+        "//libc/hdr/types:struct_iovec",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:writev",

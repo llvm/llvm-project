@@ -33,8 +33,8 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_errno_macros",
-        "//libc:hdr_signal_macros",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:signal_macros",
         "//libc/src/__support:integer_to_string",
         "//libc/src/__support/CPP:array",
         "//libc/src/__support/CPP:optional",

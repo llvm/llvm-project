@@ -31,7 +31,7 @@ libc_function(
     srcs = ["fetestexceptflag.cpp"],
     hdrs = ["fetestexceptflag.h"],
     deps = [
-        "//libc:types_fexcept_t",
+        "//libc/hdr/types:fexcept_t",
         "//libc/src/__support:common",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/__support/macros:config",
@@ -120,7 +120,7 @@ libc_function(
     srcs = ["fegetenv.cpp"],
     hdrs = ["fegetenv.h"],
     deps = [
-        "//libc:types_fenv_t",
+        "//libc/hdr/types:fenv_t",
         "//libc/src/__support:common",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/__support/macros:config",
@@ -132,7 +132,7 @@ libc_function(
     srcs = ["fesetenv.cpp"],
     hdrs = ["fesetenv.h"],
     deps = [
-        "//libc:types_fenv_t",
+        "//libc/hdr/types:fenv_t",
         "//libc/src/__support:common",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/__support/macros:config",
@@ -144,7 +144,7 @@ libc_function(
     srcs = ["feupdateenv.cpp"],
     hdrs = ["feupdateenv.h"],
     deps = [
-        "//libc:types_fenv_t",
+        "//libc/hdr/types:fenv_t",
         "//libc/src/__support:common",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/__support/macros:config",
@@ -167,7 +167,7 @@ libc_function(
     srcs = ["fegetexceptflag.cpp"],
     hdrs = ["fegetexceptflag.h"],
     deps = [
-        "//libc:types_fexcept_t",
+        "//libc/hdr/types:fexcept_t",
         "//libc/src/__support:common",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/__support/macros:config",
@@ -179,7 +179,7 @@ libc_function(
     srcs = ["fesetexceptflag.cpp"],
     hdrs = ["fesetexceptflag.h"],
     deps = [
-        "//libc:types_fexcept_t",
+        "//libc/hdr/types:fexcept_t",
         "//libc/src/__support:common",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/__support/macros:config",
@@ -191,7 +191,7 @@ libc_function(
     srcs = ["feholdexcept.cpp"],
     hdrs = ["feholdexcept.h"],
     deps = [
-        "//libc:types_fenv_t",
+        "//libc/hdr/types:fenv_t",
         "//libc/src/__support:common",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/__support/macros:config",

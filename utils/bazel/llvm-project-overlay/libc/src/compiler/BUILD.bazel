@@ -20,7 +20,7 @@ libc_support_library(
     srcs = ["generic/__stack_chk_fail.cpp"],
     hdrs = ["__stack_chk_fail.h"],
     deps = [
-        "//libc:hdr_stdint_proxy",
+        "//libc/hdr:stdint_proxy",
         "//libc/src/__support/OSUtil:io",
         "//libc/src/stdlib:abort_utils",
     ],
