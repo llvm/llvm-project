@@ -66,7 +66,6 @@ maccsu.h00 s4, s4, s0 # CHECK: :[[@LINE]]:1: error: instruction requires the fol
 mulsu.h11 s8, s4, s0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
 maccsu.h11 s0, a2, s6 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
 
-# FIXME: This error doesn't make sense. Should say that we need RV32I.
-pli.dh a0, 1 # CHECK: :[[@LINE]]:1: error: invalid instruction
-pli.db s0, 1 # CHECK: :[[@LINE]]:1: error: invalid instruction
-plui.dh t1, 1 # CHECK: :[[@LINE]]:1: error: invalid instruction
+pli.dh a0, 1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set{{$}}
+pli.db s0, 1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set{{$}}
+plui.dh t1, 1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set{{$}}

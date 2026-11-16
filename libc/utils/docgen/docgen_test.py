@@ -38,7 +38,8 @@ class DocgenTest(unittest.TestCase):
         self.assertTrue(Header("stdint.h").implements_type("int64_t"))
         self.assertTrue(Header("stdint.h").implements_macro("INT64_MAX"))
         self.assertTrue(Header("stdckdint.h").implements_macro("ckd_add"))
-        self.assertTrue(Header("regex.h").implements_fn("regcomp"))
+        self.assertEqual(Header("regex.h").fn_status("regcomp"), "experimental")
+        self.assertFalse(Header("regex.h").implements_fn("regcomp"))
         self.assertTrue(Header("sys/shm.h").implements_fn("shmget"))
         self.assertFalse(Header("ulimit.h").implements_fn("ulimit"))
 
@@ -105,7 +106,8 @@ class DocgenTest(unittest.TestCase):
 
     def test_implements_object(self):
         self.assertTrue(Header("stdio.h").implements_object("stdin"))
-        self.assertTrue(Header("time.h").implements_object("tzname"))
+        self.assertEqual(Header("time.h").object_status("tzname"), "experimental")
+        self.assertFalse(Header("time.h").implements_object("tzname"))
         self.assertTrue(Header("unistd.h").implements_object("optarg"))
         self.assertFalse(Header("time.h").implements_object("getdate_err"))
         self.assertFalse(Header("errno.h").implements_object("errno"))
@@ -407,11 +409,36 @@ class DocgenTest(unittest.TestCase):
         self.assertIn('data-stem="arpa/inet"', out)
         self.assertIn("acosf128", out)
         self.assertIn('class="dashboard-controls"', out)
+        self.assertIn('class="hc-chip-exp"', out)
         self.assertIn('class="hc-chip-missing"', out)
         self.assertIn('class="hc-chip-impl"', out)
         self.assertIn('href="https://en.cppreference.com/w/c/io/clearerr"', out)
         self.assertIn("```{toctree}\n:hidden: true", out)
         self.assertIn("\npoll\npthread\npwd\n", out)
+
+    def test_experimental_and_stub_classification(self):
+        self.assertEqual(Header("unistd.h").fn_status("setuid"), "experimental")
+        self.assertEqual(Header("unistd.h").fn_status("getuid"), "implemented")
+        self.assertEqual(Header("grp.h").fn_status("initgroups"), "experimental")
+        self.assertEqual(Header("net/if.h").fn_status("if_nameindex"), "experimental")
+        self.assertEqual(Header("fnmatch.h").fn_status("fnmatch"), "missing")
+        self.assertEqual(Header("time.h").fn_status("strptime"), "missing")
+        self.assertEqual(Header("time.h").fn_status("tzset"), "missing")
+        self.assertEqual(Header("wchar.h").fn_status("swprintf"), "missing")
+
+        rx = Header("regex.h")
+        self.assertTrue(rx.is_experimental_header())
+        self.assertEqual(rx.macro_status("REG_EXTENDED"), "experimental")
+        self.assertEqual(rx.type_status("regex_t"), "experimental")
+        rx_stats = rx.get_summary_stats()
+        self.assertEqual(rx_stats["overall"]["implemented"], 0)
+        self.assertGreater(rx_stats["overall"]["experimental"], 0)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            print_header_status_md(rx, rx.api)
+        rx_out = buf.getvalue()
+        self.assertIn('class="hc-status-exp"', rx_out)
+        self.assertIn("experimental)", rx_out)
 
 
 if __name__ == "__main__":

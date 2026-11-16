@@ -33,7 +33,6 @@
 ---
 name:            foo
 alignment:       8
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
 frameInfo:

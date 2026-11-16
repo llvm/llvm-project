@@ -459,6 +459,15 @@ OrcIncrementalExecutorBuilder::createExecutor(llvm::orc::ThreadSafeContext &TSC,
           });
   }
 
+  // Point the JIT's TargetMachine at the LLVMContext's -mllvm library options.
+  // A builder without a JTMB, which LLJIT detects later, keeps the defaults.
+  std::optional<llvm::orc::JITTargetMachineBuilder> &JTMB =
+      JITBuilder->getJITTargetMachineBuilder();
+  if (JTMB && !JTMB->getOptions().MCOptions.LibraryOptions)
+    TSC.withContextDo([&](llvm::LLVMContext *Ctx) {
+      JTMB->getOptions().MCOptions.LibraryOptions = &Ctx->getLibraryOptions();
+    });
+
   llvm::Error Err = llvm::Error::success();
   std::unique_ptr<IncrementalExecutor> Executor =
       std::make_unique<OrcIncrementalExecutor>(TSC, *JITBuilder, Err);
