@@ -174,6 +174,14 @@ bool IsTypeOnlyInquiryArg(const SpecificIntrinsic &intrinsic, std::size_t j) {
 
 Expr<Type<TypeCategory::Derived>> FoldOperation(
     FoldingContext &context, StructureConstructor &&structure) {
+  if (context.inDataStmtValue()) {
+    if (const auto *scope{structure.derivedTypeSpec().GetScope()};
+        scope && scope->size() > maxDataInitBytes) {
+      // Leave oversized DATA values unfolded so the DATA size check can
+      // diagnose them without expanding array components.
+      return Expr<Type<TypeCategory::Derived>>{std::move(structure)};
+    }
+  }
   StructureConstructor ctor{structure.derivedTypeSpec()};
   bool isConstant{true};
   auto restorer{context.WithPDTInstance(structure.derivedTypeSpec())};
@@ -200,20 +208,8 @@ Expr<Type<TypeCategory::Derived>> FoldOperation(
       if (auto valueShape{GetConstantExtents(context, expr)}) {
         if (auto componentShape{GetConstantExtents(context, symbol)}) {
           if (GetRank(*componentShape) > 0 && GetRank(*valueShape) == 0) {
-            // Leave oversized constructors unfolded so DATA initialization
-            // can diagnose them without first materializing their arrays.
-            auto elements{TotalElementCount(*componentShape)};
-            auto type{expr.GetType()};
-            auto elementBytes{type ? ToInt64(type->MeasureSizeInBytes(
-                                         context, /*aligned=*/true))
-                                   : std::nullopt};
-            if (elements && elementBytes && *elementBytes >= 0 &&
-                (*elements == 0 ||
-                    static_cast<std::uint64_t>(*elementBytes) <=
-                        maxDataInitBytes / *elements)) {
-              expr = ScalarConstantExpander{std::move(*componentShape)}.Expand(
-                  std::move(expr));
-            }
+            expr = ScalarConstantExpander{std::move(*componentShape)}.Expand(
+                std::move(expr));
             isConstant &= expr.Rank() > 0;
           } else {
             isConstant &= *valueShape == *componentShape;

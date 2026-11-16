@@ -43,9 +43,10 @@ using common::RealFlag;
 using common::RealFlags;
 using common::RelationalOperator;
 
-// Keep DATA initialization and scalar expansion during folding within the
-// same limit, so oversized initializers can be diagnosed before expansion.
-static constexpr std::uint64_t maxDataInitBytes{1000000000};
+// Impose a hard limit that's more than large enough for real applications but
+// small enough to cause artificial stress tests to fail reasonably instead of
+// crashing the compiler with a memory allocation failure.
+inline constexpr std::uint64_t maxDataInitBytes{1000000000};
 
 // Integers are always ordered; reals may not be.
 ENUM_CLASS(Ordering, Less, Equal, Greater)
@@ -253,7 +254,7 @@ public:
         analyzingPDTComponentKindSelector_{
             that.analyzingPDTComponentKindSelector_},
         inConstantContext_{that.inConstantContext_},
-        impliedDos_{that.impliedDos_},
+        inDataStmtValue_{that.inDataStmtValue_}, impliedDos_{that.impliedDos_},
         languageFeatures_{that.languageFeatures_}, tempNames_{that.tempNames_},
         fpMaxminBehavior_{that.fpMaxminBehavior_} {}
   FoldingContext(
@@ -264,7 +265,7 @@ public:
         analyzingPDTComponentKindSelector_{
             that.analyzingPDTComponentKindSelector_},
         inConstantContext_{that.inConstantContext_},
-        impliedDos_{that.impliedDos_},
+        inDataStmtValue_{that.inDataStmtValue_}, impliedDos_{that.impliedDos_},
         languageFeatures_{that.languageFeatures_}, tempNames_{that.tempNames_},
         fpMaxminBehavior_{that.fpMaxminBehavior_} {}
 
@@ -331,6 +332,11 @@ public:
     return common::ScopedSet(inConstantContext_, true);
   }
 
+  bool inDataStmtValue() const { return inDataStmtValue_; }
+  common::Restorer<bool> WithDataStmtValue() {
+    return common::ScopedSet(inDataStmtValue_, true);
+  }
+
   common::Restorer<std::string> SetRealFlagWarningContext(std::string str) {
     return common::ScopedSet(realFlagWarningContext_, str);
   }
@@ -352,6 +358,7 @@ private:
   // named-constant or type-parameter initializer).  Used to promote certain
   // deferred-to-runtime conditions into compile-time diagnostics.
   bool inConstantContext_{false};
+  bool inDataStmtValue_{false};
   std::optional<parser::CharBlock> moduleFileName_;
   std::map<parser::CharBlock, ConstantSubscript> impliedDos_;
   const common::LanguageFeatureControl &languageFeatures_;

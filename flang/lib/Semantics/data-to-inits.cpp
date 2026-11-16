@@ -424,6 +424,7 @@ bool DataInitializationCompiler<DSV>::InitElement(
     exprAnalyzer_.Say("Initializer for '%s' must not be a procedure"_err_en_US,
         DescribeElement());
   } else if (auto designatorType{designator.GetType()}) {
+    auto foldingRestorer{context.WithDataStmtValue()};
     if (expr->Rank() > 0) {
       // Because initial-data-target is ambiguous with scalar-constant and
       // scalar-constant-subobject at parse time, enforcement of scalar-*
