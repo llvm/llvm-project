@@ -925,19 +925,19 @@ public:
     return TTI::TCC_Free;
   }
 
-  virtual InstructionCost
-  getBitInsertCost(Type *Base, Type *Val, TTI::TargetCostKind CostKind,
-                   TTI::OperandValueInfo OffsetInfo,
-                   ArrayRef<const Value *> Args,
-                   const Instruction *CtxI = nullptr) const {
+  virtual InstructionCost getBitInsertCost(Type *Base, Type *Val,
+                                           TTI::TargetCostKind CostKind,
+                                           TTI::OperandValueInfo OffsetInfo,
+                                           ArrayRef<const Value *> Args,
+                                           const Instruction *CtxI) const {
     return 1;
   }
 
-  virtual InstructionCost
-  getBitExtractCost(Type *Dst, Type *Src, TTI::TargetCostKind CostKind,
-                    TTI::OperandValueInfo OffsetInfo,
-                    ArrayRef<const Value *> Args,
-                    const Instruction *CtxI = nullptr) const {
+  virtual InstructionCost getBitExtractCost(Type *Dst, Type *Src,
+                                            TTI::TargetCostKind CostKind,
+                                            TTI::OperandValueInfo OffsetInfo,
+                                            ArrayRef<const Value *> Args,
+                                            const Instruction *CtxI) const {
     return 1;
   }
 
