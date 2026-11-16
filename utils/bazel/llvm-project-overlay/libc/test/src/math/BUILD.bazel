@@ -99,9 +99,9 @@ math_mpfr_test(
     name = "bf16fmaf",
     hdrs = ["FmaTest.h"],
     deps = [
-        "//libc:rand",
-        "//libc:srand",
         "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/stdlib:rand",
+        "//libc/src/stdlib:srand",
     ],
 )
 
@@ -109,9 +109,9 @@ math_mpfr_test(
     name = "bf16mulf",
     hdrs = ["MulTest.h"],
     deps = [
-        "//libc:rand",
-        "//libc:srand",
         "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/stdlib:rand",
+        "//libc/src/stdlib:srand",
     ],
 )
 
@@ -234,8 +234,8 @@ math_mpfr_test(
     name = "dfmal",
     hdrs = ["FmaTest.h"],
     deps = [
-        "//libc:rand",
-        "//libc:srand",
+        "//libc/src/stdlib:rand",
+        "//libc/src/stdlib:srand",
     ],
 )
 
@@ -243,8 +243,8 @@ math_mpfr_test(
     name = "dmull",
     hdrs = ["MulTest.h"],
     deps = [
-        "//libc:rand",
-        "//libc:srand",
+        "//libc/src/stdlib:rand",
+        "//libc/src/stdlib:srand",
     ],
 )
 
@@ -437,8 +437,8 @@ math_mpfr_test(
     name = "ffma",
     hdrs = ["FmaTest.h"],
     deps = [
-        "//libc:rand",
-        "//libc:srand",
+        "//libc/src/stdlib:rand",
+        "//libc/src/stdlib:srand",
     ],
 )
 
@@ -446,8 +446,8 @@ math_mpfr_test(
     name = "ffmal",
     hdrs = ["FmaTest.h"],
     deps = [
-        "//libc:rand",
-        "//libc:srand",
+        "//libc/src/stdlib:rand",
+        "//libc/src/stdlib:srand",
     ],
 )
 
@@ -483,8 +483,8 @@ math_mpfr_test(
     name = "fma",
     hdrs = ["FmaTest.h"],
     deps = [
-        "//libc:rand",
-        "//libc:srand",
+        "//libc/src/stdlib:rand",
+        "//libc/src/stdlib:srand",
     ],
 )
 
@@ -492,8 +492,8 @@ math_mpfr_test(
     name = "fmaf",
     hdrs = ["FmaTest.h"],
     deps = [
-        "//libc:rand",
-        "//libc:srand",
+        "//libc/src/stdlib:rand",
+        "//libc/src/stdlib:srand",
     ],
 )
 
@@ -516,8 +516,8 @@ math_mpfr_test(
     name = "fmul",
     hdrs = ["MulTest.h"],
     deps = [
-        "//libc:rand",
-        "//libc:srand",
+        "//libc/src/stdlib:rand",
+        "//libc/src/stdlib:srand",
     ],
 )
 
@@ -525,8 +525,8 @@ math_mpfr_test(
     name = "fmull",
     hdrs = ["MulTest.h"],
     deps = [
-        "//libc:rand",
-        "//libc:srand",
+        "//libc/src/stdlib:rand",
+        "//libc/src/stdlib:srand",
     ],
 )
 
@@ -534,8 +534,8 @@ math_mpfr_test(
     name = "f16mul",
     hdrs = ["MulTest.h"],
     deps = [
-        "//libc:rand",
-        "//libc:srand",
+        "//libc/src/stdlib:rand",
+        "//libc/src/stdlib:srand",
     ],
 )
 
@@ -543,8 +543,8 @@ math_mpfr_test(
     name = "f16mulf",
     hdrs = ["MulTest.h"],
     deps = [
-        "//libc:rand",
-        "//libc:srand",
+        "//libc/src/stdlib:rand",
+        "//libc/src/stdlib:srand",
     ],
 )
 
@@ -552,8 +552,8 @@ math_mpfr_test(
     name = "f16mull",
     hdrs = ["MulTest.h"],
     deps = [
-        "//libc:rand",
-        "//libc:srand",
+        "//libc/src/stdlib:rand",
+        "//libc/src/stdlib:srand",
     ],
 )
 
@@ -561,8 +561,8 @@ math_mpfr_test(
     name = "f16fma",
     hdrs = ["FmaTest.h"],
     deps = [
-        "//libc:rand",
-        "//libc:srand",
+        "//libc/src/stdlib:rand",
+        "//libc/src/stdlib:srand",
     ],
 )
 
@@ -570,8 +570,8 @@ math_mpfr_test(
     name = "f16fmaf",
     hdrs = ["FmaTest.h"],
     deps = [
-        "//libc:rand",
-        "//libc:srand",
+        "//libc/src/stdlib:rand",
+        "//libc/src/stdlib:srand",
     ],
 )
 
@@ -579,8 +579,8 @@ math_mpfr_test(
     name = "f16fmal",
     hdrs = ["FmaTest.h"],
     deps = [
-        "//libc:rand",
-        "//libc:srand",
+        "//libc/src/stdlib:rand",
+        "//libc/src/stdlib:srand",
     ],
 )
 
@@ -588,8 +588,8 @@ math_mpfr_test(
     name = "fmaf16",
     hdrs = ["FmaTest.h"],
     deps = [
-        "//libc:rand",
-        "//libc:srand",
+        "//libc/src/stdlib:rand",
+        "//libc/src/stdlib:srand",
     ],
 )
 

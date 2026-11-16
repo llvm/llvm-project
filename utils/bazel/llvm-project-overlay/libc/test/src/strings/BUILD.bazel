@@ -14,8 +14,8 @@ libc_test(
     name = "bcopy_test",
     srcs = ["bcopy_test.cpp"],
     deps = [
-        "//libc:bcopy",
         "//libc/src/__support/CPP:span",
+        "//libc/src/strings:bcopy",
         "//libc/test/UnitTest:memory_matcher",
         "//libc/test/src/string:memory_check_utils",
     ],
@@ -25,7 +25,7 @@ libc_test(
     name = "bcmp_test",
     srcs = ["bcmp_test.cpp"],
     deps = [
-        "//libc:bcmp",
+        "//libc/src/strings:bcmp",
         "//libc/test/UnitTest:test_logger",
         "//libc/test/src/string:memory_check_utils",
     ],
@@ -35,7 +35,7 @@ libc_test(
     name = "bzero_test",
     srcs = ["bzero_test.cpp"],
     deps = [
-        "//libc:bzero",
+        "//libc/src/strings:bzero",
         "//libc/test/src/string:memory_check_utils",
     ],
 )
@@ -44,7 +44,7 @@ libc_test(
     name = "index_test",
     srcs = ["index_test.cpp"],
     deps = [
-        "//libc:index",
+        "//libc/src/strings:index",
         "//libc/test/src/string:strchr_test_helper",
     ],
 )
@@ -53,7 +53,7 @@ libc_test(
     name = "rindex_test",
     srcs = ["rindex_test.cpp"],
     deps = [
-        "//libc:rindex",
+        "//libc/src/strings:rindex",
         "//libc/test/src/string:strchr_test_helper",
     ],
 )
@@ -62,7 +62,7 @@ libc_test(
     name = "strcasecmp_test",
     srcs = ["strcasecmp_test.cpp"],
     deps = [
-        "//libc:strcasecmp",
+        "//libc/src/strings:strcasecmp",
     ],
 )
 
@@ -70,6 +70,6 @@ libc_test(
     name = "strncasecmp_test",
     srcs = ["strncasecmp_test.cpp"],
     deps = [
-        "//libc:strncasecmp",
+        "//libc/src/strings:strncasecmp",
     ],
 )

@@ -43,7 +43,6 @@ libc_support_library(
         "//libc:hdr_stdio_macros",
         "//libc:hdr_wchar_macros",
         "//libc:llvm_libc_types_off_t",
-        "//libc:string_memory_utils",
         "//libc:types_char32_t",
         "//libc:types_char8_t",
         "//libc:types_off_t",
@@ -60,6 +59,7 @@ libc_support_library(
         "//libc/src/__support/wchar:character_converter",
         "//libc/src/__support/wchar:mbstate",
         "//libc/src/__support/wchar:wcrtomb",
+        "//libc/src/string/memory_utils",
     ],
 )
 

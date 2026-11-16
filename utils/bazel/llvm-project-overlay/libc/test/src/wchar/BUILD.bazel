@@ -14,8 +14,8 @@ libc_test(
     name = "btowc_test",
     srcs = ["btowc_test.cpp"],
     deps = [
-        "//libc:btowc",
         "//libc:hdr_wchar_macros",
+        "//libc/src/wchar:btowc",
     ],
 )
 
@@ -24,7 +24,7 @@ libc_test(
     srcs = ["wcpcpy_test.cpp"],
     deps = [
         "//libc:types_wchar_t",
-        "//libc:wcpcpy",
+        "//libc/src/wchar:wcpcpy",
     ],
 )
 
@@ -33,7 +33,7 @@ libc_test(
     srcs = ["wcpncpy_test.cpp"],
     deps = [
         "//libc:types_wchar_t",
-        "//libc:wcpncpy",
+        "//libc/src/wchar:wcpncpy",
     ],
 )
 
@@ -42,7 +42,7 @@ libc_test(
     srcs = ["wcscat_test.cpp"],
     deps = [
         "//libc:types_wchar_t",
-        "//libc:wcscat",
+        "//libc/src/wchar:wcscat",
     ],
 )
 
@@ -51,7 +51,7 @@ libc_test(
     srcs = ["wcschr_test.cpp"],
     deps = [
         "//libc:types_wchar_t",
-        "//libc:wcschr",
+        "//libc/src/wchar:wcschr",
     ],
 )
 
@@ -60,7 +60,7 @@ libc_test(
     srcs = ["wcscmp_test.cpp"],
     deps = [
         "//libc:types_wchar_t",
-        "//libc:wcscmp",
+        "//libc/src/wchar:wcscmp",
     ],
 )
 
@@ -69,7 +69,7 @@ libc_test(
     srcs = ["wcscpy_test.cpp"],
     deps = [
         "//libc:types_wchar_t",
-        "//libc:wcscpy",
+        "//libc/src/wchar:wcscpy",
     ],
 )
 
@@ -79,7 +79,7 @@ libc_test(
     deps = [
         "//libc:types_size_t",
         "//libc:types_wchar_t",
-        "//libc:wcscspn",
+        "//libc/src/wchar:wcscspn",
     ],
 )
 
@@ -89,7 +89,7 @@ libc_test(
     deps = [
         "//libc:types_size_t",
         "//libc:types_wchar_t",
-        "//libc:wcslcat",
+        "//libc/src/wchar:wcslcat",
     ],
 )
 
@@ -99,7 +99,7 @@ libc_test(
     deps = [
         "//libc:types_size_t",
         "//libc:types_wchar_t",
-        "//libc:wcslcpy",
+        "//libc/src/wchar:wcslcpy",
     ],
 )
 
@@ -109,7 +109,7 @@ libc_test(
     deps = [
         "//libc:types_size_t",
         "//libc:types_wchar_t",
-        "//libc:wcslen",
+        "//libc/src/wchar:wcslen",
     ],
 )
 
@@ -118,7 +118,7 @@ libc_test(
     srcs = ["wcsncat_test.cpp"],
     deps = [
         "//libc:types_wchar_t",
-        "//libc:wcsncat",
+        "//libc/src/wchar:wcsncat",
     ],
 )
 
@@ -127,7 +127,7 @@ libc_test(
     srcs = ["wcsncmp_test.cpp"],
     deps = [
         "//libc:types_wchar_t",
-        "//libc:wcsncmp",
+        "//libc/src/wchar:wcsncmp",
     ],
 )
 
@@ -136,7 +136,7 @@ libc_test(
     srcs = ["wcsncpy_test.cpp"],
     deps = [
         "//libc:types_wchar_t",
-        "//libc:wcsncpy",
+        "//libc/src/wchar:wcsncpy",
     ],
 )
 
@@ -145,7 +145,7 @@ libc_test(
     srcs = ["wcsrchr_test.cpp"],
     deps = [
         "//libc:types_wchar_t",
-        "//libc:wcsrchr",
+        "//libc/src/wchar:wcsrchr",
     ],
 )
 
@@ -154,7 +154,7 @@ libc_test(
     srcs = ["wcspbrk_test.cpp"],
     deps = [
         "//libc:types_wchar_t",
-        "//libc:wcspbrk",
+        "//libc/src/wchar:wcspbrk",
     ],
 )
 
@@ -164,7 +164,7 @@ libc_test(
     deps = [
         "//libc:types_size_t",
         "//libc:types_wchar_t",
-        "//libc:wcsspn",
+        "//libc/src/wchar:wcsspn",
     ],
 )
 
@@ -173,7 +173,7 @@ libc_test(
     srcs = ["wcsstr_test.cpp"],
     deps = [
         "//libc:types_wchar_t",
-        "//libc:wcsstr",
+        "//libc/src/wchar:wcsstr",
     ],
 )
 
@@ -182,7 +182,7 @@ libc_test(
     srcs = ["wctob_test.cpp"],
     deps = [
         "//libc:hdr_stdio_macros",
-        "//libc:wctob",
+        "//libc/src/wchar:wctob",
     ],
 )
 
@@ -191,7 +191,7 @@ libc_test(
     srcs = ["wmemchr_test.cpp"],
     deps = [
         "//libc:types_wchar_t",
-        "//libc:wmemchr",
+        "//libc/src/wchar:wmemchr",
     ],
 )
 
@@ -201,7 +201,7 @@ libc_test(
     deps = [
         "//libc:types_size_t",
         "//libc:types_wchar_t",
-        "//libc:wmemcmp",
+        "//libc/src/wchar:wmemcmp",
     ],
 )
 
@@ -211,7 +211,7 @@ libc_test(
     deps = [
         "//libc:types_size_t",
         "//libc:types_wchar_t",
-        "//libc:wmemcpy",
+        "//libc/src/wchar:wmemcpy",
     ],
 )
 
@@ -221,7 +221,7 @@ libc_test(
     deps = [
         "//libc:types_size_t",
         "//libc:types_wchar_t",
-        "//libc:wmemmove",
+        "//libc/src/wchar:wmemmove",
     ],
 )
 
@@ -229,7 +229,7 @@ libc_test(
     name = "wmempcpy_test",
     srcs = ["wmempcpy_test.cpp"],
     deps = [
-        "//libc:wmempcpy",
+        "//libc/src/wchar:wmempcpy",
     ],
 )
 
@@ -239,6 +239,6 @@ libc_test(
     deps = [
         "//libc:types_size_t",
         "//libc:types_wchar_t",
-        "//libc:wmemset",
+        "//libc/src/wchar:wmemset",
     ],
 )

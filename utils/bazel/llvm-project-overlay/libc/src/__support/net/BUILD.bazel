@@ -37,7 +37,6 @@ libc_support_library(
         ":hex",
         "//libc:hdr_inet_address_macros",
         "//libc:hdr_stdint_proxy",
-        "//libc:string_memory_utils",
         "//libc:types_in_addr_t",
         "//libc:types_struct_in6_addr",
         "//libc:types_struct_in_addr",
@@ -50,5 +49,6 @@ libc_support_library(
         "//libc/src/__support/CPP:span",
         "//libc/src/__support/CPP:string_view",
         "//libc/src/__support/macros:config",
+        "//libc/src/string/memory_utils",
     ],
 )
