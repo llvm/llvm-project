@@ -1284,8 +1284,8 @@ cc_binary(
     includes = [
         "lib/Bindings/Python",
     ],
-    linkshared = 1,
-    linkstatic = 0,
+    linkshared = True,
+    linkstatic = False,
     deps = [
         ":MLIRBindingsPythonCore",
         ":MLIRBindingsPythonHeadersAndDeps",
@@ -1298,8 +1298,8 @@ cc_binary(
     srcs = ["lib/Bindings/Python/DialectIRDL.cpp"],
     copts = PYTHON_BINDINGS_COPTS,
     features = PYTHON_BINDINGS_FEATURES,
-    linkshared = 1,
-    linkstatic = 0,
+    linkshared = True,
+    linkstatic = False,
     deps = [
         ":CAPIIR",
         ":MLIRBindingsPythonNanobindHeadersAndDeps",
@@ -1315,8 +1315,8 @@ cc_binary(
     includes = [
         "lib/Bindings/Python",
     ],
-    linkshared = 1,
-    linkstatic = 0,
+    linkshared = True,
+    linkstatic = False,
     deps = [
         ":CAPIIR",
         ":CAPILinalg",
@@ -1330,8 +1330,8 @@ cc_binary(
     srcs = ["lib/Bindings/Python/DialectLLVM.cpp"],
     copts = PYTHON_BINDINGS_COPTS,
     features = PYTHON_BINDINGS_FEATURES,
-    linkshared = 1,
-    linkstatic = 0,
+    linkshared = True,
+    linkstatic = False,
     deps = [
         ":CAPIDebug",
         ":CAPIIR",
@@ -1348,8 +1348,8 @@ cc_binary(
     srcs = ["lib/Bindings/Python/DialectQuant.cpp"],
     copts = PYTHON_BINDINGS_COPTS,
     features = PYTHON_BINDINGS_FEATURES,
-    linkshared = 1,
-    linkstatic = 0,
+    linkshared = True,
+    linkstatic = False,
     deps = [
         ":CAPIDebug",
         ":CAPIIR",
@@ -1365,8 +1365,8 @@ cc_binary(
     srcs = ["lib/Bindings/Python/DialectSparseTensor.cpp"],
     copts = PYTHON_BINDINGS_COPTS,
     features = PYTHON_BINDINGS_FEATURES,
-    linkshared = 1,
-    linkstatic = 0,
+    linkshared = True,
+    linkstatic = False,
     deps = [
         ":CAPIDebug",
         ":CAPIIR",
@@ -1383,8 +1383,8 @@ cc_binary(
     srcs = ["lib/Bindings/Python/ExecutionEngineModule.cpp"],
     copts = PYTHON_BINDINGS_COPTS,
     features = PYTHON_BINDINGS_FEATURES,
-    linkshared = 1,
-    linkstatic = 0,
+    linkshared = True,
+    linkstatic = False,
     deps = [
         ":CAPIExecutionEngine",
         ":MLIRBindingsPythonNanobindHeadersAndDeps",
@@ -1399,8 +1399,8 @@ cc_binary(
     srcs = ["lib/Bindings/Python/LinalgPasses.cpp"],
     copts = PYTHON_BINDINGS_COPTS,
     features = PYTHON_BINDINGS_FEATURES,
-    linkshared = 1,
-    linkstatic = 0,
+    linkshared = True,
+    linkstatic = False,
     deps = [
         ":CAPILinalg",
         ":MLIRBindingsPythonNanobindHeadersAndDeps",
