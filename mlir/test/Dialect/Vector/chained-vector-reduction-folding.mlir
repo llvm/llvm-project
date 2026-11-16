@@ -114,3 +114,16 @@ func.func @reduce_2x_zero_add_i32(%arg0: vector<8xi32>, %arg1: vector<8xi32>) ->
   %1 = vector.reduction <add>, %arg1, %0 : vector<8xi32> into i32
   return %1 : i32
 }
+
+// The inner reduction is a `maxsi` reduction, so the pair is not folded.
+
+// CHECK-LABEL:   func.func @negative_reduce_2x_maxsi_parent_i32(
+// CHECK-SAME:     %[[ARG0:.+]]: vector<8xi32>, %[[ARG1:.+]]: vector<8xi32>) -> i32 {
+// CHECK:            %[[MAX:.+]] = vector.reduction <maxsi>, %[[ARG0]] : vector<8xi32> into i32
+// CHECK-NEXT:       %[[RES:.+]] = vector.reduction <add>, %[[ARG1]], %[[MAX]] : vector<8xi32> into i32
+// CHECK-NEXT:       return %[[RES]] : i32
+func.func @negative_reduce_2x_maxsi_parent_i32(%arg0: vector<8xi32>, %arg1: vector<8xi32>) -> i32 {
+  %0 = vector.reduction <maxsi>, %arg0 : vector<8xi32> into i32
+  %1 = vector.reduction <add>, %arg1, %0 : vector<8xi32> into i32
+  return %1 : i32
+}
