@@ -22,14 +22,12 @@
 #include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallVectorExtras.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 #include <numeric>
 #include <type_traits>
@@ -44,12 +42,11 @@ using namespace mlir::tosa;
 // Tosa dialect interface includes.
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Tosa/IR/TosaDialectBytecode.cpp.inc"
 #include "mlir/Dialect/Tosa/IR/TosaEnums.cpp.inc"
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.cpp.inc"
 
 namespace {
-#include "mlir/Dialect/Tosa/IR/TosaDialectBytecode.cpp.inc"
-
 //===----------------------------------------------------------------------===//
 // Dialect Function Inliner Interface.
 //===----------------------------------------------------------------------===//
@@ -119,7 +116,6 @@ struct TosaDialectBytecodeInterface : public BytecodeDialectInterface {
     return success();
   }
 };
-
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -331,7 +327,7 @@ Value mlir::tosa::createPadConstTensor(OpBuilder &builder, Location loc,
 unsigned mlir::tosa::getBitWidth(Type type) {
   if (auto blockScaledTy = dyn_cast<tosa::BlockScaledType>(type))
     return getBitWidth(blockScaledTy.getValueType());
-  if (dyn_cast<tosa::mxint8Type>(type))
+  if (isa<MXI8Type, tosa::mxint8Type>(type))
     return 8;
   return type.getIntOrFloatBitWidth();
 }
@@ -553,7 +549,7 @@ static void printScaleValues(AsmPrinter &printer,
 
 size_t mlir::tosa::BlockScaledType::getDenseElementBitSize() const {
   const Type valueType = getValueType();
-  if (isa<tosa::mxint8Type>(valueType))
+  if (isa<MXI8Type, tosa::mxint8Type>(valueType))
     return 8;
   return valueType.getIntOrFloatBitWidth();
 }
@@ -565,6 +561,8 @@ mlir::tosa::BlockScaledType::convertToAttribute(ArrayRef<char> rawData) const {
   // to 8-bits.
   assert(rawData.size() == 1 && "expected 1 byte for block_scaled element");
   const Type valueType = getValueType();
+  if (const auto mxi8Value = dyn_cast<MXI8Type>(valueType))
+    return mxi8Value.convertToAttribute(rawData);
   if (const auto mxint8Value = dyn_cast<tosa::mxint8Type>(valueType))
     return mxint8Value.convertToAttribute(rawData);
   if (!isa<FloatType>(valueType))
@@ -575,6 +573,8 @@ mlir::tosa::BlockScaledType::convertToAttribute(ArrayRef<char> rawData) const {
 LogicalResult mlir::tosa::BlockScaledType::convertFromAttribute(
     Attribute attr, SmallVectorImpl<char> &result) const {
   const Type valueType = getValueType();
+  if (const auto mxi8Value = dyn_cast<MXI8Type>(valueType))
+    return mxi8Value.convertFromAttribute(attr, result);
   if (const auto mxint8Value = dyn_cast<tosa::mxint8Type>(valueType))
     return mxint8Value.convertFromAttribute(attr, result);
 
@@ -2450,68 +2450,6 @@ LogicalResult tosa::SliceOp::verify() {
         llvm::cast<tosa::shapeType>(size.getType()).getRank();
     if (inputRank != sizeShapeRank)
       return emitOpError("length of size is not equal to rank of input shape");
-  }
-
-  SmallVector<int64_t> startValues;
-  tosa::getConstShapeValues(start.getDefiningOp(), startValues);
-  if (startValues.size()) {
-    if (llvm::any_of(startValues, [](const int64_t v) {
-          return v < 0 && v != kInferableDimSize;
-        }))
-      return emitOpError("start values must be non-negative, got [")
-             << startValues << "]";
-  }
-
-  // ERROR_IF(is_block_scale<in_out_t>() && start[rank(shape1) - 1] %
-  // get_innermost_block_size<in_out_t>() != 0);
-  const auto elemType = getElementTypeOrSelf(input.getType());
-  if (const auto blockScaledType = llvm::dyn_cast<BlockScaledType>(elemType)) {
-    const auto startBlock = startValues.back();
-    const auto scaleBlock =
-        BlockShapeAttr::getBlockShapeValue(blockScaledType.getBlockShape());
-    if (startBlock % scaleBlock != 0) {
-      return emitOpError(
-                 "expected start innermost block size to match data type "
-                 "for block scaled input, got start block=")
-             << startBlock << ", scale block=" << scaleBlock;
-    }
-  }
-
-  SmallVector<int64_t> sizeValues;
-  if (!tosa::getConstShapeValues(size.getDefiningOp(), sizeValues))
-    return success();
-
-  if (llvm::any_of(sizeValues, [](const int64_t v) {
-        return v <= 0 && v != kInferableDimSize;
-      }))
-    return emitOpError("size values must be > 0, got [") << sizeValues << "]";
-  if (outputShape.hasRank()) {
-    SmallVector<int64_t> outputDims;
-    outputShape.getDims(outputDims);
-    const bool hasNoInferableDims = llvm::all_of(
-        sizeValues, [](const int64_t v) { return v != kInferableDimSize; });
-    if (hasNoInferableDims &&
-        failed(verifyCompatibleShape(outputDims, sizeValues)))
-      return emitOpError("expected output shape to match size values, got ")
-             << output.getType() << " vs [" << sizeValues << "]";
-  }
-
-  if (inputShape.hasRank() && startValues.size()) {
-    SmallVector<int64_t> inputDims;
-    inputShape.getDims(inputDims);
-    for (const auto &[index, vals] :
-         llvm::enumerate(llvm::zip_equal(startValues, sizeValues, inputDims))) {
-      const auto &[start, size, inputDim] = vals;
-      if (start == kInferableDimSize || size == kInferableDimSize ||
-          ShapedType::isDynamic(inputDim))
-        continue;
-      if (start + size > inputDim)
-        return emitOpError("start + size must be less than or equal to input "
-                           "dimension size, got start=")
-               << start << ", size=" << size
-               << " vs input dim size=" << inputDim << " at dimension "
-               << index;
-    }
   }
 
   return success();
@@ -5261,13 +5199,6 @@ LogicalResult WhileOp::inferReturnTypeComponents(
   }
 
   return success();
-}
-
-std::optional<SmallVector<int64_t, 4>>
-ApplyScaleOp::getIterationShapeToUnroll() {
-  if (auto vt = llvm::dyn_cast<VectorType>(getType()))
-    return llvm::to_vector<4>(vt.getShape());
-  return std::nullopt;
 }
 
 static void printInitializationList(OpAsmPrinter &parser,

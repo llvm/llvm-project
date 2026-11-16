@@ -22,6 +22,7 @@ include "mlir/IR/OpBase.td"
 
 def VectorElementTypeInterface : TypeInterface<"VectorElementTypeInterface"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/BuiltinTypeInterfaces.h"];
   let description = [{
     Implementing this interface establishes a contract between this type and the
     vector type, indicating that this type can be used as element of vectors.
@@ -47,6 +48,7 @@ def VectorElementTypeInterface : TypeInterface<"VectorElementTypeInterface"> {
 
 def DenseElementTypeInterface : TypeInterface<"DenseElementType"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/BuiltinTypeInterfaces.h"];
   let description = [{
     This interface allows custom types to be used as element types in
     DenseElementsAttr. Types implementing this interface define:
@@ -106,6 +108,7 @@ def DenseElementTypeInterface : TypeInterface<"DenseElementType"> {
 def FloatTypeInterface : TypeInterface<"FloatType",
     [DenseElementTypeInterface, VectorElementTypeInterface]> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/BuiltinTypeInterfaces.h"];
   let description = [{
     This type interface should be implemented by all floating-point types. It
     defines the LLVM APFloat semantics and provides a few helper functions.
@@ -164,6 +167,7 @@ def FloatTypeInterface : TypeInterface<"FloatType",
 
 def MemRefElementTypeInterface : TypeInterface<"MemRefElementTypeInterface"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/BuiltinTypeInterfaces.h"];
   let description = [{
     Indication that this type can be used as element in memref types.
 
@@ -189,6 +193,7 @@ def MemRefElementTypeInterface : TypeInterface<"MemRefElementTypeInterface"> {
 
 def PtrLikeTypeInterface : TypeInterface<"PtrLikeTypeInterface"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/BuiltinTypeInterfaces.h"];
   let description = [{
     A ptr-like type represents an object storing a memory address. This object
     is constituted by:
@@ -242,6 +247,7 @@ def PtrLikeTypeInterface : TypeInterface<"PtrLikeTypeInterface"> {
 
 def ShapedTypeInterface : TypeInterface<"ShapedType"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/BuiltinTypeInterfaces.h"];
   let description = [{
     This interface provides a common API for interacting with multi-dimensional
     container types. These types contain a shape and an element type.

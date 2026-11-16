@@ -1396,6 +1396,23 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M) {
       continue;
     }
 
+    // If the function returns twice, skip it.
+    // The context saved by functions such as setjmp will be different if
+    // they take place within an outlined function.
+    // Ex: Saved stack pointer will be different.
+    if (F.hasFnAttribute(Attribute::ReturnsTwice)) {
+      LLVM_DEBUG(dbgs() << "SKIP: Function has returnstwice attribute\n");
+      continue;
+    }
+
+    // If the function calls a function that can return twice, skip it,
+    // for the same reasons.
+    if (MF->exposesReturnsTwice()) {
+      LLVM_DEBUG(dbgs() << "SKIP: Function calls a function with "
+                           "returnstwice attribute\n");
+      continue;
+    }
+
     const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
     BlockFrequencyInfo *BFI = nullptr;
     if (EnableProfileGuidedOutlining && F.hasProfileData())

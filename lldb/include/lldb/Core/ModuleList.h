@@ -32,7 +32,6 @@
 #include <cstdint>
 
 namespace lldb_private {
-class ConstString;
 class FileSpecList;
 class Function;
 class Log;

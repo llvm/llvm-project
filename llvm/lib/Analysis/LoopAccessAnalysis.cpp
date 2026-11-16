@@ -176,7 +176,8 @@ static const SCEV *mulSCEVNoOverflow(const SCEV *A, const SCEV *B,
 }
 
 /// Return true, if evaluating \p AR at \p MaxBTC cannot wrap, because \p AR at
-/// \p MaxBTC is guaranteed inbounds of the accessed object.
+/// \p MaxBTC is guaranteed inbounds of the accessed object. This does not imply
+/// that the whole accessed range is dereferenceable.
 static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     const SCEVAddRecExpr *AR, const SCEV *MaxBTC, const SCEV *EltSize,
     ScalarEvolution &SE, const DataLayout &DL, DominatorTree *DT,
@@ -234,17 +235,15 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   Step = SE.getNoopOrSignExtend(Step, WiderTy);
   MaxBTC = SE.getNoopOrZeroExtend(MaxBTC, WiderTy);
 
-  // For the computations below, make sure they don't unsigned wrap.
-  // FIXME: for a negative step the lowest accessed address is not
-  // AR->getStart() but AR->evaluateAtIteration(MaxBTC, SE); the check below
-  // therefore compares StartPtr against the highest accessed address instead
-  // of the lowest.
-  if (!SE.isKnownPredicate(CmpInst::ICMP_UGE, AR->getStart(), StartPtr))
-    return false;
-  const SCEV *StartOffset = SE.getNoopOrZeroExtend(
-      SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
+  // If Start u< StartPtr, StartOffset wraps to a value above DerefBytes, so
+  // the final MaxOffset u<= DerefBytes check rejects it.
+  const SCEV *Start = AR->getStart();
+  const SCEV *StartOffset =
+      SE.getNoopOrZeroExtend(SE.getMinusSCEV(Start, StartPtr), WiderTy);
 
   MaxBTC = SE.applyLoopGuards(MaxBTC, LoopGuards);
+  DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, LoopGuards);
+  StartOffset = SE.applyLoopGuards(StartOffset, LoopGuards);
 
   const SCEV *AbsStep = SE.getAbsExpr(Step, /*IsNSW=*/false);
   // Total distance (in bytes) between the first and the last
@@ -262,30 +261,27 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
       return false;
   }
 
-  // Total length in bytes of the accessed range (from the first accessed
-  // byte through the end of the last access).
-  const SCEV *AccessedBytes = addSCEVNoOverflow(
-      DistToLastIter, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE);
-  if (!AccessedBytes)
-    return false;
-
-  // Compute MaxOffset per direction: exclusive upper offset of the
-  // accessed range.
+  // Compute MaxOffset per direction: for a non-negative step, the exclusive
+  // upper offset of the accessed range; for a negative step, the offset of the
+  // start of the highest access.
   const SCEV *MaxOffset;
   if (IsKnownNonNegative) {
+    // Total length in bytes of the accessed range (from the first accessed
+    // byte through the end of the last access).
+    const SCEV *AccessedBytes = addSCEVNoOverflow(
+        DistToLastIter, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE);
+    if (!AccessedBytes)
+      return false;
     MaxOffset = addSCEVNoOverflow(StartOffset, AccessedBytes, SE);
     if (!MaxOffset)
       return false;
-    DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, LoopGuards);
   } else {
-    // FIXME: two independent off-by-EltSize bugs on this branch:
-    //  1. StartOffset here is actually the HIGHEST offset, because it is
-    //     computed from AR->getStart() rather than
-    //     AR->evaluateAtIteration(MaxBTC, SE) (see FIXME above).
-    //  2. The lower check is over-strict by EltSize and the upper is
-    //     under-counted by EltSize.
+    // For a negative step StartOffset is the highest offset and AR at MaxBTC
+    // is DistToLastIter below it, so it must not fall below StartPtr. The end
+    // of the first access, Start + EltSize, does not depend on MaxBTC and is
+    // not checked here.
     assert(SE.isKnownNegative(Step) && "must be known negative");
-    if (!SE.isKnownPredicate(CmpInst::ICMP_SGE, StartOffset, AccessedBytes))
+    if (!SE.isKnownPredicate(CmpInst::ICMP_UGE, StartOffset, DistToLastIter))
       return false;
     MaxOffset = StartOffset;
   }
@@ -433,6 +429,9 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
               ? LastAddr
               : SE->getSCEV(ConstantExpr::getIntToPtr(
                     Constant::getNullValue(DL.getIndexType(PtrTy)), PtrTy));
+      // FIXME: Start + EltSize is neither checked to stay within the
+      // dereferenceable region nor guarded against wrapping; it should
+      // saturate like the non-negative case below when that can't be proven.
       ScEnd = SE->getAddExpr(Start, EltSizeSCEV);
     } else if (SE->isKnownNonNegative(Step)) {
       ScStart = Start;
@@ -2224,10 +2223,14 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
                "Should only skip safe dependences");
         continue;
       }
-      Instruction *Src = Dep.getSource(DepChecker);
-      Instruction *Dst = Dep.getDestination(DepChecker);
-      DepCands.eraseClass({getPointerOperand(Src), Src->mayWriteToMemory()});
-      DepCands.eraseClass({getPointerOperand(Dst), Dst->mayWriteToMemory()});
+      // Both accesses are in the same class, which may already have been
+      // erased for an earlier dependence.
+      MemAccessInfo Src = DepChecker.getAccess(Dep.Source);
+      [[maybe_unused]] MemAccessInfo Dst =
+          DepChecker.getAccess(Dep.Destination);
+      assert((!DepCands.contains(Src) || DepCands.isEquivalent(Src, Dst)) &&
+             "Dependences must be between accesses in the same class");
+      DepCands.eraseClass(Src);
     }
   } else {
     CheckDeps.clear();
@@ -2706,6 +2709,7 @@ void MemoryDepChecker::addAccess(StoreInst *SI) {
                 [this, SI](Value *Ptr) {
                   Accesses[MemAccessInfo(Ptr, true)].push_back(AccessIdx);
                   InstMap.push_back(SI);
+                  AccessLocs.emplace_back(Ptr, true);
                   ++AccessIdx;
                 });
 }
@@ -2715,6 +2719,7 @@ void MemoryDepChecker::addAccess(LoadInst *LI) {
                 [this, LI](Value *Ptr) {
                   Accesses[MemAccessInfo(Ptr, false)].push_back(AccessIdx);
                   InstMap.push_back(LI);
+                  AccessLocs.emplace_back(Ptr, false);
                   ++AccessIdx;
                 });
 }

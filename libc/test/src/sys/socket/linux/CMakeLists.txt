@@ -28,7 +28,6 @@ add_libc_test(
     socket_test.cpp
   DEPENDS
     libc.hdr.sys_socket_macros
-    libc.src.errno.errno
     libc.src.sys.socket.socket
     libc.src.unistd.close
     libc.test.UnitTest.ErrnoCheckingTest
@@ -51,7 +50,6 @@ add_libc_test(
     libc.hdr.types.struct_sockaddr_in6
     libc.hdr.types.struct_sockaddr_un
     libc.src.arpa.inet.htonl
-    libc.src.errno.errno
     libc.src.sys.socket.socket
     libc.src.sys.socket.bind
     libc.src.sys.socket.getsockname
@@ -77,7 +75,6 @@ add_libc_test(
     libc.hdr.types.size_t
     libc.hdr.types.socklen_t
     libc.hdr.types.struct_sockaddr_un
-    libc.src.errno.errno
     libc.src.fcntl.fcntl
     libc.src.sys.socket.accept
     libc.src.sys.socket.accept4
@@ -103,7 +100,6 @@ add_libc_test(
     libc.include.sys_socket
     libc.hdr.sys_socket_macros
     libc.hdr.types.struct_sockaddr_un
-    libc.src.errno.errno
     libc.src.sys.socket.socket
     libc.src.sys.socket.bind
     libc.src.sys.socket.listen
@@ -130,7 +126,6 @@ add_libc_test(
     libc.hdr.time_macros
     libc.hdr.types.struct_timespec
     libc.hdr.types.struct_timeval
-    libc.src.errno.errno
     libc.src.sys.socket.getsockopt
     libc.src.sys.socket.setsockopt
     libc.src.sys.socket.socket
@@ -152,7 +147,6 @@ add_libc_test(
     socketpair_test.cpp
   DEPENDS
     libc.hdr.sys_socket_macros
-    libc.src.errno.errno
     libc.src.sys.socket.socketpair
     libc.src.unistd.close
     libc.test.UnitTest.ErrnoCheckingTest
@@ -167,7 +161,6 @@ add_libc_test(
     sockatmark_test.cpp
   DEPENDS
     libc.hdr.sys_socket_macros
-    libc.src.errno.errno
     libc.src.sys.socket.send
     libc.src.sys.socket.sockatmark
     libc.src.sys.socket.socketpair
@@ -190,7 +183,6 @@ add_libc_test(
     libc.hdr.types.sa_family_t
     libc.hdr.types.socklen_t
     libc.hdr.types.struct_sockaddr_un
-    libc.src.errno.errno
     libc.src.sys.socket.accept
     libc.src.sys.socket.bind
     libc.src.sys.socket.connect
@@ -213,7 +205,6 @@ add_libc_test(
     send_recv_test.cpp
   DEPENDS
     libc.hdr.sys_socket_macros
-    libc.src.errno.errno
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.send
     libc.src.sys.socket.recv
@@ -231,7 +222,6 @@ add_libc_test(
     sendto_recvfrom_test.cpp
   DEPENDS
     libc.hdr.sys_socket_macros
-    libc.src.errno.errno
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.sendto
     libc.src.sys.socket.recvfrom
@@ -252,7 +242,6 @@ add_libc_test(
     libc.hdr.types.struct_iovec
     libc.hdr.types.struct_mmsghdr
     libc.hdr.types.struct_timespec
-    libc.src.errno.errno
     libc.src.string.strlen
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.sendmmsg
@@ -273,7 +262,6 @@ add_libc_test(
     libc.hdr.fcntl_macros
     libc.hdr.sys_socket_macros
     libc.hdr.types.struct_cmsghdr
-    libc.src.errno.errno
     libc.src.fcntl.fcntl
     libc.src.string.memcpy
     libc.src.string.memset
@@ -298,7 +286,6 @@ add_libc_test(
     libc.hdr.sys_socket_macros
     libc.hdr.types.ssize_t
     libc.src.__support.CPP.scope
-    libc.src.errno.errno
     libc.src.sys.socket.shutdown
     libc.src.sys.socket.socketpair
     libc.src.unistd.close
