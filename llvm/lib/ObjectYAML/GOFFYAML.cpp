@@ -108,6 +108,17 @@ void ScalarEnumerationTraits<GOFFYAML::GOFF_ESDEXECUTABLE>::enumeration(
   IO.enumFallback<Hex8>(Value);
 }
 
+void ScalarEnumerationTraits<GOFFYAML::GOFF_ESDDUP_SYM_SEVERITY>::enumeration(
+    IO &IO, GOFFYAML::GOFF_ESDDUP_SYM_SEVERITY &Value) {
+#define ECase(X) IO.enumCase(Value, #X, GOFF::X)
+  ECase(ESD_DSS_NoWarning);
+  ECase(ESD_DSS_Warning);
+  ECase(ESD_DSS_Error);
+  ECase(ESD_DSS_Reserved);
+#undef ECase
+  IO.enumFallback<Hex8>(Value);
+}
+
 void ScalarEnumerationTraits<GOFFYAML::GOFF_ESDLINKAGETYPE>::enumeration(
     IO &IO, GOFFYAML::GOFF_ESDLINKAGETYPE &Value) {
 #define ECase(X) IO.enumCase(Value, #X, GOFF::X)
@@ -198,8 +209,10 @@ void MappingTraits<GOFFYAML::ESDRecord>::mapping(IO &IO,
   IO.mapOptional("TaskingBehavior", Record.TaskingBehavior);
   IO.mapOptional("ReadOnly", Record.ReadOnly);
   IO.mapOptional("Executable", Record.Executable);
+  IO.mapOptional("DuplicateSymbolSeverity", Record.DuplicateSymbolSeverity);
   IO.mapOptional("BindingStrength", Record.BindingStrength);
   IO.mapOptional("LoadingBehavior", Record.LoadingBehavior);
+  IO.mapOptional("Common", Record.Common);
   IO.mapOptional("IndirectReference", Record.IndirectReference);
   IO.mapOptional("BindingScope", Record.BindingScope);
   IO.mapOptional("LinkageType", Record.LinkageType);

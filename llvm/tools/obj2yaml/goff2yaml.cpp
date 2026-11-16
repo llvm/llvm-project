@@ -168,6 +168,9 @@ Error GOFFDumper::dumpExternalSymbol(ArrayRef<uint8_t> Data) {
     Sym.Executable = Executable;
 
   uint8_t BindingFlags = DE.getU8(C);
+  uint8_t DuplicateSymbolSeverity = (BindingFlags >> 4) & 0x03;
+  if (DuplicateSymbolSeverity)
+    Sym.DuplicateSymbolSeverity = DuplicateSymbolSeverity;
   uint8_t BindingStrength = BindingFlags & 0x0F;
   if (BindingStrength)
     Sym.BindingStrength = BindingStrength;
@@ -176,6 +179,9 @@ Error GOFFDumper::dumpExternalSymbol(ArrayRef<uint8_t> Data) {
   uint8_t LoadingBehavior = (LoadingAndScope >> 6) & 0x03;
   if (LoadingBehavior)
     Sym.LoadingBehavior = LoadingBehavior;
+  bool Common = (LoadingAndScope & 0x20) != 0;
+  if (Common)
+    Sym.Common = Common;
   bool IndirectReference = (LoadingAndScope & 0x10) != 0;
   if (IndirectReference)
     Sym.IndirectReference = IndirectReference;
