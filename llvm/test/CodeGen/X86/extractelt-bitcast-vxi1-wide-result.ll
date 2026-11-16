@@ -2,11 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl | FileCheck %s
 
-; combineExtractVectorElt folds extract_element(bitcast(<X x i1>)) into
-; bitcast(extract_subvector(<X x i1>)). The extracted result type can be wider
-; than the vector element type (e.g. the i8 lanes of an illegal <17 x i1>
-; argument/return), so the mask must be indexed by the element width, not by
-; the result width.
+; Index the mask by the bitcast element width, not the result width.
 
 ; Lane 10 of the result is bit 1 of %a; it must not be read from bit 8.
 define <17 x i1> @extract_i8_lane_wrong_scale(<17 x i1> %a, ptr %p) nounwind {
@@ -51,8 +47,7 @@ define <17 x i1> @extract_i8_lane_wrong_scale(<17 x i1> %a, ptr %p) nounwind {
   ret <17 x i1> %s
 }
 
-; Used to build an out-of-bounds EXTRACT_SUBVECTOR ("Extract subvector
-; overflow!" with assertions, out-of-bounds operand reads without).
+; Regression test for an out-of-bounds EXTRACT_SUBVECTOR.
 define <17 x i1> @extract_subvector_out_of_bounds(<17 x i1> %a, ptr %p) nounwind {
 ; CHECK-LABEL: extract_subvector_out_of_bounds:
 ; CHECK:       # %bb.0:
