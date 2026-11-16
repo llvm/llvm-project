@@ -3670,11 +3670,14 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     return true;
   };
 
+  auto IndicesNonNegative = [&] {
+    return all_of(GEP.indices(), [&](Value *Idx) {
+      return isKnownNonNegative(Idx, SQ.getWithInstruction(&GEP));
+    });
+  };
+
   if (GEP.hasNoUnsignedSignedWrap() && !GEP.hasNoUnsignedWrap() &&
-      all_of(GEP.indices(), [&](Value *Idx) {
-        return isKnownNonNegative(Idx, SQ.getWithInstruction(&GEP));
-      }) &&
-      StridesFitIndexType()) {
+      IndicesNonNegative() && StridesFitIndexType()) {
     GEP.setNoWrapFlags(GEP.getNoWrapFlags() | GEPNoWrapFlags::noUnsignedWrap());
     return &GEP;
   }
