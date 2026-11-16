@@ -1,3 +1,29 @@
+add_header_library(
+  getifaddrs_impl
+  HDRS
+    getifaddrs_impl.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.net_if_macros
+    libc.hdr.offsetof_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.sa_family_t
+    libc.hdr.types.struct_ifaddrs
+    libc.hdr.types.struct_sockaddr
+    libc.include.sys_socket
+    libc.src.__support.CPP.scope
+    libc.src.__support.CPP.span
+    libc.src.__support.CPP.string_view
+    libc.src.__support.blockstore
+    libc.src.__support.checked_ptr
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.math_extras
+    libc.src.__support.net.linux.netlink
+    libc.src.string.memory_utils.inline_memcpy
+)
+
 add_entrypoint_object(
   freeifaddrs
   SRCS
@@ -5,7 +31,9 @@ add_entrypoint_object(
   HDRS
     ../freeifaddrs.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.hdr.types.struct_ifaddrs
+    libc.src.__support.CPP.new
     libc.src.__support.common
     libc.src.__support.macros.config
 )
@@ -17,10 +45,13 @@ add_entrypoint_object(
   HDRS
     ../getifaddrs.h
   DEPENDS
-    libc.hdr.errno_macros
+    .getifaddrs_impl
     libc.hdr.types.struct_ifaddrs
+    libc.src.__support.OSUtil.linux.network_syscall_policy
     libc.src.__support.common
+    libc.src.__support.error_or
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
     libc.src.errno.errno
 )

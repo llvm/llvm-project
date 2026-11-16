@@ -12,18 +12,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/ifaddrs/getifaddrs.h"
-#include "hdr/errno_macros.h"
 #include "hdr/types/struct_ifaddrs.h"
+#include "src/__support/OSUtil/linux/network_syscall_policy.h"
 #include "src/__support/common.h"
+#include "src/__support/error_or.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
+#include "src/ifaddrs/linux/getifaddrs_impl.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, getifaddrs, ([[maybe_unused]] struct ifaddrs * *ifap)) {
-  // TODO: Implement getifaddrs.
-  libc_errno = ENOSYS;
-  return -1;
+LLVM_LIBC_FUNCTION(int, getifaddrs, (struct ifaddrs * *ifap)) {
+  LIBC_CRASH_ON_NULLPTR(ifap);
+  ErrorOr<struct ifaddrs *> result =
+      net::getifaddrs<net::DefaultNetworkSyscallPolicy>();
+  if (!result.has_value()) {
+    libc_errno = result.error();
+    return -1;
+  }
+  *ifap = *result;
+  return 0;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
