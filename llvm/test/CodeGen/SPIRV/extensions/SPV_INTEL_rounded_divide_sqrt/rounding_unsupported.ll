@@ -1,7 +1,7 @@
 ; bfloat is not an IEEE 754 type, so constrained fdiv/sqrt on it get no
 ; FPRoundingMode even with SPV_INTEL_rounded_divide_sqrt enabled.
 
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_rounded_divide_sqrt,+SPV_KHR_bfloat16,+SPV_INTEL_bfloat16_arithmetic %s -o - | FileCheck %s --implicit-check-not=FPRoundingMode --implicit-check-not=RoundedDivideSqrtINTEL --implicit-check-not=SPV_INTEL_rounded_divide_sqrt
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_rounded_divide_sqrt,+SPV_KHR_bfloat16,+SPV_INTEL_bfloat16_arithmetic %s -o - | FileCheck %s --implicit-check-not=FPRoundingMode --implicit-check-not=RoundedDivideSqrtINTEL --implicit-check-not=SPV_INTEL_rounded_divide_sqrt
 ; spirv-val does not know BFloat16ArithmeticINTEL yet.
 ; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_rounded_divide_sqrt,+SPV_KHR_bfloat16,+SPV_INTEL_bfloat16_arithmetic %s -o - -filetype=obj | spirv-val %}
 

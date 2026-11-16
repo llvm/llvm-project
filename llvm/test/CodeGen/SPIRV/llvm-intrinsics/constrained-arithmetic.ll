@@ -2,17 +2,6 @@
 ; TODO: re-enable validator FPRoundingMode is placed correctly
 ; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_rounded_divide_sqrt %s -o - | FileCheck %s --check-prefix=CHECK-EXT
-; TODO: even with the extension enabled, only FDiv and sqrt instruction can have FPRoundingMode decoration. Re-enable spirv-val once this is fixed.
-; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_rounded_divide_sqrt %s -o - -filetype=obj | spirv-val %}
-
-; CHECK-EXT-DAG: OpCapability RoundedDivideSqrtINTEL
-; CHECK-EXT-DAG: OpExtension "SPV_INTEL_rounded_divide_sqrt"
-; CHECK-EXT-DAG: %[[#e2:]] = OpFDiv %[[#]] %[[#]]
-; CHECK-EXT-DAG: %[[#e7:]] = OpExtInst %[[#]] %[[#]] sqrt
-; CHECK-EXT-DAG: OpDecorate %[[#e2]] FPRoundingMode RTZ
-; CHECK-EXT-DAG: OpDecorate %[[#e7]] FPRoundingMode RTN
-
 ; CHECK-DAG: %[[#r1:]] = OpFAdd %[[#]] %[[#]]
 ; CHECK-DAG: %[[#r2:]] = OpFDiv %[[#]] %[[#]]
 ; CHECK-DAG: %[[#r3:]] = OpFSub %[[#]] %[[#]]

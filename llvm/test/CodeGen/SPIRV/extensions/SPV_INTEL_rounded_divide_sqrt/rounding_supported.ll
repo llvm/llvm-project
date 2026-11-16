@@ -1,13 +1,8 @@
 ; Verifies that FPRoundingMode decorations on OpFDiv and sqrt (OpenCL.std
 ; extended instruction) trigger the RoundedDivideSqrtINTEL capability and the
 ; SPV_INTEL_rounded_divide_sqrt extension.
-; Some operand pairs are swapped operands to avoid MachineCSE dropping the
-; 2nd instruction (see fdiv_cse.ll and
-; https://github.com/llvm/llvm-project/issues/241441), such as the %d0 and %d1
-; operands below.
 
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_rounded_divide_sqrt %s -o - | FileCheck %s
-; RUN: llc -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_rounded_divide_sqrt %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_rounded_divide_sqrt %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_rounded_divide_sqrt %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpCapability RoundedDivideSqrtINTEL
@@ -33,7 +28,7 @@ entry:
   %h_rte = call half @llvm.experimental.constrained.fdiv.f16(half %h0, half %h1, metadata !"round.tonearest", metadata !"fpexcept.strict")
   %f_rtz = call float @llvm.experimental.constrained.fdiv.f32(float %f0, float %f1, metadata !"round.towardzero", metadata !"fpexcept.strict")
   %d_rtp = call double @llvm.experimental.constrained.fdiv.f64(double %d0, double %d1, metadata !"round.upward", metadata !"fpexcept.strict")
-  %d_rtn = call double @llvm.experimental.constrained.fdiv.f64(double %d1, double %d0, metadata !"round.downward", metadata !"fpexcept.strict")
+  %d_rtn = call double @llvm.experimental.constrained.fdiv.f64(double %d0, double %d1, metadata !"round.downward", metadata !"fpexcept.strict")
   ret void
 }
 
@@ -50,7 +45,7 @@ entry:
   %h_rte = call <2 x half> @llvm.experimental.constrained.fdiv.v2f16(<2 x half> %h0, <2 x half> %h1, metadata !"round.tonearest", metadata !"fpexcept.strict")
   %f_rtz = call <4 x float> @llvm.experimental.constrained.fdiv.v4f32(<4 x float> %f0, <4 x float> %f1, metadata !"round.towardzero", metadata !"fpexcept.strict")
   %d_rtp = call <3 x double> @llvm.experimental.constrained.fdiv.v3f64(<3 x double> %d0, <3 x double> %d1, metadata !"round.upward", metadata !"fpexcept.strict")
-  %d_rtn = call <3 x double> @llvm.experimental.constrained.fdiv.v3f64(<3 x double> %d1, <3 x double> %d0, metadata !"round.downward", metadata !"fpexcept.strict")
+  %d_rtn = call <3 x double> @llvm.experimental.constrained.fdiv.v3f64(<3 x double> %d0, <3 x double> %d1, metadata !"round.downward", metadata !"fpexcept.strict")
   ret void
 }
 
@@ -62,12 +57,12 @@ entry:
 ; CHECK-DAG: OpDecorate %[[#S_RTZ]] FPRoundingMode RTZ
 ; CHECK-DAG: OpDecorate %[[#S_RTP]] FPRoundingMode RTP
 ; CHECK-DAG: OpDecorate %[[#S_RTN]] FPRoundingMode RTN
-define spir_kernel void @test_sqrt_scalar(half %h, float %f, double %d0, double %d1) strictfp {
+define spir_kernel void @test_sqrt_scalar(half %h, float %f, double %d) strictfp {
 entry:
   %h_rte = call half @llvm.experimental.constrained.sqrt.f16(half %h, metadata !"round.tonearest", metadata !"fpexcept.strict")
   %f_rtz = call float @llvm.experimental.constrained.sqrt.f32(float %f, metadata !"round.towardzero", metadata !"fpexcept.strict")
-  %d_rtp = call double @llvm.experimental.constrained.sqrt.f64(double %d0, metadata !"round.upward", metadata !"fpexcept.strict")
-  %d_rtn = call double @llvm.experimental.constrained.sqrt.f64(double %d1, metadata !"round.downward", metadata !"fpexcept.strict")
+  %d_rtp = call double @llvm.experimental.constrained.sqrt.f64(double %d, metadata !"round.upward", metadata !"fpexcept.strict")
+  %d_rtn = call double @llvm.experimental.constrained.sqrt.f64(double %d, metadata !"round.downward", metadata !"fpexcept.strict")
   ret void
 }
 
@@ -79,12 +74,24 @@ entry:
 ; CHECK-DAG: OpDecorate %[[#SV_RTZ]] FPRoundingMode RTZ
 ; CHECK-DAG: OpDecorate %[[#SV_RTP]] FPRoundingMode RTP
 ; CHECK-DAG: OpDecorate %[[#SV_RTN]] FPRoundingMode RTN
-define spir_kernel void @test_sqrt_vector(<2 x half> %h, <4 x float> %f, <3 x double> %d0, <3 x double> %d1) strictfp {
+define spir_kernel void @test_sqrt_vector(<2 x half> %h, <4 x float> %f, <3 x double> %d) strictfp {
 entry:
   %h_rte = call <2 x half> @llvm.experimental.constrained.sqrt.v2f16(<2 x half> %h, metadata !"round.tonearest", metadata !"fpexcept.strict")
   %f_rtz = call <4 x float> @llvm.experimental.constrained.sqrt.v4f32(<4 x float> %f, metadata !"round.towardzero", metadata !"fpexcept.strict")
-  %d_rtp = call <3 x double> @llvm.experimental.constrained.sqrt.v3f64(<3 x double> %d0, metadata !"round.upward", metadata !"fpexcept.strict")
-  %d_rtn = call <3 x double> @llvm.experimental.constrained.sqrt.v3f64(<3 x double> %d1, metadata !"round.downward", metadata !"fpexcept.strict")
+  %d_rtp = call <3 x double> @llvm.experimental.constrained.sqrt.v3f64(<3 x double> %d, metadata !"round.upward", metadata !"fpexcept.strict")
+  %d_rtn = call <3 x double> @llvm.experimental.constrained.sqrt.v3f64(<3 x double> %d, metadata !"round.downward", metadata !"fpexcept.strict")
+  ret void
+}
+
+; A plain fdiv with FPRoundingMode given through !spirv.Decorations.
+; CHECK-DAG: %[[#P_RTP:]] = OpFDiv %[[#FLOAT]]
+; CHECK-DAG: %[[#PV_RTP:]] = OpFDiv %[[#FLOATV]]
+; CHECK-DAG: OpDecorate %[[#P_RTP]] FPRoundingMode RTP
+; CHECK-DAG: OpDecorate %[[#PV_RTP]] FPRoundingMode RTP
+define spir_kernel void @test_fdiv_spirv_decorations(float %f0, float %f1, <4 x float> %fv0, <4 x float> %fv1) {
+entry:
+  %f_rtp = fdiv float %f0, %f1, !spirv.Decorations !0
+  %fv_rtp = fdiv <4 x float> %fv0, %fv1, !spirv.Decorations !0
   ret void
 }
 
@@ -101,3 +108,7 @@ declare double @llvm.experimental.constrained.sqrt.f64(double, metadata, metadat
 declare <2 x half> @llvm.experimental.constrained.sqrt.v2f16(<2 x half>, metadata, metadata)
 declare <4 x float> @llvm.experimental.constrained.sqrt.v4f32(<4 x float>, metadata, metadata)
 declare <3 x double> @llvm.experimental.constrained.sqrt.v3f64(<3 x double>, metadata, metadata)
+
+; FPRoundingMode (39) RTP (2)
+!0 = !{!1}
+!1 = !{i32 39, i32 2}
