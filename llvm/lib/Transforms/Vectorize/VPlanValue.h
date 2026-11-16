@@ -492,7 +492,7 @@ public:
   }
 
   /// Returns true if the VPUser would only use the first part of any operand.
-  virtual bool isFirstPartUser() const { return false; }
+  virtual bool usesFirstPartOnly() const { return false; }
 };
 
 /// This class augments a recipe with a set of VPValues defined by the recipe.

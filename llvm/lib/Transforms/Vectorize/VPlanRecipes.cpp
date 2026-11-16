@@ -1873,7 +1873,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   }
 }
 
-bool VPInstruction::isFirstPartUser() const {
+bool VPInstruction::usesFirstPartOnly() const {
   switch (getOpcode()) {
   default:
     return false;
