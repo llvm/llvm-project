@@ -23,9 +23,8 @@
 // store. All kernels get the parameter, whether they access the memory or not,
 // so the runtime can treat the kernels of a module alike.
 //
-// The lowering changes the kernel signatures, so it is limited to Intel GPUs,
-// whose runtime sets the argument. To add support of dynamic shared memory
-// into OpenCL backends, this pass will also be needed.
+// The lowering changes the kernel signatures, so it is limited to 
+// OpenCL/Unknown OS triple whose runtime sets the argument.
 //
 //===----------------------------------------------------------------------===//
 
@@ -126,9 +125,9 @@ void updateMemoryEffects(Function *F, MemoryEffects NewEffects) {
 
 bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
   // Shaders have no kernel arguments, so the pass is disabled.
-  // It is only used for OpenCL runtime, because OpenCL has no API
-  // to size extern workgroup array. Runtimes can check global
-  // variable `__spirv_dynamic_local_memory_present` to check
+  // It is only used for OpenCL/Level Zero runtimes, because they 
+  // have no API to size extern workgroup array. Runtimes can check 
+  // global variable `__spirv_dynamic_local_memory_present` to check
   // if module contains the additional SLM argument.
   // UnknownOS implies OpenCL
   // https://llvm.org/docs/SPIRVUsage.html#target-triples.
