@@ -57,7 +57,8 @@ void ModuleCacheEntries::flush() {
       off_t Size;
       time_t ModTime;
       // Best-effort: ignore errors (e.g. read-only cache directory).
-      (void)writeImpl(Path, *Entry->Buffer, Size, ModTime);
+      (void)writeImpl(Path, *Entry->Buffer, Size, ModTime,
+                      /*ReadBack=*/false);
     }
   }
 }
@@ -194,27 +195,27 @@ public:
     return InMemory;
   }
 
-  std::error_code write(StringRef Path, llvm::MemoryBufferRef Buffer,
-                        off_t &Size, time_t &ModTime) override {
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+  write(StringRef Path, std::unique_ptr<llvm::MemoryBuffer> Buffer, off_t &Size,
+        time_t &ModTime) override {
     ModuleCacheEntry &Entry = getOrCreateEntry(Path);
     std::lock_guard<std::mutex> Lock(Entry.Mutex);
     Logger.log() << "pcm_write: " << Path;
     if (Entry.State == ModuleCacheEntry::S_Written) {
       assert(Entry.Buffer && "Wrote PCM with no contents");
-      assert(Entry.Buffer->getBuffer() == Buffer.getBuffer() &&
+      assert(Entry.Buffer->getBuffer() == Buffer->getBuffer() &&
              "Wrote the same PCM with different contents");
       Size = Entry.Buffer->getBufferSize();
       ModTime = Entry.ModTime;
-      return {};
+      return std::make_unique<SharedMemoryBuffer>(Entry.Buffer);
     }
     // Readers of the previous buffer (if any) keep it alive on their own.
-    Entry.Buffer =
-        llvm::MemoryBuffer::getMemBufferCopy(Buffer.getBuffer(), Path);
+    Entry.Buffer = std::move(Buffer);
     Entry.ModTime = llvm::sys::toTimeT(std::chrono::system_clock::now());
     Entry.State = ModuleCacheEntry::S_Written;
     Size = Entry.Buffer->getBufferSize();
     ModTime = Entry.ModTime;
-    return {};
+    return std::make_unique<SharedMemoryBuffer>(Entry.Buffer);
   }
 
   Expected<std::unique_ptr<llvm::MemoryBuffer>>
