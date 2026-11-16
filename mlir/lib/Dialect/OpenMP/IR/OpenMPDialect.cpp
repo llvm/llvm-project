@@ -5591,6 +5591,29 @@ LogicalResult AtomicCompareOp::verifyRegions() {
 }
 
 //===----------------------------------------------------------------------===//
+// ThreadprivateOp
+//===----------------------------------------------------------------------===//
+
+void ThreadprivateOp::getEffects(
+    llvm::SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+
+  // Read the primary thread's copy and write to the thread-local versions.
+  effects.emplace_back(MemoryEffects::Read::get(), &getSymAddrMutable());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       cast<OpResult>(getTlsAddr()));
+  // Threadprivate runtime bookeeping may or may not allocate new storage for
+  // caches or thread-local storage, do not attach this effect to an address to
+  // avoid incorrectly implying it is new storage.
+  effects.emplace_back(MemoryEffects::Allocate::get());
+
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       ThreadprivateRuntimeResource::get());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       ThreadprivateRuntimeResource::get());
+}
+
+//===----------------------------------------------------------------------===//
 // CancelOp
 //===----------------------------------------------------------------------===//
 
