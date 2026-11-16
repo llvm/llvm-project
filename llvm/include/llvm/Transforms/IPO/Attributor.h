@@ -551,7 +551,7 @@ struct AADepGraph {
 
   LLVM_ABI void viewGraph();
 
-  /// Dump graph to a file named after \p DotFileNamePrefix.
+  /// Dump graph to file
   LLVM_ABI void dumpGraph(StringRef DotFileNamePrefix);
 
   /// Print dependency graph

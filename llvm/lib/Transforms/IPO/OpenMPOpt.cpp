@@ -938,6 +938,7 @@ static bool moduleHasSampleProfile(const Module &M) {
 }
 
 struct OpenMPOpt {
+
   using OptimizationRemarkGetter =
       function_ref<OptimizationRemarkEmitter &(Function *)>;
 
