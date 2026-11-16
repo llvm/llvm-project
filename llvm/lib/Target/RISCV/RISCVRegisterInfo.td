@@ -316,11 +316,6 @@ class GPRRegisterClass<dag regList>
   let RegInfos = XLenRI;
 }
 
-class YGPRRegisterClass<dag regList>
-    : RISCVRegisterClass<[YLenVT], 64, regList> {
-  let RegInfos = YLenRI;
-}
-
 // The order of registers represents the preferred allocation sequence.
 // Registers are listed in the order caller-save, callee-save, specials.
 def GPR : GPRRegisterClass<(add (sequence "X%u", 10, 17),
@@ -331,6 +326,12 @@ def GPR : GPRRegisterClass<(add (sequence "X%u", 10, 17),
                                 (sequence "X%u", 0, 4))> {
   let DiagnosticType = "InvalidRegClassGPR";
   let DiagnosticString = "register must be a GPR";
+}
+
+class YGPRRegisterClass<dag regList>
+    : RISCVRegisterClass<[YLenVT], 64, regList> {
+  let RegInfos = YLenRI;
+  let CoerceFromRegClass = GPR;
 }
 
 def YGPR : YGPRRegisterClass<(add (sequence "X%u_Y", 10, 17),
@@ -551,29 +552,6 @@ class FPRCRegisterClass<list<ValueType> regTypes, int align, string regSuffix>
 // meaning caller-save regs are listed before callee-save.
 // We start by allocating argument registers in reverse order since they are
 // compressible.
-def FPR16 : FPRRegisterClass<[f16, bf16], 16, "H"> {
-  let DiagnosticType   = "InvalidRegClassFPR16";
-  let DiagnosticString = "register must be a FPR";
-}
-
-def FPR16C : FPRCRegisterClass<[f16, bf16], 16, "H"> {
-  let DiagnosticType   = "InvalidRegClassFPR16C";
-  let DiagnosticString = "register must be a FPR from f8 to f15 (fs0-fs1, fa0-fa5)";
-}
-
-def FPR32 : FPRRegisterClass<[f32], 32, "F"> {
-  let DiagnosticType   = "InvalidRegClassFPR32";
-  let DiagnosticString = "register must be a FPR";
-}
-
-def FPR32C : FPRCRegisterClass<[f32], 32, "F"> {
-  let DiagnosticType   = "InvalidRegClassFPR32C";
-  let DiagnosticString = "register must be a FPR from f8 to f15 (fs0-fs1, fa0-fa5)";
-}
-
-
-// The order of registers represents the preferred allocation sequence,
-// meaning caller-save regs are listed before callee-save.
 def FPR64 : FPRRegisterClass<[f64], 64, "D"> {
   let DiagnosticType   = "InvalidRegClassFPR64";
   let DiagnosticString = "register must be a FPR";
@@ -584,7 +562,32 @@ def FPR64C : FPRCRegisterClass<[f64], 64, "D"> {
   let DiagnosticString = "register must be a FPR from f8 to f15 (fs0-fs1, fa0-fa5)";
 }
 
+def FPR16 : FPRRegisterClass<[f16, bf16], 16, "H"> {
+  let CoerceFromRegClass = FPR64;
+  let DiagnosticType   = "InvalidRegClassFPR16";
+  let DiagnosticString = "register must be a FPR";
+}
+
+def FPR16C : FPRCRegisterClass<[f16, bf16], 16, "H"> {
+  let CoerceFromRegClass = FPR64;
+  let DiagnosticType   = "InvalidRegClassFPR16C";
+  let DiagnosticString = "register must be a FPR from f8 to f15 (fs0-fs1, fa0-fa5)";
+}
+
+def FPR32 : FPRRegisterClass<[f32], 32, "F"> {
+  let CoerceFromRegClass = FPR64;
+  let DiagnosticType   = "InvalidRegClassFPR32";
+  let DiagnosticString = "register must be a FPR";
+}
+
+def FPR32C : FPRCRegisterClass<[f32], 32, "F"> {
+  let CoerceFromRegClass = FPR64;
+  let DiagnosticType   = "InvalidRegClassFPR32C";
+  let DiagnosticString = "register must be a FPR from f8 to f15 (fs0-fs1, fa0-fa5)";
+}
+
 def FPR128 : FPRRegisterClass<[f128], 128, "Q"> {
+  let CoerceFromRegClass = FPR64;
   let DiagnosticType   = "InvalidRegClassFPR128";
   let DiagnosticString = "register must be a FPR";
 }
@@ -909,23 +912,32 @@ def VRNoV0 : VReg<!listconcat(VM1VTs, VMaskVTs), (sub VR, V0), 1>;
 
 def VRM2 : VReg<VM2VTs, (add (sequence "V%uM2", 8, 31, 2),
                              (sequence "V%uM2", 6, 0, 2)), 2> {
+  let CoerceFromRegClass = VR;
   let DecoderMethod = "DecodeVectorRegisterClass<RISCV::VRM2RegClassID, 32, 2>";
 }
 
-def VRM2NoV0 : VReg<VM2VTs, (sub VRM2, V0M2), 2>;
+def VRM2NoV0 : VReg<VM2VTs, (sub VRM2, V0M2), 2> {
+  let CoerceFromRegClass = VR;
+}
 
 def VRM4 : VReg<VM4VTs, (add V8M4, V12M4, V16M4, V20M4,
                              V24M4, V28M4, V4M4, V0M4), 4> {
+  let CoerceFromRegClass = VR;
   let DecoderMethod = "DecodeVectorRegisterClass<RISCV::VRM4RegClassID, 32, 4>";
 }
 
-def VRM4NoV0 : VReg<VM4VTs, (sub VRM4, V0M4), 4>;
+def VRM4NoV0 : VReg<VM4VTs, (sub VRM4, V0M4), 4> {
+  let CoerceFromRegClass = VR;
+}
 
 def VRM8 : VReg<VM8VTs, (add V8M8, V16M8, V24M8, V0M8), 8> {
+  let CoerceFromRegClass = VR;
   let DecoderMethod = "DecodeVectorRegisterClass<RISCV::VRM8RegClassID, 32, 8>";
 }
 
-def VRM8NoV0 : VReg<VM8VTs, (sub VRM8, V0M8), 8>;
+def VRM8NoV0 : VReg<VM8VTs, (sub VRM8, V0M8), 8> {
+  let CoerceFromRegClass = VR;
+}
 
 // Fractional LMUL register classes for inline assembly.
 // The ZZZ_ prefix is to make sure these are ordered after VR/VRNoV0 in the
@@ -1044,6 +1056,7 @@ let RegAltNameIndices = [ABIRegAltName] in
 // The order of registers represents the preferred allocation sequence,
 // meaning caller-save regs are listed before callee-save.
 def FPR256 : FPRRegisterClass<[v8i32, v8f32], 256, "Q2"> {
+  let CoerceFromRegClass = FPR64;
   let DiagnosticType   = "InvalidRegClassFPR256";
   let DiagnosticString = "register must be a FPR";
 }
