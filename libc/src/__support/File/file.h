@@ -279,6 +279,8 @@ public:
 
   LIBC_INLINE bool error_unlocked() const { return err; }
 
+  LIBC_INLINE void set_error_unlocked() { err = true; }
+
   LIBC_INLINE bool error() {
     FileLock l(this);
     return error_unlocked();
