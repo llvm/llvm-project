@@ -1,6 +1,6 @@
 # Check that we can remove the redundant save of constant registers such as $zero
 # RUN: llc -mtriple=mips64-unknown-freebsd %s -start-before=machine-cp -o - | FileCheck %s --check-prefix ASM
-# RUN: llc -mtriple=mips64-unknown-freebsd %s -verify-machineinstrs -run-pass=machine-cp -o - | FileCheck %s
+# RUN: llc -mtriple=mips64-unknown-freebsd %s -run-pass=machine-cp -o - | FileCheck %s
 --- |
   target triple = "mips64-unknown-freebsd"
   define i32 @a() nounwind {

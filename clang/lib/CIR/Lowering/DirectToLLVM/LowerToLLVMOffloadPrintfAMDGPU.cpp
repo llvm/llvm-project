@@ -18,8 +18,8 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/ADT/SparseBitVector.h"
-#include "llvm/Support/AMDGPUPrintf.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Transforms/Utils/AMDGPUEmitPrintf.h"
 
 namespace cir {
 namespace direct {

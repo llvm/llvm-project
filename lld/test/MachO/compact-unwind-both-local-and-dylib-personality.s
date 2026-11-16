@@ -195,6 +195,7 @@ _personality_2:
 ## https://reviews.llvm.org/D107533#2935217
 #--- combined.yaml
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007

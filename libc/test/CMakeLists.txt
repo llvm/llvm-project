@@ -52,7 +52,7 @@ endif()
 add_subdirectory(include)
 
 if(NOT ${LIBC_TARGET_OS} STREQUAL "linux" AND
-  NOT ${LIBC_TARGET_OS} STREQUAL "gpu")
+    NOT ${LIBC_TARGET_OS} STREQUAL "gpu")
   # Integration tests are currently only available for linux and the GPU.
   return()
 endif()

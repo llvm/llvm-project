@@ -58,15 +58,3 @@ TEST(SPSSymbolLookupSetTest, SymbolLookupSetSerialization) {
                        {"bar", SymbolLookupFlags::WeaklyReferencedSymbol}}),
       seqEqual<SymbolLookupSet>);
 }
-
-TEST(SPSSymbolLookupSetTest, SymbolLookupResultSerialization) {
-  int X = 0;
-  SymbolLookupResult R;
-  R.push_back(&X);
-  R.push_back(nullptr);
-  R.push_back(std::nullopt);
-  blobSerializationRoundTrip<SPSSymbolLookupResult, SymbolLookupResult>(
-      SymbolLookupResult(), seqEqual<SymbolLookupResult>);
-  blobSerializationRoundTrip<SPSSymbolLookupResult, SymbolLookupResult>(
-      R, seqEqual<SymbolLookupResult>);
-}

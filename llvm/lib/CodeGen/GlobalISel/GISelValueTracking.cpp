@@ -938,8 +938,11 @@ void GISelValueTracking::computeKnownBits(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(3).getReg(), WidthKnown, DemandedElts,
                          Depth + 1);
-    OffsetKnown = OffsetKnown.sext(BitWidth);
-    WidthKnown = WidthKnown.sext(BitWidth);
+    // The offset and width are unsigned and can have a different type than the
+    // source. extractBits reads both as unsigned values of any width. The
+    // width is also used below in a subtraction of BitWidth type. A valid width
+    // is at most BitWidth, so it fits in BitWidth bits.
+    WidthKnown = WidthKnown.zextOrTrunc(BitWidth);
     Known = extractBits(BitWidth, SrcOpKnown, OffsetKnown, WidthKnown);
     // Sign extend the extracted value using shift left and arithmetic shift
     // right.
@@ -1494,11 +1497,19 @@ void GISelValueTracking::computeKnownFPClass(Register R,
         MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
 
     if (A == B && isGuaranteedNotToBeUndef(A, MRI, Depth + 1)) {
-      // x * x + y
+      FPClassTest InterestedSquared = InterestedClasses;
+      FPClassTest InterestedAddend = InterestedClasses;
+      // Only fma(+inf, +inf, -inf) and fma(-inf, -inf, -inf) produce NaN when
+      // squaring.
+      if (InterestedClasses & fcQNan) {
+        InterestedSquared |= fcSNan | fcInf;
+        InterestedAddend |= fcSNan | fcNegInf;
+      }
+
       KnownFPClass KnownSrc, KnownAddend;
-      computeKnownFPClass(C, DemandedElts, InterestedClasses, KnownAddend,
+      computeKnownFPClass(C, DemandedElts, InterestedAddend, KnownAddend,
                           Depth + 1);
-      computeKnownFPClass(A, DemandedElts, InterestedClasses, KnownSrc,
+      computeKnownFPClass(A, DemandedElts, InterestedSquared, KnownSrc,
                           Depth + 1);
       if (KnownNotFromFlags) {
         KnownSrc.knownNot(KnownNotFromFlags);
@@ -1923,10 +1934,20 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FADD:
-  case TargetOpcode::G_FSUB: {
+  case TargetOpcode::G_STRICT_FADD:
+  case TargetOpcode::G_FSUB:
+  case TargetOpcode::G_STRICT_FSUB: {
     Register LHS = MI.getOperand(1).getReg();
     Register RHS = MI.getOperand(2).getReg();
-    bool IsAdd = Opcode == TargetOpcode::G_FADD;
+
+    const bool IsAdd =
+        Opcode == TargetOpcode::G_FADD || Opcode == TargetOpcode::G_STRICT_FADD;
+    const bool IsStrict = Opcode == TargetOpcode::G_STRICT_FADD ||
+                          Opcode == TargetOpcode::G_STRICT_FSUB;
+    // TODO: Obtain rounding mode for strict fadd/fsub.
+    const RoundingMode RM =
+        IsStrict ? RoundingMode::Dynamic : RoundingMode::NearestTiesToEven;
+
     bool WantNegative =
         IsAdd &&
         (InterestedClasses & KnownFPClass::OrderedLessThanZeroMask) != fcNone;
@@ -1951,7 +1972,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       KnownFPClass KnownSelf;
       computeKnownFPClass(LHS, DemandedElts, InterestedSrcs, KnownSelf,
                           Depth + 1);
-      Known = KnownFPClass::fadd_self(KnownSelf, Mode);
+      Known = KnownFPClass::fadd_self(KnownSelf, RM, Mode);
       break;
     }
 
@@ -1968,9 +1989,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     }
 
     if (IsAdd)
-      Known = KnownFPClass::fadd(KnownLHS, KnownRHS, Mode);
+      Known = KnownFPClass::fadd(KnownLHS, KnownRHS, RM, Mode);
     else
-      Known = KnownFPClass::fsub(KnownLHS, KnownRHS, Mode);
+      Known = KnownFPClass::fsub(KnownLHS, KnownRHS, RM, Mode);
     break;
   }
   case TargetOpcode::G_FMUL: {
@@ -2051,7 +2072,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
     break;
   }
-  case TargetOpcode::G_FREM: {
+  case TargetOpcode::G_FREM:
+  case TargetOpcode::G_STRICT_FREM: {
     FPClassTest InterestedLHS = fcNone;
     FPClassTest InterestedRHS = fcNone;
 
@@ -2463,7 +2485,9 @@ bool GISelValueTracking::isKnownNeverNaN(Register Val, bool SNaN) {
     case TargetOpcode::G_FMUL:
     case TargetOpcode::G_STRICT_FMUL:
     case TargetOpcode::G_FDIV:
+    case TargetOpcode::G_STRICT_FDIV:
     case TargetOpcode::G_FREM:
+    case TargetOpcode::G_STRICT_FREM:
     case TargetOpcode::G_FMA:
     case TargetOpcode::G_STRICT_FMA:
     case TargetOpcode::G_FMAD:

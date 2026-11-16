@@ -85,7 +85,6 @@
 ...
 ---
 name:            g
-tracksRegLiveness: true
 isSSA: false
 body:             |
   bb.0 (%ir-block.0):
