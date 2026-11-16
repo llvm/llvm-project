@@ -23,12 +23,42 @@ end subroutine
 ! CHECK-NOT: fir.allocmem !fir.char
 ! CHECK: return
 
+! A chain of concatenations is evaluated into a single buffer when
+! concatenations are fused, and into one buffer per concatenation otherwise.
+subroutine concat_chain(a, b, c)
+  character(*) :: a, b, c
+  call foo(a // b // c)
+end subroutine
+! CHECK-LABEL: func.func @_QPconcat_chain
+! CHECK: fir.alloca !fir.char<1,?>
+! CHECK: fir.alloca !fir.char<1,?>
+! CHECK-NOT: fir.alloca !fir.char
+! CHECK-NOT: fir.allocmem !fir.char
+! CHECK: fir.call @_QPfoo
+! CHECK: return
+! FUSED-LABEL: func.func @_QPconcat_chain
+! FUSED: fir.alloca !fir.char<1,?>
+! FUSED-NOT: fir.alloca !fir.char
+! FUSED-NOT: fir.allocmem !fir.char
+! FUSED: fir.call @_QPfoo
+! FUSED: return
+
 ! Elemental fusion and concatenation fusion must retain one scalar scratch
-! buffer, whose invariant length allows allocation outside the element loop.
+! buffer. Without concatenation fusion, each concatenation has its own buffer.
+! In both cases, the invariant length allows allocation outside the element
+! loop.
 subroutine concat_array(a, b, c)
   character(*) :: a(:), b(:), c(:)
   c = a // b // '!'
 end subroutine
+! CHECK-LABEL: func.func @_QPconcat_array
+! CHECK: fir.alloca !fir.char<1,?>
+! CHECK: fir.alloca !fir.char<1,?>
+! CHECK-NOT: fir.alloca !fir.char
+! CHECK: fir.do_loop
+! CHECK-NOT: fir.alloca !fir.char
+! CHECK-NOT: fir.allocmem !fir.char
+! CHECK: return
 ! FUSED-LABEL: func.func @_QPconcat_array
 ! FUSED: fir.alloca !fir.char<1,?>
 ! FUSED-NOT: fir.alloca !fir.char

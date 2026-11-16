@@ -799,52 +799,45 @@ namespace {
 /// Fuse single-use concatenations before allocating their buffers. The reads
 /// of the inner operands move to the outer concatenation, so do not cross any
 /// operation that may change or release their storage. Allocations, like the
-/// hlfir.declare of a literal operand, are fine to cross.
+/// hlfir.declare of a literal operand, are fine to cross. Only the first
+/// operand is fused, so that the operands are still read in the same order,
+/// which matters for volatile operands. Lowering creates left-nested chains.
 struct InlineConcat : public mlir::OpRewritePattern<hlfir::ConcatOp> {
   using OpRewritePattern::OpRewritePattern;
   llvm::LogicalResult
   matchAndRewrite(hlfir::ConcatOp concat,
                   mlir::PatternRewriter &rewriter) const override {
-    for (auto [index, string] : llvm::enumerate(concat.getStrings())) {
-      auto inner = string.getDefiningOp<hlfir::ConcatOp>();
-      if (!inner || inner->getBlock() != concat->getBlock())
-        continue;
-      unsigned uses = 0;
-      llvm::SmallVector<hlfir::DestroyOp> destroys;
-      for (mlir::OpOperand &use : string.getUses()) {
-        if (auto destroy = mlir::dyn_cast<hlfir::DestroyOp>(use.getOwner()))
-          destroys.push_back(destroy);
-        else
-          ++uses;
-      }
-      if (uses != 1)
-        continue;
-      bool canMove = true;
-      for (mlir::Operation *op = inner->getNextNode(); op != concat;
-           op = op->getNextNode()) {
-        auto effects = mlir::getEffectsRecursively(op);
-        if (!effects || llvm::any_of(*effects, [](const auto &effect) {
-              return mlir::isa<mlir::MemoryEffects::Write,
-                               mlir::MemoryEffects::Free>(effect.getEffect());
-            })) {
-          canMove = false;
-          break;
-        }
-      }
-      if (!canMove)
-        continue;
-      llvm::SmallVector<mlir::Value> strings(concat.getStrings());
-      strings.erase(strings.begin() + index);
-      strings.insert(strings.begin() + index, inner.getStrings().begin(),
-                     inner.getStrings().end());
-      rewriter.modifyOpInPlace(
-          concat, [&]() { concat.getStringsMutable().assign(strings); });
-      for (auto destroy : destroys)
-        rewriter.eraseOp(destroy);
-      rewriter.eraseOp(inner);
-      return mlir::success();
+    mlir::Value string = concat.getStrings().front();
+    auto inner = string.getDefiningOp<hlfir::ConcatOp>();
+    if (!inner || inner->getBlock() != concat->getBlock())
+      return mlir::failure();
+    unsigned uses = 0;
+    llvm::SmallVector<hlfir::DestroyOp> destroys;
+    for (mlir::OpOperand &use : string.getUses()) {
+      if (auto destroy = mlir::dyn_cast<hlfir::DestroyOp>(use.getOwner()))
+        destroys.push_back(destroy);
+      else
+        ++uses;
     }
-    return mlir::failure();
+    if (uses != 1)
+      return mlir::failure();
+    for (mlir::Operation *op = inner->getNextNode(); op != concat;
+         op = op->getNextNode()) {
+      auto effects = mlir::getEffectsRecursively(op);
+      if (!effects || llvm::any_of(*effects, [](const auto &effect) {
+            return mlir::isa<mlir::MemoryEffects::Write,
+                             mlir::MemoryEffects::Free>(effect.getEffect());
+          }))
+        return mlir::failure();
+    }
+    llvm::SmallVector<mlir::Value> strings(inner.getStrings());
+    llvm::append_range(strings, concat.getStrings().drop_front());
+    rewriter.modifyOpInPlace(
+        concat, [&]() { concat.getStringsMutable().assign(strings); });
+    for (auto destroy : destroys)
+      rewriter.eraseOp(destroy);
+    rewriter.eraseOp(inner);
+    return mlir::success();
   }
 };
 

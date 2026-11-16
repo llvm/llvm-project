@@ -78,6 +78,22 @@ func.func @snapshot(%a: !fir.boxchar<1>, %b: !fir.boxchar<1>, %out: !fir.boxchar
   return
 }
 
+// Fusing a concatenation that is not the first operand would read A before
+// B and C, reordering the volatile accesses.
+// CANON-LABEL: func.func @right_nested_volatile
+// CANON: %[[INNER:.*]] = hlfir.concat %arg1, %arg2
+// CANON: hlfir.concat %arg0, %[[INNER]]
+func.func @right_nested_volatile(%a: !fir.ref<!fir.char<1,1>, volatile>, %b: !fir.ref<!fir.char<1,1>, volatile>, %c: !fir.ref<!fir.char<1,1>, volatile>, %out: !fir.ref<!fir.char<1,3>>) {
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %x = hlfir.concat %b, %c len %c2 : (!fir.ref<!fir.char<1,1>, volatile>, !fir.ref<!fir.char<1,1>, volatile>, index) -> !hlfir.expr<!fir.char<1,2>>
+  %y = hlfir.concat %a, %x len %c3 : (!fir.ref<!fir.char<1,1>, volatile>, !hlfir.expr<!fir.char<1,2>>, index) -> !hlfir.expr<!fir.char<1,3>>
+  hlfir.assign %y to %out : !hlfir.expr<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>
+  hlfir.destroy %y : !hlfir.expr<!fir.char<1,3>>
+  hlfir.destroy %x : !hlfir.expr<!fir.char<1,2>>
+  return
+}
+
 // Explicit cleanup of an intermediate expression survives association through
 // no_reassoc and releases the buffer after the comparison.
 // CHECK-LABEL: func.func @intermediate
