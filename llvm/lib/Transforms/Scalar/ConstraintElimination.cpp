@@ -699,12 +699,12 @@ static Decomposition decompose(Value *V, ConstraintInfo &Info, bool IsSigned,
 
 static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
                                    bool IsSigned, const DataLayout &DL) {
-  auto MergeResults = [&Info, IsSigned,
-                       &DL](Value *A, Value *B,
-                            bool IsSignedB) -> std::optional<Decomposition> {
+  auto MergeResults = [&Info, IsSigned, &DL](
+                          Value *A, Value *B, bool IsSignedB,
+                          bool IsSub = false) -> std::optional<Decomposition> {
     auto ResA = decompose(A, Info, IsSigned, DL);
     auto ResB = decompose(B, Info, IsSignedB, DL);
-    if (ResA.add(ResB))
+    if (IsSub ? ResA.sub(ResB) : ResA.add(ResB))
       return std::nullopt;
     return ResA;
   };
@@ -712,14 +712,13 @@ static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
   // An add/sub.with.overflow is only decomposed for the fact queued on its
   // no-overflow edge, where it does not overflow.
   if (auto *WO = dyn_cast<WithOverflowInst>(V)) {
-    if (isKnownNoWrap(WO->getBinaryOp(), WO->getLHS(), WO->getRHS(),
-                      WO->getNoWrapKind(), Info, IsSigned)) {
-      auto ResA = decompose(WO->getLHS(), Info, IsSigned, DL);
-      auto ResB = decompose(WO->getRHS(), Info, IsSigned, DL);
-      if (!(WO->getBinaryOp() == Instruction::Add ? ResA.add(ResB)
-                                                  : ResA.sub(ResB)))
-        return ResA;
-    }
+    Instruction::BinaryOps Opc = WO->getBinaryOp();
+    if ((Opc == Instruction::Add || Opc == Instruction::Sub) &&
+        isKnownNoWrap(Opc, WO->getLHS(), WO->getRHS(), WO->getNoWrapKind(),
+                      Info, IsSigned))
+      if (auto Decomp = MergeResults(WO->getLHS(), WO->getRHS(), IsSigned,
+                                     Opc == Instruction::Sub))
+        return *Decomp;
     return V;
   }
 
