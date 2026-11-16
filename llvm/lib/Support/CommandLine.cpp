@@ -183,6 +183,10 @@ public:
   // an index from their option names.
   SmallVector<const LibraryOptions *, 0> ToolOptions;
   DenseMap<StringRef, const LibraryOptions *> ToolIndex;
+  // Whether the current or last parse takes a LibraryOptionsContext. Only such
+  // a parse recognizes library options, and only then does -help-hidden list
+  // them.
+  bool RecognizeLibraryOptions = false;
   // Storage that library options refer to: copies of the arguments passed to
   // LibraryOptions::parse and what it allocates. Response file expansions do
   // not outlive parsing.
@@ -1556,6 +1560,7 @@ bool CommandLineParser::ParseCommandLineOptions(
   assert((hasOptions() || !Tools.empty()) && "No options specified!");
 
   ProgramOverview = Overview;
+  RecognizeLibraryOptions = Context;
   bool IgnoreErrors = Errs;
   if (!Errs)
     Errs = &errs();
@@ -1727,14 +1732,12 @@ bool CommandLineParser::ParseCommandLineOptions(
       if (!Handler && ChosenSubCommand != &SubCommand::getTopLevel())
         Handler = LookupOption(SubCommand::getTopLevel(), ArgName, Value);
 
-      if (!Handler) {
+      if (!Handler && Context) {
         if (const LibraryOptions *L =
                 lookupLibraryOption(ArgName.split('=').first)) {
           ArrayRef<const char *> Rest(argv + i, argc - i);
           unsigned N;
-          if (Error E = Context ? Context->parse(*L, Rest, N)
-                                : parseLibraryOption(*L, L->global(), Rest, N,
-                                                     LibraryArgAlloc)) {
+          if (Error E = Context->parse(*L, Rest, N)) {
             *Errs << ProgramName << ": " << toString(std::move(E)) << '\n';
             ErrorParsing = true;
           }
@@ -2532,7 +2535,7 @@ public:
       MaxArgLen = std::max(MaxArgLen, Opt.second->getOptionWidth());
 
     SmallVector<std::pair<std::string, StringRef>, 0> LibraryOpts;
-    if (ShowHidden)
+    if (ShowHidden && globalParser().RecognizeLibraryOptions)
       for (const LibraryOptions *L : concat<const LibraryOptions *const>(
                globalParser().Libraries, globalParser().ToolOptions))
         L->forEachOption(
