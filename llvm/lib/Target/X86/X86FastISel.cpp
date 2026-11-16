@@ -962,10 +962,6 @@ redo_gep:
 
   switch (Opcode) {
   default: break;
-  case Instruction::BitCast:
-    // Look past bitcasts.
-    return X86SelectAddress(U->getOperand(0), AM);
-
   case Instruction::IntToPtr:
     // Look past no-op inttoptrs.
     if (TLI.getValueType(DL, U->getOperand(0)->getType()) ==
@@ -1136,12 +1132,6 @@ bool X86FastISel::X86SelectCallAddress(const Value *V, X86AddressMode &AM) {
 
   switch (Opcode) {
   default: break;
-  case Instruction::BitCast:
-    // Look past bitcasts if its operand is in the same BB.
-    if (InMBB)
-      return X86SelectCallAddress(U->getOperand(0), AM);
-    break;
-
   case Instruction::IntToPtr:
     // Look past no-op inttoptrs if its operand is in the same BB.
     if (InMBB &&
