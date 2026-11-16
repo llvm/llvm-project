@@ -355,6 +355,13 @@ integer instead of unsigned. This is required because llvm-ir will create the
 same sampled type for signed and unsigned integers. If the image format is
 unknown, the backend cannot distinguish the two case.
 
+When targeting Vulkan, the Sampled Type of every `OpTypeImage`, sampled or
+storage, must be a scalar 32-bit float, 32-bit integer or 64-bit integer
+([VUID-StandaloneSpirv-OpTypeImage-04656][vulkan-image-sampled-type]). The
+backend reports an error for any other Sampled Type, whichever frontend produced
+the LLVM IR. Other target environments are not affected; OpenCL images, for
+example, use a `void` Sampled Type.
+
 See [wg-hlsl proposal 0018](https://github.com/llvm/wg-hlsl/blob/main/proposals/0018-spirv-resource-representation.md)
 for details on `spirv.VulkanBuffer`.
 
@@ -683,3 +690,4 @@ LLVM IR representations.
 
 [inline spir-v]: https://microsoft.github.io/hlsl-specs/proposals/0011-inline-spirv.html#types
 [target extension types for inline spir-v and decorated types]: https://github.com/llvm/wg-hlsl/blob/main/proposals/0017-inline-spirv-and-decorated-types.md
+[vulkan-image-sampled-type]: https://docs.vulkan.org/spec/latest/appendices/spirvenv.html#VUID-StandaloneSpirv-OpTypeImage-04656
