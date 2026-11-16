@@ -229,6 +229,15 @@ defvar CIR_FenvOpTraits = [
 // dynamically via FenvOpTrait, so they must not inherit NoMemoryEffect.
 defvar CIR_DynamicMemoryEffects = 0;
 
+// Declares isVolatileOrAtomic() on cir.load and cir.store.
+defvar CIR_VolatileOrAtomicAccessDecl = [{
+  /// Returns true if the access is volatile or atomic. Such an access must
+  /// stay as written: it cannot be removed, merged or reordered.
+  bool isVolatileOrAtomic() {
+    return getIsVolatile() || getMemOrder().has_value();
+  }
+}];
+
 //===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//
@@ -942,6 +951,8 @@ def CIR_LoadOp : CIR_Op<"load", [
     }]>
   ];
 
+  let extraClassDeclaration = CIR_VolatileOrAtomicAccessDecl;
+
   // FIXME: add verifier.
 }
 
@@ -1051,6 +1062,8 @@ def CIR_StoreOp : CIR_Op<"store", [
             /*mem_order=*/cir::MemOrderAttr());
     }]>
   ];
+
+  let extraClassDeclaration = CIR_VolatileOrAtomicAccessDecl;
 
   // FIXME: add verifier.
 }
