@@ -104,11 +104,9 @@ define i32 @add_sext_icmp_multi_use_sext(i32 %A) {
 define i32 @add_sext_icmp_multi_use_icmp(i32 %A) {
 ; CHECK-LABEL: define i32 @add_sext_icmp_multi_use_icmp(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A]], 1
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i32 [[A]], 0
 ; CHECK-NEXT:    call void @use(i1 [[ICMP]])
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[ICMP]] to i32
-; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[SEXT]]
+; CHECK-NEXT:    [[ADD2:%.*]] = call i32 @llvm.umax.i32(i32 [[A]], i32 1)
 ; CHECK-NEXT:    ret i32 [[ADD2]]
 ;
   %add1 = add i32 %A, 1
@@ -142,8 +140,7 @@ define i32 @add_sext_icmp_multi_use_add1_icmp(i32 %A) {
 ; CHECK-NEXT:    call void @use(i32 [[ADD1]])
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i32 [[A]], 0
 ; CHECK-NEXT:    call void @use(i1 [[ICMP]])
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[ICMP]] to i32
-; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[SEXT]]
+; CHECK-NEXT:    [[ADD2:%.*]] = call i32 @llvm.umax.i32(i32 [[A]], i32 1)
 ; CHECK-NEXT:    ret i32 [[ADD2]]
 ;
   %add1 = add i32 %A, 1
@@ -158,11 +155,9 @@ define i32 @add_sext_icmp_multi_use_add1_icmp(i32 %A) {
 define i64 @add_umin_multi_use_umin(i64 %A, ptr %p) {
 ; CHECK-LABEL: define i64 @add_umin_multi_use_umin(
 ; CHECK-SAME: i64 [[A:%.*]], ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[A]], 0
-; CHECK-NEXT:    [[UMIN_NEG:%.*]] = sext i1 [[TMP1]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[A]], 1
-; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[ADD]], [[UMIN_NEG]]
-; CHECK-NEXT:    [[OFF:%.*]] = select i1 [[TMP1]], i64 4, i64 0
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i64 [[A]], 0
+; CHECK-NEXT:    [[SUB:%.*]] = call i64 @llvm.umax.i64(i64 [[A]], i64 1)
+; CHECK-NEXT:    [[OFF:%.*]] = select i1 [[DOTNOT]], i64 0, i64 4
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[OFF]]
 ; CHECK-NEXT:    call void @use.ptr(ptr [[GEP]])
 ; CHECK-NEXT:    ret i64 [[SUB]]
