@@ -2908,7 +2908,7 @@ void ProcessGDBRemote::SetExitStatusFromStopReply(
   response.SetFilePos(1);
   int exit_status = response.GetHexU8();
   std::string desc_string;
-  if (response.GetBytesLeft() > 0 && response.GetChar('-') == ';') {
+  if (response.GetBytesLeft() > 0 && response.GetChar() == ';') {
     llvm::StringRef desc_str;
     llvm::StringRef desc_token;
     while (response.GetNameColonValue(desc_token, desc_str)) {
