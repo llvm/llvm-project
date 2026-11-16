@@ -12,13 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/types/struct_in_addr.h"
-#include "src/__support/net/byte_order.h"
+#include "src/__support/endian_internal.h"
 #include "src/arpa/inet/inet_ntoa.h"
 #include "test/UnitTest/Test.h"
 
 static struct in_addr make_addr(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
   struct in_addr addr;
-  addr.s_addr = LIBC_NAMESPACE::net::hton(
+  addr.s_addr = LIBC_NAMESPACE::Endian::to_big_endian(
       static_cast<uint32_t>(a) << 24 | static_cast<uint32_t>(b) << 16 |
       static_cast<uint32_t>(c) << 8 | static_cast<uint32_t>(d));
   return addr;
