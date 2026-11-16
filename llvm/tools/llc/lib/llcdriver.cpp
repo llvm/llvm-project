@@ -582,7 +582,6 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   TargetOptions Options;
   auto InitializeOptions = [&](const Triple &TheTriple) {
     Options = codegen::getTargetOptions(Context.getLibraryOptions(), TheTriple);
-    Options.MCOptions.LibraryOptions = &Context.getLibraryOptions();
 
     if (Options.XCOFFReadOnlyPointers) {
       if (!TheTriple.isOSAIX())

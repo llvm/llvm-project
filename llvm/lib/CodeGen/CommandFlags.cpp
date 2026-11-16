@@ -398,7 +398,6 @@ Expected<std::unique_ptr<TargetMachine>> codegen::createTargetMachineForTriple(
   if (!TheTarget)
     return createStringError(inconvertibleErrorCode(), Error);
   TargetOptions Options = codegen::getTargetOptions(LibraryOptions, TheTriple);
-  Options.MCOptions.LibraryOptions = &LibraryOptions;
   auto *Target = TheTarget->createTargetMachine(
       TheTriple, codegen::getCPUStr(LibraryOptions),
       codegen::getFeaturesStr(LibraryOptions), Options,
