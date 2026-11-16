@@ -10,7 +10,6 @@
 
 ; Lane 10 of the result is bit 1 of %a; it must not be read from bit 8.
 define <17 x i1> @extract_i8_lane_wrong_scale(<17 x i1> %a, ptr %p) nounwind {
-;
 ; CHECK-LABEL: extract_i8_lane_wrong_scale:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -55,7 +54,6 @@ define <17 x i1> @extract_i8_lane_wrong_scale(<17 x i1> %a, ptr %p) nounwind {
 ; Used to build an out-of-bounds EXTRACT_SUBVECTOR ("Extract subvector
 ; overflow!" with assertions, out-of-bounds operand reads without).
 define <17 x i1> @extract_subvector_out_of_bounds(<17 x i1> %a, ptr %p) nounwind {
-;
 ; CHECK-LABEL: extract_subvector_out_of_bounds:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbp
