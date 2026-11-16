@@ -514,8 +514,11 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
   setTargetDAGCombine(ISD::AND);
   setTargetDAGCombine(ISD::OR);
+  setTargetDAGCombine(ISD::XOR);
   setTargetDAGCombine(ISD::SRL);
   setTargetDAGCombine(ISD::SETCC);
+  setTargetDAGCombine(ISD::SUB);
+  setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
 
   // On targets with the 32S feature, `select` is expanded into
   // maskeqz + masknez + or (3 instructions), which is more expensive than
@@ -6907,11 +6910,94 @@ static SDValue performSRLCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Try to turn a sub boolean RHS and constant LHS into an addi. LoongArch's
+// SUB has no immediate form, so (sub C, X) normally requires either
+// materializing C or using sub with R0 plus an addi; rewriting it as
+// (add X', C - 1) lets the immediate fold into a single ADDI.
+static SDValue combineSubOfBoolean(SDNode *N, SelectionDAG &DAG) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // Require a constant LHS.
+  auto *N0C = dyn_cast<ConstantSDNode>(N0);
+  if (!N0C)
+    return SDValue();
+
+  // (sub 0, X) is a negation, not a constant materialization; rewriting it
+  // as (add (setcc inv), -1) changes the condition code and can duplicate a
+  // compare, without saving any instruction.
+  if (N0C->isZero() && !N->hasOneUse())
+    return SDValue();
+
+  // The result of this fold is only folded into an ADDI when it is used
+  // directly.  When it feeds an extend, the original (sub C, X) form usually
+  // combines better with the surrounding zext/negate/xor.
+  if (N->hasOneUse()) {
+    unsigned UserOpc = N->use_begin()->getUser()->getOpcode();
+    if (UserOpc == ISD::ZERO_EXTEND || UserOpc == ISD::SIGN_EXTEND ||
+        UserOpc == ISD::ANY_EXTEND || UserOpc == ISD::SUB)
+      return SDValue();
+  }
+
+  // All our optimizations involve subtracting 1 from the immediate and
+  // forming an ADDI. Make sure the new immediate is valid for an ADDI.
+  APInt ImmValMinus1 = N0C->getAPIntValue() - 1;
+  if (!ImmValMinus1.isSignedIntN(12))
+    return SDValue();
+
+  SDValue NewLHS;
+  if (N1.getOpcode() == ISD::SETCC && N1.hasOneUse()) {
+    // (sub constant, (setcc x, y, eq/neq)) ->
+    // (add (setcc x, y, neq/eq), constant - 1)
+    ISD::CondCode CCVal = cast<CondCodeSDNode>(N1.getOperand(2))->get();
+    EVT SetCCOpVT = N1.getOperand(0).getValueType();
+    if (!ISD::isIntEqualitySetCC(CCVal) || !SetCCOpVT.isInteger())
+      return SDValue();
+    CCVal = ISD::getSetCCInverse(CCVal, SetCCOpVT);
+    NewLHS =
+        DAG.getSetCC(SDLoc(N1), VT, N1.getOperand(0), N1.getOperand(1), CCVal);
+  } else if (N1.getOpcode() == ISD::XOR && isOneConstant(N1.getOperand(1)) &&
+             N1.getOperand(0).getOpcode() == ISD::SETCC) {
+    // (sub C, (xor (setcc), 1)) -> (add (setcc), C-1).
+    // Since setcc returns a bool the xor is equivalent to 1-setcc.
+    NewLHS = N1.getOperand(0);
+  } else
+    return SDValue();
+
+  SDValue NewRHS = DAG.getConstant(ImmValMinus1, DL, VT);
+  return DAG.getNode(ISD::ADD, DL, VT, NewLHS, NewRHS);
+}
+
 static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const LoongArchSubtarget &Subtarget) {
   if (SDValue V = performHorizWideningCombine(N, DAG, Subtarget))
     return V;
+
+  if (N->getValueType(0) != Subtarget.getGRLenVT())
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+
+  if (SDValue V = combineSubOfBoolean(N, DAG))
+    return V;
+
+  // fold (sub 0, (setcc x, 0, setlt)) -> (sra x, xlen - 1)
+  if (isNullConstant(N0) && N1.getOpcode() == ISD::SETCC && N1.hasOneUse() &&
+      isNullConstant(N1.getOperand(1)) &&
+      N1.getValueType() == N1.getOperand(0).getValueType()) {
+    ISD::CondCode CCVal = cast<CondCodeSDNode>(N1.getOperand(2))->get();
+    if (CCVal == ISD::SETLT) {
+      SDLoc DL(N);
+      unsigned ShAmt = N0.getValueSizeInBits() - 1;
+      return DAG.getNode(ISD::SRA, DL, VT, N1.getOperand(0),
+                         DAG.getConstant(ShAmt, DL, VT));
+    }
+  }
 
   return SDValue();
 }
@@ -7362,6 +7448,37 @@ Retry2:
     goto Retry2;
   }
 
+  return SDValue();
+}
+
+static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
+                                 const LoongArchSubtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  // LA64 promotes i32 integer operations to GPR-width operations during
+  // legalization. Match the idiom before that promotion as well as after
+  // it, otherwise common unsigned 32-bit bit tests miss this combine.
+  if (VT != Subtarget.getGRLenVT() && !(Subtarget.is64Bit() && VT == MVT::i32))
+    return SDValue();
+
+  SDValue XorOps[] = {N->getOperand(0), N->getOperand(1)};
+  for (unsigned AndIdx = 0; AndIdx != 2; ++AndIdx) {
+    SDValue And = XorOps[AndIdx];
+    SDValue Mask = XorOps[1 - AndIdx];
+    if (And.getOpcode() != ISD::AND || !And.hasOneUse())
+      continue;
+
+    for (unsigned MaskIdx = 0; MaskIdx != 2; ++MaskIdx) {
+      // Match by SDValue identity so that (X & M1) ^ M2 is never folded
+      // unless M1 and M2 are the same value. Canonicalize before
+      // instruction selection, where the AND operand may already have been
+      // selected to a target machine node.
+      if (And.getOperand(MaskIdx) != Mask)
+        continue;
+      SDLoc DL(N);
+      SDValue X = And.getOperand(1 - MaskIdx);
+      return DAG.getNode(ISD::AND, DL, VT, Mask, DAG.getNOT(DL, X, VT));
+    }
+  }
   return SDValue();
 }
 
@@ -8673,6 +8790,25 @@ static SDValue performVANDNCombine(SDNode *N, SelectionDAG &DAG,
   if (SDValue Not = isNOT(N0, DAG))
     return DAG.getNode(ISD::AND, DL, VT, DAG.getBitcast(VT, Not), N1);
 
+  // VANDN(bitcast(shl(splat(1), y)), x)
+  //   -> bitcast(VANDN(shl(splat(1), y), bitcast(x)))
+  // Perform the VANDN in the element type of the shift so that it can be
+  // selected as [x]vbitclr.{b/h/w/d}.
+  if (N0.getOpcode() == ISD::BITCAST && N0.hasOneUse()) {
+    SDValue Shl = N0.getOperand(0);
+    EVT ShlVT = Shl.getValueType();
+    APInt SplatVal;
+    if (Shl.getOpcode() == ISD::SHL && ShlVT.isVector() && ShlVT.isInteger() &&
+        ShlVT != VT && ShlVT.getSizeInBits() == VT.getSizeInBits() &&
+        DAG.getTargetLoweringInfo().isTypeLegal(ShlVT) &&
+        ISD::isConstantSplatVector(Shl.getOperand(0).getNode(), SplatVal) &&
+        SplatVal.isOne()) {
+      SDValue V = DAG.getNode(LoongArchISD::VANDN, DL, ShlVT, Shl,
+                              DAG.getBitcast(ShlVT, N1));
+      return DAG.getBitcast(VT, V);
+    }
+  }
+
   // Folds for better commutativity:
   if (N1->hasOneUse()) {
     // VANDN(x,NOT(y)) -> AND(NOT(x),NOT(y)) -> NOT(OR(X,Y)).
@@ -9197,17 +9333,12 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
-  // Note: v2i128 is an unsupported MVT vector type (see
-  // MachineValueType.h::getVectorVT()), use NumElements and SizeInBits to
-  // identify it.
   bool HasLSXOnly = Subtarget.hasExtLSX() && !Subtarget.hasExtLASX();
-  bool Isv2i128 = ResTy.isVector() && ResTy.getVectorNumElements() == 2 &&
-                  ResTy.getScalarSizeInBits() == 128;
   if (ResTy != MVT::v8i16 && ResTy != MVT::v4i32 && ResTy != MVT::v2i64 &&
       ResTy != MVT::i128 && ResTy != MVT::v16i16 && ResTy != MVT::v8i32 &&
-      ResTy != MVT::v4i64 && !Isv2i128)
+      ResTy != MVT::v4i64 && ResTy != MVT::v2i128)
     return SDValue();
-  if (HasLSXOnly && (ResTy.is256BitVector() || Isv2i128))
+  if (HasLSXOnly && (ResTy.is256BitVector() || ResTy == MVT::v2i128))
     return SDValue();
 
   // Combine:
@@ -9321,6 +9452,156 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getBitcast(ResTy, Result);
 }
 
+static SDValue
+performSIGN_EXTEND_INREGCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                                const LoongArchSubtarget &Subtarget) {
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue Src = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  EVT SrcVT = cast<VTSDNode>(N->getOperand(1))->getVT();
+  unsigned Opc = Src.getOpcode();
+  SDLoc DL(N);
+
+  // Leave the sign extension in place when it feeds an xor with another
+  // sign-extended value; the generic xor-of-sext_inregs combine can then
+  // fold both extensions into a single one.
+  if (N->hasOneUse()) {
+    SDNode *User = N->use_begin()->getUser();
+    if (User->getOpcode() == ISD::XOR) {
+      SDValue Other = User->getOperand(0).getNode() == N ? User->getOperand(1)
+                                                         : User->getOperand(0);
+      if (Other.getOpcode() == ISD::SIGN_EXTEND_INREG)
+        return SDValue();
+    }
+  }
+
+  // Do not hide a sign-extended boolean from a compare against zero: the
+  // generic combiner folds (setcc (sext_inreg X, i1), 0, setlt) back to X.
+  for (SDNode *User : N->users()) {
+    if (User->getOpcode() != ISD::SETCC)
+      continue;
+    if ((User->getOperand(0).getNode() == N &&
+         isNullConstant(User->getOperand(1))) ||
+        (User->getOperand(1).getNode() == N &&
+         isNullConstant(User->getOperand(0))))
+      return SDValue();
+  }
+
+  // Fold (sext_inreg (shl X, Y), i32) -> (sll.w X, Y) iff Y u< 32.
+  if (DCI.isAfterLegalizeDAG() && Subtarget.is64Bit() && SrcVT == MVT::i32 &&
+      VT == MVT::i64 && Opc == ISD::SHL &&
+      !isa<ConstantSDNode>(Src.getOperand(1)) &&
+      DAG.computeKnownBits(Src.getOperand(1)).countMaxActiveBits() <= 5) {
+    return DAG.getNode(LoongArchISD::SLL_W, DL, VT, Src.getOperand(0),
+                       Src.getOperand(1));
+  }
+
+  // The SETCC/XOR folds replace the sign extension itself.  When the result
+  // has several users they do not save an instruction and can duplicate the
+  // compare; leave it to the generic combiner.
+  if (!N->hasOneUse())
+    return SDValue();
+
+  // Similarly, a sign-extended boolean that feeds a sign-bit extraction is
+  // usually part of a compare that the generic combiner can fold away.
+  for (SDNode *User : N->users()) {
+    if ((User->getOpcode() == ISD::SRL || User->getOpcode() == ISD::SRA) &&
+        isa<ConstantSDNode>(User->getOperand(1)))
+      return SDValue();
+  }
+
+  // Fold (sext_inreg (setcc X, Y, CC), i1) -> (sub 0, (setcc X, Y, CC)) if CC
+  // can be selected with a single instruction, or
+  // (add (setcc X, Y, inv(CC)), -1) if the inverted CC is cheaper. LoongArch
+  // selects setge/setle/setuge/setule as slt + xori, so inverting such an
+  // integer compare avoids the extra xor. Inverting replaces the original
+  // setcc, so only do it when it has a single use; otherwise (e.g. an FP
+  // compare shared with another user) this would introduce a second compare.
+  if (Opc == ISD::SETCC && SrcVT == MVT::i1) {
+    ISD::CondCode CC = cast<CondCodeSDNode>(Src.getOperand(2))->get();
+    if (Src.hasOneUse() && Src.getOperand(0).getValueType().isInteger()) {
+      switch (CC) {
+      case ISD::SETGE:
+      case ISD::SETLE:
+      case ISD::SETUGE:
+      case ISD::SETULE:
+        // (sub 0, X >= Y) == (add (X < Y), -1), etc.
+        return DAG.getNode(
+            ISD::ADD, DL, VT,
+            DAG.getSetCC(
+                SDLoc(N), Src.getValueType(), Src.getOperand(0),
+                Src.getOperand(1),
+                ISD::getSetCCInverse(CC, Src.getOperand(0).getValueType())),
+            DAG.getAllOnesConstant(DL, VT));
+      default:
+        break;
+      }
+    }
+    return DAG.getNegative(Src, DL, VT);
+  }
+
+  // Fold (sext_inreg (xor (setcc), C), i1) -> (add (setcc), -1) where C is
+  // either 1 or -1. Since setcc only produces 0 or 1, the xor only flips the
+  // low bit, so the sign extension of that bit is -(1 - setcc) == setcc - 1.
+  // The setcc may be wrapped in a truncate/any_extend when the boolean is
+  // extended to VT (e.g. by a zext, which knows the upper bits are zero).
+  if (Opc == ISD::XOR && SrcVT == MVT::i1 &&
+      (isOneConstant(Src.getOperand(1)) ||
+       isAllOnesConstant(Src.getOperand(1)))) {
+    SDValue XorOp = Src.getOperand(0);
+    if (XorOp.getOpcode() == ISD::TRUNCATE ||
+        XorOp.getOpcode() == ISD::ANY_EXTEND)
+      XorOp = XorOp.getOperand(0);
+    if (XorOp.getOpcode() != ISD::SETCC)
+      return SDValue();
+    // The setcc may still have an i1 result type, in which case rebuild it
+    // with VT so that both ADD operands have the same type. A setcc produces
+    // a canonical 0/1 value, so this is exact while the any_extend leaves the
+    // upper bits undefined.
+    ISD::CondCode CC = cast<CondCodeSDNode>(XorOp.getOperand(2))->get();
+    EVT OpVT = XorOp.getOperand(0).getValueType();
+
+    // Inverting an FP compare is free, so this fold does not save anything
+    // and can duplicate a shared fcmp.  Keep the original form.
+    if (OpVT.isFloatingPoint())
+      return SDValue();
+
+    // Reusing the original compare is only possible when the setcc is
+    // otherwise dead.  Inverting a shared compare duplicates it (e.g. an FP
+    // compare used by a zext as well).
+    if (!XorOp.hasOneUse())
+      return SDValue();
+
+    // A constant compare with a greater-than style condition code cannot use
+    // the slti/sltui immediate patterns; leave it to the generic combiner,
+    // which canonicalizes it to setlt/setult first.
+    if (isa<ConstantSDNode>(XorOp.getOperand(1)) && CC != ISD::SETLT &&
+        CC != ISD::SETULT)
+      return SDValue();
+
+    // The generic (sub X, (0 - Y)) -> (add X, Y) fold is better than
+    // rewriting the sign-extended boolean here.
+    if (N->hasOneUse() && N->use_begin()->getUser()->getOpcode() == ISD::SUB)
+      return SDValue();
+
+    // For integer compares, sext(!setcc CC) == -(setcc inv(CC)). Only keep
+    // CC (as add -1) when CC itself is the single-instruction form; otherwise
+    // negate the inverted setcc, which also CSEs with an existing one.
+    if (OpVT.isInteger() && CC != ISD::SETLT && CC != ISD::SETGT &&
+        CC != ISD::SETULT && CC != ISD::SETUGT)
+      return DAG.getNegative(DAG.getSetCC(DL, VT, XorOp.getOperand(0),
+                                          XorOp.getOperand(1),
+                                          ISD::getSetCCInverse(CC, OpVT)),
+                             DL, VT);
+    if (XorOp.getValueType() != VT)
+      XorOp =
+          DAG.getSetCC(DL, VT, XorOp.getOperand(0), XorOp.getOperand(1), CC);
+    return DAG.getNode(ISD::ADD, DL, VT, XorOp, DAG.getAllOnesConstant(DL, VT));
+  }
+
+  return SDValue();
+}
+
 SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -9333,6 +9614,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performANDCombine(N, DAG, DCI, Subtarget);
   case ISD::OR:
     return performORCombine(N, DAG, DCI, Subtarget);
+  case ISD::XOR:
+    return performXORCombine(N, DAG, Subtarget);
   case ISD::SETCC:
     return performSETCCCombine(N, DAG, DCI, Subtarget);
   case ISD::SELECT:
@@ -9349,6 +9632,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ZERO_EXTEND:
   case ISD::SIGN_EXTEND:
     return performEXTENDCombine(N, DAG, DCI, Subtarget);
+  case ISD::SIGN_EXTEND_INREG:
+    return performSIGN_EXTEND_INREGCombine(N, DCI, Subtarget);
   case ISD::SINT_TO_FP:
     return performSINT_TO_FPCombine(N, DAG, DCI, Subtarget);
   case ISD::UINT_TO_FP:
@@ -9644,9 +9929,7 @@ emitPseudoVMSKCOND(MachineInstr &MI, MachineBasicBlock *BB,
   if (NotOpc) {
     Register Tmp = MRI.createVirtualRegister(RC);
     BuildMI(*BB, MI, DL, TII->get(MskOpc), Tmp).addReg(Src);
-    BuildMI(*BB, MI, DL, TII->get(NotOpc), Msk)
-        .addReg(Tmp)
-        .addReg(Tmp);
+    BuildMI(*BB, MI, DL, TII->get(NotOpc), Msk).addReg(Tmp).addReg(Tmp);
   } else {
     BuildMI(*BB, MI, DL, TII->get(MskOpc), Msk).addReg(Src);
   }
@@ -12116,7 +12399,7 @@ bool LoongArchTargetLowering::hasAndNotCompare(SDValue Y) const {
   if (Y.getValueType().isVector())
     return false;
 
-  return !isa<ConstantSDNode>(Y);
+  return true;
 }
 
 ISD::NodeType LoongArchTargetLowering::getExtendForAtomicCmpSwapArg() const {

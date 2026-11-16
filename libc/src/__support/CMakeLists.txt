@@ -186,6 +186,7 @@ add_header_library(
     .alloc_checker
     .libc_assert
     libc.hdr.types.size_t
+    libc.src.__support.CPP.nullptr_t
     libc.src.__support.CPP.type_traits
     libc.src.__support.CPP.unique_ptr
     libc.src.__support.CPP.utility

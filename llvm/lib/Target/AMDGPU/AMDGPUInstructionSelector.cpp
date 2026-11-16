@@ -4948,6 +4948,14 @@ AMDGPUInstructionSelector::selectVOP3NoMods(MachineOperand &Root) const {
   }};
 }
 
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3NoOpSelMods(MachineOperand &Root) const {
+  Register Unused;
+  if (isExtractHiElt(*MRI, Root.getReg(), Unused))
+    return {};
+  return selectVOP3NoMods(Root);
+}
+
 enum class SrcStatus {
   IS_SAME,
   IS_UPPER_HALF,
@@ -5748,7 +5756,6 @@ AMDGPUInstructionSelector::selectWMMAModsF16NegAbs(MachineOperand &Root) const {
 
     // All elements had ModOpcode modifier
     if (CV->getNumSources() == EltsV2F16.size()) {
-      MachineIRBuilder B(*Root.getParent());
       selectWMMAModsNegAbs(ModOpcode, Mods, EltsV2F16, Src, Root.getParent(),
                            *MRI);
     }

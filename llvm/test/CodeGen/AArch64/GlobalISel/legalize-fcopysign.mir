@@ -68,3 +68,4 @@ body:             |
     %fcopysign:_(f64) = G_FCOPYSIGN %val, %sign(f64)
     $d0 = COPY %fcopysign(f64)
     RET_ReallyLR implicit $d0
+...
