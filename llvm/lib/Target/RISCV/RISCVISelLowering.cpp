@@ -20994,21 +20994,18 @@ static SDValue combineOrOfMaskedToMerge(SDNode *N, SelectionDAG &DAG,
   if (VT != Subtarget.getXLenVT())
     return SDValue();
 
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-  if (N0.getOpcode() != ISD::AND || N1.getOpcode() != ISD::AND ||
-      !N0.hasOneUse() || !N1.hasOneUse())
-    return SDValue();
-
-  auto *C0 = dyn_cast<ConstantSDNode>(N0.getOperand(1));
-  auto *C1 = dyn_cast<ConstantSDNode>(N1.getOperand(1));
-  if (!C0 || !C1 || C0->getAPIntValue() != ~C1->getAPIntValue())
+  using namespace SDPatternMatch;
+  SDValue X, Y, Mask;
+  APInt MaskVal, InvMaskVal;
+  if (!sd_match(N, m_Or(m_OneUse(m_And(m_Value(X),
+                                       m_Value(Mask, m_ConstInt(MaskVal)))),
+                        m_OneUse(m_And(m_Value(Y), m_ConstInt(InvMaskVal))))) ||
+      MaskVal != ~InvMaskVal)
     return SDValue();
 
   SDLoc DL(N);
   // MERGE computes (~mask & op1) | (mask & op2).
-  return DAG.getNode(RISCVISD::MERGE, DL, VT, N0.getOperand(1),
-                     N1.getOperand(0), N0.getOperand(0));
+  return DAG.getNode(RISCVISD::MERGE, DL, VT, Mask, Y, X);
 }
 
 static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
