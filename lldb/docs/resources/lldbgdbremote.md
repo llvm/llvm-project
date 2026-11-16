@@ -2243,6 +2243,47 @@ following keys and values:
     in the SVE Streaming Mode, but that is less common (see ESR
     register flag "WPF", "Watchpoint might be False-Positive") and
     not currently handled by lldb.
+* `lane` - `unsigned` (optional) -
+  The thread's lane in its SIMD group, in base 10.
+
+  Example:
+  ```
+  lane:3;
+  ```
+* `simd` - `unsigned` (optional) -
+  The ID of the thread's SIMD group, in base 10. lldb groups the threads that
+  report the same ID.
+
+  Example:
+  ```
+  simd:48;
+  ```
+* `inactive` - `unsigned` (optional) -
+  `1` if the thread is not active, as a GPU lane that its SIMD group is not
+  running, for example on the other side of a branch. lldb keeps a source-level
+  step going while the thread is inactive. `0` means the same as no key. In
+  `jThreadsInfo` and `jstopinfo` dictionaries, the value is a boolean:
+  `"inactive": true`.
+
+  Example:
+  ```
+  inactive:1;
+  ```
+* `implicitly_resumed_threads` - `comma-sep-base16` (optional) -
+  A list of the threads that the last resume ran although the resume packet
+  left them suspended, as a GPU lane runs when another lane of its SIMD group
+  runs. The list can include the thread that this `T` packet reports. lldb
+  reads the stop info of each of these threads afresh and, unless the user
+  suspended the thread, lets it take part in deciding whether the process
+  stops, as for a thread that lldb resumed. lldb needs this list to decide
+  whether to stop, so unlike `threads`, the server sends it whether or not
+  lldb sent `QListThreadsInStopReply`. Without the key, no thread ran this
+  way.
+
+  Example:
+  ```
+  implicitly_resumed_threads:633b2,63424;
+  ```
 * `threads` - `comma-sep-base16` -
   A list of thread ids for all threads (including
   the thread that we're reporting as stopped) that
@@ -2272,6 +2313,19 @@ following keys and values:
   Example:
   ```
   thread-pcs:dec14,2cf872b0,2cf8681c,2d02d68c,2cf716a8;
+  ```
+* `jstopinfo` - `ascii-hex` -
+  An ASCII hex encoded JSON array of dictionaries that describe the stop info
+  of threads, with the keys of the `jThreadsInfo` dictionaries except
+  `registers` and `memory`; the stop reply itself expedites the registers of
+  the thread that it reports. A server can include only the threads that have
+  a stop reason, as debugserver does, or every thread, as lldb-server does;
+  lldb takes a thread without a dictionary to have no stop reason. Like
+  `thread-pcs`, this is only emitted when the `threads` key is included.
+
+  Example, before hex encoding:
+  ```
+  [{"tid":1,"signal":5,"reason":"breakpoint"},{"tid":2}]
   ```
 * `addressing_bits` - `unsigned` (optional) -
   Specifies how many bits in addresses are significant for addressing, base

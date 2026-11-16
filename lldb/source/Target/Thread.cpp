@@ -758,6 +758,12 @@ void Thread::DidResume() {
   SetShouldRunBeforePublicStop(false);
 }
 
+void Thread::DidImplicitlyResume() {
+  LLDB_LOG(GetLog(LLDBLog::Thread), "tid = {0:x}: implicitly resumed", GetID());
+  SetTemporaryResumeState(eStateRunning);
+  ResetStopInfo();
+}
+
 void Thread::DidStop() { SetState(eStateStopped); }
 
 bool Thread::ShouldStop(Event *event_ptr) {

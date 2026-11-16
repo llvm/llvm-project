@@ -46,6 +46,8 @@ public:
   std::optional<lldb::tid_t> GetSIMD() const { return m_simd_id; }
   virtual bool GetIsActive() const { return m_active; }
   void SetIsActive(bool b) { m_active = b; }
+  bool GetImplicitlyResumed() const { return m_implicitly_resumed; }
+  void SetImplicitlyResumed(bool b) { m_implicitly_resumed = b; }
   NativeProcessProtocol &GetProcess() { return m_process; }
 
   // Thread-specific watchpoints
@@ -103,6 +105,12 @@ protected:
   /// that a GPU lane is not active. When single stepping this can be used to
   /// step until the thread becomes active again.
   bool m_active = true;
+  /// Set if the last resume ran this thread although the client asked for it
+  /// to stay suspended, as a GPU lane runs when another lane of its SIMD group
+  /// runs. The process sets this when it stops and must clear it at the next
+  /// resume. LLGS lists such threads to the client in the
+  /// "implicitly_resumed_threads" key of the stop reply.
+  bool m_implicitly_resumed = false;
 };
 }
 

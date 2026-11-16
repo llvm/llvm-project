@@ -441,7 +441,11 @@ protected:
       lldb::addr_t dispatch_queue_t, std::string &queue_name,
       lldb::QueueKind queue_kind, uint64_t queue_serial,
       std::optional<lldb::tid_t> lane_id, std::optional<lldb::tid_t> simd_id,
-      bool inactive, llvm::StringRef sync_plugin = {});
+      bool active, llvm::StringRef sync_plugin = {});
+
+  /// Call Thread::DidImplicitlyResume on each suspended thread in \a tids, the
+  /// threads that a stop reply lists as implicitly resumed.
+  void HandleImplicitlyResumedThreads(std::vector<lldb::tid_t> tids);
 
   void ClearThreadIDList();
 
