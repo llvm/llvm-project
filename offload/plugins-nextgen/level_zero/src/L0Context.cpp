@@ -70,8 +70,7 @@ Error LevelZeroPluginContextTy::initAllocators() {
 
 Expected<void *>
 LevelZeroPluginContextTy::allocateImpl(GenericDeviceTy &Device, int64_t Size,
-                                       void * /*HostPtr*/, ol_alloc_type_t Kind,
-                                       size_t Alignment,
+                                       ol_alloc_type_t Kind, size_t Alignment,
                                        GenericProfilerTy * /*ProfilerPtr*/) {
   MemAllocatorTy *Allocator = nullptr;
   if (Kind == OL_ALLOC_TYPE_HOST) {

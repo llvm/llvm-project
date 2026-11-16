@@ -126,6 +126,7 @@ static void emitXATTR(raw_ostream &OS, StringRef Name, MCSectionGOFF *ADA,
 static void emitCATTR(raw_ostream &OS, StringRef Name, GOFF::ESDRmode Rmode,
                       GOFF::ESDAlignment Alignment,
                       GOFF::ESDLoadingBehavior LoadBehavior,
+                      GOFF::ESDTaskingBehavior TaskingBehavior,
                       GOFF::ESDExecutable Executable, bool IsReadOnly,
                       uint32_t SortKey, uint8_t FillByteValue,
                       StringRef PartName) {
@@ -138,6 +139,19 @@ static void emitCATTR(raw_ostream &OS, StringRef Name, GOFF::ESDRmode Rmode,
     break;
   case GOFF::ESD_LB_NoLoad:
     OS << ",NOLOAD";
+    break;
+  default:
+    break;
+  }
+  switch (TaskingBehavior) {
+  case GOFF::ESD_TA_NonReus:
+    OS << ",NOTREUS";
+    break;
+  case GOFF::ESD_TA_Reus:
+    OS << ",REUS";
+    break;
+  case GOFF::ESD_TA_Rent:
+    OS << ",RENT";
     break;
   default:
     break;
@@ -207,9 +221,13 @@ void SystemZHLASMAsmStreamer::changeSection(MCSection *Section,
     changeSection(Sec.getParent(), Subsection);
     if (!Sec.isEmitted()) {
       GOFF::EDAttr ED = Sec.getEDAttributes();
+      GOFF::ESDTaskingBehavior TaskingBehavior =
+          static_cast<MCSectionGOFF *>(Sec.getParent())
+              ->getSDAttributes()
+              .TaskingBehavior;
       emitCATTR(OS, Sec.getName(), ED.Rmode, Sec.getEDAlignment(),
-                ED.LoadBehavior, GOFF::ESD_EXE_Unspecified, ED.IsReadOnly, 0,
-                ED.FillByteValue, StringRef());
+                ED.LoadBehavior, TaskingBehavior, GOFF::ESD_EXE_Unspecified,
+                ED.IsReadOnly, 0, ED.FillByteValue, StringRef());
       if (auto *BeginSym = static_cast<MCSymbolGOFF *>(Sec.getBeginSymbol())) {
         if (BeginSym->getADA()) {
           emitXATTR(OS, BeginSym->getName(), BeginSym->getADA(),
@@ -228,11 +246,16 @@ void SystemZHLASMAsmStreamer::changeSection(MCSection *Section,
     MCSectionGOFF *ED = Sec.getParent();
     changeSection(ED->getParent(), Subsection);
     if (!Sec.isEmitted()) {
+      GOFF::ESDTaskingBehavior TaskingBehavior =
+          static_cast<MCSectionGOFF *>(ED->getParent())
+              ->getSDAttributes()
+              .TaskingBehavior;
       GOFF::EDAttr EDAttr = ED->getEDAttributes();
       GOFF::PRAttr PRAttr = Sec.getPRAttributes();
       emitCATTR(OS, ED->getName(), EDAttr.Rmode, ED->getEDAlignment(),
-                EDAttr.LoadBehavior, PRAttr.Executable, EDAttr.IsReadOnly,
-                PRAttr.SortKey, EDAttr.FillByteValue, Sec.getName());
+                EDAttr.LoadBehavior, TaskingBehavior, PRAttr.Executable,
+                EDAttr.IsReadOnly, PRAttr.SortKey, EDAttr.FillByteValue,
+                Sec.getName());
       MCSectionGOFF *ADA =
           Sec.getBeginSymbol() != nullptr
               ? static_cast<MCSymbolGOFF *>(Sec.getBeginSymbol())->getADA()

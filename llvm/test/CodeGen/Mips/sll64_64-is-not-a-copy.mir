@@ -131,3 +131,4 @@ body:             |
     %267:gpr32 = samesign SLTu64 %271, %108
     BNE %267, $r0, %bb.2, implicit-def dead $r1
     J %bb.1, implicit-def dead $r1
+...

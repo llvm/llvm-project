@@ -1063,7 +1063,7 @@ define amdgpu_ps bfloat @tanh_bf16_constant_4.0() {
 ; GFX1250-SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-SDAG-REAL16-NEXT:    v_nop
 ; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-SDAG-REAL16-NEXT:    v_tanh_bf16_e64 v0.l, 4.0 op_sel:[1,0]
+; GFX1250-SDAG-REAL16-NEXT:    v_tanh_bf16_e64 v0.l, 4.0
 ; GFX1250-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: tanh_bf16_constant_4.0:
@@ -1072,7 +1072,7 @@ define amdgpu_ps bfloat @tanh_bf16_constant_4.0() {
 ; GFX1250-SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_nop
 ; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v0, 4.0 op_sel:[1,0]
+; GFX1250-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v0, 4.0
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-REAL16-LABEL: tanh_bf16_constant_4.0:
@@ -1095,12 +1095,12 @@ define amdgpu_ps bfloat @tanh_bf16_constant_4.0() {
 ;
 ; GFX13-SDAG-REAL16-LABEL: tanh_bf16_constant_4.0:
 ; GFX13-SDAG-REAL16:       ; %bb.0:
-; GFX13-SDAG-REAL16-NEXT:    v_tanh_bf16_e64 v0.l, 4.0 op_sel:[1,0]
+; GFX13-SDAG-REAL16-NEXT:    v_tanh_bf16_e64 v0.l, 4.0
 ; GFX13-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX13-SDAG-FAKE16-LABEL: tanh_bf16_constant_4.0:
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
-; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v0, 4.0 op_sel:[1,0]
+; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v0, 4.0
 ; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX13-GISEL-REAL16-LABEL: tanh_bf16_constant_4.0:

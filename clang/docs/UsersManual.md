@@ -1582,6 +1582,18 @@ $ clang -include-pch test.h.pch -ignore-pch test.c -o test
 This option disables precompiled headers, overrides -emit-pch and -include-pch.
 test.h.pch is not generated and not used as a prefix header.
 
+#### Working-Directory-Relative PCH Files
+
+The `-fpch-base-dir-is-cwd` option serializes precompiled header input paths
+relative to the current working directory. This allows a build tree containing
+the PCH and its inputs to be moved, provided that the PCH is consumed from the
+corresponding working directory and the inputs retain the same relative layout.
+Paths outside the working directory remain absolute.
+
+Unlike `--relocatable-pch`, this option does not store a base directory or re-root
+paths using `-isysroot` when loading the PCH. The option is only needed when
+building the PCH and cannot be combined with `--relocatable-pch`.
+
 #### Relocatable PCH Files
 
 It is sometimes necessary to build a precompiled header from headers

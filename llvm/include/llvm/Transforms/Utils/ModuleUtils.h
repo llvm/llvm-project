@@ -124,6 +124,14 @@ LLVM_ABI void removeFromUsedLists(Module &M,
 LLVM_ABI void
 filterDeadComdatFunctions(SmallVectorImpl<Function *> &DeadComdatFunctions);
 
+/// Replace the body of the dead function \p F with a single unreachable block.
+///
+/// Within a CGSCC walk, dead functions are only erased in a batch at the end of
+/// the walk, and their LazyCallGraph nodes stay valid until then. Use this
+/// instead of `Function::deleteBody` so such a function remains a definition
+/// until it is erased.
+LLVM_ABI void makeFunctionBodyUnreachable(Function &F);
+
 /// Produce a unique identifier for this module by taking the MD5 sum of
 /// the names of the module's strong external symbols that are not comdat
 /// members.
