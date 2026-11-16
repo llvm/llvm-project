@@ -563,16 +563,32 @@ KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc_,
                                      RoundingMode RM, DenormalMode Mode) {
   KnownFPClass KnownSrc = applyInputDenormalMode(KnownSrc_, Mode);
 
-  KnownFPClass Known = fadd_impl(KnownSrc, KnownSrc, RM);
+  // TODO: Refine fadd_self for directed rounding modes.
+
+  KnownFPClass Known;
+
+  Known.propagateNonNaN(KnownSrc);
+
+  if (KnownSrc.isKnownNever(fcPosNormal | fcPosInf))
+    Known.knownNot(fcPosInf);
+  if (KnownSrc.isKnownNever(fcNegNormal | fcNegInf))
+    Known.knownNot(fcNegInf);
+
+  if (KnownSrc.isKnownNever(fcPosSubnormal | fcPosNormal))
+    Known.knownNot(fcPosNormal);
+  if (KnownSrc.isKnownNever(fcNegSubnormal | fcNegNormal))
+    Known.knownNot(fcNegNormal);
 
   if (KnownSrc.isKnownNever(fcPosSubnormal))
     Known.knownNot(fcPosSubnormal);
   if (KnownSrc.isKnownNever(fcNegSubnormal))
     Known.knownNot(fcNegSubnormal);
 
-  // Doubling 0 will give the same 0.
+  // Doubling 0.0 will give the same 0.0.
   if (KnownSrc.isKnownNever(fcPosZero))
     Known.knownNot(fcPosZero);
+  if (KnownSrc.isKnownNever(fcNegZero))
+    Known.knownNot(fcNegZero);
 
   return applyOutputDenormalMode(Known, Mode);
 }
