@@ -401,6 +401,11 @@ infrastructure are described first, followed by tool-specific sections.
   avoid offering fix-its for string literals originating from macro
   expansions.
 
+- Fixed {doc}`readability-braces-around-statements
+  <clang-tidy/checks/readability/braces-around-statements>` producing
+  invalid code by withholding brace fix-its that cross conditional
+  compilation regions.
+
 - Improved {doc}`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
   fixing a crash when checking a const-qualified method declared with the

@@ -12,6 +12,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/PPConditionalDirectiveRecord.h"
+#include "clang/Lex/Preprocessor.h"
 
 using namespace clang::ast_matchers;
 
@@ -57,6 +59,14 @@ BracesAroundStatementsCheck::BracesAroundStatementsCheck(
 void BracesAroundStatementsCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "ShortStatementLines", ShortStatementLines);
+}
+
+void BracesAroundStatementsCheck::registerPPCallbacks(
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  auto Record =
+      std::make_unique<PPConditionalDirectiveRecord>(PP->getSourceManager());
+  ConditionalDirectiveRecord = Record.get();
+  PP->addPPCallbacks(std::move(Record));
 }
 
 void BracesAroundStatementsCheck::registerMatchers(MatchFinder *Finder) {
@@ -161,9 +171,16 @@ bool BracesAroundStatementsCheck::checkStmt(
       return false;
     const auto Diag = diag(BraceInsertionHints.DiagnosticPos,
                            "statement should be inside braces");
-    if (BraceInsertionHints.offersFixIts())
-      Diag << BraceInsertionHints.openingBraceFixIt()
-           << BraceInsertionHints.closingBraceFixIt();
+    if (BraceInsertionHints.offersFixIts()) {
+      const auto OpeningBrace = BraceInsertionHints.openingBraceFixIt();
+      const auto ClosingBrace = BraceInsertionHints.closingBraceFixIt();
+      const SourceManager &SM = *Result.SourceManager;
+      // Both braces must be present in the same preprocessor configurations.
+      if (!ConditionalDirectiveRecord->areInDifferentConditionalDirectiveRegion(
+              SM.getSpellingLoc(OpeningBrace.RemoveRange.getBegin()),
+              SM.getSpellingLoc(ClosingBrace.RemoveRange.getBegin())))
+        Diag << OpeningBrace << ClosingBrace;
+    }
   }
   return true;
 }
