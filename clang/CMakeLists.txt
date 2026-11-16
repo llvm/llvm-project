@@ -372,7 +372,15 @@ set(CLANG_VENDOR_UTI "org.llvm.clang" CACHE STRING
 set(CLANG_PYTHON_BINDINGS_VERSIONS "" CACHE STRING
     "Python versions to install libclang python bindings for")
 
-set(CLANG_LINK_CLANG_DYLIB ${LLVM_LINK_LLVM_DYLIB} CACHE BOOL
+if(LLVM_LINK_LLVM_DYLIB AND NOT MSVC)
+  # We can't rely on default visibility with MSVC. libClang should have its own
+  # annotation (CLANG_ABI) and have its API properly annotated for exports on
+  # Windows too. See https://github.com/llvm/llvm-project/issues/238871
+  set(CLANG_LINK_CLANG_DYLIB_DEFAULT 1)
+else()
+  set(CLANG_LINK_CLANG_DYLIB_DEFAULT 0)
+endif()
+set(CLANG_LINK_CLANG_DYLIB ${CLANG_LINK_CLANG_DYLIB_DEFAULT} CACHE BOOL
     "Link tools against libclang-cpp.so")
 
 if (NOT LLVM_LINK_LLVM_DYLIB AND CLANG_LINK_CLANG_DYLIB)

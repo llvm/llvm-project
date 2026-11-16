@@ -94,7 +94,7 @@ class HelloWorldTestCase(TestBase):
         error = lldb.SBError()
         process = target.AttachToProcessWithID(listener, popen.pid, error)
 
-        self.assertTrue(error.Success() and process, PROCESS_IS_VALID)
+        self.assertSuccess(error)
 
         # Let's check the stack traces of the attached process.
         stacktraces = lldbutil.print_stacktraces(process, string_buffer=True)

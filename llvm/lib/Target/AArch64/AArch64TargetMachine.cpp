@@ -129,7 +129,7 @@ bool AArch64TargetMachine::isGlobalISelOptNone() const {
 
 void AArch64TargetMachine::reset() {
   SubtargetMap.clear();
-  LastSubtarget = nullptr;
+  LastSubtarget.clear();
 }
 
 //===----------------------------------------------------------------------===//
@@ -262,30 +262,39 @@ AArch64TargetMachine::~AArch64TargetMachine() = default;
 
 const AArch64Subtarget *
 AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
-  // Constructing the subtarget key is not cheap, avoid rebuilding it for
-  // repeated queries with the same function attributes.
   AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
-  if (LastSubtarget && LastSubtargetAttrs == FnAttrs)
-    return LastSubtarget;
+  const Module *M = F.getParent();
+  if (const AArch64Subtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
 
-  Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute TuneAttr = F.getFnAttribute("tune-cpu");
-  Attribute FSAttr = F.getFnAttribute("target-features");
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.TuneCPU = FnAttrs.getAttribute("tune-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+  Attrs.SMEnabled = FnAttrs.getAttribute("aarch64_pstate_sm_enabled");
+  Attrs.SMBody = FnAttrs.getAttribute("aarch64_pstate_sm_body");
+  Attrs.SMCompatible = FnAttrs.getAttribute("aarch64_pstate_sm_compatible");
+  Attrs.MinSize = FnAttrs.getAttribute(Attribute::MinSize);
+  Attrs.VScaleRange = FnAttrs.getAttribute(Attribute::VScaleRange);
 
-  StringRef CPU = CPUAttr.isValid() ? CPUAttr.getValueAsString() : TargetCPU;
-  StringRef TuneCPU = TuneAttr.isValid() ? TuneAttr.getValueAsString() : CPU;
-  StringRef FS = FSAttr.isValid() ? FSAttr.getValueAsString() : TargetFS;
-  bool HasMinSize = F.hasMinSize();
+  if (const AArch64Subtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
 
-  bool IsStreaming = CLOpts.force_streaming ||
-                     F.hasFnAttribute("aarch64_pstate_sm_enabled") ||
-                     F.hasFnAttribute("aarch64_pstate_sm_body");
-  bool IsStreamingCompatible = CLOpts.force_streaming_compatible ||
-                               F.hasFnAttribute("aarch64_pstate_sm_compatible");
+  StringRef CPU =
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString() : TargetCPU;
+  StringRef TuneCPU =
+      Attrs.TuneCPU.isValid() ? Attrs.TuneCPU.getValueAsString() : CPU;
+  StringRef FS = Attrs.FS.isValid() ? Attrs.FS.getValueAsString() : TargetFS;
+  bool HasMinSize = Attrs.MinSize.isValid();
+
+  bool IsStreaming = CLOpts.force_streaming || Attrs.SMEnabled.isValid() ||
+                     Attrs.SMBody.isValid();
+  bool IsStreamingCompatible =
+      CLOpts.force_streaming_compatible || Attrs.SMCompatible.isValid();
 
   unsigned MinSVEVectorSize = 0;
   unsigned MaxSVEVectorSize = 0;
-  if (F.hasFnAttribute(Attribute::VScaleRange)) {
+  if (Attrs.VScaleRange.isValid()) {
     ConstantRange CR = getVScaleRange(&F, 64);
     MinSVEVectorSize = CR.getUnsignedMin().getZExtValue() * 128;
     MaxSVEVectorSize = CR.getUnsignedMax().getZExtValue() * 128;
@@ -335,9 +344,8 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   if (IsStreaming && !I->hasSME())
     reportFatalUsageError("streaming SVE functions require SME");
 
-  LastSubtargetAttrs = FnAttrs;
-  LastSubtarget = I.get();
-  return LastSubtarget;
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
+  return I.get();
 }
 
 // Encourage placing FORM_TRANSPOSED_REG immediately before the instruction that

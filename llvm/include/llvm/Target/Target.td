@@ -390,6 +390,15 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // to message strings.
   string DiagnosticString = "";
 
+  // When registers in this class share assembly names with registers in another
+  // class returned by MatchRegisterName / parseRegister (for example, narrower
+  // or wider FP or vector group register classes), setting CoerceFromRegClass
+  // allows the assembly matcher to accept registers from both this class and
+  // from CoerceFromRegClass, and will convert those from CoerceFromRegClass
+  // to the corresponding register in this class using the matching names
+  // instead of requiring hand-written logic in the AsmParser.
+  RegisterClass CoerceFromRegClass = ?;
+
   // Target-specific flags. This becomes the TSFlags field in TargetRegisterClass.
   bits<8> TSFlags = 0;
 
@@ -1733,9 +1742,9 @@ class AsmParser {
   // Set to true if MatchRegisterName and MatchRegisterAltName functions
   // should be generated even if there are duplicate register names. The
   // target is responsible for coercing aliased registers as necessary
-  // (e.g. in validateTargetOperandClass), and there are no guarantees about
-  // which numeric register identifier will be returned in the case of
-  // multiple matches.
+  // (e.g. via CoerceFromRegClass or in validateTargetOperandClass), and there
+  // are no guarantees about which numeric register identifier will be returned
+  // in the case of multiple matches.
   bit AllowDuplicateRegisterNames = false;
 
   // HasMnemonicFirst - Set to false if target instructions don't always
