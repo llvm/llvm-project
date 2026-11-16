@@ -14,6 +14,7 @@
 ! CHECK: octal: 17 "XY"
 ! CHECK: binary: 5 "XY"
 ! CHECK: size: 1F 6
+! CHECK: second: 2A "ZW" 8
 ! CHECK: PASS
 
 program boz_input_field
@@ -54,6 +55,16 @@ program boz_input_field
   rewind (iu)
   read (iu, '(z6)', advance='no', size=n) i16
   print '(a,z0,1x,i0)', 'size: ', i16, n
+  close (iu)
+
+  ! A second non-advancing READ continues the record, so the field does not
+  ! begin at the left tab limit of zero.
+  open (newunit=iu, status='scratch', form='formatted')
+  write (iu, '(a)') '  1F  XY 2A   ZW'
+  rewind (iu)
+  read (iu, '(z6,a2)', advance='no') i4, c2
+  read (iu, '(z6,a2)', advance='no', size=n) i16, c2
+  print '(a,z0,1x,3a,1x,i0)', 'second: ', i16, '"', c2, '"', n
   close (iu)
 
   print '(a)', 'PASS'
