@@ -339,8 +339,9 @@ add_fp_unittest(
   HDRS
     FAbsTest.h
   DEPENDS
-    libc.src.math.fabsf16
+    libc.src.__support.FPUtil.float16
     libc.src.__support.FPUtil.fp_bits
+    libc.src.math.fabsf16
 )
 
 add_fp_unittest(

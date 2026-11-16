@@ -288,6 +288,10 @@ template void explain_unary_operation_single_output_error(Operation op,
 template void explain_unary_operation_single_output_error(Operation op,
                                                           bfloat16, bfloat16,
                                                           double, RoundingMode);
+template void explain_unary_operation_single_output_error(Operation op,
+                                                          fputil::Float16,
+                                                          fputil::Float16,
+                                                          double, RoundingMode);
 
 template <typename T>
 void explain_unary_operation_two_outputs_error(
@@ -605,6 +609,9 @@ template bool compare_unary_operation_single_output(Operation, float128,
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 template bool compare_unary_operation_single_output(Operation, bfloat16,
                                                     bfloat16, double,
+                                                    RoundingMode);
+template bool compare_unary_operation_single_output(Operation, fputil::Float16,
+                                                    fputil::Float16, double,
                                                     RoundingMode);
 
 template <typename T>
