@@ -21,7 +21,6 @@
 ---
 name:            ne_i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -45,7 +44,6 @@ body:             |
 ---
 name:            eq_ptr
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -69,7 +67,6 @@ body:             |
 ---
 name:            ult_i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -98,7 +95,6 @@ body:             |
 ---
 name:            slt_i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -129,7 +125,6 @@ body:             |
 ---
 name:            eq_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -163,7 +158,6 @@ body:             |
 ---
 name:            ne_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -197,7 +191,6 @@ body:             |
 ---
 name:            sgt_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -230,7 +223,6 @@ body:             |
 ---
 name:            sge_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -263,7 +255,6 @@ body:             |
 ---
 name:            slt_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -296,7 +287,6 @@ body:             |
 ---
 name:            sle_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -329,7 +319,6 @@ body:             |
 ---
 name:            ugt_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -362,7 +351,6 @@ body:             |
 ---
 name:            uge_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -395,7 +383,6 @@ body:             |
 ---
 name:            ult_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -428,7 +415,6 @@ body:             |
 ---
 name:            ule_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7

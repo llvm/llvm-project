@@ -999,6 +999,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   setOperationAction({ISD::LROUND, ISD::LLROUND}, {MVT::f32, MVT::f64}, Expand);
 
+  setOperationAction({ISD::LRINT, ISD::LLRINT}, {MVT::f32, MVT::f64}, Expand);
+
   // 'Expand' implements FCOPYSIGN without calling an external library.
   setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
   setOperationAction(ISD::FCOPYSIGN, MVT::v2f16, Expand);
@@ -8475,6 +8477,16 @@ void NVPTXTargetLowering::computeKnownBitsForTargetNode(
     // unused parts of its operands, such as the high bytes of narrow loads.
     Known = KnownBits::mul(IsSigned ? LHS.sext(BitWidth) : LHS.zext(BitWidth),
                            IsSigned ? RHS.sext(BitWidth) : RHS.zext(BitWidth));
+    break;
+  }
+  case NVPTXISD::CLZ_B64:
+  case NVPTXISD::POPC_B64: {
+    KnownBits Input =
+        DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    unsigned MaxCount = Op.getOpcode() == NVPTXISD::CLZ_B64
+                            ? Input.countMaxLeadingZeros()
+                            : Input.countMaxPopulation();
+    Known.Zero.setBitsFrom(llvm::bit_width(MaxCount));
     break;
   }
   case NVPTXISD::PRMT:

@@ -5681,7 +5681,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // Perform the actual loop transformation.
   IRBuilder<> Builder(PSE.getSE()->getModule());
-  Builder.enableGEPCanonicalization();
   VPTransformState State(&TTI, BestVF, LI, DT, Legal->getAssumptionCache(),
                          Builder, &BestVPlan, OrigLoop->getParentLoop());
 
@@ -5925,8 +5924,8 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
 
   // In case of predicated execution (due to tail-folding, or conditional
   // execution, or both), pass the relevant mask.
-  if (CM.isMaskRequired(HistInfo->Store))
-    HGramOps.push_back(VPI->getMask());
+  if (VPValue *Mask = VPI->getMask())
+    HGramOps.push_back(Mask);
 
   return new VPHistogramRecipe(HistInfo->UpdateKind, HGramOps,
                                cast<VPIRMetadata>(*VPI), VPI->getDebugLoc());
@@ -6316,6 +6315,8 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
       RUN_VPLAN_PASS(VPlanTransforms::addExplicitVectorLength, *Plan,
                      Config.getMaxSafeElements());
       RUN_VPLAN_PASS(VPlanTransforms::optimizeEVLMasks, *Plan);
+      VPCostContext CostCtx(*TLI, *Plan, *CM, Config);
+      RUN_VPLAN_PASS(VPlanTransforms::foldPredicateMerge, *Plan, CostCtx);
     }
 
     if (auto P =
@@ -7983,8 +7984,8 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
   // will simplify all loops, regardless of whether anything end up being
   // vectorized.
   for (const auto &L : *LI)
-    Changed |= CFGChanged |=
-        simplifyLoop(L, DT, LI, SE, AC, nullptr, false /* PreserveLCSSA */);
+    Changed |= CFGChanged |= simplifyLoop(L, DT, LI, SE, AC, nullptr,
+                                          false /* PreserveLCSSA */, TTI);
 
   // Build up a worklist of inner-loops to vectorize. This is necessary as
   // the act of vectorizing or partially unrolling a loop creates new loops

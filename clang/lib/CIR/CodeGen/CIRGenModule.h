@@ -452,24 +452,6 @@ public:
   mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc, QualType ty,
                                           bool forEH = false);
 
-  static mlir::SymbolTable::Visibility getMLIRVisibility(Visibility v) {
-    switch (v) {
-    case DefaultVisibility:
-      return mlir::SymbolTable::Visibility::Public;
-    case HiddenVisibility:
-      return mlir::SymbolTable::Visibility::Private;
-    case ProtectedVisibility:
-      // The distinction between ProtectedVisibility and DefaultVisibility is
-      // that symbols with ProtectedVisibility, while visible to the dynamic
-      // linker like DefaultVisibility, are guaranteed to always dynamically
-      // resolve to a symbol in the current shared object. There is currently no
-      // equivalent MLIR visibility, so we fall back on the fact that the symbol
-      // is visible.
-      return mlir::SymbolTable::Visibility::Public;
-    }
-    llvm_unreachable("unknown visibility!");
-  }
-
   static cir::VisibilityKind getCIRVisibilityKind(Visibility v) {
     switch (v) {
     case DefaultVisibility:
@@ -1023,6 +1005,13 @@ public:
   /// Emits AMDGPU specific Metadata.
   void emitAMDGPUMetadata();
 
+  /// Build (or fetch from the dedup cache) the args ArrayAttr for an
+  /// annotation. Returns the empty ArrayAttr when the annotation has none.
+  mlir::ArrayAttr getOrCreateAnnotationArgs(const clang::AnnotateAttr *attr);
+
+  /// Create cir::AnnotationAttr for a single AnnotateAttr.
+  cir::AnnotationAttr emitAnnotateAttr(const clang::AnnotateAttr *aa);
+
   /// Add global annotations for a global value (GlobalOp or FuncOp).
   void addGlobalAnnotations(const clang::ValueDecl *d, mlir::Operation *gv);
 
@@ -1052,13 +1041,6 @@ private:
 
   /// Emit all the global annotations.
   void emitGlobalAnnotations();
-
-  /// Build (or fetch from the dedup cache) the args ArrayAttr for an
-  /// annotation. Returns the empty ArrayAttr when the annotation has none.
-  mlir::ArrayAttr getOrCreateAnnotationArgs(const clang::AnnotateAttr *attr);
-
-  /// Create cir::AnnotationAttr for a single AnnotateAttr on a global.
-  cir::AnnotationAttr emitAnnotateAttr(const clang::AnnotateAttr *aa);
 };
 } // namespace CIRGen
 

@@ -12,6 +12,7 @@
 #include "src/__support/CPP/functional.h"
 #include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
+#include "test/UnitTest/TestLogger.h"
 
 #if LIBC_TEST_HAS_MATCHERS()
 
@@ -26,13 +27,11 @@ class FPExceptMatcher : public Matcher<bool> {
 public:
   explicit FPExceptMatcher(cpp::function_ref<void(void)> func);
 
-  bool MatchAndExplain([[maybe_unused]] bool unused,
-                       MatchResultListener *listener) const {
-    if (exceptionRaised)
-      return true;
-    *listener << "A floating point exception should have been raised but it "
-              << "wasn't\n";
-    return false;
+  bool match([[maybe_unused]] bool unused) { return exceptionRaised; }
+
+  void explainError() override {
+    tlog << "A floating point exception should have been raised but it "
+         << "wasn't\n";
   }
 };
 

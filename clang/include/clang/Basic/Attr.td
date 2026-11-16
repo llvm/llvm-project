@@ -2577,7 +2577,7 @@ def AMDGPUAvailableVisible : StmtAttr, TargetSpecificAttr<TargetAMDGPU> {
 def BPFPreserveAccessIndex : InheritableAttr,
                              TargetSpecificAttr<TargetBPF>  {
   let Spellings = [Clang<"preserve_access_index">];
-  let Subjects = SubjectList<[Record], ErrorDiag>;
+  let Subjects = SubjectList<[Record, Enum], ErrorDiag>;
   let Documentation = [BPFPreserveAccessIndexDocs];
   let LangOpts = [COnly];
 }
@@ -3692,41 +3692,6 @@ def RISCVVLSCC: DeclOrTypeAttr, TargetSpecificAttr<TargetRISCV> {
                   Clang<"riscv_vls_cc">];
  let Args = [UnsignedArgument<"VectorWidth", /*opt*/1>];
  let Documentation = [RISCVVLSCCDocs];
-}
-
-def RISCVIn : TypeAttr, TargetSpecificAttr<TargetRISCV> {
-  let Spellings = [RegularKeyword<"__riscv_in">];
-  let Args = [VariadicStringArgument<"InArgs">];
-  let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
-  let Documentation = [RISCVInDocs];
-}
-
-def RISCVOut : TypeAttr, TargetSpecificAttr<TargetRISCV> {
-  let Spellings = [RegularKeyword<"__riscv_out">];
-  let Args = [VariadicStringArgument<"OutArgs">];
-  let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
-  let Documentation = [RISCVOutDocs];
-}
-
-def RISCVInOut : TypeAttr, TargetSpecificAttr<TargetRISCV> {
-  let Spellings = [RegularKeyword<"__riscv_inout">];
-  let Args = [VariadicStringArgument<"InOutArgs">];
-  let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
-  let Documentation = [RISCVInOutDocs];
-}
-
-def RISCVPreserves : TypeAttr, TargetSpecificAttr<TargetRISCV> {
-  let Spellings = [RegularKeyword<"__riscv_preserves">];
-  let Args = [VariadicStringArgument<"PreserveArgs">];
-  let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
-  let Documentation = [RISCVPreservesDocs];
-}
-
-def RISCVNew : TypeAttr, TargetSpecificAttr<TargetRISCV> {
-  let Spellings = [RegularKeyword<"__riscv_new">];
-  let Args = [VariadicStringArgument<"NewArgs">];
-  let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
-  let Documentation = [RISCVNewDocs];
 }
 
 def Target : InheritableAttr {
@@ -5499,6 +5464,14 @@ def HLSLVkLocation : HLSLAnnotationAttr {
   let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLVkLocationDocs];
+}
+
+def HLSLVkBuiltIn : HLSLAnnotationAttr, TargetSpecificAttr<TargetSPIRV> {
+  let Spellings = [CXX11<"vk", "builtin">];
+  let Args = [StringArgument<"BuiltIn">];
+  let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkBuiltInDocs];
 }
 
 // `row_major` / `column_major` are HLSL keywords that select the in-memory

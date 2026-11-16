@@ -154,6 +154,13 @@ functions:
       - type: const sigset_t *__restrict
       - type: siginfo_t *__restrict
       - type: const struct timespec *__restrict
+  - name: sigwait
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const sigset_t *__restrict
+      - type: int *__restrict
   - name: sigwaitinfo
     standards:
       - posix

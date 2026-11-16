@@ -63,6 +63,7 @@ add_orc_rt_unittest(SupportTests
   support/RTTITest.cpp
   support/StringExtrasTest.cpp
   support/StringPoolTest.cpp
+  support/SymbolLookupResultTest.cpp
   support/SymbolLookupSetTest.cpp
   support/WrapperFunctionBufferTest.cpp
   support/bind-test.cpp
@@ -75,6 +76,7 @@ add_orc_rt_unittest(SupportTests
   support/sps/SPSAllocActionTest.cpp
   support/sps/SPSJITDylibLookupFlagsTest.cpp
   support/sps/SPSMemoryFlagsTest.cpp
+  support/sps/SPSSymbolLookupResultTest.cpp
   support/sps/SPSSymbolLookupSetTest.cpp
   support/sps/SPSWrapperFunctionBufferTest.cpp
   support/sps/SPSWrapperFunctionTest.cpp

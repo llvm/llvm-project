@@ -2104,6 +2104,26 @@ static bool analyzeArgSplit(const SmallVectorImpl<ArgTy> &Args,
   return true;
 }
 
+// Return the virtual register holding the incoming "ADA" special register (R5)
+// of an XPLINK function, creating it on first use. LowerFormalArguments is not
+// called for naked functions, but those still get R5 on entry and may use it to
+// address globals and functions.
+static Register getOrCreateADAVirtualRegister(MachineFunction &MF) {
+  SystemZMachineFunctionInfo *FuncInfo =
+      MF.getInfo<SystemZMachineFunctionInfo>();
+  Register ADAvReg = FuncInfo->getADAVirtualRegister();
+  if (ADAvReg)
+    return ADAvReg;
+
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  ADAvReg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
+  auto *Regs = static_cast<SystemZXPLINK64Registers *>(
+      MF.getSubtarget<SystemZSubtarget>().getSpecialRegisters());
+  MRI.addLiveIn(Regs->getADARegister(), ADAvReg);
+  FuncInfo->setADAVirtualRegister(ADAvReg);
+  return ADAvReg;
+}
+
 SDValue SystemZTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
@@ -2294,15 +2314,6 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
     }
   }
 
-  if (Subtarget.isTargetXPLINK64()) {
-    // Create virual register  for handling incoming "ADA" special register (R5)
-    const TargetRegisterClass *RC = &SystemZ::ADDR64BitRegClass;
-    Register ADAvReg = MRI.createVirtualRegister(RC);
-    auto *Regs = static_cast<SystemZXPLINK64Registers *>(
-        Subtarget.getSpecialRegisters());
-    MRI.addLiveIn(Regs->getADARegister(), ADAvReg);
-    FuncInfo->setADAVirtualRegister(ADAvReg);
-  }
   return Chain;
 }
 
@@ -2330,8 +2341,7 @@ static bool canUseSiblingCall(const CCState &ArgCCInfo,
 static SDValue getADAEntry(SelectionDAG &DAG, SDValue Val, SDLoc DL,
                            unsigned Offset, bool LoadAdr = false) {
   MachineFunction &MF = DAG.getMachineFunction();
-  SystemZMachineFunctionInfo *MFI = MF.getInfo<SystemZMachineFunctionInfo>();
-  Register ADAvReg = MFI->getADAVirtualRegister();
+  Register ADAvReg = getOrCreateADAVirtualRegister(MF);
   EVT PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
 
   SDValue Reg = DAG.getRegister(ADAvReg, PtrVT);
@@ -2383,9 +2393,7 @@ static bool getzOSCalleeAndADA(SelectionDAG &DAG, SDValue &Callee, SDValue &ADA,
     bool IsInternal = (G->getGlobal()->hasInternalLinkage() ||
                        G->getGlobal()->hasPrivateLinkage());
     if (IsInternal) {
-      SystemZMachineFunctionInfo *MFI =
-          MF.getInfo<SystemZMachineFunctionInfo>();
-      Register ADAvReg = MFI->getADAVirtualRegister();
+      Register ADAvReg = getOrCreateADAVirtualRegister(MF);
       ADA = DAG.getCopyFromReg(Chain, DL, ADAvReg, PtrVT);
       Callee = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT);
       Callee = DAG.getNode(SystemZISD::PCREL_WRAPPER, DL, PtrVT, Callee);
@@ -5474,7 +5482,6 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   auto *Regs = Subtarget.getSpecialRegisters();
-  bool StoreBackchain = MF.getSubtarget<SystemZSubtarget>().hasBackChain();
 
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     report_fatal_error("Variable-sized stack allocations are not supported "
@@ -5482,14 +5489,33 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
 
   SDValue Chain = Op.getOperand(0);
   SDValue NewSP = Op.getOperand(1);
-  SDValue Backchain;
   SDLoc DL(Op);
 
+  // XPLINK: @@ALCAXP (lowerDYNAMIC_STACKALLOC_XPLINK) moves the frame header
+  // (register save area and reserved words at SP + bias) down with the stack
+  // pointer, and calls made while the stack pointer is lowered place their
+  // arguments over the old header. The current header must be copied back to
+  // the restored stack pointer, otherwise the epilogue and the LE stack walk
+  // use a clobbered header (abend U4083). No signal may be delivered while
+  // the stack pointer is changed and the header is copied, so this is done in
+  // a stub routine (emitted once per module by the AsmPrinter), which gets
+  // the new stack pointer in R1 and is called with BASR 3,3.
+  if (Subtarget.isTargetXPLINK64()) {
+    SDValue Glue;
+    Chain = DAG.getCopyToReg(Chain, DL, SystemZ::R1D, NewSP, Glue);
+    Glue = Chain.getValue(1);
+    return DAG.getNode(SystemZISD::XPLINK_STACKRESTORE, DL, MVT::Other, Chain,
+                       Glue);
+  }
+
+  bool StoreBackchain = MF.getSubtarget<SystemZSubtarget>().hasBackChain();
+  SDValue Backchain;
   if (StoreBackchain) {
     SDValue OldSP = DAG.getCopyFromReg(
         Chain, DL, Regs->getStackPointerRegister(), MVT::i64);
-    Backchain = DAG.getLoad(MVT::i64, DL, Chain, getBackchainAddress(OldSP, DAG),
-                            MachinePointerInfo());
+    Backchain =
+        DAG.getLoad(MVT::i64, DL, Chain, getBackchainAddress(OldSP, DAG),
+                    MachinePointerInfo());
   }
 
   Chain = DAG.getCopyToReg(Chain, DL, Regs->getStackPointerRegister(), NewSP);
@@ -6889,8 +6915,13 @@ lowerSIGN_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const {
       break;
     }
     if (StartOffsetCandidate != -1) {
-      StartOffset = StartOffsetCandidate;
-      PackedOp = PackedOp.getOperand(0);
+      // The mask indexes the concatenation of both shuffle operands: an offset
+      // past the first operand's lanes selects lanes of the second.
+      unsigned InNumElts = InVT.getVectorNumElements();
+      unsigned Offset = StartOffsetCandidate;
+      unsigned OpNo = Offset >= InNumElts ? 1 : 0;
+      StartOffset = Offset - OpNo * InNumElts;
+      PackedOp = PackedOp.getOperand(OpNo);
     }
   }
 

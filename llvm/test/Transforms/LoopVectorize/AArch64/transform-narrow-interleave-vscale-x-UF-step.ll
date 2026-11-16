@@ -6,7 +6,7 @@ target triple = "aarch64"
 ; Test that vectorization does not crash when narrowInterleaveGroups
 ; materializes VFxUF and the canonical IV increment step is UF*vscale
 ; (in the vector epilogue).
-define void @test(ptr noalias %A, i64 %v, i64 %n) {
+define void @test(ptr noalias %A, i64 %v, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[V:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ITER_CHECK:.*]]:
@@ -15,7 +15,7 @@ define void @test(ptr noalias %A, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
