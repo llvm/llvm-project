@@ -1726,12 +1726,16 @@ void CodeGenFunction::MarkGSBufferAlloca(llvm::AllocaInst *AI, bool IsLarge) {
   if (AI->getMetadata("stack-protector"))
     return;
 
-  // 2 is a large buffer and 1 a small one; see the "stack-protector" metadata
-  // in LLVM's LangRef.
+  // 1 says the alloca requires a protector, and the layout metadata says how
+  // to lay it out if it gets one; see the "stack-protector" and
+  // "stack-protector.layout" metadata in LLVM's LangRef.
   llvm::LLVMContext &Ctx = Builder.getContext();
-  auto *Operand =
-      llvm::ConstantAsMetadata::get(Builder.getInt32(IsLarge ? 2 : 1));
-  AI->setMetadata("stack-protector", llvm::MDNode::get(Ctx, {Operand}));
+  auto *Force = llvm::ConstantAsMetadata::get(Builder.getInt32(1));
+  AI->setMetadata("stack-protector", llvm::MDNode::get(Ctx, {Force}));
+  AI->setMetadata(
+      "stack-protector.layout",
+      llvm::MDNode::get(
+          Ctx, {llvm::MDString::get(Ctx, IsLarge ? "large" : "small")}));
 }
 
 void CodeGenFunction::EmitGSBufferStackProtectorMD(llvm::Value *AllocaPtr,

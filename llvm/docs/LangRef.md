@@ -2842,10 +2842,10 @@ fn -> other_fn -> other_fn ; fn is norecurse
     uses. It has no effect on a function that also has `sspreq`. It takes a
     boolean value, and is emitted by clang-cl.
 
-    Under this heuristic a function is protected if it takes no variable
-    argument list and it allocates a "GS buffer", which is either an `alloca`
-    with a non-constant or non-one element count, or an alloca that the
-    frontend marked with non-zero `stack-protector` metadata. Whether a given
+    Under this heuristic a function is protected if it allocates a "GS
+    buffer", which is either an `alloca` with a non-constant or non-one element
+    count, or an alloca that the frontend marked with `stack-protector`
+    metadata of value `1`. Whether a given
     variable is a GS buffer depends on its source-level type, which lowering
     to IR does not preserve, so classifying the fixed-size allocations is the
     frontend's job.
@@ -9219,21 +9219,43 @@ needs one.
 The metadata contains a single integer:
 
 - `0` opts the given alloca out of requiring a stack protector.
-- `1` marks the given alloca as a buffer that requires a stack protector, and
-  that is laid out like a small (`< ssp-buffer-size`) array.
-- `2` marks the given alloca as a buffer that requires a stack protector, and
-  that is laid out like a large (`>= ssp-buffer-size`) array.
+- `1` says the given alloca requires a stack protector. Any other non-zero
+  value is treated as `1`.
 
-The non-zero values let a frontend classify an allocation itself, which is
+The value `1` lets a frontend classify an allocation itself, which is
 necessary when the decision depends on source-level information that lowering
-to IR does not preserve.
+to IR does not preserve. It says nothing about where the alloca goes in the
+frame; see `stack-protector.layout` below.
 
 ```
  %a = alloca [1000 x i8], align 1, !stack-protector !0
  %b = alloca [1000 x i8], align 1, !stack-protector !1
 
 !0 = !{i32 0}
-!1 = !{i32 2}
+!1 = !{i32 1}
+```
+
+#### '`stack-protector.layout`' Metadata
+
+The `stack-protector.layout` metadata may be attached to alloca instructions.
+It says how the given alloca should be laid out *if it is protected*: like a
+small (`< ssp-buffer-size`) array, or like a large (`>= ssp-buffer-size`)
+array. It does not make the alloca protected or unprotected. Whether it is is
+decided by the function's attributes, the heuristic they select and any
+`stack-protector` metadata, and the layout metadata only replaces the layout
+class the alloca would otherwise get, so a frontend's classification composes
+with the backend's own heuristics.
+
+The metadata contains a single string, either `"small"` or `"large"`. Any
+other operand is ignored. An alloca that `stack-protector` metadata says
+requires a protector but that has no layout metadata is laid out according to
+its size.
+
+```
+ %a = alloca [1000 x i8], align 1, !stack-protector !0, !stack-protector.layout !1
+
+!0 = !{i32 1}
+!1 = !{!"large"}
 ```
 
 #### '`implicit.ref`' Metadata

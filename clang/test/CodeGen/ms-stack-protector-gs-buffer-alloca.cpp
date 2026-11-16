@@ -15,9 +15,8 @@
 // RUN:   | FileCheck %s --check-prefix=STRONG
 //
 // STRONG-NOT: = !{i32 1}
-// STRONG-NOT: = !{i32 2}
-// STRONG-NOT: = !{i32 1, i1
-// STRONG-NOT: = !{i32 2, i1
+// STRONG-NOT: = !{!"large"}
+// STRONG-NOT: = !{!"small"}
 
 extern "C" void *_alloca(unsigned long long);
 
@@ -39,24 +38,24 @@ void array_2_elements() { int a[2]; use(a); }
 // unlike for a member (see struct_array_of_pointers) the element type does not
 // matter. MSDN says otherwise, but cl.exe protects this.
 // CHECK-LABEL: @"?array_of_pointers@@YAXXZ"
-// CHECK:         alloca [8 x ptr], align 8, !stack-protector ![[LARGE:[0-9]+]]
+// CHECK:         alloca [8 x ptr], align 8, !stack-protector ![[FORCE:[0-9]+]], !stack-protector.layout ![[LARGE:[0-9]+]]
 void array_of_pointers() { void *a[8]; use(a); }
 
 // A multidimensional array is counted as the flat array it is laid out as, so
 // this has four elements rather than two.
 // CHECK-LABEL: @"?array_2_by_2_pointers@@YAXXZ"
-// CHECK:         alloca [2 x [2 x ptr]], align 8, !stack-protector ![[LARGE]]
+// CHECK:         alloca [2 x [2 x ptr]], align 8, !stack-protector ![[FORCE]], !stack-protector.layout ![[LARGE]]
 void array_2_by_2_pointers() { void *a[2][2]; use(a); }
 
 // A GS buffer of at least ssp-buffer-size bytes is laid out closest to the
 // guard, so it is marked 2 rather than 1.
 // CHECK-LABEL: @"?array_8_bytes@@YAXXZ"
-// CHECK:         alloca [8 x i8], align 1, !stack-protector ![[LARGE]]
+// CHECK:         alloca [8 x i8], align 1, !stack-protector ![[FORCE]], !stack-protector.layout ![[LARGE]]
 void array_8_bytes() { char a[8]; use(a); }
 
 // 6 bytes and three elements: over both thresholds, but under ssp-buffer-size.
 // CHECK-LABEL: @"?array_3_shorts@@YAXXZ"
-// CHECK:         alloca [3 x i16], align 2, !stack-protector ![[SMALL:[0-9]+]]
+// CHECK:         alloca [3 x i16], align 2, !stack-protector ![[FORCE]], !stack-protector.layout ![[SMALL:[0-9]+]]
 void array_3_shorts() { short a[3]; use(a); }
 
 // Two elements of two bytes each: too small either way.
@@ -76,7 +75,7 @@ struct TwoIntArray { int m[2]; };
 
 // More than 8 bytes with no pointers.
 // CHECK-LABEL: @"?struct_pointer_free@@YAXXZ"
-// CHECK:         alloca %struct.PointerFree, align 4, !stack-protector ![[LARGE]]
+// CHECK:         alloca %struct.PointerFree, align 4, !stack-protector ![[FORCE]], !stack-protector.layout ![[LARGE]]
 void struct_pointer_free() { PointerFree s; use(&s); }
 
 // CHECK-LABEL: @"?struct_with_pointer@@YAXXZ"
@@ -90,11 +89,11 @@ void struct_8_bytes() { EightBytes s; use(&s); }
 
 // Holds a pointer, but also contains a GS buffer.
 // CHECK-LABEL: @"?struct_containing_buffer@@YAXXZ"
-// CHECK:         alloca %struct.ContainsBuffer, align 8, !stack-protector ![[LARGE]]
+// CHECK:         alloca %struct.ContainsBuffer, align 8, !stack-protector ![[FORCE]], !stack-protector.layout ![[LARGE]]
 void struct_containing_buffer() { ContainsBuffer s; use(&s); }
 
 // CHECK-LABEL: @"?struct_nested_buffer@@YAXXZ"
-// CHECK:         alloca %struct.NestedBuffer, align 8, !stack-protector ![[LARGE]]
+// CHECK:         alloca %struct.NestedBuffer, align 8, !stack-protector ![[FORCE]], !stack-protector.layout ![[LARGE]]
 void struct_nested_buffer() { NestedBuffer s; use(&s); }
 
 // Below the top level the two array conditions swap over: the element count
@@ -106,7 +105,7 @@ void struct_nested_buffer() { NestedBuffer s; use(&s); }
 void struct_array_of_pointers() { ArrayOfPointers s; use(&s); }
 
 // CHECK-LABEL: @"?struct_two_int_array@@YAXXZ"
-// CHECK:         alloca %struct.TwoIntArray, align 4, !stack-protector ![[LARGE]]
+// CHECK:         alloca %struct.TwoIntArray, align 4, !stack-protector ![[FORCE]], !stack-protector.layout ![[LARGE]]
 void struct_two_int_array() { TwoIntArray s; use(&s); }
 
 //--- Anonymous members --------------------------------------------------------
@@ -129,7 +128,7 @@ void anon_struct_buffer() { AnonStructBuffer s; use(&s); }
 
 // ...though the same union as a named member is found.
 // CHECK-LABEL: @"?named_union_buffer@@YAXXZ"
-// CHECK:         alloca %struct.NamedUnionBuffer, align 1, !stack-protector ![[LARGE]]
+// CHECK:         alloca %struct.NamedUnionBuffer, align 1, !stack-protector ![[FORCE]], !stack-protector.layout ![[LARGE]]
 void named_union_buffer() { NamedUnionBuffer s; use(&s); }
 
 // A pointer inside one still disqualifies the enclosing aggregate.
@@ -155,7 +154,7 @@ void protected_data() { ProtectedData s; use(&s); }
 
 // The array rule is not subject to it.
 // CHECK-LABEL: @"?private_array@@YAXXZ"
-// CHECK:         alloca %struct.PrivateArray, align 1, !stack-protector ![[LARGE]]
+// CHECK:         alloca %struct.PrivateArray, align 1, !stack-protector ![[FORCE]], !stack-protector.layout ![[LARGE]]
 void private_array() { PrivateArray s; use(&s); }
 
 //--- Base classes -------------------------------------------------------------
@@ -170,22 +169,22 @@ struct HoldsDerivedPointer { DerivedPointer m; };
 // Neither the pointer veto nor the access-control rule looks into a base class,
 // so this is a GS buffer even though it inherits a pointer...
 // CHECK-LABEL: @"?derived_pointer@@YAXXZ"
-// CHECK:         alloca %struct.DerivedPointer, align 8, !stack-protector ![[LARGE]]
+// CHECK:         alloca %struct.DerivedPointer, align 8, !stack-protector ![[FORCE]], !stack-protector.layout ![[LARGE]]
 void derived_pointer() { DerivedPointer s; use(&s); }
 
 // ...and so is an aggregate holding one as a member.
 // CHECK-LABEL: @"?holds_derived_pointer@@YAXXZ"
-// CHECK:         alloca %struct.HoldsDerivedPointer, align 8, !stack-protector ![[LARGE]]
+// CHECK:         alloca %struct.HoldsDerivedPointer, align 8, !stack-protector ![[FORCE]], !stack-protector.layout ![[LARGE]]
 void holds_derived_pointer() { HoldsDerivedPointer s; use(&s); }
 
 // A private base with private members does not disqualify the derived class.
 // CHECK-LABEL: @"?derived_private@@YAXXZ"
-// CHECK:         alloca %struct.DerivedPrivate, align 8, !stack-protector ![[LARGE]]
+// CHECK:         alloca %struct.DerivedPrivate, align 8, !stack-protector ![[FORCE]], !stack-protector.layout ![[LARGE]]
 void derived_private() { DerivedPrivate s; use(&s); }
 
 // The search for a buffer does reach into a base class.
 // CHECK-LABEL: @"?derived_buffer@@YAXXZ"
-// CHECK:         alloca %struct.DerivedBuffer, align 1, !stack-protector ![[LARGE]]
+// CHECK:         alloca %struct.DerivedBuffer, align 1, !stack-protector ![[FORCE]], !stack-protector.layout ![[LARGE]]
 void derived_buffer() { DerivedBuffer s; use(&s); }
 
 //--- C++ specifics ------------------------------------------------------------
@@ -202,7 +201,7 @@ void polymorphic() { Polymorphic s; use(&s); }
 
 // A base class is searched for a buffer just like a member.
 // CHECK-LABEL: @"?derived@@YAXXZ"
-// CHECK:         alloca %struct.Derived, align 4, !stack-protector ![[LARGE]]
+// CHECK:         alloca %struct.Derived, align 4, !stack-protector ![[FORCE]], !stack-protector.layout ![[LARGE]]
 void derived() { Derived s; use(&s); }
 
 // A reference holds an address, so it disqualifies the aggregate just like a
@@ -218,20 +217,20 @@ void holds_reference(int &x) { HoldsReference s(x); use(&s); }
 // constant count does not stay one for long -- InstCombine folds it into the
 // allocated type -- so the classification is recorded here as well.
 // CHECK-LABEL: @"?alloca_large@@YAXXZ"
-// CHECK:         alloca i8, i64 64, align 16, !stack-protector ![[LARGE]]
+// CHECK:         alloca i8, i64 64, align 16, !stack-protector ![[FORCE]], !stack-protector.layout ![[LARGE]]
 void alloca_large() { use(_alloca(64)); }
 
 // Below ssp-buffer-size, but still a GS buffer: _alloca has no threshold.
 // CHECK-LABEL: @"?alloca_small@@YAXXZ"
-// CHECK:         alloca i8, i64 3, align 16, !stack-protector ![[SMALL]]
+// CHECK:         alloca i8, i64 3, align 16, !stack-protector ![[FORCE]], !stack-protector.layout ![[SMALL]]
 void alloca_small() { use(_alloca(3)); }
 
 // CHECK-LABEL: @"?alloca_dynamic@@YAXH@Z"
-// CHECK:         alloca i8, i64 %{{.*}}, align 16, !stack-protector ![[LARGE]]
+// CHECK:         alloca i8, i64 %{{.*}}, align 16, !stack-protector ![[FORCE]], !stack-protector.layout ![[LARGE]]
 void alloca_dynamic(int n) { use(_alloca(n)); }
 
 // CHECK-LABEL: @"?alloca_with_align@@YAXXZ"
-// CHECK:         alloca i8, i64 64, align 16, !stack-protector ![[LARGE]]
+// CHECK:         alloca i8, i64 64, align 16, !stack-protector ![[FORCE]], !stack-protector.layout ![[LARGE]]
 void alloca_with_align() { use(__builtin_alloca_with_align(64, 128)); }
 
 //--- Left to the backend ------------------------------------------------------
@@ -263,6 +262,7 @@ __declspec(safebuffers) void safe() { char a[64]; use(a); }
 // CHECK:         alloca [64 x i8], align 1{{$}}
 __declspec(strict_gs_check) void strict() { char a[64]; use(a); }
 
-// CHECK-DAG: ![[LARGE]] = !{i32 2}
-// CHECK-DAG: ![[SMALL]] = !{i32 1}
+// CHECK-DAG: ![[FORCE]] = !{i32 1}
+// CHECK-DAG: ![[LARGE]] = !{!"large"}
+// CHECK-DAG: ![[SMALL]] = !{!"small"}
 // CHECK-DAG: ![[IGNORE]] = !{i32 0}

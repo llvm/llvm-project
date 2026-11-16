@@ -38,7 +38,7 @@ define void @address_taken() #0 {
 ; CHECK-LABEL: marked_small:
 ; CHECK:         __security_cookie
 define void @marked_small() #0 {
-  %a = alloca [6 x i8], !stack-protector !1
+  %a = alloca [6 x i8], !stack-protector !1, !stack-protector.layout !3
   call void @use(ptr %a)
   ret void
 }
@@ -46,7 +46,7 @@ define void @marked_small() #0 {
 ; CHECK-LABEL: marked_large:
 ; CHECK:         __security_cookie
 define void @marked_large() #0 {
-  %a = alloca [64 x i8], !stack-protector !2
+  %a = alloca [64 x i8], !stack-protector !1, !stack-protector.layout !4
   call void @use(ptr %a)
   ret void
 }
@@ -55,7 +55,7 @@ define void @marked_large() #0 {
 ; CHECK-LABEL: marked_scalar:
 ; CHECK:         __security_cookie
 define void @marked_scalar() #0 {
-  %a = alloca i32, !stack-protector !1
+  %a = alloca i32, !stack-protector !1, !stack-protector.layout !3
   call void @use(ptr %a)
   ret void
 }
@@ -66,6 +66,47 @@ define void @marked_scalar() #0 {
 ; CHECK:       .seh_endproc
 define void @marked_ignore() #0 {
   %a = alloca [64 x i8], !stack-protector !0
+  call void @use(ptr %a)
+  ret void
+}
+
+;; --- Layout metadata ---------------------------------------------------------
+
+; The layout class is not a request for protection: an alloca that only says
+; how it would be laid out is not protected under this heuristic.
+; CHECK-LABEL: layout_only:
+; CHECK-NOT:     __security_cookie
+; CHECK:       .seh_endproc
+define void @layout_only() #0 {
+  %a = alloca [64 x i8], !stack-protector.layout !4
+  call void @use(ptr %a)
+  ret void
+}
+
+; Nor does it override an opt-out.
+; CHECK-LABEL: layout_with_ignore:
+; CHECK-NOT:     __security_cookie
+; CHECK:       .seh_endproc
+define void @layout_with_ignore() #0 {
+  %a = alloca [64 x i8], !stack-protector !0, !stack-protector.layout !4
+  call void @use(ptr %a)
+  ret void
+}
+
+; A marked alloca needs no layout metadata; it is laid out by size.
+; CHECK-LABEL: marked_without_layout:
+; CHECK:         __security_cookie
+define void @marked_without_layout() #0 {
+  %a = alloca [64 x i8], !stack-protector !1
+  call void @use(ptr %a)
+  ret void
+}
+
+; An operand that is not "small" or "large" is ignored.
+; CHECK-LABEL: marked_bad_layout:
+; CHECK:         __security_cookie
+define void @marked_bad_layout() #0 {
+  %a = alloca [64 x i8], !stack-protector !1, !stack-protector.layout !5
   call void @use(ptr %a)
   ret void
 }
@@ -100,7 +141,7 @@ define void @small_alloca() #0 {
 ; CHECK-LABEL: sret_slot:
 ; CHECK:         __security_cookie
 define void @sret_slot() #0 {
-  %a = alloca [64 x i8], !stack-protector !2
+  %a = alloca [64 x i8], !stack-protector !1, !stack-protector.layout !4
   call void @make(ptr sret([64 x i8]) %a)
   ret void
 }
@@ -112,7 +153,7 @@ define void @sret_slot() #0 {
 ; CHECK-LABEL: variadic:
 ; CHECK:         __security_cookie
 define void @variadic(i32 %n, ...) #0 {
-  %a = alloca [64 x i8], !stack-protector !2
+  %a = alloca [64 x i8], !stack-protector !1, !stack-protector.layout !4
   call void @use(ptr %a)
   ret void
 }
@@ -154,7 +195,7 @@ define void @strong_still_protects() #2 {
 ; CHECK-LABEL: strong_honours_mark:
 ; CHECK:         __security_cookie
 define void @strong_honours_mark() #2 {
-  %a = alloca i32, !stack-protector !1
+  %a = alloca i32, !stack-protector !1, !stack-protector.layout !3
   store i32 0, ptr %a
   ret void
 }
@@ -165,4 +206,6 @@ attributes #2 = { sspstrong uwtable }
 
 !0 = !{i32 0}
 !1 = !{i32 1}
-!2 = !{i32 2}
+!3 = !{!"small"}
+!4 = !{!"large"}
+!5 = !{!"huge"}

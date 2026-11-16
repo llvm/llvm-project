@@ -72,12 +72,8 @@ static constexpr const char *GSBufferAttr = "stack-protector-gs-buffer";
 enum SSPAllocaMD : uint32_t {
   /// Ignore this alloca when deciding whether the function needs a protector.
   SSPAMD_Ignore = 0,
-  /// This alloca is a buffer that requires a protector, and is laid out like a
-  /// small (< ssp-buffer-size) array.
-  SSPAMD_SmallBuffer = 1,
-  /// This alloca is a buffer that requires a protector, and is laid out like a
-  /// large (>= ssp-buffer-size) array.
-  SSPAMD_LargeBuffer = 2,
+  /// This alloca requires a protector.
+  SSPAMD_Force = 1,
 };
 
 /// Read the "stack-protector" metadata of \p AI, if it has any.
@@ -90,7 +86,25 @@ static std::optional<uint32_t> getSSPAllocaMD(const AllocaInst &AI) {
     return std::nullopt;
   // Clamp, so that a value from a newer producer errs towards more protection
   // rather than less.
-  return CI->getLimitedValue(SSPAMD_LargeBuffer);
+  return CI->getLimitedValue(SSPAMD_Force);
+}
+
+/// Read the "stack-protector.layout" metadata of \p AI, if it has any: whether
+/// the alloca should be laid out like a small or a large array, if it is
+/// protected.
+static std::optional<MachineFrameInfo::SSPLayoutKind>
+getSSPAllocaLayoutMD(const AllocaInst &AI) {
+  const MDNode *MD = AI.getMetadata("stack-protector.layout");
+  if (!MD || MD->getNumOperands() != 1)
+    return std::nullopt;
+  const auto *S = dyn_cast<MDString>(MD->getOperand(0));
+  if (!S)
+    return std::nullopt;
+  if (S->getString() == "small")
+    return MachineFrameInfo::SSPLK_SmallArray;
+  if (S->getString() == "large")
+    return MachineFrameInfo::SSPLK_LargeArray;
+  return std::nullopt;
 }
 
 /// InsertStackProtectors - Insert code into the prologue and epilogue of the
@@ -500,6 +514,16 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
     return false;
   }
 
+  // Record \p AI as needing protection with the given layout, unless the
+  // frontend said how it should be laid out.
+  auto InsertLayout = [&](const AllocaInst *AI,
+                          MachineFrameInfo::SSPLayoutKind Kind) {
+    if (std::optional<MachineFrameInfo::SSPLayoutKind> L =
+            getSSPAllocaLayoutMD(*AI))
+      Kind = *L;
+    Layout->insert(std::make_pair(AI, Kind));
+  };
+
   for (const BasicBlock &BB : *F) {
     for (const Instruction &I : BB) {
       if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
@@ -507,16 +531,18 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
           if (*MD == SSPAMD_Ignore)
             continue;
 
-          // The frontend classified this allocation as a buffer, which is
-          // final: it knows things about the allocation that the IR no longer
-          // records. This is how clang-cl communicates MSVC's "GS buffer"
-          // analysis.
+          // The frontend said this allocation requires a protector: it knows
+          // things about the allocation that the IR no longer records. This is
+          // how clang-cl communicates MSVC's "GS buffer" analysis. Without
+          // layout metadata, lay it out by size, as an array would be.
           if (!Layout)
             return true;
-          Layout->insert(
-              std::make_pair(AI, *MD == SSPAMD_LargeBuffer
-                                     ? MachineFrameInfo::SSPLK_LargeArray
-                                     : MachineFrameInfo::SSPLK_SmallArray));
+          std::optional<TypeSize> ForcedSize =
+              AI->getAllocationSize(M->getDataLayout());
+          InsertLayout(AI, !ForcedSize || ForcedSize->isScalable() ||
+                                   ForcedSize->getFixedValue() >= SSPBufferSize
+                               ? MachineFrameInfo::SSPLK_LargeArray
+                               : MachineFrameInfo::SSPLK_SmallArray);
           ORE.emit([&]() {
             return OptimizationRemark(DEBUG_TYPE, "StackProtectorBuffer", &I)
                    << "Stack protection applied to function "
@@ -543,8 +569,7 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
               // stack protectors.
               if (!Layout)
                 return true;
-              Layout->insert(
-                  std::make_pair(AI, MachineFrameInfo::SSPLK_LargeArray));
+              InsertLayout(AI, MachineFrameInfo::SSPLK_LargeArray);
               ORE.emit(RemarkBuilder);
               NeedsProtector = true;
             } else if (Strong || GSBuffer) {
@@ -553,8 +578,7 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
               // no size threshold.
               if (!Layout)
                 return true;
-              Layout->insert(
-                  std::make_pair(AI, MachineFrameInfo::SSPLK_SmallArray));
+              InsertLayout(AI, MachineFrameInfo::SSPLK_SmallArray);
               ORE.emit(RemarkBuilder);
               NeedsProtector = true;
             }
@@ -562,8 +586,7 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
             // A call to alloca with a variable size requires protectors.
             if (!Layout)
               return true;
-            Layout->insert(
-                std::make_pair(AI, MachineFrameInfo::SSPLK_LargeArray));
+            InsertLayout(AI, MachineFrameInfo::SSPLK_LargeArray);
             ORE.emit(RemarkBuilder);
             NeedsProtector = true;
           }
@@ -580,9 +603,8 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
                                      IsLarge, Strong, /*InStruct=*/false)) {
           if (!Layout)
             return true;
-          Layout->insert(std::make_pair(
-              AI, IsLarge ? MachineFrameInfo::SSPLK_LargeArray
-                          : MachineFrameInfo::SSPLK_SmallArray));
+          InsertLayout(AI, IsLarge ? MachineFrameInfo::SSPLK_LargeArray
+                                   : MachineFrameInfo::SSPLK_SmallArray);
           ORE.emit([&]() {
             return OptimizationRemark(DEBUG_TYPE, "StackProtectorBuffer", &I)
                    << "Stack protection applied to function "
@@ -601,7 +623,7 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
             ++NumAddrTaken;
             if (!Layout)
               return true;
-            Layout->insert(std::make_pair(AI, MachineFrameInfo::SSPLK_AddrOf));
+            InsertLayout(AI, MachineFrameInfo::SSPLK_AddrOf);
             ORE.emit([&]() {
               return OptimizationRemark(DEBUG_TYPE,
                                         "StackProtectorAddressTaken", &I)
