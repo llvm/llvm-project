@@ -867,7 +867,7 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig,
       case sel_get_byte_stride: {
         TYPE_CHECK(Type);
         auto type = data.Pop<CompilerType>();
-        uint64_t stride = type.GetByteStride(nullptr).value_or(0);
+        uint64_t stride = type.GetByteStride().value_or(0);
         data.Push(llvm::APSInt::get(stride));
         break;
       }
