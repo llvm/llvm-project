@@ -228,7 +228,7 @@ def EnvOpenCL : Environment<0>;
 def EnvVulkan : Environment<1>;
 
 //===----------------------------------------------------------------------===//
-// Multiclass used to define Extesions enum values and at the same time
+// Multiclass used to define Extension enum values and at the same time
 // SymbolicOperand entries.
 //===----------------------------------------------------------------------===//
 
@@ -410,6 +410,9 @@ defm SPV_KHR_poison_freeze : ExtensionOperand<139, [EnvOpenCL]>;
 defm SPV_KHR_untyped_pointers : ExtensionOperand<140, [EnvOpenCL]>;
 defm SPV_EXT_long_vector : ExtensionOperand<141, [EnvOpenCL, EnvVulkan]>;
 defm SPV_KHR_relaxed_extended_instruction : ExtensionOperand<142, [EnvVulkan, EnvOpenCL]>;
+defm SPV_EXT_shader_subgroup_partitioned : ExtensionOperand<143, [EnvVulkan]>;
+defm SPV_KHR_quad_control : ExtensionOperand<144, [EnvVulkan]>;
+defm SPV_KHR_compute_shader_derivatives : ExtensionOperand<145, [EnvVulkan]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -503,6 +506,7 @@ defm GroupNonUniformShuffle : CapabilityOperand<65, 0x10300, 0, [], [GroupNonUni
 defm GroupNonUniformShuffleRelative : CapabilityOperand<66, 0x10300, 0, [], [GroupNonUniform]>;
 defm GroupNonUniformClustered : CapabilityOperand<67, 0x10300, 0, [], [GroupNonUniform]>;
 defm GroupNonUniformQuad : CapabilityOperand<68, 0x10300, 0, [], [GroupNonUniform]>;
+defm FragmentShadingRateKHR : CapabilityOperand<4422, 0, 0, [SPV_KHR_fragment_shading_rate], [Shader]>;
 defm SubgroupBallotKHR : CapabilityOperand<4423, 0, 0, [SPV_KHR_shader_ballot], []>;
 defm DrawParameters : CapabilityOperand<4427, 0x10300, 0, [SPV_KHR_shader_draw_parameters], [Shader]>;
 defm SubgroupVoteKHR : CapabilityOperand<4431, 0, 0, [SPV_KHR_subgroup_vote], []>;
@@ -560,12 +564,18 @@ defm SubgroupImageMediaBlockIOINTEL : CapabilityOperand<5579, 0, 0, [SPV_INTEL_m
 defm SubgroupAvcMotionEstimationINTEL : CapabilityOperand<5696, 0, 0, [], []>;
 defm SubgroupAvcMotionEstimationIntraINTEL : CapabilityOperand<5697, 0, 0, [], []>;
 defm SubgroupAvcMotionEstimationChromaINTEL : CapabilityOperand<5698, 0, 0, [], []>;
-defm GroupNonUniformPartitionedNV : CapabilityOperand<5297, 0, 0, [], []>;
+defm GroupNonUniformPartitionedNV :
+    CapabilityOperand<5297, 0, 0, [SPV_NV_shader_subgroup_partitioned],
+                      [GroupNonUniform]>;
 defm VulkanMemoryModelKHR : CapabilityOperand<5345, 0, 0, [], []>;
 defm VulkanMemoryModelDeviceScopeKHR : CapabilityOperand<5346, 0, 0, [], []>;
 defm ImageFootprintNV : CapabilityOperand<5282, 0, 0, [], []>;
-defm FragmentBarycentricNV : CapabilityOperand<5284, 0, 0, [], []>;
-defm ComputeDerivativeGroupQuadsNV : CapabilityOperand<5288, 0, 0, [], []>;
+defm FragmentBarycentricKHR : CapabilityOperand<5284, 0, 0, [SPV_KHR_fragment_shader_barycentric], [Shader]>;
+defm ComputeDerivativeGroupQuadsKHR
+    : CapabilityOperand<5288, 0, 0, [SPV_KHR_compute_shader_derivatives],
+                        [Shader]>;
+def ComputeDerivativeGroupQuadsNV
+    : Capability<"ComputeDerivativeGroupQuadsNV", 5288>;
 defm DemoteToHelperInvocation : CapabilityOperand<5379, 0x10600, 0, [SPV_EXT_demote_to_helper_invocation], []>;
 defm ComputeDerivativeGroupLinearNV : CapabilityOperand<5350, 0, 0, [], []>;
 defm FragmentDensityEXT : CapabilityOperand<5291, 0, 0, [], [Shader]>;
@@ -575,6 +585,8 @@ defm ArbitraryPrecisionIntegersALTERA : CapabilityOperand<5844, 0, 0, [SPV_ALTER
 defm OptNoneINTEL : CapabilityOperand<6094, 0, 0, [SPV_INTEL_optnone], []>;
 defm OptNoneEXT : CapabilityOperand<6094, 0, 0, [SPV_EXT_optnone], []>;
 defm BitInstructions : CapabilityOperand<6025, 0, 0, [SPV_KHR_bit_instructions], []>;
+defm QuadControlKHR
+    : CapabilityOperand<5087, 0, 0, [SPV_KHR_quad_control], []>;
 defm ExpectAssumeKHR : CapabilityOperand<5629, 0, 0, [SPV_KHR_expect_assume], []>;
 defm FunctionPointersINTEL : CapabilityOperand<5603, 0, 0, [SPV_INTEL_function_pointers], []>;
 defm IndirectReferencesINTEL : CapabilityOperand<5604, 0, 0, [SPV_INTEL_function_pointers], []>;
@@ -846,8 +858,12 @@ defm SignedZeroInfNanPreserve : ExecutionModeOperand<4461, [SignedZeroInfNanPres
 defm RoundingModeRTE : ExecutionModeOperand<4462, [RoundingModeRTE]>;
 defm RoundingModeRTZ : ExecutionModeOperand<4463, [RoundingModeRTZ]>;
 defm StencilRefReplacingEXT : ExecutionModeOperand<5027, [StencilExportEXT]>;
+defm QuadDerivativesKHR : ExecutionModeOperand<5088, [QuadControlKHR]>;
+defm RequireFullQuadsKHR : ExecutionModeOperand<5089, [QuadControlKHR]>;
 defm OutputLinesNV : ExecutionModeOperand<5269, [MeshShadingNV]>;
-defm DerivativeGroupQuadsNV : ExecutionModeOperand<5289, [ComputeDerivativeGroupQuadsNV]>;
+defm DerivativeGroupQuadsKHR
+    : ExecutionModeOperand<5289, [ComputeDerivativeGroupQuadsKHR]>;
+def DerivativeGroupQuadsNV : ExecutionMode<"DerivativeGroupQuadsNV", 5289>;
 defm DerivativeGroupLinearNV : ExecutionModeOperand<5290, [ComputeDerivativeGroupLinearNV]>;
 defm OutputTrianglesNV : ExecutionModeOperand<5298, [MeshShadingNV]>;
 defm RoundingModeRTPINTEL : ExecutionModeOperand<5620, [RoundToInfinityINTEL]>;
@@ -884,10 +900,11 @@ class StorageClass<string name, bits<32> value> {
   bits<32> Value = value;
 }
 
-multiclass StorageClassOperand<bits<32> value, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
+multiclass StorageClassOperand<bits<32> value, list<Extension> reqExtensions, list<Capability> reqCapabilities, bits<32> minVersion = 0> {
   def : StorageClass<NAME, value>;
-  defm : SymbolicOperandWithRequirements<StorageClassOperand, value, NAME, 0, 0,
-                                         reqExtensions, reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<StorageClassOperand, value, NAME,
+                                         minVersion, 0, reqExtensions,
+                                         reqCapabilities, []>;
 }
 
 defm UniformConstant : StorageClassOperand<0, [], []>;
@@ -902,7 +919,7 @@ defm Generic : StorageClassOperand<8, [], [GenericPointer]>;
 defm PushConstant : StorageClassOperand<9, [], [Shader]>;
 defm AtomicCounter : StorageClassOperand<10, [], [AtomicStorage]>;
 defm Image : StorageClassOperand<11, [], []>;
-defm StorageBuffer : StorageClassOperand<12, [], [Shader]>;
+defm StorageBuffer : StorageClassOperand<12, [SPV_KHR_storage_buffer_storage_class], [Shader], 0x10300>;
 defm CallableDataNV : StorageClassOperand<5328, [], [RayTracingNV]>;
 defm IncomingCallableDataNV : StorageClassOperand<5329, [], [RayTracingNV]>;
 defm RayPayloadNV : StorageClassOperand<5338, [], [RayTracingNV]>;
@@ -1299,7 +1316,7 @@ class AccessQualifier<string name, bits<32> value> {
 }
 
 multiclass AccessQualifierOperand<bits<32> value, list<Capability> reqCapabilities> {
-  def NAME : AccessQualifier<NAME, value>;
+  def : AccessQualifier<NAME, value>;
   defm : SymbolicOperandWithRequirements<AccessQualifierOperand, value, NAME, 0,
                                          0, [], reqCapabilities, []>;
 }
@@ -1370,7 +1387,7 @@ multiclass DecorationOperand<bits<32> value, bits<32> minVersion, bits<32> maxVe
 defm RelaxedPrecision : DecorationOperand<0, 0, 0, [], [Shader]>;
 defm SpecId : DecorationOperand<1, 0, 0, [], [Shader, Kernel]>;
 defm Block : DecorationOperand<2, 0, 0, [], [Shader]>;
-defm BufferBlock : DecorationOperand<3, 0, 0, [], [Shader]>;
+defm BufferBlock : DecorationOperand<3, 0, 0x10300, [], [Shader]>;
 defm RowMajor : DecorationOperand<4, 0, 0, [], [Matrix]>;
 defm ColMajor : DecorationOperand<5, 0, 0, [], [Matrix]>;
 defm ArrayStride : DecorationOperand<6, 0, 0, [], [Shader]>;
@@ -1393,7 +1410,7 @@ defm Coherent : DecorationOperand<23, 0, 0, [], []>;
 defm NonWritable : DecorationOperand<24, 0, 0, [], []>;
 defm NonReadable : DecorationOperand<25, 0, 0, [], []>;
 defm Uniform : DecorationOperand<26, 0, 0, [], [Shader]>;
-defm UniformId : DecorationOperand<27, 0, 0, [], [Shader]>;
+defm UniformId : DecorationOperand<27, 0x10400, 0, [], [Shader]>;
 defm SaturatedConversion : DecorationOperand<28, 0, 0, [], [Kernel]>;
 defm Stream : DecorationOperand<29, 0, 0, [], [GeometryStreams]>;
 defm Location : DecorationOperand<30, 0, 0, [], [Shader]>;
@@ -1412,8 +1429,8 @@ defm NoContraction : DecorationOperand<42, 0, 0, [], [Shader]>;
 defm InputAttachmentIndex : DecorationOperand<43, 0, 0, [], [InputAttachment]>;
 defm Alignment : DecorationOperand<44, 0, 0, [], [Kernel]>;
 defm MaxByteOffset : DecorationOperand<45, 0x10100, 0, [], [Addresses]>;
-defm AlignmentId : DecorationOperand<46, 0, 0, [], [Kernel]>;
-defm MaxByteOffsetId : DecorationOperand<47, 0, 0, [], [Addresses]>;
+defm AlignmentId : DecorationOperand<46, 0x10200, 0, [], [Kernel]>;
+defm MaxByteOffsetId : DecorationOperand<47, 0x10200, 0, [], [Addresses]>;
 defm NoSignedWrap : DecorationOperand<4469, 0x10400, 0, [SPV_KHR_no_integer_wrap_decoration], []>;
 defm NoUnsignedWrap : DecorationOperand<4470, 0x10400, 0, [SPV_KHR_no_integer_wrap_decoration], []>;
 defm ExplicitInterpAMD : DecorationOperand<4999, 0, 0, [], []>;
@@ -1423,7 +1440,7 @@ defm ViewportRelativeNV : DecorationOperand<5252, 0, 0, [], [ShaderViewportMaskN
 defm SecondaryViewportRelativeNV : DecorationOperand<5256, 0, 0, [], [ShaderStereoViewNV]>;
 defm PerPrimitiveNV : DecorationOperand<5271, 0, 0, [], [MeshShadingNV]>;
 defm PerViewNV : DecorationOperand<5272, 0, 0, [], [MeshShadingNV]>;
-defm PerVertexNV : DecorationOperand<5273, 0, 0, [], [FragmentBarycentricNV]>;
+defm PerVertexNV : DecorationOperand<5273, 0, 0, [], [FragmentBarycentricKHR]>;
 defm NonUniformEXT : DecorationOperand<5300, 0, 0, [], [ShaderNonUniformEXT]>;
 defm CountBuffer : DecorationOperand<5634, 0, 0, [], []>;
 defm UserSemantic : DecorationOperand<5635, 0, 0, [], []>;
@@ -1521,6 +1538,8 @@ defm SubgroupLtMask : BuiltInOperand<4420, 0, 0, [], [SubgroupBallotKHR, GroupNo
 defm BaseVertex : BuiltInOperand<4424, 0, 0, [], [DrawParameters]>;
 defm BaseInstance : BuiltInOperand<4425, 0, 0, [], [DrawParameters]>;
 defm DrawIndex : BuiltInOperand<4426, 0, 0, [], [DrawParameters, MeshShadingNV]>;
+defm PrimitiveShadingRateKHR : BuiltInOperand<4432, 0, 0, [], [FragmentShadingRateKHR]>;
+defm ShadingRateKHR : BuiltInOperand<4444, 0, 0, [], [FragmentShadingRateKHR]>;
 defm DeviceIndex : BuiltInOperand<4438, 0, 0, [], [DeviceGroup]>;
 defm ViewIndex : BuiltInOperand<4440, 0, 0, [], [MultiView]>;
 defm BaryCoordNoPerspAMD : BuiltInOperand<4492, 0, 0, [], []>;
@@ -1545,8 +1564,12 @@ defm CullDistancePerViewNV : BuiltInOperand<5278, 0, 0, [], [MeshShadingNV]>;
 defm LayerPerViewNV : BuiltInOperand<5279, 0, 0, [], [MeshShadingNV]>;
 defm MeshViewCountNV : BuiltInOperand<5280, 0, 0, [], [MeshShadingNV]>;
 defm MeshViewIndices : BuiltInOperand<5281, 0, 0, [], [MeshShadingNV]>;
-defm BaryCoordNV : BuiltInOperand<5286, 0, 0, [], [FragmentBarycentricNV]>;
-defm BaryCoordNoPerspNV : BuiltInOperand<5287, 0, 0, [], [FragmentBarycentricNV]>;
+defm BaryCoordKHR : BuiltInOperand<5286, 0, 0, [SPV_KHR_fragment_shader_barycentric], [FragmentBarycentricKHR]>;
+defm BaryCoordNoPerspKHR : BuiltInOperand<5287, 0, 0, [SPV_KHR_fragment_shader_barycentric], [FragmentBarycentricKHR]>;
+// NV aliases keep their names recognized. Requirements are looked up by value,
+// so they come from the KHR records above.
+defm BaryCoordNV : BuiltInOperand<5286, 0, 0, [], []>;
+defm BaryCoordNoPerspNV : BuiltInOperand<5287, 0, 0, [], []>;
 defm FragSizeEXT : BuiltInOperand<5292, 0, 0, [], [FragmentDensityEXT]>;
 defm FragInvocationCountEXT : BuiltInOperand<5293, 0, 0, [], [FragmentDensityEXT]>;
 defm LaunchIdNV : BuiltInOperand<5319, 0, 0, [], [RayTracingNV]>;

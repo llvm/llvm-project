@@ -14,6 +14,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FILE_LINUX_FILE_H
 #define LLVM_LIBC_SRC___SUPPORT_FILE_LINUX_FILE_H
 
+#include "hdr/func/free.h"
 #include "hdr/stdio_macros.h"
 #include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
@@ -72,7 +73,8 @@ public:
     auto *file = new (ac) FileT(fd, buffer, DEFAULT_BUFFER_SIZE, _IOFBF,
                                 /*owned=*/true, mode);
     if (!ac) {
-      delete buffer;
+      // Use free instead of delete[] to avoid a GCC 12 ICE in the waccess pass.
+      free(buffer);
       return Error(ENOMEM);
     }
     return file;

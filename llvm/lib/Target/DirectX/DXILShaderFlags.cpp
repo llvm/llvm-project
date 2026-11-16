@@ -79,7 +79,6 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   // case Intrinsic::dx_wave_match:
   // case Intrinsic::dx_wavemulti.*:
   // case Intrinsic::dx_wavemulti.ballot:
-  // case Intrinsic::dx_quad.vote:
   switch (IID) {
   default:
     return false;
@@ -111,7 +110,16 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   case Intrinsic::dx_wave_prefix_usum:
   case Intrinsic::dx_wave_prefix_product:
   case Intrinsic::dx_wave_prefix_uproduct:
+  case Intrinsic::dx_wave_multi_prefix_bit_and:
+  case Intrinsic::dx_wave_multi_prefix_bit_or:
+  case Intrinsic::dx_wave_multi_prefix_bit_xor:
+  case Intrinsic::dx_wave_multi_prefix_bit_count:
+  case Intrinsic::dx_wave_multi_prefix_product:
+  case Intrinsic::dx_wave_multi_prefix_uproduct:
+  case Intrinsic::dx_wave_multi_prefix_sum:
+  case Intrinsic::dx_wave_multi_prefix_usum:
     // Quad Op Variants
+  case Intrinsic::dx_quad_all:
   case Intrinsic::dx_quad_read_across_x:
   case Intrinsic::dx_quad_read_across_y:
   case Intrinsic::dx_quad_read_across_diagonal:
@@ -259,6 +267,13 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
 
     switch (II->getIntrinsicID()) {
     default:
+      break;
+    case Intrinsic::dx_start_vertex_location:
+    case Intrinsic::dx_start_instance_location:
+      CSF.ExtendedCommandInfo = true;
+      break;
+    case Intrinsic::dx_view_id:
+      CSF.ViewID = true;
       break;
     case Intrinsic::dx_resource_handlefrombinding: {
       dxil::ResourceTypeInfo &RTI = DRTM[cast<TargetExtType>(II->getType())];
@@ -449,11 +464,16 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
       // An unused signature element still contributes to the shader's type
       // requirements even when no instruction uses that component type.
       if (const EntrySignature *Sig = Signatures.get(F)) {
+        CSF.Barycentrics |= llvm::any_of(Sig->Inputs, [](const auto &E) {
+          return E.SemanticKind == dxbc::PSV::SemanticKind::Barycentrics;
+        });
+        // Unallocated elements do not occupy signature registers. Their type
+        // requirements come from the instructions that access them.
         auto HasLowPrecision = [](const auto &Elements) {
           return llvm::any_of(Elements, [](const auto &E) {
-            return E.CompType == ElementType::F16 ||
-                   E.CompType == ElementType::I16 ||
-                   E.CompType == ElementType::U16;
+            return E.isAllocated() && (E.CompType == ElementType::F16 ||
+                                       E.CompType == ElementType::I16 ||
+                                       E.CompType == ElementType::U16);
           });
         };
         if (HasLowPrecision(Sig->Inputs) || HasLowPrecision(Sig->Outputs)) {
@@ -463,6 +483,15 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
           else
             CSF.MinimumPrecision = true;
         }
+        // Declaring SV_ShadingRate in either signature requires the feature,
+        // regardless of whether it is accessed.
+        auto HasShadingRate = [](const auto &Elements) {
+          return llvm::any_of(Elements, [](const auto &E) {
+            return E.SemanticKind == dxbc::PSV::SemanticKind::ShadingRate;
+          });
+        };
+        if (HasShadingRate(Sig->Inputs) || HasShadingRate(Sig->Outputs))
+          CSF.ShadingRate = true;
       }
       // Update combined shader flags mask for all functions in this SCC
       SCCSF.merge(CSF);
@@ -528,8 +557,8 @@ ModuleShaderFlags ShaderFlagsAnalysis::run(Module &M,
   return MSFI;
 }
 
-PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
-                                                  ModuleAnalysisManager &AM) {
+PreservedAnalyses
+ShaderFlagsAnalysisPrinterPass::run(Module &M, ModuleAnalysisManager &AM) {
   const ModuleShaderFlags &FlagsInfo = AM.getResult<ShaderFlagsAnalysis>(M);
   // Print description of combined shader flags for all module functions
   OS << "; Combined Shader Flags for Module\n";

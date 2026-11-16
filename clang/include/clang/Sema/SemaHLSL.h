@@ -186,6 +186,7 @@ public:
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleVkConstantIdAttr(Decl *D, const ParsedAttr &AL);
   void handleVkBindingAttr(Decl *D, const ParsedAttr &AL);
+  void handleVkBuiltInAttr(Decl *D, const ParsedAttr &AL);
   void handleVkLocationAttr(Decl *D, const ParsedAttr &AL);
   void handlePackOffsetAttr(Decl *D, const ParsedAttr &AL);
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
@@ -341,6 +342,9 @@ private:
 
   void diagnoseSemanticType(const Decl *D, const HLSLAppliedSemanticAttr *A,
                             llvm::dxbc::PSV::SemanticKind SemanticKind);
+
+  void diagnoseSemanticShaderModel(const HLSLAppliedSemanticAttr *A,
+                                   llvm::dxbc::PSV::SemanticKind SemanticKind);
 
   void handleGlobalStructOrArrayOfWithResources(VarDecl *VD);
 

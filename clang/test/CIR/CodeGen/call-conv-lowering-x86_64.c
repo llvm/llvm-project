@@ -29,14 +29,14 @@ typedef union { char c[32]; } __attribute__((aligned(32))) UBigOverAligned;
 // Narrow signed integer sign-extended in a register.
 signed char ext_schar(signed char c) { return c; }
 
-// CIR: cir.func {{.*}}@ext_schar(%arg0: !s8i {{.*}}llvm.signext{{.*}}) -> (!s8i {{.*}}llvm.signext
-// LLVM: define dso_local signext i8 @ext_schar(i8 noundef signext %{{.+}})
+// CIR: cir.func {{.*}}@ext_schar(%arg0: !s8i {{.*}}llvm.signext{{.*}}) -> !s8i
+// LLVM: define dso_local i8 @ext_schar(i8 noundef signext %{{.+}})
 
 // Narrow unsigned integer zero-extended in a register.
 unsigned char ext_uchar(unsigned char c) { return c; }
 
-// CIR: cir.func {{.*}}@ext_uchar(%arg0: !u8i {{.*}}llvm.zeroext{{.*}}) -> (!u8i {{.*}}llvm.zeroext
-// LLVM: define dso_local zeroext i8 @ext_uchar(i8 noundef zeroext %{{.+}})
+// CIR: cir.func {{.*}}@ext_uchar(%arg0: !u8i {{.*}}llvm.zeroext{{.*}}) -> !u8i
+// LLVM: define dso_local i8 @ext_uchar(i8 noundef zeroext %{{.+}})
 
 // Floating-point scalar passed/returned in an SSE register.
 double sse_double(double d) { return d; }

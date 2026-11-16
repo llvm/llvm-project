@@ -274,21 +274,29 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
                         << ", link options: " << LinkOpts;
     }
 
+    static constexpr struct {
+      llvm::object::ImageKind Kind;
+      ze_module_format_t Format;
+      const char *Name;
+    } ImageKindToModuleFormat[] = {
+        {llvm::object::IMG_SPIRV, ZE_MODULE_FORMAT_IL_SPIRV, "SPIR-V"},
+        {llvm::object::IMG_Object, ZE_MODULE_FORMAT_NATIVE, "Native"},
+        {llvm::object::IMG_PISA, ZE_MODULE_FORMAT_PISA, "PISA"}};
+
     // Determine module format based on image kind
-    ze_module_format_t ModuleFormat;
-    if (ImageKind == llvm::object::IMG_SPIRV) {
-      // SPIR-V intermediate language
-      ODBG(OLDT_Module) << "Loading SPIR-V module";
-      ModuleFormat = ZE_MODULE_FORMAT_IL_SPIRV;
-    } else if (ImageKind == llvm::object::IMG_Object) {
-      // Native binary format
-      ODBG(OLDT_Module) << "Loading native binary module";
-      ModuleFormat = ZE_MODULE_FORMAT_NATIVE;
-    } else {
+    ze_module_format_t ModuleFormat = ZE_MODULE_FORMAT_FORCE_UINT32;
+    for (auto &Entry : ImageKindToModuleFormat) {
+      if (Entry.Kind == ImageKind) {
+        ODBG(OLDT_Module) << "Loading " << Entry.Name << " module";
+        ModuleFormat = Entry.Format;
+        break;
+      }
+    }
+
+    if (ModuleFormat == ZE_MODULE_FORMAT_FORCE_UINT32)
       return Plugin::error(ErrorCode::INVALID_BINARY,
                            "Unsupported image kind %d in inner OffloadBinary",
                            static_cast<int>(ImageKind));
-    }
 
     // Load module into Level Zero
     auto Err = addModule(ImageData.size(), ImgBegin, Options, ModuleFormat);

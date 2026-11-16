@@ -584,13 +584,13 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     is passed to invocations of both so that the project is built using libc++
     instead of stdlibc++. Defaults to OFF.
 
-**LLVM_ENABLE_LIBEDIT**:BOOL
+**LLVM_ENABLE_LIBEDIT**:STRING
 
 :   Controls whether to enable libedit support for command-line editing and
-    history in LLVM tools. When `ON`, forces libedit support to be enabled and
-    will cause a CMake configuration error if libedit cannot be found. When
-    `OFF`, disables libedit support entirely. If not specified, LLVM will
-    auto-detect libedit availability. Defaults to auto-detection.
+    history in LLVM tools. When `FORCE_ON`, forces libedit support to be
+    enabled and will cause a CMake configuration error if libedit cannot be
+    found. When `OFF`, disables libedit support entirely. If not specified or
+    set to `ON`, LLVM will auto-detect libedit availability. Defaults to `ON`.
 
 **LLVM_ENABLE_LIBPFM**:BOOL
 
@@ -989,6 +989,21 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
 :   Full path to a native TableGen executable (usually named `llvm-tblgen`).
     This is intended for cross-compiling: if the user sets this variable, no
     native TableGen will be created.
+
+**LLVM_TABLEGEN_LAUNCHER**:STRING
+
+:   Semicolon-separated command prefix to run every TableGen invocation
+    under, analogous to `CMAKE_<LANG>_COMPILER_LAUNCHER`. The TableGen
+    executable remains a dependency of each command. Empty by default.
+
+    This allows TableGen commands to use a caching or remote execution
+    launcher independently of C and C++ compilation. For example,
+    `-DLLVM_TABLEGEN_LAUNCHER="/path/to/launcher;--config=/path/to/config"`
+    runs each command as `/path/to/launcher --config=/path/to/config <tablegen> ...`.
+    The launcher must support the generator being invoked and is responsible
+    for any input discovery and execution environment it requires. This also
+    applies to other generators invoked through the `tablegen_internal()`
+    CMake function, such as MLIR source sharding.
 
 **LLVM_TARGET_ARCH**:STRING
 

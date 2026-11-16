@@ -16,13 +16,10 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/ArchiveWriter.h"
-#include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileOutputBuffer.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
@@ -68,7 +65,8 @@ static cl::opt<compression::Format> CompressionFormat(
 
 static cl::opt<int>
     CompressionLevel("compression-level",
-                     cl::desc("Compression level used with --compress"),
+                     cl::desc("Compression level used with --compress. "
+                              "Requires --compression-format"),
                      cl::init(-1), cl::cat(OffloadBinaryCategory));
 
 /// Path of the current binary.
@@ -87,6 +85,31 @@ static DenseMap<StringRef, StringRef> getImageArguments(StringRef Image,
   }
 
   return Args;
+}
+
+static constexpr int ZlibMinCompressionLevel = -1;
+static constexpr int ZstdMinCompressionLevel = -131072;
+static constexpr int ZstdMaxCompressionLevel = 22;
+
+static Error checkCompressionLevel(compression::Format Format, int Level) {
+  int Lo, Hi;
+  const char *Name;
+  if (Format == compression::Format::Zlib) {
+    Lo = ZlibMinCompressionLevel;
+    Hi = compression::zlib::BestSizeCompression;
+    Name = "zlib";
+  } else {
+    Lo = ZstdMinCompressionLevel;
+    Hi = ZstdMaxCompressionLevel;
+    Name = "zstd";
+  }
+  if (Level < Lo || Level > Hi)
+    return createStringError(
+        inconvertibleErrorCode(),
+        "invalid %s compression level %d; expected a value "
+        "in [%d, %d]",
+        Name, Level, Lo, Hi);
+  return Error::success();
 }
 
 static Error writeFile(StringRef Filename, StringRef Data) {
@@ -143,12 +166,22 @@ static Error bundleImages() {
 
   SmallString<0> Buffer;
   if (Compress) {
-    if (const char *Reason =
-            compression::getReasonIfUnsupported(CompressionFormat))
+    compression::Format Format = CompressionFormat;
+    if (!CompressionFormat.getNumOccurrences() &&
+        !compression::zstd::isAvailable())
+      Format = compression::Format::Zlib;
+    if (const char *Reason = compression::getReasonIfUnsupported(Format))
       return createStringError(inconvertibleErrorCode(), Reason);
-    compression::Params Params(CompressionFormat);
-    if (CompressionLevel.getNumOccurrences())
+    compression::Params Params(Format);
+    if (CompressionLevel.getNumOccurrences()) {
+      if (!CompressionFormat.getNumOccurrences())
+        return createStringError(
+            inconvertibleErrorCode(),
+            "--compression-level requires --compression-format");
+      if (Error E = checkCompressionLevel(Format, CompressionLevel))
+        return E;
       Params.level = CompressionLevel;
+    }
     Expected<SmallString<0>> CompressedOrErr =
         OffloadBinary::write(AllImages, Params);
     if (!CompressedOrErr)

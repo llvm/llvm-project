@@ -88,6 +88,7 @@
 #include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
 #include "llvm/CodeGen/BreakFalseDeps.h"
+#include "llvm/CodeGen/CFGuardLongjmp.h"
 #include "llvm/CodeGen/CFIFixup.h"
 #include "llvm/CodeGen/CFIInstrInserter.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
@@ -98,6 +99,7 @@
 #include "llvm/CodeGen/EHContGuardTargets.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/EdgeBundles.h"
+#include "llvm/CodeGen/ExecutionDomainFix.h"
 #include "llvm/CodeGen/ExpandIRInsts.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/ExpandReductions.h"
@@ -118,6 +120,7 @@
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/CodeGen/HardwareLoops.h"
+#include "llvm/CodeGen/IfConversion.h"
 #include "llvm/CodeGen/ImplicitNullChecks.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InitUndef.h"
@@ -131,7 +134,6 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/LiveStacks.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
@@ -172,6 +174,7 @@
 #include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/ProcessImplicitDefs.h"
+#include "llvm/CodeGen/PseudoProbeInserter.h"
 #include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/RegAllocFast.h"
@@ -274,6 +277,7 @@
 #include "llvm/Transforms/Instrumentation/AllocToken.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
+#include "llvm/Transforms/Instrumentation/ConcurrencySanitizer.h"
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
 #include "llvm/Transforms/Instrumentation/CopyProf.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
@@ -566,15 +570,15 @@ static Expected<OptimizationLevel> parseOptLevelParam(StringRef S) {
       inconvertibleErrorCode());
 }
 
-PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
+PassBuilder::PassBuilder(LLVMContext &Context, TargetMachine *TM,
+                         std::optional<PipelineTuningOptions> PTO,
                          std::optional<PGOOptions> PGOOpt,
                          PassInstrumentationCallbacks *PIC,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS)
-    : LibraryOptions(PTO.LibraryOptions ? PTO.LibraryOptions
-                     : TM               ? TM->Options.MCOptions.LibraryOptions
-                                        : nullptr),
-      Opts(cl::LibraryOptionsContext::get<PassesOptions>(LibraryOptions)),
-      TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC), FS(std::move(FS)) {
+    : Context(Context), Opts(getPassesOptions(Context)), TM(TM),
+      PTO(PTO.value_or(PipelineTuningOptions())
+              .resolve(Context.getLibraryOptions())),
+      PGOOpt(PGOOpt), PIC(PIC), FS(std::move(FS)) {
   if (TM)
     TM->registerPassBuilderCallbacks(*this);
   if (PIC) {

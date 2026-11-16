@@ -56,8 +56,7 @@ void LoopRotatePass::printPipeline(
 PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM,
                                       LoopStandardAnalysisResults &AR,
                                       LPMUpdater &) {
-  const ScalarOptions &Opts =
-      L.getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(L);
   // Vectorization requires loop-rotation. Use default threshold for loops the
   // user explicitly marked for vectorization, even when header duplication is
   // disabled.

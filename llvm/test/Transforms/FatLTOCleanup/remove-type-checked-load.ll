@@ -11,7 +11,7 @@ define hidden void @foo(ptr %p1) {
 ; CHECK-SAME: ptr [[P1:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[P1]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[VTABLE]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[VTABLE]], i64 0
 ; CHECK-NEXT:    [[VFUNC:%.*]] = load ptr, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr, i1 } { ptr poison, i1 true }, ptr [[VFUNC]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP2]], 1

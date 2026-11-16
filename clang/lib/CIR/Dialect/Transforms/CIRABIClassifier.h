@@ -23,15 +23,16 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "mlir/Support/LogicalResult.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "llvm/ABI/FunctionInfo.h"
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/CallingConv.h"
 
 #include <memory>
-#include <optional>
 
 namespace cir {
 
@@ -57,7 +58,7 @@ struct ABIClassifierOptions {
 ///
 /// A subclass supplies one target's rules, or one of the two test drivers that
 /// stand in for a target.  The pass holds a single instance for the whole
-/// module.  Each method returns std::nullopt after emitting an error on the
+/// module.  Each method returns failure after emitting an error on the
 /// operation it was given, including for an operation the subclass does not
 /// support yet.
 class CIRABIClassifier {
@@ -65,24 +66,24 @@ public:
   virtual ~CIRABIClassifier() = default;
 
   /// Classify \p func's declared signature.
-  virtual std::optional<mlir::abi::FunctionClassification>
+  virtual mlir::FailureOr<mlir::abi::FunctionClassification>
   classifyFunction(cir::FuncOp func) = 0;
 
   /// Classify a direct call to the variadic function \p callee that passes
   /// arguments through the ellipsis.  The classification covers every operand
   /// of \p call, and classifies the declared parameters the same way as
   /// classifyFunction(callee).
-  virtual std::optional<mlir::abi::FunctionClassification>
+  virtual mlir::FailureOr<mlir::abi::FunctionClassification>
   classifyVariadicCall(cir::CIRCallOpInterface call, cir::FuncOp callee) = 0;
 
   /// Classify \p call, whose callee is resolved at run time, from the
   /// signature its callee pointer points to.
-  virtual std::optional<mlir::abi::FunctionClassification>
+  virtual mlir::FailureOr<mlir::abi::FunctionClassification>
   classifyIndirectCall(cir::CIRCallOpInterface call) = 0;
 
   /// Classify the type fetched by \p vaArg as an unnamed argument with a full
   /// register budget.
-  virtual std::optional<mlir::abi::ArgClassification>
+  virtual mlir::FailureOr<mlir::abi::ArgClassification>
   classifyVAArg(cir::VAArgOp vaArg) = 0;
 };
 
@@ -94,7 +95,7 @@ public:
 /// expansion is specific to each target.
 class CIRABIClassifierCommon : public CIRABIClassifier {
 public:
-  std::optional<mlir::abi::FunctionClassification>
+  mlir::FailureOr<mlir::abi::FunctionClassification>
   classifyFunction(cir::FuncOp func) override;
 
   /// The call is classified at the callee's features, not the caller's,
@@ -102,7 +103,7 @@ public:
   /// classification.  Classic instead arranges every call site from the
   /// caller and reports a caller whose features disagree with its callee in
   /// checkFunctionCallABI, which has no equivalent here yet.
-  std::optional<mlir::abi::FunctionClassification>
+  mlir::FailureOr<mlir::abi::FunctionClassification>
   classifyVariadicCall(cir::CIRCallOpInterface call,
                        cir::FuncOp callee) override;
 
@@ -111,7 +112,7 @@ public:
   /// is the declaration classic arranges every call site from.  A call that
   /// passes arguments through an ellipsis is classified from its own
   /// operands, as a direct one is.
-  std::optional<mlir::abi::FunctionClassification>
+  mlir::FailureOr<mlir::abi::FunctionClassification>
   classifyIndirectCall(cir::CIRCallOpInterface call) override;
 
 protected:
@@ -125,7 +126,7 @@ protected:
 
   /// Classify \p ty, the type fetched by a `cir.va_arg`, as an unnamed
   /// argument with every argument register free.
-  std::optional<mlir::abi::ArgClassification>
+  mlir::FailureOr<mlir::abi::ArgClassification>
   classifyVarArgType(mlir::Type ty, const llvm::abi::TargetInfo &targetInfo,
                      llvm::function_ref<mlir::InFlightDiagnostic()> emitError);
 
@@ -135,18 +136,20 @@ protected:
 
 private:
   /// Classify a signature returning \p retCIR and taking \p inputs, whose
-  /// first \p required entries are declared parameters.
-  std::optional<mlir::abi::FunctionClassification>
+  /// first \p required entries are declared parameters, under \p callConv.
+  mlir::FailureOr<mlir::abi::FunctionClassification>
   classifySignature(mlir::Type retCIR, mlir::TypeRange inputs,
                     llvm::abi::RequiredArgs required,
                     const llvm::abi::TargetInfo &targetInfo,
+                    llvm::CallingConv::ID callConv,
                     llvm::function_ref<mlir::InFlightDiagnostic()> emitError);
 
   /// Classify \p call, which passes more operands than \p calleeTy declares,
   /// from the call's operands.
-  std::optional<mlir::abi::FunctionClassification>
+  mlir::FailureOr<mlir::abi::FunctionClassification>
   classifyVariadicCall(cir::CIRCallOpInterface call, cir::FuncType calleeTy,
-                       const llvm::abi::TargetInfo &targetInfo);
+                       const llvm::abi::TargetInfo &targetInfo,
+                       llvm::CallingConv::ID callConv);
 };
 
 /// The MLIR test ABI target's classifier, whose predictable rules approximate
@@ -165,29 +168,17 @@ std::unique_ptr<CIRABIClassifier>
 createX86_64ABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp,
                           const ABIClassifierOptions &options);
 
-//===----------------------------------------------------------------------===//
-// Classification helpers defined in CallConvLoweringPass.cpp
-//===----------------------------------------------------------------------===//
+/// The AMDGPU classifier.
+std::unique_ptr<CIRABIClassifier>
+createAMDGPUABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp);
 
-/// Record on \p fc whether \p returnType is CIR's void.
-std::optional<mlir::abi::FunctionClassification>
-withReturnVoidness(std::optional<mlir::abi::FunctionClassification> fc,
-                   mlir::Type returnType);
+/// The SPIR-V classifier.
+std::unique_ptr<CIRABIClassifier>
+createSPIRVABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp);
 
-/// Classify \p func with the test target, or from the attribute named
-/// \p classificationAttrName when that is non-empty.
-std::optional<mlir::abi::FunctionClassification>
-classifyFunction(cir::FuncOp func, const mlir::DataLayout &dl,
-                 cir::CallConvTarget target,
-                 llvm::StringRef classificationAttrName);
-
-/// Where \p fnTy's declared parameters end and its ellipsis arguments begin.
-llvm::abi::RequiredArgs requiredArgs(cir::FuncType fnTy);
-
-/// The AVX level to classify \p func at: \p base, raised if the function's own
-/// recorded feature list enables a wider vector.
-llvm::abi::X86AVXABILevel funcAvxLevel(cir::FuncOp func,
-                                       llvm::abi::X86AVXABILevel base);
+/// Map a CIR calling convention to the llvm::CallingConv the ABI classifier
+/// uses.  Conventions the classifier does not distinguish fall back to C.
+llvm::CallingConv::ID convertCallingConv(cir::CallingConv cc);
 
 } // namespace cir
 

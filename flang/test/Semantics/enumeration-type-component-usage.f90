@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fsyntax-only -fenumeration-type %s
+! RUN: %flang_fc1 -fsyntax-only %s
 ! An enumeration type used as a derived-type component: default component
 ! initialization, whole-structure assignment, component assignment, use of the
 ! component in a relational, and arrays of the containing type must all compile.

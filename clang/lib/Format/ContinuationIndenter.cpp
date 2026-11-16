@@ -1115,7 +1115,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     CurrentState.LastSpace = State.Column;
   } else if (Previous.isOneOf(TT_ConditionalExpr, TT_CtorInitializerColon)) {
     CurrentState.LastSpace = State.Column;
-  } else if (Previous.is(TT_BinaryOperator) &&
+  } else if (Previous.isOneOf(TT_BinaryOperator, TT_EnumEqual) &&
              ((Previous.getPrecedence() != prec::Assignment &&
                (Previous.isNot(tok::lessless) || Previous.OperatorIndex != 0 ||
                 Previous.NextOperator)) ||
@@ -2558,7 +2558,8 @@ unsigned ContinuationIndenter::handleEndOfLine(const FormatToken &Current,
   // Compute the raw string style to use in case this is a raw string literal
   // that can be reformatted.
   auto RawStringStyle = getRawStringStyle(Current, State);
-  if (RawStringStyle && !Current.Finalized) {
+  if (RawStringStyle && !Current.Finalized &&
+      (!Current.MacroCtx || Current.MacroCtx->Role != MR_ExpandedArg)) {
     Penalty = reformatRawStringLiteral(Current, State, *RawStringStyle, DryRun,
                                        Newline);
   } else if (Current.IsMultiline && Current.isNot(TT_BlockComment)) {

@@ -27,6 +27,8 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -56,8 +58,8 @@ namespace {
 /// This struct stores finger prints of ops to determine whether the IR has
 /// changed or not.
 struct ExpensiveChecks : public RewriterBase::ForwardingListener {
-  ExpensiveChecks(RewriterBase::Listener *driver, Operation *topLevel)
-      : RewriterBase::ForwardingListener(driver), topLevel(topLevel) {}
+  ExpensiveChecks(RewriterBase::Listener *listener, Operation *topLevel)
+      : RewriterBase::ForwardingListener(listener), topLevel(topLevel) {}
 
   /// Compute finger prints of the given op and its nested ops.
   void computeFingerPrints(Operation *topLevel) {
@@ -132,6 +134,18 @@ struct ExpensiveChecks : public RewriterBase::ForwardingListener {
 protected:
   /// Invalidate the finger print of the given op, i.e., remove it from the map.
   void invalidateFingerPrint(Operation *op) { fingerprints.erase(op); }
+
+  void notifyBlockInserted(Block *block, Region *previous,
+                           Region::iterator previousIt) override {
+    RewriterBase::ForwardingListener::notifyBlockInserted(block, previous,
+                                                          previousIt);
+
+    // Inserting or moving a block changes the region structure of both the
+    // new and previous owners. Either region may be detached.
+    invalidateFingerPrint(block->getParentOp());
+    if (previous)
+      invalidateFingerPrint(previous->getParentOp());
+  }
 
   void notifyBlockErased(Block *block) override {
     RewriterBase::ForwardingListener::notifyBlockErased(block);
@@ -315,6 +329,151 @@ private:
 // GreedyPatternRewriteDriver
 //===----------------------------------------------------------------------===//
 
+/// Tracks which blocks are reachable from their region's entry block while
+/// patterns rewrite the CFG, so that the driver can skip operations in blocks
+/// that a rewrite disconnected. Notifications only record what changed; the
+/// queries, which the driver issues between rewrites, bring the cache up to
+/// date. `Block::isReachable` is not used because it traverses the region on
+/// every call, while the driver queries once per processed operation. All
+/// notifications are forwarded to the wrapped listener.
+class ReachabilityListener : public RewriterBase::ForwardingListener {
+public:
+  ReachabilityListener(RewriterBase::Listener *listener, Region *scope)
+      : RewriterBase::ForwardingListener(listener), scope(scope) {}
+
+  /// Return whether `op` is reachable: its block is reachable from the entry
+  /// block of its region, and so is every containing block up to `scope`.
+  /// Must be called between rewrites, when the IR is in a consistent state.
+  bool isReachable(Operation *op);
+
+  /// Drop all cached reachability information.
+  void clear() { regionStates.clear(); }
+
+  void notifyBlockInserted(Block *block, Region *previous,
+                           Region::iterator previousIt) override;
+  void notifyBlockErased(Block *block) override;
+  void notifyOperationInserted(Operation *op,
+                               OpBuilder::InsertPoint previous) override;
+  void notifyOperationModified(Operation *op) override;
+  void notifyOperationErased(Operation *op) override;
+
+private:
+  /// The reachability cache of one region.
+  struct RegionState {
+    /// The entry block at the time of the traversal. The traversal starts
+    /// from the entry block, so a different entry block invalidates the cache.
+    Block *entry = nullptr;
+    /// The reachable blocks, mapped to their successors within the region as
+    /// of the last query. The snapshots let the next query tell lost edges
+    /// from added ones.
+    DenseMap<Block *, SmallVector<Block *, 2>> reachable;
+    /// Blocks of `reachable` whose reachability could not be decided
+    /// incrementally. A query for one of them traverses the region. Marking
+    /// and traversing both cost O(blocks), so a lost edge into a loop whose
+    /// target keeps other predecessors costs O(blocks) per rewrite if one of
+    /// the marked blocks is queried before the next change. Bottom-up
+    /// processing has usually popped the operations of these blocks already;
+    /// top-down processing pops them next.
+    llvm::SmallDenseSet<Block *, 4> uncertain;
+    /// Blocks whose terminator changed since the last query, in notification
+    /// order, so that the cache evolves deterministically.
+    llvm::SmallSetVector<Block *, 4> changedBlocks;
+    /// Blocks erased from or moved out of the region since the last query.
+    /// Their pointers are only compared, never dereferenced.
+    llvm::SmallDenseSet<Block *, 4> removedBlocks;
+
+    /// Rebuild the cache from the entry block of `region`.
+    void traverse(Region *region);
+    /// Add `roots` and every block reachable from them to `reachable`. The
+    /// added blocks are uncertain if `isUncertain` is set.
+    void addReachable(SmallVector<Block *> roots, bool isUncertain);
+    /// Mark `block` and every block behind it in the snapshots uncertain.
+    void markUncertain(Block *block);
+    /// Apply the pending changes, if any. On failure, the state is
+    /// inconsistent and the region must be traversed again.
+    LogicalResult applyChanges();
+  };
+
+  /// Record that the terminator of `block` changed. Only tracked regions
+  /// record changes, so no pointer to a block of an untracked region is kept.
+  void markChanged(Block *block) {
+    if (!block)
+      return;
+    auto it = regionStates.find(block->getParent());
+    if (it != regionStates.end())
+      it->second.changedBlocks.insert(block);
+  }
+  /// Record that `block` left `region`.
+  void markRemoved(Region *region, Block *block) {
+    auto it = regionStates.find(region);
+    if (it != regionStates.end())
+      it->second.removedBlocks.insert(block);
+  }
+  bool isBlockReachable(Block *block);
+
+  /// The tracked regions. A region without an entry is traversed by the next
+  /// query that needs it.
+  DenseMap<Region *, RegionState> regionStates;
+
+  Region *const scope;
+};
+
+/// Provides cached deadness queries that stay valid across rewriter
+/// notifications. All notifications are forwarded to the wrapped listener
+/// after invalidating affected cache entries.
+class DeadnessListener : public RewriterBase::ForwardingListener {
+public:
+  explicit DeadnessListener(RewriterBase::Listener *listener)
+      : RewriterBase::ForwardingListener(listener) {}
+
+  /// Return true if the operation is unused and can be erased.
+  bool isOpTriviallyDead(Operation *op) { return cache.isOpTriviallyDead(op); }
+
+  void notifyBlockInserted(Block *block, Region *previous,
+                           Region::iterator previousIt) override {
+    // Moving a block can change the context of every operation it contains.
+    for (Operation &op : *block)
+      cache.invalidate(&op);
+    if (previous)
+      if (Operation *parent = previous->getParentOp())
+        cache.invalidateAncestors(parent);
+    if (Operation *parent = block->getParentOp())
+      cache.invalidateAncestors(parent);
+    ForwardingListener::notifyBlockInserted(block, previous, previousIt);
+  }
+
+  void notifyBlockErased(Block *block) override {
+    if (Operation *parent = block->getParentOp())
+      cache.invalidateAncestors(parent);
+    ForwardingListener::notifyBlockErased(block);
+  }
+
+  void notifyOperationInserted(Operation *op,
+                               OpBuilder::InsertPoint previous) override {
+    // The old parent loses a child, but its remaining descendants are
+    // unchanged. Scanning them for every move would make block merging
+    // quadratic.
+    if (previous.isSet())
+      if (Operation *parent = previous.getBlock()->getParentOp())
+        cache.invalidateAncestors(parent);
+    cache.invalidate(op);
+    ForwardingListener::notifyOperationInserted(op, previous);
+  }
+
+  void notifyOperationModified(Operation *op) override {
+    cache.invalidate(op);
+    ForwardingListener::notifyOperationModified(op);
+  }
+
+  void notifyOperationErased(Operation *op) override {
+    cache.invalidate(op);
+    ForwardingListener::notifyOperationErased(op);
+  }
+
+private:
+  DeadnessCache cache;
+};
+
 /// This is a worklist-driven driver for the PatternMatcher, which repeatedly
 /// applies the locally optimal patterns.
 ///
@@ -353,7 +512,8 @@ protected:
   void notifyOperationReplaced(Operation *op, ValueRange replacement) override;
 
   /// Process ops until the worklist is empty or `config.maxNumRewrites` is
-  /// reached. Return `true` if any IR was changed.
+  /// reached. Skip operations in unreachable blocks. Return `true` if any IR
+  /// was changed.
   bool processWorklist();
 
   /// The pattern rewriter that is used for making IR modifications and is
@@ -376,6 +536,10 @@ protected:
   /// depending on `strictMode`. This set is not maintained when
   /// `config.strictMode` is GreedyRewriteStrictness::AnyOp.
   llvm::SmallDenseSet<Operation *, 4> strictModeFilteredOps;
+
+  /// Tracks block reachability while the worklist is processed. The rewriter
+  /// notifies this listener, which forwards to the driver.
+  ReachabilityListener reachabilityListener;
 
 private:
   /// Look over the provided operands for any defining operations that should
@@ -408,20 +572,231 @@ private:
   /// The low-level pattern applicator.
   PatternApplicator matcher;
 
+  DeadnessListener deadnessListener;
+
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   ExpensiveChecks expensiveChecks;
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 };
 } // namespace
 
+/// Return whether `op` may define successors of its block.
+static bool mayDefineSuccessors(Operation *op) {
+  return op->mightHaveTrait<OpTrait::IsTerminator>() ||
+         op->getNumSuccessors() != 0;
+}
+
+/// Collect the distinct successors of `block` that are in the same region.
+/// A successor in another region is invalid IR that cannot make
+/// a block of this region reachable.
+static SmallPtrSet<Block *, 2> getRegionSuccessors(Block *block) {
+  SmallPtrSet<Block *, 2> successors;
+  for (Block *successor : block->getSuccessors())
+    if (successor->getParent() == block->getParent())
+      successors.insert(successor);
+  return successors;
+}
+
+void ReachabilityListener::RegionState::traverse(Region *region) {
+  // Clear rather than reassign, to keep the allocations for the next
+  // traversal.
+  reachable.clear();
+  uncertain.clear();
+  changedBlocks.clear();
+  removedBlocks.clear();
+  entry = &region->front();
+  addReachable({entry}, /*isUncertain=*/false);
+}
+
+void ReachabilityListener::RegionState::addReachable(SmallVector<Block *> roots,
+                                                     bool isUncertain) {
+  while (!roots.empty()) {
+    auto [it, inserted] = reachable.try_emplace(roots.pop_back_val());
+    if (!inserted)
+      continue;
+    auto successors = getRegionSuccessors(it->first);
+    it->second.append(successors.begin(), successors.end());
+    if (isUncertain)
+      uncertain.insert(it->first);
+    roots.append(it->second);
+  }
+}
+
+void ReachabilityListener::RegionState::markUncertain(Block *block) {
+  SmallVector<Block *> worklist{block};
+  while (!worklist.empty()) {
+    Block *current = worklist.pop_back_val();
+    auto it = reachable.find(current);
+    if (it == reachable.end() || !uncertain.insert(current).second)
+      continue;
+    worklist.append(it->second);
+  }
+}
+
+LogicalResult ReachabilityListener::RegionState::applyChanges() {
+  if (changedBlocks.empty() && removedBlocks.empty())
+    return success();
+  // Blocks are dropped after the loop, so that the snapshot of a lost block
+  // remains available to every changed block that lost an edge to it.
+  SmallVector<Block *> unreachable;
+  for (Block *changed : changedBlocks) {
+    // A removed block is no longer part of the region, and a change in an
+    // uncached block cannot make any block reachable.
+    if (removedBlocks.contains(changed))
+      continue;
+    auto it = reachable.find(changed);
+    if (it == reachable.end())
+      continue;
+    // Keep even a disconnected block's snapshot up to date: a later rewrite
+    // may reconnect it without querying the block itself. Its added successors
+    // must remain uncertain until a traversal establishes their reachability.
+    if (changed != entry && changed->hasNoPredecessors())
+      markUncertain(changed);
+    // Keep the snapshot available while marking lost successors uncertain.
+    // A lost self-edge can make that traversal visit `changed` itself.
+    const auto &old = it->second;
+    auto current = getRegionSuccessors(changed);
+    for (Block *lost : old) {
+      if (current.contains(lost))
+        continue;
+      // The successors of a reachable block are reachable, so `lost` has a
+      // snapshot unless the cache is inconsistent. This is not expected to
+      // happen; the failure is a safety net that forces a traversal.
+      auto lostIt = reachable.find(lost);
+      if (lostIt == reachable.end())
+        return failure();
+      // `lost` and every block behind it may have become unreachable. When
+      // `lost` is gone or has no predecessors left, it is unreachable; if all
+      // of its cached successors are still successors of `changed`, nothing
+      // else changed. This is the shape left by folding a constant conditional
+      // branch and by merging a block into its predecessor. Any other lost
+      // edge leaves the blocks behind `lost` uncertain until a query for one
+      // of them traverses the region.
+      bool isGone = removedBlocks.contains(lost) || lost->hasNoPredecessors();
+      if (isGone && llvm::all_of(lostIt->second, [&](Block *successor) {
+            return current.contains(successor);
+          })) {
+        unreachable.push_back(lost);
+        continue;
+      }
+      markUncertain(lost);
+    }
+    // Added edges can only make more blocks reachable. Blocks reached from an
+    // uncertain block are uncertain as well.
+    SmallVector<Block *> roots;
+    for (Block *successor : current)
+      if (!reachable.contains(successor))
+        roots.push_back(successor);
+    // Nothing was inserted into `reachable` since `it` was looked up.
+    it->second.assign(current.begin(), current.end());
+    addReachable(std::move(roots), uncertain.contains(changed));
+  }
+  // Drop every block that left the region, so that no stale key can match a
+  // block inserted later at the same address.
+  unreachable.append(removedBlocks.begin(), removedBlocks.end());
+  for (Block *block : unreachable) {
+    reachable.erase(block);
+    uncertain.erase(block);
+  }
+  changedBlocks.clear();
+  removedBlocks.clear();
+  return success();
+}
+
+bool ReachabilityListener::isBlockReachable(Block *block) {
+  Region *region = block->getParent();
+  // A detached block is treated as reachable, as is the entry block.
+  if (!region || block == &region->front())
+    return true;
+  if (block->hasNoPredecessors())
+    return false;
+  auto [it, inserted] = regionStates.try_emplace(region);
+  RegionState &state = it->second;
+  bool isStale = inserted || state.entry != &region->front();
+  if (isStale || failed(state.applyChanges()) ||
+      state.uncertain.contains(block))
+    state.traverse(region);
+  bool result = state.reachable.contains(block);
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+  assert(result == region->front().isReachable(block) &&
+         "reachability cache disagrees with a traversal");
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+  return result;
+}
+
+bool ReachabilityListener::isReachable(Operation *op) {
+  // A nested region can be locally reachable while its owning operation is in
+  // an unreachable block, so check every containing block up to the scope.
+  while (Block *block = op->getBlock()) {
+    if (!isBlockReachable(block))
+      return false;
+    Region *region = block->getParent();
+    if (!region || region == scope)
+      break;
+    op = region->getParentOp();
+  }
+  return true;
+}
+
+void ReachabilityListener::notifyBlockInserted(Block *block, Region *previous,
+                                               Region::iterator previousIt) {
+  Region *region = block->getParent();
+  // A block moved within its region keeps its reachability, unless it becomes
+  // the entry block, which the next query detects. A block that is new to the
+  // region is unreachable until a recorded terminator change adds an edge to
+  // it, but a stale entry from an earlier removal cannot be trusted.
+  if (previous != region) {
+    if (previous)
+      markRemoved(previous, block);
+    auto it = regionStates.find(region);
+    if (it != regionStates.end() && (it->second.removedBlocks.contains(block) ||
+                                     it->second.reachable.contains(block)))
+      regionStates.erase(it);
+  }
+  RewriterBase::ForwardingListener::notifyBlockInserted(block, previous,
+                                                        previousIt);
+}
+
+void ReachabilityListener::notifyBlockErased(Block *block) {
+  markRemoved(block->getParent(), block);
+  RewriterBase::ForwardingListener::notifyBlockErased(block);
+}
+
+void ReachabilityListener::notifyOperationInserted(
+    Operation *op, OpBuilder::InsertPoint previous) {
+  if (mayDefineSuccessors(op)) {
+    markChanged(op->getBlock());
+    if (previous.isSet())
+      markChanged(previous.getBlock());
+  }
+  RewriterBase::ForwardingListener::notifyOperationInserted(op, previous);
+}
+
+void ReachabilityListener::notifyOperationModified(Operation *op) {
+  if (mayDefineSuccessors(op))
+    markChanged(op->getBlock());
+  RewriterBase::ForwardingListener::notifyOperationModified(op);
+}
+
+void ReachabilityListener::notifyOperationErased(Operation *op) {
+  if (mayDefineSuccessors(op))
+    markChanged(op->getBlock());
+  // Do not retain keys for regions that are about to be destroyed.
+  for (Region &region : op->getRegions())
+    regionStates.erase(&region);
+  RewriterBase::ForwardingListener::notifyOperationErased(op);
+}
+
 GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
     MLIRContext *ctx, const FrozenRewritePatternSet &patterns,
     const GreedyRewriteConfig &config)
-    : rewriter(ctx), config(config), matcher(patterns)
+    : rewriter(ctx), config(config),
+      reachabilityListener(this, config.getScope()), matcher(patterns),
+      deadnessListener(&reachabilityListener)
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       // clang-format off
       , expensiveChecks(
-          /*driver=*/this,
+          /*listener=*/&deadnessListener,
           /*topLevel=*/config.getScope() ? config.getScope()->getParentOp()
                                          : nullptr)
 // clang-format on
@@ -432,15 +807,20 @@ GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
 
   // Set up listener.
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-  // Send IR notifications to the debug handler. This handler will then forward
-  // all notifications to this GreedyPatternRewriteDriver.
+  // Forward notifications through expensive checks, deadness, reachability,
+  // and the worklist driver, in that order.
   rewriter.setListener(&expensiveChecks);
 #else
-  rewriter.setListener(this);
+  rewriter.setListener(&deadnessListener);
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 }
 
 bool GreedyPatternRewriteDriver::processWorklist() {
+  // The cache is only maintained while this worklist pass runs. Between
+  // passes, the IR changes without notifications, e.g. in region
+  // simplification and in the unreachable-block sweep.
+  llvm::scope_exit clearReachability([&] { reachabilityListener.clear(); });
+
 #ifndef NDEBUG
   const char *logLineComment =
       "//===-------------------------------------------===//\n";
@@ -465,6 +845,11 @@ bool GreedyPatternRewriteDriver::processWorklist() {
          (numRewrites < config.getMaxNumRewrites() ||
           config.getMaxNumRewrites() == GreedyRewriteConfig::kNoLimit)) {
     auto *op = worklist.pop();
+    if (!reachabilityListener.isReachable(op)) {
+      LLVM_DEBUG(logger.startLine() << "Skipping unreachable operation : '"
+                                    << op->getName() << "'(" << op << ")\n");
+      continue;
+    }
 
     LLVM_DEBUG({
       logger.getOStream() << "\n";
@@ -483,7 +868,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
     });
 
     // If the operation is trivially dead - remove it.
-    if (isOpTriviallyDead(op)) {
+    if (deadnessListener.isOpTriviallyDead(op)) {
       rewriter.eraseOp(op);
       changed = true;
 
@@ -503,8 +888,9 @@ bool GreedyPatternRewriteDriver::processWorklist() {
         Operation *dumpRootOp = getDumpRootOp(op);
 #endif // NDEBUG
         if (foldResults.empty()) {
-          // Op was modified in-place.
-          notifyOperationModified(op);
+          // Folding modified the op without using the rewriter. Notify the
+          // cache listeners, which forward the modification to the driver.
+          deadnessListener.notifyOperationModified(op);
           changed = true;
           LLVM_DEBUG(logSuccessfulFolding(dumpRootOp));
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
@@ -855,7 +1241,7 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
 
     // `OperationFolder` CSE's constant ops (and may move them into parents
     // regions to enable more aggressive CSE'ing).
-    OperationFolder folder(ctx, this);
+    OperationFolder folder(ctx, rewriter.getListener());
     auto insertKnownConstant = [&](Operation *op) {
       // Check for existing constants when populating the worklist. This avoids
       // accidentally reversing the constant order during processing.
@@ -897,7 +1283,10 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
           //   %add = arith.addi %add, %add : i64
           // are legal in unreachable code. Unfortunately many patterns would be
           // unsafe to apply on such IR and can lead to crashes or infinite
-          // loops.
+          // loops. A rewrite can disconnect more blocks while processWorklist()
+          // runs; processWorklist() skips their queued operations until the
+          // next sweep, since repeated rewrites on such IR can prevent the
+          // worklist pass from returning.
           continueRewrites |=
               succeeded(eraseUnreachableBlocks(rewriter, region));
 

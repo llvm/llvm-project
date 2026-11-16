@@ -125,7 +125,7 @@ static void handle_line(char **tokens, int ntokens) {
   LLVMTypeRef Fty = LLVMFunctionType(I64ty, &I64Ptrty, 1, 0);
 
   LLVMValueRef F = LLVMAddFunction(M, name, Fty);
-  LLVMBuilderRef builder = LLVMCreateBuilderInContext(C);
+  LLVMBuilderRef builder = LLVMCreateBuilderForModule(M);
   LLVMPositionBuilderAtEnd(builder,
                            LLVMAppendBasicBlockInContext(C, F, "entry"));
 

@@ -10,7 +10,6 @@
 #define LLDB_INTERPRETER_INTERFACES_SCRIPTEDSYNTHETICCHILDRENINTERFACE_H
 
 #include "ScriptedInterface.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/ErrorExtras.h"
 
@@ -39,7 +38,7 @@ public:
 
   virtual lldb::ValueObjectSP GetSyntheticValue() { return nullptr; }
 
-  virtual ConstString GetSyntheticTypeName() { return ConstString(); }
+  virtual std::string GetSyntheticTypeName() { return std::string(); }
 };
 } // namespace lldb_private
 

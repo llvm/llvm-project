@@ -65,7 +65,7 @@ LLVM_ABI void printBumpPtrAllocatorStats(unsigned NumSlabs, size_t TotalMemory);
 /// CurPtr when the requested alignment is no greater than MinAlign.
 template <typename AllocatorT = MallocAllocator, size_t SlabSize = 4096,
           size_t SizeThreshold = SlabSize, size_t GrowthDelay = 128,
-          size_t MinAlign = 8>
+          size_t MinAlign = std::min<size_t>(8, alignof(std::max_align_t))>
 class BumpPtrAllocatorImpl
     : public AllocatorBase<BumpPtrAllocatorImpl<
           AllocatorT, SlabSize, SizeThreshold, GrowthDelay, MinAlign>>,

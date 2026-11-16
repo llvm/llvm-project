@@ -36,6 +36,7 @@ void BPFTargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
   Builder.defineMacro("__bpf__");
   Builder.defineMacro("__BPF__");
+  Builder.defineMacro("__BPF_FEATURE_ENUM_PRESERVE_ACCESS_INDEX");
 
   std::string CPU = getTargetOpts().CPU;
   if (CPU == "probe") {
@@ -79,10 +80,14 @@ void BPFTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__BPF_FEATURE_LOAD_ACQ_STORE_REL");
     Builder.defineMacro("__BPF_FEATURE_GOTOX");
   }
+
+  if (CpuVerNum >= 5) {
+    Builder.defineMacro("__BPF_FEATURE_HMUL");
+  }
 }
 
-static constexpr llvm::StringLiteral ValidCPUNames[] = {"generic", "v1", "v2",
-                                                        "v3", "v4", "probe"};
+static constexpr llvm::StringLiteral ValidCPUNames[] = {
+    "generic", "v1", "v2", "v3", "v4", "v5", "probe"};
 
 bool BPFTargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::is_contained(ValidCPUNames, Name);

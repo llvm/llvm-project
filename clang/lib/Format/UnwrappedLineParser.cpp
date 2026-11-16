@@ -230,19 +230,22 @@ void UnwrappedLineParser::parse() {
     // replaced by the expansion.
     if (!ExpandedLines.empty()) {
       LLVM_DEBUG(llvm::dbgs() << "Expanded lines:\n");
-      for (const auto &Line : Lines) {
+      for (auto &Line : Lines) {
         if (!Line.Tokens.empty()) {
           auto it = ExpandedLines.find(Line.Tokens.begin()->Tok);
           if (it != ExpandedLines.end()) {
-            for (const auto &Expanded : it->second) {
+            for (auto &Expanded : it->second) {
+              Expanded.InMacroExpansion = true;
               LLVM_DEBUG(printDebugInfo(Expanded));
               Callback.consumeUnwrappedLine(Expanded);
             }
             continue;
           }
         }
+        Line.InMacroExpansion = true;
         LLVM_DEBUG(printDebugInfo(Line));
         Callback.consumeUnwrappedLine(Line);
+        Line.InMacroExpansion = false;
       }
       Callback.finishRun();
     }
@@ -274,7 +277,8 @@ void UnwrappedLineParser::parseFile() {
   ScopedDeclarationState DeclarationState(*Line, DeclarationScopeStack,
                                           MustBeDeclaration);
   if (Style.isTextProto() || (Style.isJson() && FormatTok->IsFirst))
-    parseBracedList();
+    while (!eof())
+      parseBracedList();
   else
     parseLevel();
   // Make sure to format the remaining tokens.
@@ -812,7 +816,7 @@ FormatToken *UnwrappedLineParser::parseBlock(
       !parsingPPDirective() ? PreprocessorDirectives.size() : 0;
   addUnwrappedLine();
   size_t OpeningLineIndex =
-      CurrentLines->empty()
+      CurrentLines->empty() || !CurrentExpandedLines.empty()
           ? (UnwrappedLine::kInvalidIndex)
           : (CurrentLines->size() - 1 - NbPreprocessorDirectives);
 
@@ -873,6 +877,8 @@ FormatToken *UnwrappedLineParser::parseBlock(
       if (Previous->is(tok::r_brace) && !Previous->Optional)
         return false;
     }
+    if (OpeningLineIndex == UnwrappedLine::kInvalidIndex)
+      return false;
     assert(!CurrentLines->empty());
     auto &LastLine = CurrentLines->back();
     if (LastLine.Level == InitialLevel + 1 && !mightFitOnOneLine(LastLine))
@@ -930,7 +936,8 @@ FormatToken *UnwrappedLineParser::parseBlock(
   if (MunchSemi && FormatTok->is(tok::semi))
     nextToken();
 
-  if (PPStartHash == PPEndHash) {
+  if (PPStartHash == PPEndHash && CurrentExpandedLines.empty() &&
+      !containsExpansion(*Line)) {
     Line->MatchingOpeningBlockLineIndex = OpeningLineIndex;
     if (OpeningLineIndex != UnwrappedLine::kInvalidIndex) {
       // Update the opening line to add the forward reference as well
@@ -2664,10 +2671,11 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
       break;
     case tok::semi:
       // JavaScript (or more precisely TypeScript) can have semicolons in braced
-      // lists (in so-called TypeMemberLists). Thus, the semicolon cannot be
+      // lists (in so-called TypeMemberLists). TextProto and Proto options also
+      // allow semicolons as field separators. Thus, the semicolon cannot be
       // used for error recovery if we have otherwise determined that this is
       // a braced list.
-      if (Style.isJavaScript()) {
+      if (Style.isJavaScript() || Style.isProto() || Style.isJson()) {
         nextToken();
         break;
       }
@@ -2919,11 +2927,17 @@ static FormatToken *getLastNonComment(const UnwrappedLine &Line) {
   return nullptr;
 }
 
+static bool containsPPDirective(const UnwrappedLine &Line) {
+  return llvm::any_of(
+      llvm::drop_begin(Line.Tokens),
+      [](const UnwrappedLineNode &Node) { return Node.Tok->FirstAfterPPLine; });
+}
+
 void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
   FormatToken *Tok = nullptr;
 
   if (Style.InsertBraces && !Line->InPPDirective && !Line->Tokens.empty() &&
-      PreprocessorDirectives.empty() && FormatTok->isNot(tok::semi)) {
+      !containsPPDirective(*Line) && FormatTok->isNot(tok::semi)) {
     Tok = Style.BraceWrapping.AfterControlStatement == FormatStyle::BWACS_Never
               ? getLastNonComment(*Line)
               : Line->Tokens.back().Tok;
@@ -3557,7 +3571,8 @@ void UnwrappedLineParser::parseLabel(bool IsGotoLabel) {
     parseBlock();
     if (FormatTok->is(tok::kw_break)) {
       if (Style.BraceWrapping.AfterControlStatement ==
-          FormatStyle::BWACS_Always) {
+              FormatStyle::BWACS_Always ||
+          Style.CompactCaseLabels) {
         addUnwrappedLine();
         if (!Style.IndentCaseBlocks &&
             Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths) {
@@ -3996,19 +4011,23 @@ bool UnwrappedLineParser::parseEnum() {
   if (Style.Language == FormatStyle::LK_Proto && FormatTok->is(tok::equal))
     return false;
 
-  if (IsCpp) {
-    // Eat up enum class ...
-    if (FormatTok->isOneOf(tok::kw_class, tok::kw_struct))
-      nextToken();
-    while (FormatTok->is(tok::l_square))
-      if (!handleCppAttributes())
-        return false;
-  }
+  // Eat up enum class ...
+  if (IsCpp && FormatTok->isOneOf(tok::kw_class, tok::kw_struct))
+    nextToken();
 
   while (FormatTok->Tok.getIdentifierInfo() ||
          FormatTok->isOneOf(tok::colon, tok::coloncolon, tok::less,
                             tok::greater, tok::comma, tok::question,
                             tok::l_square)) {
+    if (FormatTok->is(TT_AttributeMacro)) {
+      nextToken();
+      continue;
+    }
+    if (IsCpp && FormatTok->is(tok::l_square)) {
+      if (handleCppAttributes())
+        continue;
+      return false;
+    }
     if (FormatTok->is(tok::colon))
       FormatTok->setFinalizedType(TT_EnumUnderlyingTypeColon);
     if (Style.isVerilog()) {
@@ -4021,8 +4040,10 @@ bool UnwrappedLineParser::parseEnum() {
       nextToken();
     }
     // We can have macros or attributes in between 'enum' and the enum name.
-    if (FormatTok->is(tok::l_paren))
+    if (FormatTok->is(tok::l_paren)) {
       parseParens();
+      continue;
+    }
     if (FormatTok->is(tok::identifier)) {
       nextToken();
       // If there are two identifiers in a row, this is likely an elaborate
@@ -4068,9 +4089,10 @@ bool UnwrappedLineParser::parseEnum() {
     if (!ManageWhitesmithsBraces)
       ++Line->Level;
   }
-  const auto OpeningLineIndex = CurrentLines->empty()
-                                    ? UnwrappedLine::kInvalidIndex
-                                    : CurrentLines->size() - 1;
+  const auto OpeningLineIndex =
+      CurrentLines->empty() || !CurrentExpandedLines.empty()
+          ? UnwrappedLine::kInvalidIndex
+          : CurrentLines->size() - 1;
   bool HasError = !parseBracedList(/*IsAngleBracket=*/false, /*IsEnum=*/true);
   if (!Style.AllowShortEnumsOnASingleLine && !ManageWhitesmithsBraces)
     --Line->Level;
@@ -4080,8 +4102,10 @@ bool UnwrappedLineParser::parseEnum() {
     addUnwrappedLine();
   }
   setPreviousRBraceType(TT_EnumRBrace);
-  if (ManageWhitesmithsBraces)
+  if (ManageWhitesmithsBraces && CurrentExpandedLines.empty() &&
+      !containsExpansion(*Line)) {
     Line->MatchingOpeningBlockLineIndex = OpeningLineIndex;
+  }
   return true;
 
   // There is no addUnwrappedLine() here so that we fall through to parsing a

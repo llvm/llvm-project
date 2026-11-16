@@ -18,7 +18,7 @@ contains
       call host_only()
     end if
     ! The guard does not apply after the entire IF.
-    !ERROR: 'host_only' may not be called in device code
+    !ERROR: 'host_only', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     call host_only()
   end subroutine
   attributes(host,device) subroutine later_else(x, y)
@@ -54,7 +54,7 @@ contains
       call host_only()
     else
       ! A nested guard in another arm does not guard this ELSE.
-      !ERROR: 'host_only' may not be called in device code
+      !ERROR: 'host_only', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
       call host_only()
     end if
   end subroutine

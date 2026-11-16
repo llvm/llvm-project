@@ -266,9 +266,11 @@ private:
 
   // For a given source instruction, collect its backwards dependence slice
   // consisting of instructions exclusively computed for producing the operands
-  // of the source instruction.
+  // of the source instruction. When sinking, the slice stops at members of
+  // \p Group.
   void getExclBackwardsSlice(Instruction *I, std::stack<Instruction *> &Slice,
-                             Instruction *SI, bool ForSinking = false);
+                             Instruction *SI, bool ForSinking = false,
+                             const SelectGroup *Group = nullptr);
 
   // Returns true if the condition of the select is highly predictable.
   bool isSelectHighlyPredictable(const SelectLike SI);
@@ -573,14 +575,14 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       // false operands.
       if (auto *TI = dyn_cast_or_null<Instruction>(SI.getTrueValue())) {
         std::stack<Instruction *> TrueSlice;
-        getExclBackwardsSlice(TI, TrueSlice, SI.getI(), true);
+        getExclBackwardsSlice(TI, TrueSlice, SI.getI(), true, &ASI);
         maxTrueSliceLen = std::max(maxTrueSliceLen, TrueSlice.size());
         TrueSlices.push_back(TrueSlice);
       }
       if (auto *FI = dyn_cast_or_null<Instruction>(SI.getFalseValue())) {
         if (isa<SelectInst>(SI.getI()) || !FI->hasOneUse()) {
           std::stack<Instruction *> FalseSlice;
-          getExclBackwardsSlice(FI, FalseSlice, SI.getI(), true);
+          getExclBackwardsSlice(FI, FalseSlice, SI.getI(), true, &ASI);
           maxFalseSliceLen = std::max(maxFalseSliceLen, FalseSlice.size());
           FalseSlices.push_back(FalseSlice);
         }
@@ -640,21 +642,20 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     // Delete the unconditional branch that was just created by the split.
     StartBlock->getTerminator()->eraseFromParent();
 
-    // Move any debug/pseudo and auxiliary instructions that were in-between the
-    // select group to the newly-created end block.
-    SmallVector<Instruction *, 2> SinkInstrs;
+    // Hoist any pseudo and auxiliary instructions that were in-between the
+    // select group before the group, since the true/false values may use them.
+    SmallVector<Instruction *, 2> HoistInstrs;
     auto DIt = SI.getI()->getIterator();
     auto NIt = ASI.Selects.begin();
     while (&*DIt != LastSI.getI()) {
       if (NIt != ASI.Selects.end() && &*DIt == NIt->getI())
         ++NIt;
       else
-        SinkInstrs.push_back(&*DIt);
+        HoistInstrs.push_back(&*DIt);
       DIt++;
     }
-    auto InsertionPoint = EndBlock->getFirstInsertionPt();
-    for (auto *DI : SinkInstrs)
-      DI->moveBeforePreserving(InsertionPoint);
+    for (auto *HI : HoistInstrs)
+      HI->moveBefore(SI.getI()->getIterator());
 
     // Duplicate implementation for DbgRecords, the non-instruction debug-info
     // format. Helper lambda for moving DbgRecords to the end block.
@@ -742,7 +743,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     // Use reverse iterator because later select may use the value of the
     // earlier select, and we need to propagate value through earlier select
     // to get the PHI operand.
-    InsertionPoint = EndBlock->begin();
+    auto InsertionPoint = EndBlock->begin();
     for (SelectLike &SI : ASI.Selects) {
       // The select itself is replaced with a PHI Node.
       PHINode *PN = PHINode::Create(SI.getType(), 2, "");
@@ -1174,8 +1175,8 @@ static bool isSafeToSinkLoad(Instruction *LoadI, Instruction *SI) {
 // form an one-use chain that leads to the source instruction.
 void SelectOptimizeImpl::getExclBackwardsSlice(Instruction *I,
                                                std::stack<Instruction *> &Slice,
-                                               Instruction *SI,
-                                               bool ForSinking) {
+                                               Instruction *SI, bool ForSinking,
+                                               const SelectGroup *Group) {
   SmallPtrSet<Instruction *, 2> Visited;
   std::queue<Instruction *> Worklist;
   Worklist.push(I);
@@ -1195,6 +1196,12 @@ void SelectOptimizeImpl::getExclBackwardsSlice(Instruction *I,
     // Avoid sinking other select instructions (should be handled separetely).
     if (ForSinking && (II->isTerminator() || II->mayHaveSideEffects() ||
                        isa<SelectInst>(II) || isa<PHINode>(II)))
+      continue;
+
+    // Select-like members of the group are replaced separately, and their
+    // operands may still be needed on the other branch.
+    if (ForSinking && Group &&
+        llvm::any_of(Group->Selects, [&](auto &S) { return S.getI() == II; }))
       continue;
 
     // Avoid sinking loads in order not to skip state-modifying instructions,

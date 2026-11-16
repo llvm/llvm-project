@@ -2510,7 +2510,7 @@ int main() {
 // CHECK1-NEXT:    [[KERNEL_ARGS5:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK1-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK1-NEXT:    call void @_ZN1SC1El(ptr noundef nonnull align 8 dereferenceable(24) [[S]], i64 noundef 0)
-// CHECK1-NEXT:    [[CALL:%.*]] = invoke noundef signext i8 @_ZN1ScvcEv(ptr noundef nonnull align 8 dereferenceable(24) [[S]])
+// CHECK1-NEXT:    [[CALL:%.*]] = invoke noundef i8 @_ZN1ScvcEv(ptr noundef nonnull align 8 dereferenceable(24) [[S]])
 // CHECK1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK1:       invoke.cont:
 // CHECK1-NEXT:    store i8 [[CALL]], ptr [[A]], align 1
@@ -3695,7 +3695,7 @@ int main() {
 // CHECK1-NEXT:    invoke void @_ZN1SC1El(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]], i64 noundef 23)
 // CHECK1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
 // CHECK1:       invoke.cont:
-// CHECK1-NEXT:    [[CALL:%.*]] = invoke noundef signext i8 @_ZN1ScvcEv(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
+// CHECK1-NEXT:    [[CALL:%.*]] = invoke noundef i8 @_ZN1ScvcEv(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
 // CHECK1-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[TERMINATE_LPAD]]
 // CHECK1:       invoke.cont2:
 // CHECK1-NEXT:    [[TMP7:%.*]] = sext i8 [[CALL]] to i32
@@ -3835,7 +3835,7 @@ int main() {
 // CHECK5-NEXT:    [[KERNEL_ARGS5:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS]], align 8
 // CHECK5-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK5-NEXT:    call void @_ZN1SC1El(ptr noundef nonnull align 8 dereferenceable(24) [[S]], i64 noundef 0)
-// CHECK5-NEXT:    [[CALL:%.*]] = invoke noundef signext i8 @_ZN1ScvcEv(ptr noundef nonnull align 8 dereferenceable(24) [[S]])
+// CHECK5-NEXT:    [[CALL:%.*]] = invoke noundef i8 @_ZN1ScvcEv(ptr noundef nonnull align 8 dereferenceable(24) [[S]])
 // CHECK5-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK5:       invoke.cont:
 // CHECK5-NEXT:    store i8 [[CALL]], ptr [[A]], align 1
@@ -5020,7 +5020,7 @@ int main() {
 // CHECK5-NEXT:    invoke void @_ZN1SC1El(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]], i64 noundef 23)
 // CHECK5-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
 // CHECK5:       invoke.cont:
-// CHECK5-NEXT:    [[CALL:%.*]] = invoke noundef signext i8 @_ZN1ScvcEv(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
+// CHECK5-NEXT:    [[CALL:%.*]] = invoke noundef i8 @_ZN1ScvcEv(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
 // CHECK5-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[TERMINATE_LPAD]]
 // CHECK5:       invoke.cont2:
 // CHECK5-NEXT:    [[TMP7:%.*]] = sext i8 [[CALL]] to i32

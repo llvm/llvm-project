@@ -28,7 +28,8 @@ def OlympusModel : SchedMachineModel {
                                                     [HasSVE2p1, HasSVEB16B16,
                                                      HasSVEBFSCALE,
                                                      HasCPA, HasCSSC,
-                                                     HasMatMulFP64, HasMOPS, HasMOPS_GO]);
+                                                     HasMatMulFP64, HasMOPS, HasMOPS_GO,
+                                                     HasFPv2]);
 }
 
 //===----------------------------------------------------------------------===//
