@@ -14512,6 +14512,10 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
     case 'r':
       if (VT.isScalableVector())
         return std::make_pair(0U, nullptr);
+      // MVT::Other has no size, e.g. an aggregate operand that could not be
+      // converted to an integer type.
+      if (VT == MVT::Other)
+        break;
       if (Subtarget->hasLS64() && VT.getSizeInBits() == 512)
         return std::make_pair(0U, &AArch64::GPR64x8ClassRegClass);
       if (VT.getFixedSizeInBits() == 64)
@@ -14545,6 +14549,8 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
         break;
       if (VT.isScalableVector())
         return std::make_pair(0U, &AArch64::ZPR_4bRegClass);
+      if (VT == MVT::Other)
+        break;
       if (VT.getSizeInBits() == 128)
         return std::make_pair(0U, &AArch64::FPR128_loRegClass);
       break;
