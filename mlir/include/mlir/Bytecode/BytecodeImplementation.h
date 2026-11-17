@@ -161,6 +161,12 @@ public:
                        << ", but got: " << baseResult;
   }
 
+  /// Bind the type being read to `type`, so that references back to it read
+  /// as `type`. A mutable type that can refer back to itself must call this
+  /// with the type it gets from its key, before reading the rest of its
+  /// encoding, and must return `type`.
+  virtual LogicalResult bindResult(Type type) = 0;
+
   /// Read a handle to a dialect resource.
   template <typename ResourceT>
   FailureOr<ResourceT> readResourceHandle() {

@@ -324,6 +324,12 @@ encountered an attribute or type of a given dialect, it doesn't encode any
 further information. As such, a common encoding idiom is to use a leading
 `varint` code to indicate how the attribute or type was encoded.
 
+A mutable type can refer back to itself, directly or through other attributes
+and types. Its encoding must start with the key that identifies it, and its
+reader must get the type from that key and pass it to `bindResult` before
+reading the rest, so that a reference back to the type reads as that type.
+Mutable attributes always use the assembly format fallback.
+
 ### Resource Section
 
 Resources are encoded using two [sections](#sections), one section

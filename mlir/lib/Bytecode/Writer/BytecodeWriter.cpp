@@ -894,14 +894,6 @@ void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
       attrTypeEmitter.emitByte(0, "attr/type separator");
     };
     auto emitAttrOrTypeImpl = [&]() -> bool {
-      // TODO: We don't currently support custom encoded mutable types and
-      // attributes.
-      if (entryValue.template hasTrait<TypeTrait::IsMutable>() ||
-          entryValue.template hasTrait<AttributeTrait::IsMutable>()) {
-        emitAttrOrTypeRawImpl();
-        return false;
-      }
-
       DialectWriter dialectWriter(config.bytecodeVersion, attrTypeEmitter,
                                   numberingState, stringSection,
                                   config.dialectVersionMap);
@@ -915,7 +907,8 @@ void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
           if (succeeded(interface->writeType(entryValue, dialectWriter)))
             return true;
         }
-      } else {
+      } else if (!entryValue.template hasTrait<AttributeTrait::IsMutable>()) {
+        // TODO: We don't currently support custom encoded mutable attributes.
         for (const auto &callback : config.attributeWriterCallbacks) {
           if (succeeded(callback->write(entryValue, dialectWriter)))
             return true;
