@@ -47,6 +47,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -158,11 +159,11 @@ class MIRVocabulary {
   LLVM_ABI unsigned
   getCommonOperandIndex(MachineOperand::MachineOperandType OperandType) const;
 
-  /// Get index for a register machine operand. Returns std::nullopt if the
-  /// register belongs to no register class, which is a valid outcome for some
-  /// target physical registers.
+  /// Get index for a register machine operand. Returns std::nullopt if Reg
+  /// belongs to no register class, which is a valid outcome for some target
+  /// physical registers.
   LLVM_ABI std::optional<unsigned>
-  getRegisterOperandIndex(const MachineOperand &MO) const;
+  getRegisterOperandIndex(Register Reg, const MachineRegisterInfo &MRI) const;
 
   // Accessors for operand types
   const Embedding &
@@ -171,8 +172,8 @@ class MIRVocabulary {
     return Storage[static_cast<unsigned>(Section::CommonOperands)][LocalIndex];
   }
 
-  const Embedding &getRegisterEmbedding(const MachineOperand &MO) const {
-    Register Reg = MO.getReg();
+  const Embedding &getRegisterEmbedding(Register Reg,
+                                        const MachineRegisterInfo &MRI) const {
     // Reg is sometimes NoRegister (0) for optional operands. We return a zero
     // vector in this case.
     if (!Reg.isValid())
@@ -188,7 +189,7 @@ class MIRVocabulary {
 
     // Registers that belong to no register class have no vocabulary entry;
     // treat them like the other unmapped cases above.
-    std::optional<unsigned> LocalIndex = getRegisterOperandIndex(MO);
+    std::optional<unsigned> LocalIndex = getRegisterOperandIndex(Reg, MRI);
     if (!LocalIndex)
       return ZeroEmbedding;
     auto SectionID =
@@ -205,12 +206,12 @@ class MIRVocabulary {
 
   /// Get entity ID (flat index) for a register
   /// This is used for triplet generation
-  unsigned getEntityIDForRegister(const MachineOperand &MO) const {
-    Register Reg = MO.getReg();
+  unsigned getEntityIDForRegister(Register Reg,
+                                  const MachineRegisterInfo &MRI) const {
     if (!Reg.isValid() || Reg.isStack())
       return Layout
           .VirtRegBase; // Return VirtRegBase for invalid/stack registers
-    std::optional<unsigned> LocalIndex = getRegisterOperandIndex(MO);
+    std::optional<unsigned> LocalIndex = getRegisterOperandIndex(Reg, MRI);
     // Registers without a register class share the invalid/stack fallback.
     if (!LocalIndex)
       return Layout.VirtRegBase;
@@ -245,9 +246,10 @@ public:
 
   /// Get entity ID (flat index) for a machine operand
   /// This is used for triplet generation
-  unsigned getEntityIDForMachineOperand(const MachineOperand &MO) const {
+  unsigned getEntityIDForMachineOperand(const MachineOperand &MO,
+                                        const MachineRegisterInfo &MRI) const {
     if (MO.getType() == MachineOperand::MO_Register)
-      return getEntityIDForRegister(MO);
+      return getEntityIDForRegister(MO.getReg(), MRI);
     return getEntityIDForCommonOperand(MO.getType());
   }
 
@@ -257,10 +259,11 @@ public:
     return Storage[static_cast<unsigned>(Section::Opcodes)][LocalIndex];
   }
 
-  const Embedding &operator[](const MachineOperand &Operand) const {
+  const Embedding &getOperandEmbedding(const MachineOperand &Operand,
+                                       const MachineRegisterInfo &MRI) const {
     auto OperandType = Operand.getType();
     if (OperandType == MachineOperand::MO_Register)
-      return getRegisterEmbedding(Operand);
+      return getRegisterEmbedding(Operand.getReg(), MRI);
     else
       return operator[](OperandType);
   }

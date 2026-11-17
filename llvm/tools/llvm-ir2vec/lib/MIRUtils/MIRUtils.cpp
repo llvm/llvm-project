@@ -94,7 +94,8 @@ TripletResult MIR2VecTool::generateTriplets(const MachineFunction &MF) const {
 
       unsigned ArgIndex = 0;
       for (const MachineOperand &MO : MI.operands()) {
-        auto OperandID = Vocab->getEntityIDForMachineOperand(MO);
+        auto OperandID =
+            Vocab->getEntityIDForMachineOperand(MO, MF.getRegInfo());
         unsigned RelationID = MIRArgRelation + ArgIndex;
         Result.Triplets.push_back({OpcodeID, OperandID, RelationID});
         LLVM_DEBUG({

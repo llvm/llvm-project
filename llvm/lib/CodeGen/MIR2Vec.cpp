@@ -14,7 +14,6 @@
 #include "llvm/CodeGen/MIR2Vec.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
@@ -361,9 +360,9 @@ unsigned MIRVocabulary::getCommonOperandIndex(
 }
 
 std::optional<unsigned>
-MIRVocabulary::getRegisterOperandIndex(const MachineOperand &MO) const {
+MIRVocabulary::getRegisterOperandIndex(Register Reg,
+                                       const MachineRegisterInfo &MRI) const {
   assert(!RegisterOperandNames.empty() && "Register operand mapping not built");
-  Register Reg = MO.getReg();
   assert(Reg.isValid() && "Invalid register; not expected here");
   assert((Reg.isPhysical() || Reg.isVirtual()) &&
          "Expected a physical or virtual register");
@@ -373,13 +372,10 @@ MIRVocabulary::getRegisterOperandIndex(const MachineOperand &MO) const {
   // For physical registers, use TRI to get minimal register class as a
   // physical register can belong to multiple classes. For virtual
   // registers, use MRI to uniquely identify the assigned register class.
-  if (Reg.isPhysical()) {
+  if (Reg.isPhysical())
     RegClass = TRI.getMinimalPhysRegClass(Reg);
-  } else {
-    const MachineInstr *MI = MO.getParent();
-    assert(MI && MI->getParent() && "Operand not in a machine function");
-    RegClass = MI->getMF()->getRegInfo().getRegClassOrNull(Reg);
-  }
+  else
+    RegClass = MRI.getRegClassOrNull(Reg);
 
   // Not every register belongs to a register class. This can happen for
   // physical registers, e.g. X86's $mxcsr and $fpcw or AMDGPU's $mode, for
@@ -614,7 +610,7 @@ Embedding SymbolicMIREmbedder::computeEmbeddings(const MachineInstr &MI) const {
 
   // Add operand contributions
   for (const MachineOperand &MO : MI.operands())
-    InstructionEmbedding += Vocab[MO];
+    InstructionEmbedding += Vocab.getOperandEmbedding(MO, MF.getRegInfo());
 
   return InstructionEmbedding;
 }
