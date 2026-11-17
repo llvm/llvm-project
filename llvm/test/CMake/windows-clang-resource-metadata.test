@@ -1,0 +1,9 @@
+# REQUIRES: clang-source-cmake
+# NOTE: Do not autogenerate. These checks cover Clang's CMake resource override.
+# RUN: %cmake -S %S/Inputs/windows-resource-metadata -B %t -DLLVM_SRC_ROOT=%S/../.. -DCLANG_SRC_ROOT=%S/../../../clang
+# RUN: FileCheck %s --input-file=%t/libclang.txt
+
+# CHECK: RC_FILE_VERSION="24.0.0git"
+# CHECK-SAME: RC_FILE_DESCRIPTION="Clang C interface library"
+# CHECK-SAME: RC_COPYRIGHT="Copyright (c) LLVM contributors."
+# CHECK-SAME: RC_ORIGINAL_FILENAME="libclang.dll"

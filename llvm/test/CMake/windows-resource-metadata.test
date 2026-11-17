@@ -1,0 +1,13 @@
+# NOTE: Do not autogenerate. These checks cover CMake resource properties.
+# RUN: %cmake -S %S/Inputs/windows-resource-metadata -B %t -DLLVM_SRC_ROOT=%S/../..
+# RUN: FileCheck %s --check-prefix=ALPHA --input-file=%t/alpha.txt
+# RUN: FileCheck %s --check-prefix=BETA --input-file=%t/beta.txt
+
+# ALPHA: RC_FILE_VERSION="alpha-version"
+# ALPHA-SAME: RC_FILE_DESCRIPTION="alpha library"
+# ALPHA-SAME: RC_COPYRIGHT="Copyright (c) LLVM contributors."
+# ALPHA-SAME: RC_ORIGINAL_FILENAME="alpha-custom-d.dll"
+# BETA: RC_FILE_VERSION="beta-version"
+# BETA-SAME: RC_FILE_DESCRIPTION="beta library"
+# BETA-SAME: RC_COPYRIGHT="Copyright (c) LLVM contributors."
+# BETA-SAME: RC_ORIGINAL_FILENAME="beta-custom-d.dll"
