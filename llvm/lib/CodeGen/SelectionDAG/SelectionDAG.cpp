@@ -5700,6 +5700,7 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
                                                     UndefPoisonKind Kind,
                                                     unsigned Depth) const {
   unsigned Opcode = Op.getOpcode();
+  unsigned NumElts = DemandedElts.getBitWidth();
 
   // Early out for FREEZE.
   if (Opcode == ISD::FREEZE)
@@ -5889,8 +5890,8 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   case ISD::VECTOR_SHUFFLE: {
     APInt DemandedLHS, DemandedRHS;
     auto *SVN = cast<ShuffleVectorSDNode>(Op);
-    if (!getShuffleDemandedElts(DemandedElts.getBitWidth(), SVN->getMask(),
-                                DemandedElts, DemandedLHS, DemandedRHS,
+    if (!getShuffleDemandedElts(NumElts, SVN->getMask(), DemandedElts,
+                                DemandedLHS, DemandedRHS,
                                 /*AllowUndefElts=*/false))
       return false;
     if (!DemandedLHS.isZero() &&
@@ -5953,17 +5954,39 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   case ISD::LOAD: {
     // If we're loading an unindexed constant pool, check if the constant
     // contains poison/undef - skip ANYEXT loads.
-    // TODO: DemandedElts and type size mismatch handling.
+    // TODO: type size mismatch handling.
     auto *LD = cast<LoadSDNode>(Op);
     if (ISD::isUNINDEXEDLoad(LD) && !ISD::isEXTLoad(LD)) {
       if (const Constant *Cst = TLI->getTargetConstantFromLoad(LD)) {
-        // TODO: expose isGuaranteedNotToBeUndefOrPoison(UndefPoisonKind)
-        if (includesPoison(Kind) && includesUndef(Kind))
-          return ::isGuaranteedNotToBeUndefOrPoison(Cst);
-        if (includesPoison(Kind))
-          return ::isGuaranteedNotToBePoison(Cst);
-        assert(includesUndef(Kind) && "UndefOnly expected");
-        return ::isGuaranteedNotToBeUndef(Cst);
+        EVT VT = Op.getValueType();
+        Type *CstTy = Cst->getType();
+
+        auto IsSafe = [Kind](const Constant *C) -> bool {
+          // TODO: expose isGuaranteedNotToBeUndefOrPoison(UndefPoisonKind)
+          if (includesPoison(Kind) && includesUndef(Kind))
+            return ::isGuaranteedNotToBeUndefOrPoison(C);
+          if (includesPoison(Kind))
+            return ::isGuaranteedNotToBePoison(C);
+          assert(includesUndef(Kind) && "UndefOnly expected");
+          return ::isGuaranteedNotToBeUndef(C);
+        };
+
+        // If Cst matches VT vector dimensions, then check per-element.
+        if (CstTy->isVectorTy() && VT.isFixedLengthVector() &&
+            VT.getSizeInBits() == CstTy->getPrimitiveSizeInBits() &&
+            VT.getScalarSizeInBits() == CstTy->getScalarSizeInBits()) {
+          for (unsigned I = 0; I != NumElts; ++I) {
+            if (!DemandedElts[I])
+              continue;
+            if (Constant *Elt = Cst->getAggregateElement(I)) {
+              if (IsSafe(Elt))
+                continue;
+            }
+            return false;
+          }
+        } else {
+          return IsSafe(Cst);
+        }
       }
     }
     break;
