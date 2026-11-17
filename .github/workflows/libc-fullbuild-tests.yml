@@ -88,7 +88,7 @@ jobs:
             cpp_compiler: clang++-24
             linker: lld-24
             target: armv6m-none-eabi
-            testing: SKIP
+            build_builtins: ON
           - name: baremetal-armv7m
             os: ubuntu-26.04
             build_type: MinSizeRel
