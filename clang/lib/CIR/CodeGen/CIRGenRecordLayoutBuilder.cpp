@@ -195,6 +195,7 @@ struct CIRRecordLowering final {
                           /*isNamedBitField=*/false);
   }
 
+  /// Return true if the field has no storage in the CIR record layout.
   bool isEmptyFieldForCIRLayout(const FieldDecl *fd) const {
     if (fd->isZeroLengthBitField())
       return true;
