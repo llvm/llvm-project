@@ -446,3 +446,62 @@ entry:
   %s0 = select i1 %c0, i32 %v0, i32 %s1
   ret i32 %s0
 }
+
+define i32 @true_value_in_other_group(ptr %a, i32 noundef %idx, i32 %y, i32 %m) {
+; CHECK-LABEL: define i32 @true_value_in_other_group(
+; CHECK-SAME: ptr [[A:%.*]], i32 noundef [[IDX:%.*]], i32 [[Y:%.*]], i32 [[M:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[IDX]], 0
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[IDX]], 1
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 [[Y]], i32 0
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[C0]], i32 [[V0]], i32 [[S1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP0]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or i32 [[TMP1]], [[M]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = or i32 [[OP_RDX]], [[OP_RDX1]]
+; CHECK-NEXT:    ret i32 [[OP_RDX2]]
+;
+entry:
+  %p1 = getelementptr inbounds nuw i8, ptr %a, i64 4
+  %p2 = getelementptr inbounds nuw i8, ptr %a, i64 8
+  %p3 = getelementptr inbounds nuw i8, ptr %a, i64 12
+  %v0 = load i32, ptr %a, align 4
+  %v1 = load i32, ptr %p1, align 4
+  %v2 = load i32, ptr %p2, align 4
+  %v3 = load i32, ptr %p3, align 4
+  %c0 = icmp eq i32 %idx, 0
+  %c1 = icmp eq i32 %idx, 1
+  %s1 = select i1 %c1, i32 %y, i32 0
+  %s0 = select i1 %c0, i32 %v0, i32 %s1
+  %r0 = or i32 %v0, %v1
+  %r1 = or i32 %v2, %v3
+  %r2 = or i32 %r0, %r1
+  %r3 = or i32 %r2, %s0
+  %r = or i32 %r3, %m
+  ret i32 %r
+}
+
+define i32 @repeated_reduced_value(i32 noundef %idx, i32 %x, i32 %y, i32 %z, i1 %b) {
+; CHECK-LABEL: define i32 @repeated_reduced_value(
+; CHECK-SAME: i32 noundef [[IDX:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]], i1 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[IDX]], 0
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[IDX]], 1
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 [[Y]], i32 0
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], i32 [[X]], i32 [[S1]]
+; CHECK-NEXT:    [[T:%.*]] = select i1 [[B]], i32 [[Z]], i32 0
+; CHECK-NEXT:    [[R0:%.*]] = or i32 [[S0]], [[T]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = or i32 [[R0]], [[T]]
+; CHECK-NEXT:    ret i32 [[OP_RDX1]]
+;
+entry:
+  %c0 = icmp eq i32 %idx, 0
+  %c1 = icmp eq i32 %idx, 1
+  %s1 = select i1 %c1, i32 %y, i32 0
+  %s0 = select i1 %c0, i32 %x, i32 %s1
+  %t = select i1 %b, i32 %z, i32 0
+  %r0 = or i32 %s0, %t
+  %r = or i32 %r0, %t
+  ret i32 %r
+}

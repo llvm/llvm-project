@@ -197,6 +197,7 @@ namespace llvm {
     /// given node type. e.g. On x86 i16 is legal, but undesirable since i16
     /// instruction encodings are longer and some i16 instructions are slow.
     bool isTypeDesirableForOp(unsigned Opc, EVT VT) const override;
+    bool isTypeDesirableForOp(SDNode *N, EVT VT) const override;
 
     /// Return true if the target has native support for the
     /// specified value type and it is 'desirable' to use the type. e.g. On x86

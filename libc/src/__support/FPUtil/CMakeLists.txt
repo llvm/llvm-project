@@ -192,6 +192,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.common
     libc.src.__support.number_pair
+    libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
     .multiply_add
 )

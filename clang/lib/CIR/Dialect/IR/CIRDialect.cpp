@@ -842,26 +842,53 @@ cir::RegisterExitDtorOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 // BranchOpTerminatorInterface Methods
 //===----------------------------------
 
+/// Return true if a cir.break may leave `loop`. A break nested in an inner
+/// loop or switch leaves that operation instead.
+static bool mayBreakOutOf(cir::LoopOpInterface loop) {
+  mlir::Operation *loopOp = loop.getOperation();
+  return loopOp
+      ->walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
+        if (op != loopOp && isa<cir::LoopOpInterface, cir::SwitchOp>(op))
+          return mlir::WalkResult::skip();
+        if (isa<cir::BreakOp>(op))
+          return mlir::WalkResult::interrupt();
+        return mlir::WalkResult::advance();
+      })
+      .wasInterrupted();
+}
+
 void cir::ConditionOp::getSuccessorRegions(
     ArrayRef<Attribute> operands, SmallVectorImpl<RegionSuccessor> &regions) {
-  // TODO(cir): The condition value may be folded to a constant, narrowing
-  // down its list of possible successors.
+  // A constant condition selects only one of the successors below.
+  FoldAdaptor adaptor(operands, *this);
+  auto cond = mlir::dyn_cast_if_present<cir::BoolAttr>(adaptor.getCondition());
+  bool mayBeTrue = !cond || cond.getValue();
+  bool mayBeFalse = !cond || !cond.getValue();
 
   // Parent is a loop: condition may branch to the body, or on the false edge
   // to the per-iteration cleanup region if present, otherwise to the parent op.
+  // cir.break is not a region branch terminator (see the FIXME in
+  // getLoopOpSuccessorRegions), so the false edge also stands for the loop
+  // exit through a break and is kept when the loop may break.
   if (auto loopOp = dyn_cast<LoopOpInterface>(getOperation()->getParentOp())) {
-    regions.emplace_back(&loopOp.getBody());
-    if (mlir::Region *cleanup = loopOp.maybeGetCleanup())
-      regions.emplace_back(cleanup);
-    else
-      regions.emplace_back(loopOp.getOperation());
+    if (mayBeTrue)
+      regions.emplace_back(&loopOp.getBody());
+    if (mayBeFalse || mayBreakOutOf(loopOp)) {
+      if (mlir::Region *cleanup = loopOp.maybeGetCleanup())
+        regions.emplace_back(cleanup);
+      else
+        regions.emplace_back(loopOp.getOperation());
+    }
     return;
   }
 
-  // Parent is an await: condition may branch to resume or suspend regions.
+  // Parent is an await: condition may branch to resume (true) or suspend
+  // (false) regions.
   auto await = cast<AwaitOp>(getOperation()->getParentOp());
-  regions.emplace_back(&await.getResume());
-  regions.emplace_back(&await.getSuspend());
+  if (mayBeTrue)
+    regions.emplace_back(&await.getResume());
+  if (mayBeFalse)
+    regions.emplace_back(&await.getSuspend());
 }
 
 MutableOperandRange
@@ -2025,6 +2052,26 @@ void cir::IfOp::getSuccessorRegions(mlir::RegionBranchPoint point,
   regions.push_back(RegionSuccessor(&getThenRegion()));
   if (elseRegion)
     regions.push_back(RegionSuccessor(elseRegion));
+  else
+    regions.emplace_back(getOperation());
+}
+
+void cir::IfOp::getEntrySuccessorRegions(
+    ArrayRef<Attribute> operands, SmallVectorImpl<RegionSuccessor> &regions) {
+  FoldAdaptor adaptor(operands, *this);
+  auto cond = mlir::dyn_cast_if_present<cir::BoolAttr>(adaptor.getCondition());
+  if (!cond) {
+    getSuccessorRegions(mlir::RegionBranchPoint::parent(), regions);
+    return;
+  }
+
+  // A constant condition selects one region. Without an else region, a false
+  // condition skips straight to the parent operation, the same parent edge
+  // getSuccessorRegions reports for an unknown condition.
+  if (cond.getValue())
+    regions.emplace_back(&getThenRegion());
+  else if (!getElseRegion().empty())
+    regions.emplace_back(&getElseRegion());
   else
     regions.emplace_back(getOperation());
 }
@@ -3995,10 +4042,12 @@ void cir::CoroutineOp::getSuccessorRegions(
   }
 
   // body can fall through into final_suspend (co_return), exit directly
-  // from any suspend_point inside it that just suspends, or reach destroy,
-  // either from a suspend_point being destroyed, or from an exception
-  // escaping body's own catch-all.
+  // from any suspend_point inside it that just suspends, or reach destroy
+  // from a suspend_point being destroyed. An exception that escapes body, for
+  // example one that unhandled_exception() rethrows, will leave through the
+  // unwind region once it is implemented.
   if (parent == &getBody()) {
+    assert(!cir::MissingFeatures::coroUnwindRegion());
     regions.emplace_back(&getFinalSuspend());
     regions.emplace_back(&getExit());    // any suspend_point inside body
     regions.emplace_back(&getDestroy()); // destroy() on any suspend inside body
@@ -4016,13 +4065,9 @@ void cir::CoroutineOp::getSuccessorRegions(
     return;
   }
 
-  // destroy has two possible outcomes depending on why it was entered:
-  // ordinary destroy dispatch falls through to exit (normal return); an
-  // exception that reached destroy needs to keep propagating instead, i.e.
-  // leave the whole op rather than go through exit's cir.return.
+  // destroy falls through to exit (normal return).
   if (parent == &getDestroy()) {
     regions.emplace_back(&getExit());
-    regions.push_back(RegionSuccessor(getOperation())); // unwind out of the op
     return;
   }
   // exit always terminates the op there's no region it loops back into.
