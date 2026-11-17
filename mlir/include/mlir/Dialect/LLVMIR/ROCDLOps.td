@@ -830,17 +830,17 @@ def ROCDL_IglpOpt : ROCDL_ConcreteNonMemIntrOp<"iglp.opt", [], 0, [0], ["variant
 def ROCDL_PadWaitcntOp
   : ROCDL_ConcreteNonMemIntrOp<"pad.waitcnt", [], 0, [0, 1],
       ["counter", "count"]>,
-    Arguments<(ins
-        ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<0>]>:$counter,
-        ConfinedAttr<I32Attr, [IntPositive]>:$count)> {
-  let assemblyFormat = "$counter `,` $count attr-dict";
+    Arguments<(ins ROCDL_WaitcntCounterAttr:$counter,
+                   ConfinedAttr<I32Attr, [IntPositive]>:$count)> {
+  let assemblyFormat = "enum($counter) `,` $count attr-dict";
   let summary = "optional exact-count hint to pad the opposite branch arm";
   let description = [{
     Requests exactly `count` extra counter events on the opposite edge of a
-    supported triangle or diamond. Counter 0 selects LOAD/VM. `counter` must be
-    0 and `count` must be positive. The current backend supports `BUFFER_INV 0`
-    and accepts counts 1..62 on gfx942/gfx950. Out-of-range, unsupported,
-    ambiguous, and repeated requests are ignored.
+    supported triangle or diamond. `counter` selects the counter to pad; `load`
+    (LOAD/VM, encoded as 0) is the only supported counter. `count` must be
+    positive. The current backend supports `BUFFER_INV 0` and accepts counts
+    1..62 on gfx942/gfx950. Out-of-range, unsupported, ambiguous, and repeated
+    requests are ignored.
     The hint itself issues no event and does not authorize weaker waits.
 
     Both arguments are immediate attributes. The operation lowers to
@@ -850,7 +850,7 @@ def ROCDL_PadWaitcntOp
 
     Example:
     ```mlir
-    rocdl.pad.waitcnt 0, 1
+    rocdl.pad.waitcnt load, 1
     ```
   }];
 }

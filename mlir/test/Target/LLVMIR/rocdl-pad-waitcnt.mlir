@@ -43,7 +43,7 @@ module attributes {llvm.target_triple = "amdgpu9.50-amd-amdhsa"} {
   ^load:
     %b_ptr = llvm.getelementptr %data[%b_index] : (!llvm.ptr<1>, i64) -> !llvm.ptr<1>, i32
     %b = llvm.load %b_ptr : !llvm.ptr<1> -> i32
-    rocdl.pad.waitcnt 0, 1
+    rocdl.pad.waitcnt load, 1
     llvm.br ^join(%b : i32)
   ^join(%v: i32):
     %a_out = llvm.getelementptr %out[%wide] : (!llvm.ptr<1>, i64) -> !llvm.ptr<1>, i32
