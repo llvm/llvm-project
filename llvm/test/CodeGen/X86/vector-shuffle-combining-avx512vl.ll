@@ -169,18 +169,20 @@ define <8 x double> @PR143606(ptr %px, ptr %py) {
 define <4 x i64> @PR241253(<4 x i64> %y) {
 ; X86-LABEL: PR241253:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpsllvq {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm1
-; X86-NEXT:    vpmovsxwq {{.*#+}} ymm2 = [256,12288,63,7]
-; X86-NEXT:    vpsllvq %ymm2, %ymm1, %ymm0
-; X86-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm0 | (ymm1 & ymm2)
+; X86-NEXT:    vpsllvq {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-NEXT:    vpmovsxwq {{.*#+}} ymm1 = [256,12288,63,7]
+; X86-NEXT:    vpand %ymm1, %ymm0, %ymm2
+; X86-NEXT:    vpsllvq %ymm1, %ymm0, %ymm0
+; X86-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3,4,5],ymm0[6,7]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR241253:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpsllvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
-; X64-NEXT:    vpmovsxwq {{.*#+}} ymm2 = [256,12288,63,7]
-; X64-NEXT:    vpsllvq %ymm2, %ymm1, %ymm0
-; X64-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm0 | (ymm1 & ymm2)
+; X64-NEXT:    vpsllvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-NEXT:    vpmovsxwq {{.*#+}} ymm1 = [256,12288,63,7]
+; X64-NEXT:    vpand %ymm1, %ymm0, %ymm2
+; X64-NEXT:    vpsllvq %ymm1, %ymm0, %ymm0
+; X64-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3,4,5],ymm0[6,7]
 ; X64-NEXT:    retq
   %x = shl <4 x i64> %y, <i64 0, i64 0, i64 0, i64 8>
   %and = and <4 x i64> %x, <i64 256, i64 12288, i64 63, i64 7>
