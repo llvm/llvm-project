@@ -2364,7 +2364,6 @@ def LNLPWriteResGroup45 : SchedWriteRes<[LNLPVPort02_03, LNLPPort20_21_22]> {
 }
 def : InstRW<[LNLPWriteResGroup45], (instregex "^VPSHUF(D|HW|LW)Ymi$")>;
 def : InstRW<[LNLPWriteResGroup45, ReadAfterVecYLd], (instrs VPALIGNRYrmi)>;
-def LNLPWriteResGroup46 : SchedWriteRes<[LNLPVPort02_03]>;
 def LNLPWriteResGroup47 : SchedWriteRes<[LNLPVPort02_03, LNLPPort20_21_22]> {
   let ReleaseAtCycles = [1, 7];
   let Latency = 8;
