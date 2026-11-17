@@ -151,7 +151,8 @@ public:
     ImmTyExpVM,
     ImmTyDone,
     ImmTyRowEn,
-    ImmTyFORMAT,
+    ImmTyFormat,
+    ImmTyFormatOp,
     ImmTyHwreg,
     ImmTyOff,
     ImmTySendMsg,
@@ -387,7 +388,10 @@ public:
   bool isMatrixAScaleFmt() const { return isImmTy(ImmTyMatrixAScaleFmt); }
   bool isMatrixBScaleFmt() const { return isImmTy(ImmTyMatrixBScaleFmt); }
   bool isTFE() const { return isImmTy(ImmTyTFE); }
-  bool isFORMAT() const { return isImmTy(ImmTyFORMAT) && isUInt<7>(getImm()); }
+  bool isFormat() const { return isImmTy(ImmTyFormat) && isUInt<7>(getImm()); }
+  bool isFormatOp() const {
+    return isImmTy(ImmTyFormatOp) && isUInt<7>(getImm());
+  }
   bool isDppFI() const { return isImmTy(ImmTyDppFI); }
   bool isSDWADstSel() const { return isImmTy(ImmTySDWADstSel); }
   bool isSDWASrc0Sel() const { return isImmTy(ImmTySDWASrc0Sel); }
@@ -889,7 +893,8 @@ public:
     case ImmTyTFE: OS << "TFE"; break;
     case ImmTyIsAsync: OS << "IsAsync"; break;
     case ImmTyD16: OS << "D16"; break;
-    case ImmTyFORMAT: OS << "FORMAT"; break;
+    case ImmTyFormat: OS << "Format"; break;
+    case ImmTyFormatOp: OS << "FormatOp"; break;
     case ImmTyClamp: OS << "Clamp"; break;
     case ImmTyOModSI: OS << "OModSI"; break;
     case ImmTyDPP8: OS << "DPP8"; break;
@@ -1529,7 +1534,8 @@ public:
                                        int64_t &Format);
   ParseStatus parseSymbolicUnifiedFormat(StringRef FormatStr, SMLoc Loc,
                                          int64_t &Format);
-  ParseStatus parseFORMAT(OperandVector &Operands);
+  ParseStatus parseFormat(OperandVector &Operands);
+  ParseStatus parseFormatOp(OperandVector &Operands);
   ParseStatus parseSymbolicOrNumericFormat(int64_t &Format);
   ParseStatus parseNumericFormat(int64_t &Format);
   ParseStatus parseFlatOffset(OperandVector &Operands);
@@ -8013,54 +8019,27 @@ ParseStatus AMDGPUAsmParser::parseSymbolicOrNumericFormat(int64_t &Format) {
   return parseNumericFormat(Format);
 }
 
-ParseStatus AMDGPUAsmParser::parseFORMAT(OperandVector &Operands) {
-  using namespace llvm::AMDGPU::MTBUFFormat;
-
-  int64_t Format = getDefaultFormatEncoding(getSTI());
-  ParseStatus Res;
+ParseStatus AMDGPUAsmParser::parseFormat(OperandVector &Operands) {
   SMLoc Loc = getLoc();
-
-  // Parse legacy format syntax.
-  Res = isGFX10Plus() ? parseUfmt(Format) : parseDfmtNfmt(Format);
-  if (Res.isFailure())
-    return Res;
-
-  bool FormatFound = Res.isSuccess();
-
-  Operands.push_back(
-      AMDGPUOperand::CreateImm(this, Format, Loc, AMDGPUOperand::ImmTyFORMAT));
-
-  if (FormatFound)
-    trySkipToken(AsmToken::Comma);
-
-  if (isToken(AsmToken::EndOfStatement)) {
-    // We are expecting an soffset operand,
-    // but let matcher handle the error.
-    return ParseStatus::Success;
-  }
-
-  // Parse soffset.
-  Res = parseRegOrImm(Operands);
+  int64_t Format;
+  ParseStatus Res = parseSymbolicOrNumericFormat(Format);
   if (!Res.isSuccess())
     return Res;
 
-  trySkipToken(AsmToken::Comma);
+  Operands.push_back(
+      AMDGPUOperand::CreateImm(this, Format, Loc, AMDGPUOperand::ImmTyFormat));
+  return ParseStatus::Success;
+}
 
-  if (!FormatFound) {
-    Res = parseSymbolicOrNumericFormat(Format);
-    if (Res.isFailure())
-      return Res;
-    if (Res.isSuccess()) {
-      auto Size = Operands.size();
-      AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands[Size - 2]);
-      assert(Op.isImm() && Op.getImmTy() == AMDGPUOperand::ImmTyFORMAT);
-      Op.setImm(Format);
-    }
-    return ParseStatus::Success;
-  }
+ParseStatus AMDGPUAsmParser::parseFormatOp(OperandVector &Operands) {
+  SMLoc Loc = getLoc();
+  int64_t Format;
+  ParseStatus Res = isGFX10Plus() ? parseUfmt(Format) : parseDfmtNfmt(Format);
+  if (!Res.isSuccess())
+    return Res;
 
-  if (isId("format") && peekToken().is(AsmToken::Colon))
-    return Error(getLoc(), "duplicate format");
+  Operands.push_back(AMDGPUOperand::CreateImm(this, Format, Loc,
+                                              AMDGPUOperand::ImmTyFormatOp));
   return ParseStatus::Success;
 }
 
