@@ -2301,7 +2301,7 @@ define half @basic_fract_f16_nonan(half nofpclass(nan) %x) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v0.h, v0.l
 ; GFX11-TRUE16-NEXT:    v_cmp_lg_f16_e64 s0, |v0.l|, 0x7c00
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x3bff, v0.h, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2324,7 +2324,7 @@ define half @basic_fract_f16_nonan(half nofpclass(nan) %x) {
 ; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v0.h, v0.l
 ; GFX12-TRUE16-NEXT:    v_cmp_lg_f16_e64 s0, |v0.l|, 0x7c00
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x3bff, v0.h, s0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2702,7 +2702,7 @@ define half @safe_math_fract_f16_noinf_check(half %x, ptr addrspace(1) writeonly
 ; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v0.h, v0.l
 ; GFX11-TRUE16-NEXT:    v_cmp_neq_f16_e64 s0, |v0.l|, 0x7c00
 ; GFX11-TRUE16-NEXT:    v_floor_f16_e32 v3.l, v0.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x3bff, v0.h, s0
 ; GFX11-TRUE16-NEXT:    global_store_b16 v[1:2], v3, off
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -2729,7 +2729,7 @@ define half @safe_math_fract_f16_noinf_check(half %x, ptr addrspace(1) writeonly
 ; GFX12-TRUE16-NEXT:    v_cmp_neq_f16_e64 s0, |v0.l|, 0x7c00
 ; GFX12-TRUE16-NEXT:    v_floor_f16_e32 v3.l, v0.l
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x3bff, v0.h, s0
 ; GFX12-TRUE16-NEXT:    global_store_b16 v[1:2], v3, off
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
