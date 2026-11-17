@@ -1107,7 +1107,13 @@ void OmpStructureChecker::CheckCompoundDirective(
         {Directive::OMPD_parallel, Directive::OMPD_workshare},
     };
     if (auto *clause{findClause(llvm::omp::Clause::OMPC_nowait)}) {
-      if (llvm::any_of(wait, [&](const llvm::SmallVector<Directive> &v) {
+      // NOWAIT on a combined TARGET applies to TARGET, not to an inner
+      // construct. Before 5.2 it must be on the begin directive.
+      bool appliesToTarget{llvm::is_contained(leafs, Directive::OMPD_target) &&
+          (version >= 52 ||
+              parser::omp::FindClause(*beginSpec, Clause::OMPC_nowait))};
+      if (!appliesToTarget &&
+          llvm::any_of(wait, [&](const llvm::SmallVector<Directive> &v) {
             return ContainsLeafs(dirName.v, v);
           })) {
         context_
