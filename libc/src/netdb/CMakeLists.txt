@@ -38,7 +38,7 @@ add_entrypoint_object(
 )
 
 if(NOT TARGET libc.src.__support.File.file OR
-   NOT TARGET libc.src.__support.File.platform_file)
+    NOT TARGET libc.src.__support.File.platform_file)
   return()
 endif()
 
