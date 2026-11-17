@@ -1321,7 +1321,6 @@ public:
     QualType rhsTy = e->getRHS()->getType();
 
     cir::CmpOpKind kind = clangCmpToCIRCmp(e->getOpcode());
-    std::pair<bool, cir::FCmpOpKind> fpInfo = clangCmpToCIRFCmp(e->getOpcode());
     if (lhsTy->getAs<MemberPointerType>()) {
       assert(!cir::MissingFeatures::dataMemberType());
       assert(e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE);
@@ -1344,6 +1343,8 @@ public:
           auto resultTy =
               mlir::cast<cir::VectorType>(cgf.convertType(boInfo.fullType));
           if (cir::isFPOrVectorOfFPType(lhs.getType())) {
+            std::pair<bool, cir::FCmpOpKind> fpInfo =
+                clangCmpToCIRFCmp(e->getOpcode());
             CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
             result = builder.createVecFCompare(cgf.getLoc(boInfo.loc), resultTy,
                                                fpInfo.second, lhs, rhs,
