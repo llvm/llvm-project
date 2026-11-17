@@ -153,7 +153,7 @@ module {
 
   // A true loop condition with a break still leaves the loop, so the code after
   // it is folded. Dead code analysis tracks liveness per block, so this does
-  // not depend on the exit edge alone; the unit tests check the successors.
+  // not depend on the exit edge alone.
   cir.func @while_true_break(%c: !cir.bool) {
     %one = cir.const #cir.int<1> : !s32i
     cir.while {
