@@ -267,5 +267,5 @@
 
 ; CHECK: declare <8 x float> @amd_vrs8_tanhf(<8 x float>) [[ATTRS]]
 
-; CHECK: attributes [[ATTRS]] = { nocallback nofree nosync nounwind willreturn }
-; CHECK: attributes [[ATTRS_PTR_ARG]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; CHECK-DAG: attributes [[ATTRS]] = { nocallback nofree nosync nounwind willreturn }
+; CHECK-DAG: attributes [[ATTRS_PTR_ARG]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }

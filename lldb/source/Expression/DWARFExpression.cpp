@@ -1511,7 +1511,9 @@ static llvm::Error Evaluate_DW_OP_call_frame_cfa(EvalContext &eval_ctx) {
   // is commonly evaluated with a valid stack frame.
   StackID id = eval_ctx.frame->GetStackID();
   addr_t cfa = id.GetCallFrameAddressWithMetadata();
-  if (cfa == LLDB_INVALID_ADDRESS)
+  // Fail for tail call frames too: they borrow the CFA of the frame that
+  // reused their stack, so locations computed from it point into that frame.
+  if (cfa == LLDB_INVALID_ADDRESS || id.GetTailCallDepth())
     return llvm::createStringError("stack frame does not include a canonical "
                                    "frame address for DW_OP_call_frame_cfa "
                                    "opcode");

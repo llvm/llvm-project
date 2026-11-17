@@ -2233,32 +2233,32 @@ void llvm::updateProfileCallee(
 }
 
 /// An operand bundle "clang.arc.attachedcall" on a call indicates the call
-/// result is implicitly consumed by a call to retainRV or claimRV immediately
-/// after the call. This function inlines the retainRV/claimRV calls.
+/// result is implicitly consumed by a call to retainRV/claimRV/unsafeClaimRV
+/// immediately after the call. This function inlines those consuming calls.
 ///
 /// There are three cases to consider:
 ///
 /// 1. If there is a call to autoreleaseRV that takes a pointer to the returned
 ///    object in the callee return block, the autoreleaseRV call and the
-///    retainRV/claimRV call in the caller cancel out. If the call in the caller
-///    is a claimRV call, a call to objc_release is emitted.
+///    retainRV/claimRV/unsafeClaimRV call in the caller cancel out. If the call
+///    in the caller is an unsafeClaimRV call, a call to objc_release is
+///    emitted.
 ///
 /// 2. If there is a call in the callee return block that doesn't have operand
 ///    bundle "clang.arc.attachedcall", the operand bundle on the original call
 ///    is transferred to the call in the callee.
 ///
 /// 3. Otherwise, a call to objc_retain is inserted if the call in the caller is
-///    a retainRV call.
+///    not an unsafeClaimRV call.
 static void
 inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
                            const SmallVectorImpl<ReturnInst *> &Returns) {
   assert(objcarc::isRetainOrClaimRV(RVCallKind) && "unexpected ARC function");
-  bool IsRetainRV = RVCallKind == objcarc::ARCInstKind::RetainRV,
-       IsUnsafeClaimRV = !IsRetainRV;
+  bool IsUnsafeClaimRV = RVCallKind == objcarc::ARCInstKind::UnsafeClaimRV;
 
   for (auto *RI : Returns) {
     Value *RetOpnd = objcarc::GetRCIdentityRoot(RI->getOperand(0));
-    bool InsertRetainCall = IsRetainRV;
+    bool InsertRetainCall = !IsUnsafeClaimRV;
     IRBuilder<> Builder(*RI->getModule());
 
     // Walk backwards through the basic block looking for either a matching
@@ -2277,10 +2277,10 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
           break;
 
         // If we've found a matching authoreleaseRV call:
-        // - If claimRV is attached to the call, insert a call to objc_release
-        //   and erase the autoreleaseRV call.
-        // - If retainRV is attached to the call, just erase the autoreleaseRV
-        //   call.
+        // - If unsafeClaimRV is attached to the call, insert a call to
+        //   objc_release and erase the autoreleaseRV call.
+        // - If retainRV/claimRV is attached to the call, just erase the
+        //   autoreleaseRV call.
         if (IsUnsafeClaimRV) {
           Builder.SetInsertPoint(II);
           Builder.CreateIntrinsic(Intrinsic::objc_release, RetOpnd);

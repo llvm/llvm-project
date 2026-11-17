@@ -33,6 +33,8 @@ using Shape = std::vector<MaybeExtentExpr>;
 
 inline constexpr int ExtentIntKind = Fortran::evaluate::SubscriptIntegerKind;
 
+bool IsSubscriptIntegerKind(const Shape &);
+
 inline Constant<ExtentType> MakeExtentConstant(int64_t v) {
   return Constant<ExtentType>{
       ExtentIntKind, Scalar<ExtentType>{ExtentIntKind, v}};
@@ -177,8 +179,6 @@ bool ContainsAnyImpliedDoIndex(const ExtentExpr &);
 template <typename T> bool ContainsUntaggedRankOneBoundElement(const Expr<T> &);
 extern template bool ContainsUntaggedRankOneBoundElement(
     const Expr<SomeType> &);
-extern template bool ContainsUntaggedRankOneBoundElement(
-    const Expr<SomeInteger> &);
 extern template bool ContainsUntaggedRankOneBoundElement(
     const Expr<SubscriptInteger> &);
 
