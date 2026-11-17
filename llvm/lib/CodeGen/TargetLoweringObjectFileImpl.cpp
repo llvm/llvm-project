@@ -98,13 +98,14 @@ static void GetObjCImageInfo(const Module &M, unsigned &Version,
                Key == "Objective-C GC Only" ||
                Key == "Objective-C Is Simulated" ||
                Key == "Objective-C Class Properties" ||
+               Key == "Objective-C Enforce ClassRO Pointer Signing" ||
                Key == "Objective-C Image Swift Version") {
       Flags |= mdconst::extract<ConstantInt>(MFE.Val)->getZExtValue();
     } else if (Key == "Objective-C Image Info Section") {
       Section = cast<MDString>(MFE.Val)->getString();
     }
-    // Backend generates L_OBJC_IMAGE_INFO from Swift ABI version + major + minor +
-    // "Objective-C Garbage Collection".
+    // Backend generates L_OBJC_IMAGE_INFO from Swift ABI version + major +
+    // minor + "Objective-C Garbage Collection".
     else if (Key == "Swift ABI Version") {
       Flags |= (mdconst::extract<ConstantInt>(MFE.Val)->getZExtValue()) << 8;
     } else if (Key == "Swift Major Version") {
@@ -2316,7 +2317,7 @@ static unsigned getWasmSectionFlags(SectionKind K, bool Retain) {
   if (Retain)
     Flags |= wasm::WASM_SEG_FLAG_RETAIN;
 
-  // TODO(sbc): Add suport for K.isMergeableConst()
+  // TODO(sbc): Add support for K.isMergeableConst()
 
   return Flags;
 }

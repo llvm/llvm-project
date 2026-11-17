@@ -20,7 +20,7 @@ define float @test1(float %x, float %y) nounwind {
 ; HARD-NEXT:    bx lr
 entry:
 
-  %0 = tail call float @copysignf(float %x, float %y) nounwind readnone
+  %0 = tail call float @llvm.copysign.f32(float %x, float %y)
   ret float %0
 }
 
@@ -39,7 +39,7 @@ define double @test2(double %x, double %y) nounwind {
 ; HARD-NEXT:    bx lr
 entry:
 
-  %0 = tail call double @copysign(double %x, double %y) nounwind readnone
+  %0 = tail call double @llvm.copysign.f64(double %x, double %y)
   ret double %0
 }
 
@@ -66,7 +66,7 @@ define double @test3(double %x, double %y, double %z) nounwind {
 ; HARD-NEXT:    bx lr
 entry:
   %0 = fmul double %x, %y
-  %1 = tail call double @copysign(double %0, double %z) nounwind readnone
+  %1 = tail call double @llvm.copysign.f64(double %0, double %z)
   ret double %1
 }
 
@@ -104,11 +104,9 @@ define float @test4() nounwind {
 entry:
   %0 = tail call double (...) @bar() nounwind
   %1 = fptrunc double %0 to float
-  %2 = tail call float @copysignf(float 5.000000e-01, float %1) nounwind readnone
+  %2 = tail call float @llvm.copysign.f32(float 5.000000e-01, float %1)
   %3 = fadd float %1, %2
   ret float %3
 }
 
 declare double @bar(...)
-declare double @copysign(double, double) nounwind
-declare float @copysignf(float, float) nounwind

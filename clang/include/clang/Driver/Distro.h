@@ -75,6 +75,7 @@ public:
     UbuntuQuesting,
     UbuntuResolute,
     UbuntuStonking,
+    UbuntuTenacious,
     UnknownDistro
   };
 
@@ -126,7 +127,7 @@ public:
   }
 
   bool IsUbuntu() const {
-    return DistroVal >= UbuntuQuantal && DistroVal <= UbuntuStonking;
+    return DistroVal >= UbuntuQuantal && DistroVal <= UbuntuTenacious;
   }
 
   bool IsAlpineLinux() const { return DistroVal == AlpineLinux; }

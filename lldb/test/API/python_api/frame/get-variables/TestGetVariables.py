@@ -43,16 +43,13 @@ class TestGetVariables(TestBase):
         # Set debugger into synchronous mode
         self.dbg.SetAsync(False)
 
-        # Create a target by the debugger.
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
         line1 = line_number(self.source, "// breakpoint 1")
         line2 = line_number(self.source, "// breakpoint 2")
         line3 = line_number(self.source, "// breakpoint 3")
 
-        breakpoint1 = target.BreakpointCreateByLocation(self.source, line1)
+        target, process, thread, breakpoint1 = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec(self.source, False), line1
+        )
         breakpoint2 = target.BreakpointCreateByLocation(self.source, line2)
         breakpoint3 = target.BreakpointCreateByLocation(self.source, line3)
 
@@ -60,24 +57,6 @@ class TestGetVariables(TestBase):
         self.assertGreaterEqual(breakpoint2.GetNumLocations(), 1, PROCESS_IS_VALID)
         self.assertGreaterEqual(breakpoint3.GetNumLocations(), 1, PROCESS_IS_VALID)
 
-        # Register our shared libraries for remote targets so they get
-        # automatically uploaded
-        arguments = None
-        environment = None
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(
-            arguments, environment, self.get_process_working_directory()
-        )
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint1)
-        self.assertEqual(
-            len(threads), 1, "There should be a thread stopped at breakpoint 1"
-        )
-
-        thread = threads[0]
-        self.assertTrue(thread.IsValid(), "Thread must be valid")
         frame = thread.GetFrameAtIndex(0)
         self.assertTrue(frame.IsValid(), "Frame must be valid")
 

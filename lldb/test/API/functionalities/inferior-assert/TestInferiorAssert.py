@@ -118,11 +118,6 @@ class AssertingInferiorTestCase(TestBase):
         self.build()
         self.inferior_asserting_step()
 
-    def set_breakpoint(self, line):
-        lldbutil.run_break_set_by_file_and_line(
-            self, "main.c", line, num_expected_locations=1, loc_exact=True
-        )
-
     def check_stop_reason(self):
         matched = lldbplatformutil.match_android_device(
             self.getArchitecture(), valid_api_levels=list(range(1, 16 + 1))
@@ -310,15 +305,10 @@ class AssertingInferiorTestCase(TestBase):
 
     def inferior_asserting_step(self):
         """Test that lldb functions correctly after stepping through a call to assert()."""
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Launch the process, and do not stop at the entry point.
-        self.set_breakpoint(self.line)
-        target.LaunchSimple(None, None, self.get_process_working_directory())
+        target, _, _, bkpt = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.c"), self.line
+        )
+        self.assertEqual(bkpt.GetNumLocations(), 1)
 
         self.expect(
             "thread list",

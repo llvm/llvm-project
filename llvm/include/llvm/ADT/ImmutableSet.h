@@ -84,9 +84,6 @@ public:
 
   friend class ImutAVLFactory<ImutInfo, Canonicalize>;
 
-private:
-  using CanonLinks = ImutAVLDetail::CanonicalLinks<ImutAVLTree, Canonicalize>;
-
 public:
   //===----------------------------------------------------===//
   // Public Interface.
