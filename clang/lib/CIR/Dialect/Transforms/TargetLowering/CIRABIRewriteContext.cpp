@@ -1112,6 +1112,12 @@ static void eraseDeadRecordLoads(ArrayRef<cir::LoadOp> loads) {
       load->erase();
 }
 
+/// The old call, their only user, must already be erased.
+static void eraseDeadFreezes(ArrayRef<cir::FreezeOp> freezes) {
+  for (cir::FreezeOp freeze : freezes)
+    freeze->erase();
+}
+
 /// The store that spills indirect parameter \p blockArg, if the parameter's
 /// only use is that store.  Null otherwise.
 static cir::StoreOp maybeFindParamSpill(mlir::BlockArgument blockArg) {
@@ -2167,6 +2173,8 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   // Indirect argument passes or copies from the address the load read from.
   // The old call still uses them, so erase them only after it is gone.
   SmallVector<cir::LoadOp> deadRecordLoads;
+  // Erased before deadRecordLoads, since a freeze keeps its load alive.
+  SmallVector<cir::FreezeOp> deadFreezes;
 
   // Capture original arg types before building newArgs (an Indirect argument
   // changes the wire argument from T to !cir.ptr<T>, so we save the
@@ -2187,12 +2195,33 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   // Recorded before the Ignore skip below, so an ignored first ellipsis
   // argument still marks where the ellipsis arguments begin in newArgs.
   std::optional<unsigned> ellipsisStart;
+  // Where each argument starts in newArgs, and the freezes to reapply there
+  // once every argument is rewritten.
+  SmallVector<unsigned> argBegin;
+  SmallVector<std::pair<unsigned, cir::FreezeOp>> refreezes;
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
     if (idx == numDeclared)
       ellipsisStart = newArgs.size();
-    if (ac.kind == ArgKind::Ignore)
-      continue;
+    argBegin.push_back(newArgs.size());
     mlir::Value arg = argOperands[idx];
+    auto freeze = arg.getDefiningOp<cir::FreezeOp>();
+    if (freeze && !freeze->hasOneUse())
+      freeze = {};
+    if (ac.kind == ArgKind::Ignore) {
+      if (freeze)
+        deadFreezes.push_back(freeze);
+      continue;
+    }
+
+    // Refreeze after the ABI rewrite, as classic CodeGen does, so padding is
+    // frozen too. Indirect freezes only the pointer, so keep non-load freezes.
+    if (freeze && ((ac.kind != ArgKind::Indirect &&
+                    ac.kind != ArgKind::IndirectAliased) ||
+                   freeze.getInput().getDefiningOp<cir::LoadOp>())) {
+      arg = freeze.getInput();
+      deadFreezes.push_back(freeze);
+      refreezes.push_back({idx, freeze});
+    }
     if (cir::RecordType flatTy = getFlattenedCoercedType(ac, dl)) {
       // Direct + canFlatten: pass one scalar call argument per field of the
       // ABI-coerced struct.  A non-atomic record load is read in place or
@@ -2362,6 +2391,11 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
       newArgs.push_back(arg);
     }
   }
+  argBegin.push_back(newArgs.size());
+  builder.setInsertionPoint(call);
+  for (auto [idx, freeze] : refreezes)
+    for (unsigned i = argBegin[idx]; i != argBegin[idx + 1]; ++i)
+      newArgs[i] = cir::FreezeOp::create(builder, freeze.getLoc(), newArgs[i]);
   unsigned numEllipsisArgs =
       ellipsisStart ? newArgs.size() - *ellipsisStart : 0;
 
@@ -2378,6 +2412,7 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
                                          origRetTy, origCallArgTypes, builder,
                                          dl, enableNoundefAttrs)))
       return mlir::failure();
+    eraseDeadFreezes(deadFreezes);
     eraseDeadRecordLoads(deadRecordLoads);
     return mlir::success();
   }
@@ -2446,6 +2481,7 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   }
 
   call->erase();
+  eraseDeadFreezes(deadFreezes);
   eraseDeadRecordLoads(deadRecordLoads);
 
   return mlir::success();
