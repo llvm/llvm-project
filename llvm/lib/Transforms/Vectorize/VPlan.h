@@ -982,6 +982,12 @@ public:
 
   LLVM_ABI_FOR_TEST FastMathFlags getFastMathFlagsOrNone() const;
 
+  /// Set the fast-math flags to \p FMFs.
+  void setFastMathFlags(FastMathFlags FMFs) {
+    assert(hasFastMathFlags() && "recipe doesn't have fast-math flags");
+    getFMFsRef() = FMFs;
+  }
+
   bool hasNoUnsignedWrap() const {
     switch (OpType) {
     case OperationType::OverflowingBinOp:
