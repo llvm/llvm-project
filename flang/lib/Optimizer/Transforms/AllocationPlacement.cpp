@@ -116,6 +116,12 @@ static fir::AllocationPlacement
 decideLegacyPlacement(const fir::AllocationInfo &info, bool stackArrays,
                       bool dynamicArrayOnHeap) {
   using P = fir::AllocationPlacement;
+  // Character expression buffers retain their historical stack storage, unless
+  // -fdynamic-heap-array asks for runtime-sized allocations to be on the heap,
+  // which the memory-allocation-opt pass applied to them.
+  if (fir::isCharacterTemporary(info))
+    return !stackArrays && dynamicArrayOnHeap && info.isDynamic ? P::Leave
+                                                                : P::Stack;
   if (stackArrays)
     return info.isCurrentlyOnStack || fir::isInOffloadRegion(info.context)
                ? P::Leave
@@ -208,10 +214,13 @@ void AllocationPlacementPass::runOnOperation() {
         return;
     }
 
-    // Arrays are placed in both directions. Constant-length scalar characters
-    // are only moved from the heap to the stack; scalar allocas are left alone,
-    // except that, like the memory-allocation-opt pass, legacy mode may move
-    // any allocation with a runtime size to the heap.
+    // Arrays are placed in both directions. Scalar characters are only moved
+    // from the heap to the stack, when the shared analysis can prove that their
+    // stack storage is safely reclaimed. Character expression buffers retain
+    // their historical preference for stack storage independently of the array
+    // size policy (see fir::isCharacterTemporary). Scalar allocas are left
+    // alone, except that, like the memory-allocation-opt pass, legacy mode may
+    // move any allocation with a runtime size to the heap.
     mlir::Type inTy = alloca ? alloca.getInType() : allocmem.getAllocatedType();
     if (!mlir::isa<fir::SequenceType>(inTy) &&
         !(allocmem && fir::isStackArraysCandidateType(inTy)) &&

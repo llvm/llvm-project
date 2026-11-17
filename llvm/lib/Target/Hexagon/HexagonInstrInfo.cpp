@@ -301,7 +301,8 @@ Register HexagonInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
     case Hexagon::PS_vloadrq_ai:
     case Hexagon::PS_vloadrw_ai:
     case Hexagon::PS_vloadrw_nt_ai:
-    case Hexagon::PS_loadrl: {
+    case Hexagon::PS_loadrl:
+    case Hexagon::PS_loadrll: {
       const MachineOperand OpFI = MI.getOperand(1);
       if (!OpFI.isFI())
         return 0;
@@ -350,7 +351,8 @@ Register HexagonInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
     case Hexagon::STriw_ctr:
     case Hexagon::PS_vstorerq_ai:
     case Hexagon::PS_vstorerw_ai:
-    case Hexagon::PS_storerl: {
+    case Hexagon::PS_storerl:
+    case Hexagon::PS_storerll: {
       const MachineOperand &OpFI = MI.getOperand(0);
       if (!OpFI.isFI())
         return 0;
@@ -1033,6 +1035,12 @@ void HexagonInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
         .addImm(0)
         .addReg(SrcReg, KillFlag)
         .addMemOperand(MMO);
+  } else if (Hexagon::HlxLLRRegClass.hasSubClassEq(RC)) {
+    BuildMI(MBB, I, DL, get(Hexagon::PS_storerll))
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addReg(SrcReg, KillFlag)
+        .addMemOperand(MMO);
   } else {
     llvm_unreachable("Unimplemented");
   }
@@ -1086,6 +1094,11 @@ void HexagonInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       .addFrameIndex(FI).addImm(0).addMemOperand(MMO);
   } else if (Hexagon::HlxLRRegClass.hasSubClassEq(RC)) {
     BuildMI(MBB, I, DL, get(Hexagon::PS_loadrl), DestReg)
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addMemOperand(MMO);
+  } else if (Hexagon::HlxLLRRegClass.hasSubClassEq(RC)) {
+    BuildMI(MBB, I, DL, get(Hexagon::PS_loadrll), DestReg)
         .addFrameIndex(FI)
         .addImm(0)
         .addMemOperand(MMO);

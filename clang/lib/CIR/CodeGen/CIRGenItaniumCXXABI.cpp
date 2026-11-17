@@ -268,10 +268,9 @@ void CIRGenItaniumCXXABI::emitInstanceFunctionProlog(SourceLocation loc,
   /// 1) getThisValue is currently protected
   /// 2) in theory, an ABI could implement 'this' returns some other way;
   ///    HasThisReturn only specifies a contract, not the implementation
-  if (hasThisReturn(cgf.curGD)) {
-    cgf.cgm.errorNYI(cgf.curFuncDecl->getLocation(),
-                     "emitInstanceFunctionProlog: hasThisReturn");
-  }
+  if (hasThisReturn(cgf.curGD))
+    cgf.getBuilder().createStore(cgf.getLoc(loc), cgf.cxxabiThisValue,
+                                 cgf.returnValue);
 }
 
 CIRGenCXXABI::AddedStructorArgCounts
@@ -525,6 +524,9 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
   vtable.setLinkage(linkage);
   mlir::SymbolTable::setSymbolVisibility(
       vtable, CIRGenModule::getMLIRVisibility(vtable));
+
+  if (cgm.mayVTableBeDuplicated(linkage))
+    vtable.setUnnamedAddr(true);
 
   if (cgm.supportsCOMDAT() && cir::isWeakForLinker(linkage))
     vtable.setSelfComdat();
@@ -1622,8 +1624,8 @@ cir::GlobalOp CIRGenItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *rd,
       cgm.getLoc(rd->getSourceRange()), name, vtableType,
       cir::GlobalLinkageKind::ExternalLinkage,
       cgm.getASTContext().toCharUnitsFromBits(ptrAlign));
-  // LLVM codegen handles unnamedAddr
-  assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+  if (!cgm.shouldEmitRTTI())
+    vtable.setUnnamedAddr(true);
 
   // In MS C++ if you have a class with virtual functions in which you are using
   // selective member import/export, then all virtual functions must be exported

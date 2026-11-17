@@ -10,6 +10,60 @@ include "llvm/Option/LibraryOptions.td"
 
 def IPOOptions : OptionsStruct;
 
+// Attributor.cpp
+defm : BoolField<"attributor-allow-deep-wrappers", "false",
+  "Allow the Attributor to use IP information derived from non-exact functions via cloning">;
+defm : BoolField<"attributor-allow-shallow-wrappers", "false",
+  "Allow the Attributor to create shallow wrappers for non-exact definitions">;
+defm : BoolField<"attributor-annotate-decl-cs", "false",
+  "Annotate call sites of function declarations">;
+defm : OptionalBoolField<"attributor-assume-closed-world",
+  "Should a closed world be assumed, or not. Default if not set">;
+defm : ValueField<"attributor-depgraph-dot-filename-prefix", "StringRef", "",
+  "The prefix used for the CallGraph dot file names">;
+defm : BoolField<"attributor-dump-dep-graph", "false",
+  "Dump the dependency graph to dot files">;
+defm : BoolField<"attributor-enable-call-site-specific-deduction", "false",
+  "Allow the Attributor to do call site specific analysis">;
+let Condition = AssertsOnly in
+defm : ListField<"attributor-function-seed-allow-list", "StringRef",
+  "Comma separated list of function names that are allowed to be seeded">;
+defm : ValueField<"attributor-max-initialization-chain-length", "unsigned", "1024",
+  "Maximal number of chained initializations (to avoid stack overflows)">;
+// TODO: Determine a good default value.
+//
+// In the LLVM-TS and SPEC2006, 32 seems to not induce compile time overheads
+// (when run with the first 5 abstract attributes). The results also indicate
+// that we never reach 32 iterations but always find a fixpoint sooner.
+//
+// This will become more evolved once we perform two interleaved fixpoint
+// iterations: bottom-up and top-down.
+defm : ValueField<"attributor-max-iterations", "unsigned", "32",
+  "Maximal number of fixpoint iterations">;
+defm : OptionalValueField<"attributor-max-specializations-per-call-base", "unsigned",
+  "Maximal number of callees specialized for a call base">;
+defm : BoolField<"attributor-print-call-graph", "false",
+  "Print Attributor's internal call graph">;
+defm : BoolField<"attributor-print-dep", "false",
+  "Print attribute dependencies">;
+let Condition = AssertsOnly in
+defm : ListField<"attributor-seed-allow-list", "StringRef",
+  "Comma separated list of attribute names that are allowed to be seeded">;
+defm : BoolField<"attributor-simplify-all-loads", "true",
+  "Try to simplify all loads">;
+defm : BoolField<"attributor-view-dep-graph", "false",
+  "View the dependency graph">;
+defm : BoolField<"enable-heap-to-stack-conversion", "true", "">;
+
+// AttributorAttributes.cpp
+defm : BoolField<"attributor-manifest-internal", "false",
+  "Manifest Attributor internal string attributes">;
+defm : ValueField<"attributor-max-potential-values", "unsigned", "7",
+  "Maximum number of potential values to be tracked for each position">;
+defm : ValueField<"attributor-max-potential-values-iterations", "int", "64",
+  "Maximum number of iterations we keep dismantling potential values">;
+defm : ValueField<"max-heap-to-stack-size", "int", "128", "">;
+
 // BlockExtractor.cpp
 defm : BoolField<"extract-blocks-erase-funcs", "false",
   "Erase the existing functions">;
@@ -114,6 +168,19 @@ defm : ValueField<"max-ifunc-versions", "unsigned", "5",
 defm : BoolField<"optimize-non-fmv-callers", "true",
   "Statically resolve calls to versioned functions from non-versioned callers">;
 
+// HotColdSplitting.cpp
+defm : BoolField<"enable-cold-section", "false",
+  "Enable placement of extracted cold functions into a separate section after hot-cold splitting">;
+defm : BoolField<"hot-cold-static-analysis", "true", "">;
+defm : OptionalValueField<"hotcoldsplit-cold-probability-denom", "int",
+  "Divisor of cold branch probability.BranchProbability = 1/ColdBranchProbDenom">;
+defm : ValueField<"hotcoldsplit-cold-section-name", "StringRef", "\"__llvm_cold\"",
+  "Name for the section containing cold functions extracted by hot-cold splitting">;
+defm : ValueField<"hotcoldsplit-max-params", "int", "4",
+  "Maximum number of parameters for a split function">;
+defm : ValueField<"hotcoldsplit-threshold", "int", "2",
+  "Base penalty for splitting cold code (as a multiple of TCC_Basic)">;
+
 // Inliner.cpp
 defm : ValueField<"cgscc-inline-replay", "StringRef", "",
   "Optimization remarks file containing inline remarks to be replayed by cgscc inlining">;
@@ -187,6 +254,51 @@ defm : ValueField<"mergefunc-verify", "unsigned", "0",
 // ModuleInliner.cpp
 defm : BoolField<"ctx-prof-promote-alwaysinline", "false",
   "If using a contextual profile in this module, and an indirect call target is marked as alwaysinline, perform indirect call promotion for that target. If multiple targets for an indirect call site fit this description, they are all promoted">;
+
+// OpenMPOpt.cpp
+defm : BoolField<"openmp-deduce-icv-values", "false", "">;
+defm : BoolField<"openmp-hide-memory-transfer-latency", "false",
+  "[WIP] Tries to hide the latency of host to device memory transfers">;
+defm : BoolField<"openmp-opt", "true",
+  "Enable OpenMP specific optimizations">;
+defm : BoolField<"openmp-opt-barrier-elimination", "true",
+  "Enable OpenMP optimizations that eliminate barriers">;
+defm : BoolField<"openmp-opt-deglobalization", "true",
+  "Enable OpenMP optimizations involving deglobalization">;
+defm : BoolField<"openmp-opt-enable-merging", "false",
+  "Enable the OpenMP region merging optimization">;
+defm : BoolField<"openmp-opt-folding", "true",
+  "Enable OpenMP optimizations involving folding">;
+defm : BoolField<"openmp-opt-inline-device", "false",
+  "Inline all applicable functions on the device">;
+defm : BoolField<"openmp-opt-internalization", "true",
+  "Enable function internalization">;
+defm : ValueField<"openmp-opt-max-callees-for-specialization", "unsigned", "3",
+  "Number of possible callees above which an indirect call site is left alone rather than specialized into an if-cascade">;
+defm : ValueField<"openmp-opt-max-iterations", "unsigned", "256",
+  "Maximal number of attributor iterations">;
+defm : BoolField<"openmp-opt-print-module-after", "false",
+  "Print the current module after OpenMP optimizations">;
+defm : BoolField<"openmp-opt-print-module-before", "false",
+  "Print the current module before OpenMP optimizations">;
+defm : ValueField<"openmp-opt-shared-limit", "unsigned", "std::numeric_limits<unsigned>::max()",
+  "Maximum amount of shared memory to use">;
+defm : BoolField<"openmp-opt-spmdization", "true",
+  "Enable OpenMP optimizations involving SPMD-ization">;
+defm : BoolField<"openmp-opt-state-machine-rewrite", "true",
+  "Enable OpenMP optimizations that replace the state machine">;
+defm : BoolField<"openmp-opt-verbose-remarks", "false",
+  "Enables more verbose remarks">;
+defm : BoolField<"openmp-print-gpu-kernels", "false", "">;
+defm : BoolField<"openmp-print-icv-values", "false", "">;
+// TODO: Remove the old spellings after 2027-05.
+def : AliasOf<"openmp-opt-disable", "openmp-opt=false">;
+def : AliasOf<"openmp-opt-disable-barrier-elimination", "openmp-opt-barrier-elimination=false">;
+def : AliasOf<"openmp-opt-disable-deglobalization", "openmp-opt-deglobalization=false">;
+def : AliasOf<"openmp-opt-disable-folding", "openmp-opt-folding=false">;
+def : AliasOf<"openmp-opt-disable-internalization", "openmp-opt-internalization=false">;
+def : AliasOf<"openmp-opt-disable-spmdization", "openmp-opt-spmdization=false">;
+def : AliasOf<"openmp-opt-disable-state-machine-rewrite", "openmp-opt-state-machine-rewrite=false">;
 
 // PartialInlining.cpp
 // Used to determine when an edge is considered cold. Default is set to 10%. ie.

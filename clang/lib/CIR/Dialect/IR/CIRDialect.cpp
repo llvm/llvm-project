@@ -4528,6 +4528,110 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// VecFCmpOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult cir::VecFCmpOp::fold(FoldAdaptor adaptor) {
+  // Do not fold when fenv is present.
+  // TODO(cir): This is overly conservative. We could fold comparisons as long
+  //            as we can prove that the operation wouldn't raise exceptions or
+  //            when the fenv attribute does not require strict exception
+  //            semantics.
+  if (getFenvAttr())
+    return {};
+
+  cir::FCmpOpKind kind = getKind();
+  if (kind == cir::FCmpOpKind::_true || kind == cir::FCmpOpKind::_false) {
+    mlir::Attribute elt =
+        cir::IntAttr::get(getType().getElementType(),
+                          (kind == cir::FCmpOpKind::_true) ? -1LL : 0LL);
+    SmallVector<mlir::Attribute, 16> elements(getType().getFixedSize(), elt);
+    return cir::ConstVectorAttr::get(
+        getType(), mlir::ArrayAttr::get(getContext(), elements));
+  }
+
+  auto lhsVecAttr =
+      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getLhs());
+  auto rhsVecAttr =
+      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getRhs());
+  if (!lhsVecAttr || !rhsVecAttr)
+    return {};
+
+  mlir::ArrayAttr lhsElts = lhsVecAttr.getElts();
+  mlir::ArrayAttr rhsElts = rhsVecAttr.getElts();
+  uint64_t vecSize = lhsElts.size();
+  SmallVector<mlir::Attribute, 16> elements;
+  elements.reserve(vecSize);
+  for (auto [lhsElt, rhsElt] : llvm::zip_equal(lhsElts, rhsElts)) {
+    auto lhsFP = mlir::cast<cir::FPAttr>(lhsElt);
+    auto rhsFP = mlir::cast<cir::FPAttr>(rhsElt);
+
+    llvm::APFloat::cmpResult cr = lhsFP.getValue().compare(rhsFP.getValue());
+    bool unordered = cr == llvm::APFloat::cmpUnordered;
+    bool eq = cr == llvm::APFloat::cmpEqual;
+    bool lt = cr == llvm::APFloat::cmpLessThan;
+    bool gt = cr == llvm::APFloat::cmpGreaterThan;
+    bool cmpResult = false;
+    switch (kind) {
+    case cir::FCmpOpKind::oeq:
+      cmpResult = eq;
+      break;
+    case cir::FCmpOpKind::ogt:
+      cmpResult = gt;
+      break;
+    case cir::FCmpOpKind::oge:
+      cmpResult = gt || eq;
+      break;
+    case cir::FCmpOpKind::olt:
+      cmpResult = lt;
+      break;
+    case cir::FCmpOpKind::ole:
+      cmpResult = lt || eq;
+      break;
+    case cir::FCmpOpKind::one:
+      cmpResult = lt || gt;
+      break;
+    case cir::FCmpOpKind::ord:
+      cmpResult = !unordered;
+      break;
+    case cir::FCmpOpKind::ueq:
+      cmpResult = unordered || eq;
+      break;
+    case cir::FCmpOpKind::ugt:
+      cmpResult = unordered || gt;
+      break;
+    case cir::FCmpOpKind::uge:
+      cmpResult = unordered || gt || eq;
+      break;
+    case cir::FCmpOpKind::ult:
+      cmpResult = unordered || lt;
+      break;
+    case cir::FCmpOpKind::ule:
+      cmpResult = unordered || lt || eq;
+      break;
+    case cir::FCmpOpKind::une:
+      cmpResult = unordered || lt || gt;
+      break;
+    case cir::FCmpOpKind::uno:
+      cmpResult = unordered;
+      break;
+    case cir::FCmpOpKind::_true:
+    case cir::FCmpOpKind::_false:
+      llvm_unreachable("Op kind have been handled already");
+    }
+
+    // A true result is all bits set (-1 in two's complement), and a false
+    // result is all bits clear. For a 1-bit element type these are the same
+    // bit pattern as 1 and 0, respectively.
+    elements.push_back(
+        cir::IntAttr::get(getType().getElementType(), cmpResult ? -1LL : 0LL));
+  }
+
+  return cir::ConstVectorAttr::get(
+      getType(), mlir::ArrayAttr::get(getContext(), elements));
+}
+
+//===----------------------------------------------------------------------===//
 // VecShuffleOp
 //===----------------------------------------------------------------------===//
 
@@ -4562,31 +4666,36 @@ OpFoldResult cir::VecShuffleOp::fold(FoldAdaptor adaptor) {
   }
 
   return cir::ConstVectorAttr::get(
-      getType(), mlir::ArrayAttr::get(getContext(), elements));
+      mlir::cast<cir::VectorType>(getType()),
+      mlir::ArrayAttr::get(getContext(), elements));
 }
 
 LogicalResult cir::VecShuffleOp::verify() {
-  if (getVec1().getType().isScalable() || getVec2().getType().isScalable() ||
-      getResult().getType().isScalable())
+  if (!mlir::isa<cir::VectorType>(getType()))
+    return success();
+
+  auto vec1Ty = mlir::cast<cir::VectorType>(getVec1().getType());
+  auto vec2Ty = mlir::cast<cir::VectorType>(getVec2().getType());
+  auto resultTy = mlir::cast<cir::VectorType>(getResult().getType());
+  if (vec1Ty.isScalable() || vec2Ty.isScalable() || resultTy.isScalable())
     return emitOpError() << "scalable vectors are not supported";
 
   // The number of elements in the indices array must match the number of
   // elements in the result type.
-  if (getIndices().size() != getResult().getType().getFixedSize()) {
+  if (getIndices().size() != resultTy.getFixedSize()) {
     return emitOpError() << ": the number of elements in " << getIndices()
-                         << " and " << getResult().getType() << " don't match";
+                         << " and " << resultTy << " don't match";
   }
 
   // The element types of the two input vectors and of the result type must
   // match.
-  if (getVec1().getType().getElementType() !=
-      getResult().getType().getElementType()) {
+  if (vec1Ty.getElementType() != resultTy.getElementType()) {
     return emitOpError() << ": element types of " << getVec1().getType()
-                         << " and " << getResult().getType() << " don't match";
+                         << " and " << resultTy << " don't match";
   }
 
-  const uint64_t maxValidIndex = getVec1().getType().getFixedSize() +
-                                 getVec2().getType().getFixedSize() - 1;
+  const uint64_t maxValidIndex =
+      vec1Ty.getFixedSize() + vec2Ty.getFixedSize() - 1;
   if (llvm::any_of(
           getIndices().getAsRange<cir::IntAttr>(), [&](cir::IntAttr idxAttr) {
             return idxAttr.getSInt() != -1 && idxAttr.getUInt() > maxValidIndex;
@@ -4702,6 +4811,38 @@ LogicalResult cir::LdexpOp::verify() {
     return emitOpError()
            << "exponent must have the same number of elements as the value";
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// LoadOp, GetBitfieldOp and MatrixColumnMajorLoadOp
+//===----------------------------------------------------------------------===//
+
+/// Adds the effects of a load from `addr`. A volatile or atomic load also has
+/// unknown read and write effects, as in the LLVM dialect, so that it is never
+/// erased when its result is unused.
+static void
+getLoadEffects(OpOperand &addr, bool isVolatileOrAtomic,
+               SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), &addr);
+  if (isVolatileOrAtomic) {
+    effects.emplace_back(MemoryEffects::Write::get());
+    effects.emplace_back(MemoryEffects::Read::get());
+  }
+}
+
+void cir::LoadOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  getLoadEffects(getAddrMutable(), isVolatileOrAtomic(), effects);
+}
+
+void cir::GetBitfieldOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  getLoadEffects(getAddrMutable(), getIsVolatile(), effects);
+}
+
+void cir::MatrixColumnMajorLoadOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  getLoadEffects(getValueMutable(), getIsVolatile(), effects);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4992,24 +5133,20 @@ void cir::InlineAsmOp::print(OpAsmPrinter &p) {
   p.printNewline();
 
   llvm::SmallVector<std::string, 3> names{"out", "in", "in_out"};
-  auto *nameIt = names.begin();
-  auto *attrIt = getOperandAttrs().begin();
+  mlir::MutableOperandRangeRange groups = getAsmOperandsMutable();
 
-  for (mlir::OperandRange ops : getAsmOperands()) {
-    p << *nameIt << " = ";
+  for (auto [index, name] : llvm::enumerate(names)) {
+    p << name << " = ";
 
     p << '[';
-    llvm::interleaveComma(llvm::make_range(ops.begin(), ops.end()), p,
-                          [&](Value value) {
-                            p.printOperand(value);
-                            p << " : " << value.getType();
-                            if (mlir::isa<mlir::UnitAttr>(*attrIt))
-                              p << " (maybe_memory)";
-                            attrIt++;
-                          });
+    llvm::interleaveComma(groups[index], p, [&](OpOperand &operand) {
+      p.printOperand(operand.get());
+      p << " : " << operand.get().getType();
+      if (isMemoryOperand(operand.getOperandNumber()))
+        p << " (maybe_memory)";
+    });
     p << "],";
     p.printNewline();
-    ++nameIt;
   }
 
   p << "{";
@@ -5191,6 +5328,19 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
   return mlir::success();
 }
 
+LogicalResult cir::InlineAsmOp::verify() {
+  if (getOperandAttrs().size() != getNumOperands())
+    return emitOpError() << "expects " << getNumOperands()
+                         << " operand attributes, but got "
+                         << getOperandAttrs().size();
+  for (auto [index, operand] : llvm::enumerate(getOperands()))
+    if (isMemoryOperand(index) && !isa<cir::PointerType>(operand.getType()))
+      return emitOpError() << "memory operand #" << index
+                           << " must be a pointer, but got "
+                           << operand.getType();
+  return success();
+}
+
 void InlineAsmOp::getEffects(
     llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &effects) {
   // If we have any side effects (that is, we're volatile asm), add a read and
@@ -5198,6 +5348,13 @@ void InlineAsmOp::getEffects(
   if (getSideEffects()) {
     effects.emplace_back(mlir::MemoryEffects::Read::get());
     effects.emplace_back(mlir::MemoryEffects::Write::get());
+  }
+  // Memory operands are read and written through.
+  for (OpOperand &operand : getOperation()->getOpOperands()) {
+    if (!isMemoryOperand(operand.getOperandNumber()))
+      continue;
+    effects.emplace_back(mlir::MemoryEffects::Read::get(), &operand);
+    effects.emplace_back(mlir::MemoryEffects::Write::get(), &operand);
   }
 }
 
