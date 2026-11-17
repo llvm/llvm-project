@@ -1694,6 +1694,13 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     }
   }
 
+  // aliasCheckRecursive() only looks through GEPs, phis and selects, and
+  // otherwise only refines accesses to the same underlying object. All other
+  // pairs are MayAlias without further queries, so don't cache them.
+  if (O1 != O2 && !isa<GEPOperator, PHINode, SelectInst>(V1) &&
+      !isa<GEPOperator, PHINode, SelectInst>(V2))
+    return AliasResult::MayAlias;
+
   // If one the accesses may be before the accessed pointer, canonicalize this
   // by using unknown after-pointer sizes for both accesses. This is
   // equivalent, because regardless of which pointer is lower, one of them
@@ -1711,13 +1718,6 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   // enough to be very rarely hit, while still being small enough to avoid
   // stack overflows.
   if (AAQI.Depth >= 512)
-    return AliasResult::MayAlias;
-
-  // aliasCheckRecursive() only looks through GEPs, phis and selects, and
-  // otherwise only refines accesses to the same underlying object. All other
-  // pairs are MayAlias without further queries, so don't cache them.
-  if (O1 != O2 && !isa<GEPOperator, PHINode, SelectInst>(V1) &&
-      !isa<GEPOperator, PHINode, SelectInst>(V2))
     return AliasResult::MayAlias;
 
   // Check the cache before climbing up use-def chains. This also terminates
