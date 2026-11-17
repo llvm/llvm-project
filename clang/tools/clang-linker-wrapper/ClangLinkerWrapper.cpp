@@ -127,9 +127,6 @@ static std::mutex TempFilesMutex;
 /// Temporary files created by the linker wrapper.
 static std::list<SmallString<128>> TempFiles;
 
-/// Codegen flags for LTO backend.
-static codegen::RegisterCodeGenFlags CodeGenFlags;
-
 /// Whether or not to look through symlinks when resolving binaries.
 static bool CanonicalPrefixes = true;
 
@@ -681,16 +678,15 @@ Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
 
 // Compile the module to an object file using the appropriate target machine for
 // the host triple.
-Expected<StringRef>
-compileModule(const cl::LibraryOptionsContext &LibraryOptions, Module &M,
-              OffloadKind Kind) {
+Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
   llvm::TimeTraceScope TimeScope("Compile module");
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(M.getTargetTriple(), Msg);
   if (!T)
     return createStringError(Msg);
 
-  auto Options = codegen::getTargetOptions(LibraryOptions, M.getTargetTriple());
+  auto Options = codegen::getTargetOptions(M.getContext().getLibraryOptions(),
+                                           M.getTargetTriple());
   StringRef CPU = "";
   StringRef Features = "";
   std::unique_ptr<TargetMachine> TM(
@@ -744,7 +740,7 @@ wrapDeviceImagesVerbose(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
       "-o",
       *BitcodeOrErr,
   };
-  if ((Kind == OFK_OpenMP || Kind == OFK_OpenACC) &&
+  if ((Kind == OFK_OpenMP || Kind == OFK_OpenACC || Kind == OFK_SYCL) &&
       Args.hasArg(OPT_relocatable))
     WrapperArgs.push_back("--relocatable");
   for (const auto &Buffer : Buffers)
@@ -783,8 +779,7 @@ wrapDeviceImagesVerbose(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
 /// Creates the object file containing the device image and runtime
 /// registration code from the device images stored in \p Images.
 Expected<StringRef>
-wrapDeviceImages(const cl::LibraryOptionsContext &LibraryOptions,
-                 ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
+wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
                  const ArgList &Args, OffloadKind Kind) {
   llvm::TimeTraceScope TimeScope("Wrap bundled images");
 
@@ -831,8 +826,9 @@ wrapDeviceImages(const cl::LibraryOptionsContext &LibraryOptions,
   case OFK_SYCL: {
     // TODO: fill these options once the Driver supports them.
     offloading::SYCLJITOptions Options;
-    if (Error Err =
-            offloading::wrapSYCLBinaries(M, BuffersToWrap.front(), Options))
+    if (Error Err = offloading::wrapSYCLBinaries(
+            M, BuffersToWrap.front(), Options,
+            /*IsFinalizedImage=*/Args.hasArg(OPT_relocatable)))
       return std::move(Err);
     break;
   }
@@ -856,7 +852,7 @@ wrapDeviceImages(const cl::LibraryOptionsContext &LibraryOptions,
     WriteBitcodeToFile(M, OS);
   }
 
-  auto FileOrErr = compileModule(LibraryOptions, M, Kind);
+  auto FileOrErr = compileModule(M, Kind);
   if (!FileOrErr)
     return FileOrErr.takeError();
   return *FileOrErr;
@@ -1105,8 +1101,7 @@ Error handleOverrideImages(
 /// be registered by the runtime. If NeedsWrapping is false, writes bundled
 /// output directly without wrapping or host linking.
 Expected<SmallVector<StringRef>>
-linkAndWrapDeviceFiles(const cl::LibraryOptionsContext &LibraryOptions,
-                       ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
+linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
                        const InputArgList &Args, char **Argv, int Argc,
                        bool NeedsWrapping) {
   llvm::TimeTraceScope TimeScope("Handle all device input");
@@ -1238,8 +1233,7 @@ linkAndWrapDeviceFiles(const cl::LibraryOptionsContext &LibraryOptions,
       continue;
     }
 
-    auto OutputOrErr = wrapDeviceImages(LibraryOptions, *BundledImagesOrErr,
-                                        Args, WrapperKind);
+    auto OutputOrErr = wrapDeviceImages(*BundledImagesOrErr, Args, WrapperKind);
     if (!OutputOrErr)
       return OutputOrErr.takeError();
     WrappedOutput.push_back(*OutputOrErr);
@@ -1623,8 +1617,8 @@ int main(int Argc, char **Argv) {
 
     // Link and process the device images. The function may emit a direct fat
     // binary if --emit-fatbin-only is specified.
-    auto FilesOrErr = linkAndWrapDeviceFiles(LibraryOptions, *DeviceInputFiles,
-                                             Args, Argv, Argc, !EmitFatbinOnly);
+    auto FilesOrErr = linkAndWrapDeviceFiles(*DeviceInputFiles, Args, Argv,
+                                             Argc, !EmitFatbinOnly);
     if (!FilesOrErr)
       reportError(FilesOrErr.takeError());
 

@@ -145,6 +145,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### New checks
 
+- New {doc}`bugprone-macro-condition
+  <clang-tidy/checks/bugprone/macro-condition>` check.
+
+  Warns about inconsistent macro usage in preprocessor conditions.
+
 - New {doc}`llvm-invalid-regex-pattern
   <clang-tidy/checks/llvm/invalid-regex-pattern>` check.
 
@@ -186,7 +191,8 @@ infrastructure are described first, followed by tool-specific sections.
 
 - Improved {doc}`bugprone-argument-comment
   <clang-tidy/checks/bugprone/argument-comment>` check by adding the
-  {option}`IgnoredParameterNames` option to skip parameters by name.
+  {option}`IgnoreMacros`, {option}`IgnoredParameterNames`,
+  {option}`NullPtrMacros` and {option}`BoolLiteralMacros` options.
   The `ZeroOnly` value of {option}`CommentIntegerLiterals` adds comments only to
   integer literals with the value zero. The option still accepts `true` and
   `false`.
@@ -451,9 +457,14 @@ infrastructure are described first, followed by tool-specific sections.
     `decltype((x))` and in the initializers and return statements of
     `decltype(auto)` declarations.
 
-- Fixed {doc}`readability-simplify-boolean-expr
-  <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid
-  fixes when applying De Morgan's theorem to overloaded comparison operators.
+- Improved {doc}`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability/simplify-boolean-expr>` check:
+
+  - Fixed invalid fixes when applying De Morgan's theorem to overloaded
+    comparison operators.
+
+  - No longer offers fixes that remove a left operand with side effects, such
+    as `f()` in `f() || true`.
 
 - Improved {doc}`readability-suspicious-call-argument
   <clang-tidy/checks/readability/suspicious-call-argument>` check by fixing the

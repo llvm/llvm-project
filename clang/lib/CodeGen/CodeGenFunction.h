@@ -2660,7 +2660,8 @@ public:
   llvm::Value *EmitVTableTypeCheckedLoad(const CXXRecordDecl *RD,
                                          llvm::Value *VTable,
                                          llvm::Type *VTableTy,
-                                         uint64_t VTableByteOffset);
+                                         uint64_t VTableByteOffset,
+                                         SourceLocation Loc);
 
   /// EnterDtorCleanups - Enter the cleanups necessary to complete the
   /// given phase of destruction for a destructor.  The end result
@@ -3706,9 +3707,12 @@ public:
                                     SourceLocation Loc,
                                     SourceLocation AssumptionLoc,
                                     llvm::Value *Alignment,
-                                    llvm::Value *OffsetValue,
-                                    llvm::Value *TheCheck,
-                                    llvm::Instruction *Assumption);
+                                    llvm::Value *OffsetValue = nullptr);
+
+  void emitReturnAlignmentAssumptionCheck(llvm::Value *Ptr, QualType Ty,
+                                          SourceLocation AssumptionLoc,
+                                          llvm::Value *Alignment,
+                                          llvm::Value *OffsetValue = nullptr);
 
   void emitAlignmentAssumption(llvm::Value *PtrValue, QualType Ty,
                                SourceLocation Loc, SourceLocation AssumptionLoc,

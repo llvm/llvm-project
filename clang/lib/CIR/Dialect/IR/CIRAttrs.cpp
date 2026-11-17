@@ -15,6 +15,7 @@
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "llvm/Support/MathExtras.h"
 
 //===-----------------------------------------------------------------===//
 // RecordMembers
@@ -170,6 +171,20 @@ LogicalResult PtrSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   if (abi > preferred)
     return emitError() << "preferred alignment is expected to be at least "
                           "as large as ABI alignment";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// BitIntSpecAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+BitIntSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       uint32_t maxAlign) {
+  // TargetInfo::getBitIntMaxAlign() is a power of two, at least the char
+  // width. Char width is 8 bits.
+  if (maxAlign < 8 || !llvm::isPowerOf2_32(maxAlign))
+    return emitError() << "max_align must be a power of two of at least 8";
   return success();
 }
 
@@ -976,7 +991,7 @@ cir::ConstVectorAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 
 LogicalResult cir::VTableAttr::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError, mlir::Type type,
-    mlir::ArrayAttr data) {
+    mlir::ArrayAttr data, mlir::ArrayAttr addressPoints) {
   auto sTy = mlir::dyn_cast_if_present<cir::RecordType>(type);
   if (!sTy)
     return emitError() << "expected !cir.struct or !cir.union type result";
@@ -986,10 +1001,29 @@ LogicalResult cir::VTableAttr::verify(
   if (cir::ConstRecordAttr::verify(emitError, type, data).failed())
     return failure();
 
-  for (const auto &element : data.getAsRange<mlir::Attribute>()) {
+  if (addressPoints.size() != data.size())
+    return emitError() << "expected one address point for each vtable, got "
+                       << addressPoints.size() << " for " << data.size()
+                       << " vtables";
+
+  for (const auto &[idx, element] :
+       llvm::enumerate(data.getAsRange<mlir::Attribute>())) {
     const auto &constArrayAttr = mlir::dyn_cast<cir::ConstArrayAttr>(element);
     if (!constArrayAttr)
       return emitError() << "expected constant array subtype";
+
+    auto arrayTy = mlir::cast<cir::ArrayType>(constArrayAttr.getType());
+    auto addressPoint =
+        mlir::dyn_cast<cir::AddressPointAttr>(addressPoints[idx]);
+    if (!addressPoint)
+      return emitError() << "expected an address point for vtable " << idx;
+    if (addressPoint.getIndex() != static_cast<int32_t>(idx))
+      return emitError() << "address point " << idx << " refers to vtable "
+                         << addressPoint.getIndex();
+    if (addressPoint.getOffset() < 0 ||
+        static_cast<uint64_t>(addressPoint.getOffset()) > arrayTy.getSize())
+      return emitError() << "address point offset " << addressPoint.getOffset()
+                         << " is out of range of vtable " << idx;
 
     LogicalResult eltTypeCheck = success();
     auto arrayElts = mlir::cast<ArrayAttr>(constArrayAttr.getElts());
