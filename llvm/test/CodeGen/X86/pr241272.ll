@@ -9,6 +9,7 @@ define void @PR241272(ptr %p0, ptr %p1, ptr %p2) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = [3,130,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; SSE2-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
