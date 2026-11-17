@@ -1,10 +1,6 @@
 // Verify that -fsanitize-compilation-dir makes absolute filenames relative
-// in UBSan check metadata.
-//
-// We use -fsanitize=unreachable (one of the checks under -fsanitize=undefined)
-// rather than -fsanitize=undefined because the latter is a driver-level umbrella
-// flag not accepted by cc1. Any individual sanitizer check exercises the same
-// EmitCheckSourceLocation path.
+// in UBSan check metadata. -fsanitize=unreachable is used because cc1 does
+// not accept the -fsanitize=undefined group.
 
 // RUN: mkdir -p %t.dir/sub
 // RUN: cp %s %t.dir/sub/test.c
