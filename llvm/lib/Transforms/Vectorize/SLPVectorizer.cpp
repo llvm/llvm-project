@@ -175,7 +175,8 @@ struct ReductionVectorPart {
   /// the final reduction result. Used for reassociated fadd reductions,
   /// flattened through fsub/fneg operations.
   bool Negated = false;
-  /// Context hint for deciding the reduction pattern
+  /// Cast context hint of the vectorized tree root, selects the i1 reduction
+  /// form.
   TTI::CastContextHint Ctx = TTI::CastContextHint::None;
 };
 } // namespace
@@ -34096,6 +34097,7 @@ public:
         Type *ScalarTy = VL.front()->getType();
         Type *VecTy = VectorizedRoot->getType();
         Type *RedScalarTy = VecTy->getScalarType();
+        TTI::CastContextHint RootCtx = V.getCastContextHint(V.getRootNode());
         // A group of negated reduced values (from an fsub/fneg in the chain)
         // is subtracted in the final combine.
         VectorValuesAndScales.emplace_back(
@@ -34108,7 +34110,7 @@ public:
                 : true,
             V.isReducedBitcastRoot() || V.isReducedCmpBitcastRoot() ||
                 !VectorizedRoot->getType()->isVectorTy(),
-            GroupNegated, V.getCastContextHint(V.getRootNode()));
+            GroupNegated, RootCtx);
         LoopAccVectorized = UseLoopAccForm;
 
         // Count vectorized reduced values to exclude them from final reduction.
