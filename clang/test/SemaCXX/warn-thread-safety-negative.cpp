@@ -25,6 +25,7 @@ class LOCKABLE REENTRANT_CAPABILITY ReentrantMutex {
 public:
   void Lock() EXCLUSIVE_LOCK_FUNCTION();
   void Unlock() UNLOCK_FUNCTION();
+  bool TryLock() EXCLUSIVE_TRYLOCK_FUNCTION(true);
 
   // for negative capabilities
   const ReentrantMutex& operator!() const { return *this; }
@@ -125,6 +126,22 @@ public:
   void callHaveNegative() EXCLUSIVE_LOCKS_REQUIRED(!mu) {
     requireNegative();
   }
+
+  // A failed try-acquire of a reentrant capability does not show the
+  // thread free of it: the caller may hold it.
+  void tryFailureIsNotNegative() {
+    if (!mu.TryLock())
+      requireNegative(); // expected-warning{{calling function 'requireNegative' requires negative capability '!mu'}}
+    else
+      mu.Unlock();
+  }
+
+  void tryFailureKeepsDeclared() EXCLUSIVE_LOCKS_REQUIRED(!mu) {
+    if (!mu.TryLock())
+      requireNegative();
+    else
+      mu.Unlock();
+  }
 };
 
 class TryLockTest {
@@ -138,6 +155,17 @@ public:
   void tryLockNegativeWarn() {
     if (mu.TryLock()) { // expected-warning{{acquiring mutex 'mu' requires negative capability '!mu'}}
       a = 0;
+      mu.Unlock();
+    }
+  }
+
+  void tryLockRebranchOneWarning(bool c) {
+    bool b = mu.TryLock(); // expected-warning{{acquiring mutex 'mu' requires negative capability '!mu'}}
+    if (b)
+      a = 0;
+    if (c && b) {
+      mu.Unlock();
+    } else if (b) {
       mu.Unlock();
     }
   }
@@ -175,6 +203,33 @@ public:
   }
 
   void needsNegative() EXCLUSIVE_LOCKS_REQUIRED(!mu);
+
+  // A failed try-acquire proves nothing about whether the thread holds the
+  // capability -- it fails for other reasons too -- so its failure edge
+  // keeps what preceded the call: without a declared '!mu', the acquire
+  // there needs it again.
+  void tryLockFailureProvesNothing() {
+    if (mu.TryLock()) { // expected-warning{{acquiring mutex 'mu' requires negative capability '!mu'}}
+      a = 0;
+      mu.Unlock();
+    } else {
+      mu.Lock(); // expected-warning{{acquiring mutex 'mu' requires negative capability '!mu'}}
+      a = 0;
+      mu.Unlock();
+    }
+  }
+
+  // With '!mu' declared, the failure edge restores what the call consumed.
+  void tryLockFailureKeepsDeclared() EXCLUSIVE_LOCKS_REQUIRED(!mu) {
+    if (mu.TryLock()) {
+      a = 0;
+      mu.Unlock();
+    } else {
+      mu.Lock();
+      a = 0;
+      mu.Unlock();
+    }
+  }
 };
 
 // A scoped try-acquire constructor attempts the acquisition like the
