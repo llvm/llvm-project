@@ -87,22 +87,23 @@ bool Vreg1LoweringHelper::cleanConstrainRegs(bool Changed) {
 /// is left as a whole, so that EXEC is the same on every iteration at the
 /// header and at the end of the latch.
 ///
-/// This holds when the latch post-dominates the header, so that the latch is
-/// the only exit and every divergent region opened inside the loop is closed
-/// by the end of the latch, and when the latch ends in a uniform branch.
+/// This relies on the control flow being structurized: lanes can only leave a
+/// loop at different times through SI_IF_BREAK/SI_LOOP on a back-edge, and a
+/// divergent SI_IF/SI_ELSE region is closed by its SI_END_CF before any edge
+/// leaves it. So if the only back-edge ends in a uniform branch, every exit,
+/// including a uniform early exit, is taken by the whole wave, and EXEC at the
+/// end of the latch is EXEC at the header.
 static bool isExecInvariantBackEdge(const MachineBasicBlock &Latch,
                                     const MachineBasicBlock &Header,
                                     const MachineDominatorTree &DT,
-                                    const MachinePostDominatorTree &PDT,
                                     const SIInstrInfo &TII) {
   assert(Latch.isSuccessor(&Header) && "expected a CFG edge");
-  if (TII.hasDivergentBranch(&Latch) || !DT.dominates(&Header, &Latch) ||
-      !PDT.dominates(&Latch, &Header))
-    return false;
-
-  return none_of(Header.predecessors(), [&](const MachineBasicBlock *Pred) {
-    return Pred != &Latch && DT.dominates(&Header, Pred);
-  });
+  return !TII.hasDivergentBranch(&Latch) &&
+         all_of(Header.predecessors(),
+                [&](const MachineBasicBlock *Pred) {
+                  return Pred == &Latch || !DT.dominates(&Header, Pred);
+                }) &&
+         DT.dominates(&Header, &Latch);
 }
 
 namespace llvm {
@@ -235,7 +236,7 @@ public:
 private:
   bool isExecInvariantBackEdge(const MachineBasicBlock &Latch,
                                const MachineBasicBlock &Header) const {
-    return ::isExecInvariantBackEdge(Latch, Header, DT, PDT, *TII);
+    return ::isExecInvariantBackEdge(Latch, Header, DT, *TII);
   }
 };
 
@@ -415,7 +416,7 @@ private:
       VisitedDom = DT.findNearestCommonDominator(VisitedDom, MBB);
 
       for (MachineBasicBlock *Succ : MBB->successors()) {
-        if (isExecInvariantBackEdge(*MBB, *Succ, DT, PDT, *TII))
+        if (isExecInvariantBackEdge(*MBB, *Succ, DT, *TII))
           continue;
 
         if (Succ == DefBlock) {
