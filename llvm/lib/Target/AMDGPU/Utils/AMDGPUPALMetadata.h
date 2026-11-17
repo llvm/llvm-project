@@ -108,7 +108,8 @@ public:
   void setFunctionStackFrameSize(StringRef FnName, uint64_t Val);
 
   // Set the backend stack size metadata, including the frames of its known
-  // callees. Recursion and indirect/external calls must be handled by the
+  // non-chain callees (and unknown if `-amdgpu-assume-external-call-stack-size`
+  // is used). Recursion and indirect/external calls must be handled by the
   // consumer.
   void setFunctionBackendStackSize(StringRef FnName, const MCExpr *Val);
 
