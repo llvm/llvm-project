@@ -1,10 +1,8 @@
 // RUN: %clang_cc1 -fopenmp -triple x86_64-linux-gnu -fclangir %s -verify -emit-cir -o -
 
-void do_things() {
-  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP OMPCriticalDirective}}
-#pragma omp critical
-  {}
+void clash(void);
 
+void do_things() {
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP OMPSingleDirective}}
 #pragma omp single
   {}
@@ -29,4 +27,20 @@ void do_things() {
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP synthesized 'firstprivate' clause from construct decomposition}}
 #pragma omp target
   { i = 1; }
+}
+
+void use_clash() {
+  clash();
+  // A critical name shares the symbol table with functions.
+  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP critical name that clashes with another symbol}}
+#pragma omp critical(clash)
+  {}
+}
+
+void conflicting_hint() {
+  // Sema accepts uncontended (1) together with contended (2), but the omp
+  // dialect rejects it.
+  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP critical 'hint' combining conflicting sync hints}}
+#pragma omp critical(conflict) hint(3)
+  {}
 }
