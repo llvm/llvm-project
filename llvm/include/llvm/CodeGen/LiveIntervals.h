@@ -74,17 +74,23 @@ class LiveIntervals {
   /// Live interval pointers for all the virtual registers.
   IndexedMap<LiveInterval *, VirtReg2IndexFunctor> VirtRegIntervals;
 
-  /// Indexed by block number. A block has been queued as live-out by the
-  /// current extendSegmentsToUses call iff its entry equals LiveOutTag.
-  SmallVector<unsigned, 0> LiveOutTags;
+  /// Per-block state for the current extendSegmentsToUses call. A tag is
+  /// current iff it equals ShrinkTag.
+  struct ShrinkBlockState {
+    /// Current if the block has been queued as live-out.
+    unsigned LiveOutTag = 0;
+    /// Current if LiveIn is valid.
+    unsigned LiveInTag = 0;
+    /// Index of the block's pending live-in segment.
+    unsigned LiveIn = 0;
+  };
 
-  /// Indexed by block number. Holds {tag, index into the pending live-in
-  /// segments}; the index is only valid when the tag equals LiveOutTag.
-  SmallVector<std::pair<unsigned, unsigned>, 0> LiveInSegments;
+  /// Indexed by block number.
+  SmallVector<ShrinkBlockState, 0> ShrinkBlocks;
 
   /// Tag for the current extendSegmentsToUses call, incremented on each call
-  /// so stale LiveOutTags entries never need clearing.
-  unsigned LiveOutTag = 0;
+  /// so stale ShrinkBlocks entries never need clearing.
+  unsigned ShrinkTag = 0;
 
   /// Sorted list of instructions with register mask operands. Always use the
   /// 'r' slot, RegMasks are normal clobbers, not early clobbers.

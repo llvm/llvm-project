@@ -8,13 +8,13 @@
 
 #include "src/arpa/inet/htons.h"
 #include "src/__support/common.h"
+#include "src/__support/endian_internal.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/net/byte_order.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(uint16_t, htons, (uint16_t hostshort)) {
-  return net::hton(hostshort);
+  return Endian::to_big_endian(hostshort);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

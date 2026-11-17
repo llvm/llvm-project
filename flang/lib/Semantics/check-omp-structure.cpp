@@ -3844,8 +3844,38 @@ void OmpStructureChecker::Enter(const parser::OmpClauseList &) {
 // 2. Checks on clauses which fall under 'struct OmpClause' from parse-tree.h.
 // 3. Checks on clauses which are not in 'struct OmpClause' from parse-tree.h.
 
+// Warns the user that on certain constructs, decomposition of OpenMP clauses
+// may create counterintuitive behaviour.
+void OmpStructureChecker::ClauseDecompPortabilityWarn(
+    SemanticsContext &context_) {
+  if (!context_.ShouldWarn(common::UsageWarning::Portability))
+    return;
+
+  // On a composite do simd construct, using the firstprivate and lastprivate
+  // clauses on the same variables causes the variable to be uninitialised in
+  // the associated body.
+  if (llvm::omp::allDoSimdSet.test(GetContext().directive)) {
+    SymbolSourceMap firstprivateSymbols, lastprivateSymbols;
+    for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_firstprivate)) {
+      GetSymbolsInObjectList(*GetOmpObjectList(*clause), firstprivateSymbols);
+    }
+    for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_lastprivate)) {
+      GetSymbolsInObjectList(*GetOmpObjectList(*clause), lastprivateSymbols);
+    }
+    for (const auto &[symbol, source] : lastprivateSymbols) {
+      // Erasing all occurrences emits only one warning per variable.
+      if (firstprivateSymbols.erase(symbol)) {
+        context_.Warn(common::UsageWarning::Portability, source,
+            "Variable '%s' appears in both FIRSTPRIVATE and LASTPRIVATE clauses on a %s construct; '%s' may be uninitialised in the associated structured block"_port_en_US,
+            symbol->name(), ContextDirectiveAsFortran(), symbol->name());
+      }
+    }
+  }
+}
+
 void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  ClauseDecompPortabilityWarn(context_);
 
   // 2.7.1 Loop Construct Restriction
   if (llvm::omp::allDoSet.test(GetContext().directive)) {

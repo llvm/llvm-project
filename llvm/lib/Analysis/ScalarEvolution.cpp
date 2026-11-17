@@ -6856,7 +6856,7 @@ const ConstantRange &ScalarEvolution::getRangeRef(
 
         for (const auto &Op : Phi->operands()) {
           auto OpRange = getRangeRef(getSCEV(Op), SignHint, Depth + 1);
-          RangeFromOps = RangeFromOps.unionWith(OpRange);
+          RangeFromOps = RangeFromOps.unionWith(OpRange, RangeType);
           // No point to continue if we already have a full set.
           if (RangeFromOps.isFullSet())
             break;
@@ -15706,42 +15706,21 @@ static bool isDivisibilityGuard(const SCEV *LHS, const SCEV *RHS,
 // recursively. This is done by aligning up/down the constant value to the
 // Divisor.
 static const SCEV *applyDivisibilityOnMinMaxExpr(const SCEV *MinMaxExpr,
-                                                 APInt Divisor,
+                                                 const APInt &Divisor,
                                                  ScalarEvolution &SE) {
-  // Return true if \p Expr is a MinMax SCEV expression with a non-negative
-  // constant operand. If so, return in \p SCTy the SCEV type and in \p RHS
-  // the non-constant operand and in \p LHS the constant operand.
-  auto IsMinMaxSCEVWithNonNegativeConstant =
-      [&](const SCEV *Expr, SCEVTypes &SCTy, const SCEV *&LHS,
-          const SCEV *&RHS) {
-        if (auto *MinMax = dyn_cast<SCEVMinMaxExpr>(Expr)) {
-          if (MinMax->getNumOperands() != 2)
-            return false;
-          if (auto *C = dyn_cast<SCEVConstant>(MinMax->getOperand(0))) {
-            if (C->getAPInt().isNegative())
-              return false;
-            SCTy = MinMax->getSCEVType();
-            LHS = MinMax->getOperand(0);
-            RHS = MinMax->getOperand(1);
-            return true;
-          }
-        }
-        return false;
-      };
-
-  const SCEV *MinMaxLHS = nullptr, *MinMaxRHS = nullptr;
-  SCEVTypes SCTy;
-  if (!IsMinMaxSCEVWithNonNegativeConstant(MinMaxExpr, SCTy, MinMaxLHS,
-                                           MinMaxRHS))
+  // Only handle min/max expressions of a non-negative constant and another
+  // operand.
+  const SCEVConstant *C;
+  const SCEV *Op;
+  if (!match(MinMaxExpr, m_scev_MinMax(m_SCEVConstant(C), m_SCEV(Op))) ||
+      C->getAPInt().isNegative())
     return MinMaxExpr;
-  auto IsMin = isa<SCEVSMinExpr>(MinMaxExpr) || isa<SCEVUMinExpr>(MinMaxExpr);
-  assert(SE.isKnownNonNegative(MinMaxLHS) && "Expected non-negative operand!");
-  auto *DivisibleExpr =
-      IsMin ? getPreviousSCEVDivisibleByDivisor(MinMaxLHS, Divisor, SE)
-            : getNextSCEVDivisibleByDivisor(MinMaxLHS, Divisor, SE);
-  SmallVector<SCEVUse> Ops = {
-      applyDivisibilityOnMinMaxExpr(MinMaxRHS, Divisor, SE), DivisibleExpr};
-  return SE.getMinMaxExpr(SCTy, Ops);
+  auto *DivisibleExpr = isa<SCEVSMinExpr, SCEVUMinExpr>(MinMaxExpr)
+                            ? getPreviousSCEVDivisibleByDivisor(C, Divisor, SE)
+                            : getNextSCEVDivisibleByDivisor(C, Divisor, SE);
+  SmallVector<SCEVUse> Ops = {applyDivisibilityOnMinMaxExpr(Op, Divisor, SE),
+                              DivisibleExpr};
+  return SE.getMinMaxExpr(MinMaxExpr->getSCEVType(), Ops);
 }
 
 void ScalarEvolution::LoopGuards::collectFromBlock(

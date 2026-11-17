@@ -14,7 +14,6 @@
 #include "Shared/Utils.h"
 
 #include "PluginInterface.h"
-#include "omptarget.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CommandFlags.h"
