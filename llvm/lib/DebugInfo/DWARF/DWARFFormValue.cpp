@@ -345,8 +345,15 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
     }
   } while (Indirect && !Err);
 
-  if (IsBlock)
-    Value.data = Data.getBytes(OffsetPtr, Value.uval, &Err).bytes_begin();
+  if (IsBlock) {
+    // Keep the data and the length consistent: if the bytes are not in the
+    // section, getBytes() returns an empty buffer and the declared length must
+    // not survive, or getAsBlock() would hand out an ArrayRef over a null
+    // pointer.
+    auto Bytes = Data.getBytes(OffsetPtr, Value.uval, &Err);
+    Value.data = Bytes.bytes_begin();
+    Value.uval = Bytes.size();
+  }
 
   return !errorToBool(std::move(Err));
 }
