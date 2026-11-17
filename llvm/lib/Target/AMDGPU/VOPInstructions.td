@@ -2022,10 +2022,7 @@ multiclass VOP3be_Real_dpp<GFXGen Gen, bits<10> op, string opName,
   defvar ps = !cast<VOP3_Pseudo>(opName #"_e64");
   defvar dpp_ps = !cast<VOP_DPP_Pseudo>(opName #"_e64" #"_dpp");
   def _e64_dpp#Gen.Suffix : Base_VOP3b_DPP16<op, dpp_ps, asmName>,
-                            SIMCInstr<dpp_ps.PseudoInstr, Gen.Subtarget> {
-    let DecoderNamespace = Gen.DecoderNamespace;
-    let AssemblerPredicate = Gen.AssemblerPredicate;
-  }
+                            Select<Gen, dpp_ps.PseudoInstr>;
 }
 
 multiclass VOP3be_Real_dpp8<GFXGen Gen, bits<10> op, string opName,

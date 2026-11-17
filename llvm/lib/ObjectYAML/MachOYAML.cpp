@@ -15,7 +15,6 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/Host.h"
 #include <cstdint>
 #include <cstring>
 
@@ -101,8 +100,7 @@ void MappingTraits<MachOYAML::Object>::mapping(IO &IO,
     IO.setContext(&Object);
   }
   IO.mapTag("!mach-o", true);
-  IO.mapOptional("IsLittleEndian", Object.IsLittleEndian,
-                 sys::IsLittleEndianHost);
+  IO.mapRequired("IsLittleEndian", Object.IsLittleEndian);
   Object.DWARF.IsLittleEndian = Object.IsLittleEndian;
 
   IO.mapRequired("FileHeader", Object.Header);

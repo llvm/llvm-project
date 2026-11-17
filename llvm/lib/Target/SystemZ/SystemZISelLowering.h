@@ -126,6 +126,7 @@ public:
                           const AttributeList &FuncAttributes) const override;
   bool isTruncateFree(Type *, Type *) const override;
   bool isTruncateFree(EVT, EVT) const override;
+  bool isTypeDesirableForOp(SDNode *N, EVT VT) const override;
 
   bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
                             bool MathUsed) const override {
@@ -358,8 +359,8 @@ private:
   SDValue lowerATOMIC_LOAD(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_LDST_I128(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerATOMIC_LOAD_OP(SDValue Op, SelectionDAG &DAG,
-                              unsigned Opcode) const;
+  void lowerATOMIC_LOAD_OP(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                           SelectionDAG &DAG, unsigned Opcode) const;
   SDValue lowerATOMIC_LOAD_SUB(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;

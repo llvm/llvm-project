@@ -18,13 +18,10 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/CommandLine.h"
 #include <optional>
 #include <type_traits>
 
 using namespace llvm;
-
-cl::OptionCategory llvm::MCScheduleOptions("Machine scheduling model options");
 
 static constexpr float DefaultReservationStationScaleFactor = 1.0f;
 

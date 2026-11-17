@@ -118,7 +118,9 @@ def main():
             "js",
             "mjs",
             "cjs",  # JavaScript
-            "ts",  # TypeScript
+            "ts",
+            "mts",
+            "cts",  # TypeScript
             "cs",  # C Sharp
             "json",
             "ipynb",  # JSON

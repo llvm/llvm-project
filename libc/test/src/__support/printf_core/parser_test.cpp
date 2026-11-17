@@ -49,18 +49,22 @@ void evaluate(LIBC_NAMESPACE::printf_core::FormatSection<CharT> *format_arr,
 }
 
 #if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
-using TestCharTypes = LIBC_NAMESPACE::testing::TypeList<char, wchar_t>;
+using TestCharTypes = LIBC_NAMESPACE::testing::Types<char, wchar_t>;
 #else
-using TestCharTypes = LIBC_NAMESPACE::testing::TypeList<char>;
+using TestCharTypes = LIBC_NAMESPACE::testing::Types<char>;
 #endif
 
-TYPED_TEST(LlvmLibcPrintfParserTest, Constructor, TestCharTypes) {
-  using CharT = ParamType;
+template <typename T>
+class LlvmLibcPrintfParserTest : public LIBC_NAMESPACE::testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcPrintfParserTest, TestCharTypes);
+
+TYPED_TEST(LlvmLibcPrintfParserTest, Constructor) {
+  using CharT = TypeParam;
   init(ENCODED(CharT, "test"), 1, 2);
 }
 
-TYPED_TEST(LlvmLibcPrintfParserTest, EvalRaw, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalRaw) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "test");
   evaluate(format_arr, str);
@@ -74,8 +78,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, EvalRaw, TestCharTypes) {
   // TODO: add checks that the format_arr after the last one has length 0
 }
 
-TYPED_TEST(LlvmLibcPrintfParserTest, EvalSimple, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalSimple) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "test %% test");
   evaluate(format_arr, str);
@@ -102,8 +106,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, EvalSimple, TestCharTypes) {
   ASSERT_PFORMAT_EQ(expected2, format_arr[2]);
 }
 
-TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArg, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArg) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "%d");
   int arg1 = 12345;
@@ -120,8 +124,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArg, TestCharTypes) {
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TYPED_TEST(LlvmLibcPrintfParserTest, EvalBadArg, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalBadArg) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "%\0abc");
   int arg1 = 12345;
@@ -134,8 +138,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, EvalBadArg, TestCharTypes) {
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFlags, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFlags) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "%+-0 #d");
   int arg1 = 12345;
@@ -158,8 +162,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFlags, TestCharTypes) {
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithWidth, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithWidth) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "%12d");
   int arg1 = 12345;
@@ -177,8 +181,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithWidth, TestCharTypes) {
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithPrecision, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithPrecision) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "%.34d");
   int arg1 = 12345;
@@ -196,9 +200,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithPrecision, TestCharTypes) {
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithTrivialPrecision,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithTrivialPrecision) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "%.d");
   int arg1 = 12345;
@@ -216,9 +219,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithTrivialPrecision,
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithShortLengthModifier,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithShortLengthModifier) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "%hd");
   int arg1 = 12345;
@@ -236,9 +238,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithShortLengthModifier,
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithLongLengthModifier,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithLongLengthModifier) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "%lld");
   long long arg1 = 12345;
@@ -257,9 +258,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithLongLengthModifier,
 }
 
 #ifndef LIBC_COPT_PRINTF_DISABLE_BITINT
-TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithBitWidthLengthModifier,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithBitWidthLengthModifier) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "%w32d");
   long long arg1 = 12345;
@@ -278,9 +278,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithBitWidthLengthModifier,
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFastBitWidthLengthModifier,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFastBitWidthLengthModifier) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "%wf32d");
   long long arg1 = 12345;
@@ -300,8 +299,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFastBitWidthLengthModifier,
 }
 #endif // LIBC_COPT_PRINTF_DISABLE_BITINT
 
-TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithAllOptions, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithAllOptions) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "% -056.78jd");
   intmax_t arg1 = 12345;
@@ -325,8 +324,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithAllOptions, TestCharTypes) {
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TYPED_TEST(LlvmLibcPrintfParserTest, EvalThreeArgs, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalThreeArgs) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "%d%f%s");
   int arg1 = 12345;
@@ -362,9 +361,9 @@ TYPED_TEST(LlvmLibcPrintfParserTest, EvalThreeArgs, TestCharTypes) {
   ASSERT_PFORMAT_EQ(expected2, format_arr[2]);
 }
 
-TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithOverflowingWidthAndPrecision,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest,
+           EvalOneArgWithOverflowingWidthAndPrecision) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "%-999999999999.999999999999d");
   int arg1 = 12345;
@@ -385,8 +384,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithOverflowingWidthAndPrecision,
 }
 
 TYPED_TEST(LlvmLibcPrintfParserTest,
-           EvalOneArgWithOverflowingWidthAndPrecisionAsArgs, TestCharTypes) {
-  using CharT = ParamType;
+           EvalOneArgWithOverflowingWidthAndPrecisionAsArgs) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "%*.*d");
   int arg1 = INT_MIN; // INT_MIN = -2147483648 if int is 32 bits.
@@ -410,8 +409,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest,
 
 #ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 
-TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeOneArg, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeOneArg) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "%1$d");
   int arg1 = 12345;
@@ -428,9 +427,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeOneArg, TestCharTypes) {
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsSequential,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsSequential) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "%1$d%2$f%3$s");
   int arg1 = 12345;
@@ -466,8 +464,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsSequential,
   ASSERT_PFORMAT_EQ(expected2, format_arr[2]);
 }
 
-TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsReverse, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsReverse) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "%3$d%2$f%1$s");
   int arg1 = 12345;
@@ -503,8 +501,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsReverse, TestCharTypes) {
   ASSERT_PFORMAT_EQ(expected2, format_arr[2]);
 }
 
-TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeTenArgsRandom, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeTenArgsRandom) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str =
       ENCODED(CharT, "%6$d%3$d%7$d%2$d%8$d%1$d%4$d%9$d%5$d%10$d");
@@ -524,8 +522,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeTenArgsRandom, TestCharTypes) {
   }
 }
 
-TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str =
       ENCODED(CharT, "normal text %3$llu %% %2$ *4$f %2$ .*4$f %1$1.1c");
@@ -618,8 +616,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing, TestCharTypes) {
   EXPECT_PFORMAT_EQ(expected9, format_arr[9]);
 }
 
-TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeGapCheck, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeGapCheck) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "%1$d%2$d%4$d");
   int arg1 = 1;
@@ -654,9 +652,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeGapCheck, TestCharTypes) {
   EXPECT_PFORMAT_EQ(expected2, format_arr[2]);
 }
 
-TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeTrailingPercentCrash,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeTrailingPercentCrash) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
   const CharT *str = ENCODED(CharT, "%2$d%");
   evaluate(format_arr, str, 1, 2);
@@ -673,9 +670,8 @@ TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeTrailingPercentCrash,
   EXPECT_PFORMAT_EQ(expected1, format_arr[1]);
 }
 
-TYPED_TEST(LlvmLibcPrintfParserTest, DoublePercentIsAllowedInvalidIndex,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfParserTest, DoublePercentIsAllowedInvalidIndex) {
+  using CharT = TypeParam;
   LIBC_NAMESPACE::printf_core::FormatSection<CharT> format_arr[10];
 
   // Normally this conversion specifier would be raw (due to having a width
