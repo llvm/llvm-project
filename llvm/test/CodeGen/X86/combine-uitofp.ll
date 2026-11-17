@@ -4,6 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=sandybridge | FileCheck %s --check-prefixes=AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64-v3 | FileCheck %s --check-prefixes=AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=AVX512
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefixes=AVX512F
 
 define <4 x double> @concat_uitofp_v4f64_v2i32(<2 x i32> %a0, <2 x i32> %a1, <2 x double> %b0, <2 x double> %b1) {
 ; SSE2-LABEL: concat_uitofp_v4f64_v2i32:
@@ -66,6 +67,17 @@ define <4 x double> @concat_uitofp_v4f64_v2i32(<2 x i32> %a0, <2 x i32> %a1, <2 
 ; AVX512-NEXT:    vaddpd %xmm1, %xmm3, %xmm1
 ; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
+;
+; AVX512F-LABEL: concat_uitofp_v4f64_v2i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512F-NEXT:    vcvtudq2pd %ymm0, %zmm0
+; AVX512F-NEXT:    vcvtudq2pd %ymm1, %zmm1
+; AVX512F-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
+; AVX512F-NEXT:    vaddpd %xmm1, %xmm3, %xmm1
+; AVX512F-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    retq
   %c0 = uitofp <2 x i32> %a0 to <2 x double>
   %c1 = uitofp <2 x i32> %a1 to <2 x double>
   %v0 = fadd <2 x double> %b0, %c0
@@ -160,6 +172,17 @@ define <8 x float> @concat_uitofp_v8f32_v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 x
 ; AVX512-NEXT:    vaddps %xmm1, %xmm3, %xmm1
 ; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
+;
+; AVX512F-LABEL: concat_uitofp_v8f32_v4i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
+; AVX512F-NEXT:    vcvtudq2ps %zmm1, %zmm1
+; AVX512F-NEXT:    vaddps %xmm0, %xmm2, %xmm0
+; AVX512F-NEXT:    vaddps %xmm1, %xmm3, %xmm1
+; AVX512F-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    retq
   %c0 = uitofp <4 x i32> %a0 to <4 x float>
   %c1 = uitofp <4 x i32> %a1 to <4 x float>
   %v0 = fadd <4 x float> %b0, %c0
@@ -268,6 +291,25 @@ define <8 x double> @concat_uitofp_v8f64_v2i32(<2 x i32> %a0, <2 x i32> %a1, <2 
 ; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
+;
+; AVX512F-LABEL: concat_uitofp_v8f64_v2i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $xmm3 killed $xmm3 def $ymm3
+; AVX512F-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512F-NEXT:    vcvtudq2pd %ymm0, %zmm0
+; AVX512F-NEXT:    vcvtudq2pd %ymm1, %zmm1
+; AVX512F-NEXT:    vcvtudq2pd %ymm2, %zmm2
+; AVX512F-NEXT:    vcvtudq2pd %ymm3, %zmm3
+; AVX512F-NEXT:    vaddpd %xmm0, %xmm4, %xmm0
+; AVX512F-NEXT:    vaddpd %xmm1, %xmm5, %xmm1
+; AVX512F-NEXT:    vaddpd %xmm2, %xmm6, %xmm2
+; AVX512F-NEXT:    vaddpd %xmm3, %xmm7, %xmm3
+; AVX512F-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; AVX512F-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512F-NEXT:    retq
   %c0 = uitofp <2 x i32> %a0 to <2 x double>
   %c1 = uitofp <2 x i32> %a1 to <2 x double>
   %c2 = uitofp <2 x i32> %a2 to <2 x double>
@@ -430,6 +472,25 @@ define <16 x float> @concat_uitofp_v16f32_v4i32(<4 x i32> %a0, <4 x i32> %a1, <4
 ; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
+;
+; AVX512F-LABEL: concat_uitofp_v16f32_v4i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $xmm3 killed $xmm3 def $zmm3
+; AVX512F-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
+; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
+; AVX512F-NEXT:    vcvtudq2ps %zmm1, %zmm1
+; AVX512F-NEXT:    vcvtudq2ps %zmm2, %zmm2
+; AVX512F-NEXT:    vcvtudq2ps %zmm3, %zmm3
+; AVX512F-NEXT:    vaddps %xmm0, %xmm4, %xmm0
+; AVX512F-NEXT:    vaddps %xmm1, %xmm5, %xmm1
+; AVX512F-NEXT:    vaddps %xmm2, %xmm6, %xmm2
+; AVX512F-NEXT:    vaddps %xmm3, %xmm7, %xmm3
+; AVX512F-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; AVX512F-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512F-NEXT:    retq
   %c0 = uitofp <4 x i32> %a0 to <4 x float>
   %c1 = uitofp <4 x i32> %a1 to <4 x float>
   %c2 = uitofp <4 x i32> %a2 to <4 x float>
@@ -537,6 +598,17 @@ define <8 x double> @concat_uitofp_v8f64_v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 
 ; AVX512-NEXT:    vaddpd %ymm1, %ymm3, %ymm1
 ; AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
+;
+; AVX512F-LABEL: concat_uitofp_v8f64_v4i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512F-NEXT:    vcvtudq2pd %ymm0, %zmm0
+; AVX512F-NEXT:    vcvtudq2pd %ymm1, %zmm1
+; AVX512F-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
+; AVX512F-NEXT:    vaddpd %ymm1, %ymm3, %ymm1
+; AVX512F-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512F-NEXT:    retq
   %c0 = uitofp <4 x i32> %a0 to <4 x double>
   %c1 = uitofp <4 x i32> %a1 to <4 x double>
   %v0 = fadd <4 x double> %b0, %c0
@@ -672,10 +744,523 @@ define <16 x float> @concat_uitofp_v16f32_v8i32(<8 x i32> %a0, <8 x i32> %a1, <8
 ; AVX512-NEXT:    vaddps %ymm1, %ymm3, %ymm1
 ; AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
+;
+; AVX512F-LABEL: concat_uitofp_v16f32_v8i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
+; AVX512F-NEXT:    vcvtudq2ps %zmm1, %zmm1
+; AVX512F-NEXT:    vaddps %ymm0, %ymm2, %ymm0
+; AVX512F-NEXT:    vaddps %ymm1, %ymm3, %ymm1
+; AVX512F-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512F-NEXT:    retq
   %c0 = uitofp <8 x i32> %a0 to <8 x float>
   %c1 = uitofp <8 x i32> %a1 to <8 x float>
   %v0 = fadd <8 x float> %b0, %c0
   %v1 = fadd <8 x float> %b1, %c1
   %res  = shufflevector <8 x float> %v0, <8 x float> %v1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x float> %res
+}
+
+define double @uitofp_trunc_nuw_i64_i8(i64 %a0) {
+; SSE2-LABEL: uitofp_trunc_nuw_i64_i8:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq %rdi, %xmm1
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
+; SSE2-NEXT:    subpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    movapd %xmm1, %xmm0
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; SSE2-NEXT:    addsd %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: uitofp_trunc_nuw_i64_i8:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    movq %rdi, %xmm1
+; SSE4-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
+; SSE4-NEXT:    subpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE4-NEXT:    movapd %xmm1, %xmm0
+; SSE4-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; SSE4-NEXT:    addsd %xmm1, %xmm0
+; SSE4-NEXT:    retq
+;
+; AVX1-LABEL: uitofp_trunc_nuw_i64_i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovq %rdi, %xmm0
+; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; AVX1-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX1-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: uitofp_trunc_nuw_i64_i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovq %rdi, %xmm0
+; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; AVX2-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX2-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: uitofp_trunc_nuw_i64_i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcvtusi2sd %rdi, %xmm15, %xmm0
+; AVX512-NEXT:    retq
+;
+; AVX512F-LABEL: uitofp_trunc_nuw_i64_i8:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vcvtusi2sd %rdi, %xmm15, %xmm0
+; AVX512F-NEXT:    retq
+  %t = trunc nuw i64 %a0 to i8
+  %r = uitofp i8 %t to double
+  ret double %r
+}
+
+define float @uitofp_trunc_nuw_i64_i32(i64 %a0) {
+; SSE2-LABEL: uitofp_trunc_nuw_i64_i32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    testq %rdi, %rdi
+; SSE2-NEXT:    js .LBB7_1
+; SSE2-NEXT:  # %bb.2:
+; SSE2-NEXT:    cvtsi2ss %rdi, %xmm0
+; SSE2-NEXT:    retq
+; SSE2-NEXT:  .LBB7_1:
+; SSE2-NEXT:    movq %rdi, %rax
+; SSE2-NEXT:    shrq %rax
+; SSE2-NEXT:    andl $1, %edi
+; SSE2-NEXT:    orq %rax, %rdi
+; SSE2-NEXT:    cvtsi2ss %rdi, %xmm0
+; SSE2-NEXT:    addss %xmm0, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: uitofp_trunc_nuw_i64_i32:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    testq %rdi, %rdi
+; SSE4-NEXT:    js .LBB7_1
+; SSE4-NEXT:  # %bb.2:
+; SSE4-NEXT:    cvtsi2ss %rdi, %xmm0
+; SSE4-NEXT:    retq
+; SSE4-NEXT:  .LBB7_1:
+; SSE4-NEXT:    movq %rdi, %rax
+; SSE4-NEXT:    shrq %rax
+; SSE4-NEXT:    andl $1, %edi
+; SSE4-NEXT:    orq %rax, %rdi
+; SSE4-NEXT:    cvtsi2ss %rdi, %xmm0
+; SSE4-NEXT:    addss %xmm0, %xmm0
+; SSE4-NEXT:    retq
+;
+; AVX1-LABEL: uitofp_trunc_nuw_i64_i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    testq %rdi, %rdi
+; AVX1-NEXT:    js .LBB7_1
+; AVX1-NEXT:  # %bb.2:
+; AVX1-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
+; AVX1-NEXT:    retq
+; AVX1-NEXT:  .LBB7_1:
+; AVX1-NEXT:    movq %rdi, %rax
+; AVX1-NEXT:    shrq %rax
+; AVX1-NEXT:    andl $1, %edi
+; AVX1-NEXT:    orq %rax, %rdi
+; AVX1-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
+; AVX1-NEXT:    vaddss %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: uitofp_trunc_nuw_i64_i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    testq %rdi, %rdi
+; AVX2-NEXT:    js .LBB7_1
+; AVX2-NEXT:  # %bb.2:
+; AVX2-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
+; AVX2-NEXT:    retq
+; AVX2-NEXT:  .LBB7_1:
+; AVX2-NEXT:    movq %rdi, %rax
+; AVX2-NEXT:    shrq %rax
+; AVX2-NEXT:    andl $1, %edi
+; AVX2-NEXT:    orq %rax, %rdi
+; AVX2-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
+; AVX2-NEXT:    vaddss %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: uitofp_trunc_nuw_i64_i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcvtusi2ss %rdi, %xmm15, %xmm0
+; AVX512-NEXT:    retq
+;
+; AVX512F-LABEL: uitofp_trunc_nuw_i64_i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vcvtusi2ss %rdi, %xmm15, %xmm0
+; AVX512F-NEXT:    retq
+  %t = trunc nuw i64 %a0 to i32
+  %r = uitofp i32 %t to float
+  ret float %r
+}
+
+define float @uitofp_trunc_i64_i32(i64 %a0) {
+; SSE2-LABEL: uitofp_trunc_i64_i32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movl %edi, %eax
+; SSE2-NEXT:    cvtsi2ss %rax, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: uitofp_trunc_i64_i32:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    movl %edi, %eax
+; SSE4-NEXT:    cvtsi2ss %rax, %xmm0
+; SSE4-NEXT:    retq
+;
+; AVX1-LABEL: uitofp_trunc_i64_i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    movl %edi, %eax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: uitofp_trunc_i64_i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    movl %edi, %eax
+; AVX2-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: uitofp_trunc_i64_i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcvtusi2ss %edi, %xmm15, %xmm0
+; AVX512-NEXT:    retq
+;
+; AVX512F-LABEL: uitofp_trunc_i64_i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vcvtusi2ss %edi, %xmm15, %xmm0
+; AVX512F-NEXT:    retq
+  %t = trunc i64 %a0 to i32
+  %r = uitofp i32 %t to float
+  ret float %r
+}
+
+define <2 x double> @uitofp_trunc_nuw_v2i64_v2f64(<2 x i64> %a0) {
+; SSE2-LABEL: uitofp_trunc_nuw_v2i64_v2f64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [4294967295,4294967295]
+; SSE2-NEXT:    pand %xmm0, %xmm1
+; SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    psrlq $32, %xmm0
+; SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    subpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    addpd %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: uitofp_trunc_nuw_v2i64_v2f64:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    pxor %xmm1, %xmm1
+; SSE4-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
+; SSE4-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE4-NEXT:    psrlq $32, %xmm0
+; SSE4-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE4-NEXT:    subpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE4-NEXT:    addpd %xmm1, %xmm0
+; SSE4-NEXT:    retq
+;
+; AVX1-LABEL: uitofp_trunc_nuw_v2i64_v2f64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
+; AVX1-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm0
+; AVX1-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: uitofp_trunc_nuw_v2i64_v2f64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX2-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm0
+; AVX2-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: uitofp_trunc_nuw_v2i64_v2f64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcvtuqq2pd %xmm0, %xmm0
+; AVX512-NEXT:    retq
+;
+; AVX512F-LABEL: uitofp_trunc_nuw_v2i64_v2f64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vpblendd {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX512F-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX512F-NEXT:    vpsrlq $32, %xmm0, %xmm0
+; AVX512F-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512F-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512F-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX512F-NEXT:    retq
+  %t = trunc nuw <2 x i64> %a0 to <2 x i32>
+  %r = uitofp <2 x i32> %t to <2 x double>
+  ret <2 x double> %r
+}
+
+define <4 x double> @uitofp_trunc_nuw_v4i64_v4f64(<4 x i64> %a0) {
+; SSE2-LABEL: uitofp_trunc_nuw_v4i64_v4f64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movapd {{.*#+}} xmm2 = [4294967295,0,4294967295,0]
+; SSE2-NEXT:    andpd %xmm2, %xmm0
+; SSE2-NEXT:    movapd {{.*#+}} xmm3 = [4.503599627370496E+15,4.503599627370496E+15]
+; SSE2-NEXT:    orpd %xmm3, %xmm0
+; SSE2-NEXT:    subpd %xmm3, %xmm0
+; SSE2-NEXT:    andpd %xmm2, %xmm1
+; SSE2-NEXT:    orpd %xmm3, %xmm1
+; SSE2-NEXT:    subpd %xmm3, %xmm1
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: uitofp_trunc_nuw_v4i64_v4f64:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    xorps %xmm2, %xmm2
+; SSE4-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
+; SSE4-NEXT:    movaps {{.*#+}} xmm3 = [4.503599627370496E+15,4.503599627370496E+15]
+; SSE4-NEXT:    orps %xmm3, %xmm0
+; SSE4-NEXT:    subpd %xmm3, %xmm0
+; SSE4-NEXT:    blendps {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
+; SSE4-NEXT:    orps %xmm3, %xmm1
+; SSE4-NEXT:    subpd %xmm3, %xmm1
+; SSE4-NEXT:    retq
+;
+; AVX1-LABEL: uitofp_trunc_nuw_v4i64_v4f64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vblendps {{.*#+}} ymm2 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
+; AVX1-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
+; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm1[1,3],ymm0[5,7],ymm1[5,7]
+; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,5,7]
+; AVX1-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: uitofp_trunc_nuw_v4i64_v4f64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsrlq $32, %ymm0, %ymm1
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072]
+; AVX2-NEXT:    vpor %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25]
+; AVX2-NEXT:    vsubpd %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2],ymm2[3],ymm0[4],ymm2[5],ymm0[6],ymm2[7]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200]
+; AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: uitofp_trunc_nuw_v4i64_v4f64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcvtuqq2pd %ymm0, %ymm0
+; AVX512-NEXT:    retq
+;
+; AVX512F-LABEL: uitofp_trunc_nuw_v4i64_v4f64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpsrlq $32, %ymm0, %ymm1
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072]
+; AVX512F-NEXT:    vpor %ymm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25]
+; AVX512F-NEXT:    vsubpd %ymm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2],ymm2[3],ymm0[4],ymm2[5],ymm0[6],ymm2[7]
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200]
+; AVX512F-NEXT:    vpor %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    retq
+  %t = trunc nuw <4 x i64> %a0 to <4 x i32>
+  %r = uitofp <4 x i32> %t to <4 x double>
+  ret <4 x double> %r
+}
+
+define <4 x float> @uitofp_trunc_nuw_v4i64_v4f32(<4 x i64> %a0) {
+; SSE2-LABEL: uitofp_trunc_nuw_v4i64_v4f32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; SSE2-NEXT:    movaps {{.*#+}} xmm1 = [65535,65535,65535,65535]
+; SSE2-NEXT:    andps %xmm0, %xmm1
+; SSE2-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    psrld $16, %xmm0
+; SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    subps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    addps %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: uitofp_trunc_nuw_v4i64_v4f32:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; SSE4-NEXT:    movdqa {{.*#+}} xmm1 = [1258291200,1258291200,1258291200,1258291200]
+; SSE4-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; SSE4-NEXT:    psrld $16, %xmm0
+; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
+; SSE4-NEXT:    subps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE4-NEXT:    addps %xmm1, %xmm0
+; SSE4-NEXT:    retq
+;
+; AVX1-LABEL: uitofp_trunc_nuw_v4i64_v4f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm2, %xmm3
+; AVX1-NEXT:    vpsrlq $1, %xmm0, %xmm4
+; AVX1-NEXT:    vpsrlq $1, %xmm1, %xmm5
+; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm4, %ymm4
+; AVX1-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm5
+; AVX1-NEXT:    vorpd %ymm5, %ymm4, %ymm4
+; AVX1-NEXT:    vblendvpd %xmm0, %xmm4, %xmm0, %xmm5
+; AVX1-NEXT:    vpextrq $1, %xmm5, %rax
+; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm2, %xmm0
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
+; AVX1-NEXT:    vmovq %xmm5, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm5
+; AVX1-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm3
+; AVX1-NEXT:    vblendvpd %xmm1, %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vmovq %xmm1, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm3
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm5[0],xmm2[0],xmm5[2,3]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
+; AVX1-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm1
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1,2],xmm1[0]
+; AVX1-NEXT:    vaddps %xmm1, %xmm1, %xmm2
+; AVX1-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: uitofp_trunc_nuw_v4i64_v4f32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm1
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [1,1,1,1]
+; AVX2-NEXT:    vpand %ymm3, %ymm0, %ymm3
+; AVX2-NEXT:    vpsrlq $1, %ymm0, %ymm4
+; AVX2-NEXT:    vpor %ymm3, %ymm4, %ymm3
+; AVX2-NEXT:    vblendvpd %ymm0, %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX2-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm3
+; AVX2-NEXT:    vmovq %xmm0, %rax
+; AVX2-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm4
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    vmovq %xmm0, %rax
+; AVX2-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm5
+; AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm4[0],xmm3[0],xmm4[2,3]
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1],xmm5[0],xmm2[3]
+; AVX2-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm2[0]
+; AVX2-NEXT:    vaddps %xmm0, %xmm0, %xmm2
+; AVX2-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: uitofp_trunc_nuw_v4i64_v4f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcvtuqq2ps %ymm0, %xmm0
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+;
+; AVX512F-LABEL: uitofp_trunc_nuw_v4i64_v4f32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512F-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm1
+; AVX512F-NEXT:    vmovq %xmm0, %rax
+; AVX512F-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm2
+; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512F-NEXT:    vmovq %xmm0, %rax
+; AVX512F-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm2
+; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
+; AVX512F-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512F-NEXT:    vcvtusi2ss %rax, %xmm15, %xmm0
+; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+  %t = trunc nuw <4 x i64> %a0 to <4 x i32>
+  %r = uitofp <4 x i32> %t to <4 x float>
+  ret <4 x float> %r
+}
+
+define <8 x double> @uitofp_trunc_nuw_v8i64_v8f64(<8 x i64> %a0) {
+; SSE2-LABEL: uitofp_trunc_nuw_v8i64_v8f64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movapd {{.*#+}} xmm4 = [4294967295,0,4294967295,0]
+; SSE2-NEXT:    andpd %xmm4, %xmm0
+; SSE2-NEXT:    movapd {{.*#+}} xmm5 = [4.503599627370496E+15,4.503599627370496E+15]
+; SSE2-NEXT:    orpd %xmm5, %xmm0
+; SSE2-NEXT:    subpd %xmm5, %xmm0
+; SSE2-NEXT:    andpd %xmm4, %xmm1
+; SSE2-NEXT:    orpd %xmm5, %xmm1
+; SSE2-NEXT:    subpd %xmm5, %xmm1
+; SSE2-NEXT:    andpd %xmm4, %xmm2
+; SSE2-NEXT:    orpd %xmm5, %xmm2
+; SSE2-NEXT:    subpd %xmm5, %xmm2
+; SSE2-NEXT:    andpd %xmm4, %xmm3
+; SSE2-NEXT:    orpd %xmm5, %xmm3
+; SSE2-NEXT:    subpd %xmm5, %xmm3
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: uitofp_trunc_nuw_v8i64_v8f64:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    xorps %xmm4, %xmm4
+; SSE4-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm4[1],xmm0[2],xmm4[3]
+; SSE4-NEXT:    movaps {{.*#+}} xmm5 = [4.503599627370496E+15,4.503599627370496E+15]
+; SSE4-NEXT:    orps %xmm5, %xmm0
+; SSE4-NEXT:    subpd %xmm5, %xmm0
+; SSE4-NEXT:    blendps {{.*#+}} xmm1 = xmm1[0],xmm4[1],xmm1[2],xmm4[3]
+; SSE4-NEXT:    orps %xmm5, %xmm1
+; SSE4-NEXT:    subpd %xmm5, %xmm1
+; SSE4-NEXT:    blendps {{.*#+}} xmm2 = xmm2[0],xmm4[1],xmm2[2],xmm4[3]
+; SSE4-NEXT:    orps %xmm5, %xmm2
+; SSE4-NEXT:    subpd %xmm5, %xmm2
+; SSE4-NEXT:    blendps {{.*#+}} xmm3 = xmm3[0],xmm4[1],xmm3[2],xmm4[3]
+; SSE4-NEXT:    orps %xmm5, %xmm3
+; SSE4-NEXT:    subpd %xmm5, %xmm3
+; SSE4-NEXT:    retq
+;
+; AVX1-LABEL: uitofp_trunc_nuw_v8i64_v8f64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm3 = [4.503599627370496E+15,4.503599627370496E+15,4.503599627370496E+15,4.503599627370496E+15]
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2],ymm2[3],ymm0[4],ymm2[5],ymm0[6],ymm2[7]
+; AVX1-NEXT:    vorps %ymm3, %ymm0, %ymm0
+; AVX1-NEXT:    vsubpd %ymm3, %ymm0, %ymm0
+; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[3],ymm1[4],ymm2[5],ymm1[6],ymm2[7]
+; AVX1-NEXT:    vorps %ymm3, %ymm1, %ymm1
+; AVX1-NEXT:    vsubpd %ymm3, %ymm1, %ymm1
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: uitofp_trunc_nuw_v8i64_v8f64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2,4,6,4,6,6,7]
+; AVX2-NEXT:    vpermd %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpermd %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [4.503599627370496E+15,4.503599627370496E+15,4.503599627370496E+15,4.503599627370496E+15]
+; AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vsubpd %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; AVX2-NEXT:    vpor %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vsubpd %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: uitofp_trunc_nuw_v8i64_v8f64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcvtuqq2pd %zmm0, %zmm0
+; AVX512-NEXT:    retq
+;
+; AVX512F-LABEL: uitofp_trunc_nuw_v8i64_v8f64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200]
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm1 = zmm1 | (zmm0 & m64bcst)
+; AVX512F-NEXT:    vpsrlq $32, %zmm0, %zmm0
+; AVX512F-NEXT:    vporq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512F-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512F-NEXT:    vaddpd %zmm0, %zmm1, %zmm0
+; AVX512F-NEXT:    retq
+  %t = trunc nuw <8 x i64> %a0 to <8 x i32>
+  %r = uitofp <8 x i32> %t to <8 x double>
+  ret <8 x double> %r
 }

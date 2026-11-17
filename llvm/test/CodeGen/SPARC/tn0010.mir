@@ -22,11 +22,9 @@
 # CHECK-NEXT: LDSTUBArr
 name:            er-5-1
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: intregs }
 body:             |
   bb.0.entry:
-    %0 = LDrr $o0, $g0
+    %0:intregs = LDrr $o0, $g0
     %0 = CASArr $o2, $o3, %0, 10
     %0 = LDrr $g0, $o0
     %0 = SWAPrr $o2, $o3, %0
@@ -45,13 +43,11 @@ body:             |
 # CHECK-NEXT: CASArr
 name:            er-5-2
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: intregs }
 body:             |
   bb.0.entry:
     successors: %bb.1, %bb.2
     BCOND %bb.2, 10, implicit $icc {
-      %0 = LDrr $g0, $o0
+      %0:intregs = LDrr $g0, $o0
     }
 
   bb.1.entry:
@@ -67,11 +63,9 @@ body:             |
 # CHECK-NEXT: CASArr
 name:            er-5-3
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: intregs }
 body:             |
   bb.0.entry:
-    %0 = CASArr $o1, $o2, %0, 10
+    %0:intregs = CASArr $o1, $o2, %0, 10
 ...
 ---
 # CHECK:      bb.1.entry:
@@ -79,13 +73,11 @@ body:             |
 # CHECK-NEXT: CASArr
 name:            er-5-4
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: intregs }
 body:             |
   bb.0.entry:
     successors: %bb.1, %bb.2
     BCOND %bb.2, 10, implicit $icc {
-      %0 = LDrr $g0, $o0
+      %0:intregs = LDrr $g0, $o0
     }
 
   bb.1.entry:
