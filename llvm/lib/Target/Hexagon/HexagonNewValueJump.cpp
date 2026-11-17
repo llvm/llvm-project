@@ -176,6 +176,8 @@ static bool canBeFeederToNewValueJump(const HexagonInstrInfo *QII,
            ++localBegin) {
         if (localBegin == skip)
           continue;
+        if (localBegin->isDebugInstr())
+          continue;
         // Check for Subregisters too.
         if (localBegin->modifiesRegister(Reg, TRI) ||
             localBegin->readsRegister(Reg, TRI))
@@ -666,6 +668,12 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
           TransferKills(*cmpPos);
           bool MO1IsKill = cmpPos->killsRegister(cmpReg1, QRI);
           bool MO2IsKill = isSecondOpReg && cmpPos->killsRegister(cmpOp2, QRI);
+
+          // A copy cannot follow the feeder, since the packetizer needs the
+          // feeder next to the jump. The jump is a terminator, so the helper
+          // copies nothing and only sets the debug values that read the
+          // feeder's register undef.
+          QII->moveDependentDebugValues(MI, *jmpInstr);
 
           MBB->splice(jmpPos, MI.getParent(), MI);
           MBB->splice(jmpPos, MI.getParent(), cmpInstr);
