@@ -4918,6 +4918,17 @@ public:
               option_arg.str().c_str());
       } break;
 
+      case 'O': {
+        bool value, success;
+        value = OptionArgParser::ToBoolean(option_arg, false, &success);
+        if (success)
+          m_one_shot = value;
+        else
+          error = Status::FromErrorStringWithFormat(
+              "invalid boolean value '%s' passed for -O option",
+              option_arg.str().c_str());
+      } break;
+
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -4945,6 +4956,7 @@ public:
       m_one_liner.clear();
       m_auto_continue = false;
       m_at_initial_stop = true;
+      m_one_shot = false;
     }
 
     std::string m_class_name;
@@ -4966,6 +4978,7 @@ public:
     bool m_use_one_liner = false;
     std::vector<std::string> m_one_liner;
     bool m_at_initial_stop;
+    bool m_one_shot = false;
 
     bool m_auto_continue = false;
   };
@@ -5134,6 +5147,8 @@ protected:
 
     // Should we run at the initial stop:
     new_hook_sp->SetRunAtInitialStop(m_options.m_at_initial_stop);
+
+    new_hook_sp->SetOneShot(m_options.m_one_shot);
 
     // Next see if any of the thread options have been entered:
 

@@ -256,7 +256,7 @@ libc_support_library(
     srcs = ["environ_internal.cpp"],
     hdrs = ["environ_internal.h"],
     deps = [
-        "//libc:config_app_h",
+        "//libc/config:app_h",
         "//libc/hdr/types:size_t",
         "//libc/src/__support:checked_ptr",
         "//libc/src/__support:common",
@@ -424,8 +424,8 @@ libc_function(
     hdrs = ["strfromf128.h"],
     deps = [
         ":str_from_util",
-        "//libc:llvm_libc_types_float128",
         "//libc/hdr/types:size_t",
+        "//libc/include:llvm_libc_types_float128",
         "//libc/src/__support/macros:config",
     ],
 )

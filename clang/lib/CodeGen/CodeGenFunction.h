@@ -3707,9 +3707,12 @@ public:
                                     SourceLocation Loc,
                                     SourceLocation AssumptionLoc,
                                     llvm::Value *Alignment,
-                                    llvm::Value *OffsetValue,
-                                    llvm::Value *TheCheck,
-                                    llvm::Instruction *Assumption);
+                                    llvm::Value *OffsetValue = nullptr);
+
+  void emitReturnAlignmentAssumptionCheck(llvm::Value *Ptr, QualType Ty,
+                                          SourceLocation AssumptionLoc,
+                                          llvm::Value *Alignment,
+                                          llvm::Value *OffsetValue = nullptr);
 
   void emitAlignmentAssumption(llvm::Value *PtrValue, QualType Ty,
                                SourceLocation Loc, SourceLocation AssumptionLoc,

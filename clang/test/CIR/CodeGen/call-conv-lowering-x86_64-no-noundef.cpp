@@ -32,9 +32,9 @@ extern "C" {
 
 void take_char(signed char c) {}
 
-// NOUNDEF:   define dso_local void @take_char(i8 noundef signext %{{.*}})
-// NONOUNDEF: define dso_local void @take_char(i8 signext %{{.*}})
-// NONOUNDEF-CIR: cir.func {{.*}} @take_char(%{{.*}}: !s8i {llvm.signext})
+// NOUNDEF:   define dso_local void @take_char(i8 noundef %{{.*}})
+// NONOUNDEF: define dso_local void @take_char(i8 %{{.*}})
+// NONOUNDEF-CIR: cir.func {{.*}} @take_char(%{{.*}}: !s8i)
 
 void take_big(Big b) {}
 
@@ -63,7 +63,7 @@ void callers(signed char c, Big b, NonTrivial n) {
 // NOUNDEF:           call void @ext_big(ptr noundef byval(%struct.Big) align 8 %{{.*}})
 // NOUNDEF:           call void @ext_non_trivial(ptr nofreeobj noundef align 4 dead_on_return dereferenceable(4) %{{.*}})
 
-// NOUNDEF-DAG: declare void @ext_char(i8 noundef signext)
+// NOUNDEF-DAG: declare void @ext_char(i8 noundef)
 // NOUNDEF-DAG: declare void @ext_big(ptr noundef byval(%struct.Big) align 8)
 // NOUNDEF-DAG: declare void @ext_non_trivial(ptr nofreeobj noundef align 4 dead_on_return dereferenceable(4))
 
@@ -72,7 +72,7 @@ void callers(signed char c, Big b, NonTrivial n) {
 // NONOUNDEF:         call void @ext_big(ptr byval(%struct.Big) align 8 %{{.*}})
 // NONOUNDEF:         call void @ext_non_trivial(ptr nofreeobj align 4 dead_on_return dereferenceable(4) %{{.*}})
 
-// NONOUNDEF-DAG: declare void @ext_char(i8 signext)
+// NONOUNDEF-DAG: declare void @ext_char(i8)
 // NONOUNDEF-DAG: declare void @ext_big(ptr byval(%struct.Big) align 8)
 // NONOUNDEF-DAG: declare void @ext_non_trivial(ptr nofreeobj align 4 dead_on_return dereferenceable(4))
 
@@ -81,7 +81,7 @@ void callers(signed char c, Big b, NonTrivial n) {
 // NONOUNDEF-CIR:         cir.call @ext_big(%{{.*}}) : (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big}) -> ()
 // NONOUNDEF-CIR:         cir.call @ext_non_trivial(%{{.*}}) : (!cir.ptr<!rec_NonTrivial> {llvm.align = 4 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj}) -> ()
 
-// NONOUNDEF-CIR-DAG: cir.func private @ext_char(!s8i {llvm.signext})
+// NONOUNDEF-CIR-DAG: cir.func private @ext_char(!s8i)
 // NONOUNDEF-CIR-DAG: cir.func private @ext_big(!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big})
 // NONOUNDEF-CIR-DAG: cir.func private @ext_non_trivial(!cir.ptr<!rec_NonTrivial> {llvm.align = 4 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj})
 

@@ -1662,13 +1662,17 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
           // Integer or pointer return type
           if (returnType->isIntegerTy() || returnType->isPointerTy()) {
         // Get the encapsulated return value
-        lldb::ValueObjectSP retVal = call_plan_sp.get()->GetReturnValueObject();
+        lldb_private::ThreadPlanReturnValue return_value =
+            call_plan_sp->GetReturnValue();
+        auto *returned =
+            std::get_if<lldb_private::ReturnedValue>(&return_value);
 
         lldb_private::Scalar returnVal = -1;
-        lldb_private::ValueObject *vobj = retVal.get();
+        lldb_private::ValueObject *vobj =
+            returned ? returned->valobj_sp.get() : nullptr;
 
         // Check if the return value is valid
-        if (vobj == nullptr || !retVal) {
+        if (vobj == nullptr) {
           error = lldb_private::Status::FromErrorString(
               "unable to get the return value");
           return false;
