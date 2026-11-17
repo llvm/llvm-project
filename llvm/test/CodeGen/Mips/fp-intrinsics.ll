@@ -43,18 +43,8 @@ define float @div_f32(float %x, float %y) #0 {
 }
 
 define float @frem_f32(float %x, float %y) #0 {
-; CHECK-LABEL: frem_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal fmodf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc fmodf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal fmodf
+; CHECK-R6: balc fmodf
   %val = call float @llvm.experimental.constrained.frem.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -138,172 +128,71 @@ define float @sqrt_f32(float %x) #0 {
 }
 
 define float @powi_f32(float %x, i32 %y) #0 {
-; CHECK-LABEL: powi_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal __powisf2
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc __powisf2
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal __powisf2
+; CHECK-R6: balc __powisf2
   %val = call float @llvm.experimental.constrained.powi.f32(float %x, i32 %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define float @sin_f32(float %x) #0 {
-; CHECK-LABEL: sin_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal sinf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc sinf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal sinf
+; CHECK-R6: balc sinf
   %val = call float @llvm.experimental.constrained.sin.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define float @cos_f32(float %x) #0 {
-; CHECK-LABEL: cos_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal cosf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-next: balc cosf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal cosf
+; CHECK-R6: balc cosf
   %val = call float @llvm.experimental.constrained.cos.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define float @tan_f32(float %x) #0 {
-; CHECK-LABEL: tan_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal tanf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc tanf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal tanf
 ; CHECK-R6: balc tanf
   %val = call float @llvm.experimental.constrained.tan.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define float @acos_f32(float %x, float %y) #0 {
-; CHECK-LABEL: acos_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal acosf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc acosf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal acosf
+; CHECK-R6: balc acosf
   %val = call float @llvm.experimental.constrained.acos.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define float @asin_f32(float %x, float %y) #0 {
-; CHECK-LABEL: asin_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal asinf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc asinf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal asinf
+; CHECK-R6: balc asinf
   %val = call float @llvm.experimental.constrained.asin.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define float @atan_f32(float %x, float %y) #0 {
-; CHECK-LABEL: atan_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal atanf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc atanf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal atanf
+; CHECK-R6: balc atanf
   %val = call float @llvm.experimental.constrained.atan.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define float @cosh_f32(float %x, float %y) #0 {
-; CHECK-LABEL: cosh_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal coshf
-; CHECK-NEXT:    nop
+; CHECK-R2: jal coshf
 ; CHECK-R6: balc coshf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
   %val = call float @llvm.experimental.constrained.cosh.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define float @sinh_f32(float %x, float %y) #0 {
-; CHECK-LABEL: sinh_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal sinhf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc sinhf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal sinhf
+; CHECK-R6: balc sinhf
   %val = call float @llvm.experimental.constrained.sinh.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define float @tanh_f32(float %x, float %y) #0 {
-; CHECK-LABEL: tanh_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal tanhf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc tanhf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal tanhf
+; CHECK-R6: balc tanhf
   %val = call float @llvm.experimental.constrained.tanh.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -326,35 +215,15 @@ define float @fmuladd_f32(float %x, float %y, float %z) #0 {
 }
 
 define float @ldexp_f32(float %x, i32 %y) #0 {
-; CHECK-LABEL: ldexp_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal ldexpf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc ldexpf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal ldexpf
+; CHECK-R6: balc ldexpf
   %val = call float @llvm.experimental.constrained.ldexp.f32.i32(float %x, i32 %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define float @roundeven_f32(float %x) #0 {
-; CHECK-LABEL: roundeven_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal roundevenf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc roundevenf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal roundevenf
+; CHECK-R6: balc roundevenf
   %val = call float @llvm.experimental.constrained.roundeven.f32(float %x, metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -424,119 +293,50 @@ define float @uitofp_f32_i32(i32 %x) #0 {
 }
 
 define float @atan2_f32(float %x, float %y) #0 {
-; CHECK-LABEL: atan2_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal atan2f
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc atan2f
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal atan2f
+; CHECK-R6: balc atan2f
   %val = call float @llvm.experimental.constrained.atan2.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define float @pow_f32(float %x, float %y) #0 {
-; CHECK-LABEL: pow_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal powf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc powf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal powf
+; CHECK-R6: balc powf
   %val = call float @llvm.experimental.constrained.pow.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define float @log_f32(float %x) #0 {
-; CHECK-LABEL: log_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal logf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc logf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal logf
+; CHECK-R6: balc logf
   %val = call float @llvm.experimental.constrained.log.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define float @log10_f32(float %x) #0 {
-; CHECK-LABEL: log10_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal log10f
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc log10f
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal log10f
+; CHECK-R6: balc log10f
   %val = call float @llvm.experimental.constrained.log10.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define float @log2_f32(float %x) #0 {
-; CHECK-LABEL: log2_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal log2f
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc log2f
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal log2f
+; CHECK-R6: balc log2f
   %val = call float @llvm.experimental.constrained.log2.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define float @exp_f32(float %x) #0 {
-; CHECK-LABEL: exp_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal expf
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal expf
+; CHECK-R6: balc expf
   %val = call float @llvm.experimental.constrained.exp.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define float @exp2_f32(float %x) #0 {
-; CHECK-LABEL: exp2_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal exp2f
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc exp2f
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal exp2f
+; CHECK-R6: balc exp2f
   %val = call float @llvm.experimental.constrained.exp2.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -563,52 +363,22 @@ define float @rint_f32(float %x) #0 {
 }
 
 define float @nearbyint_f32(float %x) #0 {
-; CHECK-LABEL: nearbyint_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal nearbyintf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc nearbyintf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal nearbyintf
+; CHECK-R6: balc nearbyintf
   %val = call float @llvm.experimental.constrained.nearbyint.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define i32 @lrint_f32(float %x) #0 {
-; CHECK-LABEL: lrint_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal lrintf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc lrintf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal lrintf
+; CHECK-R6: balc lrintf
   %val = call i32 @llvm.experimental.constrained.lrint.i32.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret i32 %val
 }
 
 define i32 @llrint_f32(float %x) #0 {
-; CHECK-LABEL: llrint_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal llrintf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc llrintf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal llrintf
+; CHECK-R6: balc llrintf
   %val = call i32 @llvm.experimental.constrained.llrint.i32.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret i32 %val
 }
@@ -656,103 +426,43 @@ define float @minnum_f32(float %x, float %y) #0 {
 }
 
 define float @ceil_f32(float %x) #0 {
-; CHECK-LABEL: ceil_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal ceilf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc ceilf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal ceilf
+; CHECK-R6: balc ceilf
   %val = call float @llvm.experimental.constrained.ceil.f32(float %x, metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define float @floor_f32(float %x) #0 {
-; CHECK-LABEL: floor_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal floorf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc floorf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal floorf
+; CHECK-R6: balc floorf
   %val = call float @llvm.experimental.constrained.floor.f32(float %x, metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define i32 @lround_f32(float %x) #0 {
-; CHECK-LABEL: lround_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal lroundf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc lroundf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal lroundf
+; CHECK-R6: balc lroundf
   %val = call i32 @llvm.experimental.constrained.lround.i32.f32(float %x, metadata !"fpexcept.strict") #0
   ret i32 %val
 }
 
 define i32 @llround_f32(float %x) #0 {
-; CHECK-LABEL: llround_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal llroundf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc llroundf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal llroundf
+; CHECK-R6: balc llroundf
   %val = call i32 @llvm.experimental.constrained.llround.i32.f32(float %x, metadata !"fpexcept.strict") #0
   ret i32 %val
 }
 
 define float @round_f32(float %x) #0 {
-; CHECK-LABEL: round_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal roundf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc roundf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal roundf
+; CHECK-R6: balc roundf
   %val = call float @llvm.experimental.constrained.round.f32(float %x, metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define float @trunc_f32(float %x) #0 {
-; CHECK-LABEL: trunc_f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal truncf
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc truncf
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal truncf
+; CHECK-R6: balc truncf
   %val = call float @llvm.experimental.constrained.trunc.f32(float %x, metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -796,18 +506,8 @@ define double @div_f64(double %x, double %y) #0 {
 }
 
 define double @frem_f64(double %x, double %y) #0 {
-; CHECK-LABEL: frem_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal fmod
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc fmod
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal fmod
+; CHECK-R6: balc fmod
   %val = call double @llvm.experimental.constrained.frem.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -926,171 +626,71 @@ define double @sqrt_f64(double %x) #0 {
 }
 
 define double @powi_f64(double %x, i32 %y) #0 {
-; CHECK-LABEL: powi_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal __powidf2
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc __powidf2
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal __powidf2
+; CHECK-R6: balc __powidf2
   %val = call double @llvm.experimental.constrained.powi.f64(double %x, i32 %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 define double @sin_f64(double %x) #0 {
-; CHECK-LABEL: sin_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal sin
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc sin
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal sin
+; CHECK-R6: balc sin
   %val = call double @llvm.experimental.constrained.sin.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 define double @cos_f64(double %x) #0 {
-; CHECK-LABEL: cos_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal cos
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc cos
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal cos
+; CHECK-R6: balc cos
   %val = call double @llvm.experimental.constrained.cos.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 define double @tan_f64(double %x) #0 {
-; CHECK-LABEL: tan_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal tan
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc tan
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal tan
+; CHECK-R6: balc tan
   %val = call double @llvm.experimental.constrained.tan.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 define double @acos_f64(double %x, double %y) #0 {
-; CHECK-LABEL: acos_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal acos
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc acos
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal acos
+; CHECK-R6: balc acos
   %val = call double @llvm.experimental.constrained.acos.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 define double @asin_f64(double %x, double %y) #0 {
-; CHECK-LABEL: asin_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal asin
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc asin
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal asin
+; CHECK-R6: balc asin
   %val = call double @llvm.experimental.constrained.asin.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 define double @atan_f64(double %x, double %y) #0 {
-; CHECK-LABEL: atan_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal atan
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc atan
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal atan
+; CHECK-R6: balc atan
   %val = call double @llvm.experimental.constrained.atan.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 define double @cosh_f64(double %x, double %y) #0 {
-; CHECK-LABEL: cosh_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal cosh
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc cosh
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal cosh
+; CHECK-R6: balc cosh
   %val = call double @llvm.experimental.constrained.cosh.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 define double @sinh_f64(double %x, double %y) #0 {
-; CHECK-LABEL: sinh_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal sinh
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc sinh
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal sinh
+; CHECK-R6: balc sinh
   %val = call double @llvm.experimental.constrained.sinh.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 define double @tanh_f64(double %x, double %y) #0 {
-; CHECK-LABEL: tanh_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal tanh
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc tanh
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal tanh
+; CHECK-R6: balc tanh
   %val = call double @llvm.experimental.constrained.tanh.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -1113,35 +713,15 @@ define double @fmuladd_f64(double %x, double %y, double %z) #0 {
 }
 
 define double @ldexp_f64(double %x, i32 %y) #0 {
-; CHECK-LABEL: ldexp_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal ldexp
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc ldexp
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal ldexp
+; CHECK-R6: balc ldexp
   %val = call double @llvm.experimental.constrained.ldexp.f64.i32(double %x, i32 %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 define double @roundeven_f64(double %x) #0 {
-; CHECK-LABEL: roundeven_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal roundeven
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc roundeven
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal roundeven
+; CHECK-R6: balc roundeven
   %val = call double @llvm.experimental.constrained.roundeven.f64(double %x, metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -1207,120 +787,50 @@ define double @uitofp_f64_i32(i32 %x) #0 {
 }
 
 define double @atan2_f64(double %x, double %y) #0 {
-; CHECK-LABEL: atan2_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal atan2
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc atan2
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal atan2
+; CHECK-R6: balc atan2
   %val = call double @llvm.experimental.constrained.atan2.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 define double @pow_f64(double %x, double %y) #0 {
-; CHECK-LABEL: pow_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal pow
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc pow
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal pow
+; CHECK-R6: balc pow
   %val = call double @llvm.experimental.constrained.pow.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 define double @log_f64(double %x) #0 {
-; CHECK-LABEL: log_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal log
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc log
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal log
+; CHECK-R6: balc log
   %val = call double @llvm.experimental.constrained.log.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 define double @log10_f64(double %x) #0 {
-; CHECK-LABEL: log10_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal log10
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc log10
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal log10
+; CHECK-R6: balc log10
   %val = call double @llvm.experimental.constrained.log10.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 define double @log2_f64(double %x) #0 {
-; CHECK-LABEL: log2_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal log2
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc log2
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal log2
+; CHECK-R6: balc log2
   %val = call double @llvm.experimental.constrained.log2.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 define double @exp_f64(double %x) #0 {
-; CHECK-LABEL: exp_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal exp
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc exp
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal exp
+; CHECK-R6: balc exp
   %val = call double @llvm.experimental.constrained.exp.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 define double @exp2_f64(double %x) #0 {
-; CHECK-LABEL: exp2_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal exp2
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc exp2
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal exp2
+; CHECK-R6: balc exp2
   %val = call double @llvm.experimental.constrained.exp2.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
@@ -1347,52 +857,22 @@ define double @rint_f64(double %x) #0 {
 }
 
 define double @nearbyint_f64(double %x) #0 {
-; CHECK-LABEL: nearbyint_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal nearbyint
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc nearbyint
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal nearbyint
+; CHECK-R6: balc nearbyint
   %val = call double @llvm.experimental.constrained.nearbyint.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 define i32 @lrint_f64(double %x) #0 {
-; CHECK-LABEL: lrint_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal lrint
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc lrint
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal lrint
+; CHECK-R6: balc lrint
   %val = call i32 @llvm.experimental.constrained.lrint.i32.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret i32 %val
 }
 
 define i32 @llrint_f64(double %x) #0 {
-; CHECK-LABEL: llrint_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal llrint
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc llrint
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal llrint
+; CHECK-R6: balc llrint
   %val = call i32 @llvm.experimental.constrained.llrint.i32.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret i32 %val
 }
@@ -1440,103 +920,43 @@ define double @minnum_f64(double %x, double %y) #0 {
 }
 
 define double @ceil_f64(double %x) #0 {
-; CHECK-LABEL: ceil_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal ceil
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc ceil
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal ceil
+; CHECK-R6: balc ceil
   %val = call double @llvm.experimental.constrained.ceil.f64(double %x, metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 define double @floor_f64(double %x) #0 {
-; CHECK-LABEL: floor_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal floor
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc floor
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal floor
+; CHECK-R6: balc floor
   %val = call double @llvm.experimental.constrained.floor.f64(double %x, metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 define i32 @lround_f64(double %x) #0 {
-; CHECK-LABEL: lround_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal lround
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc lround
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal lround
+; CHECK-R6: balc lround
   %val = call i32 @llvm.experimental.constrained.lround.i32.f64(double %x, metadata !"fpexcept.strict") #0
   ret i32 %val
 }
 
 define i32 @llround_f64(double %x) #0 {
-; CHECK-LABEL: llround_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal llround
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc llround
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal llround
+; CHECK-R6: balc llround
   %val = call i32 @llvm.experimental.constrained.llround.i32.f64(double %x, metadata !"fpexcept.strict") #0
   ret i32 %val
 }
 
 define double @round_f64(double %x) #0 {
-; CHECK-LABEL: round_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal round
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc round
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal round
+; CHECK-R6: balc round
   %val = call double @llvm.experimental.constrained.round.f64(double %x, metadata !"fpexcept.strict") #0
   ret double %val
 }
 
 define double @trunc_f64(double %x) #0 {
-; CHECK-LABEL: trunc_f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiu $sp, $sp, -24
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-R2-NEXT: jal trunc
-; CHECK-R2-NEXT: nop
-; CHECK-R6-NEXT: balc trunc
-; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R2: jal trunc
+; CHECK-R6: balc trunc
   %val = call double @llvm.experimental.constrained.trunc.f64(double %x, metadata !"fpexcept.strict") #0
   ret double %val
 }
