@@ -120,6 +120,23 @@ spirv.module Logical GLSL450 {
 
 // -----
 
+// The verifier accepts targets without literals, but llvm.switch needs a case
+// value per target.
+spirv.module Logical GLSL450 {
+  spirv.func @switch_targets_no_literals(%selector: i32) "None" {
+    // expected-error@+1 {{failed to legalize operation 'spirv.Switch' that was explicitly marked illegal}}
+    "spirv.Switch"(%selector)[^default, ^target]
+      {case_operand_segments = array<i32: 0>,
+       operandSegmentSizes = array<i32: 1, 0, 0>} : (i32) -> ()
+  ^default:
+    spirv.Return
+  ^target:
+    spirv.Return
+  }
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.mlir.loop
 //===----------------------------------------------------------------------===//
