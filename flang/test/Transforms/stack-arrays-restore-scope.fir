@@ -1,5 +1,6 @@
 // RUN: fir-opt --stack-arrays %s | FileCheck %s
 // RUN: fir-opt --allocation-placement="legacy=true stack-arrays=true" %s | FileCheck %s
+// RUN: fir-opt --allocation-placement %s | FileCheck %s --check-prefix=DEFAULT
 
 // Test that an allocmem made inside an llvm.stacksave/llvm.stackrestore pair
 // and still live after the llvm.stackrestore stays on the heap, while one made
@@ -53,6 +54,10 @@ func.func @nested_scope_in_loop(%again: i1) {
 // CHECK-LABEL: func.func @nested_scope_in_loop(
 // CHECK:         fir.allocmem
 // CHECK:         fir.freemem
+// DEFAULT-LABEL: func.func @nested_scope_in_loop(
+// DEFAULT:         fir.allocmem
+// DEFAULT:         fir.freemem
+// DEFAULT-LABEL: func.func @restore_of_unknown_save(
 
 func.func @restore_of_unknown_save(%sp: !llvm.ptr, %n: index) {
   %mem = fir.allocmem !fir.array<?xi8>, %n
@@ -62,6 +67,43 @@ func.func @restore_of_unknown_save(%sp: !llvm.ptr, %n: index) {
   return
 }
 // CHECK-LABEL: func.func @restore_of_unknown_save(
+// CHECK:         fir.allocmem
+// CHECK:         fir.freemem
+
+func.func @restore_in_region(%cond: i1) {
+  %sp = llvm.intr.stacksave : !llvm.ptr
+  %n = fir.call @extent() : () -> index
+  fir.if %cond {
+    %mem = fir.allocmem !fir.array<?xi8>, %n
+    fir.call @init(%mem) : (!fir.heap<!fir.array<?xi8>>) -> ()
+    llvm.intr.stackrestore %sp : !llvm.ptr
+    fir.call @use(%mem) : (!fir.heap<!fir.array<?xi8>>) -> ()
+    fir.freemem %mem : !fir.heap<!fir.array<?xi8>>
+  }
+  return
+}
+// CHECK-LABEL: func.func @restore_in_region(
+// CHECK:         fir.allocmem
+// CHECK:         fir.freemem
+
+func.func @restore_on_two_paths(%cond: i1) {
+  %sp = llvm.intr.stacksave : !llvm.ptr
+  %n = fir.call @extent() : () -> index
+  %mem = fir.allocmem !fir.array<?xi8>, %n
+  fir.call @init(%mem) : (!fir.heap<!fir.array<?xi8>>) -> ()
+  cf.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  llvm.intr.stackrestore %sp : !llvm.ptr
+  cf.br ^bb3
+^bb2:
+  llvm.intr.stackrestore %sp : !llvm.ptr
+  cf.br ^bb3
+^bb3:
+  fir.call @use(%mem) : (!fir.heap<!fir.array<?xi8>>) -> ()
+  fir.freemem %mem : !fir.heap<!fir.array<?xi8>>
+  return
+}
+// CHECK-LABEL: func.func @restore_on_two_paths(
 // CHECK:         fir.allocmem
 // CHECK:         fir.freemem
 

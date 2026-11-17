@@ -406,6 +406,7 @@ fir::StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
     return mlir::success();
   }
 
+  mlir::DominanceInfo dominanceInfo(func);
   mlir::DataFlowSolver solver;
   // constant propagation is required for dead code analysis, dead code analysis
   // is required to mark blocks live (required for mlir dense dfa)
@@ -415,7 +416,6 @@ fir::StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
   auto [it, inserted] = funcMaps.try_emplace(func);
   AllocMemMap &candidateOps = it->second;
 
-  mlir::DominanceInfo dominanceInfo(func);
   solver.load<AllocationAnalysis>(dominanceInfo);
   if (failed(solver.initializeAndRun(func))) {
     llvm::errs() << "DataFlowSolver failed!";
