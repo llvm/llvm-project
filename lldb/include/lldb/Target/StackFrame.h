@@ -646,17 +646,6 @@ protected:
   std::recursive_mutex m_mutex;
 
 private:
-  /// Private methods, called from GetValueForVariableExpressionPath.
-  /// See that method for documentation of parameters and return value.
-  lldb::ValueObjectSP LegacyGetValueForVariableExpressionPath(
-      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error);
-
-  lldb::ValueObjectSP DILGetValueForVariableExpressionPath(
-      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error,
-      lldb::DILMode mode = lldb::eDILModeFull);
-
   StackFrame(const StackFrame &) = delete;
   const StackFrame &operator=(const StackFrame &) = delete;
 };

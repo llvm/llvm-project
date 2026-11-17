@@ -170,7 +170,8 @@ that was not necessary.
 
 
 After being introduced in 2025, DIL became the default implementation for `frame
-variable` (aka `v`), so now that command is capable of handling many expressions
+variable` (aka `v`), and has since replaced the old implementation entirely.
+This means that `frame variable` is now capable of handling many expressions
 that formerly needed to go through the full expression evaluator. This is now
 the recommended way for users to request to see the values of their variables,
 and to evaluate simple expressions on them.
@@ -189,26 +190,6 @@ is not necessary, it is better for users to use either `v` or `expr` explicitly,
 and avoid `dwim-print` or `p`.
 
 ### User options and flags to control using DIL
-
-#### target.experimental.use-DIL
-
-Whether DIL is actually used when `frame variable` is called is controlled by a
-Boolean setting, `target.experimental.use-DIL`. This setting defaults to
-`true`. Users can set this to `false`, which will cause the `frame variable`
-command to fall back onto its old implementation:
-
-```
-(lldb) v i
-(int) i = 0
-(lldb) v 'i+3'
-(int) result = 3
-(lldb) settings show target.experimental.use-DIL
-target.experimental.use-DIL (boolean) = true
-(lldb) settings set target.experimental.use-DIL false
-(lldb) v 'i+3'
-error: unexpected char '+' encountered after "i" in "+3"
-(lldb) 
-```
 
 #### target.breakpoints-condition-mode
 
