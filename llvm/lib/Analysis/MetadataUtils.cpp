@@ -170,25 +170,21 @@ void llvm::copyMetadataForMemoryAccess(Instruction &Dest,
   assert(SourceInfo && SourceInfo->IsRead == DestInfo->IsRead &&
          "expected corresponding memory reads or writes");
   const DataLayout &DL = Source.getDataLayout();
-  // Collect the size of the old memory operation if available.
-  std::optional<TypeSize> OldSize;
-  if (SourceInfo->Ty)
-    OldSize = DL.getTypeStoreSize(SourceInfo->Ty);
-  else if (auto *Length =
-               dyn_cast<ConstantInt>(cast<AnyMemIntrinsic>(Source).getLength()))
-    // If Source is not a typed memory operation it must be an intrinsic.
-    if (auto Bytes = Length->getValue().tryZExtValue())
-      OldSize = TypeSize::getFixed(*Bytes);
+  TypeSize OldSize =
+      SourceInfo->Ty
+          ? DL.getTypeStoreSize(SourceInfo->Ty)
+          : TypeSize::getFixed(
+                cast<ConstantInt>(cast<AnyMemIntrinsic>(Source).getLength())
+                    ->getZExtValue());
   TypeSize NewSize = DL.getTypeStoreSize(DestInfo->Ty);
-  // Is the memory `Dest` accesses a subset of the memory `Source` acceses?
-  // The caller guarentees this is true if we don't know the size of `Source`
-  // or the offset of the `Dest` access in `Source`.
-  bool IsSubset = !OldSize || TypeSize::isKnownLE(NewSize, *OldSize);
+  // Is the destination access contained in the source access? If the size
+  // check succeeds but the offset is unknown, containment is a caller
+  // guarantee.
+  bool IsSubset = TypeSize::isKnownLE(NewSize, OldSize);
   if (DestByteOffset)
     IsSubset = IsSubset && *DestByteOffset >= 0 &&
-               (!OldSize ||
-                uint64_t(*DestByteOffset) <=
-                    OldSize->getKnownMinValue() - NewSize.getKnownMinValue());
+               uint64_t(*DestByteOffset) <=
+                   OldSize.getKnownMinValue() - NewSize.getKnownMinValue();
   bool IsWholeAccess = IsSubset && DestByteOffset == 0 && OldSize == NewSize;
   Type *SourceValueTy = SourceInfo->Ty;
   // Allow unpacking a single-element aggregates.

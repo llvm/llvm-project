@@ -21,18 +21,17 @@ class Instruction;
 class MDNode;
 class Value;
 
-/// Copy metadata valid for a replacement memory access. The destination must
-/// access the same bytes, a subset, or an expanded range in the same object.
-/// The destination must be a typed memory access; memory-transfer and
-/// memory-set intrinsics are supported only as sources. DestByteOffset is the
-/// destination's offset within the source access. A missing offset requires the
-/// caller to establish that the new access is a subset. Access types and
-/// pointer operands are inferred for loads, stores, and masked/VP memory
-/// intrinsics. For a source memory intrinsic, the source or destination pointer
-/// is selected to match the new read or write. The caller must establish range
-/// containment when the intrinsic's length is unknown. Pointer and value facts
-/// are retained only when valid for the destination; alias tags are adjusted
-/// for its range. Masks and execution conditions are not inspected.
+/// Copy metadata valid for a replacement memory access.
+///
+/// The destination must access the same bytes, a subset, or a wider byte range
+/// in the same object as the source. The destination must be a typed memory
+/// access. Memory-transfer and memory-set intrinsics are supported only as
+/// sources and must have a constant length.
+///
+/// DestByteOffset is the destination's offset within the source access. If the
+/// destination is no larger than the source, a missing offset means the offset
+/// is dynamic, but the caller guarentees it accesses a subset of the source
+/// access.
 LLVM_ABI void
 copyMetadataForMemoryAccess(Instruction &Dest, const Instruction &Source,
                             std::optional<int64_t> DestByteOffset = 0);

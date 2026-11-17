@@ -259,18 +259,6 @@ TEST_F(MetadataUtilsTest, MemoryTransferRemapsBothOperands) {
   EXPECT_FALSE(getMemCacheHint(*Write, 0));
 }
 
-TEST_F(MetadataUtilsTest, RuntimeMemoryTransferLength) {
-  auto *Length = B.CreateLoad(B.getInt64Ty(), Q);
-  B.CreateAssumption(B.CreateICmpUGE(Length, B.getInt64(8)));
-  auto *Copy = B.CreateMemCpy(P, Align(4), Q, Align(4), Length);
-  auto *Ptr = B.CreateInBoundsGEP(B.getInt8Ty(), Q, B.getInt64(4));
-  auto *Read = B.CreateLoad(B.getInt32Ty(), Ptr);
-  auto *Hint = hint();
-  setMemCacheHint(*Copy, 1, Hint);
-  copyMetadataForMemoryAccess(*Read, *Copy, 4);
-  EXPECT_EQ(getMemCacheHint(*Read), Hint);
-}
-
 TEST_F(MetadataUtilsTest, StoreTypeChangePreservesHints) {
   auto *Old = B.CreateStore(B.getInt32(0), P);
   auto *New = B.CreateStore(ConstantFP::get(B.getFloatTy(), 0), P);
