@@ -18,10 +18,10 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-/// Emit a work-item query builtin that takes a dimension index and returns a
-/// size_t value, e.g. __builtin_spirv_global_invocation_id(dim).
-static mlir::Value emitWorkItemQuery(CIRGenFunction &cgf, const CallExpr *expr,
-                                     llvm::StringRef intrinsicName) {
+/// Emit a builtin that takes a dimension index and returns a size_t value,
+/// e.g. __builtin_spirv_global_invocation_id(dim).
+static mlir::Value emitDimensionQuery(CIRGenFunction &cgf, const CallExpr *expr,
+                                      llvm::StringRef intrinsicName) {
   mlir::Value dim = cgf.emitScalarExpr(expr->getArg(0));
   return cgf.getBuilder().emitIntrinsicCallOp(
       cgf.getLoc(expr->getExprLoc()), intrinsicName,
@@ -30,22 +30,16 @@ static mlir::Value emitWorkItemQuery(CIRGenFunction &cgf, const CallExpr *expr,
 
 std::optional<mlir::Value>
 CIRGenFunction::emitSPIRVBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
-  switch (builtinId) {
-  case SPIRV::BI__builtin_spirv_num_workgroups:
-    return emitWorkItemQuery(*this, expr, "spv.num.workgroups");
-  case SPIRV::BI__builtin_spirv_workgroup_size:
-    return emitWorkItemQuery(*this, expr, "spv.workgroup.size");
-  case SPIRV::BI__builtin_spirv_workgroup_id:
-    return emitWorkItemQuery(*this, expr, "spv.group.id");
-  case SPIRV::BI__builtin_spirv_local_invocation_id:
-    return emitWorkItemQuery(*this, expr, "spv.thread.id.in.group");
-  case SPIRV::BI__builtin_spirv_global_invocation_id:
-    return emitWorkItemQuery(*this, expr, "spv.thread.id");
-  case SPIRV::BI__builtin_spirv_global_size:
-    return emitWorkItemQuery(*this, expr, "spv.global.size");
-  case SPIRV::BI__builtin_spirv_global_offset:
-    return emitWorkItemQuery(*this, expr, "spv.global.offset");
+  auto emitNYI = [&]() -> mlir::Value {
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented SPIR-V builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinId));
+    return mlir::Value{};
+  };
 
+  // Keep the cases in the same order as the classic codegen
+  // (clang/lib/CodeGen/TargetBuiltins/SPIR.cpp) to ease review.
+  switch (builtinId) {
   case SPIRV::BI__builtin_spirv_distance:
   case SPIRV::BI__builtin_spirv_length:
   case SPIRV::BI__builtin_spirv_reflect:
@@ -54,14 +48,25 @@ CIRGenFunction::emitSPIRVBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case SPIRV::BI__builtin_spirv_faceforward:
   case SPIRV::BI__builtin_spirv_generic_cast_to_ptr_explicit:
   case SPIRV::BI__builtin_spirv_subgroup_shuffle:
+    return emitNYI();
+  case SPIRV::BI__builtin_spirv_num_workgroups:
+    return emitDimensionQuery(*this, expr, "spv.num.workgroups");
+  case SPIRV::BI__builtin_spirv_workgroup_size:
+    return emitDimensionQuery(*this, expr, "spv.workgroup.size");
+  case SPIRV::BI__builtin_spirv_workgroup_id:
+    return emitDimensionQuery(*this, expr, "spv.group.id");
+  case SPIRV::BI__builtin_spirv_local_invocation_id:
+    return emitDimensionQuery(*this, expr, "spv.thread.id.in.group");
+  case SPIRV::BI__builtin_spirv_global_invocation_id:
+    return emitDimensionQuery(*this, expr, "spv.thread.id");
+  case SPIRV::BI__builtin_spirv_global_size:
+    return emitDimensionQuery(*this, expr, "spv.global.size");
+  case SPIRV::BI__builtin_spirv_global_offset:
+    return emitDimensionQuery(*this, expr, "spv.global.offset");
   case SPIRV::BI__builtin_spirv_ddx:
   case SPIRV::BI__builtin_spirv_ddy:
   case SPIRV::BI__builtin_spirv_fwidth:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented SPIR-V builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-
+    return emitNYI();
   default:
     // Builtins with a ClangBuiltin mapping on the intrinsic (e.g. the subgroup
     // queries) are handled by the generic path in emitBuiltinExpr.
