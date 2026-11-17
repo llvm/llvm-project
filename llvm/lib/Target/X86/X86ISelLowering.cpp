@@ -11375,10 +11375,15 @@ static SDValue lowerShuffleAsBitMask(const SDLoc &DL, MVT VT, SDValue V1,
   unsigned EltSizeInBIts = VT.getScalarSizeInBits();
   APInt Zero = APInt::getZero(EltSizeInBIts);
   APInt AllOnes = APInt::getAllOnes(EltSizeInBIts);
+  APInt DemandedElts = APInt::getAllOnes(Mask.size());
 
   SmallVector<APInt, 16> VMaskOps(Mask.size(), Zero);
   SDValue V;
   for (int I = 0, Size = Mask.size(); I != Size; ++I) {
+    if (Mask[I] < 0) {
+      DemandedElts.clearBit(I);
+      continue;
+    }
     if (Zeroable[I])
       continue;
     if (Mask[I] % Size != I)
@@ -11395,7 +11400,7 @@ static SDValue lowerShuffleAsBitMask(const SDLoc &DL, MVT VT, SDValue V1,
 
   MVT LogicVT = VT.changeTypeToInteger();
   SDValue VMask = getConstVector(VMaskOps, LogicVT, DAG, DL);
-  V = DAG.getBitcast(LogicVT, DAG.getFreeze(V));
+  V = DAG.getBitcast(LogicVT, DAG.getFreeze(V, DemandedElts));
   SDValue And = DAG.getNode(ISD::AND, DL, LogicVT, V, VMask);
   return DAG.getBitcast(VT, And);
 }
