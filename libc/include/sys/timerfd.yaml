@@ -1,0 +1,23 @@
+header: sys/timerfd.h
+standards:
+  - linux
+public_includes:
+  - time.h
+macros:
+  - macro_name: TFD_CLOEXEC
+    macro_header: sys-timerfd-macros.h
+  - macro_name: TFD_NONBLOCK
+    macro_header: sys-timerfd-macros.h
+  - macro_name: TFD_TIMER_ABSTIME
+    macro_header: sys-timerfd-macros.h
+  - macro_name: TFD_TIMER_CANCEL_ON_SET
+    macro_header: sys-timerfd-macros.h
+types: []
+enums: []
+objects: []
+functions:
+  - name: timerfd_create
+    return_type: int
+    arguments:
+      - type: int
+      - type: int

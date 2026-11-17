@@ -404,6 +404,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/sysinfo.h entrypoints
     libc.src.sys.sysinfo.sysinfo
 
+    # sys/timerfd.h entrypoints
+    libc.src.sys.timerfd.timerfd_create
+
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
 
