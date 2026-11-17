@@ -21,7 +21,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-template <bool DisableRuntimeLocale> struct LocaleStorage {
+template <bool EnableRuntimeLocale> struct LocaleStorage {
   const LcCtypeData *ctype_ptr;
   const LcNumericData *numeric_ptr;
   const LcTimeData *time_ptr;
@@ -50,7 +50,7 @@ template <bool DisableRuntimeLocale> struct LocaleStorage {
   }
 };
 
-template <> struct LocaleStorage<true> {
+template <> struct LocaleStorage<false> {
   LIBC_INLINE constexpr LocaleStorage(const LcCtypeData *,
                                       const LcNumericData *, const LcTimeData *,
                                       const void *, const LcMonetaryData *,
@@ -69,10 +69,12 @@ template <> struct LocaleStorage<true> {
 
 } // namespace LIBC_NAMESPACE_DECL
 
+// Defined in the global namespace to match the forward declaration in
+// locale_t.h.
 struct __locale_t
-    : LIBC_NAMESPACE::LocaleStorage<LIBC_NAMESPACE::DISABLE_RUNTIME_LOCALE> {
+    : LIBC_NAMESPACE::LocaleStorage<LIBC_NAMESPACE::ENABLE_RUNTIME_LOCALE> {
   using LIBC_NAMESPACE::LocaleStorage<
-      LIBC_NAMESPACE::DISABLE_RUNTIME_LOCALE>::LocaleStorage;
+      LIBC_NAMESPACE::ENABLE_RUNTIME_LOCALE>::LocaleStorage;
 };
 
 namespace LIBC_NAMESPACE_DECL {

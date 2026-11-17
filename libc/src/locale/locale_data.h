@@ -20,12 +20,12 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-#ifdef LIBC_CONF_DEFAULT_LOCALE
+#ifndef LIBC_CONF_DEFAULT_LOCALE
+#error "LIBC_CONF_DEFAULT_LOCALE must be defined by the build system."
+#endif
+
 LIBC_INLINE_VAR constexpr cpp::string_view DEFAULT_LOCALE_NAME =
     LIBC_CONF_DEFAULT_LOCALE;
-#else
-LIBC_INLINE_VAR constexpr cpp::string_view DEFAULT_LOCALE_NAME = "C.UTF-8";
-#endif
 
 LIBC_INLINE constexpr bool is_c_locale_name(cpp::string_view name) {
   return name == "C" || name == "POSIX";
@@ -53,10 +53,10 @@ static_assert(is_supported_base_locale(DEFAULT_LOCALE_NAME) &&
 LIBC_INLINE_VAR constexpr bool DEFAULT_LOCALE_IS_UTF8 =
     is_utf8_locale_name(DEFAULT_LOCALE_NAME);
 
-#ifdef LIBC_CONF_DISABLE_RUNTIME_LOCALE
-LIBC_INLINE_VAR constexpr bool DISABLE_RUNTIME_LOCALE = true;
+#ifdef LIBC_CONF_ENABLE_RUNTIME_LOCALE
+LIBC_INLINE_VAR constexpr bool ENABLE_RUNTIME_LOCALE = true;
 #else
-LIBC_INLINE_VAR constexpr bool DISABLE_RUNTIME_LOCALE = false;
+LIBC_INLINE_VAR constexpr bool ENABLE_RUNTIME_LOCALE = false;
 #endif
 
 struct LcCtypeData {

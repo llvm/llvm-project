@@ -214,9 +214,9 @@
       "value": "C.UTF-8",
       "doc": "The default locale for the C library. Options: 'C', 'POSIX', 'C.UTF-8', 'en_US.UTF-8'."
     },
-    "LIBC_CONF_DISABLE_RUNTIME_LOCALE": {
-      "value": false,
-      "doc": "Bypass runtime locale objects and use hardcoded lookups for embedded builds."
+    "LIBC_CONF_ENABLE_RUNTIME_LOCALE": {
+      "value": true,
+      "doc": "Enable runtime locale switching. Disable to bypass runtime locale objects and use hardcoded lookups for embedded builds."
     }
   }
 }

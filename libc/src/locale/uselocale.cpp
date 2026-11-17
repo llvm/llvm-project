@@ -20,7 +20,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(locale_t, uselocale, ([[maybe_unused]] locale_t newloc)) {
-  if constexpr (DISABLE_RUNTIME_LOCALE)
+  if constexpr (!ENABLE_RUNTIME_LOCALE)
     return LC_GLOBAL_LOCALE;
 
   locale_t oldloc = get_thread_locale();

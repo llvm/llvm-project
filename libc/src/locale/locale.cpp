@@ -24,7 +24,7 @@ __locale_t c_locale(&C_CTYPE_DATA, &C_NUMERIC_DATA, &C_TIME_DATA, nullptr,
 __locale_t utf8_locale(&UTF8_CTYPE_DATA, &C_NUMERIC_DATA, &C_TIME_DATA, nullptr,
                        &C_MONETARY_DATA, &C_MESSAGES_DATA);
 
-#ifndef LIBC_CONF_DISABLE_RUNTIME_LOCALE
+#ifdef LIBC_CONF_ENABLE_RUNTIME_LOCALE
 static locale_t global_locale =
     DEFAULT_LOCALE_IS_UTF8 ? &utf8_locale : &c_locale;
 
@@ -32,29 +32,29 @@ static LIBC_THREAD_LOCAL locale_t thread_locale = nullptr;
 #endif
 
 locale_t get_global_locale() {
-#ifdef LIBC_CONF_DISABLE_RUNTIME_LOCALE
-  return DEFAULT_LOCALE_IS_UTF8 ? &utf8_locale : &c_locale;
-#else
+#ifdef LIBC_CONF_ENABLE_RUNTIME_LOCALE
   return global_locale;
+#else
+  return DEFAULT_LOCALE_IS_UTF8 ? &utf8_locale : &c_locale;
 #endif
 }
 
 void set_global_locale([[maybe_unused]] locale_t loc) {
-#ifndef LIBC_CONF_DISABLE_RUNTIME_LOCALE
+#ifdef LIBC_CONF_ENABLE_RUNTIME_LOCALE
   global_locale = loc;
 #endif
 }
 
 locale_t get_thread_locale() {
-#ifdef LIBC_CONF_DISABLE_RUNTIME_LOCALE
-  return nullptr;
-#else
+#ifdef LIBC_CONF_ENABLE_RUNTIME_LOCALE
   return thread_locale;
+#else
+  return nullptr;
 #endif
 }
 
 void set_thread_locale([[maybe_unused]] locale_t loc) {
-#ifndef LIBC_CONF_DISABLE_RUNTIME_LOCALE
+#ifdef LIBC_CONF_ENABLE_RUNTIME_LOCALE
   thread_locale = loc;
 #endif
 }
