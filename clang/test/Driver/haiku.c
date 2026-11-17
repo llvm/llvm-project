@@ -1,7 +1,7 @@
 // UNSUPPORTED: system-windows
 
 // Check the C header paths
-// RUN: %clang --target=x86_64-unknown-haiku -### %s 2>&1 \
+// RUN: %clang --target=x86_64-unknown-haiku --sysroot= -### %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-C-HEADER-PATH %s
 // CHECK-C-HEADER-PATH: "-internal-isystem" "/boot/system/non-packaged/develop/headers"
 // CHECK-C-HEADER-PATH: "-internal-isystem" "/boot/system/develop/headers/os"
@@ -57,7 +57,7 @@
 // CHECK-LD-X86_64-SAME: {{^}} "[[SYSROOT]]/boot/system/develop/lib/crtn.o"
 
 // Check -rdynamic is a no-op
-// RUN: %clang -### -rdynamic %s 2>&1 --target=x86_64-unknown-haiku \
+// RUN: %clang --sysroot= -### -rdynamic %s 2>&1 --target=x86_64-unknown-haiku \
 // RUN:    | FileCheck --check-prefix=CHECK-RDYNAMIC %s
 // CHECK-RDYNAMIC-NOT: "-export-dynamic"
 
@@ -71,16 +71,16 @@
 // CHECK-X86_64-SHARED-NOT: "[[SYSROOT]]/boot/system/develop/lib/start_dyn.o"
 
 // Check default ARM CPU, ARMv6
-// RUN: %clang -### %s 2>&1 --target=arm-unknown-haiku \
+// RUN: %clang --sysroot= -### %s 2>&1 --target=arm-unknown-haiku \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM-CPU %s
 // CHECK-ARM-CPU: "-target-cpu" "arm1176jzf-s"
 
 // Check that the -X and --no-relax flags are passed to the linker on riscv64
-// RUN: %clang --target=riscv64-unknown-haiku -mno-relax -### %s 2>&1 \
+// RUN: %clang --target=riscv64-unknown-haiku -mno-relax --sysroot= -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=RISCV64-FLAGS %s
 // RISCV64-FLAGS: "-X" "--no-relax"
 
 // Check passing LTO flags to the linker
-// RUN: %clang --target=x86_64-unknown-haiku -flto -### %s 2>&1 \
+// RUN: %clang --target=x86_64-unknown-haiku -flto --sysroot= -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-LTO-FLAGS %s
 // CHECK-LTO-FLAGS: "-plugin-opt=mcpu=x86-64"

@@ -5,6 +5,19 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM,OGCG --input-file=%t.ll %s
 
+union PtrToIntUnion { int id; char *str; };
+struct Base { int b; };
+struct Derived : Base { union PtrToIntUnion u; };
+struct DerivedFromDerived : Derived { int i; };
+Derived derived = { { 1 }, { 2 } };
+// CIR: cir.global external @derived = #cir.const_record<{#cir.const_record<{#cir.int<1> : !s32i}> : !rec_Base, #cir.const_record<{#cir.int<2> : !s32i}> : !rec_PtrToIntUnion}> : !rec_Derived
+// LLVMCIR: @derived = global { %struct.Base, [4 x i8], { i32, [4 x i8] } } { %struct.Base { i32 1 }, [4 x i8] zeroinitializer, { i32, [4 x i8] } { i32 2, [4 x i8] zeroinitializer } }
+// OGCG: @derived = global { i32, [4 x i8], { i32, [4 x i8] } } { i32 1, [4 x i8] undef, { i32, [4 x i8] } { i32 2, [4 x i8] undef } }, align 8
+DerivedFromDerived derivedFromDerived = { { { 1 }, { 2 } }, 3};
+// CIR: cir.global external @derivedFromDerived = #cir.const_record<{#cir.const_record<{#cir.const_record<{#cir.int<1> : !s32i}> : !rec_Base, #cir.const_record<{#cir.int<2> : !s32i}> : !rec_PtrToIntUnion}> : !rec_Derived, #cir.int<3> : !s32i, #cir.zero : !cir.array<!u8i x 4>}> : !rec_DerivedFromDerived
+// LLVMCIR: @derivedFromDerived = global <{ { %struct.Base, [4 x i8], { i32, [4 x i8] } }, i32, [4 x i8] }> <{ { %struct.Base, [4 x i8], { i32, [4 x i8] } } { %struct.Base { i32 1 }, [4 x i8] zeroinitializer, { i32, [4 x i8] } { i32 2, [4 x i8] zeroinitializer } }, i32 3, [4 x i8] zeroinitializer }>
+// OGCG: @derivedFromDerived = global { i32, [4 x i8], { i32, [4 x i8] }, i32, [4 x i8] } { i32 1, [4 x i8] undef, { i32, [4 x i8] } { i32 2, [4 x i8] undef }, i32 3, [4 x i8] undef }, align 8
+
 typedef union vec3 {
   struct { double x, y, z; };
   double component[3];
@@ -42,24 +55,18 @@ typedef union Trivial {
 
 extern "C" Trivial ret_trivial() { return {}; }
   // CIR-LABEL: cir.func {{.*}} @ret_trivial() -> !s32i
-  // CIR: %[[COERCE:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_Trivial>
   // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Trivial>
   // CIR: %[[GET_A:.*]] = cir.get_member %[[RET_ALLOCA]][0] {name = "a"}
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0>
   // CIR: cir.store{{.*}} %[[ZERO]], %[[GET_A]]
-  // CIR: %[[TRIVIAL:.*]] = cir.load %[[RET_ALLOCA]] : !cir.ptr<!rec_Trivial>, !rec_Trivial
-  // CIR: cir.store %[[TRIVIAL]], %[[COERCE]] : !rec_Trivial, !cir.ptr<!rec_Trivial>
-  // CIR: %[[COERCE_I32:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!rec_Trivial> -> !cir.ptr<!s32i>
-  // CIR: %[[RET:.*]] = cir.load %[[COERCE_I32]] : !cir.ptr<!s32i>, !s32i
-  // CIR: cir.return %[[RET]] : !s32i
+  // CIR: %[[RET_I32:.*]] = cir.cast bitcast %[[RET_ALLOCA]] : !cir.ptr<!rec_Trivial> -> !cir.ptr<!s32i>
+  // CIR-NEXT: %[[RET:.*]] = cir.load align(4) %[[RET_I32]] : !cir.ptr<!s32i>, !s32i
+  // CIR-NEXT: cir.return %[[RET]] : !s32i
 
   // LLVM-LABEL: define dso_local i32 @ret_trivial()
-  // LLVMCIR: %[[COERCE:.*]] = alloca %union.Trivial
   // LLVM: %[[RET_ALLOCA:.*]] = alloca %union.Trivial
   // LLVM: store i32 0, ptr %[[RET_ALLOCA]]
-  // LLVMCIR: %[[TRIVIAL:.*]] = load %union.Trivial, ptr %[[RET_ALLOCA]]
-  // LLVMCIR: store %union.Trivial %[[TRIVIAL]], ptr %[[COERCE]]
-  // LLVMCIR: %[[RET:.*]] = load i32, ptr %[[COERCE]]
+  // LLVMCIR: %[[RET:.*]] = load i32, ptr %[[RET_ALLOCA]], align 4
   // OGCG: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %union.Trivial, ptr %[[RET_ALLOCA]], i32 0, i32 0
   // OGCG: %[[RET:.*]] = load i32, ptr %[[COERCE_DIVE]]
   // LLVM: ret i32 %[[RET]]

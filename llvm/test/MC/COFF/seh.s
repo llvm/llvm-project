@@ -15,7 +15,7 @@
 // CHECK-NEXT:   }
 // CHECK:        Section {
 // CHECK:          Name: .xdata
-// CHECK:          RawDataSize: 80
+// CHECK:          RawDataSize: 0x50
 // CHECK:          RelocationCount: 7
 // CHECK:          Characteristics [
 // CHECK-NEXT:       ALIGN_4BYTES

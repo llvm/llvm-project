@@ -294,7 +294,10 @@ define i64 @cnt64(i64 %x) nounwind readnone {
 ;
 ; X86-SSE2-LABEL: cnt64:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSE2-NEXT:    movq {{.*#+}} xmm0 = xmm1[0],zero
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; X86-SSE2-NEXT:    psrlw $1, %xmm1
 ; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
@@ -317,16 +320,19 @@ define i64 @cnt64(i64 %x) nounwind readnone {
 ;
 ; X86-SSSE3-LABEL: cnt64:
 ; X86-SSSE3:       # %bb.0:
-; X86-SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X86-SSSE3-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X86-SSSE3-NEXT:    movdqa %xmm1, %xmm2
-; X86-SSSE3-NEXT:    pand %xmm0, %xmm2
+; X86-SSSE3-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSSE3-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSSE3-NEXT:    movq {{.*#+}} xmm0 = xmm1[0],zero
+; X86-SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X86-SSSE3-NEXT:    movdqa %xmm0, %xmm2
+; X86-SSSE3-NEXT:    pand %xmm1, %xmm2
 ; X86-SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; X86-SSSE3-NEXT:    movdqa %xmm3, %xmm4
 ; X86-SSSE3-NEXT:    pshufb %xmm2, %xmm4
-; X86-SSSE3-NEXT:    psrlw $4, %xmm1
-; X86-SSSE3-NEXT:    pand %xmm0, %xmm1
-; X86-SSSE3-NEXT:    pshufb %xmm1, %xmm3
+; X86-SSSE3-NEXT:    psrlw $4, %xmm0
+; X86-SSSE3-NEXT:    pand %xmm1, %xmm0
+; X86-SSSE3-NEXT:    pshufb %xmm0, %xmm3
 ; X86-SSSE3-NEXT:    paddb %xmm4, %xmm3
 ; X86-SSSE3-NEXT:    pxor %xmm0, %xmm0
 ; X86-SSSE3-NEXT:    psadbw %xmm3, %xmm0
@@ -536,7 +542,10 @@ define i128 @cnt128(i128 %x) nounwind readnone {
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
 ; X86-SSE2-NEXT:    movl 8(%ebp), %eax
-; X86-SSE2-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; X86-SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSE2-NEXT:    movq {{.*#+}} xmm2 = xmm1[0],zero
 ; X86-SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; X86-SSE2-NEXT:    psrlw $1, %xmm0
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
@@ -556,7 +565,10 @@ define i128 @cnt128(i128 %x) nounwind readnone {
 ; X86-SSE2-NEXT:    pxor %xmm3, %xmm3
 ; X86-SSE2-NEXT:    psadbw %xmm3, %xmm4
 ; X86-SSE2-NEXT:    movd %xmm4, %ecx
-; X86-SSE2-NEXT:    movq {{.*#+}} xmm4 = mem[0],zero
+; X86-SSE2-NEXT:    movd {{.*#+}} xmm4 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movd {{.*#+}} xmm5 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1]
+; X86-SSE2-NEXT:    movq {{.*#+}} xmm4 = xmm5[0],zero
 ; X86-SSE2-NEXT:    movdqa %xmm4, %xmm5
 ; X86-SSE2-NEXT:    psrlw $1, %xmm5
 ; X86-SSE2-NEXT:    pand %xmm1, %xmm5
@@ -588,8 +600,11 @@ define i128 @cnt128(i128 %x) nounwind readnone {
 ; X86-SSSE3-NEXT:    andl $-16, %esp
 ; X86-SSSE3-NEXT:    subl $16, %esp
 ; X86-SSSE3-NEXT:    movl 8(%ebp), %eax
+; X86-SSSE3-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSSE3-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSSE3-NEXT:    movq {{.*#+}} xmm2 = xmm1[0],zero
 ; X86-SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X86-SSSE3-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
 ; X86-SSSE3-NEXT:    movdqa %xmm2, %xmm3
 ; X86-SSSE3-NEXT:    pand %xmm1, %xmm3
 ; X86-SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
@@ -603,7 +618,10 @@ define i128 @cnt128(i128 %x) nounwind readnone {
 ; X86-SSSE3-NEXT:    pxor %xmm2, %xmm2
 ; X86-SSSE3-NEXT:    psadbw %xmm2, %xmm3
 ; X86-SSSE3-NEXT:    movd %xmm3, %ecx
-; X86-SSSE3-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
+; X86-SSSE3-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; X86-SSSE3-NEXT:    movd {{.*#+}} xmm4 = mem[0],zero,zero,zero
+; X86-SSSE3-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
+; X86-SSSE3-NEXT:    movq {{.*#+}} xmm3 = xmm4[0],zero
 ; X86-SSSE3-NEXT:    movdqa %xmm3, %xmm4
 ; X86-SSSE3-NEXT:    pand %xmm1, %xmm4
 ; X86-SSSE3-NEXT:    movdqa %xmm0, %xmm5
@@ -902,7 +920,10 @@ define i64 @cnt64_optsize(i64 %x) nounwind readnone optsize {
 ;
 ; X86-SSE2-LABEL: cnt64_optsize:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSE2-NEXT:    movq {{.*#+}} xmm0 = xmm1[0],zero
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; X86-SSE2-NEXT:    psrlw $1, %xmm1
 ; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
@@ -925,16 +946,19 @@ define i64 @cnt64_optsize(i64 %x) nounwind readnone optsize {
 ;
 ; X86-SSSE3-LABEL: cnt64_optsize:
 ; X86-SSSE3:       # %bb.0:
-; X86-SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X86-SSSE3-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X86-SSSE3-NEXT:    movdqa %xmm1, %xmm2
-; X86-SSSE3-NEXT:    pand %xmm0, %xmm2
+; X86-SSSE3-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSSE3-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSSE3-NEXT:    movq {{.*#+}} xmm0 = xmm1[0],zero
+; X86-SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X86-SSSE3-NEXT:    movdqa %xmm0, %xmm2
+; X86-SSSE3-NEXT:    pand %xmm1, %xmm2
 ; X86-SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; X86-SSSE3-NEXT:    movdqa %xmm3, %xmm4
 ; X86-SSSE3-NEXT:    pshufb %xmm2, %xmm4
-; X86-SSSE3-NEXT:    psrlw $4, %xmm1
-; X86-SSSE3-NEXT:    pand %xmm0, %xmm1
-; X86-SSSE3-NEXT:    pshufb %xmm1, %xmm3
+; X86-SSSE3-NEXT:    psrlw $4, %xmm0
+; X86-SSSE3-NEXT:    pand %xmm1, %xmm0
+; X86-SSSE3-NEXT:    pshufb %xmm0, %xmm3
 ; X86-SSSE3-NEXT:    paddb %xmm4, %xmm3
 ; X86-SSSE3-NEXT:    pxor %xmm0, %xmm0
 ; X86-SSSE3-NEXT:    psadbw %xmm3, %xmm0
@@ -1155,7 +1179,10 @@ define i128 @cnt128_optsize(i128 %x) nounwind readnone optsize {
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
 ; X86-SSE2-NEXT:    movl 8(%ebp), %eax
-; X86-SSE2-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; X86-SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSE2-NEXT:    movq {{.*#+}} xmm2 = xmm1[0],zero
 ; X86-SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; X86-SSE2-NEXT:    psrlw $1, %xmm0
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
@@ -1175,7 +1202,10 @@ define i128 @cnt128_optsize(i128 %x) nounwind readnone optsize {
 ; X86-SSE2-NEXT:    pxor %xmm3, %xmm3
 ; X86-SSE2-NEXT:    psadbw %xmm3, %xmm4
 ; X86-SSE2-NEXT:    movd %xmm4, %ecx
-; X86-SSE2-NEXT:    movq {{.*#+}} xmm4 = mem[0],zero
+; X86-SSE2-NEXT:    movd {{.*#+}} xmm4 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movd {{.*#+}} xmm5 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1]
+; X86-SSE2-NEXT:    movq {{.*#+}} xmm4 = xmm5[0],zero
 ; X86-SSE2-NEXT:    movdqa %xmm4, %xmm5
 ; X86-SSE2-NEXT:    psrlw $1, %xmm5
 ; X86-SSE2-NEXT:    pand %xmm1, %xmm5
@@ -1208,8 +1238,11 @@ define i128 @cnt128_optsize(i128 %x) nounwind readnone optsize {
 ; X86-SSSE3-NEXT:    andl $-16, %esp
 ; X86-SSSE3-NEXT:    subl $16, %esp
 ; X86-SSSE3-NEXT:    movl 8(%ebp), %eax
+; X86-SSSE3-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSSE3-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSSE3-NEXT:    movq {{.*#+}} xmm2 = xmm1[0],zero
 ; X86-SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X86-SSSE3-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
 ; X86-SSSE3-NEXT:    movdqa %xmm2, %xmm3
 ; X86-SSSE3-NEXT:    pand %xmm1, %xmm3
 ; X86-SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
@@ -1223,7 +1256,10 @@ define i128 @cnt128_optsize(i128 %x) nounwind readnone optsize {
 ; X86-SSSE3-NEXT:    pxor %xmm2, %xmm2
 ; X86-SSSE3-NEXT:    psadbw %xmm2, %xmm3
 ; X86-SSSE3-NEXT:    movd %xmm3, %ecx
-; X86-SSSE3-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
+; X86-SSSE3-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; X86-SSSE3-NEXT:    movd {{.*#+}} xmm4 = mem[0],zero,zero,zero
+; X86-SSSE3-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
+; X86-SSSE3-NEXT:    movq {{.*#+}} xmm3 = xmm4[0],zero
 ; X86-SSSE3-NEXT:    movdqa %xmm3, %xmm4
 ; X86-SSSE3-NEXT:    pand %xmm1, %xmm4
 ; X86-SSSE3-NEXT:    movdqa %xmm0, %xmm5
@@ -1413,7 +1449,10 @@ define i64 @cnt64_pgso(i64 %x) nounwind readnone !prof !14 {
 ;
 ; X86-SSE2-LABEL: cnt64_pgso:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSE2-NEXT:    movq {{.*#+}} xmm0 = xmm1[0],zero
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; X86-SSE2-NEXT:    psrlw $1, %xmm1
 ; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
@@ -1436,16 +1475,19 @@ define i64 @cnt64_pgso(i64 %x) nounwind readnone !prof !14 {
 ;
 ; X86-SSSE3-LABEL: cnt64_pgso:
 ; X86-SSSE3:       # %bb.0:
-; X86-SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X86-SSSE3-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X86-SSSE3-NEXT:    movdqa %xmm1, %xmm2
-; X86-SSSE3-NEXT:    pand %xmm0, %xmm2
+; X86-SSSE3-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSSE3-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSSE3-NEXT:    movq {{.*#+}} xmm0 = xmm1[0],zero
+; X86-SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X86-SSSE3-NEXT:    movdqa %xmm0, %xmm2
+; X86-SSSE3-NEXT:    pand %xmm1, %xmm2
 ; X86-SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; X86-SSSE3-NEXT:    movdqa %xmm3, %xmm4
 ; X86-SSSE3-NEXT:    pshufb %xmm2, %xmm4
-; X86-SSSE3-NEXT:    psrlw $4, %xmm1
-; X86-SSSE3-NEXT:    pand %xmm0, %xmm1
-; X86-SSSE3-NEXT:    pshufb %xmm1, %xmm3
+; X86-SSSE3-NEXT:    psrlw $4, %xmm0
+; X86-SSSE3-NEXT:    pand %xmm1, %xmm0
+; X86-SSSE3-NEXT:    pshufb %xmm0, %xmm3
 ; X86-SSSE3-NEXT:    paddb %xmm4, %xmm3
 ; X86-SSSE3-NEXT:    pxor %xmm0, %xmm0
 ; X86-SSSE3-NEXT:    psadbw %xmm3, %xmm0
@@ -1657,7 +1699,10 @@ define i128 @cnt128_pgso(i128 %x) nounwind readnone !prof !14 {
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
 ; X86-SSE2-NEXT:    movl 8(%ebp), %eax
-; X86-SSE2-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; X86-SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSE2-NEXT:    movq {{.*#+}} xmm2 = xmm1[0],zero
 ; X86-SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; X86-SSE2-NEXT:    psrlw $1, %xmm0
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
@@ -1677,7 +1722,10 @@ define i128 @cnt128_pgso(i128 %x) nounwind readnone !prof !14 {
 ; X86-SSE2-NEXT:    pxor %xmm3, %xmm3
 ; X86-SSE2-NEXT:    psadbw %xmm3, %xmm4
 ; X86-SSE2-NEXT:    movd %xmm4, %ecx
-; X86-SSE2-NEXT:    movq {{.*#+}} xmm4 = mem[0],zero
+; X86-SSE2-NEXT:    movd {{.*#+}} xmm4 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movd {{.*#+}} xmm5 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1]
+; X86-SSE2-NEXT:    movq {{.*#+}} xmm4 = xmm5[0],zero
 ; X86-SSE2-NEXT:    movdqa %xmm4, %xmm5
 ; X86-SSE2-NEXT:    psrlw $1, %xmm5
 ; X86-SSE2-NEXT:    pand %xmm1, %xmm5
@@ -1710,8 +1758,11 @@ define i128 @cnt128_pgso(i128 %x) nounwind readnone !prof !14 {
 ; X86-SSSE3-NEXT:    andl $-16, %esp
 ; X86-SSSE3-NEXT:    subl $16, %esp
 ; X86-SSSE3-NEXT:    movl 8(%ebp), %eax
+; X86-SSSE3-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSSE3-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSSE3-NEXT:    movq {{.*#+}} xmm2 = xmm1[0],zero
 ; X86-SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X86-SSSE3-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
 ; X86-SSSE3-NEXT:    movdqa %xmm2, %xmm3
 ; X86-SSSE3-NEXT:    pand %xmm1, %xmm3
 ; X86-SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
@@ -1725,7 +1776,10 @@ define i128 @cnt128_pgso(i128 %x) nounwind readnone !prof !14 {
 ; X86-SSSE3-NEXT:    pxor %xmm2, %xmm2
 ; X86-SSSE3-NEXT:    psadbw %xmm2, %xmm3
 ; X86-SSSE3-NEXT:    movd %xmm3, %ecx
-; X86-SSSE3-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
+; X86-SSSE3-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; X86-SSSE3-NEXT:    movd {{.*#+}} xmm4 = mem[0],zero,zero,zero
+; X86-SSSE3-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
+; X86-SSSE3-NEXT:    movq {{.*#+}} xmm3 = xmm4[0],zero
 ; X86-SSSE3-NEXT:    movdqa %xmm3, %xmm4
 ; X86-SSSE3-NEXT:    pand %xmm1, %xmm4
 ; X86-SSSE3-NEXT:    movdqa %xmm0, %xmm5
@@ -1766,8 +1820,10 @@ define i32 @popcount_zext_i32(i16 zeroext %x) {
 ; X86-NEXT:    shrl $4, %ecx
 ; X86-NEXT:    addl %eax, %ecx
 ; X86-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
-; X86-NEXT:    imull $16843009, %ecx, %eax # imm = 0x1010101
-; X86-NEXT:    shrl $24, %eax
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    shrl $8, %eax
+; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-BASE-LABEL: popcount_zext_i32:
@@ -1785,8 +1841,10 @@ define i32 @popcount_zext_i32(i16 zeroext %x) {
 ; X64-BASE-NEXT:    shrl $4, %eax
 ; X64-BASE-NEXT:    addl %edi, %eax
 ; X64-BASE-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; X64-BASE-NEXT:    imull $16843009, %eax, %eax # imm = 0x1010101
-; X64-BASE-NEXT:    shrl $24, %eax
+; X64-BASE-NEXT:    movl %eax, %ecx
+; X64-BASE-NEXT:    shrl $8, %ecx
+; X64-BASE-NEXT:    addl %eax, %ecx
+; X64-BASE-NEXT:    movzbl %cl, %eax
 ; X64-BASE-NEXT:    retq
 ;
 ; X86-POPCNT-LABEL: popcount_zext_i32:
@@ -1812,8 +1870,9 @@ define i32 @popcount_zext_i32(i16 zeroext %x) {
 ; X64-NDD-NEXT:    shrl $4, %eax, %ecx
 ; X64-NDD-NEXT:    addl %ecx, %eax
 ; X64-NDD-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; X64-NDD-NEXT:    imull $16843009, %eax, %eax # imm = 0x1010101
-; X64-NDD-NEXT:    shrl $24, %eax
+; X64-NDD-NEXT:    shrl $8, %eax, %ecx
+; X64-NDD-NEXT:    addl %ecx, %eax
+; X64-NDD-NEXT:    movzbl %al, %eax
 ; X64-NDD-NEXT:    retq
   %z = zext i16 %x to i32
   %cnt = tail call i32 @llvm.ctpop.i32(i32 %z)

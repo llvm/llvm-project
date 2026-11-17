@@ -43,8 +43,8 @@ struct TestControlFlowSinkPass
     auto moveIntoRegion = [](Operation *op, Region *region) {
       Block &entry = region->front();
       op->moveBefore(&entry, entry.begin());
-      op->setAttr("was_sunk",
-                  Builder(op).getI32IntegerAttr(region->getRegionNumber()));
+      op->setDiscardableAttr(
+          "was_sunk", Builder(op).getI32IntegerAttr(region->getRegionNumber()));
     };
 
     getOperation()->walk([&](Operation *op) {

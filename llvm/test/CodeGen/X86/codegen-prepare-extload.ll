@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-win64 | FileCheck %s
 ; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' < %s -mtriple=x86_64-apple-macosx -S | FileCheck %s --check-prefix=OPTALL --check-prefix=OPT --check-prefix=NONSTRESS
-; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' < %s -mtriple=x86_64-apple-macosx -S -stress-cgp-ext-ld-promotion | FileCheck %s --check-prefix=OPTALL --check-prefix=OPT --check-prefix=STRESS
-; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' < %s -mtriple=x86_64-apple-macosx -S -disable-cgp-ext-ld-promotion | FileCheck %s --check-prefix=OPTALL --check-prefix=DISABLE
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' < %s -mtriple=x86_64-apple-macosx -S -cgp-stress-ext-ld-promotion | FileCheck %s --check-prefix=OPTALL --check-prefix=OPT --check-prefix=STRESS
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' < %s -mtriple=x86_64-apple-macosx -S -cgp-ext-ld-promotion=0 | FileCheck %s --check-prefix=OPTALL --check-prefix=DISABLE
 
 ; rdar://7304838
 ; CodeGenPrepare should move the zext into the block with the load

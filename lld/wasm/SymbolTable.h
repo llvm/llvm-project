@@ -55,6 +55,8 @@ public:
   Symbol *addSharedData(StringRef name, uint32_t flags, InputFile *file);
   Symbol *addSharedTag(StringRef name, uint32_t flags, InputFile *file,
                        const WasmSignature *sig);
+  Symbol *addCommon(StringRef name, uint32_t flags, InputFile *file,
+                    uint64_t size, uint32_t alignment);
   Symbol *addDefinedFunction(StringRef name, uint32_t flags, InputFile *file,
                              InputFunction *function);
   Symbol *addDefinedData(StringRef name, uint32_t flags, InputFile *file,
@@ -103,6 +105,7 @@ public:
                                   InputTable *global);
 
   void handleSymbolVariants();
+  void checkImportAttributes();
   void handleWeakUndefines();
   DefinedFunction *createUndefinedStub(const WasmSignature &sig);
 
@@ -110,6 +113,10 @@ private:
   std::pair<Symbol *, bool> insert(StringRef name, const InputFile *file);
   std::pair<Symbol *, bool> insertName(StringRef name);
 
+  void updateExistingUndefined(Symbol *existing, uint32_t flags,
+                               InputFile *file,
+                               std::optional<StringRef> importName = {},
+                               std::optional<StringRef> importModule = {});
   bool getFunctionVariant(Symbol *sym, const WasmSignature *sig,
                           const InputFile *file, Symbol **out);
   InputFunction *replaceWithUnreachable(Symbol *sym, const WasmSignature &sig,
@@ -129,6 +136,7 @@ private:
   // variants of the same symbol with different signatures.
   llvm::DenseMap<llvm::CachedHashStringRef, std::vector<Symbol *>> symVariants;
   llvm::DenseMap<WasmSignature, DefinedFunction *> stubFunctions;
+  std::vector<std::pair<const Symbol *, std::string>> importMismatches;
 
   // Comdat groups define "link once" sections. If two comdat groups have the
   // same name, only one of them is linked, and the other is ignored. This set

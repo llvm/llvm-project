@@ -1018,7 +1018,7 @@ define <4 x i32> @and_sink_not_v4i32(<4 x i32> %x, <4 x i32> %m, i1 zeroext %con
 ; X86-SSE-NEXT:    pushl %edi
 ; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    andl $-16, %esp
-; X86-SSE-NEXT:    subl $64, %esp
+; X86-SSE-NEXT:    subl $48, %esp
 ; X86-SSE-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE-NEXT:    movl 24(%ebp), %ecx
 ; X86-SSE-NEXT:    movl 20(%ebp), %edx
@@ -1190,7 +1190,7 @@ define <4 x i32> @and_sink_not_v4i32_swapped(<4 x i32> %x, <4 x i32> %m, i1 zero
 ; X86-SSE-NEXT:    pushl %edi
 ; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    andl $-16, %esp
-; X86-SSE-NEXT:    subl $64, %esp
+; X86-SSE-NEXT:    subl $48, %esp
 ; X86-SSE-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE-NEXT:    movl 24(%ebp), %ecx
 ; X86-SSE-NEXT:    movl 20(%ebp), %edx

@@ -22,7 +22,6 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
 #include "llvm/DebugInfo/LogicalView/Readers/LVCodeViewReader.h"
 #include "llvm/DebugInfo/PDB/Native/InputFile.h"
-#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/Demangle/Demangle.h"
@@ -87,9 +86,10 @@ static StringRef getRecordName(LazyRandomTypeCollection &Types, TypeIndex TI) {
   };
 
   TypeRecordKind RK = static_cast<TypeRecordKind>(CVReference.kind());
-  if (RK == TypeRecordKind::Class || RK == TypeRecordKind::Struct)
+  if (RK == TypeRecordKind::Class || RK == TypeRecordKind::Class2 ||
+      RK == TypeRecordKind::Struct || RK == TypeRecordKind::Struct2)
     GetName(ClassRecord(RK));
-  else if (RK == TypeRecordKind::Union)
+  else if (RK == TypeRecordKind::Union || RK == TypeRecordKind::Union2)
     GetName(UnionRecord(RK));
   else if (RK == TypeRecordKind::Enum)
     GetName(EnumRecord(RK));
@@ -3074,6 +3074,7 @@ LVElement *LVLogicalVisitor::createElement(TypeLeafKind Kind) {
     CurrentScope->setTag(dwarf::DW_TAG_array_type);
     return CurrentScope;
   case TypeLeafKind::LF_CLASS:
+  case TypeLeafKind::LF_CLASS2:
     CurrentScope = Reader->createScopeAggregate();
     CurrentScope->setTag(dwarf::DW_TAG_class_type);
     CurrentScope->setIsClass();
@@ -3090,11 +3091,13 @@ LVElement *LVLogicalVisitor::createElement(TypeLeafKind Kind) {
     CurrentScope->setTag(dwarf::DW_TAG_subprogram);
     return CurrentScope;
   case TypeLeafKind::LF_STRUCTURE:
+  case TypeLeafKind::LF_STRUCTURE2:
     CurrentScope = Reader->createScopeAggregate();
     CurrentScope->setIsStructure();
     CurrentScope->setTag(dwarf::DW_TAG_structure_type);
     return CurrentScope;
   case TypeLeafKind::LF_UNION:
+  case TypeLeafKind::LF_UNION2:
     CurrentScope = Reader->createScopeAggregate();
     CurrentScope->setIsUnion();
     CurrentScope->setTag(dwarf::DW_TAG_union_type);

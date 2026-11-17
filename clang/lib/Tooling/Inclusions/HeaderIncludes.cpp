@@ -14,6 +14,8 @@
 #include "clang/Lex/Token.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Inclusions/IncludeStyle.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -25,10 +27,12 @@
 #include <cassert>
 #include <climits>
 #include <functional>
+#include <iterator>
 #include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 namespace clang {
 namespace tooling {
@@ -512,11 +516,83 @@ HeaderIncludes::insert(llvm::StringRef Header, bool IsAngled,
   return tooling::Replacement(FileName, InsertOffset, 0, NewInclude);
 }
 
-tooling::Replacements HeaderIncludes::remove(llvm::StringRef IncludeName,
-                                             bool IsAngled) const {
-  assert(IncludeName == trimInclude(IncludeName));
+HeaderIncludes::HeaderToInsert::HeaderToInsert(
+    llvm::StringRef RawOrSpelledHeader, IncludeDirective Directive,
+    QuoteStyle QuoteStyle)
+    : Directive(Directive) {
+  if (RawOrSpelledHeader.starts_with("<")) {
+    Header = RawOrSpelledHeader.trim("<>").str();
+    this->IsAngled = QuoteStyle != QuoteStyle::QUOTED;
+  } else if (RawOrSpelledHeader.starts_with("\"")) {
+    Header = RawOrSpelledHeader.trim("\"").str();
+    this->IsAngled = QuoteStyle == QuoteStyle::ANGLED;
+  }
+}
+
+tooling::Replacements
+HeaderIncludes::insert(llvm::ArrayRef<HeaderToInsert> Headers) const {
   tooling::Replacements Result;
-  auto Iter = ExistingIncludes.find(IncludeName);
+  if (Headers.empty())
+    return Result;
+
+  std::vector<HeaderToInsert> SortedHeaders = Headers.vec();
+  llvm::stable_sort(SortedHeaders, [&](const HeaderToInsert &L,
+                                       const HeaderToInsert &R) {
+    std::string QuotedL =
+        std::string(llvm::formatv(L.IsAngled ? "<{0}>" : "\"{0}\"", L.Header));
+    std::string QuotedR =
+        std::string(llvm::formatv(R.IsAngled ? "<{0}>" : "\"{0}\"", R.Header));
+    int PriorityL = Categories.getIncludePriority(
+        QuotedL, /*CheckMainHeader=*/!MainIncludeFound);
+    int PriorityR = Categories.getIncludePriority(
+        QuotedR, /*CheckMainHeader=*/!MainIncludeFound);
+    if (PriorityL != PriorityR)
+      return PriorityL < PriorityR;
+    if (L.Header != R.Header)
+      return L.Header < R.Header;
+    if (L.IsAngled != R.IsAngled)
+      return L.IsAngled < R.IsAngled;
+    return L.Directive > R.Directive;
+  });
+  SortedHeaders.erase(
+      std::unique(SortedHeaders.begin(), SortedHeaders.end(),
+                  [](const HeaderToInsert &L, const HeaderToInsert &R) {
+                    return L.Header == R.Header && L.IsAngled == R.IsAngled;
+                  }),
+      SortedHeaders.end());
+
+  struct InsertionInfo {
+    std::string Text;
+    unsigned Length = 0;
+  };
+  llvm::DenseMap<unsigned, InsertionInfo> InsertionsByOffset;
+
+  for (const auto &H : SortedHeaders) {
+    if (auto Insertion = insert(H.Header, H.IsAngled, H.Directive)) {
+      auto &Info = InsertionsByOffset[Insertion->getOffset()];
+      Info.Text += Insertion->getReplacementText();
+      if (Insertion->getLength() > 0) {
+        assert(Info.Length == 0 && "Multiple replacements at same offset?");
+        Info.Length = Insertion->getLength();
+      }
+    }
+  }
+
+  for (const auto &Entry : InsertionsByOffset) {
+    const auto &Info = Entry.second;
+    const unsigned Offset = Entry.first;
+    cantFail(Result.add(
+        tooling::Replacement(FileName, Offset, Info.Length, Info.Text)));
+  }
+
+  return Result;
+}
+
+tooling::Replacements HeaderIncludes::remove(llvm::StringRef Header,
+                                             bool IsAngled) const {
+  assert(Header == trimInclude(Header));
+  tooling::Replacements Result;
+  auto Iter = ExistingIncludes.find(Header);
   if (Iter == ExistingIncludes.end())
     return Result;
   for (const auto &Inc : Iter->second) {

@@ -48,6 +48,7 @@
 
 namespace llvm {
 class AAResults;
+struct AnalysisOptions;
 template <typename T> class ArrayRef;
 class Loop;
 class LoopInfo;
@@ -148,10 +149,6 @@ public:
   /// getSameSDLevels - Returns the number of separate SameSD loops surrounding
   /// the source and destination of the dependence.
   virtual unsigned getSameSDLevels() const { return 0; }
-
-  /// getDVEntry - Returns the DV entry associated with a regular or a
-  /// SameSD level
-  DVEntry getDVEntry(unsigned Level, bool IsSameSD) const;
 
   /// getDirection - Returns the direction associated with a particular
   /// common or SameSD level.
@@ -309,8 +306,8 @@ private:
 /// DependenceInfo - This class is the main dependence-analysis driver.
 class DependenceInfo {
 public:
-  DependenceInfo(Function *F, AAResults *AA, ScalarEvolution *SE, LoopInfo *LI)
-      : AA(AA), SE(SE), LI(LI), F(F) {}
+  LLVM_ABI DependenceInfo(Function *F, AAResults *AA, ScalarEvolution *SE,
+                          LoopInfo *LI);
 
   /// Handle transitive invalidation when the cached analysis results go away.
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
@@ -330,6 +327,7 @@ public:
   Function *getFunction() const { return F; }
 
 private:
+  const AnalysisOptions &Opts;
   AAResults *AA;
   ScalarEvolution *SE;
   LoopInfo *LI;
@@ -343,8 +341,6 @@ private:
     const SCEV *Dst;
     enum ClassificationKind { ZIV, SIV, RDIV, MIV, NonLinear } Classification;
     SmallBitVector Loops;
-    SmallBitVector GroupLoops;
-    SmallBitVector Group;
   };
 
   struct CoefficientInfo {

@@ -27,6 +27,15 @@ static_assert(std::constructible_from<std::ranges::wistream_view<int>, std::wist
 static_assert(!std::convertible_to<std::wistream&, std::ranges::wistream_view<int>>);
 #endif
 
+struct NoopExtraction {
+  int n_; // intentionally doesn't have default member initializer
+};
+
+template <class CharT, class Traits>
+std::basic_istream<CharT, Traits>& operator>>(std::basic_istream<CharT, Traits>& is, const NoopExtraction&) {
+  return is; // intentionally doesn't modify the NoopExtraction object
+}
+
 template <class CharT>
 void test() {
   // test constructor init the stream pointer to the passed one
@@ -37,12 +46,18 @@ void test() {
     assert(*it == 123);
   }
 
+  // LWG 3568. value_ must be initialized for basic_istream_view to be constexpr-constructible
+  {
+    static auto fn_local_iss            = make_string_stream<CharT>("");
+    [[maybe_unused]] constexpr auto isv = std::views::istream<int>(fn_local_iss);
+  }
+
   // LWG 3568. basic_istream_view needs to initialize value_
   {
-    auto iss = make_string_stream<CharT>("");
-    std::ranges::basic_istream_view<int, CharT> isv{iss};
-    auto iter = isv.begin();
-    assert(*iter == 0);
+    auto iss = make_string_stream<CharT>("123");
+    std::ranges::basic_istream_view<NoopExtraction, CharT> isv{iss};
+    auto it = isv.begin();
+    assert((*it).n_ == 0);
   }
 }
 

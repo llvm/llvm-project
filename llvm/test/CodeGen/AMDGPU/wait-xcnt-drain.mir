@@ -12,6 +12,7 @@ body: |
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $scc
   ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
   ; GCN-NEXT:   $sgpr64_sgpr65 = S_MOV_B64 0
   ; GCN-NEXT:   V_NOP_e32 implicit $exec
   ; GCN-NEXT:   GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -78,6 +79,7 @@ body: |
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr0_sgpr1
   ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
   ; GCN-NEXT:   $sgpr64_sgpr65 = S_MOV_B64 0
   ; GCN-NEXT:   V_NOP_e32 implicit $exec
   ; GCN-NEXT:   GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -112,6 +114,7 @@ body: |
     ; GCN-LABEL: name: drain_trap
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -136,6 +139,7 @@ body: |
     ; GCN-LABEL: name: drain_getreg
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -160,6 +164,7 @@ body: |
     ; GCN-LABEL: name: drain_setreg
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr0
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -184,6 +189,7 @@ body: |
     ; GCN-LABEL: name: drain_setreg_mode
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr0
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -208,6 +214,7 @@ body: |
     ; GCN-LABEL: name: drain_setreg_imm32
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -232,6 +239,7 @@ body: |
     ; GCN-LABEL: name: drain_setreg_imm32_mode
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -256,6 +264,7 @@ body: |
     ; GCN-LABEL: name: drain_sendmsg
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $m0
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -280,6 +289,7 @@ body: |
     ; GCN-LABEL: name: drain_sendmsg_halt
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $m0
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -304,6 +314,7 @@ body: |
     ; GCN-LABEL: name: drain_sendmsg_rtn_b32
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -328,6 +339,7 @@ body: |
     ; GCN-LABEL: name: drain_sendmsg_rtn_b64
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -352,6 +364,7 @@ body: |
     ; GCN-LABEL: name: drain_barrier_wait
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -376,6 +389,7 @@ body: |
     ; GCN-LABEL: name: drain_barrier_signal_m0
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $m0
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -400,6 +414,7 @@ body: |
     ; GCN-LABEL: name: drain_barrier_signal
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -424,6 +439,7 @@ body: |
     ; GCN-LABEL: name: drain_barrier_signal_isfirst_m0
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $m0, $scc
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -448,6 +464,7 @@ body: |
     ; GCN-LABEL: name: drain_barrier_signal_isfirst
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $scc
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec

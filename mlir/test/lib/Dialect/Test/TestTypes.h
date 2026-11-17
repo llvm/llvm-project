@@ -17,16 +17,12 @@
 #include <optional>
 #include <tuple>
 
-#include "TestTraits.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.h"
-#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Interfaces/DataLayoutInterfaces.h"
 
 namespace test {
 class TestAttrWithFormatAttr;

@@ -60,3 +60,10 @@ float3 test_f32_ddy_fine3(float3 val) {
 float4 test_f32_ddy_fine4(float4 val) {
     return ddy_fine(val);
 }
+
+// CHECK-LABEL: <5 x float> @{{.*}}test_f32_ddy_fine5
+// CHECK: %hlsl.ddy.fine = call {{.*}} <5 x float> @llvm.[[TGT]].ddy.fine.v5f32(<5 x float> %{{.*}})
+// CHECK: ret <5 x float> %hlsl.ddy.fine
+vector<float, 5> test_f32_ddy_fine5(vector<float, 5> val) {
+    return ddy_fine(val);
+}

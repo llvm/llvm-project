@@ -12,6 +12,8 @@ class UnsupportedReason(str):
     broken here". Reported as UNSUPPORTED rather than SKIPPED."""
 
 
-def is_unsupported(reason):
+def is_unsupported(test, reason):
     """Return True if *reason* marks a test as unsupported rather than skipped."""
-    return isinstance(reason, UnsupportedReason)
+    return isinstance(reason, UnsupportedReason) or getattr(
+        test, "_skipped_as_unsupported", False
+    )

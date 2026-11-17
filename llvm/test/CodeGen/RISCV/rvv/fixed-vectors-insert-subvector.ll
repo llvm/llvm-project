@@ -4,11 +4,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+v,+zvfh,+zvfbfmin -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,VLA,RV32VLA
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+zvfh,+zvfbfmin -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,VLA,RV64VLA
 
-; RUN: llc -mtriple=riscv32 -mattr=+m,+v,+zvfhmin,+zvfbfmin -early-live-intervals -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,VLA,RV32VLA
-; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+zvfhmin,+zvfbfmin -early-live-intervals -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,VLA,RV64VLA
-; RUN: llc -mtriple=riscv32 -mattr=+m,+v,+zvfh,+zvfbfmin -early-live-intervals -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,VLA,RV32VLA
-; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+zvfh,+zvfbfmin -early-live-intervals -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,VLA,RV64VLA
-
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+m,+v,+zvfhmin,+zvfbfmin -riscv-v-vector-bits-max=128 -verify-machineinstrs | FileCheck -check-prefixes=CHECK,VLS,RV32VLS %s
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+v,+zvfhmin,+zvfbfmin -riscv-v-vector-bits-max=128 -verify-machineinstrs | FileCheck -check-prefixes=CHECK,VLS,RV64VLS %s
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+m,+v,+zvfh,+zvfbfmin -riscv-v-vector-bits-max=128 -verify-machineinstrs | FileCheck -check-prefixes=CHECK,VLS,RV32VLS %s

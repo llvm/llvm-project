@@ -20,8 +20,7 @@ subroutine test_udr_char_allocatable()
   end do
 end subroutine
 
-! CHECK-LABEL: omp.declare_reduction @{{.*}}cmax_byref_c8x3 : !fir.ref<!fir.char<1,3>>
-! CHECK-SAME:  attributes {byref_element_type = !fir.char<1,3>}
+! CHECK-LABEL: omp.declare_reduction @{{.*}}cmax_byref_c8x3 byref_element_type({{.*}}) : !fir.ref<!fir.char<1,3>>
 ! CHECK:       init {
 ! CHECK:       ^bb0(%{{.*}}: !fir.ref<!fir.char<1,3>>, %{{.*}}: !fir.ref<!fir.char<1,3>>):
 ! CHECK:         hlfir.assign

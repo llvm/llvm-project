@@ -11,12 +11,11 @@ define void @hr() {
 ; SSE4-LABEL: @hr(
 ; SSE4-NEXT:    br label [[LOOP:%.*]]
 ; SSE4:       loop:
-; SSE4-NEXT:    [[PHI0:%.*]] = phi double [ 0.000000e+00, [[TMP0:%.*]] ], [ [[OP_RDX:%.*]], [[LOOP]] ]
+; SSE4-NEXT:    [[SLPRDX_ACC:%.*]] = phi <4 x double> [ zeroinitializer, [[TMP0:%.*]] ], [ [[SLPRDX_ACC1:%.*]], [[LOOP]] ]
 ; SSE4-NEXT:    [[CVT0:%.*]] = uitofp i16 0 to double
 ; SSE4-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> <double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>, double [[CVT0]], i64 0
 ; SSE4-NEXT:    [[TMP2:%.*]] = fmul fast <4 x double> zeroinitializer, [[TMP1]]
-; SSE4-NEXT:    [[TMP3:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP2]])
-; SSE4-NEXT:    [[OP_RDX]] = fadd fast double [[TMP3]], [[PHI0]]
+; SSE4-NEXT:    [[SLPRDX_ACC1]] = fadd reassoc nnan ninf nsz arcp afn <4 x double> [[SLPRDX_ACC]], [[TMP2]]
 ; SSE4-NEXT:    br i1 true, label [[EXIT:%.*]], label [[LOOP]]
 ; SSE4:       exit:
 ; SSE4-NEXT:    ret void
@@ -24,13 +23,11 @@ define void @hr() {
 ; AVX-LABEL: @hr(
 ; AVX-NEXT:    br label [[LOOP:%.*]]
 ; AVX:       loop:
-; AVX-NEXT:    [[PHI0:%.*]] = phi double [ 0.000000e+00, [[TMP0:%.*]] ], [ [[ADD3:%.*]], [[LOOP]] ]
+; AVX-NEXT:    [[SLPRDX_ACC:%.*]] = phi <4 x double> [ zeroinitializer, [[TMP0:%.*]] ], [ [[SLPRDX_ACC1:%.*]], [[LOOP]] ]
 ; AVX-NEXT:    [[CVT0:%.*]] = uitofp i16 0 to double
-; AVX-NEXT:    [[MUL0:%.*]] = fmul fast double 0.000000e+00, [[CVT0]]
-; AVX-NEXT:    [[ADD0:%.*]] = fadd fast double [[MUL0]], [[PHI0]]
-; AVX-NEXT:    [[ADD1:%.*]] = fadd fast double 0.000000e+00, [[ADD0]]
-; AVX-NEXT:    [[ADD2:%.*]] = fadd fast double 0.000000e+00, [[ADD1]]
-; AVX-NEXT:    [[ADD3]] = fadd fast double 0.000000e+00, [[ADD2]]
+; AVX-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> <double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>, double [[CVT0]], i64 0
+; AVX-NEXT:    [[TMP2:%.*]] = fmul fast <4 x double> zeroinitializer, [[TMP1]]
+; AVX-NEXT:    [[SLPRDX_ACC1]] = fadd reassoc nnan ninf nsz arcp afn <4 x double> [[SLPRDX_ACC]], [[TMP2]]
 ; AVX-NEXT:    br i1 true, label [[EXIT:%.*]], label [[LOOP]]
 ; AVX:       exit:
 ; AVX-NEXT:    ret void
@@ -38,12 +35,11 @@ define void @hr() {
 ; AVX2-LABEL: @hr(
 ; AVX2-NEXT:    br label [[LOOP:%.*]]
 ; AVX2:       loop:
-; AVX2-NEXT:    [[PHI0:%.*]] = phi double [ 0.000000e+00, [[TMP0:%.*]] ], [ [[OP_RDX:%.*]], [[LOOP]] ]
+; AVX2-NEXT:    [[SLPRDX_ACC:%.*]] = phi <4 x double> [ zeroinitializer, [[TMP0:%.*]] ], [ [[SLPRDX_ACC1:%.*]], [[LOOP]] ]
 ; AVX2-NEXT:    [[CVT0:%.*]] = uitofp i16 0 to double
 ; AVX2-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> <double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>, double [[CVT0]], i64 0
 ; AVX2-NEXT:    [[TMP2:%.*]] = fmul fast <4 x double> zeroinitializer, [[TMP1]]
-; AVX2-NEXT:    [[TMP3:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP2]])
-; AVX2-NEXT:    [[OP_RDX]] = fadd fast double [[TMP3]], [[PHI0]]
+; AVX2-NEXT:    [[SLPRDX_ACC1]] = fadd reassoc nnan ninf nsz arcp afn <4 x double> [[SLPRDX_ACC]], [[TMP2]]
 ; AVX2-NEXT:    br i1 true, label [[EXIT:%.*]], label [[LOOP]]
 ; AVX2:       exit:
 ; AVX2-NEXT:    ret void

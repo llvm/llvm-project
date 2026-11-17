@@ -14,7 +14,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     %0 = llvm.add %arg0, %arg1 : i32
     omp.yield(%0 : i32)
   }
-  llvm.func @simple_target_teams_only_reduction_() attributes {fir.internal_name = "_QPsimple_target_teams_only_reduction", frame_pointer = #llvm.framePointerKind<all>, omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>, target_cpu = "gfx1030", target_features = #llvm.target_features<["+16-bit-insts", "+ci-insts", "+dl-insts", "+dot1-insts", "+dot10-insts", "+dot2-insts", "+dot5-insts", "+dot6-insts", "+dot7-insts", "+dpp", "+gfx10-3-insts", "+gfx10-insts", "+gfx8-insts", "+gfx9-insts", "+gws", "+image-insts", "+s-memrealtime", "+s-memtime-inst", "+wavefrontsize32"]>} {
+  llvm.func @simple_target_teams_only_reduction_() attributes {fir.internal_name = "_QPsimple_target_teams_only_reduction", frame_pointer = #llvm.framePointerKind<all>, omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = to>, target_cpu = "gfx1030", target_features = #llvm.target_features<["+16-bit-insts", "+ci-insts", "+dl-insts", "+dot1-insts", "+dot10-insts", "+dot2-insts", "+dot5-insts", "+dot6-insts", "+dot7-insts", "+dpp", "+gfx10-3-insts", "+gfx10-insts", "+gfx8-insts", "+gfx9-insts", "+gws", "+image-insts", "+s-memrealtime", "+s-memtime-inst", "+wavefrontsize32"]>} {
     %0 = llvm.mlir.constant(1 : i64) : i64
     %1 = llvm.alloca %0 x i32 {bindc_name = "sum"} : (i64) -> !llvm.ptr<5>
     %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
@@ -25,8 +25,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     %7 = llvm.mlir.constant(1 : i64) : i64
     %8 = llvm.mlir.constant(1 : i64) : i64
     llvm.store %6, %2 : i32, !llvm.ptr
-    %9 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "sum"}
-    %10 = omp.map.info var_ptr(%5 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "index_"}
+    %9 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("sum") -> !llvm.ptr
+    %10 = omp.map.info var_ptr(%5 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("index_") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%9 -> %arg0, %10 -> %arg1 : !llvm.ptr, !llvm.ptr) {
       %11 = llvm.mlir.constant(10000 : i32) : i32
       %12 = llvm.mlir.constant(1 : i32) : i32

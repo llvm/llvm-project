@@ -1,8 +1,6 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports vector types.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
@@ -1273,8 +1271,8 @@ void logical_or_vf4() {
 // CIR: %[[ZERO_VEC:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.float>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
 // CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
-// CIR: %[[NE_A_ZERO:.*]] = cir.vec.cmp(ne, %4, %[[ZERO_VEC]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
-// CIR: %[[NE_B_ZERO:.*]] = cir.vec.cmp(ne, %5, %[[ZERO_VEC]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+// CIR: %[[NE_A_ZERO:.*]] = cir.vec.fcmp(une, %4, %[[ZERO_VEC]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+// CIR: %[[NE_B_ZERO:.*]] = cir.vec.fcmp(une, %5, %[[ZERO_VEC]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
 // CIR: %[[RESULT:.*]] = cir.or %[[NE_A_ZERO]], %[[NE_B_ZERO]] : !cir.vector<4 x !s32i>
 // CIR: cir.store {{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 
@@ -1392,8 +1390,8 @@ void logical_and_vf4() {
 // CIR: %[[ZERO_VEC:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.float>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
 // CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
-// CIR: %[[NE_A_ZERO:.*]] = cir.vec.cmp(ne, %4, %[[ZERO_VEC]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
-// CIR: %[[NE_B_ZERO:.*]] = cir.vec.cmp(ne, %5, %[[ZERO_VEC]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+// CIR: %[[NE_A_ZERO:.*]] = cir.vec.fcmp(une, %4, %[[ZERO_VEC]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+// CIR: %[[NE_B_ZERO:.*]] = cir.vec.fcmp(une, %5, %[[ZERO_VEC]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
 // CIR: %[[RESULT:.*]] = cir.and %[[NE_A_ZERO]], %[[NE_B_ZERO]] : !cir.vector<4 x !s32i>
 // CIR: cir.store {{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 
@@ -1455,7 +1453,7 @@ void logical_not_float() {
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
 // CIR: %[[CONST_V0:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.float>
-// CIR: %[[RESULT:.*]] = cir.vec.cmp(eq, %[[TMP_A]], %[[CONST_V0]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+// CIR: %[[RESULT:.*]] = cir.vec.fcmp(oeq, %[[TMP_A]], %[[CONST_V0]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 
 // LLVM: %[[A_ADDR:.*]] = alloca <4 x float>, align 16

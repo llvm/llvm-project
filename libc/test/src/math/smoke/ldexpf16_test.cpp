@@ -10,4 +10,4 @@
 
 #include "src/math/ldexpf16.h"
 
-LIST_LDEXP_TESTS(float16, LIBC_NAMESPACE::ldexpf16);
+LIST_LDEXP_TESTS(Ldexpf16, float16, LIBC_NAMESPACE::ldexpf16);

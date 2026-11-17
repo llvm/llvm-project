@@ -13,10 +13,10 @@ func.func @entry() {
   %v3 = vector.broadcast %f3 : f32 to vector<4x4xf32>
   %v4 = vector.broadcast %f4 : f32 to vector<1xf32>
 
-  %s1 = vector.insert_strided_slice %v1, %v3 {offsets = [2, 0], strides = [1]} : vector<4xf32> into vector<4x4xf32>
-  %s2 = vector.insert_strided_slice %v2, %s1 {offsets = [1, 1], strides = [1]} : vector<3xf32> into vector<4x4xf32>
-  %s3 = vector.insert_strided_slice %v2, %s2 {offsets = [0, 0], strides = [1]} : vector<3xf32> into vector<4x4xf32>
-  %s4 = vector.insert_strided_slice %v4, %s3 {offsets = [3, 3], strides = [1]} : vector<1xf32> into vector<4x4xf32>
+  %s1 = vector.insert_strided_slice %v1, %v3 offsets = [2, 0], strides = [1] : vector<4xf32> into vector<4x4xf32>
+  %s2 = vector.insert_strided_slice %v2, %s1 offsets = [1, 1], strides = [1] : vector<3xf32> into vector<4x4xf32>
+  %s3 = vector.insert_strided_slice %v2, %s2 offsets = [0, 0], strides = [1] : vector<3xf32> into vector<4x4xf32>
+  %s4 = vector.insert_strided_slice %v4, %s3 offsets = [3, 3], strides = [1] : vector<1xf32> into vector<4x4xf32>
 
   vector.print %v3 : vector<4x4xf32>
   vector.print %s1 : vector<4x4xf32>

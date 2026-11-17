@@ -1,8 +1,5 @@
 # SYCL Compiler and Runtime architecture design
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
@@ -10,6 +7,12 @@ This document describes the architecture of the SYCL compiler and runtime
 library. More details are provided in
 [external document](https://github.com/intel/llvm/blob/sycl/sycl/doc/design/CompilerAndRuntimeDesign.md),
 which are going to be added to clang documentation in the future.
+
+## Predefined Macros
+
+| Macro | Description |
+| --- | --- |
+| `__CLANG_RDC__` | Defined when Clang is compiling code in Relocatable Device Code (RDC) mode. RDC is necessary for linking device code across translation units. It is enabled by default for SYCL and can be disabled with the `-fno-gpu-rdc` compiler option. |
 
 ## Address space handling
 
@@ -103,3 +106,20 @@ space attributes for pointers:
 ```C++
 //TODO: add support for __attribute__((opencl_global_host)) and __attribute__((opencl_global_device)).
 ```
+
+## Relocatable linking
+
+With `-r`, clang links the SYCL device code embedded in the input object files
+and merges those object files into one. That object file also contains the code
+that registers the device code with the SYCL runtime, so any host linker can
+link it later, also from a static library.
+
+```console
+clang++ -fsycl -c a.cpp b.cpp
+clang++ -fsycl -r a.o b.o -o ab.o
+clang++ -c main.cpp
+clang++ main.o ab.o -L<libsycl dir> -lLLVMSYCL -o app
+```
+
+Without `-fsycl`, use `--offload-link -r`. Relocatable linking is not
+supported for Windows (COFF) targets. See {doc}`OffloadingDesign` for details.

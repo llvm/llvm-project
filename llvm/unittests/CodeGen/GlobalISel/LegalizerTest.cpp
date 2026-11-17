@@ -68,7 +68,7 @@ TEST_F(AArch64GISelMITest, BasicLegalizerTest) {
   LostDebugLocObserver LocObserver(DEBUG_TYPE);
   GISelValueTracking VT(*MF);
 
-  Legalizer::MFResult Result = Legalizer::legalizeMachineFunction(
+  LegalizerMFResult Result = legalizeMachineFunction(
       *MF, LI, {&LocObserver}, LocObserver, B, /*Libcalls=*/nullptr, &VT);
 
   EXPECT_TRUE(isNullMIPtr(Result.FailedOn));
@@ -160,7 +160,7 @@ TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningTest) {
   //  pair(s) of artifacts that could be immediately combined out. After that
   //  the process follows def-use chains, making them shorter at each step, thus
   //  combining everything that can be combined in O(n) time.
-  Legalizer::MFResult Result = Legalizer::legalizeMachineFunction(
+  LegalizerMFResult Result = legalizeMachineFunction(
       *MF, LI, {&LocObserver}, LocObserver, B, /*Libcalls=*/nullptr, &VT);
 
   EXPECT_TRUE(isNullMIPtr(Result.FailedOn));
@@ -200,7 +200,7 @@ TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningManyCopiesTest) {
   LostDebugLocObserver LocObserver(DEBUG_TYPE);
   GISelValueTracking VT(*MF);
 
-  Legalizer::MFResult Result = Legalizer::legalizeMachineFunction(
+  LegalizerMFResult Result = legalizeMachineFunction(
       *MF, LI, {&LocObserver}, LocObserver, B, /*Libcalls=*/nullptr, &VT);
 
   EXPECT_TRUE(isNullMIPtr(Result.FailedOn));

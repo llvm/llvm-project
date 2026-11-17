@@ -59,6 +59,23 @@ bool hasBlocksAreClusters(const Function &);
 
 bool isParamGridConstant(const Argument &);
 
+/// The number of registers that the callers of a function are responsible for
+/// preserving across a call, as given by the nvvm.abi_preserve* attributes.
+/// Preserve counts general purpose registers, PreserveControl counts control
+/// registers.
+///
+/// The presence of a value indicates that the corresponding attribute was
+/// encountered.
+struct ABIPreserveInfo {
+  std::optional<unsigned> Preserve;
+  std::optional<unsigned> PreserveControl;
+};
+
+/// On a function, the attributes are looked up on the function definition or
+/// declaration. On a callsite, the attributes are looked up on the call only;
+/// they are not inherited from the callee.
+ABIPreserveInfo getABIPreserve(AttributeList Attrs);
+
 inline MaybeAlign getStackAlign(const Function &F, unsigned Index) {
   return F.getAttributes().getAttributes(Index).getStackAlignment();
 }

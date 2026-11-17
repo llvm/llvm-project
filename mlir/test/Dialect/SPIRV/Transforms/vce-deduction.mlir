@@ -42,6 +42,19 @@ spirv.module Logical GLSL450 attributes {
   }
 }
 
+// Nontemporal image operand is available since v1.6.
+
+// CHECK: requires #spirv.vce<v1.6, [Shader, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.6, [Shader], []>, #spirv.resource_limits<>>
+} {
+  spirv.func @image_read_nontemporal(%img : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba8>, %coord : vector<2xsi32>) -> vector<4xf32> "None" {
+    %0 = spirv.ImageRead %img, %coord ["Nontemporal"] : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba8>, vector<2xsi32> -> vector<4xf32>
+    spirv.ReturnValue %0 : vector<4xf32>
+  }
+}
+
 // -----
 
 // Test rejecting an op whose max version is below what the target
@@ -172,6 +185,32 @@ spirv.module Logical GLSL450 attributes {
     %0 = spirv.IAdd %val, %val : vector<16xi32>
     spirv.ReturnValue %0: vector<16xi32>
   }
+}
+
+// CHECK: requires #spirv.vce<v1.0, [Int64, Shader, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.3, [Shader, Int64], []>, #spirv.resource_limits<>>
+} {
+  spirv.SpecConstant @sc_i64 = 1 : i64
+}
+
+// CHECK: requires #spirv.vce<v1.0, [Vector16, Shader, Kernel, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.3, [Shader, Vector16], []>, #spirv.resource_limits<>>
+} {
+  spirv.SpecConstant @sc = 1 : i32
+  spirv.SpecConstantComposite @scc (@sc, @sc, @sc, @sc, @sc, @sc, @sc, @sc) : vector<8xi32>
+}
+
+// CHECK: requires #spirv.vce<v1.0, [ReplicatedCompositesEXT, Vector16, Shader, Kernel, Matrix], [SPV_EXT_replicated_composites]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.3, [Shader, Vector16, ReplicatedCompositesEXT], [SPV_EXT_replicated_composites]>, #spirv.resource_limits<>>
+} {
+  spirv.SpecConstant @sc = 1 : i32
+  spirv.EXT.SpecConstantCompositeReplicate @scc (@sc) : vector<8xi32>
 }
 
 //===----------------------------------------------------------------------===//

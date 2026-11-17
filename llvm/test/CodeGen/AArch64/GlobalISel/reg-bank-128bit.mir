@@ -1,8 +1,7 @@
-# RUN: llc -mtriple=aarch64 -run-pass=regbankselect -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=reg-bank-select -o - %s | FileCheck %s
 ---
 name:            test_large_merge
 legalized:       true
-registers:
 body: |
   bb.0.entry:
     liveins: $x0, $x1, $x2

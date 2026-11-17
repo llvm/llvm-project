@@ -14,6 +14,8 @@
 #ifndef LLVM_LIBC_MACROS_LIMITS_MACROS_H
 #define LLVM_LIBC_MACROS_LIMITS_MACROS_H
 
+#include "common-threads-macros.h"
+
 // Define all C23 macro constants of limits.h
 
 #ifndef CHAR_BIT
@@ -249,11 +251,16 @@
 #endif
 
 #ifndef PTHREAD_DESTRUCTOR_ITERATIONS
-#define PTHREAD_DESTRUCTOR_ITERATIONS _POSIX_THREAD_DESTRUCTOR_ITERATIONS
+#define PTHREAD_DESTRUCTOR_ITERATIONS __LLVM_LIBC_TSS_DTOR_ITERATIONS
 #endif
 
 #ifndef _POSIX_HOST_NAME_MAX
 #define _POSIX_HOST_NAME_MAX 255
+#endif
+
+#ifndef SEM_VALUE_MAX
+/// The maximum value a semaphore may hold.
+#define SEM_VALUE_MAX INT_MAX
 #endif
 
 #ifdef __linux__
@@ -286,5 +293,9 @@
 #define SSIZE_MAX __PTRDIFF_MAX__
 #endif
 #endif
+
+#ifndef NZERO
+#define NZERO 20
+#endif // NZERO
 
 #endif // LLVM_LIBC_MACROS_LIMITS_MACROS_H

@@ -15,8 +15,11 @@ add_mlir_library(MLIRTransformUtils
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Transforms
 
+  DEPENDS
+  MLIRTransformsDialectInterfaceIncGen
+
   LINK_LIBS PUBLIC
-  MLIRAnalysis
+  MLIRAnalysisBase
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRFunctionInterfaces

@@ -140,12 +140,10 @@ template <> struct MappingTraits<dsymutil::ValidReloc> {
 };
 
 template <> struct MappingTraits<dsymutil::RelocationMap> {
-  struct YamlRM;
   static void mapping(IO &io, dsymutil::RelocationMap &RM);
 };
 
 template <> struct MappingTraits<std::unique_ptr<dsymutil::RelocationMap>> {
-  struct YamlRM;
   static void mapping(IO &io, std::unique_ptr<dsymutil::RelocationMap> &RM);
 };
 

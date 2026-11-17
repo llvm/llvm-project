@@ -94,13 +94,13 @@ static bool eliminateMove(MachineInstr &Mov, const MachineRegisterInfo &MRI,
   RemoveList.push_back(&Mov);
 
   const MachineOperand *ParamSymbol = Mov.uses().begin();
-  assert(ParamSymbol->isSymbol());
+  assert(ParamSymbol->isMCSymbol());
 
   for (MachineInstr *LI : LoadInsts) {
     unsigned Opc = LI->getOpcode();
     int Idx = getNamedOperandIdx(Opc, NVPTX::OpName::addr);
     assert(Idx != -1 && "no addr operand");
-    LI->getOperand(Idx).ChangeToES(ParamSymbol->getSymbolName());
+    LI->getOperand(Idx).ChangeToMCSymbol(ParamSymbol->getMCSymbol());
 
     Idx = getNamedOperandIdx(Opc, NVPTX::OpName::addsp);
     assert(Idx != -1 && "no addsp operand");

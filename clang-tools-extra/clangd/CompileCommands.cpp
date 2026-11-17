@@ -416,7 +416,10 @@ std::pair<unsigned, unsigned> getArgCount(const llvm::opt::Option &Opt) {
   case Option::MultiArgClass:
     return {1 + Opt.getNumArgs(), 0};
   case Option::JoinedOrSeparateClass:
+  case Option::SeparateOrEqClass:
     return {2, 1};
+  case Option::FlagOrEqClass:
+    return {1, 1};
   case Option::RemainingArgsClass:
     return {Rest, 0};
   case Option::RemainingArgsJoinedClass:
@@ -495,7 +498,7 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
     struct {
       DriverID ID;
       DriverID AliasID;
-      const void *AliasArgs;
+      unsigned AliasArgsOffset;
     } AliasTable[] = {
 #define OPTION(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
                FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
@@ -505,7 +508,7 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
 #undef OPTION
     };
     for (auto &E : AliasTable)
-      if (E.AliasID != DriverID::OPT_INVALID && E.AliasArgs == nullptr)
+      if (E.AliasID != DriverID::OPT_INVALID && !E.AliasArgsOffset)
         AddAlias(E.ID, E.AliasID);
 
     auto Result = std::make_unique<TableTy>();

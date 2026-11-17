@@ -19,6 +19,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/utility.h"
 #include "src/__support/OSUtil/path.h"
+#include "src/__support/c_string.h"
 #include "src/__support/fixedvector.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/libc_errno.h"
@@ -39,6 +40,7 @@
 
 namespace cpp = LIBC_NAMESPACE::cpp;
 namespace path = LIBC_NAMESPACE::path;
+using LIBC_NAMESPACE::CString;
 using LIBC_NAMESPACE::FixedVector;
 using LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using LIBC_NAMESPACE::testing::tlog;
@@ -220,9 +222,17 @@ public:
   // While we would prefer to return cpp::optional<TestDir> here,
   // LLVM-libc's optional expects types to be trivially destructible.
   [[nodiscard]] bool create_test_dir(const char *name, TestDir &dst) {
-    // Use /tmp instead of the typical libc_make_test_file_path to ensure
-    // the path is absolute and does not contain symlinks.
-    cpp::string test_dir_path = "/tmp/LlvmLibcRealpathTest.";
+    CString test_dir = libc_make_test_file_path(".");
+    char buf[PATH_MAX];
+    // Some test environments will have symlinks in their test directory.
+    // In order for tests to compute an expected canonical path,
+    // the path returned by create_test_dir needs to be canonical itself.
+    char *test_dir_abspath = LIBC_NAMESPACE::realpath(test_dir, buf);
+    if (libc_errno != 0)
+      return false;
+
+    cpp::string test_dir_path(test_dir_abspath);
+    test_dir_path += "/LlvmLibcRealpathTest.";
     test_dir_path += name;
     test_dir_path += ".";
 

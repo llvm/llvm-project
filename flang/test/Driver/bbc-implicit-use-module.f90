@@ -57,4 +57,4 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPuse_implicit()
 ! CHECK-DAG: fir.address_of(@_QMimplicit_modEmodule_value) : !fir.ref<i32>
 ! CHECK-DAG: %[[COMMON:.*]] = fir.address_of(@implicit_common_) : !fir.ref<!fir.array<4xi8>>
-! CHECK-DAG: acc.copyin varPtr(%[[COMMON]] : !fir.ref<!fir.array<4xi8>>) -> !fir.ref<!fir.array<4xi8>>  {dataClause = #acc<data_clause acc_copy>, name = "implicit_common"}
+! CHECK-DAG: acc.copyin varPtr(%[[COMMON]] : !fir.ref<!fir.array<4xi8>>) dataClause(acc_copy) name("implicit_common") -> !fir.ref<!fir.array<4xi8>>

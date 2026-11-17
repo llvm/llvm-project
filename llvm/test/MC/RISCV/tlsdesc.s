@@ -5,8 +5,8 @@
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s --mattr=+relax | llvm-objdump -dr -M no-aliases - | FileCheck %s --check-prefixes=INST,RELAX,RV64
 
 
-# RUN: not llvm-mc -triple riscv32 < %s --defsym RV32=1 --defsym ERR=1 2>&1 | FileCheck %s --check-prefixes=ERR --implicit-check-not="error:" --implicit-check-not="note:"
-# RUN: not llvm-mc -triple riscv64 < %s --defsym ERR=1 2>&1 | FileCheck %s --check-prefixes=ERR --implicit-check-not="error:" --implicit-check-not="note:"
+# RUN: not llvm-mc -triple riscv32 < %s --defsym RV32=1 --defsym ERR=1 2>&1 | FileCheck %s --check-prefixes=ERR,ERR-RV32
+# RUN: not llvm-mc -triple riscv64 < %s --defsym ERR=1 2>&1 | FileCheck %s --check-prefixes=ERR,ERR-RV64
 
 start:                                  # @start
 # %bb.0:                                # %entry
@@ -50,10 +50,14 @@ start:                                  # @start
 	lw   a0, t0, %tlsdesc_load_lo(a_symbol)
 # ERR: :[[#@LINE-1]]:15: error: unexpected extra operand for instruction
 	lw   a0, t0, %tlsdesc_load_lo(a_symbol)(a4)
-# ERR: :[[#@LINE-1]]:2: error: invalid instruction, any one of the following would fix this:
-# ERR: :[[#@LINE-2]]:15: note: unexpected extra operand for instruction
-# ERR: :[[#@LINE-3]]:11: note: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
-# ERR: :[[#@LINE-4]]:11: note: immediate must be an integer in the range [-2048, 2047]
+# ERR-RV32: :[[#@LINE-1]]:2: error: invalid instruction, any one of the following would fix this:
+# ERR-RV32: :[[#@LINE-2]]:15: note: unexpected extra operand for instruction
+# ERR-RV32: :[[#@LINE-3]]:11: note: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+# ERR-RV32: :[[#@LINE-4]]:11: note: immediate must be an integer in the range [-2048, 2047]
+# ERR-RV64: :[[#@LINE-5]]:2: error: invalid instruction, any one of the following would fix this:
+# ERR-RV64: :[[#@LINE-6]]:15: note: unexpected extra operand for instruction
+# ERR-RV64: :[[#@LINE-7]]:11: note: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+# ERR-RV64: :[[#@LINE-8]]:2: note: instruction requires the following: RV32I Base Instruction Set
 
 	addi a0, t0, %tlsdesc_add_lo(a_symbol)(a4)
 # ERR: :[[#@LINE-1]]:41: error: unexpected extra operand for instruction

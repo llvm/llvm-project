@@ -16,15 +16,35 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include <optional>
 
 namespace llvm {
 
 class AArch64TargetMachine : public CodeGenTargetMachineImpl {
+  const AArch64Options &CLOpts;
+
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<AArch64Subtarget>> SubtargetMap;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute CPU, TuneCPU, FS, SMEnabled, SMBody, SMCompatible, MinSize,
+        VScaleRange;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return CPU == RHS.CPU && TuneCPU == RHS.TuneCPU && FS == RHS.FS &&
+             SMEnabled == RHS.SMEnabled && SMBody == RHS.SMBody &&
+             SMCompatible == RHS.SMCompatible && MinSize == RHS.MinSize &&
+             VScaleRange == RHS.VScaleRange;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<AArch64Subtarget, SubtargetAttrs> LastSubtarget;
 
   /// Reset internal state.
   void reset() override;
@@ -37,6 +57,8 @@ public:
                        bool JIT, bool IsLittleEndian);
 
   ~AArch64TargetMachine() override;
+
+  const AArch64Options &getCLOpts() const { return CLOpts; }
   const AArch64Subtarget *getSubtargetImpl(const Function &F) const override;
   // DO NOT IMPLEMENT: There is no such thing as a valid default subtarget,
   // subtargets are per-function entities based on the target-specific
@@ -67,8 +89,9 @@ public:
                                 SMRange &SourceRange) const override;
 
   /// Returns true if a cast between SrcAS and DestAS is a noop.
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
-    return getPointerSize(SrcAS) == getPointerSize(DestAS);
+  bool isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                           unsigned DestAS) const override {
+    return DL.getPointerSize(SrcAS) == DL.getPointerSize(DestAS);
   }
   ScheduleDAGInstrs *
   createMachineScheduler(MachineSchedContext *C) const override;

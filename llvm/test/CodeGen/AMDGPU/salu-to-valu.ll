@@ -1,6 +1,6 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-NOHSA -check-prefix=SI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu7.04 < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-NOHSA -check-prefix=CI -check-prefix=CI-NOHSA %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu7.04--amdhsa < %s | FileCheck -check-prefix=GCN -check-prefix=CI --check-prefix=GCN-HSA %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-NOHSA -check-prefix=SI %s
+; RUN: llc -mtriple=amdgpu7.04 < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-NOHSA -check-prefix=CI -check-prefix=CI-NOHSA %s
+; RUN: llc -mtriple=amdgpu7.04--amdhsa < %s | FileCheck -check-prefix=GCN -check-prefix=CI --check-prefix=GCN-HSA %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.workitem.id.y() #0
@@ -70,12 +70,12 @@ entry:
   br i1 %tmp, label %if, label %else
 
 if:                                               ; preds = %entry
-  %tmp1 = load ptr addrspace(4), ptr addrspace(1) %in
+  %tmp1 = load volatile ptr addrspace(4), ptr addrspace(1) %in
   br label %endif
 
 else:                                             ; preds = %entry
   %tmp2 = getelementptr ptr addrspace(4), ptr addrspace(1) %in
-  %tmp3 = load ptr addrspace(4), ptr addrspace(1) %tmp2
+  %tmp3 = load volatile ptr addrspace(4), ptr addrspace(1) %tmp2
   br label %endif
 
 endif:                                            ; preds = %else, %if

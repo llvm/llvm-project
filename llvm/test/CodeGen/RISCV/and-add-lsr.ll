@@ -14,7 +14,7 @@ define i32 @and_add_lsr(i32 %x, i32 %y) {
 ;
 ; RV64I-LABEL: and_add_lsr:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addiw a0, a0, -1
+; RV64I-NEXT:    addi a0, a0, -1
 ; RV64I-NEXT:    srliw a1, a1, 20
 ; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    ret
@@ -28,20 +28,16 @@ define i32 @and_add_lsr(i32 %x, i32 %y) {
 define <2 x i32> @and_add_lsr_vec(<2 x i32> %x, <2 x i32> %y) {
 ; RV32I-LABEL: and_add_lsr_vec:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a0, 1
-; RV32I-NEXT:    addi a0, a0, -1
 ; RV32I-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32I-NEXT:    vadd.vx v8, v8, a0
+; RV32I-NEXT:    vadd.vi v8, v8, -1
 ; RV32I-NEXT:    vsrl.vi v9, v9, 20
 ; RV32I-NEXT:    vand.vv v8, v9, v8
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and_add_lsr_vec:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addi a0, a0, -1
 ; RV64I-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV64I-NEXT:    vadd.vx v8, v8, a0
+; RV64I-NEXT:    vadd.vi v8, v8, -1
 ; RV64I-NEXT:    vsrl.vi v9, v9, 20
 ; RV64I-NEXT:    vand.vv v8, v9, v8
 ; RV64I-NEXT:    ret
@@ -55,20 +51,16 @@ define <2 x i32> @and_add_lsr_vec(<2 x i32> %x, <2 x i32> %y) {
 define <vscale x 2 x i32> @and_add_lsr_vec2(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y) {
 ; RV32I-LABEL: and_add_lsr_vec2:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a0, 1
-; RV32I-NEXT:    addi a0, a0, -1
-; RV32I-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; RV32I-NEXT:    vadd.vx v8, v8, a0
+; RV32I-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; RV32I-NEXT:    vadd.vi v8, v8, -1
 ; RV32I-NEXT:    vsrl.vi v9, v9, 20
 ; RV32I-NEXT:    vand.vv v8, v9, v8
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and_add_lsr_vec2:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addi a0, a0, -1
-; RV64I-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; RV64I-NEXT:    vadd.vx v8, v8, a0
+; RV64I-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; RV64I-NEXT:    vadd.vi v8, v8, -1
 ; RV64I-NEXT:    vsrl.vi v9, v9, 20
 ; RV64I-NEXT:    vand.vv v8, v9, v8
 ; RV64I-NEXT:    ret

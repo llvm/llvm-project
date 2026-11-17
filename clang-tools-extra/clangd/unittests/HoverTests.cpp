@@ -471,7 +471,7 @@ class Foo final {})cpp";
          HI.Name = "bar";
          HI.Kind = index::SymbolKind::Parameter;
          HI.Definition = "decltype(lamb) &bar";
-         HI.Type = {"decltype(lamb) &", "(lambda) &"};
+         HI.Type = "(lambda) &";
          HI.ReturnType = "bool";
          HI.Parameters = {
              {{"int"}, std::string("T"), std::nullopt},
@@ -1642,6 +1642,72 @@ TEST(Hover, DefinitionLanuage) {
     ASSERT_TRUE(H);
 
     EXPECT_STREQ(H->DefinitionLanguage, Case.ExpectedDefinitionLanguage);
+  }
+}
+
+TEST(Hover, AccessSpecifierByLanguage) {
+  struct {
+    const char *const Code;
+    const llvm::StringRef ClangLanguageFlag;
+    const char *const ExpectedAccessSpecifier;
+  } Cases[] = {
+      {R"c(
+        struct Waldo {
+          int loca^tion;
+        };
+      )c",
+       "-xc", ""},
+      {R"cpp(
+        struct Waldo {
+          int loca^tion;
+        };
+      )cpp",
+       "-xc++", "public"},
+      {R"objc(
+        struct Waldo {
+          int loca^tion;
+        };
+      )objc",
+       "-xobjective-c", ""},
+      {R"objcpp(
+        struct Waldo {
+          int loca^tion;
+        };
+      )objcpp",
+       "-xobjective-c++", "public"},
+      // Hover currently does not retrieve ivar access specifiers in either
+      // Objective-C or Objective-C++, so no label is expected.
+      {R"objc(
+        @interface Waldo {
+        @public
+          int loca^tion;
+        }
+        @end
+      )objc",
+       "-xobjective-c", ""},
+      {R"objcpp(
+        @interface Waldo {
+        @public
+          int loca^tion;
+        }
+        @end
+      )objcpp",
+       "-xobjective-c++", ""},
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+    SCOPED_TRACE(Case.ClangLanguageFlag);
+
+    Annotations T(Case.Code);
+    TestTU TU = TestTU::withCode(T.code());
+    if (!Case.ClangLanguageFlag.empty())
+      TU.ExtraArgs.push_back(Case.ClangLanguageFlag.str());
+    auto AST = TU.build();
+
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+
+    EXPECT_EQ(H->AccessSpecifier, Case.ExpectedAccessSpecifier);
   }
 }
 
@@ -3000,7 +3066,7 @@ TEST(Hover, All) {
             HI.Kind = index::SymbolKind::Variable;
             HI.NamespaceScope = "";
             HI.Name = "b";
-            HI.Type = "int";
+            HI.Type = "const int";
           }},
       {
           R"cpp(// type with decltype
@@ -3011,10 +3077,7 @@ TEST(Hover, All) {
             HI.Kind = index::SymbolKind::Function;
             HI.NamespaceScope = "";
             HI.Name = "foo";
-            // FIXME: Handle composite types with decltype with a printing
-            // policy.
-            HI.Type = {"auto (decltype(a)) -> decltype(a)",
-                       "auto (int) -> int"};
+            HI.Type = "auto (int) -> int";
             HI.ReturnType = "int";
             HI.Parameters = {{{"int"}, std::string("x"), std::nullopt}};
           }},
@@ -3322,7 +3385,7 @@ TEST(Hover, All) {
             HI.NamespaceScope = "";
             HI.Definition =
                 "bool operator==(const Foo &) const noexcept = default";
-            HI.Documentation = "";
+            HI.Documentation = "Foo spaceship";
           }},
   };
 
@@ -4743,7 +4806,7 @@ TEST(Hover, SpaceshipTemplateNoCrash) {
   TU.ExtraArgs.push_back("-std=c++20");
   auto AST = TU.build();
   auto HI = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
-  EXPECT_EQ(HI->Documentation, "");
+  EXPECT_EQ(HI->Documentation, "Foo bar baz");
 }
 
 TEST(Hover, ForwardStructNoCrash) {
@@ -5412,6 +5475,87 @@ TEST(Hover, HLSLInvalidVectorSwizzleNoCrash) {
   EXPECT_FALSE(H);
 }
 
+TEST(Hover, AttributedStmt) {
+  struct {
+    const char *const Code;
+    const char *const ExpectedName;
+    bool IsHLSL;
+    bool ExpectDocumentation;
+  } Cases[] = {
+      {R"hlsl(
+         [numthreads(1, 1, 1)]
+         void main() {
+           [^unroll]
+           for (int i = 0; i < 4; i++) {}
+         }
+       )hlsl",
+       "unroll", /*IsHLSL=*/true, /*ExpectDocumentation=*/true},
+      {R"hlsl(
+         [numthreads(1, 1, 1)]
+         void main() {
+           [l^oop]
+           for (int i = 0; i < 4; i++) {}
+         }
+       )hlsl",
+       "loop", /*IsHLSL=*/true, /*ExpectDocumentation=*/true},
+      {R"hlsl(
+         [numthreads(1, 1, 1)]
+         void main() {
+           [b^ranch]
+           if (true) {}
+         }
+       )hlsl",
+       "branch", /*IsHLSL=*/true, /*ExpectDocumentation=*/false},
+      {R"hlsl(
+         [numthreads(1, 1, 1)]
+         void main() {
+           [f^latten]
+           if (true) {}
+         }
+       )hlsl",
+       "flatten", /*IsHLSL=*/true, /*ExpectDocumentation=*/false},
+      {R"cpp(
+         void foo() {
+           [[^likely]] if (true) {}
+         }
+       )cpp",
+       "likely", /*IsHLSL=*/false, /*ExpectDocumentation=*/false},
+      {R"cpp(
+         void foo() {
+           [[^unlikely]] if (true) {}
+         }
+       )cpp",
+       "unlikely", /*IsHLSL=*/false, /*ExpectDocumentation=*/false},
+      {R"cpp(
+         void foo() {
+           switch (1) {
+           case 1:
+             [[^fallthrough]];
+           case 2:
+             break;
+           }
+         }
+       )cpp",
+       "fallthrough", /*IsHLSL=*/false, /*ExpectDocumentation=*/false},
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+    Annotations T(Case.Code,
+                  Annotations::Markers().setRangeBegin("{{").setRangeEnd("}}"));
+    TestTU TU = TestTU::withCode(T.code());
+    if (Case.IsHLSL)
+      configureHLSL(TU);
+    else
+      TU.ExtraArgs.push_back("-std=c++20");
+    auto AST = TU.build();
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+    EXPECT_EQ(H->Name, Case.ExpectedName);
+    if (Case.ExpectDocumentation) {
+      EXPECT_FALSE(H->Documentation.empty());
+    }
+  }
+}
 TEST(Hover, HLSLRegisterAttributeRange) {
   Annotations T(R"hlsl(
     Texture2D tex : [[^register]]([[^t1]]);

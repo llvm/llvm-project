@@ -53,6 +53,13 @@ struct llcas_functions_t {
 
   bool (*cas_validate)(llcas_cas_t, bool check_hash, char **error);
 
+  llcas_validation_result_t (*cas_validate_if_needed)(llcas_cas_options_t,
+                                                      bool check_hash,
+                                                      bool force, char **error);
+
+  llcas_validation_result_t (*cas_recover_ondisk_data)(llcas_cas_options_t,
+                                                       char **error);
+
   unsigned (*digest_parse)(llcas_cas_t, const char *printed_digest,
                            uint8_t *bytes, size_t bytes_size, char **error);
 
@@ -87,6 +94,11 @@ struct llcas_functions_t {
 
   llcas_object_refs_t (*loaded_object_get_refs)(llcas_cas_t,
                                                 llcas_loaded_object_t);
+
+  llcas_data_t (*loaded_object_get_standalone_data)(llcas_cas_t,
+                                                    llcas_loaded_object_t);
+
+  void (*standalone_data_dispose)(llcas_data_t);
 
   size_t (*object_refs_get_count)(llcas_cas_t, llcas_object_refs_t);
 

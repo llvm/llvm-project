@@ -9,6 +9,7 @@
 #include "src/spawn/posix_spawn.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/dup2.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/exit_group.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
@@ -43,12 +44,7 @@ pid_t fork() {
 
 // All exits from child_process are error exits. So, we use a simple
 // exit implementation which exits with code 127.
-void exit() {
-  for (;;) {
-    LIBC_NAMESPACE::syscall_impl<long>(SYS_exit_group, 127);
-    LIBC_NAMESPACE::syscall_impl<long>(SYS_exit, 127);
-  }
-}
+[[noreturn]] void exit() { linux_syscalls::exit_group(127); }
 
 void child_process(const char *__restrict path,
                    const posix_spawn_file_actions_t *file_actions,

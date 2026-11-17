@@ -1,3 +1,6 @@
 add_subdirectory(CPlusPlus)
 add_subdirectory(CLanguages)
 add_subdirectory(ObjC)
+add_subdirectory(Fortran)
+add_subdirectory(Rust)
+add_subdirectory(D)

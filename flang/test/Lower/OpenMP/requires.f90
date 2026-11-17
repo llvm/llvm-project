@@ -6,7 +6,7 @@
 ! This test checks the lowering of requires into MLIR
 
 !CHECK:      module attributes {
-!CHECK-SAME: omp.requires = #omp<clause_requires reverse_offload|unified_shared_memory>
+!CHECK-SAME: omp.requires = #omp.clause_requires<reverse_offload|unified_shared_memory>
 program requires
   !$omp requires unified_shared_memory reverse_offload atomic_default_mem_order(seq_cst)
   !$omp target

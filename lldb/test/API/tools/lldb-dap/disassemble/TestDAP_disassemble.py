@@ -2,14 +2,13 @@
 Test lldb-dap disassemble request
 """
 
-from lldbsuite.test.decorators import skipIfWindows
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
 class TestDAP_disassemble(DAPTestCaseBase):
-    @skipIfWindows
     def test_disassemble(self):
         """Disassembly at the current PC returns the expected source line, and
         clearing breakpoints doesn't change the instructions."""
@@ -49,7 +48,7 @@ class TestDAP_disassemble(DAPTestCaseBase):
 
         session.continue_to_exit()
 
-    @skipIfWindows
+    @expectedFailureAll(oslist=["windows"], archs=["aarch64"])
     def test_disassemble_backwards(self):
         """
         Tests the 'disassemble' request with a backwards disassembly range.

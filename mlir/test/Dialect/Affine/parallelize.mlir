@@ -195,6 +195,25 @@ func.func @iter_args(%in: memref<10xf32>) {
   return
 }
 
+// CHECK-LABEL: @iter_args_max
+// REDUCE-LABEL: @iter_args_max
+func.func @iter_args_max(%in: memref<10xi32>) {
+  // REDUCE: %[[init:.*]] = arith.constant
+  %c0 = arith.constant 0 : i32
+  // CHECK-NOT: affine.parallel
+  // REDUCE: %[[reduced:.*]] = affine.parallel (%{{.*}}) = (0) to (10) reduce ("maxs") -> (i32)
+  %final_red = affine.for %i = 0 to 10 iter_args(%red_iter = %c0) -> (i32) {
+    // REDUCE: %[[red_value:.*]] = affine.load
+    %ld = affine.load %in[%i] : memref<10xi32>
+    // REDUCE-NOT: arith.maxsi
+    %max = arith.maxsi %red_iter, %ld : i32
+    // REDUCE: affine.yield %[[red_value]]
+    affine.yield %max : i32
+  }
+  // REDUCE: arith.maxsi %[[init]], %[[reduced]]
+  return
+}
+
 // CHECK-LABEL: @nested_iter_args
 // REDUCE-LABEL: @nested_iter_args
 func.func @nested_iter_args(%in: memref<20x10xf32>) {
@@ -333,7 +352,7 @@ func.func @test_add_inv_or_terminal_symbol(%arg0: memref<9x9xi32>, %arg1: i1) {
   %29 = tensor.empty() : tensor<10xf16>
   memref.alloca_scope {
     %dim_30 = tensor.dim %29, %idx0 : tensor<10xf16>
-    %alloc_31 = memref.alloc(%idx0, %idx0) {alignment = 64 : i64} : memref<?x?xf16>
+    %alloc_31 = memref.alloc(%idx0, %idx0) alignment = 64 : memref<?x?xf16>
     affine.for %arg3 = 0 to %dim_30 {
       %207 = affine.load %alloc_31[%idx0, %idx0] : memref<?x?xf16>
       affine.store %207, %alloc_31[%idx0, %idx0] : memref<?x?xf16>

@@ -1,6 +1,10 @@
 // RUN: cir-opt %s -cir-flatten-cfg -mem2reg -o - | FileCheck %s
 
 !s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!u16i = !cir.int<u, 16>
+!rec_Whole = !cir.struct<"Whole" {data !u16i, data !u16i}>
+!rec_AllPad = !cir.struct<"AllPad" {pad !u8i}>
 
 module {
   // Promote CIR stack slots through the generic mem2reg pass after CFG flattening.
@@ -66,5 +70,28 @@ module {
     cir.store atomic(release) %1, %0 : !s32i, !cir.ptr<!s32i>
     %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
     cir.return %2 : !s32i
+  }
+
+  // A skip_tail_padding copy that covers the whole slot still promotes.
+  // CHECK-LABEL: cir.func @promote_copy_covering_slot
+  cir.func @promote_copy_covering_slot(%src: !cir.ptr<!rec_Whole>) -> !rec_Whole {
+    // CHECK-NOT: cir.alloca
+    // CHECK-NOT: cir.copy
+    %slot = cir.alloca "s" align(2) init : !cir.ptr<!rec_Whole>
+    cir.copy %src to %slot skip_tail_padding : !cir.ptr<!rec_Whole>
+    %v = cir.load %slot : !cir.ptr<!rec_Whole>, !rec_Whole
+    cir.return %v : !rec_Whole
+  }
+
+  // An all-pad record has a data size of zero, so the copy leaves the slot's
+  // byte untouched and the slot cannot be promoted.
+  // CHECK-LABEL: cir.func @do_not_promote_partial_copy
+  cir.func @do_not_promote_partial_copy(%src: !cir.ptr<!rec_AllPad>) -> !rec_AllPad {
+    // CHECK: %[[SLOT:.*]] = cir.alloca "s" align(1) init : !cir.ptr<!rec_AllPad>
+    // CHECK: cir.copy %{{.+}} to %[[SLOT]] skip_tail_padding : !cir.ptr<!rec_AllPad>
+    %slot = cir.alloca "s" align(1) init : !cir.ptr<!rec_AllPad>
+    cir.copy %src to %slot skip_tail_padding : !cir.ptr<!rec_AllPad>
+    %v = cir.load %slot : !cir.ptr<!rec_AllPad>, !rec_AllPad
+    cir.return %v : !rec_AllPad
   }
 }

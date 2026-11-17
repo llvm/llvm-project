@@ -348,10 +348,8 @@ FlatSymbolRefAttr SymbolRefAttr::get(StringAttr value) {
 }
 
 FlatSymbolRefAttr SymbolRefAttr::get(Operation *symbol) {
-  auto symName =
-      symbol->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName());
-  assert(symName && "value does not have a valid symbol name");
-  return SymbolRefAttr::get(symName);
+  auto symbolOp = cast<SymbolOpInterface>(symbol);
+  return SymbolRefAttr::get(symbolOp.getNameAttr());
 }
 
 StringAttr SymbolRefAttr::getLeafReference() const {
@@ -1562,6 +1560,10 @@ Attribute SparseElementsAttr::getZeroAttr() const {
   // Handle string type.
   if (llvm::isa<DenseStringElementsAttr>(getValues()))
     return StringAttr::get("", eltType);
+
+  // MXI8 elements use signless i8 attributes for their encoded bits.
+  if (llvm::isa<MXI8Type>(eltType))
+    return IntegerAttr::get(IntegerType::get(eltType.getContext(), 8), 0);
 
   // Otherwise, this is an integer.
   return IntegerAttr::get(eltType, 0);

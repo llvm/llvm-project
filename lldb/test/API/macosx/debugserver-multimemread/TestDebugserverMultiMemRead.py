@@ -9,7 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 @requireDarwin
-@skipIfOutOfTreeDebugserver
 class TestCase(TestBase):
     def check_invalid_packet(self, packet_str):
         reply = lldbutil.send_packet_get_reply(self, "packet_str")
@@ -25,8 +24,7 @@ class TestCase(TestBase):
             self, "break here", source_file
         )
 
-        capabilities = lldbutil.get_qsupported_capabilities(self)
-        self.assertIn("MultiMemRead+", capabilities)
+        lldbutil.require_qsupported_capability(self, "MultiMemRead+")
 
         mem_address_var = thread.frames[0].FindVariable("memory")
         self.assertTrue(mem_address_var)

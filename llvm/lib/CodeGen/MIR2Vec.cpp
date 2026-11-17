@@ -38,28 +38,30 @@ cl::OptionCategory MIR2VecCategory("MIR2Vec Options");
 
 // FIXME: Use a default vocab when not specified
 static cl::opt<std::string>
-    VocabFile("mir2vec-vocab-path", cl::Optional,
+    VocabFile("mir2vec-vocab-path",
               cl::desc("Path to the vocabulary file for MIR2Vec"), cl::init(""),
               cl::cat(MIR2VecCategory));
-cl::opt<float> OpcWeight("mir2vec-opc-weight", cl::Optional, cl::init(1.0),
-                         cl::desc("Weight for machine opcode embeddings"),
-                         cl::cat(MIR2VecCategory));
-cl::opt<float> CommonOperandWeight(
-    "mir2vec-common-operand-weight", cl::Optional, cl::init(1.0),
-    cl::desc("Weight for common operand embeddings"), cl::cat(MIR2VecCategory));
-cl::opt<float>
-    RegOperandWeight("mir2vec-reg-operand-weight", cl::Optional, cl::init(1.0),
+static cl::opt<float>
+    OpcWeight("mir2vec-opc-weight", cl::init(1.0),
+              cl::desc("Weight for machine opcode embeddings"),
+              cl::cat(MIR2VecCategory));
+static cl::opt<float>
+    CommonOperandWeight("mir2vec-common-operand-weight", cl::init(1.0),
+                        cl::desc("Weight for common operand embeddings"),
+                        cl::cat(MIR2VecCategory));
+static cl::opt<float>
+    RegOperandWeight("mir2vec-reg-operand-weight", cl::init(1.0),
                      cl::desc("Weight for register operand embeddings"),
                      cl::cat(MIR2VecCategory));
 cl::opt<MIR2VecKind> MIR2VecEmbeddingKind(
-    "mir2vec-kind", cl::Optional,
+    "mir2vec-kind",
     cl::values(clEnumValN(MIR2VecKind::Symbolic, "symbolic",
                           "Generate symbolic embeddings for MIR")),
     cl::init(MIR2VecKind::Symbolic), cl::desc("MIR2Vec embedding kind"),
     cl::cat(MIR2VecCategory));
 
 static cl::opt<bool> PrintAllVocabEntries(
-    "mir2vec-print-all-vocab-entries", cl::Optional, cl::init(false),
+    "mir2vec-print-all-vocab-entries", cl::init(false),
     cl::desc("Print all vocabulary entries including zero embeddings"),
     cl::cat(MIR2VecCategory));
 
@@ -74,9 +76,8 @@ MIRVocabulary::MIRVocabulary(VocabMap &&OpcodeMap, VocabMap &&CommonOperandMap,
                              VocabMap &&PhysicalRegisterMap,
                              VocabMap &&VirtualRegisterMap,
                              const TargetInstrInfo &TII,
-                             const TargetRegisterInfo &TRI,
-                             const MachineRegisterInfo &MRI)
-    : TII(TII), TRI(TRI), MRI(MRI) {
+                             const TargetRegisterInfo &TRI)
+    : TII(TII), TRI(TRI) {
   buildCanonicalOpcodeMapping();
   unsigned CanonicalOpcodeCount = UniqueBaseOpcodeNames.size();
   assert(CanonicalOpcodeCount > 0 &&
@@ -96,19 +97,19 @@ MIRVocabulary::MIRVocabulary(VocabMap &&OpcodeMap, VocabMap &&CommonOperandMap,
   Layout.TotalEntries = Storage.size();
 }
 
-Expected<MIRVocabulary>
-MIRVocabulary::create(VocabMap &&OpcodeMap, VocabMap &&CommonOperandMap,
-                      VocabMap &&PhyRegMap, VocabMap &&VirtRegMap,
-                      const TargetInstrInfo &TII, const TargetRegisterInfo &TRI,
-                      const MachineRegisterInfo &MRI) {
+Expected<MIRVocabulary> MIRVocabulary::create(VocabMap &&OpcodeMap,
+                                              VocabMap &&CommonOperandMap,
+                                              VocabMap &&PhyRegMap,
+                                              VocabMap &&VirtRegMap,
+                                              const TargetInstrInfo &TII,
+                                              const TargetRegisterInfo &TRI) {
   if (OpcodeMap.empty() || CommonOperandMap.empty() || PhyRegMap.empty() ||
       VirtRegMap.empty())
     return createStringError(errc::invalid_argument,
                              "Empty vocabulary entries provided");
 
   MIRVocabulary Vocab(std::move(OpcodeMap), std::move(CommonOperandMap),
-                      std::move(PhyRegMap), std::move(VirtRegMap), TII, TRI,
-                      MRI);
+                      std::move(PhyRegMap), std::move(VirtRegMap), TII, TRI);
 
   // Validate Storage after construction
   if (!Vocab.Storage.isValid())
@@ -359,7 +360,8 @@ unsigned MIRVocabulary::getCommonOperandIndex(
 }
 
 std::optional<unsigned>
-MIRVocabulary::getRegisterOperandIndex(Register Reg) const {
+MIRVocabulary::getRegisterOperandIndex(Register Reg,
+                                       const MachineRegisterInfo &MRI) const {
   assert(!RegisterOperandNames.empty() && "Register operand mapping not built");
   assert(Reg.isValid() && "Invalid register; not expected here");
   assert((Reg.isPhysical() || Reg.isVirtual()) &&
@@ -383,12 +385,12 @@ MIRVocabulary::getRegisterOperandIndex(Register Reg) const {
   // RegisterBank instead of a TargetRegisterClass, for which
   // getRegClassOrNull() returns nullptr.
   // TODO: Avoid special-casing these registers at every use site. Classless
-  // registers currently fall back to a zero embedding in operator[] and to
-  // VirtRegBase in getEntityIDForRegister(), which is the same ad-hoc handling
-  // the invalid/stack-slot cases already get. Give them a real vocabulary
-  // representation instead -- e.g. an explicit "no register class" entry, or
-  // keying generic vregs on their LLT/RegisterBank -- so that the lookup is
-  // total and the callers need no fallbacks.
+  // registers currently fall back to a zero embedding in getRegisterEmbedding()
+  // and to VirtRegBase in getEntityIDForRegister(), which is the same ad-hoc
+  // handling the invalid/stack-slot cases already get. Give them a real
+  // vocabulary representation instead -- e.g. an explicit "no register class"
+  // entry, or keying generic vregs on their LLT/RegisterBank -- so that the
+  // lookup is total and the callers need no fallbacks.
   if (!RegClass) {
     LLVM_DEBUG(errs() << "MIR2Vec: No register class for register " << Reg.id()
                       << "; using zero vector.\n");
@@ -400,8 +402,7 @@ MIRVocabulary::getRegisterOperandIndex(Register Reg) const {
 }
 
 Expected<MIRVocabulary> MIRVocabulary::createDummyVocabForTest(
-    const TargetInstrInfo &TII, const TargetRegisterInfo &TRI,
-    const MachineRegisterInfo &MRI, unsigned Dim) {
+    const TargetInstrInfo &TII, const TargetRegisterInfo &TRI, unsigned Dim) {
   assert(Dim > 0 && "Dimension must be greater than zero");
 
   float DummyVal = 0.1f;
@@ -438,7 +439,7 @@ Expected<MIRVocabulary> MIRVocabulary::createDummyVocabForTest(
   // Create vocabulary directly without temporary instance
   return MIRVocabulary::create(
       std::move(DummyOpcMap), std::move(DummyOperandMap),
-      std::move(DummyPhyRegMap), std::move(DummyVirtRegMap), TII, TRI, MRI);
+      std::move(DummyPhyRegMap), std::move(DummyVirtRegMap), TII, TRI);
 }
 
 //===----------------------------------------------------------------------===//
@@ -463,8 +464,8 @@ MIR2VecVocabProvider::getVocabulary(const Module &M) {
         if (const auto *TRI = Subtarget.getRegisterInfo())
           return mir2vec::MIRVocabulary::create(
               std::move(OpcVocab), std::move(CommonOperandVocab),
-              std::move(PhyRegVocabMap), std::move(VirtRegVocabMap), *TII, *TRI,
-              MF->getRegInfo());
+              std::move(PhyRegVocabMap), std::move(VirtRegVocabMap), *TII,
+              *TRI);
     }
   }
   return createStringError(errc::invalid_argument,
@@ -548,6 +549,12 @@ std::unique_ptr<MIREmbedder> MIREmbedder::create(MIR2VecKind Mode,
   return nullptr;
 }
 
+MIREmbedder::MIREmbedder(const MachineFunction &MF, const MIRVocabulary &Vocab)
+    : MF(MF), Vocab(Vocab), Dimension(Vocab.getDimension()),
+      OpcWeight(mir2vec::OpcWeight),
+      CommonOperandWeight(mir2vec::CommonOperandWeight),
+      RegOperandWeight(mir2vec::RegOperandWeight) {}
+
 Embedding MIREmbedder::computeEmbeddings(const MachineBasicBlock &MBB) const {
   Embedding MBBVector(Dimension, 0);
 
@@ -603,7 +610,7 @@ Embedding SymbolicMIREmbedder::computeEmbeddings(const MachineInstr &MI) const {
 
   // Add operand contributions
   for (const MachineOperand &MO : MI.operands())
-    InstructionEmbedding += Vocab[MO];
+    InstructionEmbedding += Vocab.getOperandEmbedding(MO, MF.getRegInfo());
 
   return InstructionEmbedding;
 }

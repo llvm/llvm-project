@@ -14,7 +14,6 @@
 #include "Shared/Utils.h"
 
 #include "PluginInterface.h"
-#include "omptarget.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CommandFlags.h"
@@ -104,7 +103,8 @@ createTargetMachine(Module &M, std::string CPU, unsigned OptLevel) {
 
   std::optional<CodeModel::Model> CodeModel = M.getCodeModel();
 
-  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags(TT);
+  TargetOptions Options =
+      codegen::getTargetOptions(M.getContext().getLibraryOptions(), TT);
 
   std::unique_ptr<TargetMachine> TM(
       T->createTargetMachine(M.getTargetTriple(), CPU, Features.getString(),
@@ -118,7 +118,6 @@ createTargetMachine(Module &M, std::string CPU, unsigned OptLevel) {
 } // namespace
 
 JITEngine::JITEngine(Triple::ArchType TA) : TT(Triple::getArchTypeName(TA)) {
-  codegen::RegisterCodeGenFlags();
 #ifdef LIBOMPTARGET_JIT_NVPTX
   if (TT.isNVPTX()) {
     LLVMInitializeNVPTXTargetInfo();
@@ -147,7 +146,6 @@ JITEngine::JITEngine(Triple::ArchType TA) : TT(Triple::getArchTypeName(TA)) {
 
 void JITEngine::opt(TargetMachine *TM, TargetLibraryInfoImpl *TLII, Module &M,
                     unsigned OptLevel) {
-  PipelineTuningOptions PTO;
   std::optional<PGOOptions> PGOOpt;
 
   LoopAnalysisManager LAM;
@@ -156,7 +154,7 @@ void JITEngine::opt(TargetMachine *TM, TargetLibraryInfoImpl *TLII, Module &M,
   ModuleAnalysisManager MAM;
   ModulePassManager MPM;
 
-  PassBuilder PB(TM, PTO, PGOOpt, nullptr);
+  PassBuilder PB(M.getContext(), TM, std::nullopt, PGOOpt, nullptr);
 
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
 
@@ -176,10 +174,10 @@ void JITEngine::codegen(TargetMachine *TM, TargetLibraryInfoImpl *TLII,
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(*TLII));
   MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(TM);
-  TM->addPassesToEmitFile(PM, OS, nullptr,
-                          TT.isNVPTX() ? CodeGenFileType::AssemblyFile
-                                       : CodeGenFileType::ObjectFile,
-                          /*DisableVerify=*/false, MMIWP);
+  (void)TM->addPassesToEmitFile(PM, OS, nullptr,
+                                TT.isNVPTX() ? CodeGenFileType::AssemblyFile
+                                             : CodeGenFileType::ObjectFile,
+                                /*DisableVerify=*/false, MMIWP);
 
   PM.run(M);
 }
@@ -300,7 +298,8 @@ JITEngine::process(StringRef Image, target::plugin::GenericDeviceTy &Device) {
     return Device.doJITPostProcessing(std::move(MB));
   };
 
-  auto ImageOrError = compile(Image, ComputeUnitKind, PostProcessing);
+  auto ImageOrError =
+      compile(Image, ComputeUnitKind, std::move(PostProcessing));
 
   if (SaveImageFileName.isPresent() && ImageOrError) {
     std::error_code EC;

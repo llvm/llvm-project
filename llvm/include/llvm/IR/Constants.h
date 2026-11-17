@@ -144,7 +144,7 @@ public:
   /// type is the integer type that corresponds to the bit width of the value.
   LLVM_ABI static ConstantInt *get(LLVMContext &Context, const APInt &V);
 
-  /// Return a ConstantInt constructed from the string strStart with the given
+  /// Return a ConstantInt constructed from the string Str with the given
   /// radix.
   LLVM_ABI static ConstantInt *get(IntegerType *Ty, StringRef Str,
                                    uint8_t Radix);
@@ -1337,12 +1337,16 @@ public:
 
   /// getAlignOf constant expr - computes the alignment of a type in a target
   /// independent way (Note: the return type is an i64).
+  [[deprecated(
+      "Create a constant based on DataLayout::getABITypeAlign() instead")]]
   LLVM_ABI static Constant *getAlignOf(Type *Ty);
 
   /// getSizeOf constant expr - computes the (alloc) size of a type (in
   /// address-units, not bits) in a target independent way (Note: the return
   /// type is an i64).
   ///
+  [[deprecated(
+      "Create a constant based on DataLayout::getTypeAllocSize() instead")]]
   LLVM_ABI static Constant *getSizeOf(Type *Ty);
 
   LLVM_ABI static Constant *getNeg(Constant *C, bool HasNSW = false);
@@ -1461,11 +1465,14 @@ public:
                                 unsigned Flags = 0,
                                 Type *OnlyIfReducedTy = nullptr);
 
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+
   /// Getelementptr form.  Value* is only accepted for convenience;
   /// all elements must be Constants.
   ///
   /// \param InRange the inrange range if present or std::nullopt.
   /// \param OnlyIfReducedTy see \a getWithOperands() docs.
+  [[deprecated("Use getPtrAdd() or the overload accepting DataLayout instead")]]
   static Constant *
   getGetElementPtr(Type *Ty, Constant *C, ArrayRef<Constant *> IdxList,
                    GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
@@ -1475,6 +1482,7 @@ public:
         Ty, C, ArrayRef((Value *const *)IdxList.data(), IdxList.size()), NW,
         InRange, OnlyIfReducedTy);
   }
+  [[deprecated("Use getPtrAdd() or the overload accepting DataLayout instead")]]
   static Constant *
   getGetElementPtr(Type *Ty, Constant *C, Constant *Idx,
                    GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
@@ -1486,8 +1494,21 @@ public:
     return getGetElementPtr(Ty, C, cast<Value>(Idx), NW, InRange,
                             OnlyIfReducedTy);
   }
+  [[deprecated("Use getPtrAdd() or the overload accepting DataLayout instead")]]
   LLVM_ABI static Constant *
   getGetElementPtr(Type *Ty, Constant *C, ArrayRef<Value *> IdxList,
+                   GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
+                   std::optional<ConstantRange> InRange = std::nullopt,
+                   Type *OnlyIfReducedTy = nullptr);
+
+  /// Create a getelementptr constant expression in canonical ptradd form
+  /// (getelementptr i8) by converting GEP indices to offsets using the
+  /// provided data layout.
+  ///
+  /// Returns nullptr if the indices cannot be converted to ptradd form.
+  LLVM_ABI static Constant *
+  getGetElementPtr(const DataLayout &DL, Type *Ty, Constant *C,
+                   ArrayRef<Constant *> IdxList,
                    GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
                    std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr);
@@ -1504,10 +1525,12 @@ public:
 
   /// Create an "inbounds" getelementptr. See the documentation for the
   /// "inbounds" flag in LangRef.html for details.
+  [[deprecated("Use getPtrAdd() or the overload accepting DataLayout instead")]]
   static Constant *getInBoundsGetElementPtr(Type *Ty, Constant *C,
                                             ArrayRef<Constant *> IdxList) {
     return getGetElementPtr(Ty, C, IdxList, GEPNoWrapFlags::inBounds());
   }
+  [[deprecated("Use getPtrAdd() or the overload accepting DataLayout instead")]]
   static Constant *getInBoundsGetElementPtr(Type *Ty, Constant *C,
                                             Constant *Idx) {
     // This form of the function only exists to avoid ambiguous overload
@@ -1515,10 +1538,13 @@ public:
     // ArrayRef<Value *>.
     return getGetElementPtr(Ty, C, Idx, GEPNoWrapFlags::inBounds());
   }
+  [[deprecated("Use getPtrAdd() or the overload accepting DataLayout instead")]]
   static Constant *getInBoundsGetElementPtr(Type *Ty, Constant *C,
                                             ArrayRef<Value *> IdxList) {
     return getGetElementPtr(Ty, C, IdxList, GEPNoWrapFlags::inBounds());
   }
+
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
   /// Create a getelementptr inbounds i8, ptr, offset constant expression.
   static Constant *getInBoundsPtrAdd(Constant *Ptr, Constant *Offset) {

@@ -32,7 +32,7 @@ end program
 ! The op is named from the module owner (_QQMm) and the source name (myadd),
 ! never the alias (myadd_alias). The clause spelled with the alias binds the
 ! same source op.
-! CHECK: omp.declare_reduction @[[RED:_QQMmmyadd_byref_rec__QMmTt]] : !fir.ref<!fir.type<{{[^>]*}}t{v:i32}>>
+! CHECK: omp.declare_reduction @[[RED:_QQMmmyadd_byref_rec__QMmTt]] byref_element_type({{.*}}) : !fir.ref<!fir.type<{{[^>]*}}t{v:i32}>>
 ! CHECK-NOT: myadd_alias
 ! CHECK: omp.wsloop
 ! CHECK-SAME: reduction(byref @[[RED]]

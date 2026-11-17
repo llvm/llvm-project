@@ -29,6 +29,7 @@
 
 namespace llvm {
 
+struct AnalysisOptions;
 class AssumptionCache;
 class DominatorTree;
 class PHITransAddr;
@@ -270,7 +271,7 @@ public:
   /// The address is always null for a non-local 'call' dependence.
   ///
   /// If the result is a select dependency (\see MemDepResult::isSelect), the
-  /// returned SelectAddr instead carries the select condition and the two
+  /// returned SelectAddr instead carries the select instruction and the two
   /// translated addresses (true/false side).
   SelectAddr getAddress() const { return Address; }
 };
@@ -288,6 +289,8 @@ public:
 /// must-alias'd pointers instead of all pointers interacts well with the
 /// internal caching mechanism.
 class MemoryDependenceResults {
+  const AnalysisOptions &Opts;
+
   // A map from instructions to their dependency.
   using LocalDepMapType = DenseMap<Instruction *, MemDepResult>;
   LocalDepMapType LocalDeps;
@@ -389,11 +392,10 @@ private:
   ClobberOffsetsMapType ClobberOffsets;
 
 public:
-  MemoryDependenceResults(AAResults &AA, AssumptionCache &AC,
-                          const TargetLibraryInfo &TLI, DominatorTree &DT,
-                          unsigned DefaultBlockScanLimit)
-      : AA(AA), AC(AC), TLI(TLI), DT(DT), EEA(DT),
-        DefaultBlockScanLimit(DefaultBlockScanLimit) {}
+  LLVM_ABI MemoryDependenceResults(AAResults &AA, AssumptionCache &AC,
+                                   const TargetLibraryInfo &TLI,
+                                   DominatorTree &DT,
+                                   unsigned DefaultBlockScanLimit);
 
   /// Handle invalidation in the new PM.
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
@@ -496,9 +498,6 @@ public:
   LLVM_ABI MemDepResult getInvariantGroupPointerDependency(LoadInst *LI,
                                                            BasicBlock *BB);
 
-  /// Release memory in caches.
-  LLVM_ABI void releaseMemory();
-
   /// Return the clobber offset to dependent instruction.
   std::optional<int32_t> getClobberOffset(LoadInst *DepInst) const {
     const auto Off = ClobberOffsets.find(DepInst);
@@ -542,7 +541,7 @@ class MemoryDependenceAnalysis
 
   static AnalysisKey Key;
 
-  unsigned DefaultBlockScanLimit;
+  std::optional<unsigned> DefaultBlockScanLimit;
 
 public:
   using Result = MemoryDependenceResults;

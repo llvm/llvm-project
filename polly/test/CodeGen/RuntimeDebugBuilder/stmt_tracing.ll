@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-codegen-trace-stmts -polly-codegen-trace-scalars '-passes=polly<no-default-opts>' -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-codegen-trace-stmts -plugin-arg=Polly,-polly-codegen-trace-scalars '-passes=polly<no-default-opts>' -S < %s | FileCheck %s
 ;
 
 define void @func(i32 %n, ptr %A) {

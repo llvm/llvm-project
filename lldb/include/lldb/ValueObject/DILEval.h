@@ -9,6 +9,7 @@
 #ifndef LLDB_VALUEOBJECT_DILEVAL_H
 #define LLDB_VALUEOBJECT_DILEVAL_H
 
+#include "lldb/Target/ExecutionContext.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILParser.h"
 #include "llvm/ADT/StringRef.h"
@@ -18,13 +19,19 @@
 
 namespace lldb_private::dil {
 
+/// Given the name of a persistent identifier (i.e., one that starts with a $),
+/// find the ValueObject for that name (if it exists).
+lldb::ValueObjectSP LookupPersistentIdentifier(llvm::StringRef name_ref,
+                                               ExecutionContext &exe_ctx,
+                                               lldb::LanguageType language);
+
 /// Given the name of an identifier (variable name, member name, type name,
 /// etc.), find the ValueObject for that name (if it exists), excluding global
 /// variables, and create and return an IdentifierInfo object containing all
 /// the relevant information about that object (for DIL parsing and
 /// evaluating).
 lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
-                                     StackFrame &stack_frame,
+                                     ExecutionContext &exe_ctx,
                                      lldb::DynamicValueType use_dynamic);
 
 /// Given the name of an identifier, check to see if it matches the name of a
@@ -32,26 +39,27 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
 /// create and return an IdentifierInfo object containing all the relevant
 /// information about it.
 lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
-                                           StackFrame &stack_frame,
-                                           lldb::TargetSP target_sp,
+                                           ExecutionContext &exe_ctx,
                                            lldb::DynamicValueType use_dynamic);
 
 /// Given the name of an identifier, attempt to find an enumeration value.
 /// If found, return a ValueObject with a const scalar value of the enum.
 lldb::ValueObjectSP LookupEnumValue(llvm::StringRef name_ref,
-                                    ExecutionContextScope &ctx_scope);
+                                    ExecutionContext &exe_ctx);
 
 class Interpreter : Visitor {
 public:
-  Interpreter(lldb::TargetSP target, llvm::StringRef expr,
-              StackFrame &stack_frame, lldb::DynamicValueType use_dynamic,
-              uint32_t options);
+  Interpreter(ExecutionContext &exe_ctx, llvm::StringRef expr,
+              lldb::DynamicValueType use_dynamic, uint32_t options);
 
+  /// Evaluate an ASTNode tree.
+  /// \returns A non-null lldb::ValueObjectSP or an Error.
+  llvm::Expected<lldb::ValueObjectSP> EvaluateTree(const ASTNodeUP &tree);
+
+private:
   /// Evaluate an ASTNode.
   /// \returns A non-null lldb::ValueObjectSP or an Error.
   llvm::Expected<lldb::ValueObjectSP> Evaluate(const ASTNode &node);
-
-private:
   /// Evaluate an ASTNode. If the result is a reference, it is also
   /// dereferenced using ValueObject::Dereference.
   /// \returns A non-null lldb::ValueObjectSP or an Error.
@@ -73,7 +81,15 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const BooleanLiteralNode &node) override;
   llvm::Expected<lldb::ValueObjectSP> Visit(const CastNode &node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const ConditionalNode &node) override;
   llvm::Expected<lldb::ValueObjectSP> Visit(const SizeOfNode &node) override;
+
+  /// Retrieve the LanguageType from the compile unit of the current frame.
+  llvm::Expected<lldb::LanguageType> GetSourceLanguageFromCU();
+
+  /// Retrieve the TypeSystem from the compile unit of the current frame.
+  llvm::Expected<lldb::TypeSystemSP> GetTypeSystemFromCU();
 
   /// Perform usual unary conversions on a value. At the moment this
   /// includes array-to-pointer and integral promotion for eligible types.
@@ -107,6 +123,13 @@ private:
                                                        lldb::ValueObjectSP rhs,
                                                        CompilerType result_type,
                                                        uint32_t location);
+  llvm::Error ValidateComparison(BinaryOpKind kind, lldb::ValueObjectSP &lhs,
+                                 lldb::ValueObjectSP &rhs, bool lhs_is_literal,
+                                 bool rhs_is_literal, uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateComparison(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                     lldb::ValueObjectSP rhs, bool lhs_is_literal,
+                     bool rhs_is_literal, uint32_t location);
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinaryShift(BinaryOpKind kind, lldb::ValueObjectSP lhs,
                       lldb::ValueObjectSP rhs, uint32_t location);
@@ -130,8 +153,9 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinaryBitwise(BinaryOpKind kind, lldb::ValueObjectSP lhs,
                         lldb::ValueObjectSP rhs, uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP> EvaluateLogical(const BinaryOpNode &node);
   llvm::Expected<CompilerType>
-  PickIntegerType(lldb::TypeSystemSP type_system, ExecutionContextScope &ctx,
+  PickIntegerType(lldb::TypeSystemSP type_system, ExecutionContext &ext_ctx,
                   const IntegerLiteralNode &literal);
 
   llvm::Expected<lldb::ValueObjectSP>
@@ -155,10 +179,9 @@ private:
                                           int location);
 
   // Used by the interpreter to create objects, perform casts, etc.
-  lldb::TargetSP m_target;
+  ExecutionContext m_exe_ctx;
   llvm::StringRef m_expr;
   lldb::ValueObjectSP m_scope;
-  StackFrame &m_stack_frame;
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;
   bool m_check_ptr_vs_member;

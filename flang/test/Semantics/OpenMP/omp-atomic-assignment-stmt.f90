@@ -1,10 +1,7 @@
-! REQUIRES: openmp_runtime
-
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=50
 ! Semantic checks for various assignments related to atomic constructs
 
 program sample
-    use omp_lib
     integer :: x, v
     integer :: y(10)
     integer, allocatable :: k
@@ -146,6 +143,7 @@ program sample
 
     !$omp atomic read
     !ERROR: Atomic variable r cannot have CHARACTER type
+    !ERROR: Capture variable l cannot have CHARACTER type
         l = r
 
     !$omp atomic write

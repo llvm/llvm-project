@@ -37,9 +37,9 @@
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/is_relocatable.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
-#include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/nat.h>
 #include <__type_traits/reference_converts_from_temporary.h>

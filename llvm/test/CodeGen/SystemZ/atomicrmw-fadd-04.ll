@@ -53,13 +53,13 @@ define half @f1(ptr %src, half %b) {
 ; CHECK-NEXT:  .LBB0_3: # %atomicrmw.start
 ; CHECK-NEXT:    # Parent Loop BB0_2 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    rll %r3, %r0, 16(%r13)
-; CHECK-NEXT:    risbg %r1, %r3, 32, 47, 0
-; CHECK-NEXT:    llhr %r3, %r3
+; CHECK-NEXT:    rll %r4, %r0, 16(%r13)
+; CHECK-NEXT:    llhr %r3, %r4
 ; CHECK-NEXT:    cr %r3, %r2
 ; CHECK-NEXT:    jlh .LBB0_1
 ; CHECK-NEXT:  # %bb.4: # %atomicrmw.start
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=2
+; CHECK-NEXT:    risbg %r1, %r4, 32, 47, 0
 ; CHECK-NEXT:    rll %r4, %r1, -16(%r11)
 ; CHECK-NEXT:    cs %r0, %r4, 0(%r12)
 ; CHECK-NEXT:    jl .LBB0_3

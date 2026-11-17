@@ -54,4 +54,4 @@ for.body:                                         ; preds = %entry, %for.body
 ; Function Attrs: nofree nounwind
 declare dso_local noundef i32 @printf(ptr noundef readonly captures(none), ...) local_unnamed_addr #0
 
-attributes #0 = { "hw-shadow-stack" "target-features"="+experimental-zicfiss,+zcmop,+zcmp" }
+attributes #0 = { "hw-shadow-stack" "target-features"="+zimop,+zcmop,+zcmp" }

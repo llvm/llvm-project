@@ -28,16 +28,12 @@ using namespace mlir::x86;
 namespace {
 // Transforms vector.contract(A, B, Acc) into vector.contract(A, B, 0) + Acc
 // to decouple the contraction computation from the accumulator update.
-struct MoveAccumulatorForContractLoop
-    : public OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+struct MoveAccumulatorForContractLoop : public AddContractionOpRewritePattern {
+  using AddContractionOpRewritePattern::AddContractionOpRewritePattern;
 
-  LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
-                                PatternRewriter &rewriter) const override {
-
-    if (contractOp.getKind() != vector::CombiningKind::ADD)
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Expects add combining kind.");
+  LogicalResult
+  matchAndRewriteAddContractOp(vector::ContractionOp contractOp,
+                               PatternRewriter &rewriter) const override {
 
     Operation *accReadOp =
         traceToVectorReadLikeParentOperation(contractOp.getAcc());
@@ -86,7 +82,7 @@ struct MoveAccumulatorForContractLoop
         rewriter, loc,
         DenseElementsAttr::get(vecTy, rewriter.getZeroAttr(elemTy)));
 
-    accValue.replaceAllUsesWith(zeroVec);
+    rewriter.replaceAllUsesWith(accValue, zeroVec);
 
     // Adds the initial acc value with contract results before storing to acc
     // matrix.
@@ -105,11 +101,12 @@ struct MoveAccumulatorForContractLoop
       llvm_unreachable("expected floating-point or integer element type");
     }
 
-    resultUserOp->replaceUsesOfWith(contractValue, addition);
+    rewriter.modifyOpInPlace(resultUserOp, [&]() {
+      resultUserOp->replaceUsesOfWith(contractValue, addition);
+    });
     return success();
   }
 };
-
 } // namespace
 
 void x86::populateMoveAccumulatorForContractLoopPatterns(

@@ -8,9 +8,13 @@
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorSharedMemoryMapperService.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SharedMemoryMapperSPSCI.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/WindowsError.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include <sstream>
 
 #if defined(LLVM_ON_UNIX)
@@ -309,24 +313,25 @@ Error ExecutorSharedMemoryMapperService::shutdown() {
 
 void ExecutorSharedMemoryMapperService::addBootstrapSymbols(
     StringMap<ExecutorAddr> &M) {
-  M[rt::ExecutorSharedMemoryMapperServiceInstanceName] =
+  Mangler Mangle{Triple(sys::getProcessTriple())};
+  M[Mangle.mangledCopy(rt::sps_ci::SharedMemoryMapperInstanceName)] =
       ExecutorAddr::fromPtr(this);
-  M[rt::ExecutorSharedMemoryMapperServiceReserveWrapperName] =
+  M[Mangle.mangledCopy(rt::sps_ci::SharedMemoryMapperReserve::Name)] =
       ExecutorAddr::fromPtr(&reserveWrapper);
-  M[rt::ExecutorSharedMemoryMapperServiceInitializeWrapperName] =
+  M[Mangle.mangledCopy(rt::sps_ci::SharedMemoryMapperInitialize::Name)] =
       ExecutorAddr::fromPtr(&initializeWrapper);
-  M[rt::ExecutorSharedMemoryMapperServiceDeinitializeWrapperName] =
+  M[Mangle.mangledCopy(rt::sps_ci::SharedMemoryMapperDeinitialize::Name)] =
       ExecutorAddr::fromPtr(&deinitializeWrapper);
-  M[rt::ExecutorSharedMemoryMapperServiceReleaseWrapperName] =
+  M[Mangle.mangledCopy(rt::sps_ci::SharedMemoryMapperRelease::Name)] =
       ExecutorAddr::fromPtr(&releaseWrapper);
 }
 
 llvm::orc::shared::CWrapperFunctionBuffer
 ExecutorSharedMemoryMapperService::reserveWrapper(const char *ArgData,
                                                   size_t ArgSize) {
-  return shared::WrapperFunction<
-             rt::SPSExecutorSharedMemoryMapperServiceReserveSignature>::
-      handle(ArgData, ArgSize,
+  return shared::
+      WrapperFunction<rt::sps_ci::SharedMemoryMapperReserve::SPSSig>::handle(
+             ArgData, ArgSize,
              shared::makeMethodWrapperHandler(
                  &ExecutorSharedMemoryMapperService::reserve))
           .release();
@@ -335,9 +340,9 @@ ExecutorSharedMemoryMapperService::reserveWrapper(const char *ArgData,
 llvm::orc::shared::CWrapperFunctionBuffer
 ExecutorSharedMemoryMapperService::initializeWrapper(const char *ArgData,
                                                      size_t ArgSize) {
-  return shared::WrapperFunction<
-             rt::SPSExecutorSharedMemoryMapperServiceInitializeSignature>::
-      handle(ArgData, ArgSize,
+  return shared::
+      WrapperFunction<rt::sps_ci::SharedMemoryMapperInitialize::SPSSig>::handle(
+             ArgData, ArgSize,
              shared::makeMethodWrapperHandler(
                  &ExecutorSharedMemoryMapperService::initialize))
           .release();
@@ -347,7 +352,7 @@ llvm::orc::shared::CWrapperFunctionBuffer
 ExecutorSharedMemoryMapperService::deinitializeWrapper(const char *ArgData,
                                                        size_t ArgSize) {
   return shared::WrapperFunction<
-             rt::SPSExecutorSharedMemoryMapperServiceDeinitializeSignature>::
+             rt::sps_ci::SharedMemoryMapperDeinitialize::SPSSig>::
       handle(ArgData, ArgSize,
              shared::makeMethodWrapperHandler(
                  &ExecutorSharedMemoryMapperService::deinitialize))
@@ -357,9 +362,9 @@ ExecutorSharedMemoryMapperService::deinitializeWrapper(const char *ArgData,
 llvm::orc::shared::CWrapperFunctionBuffer
 ExecutorSharedMemoryMapperService::releaseWrapper(const char *ArgData,
                                                   size_t ArgSize) {
-  return shared::WrapperFunction<
-             rt::SPSExecutorSharedMemoryMapperServiceReleaseSignature>::
-      handle(ArgData, ArgSize,
+  return shared::
+      WrapperFunction<rt::sps_ci::SharedMemoryMapperRelease::SPSSig>::handle(
+             ArgData, ArgSize,
              shared::makeMethodWrapperHandler(
                  &ExecutorSharedMemoryMapperService::release))
           .release();

@@ -82,11 +82,11 @@ public:
   bool WarnBeforeDetach() const override { return false; }
 
   // Process Memory
-  size_t ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                    lldb_private::Status &error) override;
+  bool ShouldUseMemoryCache(
+      const lldb_private::ProcessAddress &process_addr) override;
 
-  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      lldb_private::Status &error) override;
+  size_t DoReadMemory(const lldb_private::ProcessAddress &addr, void *buf,
+                      size_t size, lldb_private::Status &error) override;
 
   // We do not implement DoReadMemoryTags. Instead all the work is done in
   // ReadMemoryTags which avoids having to unpack and repack tags.
@@ -119,7 +119,9 @@ private:
   struct NT_FILE_Entry {
     lldb::addr_t start;
     lldb::addr_t end;
-    lldb::addr_t file_ofs;
+    /// The byte file offset in the original file on disk where this region was
+    /// copied from when it was loaded into the process.
+    lldb::addr_t original_file_offset;
     std::string path;
   };
 

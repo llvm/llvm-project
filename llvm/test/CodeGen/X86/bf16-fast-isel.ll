@@ -6,10 +6,8 @@ define i8 @test_direct_call(ptr %f) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq foo@PLT
-; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    shll $16, %eax
-; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    callq __truncsfbf2@PLT
+; CHECK-NEXT:    pslld $16, %xmm0
+; CHECK-NEXT:    psrld $16, %xmm0
 ; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
@@ -24,10 +22,8 @@ define i8 @test_fast_direct_call(ptr %f) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq foo_fast@PLT
-; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    shll $16, %eax
-; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    callq __truncsfbf2@PLT
+; CHECK-NEXT:    pslld $16, %xmm0
+; CHECK-NEXT:    psrld $16, %xmm0
 ; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
@@ -44,10 +40,8 @@ define i8 @test_indirect_all(ptr %fptr, ptr %f) nounwind {
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movq %rsi, %rdi
 ; CHECK-NEXT:    callq foo@PLT
-; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    shll $16, %eax
-; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    callq __truncsfbf2@PLT
+; CHECK-NEXT:    pslld $16, %xmm0
+; CHECK-NEXT:    psrld $16, %xmm0
 ; CHECK-NEXT:    callq *%rbx
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
@@ -70,10 +64,8 @@ define i8 @test_indirect_all2(ptr %fptr, ptr %f, i1 %cond) nounwind {
 ; CHECK-NEXT:    testb $1, %bpl
 ; CHECK-NEXT:    je .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %exit
-; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    shll $16, %eax
-; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    callq __truncsfbf2@PLT
+; CHECK-NEXT:    pslld $16, %xmm0
+; CHECK-NEXT:    psrld $16, %xmm0
 ; CHECK-NEXT:    callq *%rbx
 ; CHECK-NEXT:    jmp .LBB3_3
 ; CHECK-NEXT:  .LBB3_2: # %exit2
@@ -103,10 +95,8 @@ define i8 @test_fast_indirect_all(ptr %fptr, ptr %f) nounwind {
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movq %rsi, %rdi
 ; CHECK-NEXT:    callq foo@PLT
-; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    shll $16, %eax
-; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    callq __truncsfbf2@PLT
+; CHECK-NEXT:    pslld $16, %xmm0
+; CHECK-NEXT:    psrld $16, %xmm0
 ; CHECK-NEXT:    callq *%rbx
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
@@ -124,20 +114,10 @@ define void @call_get_bfloats() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq get_bfloats@PLT
-; CHECK-NEXT:    pextrw $0, %xmm1, %eax
-; CHECK-NEXT:    shll $16, %eax
-; CHECK-NEXT:    movl %eax, (%rsp) # 4-byte Spill
-; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    shll $16, %eax
-; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    callq __truncsfbf2@PLT
-; CHECK-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; CHECK-NEXT:    movss (%rsp), %xmm0 # 4-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq __truncsfbf2@PLT
-; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    pslld $16, %xmm1
+; CHECK-NEXT:    pslld $16, %xmm0
+; CHECK-NEXT:    psrld $16, %xmm0
+; CHECK-NEXT:    psrld $16, %xmm1
 ; CHECK-NEXT:    callq take_bfloats@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq

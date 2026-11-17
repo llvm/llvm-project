@@ -123,9 +123,8 @@ public:
   }
   static void setInherentAttr(Properties &prop, StringRef name,
                               mlir::Attribute value) {}
-  static void populateInherentAttrs(MLIRContext *context,
-                                    const Properties &prop,
-                                    NamedAttrList &attrs) {}
+  static void walkInherentAttrs(MLIRContext *context, Properties &prop,
+                                OperationName::InherentAttrVisitor visitor) {}
   static LogicalResult
   verifyInherentAttrs(OperationName opName, NamedAttrList &attrs,
                       function_ref<InFlightDiagnostic()> emitError) {
@@ -394,11 +393,15 @@ TEST(OpPropertiesTest, withoutPropertiesDiscardableAttrs) {
   ParserConfig config(&context);
   OwningOpRef<Operation *> op =
       parseSourceString(withoutPropertiesAttrsSrc, config);
-  ASSERT_EQ(llvm::range_size(op->getDiscardableAttrs()), 1u);
-  EXPECT_EQ(op->getDiscardableAttrs().begin()->getName().getValue(),
+  ASSERT_EQ(llvm::range_size(op->getDiscardableAttrDictionary().getValue()),
+            1u);
+  EXPECT_EQ(op->getDiscardableAttrDictionary()
+                .getValue()
+                .begin()
+                ->getName()
+                .getValue(),
             "other_attr");
 
-  EXPECT_EQ(op->getAttrs().size(), 2u);
   EXPECT_EQ(op->getInherentAttr("inherent_attr"), std::nullopt);
   EXPECT_NE(op->getDiscardableAttr("inherent_attr"), Attribute());
   EXPECT_NE(op->getDiscardableAttr("other_attr"), Attribute());

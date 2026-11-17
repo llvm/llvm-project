@@ -142,6 +142,9 @@ def RemoveDeadValuesPass : Pass<"remove-dead-values"> {
     (D) Removes simple and region branch ops that have all non-live results and
     don't affect memory in any way.
 
+    The pass applies only to nested operations. It preserves the root
+    operation, including its operands, results, and function signature.
+
     Here, a "simple op" refers to an op that isn't a symbol op, symbol-user op,
     region branch op, branch op, region branch terminator op, or return-like.
 
@@ -609,6 +612,18 @@ def CompositeFixedPointPass : Pass<"composite-fixed-point-pass"> {
       "Composite pass inner pipeline">,
     Option<"maxIter", "max-iterations", "int", /*default=*/"10",
       "Maximum number of iterations if inner pipeline">,
+    Option<"convergenceFailureAction", "on-convergence-failure",
+      "mlir::ConvergenceFailureAction",
+      /*default=*/"mlir::ConvergenceFailureAction::Warn",
+      "Action to take if the pass fails to converge within max-iterations",
+      [{::llvm::cl::values(
+        clEnumValN(mlir::ConvergenceFailureAction::Warn, "warn",
+         "Emit a warning (default)"),
+        clEnumValN(mlir::ConvergenceFailureAction::Error, "error",
+         "Emit an error and fail the pass"),
+        clEnumValN(mlir::ConvergenceFailureAction::Silent, "silent",
+         "Do nothing")
+       )}]>,
   ];
 }
 

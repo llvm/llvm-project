@@ -20,6 +20,7 @@
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 
 namespace cir {
 
@@ -28,14 +29,18 @@ namespace cir {
 /// that are not yet handled.
 class CIRBasicAliasAnalysis {
 public:
-  CIRBasicAliasAnalysis() = default;
+  explicit CIRBasicAliasAnalysis(mlir::Operation *op)
+      : dataLayout(mlir::DataLayout::closest(op)) {}
   CIRBasicAliasAnalysis(CIRBasicAliasAnalysis &&) = default;
 
   /// Return the aliasing behavior between two values.
   ///
-  /// Returns MayAlias conservatively unless a more precise result can be
-  /// determined from CIR-specific information (e.g. distinct alloca ops,
-  /// pointer provenance, restrict attributes).
+  /// Both values are traced back to the object they point into and to their
+  /// byte offset within it. Pointers into provably different objects don't
+  /// alias. Within one object, pointers at the same offset must alias, pointers
+  /// whose accessed byte ranges are disjoint don't alias, and pointers whose
+  /// ranges overlap partially alias. MayAlias is returned whenever a more
+  /// precise answer cannot be determined.
   mlir::AliasResult alias(mlir::Value lhs, mlir::Value rhs);
 
   /// Return the modify-reference behavior of `op` on `location`.
@@ -45,14 +50,7 @@ public:
   mlir::ModRefResult getModRef(mlir::Operation *op, mlir::Value location);
 
 private:
-  /// Attempt to find the underlying allocation source for `val` by walking
-  /// through pointer arithmetic, casts, and other CIR ops. Returns `val` if
-  /// no more specific source is found.
-  mlir::Value getUnderlyingObject(mlir::Value val);
-
-  /// Return true if `lhs` and `rhs` are provably different allocations and
-  /// therefore cannot alias.
-  bool areDistinctObjects(mlir::Value lhs, mlir::Value rhs);
+  mlir::DataLayout dataLayout;
 };
 
 } // namespace cir

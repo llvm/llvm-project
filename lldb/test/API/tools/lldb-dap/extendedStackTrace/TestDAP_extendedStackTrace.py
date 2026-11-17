@@ -4,7 +4,7 @@ Test lldb-dap stackTrace request with an extended backtrace thread.
 
 import os
 
-from lldbsuite.test.decorators import requireDarwin
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbplatformutil import findBacktraceRecordingDylib
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase

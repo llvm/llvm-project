@@ -57,6 +57,8 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   field bit VOPD3 = 0;
 
+  field bit HasNoOpSelHi = 0;
+
   // High bits - other information.
   field bit VM_CNT = 0;
   field bit EXP_CNT = 0;
@@ -110,9 +112,6 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   // This bit indicates that this is a packed VOP3P instruction
   field bit IsPacked = 0;
-
-  // This bit indicates that this is a D16 buffer instruction.
-  field bit D16Buf = 0;
 
   // This field indicates that FLAT instruction accesses FLAT_GLBL segment.
   // Must be 0 for non-FLAT instructions.
@@ -218,17 +217,12 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   let TSFlags{43} = maybeAtomic;
 
-  // Reserved, must be 0.
-  let TSFlags{44} = 0;
-
   let TSFlags{45} = FPClamp;
   let TSFlags{46} = IntClamp;
   let TSFlags{47} = ClampLo;
   let TSFlags{48} = ClampHi;
 
   let TSFlags{49} = IsPacked;
-
-  let TSFlags{50} = D16Buf;
 
   let TSFlags{51} = FlatGlobal;
 
@@ -318,7 +312,7 @@ def CPolBit {
   int DLC = 2;
   int SCC = 4;
   int NV = 5;
-  int SCAL = 11;
+  int SCAL = 9;
 }
 
 class VOPDstOperand<RegisterClassLike rc> : RegisterOperand<rc, "printVOPDst">;
@@ -463,7 +457,7 @@ class VIMAGE_VSAMPLE_Common <bits<8> op> : Enc96 {
   bits<4> dmask;
   bits<8> vdata;
   bits<9> rsrc;
-  bits<6> cpol;
+  bits<9> cpol;
   bits<8> vaddr0;
   bits<8> vaddr1;
   bits<8> vaddr2;
