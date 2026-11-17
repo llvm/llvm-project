@@ -46,6 +46,7 @@ using namespace llvm;
 namespace llvm::AMDGPU {
 #define GET_ImageDimIntrinsicTable_IMPL
 #define GET_RsrcIntrinsics_IMPL
+#define GET_BufferIntrinsicsTable_IMPL
 #define GET_GFX1250BlockingCyclesTable_DECL
 #define GET_GFX1250BlockingCyclesTable_IMPL
 
@@ -5566,7 +5567,7 @@ static Register findImplicitSGPRRead(const MachineInstr &MI) {
 }
 
 static bool shouldReadExec(const MachineInstr &MI) {
-  if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true)) {
+  if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false)) {
     switch (MI.getOpcode()) {
     case AMDGPU::V_READLANE_B32:
     case AMDGPU::SI_RESTORE_S32_FROM_VGPR:

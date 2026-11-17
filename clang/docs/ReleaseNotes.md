@@ -1588,6 +1588,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Improvements
 
+- The user can opt in to analyze functions coming from files participating in
+  unity or jumbo builds as analysis entry points with
+  `-analyzer-config unitybuild-file-extensions=<file-extensions>`.
+  The default behavior is unchanged.
+
 - `unix.StdCLibraryFunctions` now ignores `restrict` qualifiers in C library
   declarations such as `fopen` when targeting MSVC to avoid false negatives in
   C99 and later C standards.
