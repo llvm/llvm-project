@@ -205,3 +205,33 @@ define i64 @no_bstrins_d(i64 %a) nounwind {
   %or = or i64 %and, 20015998341120       ; 0x0000123456789000
   ret i64 %or
 }
+
+;; Expanding the funnel shift creates the OR first. Its operand only
+;; becomes an AND, and then a BSTRPICK, after the OR has been combined.
+define i64 @fshl_pack(i8 %a, i56 %b) nounwind {
+; CHECK-LABEL: fshl_pack:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    bstrpick.d $a1, $a1, 55, 0
+; CHECK-NEXT:    slli.d $a0, $a0, 56
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ret
+  %ea = zext i8 %a to i64
+  %eb = zext i56 %b to i64
+  %sb = shl nuw i64 %eb, 8
+  %r = call i64 @llvm.fshl.i64(i64 %ea, i64 %sb, i64 56)
+  ret i64 %r
+}
+
+define i64 @fshl_shl(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: fshl_shl:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli.d $a0, $a0, 21
+; CHECK-NEXT:    slli.d $a1, $a1, 10
+; CHECK-NEXT:    bstrpick.d $a1, $a1, 20, 10
+; CHECK-NEXT:    slli.d $a1, $a1, 10
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ret
+  %sb = shl i64 %b, 53
+  %r = call i64 @llvm.fshl.i64(i64 %a, i64 %sb, i64 21)
+  ret i64 %r
+}
