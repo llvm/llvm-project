@@ -7620,7 +7620,6 @@ LegalizerHelper::narrowScalarMul(MachineInstr &MI, LLT NarrowTy) {
   extractParts(Src2, NarrowTy, NumParts, Src2Parts, MIRBuilder, MRI);
 
   SmallVector<Register, 2> DstTmpRegs;
-  ArrayRef<Register> DstRegs;
   LLT CarryTy = LLT::integer(1);
   if (IsMulHigh && NumParts > 1 &&
       LI.isLegal({TargetOpcode::G_UADDO, {NarrowTy, CarryTy}}) &&
@@ -7628,14 +7627,13 @@ LegalizerHelper::narrowScalarMul(MachineInstr &MI, LLT NarrowTy) {
     // Chain the carries directly when add-with-carry is available.
     buildMulHighWithCarries(MIRBuilder, NarrowTy, Src1Parts, Src2Parts,
                             DstTmpRegs);
-    DstRegs = DstTmpRegs;
   } else {
     unsigned DstTmpParts = NumParts * (IsMulHigh ? 2 : 1);
     DstTmpRegs.resize(DstTmpParts);
     multiplyRegisters(DstTmpRegs, Src1Parts, Src2Parts, NarrowTy);
-    // Take only high half of registers if this is high mul.
-    DstRegs = ArrayRef<Register>(&DstTmpRegs[DstTmpParts - NumParts], NumParts);
   }
+  // Take only the high half of the registers if this is a high mul.
+  ArrayRef<Register> DstRegs = ArrayRef(DstTmpRegs).take_back(NumParts);
 
   if (MI.getOpcode() == TargetOpcode::G_SMULH) {
     Register UnsignedHigh = MRI.createGenericVirtualRegister(Ty);
