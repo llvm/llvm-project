@@ -32759,7 +32759,9 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
 /// the corresponding cmpxchg8b or cmpxchg16b instruction is available.
 /// Used to know whether to use cmpxchg8/16b when expanding atomic operations
 /// (otherwise we leave them alone to become __sync_fetch_and_... calls).
-bool X86TargetLowering::needsCmpXchgNb(unsigned OpWidth) const {
+bool X86TargetLowering::needsCmpXchgNb(Type *MemType) const {
+  unsigned OpWidth = MemType->getPrimitiveSizeInBits();
+
   if (OpWidth == 64)
     return Subtarget.canUseCMPXCHG8B() && !Subtarget.is64Bit();
   if (OpWidth == 128)
@@ -32770,44 +32772,45 @@ bool X86TargetLowering::needsCmpXchgNb(unsigned OpWidth) const {
 
 TargetLoweringBase::AtomicExpansionKind
 X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
-  unsigned Size =
-      SI->getDataLayout().getTypeSizeInBits(SI->getValueOperand()->getType());
+  Type *MemType = SI->getValueOperand()->getType();
 
   if (!SI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat) &&
       !Subtarget.useSoftFloat()) {
-    if (Size == 64 && !Subtarget.is64Bit() &&
+    if (MemType->getPrimitiveSizeInBits() == 64 && !Subtarget.is64Bit() &&
         (Subtarget.hasSSE1() || Subtarget.hasX87()))
       return AtomicExpansionKind::None;
 
-    if (Size == 128 && Subtarget.is64Bit() && Subtarget.hasAVX())
+    if (MemType->getPrimitiveSizeInBits() == 128 && Subtarget.is64Bit() &&
+        Subtarget.hasAVX())
       return AtomicExpansionKind::None;
   }
 
-  return needsCmpXchgNb(Size) ? AtomicExpansionKind::Expand
-                              : AtomicExpansionKind::None;
+  return needsCmpXchgNb(MemType) ? AtomicExpansionKind::Expand
+                                 : AtomicExpansionKind::None;
 }
 
 // Note: this turns large loads into lock cmpxchg8b/16b.
 TargetLowering::AtomicExpansionKind
 X86TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
-  unsigned Size = LI->getDataLayout().getTypeSizeInBits(LI->getType());
+  Type *MemType = LI->getType();
 
   if (!LI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat) &&
       !Subtarget.useSoftFloat()) {
     // If this a 64 bit atomic load on a 32-bit target and SSE2 is enabled, we
     // can use movq to do the load. If we have X87 we can load into an 80-bit
     // X87 register and store it to a stack temporary.
-    if (Size == 64 && !Subtarget.is64Bit() &&
+    if (MemType->getPrimitiveSizeInBits() == 64 && !Subtarget.is64Bit() &&
         (Subtarget.hasSSE1() || Subtarget.hasX87()))
       return AtomicExpansionKind::None;
 
     // If this is a 128-bit load with AVX, 128-bit SSE loads/stores are atomic.
-    if (Size == 128 && Subtarget.is64Bit() && Subtarget.hasAVX())
+    if (MemType->getPrimitiveSizeInBits() == 128 && Subtarget.is64Bit() &&
+        Subtarget.hasAVX())
       return AtomicExpansionKind::None;
   }
 
-  return needsCmpXchgNb(Size) ? AtomicExpansionKind::CmpXChg
-                              : AtomicExpansionKind::None;
+  return needsCmpXchgNb(MemType) ? AtomicExpansionKind::CmpXChg
+                                 : AtomicExpansionKind::None;
 }
 
 enum BitTestKind : unsigned {
@@ -33278,7 +33281,7 @@ void X86TargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
 TargetLowering::AtomicExpansionKind
 X86TargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   unsigned NativeWidth = Subtarget.is64Bit() ? 64 : 32;
-  unsigned Size = AI->getDataLayout().getTypeSizeInBits(AI->getType());
+  Type *MemType = AI->getType();
 
   // x86 has no native atomic RMW operations for vectors. An unused and/or/xor
   // that fits a GPR is bitcast to an integer so it can select to a lock
@@ -33294,9 +33297,9 @@ X86TargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 
   // If the operand is too big, we must see if cmpxchg8/16b is available
   // and default to library calls otherwise.
-  if (Size > NativeWidth) {
-    return needsCmpXchgNb(Size) ? AtomicExpansionKind::CmpXChg
-                                : AtomicExpansionKind::None;
+  if (MemType->getPrimitiveSizeInBits() > NativeWidth) {
+    return needsCmpXchgNb(MemType) ? AtomicExpansionKind::CmpXChg
+                                   : AtomicExpansionKind::None;
   }
 
   AtomicRMWInst::BinOp Op = AI->getOperation();
