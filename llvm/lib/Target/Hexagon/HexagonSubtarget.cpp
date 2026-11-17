@@ -531,6 +531,38 @@ void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
   }
 }
 
+void HexagonSubtarget::HLXPseudoMutation::apply(ScheduleDAGInstrs *DAG) {
+  const auto &HII = static_cast<const HexagonInstrInfo &>(*DAG->TII);
+  const auto &HST = DAG->MF.getSubtarget<HexagonSubtarget>();
+  if (!HST.useHLXOps())
+    return;
+
+  auto setLatency = [](SUnit &From, SUnit &To) {
+    for (SDep &Dep : From.Succs)
+      if (Dep.getSUnit() == &To && Dep.getKind() == SDep::Data)
+        Dep.setLatency(0);
+    for (SDep &Dep : To.Preds)
+      if (Dep.getSUnit() == &From && Dep.getKind() == SDep::Data)
+        Dep.setLatency(0);
+  };
+
+  for (SUnit &SU : DAG->SUnits) {
+    if (!SU.isInstr())
+      continue;
+
+    MachineInstr &MI = *SU.getInstr();
+    if (HII.isTmpLoadPseudo(MI)) {
+      for (SDep &Dep : SU.Succs)
+        if (Dep.getKind() == SDep::Data)
+          setLatency(SU, *Dep.getSUnit());
+    } else if (HII.isNewStorePseudo(MI)) {
+      for (SDep &Dep : SU.Preds)
+        if (Dep.getKind() == SDep::Data)
+          setLatency(*Dep.getSUnit(), SU);
+    }
+  }
+}
+
 /// Enable use of alias analysis during code generation (during MI
 /// scheduling, DAGCombine, etc.).
 bool HexagonSubtarget::useAA() const {
@@ -623,6 +655,7 @@ void HexagonSubtarget::getPostRAMutations(
   Mutations.push_back(std::make_unique<UsrOverflowMutation>());
   Mutations.push_back(std::make_unique<HVXMemLatencyMutation>());
   Mutations.push_back(std::make_unique<BankConflictMutation>());
+  Mutations.push_back(std::make_unique<HLXPseudoMutation>());
 }
 
 void HexagonSubtarget::getSMSMutations(

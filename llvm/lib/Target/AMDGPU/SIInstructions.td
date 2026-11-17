@@ -566,7 +566,9 @@ def SCHED_GROUP_BARRIER : SPseudoInstSI<
   let isMeta = 1;
 }
 
-def IGLP_OPT : SPseudoInstSI<(outs), (ins i32imm:$mask),
+// The scheduler may append immediate operands after $mask to keep results of
+// the pre-RA IGLP analysis for later scheduling phases.
+def IGLP_OPT : SPseudoInstSI<(outs), (ins i32imm:$mask, variable_ops),
   [(int_amdgcn_iglp_opt (i32 timm:$mask))]> {
   let SchedRW = [];
   let hasNoSchedulingInfo = 1;
@@ -3390,64 +3392,6 @@ def : GCNPat <
     )
 >;
 
-let SubtargetPredicate = NotHasTrue16BitInsts in
-def : GCNPat <
-  (f16 (sint_to_fp i1:$src)),
-  (V_CVT_F16_F32_e32 (
-      V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
-                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_NEG_ONE),
-                        SSrc_i1:$src))
->;
-
-let True16Predicate = UseRealTrue16Insts in
-def : GCNPat <
-  (f16 (sint_to_fp i1:$src)),
-  (V_CVT_F16_F32_t16_e64 /*src0_modifiers*/ 0,
-      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
-                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_NEG_ONE),
-                        SSrc_i1:$src),
-      /*clamp*/ 0, /*omod*/ 0, /*op_sel*/ 0)
->;
-
-let True16Predicate = UseFakeTrue16Insts in
-def : GCNPat <
-  (f16 (sint_to_fp i1:$src)),
-  (V_CVT_F16_F32_fake16_e64 /*src0_modifiers*/ 0,
-      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
-                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_NEG_ONE),
-                        SSrc_i1:$src),
-      /*clamp*/ 0, /*omod*/ 0)
->;
-
-let True16Predicate = NotHasTrue16BitInsts in
-def : GCNPat <
-  (f16 (uint_to_fp i1:$src)),
-  (V_CVT_F16_F32_e32 (
-      V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
-                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
-                        SSrc_i1:$src))
->;
-
-let True16Predicate = UseRealTrue16Insts in
-def : GCNPat <
-  (f16 (uint_to_fp i1:$src)),
-  (V_CVT_F16_F32_t16_e64 /*src0_modifiers*/ 0,
-      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
-                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
-                        SSrc_i1:$src),
-      /*clamp*/ 0, /*omod*/ 0, /*op_sel*/ 0)
->;
-
-let True16Predicate = UseFakeTrue16Insts in
-def : GCNPat <
-  (f16 (uint_to_fp i1:$src)),
-  (V_CVT_F16_F32_fake16_e64 /*src0_modifiers*/ 0,
-      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
-                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
-                        SSrc_i1:$src),
-      /*clamp*/ 0, /*omod*/ 0)
->;
-
 def : GCNPat <
   (f32 (sint_to_fp i1:$src)),
   (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
@@ -3943,9 +3887,9 @@ let SubtargetPredicate = isGFX10Plus in {
 // better to select fma instead of fmac.
 let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <
-  (fma (f16 (VOP3NoMods f32:$src0)),
-       (f16 (VOP3NoMods f32:$src1)),
-       (f16 (VOP3NoMods f32:$src2))),
+  (fma (f16 (VOP3NoOpSelMods f32:$src0)),
+       (f16 (VOP3NoOpSelMods f32:$src1)),
+       (f16 (VOP3NoOpSelMods f32:$src2))),
   (V_FMAC_F16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;
@@ -3959,9 +3903,9 @@ def : GCNPat <
 >;
 let True16Predicate = UseFakeTrue16Insts in
 def : GCNPat <
-  (fma (f16 (VOP3NoMods f16:$src0)),
-       (f16 (VOP3NoMods f16:$src1)),
-       (f16 (VOP3NoMods f16:$src2))),
+  (fma (f16 (VOP3NoOpSelMods f16:$src0)),
+       (f16 (VOP3NoOpSelMods f16:$src1)),
+       (f16 (VOP3NoOpSelMods f16:$src2))),
   (V_FMAC_F16_fake16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;
