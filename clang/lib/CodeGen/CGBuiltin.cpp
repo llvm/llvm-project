@@ -4187,6 +4187,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::clear_cache, {CGM.DefaultPtrTy});
     return RValue::get(Builder.CreateCall(F, {Begin, End}));
   }
+  case Builtin::BI__builtin_abort:
+    // On the device side we might not have a definition of 'abort()', so emit
+    // a trap instead.
+    if (!getLangOpts().CUDAIsDevice)
+      break;
+    EmitTrapCall(Intrinsic::trap);
+    return RValue::get(nullptr);
   case Builtin::BI__builtin_trap:
     EmitTrapCall(Intrinsic::trap);
     return RValue::get(nullptr);

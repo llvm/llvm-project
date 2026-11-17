@@ -1340,6 +1340,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### CUDA/HIP Language Changes
 
+- `__builtin_abort()` in CUDA and HIP device code now emits a trap instruction
+  rather than a call to `abort()`. (#GH143911)
+
 - HIP compilations now add the `include/libhipcxx` directory from the selected
   ROCm installation to the header search path when it exists. This allows
   libhipcxx headers to be included with paths such as `<cuda/std/atomic>`.
