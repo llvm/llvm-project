@@ -6,158 +6,158 @@
 ; operation with an fabs source and folds the abs into scalar instructions. The
 ; fabs stays free and the operation costs one scalar instruction per element.
 
-define void @fadd_f32() {
+define void @fadd_f32(<2 x float> %a, <2 x float> %b, <4 x float> %c, <4 x float> %d) {
 ; GFX90A-LABEL: 'fadd_f32'
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> undef)
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %plain = fadd <2 x float> undef, undef
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fabs = fadd <2 x float> undef, %fabs
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs.n = call <2 x float> @llvm.fabs.v2f32(<2 x float> undef)
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %plain = fadd <2 x float> %b, %a
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fabs = fadd <2 x float> %b, %fabs
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs.n = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fneg.fabs = fneg <2 x float> %fabs.n
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fneg.fabs = fadd <2 x float> undef, %fneg.fabs
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs.s = call <2 x float> @llvm.fabs.v2f32(<2 x float> undef)
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fsub = fsub <2 x float> undef, %fabs.s
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs.4 = call <4 x float> @llvm.fabs.v4f32(<4 x float> undef)
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %with.fabs.4 = fadd <4 x float> undef, %fabs.4
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fneg.fabs = fadd <2 x float> %b, %fneg.fabs
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs.s = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fsub = fsub <2 x float> %b, %fabs.s
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs.4 = call <4 x float> @llvm.fabs.v4f32(<4 x float> %c)
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %with.fabs.4 = fadd <4 x float> %d, %fabs.4
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX1251-LABEL: 'fadd_f32'
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> undef)
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %plain = fadd <2 x float> undef, undef
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fabs = fadd <2 x float> undef, %fabs
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs.n = call <2 x float> @llvm.fabs.v2f32(<2 x float> undef)
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %plain = fadd <2 x float> %b, %a
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fabs = fadd <2 x float> %b, %fabs
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs.n = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
 ; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fneg.fabs = fneg <2 x float> %fabs.n
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fneg.fabs = fadd <2 x float> undef, %fneg.fabs
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs.s = call <2 x float> @llvm.fabs.v2f32(<2 x float> undef)
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fsub = fsub <2 x float> undef, %fabs.s
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs.4 = call <4 x float> @llvm.fabs.v4f32(<4 x float> undef)
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %with.fabs.4 = fadd <4 x float> undef, %fabs.4
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fneg.fabs = fadd <2 x float> %b, %fneg.fabs
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs.s = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fsub = fsub <2 x float> %b, %fabs.s
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs.4 = call <4 x float> @llvm.fabs.v4f32(<4 x float> %c)
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %with.fabs.4 = fadd <4 x float> %d, %fabs.4
 ; GFX1251-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
-  %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> undef)
-  %plain = fadd <2 x float> undef, undef
-  %with.fabs = fadd <2 x float> undef, %fabs
-  %fabs.n = call <2 x float> @llvm.fabs.v2f32(<2 x float> undef)
+  %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
+  %plain = fadd <2 x float> %b, %a
+  %with.fabs = fadd <2 x float> %b, %fabs
+  %fabs.n = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
   %fneg.fabs = fneg <2 x float> %fabs.n
-  %with.fneg.fabs = fadd <2 x float> undef, %fneg.fabs
-  %fabs.s = call <2 x float> @llvm.fabs.v2f32(<2 x float> undef)
-  %with.fsub = fsub <2 x float> undef, %fabs.s
-  %fabs.4 = call <4 x float> @llvm.fabs.v4f32(<4 x float> undef)
-  %with.fabs.4 = fadd <4 x float> undef, %fabs.4
+  %with.fneg.fabs = fadd <2 x float> %b, %fneg.fabs
+  %fabs.s = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
+  %with.fsub = fsub <2 x float> %b, %fabs.s
+  %fabs.4 = call <4 x float> @llvm.fabs.v4f32(<4 x float> %c)
+  %with.fabs.4 = fadd <4 x float> %d, %fabs.4
   ret void
 }
 
-define void @fmul_f32() {
+define void @fmul_f32(<2 x float> %a, <2 x float> %b) {
 ; GFX90A-LABEL: 'fmul_f32'
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> undef)
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %plain = fmul <2 x float> undef, undef
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fabs = fmul <2 x float> undef, %fabs
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %plain = fmul <2 x float> %b, %a
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fabs = fmul <2 x float> %b, %fabs
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX1251-LABEL: 'fmul_f32'
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> undef)
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %plain = fmul <2 x float> undef, undef
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fabs = fmul <2 x float> undef, %fabs
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %plain = fmul <2 x float> %b, %a
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fabs = fmul <2 x float> %b, %fabs
 ; GFX1251-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
-  %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> undef)
-  %plain = fmul <2 x float> undef, undef
-  %with.fabs = fmul <2 x float> undef, %fabs
+  %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
+  %plain = fmul <2 x float> %b, %a
+  %with.fabs = fmul <2 x float> %b, %fabs
   ret void
 }
 
 ; A multi-use fabs is not folded by the backend; the packed op stays packed.
-define void @fadd_f32_multi_use_fabs(ptr addrspace(1) %out) {
+define void @fadd_f32_multi_use_fabs(<2 x float> %a, <2 x float> %b, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: 'fadd_f32_multi_use_fabs'
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> undef)
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = fadd <2 x float> undef, %fabs
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = fadd <2 x float> %b, %fabs
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x float> %fabs, ptr addrspace(1) %out, align 8
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX1251-LABEL: 'fadd_f32_multi_use_fabs'
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> undef)
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = fadd <2 x float> undef, %fabs
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = fadd <2 x float> %b, %fabs
 ; GFX1251-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x float> %fabs, ptr addrspace(1) %out, align 8
 ; GFX1251-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
-  %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> undef)
-  %add = fadd <2 x float> undef, %fabs
+  %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
+  %add = fadd <2 x float> %b, %fabs
   store <2 x float> %fabs, ptr addrspace(1) %out
   ret void
 }
 
-define void @fma_f32() {
+define void @fma_f32(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
 ; GFX90A-LABEL: 'fma_f32'
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> undef)
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %plain = call <2 x float> @llvm.fma.v2f32(<2 x float> undef, <2 x float> undef, <2 x float> undef)
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fabs = call <2 x float> @llvm.fma.v2f32(<2 x float> %fabs, <2 x float> undef, <2 x float> undef)
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %plain = call <2 x float> @llvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c)
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fabs = call <2 x float> @llvm.fma.v2f32(<2 x float> %fabs, <2 x float> %b, <2 x float> %c)
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX1251-LABEL: 'fma_f32'
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> undef)
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %plain = call <2 x float> @llvm.fma.v2f32(<2 x float> undef, <2 x float> undef, <2 x float> undef)
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fabs = call <2 x float> @llvm.fma.v2f32(<2 x float> %fabs, <2 x float> undef, <2 x float> undef)
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %plain = call <2 x float> @llvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c)
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fabs = call <2 x float> @llvm.fma.v2f32(<2 x float> %fabs, <2 x float> %b, <2 x float> %c)
 ; GFX1251-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
-  %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> undef)
-  %plain = call <2 x float> @llvm.fma.v2f32(<2 x float> undef, <2 x float> undef, <2 x float> undef)
-  %with.fabs = call <2 x float> @llvm.fma.v2f32(<2 x float> %fabs, <2 x float> undef, <2 x float> undef)
+  %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
+  %plain = call <2 x float> @llvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c)
+  %with.fabs = call <2 x float> @llvm.fma.v2f32(<2 x float> %fabs, <2 x float> %b, <2 x float> %c)
   ret void
 }
 
-define void @fadd_f64() {
+define void @fadd_f64(<2 x double> %a, <2 x double> %b) {
 ; GFX90A-LABEL: 'fadd_f64'
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x double> @llvm.fabs.v2f64(<2 x double> undef)
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %plain = fadd <2 x double> undef, undef
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fabs = fadd <2 x double> undef, %fabs
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x double> @llvm.fabs.v2f64(<2 x double> %a)
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %plain = fadd <2 x double> %b, %a
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fabs = fadd <2 x double> %b, %fabs
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX1251-LABEL: 'fadd_f64'
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x double> @llvm.fabs.v2f64(<2 x double> undef)
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %plain = fadd <2 x double> undef, undef
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fabs = fadd <2 x double> undef, %fabs
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x double> @llvm.fabs.v2f64(<2 x double> %a)
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %plain = fadd <2 x double> %b, %a
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fabs = fadd <2 x double> %b, %fabs
 ; GFX1251-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
-  %fabs = call <2 x double> @llvm.fabs.v2f64(<2 x double> undef)
-  %plain = fadd <2 x double> undef, undef
-  %with.fabs = fadd <2 x double> undef, %fabs
+  %fabs = call <2 x double> @llvm.fabs.v2f64(<2 x double> %a)
+  %plain = fadd <2 x double> %b, %a
+  %with.fabs = fadd <2 x double> %b, %fabs
   ret void
 }
 
-define void @fma_f64() {
+define void @fma_f64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; GFX90A-LABEL: 'fma_f64'
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x double> @llvm.fabs.v2f64(<2 x double> undef)
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %plain = call <2 x double> @llvm.fma.v2f64(<2 x double> undef, <2 x double> undef, <2 x double> undef)
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fabs = call <2 x double> @llvm.fma.v2f64(<2 x double> %fabs, <2 x double> undef, <2 x double> undef)
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x double> @llvm.fabs.v2f64(<2 x double> %a)
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %plain = call <2 x double> @llvm.fma.v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c)
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fabs = call <2 x double> @llvm.fma.v2f64(<2 x double> %fabs, <2 x double> %b, <2 x double> %c)
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX1251-LABEL: 'fma_f64'
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x double> @llvm.fabs.v2f64(<2 x double> undef)
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %plain = call <2 x double> @llvm.fma.v2f64(<2 x double> undef, <2 x double> undef, <2 x double> undef)
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fabs = call <2 x double> @llvm.fma.v2f64(<2 x double> %fabs, <2 x double> undef, <2 x double> undef)
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x double> @llvm.fabs.v2f64(<2 x double> %a)
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %plain = call <2 x double> @llvm.fma.v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c)
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %with.fabs = call <2 x double> @llvm.fma.v2f64(<2 x double> %fabs, <2 x double> %b, <2 x double> %c)
 ; GFX1251-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
-  %fabs = call <2 x double> @llvm.fabs.v2f64(<2 x double> undef)
-  %plain = call <2 x double> @llvm.fma.v2f64(<2 x double> undef, <2 x double> undef, <2 x double> undef)
-  %with.fabs = call <2 x double> @llvm.fma.v2f64(<2 x double> %fabs, <2 x double> undef, <2 x double> undef)
+  %fabs = call <2 x double> @llvm.fabs.v2f64(<2 x double> %a)
+  %plain = call <2 x double> @llvm.fma.v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c)
+  %with.fabs = call <2 x double> @llvm.fma.v2f64(<2 x double> %fabs, <2 x double> %b, <2 x double> %c)
   ret void
 }
 
 ; f16 is not unpacked: a packed f16 fabs is a single and.
-define void @fadd_f16() {
+define void @fadd_f16(<2 x half> %a, <2 x half> %b) {
 ; GFX90A-LABEL: 'fadd_f16'
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> undef)
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %plain = fadd <2 x half> undef, undef
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %with.fabs = fadd <2 x half> undef, %fabs
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %a)
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %plain = fadd <2 x half> %b, %a
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %with.fabs = fadd <2 x half> %b, %fabs
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX1251-LABEL: 'fadd_f16'
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> undef)
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %plain = fadd <2 x half> undef, undef
-; GFX1251-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %with.fabs = fadd <2 x half> undef, %fabs
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %a)
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %plain = fadd <2 x half> %b, %a
+; GFX1251-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %with.fabs = fadd <2 x half> %b, %fabs
 ; GFX1251-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
-  %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> undef)
-  %plain = fadd <2 x half> undef, undef
-  %with.fabs = fadd <2 x half> undef, %fabs
+  %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %a)
+  %plain = fadd <2 x half> %b, %a
+  %with.fabs = fadd <2 x half> %b, %fabs
   ret void
 }
