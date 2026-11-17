@@ -800,7 +800,8 @@ void MachineBasicBlock::updateTerminator(
     // successors is its layout successor, rewrite it to a fallthrough
     // conditional branch.
     if (isLayoutSuccessor(TBB)) {
-      if (TII->reverseBranchCondition(Cond))
+      if (!TII->shouldSwapBranchTargets(*this) ||
+          TII->reverseBranchCondition(Cond))
         return;
       TII->removeBranch(*this);
       TII->insertBranch(*this, FBB, nullptr, Cond, DL);
@@ -830,7 +831,8 @@ void MachineBasicBlock::updateTerminator(
 
   // The block has a fallthrough conditional branch.
   if (isLayoutSuccessor(TBB)) {
-    if (TII->reverseBranchCondition(Cond)) {
+    if (!TII->shouldSwapBranchTargets(*this) ||
+        TII->reverseBranchCondition(Cond)) {
       // We can't reverse the condition, add an unconditional branch.
       Cond.clear();
       TII->insertBranch(*this, PreviousLayoutSuccessor, nullptr, Cond, DL);

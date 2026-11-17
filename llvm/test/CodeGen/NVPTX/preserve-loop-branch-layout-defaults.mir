@@ -1,0 +1,93 @@
+# RUN: llc -mtriple=nvptx64 -mcpu=sm_120 -run-pass=branch-folder -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=PRESERVE,SIZE-FOLD
+# RUN: llc -mtriple=nvptx64 -mcpu=sm_120 -run-pass=branch-folder -verify-machineinstrs -nvptx-preserve-loop-branch-layout=false %s -o - | FileCheck %s --check-prefixes=FOLD,SIZE-FOLD
+# RUN: llc -mtriple=nvptx64 -mcpu=sm_100 -run-pass=branch-folder -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=FOLD,SIZE-FOLD
+# RUN: llc -mtriple=nvptx64 -mcpu=sm_100 -run-pass=branch-folder -verify-machineinstrs -nvptx-preserve-loop-branch-layout %s -o - | FileCheck %s --check-prefixes=PRESERVE,SIZE-PRESERVE
+
+# Default preservation is a performance choice for exactly sm_120. Size
+# optimization retains ordinary branch folding. Explicit options override both
+# the target default and size optimization preference.
+
+--- |
+  target triple = "nvptx64-nvidia-cuda"
+  define void @regular_loop() { ret void }
+  define void @optsize_loop() optsize { ret void }
+  define void @minsize_loop() minsize { ret void }
+...
+---
+name: regular_loop
+tracksRegLiveness: true
+body: |
+  ; PRESERVE-LABEL: name: regular_loop
+  ; PRESERVE: bb.1:
+  ; PRESERVE: CBranch %0, %bb.2, 0
+  ; PRESERVE-NEXT: GOTO %bb.1
+  ; FOLD-LABEL: name: regular_loop
+  ; FOLD: bb.1:
+  ; FOLD: CBranch %0, %bb.1, 1
+  ; FOLD-NOT: GOTO
+  ; FOLD: bb.2:
+  bb.0:
+    successors: %bb.1
+    GOTO %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    %0:b1 = IMPLICIT_DEF
+    CBranch %0, %bb.2, 0
+    GOTO %bb.1
+
+  bb.2:
+    Return
+...
+---
+name: optsize_loop
+tracksRegLiveness: true
+body: |
+  ; SIZE-PRESERVE-LABEL: name: optsize_loop
+  ; SIZE-PRESERVE: bb.1:
+  ; SIZE-PRESERVE: CBranch %0, %bb.2, 0
+  ; SIZE-PRESERVE-NEXT: GOTO %bb.1
+  ; SIZE-FOLD-LABEL: name: optsize_loop
+  ; SIZE-FOLD: bb.1:
+  ; SIZE-FOLD: CBranch %0, %bb.1, 1
+  ; SIZE-FOLD-NOT: GOTO
+  ; SIZE-FOLD: bb.2:
+  bb.0:
+    successors: %bb.1
+    GOTO %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    %0:b1 = IMPLICIT_DEF
+    CBranch %0, %bb.2, 0
+    GOTO %bb.1
+
+  bb.2:
+    Return
+...
+---
+name: minsize_loop
+tracksRegLiveness: true
+body: |
+  ; SIZE-PRESERVE-LABEL: name: minsize_loop
+  ; SIZE-PRESERVE: bb.1:
+  ; SIZE-PRESERVE: CBranch %0, %bb.2, 0
+  ; SIZE-PRESERVE-NEXT: GOTO %bb.1
+  ; SIZE-FOLD-LABEL: name: minsize_loop
+  ; SIZE-FOLD: bb.1:
+  ; SIZE-FOLD: CBranch %0, %bb.1, 1
+  ; SIZE-FOLD-NOT: GOTO
+  ; SIZE-FOLD: bb.2:
+  bb.0:
+    successors: %bb.1
+    GOTO %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    %0:b1 = IMPLICIT_DEF
+    CBranch %0, %bb.2, 0
+    GOTO %bb.1
+
+  bb.2:
+    Return
+...

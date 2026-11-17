@@ -1,0 +1,46 @@
+# RUN: llc -mtriple=nvptx64 -mcpu=sm_120 -run-pass=machine-cse -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=nvptx64 -mcpu=sm_120 -run-pass=machine-cse -verify-machineinstrs -nvptx-preserve-loop-branch-layout %s -o - | FileCheck %s
+
+# Preserving branch target order must not prevent MachineCSE from reusing the
+# inverted comparison. Inverting the predicate and its users keeps both branch
+# destinations in place, including the self-loop's conditional backedge.
+# Declining branch analysis for the loop would prevent this optimization.
+
+--- |
+  target triple = "nvptx64-nvidia-cuda"
+  define void @predicate_cse_loop() { ret void }
+...
+---
+name: predicate_cse_loop
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: predicate_cse_loop
+  ; CHECK: bb.0:
+  ; CHECK: [[PRED:%[0-9]+]]:b1 = SETP_i32
+  ; CHECK-NEXT: CBranch [[PRED]], %bb.1, 0
+  ; CHECK-NEXT: GOTO %bb.2
+  ; CHECK: bb.1:
+  ; CHECK-NOT: SETP
+  ; CHECK: SELP_b32 0, 1, [[PRED]]
+  ; CHECK-NEXT: CBranch [[PRED]], %bb.1, 1
+  ; CHECK-NEXT: GOTO %bb.2
+  ; CHECK: bb.2:
+  ; CHECK: Return
+  bb.0:
+    successors: %bb.1, %bb.2
+    %0:b32 = IMPLICIT_DEF
+    %1:b32 = IMPLICIT_DEF
+    %2:b1 = SETP_i32 %0, %1, 0
+    CBranch %2, %bb.1, 0
+    GOTO %bb.2
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    %3:b1 = SETP_i32 %0, %1, 1
+    %4:b32 = SELP_b32 1, 0, %3
+    CBranch %3, %bb.1, 0
+    GOTO %bb.2
+
+  bb.2:
+    Return
+...
