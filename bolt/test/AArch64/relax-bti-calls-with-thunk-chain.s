@@ -1,6 +1,8 @@
 ## Check BTI fixups and call relaxation with clustered layout:
 ##  > A (old text) calls B (new text), whose entry needs BTI.
 ##  > D (new text) calls A (old text), whose entry NOP is patched to BTI.
+##  > B.cold calls C.hot, which has no BTI, through a short thunk chain.
+##  > C.cold calls B.hot, which has BTI, through a long thunk.
 ## In-layout calls use short thunk chains when their targets lack BTI.
 ## Calls to targets with BTI can use long thunks.
 
