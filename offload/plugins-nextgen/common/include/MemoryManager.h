@@ -22,10 +22,10 @@
 #include <unordered_map>
 #include <vector>
 
+#include "OffloadAPI.h"
 #include "OffloadError.h"
 #include "Shared/Debug.h"
 #include "Shared/Utils.h"
-#include "omptarget.h"
 
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CheckedArithmetic.h"
@@ -40,15 +40,14 @@ class DeviceAllocatorTy {
 public:
   virtual ~DeviceAllocatorTy() = default;
 
-  /// Allocate a memory of size \p Size . \p HstPtr is used to assist the
-  /// allocation.
-  virtual Expected<void *> allocate(size_t Size, void *HstPtr,
-                                    TargetAllocTy Kind = TARGET_ALLOC_DEFAULT,
+  /// Allocate a memory of size \p Size .
+  virtual Expected<void *> allocate(size_t Size,
+                                    ol_alloc_type_t Kind = OL_ALLOC_TYPE_DEVICE,
                                     size_t Alignment = 0) = 0;
 
   /// Delete the pointer \p TgtPtr on the device
   virtual Error free(void *TgtPtr,
-                     TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) = 0;
+                     ol_alloc_type_t Kind = OL_ALLOC_TYPE_DEVICE) = 0;
 };
 
 /// Class of memory manager. A manager pools the memory of a single allocator,
@@ -145,7 +144,7 @@ class MemoryManagerTy {
   /// The reference to a device allocator
   DeviceAllocatorTy &DeviceAllocator;
   /// The kind of device for which the memory manager is allocated
-  TargetAllocTy DeviceKind;
+  ol_alloc_type_t DeviceKind;
 
   /// The threshold to manage memory using memory manager. If the request size
   /// is larger than \p SizeThreshold, the allocation will not be managed by the
@@ -153,9 +152,8 @@ class MemoryManagerTy {
   size_t SizeThreshold = DefaultSizeThreshold;
 
   /// Request memory from target device
-  Expected<void *> allocateOnDevice(size_t Size, void *HstPtr,
-                                    size_t Alignment) const {
-    return DeviceAllocator.allocate(Size, HstPtr, DeviceKind, Alignment);
+  Expected<void *> allocateOnDevice(size_t Size, size_t Alignment) const {
+    return DeviceAllocator.allocate(Size, DeviceKind, Alignment);
   }
 
   /// Deallocate data on device
@@ -166,8 +164,7 @@ class MemoryManagerTy {
   /// This function is called when it tries to allocate memory on device but the
   /// device returns out of memory. It will first free all memory in the
   /// FreeList and try to allocate again.
-  Expected<void *> freeAndAllocate(size_t Size, void *HstPtr,
-                                   size_t Alignment) {
+  Expected<void *> freeAndAllocate(size_t Size, size_t Alignment) {
     std::vector<void *> RemoveList;
 
     // Deallocate all memory in FreeList
@@ -192,16 +189,16 @@ class MemoryManagerTy {
     }
 
     // Try allocate memory again
-    return allocateOnDevice(Size, HstPtr, Alignment);
+    return allocateOnDevice(Size, Alignment);
   }
 
   /// The goal is to allocate memory on the device. It first tries to
   /// allocate directly on the device. If a \p nullptr is returned, it might
   /// be because the device is OOM. In that case, it will free all unused
   /// memory and then try again.
-  Expected<void *> allocateOrFreeAndAllocateOnDevice(size_t Size, void *HstPtr,
+  Expected<void *> allocateOrFreeAndAllocateOnDevice(size_t Size,
                                                      size_t Alignment) {
-    auto TgtPtrOrErr = allocateOnDevice(Size, HstPtr, Alignment);
+    auto TgtPtrOrErr = allocateOnDevice(Size, Alignment);
     if (!TgtPtrOrErr)
       return TgtPtrOrErr.takeError();
 
@@ -211,7 +208,7 @@ class MemoryManagerTy {
     if (TgtPtr == nullptr) {
       ODBG(OLDT_Alloc) << "Failed to get memory on device. Free all memory "
                        << "in FreeLists and try again.";
-      TgtPtrOrErr = freeAndAllocate(Size, HstPtr, Alignment);
+      TgtPtrOrErr = freeAndAllocate(Size, Alignment);
       if (!TgtPtrOrErr)
         return TgtPtrOrErr.takeError();
       TgtPtr = *TgtPtrOrErr;
@@ -238,7 +235,7 @@ public:
   /// Constructor. If \p Threshold is non-zero, then the default threshold will
   /// be overwritten by \p Threshold.
   MemoryManagerTy(DeviceAllocatorTy &DeviceAllocator, size_t Threshold = 0,
-                  TargetAllocTy DeviceKind = TARGET_ALLOC_DEVICE)
+                  ol_alloc_type_t DeviceKind = OL_ALLOC_TYPE_DEVICE)
       : FreeLists(NumBuckets), FreeListLocks(NumBuckets),
         DeviceAllocator(DeviceAllocator), DeviceKind(DeviceKind) {
     if (Threshold)
@@ -254,9 +251,8 @@ public:
     }
   }
 
-  /// Allocate memory of size \p Size from target device. \p HstPtr is used to
-  /// assist the allocation.
-  Expected<void *> allocate(size_t Size, void *HstPtr, size_t Alignment) {
+  /// Allocate memory of size \p Size from target device.
+  Expected<void *> allocate(size_t Size, size_t Alignment) {
     // If the size is zero, we will not bother the target device. Just return
     // nullptr directly.
     if (Size == 0)
@@ -274,8 +270,7 @@ public:
     }
 
     ODBG(OLDT_Alloc) << "MemoryManagerTy::allocate: requested memory " << Size
-                     << ", allocated:  " << AllocationSize
-                     << " with host pointer " << HstPtr << ".";
+                     << ", allocated:  " << AllocationSize << ".";
 
     // If the size is greater than the threshold, allocate it directly from
     // device.
@@ -283,7 +278,7 @@ public:
       ODBG(OLDT_Alloc) << AllocationSize << " is greater than the threshold "
                        << SizeThreshold << ". Allocate it directly from device";
       auto TgtPtrOrErr =
-          allocateOrFreeAndAllocateOnDevice(AllocationSize, HstPtr, Alignment);
+          allocateOrFreeAndAllocateOnDevice(AllocationSize, Alignment);
       if (!TgtPtrOrErr)
         return TgtPtrOrErr.takeError();
 
@@ -344,7 +339,7 @@ public:
                        << "Allocate on device.";
       // Allocate one on device
       auto TgtPtrOrErr =
-          allocateOrFreeAndAllocateOnDevice(AllocationSize, HstPtr, Alignment);
+          allocateOrFreeAndAllocateOnDevice(AllocationSize, Alignment);
       if (!TgtPtrOrErr)
         return TgtPtrOrErr.takeError();
 

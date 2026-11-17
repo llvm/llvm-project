@@ -12,7 +12,6 @@
 ...
 ---
 name:            outline_tail_1
-tracksRegLiveness: true
 isOutlined: false
 body:             |
   bb.0:
@@ -31,7 +30,6 @@ body:             |
 ...
 ---
 name:            outline_tail_2
-tracksRegLiveness: true
 isOutlined: false
 body:             |
   bb.0:
