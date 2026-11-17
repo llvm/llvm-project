@@ -481,6 +481,17 @@ lowerConstrainedFmuladd(IntrinsicInst *II,
   EraseFromParent.push_back(II);
 }
 
+// Give a zero minnum/maxnum result the sign llvm.minimum/maximum require.
+static Value *fixZeroSign(IRBuilderBase &Builder, bool IsMax, Value *Res,
+                          Value *X, Value *Y) {
+  Type *Ty = X->getType();
+  Value *XSign = Builder.CreateCopySign(ConstantFP::get(Ty, 1.0), X);
+  Value *XNeg = Builder.CreateFCmpOLT(XSign, ConstantFP::getZero(Ty));
+  Value *Sign = IsMax ? Builder.CreateSelect(XNeg, Y, X)
+                      : Builder.CreateSelect(XNeg, X, Y);
+  return Builder.CreateCopySign(Res, Sign);
+}
+
 // llvm.minimum/llvm.maximum return NaN if either operand is NaN and order -0.0
 // before +0.0, whereas OpenCL.std fmin/fmax and GLSL.std.450 NMin/NMax return
 // the other operand for a NaN and may return either zero. Expand them like
@@ -502,13 +513,8 @@ static Value *expandFMinimumMaximum(IRBuilderBase &Builder, bool IsMax,
   Type *Ty = X->getType();
   Value *Res = Builder.CreateIntrinsic(
       IsMax ? Intrinsic::maxnum : Intrinsic::minnum, {Ty}, {X, Y}, FMF);
-  if (!FMF.noSignedZeros()) {
-    Value *XSign = Builder.CreateCopySign(ConstantFP::get(Ty, 1.0), X);
-    Value *XNeg = Builder.CreateFCmpOLT(XSign, ConstantFP::getZero(Ty));
-    Value *Sign = IsMax ? Builder.CreateSelect(XNeg, Y, X)
-                        : Builder.CreateSelect(XNeg, X, Y);
-    Res = Builder.CreateCopySign(Res, Sign);
-  }
+  if (!FMF.noSignedZeros())
+    Res = fixZeroSign(Builder, IsMax, Res, X, Y);
   if (!FMF.noNaNs()) {
     Value *Uno = Builder.CreateFCmpUNO(X, Y);
     Res = Builder.CreateSelect(Uno, ConstantFP::getQNaN(Ty), Res);
@@ -543,13 +549,8 @@ lowerFMinimumMaximumNum(IntrinsicInst *II,
   // No flags: SPIR-V NSZ and Fast would also drop the sign of same-sign zeros.
   Value *Res = Builder.CreateIntrinsic(
       IsMax ? Intrinsic::maxnum : Intrinsic::minnum, {Ty}, {X, Y});
-  if (!FMF.noSignedZeros()) {
-    Value *XNeg = Builder.CreateFCmpOLT(
-        Builder.CreateCopySign(ConstantFP::get(Ty, 1.0), X),
-        ConstantFP::getZero(Ty));
-    Res = Builder.CreateCopySign(Res, IsMax ? Builder.CreateSelect(XNeg, Y, X)
-                                            : Builder.CreateSelect(XNeg, X, Y));
-  }
+  if (!FMF.noSignedZeros())
+    Res = fixZeroSign(Builder, IsMax, Res, X, Y);
   Res->takeName(II);
   II->replaceAllUsesWith(Res);
   EraseFromParent.push_back(II);
