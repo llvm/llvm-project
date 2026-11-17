@@ -1981,8 +1981,8 @@ void CFGBuilder::addAutomaticObjHandling(LocalScope::const_iterator B,
 }
 
 /// Add CFG elements corresponding to call destructor and end of lifetime
-/// of all automatic variables with non-trivial destructor in range [B, E).
-/// This include AutomaticObjectDtor and LifetimeEnds elements.
+/// of all automatic variables with trivial and non-trivial destructors in
+/// range [B, E). This includes AutomaticObjectDtor and LifetimeEnds elements.
 void CFGBuilder::addAutomaticObjDestruction(LocalScope::const_iterator B,
                                             LocalScope::const_iterator E,
                                             Stmt *S) {
@@ -2028,11 +2028,8 @@ void CFGBuilder::addAutomaticObjDestruction(LocalScope::const_iterator B,
   }
 }
 
-/// Add CFG elements corresponding to leaving a scope.
-/// Assumes that range [B, E) corresponds to single scope.
-/// This add following elements:
-///   * LifetimeEnds for all variables with non-trivial destructor
-///   * ScopeEnd for each scope left
+/// Add ScopeEnd CFG elements for each element in the CFG leaving a
+/// local scope. Assumes that range [B, E) corresponds to single scope.
 void CFGBuilder::addScopeExitHandling(LocalScope::const_iterator B,
                                       LocalScope::const_iterator E, Stmt *S) {
   assert(!B.inSameLocalScope(E));
