@@ -102,7 +102,7 @@ infrastructure are described first, followed by tool-specific sections.
   value when possible, and otherwise via a pointer parameter, since C has
   no references.
 
-- The `Define outline` tweak now longer copies attributes (`[[...]]`,
+- The `Define outline` tweak no longer copies attributes (`[[...]]`,
   `__attribute__((...))` and `__declspec(...)`) from the declaration to the
   generated out-of-line definition.
 
