@@ -207,17 +207,13 @@ size_t StringRef::rfind_insensitive(char C, size_t From) const {
 }
 
 // Returns the index of the last C in Data[0, End), or npos if it is not found.
-// Written to be vectorizable. GCC at -O3 fully unrolls the inner loop before
-// vectorizing, which leaves it scalar; the pragma prevents that.
+// Written to be vectorizable.
 static size_t rfindByte(const char *Data, size_t End, char C) {
   constexpr size_t VectorWidth = 16;
   size_t I = End;
   for (; I >= VectorWidth; I -= VectorWidth) {
     const char *Chunk = Data + I - VectorWidth;
     unsigned char Any = 0;
-#if defined(__GNUC__)
-#pragma GCC unroll 1
-#endif
     for (size_t J = 0; J != VectorWidth; ++J)
       Any |= Chunk[J] == C;
     if (Any)
