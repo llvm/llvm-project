@@ -56,6 +56,19 @@ enum OutputFormatTy { berkeley, sysv, darwin };
 enum RadixTy { octal = 8, decimal = 10, hexadecimal = 16 };
 enum class SliceKind { None, ExplicitArch, HostArch, AllArchs };
 
+struct SummarySizes {
+  uint64_t Text = 0;
+  uint64_t Data = 0;
+  uint64_t Bss = 0;
+};
+
+struct MachOSegmentSizes {
+  uint64_t Text = 0;
+  uint64_t Data = 0;
+  uint64_t Objc = 0;
+  uint64_t Others = 0;
+};
+
 struct ObjectContext {
   StringRef ArchiveName;
   StringRef ArchName;
@@ -154,22 +167,41 @@ static size_t getNumLengthAsString(uint64_t num) {
   return result.size();
 }
 
-/// Return the printing format for the Radix.
-static const char *getRadixFmt() {
+// Print Value right-aligned in Width characters using the configured Radix.
+static void printRadixNumber(raw_ostream &OS, uint64_t Value, unsigned Width) {
+  int W = static_cast<int>(Width);
   switch (Radix) {
   case octal:
-    return PRIo64;
+    OS << format("%#*" PRIo64, W, Value);
+    break;
   case decimal:
-    return PRIu64;
+    OS << format("%*" PRIu64, W, Value);
+    break;
   case hexadecimal:
-    return PRIx64;
+    OS << format("%#*" PRIx64, W, Value);
+    break;
   }
-  return nullptr;
+}
+
+// Print a Berkeley summary row (text, data, bss, dec/oct, hex).
+static void printBerkeleyRow(raw_ostream &OS, uint64_t Text, uint64_t Data,
+                             uint64_t Bss, uint64_t Total) {
+  printRadixNumber(OS, Text, 7);
+  OS << '\t';
+  printRadixNumber(OS, Data, 7);
+  OS << '\t';
+  printRadixNumber(OS, Bss, 7);
+  OS << '\t';
+  if (Radix == octal)
+    OS << format("%7" PRIo64 "\t", Total);
+  else
+    OS << format("%7" PRIu64 "\t", Total);
+  OS << format("%7" PRIx64 "\t", Total);
 }
 
 /// Remove unneeded ELF sections from calculation
-static bool considerForSize(ObjectFile *Obj, SectionRef Section) {
-  if (!Obj->isELF())
+static bool considerForSize(const ObjectFile &Obj, SectionRef Section) {
+  if (!Obj.isELF())
     return true;
   switch (static_cast<ELFSectionRef>(Section).getType()) {
   case ELF::SHT_NULL:
@@ -184,312 +216,268 @@ static bool considerForSize(ObjectFile *Obj, SectionRef Section) {
 }
 
 /// Total size of all ELF common symbols
-static Expected<uint64_t> getCommonSize(ObjectFile *Obj) {
+static Expected<uint64_t> getCommonSize(const ObjectFile &Obj) {
   uint64_t TotalCommons = 0;
-  for (auto &Sym : Obj->symbols()) {
+  for (const auto &Sym : Obj.symbols()) {
     Expected<uint32_t> SymFlagsOrErr =
-        Obj->getSymbolFlags(Sym.getRawDataRefImpl());
+        Obj.getSymbolFlags(Sym.getRawDataRefImpl());
     if (!SymFlagsOrErr)
       return SymFlagsOrErr.takeError();
     if (*SymFlagsOrErr & SymbolRef::SF_Common)
-      TotalCommons += Obj->getCommonSymbolSize(Sym.getRawDataRefImpl());
+      TotalCommons += Obj.getCommonSymbolSize(Sym.getRawDataRefImpl());
   }
   return TotalCommons;
+}
+
+// Calculate cumulative text, data, and bss sizes using Berkeley classification.
+static SummarySizes getBerkeleySectionSizes(const ObjectFile &Obj) {
+  SummarySizes Sizes;
+  for (SectionRef Section : Obj.sections()) {
+    uint64_t Size = Section.getSize();
+    if (Section.isBerkeleyText())
+      Sizes.Text += Size;
+    else if (Section.isBerkeleyData())
+      Sizes.Data += Size;
+    else if (Section.isBSS())
+      Sizes.Bss += Size;
+  }
+  return Sizes;
+}
+
+// Calculate standard Mach-O segment summary sizes.
+static MachOSegmentSizes getMachOSegmentSizes(const MachOObjectFile &MachO) {
+  MachOSegmentSizes Sizes;
+  bool IsObject = MachO.getHeader().filetype == MachO::MH_OBJECT;
+  auto AddSize = [&](StringRef SegmentName, uint64_t Size) {
+    if (SegmentName == "__TEXT")
+      Sizes.Text += Size;
+    else if (SegmentName == "__DATA")
+      Sizes.Data += Size;
+    else if (SegmentName == "__OBJC")
+      Sizes.Objc += Size;
+    else if (IsObject || !ExcludePageZero || SegmentName != "__PAGEZERO")
+      Sizes.Others += Size;
+  };
+
+  auto AddSegment = [&](const auto &Seg, auto GetSection) {
+    if (IsObject) {
+      for (unsigned J = 0; J < Seg.nsects; ++J) {
+        auto Sec = GetSection(J);
+        AddSize(StringRef(Sec.segname), Sec.size);
+      }
+    } else {
+      AddSize(StringRef(Seg.segname), Seg.vmsize);
+    }
+  };
+
+  for (const auto &Load : MachO.load_commands()) {
+    if (Load.C.cmd == MachO::LC_SEGMENT_64) {
+      AddSegment(MachO.getSegment64LoadCommand(Load),
+                 [&](unsigned J) { return MachO.getSection64(Load, J); });
+    } else if (Load.C.cmd == MachO::LC_SEGMENT) {
+      AddSegment(MachO.getSegmentLoadCommand(Load),
+                 [&](unsigned J) { return MachO.getSection(Load, J); });
+    }
+  }
+  return Sizes;
 }
 
 /// Print the size of each Mach-O segment and section in @p MachO.
 ///
 /// This is when used when @c OutputFormat is darwin and produces the same
 /// output as darwin's size(1) -m output.
-static void printDarwinSectionSizes(MachOObjectFile *MachO) {
-  std::string fmtbuf;
-  raw_string_ostream fmt(fmtbuf);
-  const char *radix_fmt = getRadixFmt();
-  if (Radix == hexadecimal)
-    fmt << "0x";
-  fmt << "%" << radix_fmt;
+static void printDarwinSectionSizes(const MachOObjectFile &MachO) {
+  auto PrintSize = [](raw_ostream &OS, uint64_t Value) {
+    switch (Radix) {
+    case octal:
+      OS << format("%" PRIo64, Value);
+      break;
+    case decimal:
+      OS << format("%" PRIu64, Value);
+      break;
+    case hexadecimal:
+      OS << format("0x%" PRIx64, Value);
+      break;
+    }
+  };
 
-  uint32_t Filetype = MachO->getHeader().filetype;
+  uint32_t Filetype = MachO.getHeader().filetype;
+  uint64_t Total = 0;
 
-  uint64_t total = 0;
-  for (const auto &Load : MachO->load_commands()) {
+  auto PrintSegment = [&](const auto &Seg, auto GetSection) {
+    outs() << "Segment " << Seg.segname << ": ";
+    PrintSize(outs(), Seg.vmsize);
+    if (DarwinLongFormat)
+      outs() << " (vmaddr 0x"
+             << format("%" PRIx64, static_cast<uint64_t>(Seg.vmaddr))
+             << " fileoff " << Seg.fileoff << ')';
+    outs() << '\n';
+    Total += Seg.vmsize;
+
+    uint64_t SecTotal = 0;
+    for (unsigned J = 0; J < Seg.nsects; ++J) {
+      auto Sec = GetSection(J);
+      if (Filetype == MachO::MH_OBJECT)
+        outs() << "\tSection (" << format("%.16s", Sec.segname) << ", "
+               << format("%.16s", Sec.sectname) << "): ";
+      else
+        outs() << "\tSection " << format("%.16s", Sec.sectname) << ": ";
+      PrintSize(outs(), Sec.size);
+      if (DarwinLongFormat)
+        outs() << " (addr 0x"
+               << format("%" PRIx64, static_cast<uint64_t>(Sec.addr))
+               << " offset " << Sec.offset << ')';
+      outs() << '\n';
+      SecTotal += Sec.size;
+    }
+    if (Seg.nsects != 0) {
+      outs() << "\ttotal ";
+      PrintSize(outs(), SecTotal);
+      outs() << '\n';
+    }
+  };
+
+  for (const auto &Load : MachO.load_commands()) {
     if (Load.C.cmd == MachO::LC_SEGMENT_64) {
-      MachO::segment_command_64 Seg = MachO->getSegment64LoadCommand(Load);
-      outs() << "Segment " << Seg.segname << ": "
-             << format(fmtbuf.c_str(), Seg.vmsize);
-      if (DarwinLongFormat)
-        outs() << " (vmaddr 0x" << format("%" PRIx64, Seg.vmaddr) << " fileoff "
-               << Seg.fileoff << ")";
-      outs() << "\n";
-      total += Seg.vmsize;
-      uint64_t sec_total = 0;
-      for (unsigned J = 0; J < Seg.nsects; ++J) {
-        MachO::section_64 Sec = MachO->getSection64(Load, J);
-        if (Filetype == MachO::MH_OBJECT)
-          outs() << "\tSection (" << format("%.16s", &Sec.segname) << ", "
-                 << format("%.16s", &Sec.sectname) << "): ";
-        else
-          outs() << "\tSection " << format("%.16s", &Sec.sectname) << ": ";
-        outs() << format(fmtbuf.c_str(), Sec.size);
-        if (DarwinLongFormat)
-          outs() << " (addr 0x" << format("%" PRIx64, Sec.addr) << " offset "
-                 << Sec.offset << ")";
-        outs() << "\n";
-        sec_total += Sec.size;
-      }
-      if (Seg.nsects != 0)
-        outs() << "\ttotal " << format(fmtbuf.c_str(), sec_total) << "\n";
+      PrintSegment(MachO.getSegment64LoadCommand(Load),
+                   [&](unsigned J) { return MachO.getSection64(Load, J); });
     } else if (Load.C.cmd == MachO::LC_SEGMENT) {
-      MachO::segment_command Seg = MachO->getSegmentLoadCommand(Load);
-      uint64_t Seg_vmsize = Seg.vmsize;
-      outs() << "Segment " << Seg.segname << ": "
-             << format(fmtbuf.c_str(), Seg_vmsize);
-      if (DarwinLongFormat)
-        outs() << " (vmaddr 0x" << format("%" PRIx32, Seg.vmaddr) << " fileoff "
-               << Seg.fileoff << ")";
-      outs() << "\n";
-      total += Seg.vmsize;
-      uint64_t sec_total = 0;
-      for (unsigned J = 0; J < Seg.nsects; ++J) {
-        MachO::section Sec = MachO->getSection(Load, J);
-        if (Filetype == MachO::MH_OBJECT)
-          outs() << "\tSection (" << format("%.16s", &Sec.segname) << ", "
-                 << format("%.16s", &Sec.sectname) << "): ";
-        else
-          outs() << "\tSection " << format("%.16s", &Sec.sectname) << ": ";
-        uint64_t Sec_size = Sec.size;
-        outs() << format(fmtbuf.c_str(), Sec_size);
-        if (DarwinLongFormat)
-          outs() << " (addr 0x" << format("%" PRIx32, Sec.addr) << " offset "
-                 << Sec.offset << ")";
-        outs() << "\n";
-        sec_total += Sec.size;
-      }
-      if (Seg.nsects != 0)
-        outs() << "\ttotal " << format(fmtbuf.c_str(), sec_total) << "\n";
+      PrintSegment(MachO.getSegmentLoadCommand(Load),
+                   [&](unsigned J) { return MachO.getSection(Load, J); });
     }
   }
-  outs() << "total " << format(fmtbuf.c_str(), total) << "\n";
+  outs() << "total ";
+  PrintSize(outs(), Total);
+  outs() << '\n';
 }
 
 /// Print the summary sizes of the standard Mach-O segments in @p MachO.
 ///
 /// This is when used when @c OutputFormat is berkeley with a Mach-O file and
 /// produces the same output as darwin's size(1) default output.
-static void printDarwinSegmentSizes(MachOObjectFile *MachO) {
-  uint64_t total_text = 0;
-  uint64_t total_data = 0;
-  uint64_t total_objc = 0;
-  uint64_t total_others = 0;
+static void printDarwinSegmentSizes(const MachOObjectFile &MachO) {
+  MachOSegmentSizes Sizes = getMachOSegmentSizes(MachO);
+  uint64_t Total = Sizes.Text + Sizes.Data + Sizes.Objc + Sizes.Others;
   HasMachOFiles = true;
-  for (const auto &Load : MachO->load_commands()) {
-    if (Load.C.cmd == MachO::LC_SEGMENT_64) {
-      MachO::segment_command_64 Seg = MachO->getSegment64LoadCommand(Load);
-      if (MachO->getHeader().filetype == MachO::MH_OBJECT) {
-        for (unsigned J = 0; J < Seg.nsects; ++J) {
-          MachO::section_64 Sec = MachO->getSection64(Load, J);
-          StringRef SegmentName = StringRef(Sec.segname);
-          if (SegmentName == "__TEXT")
-            total_text += Sec.size;
-          else if (SegmentName == "__DATA")
-            total_data += Sec.size;
-          else if (SegmentName == "__OBJC")
-            total_objc += Sec.size;
-          else
-            total_others += Sec.size;
-        }
-      } else {
-        StringRef SegmentName = StringRef(Seg.segname);
-        if (SegmentName == "__TEXT")
-          total_text += Seg.vmsize;
-        else if (SegmentName == "__DATA")
-          total_data += Seg.vmsize;
-        else if (SegmentName == "__OBJC")
-          total_objc += Seg.vmsize;
-        else if (!ExcludePageZero || SegmentName != "__PAGEZERO")
-          total_others += Seg.vmsize;
-      }
-    } else if (Load.C.cmd == MachO::LC_SEGMENT) {
-      MachO::segment_command Seg = MachO->getSegmentLoadCommand(Load);
-      if (MachO->getHeader().filetype == MachO::MH_OBJECT) {
-        for (unsigned J = 0; J < Seg.nsects; ++J) {
-          MachO::section Sec = MachO->getSection(Load, J);
-          StringRef SegmentName = StringRef(Sec.segname);
-          if (SegmentName == "__TEXT")
-            total_text += Sec.size;
-          else if (SegmentName == "__DATA")
-            total_data += Sec.size;
-          else if (SegmentName == "__OBJC")
-            total_objc += Sec.size;
-          else
-            total_others += Sec.size;
-        }
-      } else {
-        StringRef SegmentName = StringRef(Seg.segname);
-        if (SegmentName == "__TEXT")
-          total_text += Seg.vmsize;
-        else if (SegmentName == "__DATA")
-          total_data += Seg.vmsize;
-        else if (SegmentName == "__OBJC")
-          total_objc += Seg.vmsize;
-        else if (!ExcludePageZero || SegmentName != "__PAGEZERO")
-          total_others += Seg.vmsize;
-      }
-    }
-  }
-  uint64_t total = total_text + total_data + total_objc + total_others;
 
   if (TotalSizes) {
-    TotalObjectText += total_text;
-    TotalObjectData += total_data;
-    TotalObjectObjc += total_objc;
-    TotalObjectOthers += total_others;
-    TotalObjectTotal += total;
+    TotalObjectText += Sizes.Text;
+    TotalObjectData += Sizes.Data;
+    TotalObjectObjc += Sizes.Objc;
+    TotalObjectOthers += Sizes.Others;
+    TotalObjectTotal += Total;
   }
 
   if (!BerkeleyHeaderPrinted) {
     outs() << "__TEXT\t__DATA\t__OBJC\tothers\tdec\thex\n";
     BerkeleyHeaderPrinted = true;
   }
-  outs() << total_text << "\t" << total_data << "\t" << total_objc << "\t"
-         << total_others << "\t" << total << "\t" << format("%" PRIx64, total)
-         << "\t";
+  outs() << Sizes.Text << '\t' << Sizes.Data << '\t' << Sizes.Objc << '\t'
+         << Sizes.Others << '\t' << Total << '\t' << format("%" PRIx64, Total)
+         << '\t';
 }
 
 /// Print the size of each section in @p Obj.
 ///
 /// The format used is determined by @c OutputFormat and @c Radix.
-static void printObjectSectionSizes(ObjectFile *Obj) {
-  uint64_t total = 0;
-  std::string fmtbuf;
-  raw_string_ostream fmt(fmtbuf);
-  const char *radix_fmt = getRadixFmt();
-
+static void printObjectSectionSizes(const ObjectFile &Obj) {
   // If OutputFormat is darwin and we have a MachOObjectFile print as darwin's
   // size(1) -m output, else if OutputFormat is darwin and not a Mach-O object
   // let it fall through to OutputFormat berkeley.
-  MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(Obj);
-  if (OutputFormat == darwin && MachO)
-    printDarwinSectionSizes(MachO);
-  // If we have a MachOObjectFile and the OutputFormat is berkeley print as
-  // darwin's default berkeley format for Mach-O files.
-  else if (MachO && OutputFormat == berkeley)
-    printDarwinSegmentSizes(MachO);
-  else if (OutputFormat == sysv) {
+  const auto *MachO = dyn_cast<MachOObjectFile>(&Obj);
+  if (OutputFormat == darwin && MachO) {
+    printDarwinSectionSizes(*MachO);
+  } else if (MachO && OutputFormat == berkeley) {
+    // Print as darwin's default berkeley format for Mach-O files.
+    printDarwinSegmentSizes(*MachO);
+  } else if (OutputFormat == sysv) {
     // Run two passes over all sections. The first gets the lengths needed for
     // formatting the output. The second actually does the output.
-    std::size_t max_name_len = strlen("section");
-    std::size_t max_size_len = strlen("size");
-    std::size_t max_addr_len = strlen("addr");
-    for (const SectionRef &Section : Obj->sections()) {
+    uint64_t Total = 0;
+    size_t MaxNameLen = strlen("section");
+    size_t MaxSizeLen = strlen("size");
+    size_t MaxAddrLen = strlen("addr");
+    for (SectionRef Section : Obj.sections()) {
       if (!considerForSize(Obj, Section))
         continue;
-      uint64_t size = Section.getSize();
-      total += size;
+      uint64_t Size = Section.getSize();
+      Total += Size;
 
-      Expected<StringRef> name_or_err = Section.getName();
-      if (!name_or_err) {
-        error(name_or_err.takeError(), Obj->getFileName());
+      Expected<StringRef> NameOrErr = Section.getName();
+      if (!NameOrErr) {
+        error(NameOrErr.takeError(), Obj.getFileName());
         return;
       }
 
-      uint64_t addr = Section.getAddress();
-      max_name_len = std::max(max_name_len, name_or_err->size());
-      max_size_len = std::max(max_size_len, getNumLengthAsString(size));
-      max_addr_len = std::max(max_addr_len, getNumLengthAsString(addr));
+      uint64_t Addr = Section.getAddress();
+      MaxNameLen = std::max(MaxNameLen, NameOrErr->size());
+      MaxSizeLen = std::max(MaxSizeLen, getNumLengthAsString(Size));
+      MaxAddrLen = std::max(MaxAddrLen, getNumLengthAsString(Addr));
     }
 
     // Add extra padding.
-    max_name_len += 2;
-    max_size_len += 2;
-    max_addr_len += 2;
+    MaxNameLen += 2;
+    MaxSizeLen += 2;
+    MaxAddrLen += 2;
 
-    // Setup header format.
-    fmt << "%-" << max_name_len << "s "
-        << "%" << max_size_len << "s "
-        << "%" << max_addr_len << "s\n";
-
-    // Print header
-    outs() << format(fmtbuf.c_str(), static_cast<const char *>("section"),
-                     static_cast<const char *>("size"),
-                     static_cast<const char *>("addr"));
-    fmtbuf.clear();
-
-    // Setup per section format.
-    fmt << "%-" << max_name_len << "s "
-        << "%#" << max_size_len << radix_fmt << " "
-        << "%#" << max_addr_len << radix_fmt << "\n";
+    // Print header.
+    outs() << left_justify("section", MaxNameLen) << ' '
+           << right_justify("size", MaxSizeLen) << ' '
+           << right_justify("addr", MaxAddrLen) << '\n';
 
     // Print each section.
-    for (const SectionRef &Section : Obj->sections()) {
+    for (SectionRef Section : Obj.sections()) {
       if (!considerForSize(Obj, Section))
         continue;
 
-      Expected<StringRef> name_or_err = Section.getName();
-      if (!name_or_err) {
-        error(name_or_err.takeError(), Obj->getFileName());
+      Expected<StringRef> NameOrErr = Section.getName();
+      if (!NameOrErr) {
+        error(NameOrErr.takeError(), Obj.getFileName());
         return;
       }
 
-      uint64_t size = Section.getSize();
-      uint64_t addr = Section.getAddress();
-      outs() << format(fmtbuf.c_str(), name_or_err->str().c_str(), size, addr);
+      outs() << left_justify(*NameOrErr, MaxNameLen) << ' ';
+      printRadixNumber(outs(), Section.getSize(), MaxSizeLen);
+      outs() << ' ';
+      printRadixNumber(outs(), Section.getAddress(), MaxAddrLen);
+      outs() << '\n';
     }
 
     if (ELFCommons) {
       if (Expected<uint64_t> CommonSizeOrErr = getCommonSize(Obj)) {
-        total += *CommonSizeOrErr;
-        outs() << format(fmtbuf.c_str(), std::string("*COM*").c_str(),
-                         *CommonSizeOrErr, static_cast<uint64_t>(0));
+        Total += *CommonSizeOrErr;
+        outs() << left_justify("*COM*", MaxNameLen) << ' ';
+        printRadixNumber(outs(), *CommonSizeOrErr, MaxSizeLen);
+        outs() << ' ';
+        printRadixNumber(outs(), 0, MaxAddrLen);
+        outs() << '\n';
       } else {
-        error(CommonSizeOrErr.takeError(), Obj->getFileName());
+        error(CommonSizeOrErr.takeError(), Obj.getFileName());
         return;
       }
     }
 
     // Print total.
-    fmtbuf.clear();
-    fmt << "%-" << max_name_len << "s "
-        << "%#" << max_size_len << radix_fmt << "\n";
-    outs() << format(fmtbuf.c_str(), static_cast<const char *>("Total"), total)
-           << "\n\n";
+    outs() << left_justify("Total", MaxNameLen) << ' ';
+    printRadixNumber(outs(), Total, MaxSizeLen);
+    outs() << "\n\n\n";
   } else {
-    // The Berkeley format does not display individual section sizes. It
-    // displays the cumulative size for each section type.
-    uint64_t total_text = 0;
-    uint64_t total_data = 0;
-    uint64_t total_bss = 0;
-
-    // Make one pass over the section table to calculate sizes.
-    for (const SectionRef &Section : Obj->sections()) {
-      uint64_t size = Section.getSize();
-      bool isText = Section.isBerkeleyText();
-      bool isData = Section.isBerkeleyData();
-      bool isBSS = Section.isBSS();
-      if (isText)
-        total_text += size;
-      else if (isData)
-        total_data += size;
-      else if (isBSS)
-        total_bss += size;
-    }
-
+    SummarySizes Sizes = getBerkeleySectionSizes(Obj);
     if (ELFCommons) {
       if (Expected<uint64_t> CommonSizeOrErr = getCommonSize(Obj))
-        total_bss += *CommonSizeOrErr;
+        Sizes.Bss += *CommonSizeOrErr;
       else {
-        error(CommonSizeOrErr.takeError(), Obj->getFileName());
+        error(CommonSizeOrErr.takeError(), Obj.getFileName());
         return;
       }
     }
 
-    total = total_text + total_data + total_bss;
-
+    uint64_t Total = Sizes.Text + Sizes.Data + Sizes.Bss;
     if (TotalSizes) {
-      TotalObjectText += total_text;
-      TotalObjectData += total_data;
-      TotalObjectBss += total_bss;
-      TotalObjectTotal += total;
+      TotalObjectText += Sizes.Text;
+      TotalObjectData += Sizes.Data;
+      TotalObjectBss += Sizes.Bss;
+      TotalObjectTotal += Total;
     }
 
     if (!BerkeleyHeaderPrinted) {
@@ -504,21 +492,13 @@ static void printObjectSectionSizes(ObjectFile *Obj) {
       BerkeleyHeaderPrinted = true;
     }
 
-    // Print result.
-    fmt << "%#7" << radix_fmt << "\t"
-        << "%#7" << radix_fmt << "\t"
-        << "%#7" << radix_fmt << "\t";
-    outs() << format(fmtbuf.c_str(), total_text, total_data, total_bss);
-    fmtbuf.clear();
-    fmt << "%7" << (Radix == octal ? PRIo64 : PRIu64) << "\t"
-        << "%7" PRIx64 "\t";
-    outs() << format(fmtbuf.c_str(), total, total);
+    printBerkeleyRow(outs(), Sizes.Text, Sizes.Data, Sizes.Bss, Total);
   }
 }
 
 // Print Obj along with any format-specific prefix or suffix headers described
 // by Ctx.
-static void printObject(ObjectFile &Obj, const ObjectContext &Ctx) {
+static void printObject(const ObjectFile &Obj, const ObjectContext &Ctx) {
   const auto *MachO = dyn_cast<MachOObjectFile>(&Obj);
   if (OutputFormat == sysv) {
     if (!Ctx.ArchiveName.empty())
@@ -544,7 +524,7 @@ static void printObject(ObjectFile &Obj, const ObjectContext &Ctx) {
     }
   }
 
-  printObjectSectionSizes(&Obj);
+  printObjectSectionSizes(Obj);
 
   if (!MachO && OutputFormat == darwin && Ctx.Slice == SliceKind::None) {
     if (!Ctx.ArchiveName.empty())
@@ -614,7 +594,7 @@ static void printArchiveMembers(Archive &A, StringRef File,
         error(std::move(E), A.getFileName(), C, ErrorArchName);
       continue;
     }
-    if (auto *Obj = dyn_cast<ObjectFile>(ChildOrErr->get())) {
+    if (const auto *Obj = dyn_cast<ObjectFile>(ChildOrErr->get())) {
       if (CheckArchFlags && !checkMachOAndArchFlags(*Obj, File))
         break;
       printObject(*Obj, Ctx);
@@ -724,7 +704,7 @@ static void printFileSectionSizes(StringRef File) {
                                /*MultipleArchs=*/MoreThanOneArch))
         return;
     }
-  } else if (auto *Obj = dyn_cast<ObjectFile>(&Bin)) {
+  } else if (const auto *Obj = dyn_cast<ObjectFile>(&Bin)) {
     if (!checkMachOAndArchFlags(*Obj, File))
       return;
     ObjectContext Ctx;
@@ -736,27 +716,16 @@ static void printFileSectionSizes(StringRef File) {
 }
 
 static void printBerkeleyTotals() {
-  std::string fmtbuf;
-  raw_string_ostream fmt(fmtbuf);
-  const char *radix_fmt = getRadixFmt();
-
   if (HasMachOFiles) {
     // Darwin format totals: __TEXT __DATA __OBJC others dec hex
-    outs() << TotalObjectText << "\t" << TotalObjectData << "\t"
-           << TotalObjectObjc << "\t" << TotalObjectOthers << "\t"
-           << TotalObjectTotal << "\t" << format("%" PRIx64, TotalObjectTotal)
+    outs() << TotalObjectText << '\t' << TotalObjectData << '\t'
+           << TotalObjectObjc << '\t' << TotalObjectOthers << '\t'
+           << TotalObjectTotal << '\t' << format("%" PRIx64, TotalObjectTotal)
            << "\t(TOTALS)\n";
   } else {
-    fmt << "%#7" << radix_fmt << "\t"
-        << "%#7" << radix_fmt << "\t"
-        << "%#7" << radix_fmt << "\t";
-    outs() << format(fmtbuf.c_str(), TotalObjectText, TotalObjectData,
-                     TotalObjectBss);
-    fmtbuf.clear();
-    fmt << "%7" << (Radix == octal ? PRIo64 : PRIu64) << "\t"
-        << "%7" PRIx64 "\t";
-    outs() << format(fmtbuf.c_str(), TotalObjectTotal, TotalObjectTotal)
-           << "(TOTALS)\n";
+    printBerkeleyRow(outs(), TotalObjectText, TotalObjectData, TotalObjectBss,
+                     TotalObjectTotal);
+    outs() << "(TOTALS)\n";
   }
 }
 
