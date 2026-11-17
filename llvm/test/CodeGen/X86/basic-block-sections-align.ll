@@ -30,7 +30,7 @@
 ; RUN:   -basic-block-sections=begin-section.txt -align-blocks-in-bbsections -max-bytes-for-alignment=8 \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,SPLIT,BEGINSEC
 ;;
-;; 4. Even with a low entry count 2 < 5, an unexecuted loop is not aligned.
+;; 4. Even with a low entry count (2), an unexecuted loop is not aligned.
 ; RUN: llc < test.ll -O2 -mtriple=x86_64-pc-linux -function-sections -function-splitting=all \
 ; RUN:   -basic-block-sections=low-entry.txt -align-blocks-in-bbsections -max-bytes-for-alignment=8 \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,SPLIT,LOWENTRY
