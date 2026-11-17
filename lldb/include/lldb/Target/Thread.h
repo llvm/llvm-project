@@ -13,6 +13,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include "lldb/Core/UserSettingsController.h"
@@ -65,6 +66,21 @@ public:
 
   uint64_t GetSingleThreadPlanTimeout() const;
 };
+
+/// A value a function returned.
+struct ReturnedValue {
+  lldb::ValueObjectSP valobj_sp;
+};
+
+/// An error a function threw instead of returning.
+struct ThrownError {
+  lldb::ValueObjectSP valobj_sp;
+};
+
+/// What a completed thread plan computed for the function it stepped out of or
+/// called: nothing, the value it returned, or the error it threw.
+using ThreadPlanReturnValue =
+    std::variant<std::monostate, ReturnedValue, ThrownError>;
 
 class Thread : public std::enable_shared_from_this<Thread>,
                public ThreadProperties,
@@ -1050,9 +1066,9 @@ public:
   /// Gets the outer-most return value from the completed plans
   ///
   /// \return
-  ///     A ValueObjectSP, either empty if there is no return value,
-  ///     or containing the return value.
-  lldb::ValueObjectSP GetReturnValueObject() const;
+  ///     The return value, which is empty if there is none, or the error the
+  ///     function threw.
+  ThreadPlanReturnValue GetReturnValue() const;
 
   /// Gets the outer-most expression variable from the completed plans
   ///

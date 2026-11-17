@@ -331,6 +331,14 @@ public:
   LLVM_ABI static KnownFPClass applyInputDenormalMode(const KnownFPClass &Src,
                                                       DenormalMode Mode);
 
+  /// Return the known classes of \p Src after passing through an input that
+  /// may flush subnormals to zero according to \p Mode. If the input may have
+  /// NSZ, then +0.0 and -0.0 (along with subnormals flushed to zero) may be
+  /// treated as a zero of either sign.
+  LLVM_ABI static KnownFPClass applyInputSemantics(const KnownFPClass &Src,
+                                                   DenormalMode Mode,
+                                                   bool MayBeNSZ = true);
+
   /// Return the known classes of \p Src after producing an output that may
   /// flush subnormals to zero according to \p Mode.
   LLVM_ABI static KnownFPClass applyOutputDenormalMode(const KnownFPClass &Src,
@@ -442,29 +450,25 @@ public:
 
   /// Report known values for fadd
   LLVM_ABI static KnownFPClass fadd(const KnownFPClass &LHS,
-                                    const KnownFPClass &RHS, DenormalMode Mode);
+                                    const KnownFPClass &RHS, RoundingMode RM,
+                                    DenormalMode Mode);
 
   /// Report known values for fadd x, x
   LLVM_ABI static KnownFPClass fadd_self(const KnownFPClass &Src,
-                                         DenormalMode Mode);
+                                         RoundingMode RM, DenormalMode Mode);
 
   /// Report known values for fsub
   LLVM_ABI static KnownFPClass fsub(const KnownFPClass &LHS,
-                                    const KnownFPClass &RHS, DenormalMode Mode);
+                                    const KnownFPClass &RHS, RoundingMode RM,
+                                    DenormalMode Mode);
 
   /// Report known values for fmul
   LLVM_ABI static KnownFPClass fmul(const KnownFPClass &LHS,
                                     const KnownFPClass &RHS, DenormalMode Mode);
 
   // Special case of fmul x, x.
-  static KnownFPClass square(const KnownFPClass &Src, DenormalMode Mode) {
-    KnownFPClass Known = fmul(Src, Src, Mode);
-
-    // X * X is always non-negative or a NaN.
-    Known.knownNot(fcNegative);
-    Known.propagateNonNaN(Src);
-    return Known;
-  }
+  LLVM_ABI static KnownFPClass square(const KnownFPClass &Src,
+                                      DenormalMode Mode);
 
   LLVM_ABI static KnownFPClass fmul(const KnownFPClass &LHS, const APFloat &RHS,
                                     DenormalMode Mode);

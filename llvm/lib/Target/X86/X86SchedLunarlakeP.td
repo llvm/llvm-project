@@ -124,7 +124,7 @@ def : ReadAdvance<ReadInt2Fpu, 0>;
 multiclass LNLPWriteResPair<X86FoldableSchedWrite SchedRW,
                            list<ProcResourceKind> ExePorts,
                            int Lat, list<int> Res = [1], int UOps = 1,
-                           int LoadLat = 4, int LoadUOps = 1> {
+                           int LoadLat = 4, int LoadUOps = 1, int LoadRel = 1> {
   // Register variant is using a single cycle on ExePort.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
@@ -136,7 +136,7 @@ multiclass LNLPWriteResPair<X86FoldableSchedWrite SchedRW,
   // the latency (default = 4).
   def : WriteRes<SchedRW.Folded, !listconcat([LNLPPort20_21_22], ExePorts)> {
     let Latency = !add(Lat, LoadLat);
-    let ReleaseAtCycles = !listconcat([1], Res);
+    let ReleaseAtCycles = !listconcat([LoadRel], Res);
     let NumMicroOps = !add(UOps, LoadUOps);
   }
 }
@@ -736,7 +736,10 @@ def : WriteRes<WritePHMINPOS, [LNLPVPort00_01]> {
 def : WriteRes<WritePHMINPOSLd, [LNLPVPort00_01, LNLPPort20_21_22]> {
   let Latency = 11;
 }
-
+defm : LNLPWriteResPair<WritePack, [LNLPPort01_03_05], 4, [2], 2, 8>;
+defm : LNLPWriteResPair<WritePackX, [LNLPVPort02_03], 3, [3], 1, 6, 0, 6>;
+defm : LNLPWriteResPair<WritePackY, [LNLPVPort02_03], 3, [3], 1, 7, 0, 7>;
+defm : X86WriteResPairUnsupported<WritePackZ>;
 // FIXME : uops info is incorrect 
 defm : LNLPWriteResPair<WritePMULLD, [LNLPVPort00_01_02_03], 10, [2], 2, 8>;
 defm : LNLPWriteResPair<WritePMULLDY, [LNLPVPort00_01_02_03], 10, [2], 2, 8>; 
@@ -1467,15 +1470,11 @@ def LNLPWriteResGroupX120 : SchedWriteRes<[LNLPPort20_21_22, LNLPPort01_03_05]> 
   let Latency = 12;
   let NumMicroOps = 3;
 }
-def : InstRW<[LNLPWriteResGroupX120, ReadAfterVecLd], (instregex "^MMX_PACKSS(DW|WB)rm$")>;
-def : InstRW<[LNLPWriteResGroupX120, ReadAfterVecLd], (instrs MMX_PACKUSWBrm)>;
 def LNLPWriteResGroupX121 : SchedWriteRes<[LNLPPort01_03_05]> {
   let ReleaseAtCycles = [2];
   let Latency = 4;
   let NumMicroOps = 2;
 }
-def : InstRW<[LNLPWriteResGroupX121], (instregex "^MMX_PACKSS(DW|WB)rr$")>;
-def : InstRW<[LNLPWriteResGroupX121], (instrs MMX_PACKUSWBrr)>;
 def : InstRW<[LNLPWriteResGroupX121, ReadDefault, ReadInt2Fpu], (instrs MMX_PINSRWrri)>;
 def LNLPWriteResGroupX125 : SchedWriteRes<[LNLPPort20_21_22, LNLPPort01_03_05]> {
   let Latency = 9;
@@ -2187,16 +2186,12 @@ def LNLPWriteResGroup17 : SchedWriteRes<[LNLPVPort02_03, LNLPPort20_21_22]> {
   let ReleaseAtCycles = [3, 6];
   let Latency = 9;  // originally 10
 }
-def : InstRW<[LNLPWriteResGroup17, ReadAfterVecXLd], (instregex "^(V?)PACK(S|U)S(DW|WB)rm$",
-                                                                "^(V?)PCMPGTQrm$")>;
+def : InstRW<[LNLPWriteResGroup17, ReadAfterVecXLd], (instregex "^(V?)PCMPGTQrm$")>;
 def LNLPWriteResGroup18 : SchedWriteRes<[LNLPVPort02_03]> {
   let ReleaseAtCycles = [3];
   let Latency = 3;
 }
-def : InstRW<[LNLPWriteResGroup18], (instregex "^(V?)PACK(S|U)S(DW|WB)rr$",
-                                               "^(V?)PACKUSWBrr$",
-                                               "^(V?)PCMPGTQrr$",
-                                               "^VPACK(S|U)S(DW|WB)Yrr$",
+def : InstRW<[LNLPWriteResGroup18], (instregex "^(V?)PCMPGTQrr$",
                                                "^VSHA512MSG(1|2)rr$")>;
 def : InstRW<[LNLPWriteResGroup18], (instrs VPCMPGTQYrr)>;
 def LNLPWriteResGroup19 : SchedWriteRes<[LNLPVPort00_01_02_03, LNLPPort20_21_22]> {
@@ -2349,7 +2344,6 @@ def LNLPWriteResGroup43 : SchedWriteRes<[LNLPVPort02_03, LNLPPort20_21_22]> {
   let ReleaseAtCycles = [3, 7];
   let Latency = 10;
 }
-def : InstRW<[LNLPWriteResGroup43, ReadAfterVecYLd], (instregex "^VPACK(S|U)S(DW|WB)Yrm$")>;
 def : InstRW<[LNLPWriteResGroup43, ReadAfterVecYLd], (instrs VPCMPGTQYrm)>;
 def LNLPWriteResGroup44 : SchedWriteRes<[LNLPVPort00_01_02_03, LNLPPort20_21_22]> {
   let ReleaseAtCycles = [1, 7];

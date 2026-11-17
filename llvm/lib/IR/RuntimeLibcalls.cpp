@@ -55,10 +55,11 @@ static RuntimeLibrary getVectorRuntimeLibrary(VectorLibrary VecLib) {
 }
 
 RuntimeLibcallsInfo::RuntimeLibcallsInfo(
-    const Triple &TT, ExceptionHandling ExceptionModel,
+    const Triple &TT, ExceptionHandling ExceptionModel, unsigned WCharSize,
     FloatABI::ABIType FloatABI, std::optional<LongDoubleFormat> LDblFormat,
     StringRef ABIName, VectorLibrary VecLib)
-    : LongDoubleFmt(LDblFormat.value_or(TT.getDefaultLongDoubleFormat())) {
+    : WCharSize(WCharSize ? WCharSize : TT.getDefaultWCharSize()),
+      LongDoubleFmt(LDblFormat.value_or(TT.getDefaultLongDoubleFormat())) {
   // Only an unspecified model resolves to the triple default; None is left as
   // an explicit disable.
   if (ExceptionModel == ExceptionHandling::Default)
@@ -77,8 +78,8 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(
 RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M, StringRef ABIName,
                                          VectorLibrary VecLib)
     : RuntimeLibcallsInfo(M.getTargetTriple(), M.getExceptionModel(),
-                          M.getFloatABI(), M.getLongDoubleFormat(), ABIName,
-                          VecLib) {}
+                          M.getWCharSize(), M.getFloatABI(),
+                          M.getLongDoubleFormat(), ABIName, VecLib) {}
 
 RTLIB::Libcall RuntimeLibcallsInfo::selectLongDoubleLibcall(
     RTLIB::Libcall F80, RTLIB::Libcall F128, RTLIB::Libcall PPCF128) const {
@@ -242,7 +243,7 @@ static Type *getInt128Type(LLVMContext &Ctx, const Triple &TT) {
 
 static Type *convertToIRType(FuncArgTypeID ID, LLVMContext &Ctx,
                              const Triple &TT, const DataLayout &DL,
-                             LongDoubleFormat LdblFormat) {
+                             unsigned WCharSize, LongDoubleFormat LdblFormat) {
   // FIXME: Use the llvm/ABI library to get accurate IR types and attributes.
   switch (ID) {
   case Void:
@@ -350,7 +351,8 @@ static Type *convertToIRType(FuncArgTypeID ID, LLVMContext &Ctx,
 
   SmallVector<Type *, 2> EltTys;
   for (FuncArgTypeID EltID : EltIDs)
-    EltTys.push_back(convertToIRType(EltID, Ctx, TT, DL, LdblFormat));
+    EltTys.push_back(
+        convertToIRType(EltID, Ctx, TT, DL, WCharSize, LdblFormat));
   return StructType::get(Ctx, EltTys);
 }
 
@@ -421,7 +423,7 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
     return {};
 
   FuncArgTypeID LastID = ProtoTypes[0];
-  Type *RetTy = convertToIRType(LastID, Ctx, TT, DL, LongDoubleFmt);
+  Type *RetTy = convertToIRType(LastID, Ctx, TT, DL, WCharSize, LongDoubleFmt);
   AttributeSet RetAttrs;
   if (Attribute::AttrKind AK =
           getIntExtAttr(LastID, RetTy, TT, /*IsReturn=*/true))
@@ -450,7 +452,7 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
     else
       LastID = TyID;
 
-    Type *ArgTy = convertToIRType(TyID, Ctx, TT, DL, LongDoubleFmt);
+    Type *ArgTy = convertToIRType(TyID, Ctx, TT, DL, WCharSize, LongDoubleFmt);
     ArgTys.push_back(ArgTy);
 
     AttributeSet ArgAttrSet;
@@ -466,8 +468,8 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
            "attributes for nonexistent argument");
     AttributeSet StaticAttrs = getLibcallArgAttributeSet(Ctx, Static.AttrSetID);
     if (Static.PointeeType != NoFuncArgType) {
-      Type *PointeeTy =
-          convertToIRType(Static.PointeeType, Ctx, TT, DL, LongDoubleFmt);
+      Type *PointeeTy = convertToIRType(Static.PointeeType, Ctx, TT, DL,
+                                        WCharSize, LongDoubleFmt);
       Type *AlignTy =
           Static.AlignToElement ? PointeeTy->getScalarType() : PointeeTy;
       SmallVector<Attribute, 2> PointeeAttrs = {
@@ -498,16 +500,17 @@ RuntimeLibcallsInfo::getVariableType(LLVMContext &Ctx, const Triple &TT,
       &SignatureTable[SignatureOffset[LibcallImpl]];
   if (ProtoTypes[0] != Variable && ProtoTypes[0] != ThreadLocalVariable)
     return nullptr;
-  return convertToIRType(ProtoTypes[1], Ctx, TT, DL, LongDoubleFmt);
+  return convertToIRType(ProtoTypes[1], Ctx, TT, DL, WCharSize, LongDoubleFmt);
 }
 
 FunctionCallee RuntimeLibcallsInfo::getOrInsertLibcallDecl(
     Module &M, RTLIB::LibcallImpl LibcallImpl) const {
   assert(!isVariable(LibcallImpl) && "not a function declaration");
 
-  const DataLayout &DL = M.getDataLayout();
-  auto [FuncTy, FuncAttrs] =
-      getFunctionTy(M.getContext(), M.getTargetTriple(), DL, LibcallImpl);
+  FunctionType *FuncTy;
+  AttributeList FuncAttrs;
+  std::tie(FuncTy, FuncAttrs) = getFunctionTy(
+      M.getContext(), M.getTargetTriple(), M.getDataLayout(), LibcallImpl);
 
   // TODO: Every libcall should have a known signature.
   if (!FuncTy) {
@@ -515,15 +518,11 @@ FunctionCallee RuntimeLibcallsInfo::getOrInsertLibcallDecl(
                                /*IsVarArg=*/true);
   }
 
-  StringRef Name = getLibcallImplName(LibcallImpl);
-  if (GlobalValue *GV = M.getNamedValue(Name))
-    return {FuncTy, GV};
-
-  Function *F = Function::Create(FuncTy, GlobalValue::ExternalLinkage,
-                                 DL.getProgramAddressSpace(), Name, &M);
-  F->setAttributes(FuncAttrs);
-  F->setCallingConv(getLibcallImplCallingConv(LibcallImpl));
-  return {FuncTy, F};
+  return M.getOrInsertFunction(
+      getLibcallImplName(LibcallImpl), FuncTy, [&](Function &F) {
+        F.setAttributes(FuncAttrs);
+        F.setCallingConv(getLibcallImplCallingConv(LibcallImpl));
+      });
 }
 
 GlobalValue *RuntimeLibcallsInfo::getOrInsertImplGlobal(

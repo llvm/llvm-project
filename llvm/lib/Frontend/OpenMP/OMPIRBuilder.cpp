@@ -750,58 +750,39 @@ void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
 FunctionCallee
 OpenMPIRBuilder::getOrCreateRuntimeFunction(Module &M, RuntimeFunction FnID) {
   FunctionType *FnTy = nullptr;
-  Function *Fn = nullptr;
+  StringRef Name;
 
-  // Try to find the declation in the module first.
   switch (FnID) {
 #define OMP_RTL(Enum, Str, IsVarArg, ReturnType, ...)                          \
   case Enum:                                                                   \
     FnTy = FunctionType::get(ReturnType, ArrayRef<Type *>{__VA_ARGS__},        \
                              IsVarArg);                                        \
-    Fn = M.getFunction(Str);                                                   \
+    Name = Str;                                                                \
     break;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
   }
 
-  if (!Fn) {
-    // Create a new declaration if we need one.
-    switch (FnID) {
-#define OMP_RTL(Enum, Str, ...)                                                \
-  case Enum:                                                                   \
-    Fn = Function::Create(FnTy, GlobalValue::ExternalLinkage, Str, M);         \
-    break;
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
-    }
-    Fn->setCallingConv(Config.getRuntimeCC());
+  return M.getOrInsertFunction(Name, FnTy, [&](Function &Fn) {
+    Fn.setCallingConv(Config.getRuntimeCC());
     // Add information if the runtime function takes a callback function
     if (FnID == OMPRTL___kmpc_fork_call || FnID == OMPRTL___kmpc_fork_teams) {
-      if (!Fn->hasMetadata(LLVMContext::MD_callback)) {
-        LLVMContext &Ctx = Fn->getContext();
-        MDBuilder MDB(Ctx);
-        // Annotate the callback behavior of the runtime function:
-        //  - The callback callee is argument number 2 (microtask).
-        //  - The first two arguments of the callback callee are unknown (-1).
-        //  - All variadic arguments to the runtime function are passed to the
-        //    callback callee.
-        Fn->addMetadata(
-            LLVMContext::MD_callback,
-            *MDNode::get(Ctx, {MDB.createCallbackEncoding(
-                                  2, {-1, -1}, /* VarArgsArePassed */ true)}));
-      }
+      LLVMContext &Ctx = Fn.getContext();
+      MDBuilder MDB(Ctx);
+      // Annotate the callback behavior of the runtime function:
+      //  - The callback callee is argument number 2 (microtask).
+      //  - The first two arguments of the callback callee are unknown (-1).
+      //  - All variadic arguments to the runtime function are passed to the
+      //    callback callee.
+      Fn.addMetadata(
+          LLVMContext::MD_callback,
+          *MDNode::get(Ctx, {MDB.createCallbackEncoding(
+                                2, {-1, -1}, /* VarArgsArePassed */ true)}));
     }
 
-    LLVM_DEBUG(dbgs() << "Created OpenMP runtime function " << Fn->getName()
-                      << " with type " << *Fn->getFunctionType() << "\n");
-    addAttributes(FnID, *Fn);
-
-  } else {
-    LLVM_DEBUG(dbgs() << "Found OpenMP runtime function " << Fn->getName()
-                      << " with type " << *Fn->getFunctionType() << "\n");
-  }
-
-  assert(Fn && "Failed to create OpenMP runtime function");
-
-  return {FnTy, Fn};
+    LLVM_DEBUG(dbgs() << "Created OpenMP runtime function " << Fn.getName()
+                      << " with type " << *Fn.getFunctionType() << "\n");
+    addAttributes(FnID, Fn);
+  });
 }
 
 Expected<BasicBlock *>
@@ -9553,28 +9534,10 @@ static Expected<Function *> createOutlinedFunction(
 /// Given a task descriptor, TaskWithPrivates, return the pointer to the block
 /// of pointers containing shared data between the parent task and the created
 /// task.
-static LoadInst *loadSharedDataFromTaskDescriptor(OpenMPIRBuilder &OMPIRBuilder,
-                                                  IRBuilderBase &Builder,
-                                                  Value *TaskWithPrivates,
-                                                  Type *TaskWithPrivatesTy) {
-
-  Type *TaskTy = OMPIRBuilder.Task;
+static LoadInst *loadSharedDataFromTaskDescriptor(IRBuilderBase &Builder,
+                                                  Value *TaskWithPrivates) {
   LLVMContext &Ctx = Builder.getContext();
-  Value *TaskT =
-      Builder.CreateStructGEP(TaskWithPrivatesTy, TaskWithPrivates, 0);
-  Value *Shareds = TaskT;
-  // TaskWithPrivatesTy can be one of the following
-  // 1. %struct.task_with_privates = type { %struct.kmp_task_ompbuilder_t,
-  //                                        %struct.privates }
-  // 2. %struct.kmp_task_ompbuilder_t ;; This is simply TaskTy
-  //
-  // In the former case, that is when  TaskWithPrivatesTy != TaskTy,
-  // its first member has to be the task descriptor. TaskTy is the type of the
-  // task descriptor. TaskT is the pointer to the task descriptor. Loading the
-  // first member of TaskT, gives us the pointer to shared data.
-  if (TaskWithPrivatesTy != TaskTy)
-    Shareds = Builder.CreateStructGEP(TaskTy, TaskT, 0);
-  return Builder.CreateLoad(PointerType::getUnqual(Ctx), Shareds);
+  return Builder.CreateLoad(PointerType::getUnqual(Ctx), TaskWithPrivates);
 }
 /// Create an entry point for a target task with the following.
 /// It'll have the following signature
@@ -9681,8 +9644,8 @@ static Function *emitTargetTaskProxyFunction(
 
     Value *SharedsSize = Builder.getInt64(StructSize);
 
-    LoadInst *LoadShared = loadSharedDataFromTaskDescriptor(
-        OMPBuilder, Builder, TaskWithPrivates, TaskWithPrivatesTy);
+    LoadInst *LoadShared =
+        loadSharedDataFromTaskDescriptor(Builder, TaskWithPrivates);
 
     Builder.CreateMemCpy(
         NewArgStructAlloca, NewArgStructAlloca->getAlign(), LoadShared,
@@ -10066,8 +10029,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
     Align Alignment = TaskData->getPointerAlignment(M.getDataLayout());
     if (HasShareds) {
       Value *Shareds = StaleCI->getArgOperand(SharedArgOperandNo);
-      Value *TaskShareds = loadSharedDataFromTaskDescriptor(
-          *this, Builder, TaskData, TaskWithPrivatesTy);
+      Value *TaskShareds = loadSharedDataFromTaskDescriptor(Builder, TaskData);
       Builder.CreateMemCpy(TaskShareds, Alignment, Shareds, Alignment,
                            SharedsSize);
     }
