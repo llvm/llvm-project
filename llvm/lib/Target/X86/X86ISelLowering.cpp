@@ -22666,22 +22666,15 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
       }
 
       if (SatWidth <= 32) {
-        if (SatWidth == 8) {
+        if (SatWidth == 8 || SatWidth == 16) {
+          MVT TruncVT = SatWidth == 8 ? MVT::v16i8 : MVT::v8i16;
+          MVT EltVT = SatWidth == 8 ? MVT::i8 : MVT::i16;
           SDValue VMask = getMaskNode(InvMask8, MVT::v4i1, Subtarget, DAG, dl);
           SDValue Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, MVT::v4i32, VecSrc);
-          SDValue Zero = DAG.getConstant(0, dl, MVT::v16i8);
+          SDValue Zero = DAG.getConstant(0, dl, TruncVT);
           SDValue Trunc =
-              DAG.getNode(X86ISD::VMTRUNCUS, dl, MVT::v16i8, Cvt, Zero, VMask);
-          SDValue Res = DAG.getExtractVectorElt(dl, MVT::i8, Trunc, 0);
-          return DAG.getZExtOrTrunc(Res, dl, DstVT);
-        }
-        if (SatWidth == 16) {
-          SDValue VMask = getMaskNode(InvMask8, MVT::v4i1, Subtarget, DAG, dl);
-          SDValue Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, MVT::v4i32, VecSrc);
-          SDValue Zero = DAG.getConstant(0, dl, MVT::v8i16);
-          SDValue Trunc =
-              DAG.getNode(X86ISD::VMTRUNCUS, dl, MVT::v8i16, Cvt, Zero, VMask);
-          SDValue Res = DAG.getExtractVectorElt(dl, MVT::i16, Trunc, 0);
+              DAG.getNode(X86ISD::VMTRUNCUS, dl, TruncVT, Cvt, Zero, VMask);
+          SDValue Res = DAG.getExtractVectorElt(dl, EltVT, Trunc, 0);
           return DAG.getZExtOrTrunc(Res, dl, DstVT);
         }
         if (SatWidth == 32) {
