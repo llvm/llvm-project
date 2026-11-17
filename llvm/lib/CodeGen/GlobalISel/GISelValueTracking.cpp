@@ -2791,12 +2791,17 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     break;
   }
   case TargetOpcode::G_SREM: {
-    // The sign bit is the LHS's sign bit, except when the result of the
-    // remainder is zero. The magnitude of the result should be less than or
-    // equal to the magnitude of the LHS. Therefore, the result should have
-    // at least as many sign bits as the left hand side.
+    // The sign bit is the LHS's sign bit, except when LHS is negative and the
+    // result of the remainder is zero. The magnitude of the result should be
+    // less than or equal to the magnitude of the LHS. Therefore, the result
+    // should have at least as many sign bits as the left hand side.
     Register Src = MI.getOperand(1).getReg();
-    return computeNumSignBits(Src, DemandedElts, Depth + 1, IsNeg);
+    std::optional<bool> SrcIsNeg;
+    unsigned Result =
+        computeNumSignBits(Src, DemandedElts, Depth + 1, &SrcIsNeg);
+    if (IsNeg && SrcIsNeg == false)
+      *IsNeg = false;
+    return Result;
   }
   case TargetOpcode::G_TRUNC: {
     Register Src = MI.getOperand(1).getReg();
