@@ -74,6 +74,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  double_double_test
+  SUITE
+    libc-fputil-tests
+  SRCS
+    double_double_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_fp_unittest(
   float128_test
   SUITE
     libc-fputil-tests
