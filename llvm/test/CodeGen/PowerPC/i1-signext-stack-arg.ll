@@ -52,26 +52,31 @@ define i32 @zext_signext(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i
 ; LE64-LABEL: zext_signext:
 ; LE64:       # %bb.0:
 ; LE64-NEXT:    lbz 3, 96(1)
+; LE64-NEXT:    clrldi 3, 3, 63
 ; LE64-NEXT:    blr
 ;
 ; BE64-LABEL: zext_signext:
 ; BE64:       # %bb.0:
 ; BE64-NEXT:    lbz 3, 119(1)
+; BE64-NEXT:    clrldi 3, 3, 63
 ; BE64-NEXT:    blr
 ;
 ; BE32-LABEL: zext_signext:
 ; BE32:       # %bb.0:
 ; BE32-NEXT:    lbz 3, 11(1)
+; BE32-NEXT:    clrlwi 3, 3, 31
 ; BE32-NEXT:    blr
 ;
 ; AIX64-LABEL: zext_signext:
 ; AIX64:       # %bb.0:
 ; AIX64-NEXT:    lbz 3, 119(1)
+; AIX64-NEXT:    clrldi 3, 3, 63
 ; AIX64-NEXT:    blr
 ;
 ; AIX32-LABEL: zext_signext:
 ; AIX32:       # %bb.0:
 ; AIX32-NEXT:    lbz 3, 59(1)
+; AIX32-NEXT:    clrlwi 3, 3, 31
 ; AIX32-NEXT:    blr
   %r = zext i1 %b to i32
   ret i32 %r
