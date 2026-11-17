@@ -58,7 +58,6 @@
 ---
 name:            _Z8call_memPPFvvE
 alignment:       16
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true

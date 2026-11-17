@@ -29,7 +29,7 @@ add_libc_test(
   SRCS
     inet_addr_test.cpp
   DEPENDS
-    libc.src.arpa.inet.htonl
+    libc.src.__support.net.byte_order
     libc.src.arpa.inet.inet_addr
 )
 
@@ -40,7 +40,7 @@ add_libc_test(
   SRCS
     inet_aton_test.cpp
   DEPENDS
-    libc.src.arpa.inet.htonl
+    libc.src.__support.net.byte_order
     libc.src.arpa.inet.inet_aton
 )
 
@@ -53,7 +53,7 @@ add_libc_test(
   DEPENDS
     libc.src.arpa.inet.inet_ntoa
     libc.hdr.types.struct_in_addr
-    libc.src.__support.endian_internal
+    libc.src.__support.net.byte_order
 )
 
 add_libc_test(
@@ -68,7 +68,7 @@ add_libc_test(
     libc.hdr.sys_socket_macros
     libc.hdr.types.struct_in_addr
     libc.hdr.types.struct_in6_addr
-    libc.src.__support.common
+    libc.src.__support.net.byte_order
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
@@ -82,6 +82,7 @@ add_libc_test(
     libc.hdr.errno_macros
     libc.hdr.types.struct_in_addr
     libc.hdr.types.struct_in6_addr
+    libc.src.__support.net.byte_order
     libc.src.arpa.inet.inet_pton
     libc.hdr.sys_socket_macros
     libc.src.string.memory_utils.inline_memcmp

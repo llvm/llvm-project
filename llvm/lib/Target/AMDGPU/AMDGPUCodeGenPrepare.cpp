@@ -1348,17 +1348,12 @@ within the byte are all 0.
 */
 bool AMDGPUCodeGenPrepareImpl::tryNarrowMathIfNoOverflow(Instruction *I) {
   unsigned Opc = I->getOpcode();
-  Type *OldType = I->getType();
 
   if (Opc != Instruction::Add && Opc != Instruction::Mul)
     return false;
 
+  Type *OldType = I->getType();
   unsigned OrigBit = OldType->getScalarSizeInBits();
-
-  if (Opc != Instruction::Add && Opc != Instruction::Mul)
-    llvm_unreachable("Unexpected opcode, only valid for Instruction::Add and "
-                     "Instruction::Mul.");
-
   unsigned MaxBitsNeeded = computeKnownBits(I, DL).countMaxActiveBits();
 
   MaxBitsNeeded = std::max<unsigned>(bit_ceil(MaxBitsNeeded), 8);

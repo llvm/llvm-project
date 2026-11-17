@@ -62,8 +62,27 @@ void test_pr34298()
   }
 }
 
+struct LateReturnType;
+
+void copy_while_incomplete(const std::function<LateReturnType(int)>& f) {
+  std::function<LateReturnType(int)> copy = f;
+  (void)copy;
+}
+
+struct LateReturnType {
+  int value;
+};
+
+LateReturnType make_late_return_type(int value) { return LateReturnType{value}; }
+
+void test_return_type_completed_after_copy() {
+  std::function<LateReturnType(int)> f = make_late_return_type;
+  assert(f(42).value == 42);
+}
+
 int main(int, char**) {
   test_pr34298();
+  test_return_type_completed_after_copy();
 
   return 0;
 }

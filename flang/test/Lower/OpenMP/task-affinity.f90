@@ -296,7 +296,7 @@ end subroutine
 ! CHECK: %[[ENTRY_I:.*]] = omp.affinity_entry %[[PTR_I]], %[[SIZE_I]]
 ! CHECK: omp.yield(%[[ENTRY_I]] :
 ! CHECK-SAME: !omp.affinity_entry_ty<!fir.ref<i8>, i64>)
-! CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
+! CHECK: } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
 ! CHECK: %[[IT_J:.*]] = omp.iterator(%[[IV_J:.*]]: i32) =
 ! CHECK-SAME: (%[[J_LB]] to %[[J_UB]] step %[[J_STEP]]) {
 ! CHECK: fir.store %[[IV_J]] to %[[MEM_J:.*]] : !fir.ref<i32>
@@ -310,7 +310,7 @@ end subroutine
 ! CHECK: %[[ENTRY_J:.*]] = omp.affinity_entry %[[PTR_J]], %[[SIZE_J]]
 ! CHECK: omp.yield(%[[ENTRY_J]] :
 ! CHECK-SAME: !omp.affinity_entry_ty<!fir.ref<i8>, i64>)
-! CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
+! CHECK: } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
 ! CHECK: %[[C_PTR:.*]] = fir.convert %[[C]]#0
 ! CHECK-SAME: (!fir.ref<i32>) -> !fir.ref<i8>
 ! CHECK: %[[C_ENTRY:.*]] = omp.affinity_entry %[[C_PTR]],
@@ -348,7 +348,7 @@ end subroutine
 ! CHECK:   %[[ADDRI8:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !fir.ref<i8>
 ! CHECK:   %[[ENTRY:.*]] = omp.affinity_entry %[[ADDRI8]], %[[C4]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
 ! CHECK:   omp.yield(%[[ENTRY]] : !omp.affinity_entry_ty<!fir.ref<i8>, i64>)
-! CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
+! CHECK: } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
 ! CHECK: omp.task affinity(%{{.*}} : !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>) {
 
 subroutine task_affinity_iterator_nondefault_lb()
@@ -378,7 +378,7 @@ end subroutine
 ! CHECK:   %[[ADDRI8_NDLB:.*]] = fir.convert %[[COOR_NDLB]] : (!fir.ref<i32>) -> !fir.ref<i8>
 ! CHECK:   %[[ENTRY_NDLB:.*]] = omp.affinity_entry %[[ADDRI8_NDLB]], %[[ELEM_NDLB_I64]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
 ! CHECK:   omp.yield(%[[ENTRY_NDLB]] : !omp.affinity_entry_ty<!fir.ref<i8>, i64>)
-! CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
+! CHECK: } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
 ! CHECK: omp.task affinity(%[[ITERATED_NDLB]] : !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>) {
 
 subroutine task_affinity_iterator_nondefault_lb_2d()
@@ -413,7 +413,7 @@ end subroutine
 ! CHECK:   %[[ADDRI8_NDLB2:.*]] = fir.convert %[[COOR_NDLB2]] : (!fir.ref<i32>) -> !fir.ref<i8>
 ! CHECK:   %[[ENTRY_NDLB2:.*]] = omp.affinity_entry %[[ADDRI8_NDLB2]], %[[ELEM_NDLB2_I64]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
 ! CHECK:   omp.yield(%[[ENTRY_NDLB2]] : !omp.affinity_entry_ty<!fir.ref<i8>, i64>)
-! CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
+! CHECK: } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
 ! CHECK: omp.task affinity(%[[ITERATED_NDLB2]] : !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>) {
 
 subroutine task_affinity_iterator_multi_dimension()
@@ -449,7 +449,7 @@ end subroutine
 ! CHECK:   %[[ADDRI8:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !fir.ref<i8>
 ! CHECK:   %[[ENTRY:.*]] = omp.affinity_entry %[[ADDRI8]], %[[C4]] : (!fir.ref<i8>, i64) -> !omp.affinity_entry_ty<!fir.ref<i8>, i64>
 ! CHECK:   omp.yield(%[[ENTRY]] : !omp.affinity_entry_ty<!fir.ref<i8>, i64>)
-! CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
+! CHECK: } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
 ! CHECK: omp.task affinity(%[[ITER]] : !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>)
 
 subroutine task_affinity_iterator_reordered()

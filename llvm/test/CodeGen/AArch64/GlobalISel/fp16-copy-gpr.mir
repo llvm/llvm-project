@@ -24,21 +24,6 @@ name:            fp16_to_gpr
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
-  - { id: 3, class: gpr }
-  - { id: 4, class: gpr }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
-  - { id: 7, class: gpr }
-  - { id: 8, class: gpr }
-  - { id: 9, class: gpr }
-  - { id: 10, class: gpr }
-  - { id: 11, class: gpr }
-  - { id: 12, class: gpr }
 body:             |
   bb.1 (%ir-block.1):
     liveins: $h0, $h1, $x0
@@ -77,11 +62,6 @@ name:            gpr_to_fp16
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: fpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $w0
@@ -106,10 +86,6 @@ name:            gpr_to_fp16_physreg
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $w0

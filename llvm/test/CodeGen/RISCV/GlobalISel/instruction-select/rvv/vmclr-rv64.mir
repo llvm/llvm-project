@@ -6,7 +6,6 @@
 name:            splat_zero_nxv1i1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splat_zero_nxv1i1
@@ -23,7 +22,6 @@ body:             |
 name:            splat_zero_nxv2i1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splat_zero_nxv2i1
@@ -40,7 +38,6 @@ body:             |
 name:            splat_zero_nxv4i1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splat_zero_nxv4i1
@@ -57,7 +54,6 @@ body:             |
 name:            splat_zero_nxv8i1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splat_zero_nxv8i1
@@ -74,7 +70,6 @@ body:             |
 name:            splat_zero_nxv16i1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splat_zero_nxv16i1
@@ -91,7 +86,6 @@ body:             |
 name:            splat_zero_nxv32i1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splat_zero_nxv32i1
@@ -108,7 +102,6 @@ body:             |
 name:            splat_zero_nxv64i1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splat_zero_nxv64i1
