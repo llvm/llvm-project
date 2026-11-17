@@ -3019,6 +3019,10 @@ static bool computeDelta(const MachineInstr &MI, const TargetInstrInfo &TII,
   return findLoopIncrementValue(*BaseOp, Delta);
 }
 
+bool SwingSchedulerDAG::computeDelta(const MachineInstr &MI, int &Delta) const {
+  return ::computeDelta(MI, *TII, Delta);
+}
+
 /// Check if we can change the instruction to use an offset value from the
 /// previous iteration. If so, return true and set the base and offset values
 /// so that we can rewrite the load, if necessary.
@@ -3132,6 +3136,11 @@ MachineInstr *SwingSchedulerDAG::findDefInLoop(Register Reg) {
       }
   }
   return Def;
+}
+
+bool SwingSchedulerDAG::mayOverlapInLaterIter(
+    const MachineInstr *BaseMI, const MachineInstr *OtherMI) const {
+  return llvm::mayOverlapInLaterIter(BaseMI, OtherMI, BB, MRI, *TII);
 }
 
 /// Return false if there is no overlap between the region accessed by BaseMI in
