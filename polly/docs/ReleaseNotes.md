@@ -20,6 +20,8 @@ branch.
 :::
 ::::
 
+- `-polly-tile-outer-bands` enables tiling of outer permutable bands by default.
+  Use `-polly-tile-outer-bands=false` to disable it.
 - Polly's options are passed to `opt` with `-plugin-arg=Polly,<option>`,
   whether Polly is linked into `opt` or loaded as a plugin, e.g.
   `opt -load-pass-plugin=LLVMPolly.so -plugin-arg=Polly,-polly-process-unprofitable`.
@@ -36,7 +38,3 @@ branch.
   `-polly-isolate-complete-tiles-2nd-level` and
   `-polly-isolate-complete-register-tiles` do the same for the second level
   of tiling and for register tiling.
-- Polly now tiles outer permutable bands with parameter-independent schedules,
-  including bands around already tiled inner loops. Register tiling and
-  prevectorization still apply only to innermost bands. Outer-band tiling is
-  enabled by default and can be disabled with `-polly-tile-outer-bands=false`.
