@@ -3314,6 +3314,11 @@ void SubViewOp::build(OpBuilder &b, OperationState &result, Value source,
 /// For ViewLikeOpInterface.
 Value SubViewOp::getViewSource() { return getSource(); }
 
+bool SubViewOp::mayHaveNonZeroOffset() {
+  return llvm::any_of(getStaticOffsets(),
+                      [](int64_t offset) { return offset != 0; });
+}
+
 /// Return true if `t1` and `t2` have equal offsets (both dynamic or of same
 /// static value).
 static bool haveCompatibleOffsets(MemRefType t1, MemRefType t2) {
@@ -3840,6 +3845,8 @@ static MemRefType inferTransposeResultType(MemRefType memRefType,
 
 Value TransposeOp::getViewSource() { return getIn(); }
 
+bool TransposeOp::mayHaveNonZeroOffset() { return false; }
+
 void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,
                         AffineMapAttr permutation,
                         ArrayRef<NamedAttribute> attrs) {
@@ -3956,6 +3963,10 @@ LogicalResult ViewOp::verify() {
 }
 
 Value ViewOp::getViewSource() { return getSource(); }
+
+bool ViewOp::mayHaveNonZeroOffset() {
+  return !matchPattern(getByteShift(), m_Zero());
+}
 
 OpFoldResult ViewOp::fold(FoldAdaptor adaptor) {
   MemRefType sourceMemrefType = getSource().getType();

@@ -39,9 +39,17 @@ using namespace mlir;
 /// value.
 static constexpr unsigned maxUnderlyingValueSearchDepth = 10;
 
+namespace {
+struct UnderlyingValueWalk {
+  DenseSet<Value> visited;
+  // True if a value can be aliased by offset.
+  bool throughOffsetView = false;
+};
+} // namespace
+
 /// Given a value, collect all of the underlying values being addressed.
 static void collectUnderlyingAddressValues(Value value, unsigned maxDepth,
-                                           DenseSet<Value> &visited,
+                                           UnderlyingValueWalk &walk,
                                            SmallVectorImpl<Value> &output);
 
 /// Given a RegionBranchOpInterface operation  (`branch`), a Value`inputValue`
@@ -50,7 +58,7 @@ static void collectUnderlyingAddressValues(Value value, unsigned maxDepth,
 static void collectUnderlyingAddressValues2(
     RegionBranchOpInterface branch, RegionSuccessor initialSuccessor,
     Value inputValue, unsigned inputIndex, unsigned maxDepth,
-    DenseSet<Value> &visited, SmallVectorImpl<Value> &output) {
+    UnderlyingValueWalk &walk, SmallVectorImpl<Value> &output) {
   LDBG() << "collectUnderlyingAddressValues2: "
          << OpWithFlags(branch.getOperation(), OpPrintingFlags().skipRegions());
   LDBG() << " with initialSuccessor " << initialSuccessor;
@@ -84,13 +92,13 @@ static void collectUnderlyingAddressValues2(
   LDBG() << "  Found " << predecessorValues.size() << " predecessor values";
   for (Value predecessorValue : predecessorValues) {
     LDBG() << "    Processing predecessor value: " << predecessorValue;
-    collectUnderlyingAddressValues(predecessorValue, maxDepth, visited, output);
+    collectUnderlyingAddressValues(predecessorValue, maxDepth, walk, output);
   }
 }
 
 /// Given a result, collect all of the underlying values being addressed.
 static void collectUnderlyingAddressValues(OpResult result, unsigned maxDepth,
-                                           DenseSet<Value> &visited,
+                                           UnderlyingValueWalk &walk,
                                            SmallVectorImpl<Value> &output) {
   LDBG() << "collectUnderlyingAddressValues (OpResult): " << result;
   LDBG() << "  maxDepth: " << maxDepth;
@@ -101,8 +109,10 @@ static void collectUnderlyingAddressValues(OpResult result, unsigned maxDepth,
   if (ViewLikeOpInterface view = dyn_cast<ViewLikeOpInterface>(op)) {
     if (result == view.getViewDest()) {
       LDBG() << "  Unwrapping view to source: " << view.getViewSource();
+      if (view.mayHaveNonZeroOffset())
+        walk.throughOffsetView = true;
       return collectUnderlyingAddressValues(view.getViewSource(), maxDepth,
-                                            visited, output);
+                                            walk, output);
     }
   }
   // Check to see if we can reason about the control flow of this op.
@@ -110,7 +120,7 @@ static void collectUnderlyingAddressValues(OpResult result, unsigned maxDepth,
     LDBG() << "  Processing region branch operation";
     return collectUnderlyingAddressValues2(
         branch, RegionSuccessor(branch.getOperation()), result,
-        result.getResultNumber(), maxDepth, visited, output);
+        result.getResultNumber(), maxDepth, walk, output);
   }
 
   LDBG() << "  Adding result to output: " << result;
@@ -120,7 +130,7 @@ static void collectUnderlyingAddressValues(OpResult result, unsigned maxDepth,
 /// Given a block argument, collect all of the underlying values being
 /// addressed.
 static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
-                                           DenseSet<Value> &visited,
+                                           UnderlyingValueWalk &walk,
                                            SmallVectorImpl<Value> &output) {
   LDBG() << "collectUnderlyingAddressValues (BlockArgument): " << arg;
   LDBG() << "  maxDepth: " << maxDepth;
@@ -154,7 +164,7 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
         return;
       }
       LDBG() << "    Processing operand from predecessor: " << operand;
-      collectUnderlyingAddressValues(operand, maxDepth, visited, output);
+      collectUnderlyingAddressValues(operand, maxDepth, walk, output);
     }
     return;
   }
@@ -174,7 +184,7 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
       if (successor.getSuccessor() == region) {
         LDBG() << "  Found matching region successor: " << successor;
         return collectUnderlyingAddressValues2(
-            branch, successor, arg, argNumber, maxDepth, visited, output);
+            branch, successor, arg, argNumber, maxDepth, walk, output);
       }
     }
     LDBG() << "  No matching region successor found, adding argument to output";
@@ -190,13 +200,13 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
 
 /// Given a value, collect all of the underlying values being addressed.
 static void collectUnderlyingAddressValues(Value value, unsigned maxDepth,
-                                           DenseSet<Value> &visited,
+                                           UnderlyingValueWalk &walk,
                                            SmallVectorImpl<Value> &output) {
   LDBG() << "collectUnderlyingAddressValues: " << value;
   LDBG() << "  maxDepth: " << maxDepth;
 
   // Check that we don't infinitely recurse.
-  if (!visited.insert(value).second) {
+  if (!walk.visited.insert(value).second) {
     LDBG() << "  Value already visited, skipping";
     return;
   }
@@ -209,21 +219,23 @@ static void collectUnderlyingAddressValues(Value value, unsigned maxDepth,
 
   if (BlockArgument arg = dyn_cast<BlockArgument>(value)) {
     LDBG() << "  Processing as BlockArgument";
-    return collectUnderlyingAddressValues(arg, maxDepth, visited, output);
+    return collectUnderlyingAddressValues(arg, maxDepth, walk, output);
   }
   LDBG() << "  Processing as OpResult";
-  collectUnderlyingAddressValues(cast<OpResult>(value), maxDepth, visited,
-                                 output);
+  collectUnderlyingAddressValues(cast<OpResult>(value), maxDepth, walk, output);
 }
 
-/// Given a value, collect all of the underlying values being addressed.
-static void collectUnderlyingAddressValues(Value value,
+/// Given a value, collect all of the underlying values being addressed. Returns
+/// true if the walk looked through a view that may start at an offset from its
+/// source.
+static bool collectUnderlyingAddressValues(Value value,
                                            SmallVectorImpl<Value> &output) {
   LDBG() << "collectUnderlyingAddressValues: " << value;
-  DenseSet<Value> visited;
-  collectUnderlyingAddressValues(value, maxUnderlyingValueSearchDepth, visited,
+  UnderlyingValueWalk walk;
+  collectUnderlyingAddressValues(value, maxUnderlyingValueSearchDepth, walk,
                                  output);
   LDBG() << "  Collected " << output.size() << " underlying values";
+  return walk.throughOffsetView;
 }
 
 //===----------------------------------------------------------------------===//
@@ -439,8 +451,8 @@ AliasResult LocalAliasAnalysis::alias(Value lhs, Value rhs) {
 
   // Get the underlying values being addressed.
   SmallVector<Value, 8> lhsValues, rhsValues;
-  collectUnderlyingAddressValues(lhs, lhsValues);
-  collectUnderlyingAddressValues(rhs, rhsValues);
+  bool throughOffsetView = collectUnderlyingAddressValues(lhs, lhsValues);
+  throughOffsetView |= collectUnderlyingAddressValues(rhs, rhsValues);
 
   LDBG() << "  lhs underlying values: " << lhsValues.size();
   LDBG() << "  rhs underlying values: " << rhsValues.size();
@@ -458,6 +470,9 @@ AliasResult LocalAliasAnalysis::alias(Value lhs, Value rhs) {
     for (Value rhsVal : rhsValues) {
       LDBG() << "  Checking underlying values: " << lhsVal << " vs " << rhsVal;
       AliasResult nextResult = aliasImpl(lhsVal, rhsVal);
+      // Downgrade to MayAlias to give impl a chance to do alias anaylasis
+      if (nextResult.isMust() && throughOffsetView)
+        nextResult = AliasResult::MayAlias;
       LDBG() << "  Result: "
              << (nextResult == AliasResult::MustAlias ? "MustAlias"
                  : nextResult == AliasResult::NoAlias ? "NoAlias"
