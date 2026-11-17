@@ -17,13 +17,13 @@ body:             |
     ; RV32I-MO-LABEL: name: outline_0
     ; RV32I-MO: liveins: $x10, $x11
     ; RV32I-MO-NEXT: {{  $}}
-    ; RV32I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+    ; RV32I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x11, implicit $x10
     ; RV32I-MO-NEXT: PseudoRET implicit $x11
     ;
     ; RV64I-MO-LABEL: name: outline_0
     ; RV64I-MO: liveins: $x10, $x11
     ; RV64I-MO-NEXT: {{  $}}
-    ; RV64I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+    ; RV64I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x11, implicit $x10
     ; RV64I-MO-NEXT: PseudoRET implicit $x11
     $x11 = ORI $x11, 1023
     $x12 = ADDI $x10, 17
@@ -91,13 +91,13 @@ body:             |
     ; RV32I-MO-LABEL: name: outline_1
     ; RV32I-MO: liveins: $x10, $x11
     ; RV32I-MO-NEXT: {{  $}}
-    ; RV32I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+    ; RV32I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x11, implicit $x10
     ; RV32I-MO-NEXT: PseudoRET implicit $x10
     ;
     ; RV64I-MO-LABEL: name: outline_1
     ; RV64I-MO: liveins: $x10, $x11
     ; RV64I-MO-NEXT: {{  $}}
-    ; RV64I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+    ; RV64I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x11, implicit $x10
     ; RV64I-MO-NEXT: PseudoRET implicit $x10
     $x11 = ORI $x11, 1023
     $x12 = ADDI $x10, 17
@@ -116,13 +116,13 @@ body:             |
     ; RV32I-MO-LABEL: name: outline_2
     ; RV32I-MO: liveins: $x10, $x11
     ; RV32I-MO-NEXT: {{  $}}
-    ; RV32I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+    ; RV32I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x11, implicit $x10
     ; RV32I-MO-NEXT: PseudoRET implicit $x12
     ;
     ; RV64I-MO-LABEL: name: outline_2
     ; RV64I-MO: liveins: $x10, $x11
     ; RV64I-MO-NEXT: {{  $}}
-    ; RV64I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+    ; RV64I-MO-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x11, implicit $x10
     ; RV64I-MO-NEXT: PseudoRET implicit $x12
     $x11 = ORI $x11, 1023
     $x12 = ADDI $x10, 17

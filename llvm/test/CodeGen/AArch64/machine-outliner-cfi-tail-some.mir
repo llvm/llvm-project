@@ -24,7 +24,7 @@ body:             |
     ; CHECK: $w10 = ORRWri $wzr, 2
     ; CHECK: $w11 = ORRWri $wzr, 3
     ; CHECK: frame-setup CFI_INSTRUCTION def_cfa $w29, 16
-    ; CHECK: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w12, implicit-def $w13, implicit-def $w14, implicit-def $w15, implicit $wzr, implicit $sp
+    ; CHECK: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w12, implicit-def $w13, implicit-def $w14, implicit-def $w15, implicit $sp, implicit $wzr
     frame-setup CFI_INSTRUCTION def_cfa $w28, 16
     $w9 = ORRWri $wzr, 1
     $w10 = ORRWri $wzr, 2
@@ -47,7 +47,7 @@ body:             |
     ; CHECK: $w10 = ORRWri $wzr, 2
     ; CHECK: $w11 = ORRWri $wzr, 3
     ; CHECK: frame-setup CFI_INSTRUCTION def_cfa $w29, 16
-    ; CHECK: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w12, implicit-def $w13, implicit-def $w14, implicit-def $w15, implicit $wzr, implicit $sp
+    ; CHECK: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w12, implicit-def $w13, implicit-def $w14, implicit-def $w15, implicit $sp, implicit $wzr
     $w9 = ORRWri $wzr, 1
     $w10 = ORRWri $wzr, 2
     $w11 = ORRWri $wzr, 3
@@ -69,7 +69,7 @@ body:             |
     ; CHECK: $w10 = ORRWri $wzr, 2
     ; CHECK: $w11 = ORRWri $wzr, 3
     ; CHECK: frame-setup CFI_INSTRUCTION def_cfa $w29, 16
-    ; CHECK: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w12, implicit-def $w13, implicit-def $w14, implicit-def $w15, implicit $wzr, implicit $sp
+    ; CHECK: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w12, implicit-def $w13, implicit-def $w14, implicit-def $w15, implicit $sp, implicit $wzr
     $w9 = ORRWri $wzr, 1
     $w10 = ORRWri $wzr, 2
     $w11 = ORRWri $wzr, 3

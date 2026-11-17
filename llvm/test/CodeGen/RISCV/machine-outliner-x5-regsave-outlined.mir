@@ -42,7 +42,7 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   liveins: $x10, $x11
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x11, implicit-def $x12, implicit-def $x13, implicit-def $x14, implicit $x10, implicit $x11
+  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x11, implicit-def $x12, implicit-def $x13, implicit-def $x14, implicit $x11, implicit $x10
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -67,7 +67,7 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   liveins: $x10, $x11
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x11, implicit-def $x12, implicit-def $x13, implicit-def $x14, implicit $x10, implicit $x11
+  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x11, implicit-def $x12, implicit-def $x13, implicit-def $x14, implicit $x11, implicit $x10
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
