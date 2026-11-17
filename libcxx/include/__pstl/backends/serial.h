@@ -19,6 +19,8 @@
 #include <__algorithm/min_element.h>
 #include <__algorithm/minmax_element.h>
 #include <__algorithm/mismatch.h>
+#include <__algorithm/partial_sort.h>
+#include <__algorithm/partial_sort_copy.h>
 #include <__algorithm/partition.h>
 #include <__algorithm/partition_copy.h>
 #include <__algorithm/reverse.h>
@@ -481,6 +483,35 @@ struct __partition_copy<__serial_backend_tag, _ExecutionPolicy> {
              _Predicate __pred) const noexcept {
     return std::partition_copy(
         std::move(__first), std::move(__last), std::move(__out_true), std::move(__out_false), std::move(__pred));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __partial_sort<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _RandomAccessIterator, class _Comp>
+  _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  operator()(_Policy&&,
+             _RandomAccessIterator __first,
+             _RandomAccessIterator __middle,
+             _RandomAccessIterator __last,
+             _Comp __comp) const noexcept {
+    std::partial_sort(std::move(__first), std::move(__middle), std::move(__last), std::move(__comp));
+    return __empty{};
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __partial_sort_copy<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _RandomAccessIterator, class _Comp>
+  _LIBCPP_HIDE_FROM_ABI optional<_RandomAccessIterator>
+  operator()(_Policy&&,
+             _ForwardIterator __first,
+             _ForwardIterator __last,
+             _RandomAccessIterator __result_first,
+             _RandomAccessIterator __result_last,
+             _Comp __comp) const noexcept {
+    return std::partial_sort_copy(
+        std::move(__first), std::move(__last), std::move(__result_first), std::move(__result_last), std::move(__comp));
   }
 };
 
