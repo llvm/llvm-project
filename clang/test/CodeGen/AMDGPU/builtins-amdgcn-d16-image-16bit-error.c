@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgpu7.00-unknown-unknown -S -verify -o - %s
+// RUN: %clang_cc1 -triple amdgpu7.00-unknown-unknown -emit-llvm -verify -o - %s
 
 // Verify that half typed image intrinsics require 16-bit-insts as well as
 // image-insts.
