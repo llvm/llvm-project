@@ -9642,8 +9642,6 @@ struct VarArgSystemZHelper : public VarArgHelperBase {
 
 /// i386-specific implementation of VarArgHelper.
 struct VarArgI386Helper : public VarArgStackModelHelperBase {
-  AllocaInst *VAArgTLSCopy = nullptr;
-  Value *VAArgSize = nullptr;
 
   VarArgI386Helper(Function &F, MemorySanitizer &MS,
                    MemorySanitizerVisitor &MSV)
@@ -9656,45 +9654,30 @@ struct VarArgI386Helper : public VarArgStackModelHelperBase {
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
       bool IsByVal = CB.isByValArgument(ArgNo);
-      if (IsByVal) {
+      bool IsSRet = CB.paramHasAttr(ArgNo, Attribute::StructRet);
+      uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
+      Align ArgAlign = DL.getABITypeAlign(A->getType());
+      if (IsByVal || IsSRet) {
         assert(A->getType()->isPointerTy());
-        Type *RealTy = CB.getParamByValType(ArgNo);
-        uint64_t ArgSize = DL.getTypeAllocSize(RealTy);
-        Align ArgAlign = CB.getParamAlign(ArgNo).value_or(Align(IntptrSize));
-        if (ArgAlign < IntptrSize)
-          ArgAlign = Align(IntptrSize);
-        VAArgOffset = alignTo(VAArgOffset, ArgAlign);
-        if (!IsFixed) {
-          Value *Base = getShadowPtrForVAArgument(IRB, VAArgOffset, ArgSize);
-          if (Base) {
-            Value *AShadowPtr, *AOriginPtr;
-            std::tie(AShadowPtr, AOriginPtr) =
-                MSV.getShadowOriginPtr(A, IRB, IRB.getInt8Ty(),
-                                       kShadowTLSAlignment, /*isStore*/ false);
-
-            IRB.CreateMemCpy(Base, kShadowTLSAlignment, AShadowPtr,
-                             kShadowTLSAlignment, ArgSize);
-          }
-          VAArgOffset += alignTo(ArgSize, Align(IntptrSize));
-        }
-      } else {
-        Value *Base;
-        uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
-        Align ArgAlign = Align(IntptrSize);
-        VAArgOffset = alignTo(VAArgOffset, ArgAlign);
-        if (DL.isBigEndian()) {
-          // Adjusting the shadow for argument with size < IntptrSize to match
-          // the placement of bits in big endian system
-          if (ArgSize < IntptrSize)
-            VAArgOffset += (IntptrSize - ArgSize);
-        }
-        if (!IsFixed) {
-          Base = getShadowPtrForVAArgument(IRB, VAArgOffset, ArgSize);
-          if (Base)
-            IRB.CreateAlignedStore(MSV.getShadow(A), Base, kShadowTLSAlignment);
-          VAArgOffset += ArgSize;
-          VAArgOffset = alignTo(VAArgOffset, Align(IntptrSize));
-        }
+        assert(!IsSRet || ArgNo == 0U);
+        VAArgOffset += IntptrSize;
+        continue;
+      }
+      if (ArgAlign < IntptrSize)
+        ArgAlign = Align(IntptrSize);
+      VAArgOffset = alignTo(VAArgOffset, ArgAlign);
+      if (DL.isBigEndian()) {
+        // Adjusting the shadow for argument with size < IntptrSize to match
+        // the placement of bits in big endian system
+        if (ArgSize < IntptrSize)
+          VAArgOffset += (IntptrSize - ArgSize);
+      }
+      if (!IsFixed) {
+        Value *Base = getShadowPtrForVAArgument(IRB, VAArgOffset, ArgSize);
+        if (Base)
+          IRB.CreateAlignedStore(MSV.getShadow(A), Base, kShadowTLSAlignment);
+        VAArgOffset += ArgSize;
+        VAArgOffset = alignTo(VAArgOffset, Align(IntptrSize));
       }
     }
 
