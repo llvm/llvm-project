@@ -1055,10 +1055,12 @@ Argument *IRPosition::getAssociatedArgument() const {
 
   const auto &CB = cast<CallBase>(getAnchorValue());
   auto *Callee = dyn_cast_if_present<Function>(CB.getCalledOperand());
+  if (!Callee)
+    return nullptr;
 
   // Without callbacks, use the direct callee argument if available.
-  if (!Callee || !Callee->hasMetadata(LLVMContext::MD_callback)) {
-    if (Callee && Callee->arg_size() > unsigned(ArgNo))
+  if (!Callee->hasMetadata(LLVMContext::MD_callback)) {
+    if (Callee->arg_size() > unsigned(ArgNo))
       return Callee->getArg(ArgNo);
     return nullptr;
   }
