@@ -15,59 +15,8 @@
 #define LLVM_LIBC_SRC_LOCALE_LOCALE_H
 
 #include "hdr/types/locale_t.h"
-#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/locale/locale_data.h"
-
-namespace LIBC_NAMESPACE_DECL {
-
-template <bool EnableRuntimeLocale> struct LocaleStorage {
-  const LcCtypeData *ctype_ptr;
-  const LcNumericData *numeric_ptr;
-  const LcTimeData *time_ptr;
-  const void *collate_ptr;
-  const LcMonetaryData *monetary_ptr;
-  const LcMessagesData *messages_ptr;
-
-  LIBC_INLINE constexpr LocaleStorage(const LcCtypeData *c,
-                                      const LcNumericData *num,
-                                      const LcTimeData *t, const void *col,
-                                      const LcMonetaryData *mon,
-                                      const LcMessagesData *msg)
-      : ctype_ptr(c), numeric_ptr(num), time_ptr(t), collate_ptr(col),
-        monetary_ptr(mon), messages_ptr(msg) {}
-
-  LIBC_INLINE constexpr const LcCtypeData *ctype() const { return ctype_ptr; }
-  LIBC_INLINE constexpr const LcNumericData *numeric() const {
-    return numeric_ptr;
-  }
-  LIBC_INLINE constexpr const LcTimeData *time() const { return time_ptr; }
-  LIBC_INLINE constexpr const LcMonetaryData *monetary() const {
-    return monetary_ptr;
-  }
-  LIBC_INLINE constexpr const LcMessagesData *messages() const {
-    return messages_ptr;
-  }
-};
-
-template <> struct LocaleStorage<false> {
-  LIBC_INLINE constexpr LocaleStorage(const LcCtypeData *,
-                                      const LcNumericData *, const LcTimeData *,
-                                      const void *, const LcMonetaryData *,
-                                      const LcMessagesData *) {}
-
-  LIBC_INLINE constexpr const LcCtypeData *ctype() const { return nullptr; }
-  LIBC_INLINE constexpr const LcNumericData *numeric() const { return nullptr; }
-  LIBC_INLINE constexpr const LcTimeData *time() const { return nullptr; }
-  LIBC_INLINE constexpr const LcMonetaryData *monetary() const {
-    return nullptr;
-  }
-  LIBC_INLINE constexpr const LcMessagesData *messages() const {
-    return nullptr;
-  }
-};
-
-} // namespace LIBC_NAMESPACE_DECL
 
 // Defined in the global namespace to match the forward declaration in
 // locale_t.h.
