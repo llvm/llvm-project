@@ -88,6 +88,7 @@ class APValue;
 class ASTMutationListener;
 class ASTRecordLayout;
 class AtomicExpr;
+class Attr;
 class BlockExpr;
 struct BlockVarCopyInit;
 class BuiltinTemplateDecl;
@@ -841,6 +842,9 @@ private:
 
   const TargetInfo *Target = nullptr;
   const TargetInfo *AuxTarget = nullptr;
+  mutable llvm::DenseMap<std::pair<const Attr *, unsigned>,
+                         std::unique_ptr<llvm::StringMap<bool>>>
+      FunctionFeatureMaps;
   clang::PrintingPolicy PrintingPolicy;
   mutable std::unique_ptr<interp::Context> InterpContext;
   std::unique_ptr<ParentMapContext> ParentMapCtx;
@@ -3751,6 +3755,10 @@ public:
   /// Parses the target attributes passed in, and returns only the ones that are
   /// valid feature names.
   ParsedTargetAttr filterFunctionTargetAttrs(const TargetAttr *TD) const;
+
+  const llvm::StringMap<bool> &
+  getFunctionFeatureMap(const FunctionDecl *FD) const;
+  const llvm::StringMap<bool> &getFunctionFeatureMap(GlobalDecl GD) const;
 
   void getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
                              const FunctionDecl *) const;

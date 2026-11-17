@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements support for context disambiguation of allocation
-// calls for profile guided heap optimization. Specifically, it uses Memprof
-// profiles which indicate context specific allocation behavior (currently
-// distinguishing cold vs hot memory allocations). Cloning is performed to
-// expose the cold allocation call contexts, and the allocation calls are
-// subsequently annotated with an attribute for later transformation.
+// calls for profile-guided memory optimization (MemPGO). Specifically, it uses
+// MemProf profiles which indicate context specific allocation behavior
+// (currently distinguishing cold vs hot memory allocations). Cloning is
+// performed to expose the cold allocation call contexts, and the allocation
+// calls are subsequently annotated with an attribute for later transformation.
 //
 // The transformations can be performed either directly on IR (regular LTO), or
 // on a ThinLTO index (and later applied to the IR during the ThinLTO backend).
@@ -2518,18 +2518,12 @@ uint64_t IndexCallsiteContextGraph::getLastStackId(IndexCall &Call) {
   return Index.getStackIdAtIndex(CallsiteContext.back());
 }
 
-static const std::string MemProfCloneSuffix = ".memprof.";
-
 static std::string getMemProfFuncName(Twine Base, unsigned CloneNo) {
   // We use CloneNo == 0 to refer to the original version, which doesn't get
   // renamed with a suffix.
   if (!CloneNo)
     return Base.str();
   return (Base + MemProfCloneSuffix + Twine(CloneNo)).str();
-}
-
-static bool isMemProfClone(const GlobalValue &GV) {
-  return GV.getName().contains(MemProfCloneSuffix);
 }
 
 // Return the clone number of the given function by extracting it from the
@@ -4997,6 +4991,10 @@ ModuleCallsiteContextGraph::cloneFunctionForCallsite(
   // Use existing LLVM facilities for cloning and obtaining Call in clone
   ValueToValueMapTy VMap;
   auto *NewFunc = CloneFunction(Func.func(), VMap);
+  // Clones are only called directly and never have their address taken, so
+  // strip !kcfi_type to avoid emitting KCFI type preambles/symbols on them or
+  // making them valid KCFI indirect-call targets.
+  NewFunc->setMetadata(LLVMContext::MD_kcfi_type, nullptr);
   std::string Name = getMemProfFuncName(Func.func()->getName(), CloneNo);
   assert(!Func.func()->getParent()->getFunction(Name));
   NewFunc->setName(Name);
@@ -6682,6 +6680,8 @@ static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
     auto *NewF = CloneFunction(&F, *VMaps.back());
     HashToFunc[Hash] = {NewF, I};
     FunctionClonesThinBackend++;
+    // Strip !kcfi_type (see comment in cloneFunctionForCallsite).
+    NewF->setMetadata(LLVMContext::MD_kcfi_type, nullptr);
     // Strip memprof and callsite metadata from clone as they are no longer
     // needed.
     for (auto &BB : *NewF) {

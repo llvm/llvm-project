@@ -305,6 +305,8 @@ RawComment *ASTContext::getRawCommentNoCacheImpl(
   // Decompose the end of the comment.
   const unsigned CommentEndOffset =
       Comments.getCommentEndOffset(CommentBeforeDecl);
+  if (CommentEndOffset > LocDecomp.second)
+    return nullptr;
 
   // Get the corresponding buffer.
   bool Invalid = false;
@@ -541,8 +543,18 @@ void ASTContext::attachCommentsToJustParsedDecls(ArrayRef<Decl *> Decls,
       if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
         continue;
 
+      const FileID DeclFile = SourceMgr.getDecomposedLoc(DeclLoc).first;
+      if (!DeclFile.isValid())
+        continue;
+
+      const auto *CommentsInDeclFile =
+          DeclFile == File ? CommentsInThisFile
+                           : Comments.getCommentsInFile(DeclFile);
+      if (!CommentsInDeclFile || CommentsInDeclFile->empty())
+        continue;
+
       if (RawComment *const DocComment =
-              getRawCommentNoCacheImpl(D, DeclLoc, *CommentsInThisFile)) {
+              getRawCommentNoCacheImpl(D, DeclLoc, *CommentsInDeclFile)) {
         cacheRawComment(D, *DocComment);
         comments::FullComment *FC = DocComment->parse(*this, PP, D);
         ParsedComments[D->getCanonicalDecl()] = FC;
@@ -15395,6 +15407,45 @@ ASTContext::filterFunctionTargetAttrs(const TargetAttr *TD) const {
     return !Target->isValidFeatureName(StringRef{Feat}.substr(1));
   });
   return ParsedAttr;
+}
+
+const llvm::StringMap<bool> &
+ASTContext::getFunctionFeatureMap(const FunctionDecl *FD) const {
+  return getFunctionFeatureMap(GlobalDecl().getWithDecl(FD));
+}
+
+const llvm::StringMap<bool> &
+ASTContext::getFunctionFeatureMap(GlobalDecl GD) const {
+  const auto *FD = GD.getDecl() ? GD.getDecl()->getAsFunction() : nullptr;
+  if (FD && !FD->hasAttrs())
+    return Target->getTargetOpts().FeatureMap;
+
+  const Attr *FeatureAttr = FD ? FD->getAttr<TargetAttr>() : nullptr;
+  unsigned MultiVersionIndex = 0;
+  if (FD && !FeatureAttr) {
+    FeatureAttr = FD->getAttr<CPUSpecificAttr>();
+    if (!FeatureAttr)
+      FeatureAttr = FD->getAttr<TargetClonesAttr>();
+    if (FeatureAttr)
+      MultiVersionIndex = GD.getMultiVersionIndex();
+    else
+      FeatureAttr = FD->getAttr<TargetVersionAttr>();
+  }
+  if (FD && !FeatureAttr)
+    return Target->getTargetOpts().FeatureMap;
+
+  auto Key = std::make_pair(FeatureAttr, MultiVersionIndex);
+  auto It = FunctionFeatureMaps.find(Key);
+  if (It != FunctionFeatureMaps.end())
+    return *It->second;
+
+  auto FeatureMap = std::make_unique<llvm::StringMap<bool>>();
+  if (FD)
+    getFunctionFeatureMap(*FeatureMap, GD);
+  else
+    getFunctionFeatureMap(*FeatureMap, FD);
+  return *FunctionFeatureMaps.try_emplace(Key, std::move(FeatureMap))
+              .first->second;
 }
 
 void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,

@@ -18,7 +18,7 @@
   }
 
   declare dso_local noundef i32 @printf(ptr nocapture noundef readonly, ...) local_unnamed_addr
-
+...
 ---
 name:            foo
 alignment:       16

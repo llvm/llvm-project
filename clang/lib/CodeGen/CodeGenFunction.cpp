@@ -1130,28 +1130,18 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     Fn->removeFnAttr("zero-call-used-regs");
 
   // Add vscale_range attribute if appropriate.
-  llvm::Attribute VScaleRangeAttr;
-  if (CGM.getTriple().isAArch64()) {
-    llvm::StringMap<bool> FeatureMap;
-    auto IsArmStreaming = TargetInfo::ArmStreamingKind::NotStreaming;
-    if (FD) {
-      getContext().getFunctionFeatureMap(FeatureMap, FD);
-      if (const auto *T = FD->getType()->getAs<FunctionProtoType>())
-        if (T->getAArch64SMEAttributes() &
-            FunctionType::SME_PStateSMCompatibleMask)
-          IsArmStreaming = TargetInfo::ArmStreamingKind::StreamingCompatible;
+  auto IsArmStreaming = TargetInfo::ArmStreamingKind::NotStreaming;
+  if (FD) {
+    if (const auto *T = FD->getType()->getAs<FunctionProtoType>())
+      if (T->getAArch64SMEAttributes() &
+          FunctionType::SME_PStateSMCompatibleMask)
+        IsArmStreaming = TargetInfo::ArmStreamingKind::StreamingCompatible;
 
-      if (IsArmStreamingFunction(FD, true))
-        IsArmStreaming = TargetInfo::ArmStreamingKind::Streaming;
-    }
-    auto VScaleRange = getContext().getTargetInfo().getVScaleRange(
-        getLangOpts(), IsArmStreaming, FD ? &FeatureMap : nullptr);
-    if (VScaleRange)
-      VScaleRangeAttr = llvm::Attribute::getWithVScaleRangeArgs(
-          getLLVMContext(), VScaleRange->first, VScaleRange->second);
-  } else {
-    VScaleRangeAttr = CGM.getDefaultVScaleRange();
+    if (IsArmStreamingFunction(FD, true))
+      IsArmStreaming = TargetInfo::ArmStreamingKind::Streaming;
   }
+  llvm::Attribute VScaleRangeAttr =
+      CGM.getVScaleRangeAttribute(FD, IsArmStreaming);
   if (VScaleRangeAttr.isValid())
     CurFn->addFnAttr(VScaleRangeAttr);
 

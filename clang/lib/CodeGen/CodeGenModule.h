@@ -366,8 +366,10 @@ private:
   /// An invalid attribute means that the defaults were computed but no
   /// target-features attribute needs to be emitted.
   std::optional<llvm::Attribute> DefaultTargetFeatures;
-  /// Canonical vscale range for targets without per-function ranges.
-  std::optional<llvm::Attribute> DefaultVScaleRange;
+  /// Lazily cached vscale ranges for feature maps and streaming modes.
+  using VScaleRangeKey =
+      std::pair<const llvm::StringMap<bool> *, TargetInfo::ArmStreamingKind>;
+  llvm::DenseMap<VScaleRangeKey, llvm::Attribute> VScaleRangeAttrs;
   std::unique_ptr<CGCXXABI> ABI;
   llvm::LLVMContext &VMContext;
   std::string ModuleNameHash;
@@ -710,6 +712,7 @@ private:
   typedef llvm::DenseMap<QualType, llvm::Metadata *> MetadataTypeMap;
   MetadataTypeMap MetadataIdMap;
   MetadataTypeMap VirtualMetadataIdMap;
+  MetadataTypeMap CfiICallMetadataIdMap;
   MetadataTypeMap GeneralizedMetadataIdMap;
   MetadataTypeMap CallGraphMetadataIdMap;
 
@@ -917,7 +920,8 @@ public:
   }
   const TargetInfo &getTarget() const { return Target; }
   const llvm::Triple &getTriple() const { return Target.getTriple(); }
-  llvm::Attribute getDefaultVScaleRange();
+  llvm::Attribute getVScaleRangeAttribute(const FunctionDecl *FD,
+                                          TargetInfo::ArmStreamingKind Mode);
   bool supportsCOMDAT() const;
   void maybeSetTrivialComdat(const Decl &D, llvm::GlobalObject &GO);
 
@@ -1756,8 +1760,10 @@ public:
   /// Generate a KCFI type identifier for T.
   llvm::ConstantInt *CreateKCFITypeId(QualType T, StringRef Salt);
 
-  /// Create a metadata identifier for the given function type.
-  llvm::Metadata *CreateMetadataIdentifierForFnType(QualType T);
+  /// Create a metadata identifier for the given function type for CFI icall.
+  llvm::Metadata *CreateMetadataIdentifierForCFIFnType(QualType T,
+                                                       bool GeneralizePointers);
+  llvm::Metadata *CreateMetadataIdentifierForCFIFnType(QualType T);
 
   /// Create a metadata identifier for the given type. This may either be an
   /// MDString (for external identifiers) or a distinct unnamed MDNode (for
@@ -1783,11 +1789,6 @@ public:
   /// Create a metadata identifier that is intended to be used to check virtual
   /// calls via a member function pointer.
   llvm::Metadata *CreateMetadataIdentifierForVirtualMemPtrType(QualType T);
-
-  /// Create a metadata identifier for the generalization of the given type.
-  /// This may either be an MDString (for external identifiers) or a distinct
-  /// unnamed MDNode (for internal identifiers).
-  llvm::Metadata *CreateMetadataIdentifierGeneralized(QualType T);
 
   /// Create and attach type metadata to the given function.
   void createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
@@ -2226,7 +2227,8 @@ private:
 
   llvm::Metadata *CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
                                                StringRef Suffix,
-                                               bool ForceString = false);
+                                               bool ForceString = false,
+                                               bool NormalizeIntegers = false);
 
   /// Emit deactivation symbols for any PFP fields whose offset is taken with
   /// offsetof.

@@ -680,6 +680,13 @@ void tools::addLinkerCompressDebugSectionsOption(
   }
 }
 
+bool tools::useMachORelocatableDwarf(const llvm::Triple &T,
+                                     unsigned DwarfVersion) {
+  return T.isOSBinFormatMachO() && DwarfVersion >= 5 &&
+         !(T.isMacOSX() || T.isiOS() || T.isWatchOS() || T.isXROS() ||
+           T.isDriverKit());
+}
+
 void tools::renderDebugInfoCompressionArgs(const ArgList &Args,
                                            ArgStringList &CmdArgs,
                                            const Driver &D,
@@ -1812,8 +1819,11 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
     StaticRuntimes.push_back("dfsan");
   if (SanArgs.needsLsanRt())
     StaticRuntimes.push_back("lsan");
-  if (SanArgs.needsCopyProfRt())
+  if (SanArgs.needsCopyProfRt()) {
     StaticRuntimes.push_back("copyprof");
+    if (SanArgs.linkCXXRuntimes())
+      StaticRuntimes.push_back("copyprof_cxx");
+  }
   if (SanArgs.needsMsanRt()) {
     StaticRuntimes.push_back("msan");
     if (SanArgs.linkCXXRuntimes())

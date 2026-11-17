@@ -7,7 +7,6 @@
 
 ---
 name: tied_read_keeps_def
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: tied_read_keeps_def
@@ -25,7 +24,6 @@ body: |
 ## The PHI turned into a kept IMPLICIT_DEF moves out of the PHI block.
 ---
 name: phi_keeps_def
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: phi_keeps_def
   ; CHECK: bb.0:
