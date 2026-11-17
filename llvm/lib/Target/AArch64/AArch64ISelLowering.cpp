@@ -23074,7 +23074,7 @@ static SDValue performConcatVectorsCombine(SDNode *N,
   EVT SrcVT = N0.getValueType();
   if ((SrcVT == MVT::v4i8 || SrcVT == MVT::v2i16 || SrcVT == MVT::v2i8) &&
       all_equal(N->op_values()) && LD && ISD::isNormalLoad(LD) &&
-      LD->isSimple() && N0->hasNUsesOfValue(N->getNumOperands(), 0)) {
+      LD->isSimple() && N0.hasOneUser()) {
 
     MVT IVT = MVT::getIntegerVT(SrcVT.getSizeInBits());
     EVT NVT = EVT::getVectorVT(*DAG.getContext(), IVT, N->getNumOperands());
