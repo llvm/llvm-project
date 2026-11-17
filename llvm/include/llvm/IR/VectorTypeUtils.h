@@ -9,6 +9,7 @@
 #ifndef LLVM_IR_VECTORTYPEUTILS_H
 #define LLVM_IR_VECTORTYPEUTILS_H
 
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/Compiler.h"
 
@@ -104,6 +105,16 @@ inline ElementCount getVectorizedTypeVF(Type *Ty) {
 
 inline bool isUnpackedStructLiteral(StructType *StructTy) {
   return StructTy->isLiteral() && !StructTy->isPacked();
+}
+
+/// A helper function that returns true if the given type is irregular. The
+/// type is irregular if its allocated size doesn't equal the store size of an
+/// element of the corresponding vector type.
+inline bool hasIrregularType(Type *Ty, const DataLayout &DL) {
+  // Determine if an array of N elements of type Ty is "bitcast compatible"
+  // with a <N x Ty> vector.
+  // This is only true if there is no padding between the array elements.
+  return DL.getTypeAllocSizeInBits(Ty) != DL.getTypeSizeInBits(Ty);
 }
 
 } // namespace llvm

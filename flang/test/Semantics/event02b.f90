@@ -86,28 +86,28 @@ program test_event_wait
   !ERROR: Until-spec in a event-wait-spec-list may not be repeated
   event wait(concert, until_count=threshold, stat=sync_status, errmsg=error_message, until_count=indexed(1))
 
-  !ERROR: A stat-variable in a event-wait-spec-list may not be repeated
+  !ERROR: The stat-variable in a event-wait-spec-list may not be repeated
   event wait(concert, stat=sync_status, stat=superfluous_stat)
 
-  !ERROR: A stat-variable in a event-wait-spec-list may not be repeated
+  !ERROR: The stat-variable in a event-wait-spec-list may not be repeated
   event wait(concert, stat=sync_status, until_count=threshold, stat=superfluous_stat)
 
-  !ERROR: A stat-variable in a event-wait-spec-list may not be repeated
+  !ERROR: The stat-variable in a event-wait-spec-list may not be repeated
   event wait(concert, stat=sync_status, errmsg=error_message, stat=superfluous_stat)
 
-  !ERROR: A stat-variable in a event-wait-spec-list may not be repeated
+  !ERROR: The stat-variable in a event-wait-spec-list may not be repeated
   event wait(concert, stat=sync_status, until_count=threshold, errmsg=error_message, stat=superfluous_stat)
 
-  !ERROR: A errmsg-variable in a event-wait-spec-list may not be repeated
+  !ERROR: The errmsg-variable in a event-wait-spec-list may not be repeated
   event wait(concert, errmsg=error_message, errmsg=superfluous_errmsg)
 
-  !ERROR: A errmsg-variable in a event-wait-spec-list may not be repeated
+  !ERROR: The errmsg-variable in a event-wait-spec-list may not be repeated
   event wait(concert, errmsg=error_message, until_count=threshold, errmsg=superfluous_errmsg)
 
-  !ERROR: A errmsg-variable in a event-wait-spec-list may not be repeated
+  !ERROR: The errmsg-variable in a event-wait-spec-list may not be repeated
   event wait(concert, errmsg=error_message, stat=superfluous_stat, errmsg=superfluous_errmsg)
 
-  !ERROR: A errmsg-variable in a event-wait-spec-list may not be repeated
+  !ERROR: The errmsg-variable in a event-wait-spec-list may not be repeated
   event wait(concert, errmsg=error_message, until_count=threshold, stat=superfluous_stat, errmsg=superfluous_errmsg)
 
   !_____________ invalid sync-stat-lists: coindexed stat-variable - C1173 __________________

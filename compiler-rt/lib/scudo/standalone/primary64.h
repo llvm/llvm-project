@@ -1431,7 +1431,7 @@ template <typename Config>
 BlockInfo SizeClassAllocator64<Config>::findNearestBlock(uptr Ptr)
     NO_THREAD_SAFETY_ANALYSIS {
   uptr ClassId;
-  uptr MinDistance = -1UL;
+  uptr MinDistance = ~static_cast<uptr>(1);
   for (uptr I = 0; I != NumClasses; ++I) {
     if (I == SizeClassMap::BatchClassId)
       continue;
@@ -1514,7 +1514,10 @@ uptr SizeClassAllocator64<Config>::releaseToOSMaybe(RegionInfo *Region,
     // value here so that when we are adapting the `TryReleaseThreshold`
     // later, we are using the right metric.
     RegionPushedBytesDelta =
-        BytesInFreeList - Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint;
+        BytesInFreeList > Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint
+            ? BytesInFreeList -
+                  Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint
+            : 0;
 
     // ==================================================================== //
     // 2. Determine which groups can release the pages. Use a heuristic to
@@ -1730,7 +1733,7 @@ SizeClassAllocator64<Config>::collectGroupsToRelease(
         decompactGroupBase(CompactPtrBase, BG->CompactPtrGroupBase);
     DCHECK_LE(Region->RegionBeg, BatchGroupBase);
     DCHECK_GE(AllocatedUserEnd, BatchGroupBase);
-    DCHECK_EQ((Region->RegionBeg - BatchGroupBase) % GroupSize, 0U);
+    DCHECK_EQ((BatchGroupBase - Region->RegionBeg) % GroupSize, 0U);
     // Batches are pushed in front of BG.Batches. The first one may
     // not have all caches used.
     const uptr NumBlocks = (BG->Batches.size() - 1) * BG->MaxCachedPerBatch +

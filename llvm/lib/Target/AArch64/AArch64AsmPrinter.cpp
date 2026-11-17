@@ -65,6 +65,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
@@ -2748,7 +2749,8 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
   auto STI = std::make_unique<AArch64Subtarget>(
       TT, TM.getTargetCPU(), TM.getTargetCPU(), TM.getTargetFeatureString(), TM,
       true);
-  this->STI = STI.get();
+  // This may be called while emitting a function, whose subtarget is restored.
+  SaveAndRestore<const AArch64Subtarget *> SavedSTI(this->STI, STI.get());
 
   MCSymbol *Place = OutStreamer->getContext().createTempSymbol();
   OutStreamer->emitLabel(Place);
@@ -4093,8 +4095,8 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
 
   case AArch64::SEH_SaveAnyRegI:
-    assert(MI->getOperand(1).getImm() <= 1008 &&
-           "SaveAnyRegQP SEH opcode offset must fit into 6 bits");
+    assert((isShiftedUInt<6, 3>((uint64_t)MI->getOperand(1).getImm())) &&
+           "SaveAnyRegI SEH opcode offset must fit into 6 bits");
     TS->emitARM64WinCFISaveAnyRegI(MI->getOperand(0).getImm(),
                                    MI->getOperand(1).getImm());
     return;
@@ -4102,18 +4104,30 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::SEH_SaveAnyRegIP:
     assert(MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1 &&
            "Non-consecutive registers not allowed for save_any_reg");
-    assert(MI->getOperand(2).getImm() <= 1008 &&
-           "SaveAnyRegQP SEH opcode offset must fit into 6 bits");
+    assert((isShiftedUInt<6, 4>((uint64_t)MI->getOperand(2).getImm())) &&
+           "SaveAnyRegIP SEH opcode offset must fit into 6 bits");
     TS->emitARM64WinCFISaveAnyRegIP(MI->getOperand(0).getImm(),
                                     MI->getOperand(2).getImm());
+    return;
+
+  case AArch64::SEH_SaveAnyRegQ:
+    assert((isShiftedUInt<6, 4>((uint64_t)MI->getOperand(1).getImm())) &&
+           "SaveAnyRegQ SEH opcode offset must fit into 6 bits");
+    TS->emitARM64WinCFISaveAnyRegQ(MI->getOperand(0).getImm(),
+                                   MI->getOperand(1).getImm());
+    return;
+
+  case AArch64::SEH_SaveAnyRegQX:
+    assert((isShiftedUInt<6, 4>(-(uint64_t)MI->getOperand(1).getImm())) &&
+           "SaveAnyRegQX SEH opcode offset must fit into 6 bits");
+    TS->emitARM64WinCFISaveAnyRegQX(MI->getOperand(0).getImm(),
+                                    -MI->getOperand(1).getImm());
     return;
 
   case AArch64::SEH_SaveAnyRegQP:
     assert(MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1 &&
            "Non-consecutive registers not allowed for save_any_reg");
-    assert(MI->getOperand(2).getImm() >= 0 &&
-           "SaveAnyRegQP SEH opcode offset must be non-negative");
-    assert(MI->getOperand(2).getImm() <= 1008 &&
+    assert((isShiftedUInt<6, 4>((uint64_t)MI->getOperand(2).getImm())) &&
            "SaveAnyRegQP SEH opcode offset must fit into 6 bits");
     TS->emitARM64WinCFISaveAnyRegQP(MI->getOperand(0).getImm(),
                                     MI->getOperand(2).getImm());
@@ -4122,9 +4136,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::SEH_SaveAnyRegQPX:
     assert(MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1 &&
            "Non-consecutive registers not allowed for save_any_reg");
-    assert(MI->getOperand(2).getImm() < 0 &&
-           "SaveAnyRegQPX SEH opcode offset must be negative");
-    assert(MI->getOperand(2).getImm() >= -1008 &&
+    assert((isShiftedUInt<6, 4>(-(uint64_t)MI->getOperand(2).getImm())) &&
            "SaveAnyRegQPX SEH opcode offset must fit into 6 bits");
     TS->emitARM64WinCFISaveAnyRegQPX(MI->getOperand(0).getImm(),
                                      -MI->getOperand(2).getImm());
