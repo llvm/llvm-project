@@ -21041,14 +21041,19 @@ static SDValue performVecReduceAddCntpCombine(SDNode *N, SelectionDAG &DAG,
 // as extending each lane first. Keep fixed-vector SVE preference and all
 // non-NEON modes unchanged.
 static SDValue performWidenedReductionCombine(SDNode *N, SelectionDAG &DAG,
-                                              const AArch64Subtarget *ST,
-                                              unsigned ExtOpcode,
-                                              unsigned AddlvOpcode) {
+                                              const AArch64Subtarget *ST) {
   if (N->getValueType(0) != MVT::i64 || !ST->isNeonAvailable())
     return SDValue();
 
+  // Skip the fold when the scalar reduction is immediately rebuilt into a
+  // vector.
+  for (auto *U : N->users())
+    if (U->getOpcode() == ISD::BUILD_VECTOR)
+      return SDValue();
+
   SDValue Ext = N->getOperand(0);
-  if (Ext.getOpcode() != ExtOpcode)
+  unsigned ExtOpcode = Ext.getOpcode();
+  if (ExtOpcode != ISD::ZERO_EXTEND && ExtOpcode != ISD::SIGN_EXTEND)
     return SDValue();
 
   SDValue Input = Ext.getOperand(0);
@@ -21060,29 +21065,24 @@ static SDValue performWidenedReductionCombine(SDNode *N, SelectionDAG &DAG,
   // Use the same legal node/result types as the existing UADDLV/SADDLV
   // intrinsic lowering.
   SDLoc DL(N);
-  bool IsWordInput = InputVT.getVectorElementType() == MVT::i32;
-  MVT ScalarVT = IsWordInput ? MVT::i64 : MVT::i32;
-  MVT VectorVT = IsWordInput ? MVT::v2i64 : MVT::v4i32;
+  unsigned AddlvOpcode =
+      (ExtOpcode == ISD::ZERO_EXTEND) ? AArch64ISD::UADDLV : AArch64ISD::SADDLV;
+  EVT VectorElementType = InputVT.getVectorElementType();
+  MVT ExtractVT = (VectorElementType == MVT::i32) ? MVT::i64 : MVT::i32;
+  MVT VectorVT = (VectorElementType == MVT::i32) ? MVT::v2i64 : MVT::v4i32;
   SDValue Sum = DAG.getNode(AddlvOpcode, DL, VectorVT, Input);
-  SDValue Scalar = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Sum,
-                               DAG.getConstant(0, DL, MVT::i64));
+  SDValue Scalar;
+  if (VectorElementType == MVT::i8) {
+    SDValue PackedHalfwords = DAG.getBitcast(MVT::v8i16, Sum);
+    Scalar = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i16, PackedHalfwords,
+                         DAG.getConstant(0, DL, MVT::i64));
+  } else {
+    Scalar = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ExtractVT, Sum,
+                         DAG.getConstant(0, DL, MVT::i64));
+  }
   return ExtOpcode == ISD::ZERO_EXTEND
              ? DAG.getZExtOrTrunc(Scalar, DL, MVT::i64)
              : DAG.getSExtOrTrunc(Scalar, DL, MVT::i64);
-}
-
-static SDValue
-performWidenedUnsignedReductionCombine(SDNode *N, SelectionDAG &DAG,
-                                       const AArch64Subtarget *ST) {
-  return performWidenedReductionCombine(N, DAG, ST, ISD::ZERO_EXTEND,
-                                        AArch64ISD::UADDLV);
-}
-
-static SDValue
-performWidenedSignedReductionCombine(SDNode *N, SelectionDAG &DAG,
-                                     const AArch64Subtarget *ST) {
-  return performWidenedReductionCombine(N, DAG, ST, ISD::SIGN_EXTEND,
-                                        AArch64ISD::SADDLV);
 }
 
 static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
@@ -21090,10 +21090,7 @@ static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
   if (SDValue Result = performVecReduceAddCntpCombine(N, DAG, ST))
     return Result;
 
-  if (SDValue Result = performWidenedUnsignedReductionCombine(N, DAG, ST))
-    return Result;
-
-  if (SDValue Result = performWidenedSignedReductionCombine(N, DAG, ST))
+  if (SDValue Result = performWidenedReductionCombine(N, DAG, ST))
     return Result;
 
   if (!ST->isNeonAvailable())
