@@ -1914,6 +1914,90 @@ public:
   }
 };
 
+// Extends i4 elements that a `vector.bitcast` took from a vector of wider
+// integers, by masking and shifting the wide elements before splitting them
+// into bytes:
+//
+//   %n = vector.bitcast %w : vector<8xi32> to vector<64xi4>
+//   %e = arith.extui %n : vector<64xi4> to vector<64xi16>
+//
+// becomes
+//
+//   %lo = arith.andi %w, 0x0F0F0F0F
+//   %hi = arith.andi (arith.shrui %w, 4), 0x0F0F0F0F
+//   %l  = arith.extui (vector.bitcast %lo to vector<32xi8>) to vector<32xi16>
+//   %h  = arith.extui (vector.bitcast %hi to vector<32xi8>) to vector<32xi16>
+//   %e  = vector.interleave %l, %h
+//
+// Element 2 * q of the i4 vector is the low nibble of byte q, and element
+// 2 * q + 1 is its high nibble, so the interleave restores the element order.
+// The masks and shifts handle all bytes of a wide element at once. The
+// generic rewrite first bitcasts the source to i8 and works on single bytes.
+// Signed extensions move each nibble into the high half of its byte, so that an
+// arithmetic right shift of the byte gives the signed i8 value.
+template <typename ExtOp>
+class ExtendI4FromWideBitcast final : public OpRewritePattern<ExtOp> {
+public:
+  using OpRewritePattern<ExtOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtOp op,
+                                PatternRewriter &rewriter) const override {
+    constexpr bool isSigned = std::is_same_v<ExtOp, arith::ExtSIOp>;
+    auto srcTy = dyn_cast<VectorType>(op.getIn().getType());
+    auto dstTy = dyn_cast<VectorType>(op.getType());
+    if (!srcTy || !dstTy || srcTy.getRank() != 1 || srcTy.isScalable() ||
+        !srcTy.getElementType().isSignlessInteger(4) ||
+        dstTy.getElementTypeBitWidth() < 8)
+      return rewriter.notifyMatchFailure(op, "not a 1-D i4 extension");
+    auto bitcast = op.getIn().template getDefiningOp<vector::BitCastOp>();
+    if (!bitcast)
+      return rewriter.notifyMatchFailure(op, "source is not a bitcast");
+    Value wide = bitcast.getSource();
+    auto wideTy = cast<VectorType>(wide.getType());
+    unsigned width = wideTy.getElementTypeBitWidth();
+    // Leave i8 sources to the generic rewrite. Limit the wide arithmetic to
+    // i16, i32 and i64, which the backend supports.
+    if (wideTy.getRank() != 1 || !wideTy.getElementType().isSignlessInteger() ||
+        (width != 16 && width != 32 && width != 64))
+      return rewriter.notifyMatchFailure(op, "source is not a wide integer");
+
+    Location loc = op.getLoc();
+    auto splat = [&](VectorType ty, const APInt &value) -> Value {
+      return arith::ConstantOp::create(rewriter, loc,
+                                       DenseElementsAttr::get(ty, value));
+    };
+    Value four = splat(wideTy, APInt(width, 4));
+    Value lo, hi;
+    if (isSigned) {
+      Value highNibbles = splat(wideTy, APInt::getSplat(width, APInt(8, 0xF0)));
+      Value shifted = arith::ShLIOp::create(rewriter, loc, wide, four);
+      lo = arith::AndIOp::create(rewriter, loc, shifted, highNibbles);
+      hi = arith::AndIOp::create(rewriter, loc, wide, highNibbles);
+    } else {
+      Value lowNibbles = splat(wideTy, APInt::getSplat(width, APInt(8, 0x0F)));
+      Value shifted = arith::ShRUIOp::create(rewriter, loc, wide, four);
+      lo = arith::AndIOp::create(rewriter, loc, wide, lowNibbles);
+      hi = arith::AndIOp::create(rewriter, loc, shifted, lowNibbles);
+    }
+    int64_t half = srcTy.getNumElements() / 2;
+    auto byteTy = VectorType::get({half}, rewriter.getI8Type());
+    Value loBytes = vector::BitCastOp::create(rewriter, loc, byteTy, lo);
+    Value hiBytes = vector::BitCastOp::create(rewriter, loc, byteTy, hi);
+    if (isSigned) {
+      Value byteFour = splat(byteTy, APInt(8, 4));
+      loBytes = arith::ShRSIOp::create(rewriter, loc, loBytes, byteFour);
+      hiBytes = arith::ShRSIOp::create(rewriter, loc, hiBytes, byteFour);
+    }
+    if (dstTy.getElementTypeBitWidth() > 8) {
+      auto halfTy = VectorType::get({half}, dstTy.getElementType());
+      loBytes = ExtOp::create(rewriter, loc, halfTy, loBytes);
+      hiBytes = ExtOp::create(rewriter, loc, halfTy, hiBytes);
+    }
+    rewriter.replaceOpWithNewOp<vector::InterleaveOp>(op, loBytes, hiBytes);
+    return success();
+  }
+};
+
 // Lowers `xegpu.lane_shuffle` to `xevm.bitcast_shuffle`.
 //
 // `xevm.bitcast_shuffle` concatenates the components of its operand across the
@@ -2010,10 +2094,16 @@ struct ConvertXeGPUToXeVMPass
               applyOpPatternsGreedily(extensions, std::move(patterns), config)))
         return signalPassFailure();
     }
-    // Expand the new i4-to-i8 casts into byte-level masks and shifts before
-    // lowering. LLVM extensions on i4 vectors are not legal in the backend.
+    // Expand i4 extensions into masks and shifts before lowering: on the wide
+    // source when there is one, on bytes otherwise. LLVM extensions on i4
+    // vectors are not legal in the backend.
     {
       RewritePatternSet patterns(context);
+      // Above the aligned (benefit 2) and general (benefit 1) narrow-type
+      // rewrites.
+      patterns.add<ExtendI4FromWideBitcast<arith::ExtUIOp>,
+                   ExtendI4FromWideBitcast<arith::ExtSIOp>>(context,
+                                                            /*benefit=*/3);
       vector::populateVectorNarrowTypeRewritePatterns(patterns);
       vector::populateVectorInterleaveToShufflePatterns(patterns);
       vector::populateVectorDeinterleaveToShufflePatterns(patterns);

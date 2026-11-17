@@ -166,18 +166,89 @@ gpu.func @unpack_shared_broadcast_extui(%a: vector<2xi8>) -> (vector<1x16xi32>, 
 // -----
 
 // Compatible extensions with different destination widths share one widened
-// shuffle. One extension can disappear without invalidating the other.
+// shuffle. One extension can disappear without invalidating the other. The
+// nibbles come from an i16 value, so the hoisted i4-to-i8 part is masked on
+// the i16 value and needs no extension after the split.
 gpu.module @test {
 // CHECK-LABEL: gpu.func @pack_shared_extsi
-// CHECK: %[[PACKED:.*]] = xevm.bitcast_shuffle {{.*}} : (vector<4xi8>) -> i32
+// CHECK-SAME: %[[SRC:.*]]: vector<1xi16>
+// CHECK-DAG: %[[FOUR:.*]] = arith.constant dense<4> : vector<1xi16>
+// CHECK-DAG: %[[MASK:.*]] = arith.constant dense<-3856> : vector<1xi16>
+// CHECK: %[[UP:.*]] = arith.shli %[[SRC]], %[[FOUR]] : vector<1xi16>
+// CHECK: %[[LOW:.*]] = arith.andi %[[UP]], %[[MASK]] : vector<1xi16>
+// CHECK: %[[HIGH:.*]] = arith.andi %[[SRC]], %[[MASK]] : vector<1xi16>
+// CHECK: %[[LOWB:.*]] = vector.bitcast %[[LOW]] : vector<1xi16> to vector<2xi8>
+// CHECK: %[[HIGHB:.*]] = vector.bitcast %[[HIGH]] : vector<1xi16> to vector<2xi8>
+// CHECK: %[[BFOUR:.*]] = arith.constant dense<4> : vector<2xi8>
+// CHECK: %[[LOWS:.*]] = arith.shrsi %[[LOWB]], %[[BFOUR]] : vector<2xi8>
+// CHECK: %[[HIGHS:.*]] = arith.shrsi %[[HIGHB]], %[[BFOUR]] : vector<2xi8>
+// CHECK-NEXT: %[[BYTES:.*]] = vector.shuffle %[[LOWS]], %[[HIGHS]] [0, 2, 1, 3] : vector<2xi8>, vector<2xi8>
+// CHECK-NEXT: %[[PACKED:.*]] = xevm.bitcast_shuffle %[[BYTES]] : (vector<4xi8>) -> i32
 // CHECK: %[[WIDE:.*]] = llvm.bitcast %[[PACKED]] : i32 to vector<4xi8>
 // CHECK: %[[EXT:.*]] = arith.extsi %[[WIDE]] : vector<4xi8> to vector<4xi32>
 // CHECK: gpu.return %[[WIDE]], %[[EXT]] : vector<4xi8>, vector<4xi32>
-gpu.func @pack_shared_extsi(%a: vector<2xi8>) -> (vector<4xi8>, vector<4xi32>) {
-  %nibbles = vector.bitcast %a : vector<2xi8> to vector<4xi4>
+gpu.func @pack_shared_extsi(%a: vector<1xi16>) -> (vector<4xi8>, vector<4xi32>) {
+  %nibbles = vector.bitcast %a : vector<1xi16> to vector<4xi4>
   %shuffled = xegpu.lane_shuffle %nibbles pack : vector<4xi4>
   %r0 = arith.extsi %shuffled : vector<4xi4> to vector<4xi8>
   %r1 = arith.extsi %shuffled : vector<4xi4> to vector<4xi32>
   gpu.return %r0, %r1 : vector<4xi8>, vector<4xi32>
+}
+}
+
+// -----
+
+// Nibbles bitcast from i32 elements are masked and shifted as i32 values, four
+// bytes at a time, before they are split into bytes and interleaved.
+gpu.module @test {
+// CHECK-LABEL: gpu.func @extui_from_i32
+// CHECK-SAME: %[[SRC:.*]]: vector<2xi32>
+// CHECK-DAG: %[[FOUR:.*]] = arith.constant dense<4> : vector<2xi32>
+// CHECK-DAG: %[[MASK:.*]] = arith.constant dense<252645135> : vector<2xi32>
+// CHECK: %[[SHIFTED:.*]] = arith.shrui %[[SRC]], %[[FOUR]] : vector<2xi32>
+// CHECK: %[[LOW:.*]] = arith.andi %[[SRC]], %[[MASK]] : vector<2xi32>
+// CHECK: %[[HIGH:.*]] = arith.andi %[[SHIFTED]], %[[MASK]] : vector<2xi32>
+// CHECK: %[[LOW_DUP:.*]] = vector.shuffle %[[LOW]], %[[LOW]] [0, 0, 0, 0, 1, 1, 1, 1] : vector<2xi32>, vector<2xi32>
+// CHECK: %[[LOW_MASKED:.*]] = arith.andi %[[LOW_DUP]], %{{.*}} : vector<8xi32>
+// CHECK: %[[LOW_SHIFTED:.*]] = arith.shrui %[[LOW_MASKED]], %{{.*}} : vector<8xi32>
+// CHECK: %[[LOW_EXT:.*]] = arith.trunci %[[LOW_SHIFTED]] : vector<8xi32> to vector<8xi16>
+// CHECK: %[[HIGH_DUP:.*]] = vector.shuffle %[[HIGH]], %[[HIGH]] [0, 0, 0, 0, 1, 1, 1, 1] : vector<2xi32>, vector<2xi32>
+// CHECK: %[[HIGH_MASKED:.*]] = arith.andi %[[HIGH_DUP]], %{{.*}} : vector<8xi32>
+// CHECK: %[[HIGH_SHIFTED:.*]] = arith.shrui %[[HIGH_MASKED]], %{{.*}} : vector<8xi32>
+// CHECK: %[[HIGH_EXT:.*]] = arith.trunci %[[HIGH_SHIFTED]] : vector<8xi32> to vector<8xi16>
+// CHECK: %[[RES:.*]] = vector.shuffle %[[LOW_EXT]], %[[HIGH_EXT]] [0, 8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15] : vector<8xi16>, vector<8xi16>
+// CHECK: gpu.return %[[RES]] : vector<16xi16>
+gpu.func @extui_from_i32(%a: vector<2xi32>) -> vector<16xi16> {
+  %nibbles = vector.bitcast %a : vector<2xi32> to vector<16xi4>
+  %res = arith.extui %nibbles : vector<16xi4> to vector<16xi16>
+  gpu.return %res : vector<16xi16>
+}
+}
+
+// -----
+
+// The signed form moves each nibble to the high half of its byte, so that an
+// arithmetic shift of the byte sign-extends it.
+gpu.module @test {
+// CHECK-LABEL: gpu.func @extsi_from_i16
+// CHECK-SAME: %[[SRC:.*]]: vector<1xi16>
+// CHECK-DAG: %[[FOUR:.*]] = arith.constant dense<4> : vector<1xi16>
+// CHECK-DAG: %[[MASK:.*]] = arith.constant dense<-3856> : vector<1xi16>
+// CHECK: %[[UP:.*]] = arith.shli %[[SRC]], %[[FOUR]] : vector<1xi16>
+// CHECK: %[[LOW:.*]] = arith.andi %[[UP]], %[[MASK]] : vector<1xi16>
+// CHECK: %[[HIGH:.*]] = arith.andi %[[SRC]], %[[MASK]] : vector<1xi16>
+// CHECK: %[[LOWB:.*]] = vector.bitcast %[[LOW]] : vector<1xi16> to vector<2xi8>
+// CHECK: %[[HIGHB:.*]] = vector.bitcast %[[HIGH]] : vector<1xi16> to vector<2xi8>
+// CHECK: %[[BFOUR:.*]] = arith.constant dense<4> : vector<2xi8>
+// CHECK: %[[LOWS:.*]] = arith.shrsi %[[LOWB]], %[[BFOUR]] : vector<2xi8>
+// CHECK: %[[HIGHS:.*]] = arith.shrsi %[[HIGHB]], %[[BFOUR]] : vector<2xi8>
+// CHECK: %[[LOWE:.*]] = arith.extsi %[[LOWS]] : vector<2xi8> to vector<2xi32>
+// CHECK: %[[HIGHE:.*]] = arith.extsi %[[HIGHS]] : vector<2xi8> to vector<2xi32>
+// CHECK: %[[RES:.*]] = vector.shuffle %[[LOWE]], %[[HIGHE]] [0, 2, 1, 3] : vector<2xi32>, vector<2xi32>
+// CHECK: gpu.return %[[RES]] : vector<4xi32>
+gpu.func @extsi_from_i16(%a: vector<1xi16>) -> vector<4xi32> {
+  %nibbles = vector.bitcast %a : vector<1xi16> to vector<4xi4>
+  %res = arith.extsi %nibbles : vector<4xi4> to vector<4xi32>
+  gpu.return %res : vector<4xi32>
 }
 }
