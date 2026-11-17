@@ -8,7 +8,10 @@
 define double @fdiv_select(double %x, double %y, <2 x i1> %c) {
 ; CHECK-LABEL: fdiv_select:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,0,2,2]
+; CHECK-NEXT:    pslld $31, %xmm0
+; CHECK-NEXT:    psrad $31, %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %vx = insertelement <2 x double> zeroinitializer, double %x, i32 1
   %vy = insertelement <2 x double> zeroinitializer, double %y, i32 1
@@ -21,7 +24,10 @@ define double @fdiv_select(double %x, double %y, <2 x i1> %c) {
 define double @frem_select(double %x, double %y, <2 x i1> %c) {
 ; CHECK-LABEL: frem_select:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,0,2,2]
+; CHECK-NEXT:    pslld $31, %xmm0
+; CHECK-NEXT:    psrad $31, %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %vx = insertelement <2 x double> zeroinitializer, double %x, i32 1
   %vy = insertelement <2 x double> zeroinitializer, double %y, i32 1
@@ -34,7 +40,9 @@ define double @frem_select(double %x, double %y, <2 x i1> %c) {
 define i64 @fdiv_and(double %x, double %y, <2 x i64> %z) {
 ; CHECK-LABEL: fdiv_and:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    movq %xmm2, %rcx
+; CHECK-NEXT:    movabsq $9221120237041090560, %rax # imm = 0x7FF8000000000000
+; CHECK-NEXT:    andq %rcx, %rax
 ; CHECK-NEXT:    retq
   %vx = insertelement <2 x double> zeroinitializer, double %x, i32 1
   %vy = insertelement <2 x double> zeroinitializer, double %y, i32 1
@@ -48,7 +56,9 @@ define i64 @fdiv_and(double %x, double %y, <2 x i64> %z) {
 define i64 @frem_and(double %x, double %y, <2 x i64> %z) {
 ; CHECK-LABEL: frem_and:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    movq %xmm2, %rcx
+; CHECK-NEXT:    movabsq $9221120237041090560, %rax # imm = 0x7FF8000000000000
+; CHECK-NEXT:    andq %rcx, %rax
 ; CHECK-NEXT:    retq
   %vx = insertelement <2 x double> zeroinitializer, double %x, i32 1
   %vy = insertelement <2 x double> zeroinitializer, double %y, i32 1
