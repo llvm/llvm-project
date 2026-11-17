@@ -66,6 +66,17 @@ static Type cloneToShapedType(Type cloneFrom, Type cloneTo) {
   return cloneTo;
 }
 
+/// Returns the op's nnan flag alone, or null: the only flag of the float ops
+/// created before the rounding. With contract, ExtFOp::fold would fold the
+/// widening of a contract truncf back to the truncf's operand.
+static arith::FastMathFlagsAttr getNNaNOnly(MLIRContext *ctx,
+                                            arith::FastMathFlagsAttr fastmath) {
+  if (fastmath && arith::bitEnumContainsAll(fastmath.getValue(),
+                                            arith::FastMathFlags::nnan))
+    return arith::FastMathFlagsAttr::get(ctx, arith::FastMathFlags::nnan);
+  return {};
+}
+
 namespace {
 
 template <typename OpTy, arith::CmpIPredicate pred>
@@ -552,7 +563,8 @@ struct F8E8M0TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
 
     if (operandETy.getIntOrFloatBitWidth() < 32) {
-      operand = arith::ExtFOp::create(b, f32Ty, operand, op.getFastmathAttr());
+      operand = arith::ExtFOp::create(
+          b, f32Ty, operand, getNNaNOnly(b.getContext(), op.getFastmathAttr()));
     } else if (operandETy.getIntOrFloatBitWidth() > 32) {
       operand = arith::TruncFOp::create(
           b, f32Ty, operand, op.getRoundingmodeAttr(), op.getFastmathAttr());

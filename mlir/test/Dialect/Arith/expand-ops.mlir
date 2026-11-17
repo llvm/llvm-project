@@ -310,6 +310,17 @@ func.func @truncf_vector_bf16_to_f8E8M0FNU(%arg0 : vector<4xbf16>) -> vector<4xf
 
 // -----
 
+// The widening keeps only nnan: with contract, ExtFOp::fold would cancel it
+// against a contract truncf producing %arg0, skipping its rounding.
+func.func @truncf_f16_to_f8E8M0FNU_fastmath(%arg0 : f16) -> f8E8M0FNU {
+    %0 = arith.truncf %arg0 fastmath<nnan,contract> : f16 to f8E8M0FNU
+    return %0 : f8E8M0FNU
+}
+// CHECK-LABEL: @truncf_f16_to_f8E8M0FNU_fastmath
+// CHECK: arith.extf %arg0 fastmath<nnan> : f16 to f32
+
+// -----
+
 func.func @scaling_truncf_f32_to_f4E2M1FN(%arg0 : f32, %arg1: f8E8M0FNU) -> f4E2M1FN {
     %0 = arith.scaling_truncf %arg0, %arg1 : f32, f8E8M0FNU to f4E2M1FN
     return %0 : f4E2M1FN
