@@ -2787,56 +2787,46 @@ void LoweringPreparePass::lowerStdOp(cir::StdOpInterface typedOp) {
 }
 
 /// If `cond` is the result of a chain of cir.not ops, sets it to the input of
-/// the innermost cir.not and erases the cir.not ops left without uses.  An
-/// odd number of cir.not ops inverts the condition, so `trueRegion` and
-/// `falseRegion` are swapped.  If one region is empty, the other is empty
-/// after a swap, and the caller restores any region its op requires.  Returns
-/// true if the regions were swapped.
-static bool stripNotsFromCondition(mlir::OpOperand &cond,
-                                   mlir::Region &trueRegion,
-                                   mlir::Region &falseRegion) {
-  llvm::SmallVector<cir::NotOp> notOps;
-  mlir::Value value = cond.get();
-  while (auto notOp = value.getDefiningOp<cir::NotOp>()) {
-    notOps.push_back(notOp);
-    value = notOp.getInput();
+/// the innermost cir.not, erasing each cir.not left without uses.  Returns true
+/// if the chain has an odd length, which inverts the condition.
+static bool stripNotsFromCondition(mlir::OpOperand &cond) {
+  bool inverted = false;
+  while (auto notOp = cond.get().getDefiningOp<cir::NotOp>()) {
+    cond.set(notOp.getInput());
+    if (notOp->use_empty())
+      notOp.erase();
+    inverted = !inverted;
   }
-  if (notOps.empty())
-    return false;
+  return inverted;
+}
 
-  cond.set(value);
-  bool swapped = notOps.size() % 2 == 1;
-  if (swapped) {
-    mlir::Region trueBody;
-    trueBody.takeBody(trueRegion);
-    trueRegion.takeBody(falseRegion);
-    falseRegion.takeBody(trueBody);
-  }
-  for (cir::NotOp notOp : notOps) {
-    if (!notOp->use_empty())
-      break;
-    notOp.erase();
-  }
-  return swapped;
+/// Swaps the bodies of `a` and `b`.  std::swap on the block lists does not
+/// update each block's parent region, so the bodies move with takeBody.
+static void swapRegions(mlir::Region &a, mlir::Region &b) {
+  mlir::Region aBody;
+  aBody.takeBody(a);
+  a.takeBody(b);
+  b.takeBody(aBody);
 }
 
 void LoweringPreparePass::lowerIfOp(cir::IfOp op) {
-  bool hadElse = !op.getElseRegion().empty();
-  bool swapped = stripNotsFromCondition(op.getConditionMutable(),
-                                        op.getThenRegion(), op.getElseRegion());
-  if (!swapped || hadElse)
+  bool inverted = stripNotsFromCondition(op.getConditionMutable());
+  if (!inverted)
     return;
 
-  // The then body was swapped into the else region.  Only the else region of
-  // a cir.if may be empty, so give the then region a block that just yields.
-  cir::CIRBaseBuilderTy builder(getContext());
-  builder.createBlock(&op.getThenRegion());
-  cir::YieldOp::create(builder, op.getLoc());
+  // An empty else region becomes the then region after the swap, and a cir.if
+  // needs a then block, so give the else region a block that yields.
+  if (op.getElseRegion().empty()) {
+    cir::CIRBaseBuilderTy builder(getContext());
+    builder.createBlock(&op.getElseRegion());
+    cir::YieldOp::create(builder, op.getLoc());
+  }
+  swapRegions(op.getThenRegion(), op.getElseRegion());
 }
 
 void LoweringPreparePass::lowerTernaryOp(cir::TernaryOp op) {
-  stripNotsFromCondition(op.getCondMutable(), op.getTrueRegion(),
-                         op.getFalseRegion());
+  if (stripNotsFromCondition(op.getCondMutable()))
+    swapRegions(op.getTrueRegion(), op.getFalseRegion());
 }
 
 void LoweringPreparePass::runOnOp(mlir::Operation *op) {
