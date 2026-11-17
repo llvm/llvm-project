@@ -516,8 +516,10 @@ def PromisedInterfacesOp : TEST_AttrOp<"promised_interfaces"> {
 //===----------------------------------------------------------------------===//
 
 // Define the enum attribute.
+let partition = Test_AttrTypeCorePartition in
 def TestEnumAttr : EnumAttr<Test_Dialect, TestEnum, "enum">;
 
+let partition = Test_AttrTypeCorePartition in
 def TestPrettyEnumAttr
     : EnumAttr<Test_Dialect, TestPrettyEnum, "pretty_enum">;
 
@@ -611,6 +613,7 @@ def OpWithSimpleEnum16Prop : TEST_AttrOp<"op_with_simple_enum_16_prop"> {
 //===----------------------------------------------------------------------===//
 
 // Define the enum attribute.
+let partition = Test_AttrTypeCorePartition in
 def TestBitEnumAttr : EnumAttr<Test_Dialect, TestBitEnum, "bit_enum">;
 
 // Define an op that contains the enum attribute.
@@ -619,6 +622,7 @@ def OpWithBitEnum : TEST_AttrOp<"op_with_bit_enum"> {
   let assemblyFormat = "$value (`tag` $tag^)? attr-dict";
 }
 
+let partition = Test_AttrTypeCorePartition in
 def TestBitEnumVerticalBarAttr
     : EnumAttr<Test_Dialect, TestBitEnumVerticalBar, "bit_enum_vbar">;
 
@@ -640,6 +644,7 @@ def OpWithBitEnumVerticalBarDirective
   let assemblyFormat = "enum($value) attr-dict";
 }
 
+let partition = Test_AttrTypeCorePartition in
 def TestBitEnumSpaceAttr
     : EnumAttr<Test_Dialect, TestBitEnumSpace, "bit_enum_space">;
 
