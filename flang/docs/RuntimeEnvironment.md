@@ -108,9 +108,8 @@ statement, the `ABORT` extension, or a deadly signal such as `SIGSEGV` or
 `CALL BACKTRACE()` always prints one, whether or not this variable disables
 the others.
 
-Only the first character is significant. `1`, `Y`, or `y` enables the trace,
-and `0`, `N`, or `n` disables it. Any other value is ignored. When the
-variable is unset, the trace is enabled.
+The value must be `0` or `1`. `1` enables the trace and `0` disables it.
+Any other value is ignored. When the variable is unset, the trace is enabled.
 
 `-fbacktrace` is the compiler default and does not set the variable.
 `-fno-backtrace` sets `FLANG_ERROR_BACKTRACE=0` only when the variable is not

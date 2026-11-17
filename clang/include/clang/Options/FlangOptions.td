@@ -146,9 +146,9 @@ def ffixed_line_length_EQ : Joined<["-"], "ffixed-line-length=">, Group<f_Group>
 file}]>;
 def ffixed_line_length_VALUE : Joined<["-"], "ffixed-line-length-">, Group<f_Group>, Alias<ffixed_line_length_EQ>;
 def fbacktrace : Flag<["-"], "fbacktrace">, Group<f_Group>,
-  HelpText<"Print a stack trace on a fatal runtime error or deadly signal (default)">;
+  HelpText<"Print a stack trace on a fatal runtime error or a signal whose default action is to dump core (default)">;
 def fno_backtrace : Flag<["-"], "fno-backtrace">, Group<f_Group>,
-  HelpText<"Do not print a stack trace on a fatal runtime error or deadly signal">;
+  HelpText<"Do not print a stack trace on a fatal runtime error or a signal whose default action is to dump core">;
 def fconvert_EQ : Joined<["-"], "fconvert=">, Group<f_Group>,
   HelpText<"Set endian conversion of data for unformatted files">;
 def fdefault_double_8 : Flag<["-"],"fdefault-double-8">, Group<f_Group>,

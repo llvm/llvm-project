@@ -82,7 +82,7 @@ struct ExecutionEnvironment {
   bool noStopMessage{false}; // NO_STOP_MESSAGE=1 inhibits "Fortran STOP"
   // Print a stack trace for a fatal runtime error, ERROR STOP, or a deadly
   // signal. On by default, matching gfortran -fbacktrace.
-  // ExecutionEnvironment::Configure() applies FLANG_ERROR_BACKTRACE
+  // ExecutionEnvironment::Configure() applies FLANG_ERROR_BACKTRACE=0 or 1
   // when this variable is set.
   bool backtrace{true};
   // FLANG_TIMEF_IN_MILLISECONDS=1 sets TIMEF resolution to milliseconds.
