@@ -17,11 +17,13 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -46,6 +48,13 @@ static cl::opt<uint32_t> SelectFalseWeight(
     "profcheck-default-select-false-weight", cl::init(3U),
     cl::desc("When annotating `select` instructions, this value will be used "
              "for the second ('false') case."));
+static cl::opt<bool> AnnotateIndirectCalls(
+    "profcheck-annotate-indirect-calls", cl::init(false),
+    cl::desc("Also inject (if missing) and verify MD_prof for indirect calls"));
+static cl::opt<bool> AnnotateMemoryOperations(
+    "profcheck-annotate-mem-ops", cl::init(true),
+    cl::desc(
+        "Also inject (if missing) and verify MD_prof for memory operations"));
 namespace {
 class ProfileInjector {
   Function &F;
@@ -136,6 +145,34 @@ bool ProfileInjector::inject() {
             continue;
           setBranchWeights(I, {SelectTrueWeight, SelectFalseWeight},
                            /*IsExpected=*/false);
+        }
+      }
+    }
+    for (Instruction &I : BB) {
+      if (I.getMetadata(LLVMContext::MD_prof))
+        continue;
+      if (AnnotateSelect) {
+        if (auto *SI = dyn_cast<SelectInst>(&I)) {
+          if (SI->getCondition()->getType()->isVectorTy())
+            continue;
+          setBranchWeights(I, {SelectTrueWeight, SelectFalseWeight},
+                           /*IsExpected=*/false);
+        }
+      }
+      if (AnnotateMemoryOperations) {
+        if (auto *MI = dyn_cast<MemIntrinsic>(&I)) {
+          if (isa<ConstantInt>(MI->getLength()))
+            continue;
+          annotateValueSite(*F.getParent(), *MI, {{19797, 2}, {18770, 3}}, 10,
+                            InstrProfValueKind::IPVK_MemOPSize, 30);
+        }
+      }
+      if (AnnotateIndirectCalls) {
+        if (auto *CB = dyn_cast<CallBase>(&I)) {
+          if (!CB->isIndirectCall())
+            continue;
+          annotateValueSite(*F.getParent(), *CB, {{19797, 2}, {18770, 3}}, 10,
+                            InstrProfValueKind::IPVK_IndirectCallTarget, 30);
         }
       }
     }
@@ -251,15 +288,30 @@ PreservedAnalyses ProfileVerifierPass::run(Function &F,
     return PreservedAnalyses::all();
   }
   for (const auto &BB : F) {
-    if (AnnotateSelect) {
-      for (const auto &I : BB)
+    for (const auto &I : BB) {
+      if (I.getMetadata(LLVMContext::MD_prof))
+        continue;
+      if (AnnotateSelect) {
         if (auto *SI = dyn_cast<SelectInst>(&I)) {
           if (SI->getCondition()->getType()->isVectorTy())
             continue;
-          if (I.getMetadata(LLVMContext::MD_prof))
-            continue;
           emitProfileError("select annotation missing", F);
         }
+      }
+      if (AnnotateMemoryOperations) {
+        if (auto *MI = dyn_cast<MemIntrinsic>(&I)) {
+          if (isa<ConstantInt>(MI->getLength()))
+            continue;
+          emitProfileError("memory operation annotation missing", F);
+        }
+      }
+      if (AnnotateIndirectCalls) {
+        if (auto *CB = dyn_cast<CallBase>(&I)) {
+          if (!CB->isIndirectCall())
+            continue;
+          emitProfileError("indirect call annotation missing", F);
+        }
+      }
     }
     if (const auto *Term =
             ProfileInjector::getTerminatorBenefitingFromMDProf(BB))
