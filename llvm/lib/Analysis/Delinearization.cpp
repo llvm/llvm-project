@@ -656,9 +656,9 @@ bool llvm::delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
   return !Subscripts.empty();
 }
 
-bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
-                                         ArrayRef<const SCEV *> Sizes,
-                                         ArrayRef<const SCEV *> Subscripts) {
+bool llvm::validateDelinearizationResult(
+    ScalarEvolution &SE, ArrayRef<const SCEV *> Sizes,
+    ArrayRef<const SCEV *> Subscripts, DelinearizationRangeCache *RangeCache) {
   // Sizes and Subscripts are as follows:
   //
   //   Sizes:      [UNK][S_2]...[S_n]
@@ -678,23 +678,98 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
     return SE.getMulExpr(A, B);
   };
 
+  // Prove 0 <= I_k < S_k for an affine subscript by bounding it with the
+  // extreme values it takes over its own loop.
+  auto isInRangeOverItsLoop = [&](const SCEV *Subscript, const SCEV *Size,
+                                  Type *WiderTy) -> bool {
+    const auto *AR = dyn_cast<SCEVAddRecExpr>(Subscript);
+    if (!AR || !AR->isAffine() || !AR->hasNoSignedWrap())
+      return false;
+    const Loop *L = AR->getLoop();
+    const SCEV *BTC = SE.getBackedgeTakenCount(L);
+    if (isa<SCEVCouldNotCompute>(BTC))
+      return false;
+
+    // Which end of the range is the maximum depends on the sign of the step.
+    const SCEV *Step = AR->getStepRecurrence(SE);
+    const SCEV *Min, *Max;
+    if (SE.isKnownNonNegative(Step)) {
+      Min = AR->getStart();
+      Max = AR->evaluateAtIteration(BTC, SE);
+    } else if (SE.isKnownNonPositive(Step)) {
+      Min = AR->evaluateAtIteration(BTC, SE);
+      Max = AR->getStart();
+    } else {
+      return false;
+    }
+    Min = SE.getNoopOrSignExtend(Min, WiderTy);
+    Max = SE.getNoopOrSignExtend(Max, WiderTy);
+
+    // If the loop runs no more times than the extent
+    // then it leaves the original expressions in
+    // place, so a dominating `n <= m` applies directly,
+    // and it needs no guard rewriting.
+    // Max + 1 is the trip count if it does not wrap.
+    const SCEV *One = SE.getOne(WiderTy);
+    const Instruction *CtxI = L->getHeader()->getTerminator();
+    if (SE.isKnownNonNegative(Min) &&
+        SE.willNotOverflow(Instruction::Add, /*Signed=*/true, Max, One, CtxI)) {
+      const SCEV *TripCount = SE.getAddExpr(Max, One);
+      if (SE.isKnownPredicateAt(ICmpInst::ICMP_SLE, TripCount, Size, CtxI)) {
+        LLVM_DEBUG(dbgs() << "Range check via trip count: " << *TripCount
+                          << " <=s " << *Size << "\n");
+        return true;
+      }
+    }
+
+    // Otherwise rewrite both sides with the conditions that dominate the loop,
+    // which brings the extent recovered from the access strides and the bound
+    // recovered from the latch into comparable form.
+    ScalarEvolution::LoopGuards Guards =
+        ScalarEvolution::LoopGuards::collectOnDemand(L, SE);
+    if (!SE.isKnownNonNegative(SE.applyLoopGuards(Min, Guards)))
+      return false;
+
+    const SCEV *GuardedMax = SE.applyLoopGuards(Max, Guards);
+    const SCEV *GuardedSize = SE.applyLoopGuards(Size, Guards);
+    if (SE.isKnownPredicate(ICmpInst::ICMP_SLT, GuardedMax, GuardedSize)) {
+      LLVM_DEBUG(dbgs() << "Range check via loop bounds: " << *GuardedMax
+                        << " <s " << *GuardedSize << "\n");
+      return true;
+    }
+    return false;
+  };
+
   // Range check: 0 <= I_k < S_k for k = 2..n.
   for (size_t I = 1; I < Sizes.size(); ++I) {
     const SCEV *Size = Sizes[I - 1];
     const SCEV *Subscript = Subscripts[I];
-    if (!SE.isKnownNonNegative(Subscript))
-      return false;
 
     // TODO: It may be better that delinearization itself unifies the types of
     // all elements in Sizes and Subscripts.
     Type *WiderTy = SE.getWiderType(Subscript->getType(), Size->getType());
-    Subscript = SE.getNoopOrSignExtend(Subscript, WiderTy);
-    Size = SE.getNoopOrSignExtend(Size, WiderTy);
-    if (!SE.isKnownPredicate(ICmpInst::ICMP_SLT, Subscript, Size)) {
-      LLVM_DEBUG(dbgs() << "Range check failed: " << *Subscript << " <s "
-                        << *Size << "\n");
-      return false;
+    const SCEV *ExtSubscript = SE.getNoopOrSignExtend(Subscript, WiderTy);
+    const SCEV *ExtSize = SE.getNoopOrSignExtend(Size, WiderTy);
+
+    if (SE.isKnownNonNegative(ExtSubscript) &&
+        SE.isKnownPredicate(ICmpInst::ICMP_SLT, ExtSubscript, ExtSize))
+      continue;
+
+    // Try prooving by walking dominating conditions.
+    if (!RangeCache) {
+      if (isInRangeOverItsLoop(Subscript, ExtSize, WiderTy))
+        continue;
+    } else {
+      auto [It, Inserted] = RangeCache->try_emplace({Subscript, ExtSize});
+      if (Inserted)
+        It->second = isInRangeOverItsLoop(Subscript, ExtSize, WiderTy);
+      if (It->second)
+        continue;
     }
+
+    LLVM_DEBUG(dbgs() << "Range check failed: " << *ExtSubscript << " <s "
+                      << *ExtSize << "\n");
+    return false;
   }
 
   // The offset computation is as follows:

@@ -40,6 +40,7 @@
 #define LLVM_ANALYSIS_DEPENDENCEANALYSIS_H
 
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/Analysis/Delinearization.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
@@ -329,6 +330,7 @@ public:
 private:
   const AnalysisOptions &Opts;
   AAResults *AA;
+  DelinearizationRangeCache RangeCache;
   ScalarEvolution *SE;
   LoopInfo *LI;
   Function *F;
