@@ -2123,9 +2123,10 @@ entry:
 define <2 x bfloat> @utofp_v2i16_v2bf16(<2 x i16> %a) {
 ; CHECK-NOFP16-LABEL: utofp_v2i16_v2bf16:
 ; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-NOFP16-NEXT:    movi v1.2d, #0x00ffff0000ffff
+; CHECK-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NOFP16-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NOFP16-NEXT:    movi v1.4s, #1
-; CHECK-NOFP16-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NOFP16-NEXT:    ucvtf v0.4s, v0.4s
 ; CHECK-NOFP16-NEXT:    ushr v2.4s, v0.4s, #16
 ; CHECK-NOFP16-NEXT:    and v1.16b, v2.16b, v1.16b
@@ -2136,8 +2137,9 @@ define <2 x bfloat> @utofp_v2i16_v2bf16(<2 x i16> %a) {
 ;
 ; CHECK-FP16-LABEL: utofp_v2i16_v2bf16:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
-; CHECK-FP16-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-FP16-NEXT:    movi v1.2d, #0x00ffff0000ffff
+; CHECK-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-FP16-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-FP16-NEXT:    ucvtf v0.4s, v0.4s
 ; CHECK-FP16-NEXT:    bfcvtn v0.4h, v0.4s
 ; CHECK-FP16-NEXT:    ret

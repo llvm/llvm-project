@@ -234,6 +234,34 @@ func.func @nested_orphan_loop(%arg0 : memref<i32>) attributes {acc.routine_info 
   return
 }
 
+// Structured orphan acc.loop with a multi-block body. scf.for stays
+// single-block; the body is wrapped in scf.execute_region.
+acc.routine @acc_routine_loop_multiblock func(@orphan_loop_multi_block) seq
+// CHECK-LABEL: func.func @orphan_loop_multi_block
+// CHECK-NOT:   acc.loop
+// CHECK:       scf.for
+// CHECK:       scf.execute_region
+// CHECK:       cf.cond_br
+// CHECK:       memref.store
+// CHECK:       scf.yield
+func.func @orphan_loop_multi_block(%arg0 : memref<i32>) attributes {acc.routine_info = #acc.routine_info<[@acc_routine_loop_multiblock]>} {
+  %c0 = arith.constant 0 : i32
+  %c10 = arith.constant 10 : i32
+  %c1 = arith.constant 1 : i32
+  %true = arith.constant true
+  acc.loop control(%iv : i32) = (%c0 : i32) to (%c10 : i32) step (%c1 : i32) {
+    cf.cond_br %true, ^bb1, ^bb2
+  ^bb1:
+    memref.store %iv, %arg0[] : memref<i32>
+    cf.br ^bb3
+  ^bb2:
+    cf.br ^bb3
+  ^bb3:
+    acc.yield
+  } inclusiveUpperbound(array<i1: true>) seq
+  return
+}
+
 //===----------------------------------------------------------------------===//
 // Unstructured orphan loop - converted to scf.execute_region
 //===----------------------------------------------------------------------===//

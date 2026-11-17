@@ -25,3 +25,39 @@ func.func @avg_pool2d_adaptive_not_canonicalized(
     (tensor<1x4x4x1xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x2x2x1xf32>
   return %0 : tensor<1x2x2x1xf32>
 }
+
+// -----
+
+// Unranked operands must fail conversion cleanly before accessing their shape.
+func.func @matmul_unranked_a(
+    %a: tensor<*xf32>, %b: tensor<1x3x6xf32>) -> tensor<1x5x6xf32> {
+  %a_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %b_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{failed to legalize operation 'tosa.matmul'}}
+  %0 = tosa.matmul %a, %b, %a_zp, %b_zp : (tensor<*xf32>, tensor<1x3x6xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x5x6xf32>
+  return %0 : tensor<1x5x6xf32>
+}
+
+// -----
+
+// A's zero point must be statically known; keep B's zero point constant.
+func.func @matmul_nonconstant_a_zero_point(
+    %a: tensor<1x5x3xi8>, %b: tensor<1x3x6xi8>,
+    %a_zp: tensor<1xi8>) -> tensor<1x5x6xi32> {
+  %b_zp = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  // expected-error@+1 {{failed to legalize operation 'tosa.matmul'}}
+  %0 = tosa.matmul %a, %b, %a_zp, %b_zp : (tensor<1x5x3xi8>, tensor<1x3x6xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<1x5x6xi32>
+  return %0 : tensor<1x5x6xi32>
+}
+
+// -----
+
+// B's zero point must be statically known after A's zero point is accepted.
+func.func @matmul_nonconstant_b_zero_point(
+    %a: tensor<1x5x3xi8>, %b: tensor<1x3x6xi8>,
+    %b_zp: tensor<1xi8>) -> tensor<1x5x6xi32> {
+  %a_zp = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  // expected-error@+1 {{failed to legalize operation 'tosa.matmul'}}
+  %0 = tosa.matmul %a, %b, %a_zp, %b_zp : (tensor<1x5x3xi8>, tensor<1x3x6xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<1x5x6xi32>
+  return %0 : tensor<1x5x6xi32>
+}

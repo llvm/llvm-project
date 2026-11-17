@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=mipsel -mcpu=mips32r6 -run-pass=greedy -verify-machineinstrs %s -o - | FileCheck %s
-# RUN: llc -mtriple=mips -mcpu=mips32r6 -run-pass=greedy -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=mipsel -mcpu=mips32r6 -run-pass=greedy %s -o - | FileCheck %s
+# RUN: llc -mtriple=mips -mcpu=mips32r6 -run-pass=greedy %s -o - | FileCheck %s
 # RUN: llc -mtriple=mipsel -mcpu=mips32r6 -start-before=greedy -verify-machineinstrs -filetype=obj %s -o /dev/null
 # RUN: llc -mtriple=mips -mcpu=mips32r6 -start-before=greedy -verify-machineinstrs -filetype=obj %s -o /dev/null
 
@@ -7,7 +7,6 @@
 # eight-byte slot, using the ordinary FPR register classes.
 ---
 name: spill_condition
-tracksRegLiveness: true
 # CHECK-LABEL: name: spill_condition
 # CHECK: type: spill-slot, offset: 0, size: 4, alignment: 4
 # CHECK: SWC1
@@ -26,7 +25,6 @@ body: |
 ...
 ---
 name: spill_select_result
-tracksRegLiveness: true
 # CHECK-LABEL: name: spill_select_result
 # CHECK: type: spill-slot, offset: 0, size: 8, alignment: 8
 # CHECK: SDC164

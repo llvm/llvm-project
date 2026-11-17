@@ -3,6 +3,7 @@
 
 ---
 name:            Cst
+tracksRegLiveness: false
 body:             |
   bb.1:
     %0:_(s8) = G_CONSTANT i8 1
@@ -10,6 +11,7 @@ body:             |
 ...
 ---
 name:            Test2
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; Note: This comment should not be removed, the check lines below should be updated

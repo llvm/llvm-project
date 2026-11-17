@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x hip -std=c++17 -fsyntax-only -verify=host %s
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -aux-triple x86_64-unknown-linux-gnu \
 // RUN:   -fcuda-is-device -x cuda -std=c++17 -fsyntax-only -verify=device %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx906 -aux-triple x86_64-unknown-linux-gnu \
+// RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu \
 // RUN:   -fcuda-is-device -x hip -std=c++17 -fsyntax-only -verify=device %s
 
 #define __host__ __attribute__((host))

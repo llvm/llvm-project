@@ -33,6 +33,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/AllocatorBase.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <new>
 
@@ -167,7 +168,8 @@ public:
 };
 
 template <typename K, typename V, typename KInfo, typename AllocatorTy>
-class ScopedHashTable : detail::AllocatorHolder<AllocatorTy> {
+class LLVM_ATTRIBUTE_WARN_UNUSED ScopedHashTable
+    : detail::AllocatorHolder<AllocatorTy> {
   using AllocTy = detail::AllocatorHolder<AllocatorTy>;
 
 public:

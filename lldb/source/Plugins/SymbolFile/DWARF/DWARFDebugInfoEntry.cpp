@@ -45,10 +45,9 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
                                   lldb::offset_t *offset_ptr) {
   m_offset = *offset_ptr;
   auto report_error = [&](const char *fmt, const auto &...vals) {
-    unit.GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-        "[{0:x16}]: {1}, please file a bug and "
-        "attach the file at the start of this error message",
-        static_cast<uint64_t>(m_offset), llvm::formatv(fmt, vals...));
+    unit.GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportInternalError(
+        "[{0:x16}]: {1}", static_cast<uint64_t>(m_offset),
+        llvm::formatv(fmt, vals...));
     *offset_ptr = std::numeric_limits<lldb::offset_t>::max();
     return false;
   };
@@ -166,10 +165,9 @@ static void GetDIENamesAndRanges(
                   GetRanges(*cu, form_value)) {
             ranges = std::move(*r);
           } else {
-            module->ReportError(
+            module->ReportInternalError(
                 "[{0:x16}]: DIE has DW_AT_ranges({1} {2:x16}) attribute, but "
-                "range extraction failed ({3}), please file a bug "
-                "and attach the file at the start of this error message",
+                "range extraction failed ({3})",
                 die.GetOffset(),
                 llvm::dwarf::FormEncodingString(form_value.Form()),
                 form_value.Unsigned(), fmt_consume(r.takeError()));

@@ -19,10 +19,6 @@
 
 namespace llvm {
 
-/// Whether to match basic blocks using BBIDs instead of hashes for Propeller
-/// inference.
-LLVM_ABI extern cl::opt<bool> PropellerMatchBBID;
-
 class LLVM_ABI BasicBlockMatchingAndInference : public MachineFunctionPass {
 private:
   using Edge = std::pair<const MachineBasicBlock *, const MachineBasicBlock *>;

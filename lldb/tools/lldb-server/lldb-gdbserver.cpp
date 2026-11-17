@@ -452,7 +452,8 @@ int main_gdbserver(int argc, char *argv[]) {
   }
 
   NativeProcessManager manager(mainloop);
-  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager,
+                                              "lldb-server.native");
 
 #if defined(LLDB_ENABLE_MOCK_ACCELERATOR_PLUGIN)
   gdb_server.InstallPlugin(
