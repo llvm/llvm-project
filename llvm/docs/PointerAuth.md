@@ -417,3 +417,6 @@ pointer authentication on ELF platforms.
   combination with `ptrauth-init-fini`, it determines whether address
   diversity is used in the discriminator for the pointers in the
   `.init_array` and `.fini_array`.
+* `ptrauth-sign-personality` is a flag that determines if the pointer
+  to the personality routine `DW.ref.__gxx_personality_v0` is signed
+  with the global instruction key (`ASIA`).
