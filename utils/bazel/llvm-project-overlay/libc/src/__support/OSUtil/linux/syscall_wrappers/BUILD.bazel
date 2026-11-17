@@ -1548,6 +1548,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "mlockall",
+    hdrs = ["mlockall.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:error_or",
+        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
     name = "mmap",
     hdrs = ["mmap.h"],
     target_compatible_with = select({
