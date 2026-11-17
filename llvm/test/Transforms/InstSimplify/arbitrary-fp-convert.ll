@@ -129,46 +129,37 @@ define i8 @round_trip_e5m2_f32_saturating(i8 %x) {
   ret i8 %r
 }
 
-; E5M2 subnormals are subnormal in half too.
+; The denormal mode does not block the fold.
 define i8 @round_trip_e5m2_f16_daz(i8 %x) #0 {
 ; CHECK-LABEL: define i8 @round_trip_e5m2_f16_daz(
 ; CHECK-SAME: i8 [[X:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[F:%.*]] = call nnan half @llvm.convert.from.arbitrary.fp.f16.i8(i8 [[X]], metadata !"Float8E5M2")
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.convert.to.arbitrary.fp.i8.f16(half [[F]], metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X]]
 ;
   %f = call nnan half @llvm.convert.from.arbitrary.fp.f16.i8(i8 %x, metadata !"Float8E5M2")
   %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f16(half %f, metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
   ret i8 %r
 }
 
-; Flushing on output alone is enough to lose the subnormal encodings.
 define i8 @round_trip_e5m2_f16_ftz(i8 %x) #1 {
 ; CHECK-LABEL: define i8 @round_trip_e5m2_f16_ftz(
 ; CHECK-SAME: i8 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[F:%.*]] = call nnan half @llvm.convert.from.arbitrary.fp.f16.i8(i8 [[X]], metadata !"Float8E5M2")
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.convert.to.arbitrary.fp.i8.f16(half [[F]], metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X]]
 ;
   %f = call nnan half @llvm.convert.from.arbitrary.fp.f16.i8(i8 %x, metadata !"Float8E5M2")
   %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f16(half %f, metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
   ret i8 %r
 }
 
-; A dynamic mode may turn out to flush.
 define i8 @round_trip_e5m2_f16_dynamic(i8 %x) #2 {
 ; CHECK-LABEL: define i8 @round_trip_e5m2_f16_dynamic(
 ; CHECK-SAME: i8 [[X:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[F:%.*]] = call nnan half @llvm.convert.from.arbitrary.fp.f16.i8(i8 [[X]], metadata !"Float8E5M2")
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.convert.to.arbitrary.fp.i8.f16(half [[F]], metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X]]
 ;
   %f = call nnan half @llvm.convert.from.arbitrary.fp.f16.i8(i8 %x, metadata !"Float8E5M2")
   %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f16(half %f, metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
   ret i8 %r
 }
 
-; E4M3FN lands on half normals, so flushing cannot reach it.
 define i8 @round_trip_e4m3fn_f16_ftz(i8 %x) #3 {
 ; CHECK-LABEL: define i8 @round_trip_e4m3fn_f16_ftz(
 ; CHECK-SAME: i8 [[X:%.*]]) #[[ATTR3:[0-9]+]] {

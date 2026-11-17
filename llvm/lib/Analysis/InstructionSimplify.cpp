@@ -7540,18 +7540,6 @@ static Value *simplifyArbitraryFPRoundTrip(Type *ReturnType,
   if (APFloat::semanticsHasInf(*Src) && !match(Args[3], m_Zero()))
     return nullptr;
 
-  if (!APFloat::isRepresentableAsNormalIn(*Src, Dst)) {
-    // From may be detached, but its function, not the context, decides the
-    // mode.
-    const Function *F =
-        From->getParent() ? From->getFunction() : Q.getFunction();
-    if (!F)
-      return nullptr;
-    DenormalMode Mode = F->getDenormalMode(Dst);
-    if (Mode.inputsMayBeZero() || Mode.outputsMayBeZero())
-      return nullptr;
-  }
-
   // A NaN result has a non-deterministic sign and payload.
   if (APFloat::semanticsHasNaN(*Src) && !isKnownNeverNaN(From, Q))
     return nullptr;
