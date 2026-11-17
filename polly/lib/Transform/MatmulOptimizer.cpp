@@ -27,6 +27,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include "isl/ctx.h"
@@ -127,6 +128,14 @@ static cl::opt<int> PollyPatternMatchingNcQuotient(
     cl::desc("Quotient that is obtained by dividing Nc, the parameter of the"
              "macro-kernel, by Nr, the parameter of the micro-kernel"),
     cl::Hidden, cl::init(256), cl::cat(PollyCategory));
+
+static cl::opt<int> MaxStackArraySize(
+    "polly-pattern-matching-max-stack-array-size",
+    cl::desc("The maximal size in bytes of a packed array of the matrix "
+             "multiplication optimization that is allocated on the stack; "
+             "larger ones are allocated on the heap (-1: all on the stack, "
+             "0: all on the heap)"),
+    cl::Hidden, cl::init(1024 * 1024), cl::cat(PollyCategory));
 
 static cl::opt<bool>
     PMBasedTCOpts("polly-tc-opt",
@@ -795,6 +804,19 @@ static isl::schedule_node createExtensionNode(isl::schedule_node Node,
   return Node.graft_before(NewNode);
 }
 
+/// Allocate the packed array @p SAI, whose dimensions have the sizes
+/// @p DimSizes, on the heap if it is larger than
+/// -polly-pattern-matching-max-stack-array-size and that is not negative, and
+/// on the stack otherwise.
+static void setPackedArrayAllocation(ScopArrayInfo *SAI,
+                                     ArrayRef<unsigned> DimSizes) {
+  uint64_t Size = SAI->getElemSizeInBytes();
+  for (unsigned DimSize : DimSizes)
+    Size *= DimSize;
+  SAI->setIsOnHeap(MaxStackArraySize >= 0 &&
+                   Size > uint64_t(MaxStackArraySize));
+}
+
 static isl::schedule_node optimizePackedB(isl::schedule_node Node,
                                           ScopStmt *Stmt, isl::map MapOldIndVar,
                                           MicroKernelParamsTy MicroParams,
@@ -810,6 +832,8 @@ static isl::schedule_node optimizePackedB(isl::schedule_node Node,
   ScopArrayInfo *PackedB =
       S->createScopArrayInfo(MMI.B->getElementType(), "Packed_B",
                              {FirstDimSize, SecondDimSize, ThirdDimSize});
+  setPackedArrayAllocation(PackedB,
+                           {FirstDimSize, SecondDimSize, ThirdDimSize});
 
   // Compute the access relation for copying from B to PackedB.
   isl::map AccRelB = MMI.B->getLatestAccessRelation();
@@ -842,13 +866,15 @@ static isl::schedule_node optimizePackedA(isl::schedule_node Node, ScopStmt *,
   isl::set Domain = Stmt->getDomain();
   isl::id DomainId = Domain.get_tuple_id();
 
-  // Create the packed array.
-  unsigned FirstDimSize = MacroParams.Mc / MicroParams.Mr;
+  // Include the last, partial micro-tile when Mc is not a multiple of Mr.
+  unsigned FirstDimSize = divideCeil(MacroParams.Mc, MicroParams.Mr);
   unsigned SecondDimSize = MacroParams.Kc;
   unsigned ThirdDimSize = MicroParams.Mr;
   ScopArrayInfo *PackedA = Stmt->getParent()->createScopArrayInfo(
       MMI.A->getElementType(), "Packed_A",
       {FirstDimSize, SecondDimSize, ThirdDimSize});
+  setPackedArrayAllocation(PackedA,
+                           {FirstDimSize, SecondDimSize, ThirdDimSize});
 
   // Compute the access relation for copying from A to PackedA.
   isl::map AccRelA = MMI.A->getLatestAccessRelation();
