@@ -214,7 +214,7 @@ bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
   for (Function *F : Kernels) {
     Function *NewF = appendKernelParam(*F, LocalPtrTy);
     Instruction *InsertBefore =
-      &*NewF->getEntryBlock().getFirstNonPHIOrAlloca();
+        &*NewF->getEntryBlock().getFirstNonPHIOrAlloca();
     IRBuilder<> Builder(InsertBefore);
 
     // Only thread [0][0][0] performs the store
@@ -222,13 +222,15 @@ bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
     Value *IsFirst = Builder.getTrue();
     for (unsigned Dim = 0; Dim != 3; ++Dim) {
       // Get thread ID and check if it's zero
-      Value *ThreadId = Builder.CreateIntrinsic(Intrinsic::spv_thread_id_in_group,
-                        {ThreadIdTy}, {Builder.getInt32(Dim)});
+      Value *ThreadId =
+          Builder.CreateIntrinsic(Intrinsic::spv_thread_id_in_group,
+                                  {ThreadIdTy}, {Builder.getInt32(Dim)});
       IsFirst = Builder.CreateAnd(
-        IsFirst, Builder.CreateICmpEQ(ThreadId, ConstantInt::get(ThreadIdTy, 0)));
+          IsFirst,
+          Builder.CreateICmpEQ(ThreadId, ConstantInt::get(ThreadIdTy, 0)));
     }
     Instruction *ThenTerm =
-      SplitBlockAndInsertIfThen(IsFirst, InsertBefore, false);
+        SplitBlockAndInsertIfThen(IsFirst, InsertBefore, false);
 
     // Insert store on thead [0][0][0]
     Builder.SetInsertPoint(ThenTerm);
@@ -238,7 +240,7 @@ bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
     Builder.SetInsertPoint(InsertBefore);
     Builder.CreateIntrinsic(Intrinsic::spv_group_memory_barrier_with_group_sync,
                             {});
-  
+
     NewF->setMemoryEffects(NewF->getMemoryEffects() |
                            MemoryEffects::otherMemOnly(ModRefInfo::ModRef));
   }
