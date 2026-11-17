@@ -33,9 +33,8 @@ define amdgpu_kernel void @test_if(i32 %b, ptr addrspace(1) %src, ptr addrspace(
 ; SI-NEXT:  ; %bb.4: ; %LeafBlock
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
 ; SI-NEXT:    s_andn2_b64 s[2:3], s[2:3], exec
-; SI-NEXT:    s_and_b64 s[6:7], vcc, exec
 ; SI-NEXT:    s_mov_b64 s[10:11], exec
-; SI-NEXT:    s_or_b64 s[2:3], s[2:3], s[6:7]
+; SI-NEXT:    s_or_b64 s[2:3], s[2:3], vcc
 ; SI-NEXT:  ; %bb.5: ; %Flow8
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], s[2:3]
@@ -265,12 +264,12 @@ define amdgpu_kernel void @simple_test_v_loop(ptr addrspace(1) %dst, ptr addrspa
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0
 ; SI-NEXT:    s_add_i32 s8, s8, -1
-; SI-NEXT:    s_cmp_lg_u32 s8, 0
+; SI-NEXT:    s_cmp_eq_u32 s8, 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, 4, v0
 ; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; SI-NEXT:    s_cbranch_scc1 .LBB4_2
+; SI-NEXT:    s_cbranch_scc0 .LBB4_2
 ; SI-NEXT:  .LBB4_3: ; %exit
 ; SI-NEXT:    s_endpgm
 entry:
@@ -355,8 +354,7 @@ define amdgpu_kernel void @multi_vcond_loop(ptr addrspace(1) noalias nocapture %
 ; SI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v7, vcc
 ; SI-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[0:1]
 ; SI-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec
-; SI-NEXT:    s_and_b64 s[8:9], vcc, exec
-; SI-NEXT:    s_or_b64 s[4:5], s[4:5], s[8:9]
+; SI-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
 ; SI-NEXT:  .LBB5_4: ; %Flow
 ; SI-NEXT:    ; in Loop: Header=BB5_2 Depth=1
 ; SI-NEXT:    s_or_b64 exec, exec, s[0:1]

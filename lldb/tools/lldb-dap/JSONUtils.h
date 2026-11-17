@@ -154,10 +154,14 @@ bool ValuePointsToCode(lldb::SBValue v);
 
 /// Pack a location into a single integer which we can send via
 /// the debug adapter protocol.
-int64_t PackLocation(int64_t var_ref, bool is_value_location);
+inline int64_t PackLocation(var_ref_t var_ref, bool is_value_location) {
+  return var_ref.AsUInt32() << 1 | is_value_location;
+}
 
 /// Reverse of `PackLocation`
-std::pair<int64_t, bool> UnpackLocation(int64_t location_id);
+inline std::pair<var_ref_t, bool> UnpackLocation(int64_t location_id) {
+  return std::pair{var_ref_t(location_id >> 1), location_id & 1};
+}
 
 /// Create a runInTerminal reverse request object
 ///

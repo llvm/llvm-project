@@ -9,7 +9,7 @@
 
 // Ensure that evaluateExpression bounds checks its internal operand stack and
 // aborts on malformed DWARF expressions rather than overflowing the stack.
-// REQUIRES: target={{(aarch64|x86_64)-.+}}
+// REQUIRES: target={{(aarch64|x86_64)-.+}} && has-unix-headers
 // UNSUPPORTED: target={{.*-windows.*}}
 // UNSUPPORTED: target={{.*-apple.*}}
 

@@ -62,8 +62,6 @@ public:
   StringRef getPassName() const override { return "X86 Fixup Inst Tuning"; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-  bool processInstruction(MachineFunction &MF, MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator &I);
 
   // This pass runs after regalloc and doesn't support VReg operands.
   MachineFunctionProperties getRequiredProperties() const override {
@@ -264,6 +262,23 @@ bool X86FixupInstTuningImpl::processInstruction(
       return false;
     LLVM_DEBUG(dbgs() << "Replacing: " << MI);
     MI.setDesc(TII->get(NewOpc));
+    LLVM_DEBUG(dbgs() << "     With: " << MI);
+    return true;
+  };
+
+  // `extractps $0, x, r32` -> `movd x, r32`
+  // `extractps $0, x, m32` -> `movss x, m32`
+  // Extracting element 0 only needs the low 32 bits, and MOVD/MOVSS are
+  // smaller and usually faster than EXTRACTPS.
+  auto ProcessEXTRACTPS = [&](unsigned NewOpc) -> bool {
+    if (MI.getOperand(NumOperands - 1).getImm() != 0 ||
+        !NewOpcPreferable(NewOpc))
+      return false;
+    LLVM_DEBUG(dbgs() << "Replacing: " << MI);
+    {
+      MI.removeOperand(NumOperands - 1);
+      MI.setDesc(TII->get(NewOpc));
+    }
     LLVM_DEBUG(dbgs() << "     With: " << MI);
     return true;
   };
@@ -722,6 +737,19 @@ bool X86FixupInstTuningImpl::processInstruction(
     return ProcessMOVPDToMOVPS(X86::MOVAPSrm);
   case X86::MOVAPDmr:
     return ProcessMOVPDToMOVPS(X86::MOVAPSmr);
+
+  case X86::EXTRACTPSrri:
+    return ProcessEXTRACTPS(X86::MOVPDI2DIrr);
+  case X86::VEXTRACTPSrri:
+    return ProcessEXTRACTPS(X86::VMOVPDI2DIrr);
+  case X86::VEXTRACTPSZrri:
+    return ProcessEXTRACTPS(X86::VMOVPDI2DIZrr);
+  case X86::EXTRACTPSmri:
+    return ProcessEXTRACTPS(X86::MOVSSmr);
+  case X86::VEXTRACTPSmri:
+    return ProcessEXTRACTPS(X86::VMOVSSmr);
+  case X86::VEXTRACTPSZmri:
+    return ProcessEXTRACTPS(X86::VMOVSSZmr);
 
   default:
     return false;

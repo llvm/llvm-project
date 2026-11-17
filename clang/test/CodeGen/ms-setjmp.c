@@ -1,9 +1,13 @@
 // RUN: %clang_cc1 -fms-extensions -DDECLARE_SETJMP -triple i686-windows-msvc   -emit-llvm %s -o - | FileCheck --check-prefix=I386 %s
 // RUN: %clang_cc1 -fms-extensions -DDECLARE_SETJMP -triple x86_64-windows-msvc -emit-llvm %s -o - | FileCheck --check-prefix=X64 %s
 // RUN: %clang_cc1 -fms-extensions -DDECLARE_SETJMP -triple aarch64-windows-msvc -emit-llvm %s -o - | FileCheck --check-prefix=AARCH64 %s
+// RUN: %clang_cc1 -fms-extensions -DDECLARE_SETJMP -triple thumbv7-windows-msvc -emit-llvm %s -o - | FileCheck --check-prefix=ARM32 %s
+// RUN: %clang_cc1 -fms-extensions -DDECLARE_SETJMP -triple armv7-windows-msvc   -emit-llvm %s -o - | FileCheck --check-prefix=ARM32 %s
 // RUN: %clang_cc1 -fms-extensions -triple i686-windows-msvc -Wno-implicit-function-declaration -emit-llvm %s -o - | FileCheck --check-prefix=I386 %s
 // RUN: %clang_cc1 -fms-extensions -triple x86_64-windows-msvc -Wno-implicit-function-declaration -emit-llvm %s -o - | FileCheck --check-prefix=X64 %s
 // RUN: %clang_cc1 -fms-extensions -triple aarch64-windows-msvc -Wno-implicit-function-declaration -emit-llvm %s -o - | FileCheck --check-prefix=AARCH64 %s
+// RUN: %clang_cc1 -fms-extensions -triple thumbv7-windows-msvc -Wno-implicit-function-declaration -emit-llvm %s -o - | FileCheck --check-prefix=ARM32 %s
+// RUN: %clang_cc1 -fms-extensions -triple armv7-windows-msvc -Wno-implicit-function-declaration -emit-llvm %s -o - | FileCheck --check-prefix=ARM32 %s
 typedef char jmp_buf[1];
 
 #ifdef DECLARE_SETJMP
@@ -28,6 +32,11 @@ int test_setjmp(void) {
   // AARCH64:       %[[addr:.*]] = call ptr @llvm.sponentry.p0()
   // AARCH64:       %[[call:.*]] = call i32 @_setjmpex(ptr @jb, ptr %[[addr]])
   // AARCH64-NEXT:  ret i32 %[[call]]
+
+  // ARM32-LABEL: define dso_local arm_aapcs_vfpcc i32 @test_setjmp
+  // ARM32:       %[[addr:.*]] = call ptr @llvm.sponentry.p0()
+  // ARM32:       %[[call:.*]] = call arm_aapcs_vfpcc i32 @_setjmp(ptr @jb, ptr %[[addr]])
+  // ARM32-NEXT:  ret i32 %[[call]]
 }
 
 int test_setjmpex(void) {
@@ -41,4 +50,9 @@ int test_setjmpex(void) {
   // AARCH64:       %[[addr:.*]] = call ptr @llvm.sponentry.p0()
   // AARCH64:       %[[call:.*]] = call i32 @_setjmpex(ptr @jb, ptr %[[addr]])
   // AARCH64-NEXT:  ret i32 %[[call]]
+
+  // ARM32-LABEL: define dso_local arm_aapcs_vfpcc i32 @test_setjmpex
+  // ARM32:       %[[addr:.*]] = call ptr @llvm.sponentry.p0()
+  // ARM32:       %[[call:.*]] = call arm_aapcs_vfpcc i32 @_setjmpex(ptr @jb, ptr %[[addr]])
+  // ARM32-NEXT:  ret i32 %[[call]]
 }

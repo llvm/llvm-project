@@ -101,10 +101,7 @@ def ExynosScaledIdxFn   : TIIPredicate<"isExynosScaledAddr",
                                          [MCOpcodeSwitchCase<
                                             IsLoadStoreRegOffsetOp.ValidOpcodes,
                                             MCReturnStatement<
-                                              CheckAny<
-                                                [CheckMemExtSXTW,
-                                                 CheckMemExtUXTW,
-                                                 CheckMemScaled]>>>],
+                                              CheckMemScaled>>],
                                          MCReturnStatement<FalsePred>>>;
 def ExynosScaledIdxPred : MCSchedPredicate<ExynosScaledIdxFn>;
 

@@ -293,7 +293,7 @@ const char **Args::GetConstArgumentVector() const {
 }
 
 void Args::Shift() {
-  // Don't pop the last NULL terminator from the argv array
+  // Don't pop the last null terminator from the argv array
   if (m_entries.empty())
     return;
   m_argv.erase(m_argv.begin());
@@ -533,7 +533,7 @@ void Args::EncodeEscapeSequences(const char *src, std::string &dst) {
             ++p; // Skip the 'x'
 
             // Make a string that can hold onto two hex chars plus a
-            // NULL terminator
+            // null terminator
             char hex_str[3] = {*p, '\0', '\0'};
             if (isxdigit(p[1])) {
               ++p; // Skip the first of the two hex chars

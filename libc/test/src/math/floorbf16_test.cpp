@@ -16,4 +16,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/floorbf16.h"
 
-LIST_FLOOR_TESTS(bfloat16, LIBC_NAMESPACE::floorbf16)
+LIST_FLOOR_TESTS(Floorbf16, bfloat16, LIBC_NAMESPACE::floorbf16)

@@ -16,26 +16,28 @@ set(LLVM_SUBPROJECT_TITLE "liboffload")
 set(OFFLOAD_MIN_CUDA_VERSION 11.8.0)
 set(OFFLOAD_MIN_CUDA_VERSION_CODE 11080)
 
-# libomptarget is not supported on Windows.
-set(BUILD_LIBOMPTARGET ON)
+option(BUILD_LIBOMPTARGET "Build the OpenMP offloading runtime library libomptarget." ON)
+option(BUILD_LIBACCTARGET "Build the OpenACC offloading runtime library libacctarget." ON)
+# libomptarget and libacctarget are not supported on Windows.
 if(MSVC)
-  set(BUILD_LIBOMPTARGET OFF)
-  message(STATUS "libomptarget is not supported on Windows, skipping.")
+  set(BUILD_LIBOMPTARGET OFF CACHE BOOL "" FORCE)
+  set(BUILD_LIBACCTARGET OFF CACHE BOOL "" FORCE)
+  message(STATUS "libomptarget and libacctarget are not supported on Windows, skipping.")
 endif()
 
 # Check that the library can actually be built.
 if(APPLE OR WASM)
-  message(WARNING "libomptarget cannot be built on MacOS X and WASM!")
+  message(WARNING "offload cannot be built on MacOS X and WASM!")
   return()
-elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^(amdgcn|nvptx|spirv)" OR
-       "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^(amdgcn|nvptx|spirv)")
+elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^(amdgpu|amdgcn|nvptx|spirv)" OR
+       "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^(amdgpu|amdgcn|nvptx|spirv)")
   message(WARNING "offload cannot be built on GPU targets yet.")
   return()
 elseif(NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-  message(WARNING "Host compiler must support C++17 to build libomptarget!")
+  message(WARNING "Host compiler must support C++17 to build offload!")
   return()
 elseif(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-  message(WARNING "libomptarget on 32-bit systems is not supported!")
+  message(WARNING "offload on 32-bit systems is not supported!")
   return()
 endif()
 
@@ -317,6 +319,7 @@ else()
 endif()
 
 pythonize_bool(LIBOMPTARGET_OMPT_SUPPORT)
+pythonize_bool(BUILD_LIBACCTARGET)
 
 set(LIBOMPTARGET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(LIBOMPTARGET_BINARY_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
@@ -333,32 +336,12 @@ set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_LIBRARY_DIR}" CACHE STRING
 
 # If LLVM is dynamically linked we need to add its libraries.
 set(OFFLOAD_INSTALL_RPATH "$ORIGIN")
-if(LLVM_LINK_LLVM_DYLIB)
+if(LLVM_LINK_LLVM_DYLIB OR LLVM_ENABLE_SHARED_LIBS)
   file(RELATIVE_PATH llvm_libdir_relpath
        "${CMAKE_INSTALL_PREFIX}/${OFFLOAD_INSTALL_LIBDIR}"
        "${CMAKE_INSTALL_PREFIX}/lib${LLVM_LIBDIR_SUFFIX}")
   string(REGEX REPLACE "/$" "" llvm_libdir_relpath "${llvm_libdir_relpath}")
   list(APPEND OFFLOAD_INSTALL_RPATH "$ORIGIN/${llvm_libdir_relpath}")
-endif()
-
-add_subdirectory(tools/offload-tblgen)
-
-# Build offloading plugins and device RTLs if they are available.
-add_subdirectory(plugins-nextgen)
-add_subdirectory(tools)
-add_subdirectory(docs)
-
-if(BUILD_LIBOMPTARGET)
-  add_subdirectory(libomptarget)
-endif()
-
-add_subdirectory(liboffload)
-add_subdirectory(languages)
-
-# Add tests.
-if(OFFLOAD_INCLUDE_TESTS)
-  add_subdirectory(test)
-  add_subdirectory(unittests)
 endif()
 
 # Expose a high-level target to build the offloading runtimes.
@@ -367,23 +350,49 @@ endif()
 add_custom_target(offload
   COMMENT "Building offloading runtime libraries and plugins"
 )
-if(TARGET omptarget)
-  add_dependencies(offload omptarget)
-endif()
-if(TARGET LLVMOffload)
-  add_dependencies(offload LLVMOffload)
-endif()
 
 add_custom_target(install-offload
   COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component offload)
 add_custom_target(install-offload-stripped
   COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component offload --strip)
+add_dependencies(install-offload offload)
+add_dependencies(install-offload-stripped offload)
 
-if(TARGET omptarget)
-  add_dependencies(install-offload omptarget)
-  add_dependencies(install-offload-stripped omptarget)
+add_subdirectory(tools/offload-tblgen)
+
+# Invokes offload-tblgen; see tablegen_internal() for the calling convention.
+function(offload_tablegen ofn)
+  tablegen_internal(OFFLOAD ${ARGV})
+  set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} PARENT_SCOPE)
+endfunction()
+
+# Build offloading plugins and device RTLs if they are available.
+add_subdirectory(plugins-nextgen)
+add_subdirectory(tools)
+add_subdirectory(docs)
+
+add_subdirectory(liboffload)
+
+add_subdirectory(libompaccsupport)
+
+if(BUILD_LIBOMPTARGET)
+  add_subdirectory(libomptarget)
 endif()
-if(TARGET LLVMOffload)
-  add_dependencies(install-offload LLVMOffload)
-  add_dependencies(install-offload-stripped LLVMOffload)
+
+if(BUILD_LIBACCTARGET)
+  add_subdirectory(libacctarget)
 endif()
+
+add_subdirectory(languages)
+
+# Add tests.
+if(OFFLOAD_INCLUDE_TESTS)
+  add_subdirectory(test)
+  add_subdirectory(unittests)
+endif()
+
+foreach(target omptarget LLVMOffload LLVMOffloadKernel)
+  if(TARGET ${target})
+    add_dependencies(offload ${target})
+  endif()
+endforeach()

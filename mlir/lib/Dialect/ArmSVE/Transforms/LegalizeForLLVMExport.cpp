@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h"
 #include "mlir/Dialect/ArmSVE/Transforms/Transforms.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -21,6 +22,7 @@ using namespace mlir::arm_sve;
 using SdotOpLowering = OneToOneConvertToLLVMPattern<SdotOp, SdotIntrOp>;
 using SmmlaOpLowering = OneToOneConvertToLLVMPattern<SmmlaOp, SmmlaIntrOp>;
 using UdotOpLowering = OneToOneConvertToLLVMPattern<UdotOp, UdotIntrOp>;
+using FmlaOpLowering = OneToOneConvertToLLVMPattern<FmlaOp, FmlaIntrOp>;
 using UmmlaOpLowering = OneToOneConvertToLLVMPattern<UmmlaOp, UmmlaIntrOp>;
 using UsmmlaOpLowering = OneToOneConvertToLLVMPattern<UsmmlaOp, UsmmlaIntrOp>;
 using DupQLaneLowering =
@@ -204,6 +206,7 @@ void mlir::populateArmSVELegalizeForLLVMExportPatterns(
                ScalableMaskedUDivIOpLowering,
                SmmlaOpLowering,
                UdotOpLowering,
+               FmlaOpLowering,
                UmmlaOpLowering,
                UsmmlaOpLowering,
                ZipX2OpLowering,
@@ -234,6 +237,7 @@ void mlir::configureArmSVELegalizeForExportTarget(
                     ScalableMaskedUDivIIntrOp,
                     SmmlaIntrOp,
                     UdotIntrOp,
+                    FmlaIntrOp,
                     UmmlaIntrOp,
                     UsmmlaIntrOp,
                     WhileLTIntrOp,
@@ -255,6 +259,7 @@ void mlir::configureArmSVELegalizeForExportTarget(
                       ScalableMaskedUDivIOp,
                       SmmlaOp,
                       UdotOp,
+                      FmlaOp,
                       UmmlaOp,
                       UsmmlaOp,
                       ZipX2Op,

@@ -107,8 +107,12 @@ public:
   /// registers, register costs, and allocation orders must remain unchanged.
   LLVM_ABI void updateReservedRegs(const BitVector &ReservedInput);
 
-  LLVM_ABI bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
-                           MachineFunctionAnalysisManager::Invalidator &) {
+  /// Whether the cached information was filtered by MRI's frozen reserved
+  /// registers, i.e. no change to them was left unpublished.
+  LLVM_ABI bool hasCurrentReservedRegs() const;
+
+  bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &) {
     auto PAC = PA.getChecker<MachineRegisterClassAnalysis>();
     return !PAC.preservedWhenStateless();
   }
@@ -136,13 +140,19 @@ public:
     return get(RC).ProperSubClass;
   }
 
+  /// Return the callee-saved register containing \p Unit, or NoRegister if
+  /// there is none.
+  MCRegister getCalleeSavedAlias(MCRegUnit Unit) const {
+    return CalleeSavedAliases[static_cast<unsigned>(Unit)];
+  }
+
   /// getLastCalleeSavedAlias - Returns the last callee saved register that
   /// overlaps PhysReg, or NoRegister if PhysReg doesn't overlap a
   /// CalleeSavedAliases.
   MCRegister getLastCalleeSavedAlias(MCRegister PhysReg) const {
     MCRegister CSR;
     for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
-      CSR = CalleeSavedAliases[static_cast<unsigned>(Unit)];
+      CSR = getCalleeSavedAlias(Unit);
       if (CSR)
         break;
     }
@@ -186,10 +196,11 @@ class MachineRegisterClassAnalysis
 public:
   using Result = RegisterClassInfo;
 
-  Result run(MachineFunction &, MachineFunctionAnalysisManager &);
+  LLVM_ABI Result run(MachineFunction &, MachineFunctionAnalysisManager &);
 };
 
-class MachineRegisterClassInfoWrapperPass : public MachineFunctionPass {
+class LLVM_ABI MachineRegisterClassInfoWrapperPass
+    : public MachineFunctionPass {
   virtual void anchor();
 
   RegisterClassInfo RCI;

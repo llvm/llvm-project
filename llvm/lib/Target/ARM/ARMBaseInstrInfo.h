@@ -119,6 +119,8 @@ protected:
   describeLoadedValue(const MachineInstr &MI, Register Reg) const override;
 
 public:
+  const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
+
   // Return whether the target has an explicit NOP encoding.
   bool hasNOP() const;
 
@@ -129,6 +131,11 @@ public:
   const ARMBaseRegisterInfo &getRegisterInfo() const {
     return static_cast<const ARMBaseRegisterInfo &>(
         TargetInstrInfo::getRegisterInfo());
+  }
+
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &ARM::GPRRegClass;
   }
 
   const ARMSubtarget &getSubtarget() const { return Subtarget; }
@@ -164,10 +171,9 @@ public:
   bool isPredicated(const MachineInstr &MI) const override;
 
   // MIR printer helper function to annotate Operands with a comment.
-  std::string
-  createMIROperandComment(const MachineInstr &MI, const MachineOperand &Op,
-                          unsigned OpIdx,
-                          const TargetRegisterInfo *TRI) const override;
+  std::string createMIROperandComment(const MachineInstr &MI,
+                                      const MachineOperand &Op,
+                                      unsigned OpIdx) const override;
 
   ARMCC::CondCodes getPredicate(const MachineInstr &MI) const {
     int PIdx = MI.findFirstPredOperandIdx();
@@ -192,6 +198,15 @@ public:
   /// GetInstSize - Returns the size of the specified MachineInstr.
   ///
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
+
+  InstSizeVerifyMode
+  getInstSizeVerifyMode(const MachineInstr &MI) const override {
+    // FIXME: These instructions report an incorrect size, but the ARM constant
+    // islands pass somehow depends on it being incorrect.
+    if (MI.getOpcode() == ARM::tTBB_JT || MI.getOpcode() == ARM::tTBH_JT)
+      return InstSizeVerifyMode::NoVerify;
+    return InstSizeVerifyMode::AllowOverEstimate;
+  }
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
@@ -332,11 +347,9 @@ public:
   getExecutionDomain(const MachineInstr &MI) const override;
   void setExecutionDomain(MachineInstr &MI, unsigned Domain) const override;
 
-  unsigned
-  getPartialRegUpdateClearance(const MachineInstr &, unsigned,
-                               const TargetRegisterInfo *) const override;
-  void breakPartialRegDependency(MachineInstr &, unsigned,
-                                 const TargetRegisterInfo *TRI) const override;
+  unsigned getPartialRegUpdateClearance(const MachineInstr &,
+                                        unsigned) const override;
+  void breakPartialRegDependency(MachineInstr &, unsigned) const override;
 
   /// Get the number of addresses by LDM or VLDM or zero for unknown.
   unsigned getNumLDMAddresses(const MachineInstr &MI) const;

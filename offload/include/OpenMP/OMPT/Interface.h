@@ -24,6 +24,8 @@
 #include <tuple>
 
 #define OMPT_IF_BUILT(stmt) stmt
+#define OMPT_IF_BUILT_AND_INITIALIZED(stmt)                                    \
+  OMPT_IF_BUILT(performIfOmptInitialized(stmt))
 
 /// Callbacks for target regions require task_data representing the
 /// encountering task.
@@ -337,6 +339,7 @@ private:
 
 #else
 #define OMPT_IF_BUILT(stmt)
+#define OMPT_IF_BUILT_AND_INITIALIZED(stmt)
 #endif
 
 #endif // OFFLOAD_INCLUDE_OPENMP_OMPT_INTERFACE_H

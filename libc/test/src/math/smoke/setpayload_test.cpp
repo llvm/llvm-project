@@ -10,4 +10,4 @@
 
 #include "src/math/setpayload.h"
 
-LIST_SETPAYLOAD_TESTS(double, LIBC_NAMESPACE::setpayload)
+LIST_SETPAYLOAD_TESTS(Setpayload, double, LIBC_NAMESPACE::setpayload)

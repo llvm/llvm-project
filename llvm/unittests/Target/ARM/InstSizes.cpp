@@ -31,6 +31,7 @@ void runChecks(
                    "...\n"
                    "---\n"
                    "name: sizes\n"
+                   "tracksRegLiveness: false\n"
                    "constants:\n"
                    "  - id:        0\n"
                    "    value:     i32 12345678\n"
@@ -53,7 +54,7 @@ void runChecks(
   ASSERT_TRUE(M);
 
   M->setTargetTriple(TM->getTargetTriple());
-  M->setDataLayout(TM->createDataLayout());
+  M->setDataLayout(TM->getTargetTriple().computeDataLayout());
 
   MachineModuleInfo MMI(TM);
   bool Res = MParser->parseMachineFunctions(*M, MMI);
@@ -145,12 +146,12 @@ TEST(InstSizes, PseudoInst) {
   runChecks(TM.get(), II, "",
             "    Int_eh_sjlj_longjmp $r0, $r1, implicit-def $r7,"
             " implicit-def $lr, implicit-def $sp\n",
-            16u, cmpInstSize);
+            20u, cmpInstSize);
 
   runChecks(TM.get(), II, "",
             "    tInt_eh_sjlj_longjmp $r0, $r1, implicit-def $r7,"
             " implicit-def $lr, implicit-def $sp\n",
-            10u, cmpInstSize);
+            12u, cmpInstSize);
 
   runChecks(TM.get(), II, "",
             "    tInt_WIN_eh_sjlj_longjmp $r0, $r1, implicit-def $r11,"

@@ -36,7 +36,7 @@ instead of string triplets, streamlining the training data preparation workflow.
 
 :::{note}
 For information about using IR2Vec and MIR2Vec programmatically within LLVM
-passes and the C++ API, see the [IR2Vec Embeddings](https://llvm.org/docs/MLGO.html#ir2vec-embeddings)
+passes and the C++ API, see the {ref}`IR2Vec Embeddings <ir2vec-embeddings>`
 section in the MLGO documentation.
 :::
 
@@ -226,6 +226,15 @@ the relative importance of common operand types in the final embedding.
 :::{option} --mir2vec-reg-operand-weight=<weight>
 Specify the weight for register operand embeddings (default: 1.0). This controls
 the relative importance of register operands in the final embedding.
+:::
+
+:::{option} --mtriple=<triple>
+Override the target triple of the input. Without it, the triple comes from the
+embedded LLVM IR of the .mir file, or the host triple if there is none.
+:::
+
+:::{option} --mcpu=<cpu>, --mattr=<features>
+Specify the target CPU and features, as in {program}`llc`.
 :::
 
 **triplets** subcommand:

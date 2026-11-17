@@ -6,7 +6,13 @@
 
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fapinotes-modules -iapinotes-modules %S/Inputs/APINotes  -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -DFROM_FRAMEWORK=1 -verify
 
+// RUN: %clang_cc1 -fapinotes -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -DFROM_FRAMEWORK=1 -verify
+
+#if __has_feature(modules)
 @import SomeOtherKit;
+#else
+#import <SomeOtherKit/SomeOtherKit_Private.h>
+#endif
 
 void test(A *a) {
 #if FROM_FRAMEWORK

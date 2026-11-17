@@ -250,6 +250,21 @@ static bool containsDiscardedTokens(const ASTContext &Context,
   return false;
 }
 
+static std::optional<bool>
+tryFixCXXOperator(const Expr *E, SmallVectorImpl<FixItHint> &Fixes) {
+  if (const auto *OpCall = dyn_cast<CXXOperatorCallExpr>(E)) {
+    const StringRef NegatedOperator = negatedOperator(OpCall);
+    if (!NegatedOperator.empty()) {
+      if (OpCall->getOperatorLoc().isMacroID())
+        return true;
+      Fixes.push_back(FixItHint::CreateReplacement(OpCall->getOperatorLoc(),
+                                                   NegatedOperator));
+      return false;
+    }
+  }
+  return std::nullopt;
+}
+
 class SimplifyBooleanExprCheck::Visitor : public RecursiveASTVisitor<Visitor> {
   using Base = RecursiveASTVisitor<Visitor>;
 
@@ -644,6 +659,22 @@ void SimplifyBooleanExprCheck::reportBinOp(const ASTContext &Context,
               Replacement);
   };
 
+  // `f() && false` and `f() || true` always call `f()`, so don't replace them
+  // with the literal if the left operand may have side effects.
+  const auto ReplaceWithBool = [this, &Context, Op, Bool,
+                                &ReplaceWithExpression]() {
+    const Expr *Left = Op->getLHS();
+    if (!Left->HasSideEffects(Context)) {
+      ReplaceWithExpression(Bool, /*Negated=*/false);
+      return;
+    }
+    diag(Bool->getBeginLoc(), SimplifyOperatorDiagnostic);
+    diag(Left->getBeginLoc(),
+         "left operand may have side effects and cannot be removed",
+         DiagnosticIDs::Note)
+        << Left->getSourceRange();
+  };
+
   switch (Op->getOpcode()) {
   case BO_LAnd:
     if (BoolValue)
@@ -651,12 +682,12 @@ void SimplifyBooleanExprCheck::reportBinOp(const ASTContext &Context,
       ReplaceWithExpression(Other, /*Negated=*/false);
     else
       // expr && false -> false
-      ReplaceWithExpression(Bool, /*Negated=*/false);
+      ReplaceWithBool();
     break;
   case BO_LOr:
     if (BoolValue)
       // expr || true -> true
-      ReplaceWithExpression(Bool, /*Negated=*/false);
+      ReplaceWithBool();
     else
       // expr || false -> expr
       ReplaceWithExpression(Other, /*Negated=*/false);
@@ -916,9 +947,17 @@ static bool flipDemorganSide(SmallVectorImpl<FixItHint> &Fixes,
   }
   if (const auto *BinOp = dyn_cast<BinaryOperator>(E))
     return flipDemorganBinaryOperator(Fixes, Ctx, BinOp, OuterBO);
+  // Overloaded comparisons are represented as CXXOperatorCallExpr rather than
+  // BinaryOperator, so negate them by replacing their operator location.
+  if (auto Fixed = tryFixCXXOperator(E, Fixes))
+    return *Fixed;
+
   if (const auto *Paren = dyn_cast<ParenExpr>(E)) {
     if (const auto *BinOp = dyn_cast<BinaryOperator>(Paren->getSubExpr()))
       return flipDemorganBinaryOperator(Fixes, Ctx, BinOp, OuterBO, Paren);
+    // Overloaded comparisons in parentheses, e.g. (T1 < T2).
+    if (auto Fixed = tryFixCXXOperator(Paren->getSubExpr(), Fixes))
+      return *Fixed;
   }
   // Fallback case just insert a logical not operator.
   if (E->getBeginLoc().isMacroID())

@@ -19,6 +19,7 @@ name:            test_add_i1
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
@@ -45,6 +46,7 @@ name:            test_add_i8
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
@@ -70,6 +72,7 @@ name:            test_add_i16
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -95,6 +98,7 @@ name:            test_add_i27
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -118,6 +122,7 @@ name:            test_add_i32
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -141,6 +146,7 @@ name:            test_add_i42
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -174,6 +180,7 @@ name:            test_add_i64
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -208,6 +215,7 @@ name:            test_add_i128
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

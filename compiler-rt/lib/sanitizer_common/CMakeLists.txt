@@ -26,6 +26,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_platform_limits_solaris.cpp
   sanitizer_posix.cpp
   sanitizer_printf.cpp
+  sanitizer_procmaps_aix.cpp
   sanitizer_procmaps_common.cpp
   sanitizer_procmaps_bsd.cpp
   sanitizer_procmaps_fuchsia.cpp
@@ -110,6 +111,7 @@ set(SANITIZER_IMPL_HEADERS
   sancov_flags.h
   sancov_flags.inc
   sanitizer_addrhashmap.h
+  sanitizer_aix.h
   sanitizer_allocator.h
   sanitizer_allocator_checks.h
   sanitizer_allocator_combined.h
@@ -172,6 +174,10 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_mutex.h
   sanitizer_new_handler.h
   sanitizer_new_operators.inc
+  sanitizer_offload.h
+  sanitizer_offload_hsa.h
+  sanitizer_offload_opcodes.h
+  sanitizer_offload_rpc.h
   sanitizer_placement_new.h
   sanitizer_platform.h
   sanitizer_platform_interceptors.h
@@ -337,6 +343,32 @@ if(WIN32)
       sanitizer_coverage_win_sections.cpp
     CFLAGS ${SANITIZER_CFLAGS} ${RUNTIME_THUNK_CFLAGS}
     DEFS ${SANITIZER_COMMON_DEFINITIONS})
+endif()
+
+# Host offload helpers for device sanitizers.
+include(FindLibcCommonUtils)
+if(OS_NAME MATCHES "Linux" AND TARGET llvm-libc-common-utilities)
+  set(ALL_SANITIZER_OFFLOAD_SUPPORTED_HOST_ARCH ${X86_64} ${ARM64} ${PPC64})
+  list_intersect(SANITIZER_OFFLOAD_SUPPORTED_HOST_ARCH
+    SANITIZER_COMMON_SUPPORTED_ARCH
+    ALL_SANITIZER_OFFLOAD_SUPPORTED_HOST_ARCH)
+  add_compiler_rt_object_libraries(RTSanitizerOffload
+    ARCHS ${SANITIZER_OFFLOAD_SUPPORTED_HOST_ARCH}
+    SOURCES
+      sanitizer_offload.cpp
+      sanitizer_offload_image.cpp
+      sanitizer_offload_rpc.cpp
+    ADDITIONAL_HEADERS
+      sanitizer_offload.h
+      sanitizer_offload_hsa.h
+      sanitizer_offload_opcodes.h
+      sanitizer_offload_rpc.h
+    CFLAGS ${SANITIZER_CFLAGS}
+    DEFS ${SANITIZER_COMMON_DEFINITIONS})
+  foreach(arch ${SANITIZER_OFFLOAD_SUPPORTED_HOST_ARCH})
+    target_link_libraries(RTSanitizerOffload.${arch} PRIVATE
+                          llvm-libc-common-utilities)
+  endforeach()
 endif()
 
 # Unit tests for common sanitizer runtime.

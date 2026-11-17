@@ -1,8 +1,5 @@
 # Matrix Types
 
-```{contents}
-:local: true
-```
 
 (matrixtypes)=
 

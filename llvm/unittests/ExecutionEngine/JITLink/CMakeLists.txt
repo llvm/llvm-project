@@ -14,10 +14,12 @@ add_llvm_unittest(JITLinkTests
     COFFLinkGraphTests.cpp
     EHFrameSupportTests.cpp
     JITLinkDylibTest.cpp
+    JITLinkGenericTests.cpp
     JITLinkTestUtils.cpp
     LinkGraphTests.cpp
     MachOLinkGraphTests.cpp
     MemoryManagerErrorTests.cpp
+    MipsTests.cpp
     StubsTests.cpp
     X86_64Tests.cpp
   )

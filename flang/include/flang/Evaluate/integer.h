@@ -489,12 +489,16 @@ public:
 
   template <typename SINT = std::int64_t, typename UINT = std::uint64_t>
   constexpr SINT ToSInt() const {
-    SINT n = ToUInt<UINT>();
+    // SINT/UINT may be a user-defined type from uint128.h whose signed/
+    // unsigned conversion constructor is explicit. Hence, cast explicitly.
+    SINT n{static_cast<SINT>(ToUInt<UINT>())};
     constexpr std::size_t maxBits{CHAR_BIT * sizeof n};
     if constexpr (bits < maxBits) {
       // Avoid left shifts of negative signed values (that's an undefined
       // behavior in C++).
-      auto u{std::make_unsigned_t<SINT>(ToUInt())};
+      // std::make_unsigned_t cannot be use here because SINT/UINT may be a
+      // user-defined type from uint128.h.
+      UINT u{ToUInt<UINT>()};
       u = (u >> (bits - 1)) << (bits - 1); // Get the sign bit only.
       u = ~u + 1; // Negate top bits if not 0.
       n |= static_cast<SINT>(u);
@@ -1015,6 +1019,34 @@ public:
       }
     }
     return result;
+  }
+
+  /// Number of bytes that FromRawBytes/StoreRawBytes would accesses.
+  static constexpr std::size_t bytesStored() { return sizeof(Integer{}); }
+
+  /// De-serializes an integer from \p raw. \p expectedSize must match the the
+  /// number of bytes to be read.
+  static Integer FromRawBytes(
+      const void *raw, [[maybe_unused]] std::size_t expectedSize) {
+    CHECK(expectedSize == bytesStored());
+    Integer result;
+    std::memcpy(&result, raw, bytesStored());
+    return result;
+  }
+
+  /// Serializes this integer to \p dst. \p expectedSize must match the the
+  /// number of bytes to be written. If \p changed points to a boolean, it will
+  /// be set to true if any bytes at \p dst have changed.
+  void StoreRawBytes(void *dst, [[maybe_unused]] size_t expectedSize,
+      bool *changed = nullptr) const {
+    CHECK(expectedSize == bytesStored());
+    if (changed) {
+      if (std::memcmp(dst, this, bytesStored()) == 0) {
+        return;
+      }
+      *changed = true;
+    }
+    std::memcpy(dst, this, bytesStored());
   }
 
 private:

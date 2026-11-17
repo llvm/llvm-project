@@ -99,6 +99,7 @@ struct CachedBlock {
   u64 Time = 0;
   u16 Next = 0;
   u16 Prev = 0;
+  bool Zero = false;
 
   enum CacheFlags : u16 {
     None = 0,
@@ -122,7 +123,7 @@ public:
   }
   void store(UNUSED Options Options, UNUSED uptr CommitBase,
              UNUSED uptr CommitSize, UNUSED uptr BlockBegin,
-             UNUSED MemMapT MemMap) {
+             UNUSED MemMapT MemMap, UNUSED bool Zero) {
     // This should never be called since canCache always returns false.
     UNREACHABLE(
         "It is not valid to call store on MapAllocatorNoCache objects.");
@@ -295,7 +296,7 @@ public:
   }
 
   void store(const Options &Options, uptr CommitBase, uptr CommitSize,
-             uptr BlockBegin, MemMapT MemMap) EXCLUDES(Mutex) {
+             uptr BlockBegin, MemMapT MemMap, bool Zero) EXCLUDES(Mutex) {
     DCHECK(canCache(CommitSize));
 
     const s32 Interval = atomic_load_relaxed(&ReleaseToOsIntervalMs);
@@ -307,12 +308,14 @@ public:
     Entry.BlockBegin = BlockBegin;
     Entry.MemMap = MemMap;
     Entry.Time = UINT64_MAX;
+    Entry.Zero = Zero;
     Entry.Flags = CachedBlock::None;
 
     bool MemoryTaggingEnabled = useMemoryTagging<Config>(Options);
     if (MemoryTaggingEnabled) {
-      if (Interval == 0 && !SCUDO_FUCHSIA) {
+      if ((Interval == 0 || Zero) && !SCUDO_FUCHSIA) {
         Entry.Time = 0;
+        Entry.Zero = true;
         Entry.MemMap.releaseAndZeroPagesToOS(Entry.CommitBase,
                                              Entry.CommitSize);
       }
@@ -373,6 +376,8 @@ public:
         remove(Entry);
       }
 
+      if (Zero && !useMemoryTagging<Config>(Options))
+        memset(reinterpret_cast<void *>(Entry.CommitBase), 0, Entry.CommitSize);
       insert(Entry);
       trimResidentBytes(atomic_load_relaxed(&MaxCacheResidentBytes));
     } while (0);
@@ -384,11 +389,12 @@ public:
       // It is very likely that multiple threads trying to do a release at the
       // same time will not actually release any extra elements. Therefore,
       // let any other thread continue, skipping the release.
-      if (Mutex.tryLock()) {
+      const u64 IntervalTime = static_cast<u64>(Interval) * 1000000;
+      if (LIKELY(Time > IntervalTime) && Mutex.tryLock()) {
         SCUDO_SCOPED_TRACE(
             GetSecondaryReleaseToOSTraceName(ReleaseToOS::Normal));
 
-        releaseOlderThan(Time - static_cast<u64>(Interval) * 1000000);
+        releaseOlderThan(Time - IntervalTime);
         Mutex.unlock();
       } else
         atomic_fetch_add(&ReleaseToOsSkips, 1U, memory_order_relaxed);
@@ -517,6 +523,11 @@ public:
           Min(static_cast<s32>(Value), Config::getMaxReleaseToOsIntervalMs()),
           Config::getMinReleaseToOsIntervalMs());
       atomic_store_relaxed(&ReleaseToOsIntervalMs, Interval);
+      if (Interval >= 0) {
+        // Always trigger a trim if the interval is not being disabled.
+        ScopedLock L(Mutex);
+        trimResidentBytes(atomic_load_relaxed(&MaxCacheResidentBytes));
+      }
       return true;
     }
     if (O == Option::MaxCacheEntriesCount) {
@@ -576,7 +587,9 @@ public:
         Quarantine[I].invalidate();
       }
     }
-    QuarantinePos = -1U;
+    // Reset to 0 (matching initial state) rather than UINT32_MAX so that
+    // (QuarantinePos + 1) in store() does not overflow u32.
+    QuarantinePos = 0;
   }
 
   void disable() NO_THREAD_SAFETY_ANALYSIS { Mutex.lock(); }
@@ -631,7 +644,8 @@ private:
 
   ALWAYS_INLINE void trimResidentBytes(uptr MaxResidentBytesLimit)
       REQUIRES(Mutex) {
-    if (MaxResidentBytesLimit == 0)
+    if (MaxResidentBytesLimit == 0 ||
+        atomic_load_relaxed(&ReleaseToOsIntervalMs) < 0)
       return;
     while (CurrentResidentBytes > MaxResidentBytesLimit &&
            OldestPresentEntry != nullptr) {
@@ -673,6 +687,7 @@ private:
         Entry.MemMap.releaseAndZeroPagesToOS(Entry.CommitBase,
                                              Entry.CommitSize);
         Entry.Time = 0;
+        Entry.Zero = false;
       }
     }
 
@@ -691,6 +706,7 @@ private:
                                             Entry->CommitSize);
       CurrentResidentBytes -= Entry->CommitSize;
       Entry->Time = 0;
+      Entry->Zero = false;
     }
     OldestPresentEntry = nullptr;
   }
@@ -736,7 +752,7 @@ public:
                  uptr *BlockEnd = nullptr,
                  FillContentsMode FillContents = NoFill);
 
-  void deallocate(const Options &Options, void *Ptr);
+  void deallocate(const Options &Options, void *Ptr, bool Zero);
 
   void *tryAllocateFromCache(const Options &Options, uptr Size, uptr Alignment,
                              uptr *BlockEndPtr, FillContentsMode FillContents);
@@ -841,7 +857,6 @@ MapAllocator<Config>::tryAllocateFromCache(const Options &Options, uptr Size,
 
   LargeBlock::Header *H = reinterpret_cast<LargeBlock::Header *>(
       LargeBlock::addHeaderTag<Config>(EntryHeaderPos));
-  bool Zeroed = Entry.Time == 0;
 
   if (UNLIKELY(Entry.Flags & CachedBlock::NoAccess)) {
     // NOTE: Flags set to 0 actually restores read-write.
@@ -909,7 +924,7 @@ MapAllocator<Config>::tryAllocateFromCache(const Options &Options, uptr Size,
     HInt = untagPointer(HInt);
   const uptr PtrInt = HInt + LargeBlock::getHeaderSize();
   void *Ptr = reinterpret_cast<void *>(PtrInt);
-  if (FillContents && !Zeroed)
+  if (FillContents && !Entry.Zero)
     memset(Ptr, FillContents == ZeroFill ? 0 : PatternFillByte,
            BlockEnd - PtrInt);
   {
@@ -1039,8 +1054,8 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
 }
 
 template <typename Config>
-void MapAllocator<Config>::deallocate(const Options &Options, void *Ptr)
-    EXCLUDES(Mutex) {
+void MapAllocator<Config>::deallocate(const Options &Options, void *Ptr,
+                                      bool Zero) EXCLUDES(Mutex) {
   LargeBlock::Header *H = LargeBlock::getHeader<Config>(Ptr);
   const uptr CommitSize = H->CommitSize;
   {
@@ -1055,7 +1070,7 @@ void MapAllocator<Config>::deallocate(const Options &Options, void *Ptr)
 
   if (Cache.canCache(H->CommitSize)) {
     Cache.store(Options, H->CommitBase, H->CommitSize,
-                reinterpret_cast<uptr>(H + 1), H->MemMap);
+                reinterpret_cast<uptr>(H + 1), H->MemMap, Zero);
   } else {
     // Note that the `H->MemMap` is stored on the pages managed by itself. Take
     // over the ownership before unmap() so that any operation along with

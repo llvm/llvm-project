@@ -1,0 +1,73 @@
+## Show that strings interacting with the read-chunk boundary are reported
+## correctly. The input files are crafted assuming the native read chunk size
+## (sys::fs::DefaultReadChunkSize) of 16384 bytes.
+
+## Case 1: at least min string size appears before the boundary, unprintable
+## byte as first byte of the next chunk. The string is printed on its own,
+## with the offset of its start (16376 = 16384 - 8).
+## Some older versions of printf on Windows produced \r\n instead of \n,
+## which would cause the subsequent diff to fail. Make sure you are using an
+## up-to-date version.
+# RUN: printf "%16376sENDCHUNK%4s" | tr " " "\0" > %t.1
+# RUN: llvm-strings --radix=d %t.1 | FileCheck %s --check-prefix=CASE1 --match-full-lines --strict-whitespace --implicit-check-not={{.}}
+
+# CASE1:  16376 ENDCHUNK
+
+## Case 2: at least min string size appears before the boundary, printable
+## byte as first byte of the next chunk. The prefix is printed together with
+## the following characters, as a single string.
+# RUN: printf "%16378sBEFOREAFTER!%4s" | tr " " "\0" > %t.2
+# RUN: llvm-strings --radix=d %t.2 | FileCheck %s --check-prefix=CASE2 --match-full-lines --strict-whitespace --implicit-check-not={{.}}
+
+# CASE2:  16378 BEFOREAFTER!
+
+## Case 3: less than min string size appears before the boundary, unprintable
+## byte as the next byte. The prefix is not printed.
+# RUN: printf "%16382sAB%4s" | tr " " "\0" > %t.3
+# RUN: llvm-strings %t.3 | count 0
+
+## Case 4: less than min string size appears before the boundary, printable
+## bytes as the next bytes, forming a min length string. The prefix is
+## printed together with the following characters, with the offset of its
+## true start (16381 = 16384 - 3).
+# RUN: printf "%16381sABCDEF%4s" | tr " " "\0" > %t.4
+# RUN: llvm-strings --radix=d %t.4 | FileCheck %s --check-prefix=CASE4 --match-full-lines --strict-whitespace --implicit-check-not={{.}}
+
+# CASE4:  16381 ABCDEF
+
+## Case 5: the prefix is empty at the start of a chunk that starts with a min
+## length string (16384).
+# RUN: printf "%16384sFRESH%4s" | tr " " "\0" > %t.5
+# RUN: llvm-strings --radix=d %t.5 | FileCheck %s --check-prefix=CASE5 --match-full-lines --strict-whitespace --implicit-check-not={{.}}
+
+# CASE5:  16384 FRESH
+
+## Case 6: a string that spans the entirety of one chunk, with one character
+## before the chunk start and one after its end. The string is printed
+## intact, once. The expected output is generated rather than written as a
+## CHECK line because it is a chunk long.
+# RUN: printf "%16383sS%.16384dE%4s" | tr " " "\0" > %t.6
+# RUN: printf "S%.16384dE\n" > %t.6.expected
+# RUN: llvm-strings %t.6 > %t.6.out
+# RUN: diff %t.6.expected %t.6.out
+
+## Case 7: the minimum length is greater than the chunk size, so a candidate
+## has to be buffered across more than one chunk before it is known to be long
+## enough. A run of exactly the minimum length is printed, with the offset of
+## its start, which lies in an earlier chunk than the one where it is printed.
+# RUN: printf "%8s%.20000d%4s" | tr " " "\0" > %t.7
+# RUN: printf "      8 %.20000d\n" > %t.7.expected
+# RUN: llvm-strings --radix=d --bytes=20000 %t.7 > %t.7.out
+# RUN: diff %t.7.expected %t.7.out
+
+## Case 8: as case 7, but the run is one byte short of the minimum length, so
+## the buffered candidate is discarded and nothing is printed.
+# RUN: printf "%8s%.19999d%4s" | tr " " "\0" > %t.8
+# RUN: llvm-strings --bytes=20000 %t.8 | count 0
+
+## Case 9: a string is terminated by the end of the file, with no trailing
+## unprintable byte. The string must still be printed.
+# RUN: printf "%16380sTRAILING" | tr " " "\0" > %t.9
+# RUN: llvm-strings %t.9 | FileCheck %s --check-prefix=CASE9 --match-full-lines --strict-whitespace --implicit-check-not={{.}}
+
+# CASE9:TRAILING

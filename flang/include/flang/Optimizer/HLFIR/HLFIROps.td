@@ -89,7 +89,7 @@ def hlfir_DeclareOp
       %c20 = arith.constant 20 : index
       %1 = fir.load %ag1 : fir.ref<i64>
       %2 = fir.shape_shift %c10, %1, %c20, %1 : (index, index, index, index) -> !fir.shapeshift<2>
-      %3 = hfir.declare %arg0(%2) typeparams %1 {uniq_name = "c"} (fir.ref<!fir.array<?x?x!fir.char<1,?>>>, fir.shapeshift<2>, index) -> (fir.box<!fir.array<?x?x!fir.char<1,?>>>, fir.ref<!fir.array<?x?x!fir.char<1,?>>>)
+      %3 = hlfir.declare %arg0(%2) typeparams %1 uniq_name("c") (fir.ref<!fir.array<?x?x!fir.char<1,?>>>, fir.shapeshift<2>, index) -> (fir.box<!fir.array<?x?x!fir.char<1,?>>>, fir.ref<!fir.array<?x?x!fir.char<1,?>>>)
       // ... uses %3#0 as "c"
     }
    ```
@@ -113,6 +113,9 @@ def hlfir_DeclareOp
     (`dummy_scope` $dummy_scope^ (`arg` $dummy_arg_no^)?)?
     (`storage` `(` $storage^ `[` $storage_offset `]` `)`)?
     (`skip_rebox` $skip_rebox^)?
+    `uniq_name` `(` $uniq_name `)`
+    (`fortran_attrs` `` $fortran_attrs^)?
+    (`data_attr` `(` qualified($data_attr)^ `)`)?
     attr-dict `:` functional-type(operands, results)
   }];
 
@@ -277,6 +280,7 @@ def hlfir_DesignateOp
     (`substr` $substring^)?
     custom<DesignatorComplexPart>($complex_part)
     (`shape` $shape^)? (`typeparams` $typeparams^)?
+    (`fortran_attrs` `` $fortran_attrs^)?
     attr-dict `:` functional-type(operands, results)
   }];
 
@@ -519,7 +523,7 @@ def hlfir_MaxvalOp : hlfir_Op<"maxval", [AttrSizedOperandSegments,
   let results = (outs AnyFortranValue);
 
   let assemblyFormat = [{
-    $array (`dim` $dim^)? (`mask` $mask^)? attr-dict `:` functional-type(operands, results)
+    $array (`dim` $dim^)? (`mask` $mask^)? (`fastmath` `(` enum($fastmath)^ `)`)? attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -546,7 +550,7 @@ def hlfir_MinvalOp : hlfir_Op<"minval", [AttrSizedOperandSegments,
   let results = (outs AnyFortranValue);
 
   let assemblyFormat = [{
-    $array (`dim` $dim^)? (`mask` $mask^)? attr-dict `:` functional-type(operands, results)
+    $array (`dim` $dim^)? (`mask` $mask^)? (`fastmath` `(` enum($fastmath)^ `)`)? attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -572,7 +576,7 @@ def hlfir_MinlocOp : hlfir_Op<"minloc", [AttrSizedOperandSegments,
   let results = (outs AnyFortranValue);
 
   let assemblyFormat = [{
-    $array (`dim` $dim^)? (`mask` $mask^)? (`back` $back^)?  attr-dict `:` functional-type(operands, results)
+    $array (`dim` $dim^)? (`mask` $mask^)? (`back` $back^)?  (`fastmath` `(` enum($fastmath)^ `)`)? attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -598,7 +602,7 @@ def hlfir_MaxlocOp : hlfir_Op<"maxloc", [AttrSizedOperandSegments,
   let results = (outs AnyFortranValue);
 
   let assemblyFormat = [{
-    $array (`dim` $dim^)? (`mask` $mask^)? (`back` $back^)?  attr-dict `:` functional-type(operands, results)
+    $array (`dim` $dim^)? (`mask` $mask^)? (`back` $back^)?  (`fastmath` `(` enum($fastmath)^ `)`)? attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -624,7 +628,7 @@ def hlfir_ProductOp : hlfir_Op<"product", [AttrSizedOperandSegments,
   let results = (outs AnyFortranValue);
 
   let assemblyFormat = [{
-    $array (`dim` $dim^)? (`mask` $mask^)? attr-dict `:` functional-type(operands, results)
+    $array (`dim` $dim^)? (`mask` $mask^)? (`fastmath` `(` enum($fastmath)^ `)`)? attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -689,7 +693,7 @@ def hlfir_SumOp : hlfir_Op<"sum", [AttrSizedOperandSegments,
   let results = (outs AnyFortranValue);
 
   let assemblyFormat = [{
-    $array (`dim` $dim^)? (`mask` $mask^)? attr-dict `:` functional-type(operands, results)
+    $array (`dim` $dim^)? (`mask` $mask^)? (`fastmath` `(` enum($fastmath)^ `)`)? attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -713,7 +717,8 @@ def hlfir_DotProductOp : hlfir_Op<"dot_product",
   let results = (outs AnyFortranValue);
 
   let assemblyFormat = [{
-    $lhs $rhs attr-dict `:` functional-type(operands, results)
+    $lhs $rhs (`fastmath` `(` enum($fastmath)^ `)`)?
+    attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -737,7 +742,8 @@ def hlfir_MatmulOp : hlfir_Op<"matmul",
   let results = (outs hlfir_ExprType);
 
   let assemblyFormat = [{
-    $lhs $rhs attr-dict `:` functional-type(operands, results)
+    $lhs $rhs (`fastmath` `(` enum($fastmath)^ `)`)?
+    attr-dict `:` functional-type(operands, results)
   }];
 
   // MATMUL(TRANSPOSE(...), ...) => hlfir.matmul_transpose
@@ -782,7 +788,8 @@ def hlfir_MatmulTransposeOp : hlfir_Op<"matmul_transpose",
   let results = (outs hlfir_ExprType);
 
   let assemblyFormat = [{
-    $lhs $rhs attr-dict `:` functional-type(operands, results)
+    $lhs $rhs (`fastmath` `(` enum($fastmath)^ `)`)?
+    attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -890,6 +897,8 @@ def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
 
   let assemblyFormat = [{
     $source (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
+     (`uniq_name` `(` $uniq_name^ `)`)?
+     (`fortran_attrs` `` $fortran_attrs^)?
      attr-dict `:` functional-type(operands, results)
   }];
 
@@ -1119,7 +1128,7 @@ def hlfir_ElementalOp : hlfir_Op<"elemental",
 
       mlir::Region& getElementalRegion() { return getRegion(); }
       mlir::Value getElementEntity();
-      mlir::Region* getElementCleanup() { return nullptr; }
+      mlir::Region* getElementCleanup();
 
       /// Must this elemental be evaluated in order?
       bool isOrdered() { return !getUnordered(); }
@@ -1136,17 +1145,28 @@ def hlfir_ElementalOp : hlfir_Op<"elemental",
   let hasVerifier = 1;
 }
 
-def hlfir_YieldElementOp : hlfir_Op<"yield_element", [Terminator, HasParent<"ElementalOp">, Pure]> {
+def hlfir_YieldElementOp : hlfir_Op<"yield_element", [Terminator,
+    HasParent<"ElementalOp">,
+    SingleBlockImplicitTerminator<"fir::FirEndOp">,
+    RecursiveMemoryEffects]> {
   let summary = "Yield the elemental value in an ElementalOp";
   let description = [{
     Yield the element value of the current elemental expression iteration
     in an hlfir.elemental region. See hlfir.elemental description for an
-    example.
+    example. The optional cleanup region is executed after the element value
+    has been consumed. It explicitly describes the cleanup of temporaries
+    created by this iteration, including the yielded expression itself. There
+    is no implicit destruction of the yielded value.
+
+    When an elemental is inlined, this cleanup must follow the consumption of
+    its scalar result. When inlined into another elemental, it can be appended
+    to that elemental's yield cleanup.
   }];
 
   let arguments = (ins AnyType:$element_value);
+  let regions = (region MaxSizedRegion<1>:$cleanup);
 
-  let assemblyFormat = "$element_value attr-dict `:` type($element_value)";
+  let assemblyFormat = "$element_value attr-dict `:` type($element_value) custom<YieldOpCleanup>($cleanup)";
 }
 
 def hlfir_ApplyOp : hlfir_Op<"apply", [NoMemoryEffect, AttrSizedOperandSegments]> {
@@ -1221,10 +1241,9 @@ def hlfir_DestroyOp : hlfir_Op<"destroy", [MemoryEffects<[MemFree]>]> {
     is placed into a memory buffer, so that the library runtime
     can be called on it. The element type of the hlfir.expr must be
     derived type in this case.
-    It is not required to create an hlfir.destroy operation for and hlfir.expr
-    created inside an hlfir.elemental and returned in the hlfir.yield_element.
-    The last use of such expression is implicit and an hlfir.destroy could
-    not be emitted after the hlfir.yield_element since it is a terminator.
+    An expression created inside an hlfir.elemental and returned by its
+    hlfir.yield_element is destroyed in the yield's cleanup region, after
+    the element value has been consumed.
 
     Note that hlfir.destroy are currently generated by Fortran lowering that
     has a good view of the expression use contexts, but this will need to be
@@ -1251,6 +1270,7 @@ def hlfir_DestroyOp : hlfir_Op<"destroy", [MemoryEffects<[MemFree]>]> {
   }];
 
   let hasVerifier = 1;
+  let hasCanonicalizeMethod = 1;
 }
 
 def hlfir_CopyInOp : hlfir_Op<"copy_in", [MemoryEffects<[MemAlloc]>]> {
@@ -1260,32 +1280,44 @@ def hlfir_CopyInOp : hlfir_Op<"copy_in", [MemoryEffects<[MemAlloc]>]> {
     an absent optional and is not contiguous at runtime. When a copy is made this
     operation returns the temporary as first result, otherwise, it returns the
     potentially absent variable storage. The second result indicates if a copy
-    was made.
+    was made, and the third indicates if the returned storage must be freed.
 
-    A descriptor address must be provided for the temporary. This descriptor will
-    be set if a temporary copy was made.
+    A descriptor address must be provided for the temporary. This descriptor is
+    set if a temporary copy is made.
 
     This operation is meant to be used in combination with the hlfir.copy_out
-    operation that takes the address of the descriptor for the temporary, deletes
-    the temporary if it was created, and copies the data back if needed.
+    operation that takes the descriptor address and flags, deletes the temporary
+    if needed, and copies the data back if needed.
     This operation allows passing non contiguous arrays to contiguous dummy
     arguments, which is possible in Fortran procedure references.
 
     To deal with the optional case, an extra boolean value can be pass to the
     operation. In such cases, the copy-in will only be done if "var_is_present"
     is true and, when it is false, the original value will be returned instead.
+
+    The optional alignment attribute requests a minimum byte alignment for the
+    temporary, so that a copy standing in for a variable with an alignment
+    requirement satisfies the same requirement. It must be a positive power of
+    two. Code generation applies it to the inline buffer allocation; copies
+    made by the runtime do not honor it yet, and on targets where an aligned
+    fir.allocmem lowers to an ordinary malloc (Windows, GPU device code) a
+    heap-allocated buffer only gets the allocator's alignment.
   }];
 
   let arguments = (ins Arg<fir_BaseBoxType, "", [MemRead]>:$var,
                     Arg<AnyReferenceLike, "", [MemWrite]>:$tempBox,
-                    Optional<I1>:$var_is_present);
+                    Optional<I1>:$var_is_present,
+                    OptionalAttr<I64Attr>:$alignment);
 
-  let results = (outs fir_BaseBoxType, I1);
+  let results = (outs fir_BaseBoxType, I1, I1);
 
   let assemblyFormat = [{
     $var `to` $tempBox (`handle_optional` $var_is_present^)?
+    (`alignment` `(` $alignment^ `)`)?
     attr-dict `:` functional-type(operands, results)
   }];
+
+  let hasVerifier = 1;
 
   let builders = [
     OpBuilder<(ins "mlir::Value":$var, "mlir::Value":$temp_box,
@@ -1302,6 +1334,11 @@ def hlfir_CopyInOp : hlfir_Op<"copy_in", [MemoryEffects<[MemAlloc]>]> {
     mlir::Value getWasCopied() {
       return getResult(1);
     }
+
+    /// Get the result indicating if the copied-in storage must be freed.
+    mlir::Value getMustFree() {
+      return getResult(2);
+    }
   }];
 }
 
@@ -1310,19 +1347,20 @@ def hlfir_CopyOutOp : hlfir_Op<"copy_out", [MemoryEffects<[MemFree]>]> {
   let description = [{
     If the variable was copied in a temporary in the related hlfir.copy_in,
     optionally copy back the temporary value to it (that may have been
-    modified between the hlfir.copy_in and hlfir.copy_out). Then deallocate
-    the temporary.
+    modified between the hlfir.copy_in and hlfir.copy_out). Then free the
+    temporary if needed.
     The copy back is done if $var is provided and $was_copied is true.
-    The deallocation of $temp is done if $was_copied is true.
+    The deallocation of $temp is done if $must_free is true.
     $temp must be the descriptor address that was provided to hlfir.copy_in.
   }];
 
   let arguments = (ins Arg<AnyReferenceLike, "", [MemRead]>:$temp,
                        I1:$was_copied,
+                       I1:$must_free,
                        Arg<Optional<fir_BaseBoxType>, "", [MemWrite]>:$var);
 
   let assemblyFormat = [{
-    $temp `,` $was_copied (`to` $var^)?
+    $temp `,` $was_copied `,` $must_free (`to` $var^)?
     attr-dict `:` functional-type(operands, results)
   }];
 }
@@ -1373,7 +1411,7 @@ def hlfir_GetExtentOp : hlfir_Op<"get_extent", [Pure]> {
   let hasVerifier = 1;
 
   let assemblyFormat = [{
-    $shape attr-dict `:` functional-type(operands, results)
+    $shape `dim` `(` $dim `)` attr-dict `:` functional-type(operands, results)
   }];
 
   let builders = [OpBuilder<(ins "mlir::Value":$shape, "unsigned":$dim)>];

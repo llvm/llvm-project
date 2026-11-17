@@ -196,7 +196,13 @@ struct NameUniquer {
   static bool isSpecialSymbol(llvm::StringRef name);
 
   /// Returns true if the passed name denotes a compiler generated name.
-  static bool isCompilerGenerated(llvm::StringRef name);
+  /// If \p excludeStringLiterals is true, string literals are excluded from the
+  /// check.
+  /// If \p excludeArrayLiterals is true, array literals are excluded from the
+  /// check.
+  static bool isCompilerGenerated(llvm::StringRef name,
+                                  bool excludeStringLiterals = true,
+                                  bool excludeArrayLiterals = true);
 
 private:
   static std::string intAsString(std::int64_t i);

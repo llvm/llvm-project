@@ -249,10 +249,10 @@ struct SVEShuffleOpts : public LoopPass {
 
     TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
     const AArch64TargetMachine &TM = TPC.getTM<AArch64TargetMachine>();
-    const AArch64Subtarget &ST =
-        *TM.getSubtargetImpl(*L->getHeader()->getParent());
+    const Function *F = L->getHeader()->getParent();
+    const AArch64Subtarget &ST = *TM.getSubtargetImpl(*F);
 
-    return processLoop(*L, ST, TM.createDataLayout());
+    return processLoop(*L, ST, F->getDataLayout());
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -275,10 +275,10 @@ Pass *llvm::createSVEShuffleOptsPass() { return new SVEShuffleOpts(); }
 PreservedAnalyses
 AArch64SVEShuffleOptsPass::run(Loop &L, LoopAnalysisManager &AM,
                                LoopStandardAnalysisResults &AR, LPMUpdater &U) {
-  const AArch64Subtarget &ST =
-      *TM.getSubtargetImpl(*L.getHeader()->getParent());
+  const Function *F = L.getHeader()->getParent();
+  const AArch64Subtarget &ST = *TM.getSubtargetImpl(*F);
 
-  if (processLoop(L, ST, TM.createDataLayout())) {
+  if (processLoop(L, ST, F->getDataLayout())) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
     PA.preserve<TargetIRAnalysis>();

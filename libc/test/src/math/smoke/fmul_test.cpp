@@ -10,9 +10,9 @@
 
 #include "src/math/fmul.h"
 
-LIST_MUL_TESTS(float, double, LIBC_NAMESPACE::fmul)
+LIST_MUL_TESTS(Fmul, float, double, LIBC_NAMESPACE::fmul)
 
-TEST_F(LlvmLibcMulTest, SpecialInputs) {
+TEST_F(LlvmLibcFmulTest, SpecialInputs) {
   constexpr double INPUTS[][2] = {
       {0x1.0100010002p8, 0x1.fffcp14},
       {0x1.000000b92144p-7, 0x1.62p7},

@@ -874,7 +874,7 @@ void RetainCountChecker::processNonLeakError(ProgramStateRef St,
     if (RV->getIvarAccessHistory() != RefVal::IvarAccessHistory::None)
       return;
 
-  ExplodedNode *N = C.generateErrorNode(St);
+  ExplodedNode *N = C.addSink(St);
   if (!N)
     return;
 
@@ -1255,7 +1255,7 @@ ProgramStateRef RetainCountChecker::handleAutoreleaseCounts(
   V = V ^ RefVal::ErrorOverAutorelease;
   state = setRefBinding(state, Sym, V);
 
-  ExplodedNode *N = Ctx.generateSink(state, Pred);
+  ExplodedNode *N = Ctx.addSink(state, Pred);
   if (N) {
     SmallString<128> sbuf;
     llvm::raw_svector_ostream os(sbuf);

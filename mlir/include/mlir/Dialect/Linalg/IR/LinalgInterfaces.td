@@ -26,8 +26,11 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
      2. Has at least one reduction dimension.
      3. Has only projected permutation indexing maps.
      4. its body computes `u5(u1(c) + u2(u3(a) * u4(b)))` on some field
-     (AddOpType, MulOpType), where u1, u2, u3, u4 and u5 represent scalar unary
-     operations that may change the type (e.g. for mixed-precision).
+        where u1, u2, u3, u4 and u5 represent scalar unary
+        operations that may change the type (e.g. for mixed-precision).
+     5. The contraction operations (MulOpType, AddOpType) depend on the type
+        of the operands (`int`, `float`, `bool`, `complex`). Boolean values
+        use `And` and `Or` operations.
    As a consequence, when vectorization of such an op occurs, the only special
    behavior is that the (unique) MulOpType is vectorized into a
    `vector.contract`. All other ops are handled in a generic fashion.
@@ -44,7 +47,7 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
     /*methodName=*/"lhs",
     /*args=*/(ins),
     /*methodBody=*/[{
-      return $_op.getOperation()->getOperand(0);
+      return $_raw_op->getOperand(0);
     }]>,
     InterfaceMethod<
     /*desc=*/"Returns the right-hand side operand.",
@@ -52,7 +55,7 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
     /*methodName=*/"rhs",
     /*args=*/(ins),
     /*methodBody=*/[{
-      return $_op.getOperation()->getOperand(1);
+      return $_raw_op->getOperand(1);
     }]>,
     InterfaceMethod<
     /*desc=*/[{

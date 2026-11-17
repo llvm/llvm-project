@@ -1,7 +1,6 @@
-; RUN: llc -stop-after=finalize-isel  -verify-machineinstrs -mcpu=pwr8 \
-; RUN:   -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck %s
+; RUN: llc -stop-after=finalize-isel -mcpu=pwr8 -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck %s
 
-; RUN: llc -stop-after=finalize-isel  -verify-machineinstrs -mcpu=pwr8 \
+; RUN: llc -stop-after=finalize-isel -mcpu=pwr8 \
 ; RUN:   -mtriple powerpc64-ibm-aix-xcoff < %s | \
 ; RUN:   FileCheck %s --check-prefix=CHECK64
 

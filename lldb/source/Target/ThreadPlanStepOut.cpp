@@ -14,6 +14,7 @@
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
@@ -198,6 +199,15 @@ void ThreadPlanStepOut::SetupReturnAddress(
       }
     }
   }
+
+  // Record where the language runtime will find an error thrown by the
+  // function. The runtime has to look at the function before it returns, so
+  // this only works when stepping out of frame 0.
+  if (frame_idx != 0)
+    return;
+
+  m_thrown_error_location =
+      LanguageRuntime::ThrownErrorLocation(GetThread().GetStackFrameAtIndex(0));
 }
 
 void ThreadPlanStepOut::SetupAvoidNoDebug(
@@ -379,14 +389,12 @@ bool ThreadPlanStepOut::ShouldStop(Event *event_ptr) {
   bool done = false;
   if (m_step_out_to_inline_plan_sp) {
     if (m_step_out_to_inline_plan_sp->MischiefManaged()) {
+      m_step_out_to_inline_plan_sp.reset();
       // Now step through the inlined stack we are in:
-      if (QueueInlinedStepPlan(true)) {
-        // If we can't queue a plan to do this, then just call ourselves done.
-        m_step_out_to_inline_plan_sp.reset();
-        SetPlanComplete(false);
-        return true;
-      } else
-        done = true;
+      if (QueueInlinedStepPlan(true))
+        return false;
+      // If we can't queue a plan to do this, then just call ourselves done.
+      done = true;
     } else
       return m_step_out_to_inline_plan_sp->ShouldStop(event_ptr);
   } else if (m_step_through_inline_plan_sp) {
@@ -542,11 +550,18 @@ bool ThreadPlanStepOut::QueueInlinedStepPlan(bool queue_now) {
 }
 
 void ThreadPlanStepOut::CalculateReturnValue() {
-  if (m_return_valobj_sp)
+  if (!std::holds_alternative<std::monostate>(m_return_value))
     return;
 
   if (!m_calculate_return_value)
     return;
+
+  if (std::optional<ValueObjectSP> error_sp =
+          m_thrown_error_location.GetThrownError(
+              GetThread().GetStackFrameAtIndex(0))) {
+    m_return_value = ThrownError{*error_sp};
+    return;
+  }
 
   if (m_immediate_step_from_function != nullptr) {
     CompilerType return_compiler_type =
@@ -555,8 +570,9 @@ void ThreadPlanStepOut::CalculateReturnValue() {
     if (return_compiler_type) {
       lldb::ABISP abi_sp = m_process.GetABI();
       if (abi_sp)
-        m_return_valobj_sp =
-            abi_sp->GetReturnValueObject(GetThread(), return_compiler_type);
+        if (ValueObjectSP valobj_sp =
+                abi_sp->GetReturnValueObject(GetThread(), return_compiler_type))
+          m_return_value = ReturnedValue{valobj_sp};
     }
   }
 }

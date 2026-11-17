@@ -1,3 +1,5 @@
+# RUN: llvm-mc -triple=mipsel -mcpu=mips32r2 -mattr=+micromips -filetype=obj %s | llvm-objdump -d --mattr=+micromips - | FileCheck %s --check-prefix=DIS
+# RUN: llvm-mc -triple=mips -mcpu=mips32r2 -mattr=+micromips -filetype=obj %s | llvm-objdump -d --mattr=+micromips - | FileCheck %s --check-prefix=DIS
 # RUN: llvm-mc %s -triple=mipsel -show-encoding -mattr=micromips \
 # RUN: | FileCheck %s -check-prefix=CHECK-EL
 # RUN: llvm-mc %s -triple=mips -show-encoding -mattr=micromips \
@@ -63,3 +65,20 @@
      jalrs $ra, $6
      jal $25
      jal $4, $25
+
+     .set noreorder
+     jr.hb $3
+# CHECK-EL: jr.hb $3 # encoding: [0x03,0x00,0x3c,0x1f]
+# CHECK-EB: jr.hb $3 # encoding: [0x00,0x03,0x1f,0x3c]
+# DIS: jr.hb $3
+     nop
+     jalr.hb $6, $7
+# CHECK-EL: jalr.hb $6, $7 # encoding: [0xc7,0x00,0x3c,0x1f]
+# CHECK-EB: jalr.hb $6, $7 # encoding: [0x00,0xc7,0x1f,0x3c]
+# DIS: jalr.hb $6, $7
+     nop
+     jalr.hb $8
+# CHECK-EL: jalr.hb $ra, $8 # encoding: [0xe8,0x03,0x3c,0x1f]
+# CHECK-EB: jalr.hb $ra, $8 # encoding: [0x03,0xe8,0x1f,0x3c]
+# DIS: jalr.hb $ra, $8
+     nop

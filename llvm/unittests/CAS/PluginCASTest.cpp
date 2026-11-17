@@ -8,14 +8,14 @@
 ///
 /// \file
 /// Tests the plugin-backed \c ObjectStore and \c ActionCache against the mock
-/// plugin implementation in \c llvm/tools/libCASPluginTest.
+/// plugin implementation in \c llvm/unittests/CAS/CASPluginTest.
 ///
 //===----------------------------------------------------------------------===//
 
 #include "CASTestConfig.h"
+#include "OnDiskCommonUtils.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/ObjectStore.h"
-#include "llvm/Config/config.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Error.h"
@@ -32,22 +32,9 @@ using namespace llvm::unittest::cas;
 // fixed.
 #if !LLVM_HWADDRESS_SANITIZER_BUILD
 
-extern const char *TestMainArgv0;
-static std::string TestStringArg1("castest-string-arg1");
-
-/// \returns the path of the libCASPluginTest dynamic library, which implements
+/// \returns the path of the CASPluginTest dynamic library, which implements
 /// the CAS plugin API for testing purposes.
-static std::string getCASPluginPath() {
-  std::string Executable =
-      sys::fs::getMainExecutable(TestMainArgv0, &TestStringArg1);
-  llvm::SmallString<256> PathBuf(sys::path::parent_path(Executable));
-#if !defined(_WIN32) || defined(__MINGW32__)
-  sys::path::append(PathBuf, "libCASPluginTest" LLVM_PLUGIN_EXT);
-#else
-  sys::path::append(PathBuf, "CASPluginTest" LLVM_PLUGIN_EXT);
-#endif
-  return std::string(PathBuf);
-}
+static std::string getCASPluginPath() { return CAS_PLUGIN_PATH; }
 
 static CASTestingEnv createPlugin(int I) {
   unittest::TempDir Temp("plugin-cas", /*Unique=*/true);
@@ -129,6 +116,132 @@ TEST(PluginCASTest, isMaterialized) {
                       Succeeded());
     EXPECT_TRUE(IsMaterialized);
   }
+}
+
+TEST(PluginCASTest, parseInvalidID) {
+  unittest::TempDir Temp("plugin-cas", /*Unique=*/true);
+  std::pair<std::string, std::string> PluginOpts[] = {
+      {"first-prefix", "first~"}, {"second-prefix", "second~"}};
+
+  std::optional<
+      std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>
+      DBs;
+  ASSERT_THAT_ERROR(
+      createPluginCASDatabases(getCASPluginPath(), Temp.path(), PluginOpts)
+          .moveInto(DBs),
+      Succeeded());
+  std::shared_ptr<ObjectStore> CAS = DBs->first;
+
+  std::optional<CASID> ID;
+  ASSERT_THAT_ERROR(CAS->createProxy({}, "1").moveInto(ID), Succeeded());
+  std::string PrintedID = ID->toString();
+  ASSERT_TRUE(StringRef(PrintedID).starts_with("first~second~"));
+
+  std::optional<CASID> ParsedID;
+  ASSERT_THAT_ERROR(CAS->parseID(PrintedID).moveInto(ParsedID), Succeeded());
+  EXPECT_EQ(ID, ParsedID);
+
+  // Missing or mismatched prefixes are reported as errors.
+  StringRef Digest = StringRef(PrintedID).drop_front(strlen("first~second~"));
+  EXPECT_THAT_EXPECTED(CAS->parseID(Digest), Failed());
+  EXPECT_THAT_EXPECTED(CAS->parseID(("first~" + Digest).str()), Failed());
+  EXPECT_THAT_EXPECTED(CAS->parseID(("second~" + Digest).str()), Failed());
+  EXPECT_THAT_EXPECTED(CAS->parseID(("second~first~" + Digest).str()),
+                       Failed());
+  EXPECT_THAT_EXPECTED(CAS->parseID(""), Failed());
+}
+
+TEST(PluginCASTest, validate) {
+  unittest::TempDir Temp("plugin-cas", /*Unique=*/true);
+
+  auto validateIfNeeded = [&](bool Force) {
+    return validatePluginCASDatabasesIfNeeded(getCASPluginPath(), Temp.path(),
+                                              /*PluginArgs=*/{},
+                                              /*CheckHash=*/true, Force);
+  };
+  auto recover = [&]() {
+    return recoverPluginCASDatabases(getCASPluginPath(), Temp.path(),
+                                     /*PluginArgs=*/{});
+  };
+  auto openCAS = [&]() {
+    std::optional<
+        std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>
+        DBs;
+    EXPECT_THAT_ERROR(createPluginCASDatabases(getCASPluginPath(), Temp.path(),
+                                               /*PluginArgs=*/{})
+                          .moveInto(DBs),
+                      Succeeded());
+    return DBs;
+  };
+
+  std::optional<ValidationResult> Result;
+  ASSERT_THAT_ERROR(validateIfNeeded(/*Force=*/false).moveInto(Result),
+                    Succeeded());
+  EXPECT_EQ(Result, ValidationResult::Valid);
+
+  {
+    auto DBs = openCAS();
+    ASSERT_TRUE(DBs);
+    auto &[CAS, AC] = *DBs;
+
+    std::optional<CASID> ID1, ID2;
+    ASSERT_THAT_ERROR(CAS->createProxy({}, "1").moveInto(ID1), Succeeded());
+    ASSERT_THAT_ERROR(CAS->createProxy({}, "2").moveInto(ID2), Succeeded());
+    ASSERT_THAT_ERROR(AC->put(*ID1, *ID2), Succeeded());
+
+    EXPECT_THAT_ERROR(CAS->validate(/*CheckHash=*/true), Succeeded());
+    EXPECT_THAT_ERROR(AC->validate(), Succeeded());
+  }
+
+  // Already validated since boot.
+  const ValidationResult ValidatedSinceBoot =
+      isBootTimeKnown() ? ValidationResult::Skipped : ValidationResult::Valid;
+  ASSERT_THAT_ERROR(validateIfNeeded(/*Force=*/false).moveInto(Result),
+                    Succeeded());
+  EXPECT_EQ(Result, ValidatedSinceBoot);
+
+  ASSERT_THAT_ERROR(validateIfNeeded(/*Force=*/true).moveInto(Result),
+                    Succeeded());
+  EXPECT_EQ(Result, ValidationResult::Valid);
+
+  // Nothing to recover from after a successful validation.
+  ASSERT_THAT_ERROR(recover().moveInto(Result), Succeeded());
+  EXPECT_EQ(Result, ValidationResult::Skipped);
+  EXPECT_TRUE(sys::fs::exists(Temp.path("v1.1")));
+
+  // Invalidate the data.
+  ASSERT_FALSE(sys::fs::remove(Temp.path("v1.1/data.v1")));
+  EXPECT_THAT_EXPECTED(validateIfNeeded(/*Force=*/true), Failed());
+
+  // Recovery requires exclusive access, and fails rather than waiting for it.
+  {
+    auto DBs = openCAS();
+    ASSERT_TRUE(DBs);
+    EXPECT_THAT_EXPECTED(recover(), Failed());
+  }
+
+  ASSERT_THAT_ERROR(recover().moveInto(Result), Succeeded());
+  EXPECT_EQ(Result, ValidationResult::Recovered);
+  EXPECT_FALSE(sys::fs::exists(Temp.path("v1.1")));
+
+  // A concurrent recovery for the same failed validation is skipped.
+  ASSERT_THAT_ERROR(recover().moveInto(Result), Succeeded());
+  EXPECT_EQ(Result, ValidationResult::Skipped);
+
+  // Recovery counts as validation for this boot.
+  ASSERT_THAT_ERROR(validateIfNeeded(/*Force=*/false).moveInto(Result),
+                    Succeeded());
+  EXPECT_EQ(Result, ValidatedSinceBoot);
+
+  std::pair<std::string, std::string> BadOpts[] = {{"bogus", ""}};
+  EXPECT_THAT_EXPECTED(
+      validatePluginCASDatabasesIfNeeded(getCASPluginPath(), Temp.path(),
+                                         BadOpts, /*CheckHash=*/false,
+                                         /*ForceValidation=*/true),
+      Failed());
+  EXPECT_THAT_EXPECTED(
+      recoverPluginCASDatabases(getCASPluginPath(), Temp.path(), BadOpts),
+      Failed());
 }
 
 #endif /* !LLVM_HWADDRESS_SANITIZER_BUILD */

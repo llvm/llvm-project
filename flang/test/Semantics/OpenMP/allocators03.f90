@@ -1,12 +1,9 @@
-! REQUIRES: openmp_runtime
-
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=52
 ! OpenMP Version 5.2
 ! 6.7 allocators construct
 ! Only the allocate clause is allowed on the allocators construct
 
 subroutine allocate()
-use omp_lib
 
   integer, allocatable :: arr1(:), arr2(:)
 

@@ -231,9 +231,7 @@ public:
 
   /// Returns the declaration of the function or method that will be
   /// called. May be null.
-  virtual const Decl *getDecl() const {
-    return Origin.dyn_cast<const Decl *>();
-  }
+  virtual const Decl *getDecl() const { return dyn_cast<const Decl *>(Origin); }
 
   bool isForeign() const {
     assert(Foreign && "Foreign must be set before querying");
@@ -262,7 +260,7 @@ public:
   /// Null if and only if 'this' is a CXXDestructorCall or a
   /// CleanupFunctionCall.
   virtual const Expr *getOriginExpr() const {
-    return Origin.dyn_cast<const Expr *>();
+    return dyn_cast<const Expr *>(Origin);
   }
 
   /// Returns the number of arguments (explicit and implicit).

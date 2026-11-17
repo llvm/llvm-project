@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/fmabf16.h"
 
-LIST_FMA_TESTS(bfloat16, LIBC_NAMESPACE::fmabf16)
+LIST_FMA_TESTS(Fmabf16, bfloat16, LIBC_NAMESPACE::fmabf16)
