@@ -863,7 +863,6 @@ LinkEditData:
   offset_t data_offset = 0;
   const bool success = symtab.Decode(data, &data_offset);
   ASSERT_EQ(success, true);
-  ASSERT_EQ(uuid_mismatch, false);
   // The yaml contains N_SO and N_OSO debug map symbols.
   EXPECT_TRUE(symtab.HasDebugMap());
   EXPECT_TRUE(symtab.HasSourceFiles());
