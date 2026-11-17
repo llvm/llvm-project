@@ -48,8 +48,10 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
+#include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/SemaHexagon.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenACC.h"
@@ -3517,11 +3519,12 @@ static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
       newDecl, oldDecl, [&S](ParmVarDecl *To, const ParmVarDecl *From) {
         unsigned found = 0;
         found += propagateAttribute<InheritableParamAttr>(To, From, S);
-        // Propagate the lifetimebound attribute from parameters to the
-        // most recent declaration. Note that this doesn't include the implicit
-        // 'this' parameter, as the attribute is applied to the function type in
-        // that case.
+        // Propagate the lifetimebound and lifetime_capture_by attributes from
+        // parameters to the most recent declaration. Note that this doesn't
+        // include the implicit 'this' parameter, as the attribute is applied to
+        // the function type in that case.
         found += propagateAttribute<LifetimeBoundAttr>(To, From, S);
+        found += propagateAttribute<LifetimeCaptureByAttr>(To, From, S);
         return found;
       });
 }
@@ -9352,6 +9355,14 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
                                 CallerFeatureMap);
   }
 
+  // Global, static or variable sized objects of HLX types are not allowed.
+  if (Hexagon().isHLXVectorType(T) &&
+      (NewVD->hasGlobalStorage() || T->isVariableArrayType())) {
+    Diag(NewVD->getLocation(), diag::err_hlx_invalid_object);
+    NewVD->setInvalidDecl();
+    return;
+  }
+
   if (Context.getTargetInfo().hasAMDGPUTypes()) {
     if (!AMDGPU().checkAMDGPUTypeSupport(T, NewVD->getLocation())) {
       NewVD->setInvalidDecl();
@@ -14324,6 +14335,9 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   if (getLangOpts().HLSL)
     if (!HLSL().handleInitialization(VDecl, Init))
       return;
+
+  if (Context.getTargetInfo().getTriple().isBPF())
+    Init = BPF().checkLocalConstantInitializer(VDecl, Init);
 
   // Get the decls type and save a reference for later, since
   // CheckInitializerTypes may change it.
@@ -19787,6 +19801,12 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
         InvalidDecl = true;
       }
     }
+  }
+
+  // Aggregates with members of HLX types are not allowed.
+  if (Hexagon().isHLXVectorType(T)) {
+    Diag(Loc, diag::err_hlx_invalid_field);
+    InvalidDecl = true;
   }
 
   // C++11 [class.union]p8 (DR1460):

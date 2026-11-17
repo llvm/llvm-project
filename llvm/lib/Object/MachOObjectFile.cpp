@@ -2919,7 +2919,7 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
       return Triple("arm64e-apple-darwin");
     case MachO::CPU_SUBTYPE_ARM64E_X1:
       if (McpuDefault)
-        *McpuDefault = "apple-a20";
+        *McpuDefault = "apple-m6";
       if (ArchFlag)
         *ArchFlag = "arm64e.x1";
       return Triple("arm64e.x1-apple-darwin");

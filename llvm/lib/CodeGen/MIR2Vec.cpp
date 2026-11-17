@@ -76,9 +76,8 @@ MIRVocabulary::MIRVocabulary(VocabMap &&OpcodeMap, VocabMap &&CommonOperandMap,
                              VocabMap &&PhysicalRegisterMap,
                              VocabMap &&VirtualRegisterMap,
                              const TargetInstrInfo &TII,
-                             const TargetRegisterInfo &TRI,
-                             const MachineRegisterInfo &MRI)
-    : TII(TII), TRI(TRI), MRI(MRI) {
+                             const TargetRegisterInfo &TRI)
+    : TII(TII), TRI(TRI) {
   buildCanonicalOpcodeMapping();
   unsigned CanonicalOpcodeCount = UniqueBaseOpcodeNames.size();
   assert(CanonicalOpcodeCount > 0 &&
@@ -98,19 +97,19 @@ MIRVocabulary::MIRVocabulary(VocabMap &&OpcodeMap, VocabMap &&CommonOperandMap,
   Layout.TotalEntries = Storage.size();
 }
 
-Expected<MIRVocabulary>
-MIRVocabulary::create(VocabMap &&OpcodeMap, VocabMap &&CommonOperandMap,
-                      VocabMap &&PhyRegMap, VocabMap &&VirtRegMap,
-                      const TargetInstrInfo &TII, const TargetRegisterInfo &TRI,
-                      const MachineRegisterInfo &MRI) {
+Expected<MIRVocabulary> MIRVocabulary::create(VocabMap &&OpcodeMap,
+                                              VocabMap &&CommonOperandMap,
+                                              VocabMap &&PhyRegMap,
+                                              VocabMap &&VirtRegMap,
+                                              const TargetInstrInfo &TII,
+                                              const TargetRegisterInfo &TRI) {
   if (OpcodeMap.empty() || CommonOperandMap.empty() || PhyRegMap.empty() ||
       VirtRegMap.empty())
     return createStringError(errc::invalid_argument,
                              "Empty vocabulary entries provided");
 
   MIRVocabulary Vocab(std::move(OpcodeMap), std::move(CommonOperandMap),
-                      std::move(PhyRegMap), std::move(VirtRegMap), TII, TRI,
-                      MRI);
+                      std::move(PhyRegMap), std::move(VirtRegMap), TII, TRI);
 
   // Validate Storage after construction
   if (!Vocab.Storage.isValid())
@@ -361,7 +360,8 @@ unsigned MIRVocabulary::getCommonOperandIndex(
 }
 
 std::optional<unsigned>
-MIRVocabulary::getRegisterOperandIndex(Register Reg) const {
+MIRVocabulary::getRegisterOperandIndex(Register Reg,
+                                       const MachineRegisterInfo &MRI) const {
   assert(!RegisterOperandNames.empty() && "Register operand mapping not built");
   assert(Reg.isValid() && "Invalid register; not expected here");
   assert((Reg.isPhysical() || Reg.isVirtual()) &&
@@ -385,12 +385,12 @@ MIRVocabulary::getRegisterOperandIndex(Register Reg) const {
   // RegisterBank instead of a TargetRegisterClass, for which
   // getRegClassOrNull() returns nullptr.
   // TODO: Avoid special-casing these registers at every use site. Classless
-  // registers currently fall back to a zero embedding in operator[] and to
-  // VirtRegBase in getEntityIDForRegister(), which is the same ad-hoc handling
-  // the invalid/stack-slot cases already get. Give them a real vocabulary
-  // representation instead -- e.g. an explicit "no register class" entry, or
-  // keying generic vregs on their LLT/RegisterBank -- so that the lookup is
-  // total and the callers need no fallbacks.
+  // registers currently fall back to a zero embedding in getRegisterEmbedding()
+  // and to VirtRegBase in getEntityIDForRegister(), which is the same ad-hoc
+  // handling the invalid/stack-slot cases already get. Give them a real
+  // vocabulary representation instead -- e.g. an explicit "no register class"
+  // entry, or keying generic vregs on their LLT/RegisterBank -- so that the
+  // lookup is total and the callers need no fallbacks.
   if (!RegClass) {
     LLVM_DEBUG(errs() << "MIR2Vec: No register class for register " << Reg.id()
                       << "; using zero vector.\n");
@@ -402,8 +402,7 @@ MIRVocabulary::getRegisterOperandIndex(Register Reg) const {
 }
 
 Expected<MIRVocabulary> MIRVocabulary::createDummyVocabForTest(
-    const TargetInstrInfo &TII, const TargetRegisterInfo &TRI,
-    const MachineRegisterInfo &MRI, unsigned Dim) {
+    const TargetInstrInfo &TII, const TargetRegisterInfo &TRI, unsigned Dim) {
   assert(Dim > 0 && "Dimension must be greater than zero");
 
   float DummyVal = 0.1f;
@@ -440,7 +439,7 @@ Expected<MIRVocabulary> MIRVocabulary::createDummyVocabForTest(
   // Create vocabulary directly without temporary instance
   return MIRVocabulary::create(
       std::move(DummyOpcMap), std::move(DummyOperandMap),
-      std::move(DummyPhyRegMap), std::move(DummyVirtRegMap), TII, TRI, MRI);
+      std::move(DummyPhyRegMap), std::move(DummyVirtRegMap), TII, TRI);
 }
 
 //===----------------------------------------------------------------------===//
@@ -465,8 +464,8 @@ MIR2VecVocabProvider::getVocabulary(const Module &M) {
         if (const auto *TRI = Subtarget.getRegisterInfo())
           return mir2vec::MIRVocabulary::create(
               std::move(OpcVocab), std::move(CommonOperandVocab),
-              std::move(PhyRegVocabMap), std::move(VirtRegVocabMap), *TII, *TRI,
-              MF->getRegInfo());
+              std::move(PhyRegVocabMap), std::move(VirtRegVocabMap), *TII,
+              *TRI);
     }
   }
   return createStringError(errc::invalid_argument,
@@ -611,7 +610,7 @@ Embedding SymbolicMIREmbedder::computeEmbeddings(const MachineInstr &MI) const {
 
   // Add operand contributions
   for (const MachineOperand &MO : MI.operands())
-    InstructionEmbedding += Vocab[MO];
+    InstructionEmbedding += Vocab.getOperandEmbedding(MO, MF.getRegInfo());
 
   return InstructionEmbedding;
 }

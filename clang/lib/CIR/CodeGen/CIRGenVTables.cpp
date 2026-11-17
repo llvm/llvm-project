@@ -208,8 +208,7 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
       cir::FuncType fnTy =
           cgm.getBuilder().getFuncType({}, cgm.getBuilder().getVoidTy());
       cir::FuncOp fnPtr = cgm.createRuntimeFunction(fnTy, name);
-
-      assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+      fnPtr.setUnnamedAddr(true);
 
       // The Microsoft ABI uses the same function name for pure and deleted
       // virtual functions.
@@ -342,8 +341,10 @@ cir::GlobalOp CIRGenVTables::generateConstructionVTable(
   cir::GlobalOp vtable = cgm.createOrReplaceCXXRuntimeVariable(
       loc, name, vtType, linkage, CharUnits::fromQuantity(align));
 
-  // V-tables are always unnamed_addr.
-  assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+  // dynamic_cast relies on a unique vtable address, so the address only
+  // becomes insignificant without RTTI or when the vtable may be duplicated.
+  if (!cgm.shouldEmitRTTI() || cgm.mayVTableBeDuplicated(vtable.getLinkage()))
+    vtable.setUnnamedAddr(true);
 
   mlir::Attribute rtti = cgm.getAddrOfRTTIDescriptor(
       loc, cgm.getASTContext().getCanonicalTagType(base.getBase()));
@@ -355,6 +356,10 @@ cir::GlobalOp CIRGenVTables::generateConstructionVTable(
   // Set properties only after the initializer has been set to ensure that the
   // GV is treated as definition and not declaration.
   assert(!vtable.isDeclaration() && "Shouldn't set properties on declaration");
+  // The global was created as a declaration, which MLIR requires to be private,
+  // so the visibility has to follow the linkage of the definition.
+  mlir::SymbolTable::setSymbolVisibility(
+      vtable, CIRGenModule::getMLIRVisibility(vtable));
   cgm.setGVProperties(vtable, rd);
 
   assert(!cir::MissingFeatures::vtableEmitMetadata());
@@ -1103,4 +1108,10 @@ void CIRGenModule::emitVTablesOpportunistically() {
 
 bool CIRGenModule::shouldOpportunisticallyEmitVTables() {
   return codeGenOpts.OptimizationLevel > 0;
+}
+
+bool CIRGenModule::mayVTableBeDuplicated(cir::GlobalLinkageKind linkage) const {
+  return getTarget().getVTableUniqueness() ==
+             VTableUniquenessKind::UniqueIfStrongLinkage &&
+         cir::isWeakForLinker(linkage);
 }

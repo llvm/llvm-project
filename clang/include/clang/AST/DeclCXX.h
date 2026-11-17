@@ -2656,6 +2656,15 @@ class CXXConstructorDecl final
   /// to store this size. However, the downside to this is that querying whether
   /// this is a 'delegating' constructor would then become expensive.
   ///
+  /// While it might be tempting to move numCtorInitializers into the
+  /// CXXConstructorDeclBitfields, it DID live there for quite a while. However,
+  /// it was limited to 16 bits which was being hit repeatedly by generated
+  /// code. While there is MORE room there now (19 bits), it was both unclear
+  /// that 2^19 initializers would be sufficient, and it would be tempting to
+  /// shrink it if we ever need another bit, which would be unacceptable.  So
+  /// it was determined that moving it into a full unsigned was the only
+  /// acceptable option.
+  ///
   /// An additional alternative we can do to negate that is to either store
   /// 'isDelegatingConstructor', or a 2 bit 'size' (where 0b11 means 'always
   /// check the Lazy Ptr array ref') in CXXConstructorDeclBitfields.
