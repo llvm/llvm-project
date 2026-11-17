@@ -24,6 +24,7 @@
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBType.h"
+#include "lldb/API/SBTypeSummary.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/Host/PosixApi.h" // IWYU pragma: keep
 #include "lldb/lldb-defines.h"
@@ -300,16 +301,23 @@ VariableDescription::VariableDescription(
     llvm::StringRef display_summary = auto_summary ? *auto_summary : summary;
     const bool has_summary = !display_summary.empty();
 
-    if (!value.empty()) {
+    // Respect the type summary options.
+    const bool print_value = [&] {
+      if (value.empty())
+        return false;
+      if (summary.empty())
+        return true;
+
+      lldb::SBTypeSummary type_summary = val.GetTypeSummary();
+      return !type_summary.IsValid() || type_summary.DoesPrintValue(val);
+    }();
+
+    if (print_value) {
       os_display_value << value;
       if (has_summary)
         os_display_value << " " << display_summary;
     } else if (has_summary) {
       os_display_value << display_summary;
-
-    } else if (!type_name.empty()) {
-      // As last resort, we print its type if available.
-      os_display_value << type_name;
     }
   }
 
@@ -378,7 +386,8 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
   }
   // The program path must be the first entry in the "args" field
   std::vector<std::string> req_args = {DAP::debug_adapter_path.str(),
-                                       "--comm-file", comm_file.str()};
+                                       "--launch-target", "--comm-file",
+                                       comm_file.str()};
   if (debugger_pid != LLDB_INVALID_PROCESS_ID) {
     req_args.push_back("--debugger-pid");
     req_args.push_back(std::to_string(debugger_pid));
@@ -401,9 +410,8 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
     req_args.push_back(ss.str());
   }
 
-  // WARNING: Any argument added after `launch-target` is passed to to the
-  // target.
-  req_args.emplace_back("--launch-target");
+  // Place the target and its arguments after `--`.
+  req_args.emplace_back("--");
   req_args.push_back(program.str());
   req_args.insert(req_args.end(), args.begin(), args.end());
   run_in_terminal_args.try_emplace("args", req_args);

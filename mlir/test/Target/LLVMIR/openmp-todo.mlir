@@ -879,3 +879,56 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
     llvm.return
   }
 }
+
+// -----
+
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  // Translation does not support mappers with multi-dimensional iterators.
+  omp.declare_mapper @mapper_with_iterator : !llvm.struct<"mapper_type", (i32)> {
+  ^bb0(%arg: !llvm.ptr):
+    %c0 = llvm.mlir.constant(0 : i64) : i64
+    %c10 = llvm.mlir.constant(10 : i64) : i64
+    %c1 = llvm.mlir.constant(1 : i64) : i64
+    %it = omp.iterator(%iv: i64, %jv: i64) = (%c0 to %c10 step %c1, %c0 to %c10 step %c1) {
+      %m = omp.map.info var_ptr(%arg : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+      omp.yield(%m : !llvm.ptr)
+    } -> !omp.iterated<!llvm.ptr>
+    // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.declare_mapper.info operation}}
+    omp.declare_mapper.info map_iterated(%it : !omp.iterated<!llvm.ptr>)
+  }
+
+  llvm.func @target_mapper_iterator(%addr : !llvm.ptr) {
+    %map = omp.map.info var_ptr(%addr : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) mapper(@mapper_with_iterator) name("") -> !llvm.ptr
+    // expected-error@below {{LLVM Translation failed for operation: omp.target}}
+    omp.target kernel_type(generic) map_entries(%map -> %arg0 : !llvm.ptr) {
+      omp.terminator
+    }
+    llvm.return
+  }
+}
+
+// -----
+
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  omp.declare_mapper @mapper_with_iterator : !llvm.struct<"mapper_type", (i32)> {
+  ^bb0(%arg: !llvm.ptr):
+    %c0 = llvm.mlir.constant(0 : i64) : i64
+    %c10 = llvm.mlir.constant(10 : i64) : i64
+    %c1 = llvm.mlir.constant(1 : i64) : i64
+    %it = omp.iterator(%iv: i64, %jv: i64) = (%c0 to %c10 step %c1, %c0 to %c10 step %c1) {
+      %m = omp.map.info var_ptr(%arg : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+      omp.yield(%m : !llvm.ptr)
+    } -> !omp.iterated<!llvm.ptr>
+    // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.declare_mapper.info operation}}
+    omp.declare_mapper.info map_iterated(%it : !omp.iterated<!llvm.ptr>)
+  }
+
+  llvm.func @target_if_mapper_iterator(%addr : !llvm.ptr, %cond : i1) {
+    %map = omp.map.info var_ptr(%addr : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) mapper(@mapper_with_iterator) name("") -> !llvm.ptr
+    // expected-error@below {{LLVM Translation failed for operation: omp.target}}
+    omp.target kernel_type(generic) if(%cond) map_entries(%map -> %arg0 : !llvm.ptr) {
+      omp.terminator
+    }
+    llvm.return
+  }
+}

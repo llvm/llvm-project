@@ -59,17 +59,17 @@ The output is written to `<build-dir>/tools/libc/docs/html/`. Open
 ## Header Status Pages (Auto-generated)
 
 The per-header implementation status pages under `docs/headers/` are
-**not** hand-written RST. They are generated at build time by
+**not** hand-written Markdown. They are generated at build time by
 `libc/utils/docgen/docgen.py`, which:
 
 1. Reads YAML function and macro definitions from `libc/utils/docgen/<header>.yaml`.
 2. Checks implementation status against platform `entrypoints.txt` files (excluding `TODO` stubs).
 3. Checks `libc/include/llvm-libc-macros/` and `libc/include/<header>.yaml` for macro definitions.
-4. Emits an RST `list-table` showing each symbol's implementation status,
-   C standard section, and POSIX link.
+4. Emits a MyST Markdown page with styled HTML tables showing each symbol's
+   implementation status, C standard section, and POSIX link.
 
 If you add a new function and regenerate, these pages update automatically.
-Do **not** hand-edit the generated RST files in `docs/headers/` — your
+Do **not** hand-edit the generated `.md` files in `docs/headers/` — your
 changes will be overwritten the next time the docs are built.
 
 ## Troubleshooting

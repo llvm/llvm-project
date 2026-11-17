@@ -85,12 +85,12 @@ LIBC_ALWAYS_INLINE double exp2(double x) {
   double dx = fputil::multiply_add(kd, -EXP_SCALE_INV, x); // exact
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-  double u = dx * LOG_2.hi;
+  double u = dx * LOG_2_DD.hi;
   return exp2_eval(x, u, hi, idx, /*is_exp2=*/true);
 #else // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-  DoubleDouble u = fputil::exact_mult(dx, LOG_2.hi);
-  u.lo = fputil::multiply_add(dx, LOG_2.lo, u.lo);
+  DoubleDouble u = fputil::exact_mult(dx, LOG_2_DD.hi);
+  u.lo = fputil::multiply_add(dx, LOG_2_DD.lo, u.lo);
 #else  // !LIBC_TARGET_CPU_HAS_FMA_DOUBLE
   // Without FMA, we use fixed-point splitting to avoid Veltkamp's splitting:
   // Let:

@@ -6,7 +6,6 @@
 name:            brcond
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; RV64I-LABEL: name: brcond
   ; RV64I: bb.0:

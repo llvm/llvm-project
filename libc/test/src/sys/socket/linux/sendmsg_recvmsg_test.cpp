@@ -22,7 +22,6 @@
 #include "src/__support/CPP/scope.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
-#include "test/UnitTest/LibcTest.h"
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;

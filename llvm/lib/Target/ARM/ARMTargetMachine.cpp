@@ -162,6 +162,8 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
 
   initAsmInfo();
 
+  LLT::setUseExtended(true);
+
   // ARM supports the MachineOutliner.
   setMachineOutliner(true);
   setSupportsDefaultOutlining(true);
@@ -511,7 +513,7 @@ void ARMPassConfig::addPreSched2() {
              this->TM->getSubtarget<ARMSubtarget>(F).restrictIT();
     }));
 
-    addPass(createIfConverter([](const MachineFunction &MF) {
+    addPass(createIfConverterLegacyPass([](const MachineFunction &MF) {
       return !MF.getSubtarget<ARMSubtarget>().isThumb1Only();
     }));
   }

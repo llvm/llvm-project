@@ -27,10 +27,10 @@ namespace llvm {
 /// what tradeoffs are made when making the decision.
 class ModuleInlinerPass : public OptionalPassInfoMixin<ModuleInlinerPass> {
 public:
-  ModuleInlinerPass(InlineParams Params = getInlineParams(),
+  ModuleInlinerPass(InlineParams Params,
                     InliningAdvisorMode Mode = InliningAdvisorMode::Default,
                     ThinOrFullLTOPhase LTOPhase = ThinOrFullLTOPhase::None)
-      : Params(Params), Mode(Mode), LTOPhase(LTOPhase){};
+      : Params(Params), Mode(Mode), LTOPhase(LTOPhase) {}
   ModuleInlinerPass(ModuleInlinerPass &&Arg) = default;
 
   LLVM_ABI PreservedAnalyses run(Module &, ModuleAnalysisManager &);

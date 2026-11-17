@@ -58,11 +58,11 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
   PassRegistry *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
   initializeMipsAsmPrinterPass(*PR);
-  initializeMipsDelaySlotFillerPass(*PR);
-  initializeMipsBranchExpansionPass(*PR);
+  initializeMipsDelaySlotFillerLegacyPass(*PR);
+  initializeMipsBranchExpansionLegacyPass(*PR);
   initializeMicroMipsSizeReduceLegacyPass(*PR);
-  initializeMipsPreLegalizerCombinerPass(*PR);
-  initializeMipsPostLegalizerCombinerPass(*PR);
+  initializeMipsPreLegalizerCombinerLegacyPass(*PR);
+  initializeMipsPostLegalizerCombinerLegacyPass(*PR);
   initializeMipsMulMulBugFixLegacyPass(*PR);
   initializeMipsDAGToDAGISelLegacyPass(*PR);
 }
@@ -129,23 +129,38 @@ MipselTargetMachine::MipselTargetMachine(const Target &T, const Triple &TT,
 
 const MipsSubtarget *
 MipsTargetMachine::getSubtargetImpl(const Function &F) const {
-  Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute FSAttr = F.getFnAttribute("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const MipsSubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
+
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+  Attrs.Mips16 = FnAttrs.getAttribute("mips16");
+  Attrs.NoMips16 = FnAttrs.getAttribute("nomips16");
+  Attrs.MicroMips = FnAttrs.getAttribute("micromips");
+  Attrs.NoMicroMips = FnAttrs.getAttribute("nomicromips");
+  Attrs.SoftFloat = FnAttrs.getAttribute("use-soft-float");
+  Attrs.ABIName = getTargetABIName(*M);
+
+  if (const MipsSubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
 
   std::string CPU =
-      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString().str() : TargetCPU;
   std::string FS =
-      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
-  bool hasMips16Attr = F.getFnAttribute("mips16").isValid();
-  bool hasNoMips16Attr = F.getFnAttribute("nomips16").isValid();
+      Attrs.FS.isValid() ? Attrs.FS.getValueAsString().str() : TargetFS;
+  bool hasMips16Attr = Attrs.Mips16.isValid();
+  bool hasNoMips16Attr = Attrs.NoMips16.isValid();
 
-  bool HasMicroMipsAttr = F.getFnAttribute("micromips").isValid();
-  bool HasNoMicroMipsAttr = F.getFnAttribute("nomicromips").isValid();
+  bool HasMicroMipsAttr = Attrs.MicroMips.isValid();
+  bool HasNoMicroMipsAttr = Attrs.NoMicroMips.isValid();
 
   // FIXME: This is related to the code below to reset the target options,
   // we need to know whether or not the soft float flag is set on the
   // function, so we can enable it as a subtarget feature.
-  bool softFloat = F.getFnAttribute("use-soft-float").getValueAsBool();
+  bool softFloat = Attrs.SoftFloat.getValueAsBool();
 
   if (hasMips16Attr)
     FS += FS.empty() ? "+mips16" : ",+mips16";
@@ -158,14 +173,13 @@ MipsTargetMachine::getSubtargetImpl(const Function &F) const {
   if (softFloat)
     FS += FS.empty() ? "+soft-float" : ",+soft-float";
 
-  StringRef ABIName = getTargetABIName(*F.getParent());
-
-  auto &I = SubtargetMap[CPU + FS + ABIName.str()];
+  auto &I = SubtargetMap[CPU + FS + Attrs.ABIName.str()];
   if (!I) {
     I = std::make_unique<MipsSubtarget>(
-        TargetTriple, CPU, FS, ABIName, isLittle, *this,
+        TargetTriple, CPU, FS, Attrs.ABIName, isLittle, *this,
         MaybeAlign(F.getParent()->getOverrideStackAlignment()));
   }
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 
@@ -259,7 +273,7 @@ void MipsPassConfig::addPreEmitPass() {
 
   // The delay slot filler pass can potientially create forbidden slot hazards
   // for MIPSR6 and therefore it should go before MipsBranchExpansion pass.
-  addPass(createMipsDelaySlotFillerPass());
+  addPass(createMipsDelaySlotFillerLegacyPass());
 
   // This pass expands branches and takes care about the forbidden slot hazards.
   // Expanding branches may potentially create forbidden slot hazards for
@@ -269,9 +283,9 @@ void MipsPassConfig::addPreEmitPass() {
   // then we can be sure that all branches are expanded properly and no hazards
   // exists.
   // Any new pass should go before this pass.
-  addPass(createMipsBranchExpansion());
+  addPass(createMipsBranchExpansionLegacyPass());
 
-  addPass(createMipsConstantIslandPass());
+  addPass(createMipsConstantIslandLegacyPass());
 }
 
 bool MipsPassConfig::addIRTranslator() {
@@ -280,7 +294,7 @@ bool MipsPassConfig::addIRTranslator() {
 }
 
 void MipsPassConfig::addPreLegalizeMachineIR() {
-  addPass(createMipsPreLegalizeCombiner());
+  addPass(createMipsPreLegalizeCombinerLegacyPass());
 }
 
 bool MipsPassConfig::addLegalizeMachineIR() {
@@ -290,7 +304,7 @@ bool MipsPassConfig::addLegalizeMachineIR() {
 
 void MipsPassConfig::addPreRegBankSelect() {
   bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
-  addPass(createMipsPostLegalizeCombiner(IsOptNone));
+  addPass(createMipsPostLegalizeCombinerLegacyPass(IsOptNone));
 }
 
 bool MipsPassConfig::addRegBankSelect() {

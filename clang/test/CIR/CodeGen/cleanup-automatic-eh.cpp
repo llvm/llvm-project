@@ -37,8 +37,6 @@ void test_cleanup_with_automatic_storage_duration() {
 // LLVM:     to label %[[CONT:.*]] unwind label %[[LPAD:.*]]
 // LLVM: [[CONT]]:
 // LLVM:   call void @_ZN5StrukD1Ev(
-// LLVM:   br label %[[EXIT_NORMAL_CLEANUP:.*]]
-// LLVM: [[EXIT_NORMAL_CLEANUP]]:
 // LLVM:   br label %[[EXIT:.*]]
 // LLVM: [[LPAD]]:
 // LLVM:   landingpad { ptr, i32 }
