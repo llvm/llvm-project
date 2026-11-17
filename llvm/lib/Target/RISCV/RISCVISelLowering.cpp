@@ -6644,24 +6644,6 @@ static SDValue lowerVECTOR_SHUFFLEAsPSlide1(ShuffleVectorSDNode *SVN,
                      DAG.getBitcast(HalfVT, NewHi));
 }
 
-// Match the packed zero-extend shuffle mask <0, N, 2, N+2, ...>: even result
-// lanes keep operand 0's even lanes and odd result lanes come from operand 1.
-// The odd lanes may select any element of operand 1, which is looser than a
-// strict pair-even mask; DAGCombiner::XformToShuffleWithZero forms exactly this
-// from a packed zero-extend `and`, leaving each zeroed lane at its own
-// position, and lowerVECTOR_SHUFFLEAsPPair then forms the PPAIRE. Undef lanes
-// always match.
-static bool isPackedZExtShuffleMask(ArrayRef<int> Mask) {
-  unsigned NumElts = Mask.size();
-  if (NumElts % 2 != 0)
-    return false;
-  for (unsigned I = 0; I != NumElts / 2; ++I)
-    if ((Mask[2 * I] >= 0 && Mask[2 * I] != (int)(2 * I)) ||
-        (Mask[2 * I + 1] >= 0 && Mask[2 * I + 1] < (int)NumElts))
-      return false;
-  return true;
-}
-
 // Match a legalized deinterleave shuffle on two RV32 vector halves and lower
 // it to an RV32 P narrowing shift on the concatenated source.
 static SDValue
@@ -7465,6 +7447,35 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V2, V1);
 }
 
+// Match shuffle masks that can be lowered to a P extension packed pair.
+static bool isPackedPairShuffleMask(ArrayRef<int> Mask) {
+  unsigned NumElts = Mask.size();
+  if (NumElts % 2 != 0)
+    return false;
+
+  // Tracks the source number in bit 1 and the polarity in bit 0. -1 means we
+  // don't know anything yet.
+  int Src[2] = {-1, -1};
+  for (unsigned I = 0; I < NumElts; ++I) {
+    if (Mask[I] < 0)
+      continue;
+
+    // Each element must belong to the correct pair.
+    unsigned Local = unsigned(Mask[I]) % NumElts;
+    if (Local / 2 != I / 2)
+      return false;
+
+    unsigned Index = I % 2;
+    // Combine the source number and the polarity into a single value.
+    int Source = (unsigned(Mask[I]) / NumElts) * 2 + Local % 2;
+    if (Src[Index] >= 0 && Src[Index] != Source)
+      return false;
+    Src[Index] = Source;
+  }
+
+  return Src[0] >= 0 && Src[1] >= 0;
+}
+
 bool RISCVTargetLowering::isVectorClearMaskLegal(ArrayRef<int> M,
                                                  EVT VT) const {
   // Enable DAGCombiner::XformToShuffleWithZero to rewrite a packed zero-extend
@@ -7475,10 +7486,8 @@ bool RISCVTargetLowering::isVectorClearMaskLegal(ArrayRef<int> M,
   if (!Subtarget.hasStdExtP() || !VT.isSimple())
     return false;
   MVT SVT = VT.getSimpleVT();
-  SmallVector<int> CommutedMask(M);
-  ShuffleVectorSDNode::commuteMask(CommutedMask);
   return (SVT == MVT::v4i8 || SVT == MVT::v8i8 || SVT == MVT::v4i16) &&
-         (isPackedZExtShuffleMask(M) || isPackedZExtShuffleMask(CommutedMask));
+         isPackedPairShuffleMask(M);
 }
 
 bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
