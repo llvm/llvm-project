@@ -2979,12 +2979,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Ops[2] = Builder.CreateZExt(Ops[2], Int64Ty);
     return Builder.CreateCall(F, Ops);
   }
-  case X86::BI_ReadWriteBarrier:
-  case X86::BI_ReadBarrier:
-  case X86::BI_WriteBarrier: {
-    return Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent,
-                               llvm::SyncScope::SingleThread);
-  }
 
   case X86::BI_AddressOfReturnAddress: {
     Function *F =

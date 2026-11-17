@@ -136,11 +136,14 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
 
 // Base class for structured control flow ops whose regions take no inputs and
 // yield the parent's results on the way out. Users still have to define
-// `getSuccessorRegions` themselves.
-class CIR_RegionBranchOpBase<string mnemonic, list<Trait> traits = []>
+// `getSuccessorRegions` themselves, and the optional `RegionBranchOpInterface`
+// methods they list in `regionBranchMethods`.
+class CIR_RegionBranchOpBase<string mnemonic, list<Trait> traits = [],
+                             list<string> regionBranchMethods = []>
     : CIR_Op<mnemonic, !listconcat([
         DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                  ["getSuccessorInputs"]>], traits)> {
+            !listconcat(["getSuccessorInputs"], regionBranchMethods)>],
+        traits)> {
   let extraClassDefinition = [{
     ValueRange $cppClass::getSuccessorInputs(
         mlir::RegionSuccessor successor) {
@@ -154,9 +157,11 @@ class CIR_RegionBranchOpBase<string mnemonic, list<Trait> traits = []>
 
 // Base class for the region-branch ops whose successors do not depend on the
 // operation: any of their regions may be entered from the parent operation, and
-// every region returns to it on exit.
-class CIR_EnterAnyRegionBranchOpBase<string mnemonic, list<Trait> traits = []>
-    : CIR_RegionBranchOpBase<mnemonic, traits> {
+// every region returns to it on exit. Subclasses may narrow which regions are
+// entered for constant operands, through `getEntrySuccessorRegions`.
+class CIR_EnterAnyRegionBranchOpBase<string mnemonic, list<Trait> traits = [],
+                                     list<string> regionBranchMethods = []>
+    : CIR_RegionBranchOpBase<mnemonic, traits, regionBranchMethods> {
   let append extraClassDefinition = [{
     void $cppClass::getSuccessorRegions(
         mlir::RegionBranchPoint point,
@@ -223,6 +228,15 @@ defvar CIR_FenvOpTraits = [
 // Passed as CIR_BinaryOp's hasNoMemoryEffect: fenv ops compute effects
 // dynamically via FenvOpTrait, so they must not inherit NoMemoryEffect.
 defvar CIR_DynamicMemoryEffects = 0;
+
+// Declares isVolatileOrAtomic() on cir.load and cir.store.
+defvar CIR_VolatileOrAtomicAccessDecl = [{
+  /// Returns true if the access is volatile or atomic. Such an access must
+  /// stay as written: it cannot be removed, merged or reordered.
+  bool isVolatileOrAtomic() {
+    return getIsVolatile() || getMemOrder().has_value();
+  }
+}];
 
 //===----------------------------------------------------------------------===//
 // CastOp
@@ -491,17 +505,11 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
     cast operation. It is an optional `#cir.dyn_cast_info` attribute that is
     only present when the operation models a down-cast or a side-cast.
 
-    The `relative_layout` argument specifies whether the Itanium C++ ABI vtable
-    uses relative layout. It is only meaningful when the operation models a
-    cast-to-complete operation.
-
     Examples:
 
     ```
     %0 = cir.dyn_cast ptr %p : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
-    %1 = cir.dyn_cast ptr relative_layout %p : !cir.ptr<!rec_Base>
-              -> !cir.ptr<!rec_Derived>
-    %2 = cir.dyn_cast ref %r : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
+    %1 = cir.dyn_cast ref %r : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
               #cir.dyn_cast_info<
                 srcRtti = #cir.global_view<@_ZTI4Base> : !cir.ptr<!u8i>,
                 destRtti = #cir.global_view<@_ZTI7Derived> : !cir.ptr<!u8i>,
@@ -515,8 +523,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   let arguments = (ins
     CIR_DynamicCastKindAttr:$kind,
     CIR_PtrToRecordType:$src,
-    OptionalAttr<CIR_DynamicCastInfoAttr>:$info,
-    UnitAttr:$relative_layout
+    OptionalAttr<CIR_DynamicCastInfoAttr>:$info
   );
 
   let results = (outs
@@ -524,7 +531,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   );
 
   let assemblyFormat = [{
-    enum($kind) (`relative_layout` $relative_layout^)? $src
+    enum($kind) $src
     `:` qualified(type($src)) `->` qualified(type($result))
     (qualified($info)^)? attr-dict
   }];
@@ -810,8 +817,7 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
     UnitAttr:$init,
     UnitAttr:$constant,
     UnitAttr:$cleanup_dest_slot,
-    ConfinedAttr<I64Attr, [IntMinValue<1>]>:$alignment,
-    OptionalAttr<CIR_AnnotationArrayAttr>:$annotations
+    ConfinedAttr<I64Attr, [IntMinValue<1>]>:$alignment
   );
 
   let results = (outs Res<CIR_PointerType, "",
@@ -850,7 +856,7 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
           | `const`             $constant
           | `cleanup_dest_slot` $cleanup_dest_slot)
     (`size` `(` $dynAllocSize^ `)`)? `:` qualified(type($addr))
-    ($annotations^)? attr-dict
+    attr-dict
   }];
 
   let hasCXXABILowering = true;
@@ -863,7 +869,8 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
 def CIR_LoadOp : CIR_Op<"load", [
   TypesMatchWith<"type of 'result' matches pointee type of 'addr'",
     "addr", "result", "mlir::cast<cir::PointerType>($_self).getPointee()">,
-  DeclareOpInterfaceMethods<PromotableMemOpInterface>
+  DeclareOpInterfaceMethods<PromotableMemOpInterface>,
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
 ]> {
   let summary = "Load value from memory adddress";
   let description = [{
@@ -901,8 +908,7 @@ def CIR_LoadOp : CIR_Op<"load", [
     ```
   }];
 
-  let arguments = (ins Arg<CIR_PointerType, "the address to load from",
-                           [MemRead]>:$addr,
+  let arguments = (ins Arg<CIR_PointerType, "the address to load from">:$addr,
                        UnitAttr:$isDeref,
                        UnitAttr:$is_volatile,
                        UnitAttr:$is_nontemporal,
@@ -937,6 +943,8 @@ def CIR_LoadOp : CIR_Op<"load", [
             cir::MemOrderAttr{}, /*invariant=*/false);
     }]>
   ];
+
+  let extraClassDeclaration = CIR_VolatileOrAtomicAccessDecl;
 
   // FIXME: add verifier.
 }
@@ -1047,6 +1055,8 @@ def CIR_StoreOp : CIR_Op<"store", [
             /*mem_order=*/cir::MemOrderAttr());
     }]>
   ];
+
+  let extraClassDeclaration = CIR_VolatileOrAtomicAccessDecl;
 
   // FIXME: add verifier.
 }
@@ -2215,6 +2225,9 @@ def CIR_FNegOp : CIR_UnaryOp<"fneg", CIR_AnyFloatOrVecOfFloatType> {
     The `cir.fneg` operation negates the operand. The operand and result must
     have the same type.
 
+    The optional `fastmath_flags` attribute holds the fast-math flags of the
+    operation.
+
     Example:
 
     ```
@@ -2223,6 +2236,19 @@ def CIR_FNegOp : CIR_UnaryOp<"fneg", CIR_AnyFloatOrVecOfFloatType> {
     %5 = cir.fneg %4 : !cir.vector<4 x !cir.float>
     ```
   }];
+
+  let arguments = !con(commonArgs, (ins
+      OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags));
+
+  let assemblyFormat = [{
+    $input `:` type($input) prop-dict attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$input), [{
+      build($_builder, $_state, input, cir::FastMathFlagsAttr{});
+    }]>
+  ];
 
   let hasFolder = 1;
 
@@ -3405,7 +3431,7 @@ def CIR_SelectOp : CIR_Op<"select", [
 
 def CIR_TernaryOp : CIR_EnterAnyRegionBranchOpBase<"ternary", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
-]> {
+], ["getEntrySuccessorRegions"]> {
   let summary = "The `cond ? a : b` C/C++ ternary operation";
   let description = [{
     The `cir.ternary` operation represents C/C++ ternary, much like a `select`
@@ -3757,7 +3783,14 @@ def CIR_VTableAddrPointOp : CIR_Op<"vtable.address_point", [
 // VTableGetVPtr
 //===----------------------------------------------------------------------===//
 
-def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [Pure]> {
+def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [
+  Pure,
+  TypesMatchWith<
+      "result is a vptr pointer in the address space of 'src'",
+      "src", "result",
+      "cir::PointerType::get(cir::VPtrType::get($_self.getContext()), "
+      "mlir::cast<cir::PointerType>($_self).getAddrSpace())">
+]> {
   let summary = "Get a the address of the vtable pointer for an object";
   let description = [{
     The `vtable.get_vptr` operation retrieves the address of the vptr for a
@@ -3766,7 +3799,7 @@ def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [Pure]> {
     The vptr will always be at offset zero in the object, but this operation
     is more explicit about what is being retrieved than a direct bitcast.
 
-    The return type is always `!cir.ptr<!cir.vptr>`.
+    The return type is `!cir.ptr<!cir.vptr>` in the address space of `src`.
 
     Example:
     ```
@@ -3787,45 +3820,122 @@ def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
-// VTableGetVirtualFnAddrOp
+// VTableGetVirtualFnOp
 //===----------------------------------------------------------------------===//
 
-def CIR_VTableGetVirtualFnAddrOp : CIR_Op<"vtable.get_virtual_fn_addr", [
-  Pure
+def CIR_VTableGetVirtualFnOp : CIR_Op<"vtable.get_virtual_fn", [
+  MemoryEffects<[MemRead]>
 ]> {
-  let summary = "Get a the address of a virtual function pointer";
+  let summary = "Get a virtual function pointer from a vtable";
   let description = [{
-    The `vtable.get_virtual_fn_addr` operation retrieves the address of a
-    virtual function pointer from an object's vtable (__vptr).
-    This is an abstraction to perform the basic pointer arithmetic to get
-    the address of the virtual function pointer, which can then be loaded and
-    called.
+    The `vtable.get_virtual_fn` operation retrieves the pointer to a virtual
+    function from an object's vtable (__vptr). This is an ABI independent
+    abstraction of this operation: how the entry is stored and read is decided
+    when the operation is lowered.
 
-    The `vptr` operand must be a `!cir.ptr<!cir.vptr>` value, which would
-    have been returned by a previous call to `cir.vtable.get_vptr`. The
-    `index` operand is an index of the virtual function in the vtable.
+    The `vptr` operand must be a `!cir.vptr` value, which would have been
+    returned by a previous call to `cir.vtable.get_vptr`. The `index` operand
+    is the index of the virtual function in the vtable, counted from the
+    address point.
 
-    The return type is a pointer-to-pointer to the function type.
+    The `invariant` attribute marks that the entry does not change for as long
+    as the vtable is live, which allows the load of it to be optimized.
+
+    The result is the pointer to the function.
 
     Example:
     ```
     %2 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
     %3 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>
     %4 = cir.load %3 : !cir.ptr<!cir.vptr>, !cir.vptr
-    %5 = cir.vtable.get_virtual_fn_addr %4[2] : !cir.vptr
-                  -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>>
-    %6 = cir.load align(8) %5 : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_C>)
-                                                                 -> !s32i>>>,
-                                !cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>
-    %7 = cir.call %6(%2) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>,
+    %5 = cir.vtable.get_virtual_fn %4[2] : !cir.vptr
+                  -> !cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>
+    %6 = cir.call %5(%2) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>,
                             !cir.ptr<!rec_C>) -> !s32i
     ```
   }];
 
   let arguments = (ins
     CIR_VPtrType:$vptr,
-    I64Attr:$index);
+    I64Attr:$index,
+    UnitAttr:$invariant);
 
+  let results = (outs CIR_PtrToFunc:$result);
+
+  let assemblyFormat = [{
+    $vptr `[` $index `]` (`invariant` $invariant^)? attr-dict
+    `:` qualified(type($vptr)) `->` qualified(type($result))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// VTableGetOffsetOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableGetOffsetOp : CIR_Op<"vtable.get_offset", [
+  MemoryEffects<[MemRead]>
+]> {
+  let summary = "Get an offset stored in a vtable";
+  let description = [{
+    The `vtable.get_offset` operation reads an offset that is stored in an
+    object's vtable, such as the offset of a virtual base class or a virtual
+    adjustment for a thunk, in an ABI independent way.
+
+    The `vptr` operand must be a `!cir.vptr` value, which would have been
+    returned by a previous call to `cir.vtable.get_vptr`. The `index` operand
+    is the index of the entry in the vtable, counted from the address point.
+    Entries that precede the address point have a negative index.
+
+    The result is the value of the offset, in bytes.
+
+    Example:
+    ```
+    %3 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_D> -> !cir.ptr<!cir.vptr>
+    %4 = cir.load %3 : !cir.ptr<!cir.vptr>, !cir.vptr
+    %5 = cir.vtable.get_offset %4[-4] : !cir.vptr -> !s64i
+    ```
+  }];
+
+  let arguments = (ins CIR_VPtrType:$vptr, I64Attr:$index);
+  let results = (outs CIR_IntType:$result);
+
+  let assemblyFormat = [{
+    $vptr `[` $index `]` attr-dict
+    `:` qualified(type($vptr)) `->` qualified(type($result))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// VTableGetEntryOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableGetEntryOp : CIR_Op<"vtable.get_entry", [
+  MemoryEffects<[MemRead]>
+]> {
+  let summary = "Get a pointer entry from a vtable";
+  let description = [{
+    The `vtable.get_entry` operation reads an entry of an object's vtable that
+    holds a pointer, other than a virtual function. This is an ABI independent
+    abstraction of this operation: how the entry is stored and read is decided
+    when the operation is lowered.
+
+    The `vptr` operand must be a `!cir.vptr` value, which would have been
+    returned by a previous call to `cir.vtable.get_vptr`. The `index` operand
+    is the index of the entry in the vtable, counted from the address point.
+    Entries that precede the address point have a negative index.
+
+    The result is the pointer that the entry holds.
+
+    Example:
+    ```
+    %3 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_A> -> !cir.ptr<!cir.vptr>
+    %4 = cir.load %3 : !cir.ptr<!cir.vptr>, !cir.vptr
+    %5 = cir.vtable.get_entry %4[-1] : !cir.vptr
+                  -> !cir.ptr<!rec_std3A3Atype_info>
+    ```
+  }];
+
+  let arguments = (ins CIR_VPtrType:$vptr, I64Attr:$index);
   let results = (outs CIR_PointerType:$result);
 
   let assemblyFormat = [{
@@ -3839,26 +3949,25 @@ def CIR_VTableGetVirtualFnAddrOp : CIR_Op<"vtable.get_virtual_fn_addr", [
 //===----------------------------------------------------------------------===//
 
 def CIR_VTableGetTypeInfoOp : CIR_Op<"vtable.get_type_info", [
-  Pure
+  MemoryEffects<[MemRead]>
 ]> {
-  let summary = "Get the address of the type_info from the vtable";
+  let summary = "Get the type_info of an object from its vtable";
   let description = [{
-    The `vtable.get_type_info` operation retreives the address of the dynamic
-    type_info/rtti object from an object's vtable. This is an ABI independent
-    abstraction of this operation.
+    The `vtable.get_type_info` operation retrieves the pointer to the dynamic
+    type_info/rtti object from an object's vtable (__vptr). This is an ABI
+    independent abstraction of this operation: where the entry is, and how it
+    is stored and read, is decided when the operation is lowered.
 
     The `vptr` operand must be a `!cir.vptr` value, which would have been
     returned by a previous call to `cir.vtable.get_vptr`.
 
-    The return type is a loadable pointer to a `type_info` struct.
+    The result is the pointer to the `type_info` struct.
 
     Example:
     ```
     %5 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_A> -> !cir.ptr<!cir.vptr>
     %6 = cir.load align(8) %5 : !cir.ptr<!cir.vptr>, !cir.vptr
-    %7 = cir.vtable.get_type_info %6 : !cir.vptr -> !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>
-    %8 = cir.load align(8) %7 : !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>, !cir.ptr<!rec_std3A3Atype_info>
-
+    %7 = cir.vtable.get_type_info %6 : !cir.vptr -> !cir.ptr<!rec_std3A3Atype_info>
     ```
   }];
 
@@ -4040,7 +4149,9 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
 // GetBitfieldOp
 //===----------------------------------------------------------------------===//
 
-def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
+def CIR_GetBitfieldOp : CIR_Op<"get_bitfield", [
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
+]> {
   let summary = "Get the information for a bitfield member";
   let description = [{
     The `cir.get_bitfield` operation provides a load-like access to
@@ -4089,7 +4200,7 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
     }];
 
   let arguments = (ins
-    Arg<CIR_PointerType, "the address to load from", [MemRead]>:$addr,
+    Arg<CIR_PointerType, "the address to load from">:$addr,
     CIR_BitfieldInfoAttr:$bitfield_info,
     DefaultValuedOptionalAttr<I64Attr, "0">:$alignment,
     UnitAttr:$is_volatile
@@ -4302,18 +4413,42 @@ def CIR_GetElementOp : CIR_Op<"get_element", [
     It expects a pointer to the `base` array and the `index` of the element.
     The result pointer preserves the address space of the base pointer.
 
+    The optional `inbounds` and `nuw` (no unsigned wrap) flags have the
+    semantics of the same flags on LLVM's `getelementptr`.  With `inbounds`,
+    unless `index` is zero, `base` and the result both point into the same
+    allocated object, or to its end.  `inbounds` also guarantees that scaling
+    `index` by the element size does not overflow as a signed value, and that
+    adding that signed offset to the unsigned address of `base` does not wrap.
+    With `nuw`, the scaling and the addition do not wrap when `index` and the
+    address are both treated as unsigned.  The result is poison if the
+    guarantee of a present flag does not hold.
+
     Example:
     ```
-    // Suppose we have a array.
+    // Suppose we have an array.
     !s32i = !cir.int<s, 32>
+    !u32i = !cir.int<u, 32>
     !arr_ty = !cir.array<!s32i x 4>
 
     // Get the address of the element at index 1.
-    %elem_1 = cir.get_element %0[1 : !s32i] : !cir.ptr<!array_ty> -> !cir.ptr<!s32i>
+    %elem_1 = cir.get_element %0[1 : !s32i] :
+      !cir.ptr<!arr_ty> -> !cir.ptr<!s32i>
 
     // Get the address of the element at index %i.
     %i = ...
-    %elem_i = cir.get_element %0[%i : !s32i] : !cir.ptr<!array_ty> -> !cir.ptr<!s32i>
+    %elem_i = cir.get_element %0[%i : !s32i] :
+      !cir.ptr<!arr_ty> -> !cir.ptr<!s32i>
+
+    // The same, when %0 and the result are known to be in bounds of the same
+    // allocated object.
+    %elem_ib = cir.get_element inbounds %0[%i : !s32i] :
+      !cir.ptr<!arr_ty> -> !cir.ptr<!s32i>
+
+    // The same, when scaling %u and adding it to %0 are also known not to
+    // wrap as unsigned arithmetic.
+    %u = ...
+    %elem_ibnuw = cir.get_element inbounds nuw %0[%u : !u32i] :
+      !cir.ptr<!arr_ty> -> !cir.ptr<!s32i>
 
     // With address space (e.g., GPU private memory):
     %elem_gpu = cir.get_element %gpu_arr[%i : !s32i] :
@@ -4325,11 +4460,15 @@ def CIR_GetElementOp : CIR_Op<"get_element", [
 
   let arguments = (ins
     Arg<CIR_PtrToArray, "the base address of the array ">:$base,
-    Arg<CIR_AnyFundamentalIntType, "the index of the element">:$index
+    Arg<CIR_AnyFundamentalIntType, "the index of the element">:$index,
+    UnitProp:$in_bounds,
+    UnitProp:$no_unsigned_wrap
   );
   let results = (outs CIR_PointerType : $result);
 
   let assemblyFormat = [{
+    (`inbounds` $in_bounds^)?
+    (`nuw` $no_unsigned_wrap^)?
     $base`[` $index `:` type($index) `]` attr-dict
       `:` qualified(type($base)) `->` qualified(type($result))
   }];
@@ -6007,6 +6146,15 @@ def CIR_AsmFlavor : CIR_I32Enum<"AsmFlavor", "ATT or Intel",
 
 def CIR_AsmFlavorAttr : CIR_EnumAttr<CIR_AsmFlavor, "asm_flavor">;
 
+def CIR_EmptyDictAttr : Attr<CPred<
+  "::llvm::isa<::mlir::DictionaryAttr>($_self) && "
+  "::llvm::cast<::mlir::DictionaryAttr>($_self).empty()">,
+  "empty dictionary">;
+
+def CIR_AsmOperandAttrArray : CIR_TypedArrayAttrBase<
+  AnyAttrOf<[UnitAttr, CIR_EmptyDictAttr]>,
+  "array of unit attributes or empty dictionaries">;
+
 def CIR_InlineAsmOp : CIR_Op<"asm",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let description = [{
@@ -6020,9 +6168,9 @@ def CIR_InlineAsmOp : CIR_Op<"asm",
     - the output variable index referenced by the input operands.
     - the index of early-clobber operand
 
-    Operand attributes are a storage, where each element corresponds to the
-    operand with the same index. The first index relates to the operation
-    result (if any).
+    `operand_attrs` has one entry per operand, in operand order: a unit
+    attribute marks a memory operand (printed as `maybe_memory`) and an empty
+    dictionary marks any other operand.
     The operands themselves are stored as VariadicOfVariadic in the following
     order: output, input and then in/out operands. When several output operands
     are present, the result type may be represented as an anonymous record type.
@@ -6072,7 +6220,8 @@ def CIR_InlineAsmOp : CIR_Op<"asm",
   let arguments =
       (ins VariadicOfVariadic<AnyType, "operands_segments">:$asm_operands,
           StrAttr:$asm_string, StrAttr:$constraints, UnitAttr:$side_effects,
-          UnitAttr:$convergent, CIR_AsmFlavorAttr:$asm_flavor, ArrayAttr:$operand_attrs,
+          UnitAttr:$convergent, CIR_AsmFlavorAttr:$asm_flavor,
+          CIR_AsmOperandAttrArray:$operand_attrs,
           DenseI32ArrayAttr:$operands_segments);
 
   let builders = [OpBuilder<(ins
@@ -6081,7 +6230,19 @@ def CIR_InlineAsmOp : CIR_Op<"asm",
       "bool":$sideEffects, "bool":$convergent, "AsmFlavor":$asmFlavor,
       "llvm::ArrayRef<mlir::Attribute>":$operandAttrs)>];
 
+  let extraClassDeclaration = [{
+    /// Returns true if the asm operand at `index`, counted over all asm
+    /// operands, is a memory operand: the address of an lvalue that the asm
+    /// reads or writes, from a constraint such as "=*m". It is printed as
+    /// `maybe_memory`.
+    bool isMemoryOperand(unsigned index) {
+      assert(index < getOperandAttrs().size() && "operand index out of range");
+      return mlir::isa<mlir::UnitAttr>(getOperandAttrs()[index]);
+    }
+  }];
+
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -6764,7 +6925,7 @@ def CIR_VecFCmpOp : CIR_Op<"vec.fcmp",
             cir::FenvAttr{});
     }]>
   ];
-
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -6801,12 +6962,12 @@ def CIR_VecShuffleOp : CIR_Op<"vec.shuffle", [
   }];
 
   let arguments = (ins
-    CIR_VectorType:$vec1,
-    CIR_VectorType:$vec2,
+    CIR_AnyVectorOrMatrixType:$vec1,
+    CIR_AnyVectorOrMatrixType:$vec2,
     CIR_IntArrayAttr:$indices
   );
 
-  let results = (outs CIR_VectorType:$result);
+  let results = (outs CIR_AnyVectorOrMatrixType:$result);
   let assemblyFormat = [{
     `(` $vec1 `,` $vec2 `:` qualified(type($vec1)) `)` $indices `:`
      qualified(type($result)) attr-dict
@@ -6922,8 +7083,7 @@ def CIR_VecSplatOp : CIR_Op<"vec.splat", [
   }];
 
   let arguments = (ins CIR_VectorElementType:$value);
-  let results = (outs AnyTypeOf<[CIR_VectorType, CIR_MatrixType],
-                                "vector or matrix type">:$result);
+  let results = (outs CIR_AnyVectorOrMatrixType:$result);
 
   let assemblyFormat = [{
     $value `:` type($value) `,` qualified(type($result)) attr-dict
@@ -7053,6 +7213,7 @@ def CIR_MatrixInsertOp : CIR_Op<"matrix.insert", [
 
 def CIR_MatrixColumnMajorLoadOp : CIR_Op<"matrix.column_major_load", [
   DeclareOpInterfaceMethods<PromotableMemOpInterface>,
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
 ]> {
   let summary = "Matrix column major load";
   let description = [{
@@ -7080,7 +7241,7 @@ def CIR_MatrixColumnMajorLoadOp : CIR_Op<"matrix.column_major_load", [
   }];
 
   let arguments = (ins
-    Arg<CIR_PointerType, "the address to load from", [MemRead]>:$value,
+    Arg<CIR_PointerType, "the address to load from">:$value,
     CIR_IntType:$stride,
     UnitAttr:$is_volatile
   );
@@ -8258,6 +8419,84 @@ def CIR_AssumeOp : CIR_Op<"assume"> {
   let hasVerifier = 1;
 }
 
+
+//===----------------------------------------------------------------------===//
+// Annotation operations
+//===----------------------------------------------------------------------===//
+
+def CIR_VarAnnotationOp : CIR_Op<"var_annotation"> {
+  let summary = "Annotate the storage of a local variable or parameter";
+  let description = [{
+    Attaches an `annotate` attribute to the local variable or parameter stored
+    at `addr`. Corresponds to `llvm.var.annotation`.
+
+    ```
+    cir.var_annotation %0 [#cir.annotation<"on_local", [7 : i32]>]
+        : !cir.ptr<!s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$addr,
+                       CIR_AnnotationAttr:$annotation);
+
+  let assemblyFormat = [{
+    $addr ` ` `[` qualified($annotation) `]` `:` qualified(type($addr))
+    attr-dict
+  }];
+  let customLLVMLoweringConstructorDecl = LoweringBuilders<(
+      ins "LLVMAnnotationGlobals &":$annotationGlobals)>;
+}
+
+def CIR_PtrAnnotationOp : CIR_Op<"ptr_annotation", [
+  AllTypesMatch<["addr", "result"]>
+]> {
+  let summary = "Annotate a pointer to a record field";
+  let description = [{
+    Returns `addr` annotated with the `annotate` attribute of a record field;
+    accesses to the field use the result. Corresponds to `llvm.ptr.annotation`.
+
+    ```
+    %1 = cir.ptr_annotation %0 [#cir.annotation<"on_field">] : !cir.ptr<!s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$addr,
+                       CIR_AnnotationAttr:$annotation);
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    $addr ` ` `[` qualified($annotation) `]` `:` qualified(type($addr))
+    attr-dict
+  }];
+  let customLLVMLoweringConstructorDecl = LoweringBuilders<(
+      ins "LLVMAnnotationGlobals &":$annotationGlobals)>;
+}
+
+def CIR_AnnotationOp : CIR_Op<"annotation", [
+  AllTypesMatch<["value", "result"]>
+]> {
+  let summary = "Annotate an integer value";
+  let description = [{
+    Returns `value` annotated with a string, as `__builtin_annotation` does.
+    The annotation takes no arguments. Corresponds to `llvm.annotation`.
+
+    ```
+    %1 = cir.annotation %0 [#cir.annotation<"on_builtin">] : !s32i
+    ```
+  }];
+
+  let arguments = (ins CIR_AnyIntType:$value,
+                       CIR_AnnotationAttr:$annotation);
+  let results = (outs CIR_AnyIntType:$result);
+
+  let assemblyFormat = [{
+    $value ` ` `[` qualified($annotation) `]` `:` type($value) attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let customLLVMLoweringConstructorDecl = LoweringBuilders<(
+      ins "LLVMAnnotationGlobals &":$annotationGlobals)>;
+}
 //===----------------------------------------------------------------------===//
 // Branch Probability Operations
 //===----------------------------------------------------------------------===//
@@ -9047,6 +9286,8 @@ def CIR_ModfOp : CIR_Op<"modf", [Pure]> {
   }];
 }
 
+// The optional `fastmath_flags` attribute holds the fast-math flags of the
+// operation.
 class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     : CIR_Op<mnemonic,
              !listconcat([SameOperandsAndResultType], CIR_FenvOpTraits)>
@@ -9055,19 +9296,21 @@ class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     CIR_AnyFloatOrVecOfFloatType:$a,
     CIR_AnyFloatOrVecOfFloatType:$b,
     CIR_AnyFloatOrVecOfFloatType:$c,
-    OptionalAttr<CIR_FenvAttr>:$fenv
+    OptionalAttr<CIR_FenvAttr>:$fenv,
+    OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags
   );
 
   let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
 
   let assemblyFormat = [{
-    $a `,` $b `,` $c `:` type($a) (`fenv` `` $fenv^)? attr-dict
+    $a `,` $b `,` $c `:` type($a) (`fenv` `` $fenv^)? prop-dict attr-dict
   }];
 
   let builders = [
     OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$a, "mlir::Value":$b,
                    "mlir::Value":$c), [{
-      build($_builder, $_state, result, a, b, c, cir::FenvAttr{});
+      build($_builder, $_state, result, a, b, c, cir::FenvAttr{},
+            cir::FastMathFlagsAttr{});
     }]>
   ];
 

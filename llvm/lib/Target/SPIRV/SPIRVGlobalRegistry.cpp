@@ -1853,7 +1853,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateOpTypeByOpcode(
 
 SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateUnknownType(
     const Type *Ty, MachineIRBuilder &MIRBuilder, unsigned Opcode,
-    const ArrayRef<MCOperand> Operands) {
+    const ArrayRef<MachineOperand> Operands) {
   if (const MachineInstr *MI = findMI(Ty, false, &MIRBuilder.getMF()))
     return MI;
   Register ResVReg = createTypeVReg(MIRBuilder);
@@ -1862,12 +1862,10 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateUnknownType(
         MachineInstrBuilder MIB = MIRBuilder.buildInstr(SPIRV::UNKNOWN_type)
                                       .addDef(ResVReg)
                                       .addImm(Opcode);
-        for (MCOperand Operand : Operands) {
-          if (Operand.isReg()) {
-            MIB.addUse(Operand.getReg());
-          } else if (Operand.isImm()) {
-            MIB.addImm(Operand.getImm());
-          }
+        for (const MachineOperand &Operand : Operands) {
+          assert((Operand.isReg() || Operand.isImm()) &&
+                 "Expected register or immediate operand");
+          MIB.add(Operand);
         }
         return MIB;
       });

@@ -13,7 +13,6 @@ name:            load_i32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -41,7 +40,6 @@ name:            load_float
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -69,7 +67,6 @@ name:            load_double
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4

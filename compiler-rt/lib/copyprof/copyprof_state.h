@@ -72,6 +72,21 @@ struct PerThreadState {
   const void* current_this_ptr = nullptr;
 };
 
+// Each copied object has an associated `PerObjectState`.
+// Used for tracking the transitive size (size of self + all memory allocations)
+// of the object.
+struct PerObjectState {
+  void SetStaticSize(usize num_bytes);
+  void IncreaseTrackedSize(usize num_bytes);
+  usize GetTrackedSize() const;
+
+  // Whether memory was dynamically allocated while making the copy.
+  bool did_allocate = false;
+
+  // Total transitive size (self + all memory allocations) in bytes.
+  usize tracked_size = 0;
+};
+
 // The runtime is always linked into the main executable, so the state can be
 // reached with the initial-exec model instead of paying for a __tls_get_addr
 // call on every access.

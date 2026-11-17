@@ -2366,7 +2366,7 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
   if (!Base.isReg())
     return;
 
-  MachineInstr *Def = MRI->getUniqueVRegDef(Base.getReg());
+  MachineInstr *Def = MRI->getVRegDef(Base.getReg());
   if (!Def)
     return;
 
@@ -2393,8 +2393,8 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
   if (!BaseLo.isReg() || !BaseHi.isReg())
     return;
 
-  MachineInstr *BaseLoDef = MRI->getUniqueVRegDef(BaseLo.getReg());
-  MachineInstr *BaseHiDef = MRI->getUniqueVRegDef(BaseHi.getReg());
+  MachineInstr *BaseLoDef = MRI->getVRegDef(BaseLo.getReg());
+  MachineInstr *BaseHiDef = MRI->getVRegDef(BaseHi.getReg());
 
   if (!BaseLoDef || BaseLoDef->getOpcode() != AMDGPU::V_ADD_CO_U32_e64 ||
       !BaseHiDef || BaseHiDef->getOpcode() != AMDGPU::V_ADDC_U32_e64)

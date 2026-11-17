@@ -48,17 +48,24 @@ static NameLoc getLocFromDebugInfoString(OpBuilder &builder, StringRef source) {
 Value spirv::Deserializer::getValue(uint32_t id) {
   if (std::optional<std::pair<Attribute, Type>> constCompositeReplicateInfo =
           getConstantCompositeReplicate(id)) {
-    return spirv::EXTConstantCompositeReplicateOp::create(
-        opBuilder, unknownLoc, constCompositeReplicateInfo->second,
-        constCompositeReplicateInfo->first);
+    Value &value = blockConstantMap[{opBuilder.getInsertionBlock(), id}];
+    if (!value)
+      value = spirv::EXTConstantCompositeReplicateOp::create(
+          opBuilder, unknownLoc, constCompositeReplicateInfo->second,
+          constCompositeReplicateInfo->first);
+    return value;
   }
   if (auto constInfo = getConstant(id)) {
-    // Materialize a `spirv.Constant` op at every use site.
-    Location loc = unknownLoc;
-    if (LocationAttr locAttr = constantLocMap.lookup(id))
-      loc = Location(locAttr);
-    return spirv::ConstantOp::create(opBuilder, loc, constInfo->second,
-                                     constInfo->first);
+    // Materialize a `spirv.Constant` op once per block.
+    Value &value = blockConstantMap[{opBuilder.getInsertionBlock(), id}];
+    if (!value) {
+      Location loc = unknownLoc;
+      if (LocationAttr locAttr = constantLocMap.lookup(id))
+        loc = Location(locAttr);
+      value = spirv::ConstantOp::create(opBuilder, loc, constInfo->second,
+                                        constInfo->first);
+    }
+    return value;
   }
   if (auto varOp = getGlobalVariable(id)) {
     auto addressOfOp =
@@ -93,7 +100,10 @@ Value spirv::Deserializer::getValue(uint32_t id) {
         specConstOperationInfo->enclosedOpOperands);
   }
   if (auto undef = getUndefType(id)) {
-    return spirv::UndefOp::create(opBuilder, unknownLoc, undef);
+    Value &value = blockConstantMap[{opBuilder.getInsertionBlock(), id}];
+    if (!value)
+      value = spirv::UndefOp::create(opBuilder, unknownLoc, undef);
+    return value;
   }
   if (std::optional<spirv::GraphConstantARMOpMaterializationInfo>
           graphConstantARMInfo = getGraphConstantARM(id)) {

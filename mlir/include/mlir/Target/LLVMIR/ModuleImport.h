@@ -257,6 +257,12 @@ public:
     return tbaaMapping.lookup(node);
   }
 
+  /// Looks up a converted `!tbaa.struct` node. Returns null when the
+  /// node was never converted or could not be modeled.
+  Attribute lookupTBAAStructAttr(const llvm::MDNode *node) const {
+    return tbaaStructMapping.lookup(node);
+  }
+
   /// Returns the access group attributes that map to the access group nodes
   /// starting from the access group metadata `node`. Returns failure, if any of
   /// the attributes cannot be found.
@@ -471,6 +477,12 @@ private:
   /// (unless all dependencies have been converted by a previous
   /// invocation of this function).
   LogicalResult processTBAAMetadata(const llvm::MDNode *node);
+  /// Converts a `!tbaa.struct` node to the `tbaa_struct` attribute. The
+  /// node's tags must already be converted (see the pre-walk in
+  /// convertMetadata). Returns null for nodes that cannot be modeled;
+  /// callers record the null in tbaaStructMapping so the node is
+  /// declined at attach time.
+  Attribute convertTBAAStructMetadata(const llvm::MDNode *node);
   /// Converts all LLVM access groups starting from `node` to MLIR access group
   /// operations and stores a mapping from every nested access group node to the
   /// translated attribute. Returns success if all conversions succeed and
@@ -539,6 +551,12 @@ private:
   /// Mapping between LLVM TBAA metadata nodes and LLVM dialect TBAA attributes
   /// corresponding to these nodes.
   DenseMap<const llvm::MDNode *, Attribute> tbaaMapping;
+  /// Mapping between LLVM `!tbaa.struct` nodes and the converted
+  /// `tbaa_struct` attributes. Kept separate from tbaaMapping so a struct
+  /// node can never be mistaken for a TBAA tag or type descriptor node,
+  /// which processTBAAMetadata casts to those attribute kinds. A null
+  /// value records that the node was converted and could not be modeled.
+  DenseMap<const llvm::MDNode *, Attribute> tbaaStructMapping;
   /// Mapping between LLVM comdat structs and symbol references to LLVM dialect
   /// comdat selector operations corresponding to these structs.
   DenseMap<const llvm::Comdat *, SymbolRefAttr> comdatMapping;
