@@ -3006,6 +3006,8 @@ bool Sema::AttachBaseSpecifiers(CXXRecordDecl *Class,
 
   if (getLangOpts().HLSL && Bases.size() > 1) {
     Diag(Bases[1]->getBeginLoc(), diag::err_hlsl_mult_inheritance);
+    // To prevent producing error messages about the additional base classes
+    Bases = Bases.take_front();
     Invalid = true;
   }
 

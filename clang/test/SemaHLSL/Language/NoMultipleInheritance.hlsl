@@ -12,3 +12,5 @@ struct SingleInheritance : FirstBase {};
 struct ChainedInheritance : SingleInheritance {};
 
 struct MultipleInheritance : FirstBase, SecondBase {}; // expected-error{{HLSL does not support multiple inheritance}}
+
+struct MultiError : FirstBase, FirstBase {}; // expected-error{{HLSL does not support multiple inheritance}}
