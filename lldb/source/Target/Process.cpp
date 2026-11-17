@@ -2126,9 +2126,10 @@ size_t Process::ReadMemory(const ProcessAddress &process_addr, void *buf,
     return DoReadMemory(process_addr, buf, size, error);
   }
 
-  lldb::addr_t addr = process_addr.GetValue();
-  if (ABISP abi_sp = GetABI())
-    addr = abi_sp->FixAnyAddress(addr);
+  const lldb::addr_t addr = FixAnyAddress(process_addr.GetValue());
+
+  if (!ShouldUseMemoryCache(addr))
+    return DoReadMemory(addr, buf, size, error);
 
   if (GetDisableMemoryCache())
     return ReadMemoryFromInferior(addr, buf, size, error);
@@ -6842,9 +6843,13 @@ bool Process::CallVoidArgVoidPtrReturn(const Address *address,
       ExpressionResults result =
           RunThreadPlan(exe_ctx, call_plan_sp, options, diagnostics);
       if (result == eExpressionCompleted) {
+        ThreadPlanReturnValue return_value = call_plan_sp->GetReturnValue();
+        auto *returned = std::get_if<ReturnedValue>(&return_value);
+        if (!returned)
+          return false;
+
         returned_func =
-            call_plan_sp->GetReturnValueObject()->GetValueAsUnsigned(
-                LLDB_INVALID_ADDRESS);
+            returned->valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
 
         if (GetAddressByteSize() == 4) {
           if (returned_func == UINT32_MAX)
