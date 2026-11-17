@@ -151,20 +151,15 @@ public:
       return {};
 
     if (mlir::Attribute result = ConstantEmitter(cgf).tryEmitConstantExpr(e)) {
-      if (e->isGLValue()) {
-        if (e->hasAPValueResult() && !e->getAPValueResult().isLValue())
-          return builder.getConstant(cgf.getLoc(e->getSourceRange()),
-                                     mlir::cast<mlir::TypedAttr>(result));
-        mlir::Value val =
-            builder.getConstant(cgf.getLoc(e->getSourceRange()),
-                                mlir::cast<mlir::TypedAttr>(result));
-        return cgf.emitLoadOfScalar(
-            cgf.makeNaturalAlignPointeeAddrLValue(val, e->getType()),
-            e->getExprLoc());
-      }
-
-      return builder.getConstant(cgf.getLoc(e->getSourceRange()),
-                                 mlir::cast<mlir::TypedAttr>(result));
+      mlir::Value val = builder.getConstant(
+          cgf.getLoc(e->getSourceRange()), mlir::cast<mlir::TypedAttr>(result));
+      // This was already converted to an rvalue when it was constant evaluated.
+      if (!e->isGLValue() ||
+          (e->hasAPValueResult() && !e->getAPValueResult().isLValue()))
+        return val;
+      return cgf.emitLoadOfScalar(
+          cgf.makeNaturalAlignPointeeAddrLValue(val, e->getType()),
+          e->getExprLoc());
     }
 
     return Visit(e->getSubExpr());

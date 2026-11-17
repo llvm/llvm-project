@@ -201,6 +201,16 @@ int test_load() {
   return get_ref(val);
 }
 
+constexpr long kAlignment = 128;
+void *test_assume_aligned(void *p) {
+  // CIR-LABEL: cir.func {{.*}} @_Z19test_assume_alignedPv
+  // CIR: %[[ALIGN:.*]] = cir.const #cir.int<128> : !u64i
+  // CIR: cir.assume {{.*}} align({{.*}}, %[[ALIGN]] : !cir.ptr<!void>, !u64i)
+  // LLVM-LABEL: define {{.*}} @_Z19test_assume_alignedPv
+  // LLVM: call void @llvm.assume(i1 true) [ "align"(ptr %{{.*}}, i64 128) ]
+  return __builtin_assume_aligned(p, kAlignment);
+}
+
 // TODO(cir): Once we get destructors for temporaries done, we should test them
 // here, same as the 'const-WithCtor' examples, except with the 'withCtorDtor'
 // versions.
