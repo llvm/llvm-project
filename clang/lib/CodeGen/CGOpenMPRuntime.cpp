@@ -10950,10 +10950,14 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
   // HasAttachPtr) only for OpenMP >= 6.0; before 6.0 the present modifier does
   // not apply to the pointee (see the OpenMP 6.0 erratum on the present motion
   // vs. map-type modifier divergence).
-  bool PropagatePresentToPointee = CGM.getLangOpts().OpenMP >= 60;
+  bool PropagatePresentToPointeeStorage = CGM.getLangOpts().OpenMP >= 60;
+  // Keep non-pointee storage present propagation disabled until Clang stops
+  // emitting PTR_AND_OBJ maps and uses attach-style maps throughout.
+  bool PropagatePresentToNonPointeeStorage = false;
   llvm::Function *NewFn = cantFail(OMPBuilder.emitUserDefinedMapper(
       PrivatizeAndGenMapInfoCB, ElemTy, Name, CustomMapperCB,
-      /*PreserveMemberOfFlags=*/false, PropagatePresentToPointee));
+      /*PreserveMemberOfFlags=*/false, PropagatePresentToPointeeStorage,
+      PropagatePresentToNonPointeeStorage));
   UDMMap.try_emplace(D, NewFn);
   if (CGF)
     FunctionUDMMap[CGF->CurFn].push_back(D);

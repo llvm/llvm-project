@@ -61,8 +61,13 @@ public:
     /// Input DWARF is loaded.
     Loaded,
 
-    /// Input DWARF is analysed(DIEs pointing to the real code section are
-    /// discovered, type names are assigned if ODR is requested).
+    /// DIEs with a live address are found. Marking a unit reads whether the
+    /// DIEs it references in other units have an address, so every
+    /// inter-connected unit gets here before any of them is marked.
+    LiveRootsCollected,
+
+    /// Input DWARF is analysed(DIEs pointing to the real code section and the
+    /// DIEs they depend on are marked).
     LivenessAnalysisDone,
 
     /// Check if dependencies have incompatible placement.
@@ -162,8 +167,11 @@ public:
   /// This method copies output offsets for referenced DIEs into DIEs patches.
   void updateDieRefPatchesWithClonedOffsets();
 
-  /// Search for subprograms and variables referencing live code and discover
-  /// dependend DIEs. Mark live DIEs, set placement for DIEs.
+  /// Search for subprograms and variables referencing live code.
+  void collectLiveRoots();
+
+  /// Discover the DIEs the live roots depend on. Mark live DIEs, set placement
+  /// for DIEs.
   bool resolveDependenciesAndMarkLiveness(
       bool InterCUProcessingStarted,
       std::atomic<bool> &HasNewInterconnectedCUs);
@@ -303,6 +311,10 @@ public:
 
     /// Track liveness for the DIE.
     SINGLE_FLAG_METHODS_SET(HasAnAddress, 0x800)
+
+    /// DIE is a function-local variable with a live address that does not keep
+    /// its function, and is kept wherever the function is.
+    SINGLE_FLAG_METHODS_SET(KeepWithParent, 0x1000)
 
     void unsetFlagsWhichSetDuringLiveAnalysis() {
       auto InputData = Flags.load();

@@ -754,7 +754,7 @@ struct FunctionLikeUnit : public ProgramUnit {
 
   void setHostAssociatedSymbols(
       const llvm::SetVector<const semantics::Symbol *> &symbols) {
-    hostAssociations.addSymbolsToBind(symbols, getScope());
+    hostAssociations.addSymbolsToBind(symbols);
   }
 
   /// Return the host associations, if any, from the parent (host) procedure.
@@ -904,7 +904,9 @@ struct Program {
 private:
   std::list<Units> units;
   semantics::CommonBlockList commonBlocks;
-  ScopeVariableListMap scopeVariableListMap; // module and submodule scopes
+  // Module and submodule lists last until lowering ends. A host's list is kept
+  // only while lowering that host and all its internal procedures.
+  ScopeVariableListMap scopeVariableListMap;
 };
 
 /// Helper to get location from FunctionLikeUnit/ModuleLikeUnit begin/end

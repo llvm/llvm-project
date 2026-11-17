@@ -222,6 +222,7 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonHardwareLoopsPass(PR);
   initializeHexagonHVXSaveRemarkPass(PR);
   initializeHexagonLoopIdiomRecognizeLegacyPassPass(PR);
+  initializeHexagonLowerHLXPairAllocasPass(PR);
   initializeHexagonNewValueJumpPass(PR);
   initializeHexagonOptAddrModePass(PR);
   initializeHexagonPacketizerPass(PR);
@@ -274,18 +275,27 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
 
 const HexagonSubtarget *
 HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
-  AttributeList FnAttrs = F.getAttributes();
-  Attribute CPUAttr = FnAttrs.getFnAttr("target-cpu");
-  Attribute FSAttr = FnAttrs.getFnAttr("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const HexagonSubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
+
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+
+  if (const HexagonSubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
 
   std::string CPU =
-      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString().str() : TargetCPU;
   std::string FS =
-      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+      Attrs.FS.isValid() ? Attrs.FS.getValueAsString().str() : TargetFS;
 
   auto &I = SubtargetMap[CPU + FS];
   if (!I)
     I = std::make_unique<HexagonSubtarget>(TargetTriple, CPU, FS, *this);
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 
@@ -371,6 +381,7 @@ public:
   }
 
   void addIRPasses() override;
+  bool addPreISel() override;
   bool addInstSelector() override;
   bool addILPOpts() override;
   void addMachineSSAOptimization() override;
@@ -424,6 +435,13 @@ void HexagonPassConfig::addIRPasses() {
     if (EnableGenExtract)
       addPass(createHexagonGenExtract());
   }
+}
+
+bool HexagonPassConfig::addPreISel() {
+  // Functions can enable HLX through target-features, so the pass filters
+  // individual functions instead of being gated by the default subtarget.
+  addPass(createHexagonLowerHLXPairAllocas());
+  return false;
 }
 
 bool HexagonPassConfig::addInstSelector() {

@@ -19,7 +19,7 @@ class ReturnValueTestCase(TestBase):
         )
 
     def affected_by_pr44132(self):
-        return self.getArchitecture() in ["aarch64", "arm"] and self.getPlatform() in [
+        return self.getArchitecture() == "arm" and self.getPlatform() in [
             "freebsd",
             "linux",
         ]
@@ -88,6 +88,8 @@ class ReturnValueTestCase(TestBase):
         ret_int = return_value.GetValueAsSigned(error)
         self.assertSuccess(error)
         self.assertEqual(in_int, ret_int)
+
+        self.assertFalse(thread.GetStopErrorValue().IsValid())
 
         # Run again and we will stop in inner_sint the second time outer_sint is called.
         # Then test stepping out two frames at once:
