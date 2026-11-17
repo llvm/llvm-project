@@ -2051,7 +2051,8 @@ void cir::IfOp::getEntrySuccessorRegions(
   }
 
   // A constant condition selects one region. Without an else region, a false
-  // condition skips straight to the parent operation.
+  // condition skips straight to the parent operation, the same parent edge
+  // getSuccessorRegions reports for an unknown condition.
   if (cond.getValue())
     regions.emplace_back(&getThenRegion());
   else if (!getElseRegion().empty())
