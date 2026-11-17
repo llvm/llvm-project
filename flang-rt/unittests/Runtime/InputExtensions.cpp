@@ -173,6 +173,38 @@ TEST(InputExtensionTests, TabInField_F) {
   }
 }
 
+// Tabs around the digits, decimal point and exponent of real literals.
+TEST(InputExtensionTests, TabInField_F_Literals) {
+  static const struct {
+    const char *format, *data;
+    double expect;
+  } test[] = {
+      {"(BN,F5.0)", "\t3.14", 3.14},
+      {"(BN,F5.0)", "3.\t14", 3.14},
+      {"(BN,F5.0)", "3.14\t", 3.14},
+      {"(BZ,F5.0)", "3.\t14", 3.014},
+      {"(BN,F7.0)", "\t1.2E-3", 1.2E-3},
+      {"(BN,F7.0)", "1.2E-\t3", 1.2E-3},
+      {"(BN,F7.0)", "1.2E-3\t", 1.2E-3},
+      {"(BZ,F7.0)", "1.2E-3\t", 1.2E-30},
+      {"(BN,F3.0)", "\t.7", 0.7},
+      {"(BN,F3.0)", ".\t7", 0.7},
+      {"(BZ,F3.0)", ".\t7", 0.07},
+  };
+  for (std::size_t j{0}; j < sizeof test / sizeof *test; ++j) {
+    auto cookie{IONAME(BeginInternalFormattedInput)(test[j].data,
+        std::strlen(test[j].data), test[j].format,
+        std::strlen(test[j].format))};
+    double got{-1};
+    IONAME(InputReal64)(cookie, got);
+    ASSERT_EQ(got, test[j].expect)
+        << "expected " << test[j].expect << ", got " << got;
+    auto status{IONAME(EndIoStatement)(cookie)};
+    ASSERT_EQ(status, 0) << "error status " << status << " on F test case "
+                         << j;
+  }
+}
+
 TEST(InputExtensionTests, TabInField_L) {
   static const struct {
     const char *format, *data;
