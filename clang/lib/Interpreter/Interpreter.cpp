@@ -232,8 +232,15 @@ static llvm::Error ExecuteIncrementalAction(CompilerInstance &CI,
   // LLVMContext.
   std::string Msg;
   llvm::raw_string_ostream OS(Msg);
-  if (!CI.parseLLVMArgs(&OS))
+  if (!CI.parseLLVMArgs(&OS)) {
+    // Without a preprocessor, the SourceManager never adopts the buffers.
+    PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
+    if (!PPOpts.RetainRemappedFileBuffers)
+      for (auto &RB : PPOpts.RemappedFileBuffers)
+        delete RB.second;
+    PPOpts.clearRemappedFiles();
     return llvm::createStringError(llvm::StringRef(Msg).rtrim());
+  }
   if (!CI.ExecuteAction(Act) || CI.getDiagnostics().hasErrorOccurred()) {
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Failed to execute incremental action");
@@ -399,9 +406,11 @@ IncrementalCompilerBuilder::createOffload(bool device, OffloadType Type) {
         "Detecting the device vendor is not supported yet.",
         llvm::inconvertibleErrorCode());
 
+  constexpr size_t NumDriverArgs = 6;
+
   const bool HipEnabled = Type == OffloadType::HIP;
   std::vector<const char *> Argv;
-  Argv.reserve(5 + 4 + UserArgs.size());
+  Argv.reserve(NumDriverArgs + UserArgs.size());
   Argv.push_back(HipEnabled ? "-xhip" : "-xcuda");
   Argv.push_back(device ? "--cuda-device-only" : "--cuda-host-only");
 
@@ -422,6 +431,11 @@ IncrementalCompilerBuilder::createOffload(bool device, OffloadType Type) {
                                   /*LowerCase=*/true);
   std::string CUIDArg = "-cuid=" + OffloadCUID;
   Argv.push_back(CUIDArg.c_str());
+
+  // Unoptimized HIP kernels request hostcall support, which needs PCIe atomics
+  // and fails to dispatch without them. A -O in UserArgs comes later and wins.
+  if (device && HipEnabled)
+    Argv.push_back("-O3");
 
   llvm::append_range(Argv, UserArgs);
 
