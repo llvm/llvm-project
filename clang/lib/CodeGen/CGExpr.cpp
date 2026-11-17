@@ -1973,6 +1973,53 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
          E->getType()->isObjCObjectPointerType());
   E = E->IgnoreParens();
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  // A caller that asks for bounds only emits a check if it gets them back,
+  // and the peepholes below return none. For a wide pointer, use a peephole
+  // only if it returns bounds, and take the generic path otherwise.
+  const auto *WidePT = E->getType()->getAs<PointerType>();
+  if (UpperPtr && WidePT && !WidePT->hasRawPointerLayout()) {
+    if (const auto *CE = dyn_cast<CastExpr>(E)) {
+      // Not for a flexible array member: its count isn't known here.
+      if (CE->getCastKind() == CK_ArrayToPointerDecay &&
+          !CE->getSubExpr()->getType()->isIncompleteArrayType()) {
+        Address Addr = CGF.EmitArrayToWidePointerDecay(
+            CE->getSubExpr(), *UpperPtr, BaseInfo, TBAAInfo);
+        if (LowerPtr)
+          *LowerPtr = Addr.getBasePointer();
+        return Addr;
+      }
+    } else if (!isa<CallExpr>(E)) {
+      const auto *UO = dyn_cast<UnaryOperator>(E);
+      const Expr *Sub = UO && UO->getOpcode() == UO_AddrOf
+                            ? UO->getSubExpr()->IgnoreParens()
+                            : nullptr;
+      if (Sub && (isa<DeclRefExpr>(Sub) || isa<MemberExpr>(Sub))) {
+        // &var and &s->m get the bounds of that one object and keep the
+        // lvalue's alignment, which matters for packed structs.
+        LValue LV = CGF.EmitLValue(Sub, IsKnownNonNull);
+        if (BaseInfo)
+          *BaseInfo = LV.getBaseInfo();
+        if (TBAAInfo)
+          *TBAAInfo = LV.getTBAAInfo();
+        llvm::Value *Ptr = LV.getPointer(CGF);
+        *UpperPtr =
+            CGF.Builder.CreateGEP(LV.getAddress().getElementType(), Ptr,
+                                  llvm::ConstantInt::get(CGF.SizeTy, 1));
+        if (LowerPtr)
+          *LowerPtr = Ptr;
+        return LV.getAddress();
+      }
+      llvm::Value *Base = CGF.EmitWideToRawPtr(
+          E, /*BoundsCheck=*/false, /*TrapCtx=*/BoundsSafetyTrapCtx::UNKNOWN,
+          /*LowerOnlyCheck=*/false, UpperPtr, LowerPtr);
+      return CGF.makeNaturalAddressForPointer(
+          Base, E->getType()->getPointeeType(), CharUnits(),
+          /*ForPointeeType=*/true, BaseInfo, TBAAInfo, IsKnownNonNull);
+    }
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   // Casts:
   if (const CastExpr *CE = dyn_cast<CastExpr>(E)) {
     if (const auto *ECE = dyn_cast<ExplicitCastExpr>(CE))
