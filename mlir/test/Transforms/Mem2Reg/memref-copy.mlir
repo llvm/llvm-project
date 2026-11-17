@@ -75,7 +75,7 @@ func.func @negative_copy_self(%v: vector<8x16xf32>, %pad: f32) -> vector<8x16xf3
 // -----
 
 // NEGATIVE: copies of scalable slots are not supported. Such buffers can still
-// be promoted through transfers (see @scalable_whole_buffer_in_loop).
+// be promoted through transfers (see @scalable_whole_buffer_in_loop in vector.mlir).
 
 // CHECK-LABEL: func.func @negative_copy_src_scalable(
 //        CHECK:   memref.alloca
