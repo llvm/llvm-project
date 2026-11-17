@@ -39,10 +39,15 @@
 /clang/www/cxx_dr_status.html @Endilll
 /clang/www/make_cxx_dr_status @Endilll
 
-/clang/include/clang/CIR @lanza @bcardosolopes @xlauko @andykaylor
-/clang/lib/CIR @lanza @bcardosolopes @xlauko @andykaylor
-/clang/lib/CIR/CodeGen/CIRGenBuiltinAArch64.cpp @lanza @bcardosolopes @xlauko @andykaylor @banach-space
-/clang/tools/cir-* @lanza @bcardosolopes @xlauko @andykaylor
+/clang/include/clang/Lex/ @ChenMiaoi
+/clang/lib/Lex/ @ChenMiaoi
+
+# ClangIR
+# Emeritus owner: @lanza
+/clang/include/clang/CIR @bcardosolopes @xlauko @andykaylor
+/clang/lib/CIR @bcardosolopes @xlauko @andykaylor
+/clang/lib/CIR/CodeGen/CIRGenBuiltinAArch64.cpp @bcardosolopes @xlauko @andykaylor @banach-space
+/clang/tools/cir-* @bcardosolopes @xlauko @andykaylor
 
 /clang/tools/clang-repl @vgvassilev
 /clang/include/clang/Interpreter @vgvassilev
@@ -168,8 +173,16 @@
 /mlir/**/*ToSPIRV/ @antiagainst @kuhar @IgWod
 /mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp @antiagainst @kuhar @IgWod
 
+# SPIR-V backend.
+/llvm/lib/Target/SPIRV/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo
+/llvm/test/CodeGen/SPIRV/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo
+/llvm/unittests/Target/SPIRV/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo
+/llvm/lib/Target/SPIRV/SPIRVNonSemanticDebugHandler.* @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo @mgcarrasco
+/llvm/test/CodeGen/SPIRV/debug-info/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo @mgcarrasco
+
 # MLIR Sparsifier.
-/mlir/**/*SparseTensor*/ @aartbik @PeimingLiu @yinying-lisa-li @matthias-springer
+# Emeritus owner: @yinying-lisa-li
+/mlir/**/*SparseTensor*/ @aartbik @PeimingLiu @matthias-springer
 
 # MLIR NVGPU Dialect
 /mlir/**/NVGPU*/ @grypp
@@ -193,8 +206,9 @@
 /mlir/**/WasmSSA* @flemairen6 @lforg37
 
 # MLIR Python Bindings
-/mlir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel
-/mlir/python/ @ftynse @makslevental @stellaraccident @rolfmorel
+# Emeritus owner: @stellaraccident
+/mlir/test/python/ @ftynse @makslevental @rolfmorel
+/mlir/python/ @ftynse @makslevental @rolfmorel
 /mlir/lib/Bindings/Python @makslevental @rolfmorel
 /mlir/include/Bindings/Python @makslevental @rolfmorel
 
@@ -206,7 +220,8 @@
 /mlir/**/*IRDL* @moxinilian
 
 # BOLT
-/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @yota9 @labrinea @yozhu @yavtuk
+# Emeritus owner: @yota9
+/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @labrinea @yozhu @yavtuk
 
 # Bazel build system.
 /utils/bazel/ @rupprecht @keith @aaronmondal @googlewalt
@@ -235,9 +250,11 @@
 # Clang Driver
 /clang/lib/Driver/ToolChains/AMDGPU.cpp @lamb-j @jhuber6
 /clang/lib/Driver/ToolChains/AMDGPU.h @jhuber6
+/clang/lib/Driver/ToolChains/Fuchsia.* @ilovepi
 /clang/lib/Driver/ToolChains/HIPAMD.* @jhuber6
 /clang/lib/Driver/ToolChains/HIPUtility.* @jhuber6
 /clang/lib/Driver/OffloadBundler.cpp @lamb-j @david-salinas
+/clang/test/Driver/fuchsia* @ilovepi
 
 # GlobalIsel
 /llvm/lib/Target/AMDGPU/AMDGPURegBankLegalize* @vangthao95
@@ -250,6 +267,11 @@
 /clang-tools-extra/clang-tidy/ @vbvictor @zeyi2
 /clang-tools-extra/test/clang-tidy/ @vbvictor @zeyi2
 /clang-tools-extra/docs/clang-tidy/ @vbvictor @zeyi2
+
+# Clang-Doc tool
+/clang-tools-extra/clang-doc/ @ilovepi
+/clang-tools-extra/test/clang-doc/ @ilovepi
+/clang-tools-extra/unittests/clang-doc/ @ilovepi
 
 # Offloading binary format and device linking
 /llvm/**/Object/OffloadBinary.* @jhuber6
@@ -299,3 +321,26 @@
 /compiler-rt/lib/profile/InstrProfilingPlatformGPU.c @jhuber6
 /flang-rt/lib/runtime/io-api-gpu.* @jhuber6
 /flang-rt/lib/runtime/io-api-server.cpp @jhuber6
+
+# FatLTO
+/llvm/**/Transforms/IPO/EmbedBitcodePass.* @ilovepi
+/llvm/**/Transforms/IPO/FatLTOCleanup.* @ilovepi
+/llvm/test/Transforms/EmbedBitcode/ @ilovepi
+/llvm/test/Other/fatlto.ll @ilovepi
+/clang/test/**/fat-lto-objects* @ilovepi
+
+# StackFrameLayoutAnalysisPass
+/llvm/**/CodeGen/StackFrameLayoutAnalysisPass.* @ilovepi
+
+# ProfDataUtils
+/llvm/**/IR/ProfDataUtils.* @ilovepi
+/llvm/unittests/Transforms/Utils/ProfDataUtilTest.cpp @ilovepi
+
+# MisExpect
+/llvm/**/Transforms/Scalar/LowerExpectIntrinsic.* @ilovepi
+/llvm/test/Transforms/LowerExpectIntrinsic/ @ilovepi
+/llvm/**/Transforms/Utils/MisExpect.* @ilovepi
+/llvm/test/Transforms/PGOProfile/misexpect* @ilovepi
+
+# Mustache
+/llvm/**/Support/Mustache* @ilovepi

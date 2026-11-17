@@ -1,7 +1,7 @@
 ; RUN: opt -hexagon-vc -S -mtriple=hexagon \
 ; RUN:   -mcpu=hexagonv68 -mattr=+hvxv68,+hvx-length128b \
 ; RUN:   -pass-remarks=hexagon-vc -pass-remarks-missed=hexagon-vc \
-; RUN:   %s -o /dev/null 2>&1 | FileCheck %s
+; RUN:   %s -disable-output 2>&1 | FileCheck %s
 
 ;; Test that HexagonVectorCombine emits optimization remarks.
 

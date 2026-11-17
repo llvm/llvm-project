@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "IPOOptions.h"
 #include "llvm/IR/BundleAttributes.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
@@ -63,7 +64,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/InterleavedRange.h"
@@ -83,32 +83,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "attributor"
-
-static cl::opt<bool> ManifestInternal(
-    "attributor-manifest-internal", cl::Hidden,
-    cl::desc("Manifest Attributor internal string attributes."),
-    cl::init(false));
-
-static cl::opt<int> MaxHeapToStackSize("max-heap-to-stack-size", cl::init(128),
-                                       cl::Hidden);
-
-template <>
-unsigned llvm::PotentialConstantIntValuesState::MaxPotentialValues = 0;
-
-template <> unsigned llvm::PotentialLLVMValuesState::MaxPotentialValues = -1;
-
-static cl::opt<unsigned, true> MaxPotentialValues(
-    "attributor-max-potential-values", cl::Hidden,
-    cl::desc("Maximum number of potential values to be "
-             "tracked for each position."),
-    cl::location(llvm::PotentialConstantIntValuesState::MaxPotentialValues),
-    cl::init(7));
-
-static cl::opt<int> MaxPotentialValuesIterations(
-    "attributor-max-potential-values-iterations", cl::Hidden,
-    cl::desc(
-        "Maximum number of iterations we keep dismantling potential values."),
-    cl::init(64));
 
 STATISTIC(NumAAs, "Number of abstract attributes created");
 STATISTIC(NumIndirectCallsPromoted, "Number of indirect calls promoted");
@@ -303,8 +277,8 @@ static Value *constructPointer(Value *Ptr, int64_t Offset,
                     << "-bytes\n");
 
   if (Offset)
-    Ptr = IRB.CreatePtrAdd(Ptr, IRB.getInt64(Offset),
-                           Ptr->getName() + ".b" + Twine(Offset));
+    Ptr = IRB.CreatePtrAddWithSignedOffset(
+        Ptr, Offset, Ptr->getName() + ".b" + Twine(Offset));
   return Ptr;
 }
 
@@ -5795,11 +5769,13 @@ void AANoCapture::determineFunctionCaptureCapabilities(const IRPosition &IRP,
   // TODO: Once we have memory behavior attributes we should use them here.
 
   // If we know we cannot communicate or write to memory, we do not care about
-  // ptr2int anymore.
+  // ptr2int anymore. The value can still be captured by whether the function
+  // returns.
   bool ReadOnly = F.onlyReadsMemory();
   bool NoThrow = F.doesNotThrow();
+  bool WillReturn = F.willReturn();
   bool IsVoidReturn = F.getReturnType()->isVoidTy();
-  if (ReadOnly && NoThrow && IsVoidReturn) {
+  if (ReadOnly && NoThrow && WillReturn && IsVoidReturn) {
     State.addKnownBits(NO_CAPTURE);
     return;
   }
@@ -5825,7 +5801,7 @@ void AANoCapture::determineFunctionCaptureCapabilities(const IRPosition &IRP,
     if (F.hasParamAttribute(U, Attribute::Returned)) {
       if (U == unsigned(ArgNo))
         State.removeAssumedBits(NOT_CAPTURED_IN_RET);
-      else if (ReadOnly)
+      else if (ReadOnly && WillReturn)
         State.addKnownBits(NO_CAPTURE);
       else
         State.addKnownBits(NOT_CAPTURED_IN_RET);
@@ -5855,7 +5831,7 @@ struct AANoCaptureImpl : public AANoCapture {
     if (isArgumentPosition()) {
       if (isAssumedNoCapture())
         Attrs.emplace_back(Attribute::get(Ctx, Attribute::Captures));
-      else if (ManifestInternal)
+      else if (A.Opts.attributor_manifest_internal)
         Attrs.emplace_back(Attribute::get(Ctx, "no-capture-maybe-returned"));
     }
   }
@@ -6004,11 +5980,16 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
     bool UsedAssumedInformation = false;
     if (IsVoidTy || CheckReturnedArgs(UsedAssumedInformation)) {
       T.addKnownBits(NOT_CAPTURED_IN_RET);
-      if (T.isKnown(NOT_CAPTURED_IN_MEM))
+      // If the function only reads memory and does not return the value, the
+      // value can still be captured by whether the function returns.
+      bool IsKnownWillReturn;
+      bool IsAssumedWillReturn = AA::hasAssumedIRAttr<Attribute::WillReturn>(
+          A, this, FnPos, DepClassTy::OPTIONAL, IsKnownWillReturn);
+      if (IsAssumedWillReturn && T.isKnown(NOT_CAPTURED_IN_MEM))
         return ChangeStatus::UNCHANGED;
       if (IsKnownNoUnwind && (IsVoidTy || !UsedAssumedInformation)) {
         addKnownBits(NOT_CAPTURED_IN_RET);
-        if (isKnown(NOT_CAPTURED_IN_MEM))
+        if (IsKnownWillReturn && isKnown(NOT_CAPTURED_IN_MEM))
           return indicateOptimisticFixpoint();
       }
     }
@@ -6567,6 +6548,22 @@ struct AAValueSimplifyCallSiteArgument : AAValueSimplifyFloating {
 };
 } // namespace
 
+/// Collect the non-musttail tail calls in the function of \p QueryingAA. Tail
+/// calls cannot access allocas of the caller.
+/// TODO: Be smarter about new allocas escaping into tail calls.
+static bool collectTailCalls(Attributor &A, const AbstractAttribute &QueryingAA,
+                             SmallVectorImpl<CallInst *> &TailCalls) {
+  bool UsedAssumedInformation = false;
+  return A.checkForAllInstructions(
+      [&](Instruction &I) {
+        auto &CI = cast<CallInst>(I);
+        if (CI.isTailCall() && !CI.isMustTailCall())
+          TailCalls.push_back(&CI);
+        return true;
+      },
+      QueryingAA, {Instruction::Call}, UsedAssumedInformation);
+}
+
 /// ----------------------- Heap-To-Stack Conversion ---------------------------
 namespace {
 struct AAHeapToStackFunction final : public AAHeapToStack {
@@ -6728,6 +6725,15 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
     Function *F = getAnchorScope();
     const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
 
+    // The new allocas may escape into tail calls.
+    SmallVector<CallInst *, 16> TailCalls;
+    if (any_of(AllocationInfos,
+               [](const std::pair<CallBase *, AllocationInfo *> &It) {
+                 return It.second->Status != AllocationInfo::INVALID;
+               }) &&
+        !collectTailCalls(A, *this, TailCalls))
+      return ChangeStatus::UNCHANGED;
+
     for (auto &It : AllocationInfos) {
       AllocationInfo &AI = *It.second;
       if (AI.Status == AllocationInfo::INVALID)
@@ -6816,6 +6822,9 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       }
       HasChanged = ChangeStatus::CHANGED;
     }
+
+    for (CallInst *CI : TailCalls)
+      CI->setTailCall(false);
 
     return HasChanged;
   }
@@ -7024,6 +7033,14 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
         return true;
       }
       if (auto *CB = dyn_cast<CallBase>(UserI)) {
+        // A musttail call cannot access allocas of the caller, and its marker
+        // cannot be removed.
+        if (CB->isMustTailCall()) {
+          LLVM_DEBUG(dbgs() << "[H2S] musttail user: " << *UserI << "\n");
+          ValidUsesOnly = false;
+          return true;
+        }
+
         if (!CB->isArgOperand(&U) || CB->isLifetimeStartOrEnd())
           return true;
         if (DeallocationInfos.count(CB)) {
@@ -7116,14 +7133,14 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
     }
 
     std::optional<APInt> Size = getSize(A, *this, AI);
-    if (!AI.IsGlobalizedLocal && MaxHeapToStackSize != -1) {
-      if (!Size || Size->ugt(MaxHeapToStackSize)) {
+    if (!AI.IsGlobalizedLocal && A.Opts.max_heap_to_stack_size != -1) {
+      if (!Size || Size->ugt(A.Opts.max_heap_to_stack_size)) {
         LLVM_DEBUG({
           if (!Size)
             dbgs() << "[H2S] Unknown allocation size: " << *AI.CB << "\n";
           else
             dbgs() << "[H2S] Allocation size too large: " << *AI.CB << " vs. "
-                   << MaxHeapToStackSize << "\n";
+                   << A.Opts.max_heap_to_stack_size << "\n";
         });
 
         AI.Status = AllocationInfo::INVALID;
@@ -7549,21 +7566,6 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       return ChangeStatus::UNCHANGED;
     assert(*PrivatizableType && "Expected privatizable type!");
 
-    // Collect all tail calls in the function as we cannot allow new allocas to
-    // escape into tail recursion.
-    // TODO: Be smarter about new allocas escaping into tail calls.
-    SmallVector<CallInst *, 16> TailCalls;
-    bool UsedAssumedInformation = false;
-    if (!A.checkForAllInstructions(
-            [&](Instruction &I) {
-              CallInst &CI = cast<CallInst>(I);
-              if (CI.isTailCall())
-                TailCalls.push_back(&CI);
-              return true;
-            },
-            *this, {Instruction::Call}, UsedAssumedInformation))
-      return ChangeStatus::UNCHANGED;
-
     Argument *Arg = getAssociatedArgument();
     // Query AAAlign attribute for alignment of associated argument to
     // determine the best alignment of loads.
@@ -7590,8 +7592,13 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
                 AI, Arg->getType(), "", IP);
           Arg->replaceAllUsesWith(AI);
 
-          for (CallInst *CI : TailCalls)
-            CI->setTailCall(false);
+          // The new alloca may escape into tail calls. Find them here, as calls
+          // may have been replaced or deleted since manifest.
+          for (Instruction &I : instructions(ReplacementFn)) {
+            auto *CI = dyn_cast<CallInst>(&I);
+            if (CI && CI->isTailCall() && !CI->isMustTailCall())
+              CI->setTailCall(false);
+          }
         };
 
     // Callback to repair a call site of the associated function. The elements
@@ -7789,10 +7796,11 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
     IRPosition::Kind Kind = IRP.getPositionKind();
     if (Kind == IRPosition::IRP_CALL_SITE ||
         Kind == IRPosition::IRP_CALL_SITE_ARGUMENT) {
-      if (auto *I = dyn_cast<Instruction>(&IRP.getAnchorValue())) {
-        if (!I->mayReadFromMemory())
+      if (auto *CB = dyn_cast<CallBase>(&IRP.getAnchorValue())) {
+        ModRefInfo MR = CB->getMemoryEffects().getModRef();
+        if (!isRefSet(MR))
           State.addKnownBits(NO_READS);
-        if (!I->mayWriteToMemory())
+        if (!isModSet(MR))
           State.addKnownBits(NO_WRITES);
       }
     }
@@ -8800,6 +8808,20 @@ struct AAMemoryLocationCallSite final : AAMemoryLocationImpl {
   AAMemoryLocationCallSite(const IRPosition &IRP, Attributor &A)
       : AAMemoryLocationImpl(IRP, A) {}
 
+  void initialize(Attributor &A) override {
+    AAMemoryLocationImpl::initialize(A);
+
+    // Volatile calls may also access inaccessible memory, which the callee's
+    // attributes do not say.
+    auto &CB = cast<CallBase>(getAnchorValue());
+    if (CB.isVolatile()) {
+      bool Changed = false;
+      removeKnownBits(NO_INACCESSIBLE_MEM);
+      updateStateAndAccessesMap(getState(), NO_INACCESSIBLE_MEM, &CB, nullptr,
+                                Changed, getAccessKindFromInst(&CB));
+    }
+  }
+
   ChangeStatus updateImpl(Attributor &A) override {
     // TODO: Once we have call site specific value information we can provide
     //       call site specific liveness liveness information and then it makes
@@ -9561,6 +9583,10 @@ struct AAValueConstantRangeCallSiteArgument : AAValueConstantRangeFloating {
 
 /// ------------------ Potential Values Attribute -------------------------
 
+AAPotentialConstantValues::AAPotentialConstantValues(const IRPosition &IRP,
+                                                     Attributor &A)
+    : Base(IRP, true, A.Opts.attributor_max_potential_values) {}
+
 namespace {
 struct AAPotentialConstantValuesImpl : AAPotentialConstantValues {
   using StateType = PotentialConstantIntValuesState;
@@ -10217,26 +10243,92 @@ struct AANoUndefFloating : public AANoUndefImpl {
   void trackStatistics() const override { STATS_DECLTRACK_FNRET_ATTR(noundef) }
 };
 
+/// Return true if the poison-generating attributes in \p Attrs are assumed to
+/// hold for the value at \p Pos.
+static bool checkPoisonGeneratingAttrsHold(Attributor &A,
+                                           const AbstractAttribute &QueryingAA,
+                                           AttributeSet Attrs,
+                                           const IRPosition &Pos,
+                                           const Instruction *CtxI) {
+  AttributeMask AM = AttributeFuncs::getPoisonGeneratingAttributes();
+  for (Attribute Attr : Attrs) {
+    if (!AM.contains(Attr))
+      continue;
+
+    switch (Attr.getKindAsEnum()) {
+    case Attribute::NonNull: {
+      bool IsKnown;
+      if (!AA::hasAssumedIRAttr<Attribute::NonNull>(
+              A, &QueryingAA, Pos, DepClassTy::REQUIRED, IsKnown))
+        return false;
+      break;
+    }
+    case Attribute::Alignment: {
+      const auto *AlignAA =
+          A.getAAFor<AAAlign>(QueryingAA, Pos, DepClassTy::REQUIRED);
+      if (!AlignAA || AlignAA->getAssumedAlign() < *Attr.getAlignment())
+        return false;
+      break;
+    }
+    case Attribute::Range: {
+      const auto *RangeAA = A.getAAFor<AAValueConstantRange>(
+          QueryingAA, Pos, DepClassTy::REQUIRED);
+      if (!RangeAA ||
+          !Attr.getRange().contains(RangeAA->getAssumedConstantRange(A, CtxI)))
+        return false;
+      break;
+    }
+    case Attribute::NoFPClass: {
+      FPClassTest NoFPClass = Attr.getNoFPClass();
+      const auto *NoFPClassAA =
+          A.getAAFor<AANoFPClass>(QueryingAA, Pos, DepClassTy::REQUIRED);
+      if (!NoFPClassAA ||
+          (NoFPClassAA->getAssumedNoFPClass() & NoFPClass) != NoFPClass)
+        return false;
+      break;
+    }
+    default:
+      // Conservatively assume unhandled attributes do not hold.
+      return false;
+    }
+  }
+
+  return true;
+}
+
 struct AANoUndefReturned final
     : AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl> {
-  AANoUndefReturned(const IRPosition &IRP, Attributor &A)
-      : AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl>(IRP, A) {}
+  using Base = AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl>;
+  AANoUndefReturned(const IRPosition &IRP, Attributor &A) : Base(IRP, A) {}
 
   void initialize(Attributor &A) override {
-    AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl>::initialize(A);
-    if (isAtFixpoint())
-      return;
+    Base::initialize(A);
+    RetAttrs = getAssociatedFunction()->getAttributes().getRetAttrs();
+  }
 
-    // Returning a value that violates a return attribute, e.g., nonnull, is
-    // poison.
-    AttributeMask AM = AttributeFuncs::getPoisonGeneratingAttributes();
-    AttributeSet RetAttrs =
-        getAssociatedFunction()->getAttributes().getRetAttrs();
-    if (any_of(RetAttrs, [&](Attribute Attr) { return AM.contains(Attr); }))
-      indicatePessimisticFixpoint();
+  ChangeStatus updateImpl(Attributor &A) override {
+    // A returned value that violates a poison-generating return attribute
+    // becomes poison, so the attributes must hold for every returned value.
+    if (RetAttrs.hasAttributes()) {
+      auto AttrsHold = [&](Instruction &I) {
+        Value &V = *cast<ReturnInst>(I).getReturnValue();
+        return checkPoisonGeneratingAttrsHold(A, *this, RetAttrs,
+                                              IRPosition::value(V), &I);
+      };
+      bool UsedAssumedInformation = false;
+      if (!A.checkForAllInstructions(AttrsHold, *this, {Instruction::Ret},
+                                     UsedAssumedInformation))
+        return indicatePessimisticFixpoint();
+    }
+
+    return Base::updateImpl(A);
   }
 
   void trackStatistics() const override { STATS_DECLTRACK_FNRET_ATTR(noundef) }
+
+private:
+  /// The function return attributes.
+  AttributeSet RetAttrs;
 };
 
 struct AANoUndefArgument final
@@ -10256,10 +10348,39 @@ struct AANoUndefCallSiteArgument final : AANoUndefFloating {
 
 struct AANoUndefCallSiteReturned final
     : AACalleeToCallSite<AANoUndef, AANoUndefImpl> {
+  using Base = AACalleeToCallSite<AANoUndef, AANoUndefImpl>;
   AANoUndefCallSiteReturned(const IRPosition &IRP, Attributor &A)
-      : AACalleeToCallSite<AANoUndef, AANoUndefImpl>(IRP, A) {}
+      : Base(IRP, A) {}
+
+  void initialize(Attributor &A) override {
+    Base::initialize(A);
+    RetAttrs = cast<CallBase>(getAnchorValue()).getRetAttributes();
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    // The call returns poison if the callee return value violates a
+    // poison-generating call site return attribute, so the attributes must
+    // hold for every callee.
+    if (RetAttrs.hasAttributes()) {
+      auto AttrsHold = [&](ArrayRef<const Function *> Callees) {
+        return all_of(Callees, [&](const Function *Callee) {
+          return checkPoisonGeneratingAttrsHold(
+              A, *this, RetAttrs, IRPosition::returned(*Callee), nullptr);
+        });
+      };
+      if (!A.checkForAllCallees(AttrsHold, *this,
+                                cast<CallBase>(getAnchorValue())))
+        return indicatePessimisticFixpoint();
+    }
+
+    return Base::updateImpl(A);
+  }
 
   void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(noundef) }
+
+private:
+  /// The call site return attributes.
+  AttributeSet RetAttrs;
 };
 
 /// ------------------------ NoFPClass Attribute -------------------------------
@@ -11320,7 +11441,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
         continue;
 
       // Make sure we limit the compile time for complex expressions.
-      if (Iteration++ >= MaxPotentialValuesIterations) {
+      if (Iteration++ >= A.Opts.attributor_max_potential_values_iterations) {
         LLVM_DEBUG(dbgs() << "Generic value traversal reached iteration limit: "
                           << Iteration << "!\n");
         addValue(A, getState(), *V, CtxI, S, getAnchorScope());

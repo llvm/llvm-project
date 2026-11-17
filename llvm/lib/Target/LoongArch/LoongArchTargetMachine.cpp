@@ -57,7 +57,7 @@ static cl::opt<bool> EnableLoongArchDeadRegisterElimination(
 static cl::opt<bool>
     EnableLoopDataPrefetch("loongarch-enable-loop-data-prefetch", cl::Hidden,
                            cl::desc("Enable the loop data prefetch pass"),
-                           cl::init(false));
+                           cl::init(true));
 
 static cl::opt<bool>
     EnableMergeBaseOffset("loongarch-enable-merge-offset",

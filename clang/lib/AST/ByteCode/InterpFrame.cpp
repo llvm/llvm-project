@@ -89,13 +89,7 @@ InterpFrame::~InterpFrame() {
 
 void InterpFrame::enableLocal(unsigned Offset) {
   assert(Func);
-
-  // FIXME: This is a little dirty, but to avoid adding a flag to
-  // InlineDescriptor that's only ever useful on the toplevel of local
-  // variables, we reuse the IsActive flag for the enabled state. We should
-  // probably use a different struct than InlineDescriptor for the block-level
-  // inline descriptor of local varaibles.
-  getLocalBlock(Offset)->getBlockDesc<InlineDescriptor>().IsActive = true;
+  getLocalBlock(Offset)->getBlockDesc<LocalInlineDescriptor>().IsEnabled = true;
 }
 
 void InterpFrame::destroy(unsigned Idx) {

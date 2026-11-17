@@ -1564,7 +1564,6 @@ bool MachineLICMImpl::EliminateCSE(
       Register Reg = MI->getOperand(Idx).getReg();
       Register DupReg = Dup->getOperand(Idx).getReg();
       MRI->replaceRegWith(Reg, DupReg);
-      MRI->clearKillFlags(DupReg);
       // Clear Dup dead flag if any, we reuse it for Reg.
       if (!MRI->use_nodbg_empty(DupReg))
         Dup->getOperand(Idx).setIsDead(false);
@@ -1678,13 +1677,6 @@ unsigned MachineLICMImpl::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
 
     // Update register pressure for BBs from header to this block.
     UpdateBackTraceRegPressure(MI);
-
-    // Clear the kill flags of any register this instruction defines,
-    // since they may need to be live throughout the entire loop
-    // rather than just live for part of it.
-    for (MachineOperand &MO : MI->all_defs())
-      if (!MO.isDead())
-        MRI->clearKillFlags(MO.getReg());
 
     CSEMap[Preheader][Opcode].push_back(MI);
   }

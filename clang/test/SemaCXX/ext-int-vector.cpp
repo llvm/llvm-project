@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64-linux-gnu %s
+// RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64-linux-gnu %s -fexperimental-new-constant-interpreter
 
 namespace GH200665 {
 typedef _BitInt(2) ExtVec2x4 __attribute__((ext_vector_type(4)));

@@ -6,7 +6,7 @@
 define i8 @load_i8(ptr %p) {
 ; CHECK-LABEL: define i8 @load_i8(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @__atomic_load_1(ptr [[P]], i16 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = call zeroext i8 @__atomic_load_1(ptr [[P]], i16 5)
 ; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %v = load atomic i8, ptr %p seq_cst, align 1

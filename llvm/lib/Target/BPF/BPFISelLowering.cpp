@@ -355,9 +355,9 @@ void BPFTargetLowering::ReplaceNodeResults(
   }
 
   SDLoc DL(N);
-  // We'll still produce a fatal error downstream, but this diagnostic is more
-  // user-friendly.
   fail(DL, DAG, Msg);
+  for (EVT VT : N->values())
+    Results.push_back(VT == MVT::Other ? N->getOperand(0) : DAG.getUNDEF(VT));
 }
 
 SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {

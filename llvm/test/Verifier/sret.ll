@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 declare void @a(ptr sret(i32) %a, ptr sret(i32) %b)
 ; CHECK: Cannot have multiple 'sret' parameters!

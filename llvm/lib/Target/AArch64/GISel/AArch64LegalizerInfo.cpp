@@ -2239,7 +2239,7 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
     AtomicOrdering Ordering = (*MI.memoperands_begin())->getSuccessOrdering();
     bool IsLoad = MI.getOpcode() == TargetOpcode::G_LOAD;
     bool IsLoadAcquire = IsLoad && Ordering == AtomicOrdering::Acquire;
-    bool IsStoreRelease = !IsLoad && Ordering == AtomicOrdering::Release;
+    bool IsStoreRelease = !IsLoad && isReleaseOrStronger(Ordering);
     bool IsRcpC3 =
         ST->hasLSE2() && ST->hasRCPC3() && (IsLoadAcquire || IsStoreRelease);
 

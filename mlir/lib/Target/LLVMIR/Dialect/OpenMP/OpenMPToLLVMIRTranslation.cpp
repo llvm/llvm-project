@@ -1910,7 +1910,7 @@ static LogicalResult createReductionsAndCleanup(
     return op->emitOpError() << "failed to convert reductions";
 
   llvm::OpenMPIRBuilder::InsertPointTy afterIP = *contInsertPoint;
-  if (!isTeamsReduction) {
+  if (!isTeamsReduction && !isNowait) {
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy barrierIP =
         ompBuilder->createBarrier({*contInsertPoint, reductionLoc},
                                   llvm::omp::OMPD_for);
@@ -3083,6 +3083,8 @@ public:
           moduleTranslation.lookupValue(itersOp.getLoopSteps()[d]);
       assert(lb && ub && st &&
              "Expect lowerBounds, upperBounds, and steps in IteratorOp");
+      assert(lb->getType() == ub->getType() && lb->getType() == st->getType() &&
+             "Expect matching iterator range types");
       assert((!llvm::isa<llvm::ConstantInt>(st) ||
               !llvm::cast<llvm::ConstantInt>(st)->isZero()) &&
              "Expect non-zero step in IteratorOp");
@@ -3100,9 +3102,9 @@ public:
       llvm::Value *step = builder.CreateSExt(st, countTy);
       llvm::Value *count =
           getOpenMPBuilder(moduleTranslation)
-              ->calculateCanonicalLoopTripCount(builder, start, stop, step,
-                                                /*IsSigned=*/true,
-                                                /*InclusiveStop=*/true);
+              ->calculateCanonicalLoopTripCount(
+                  builder, start, stop, step,
+                  /*IsSigned=*/true, itersOp.getLoopInclusive(), "iterator");
       trips[d] = builder.CreateZExtOrTrunc(count, builder.getInt64Ty());
     }
 
@@ -3237,10 +3239,16 @@ static mlir::LogicalResult convertIteratorRegion(
   llvm::Value *tmp = linearIV;
   for (int d = (int)iterInfo.getDims() - 1; d >= 0; --d) {
     llvm::Value *trip = iterInfo.getTrips()[d];
-    // idx_d = tmp % trip_d
-    llvm::Value *idx = builder.CreateURem(tmp, trip);
-    // tmp = tmp / trip_d
-    tmp = builder.CreateUDiv(tmp, trip);
+    llvm::Value *zero = llvm::ConstantInt::get(trip->getType(), 0);
+    llvm::Value *one = llvm::ConstantInt::get(trip->getType(), 1);
+    // A zero trip count makes the linearized loop empty. Use one in its
+    // unreachable IV decoder so the generated IR contains no division by zero.
+    llvm::Value *divisor =
+        builder.CreateSelect(builder.CreateICmpEQ(trip, zero), one, trip);
+    // idx_d = tmp % divisor_d
+    llvm::Value *idx = builder.CreateURem(tmp, divisor);
+    // tmp = tmp / divisor_d
+    tmp = builder.CreateUDiv(tmp, divisor);
 
     // physIV_d = lb_d + idx_d * step_d
     idx =
@@ -8137,6 +8145,107 @@ getOverlappedMembers(llvm::SmallVectorImpl<size_t> &overlapMapDataIdxs,
       overlapMapDataIdxs.push_back(i);
 }
 
+/// Describe a bounded update as a set of contiguous pieces. Bounds follow the
+/// dialect's normalized fastest-to-slowest varying order, which matches
+/// Fortran's column-major dimension order. Frontends for row-major languages
+/// such as C/C++ must normalize their source dimensions to this order.
+/// OpenMPIRBuilder reverses the vectors when emitting the runtime descriptor,
+/// which uses byte offsets and strides with the slowest varying dimension
+/// first.
+static void addNonContiguousUpdate(LLVM::ModuleTranslation &moduleTranslation,
+                                   llvm::IRBuilderBase &builder,
+                                   MapInfoData &mapData, size_t mapDataIdx,
+                                   MapInfosTy &combinedInfo) {
+  auto mapOp = cast<omp::MapInfoOp>(mapData.MapClause[mapDataIdx]);
+  if (mapOp.getBounds().empty() || mapOp.getMapperId() ||
+      mapOp->getParentOfType<omp::DeclareMapperOp>() ||
+      bitEnumContainsAll(mapOp.getMapType(), omp::ClauseMapFlags::attach))
+    return;
+
+  llvm::Type *elementType = mapData.BaseType[mapDataIdx];
+  // Bounds extents may be absent, and a scalar subscript has extent one.
+  // Preserve the full source shape: for a(4,5), a(2,:) still needs a
+  // second-dimension stride of four elements.
+  SmallVector<uint64_t> arrayExtents;
+  while (auto *arrayType = dyn_cast<llvm::ArrayType>(elementType)) {
+    arrayExtents.push_back(arrayType->getNumElements());
+    elementType = arrayType->getElementType();
+  }
+  llvm::Value *elementSize = builder.getInt64(
+      builder.GetInsertBlock()->getModule()->getDataLayout().getTypeAllocSize(
+          elementType));
+
+  // Include a byte dimension so that a non-unit descriptor stride in the
+  // innermost array dimension still transfers one element at a time.
+  llvm::OpenMPIRBuilder::MapValuesArrayTy offsets{builder.getInt64(0)};
+  llvm::OpenMPIRBuilder::MapValuesArrayTy counts{elementSize};
+  llvm::OpenMPIRBuilder::MapValuesArrayTy strides{builder.getInt64(1)};
+  llvm::Value *sourceStride = elementSize;
+  llvm::Value *contiguousSize = elementSize;
+  // Unknown descriptor strides conservatively use a descriptor. The runtime
+  // merges contiguous dimensions from their actual values.
+  bool isContiguous = true;
+  for (auto [dim, bound] : llvm::enumerate(mapOp.getBounds())) {
+    auto bounds = cast<omp::MapBoundsOp>(bound.getDefiningOp());
+    auto getInt64 = [&](Value value) {
+      return builder.CreateSExtOrTrunc(moduleTranslation.lookupValue(value),
+                                       builder.getInt64Ty());
+    };
+    llvm::Value *lower = bounds.getLowerBound()
+                             ? getInt64(bounds.getLowerBound())
+                             : builder.getInt64(0);
+    llvm::Value *count = builder.CreateAdd(
+        builder.CreateSub(getInt64(bounds.getUpperBound()), lower),
+        builder.getInt64(1));
+    count =
+        builder.CreateSelect(builder.CreateICmpSGT(count, builder.getInt64(0)),
+                             count, builder.getInt64(0));
+    llvm::Value *stride = sourceStride;
+    if (bounds.getStrideInBytes() && bounds.getStride())
+      stride = getInt64(bounds.getStride());
+    else if (arrayExtents.empty() && bounds.getStride())
+      stride = builder.CreateMul(getInt64(bounds.getStride()), elementSize);
+    offsets.push_back(builder.CreateMul(lower, stride));
+    counts.push_back(count);
+    strides.push_back(stride);
+    isContiguous &= stride == contiguousSize;
+    contiguousSize = builder.CreateMul(contiguousSize, count);
+
+    // Static array types carry the full source shape, including dimensions
+    // selected with scalar subscripts. Otherwise the frontend supplies the
+    // physical stride in elements (or descriptor bytes) for every dimension.
+    if (dim < arrayExtents.size())
+      sourceStride = builder.CreateMul(
+          sourceStride,
+          builder.getInt64(arrayExtents[arrayExtents.size() - dim - 1]));
+    else if (bounds.getExtent())
+      sourceStride =
+          builder.CreateMul(sourceStride, getInt64(bounds.getExtent()));
+  }
+  if (isContiguous)
+    return;
+
+  llvm::Value *base = mapData.OriginalValue[mapDataIdx];
+  if (mapOp.getVarPtrPtr())
+    base = builder.CreateLoad(builder.getPtrTy(), base);
+  // Absent optional arrays and unallocated descriptors must not issue
+  // transfers, including sections with explicit nonempty bounds.
+  counts[1] = builder.CreateSelect(builder.CreateIsNull(base),
+                                   builder.getInt64(0), counts[1]);
+  // The descriptor offsets already locate the first selected element. The
+  // runtime needs the pointee base, not the descriptor or a section address.
+  combinedInfo.BasePointers.back() = base;
+  combinedInfo.Types.back() |=
+      llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG;
+  auto &nonContig = combinedInfo.NonContigInfo;
+  nonContig.IsNonContiguous = true;
+  nonContig.Dims.resize(combinedInfo.Types.size(), 1);
+  nonContig.Dims.back() = counts.size();
+  nonContig.Offsets.push_back(std::move(offsets));
+  nonContig.Counts.push_back(std::move(counts));
+  nonContig.Strides.push_back(std::move(strides));
+}
+
 /// This function handles the insertion of a single item of map data from
 /// MapInfoData into the OMPIRBuilder's MapInfo list. Utilising this function
 /// means the map being inserted can be treated as a non-parent map entity,
@@ -8146,14 +8255,13 @@ getOverlappedMembers(llvm::SmallVectorImpl<size_t> &overlapMapDataIdxs,
 /// a ref_ptr or ref_ptee map, if it's a member of a record, what construct
 /// the map belongs to and the various map type bit flags that are set for
 /// the map.
-static void
-processIndividualMap(llvm::IRBuilderBase &builder,
-                     llvm::OpenMPIRBuilder &ompBuilder, MapInfoData &mapData,
-                     size_t mapDataIdx, MapInfosTy &combinedInfo,
-                     TargetDirectiveEnumTy targetDirective,
-                     llvm::omp::OpenMPOffloadMappingFlags memberOfFlag =
-                         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE,
-                     bool isTargetParam = true, int mapDataParentIdx = -1) {
+static void processIndividualMap(
+    LLVM::ModuleTranslation &moduleTranslation, llvm::IRBuilderBase &builder,
+    llvm::OpenMPIRBuilder &ompBuilder, MapInfoData &mapData, size_t mapDataIdx,
+    MapInfosTy &combinedInfo, TargetDirectiveEnumTy targetDirective,
+    llvm::omp::OpenMPOffloadMappingFlags memberOfFlag =
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE,
+    bool isTargetParam = true, int mapDataParentIdx = -1) {
   auto mapFlag = mapData.Types[mapDataIdx];
   auto mapInfoOp = llvm::cast<omp::MapInfoOp>(mapData.MapClause[mapDataIdx]);
 
@@ -8246,6 +8354,9 @@ processIndividualMap(llvm::IRBuilderBase &builder,
                 builder.CreateIsNull(mapData.Pointers[mapDataIdx]),
                 builder.getInt64(0), mapData.Sizes[mapDataIdx])
           : mapData.Sizes[mapDataIdx]);
+  if (targetDirective == TargetDirectiveEnumTy::TargetUpdate)
+    addNonContiguousUpdate(moduleTranslation, builder, mapData, mapDataIdx,
+                           combinedInfo);
 }
 
 // This creates two insertions into the MapInfosTy data structure for the
@@ -8535,8 +8646,8 @@ static void processMapWithMembersOf(LLVM::ModuleTranslation &moduleTranslation,
     // currently do), whereas we treat them as arrays in all cases
     // currently.
     processIndividualMap(
-        builder, ompBuilder, mapData, memberDataIdx, combinedInfo,
-        targetDirective,
+        moduleTranslation, builder, ompBuilder, mapData, memberDataIdx,
+        combinedInfo, targetDirective,
         /*MemberOfFlag=*/llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE,
         /*isTargetParam=*/true, mapDataIndex);
     return;
@@ -8576,7 +8687,8 @@ static void processMapWithMembersOf(LLVM::ModuleTranslation &moduleTranslation,
                            targetDirective);
     } else {
       processIndividualMap(
-          builder, ompBuilder, mapData, idx, combinedInfo, targetDirective,
+          moduleTranslation, builder, ompBuilder, mapData, idx, combinedInfo,
+          targetDirective,
           parentIsPrivatizeableAttach
               ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE
               : memberOfFlag,
@@ -8705,9 +8817,11 @@ static void genMapInfos(llvm::IRBuilderBase &builder,
       continue;
     }
 
-    processIndividualMap(builder, *ompBuilder, mapData, i, combinedInfo,
-                         targetDirective);
+    processIndividualMap(moduleTranslation, builder, *ompBuilder, mapData, i,
+                         combinedInfo, targetDirective);
   }
+  if (!combinedInfo.NonContigInfo.Dims.empty())
+    combinedInfo.NonContigInfo.Dims.resize(combinedInfo.Types.size(), 1);
 }
 
 static llvm::Expected<llvm::Function *>
@@ -8799,7 +8913,8 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
 
   llvm::Expected<llvm::Function *> newFn = ompBuilder->emitUserDefinedMapper(
       genMapInfoCB, varType, mapperFuncName, customMapperCB,
-      /*PreserveMemberOfFlags=*/true);
+      /*PreserveMemberOfFlags=*/true, /*PropagatePresentToPointeeStorage=*/true,
+      /*PropagatePresentToNonPointeeStorage=*/true);
   if (!newFn)
     return newFn.takeError();
   if ([[maybe_unused]] llvm::Function *mappedFunc =

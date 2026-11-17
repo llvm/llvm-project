@@ -32,6 +32,11 @@ class Trait {
 // # [Others, ...]` while still allowing providing convenient groupings.
 class TraitList<list<Trait> props> : Trait {
   list<Trait> traits = props;
+  // The headers of all traits in the list, without duplicates.
+  // Note: Technically unused by the generator but nevertheless put here for
+  //       convenience.
+  let cppIncludes = !foldl([]<string>, props, includes, trait,
+      !listconcat(includes, !listremove(trait.cppIncludes, includes)));
 }
 
 // NativeTrait corresponds to the MLIR C++ trait mechanism. The purpose to wrap

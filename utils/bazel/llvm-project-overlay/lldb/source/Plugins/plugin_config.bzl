@@ -30,6 +30,8 @@ DEFAULT_PLUGINS = [
     "DisassemblerLLVMC",
     "HighlighterClang",
     "HighlighterDefault",
+    "DLanguage",
+    "DynamicLoaderAcceleratorGDBRemote",
     "DynamicLoaderDarwinKernel",
     "DynamicLoaderFreeBSDKernel",
     "DynamicLoaderHexagonDYLD",

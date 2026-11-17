@@ -120,7 +120,7 @@ TEST_F(LlvmLibcStrToDblTest, SimpleDecimalConversion64SubnormalRounding) {
                                  1);
 }
 
-TEST(LlvmLibcStrToDblTest, SimpleDecimalConversionExtraTypes) {
+TEST_F(LlvmLibcStrToDblTest, SimpleDecimalConversionExtraTypes) {
   uint64_t double_output_mantissa = 0;
   uint32_t output_exp2 = 0;
 

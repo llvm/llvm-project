@@ -319,7 +319,7 @@ LLVM_ABI extern char &StackFrameLayoutAnalysisPassID;
 LLVM_ABI extern char &IfConverterID;
 
 LLVM_ABI FunctionPass *
-createIfConverter(std::function<bool(const MachineFunction &)> Ftor);
+createIfConverterLegacyPass(std::function<bool(const MachineFunction &)> Ftor);
 
 /// MachineBlockPlacement - This pass places basic blocks based on branch
 /// probabilities.

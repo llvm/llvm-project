@@ -206,8 +206,8 @@ def FamilyAVR6 : Family<"avr6", [FamilyAVR51, FeatureEIJMPCALL]>;
 
 def FamilyTiny
     : Family<"avrtiny",
-             [FamilyAVR0, FeatureBREAK, FeatureSRAM, FeatureTinyEncoding,
-              FeatureSmallStack]>;
+             [FamilyAVR0, FeatureIJMPCALL, FeatureBREAK, FeatureSRAM,
+              FeatureTinyEncoding, FeatureSmallStack]>;
 
 def FamilyXMEGA2 : Family<"xmega2",
                           [FamilyAVR0, FeatureLPM, FeatureIJMPCALL,
@@ -333,10 +333,10 @@ def : Device<"attiny43u", FamilyAVR25, ELFArchAVR25>;
 def : Device<"attiny48", FamilyAVR25, ELFArchAVR25>;
 def : Device<"attiny88", FamilyAVR25, ELFArchAVR25, [FeatureWrappingRjmp]>;
 def : Device<"attiny828", FamilyAVR25, ELFArchAVR25, [FeatureWrappingRjmp]>;
+def : Device<"at43usb320", FamilyAVR3, ELFArchAVR3>;
 def : Device<"at43usb355", FamilyAVR3, ELFArchAVR3>;
 def : Device<"at76c711", FamilyAVR3, ELFArchAVR3>;
 def : Device<"atmega103", FamilyAVR31, ELFArchAVR31>;
-def : Device<"at43usb320", FamilyAVR31, ELFArchAVR31>;
 def : Device<"attiny167", FamilyAVR35, ELFArchAVR35>;
 def : Device<"at90usb82", FamilyAVR35, ELFArchAVR35>;
 def : Device<"at90usb162", FamilyAVR35, ELFArchAVR35>;

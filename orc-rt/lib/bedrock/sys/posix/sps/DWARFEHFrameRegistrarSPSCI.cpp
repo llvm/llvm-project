@@ -13,7 +13,7 @@
 #include "orc-rt/bedrock/sps/DWARFEHFrameRegistrarSPSCI.h"
 #include "orc-rt-internal/bedrock/sys/posix/DWARFEHFrameRegistrar.h"
 
-namespace orc_rt::sps_ci {
+namespace orc_rt::sps::ci {
 
 ORC_RT_SPS_ALLOC_ACTION_IMPL(
     orc_rt_ci_aa_sps_DWARFEHFrameRegistrar_registerSection,
@@ -35,4 +35,4 @@ Error addDWARFEHFrameRegistrar(SimpleSymbolTable &ST) {
   return ST.addUnique(orc_rt_ci_DWARFEHFrameRegistrar_sps_interface);
 }
 
-} // namespace orc_rt::sps_ci
+} // namespace orc_rt::sps::ci

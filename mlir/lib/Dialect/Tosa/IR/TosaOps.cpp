@@ -22,14 +22,12 @@
 #include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallVectorExtras.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 #include <numeric>
 #include <type_traits>
@@ -44,12 +42,11 @@ using namespace mlir::tosa;
 // Tosa dialect interface includes.
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Tosa/IR/TosaDialectBytecode.cpp.inc"
 #include "mlir/Dialect/Tosa/IR/TosaEnums.cpp.inc"
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.cpp.inc"
 
 namespace {
-#include "mlir/Dialect/Tosa/IR/TosaDialectBytecode.cpp.inc"
-
 //===----------------------------------------------------------------------===//
 // Dialect Function Inliner Interface.
 //===----------------------------------------------------------------------===//
@@ -119,7 +116,6 @@ struct TosaDialectBytecodeInterface : public BytecodeDialectInterface {
     return success();
   }
 };
-
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -331,7 +327,7 @@ Value mlir::tosa::createPadConstTensor(OpBuilder &builder, Location loc,
 unsigned mlir::tosa::getBitWidth(Type type) {
   if (auto blockScaledTy = dyn_cast<tosa::BlockScaledType>(type))
     return getBitWidth(blockScaledTy.getValueType());
-  if (dyn_cast<tosa::mxint8Type>(type))
+  if (isa<MXI8Type, tosa::mxint8Type>(type))
     return 8;
   return type.getIntOrFloatBitWidth();
 }
@@ -553,7 +549,7 @@ static void printScaleValues(AsmPrinter &printer,
 
 size_t mlir::tosa::BlockScaledType::getDenseElementBitSize() const {
   const Type valueType = getValueType();
-  if (isa<tosa::mxint8Type>(valueType))
+  if (isa<MXI8Type, tosa::mxint8Type>(valueType))
     return 8;
   return valueType.getIntOrFloatBitWidth();
 }
@@ -565,6 +561,8 @@ mlir::tosa::BlockScaledType::convertToAttribute(ArrayRef<char> rawData) const {
   // to 8-bits.
   assert(rawData.size() == 1 && "expected 1 byte for block_scaled element");
   const Type valueType = getValueType();
+  if (const auto mxi8Value = dyn_cast<MXI8Type>(valueType))
+    return mxi8Value.convertToAttribute(rawData);
   if (const auto mxint8Value = dyn_cast<tosa::mxint8Type>(valueType))
     return mxint8Value.convertToAttribute(rawData);
   if (!isa<FloatType>(valueType))
@@ -575,6 +573,8 @@ mlir::tosa::BlockScaledType::convertToAttribute(ArrayRef<char> rawData) const {
 LogicalResult mlir::tosa::BlockScaledType::convertFromAttribute(
     Attribute attr, SmallVectorImpl<char> &result) const {
   const Type valueType = getValueType();
+  if (const auto mxi8Value = dyn_cast<MXI8Type>(valueType))
+    return mxi8Value.convertFromAttribute(attr, result);
   if (const auto mxint8Value = dyn_cast<tosa::mxint8Type>(valueType))
     return mxint8Value.convertFromAttribute(attr, result);
 

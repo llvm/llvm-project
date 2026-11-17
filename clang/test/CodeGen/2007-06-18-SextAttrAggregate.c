@@ -1,15 +1,9 @@
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -o - -emit-llvm | FileCheck %s
-// XFAIL: target={{(aarch64|arm64).*}}, target=x86_64-pc-windows-msvc, target=x86_64-{{(pc|w64)}}-windows-gnu, target=x86_64-pc-windows-cygnus
+// RUN: %clang_cc1 -triple=sparc64-unknown-linux-gnu -no-enable-noundef-analysis %s -o - -emit-llvm | FileCheck %s
 
 // PR1513
 
-// AArch64 ABI actually requires the reverse of what this is testing: the callee
-// does any extensions and remaining bits are unspecified.
-
-// Win64 ABI does expect extensions for type smaller than 64bits.
-
-// Technically this test wasn't written to test that feature, but it's a
-// valuable check nevertheless.
+// The triple here is chosen so that the struct is passed in two arguments,
+// and the signed char requires sign extension.
 
 struct s{
 long a;
