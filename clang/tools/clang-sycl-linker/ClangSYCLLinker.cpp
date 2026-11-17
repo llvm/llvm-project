@@ -748,6 +748,9 @@ static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
     return runAOTCompileIntelGPU(InputFile, OutputFile, Args);
   if (OA.isIntelCPU())
     return runAOTCompileIntelCPU(InputFile, OutputFile, Args);
+  if (OA.isIntelIGCA())
+    return createStringError("AOT compilation for IGCA target '" + Arch +
+                             "' is not yet implemented");
 
   llvm_unreachable("runAOTCompile dispatched on unsupported arch");
 }

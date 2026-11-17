@@ -14,6 +14,8 @@ class TestAttachWaitConnected(GDBRemoteTestBase):
 
     @skipIfRemote
     @skipIfWindows
+    # Flaky on Linux https://github.com/llvm/llvm-project/issues/236354.
+    @skipIfLinux
     def test_interrupt_wait_for_attach(self):
         """
         An interrupt ends a wait-for attach on a process that was connected

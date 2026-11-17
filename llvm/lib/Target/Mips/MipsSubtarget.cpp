@@ -301,13 +301,72 @@ const RTLIB::LibcallImpl MipsSubtarget::HardFloatLibCalls[34] = {
     RTLIB::impl___mips16_unorddf2,      RTLIB::impl___mips16_unordsf2};
 
 void MipsSubtarget::initLibcallLoweringInfo(LibcallLoweringInfo &Info) const {
-  if (inMips16Mode() && !useSoftFloat()) {
-    for (unsigned I = 0; I != std::size(HardFloatLibCalls); ++I) {
-      assert((I == 0 || HardFloatLibCalls[I - 1] < HardFloatLibCalls[I]) &&
-             "Array not sorted!");
-      RTLIB::Libcall LC =
-          RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(HardFloatLibCalls[I]);
-      Info.setLibcallImpl(LC, HardFloatLibCalls[I]);
-    }
+  assert(is_sorted(HardFloatLibCalls) && "Array not sorted!");
+
+  static const struct {
+    RTLIB::Libcall LC;
+    RTLIB::LibcallImpl Mips16Impl;
+    RTLIB::LibcallImpl GenericImpl;
+  } HardFloatCalls[] = {
+      {RTLIB::ADD_F64, RTLIB::impl___mips16_adddf3, RTLIB::impl___adddf3},
+      {RTLIB::ADD_F32, RTLIB::impl___mips16_addsf3, RTLIB::impl___addsf3},
+      {RTLIB::DIV_F64, RTLIB::impl___mips16_divdf3, RTLIB::impl___divdf3},
+      {RTLIB::DIV_F32, RTLIB::impl___mips16_divsf3, RTLIB::impl___divsf3},
+      {RTLIB::FCMP3_PRED_OEQ_F64, RTLIB::impl___mips16_eqdf2,
+       RTLIB::impl___eqdf2},
+      {RTLIB::FCMP3_PRED_OEQ_F32, RTLIB::impl___mips16_eqsf2,
+       RTLIB::impl___eqsf2},
+      {RTLIB::FPEXT_F32_F64, RTLIB::impl___mips16_extendsfdf2,
+       RTLIB::impl___extendsfdf2},
+      {RTLIB::FPTOSINT_F64_I32, RTLIB::impl___mips16_fix_truncdfsi,
+       RTLIB::impl___fixdfsi},
+      {RTLIB::FPTOSINT_F32_I32, RTLIB::impl___mips16_fix_truncsfsi,
+       RTLIB::impl___fixsfsi},
+      {RTLIB::SINTTOFP_I32_F64, RTLIB::impl___mips16_floatsidf,
+       RTLIB::impl___floatsidf},
+      {RTLIB::SINTTOFP_I32_F32, RTLIB::impl___mips16_floatsisf,
+       RTLIB::impl___floatsisf},
+      {RTLIB::UINTTOFP_I32_F64, RTLIB::impl___mips16_floatunsidf,
+       RTLIB::impl___floatunsidf},
+      {RTLIB::UINTTOFP_I32_F32, RTLIB::impl___mips16_floatunsisf,
+       RTLIB::impl___floatunsisf},
+      {RTLIB::FCMP3_PRED_OGE_F64, RTLIB::impl___mips16_gedf2,
+       RTLIB::impl___gedf2},
+      {RTLIB::FCMP3_PRED_OGE_F32, RTLIB::impl___mips16_gesf2,
+       RTLIB::impl___gesf2},
+      {RTLIB::FCMP3_PRED_OGT_F64, RTLIB::impl___mips16_gtdf2,
+       RTLIB::impl___gtdf2},
+      {RTLIB::FCMP3_PRED_OGT_F32, RTLIB::impl___mips16_gtsf2,
+       RTLIB::impl___gtsf2},
+      {RTLIB::FCMP3_PRED_OLE_F64, RTLIB::impl___mips16_ledf2,
+       RTLIB::impl___ledf2},
+      {RTLIB::FCMP3_PRED_OLE_F32, RTLIB::impl___mips16_lesf2,
+       RTLIB::impl___lesf2},
+      {RTLIB::FCMP3_PRED_OLT_F64, RTLIB::impl___mips16_ltdf2,
+       RTLIB::impl___ltdf2},
+      {RTLIB::FCMP3_PRED_OLT_F32, RTLIB::impl___mips16_ltsf2,
+       RTLIB::impl___ltsf2},
+      {RTLIB::MUL_F64, RTLIB::impl___mips16_muldf3, RTLIB::impl___muldf3},
+      {RTLIB::MUL_F32, RTLIB::impl___mips16_mulsf3, RTLIB::impl___mulsf3},
+      {RTLIB::FCMP3_PRED_UNE_F64, RTLIB::impl___mips16_nedf2,
+       RTLIB::impl___nedf2},
+      {RTLIB::FCMP3_PRED_UNE_F32, RTLIB::impl___mips16_nesf2,
+       RTLIB::impl___nesf2},
+      {RTLIB::MIPS16_RET_DC, RTLIB::impl___mips16_ret_dc, RTLIB::Unsupported},
+      {RTLIB::MIPS16_RET_DF, RTLIB::impl___mips16_ret_df, RTLIB::Unsupported},
+      {RTLIB::MIPS16_RET_SC, RTLIB::impl___mips16_ret_sc, RTLIB::Unsupported},
+      {RTLIB::MIPS16_RET_SF, RTLIB::impl___mips16_ret_sf, RTLIB::Unsupported},
+      {RTLIB::SUB_F64, RTLIB::impl___mips16_subdf3, RTLIB::impl___subdf3},
+      {RTLIB::SUB_F32, RTLIB::impl___mips16_subsf3, RTLIB::impl___subsf3},
+      {RTLIB::FPROUND_F64_F32, RTLIB::impl___mips16_truncdfsf2,
+       RTLIB::impl___truncdfsf2},
+      {RTLIB::UO_F64, RTLIB::impl___mips16_unorddf2, RTLIB::impl___unorddf2},
+      {RTLIB::UO_F32, RTLIB::impl___mips16_unordsf2, RTLIB::impl___unordsf2},
+  };
+
+  bool UseMips16HardFloat = inMips16Mode() && !useSoftFloat();
+  for (const auto &E : HardFloatCalls) {
+    Info.setLibcallImpl(E.LC,
+                        UseMips16HardFloat ? E.Mips16Impl : E.GenericImpl);
   }
 }

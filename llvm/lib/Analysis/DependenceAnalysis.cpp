@@ -45,6 +45,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/DependenceAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Delinearization.h"
@@ -56,7 +57,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -94,69 +94,12 @@ STATISTIC(BanerjeeIndependence, "Banerjee independence");
 STATISTIC(BanerjeeSuccesses, "Banerjee successes");
 STATISTIC(SameSDLoopsCount, "Loops with Same iteration Space and Depth");
 
-static cl::opt<bool>
-    Delinearize("da-delinearize", cl::init(true), cl::Hidden,
-                cl::desc("Try to delinearize array references."));
-static cl::opt<bool> DisableDelinearizationChecks(
-    "da-disable-delinearization-checks", cl::Hidden,
-    cl::desc(
-        "Disable checks that try to statically verify validity of "
-        "delinearized subscripts. Enabling this option may result in incorrect "
-        "dependence vectors for languages that allow the subscript of one "
-        "dimension to underflow or overflow into another dimension."));
-
-static cl::opt<unsigned> MIVMaxLevelThreshold(
-    "da-miv-max-level-threshold", cl::init(7), cl::Hidden,
-    cl::desc("Maximum depth allowed for the recursive algorithm used to "
-             "explore MIV direction vectors."));
-
-namespace {
-
-/// Types of dependence test routines.
-enum class DependenceTestType {
-  Default, ///< All tests except BanerjeeMIV
-  All,
-  StrongSIV,
-  WeakCrossingSIV,
-  ExactSIV,
-  WeakZeroSIV,
-  ExactRDIV,
-  GCDMIV,
-  BanerjeeMIV,
-};
-
-} // anonymous namespace
-
-static cl::opt<DependenceTestType> EnableDependenceTest(
-    "da-enable-dependence-test", cl::init(DependenceTestType::Default),
-    cl::ReallyHidden,
-    cl::desc("Run only specified dependence test routine and disable others. "
-             "The purpose is mainly to exclude the influence of other "
-             "dependence test routines in regression tests. If set to All, all "
-             "dependence test routines are enabled."),
-    cl::values(clEnumValN(DependenceTestType::Default, "default",
-                          "Enable all dependence test routines except "
-                          "Banerjee MIV (default)."),
-               clEnumValN(DependenceTestType::All, "all",
-                          "Enable all dependence test routines."),
-               clEnumValN(DependenceTestType::StrongSIV, "strong-siv",
-                          "Enable only Strong SIV test."),
-               clEnumValN(DependenceTestType::WeakCrossingSIV,
-                          "weak-crossing-siv",
-                          "Enable only Weak-Crossing SIV test."),
-               clEnumValN(DependenceTestType::ExactSIV, "exact-siv",
-                          "Enable only Exact SIV test."),
-               clEnumValN(DependenceTestType::WeakZeroSIV, "weak-zero-siv",
-                          "Enable only Weak-Zero SIV test."),
-               clEnumValN(DependenceTestType::ExactRDIV, "exact-rdiv",
-                          "Enable only Exact RDIV test."),
-               clEnumValN(DependenceTestType::GCDMIV, "gcd-miv",
-                          "Enable only GCD MIV test."),
-               clEnumValN(DependenceTestType::BanerjeeMIV, "banerjee-miv",
-                          "Enable only Banerjee MIV test.")));
-
 //===----------------------------------------------------------------------===//
 // basics
+
+DependenceInfo::DependenceInfo(Function *F, AAResults *AA, ScalarEvolution *SE,
+                               LoopInfo *LI)
+    : Opts(getAnalysisOptions(*F)), AA(AA), SE(SE), LI(LI), F(F) {}
 
 DependenceAnalysis::Result
 DependenceAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
@@ -592,7 +535,7 @@ adjustLoc(MemoryLocation Loc,
 
 // Returns NoAlias/MayAliass/MustAlias for two memory locations based upon their
 // underlaying objects. If LocA and LocB are known to not alias (for any reason:
-// tbaa, non-overlapping regions etc), then it is known there is no dependecy.
+// tbaa, non-overlapping regions etc), then it is known there is no dependency.
 // Otherwise the underlying objects are checked to see if they point to
 // different identifiable objects.
 static AliasResult
@@ -926,15 +869,16 @@ static const SCEV *minusSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
 }
 
 /// Returns true iff \p Test is enabled.
-static bool isDependenceTestEnabled(DependenceTestType Test) {
-  if (EnableDependenceTest == DependenceTestType::All)
+static bool isDependenceTestEnabled(const AnalysisOptions &Opts,
+                                    DependenceTestType Test) {
+  if (Opts.da_enable_dependence_test == DependenceTestType::All)
     return true;
   // The Banerjee test is disabled by default because of correctness issues,
   // but can be enabled with -da-enable-dependence-test=banerjee-miv or
   // -da-enable-dependence-test=all.
-  if (EnableDependenceTest == DependenceTestType::Default)
+  if (Opts.da_enable_dependence_test == DependenceTestType::Default)
     return Test != DependenceTestType::BanerjeeMIV;
-  return EnableDependenceTest == Test;
+  return Opts.da_enable_dependence_test == Test;
 }
 
 // testZIV -
@@ -996,7 +940,7 @@ bool DependenceInfo::strongSIVtest(const SCEVAddRecExpr *Src,
                                    const SCEVAddRecExpr *Dst, unsigned Level,
                                    FullDependence &Result,
                                    bool UnderRuntimeAssumptions) {
-  if (!isDependenceTestEnabled(DependenceTestType::StrongSIV))
+  if (!isDependenceTestEnabled(Opts, DependenceTestType::StrongSIV))
     return false;
 
   const SCEV *Coeff = Src->getStepRecurrence(*SE);
@@ -1135,7 +1079,7 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
                                          const SCEVAddRecExpr *Dst,
                                          unsigned Level,
                                          FullDependence &Result) const {
-  if (!isDependenceTestEnabled(DependenceTestType::WeakCrossingSIV))
+  if (!isDependenceTestEnabled(Opts, DependenceTestType::WeakCrossingSIV))
     return false;
 
   const SCEV *Coeff = Src->getStepRecurrence(*SE);
@@ -1371,7 +1315,7 @@ inferDomainOfAffine(OverflowSafeSignedAPInt A, OverflowSafeSignedAPInt B,
 bool DependenceInfo::exactSIVtest(const SCEVAddRecExpr *Src,
                                   const SCEVAddRecExpr *Dst, unsigned Level,
                                   FullDependence &Result) const {
-  if (!isDependenceTestEnabled(DependenceTestType::ExactSIV))
+  if (!isDependenceTestEnabled(Opts, DependenceTestType::ExactSIV))
     return false;
 
   LLVM_DEBUG(dbgs() << "\tExact SIV test\n");
@@ -1477,7 +1421,7 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *SrcConst,
                                         const SCEVAddRecExpr *Dst,
                                         unsigned Level,
                                         FullDependence &Result) const {
-  if (!isDependenceTestEnabled(DependenceTestType::WeakZeroSIV))
+  if (!isDependenceTestEnabled(Opts, DependenceTestType::WeakZeroSIV))
     return false;
 
   // For the WeakSIV test, it's possible the loop isn't common to
@@ -1536,7 +1480,7 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *SrcConst,
 bool DependenceInfo::weakZeroDstSIVtest(const SCEVAddRecExpr *Src,
                                         const SCEV *DstConst, unsigned Level,
                                         FullDependence &Result) const {
-  if (!isDependenceTestEnabled(DependenceTestType::WeakZeroSIV))
+  if (!isDependenceTestEnabled(Opts, DependenceTestType::WeakZeroSIV))
     return false;
 
   // For the WeakSIV test, it's possible the loop isn't common to the
@@ -1563,7 +1507,7 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEVAddRecExpr *Src,
 bool DependenceInfo::exactRDIVtest(const SCEVAddRecExpr *Src,
                                    const SCEVAddRecExpr *Dst,
                                    FullDependence &Result) const {
-  if (!isDependenceTestEnabled(DependenceTestType::ExactRDIV))
+  if (!isDependenceTestEnabled(Opts, DependenceTestType::ExactRDIV))
     return false;
 
   LLVM_DEBUG(dbgs() << "\tExact RDIV test\n");
@@ -1861,7 +1805,7 @@ const SCEV *DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
 // to "a common divisor".
 bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
                                 FullDependence &Result) const {
-  if (!isDependenceTestEnabled(DependenceTestType::GCDMIV))
+  if (!isDependenceTestEnabled(Opts, DependenceTestType::GCDMIV))
     return false;
 
   LLVM_DEBUG(dbgs() << "starting gcd\n");
@@ -2151,7 +2095,7 @@ static Type *getBanerjeeBaseType(const SCEV *Src, const SCEV *Dst,
 bool DependenceInfo::banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
                                      const SmallBitVector &Loops,
                                      FullDependence &Result) const {
-  if (!isDependenceTestEnabled(DependenceTestType::BanerjeeMIV))
+  if (!isDependenceTestEnabled(Opts, DependenceTestType::BanerjeeMIV))
     return false;
 
   LLVM_DEBUG(dbgs() << "starting Banerjee\n");
@@ -2311,7 +2255,7 @@ unsigned DependenceInfo::exploreDirections(unsigned Level,
                                            const SmallBitVector &Loops,
                                            const SCEV *Delta,
                                            const FullDependence &Result) const {
-  if (CommonLevels > MIVMaxLevelThreshold) {
+  if (CommonLevels > Opts.da_miv_max_level_threshold) {
     LLVM_DEBUG(dbgs() << "Number of common levels exceeded the threshold. MIV "
                          "direction exploration is terminated.\n");
     for (unsigned K = 1; K <= CommonLevels; ++K)
@@ -2577,7 +2521,7 @@ bool DependenceInfo::tryDelinearizeFixedSize(
   // impossible to verify this at compile-time. As such we can only delinearize
   // iff the subscripts are positive and are less than the range of the
   // dimension.
-  if (!DisableDelinearizationChecks) {
+  if (Opts.da_delinearization_checks) {
     if (!validateDelinearizationResult(*SE, SrcSizes, SrcSubscripts) ||
         !validateDelinearizationResult(*SE, DstSizes, DstSubscripts)) {
       SrcSubscripts.clear();
@@ -2641,7 +2585,7 @@ bool DependenceInfo::tryDelinearizeParametricSize(
   // and dst.
   // FIXME: It may be better to record these sizes and add them as constraints
   // to the dependency checks.
-  if (!DisableDelinearizationChecks)
+  if (Opts.da_delinearization_checks)
     if (!validateDelinearizationResult(*SE, Sizes, SrcSubscripts) ||
         !validateDelinearizationResult(*SE, Sizes, DstSubscripts))
       return false;
@@ -2815,7 +2759,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   SmallVector<Subscript, 2> Pair(Pairs);
   Pair[0].Src = SrcEv;
   Pair[0].Dst = DstEv;
-  if (Delinearize) {
+  if (Opts.da_delinearize) {
     if (tryDelinearize(Src, Dst, Pair)) {
       LLVM_DEBUG(dbgs() << "    delinearized\n");
       Pairs = Pair.size();

@@ -21,6 +21,16 @@ TEST_F(GlobPatternTest, Empty) {
   EXPECT_FALSE(Pat1->match("a"));
 }
 
+TEST_F(GlobPatternTest, Literal) {
+  Expected<GlobPattern> Pat1 = GlobPattern::create("abc");
+  EXPECT_TRUE((bool)Pat1);
+  EXPECT_TRUE(Pat1->match("abc"));
+  EXPECT_FALSE(Pat1->match(""));
+  EXPECT_FALSE(Pat1->match("ab"));
+  EXPECT_FALSE(Pat1->match("abcd"));
+  EXPECT_FALSE(Pat1->match("xabc"));
+}
+
 TEST_F(GlobPatternTest, Glob) {
   Expected<GlobPattern> Pat1 = GlobPattern::create("ab*c*def");
   EXPECT_TRUE((bool)Pat1);

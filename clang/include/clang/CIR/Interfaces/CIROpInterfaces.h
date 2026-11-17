@@ -16,7 +16,6 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
-#include "mlir/Interfaces/CallInterfaces.h"
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclTemplate.h"

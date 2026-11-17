@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 \
+; RUN: opt < %s -passes="print<cost-model>" -disable-output -mtriple=systemz-unknown -mcpu=z13 2>&1 \
 ; RUN:  | FileCheck %s -check-prefix=COST
 
 ; Check that all divide/remainder instructions are implemented by cheaper instructions.

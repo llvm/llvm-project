@@ -707,6 +707,10 @@ namespace llvm {
     bool isInlineAsmTargetBranch(const SmallVectorImpl<StringRef> &AsmStrs,
                                  unsigned OpNo) const override;
 
+    // An x86 address can use a symbol as its displacement, which the asm
+    // printer prints for a call target, e.g. "call foo@PLT".
+    bool supportsInlineAsmFuncOperands() const override { return true; }
+
     SDValue visitMaskedLoad(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
                             MachineMemOperand *MMO, SDValue &NewLoad,
                             SDValue Ptr, SDValue PassThru,
@@ -911,6 +915,7 @@ namespace llvm {
     shouldExpandLogicAtomicRMWInIR(const AtomicRMWInst *AI) const;
     void emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const override;
     void emitCmpArithAtomicRMWIntrinsic(AtomicRMWInst *AI) const override;
+    void emitExpandAtomicRMW(AtomicRMWInst *AI) const override;
 
     LoadInst *
     lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;

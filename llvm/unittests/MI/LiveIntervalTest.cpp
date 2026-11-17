@@ -241,11 +241,13 @@ static void liveIntervalTest(StringRef MIRFunc,
 ---
 ...
 name: func
+tracksRegLiveness: false
 registers:
   - { id: 0, class: sreg_64 }
 body: |
   bb.0:
-)MIR") + Twine(MIRFunc) + Twine("...\n")).toNullTerminatedStringRef(S);
+)MIR") + Twine(MIRFunc) + Twine("...\n"))
+                            .toNullTerminatedStringRef(S);
 
   doTest<LiveIntervalsWrapperPass>(MIRString, T, ShouldPass);
 }
@@ -911,6 +913,79 @@ TEST(LiveIntervalTest, LiveThroughSegments) {
         FirstSeg->valno->def = NewIdx;
       },
       false);
+}
+
+static const char *PhiOnlyClassMIR = R"MIR(
+    %0 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+  bb.1:
+    S_ENDPGM 0
+  bb.2:
+    S_ENDPGM 0
+  bb.3:
+    S_ENDPGM 0
+)MIR";
+
+static VNInfo *addPhiOnlyValue(LiveRange &LR, LiveIntervals &LIS,
+                               MachineFunction &MF, unsigned BlockNum,
+                               VNInfo::Allocator &Alloc) {
+  SlotIndex Start = LIS.getMBBStartIdx(MF.getBlockNumbered(BlockNum));
+  SlotIndex End = LIS.getInstructionIndex(getMI(MF, 0, BlockNum)).getRegSlot();
+  VNInfo *VNI = LR.getNextValue(Start, Alloc);
+  LR.addSegment(LiveRange::Segment(Start, End, VNI));
+  return VNI;
+}
+
+static VNInfo *addDefinedValue(LiveRange &LR, LiveIntervals &LIS,
+                               MachineFunction &MF, VNInfo::Allocator &Alloc) {
+  SlotIndex Def = LIS.getInstructionIndex(getMI(MF, 0, 0)).getRegSlot();
+  VNInfo *VNI = LR.getNextValue(Def, Alloc);
+  LR.addSegment(LiveRange::Segment(Def, Def.getDeadSlot(), VNI));
+  return VNI;
+}
+
+TEST(LiveIntervalTest, ClassifyJoinsUnreachablePhiOnlyClass) {
+  liveIntervalTest(PhiOnlyClassMIR, [](MachineFunction &MF,
+                                       LiveIntervalsWrapperPass &LISWrapper) {
+    auto &LIS = LISWrapper.getLIS();
+    VNInfo::Allocator Alloc;
+    LiveRange LR;
+    addDefinedValue(LR, LIS, MF, Alloc);
+    VNInfo *Phi = addPhiOnlyValue(LR, LIS, MF, 2, Alloc);
+    ASSERT_TRUE(Phi->isPHIDef());
+
+    ConnectedVNInfoEqClasses ConEQ(LIS);
+    EXPECT_EQ(ConEQ.Classify(LR), 1u);
+  });
+}
+
+TEST(LiveIntervalTest, ClassifyKeepsReachablePhiOnlyClass) {
+  liveIntervalTest(PhiOnlyClassMIR, [](MachineFunction &MF,
+                                       LiveIntervalsWrapperPass &LISWrapper) {
+    auto &LIS = LISWrapper.getLIS();
+    VNInfo::Allocator Alloc;
+    LiveRange LR;
+    addDefinedValue(LR, LIS, MF, Alloc);
+    VNInfo *Phi = addPhiOnlyValue(LR, LIS, MF, 1, Alloc);
+    ASSERT_TRUE(Phi->isPHIDef());
+
+    ConnectedVNInfoEqClasses ConEQ(LIS);
+    EXPECT_EQ(ConEQ.Classify(LR), 2u);
+  });
+}
+
+TEST(LiveIntervalTest, ClassifyPhiOnlyClassesWithoutDef) {
+  liveIntervalTest(PhiOnlyClassMIR, [](MachineFunction &MF,
+                                       LiveIntervalsWrapperPass &LISWrapper) {
+    auto &LIS = LISWrapper.getLIS();
+    VNInfo::Allocator Alloc;
+    LiveRange LR;
+    addPhiOnlyValue(LR, LIS, MF, 2, Alloc);
+    addPhiOnlyValue(LR, LIS, MF, 3, Alloc);
+
+    ConnectedVNInfoEqClasses ConEQ(LIS);
+    EXPECT_EQ(ConEQ.Classify(LR), 2u);
+  });
 }
 
 int main(int argc, char **argv) {

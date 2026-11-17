@@ -1399,6 +1399,7 @@ bool ModuleList::LoadScriptingResourceInTargetForModule(Module &module,
 
   const bool trusted = platform_sp->IsSymbolFileTrusted(module);
 
+  llvm::SmallVector<const FileSpec *> scripts_to_load;
   for (const auto &[scripting_fspec, load_style] : file_specs) {
     if (load_style == eLoadScriptFromSymFileFalse)
       continue;
@@ -1436,12 +1437,22 @@ To run all discovered debug scripts in this session:
       continue;
     }
 
-    LLDB_LOG(log, "Auto-loading {0}", scripting_fspec.GetPath());
+    scripts_to_load.push_back(&scripting_fspec);
+  }
 
-    if (!LoadScriptingModule(scripting_fspec, *script_interpreter, target,
+  // Only load each module's scripts once per target. We record the module for
+  // all of its scripts at once, so that loading the first one doesn't skip the
+  // others.
+  if (scripts_to_load.empty() || !target.RecordScriptingResources(module))
+    return true;
+
+  for (const FileSpec *scripting_fspec : scripts_to_load) {
+    LLDB_LOG(log, "Auto-loading {0}", scripting_fspec->GetPath());
+
+    if (!LoadScriptingModule(*scripting_fspec, *script_interpreter, target,
                              error)) {
       LLDB_LOG(log, "Failed to load '{0}'. Remaining scripts won't be loaded.",
-               scripting_fspec.GetPath());
+               scripting_fspec->GetPath());
       return false;
     }
   }

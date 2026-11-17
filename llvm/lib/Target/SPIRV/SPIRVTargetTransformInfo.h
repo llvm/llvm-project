@@ -20,6 +20,7 @@
 #include "SPIRVTargetMachine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
+#include "llvm/Support/SPIRVAddrSpace.h"
 
 namespace llvm {
 class SPIRVTTIImpl final : public BasicTTIImplBase<SPIRVTTIImpl> {
@@ -51,9 +52,9 @@ public:
 
   unsigned getFlatAddressSpace() const override {
     // Clang has 2 distinct address space maps. One where
-    // default=4=Generic, and one with default=0=Function. This depends on the
+    // default=Generic, and one with default=Function. This depends on the
     // environment.
-    return ST->isShader() ? 0 : 4;
+    return ST->isShader() ? SPIRVAS::Function : SPIRVAS::Generic;
   }
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                   Intrinsic::ID IID) const override;

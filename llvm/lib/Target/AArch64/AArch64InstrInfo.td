@@ -597,7 +597,8 @@ def nonext_masked_load :
           (masked_ld node:$ptr, undef, node:$pred, node:$def), [{
   return cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD &&
          cast<MaskedLoadSDNode>(N)->isUnindexed() &&
-         !cast<MaskedLoadSDNode>(N)->isNonTemporal();
+         !cast<MaskedLoadSDNode>(N)->isNonTemporal() &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 // Any/Zero extending masked load fragments.
 def azext_masked_load :
@@ -605,44 +606,52 @@ def azext_masked_load :
           (masked_ld node:$ptr, undef, node:$pred, node:$def),[{
   return (cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::EXTLOAD ||
           cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::ZEXTLOAD) &&
-         cast<MaskedLoadSDNode>(N)->isUnindexed();
+         cast<MaskedLoadSDNode>(N)->isUnindexed() &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def azext_masked_load_i8 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (azext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def azext_masked_load_i16 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (azext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def azext_masked_load_i32 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (azext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 // Sign extending masked load fragments.
 def sext_masked_load :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (masked_ld node:$ptr, undef, node:$pred, node:$def), [{
   return cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::SEXTLOAD &&
-         cast<MaskedLoadSDNode>(N)->isUnindexed();
+         cast<MaskedLoadSDNode>(N)->isUnindexed() &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def sext_masked_load_i8 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (sext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def sext_masked_load_i16 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (sext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def sext_masked_load_i32 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (sext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 
 def non_temporal_load :
@@ -650,7 +659,8 @@ def non_temporal_load :
            (masked_ld node:$ptr, undef, node:$pred, node:$def), [{
    return cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD &&
           cast<MaskedLoadSDNode>(N)->isUnindexed() &&
-          cast<MaskedLoadSDNode>(N)->isNonTemporal();
+          cast<MaskedLoadSDNode>(N)->isNonTemporal() &&
+          !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 
 // non-truncating masked store fragment.
@@ -2130,6 +2140,7 @@ def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]> {
   // duplicated.
   let isNotDuplicable = 1;
 }
+
 // Insertion point of LR authentication code.
 // The RET terminator of the containing machine basic block may be replaced
 // with a combined RETA(A|B) instruction when rewriting this Pseudo.
@@ -2139,6 +2150,13 @@ def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]> {
 // AArch64InstrInfo::createPauthEpilogueInstr method that adds an implicit-def
 // operand as needed.
 def PAUTH_EPILOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
+
+// Like PAUTH_EPILOGUE, but for use before the epilogue proper, where it
+// authenticates the return address in LR, which the epilogue then leaves alone.
+// The SP the return address was signed with must already be in X16, and the
+// signed return address in X17 if the authentication sequence works on that
+// (see AArch64PAuth::authenticatesLRViaX17), or else in LR.
+def PAUTH_EPILOGUE_ENTRY_SP : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
 
 // These pointer authentication instructions require armv8.3a
@@ -3801,6 +3819,11 @@ def EMITBKEY : Pseudo<(outs), (ins), []>, Sched<[]> {}
 // Pseudo instruction to tell the streamer to emit a 'G' character into the
 // augmentation string.
 def EMITMTETAGGED : Pseudo<(outs), (ins), []>, Sched<[]> {}
+
+// Pseudo instruction to tell the streamer to emit an 'N' character into the
+// augmentation string, indicating that non hint-space FEAT_PAuth_LR
+// instructions are used for signing/authenticating the return address.
+def EMITNONHINTED : Pseudo<(outs), (ins), []>, Sched<[]> {}
 
 // FIXME: maybe the scratch register used shouldn't be fixed to X1?
 // FIXME: can "hasSideEffects be dropped?
@@ -6124,6 +6147,10 @@ def F128CSEL : Pseudo<(outs FPR128:$Rd),
 //===----------------------------------------------------------------------===//
 // Instructions used for emitting unwind opcodes on ARM64 Windows.
 //===----------------------------------------------------------------------===//
+let isMeta = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0, Size = 0 in {
+  def SEH_EndC : Pseudo<(outs), (ins), []>, Sched<[]>;
+}
+
 let isPseudo = 1 in {
   def SEH_StackAlloc : Pseudo<(outs), (ins i32imm:$size), []>, Sched<[]>;
   def SEH_SaveFPLR : Pseudo<(outs), (ins i32imm:$offs), []>, Sched<[]>;
@@ -6145,6 +6172,8 @@ let isPseudo = 1 in {
   def SEH_PACSignLR : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_SaveAnyRegI : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$offs), []>, Sched<[]>;
   def SEH_SaveAnyRegIP : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
+  def SEH_SaveAnyRegQ : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$offs), []>, Sched<[]>;
+  def SEH_SaveAnyRegQX : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$offs), []>, Sched<[]>;
   def SEH_SaveAnyRegQP : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
   def SEH_SaveAnyRegQPX : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
   def SEH_AllocZ : Pseudo<(outs), (ins i32imm:$offs), []>, Sched<[]>;
@@ -6623,7 +6652,11 @@ defm ORN : SIMDLogicalThreeVector<0, 0b11, "orn",
 defm ORR : SIMDLogicalThreeVector<0, 0b10, "orr", or>;
 
 // Pseudo bitwise select pattern BSP.
-// It is expanded into BSL/BIT/BIF after register allocation.
+// It is expanded into BSL/BIT/BIF after register allocation. When SVE2
+// instructions are available, BSPv16i8 may also be expanded into
+// MOVPRFX + SVE2 BSL. Unlike most V128 instructions, it should not be assumed
+// that the BSPv16i8 pseudo zeroes the upper bits (above bit 127) of the
+// overlaying Z register as the SVE expansion code does not guarantee this.
 defm BSP : SIMDLogicalThreeVectorPseudo<TriOpFrag<(or (and node:$LHS, node:$MHS),
                                                       (and (vnot node:$LHS), node:$RHS))>>;
 defm BSL : SIMDLogicalThreeVectorTied<1, 0b01, "bsl">;
@@ -8736,6 +8769,75 @@ defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v4i16, scalar_to_vector, INSvi8lane
 defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v2i32, scalar_to_vector_v2f32, INSvi8lane, DUPi8, bsub, VecIndex_x4>;
 defm : Neon_INS_elt_ext_pattern<v8i16, v4i16, v2i32, scalar_to_vector_v2f32, INSvi16lane, DUPi16, hsub, VecIndex_x2>;
 
+
+let Predicates = [HasFullFP16] in {
+  def : Pat<(v8i16 (vector_insert immAllZerosV,
+              (i32 (vector_extract
+                (v8i16 V128:$Rn),
+                (i64 0))),
+              (i64 0))),
+            (v8i16 (SUBREG_TO_REG
+              (FMOVHr (f16 (EXTRACT_SUBREG (v8i16 V128:$Rn), hsub))),
+              hsub))>;
+
+  def : Pat<(v8f16 (vector_insert immAllZerosV,
+              (f16 (vector_extract
+                (v8f16 V128:$Rn),
+                (i64 0))),
+              (i64 0))),
+            (v8f16 (SUBREG_TO_REG
+              (FMOVHr (f16 (EXTRACT_SUBREG (v8f16 V128:$Rn), hsub))),
+              hsub))>;
+
+  def : Pat<(v8bf16 (vector_insert immAllZerosV,
+              (bf16 (vector_extract
+                (v8bf16 V128:$Rn),
+                (i64 0))),
+              (i64 0))),
+            (v8bf16 (SUBREG_TO_REG
+              (FMOVHr (f16 (EXTRACT_SUBREG (v8bf16 V128:$Rn), hsub))),
+              hsub))>;
+
+  def : Pat<(v4i16 (vector_insert immAllZerosV,
+            (i32 (vector_extract
+                (v8i16 (insert_subvector (v8i16 undef),
+                  (v4i16 V64:$Rn), (i64 0))),
+                (i64 0))),
+              (i64 0))),
+            (v4i16 (SUBREG_TO_REG
+              (FMOVHr (f16 (EXTRACT_SUBREG (v4i16 V64:$Rn), hsub))),
+              hsub))>;
+
+  def : Pat<(v4i16 (vector_insert immAllZerosV,
+            (i32 (vector_extract
+                (v8i16 (bitconvert
+                  (v8f16 (insert_subvector (v8f16 undef),
+                    (v4f16 V64:$Rn), (i64 0))))),
+                (i64 0))),
+              (i64 0))),
+            (v4i16 (SUBREG_TO_REG
+              (FMOVHr (f16 (EXTRACT_SUBREG (v4f16 V64:$Rn), hsub))),
+              hsub))>;
+
+  def : Pat<(v4i16 (vector_insert immAllZerosV,
+              (i32 (vector_extract
+                (v8i16 (bitconvert
+                  (v8bf16 (insert_subvector (v8bf16 undef),
+                    (v4bf16 V64:$Rn), (i64 0))))),
+                (i64 0))),
+              (i64 0))),
+            (v4i16 (SUBREG_TO_REG
+              (FMOVHr (f16 (EXTRACT_SUBREG (v4bf16 V64:$Rn), hsub))),
+              hsub))>;
+}
+
+// extract from lane 0 and insert into lane 0 of a zero vector
+// is equivalent to clearing upper bits of a register, we can use fmov
+def : Pat<(v4i32 (vector_insert immAllZerosV, (i32 (vector_extract (v4i32 V128:$Rn), (i64 0))), (i64 0))),
+          (v4i32 (SUBREG_TO_REG (FMOVSr (EXTRACT_SUBREG (v4i32 V128:$Rn), ssub)), ssub))>;
+def : Pat<(v4f32 (vector_insert immAllZerosV, (f32 (vector_extract (v4f32 V128:$Rn), (i64 0))), (i64 0))),
+          (v4f32 (SUBREG_TO_REG (FMOVSr (EXTRACT_SUBREG (v4f32 V128:$Rn), ssub)), ssub))>;
+
 // bitcast of an extract
 // f32 bitcast(vector_extract(v4i32 src, 0)) -> EXTRACT_SUBREG(src)
 def : Pat<(f32 (bitconvert (i32 (vector_extract v16i8:$src, (i64 0))))),
@@ -8829,33 +8931,42 @@ defm FMAXV   : SIMDFPAcrossLanes<0b01111, 0, "fmaxv", AArch64fmaxv>;
 defm FMINNMV : SIMDFPAcrossLanes<0b01100, 1, "fminnmv", AArch64fminnmv>;
 defm FMINV   : SIMDFPAcrossLanes<0b01111, 1, "fminv", AArch64fminv>;
 
-multiclass SIMDAcrossLanesFPIntrinsic<string acrossLanesOpc,
+multiclass SIMDAcrossLanesFPIntrinsic<string baseOpc,
                                       SDPatternOperator opNode> {
   // Reductions have the unused lanes set to zero. Inserting the reduction's
   // result into lane zero of a zero vector is therefore redundant.
   let Predicates = [HasFullFP16] in {
-  def : Pat<(v4f16 (vector_insert (v4f16 immAllZerosV),
-                    (f16 (opNode (v4f16 V64:$Rn))), (i64 0))),
-            (v4f16 (SUBREG_TO_REG
-              (!cast<Instruction>(acrossLanesOpc # "v4i16v") V64:$Rn),
-              hsub))>;
-  def : Pat<(v8f16 (vector_insert (v8f16 immAllZerosV),
-                    (f16 (opNode (v8f16 V128:$Rn))), (i64 0))),
-            (v8f16 (SUBREG_TO_REG
-              (!cast<Instruction>(acrossLanesOpc # "v8i16v") V128:$Rn),
-              hsub))>;
+    foreach DstTy = [v4f16, v8f16] in {
+      def : Pat<(DstTy (vector_insert (DstTy immAllZerosV),
+                        (f16 (opNode (v4f16 V64:$Rn))), (i64 0))),
+                (DstTy (SUBREG_TO_REG
+                  (!cast<Instruction>(baseOpc # "Vv4i16v") V64:$Rn),
+                  hsub))>;
+      def : Pat<(DstTy (vector_insert (DstTy immAllZerosV),
+                        (f16 (opNode (v8f16 V128:$Rn))), (i64 0))),
+                (DstTy (SUBREG_TO_REG
+                  (!cast<Instruction>(baseOpc # "Vv8i16v") V128:$Rn),
+                  hsub))>;
+    }
   }
-  def : Pat<(v4f32 (vector_insert (v4f32 immAllZerosV),
-                    (f32 (opNode (v4f32 V128:$Rn))), (i64 0))),
-            (v4f32 (SUBREG_TO_REG
-              (!cast<Instruction>(acrossLanesOpc # "v4i32v") V128:$Rn),
-              ssub))>;
+  foreach DstTy = [v2f32, v4f32] in {
+    def : Pat<(DstTy (vector_insert (DstTy immAllZerosV),
+                      (f32 (opNode (v2f32 V64:$Rn))), (i64 0))),
+              (DstTy (SUBREG_TO_REG
+                (!cast<Instruction>(baseOpc # "Pv2i32p") V64:$Rn),
+                ssub))>;
+    def : Pat<(DstTy (vector_insert (DstTy immAllZerosV),
+                      (f32 (opNode (v4f32 V128:$Rn))), (i64 0))),
+              (DstTy (SUBREG_TO_REG
+                (!cast<Instruction>(baseOpc # "Vv4i32v") V128:$Rn),
+                ssub))>;
+  }
 }
 
-defm : SIMDAcrossLanesFPIntrinsic<"FMAXV", AArch64fmaxv>;
-defm : SIMDAcrossLanesFPIntrinsic<"FMINV", AArch64fminv>;
-defm : SIMDAcrossLanesFPIntrinsic<"FMAXNMV", AArch64fmaxnmv>;
-defm : SIMDAcrossLanesFPIntrinsic<"FMINNMV", AArch64fminnmv>;
+defm : SIMDAcrossLanesFPIntrinsic<"FMAX", AArch64fmaxv>;
+defm : SIMDAcrossLanesFPIntrinsic<"FMIN", AArch64fminv>;
+defm : SIMDAcrossLanesFPIntrinsic<"FMAXNM", AArch64fmaxnmv>;
+defm : SIMDAcrossLanesFPIntrinsic<"FMINNM", AArch64fminnmv>;
 
 multiclass SIMDAcrossLaneLongReductionExt<string Opc, SDPatternOperator ext> {
   def : Pat<(i32 (vector_extract (v8i16 (AArch64uaddv (v8i16 (ext (v8i8 V64:$op))))), (i64 0))),
@@ -8992,69 +9103,86 @@ multiclass SIMDAcrossLanesIntrinsic<string baseOpc,
 // directly match the latter to the instruction.
 def : Pat<(v8i8 (opNode V64:$Rn)),
           (INSERT_SUBREG (v8i8 (IMPLICIT_DEF)),
-           (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn), bsub)>;
+           (!cast<Instruction>(!strconcat(baseOpc, "Vv8i8v")) V64:$Rn), bsub)>;
 def : Pat<(v16i8 (opNode V128:$Rn)),
           (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-           (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn), bsub)>;
+           (!cast<Instruction>(!strconcat(baseOpc, "Vv16i8v")) V128:$Rn), bsub)>;
 def : Pat<(v4i16 (opNode V64:$Rn)),
           (INSERT_SUBREG (v4i16 (IMPLICIT_DEF)),
-           (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) V64:$Rn), hsub)>;
+           (!cast<Instruction>(!strconcat(baseOpc, "Vv4i16v")) V64:$Rn), hsub)>;
 def : Pat<(v8i16 (opNode V128:$Rn)),
           (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)),
-           (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) V128:$Rn), hsub)>;
+           (!cast<Instruction>(!strconcat(baseOpc, "Vv8i16v")) V128:$Rn), hsub)>;
 def : Pat<(v4i32 (opNode V128:$Rn)),
           (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
-           (!cast<Instruction>(!strconcat(baseOpc, "v4i32v")) V128:$Rn), ssub)>;
+           (!cast<Instruction>(!strconcat(baseOpc, "Vv4i32v")) V128:$Rn), ssub)>;
 
 
 // If none did, fallback to the explicit patterns, consuming the vector_extract.
 def : Pat<(i32 (vector_extract (insert_subvector (v16i8 undef), (v8i8 (opNode V64:$Rn)),
             (i64 0)), (i64 0))),
           (EXTRACT_SUBREG (INSERT_SUBREG (v8i8 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn),
+            (!cast<Instruction>(!strconcat(baseOpc, "Vv8i8v")) V64:$Rn),
             bsub), ssub)>;
 def : Pat<(i32 (vector_extract (v16i8 (opNode V128:$Rn)), (i64 0))),
           (EXTRACT_SUBREG (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn),
+            (!cast<Instruction>(!strconcat(baseOpc, "Vv16i8v")) V128:$Rn),
             bsub), ssub)>;
 def : Pat<(i32 (vector_extract (insert_subvector (v8i16 undef),
             (v4i16 (opNode V64:$Rn)), (i64 0)), (i64 0))),
           (EXTRACT_SUBREG (INSERT_SUBREG (v4i16 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) V64:$Rn),
+            (!cast<Instruction>(!strconcat(baseOpc, "Vv4i16v")) V64:$Rn),
             hsub), ssub)>;
 def : Pat<(i32 (vector_extract (v8i16 (opNode V128:$Rn)), (i64 0))),
           (EXTRACT_SUBREG (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) V128:$Rn),
+            (!cast<Instruction>(!strconcat(baseOpc, "Vv8i16v")) V128:$Rn),
             hsub), ssub)>;
 def : Pat<(i32 (vector_extract (v4i32 (opNode V128:$Rn)), (i64 0))),
           (EXTRACT_SUBREG (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v4i32v")) V128:$Rn),
+            (!cast<Instruction>(!strconcat(baseOpc, "Vv4i32v")) V128:$Rn),
             ssub), ssub)>;
 
 // Reductions have the unused lanes set to zero. Inserting the reduction's
 // result into lane zero of a zero vector is therefore redundant.
-def : Pat<(v16i8 (vector_insert immAllZerosV,
-                    (i32 (vector_extract (v16i8 (opNode V128:$Rn)), (i64 0))),
-                    (i64 0))),
-          (v16i8 (SUBREG_TO_REG (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn), bsub))>;
-def : Pat<(v8i16 (vector_insert immAllZerosV,
-                    (i32 (vector_extract (v8i16 (opNode V128:$Rn)), (i64 0))),
-                    (i64 0))),
-          (v8i16 (SUBREG_TO_REG (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) V128:$Rn), hsub))>;
-def : Pat<(v4i32 (vector_insert immAllZerosV,
-                    (i32 (vector_extract (v4i32 (opNode V128:$Rn)), (i64 0))),
-                    (i64 0))),
-          (v4i32 (SUBREG_TO_REG (!cast<Instruction>(!strconcat(baseOpc, "v4i32v")) V128:$Rn), ssub))>;
+foreach DstTy = [v8i8, v16i8] in {
+  def : Pat<(DstTy (vector_insert immAllZerosV,
+                      (i32 (vector_extract (v16i8 (opNode V128:$Rn)), (i64 0))),
+                      (i64 0))),
+            (DstTy (SUBREG_TO_REG (!cast<Instruction>(!strconcat(baseOpc, "Vv16i8v")) V128:$Rn), bsub))>;
+  def : Pat<(DstTy (vector_insert immAllZerosV,
+                      (i32 (vector_extract (v16i8 (insert_subvector undef,
+                      (v8i8 (opNode V64:$Rn)), (i64 0))), (i64 0))), (i64 0))),
+            (DstTy (SUBREG_TO_REG (!cast<Instruction>(!strconcat(baseOpc, "Vv8i8v")) V64:$Rn), bsub))>;
+}
+foreach DstTy = [v4i16, v8i16] in {
+  def : Pat<(DstTy (vector_insert immAllZerosV,
+                      (i32 (vector_extract (v8i16 (opNode V128:$Rn)), (i64 0))),
+                      (i64 0))),
+            (DstTy (SUBREG_TO_REG (!cast<Instruction>(!strconcat(baseOpc, "Vv8i16v")) V128:$Rn), hsub))>;
+  def : Pat<(DstTy (vector_insert immAllZerosV,
+                      (i32 (vector_extract (v8i16 (insert_subvector undef,
+                      (v4i16 (opNode V64:$Rn)), (i64 0))), (i64 0))), (i64 0))),
+            (DstTy (SUBREG_TO_REG (!cast<Instruction>(!strconcat(baseOpc, "Vv4i16v")) V64:$Rn), hsub))>;
+}
+foreach DstTy = [v2i32, v4i32] in {
+  def : Pat<(DstTy (vector_insert immAllZerosV,
+                      (i32 (vector_extract (v4i32 (opNode V128:$Rn)), (i64 0))),
+                      (i64 0))),
+            (DstTy (SUBREG_TO_REG (!cast<Instruction>(!strconcat(baseOpc, "Vv4i32v")) V128:$Rn), ssub))>;
+}
 
-def : Pat<(v8i8 (vector_insert immAllZerosV,
-                   (i32 (vector_extract (v16i8 (insert_subvector undef,
-                   (v8i8 (opNode V64:$Rn)), (i64 0))), (i64 0))), (i64 0))),
-          (v8i8 (SUBREG_TO_REG (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn), bsub))>;
+// Use pairwise equivalent instructions for v2i32 inputs, with a zero vector
+// as second operand to clear the unused result lanes.
+def : Pat<(v2i32 (vector_insert immAllZerosV:$zeros,
+                    (i32 (vector_extract (v4i32 (insert_subvector undef,
+                    (v2i32 (opNode V64:$Rn)), (i64 0))), (i64 0))), (i64 0))),
+          (!cast<Instruction>(baseOpc # "Pv2i32") V64:$Rn, V64:$zeros)>;
 
-def : Pat<(v4i16 (vector_insert immAllZerosV,
-                    (i32 (vector_extract (v8i16 (insert_subvector undef,
-                    (v4i16 (opNode V64:$Rn)), (i64 0))), (i64 0))), (i64 0))),
-          (v4i16 (SUBREG_TO_REG(!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) V64:$Rn), hsub))>;
+def : Pat<(v4i32 (vector_insert immAllZerosV:$zeros,
+                    (i32 (vector_extract (v4i32 (insert_subvector undef,
+                    (v2i32 (opNode V64:$Rn)), (i64 0))), (i64 0))), (i64 0))),
+          (v4i32 (SUBREG_TO_REG (!cast<Instruction>(baseOpc # "Pv2i32") V64:$Rn,
+                    (EXTRACT_SUBREG V128:$zeros, dsub)), dsub))>;
 }
 // Reductions have the unused lanes set to zero. Inserting the reduction's
 // result into lane zero of a zero vector is therefore redundant.
@@ -9073,25 +9201,25 @@ def : Pat<(i32 (sext_inreg (i32 (vector_extract (insert_subvector (v16i8 undef),
             (opNode (v8i8 V64:$Rn)), (i64 0)), (i64 0))), i8)),
           (i32 (SMOVvi8to32
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-              (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn), bsub),
+              (!cast<Instruction>(!strconcat(baseOpc, "Vv8i8v")) V64:$Rn), bsub),
             (i64 0)))>;
 def : Pat<(i32 (sext_inreg (i32 (vector_extract
             (opNode (v16i8 V128:$Rn)), (i64 0))), i8)),
           (i32 (SMOVvi8to32
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-             (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn), bsub),
+             (!cast<Instruction>(!strconcat(baseOpc, "Vv16i8v")) V128:$Rn), bsub),
             (i64 0)))>;
 def : Pat<(i32 (sext_inreg (i32 (vector_extract (insert_subvector (v8i16 undef),
             (opNode (v4i16 V64:$Rn)), (i64 0)), (i64 0))), i16)),
           (i32 (SMOVvi16to32
            (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) V64:$Rn), hsub),
+            (!cast<Instruction>(!strconcat(baseOpc, "Vv4i16v")) V64:$Rn), hsub),
            (i64 0)))>;
 def : Pat<(i32 (sext_inreg (i32 (vector_extract
             (opNode (v8i16 V128:$Rn)), (i64 0))), i16)),
           (i32 (SMOVvi16to32
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-             (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) V128:$Rn), hsub),
+             (!cast<Instruction>(!strconcat(baseOpc, "Vv8i16v")) V128:$Rn), hsub),
             (i64 0)))>;
 }
 
@@ -9104,25 +9232,25 @@ def : Pat<(i32 (and (i32 (vector_extract (insert_subvector (v16i8 undef),
             (opNode (v8i8 V64:$Rn)), (i64 0)), (i64 0))), maski8_or_more)),
       (i32 (EXTRACT_SUBREG
         (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-          (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn), bsub),
+          (!cast<Instruction>(!strconcat(baseOpc, "Vv8i8v")) V64:$Rn), bsub),
         ssub))>;
 def : Pat<(i32 (and (i32 (vector_extract (opNode (v16i8 V128:$Rn)), (i64 0))),
             maski8_or_more)),
         (i32 (EXTRACT_SUBREG
           (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn), bsub),
+            (!cast<Instruction>(!strconcat(baseOpc, "Vv16i8v")) V128:$Rn), bsub),
           ssub))>;
 def : Pat<(i32 (and (i32 (vector_extract (insert_subvector (v8i16 undef),
             (opNode (v4i16 V64:$Rn)), (i64 0)), (i64 0))), maski16_or_more)),
           (i32 (EXTRACT_SUBREG
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-              (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) V64:$Rn), hsub),
+              (!cast<Instruction>(!strconcat(baseOpc, "Vv4i16v")) V64:$Rn), hsub),
             ssub))>;
 def : Pat<(i32 (and (i32 (vector_extract (opNode (v8i16 V128:$Rn)), (i64 0))),
             maski16_or_more)),
         (i32 (EXTRACT_SUBREG
           (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) V128:$Rn), hsub),
+            (!cast<Instruction>(!strconcat(baseOpc, "Vv8i16v")) V128:$Rn), hsub),
           ssub))>;
 }
 
@@ -9142,29 +9270,29 @@ def : Pat<(i32 (vecreduce_add (v4i32 V128:$Rn))),
 def : Pat<(i64 (vecreduce_add (v2i64 V128:$Rn))),
           (i64 (ADDPv2i64p V128:$Rn))>;
 
-defm : SIMDAcrossLanesSignedIntrinsic<"ADDV",  AArch64saddv>;
+defm : SIMDAcrossLanesSignedIntrinsic<"ADD",  AArch64saddv>;
 // vaddv_[su]32 is special; -> ADDP Vd.2S,Vn.2S,Vm.2S; return Vd.s[0];Vn==Vm
 def : Pat<(v2i32 (AArch64saddv (v2i32 V64:$Rn))),
           (ADDPv2i32 V64:$Rn, V64:$Rn)>;
 
-defm : SIMDAcrossLanesUnsignedIntrinsic<"ADDV", AArch64uaddv>;
+defm : SIMDAcrossLanesUnsignedIntrinsic<"ADD", AArch64uaddv>;
 // vaddv_[su]32 is special; -> ADDP Vd.2S,Vn.2S,Vm.2S; return Vd.s[0];Vn==Vm
 def : Pat<(v2i32 (AArch64uaddv (v2i32 V64:$Rn))),
           (ADDPv2i32 V64:$Rn, V64:$Rn)>;
 
-defm : SIMDAcrossLanesSignedIntrinsic<"SMAXV", AArch64smaxv>;
+defm : SIMDAcrossLanesSignedIntrinsic<"SMAX", AArch64smaxv>;
 def : Pat<(v2i32 (AArch64smaxv (v2i32 V64:$Rn))),
           (SMAXPv2i32 V64:$Rn, V64:$Rn)>;
 
-defm : SIMDAcrossLanesSignedIntrinsic<"SMINV", AArch64sminv>;
+defm : SIMDAcrossLanesSignedIntrinsic<"SMIN", AArch64sminv>;
 def : Pat<(v2i32 (AArch64sminv (v2i32 V64:$Rn))),
           (SMINPv2i32 V64:$Rn, V64:$Rn)>;
 
-defm : SIMDAcrossLanesUnsignedIntrinsic<"UMAXV", AArch64umaxv>;
+defm : SIMDAcrossLanesUnsignedIntrinsic<"UMAX", AArch64umaxv>;
 def : Pat<(v2i32 (AArch64umaxv (v2i32 V64:$Rn))),
           (UMAXPv2i32 V64:$Rn, V64:$Rn)>;
 
-defm : SIMDAcrossLanesUnsignedIntrinsic<"UMINV", AArch64uminv>;
+defm : SIMDAcrossLanesUnsignedIntrinsic<"UMIN", AArch64uminv>;
 def : Pat<(v2i32 (AArch64uminv (v2i32 V64:$Rn))),
           (UMINPv2i32 V64:$Rn, V64:$Rn)>;
 
@@ -10139,7 +10267,7 @@ defm SSHLL   : SIMDVectorLShiftLongBHSD<0, 0b10100, "sshll",
 
 defm SSHR    : SIMDVectorRShiftBHSD<0, 0b00000, "sshr", AArch64vashr>;
 defm SSRA    : SIMDVectorRShiftBHSDTied<0, 0b00010, "ssra",
-                TriOpFrag<(add_like node:$LHS, (AArch64vashr node:$MHS, node:$RHS))>>;
+                TriOpFrag<(add_like node:$LHS, (AArch64vashr_oneuse node:$MHS, node:$RHS))>>;
 defm UCVTF   : SIMDVectorRShiftToFP<1, 0b11100, "ucvtf",
                         int_aarch64_neon_vcvtfxu2fp>;
 defm UQRSHRN : SIMDVectorRShiftNarrowBHS<1, 0b10011, "uqrshrn",
@@ -10155,7 +10283,7 @@ defm USHLL   : SIMDVectorLShiftLongBHSD<1, 0b10100, "ushll",
                 BinOpFrag<(AArch64vshl (zext node:$LHS), node:$RHS)>>;
 defm USHR    : SIMDVectorRShiftBHSD<1, 0b00000, "ushr", AArch64vlshr>;
 defm USRA    : SIMDVectorRShiftBHSDTied<1, 0b00010, "usra",
-                TriOpFrag<(add_like node:$LHS, (AArch64vlshr node:$MHS, node:$RHS))> >;
+                TriOpFrag<(add_like node:$LHS, (AArch64vlshr_oneuse node:$MHS, node:$RHS))> >;
 
 let Predicates = [HasNEON] in {
 defm : CVTFRecipPat<v2f64, v2i64, V128, fixedpoint_recip_v2f64>;
@@ -10874,13 +11002,15 @@ class St1Lane128SubvecPat<ValueType VTy, ComplexPattern extract_high>
   : Pat<(store (extract_high (VTy V128:$Vt)), GPR64sp:$Rn),
         (ST1i64 V128:$Vt, 1, GPR64sp:$Rn)>;
 
+let Predicates = [IsLE] in {
 def : St1Lane128SubvecPat<v16i8, extract_high_v16i8>;
 def : St1Lane128SubvecPat<v8i16, extract_high_v8i16>;
 def : St1Lane128SubvecPat<v4i32, extract_high_v4i32>;
-def : St1Lane128SubvecPat<v2i64, extract_high_v2i64>;
 def : St1Lane128SubvecPat<v8f16, extract_high_v8f16>;
 def : St1Lane128SubvecPat<v8bf16, extract_high_v8bf16>;
 def : St1Lane128SubvecPat<v4f32, extract_high_v4f32>;
+}
+def : St1Lane128SubvecPat<v2i64, extract_high_v2i64>;
 def : St1Lane128SubvecPat<v2f64, extract_high_v2f64>;
 
 // Truncating post-inc stores from lane 0 of v4i32/v2i64.

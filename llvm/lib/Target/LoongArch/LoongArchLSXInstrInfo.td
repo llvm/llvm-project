@@ -139,21 +139,20 @@ def loongarch_vanynonzero
 def loongarch_vallzero
     : SDNode<"LoongArchISD::VALLZERO", SDT_LoongArchVMSKCOND>;
 
+// Perform element-wise vector multiplication at even/odd indices,
+// and keep each result in its corresponding widened slot
+def loongarch_vmulwev: SDNode<"LoongArchISD::VMULWEV", SDT_LoongArchV2R>;
+def loongarch_vmulwod: SDNode<"LoongArchISD::VMULWOD", SDT_LoongArchV2R>;
+def loongarch_vmulwevu: SDNode<"LoongArchISD::VMULWEVU", SDT_LoongArchV2R>;
+def loongarch_vmulwodu: SDNode<"LoongArchISD::VMULWODU", SDT_LoongArchV2R>;
+def loongarch_vmulwevus: SDNode<"LoongArchISD::VMULWEVUS", SDT_LoongArchV2R>;
+def loongarch_vmulwodus: SDNode<"LoongArchISD::VMULWODUS", SDT_LoongArchV2R>;
+
 def immZExt1 : ImmLeaf<GRLenVT, [{return isUInt<1>(Imm);}]>;
 def immZExt2 : ImmLeaf<GRLenVT, [{return isUInt<2>(Imm);}]>;
 def immZExt3 : ImmLeaf<GRLenVT, [{return isUInt<3>(Imm);}]>;
 def immZExt4 : ImmLeaf<GRLenVT, [{return isUInt<4>(Imm);}]>;
 def immZExt8 : ImmLeaf<GRLenVT, [{return isUInt<8>(Imm);}]>;
-
-class VecCond<SDPatternOperator OpNode, ValueType TyNode,
-              RegisterClass RC = LSX128>
-    : Pseudo<(outs GPR:$rd), (ins RC:$vj),
-             [(set GPR:$rd, (OpNode (TyNode RC:$vj)))]> {
-  let hasSideEffects = 0;
-  let mayLoad = 0;
-  let mayStore = 0;
-  let usesCustomInserter = 1;
-}
 
 def vsplat_imm_eq_1 : PatFrags<(ops), [(build_vector)], [{
   APInt Imm;
@@ -1925,18 +1924,6 @@ def PseudoVREPLI_D : Pseudo<(outs LSX128:$vd), (ins simm10:$imm), [],
                             "vrepli.d", "$vd, $imm">;
 }
 
-def PseudoVBNZ_B : VecCond<loongarch_vall_nonzero, v16i8>;
-def PseudoVBNZ_H : VecCond<loongarch_vall_nonzero, v8i16>;
-def PseudoVBNZ_W : VecCond<loongarch_vall_nonzero, v4i32>;
-def PseudoVBNZ_D : VecCond<loongarch_vall_nonzero, v2i64>;
-def PseudoVBNZ : VecCond<loongarch_vany_nonzero, v16i8>;
-
-def PseudoVBZ_B : VecCond<loongarch_vall_zero, v16i8>;
-def PseudoVBZ_H : VecCond<loongarch_vall_zero, v8i16>;
-def PseudoVBZ_W : VecCond<loongarch_vall_zero, v4i32>;
-def PseudoVBZ_D : VecCond<loongarch_vall_zero, v2i64>;
-def PseudoVBZ : VecCond<loongarch_vany_zero, v16i8>;
-
 let usesCustomInserter = 1 in {
 def PseudoCTPOP_B : Pseudo<(outs GPR:$rd), (ins GPR:$rj),
                            [(set GPR:$rd, (ctpop (and GPR:$rj, 255)))]>;
@@ -1968,6 +1955,12 @@ def PseudoVMSKGEZ_B : Pseudo<(outs GPR:$rd), (ins LSX128:$vj)>;
 def PseudoVMSKEQZ_B : Pseudo<(outs GPR:$rd), (ins LSX128:$vj)>;
 def PseudoVMSKNEZ_B : Pseudo<(outs GPR:$rd), (ins LSX128:$vj)>;
 } // usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+// LA464 has very slow MOVCF2GR, and going through MOVCF2FR+MOVFR2GR seems to work
+// around this anomaly.
+def PseudoMOVCF2GRViaFR : Pseudo<(outs GPR:$rd), (ins CFR:$cj), []>;
+} // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
 } // Predicates = [HasExtLSX]
 
@@ -2260,6 +2253,39 @@ multiclass InsertExtractPatV2<ValueType vecty, ValueType elemty> {
   }
 }
 
+multiclass VmulwPat<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode (v16i8 LSX128:$vj), (v16i8 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_H_B") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v8i16 LSX128:$vj), (v8i16 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_W_H") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v4i32 LSX128:$vj), (v4i32 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_D_W") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v2i64 LSX128:$vj), (v2i64 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_Q_D") LSX128:$vj, LSX128:$vk)>;
+}
+
+multiclass VmulwuPat<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode (v16i8 LSX128:$vj), (v16i8 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_H_BU") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v8i16 LSX128:$vj), (v8i16 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_W_HU") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v4i32 LSX128:$vj), (v4i32 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_D_WU") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v2i64 LSX128:$vj), (v2i64 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_Q_DU") LSX128:$vj, LSX128:$vk)>;
+}
+
+multiclass VmulwusPat<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode (v16i8 LSX128:$vj), (v16i8 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_H_BU_B") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v8i16 LSX128:$vj), (v8i16 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_W_HU_H") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v4i32 LSX128:$vj), (v4i32 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_D_WU_W") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v2i64 LSX128:$vj), (v2i64 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_Q_DU_D") LSX128:$vj, LSX128:$vk)>;
+}
+
 let Predicates = [HasExtLSX] in {
 
 // VADD_{B/H/W/D}
@@ -2298,6 +2324,14 @@ defm : PatVrVr<mul, "VMUL">;
 // VMUH_{B/H/W/D}[U]
 defm : PatVrVr<mulhs, "VMUH">;
 defm : PatVrVrU<mulhu, "VMUH">;
+
+// VMULW{EV/OD}_{H_B/W_H/D_W/Q_D}[U], VMULW{EV/OD}_{H_BU_B/W_HU_H/D_WU_W/Q_DU_D}
+defm : VmulwPat<loongarch_vmulwev, "VMULWEV">;
+defm : VmulwPat<loongarch_vmulwod, "VMULWOD">;
+defm : VmulwuPat<loongarch_vmulwevu, "VMULWEV">;
+defm : VmulwuPat<loongarch_vmulwodu, "VMULWOD">;
+defm : VmulwusPat<loongarch_vmulwevus, "VMULWEV">;
+defm : VmulwusPat<loongarch_vmulwodus, "VMULWOD">;
 
 // VMADD_{B/H/W/D}
 defm : PatVrVrVr<muladd, "VMADD">;
@@ -2956,6 +2990,13 @@ def : Pat<(f32 (vector_extract v4f32:$vj, uimm2:$imm)),
           (f32 (EXTRACT_SUBREG (VREPLVEI_W v4f32:$vj, uimm2:$imm), sub_32))>;
 def : Pat<(f64 (vector_extract v2f64:$vj, uimm1:$imm)),
           (f64 (EXTRACT_SUBREG (VREPLVEI_D v2f64:$vj, uimm1:$imm), sub_64))>;
+// Element 0 of a floating-point vector already lives in the aliased FPR.
+let AddedComplexity = 1 in {
+def : Pat<(f32 (vector_extract v4f32:$vj, 0)),
+          (f32 (EXTRACT_SUBREG v4f32:$vj, sub_32))>;
+def : Pat<(f64 (vector_extract v2f64:$vj, 0)),
+          (f64 (EXTRACT_SUBREG v2f64:$vj, sub_64))>;
+} // AddedComplexity = 1
 
 // Vector extraction with variable index.
 def : Pat<(GRLenVT (vector_extract v16i8:$vj, GRLenVT:$rk)),
@@ -3011,9 +3052,39 @@ def : Pat<(v2i64 (fp_to_sint v2f64:$vj)), (VFTINTRZ_L_D v2f64:$vj)>;
 def : Pat<(v4i32 (fp_to_sint_sat v4f32:$vj, i32)), (VFTINTRZ_W_S v4f32:$vj)>;
 def : Pat<(v2i64 (fp_to_sint_sat v2f64:$vj, i64)), (VFTINTRZ_L_D v2f64:$vj)>;
 
+// fptosi(frint(x)) is equivalent to a conversion using the same rounding
+// mode: frint is exact in the floating-point domain, so the following
+// round-toward-zero conversion performs no additional rounding.  The same
+// holds for the saturating form, as both saturate and map NaN to zero.
+multiclass PatVrFToIntRoundLSX<SDNode ToInt, SDNode ToIntSat, SDNode Round,
+                               string InstWS, string InstLD, string InstWD> {
+  def : Pat<(v4i32 (ToInt (Round v4f32:$vj))),
+            (!cast<LAInst>(InstWS) v4f32:$vj)>;
+  def : Pat<(v2i64 (ToInt (Round v2f64:$vj))),
+            (!cast<LAInst>(InstLD) v2f64:$vj)>;
+  def : Pat<(v4i32 (ToIntSat (Round v4f32:$vj), i32)),
+            (!cast<LAInst>(InstWS) v4f32:$vj)>;
+  def : Pat<(v2i64 (ToIntSat (Round v2f64:$vj), i64)),
+            (!cast<LAInst>(InstLD) v2f64:$vj)>;
+  def : Pat<(v4i32 (loongarch_vftintrz_w_d (Round v2f64:$vj),
+                                           (Round v2f64:$vk))),
+            (!cast<LAInst>(InstWD) v2f64:$vj, v2f64:$vk)>;
+}
+
+defm : PatVrFToIntRoundLSX<fp_to_sint, fp_to_sint_sat, ffloor,
+                           "VFTINTRM_W_S", "VFTINTRM_L_D", "VFTINTRM_W_D">;
+defm : PatVrFToIntRoundLSX<fp_to_sint, fp_to_sint_sat, fceil,
+                           "VFTINTRP_W_S", "VFTINTRP_L_D", "VFTINTRP_W_D">;
+defm : PatVrFToIntRoundLSX<fp_to_sint, fp_to_sint_sat, froundeven,
+                           "VFTINTRNE_W_S", "VFTINTRNE_L_D", "VFTINTRNE_W_D">;
+defm : PatVrFToIntRoundLSX<fp_to_sint, fp_to_sint_sat, ftrunc,
+                           "VFTINTRZ_W_S", "VFTINTRZ_L_D", "VFTINTRZ_W_D">;
+
 // VFTINTRZ_{W_SU/L_DU}
 def : Pat<(v4i32 (fp_to_uint v4f32:$vj)), (VFTINTRZ_WU_S v4f32:$vj)>;
+def : Pat<(v4i32 (fp_to_uint (ftrunc v4f32:$vj))), (VFTINTRZ_WU_S v4f32:$vj)>;
 def : Pat<(v2i64 (fp_to_uint v2f64:$vj)), (VFTINTRZ_LU_D v2f64:$vj)>;
+def : Pat<(v2i64 (fp_to_uint (ftrunc v2f64:$vj))), (VFTINTRZ_LU_D v2f64:$vj)>;
 
 // VFTINTRZ_W_D
 def : Pat<(v4i32 (loongarch_vftintrz_w_d (v2f64 LSX128:$vj), (v2f64 LSX128:$vk))),
@@ -3066,24 +3137,11 @@ def : Pat<(loongarch_vmskgez (v16i8 LSX128:$vj)), (PseudoVMSKGEZ_B LSX128:$vj)>;
 def : Pat<(loongarch_vmskeqz (v16i8 LSX128:$vj)), (PseudoVMSKEQZ_B LSX128:$vj)>;
 def : Pat<(loongarch_vmsknez (v16i8 LSX128:$vj)), (PseudoVMSKNEZ_B LSX128:$vj)>;
 
-// Whole-vector zero tests. The result lives in a condition flag register, so a
+// Vector tests against zero. The result lives in a condition flag register, so a
 // branch consumes it directly and only a materialization needs MOVCF2GR.
-foreach vt = [v16i8, v8i16, v4i32, v2i64] in {
-def : Pat<(GRLenVT (loongarch_vanynonzero (vt LSX128:$vj))),
-          (MOVCF2GR (VSETNEZ_V LSX128:$vj))>;
-def : Pat<(GRLenVT (loongarch_vallzero (vt LSX128:$vj))),
-          (MOVCF2GR (VSETEQZ_V LSX128:$vj))>;
-def : Pat<(loongarch_brcc (GRLenVT (loongarch_vanynonzero (vt LSX128:$vj))), 0,
-                          SETNE, bb:$imm21),
-          (BCNEZ (VSETNEZ_V LSX128:$vj), bb:$imm21)>;
-def : Pat<(loongarch_brcc (GRLenVT (loongarch_vallzero (vt LSX128:$vj))), 0,
-                          SETNE, bb:$imm21),
-          (BCNEZ (VSETEQZ_V LSX128:$vj), bb:$imm21)>;
-}
-
-// Vector conditional branches. Ditto.
-multiclass PatVecCondBrCC<SDPatternOperator OpNode, LAInst VSet, ValueType VT,
-                          RegisterClass RC> {
+multiclass PatVecCond<SDPatternOperator OpNode, LAInst VSet, ValueType VT,
+                      RegisterClass RC> {
+  def : Pat<(GRLenVT (OpNode (VT RC:$vj))), (MOVCF2GR (VSet RC:$vj))>;
   def : Pat<(loongarch_brcc (GRLenVT (OpNode (VT RC:$vj))), 0,
                             SETNE, bb:$imm21),
             (BCNEZ (VSet RC:$vj), bb:$imm21)>;
@@ -3091,18 +3149,57 @@ multiclass PatVecCondBrCC<SDPatternOperator OpNode, LAInst VSet, ValueType VT,
                             SETEQ, bb:$imm21),
             (BCEQZ (VSet RC:$vj), bb:$imm21)>;
 }
-defm : PatVecCondBrCC<loongarch_vall_zero, VSETANYEQZ_B, v16i8, LSX128>;
-defm : PatVecCondBrCC<loongarch_vall_zero, VSETANYEQZ_H, v8i16, LSX128>;
-defm : PatVecCondBrCC<loongarch_vall_zero, VSETANYEQZ_W, v4i32, LSX128>;
-defm : PatVecCondBrCC<loongarch_vall_zero, VSETANYEQZ_D, v2i64, LSX128>;
-defm : PatVecCondBrCC<loongarch_vall_nonzero, VSETALLNEZ_B, v16i8, LSX128>;
-defm : PatVecCondBrCC<loongarch_vall_nonzero, VSETALLNEZ_H, v8i16, LSX128>;
-defm : PatVecCondBrCC<loongarch_vall_nonzero, VSETALLNEZ_W, v4i32, LSX128>;
-defm : PatVecCondBrCC<loongarch_vall_nonzero, VSETALLNEZ_D, v2i64, LSX128>;
-defm : PatVecCondBrCC<loongarch_vany_zero, VSETEQZ_V, v16i8, LSX128>;
-defm : PatVecCondBrCC<loongarch_vany_nonzero, VSETNEZ_V, v16i8, LSX128>;
+
+multiclass PatVecCondViaFR<SDPatternOperator OpNode, LAInst VSet, ValueType VT,
+                          RegisterClass RC> {
+  def : Pat<(GRLenVT (OpNode (VT RC:$vj))),
+            (PseudoMOVCF2GRViaFR (VSet RC:$vj))>;
+  def : Pat<(loongarch_brcc (GRLenVT (OpNode (VT RC:$vj))), 0,
+                            SETNE, bb:$imm21),
+            (BCNEZ (VSet RC:$vj), bb:$imm21)>;
+  def : Pat<(loongarch_brcc (GRLenVT (OpNode (VT RC:$vj))), 0,
+                            SETEQ, bb:$imm21),
+            (BCEQZ (VSet RC:$vj), bb:$imm21)>;
+}
 
 } // Predicates = [HasExtLSX]
+
+let Predicates = [HasExtLSX, HasFastMOVCF2GR] in {
+// Whole-vector zero tests.
+foreach vt = [v16i8, v8i16, v4i32, v2i64] in {
+defm : PatVecCond<loongarch_vanynonzero, VSETNEZ_V, vt, LSX128>;
+defm : PatVecCond<loongarch_vallzero, VSETEQZ_V, vt, LSX128>;
+}
+
+defm : PatVecCond<loongarch_vall_zero, VSETANYEQZ_B, v16i8, LSX128>;
+defm : PatVecCond<loongarch_vall_zero, VSETANYEQZ_H, v8i16, LSX128>;
+defm : PatVecCond<loongarch_vall_zero, VSETANYEQZ_W, v4i32, LSX128>;
+defm : PatVecCond<loongarch_vall_zero, VSETANYEQZ_D, v2i64, LSX128>;
+defm : PatVecCond<loongarch_vall_nonzero, VSETALLNEZ_B, v16i8, LSX128>;
+defm : PatVecCond<loongarch_vall_nonzero, VSETALLNEZ_H, v8i16, LSX128>;
+defm : PatVecCond<loongarch_vall_nonzero, VSETALLNEZ_W, v4i32, LSX128>;
+defm : PatVecCond<loongarch_vall_nonzero, VSETALLNEZ_D, v2i64, LSX128>;
+defm : PatVecCond<loongarch_vany_zero, VSETEQZ_V, v16i8, LSX128>;
+defm : PatVecCond<loongarch_vany_nonzero, VSETNEZ_V, v16i8, LSX128>;
+} // Predicates = [HasExtLSX, HasFastMOVCF2GR]
+
+let Predicates = [HasExtLSX, HasSlowMOVCF2GR] in {
+foreach vt = [v16i8, v8i16, v4i32, v2i64] in {
+defm : PatVecCondViaFR<loongarch_vanynonzero, VSETNEZ_V, vt, LSX128>;
+defm : PatVecCondViaFR<loongarch_vallzero, VSETEQZ_V, vt, LSX128>;
+}
+
+defm : PatVecCondViaFR<loongarch_vall_zero, VSETANYEQZ_B, v16i8, LSX128>;
+defm : PatVecCondViaFR<loongarch_vall_zero, VSETANYEQZ_H, v8i16, LSX128>;
+defm : PatVecCondViaFR<loongarch_vall_zero, VSETANYEQZ_W, v4i32, LSX128>;
+defm : PatVecCondViaFR<loongarch_vall_zero, VSETANYEQZ_D, v2i64, LSX128>;
+defm : PatVecCondViaFR<loongarch_vall_nonzero, VSETALLNEZ_B, v16i8, LSX128>;
+defm : PatVecCondViaFR<loongarch_vall_nonzero, VSETALLNEZ_H, v8i16, LSX128>;
+defm : PatVecCondViaFR<loongarch_vall_nonzero, VSETALLNEZ_W, v4i32, LSX128>;
+defm : PatVecCondViaFR<loongarch_vall_nonzero, VSETALLNEZ_D, v2i64, LSX128>;
+defm : PatVecCondViaFR<loongarch_vany_zero, VSETEQZ_V, v16i8, LSX128>;
+defm : PatVecCondViaFR<loongarch_vany_nonzero, VSETNEZ_V, v16i8, LSX128>;
+} // Predicates = [HasExtLSX, HasSlowMOVCF2GR]
 
 /// Intrinsic pattern
 

@@ -64,11 +64,11 @@ def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
 // CHECK-NEXT:   }
 // CHECK-NEXT:   if (TT.getArch() == Triple::msp430) {
 // CHECK-NEXT:     if ( isFoo() ) {
-// CHECK-NEXT:       static const RTLIB::LibcallImpl LibraryCalls_anonymous_1_AVR_BUILTIN[] = {
+// CHECK-NEXT:       static const RTLIB::LibcallImpl [[AVR_CALLS:LibraryCalls_anonymous_[0-9]+_AVR_BUILTIN]][] = {
 // CHECK-NEXT:           RTLIB::impl___divmodqi4, // __divmodqi4
 // CHECK-NEXT:       };
 // CHECK-EMPTY:
-// CHECK-NEXT:       for (const RTLIB::LibcallImpl Impl : LibraryCalls_anonymous_1_AVR_BUILTIN) {
+// CHECK-NEXT:       for (const RTLIB::LibcallImpl Impl : [[AVR_CALLS]]) {
 // CHECK-NEXT:         setAvailable(Impl);
 // CHECK-NEXT:         setLibcallImplCallingConv(Impl, CallingConv::AVR_BUILTIN);
 // CHECK-NEXT:       }
@@ -76,11 +76,11 @@ def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
 // CHECK-NEXT:     }
 // CHECK-EMPTY:
 // CHECK-NEXT:     if ( isBar() ) {
-// CHECK-NEXT:       static const RTLIB::LibcallImpl LibraryCalls_anonymous_3_MSP430_BUILTIN[] = {
+// CHECK-NEXT:       static const RTLIB::LibcallImpl [[MSP430_CALLS:LibraryCalls_anonymous_[0-9]+_MSP430_BUILTIN]][] = {
 // CHECK-NEXT:           RTLIB::impl___udivmodhi4, // __udivmodhi4
 // CHECK-NEXT:       };
 // CHECK-EMPTY:
-// CHECK-NEXT:       for (const RTLIB::LibcallImpl Impl : LibraryCalls_anonymous_3_MSP430_BUILTIN) {
+// CHECK-NEXT:       for (const RTLIB::LibcallImpl Impl : [[MSP430_CALLS]]) {
 // CHECK-NEXT:         setAvailable(Impl);
 // CHECK-NEXT:         setLibcallImplCallingConv(Impl, CallingConv::MSP430_BUILTIN);
 // CHECK-NEXT:       }
