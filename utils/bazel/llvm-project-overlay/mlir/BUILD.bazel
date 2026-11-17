@@ -3759,6 +3759,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":BuiltinDialectTdFiles",
+        ":ControlFlowInterfacesTdFiles",
         ":OpBaseTdFiles",
     ],
 )
@@ -3812,6 +3813,7 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/WasmSSA/IR/WasmSSAOps.td",
     deps = [
+        ":ControlFlowInterfacesTdFiles",
         ":FunctionInterfacesTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":WasmSSATdFiles",
@@ -3838,6 +3840,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BytecodeOpInterface",
+        ":ControlFlowInterfaces",
         ":DialectUtils",
         ":FunctionInterfaces",
         ":IR",
