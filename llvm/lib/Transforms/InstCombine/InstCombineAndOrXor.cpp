@@ -4586,7 +4586,16 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
         match(Op1, m_Select(m_Value(Y), m_Value(C), m_Value(D))) && X == Y) {
       Value *orTrue = Builder.CreateOr(A, C);
       Value *orFalse = Builder.CreateOr(B, D);
-      return SelectInst::Create(X, orTrue, orFalse);
+      // Both selects test the same condition, so preserve the first available
+      // profile metadata from the original selects on the new select.
+      Instruction *MDFrom = nullptr;
+      if (!ProfcheckDisableMetadataFixes) {
+        if (cast<Instruction>(Op0)->getMetadata(LLVMContext::MD_prof))
+          MDFrom = cast<Instruction>(Op0);
+        else if (cast<Instruction>(Op1)->getMetadata(LLVMContext::MD_prof))
+          MDFrom = cast<Instruction>(Op1);
+      }
+      return SelectInst::Create(X, orTrue, orFalse, "", nullptr, MDFrom);
     }
   }
 
