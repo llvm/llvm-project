@@ -87,7 +87,7 @@ static int dumpMLIR() {
     if (!module)
       return 1;
 
-    module->dump();
+    module->print(llvm::errs());
     return 0;
   }
 
@@ -109,7 +109,7 @@ static int dumpMLIR() {
     return 3;
   }
 
-  module->dump();
+  module->print(llvm::errs());
   return 0;
 }
 

@@ -57,10 +57,6 @@ static cl::opt<bool, true>
     VerifyLoopInfoX("verify-loop-info", cl::location(VerifyLoopInfo),
                     cl::Hidden, cl::desc("Verify loop info (time consuming)"));
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-} // end namespace llvm
-
 //===----------------------------------------------------------------------===//
 // Loop implementation
 //
@@ -126,9 +122,8 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
   // case, we only hoist from a loop header (which covers a reasonable number
   // of cases) where we are guaranteed to not run into problems.
   SmallVector<unsigned, 1> ProfileMetadataToPreserve;
-  if (!ProfcheckDisableMetadataFixes)
-    if (OriginalParent == getHeader())
-      ProfileMetadataToPreserve.push_back(LLVMContext::MD_prof);
+  if (OriginalParent == getHeader())
+    ProfileMetadataToPreserve.push_back(LLVMContext::MD_prof);
 
   // There is possibility of hoisting this instruction above some arbitrary
   // condition. Any metadata defined on it can be control dependent on this
@@ -198,7 +193,7 @@ PHINode *Loop::getCanonicalInductionVariable() const {
 /// Get the latch condition instruction.
 ICmpInst *Loop::getLatchCmpInst() const {
   if (BasicBlock *Latch = getLoopLatch())
-    if (CondBrInst *BI = dyn_cast_or_null<CondBrInst>(Latch->getTerminator()))
+    if (CondBrInst *BI = dyn_cast<CondBrInst>(Latch->getTerminator()))
       return dyn_cast<ICmpInst>(BI->getCondition());
 
   return nullptr;
@@ -409,8 +404,6 @@ CondBrInst *Loop::getLoopGuardBranch() const {
   if (!GuardBB)
     return nullptr;
 
-  assert(GuardBB->getTerminator() && "Expecting valid guard terminator");
-
   CondBrInst *GuardBI = dyn_cast<CondBrInst>(GuardBB->getTerminator());
   if (!GuardBI)
     return nullptr;
@@ -443,7 +436,7 @@ bool Loop::isCanonical(ScalarEvolution &SE) const {
   if (IndDesc.getInductionOpcode() != Instruction::Add)
     return false;
 
-  ConstantInt *Step = IndDesc.getConstIntStepValue();
+  std::optional<APInt> Step = IndDesc.getConstStepValue();
   if (!Step || !Step->isOne())
     return false;
 

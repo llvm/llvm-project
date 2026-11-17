@@ -11,7 +11,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.sys_stat_macros
     libc.include.fcntl
-    libc.src.errno.errno
     libc.src.fcntl.creat
     libc.src.fcntl.open
     libc.src.unistd.close
@@ -27,7 +26,6 @@ add_libc_test(
     fcntl_test.cpp
   DEPENDS
     libc.include.fcntl
-    libc.src.errno.errno
     libc.src.fcntl.fcntl
     libc.src.fcntl.open
     libc.src.unistd.close
@@ -47,7 +45,6 @@ add_libc_test(
     openat_test.cpp
   DEPENDS
     libc.hdr.fcntl_macros
-    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.fcntl.openat
     libc.src.unistd.close
@@ -65,7 +62,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fcntl_macros
-    libc.src.errno.errno
     libc.src.fcntl.creat
     libc.src.fcntl.posix_fadvise
     libc.src.unistd.close
@@ -86,7 +82,6 @@ add_libc_test(
     libc.hdr.errno_macros
     libc.hdr.fcntl_macros
     libc.hdr.types.off64_t
-    libc.src.errno.errno
     libc.src.fcntl.creat
     libc.src.fcntl.posix_fadvise64
     libc.src.unistd.close

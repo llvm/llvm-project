@@ -30,6 +30,27 @@ add_libc_test(
 )
 
 add_fp_unittest(
+  except_value_utils_test
+  SUITE
+    libc-fputil-tests
+  SRCS
+    except_value_utils_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.hdr.math_macros
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.sign
+)
+
+add_fp_unittest(
   fp_bitwise_test
   SUITE
     libc-fputil-tests
@@ -50,6 +71,18 @@ add_fp_unittest(
     rounding_mode_test.cpp
   DEPENDS
     libc.src.__support.FPUtil.rounding_mode
+)
+
+add_fp_unittest(
+  double_double_test
+  SUITE
+    libc-fputil-tests
+  SRCS
+    double_double_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
 )
 
 add_fp_unittest(

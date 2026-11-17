@@ -4,12 +4,8 @@
 define dso_local void @foo() #1 {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %newFuncRoot
-; CHECK-NEXT:    vpmovzxbd {{.*#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
-; CHECK-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [64,64,64,64,64,64,64,64]
-; CHECK-NEXT:    vpdpwssd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm1
-; CHECK-NEXT:    vpsrld $7, %ymm1, %ymm0
-; CHECK-NEXT:    vpackusdw %ymm0, %ymm0, %ymm0
-; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; CHECK-NEXT:    vpmulhrsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [4608,4608,4608,4608,4608,4608,4608,4608,4608,4608,4608,4608,4608,4608,4608,4608]
 ; CHECK-NEXT:    vmovdqu %ymm0, (%rax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

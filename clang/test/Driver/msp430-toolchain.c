@@ -253,6 +253,10 @@
 // RUN:   | FileCheck -check-prefix=HWMult-32BIT %s
 // HWMult-32BIT: "--start-group" "-lmul_32"
 
+// RUN: %clang -### %s --target=msp430 -mmcu=msp430f5529 --sysroot="" 2>&1 \
+// RUN:   | FileCheck -check-prefix=HWMult-F5 %s
+// RUN: %clang -### %s --target=msp430 -mmcu=msp430f5529 -mhwmult=auto --sysroot="" 2>&1 \
+// RUN:   | FileCheck -check-prefix=HWMult-F5 %s
 // RUN: %clang -### %s --target=msp430 -mhwmult=f5series --sysroot="" 2>&1 \
 // RUN:   | FileCheck -check-prefix=HWMult-F5 %s
 // HWMult-F5: "--start-group" "-lmul_f5"

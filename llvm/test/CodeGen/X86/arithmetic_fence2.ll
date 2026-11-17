@@ -177,14 +177,14 @@ define bfloat @f8(bfloat %a) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    #ARITH_FENCE
-; X86-NEXT:    pinsrw $0, %eax, %xmm0
+; X86-NEXT:    movd %eax, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: f8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pextrw $0, %xmm0, %eax
 ; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    pinsrw $0, %eax, %xmm0
+; X64-NEXT:    movd %eax, %xmm0
 ; X64-NEXT:    retq
   %b = call bfloat @llvm.arithmetic.fence.bf16(bfloat %a)
   ret bfloat %b
@@ -224,10 +224,10 @@ define <3 x bfloat> @f10(<3 x bfloat> %a) nounwind {
 ; X86-NEXT:    #ARITH_FENCE
 ; X86-NEXT:    #ARITH_FENCE
 ; X86-NEXT:    #ARITH_FENCE
-; X86-NEXT:    pinsrw $0, %eax, %xmm0
-; X86-NEXT:    pinsrw $0, %ecx, %xmm1
+; X86-NEXT:    movd %eax, %xmm0
+; X86-NEXT:    movd %ecx, %xmm1
 ; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; X86-NEXT:    pinsrw $0, %edx, %xmm1
+; X86-NEXT:    movd %edx, %xmm1
 ; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-NEXT:    retl
 ;
@@ -242,10 +242,10 @@ define <3 x bfloat> @f10(<3 x bfloat> %a) nounwind {
 ; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    pinsrw $0, %eax, %xmm0
-; X64-NEXT:    pinsrw $0, %ecx, %xmm1
+; X64-NEXT:    movd %eax, %xmm0
+; X64-NEXT:    movd %ecx, %xmm1
 ; X64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; X64-NEXT:    pinsrw $0, %edx, %xmm1
+; X64-NEXT:    movd %edx, %xmm1
 ; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X64-NEXT:    retq
   %b = call <3 x bfloat> @llvm.arithmetic.fence.v3bf16(<3 x bfloat> %a)
@@ -269,11 +269,11 @@ define <4 x bfloat> @f11(<4 x bfloat> %a) nounwind {
 ; X86-NEXT:    #ARITH_FENCE
 ; X86-NEXT:    #ARITH_FENCE
 ; X86-NEXT:    #ARITH_FENCE
-; X86-NEXT:    pinsrw $0, %eax, %xmm0
-; X86-NEXT:    pinsrw $0, %edx, %xmm1
+; X86-NEXT:    movd %eax, %xmm0
+; X86-NEXT:    movd %edx, %xmm1
 ; X86-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; X86-NEXT:    pinsrw $0, %ecx, %xmm0
-; X86-NEXT:    pinsrw $0, %esi, %xmm2
+; X86-NEXT:    movd %ecx, %xmm0
+; X86-NEXT:    movd %esi, %xmm2
 ; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-NEXT:    popl %esi
@@ -294,11 +294,11 @@ define <4 x bfloat> @f11(<4 x bfloat> %a) nounwind {
 ; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    pinsrw $0, %eax, %xmm0
-; X64-NEXT:    pinsrw $0, %ecx, %xmm1
+; X64-NEXT:    movd %eax, %xmm0
+; X64-NEXT:    movd %ecx, %xmm1
 ; X64-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; X64-NEXT:    pinsrw $0, %edx, %xmm0
-; X64-NEXT:    pinsrw $0, %esi, %xmm2
+; X64-NEXT:    movd %edx, %xmm0
+; X64-NEXT:    movd %esi, %xmm2
 ; X64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X64-NEXT:    retq

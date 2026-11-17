@@ -641,8 +641,7 @@ PreservedAnalyses InstrProfilingLoweringPass::run(Module &M,
   auto GetTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
-  const InstrumentationOptions &Opts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   InstrLowerer Lowerer(Opts, M, Options, GetTLI, IsCS);
   if (!Lowerer.lower())
     return PreservedAnalyses::all();
@@ -1144,7 +1143,7 @@ Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
 
   // Add Bias to Bitmaps and put it before the intrinsic.
   IRBuilder<> Builder(I);
-  return Builder.CreatePtrAdd(Bitmaps, BiasLI, "profbm_addr");
+  return Builder.CreatePtrAddWithSExtOrTrunc(Bitmaps, BiasLI, "profbm_addr");
 }
 
 void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
@@ -1352,8 +1351,8 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
 
   // Add byte offset to section base byte address.
   // %4 = getelementptr inbounds i8, ptr @__profbm_test, i32 %1
-  auto *BitmapByteAddr =
-      Builder.CreateInBoundsPtrAdd(BitmapAddr, BitmapByteOffset);
+  auto *BitmapByteAddr = Builder.CreatePtrAddWithZExtOrTrunc(
+      BitmapAddr, BitmapByteOffset, "", GEPNoWrapFlags::inBounds());
 
   // Calculate bit offset into bitmap byte by using div8 remainder (AND ~8)
   //  %5 = and i32 %mcdc.temp, 7
@@ -2444,8 +2443,7 @@ void createProfileSamplingVar(Module &M) {
   const StringRef VarName(INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_SAMPLING_VAR));
   IntegerType *SamplingVarTy;
   Constant *ValueZero;
-  const InstrumentationOptions &Opts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   if (getSampledInstrumentationConfig(Opts).UseShort) {
     SamplingVarTy = Type::getInt16Ty(M.getContext());
     ValueZero = Constant::getIntegerValue(SamplingVarTy, APInt(16, 0));

@@ -2713,11 +2713,11 @@ public:
   PseudoDestructorTypeStorage(TypeSourceInfo *Info);
 
   TypeSourceInfo *getTypeSourceInfo() const {
-    return Type.dyn_cast<TypeSourceInfo *>();
+    return dyn_cast<TypeSourceInfo *>(Type);
   }
 
   const IdentifierInfo *getIdentifier() const {
-    return Type.dyn_cast<const IdentifierInfo *>();
+    return dyn_cast<const IdentifierInfo *>(Type);
   }
 
   SourceLocation getLocation() const { return Location; }

@@ -1127,8 +1127,8 @@ define <16 x i8> @load2multi2_v4i8(float %tmp, ptr %a, ptr %b) {
 ; CHECK-SD-NEXT:    ldr s1, [x1]
 ; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-SD-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-SD-NEXT:    mov v1.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-SD-NEXT:    mov v1.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    ret
 ;

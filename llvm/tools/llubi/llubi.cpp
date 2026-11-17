@@ -20,7 +20,6 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SourceMgr.h"

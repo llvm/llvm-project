@@ -35,6 +35,7 @@ define swifttailcc void @caller_to0_from0() "branch-protection-pauth-lr" "sign-r
 ; V83A-NEXT:     paciasp
 ; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp0
 
+; V9A-NEXT:      .cfi_non_hint_pauth_frame
 ; V9A-NEXT:    .Ltmp0:
 ; V9A-NEXT:      paciasppc
 ; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp0
@@ -103,6 +104,7 @@ define swifttailcc void @caller_to0_from8([8 x i64], i64) "branch-protection-pau
 ; V83A-NEXT:     paciasp
 ; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp1
 
+; V9A-NEXT:      .cfi_non_hint_pauth_frame
 ; V9A-NEXT:    .Ltmp1:
 ; V9A-NEXT:      paciasppc
 ; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp1
@@ -177,6 +179,7 @@ define swifttailcc void @caller_to8_from0() "branch-protection-pauth-lr" "sign-r
 ; V83A-NEXT:     paciasp
 ; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp2
 
+; V9A-NEXT:      .cfi_non_hint_pauth_frame
 ; V9A-NEXT:    .Ltmp2:
 ; V9A-NEXT:      paciasppc
 ; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp2
@@ -252,6 +255,7 @@ define swifttailcc void @crash_tc(i1 %c, [8 x i64] %pad, i64 %x) "branch-protect
 ; V83A-NEXT:           paciasp
 ; V83A-NEXT:           .cfi_set_ra_state 2, .Ltmp3
 
+; V9A-NEXT:            .cfi_non_hint_pauth_frame
 ; V9A-NEXT:    .Ltmp3:
 ; V9A-NEXT:            paciasppc
 ; V9A-NEXT:            .cfi_set_ra_state 2, .Ltmp3

@@ -1520,4 +1520,13 @@ TEST_F(IRBuilderTest, CreateInContext) {
 
   LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 }
+
+TEST_F(IRBuilderTest, Unwrap) {
+  // unwrap() on LLVMBuilderRef is available to interact with it via
+  // the C++ API.
+  LLVMBuilderRef Builder = LLVMCreateBuilderForModule(wrap(&*M));
+  LLVMPositionBuilderAtEnd(Builder, wrap(BB));
+  unwrap(Builder)->CreateRetVoid();
+  LLVMDisposeBuilder(Builder);
+}
 }

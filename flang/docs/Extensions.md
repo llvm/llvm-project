@@ -282,6 +282,15 @@ end
 * $ and \ edit descriptors are supported in FORMAT to suppress newline
   output on user prompts.
 * Tabs in format strings (not `FORMAT` statements) are allowed on output.
+* A tab in a numeric or logical input field is treated as a blank, so it is
+  subject to the blank interpretation mode: it is ignored by default (`BN`)
+  and read as a zero under `BZ`. A tab also separates values in
+  list-directed and namelist input. Character (`A`) input transfers a tab
+  unchanged. A tab is not a blank in standard Fortran, so this is a
+  non-conforming extension; gfortran, for example, rejects `I3` input of
+  `1<tab>2`. The tab is in the input data, not in the program, so no
+  compile-time option such as `-pedantic` can diagnose it, and the runtime
+  does not warn about it.
 * REAL and DOUBLE PRECISION variable and bounds in DO loops
 * Integer literals without explicit kind specifiers that are out of range
   for the default kind of INTEGER are assumed to have the least larger kind
@@ -556,6 +565,11 @@ print *, is_contiguous(a(::2))                   ! prints T in Flang
 * A local data object may appear in a specification expression, even
   when it is not a dummy argument or in COMMON, so long as it is
   has the SAVE attribute and was initialized.
+* A nonallocatable nonpointer function result may be declared with a
+  rank-1 integer array as its bounds (F2023 R818 `explicit-shape-bounds-spec`),
+  e.g. `real :: res(shape_of_input)`.  F2023 C816 permits only an
+  `explicit-shape-spec-list` there, although R814 allows the rank-1 form
+  for other entities.
 * `PRINT namelistname` is accepted and interpreted as
   `WRITE(*,NML=namelistname)`, a near-universal extension.
 * A character length specifier in a component or entity declaration

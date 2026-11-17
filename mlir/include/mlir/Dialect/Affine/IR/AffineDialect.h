@@ -9,8 +9,6 @@
 #ifndef MLIR_DIALECT_AFFINE_IR_AFFINEDIALECT_H
 #define MLIR_DIALECT_AFFINE_IR_AFFINEDIALECT_H
 
-#include "mlir/IR/Dialect.h"
-
 #include "mlir/Dialect/Affine/IR/AffineOpsDialect.h.inc"
 
 #endif // MLIR_DIALECT_AFFINE_IR_AFFINEDIALECT_H
