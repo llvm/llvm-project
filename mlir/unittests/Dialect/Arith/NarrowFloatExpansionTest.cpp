@@ -12,8 +12,11 @@
 
 #include "mlir/Dialect/Arith/Utils/NarrowFloatExpansion.h"
 #include "mlir/AsmParser/AsmParser.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/APFloat.h"
 #include "gtest/gtest.h"
 
@@ -154,6 +157,91 @@ TEST(FloatFormatSpecTest, EncodingsMatchAPFloat) {
     EXPECT_TRUE(quietNaN.isNaN() && !quietNaN.isSignaling());
     EXPECT_EQ(spec.quietNaNBits,
               APFloat::getNaN(sem).bitcastToAPInt().getZExtValue());
+  }
+}
+
+/// Emits `emit` on a vector constant of `codes` in an i`width` carrier, folds
+/// the function with no patterns and returns the folded result codes (empty if
+/// it did not fold to a constant).
+/// The shli folder range-checks only the last lane's shift amount; every
+/// shift amount the extension emits is a constant splat, so the folded
+/// codes are what the IR computes.
+SmallVector<uint64_t>
+foldEmitted(MLIRContext &ctx, unsigned width, ArrayRef<uint64_t> codes,
+            function_ref<Value(ImplicitLocOpBuilder &, Value)> emit) {
+  auto carrierTy =
+      VectorType::get({int64_t(codes.size())}, IntegerType::get(&ctx, width));
+  SmallVector<APInt> values;
+  for (uint64_t code : codes)
+    values.push_back(APInt(width, code));
+  Location loc = UnknownLoc::get(&ctx);
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  OpBuilder builder(module->getBodyRegion());
+  auto func = func::FuncOp::create(builder, loc, "f",
+                                   builder.getFunctionType({}, carrierTy));
+  builder.setInsertionPointToStart(func.addEntryBlock());
+  ImplicitLocOpBuilder b(loc, builder);
+  Value in = arith::ConstantOp::create(
+      b, carrierTy, DenseElementsAttr::get(carrierTy, values));
+  func::ReturnOp::create(b, emit(b, in));
+  if (failed(applyPatternsGreedily(func, RewritePatternSet(&ctx))))
+    return {};
+  Value result = func.getBody().front().getTerminator()->getOperand(0);
+  auto folded = result.getDefiningOp<arith::ConstantOp>();
+  if (!folded)
+    return {};
+  SmallVector<uint64_t> bits;
+  for (const APInt &v :
+       cast<DenseElementsAttr>(folded.getValue()).getValues<APInt>())
+    bits.push_back(v.getZExtValue());
+  return bits;
+}
+
+// Every code of each narrow format with a zero (f8E5M3FNU has no pass option)
+// into f16, bf16, f32 and f64 is APFloat::convert's: exact, +Inf above the
+// range (f8E5M3FNU to f16), a NaN quieted with its sign and payload. The
+// carrier bits above the code are ignored.
+TEST(NarrowFloatExpansionTest, ExtMatchesAPFloat) {
+  MLIRContext ctx;
+  ctx.loadDialect<arith::ArithDialect, func::FuncDialect>();
+  const char *srcNames[] = {"f4E2M1FN",   "f6E2M3FN",      "f6E3M2FN",
+                            "f8E3M4",     "f8E4M3",        "f8E4M3FN",
+                            "f8E4M3FNUZ", "f8E4M3B11FNUZ", "f8E5M2",
+                            "f8E5M2FNUZ", "f8E5M3FNU"};
+  for (const char *srcName : srcNames) {
+    auto srcTy = cast<FloatType>(parseType(srcName, &ctx));
+    arith::FloatFormatSpec src = arith::floatFormatSpecFromFloatType(srcTy);
+    for (FloatType dstTy :
+         {FloatType(Float16Type::get(&ctx)), FloatType(BFloat16Type::get(&ctx)),
+          FloatType(Float32Type::get(&ctx)),
+          FloatType(Float64Type::get(&ctx))}) {
+      arith::FloatFormatSpec dst = arith::floatFormatSpecFromFloatType(dstTy);
+      std::string dstName;
+      llvm::raw_string_ostream os(dstName);
+      os << dstTy;
+      for (uint64_t junk : {uint64_t(0), uint64_t(0x5A)}) {
+        SCOPED_TRACE(testing::Message()
+                     << srcName << " to " << dstName << " junk " << junk);
+        SmallVector<uint64_t> codes;
+        for (uint64_t code = 0; code >> src.sizeInBits == 0; ++code)
+          codes.push_back(code | junk << src.sizeInBits);
+        SmallVector<uint64_t> got =
+            foldEmitted(ctx, dst.sizeInBits > 32 ? 64 : 32, codes,
+                        [&](ImplicitLocOpBuilder &b, Value in) {
+                          return arith::emitNarrowFloatExt(b, in, src, dst);
+                        });
+        ASSERT_EQ(got.size(), codes.size());
+        for (auto [code, bits] : llvm::enumerate(got)) {
+          APFloat expected(srcTy.getFloatSemantics(),
+                           APInt(src.sizeInBits, code));
+          bool losesInfo = false;
+          (void)expected.convert(dstTy.getFloatSemantics(),
+                                 APFloat::rmNearestTiesToEven, &losesInfo);
+          EXPECT_EQ(bits, expected.bitcastToAPInt().getZExtValue())
+              << "code " << code;
+        }
+      }
+    }
   }
 }
 

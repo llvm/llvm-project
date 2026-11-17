@@ -46,6 +46,18 @@ FloatFormatSpec floatFormatSpecFromSemantics(const llvm::fltSemantics &sem);
 
 /// Returns floatFormatSpecFromSemantics of `floatTy`'s semantics.
 FloatFormatSpec floatFormatSpecFromFloatType(FloatType floatTy);
+
+// The emitter takes a carrier `srcBits` of i32 or i64 (or a static or scalable
+// shaped type of it) with the source encoding in its low bits, higher bits
+// ignored, and returns the destination encoding zero-extended in the same type.
+
+/// Emits the exact extension of the narrow `src` (which must have a zero) to
+/// `dst` (f16, bf16, f32 or f64), which must have `src`'s precision and
+/// smallest subnormal (asserted); a value above its range gives +-Inf, and NaNs
+/// are quieted as by APFloat.
+Value emitNarrowFloatExt(ImplicitLocOpBuilder &b, Value srcBits,
+                         const FloatFormatSpec &src,
+                         const FloatFormatSpec &dst);
 } // namespace arith
 } // namespace mlir
 

@@ -6,4 +6,6 @@ mlir_target_link_libraries(MLIRArithTests
   PRIVATE
   MLIRArithUtils
   MLIRAsmParser
+  MLIRFuncDialect
+  MLIRTransformUtils
 )
