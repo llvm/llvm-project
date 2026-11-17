@@ -14564,10 +14564,22 @@ SDValue SelectionDAG::UnrollVectorOp(SDNode *N, unsigned ResNE) {
                                 N->getFlags()));
       break;
     }
-    case ISD::VSELECT:
+    case ISD::VSELECT: {
+      SDValue Cond = Operands[0];
+      EVT CondVT = Cond.getValueType();
+      const TargetLowering &TLI = getTargetLoweringInfo();
+      if (CondVT != MVT::i1 &&
+          TLI.getBooleanContents(N->getOperand(1).getValueType()) !=
+              TLI.getBooleanContents(CondVT)) {
+        EVT SetCCVT =
+            TLI.getSetCCResultType(getDataLayout(), *getContext(), CondVT);
+        Operands[0] =
+            getSetCC(dl, SetCCVT, Cond, getConstant(0, dl, CondVT), ISD::SETNE);
+      }
       Scalars.push_back(
           getNode(ISD::SELECT, dl, EltVT, Operands, N->getFlags()));
       break;
+    }
     case ISD::SHL:
     case ISD::SRA:
     case ISD::SRL:

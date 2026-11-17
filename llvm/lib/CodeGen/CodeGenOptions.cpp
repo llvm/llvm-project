@@ -24,6 +24,10 @@ const CodeGenOptions &llvm::getCodeGenOptions(const LLVMContext &C) {
   return C.getLibraryOptions().get<CodeGenOptions>();
 }
 
+const CodeGenOptions &llvm::getCodeGenOptions(const Function &F) {
+  return getCodeGenOptions(F.getContext());
+}
+
 const CodeGenOptions &llvm::getCodeGenOptions(const Module &M) {
   return getCodeGenOptions(M.getContext());
 }

@@ -439,6 +439,7 @@ public:
 
   /// Apply the canonicalize intrinsic to this value.
   LLVM_ABI static KnownFPClass canonicalize(const KnownFPClass &Src,
+                                            const fltSemantics &Flt,
                                             DenormalMode Mode);
 
   /// Report known values for a bitcast into a float with provided semantics.
@@ -467,14 +468,8 @@ public:
                                     const KnownFPClass &RHS, DenormalMode Mode);
 
   // Special case of fmul x, x.
-  static KnownFPClass square(const KnownFPClass &Src, DenormalMode Mode) {
-    KnownFPClass Known = fmul(Src, Src, Mode);
-
-    // X * X is always non-negative or a NaN.
-    Known.knownNot(fcNegative);
-    Known.propagateNonNaN(Src);
-    return Known;
-  }
+  LLVM_ABI static KnownFPClass square(const KnownFPClass &Src,
+                                      DenormalMode Mode);
 
   LLVM_ABI static KnownFPClass fmul(const KnownFPClass &LHS, const APFloat &RHS,
                                     DenormalMode Mode);

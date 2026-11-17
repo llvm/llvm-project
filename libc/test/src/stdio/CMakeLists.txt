@@ -523,6 +523,28 @@ add_libc_test(
     libc.src.stdio.fread
 )
 
+add_libc_test(
+  putchar_unlocked_test
+  SUITE
+    libc-stdio-tests
+  SRCS
+    putchar_unlocked_test.cpp
+  DEPENDS
+    libc.hdr.stdio_macros
+    libc.src.__support.CPP.scope
+    libc.src.stdio.fclose
+    libc.src.stdio.ferror
+    libc.src.stdio.fflush
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.stdio.freopen
+    libc.src.stdio.putchar_unlocked
+    libc.src.stdio.stdout
+    libc.src.string.memcmp
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_libc_test(
     remove_test
