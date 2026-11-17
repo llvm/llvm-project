@@ -1405,6 +1405,7 @@ void arith::SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 }
 
 namespace {
+
 /// Narrow an extremum whose operands were extended from the result type:
 ///
 ///   trunc(extremum(ext(lhs), ext(rhs))) -> extremum(lhs, rhs)
@@ -1467,6 +1468,7 @@ struct NarrowExtremum final : OpRewritePattern<TruncOp> {
     return success();
   }
 };
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -2310,7 +2312,7 @@ static bool checkIntFloatCast(TypeRange inputs, TypeRange outputs) {
 }
 
 //===----------------------------------------------------------------------===//
-// NOTE: TO BE WRITTEN
+// Helper for judging and folding exact interger-float-integer round trips.
 //===----------------------------------------------------------------------===//
 template <typename IntToFPOp, bool IsSigned>
 static Value foldIntToFPToInt(Value input, Type resultType) {
