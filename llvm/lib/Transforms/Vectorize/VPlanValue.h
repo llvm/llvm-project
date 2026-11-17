@@ -491,7 +491,7 @@ public:
     return false;
   }
 
-  /// Returns true if the VPUser would only use the first part of any operand.
+  /// Returns true if the VPUser only uses the first part of all operands.
   virtual bool usesFirstPartOnly() const { return false; }
 };
 

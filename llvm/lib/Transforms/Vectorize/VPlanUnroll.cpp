@@ -295,11 +295,11 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
   if (match(&R, m_Branch()))
     return;
 
-  // Recipes with side-effects must be unrolled for all parts, regardless of
-  // how (or whether) their result is used.
-  if (auto *Def = dyn_cast<VPSingleDefRecipe>(&R)) {
-    if (!Def->mayHaveSideEffects() && vputils::onlyFirstPartUsed(Def)) {
-      addUniformForAllParts(Def);
+  // VPInstructions with side-effects must be unrolled for all parts, regardless
+  // of how (or whether) their result is used.
+  if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
+    if (!VPI->mayHaveSideEffects() && vputils::onlyFirstPartUsed(VPI)) {
+      addUniformForAllParts(VPI);
       return;
     }
   }

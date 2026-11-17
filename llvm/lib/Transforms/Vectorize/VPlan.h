@@ -1592,7 +1592,7 @@ public:
            usesFirstLaneOnly(Op);
   }
 
-  /// Returns true if the recipe would only use the first part of any operand.
+  /// Returns true if the recipe only uses the first part of all operands.
   bool usesFirstPartOnly() const override;
 
   /// Returns true if this VPInstruction produces a scalar value from a vector,
@@ -1772,7 +1772,7 @@ public:
     return true;
   }
 
-  /// Returns true if the recipe would only use the first part of any operand.
+  /// Returns true if the recipe only uses the first part of all operands.
   bool usesFirstPartOnly() const override { return true; }
 
   bool usesFirstLaneOnly(const VPValue *Op) const override {
@@ -2364,7 +2364,7 @@ public:
     return 0;
   }
 
-  /// Returns true if the recipe would only use the first part of any operand.
+  /// Returns true if the recipe only uses the first part of all operands.
   bool usesFirstPartOnly() const override {
     assert(getNumOperands() <= 2 && "must have at most two operands");
     return true;
@@ -2427,7 +2427,7 @@ public:
     return true;
   }
 
-  /// Returns true if the recipe would only use the first part of any operand.
+  /// Returns true if the recipe only uses the first part of all operands.
   bool usesFirstPartOnly() const override {
     assert(getNumOperands() <= 2 && "must have at most two operands");
     return true;
