@@ -140,21 +140,27 @@ td_library(
         "include/clang/Basic/arm_sve_sme_incl.td",
     ],
     includes = [
-        "include",
         "/clang/include/clang/Basic",
+        "include",
     ],
 )
 
 td_library(
     name = "ArmSveIntrinsicGuardsTdFiles",
     srcs = ["include/clang/Basic/arm_sve_intrinsic_guards.td"],
-    deps = [":ArmTdFiles", "//llvm:CommonTargetTdFiles"],
+    deps = [
+        ":ArmTdFiles",
+        "//llvm:CommonTargetTdFiles",
+    ],
 )
 
 td_library(
     name = "ArmSmeIntrinsicGuardsTdFiles",
     srcs = ["include/clang/Basic/arm_sme_intrinsic_guards.td"],
-    deps = [":ArmTdFiles", "//llvm:CommonTargetTdFiles"],
+    deps = [
+        ":ArmTdFiles",
+        "//llvm:CommonTargetTdFiles",
+    ],
 )
 
 gentbl_cc_library(
