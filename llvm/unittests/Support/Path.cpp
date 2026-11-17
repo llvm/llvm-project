@@ -1116,6 +1116,35 @@ TEST_F(FileSystemTest, TempFileDiscardDiscard) {
   ASSERT_FALSE(fs::exists(TestDirectory + "/keep"));
 }
 
+TEST_F(FileSystemTest, TempFileWithErrorCode) {
+  // Creating fails in a missing directory.
+  ErrorOr<fs::TempFile> Missing =
+      fs::TempFile::createWithErrorCode(TestDirectory + "/missing/test-%%%%");
+  ASSERT_EQ(Missing.getError(), errc::no_such_file_or_directory);
+
+  // Keeping succeeds.
+  ErrorOr<fs::TempFile> Kept =
+      fs::TempFile::createWithErrorCode(TestDirectory + "/test-%%%%");
+  ASSERT_NO_ERROR(Kept.getError());
+  ASSERT_NO_ERROR(Kept->keepWithErrorCode(TestDirectory + "/keep"));
+  ASSERT_TRUE(fs::exists(TestDirectory + "/keep"));
+  ASSERT_NO_ERROR(fs::remove(TestDirectory + "/keep"));
+
+  // Keeping fails if the destination is a non-empty directory, and the
+  // temporary file is removed.
+  ASSERT_NO_ERROR(fs::create_directory(TestDirectory + "/dir"));
+  ASSERT_NO_ERROR(fs::create_directory(TestDirectory + "/dir/sub"));
+  ErrorOr<fs::TempFile> NotKept =
+      fs::TempFile::createWithErrorCode(TestDirectory + "/test-%%%%");
+  ASSERT_NO_ERROR(NotKept.getError());
+  std::string TmpName = NotKept->TmpName;
+  ASSERT_TRUE(fs::exists(TmpName));
+  ASSERT_TRUE((bool)NotKept->keepWithErrorCode(TestDirectory + "/dir"));
+  ASSERT_FALSE(fs::exists(TmpName));
+  ASSERT_NO_ERROR(fs::remove(TestDirectory + "/dir/sub"));
+  ASSERT_NO_ERROR(fs::remove(TestDirectory + "/dir"));
+}
+
 TEST_F(FileSystemTest, TempFiles) {
   // Create a temp file.
   int FileDescriptor;
