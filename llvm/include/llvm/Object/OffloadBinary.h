@@ -18,6 +18,8 @@
 #define LLVM_OBJECT_OFFLOADBINARY_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -218,7 +220,26 @@ private:
 /// A handle to a single OffloadBinary.
 class OffloadFile {
 public:
-  using TargetID = std::pair<StringRef, StringRef>;
+  /// The target a device image is built for. Device images with the same
+  /// target are linked together.
+  struct TargetID {
+    /// The target triple, e.g. "spirv64-unknown-unknown".
+    StringRef Triple;
+    /// The architecture, e.g. "sm_70" or "igca_30r".
+    StringRef Arch;
+    /// The real devices to compile for ahead of time, e.g. "xe-mtl-h,xe-mtl-u".
+    /// Empty if the device image lists none.
+    StringRef Code;
+
+    TargetID() = default;
+    TargetID(StringRef Triple, StringRef Arch, StringRef Code = "")
+        : Triple(Triple), Arch(Arch), Code(Code) {}
+
+    bool operator==(const TargetID &Other) const {
+      return Triple == Other.Triple && Arch == Other.Arch && Code == Other.Code;
+    }
+    bool operator!=(const TargetID &Other) const { return !(*this == Other); }
+  };
 
   OffloadFile() = default;
   OffloadFile(std::unique_ptr<OffloadBinary> Binary)
@@ -237,10 +258,11 @@ public:
     return OffloadFile(std::move((*NewBinaryOrErr)[0]));
   }
 
-  /// We use the Triple and Architecture pair to group linker inputs together.
-  /// This conversion function lets us use these inputs in a hash-map.
+  /// We use the target to group device images together. This conversion
+  /// function lets us use them in a hash-map.
   operator TargetID() const {
-    return std::make_pair(getBinary()->getTriple(), getBinary()->getArch());
+    return {getBinary()->getTriple(), getBinary()->getArch(),
+            getBinary()->getString("code")};
   }
 
 private:
@@ -264,12 +286,22 @@ LLVM_ABI OffloadKind getOffloadKind(StringRef Name);
 /// Convert an offload kind to its string representation.
 LLVM_ABI StringRef getOffloadKindName(OffloadKind Name);
 
-/// Returns true if an image built for target \p Provided can provide the device
-/// code for a request for target \p Requested. This is directional: a
-/// feature-unspecified or generic image serves a more specific request (e.g. a
-/// generic static-archive member pulled into a specific device-image group),
-/// but not vice versa. For AMDGPU a target id is a string conforming to the
-/// following BNF syntax:
+/// Returns true if the device image \p Provided, e.g. a static archive member,
+/// can be linked into the group of device images \p Requested.
+///
+/// - A generic device image can be linked into any group.
+/// - Otherwise, both must list the same real devices in "code", and have the
+///   same architecture unless the group is generic.
+///
+///   Device image to add       Group to link it into              Result
+///   (Provided)                (Requested)
+///   generic                   igca_30r, code=xe-mtl-u            true
+///   igca_30r                  generic                            true
+///   igca_30r, code=xe-mtl-u   igca_30r, code=xe-mtl-u            true
+///   igca_30r, code=xe-mtl-u   igca_30r, code=xe-mtl-h,xe-mtl-u   false
+///   igca_30r, code=xe-mtl-u   generic                            false
+///
+/// For AMDGPU a target id is a string conforming to the following BNF syntax:
 ///
 ///  target-id ::= '<arch> ( : <feature> ( '+' | '-' ) )*'
 ///
@@ -279,12 +311,23 @@ LLVM_ABI StringRef getOffloadKindName(OffloadKind Name);
 LLVM_ABI bool areTargetsCompatible(const OffloadFile::TargetID &Provided,
                                    const OffloadFile::TargetID &Requested);
 
-/// Returns true if \p LHS and \p RHS denote the same logical target, i.e. the
-/// same processor and features.
+/// Returns true if device images built for \p LHS and \p RHS are linked
+/// together: they have the same processor and features, and list the same
+/// real devices in "code".
 LLVM_ABI bool areTargetsEquivalent(const OffloadFile::TargetID &LHS,
                                    const OffloadFile::TargetID &RHS);
 
 } // namespace object
+
+template <> struct DenseMapInfo<object::OffloadFile::TargetID> {
+  using TargetID = object::OffloadFile::TargetID;
+  static unsigned getHashValue(const TargetID &ID) {
+    return hash_combine(ID.Triple, ID.Arch, ID.Code);
+  }
+  static bool isEqual(const TargetID &LHS, const TargetID &RHS) {
+    return LHS == RHS;
+  }
+};
 
 } // namespace llvm
 #endif

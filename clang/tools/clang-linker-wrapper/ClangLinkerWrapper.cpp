@@ -1557,25 +1557,16 @@ getDeviceInput(const ArgList &Args) {
                              B.getBinary()->getArch().count(':');
                     });
 
-  // An image can list real devices in "code", e.g. "code=xe-mtl-h,xe-mtl-u" for
-  // Intel GPUs. Images with different lists are linked separately, so the key
-  // of an image is its target and its "code".
-  using ImageID = std::pair<OffloadFile::TargetID, StringRef>;
-  auto GetImageID = [](const OffloadFile &Binary) -> ImageID {
-    return {Binary, Binary.getBinary()->getString("code")};
-  };
-
   // Link all standard input files and update the list of symbols.
-  MapVector<ImageID, SmallVector<OffloadFile, 0>> InputFiles;
+  MapVector<OffloadFile::TargetID, SmallVector<OffloadFile, 0>> InputFiles;
   for (OffloadFile &Binary : ObjectFilesToExtract) {
     if (!Binary.getBinary())
       continue;
 
-    ImageID Target = GetImageID(Binary);
-    SmallVector<ImageID> CompatibleTargets;
+    OffloadFile::TargetID Target = Binary;
+    SmallVector<OffloadFile::TargetID> CompatibleTargets;
     for (const auto &[ID, Input] : InputFiles)
-      if (Target.second == ID.second &&
-          object::areTargetsEquivalent(Target.first, ID.first))
+      if (object::areTargetsEquivalent(Target, ID))
         CompatibleTargets.emplace_back(ID);
 
     // Seed a new image when no existing target can provide for this input.
@@ -1602,20 +1593,16 @@ getDeviceInput(const ArgList &Args) {
     if (!Binary.getBinary())
       continue;
 
-    // A generic member can still be linked into any compatible image; other
-    // members only into images with the same "code".
-    ImageID Target = GetImageID(Binary);
-    bool IsGeneric = Target.first.second == "generic";
-    SmallVector<ImageID> CompatibleTargets = {Target};
+    SmallVector<OffloadFile::TargetID> CompatibleTargets = {Binary};
     for (const auto &[ID, Input] : InputFiles)
-      if (Target != ID && (IsGeneric || Target.second == ID.second) &&
-          object::areTargetsCompatible(Target.first, ID.first))
+      if (OffloadFile::TargetID(Binary) != ID &&
+          object::areTargetsCompatible(Binary, ID))
         CompatibleTargets.emplace_back(ID);
 
     for (const auto &[Index, ID] : llvm::enumerate(CompatibleTargets)) {
       // Only extract if we have an object matching this target or it
       // was specifically requested.
-      if (!InputFiles.count(ID) && !ShouldExtract.contains(ID.first.second))
+      if (!InputFiles.count(ID) && !ShouldExtract.contains(ID.Arch))
         continue;
 
       // If another target needs this binary it must be copied instead.

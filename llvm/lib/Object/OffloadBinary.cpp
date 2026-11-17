@@ -540,40 +540,54 @@ StringRef object::getImageKindName(ImageKind Kind) {
 
 bool object::areTargetsEquivalent(const OffloadFile::TargetID &LHS,
                                   const OffloadFile::TargetID &RHS) {
-  llvm::Triple LHSTT(LHS.first);
-  llvm::Triple RHSTT(RHS.first);
+  // Device images that list different real devices are linked separately.
+  if (LHS.Code != RHS.Code)
+    return false;
+
+  llvm::Triple LHSTT(LHS.Triple);
+  llvm::Triple RHSTT(RHS.Triple);
 
   // Check for logical AMDGPU target-id equivalence.
   if (LHSTT.isAMDGPU()) {
-    AMDGPU::TargetID LHSID(LHSTT, LHS.second);
-    AMDGPU::TargetID RHSID(RHSTT, RHS.second);
+    AMDGPU::TargetID LHSID(LHSTT, LHS.Arch);
+    AMDGPU::TargetID RHSID(RHSTT, RHS.Arch);
     return LHSID.isEquivalent(RHSID);
   }
 
   // For other targets the triples must be compatible and the arch must match.
-  return LHSTT.isCompatibleWith(RHSTT) && LHS.second == RHS.second;
+  return LHSTT.isCompatibleWith(RHSTT) && LHS.Arch == RHS.Arch;
 }
 
 bool object::areTargetsCompatible(const OffloadFile::TargetID &Provided,
                                   const OffloadFile::TargetID &Requested) {
-  llvm::Triple ProvidedTT(Provided.first);
-  llvm::Triple RequestedTT(Requested.first);
+  llvm::Triple ProvidedTT(Provided.Triple);
+  llvm::Triple RequestedTT(Requested.Triple);
 
   // The AMDGPU target requires target-id aware checks (base processor plus
   // xnack/sramecc features).
   if (ProvidedTT.isAMDGPU()) {
-    AMDGPU::TargetID ProvidedID(ProvidedTT, Provided.second);
-    AMDGPU::TargetID RequestedID(RequestedTT, Requested.second);
-    return ProvidedID.providesFor(RequestedID);
+    AMDGPU::TargetID ProvidedID(ProvidedTT, Provided.Arch);
+    AMDGPU::TargetID RequestedID(RequestedTT, Requested.Arch);
+    return Provided.Code == Requested.Code &&
+           ProvidedID.providesFor(RequestedID);
   }
 
   // For other targets the triples must be compatible.
   if (!ProvidedTT.isCompatibleWith(RequestedTT))
     return false;
 
-  // If the architecture is "generic" we assume it is always compatible.
-  if (Provided.second == "generic" || Requested.second == "generic")
+  // A generic device image can be linked into any group.
+  if (Provided.Arch == "generic")
     return true;
 
-  return Provided.second == Requested.second;
+  // Otherwise, device images that list different real devices are linked
+  // separately.
+  if (Provided.Code != Requested.Code)
+    return false;
+
+  // A generic group accepts a device image of any architecture.
+  if (Requested.Arch == "generic")
+    return true;
+
+  return Provided.Arch == Requested.Arch;
 }

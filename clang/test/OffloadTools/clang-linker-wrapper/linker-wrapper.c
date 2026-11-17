@@ -92,6 +92,11 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --linker-path=/usr/bin/ld %t.sycl-u.o %t.sycl-generic.a -o a.out 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=SYCL-GENERIC-ARCHIVE
+// RUN: rm -f %t.sycl-u.a
+// RUN: llvm-ar rcs %t.sycl-u.a %t.sycl-u.o
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld %t.sycl-generic.o %t.sycl-u.a -o a.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=SYCL-CODE-ARCHIVE
 // RUN: llvm-offload-binary -o %t.sycl-two.out \
 // RUN:   --image=file=%t.spirv.bc,kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=xe-mtl-u \
 // RUN:   --image=file=%t.spirv.bc,kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=xe-mtl-u,code=xe-mtl-h
@@ -139,6 +144,10 @@ __attribute__((visibility("protected"), used)) int x;
 
 // A generic archive member is still linked into an image that lists devices.
 // SYCL-GENERIC-ARCHIVE: clang{{.*}} -march=igca_30r {{.*}}igca_30r{{.*}}.o {{.*}}generic{{.*}}.o --sycl-link -Xlinker --code=xe-mtl-u{{$}}
+
+// An archive member that lists real devices is not linked into a generic group.
+// SYCL-CODE-ARCHIVE:     clang{{.*}} --target=spirv64-unknown-unknown {{[^ ]*}}generic{{[^ ]*}}.o --sycl-link{{$}}
+// SYCL-CODE-ARCHIVE-NOT: --sycl-link
 
 // Images that only differ in "code" are extracted to different files, also
 // when replaying the extraction.
