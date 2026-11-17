@@ -255,7 +255,6 @@ public:
   std::optional<ANDMaskResult> getANDMaskRegOperand(MachineInstr &AndMI) const;
 
   bool tryConstantFoldOp(MachineInstr *MI) const;
-  bool tryFoldBFE(MachineInstr &MI) const;
   bool tryFoldCndMask(MachineInstr &MI) const;
   bool tryFoldRedundantAND(MachineInstr &ChildMI) const;
   bool tryFoldAndExec(MachineInstr &MI) const;
@@ -1863,47 +1862,6 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
   return false;
 }
 
-bool SIFoldOperandsImpl::tryFoldBFE(MachineInstr &MI) const {
-  if (MI.getOpcode() != AMDGPU::V_BFE_I32_e64 || !ST->hasTrue16BitInsts())
-    return false;
-
-  const MachineOperand &Offset = MI.getOperand(2);
-  const MachineOperand &Width = MI.getOperand(3);
-  if (!Offset.isImm() || Offset.getImm() != 0 || !Width.isImm() ||
-      Width.getImm() != 16)
-    return false;
-
-  MachineOperand Source = MI.getOperand(1);
-  Source.clearParent();
-  if (!Source.isReg() && !Source.isImm())
-    return false;
-
-  bool RealTrue16 = ST->useRealTrue16Insts();
-  if (Source.isImm()) {
-    Source.setImm(SignExtend64<16>(Source.getImm()));
-  } else if (RealTrue16 && TRI->isVGPR(*MRI, Source.getReg())) {
-    if (Source.getReg().isVirtual())
-      Source.setSubReg(
-          TRI->composeSubRegIndices(Source.getSubReg(), AMDGPU::lo16));
-    else
-      Source.setReg(TRI->getSubReg(Source.getReg(), AMDGPU::lo16));
-  }
-
-  unsigned Opcode = RealTrue16 ? AMDGPU::V_CVT_I32_I16_t16_e64
-                               : AMDGPU::V_CVT_I32_I16_fake16_e64;
-  MI.removeOperand(3);
-  MI.removeOperand(2);
-  MI.removeOperand(1);
-  MI.setDesc(TII->get(Opcode));
-  MachineInstrBuilder Builder(*MF, &MI);
-  if (RealTrue16)
-    Builder.addImm(0);
-  Builder.add(Source);
-  if (RealTrue16)
-    Builder.addImm(0);
-  return true;
-}
-
 // Fold a select whose two sources are the same value into a copy or move.
 bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
@@ -3326,7 +3284,6 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF, const MachineLoopInfo *MLI) {
   for (MachineBasicBlock *MBB : depth_first(&MF)) {
     MachineOperand *CurrentKnownM0Val = nullptr;
     for (auto &MI : make_early_inc_range(*MBB)) {
-      Changed |= tryFoldBFE(MI);
       Changed |= tryFoldCndMask(MI);
 
       // PeepholeOptimizer may have folded an inline immediate directly onto an

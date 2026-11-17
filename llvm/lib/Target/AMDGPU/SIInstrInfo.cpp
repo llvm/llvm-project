@@ -6350,6 +6350,12 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
 }
 
 unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
+  if (MI.getOpcode() == AMDGPU::S_BFE_I32 && ST.hasTrue16BitInsts() &&
+      MI.getOperand(2).isImm() &&
+      (MI.getOperand(2).getImm() & 0x7f003f) == 0x100000)
+    return ST.useRealTrue16Insts() ? AMDGPU::V_CVT_I32_I16_t16_e64
+                                   : AMDGPU::V_CVT_I32_I16_fake16_e64;
+
   if (MI.getOpcode() == AMDGPU::S_MOV_B32) {
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     return MI.getOperand(1).isReg() || RI.isAGPR(MRI, MI.getOperand(0).getReg())
@@ -6409,7 +6415,11 @@ unsigned SIInstrInfo::getVALUOp(unsigned Opc) const {
   case AMDGPU::S_LSHR_B32: return AMDGPU::V_LSHR_B32_e32;
   case AMDGPU::S_LSHR_B64: return AMDGPU::V_LSHR_B64_e64;
   case AMDGPU::S_SEXT_I32_I8: return AMDGPU::V_BFE_I32_e64;
-  case AMDGPU::S_SEXT_I32_I16: return AMDGPU::V_BFE_I32_e64;
+  case AMDGPU::S_SEXT_I32_I16:
+    if (!ST.hasTrue16BitInsts())
+      return AMDGPU::V_BFE_I32_e64;
+    return ST.useRealTrue16Insts() ? AMDGPU::V_CVT_I32_I16_t16_e64
+                                   : AMDGPU::V_CVT_I32_I16_fake16_e64;
   case AMDGPU::S_BFE_U32: return AMDGPU::V_BFE_U32_e64;
   case AMDGPU::S_BFE_I32: return AMDGPU::V_BFE_I32_e64;
   case AMDGPU::S_BFM_B32: return AMDGPU::V_BFM_B32_e64;
@@ -9046,7 +9056,8 @@ void SIInstrInfo::moveToVALUImpl(
       NewInstr->addOperand(Src);
     }
 
-    if (Opcode == AMDGPU::S_SEXT_I32_I8 || Opcode == AMDGPU::S_SEXT_I32_I16) {
+    if (NewOpcode == AMDGPU::V_BFE_I32_e64 &&
+        (Opcode == AMDGPU::S_SEXT_I32_I8 || Opcode == AMDGPU::S_SEXT_I32_I16)) {
       // We are converting these to a BFE, so we need to add the missing
       // operands for the size and offset.
       unsigned Size = (Opcode == AMDGPU::S_SEXT_I32_I8) ? 8 : 16;
@@ -9056,7 +9067,9 @@ void SIInstrInfo::moveToVALUImpl(
       // The VALU version adds the second operand to the result, so insert an
       // extra 0 operand.
       NewInstr.addImm(0);
-    } else if (Opcode == AMDGPU::S_BFE_I32 || Opcode == AMDGPU::S_BFE_U32) {
+    } else if ((NewOpcode == AMDGPU::V_BFE_I32_e64 ||
+                NewOpcode == AMDGPU::V_BFE_U32_e64) &&
+               (Opcode == AMDGPU::S_BFE_I32 || Opcode == AMDGPU::S_BFE_U32)) {
       const MachineOperand &OffsetWidthOp = Inst.getOperand(2);
       // If we need to move this to VGPRs, we need to unpack the second
       // operand back into the 2 separate ones for bit offset and width.
@@ -9865,10 +9878,17 @@ void SIInstrInfo::splitScalar64BitBFE(SIInstrWorklist &Worklist,
     Register MidRegHi = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     Register ResultReg = MRI.createVirtualRegister(&AMDGPU::VReg_64RegClass);
 
-    BuildMI(MBB, MII, DL, get(AMDGPU::V_BFE_I32_e64), MidRegLo)
-        .addReg(Inst.getOperand(1).getReg(), {}, AMDGPU::sub0)
-        .addImm(0)
-        .addImm(BitWidth);
+    unsigned Opcode = BitWidth == 16 ? getVALUOp(AMDGPU::S_SEXT_I32_I16)
+                                     : AMDGPU::V_BFE_I32_e64;
+    auto Extend = BuildMI(MBB, MII, DL, get(Opcode), MidRegLo);
+    if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src0_modifiers))
+      Extend.addImm(0);
+    Extend.addReg(Inst.getOperand(1).getReg(), {}, AMDGPU::sub0);
+    if (Opcode == AMDGPU::V_BFE_I32_e64)
+      Extend.addImm(0).addImm(BitWidth);
+    else if (ST.useRealTrue16Insts())
+      Extend.addImm(0);
+    legalizeOperandsVALUt16(*Extend, MRI);
 
     BuildMI(MBB, MII, DL, get(AMDGPU::V_ASHRREV_I32_e32), MidRegHi)
       .addImm(31)

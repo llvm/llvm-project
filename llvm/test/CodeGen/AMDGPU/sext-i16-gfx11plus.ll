@@ -375,14 +375,14 @@ define i64 @sext_i16_add_i64(i16 %v, i16 %w, ptr addrspace(1) %p) {
 }
 
 ; ISEL-LABEL: name: sext_i16_add_i32_i64
-; ISEL: [[EXT:%.+]]:vgpr_32 = V_BFE_I32_e64 {{.+}}, 0, 16,
-; ISEL-NOT: V_BFE_I32_e64
+; ISEL: [[EXT:%.+]]:vgpr_32 = V_CVT_I32_I16{{.+}} {{.+}},
+; ISEL-NOT: V_CVT_I32_I16
 ; ISEL: [[HI:%.+]]:vgpr_32 = V_ASHRREV_I32_e32 31, [[EXT]],
 ; ISEL: [[WIDE:%.+]]:vreg_64{{(_align2)?}} = REG_SEQUENCE [[EXT]], %subreg.sub0, [[HI]], %subreg.sub1
-; ISEL-NOT: V_BFE_I32_e64
+; ISEL-NOT: V_CVT_I32_I16
 ; ISEL: GLOBAL_STORE_DWORD {{.+}}, [[EXT]],
 ; ISEL: GLOBAL_STORE_DWORDX2 {{.+}}, [[WIDE]],
-; ISEL-NOT: V_BFE_I32_e64
+; ISEL-NOT: V_CVT_I32_I16
 ; ISEL: SI_RETURN
 define i64 @sext_i16_add_i32_i64(i16 %v, i16 %w, ptr addrspace(1) %p, ptr addrspace(1) %q) {
 ; GFX942-LABEL: sext_i16_add_i32_i64:

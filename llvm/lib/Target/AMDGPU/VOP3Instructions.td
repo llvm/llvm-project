@@ -402,18 +402,22 @@ let SchedRW = [Write64Bit] in {
 } // End SchedRW = [Write64Bit]
 } // End isReMaterializable = 1
 
-let True16Predicate = NotUseRealTrue16Insts in
+let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat<
   (i32 (DivergentUnaryFrag<sext> i16:$src)),
-  (i32 (V_BFE_I32_e64 i16:$src, (i32 0), (i32 0x10)))
+  (i32 (V_BFE_I32_e64 i16:$src, (i32 0), (i32 16)))
+>;
+
+let True16Predicate = UseFakeTrue16Insts in
+def : GCNPat<
+  (i32 (DivergentUnaryFrag<sext> i16:$src)),
+  (V_CVT_I32_I16_fake16_e64 $src)
 >;
 
 let True16Predicate = UseRealTrue16Insts in
 def : GCNPat<
   (i32 (DivergentUnaryFrag<sext> i16:$src)),
-  (i32 (V_BFE_I32_e64
-       (lo16_to_vgpr32 VGPR_16:$src),
-       (i32 0), (i32 0x10)))
+  (V_CVT_I32_I16_t16_e64 SRCMODS.NONE, $src)
 >;
 
 let isReMaterializable = 1 in {
@@ -525,13 +529,15 @@ multiclass SextI16ToI64<dag Extend> {
   >;
 }
 
-let True16Predicate = NotUseRealTrue16Insts in
+let True16Predicate = NotHasTrue16BitInsts in
 defm : SextI16ToI64<
   (i32 (V_BFE_I32_e64 i16:$src, (i32 0), (i32 16)))>;
 
+let True16Predicate = UseFakeTrue16Insts in
+defm : SextI16ToI64<(i32 (V_CVT_I32_I16_fake16_e64 $src))>;
+
 let True16Predicate = UseRealTrue16Insts in
-defm : SextI16ToI64<
-  (i32 (V_BFE_I32_e64 (lo16_to_vgpr32 VGPR_16:$src), (i32 0), (i32 16)))>;
+defm : SextI16ToI64<(i32 (V_CVT_I32_I16_t16_e64 SRCMODS.NONE, $src))>;
 
 let SubtargetPredicate = isGFX8Plus, Uses = [MODE, M0, EXEC], OtherPredicates = [isNotGFX90APlus] in {
 def V_INTERP_P1_F32_e64  : VOP3Interp <"v_interp_p1_f32", VOP3_INTERP>;
