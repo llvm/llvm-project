@@ -1704,7 +1704,7 @@ public:
     std::unique_ptr<ThreadSpec> m_thread_spec_up;
     bool m_active = true;
     bool m_auto_continue = false;
-    bool m_at_initial_stop = true;
+    bool m_at_initial_stop = false;
     bool m_one_shot = false;
     bool m_suppress_output = false;
 
@@ -1898,7 +1898,7 @@ public:
     // Filters
     lldb::SymbolContextSpecifierSP m_sc_specifier_sp;
     std::unique_ptr<ThreadSpec> m_thread_spec_up;
-    bool m_at_initial_stop = true;
+    bool m_at_initial_stop = false;
 
     // Reaction settings
     bool m_auto_continue = false;
