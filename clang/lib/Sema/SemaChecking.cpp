@@ -4903,7 +4903,8 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
         << diag::OffloadLang::SYCL;
 
   // Functions requiring host target features or a host CPU are host-only.
-  if (FD && getLangOpts().SYCLIsDevice && !isUnevaluatedContext())
+  if (FD && getLangOpts().SYCLIsDevice && !isUnevaluatedContext() &&
+      !isConstantEvaluatedContext())
     if (const auto *TA = FD->getAttr<TargetAttr>())
       if (const TargetInfo *Aux = Context.getAuxTargetInfo()) {
         ParsedTargetAttr P = Aux->parseTargetAttr(TA->getFeaturesStr());

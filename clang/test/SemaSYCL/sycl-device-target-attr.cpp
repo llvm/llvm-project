@@ -11,6 +11,7 @@
 
 __attribute__((target("sse2"))) int sse2_add(int x) { return x; }
 __attribute__((target("arch=haswell"))) int haswell_add(int x) { return x; }
+__attribute__((target("sse2"))) constexpr int sse2_const(int x) { return x; }
 
 [[clang::sycl_external]] int direct(int x) {
   // expected-error@+2 {{SYCL device code cannot call 'sse2_add', which requires the 'sse2' host feature}}
@@ -31,3 +32,8 @@ int host_only(int x) { return sse2_add(x) + haswell_add(x); }
 
 // Not evaluated.
 [[clang::sycl_external]] int unevaluated(int x) { return sizeof(sse2_add(x)); }
+
+// Constant evaluated.
+[[clang::sycl_external]] void constant_evaluated() {
+  static_assert(sse2_const(1) == 1);
+}
