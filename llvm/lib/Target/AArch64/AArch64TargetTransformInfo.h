@@ -371,7 +371,8 @@ public:
       return false;
 
     auto *DataTypeFVTy = dyn_cast<FixedVectorType>(DataType);
-    if (DataTypeFVTy && DataTypeFVTy->getNumElements() < 2)
+    if (DataTypeFVTy && (DataTypeFVTy->getNumElements() < 2 ||
+                         DataType->getScalarType()->isIntegerTy(1)))
       return false;
 
     return isElementTypeLegalForScalableVector(DataType->getScalarType());

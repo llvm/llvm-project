@@ -37,6 +37,8 @@ define void @masked_gathers() vscale_range(1,16) {
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res.v2f64 = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> align 8 poison, <2 x i1> poison, <2 x double> zeroinitializer)
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res.v4f64 = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 poison, <4 x i1> poison, <4 x double> zeroinitializer)
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %res.v8f64 = call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> align 8 poison, <8 x i1> poison, <8 x double> zeroinitializer)
+; NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %res.v16i1 = call <16 x i1> @llvm.masked.gather.v16i1.v16p0(<16 x ptr> align 1 poison, <16 x i1> poison, <16 x i1> zeroinitializer)
+; NEON-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %res.v1i128 = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> align 16 poison, <1 x i1> poison, <1 x i128> zeroinitializer)
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SVE-LABEL: 'masked_gathers'
@@ -70,6 +72,8 @@ define void @masked_gathers() vscale_range(1,16) {
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %res.v2f64 = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> align 8 poison, <2 x i1> poison, <2 x double> zeroinitializer)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %res.v4f64 = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 poison, <4 x i1> poison, <4 x double> zeroinitializer)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %res.v8f64 = call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> align 8 poison, <8 x i1> poison, <8 x double> zeroinitializer)
+; SVE-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %res.v16i1 = call <16 x i1> @llvm.masked.gather.v16i1.v16p0(<16 x ptr> align 1 poison, <16 x i1> poison, <16 x i1> zeroinitializer)
+; SVE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %res.v1i128 = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> align 16 poison, <1 x i1> poison, <1 x i128> zeroinitializer)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %res.v2i8 = call <2 x i8> @llvm.masked.gather.v2i8(<2 x ptr> poison, i32 0, <2 x i1> poison, <2 x i8> zeroinitializer)
@@ -103,6 +107,10 @@ define void @masked_gathers() vscale_range(1,16) {
   %res.v2f64 = call <2 x double> @llvm.masked.gather.v2f64(<2 x ptr> poison, i32 0, <2 x i1> poison, <2 x double> zeroinitializer)
   %res.v4f64 = call <4 x double> @llvm.masked.gather.v4f64(<4 x ptr> poison, i32 0, <4 x i1> poison, <4 x double> zeroinitializer)
   %res.v8f64 = call <8 x double> @llvm.masked.gather.v8f64(<8 x ptr> poison, i32 0, <8 x i1> poison, <8 x double> zeroinitializer)
+
+  %res.v16i1 = call <16 x i1> @llvm.masked.gather.v16i1(<16 x ptr> poison, i32 0, <16 x i1> poison, <16 x i1> zeroinitializer)
+  %res.v1i128 = call <1 x i128> @llvm.masked.gather.v1i128(<1 x ptr> poison, i32 0, <1 x i1> poison, <1 x i128> zeroinitializer)
+
   ret void
 }
 
@@ -137,6 +145,8 @@ define void @masked_scatters() vscale_range(1,16) {
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: call void @llvm.masked.scatter.v8f32.v8p0(<8 x float> poison, <8 x ptr> align 4 poison, <8 x i1> poison)
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.masked.scatter.v2f64.v2p0(<2 x double> poison, <2 x ptr> align 8 poison, <2 x i1> poison)
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> poison, <4 x ptr> align 8 poison, <4 x i1> poison)
+; NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.v16i1.v16p0(<16 x i1> poison, <16 x ptr> align 1 poison, <16 x i1> poison)
+; NEON-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: call void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> poison, <1 x ptr> align 16 poison, <1 x i1> poison)
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SVE-LABEL: 'masked_scatters'
@@ -168,6 +178,8 @@ define void @masked_scatters() vscale_range(1,16) {
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.v8f32.v8p0(<8 x float> poison, <8 x ptr> align 4 poison, <8 x i1> poison)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: call void @llvm.masked.scatter.v2f64.v2p0(<2 x double> poison, <2 x ptr> align 8 poison, <2 x i1> poison)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> poison, <4 x ptr> align 8 poison, <4 x i1> poison)
+; SVE-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: call void @llvm.masked.scatter.v16i1.v16p0(<16 x i1> poison, <16 x ptr> align 1 poison, <16 x i1> poison)
+; SVE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: call void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> poison, <1 x ptr> align 16 poison, <1 x i1> poison)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call void @llvm.masked.scatter.v2i8(<2 x i8> poison, <2 x ptr> poison, i32 0, <2 x i1> poison)
@@ -199,6 +211,10 @@ define void @masked_scatters() vscale_range(1,16) {
   call void @llvm.masked.scatter.v8f32(<8 x float> poison, <8 x ptr> poison, i32 0, <8 x i1> poison)
   call void @llvm.masked.scatter.v2f64(<2 x double> poison, <2 x ptr> poison, i32 0, <2 x i1> poison)
   call void @llvm.masked.scatter.v4f64(<4 x double> poison, <4 x ptr> poison, i32 0, <4 x i1> poison)
+
+  call void @llvm.masked.scatter.v16i1(<16 x i1> poison, <16 x ptr> poison, i32 0, <16 x i1> poison)
+  call void @llvm.masked.scatter.v1i128(<1 x i128> poison, <1 x ptr> poison, i32 0, <1 x i1> poison)
+
   ret void
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
