@@ -12,6 +12,11 @@ declare void @readonly_returns() nounwind willreturn memory(read)
 define void @call_may_not_return() {
 ; CHECK-LABEL: call_may_not_return:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    callq readonly_may_not_return@PLT
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   call void @readonly_may_not_return()
   ret void
@@ -20,6 +25,11 @@ define void @call_may_not_return() {
 define void @call_may_throw() {
 ; CHECK-LABEL: call_may_throw:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    callq readonly_may_throw@PLT
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   call void @readonly_may_throw()
   ret void
