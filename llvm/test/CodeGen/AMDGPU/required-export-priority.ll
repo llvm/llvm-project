@@ -445,9 +445,7 @@ define amdgpu_ps void @test_export_in_callee_prio(float %v) #0 {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    v_add_f32_e32 v0, 1.0, v0
-; GFX11-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX11-NEXT:    s_setprio 0
-; GFX11-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX11-NEXT:    s_getpc_b64 s[0:1]
 ; GFX11-NEXT:    s_add_u32 s0, s0, test_export_gfx@gotpcrel32@lo+4
 ; GFX11-NEXT:    s_addc_u32 s1, s1, test_export_gfx@gotpcrel32@hi+12
@@ -461,9 +459,7 @@ define amdgpu_ps void @test_export_in_callee_prio(float %v) #0 {
 ; GFX1150-NEXT:    s_setprio 2
 ; GFX1150-NEXT:    s_mov_b32 s32, 0
 ; GFX1150-NEXT:    v_add_f32_e32 v0, 1.0, v0
-; GFX1150-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX1150-NEXT:    s_setprio 2
-; GFX1150-NEXT:    ; sched_barrier mask(0x00000000)
 ; GFX1150-NEXT:    s_getpc_b64 s[0:1]
 ; GFX1150-NEXT:    s_add_u32 s0, s0, test_export_gfx@gotpcrel32@lo+4
 ; GFX1150-NEXT:    s_addc_u32 s1, s1, test_export_gfx@gotpcrel32@hi+12
