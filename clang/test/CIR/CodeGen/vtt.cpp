@@ -83,7 +83,7 @@ void D::y() {}
 // CIR-RTTI-SAME:        #cir.global_view<@_ZTI1D> : !cir.ptr<!u8i>,
 // CIR-COMMON-SAME:      #cir.global_view<@_ZN1A1vEv> : !cir.ptr<!u8i>
 // CIR-COMMON-SAME:    ]> : !cir.array<!cir.ptr<!u8i> x 4>
-// CIR-COMMON-SAME: }> : ![[REC_D_VTABLE]] align(8)
+// CIR-COMMON-SAME: }, address_points = [#cir.address_point<index = 0, offset = 3>, #cir.address_point<index = 1, offset = 3>, #cir.address_point<index = 2, offset = 3>]> : ![[REC_D_VTABLE]] align(8)
 
 // LLVM-NO-RTTI:     @_ZTV1D = unnamed_addr constant { [5 x ptr], [4 x ptr], [4 x ptr] } {
 // LLVM-RTTI:         @_ZTV1D = constant { [5 x ptr], [4 x ptr], [4 x ptr] } {
@@ -154,7 +154,7 @@ void D::y() {}
 // CIR-RTTI-SAME:        #cir.global_view<@_ZTI1B> : !cir.ptr<!u8i>,
 // CIR-COMMON-SAME:      #cir.global_view<@_ZN1A1vEv> : !cir.ptr<!u8i>
 // CIR-COMMON-SAME:    ]> : !cir.array<!cir.ptr<!u8i> x 4>
-// CIR-COMMON-SAME:    }> : ![[REC_B_OR_C_IN_D_VTABLE]]
+// CIR-COMMON-SAME:    }, address_points = [#cir.address_point<index = 0, offset = 3>, #cir.address_point<index = 1, offset = 3>]> : ![[REC_B_OR_C_IN_D_VTABLE]]
 
 // LLVM-NO-RTTI:     @_ZTC1D0_1B = unnamed_addr constant { [4 x ptr], [4 x ptr] } {
 // LLVM-RTTI:         @_ZTC1D0_1B = constant { [4 x ptr], [4 x ptr] } {
@@ -193,7 +193,7 @@ void D::y() {}
 // CIR-NO-RTTI-SAME:     #cir.ptr<null> : !cir.ptr<!u8i>,
 // CIR-RTTI-SAME:        #cir.global_view<@_ZTI1C> : !cir.ptr<!u8i>,
 // CIR-COMMON-SAME:      #cir.global_view<@_ZN1A1vEv> : !cir.ptr<!u8i>
-// CIR-COMMON-SAME:  ]> : !cir.array<!cir.ptr<!u8i> x 4>}>
+// CIR-COMMON-SAME:  ]> : !cir.array<!cir.ptr<!u8i> x 4>}, address_points = [#cir.address_point<index = 0, offset = 3>, #cir.address_point<index = 1, offset = 3>]>
 // CIR-COMMON-SAME:  : ![[REC_B_OR_C_IN_D_VTABLE]]
 
 // LLVM-NO-RTTI:     @_ZTC1D16_1C = unnamed_addr constant { [4 x ptr], [4 x ptr] } {
