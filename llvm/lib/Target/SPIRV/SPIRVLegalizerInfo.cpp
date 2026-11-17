@@ -521,6 +521,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .unsupportedIf(LegalityPredicates::any(
           all(typeIs(0, p9), typeInSet(1, allPtrs), typeIsNot(1, p9)),
           all(typeInSet(0, allPtrs), typeIsNot(0, p9), typeIs(1, p9))))
+      .legalIf(
+          all(typeOfLongVectors(1, IsLongVecs), predNot(isPointerVector(1))))
       .fewerElementsIf(vectorElementCountIsGreaterThan(1, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
                            1, ElementCount::getFixed(MaxVectorSize)))
@@ -535,6 +537,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .moreElementsToNextPow2(1);
 
   getActionDefinitionsBuilder(G_FCMP)
+      .legalIf(typeOfLongVectors(1, IsLongVecs))
       .fewerElementsIf(vectorElementCountIsGreaterThan(1, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
                            1, ElementCount::getFixed(MaxVectorSize)))
