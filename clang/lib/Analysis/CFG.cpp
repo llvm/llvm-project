@@ -2028,14 +2028,11 @@ void CFGBuilder::addAutomaticObjDestruction(LocalScope::const_iterator B,
   }
 }
 
-/// Add ScopeEnd CFG elements for the local scope that is being left.
+/// Add ScopeEnd CFG elements for the local scope that is being left. 
 /// Assumes that range [B, E) corresponds to single scope.
 void CFGBuilder::addScopeExitHandling(LocalScope::const_iterator B,
                                       LocalScope::const_iterator E, Stmt *S) {
   assert(!B.inSameLocalScope(E));
-  if (!BuildOpts.AddLifetime && !BuildOpts.AddScopes)
-    return;
-
   if (BuildOpts.AddScopes) {
     autoCreateBlock();
     appendScopeEnd(Block, B.getFirstVarInScope(), S);
