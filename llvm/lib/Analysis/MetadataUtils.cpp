@@ -190,13 +190,25 @@ void llvm::copyMetadataForMemoryAccess(Instruction &Dest,
                 uint64_t(*DestByteOffset) <=
                     OldSize->getKnownMinValue() - NewSize.getKnownMinValue());
   bool IsWholeAccess = IsSubset && DestByteOffset == 0 && OldSize == NewSize;
-  bool SameElementType = SourceInfo->Ty && SourceInfo->Ty->getScalarType() ==
-                                               DestInfo->Ty->getScalarType();
+  Type *SourceValueTy = SourceInfo->Ty;
+  // Allow unpacking a single-element aggregates.
+  if (IsWholeAccess) {
+    if (auto *ST = dyn_cast_or_null<StructType>(SourceValueTy);
+        ST && ST->getNumElements() == 1 &&
+        ST->getElementType(0) == DestInfo->Ty)
+      SourceValueTy = DestInfo->Ty;
+    else if (auto *AT = dyn_cast_or_null<ArrayType>(SourceValueTy);
+             AT && AT->getNumElements() == 1 &&
+             AT->getElementType() == DestInfo->Ty)
+      SourceValueTy = DestInfo->Ty;
+  }
+  bool SameElementType = SourceValueTy && SourceValueTy->getScalarType() ==
+                                              DestInfo->Ty->getScalarType();
   bool SamePointer = getInvariantGroupPointer(getMemoryPointer(
                          Source, SourceInfo->PointerOperand)) ==
                      getInvariantGroupPointer(
                          getMemoryPointer(Dest, DestInfo->PointerOperand));
-  
+
   // Now loop over all `Source` metadata, propagating what we can.
   SmallVector<std::pair<unsigned, MDNode *>, 8> MDs;
   Source.getAllMetadata(MDs);
@@ -207,6 +219,7 @@ void llvm::copyMetadataForMemoryAccess(Instruction &Dest,
     case LLVMContext::MD_nontemporal:
     case LLVMContext::MD_annotation:
     case LLVMContext::MD_nosanitize:
+    case LLVMContext::MD_pcsections:
       Keep = true;
       break;
     case LLVMContext::MD_mmra:
@@ -220,6 +233,7 @@ void llvm::copyMetadataForMemoryAccess(Instruction &Dest,
       Keep = IsSubset && DestInfo->IsRead;
       break;
     case LLVMContext::MD_invariant_group:
+      // TODO: Requiring `SamePointer` is too conservative.
       Keep = IsSubset && SamePointer && !isa<CallBase>(Dest);
       break;
     case LLVMContext::MD_noundef:
@@ -228,15 +242,15 @@ void llvm::copyMetadataForMemoryAccess(Instruction &Dest,
       // doesn't have padding).
       Keep = IsSubset && isa<LoadInst>(Dest) &&
              (SameElementType ||
-              (SourceInfo->Ty && !SourceInfo->Ty->isAggregateType() &&
-               DL.typeSizeEqualsStoreSize(SourceInfo->Ty)));
+              (SourceValueTy && !SourceValueTy->isAggregateType() &&
+               DL.typeSizeEqualsStoreSize(SourceValueTy)));
       break;
     case LLVMContext::MD_fpmath:
     case LLVMContext::MD_nofpclass:
-      Keep =
-          IsSubset && SameElementType &&
-          (Kind == LLVMContext::MD_fpmath ? Dest.getType()->isFPOrFPVectorTy()
-                                          : isa<LoadInst>(Dest));
+      Keep = IsSubset && SameElementType &&
+             (Kind == LLVMContext::MD_fpmath
+                  ? FPMathOperator::isSupportedFloatingPointType(Dest.getType())
+                  : isa<LoadInst>(Dest));
       break;
     case LLVMContext::MD_nonnull:
       if (IsWholeAccess && isa<LoadInst>(Source) && isa<LoadInst>(Dest))
@@ -257,9 +271,14 @@ void llvm::copyMetadataForMemoryAccess(Instruction &Dest,
       Keep = IsWholeAccess && SourceInfo->Ty == DestInfo->Ty &&
              DestInfo->Ty->isPointerTy() && isa<LoadInst>(Dest);
       break;
-    case LLVMContext::MD_DIAssignID:
-      Keep = IsWholeAccess && isa<StoreInst>(Source) && isa<StoreInst>(Dest);
+    case LLVMContext::MD_DIAssignID: {
+      const auto *OldSI = dyn_cast<StoreInst>(&Source);
+      const auto *NewSI = dyn_cast<StoreInst>(&Dest);
+      // A new address requires updating the linked dbg.assign records.
+      Keep = IsWholeAccess && OldSI && NewSI &&
+             OldSI->getPointerOperand() == NewSI->getPointerOperand();
       break;
+    }
     case LLVMContext::MD_prof:
       Keep =
           IsWholeAccess && ((isa<LoadInst>(Source) && isa<LoadInst>(Dest)) ||
@@ -286,8 +305,12 @@ void llvm::copyMetadataForMemoryAccess(Instruction &Dest,
   } else if (!IsWholeAccess) {
     if (DestByteOffset)
       AA = AA.adjustForAccess(*DestByteOffset, DestInfo->Ty, DL);
-    else
+    else {
+      // A common tag for the whole source also describes any selected part.
+      if (!AA.TBAA && SourceInfo->Ty)
+        AA.TBAA = AA.adjustForAccess(0, SourceInfo->Ty, DL).TBAA;
       AA.TBAAStruct = nullptr;
+    }
   } else {
     // Prefer !tbaa over !tbaa.struct.
     AAMDNodes Adjusted = AA.adjustForAccess(0, DestInfo->Ty, DL);

@@ -136,6 +136,60 @@ define void @splat_scatter(ptr %p, i32 %v) {
   ret void
 }
 
+define i32 @single_struct_noundef(ptr %p) {
+; CHECK-LABEL: define i32 @single_struct_noundef(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[V_UNPACK:%.*]] = load i32, ptr [[P]], align 4, !noundef [[META4]]
+; CHECK-NEXT:    ret i32 [[V_UNPACK]]
+;
+  %v = load {i32}, ptr %p, !noundef !0
+  %x = extractvalue {i32} %v, 0
+  ret i32 %x
+}
+
+define i32 @single_array_noundef(ptr %p) {
+; CHECK-LABEL: define i32 @single_array_noundef(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[V_UNPACK:%.*]] = load i32, ptr [[P]], align 4, !noundef [[META4]]
+; CHECK-NEXT:    ret i32 [[V_UNPACK]]
+;
+  %v = load [1 x i32], ptr %p, !noundef !0
+  %x = extractvalue [1 x i32] %v, 0
+  ret i32 %x
+}
+
+define float @single_struct_fpmath(ptr %p) {
+; CHECK-LABEL: define float @single_struct_fpmath(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[V_UNPACK:%.*]] = load float, ptr [[P]], align 4, !fpmath [[META22:![0-9]+]], !noundef [[META4]], !nofpclass [[META23:![0-9]+]]
+; CHECK-NEXT:    ret float [[V_UNPACK]]
+;
+  %v = load {float}, ptr %p, !fpmath !14, !nofpclass !15, !noundef !0
+  %x = extractvalue {float} %v, 0
+  ret float %x
+}
+
+define float @single_array_fpmath(ptr %p) {
+; CHECK-LABEL: define float @single_array_fpmath(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[V_UNPACK:%.*]] = load float, ptr [[P]], align 4, !fpmath [[META22]], !noundef [[META4]], !nofpclass [[META23]]
+; CHECK-NEXT:    ret float [[V_UNPACK]]
+;
+  %v = load [1 x float], ptr %p, !fpmath !14, !nofpclass !15, !noundef !0
+  %x = extractvalue [1 x float] %v, 0
+  ret float %x
+}
+
+define <2 x i32> @unmask_pcsections(ptr %p) {
+; CHECK-LABEL: define <2 x i32> @unmask_pcsections(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[UNMASKEDLOAD:%.*]] = load <2 x i32>, ptr [[P]], align 1, !pcsections [[META24:![0-9]+]]
+; CHECK-NEXT:    ret <2 x i32> [[UNMASKEDLOAD]]
+;
+  %v = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr %p, <2 x i1> <i1 true, i1 true>, <2 x i32> poison), !pcsections !26
+  ret <2 x i32> %v
+}
+
 !0 = !{}
 !1 = !{i32 1}
 !2 = !{!"preserved memory metadata"}
@@ -162,6 +216,8 @@ define void @splat_scatter(ptr %p, i32 %v) {
 !23 = !{!"nvvm.l1_eviction", !"first"}
 !24 = !{!"branch_weights", i32 10}
 !25 = !{i64 8}
+!26 = !{!"test_section", !27}
+!27 = !{i32 42}
 ;.
 ; CHECK: [[INT_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; CHECK: [[META1]] = !{!"int", [[META2:![0-9]+]], i64 0}
@@ -185,4 +241,8 @@ define void @splat_scatter(ptr %p, i32 %v) {
 ; CHECK: [[META19]] = !{i32 0, [[META20:![0-9]+]]}
 ; CHECK: [[META20]] = !{!"nvvm.l1_eviction", !"first"}
 ; CHECK: [[RNG21]] = !{i32 0, i32 100}
+; CHECK: [[META22]] = !{float 2.500000e+00}
+; CHECK: [[META23]] = !{i32 3}
+; CHECK: [[META24]] = !{!"test_section", [[META25:![0-9]+]]}
+; CHECK: [[META25]] = !{i32 42}
 ;.

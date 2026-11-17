@@ -408,10 +408,16 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     BaseFragments[getAggregateVariable(DVR)] =
         DVR->getExpression()->getFragmentInfo();
 
-  // The new inst needs a DIAssignID unique metadata tag (if OldInst has
-  // one). It shouldn't already have one: assert this assumption.
-  assert(!Inst->getMetadata(LLVMContext::MD_DIAssignID));
-  DIAssignID *NewID = nullptr;
+  // Reuse an assignment ID copied for an unsplit store at the same address.
+  auto *NewID =
+      cast_or_null<DIAssignID>(Inst->getMetadata(LLVMContext::MD_DIAssignID));
+  if (NewID) {
+    assert(!IsSplit &&
+           NewID == OldInst->getMetadata(LLVMContext::MD_DIAssignID) &&
+           "unexpected assignment ID on replacement instruction");
+    // Deleting OldInst must not delete the records now linked to Inst.
+    OldInst->setMetadata(LLVMContext::MD_DIAssignID, nullptr);
+  }
   auto &Ctx = Inst->getContext();
   DIBuilder DIB(*OldInst->getModule(), /*AllowUnresolved*/ false);
   assert(OldAlloca->isStaticAlloca());
@@ -478,7 +484,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     } else {
       // The store is not split, simply steal the existing dbg_assign.
       NewAssign = DbgAssign;
-      NewAssign->setAssignId(NewID); // FIXME: Can we avoid generating new IDs?
+      NewAssign->setAssignId(NewID);
       NewAssign->setAddress(Dest);
       if (Value)
         NewAssign->replaceVariableLocationOp(0u, Value);

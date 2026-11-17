@@ -2149,6 +2149,9 @@ bool VectorCombine::foldInsertElementsToStores(Instruction &I) {
       Offset =
           ConstIdx->getZExtValue() * DL->getTypeStoreSize(InsertVal->getType());
     copyMetadataForMemoryAccess(*LastStore, *SI, Offset);
+    // Unchanged lanes remain in memory, so the original assignment still
+    // describes the whole vector after the replacement stores.
+    LastStore->copyMetadata(*SI, LLVMContext::MD_DIAssignID);
     Align ScalarOpAlignment = computeAlignmentAfterScalarization(
         std::max(SI->getAlign(), Load->getAlign()), InsertVal->getType(), Idx,
         *DL);

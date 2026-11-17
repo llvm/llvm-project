@@ -317,6 +317,66 @@ TEST_F(MetadataUtilsTest, AddressSpaceCastChangesInvariantGroupIdentity) {
   EXPECT_FALSE(New->hasMetadata(LLVMContext::MD_invariant_group));
 }
 
+TEST_F(MetadataUtilsTest, SingleElementAggregatePreservesDefinedness) {
+  Type *Types[] = {StructType::get(C, {B.getInt32Ty()}, /*isPacked=*/false),
+                   ArrayType::get(B.getInt32Ty(), 1)};
+  for (Type *Ty : Types) {
+    auto *Old = B.CreateLoad(Ty, P);
+    auto *New = B.CreateLoad(B.getInt32Ty(), P);
+    Old->setMetadata(LLVMContext::MD_noundef, empty());
+    copyMetadataForMemoryAccess(*New, *Old);
+    EXPECT_TRUE(New->hasMetadata(LLVMContext::MD_noundef));
+  }
+}
+
+TEST_F(MetadataUtilsTest, SingleElementAggregatePreservesFloatingPointFacts) {
+  auto *FPMath = MDNode::get(
+      C, {ConstantAsMetadata::get(ConstantFP::get(B.getFloatTy(), 2.5))});
+  auto *NoFPClass = MDNode::get(C, {ConstantAsMetadata::get(B.getInt32(3))});
+  Type *Types[] = {StructType::get(C, {B.getFloatTy()}, /*isPacked=*/false),
+                   ArrayType::get(B.getFloatTy(), 1)};
+  for (Type *Ty : Types) {
+    auto *Old = B.CreateLoad(Ty, P);
+    auto *New = B.CreateLoad(B.getFloatTy(), P);
+    Old->setMetadata(LLVMContext::MD_noundef, empty());
+    Old->setMetadata(LLVMContext::MD_fpmath, FPMath);
+    Old->setMetadata(LLVMContext::MD_nofpclass, NoFPClass);
+    copyMetadataForMemoryAccess(*New, *Old);
+    EXPECT_TRUE(New->hasMetadata(LLVMContext::MD_noundef));
+    EXPECT_EQ(New->getMetadata(LLVMContext::MD_fpmath), FPMath);
+    EXPECT_EQ(New->getMetadata(LLVMContext::MD_nofpclass), NoFPClass);
+  }
+}
+
+TEST_F(MetadataUtilsTest, ShortAccessSelectsCoveringFieldTag) {
+  auto *Old = B.CreateLoad(B.getInt64Ty(), P);
+  auto *New = B.CreateLoad(B.getInt32Ty(), P);
+  MDBuilder MDB(C);
+  auto *Int = MDB.createTBAAScalarTypeNode("int", MDB.createTBAARoot("root"));
+  auto *Tag = MDB.createTBAAStructTagNode(Int, Int, 0);
+  Old->setMetadata(LLVMContext::MD_tbaa_struct,
+                   MDNode::get(C, {number(0), number(8), Tag}));
+  copyMetadataForMemoryAccess(*New, *Old);
+  EXPECT_EQ(New->getMetadata(LLVMContext::MD_tbaa), Tag);
+  EXPECT_FALSE(New->hasMetadata(LLVMContext::MD_tbaa_struct));
+}
+
+TEST_F(MetadataUtilsTest, UnknownOffsetSelectsCommonFieldTag) {
+  auto *Old = B.CreateLoad(FixedVectorType::get(B.getInt32Ty(), 2), P);
+  auto *Index = B.CreateAnd(B.CreateLoad(B.getInt64Ty(), Q), B.getInt64(1));
+  auto *Ptr = B.CreateInBoundsGEP(B.getInt32Ty(), P, Index);
+  auto *New = B.CreateLoad(B.getInt32Ty(), Ptr);
+  MDBuilder MDB(C);
+  auto *Int = MDB.createTBAAScalarTypeNode("int", MDB.createTBAARoot("root"));
+  auto *Tag = MDB.createTBAAStructTagNode(Int, Int, 0);
+  Old->setMetadata(
+      LLVMContext::MD_tbaa_struct,
+      MDNode::get(C, {number(0), number(4), Tag, number(4), number(4), Tag}));
+  copyMetadataForMemoryAccess(*New, *Old, std::nullopt);
+  EXPECT_EQ(New->getMetadata(LLVMContext::MD_tbaa), Tag);
+  EXPECT_FALSE(New->hasMetadata(LLVMContext::MD_tbaa_struct));
+}
+
 TEST_F(MetadataUtilsTest, DefinedAggregateDoesNotDefinePadding) {
   auto *Ty = StructType::get(C, {B.getInt8Ty(), B.getInt32Ty()});
   ASSERT_EQ(M.getDataLayout().getTypeStoreSize(Ty).getFixedValue(), 8u);
@@ -420,6 +480,18 @@ TEST_F(MetadataUtilsTest, StoreFactsRequireWholeAccessAndPointerValue) {
   EXPECT_FALSE(Integer->hasMetadata(LLVMContext::MD_captures));
   EXPECT_FALSE(Part->hasMetadata(LLVMContext::MD_DIAssignID));
   EXPECT_FALSE(Part->hasMetadata(LLVMContext::MD_captures));
+}
+
+TEST_F(MetadataUtilsTest, AssignmentIDRequiresUnchangedStoreAddress) {
+  auto *Old = B.CreateStore(B.getInt32(1), P);
+  auto *Same = B.CreateStore(B.getInt32(1), P);
+  auto *Moved = B.CreateStore(B.getInt32(1), Q);
+  auto *AssignID = DIAssignID::getDistinct(C);
+  Old->setMetadata(LLVMContext::MD_DIAssignID, AssignID);
+  copyMetadataForMemoryAccess(*Same, *Old);
+  copyMetadataForMemoryAccess(*Moved, *Old);
+  EXPECT_EQ(Same->getMetadata(LLVMContext::MD_DIAssignID), AssignID);
+  EXPECT_FALSE(Moved->hasMetadata(LLVMContext::MD_DIAssignID));
 }
 
 TEST_F(MetadataUtilsTest, IntrinsicProfilesAndUnknownMetadataAreNotCopied) {
