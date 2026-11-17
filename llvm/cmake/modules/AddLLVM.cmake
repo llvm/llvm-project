@@ -939,6 +939,17 @@ function(llvm_add_library name)
       if(pch_variant)
         # Link the PCH variant library. This is needed for MSVC.
         target_link_libraries(${name} PRIVATE $<BUILD_LOCAL_INTERFACE:${pch_variant}>)
+        # Archive the object that creates the variant PCH for static libraries.
+        # This ensures that the static library is usable outside of this build
+        # without the variant library. Executables and shared libraries get it
+        # from CMake's link flags.
+        # Exclude the empty TU object because it defines nothing and would just
+        # be noise.
+        get_target_property(lib_type ${name} TYPE)
+        if(lib_type STREQUAL "STATIC_LIBRARY")
+          target_sources(${name} PRIVATE
+            $<FILTER:$<TARGET_OBJECTS:${pch_variant}>,EXCLUDE,llvm_pch_variant_empty>)
+        endif()
       endif()
     endif()
   endif()
