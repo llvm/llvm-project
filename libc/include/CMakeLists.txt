@@ -1050,6 +1050,16 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_timerfd
+  ../libc/include/sys/timerfd.yaml
+  sys/timerfd.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_timerfd_macros
+    .llvm-libc-macros.time_macros
+)
+
+add_header_macro(
   sys_types
   ../libc/include/sys/types.yaml
   sys/types.h
