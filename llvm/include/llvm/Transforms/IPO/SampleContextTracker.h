@@ -101,8 +101,9 @@ public:
   LLVM_ABI void populateFuncToCtxtMap();
   // Query context profile for a specific callee with given name at a given
   // call-site. The full context is identified by location of call instruction.
-  LLVM_ABI FunctionSamples *getCalleeContextSamplesFor(const CallBase &Inst,
-                                                       StringRef CalleeName);
+  LLVM_ABI FunctionSamples *getCalleeContextSamplesFor(
+      const CallBase &Inst, StringRef CalleeName,
+      const HashKeyMap<DenseMap, FunctionId, Function *> &SymbolMap);
   // Get samples for indirect call targets for call site at given location.
   LLVM_ABI std::vector<const FunctionSamples *>
   getIndirectCalleeContextSamplesFor(const DILocation *DIL);

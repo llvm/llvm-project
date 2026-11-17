@@ -223,16 +223,16 @@ void SampleContextTracker::populateFuncToCtxtMap() {
   }
 }
 
-FunctionSamples *
-SampleContextTracker::getCalleeContextSamplesFor(const CallBase &Inst,
-                                                 StringRef CalleeName) {
+FunctionSamples *SampleContextTracker::getCalleeContextSamplesFor(
+    const CallBase &Inst, StringRef CalleeName,
+    const HashKeyMap<DenseMap, FunctionId, Function *> &SymbolMap) {
   LLVM_DEBUG(dbgs() << "Getting callee context for instr: " << Inst << "\n");
   DILocation *DIL = Inst.getDebugLoc();
   if (!DIL)
     return nullptr;
 
   CalleeName = FunctionSamples::getCanonicalFnName(CalleeName);
-  
+
   FunctionId FName = getRepInFormat(CalleeName);
 
   // For indirect call, CalleeName will be empty, in which case the context
@@ -245,6 +245,21 @@ SampleContextTracker::getCalleeContextSamplesFor(const CallBase &Inst,
              << "\n";
     });
     return FSamples;
+  } else {
+    // For functions remapped through stale profile matching, find its profile
+    // from SymbolMap mapping.
+    Function *Callee = Inst.getCalledFunction();
+    ContextTrieNode *CallContext = getContextFor(DIL);
+    if (!CallContext || !Callee)
+      return nullptr;
+    LineLocation CallSite = FunctionSamples::getCallSiteIdentifier(DIL);
+    for (auto &It : CallContext->getAllChildContext()) {
+      if (It.second.getCallSiteLoc() != CallSite)
+        continue;
+      FunctionSamples *FSamples = It.second.getFunctionSamples();
+      if (FSamples && Callee == SymbolMap.lookup(FSamples->getFunction()))
+        return FSamples;
+    }
   }
 
   return nullptr;
