@@ -717,12 +717,7 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
         return false;
       if (RA.getExtraInfo().getStage(*Intf) == RS_Done)
         return false;
-      bool Urgent =
-          !VirtReg.isSpillable() &&
-          (Intf->isSpillable() ||
-           RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(VirtReg.reg())) <
-               RegClassInfo.getNumAllocatableRegs(
-                   MRI->getRegClass(Intf->reg())));
+      bool Urgent = isUrgentEviction(VirtReg, *Intf);
 
       unsigned IntfCascade = RA.getExtraInfo().getCascade(Intf->reg());
       // There is a potential that the model could be adversarial and
