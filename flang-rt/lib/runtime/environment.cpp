@@ -337,8 +337,7 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
       backtrace = (n != 0);
     } else {
       std::fprintf(stderr,
-          "Fortran runtime: FLANG_ERROR_BACKTRACE=%s is invalid; ignored\n",
-          x);
+          "Fortran runtime: FLANG_ERROR_BACKTRACE=%s is invalid; ignored\n", x);
     }
   }
 
