@@ -198,6 +198,9 @@ def hasCLMAD : SubtargetPredicate;
 def hasTcgen05InstSupport : SubtargetPredicate;
 def hasTensormapReplaceSupport : SubtargetPredicate;
 
+def hasTensormapAllocClassSupport
+  : PredAnd<[PTX95, PredOr<[SM90a, SM100f, SM110f, SM120f]>]>;
+
 // Checks Rubin family extensions support.
 //  - TMA S2G im2col_w mode support
 //  - tcgen05.commit shared mem A variants.
@@ -209,7 +212,7 @@ def hasRubinFamilySupport : PredOr<[SM107f]>;
 def hasSPCompress : PredOr<[SM107a]>;
 
 // Checks tcgen05.shift instruction support.
-def hasTcgen05ShiftSupport : PredOr<[SM100a, SM103a, SM110a]>;
+def hasTcgen05ShiftSupport : PredOr<[SM100a, SM103a, SM110a, SM107a]>;
 
 def hasTcgen05MMAScaleInputDImm : PredOr<[SM100f]>;
 def hasTcgen05MMAI8Kind : PredOr<[SM100a, SM110a]>;
@@ -2376,6 +2379,8 @@ def: Pat<(v2i16 (scalar_to_vector i16:$a)),
 def: Pat<(v2i32 (scalar_to_vector i32:$a)),
          (CVT_u64_u32 reg_or_imm:$a, CvtNONE)>;
 def: Pat<(v2f16 (scalar_to_vector f16:$a)),
+         (V2I16toI32 reg_or_fpimm:$a, (i16 0))>;
+def: Pat<(v2bf16 (scalar_to_vector bf16:$a)),
          (V2I16toI32 reg_or_fpimm:$a, (i16 0))>;
 def: Pat<(v2f32 (scalar_to_vector f32:$a)),
          (V2I32toI64 $a, (i32 0))>;

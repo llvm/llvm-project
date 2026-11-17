@@ -144,7 +144,7 @@ public:
       // obscures the lifetime relationship (e.g., shared_ptr from unique_ptr).
       if (IsMoved)
         return;
-      if (PVD->hasAttr<LifetimeBoundAttr>()) {
+      if (paramIsLifetimeBound(*PVD)) {
         // Track that this lifetimebound parameter correctly escapes
         // (via return or via field assignment in a constructor).
         if (isa<ReturnEscapeFact>(OEF) ||

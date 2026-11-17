@@ -229,7 +229,7 @@ func.func @complex_exp(%arg: complex<f32>) -> complex<f32> {
 // CHECK-DAG: %[[EXP_HALF_SIN:.*]] = arith.mulf %[[EXP_HALF]], %[[SIN_IMAG]] : f32
 // CHECK-DAG: %[[IMAG_OVERFLOW:.*]] = arith.mulf %[[EXP_HALF_SIN]], %[[EXP_HALF]] : f32
 // CHECK-DAG: %[[IMAG_NONZERO:.*]] = arith.select %[[IS_INF]], %[[IMAG_OVERFLOW]], %[[IMAG_NORMAL]] : f32
-// CHECK: %[[RESULT_IMAG:.*]] = arith.select %[[IS_IMAG_ZERO]], %[[ZERO]], %[[IMAG_NONZERO]] : f32
+// CHECK: %[[RESULT_IMAG:.*]] = arith.select %[[IS_IMAG_ZERO]], %[[IMAG]], %[[IMAG_NONZERO]] : f32
 // CHECK-DAG: %[[ABS_REAL:.*]] = math.absf %[[REAL]] : f32
 // CHECK-DAG: %[[ABS_IMAG:.*]] = math.absf %[[IMAG]] : f32
 // CHECK-DAG: %[[IMAG_NOT_FINITE:.*]] = arith.cmpf uge, %[[ABS_IMAG]], %[[INF]] : f32
@@ -874,7 +874,7 @@ func.func @complex_exp_with_fmf(%arg: complex<f32>) -> complex<f32> {
 // CHECK-DAG: %[[EXP_HALF_SIN:.*]] = arith.mulf %[[EXP_HALF]], %[[SIN_IMAG]] fastmath<nnan,contract> : f32
 // CHECK-DAG: %[[IMAG_OVERFLOW:.*]] = arith.mulf %[[EXP_HALF_SIN]], %[[EXP_HALF]] fastmath<nnan,contract> : f32
 // CHECK-DAG: %[[IMAG_NONZERO:.*]] = arith.select %[[IS_INF]], %[[IMAG_OVERFLOW]], %[[IMAG_NORMAL]] : f32
-// CHECK: %[[RESULT_IMAG:.*]] = arith.select %[[IS_IMAG_ZERO]], %[[ZERO]], %[[IMAG_NONZERO]] : f32
+// CHECK: %[[RESULT_IMAG:.*]] = arith.select %[[IS_IMAG_ZERO]], %[[IMAG]], %[[IMAG_NONZERO]] : f32
 // CHECK-DAG: %[[ABS_REAL:.*]] = math.absf %[[REAL]] : f32
 // CHECK-DAG: %[[ABS_IMAG:.*]] = math.absf %[[IMAG]] : f32
 // CHECK-DAG: %[[IMAG_NOT_FINITE:.*]] = arith.cmpf uge, %[[ABS_IMAG]], %[[INF]] : f32

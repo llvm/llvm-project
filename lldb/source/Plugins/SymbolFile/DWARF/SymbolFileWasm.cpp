@@ -86,6 +86,7 @@ void SymbolFileWasm::AddSymbols(Symtab &symtab) {
   }
 
   std::vector<Symbol> data_symbols;
+  bool updated_symbols = false;
   DWARFDebugInfo &debug_info = DebugInfo();
   const size_t num_units = debug_info.GetNumUnits();
   for (size_t i = 0; i < num_units; ++i) {
@@ -125,8 +126,10 @@ void SymbolFileWasm::AddSymbols(Symtab &symtab) {
           if (it != demangled_index->end())
             symbol = symtab.SymbolAtIndex(it->second);
         }
-        if (symbol && !symbol->GetMangled().GetMangledName())
+        if (symbol && !symbol->GetMangled().GetMangledName()) {
           symbol->GetMangled().SetMangledName(ConstString(mangled));
+          updated_symbols = true;
+        }
         continue;
       }
 
@@ -184,6 +187,9 @@ void SymbolFileWasm::AddSymbols(Symtab &symtab) {
   // sizes.
   for (const Symbol &symbol : data_symbols)
     symtab.AddSymbol(symbol);
+
+  if (updated_symbols)
+    symtab.SetSymbolFileAddedSymbols();
 }
 
 lldb::offset_t

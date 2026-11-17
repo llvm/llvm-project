@@ -441,6 +441,12 @@ def CIR_AnyIntOrVecOrMatrixOfIntType
     let cppFunctionName = "isIntOrVectorOrMatrixOfIntType";
 }
 
+def CIR_AnyVectorOrMatrixType
+    : AnyTypeOf<[CIR_AnyVectorType, CIR_AnyMatrixType],
+        "vector or matrix type"> {
+    let cppFunctionName = "isVectorOrMatrixType";
+}
+
 def CIR_AnyFloatOrVecOrMatrixOfFloatType
     : AnyTypeOf<[CIR_AnyFloatType, CIR_VectorOfFloatType,
                  CIR_MatrixOfFloatType],
@@ -462,9 +468,7 @@ def CIR_AnyDataMemberType : CIR_TypeBase<"::cir::DataMemberType",
 def CIR_AnyVPtrType : CIR_TypeBase<"::cir::VPtrType", "vptr type">,
       BuildableType<"$_builder.getType<" # cppType # ">()">;
 
-def CIR_PtrToVPtr : CIR_PtrToType<CIR_AnyVPtrType>,
-      BuildableType<"$_builder.getType<" # cppType # ">("
-        "$_builder.getType<::cir::VPtrType>())">;
+def CIR_PtrToVPtr : CIR_PtrToType<CIR_AnyVPtrType>;
 
 //===----------------------------------------------------------------------===//
 // Scalar Type predicates
