@@ -974,8 +974,7 @@ define i1 @exit_one_iteration_after_latch_wider_latch_iv(i32 %n, ptr %p) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[LATCH:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[C:%.*]] = phi i32 [ [[C_NEXT:%.*]], [[LATCH]] ], [ [[N]], [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[Z:%.*]] = icmp eq i32 [[C]], 0
-; CHECK-NEXT:    br i1 [[Z]], label [[FAIL:%.*]], label [[LATCH]]
+; CHECK-NEXT:    br i1 false, label [[FAIL:%.*]], label [[LATCH]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[I]]
 ; CHECK-NEXT:    store i32 [[C]], ptr [[G]], align 4
@@ -1027,8 +1026,7 @@ define void @exit_on_constant_bound_above_latch_count(ptr %p, i32 %n) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LATCH:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
-; CHECK-NEXT:    [[IN_RANGE:%.*]] = icmp samesign ult i32 [[I]], 2147483647
-; CHECK-NEXT:    br i1 [[IN_RANGE]], label [[LATCH]], label [[FAIL:%.*]]
+; CHECK-NEXT:    br i1 true, label [[LATCH]], label [[FAIL:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i32, ptr [[P:%.*]], i32 [[I]]
 ; CHECK-NEXT:    store i32 0, ptr [[G]], align 4
