@@ -203,7 +203,7 @@ def FeatureNV : Extension<"nv", "NV", "FEAT_NV, FEAT_NV2",
 //  Armv8.4 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureLSE2 : Extension<"lse2", "LSE2", "FEAT_LSE2",
+def FeatureLSE2 : ExtensionWithMArch<"lse2", "LSE2", "FEAT_LSE2",
   "Enable Armv8.4-A Large System Extension 2 (LSE2) atomicity rules">;
 
 def FeatureFP16FML : ExtensionWithMArch<"fp16fml", "FP16FML", "FEAT_FHM",
@@ -1100,7 +1100,8 @@ def HasV8_4aOps : Architecture64<8, 4, "a", "v8.4a",
   [HasV8_3aOps, FeatureDotProd, FeatureNV, FeatureMPAM, FeatureDIT,
     FeatureTRACEV8_4, FeatureAM, FeatureSEL2, FeatureTLB_RMI, FeatureFlagM,
     FeatureRCPC_IMMO, FeatureLSE2],
-  !listconcat(HasV8_3aOps.DefaultExts, [FeatureDotProd, FeatureDIT, FeatureFlagM])>;
+  !listconcat(HasV8_3aOps.DefaultExts,
+    [FeatureDotProd, FeatureDIT, FeatureFlagM, FeatureLSE2])>;
 def HasV8_5aOps : Architecture64<8, 5, "a", "v8.5a",
   [HasV8_4aOps, FeatureAltFPCmp, FeatureFRInt3264, FeatureSpecRestrict,
     FeatureSB, FeaturePredRes, FeatureCacheDeepPersist,
@@ -1171,7 +1172,8 @@ def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   // For v8-R, we do not enable crypto and align with GCC that enables a more
   // minimal set of optional architecture extensions.
   !listconcat(
-    !listremove(HasV8_5aOps.DefaultExts, [FeatureBranchTargetId, FeaturePredRes]),
+    !listremove(HasV8_5aOps.DefaultExts,
+      [FeatureBranchTargetId, FeaturePredRes, FeatureLSE2]),
     [FeatureSSBS, FeatureFullFP16, FeatureFP16FML, FeatureSB]
   )>;
 

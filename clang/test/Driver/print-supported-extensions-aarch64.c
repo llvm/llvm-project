@@ -49,6 +49,7 @@
 // CHECK-NEXT:     lscp                FEAT_LSCP                                              Enable Armv9.7-A Load-acquire and store-release pair extension
 // CHECK-NEXT:     lse                 FEAT_LSE                                               Enable Armv8.1-A Large System Extension (LSE) atomic instructions
 // CHECK-NEXT:     lse128              FEAT_LSE128                                            Enable Armv9.4-A 128-bit Atomic instructions
+// CHECK-NEXT:     lse2                FEAT_LSE2                                              Enable Armv8.4-A Large System Extension 2 (LSE2) atomicity rules
 // CHECK-NEXT:     lsfe                FEAT_LSFE                                              Enable Armv9.6-A base Atomic floating-point in-memory instructions
 // CHECK-NEXT:     lsui                FEAT_LSUI                                              Enable Armv9.6-A unprivileged load/store instructions
 // CHECK-NEXT:     lut                 FEAT_LUT                                               Enable Lookup Table instructions

@@ -695,7 +695,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasMatMul)
     Builder.defineMacro("__ARM_FEATURE_MATMUL_INT8", "1");
 
-  if (HasLSE)
+  if (HasLSE2)
+    Builder.defineMacro("__ARM_FEATURE_ATOMICS", "2");
+  else if (HasLSE)
     Builder.defineMacro("__ARM_FEATURE_ATOMICS", "1");
 
   if (HasBFloat16) {
@@ -934,6 +936,7 @@ void AArch64TargetInfo::computeFeatureLookup() {
       .Case("sm4", HasSM4)
       .Case("rdm", HasRDM)
       .Case("lse", HasLSE)
+      .Case("lse2", HasLSE2)
       .Case("crc", HasCRC)
       .Case("cssc", HasCSSC)
       .Case("sha2", HasSHA2)
@@ -1341,6 +1344,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasBFloat16 = true;
     if (Feature == "+lse")
       HasLSE = true;
+    if (Feature == "+lse2")
+      HasLSE2 = true;
     if (Feature == "+ls64")
       HasLS64 = true;
     if (Feature == "+rand")

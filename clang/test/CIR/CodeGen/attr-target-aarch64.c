@@ -44,9 +44,9 @@ __attribute__((target("arch=armv8.6-a+sve2")))
 void v86sve2(void) {}
 
 // CIR:      cir.func{{.*}} @v86sve2()
-// CIR-SAME: "cir.target-features" = "+bf16,+bti,+ccidx,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+predres,+ras,+rcpc,+rdm,+sb,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a"
+// CIR-SAME: "cir.target-features" = "+bf16,+bti,+ccidx,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+lse2,+neon,+pauth,+predres,+ras,+rcpc,+rdm,+sb,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a"
 // LLVM-DAG: define{{.*}} void @v86sve2(){{.*}} #[[ATTR_V86SVE2:[0-9]+]]
-// LLVM-DAG: attributes #[[ATTR_V86SVE2]] = {{.*}}"target-features"="+bf16,+bti,+ccidx,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+predres,+ras,+rcpc,+rdm,+sb,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a"
+// LLVM-DAG: attributes #[[ATTR_V86SVE2]] = {{.*}}"target-features"="+bf16,+bti,+ccidx,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+lse2,+neon,+pauth,+predres,+ras,+rcpc,+rdm,+sb,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a"
 
 // target("cpu=cortex-a710"): cpu override pulls in cortex-a710's baseline.
 __attribute__((target("cpu=cortex-a710")))
@@ -54,9 +54,9 @@ void a710(void) {}
 
 // CIR:      cir.func{{.*}} @a710()
 // CIR-SAME: "cir.target-cpu" = "cortex-a710"
-// CIR-SAME: "cir.target-features" = "+bf16,+bti,+ccidx,+complxnum,+crc,+dit,+dotprod,+ete,+flagm,+fp-armv8,+fp16fml,+fpac,+fullfp16,+i8mm,+jsconv,+lse,+mte,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+ssbs,+sve,+sve-bitperm,+sve2,+trbe,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8a,+v9a"
+// CIR-SAME: "cir.target-features" = "+bf16,+bti,+ccidx,+complxnum,+crc,+dit,+dotprod,+ete,+flagm,+fp-armv8,+fp16fml,+fpac,+fullfp16,+i8mm,+jsconv,+lse,+lse2,+mte,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+ssbs,+sve,+sve-bitperm,+sve2,+trbe,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8a,+v9a"
 // LLVM-DAG: define{{.*}} void @a710(){{.*}} #[[ATTR_A710:[0-9]+]]
-// LLVM-DAG: attributes #[[ATTR_A710]] = {{.*}}"target-cpu"="cortex-a710"{{.*}}"target-features"="+bf16,+bti,+ccidx,+complxnum,+crc,+dit,+dotprod,+ete,+flagm,+fp-armv8,+fp16fml,+fpac,+fullfp16,+i8mm,+jsconv,+lse,+mte,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+ssbs,+sve,+sve-bitperm,+sve2,+trbe,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8a,+v9a"
+// LLVM-DAG: attributes #[[ATTR_A710]] = {{.*}}"target-cpu"="cortex-a710"{{.*}}"target-features"="+bf16,+bti,+ccidx,+complxnum,+crc,+dit,+dotprod,+ete,+flagm,+fp-armv8,+fp16fml,+fpac,+fullfp16,+i8mm,+jsconv,+lse,+lse2,+mte,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+ssbs,+sve,+sve-bitperm,+sve2,+trbe,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8a,+v9a"
 
 // target("tune=cortex-a710"): only tune-cpu changes; no target-cpu, no
 // target-features (global features unchanged from base aarch64 defaults).
@@ -126,9 +126,9 @@ void v1plussve2(void) {}
 
 // CIR:      cir.func{{.*}} @v1plussve2()
 // CIR-SAME: "cir.target-cpu" = "neoverse-v1"
-// CIR-SAME: "cir.target-features" = "+aes,+bf16,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+perfmon,+rand,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a"
+// CIR-SAME: "cir.target-features" = "+aes,+bf16,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+lse2,+neon,+pauth,+perfmon,+rand,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a"
 // LLVM-DAG: define{{.*}} void @v1plussve2(){{.*}} #[[ATTR_V1SVE2:[0-9]+]]
-// LLVM-DAG: attributes #[[ATTR_V1SVE2]] = {{.*}}"target-cpu"="neoverse-v1"{{.*}}"target-features"="+aes,+bf16,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+perfmon,+rand,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a"
+// LLVM-DAG: attributes #[[ATTR_V1SVE2]] = {{.*}}"target-cpu"="neoverse-v1"{{.*}}"target-features"="+aes,+bf16,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+lse2,+neon,+pauth,+perfmon,+rand,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a"
 
 // target("cpu=neoverse-v1+sve2"): cpu+feature without comma; same effect;
 // reuses ATTR_V1SVE2.
@@ -143,9 +143,9 @@ void v1minussve(void) {}
 
 // CIR:      cir.func{{.*}} @v1minussve()
 // CIR-SAME: "cir.target-cpu" = "neoverse-v1"
-// CIR-SAME: "cir.target-features" = "+aes,+bf16,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+perfmon,+rand,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+spe,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a,-sve"
+// CIR-SAME: "cir.target-features" = "+aes,+bf16,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+lse2,+neon,+pauth,+perfmon,+rand,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+spe,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a,-sve"
 // LLVM-DAG: define{{.*}} void @v1minussve(){{.*}} #[[ATTR_V1NOSVE:[0-9]+]]
-// LLVM-DAG: attributes #[[ATTR_V1NOSVE]] = {{.*}}"target-cpu"="neoverse-v1"{{.*}}"target-features"="+aes,+bf16,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+perfmon,+rand,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+spe,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a,-sve"
+// LLVM-DAG: attributes #[[ATTR_V1NOSVE]] = {{.*}}"target-cpu"="neoverse-v1"{{.*}}"target-features"="+aes,+bf16,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jsconv,+lse,+lse2,+neon,+pauth,+perfmon,+rand,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+spe,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a,-sve"
 
 // target("cpu=neoverse-v1,no-sve"): "no-" prefix; same effect; reuses
 // ATTR_V1NOSVE.
@@ -202,10 +202,10 @@ void all(void) {}
 
 // CIR:      cir.func{{.*}} @all()
 // CIR-SAME: "cir.target-cpu" = "neoverse-n1"
-// CIR-SAME: "cir.target-features" = "+aes,+bf16,+bti,+ccidx,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a"
+// CIR-SAME: "cir.target-features" = "+aes,+bf16,+bti,+ccidx,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fullfp16,+i8mm,+jsconv,+lse,+lse2,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a"
 // CIR-SAME: "cir.tune-cpu" = "cortex-a710"
 // LLVM-DAG: define{{.*}} void @all(){{.*}} #[[ATTR_ALL:[0-9]+]]
-// LLVM-DAG: attributes #[[ATTR_ALL]] = {{.*}}"target-cpu"="neoverse-n1"{{.*}}"target-features"="+aes,+bf16,+bti,+ccidx,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a"{{.*}}"tune-cpu"="cortex-a710"
+// LLVM-DAG: attributes #[[ATTR_ALL]] = {{.*}}"target-cpu"="neoverse-n1"{{.*}}"target-features"="+aes,+bf16,+bti,+ccidx,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fullfp16,+i8mm,+jsconv,+lse,+lse2,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a"{{.*}}"tune-cpu"="cortex-a710"
 
 // target("+nosimd"): "+no" prefix for simd; produces no target-features (the
 // negation cancels the default neon, leaving an empty effective delta).
@@ -239,6 +239,6 @@ void applem4(void) {}
 
 // CIR:      cir.func{{.*}} @applem4()
 // CIR-SAME: "cir.target-cpu" = "apple-m4"
-// CIR-SAME: "cir.target-features" = "+aes,+bf16,+bti,+ccidx,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fpac,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+sme,+sme-f64f64,+sme-i16i64,+sme2,+spe-eef,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8.7a,+v8a,+wfxt"
+// CIR-SAME: "cir.target-features" = "+aes,+bf16,+bti,+ccidx,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fpac,+fullfp16,+i8mm,+jsconv,+lse,+lse2,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+sme,+sme-f64f64,+sme-i16i64,+sme2,+spe-eef,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8.7a,+v8a,+wfxt"
 // LLVM-DAG: define{{.*}} void @applem4(){{.*}} #[[ATTR_APPLEM4:[0-9]+]]
-// LLVM-DAG: attributes #[[ATTR_APPLEM4]] = {{.*}}"target-cpu"="apple-m4"{{.*}}"target-features"="+aes,+bf16,+bti,+ccidx,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fpac,+fullfp16,+i8mm,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+sme,+sme-f64f64,+sme-i16i64,+sme2,+spe-eef,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8.7a,+v8a,+wfxt"
+// LLVM-DAG: attributes #[[ATTR_APPLEM4]] = {{.*}}"target-cpu"="apple-m4"{{.*}}"target-features"="+aes,+bf16,+bti,+ccidx,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fpac,+fullfp16,+i8mm,+jsconv,+lse,+lse2,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+sme,+sme-f64f64,+sme-i16i64,+sme2,+spe-eef,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8.7a,+v8a,+wfxt"

@@ -1758,6 +1758,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"profile", "noprofile", "+spe", "-spe"},
       {"ras", "noras", "+ras", "-ras"},
       {"lse", "nolse", "+lse", "-lse"},
+      {"lse2", "nolse2", "+lse2", "-lse2"},
       {"rdm", "nordm", "+rdm", "-rdm"},
       {"sve", "nosve", "+sve", "-sve"},
       {"sve-b16b16", "nosve-b16b16", "+sve-b16b16", "-sve-b16b16"},
