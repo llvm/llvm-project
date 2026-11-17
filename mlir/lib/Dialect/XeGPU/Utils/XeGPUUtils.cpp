@@ -147,6 +147,10 @@ std::string xegpu::getTemporaryLayoutName(const OpResult result) {
   return llvm::formatv("{0}{1}", prefix, result.getResultNumber()).str();
 }
 
+bool xegpu::isLayoutCarrierType(Type type) {
+  return isa<VectorType, xegpu::TensorDescType>(type);
+}
+
 xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
   if (!value)
     return nullptr;

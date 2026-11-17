@@ -188,6 +188,10 @@ template <typename T>
 int getLargestDivisor(T dim, ArrayRef<T> candidates,
                       ArrayRef<T> candidateMultiples = {});
 
+/// Returns true if values of `type` can carry a DistributeLayoutAttr, i.e.
+/// `type` is a vector or a tensor descriptor.
+bool isLayoutCarrierType(Type type);
+
 /// Retrieves the DistributeLayoutAttr associated with a given Value, or nullptr
 /// if none is found. For TensorDescType values it is extracted from the
 /// TensorDescType itself; for an op result, from the attributes of the defining

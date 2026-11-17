@@ -124,7 +124,10 @@ static SmallVector<Region *> getBackwardRegionOrder(Operation *op) {
     auto unvisited = llvm::make_filter_range(regions, [&](Region *region) {
       return !visitedRegions.contains(region);
     });
-    // If no region is ready, break the cycle at an exit region when possible.
+    // If no region is ready, every unvisited region is on a cycle (e.g.
+    // scf.while before <-> after). Break it at an exit region when possible:
+    // its consumers outside the op are already visited, and its in-cycle
+    // successor is then visited after it, like a use across a loop back edge.
     auto findFirst = [&](auto pred) -> Region * {
       auto it = llvm::find_if(unvisited, pred);
       return it == unvisited.end() ? nullptr : *it;
@@ -308,8 +311,7 @@ void xegpu::propagateRegionResultsToYieldOperands(
   regionOp.getSuccessorOperandInputMapping(mapping,
                                            RegionBranchPoint(terminator));
   for (const auto &[successorOperand, successorInputs] : mapping) {
-    if (!isa<VectorType, xegpu::TensorDescType>(
-            successorOperand->get().getType()))
+    if (!xegpu::isLayoutCarrierType(successorOperand->get().getType()))
       continue;
     // Prefer the layout of a region argument, e.g. a loop's iter_arg.
     xegpu::DistributeLayoutAttr layout;

@@ -268,12 +268,13 @@ void LayoutPropagation::visitOperation(Operation *op, LayoutsMutRef operands,
       // All other ops: every vector / tensor_desc operand takes the layout of
       // the first result that has one.
       .Default([&](Operation *op) {
-        auto it = llvm::find_if(results, [](auto layout) { return !!layout; });
+        auto it = llvm::find_if(
+            results, [](auto layout) { return static_cast<bool>(layout); });
         if (it == results.end())
           return;
         for (auto [operandLayout, operand] :
              llvm::zip_equal(operands, op->getOperands()))
-          if (isa<xegpu::TensorDescType, VectorType>(operand.getType()))
+          if (xegpu::isLayoutCarrierType(operand.getType()))
             operandLayout = *it;
       });
 }
@@ -1216,9 +1217,9 @@ void LayoutPropagation::visitRegularOp(Operation *op) {
   SmallVector<xegpu::DistributeLayoutAttr> operandLayouts(op->getNumOperands());
   visitOperation(op, operandLayouts, resultLayouts);
 
-  // For repeated operands, prefer the first non-null requested layout.
-  for (unsigned i : llvm::reverse(llvm::seq(op->getNumOperands())))
-    recordRequestedLayout(op->getOperand(i), operandLayouts[i]);
+  for (auto [operand, layout] :
+       llvm::zip_equal(op->getOperands(), operandLayouts))
+    recordRequestedLayout(operand, layout);
 
   // Anchor visitors have already stored their selected layouts.
   if (isa<xegpu::AnchorLayoutInterface>(op))
@@ -1551,7 +1552,7 @@ static LogicalResult forwardFillRegularOp(mlir::OpBuilder &builder,
   for (OpResult result : op->getResults()) {
     Type resultType = result.getType();
     // Layouts are needed only for vector and tensor descriptor types.
-    if (!isa<VectorType, xegpu::TensorDescType>(resultType))
+    if (!xegpu::isLayoutCarrierType(resultType))
       continue;
     xegpu::DistributeLayoutAttr layout = getLayoutOfValue(result);
     if (!layout) {
@@ -1747,7 +1748,6 @@ struct XeGPUPropagateLayoutPass final
       : XeGPUPropagateLayoutBase(std::move(options)) {}
   void runOnOperation() override;
 };
-
 } // namespace
 
 /// Assign each region result the layout of the terminator operand forwarded
@@ -1795,7 +1795,7 @@ static LogicalResult updateFunctionOpInterface(mlir::OpBuilder &builder,
   for (BlockArgument arg : funcOp.getArguments()) {
     Type argType = arg.getType();
     newArgTypes.push_back(argType);
-    if (!isa<VectorType, xegpu::TensorDescType>(argType))
+    if (!xegpu::isLayoutCarrierType(argType))
       continue;
     xegpu::DistributeLayoutAttr layout = getLayoutOfValue(arg);
     if (!layout) {
