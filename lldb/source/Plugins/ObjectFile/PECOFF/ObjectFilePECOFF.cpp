@@ -955,9 +955,9 @@ std::unique_ptr<CallFrameInfo> ObjectFilePECOFF::CreateCallFrameInfo() {
                                            data_dir_exception.vmsize);
 }
 
-lldb::addr_t ObjectFilePECOFF::GetTlsIndexAddress() const {
+lldb::addr_t ObjectFilePECOFF::GetTlsIndexAddress() {
   addr_t addr = LLDB_INVALID_ADDRESS;
-  if (!m_binary)
+  if (!CreateBinary())
     return addr;
   if (m_binary->is64()) {
     if (m_binary->getTLSDirectory64())
@@ -1115,6 +1115,8 @@ UUID ObjectFilePECOFF::GetUUID() {
 std::optional<FileSpec> ObjectFilePECOFF::GetDebugLink() {
   std::string gnu_debuglink_file;
   uint32_t gnu_debuglink_crc;
+  if (!CreateBinary())
+    return std::nullopt;
   if (GetDebugLinkContents(*m_binary, gnu_debuglink_file, gnu_debuglink_crc))
     return FileSpec(gnu_debuglink_file);
   return std::nullopt;
@@ -1123,6 +1125,8 @@ std::optional<FileSpec> ObjectFilePECOFF::GetDebugLink() {
 std::optional<FileSpec> ObjectFilePECOFF::GetPDBPath() {
   llvm::StringRef pdb_file;
   const llvm::codeview::DebugInfo *pdb_info = nullptr;
+  if (!CreateBinary())
+    return std::nullopt;
   if (llvm::Error Err = m_binary->getDebugPDBInfo(pdb_info, pdb_file)) {
     // DebugInfo section is corrupt.
     Log *log = GetLog(LLDBLog::Object);
