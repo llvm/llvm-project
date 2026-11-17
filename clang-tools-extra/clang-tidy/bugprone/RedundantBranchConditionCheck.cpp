@@ -395,6 +395,8 @@ void RedundantBranchConditionCheck::check(
   }
   bool IsTransformValid = true;
   llvm::SmallVector<FixItHint, 8> IfBodyFixIts;
+  const SourceManager &SM = (*Result.Context).getSourceManager();
+  const LangOptions &LangOpts = (*Result.Context).getLangOpts();
   const SourceLocation IfBegin = InnerIf->getBeginLoc();
   if (!FixItResult.HasSideEffect) {
     const auto IfBeginToRParenRg =
@@ -435,8 +437,17 @@ void RedundantBranchConditionCheck::check(
     // remove else part as not used.
     const Stmt *ElseBody = InnerIf->getElse();
     if (ElseBody) {
-      const auto ElseRg = CharSourceRange::getTokenRange(InnerIf->getElseLoc(),
-                                                         ElseBody->getEndLoc());
+      CharSourceRange ElseRg;
+      if (const auto *CS = dyn_cast<CompoundStmt>(ElseBody)) {
+        ElseRg = CharSourceRange::getTokenRange(
+            InnerIf->getElseLoc(), // this to get else 'keyword' location
+            CS->getRBracLoc());
+      } else {
+        const auto ElseEndLocWithSemi = Lexer::findLocationAfterToken(
+            ElseBody->getEndLoc(), tok::semi, SM, LangOpts, true);
+        ElseRg = CharSourceRange::getTokenRange(InnerIf->getElseLoc(),
+                                                ElseEndLocWithSemi);
+      }
       if (ElseRg.isValid())
         IfBodyFixIts.push_back(FixItHint::CreateRemoval(ElseRg));
       else
@@ -446,14 +457,21 @@ void RedundantBranchConditionCheck::check(
   if (FixItResult.ExprKind == SimpliFiedExprKind::False) {
     // remove if body
     const Stmt *IfBody = InnerIf->getThen();
+    CharSourceRange IfBodyRg;
     if (const auto *CS = dyn_cast<CompoundStmt>(IfBody)) {
-      const auto IfBodyRg =
+      IfBodyRg =
           CharSourceRange::getTokenRange(CS->getLBracLoc(), CS->getRBracLoc());
-      if (IfBodyRg.isValid())
-        IfBodyFixIts.push_back(FixItHint::CreateRemoval(IfBodyRg));
-      else
-        IsTransformValid = false;
+    } else { // remove extra semicolon on removing singleton expression.
+      const auto IfEndLocWithSemi = Lexer::findLocationAfterToken(
+          IfBody->getEndLoc(), tok::semi, SM, LangOpts, true);
+      IfBodyRg = CharSourceRange::getTokenRange(IfBody->getBeginLoc(),
+                                                IfEndLocWithSemi);
     }
+    if (IfBodyRg.isValid())
+      IfBodyFixIts.push_back(FixItHint::CreateRemoval(IfBodyRg));
+    else
+      IsTransformValid = false;
+
     const Stmt *ElseBody = InnerIf->getElse();
     if (ElseBody) {
       // remove else word as not needed
