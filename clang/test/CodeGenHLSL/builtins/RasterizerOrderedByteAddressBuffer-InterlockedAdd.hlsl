@@ -2,6 +2,8 @@
 // RUN:   dxil-pc-shadermodel6.6-library %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,DXCHECK
 
+using namespace hlsl;
+
 // SPIR-V codegen for RasterizerOrderedByteAddressBuffer is not implemented
 // yet. Add a `spirv-pc-vulkan1.3-library` RUN line here when SPIR-V ROV
 // support lands. See https://github.com/llvm/llvm-project/issues/124585.

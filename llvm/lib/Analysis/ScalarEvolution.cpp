@@ -4372,14 +4372,11 @@ bool ScalarEvolution::checkValidity(const SCEV *S) const {
 }
 
 bool ScalarEvolution::containsAddRecurrence(const SCEV *S) {
-  HasRecMapType::iterator I = HasRecMap.find(S);
-  if (I != HasRecMap.end())
-    return I->second;
-
-  bool FoundAddRec =
-      SCEVExprContains(S, [](const SCEV *S) { return isa<SCEVAddRecExpr>(S); });
-  HasRecMap.insert({S, FoundAddRec});
-  return FoundAddRec;
+  auto [I, Inserted] = HasRecMap.try_emplace(S);
+  if (Inserted)
+    I->second = SCEVExprContains(
+        S, [](const SCEV *S) { return isa<SCEVAddRecExpr>(S); });
+  return I->second;
 }
 
 /// Return the ValueOffsetPair set for \p S. \p S can be represented
@@ -6859,7 +6856,7 @@ const ConstantRange &ScalarEvolution::getRangeRef(
 
         for (const auto &Op : Phi->operands()) {
           auto OpRange = getRangeRef(getSCEV(Op), SignHint, Depth + 1);
-          RangeFromOps = RangeFromOps.unionWith(OpRange);
+          RangeFromOps = RangeFromOps.unionWith(OpRange, RangeType);
           // No point to continue if we already have a full set.
           if (RangeFromOps.isFullSet())
             break;
@@ -6868,6 +6865,11 @@ const ConstantRange &ScalarEvolution::getRangeRef(
             ConservativeResult.intersectWith(RangeFromOps, RangeType);
       }
     }
+
+    const APInt *TrueC, *FalseC;
+    if (match(V, m_Select(m_Value(), m_APInt(TrueC), m_APInt(FalseC))))
+      ConservativeResult = ConservativeResult.intersectWith(
+          ConstantRange(*TrueC).unionWith(*FalseC, RangeType), RangeType);
 
     // vscale can't be equal to zero
     if (const auto *II = dyn_cast<IntrinsicInst>(V))
@@ -14569,10 +14571,11 @@ void ScalarEvolution::forgetMemoizedResultsImpl(const SCEV *S) {
   }
 
   auto FoldUser = FoldCacheUser.find(S);
-  if (FoldUser != FoldCacheUser.end())
+  if (FoldUser != FoldCacheUser.end()) {
     for (auto &KV : FoldUser->second)
       FoldCache.erase(KV);
-  FoldCacheUser.erase(S);
+    FoldCacheUser.erase(FoldUser);
+  }
 }
 
 void
@@ -15703,42 +15706,21 @@ static bool isDivisibilityGuard(const SCEV *LHS, const SCEV *RHS,
 // recursively. This is done by aligning up/down the constant value to the
 // Divisor.
 static const SCEV *applyDivisibilityOnMinMaxExpr(const SCEV *MinMaxExpr,
-                                                 APInt Divisor,
+                                                 const APInt &Divisor,
                                                  ScalarEvolution &SE) {
-  // Return true if \p Expr is a MinMax SCEV expression with a non-negative
-  // constant operand. If so, return in \p SCTy the SCEV type and in \p RHS
-  // the non-constant operand and in \p LHS the constant operand.
-  auto IsMinMaxSCEVWithNonNegativeConstant =
-      [&](const SCEV *Expr, SCEVTypes &SCTy, const SCEV *&LHS,
-          const SCEV *&RHS) {
-        if (auto *MinMax = dyn_cast<SCEVMinMaxExpr>(Expr)) {
-          if (MinMax->getNumOperands() != 2)
-            return false;
-          if (auto *C = dyn_cast<SCEVConstant>(MinMax->getOperand(0))) {
-            if (C->getAPInt().isNegative())
-              return false;
-            SCTy = MinMax->getSCEVType();
-            LHS = MinMax->getOperand(0);
-            RHS = MinMax->getOperand(1);
-            return true;
-          }
-        }
-        return false;
-      };
-
-  const SCEV *MinMaxLHS = nullptr, *MinMaxRHS = nullptr;
-  SCEVTypes SCTy;
-  if (!IsMinMaxSCEVWithNonNegativeConstant(MinMaxExpr, SCTy, MinMaxLHS,
-                                           MinMaxRHS))
+  // Only handle min/max expressions of a non-negative constant and another
+  // operand.
+  const SCEVConstant *C;
+  const SCEV *Op;
+  if (!match(MinMaxExpr, m_scev_MinMax(m_SCEVConstant(C), m_SCEV(Op))) ||
+      C->getAPInt().isNegative())
     return MinMaxExpr;
-  auto IsMin = isa<SCEVSMinExpr>(MinMaxExpr) || isa<SCEVUMinExpr>(MinMaxExpr);
-  assert(SE.isKnownNonNegative(MinMaxLHS) && "Expected non-negative operand!");
-  auto *DivisibleExpr =
-      IsMin ? getPreviousSCEVDivisibleByDivisor(MinMaxLHS, Divisor, SE)
-            : getNextSCEVDivisibleByDivisor(MinMaxLHS, Divisor, SE);
-  SmallVector<SCEVUse> Ops = {
-      applyDivisibilityOnMinMaxExpr(MinMaxRHS, Divisor, SE), DivisibleExpr};
-  return SE.getMinMaxExpr(SCTy, Ops);
+  auto *DivisibleExpr = isa<SCEVSMinExpr, SCEVUMinExpr>(MinMaxExpr)
+                            ? getPreviousSCEVDivisibleByDivisor(C, Divisor, SE)
+                            : getNextSCEVDivisibleByDivisor(C, Divisor, SE);
+  SmallVector<SCEVUse> Ops = {applyDivisibilityOnMinMaxExpr(Op, Divisor, SE),
+                              DivisibleExpr};
+  return SE.getMinMaxExpr(MinMaxExpr->getSCEVType(), Ops);
 }
 
 void ScalarEvolution::LoopGuards::collectFromBlock(
@@ -16119,10 +16101,14 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     SmallPtrSet<const SCEV *, 16> ToRewrite(llvm::from_range, ExprsToRewrite);
     std::function<const SCEV *(const SCEV *)> Lookup = [&](const SCEV *Expr) {
       if (Depth < MaxDepth && ToRewrite.erase(Expr)) {
-        const SCEV *RewriteTo = Guards.RewriteMap[Expr];
-        Guards.RewriteMap.erase(Expr);
+        auto It = Guards.RewriteMap.find(Expr);
+        assert(It != Guards.RewriteMap.end() && "Expected rewrite entry");
+        const SCEV *RewriteTo = It->second;
+        Guards.RewriteMap.erase(It);
         SaveAndRestore Nest(Depth, Depth + 1);
-        Guards.RewriteMap[Expr] = Guards.rewrite(RewriteTo, Lookup);
+        const SCEV *Rewritten = Guards.rewrite(RewriteTo, Lookup);
+        Guards.RewriteMap[Expr] = Rewritten;
+        return Rewritten;
       }
       return Guards.RewriteMap.lookup(Expr);
     };
@@ -16164,27 +16150,20 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(
         FlagMask = ScalarEvolution::setFlags(FlagMask, SCEV::FlagNSW);
     }
 
+    const SCEV *visit(const SCEV *Expr) {
+      if (isa<SCEVUnknown, SCEVPtrToAddrExpr, SCEVZeroExtendExpr,
+              SCEVSignExtendExpr, SCEVUMinExpr, SCEVSMinExpr, SCEVAddExpr>(
+              Expr))
+        if (const SCEV *S = lookup(Expr))
+          return S;
+      return SCEVRewriteVisitor::visit(Expr);
+    }
+
     const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) { return Expr; }
 
-    const SCEV *visitUnknown(const SCEVUnknown *Expr) {
-      if (const SCEV *S = lookup(Expr))
-        return S;
-      return Expr;
-    }
-
-    const SCEV *visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) {
-      if (const SCEV *S = lookup(Expr))
-        return S;
-      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitPtrToAddrExpr(
-          Expr);
-    }
-
     const SCEV *visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
-      if (const SCEV *S = lookup(Expr))
-        return S;
-
-      // If we didn't find the extact ZExt expr in the map, check if there's
-      // an entry for a smaller ZExt we can use instead.
+      // If there is no replacement for the exact ZExt expr, check if there's
+      // one for a smaller ZExt we can use instead.
       Type *Ty = Expr->getType();
       const SCEV *Op = Expr->getOperand(0);
       unsigned Bitwidth = Ty->getScalarSizeInBits() / 2;
@@ -16197,33 +16176,10 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(
         Bitwidth = Bitwidth / 2;
       }
 
-      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitZeroExtendExpr(
-          Expr);
-    }
-
-    const SCEV *visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
-      if (const SCEV *S = lookup(Expr))
-        return S;
-      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitSignExtendExpr(
-          Expr);
-    }
-
-    const SCEV *visitUMinExpr(const SCEVUMinExpr *Expr) {
-      if (const SCEV *S = lookup(Expr))
-        return S;
-      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitUMinExpr(Expr);
-    }
-
-    const SCEV *visitSMinExpr(const SCEVSMinExpr *Expr) {
-      if (const SCEV *S = lookup(Expr))
-        return S;
-      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitSMinExpr(Expr);
+      return SCEVRewriteVisitor::visitZeroExtendExpr(Expr);
     }
 
     const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
-      if (const SCEV *S = lookup(Expr))
-        return S;
-
       // Helper to check if S is a subtraction (A - B) where A != B, and if so,
       // return UMax(S, 1).
       auto RewriteSubtraction = [&](const SCEV *S) -> const SCEV * {
@@ -16281,8 +16237,7 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(
       SmallVector<SCEVUse, 2> Operands;
       bool Changed = false;
       for (SCEVUse Op : Expr->operands()) {
-        Operands.push_back(
-            SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visit(Op));
+        Operands.push_back(visit(Op));
         Changed |= Op != Operands.back();
       }
       // We are only replacing operands with equivalent values, so transfer the
@@ -16297,8 +16252,7 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(
       SmallVector<SCEVUse, 2> Operands;
       bool Changed = false;
       for (SCEVUse Op : Expr->operands()) {
-        Operands.push_back(
-            SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visit(Op));
+        Operands.push_back(visit(Op));
         Changed |= Op != Operands.back();
       }
       // We are only replacing operands with equivalent values, so transfer the

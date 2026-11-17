@@ -456,18 +456,18 @@ def LoaderReplaceable : StrBoolAttr<"loader-replaceable">;
 // CompatRuleStrAttr takes the compare function and the string attribute for
 // checking compatibility for inline substitution.
 class CompatRule<string F> {
-  // The function's signature must match "bool(const Function&, const
-  // Function&)", where the first parameter is the reference to the caller and
-  // the second parameter is the reference to the callee. It must return false
-  // if the attributes of the caller and callee are incompatible, and true
-  // otherwise.
+  // The function's signature must match "bool(AttributeSet, AttributeSet)",
+  // where the first parameter is the function attributes of the caller and
+  // the second parameter is the function attributes of the callee. It must
+  // return false if the attributes of the caller and callee are incompatible,
+  // and true otherwise.
   string CompatFunc = F;
   string AttrName = "";
 }
 
 class CompatRuleStrAttr<string F, string Attr> : CompatRule<F> {
   // The checker function is extended with an third argument as the function
-  // attribute string "bool(const Function&, const Function&, const StringRef&)".
+  // attribute string "bool(AttributeSet, AttributeSet, StringRef)".
   string AttrName = Attr;
 }
 

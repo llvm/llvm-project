@@ -315,6 +315,15 @@ define <4 x i8> @neg_bitextract_vec_in_range(<4 x b32> %x) {
   ret <4 x i8> %r
 }
 
+define <4 x i8> @bitextract_vec_non_splat_out_of_range(<4 x b32> %x) {
+; CHECK-LABEL: define <4 x i8> @bitextract_vec_non_splat_out_of_range(
+; CHECK-SAME: <4 x b32> [[X:%.*]]) {
+; CHECK-NEXT:    ret <4 x i8> poison
+;
+  %r = bitextract <4 x i8>, <4 x b32> %x, <4 x i32> <i32 25, i32 32, i32 poison, i32 -1>
+  ret <4 x i8> %r
+}
+
 ; Only the last lane is out of range.
 define <4 x i8> @neg_bitextract_vec_non_splat_offset(<4 x b32> %x) {
 ; CHECK-LABEL: define <4 x i8> @neg_bitextract_vec_non_splat_offset(
@@ -352,6 +361,15 @@ define <4 x b32> @neg_bitinsert_vec_in_range(<4 x b32> %x, <4 x i8> %y) {
 ; CHECK-NEXT:    ret <4 x b32> [[R]]
 ;
   %r = bitinsert <4 x b32> %x, <4 x i8> %y, <4 x i32> splat (i32 24)
+  ret <4 x b32> %r
+}
+
+define <4 x b32> @bitinsert_vec_non_splat_out_of_range(<4 x b32> %x, <4 x i8> %y) {
+; CHECK-LABEL: define <4 x b32> @bitinsert_vec_non_splat_out_of_range(
+; CHECK-SAME: <4 x b32> [[X:%.*]], <4 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    ret <4 x b32> poison
+;
+  %r = bitinsert <4 x b32> %x, <4 x i8> %y, <4 x i32> <i32 25, i32 32, i32 poison, i32 -1>
   ret <4 x b32> %r
 }
 
