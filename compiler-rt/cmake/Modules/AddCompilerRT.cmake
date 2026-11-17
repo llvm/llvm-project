@@ -454,7 +454,8 @@ function(add_compiler_rt_runtime name type)
         endif()
       endif()
       find_program(CODESIGN codesign)
-      if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*" AND CODESIGN)
+      get_filename_component(CLANG_LINKER_NAME "${CMAKE_LINKER}" NAME)
+      if (APPLE AND NOT CLANG_LINKER_NAME MATCHES "lld" AND CODESIGN)
         # Apple's linker signs the resulting dylib with an ad-hoc code signature in
         # most situations, except:
         # 1. Versions of ld64 prior to ld64-609 in Xcode 12 predate this behavior.
@@ -485,6 +486,7 @@ function(add_compiler_rt_runtime name type)
           COMMAND_EXPAND_LISTS
         )
       endif()
+      unset(CLANG_LINKER_NAME)
     endif()
 
     set(parent_target_arg)

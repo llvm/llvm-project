@@ -563,6 +563,21 @@ void cir::AllocaOp::build(mlir::OpBuilder &odsBuilder,
   odsState.addTypes(addr);
 }
 
+bool cir::usesRelativeVTables(mlir::ModuleOp mod) {
+  auto loweringOpts = mod->getAttrOfType<cir::LoweringOptionsAttr>(
+      cir::CIRDialect::getLoweringOptionsAttrName());
+  return loweringOpts && loweringOpts.getRelativeCxxAbiVtables();
+}
+
+uint64_t cir::getVTableEntrySize(mlir::ModuleOp mod,
+                                 const mlir::DataLayout &dataLayout) {
+  // Relative layout entries are 32-bit offsets.
+  if (usesRelativeVTables(mod))
+    return 4;
+  return dataLayout.getTypeSize(
+      cir::PointerType::get(cir::VoidType::get(mod.getContext())));
+}
+
 cir::AllocaOp cir::getUnderlyingAlloca(mlir::Value addr) {
   mlir::Value ptr = addr;
   while (cir::CastOp castOp = ptr.getDefiningOp<cir::CastOp>()) {
@@ -2867,9 +2882,24 @@ cir::VTableAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   std::optional<mlir::Attribute> init = op.getInitialValue();
   if (!init)
     return success();
-  if (!isa<cir::VTableAttr>(*init))
+  auto vtable = dyn_cast<cir::VTableAttr>(*init);
+  if (!vtable)
     return emitOpError("Expected #cir.vtable in initializer for global '")
            << name << "'";
+
+  // The address point has to be the one that the vtable records for the
+  // array that it points into.
+  cir::AddressPointAttr addressPoint = getAddressPoint();
+  mlir::ArrayAttr addressPoints = vtable.getAddressPoints();
+  if (addressPoint.getIndex() < 0 ||
+      static_cast<size_t>(addressPoint.getIndex()) >= addressPoints.size())
+    return emitOpError("address point refers to vtable ")
+           << addressPoint.getIndex() << ", but '" << name << "' has "
+           << addressPoints.size() << " vtables";
+  if (addressPoint != addressPoints[addressPoint.getIndex()])
+    return emitOpError("address point ")
+           << addressPoint << " does not match the address point "
+           << addressPoints[addressPoint.getIndex()] << " of '" << name << "'";
   return success();
 }
 
@@ -3965,10 +3995,12 @@ void cir::CoroutineOp::getSuccessorRegions(
   }
 
   // body can fall through into final_suspend (co_return), exit directly
-  // from any suspend_point inside it that just suspends, or reach destroy,
-  // either from a suspend_point being destroyed, or from an exception
-  // escaping body's own catch-all.
+  // from any suspend_point inside it that just suspends, or reach destroy
+  // from a suspend_point being destroyed. An exception that escapes body, for
+  // example one that unhandled_exception() rethrows, will leave through the
+  // unwind region once it is implemented.
   if (parent == &getBody()) {
+    assert(!cir::MissingFeatures::coroUnwindRegion());
     regions.emplace_back(&getFinalSuspend());
     regions.emplace_back(&getExit());    // any suspend_point inside body
     regions.emplace_back(&getDestroy()); // destroy() on any suspend inside body
@@ -3986,13 +4018,9 @@ void cir::CoroutineOp::getSuccessorRegions(
     return;
   }
 
-  // destroy has two possible outcomes depending on why it was entered:
-  // ordinary destroy dispatch falls through to exit (normal return); an
-  // exception that reached destroy needs to keep propagating instead, i.e.
-  // leave the whole op rather than go through exit's cir.return.
+  // destroy falls through to exit (normal return).
   if (parent == &getDestroy()) {
     regions.emplace_back(&getExit());
-    regions.push_back(RegionSuccessor(getOperation())); // unwind out of the op
     return;
   }
   // exit always terminates the op there's no region it loops back into.
@@ -4666,31 +4694,36 @@ OpFoldResult cir::VecShuffleOp::fold(FoldAdaptor adaptor) {
   }
 
   return cir::ConstVectorAttr::get(
-      getType(), mlir::ArrayAttr::get(getContext(), elements));
+      mlir::cast<cir::VectorType>(getType()),
+      mlir::ArrayAttr::get(getContext(), elements));
 }
 
 LogicalResult cir::VecShuffleOp::verify() {
-  if (getVec1().getType().isScalable() || getVec2().getType().isScalable() ||
-      getResult().getType().isScalable())
+  if (!mlir::isa<cir::VectorType>(getType()))
+    return success();
+
+  auto vec1Ty = mlir::cast<cir::VectorType>(getVec1().getType());
+  auto vec2Ty = mlir::cast<cir::VectorType>(getVec2().getType());
+  auto resultTy = mlir::cast<cir::VectorType>(getResult().getType());
+  if (vec1Ty.isScalable() || vec2Ty.isScalable() || resultTy.isScalable())
     return emitOpError() << "scalable vectors are not supported";
 
   // The number of elements in the indices array must match the number of
   // elements in the result type.
-  if (getIndices().size() != getResult().getType().getFixedSize()) {
+  if (getIndices().size() != resultTy.getFixedSize()) {
     return emitOpError() << ": the number of elements in " << getIndices()
-                         << " and " << getResult().getType() << " don't match";
+                         << " and " << resultTy << " don't match";
   }
 
   // The element types of the two input vectors and of the result type must
   // match.
-  if (getVec1().getType().getElementType() !=
-      getResult().getType().getElementType()) {
+  if (vec1Ty.getElementType() != resultTy.getElementType()) {
     return emitOpError() << ": element types of " << getVec1().getType()
-                         << " and " << getResult().getType() << " don't match";
+                         << " and " << resultTy << " don't match";
   }
 
-  const uint64_t maxValidIndex = getVec1().getType().getFixedSize() +
-                                 getVec2().getType().getFixedSize() - 1;
+  const uint64_t maxValidIndex =
+      vec1Ty.getFixedSize() + vec2Ty.getFixedSize() - 1;
   if (llvm::any_of(
           getIndices().getAsRange<cir::IntAttr>(), [&](cir::IntAttr idxAttr) {
             return idxAttr.getSInt() != -1 && idxAttr.getUInt() > maxValidIndex;
