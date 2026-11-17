@@ -2237,7 +2237,7 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
 ///
 ///   %cst = arith.constant dense<15> : vector<4xi8>
 ///   %cst_0 = arith.constant dense<4> : vector<4xi8>
-///   %0, %1 = vector.deinterleave %in : vector<8xi8>, vector<8xi8>
+///   %0, %1 = vector.deinterleave %in : vector<8xi8> -> vector<4xi8>
 ///   %2 = arith.andi %0, %cst : vector<4xi8>
 ///   %3 = arith.shli %1, %cst_0 : vector<4xi8>
 ///   %4 = arith.ori %2, %3 : vector<4xi8>
