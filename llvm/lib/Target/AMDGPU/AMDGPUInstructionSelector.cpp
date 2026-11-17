@@ -1084,6 +1084,14 @@ bool AMDGPUInstructionSelector::selectG_SBFX_UBFX(MachineInstr &MI) const {
   MachineBasicBlock *MBB = MI.getParent();
 
   bool IsSigned = MI.getOpcode() == TargetOpcode::G_SBFX;
+  if (IsSigned && STI.hasTrue16BitInsts()) {
+    std::optional<ValueAndVReg> Offset =
+        getIConstantVRegValWithLookThrough(OffsetReg, *MRI);
+    std::optional<ValueAndVReg> Width =
+        getIConstantVRegValWithLookThrough(WidthReg, *MRI);
+    if (Offset && Offset->Value == 0 && Width && Width->Value == 16)
+      return selectI16SignExtend(MI, SrcReg);
+  }
   unsigned Opc = IsSigned ? AMDGPU::V_BFE_I32_e64 : AMDGPU::V_BFE_U32_e64;
   auto MIB = BuildMI(*MBB, &MI, DL, TII.get(Opc), DstReg)
                  .addReg(SrcReg)
@@ -2701,6 +2709,38 @@ const RegisterBank *AMDGPUInstructionSelector::getArtifactRegBank(
   return nullptr;
 }
 
+bool AMDGPUInstructionSelector::selectI16SignExtend(MachineInstr &I,
+                                                    Register SrcReg) const {
+  bool RealTrue16 = STI.useRealTrue16Insts();
+  bool IsVGPR =
+      getArtifactRegBank(SrcReg, *MRI, TRI)->getID() == AMDGPU::VGPRRegBankID;
+  unsigned SubReg = AMDGPU::NoSubRegister;
+  bool UseVGPR16 =
+      RealTrue16 && IsVGPR && MRI->getType(SrcReg).getSizeInBits() == 16 &&
+      RBI.constrainGenericRegister(SrcReg, AMDGPU::VGPR_16RegClass, *MRI);
+  if (!UseVGPR16) {
+    const TargetRegisterClass &SourceRC =
+        IsVGPR ? AMDGPU::VGPR_32RegClass : AMDGPU::SReg_32RegClass;
+    if (!RBI.constrainGenericRegister(SrcReg, SourceRC, *MRI))
+      return false;
+    if (RealTrue16 && IsVGPR)
+      SubReg = AMDGPU::lo16;
+  }
+
+  unsigned Opcode = RealTrue16 ? AMDGPU::V_CVT_I32_I16_t16_e64
+                               : AMDGPU::V_CVT_I32_I16_fake16_e64;
+  auto Extend = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode),
+                        I.getOperand(0).getReg());
+  if (RealTrue16)
+    Extend.addImm(0);
+  Extend.addReg(SrcReg, {}, SubReg);
+  if (RealTrue16)
+    Extend.addImm(0);
+  I.eraseFromParent();
+  return RBI.constrainGenericRegister(Extend->getOperand(0).getReg(),
+                                      AMDGPU::VGPR_32RegClass, *MRI);
+}
+
 bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
   bool InReg = I.getOpcode() == AMDGPU::G_SEXT_INREG;
   bool Signed = I.getOpcode() == AMDGPU::G_SEXT || InReg;
@@ -2747,6 +2787,9 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
 
   if (SrcBank->getID() == AMDGPU::VGPRRegBankID && DstSize <= 32) {
     // 64-bit should have been split up in RegBankSelect
+
+    if (Signed && SrcSize == 16 && STI.hasTrue16BitInsts())
+      return selectI16SignExtend(I, SrcReg);
 
     // Try to use an and with a mask if it will save code size.
     unsigned Mask;
