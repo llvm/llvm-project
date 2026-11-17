@@ -586,10 +586,12 @@ UnrollCostEstimator::UnrollCostEstimator(
   // Convergent operations make the remainder prelude unsafe by adding a
   // control-flow dependency, unless the trip count is uniform per
   // UniformityInfo, in which case all paths agree and the remainder is safe.
+  // A loop with a convergence heart does not allow a remainder even then; see
+  // ConvergentOperations.md.
   ConvergenceAllowsRuntime =
-      (Metrics.Convergence != ConvergenceKind::Uncontrolled &&
-       !getLoopConvergenceHeart(L)) ||
-      TripCountIsUniform;
+      !getLoopConvergenceHeart(L) &&
+      (Metrics.Convergence != ConvergenceKind::Uncontrolled ||
+       TripCountIsUniform);
 
   // Don't allow an estimate of size zero.  This would allows unrolling of loops
   // with huge iteration counts, which is a compile time problem even if it's
