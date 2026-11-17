@@ -8,10 +8,12 @@
 //
 // A reachability walk over structured CIR. Each region reports how control
 // leaves it (falling through, break, continue, explicit return, or reaching an
-// `implicit` terminator), and each structured operation combines the exits of
-// its regions according to its semantics. Reachable noreturn calls, user
-// traps and throws are one more kind of exit, the edges CheckFallThrough uses
-// to tell MaybeFallThrough from AlwaysFallThrough.
+// `implicit` terminator). Operations implementing RegionBranchOpInterface are
+// walked through their region successors, narrowed by constant operands;
+// break, continue, switches and cleanup scopes are handled on their own.
+// Reachable noreturn calls, user traps and throws are one more kind of exit,
+// the edges CheckFallThrough uses to tell MaybeFallThrough from
+// AlwaysFallThrough.
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,6 +21,7 @@
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Threading.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "clang/CIR/Dialect/Analysis/CIRConstantFolding.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/ADT/BitmaskEnum.h"
@@ -47,11 +50,7 @@ enum class Exits : uint8_t {
   ImplicitReturn = 1 << 4,
   /// Noreturn call, trap, throw or `__builtin_unreachable`.
   NoReturn = 1 << 5,
-  /// The region's `cir.condition` may be true.
-  CondTrue = 1 << 6,
-  /// The region's `cir.condition` may be false.
-  CondFalse = 1 << 7,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/CondFalse)
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/NoReturn)
 };
 
 /// The exits that leave the whole function.
@@ -122,13 +121,20 @@ public:
   }
 
 private:
-  Exits visitRegion(mlir::Region &region, bool entered);
+  using BranchTerminators =
+      llvm::SmallVectorImpl<mlir::RegionBranchTerminatorOpInterface>;
+
+  /// With `branchTerms`, the reached region branch terminators are collected
+  /// there; otherwise reaching one is a Normal exit.
+  Exits visitRegion(mlir::Region &region, bool entered,
+                    BranchTerminators *branchTerms = nullptr);
   Exits visitStructured(mlir::Operation *op, bool entered);
-  Exits visitLoop(LoopOpInterface loop, bool entered);
+  Exits visitRegionBranch(mlir::RegionBranchOpInterface op, bool entered);
   Exits visitSwitch(SwitchOp op, bool entered);
   Exits visitCleanupScope(CleanupScopeOp op, bool entered);
   void visitTerminator(mlir::Operation *op, Exits &exits,
-                       llvm::SmallVectorImpl<mlir::Block *> &liveSuccessors);
+                       llvm::SmallVectorImpl<mlir::Block *> &liveSuccessors,
+                       BranchTerminators *branchTerms);
 
   FuncOp func;
   GotoTargets gotoTargets;
@@ -165,13 +171,25 @@ private:
 
 } // namespace
 
-/// The outcomes `cond` may have, as `CondTrue` and `CondFalse`: both, unless it
-/// folds to a constant.
-static Exits getCondExits(mlir::Value cond) {
-  std::optional<bool> value = tryFoldConstantBool(cond);
-  if (!value)
-    return Exits::CondTrue | Exits::CondFalse;
-  return *value ? Exits::CondTrue : Exits::CondFalse;
+/// The constant values of `op`'s operands, null where unknown, as the region
+/// branch interfaces take them. Only conditions select successors, so only
+/// `!cir.bool` operands are folded.
+static llvm::SmallVector<mlir::Attribute>
+getConstantOperands(mlir::Operation *op) {
+  return llvm::map_to_vector(op->getOperands(), [](mlir::Value value) {
+    return mlir::isa<BoolType>(value.getType()) ? foldToConstant(value)
+                                                : mlir::Attribute();
+  });
+}
+
+/// Where a `cir.continue` in `loop`'s body goes: where the end of the body
+/// goes.
+static mlir::Region &getLatch(LoopOpInterface loop) {
+  if (mlir::Region *step = loop.maybeGetStep())
+    return *step;
+  if (mlir::Region *cleanup = loop.maybeGetCleanup())
+    return *cleanup;
+  return loop.getCond();
 }
 
 /// `__builtin_assume(0)` is noreturn for the CFG check.
@@ -287,7 +305,8 @@ void GotoTargets::updateTargetAncestors() {
   }
 }
 
-Exits FunctionExitAnalyzer::visitRegion(mlir::Region &region, bool entered) {
+Exits FunctionExitAnalyzer::visitRegion(mlir::Region &region, bool entered,
+                                        BranchTerminators *branchTerms) {
   if (region.empty())
     return entered ? Exits::Normal : Exits::None;
 
@@ -351,7 +370,7 @@ Exits FunctionExitAnalyzer::visitRegion(mlir::Region &region, bool entered) {
         exits |= Exits::NoReturn;
         live = false;
       } else if (&op == terminator) {
-        visitTerminator(&op, exits, liveSuccessors);
+        visitTerminator(&op, exits, liveSuccessors, branchTerms);
         live = false;
       }
     }
@@ -368,12 +387,14 @@ Exits FunctionExitAnalyzer::visitRegion(mlir::Region &region, bool entered) {
 
 void FunctionExitAnalyzer::visitTerminator(
     mlir::Operation *op, Exits &exits,
-    llvm::SmallVectorImpl<mlir::Block *> &liveSuccessors) {
-  if (mlir::isa<YieldOp>(op)) {
-    exits |= Exits::Normal;
-  } else if (auto condOp = mlir::dyn_cast<ConditionOp>(op)) {
-    exits |= getCondExits(condOp.getCondition());
-  } else if (mlir::isa<CoReturnOp>(op)) {
+    llvm::SmallVectorImpl<mlir::Block *> &liveSuccessors,
+    BranchTerminators *branchTerms) {
+  // cir.resume unwinds: its edge to the parent is not a normal exit.
+  if (mlir::isa<ResumeOp>(op))
+    return;
+  // Check the terminators leaving the function first: some are ReturnLike,
+  // and so region branch terminators too.
+  if (mlir::isa<CoReturnOp>(op)) {
     exits |= Exits::ExplicitReturn;
   } else if (auto synthesized =
                  mlir::dyn_cast<SynthesizedTerminatorOpInterface>(op)) {
@@ -384,15 +405,21 @@ void FunctionExitAnalyzer::visitTerminator(
       exits |= Exits::ExplicitReturn;
     else
       exits |= Exits::NoReturn;
+  } else if (auto branchTerm =
+                 mlir::dyn_cast<mlir::RegionBranchTerminatorOpInterface>(op)) {
+    if (branchTerms)
+      branchTerms->push_back(branchTerm);
+    else
+      exits |= Exits::Normal;
   } else if (mlir::isa<BreakOp>(op)) {
     exits |= Exits::Break;
   } else if (mlir::isa<ContinueOp>(op)) {
     exits |= Exits::Continue;
   } else if (auto brCond = mlir::dyn_cast<BrCondOp>(op)) {
-    Exits outcomes = getCondExits(brCond.getCond());
-    if (mayExitVia(outcomes, Exits::CondTrue))
+    std::optional<bool> value = tryFoldConstantBool(brCond.getCond());
+    if (value != false)
       liveSuccessors.push_back(brCond.getDestTrue());
-    if (mayExitVia(outcomes, Exits::CondFalse))
+    if (value != true)
       liveSuccessors.push_back(brCond.getDestFalse());
   } else if (auto gotoOp = mlir::dyn_cast<GotoOp>(op)) {
     gotoTargets.addReachedGoto(gotoOp);
@@ -406,8 +433,6 @@ void FunctionExitAnalyzer::visitTerminator(
 }
 
 Exits FunctionExitAnalyzer::visitStructured(mlir::Operation *op, bool entered) {
-  if (auto loop = mlir::dyn_cast<LoopOpInterface>(op))
-    return visitLoop(loop, entered);
   if (auto switchOp = mlir::dyn_cast<SwitchOp>(op))
     return visitSwitch(switchOp, entered);
   if (auto cleanupScope = mlir::dyn_cast<CleanupScopeOp>(op))
@@ -422,74 +447,84 @@ Exits FunctionExitAnalyzer::visitStructured(mlir::Operation *op, bool entered) {
     return visitRegion(caseOp.getCaseRegion(), entered || dispatched);
   }
 
-  if (auto ifOp = mlir::dyn_cast<IfOp>(op)) {
-    Exits outcomes = getCondExits(ifOp.getCondition());
-    bool thenEntered = entered && mayExitVia(outcomes, Exits::CondTrue);
-    bool elseEntered = entered && mayExitVia(outcomes, Exits::CondFalse);
-    Exits thenExits = visitRegion(ifOp.getThenRegion(), thenEntered);
-    Exits elseExits = visitRegion(ifOp.getElseRegion(), elseEntered);
-    return (thenExits | elseExits) & (Exits::Normal | escapingExits);
-  }
+  // The region successors of other dialects' operations may end in
+  // terminators this analysis does not know.
+  auto regionBranch = mlir::dyn_cast<mlir::RegionBranchOpInterface>(op);
+  if (regionBranch && mlir::isa<CIRDialect>(op->getDialect()))
+    return visitRegionBranch(regionBranch, entered);
 
-  if (auto tryOp = mlir::dyn_cast<TryOp>(op)) {
-    // Like the CFG check, treat every handler as reachable when the try is.
-    Exits exits = visitRegion(tryOp.getTryRegion(), entered);
-    for (mlir::Region &handler : tryOp.getHandlerRegions())
-      exits |= visitRegion(handler, entered);
-    return exits & (Exits::Normal | escapingExits);
-  }
-
-  // Any region may run. Scopes and ternaries complete if a region does; ops
-  // whose regions do not yield control complete whenever reached.
-  bool yieldsControl = mlir::isa<ScopeOp, TernaryOp>(op);
-  Exits exits = entered && !yieldsControl ? Exits::Normal : Exits::None;
-  Exits kept = yieldsControl ? Exits::Normal | escapingExits : escapingExits;
+  // Anything else completes whenever reached.
+  Exits exits = entered ? Exits::Normal : Exits::None;
   for (mlir::Region &region : op->getRegions())
-    exits |= visitRegion(region, entered) & kept;
+    exits |= visitRegion(region, entered) & escapingExits;
   return exits;
 }
 
-Exits FunctionExitAnalyzer::visitLoop(LoopOpInterface loop, bool entered) {
-  bool isDoWhile = &loop.getEntry() == &loop.getBody();
-  bool condEntered = entered && !isDoWhile;
-  bool bodyEntered = entered && isDoWhile;
-  mlir::Region *step = loop.maybeGetStep();
-
-  // Visit the regions in execution order. Another round is only needed when
-  // the loop was not entered from the top but through a goto into it.
-  Exits condExits = Exits::None, bodyExits = Exits::None,
-        stepExits = Exits::None;
-  auto visitBodyAndStep = [&]() {
-    bodyExits = visitRegion(loop.getBody(), bodyEntered);
-    bool reachesLatch = mayExitVia(bodyExits, Exits::Normal | Exits::Continue);
-    if (step) {
-      stepExits = visitRegion(*step, reachesLatch);
-      reachesLatch = mayExitVia(stepExits, Exits::Normal);
+Exits FunctionExitAnalyzer::visitRegionBranch(mlir::RegionBranchOpInterface op,
+                                              bool entered) {
+  enum class Visit : uint8_t { None, Dead, Live };
+  llvm::SmallVector<Visit, 4> visits(op->getNumRegions(), Visit::None);
+  llvm::SmallVector<std::pair<mlir::Region *, bool>, 4> worklist;
+  bool completes = false;
+  auto addSuccessors = [&](llvm::ArrayRef<mlir::RegionSuccessor> successors) {
+    for (const mlir::RegionSuccessor &successor : successors) {
+      if (successor.isOperation())
+        completes = true;
+      else if (visits[successor.getSuccessor()->getRegionNumber()] !=
+               Visit::Live)
+        worklist.push_back({successor.getSuccessor(), true});
     }
-    return reachesLatch;
   };
-  while (true) {
-    if (isDoWhile) {
-      condEntered |= visitBodyAndStep();
-      condExits = visitRegion(loop.getCond(), condEntered);
-      if (!mayExitVia(condExits, Exits::CondTrue) || bodyEntered)
-        break;
-      bodyEntered = true;
-    } else {
-      condExits = visitRegion(loop.getCond(), condEntered);
-      bodyEntered |= mayExitVia(condExits, Exits::CondTrue);
-      if (!visitBodyAndStep() || condEntered)
-        break;
-      condEntered = true;
-    }
+
+  llvm::SmallVector<mlir::RegionSuccessor> successors;
+  if (entered) {
+    op.getEntrySuccessorRegions(getConstantOperands(op), successors);
+    addSuccessors(successors);
   }
 
-  // Breaks and continues stop at the loop; what leaves the function leaves it.
-  Exits exits = (condExits | bodyExits | stepExits) & functionExits;
-  if (mayExitVia(condExits, Exits::CondFalse) ||
-      mayExitVia(bodyExits, Exits::Break))
-    exits |= Exits::Normal;
-  return exits;
+  // Regions control does not enter are still walked when a goto or a switch
+  // dispatch may enter them.
+  bool mayVisitDead = inEnteredSwitch() || gotoTargets.enclosesTarget(op);
+  auto loop = mlir::dyn_cast<LoopOpInterface>(op.getOperation());
+  Exits exits = Exits::None;
+  while (true) {
+    while (!worklist.empty()) {
+      auto [region, live] = worklist.pop_back_val();
+      Visit &visit = visits[region->getRegionNumber()];
+      if (visit == Visit::Live || (visit == Visit::Dead && !live))
+        continue;
+      visit = live ? Visit::Live : Visit::Dead;
+
+      llvm::SmallVector<mlir::RegionBranchTerminatorOpInterface> branchTerms;
+      Exits regionExits = visitRegion(*region, live, &branchTerms);
+      exits |= regionExits & escapingExits;
+      // Falling off the end of a region returns to the operation.
+      if (mayExitVia(regionExits, Exits::Normal))
+        completes = true;
+      for (mlir::RegionBranchTerminatorOpInterface term : branchTerms) {
+        successors.clear();
+        term.getSuccessorRegions(getConstantOperands(term), successors);
+        addSuccessors(successors);
+      }
+      if (loop && mayExitVia(regionExits, Exits::Continue))
+        addSuccessors(mlir::RegionSuccessor(&getLatch(loop)));
+    }
+
+    if (!entered || mayVisitDead) {
+      for (mlir::Region &region : op->getRegions())
+        if (visits[region.getRegionNumber()] == Visit::None)
+          worklist.push_back({&region, false});
+    }
+    if (worklist.empty())
+      break;
+  }
+
+  // Breaks and continues stop at a loop; what leaves the function leaves it.
+  if (loop) {
+    completes |= mayExitVia(exits, Exits::Break);
+    exits &= functionExits;
+  }
+  return completes ? exits | Exits::Normal : exits;
 }
 
 Exits FunctionExitAnalyzer::visitSwitch(SwitchOp op, bool entered) {
