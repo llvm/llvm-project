@@ -147,3 +147,64 @@ llvm.mlir.global internal @_QFEb() {addr_space = 0 : i32} : !llvm.array<100 x i3
 // these constant bounds the size folds to i64 404 (101 elements * 4 bytes).
 //CHECK: %[[ARR:.+]] = tail call ptr @malloc(i64 404)
 //CHECK: store ptr %[[ARR]], ptr %{{.*}}, align 8
+
+// CHECK-LABEL: define void @scan_with_default_reduction
+llvm.func @scan_with_default_reduction(%scan : !llvm.ptr, %ordinary : !llvm.ptr) {
+  %lb = llvm.mlir.constant(1 : i32) : i32
+  %ub = llvm.mlir.constant(8 : i32) : i32
+  %step = llvm.mlir.constant(1 : i32) : i32
+  omp.parallel {
+    omp.wsloop reduction(@add_reduction_i32 %ordinary -> %ordinary_private, inscan @add_reduction_i32 %scan -> %scan_private : !llvm.ptr, !llvm.ptr) {
+      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) inclusive step (%step) {
+        %old = llvm.load %scan_private : !llvm.ptr -> i32
+        %sum = llvm.add %old, %iv : i32
+        llvm.store %sum, %scan_private : i32, !llvm.ptr
+        omp.scan inclusive(%scan_private : !llvm.ptr)
+        %other = llvm.load %ordinary_private : !llvm.ptr -> i32
+        %new = llvm.add %other, %iv : i32
+        llvm.store %new, %ordinary_private : i32, !llvm.ptr
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+// CHECK-LABEL: define internal void @scan_with_default_reduction..omp_par(
+// CHECK: %[[ORDINARY_SHARED:.*]] = load ptr, ptr %{{.*}}
+// CHECK: %[[ORDINARY_PRIVATE:[0-9]+]] = alloca i32
+// CHECK: %[[SCAN_PRIVATE:[0-9]+]] = alloca i32
+// CHECK: %red.array = alloca [1 x ptr]
+// CHECK: store i32 0, ptr %[[ORDINARY_PRIVATE]]
+// CHECK: store i32 0, ptr %[[SCAN_PRIVATE]]
+// CHECK: store ptr %[[ORDINARY_PRIVATE]], ptr %red.array.elem.0
+// CHECK: call i32 @__kmpc_reduce({{.*}} i32 1,
+// CHECK: %[[ORIG:.*]] = load i32, ptr %[[ORDINARY_SHARED]]
+// CHECK: %[[PRIV:.*]] = load i32, ptr %[[ORDINARY_PRIVATE]]
+// CHECK: %[[SUM:.*]] = add i32 %[[ORIG]], %[[PRIV]]
+// CHECK: store i32 %[[SUM]], ptr %[[ORDINARY_SHARED]]
+
+// CHECK-LABEL: define void @multiple_scans_with_default_reduction
+llvm.func @multiple_scans_with_default_reduction(%first : !llvm.ptr, %ordinary : !llvm.ptr, %second : !llvm.ptr) {
+  %lb = llvm.mlir.constant(1 : i32) : i32
+  %ub = llvm.mlir.constant(8 : i32) : i32
+  %step = llvm.mlir.constant(1 : i32) : i32
+  omp.parallel {
+    omp.wsloop reduction(inscan @add_reduction_i32 %first -> %first_private, @add_reduction_i32 %ordinary -> %ordinary_private, inscan @add_reduction_i32 %second -> %second_private : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) inclusive step (%step) {
+        llvm.store %iv, %first_private : i32, !llvm.ptr
+        llvm.store %iv, %second_private : i32, !llvm.ptr
+        omp.scan inclusive(%first_private, %second_private : !llvm.ptr, !llvm.ptr)
+        %old = llvm.load %ordinary_private : !llvm.ptr -> i32
+        %sum = llvm.add %old, %iv : i32
+        llvm.store %sum, %ordinary_private : i32, !llvm.ptr
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+// CHECK-LABEL: define internal void @multiple_scans_with_default_reduction..omp_par(
+// CHECK: %red.array = alloca [1 x ptr]
+// CHECK: call i32 @__kmpc_reduce({{.*}} i32 1,

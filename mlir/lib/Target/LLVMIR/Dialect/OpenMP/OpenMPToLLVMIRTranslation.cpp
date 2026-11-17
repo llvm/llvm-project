@@ -655,27 +655,27 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         if (auto byref = op.getReductionByref())
           if ((*byref)[i])
             result = todo("inscan reduction modifier with by-ref reduction");
-        // Scan reductions allocate a shared temporary buffer in the alloca
-        // frame of the enclosing parallel region. An orphaned worksharing loop
-        // (e.g. an `omp do` in a subroutine that is called from within a
-        // parallel region) has no such frame in its own function, so the buffer
-        // would be allocated per-thread and produce wrong results.
-        if (!op->template getParentOfType<omp::ParallelOp>())
-          result = todo("inscan reduction on an orphaned worksharing loop "
-                        "(no enclosing parallel region)");
-        if (auto wsloopOp = dyn_cast<omp::WsloopOp>(op.getOperation())) {
-          // Linear clauses are not yet supported together with scan
-          // reductions.
-          if (!wsloopOp.getLinearVars().empty())
-            result = todo("inscan reduction with linear clause");
-          // Scan reductions are only implemented for a single loop; a collapsed
-          // (multi-dimensional) loop nest is not yet supported.
-          if (auto loopNest =
-                  dyn_cast_or_null<omp::LoopNestOp>(wsloopOp.getWrappedLoop()))
-            if (loopNest.getNumLoops() > 1)
-              result = todo("inscan reduction on a collapsed "
-                            "(multi-dimensional) loop nest");
-        }
+      }
+    }
+    if (auto wsloopOp = dyn_cast<omp::WsloopOp>(op.getOperation())) {
+      if (!wsloopOp.hasReductionModifier(omp::ReductionModifier::inscan))
+        return;
+      // Scan reductions allocate a shared temporary buffer in the alloca
+      // frame of the enclosing parallel region. An orphaned worksharing loop
+      // has no such frame in its own function, so the buffer would be
+      // allocated per-thread and produce wrong results.
+      if (!op->template getParentOfType<omp::ParallelOp>())
+        result = todo("inscan reduction on an orphaned worksharing loop "
+                      "(no enclosing parallel region)");
+      if (!wsloopOp.getLinearVars().empty())
+        result = todo("inscan reduction with linear clause");
+      if (auto loopNest =
+              dyn_cast_or_null<omp::LoopNestOp>(wsloopOp.getWrappedLoop())) {
+        if (loopNest.getNumLoops() > 1)
+          result = todo("inscan reduction on a collapsed "
+                        "(multi-dimensional) loop nest");
+        if (loopNest.getTileSizes())
+          result = todo("inscan reduction on a tiled loop nest");
       }
     }
   };
@@ -2028,7 +2028,8 @@ static LogicalResult createReductionsAndCleanup(
     llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
     SmallVectorImpl<omp::DeclareReductionOp> &reductionDecls,
     ArrayRef<llvm::Value *> privateReductionVariables, ArrayRef<bool> isByRef,
-    bool isNowait = false, bool isTeamsReduction = false) {
+    bool isNowait = false, bool isTeamsReduction = false,
+    bool excludeInscan = false) {
   // Process the reductions if required.
   if (op.getNumReductionVars() == 0)
     return success();
@@ -2047,6 +2048,24 @@ static LogicalResult createReductionsAndCleanup(
                        owningReductionGenRefDataPtrGens,
                        privateReductionVariables, reductionInfos, isByRef);
 
+  SmallVector<llvm::OpenMPIRBuilder::ReductionInfo, 2> selectedInfos;
+  SmallVector<bool> selectedByRef;
+  SmallVector<Region *> selectedRegions;
+  SmallVector<llvm::Value *> selectedVariables;
+  SmallVector<omp::DeclareReductionOp> selectedDecls;
+  for (unsigned i = 0; i < op.getNumReductionVars(); ++i) {
+    if (excludeInscan &&
+        op.getReductionModifier(i) == omp::ReductionModifier::inscan)
+      continue;
+    selectedInfos.push_back(reductionInfos[i]);
+    selectedByRef.push_back(isByRef[i]);
+    selectedRegions.push_back(&reductionDecls[i].getCleanupRegion());
+    selectedVariables.push_back(privateReductionVariables[i]);
+    selectedDecls.push_back(reductionDecls[i]);
+  }
+  if (selectedInfos.empty())
+    return success();
+
   // The call to createReductions below expects the block to have a
   // terminator. Create an unreachable instruction to serve as terminator
   // and remove it later.
@@ -2054,8 +2073,8 @@ static LogicalResult createReductionsAndCleanup(
   builder.SetInsertPoint(tempTerminator);
   llvm::DebugLoc reductionLoc = builder.getCurrentDebugLocation();
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy contInsertPoint =
-      ompBuilder->createReductions(builder, allocaIP, reductionInfos, isByRef,
-                                   isNowait, isTeamsReduction);
+      ompBuilder->createReductions(builder, allocaIP, selectedInfos,
+                                   selectedByRef, isNowait, isTeamsReduction);
 
   if (failed(handleError(contInsertPoint, *op)))
     return failure();
@@ -2078,19 +2097,14 @@ static LogicalResult createReductionsAndCleanup(
   builder.restoreIP(afterIP);
 
   // after the construct, deallocate private reduction variables
-  SmallVector<Region *> reductionRegions;
-  llvm::transform(reductionDecls, std::back_inserter(reductionRegions),
-                  [](omp::DeclareReductionOp reductionDecl) {
-                    return &reductionDecl.getCleanupRegion();
-                  });
   LogicalResult result = inlineOmpRegionCleanup(
-      reductionRegions, privateReductionVariables, moduleTranslation, builder,
+      selectedRegions, selectedVariables, moduleTranslation, builder,
       "omp.reduction.cleanup");
 
   bool useDeviceSharedMem = omp::opInSharedDeviceContext(*op);
   if (useDeviceSharedMem) {
     for (auto [var, reductionDecl] :
-         llvm::zip_equal(privateReductionVariables, reductionDecls))
+         llvm::zip_equal(selectedVariables, selectedDecls))
       ompBuilder->createOMPFreeShared(
           builder, var, moduleTranslation.convertType(reductionDecl.getType()));
   }
@@ -5352,10 +5366,14 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
                          owningReductionGens, owningAtomicReductionGens,
                          owningReductionGenRefDataPtrGens,
                          privateReductionVariables, reductionInfos, isByRef);
+    SmallVector<llvm::OpenMPIRBuilder::ReductionInfo, 2> scanReductionInfos;
+    for (unsigned i = 0; i < wsloopOp.getNumReductionVars(); ++i)
+      if (wsloopOp.getReductionModifier(i) == omp::ReductionModifier::inscan)
+        scanReductionInfos.push_back(reductionInfos[i]);
     llvm::BasicBlock *cont = splitBB(builder, false, "omp.scan.loop.cont");
     llvm::ScanInfo *scanInfo = findScanInfo(moduleTranslation);
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy redIP =
-        ompBuilder->emitScanReduction(builder, reductionInfos, scanInfo,
+        ompBuilder->emitScanReduction(builder, scanReductionInfos, scanInfo,
                                       wsloopOp.getNowait());
     if (failed(handleError(redIP, opInst)))
       return failure();
@@ -5393,13 +5411,24 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     if (failed(wsloopCodeGen(scanLoopInfo, noLoopMode, inputScanLoop)))
       return failure();
     SmallVector<Region *> reductionRegions;
-    llvm::transform(reductionDecls, std::back_inserter(reductionRegions),
-                    [](omp::DeclareReductionOp reductionDecl) {
-                      return &reductionDecl.getCleanupRegion();
-                    });
-    if (failed(inlineOmpRegionCleanup(
-            reductionRegions, privateReductionVariables, moduleTranslation,
-            builder, "omp.reduction.cleanup")))
+    SmallVector<llvm::Value *> scanVariables;
+    for (unsigned i = 0; i < wsloopOp.getNumReductionVars(); ++i) {
+      if (wsloopOp.getReductionModifier(i) != omp::ReductionModifier::inscan)
+        continue;
+      reductionRegions.push_back(&reductionDecls[i].getCleanupRegion());
+      scanVariables.push_back(privateReductionVariables[i]);
+    }
+    if (failed(inlineOmpRegionCleanup(reductionRegions, scanVariables,
+                                      moduleTranslation, builder,
+                                      "omp.reduction.cleanup")))
+      return failure();
+    if (isTaskReductionMod)
+      emitTaskReductionModifierFini(/*isWorksharing=*/true, builder,
+                                    moduleTranslation);
+    if (failed(createReductionsAndCleanup(
+            wsloopOp, builder, moduleTranslation, allocaIP, reductionDecls,
+            privateReductionVariables, isByRef, wsloopOp.getNowait(),
+            /*isTeamsReduction=*/false, /*excludeInscan=*/true)))
       return failure();
   } else {
     // Close the task-reduction scope before the worksharing reduction combine.
@@ -5950,7 +5979,8 @@ initScanReductionVars(omp::LoopNestOp loopOp, llvm::IRBuilderBase &builder,
 
   for (unsigned i = 0; i < numReductions; ++i) {
     // Scan reductions only support by-value (scalar) reductions.
-    if (isByRef[i])
+    if (wsloopOp.getReductionModifier(i) != omp::ReductionModifier::inscan ||
+        isByRef[i])
       continue;
     SmallVector<llvm::Value *, 1> phis;
     mapInitializationArgs(wsloopOp, moduleTranslation, builder, reductionDecls,
@@ -6105,7 +6135,6 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
             return WalkResult::interrupt();
           });
       builder.restoreIP(scanLoop->getAfterIP());
-      // TODO: tiling and collapse are not yet implemented for scan reduction.
       return success();
     }
 

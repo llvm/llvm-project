@@ -95,7 +95,8 @@ static void injectCondLpIndexStores(
     mlir::Value structArg, mlir::Region &region,
     const llvm::MapVector<mlir::Value, std::string> &valAddrToSymName,
     llvm::function_ref<mlir::Value(fir::FirOpBuilder &, mlir::Location)>
-        genIndexVal);
+        genIndexVal,
+    bool indexAtWrite = false);
 
 static mlir::Value
 computeFlattenedCanonicalIV(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -5250,7 +5251,8 @@ static mlir::omp::WsloopOp genStandaloneDo(
         builder, loc, lpType, structArg, loopNestOp.getRegion(), condLpValAddrs,
         [&](fir::FirOpBuilder &b, mlir::Location l) -> mlir::Value {
           return computeFlattenedCanonicalIV(b, l, loopNestOp);
-        });
+        },
+        wsloopOp.hasReductionModifier(mlir::omp::ReductionModifier::inscan));
   }
 
   // Post-reduction copy-back.  When nowait is absent, the wsloop's implicit
@@ -6460,7 +6462,8 @@ static void injectCondLpIndexStores(
     mlir::Value structArg, mlir::Region &region,
     const llvm::MapVector<mlir::Value, std::string> &valAddrToSymName,
     llvm::function_ref<mlir::Value(fir::FirOpBuilder &, mlir::Location)>
-        genIndexVal) {
+        genIndexVal,
+    bool indexAtWrite) {
   // Look through hlfir.declare to find the underlying struct field address.
   // When symbols are bound via bindCondLpSymsToStructFields, the lowering
   // wraps the fir.coordinate_of result in hlfir.declare, so the actual write
@@ -6531,10 +6534,10 @@ static void injectCondLpIndexStores(
     });
   });
 
-  // Compute the canonical index once at the region entry so that it dominates
-  // all write sites (which may be inside nested fir.if blocks).
+  // Compute the index at the region entry unless scan splits its execution
+  // into phases, in which case it must be computed at each write site.
   mlir::Value indexVal;
-  if (!writes.empty()) {
+  if (!writes.empty() && !indexAtWrite) {
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.setInsertionPointToStart(&region.front());
     indexVal = genIndexVal(builder, loc);
@@ -6555,6 +6558,11 @@ static void injectCondLpIndexStores(
 
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.setInsertionPointAfter(writeOp);
+    mlir::Value writeIndex =
+        indexAtWrite ? genIndexVal(builder, loc) : indexVal;
+    if (writeIndex.getType() != builder.getI64Type())
+      writeIndex = fir::ConvertOp::create(builder, loc, builder.getI64Type(),
+                                          writeIndex);
 
     // The value just written to the private copy of the list item.
     mlir::Value curVal = fir::LoadOp::create(builder, loc, writeAddr);
@@ -6576,11 +6584,11 @@ static void injectCondLpIndexStores(
     // overwrite a higher-index one.
     mlir::Value curIdx = fir::LoadOp::create(builder, loc, idxAddr);
     mlir::Value cmp = mlir::arith::CmpIOp::create(
-        builder, loc, mlir::arith::CmpIPredicate::sge, indexVal, curIdx);
+        builder, loc, mlir::arith::CmpIPredicate::sge, writeIndex, curIdx);
     auto ifOp = fir::IfOp::create(builder, loc, cmp, /*withElseRegion=*/false);
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     fir::StoreOp::create(builder, loc, curVal, valAddr);
-    fir::StoreOp::create(builder, loc, indexVal, idxAddr);
+    fir::StoreOp::create(builder, loc, writeIndex, idxAddr);
   }
 }
 
