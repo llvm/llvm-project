@@ -28,11 +28,12 @@
   !12 = !DILocalVariable(name: "z", scope: !4, file: !1, line: 1, type: !11)
   !13 = !DILocalVariable(name: "w", scope: !5, file: !1, line: 1, type: !10)
   !14 = !DILocalVariable(name: "v", scope: !6, file: !1, line: 1, type: !10)
-  !15 = !DILocalVariable(name: "u", scope: !7, file: !1, line: 1, type: !10)
+  !15 = !DILocalVariable(name: "u", scope: !7, file: !1, line: 1, type: !20)
   !16 = !DILocation(line: 2, column: 3, scope: !4)
   !17 = !DILocation(line: 2, column: 3, scope: !5)
   !18 = !DILocation(line: 2, column: 3, scope: !6)
   !19 = !DILocation(line: 2, column: 3, scope: !7)
+  !20 = !DIBasicType(name: "i64", size: 64, encoding: DW_ATE_unsigned)
 ...
 ---
 name: build_vector_fragment
@@ -89,22 +90,22 @@ body: |
     RET_ReallyLR debug-location !18
 ...
 ---
-# The vector is one of several location operands, so it cannot be split.
+# Per-element fragments would lose the carry between elements, so this is not split.
 name: build_vector_list_multi_arg
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $x0, $x1, $x2
+    liveins: $w0, $w1, $x2
     ; CHECK-LABEL: name: build_vector_list_multi_arg
-    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK: liveins: $w0, $w1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x2
     ; CHECK-NEXT: DBG_VALUE_LIST !10, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), $noreg, $noreg, debug-location !DILocation(line: 2, column: 3, scope: !9)
     ; CHECK-NEXT: RET_ReallyLR implicit [[COPY]](i64), debug-location !DILocation(line: 2, column: 3, scope: !9)
-    %0:_(i64) = COPY $x0
-    %1:_(i64) = COPY $x1
-    %2:_(<2 x i64>) = G_BUILD_VECTOR %0(i64), %1(i64)
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = COPY $w1
+    %2:_(<2 x i32>) = G_BUILD_VECTOR %0(i32), %1(i32)
     %3:_(i64) = COPY $x2
-    DBG_VALUE_LIST !15, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), %2(<2 x i64>), %3(i64), debug-location !19
+    DBG_VALUE_LIST !15, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), %2(<2 x i32>), %3(i64), debug-location !19
     RET_ReallyLR implicit %3, debug-location !19
 ...

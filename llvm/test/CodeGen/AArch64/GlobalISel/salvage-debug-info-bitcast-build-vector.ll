@@ -38,6 +38,10 @@ define i128 @bitcast_build_vector(i64 %a, i64 %b) {
 ; CHECK-NEXT: DBG_VALUE $w1, $noreg, [[V3]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 ; CHECK-NEXT: DBG_VALUE $w2, $noreg, [[V3]], !DIExpression(DW_OP_LLVM_fragment, 64, 32)
 ; CHECK-NEXT: DBG_VALUE [[D]](i32), $noreg, [[V3]], !DIExpression(DW_OP_LLVM_fragment, 96, 32)
+; CHECK-NEXT: DBG_VALUE [[A]](i32), $noreg, {{![0-9]+}}, !DIExpression()
+; CHECK-NEXT: DBG_VALUE [[D]](i32), $noreg, {{![0-9]+}}, !DIExpression()
+; CHECK-NEXT: [[R:%[0-9]+]]:_(i32) = G_ADD [[A]], [[D]]
+; CHECK-NEXT: DBG_VALUE [[R]](i32), $noreg, {{![0-9]+}}, !DIExpression()
 define i32 @build_vector(i32 %a, i32 %b, i32 %c, i32 %d) {
   %v0 = insertelement <4 x i32> poison, i32 %a, i64 0
   %v1 = insertelement <4 x i32> %v0, i32 %b, i64 1
