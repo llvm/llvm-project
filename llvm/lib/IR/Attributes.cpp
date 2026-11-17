@@ -1515,8 +1515,6 @@ std::string AttributeSetNode::getAsString(bool InAttrGrp) const {
 // AttributeListImpl Definition
 //===----------------------------------------------------------------------===//
 
-/// Map from AttributeList index to the internal array index. Adding one happens
-/// to work, because -1 wraps around to 0.
 AttributeListImpl::AttributeListImpl(ArrayRef<AttributeSet> Sets) {
   assert(!Sets.empty() && "pointless AttributeListImpl");
 
