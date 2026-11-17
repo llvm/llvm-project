@@ -20291,15 +20291,11 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
 
   Info->limitOccupancy(MF);
 
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : MBB) {
-      // The contents of inline asm are opaque. Assume convergent inline asm
-      // depends on the set of active lanes, and so reads EXEC.
-      if (MI.isInlineAsm() && MI.isConvergent() &&
-          !MI.readsRegister(AMDGPU::EXEC, TRI))
-        MI.addOperand(MF, MachineOperand::CreateReg(AMDGPU::EXEC, false, true));
-      if (ST.isWave32())
+  if (ST.isWave32() && !MF.empty()) {
+    for (auto &MBB : MF) {
+      for (auto &MI : MBB) {
         TII->fixImplicitOperands(MI);
+      }
     }
   }
 
