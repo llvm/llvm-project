@@ -305,24 +305,41 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCvtF32UByteN(
   }
 
   // Look through G_ZEXT.
-  bool IsShr = mi_match(SrcReg, MRI, m_GZExt(m_Reg(SrcReg)));
+  Register ZExtSrc;
+  bool IsZExt = mi_match(SrcReg, MRI, m_GZExt(m_Reg(ZExtSrc)));
+  if (IsZExt)
+    SrcReg = ZExtSrc;
 
   Register Src0;
   int64_t ShiftAmt;
-  IsShr = mi_match(SrcReg, MRI, m_GLShr(m_Reg(Src0), m_ICst(ShiftAmt)));
+  bool IsShr = mi_match(SrcReg, MRI, m_GLShr(m_Reg(Src0), m_ICst(ShiftAmt)));
+  bool IsShl =
+      !IsShr && mi_match(SrcReg, MRI, m_GShl(m_Reg(Src0), m_ICst(ShiftAmt)));
 
-  if (IsShr || mi_match(SrcReg, MRI, m_GShl(m_Reg(Src0), m_ICst(ShiftAmt)))) {
-    unsigned ShiftOffset = ByteOffset;
+  if (IsShr || IsShl) {
+    // A shift amount outside the range of a 32-bit value cannot select a byte.
+    if (ShiftAmt >= 0 && ShiftAmt < 32) {
+      int64_t ShiftOffset = ByteOffset;
 
-    if (IsShr)
-      ShiftOffset += ShiftAmt;
-    else
-      ShiftOffset -= ShiftAmt;
+      if (IsShr)
+        ShiftOffset += ShiftAmt;
+      else
+        ShiftOffset -= ShiftAmt;
 
-    if (ShiftOffset < 32 && ShiftOffset >= 8 && (ShiftOffset % 8) == 0) {
-      MatchInfo.CvtVal = Src0;
-      MatchInfo.ShiftOffset = ShiftOffset;
-      return true;
+      // Do not bypass a zero extension when the selected byte includes bits
+      // that were added by the extension.
+      if (IsZExt) {
+        LLT SrcTy = MRI.getType(Src0);
+        if (!SrcTy.isScalar() || ShiftOffset < 0 ||
+            ShiftOffset + 8 > static_cast<int64_t>(SrcTy.getSizeInBits()))
+          return false;
+      }
+
+      if (ShiftOffset < 32 && ShiftOffset >= 8 && (ShiftOffset % 8) == 0) {
+        MatchInfo.CvtVal = Src0;
+        MatchInfo.ShiftOffset = static_cast<unsigned>(ShiftOffset);
+        return true;
+      }
     }
     // Shift didn't land on a byte boundary we can use. Fall through
     // if we matched an AND above, it may still be safe to drop on its
