@@ -23,6 +23,7 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1692,6 +1693,24 @@ static mlir::Value walkBlockArgPassThroughs(mlir::Value v) {
   return v;
 }
 
+/// Whether \p op produces a result by reading the memory at \p address.
+static bool isLoadFrom(mlir::Operation *op, mlir::Value address) {
+  auto load = mlir::dyn_cast<fir::FortranObjectLoadOpInterface>(op);
+  return load && llvm::any_of(op->getResults(), [&](mlir::OpResult result) {
+           return load.getLoadSource(result) == address;
+         });
+}
+
+/// Whether \p op reads, writes or frees the memory at \p address.
+static bool accessesMemoryThrough(mlir::Operation *op, mlir::Value address) {
+  auto memEffects = mlir::dyn_cast<mlir::MemoryEffectOpInterface>(op);
+  if (!memEffects)
+    return false;
+  llvm::SmallVector<mlir::MemoryEffects::EffectInstance> effects;
+  memEffects.getEffectsOnValue(address, effects);
+  return !effects.empty();
+}
+
 AliasAnalysis::AllocationPublication
 AliasAnalysis::getAllocationPublication(mlir::OpResult allocation) {
   if (sourceCacheEnabled) {
@@ -1702,41 +1721,71 @@ AliasAnalysis::getAllocationPublication(mlir::OpResult allocation) {
 
   using Kind = AllocationPublication::Kind;
   AllocationPublication publication;
+  // The values that may hold the address of the allocation.
   llvm::SmallVector<mlir::Value> worklist{allocation};
   llvm::SmallPtrSet<mlir::Value, 8> visited{allocation};
   llvm::SmallSetVector<mlir::Value, 2> descriptors;
-  bool storedElsewhere = false;
+  // Whether the address may be stored into memory that is not a descriptor,
+  // or passed on in a way that the walk does not follow.
+  bool escapes = false;
   auto carry = [&](mlir::Value value) {
     if (visited.insert(value).second)
       worklist.push_back(value);
   };
   // A declaration without a dummy_scope makes the allocation a variable,
-  // whose accesses follow the rules for its attributes. A declaration with a
-  // dummy_scope is a dummy argument of an inlined procedure, and does not
-  // describe the allocation itself.
-  auto declaresAllocation = [](auto declare, mlir::Value value) {
-    return declare.getMemref() == value && !declare.getDummyScope();
+  // whose accesses follow the rules for its attributes. So does the
+  // declaration of a VALUE dummy argument, whose own copy of the actual
+  // argument is the allocation. The declaration of another dummy argument,
+  // e.g. of an inlined procedure, only associates it with the allocation.
+  auto declaresAllocation = [](mlir::Operation *op, mlir::Value value) {
+    auto declares = [&](auto declare) {
+      if (declare.getMemref() != value)
+        return false;
+      if (!declare.getDummyScope())
+        return true;
+      std::optional<fir::FortranVariableFlagsEnum> attrs =
+          declare.getFortranAttrs();
+      return attrs &&
+             bitEnumContainsAny(*attrs, fir::FortranVariableFlagsEnum::value);
+    };
+    if (auto declare = mlir::dyn_cast<fir::DeclareOp>(op))
+      return declares(declare);
+    if (auto declare = mlir::dyn_cast<hlfir::DeclareOp>(op))
+      return declares(declare);
+    return false;
+  };
+  auto forwardSuccessorOperand = [&](mlir::RegionBranchOpInterface op,
+                                     mlir::RegionBranchPoint point,
+                                     mlir::OpOperand &use) {
+    mlir::RegionBranchSuccessorMapping mapping;
+    op.getSuccessorOperandInputMapping(mapping, point);
+    auto it = mapping.find(&use);
+    if (it != mapping.end())
+      llvm::for_each(it->second, carry);
   };
   bool declared = false;
   while (!worklist.empty() && !declared) {
     mlir::Value value = worklist.pop_back_val();
     for (mlir::OpOperand &use : value.getUses()) {
       mlir::Operation *user = use.getOwner();
-      if (auto declare = mlir::dyn_cast<fir::DeclareOp>(user)) {
-        declared = declaresAllocation(declare, value);
-      } else if (auto declare = mlir::dyn_cast<hlfir::DeclareOp>(user)) {
-        declared = declaresAllocation(declare, value);
-      } else if (auto view =
-                     mlir::dyn_cast<fir::FortranObjectViewOpInterface>(user)) {
+      if (declaresAllocation(user, value)) {
+        declared = true;
+        break;
+      }
+      if (auto view = mlir::dyn_cast<fir::FortranObjectViewOpInterface>(user)) {
+        // The other operands of a view, e.g. its shape, do not take part in
+        // its address.
         for (mlir::OpResult result : user->getResults())
           if (view.getViewSource(result) == value)
             carry(result);
+      } else if (isLoadFrom(user, value)) {
+        // The results are read from the allocation.
       } else if (auto store = mlir::dyn_cast<fir::StoreOp>(user)) {
         if (store.getValue() == value) {
           if (mlir::isa<fir::BaseBoxType>(value.getType()))
             descriptors.insert(store.getMemref());
           else
-            storedElsewhere = true;
+            escapes = true;
         }
       } else if (auto select =
                      mlir::dyn_cast<mlir::SelectLikeOpInterface>(user)) {
@@ -1752,34 +1801,48 @@ AliasAnalysis::getAllocationPublication(mlir::OpResult allocation) {
                          user)) {
         if (auto parent = mlir::dyn_cast<mlir::RegionBranchOpInterface>(
                 user->getParentOp())) {
-          mlir::RegionBranchSuccessorMapping mapping;
-          parent.getSuccessorOperandInputMapping(
-              mapping, mlir::RegionBranchPoint(terminator));
-          auto it = mapping.find(&use);
-          if (it != mapping.end())
-            llvm::for_each(it->second, carry);
+          forwardSuccessorOperand(parent, mlir::RegionBranchPoint(terminator),
+                                  use);
+        } else {
+          // E.g. func.return passes the address to the caller.
+          escapes = true;
         }
       } else if (auto regionBranch =
                      mlir::dyn_cast<mlir::RegionBranchOpInterface>(user)) {
-        mlir::RegionBranchSuccessorMapping mapping;
-        regionBranch.getSuccessorOperandInputMapping(
-            mapping, mlir::RegionBranchPoint::parent());
-        auto it = mapping.find(&use);
-        if (it != mapping.end())
-          llvm::for_each(it->second, carry);
+        forwardSuccessorOperand(regionBranch, mlir::RegionBranchPoint::parent(),
+                                use);
       } else if (mlir::BlockArgument arg =
                      mlir::acc::getACCBlockArgForOperand(use)) {
         carry(arg);
+      } else if (mlir::isa<hlfir::ExprType>(value.getType())) {
+        // An expression has no address. An operation that uses it may give
+        // its storage an address only in a variable that it returns, e.g.
+        // hlfir.associate, or pass the storage on in another expression.
+        for (mlir::Value result : user->getResults())
+          if (mlir::isa<hlfir::ExprType>(result.getType()) ||
+              hlfir::isFortranVariableType(result.getType()))
+            carry(result);
+      } else if (mlir::isa<mlir::CallOpInterface>(user)) {
+        // After a call, no pointer remains associated with an actual
+        // argument that is not a TARGET. An allocation can be a TARGET only
+        // as the data of a TARGET or POINTER variable, and then its source
+        // has the attribute of that variable.
+      } else if (user->getNumRegions() == 0 &&
+                 !user->hasTrait<mlir::OpTrait::IsTerminator>() &&
+                 (accessesMemoryThrough(user, value) ||
+                  !mlir::mightHaveEffect<mlir::MemoryEffects::Write>(user))) {
+        // The operation does not store the address: it does not write
+        // memory, or it uses the address to access memory. It may still pass
+        // the address on through its results.
+        llvm::for_each(user->getResults(), carry);
+      } else {
+        escapes = true;
       }
-      // Other uses access the allocation, pass its address to a call, or
-      // compare or free it.
-      if (declared)
-        break;
     }
   }
 
   if (!declared) {
-    if (storedElsewhere || descriptors.size() > 1) {
+    if (escapes || descriptors.size() > 1) {
       publication.kind = Kind::Unknown;
     } else if (descriptors.size() == 1) {
       publication.kind = Kind::Descriptor;

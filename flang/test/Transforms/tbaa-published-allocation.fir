@@ -28,7 +28,16 @@
 //     j = n
 //     r = j
 //   end subroutine
+//   subroutine escaped(n)
+//     integer :: n
+//     integer, allocatable :: j
+//     j = n
+//   end subroutine
 // end module
+//
+// In escaped, the address of the new buffer is also stored into a tuple. The
+// analysis cannot tell where the address goes, so the store into the buffer
+// gets no tag.
 
 // RUN: fir-opt --fir-add-alias-tags %s | FileCheck %s
 
@@ -190,6 +199,26 @@ func.func @_QMmPlocal_var(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !f
   %15 = fir.box_addr %14 : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
   %16 = fir.load %15 : !fir.heap<i32>
   fir.store %16 to %6 : !fir.ref<i32>
+  return
+}
+
+// CHECK-LABEL: func.func @_QMmPescaped(
+// CHECK: %[[NEW:.*]] = fir.allocmem i32
+// CHECK: fir.store %{{.*}} to %[[NEW]] : !fir.heap<i32>
+func.func @_QMmPescaped(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = "j", uniq_name = "_QMmFescapedEj"}
+  %2 = fir.declare %1 uniq_name("_QMmFescapedEj") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.ref<!fir.box<!fir.heap<i32>>>
+  %3 = fir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QMmFescapedEn") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %4 = fir.load %3 : !fir.ref<i32>
+  %5 = fir.allocmem i32
+  fir.store %4 to %5 : !fir.heap<i32>
+  %6 = fir.embox %5 : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
+  fir.store %6 to %2 : !fir.ref<!fir.box<!fir.heap<i32>>>
+  %7 = fir.alloca tuple<!fir.heap<i32>>
+  %8 = fir.undefined tuple<!fir.heap<i32>>
+  %9 = fir.insert_value %8, %5, [0 : index] : (tuple<!fir.heap<i32>>, !fir.heap<i32>) -> tuple<!fir.heap<i32>>
+  fir.store %9 to %7 : !fir.ref<tuple<!fir.heap<i32>>>
   return
 }
 

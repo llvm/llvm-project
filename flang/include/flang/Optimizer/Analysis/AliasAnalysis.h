@@ -65,8 +65,9 @@ struct AliasAnalysis {
              /// an allocatable variable. If its address is stored into
              /// exactly one descriptor, the allocation gets the source of the
              /// data of that descriptor instead. If its address is stored
-             /// into more than one descriptor, or into other memory, its
-             /// source is Indirect.
+             /// into more than one descriptor, or into other memory, or if
+             /// the analysis cannot tell where the address goes, its source
+             /// is Indirect.
              Allocate,
              /// A global object allocated statically on the module level.
              Global,
@@ -478,8 +479,8 @@ private:
       None,
       /// The address is stored only into the descriptor at \c descriptor.
       Descriptor,
-      /// The address is stored into several descriptors, or into memory
-      /// that is not a descriptor.
+      /// The address is stored into several descriptors or into memory that
+      /// is not a descriptor, or it may be, as far as the analysis can tell.
       Unknown
     };
     Kind kind = Kind::None;
@@ -487,8 +488,11 @@ private:
   };
 
   /// Find where the address of \p allocation is stored, following the values
-  /// that carry it: the views of the allocation, arith.select, and the
-  /// operands forwarded by branches and region terminators.
+  /// that may hold it: the views of the allocation, the values forwarded by
+  /// select-like operations, branches and region terminators, and the
+  /// results of other operations that cannot store it. An operation that may
+  /// store the address, or pass it on in a way that the walk does not know,
+  /// makes the result Unknown.
   AllocationPublication getAllocationPublication(mlir::OpResult allocation);
 
   /// Build an intermediate Source rooted at the declare captured by the
