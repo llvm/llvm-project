@@ -384,6 +384,8 @@ class SPIRVEmitIntrinsicsImpl
 
   Instruction *buildLogicalAccessChainFromGEP(GetElementPtrInst &GEP);
 
+  Value *truncateGEPIndex(Value *Idx, Type *IdxTy, IRBuilder<> &B);
+
 public:
   SPIRVEmitIntrinsicsImpl(const SPIRVTargetMachine &TM) : TM(TM) {}
   Instruction *visitInstruction(Instruction &I) { return &I; }
@@ -883,12 +885,32 @@ bool SPIRVEmitIntrinsicsImpl::walkLogicalAccessChain(
   Type *CurType = deduceElementType(Src, true);
 
   Value *Operand = *GEP.idx_begin();
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(Operand))
-    return walkLogicalAccessChainConstant(
-        CurType, CI->getZExtValue() * Multiplier, OnLiteralIndexing);
+  if (isa<ConstantInt>(Operand)) {
+    // The byte offset wraps at the width of the GEP index type.
+    const DataLayout &DL = CurrF->getDataLayout();
+    APInt Offset(DL.getIndexSizeInBits(GEP.getPointerAddressSpace()), 0);
+    [[maybe_unused]] bool IsConstant = GEP.accumulateConstantOffset(DL, Offset);
+    assert(IsConstant && "a constant index must give a constant offset");
+    return walkLogicalAccessChainConstant(CurType, Offset.getZExtValue(),
+                                          OnLiteralIndexing);
+  }
 
   return walkLogicalAccessChainDynamic(CurType, Operand, Multiplier,
                                        OnLiteralIndexing, OnDynamicIndexing);
+}
+
+// Returns Idx truncated to IdxTy, the GEP index type, if Idx is wider. A GEP
+// uses only the low bits of a wider index, while an access chain uses all of
+// them. Both sign-extend a narrower index, so this returns Idx unchanged when
+// it is not wider.
+Value *SPIRVEmitIntrinsicsImpl::truncateGEPIndex(Value *Idx, Type *IdxTy,
+                                                 IRBuilder<> &B) {
+  if (Idx->getType()->getScalarSizeInBits() <= IdxTy->getScalarSizeInBits())
+    return Idx;
+  Value *Trunc = B.CreateTrunc(Idx, IdxTy);
+  if (auto *TruncI = dyn_cast<Instruction>(Trunc))
+    insertAssignTypeIntrs(TruncI, B);
+  return Trunc;
 }
 
 Instruction *SPIRVEmitIntrinsicsImpl::buildLogicalAccessChainFromGEP(
@@ -900,14 +922,15 @@ Instruction *SPIRVEmitIntrinsicsImpl::buildLogicalAccessChainFromGEP(
   std::vector<Value *> Indices;
   Indices.push_back(ConstantInt::get(
       IntegerType::getInt32Ty(CurrF->getContext()), 0, /* Signed= */ false));
+  Type *IdxTy = DL.getIndexType(GEP.getPointerOperandType());
   walkLogicalAccessChain(
       GEP,
-      [&Indices, &B](Type *EltType, uint64_t Index) {
-        Indices.push_back(
-            ConstantInt::get(B.getInt64Ty(), Index, /* Signed= */ false));
+      [&Indices, IdxTy](Type *EltType, uint64_t Index) {
+        Indices.push_back(ConstantInt::get(IdxTy, Index, /* Signed= */ false));
       },
-      [&Indices, &B, &DL, this](Type *EltType, Value *Offset,
-                                uint64_t Multiplier) {
+      [&Indices, &B, &DL, IdxTy, this](Type *EltType, Value *Offset,
+                                       uint64_t Multiplier) {
+        Offset = truncateGEPIndex(Offset, IdxTy, B);
         Value *Index = nullptr;
         uint32_t EltTypeSize = DL.getTypeSizeInBits(EltType) / 8;
         assert(Multiplier != 0);
@@ -2128,7 +2151,9 @@ SPIRVEmitIntrinsicsImpl::visitGetElementPtrInst(GetElementPtrInst &I) {
     return NewI;
   }
 
-  if (TM.getSubtargetImpl()->isLogicalSPIRV() && !isFirstIndexZero(&I)) {
+  bool IsLogical = TM.getSubtargetImpl()->isLogicalSPIRV();
+  Type *IdxTy = CurrF->getDataLayout().getIndexType(I.getPointerOperandType());
+  if (IsLogical && !isFirstIndexZero(&I)) {
     // Logical SPIR-V cannot use the OpPtrAccessChain instruction. If the first
     // index of the GEP is not 0, then we need to try to adjust it.
     //
@@ -2147,10 +2172,10 @@ SPIRVEmitIntrinsicsImpl::visitGetElementPtrInst(GetElementPtrInst &I) {
     if (auto *ArrTy = dyn_cast<ArrayType>(DeducedPointeeTy)) {
       if (ArrTy->getElementType() == SrcElemTy) {
         SmallVector<Value *> NewIndices;
-        Type *FirstIdxType = I.getOperand(1)->getType();
-        NewIndices.push_back(ConstantInt::get(FirstIdxType, 0));
         for (Value *Idx : I.indices())
-          NewIndices.push_back(Idx);
+          NewIndices.push_back(truncateGEPIndex(Idx, IdxTy, B));
+        NewIndices.insert(NewIndices.begin(),
+                          ConstantInt::get(NewIndices.front()->getType(), 0));
 
         SmallVector<Type *, 2> Types = {I.getType(), I.getPointerOperandType()};
         SmallVector<Value *, 4> Args;
@@ -2169,7 +2194,9 @@ SPIRVEmitIntrinsicsImpl::visitGetElementPtrInst(GetElementPtrInst &I) {
   SmallVector<Type *, 2> Types = {I.getType(), I.getOperand(0)->getType()};
   SmallVector<Value *, 4> Args;
   Args.push_back(B.getInt1(I.isInBounds()));
-  llvm::append_range(Args, I.operands());
+  Args.push_back(I.getPointerOperand());
+  for (Value *Idx : I.indices())
+    Args.push_back(IsLogical ? truncateGEPIndex(Idx, IdxTy, B) : Idx);
   Instruction *NewI =
       B.CreateIntrinsicWithoutFolding(Intrinsic::spv_gep, {Types}, {Args});
   replaceAllUsesWithAndErase(B, &I, NewI);
