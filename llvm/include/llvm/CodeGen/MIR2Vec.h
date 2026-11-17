@@ -367,22 +367,14 @@ public:
 /// MIR2Vec vocabulary provider used by pass managers and standalone tools.
 /// This class encapsulates the core vocabulary loading logic and can be used
 /// independently of the pass manager infrastructure. For pass-based usage,
-/// see MIR2VecVocabLegacyAnalysis.
-///
-/// Note: This provider pattern makes new PM migration straightforward when
-/// needed. A new PM analysis wrapper can be added that delegates to this
-/// provider, similar to how MIR2VecVocabLegacyAnalysis currently wraps it.
+/// see MIR2VecVocabLegacyAnalysis and MIR2VecVocabAnalysis.
 class MIR2VecVocabProvider {
-  using VocabMap = std::map<std::string, mir2vec::Embedding>;
-
 public:
   MIR2VecVocabProvider(const MachineModuleInfo &MMI) : MMI(MMI) {}
 
   LLVM_ABI Expected<mir2vec::MIRVocabulary> getVocabulary(const Module &M);
 
 private:
-  Error readVocabulary(VocabMap &OpcVocab, VocabMap &CommonOperandVocab,
-                       VocabMap &PhyRegVocabMap, VocabMap &VirtRegVocabMap);
   const MachineModuleInfo &MMI;
 };
 
@@ -463,6 +455,29 @@ public:
 
 /// Create a machine pass that prints MIR2Vec embeddings
 LLVM_ABI MachineFunctionPass *createMIR2VecPrinterLegacyPass(raw_ostream &OS);
+
+/// New pass manager analysis that provides the MIR2Vec vocabulary for a machine
+/// function.
+class MIR2VecVocabAnalysis : public AnalysisInfoMixin<MIR2VecVocabAnalysis> {
+  friend AnalysisInfoMixin<MIR2VecVocabAnalysis>;
+  LLVM_ABI static AnalysisKey Key;
+
+public:
+  using Result = mir2vec::MIRVocabulary;
+  LLVM_ABI Result run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM);
+};
+
+/// New pass manager pass that prints the MIR2Vec embeddings for machine
+/// functions, basic blocks, and instructions.
+class MIR2VecPrinterPass : public RequiredPassInfoMixin<MIR2VecPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit MIR2VecPrinterPass(raw_ostream &OS) : OS(OS) {}
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
+};
 
 } // namespace llvm
 
