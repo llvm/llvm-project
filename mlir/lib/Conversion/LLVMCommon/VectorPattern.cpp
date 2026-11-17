@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
-#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMAggregateOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
 
 using namespace mlir;

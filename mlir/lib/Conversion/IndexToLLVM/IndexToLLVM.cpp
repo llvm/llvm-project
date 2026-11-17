@@ -15,8 +15,8 @@
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMCastOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMIntegerIntrinsicOps.h"
 #include "mlir/Pass/Pass.h"
 

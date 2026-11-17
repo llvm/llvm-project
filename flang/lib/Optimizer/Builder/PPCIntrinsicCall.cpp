@@ -18,7 +18,7 @@
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMCastOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 namespace fir {
