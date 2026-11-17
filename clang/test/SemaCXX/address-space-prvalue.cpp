@@ -20,9 +20,9 @@ extern as1_S gs;
 // Temporaries are created in the default address space, so a temporary whose
 // type is qualified with a different address space is rejected.
 void temporaries() {
-  (void)as1_S{1};   // expected-error {{temporary of type 'as1_S' (aka '__attribute__((address_space(1))) S') cannot be created in address space '__attribute__((address_space(1)))'}}
-  (void)as1_Agg{};  // expected-error {{temporary of type 'as1_Agg' (aka '__attribute__((address_space(1))) Agg') cannot be created in address space '__attribute__((address_space(1)))'}}
-  (void)as1_Agg();  // expected-error {{temporary of type 'as1_Agg' (aka '__attribute__((address_space(1))) Agg') cannot be created in address space '__attribute__((address_space(1)))'}}
+  (void)as1_S{1};   // expected-error {{temporary of type 'as1_S' (aka '__attribute__((address_space(1))) S') cannot be created in address space '1'}}
+  (void)as1_Agg{};  // expected-error {{temporary of type 'as1_Agg' (aka '__attribute__((address_space(1))) Agg') cannot be created in address space '1'}}
+  (void)as1_Agg();  // expected-error {{temporary of type 'as1_Agg' (aka '__attribute__((address_space(1))) Agg') cannot be created in address space '1'}}
 
   // A cast to a class type initializes its result as a temporary of that type,
   // so it is rejected in the same way.
@@ -49,8 +49,8 @@ as1_Agg global_agg = {1};
 using int_array = const __attribute__((address_space(1))) int[1];
 using S_array = const __attribute__((address_space(1))) S[1];
 void arrays() {
-  (void)int_array{1}; // expected-error {{temporary of type 'int_array' (aka 'const __attribute__((address_space(1))) int[1]') cannot be created in address space '__attribute__((address_space(1)))'}}
-  (void)S_array{1};   // expected-error {{temporary of type 'S_array' (aka 'const __attribute__((address_space(1))) S[1]') cannot be created in address space '__attribute__((address_space(1)))'}}
+  (void)int_array{1}; // expected-error {{temporary of type 'int_array' (aka 'const __attribute__((address_space(1))) int[1]') cannot be created in address space '1'}}
+  (void)S_array{1};   // expected-error {{temporary of type 'S_array' (aka 'const __attribute__((address_space(1))) S[1]') cannot be created in address space '1'}}
 }
 
 // A by-value call result is a prvalue and does not keep the return type's

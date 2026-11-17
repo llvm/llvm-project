@@ -9554,13 +9554,10 @@ bool InitializationSequence::Diagnose(Sema &S,
     break;
   }
 
-  case FK_TemporaryAddressSpace: {
-    Qualifiers QualsForPrinting;
-    QualsForPrinting.setAddressSpace(DestType.getAddressSpace());
+  case FK_TemporaryAddressSpace:
     S.Diag(Kind.getLocation(), diag::err_temporary_with_address_space)
-        << DestType << QualsForPrinting << Kind.getRange();
+        << DestType << DestType.getAddressSpace() << Kind.getRange();
     break;
-  }
 
   case FK_ExplicitConstructor: {
     S.Diag(Kind.getLocation(), diag::err_selected_explicit_constructor)
