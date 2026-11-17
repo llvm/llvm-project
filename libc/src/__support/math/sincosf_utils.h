@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_SINCOSF_UTILS_H
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
