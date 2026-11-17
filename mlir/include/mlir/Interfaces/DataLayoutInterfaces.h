@@ -16,7 +16,6 @@
 #define MLIR_INTERFACES_DATALAYOUTINTERFACES_H
 
 #include "mlir/IR/Attributes.h"
-#include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"

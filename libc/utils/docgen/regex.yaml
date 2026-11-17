@@ -1,0 +1,56 @@
+posix: posix-2024
+functions:
+  regcomp:
+    in-latest-posix: ''
+  regerror:
+    in-latest-posix: ''
+  regexec:
+    in-latest-posix: ''
+  regfree:
+    in-latest-posix: ''
+macros:
+  REG_BADBR:
+    in-latest-posix: ''
+  REG_BADPAT:
+    in-latest-posix: ''
+  REG_BADRPT:
+    in-latest-posix: ''
+  REG_EBRACE:
+    in-latest-posix: ''
+  REG_EBRACK:
+    in-latest-posix: ''
+  REG_ECOLLATE:
+    in-latest-posix: ''
+  REG_ECTYPE:
+    in-latest-posix: ''
+  REG_EESCAPE:
+    in-latest-posix: ''
+  REG_EPAREN:
+    in-latest-posix: ''
+  REG_ERANGE:
+    in-latest-posix: ''
+  REG_ESPACE:
+    in-latest-posix: ''
+  REG_ESUBREG:
+    in-latest-posix: ''
+  REG_EXTENDED:
+    in-latest-posix: ''
+  REG_ICASE:
+    in-latest-posix: ''
+  REG_NEWLINE:
+    in-latest-posix: ''
+  REG_NOMATCH:
+    in-latest-posix: ''
+  REG_NOSUB:
+    in-latest-posix: ''
+  REG_NOTBOL:
+    in-latest-posix: ''
+  REG_NOTEOL:
+    in-latest-posix: ''
+types:
+  regex_t:
+    in-latest-posix: ''
+  regmatch_t:
+    in-latest-posix: ''
+  regoff_t:
+    in-latest-posix: ''

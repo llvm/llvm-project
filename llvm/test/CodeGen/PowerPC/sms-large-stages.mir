@@ -45,22 +45,6 @@
 name:            f
 alignment:       16
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: g8rc }
-  - { id: 1, class: g8rc }
-  - { id: 2, class: g8rc_and_g8rc_nox0 }
-  - { id: 3, class: g8rc_and_g8rc_nox0 }
-  - { id: 4, class: g8rc }
-  - { id: 5, class: g8rc }
-  - { id: 6, class: g8rc_and_g8rc_nox0 }
-  - { id: 7, class: g8rc_and_g8rc_nox0 }
-  - { id: 8, class: g8rc }
-  - { id: 9, class: g8rc }
-  - { id: 10, class: f4rc }
-  - { id: 11, class: g8rc_and_g8rc_nox0 }
-  - { id: 12, class: vssrc }
-  - { id: 13, class: f4rc }
-  - { id: 14, class: g8rc_and_g8rc_nox0 }
 liveins:
   - { reg: '$x3', virtual-reg: '%6' }
   - { reg: '$x4', virtual-reg: '%7' }

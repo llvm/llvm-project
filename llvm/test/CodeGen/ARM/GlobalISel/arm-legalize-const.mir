@@ -6,7 +6,6 @@ name:            get_const
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; CHECK-LABEL: name: get_const

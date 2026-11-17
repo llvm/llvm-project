@@ -152,23 +152,41 @@ define i64 @test_floor_si64(float %x) nounwind {
 }
 
 define signext i32 @test_floor_ui32(float %x) {
-; CHECKIF-LABEL: test_floor_ui32:
-; CHECKIF:       # %bb.0:
-; CHECKIF-NEXT:    feq.s a0, fa0, fa0
-; CHECKIF-NEXT:    fcvt.wu.s a1, fa0, rdn
-; CHECKIF-NEXT:    seqz a0, a0
-; CHECKIF-NEXT:    addi a0, a0, -1
-; CHECKIF-NEXT:    and a0, a0, a1
-; CHECKIF-NEXT:    ret
+; RV32IF-LABEL: test_floor_ui32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    feq.s a0, fa0, fa0
+; RV32IF-NEXT:    fcvt.wu.s a1, fa0, rtz
+; RV32IF-NEXT:    seqz a0, a0
+; RV32IF-NEXT:    addi a0, a0, -1
+; RV32IF-NEXT:    and a0, a0, a1
+; RV32IF-NEXT:    ret
 ;
-; CHECKIZFINX-LABEL: test_floor_ui32:
-; CHECKIZFINX:       # %bb.0:
-; CHECKIZFINX-NEXT:    feq.s a1, a0, a0
-; CHECKIZFINX-NEXT:    fcvt.wu.s a0, a0, rdn
-; CHECKIZFINX-NEXT:    seqz a1, a1
-; CHECKIZFINX-NEXT:    addi a1, a1, -1
-; CHECKIZFINX-NEXT:    and a0, a1, a0
-; CHECKIZFINX-NEXT:    ret
+; RV64IF-LABEL: test_floor_ui32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    feq.s a0, fa0, fa0
+; RV64IF-NEXT:    fcvt.wu.s a1, fa0, rtz
+; RV64IF-NEXT:    seqz a0, a0
+; RV64IF-NEXT:    addiw a0, a0, -1
+; RV64IF-NEXT:    and a0, a1, a0
+; RV64IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: test_floor_ui32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    feq.s a1, a0, a0
+; RV32IZFINX-NEXT:    fcvt.wu.s a0, a0, rtz
+; RV32IZFINX-NEXT:    seqz a1, a1
+; RV32IZFINX-NEXT:    addi a1, a1, -1
+; RV32IZFINX-NEXT:    and a0, a1, a0
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: test_floor_ui32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    feq.s a1, a0, a0
+; RV64IZFINX-NEXT:    fcvt.wu.s a0, a0, rtz
+; RV64IZFINX-NEXT:    seqz a1, a1
+; RV64IZFINX-NEXT:    addiw a1, a1, -1
+; RV64IZFINX-NEXT:    and a0, a0, a1
+; RV64IZFINX-NEXT:    ret
   %a = call float @llvm.floor.f32(float %x)
   %b = call i32 @llvm.fptoui.sat.i32.f32(float %a)
   ret i32 %b
@@ -181,21 +199,10 @@ define i64 @test_floor_ui64(float %x) nounwind {
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    fsw fs0, 4(sp) # 4-byte Folded Spill
-; RV32IF-NEXT:    fmv.s fs0, fa0
-; RV32IF-NEXT:    lui a0, 307200
-; RV32IF-NEXT:    fmv.w.x fa5, a0
-; RV32IF-NEXT:    fabs.s fa4, fa0
-; RV32IF-NEXT:    flt.s a0, fa4, fa5
-; RV32IF-NEXT:    beqz a0, .LBB3_2
-; RV32IF-NEXT:  # %bb.1:
-; RV32IF-NEXT:    fcvt.w.s a0, fs0, rdn
-; RV32IF-NEXT:    fcvt.s.w fa5, a0, rdn
-; RV32IF-NEXT:    fsgnj.s fs0, fa5, fs0
-; RV32IF-NEXT:  .LBB3_2:
 ; RV32IF-NEXT:    fmv.w.x fa5, zero
-; RV32IF-NEXT:    fle.s a0, fa5, fs0
+; RV32IF-NEXT:    fmv.s fs0, fa0
+; RV32IF-NEXT:    fle.s a0, fa5, fa0
 ; RV32IF-NEXT:    neg s0, a0
-; RV32IF-NEXT:    fmv.s fa0, fs0
 ; RV32IF-NEXT:    call __fixunssfdi
 ; RV32IF-NEXT:    lui a2, 391168
 ; RV32IF-NEXT:    addi a2, a2, -1
@@ -215,7 +222,7 @@ define i64 @test_floor_ui64(float %x) nounwind {
 ; RV64IF-LABEL: test_floor_ui64:
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    feq.s a0, fa0, fa0
-; RV64IF-NEXT:    fcvt.lu.s a1, fa0, rdn
+; RV64IF-NEXT:    fcvt.lu.s a1, fa0, rtz
 ; RV64IF-NEXT:    seqz a0, a0
 ; RV64IF-NEXT:    addi a0, a0, -1
 ; RV64IF-NEXT:    and a0, a0, a1
@@ -228,16 +235,7 @@ define i64 @test_floor_ui64(float %x) nounwind {
 ; RV32IZFINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32IZFINX-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; RV32IZFINX-NEXT:    mv s0, a0
-; RV32IZFINX-NEXT:    fabs.s a0, a0
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    flt.s a0, a0, a1
-; RV32IZFINX-NEXT:    beqz a0, .LBB3_2
-; RV32IZFINX-NEXT:  # %bb.1:
-; RV32IZFINX-NEXT:    fcvt.w.s a0, s0, rdn
-; RV32IZFINX-NEXT:    fcvt.s.w a0, a0, rdn
-; RV32IZFINX-NEXT:    fsgnj.s s0, a0, s0
-; RV32IZFINX-NEXT:  .LBB3_2:
-; RV32IZFINX-NEXT:    fle.s a0, zero, s0
+; RV32IZFINX-NEXT:    fle.s a0, zero, a0
 ; RV32IZFINX-NEXT:    neg s1, a0
 ; RV32IZFINX-NEXT:    mv a0, s0
 ; RV32IZFINX-NEXT:    call __fixunssfdi
@@ -258,7 +256,7 @@ define i64 @test_floor_ui64(float %x) nounwind {
 ; RV64IZFINX-LABEL: test_floor_ui64:
 ; RV64IZFINX:       # %bb.0:
 ; RV64IZFINX-NEXT:    feq.s a1, a0, a0
-; RV64IZFINX-NEXT:    fcvt.lu.s a0, a0, rdn
+; RV64IZFINX-NEXT:    fcvt.lu.s a0, a0, rtz
 ; RV64IZFINX-NEXT:    seqz a1, a1
 ; RV64IZFINX-NEXT:    addi a1, a1, -1
 ; RV64IZFINX-NEXT:    and a0, a1, a0
