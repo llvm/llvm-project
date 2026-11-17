@@ -238,12 +238,13 @@ AArch64InstrInfo::getInstSizeInBytesNoGuard(const MachineInstr &MI) const {
 
     if (STI.isLFI()) {
       unsigned Opc = MI.getOpcode();
-      if (Opc == AArch64::AUTH_TCRETURN || Opc == AArch64::AUTH_TCRETURN_BTI)
+      if (Opc == AArch64::AUTH_TCRETURN || Opc == AArch64::AUTH_TCRETURN_BTI) {
         // The braa/brab expands to 3 instructions (authenticate + guard + br).
         NumBytes += 8;
-      else if (MI.getOperand(0).isReg())
+      } else if (MI.getOperand(0).isReg()) {
         // Indirect tail calls expand to 2 instructions (guard + br).
         NumBytes += 4;
+      }
     }
 
     const auto *MFI = MF->getInfo<AArch64FunctionInfo>();
