@@ -35209,8 +35209,7 @@ private:
     // the signs of the operands.
     auto CreateSingleOp = [&](Value *Vec, unsigned Scale, bool IsSigned,
                               bool ReducedInTree, bool Negated,
-                              TTI::CastContextHint Ctx =
-                                  TTI::CastContextHint::None) {
+                              TTI::CastContextHint Ctx) {
       Value *Rdx = createSingleOp(Builder, TTI, Ctx, Vec, Scale, IsSigned,
                                   DestTy, ReducedInTree);
       if (!ReducedSubTree) {
@@ -35236,7 +35235,8 @@ private:
     auto CreateVecOp = [&](Value *Vec, unsigned Cnt, bool IsSigned,
                            bool ReducedInTree, bool Negated) {
       if (ReducedInTree) {
-        CreateSingleOp(Vec, Cnt, IsSigned, ReducedInTree, Negated);
+        CreateSingleOp(Vec, Cnt, IsSigned, ReducedInTree, Negated,
+                       /*Ctx=*/TTI::CastContextHint::None);
         return;
       }
       Type *ScalarTy = Vec->getType()->getScalarType();
@@ -35393,7 +35393,8 @@ private:
     // to reduce.
     if (VecRes)
       CreateSingleOp(VecRes, /*Scale=*/1, VecResSignedness,
-                     /*ReducedInTree=*/false, VecResNegated);
+                     /*ReducedInTree=*/false, VecResNegated,
+                     /*Ctx=*/TTI::CastContextHint::None);
 
     return {ReducedSubTree, ResNegated};
   }
