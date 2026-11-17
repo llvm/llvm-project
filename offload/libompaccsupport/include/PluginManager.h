@@ -15,11 +15,11 @@
 
 #include "OffloadAPI.h"
 
+#include "APITypes.h"
 #include "DeviceImage.h"
-#include "ExclusiveAccess.h"
 #include "OmpAccError.h"
-#include "Shared/APITypes.h"
-#include "Shared/Requirements.h"
+#include "Requirements.h"
+#include "Shared/ExclusiveAccess.h"
 #include "Shared/Utils.h"
 
 #include "Platform.h"

@@ -15,8 +15,8 @@
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginManager.h"
 
+#include "Profile.h"
 #include "Shared/Debug.h"
-#include "Shared/Profile.h"
 
 #include <thread>
 

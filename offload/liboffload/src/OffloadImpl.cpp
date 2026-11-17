@@ -372,7 +372,7 @@ ol_platform_backend_t pluginNameToBackend(StringRef Name) {
 
 // Every plugin exports this method to create an instance of the plugin type.
 #define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
-#include "Shared/Targets.def"
+#include "Targets.def"
 
 Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
   SmallSet<ol_platform_backend_t, 0> Requested;
@@ -391,7 +391,7 @@ Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
           std::unique_ptr<GenericPluginTy>(createPlugin_##Name()), Backend));  \
     }                                                                          \
   } while (false);
-#include "Shared/Targets.def"
+#include "Targets.def"
 
   Context.TracingEnabled = std::getenv("OFFLOAD_TRACE");
   Context.ValidationEnabled = !std::getenv("OFFLOAD_DISABLE_VALIDATION");

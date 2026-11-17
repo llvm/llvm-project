@@ -12,8 +12,8 @@
 
 #include "device.h"
 
+#include "APITypes.h"
 #include "OmpAccError.h"
-#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Utils.h"
 

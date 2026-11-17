@@ -1,4 +1,4 @@
-//===-- Shared/APITypes.h - Offload and plugin API types --------*- C++ -*-===//
+//===-- APITypes.h - Offload and plugin API types ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,8 +14,8 @@
 #ifndef OMPTARGET_SHARED_API_TYPES_H
 #define OMPTARGET_SHARED_API_TYPES_H
 
-#include "Environment.h"
 #include "OffloadAPI.h"
+#include "Shared/Environment.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"

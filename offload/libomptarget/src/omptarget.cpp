@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "omptarget.h"
+#include "Helpers.h"
 #include "OffloadPolicy.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
@@ -20,10 +21,9 @@
 #include "Shared/EnvironmentVar.h"
 #include "Shared/Utils.h"
 #include "device.h"
-#include "private.h"
 #include "rtl.h"
 
-#include "Shared/Profile.h"
+#include "Profile.h"
 
 #include "OpenMP/Mapping.h"
 #include "OpenMP/omp.h"

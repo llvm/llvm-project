@@ -18,7 +18,7 @@
 #include <mutex>
 #include <unordered_set>
 
-#include "Shared/APITypes.h"
+#include "APITypes.h"
 #include "Shared/EnvironmentVar.h"
 #include "Shared/Utils.h"
 

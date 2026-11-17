@@ -113,8 +113,9 @@ int __KAI_KMPC_CONVENTION omp_get_num_interop_properties(const omp_interop_t);
  * The `omp_get_interop_int` routine retrieves an integer property from an
  * `omp_interop_t` object.
  */
-omp_intptr_t __KAI_KMPC_CONVENTION
-omp_get_interop_int(const omp_interop_t, omp_interop_property_t, int *);
+omp_intptr_t __KAI_KMPC_CONVENTION omp_get_interop_int(const omp_interop_t,
+                                                       omp_interop_property_t,
+                                                       int *);
 /*!
  * The `omp_get_interop_ptr` routine retrieves a pointer property from an
  * `omp_interop_t` object.
@@ -125,8 +126,9 @@ void *__KAI_KMPC_CONVENTION omp_get_interop_ptr(const omp_interop_t,
  * The `omp_get_interop_str` routine retrieves a string property from an
  * `omp_interop_t` object.
  */
-const char *__KAI_KMPC_CONVENTION
-omp_get_interop_str(const omp_interop_t, omp_interop_property_t, int *);
+const char *__KAI_KMPC_CONVENTION omp_get_interop_str(const omp_interop_t,
+                                                      omp_interop_property_t,
+                                                      int *);
 /*!
  * The `omp_get_interop_name` routine retrieves a property name from an
  * `omp_interop_t` object.

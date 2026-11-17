@@ -12,15 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "OpenMP/OMPT/Interface.h"
+#include "Helpers.h"
 #include "OffloadPolicy.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OffloadRTL.h"
 #include "OpenMP/omp.h"
 #include "omptarget.h"
-#include "private.h"
 
+#include "Profile.h"
 #include "Shared/EnvironmentVar.h"
-#include "Shared/Profile.h"
 
 #include "Utils/ExponentialBackoff.h"
 

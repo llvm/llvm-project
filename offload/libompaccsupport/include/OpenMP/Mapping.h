@@ -13,8 +13,8 @@
 #ifndef OMPTARGET_OPENMP_MAPPING_H
 #define OMPTARGET_OPENMP_MAPPING_H
 
-#include "ExclusiveAccess.h"
 #include "Shared/EnvironmentVar.h"
+#include "Shared/ExclusiveAccess.h"
 #include "omptarget.h"
 
 #include <cstdint>
