@@ -108,7 +108,7 @@ private:
   unsigned MaxVGPRs;
   unsigned VGPRBudgetRatio;
   unsigned MaxVectorRegs;
-  unsigned DivergentMaxVectorRegs;
+  unsigned DivergentSelectRatio;
 
   bool IsAMDGCN = false;
   bool IsAMDHSA = false;
@@ -340,10 +340,9 @@ void AMDGPUPromoteAllocaImpl::setFunctionLimits(const Function &F) {
       F.getFnAttributeAsParsedInteger(
           "amdgpu-promote-alloca-to-vector-max-regs",
           IsAMDGCN ? 32 : R600MaxVectorRegs));
-  DivergentMaxVectorRegs =
-      CLOpts.promote_alloca_to_vector_divergent_max_regs.value_or(
-          F.getFnAttributeAsParsedInteger(
-              "amdgpu-promote-alloca-to-vector-divergent-max-regs", 8));
+  DivergentSelectRatio = CLOpts.promote_alloca_to_vector_select_ratio.value_or(
+      F.getFnAttributeAsParsedInteger(
+          "amdgpu-promote-alloca-to-vector-select-ratio", 8));
   VGPRBudgetRatio = CLOpts.promote_alloca_to_vector_vgpr_ratio.value_or(
       F.getFnAttributeAsParsedInteger(
           "amdgpu-promote-alloca-to-vector-vgpr-ratio", 4));
@@ -1000,6 +999,13 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
   Type *VecEltTy = AA.Vector.Ty->getElementType();
   unsigned ElementSize = DL.getTypeSizeInBits(VecEltTy) / 8;
   assert(ElementSize > 0);
+  // Keyed on every component of the index so that %i and %i + 1 are not treated
+  // as the same index.
+  SmallDenseSet<
+      std::tuple<Value *, ConstantInt *, ConstantInt *, ConstantInt *>, 4>
+      DivergentIdxs;
+  unsigned NumDivergentAccesses = 0;
+  unsigned NumNonDivergentAccesses = 0;
   for (auto *U : AA.Uses) {
     Instruction *Inst = cast<Instruction>(U->getUser());
 
@@ -1019,6 +1025,20 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
         return RejectUser(Inst, "not a simple load or store");
 
       Ptr = Ptr->stripPointerCasts();
+
+      const GEPToVectorIndex *Idx = nullptr;
+      if (auto *AccessGEP = dyn_cast<GetElementPtrInst>(Ptr)) {
+        auto *It = AA.Vector.GEPVectorIdx.find(AccessGEP);
+        if (It != AA.Vector.GEPVectorIdx.end())
+          Idx = &It->second;
+      }
+      if (Idx && Idx->VarIndex && GetUI()->isDivergentAtUse(*U)) {
+        DivergentIdxs.insert(
+            {Idx->VarIndex, Idx->VarMul, Idx->VarShift, Idx->ConstIndex});
+        ++NumDivergentAccesses;
+      } else {
+        ++NumNonDivergentAccesses;
+      }
 
       // Alloca already accessed as vector.
       if (Ptr == AA.Alloca &&
@@ -1042,13 +1062,6 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
       if (!Index)
         return RejectUser(Inst, "cannot compute vector index for GEP");
 
-      const bool ShouldRejectDivergentIdx =
-          divideCeil(DL.getTypeSizeInBits(AA.Vector.Ty).getFixedValue(), 32) >
-          DivergentMaxVectorRegs;
-      if (ShouldRejectDivergentIdx && Index->VarIndex &&
-          GetUI()->isDivergentAtDef(Index->VarIndex))
-        return RejectUser(Inst, "divergent dynamic index into a large vector");
-
       AA.Vector.GEPVectorIdx[GEP] = std::move(Index.value());
       AA.Vector.UsersToRemove.push_back(Inst);
       continue;
@@ -1056,6 +1069,7 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
 
     if (MemSetInst *MSI = dyn_cast<MemSetInst>(Inst);
         MSI && isSupportedMemset(MSI, AA.Alloca, DL)) {
+      ++NumNonDivergentAccesses;
       AA.Vector.Worklist.push_back(Inst);
       continue;
     }
@@ -1134,7 +1148,31 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
       return RejectUser(Entry.first,
                         "mem transfer inst between different objects");
     AA.Vector.Worklist.push_back(Entry.first);
+    ++NumNonDivergentAccesses;
   }
+
+  if (DivergentIdxs.empty())
+    return;
+
+  // Every access uses the same divergent index, so no `cmp`/`cndmask` chain;
+  if (DivergentIdxs.size() == 1 && NumNonDivergentAccesses == 0)
+    return;
+
+  // Check if removing memory access is worth extra `cmp`/`cndmask`
+  // instructions.
+  const uint64_t SelectsPerAccess =
+      static_cast<uint64_t>(AA.Vector.Ty->getNumElements()) *
+      divideCeil(DL.getTypeSizeInBits(VecEltTy).getFixedValue(), 32);
+  const uint64_t AddedSelectsCost = NumDivergentAccesses * SelectsPerAccess;
+  // Non-divergent accesses amplify the benefit. They are always profitable, so
+  // it is likely a win on average even if we introduce some select chains for
+  // divergent cases.
+  const uint64_t RemovedMemAccessBenefit =
+      static_cast<uint64_t>(DivergentSelectRatio) *
+      (NumDivergentAccesses + NumNonDivergentAccesses);
+  if (AddedSelectsCost > RemovedMemAccessBenefit)
+    return RejectUser(AA.Alloca,
+                      "divergent dynamic indices cost more than they save");
 }
 
 void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
