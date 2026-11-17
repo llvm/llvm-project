@@ -67,9 +67,6 @@ int main(int argc, const char *argv[]) {
     xpc_connection_set_event_handler(client_conn, ^(xpc_object_t event) {
       NSLog(@"client event handler, event = %@, captured = %@", event, client_captured);
       barrier_wait(&barrier);
-      dispatch_sync(dispatch_get_main_queue(), ^{
-        CFRunLoopStop(CFRunLoopGetCurrent());
-      });
     });
 
     NSString *reply_captured =
@@ -84,8 +81,6 @@ int main(int argc, const char *argv[]) {
     xpc_connection_resume(server_conn);
     xpc_connection_resume(client_conn);
     barrier_wait(&barrier);
-
-    CFRunLoopRun();
 
     NSLog(@"Done.");
   }
