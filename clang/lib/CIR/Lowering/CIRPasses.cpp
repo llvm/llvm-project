@@ -126,8 +126,7 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
   if (enableCallConvLowering) {
     // CallConvLowering rewrites signatures and call sites using the classifier,
     // so it must run after CXXABILowering has lowered C++ ABI types to plain
-    // records the classifier can handle.  Only the x86_64 System V and AMDGPU
-    // classifiers are implemented. Other targets are left unchanged.
+    // records the classifier can handle.
     CallConvTarget target = getCallConvTarget(*triple);
     if (target != CallConvTarget::None) {
       // Source the ABI-compatibility version from the module's serialized
