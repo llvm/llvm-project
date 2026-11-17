@@ -13,7 +13,6 @@
 #ifndef MLIR_IR_REMARKS_H
 #define MLIR_IR_REMARKS_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringExtras.h"

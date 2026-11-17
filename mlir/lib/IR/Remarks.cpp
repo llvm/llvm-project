@@ -233,6 +233,7 @@ struct RemarkEngine::RemarkHistory {
     llvm::UniqueStringSaver strings{allocator};
     std::vector<Entry> entries;
     llvm::DenseMap<Location, SmallVector<size_t, 1>> entriesByLocation;
+    size_t indexedEntries = 0;
     // IDs already recorded.
     llvm::DenseSet<uint64_t> recordedIds;
   };
@@ -295,8 +296,13 @@ RemarkEngine::findRemarks(const RemarkQuery &query) const {
     std::scoped_lock<std::mutex> lock(history->mutex);
     if (!history->storage)
       return {};
-    const auto &storage = *history->storage;
+    auto &storage = *history->storage;
     if (query.location) {
+      while (storage.indexedEntries < storage.entries.size()) {
+        size_t i = storage.indexedEntries;
+        storage.entriesByLocation[storage.entries[i].location].push_back(i);
+        ++storage.indexedEntries;
+      }
       auto entries = storage.entriesByLocation.find(*query.location);
       if (entries != storage.entriesByLocation.end())
         for (size_t index : entries->second) {
@@ -417,12 +423,9 @@ void RemarkEngine::reportImpl(const Remark &remark) {
     if (history->storage && remark.getId()) {
       auto &storage = *history->storage;
       // A policy may deliver the same event repeatedly.
-      if (storage.recordedIds.insert(remark.getId().getValue()).second) {
-        storage.entriesByLocation[remark.getLocation()].push_back(
-            storage.entries.size());
+      if (storage.recordedIds.insert(remark.getId().getValue()).second)
         storage.entries.push_back(
             RemarkHistory::Entry::from(remark, storage.strings));
-      }
     }
   }
   // Stream the remark

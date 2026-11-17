@@ -1622,7 +1622,7 @@ TEST_P(RemarkHistoryTest, ConcurrentReportsAndQueries) {
             loc,
             remark::RemarkOpts::name(name).category("Opt").function(function))
             << remark::relatedTo(remark::RemarkQuery{}.function(function));
-        (void)engine().findRemarks(remark::RemarkQuery{});
+        (void)engine().findRemarks(remark::RemarkQuery{}.at(loc));
       }
     });
   for (std::thread &thread : threads)

@@ -314,9 +314,10 @@ remark itself. A match indicates a relationship, not causality, and the IR may
 have changed since.
 
 Queries with `at(loc)` use location indexes for emitted remarks and Final's
-pending candidates, then check the remaining criteria. Final builds its index
-on the first location query of each batch. Queries without a location scan all
-remarks. A broad query in a loop produces many links; a known ID links through
+pending candidates, then check the remaining criteria. History builds and extends
+its index only on location queries. Final builds its index on the first location
+query of each batch. Queries without a location scan all remarks. A broad query
+in a loop produces many links; a known ID links through
 `RemarkOpts::relatedTo(id)`. Each link is serialized as its own `RelatedTo`
 argument.
 
