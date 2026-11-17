@@ -15,24 +15,19 @@
 #define LLVM_LIB_TARGET_SPIRV_SPIRVCOMMANDLINE_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
-#include "llvm/Support/CommandLine.h"
 #include <string>
 
 namespace llvm {
 template <typename T> class ArrayRef;
+class Error;
 class StringRef;
 class Triple;
 
-/// Command line parser for toggling SPIR-V extensions.
-struct SPIRVExtensionsParser : public cl::parser<ExtensionSet> {
-public:
-  SPIRVExtensionsParser(cl::Option &O) : cl::parser<ExtensionSet>(O) {}
-
-  /// Parses SPIR-V extension name from CLI arguments.
-  ///
-  /// \return Returns true on error.
-  bool parse(cl::Option &O, StringRef ArgName, StringRef ArgValue,
-             ExtensionSet &Vals);
+/// Parser for toggling SPIR-V extensions.
+struct SPIRVExtensionsParser {
+  /// Parses the value of -spirv-ext into \p Enabled and \p Disabled.
+  static Error parse(StringRef ArgValue, ExtensionSet &Enabled,
+                     ExtensionSet &Disabled);
 
   /// Validates and converts extension names into internal enum values.
   ///
@@ -42,11 +37,9 @@ public:
                                    ExtensionSet &AllowedExtensions);
 
   /// Returns the list of extensions that are valid for a particular
-  /// target environment (i.e., OpenCL or Vulkan).
-  static ExtensionSet getValidExtensions(const Triple &TT);
-
-private:
-  static ExtensionSet DisabledExtensions;
+  /// target environment (i.e., OpenCL or Vulkan), excluding \p Disabled.
+  static ExtensionSet getValidExtensions(const Triple &TT,
+                                         const ExtensionSet &Disabled);
 };
 
 } // namespace llvm

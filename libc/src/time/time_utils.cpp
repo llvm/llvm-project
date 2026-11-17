@@ -162,8 +162,10 @@ ErrorOr<void> update_from_seconds(time_t total_seconds, tm *tm) {
   // N packs month (high 16 bits) and day-part (low 16 bits).
   // (yrs % 4) * 512 corrects a 1/4-day-per-year drift introduced by
   // skipping the explicit day-of-year step. 512 = 2^16 / 32 / 4, i.e.
-  // one quarter of a "fake 32-day month" in 16-bit space.
-  int64_t n_val = (yrs % 4) * 512 + shift - static_cast<int64_t>(ypt);
+  // one quarter of a "fake 32-day month" in 16-bit space. yrs is negative
+  // before year zero and % 4 would then be negative too, so the remainder
+  // is taken with & 3, which stays in [0, 3] for two's complement values.
+  int64_t n_val = (yrs & 3) * 512 + shift - static_cast<int64_t>(ypt);
   int64_t d_val =
       static_cast<int64_t>((static_cast<UInt128>(n_val & 65535) * C3) >> 64);
 
@@ -184,10 +186,7 @@ ErrorOr<void> update_from_seconds(time_t total_seconds, tm *tm) {
     yday++;
 
   // Step 5: Calculate day of week [0=Sun, 1=Mon, ..., 6=Sat]
-  // Unix epoch 1970-01-01 was Thursday (4)
-  int wday = static_cast<int>((unix_days + 4) % 7);
-  if (wday < 0)
-    wday += 7;
+  int wday = get_weekday(unix_days);
 
   // Step 6: Populate tm structure with all calculated values
   tm->tm_year = year - time_constants::TIME_YEAR_BASE; // Years since 1900
@@ -196,14 +195,12 @@ ErrorOr<void> update_from_seconds(time_t total_seconds, tm *tm) {
   tm->tm_wday = wday;                                  // Day of week [0, 6]
   tm->tm_yday = yday;                                  // Day of year [0, 365]
 
-  // Calculate time components from remaining seconds
-  tm->tm_hour =
-      static_cast<int>(remaining_seconds / time_constants::SECONDS_PER_HOUR);
-  tm->tm_min =
-      static_cast<int>(remaining_seconds / time_constants::SECONDS_PER_MIN %
-                       time_constants::SECONDS_PER_MIN);
-  tm->tm_sec =
-      static_cast<int>(remaining_seconds % time_constants::SECONDS_PER_MIN);
+  // Calculate time components from remaining seconds [0, 86399]
+  TimeOfDay time_of_day =
+      get_time_of_day(static_cast<uint32_t>(remaining_seconds));
+  tm->tm_hour = time_of_day.hour;
+  tm->tm_min = time_of_day.minute;
+  tm->tm_sec = time_of_day.second;
   tm->tm_isdst = 0; // Daylight saving time flag (not implemented)
 
   return {};

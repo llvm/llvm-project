@@ -211,7 +211,8 @@ TEST(LlvmLibcRegexMatcherTest, StarMatchingAndStabilization) {
   ExprPool star_pool;
   ErrorOr<ExprId> dot_star = parse_ere("a.*c", REG_EXTENDED, star_pool);
   ASSERT_TRUE(dot_star.has_value());
-  char long_input[10000];
+  // 'static' as otherwise it will exhaust the stack on the GPU targets.
+  static char long_input[10000];
   long_input[0] = 'a';
   for (size_t i = 1; i < 9999; ++i)
     long_input[i] = 'b';

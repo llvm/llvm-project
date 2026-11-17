@@ -18,7 +18,7 @@
 
 using namespace llvm;
 
-static llvm::opt::RegisterLibraryOptions<llvm::CodeGenOptions> Registration;
+LLVM_REGISTER_LIBRARY_OPTIONS(llvm::CodeGenOptions)
 
 const CodeGenOptions &llvm::getCodeGenOptions(const LLVMContext &C) {
   return C.getLibraryOptions().get<CodeGenOptions>();

@@ -109,18 +109,26 @@ AllocationSizeContext getAllocationSizeContext(mlir::Operation *op);
 
 /// Return true if a copy-in buffer should be allocated on the stack. Unlike
 /// general array allocation placement, copy-in buffers with dynamic size are
-/// kept on the heap even under -fstack-arrays.
-bool shouldUseStackForCopyin(mlir::Location loc, mlir::Type sequenceType,
-                             const AllocationPolicy &policy,
-                             const AllocationSizeContext &sizeContext);
+/// kept on the heap even under -fstack-arrays. \p alignment is the alignment
+/// requested for the buffer, if any; its padding counts against the budget.
+bool shouldUseStackForCopyin(
+    mlir::Location loc, mlir::Type sequenceType, const AllocationPolicy &policy,
+    const AllocationSizeContext &sizeContext,
+    std::optional<std::int64_t> alignment = std::nullopt);
 
-/// Facts about a single existing array allocation used to decide its placement.
+/// Facts about an existing allocation used to decide its placement.
 struct AllocationInfo : PendingAllocationInfo {
   /// The allocation operation (fir.alloca or fir.allocmem).
   mlir::Operation *op = nullptr;
   /// True if the allocation currently lives on the stack (fir.alloca).
   bool isCurrentlyOnStack = false;
 };
+
+/// Return true if \p info describes a scalar character expression buffer: a
+/// compiler temporary fir.allocmem of character type. Such buffers have
+/// explicit lifetimes but retain their historical stack storage independently
+/// of the array placement policy.
+bool isCharacterTemporary(const AllocationInfo &info);
 
 /// Size-based placement policy, usable before the allocation is created.
 /// Decides whether an allocation described by \p info should live on the stack,

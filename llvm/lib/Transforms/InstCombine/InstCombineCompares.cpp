@@ -105,7 +105,7 @@ static bool isSignTest(ICmpInst::Predicate &Pred, const APInt &C) {
   return false;
 }
 
-/// This is called when we see this pattern:
+/// Try to fold
 ///   cmp pred (load (gep GV, ...)), cmpcst
 /// where GV is a global variable with a constant initializer. Try to simplify
 /// this into some simple computation that does not need the load. For example
@@ -119,9 +119,10 @@ static bool isSignTest(ICmpInst::Predicate &Pred, const APInt &C) {
 /// Even if there are multiple uses, they can often be sunk into the block
 /// guarded by the icmp.
 Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
-    LoadInst *LI, GetElementPtrInst *GEP, CmpPredicate Pred, Constant *RHSC,
-    Instruction &CtxI, ConstantInt *AndCst) {
-  auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(GEP));
+    LoadInst *LI, CmpPredicate Pred, Constant *RHSC, Instruction &CtxI,
+    ConstantInt *AndCst) {
+  Value *Ptr = LI->getPointerOperand();
+  auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(Ptr));
   if (LI->isVolatile() || !GV || !GV->isConstant() ||
       !GV->hasDefinitiveInitializer())
     return nullptr;
@@ -131,7 +132,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   if (EltSize.isScalable())
     return nullptr;
 
-  LinearExpression Expr = decomposeLinearExpression(DL, GEP);
+  LinearExpression Expr = decomposeLinearExpression(DL, Ptr);
   if (!Expr.Index || Expr.BasePtr != GV || Expr.Offset.getBitWidth() > 64)
     return nullptr;
 
@@ -150,14 +151,17 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   if (!Stride.uge(EltSize.getFixedValue()))
     return nullptr;
 
-  // With nusw (implied by inbounds), Idx * Stride does not wrap as a signed
-  // quantity, and the following enumeration over ArrayElementCount is valid so
-  // long as the stride is positive. Conversely, without nusw, Idx * Stride is
-  // computed modulo 2^N (see MaskIdx below), and the masking in MaskIdx below
-  // is only exact when the stride is a power of two.
-  bool StrideIsValid = Expr.Flags.hasNoUnsignedSignedWrap()
-                           ? !Stride.isNegative()
-                           : Stride.isPowerOf2();
+  // - With nuw: `Idx * Stride` does not wrap and all strides are valid.
+  // - With nusw: `Idx * Stride` does not wrap as signed, and the following
+  //   enumeration over ArrayElementCount is valid so long as the stride is
+  //   positive.
+  // - Without nusw or nuw: `Idx * Stride` is computed modulo 2^N (see MaskIdx
+  //   below), and the masking in MaskIdx below is only exact when the stride
+  //   is a power of two.
+  bool StrideIsValid =
+      Expr.Flags.hasNoUnsignedWrap() ||
+      (Expr.Flags.hasNoUnsignedSignedWrap() ? !Stride.isNegative()
+                                            : Stride.isPowerOf2());
   if (!StrideIsValid)
     return nullptr;
 
@@ -276,10 +280,9 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     if (i < 64 && IsTrueForElt)
       MagicBitvector |= 1ULL << i;
 
-    // If all of our states become overdefined, bail out early.  Since the
-    // predicate is expensive, only check it every 8 elements.  This is only
-    // really useful for really huge arrays.
-    if ((i & 8) == 0 && i >= 64 && SecondTrueElement == Overdefined &&
+    // If all of our states become overdefined and we need more than 64 bits in
+    // the bit vector, bail out.
+    if (i >= 64 && SecondTrueElement == Overdefined &&
         SecondFalseElement == Overdefined && TrueRangeEnd == Overdefined &&
         FalseRangeEnd == Overdefined)
       return nullptr;
@@ -288,15 +291,17 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // Now that we've scanned the entire array, emit our new comparison(s).  We
   // order the state machines in complexity of the generated code.
 
-  // If inbounds keyword is not present, Idx * Stride can overflow.
+  // If none of nusw (implied by inbounds) or nuw is present, Idx * Stride can
+  // overflow.
   // Let's assume that Stride is 2 and the wanted value is at offset 0.
   // Then, there are two possible values for Idx to match offset 0:
   // 0x00..00, 0x80..00.
   // Emitting 'icmp eq Idx, 0' isn't correct in this case because the
   // comparison is false if Idx was 0x80..00.
-  // We need to erase the highest countTrailingZeros(ElementSize) bits of Idx.
+  // We need to erase the highest countTrailingZeros(Stride) bits of Idx.
   auto MaskIdx = [&](Value *Idx) {
-    if (!Expr.Flags.isInBounds() && Stride.countr_zero() != 0) {
+    if (!Expr.Flags.hasNoUnsignedWrap() &&
+        !Expr.Flags.hasNoUnsignedSignedWrap() && Stride.countr_zero() != 0) {
       Value *Mask = Constant::getAllOnesValue(Idx->getType());
       Mask = Builder.CreateLShr(Mask, Stride.countr_zero());
       Idx = Builder.CreateAnd(Idx, Mask);
@@ -1995,11 +2000,10 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
   Value *Y = And->getOperand(1);
   if (auto *C2 = dyn_cast<ConstantInt>(Y))
     if (auto *LI = dyn_cast<LoadInst>(X))
-      if (auto *GEP = dyn_cast<GetElementPtrInst>(LI->getOperand(0)))
-        if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
-                LI, GEP, Cmp.getPredicate(), cast<Constant>(Cmp.getOperand(1)),
-                Cmp, C2))
-          return Res;
+      if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
+              LI, Cmp.getPredicate(), cast<Constant>(Cmp.getOperand(1)), Cmp,
+              C2))
+        return Res;
 
   if (!Cmp.isEquality())
     return nullptr;
@@ -4498,6 +4502,41 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
     return nullptr;
 
   switch (LHSI->getOpcode()) {
+  // umax(X, Y) == null -> (X == null) && (Y == null).
+  // umax(X, Y) != null -> (X != null) || (Y != null).
+  case Instruction::Select: {
+    CmpInst::Predicate Pred = I.getPredicate();
+    if (!ICmpInst::isEquality(Pred) || !RHSC->getType()->isPtrOrPtrVectorTy())
+      break;
+
+    // Require zero address bits, the minimum unsigned pointer value.
+    Constant *RHSIndexBits = ConstantFoldCastOperand(
+        Instruction::PtrToAddr, RHSC, DL.getIndexType(RHSC->getType()), DL);
+    if (!RHSIndexBits || !RHSIndexBits->isNullValue())
+      break;
+
+    auto *SI = cast<SelectInst>(LHSI);
+    // Both the select and its comparison must die to avoid adding instructions.
+    if (!SI->hasOneUse() || !SI->getCondition()->hasOneUse())
+      break;
+
+    // Require the condition to compare the select operands directly.
+    Value *A = SI->getTrueValue();
+    Value *B = SI->getFalseValue();
+    CmpPredicate SelectPred;
+    if (!match(SI->getCondition(),
+               m_c_ICmp(SelectPred, m_Specific(A), m_Specific(B))) ||
+        (SelectPred != ICmpInst::ICMP_UGT && SelectPred != ICmpInst::ICMP_UGE))
+      break;
+
+    Value *ACmp = Builder.CreateICmp(Pred, A, RHSC);
+    Value *BCmp = Builder.CreateICmp(Pred, B, RHSC);
+    // The original icmp propagates poison from both operands; and/or is safe.
+    return BinaryOperator::Create(Pred == ICmpInst::ICMP_EQ ? Instruction::And
+                                                            : Instruction::Or,
+                                  ACmp, BCmp);
+  }
+
   case Instruction::IntToPtr:
     // icmp pred inttoptr(X), null -> icmp pred X, null pointer value
     if (isa<ConstantPointerNull>(RHSC)) {
@@ -4513,11 +4552,9 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
 
   case Instruction::Load:
     // Try to optimize things like "A[i] > 4" to index computations.
-    if (GetElementPtrInst *GEP =
-            dyn_cast<GetElementPtrInst>(LHSI->getOperand(0)))
-      if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
-              cast<LoadInst>(LHSI), GEP, I.getPredicate(), RHSC, I))
-        return Res;
+    if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
+            cast<LoadInst>(LHSI), I.getPredicate(), RHSC, I))
+      return Res;
     break;
   }
 
@@ -9111,12 +9148,15 @@ static Instruction *foldFCmpFNegCommonOp(FCmpInst &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   // Canonicalize fneg as Op1.
-  if (match(Op0, m_FNeg(m_Value())) && !match(Op1, m_FNeg(m_Value()))) {
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  if (match(Op0, m_FNegOrFSubNegZero(m_Value())) &&
+      !match(Op1, m_FNegOrFSubNegZero(m_Value()))) {
     std::swap(Op0, Op1);
     Pred = I.getSwappedPredicate();
   }
 
-  if (!match(Op1, m_FNeg(m_Specific(Op0))))
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  if (!match(Op1, m_FNegOrFSubNegZero(m_Specific(Op0))))
     return nullptr;
 
   // Replace the negated operand with 0.0:
@@ -9442,7 +9482,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
 
   // fcmp pred (fneg X), (fneg Y) -> fcmp swap(pred) X, Y
   Value *X, *Y;
-  if (match(Op0, m_FNeg(m_Value(X))) && match(Op1, m_FNeg(m_Value(Y))))
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  if (match(Op0, m_FNegOrFSubNegZero(m_Value(X))) &&
+      match(Op1, m_FNegOrFSubNegZero(m_Value(Y))))
     return new FCmpInst(I.getSwappedPredicate(), X, Y, "", &I);
 
   if (Instruction *R = foldFCmpFNegCommonOp(I))
@@ -9545,8 +9587,10 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
     switch (LHSI->getOpcode()) {
     case Instruction::Select:
       // fcmp eq (cond ? x : -x), 0 --> fcmp eq x, 0
+      // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
       if (FCmpInst::isEquality(Pred) && match(RHSC, m_AnyZeroFP()) &&
-          match(LHSI, m_c_Select(m_FNeg(m_Value(X)), m_Deferred(X))))
+          match(LHSI,
+                m_c_Select(m_FNegOrFSubNegZero(m_Value(X)), m_Deferred(X))))
         return replaceOperand(I, 0, X);
       if (Instruction *NV = FoldOpIntoSelect(I, cast<SelectInst>(LHSI)))
         return NV;
@@ -9570,10 +9614,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
         return NV;
       break;
     case Instruction::Load:
-      if (auto *GEP = dyn_cast<GetElementPtrInst>(LHSI->getOperand(0)))
-        if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
-                cast<LoadInst>(LHSI), GEP, I.getPredicate(), RHSC, I))
-          return Res;
+      if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
+              cast<LoadInst>(LHSI), I.getPredicate(), RHSC, I))
+        return Res;
       break;
     case Instruction::FPTrunc:
       if (Instruction *NV = foldFCmpFpTrunc(I, *LHSI, *RHSC))
@@ -9597,7 +9640,8 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   if (Instruction *R = foldCmpSelectOfConstants(I))
     return R;
 
-  if (match(Op0, m_FNeg(m_Value(X)))) {
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  if (match(Op0, m_FNegOrFSubNegZero(m_Value(X)))) {
     // fcmp pred (fneg X), C --> fcmp swap(pred) X, -C
     Constant *C;
     if (match(Op1, m_Constant(C)))

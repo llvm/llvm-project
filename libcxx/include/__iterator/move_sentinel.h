@@ -29,22 +29,22 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <semiregular _Sent>
 class move_sentinel {
 public:
-  _LIBCPP_HIDE_FROM_ABI move_sentinel() = default;
+  move_sentinel() = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit move_sentinel(_Sent __s) : __last_(std::move(__s)) {}
+  constexpr explicit move_sentinel(_Sent __s) : __last_(std::move(__s)) {}
 
   template <class _S2>
     requires convertible_to<const _S2&, _Sent>
-  _LIBCPP_HIDE_FROM_ABI constexpr move_sentinel(const move_sentinel<_S2>& __s) : __last_(__s.base()) {}
+  constexpr move_sentinel(const move_sentinel<_S2>& __s) : __last_(__s.base()) {}
 
   template <class _S2>
     requires assignable_from<_Sent&, const _S2&>
-  _LIBCPP_HIDE_FROM_ABI constexpr move_sentinel& operator=(const move_sentinel<_S2>& __s) {
+  constexpr move_sentinel& operator=(const move_sentinel<_S2>& __s) {
     __last_ = __s.base();
     return *this;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Sent base() const { return __last_; }
+  [[nodiscard]] constexpr _Sent base() const { return __last_; }
 
 private:
   _Sent __last_ = _Sent();

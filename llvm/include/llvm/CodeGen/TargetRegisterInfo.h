@@ -639,6 +639,13 @@ public:
     return nullptr;
   }
 
+  /// Return a register class where domain (integer/floating point) crossings
+  /// should be minimized.
+  virtual const TargetRegisterClass *
+  getRegClassToMinimizeDomainCrossings() const {
+    return nullptr;
+  }
+
 protected:
   /// Overridden by TableGen in targets that have sub-registers.
   virtual unsigned composeSubRegIndicesImpl(unsigned, unsigned) const {

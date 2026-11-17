@@ -2902,10 +2902,10 @@ define float @v_exp2_f32_from_fpext_bf16(bfloat %src) {
 ; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GFX900-SDAG-NEXT:    v_mov_b32_e32 v1, 0x42800000
 ; GFX900-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX900-SDAG-NEXT:    v_not_b32_e32 v1, 63
 ; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc

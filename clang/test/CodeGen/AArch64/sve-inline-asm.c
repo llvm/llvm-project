@@ -1,6 +1,8 @@
 // REQUIRES: aarch64-registered-target
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sve2p1 \
 // RUN:   -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sve2p1 \
+// RUN:   -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK %}
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sve2p1 \
 // RUN:   -S -o /dev/null
 

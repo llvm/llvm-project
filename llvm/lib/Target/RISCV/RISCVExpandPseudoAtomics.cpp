@@ -409,12 +409,19 @@ void RISCVExpandPseudoAtomicsImpl::insertMaskedMerge(
   // We select bits from newval and oldval using:
   // https://graphics.stanford.edu/~seander/bithacks.html#MaskedMerge
   // r = oldval ^ ((oldval ^ newval) & masktargetdata);
-  BuildMI(MBB, DL, TII->get(RISCV::XOR), ScratchReg)
-      .addReg(OldValReg)
-      .addReg(NewValReg);
-  BuildMI(MBB, DL, TII->get(RISCV::AND), ScratchReg)
-      .addReg(ScratchReg)
-      .addReg(MaskReg);
+  // A zero newval reduces this to r = oldval ^ (oldval & masktargetdata).
+  if (NewValReg == RISCV::X0) {
+    BuildMI(MBB, DL, TII->get(RISCV::AND), ScratchReg)
+        .addReg(OldValReg)
+        .addReg(MaskReg);
+  } else {
+    BuildMI(MBB, DL, TII->get(RISCV::XOR), ScratchReg)
+        .addReg(OldValReg)
+        .addReg(NewValReg);
+    BuildMI(MBB, DL, TII->get(RISCV::AND), ScratchReg)
+        .addReg(ScratchReg)
+        .addReg(MaskReg);
+  }
   BuildMI(MBB, DL, TII->get(RISCV::XOR), DestReg)
       .addReg(OldValReg)
       .addReg(ScratchReg);
@@ -879,8 +886,15 @@ bool RISCVExpandPseudoAtomicsImpl::expandAtomicCmpXchg(
     //   xor scratch, dest, scratch
     //   sc.w scratch, scratch, (adrr)
     //   bnez scratch, loophead
-    insertMaskedMerge(DL, LoopTailMBB, ScratchReg, DestReg, NewValReg, MaskReg,
-                      ScratchReg);
+    // A zero newval needs only the last xor: scratch still holds dest & mask
+    // from .loophead.
+    if (NewValReg == RISCV::X0)
+      BuildMI(LoopTailMBB, DL, TII->get(RISCV::XOR), ScratchReg)
+          .addReg(DestReg)
+          .addReg(ScratchReg);
+    else
+      insertMaskedMerge(DL, LoopTailMBB, ScratchReg, DestReg, NewValReg,
+                        MaskReg, ScratchReg);
     BuildMI(LoopTailMBB, DL, TII->get(getSCForRMW(Ordering, Width)), ScratchReg)
         .addReg(ScratchReg)
         .addReg(AddrReg);

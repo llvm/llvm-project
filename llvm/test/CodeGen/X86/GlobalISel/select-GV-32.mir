@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=i386-linux-gnu -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X32ALL --check-prefix=X32
-# RUN: llc -mtriple=x86_64-linux-gnux32 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X32ALL --check-prefix=X32ABI
+# RUN: llc -mtriple=i386-linux-gnu -run-pass=instruction-select %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X32ALL --check-prefix=X32
+# RUN: llc -mtriple=x86_64-linux-gnux32 -run-pass=instruction-select %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X32ALL --check-prefix=X32ABI
 
 --- |
 

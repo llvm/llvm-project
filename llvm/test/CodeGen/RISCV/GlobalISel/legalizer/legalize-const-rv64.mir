@@ -141,8 +141,11 @@ body:             |
 name:            const_add_i32
 body:             |
   bb.0.entry:
+    liveins: $x10
     ; CHECK-LABEL: name: const_add_i32
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -64769
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -64769
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[C]]
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[ADD]], 32
@@ -161,8 +164,11 @@ body:             |
 name:            const_add_i8
 body:             |
   bb.0.entry:
+    liveins: $x10
     ; CHECK-LABEL: name: const_add_i8
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[C]]
     ; CHECK-NEXT: $x10 = COPY [[ADD]](s64)

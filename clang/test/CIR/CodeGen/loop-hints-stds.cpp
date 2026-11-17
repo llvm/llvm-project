@@ -28,8 +28,8 @@ void hints(int n) {
 #pragma clang loop interleave(enable)
   for (int i = 0; i < n; ++i)
     use(i);
-// CXX17: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable>
-// CXX98: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < vectorize_enable>
+// CXX17: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable = true>
+// CXX98: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < vectorize_enable = true>
 #pragma clang loop vectorize_width(4) unroll_count(2)
   for (int i = 0; i < n; ++i)
     use(i);
@@ -51,8 +51,8 @@ void nested(int n) {
 #pragma clang loop vectorize(enable)
     for (int j = 0; j < n; ++j)
       use(j);
-// CXX17: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable>
-// CXX98: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < vectorize_enable>
+// CXX17: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable = true>
+// CXX98: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < vectorize_enable = true>
   }
 // CXX17: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll = full>
 // CXX98: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < unroll = full>

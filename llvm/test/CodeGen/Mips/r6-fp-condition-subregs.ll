@@ -6,7 +6,7 @@
 ; RUN: llc -mtriple=mips64 -mcpu=mips64r6 -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=mips64el -mcpu=mips64r6 -target-abi=n32 -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=mips64 -mcpu=mips64r6 -target-abi=n32 -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=mipsel -mcpu=mips32r6 -stop-after=finalize-isel -verify-machineinstrs < %s | FileCheck %s --check-prefix=ISEL
+; RUN: llc -mtriple=mipsel -mcpu=mips32r6 -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=ISEL
 ; RUN: llc -mtriple=mipsel -mcpu=mips32r6 -verify-machineinstrs -filetype=obj < %s -o /dev/null
 ; RUN: llc -mtriple=mips -mcpu=mips32r6 -verify-machineinstrs -filetype=obj < %s -o /dev/null
 ; RUN: llc -mtriple=mipsel -mcpu=mips32r6 -mattr=+micromips -verify-machineinstrs -filetype=obj < %s -o /dev/null

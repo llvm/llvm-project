@@ -20,8 +20,6 @@ bool check(backend Backend) {
   switch (Backend) {
   case backend::opencl:
   case backend::level_zero:
-  case backend::cuda:
-  case backend::hip:
     return true;
   default:
     return false;

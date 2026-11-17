@@ -1804,6 +1804,15 @@ let Command = "target modules list" in {
         Desc<
             "Display whether the module is still in the "
             "the shared module cache (Y/N), and its shared pointer use_count.">;
+  def target_modules_list_symtab_flags
+      : Option<"symtab-state-flags", "F">,
+        Group<1>,
+        OptionalArg<"Width">,
+        Desc<"Display state about the symbol table with optional width: "
+             "C if it was read from the index cache, F if it was parsed from "
+             "the object file, W if it was written to the index cache, S if "
+             "a symbol file added or updated symbols, - if none of these "
+             "apply.">;
   def target_modules_list_pointer : Option<"pointer", "p">,
                                     Group<1>,
                                     OptionalArg<"None">,
@@ -1985,6 +1994,11 @@ let Command = "target stop_hook add" in {
              "may happen very early on - before the loader has run. You can "
              "use this option if you do not want some stop-hooks to run then. "
              "Defaults to true.">;
+  def target_stop_hook_add_one_shot
+      : Option<"one-shot", "O">,
+        Arg<"Boolean">,
+        Desc<"The stop-hook runs at the next stop where it applies, for every "
+             "thread it applies to, and is then deleted. Defaults to false.">;
 }
 
 let Command = "target stop_hook list" in {

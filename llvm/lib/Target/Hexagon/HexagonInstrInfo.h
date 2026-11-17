@@ -422,6 +422,7 @@ public:
   bool isToBeScheduledASAP(const MachineInstr &MI1,
                            const MachineInstr &MI2) const;
   bool isHVXVec(const MachineInstr &MI) const;
+  bool isHLXVec(const MachineInstr &MI) const;
   bool isValidAutoIncImm(const EVT VT, const int Offset) const;
   bool isValidOffset(unsigned Opcode, int Offset, bool Extend = true) const;
   bool isVecAcc(const MachineInstr &MI) const;
@@ -440,6 +441,9 @@ public:
   bool hasUncondBranch(const MachineBasicBlock *B) const;
   bool mayBeCurLoad(const MachineInstr &MI) const;
   bool mayBeNewStore(const MachineInstr &MI) const;
+  // Identify HLX pseudos that expand to a tmp load or new store and a copy.
+  bool isTmpLoadPseudo(const MachineInstr &MI) const;
+  bool isNewStorePseudo(const MachineInstr &MI) const;
   bool producesStall(const MachineInstr &ProdMI,
                      const MachineInstr &ConsMI) const;
   bool producesStall(const MachineInstr &MI,
