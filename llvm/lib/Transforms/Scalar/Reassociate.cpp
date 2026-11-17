@@ -623,6 +623,32 @@ static bool LinearizeExprTree(Instruction *I,
   return Changed;
 }
 
+// Preserve locations for block-local moves and for the simple cross-block case
+// where Source's block unconditionally leads to Destination's block. There
+// must also be no possible implicit exit between the instruction positions.
+static bool canPreserveDebugLocForTreeMove(Instruction *Source,
+                                           Instruction *Destination) {
+  BasicBlock *SourceBlock = Source->getParent();
+  BasicBlock *DestinationBlock = Destination->getParent();
+  if (SourceBlock == DestinationBlock)
+    return true;
+
+  if (SourceBlock->getUniqueSuccessor() != DestinationBlock ||
+      DestinationBlock->getUniquePredecessor() != SourceBlock)
+    return false;
+
+  auto It = Source->getIterator();
+  for (++It; It != SourceBlock->end(); ++It)
+    if (!isGuaranteedToTransferExecutionToSuccessor(&*It))
+      return false;
+
+  for (auto It = DestinationBlock->begin(); It != Destination->getIterator();
+       ++It)
+    if (!isGuaranteedToTransferExecutionToSuccessor(&*It))
+      return false;
+  return true;
+}
+
 // Find the value that this record supersedes within its basic block. This is
 // used to reconstruct the variable view only for instructions moved within the
 // block; cross-block moves retain the pre-existing salvage behavior.
@@ -857,6 +883,10 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
       if (ExpressionChangedStart == I)
         break;
 
+      // Other cross-block moves can make the source location execute on
+      // different paths, so drop it before relocating the instruction.
+      if (!canPreserveDebugLocForTreeMove(ExpressionChangedStart, I))
+        ExpressionChangedStart->dropLocation();
       ExpressionChangedStart->moveBefore(I->getIterator());
       ExpressionChangedStart =
           cast<BinaryOperator>(*ExpressionChangedStart->user_begin());
