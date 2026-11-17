@@ -594,7 +594,8 @@ KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS_,
 }
 
 KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS_,
-                                const APFloat &RHS, RoundingMode RM, DenormalMode Mode) {
+                                const APFloat &RHS, RoundingMode RM,
+                                DenormalMode Mode) {
   const auto &Semantics = RHS.getSemantics();
 
   // Only handle fcNormal constants, and bail out for PPCDoubleDouble.

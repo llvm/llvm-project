@@ -5444,10 +5444,10 @@ computeKnownFPClassForFAddSub(const Operator *Op, const APInt &DemandedElts,
       }
 
       if (ConstFP && IsAdd) {
-          const auto &APF = ConstFP->getValueAPF();
-          Known = KnownFPClass::fadd(KnownLHS, APF, RM, Mode);
-          return;
-        }
+        const auto &APF = ConstFP->getValueAPF();
+        Known = KnownFPClass::fadd(KnownLHS, APF, RM, Mode);
+        return;
+      }
 
       Known = IsAdd ? KnownFPClass::fadd(KnownLHS, KnownRHS, RM, Mode)
                     : KnownFPClass::fsub(KnownLHS, KnownRHS, RM, Mode);
