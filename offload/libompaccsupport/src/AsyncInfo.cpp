@@ -26,7 +26,7 @@ AsyncInfoTy::AsyncInfoTy(DeviceTy &Device, SyncTy SyncType)
 }
 
 AsyncInfoTy::~AsyncInfoTy() {
-  synchronize();
+  (void)synchronize();
   if (Queue) {
     if (auto Res = olDestroyQueue(Queue))
       REPORT() << "Failed to destroy queue " << Queue << ": " << Res->Details;

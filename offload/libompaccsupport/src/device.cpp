@@ -1259,6 +1259,8 @@ static uint32_t getEffectiveNumBlocks(const DeviceGeometryPropsTy &Props,
     }
   }
 
+  assert(TripCountNumBlocks <= std::numeric_limits<uint32_t>::max() &&
+         "Unexpected overflow while computing block counts!");
   uint32_t PreferredNumBlocks = TripCountNumBlocks;
   // If the loops are long running we rather reuse blocks than spawn too many.
   static BoolEnvar OMPX_ReuseBlocksForHighTripCount(
