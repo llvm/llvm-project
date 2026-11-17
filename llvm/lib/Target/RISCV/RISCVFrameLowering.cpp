@@ -2090,23 +2090,14 @@ static unsigned getScavSlotsNumForRVV(MachineFunction &MF) {
   return MaxScavSlotsNum;
 }
 
+// Whether the function holds scalable vector stack objects. Scanning the stack
+// objects answers "no" before register allocation and "yes" once it has
+// created spill slots for vector values, and in issue 53016 the later answer
+// asked for a base pointer the earlier one had not reserved. So the answer is
+// "yes" for any function with V until register allocation is done, and only
+// then comes from the stack objects.
 static bool hasRVVFrameObject(const MachineFunction &MF) {
-  // Originally, the function will scan all the stack objects to check whether
-  // if there is any scalable vector object on the stack or not. However, it
-  // causes errors in the register allocator. In issue 53016, it returns false
-  // before RA because there is no RVV stack objects. After RA, it returns true
-  // because there are spilling slots for RVV values during RA. It will not
-  // reserve BP during register allocation and generate BP access in the PEI
-  // pass due to the inconsistent behavior of the function.
-  //
-  // The function is changed to use hasVInstructions() as the return value. It
-  // is not precise, but it can make the register allocation correct.
-  //
-  // FIXME: Find a better way to make the decision or revisit the solution in
-  // D103622.
-  //
-  // Refer to https://github.com/llvm/llvm-project/issues/53016.
-  return MF.getSubtarget<RISCVSubtarget>().hasVInstructions();
+  return MF.getInfo<RISCVMachineFunctionInfo>()->hasRVVFrameObject(MF);
 }
 
 static unsigned estimateFunctionSizeInBytes(const MachineFunction &MF,
@@ -2162,6 +2153,9 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
 
   RVFI->setRVVStackSize(RVVStackSize);
   RVFI->setRVVStackAlign(RVVStackAlign);
+
+  assert((RVVStackSize == 0 || hasRVVFrameObject(MF)) &&
+         "Scalable vector stack object created after register allocation");
 
   if (hasRVVFrameObject(MF)) {
     // Ensure the entire stack is aligned to at least the RVV requirement: some

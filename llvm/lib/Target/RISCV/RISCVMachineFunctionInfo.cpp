@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVMachineFunctionInfo.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/Module.h"
 
 using namespace llvm;
@@ -165,4 +167,37 @@ void RISCVMachineFunctionInfo::addSExt32Register(Register Reg) {
 
 bool RISCVMachineFunctionInfo::isSExt32Register(Register Reg) const {
   return is_contained(SExt32Registers, Reg);
+}
+
+bool RISCVMachineFunctionInfo::hasRVVFrameObject(
+    const MachineFunction &MF) const {
+  if (!MF.getSubtarget<RISCVSubtarget>().hasVInstructions())
+    return false;
+
+  // Register allocation may still spill a vector register. Say yes until it
+  // is done, so that the base pointer it may need is reserved (issue 53016).
+  if (!MF.getProperties().hasNoVRegs())
+    return true;
+
+  if (HasRVVFrameObject)
+    return *HasRVVFrameObject;
+
+  // Spilled vector registers have their stack objects by now. The only ones
+  // still to be created are the save slots of the callee-saved vector registers
+  // this function clobbers; this is the test RISCVFrameLowering's
+  // determineCalleeSaves applies to them.
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  for (const MCPhysReg *CSR = MRI.getCalleeSavedRegs(); *CSR; ++CSR)
+    if (RISCVRegisterInfo::isRVVRegClass(TRI.getMinimalPhysRegClass(*CSR)) &&
+        (!MRI.def_empty(*CSR) || MRI.getUsedPhysRegsMask().test(*CSR)))
+      return *(HasRVVFrameObject = true);
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  for (int I = MFI.getObjectIndexBegin(), E = MFI.getObjectIndexEnd(); I != E;
+       ++I)
+    if (MFI.getStackID(I) == TargetStackID::ScalableVector)
+      return *(HasRVVFrameObject = true);
+
+  return *(HasRVVFrameObject = false);
 }

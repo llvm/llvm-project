@@ -8,9 +8,9 @@
 ; RUN: llc -mtriple=riscv64 -frame-pointer=non-leaf < %s \
 ; RUN:   | FileCheck -check-prefix=RV64-NO-VEXT %s
 
-; Test that the SP-over-FP preference does not fire when V extension is
-; enabled. @foo_vec spills a vector register around the call under +v, so it
-; holds a scalable vector stack object there.
+; Test that the SP-over-FP preference does not fire for a function that holds
+; a scalable vector stack object. @foo holds none, with or without +v.
+; @foo_vec spills a vector register around the call under +v.
 
 declare void @use(ptr)
 declare riscv_vector_cc void @use_vcc(ptr)
@@ -22,12 +22,12 @@ define i32 @foo(i32 %a, i32 %b) nounwind {
 ; RV32-VEXT-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-VEXT-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32-VEXT-NEXT:    addi s0, sp, 16
-; RV32-VEXT-NEXT:    sw a0, -12(s0)
-; RV32-VEXT-NEXT:    sw a1, -16(s0)
-; RV32-VEXT-NEXT:    addi a0, s0, -12
+; RV32-VEXT-NEXT:    sw a0, 4(sp)
+; RV32-VEXT-NEXT:    sw a1, 0(sp)
+; RV32-VEXT-NEXT:    addi a0, sp, 4
 ; RV32-VEXT-NEXT:    call use
-; RV32-VEXT-NEXT:    lw a0, -12(s0)
-; RV32-VEXT-NEXT:    lw a1, -16(s0)
+; RV32-VEXT-NEXT:    lw a0, 4(sp)
+; RV32-VEXT-NEXT:    lw a1, 0(sp)
 ; RV32-VEXT-NEXT:    add a0, a0, a1
 ; RV32-VEXT-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-VEXT-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -58,12 +58,12 @@ define i32 @foo(i32 %a, i32 %b) nounwind {
 ; RV64-VEXT-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64-VEXT-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64-VEXT-NEXT:    addi s0, sp, 32
-; RV64-VEXT-NEXT:    sw a0, -20(s0)
-; RV64-VEXT-NEXT:    sw a1, -24(s0)
-; RV64-VEXT-NEXT:    addi a0, s0, -20
+; RV64-VEXT-NEXT:    sw a0, 12(sp)
+; RV64-VEXT-NEXT:    sw a1, 8(sp)
+; RV64-VEXT-NEXT:    addi a0, sp, 12
 ; RV64-VEXT-NEXT:    call use
-; RV64-VEXT-NEXT:    lw a0, -20(s0)
-; RV64-VEXT-NEXT:    lw a1, -24(s0)
+; RV64-VEXT-NEXT:    lw a0, 12(sp)
+; RV64-VEXT-NEXT:    lw a1, 8(sp)
 ; RV64-VEXT-NEXT:    addw a0, a0, a1
 ; RV64-VEXT-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-VEXT-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
@@ -258,12 +258,12 @@ define riscv_vector_cc i32 @foo_vcc(i32 %a, i32 %b) nounwind {
 ; RV32-VEXT-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-VEXT-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32-VEXT-NEXT:    addi s0, sp, 16
-; RV32-VEXT-NEXT:    sw a0, -12(s0)
-; RV32-VEXT-NEXT:    sw a1, -16(s0)
-; RV32-VEXT-NEXT:    addi a0, s0, -12
+; RV32-VEXT-NEXT:    sw a0, 4(sp)
+; RV32-VEXT-NEXT:    sw a1, 0(sp)
+; RV32-VEXT-NEXT:    addi a0, sp, 4
 ; RV32-VEXT-NEXT:    call use_vcc
-; RV32-VEXT-NEXT:    lw a0, -12(s0)
-; RV32-VEXT-NEXT:    lw a1, -16(s0)
+; RV32-VEXT-NEXT:    lw a0, 4(sp)
+; RV32-VEXT-NEXT:    lw a1, 0(sp)
 ; RV32-VEXT-NEXT:    add a0, a0, a1
 ; RV32-VEXT-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-VEXT-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -294,12 +294,12 @@ define riscv_vector_cc i32 @foo_vcc(i32 %a, i32 %b) nounwind {
 ; RV64-VEXT-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64-VEXT-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64-VEXT-NEXT:    addi s0, sp, 32
-; RV64-VEXT-NEXT:    sw a0, -20(s0)
-; RV64-VEXT-NEXT:    sw a1, -24(s0)
-; RV64-VEXT-NEXT:    addi a0, s0, -20
+; RV64-VEXT-NEXT:    sw a0, 12(sp)
+; RV64-VEXT-NEXT:    sw a1, 8(sp)
+; RV64-VEXT-NEXT:    addi a0, sp, 12
 ; RV64-VEXT-NEXT:    call use_vcc
-; RV64-VEXT-NEXT:    lw a0, -20(s0)
-; RV64-VEXT-NEXT:    lw a1, -24(s0)
+; RV64-VEXT-NEXT:    lw a0, 12(sp)
+; RV64-VEXT-NEXT:    lw a1, 8(sp)
 ; RV64-VEXT-NEXT:    addw a0, a0, a1
 ; RV64-VEXT-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-VEXT-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
