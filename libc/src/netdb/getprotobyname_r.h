@@ -20,12 +20,14 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+#ifndef LIBC_COPT_PUBLIC_PACKAGING
 namespace netdb {
 
 // Overrides the protocols database path on the calling thread for testing.
 void set_protocols_path(const char *path);
 
 } // namespace netdb
+#endif // LIBC_COPT_PUBLIC_PACKAGING
 
 int getprotobyname_r(const char *__restrict name,
                      struct protoent *__restrict result_buf,

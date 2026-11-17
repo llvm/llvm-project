@@ -60,7 +60,7 @@ add_entrypoint_object(
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
     libc.src.__support.ctype_utils
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.null_check
     libc.src.__support.str_to_integer
-    libc.src.string.memory_utils.inline_memcpy
 )
