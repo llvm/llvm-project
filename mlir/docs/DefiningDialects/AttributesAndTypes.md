@@ -1234,22 +1234,21 @@ generates an `getAlias` implementation using the Attribute or Type's mnemonic.
 ### Registering with the Dialect
 
 Once the attributes and types have been defined, they must then be registered
-with the parent `Dialect`. This is done via the `addAttributes` and `addTypes`
-methods. Note that when registering, the full definition of the storage classes
-must be visible.
+with the parent `Dialect`. The generated definitions define
+`register<DialectClass>Attributes` (or `register<DialectClass>Types`), which
+registers all attributes (or types) of the generated file. Since registering
+requires the full definition of the storage classes, it is a `static` function,
+which can be called in the compilation unit that includes the definitions:
 
 ```c++
-void MyDialect::initialize() {
-    /// Add the defined attributes to the dialect.
-  addAttributes<
-#define GET_ATTRDEF_LIST
+#define GET_ATTRDEF_CLASSES
 #include "MyDialect/Attributes.cpp.inc"
-  >();
 
-    /// Add the defined types to the dialect.
-  addTypes<
-#define GET_TYPEDEF_LIST
+#define GET_TYPEDEF_CLASSES
 #include "MyDialect/Types.cpp.inc"
-  >();
+
+void MyDialect::initialize() {
+  registerMyDialectAttributes(this);
+  registerMyDialectTypes(this);
 }
 ```

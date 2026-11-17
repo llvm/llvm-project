@@ -867,6 +867,12 @@ protected:
   /// Emit the code to dispatch between different defs during parsing/printing.
   void emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs);
 
+  /// Returns the name of the function that registers the defs of `dialect`.
+  std::string getRegistrationHookName(const Dialect &dialect) const;
+
+  /// Emit the definition of the hook that registers `defs` with their dialect.
+  void emitRegistrationHook(ArrayRef<AttrOrTypeDef> defs);
+
   /// The set of def records to emit.
   std::vector<const Record *> defRecords;
   /// The attribute or type class to emit.
@@ -1193,6 +1199,32 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
   printer.writeDeclTo(indentedOs);
 }
 
+std::string
+DefGenerator::getRegistrationHookName(const Dialect &dialect) const {
+  return strfmt("register{0}{1}s", dialect.getCppClassName(), valueType);
+}
+
+/// Emit the hook that registers the defs with their dialect. Since registering
+/// requires the definitions of the storage classes, the hook is a static
+/// function.
+void DefGenerator::emitRegistrationHook(ArrayRef<AttrOrTypeDef> defs) {
+  Dialect dialect = defs.front().getDialect();
+  std::string dialectClass = dialect.getCppClassName();
+  DialectNamespaceEmitter ns(os, dialect);
+  // TODO: Ideally, the hook would be non-static, so that callers do not have to
+  // be in the same TU as the registration function. This is currently blocked
+  // by dialects defining their attributes and types across multiple TUs (e.g.
+  // the transform dialect and its extensions), whose hooks would cause
+  // multiple definition errors.
+  os << "class " << dialectClass << ";\n"
+     << llvm::formatv("[[maybe_unused]] static void {0}({1} *dialect) {{\n",
+                      getRegistrationHookName(dialect), dialectClass);
+  for (const AttrOrTypeDef &def : defs)
+    os << llvm::formatv("  ::mlir::Abstract{0}::insert<{1}>(*dialect);\n",
+                        valueType, def.getCppClassName());
+  os << "}\n";
+}
+
 /// Headers declaring the C++ constructs used by every generated attribute or
 /// type definition, beyond those already included by the declarations.
 static constexpr StringRef attrOrTypeDefIncludes[] = {
@@ -1232,6 +1264,7 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
          << def.getDialect().getCppNamespace() << "::" << def.getCppClassName()
          << ")\n";
   }
+  emitRegistrationHook(defs);
 
   Dialect firstDialect = defs.front().getDialect();
 
