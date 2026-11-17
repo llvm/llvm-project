@@ -304,6 +304,23 @@ void logical_insitu_without_beta(bool other) {
   mu.Unlock();
 }
 
+// A cross-kind try-acquire reads the same in either mode: one conditional
+// acquisition per kind, each resolved on its own attribute's outcome.
+Mutex mu_cross;
+int a_cross __attribute__((guarded_by(mu_cross)));
+bool TryUpgradeCross() __attribute__((try_acquire_capability(true, mu_cross)))
+    __attribute__((try_acquire_shared_capability(false, mu_cross)));
+void cross_kind_without_beta() {
+  if (TryUpgradeCross()) {
+    a_cross = 1;
+    mu_cross.Unlock();
+  } else {
+    int r = a_cross;
+    (void)r;
+    mu_cross.ReaderUnlock();
+  }
+}
+
 // A hold its call proved, beside the same call's unresolved result, at a
 // join that does not branch on it: without beta nothing downstream reports
 // a leak of the merged conditional fact, so the join reports the hold.

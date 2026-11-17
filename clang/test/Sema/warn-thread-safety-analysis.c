@@ -908,6 +908,22 @@ void test_trylock_logical_insitu(int c) {
   mutex_unlock_mu1();
 }
 
+// A cross-kind try-acquire in C: one conditional acquisition per kind,
+// each resolved on the outcome its own attribute names.
+int mutex_try_upgrade(struct Mutex *mu) EXCLUSIVE_TRYLOCK_FUNCTION(1, mu)
+    SHARED_TRYLOCK_FUNCTION(0, mu);
+
+void test_trylock_cross_kind(void) {
+  if (mutex_try_upgrade(&mu1)) {
+    work_data = 1;
+    mutex_unlock_mu1();
+  } else {
+    int r = work_data;
+    (void)r;
+    mutex_unlock_mu1();
+  }
+}
+
 // We had a problem where we'd skip all attributes that follow a late-parsed
 // attribute in a single __attribute__.
 void run(void) __attribute__((guarded_by(mu1), guarded_by(mu1))); // expected-warning 2{{only applies to non-static data members and global variables}}
