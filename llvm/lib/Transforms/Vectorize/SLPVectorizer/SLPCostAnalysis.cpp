@@ -212,6 +212,26 @@ InstructionCost getWidenedStridedCastCost(const TargetTransformInfo &TTI,
                               CostKind);
 }
 
+InstructionCost getDemotedEntryCastCost(const TargetTransformInfo &TTI,
+                                        FixedVectorType *VecTy,
+                                        const std::pair<uint64_t, bool> &MinBW,
+                                        const DataLayout &DL,
+                                        TTI::CastContextHint CCH,
+                                        TTI::TargetCostKind CostKind) {
+  unsigned BWSz = MinBW.first;
+  unsigned DstBWSz = DL.getTypeSizeInBits(VecTy->getElementType());
+  unsigned VecOpcode;
+  if (DstBWSz < BWSz)
+    VecOpcode = Instruction::Trunc;
+  else
+    VecOpcode = MinBW.second ? Instruction::SExt : Instruction::ZExt;
+  return TTI.getCastInstrCost(
+      VecOpcode, VecTy,
+      getWidenedType(IntegerType::get(VecTy->getContext(), BWSz),
+                     VecTy->getNumElements()),
+      CCH, CostKind);
+}
+
 InstructionCost getMaskedDivRemCost(const TargetTransformInfo &TTI, bool ReVec,
                                     unsigned Opcode, Type *ScalarTy,
                                     unsigned NumElts,

@@ -2589,12 +2589,6 @@ private:
       function_ref<InstructionCost(InstructionCost, const TreeEntry &)>
           ScaleCost) const;
 
-  /// \returns the cost of casting the vector of the demoted entry \p E to
-  /// \p VecTy. \p MinBW is the minimum bit width and signedness of \p E.
-  InstructionCost
-  getDemotedEntryCastCost(const TreeEntry &E, FixedVectorType *VecTy,
-                          const std::pair<uint64_t, bool> &MinBW) const;
-
   /// Set the Builder insert point to one after the last instruction in
   /// the bundle
   void setInsertPointAfterBundle(const TreeEntry *E);
@@ -20853,8 +20847,9 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
                 VectorCasts
                     .insert(std::make_pair(ScalarTE, FTy->getElementType()))
                     .second) {
-              InstructionCost C =
-                  getDemotedEntryCastCost(*ScalarTE, FTy, It->second);
+              InstructionCost C = getDemotedEntryCastCost(
+                  *TTI, FTy, It->second, *DL, getCastContextHint(*ScalarTE),
+                  CostKind);
               LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
                                 << " for extending externally used vector with "
                                    "non-equal minimum bitwidth.\n");
@@ -22272,23 +22267,6 @@ BoUpSLP::isGatherShuffledEntry(
     return {};
   }
   return Res;
-}
-
-InstructionCost
-BoUpSLP::getDemotedEntryCastCost(const TreeEntry &E, FixedVectorType *VecTy,
-                                 const std::pair<uint64_t, bool> &MinBW) const {
-  unsigned BWSz = MinBW.first;
-  unsigned DstBWSz = DL->getTypeSizeInBits(VecTy->getElementType());
-  unsigned VecOpcode;
-  if (DstBWSz < BWSz)
-    VecOpcode = Instruction::Trunc;
-  else
-    VecOpcode = MinBW.second ? Instruction::SExt : Instruction::ZExt;
-  return TTI->getCastInstrCost(
-      VecOpcode, VecTy,
-      getWidenedType(IntegerType::get(VecTy->getContext(), BWSz),
-                     VecTy->getNumElements()),
-      getCastContextHint(E), CostKind);
 }
 
 InstructionCost BoUpSLP::getEntriesLanesShuffleCost(
