@@ -254,6 +254,8 @@ define half @fadd_f16_global_f32_ftz_only_no_md(ptr addrspace(1) %addr, half %va
 }
 
 attributes #0 = { denormal_fpenv(float: preservesign) }
-attributes #1 = { denormal_fpenv(preservesign) }
+; Keep f32 IEEE in the half-FTZ cases: both atomic eligibility and the
+; arithmetic in the CAS loop must consult the half mode independently.
+attributes #1 = { denormal_fpenv(preservesign, float: ieee) }
 
 !0 = !{}

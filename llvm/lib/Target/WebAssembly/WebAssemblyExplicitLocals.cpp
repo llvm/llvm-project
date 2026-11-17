@@ -245,6 +245,18 @@ static bool explicitLocals(MachineFunction &MF) {
   // Map non-stackified virtual registers to their local ids.
   DenseMap<unsigned, unsigned> Reg2Local;
 
+  // Start assigning local numbers after the last parameter and after any
+  // already-assigned locals.
+  unsigned CurLocal = static_cast<unsigned>(MFI.getParams().size());
+  CurLocal += static_cast<unsigned>(MFI.getLocals().size());
+
+  // ABI contract: the async context must always be available in local 0. If
+  // something else defines the register of the swiftasync argument too, for
+  // example a value that register coalescing merged with it, that register
+  // gets its own local.
+  Register SwiftAsyncReg = WebAssembly::getSwiftAsyncArgReg(MF);
+  bool CopySwiftAsyncArg = SwiftAsyncReg && !MRI.hasOneDef(SwiftAsyncReg);
+
   // Handle ARGUMENTS first to ensure that they get the designated numbers.
   for (MachineBasicBlock::iterator I = MF.begin()->begin(),
                                    E = MF.begin()->end();
@@ -255,6 +267,18 @@ static bool explicitLocals(MachineFunction &MF) {
     Register Reg = MI.getOperand(0).getReg();
     assert(!MFI.isVRegStackified(Reg));
     auto Local = static_cast<unsigned>(MI.getOperand(1).getImm());
+    if (Reg == SwiftAsyncReg && CopySwiftAsyncArg) {
+      const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+      Register Tmp = MRI.createVirtualRegister(RC);
+      BuildMI(*MI.getParent(), MI, DebugLoc(), TII->get(getLocalGetOpcode(RC)),
+              Tmp)
+          .addImm(Local);
+      MFI.stackifyVReg(MRI, Tmp);
+      Local = CurLocal++;
+      BuildMI(*MI.getParent(), MI, DebugLoc(), TII->get(getLocalSetOpcode(RC)))
+          .addImm(Local)
+          .addReg(Tmp);
+    }
     Reg2Local[Reg] = Local;
     checkFrameBase(MFI, Local, Reg);
 
@@ -264,11 +288,6 @@ static bool explicitLocals(MachineFunction &MF) {
     MI.eraseFromParent();
     Changed = true;
   }
-
-  // Start assigning local numbers after the last parameter and after any
-  // already-assigned locals.
-  unsigned CurLocal = static_cast<unsigned>(MFI.getParams().size());
-  CurLocal += static_cast<unsigned>(MFI.getLocals().size());
 
   // Precompute the set of registers that are unused, so that we can insert
   // drops to their defs.

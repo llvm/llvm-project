@@ -7,8 +7,11 @@
 name:            smax_i8
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; RV64I-LABEL: name: smax_i8
-    ; RV64I: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64I: liveins: $x10, $x11
+    ; RV64I-NEXT: {{  $}}
+    ; RV64I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; RV64I-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 56
     ; RV64I-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
@@ -26,7 +29,9 @@ body:             |
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
     ; RV64ZBB-LABEL: name: smax_i8
-    ; RV64ZBB: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64ZBB: liveins: $x10, $x11
+    ; RV64ZBB-NEXT: {{  $}}
+    ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; RV64ZBB-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 8
     ; RV64ZBB-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY1]], 8
@@ -47,8 +52,11 @@ body:             |
 name:            smax_i16
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; RV64I-LABEL: name: smax_i16
-    ; RV64I: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64I: liveins: $x10, $x11
+    ; RV64I-NEXT: {{  $}}
+    ; RV64I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; RV64I-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
     ; RV64I-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
@@ -66,7 +74,9 @@ body:             |
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
     ; RV64ZBB-LABEL: name: smax_i16
-    ; RV64ZBB: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64ZBB: liveins: $x10, $x11
+    ; RV64ZBB-NEXT: {{  $}}
+    ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; RV64ZBB-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 16
     ; RV64ZBB-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY1]], 16
@@ -87,8 +97,11 @@ body:             |
 name:            smax_i32
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; RV64I-LABEL: name: smax_i32
-    ; RV64I: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64I: liveins: $x10, $x11
+    ; RV64I-NEXT: {{  $}}
+    ; RV64I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; RV64I-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; RV64I-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
@@ -101,7 +114,9 @@ body:             |
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
     ; RV64ZBB-LABEL: name: smax_i32
-    ; RV64ZBB: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64ZBB: liveins: $x10, $x11
+    ; RV64ZBB-NEXT: {{  $}}
+    ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; RV64ZBB-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
     ; RV64ZBB-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY1]], 32
@@ -122,8 +137,11 @@ body:             |
 name:            smax_i64
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; RV64I-LABEL: name: smax_i64
-    ; RV64I: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64I: liveins: $x10, $x11
+    ; RV64I-NEXT: {{  $}}
+    ; RV64I-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(sgt), [[COPY]](s64), [[COPY1]]
     ; RV64I-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s64), [[COPY]], [[COPY1]]
@@ -131,7 +149,9 @@ body:             |
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
     ; RV64ZBB-LABEL: name: smax_i64
-    ; RV64ZBB: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64ZBB: liveins: $x10, $x11
+    ; RV64ZBB-NEXT: {{  $}}
+    ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; RV64ZBB-NEXT: [[SMAX:%[0-9]+]]:_(s64) = G_SMAX [[COPY]], [[COPY1]]
     ; RV64ZBB-NEXT: $x10 = COPY [[SMAX]](s64)

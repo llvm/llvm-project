@@ -14,8 +14,6 @@
 #ifndef MLIR_DIALECT_EMITC_IR_EMITCINTERFACES_H
 #define MLIR_DIALECT_EMITC_IR_EMITCINTERFACES_H
 
-#include "mlir/IR/OpDefinition.h"
-
 namespace mlir {
 namespace emitc {
 //
