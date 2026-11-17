@@ -915,6 +915,7 @@ add_header_macro(
     .llvm-libc-types.blksize_t
     .llvm-libc-types.blkcnt_t
     .llvm-libc-types.struct_stat
+    .llvm-libc-types.struct_statx
 )
 
 add_header_macro(
@@ -1275,6 +1276,15 @@ add_header_macro(
     .llvm-libc-types.struct_in_addr
     .llvm-libc-macros.inet_address_macros
     .netinet_in
+)
+
+add_header_macro(
+  arpa_nameser
+  ../libc/include/arpa/nameser.yaml
+  arpa/nameser.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.arpa_nameser_macros
 )
 
 add_header_macro(

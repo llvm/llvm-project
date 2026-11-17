@@ -1595,12 +1595,11 @@ MaterializationResponsibility::getExecutionSession() const {
 
 template <typename GeneratorT>
 GeneratorT &JITDylib::addGenerator(std::unique_ptr<GeneratorT> DefGenerator) {
-  auto &G = *DefGenerator;
-  ES.runSessionLocked([&] {
+  return ES.runSessionLocked([&]() -> GeneratorT & {
     assert(State == Open && "Cannot add generator to closed JITDylib");
     DefGenerators.push_back(std::move(DefGenerator));
+    return static_cast<GeneratorT &>(*DefGenerators.back());
   });
-  return G;
 }
 
 template <typename Func>

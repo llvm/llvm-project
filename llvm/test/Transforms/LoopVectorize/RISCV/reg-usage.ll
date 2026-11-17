@@ -126,3 +126,132 @@ for.body:
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
 }
+
+
+define void @red_smax_smin(ptr %base.0, ptr %base.1, ptr %base.2, ptr %base.3, i64 %end) {
+; CHECK-LABEL: 'red_smax_smin'
+; CHECK:  LV(REG): Calculating max register usage:
+; CHECK:  LV(REG): VF = 1
+; CHECK:  LV(REG): Found max usage: 1 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 10 registers
+; CHECK:  LV(REG): Found invariant usage: 1 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK:  LV(REG): Calculating max register usage:
+; CHECK:  LV(REG): VF = vscale x 1
+; CHECK:  LV(REG): Found max usage: 2 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 6 registers
+; CHECK:  LV(REG): Found invariant usage: 1 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK:  LV(REG): VF = vscale x 2
+; CHECK:  LV(REG): Found max usage: 2 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 12 registers
+; CHECK:  LV(REG): Found invariant usage: 1 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK:  LV(REG): VF = vscale x 4
+; CHECK:  LV(REG): Found max usage: 2 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 24 registers
+; CHECK:  LV(REG): Found invariant usage: 1 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK:  LV(REG): VF = vscale x 8
+; CHECK:  LV(REG): Found max usage: 2 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 48 registers
+; CHECK:  LV(REG): Found invariant usage: 1 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK:  LV(REG): Cost of 32 from 16 spills of RISCV::VRRC
+;
+entry:
+  br label %loop.body
+
+loop.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.body ]
+  %red.0 = phi i64 [ 0, %entry ], [ %red.0.next, %loop.body ]
+  %red.1 = phi i64 [ 0, %entry ], [ %red.1.next, %loop.body ]
+  %red.2 = phi i64 [ 0, %entry ], [ %red.2.next, %loop.body ]
+  %red.3 = phi i64 [ 0, %entry ], [ %red.3.next, %loop.body ]
+  %ptr.0 = getelementptr i8, ptr %base.0, i64 %iv
+  %0 = load i64, ptr %ptr.0, align 8
+  %ptr.1 = getelementptr i8, ptr %base.1, i64 %iv
+  %1 = load i64, ptr %ptr.1, align 8
+  %red.0.next = tail call i64 @llvm.smin.i64(i64 %0, i64 %red.0)
+  %red.2.next = tail call i64 @llvm.smax.i64(i64 %0, i64 %red.2)
+  %red.1.next = tail call i64 @llvm.smin.i64(i64 %1, i64 %red.1)
+  %red.3.next = tail call i64 @llvm.smax.i64(i64 %1, i64 %red.3)
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv, %end
+  br i1 %exitcond, label %loop.exit, label %loop.body
+
+loop.exit:
+  store i64 %red.0.next, ptr %base.0
+  store i64 %red.1.next, ptr %base.1
+  store i64 %red.2.next, ptr %base.2
+  store i64 %red.3.next, ptr %base.3
+  ret void
+}
+
+define void @red_umax_umin(ptr %base.0, ptr %base.1, ptr %base.2, ptr %base.3, i64 %end) {
+; CHECK-LABEL: 'red_umax_umin'
+; CHECK:  LV(REG): Calculating max register usage:
+; CHECK:  LV(REG): VF = 1
+; CHECK:  LV(REG): Found max usage: 1 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 10 registers
+; CHECK:  LV(REG): Found invariant usage: 1 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK:  LV(REG): Calculating max register usage:
+; CHECK:  LV(REG): VF = vscale x 1
+; CHECK:  LV(REG): Found max usage: 2 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 6 registers
+; CHECK:  LV(REG): Found invariant usage: 1 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK:  LV(REG): VF = vscale x 2
+; CHECK:  LV(REG): Found max usage: 2 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 12 registers
+; CHECK:  LV(REG): Found invariant usage: 1 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK:  LV(REG): VF = vscale x 4
+; CHECK:  LV(REG): Found max usage: 2 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 24 registers
+; CHECK:  LV(REG): Found invariant usage: 1 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK:  LV(REG): VF = vscale x 8
+; CHECK:  LV(REG): Found max usage: 2 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 48 registers
+; CHECK:  LV(REG): Found invariant usage: 1 item
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK:  LV(REG): Cost of 32 from 16 spills of RISCV::VRRC
+;
+entry:
+  br label %loop.body
+
+loop.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.body ]
+  %red.0 = phi i64 [ 0, %entry ], [ %red.0.next, %loop.body ]
+  %red.1 = phi i64 [ 0, %entry ], [ %red.1.next, %loop.body ]
+  %red.2 = phi i64 [ 0, %entry ], [ %red.2.next, %loop.body ]
+  %red.3 = phi i64 [ 0, %entry ], [ %red.3.next, %loop.body ]
+  %ptr.0 = getelementptr i8, ptr %base.0, i64 %iv
+  %0 = load i64, ptr %ptr.0, align 8
+  %ptr.1 = getelementptr i8, ptr %base.1, i64 %iv
+  %1 = load i64, ptr %ptr.1, align 8
+  %red.0.next = tail call i64 @llvm.umin.i64(i64 %0, i64 %red.0)
+  %red.2.next = tail call i64 @llvm.umax.i64(i64 %0, i64 %red.2)
+  %red.1.next = tail call i64 @llvm.umin.i64(i64 %1, i64 %red.1)
+  %red.3.next = tail call i64 @llvm.umax.i64(i64 %1, i64 %red.3)
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv, %end
+  br i1 %exitcond, label %loop.exit, label %loop.body
+
+loop.exit:
+  store i64 %red.0.next, ptr %base.0
+  store i64 %red.1.next, ptr %base.1
+  store i64 %red.2.next, ptr %base.2
+  store i64 %red.3.next, ptr %base.3
+  ret void
+}

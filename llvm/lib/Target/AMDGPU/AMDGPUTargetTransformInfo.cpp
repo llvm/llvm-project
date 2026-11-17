@@ -1015,6 +1015,21 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
         Elts && Src->isIntegerTy(*Elts))
       return InstructionCost(MaskUnpackCostPerElt) * *Elts *
              getFullRateInstrCost();
+    // The generic code scalarizes a vector cast into element casts, which for
+    // a bitcast may pair elements of different sizes.
+    if (DL.getTypeSizeInBits(Src) == DL.getTypeSizeInBits(Dst)) {
+      // Integer and FP values share registers. A legalized vector may need its
+      // lanes repacked.
+      EVT SrcVT = TLI->getValueType(DL, Src);
+      EVT DstVT = TLI->getValueType(DL, Dst);
+      if (TLI->isTypeLegal(SrcVT) && TLI->isTypeLegal(DstVT))
+        return 0;
+      LLVMContext &Ctx = Src->getContext();
+      if (!SrcVT.isVector() && !DstVT.isVector() &&
+          TLI->getRegisterType(Ctx, SrcVT).getSizeInBits() ==
+              TLI->getRegisterType(Ctx, DstVT).getSizeInBits())
+        return 0;
+    }
   }
 
   // Each f32 lane is rounded and the halves are packed in pairs. A packed
