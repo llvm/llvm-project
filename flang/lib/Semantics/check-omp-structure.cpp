@@ -946,6 +946,12 @@ void OmpStructureChecker::CheckArgumentObjectKind(const parser::OmpClause &x) {
           symbol->name(), parser::omp::GetUpperName(clauseId, version));
       continue;
     }
+    if (IsCoindexedObject(object)) {
+      context_.Say(*parser::omp::GetObjectSource(object),
+          "A coindexed object is not allowed as a list item on %s clause"_err_en_US,
+          parser::omp::GetUpperName(clauseId, version));
+      continue;
+    }
     // Emit a more user-friendly diagnostic than "'kind' must be a variable
     // list item" for x%kind, or for cplx%re.
     if (IsTypeParamInquiry(*symbol)) {
@@ -1925,6 +1931,19 @@ void OmpStructureChecker::ChecksOnOrderedAsBlock() {
   }
 }
 
+void OmpStructureChecker::CheckCoindexedArguments(
+    const parser::OmpDirectiveSpecification &x) {
+  for (const auto &arg : x.Arguments().v) {
+    if (const auto *object{GetArgumentObject(arg)};
+        object && IsCoindexedObject(*object)) {
+      context_.Say(arg.source,
+          "A coindexed object is not allowed as a list item on %s directive"_err_en_US,
+          parser::omp::GetUpperName(
+              x.DirName().v, context_.langOptions().getOpenMPVersion()));
+    }
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OmpBeginDirective &x) {
   switch (x.DirId()) {
   case llvm::omp::Directive::OMPD_metadirective:
@@ -2101,6 +2120,7 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
 }
 
 void OmpStructureChecker::Enter(const parser::OmpGroupprivateDirective &x) {
+  CheckCoindexedArguments(x.v);
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     auto *object{GetArgumentObject(arg)};
     const Symbol *sym{GetArgumentSymbol(arg, /*ultimate=*/true)};
@@ -2150,6 +2170,7 @@ void OmpStructureChecker::Enter(const parser::OmpGroupprivateDirective &x) {
 }
 
 void OmpStructureChecker::Leave(const parser::OmpThreadprivateDirective &x) {
+  CheckCoindexedArguments(x.v);
   const parser::OmpDirectiveSpecification &dirSpec{x.v};
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     if (auto *object{GetArgumentObject(arg)}) {
@@ -2613,6 +2634,7 @@ void OmpStructureChecker::CheckExecutableAllocateDirective(
 }
 
 void OmpStructureChecker::Enter(const parser::OmpAllocateDirective &x) {
+  CheckCoindexedArguments(x.BeginDir());
   const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
   const parser::OmpDirectiveName &dirName{beginSpec.DirName()};
   ++allocateDirectiveLevel_;
@@ -2785,6 +2807,7 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareReductionDirective &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpDeclareTargetDirective &x) {
+  CheckCoindexedArguments(x.v);
   const parser::OmpDirectiveName &dirName{x.v.DirName()};
 
   // Check if arguments are extended-list-items.
@@ -3483,6 +3506,7 @@ void OmpStructureChecker::Leave(
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPFlushConstruct &x) {
+  CheckCoindexedArguments(x.v);
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   auto &flushList{std::get<std::optional<parser::OmpArgumentList>>(x.v.t)};
   std::string flushName{
@@ -5467,6 +5491,16 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
         taskDep->GetTaskDepType() ==
             parser::OmpTaskDependenceType::Value::Depobj};
     auto checkDepobjVar = [&](const parser::OmpObject &object) {
+      if (IsCoindexedObject(object)) {
+        // Earlier versions are diagnosed by CheckArgumentObjectKind.
+        if (version >= 61) {
+          context_.Say(*parser::omp::GetObjectSource(object),
+              "A coindexed object is not allowed as a list item on %s clause"_err_en_US,
+              parser::omp::GetUpperName(
+                  llvm::omp::Clause::OMPC_depend, version));
+        }
+        return;
+      }
       const parser::Designator *designator{GetDesignatorFromObj(object)};
       if (!designator) {
         context_.Say(GetContext().clauseSource,
@@ -6245,6 +6279,7 @@ llvm::StringRef OmpStructureChecker::getDirectiveName(
 }
 
 void OmpStructureChecker::CheckDependList(const parser::DataRef &d) {
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   common::visit(
       common::visitors{
           [&](const common::Indirection<parser::ArrayElement> &elem) {
@@ -6255,8 +6290,13 @@ void OmpStructureChecker::CheckDependList(const parser::DataRef &d) {
             CheckDependList(comp.value().Base());
           },
           [&](const common::Indirection<parser::CoindexedNamedObject> &) {
-            context_.Say(GetContext().clauseSource,
-                "Coarrays are not supported in DEPEND clause"_err_en_US);
+            // Earlier versions are diagnosed by CheckArgumentObjectKind.
+            if (version >= 61) {
+              context_.Say(GetContext().clauseSource,
+                  "A coindexed object is not allowed as a list item on %s clause"_err_en_US,
+                  parser::omp::GetUpperName(
+                      llvm::omp::Clause::OMPC_depend, version));
+            }
           },
           [&](const parser::Name &) {},
       },
@@ -6686,6 +6726,10 @@ void OmpStructureChecker::CheckWorkdistributeBlockStmts(
 }
 
 void OmpStructureChecker::CheckIfContiguous(const parser::OmpObject &object) {
+  if (IsCoindexedObject(object)) {
+    return; // The list item is invalid regardless of contiguity. Return early
+            // to avoid a crash whilst determining contiguity.
+  }
   if (!IsContiguous(context_, object).value_or(true)) { // known discontiguous
     const parser::Name *name{GetObjectName(object)};
     assert(name && "Expecting name component");
