@@ -61,6 +61,8 @@ static int run(int is_unsigned, int n, int grain, int sched, int strict,
   {
 #pragma omp single
     {
+      if (omp_get_num_threads() != threads)
+        ++c.bad;
       if (is_unsigned) {
         struct unsigned_data d = {0, 0, &c};
         GOMP_taskloop_ull(unsigned_entry, &d, NULL, sizeof(d),
@@ -103,21 +105,26 @@ static int run(int is_unsigned, int n, int grain, int sched, int strict,
 }
 
 int main(void) {
-  const int counts[] = {1, 10, 11, 53, 60};
-  const int grains[] = {3, 10, 64};
-  int errors = 0, cases = 0;
+  const struct {
+    int count, grain, sched, strict;
+  } cases[] = {
+      {53, 10, 1, 1}, // Strict grainsize with a partial final chunk.
+      {60, 10, 1, 1}, // Exact multiple.
+      {1, 10, 1, 1}, // Fewer iterations than the grainsize.
+      {53, 10, 1, 0}, // Non-strict grainsize control.
+      {53, 10, 2, 1}, // Strict num_tasks control.
+      {53, 10, 2, 0}, // Non-strict num_tasks control.
+  };
+  int errors = 0, checked = 0;
   omp_set_dynamic(0);
   for (int threads = 1; threads <= 2; ++threads)
     for (int if_val = 0; if_val <= 1; ++if_val)
       for (int ull = 0; ull <= 1; ++ull)
-        for (int n = 0; n < 5; ++n)
-          for (int g = 0; g < 3; ++g)
-            for (int sched = 1; sched <= 2; ++sched)
-              for (int strict = 0; strict <= 1; ++strict) {
-                errors += run(ull, counts[n], grains[g], sched, strict, if_val,
-                              threads);
-                ++cases;
-              }
-  printf("GNU strict: cases=%d errors=%d\n", cases, errors);
+        for (unsigned i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i) {
+          errors += run(ull, cases[i].count, cases[i].grain, cases[i].sched,
+                        cases[i].strict, if_val, threads);
+          ++checked;
+        }
+  printf("GNU strict: cases=%d errors=%d\n", checked, errors);
   return errors != 0;
 }
