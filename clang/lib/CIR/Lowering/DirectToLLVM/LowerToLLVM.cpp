@@ -25,6 +25,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
@@ -1098,13 +1099,6 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstVectorAttr attr) {
       rewriter, parentLoc, llvmTy,
       mlir::DenseElementsAttr::get(mlir::cast<mlir::ShapedType>(llvmTy),
                                    mlirValues));
-}
-
-/// Whether the C++ vtables of the module use the relative layout.
-static bool usesRelativeVTables(mlir::ModuleOp module) {
-  auto loweringOpts = module->getAttrOfType<cir::LoweringOptionsAttr>(
-      cir::CIRDialect::getLoweringOptionsAttrName());
-  return loweringOpts && loweringOpts.getRelativeCxxAbiVtables();
 }
 
 // GlobalViewAttr / GlobalOffsetAttr visitors.
@@ -5760,6 +5754,60 @@ mlir::LogicalResult CIRToLLVMVTableGetVirtualFnOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMVTableGetOffsetOpLowering::matchAndRewrite(
+    cir::VTableGetOffsetOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(!cir::MissingFeatures::vtableRelativeLayout());
+  if (usesRelativeVTables(op->getParentOfType<mlir::ModuleOp>()))
+    return op.emitError("NYI: offset lookup in a relative layout vtable");
+
+  mlir::Type resultType = getTypeConverter()->convertType(op.getType());
+  if (!resultType)
+    return emitTypeConversionError(op, op.getType());
+
+  // The entry is the offset itself: load it from its slot, addressed by its
+  // byte offset.
+  auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  int64_t byteOffset =
+      op.getIndex() * cir::getVTableEntrySize(
+                          op->getParentOfType<mlir::ModuleOp>(), dataLayout);
+  mlir::Value byteOffsetVal = mlir::LLVM::ConstantOp::create(
+      rewriter, op.getLoc(), rewriter.getI64Type(),
+      rewriter.getI64IntegerAttr(byteOffset));
+  mlir::Value slot = mlir::LLVM::GEPOp::create(
+      rewriter, op.getLoc(), ptrTy, rewriter.getI8Type(), adaptor.getVptr(),
+      llvm::ArrayRef<mlir::LLVM::GEPArg>{byteOffsetVal});
+  rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(
+      op, resultType, slot, dataLayout.getTypeABIAlignment(ptrTy));
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVTableGetEntryOpLowering::matchAndRewrite(
+    cir::VTableGetEntryOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(!cir::MissingFeatures::vtableRelativeLayout());
+  if (usesRelativeVTables(op->getParentOfType<mlir::ModuleOp>()))
+    return op.emitError(
+        "NYI: pointer entry lookup in a relative layout vtable");
+
+  mlir::Type resultType = getTypeConverter()->convertType(op.getType());
+  if (!resultType)
+    return emitTypeConversionError(op, op.getType());
+
+  // The entry is the pointer itself: load it from its slot.
+  auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  mlir::Value index = mlir::LLVM::ConstantOp::create(
+      rewriter, op.getLoc(), rewriter.getI64Type(),
+      rewriter.getI64IntegerAttr(op.getIndex()));
+  mlir::Value slot = mlir::LLVM::GEPOp::create(
+      rewriter, op.getLoc(), ptrTy, ptrTy, adaptor.getVptr(),
+      llvm::ArrayRef<mlir::LLVM::GEPArg>{index},
+      mlir::LLVM::GEPNoWrapFlags::inbounds);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(
+      op, resultType, slot, dataLayout.getTypeABIAlignment(ptrTy));
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMVTTAddrPointOpLowering::matchAndRewrite(
     cir::VTTAddrPointOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -6177,12 +6225,10 @@ mlir::LogicalResult CIRToLLVMComplexCreateOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMComplexRealOpLowering::matchAndRewrite(
     cir::ComplexRealOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Type resultLLVMTy = getTypeConverter()->convertType(op.getType());
   mlir::Value operand = adaptor.getOperand();
   if (mlir::isa<cir::ComplexType>(op.getOperand().getType())) {
-    operand = mlir::LLVM::ExtractValueOp::create(
-        rewriter, op.getLoc(), resultLLVMTy, operand,
-        llvm::ArrayRef<std::int64_t>{0});
+    operand = rewriter.createOrFold<mlir::LLVM::ExtractValueOp>(
+        op.getLoc(), operand, llvm::ArrayRef<std::int64_t>{0});
   }
   rewriter.replaceOp(op, operand);
   return mlir::success();
@@ -6196,8 +6242,8 @@ mlir::LogicalResult CIRToLLVMComplexImagOpLowering::matchAndRewrite(
   mlir::Location loc = op.getLoc();
 
   if (mlir::isa<cir::ComplexType>(op.getOperand().getType())) {
-    operand = mlir::LLVM::ExtractValueOp::create(
-        rewriter, loc, resultLLVMTy, operand, llvm::ArrayRef<std::int64_t>{1});
+    operand = rewriter.createOrFold<mlir::LLVM::ExtractValueOp>(
+        loc, operand, llvm::ArrayRef<std::int64_t>{1});
   } else {
     mlir::TypedAttr zeroAttr = rewriter.getZeroAttr(resultLLVMTy);
     operand =
@@ -6976,7 +7022,8 @@ std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass() {
   return std::make_unique<ConvertCIRToLLVMPass>();
 }
 
-void populateCIRToLLVMPasses(mlir::OpPassManager &pm, bool enableOpenMP) {
+void populateCIRToLLVMPasses(mlir::OpPassManager &pm, bool enableOpenMP,
+                             bool enableOptimizations) {
   mlir::populateCIRPreLoweringPasses(pm);
   if (enableOpenMP)
     pm.addPass(mlir::omp::createMarkDeclareTargetPass());
@@ -6986,18 +7033,22 @@ void populateCIRToLLVMPasses(mlir::OpPassManager &pm, bool enableOpenMP) {
     pm.nest<mlir::LLVM::LLVMFuncOp>().addPass(
         mlir::omp::createStackToSharedPass());
   }
+  if (enableOptimizations)
+    pm.nest<mlir::LLVM::LLVMFuncOp>().addPass(
+        mlir::LLVM::createLLVMSimplifyCFGPass());
 }
 
 std::unique_ptr<llvm::Module>
 lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx,
                              bool enableOpenMP, StringRef mlirSaveTempsOutFile,
-                             llvm::vfs::FileSystem *fs) {
+                             llvm::vfs::FileSystem *fs,
+                             bool enableOptimizations) {
   llvm::TimeTraceScope scope("lower from CIR to LLVM directly");
 
   mlir::MLIRContext *mlirCtx = mlirModule.getContext();
 
   mlir::PassManager pm(mlirCtx);
-  populateCIRToLLVMPasses(pm, enableOpenMP);
+  populateCIRToLLVMPasses(pm, enableOpenMP, enableOptimizations);
 
   (void)mlir::applyPassManagerCLOptions(pm);
 

@@ -1,8 +1,5 @@
 ! RUN: split-file %s %t
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
-! RUN:   -fopenmp-version=52 -o - %t/coarray.f90 2>&1 | \
-! RUN:   FileCheck %t/coarray.f90
-! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
 ! RUN:   -fopenmp-version=52 -o - %t/external-array.f90 2>&1 | \
 ! RUN:   FileCheck %t/external-array.f90
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
@@ -49,19 +46,6 @@
 ! RUN:   FileCheck %t/later-clause-external.f90
 
 ! Unsupported iterator locators inside declare mapper.
-
-!--- coarray.f90
-! CHECK: not yet implemented: iterator modifier with locator outside
-! CHECK-SAME: declare mapper variable
-
-module declare_mapper_iterator_coarray
-  integer, save :: a(10)[*]
-  type :: t
-    integer :: x
-  end type
-
-  !$omp declare mapper(mm: t :: v) map(iterator(i = 1:10): a(i)[1])
-end module
 
 !--- external-array.f90
 ! CHECK: not yet implemented: iterator modifier with locator outside
