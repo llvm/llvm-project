@@ -201,10 +201,10 @@ define fastcc i32 @prune_match(ptr nocapture readonly %a, ptr nocapture readonly
 ; CHECK-NEXT:    b LBB0_41
 ; CHECK-NEXT:  LBB0_32: ; %if.else123
 ; CHECK-NEXT:    cmp w13, #1
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    b.ne LBB0_42
+; CHECK-NEXT:    b.ne LBB0_41
 ; CHECK-NEXT:  ; %bb.33: ; %if.else123
 ; CHECK-NEXT:    cmp w12, #2
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    b.ne LBB0_42
 ; CHECK-NEXT:  ; %bb.34: ; %while.cond130.preheader
 ; CHECK-NEXT:    ldrb w8, [x9, x11]

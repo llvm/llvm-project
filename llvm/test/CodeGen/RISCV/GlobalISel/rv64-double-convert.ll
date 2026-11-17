@@ -65,54 +65,52 @@ define i128 @fptosi_sat_f64_to_i128(double %a) nounwind {
 ; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    mv s2, a0
+; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    call __fixdfti
-; RV64I-NEXT:    mv s3, a0
+; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    li a1, -449
 ; RV64I-NEXT:    slli a1, a1, 53
-; RV64I-NEXT:    mv a0, s2
+; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    call __gedf2
-; RV64I-NEXT:    li s1, 0
 ; RV64I-NEXT:    sext.w a0, a0
-; RV64I-NEXT:    li s4, -1
+; RV64I-NEXT:    li s3, -1
 ; RV64I-NEXT:    bgez a0, .LBB4_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    slli s0, s4, 63
-; RV64I-NEXT:    mv s3, s1
+; RV64I-NEXT:    li s2, 0
+; RV64I-NEXT:    slli s0, s3, 63
 ; RV64I-NEXT:  .LBB4_2:
 ; RV64I-NEXT:    li a0, 575
 ; RV64I-NEXT:    slli a0, a0, 53
 ; RV64I-NEXT:    addi a1, a0, -1
-; RV64I-NEXT:    mv a0, s2
+; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    call __gtdf2
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    bgtz a0, .LBB4_4
 ; RV64I-NEXT:  # %bb.3:
-; RV64I-NEXT:    mv s4, s3
+; RV64I-NEXT:    mv s3, s2
 ; RV64I-NEXT:    j .LBB4_5
 ; RV64I-NEXT:  .LBB4_4:
 ; RV64I-NEXT:    li s0, -1
 ; RV64I-NEXT:    srli s0, s0, 1
 ; RV64I-NEXT:  .LBB4_5:
-; RV64I-NEXT:    mv a0, s2
-; RV64I-NEXT:    mv a1, s2
-; RV64I-NEXT:    call __unorddf2
-; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    mv a1, s1
-; RV64I-NEXT:    bnez a0, .LBB4_7
+; RV64I-NEXT:    call __unorddf2
+; RV64I-NEXT:    mv a1, a0
+; RV64I-NEXT:    li a0, 0
+; RV64I-NEXT:    sext.w a2, a1
+; RV64I-NEXT:    li a1, 0
+; RV64I-NEXT:    bnez a2, .LBB4_7
 ; RV64I-NEXT:  # %bb.6:
-; RV64I-NEXT:    mv s1, s4
+; RV64I-NEXT:    mv a0, s3
 ; RV64I-NEXT:    mv a1, s0
 ; RV64I-NEXT:  .LBB4_7:
-; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
@@ -123,35 +121,34 @@ define i128 @fptosi_sat_f64_to_i128(double %a) nounwind {
 ; RV64ID-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
 ; RV64ID-NEXT:    fmv.d fs0, fa0
 ; RV64ID-NEXT:    call __fixdfti
-; RV64ID-NEXT:    mv a2, a0
-; RV64ID-NEXT:    li a0, 0
-; RV64ID-NEXT:    li a3, -449
-; RV64ID-NEXT:    slli a3, a3, 53
-; RV64ID-NEXT:    fmv.d.x fa5, a3
-; RV64ID-NEXT:    fle.d a3, fa5, fs0
-; RV64ID-NEXT:    xori a4, a3, 1
+; RV64ID-NEXT:    li a2, -449
+; RV64ID-NEXT:    slli a2, a2, 53
+; RV64ID-NEXT:    fmv.d.x fa5, a2
+; RV64ID-NEXT:    fle.d a2, fa5, fs0
+; RV64ID-NEXT:    xori a2, a2, 1
 ; RV64ID-NEXT:    li a3, -1
-; RV64ID-NEXT:    beqz a4, .LBB4_2
+; RV64ID-NEXT:    beqz a2, .LBB4_2
 ; RV64ID-NEXT:  # %bb.1:
+; RV64ID-NEXT:    li a0, 0
 ; RV64ID-NEXT:    slli a1, a3, 63
-; RV64ID-NEXT:    mv a2, a0
 ; RV64ID-NEXT:  .LBB4_2:
-; RV64ID-NEXT:    li a4, 575
-; RV64ID-NEXT:    slli a4, a4, 53
-; RV64ID-NEXT:    addi a4, a4, -1
-; RV64ID-NEXT:    fmv.d.x fa5, a4
-; RV64ID-NEXT:    flt.d a4, fa5, fs0
-; RV64ID-NEXT:    bnez a4, .LBB4_4
+; RV64ID-NEXT:    li a2, 575
+; RV64ID-NEXT:    slli a2, a2, 53
+; RV64ID-NEXT:    addi a2, a2, -1
+; RV64ID-NEXT:    fmv.d.x fa5, a2
+; RV64ID-NEXT:    flt.d a2, fa5, fs0
+; RV64ID-NEXT:    bnez a2, .LBB4_4
 ; RV64ID-NEXT:  # %bb.3:
-; RV64ID-NEXT:    mv a3, a2
+; RV64ID-NEXT:    mv a3, a0
 ; RV64ID-NEXT:    j .LBB4_5
 ; RV64ID-NEXT:  .LBB4_4:
 ; RV64ID-NEXT:    li a1, -1
 ; RV64ID-NEXT:    srli a1, a1, 1
 ; RV64ID-NEXT:  .LBB4_5:
+; RV64ID-NEXT:    li a0, 0
 ; RV64ID-NEXT:    feq.d a2, fs0, fs0
 ; RV64ID-NEXT:    xori a4, a2, 1
-; RV64ID-NEXT:    mv a2, a0
+; RV64ID-NEXT:    li a2, 0
 ; RV64ID-NEXT:    bnez a4, .LBB4_7
 ; RV64ID-NEXT:  # %bb.6:
 ; RV64ID-NEXT:    mv a0, a3

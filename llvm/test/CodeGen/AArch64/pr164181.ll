@@ -81,6 +81,7 @@ define void @f(i1 %var_0, i16 %var_1, i64 %var_2, i8 %var_3, i16 %var_4, i1 %var
 ; CHECK-NEXT:    ldr w19, [sp, #16] // 4-byte Reload
 ; CHECK-NEXT:    ldr x24, [sp, #40] // 8-byte Reload
 ; CHECK-NEXT:    ldr x14, [sp, #152] // 8-byte Reload
+; CHECK-NEXT:    mov x21, xzr
 ; CHECK-NEXT:    mov w27, #1 // =0x1
 ; CHECK-NEXT:    mov w28, #1 // =0x1
 ; CHECK-NEXT:    mov w25, w19
@@ -105,9 +106,9 @@ define void @f(i1 %var_0, i16 %var_1, i64 %var_2, i8 %var_3, i16 %var_4, i1 %var
 ; CHECK-NEXT:    ldr w9, [sp, #36] // 4-byte Reload
 ; CHECK-NEXT:    ldr x4, [sp, #24] // 8-byte Reload
 ; CHECK-NEXT:    ldp x24, x12, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    mov x21, xzr
 ; CHECK-NEXT:    mov w25, wzr
 ; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    mov x21, xzr
 ; CHECK-NEXT:    tbz w9, #0, .LBB0_3
 ; CHECK-NEXT:  .LBB0_6: // %for.body67.us
 ; CHECK-NEXT:    // Parent Loop BB0_4 Depth=1

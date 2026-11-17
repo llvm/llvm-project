@@ -1582,7 +1582,6 @@ define i256 @f32_to_u256_sat(float %val) nounwind {
 ; CHECK-GI-LABEL: f32_to_u256_sat:
 ; CHECK-GI:       // %bb.0: // %fp-to-i-entry
 ; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov x0, xzr
 ; CHECK-GI-NEXT:    ubfx w9, w8, #23, #8
 ; CHECK-GI-NEXT:    cmp w9, #127
 ; CHECK-GI-NEXT:    b.lo .LBB9_6
@@ -1590,9 +1589,10 @@ define i256 @f32_to_u256_sat(float %val) nounwind {
 ; CHECK-GI-NEXT:    fcmp s0, s0
 ; CHECK-GI-NEXT:    b.vs .LBB9_6
 ; CHECK-GI-NEXT:  // %bb.2: // %fp-to-i-entry
-; CHECK-GI-NEXT:    mov x1, x0
-; CHECK-GI-NEXT:    mov x2, x0
-; CHECK-GI-NEXT:    mov x3, x0
+; CHECK-GI-NEXT:    mov x0, xzr
+; CHECK-GI-NEXT:    mov x1, xzr
+; CHECK-GI-NEXT:    mov x2, xzr
+; CHECK-GI-NEXT:    mov x3, xzr
 ; CHECK-GI-NEXT:    tbnz w8, #31, .LBB9_8
 ; CHECK-GI-NEXT:  // %bb.3: // %fp-to-i-if-check.saturate
 ; CHECK-GI-NEXT:    cmp w9, #255
@@ -1611,9 +1611,10 @@ define i256 @f32_to_u256_sat(float %val) nounwind {
 ; CHECK-GI-NEXT:    lsr w0, w8, w9
 ; CHECK-GI-NEXT:    ret
 ; CHECK-GI-NEXT:  .LBB9_6:
-; CHECK-GI-NEXT:    mov x1, x0
-; CHECK-GI-NEXT:    mov x2, x0
-; CHECK-GI-NEXT:    mov x3, x0
+; CHECK-GI-NEXT:    mov x0, xzr
+; CHECK-GI-NEXT:    mov x1, xzr
+; CHECK-GI-NEXT:    mov x2, xzr
+; CHECK-GI-NEXT:    mov x3, xzr
 ; CHECK-GI-NEXT:    ret
 ; CHECK-GI-NEXT:  .LBB9_7: // %fp-to-i-if-exp.large
 ; CHECK-GI-NEXT:    sub w9, w9, #150
@@ -1995,7 +1996,6 @@ define i256 @f64_to_u256_sat(double %val) nounwind {
 ; CHECK-GI-LABEL: f64_to_u256_sat:
 ; CHECK-GI:       // %bb.0: // %fp-to-i-entry
 ; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    mov x0, xzr
 ; CHECK-GI-NEXT:    ubfx x9, x8, #52, #11
 ; CHECK-GI-NEXT:    cmp x9, #1023
 ; CHECK-GI-NEXT:    b.lo .LBB11_6
@@ -2003,9 +2003,10 @@ define i256 @f64_to_u256_sat(double %val) nounwind {
 ; CHECK-GI-NEXT:    fcmp d0, d0
 ; CHECK-GI-NEXT:    b.vs .LBB11_6
 ; CHECK-GI-NEXT:  // %bb.2: // %fp-to-i-entry
-; CHECK-GI-NEXT:    mov x1, x0
-; CHECK-GI-NEXT:    mov x2, x0
-; CHECK-GI-NEXT:    mov x3, x0
+; CHECK-GI-NEXT:    mov x0, xzr
+; CHECK-GI-NEXT:    mov x1, xzr
+; CHECK-GI-NEXT:    mov x2, xzr
+; CHECK-GI-NEXT:    mov x3, xzr
 ; CHECK-GI-NEXT:    tbnz x8, #63, .LBB11_8
 ; CHECK-GI-NEXT:  // %bb.3: // %fp-to-i-if-check.saturate
 ; CHECK-GI-NEXT:    cmp x9, #1279
@@ -2024,9 +2025,10 @@ define i256 @f64_to_u256_sat(double %val) nounwind {
 ; CHECK-GI-NEXT:    lsr x0, x8, x9
 ; CHECK-GI-NEXT:    ret
 ; CHECK-GI-NEXT:  .LBB11_6:
-; CHECK-GI-NEXT:    mov x1, x0
-; CHECK-GI-NEXT:    mov x2, x0
-; CHECK-GI-NEXT:    mov x3, x0
+; CHECK-GI-NEXT:    mov x0, xzr
+; CHECK-GI-NEXT:    mov x1, xzr
+; CHECK-GI-NEXT:    mov x2, xzr
+; CHECK-GI-NEXT:    mov x3, xzr
 ; CHECK-GI-NEXT:    ret
 ; CHECK-GI-NEXT:  .LBB11_7: // %fp-to-i-if-exp.large
 ; CHECK-GI-NEXT:    sub x9, x9, #1075
