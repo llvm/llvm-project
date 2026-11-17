@@ -6611,8 +6611,12 @@ void CGDebugInfo::EmitGlobalAlias(const llvm::GlobalValue *GV,
     // Fix compiler to generate "newname" as imported_declaration
     // pointing to the DIE of "oldname".
     return;
-  if (!(DI = getDeclarationOrDefinition(
-            AliaseeDecl.getCanonicalDecl().getDecl())))
+  const auto *AliaseeD = AliaseeDecl.getCanonicalDecl().getDecl();
+  // A static local without debug info has no scope to forward-declare it in.
+  if (const auto *VD = dyn_cast<VarDecl>(AliaseeD);
+      VD && VD->isStaticLocal() && !DeclCache.count(VD))
+    return;
+  if (!(DI = getDeclarationOrDefinition(AliaseeD)))
     return;
 
   llvm::DIScope *DContext = getDeclContextDescriptor(D);
