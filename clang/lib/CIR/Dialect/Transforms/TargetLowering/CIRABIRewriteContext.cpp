@@ -17,7 +17,6 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
@@ -2192,31 +2191,33 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   // Recorded before the Ignore skip below, so an ignored first ellipsis
   // argument still marks where the ellipsis arguments begin in newArgs.
   std::optional<unsigned> ellipsisStart;
+  // Where each argument starts in newArgs, and the freezes to reapply there
+  // once every argument is rewritten.
+  SmallVector<unsigned> argBegin;
+  SmallVector<std::pair<unsigned, cir::FreezeOp>> refreezes;
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
     if (idx == numDeclared)
       ellipsisStart = newArgs.size();
-    if (ac.kind == ArgKind::Ignore)
-      continue;
+    argBegin.push_back(newArgs.size());
     mlir::Value arg = argOperands[idx];
+    auto freeze = arg.getDefiningOp<cir::FreezeOp>();
+    if (freeze && !freeze->hasOneUse())
+      freeze = {};
+    if (ac.kind == ArgKind::Ignore) {
+      if (freeze)
+        deadFreezes.push_back(freeze);
+      continue;
+    }
 
     // Refreeze after the ABI rewrite, as classic CodeGen does, so padding is
     // frozen too. Indirect freezes only the pointer, so keep non-load freezes.
-    auto freeze = arg.getDefiningOp<cir::FreezeOp>();
-    if (freeze && freeze->hasOneUse() &&
-        (ac.kind != ArgKind::Indirect ||
-         freeze.getInput().getDefiningOp<cir::LoadOp>())) {
+    if (freeze && ((ac.kind != ArgKind::Indirect &&
+                    ac.kind != ArgKind::IndirectAliased) ||
+                   freeze.getInput().getDefiningOp<cir::LoadOp>())) {
       arg = freeze.getInput();
       deadFreezes.push_back(freeze);
-    } else {
-      freeze = {};
+      refreezes.push_back({idx, freeze});
     }
-    llvm::scope_exit refreeze([&, firstNewArg = newArgs.size()] {
-      if (!freeze)
-        return;
-      builder.setInsertionPoint(call);
-      for (mlir::Value &newArg : llvm::drop_begin(newArgs, firstNewArg))
-        newArg = cir::FreezeOp::create(builder, freeze.getLoc(), newArg);
-    });
     if (cir::RecordType flatTy = getFlattenedCoercedType(ac, dl)) {
       // Direct + canFlatten: pass one scalar call argument per field of the
       // ABI-coerced struct.  A non-atomic record load is read in place or
@@ -2386,6 +2387,11 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
       newArgs.push_back(arg);
     }
   }
+  argBegin.push_back(newArgs.size());
+  builder.setInsertionPoint(call);
+  for (auto [idx, freeze] : refreezes)
+    for (unsigned i = argBegin[idx]; i != argBegin[idx + 1]; ++i)
+      newArgs[i] = cir::FreezeOp::create(builder, freeze.getLoc(), newArgs[i]);
   unsigned numEllipsisArgs =
       ellipsisStart ? newArgs.size() - *ellipsisStart : 0;
 

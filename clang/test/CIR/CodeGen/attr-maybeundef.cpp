@@ -11,6 +11,7 @@ struct Pad { char c; int i; };
 struct Dbl { double a, b; };
 struct Big { int a[10]; };
 struct NT { NT(const NT &); int x; };
+struct E {};
 
 void scalar(int a, int __maybe_undef b, int c);
 void variadic(int __maybe_undef x, ...);
@@ -21,6 +22,7 @@ void bitint(_BitInt(129) __maybe_undef x);
 void indirect(NT __maybe_undef n);
 void cfloat(_Complex float __maybe_undef c);
 void cdouble(_Complex double __maybe_undef c);
+void ignored(E __maybe_undef e);
 
 void test_scalar() {
   int x, y, z;
@@ -132,3 +134,13 @@ void test_complex(_Complex float f, _Complex double d) {
 // LLVM-DAG:     %[[FR:.*]] = freeze double
 // LLVM-DAG:     %[[FI:.*]] = freeze double
 // LLVM:         call void @_Z7cdoubleCd(double noundef %[[FR]], double noundef %[[FI]])
+
+void test_ignored(E e) { ignored(e); }
+
+// CIR-LABEL: cir.func{{.*}} @_Z12test_ignored1E(
+// CIR-NOT:     cir.freeze
+// CIR:         cir.call @_Z7ignored1E()
+
+// LLVM-LABEL: define{{.*}} void @_Z12test_ignored1E(
+// LLVM-NOT:     freeze
+// LLVM:         call void @_Z7ignored1E()
