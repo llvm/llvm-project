@@ -457,6 +457,7 @@ private:
   friend struct VarArgSystemZHelper;
   friend struct VarArgI386Helper;
   friend struct VarArgRISCVHelper;
+  friend struct VarArgLoongArch64Helper;
   friend struct VarArgGenericHelper;
 
   void initializeModule(Module &M);
@@ -9749,6 +9750,116 @@ struct VarArgRISCVHelper : public VarArgStackModelHelperBase {
   }
 };
 
+/// Implementation of VarArgHelper that is used for LoongArch64.
+struct VarArgLoongArch64Helper : public VarArgStackModelHelperBase {
+  static const unsigned kLoongArch64GpRegAreaSize = 64;
+  static const unsigned kLoongArch64FpRegAreaSize = 64;
+
+  VarArgLoongArch64Helper(Function &F, MemorySanitizer &MS,
+                          MemorySanitizerVisitor &MSV,
+                          const unsigned VAListTagSize)
+      : VarArgStackModelHelperBase(F, MS, MSV, VAListTagSize) {}
+
+  bool tryFlattenInAtMostTwoFields(Type *Ty, SmallVector<Type *, 2> &Fields) {
+    assert(Fields.size() <= 2);
+    bool AtMostTwoFields = true;
+    if (auto *STy = dyn_cast<StructType>(Ty)) {
+      unsigned NElems = STy->getNumElements();
+      for (unsigned ElemNo = 0; AtMostTwoFields && ElemNo < NElems; ++ElemNo) {
+        AtMostTwoFields =
+            tryFlattenInAtMostTwoFields(STy->getElementType(ElemNo), Fields);
+      }
+    } else if (auto *ATy = dyn_cast<ArrayType>(Ty)) {
+      Type *ElemTy = ATy->getElementType();
+      unsigned NElems = ATy->getNumElements();
+      for (unsigned ElemNo = 0; AtMostTwoFields && ElemNo < NElems; ++ElemNo) {
+        AtMostTwoFields = tryFlattenInAtMostTwoFields(ElemTy, Fields);
+      }
+    } else {
+      if (Fields.size() < 2)
+        Fields.push_back(Ty);
+      else
+        AtMostTwoFields = false;
+    }
+    return AtMostTwoFields;
+  }
+
+  void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
+    unsigned VAArgBase = 0;
+    unsigned VAArgOffset = VAArgBase;
+    unsigned FPArgOffset = 0;
+    const DataLayout &DL = F.getDataLayout();
+    unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
+    unsigned DoubleSize = DL.getTypeStoreSize(Type::getDoubleTy(*MS.C));
+    Align StackAlign = DL.getStackAlignment().value_or(Align(2 * IntptrSize));
+    for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
+      bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
+      bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
+      bool IsSRet = CB.paramHasAttr(ArgNo, Attribute::StructRet);
+      uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
+      Align ArgAlign = DL.getABITypeAlign(A->getType());
+      if (ArgAlign < IntptrSize)
+        ArgAlign = Align(IntptrSize);
+      VAArgOffset = alignTo(VAArgOffset, Align(IntptrSize));
+      if (IsByVal || IsSRet) {
+        assert(A->getType()->isPointerTy());
+        assert(!IsSRet || ArgNo == 0U);
+        VAArgOffset += IntptrSize;
+        continue;
+      }
+      if (IsFixed) {
+        if (auto *STy = dyn_cast<StructType>(A->getType())) {
+          SmallVector<Type *, 2> Fields;
+          assert(ArgSize <= 2 * IntptrSize);
+          if (tryFlattenInAtMostTwoFields(STy, Fields)) {
+            unsigned FPCount = count_if(Fields, [&DL, DoubleSize](Type *Ty) {
+              return Ty->isFloatingPointTy() &&
+                     DL.getTypeStoreSize(Ty) <= DoubleSize;
+            });
+            if (FPCount > 0 && FPArgOffset + FPCount * DoubleSize <=
+                                   kLoongArch64FpRegAreaSize) {
+              FPArgOffset += FPCount * DoubleSize;
+              if (FPCount < Fields.size()) {
+                ArgSize = IntptrSize;
+                ArgAlign = Align(IntptrSize);
+              } else {
+                continue;
+              }
+            }
+          }
+        }
+      }
+      if (ArgAlign > IntptrSize &&
+          (VAArgOffset >= VAArgBase + kLoongArch64GpRegAreaSize || !IsFixed)) {
+        if (ArgAlign > StackAlign)
+          ArgAlign = StackAlign;
+        VAArgOffset = alignTo(VAArgOffset, ArgAlign);
+      }
+      if (DL.isBigEndian() && ArgSize < IntptrSize) {
+        // Adjusting the shadow for argument with size < IntptrSize to match the
+        // placement of bits in big endian system
+        VAArgOffset += (IntptrSize - ArgSize);
+      }
+      Value *Base =
+          getShadowPtrForVAArgument(IRB, VAArgOffset - VAArgBase, ArgSize);
+      VAArgOffset += ArgSize;
+      if (IsFixed) {
+        VAArgBase = alignTo(VAArgOffset, IntptrSize);
+        continue;
+      }
+      if (!Base)
+        break;
+      IRB.CreateAlignedStore(MSV.getShadow(A), Base, kShadowTLSAlignment);
+    }
+
+    Constant *TotalVAArgSize =
+        ConstantInt::get(MS.IntptrTy, VAArgOffset - VAArgBase);
+    // Here using VAArgOverflowSizeTLS as VAArgSizeTLS to avoid creation of
+    // a new class member i.e. it is the total size of all VarArgs.
+    IRB.CreateStore(TotalVAArgSize, MS.VAArgOverflowSizeTLS);
+  }
+};
+
 /// Implementation of VarArgHelper that is used for ARM32, MIPS, LoongArch64.
 struct VarArgGenericHelper : public VarArgStackModelHelperBase {
   AllocaInst *VAArgTLSCopy = nullptr;
@@ -9792,7 +9903,6 @@ struct VarArgGenericHelper : public VarArgStackModelHelperBase {
 // regarding VAArgs.
 using VarArgARM32Helper = VarArgGenericHelper;
 using VarArgMIPSHelper = VarArgGenericHelper;
-using VarArgLoongArch64Helper = VarArgGenericHelper;
 using VarArgHexagonHelper = VarArgGenericHelper;
 
 /// A no-op implementation of VarArgHelper.
