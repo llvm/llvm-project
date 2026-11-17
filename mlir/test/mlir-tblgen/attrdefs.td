@@ -204,3 +204,11 @@ def J_CustomStorageCtorAttr : AttrDef<Test_Dialect, "CustomStorageCtorAttr"> {
 // DEF-LABEL: struct CustomStorageCtorAttrAttrStorage : public ::mlir::AttributeStorage
 // DEF: static CustomStorageCtorAttrAttrStorage *construct
 // DEF-SAME: (::mlir::AttributeStorageAllocator &allocator, KeyTy &&tblgenKey);
+
+// The registration hook registers every attribute.
+// DEF: class TestDialect;
+// DEF-NEXT: {{\[\[}}maybe_unused{{\]\]}} static void registerTestDialectAttributes(TestDialect *dialect) {
+// DEF-NEXT:   ::mlir::AbstractAttribute::insert<IndexAttr>(*dialect);
+// DEF-NEXT:   ::mlir::AbstractAttribute::insert<SimpleAAttr>(*dialect);
+// DEF:        ::mlir::AbstractAttribute::insert<CustomStorageCtorAttrAttr>(*dialect);
+// DEF-NEXT: }
