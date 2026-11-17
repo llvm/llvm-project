@@ -151,6 +151,32 @@ module {
   // CHECK:         } do {
   // CHECK-NEXT:      cir.call @use(%[[TRUE]])
 
+  // A true loop condition with a break still leaves the loop, so the code after
+  // it is folded. Dead code analysis tracks liveness per block, so this does
+  // not depend on the exit edge alone; the unit tests check the successors.
+  cir.func @while_true_break(%c: !cir.bool) {
+    %one = cir.const #cir.int<1> : !s32i
+    cir.while {
+      %t = cir.const #true
+      cir.condition(%t)
+    } do {
+      cir.if %c {
+        cir.break
+      }
+      cir.yield
+    }
+    %b = cir.cast int_to_bool %one : !s32i -> !cir.bool
+    cir.call @use(%b) : (!cir.bool) -> ()
+    cir.return
+  }
+  // CHECK-LABEL: cir.func @while_true_break
+  // CHECK:         %[[TRUE:.*]] = cir.const #true
+  // CHECK:         cir.while
+  // CHECK:         cir.break
+  // CHECK:         }
+  // CHECK-NOT:     cir.cast int_to_bool
+  // CHECK:         cir.call @use(%[[TRUE]])
+
   // A ready condition that is true resumes without suspending.
   cir.func coroutine @await_ready() {
     %one = cir.const #cir.int<1> : !s32i
