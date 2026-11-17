@@ -3616,14 +3616,34 @@ For more information, refer to the
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.tensormap.replace.global.address.p1(ptr addrspace(1) %addr, i64 %new_value)
-declare void @llvm.nvvm.tensormap.replace.global.address.p3(ptr addrspace(3) %addr, i64 %new_value)
+declare void @llvm.nvvm.tensormap.replace.global.address.p1(ptr addrspace(1) %addr, i64 %new_value, i32 immarg %alloc_class)
+declare void @llvm.nvvm.tensormap.replace.global.address.p3(ptr addrspace(3) %addr, i64 %new_value, i32 immarg %alloc_class)
 ```
 
 ##### Overview:
 
 The '`@llvm.nvvm.tensormap.replace.global.address.*`' intrinsics replace the
 `global_address` field of the tensor-map object with `%new_value`.
+
+The `%alloc_class` argument sets the tensor allocation class of the tensor-map
+object along with the new address. This argument must be a compile-time
+constant and defaults to `0` (`.alloc_small`) when omitted.
+
+##### Semantics:
+
+The following table shows the PTX qualifier emitted for each value of
+`%alloc_class`. The values `1` and `2` require PTX ISA 9.5. For the value `0`,
+the `.alloc_small` qualifier is emitted for PTX ISA 9.5 and above, and ignored
+for earlier versions.
+
+|  Alloc Class   | Value |
+| -------------- | ----- |
+| `.alloc_small` | 0     |
+| `.alloc_large` | 1     |
+| `.alloc_same`  | 2     |
+
+The `.alloc_same` qualifier leaves the allocation class of the tensor-map
+object unchanged.
 
 #### '`llvm.nvvm.tensormap.replace.rank`'
 
@@ -3842,6 +3862,55 @@ The following table shows the mapping of `%new_value` to the actual fill mode:
 | -------------- | ----- |
 | `Zero fill`    | 0     |
 | `OOB-NaN fill` | 1     |
+
+#### '`llvm.nvvm.tensormap.replace.alloc.class`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.tensormap.replace.alloc.class.p1(ptr addrspace(1) %addr, i32 immarg %alloc_class)
+declare void @llvm.nvvm.tensormap.replace.alloc.class.p3(ptr addrspace(3) %addr, i32 immarg %alloc_class)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.tensormap.replace.alloc.class.*`' intrinsics set the tensor
+allocation class of the tensor-map object to the class specified by
+`%alloc_class`.
+
+##### Semantics:
+
+The following table shows the PTX qualifier emitted for each value of
+`%alloc_class`:
+
+|  Alloc Class   | Value |
+| -------------- | ----- |
+| `.alloc_small` | 0     |
+| `.alloc_large` | 1     |
+
+### Tensormap Query Intrinsics
+
+#### '`llvm.nvvm.tensormap.query.alloc.class.large`'
+
+##### Syntax:
+
+```llvm
+declare i1 @llvm.nvvm.tensormap.query.alloc.class.large.p0(ptr %addr)
+declare i1 @llvm.nvvm.tensormap.query.alloc.class.large.p1(ptr addrspace(1) %addr)
+declare i1 @llvm.nvvm.tensormap.query.alloc.class.large.p3(ptr addrspace(3) %addr)
+declare i1 @llvm.nvvm.tensormap.query.alloc.class.large.p4(ptr addrspace(4) %addr)
+declare i1 @llvm.nvvm.tensormap.query.alloc.class.large.p101(ptr addrspace(101) %addr)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.tensormap.query.alloc.class.large.*`' intrinsics return `true`
+only if the tensor allocation class of the tensor-map object at `%addr` has been
+set to large. The address space of `%addr` selects the state space of the
+instruction: generic, `.global`, `.shared::cta`, `.const`, or `.param`.
+
+For more information, refer to the
+[PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-tensormap-query-alloc-class-large).
 
 ### TCGEN05 family of Intrinsics
 

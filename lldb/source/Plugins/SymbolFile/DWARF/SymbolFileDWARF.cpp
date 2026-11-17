@@ -1886,7 +1886,7 @@ Type *SymbolFileDWARF::ResolveType(const DWARFDIE &die,
       if (type != DIE_IS_BEING_PARSED)
         return type;
 
-      GetObjectFile()->GetModule()->ReportError(
+      GetObjectFile()->GetModule()->ReportInternalError(
           "Parsing a die that is being parsed die: {0:x16}: {1} ({2}) {3}",
           die.GetOffset(), DW_TAG_value_to_name(die.Tag()), die.Tag(),
           die.GetName());
@@ -4301,6 +4301,21 @@ SymbolFileDWARF::MergeBlockAbstractParameters(const DWARFDIE &block_die,
   return merged;
 }
 
+/// Appends the variables that the abstract origin of \p block_die describes
+/// with a location. Such a variable is in the same place in every instance of
+/// the block, so compilers describe it only there.
+static void AppendAbstractStaticVariables(const DWARFDIE &block_die,
+                                          DIEArray &variable_dies) {
+  DWARFDIE abstract_die = block_die.GetReferencedDIE(DW_AT_abstract_origin);
+  for (DWARFDIE child : abstract_die.children()) {
+    DWARFFormValue location;
+    if (child.Tag() == DW_TAG_variable &&
+        child.GetDIE()->GetAttributeValue(child.GetCU(), DW_AT_location,
+                                          location))
+      variable_dies.push_back(*child.GetDIERef());
+  }
+}
+
 size_t SymbolFileDWARF::ParseVariablesInFunctionContext(
     const SymbolContext &sc, const DWARFDIE &die,
     const lldb::addr_t func_low_pc) {
@@ -4368,6 +4383,7 @@ size_t SymbolFileDWARF::ParseVariablesInFunctionContextRecursive(
     }
     block_variables =
         MergeBlockAbstractParameters(die, std::move(block_variables));
+    AppendAbstractStaticVariables(die, block_variables);
     vars_added += PopulateBlockVariableList(*block_variable_list_sp, sc,
                                             block_variables, func_low_pc);
     break;

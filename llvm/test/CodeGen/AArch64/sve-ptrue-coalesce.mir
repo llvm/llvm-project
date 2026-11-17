@@ -6,13 +6,6 @@
 ---
 name:            ptrue_b_replaces_ptrue_h_for_h_user
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: ppr_3b }
-  - { id: 2, class: zpr }
-  - { id: 3, class: zpr }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
 liveins:
   - { reg: '$z0', virtual-reg: '%2' }
   - { reg: '$z1', virtual-reg: '%3' }
@@ -52,13 +45,6 @@ body:             |
 ---
 name:            keep_ptrue_h_for_b_user
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: ppr_3b }
-  - { id: 2, class: zpr }
-  - { id: 3, class: zpr }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
 liveins:
   - { reg: '$z0', virtual-reg: '%2' }
   - { reg: '$z1', virtual-reg: '%3' }
@@ -98,13 +84,6 @@ body:             |
 ---
 name:            ptrue_b_replaces_and_updates_ptrue_h
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: ppr_3b }
-  - { id: 2, class: zpr }
-  - { id: 3, class: zpr }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
 liveins:
   - { reg: '$z0', virtual-reg: '%2' }
   - { reg: '$z1', virtual-reg: '%3' }
@@ -144,13 +123,6 @@ body:             |
 ---
 name:            ptrue_b_replaces_ptrue_h_in_dominated_block
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: ppr_3b }
-  - { id: 2, class: zpr }
-  - { id: 3, class: zpr }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
 liveins:
   - { reg: '$z0', virtual-reg: '%2' }
   - { reg: '$z1', virtual-reg: '%3' }
@@ -204,13 +176,6 @@ body:             |
 ---
 name:            keep_ptrue_h_when_b_user_would_observe_extra_lanes
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: ppr_3b }
-  - { id: 2, class: zpr }
-  - { id: 3, class: zpr }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
 liveins:
   - { reg: '$z0', virtual-reg: '%2' }
   - { reg: '$z1', virtual-reg: '%3' }
@@ -240,14 +205,6 @@ body:             |
 ---
 name:            keep_ptrue_s_when_d_user_cannot_be_narrowed
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: ppr_3b }
-  - { id: 2, class: zpr }
-  - { id: 3, class: zpr }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
-  - { id: 6, class: zpr }
 liveins:
   - { reg: '$z0', virtual-reg: '%2' }
   - { reg: '$z1', virtual-reg: '%3' }
@@ -279,14 +236,6 @@ body:             |
 ---
 name:            keep_ptrue_h_when_candidate_does_not_dominate
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: ppr_3b }
-  - { id: 2, class: zpr }
-  - { id: 3, class: zpr }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
-  - { id: 6, class: gpr32 }
 liveins:
   - { reg: '$z0', virtual-reg: '%2' }
   - { reg: '$z1', virtual-reg: '%3' }
@@ -340,13 +289,6 @@ body:             |
 ---
 name:            ptrue_s_replaces_ptrue_d_for_d_user
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: ppr_3b }
-  - { id: 2, class: zpr }
-  - { id: 3, class: zpr }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
 liveins:
   - { reg: '$z0', virtual-reg: '%2' }
   - { reg: '$z1', virtual-reg: '%3' }
@@ -386,13 +328,6 @@ body:             |
 ---
 name:            keep_non_all_ptrue
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: ppr_3b }
-  - { id: 2, class: zpr }
-  - { id: 3, class: zpr }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
 liveins:
   - { reg: '$z0', virtual-reg: '%2' }
   - { reg: '$z1', virtual-reg: '%3' }
@@ -422,13 +357,6 @@ body:             |
 ---
 name:            keep_ptrue_s_when_existing_b_user_would_observe_extra_lanes
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: ppr_3b }
-  - { id: 2, class: zpr }
-  - { id: 3, class: zpr }
-  - { id: 4, class: zpr }
-  - { id: 5, class: ppr }
 liveins:
   - { reg: '$z0', virtual-reg: '%2' }
   - { reg: '$z1', virtual-reg: '%3' }
@@ -458,13 +386,6 @@ body:             |
 ---
 name:            do_notcoalesce_across_vg_definitions
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: ppr_3b }
-  - { id: 2, class: zpr }
-  - { id: 3, class: zpr }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
 liveins:
   - { reg: '$z0', virtual-reg: '%2' }
   - { reg: '$z1', virtual-reg: '%3' }
@@ -496,14 +417,6 @@ body:             |
 ---
 name:            constrained_ptrue_b_replaces_ptrue_h_for_h_user
 alignment:       2
-registers:
-  - { id: 0, class: ppr }
-  - { id: 1, class: ppr_3b }
-  - { id: 2, class: zpr }
-  - { id: 3, class: zpr }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
-  - { id: 6, class: ppr }
 liveins:
   - { reg: '$z0', virtual-reg: '%2' }
   - { reg: '$z1', virtual-reg: '%3' }
@@ -543,14 +456,6 @@ body:             |
 ---
 name:            keep_ptrue_when_constrain_regclass_fails
 alignment:       2
-registers:
-  - { id: 0, class: ppr_p8to15 }
-  - { id: 1, class: ppr_3b }
-  - { id: 2, class: zpr }
-  - { id: 3, class: zpr }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
-  - { id: 6, class: ppr }
 liveins:
   - { reg: '$z0', virtual-reg: '%2' }
   - { reg: '$z1', virtual-reg: '%3' }
@@ -580,13 +485,6 @@ body:             |
 ---
 name:            ptrue_s_replaces_ptrue_d_for_d_user_fcmp
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: ppr_3b }
-  - { id: 2, class: zpr }
-  - { id: 3, class: zpr }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
 liveins:
   - { reg: '$z0', virtual-reg: '%2' }
   - { reg: '$z1', virtual-reg: '%3' }
@@ -626,13 +524,6 @@ body:             |
 ---
 name:            ptrue_s_replaces_ptrue_d_for_d_user_fcmpz
 alignment:       2
-registers:
-  - { id: 0, class: ppr_3b }
-  - { id: 1, class: ppr_3b }
-  - { id: 2, class: zpr }
-  - { id: 3, class: zpr }
-  - { id: 4, class: ppr }
-  - { id: 5, class: ppr }
 liveins:
   - { reg: '$z0', virtual-reg: '%2' }
   - { reg: '$z1', virtual-reg: '%3' }
@@ -672,12 +563,6 @@ body:             |
 ---
 name:            ptrue_d_replaces_ptrue_s_for_d_user_ld1_st1_reg_imm
 alignment:       2
-registers:
-  - { id: 0, class: gpr64common }
-  - { id: 1, class: ppr_3b }
-  - { id: 2, class: ppr_3b }
-  - { id: 3, class: zpr }
-  - { id: 4, class: zpr }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
   - { reg: '$z0', virtual-reg: '%3' }
@@ -717,13 +602,6 @@ body:             |
 ---
 name:            ptrue_d_replaces_ptrue_s_for_d_user_ld1_st1_reg_reg
 alignment:       2
-registers:
-  - { id: 0, class: gpr64common }
-  - { id: 1, class: ppr_3b }
-  - { id: 2, class: ppr_3b }
-  - { id: 3, class: zpr }
-  - { id: 4, class: zpr }
-  - { id: 5, class: gpr64common }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
   - { reg: '$x1', virtual-reg: '%5' }
@@ -767,12 +645,6 @@ body:             |
 ---
 name:            ptrue_s_replaces_ptrue_d_for_d_user_ld1r_reg_imm
 alignment:       2
-registers:
-  - { id: 0, class: gpr64common }
-  - { id: 1, class: ppr_3b }
-  - { id: 2, class: ppr_3b }
-  - { id: 3, class: zpr }
-  - { id: 4, class: zpr }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
   - { reg: '$z0', virtual-reg: '%3' }
@@ -812,12 +684,6 @@ body:             |
 ---
 name:            ptrue_d_replaces_ptrue_s_for_d_user_ldnt1_stnt1_reg_imm
 alignment:       2
-registers:
-  - { id: 0, class: gpr64common }
-  - { id: 1, class: ppr_3b }
-  - { id: 2, class: ppr_3b }
-  - { id: 3, class: zpr }
-  - { id: 4, class: zpr }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
   - { reg: '$z0', virtual-reg: '%3' }
@@ -857,13 +723,6 @@ body:             |
 ---
 name:            ptrue_d_replaces_ptrue_s_for_d_user_ldnt1_stnt1_reg_reg
 alignment:       2
-registers:
-  - { id: 0, class: gpr64common }
-  - { id: 1, class: ppr_3b }
-  - { id: 2, class: ppr_3b }
-  - { id: 3, class: zpr }
-  - { id: 4, class: zpr }
-  - { id: 5, class: gpr64common }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
   - { reg: '$x1', virtual-reg: '%5' }

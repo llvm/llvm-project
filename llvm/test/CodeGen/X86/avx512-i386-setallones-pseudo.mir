@@ -14,6 +14,7 @@
   }
 
   attributes #0 = { "target-features"="+avx512f,+avx512vl" }
+...
 ---
 name:            setallones
 liveins: []

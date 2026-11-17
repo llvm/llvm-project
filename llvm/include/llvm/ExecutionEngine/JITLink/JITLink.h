@@ -1956,7 +1956,17 @@ public:
   /// Called by JITLink to resolve external symbols. This method is passed a
   /// lookup continutation which it must call with a result to continue the
   /// linking process.
-  virtual void lookup(const LookupMap &Symbols,
+  ///
+  /// The lookup continuation may destroy the LinkGraph, and with it the
+  /// SymbolStringPool that owns the elements of Symbols if the graph holds the
+  /// only reference to the pool. Implementations must not hold any
+  /// SymbolStringPtrs from the pool (including the elements of Symbols) across
+  /// the call to the continuation unless they ensure that the pool outlives
+  /// that call, e.g. by holding a reference to it. The LinkGraph is not passed
+  /// to this method, so implementations that need such a reference should
+  /// obtain one earlier (e.g. via LinkGraph::getSymbolStringPool in
+  /// modifyPassConfig), or from whatever owns the pool.
+  virtual void lookup(LookupMap Symbols,
                       std::unique_ptr<JITLinkAsyncLookupContinuation> LC) = 0;
 
   /// Called by JITLink once all defined symbols in the graph have been assigned

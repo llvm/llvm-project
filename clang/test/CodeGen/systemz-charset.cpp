@@ -72,3 +72,33 @@ const char16_t *UnicodeUCNString16 = u"\u00E2\u00AC\U000000DF";
 const char32_t *UnicodeUCNString32 = U"\u00E2\u00AC\U000000DF";
 //CHECK: [4 x i32] [i32 226, i32 172, i32 223, i32 0]
 //CHECK-UTF8: [4 x i32] [i32 226, i32 172, i32 223, i32 0]
+
+
+struct string_view {
+    const char* D;
+    int S;
+    constexpr string_view(const char* Str) : D(Str), S(__builtin_strlen(Str)) {}
+    constexpr const char* data() const {
+        return D;
+    }
+    constexpr int size() const {
+        return S;
+    }
+};
+
+constexpr string_view getfoo() { return "\174foo"; }
+
+void function()
+{
+  asm("\174foo");
+  // CHECK: asm{{.*}}@foo
+  // CHECK-UTF8: asm{{.*}}@foo
+  asm((getfoo()));
+  // CHECK: asm{{.*}}@foo
+  // CHECK-UTF8: asm{{.*}}|foo
+
+  asm((string_view("\tnop\n")));
+  // CHECK: asm{{.*}}\09nop\0A
+  // CHECK-UTF8: asm{{.*}}\09nop\0A
+}
+

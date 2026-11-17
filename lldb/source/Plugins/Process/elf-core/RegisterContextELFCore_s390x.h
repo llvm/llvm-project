@@ -9,8 +9,8 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_S390X_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_S390X_H
 
-#include "Plugins/Register/Core/RegisterContextCore_s390x.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
+#include "Plugins/Register/Core/RegisterContextCore_s390x.h"
 #include "lldb/Utility/DataExtractor.h"
 
 class RegisterContextELFCore_s390x : public RegisterContextCore_s390x {

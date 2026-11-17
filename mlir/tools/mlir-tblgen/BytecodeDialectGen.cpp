@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CppGenUtilities.h"
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "llvm/ADT/MapVector.h"
@@ -458,6 +459,16 @@ struct AttrOrType {
 };
 } // namespace
 
+/// Headers declaring the C++ constructs used by the generated readers and
+/// writers.
+static constexpr StringRef bytecodeIncludes[] = {
+    // `::llvm::TypeSwitch`.
+    "llvm/ADT/TypeSwitch.h",
+    // `::mlir::DialectBytecodeReader`, `::mlir::DialectBytecodeWriter`,
+    // `::mlir::getChecked`, `::mlir::readResourceHandle`.
+    "mlir/Bytecode/BytecodeImplementation.h",
+};
+
 static bool emitBCRW(const RecordKeeper &records, raw_ostream &os) {
   MapVector<StringRef, AttrOrType> dialectAttrOrType;
   for (const Record *it :
@@ -481,6 +492,7 @@ static bool emitBCRW(const RecordKeeper &records, raw_ostream &os) {
                     "one in input file or specified via dialect option)");
 
   auto it = dialectAttrOrType.front();
+  mlir::tblgen::emitIncludes(os, bytecodeIncludes);
   Generator gen(os);
 
   const std::vector<const Record *> *vecs[] = {&it.second.attr,

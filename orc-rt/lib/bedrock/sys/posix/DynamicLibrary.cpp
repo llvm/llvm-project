@@ -65,7 +65,7 @@ Error unloadLibrary(void *Handle) {
 }
 
 SymbolLookupResult lookupLibrarySymbols(void *Handle,
-                                        const SymbolLookupSet &Symbols) {
+                                        const RemoteSymbolLookupSet &Symbols) {
   SymbolLookupResult Result;
   Result.reserve(Symbols.size());
   // Reset dlerror so we can distinguish "dlsym returned null because the

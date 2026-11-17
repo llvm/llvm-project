@@ -156,3 +156,4 @@ body:             |
     %select:_(i32) = G_SELECT %cond(i1), %a_assert_zext, %b
     $w0 = COPY %select(i32)
     RET_ReallyLR implicit $w0
+...
