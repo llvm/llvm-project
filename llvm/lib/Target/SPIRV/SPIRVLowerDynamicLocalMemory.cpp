@@ -19,9 +19,10 @@
 //
 // Going through a variable rather than threading the pointer through every
 // function keeps indirect calls and functions shared between kernels working.
-// All work-items store the same value, and each loads it only after its own
-// store. All kernels get the parameter, whether they access the memory or not,
-// so the runtime can treat the kernels of a module alike.
+// The first work-item stores the value, then a workgroup barrier makes it
+// visible to every work-item before any loads. All kernels get the parameter,
+// whether they access the memory or not, so the runtime can treat the kernels
+// of a module alike.
 //
 // The lowering changes the kernel signatures, so it is limited to
 // OpenCL/Unknown OS triple whose runtime sets the argument.
@@ -36,6 +37,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Pass.h"
@@ -43,6 +45,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 #define DEBUG_TYPE "spirv-lower-dynamic-local-memory"
 
@@ -210,8 +213,32 @@ bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
   // Give every kernel the memory as an argument stored on entry.
   for (Function *F : Kernels) {
     Function *NewF = appendKernelParam(*F, LocalPtrTy);
-    IRBuilder<> Builder(NewF->getEntryBlock().getFirstNonPHIOrAlloca());
+    Instruction *InsertBefore =
+      &*NewF->getEntryBlock().getFirstNonPHIOrAlloca();
+    IRBuilder<> Builder(InsertBefore);
+
+    // Only thread [0][0][0] performs the store
+    Type *ThreadIdTy = M.getDataLayout().getIntPtrType(M.getContext(), LocalAS);
+    Value *IsFirst = Builder.getTrue();
+    for (unsigned Dim = 0; Dim != 3; ++Dim) {
+      // Get thread ID and check if it's zero
+      Value *ThreadId = Builder.CreateIntrinsic(Intrinsic::spv_thread_id_in_group,
+                        {ThreadIdTy}, {Builder.getInt32(Dim)});
+      IsFirst = Builder.CreateAnd(
+        IsFirst, Builder.CreateICmpEQ(ThreadId, ConstantInt::get(ThreadIdTy, 0)));
+    }
+    Instruction *ThenTerm =
+      SplitBlockAndInsertIfThen(IsFirst, InsertBefore, false);
+
+    // Insert store on thead [0][0][0]
+    Builder.SetInsertPoint(ThenTerm);
     Builder.CreateStore(NewF->getArg(NewF->arg_size() - 1), Slot);
+
+    // All threads do workgroup barrier
+    Builder.SetInsertPoint(InsertBefore);
+    Builder.CreateIntrinsic(Intrinsic::spv_group_memory_barrier_with_group_sync,
+                            {});
+  
     NewF->setMemoryEffects(NewF->getMemoryEffects() |
                            MemoryEffects::otherMemOnly(ModRefInfo::ModRef));
   }

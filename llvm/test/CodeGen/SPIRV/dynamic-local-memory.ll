@@ -65,7 +65,22 @@ exit:
 ; IR-SAME: ptr addrspace(1) noundef %out, ptr addrspace(3) %dyn_local_mem) addrspace(9) #[[KERNEL_ATTRS:[0-9]+]] !kernel_arg_addr_space
 ; IR-NEXT: entry:
 ; IR-NEXT: %a = alloca i32
+; IR-NEXT: %[[X:.*]] = call{{( addrspace\(9\))?}} i64 @llvm.spv.thread.id.in.group.i64(i32 0)
+; IR-NEXT: %[[XZERO:.*]] = icmp eq i64 %[[X]], 0
+; IR-NEXT: %[[FIRSTX:.*]] = and i1 true, %[[XZERO]]
+; IR-NEXT: %[[Y:.*]] = call{{( addrspace\(9\))?}} i64 @llvm.spv.thread.id.in.group.i64(i32 1)
+; IR-NEXT: %[[YZERO:.*]] = icmp eq i64 %[[Y]], 0
+; IR-NEXT: %[[FIRSTXY:.*]] = and i1 %[[FIRSTX]], %[[YZERO]]
+; IR-NEXT: %[[Z:.*]] = call{{( addrspace\(9\))?}} i64 @llvm.spv.thread.id.in.group.i64(i32 2)
+; IR-NEXT: %[[ZZERO:.*]] = icmp eq i64 %[[Z]], 0
+; IR-NEXT: %[[FIRST:.*]] = and i1 %[[FIRSTXY]], %[[ZZERO]]
+; IR-NEXT: br i1 %[[FIRST]], label %[[INIT:.*]], label %[[READY:.*]]
+; IR: [[INIT]]:
 ; IR-NEXT: store ptr addrspace(3) %dyn_local_mem, ptr addrspace(3) @__spirv_dynamic_local_memory
+; IR-NEXT: br label %[[READY]]
+; IR: [[READY]]:
+; IR-NEXT: call{{( addrspace\(9\))?}} void @llvm.spv.group.memory.barrier.with.group.sync()
+; IR-NEXT: %v = call spir_func addrspace(9) i32 @load(i64 0)
 define spir_kernel void @kernel(ptr addrspace(1) noundef %out) addrspace(9) #0 !kernel_arg_addr_space !0 {
 entry:
   %a = alloca i32
@@ -79,7 +94,12 @@ entry:
 ; IR-LABEL: define spir_kernel void @use_kernel(
 ; IR-SAME: ptr addrspace(1) noundef %out, ptr addrspace(3) %[[LOCAL_ARG:[a-zA-Z0-9_]+]]) addrspace(9)
 ; IR-NEXT: entry:
+; IR: br i1 %{{.*}}, label %[[INIT:.*]], label %[[READY:.*]]
+; IR: [[INIT]]:
 ; IR-NEXT: store ptr addrspace(3) %[[LOCAL_ARG]], ptr addrspace(3) @__spirv_dynamic_local_memory
+; IR-NEXT: br label %[[READY]]
+; IR: [[READY]]:
+; IR-NEXT: call{{( addrspace\(9\))?}} void @llvm.spv.group.memory.barrier.with.group.sync()
 ; IR-NEXT: %[[LOCAL_PTR:.*]] = load ptr addrspace(3), ptr addrspace(3) @__spirv_dynamic_local_memory
 ; IR-NEXT: %p0 = getelementptr i32, ptr addrspace(3) %[[LOCAL_PTR]], i64 0
 ; IR-NEXT: %v0 = load i32, ptr addrspace(3) %p0
@@ -103,7 +123,12 @@ entry:
 ; Kernels not accessing the memory get it too, so the runtime can treat all
 ; kernels of the module alike.
 ; IR-LABEL: define spir_kernel void @nouse(ptr addrspace(3) %dyn_local_mem)
+; IR: br i1 %{{.*}}, label %[[INIT:.*]], label %[[READY:.*]]
+; IR: [[INIT]]:
 ; IR-NEXT: store ptr addrspace(3) %dyn_local_mem, ptr addrspace(3) @__spirv_dynamic_local_memory
+; IR-NEXT: br label %[[READY]]
+; IR: [[READY]]:
+; IR-NEXT: call{{( addrspace\(9\))?}} void @llvm.spv.group.memory.barrier.with.group.sync()
 ; IR-NEXT: ret void
 define spir_kernel void @nouse() addrspace(9) {
   ret void
@@ -161,11 +186,21 @@ define spir_func ptr addrspace(3) @call_instruction() addrspace(9) memory(none) 
 ; SPV-DAG: %[[#GLOBALPTR:]] = OpTypePointer CrossWorkgroup %[[#I8]]
 ; SPV-DAG: %[[#ONE:]] = OpConstant %[[#I8]] 1{{$}}
 ; SPV-DAG: %[[#MARKER]] = OpVariable %[[#GLOBALPTR]] CrossWorkgroup %[[#ONE]]
+; SPV-DAG: %[[#I32:]] = OpTypeInt 32 0
+; SPV-DAG: %[[#WORKGROUP:]] = OpConstant %[[#I32]] 2{{$}}
+; SPV-DAG: %[[#ACQREL_WORKGROUP:]] = OpConstant %[[#I32]] 264{{$}}
 ; SPV: %[[#KERNEL]] = OpFunction
 ; SPV-NEXT: OpFunctionParameter
 ; SPV-NEXT: OpFunctionParameter %[[#LOCALPTR]]
+; SPV: OpBranchConditional %{{[0-9]+}} %[[#INIT:]] %[[#READY:]]
+; SPV: %[[#INIT]] = OpLabel
+; SPV-NEXT: OpStore
+; SPV-NEXT: OpBranch %[[#READY]]
+; SPV: %[[#READY]] = OpLabel
+; SPV-NEXT: OpControlBarrier %[[#WORKGROUP]] %[[#WORKGROUP]] %[[#ACQREL_WORKGROUP]]
 ; SPV: %[[#NOUSE]] = OpFunction
 ; SPV-NEXT: OpFunctionParameter %[[#LOCALPTR]]
+; SPV: OpControlBarrier %[[#WORKGROUP]] %[[#WORKGROUP]] %[[#ACQREL_WORKGROUP]]
 
 attributes #0 = { "foo" }
 
