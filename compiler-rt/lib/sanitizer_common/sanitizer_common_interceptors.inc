@@ -4077,61 +4077,59 @@ INTERCEPTOR(int, wctomb, char *dest, wchar_t src) {
 #define INIT_WCTOMB
 #endif
 
-#if SANITIZER_INTERCEPT_MBRTOC8 || SANITIZER_INTERCEPT_MBRTOC16 || \
-    SANITIZER_INTERCEPT_MBRTOC32
+#if SANITIZER_INTERCEPT_MBRTOC8_C8RTOMB || \
+    SANITIZER_INTERCEPT_MBRTOC16_C16RTOMB_MBRTOC32_C32RTOMB
 template <typename CharT, typename Fn>
 static ALWAYS_INLINE SIZE_T MbrtocImpl(void* ctx, Fn real, CharT* pc,
                                        const char* s, SIZE_T n, void* ps) {
-  if (ps != nullptr)
+  if (ps)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, ps, mbstate_t_sz);
   CharT local_pc;
   SIZE_T res = real(&local_pc, s, n, ps);
-  if (ps != nullptr)
+  if (ps)
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ps, mbstate_t_sz);
-  if (s == nullptr)
+  if (!s)
     // `pc` and `n` are ignored.
     return res;
   if (res == (SIZE_T)-1) {
-    // Encoding error.
     if (n > 0)
       // At least 1 byte of `s` was read. Nothing is written to `pc`.
       COMMON_INTERCEPTOR_READ_RANGE(ctx, s, 1);
-  } else if (res == (SIZE_T)-2) {
-    // Incomplete, but so far valid.
+    return res;
+  }
+  if (res == (SIZE_T)-2) {
     if (n > 0)
       // All `n` bytes were read. Nothing is written to `pc`.
       COMMON_INTERCEPTOR_READ_RANGE(ctx, s, n);
-  } else if (res == (SIZE_T)-3) {
+    return res;
+  }
+  if (res == (SIZE_T)-3) {
     // A surrogate pair was read from `ps`. Nothing is read from `s`.
-    if (pc != nullptr) {
+    if (pc) {
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pc, sizeof(*pc));
       *pc = local_pc;
     }
-  } else {
-    // Normal decoding.
-    SIZE_T read_cnt = (res == 0) ? 1 : res;
-    if (n > 0)
-      COMMON_INTERCEPTOR_READ_RANGE(ctx, s, Min(read_cnt, n));
-    if (pc != nullptr) {
-      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pc, sizeof(*pc));
-      *pc = local_pc;
-    }
+    return res;
+  }
+  SIZE_T read_cnt = (res == 0) ? 1 : res;
+  if (n > 0)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, s, Min(read_cnt, n));
+  if (pc) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pc, sizeof(*pc));
+    *pc = local_pc;
   }
   return res;
 }
-#endif  // SANITIZER_INTERCEPT_MBRTOC{8,16,32}
 
-#if SANITIZER_INTERCEPT_C8RTOMB || SANITIZER_INTERCEPT_C16RTOMB || \
-    SANITIZER_INTERCEPT_C32RTOMB
 template <typename CharT, typename Fn>
 static ALWAYS_INLINE SIZE_T CrtombImpl(void* ctx, Fn real, char* s, CharT c,
                                        void* ps) {
-  if (ps != nullptr)
+  if (ps)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, ps, mbstate_t_sz);
-  if (s == nullptr) {
+  if (!s) {
     // Resets `ps` and writes nothing to `s`.
     SIZE_T res = real(nullptr, c, ps);
-    if (ps != nullptr)
+    if (ps)
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ps, mbstate_t_sz);
     return res;
   }
@@ -4139,96 +4137,84 @@ static ALWAYS_INLINE SIZE_T CrtombImpl(void* ctx, Fn real, char* s, CharT c,
   // 32 is larger than MB_LEN_MAX, which is 16 on glibc/Linux.
   char local_dest[32];
   SIZE_T res = real(local_dest, c, ps);
-  if (ps != nullptr)
+  if (ps)
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ps, mbstate_t_sz);
-  if (res != (SIZE_T)-1) {
-    CHECK_LE(res, sizeof(local_dest));
-    if (res > 0) {
-      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, s, res);
-      internal_memcpy(s, local_dest, res);
-    }
+  if (res == (SIZE_T)-1) {
+    // Nothing is written to `s`.
+    return res;
   }
 
-  // If res == -1, nothing is written to `s`.
+  CHECK_LE(res, sizeof(local_dest));
+  if (res > 0) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, s, res);
+    internal_memcpy(s, local_dest, res);
+  }
   return res;
 }
-#endif  // SANITIZER_INTERCEPT_C{8,16,32}RTOMB
+#endif  // SANITIZER_INTERCEPT_MBRTOC8_C8RTOMB ||
+        // SANITIZER_INTERCEPT_MBRTOC16_C16RTOMB_MBRTOC32_C32RTOMB
 
-#if SANITIZER_INTERCEPT_MBRTOC8 || SANITIZER_INTERCEPT_C8RTOMB
+#if SANITIZER_INTERCEPT_MBRTOC8_C8RTOMB
 #  ifdef __cpp_char8_t
 typedef char8_t CHAR8_T;
 #  else
 typedef u8 CHAR8_T;
 #  endif  // __cpp_char8_t
-#endif    // SANITIZER_INTERCEPT_MBRTOC8 || SANITIZER_INTERCEPT_C8RTOMB
 
-#if SANITIZER_INTERCEPT_MBRTOC8
 INTERCEPTOR(SIZE_T, mbrtoc8, CHAR8_T* pc8, const char* s, SIZE_T n, void* ps) {
   void* ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, mbrtoc8, pc8, s, n, ps);
   return MbrtocImpl(ctx, REAL(mbrtoc8), pc8, s, n, ps);
 }
-#  define INIT_MBRTOC8 COMMON_INTERCEPT_FUNCTION(mbrtoc8);
-#else
-#  define INIT_MBRTOC8
-#endif  // SANITIZER_INTERCEPT_MBRTOC8
 
-#if SANITIZER_INTERCEPT_C8RTOMB
 INTERCEPTOR(SIZE_T, c8rtomb, char* s, CHAR8_T c8, void* ps) {
   void* ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, c8rtomb, s, c8, ps);
   return CrtombImpl(ctx, REAL(c8rtomb), s, c8, ps);
 }
-#  define INIT_C8RTOMB COMMON_INTERCEPT_FUNCTION(c8rtomb);
-#else
-#  define INIT_C8RTOMB
-#endif  // SANITIZER_INTERCEPT_C8RTOMB
 
-#if SANITIZER_INTERCEPT_MBRTOC16
+#  define INIT_MBRTOC8_C8RTOMB          \
+    COMMON_INTERCEPT_FUNCTION(mbrtoc8); \
+    COMMON_INTERCEPT_FUNCTION(c8rtomb);
+#else
+#  define INIT_MBRTOC8_C8RTOMB
+#endif  // SANITIZER_INTERCEPT_MBRTOC8_C8RTOMB
+
+#if SANITIZER_INTERCEPT_MBRTOC16_C16RTOMB_MBRTOC32_C32RTOMB
 INTERCEPTOR(SIZE_T, mbrtoc16, char16_t* pc16, const char* s, SIZE_T n,
             void* ps) {
   void* ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, mbrtoc16, pc16, s, n, ps);
   return MbrtocImpl(ctx, REAL(mbrtoc16), pc16, s, n, ps);
 }
-#  define INIT_MBRTOC16 COMMON_INTERCEPT_FUNCTION(mbrtoc16);
-#else
-#  define INIT_MBRTOC16
-#endif  // SANITIZER_INTERCEPT_MBRTOC16
 
-#if SANITIZER_INTERCEPT_C16RTOMB
 INTERCEPTOR(SIZE_T, c16rtomb, char* s, char16_t c16, void* ps) {
   void* ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, c16rtomb, s, c16, ps);
   return CrtombImpl(ctx, REAL(c16rtomb), s, c16, ps);
 }
-#  define INIT_C16RTOMB COMMON_INTERCEPT_FUNCTION(c16rtomb);
-#else
-#  define INIT_C16RTOMB
-#endif  // SANITIZER_INTERCEPT_C16RTOMB
 
-#if SANITIZER_INTERCEPT_MBRTOC32
 INTERCEPTOR(SIZE_T, mbrtoc32, char32_t* pc32, const char* s, SIZE_T n,
             void* ps) {
   void* ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, mbrtoc32, pc32, s, n, ps);
   return MbrtocImpl(ctx, REAL(mbrtoc32), pc32, s, n, ps);
 }
-#  define INIT_MBRTOC32 COMMON_INTERCEPT_FUNCTION(mbrtoc32);
-#else
-#  define INIT_MBRTOC32
-#endif  // SANITIZER_INTERCEPT_MBRTOC32
 
-#if SANITIZER_INTERCEPT_C32RTOMB
 INTERCEPTOR(SIZE_T, c32rtomb, char* s, char32_t c32, void* ps) {
   void* ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, c32rtomb, s, c32, ps);
   return CrtombImpl(ctx, REAL(c32rtomb), s, c32, ps);
 }
-#  define INIT_C32RTOMB COMMON_INTERCEPT_FUNCTION(c32rtomb);
+
+#  define INIT_MBRTOC16_C16RTOMB_MBRTOC32_C32RTOMB \
+    COMMON_INTERCEPT_FUNCTION(mbrtoc16);           \
+    COMMON_INTERCEPT_FUNCTION(c16rtomb);           \
+    COMMON_INTERCEPT_FUNCTION(mbrtoc32);           \
+    COMMON_INTERCEPT_FUNCTION(c32rtomb);
 #else
-#  define INIT_C32RTOMB
-#endif  // SANITIZER_INTERCEPT_C32RTOMB
+#  define INIT_MBRTOC16_C16RTOMB_MBRTOC32_C32RTOMB
+#endif  // SANITIZER_INTERCEPT_MBRTOC16_C16RTOMB_MBRTOC32_C32RTOMB
 
 #if SANITIZER_INTERCEPT_TCGETATTR
 INTERCEPTOR(int, tcgetattr, int fd, void *termios_p) {
@@ -10860,12 +10846,8 @@ static void InitializeCommonInterceptors() {
   INIT_WCSNRTOMBS;
   INIT_WCRTOMB;
   INIT_WCTOMB;
-  INIT_MBRTOC8;
-  INIT_C8RTOMB;
-  INIT_MBRTOC16;
-  INIT_C16RTOMB;
-  INIT_MBRTOC32;
-  INIT_C32RTOMB;
+  INIT_MBRTOC8_C8RTOMB;
+  INIT_MBRTOC16_C16RTOMB_MBRTOC32_C32RTOMB;
   INIT_TCGETATTR;
   INIT_REALPATH;
   INIT_CANONICALIZE_FILE_NAME;
