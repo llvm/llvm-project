@@ -5,7 +5,6 @@
 name:            saddlp1d
 legalized:       true
 regBankSelected: false
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $x0
@@ -29,7 +28,6 @@ name:            uaddlp1d
 legalized:       true
 regBankSelected: false
 failedISel:      false
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $x0

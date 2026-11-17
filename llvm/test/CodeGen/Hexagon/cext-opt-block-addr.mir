@@ -42,7 +42,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 callsEHReturn:   false
 callsUnwindInit: false
@@ -53,8 +52,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: intregs, preferred-register: '' }
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false
@@ -103,7 +100,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 callsEHReturn:   false
 callsUnwindInit: false
@@ -114,12 +110,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: intregs, preferred-register: '' }
-  - { id: 1, class: intregs, preferred-register: '' }
-  - { id: 2, class: intregs, preferred-register: '' }
-  - { id: 3, class: intregs, preferred-register: '' }
-  - { id: 4, class: intregs, preferred-register: '' }
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false

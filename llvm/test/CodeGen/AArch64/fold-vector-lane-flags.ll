@@ -61,14 +61,13 @@ define i64 @srl(i64 %a, i64 %c, ptr %p) {
 define i32 @sdiv(i32 %a, i32 %b, i32 %c, i32 %d, ptr %p) {
 ; CHECK-LABEL: sdiv:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w8, w0, #4
-; CHECK-NEXT:    orr w9, w1, #0x1
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    sdiv w8, w8, w9
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    orr w10, w1, #0x1
 ; CHECK-NEXT:    sdiv w9, w2, w3
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov v0.s[1], w9
-; CHECK-NEXT:    str d0, [x4]
+; CHECK-NEXT:    lsl w8, w8, #4
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    sdiv w8, w8, w10
+; CHECK-NEXT:    stp w8, w9, [x4]
 ; CHECK-NEXT:    ret
   %x = shl i32 %a, 4
   %y = or i32 %b, 1

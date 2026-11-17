@@ -6,7 +6,6 @@
 
 ---
 name:            uaddsat_i32
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11
@@ -44,12 +43,11 @@ body:             |
 ...
 ---
 name:            uaddsat_i64
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $x10, $x11
+    liveins: $x10, $x11, $x12, $x13
     ; CHECK-LABEL: name: uaddsat_i64
-    ; CHECK: liveins: $x10, $x11
+    ; CHECK: liveins: $x10, $x11, $x12, $x13
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -86,7 +84,6 @@ body:             |
 ...
 ---
 name:            saddsat_i32
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11
@@ -136,12 +133,11 @@ body:             |
 ...
 ---
 name:            saddsat_i64
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $x10, $x11
+    liveins: $x10, $x11, $x12, $x13
     ; CHECK-LABEL: name: saddsat_i64
-    ; CHECK: liveins: $x10, $x11
+    ; CHECK: liveins: $x10, $x11, $x12, $x13
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -192,7 +188,6 @@ body:             |
 ...
 ---
 name:            usubsat_i32
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11
@@ -227,12 +222,11 @@ body:             |
 ...
 ---
 name:            usubsat_i64
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $x10, $x11
+    liveins: $x10, $x11, $x12, $x13
     ; CHECK-LABEL: name: usubsat_i64
-    ; CHECK: liveins: $x10, $x11
+    ; CHECK: liveins: $x10, $x11, $x12, $x13
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -267,7 +261,6 @@ body:             |
 ...
 ---
 name:            ssubsat_i32
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11
@@ -317,12 +310,11 @@ body:             |
 ...
 ---
 name:            ssubsat_i64
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $x10, $x11
+    liveins: $x10, $x11, $x12, $x13
     ; CHECK-LABEL: name: ssubsat_i64
-    ; CHECK: liveins: $x10, $x11
+    ; CHECK: liveins: $x10, $x11, $x12, $x13
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -371,7 +363,6 @@ body:             |
 ...
 ---
 name:            uaddsat_i8
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11
@@ -402,7 +393,6 @@ body:             |
 ...
 ---
 name:            sshlsat_i32
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11
@@ -432,12 +422,11 @@ body:             |
 ...
 ---
 name:            sshlsat_i64
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $x10, $x11
+    liveins: $x10, $x11, $x12, $x13
     ; CHECK-LABEL: name: sshlsat_i64
-    ; CHECK: liveins: $x10, $x11
+    ; CHECK: liveins: $x10, $x11, $x12, $x13
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -501,7 +490,6 @@ body:             |
 ...
 ---
 name:            ushlsat_i32
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11
@@ -527,12 +515,11 @@ body:             |
 ...
 ---
 name:            ushlsat_i64
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $x10, $x11
+    liveins: $x10, $x11, $x12, $x13
     ; CHECK-LABEL: name: ushlsat_i64
-    ; CHECK: liveins: $x10, $x11
+    ; CHECK: liveins: $x10, $x11, $x12, $x13
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11

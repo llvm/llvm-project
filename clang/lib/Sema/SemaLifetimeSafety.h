@@ -761,7 +761,7 @@ private:
   }
 
   std::string getDiagSubjectDescription(const Expr *E) {
-    E = E->IgnoreImpCasts();
+    E = ignoreParensAndImpCasts(E);
     if (const auto *DAE = dyn_cast<CXXDefaultArgExpr>(E))
       return getDiagSubjectDescription(DAE->getExpr()->IgnoreParenBaseCasts());
     if (isa<MaterializeTemporaryExpr>(E))
@@ -792,8 +792,8 @@ private:
   }
 
   bool shouldShowInAliasChain(const Expr *CurrExpr, const Expr *LastExpr) {
-    CurrExpr = CurrExpr->IgnoreImpCasts();
-    LastExpr = LastExpr->IgnoreImpCasts();
+    CurrExpr = ignoreParensAndImpCasts(CurrExpr);
+    LastExpr = ignoreParensAndImpCasts(LastExpr);
 
     if (!isa<CallExpr, DeclRefExpr>(CurrExpr))
       return false;

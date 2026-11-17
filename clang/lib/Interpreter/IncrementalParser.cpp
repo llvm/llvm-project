@@ -308,6 +308,12 @@ public:
   void VisitVarDecl(VarDecl *D) { VisitRedeclarable(D); }
 
   void VisitTagDecl(TagDecl *D) {
+    // Some members of a definition are visible outside of it: the enumerators
+    // of an unscoped enumeration, and in C the tags and enumerators declared
+    // in a structure or union.
+    if (D->isThisDeclarationADefinition())
+      VisitDeclContext(D);
+
     NamedDecl *Prev = VisitRedeclarable(D);
 
     // A class definition is kept in DefinitionData outside the

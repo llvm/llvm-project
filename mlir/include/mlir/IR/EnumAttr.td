@@ -648,6 +648,16 @@ class EnumProp<EnumInfo enumInfo> : Property<enumInfo.cppType, enumInfo.summary>
   }];
 }
 
+// An `EnumProp` whose default is the given enum case. A property holding its
+// default is elided from `prop-dict` and from an optional group it anchors,
+// `($flags^)?`.
+class DefaultValuedEnumProp<EnumInfo enumInfo, EnumCase case>
+    : EnumProp<enumInfo> {
+  assert !not(!empty(!filter(c, enumInfo.enumerants, !eq(c, case)))),
+      "default `" # case.symbol # "` is not a case of " # enumInfo.cppType;
+  let defaultValue = enumInfo.cppType # "::" # case.symbol;
+}
+
 // Enum property that can have been (or, if `storeInCustomAttribute` is true, will also
 // be stored as) an attribute, in addition to being stored as an integer attribute.
 class EnumPropWithAttrForm<EnumInfo enumInfo, Attr attributeForm>

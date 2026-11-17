@@ -60,10 +60,14 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
@@ -131,11 +135,11 @@ struct BlockPosition {
       : KnownBits(InitialLogAlignment) {}
 };
 
-class SystemZLongBranch : public MachineFunctionPass {
+class SystemZLongBranchLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SystemZLongBranch() : MachineFunctionPass(ID) {}
+  SystemZLongBranchLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
@@ -143,7 +147,13 @@ public:
     return MachineFunctionProperties().setNoVRegs();
   }
 
-private:
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+
+class SystemZLongBranchImpl {
   void skipNonTerminators(BlockPosition &Position, MBBInfo &Block);
   void skipTerminator(BlockPosition &Position, TerminatorInfo &Terminator,
                       bool AssumeRelaxed);
@@ -161,23 +171,26 @@ private:
   MachineFunction *MF = nullptr;
   SmallVector<MBBInfo, 16> MBBs;
   SmallVector<TerminatorInfo, 16> Terminators;
+
+public:
+  bool runOnMachineFunction(MachineFunction &MF);
 };
 
-char SystemZLongBranch::ID = 0;
+char SystemZLongBranchLegacy::ID = 0;
 
 const uint64_t MaxBackwardRange = 0x10000;
 const uint64_t MaxForwardRange = 0xfffe;
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(SystemZLongBranch, DEBUG_TYPE, "SystemZ Long Branch", false,
-                false)
+INITIALIZE_PASS(SystemZLongBranchLegacy, DEBUG_TYPE, "SystemZ Long Branch",
+                false, false)
 
 // Position describes the state immediately before Block.  Update Block
 // accordingly and move Position to the end of the block's non-terminator
 // instructions.
-void SystemZLongBranch::skipNonTerminators(BlockPosition &Position,
-                                           MBBInfo &Block) {
+void SystemZLongBranchImpl::skipNonTerminators(BlockPosition &Position,
+                                               MBBInfo &Block) {
   if (Log2(Block.Alignment) > Position.KnownBits) {
     // When calculating the address of Block, we need to conservatively
     // assume that Block had the worst possible misalignment.
@@ -199,9 +212,9 @@ void SystemZLongBranch::skipNonTerminators(BlockPosition &Position,
 // Position describes the state immediately before Terminator.
 // Update Terminator accordingly and move Position past it.
 // Assume that Terminator will be relaxed if AssumeRelaxed.
-void SystemZLongBranch::skipTerminator(BlockPosition &Position,
-                                       TerminatorInfo &Terminator,
-                                       bool AssumeRelaxed) {
+void SystemZLongBranchImpl::skipTerminator(BlockPosition &Position,
+                                           TerminatorInfo &Terminator,
+                                           bool AssumeRelaxed) {
   Terminator.Address = Position.Address;
   Position.Address += Terminator.Size;
   if (AssumeRelaxed)
@@ -229,7 +242,7 @@ static unsigned getInstSizeInBytes(const MachineInstr &MI,
 }
 
 // Return a description of terminator instruction MI.
-TerminatorInfo SystemZLongBranch::describeTerminator(MachineInstr &MI) {
+TerminatorInfo SystemZLongBranchImpl::describeTerminator(MachineInstr &MI) {
   TerminatorInfo Terminator;
   Terminator.Size = getInstSizeInBytes(MI, TII);
   if (MI.isConditionalBranch() || MI.isUnconditionalBranch()) {
@@ -284,7 +297,7 @@ TerminatorInfo SystemZLongBranch::describeTerminator(MachineInstr &MI) {
 // Fill MBBs and Terminators, setting the addresses on the assumption
 // that no branches need relaxation.  Return the size of the function under
 // this assumption.
-uint64_t SystemZLongBranch::initMBBInfo() {
+uint64_t SystemZLongBranchImpl::initMBBInfo() {
   MF->RenumberBlocks();
   unsigned NumBlocks = MF->size();
 
@@ -328,8 +341,8 @@ uint64_t SystemZLongBranch::initMBBInfo() {
 
 // Return true if, under current assumptions, Terminator would need to be
 // relaxed if it were placed at address Address.
-bool SystemZLongBranch::mustRelaxBranch(const TerminatorInfo &Terminator,
-                                        uint64_t Address) {
+bool SystemZLongBranchImpl::mustRelaxBranch(const TerminatorInfo &Terminator,
+                                            uint64_t Address) {
   if (!Terminator.Branch || Terminator.ExtraRelaxSize == 0)
     return false;
 
@@ -347,7 +360,7 @@ bool SystemZLongBranch::mustRelaxBranch(const TerminatorInfo &Terminator,
 
 // Return true if, under current assumptions, any terminator needs
 // to be relaxed.
-bool SystemZLongBranch::mustRelaxABranch() {
+bool SystemZLongBranchImpl::mustRelaxABranch() {
   for (auto &Terminator : Terminators)
     if (mustRelaxBranch(Terminator, Terminator.Address))
       return true;
@@ -356,7 +369,7 @@ bool SystemZLongBranch::mustRelaxABranch() {
 
 // Set the address of each block on the assumption that all branches
 // must be long.
-void SystemZLongBranch::setWorstCaseAddresses() {
+void SystemZLongBranchImpl::setWorstCaseAddresses() {
   SmallVector<TerminatorInfo, 16>::iterator TI = Terminators.begin();
   BlockPosition Position(Log2(MF->getAlignment()));
   for (auto &Block : MBBs) {
@@ -370,8 +383,8 @@ void SystemZLongBranch::setWorstCaseAddresses() {
 
 // Split BRANCH ON COUNT MI into the addition given by AddOpcode followed
 // by a BRCL on the result.
-void SystemZLongBranch::splitBranchOnCount(MachineInstr *MI,
-                                           unsigned AddOpcode) {
+void SystemZLongBranchImpl::splitBranchOnCount(MachineInstr *MI,
+                                               unsigned AddOpcode) {
   MachineBasicBlock *MBB = MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
   MachineInstr *AddImm = BuildMI(*MBB, MI, DL, TII->get(AddOpcode))
@@ -392,8 +405,8 @@ void SystemZLongBranch::splitBranchOnCount(MachineInstr *MI,
 
 // Split MI into the comparison given by CompareOpcode followed
 // a BRCL on the result.
-void SystemZLongBranch::splitCompareBranch(MachineInstr *MI,
-                                           unsigned CompareOpcode) {
+void SystemZLongBranchImpl::splitCompareBranch(MachineInstr *MI,
+                                               unsigned CompareOpcode) {
   MachineBasicBlock *MBB = MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
   BuildMI(*MBB, MI, DL, TII->get(CompareOpcode))
@@ -411,7 +424,7 @@ void SystemZLongBranch::splitCompareBranch(MachineInstr *MI,
 }
 
 // Relax the branch described by Terminator.
-void SystemZLongBranch::relaxBranch(TerminatorInfo &Terminator) {
+void SystemZLongBranchImpl::relaxBranch(TerminatorInfo &Terminator) {
   MachineInstr *Branch = Terminator.Branch;
   switch (Branch->getOpcode()) {
   case SystemZ::J:
@@ -462,7 +475,7 @@ void SystemZLongBranch::relaxBranch(TerminatorInfo &Terminator) {
 }
 
 // Run a shortening pass and relax any branches that need to be relaxed.
-void SystemZLongBranch::relaxBranches() {
+void SystemZLongBranchImpl::relaxBranches() {
   SmallVector<TerminatorInfo, 16>::iterator TI = Terminators.begin();
   BlockPosition Position(Log2(MF->getAlignment()));
   for (auto &Block : MBBs) {
@@ -478,7 +491,7 @@ void SystemZLongBranch::relaxBranches() {
   }
 }
 
-bool SystemZLongBranch::runOnMachineFunction(MachineFunction &F) {
+bool SystemZLongBranchImpl::runOnMachineFunction(MachineFunction &F) {
   TII = static_cast<const SystemZInstrInfo *>(F.getSubtarget().getInstrInfo());
   MF = &F;
   uint64_t Size = initMBBInfo();
@@ -490,6 +503,22 @@ bool SystemZLongBranch::runOnMachineFunction(MachineFunction &F) {
   return true;
 }
 
-FunctionPass *llvm::createSystemZLongBranchPass(SystemZTargetMachine &TM) {
-  return new SystemZLongBranch();
+FunctionPass *
+llvm::createSystemZLongBranchLegacyPass(SystemZTargetMachine &TM) {
+  return new SystemZLongBranchLegacy();
+}
+
+bool SystemZLongBranchLegacy::runOnMachineFunction(MachineFunction &MF) {
+  SystemZLongBranchImpl Impl;
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+SystemZLongBranchPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  SystemZLongBranchImpl Impl;
+  return Impl.runOnMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

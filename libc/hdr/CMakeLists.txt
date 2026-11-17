@@ -45,6 +45,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  arpa_nameser_macros
+  HDRS
+    arpa_nameser_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.arpa_nameser_macros
+)
+
+add_proxy_header_library(
   errno_macros
   HDRS
     errno_macros.h

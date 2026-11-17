@@ -254,6 +254,7 @@ LANGOPT(HLSLSpvUseUnknownImageFormat, 1, 0, NotCompatible, "For storage images a
 LANGOPT(HLSLSpvUseLegacyBufferMatrixOrder, 1, 0, NotCompatible, "Assume the legacy matrix order (row major) when accessing raw buffers (e.g. ByteAddressBuffer). Defaults to column major.")
 LANGOPT(HLSLSpvEnableMaximalReconvergence, 1, 0, NotCompatible, "Enables the MaximallyReconvergesKHR execution mode for this module. This ensures that control flow reconverges at well-defined merge points as defined by the Vulkan spec.")
 LANGOPT(HLSLSpvPreserveInterface, 1, 0, NotCompatible, "Preserve entry-point interface variables from dead-code elimination.")
+LANGOPT(HLSLSpvSupportNonzeroBaseInstance, 1, 0, NotCompatible, "Make SV_InstanceID zero-based by subtracting the BaseInstance built-in from InstanceIndex on SPIR-V.")
 LANGOPT(EmitLogicalPointer, 1, 0, NotCompatible, "Allow emitting structured GEP/alloca intrinsics instead of normal GEP/alloca instructions.")
 
 LANGOPT(CUDAIsDevice      , 1, 0, NotCompatible, "compiling for CUDA device")
