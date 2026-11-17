@@ -237,6 +237,22 @@ struct AArch64ABIOptions {
 LLVM_ABI std::unique_ptr<TargetInfo>
 createAArch64TargetInfo(TypeBuilder &TB, const AArch64ABIOptions &Opts);
 
+enum class SystemZABIKind { ELF, XPLINK };
+
+struct SystemZABIOptions {
+  SystemZABIKind Kind = SystemZABIKind::ELF;
+  bool HasVector = false;
+  bool IsSoftFloatABI = false;
+  ABICompatInfo CompatInfo;
+
+  SystemZABIOptions() = default;
+  explicit SystemZABIOptions(SystemZABIKind Kind) : Kind(Kind) {}
+};
+
+/// Create the SystemZ classifier for the ELF or XPLINK ABI.
+LLVM_ABI std::unique_ptr<TargetInfo>
+createSystemZTargetInfo(TypeBuilder &TB, const SystemZABIOptions &Opts);
+
 } // namespace abi
 } // namespace llvm
 

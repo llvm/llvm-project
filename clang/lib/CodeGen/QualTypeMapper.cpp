@@ -204,8 +204,6 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
   case BuiltinType::UShort:
   case BuiltinType::Int:
   case BuiltinType::UInt:
-  case BuiltinType::Long:
-  case BuiltinType::ULong:
   case BuiltinType::LongLong:
   case BuiltinType::ULongLong:
   case BuiltinType::Int128:
@@ -213,6 +211,12 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
     return Builder.getIntegerType(ASTCtx.getTypeSize(QT), getTypeAlign(QT),
                                   /*Signed=*/BT->isSignedInteger(),
                                   /*IsBitInt=*/false);
+
+  case BuiltinType::Long:
+  case BuiltinType::ULong:
+    return Builder.getIntegerType(ASTCtx.getTypeSize(QT), getTypeAlign(QT),
+                                  /*Signed=*/BT->isSignedInteger(),
+                                  /*IsBitInt=*/false, /*IsLong=*/true);
 
   case BuiltinType::Half:
   case BuiltinType::Float16:

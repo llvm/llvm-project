@@ -972,6 +972,7 @@ void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
       CheckSimple(Target.getDirectAlign(), Res.getDirectAlign(), "DirectAlign");
       CheckSimple(Target.getDirectOffset(), Res.getDirectOffset(),
                   "DirectOffset");
+      CheckSimple(Target.getInReg(), Res.getInReg(), "InReg");
       // Extend falls through to here, and only Direct carries the flag.
       if (Res.isDirect())
         CheckSimple(Target.getCanBeFlattened(), Res.getCanBeFlattened(),
@@ -1038,9 +1039,11 @@ ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
       DirectAlign = Align->value();
     // TODO: Move Padding into the ABIArgInfo struct when we add support for
     //       targets that need a different setting than we have here.
-    return ABIArgInfo::getDirect(CoercedType, AbiInfo.getDirectOffset(),
-                                 /*Padding=*/nullptr,
-                                 AbiInfo.getCanBeFlattened(), DirectAlign);
+    ABIArgInfo Res = ABIArgInfo::getDirect(
+        CoercedType, AbiInfo.getDirectOffset(),
+        /*Padding=*/nullptr, AbiInfo.getCanBeFlattened(), DirectAlign);
+    Res.setInReg(AbiInfo.getInReg());
+    return Res;
   }
   case llvm::abi::ArgInfo::Extend: {
     llvm::Type *CoercedType = nullptr;
@@ -1061,6 +1064,7 @@ ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
     else
       Res = ABIArgInfo::getNoExtend(cast<llvm::IntegerType>(CoercedType));
     Res.setConservative(AbiInfo.isConservative());
+    Res.setInReg(AbiInfo.getInReg());
     return Res;
   }
   case llvm::abi::ArgInfo::Indirect: {

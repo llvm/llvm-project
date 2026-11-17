@@ -167,15 +167,20 @@ class IntegerType : public Type {
 private:
   bool IsSigned;
   bool IsBitInt;
+  bool IsLong;
 
 public:
   IntegerType(uint64_t BitWidth, Align ABIAlign, bool IsSigned,
-              bool IsBitInt = false)
+              bool IsBitInt = false, bool IsLong = false)
       : Type(TypeKind::Integer, TypeSize::getFixed(BitWidth), ABIAlign),
-        IsSigned(IsSigned), IsBitInt(IsBitInt) {}
+        IsSigned(IsSigned), IsBitInt(IsBitInt), IsLong(IsLong) {}
 
   bool isSigned() const { return IsSigned; }
   bool isBitInt() const { return IsBitInt; }
+  /// True for C's `long` and `unsigned long`. These are distinct from
+  /// `long long` even when both have the same width, and some ABIs treat the
+  /// two differently.
+  bool isLong() const { return IsLong; }
   bool isBool() const {
     return getSizeInBits().getFixedValue() == 1 && !IsBitInt;
   }
@@ -528,9 +533,10 @@ public:
   }
 
   const IntegerType *getIntegerType(uint64_t BitWidth, Align Align, bool Signed,
-                                    bool IsBitInt = false) {
+                                    bool IsBitInt = false,
+                                    bool IsLong = false) {
     return new (Allocator.Allocate<IntegerType>())
-        IntegerType(BitWidth, Align, Signed, IsBitInt);
+        IntegerType(BitWidth, Align, Signed, IsBitInt, IsLong);
   }
 
   const FloatType *getFloatType(const fltSemantics &Semantics, Align Align) {

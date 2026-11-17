@@ -8,6 +8,7 @@ add_llvm_component_library(LLVMABI
   Targets/AMDGPU.cpp
   Targets/BPF.cpp
   Targets/SPIRV.cpp
+  Targets/SystemZ.cpp
   Targets/X86.cpp
 
   ADDITIONAL_HEADER_DIRS
