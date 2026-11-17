@@ -179,7 +179,7 @@ const void* dyn_cast_to_derived(
       0,
       0,
       true,
-      1, // number_of_dst_type
+      true, // has_unique_dst_type
       false,
       false};
   // Do the  search
@@ -214,11 +214,10 @@ const void* dyn_cast_to_derived(
         0,
         0,
         true,
-        0,
+        true, // has_unique_dst_type
         false,
         false};
-    info.number_of_dst_type = 1;
-    res                     = dst_type->search_above_dst<true>(&info, dynamic_ptr, dynamic_ptr, path_kind::public_path);
+    res = dst_type->search_above_dst<true>(&info, dynamic_ptr, dynamic_ptr, path_kind::public_path);
   }
 #endif // _LIBCXXABI_FORGIVING_DYNAMIC_CAST
   switch (res) {
@@ -269,7 +268,7 @@ const void* dyn_cast_try_downcast(
       0,
       0,
       true,
-      1, // number_of_dst_type
+      true, // has_unique_dst_type
       false,
       false};
   result res =
@@ -926,7 +925,7 @@ result __class_type_info::process_static_type_above_dst(
     info->has_path_to_static_ptr        = true;
     // If there is only one dst_type in the entire tree and the path from
     //    there to here is public then we are done!
-    return info->number_of_dst_type == 1 && info->path_dst_ptr_to_static_ptr == path_kind::public_path
+    return info->has_unique_dst_type && info->path_dst_ptr_to_static_ptr == path_kind::public_path
              ? result::success
              : result::unknown;
   } else if (info->dst_ptr_leading_to_static_ptr == dst_ptr) {
@@ -935,7 +934,7 @@ result __class_type_info::process_static_type_above_dst(
       info->path_dst_ptr_to_static_ptr = path_below;
     // If there is only one dst_type in the entire tree and the path from
     //    there to here is public then we are done!
-    return info->number_of_dst_type == 1 && info->path_dst_ptr_to_static_ptr == path_kind::public_path
+    return info->has_unique_dst_type && info->path_dst_ptr_to_static_ptr == path_kind::public_path
              ? result::success
              : result::unknown;
   } else {

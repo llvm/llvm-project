@@ -108,8 +108,8 @@ struct _LIBCXXABI_HIDDEN __dynamic_cast_info {
   // Data that helps stop the search before the entire tree is searched:
 
   bool dst_type_might_be_derived_from_static_type;
-  // Number of dst_type in tree.  If 0, then that means unknown.
-  int number_of_dst_type;
+  // Whether we know that there is a unique dst_type in the graph.
+  bool has_unique_dst_type;
   // communicates to a dst_type node that (static_ptr, static_type) was found
   //    above it.
   bool found_our_static_ptr;
