@@ -10,9 +10,7 @@
 
 #include "PluginInterface.h"
 
-#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
-#include "Shared/Environment.h"
 
 #include "ErrorReporting.h"
 #include "GenericProfiler.h"
@@ -20,7 +18,6 @@
 #include "JIT.h"
 #include "Shared/Utils.h"
 #include "Utils/ELF.h"
-#include "omptarget.h"
 
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -62,6 +59,13 @@ void AsyncInfoWrapperTy::finalize(Error &Err) {
                            AsyncInfoPtr->Queue != nullptr, (bool)Err))
     Err = Device.synchronize(AsyncInfoPtr, /*ReleaseQueue=*/false);
 
+  // The local async info is about to be destroyed; make sure no kernel trace
+  // entry keeps pointing to it. This is done after synchronizing so that a trap
+  // raised while waiting for the kernel can still be attributed to it.
+  if (KernelTraced && AsyncInfoPtr == &LocalAsyncInfo)
+    Device.KernelLaunchTraces.getExclusiveAccessor()->clearAsyncInfo(
+        &LocalAsyncInfo);
+
   // Invalidate the wrapper object.
   AsyncInfoPtr = nullptr;
 }
@@ -100,8 +104,12 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
 
     auto KernelTraceInfoRecord =
         GenericDevice.KernelLaunchTraces.getExclusiveAccessor();
+    // For a synchronous launch this is the wrapper's stack-local async info;
+    // finalize() removes the reference before that object is destroyed as
+    // otherwise it could be accessed from the trap handlers.
     (*KernelTraceInfoRecord)
         .emplace(this, std::move(StackTrace), AsyncInfoWrapper);
+    AsyncInfoWrapper.setKernelTraced();
   }
 
   uint32_t EffectiveNumThreads[3] = {LaunchArgs.UserThreadLimit[0],
@@ -225,13 +233,6 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin,
       return Err;
   LoadedImages.clear();
 
-  if (RecordReplay) {
-    if (auto Err = RecordReplay->deinit())
-      return Err;
-    delete RecordReplay;
-    RecordReplay = nullptr;
-  }
-
   return deinitImpl();
 }
 Expected<DeviceImageTy *>
@@ -271,9 +272,6 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin, StringRef InputTgtImage,
   if (!ImageOrErr)
     return ImageOrErr.takeError();
   DeviceImageTy *Image = *ImageOrErr;
-
-  if (identify_magic(InputTgtImage) == file_magic::bitcode)
-    Image->setIRImage(MemoryBuffer::getMemBufferCopy(InputTgtImage));
 
   // Add the image to list.
   LoadedImages.push_back(Image);
@@ -513,7 +511,7 @@ Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo,
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "invalid async info queue");
 
-  SmallVector<std::pair<void *, TargetAllocTy>> AllocsToDelete{};
+  SmallVector<std::pair<void *, ol_alloc_type_t>> AllocsToDelete{};
   {
     std::lock_guard<std::mutex> AllocationGuard{AsyncInfo->Mutex};
 
@@ -541,7 +539,7 @@ Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo,
                          "invalid async info queue");
 
   bool WorkCompleted = false;
-  SmallVector<std::pair<void *, TargetAllocTy>> AllocsToDelete{};
+  SmallVector<std::pair<void *, ol_alloc_type_t>> AllocsToDelete{};
 
   {
     // Query and collect under the mutex, as synchronize does. Querying outside
@@ -570,37 +568,23 @@ Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo,
   return Plugin::success();
 }
 
-Error GenericDeviceTy::memoryVAMap(void **Addr, void *VAddr, size_t *RSize) {
-  return Plugin::error(ErrorCode::UNSUPPORTED,
-                       "device does not support VA Management");
-}
-
-Error GenericDeviceTy::memoryVAUnMap(void *VAddr, size_t Size) {
-  return Plugin::error(ErrorCode::UNSUPPORTED,
-                       "device does not support VA Management");
-}
-
 Error GenericDeviceTy::getDeviceMemorySize(uint64_t &DSize) {
   return Plugin::error(
       ErrorCode::UNIMPLEMENTED,
       "missing getDeviceMemorySize implementation (required by RR-heuristic");
 }
 
-Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
-                                            TargetAllocTy Kind,
+Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, ol_alloc_type_t Kind,
                                             size_t Alignment,
                                             GenericProfilerTy *ProfilerPtr) {
   GenericProfilerTy &Profiler = ProfilerPtr ? *ProfilerPtr : getNoOpProfiler();
 
-  auto ProfTimer = Profiler.getScopedDataAllocTimer(this, HostPtr, Size);
+  auto ProfTimer = Profiler.getScopedDataAllocTimer(this, Size);
 
   void *Alloc = nullptr;
 
   // TODO Check alignment.
-  if (RecordReplay && RecordReplay->isRecordingOrReplaying())
-    return RecordReplay->allocate(Size);
-
-  auto AllocOrErr = allocate(Size, HostPtr, Kind, Alignment);
+  auto AllocOrErr = allocate(Size, Kind, Alignment);
   if (!AllocOrErr)
     return AllocOrErr.takeError();
   Alloc = *AllocOrErr;
@@ -616,66 +600,67 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
                          "device allocator returned a misaligned pointer");
   }
 
-  // Keep track of the allocation stack if we track allocation traces.
-  if (OMPX_TrackAllocationTraces) {
-    std::string StackTrace;
-    llvm::raw_string_ostream OS(StackTrace);
-    llvm::sys::PrintStackTrace(OS);
-
-    AllocationTraceInfoTy *ATI = new AllocationTraceInfoTy();
-    ATI->AllocationTrace = std::move(StackTrace);
-    ATI->DevicePtr = Alloc;
-    ATI->HostPtr = HostPtr;
-    ATI->Size = Size;
-    ATI->Kind = Kind;
-
-    auto AllocationTraceMap = AllocationTraces.getExclusiveAccessor();
-    auto *&MapATI = (*AllocationTraceMap)[Alloc];
-    ATI->LastAllocationInfo = MapATI;
-    MapATI = ATI;
-  }
-
   return Alloc;
 }
 
-Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind,
+void GenericDeviceTy::recordAllocation(void *DevicePtr, int64_t Size,
+                                       ol_alloc_type_t Kind) {
+  if (!OMPX_TrackAllocationTraces)
+    return;
+
+  std::string StackTrace;
+  llvm::raw_string_ostream OS(StackTrace);
+  llvm::sys::PrintStackTrace(OS);
+
+  AllocationTraceInfoTy *ATI = new AllocationTraceInfoTy();
+  ATI->AllocationTrace = std::move(StackTrace);
+  ATI->DevicePtr = DevicePtr;
+  ATI->Size = Size;
+  ATI->Kind = Kind;
+
+  auto AllocationTraceMap = AllocationTraces.getExclusiveAccessor();
+  auto *&MapATI = (*AllocationTraceMap)[DevicePtr];
+  ATI->LastAllocationInfo = MapATI;
+  MapATI = ATI;
+}
+
+void GenericDeviceTy::recordDeallocation(void *DevicePtr,
+                                         ol_alloc_type_t Kind) {
+  if (!OMPX_TrackAllocationTraces)
+    return;
+
+  AllocationTraceInfoTy *ATI = nullptr;
+  {
+    auto AllocationTraceMap = AllocationTraces.getExclusiveAccessor();
+    ATI = (*AllocationTraceMap)[DevicePtr];
+  }
+
+  std::string StackTrace;
+  llvm::raw_string_ostream OS(StackTrace);
+  llvm::sys::PrintStackTrace(OS);
+
+  if (!ATI)
+    ErrorReporter::reportDeallocationOfNonAllocatedPtr(DevicePtr, Kind, ATI,
+                                                       StackTrace);
+
+  // ATI is not null, thus we can lock it to inspect and modify it further.
+  std::lock_guard<std::mutex> LG(ATI->Lock);
+  if (!ATI->DeallocationTrace.empty())
+    ErrorReporter::reportDeallocationOfDeallocatedPtr(DevicePtr, Kind, ATI,
+                                                      StackTrace);
+
+  if (ATI->Kind != Kind)
+    ErrorReporter::reportDeallocationOfWrongPtrKind(DevicePtr, Kind, ATI,
+                                                    StackTrace);
+
+  ATI->DeallocationTrace = StackTrace;
+}
+
+Error GenericDeviceTy::dataDelete(void *TgtPtr, ol_alloc_type_t Kind,
                                   GenericProfilerTy *ProfilerPtr) {
   GenericProfilerTy &Profiler = ProfilerPtr ? *ProfilerPtr : getNoOpProfiler();
 
   auto ProfTimer = Profiler.getScopedDataDeleteTimer(this, TgtPtr);
-
-  // Free is a noop when recording or replaying.
-  if (RecordReplay && RecordReplay->isRecordingOrReplaying())
-    return RecordReplay->deallocate(TgtPtr);
-
-  // Keep track of the deallocation stack if we track allocation traces.
-  if (OMPX_TrackAllocationTraces) {
-    AllocationTraceInfoTy *ATI = nullptr;
-    {
-      auto AllocationTraceMap = AllocationTraces.getExclusiveAccessor();
-      ATI = (*AllocationTraceMap)[TgtPtr];
-    }
-
-    std::string StackTrace;
-    llvm::raw_string_ostream OS(StackTrace);
-    llvm::sys::PrintStackTrace(OS);
-
-    if (!ATI)
-      ErrorReporter::reportDeallocationOfNonAllocatedPtr(TgtPtr, Kind, ATI,
-                                                         StackTrace);
-
-    // ATI is not null, thus we can lock it to inspect and modify it further.
-    std::lock_guard<std::mutex> LG(ATI->Lock);
-    if (!ATI->DeallocationTrace.empty())
-      ErrorReporter::reportDeallocationOfDeallocatedPtr(TgtPtr, Kind, ATI,
-                                                        StackTrace);
-
-    if (ATI->Kind != Kind)
-      ErrorReporter::reportDeallocationOfWrongPtrKind(TgtPtr, Kind, ATI,
-                                                      StackTrace);
-
-    ATI->DeallocationTrace = StackTrace;
-  }
 
   if (auto Err = free(TgtPtr, Kind))
     return Err;
@@ -761,21 +746,25 @@ Error PluginContextTy::initAsyncInfo(GenericDeviceTy &Device,
   return Err;
 }
 
-PluginContextTy::~PluginContextTy() = default;
+PluginContextTy::~PluginContextTy() {
+  assert(DeviceMemoryManagers.empty() && !HostMemoryManager.Manager &&
+         "plugin context destroyed before its memory pools were released");
+  for (auto &DeviceMemoryManager : DeviceMemoryManagers)
+    (void)DeviceMemoryManager.second.Manager.release();
+  (void)HostMemoryManager.Manager.release();
+}
 
 MemoryManagerTy *
 PluginContextTy::getDeviceMemoryManagerFor(GenericDeviceTy &Device,
-                                           TargetAllocTy Kind) {
+                                           ol_alloc_type_t Kind) {
   if (Device.OMPX_TrackAllocationTraces)
     return nullptr;
 
-  if (Kind == TARGET_ALLOC_DEFAULT)
-    Kind = TARGET_ALLOC_DEVICE;
-  assert((Kind == TARGET_ALLOC_DEVICE || Kind == TARGET_ALLOC_SHARED) &&
+  assert((Kind == OL_ALLOC_TYPE_DEVICE || Kind == OL_ALLOC_TYPE_MANAGED) &&
          "host allocations are not device-bound");
 
   size_t Threshold;
-  if (Kind == TARGET_ALLOC_DEVICE) {
+  if (Kind == OL_ALLOC_TYPE_DEVICE) {
     auto [EnvThreshold, EnableMM] = MemoryManagerTy::getSizeThresholdFromEnv();
     if (!EnableMM)
       return nullptr;
@@ -790,11 +779,14 @@ PluginContextTy::getDeviceMemoryManagerFor(GenericDeviceTy &Device,
   std::lock_guard<std::mutex> Lock(MemoryManagersMutex);
   auto It = DeviceMemoryManagers.find(Key);
   if (It != DeviceMemoryManagers.end())
-    return It->second.get();
+    return It->second.Manager.get();
 
-  auto Manager = std::make_unique<MemoryManagerTy>(Device, Threshold, Kind);
-  auto *Raw = Manager.get();
-  DeviceMemoryManagers[Key] = std::move(Manager);
+  MemoryPoolTy Pool;
+  Pool.Allocator = std::make_unique<ContextAllocatorTy>(*this, Device);
+  Pool.Manager =
+      std::make_unique<MemoryManagerTy>(*Pool.Allocator, Threshold, Kind);
+  auto *Raw = Pool.Manager.get();
+  DeviceMemoryManagers[Key] = std::move(Pool);
   return Raw;
 }
 
@@ -805,31 +797,64 @@ MemoryManagerTy *PluginContextTy::getHostMemoryManager() {
     return nullptr;
 
   std::lock_guard<std::mutex> Lock(MemoryManagersMutex);
-  if (HostMemoryManager)
-    return HostMemoryManager.get();
+  if (HostMemoryManager.Manager)
+    return HostMemoryManager.Manager.get();
 
-  HostMemoryManager = std::make_unique<MemoryManagerTy>(
-      *Devices.front(), MemoryManagerTy::DefaultSizeThreshold,
-      TARGET_ALLOC_HOST);
-  return HostMemoryManager.get();
+  HostMemoryManager.Allocator =
+      std::make_unique<ContextAllocatorTy>(*this, *Devices.front());
+  HostMemoryManager.Manager = std::make_unique<MemoryManagerTy>(
+      *HostMemoryManager.Allocator, MemoryManagerTy::DefaultSizeThreshold,
+      OL_ALLOC_TYPE_HOST);
+  return HostMemoryManager.Manager.get();
+}
+
+void PluginContextTy::releaseMemoryManagers() {
+  std::lock_guard<std::mutex> Lock(MemoryManagersMutex);
+  DeviceMemoryManagers.clear();
+  HostMemoryManager.Manager.reset();
+  HostMemoryManager.Allocator.reset();
+}
+
+Expected<void *> ContextAllocatorTy::allocate(size_t Size, ol_alloc_type_t Kind,
+                                              size_t Alignment) {
+  return Context.allocateImpl(Device, Size, Kind, Alignment);
+}
+
+Error ContextAllocatorTy::free(void *TgtPtr, ol_alloc_type_t Kind) {
+  return Context.deallocateImpl(Device, TgtPtr, Kind);
+}
+
+MemoryManagerTy *PluginContextTy::getMemoryManagerFor(GenericDeviceTy &Device,
+                                                      ol_alloc_type_t Kind) {
+  return Kind == OL_ALLOC_TYPE_HOST ? getHostMemoryManager()
+                                    : getDeviceMemoryManagerFor(Device, Kind);
 }
 
 Expected<void *> PluginContextTy::allocate(GenericDeviceTy &Device,
-                                           int64_t Size, void *HostPtr,
-                                           TargetAllocTy Kind, size_t Alignment,
+                                           int64_t Size, ol_alloc_type_t Kind,
+                                           size_t Alignment,
                                            GenericProfilerTy *ProfilerPtr) {
-  // Record-replay hands out interior pointers into a preallocated slab so
-  // recorded kernels can re-execute at their original addresses; the MM pool
-  // must be bypassed for those allocations to reach the RR bump allocator.
-  if (auto *RR = Device.getRecordReplay(); RR && RR->isRecordingOrReplaying())
-    return Device.dataAlloc(Size, HostPtr, Kind, Alignment, ProfilerPtr);
+  MemoryManagerTy *Manager = getMemoryManagerFor(Device, Kind);
+  auto AllocOrErr =
+      Manager ? Manager->allocate(Size, Alignment)
+              : allocateImpl(Device, Size, Kind, Alignment, ProfilerPtr);
+  if (!AllocOrErr)
+    return AllocOrErr.takeError();
 
-  MemoryManagerTy *MM = (Kind == TARGET_ALLOC_HOST)
-                            ? getHostMemoryManager()
-                            : getDeviceMemoryManagerFor(Device, Kind);
-  if (MM)
-    return MM->allocate(Size, HostPtr, Alignment);
-  return Device.dataAlloc(Size, HostPtr, Kind, Alignment, ProfilerPtr);
+  if (*AllocOrErr) {
+    trackAllocation(Device, *AllocOrErr, Size, Kind);
+    Device.recordAllocation(*AllocOrErr, Size, Kind);
+  }
+
+  return AllocOrErr;
+}
+
+Expected<void *> PluginContextTy::allocateImpl(GenericDeviceTy &Device,
+                                               int64_t Size,
+                                               ol_alloc_type_t Kind,
+                                               size_t Alignment,
+                                               GenericProfilerTy *ProfilerPtr) {
+  return Device.dataAlloc(Size, Kind, Alignment, ProfilerPtr);
 }
 
 Error PluginContextTy::deallocate(void *Ptr, GenericProfilerTy *ProfilerPtr) {
@@ -844,30 +869,21 @@ Error PluginContextTy::deallocate(void *Ptr, GenericProfilerTy *ProfilerPtr) {
 }
 
 Error PluginContextTy::deallocate(GenericDeviceTy &Device, void *Ptr,
-                                  TargetAllocTy Kind,
+                                  ol_alloc_type_t Kind,
                                   GenericProfilerTy *ProfilerPtr) {
-  // Symmetric with allocate: record-replay allocations never entered the MM
-  // pool, so route their free through dataDelete's RR shortcut.
-  if (auto *RR = Device.getRecordReplay(); RR && RR->isRecordingOrReplaying())
-    return Device.dataDelete(Ptr, Kind, ProfilerPtr);
+  Device.recordDeallocation(Ptr, Kind);
+  untrackAllocation(Ptr);
 
-  MemoryManagerTy *MM = (Kind == TARGET_ALLOC_HOST)
-                            ? getHostMemoryManager()
-                            : getDeviceMemoryManagerFor(Device, Kind);
-  if (MM)
-    return MM->free(Ptr);
+  if (MemoryManagerTy *Manager = getMemoryManagerFor(Device, Kind))
+    return Manager->free(Ptr);
+
+  return deallocateImpl(Device, Ptr, Kind, ProfilerPtr);
+}
+
+Error PluginContextTy::deallocateImpl(GenericDeviceTy &Device, void *Ptr,
+                                      ol_alloc_type_t Kind,
+                                      GenericProfilerTy *ProfilerPtr) {
   return Device.dataDelete(Ptr, Kind, ProfilerPtr);
-}
-
-PluginContextTy &
-GenericPluginTy::getDefaultContext(GenericDeviceTy & /*Device*/) {
-  assert(DefaultContext && "default context not initialized");
-  return *DefaultContext;
-}
-
-Expected<std::unique_ptr<PluginContextTy>>
-GenericPluginTy::createDefaultPluginContext() {
-  return std::make_unique<DefaultPluginContextTy>(*this);
 }
 
 Error GenericDeviceTy::enqueueHostCall(void (*Callback)(void *), void *UserData,
@@ -984,19 +1000,11 @@ Error GenericPluginTy::init(GenericProfilerTy *ProfilerPtr) {
   RPCServer = new RPCServerTy(*this);
   assert(RPCServer && "Invalid RPC server");
 
-  auto DefaultCtxOrErr = createDefaultPluginContext();
-  if (!DefaultCtxOrErr)
-    return DefaultCtxOrErr.takeError();
-  DefaultContext = std::move(*DefaultCtxOrErr);
-
   return Plugin::success();
 }
 
 Error GenericPluginTy::deinit(GenericProfilerTy *ProfilerPtr) {
   assert(Initialized && "Plugin was not initialized!");
-
-  // Release context-held resources before the devices that back them.
-  DefaultContext.reset();
 
   // Deinitialize all active devices.
   for (int32_t DeviceId = 0; DeviceId < NumDevices; ++DeviceId) {
@@ -1157,123 +1165,4 @@ int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
       return HandleError(std::move(Err));
     return *MatchOrErr;
   }
-}
-
-int32_t GenericPluginTy::initialize_record_replay(
-    int32_t DeviceId, int64_t MemorySize, void *VAddr, bool IsRecord,
-    bool IsNative, bool SaveOutput, bool EmitReport, const char *ReportFilename,
-    const char *OutputDirPath) {
-  GenericDeviceTy &Device = getDevice(DeviceId);
-
-  if (auto Err = Device.initRecordReplay(MemorySize, VAddr, IsRecord, IsNative,
-                                         SaveOutput, EmitReport, ReportFilename,
-                                         OutputDirPath)) {
-    REPORT() << "Failure to initialize RR with " << MemorySize
-             << " bytes on device " << DeviceId << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-  return OFFLOAD_SUCCESS;
-}
-
-void *GenericPluginTy::data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr,
-                                  int32_t Kind,
-                                  GenericProfilerTy *ProfilerPtr) {
-  auto &Device = getDevice(DeviceId);
-  auto AllocOrErr = getDefaultContext(Device).allocate(
-      Device, Size, HostPtr, static_cast<TargetAllocTy>(Kind),
-      /*Alignment=*/0, ProfilerPtr);
-
-  if (!AllocOrErr) {
-    REPORT() << "Failure to allocate device memory: "
-             << toString(AllocOrErr.takeError());
-    return nullptr;
-  }
-  assert(*AllocOrErr && "Null pointer upon successful allocation");
-  return *AllocOrErr;
-}
-
-int32_t GenericPluginTy::data_delete(int32_t DeviceId, void *TgtPtr,
-                                     int32_t Kind,
-                                     GenericProfilerTy *ProfilerPtr) {
-  auto &Device = getDevice(DeviceId);
-  if (auto Err = getDefaultContext(Device).deallocate(
-          Device, TgtPtr, static_cast<TargetAllocTy>(Kind), ProfilerPtr)) {
-    REPORT() << "Failure to deallocate device pointer " << TgtPtr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::use_auto_zero_copy(int32_t DeviceId) {
-  return getDevice(DeviceId).useAutoZeroCopy();
-}
-
-/// Create OpenMP interop with the given interop context
-omp_interop_val_t *
-GenericPluginTy::create_interop(int32_t ID, int32_t InteropContext,
-                                interop_spec_t *InteropSpec) {
-  assert(InteropSpec && "Interop spec is null");
-  auto &Device = getDevice(ID);
-  auto InteropOrErr = Device.createInterop(InteropContext, *InteropSpec);
-  if (!InteropOrErr) {
-    REPORT() << "Failure to create interop object for device " << InteropSpec
-             << ": " << toString(InteropOrErr.takeError());
-    return nullptr;
-  }
-  return *InteropOrErr;
-}
-
-/// Release OpenMP interop object
-int32_t GenericPluginTy::release_interop(int32_t ID,
-                                         omp_interop_val_t *Interop) {
-  assert(Interop && "Interop is null");
-  assert(Interop->device_id == ID && "Interop does not match device id");
-  auto &Device = getDevice(ID);
-  auto Err = Device.releaseInterop(Interop);
-  if (Err) {
-    REPORT() << "Failure to release interop object " << Interop << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-  return OFFLOAD_SUCCESS;
-}
-
-/// Flush the queue associated with the interop object if necessary
-int32_t GenericPluginTy::flush_queue(omp_interop_val_t *Interop) {
-  assert(Interop && "Interop is null");
-  auto Err = flushQueueImpl(Interop);
-  if (Err) {
-    REPORT() << "Failure to flush interop object " << Interop
-             << " queue: " << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-  return OFFLOAD_SUCCESS;
-}
-
-/// Perform a host synchronization with the queue associated with the interop
-/// object and wait for it to complete.
-int32_t GenericPluginTy::sync_barrier(omp_interop_val_t *Interop) {
-  assert(Interop && "Interop is null");
-  auto Err = syncBarrierImpl(Interop);
-  if (Err) {
-    REPORT() << "Failure to synchronize interop object " << Interop << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-  return OFFLOAD_SUCCESS;
-}
-
-/// Queue an asynchronous barrier in the queue associated with the interop
-/// object and return immediately.
-int32_t GenericPluginTy::async_barrier(omp_interop_val_t *Interop) {
-  assert(Interop && "Interop is null");
-  auto Err = asyncBarrierImpl(Interop);
-  if (Err) {
-    REPORT() << "Failure to queue barrier in interop object " << Interop << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-  return OFFLOAD_SUCCESS;
 }

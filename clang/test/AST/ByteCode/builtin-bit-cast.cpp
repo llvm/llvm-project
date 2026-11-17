@@ -616,3 +616,11 @@ namespace StringInDoBitCast {
   static_assert(foo<b32>(0x42), ""); // both-error {{not an integral constant expression}} \
                                      // both-note {{in call to}}
 }
+
+namespace nullptrToArray {
+  typedef decltype(__builtin_bit_cast(unsigned char[sizeof(nullptr)], nullptr)) footype;
+  static_assert(__builtin_bit_cast(footype, nullptr) == nullptr); // both-error {{failed due to requirement}}
+  static_assert(__builtin_bit_cast(footype, nullptr)[0] == 0); // both-error {{not an integral constant expression}} \
+                                                               // both-note {{read of uninitialized object}} \
+                                                               // both-note {{temporary created here}}
+}

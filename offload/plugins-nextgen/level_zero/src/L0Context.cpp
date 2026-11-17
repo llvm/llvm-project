@@ -68,19 +68,17 @@ Error LevelZeroPluginContextTy::initAllocators() {
   return Plugin::success();
 }
 
-Expected<void *> LevelZeroPluginContextTy::allocate(
-    GenericDeviceTy &Device, int64_t Size, void * /*HostPtr*/,
-    TargetAllocTy Kind, size_t Alignment, GenericProfilerTy * /*ProfilerPtr*/) {
+Expected<void *>
+LevelZeroPluginContextTy::allocateImpl(GenericDeviceTy &Device, int64_t Size,
+                                       ol_alloc_type_t Kind, size_t Alignment,
+                                       GenericProfilerTy * /*ProfilerPtr*/) {
   MemAllocatorTy *Allocator = nullptr;
-  int32_t ResolvedKind = Kind;
-  if (Kind == TARGET_ALLOC_HOST) {
+  if (Kind == OL_ALLOC_TYPE_HOST) {
     if (!HostAllocator)
       return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                            "host allocator not initialized");
     Allocator = HostAllocator.get();
   } else {
-    if (ResolvedKind == TARGET_ALLOC_DEFAULT)
-      ResolvedKind = TARGET_ALLOC_DEVICE;
     auto &L0Device = static_cast<L0DeviceTy &>(Device);
     auto It = DeviceAllocators.find(&L0Device);
     if (It == DeviceAllocators.end())
@@ -88,17 +86,17 @@ Expected<void *> LevelZeroPluginContextTy::allocate(
                            "device is not part of this context");
     Allocator = It->second.get();
   }
-  return Allocator->alloc(Size, Alignment, ResolvedKind, /*Offset=*/0,
+  return Allocator->alloc(Size, Alignment, Kind, /*Offset=*/0,
                           /*UserAlloc=*/true, /*DevMalloc=*/false,
                           /*MemAdvice=*/
                           std::numeric_limits<uint32_t>::max(),
                           AllocOptionTy::ALLOC_OPT_NONE);
 }
 
-Error LevelZeroPluginContextTy::deallocate(
-    GenericDeviceTy &Device, void *Ptr, TargetAllocTy Kind,
+Error LevelZeroPluginContextTy::deallocateImpl(
+    GenericDeviceTy &Device, void *Ptr, ol_alloc_type_t Kind,
     GenericProfilerTy * /*ProfilerPtr*/) {
-  if (Kind == TARGET_ALLOC_HOST) {
+  if (Kind == OL_ALLOC_TYPE_HOST) {
     if (!HostAllocator)
       return Plugin::error(ErrorCode::NOT_FOUND,
                            "no host allocation tracked in this context");
@@ -117,12 +115,13 @@ LevelZeroPluginContextTy::getAllocInfo(const void *Ptr) {
   void *Raw = const_cast<void *>(Ptr);
   for (const auto &[Device, Allocator] : DeviceAllocators) {
     if (auto *Info = Allocator->getAllocInfo(Raw))
-      return PluginAllocInfoTy{Device, static_cast<TargetAllocTy>(Info->Kind),
+      return PluginAllocInfoTy{Device, static_cast<ol_alloc_type_t>(Info->Kind),
                                Info->Base, Info->ReqSize};
   }
   if (HostAllocator) {
     if (auto *Info = HostAllocator->getAllocInfo(Raw))
-      return PluginAllocInfoTy{nullptr, static_cast<TargetAllocTy>(Info->Kind),
+      return PluginAllocInfoTy{nullptr,
+                               static_cast<ol_alloc_type_t>(Info->Kind),
                                Info->Base, Info->ReqSize};
   }
 

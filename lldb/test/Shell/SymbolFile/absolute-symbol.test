@@ -7,6 +7,7 @@
 #   .globl absolute_symbol
 #   absolute_symbol = 0x12345678
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C

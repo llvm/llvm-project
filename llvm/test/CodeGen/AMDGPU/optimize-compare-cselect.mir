@@ -316,7 +316,7 @@ body:             |
   ; CHECK-NEXT:   S_CMP_LG_U32 [[COPY]], 0, implicit-def $scc
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 3
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 4
-  ; CHECK-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_MOV_B32_]], [[S_MOV_B32_1]], implicit $scc
+  ; CHECK-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 3, [[S_MOV_B32_1]], implicit $scc
   ; CHECK-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}

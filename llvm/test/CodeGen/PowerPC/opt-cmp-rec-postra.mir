@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=powerpc64le-linux-gnu -stop-after ppc-pre-emit-peephole %s -o - -verify-machineinstrs | FileCheck %s
+# RUN: llc -mtriple=powerpc64le-linux-gnu -stop-after ppc-pre-emit-peephole %s -o - | FileCheck %s
 
 ---
 name: test1

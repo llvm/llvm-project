@@ -21,11 +21,6 @@
 #ifndef MACHINE_FUNCTION_ANALYSIS
 #define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)
 #endif
-// LiveVariables currently requires pure SSA form.
-// FIXME: Once TwoAddressInstruction pass no longer uses kill flags,
-// LiveVariables can be removed completely, and LiveIntervals can be directly
-// computed. (We still either need to regenerate kill flags after regalloc, or
-// preferably fix the scavenger to not depend on them).
 MACHINE_FUNCTION_ANALYSIS("edge-bundles", EdgeBundlesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("gisel-cse-analysis", GISelCSEAnalysis(TM))
 MACHINE_FUNCTION_ANALYSIS("gisel-value-tracking", GISelValueTrackingAnalysis())
@@ -33,7 +28,6 @@ MACHINE_FUNCTION_ANALYSIS("livedebugvars", LiveDebugVariablesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("live-intervals", LiveIntervalsAnalysis())
 MACHINE_FUNCTION_ANALYSIS("live-reg-matrix", LiveRegMatrixAnalysis())
 MACHINE_FUNCTION_ANALYSIS("live-stacks", LiveStacksAnalysis())
-MACHINE_FUNCTION_ANALYSIS("live-vars", LiveVariablesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-block-freq", MachineBlockFrequencyAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-block-hash", MachineBlockHashInfoAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-branch-prob",
@@ -78,11 +72,13 @@ MACHINE_FUNCTION_PASS("early-ifcvt", EarlyIfConverterPass())
 MACHINE_FUNCTION_PASS("early-machinelicm", EarlyMachineLICMPass())
 MACHINE_FUNCTION_PASS("early-tailduplication", EarlyTailDuplicatePass())
 MACHINE_FUNCTION_PASS("eh-cont-guard-targets", EHContGuardTargetsPass())
+MACHINE_FUNCTION_PASS("execution-domain-fix", ExecutionDomainFixPass())
 MACHINE_FUNCTION_PASS("fentry-insert", FEntryInserterPass())
 MACHINE_FUNCTION_PASS("finalize-isel", FinalizeISelPass())
 MACHINE_FUNCTION_PASS("finalizebundle-test", FinalizeBundleTestPass())
 MACHINE_FUNCTION_PASS("fixup-statepoint-caller-saved", FixupStatepointCallerSavedPass())
 MACHINE_FUNCTION_PASS("funclet-layout", FuncletLayoutPass())
+MACHINE_FUNCTION_PASS("if-converter", IfConverterPass())
 MACHINE_FUNCTION_PASS("init-undef", InitUndefPass())
 MACHINE_FUNCTION_PASS("implicit-null-checks", ImplicitNullChecksPass())
 MACHINE_FUNCTION_PASS("instruction-select", InstructionSelectPass())
@@ -90,6 +86,7 @@ MACHINE_FUNCTION_PASS("ir-translator", IRTranslatorPass(TM->getOptLevel()))
 MACHINE_FUNCTION_PASS("kcfi", MachineKCFIPass())
 MACHINE_FUNCTION_PASS("gc-empty-basic-blocks", GCEmptyBasicBlocksPass())
 MACHINE_FUNCTION_PASS("legalizer", LegalizerPass())
+MACHINE_FUNCTION_PASS("live-debug-values", LiveDebugValuesPass())
 MACHINE_FUNCTION_PASS("load-store-opt", LoadStoreOptPass())
 MACHINE_FUNCTION_PASS("localizer", LocalizerPass())
 MACHINE_FUNCTION_PASS("localstackalloc", LocalStackSlotAllocationPass())
@@ -112,7 +109,6 @@ MACHINE_FUNCTION_PASS("post-RA-sched", PostRASchedulerPass(TM))
 MACHINE_FUNCTION_PASS("postra-machine-sink", PostRAMachineSinkingPass())
 MACHINE_FUNCTION_PASS("postmisched", PostMachineSchedulerPass(TM))
 MACHINE_FUNCTION_PASS("post-ra-pseudos", ExpandPostRAPseudosPass())
-MACHINE_FUNCTION_PASS("print", PrintMIRPass())
 MACHINE_FUNCTION_PASS("print<gisel-value-tracking-fpclass>",
                       GISelValueTrackingFPClassPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<gisel-value-tracking>",
@@ -167,6 +163,8 @@ MACHINE_FUNCTION_PASS("unreachable-mbb-elimination",
                       UnreachableMachineBlockElimPass())
 MACHINE_FUNCTION_PASS("verify", MachineVerifierPass())
 MACHINE_FUNCTION_PASS("verify<machine-cycles>", MachineCycleInfoVerifierPass())
+MACHINE_FUNCTION_PASS("verify<machine-dom-tree>",
+                      MachineDominatorTreeVerifierPass())
 MACHINE_FUNCTION_PASS("verify<machine-trace-metrics>", MachineTraceMetricsVerifierPass())
 MACHINE_FUNCTION_PASS("xray-instrumentation", XRayInstrumentationPass())
 #undef MACHINE_FUNCTION_PASS
@@ -192,17 +190,6 @@ MACHINE_FUNCTION_PASS_WITH_PARAMS(
                                    "BranchFolderPass");
     },
     "enable-tail-merge")
-
-MACHINE_FUNCTION_PASS_WITH_PARAMS(
-    "live-debug-values", "LiveDebugValuesPass",
-    [](bool ShouldEmitDebugEntryValues) {
-      return LiveDebugValuesPass(ShouldEmitDebugEntryValues);
-    },
-    [](StringRef Params) {
-      return parseSinglePassOption(Params, "emit-debug-entry-values",
-                                   "LiveDebugValuesPass");
-    },
-    "emit-debug-entry-values")
 
 MACHINE_FUNCTION_PASS_WITH_PARAMS(
     "machine-sink", "MachineSinkingPass",

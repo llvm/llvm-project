@@ -744,6 +744,7 @@ spirv::Deserializer::processFunctionEnd(ArrayRef<uint32_t> operands) {
     return failure();
   }
 
+  blockConstantMap.clear();
   curBlock = nullptr;
   curFunction = std::nullopt;
 
@@ -937,6 +938,7 @@ spirv::Deserializer::processGraphEndARM(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "unexpected operands for OpGraphEndARM");
   }
 
+  blockConstantMap.clear();
   curBlock = nullptr;
   curGraph = std::nullopt;
   graphOutputs.clear();
@@ -1912,24 +1914,35 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc,
                      "OpConstantComposite must have type <id> and result <id>");
   }
-  if (operands.size() < 3) {
-    return emitError(unknownLoc,
-                     "OpConstantComposite must have at least 1 parameter");
-  }
-
   Type resultType = getType(operands[0]);
   if (!resultType) {
     return emitError(unknownLoc, "undefined result type from <id> ")
            << operands[0];
   }
 
+  // Unused constants are not materialized as ops, so their verifier cannot
+  // diagnose missing constituents. Only empty structs may have none.
+  auto structType = dyn_cast<spirv::StructType>(resultType);
+  if (operands.size() < 3 &&
+      (!structType || structType.getNumElements() != 0)) {
+    return emitError(unknownLoc,
+                     "OpConstantComposite must have at least 1 parameter");
+  }
+
   SmallVector<Attribute, 4> elements;
   elements.reserve(operands.size() - 2);
-  for (unsigned i = 2, e = operands.size(); i < e; ++i) {
-    auto elementInfo = getConstant(operands[i]);
+  for (auto [index, id] : llvm::enumerate(operands.drop_front(2))) {
+    std::optional<std::pair<Attribute, Type>> elementInfo = getConstant(id);
     if (!elementInfo) {
-      return emitError(unknownLoc, "OpConstantComposite component <id> ")
-             << operands[i] << " must come from a normal constant";
+      // spirv.Constant cannot represent undefined constituents.
+      if (getUndefType(id)) {
+        return emitError(unknownLoc, "OpConstantComposite component #")
+               << index << " <id> " << id
+               << " is an OpUndef, which cannot be represented in "
+                  "spirv.Constant";
+      }
+      return emitError(unknownLoc, "OpConstantComposite component #")
+             << index << " <id> " << id << " must come from a normal constant";
     }
     elements.push_back(elementInfo->first);
   }
@@ -2186,6 +2199,9 @@ spirv::Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   } else if (auto tensorType = dyn_cast<TensorArmType>(resultType)) {
     if (auto element = opBuilder.getZeroAttr(tensorType.getElementType()))
       attr = DenseElementsAttr::get(tensorType, element);
+  } else if (isa<spirv::ArrayType, spirv::PointerType, spirv::StructType>(
+                 resultType)) {
+    attr = spirv::NullAttr::get(resultType);
   }
 
   if (attr) {
@@ -3056,8 +3072,9 @@ LogicalResult spirv::Deserializer::splitSelectionHeader() {
     // Do not split a block that only contains a conditional branch / switch,
     // unless it is also a merge block of another construct - in that case we
     // want to split the block. We do not want two constructs to share header /
-    // merge block.
-    if (!llvm::hasSingleElement(*block) || splitHeaderMergeBlock) {
+    // merge block. The entry block cannot join a region, so split it too.
+    if (!llvm::hasSingleElement(*block) || splitHeaderMergeBlock ||
+        isFnEntryBlock(block)) {
       Block *newBlock = block->splitBlock(terminator);
       OpBuilder builder(block, block->end());
       spirv::BranchOp::create(builder, block->getParent()->getLoc(), newBlock);
