@@ -10,37 +10,73 @@ from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase, DAPTestSession
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs, StoppedEvent, ThreadsArgs
 
 
-# Needs both threads' breakpoint hits in one stop.
 # The in-process Windows plugin (ProcessWindows) reports one thread's exception
 # per stop.
-# lldb-server puts every hit that is already queued into the one stop, but
-# on a loaded machine the second thread can reach the trap only after the stop
-# was reported, so it still flakes there.
 @skipIfWindows
-@skipIfLinux
 @requireThreadSupport
 class TestDAP_stopped_events(DAPTestCaseBase):
     """
     Test validates different operations that produce 'stopped' events.
     """
 
-    def collect_two_stops(self, session: DAPTestSession, *, after):
-        """Collect two consecutive StoppedEvents (one per thread that hit the
-        breakpoint). Both threads release the barrier together so the events
-        arrive close in time"""
-        first = session.wait_for_stopped_event(
-            after=after, timeout_msg="waiting for first stop"
-        )
-        second = session.wait_for_stopped_event(
-            after=first, timeout_msg="waiting for second stop"
-        )
+    # How often to launch the process to get both threads into one stop.
+    MAX_LAUNCH_ATTEMPTS = 50
 
+    def launch_until_threads_stop_together(self, set_breakpoints):
+        """Launch the process until both threads hit the breakpoint in the same
+        stop. Returns (session, breakpoint ids, first event, second event).
+
+        Ideally both threads hit the breakpoint before the stop is reported,
+        and lldb-dap sends one StoppedEvent per thread for that one stop.
+        On a loaded machine, the second thread might reach the breakpoint only
+        after the stop was reported, so the stop only has a single
+        StoppedEvent. In that case, relaunch and try again.
+        """
+        self.build()
+        program = self.getBuildArtifact("a.out")
+        for attempt in range(1, self.MAX_LAUNCH_ATTEMPTS + 1):
+            # The first attempt uses the default adapter.
+            adapter = self.create_debug_adapter() if attempt > 1 else None
+            session = self.create_session(adapter, disconnect_automatically=False)
+            with session.configure(LaunchArgs(program)) as ctx:
+                bp_ids = set_breakpoints(session)
+            first = session.wait_for_stopped_event(
+                after=ctx.process_event, timeout_msg="waiting for first stop"
+            )
+            # For each stop, lldb-dap sends one StoppedEvent per thread with a
+            # stop reason (see SendThreadStoppedEvent). The focused thread's
+            # event is always sent last and is the only one with
+            # allThreadsStopped=True. So if the first event has
+            # allThreadsStopped=False, at least one more event for this stop
+            # follows, i.e. both threads hit the breakpoint. If it is True,
+            # it was the only thread with a stop reason in this stop.
+            if not first.body.allThreadsStopped:
+                break
+            self.logger.info(
+                "Attempt %d: only one thread stopped at the breakpoint, relaunching.",
+                attempt,
+            )
+            session.disconnect(terminateDebuggee=True)
+            session.stop()
+        else:
+            self.fail(
+                f"no stop with both threads at the breakpoint in "
+                f"{self.MAX_LAUNCH_ATTEMPTS} launches"
+            )
+
+        second = session.wait_for_stopped_event(
+            after=first, timeout_msg="waiting for second thread in same stop"
+        )
+        self.assertTrue(
+            second.body.allThreadsStopped,
+            "expected the second stopped event to complete the stop",
+        )
         self.assertNotEqual(
             first.body.threadId,
             second.body.threadId,
             "expected stopped event on different threads.",
         )
-        return first, second
+        return session, bp_ids, first, second
 
     def verify_threads(
         self, session: DAPTestSession, stopped_events: Sequence[StoppedEvent]
@@ -86,12 +122,9 @@ class TestDAP_stopped_events(DAPTestCaseBase):
         Test that multiple threads being stopped on the same breakpoint
         produces multiple 'stopped' events.
         """
-        program = self.getBuildArtifact("a.out")
-        session = self.build_and_create_session()
-        with session.configure(LaunchArgs(program)) as ctx:
-            [bp] = session.resolve_function_breakpoints(["my_add"])
-        process_event = ctx.process_event
-        first, second = self.collect_two_stops(session, after=process_event)
+        session, [bp], first, second = self.launch_until_threads_stop_together(
+            lambda session: session.resolve_function_breakpoints(["my_add"])
+        )
 
         for event in (first, second):
             body = event.body
@@ -114,15 +147,17 @@ class TestDAP_stopped_events(DAPTestCaseBase):
         Test stopping at a location that reports multiple overlapping
         breakpoints.
         """
-        program = self.getBuildArtifact("a.out")
-        session = self.build_and_create_session()
         source = self.getSourcePath("main.cpp")
         bp_line = line_number(source, "breakpoint")
 
-        with session.configure(LaunchArgs(program)) as ctx:
+        def set_breakpoints(session):
             [bp1] = session.resolve_source_breakpoints(source, [bp_line])
             [bp2] = session.resolve_function_breakpoints(["my_add"])
-        first, second = self.collect_two_stops(session, after=ctx.process_event)
+            return bp1, bp2
+
+        session, (bp1, bp2), first, second = self.launch_until_threads_stop_together(
+            set_breakpoints
+        )
 
         for event in (first, second):
             body = event.body
