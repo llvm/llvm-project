@@ -13,6 +13,8 @@
 #include "L0Plugin.h"
 #include "L0Program.h"
 
+#include "llvm/Object/OffloadBinary.h"
+
 namespace llvm::omp::target::plugin {
 
 Error L0GlobalHandlerTy::getGlobalMetadataFromDevice(GenericDeviceTy &Device,

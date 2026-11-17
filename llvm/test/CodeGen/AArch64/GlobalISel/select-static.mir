@@ -32,8 +32,6 @@ regBankSelected: true
 
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr64sp, preferred-register: '', flags: [  ] }
-registers:
-  - { id: 0, class: gpr }
 
 stack:
   - { id: 0, name: ptr0, offset: 0, size: 8, alignment: 8 }
@@ -42,7 +40,7 @@ stack:
 # CHECK: %0:gpr64sp = ADDXri %stack.0.ptr0, 0, 0
 body:             |
   bb.0:
-    %0(p0) = G_FRAME_INDEX %stack.0.ptr0
+    %0:gpr(p0) = G_FRAME_INDEX %stack.0.ptr0
     $x0 = COPY %0(p0)
 ...
 
@@ -70,14 +68,12 @@ body:             |
 name:            global_local
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
 
 # CHECK:  body:
 # LINUX-DEFAULT: %0:gpr64common = MOVaddr target-flags(aarch64-page) @var_local, target-flags(aarch64-pageoff, aarch64-nc) @var_local
 body:             |
   bb.0:
-    %0(p0) = G_GLOBAL_VALUE @var_local
+    %0:gpr(p0) = G_GLOBAL_VALUE @var_local
     $x0 = COPY %0(p0)
 ...
 
@@ -86,14 +82,12 @@ body:             |
 name:            global_got
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
 
 # CHECK:  body:
 # LINUX-DEFAULT: %0:gpr64common = MOVaddr target-flags(aarch64-page) @var_got, target-flags(aarch64-pageoff, aarch64-nc) @var_got
 body:             |
   bb.0:
-    %0(p0) = G_GLOBAL_VALUE @var_got
+    %0:gpr(p0) = G_GLOBAL_VALUE @var_got
     $x0 = COPY %0(p0)
 ...
 
@@ -110,19 +104,6 @@ regBankSelected: true
 # CHECK-NEXT:  - { id: 3, class: gpr32, preferred-register: '', flags: [  ] }
 # CHECK-NEXT:  - { id: 4, class: gpr64, preferred-register: '', flags: [  ] }
 # CHECK-NEXT:  - { id: 5, class: gpr32, preferred-register: '', flags: [  ] }
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gpr }
-  - { id: 4, class: gpr }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
-  - { id: 7, class: gpr }
-  - { id: 8, class: gpr }
-  - { id: 9, class: gpr }
-  - { id: 10, class: gpr }
-  - { id: 11, class: gpr }
 
 # CHECK:  body:
 # CHECK:    SUBSWrr %0, %0, implicit-def $nzcv
@@ -138,16 +119,16 @@ body:             |
   bb.0:
     liveins: $w0, $x0
 
-    %0(i32) = COPY $w0
-    %1(i32) = G_ICMP intpred(eq), %0, %0
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = G_ICMP intpred(eq), %0, %0
     $w0 = COPY %1
 
-    %2(i64) = COPY $x0
-    %3(i32) = G_ICMP intpred(uge), %2, %2
+    %2:gpr(i64) = COPY $x0
+    %3:gpr(i32) = G_ICMP intpred(uge), %2, %2
     $w0 = COPY %3
 
-    %4(p0) = COPY $x0
-    %5(i32) = G_ICMP intpred(ne), %4, %4
+    %4:gpr(p0) = COPY $x0
+    %5:gpr(i32) = G_ICMP intpred(ne), %4, %4
     $w0 = COPY %5
 ...
 
@@ -164,11 +145,6 @@ regBankSelected: true
 # CHECK-NEXT:  - { id: 3, class: gpr32, preferred-register: '', flags: [  ] }
 # CHECK-NEXT:  - { id: 4, class: gpr32, preferred-register: '', flags: [  ] }
 # CHECK-NEXT:  - { id: 5, class: gpr32, preferred-register: '', flags: [  ] }
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: fpr }
-  - { id: 3, class: gpr }
 
 # CHECK:  body:
 # CHECK:    nofpexcept FCMPSrr %0, %0, implicit-def $nzcv
@@ -183,12 +159,12 @@ body:             |
   bb.0:
     liveins: $d0, $x0
 
-    %0(f32) = COPY $s0
-    %1(i32) = G_FCMP floatpred(one), %0, %0
+    %0:fpr(f32) = COPY $s0
+    %1:gpr(i32) = G_FCMP floatpred(one), %0, %0
     $w0 = COPY %1
 
-    %2(f64) = COPY $d0
-    %3(i32) = G_FCMP floatpred(uge), %2, %2
+    %2:fpr(f64) = COPY $d0
+    %3:gpr(i32) = G_FCMP floatpred(uge), %2, %2
     $w0 = COPY %3
 
 ...
@@ -201,13 +177,8 @@ regBankSelected: true
 
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: fpr32, preferred-register: '', flags: [  ] }
-# CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:  - { id: 1, class: gpr32, preferred-register: '', flags: [  ] }
 # CHECK-NEXT:  - { id: 2, class: fpr32, preferred-register: '', flags: [  ] }
-# CHECK-NEXT:  - { id: 3, class: gpr32, preferred-register: '', flags: [  ] }
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: fpr }
 
 # CHECK:  body:
 # CHECK:    bb.1:
@@ -217,12 +188,12 @@ body:             |
   bb.0:
     liveins: $s0, $w0
     successors: %bb.1
-    %0(i32) = COPY $s0
+    %0:fpr(i32) = COPY $s0
     %3:gpr(i32) = COPY $w0
 
   bb.1:
     successors: %bb.1, %bb.2
-    %2(i32) = PHI %0, %bb.0, %2, %bb.1
+    %2:fpr(i32) = PHI %0, %bb.0, %2, %bb.1
     G_BRCOND %3, %bb.1
 
   bb.2:
@@ -247,17 +218,6 @@ regBankSelected: true
 # CHECK-NEXT:  - { id: 7, class: gpr64, preferred-register: '', flags: [  ] }
 # CHECK-NEXT:  - { id: 8, class: gpr64, preferred-register: '', flags: [  ] }
 # CHECK-NEXT:  - { id: 9, class: gpr64, preferred-register: '', flags: [  ] }
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gpr }
-  - { id: 4, class: gpr }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
-  - { id: 7, class: gpr }
-  - { id: 8, class: gpr }
-  - { id: 9, class: gpr }
 
 # CHECK:  body:
 # CHECK:      ANDSWri %0, 0, implicit-def $nzcv
@@ -271,18 +231,18 @@ body:             |
     liveins: $w0, $w1, $w2
     %0:gpr(i32) = COPY $w0
 
-    %1(i32) = COPY $w1
-    %2(i32) = COPY $w2
-    %3(i32) = G_SELECT %0, %1, %2
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = COPY $w2
+    %3:gpr(i32) = G_SELECT %0, %1, %2
     $w0 = COPY %3(i32)
 
-    %4(i64) = COPY $x0
-    %5(i64) = COPY $x1
-    %6(i64) = G_SELECT %0, %4, %5
+    %4:gpr(i64) = COPY $x0
+    %5:gpr(i64) = COPY $x1
+    %6:gpr(i64) = G_SELECT %0, %4, %5
     $x0 = COPY %6(i64)
 
-    %7(p0) = COPY $x0
-    %8(p0) = COPY $x1
-    %9(p0) = G_SELECT %0, %7, %8
+    %7:gpr(p0) = COPY $x0
+    %8:gpr(p0) = COPY $x1
+    %9:gpr(p0) = G_SELECT %0, %7, %8
     $x0 = COPY %9(p0)
 ...

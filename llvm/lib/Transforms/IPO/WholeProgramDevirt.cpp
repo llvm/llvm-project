@@ -753,17 +753,18 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
     return PreservedAnalyses::none();
   }
 
+  // FIXME: The state of a run should not be kept in the pass. A more resilient
+  // design would create an object in run() that holds the values the run
+  // needs, such as the module, the analyses and the summaries.
   std::optional<ModuleSummaryIndex> Index;
+  ModuleSummaryIndex *Export = ExportSummary;
   if (!ExportSummary && !ImportSummary && DevirtSpeculatively) {
     // Build the ExportSummary from the module.
-    assert(!ExportSummary &&
-           "ExportSummary is expected to be empty in non-LTO mode");
     ProfileSummaryInfo PSI(M);
     Index.emplace(buildModuleSummaryIndex(M, nullptr, &PSI));
-    ExportSummary = Index.has_value() ? &Index.value() : nullptr;
+    Export = &*Index;
   }
-  if (!DevirtModule(M, MAM, ExportSummary, ImportSummary, DevirtSpeculatively)
-           .run())
+  if (!DevirtModule(M, MAM, Export, ImportSummary, DevirtSpeculatively).run())
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }

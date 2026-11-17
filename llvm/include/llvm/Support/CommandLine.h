@@ -54,7 +54,8 @@ class LibraryOptions;
 class LibraryOptionsContext;
 
 //===----------------------------------------------------------------------===//
-// Command line option processing entry point.
+// Command line option processing entry point. It does not recognize library
+// options; parseCommandLineOptions below does.
 //
 // Returns true on success. Otherwise, this will print the error message to
 // stderr and exit if \p Errs is not set (nullptr by default), or print the
@@ -73,8 +74,8 @@ LLVM_ABI bool ParseCommandLineOptions(int argc, const char *const *argv,
                                       vfs::FileSystem *VFS = nullptr,
                                       const char *EnvVar = nullptr);
 
-// Like ParseCommandLineOptions, but sets per-context libraries' options in
-// Context instead of their global().
+// Like ParseCommandLineOptions, but also recognizes library options, the
+// options declared in TableGen, and sets them in Context.
 LLVM_ABI bool parseCommandLineOptions(LibraryOptionsContext &Context,
                                       ArrayRef<const char *> Args,
                                       StringRef Overview = "",
@@ -93,7 +94,7 @@ LLVM_ABI bool parseCommandLineOptions(
     vfs::FileSystem *VFS = nullptr, const char *EnvVar = nullptr);
 
 // The library options that LLVMParseCommandLineOptions sets, which contexts
-// created through the C API start with.
+// and target machines created through the C API use.
 LLVM_ABI LibraryOptionsContext &getCAPILibraryOptions();
 
 // Function pointer type for printing version information.
@@ -2188,7 +2189,7 @@ LLVM_ABI void ResetCommandLineParser();
 LLVM_ABI bool ProvidePositionalOption(Option *Handler, StringRef Arg, int i);
 
 /// The options of a library that declares them in TableGen rather than as
-/// cl::opt (see llvm/Option/LibraryOptions.h). ParseCommandLineOptions hands
+/// cl::opt (see llvm/Option/LibraryOptions.h). parseCommandLineOptions hands
 /// every argument naming one of them to parse(). This lets libraries move off
 /// cl::opt while tools still parse argv with cl::, and goes away once tools
 /// parse argv without cl::.
@@ -2202,14 +2203,11 @@ public:
           Fn) const = 0;
 
   /// Parses the option spelled by Args[0], which may take Args[1] as its
-  /// value, into \p Opts, which is global() or a context's values, and sets
-  /// \p Consumed to the number of arguments it spans. The strings in \p Args
-  /// and the memory from \p Alloc remain valid as long as \p Opts is used.
+  /// value, into \p Opts and sets \p Consumed to the number of arguments it
+  /// spans. The strings in \p Args and the memory from \p Alloc remain valid as
+  /// long as \p Opts is used.
   virtual Error parse(void *Opts, ArrayRef<const char *> Args,
                       unsigned &Consumed, BumpPtrAllocator &Alloc) const = 0;
-
-  /// Returns the values that ParseCommandLineOptions sets.
-  virtual void *global() const = 0;
 
   /// Returns the default values.
   virtual const void *getDefault() const = 0;
@@ -2217,21 +2215,10 @@ public:
   /// Returns a copy of getDefault() allocated from \p Alloc.
   virtual void *copyDefault(BumpPtrAllocator &Alloc) const = 0;
 
-  /// Restores the default values.
-  virtual void reset() const = 0;
-
-  /// Whether every reader of the options goes through a context's
-  /// LibraryOptionsContext, so that they need not be set in global().
-  bool isPerContext() const { return PerContext; }
-
 protected:
-  constexpr explicit LibraryOptions(bool PerContext = false)
-      : PerContext(PerContext) {}
+  constexpr LibraryOptions() = default;
   // Registrations are static and never destroyed through this class.
   ~LibraryOptions() = default;
-
-private:
-  bool PerContext;
 };
 
 /// Makes ParseCommandLineOptions recognize \p L's options. A name that is also

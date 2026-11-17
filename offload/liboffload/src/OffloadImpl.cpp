@@ -372,7 +372,7 @@ ol_platform_backend_t pluginNameToBackend(StringRef Name) {
 
 // Every plugin exports this method to create an instance of the plugin type.
 #define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
-#include "Shared/Targets.def"
+#include "Targets.def"
 
 Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
   SmallSet<ol_platform_backend_t, 0> Requested;
@@ -391,7 +391,7 @@ Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
           std::unique_ptr<GenericPluginTy>(createPlugin_##Name()), Backend));  \
     }                                                                          \
   } while (false);
-#include "Shared/Targets.def"
+#include "Targets.def"
 
   Context.TracingEnabled = std::getenv("OFFLOAD_TRACE");
   Context.ValidationEnabled = !std::getenv("OFFLOAD_DISABLE_VALIDATION");
@@ -1712,11 +1712,8 @@ Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
 }
 
 namespace tmp {
-// Temporary helpers to help transition of libomptarget to liboffload
-DeviceImageTy *__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program) {
-  return Program->Image;
-}
-
+// Helpers for virtual address management that are only used RecordReplay until
+// it transitions to a new code.
 void *__ol_tgt_GetSuggestedVirtualAddress(ol_device_handle_t Device) {
   return Device->Device->getSuggestedVirtualAddress();
 }

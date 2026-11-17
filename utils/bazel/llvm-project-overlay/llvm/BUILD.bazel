@@ -566,7 +566,7 @@ cc_library(
         # provides the configuration define unless lzma is enabled, in which
         # case it also links the system liblzma.
         "//third-party:lzma",
-        "//libc:shared_math_headers_for_apfloat",
+        "//libc/shared:math_headers_for_apfloat",
     ],
 )
 
@@ -4762,7 +4762,6 @@ cc_library(
         ":Core",
         ":LTO",
         ":Object",
-        ":Passes",
         ":Support",
     ],
 )

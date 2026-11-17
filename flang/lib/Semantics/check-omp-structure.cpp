@@ -360,7 +360,7 @@ void OmpStructureChecker::Leave(const parser::InterfaceBody &) {
   EndMetadirectiveVariantScope();
 }
 
-void OmpStructureChecker::Enter(const parser::SpecificationPart &) {
+void OmpStructureChecker::Enter(const parser::SpecificationPart &specPart) {
   // Clear pending metadirective loop variants at the start of a program unit.
   // An empty partStack_ marks the unit's top-level specification part, so a
   // nested one such as an interface body does not reset them.
@@ -368,6 +368,26 @@ void OmpStructureChecker::Enter(const parser::SpecificationPart &) {
     metadirectiveLoopVariants_.clear();
   }
   partStack_.push_back(PartKind::SpecificationPart);
+
+  using UseStmts =
+      std::list<parser::Statement<common::Indirection<parser::UseStmt>>>;
+  using ImportStmts =
+      std::list<parser::Statement<common::Indirection<parser::ImportStmt>>>;
+  if (!std::get<UseStmts>(specPart.t).empty() ||
+      !std::get<ImportStmts>(specPart.t).empty() ||
+      llvm::any_of(std::get<parser::ImplicitPart>(specPart.t).v,
+          [](const parser::ImplicitPartStmt &stmt) {
+            return parser::Unwrap<parser::ImplicitStmt>(stmt) != nullptr;
+          })) {
+    for (const auto &directive :
+        std::get<std::list<parser::OpenMPDeclarativeConstruct>>(specPart.t)) {
+      if (const auto *assumes{
+              parser::Unwrap<parser::OmpAssumesDirective>(directive)}) {
+        context_.Say(assumes->v.DirName().source,
+            "ASSUMES directive must appear after all USE, IMPORT, and IMPLICIT statements"_err_en_US);
+      }
+    }
+  }
 }
 
 void OmpStructureChecker::Leave(const parser::SpecificationPart &) {
@@ -2135,6 +2155,16 @@ void OmpStructureChecker::Leave(const parser::OmpThreadprivateDirective &x) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OmpAssumesDirective &directive) {
+  const parser::CharBlock source{directive.v.DirName().source};
+  const Scope &scope{
+      GetProgramUnitOrBlockConstructContaining(context_.FindScope(source))};
+  if (!scope.IsModule() && scope.kind() != Scope::Kind::Subprogram) {
+    context_.Say(source,
+        "ASSUMES directive must appear in the specification part of a module or subprogram"_err_en_US);
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OmpDeclareSimdDirective &x) {
   const parser::OmpDirectiveName &dirName{x.v.DirName()};
 
@@ -3814,8 +3844,38 @@ void OmpStructureChecker::Enter(const parser::OmpClauseList &) {
 // 2. Checks on clauses which fall under 'struct OmpClause' from parse-tree.h.
 // 3. Checks on clauses which are not in 'struct OmpClause' from parse-tree.h.
 
+// Warns the user that on certain constructs, decomposition of OpenMP clauses
+// may create counterintuitive behaviour.
+void OmpStructureChecker::ClauseDecompPortabilityWarn(
+    SemanticsContext &context_) {
+  if (!context_.ShouldWarn(common::UsageWarning::Portability))
+    return;
+
+  // On a composite do simd construct, using the firstprivate and lastprivate
+  // clauses on the same variables causes the variable to be uninitialised in
+  // the associated body.
+  if (llvm::omp::allDoSimdSet.test(GetContext().directive)) {
+    SymbolSourceMap firstprivateSymbols, lastprivateSymbols;
+    for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_firstprivate)) {
+      GetSymbolsInObjectList(*GetOmpObjectList(*clause), firstprivateSymbols);
+    }
+    for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_lastprivate)) {
+      GetSymbolsInObjectList(*GetOmpObjectList(*clause), lastprivateSymbols);
+    }
+    for (const auto &[symbol, source] : lastprivateSymbols) {
+      // Erasing all occurrences emits only one warning per variable.
+      if (firstprivateSymbols.erase(symbol)) {
+        context_.Warn(common::UsageWarning::Portability, source,
+            "Variable '%s' appears in both FIRSTPRIVATE and LASTPRIVATE clauses on a %s construct; '%s' may be uninitialised in the associated structured block"_port_en_US,
+            symbol->name(), ContextDirectiveAsFortran(), symbol->name());
+      }
+    }
+  }
+}
+
 void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  ClauseDecompPortabilityWarn(context_);
 
   // 2.7.1 Loop Construct Restriction
   if (llvm::omp::allDoSet.test(GetContext().directive)) {
@@ -6669,6 +6729,19 @@ void OmpStructureChecker::Enter(
 
 void OmpStructureChecker::Enter(const parser::OmpClause::DeviceSafesync &x) {
   CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_device_safesync);
+}
+
+void OmpStructureChecker::Enter(
+    const parser::OmpClause::NoParallelism &clause) {
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  llvm::omp::Version v60{60};
+  if (clause.v && version < v60) {
+    context_.Say(GetContext().clauseSource,
+        "An argument to %s is an %s feature, %s"_warn_en_US,
+        parser::omp::GetUpperName(
+            llvm::omp::Clause::OMPC_no_parallelism, version),
+        ThisVersion(v60), TryVersion(v60));
+  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::DynamicAllocators &x) {

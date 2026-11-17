@@ -132,9 +132,6 @@ body:             |
 ---
 name:            test_v4f16.roundeven
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -166,9 +163,6 @@ body:             |
 ---
 name:            test_v2f32.roundeven
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -198,9 +192,6 @@ body:             |
 ---
 name:            test_v4f32.roundeven
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -230,9 +221,6 @@ body:             |
 ---
 name:            test_v2f64.roundeven
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 machineFunctionInfo: {}
 body:             |
   bb.0:
