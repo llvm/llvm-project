@@ -13,6 +13,7 @@
 
 #include "llvm/Analysis/Delinearization.h"
 #include "AnalysisOptions.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionDivision.h"
@@ -22,6 +23,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -656,9 +658,71 @@ bool llvm::delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
   return !Subscripts.empty();
 }
 
-bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
-                                         ArrayRef<const SCEV *> Sizes,
-                                         ArrayRef<const SCEV *> Subscripts) {
+/// Return true if \p Root, an integer value feeding the computation of a
+/// pointer offset, evaluates to its mathematical value rather than a wrapped
+/// one.
+static bool hasExactOffsetArithmetic(Value *Root, ScalarEvolution &SE) {
+
+  // Max Bound the walk
+  constexpr unsigned MaxValuesVisited = 16;
+
+  SmallVector<Value *, 8> Worklist(1, Root);
+  SmallPtrSet<Value *, 16> Visited;
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    // Reaching a value again, which is how the cycle through a phi ends,
+    // needs no second proof.
+    if (!Visited.insert(V).second)
+      continue;
+    if (Visited.size() > MaxValuesVisited)
+      return false;
+
+    if (!SE.isSCEVable(V->getType()))
+      return false;
+    const SCEV *S = SE.getSCEV(V);
+    if (isa<SCEVConstant>(S) || isa<SCEVUnknown>(S))
+      continue;
+
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I)
+      return false;
+
+    switch (I->getOpcode()) {
+    case Instruction::Add:
+    case Instruction::Sub:
+    case Instruction::Mul:
+    case Instruction::Shl:
+      if (!cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap())
+        return false;
+      break;
+    case Instruction::PHI:
+      break;
+    default:
+      return false;
+    }
+
+    Worklist.append(I->op_begin(), I->op_end());
+  }
+  return true;
+}
+
+bool llvm::hasNoSignedWrapOffsetFromBase(ScalarEvolution &SE, Value *Ptr) {
+  Value *V = Ptr->stripPointerCasts();
+  while (auto *GEP = dyn_cast<GEPOperator>(V)) {
+    if (!GEP->hasNoUnsignedSignedWrap())
+      return false;
+    for (Value *Idx : GEP->indices())
+      if (!hasExactOffsetArithmetic(Idx, SE))
+        return false;
+    V = GEP->getPointerOperand()->stripPointerCasts();
+  }
+  return SE.getPointerBase(SE.getSCEV(Ptr)) == SE.getSCEV(V);
+}
+
+bool llvm::validateDelinearizationResult(
+    ScalarEvolution &SE, ArrayRef<const SCEV *> Sizes,
+    ArrayRef<const SCEV *> Subscripts, Value *Ptr,
+    DelinearizationRangeCache *RangeCache) {
   // Sizes and Subscripts are as follows:
   //
   //   Sizes:      [UNK][S_2]...[S_n]
@@ -678,23 +742,98 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
     return SE.getMulExpr(A, B);
   };
 
+  // Prove 0 <= I_k < S_k for an affine subscript by bounding it with the
+  // extreme values it takes over its own loop.
+  auto isInRangeOverItsLoop = [&](const SCEV *Subscript, const SCEV *Size,
+                                  Type *WiderTy) -> bool {
+    const auto *AR = dyn_cast<SCEVAddRecExpr>(Subscript);
+    if (!AR || !AR->isAffine() || !AR->hasNoSignedWrap())
+      return false;
+    const Loop *L = AR->getLoop();
+    const SCEV *BTC = SE.getBackedgeTakenCount(L);
+    if (isa<SCEVCouldNotCompute>(BTC))
+      return false;
+
+    // Which end of the range is the maximum depends on the sign of the step.
+    const SCEV *Step = AR->getStepRecurrence(SE);
+    const SCEV *Min, *Max;
+    if (SE.isKnownNonNegative(Step)) {
+      Min = AR->getStart();
+      Max = AR->evaluateAtIteration(BTC, SE);
+    } else if (SE.isKnownNonPositive(Step)) {
+      Min = AR->evaluateAtIteration(BTC, SE);
+      Max = AR->getStart();
+    } else {
+      return false;
+    }
+    Min = SE.getNoopOrSignExtend(Min, WiderTy);
+    Max = SE.getNoopOrSignExtend(Max, WiderTy);
+
+    // If the loop runs no more times than the extent
+    // then it leaves the original expressions in
+    // place, so a dominating `n <= m` applies directly,
+    // and it needs no guard rewriting.
+    // Max + 1 is the trip count if it does not wrap.
+    const SCEV *One = SE.getOne(WiderTy);
+    const Instruction *CtxI = L->getHeader()->getTerminator();
+    if (SE.isKnownNonNegative(Min) &&
+        SE.willNotOverflow(Instruction::Add, /*Signed=*/true, Max, One, CtxI)) {
+      const SCEV *TripCount = SE.getAddExpr(Max, One);
+      if (SE.isKnownPredicateAt(ICmpInst::ICMP_SLE, TripCount, Size, CtxI)) {
+        LLVM_DEBUG(dbgs() << "Range check via trip count: " << *TripCount
+                          << " <=s " << *Size << "\n");
+        return true;
+      }
+    }
+
+    // Otherwise rewrite both sides with the conditions that dominate the loop,
+    // which brings the extent recovered from the access strides and the bound
+    // recovered from the latch into comparable form.
+    ScalarEvolution::LoopGuards Guards =
+        ScalarEvolution::LoopGuards::collectOnDemand(L, SE);
+    if (!SE.isKnownNonNegative(SE.applyLoopGuards(Min, Guards)))
+      return false;
+
+    const SCEV *GuardedMax = SE.applyLoopGuards(Max, Guards);
+    const SCEV *GuardedSize = SE.applyLoopGuards(Size, Guards);
+    if (SE.isKnownPredicate(ICmpInst::ICMP_SLT, GuardedMax, GuardedSize)) {
+      LLVM_DEBUG(dbgs() << "Range check via loop bounds: " << *GuardedMax
+                        << " <s " << *GuardedSize << "\n");
+      return true;
+    }
+    return false;
+  };
+
   // Range check: 0 <= I_k < S_k for k = 2..n.
   for (size_t I = 1; I < Sizes.size(); ++I) {
     const SCEV *Size = Sizes[I - 1];
     const SCEV *Subscript = Subscripts[I];
-    if (!SE.isKnownNonNegative(Subscript))
-      return false;
 
     // TODO: It may be better that delinearization itself unifies the types of
     // all elements in Sizes and Subscripts.
     Type *WiderTy = SE.getWiderType(Subscript->getType(), Size->getType());
-    Subscript = SE.getNoopOrSignExtend(Subscript, WiderTy);
-    Size = SE.getNoopOrSignExtend(Size, WiderTy);
-    if (!SE.isKnownPredicate(ICmpInst::ICMP_SLT, Subscript, Size)) {
-      LLVM_DEBUG(dbgs() << "Range check failed: " << *Subscript << " <s "
-                        << *Size << "\n");
-      return false;
+    const SCEV *ExtSubscript = SE.getNoopOrSignExtend(Subscript, WiderTy);
+    const SCEV *ExtSize = SE.getNoopOrSignExtend(Size, WiderTy);
+
+    if (SE.isKnownNonNegative(ExtSubscript) &&
+        SE.isKnownPredicate(ICmpInst::ICMP_SLT, ExtSubscript, ExtSize))
+      continue;
+
+    // Try prooving by walking dominating conditions.
+    if (!RangeCache) {
+      if (isInRangeOverItsLoop(Subscript, ExtSize, WiderTy))
+        continue;
+    } else {
+      auto [It, Inserted] = RangeCache->try_emplace({Subscript, ExtSize});
+      if (Inserted)
+        It->second = isInRangeOverItsLoop(Subscript, ExtSize, WiderTy);
+      if (It->second)
+        continue;
     }
+
+    LLVM_DEBUG(dbgs() << "Range check failed: " << *ExtSubscript << " <s "
+                      << *ExtSize << "\n");
+    return false;
   }
 
   // The offset computation is as follows:
@@ -720,6 +859,15 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
   //       = Min + (S_2 * ... * S_n) - 1
   //
   // NOTE: I_1 can be negative, so Min is not just 0.
+  //
+  // When Sizes are already constant it does reqruire nusw based proof.
+  bool HasSymbolicSize = false;
+  for (const SCEV *Size : Sizes)
+    HasSymbolicSize |= !isa<SCEVConstant>(Size);
+  if (Sizes.size() >= 2 && HasSymbolicSize &&
+      hasNoSignedWrapOffsetFromBase(SE, Ptr))
+    return true;
+
   const SCEV *Prod = SE.getOne(Sizes[0]->getType());
   for (const SCEV *Size : Sizes) {
     Prod = MulOverflow(Prod, Size);
@@ -856,7 +1004,8 @@ void printDelinearization(raw_ostream &O, Function *F, LoopInfo *LI,
       O << "[" << *Subscripts[i] << "]";
     O << "\n";
 
-    bool IsValid = validateDelinearizationResult(*SE, Sizes, Subscripts);
+    bool IsValid = validateDelinearizationResult(*SE, Sizes, Subscripts,
+                                                 getPointerOperand(&Inst));
     O << "Delinearization validation: " << (IsValid ? "Succeeded" : "Failed")
       << "\n";
   }

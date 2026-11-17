@@ -2493,8 +2493,12 @@ bool DependenceInfo::tryDelinearizeFixedSize(
   // iff the subscripts are positive and are less than the range of the
   // dimension.
   if (Opts.da_delinearization_checks) {
-    if (!validateDelinearizationResult(*SE, SrcSizes, SrcSubscripts) ||
-        !validateDelinearizationResult(*SE, DstSizes, DstSubscripts)) {
+    if (!validateDelinearizationResult(*SE, SrcSizes, SrcSubscripts,
+                                       getLoadStorePointerOperand(Src),
+                                       &RangeCache) ||
+        !validateDelinearizationResult(*SE, DstSizes, DstSubscripts,
+                                       getLoadStorePointerOperand(Dst),
+                                       &RangeCache)) {
       SrcSubscripts.clear();
       DstSubscripts.clear();
       return false;
@@ -2556,10 +2560,15 @@ bool DependenceInfo::tryDelinearizeParametricSize(
   // and dst.
   // FIXME: It may be better to record these sizes and add them as constraints
   // to the dependency checks.
-  if (Opts.da_delinearization_checks)
-    if (!validateDelinearizationResult(*SE, Sizes, SrcSubscripts) ||
-        !validateDelinearizationResult(*SE, Sizes, DstSubscripts))
+  if (Opts.da_delinearization_checks) {
+    if (!validateDelinearizationResult(*SE, Sizes, SrcSubscripts,
+                                       getLoadStorePointerOperand(Src),
+                                       &RangeCache) ||
+        !validateDelinearizationResult(*SE, Sizes, DstSubscripts,
+                                       getLoadStorePointerOperand(Dst),
+                                       &RangeCache))
       return false;
+  }
 
   return true;
 }
