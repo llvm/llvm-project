@@ -16,7 +16,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; architecture with masked loads/stores, but we use SVE for testing purposes
 ; here.
 
-define void @foo(ptr %data1, ptr %data2) {
+define void @foo(ptr %data1, ptr %data2) vscale_range(1,16) {
 ; CHECK-LABEL: @foo(
 ; CHECK:       vector.body:
 ; CHECK:         br i1 {{%.*}}, label %pred.store.if, label %pred.store.continue

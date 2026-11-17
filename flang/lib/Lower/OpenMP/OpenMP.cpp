@@ -1877,6 +1877,35 @@ struct OpWithBodyGenInfo {
   int collapseValue = 0;
 };
 
+static bool canAssumeBoundedRecipeEffects(const mlir::Value &variable) {
+  mlir::Type type = variable.getType();
+  if (auto refType = mlir::dyn_cast<fir::ReferenceType>(type))
+    if (mlir::isa<fir::BoxCharType, fir::BaseBoxType>(refType.getEleTy()))
+      return false;
+  return !fir::isAllocatableType(type) &&
+         !fir::isa_derived(fir::getFortranElementType(type)) &&
+         !fir::isPointerType(type);
+}
+
+static bool canAssumeBoundedRecipeEffects(lower::AbstractConverter &converter,
+                                          const semantics::Symbol &sym) {
+  mlir::Value variable = converter.getSymbolAddress(sym);
+  return variable && canAssumeBoundedRecipeEffects(variable);
+}
+
+static bool
+canAssumeBoundedRecipeEffectsForItem(lower::AbstractConverter &converter,
+                                     const semantics::Symbol &sym) {
+  const auto &ultimate = sym.GetUltimate();
+  if (const auto *common =
+          ultimate.detailsIf<semantics::CommonBlockDetails>()) {
+    return llvm::all_of(common->objects(), [&converter](const auto &member) {
+      return canAssumeBoundedRecipeEffects(converter, *member);
+    });
+  }
+  return canAssumeBoundedRecipeEffects(converter, sym);
+}
+
 /// Create the body (block) for an OpenMP Operation.
 ///
 /// \param [in]   op  - the operation the body belongs to.
@@ -1945,6 +1974,17 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
                     Fortran::lower::omp::isLastItemInQueue(item, queue),
                     /*useDelayedPrivatization=*/false, info.symTable);
     tempDsp->processStep1();
+
+    // TODO: omp.single still uses eager privatisation.
+    // Use clauseOps.privateVars inside genSingleOp once
+    // delayedPrivatization is turned on.
+    if (auto singleOp = llvm::dyn_cast<mlir::omp::SingleOp>(op)) {
+      const auto &privateSyms = tempDsp->getAllSymbolsToPrivatize();
+      if (llvm::all_of(privateSyms, [&info](const semantics::Symbol *sym) {
+            return canAssumeBoundedRecipeEffectsForItem(info.converter, *sym);
+          }))
+        singleOp.setPrivateAssumeBoundedRecipeEffects(true);
+    }
   }
 
   if (info.dir == llvm::omp::Directive::OMPD_parallel) {
@@ -2600,7 +2640,7 @@ genTargetClauses(lower::AbstractConverter &converter,
                   "storage-associated variable");
     }
   cp.processIsDevicePtr(stmtCtx, clauseOps, isDevicePtrObjects);
-  cp.processMap(loc, stmtCtx, clauseOps, llvm::omp::Directive::OMPD_unknown,
+  cp.processMap(loc, stmtCtx, clauseOps, llvm::omp::Directive::OMPD_target,
                 &mapObjects);
   cp.processNowait(clauseOps);
   cp.processThreadLimit(stmtCtx, clauseOps);
@@ -2623,7 +2663,8 @@ static void genTargetDataClauses(
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processDevice(stmtCtx, clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_target_data, clauseOps);
-  cp.processMap(loc, stmtCtx, clauseOps);
+  cp.processMap(loc, stmtCtx, clauseOps,
+                llvm::omp::Directive::OMPD_target_data);
   cp.processUseDeviceAddr(stmtCtx, clauseOps, useDeviceAddrObjects);
   // Record the source UDA prefix before non-C_PTR UDP operands are promoted.
   sourceUseDeviceAddrCount = useDeviceAddrObjects.size();
@@ -3610,30 +3651,6 @@ findEnclosingParallelOp(fir::FirOpBuilder &builder) {
   return {};
 }
 
-static bool isNonDerivedNonPointer(const semantics::Symbol &sym) {
-  const auto &ultimate = sym.GetUltimate();
-  const auto *type = ultimate.GetType();
-  return type && type->AsIntrinsic() && !semantics::IsAllocatable(ultimate) &&
-         !semantics::IsPointer(ultimate);
-}
-
-static bool isNonDerivedNonPointer(const mlir::Value &variable) {
-  return !fir::isAllocatableType(variable.getType()) &&
-         !fir::isa_derived(fir::getFortranElementType(variable.getType())) &&
-         !fir::isPointerType(variable.getType());
-}
-
-static bool isNonDerivedNonPointerItem(const semantics::Symbol &sym) {
-  const auto &ultimate = sym.GetUltimate();
-  if (const auto *common =
-          ultimate.detailsIf<semantics::CommonBlockDetails>()) {
-    return llvm::all_of(common->objects(), [](const auto &member) {
-      return isNonDerivedNonPointer(*member);
-    });
-  }
-  return isNonDerivedNonPointer(ultimate);
-}
-
 static mlir::omp::SectionsOp
 genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               semantics::SemanticsContext &semaCtx,
@@ -3734,8 +3751,8 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // once delayedPrivatization is turned on.
   const auto &privateSyms = dsp.getAllSymbolsToPrivatize();
   if (!privateSyms.empty() &&
-      llvm::all_of(privateSyms, [](const semantics::Symbol *sym) {
-        return isNonDerivedNonPointerItem(*sym);
+      llvm::all_of(privateSyms, [&converter](const semantics::Symbol *sym) {
+        return canAssumeBoundedRecipeEffectsForItem(converter, *sym);
       }))
     sectionsOp.setPrivateAssumeBoundedRecipeEffects(true);
 
@@ -3744,7 +3761,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         // The generated conditional-lastprivate recipe only accesses the
         // intrinsic value and index fields of its accumulator, despite its
         // record type.
-        return variable == lpAlloca || isNonDerivedNonPointer(variable);
+        return variable == lpAlloca || canAssumeBoundedRecipeEffects(variable);
       }))
     sectionsOp.setReductionAssumeBoundedRecipeEffects(true);
 
@@ -3994,11 +4011,18 @@ genSingleOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   mlir::omp::SingleOperands clauseOps;
   genSingleClauses(converter, semaCtx, item->clauses, loc, clauseOps);
 
-  return genOpWithBody<mlir::omp::SingleOp>(
+  auto singleOp = genOpWithBody<mlir::omp::SingleOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_single)
           .setClauses(&item->clauses),
       queue, item, clauseOps);
+
+  if (llvm::all_of(clauseOps.copyprivateVars, [](mlir::Value variable) {
+        return canAssumeBoundedRecipeEffects(variable);
+      }))
+    singleOp.setCopyprivateAssumeBoundedRecipeEffects(true);
+
+  return singleOp;
 }
 
 static bool isDuplicateMappedSymbol(
@@ -4339,8 +4363,11 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             // where the record type contains an allocatable.
             if (!isPointer &&
                 (hasDefaultMapper ||
-                 (requiresImplicitDefaultDeclareMapper(*typeSpec)))) {
+                 (requiresImplicitDefaultDeclareMapper(
+                     converter, firOpBuilder, *typeSpec,
+                     enableImplicitDefaultMapperAllocatableMembers)))) {
               if (!hasDefaultMapper) {
+                checkImplicitMapperComponents(converter, loc, *typeSpec);
                 if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
                         converter.genType(*typeSpec)))
                   mapperId = getOrGenImplicitDefaultDeclareMapper(
@@ -4349,7 +4376,8 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                       [&](std::string &mapperIdName,
                           llvm::StringRef memberName) {
                         defaultMangler(converter, mapperIdName, memberName);
-                      });
+                      },
+                      enableImplicitDefaultMapperAllocatableMembers);
               } else {
                 mapperId = mlir::FlatSymbolRefAttr::get(
                     &converter.getMLIRContext(), mapperIdName);
@@ -4708,12 +4736,19 @@ genTaskgroupOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   taskgroupArgs.taskReduction.objects = taskReductionObjects;
   taskgroupArgs.taskReduction.vars = clauseOps.taskReductionVars;
 
-  return genOpWithBody<mlir::omp::TaskgroupOp>(
+  auto taskgroupOp = genOpWithBody<mlir::omp::TaskgroupOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_taskgroup)
           .setClauses(&item->clauses)
           .setEntryBlockArgs(&taskgroupArgs),
       queue, item, clauseOps);
+
+  if (llvm::all_of(clauseOps.taskReductionVars, [](mlir::Value variable) {
+        return canAssumeBoundedRecipeEffects(variable);
+      }))
+    taskgroupOp.setTaskReductionAssumeBoundedRecipeEffects(true);
+
+  return taskgroupOp;
 }
 
 static mlir::omp::TaskwaitOp
@@ -6045,7 +6080,9 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     return;
 
   for (const parser::OmpClause &clause : assumesConstruct.v.Clauses().v) {
-    if (!std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u))
+    if (!std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u) &&
+        !std::holds_alternative<parser::OmpClause::NoParallelism>(clause.u) &&
+        !std::holds_alternative<parser::OmpClause::Absent>(clause.u))
       TODO(converter.genLocation(clause.source),
            "assumption clauses on the assumes directive");
   }
@@ -6720,6 +6757,111 @@ appendCombiner(const parser::OmpDeclareReductionDirective &construct,
   llvm_unreachable("Expecting reduction combiner");
 }
 
+// Name the op for a defined-operator reduction identifier: either an intrinsic
+// operator (`declare reduction(+:t)`) or a user-defined one (`.myop.`).
+static std::string getDefinedOperatorOpName(
+    lower::AbstractConverter &converter, const clause::DefinedOperator &defOp,
+    const semantics::Symbol *symOpt, mlir::Type reductionType, bool isByRef) {
+  return common::visit(
+      common::visitors{
+          [&](const clause::IntrinsicOperator &intrOp) -> std::string {
+            // Directive side of the intrinsic-operator USER reduction naming
+            // contract (clause side:
+            // ReductionProcessor::processReductionArguments site 2). A user
+            // `declare reduction(+:t)` is scoped by its owning scope exactly
+            // like the defined-operator and named paths, so two declarations
+            // for the same (operator, type) in different scopes get distinct
+            // ops instead of colliding on the one global builtin name. Only
+            // user reductions reach here (builtins are created directly by
+            // createDeclareReduction), so this always scopes. The
+            // intrinsic-operator parse node carries no reduction symbol: symOpt
+            // supplies it for separate compilation; same-file it is resolved
+            // from the current (declaration) scope under the operator's mangled
+            // name (MakeNameFromOperator), which resolves to the same ultimate
+            // the clause side finds, so both name the op identically.
+            const semantics::Symbol *redSymPtr = symOpt;
+            if (!redSymPtr) {
+              parser::CharBlock mangledOpName = semantics::MakeNameFromOperator(
+                  ReductionProcessor::toParserIntrinsicOperator(intrOp));
+              redSymPtr = semantics::omp::FindUserReductionSymbol(
+                  converter.getCurrentScope(), mangledOpName);
+            }
+            if (!redSymPtr)
+              TODO(converter.getCurrentLocation(),
+                   "OpenMP user-defined intrinsic-operator declare "
+                   "reduction symbol was not found for lowering");
+            const semantics::Symbol &redSym = redSymPtr->GetUltimate();
+            return ReductionProcessor::getScopedUserReductionName(
+                converter, redSym, reductionType, isByRef);
+          },
+          [&](const clause::DefinedOperator::DefinedOpName &opName)
+              -> std::string {
+            // Directive side of the user-defined operator reduction naming
+            // contract (the clause side is in
+            // ReductionProcessor::processReductionArguments). Name the op via
+            // getScopedUserReductionName from the symbol's ultimate (name,
+            // owner) plus the per-type suffix, byte-identical to the clause
+            // reference. symOpt supplies the source symbol for separate
+            // compilation, else opName.v.sym(). Runs once per listed type (the
+            // enclosing loop walks typeNameList in lockstep with the per-type
+            // combiner/initializer instances), emitting one op per (operator,
+            // type); single-type is N=1.
+            const semantics::Symbol &redSym =
+                symOpt ? symOpt->GetUltimate() : opName.v.sym()->GetUltimate();
+            const auto *userDetails =
+                redSym.detailsIf<semantics::UserReductionDetails>();
+            if (!userDetails)
+              TODO(converter.getCurrentLocation(),
+                   "OpenMP user-defined operator declare reduction "
+                   "without user reduction details");
+            return ReductionProcessor::getScopedUserReductionName(
+                converter, redSym, reductionType, isByRef);
+          },
+      },
+      defOp.u);
+}
+
+// Name the op for a procedure-designator reduction identifier, i.e. a named
+// reduction (`declare reduction(myred:t)`).
+static std::string getProcedureDesignatorOpName(
+    lower::AbstractConverter &converter, const clause::ProcedureDesignator &pd,
+    const semantics::Symbol *symOpt, mlir::Type reductionType, bool isByRef) {
+  // Directive side of the named-reduction naming contract (clause side in
+  // ReductionProcessor::processReductionArguments). Name the op via
+  // getScopedUserReductionName from the source symbol's ultimate (name, owner)
+  // plus the per-type suffix, byte-identical to the clause reference. symOpt
+  // supplies the source symbol for separate compilation, else pd.v.sym();
+  // GetUltimate keeps the name stable across a plain `use`. reductionType is
+  // the declared element type (already canonical), so unlike the clause side it
+  // needs no namingType normalization.
+  const semantics::Symbol &redSym =
+      (symOpt ? *symOpt : *pd.v.sym()).GetUltimate();
+  return ReductionProcessor::getScopedUserReductionName(converter, redSym,
+                                                        reductionType, isByRef);
+}
+
+// Compute the canonical omp.declare_reduction op name for one listed type of a
+// `declare reduction` directive, the same way processReductionArguments does on
+// the clause side, so the two name the same op. \p symOpt is the source
+// reduction symbol when materializing an imported declaration, and null for
+// same-file lowering.
+static std::string getDeclareReductionOpName(
+    lower::AbstractConverter &converter, const clause::ReductionOperator &redOp,
+    const semantics::Symbol *symOpt, mlir::Type reductionType, bool isByRef) {
+  return common::visit(
+      common::visitors{
+          [&](const clause::DefinedOperator &defOp) -> std::string {
+            return getDefinedOperatorOpName(converter, defOp, symOpt,
+                                            reductionType, isByRef);
+          },
+          [&](const clause::ProcedureDesignator &pd) -> std::string {
+            return getProcedureDesignatorOpName(converter, pd, symOpt,
+                                                reductionType, isByRef);
+          },
+      },
+      redOp.u);
+}
+
 // Lower a single declare-reduction directive. Serves both same-file lowering
 // (symOpt null, no filter) and separate-compilation materialization of an
 // imported reduction (symOpt is the source symbol, with a fresh SymMap).
@@ -6804,94 +6946,8 @@ static void genOpenMPDeclareReductionImpl(
     bool isByRef = ReductionProcessor::doReductionByRef(reductionType);
     // Compute the canonical reduction name the same way
     // processReductionArguments does.
-    std::string reductionNameStr = common::visit(
-        common::visitors{
-            [&](const clause::DefinedOperator &defOp) -> std::string {
-              return common::visit(
-                  common::visitors{
-                      [&](const clause::DefinedOperator::IntrinsicOperator
-                              &intrOp) -> std::string {
-                        // Directive side of the intrinsic-operator USER
-                        // reduction naming contract (clause side:
-                        // ReductionProcessor::processReductionArguments site
-                        // 2). A user `declare reduction(+:t)` is scoped by its
-                        // owning scope exactly like the defined-operator and
-                        // named paths, so two declarations for the same
-                        // (operator, type) in different scopes get distinct ops
-                        // instead of colliding on the one global builtin name.
-                        // Only user reductions reach here (builtins are created
-                        // directly by createDeclareReduction), so this always
-                        // scopes. The intrinsic-operator parse node carries no
-                        // reduction symbol: symOpt supplies it for separate
-                        // compilation; same-file it is resolved from the
-                        // current (declaration) scope under the operator's
-                        // mangled name (MakeNameFromOperator), which resolves
-                        // to the same ultimate the clause side finds, so both
-                        // name the op identically.
-                        const semantics::Symbol *redSymPtr = symOpt;
-                        if (!redSymPtr) {
-                          parser::CharBlock mangledOpName =
-                              semantics::MakeNameFromOperator(
-                                  ReductionProcessor::toParserIntrinsicOperator(
-                                      intrOp));
-                          redSymPtr = semantics::omp::FindUserReductionSymbol(
-                              converter.getCurrentScope(), mangledOpName);
-                        }
-                        if (!redSymPtr)
-                          TODO(converter.getCurrentLocation(),
-                               "OpenMP user-defined intrinsic-operator declare "
-                               "reduction symbol was not found for lowering");
-                        const semantics::Symbol &redSym =
-                            redSymPtr->GetUltimate();
-                        return ReductionProcessor::getScopedUserReductionName(
-                            converter, redSym, reductionType, isByRef);
-                      },
-                      [&](const clause::DefinedOperator::DefinedOpName &opName)
-                          -> std::string {
-                        // Directive side of the user-defined operator reduction
-                        // naming contract (the clause side is in
-                        // ReductionProcessor::processReductionArguments). Name
-                        // the op via getScopedUserReductionName from the
-                        // symbol's ultimate (name, owner) plus the per-type
-                        // suffix, byte-identical to the clause reference.
-                        // symOpt supplies the source symbol for separate
-                        // compilation, else opName.v.sym(). Runs once per
-                        // listed type (the enclosing loop walks typeNameList in
-                        // lockstep with the per-type combiner/initializer
-                        // instances), emitting one op per (operator, type);
-                        // single-type is N=1.
-                        const semantics::Symbol &redSym =
-                            symOpt ? symOpt->GetUltimate()
-                                   : opName.v.sym()->GetUltimate();
-                        const auto *userDetails =
-                            redSym.detailsIf<semantics::UserReductionDetails>();
-                        if (!userDetails)
-                          TODO(converter.getCurrentLocation(),
-                               "OpenMP user-defined operator declare reduction "
-                               "without user reduction details");
-                        return ReductionProcessor::getScopedUserReductionName(
-                            converter, redSym, reductionType, isByRef);
-                      },
-                  },
-                  defOp.u);
-            },
-            [&](const clause::ProcedureDesignator &pd) -> std::string {
-              // Directive side of the named-reduction naming contract (clause
-              // side in ReductionProcessor::processReductionArguments). Name
-              // the op via getScopedUserReductionName from the source symbol's
-              // ultimate (name, owner) plus the per-type suffix, byte-identical
-              // to the clause reference. symOpt supplies the source symbol for
-              // separate compilation, else pd.v.sym(); GetUltimate keeps the
-              // name stable across a plain `use`. reductionType is the declared
-              // element type (already canonical), so unlike the clause side it
-              // needs no namingType normalization.
-              const semantics::Symbol &redSym =
-                  (symOpt ? *symOpt : *pd.v.sym()).GetUltimate();
-              return ReductionProcessor::getScopedUserReductionName(
-                  converter, redSym, reductionType, isByRef);
-            },
-        },
-        redOp.u);
+    std::string reductionNameStr = getDeclareReductionOpName(
+        converter, redOp, symOpt, reductionType, isByRef);
 
     // Lazy path: emit only the op the clause requested, skipping this
     // declaration's other listed types (keeping the per-type iterators in
@@ -7150,7 +7206,35 @@ genOpenMPDeclareMapperImpl(lower::AbstractConverter &converter,
   List<Clause> clauses = makeClauses(construct.v.Clauses(), semaCtx);
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processMap(loc, stmtCtx, clauseOps);
+  // Emit cleanups inside the mapper region, before its terminator.
+  stmtCtx.finalizeAndReset();
   mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseOps);
+
+  // Values of the enclosing procedure are not available in the mapper region.
+  mlir::WalkResult usesOutsideValue = region.walk([&](mlir::Operation *op) {
+    for (mlir::Value operand : op->getOperands())
+      if (!region.isAncestor(operand.getParentRegion()))
+        return mlir::WalkResult::interrupt();
+    return mlir::WalkResult::advance();
+  });
+  if (usesOutsideValue.wasInterrupted())
+    TODO(loc, "declare mapper using a value from outside the mapper region");
+
+  // The mapper region must remain a single block once control flow is lowered.
+  // With an iterator modifier, intrinsic simplification may also add loops.
+  bool hasIterator = llvm::any_of(clauses, [](const Clause &clause) {
+    const auto *map = std::get_if<clause::Map>(&clause.u);
+    return map && std::get<std::optional<clause::Iterator>>(map->t).has_value();
+  });
+  for (mlir::Operation &op : region.front()) {
+    bool mayAddLoops =
+        hasIterator && mlir::isa<hlfir::hlfirDialect>(op.getDialect()) &&
+        !mlir::isa<hlfir::DeclareOp, hlfir::DesignateOp, hlfir::AssociateOp,
+                   hlfir::EndAssociateOp, hlfir::NoReassocOp>(op);
+    if (mayAddLoops ||
+        (op.getNumRegions() != 0 && !mlir::isa<mlir::omp::IteratorOp>(op)))
+      TODO(loc, "declare mapper with control flow");
+  }
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

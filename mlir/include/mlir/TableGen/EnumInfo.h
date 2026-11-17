@@ -138,12 +138,13 @@ public:
   StringRef getBitEnumSeparator() const;
 
   // The token that separates the cases of a bit enum, ignoring the spaces
-  // around it.
-  enum class BitEnumSeparatorKind { VerticalBar, Comma };
+  // around it. `Space` means the separator is a space " ".
+  enum class BitEnumSeparatorKind { VerticalBar, Comma, Space };
   BitEnumSeparatorKind getBitEnumSeparatorKind() const;
 
   // Returns the name of the `AsmParser` method that parses the separator
-  // between the cases of a bit enum.
+  // between the cases of a bit enum. Must not be called for a space
+  // separator.
   StringRef getBitEnumSeparatorParser() const;
 
   // Returns the TableGen definition this EnumAttrCase was constructed from.

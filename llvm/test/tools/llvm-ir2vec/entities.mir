@@ -28,3 +28,4 @@ body:             |
     %0:gr32 = COPY $edi
     $eax = COPY %0
     RET 0, $eax
+...

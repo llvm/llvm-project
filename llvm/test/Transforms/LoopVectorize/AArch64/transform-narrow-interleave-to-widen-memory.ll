@@ -690,7 +690,7 @@ define void @reverse_load_store_interleave_group(ptr noalias %data) {
 ; VF2-NEXT:    [[TMP0:%.*]] = sub i64 99, [[INDEX]]
 ; VF2-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[TMP0]], 1
 ; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP1]]
-; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i64 -2
+; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 -16
 ; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
 ; VF2-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
 ; VF2-NEXT:    [[REVERSE:%.*]] = shufflevector <2 x i64> [[STRIDED_VEC]], <2 x i64> poison, <2 x i32> <i32 1, i32 0>
@@ -720,7 +720,7 @@ define void @reverse_load_store_interleave_group(ptr noalias %data) {
 ; VF4-NEXT:    [[TMP0:%.*]] = sub i64 99, [[INDEX]]
 ; VF4-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[TMP0]], 1
 ; VF4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP1]]
-; VF4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i64 -6
+; VF4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 -48
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP3]], align 8
 ; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; VF4-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i64> [[STRIDED_VEC]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -797,7 +797,7 @@ define void @narrowed_load_uses_group_align(ptr noalias %src, ptr noalias %dst, 
 ; VF2-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP1:%.*]] = or disjoint i64 [[TMP0]], 1
 ; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP1]]
-; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 -8
+; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 -8
 ; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP3]], align 8
 ; VF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP0]]
 ; VF2-NEXT:    store <2 x i64> [[WIDE_LOAD]], ptr [[TMP4]], align 8
@@ -822,7 +822,7 @@ define void @narrowed_load_uses_group_align(ptr noalias %src, ptr noalias %dst, 
 ; VF4-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF4-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[TMP1]], 1
 ; VF4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP2]]
-; VF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 -8
+; VF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 -8
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP4]], align 8
 ; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; VF4-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>

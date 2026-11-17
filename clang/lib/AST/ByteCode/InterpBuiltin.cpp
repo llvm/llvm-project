@@ -1027,8 +1027,7 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
 
   // Write Result to ResultPtr and put Overflow on the stack.
   assignIntegral(S, ResultPtr, ResultT, Result);
-  if (ResultPtr.canBeInitialized())
-    ResultPtr.initialize();
+  ResultPtr.initialize();
 
   assert(Call->getDirectCallee()->getReturnType()->isBooleanType());
   S.Stk.push<Boolean>(Overflow);
@@ -1091,8 +1090,7 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
   PrimType CarryOutT = *S.getContext().classify(CarryOutType);
   assignIntegral(S, CarryOutPtr, CarryOutT, CarryOut);
-  if (CarryOutPtr.canBeInitialized())
-    CarryOutPtr.initialize();
+  CarryOutPtr.initialize();
 
   assert(S.getASTContext().hasSimilarType(Call->getType(),
                                           Call->getArg(0)->getType()));
@@ -7137,8 +7135,7 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, PtrView Src, PtrView Dest,
       }
 
       TYPE_SWITCH(*FT, DestField.deref<T>() = SrcField.deref<T>(););
-      if (DestField.canBeInitialized())
-        DestField.initialize();
+      DestField.initialize();
       if (Activate)
         DestField.activate();
       return true;

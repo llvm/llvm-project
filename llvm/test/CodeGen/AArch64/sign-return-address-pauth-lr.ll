@@ -1176,7 +1176,6 @@ define i32 @leaf_sign_all_a_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 ; PAUTHLR-LABEL: leaf_sign_all_a_key_bti:
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
-; PAUTHLR-NEXT:    bti c
 ; PAUTHLR-NEXT:  .Ltmp10:
 ; PAUTHLR-NEXT:    paciasppc
 ; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp10
@@ -1236,7 +1235,6 @@ define i32 @leaf_sign_all_a_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 ; NEGATE-PAUTHLR:       // %bb.0:
 ; NEGATE-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
-; NEGATE-PAUTHLR-NEXT:    bti c
 ; NEGATE-PAUTHLR-NEXT:  .Ltmp10:
 ; NEGATE-PAUTHLR-NEXT:    paciasppc
 ; NEGATE-PAUTHLR-NEXT:    retaasppc .Ltmp10
@@ -1276,7 +1274,6 @@ define i32 @leaf_sign_all_b_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:    .cfi_b_key_frame
 ; PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
-; PAUTHLR-NEXT:    bti c
 ; PAUTHLR-NEXT:  .Ltmp11:
 ; PAUTHLR-NEXT:    pacibsppc
 ; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp11
@@ -1341,7 +1338,6 @@ define i32 @leaf_sign_all_b_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 ; NEGATE-PAUTHLR-NEXT:    .cfi_b_key_frame
 ; NEGATE-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
-; NEGATE-PAUTHLR-NEXT:    bti c
 ; NEGATE-PAUTHLR-NEXT:  .Ltmp11:
 ; NEGATE-PAUTHLR-NEXT:    pacibsppc
 ; NEGATE-PAUTHLR-NEXT:    retabsppc .Ltmp11
@@ -1367,7 +1363,6 @@ define i32 @leaf_sign_all_v83_b_key_bti(i32 %x) "branch-protection-pauth-lr" "si
 ; PAUTHLR:       // %bb.0:
 ; PAUTHLR-NEXT:    .cfi_b_key_frame
 ; PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
-; PAUTHLR-NEXT:    bti c
 ; PAUTHLR-NEXT:  .Ltmp12:
 ; PAUTHLR-NEXT:    pacibsppc
 ; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp12
@@ -1404,7 +1399,6 @@ define i32 @leaf_sign_all_v83_b_key_bti(i32 %x) "branch-protection-pauth-lr" "si
 ; NEGATE-PAUTHLR-NEXT:    .cfi_b_key_frame
 ; NEGATE-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; NEGATE-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
-; NEGATE-PAUTHLR-NEXT:    bti c
 ; NEGATE-PAUTHLR-NEXT:  .Ltmp12:
 ; NEGATE-PAUTHLR-NEXT:    pacibsppc
 ; NEGATE-PAUTHLR-NEXT:    retabsppc .Ltmp12

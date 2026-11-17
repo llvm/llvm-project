@@ -18,13 +18,13 @@ body:             |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $agpr1
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
     ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_96_align2 = REG_SEQUENCE killed [[REG_SEQUENCE]], %subreg.sub0_sub1, killed [[DEF]], %subreg.sub2
+    ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_96_align2 = REG_SEQUENCE [[REG_SEQUENCE]], %subreg.sub0_sub1, [[DEF]], %subreg.sub2
     ; GCN-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE1]]
     %0:vgpr_32 = COPY $agpr0
     %1:vgpr_32 = COPY $agpr1
     %2:vreg_64_align2 = REG_SEQUENCE %0:vgpr_32, %subreg.sub0, %1:vgpr_32, %subreg.sub1
     %3:vgpr_32 = IMPLICIT_DEF
-    %4:vreg_96_align2 = REG_SEQUENCE killed %2:vreg_64_align2, %subreg.sub0_sub1, killed %3:vgpr_32, %subreg.sub2
+    %4:vreg_96_align2 = REG_SEQUENCE %2:vreg_64_align2, %subreg.sub0_sub1, %3:vgpr_32, %subreg.sub2
     S_ENDPGM 0, implicit %4
 ...
 ---

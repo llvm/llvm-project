@@ -105,7 +105,7 @@ public:
 
   // Set the stack frame size of a function in the metadata. This only covers
   // the frame of the function itself, not the frames of any of its callees.
-  void setFunctionStackFrameSize(StringRef FnName, unsigned Val);
+  void setFunctionStackFrameSize(StringRef FnName, uint64_t Val);
 
   // Set the backend stack size metadata, including the frames of its known
   // callees. Recursion and indirect/external calls must be handled by the

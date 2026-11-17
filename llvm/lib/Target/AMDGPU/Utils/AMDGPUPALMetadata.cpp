@@ -367,7 +367,7 @@ void AMDGPUPALMetadata::setScratchSize(unsigned CC, const MCExpr *Val,
 }
 
 void AMDGPUPALMetadata::setFunctionStackFrameSize(StringRef FnName,
-                                                  unsigned Val) {
+                                                  uint64_t Val) {
   auto Node = getShaderFunction(FnName);
   Node[".stack_frame_size_in_bytes"] = MsgPackDoc.getNode(Val);
 }

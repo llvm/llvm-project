@@ -346,8 +346,8 @@ unsigned _Accum bool_to_uaccum(bool i) {
 // CIR-NEXT: %[[MAX:.*]] = cir.const #cir.int<32767> : !u16i
 // CIR-NEXT: %[[GT_CMP:.*]] = cir.cmp gt %[[SHIFT]], %[[MAX]] : !u16i
 // CIR-NEXT: %[[MAX_SEL:.*]] = cir.select if %[[GT_CMP]] then %[[MAX]] else %[[SHIFT]] : (!cir.bool, !u16i, !u16i) -> !u16i
-// CIR-NEXT: %[[RET_BITCAST:.*]] = cir.cast bitcast %[[RET:.*]] : !cir.ptr<!s16i> -> !cir.ptr<!u16i>
-// CIR-NEXT: cir.store %[[MAX_SEL]], %[[RET_BITCAST]] : !u16i, !cir.ptr<!u16i>
+// CIR-NEXT: %[[RES:.*]] = cir.cast integral %[[MAX_SEL]] : !u16i -> !s16i
+// CIR-NEXT: cir.store %[[RES]], %[[RET:.*]] : !s16i, !cir.ptr<!s16i>
 // CIR-NEXT: %[[LOAD_RET:.*]] = cir.load %[[RET]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: cir.return %[[LOAD_RET]] : !s16i
 // LLVM-LABEL: @bool_to_sat_fract
@@ -368,8 +368,8 @@ _Sat _Fract bool_to_sat_fract(bool i) {
 // CIR-NEXT: %[[CAST:.*]] = cir.cast integral %[[BOOL_CAST]] : !cir.int<u, 1> -> !u32i
 // CIR-NEXT: %[[SHIFT_AMOUNT:.*]] = cir.const #cir.int<15> : !u32i
 // CIR-NEXT: %[[SHIFT:.*]] = cir.shift(left, %[[CAST]] : !u32i, %[[SHIFT_AMOUNT]] : !u32i) -> !u32i
-// CIR-NEXT: %[[RET_BITCAST:.*]] = cir.cast bitcast %[[RET:.*]] : !cir.ptr<!s32i> -> !cir.ptr<!u32i>
-// CIR-NEXT: cir.store %[[SHIFT]], %[[RET_BITCAST]] : !u32i, !cir.ptr<!u32i>
+// CIR-NEXT: %[[RES:.*]] = cir.cast integral %[[SHIFT]] : !u32i -> !s32i
+// CIR-NEXT: cir.store %[[RES]], %[[RET:.*]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT: %[[LOAD_RET:.*]] = cir.load %[[RET]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: cir.return %[[LOAD_RET]] : !s32i
 // LLVM-LABEL: @bool_to_sat_accum

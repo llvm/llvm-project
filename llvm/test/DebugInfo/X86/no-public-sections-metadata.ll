@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -debugger-tune=gdb -filetype=asm < %s | FileCheck %s --check-prefix=DISABLED
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=asm < %s | FileCheck %s --check-prefix=DISABLED
 
 ; DISABLED-NOT: pub{{names|types}}
 
@@ -8,7 +8,7 @@
 @b = global %struct.bar zeroinitializer, align 1, !dbg !0
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!11, !12}
+!llvm.module.flags = !{!11, !12, !14}
 !llvm.ident = !{!13}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -25,4 +25,5 @@
 !11 = !{i32 2, !"Dwarf Version", i32 4}
 !12 = !{i32 2, !"Debug Info Version", i32 3}
 !13 = !{!"clang"}
+!14 = !{i32 2, !"debugger-tuning", !"gdb"}
 

@@ -19,7 +19,6 @@
 
   attributes #0 = { nounwind }
 ...
----
 
 # Check that we preserve the inactive lanes of registers v8+ received in the
 # MachineFunctionInfo as wwmReservedRegs.

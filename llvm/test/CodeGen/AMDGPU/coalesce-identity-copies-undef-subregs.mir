@@ -44,7 +44,7 @@ body:             |
     S_BRANCH %bb.2
 
   bb.2:
-    undef %0.sub1:vreg_64 = nofpexcept V_CEIL_F32_e32 killed %0.sub1, implicit $mode, implicit $exec
+    undef %0.sub1:vreg_64 = nofpexcept V_CEIL_F32_e32 %0.sub1, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
 ...
@@ -88,7 +88,7 @@ body:             |
     S_BRANCH %bb.2
 
   bb.2:
-    undef %0.sub1:vreg_64 = nofpexcept V_CEIL_F32_e32 killed %0.sub1, implicit $mode, implicit $exec
+    undef %0.sub1:vreg_64 = nofpexcept V_CEIL_F32_e32 %0.sub1, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
 ...
@@ -123,13 +123,13 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.1
 
-    %0:vreg_64 = COPY killed %0
+    %0:vreg_64 = COPY %0
     %0:vreg_64 = COPY %0
     S_CBRANCH_EXECNZ %bb.1, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:
-    undef %0.sub1:vreg_64 = nofpexcept V_MUL_F32_e32 0, killed %0.sub1, implicit $mode, implicit $exec
+    undef %0.sub1:vreg_64 = nofpexcept V_MUL_F32_e32 0, %0.sub1, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
 ...
@@ -164,13 +164,13 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.1
 
-    %0:vreg_64 = COPY killed %0
+    %0:vreg_64 = COPY %0
     %0:vreg_64 = COPY %0
     S_CBRANCH_EXECNZ %bb.1, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:
-    %0.sub1:vreg_64 = nofpexcept V_MUL_F32_e32 0, killed %0.sub1, implicit $mode, implicit $exec
+    %0.sub1:vreg_64 = nofpexcept V_MUL_F32_e32 0, %0.sub1, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
 ...
@@ -212,7 +212,7 @@ body:             |
 
   bb.2:
     S_NOP 0, implicit %0.sub0
-    undef %0.sub1:vreg_64 = nofpexcept V_CEIL_F32_e32 killed %0.sub1, implicit $mode, implicit $exec
+    undef %0.sub1:vreg_64 = nofpexcept V_CEIL_F32_e32 %0.sub1, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
   bb.3:
@@ -315,14 +315,14 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.1
 
-    %1:vreg_64 = COPY killed %0
+    %1:vreg_64 = COPY %0
     %0:vreg_64 = COPY %1
     S_CBRANCH_EXECNZ %bb.1, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:
     undef %2.sub1:vreg_64 = COPY %0.sub1
-    %0:vreg_64 = COPY killed %2
+    %0:vreg_64 = COPY %2
     S_BRANCH %bb.1
 
 ...
@@ -356,7 +356,7 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.1
 
-    %1:vreg_64 = COPY killed %0
+    %1:vreg_64 = COPY %0
     %0:vreg_64 = COPY %1
     S_CBRANCH_EXECNZ %bb.1, implicit $exec
     S_BRANCH %bb.2
@@ -396,7 +396,7 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.1
 
-    %1:vreg_64 = COPY killed %0
+    %1:vreg_64 = COPY %0
     %0:vreg_64 = COPY %1
     S_CBRANCH_EXECNZ %bb.1, implicit $exec
     S_BRANCH %bb.2
@@ -438,13 +438,13 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.1
 
-    %0:vreg_64 = COPY killed %0
+    %0:vreg_64 = COPY %0
     S_CBRANCH_EXECNZ %bb.1, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:
-    undef %1.sub1:vreg_64 = nofpexcept V_CEIL_F32_e32 killed %0.sub1, implicit $mode, implicit $exec
-    %0:vreg_64 = COPY killed %1
+    undef %1.sub1:vreg_64 = nofpexcept V_CEIL_F32_e32 %0.sub1, implicit $mode, implicit $exec
+    %0:vreg_64 = COPY %1
     S_BRANCH %bb.1
 
 ...
@@ -479,7 +479,7 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.1
 
-    %0:vreg_64 = COPY killed %0
+    %0:vreg_64 = COPY %0
     S_CBRANCH_EXECNZ %bb.1, implicit $exec
     S_BRANCH %bb.2
 

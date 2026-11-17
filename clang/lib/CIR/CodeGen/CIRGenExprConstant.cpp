@@ -946,14 +946,10 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     // at properties of the most recent declaration at the point of emission.
     d = cast<ValueDecl>(d->getMostRecentDecl());
 
-    if (d->hasAttr<WeakRefAttr>()) {
-      cgm.errorNYI(d->getSourceRange(),
-                   "ConstantLValueEmitter: emit pointer base for weakref");
-      return {};
-    }
-
     if (auto *fd = dyn_cast<FunctionDecl>(d)) {
-      cir::FuncOp fop = cgm.getAddrOfFunction(fd);
+      cir::FuncOp fop = cgm.getRawFunctionPointer(GlobalDecl{fd});
+      if (!fop)
+        return {};
       CIRGenBuilderTy &builder = cgm.getBuilder();
       mlir::MLIRContext *mlirContext = builder.getContext();
       // Use the destination pointer type (e.g. struct field type), not
@@ -976,6 +972,14 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
                       .getSymNameAttr();
       return cir::GlobalViewAttr::get(
           ptrTy, mlir::FlatSymbolRefAttr::get(mlirContext, symName));
+    }
+
+    // A weakref refers to its alias target. Handle non-function versions here.
+    if (d->hasAttr<WeakRefAttr>()) {
+      auto aliasee = cast_or_null<cir::GlobalOp>(cgm.getWeakRefReference(d));
+      if (!aliasee)
+        return {};
+      return cgm.getBuilder().getGlobalViewAttr(aliasee);
     }
 
     if (auto *vd = dyn_cast<VarDecl>(d)) {

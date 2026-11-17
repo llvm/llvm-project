@@ -5,7 +5,7 @@
 # GCN:      %0:vreg_64 = IMPLICIT_DEF
 # GCN-NEXT: %1:vgpr_32 = IMPLICIT_DEF
 # GCN-NEXT: %2:vgpr_32 = IMPLICIT_DEF
-# GCN-NEXT: DS_WRITE2_B32_gfx9 %0.sub0, killed %1, killed %2, 0, 1, 0, implicit $exec
+# GCN-NEXT: DS_WRITE2_B32_gfx9 %0.sub0, %1, %2, 0, 1, 0, implicit $exec
 
 ---
 name:            fold_vgpr_to_vgpr_copy
@@ -17,7 +17,7 @@ body:             |
     %3:vgpr_32 = IMPLICIT_DEF
     %1:vgpr_32 = COPY %0.sub0
     %2:vgpr_32 = COPY %1
-    DS_WRITE2_B32_gfx9 %2, killed %4, killed %3, 0, 1, 0, implicit $exec
+    DS_WRITE2_B32_gfx9 %2, %4, %3, 0, 1, 0, implicit $exec
 ...
 
 # GCN-LABEL: name: fold_sgpr_to_vgpr_copy
@@ -25,7 +25,7 @@ body:             |
 # GCN-NEXT: %1:vgpr_32 = IMPLICIT_DEF
 # GCN-NEXT: %2:vgpr_32 = IMPLICIT_DEF
 # GCN-NEXT: %4:vgpr_32 = COPY %0.sub0
-# GCN-NEXT: DS_WRITE2_B32_gfx9 %4, killed %1, killed %2, 0, 1, 0, implicit $exec
+# GCN-NEXT: DS_WRITE2_B32_gfx9 %4, %1, %2, 0, 1, 0, implicit $exec
 name:            fold_sgpr_to_vgpr_copy
 body:             |
   bb.0:
@@ -35,7 +35,7 @@ body:             |
     %3:vgpr_32 = IMPLICIT_DEF
     %1:sgpr_32 = COPY %0.sub0
     %2:vgpr_32 = COPY %1
-    DS_WRITE2_B32_gfx9 %2, killed %4, killed %3, 0, 1, 0, implicit $exec
+    DS_WRITE2_B32_gfx9 %2, %4, %3, 0, 1, 0, implicit $exec
 ...
 
 # GCN-LABEL: name: fma_sgpr_use
@@ -50,7 +50,7 @@ body:             |
     %2:sgpr_32 = COPY %0.sub1
     %3:vgpr_32 = COPY %2
     %4:vgpr_32 = nnan ninf nsz arcp contract afn reassoc V_FMAC_F32_e64 2, %1, 0, 1073741824, 0, %3, 0, 0, implicit $mode, implicit $exec
-    DS_WRITE2_B32_gfx9 undef %5:vgpr_32, killed %4, undef %6:vgpr_32, 0, 1, 0, implicit $exec
+    DS_WRITE2_B32_gfx9 undef %5:vgpr_32, %4, undef %6:vgpr_32, 0, 1, 0, implicit $exec
 ...
 
 # GCN-LABEL: name: fma_sgpr_sgpr_use
