@@ -25,12 +25,6 @@
 ---
 name:            masked_load_nxv8i64
 alignment:       4
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: vr }
-  - { id: 2, class: vrm8nov0 }
-  - { id: 3, class: vrm8 }
-  - { id: 4, class: vrm8nov0 }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$v0', virtual-reg: '%1' }

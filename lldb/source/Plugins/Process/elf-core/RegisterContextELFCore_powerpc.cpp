@@ -62,8 +62,8 @@ bool RegisterContextELFCore_powerpc::WriteVMX() {
   return false;
 }
 
-bool RegisterContextELFCore_powerpc::ReadRegister(
-    const RegisterInfo *reg_info, RegisterValue &value) {
+bool RegisterContextELFCore_powerpc::ReadRegister(const RegisterInfo *reg_info,
+                                                  RegisterValue &value) {
   lldb::offset_t offset = reg_info->byte_offset;
   if (IsFPR(reg_info->kinds[lldb::eRegisterKindLLDB])) {
     uint64_t v = m_fpr.GetMaxU64(&offset, reg_info->byte_size);
@@ -96,8 +96,8 @@ bool RegisterContextELFCore_powerpc::ReadAllRegisterValues(
   return false;
 }
 
-bool RegisterContextELFCore_powerpc::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &value) {
+bool RegisterContextELFCore_powerpc::WriteRegister(const RegisterInfo *reg_info,
+                                                   const RegisterValue &value) {
   return false;
 }
 

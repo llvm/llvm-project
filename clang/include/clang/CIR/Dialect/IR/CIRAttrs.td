@@ -1327,6 +1327,10 @@ def CIR_VTableAttr : CIR_ValueLikeAttr<"VTable", "vtable"> {
     in the case of multiple inheritence, the anonymous structure may contain
     multiple arrays, each of which is a vtable.
 
+    The `address_points` parameter holds the `#cir.address_point` object for
+    each entry in the vtable array. The address point is the 'split' location
+    between the offset/RTTI components and the virtual table elements.
+
     Example 1 (single vtable):
     ```
     cir.global linkonce_odr @_ZTV6Mother =
@@ -1337,7 +1341,7 @@ def CIR_VTableAttr : CIR_ValueLikeAttr<"VTable", "vtable"> {
           #cir.global_view<@_ZN6Mother9MotherFooEv> : !cir.ptr<!u8i>,
           #cir.global_view<@_ZN6Mother10MotherFoo2Ev> : !cir.ptr<!u8i>
         ]> : !cir.array<!cir.ptr<!u8i> x 4>
-      }> : !rec_anon_struct1
+      }, address_points = [<index = 0, offset = 2>]> : !rec_anon_struct1
     ```
 
     Example 2 (multiple vtables):
@@ -1355,7 +1359,7 @@ def CIR_VTableAttr : CIR_ValueLikeAttr<"VTable", "vtable"> {
           #cir.global_view<@_ZTI5Child> : !cir.ptr<!u8i>,
           #cir.global_view<@_ZN6Father9FatherFooEv> : !cir.ptr<!u8i>
         ]> : !cir.array<!cir.ptr<!u8i> x 3>
-      }> : !rec_anon_struct2
+      }, address_points = [<index = 0, offset = 2>, <index = 1, offset = 2>]> : !rec_anon_struct2
     ```
   }];
 
@@ -1363,19 +1367,22 @@ def CIR_VTableAttr : CIR_ValueLikeAttr<"VTable", "vtable"> {
   // vtable information.
   let parameters = (ins
     AttributeSelfTypeParameter<"">:$type,
-    "mlir::ArrayAttr":$data
+    "mlir::ArrayAttr":$data,
+    "mlir::ArrayAttr":$address_points
   );
 
   let builders = [
     AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
-                                        "mlir::ArrayAttr":$data), [{
-      return $_get(type.getContext(), type, data);
+                                        "mlir::ArrayAttr":$data,
+                                        "mlir::ArrayAttr":$address_points), [{
+      return $_get(type.getContext(), type, data, address_points);
     }]>
   ];
 
   let genVerifyDecl = 1;
   let assemblyFormat = [{
-    `<` custom<RecordMembers>($data) `>`
+    `<` custom<RecordMembers>($data) `,` `address_points` `=`
+    $address_points `>`
   }];
 }
 
@@ -1555,6 +1562,32 @@ def CIR_PtrSpecAttr : CIR_Attr<"PtrSpec", "ptr_spec"> {
     static constexpr uint32_t kOptionalSpecValue =
         std::numeric_limits<uint32_t>::max();
   }];
+  let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// BitIntSpecAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_BitIntSpecAttr : CIR_Attr<"BitIntSpec", "bitint_spec"> {
+  let summary = "!cir.int _BitInt data layout spec";
+  let description = [{
+    Upper bound, in bits, on the ABI alignment of a `_BitInt`. This is
+    `TargetInfo::getBitIntMaxAlign()`. `_BitInt(N)` is aligned to
+    `min(PowerOf2Ceil(N), max_align)` bits, and at least one byte.
+
+    Used as the value of the `!cir.int<u, 1, bitint>`-keyed data-layout
+    entry. The key names the `_BitInt` class. Its width is not a layout
+    input.
+
+    ```mlir
+    #dlti.dl_spec<!cir.int<u, 1, bitint> =
+        #cir.bitint_spec<max_align = 64>>
+    ```
+  }];
+  let parameters = (ins "uint32_t":$max_align);
+  let assemblyFormat = "`<` struct(params) `>`";
   let genVerifyDecl = 1;
   let canHaveIllegalCXXABIType = 0;
 }
@@ -2803,9 +2836,15 @@ def CIR_LoweringOptionsAttr
 //===----------------------------------------------------------------------===//
 
 def CIR_AnnotationAttr : CIR_Attr<"Annotation", "annotation"> {
-  let summary = "Annotation attribute for global variables and functions";
+  let summary = "A C/C++ `annotate` attribute";
   let description = [{
-    Represents a C/C++ `__attribute__((annotate(...)))` in CIR.
+    Represents a C/C++ `__attribute__((annotate(...)))` in CIR. Global
+    variables and functions carry these in their `annotations` attribute; local
+    variables, parameters, record fields, and `__builtin_annotation` use them
+    through the `cir.var_annotation`, `cir.ptr_annotation`, and
+    `cir.annotation` operations. The source file and line of an annotation are
+    taken from the location of the operation that carries it, and its strings
+    are emitted as globals in the `llvm.metadata` section.
 
     Example C code:
     ```c

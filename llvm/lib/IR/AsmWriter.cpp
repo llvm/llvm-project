@@ -2963,7 +2963,6 @@ class AssemblyWriter {
   formatted_raw_ostream &Out;
   const Module *TheModule = nullptr;
   const ModuleSummaryIndex *TheIndex = nullptr;
-  std::unique_ptr<SlotTracker> SlotTrackerStorage;
   SlotTracker &Machine;
   TypePrinting TypePrinter;
   AssemblyAnnotationWriter *AnnotationWriter = nullptr;
@@ -3358,7 +3357,9 @@ void AssemblyWriter::printModuleSummaryIndex() {
   // Print the TypeIdMap entries.
   for (const auto &TID : TheIndex->typeIds()) {
     Out << "^" << Machine.getTypeIdSlot(TID.second.first)
-        << " = typeid: (name: \"" << TID.second.first << "\"";
+        << " = typeid: (name: \"";
+    printEscapedString(TID.second.first, Out);
+    Out << "\"";
     printTypeIdSummary(TID.second.second);
     Out << ") ; guid = " << TID.first << "\n";
   }
@@ -3367,7 +3368,9 @@ void AssemblyWriter::printModuleSummaryIndex() {
   for (auto &TId : TheIndex->typeIdCompatibleVtableMap()) {
     auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(TId.first);
     Out << "^" << Machine.getTypeIdCompatibleVtableSlot(TId.first)
-        << " = typeidCompatibleVTable: (name: \"" << TId.first << "\"";
+        << " = typeidCompatibleVTable: (name: \"";
+    printEscapedString(TId.first, Out);
+    Out << "\"";
     printTypeIdCompatibleVtableSummary(TId.second);
     Out << ") ; guid = " << GUID << "\n";
   }
@@ -3409,6 +3412,8 @@ getWholeProgDevirtResKindName(WholeProgramDevirtResolution::Kind K) {
     return "singleImpl";
   case WholeProgramDevirtResolution::BranchFunnel:
     return "branchFunnel";
+  case WholeProgramDevirtResolution::Speculative:
+    return "speculative";
   }
   llvm_unreachable("invalid WholeProgramDevirtResolution kind");
 }
@@ -3503,8 +3508,12 @@ void AssemblyWriter::printWPDRes(const WholeProgramDevirtResolution &WPDRes) {
   Out << "wpdRes: (kind: ";
   Out << getWholeProgDevirtResKindName(WPDRes.TheKind);
 
-  if (WPDRes.TheKind == WholeProgramDevirtResolution::SingleImpl)
-    Out << ", singleImplName: \"" << WPDRes.SingleImplName << "\"";
+  if (WPDRes.TheKind == WholeProgramDevirtResolution::SingleImpl ||
+      WPDRes.TheKind == WholeProgramDevirtResolution::Speculative) {
+    Out << ", singleImplName: \"";
+    printEscapedString(WPDRes.SingleImplName, Out);
+    Out << "\"";
+  }
 
   if (!WPDRes.ResByArg.empty()) {
     Out << ", resByArg: (";
@@ -3911,10 +3920,13 @@ void AssemblyWriter::printSummary(const GlobalValueSummary &Summary) {
 
 void AssemblyWriter::printSummaryInfo(unsigned Slot, const ValueInfo &VI) {
   Out << "^" << Slot << " = gv: (";
-  if (VI.hasName() && !VI.name().empty())
-    Out << "name: \"" << VI.name() << "\"";
-  else
+  if (VI.hasName() && !VI.name().empty()) {
+    Out << "name: \"";
+    printEscapedString(VI.name(), Out);
+    Out << "\"";
+  } else {
     Out << "guid: " << VI.getGUID();
+  }
   if (!VI.getSummaryList().empty()) {
     Out << ", summaries: (";
     ListSeparator FS;

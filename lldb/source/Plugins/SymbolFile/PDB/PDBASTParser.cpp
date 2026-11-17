@@ -57,7 +57,7 @@ static int TranslateUdtKind(PDB_UdtType pdb_kind) {
   case PDB_UdtType::Interface:
     return llvm::to_underlying(clang::TagTypeKind::Interface);
   }
-  llvm_unreachable("unsuported PDB UDT type");
+  llvm_unreachable("unsupported PDB UDT type");
 }
 
 static lldb::Encoding TranslateBuiltinEncoding(PDB_BuiltinType type) {

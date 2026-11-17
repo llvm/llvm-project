@@ -40,11 +40,11 @@ add_entrypoint_object(
   HDRS
     regerror.h
   DEPENDS
+    libc.hdr.regex_macros
     libc.hdr.types.regex_t
     libc.hdr.types.size_t
-    libc.hdr.regex_macros
-    libc.src.__support.common
     libc.src.__support.CPP.string_view
+    libc.src.__support.macros.null_check
     libc.src.string.memory_utils.inline_memcpy
 )
 

@@ -242,6 +242,7 @@ add_header(
     .dev_t .ino_t .mode_t .nlink_t .uid_t .gid_t .off_t .struct_timespec
     .blksize_t .blkcnt_t
 )
+add_header(struct_statx HDR struct_statx.h)
 add_header(struct_tm HDR struct_tm.h)
 add_header(struct_passwd HDR struct_passwd.h DEPENDS .uid_t .gid_t)
 add_header(struct_group HDR struct_group.h DEPENDS .gid_t)
@@ -380,6 +381,7 @@ add_header(
 )
 add_header(locale_t HDR locale_t.h)
 add_header(struct_lconv HDR struct_lconv.h)
+add_header(struct_mallinfo2 HDR struct_mallinfo2.h DEPENDS .size_t)
 add_header(int_hk_t HDR int_hk_t.h)
 add_header(int_hr_t HDR int_hr_t.h)
 add_header(int_k_t HDR int_k_t.h)

@@ -724,4 +724,25 @@ define <vscale x 2 x half> @test_vp_splice_nxv2f16_with_firstelt(half %first, <v
   ret <vscale x 2 x half> %v
 }
 
+define <vscale x 2 x i10> @test_vp_splice_nxv2i10(<vscale x 2 x i10> %va, <vscale x 2 x i10> %vb, i32 zeroext %evla, i32 zeroext %evlb) #0 {
+; NOVLDEP-LABEL: test_vp_splice_nxv2i10:
+; NOVLDEP:       # %bb.0:
+; NOVLDEP-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
+; NOVLDEP-NEXT:    vslidedown.vi v8, v8, 1
+; NOVLDEP-NEXT:    addi a0, a0, -1
+; NOVLDEP-NEXT:    vslideup.vx v8, v9, a0
+; NOVLDEP-NEXT:    ret
+;
+; VLDEP-LABEL: test_vp_splice_nxv2i10:
+; VLDEP:       # %bb.0:
+; VLDEP-NEXT:    addi a0, a0, -1
+; VLDEP-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; VLDEP-NEXT:    vslidedown.vi v8, v8, 1
+; VLDEP-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
+; VLDEP-NEXT:    vslideup.vx v8, v9, a0
+; VLDEP-NEXT:    ret
+  %v = call <vscale x 2 x i10> @llvm.experimental.vp.splice.nxv2i10(<vscale x 2 x i10> %va, <vscale x 2 x i10> %vb, i32 1, <vscale x 2 x i1> splat (i1 1), i32 %evla, i32 %evlb)
+  ret <vscale x 2 x i10> %v
+}
+
 attributes #0 = { nounwind vscale_range(2,0) }
