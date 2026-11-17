@@ -1210,10 +1210,8 @@ void MemorySSA::markUnreachableAsLiveOnEntry(BasicBlock *BB) {
 
 MemorySSA::MemorySSA(Function &Func, AliasAnalysis *AA, DominatorTree *DT)
     : Opts(getAnalysisOptions(Func)), DT(DT), F(&Func),
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-      BlockNumberEpoch(Func.getBlockNumberEpoch()),
-#endif
-      LiveOnEntryDef(nullptr), Walker(nullptr), SkipWalker(nullptr) {
+      BlockNumberEpoch(Func.getBlockNumberEpoch()), LiveOnEntryDef(nullptr),
+      Walker(nullptr), SkipWalker(nullptr) {
   // Build MemorySSA using a batch alias analysis. This reuses the internal
   // state that AA collects during an alias()/getModRefInfo() call. This is
   // safe because there are no CFG changes while building MemorySSA and can
@@ -1231,9 +1229,7 @@ MemorySSA::MemorySSA(Function &Func, AliasAnalysis *AA, DominatorTree *DT)
 
 MemorySSA::MemorySSA(Loop &L, AliasAnalysis *AA, DominatorTree *DT)
     : Opts(getAnalysisOptions(L)), DT(DT), L(&L),
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
       BlockNumberEpoch(L.getHeader()->getParent()->getBlockNumberEpoch()),
-#endif
       LiveOnEntryDef(nullptr), Walker(nullptr), SkipWalker(nullptr) {
   // Build MemorySSA using a batch alias analysis. This reuses the internal
   // state that AA collects during an alias()/getModRefInfo() call. This is

@@ -93,7 +93,6 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/PHITransAddr.h"
-#include "llvm/Config/abi-breaking.h"
 #include "llvm/IR/DerivedUser.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Type.h"
@@ -842,7 +841,7 @@ private:
   };
   template <typename ListT> using ListPtr = std::unique_ptr<ListT, ListDeleter>;
 
-  /// Per-block state, indexed by block number.
+  /// Per-block state.
   struct BlockInfo {
     /// The list of all accesses in the block. Owns the accesses.
     ListPtr<AccessList> Accesses;
@@ -853,10 +852,8 @@ private:
   /// Return the index of \p BB in the per-block lists. Blocks must not be
   /// renumbered or moved to a different function while MemorySSA is alive.
   unsigned getBlockIndex(const BasicBlock *BB) const {
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(BB->getParent()->getBlockNumberEpoch() == BlockNumberEpoch &&
            "Blocks were renumbered while MemorySSA was alive");
-#endif
     return BB->getNumber();
   }
 
@@ -897,10 +894,8 @@ private:
   // number. The Accesses lists really own all the MemoryAccesses. A block's
   // Accesses and Defs are non-null iff the corresponding list is not empty.
   SmallVector<BlockInfo, 0> PerBlock;
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// Block number epoch on construction.
   unsigned BlockNumberEpoch;
-#endif
   std::unique_ptr<MemoryAccess, ValueDeleter> LiveOnEntryDef;
 
   // Domination mappings
