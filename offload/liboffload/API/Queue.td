@@ -11,13 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 def olCreateQueue : Function {
-    let desc = "Create a queue that submits work to a device.";
+    let desc = "Create a queue that can be used to submit work to a device.";
     let details = [
         "`olCreateQueue` creates a queue on `Device` and stores its handle in "
         "`Queue`.",
-        "The queue belongs to `Context`. `Device` must be one of the devices "
-        "of `Context`, and the queue can only be used with resources (memory "
-        "allocations, programs) created in `Context`.",
+        "The queue belongs to the context passed as `Context`.",
+        "`Device` must be one of the devices of `Context`.",
+        "The queue can only be used with resources (memory allocations, "
+        "programs) created in `Context`.",
         "The caller owns the returned queue and must release it with a "
         "subsequent call to `olDestroyQueue`.",
         "`Context` and `Device` must remain valid for the lifetime of the "
@@ -51,8 +52,8 @@ def olDestroyQueue : Function {
       "completion. `olDestroyQueue` does not wait for it.",
       "Events created from `Queue` remain valid and can still be passed to "
       "`olSyncEvent`, `olWaitEvents` and `olDestroyEvent`.",
-      "Backend resources of a queue that still has work pending are released "
-      "later, at the latest when its context is destroyed.",
+      "Backend resources of a queue that still has work pending might be "
+      "released later, at the latest when its associated context is destroyed.",
       "If `olDestroyQueue` fails, `Queue` is not released. It is left in an "
       "undefined state and must not be used, including in another call to "
       "`olDestroyQueue`.",
@@ -95,8 +96,8 @@ def ol_queue_info_t : Enum {
   let desc = "Supported queue info.";
   let is_typed = 1;
   let etors = [
-    TaggedEtor<"DEVICE", "ol_device_handle_t", "The device that was passed to `olCreateQueue`. The handle is borrowed; no ownership is transferred to the caller.">,
-    TaggedEtor<"CONTEXT", "ol_context_handle_t", "The context that was passed to `olCreateQueue`. The handle is borrowed; no ownership is transferred to the caller.">,
+    TaggedEtor<"DEVICE", "ol_device_handle_t", "The device that was passed to `olCreateQueue`.">,
+    TaggedEtor<"CONTEXT", "ol_context_handle_t", "The context that was passed to `olCreateQueue`.">,
     TaggedEtor<"EMPTY", "bool", "True if all work submitted to the queue has completed.">,
     TaggedEtor<"NATIVE_HANDLE", "void *", "The backend-native handle of the queue, reinterpreted as a void pointer. It is owned by the platform, must not be released by the caller, and is valid only while the queue exists.">,
   ];
@@ -106,10 +107,12 @@ def olGetQueueInfo : Function {
   let desc = "Query a property of a queue.";
   let details = [
     "`olGetQueueInfo` writes the value of the property `PropName` of `Queue` "
-    "to `PropValue`. `PropSize` is the size of that storage; "
-    "`olGetQueueInfoSize` reports the size required.",
-    "`ol_queue_info_t` describes each property, including the ownership of "
-    "returned handles.",
+    "to `PropValue`.",
+    "`PropSize` is the size in bytes of the storage pointed to by "
+    "`PropValue`. It must be at least the number of bytes that "
+    "`olGetQueueInfo` needs to store the value of `PropName`, which "
+    "`olGetQueueInfoSize` reports. A larger `PropSize` is accepted.",
+    "`ol_queue_info_t` describes each property.",
     "`olGetQueueInfo` is thread safe."
   ];
   let params = [

@@ -168,8 +168,8 @@ TEST_P(olGetQueueInfoTest, NativeHandleStable) {
   ASSERT_EQ(First, Second);
 }
 
-// The size reported by olGetQueueInfoSize is accepted by olGetQueueInfo and
-// one byte less is rejected, for every property.
+// The size reported by olGetQueueInfoSize and any larger size are accepted by
+// olGetQueueInfo and one byte less is rejected, for every property.
 TEST_P(olGetQueueInfoTest, SizeRoundTrip) {
   for (ol_queue_info_t Prop :
        {OL_QUEUE_INFO_DEVICE, OL_QUEUE_INFO_CONTEXT, OL_QUEUE_INFO_EMPTY}) {
@@ -178,8 +178,9 @@ TEST_P(olGetQueueInfoTest, SizeRoundTrip) {
     ASSERT_SUCCESS(olGetQueueInfoSize(Queue, Prop, &Size));
     ASSERT_GT(Size, 0u);
 
-    std::vector<char> Buffer(Size);
+    std::vector<char> Buffer(Size + 1);
     ASSERT_SUCCESS(olGetQueueInfo(Queue, Prop, Size, Buffer.data()));
+    ASSERT_SUCCESS(olGetQueueInfo(Queue, Prop, Size + 1, Buffer.data()));
     ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
                  olGetQueueInfo(Queue, Prop, Size - 1, Buffer.data()));
   }
@@ -190,9 +191,11 @@ TEST_P(olGetQueueInfoTest, SizeRoundTrip) {
   ASSERT_SUCCESS_OR_UNSUPPORTED(
       olGetQueueInfoSize(Queue, OL_QUEUE_INFO_NATIVE_HANDLE, &Size));
   ASSERT_GT(Size, 0u);
-  std::vector<char> Buffer(Size);
+  std::vector<char> Buffer(Size + 1);
   ASSERT_SUCCESS_OR_UNSUPPORTED(
       olGetQueueInfo(Queue, OL_QUEUE_INFO_NATIVE_HANDLE, Size, Buffer.data()));
+  ASSERT_SUCCESS(olGetQueueInfo(Queue, OL_QUEUE_INFO_NATIVE_HANDLE, Size + 1,
+                                Buffer.data()));
   ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
                olGetQueueInfo(Queue, OL_QUEUE_INFO_NATIVE_HANDLE, Size - 1,
                               Buffer.data()));
