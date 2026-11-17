@@ -730,6 +730,21 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
   return Known;
 }
 
+KnownFPClass KnownFPClass::square(const KnownFPClass &KnownSrc_,
+                                  DenormalMode Mode) {
+  KnownFPClass KnownSrc = applyInputDenormalMode(KnownSrc_, Mode);
+
+  KnownFPClass Known = fmul(KnownSrc, KnownSrc, DenormalMode::getIEEE());
+
+  // 0.0 * inf and inf * 0.0 are impossible.
+  Known.propagateNonNaN(KnownSrc);
+
+  // X * X is always non-negative or a NaN.
+  Known.knownNot(fcNegative);
+
+  return applyOutputDenormalMode(Known, Mode);
+}
+
 KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS_,
                                 const KnownFPClass &KnownRHS_,
                                 DenormalMode Mode) {
