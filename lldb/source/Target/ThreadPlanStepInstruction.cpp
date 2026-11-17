@@ -125,6 +125,10 @@ bool ThreadPlanStepInstruction::IsPlanStale() {
   }
 }
 
+bool ThreadPlanStepInstruction::HasInstructionStepCompleted() {
+  return GetThread().GetRegisterContext()->GetPC(0) != m_instruction_addr;
+}
+
 bool ThreadPlanStepInstruction::ShouldStop(Event *event_ptr) {
   Thread &thread = GetThread();
   if (m_step_over) {
@@ -141,7 +145,7 @@ bool ThreadPlanStepInstruction::ShouldStop(Event *event_ptr) {
     StackID cur_frame_zero_id = cur_frame_sp->GetStackID();
 
     if (cur_frame_zero_id == m_stack_id || m_stack_id < cur_frame_zero_id) {
-      if (thread.GetRegisterContext()->GetPC(0) != m_instruction_addr) {
+      if (HasInstructionStepCompleted()) {
         if (--m_iteration_count <= 0) {
           SetPlanComplete();
           return true;
@@ -218,8 +222,7 @@ bool ThreadPlanStepInstruction::ShouldStop(Event *event_ptr) {
       }
     }
   } else {
-    lldb::addr_t pc_addr = thread.GetRegisterContext()->GetPC(0);
-    if (pc_addr != m_instruction_addr) {
+    if (HasInstructionStepCompleted()) {
       if (--m_iteration_count <= 0) {
         SetPlanComplete();
         return true;

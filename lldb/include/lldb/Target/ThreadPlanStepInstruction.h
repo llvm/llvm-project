@@ -34,6 +34,13 @@ public:
 protected:
   bool DoPlanExplainsStop(Event *event_ptr) override;
 
+  /// Check whether the instruction step has completed.
+  ///
+  /// The default checks for a PC change. Subclasses may use other completion
+  /// criteria, for example when an instruction branches to itself or a SIMD
+  /// step leaves the selected thread's PC unchanged.
+  virtual bool HasInstructionStepCompleted();
+
   void SetUpState();
 
 private:
