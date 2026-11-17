@@ -5771,7 +5771,7 @@ private:
         builder.setInsertionPoint(firstElOp);
         // Create a temp to transfer the rhs before applying the conversion.
         hlfir::Entity entity{designateOp.getMemref()};
-        auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, entity);
+        auto [temp, mustFree] = hlfir::createTempFromMold(loc, builder, entity);
         auto transferKindAttr = cuf::DataTransferKindAttr::get(
             builder.getContext(), cuf::DataTransferKind::DeviceHost);
         cuf::DataTransferOp::create(builder, loc, designateOp.getMemref(), temp,
@@ -5782,6 +5782,7 @@ private:
         hlfir::AssignOp::create(builder, loc, elOp, lhs,
                                 isWholeAllocatableAssignment,
                                 keepLhsLengthInAllocatableAssignment);
+        hlfir::genFreeTempFromMold(loc, builder, temp, mustFree);
         return;
       }
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
@@ -6038,7 +6039,7 @@ private:
         }
         if (isCUDATransfer && hasCUDAImplicitTransfer &&
             Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs)) {
-          auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, lhs);
+          auto [temp, mustFree] = hlfir::createTempFromMold(loc, builder, lhs);
           hlfir::AssignOp::create(builder, loc, rhs, temp,
                                   isWholeAllocatableAssignment,
                                   keepLhsLengthInAllocatableAssignment);
@@ -6047,6 +6048,7 @@ private:
           cuf::DataTransferOp::create(builder, loc, temp, lhs,
                                       /*shape=*/mlir::Value{},
                                       transferKindAttr);
+          hlfir::genFreeTempFromMold(loc, builder, temp, mustFree);
         } else {
           hlfir::AssignOp::create(builder, loc, rhs, lhs,
                                   isWholeAllocatableAssignment,
