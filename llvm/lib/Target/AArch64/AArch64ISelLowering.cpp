@@ -23080,7 +23080,7 @@ static SDValue performConcatVectorsCombine(SDNode *N,
     EVT NVT = EVT::getVectorVT(*DAG.getContext(), IVT, N->getNumOperands());
 
     SDValue NewLoad = DAG.getLoad(IVT, DL, LD->getChain(), LD->getBasePtr(),
-                                LD->getMemOperand());
+                                  LD->getMemOperand());
     DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), NewLoad.getValue(1));
 
     return DAG.getBitcast(VT, DAG.getSplatBuildVector(NVT, DL, NewLoad));
