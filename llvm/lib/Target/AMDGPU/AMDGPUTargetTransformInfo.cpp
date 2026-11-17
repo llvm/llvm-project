@@ -524,6 +524,17 @@ static bool isFusedFMul(const SITargetLowering &TLI, Type *Ty,
          canFuseFMulWithFAddSub(TLI, Ty, FMul, Outer);
 }
 
+static bool hasFAbsSourceOperand(const Instruction *I) {
+  using namespace PatternMatch;
+  if (!I)
+    return false;
+  return any_of(I->operands(), [](const Value *Op) {
+    // neg is a source modifier as well, so look through it.
+    match(Op, m_FNeg(m_Value(Op)));
+    return Op->hasOneUse() && match(Op, m_FAbs(m_Value()));
+  });
+}
+
 InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
@@ -599,13 +610,15 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     }
     [[fallthrough]];
   case ISD::FADD:
-  case ISD::FSUB:
-    if (ST->hasAnyPackedFP32Ops() && SLT == MVT::f32)
+  case ISD::FSUB: {
+    // An fabs source unpacks f32/f64 packed math; the abs itself is then free.
+    bool Unpacked = hasFAbsSourceOperand(CtxI);
+    if (ST->hasAnyPackedFP32Ops() && SLT == MVT::f32 && !Unpacked)
       NElts = (NElts + 1) / 2;
     if (ST->hasBF16PackedInsts() && SLT == MVT::bf16)
       NElts = (NElts + 1) / 2;
     if (SLT == MVT::f64) {
-      if (ST->hasAnyPackedFP64Ops())
+      if (ST->hasAnyPackedFP64Ops() && !Unpacked)
         NElts = (NElts + 1) / 2;
       return LT.first * NElts * get64BitInstrCost(CostKind);
     }
@@ -616,6 +629,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     if (SLT == MVT::f32 || SLT == MVT::f16 || SLT == MVT::bf16)
       return LT.first * NElts * getFullRateInstrCost();
     break;
+  }
   case ISD::FDIV:
   case ISD::FREM:
     // FIXME: frem should be handled separately. The fdiv in it is most of it,
@@ -868,14 +882,27 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
   unsigned NElts = LT.second.isVector() ? LT.second.getVectorNumElements() : 1;
 
+  // An fabs source unpacks f32/f64 packed math; the abs itself is then free.
+  bool Unpacked = false;
+  switch (IID) {
+  case Intrinsic::fma:
+  case Intrinsic::fmuladd:
+  case Intrinsic::minimumnum:
+  case Intrinsic::maximumnum:
+    Unpacked = hasFAbsSourceOperand(ICA.getInst());
+    break;
+  default:
+    break;
+  }
+
   if ((ST->hasVOP3PInsts() &&
        (SLT == MVT::f16 || SLT == MVT::i16 ||
         (SLT == MVT::bf16 && ST->hasBF16PackedInsts()))) ||
-      (ST->hasAnyPackedFP64Ops() && SLT == MVT::f64) ||
+      (ST->hasAnyPackedFP64Ops() && SLT == MVT::f64 && !Unpacked) ||
       (ST->hasAnyPackedU64Ops() && SLT == MVT::i64)) {
     NElts = (NElts + 1) / 2;
   } else if (SLT == MVT::f32) {
-    bool HasPk2FP32Op = ST->hasAnyPackedFP32Ops() &&
+    bool HasPk2FP32Op = ST->hasAnyPackedFP32Ops() && !Unpacked &&
                         IID != Intrinsic::minimumnum &&
                         IID != Intrinsic::maximumnum;
     NElts = HasPk2FP32Op ? (NElts + 1) / 2 : NElts;
