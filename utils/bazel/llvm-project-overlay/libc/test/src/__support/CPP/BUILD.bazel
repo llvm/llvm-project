@@ -108,7 +108,7 @@ libc_test(
     name = "type_traits_test",
     srcs = ["type_traits_test.cpp"],
     deps = [
-        "//libc:llvm_libc_macros_stdfix_macros",
+        "//libc/include:llvm_libc_macros_stdfix_macros",
         "//libc/src/__support/CPP:type_traits",
     ],
 )

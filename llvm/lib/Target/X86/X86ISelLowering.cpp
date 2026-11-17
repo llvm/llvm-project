@@ -31320,6 +31320,11 @@ static SDValue LowerShiftByScalarImmediate(SDValue Op, SelectionDAG &DAG,
                          DAG.getTargetConstant(0, dl, MVT::i8));
     }
 
+    // Freeze shifted value - we're either increasing uses or shifting as a
+    // vXi16 type which can potentially propagate poison from one i8 element to
+    // the entire i16.
+    R = DAG.getFreeze(R);
+
     if (Op.getOpcode() == ISD::SHL) {
       // Make a large shift.
       SDValue SHL = getTargetVShiftByConstNode(X86ISD::VSHLI, dl, ShiftVT, R,
@@ -31341,7 +31346,6 @@ static SDValue LowerShiftByScalarImmediate(SDValue Op, SelectionDAG &DAG,
     if (Op.getOpcode() == ISD::SRA) {
       // ashr(R, 1) === xor(avgceilu(R,-1),and(not(R),MIN_SIGNED))
       if (ShiftAmt == 1) {
-        R = DAG.getFreeze(R);
         SDValue AllOnes = DAG.getAllOnesConstant(dl, VT);
         SDValue Avg = DAG.getNode(ISD::AVGCEILU, dl, VT, R, AllOnes);
         SDValue Not = DAG.getNode(ISD::XOR, dl, VT, R, AllOnes);

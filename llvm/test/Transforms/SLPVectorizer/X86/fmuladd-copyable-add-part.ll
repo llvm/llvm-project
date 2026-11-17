@@ -107,7 +107,8 @@ define void @test_two_lanes(ptr %dst, double %a0, double %b0, double %c0, double
 ; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[C0]], i64 0
 ; ENABLED-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[X]], i64 1
 ; ENABLED-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]], <2 x double> [[TMP3]])
-; ENABLED-NEXT:    store <2 x double> [[TMP4]], ptr [[DST]], align 8
+; ENABLED-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> [[TMP3]], <2 x i32> <i32 0, i32 3>
+; ENABLED-NEXT:    store <2 x double> [[TMP5]], ptr [[DST]], align 8
 ; ENABLED-NEXT:    ret void
 ;
 ; DISABLED-LABEL: define void @test_two_lanes(
