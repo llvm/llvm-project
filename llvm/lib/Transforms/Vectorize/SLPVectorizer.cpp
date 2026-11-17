@@ -2589,9 +2589,10 @@ private:
           ScaleCost) const;
 
   /// \returns the cost of casting the vector of the demoted entry \p E to
-  /// \p VecTy, or zero if \p E is not demoted.
-  InstructionCost getDemotedEntryCastCost(const TreeEntry &E,
-                                          FixedVectorType *VecTy) const;
+  /// \p VecTy. \p MinBW is the minimum bit width and signedness of \p E.
+  InstructionCost
+  getDemotedEntryCastCost(const TreeEntry &E, FixedVectorType *VecTy,
+                          const std::pair<uint64_t, bool> &MinBW) const;
 
   /// Set the Builder insert point to one after the last instruction in
   /// the bundle
@@ -20665,11 +20666,13 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
             Data.InsertElements.emplace_back(VU);
             DemandedElts.push_back(APInt::getZero(FTy->getNumElements()));
             VecId = ShuffledInserts.size() - 1;
-            if (MinBWs.contains(ScalarTE) &&
+            auto It = MinBWs.find(ScalarTE);
+            if (It != MinBWs.end() &&
                 VectorCasts
                     .insert(std::make_pair(ScalarTE, FTy->getElementType()))
                     .second) {
-              InstructionCost C = getDemotedEntryCastCost(*ScalarTE, FTy);
+              InstructionCost C =
+                  getDemotedEntryCastCost(*ScalarTE, FTy, It->second);
               LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
                                 << " for extending externally used vector with "
                                    "non-equal minimum bitwidth.\n");
@@ -22091,18 +22094,16 @@ BoUpSLP::isGatherShuffledEntry(
   return Res;
 }
 
-InstructionCost BoUpSLP::getDemotedEntryCastCost(const TreeEntry &E,
-                                                 FixedVectorType *VecTy) const {
-  auto It = MinBWs.find(&E);
-  if (It == MinBWs.end())
-    return TTI::TCC_Free;
-  unsigned BWSz = It->second.first;
+InstructionCost
+BoUpSLP::getDemotedEntryCastCost(const TreeEntry &E, FixedVectorType *VecTy,
+                                 const std::pair<uint64_t, bool> &MinBW) const {
+  unsigned BWSz = MinBW.first;
   unsigned DstBWSz = DL->getTypeSizeInBits(VecTy->getElementType());
   unsigned VecOpcode;
   if (DstBWSz < BWSz)
     VecOpcode = Instruction::Trunc;
   else
-    VecOpcode = It->second.second ? Instruction::SExt : Instruction::ZExt;
+    VecOpcode = MinBW.second ? Instruction::SExt : Instruction::ZExt;
   return TTI->getCastInstrCost(
       VecOpcode, VecTy,
       getWidenedType(IntegerType::get(VecTy->getContext(), BWSz),
@@ -22253,7 +22254,9 @@ InstructionCost BoUpSLP::getVectorizedScalarsShuffleCost(
 
   InstructionCost Cost = 0;
   for (const TreeEntry *E : make_first_range(EntryMasks))
-    Cost += getDemotedEntryCastCost(*E, cast<FixedVectorType>(VecTy));
+    if (auto It = MinBWs.find(E); It != MinBWs.end())
+      Cost +=
+          getDemotedEntryCastCost(*E, cast<FixedVectorType>(VecTy), It->second);
   auto Vector = EntryMasks.takeVector();
   Cost += getEntriesLanesShuffleCost(
       MutableArrayRef(Vector.data(), Vector.size()), Base, ScalarTy,
