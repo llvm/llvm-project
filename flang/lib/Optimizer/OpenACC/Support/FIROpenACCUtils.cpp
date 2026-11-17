@@ -796,7 +796,12 @@ bool fir::acc::isValidValueUse(mlir::Value val, mlir::Region &region,
   // the declared members live. It is not an access to the whole global, so it
   // must not be implicitly mapped: that would clash with explicit mappings of
   // the individual members. The address is rematerialized in the region.
-  if (val.getDefiningOp<fir::AddrOfOp>()) {
+  // A common block with a typed initializer (e.g. from BLOCK DATA) is
+  // reached through a fir.convert of the global's address.
+  mlir::Value globalAddr = val;
+  while (auto convert = globalAddr.getDefiningOp<fir::ConvertOp>())
+    globalAddr = convert.getValue();
+  if (globalAddr.getDefiningOp<fir::AddrOfOp>()) {
     bool onlyStorageUses = true, anyUse = false;
     for (mlir::OpOperand &use : val.getUses()) {
       mlir::Operation *user = use.getOwner();
