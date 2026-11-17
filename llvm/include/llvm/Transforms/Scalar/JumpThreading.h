@@ -91,6 +91,10 @@ class JumpThreadingPass : public OptionalPassInfoMixin<JumpThreadingPass> {
   BranchProbabilityInfo *BPI = nullptr;
   bool ChangedSinceLastAnalysisUpdate = false;
   bool HasGuards = false;
+  // Uniformity of the blocks numbered below UniformityNumBlocks.
+  UniformityInfo *Uniformity = nullptr;
+  DominatorTree *UniformityDT = nullptr;
+  unsigned UniformityNumBlocks = 0;
 #ifndef LLVM_ENABLE_ABI_BREAKING_CHECKS
   SmallSet<AssertingVH<const BasicBlock>, 16> LoopHeaders;
 #else
@@ -192,6 +196,16 @@ private:
   /// Returns the uniformity info, or nullptr if the target has no branch
   /// divergence.
   UniformityInfo *getUniformityInfo();
+
+  /// Returns true if the terminator of \p BB is uniform.
+  bool isUniformTerminator(const BasicBlock *BB);
+
+  /// Returns true if \p U is uniform.
+  bool isUniformAtUse(const Use &U);
+
+  /// Returns true if duplicating \p BB for \p PredBBs would split the paths of
+  /// a divergent branch that reconverge at \p BB.
+  bool splitsDivergentJoin(BasicBlock *BB, ArrayRef<BasicBlock *> PredBBs);
 
   /// Returns analysis preserved by the pass.
   PreservedAnalyses getPreservedAnalysis() const;
