@@ -1,4 +1,4 @@
-  // RUN: mlir-opt %s -transform-interpreter -canonicalize -cse -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -transform-interpreter -canonicalize -cse -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -transform-interpreter=entry-point=__transform_nano -canonicalize -cse -split-input-file \
 // RUN:   | FileCheck %s --check-prefix=NANO --implicit-check-not=vector.contract
 
@@ -1200,9 +1200,9 @@ func.func @amx_bf16_flat_single_reg_tile(%A: memref<?x?xbf16>, %B: memref<?x?xbf
 // CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C16:.+]] = arith.constant 16 : index
 // CHECK-DAG:     %[[C32:.+]] = arith.constant 32 : index
-// CHECK-NOT:     memref.alloca
 // CHECK-DAG:     %[[ACC_VIEW:.+]] = memref.subview %[[C]][%[[M]], %[[N]]] [32, 32] [1, 1]
 // CHECK-DAG:     %[[OUT_VIEW:.+]] = memref.subview %[[D]][%[[M]], %[[N]]] [32, 32] [1, 1]
+// CHECK-NOT:     memref.alloca
 // CHECK-NOT:     memref.subview %[[ACC_VIEW]]
 // CHECK:         %[[ACC0:.+]] = vector.transfer_read %[[ACC_VIEW]][%[[C0]], %[[C0]]], {{.*}} vector<16x16xf32>
 // CHECK:         %[[ACC1:.+]] = vector.transfer_read %[[ACC_VIEW]][%[[C0]], %[[C16]]], {{.*}} vector<16x16xf32>
@@ -1285,9 +1285,9 @@ func.func @amx_bf16_vnni_single_reg_tile(%A: memref<?x?x2xbf16>, %B: memref<?x?x
 // CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C16:.+]] = arith.constant 16 : index
 // CHECK-DAG:     %[[N_OFF:.+]] = arith.addi %[[N]], %[[C16]]
-// CHECK-NOT:     memref.alloca
 // CHECK-DAG:     %[[ACC_VIEW:.+]] = memref.subview %[[C]][%[[M]], %[[N]]] [32, 32] [1, 1]
 // CHECK-DAG:     %[[OUT_VIEW:.+]] = memref.subview %[[C]][%[[M]], %[[N_OFF]]] [32, 32] [1, 1]
+// CHECK-NOT:     memref.alloca
 // CHECK-NOT:     memref.subview %[[ACC_VIEW]]
 // CHECK:         %[[ACC0:.+]] = vector.transfer_read %[[ACC_VIEW]][%[[C0]], %[[C0]]], {{.*}} vector<16x16xf32>
 // CHECK:         %[[ACC1:.+]] = vector.transfer_read %[[ACC_VIEW]][%[[C0]], %[[C16]]], {{.*}} vector<16x16xf32>
