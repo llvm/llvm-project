@@ -6203,12 +6203,10 @@ mlir::LogicalResult CIRToLLVMComplexCreateOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMComplexRealOpLowering::matchAndRewrite(
     cir::ComplexRealOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Type resultLLVMTy = getTypeConverter()->convertType(op.getType());
   mlir::Value operand = adaptor.getOperand();
   if (mlir::isa<cir::ComplexType>(op.getOperand().getType())) {
-    operand = mlir::LLVM::ExtractValueOp::create(
-        rewriter, op.getLoc(), resultLLVMTy, operand,
-        llvm::ArrayRef<std::int64_t>{0});
+    operand = rewriter.createOrFold<mlir::LLVM::ExtractValueOp>(
+        op.getLoc(), operand, llvm::ArrayRef<std::int64_t>{0});
   }
   rewriter.replaceOp(op, operand);
   return mlir::success();
@@ -6222,8 +6220,8 @@ mlir::LogicalResult CIRToLLVMComplexImagOpLowering::matchAndRewrite(
   mlir::Location loc = op.getLoc();
 
   if (mlir::isa<cir::ComplexType>(op.getOperand().getType())) {
-    operand = mlir::LLVM::ExtractValueOp::create(
-        rewriter, loc, resultLLVMTy, operand, llvm::ArrayRef<std::int64_t>{1});
+    operand = rewriter.createOrFold<mlir::LLVM::ExtractValueOp>(
+        loc, operand, llvm::ArrayRef<std::int64_t>{1});
   } else {
     mlir::TypedAttr zeroAttr = rewriter.getZeroAttr(resultLLVMTy);
     operand =
