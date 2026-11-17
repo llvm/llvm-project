@@ -2740,7 +2740,8 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
       auto *RParen = FormatTok;
       const bool EndsInComma =
           RParen->Previous && RParen->Previous->is(tok::comma) &&
-          !RParen->Previous->endsSequence(tok::comma, tok::kw_operator);
+          (!RParen->Previous->Previous ||
+           RParen->Previous->Previous->isNot(tok::kw_operator));
       nextToken();
       if (Prev) {
         auto OptionalParens = [&] {

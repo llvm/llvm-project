@@ -680,10 +680,6 @@ public:
     return !isOneOf(Ks...);
   }
 
-  bool isCommaOrTrailingCommaVaOpt() const {
-    return isOneOf(tok::comma, TT_TrailingCommaVaOptRParen);
-  }
-
   bool isIf(bool AllowConstexprMacro = true) const {
     return is(tok::kw_if) || endsSequence(tok::kw_constexpr, tok::kw_if) ||
            (endsSequence(tok::identifier, tok::kw_if) && AllowConstexprMacro);

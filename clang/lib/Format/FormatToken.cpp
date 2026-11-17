@@ -357,7 +357,7 @@ bool startsNextParameter(const FormatToken &Current, const FormatStyle &Style) {
     return true;
   if (Current.is(TT_QtProperty))
     return true;
-  return Previous.isCommaOrTrailingCommaVaOpt() &&
+  return Previous.isOneOf(tok::comma, TT_TrailingCommaVaOptRParen) &&
          Current.isNot(TT_TrailingCommaVaOptRParen) &&
          !Current.isTrailingComment() &&
          ((Previous.isNot(TT_CtorInitializerComma) ||

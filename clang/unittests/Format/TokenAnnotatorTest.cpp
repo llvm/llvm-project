@@ -4642,6 +4642,71 @@ TEST_F(TokenAnnotatorTest, CSharpUtf8StringLiterals) {
   EXPECT_TOKEN(Tokens[4], tok::identifier, TT_Unknown);
 }
 
+TEST_F(TokenAnnotatorTest, VaOptWithTrailingComma) {
+  auto Tokens =
+      annotate("#define M(...) enum E { __VA_OPT__(__VA_ARGS__, ) kFirst };");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[13], tok::r_paren, TT_TrailingCommaVaOptRParen);
+
+  Tokens =
+      annotate("#define M(...) enum E { __VA_OPT__(FOO(a, b), ) kFirst };");
+  ASSERT_EQ(Tokens.size(), 23u) << Tokens;
+  EXPECT_TOKEN(Tokens[16], tok::r_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[18], tok::r_paren, TT_TrailingCommaVaOptRParen);
+
+  Tokens = annotate("#define M(...) enum E { __VA_OPT__(FOO(a, )) kFirst };");
+  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
+  EXPECT_TOKEN(Tokens[16], tok::r_paren, TT_Unknown);
+
+  Tokens =
+      annotate("#define M(...) enum E { kFirst __VA_OPT__(, __VA_ARGS__) };");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[14], tok::r_paren, TT_Unknown);
+
+  Tokens = annotate("#define M(...) foo(__VA_OPT__(x.operator, ) + y)");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[14], tok::r_paren, TT_Unknown);
+
+  Tokens = annotate(
+      "#define M(...) enum E { __VA_OPT__(__VA_ARGS__, /*c*/) kFirst };");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[14], tok::r_paren, TT_TrailingCommaVaOptRParen);
+
+  Tokens =
+      annotate("#define M(...) foo(__VA_OPT__(a, ) *b, __VA_OPT__(a, ) &c, "
+               "__VA_OPT__(a, ) -d, __VA_OPT__(a, ) ++e)");
+  ASSERT_EQ(Tokens.size(), 41u) << Tokens;
+  EXPECT_TOKEN(Tokens[12], tok::r_paren, TT_TrailingCommaVaOptRParen);
+  EXPECT_TOKEN(Tokens[13], tok::star, TT_UnaryOperator);
+  EXPECT_TOKEN(Tokens[20], tok::r_paren, TT_TrailingCommaVaOptRParen);
+  EXPECT_TOKEN(Tokens[21], tok::amp, TT_UnaryOperator);
+  EXPECT_TOKEN(Tokens[28], tok::r_paren, TT_TrailingCommaVaOptRParen);
+  EXPECT_TOKEN(Tokens[29], tok::minus, TT_UnaryOperator);
+  EXPECT_TOKEN(Tokens[36], tok::r_paren, TT_TrailingCommaVaOptRParen);
+  EXPECT_TOKEN(Tokens[37], tok::plusplus, TT_UnaryOperator);
+
+  Tokens = annotate("#define M(...) S s = {__VA_OPT__(.a = 1, ) .b = 2};");
+  ASSERT_EQ(Tokens.size(), 25u) << Tokens;
+  EXPECT_TOKEN(Tokens[17], tok::r_paren, TT_TrailingCommaVaOptRParen);
+  EXPECT_TOKEN(Tokens[18], tok::period, TT_DesignatedInitializerPeriod);
+
+  Tokens =
+      annotate("#define M(...) int a[] = {__VA_OPT__([0] = 1, ) [1] = 2};");
+  ASSERT_EQ(Tokens.size(), 29u) << Tokens;
+  EXPECT_TOKEN(Tokens[20], tok::r_paren, TT_TrailingCommaVaOptRParen);
+  EXPECT_TOKEN(Tokens[21], tok::l_square, TT_DesignatedInitializerLSquare);
+
+  Tokens = annotate("#define M(...) foo(__VA_OPT__(a, ) [x]() { return x; })");
+  ASSERT_EQ(Tokens.size(), 25u) << Tokens;
+  EXPECT_TOKEN(Tokens[12], tok::r_paren, TT_TrailingCommaVaOptRParen);
+  EXPECT_TOKEN(Tokens[13], tok::l_square, TT_LambdaLSquare);
+
+  Tokens = annotate("enum E { __VA_OPT__(a, ) kFirst };",
+                    getLLVMStyle(FormatStyle::LK_Java));
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_Unknown);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang

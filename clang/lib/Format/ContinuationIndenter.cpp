@@ -609,7 +609,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
 
   if (Style.AlwaysBreakBeforeMultilineStrings &&
       (NewLineColumn == State.FirstIndent + Style.ContinuationIndentWidth ||
-       Previous.isCommaOrTrailingCommaVaOpt() || Current.NestingLevel < 2) &&
+       Previous.isOneOf(tok::comma, TT_TrailingCommaVaOptRParen) ||
+       Current.NestingLevel < 2) &&
       Previous.isNoneOf(tok::kw_return, tok::lessless, tok::at,
                         Keywords.kw_dollar) &&
       Previous.isNoneOf(TT_InlineASMColon, TT_ConditionalExpr) &&
@@ -1104,7 +1105,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     CurrentState.LastSpace = State.Column;
     CurrentState.NestedBlockIndent = State.Column;
   } else if (Current.isNoneOf(tok::comment, tok::caret) &&
-             ((Previous.isCommaOrTrailingCommaVaOpt() &&
+             ((Previous.isOneOf(tok::comma, TT_TrailingCommaVaOptRParen) &&
                Previous.isNot(TT_OverloadedOperator)) ||
               (Previous.is(tok::colon) && Previous.is(TT_ObjCMethodExpr)))) {
     CurrentState.LastSpace = State.Column;
@@ -1670,8 +1671,10 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
     }
     return CurrentState.QuestionColumn;
   }
-  if (Previous.isCommaOrTrailingCommaVaOpt() && CurrentState.VariablePos != 0)
+  if (Previous.isOneOf(tok::comma, TT_TrailingCommaVaOptRParen) &&
+      CurrentState.VariablePos != 0) {
     return CurrentState.VariablePos;
+  }
   if (Current.is(TT_RequiresClause)) {
     if (Style.IndentRequiresClause)
       return CurrentState.Indent + Style.IndentWidth;
@@ -2159,7 +2162,7 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     const auto *Prev = Tok->getPreviousNonComment();
     if (!Prev)
       return false;
-    return Prev->isCommaOrTrailingCommaVaOpt();
+    return Prev->isOneOf(tok::comma, TT_TrailingCommaVaOptRParen);
   }(Current.MatchingParen);
 
   IndentationAndAlignment NewIndent = 0;

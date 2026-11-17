@@ -709,7 +709,7 @@ private:
         // Do not consider '[' after a comma inside a braced initializer the
         // start of an ObjC method expression. In braced initializer lists,
         // commas are list separators and should not trigger ObjC parsing.
-        (!Parent || !Parent->isCommaOrTrailingCommaVaOpt() ||
+        (!Parent || Parent->isNoneOf(tok::comma, TT_TrailingCommaVaOptRParen) ||
          Contexts.back().ContextKind != tok::l_brace) &&
         (!Parent ||
          Parent->isOneOf(tok::colon, tok::l_square, tok::l_paren,
@@ -2312,8 +2312,8 @@ private:
       if (!Line.startsWith(TT_UnaryOperator)) {
         for (FormatToken *Previous = Current.Previous;
              Previous && Previous->Previous &&
-             !Previous->Previous->isCommaOrTrailingCommaVaOpt() &&
-             Previous->Previous->isNot(tok::semi);
+             Previous->Previous->isNoneOf(
+                 tok::comma, TT_TrailingCommaVaOptRParen, tok::semi);
              Previous = Previous->Previous) {
           if (Previous->isOneOf(tok::r_square, tok::r_paren, tok::greater)) {
             if (Previous->is(TT_TrailingCommaVaOptRParen))
@@ -4341,7 +4341,8 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
           if (Parameter->isOneOf(tok::comment, tok::r_brace))
             break;
           if (Parameter->Previous &&
-              Parameter->Previous->isCommaOrTrailingCommaVaOpt()) {
+              Parameter->Previous->isOneOf(tok::comma,
+                                           TT_TrailingCommaVaOptRParen)) {
             if (Parameter->Previous->isNot(TT_CtorInitializerComma) &&
                 Parameter->HasUnescapedNewline) {
               Parameter->MustBreakBefore = true;
@@ -4716,7 +4717,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
       (Right.NextOperator || Right.OperatorIndex != 0)) {
     return 25;
   }
-  if (Left.isCommaOrTrailingCommaVaOpt())
+  if (Left.isOneOf(tok::comma, TT_TrailingCommaVaOptRParen))
     return 1;
   if (Right.is(tok::lessless) && Left.isLabelString() &&
       (Right.NextOperator || Right.OperatorIndex != 1)) {
@@ -6097,7 +6098,7 @@ bool TokenAnnotator::mustBreakBefore(AnnotatedLine &Line,
       BeforeClosingBrace = &Left;
     }
     if (BeforeClosingBrace &&
-        (BeforeClosingBrace->isCommaOrTrailingCommaVaOpt() ||
+        (BeforeClosingBrace->isOneOf(tok::comma, TT_TrailingCommaVaOptRParen) ||
          BeforeClosingBrace->isTrailingComment())) {
       return true;
     }
