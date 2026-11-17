@@ -1447,6 +1447,7 @@ def CIR_ScopeOp : CIR_EnterAnyRegionBranchOpBase<"scope", [
   let regions = (region AnyRegion:$scopeRegion);
 
   let hasFolder = 1;
+  let hasCanonicalizeMethod = 1;
   let hasVerifier = 1;
   let skipDefaultBuilders = 1;
   let assemblyFormat = [{
@@ -1827,6 +1828,7 @@ def CIR_SwitchOp : CIR_EnterAnyRegionBranchOpBase<"switch", [
 
   let regions = (region AnyRegion:$body);
 
+  let hasCanonicalizeMethod = 1;
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins "mlir::Value":$condition,

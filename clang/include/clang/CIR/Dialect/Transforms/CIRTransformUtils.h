@@ -72,10 +72,14 @@ void collectUnreachable(mlir::Operation *parent,
 /// into branches, no CFG edge leads to such code, so MLIR's driver skips it as
 /// unreachable. Unlike MLIR's driver, it folds an operation in place at most 64
 /// times, which ends folds that never stop succeeding on a cycle of SSA values.
+/// With `eraseOnlyNewlyDead`, dead code elimination spares the operations of
+/// `ops` that are unused when rewriting starts, so it erases only what
+/// rewriting leaves dead. A pattern or a fold can still erase any operation.
 /// Return whether the IR changed.
 bool applyOpPatternsGreedily(llvm::ArrayRef<mlir::Operation *> ops,
                              const mlir::FrozenRewritePatternSet &patterns,
-                             mlir::Region &scope);
+                             mlir::Region &scope,
+                             bool eraseOnlyNewlyDead = false);
 
 } // namespace cir
 

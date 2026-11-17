@@ -14,6 +14,7 @@ void test(void *p) {
 // CIR:     cir.func{{.*}} @_Z4testPv
 // CIR-NEXT:    %[[P:.*]] = cir.alloca "p" align(8) init : !cir.ptr<!cir.ptr<!void>>
 // CIR-NEXT:    cir.store %arg0, %[[P]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+// CIR-NEXT:    %{{.+}} = cir.const #cir.int<4> : !u64i
 // CIR-NEXT:    %[[P1:.*]] = cir.load align(8) %[[P]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR-NEXT:    %[[P2:.*]] = cir.cast bitcast %[[P1]] : !cir.ptr<!void> -> !cir.ptr<!s32i>
 // CIR-NEXT:    %[[P3:.*]] = cir.const #cir.int<0> : !s32i

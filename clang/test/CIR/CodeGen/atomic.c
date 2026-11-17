@@ -102,12 +102,15 @@ void init_with_padding(_Atomic struct S1 *p) {
   // CIR-NEXT: cir.libc.memset %[[MEMSET_SIZE]] bytes at %[[PTR_VOID]] align(8) to %[[MEMSET_VALUE]] : !cir.ptr<!void>, !u8i, !u64i
   // CIR-NEXT: %[[VALUE_PTR:.+]] = cir.get_member %[[PTR]][0] {name = "value"} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_S1>
   // CIR-NEXT: %[[X_PTR:.+]] = cir.get_member %[[VALUE_PTR]][0] {name = "x"} : !cir.ptr<!rec_S1> -> !cir.ptr<!s16i>
+  // CIR-NEXT: %{{.+}} = cir.const #cir.int<1> : !s32i
   // CIR-NEXT: %[[X_INIT:.+]] = cir.const #cir.int<1> : !s16i
   // CIR-NEXT: cir.store align(8) %[[X_INIT]], %[[X_PTR]] : !s16i, !cir.ptr<!s16i>
   // CIR-NEXT: %[[Y_PTR:.+]] = cir.get_member %[[VALUE_PTR]][1] {name = "y"} : !cir.ptr<!rec_S1> -> !cir.ptr<!s16i>
+  // CIR-NEXT: %{{.+}} = cir.const #cir.int<2> : !s32i
   // CIR-NEXT: %[[Y_INIT:.+]] = cir.const #cir.int<2> : !s16i
   // CIR-NEXT: cir.store align(2) %[[Y_INIT]], %[[Y_PTR]] : !s16i, !cir.ptr<!s16i>
   // CIR-NEXT: %[[Z_PTR:.+]] = cir.get_member %[[VALUE_PTR]][2] {name = "z"} : !cir.ptr<!rec_S1> -> !cir.ptr<!s16i>
+  // CIR-NEXT: %{{.+}} = cir.const #cir.int<3> : !s32i
   // CIR-NEXT: %[[Z_INIT:.+]] = cir.const #cir.int<3> : !s16i
   // CIR-NEXT: cir.store align(4) %[[Z_INIT]], %[[Z_PTR]] : !s16i, !cir.ptr<!s16i>
 

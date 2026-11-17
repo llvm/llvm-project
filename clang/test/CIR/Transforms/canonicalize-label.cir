@@ -50,12 +50,13 @@ module {
 
   // A goto to a label inside a scope enters the outer block at that scope.
   // The canonicalizer simplifies the scope and the operations after it, but
-  // not the constant before it, which no jump reaches. It keeps the label at
-  // the start of its block.
+  // not the empty scope before it, which no jump reaches. It keeps the label
+  // at the start of its block.
   cir.func @label_in_scope(%arg0: !s32i) -> !s32i {
     cir.goto "in"
   ^bb1:
-    %0 = cir.const #cir.int<7> : !s32i
+    cir.scope {
+    }
     cir.scope {
       cir.br ^bb2
     ^bb2:
@@ -71,7 +72,8 @@ module {
   // CHECK:      cir.func{{.*}} @label_in_scope(%[[ARG0:.*]]: !s32i) -> !s32i {
   // CHECK-NEXT:   cir.goto "in"
   // CHECK-NEXT: ^bb1:
-  // CHECK-NEXT:   cir.const #cir.int<7> : !s32i
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:   }
   // CHECK-NEXT:   cir.scope {
   // CHECK-NEXT:     cir.br ^[[LABEL:bb[0-9]+]]
   // CHECK-NEXT:   ^[[LABEL]]:
@@ -82,15 +84,17 @@ module {
   // CHECK-NEXT: }
 
   // Every block on the way to a nested label is entered at the operation that
-  // holds the label. The constants before those operations stay.
+  // holds the label. The empty scopes before those operations stay.
   cir.func @nested_holders() {
     cir.goto "in"
   ^bb1:
-    %0 = cir.const #cir.int<1> : !s32i
+    cir.scope {
+    }
     cir.scope {
       cir.goto "in"
     ^bb2:
-      %1 = cir.const #cir.int<2> : !s32i
+      cir.scope {
+      }
       cir.scope {
         cir.br ^bb3
       ^bb3:
@@ -110,11 +114,13 @@ module {
   // CHECK:      cir.func{{.*}} @nested_holders() {
   // CHECK-NEXT:   cir.goto "in"
   // CHECK-NEXT: ^bb1:
-  // CHECK-NEXT:   cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:   }
   // CHECK-NEXT:   cir.scope {
   // CHECK-NEXT:     cir.goto "in"
   // CHECK-NEXT:   ^bb{{[0-9]+}}:
-  // CHECK-NEXT:     cir.const #cir.int<2> : !s32i
+  // CHECK-NEXT:     cir.scope {
+  // CHECK-NEXT:     }
   // CHECK-NEXT:     cir.scope {
   // CHECK-NEXT:       cir.br ^[[LABEL:bb[0-9]+]]
   // CHECK-NEXT:     ^[[LABEL]]:
@@ -131,7 +137,8 @@ module {
   cir.func @two_holders() {
     cir.goto "a"
   ^bb1:
-    %0 = cir.const #cir.int<1> : !s32i
+    cir.scope {
+    }
     cir.scope {
       cir.br ^bb2
     ^bb2:
@@ -151,7 +158,8 @@ module {
   // CHECK:      cir.func{{.*}} @two_holders() {
   // CHECK-NEXT:   cir.goto "a"
   // CHECK-NEXT: ^bb1:
-  // CHECK-NEXT:   cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:   }
   // CHECK-NEXT:   cir.scope {
   // CHECK-NEXT:     cir.br ^bb1
   // CHECK-NEXT:   ^bb1:
@@ -171,7 +179,8 @@ module {
   cir.func @holder_successors(%arg0: !cir.bool) {
     cir.goto "in"
   ^bb1:
-    %0 = cir.const #cir.int<1> : !s32i
+    cir.scope {
+    }
     cir.scope {
       cir.br ^bb2
     ^bb2:
@@ -189,7 +198,8 @@ module {
   // CHECK:      cir.func{{.*}} @holder_successors(%[[ARG0:.*]]: !cir.bool) {
   // CHECK-NEXT:   cir.goto "in"
   // CHECK-NEXT: ^bb1:
-  // CHECK-NEXT:   cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:   }
   // CHECK-NEXT:   cir.scope {
   // CHECK-NEXT:     cir.br ^bb1
   // CHECK-NEXT:   ^bb1:
@@ -323,15 +333,16 @@ module {
   // CHECK-NEXT: }
 
   // The block that holds a cir.case after a cir.break has no CFG predecessor
-  // either, but the cir.switch jumps to the case. The constant before the case
-  // stays.
+  // either, but the cir.switch jumps to the case. The empty scope before the
+  // case stays.
   cir.func @case_after_break(%arg0: !s32i) {
     cir.switch(%arg0 : !s32i) {
       cir.case(equal, [#cir.int<1> : !s32i]) {
         cir.scope {
           cir.break
         ^bb1:
-          %0 = cir.const #cir.int<1> : !s32i
+          cir.scope {
+          }
           cir.case(equal, [#cir.int<2> : !s32i]) {
             cir.scope {
             }
@@ -353,7 +364,8 @@ module {
   // CHECK-NEXT:       cir.scope {
   // CHECK-NEXT:         cir.break
   // CHECK-NEXT:       ^bb1:
-  // CHECK-NEXT:         cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT:         cir.scope {
+  // CHECK-NEXT:         }
   // CHECK-NEXT:         cir.case(equal, [#cir.int<2> : !s32i]) {
   // CHECK-NEXT:           cir.yield
   // CHECK-NEXT:         }
@@ -373,7 +385,8 @@ module {
       cir.case(equal, [#cir.int<1> : !s32i]) {
         cir.break
       ^bb1:
-        %0 = cir.const #cir.int<1> : !s32i
+        cir.scope {
+        }
         cir.scope {
           cir.case(equal, [#cir.int<2> : !s32i]) {
             cir.scope {
@@ -393,7 +406,8 @@ module {
   // CHECK-NEXT:     cir.case(equal, [#cir.int<1> : !s32i]) {
   // CHECK-NEXT:       cir.break
   // CHECK-NEXT:     ^bb1:
-  // CHECK-NEXT:       cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT:       cir.scope {
+  // CHECK-NEXT:       }
   // CHECK-NEXT:       cir.scope {
   // CHECK-NEXT:         cir.case(equal, [#cir.int<2> : !s32i]) {
   // CHECK-NEXT:           cir.yield
@@ -496,13 +510,14 @@ module {
   // CHECK-NEXT: }
 
   // The verifier checks no dominance in a block that only a jump enters, so
-  // it can hold SSA cycles. Folding them must stop. The unused constant goes
-  // away, which shows that the block is visited.
+  // it can hold SSA cycles. Folding them must stop. The empty scope goes away,
+  // which shows that the block is visited.
   cir.func @cycles_after_label() {
     cir.goto "out"
   ^bb1:
     cir.label "out"
-    %c = cir.const #cir.int<0> : !s32i
+    cir.scope {
+    }
     %0 = cir.cast int_to_bool %1 : !s32i -> !cir.bool
     %1 = cir.cast bool_to_int %0 : !cir.bool -> !s32i
     %2 = cir.not %3 : !cir.bool

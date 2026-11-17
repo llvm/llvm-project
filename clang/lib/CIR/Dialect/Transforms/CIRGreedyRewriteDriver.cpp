@@ -79,9 +79,10 @@ public:
     rewriter.setListener(this);
   }
 
-  /// Rewrite `ops` and every operation the rewrites touch. Return whether the
-  /// IR changed.
-  bool run(ArrayRef<Operation *> ops);
+  /// Rewrite `ops` and every operation the rewrites touch. With
+  /// `eraseOnlyNewlyDead`, dead code elimination spares the operations of
+  /// `ops` that are unused now. Return whether the IR changed.
+  bool run(ArrayRef<Operation *> ops, bool eraseOnlyNewlyDead);
 
 private:
   bool isReachable(Operation *op);
@@ -105,13 +106,20 @@ private:
   cir::GotoAnalysis reachability;
   /// How many times each operation has folded in place.
   DenseMap<Operation *, unsigned> inPlaceFolds;
+  /// Operations to keep even when they are trivially dead. With
+  /// `eraseOnlyNewlyDead`, the given operations that start out unused.
+  DenseSet<Operation *> keptIfDead;
 };
 
 } // namespace
 
-bool GreedyRewriteDriver::run(ArrayRef<Operation *> ops) {
-  for (Operation *op : ops)
+bool GreedyRewriteDriver::run(ArrayRef<Operation *> ops,
+                              bool eraseOnlyNewlyDead) {
+  for (Operation *op : ops) {
     worklist.push(op);
+    if (eraseOnlyNewlyDead && op->use_empty())
+      keptIfDead.insert(op);
+  }
 
   bool changed = false;
   while (!worklist.empty()) {
@@ -119,7 +127,7 @@ bool GreedyRewriteDriver::run(ArrayRef<Operation *> ops) {
     if (!isReachable(op))
       continue;
 
-    if (deadness.isOpTriviallyDead(op)) {
+    if (!keptIfDead.contains(op) && deadness.isOpTriviallyDead(op)) {
       rewriter.eraseOp(op);
       changed = true;
       continue;
@@ -289,13 +297,14 @@ void GreedyRewriteDriver::notifyOperationErased(Operation *op) {
   deadness.invalidate(op);
   reachability.notifyOperationErased(op);
   inPlaceFolds.erase(op);
+  keptIfDead.erase(op);
   addOperandsToWorklist(op);
   worklist.remove(op);
 }
 
 bool cir::applyOpPatternsGreedily(ArrayRef<Operation *> ops,
                                   const FrozenRewritePatternSet &patterns,
-                                  Region &scope) {
+                                  Region &scope, bool eraseOnlyNewlyDead) {
   assert(llvm::all_of(ops,
                       [&](Operation *op) {
                         return scope.findAncestorOpInRegion(*op) != nullptr;
@@ -304,5 +313,5 @@ bool cir::applyOpPatternsGreedily(ArrayRef<Operation *> ops,
   if (ops.empty())
     return false;
   return GreedyRewriteDriver(ops.front()->getContext(), patterns, scope)
-      .run(ops);
+      .run(ops, eraseOnlyNewlyDead);
 }

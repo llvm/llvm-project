@@ -58,6 +58,8 @@ void ternaryCheap(bool b) {
 // CIR: %[[ARG:.*]] = cir.alloca {{.*}} : !cir.ptr<!cir.bool>
 // CIR: cir.load{{.*}}%[[ARG]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR-NEXT: cir.load{{.*}}%[[ARG]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR-NEXT: cir.const #cir.int<0> : !s32i
+// CIR-NEXT: cir.const #cir.int<1> : !s32i
 // CIR-NEXT: cir.load{{.*}}%[[ARG]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR-NEXT: cir.return
 // LLVM-LABEL: define{{.*}} void @_Z12ternaryCheapb

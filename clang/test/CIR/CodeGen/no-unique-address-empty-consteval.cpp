@@ -65,6 +65,7 @@ struct U {
 
 // CIR-LABEL: cir.func {{.*}} @_Z19test_aggregate_initv(
 // CIR:         %[[V3:.*]] = cir.get_member %{{.+}}[0] {name = "v3"}
+// CIR-NEXT:    %{{.+}} = cir.const #cir.int<39612> : !s32i
 // CIR-NEXT:    %[[C:.*]] = cir.const #cir.int<39612>
 // CIR-NEXT:    cir.store align(8) %[[C]], %[[V3]] : !u64i, !cir.ptr<!u64i>
 // CIR-NOT:      #cir.zero : !rec_Empty
@@ -94,6 +95,7 @@ unsigned long test_default_member_init() {
 // CIR:         %[[V:.*]] = cir.get_member %{{.+}}[0] {name = "v"}
 // CIR:         %[[X:.*]] = cir.load align(8) %{{.+}} : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:    cir.store align(8) %[[X]], %[[V]] : !u64i, !cir.ptr<!u64i>
+// CIR-NEXT:    %{{.+}} = cir.cast bitcast %{{.+}} : !cir.ptr<!rec_S> -> !cir.ptr<!rec_Empty>
 // CIR-NEXT:    cir.return
 
 // LLVM-LABEL: define {{.*}} void @_ZN1SC2Em(
@@ -119,6 +121,7 @@ unsigned long test_default_member_init() {
 // CIR:         %[[V4:.*]] = cir.get_member %{{.+}}[0] {name = "v4"}
 // CIR:         %[[X4:.*]] = cir.load align(8) %{{.+}} : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:    cir.store align(8) %[[X4]], %[[V4]] : !u64i, !cir.ptr<!u64i>
+// CIR-NEXT:    %{{.+}} = cir.cast bitcast %{{.+}} : !cir.ptr<!rec_V> -> !cir.ptr<!rec_Empty>
 // CIR-NEXT:    cir.return
 
 // LLVM-LABEL: define {{.*}} void @_ZN1VC2Em(
