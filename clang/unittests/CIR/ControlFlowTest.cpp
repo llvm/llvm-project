@@ -80,6 +80,13 @@ getExitTerminators(Region &region) {
   return terms;
 }
 
+/// Collect the successors of `term` with no operand known to be constant.
+static void getTerminatorSuccessors(RegionBranchTerminatorOpInterface term,
+                                    SmallVectorImpl<RegionSuccessor> &regions) {
+  SmallVector<Attribute> operands(term->getNumOperands());
+  term.getSuccessorRegions(operands, regions);
+}
+
 /// Check that the terminator of `region` has the given successor regions.
 static void expectTerminatorSuccessors(Region &region,
                                        ArrayRef<Region *> expected) {
@@ -87,7 +94,7 @@ static void expectTerminatorSuccessors(Region &region,
   if (!term)
     return;
   SmallVector<RegionSuccessor> successors;
-  term.getSuccessorRegions(/*operands=*/{}, successors);
+  getTerminatorSuccessors(term, successors);
   expectRegionSuccessors(successors, expected,
                          "region #" + std::to_string(region.getRegionNumber()));
 }
@@ -120,7 +127,7 @@ static void verifyControlFlowInterfaceConsistency(RegionBranchOpInterface op) {
         point.getTerminatorPredecessorOrNull();
     regionsWithExit.insert(term->getParentRegion());
     SmallVector<RegionSuccessor> termSuccessors;
-    term.getSuccessorRegions(/*operands=*/{}, termSuccessors);
+    getTerminatorSuccessors(term, termSuccessors);
     unsigned from = term->getParentRegion()->getRegionNumber();
     for (const RegionSuccessor &s : termSuccessors)
       EXPECT_TRUE(llvm::is_contained(opSuccessors, s))

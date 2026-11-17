@@ -829,24 +829,33 @@ cir::RegisterExitDtorOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
 void cir::ConditionOp::getSuccessorRegions(
     ArrayRef<Attribute> operands, SmallVectorImpl<RegionSuccessor> &regions) {
-  // TODO(cir): The condition value may be folded to a constant, narrowing
-  // down its list of possible successors.
+  // A constant condition selects only one of the successors below.
+  FoldAdaptor adaptor(operands, *this);
+  auto cond = mlir::dyn_cast_if_present<cir::BoolAttr>(adaptor.getCondition());
+  bool mayBeTrue = !cond || cond.getValue();
+  bool mayBeFalse = !cond || !cond.getValue();
 
   // Parent is a loop: condition may branch to the body, or on the false edge
   // to the per-iteration cleanup region if present, otherwise to the parent op.
   if (auto loopOp = dyn_cast<LoopOpInterface>(getOperation()->getParentOp())) {
-    regions.emplace_back(&loopOp.getBody());
-    if (mlir::Region *cleanup = loopOp.maybeGetCleanup())
-      regions.emplace_back(cleanup);
-    else
-      regions.emplace_back(loopOp.getOperation());
+    if (mayBeTrue)
+      regions.emplace_back(&loopOp.getBody());
+    if (mayBeFalse) {
+      if (mlir::Region *cleanup = loopOp.maybeGetCleanup())
+        regions.emplace_back(cleanup);
+      else
+        regions.emplace_back(loopOp.getOperation());
+    }
     return;
   }
 
-  // Parent is an await: condition may branch to resume or suspend regions.
+  // Parent is an await: condition may branch to resume (true) or suspend
+  // (false) regions.
   auto await = cast<AwaitOp>(getOperation()->getParentOp());
-  regions.emplace_back(&await.getResume());
-  regions.emplace_back(&await.getSuspend());
+  if (mayBeTrue)
+    regions.emplace_back(&await.getResume());
+  if (mayBeFalse)
+    regions.emplace_back(&await.getSuspend());
 }
 
 MutableOperandRange
@@ -2010,6 +2019,25 @@ void cir::IfOp::getSuccessorRegions(mlir::RegionBranchPoint point,
   regions.push_back(RegionSuccessor(&getThenRegion()));
   if (elseRegion)
     regions.push_back(RegionSuccessor(elseRegion));
+  else
+    regions.emplace_back(getOperation());
+}
+
+void cir::IfOp::getEntrySuccessorRegions(
+    ArrayRef<Attribute> operands, SmallVectorImpl<RegionSuccessor> &regions) {
+  FoldAdaptor adaptor(operands, *this);
+  auto cond = mlir::dyn_cast_if_present<cir::BoolAttr>(adaptor.getCondition());
+  if (!cond) {
+    getSuccessorRegions(mlir::RegionBranchPoint::parent(), regions);
+    return;
+  }
+
+  // A constant condition selects one region. Without an else region, a false
+  // condition skips straight to the parent operation.
+  if (cond.getValue())
+    regions.emplace_back(&getThenRegion());
+  else if (!getElseRegion().empty())
+    regions.emplace_back(&getElseRegion());
   else
     regions.emplace_back(getOperation());
 }
