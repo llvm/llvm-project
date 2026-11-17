@@ -1706,7 +1706,7 @@ define <2 x i1> @neg_test_logical_and_trunc_nuw_nsw_vec(<2 x i1> %c, <2 x i8> no
 }
 
 ; or (select X, A, B), (select X, C, D) -> select X, (A|C), (B|D).
-; Both selects test X, so the new select keeps the first available weights.
+; LHS weights win when both selects have weights.
 define i32 @test_or_of_selects(i1 %c, i32 %a, i32 %b, i32 %d, i32 %e) {
 ; CHECK-LABEL: @test_or_of_selects(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[A:%.*]], [[D:%.*]]
@@ -1720,7 +1720,6 @@ define i32 @test_or_of_selects(i1 %c, i32 %a, i32 %b, i32 %d, i32 %e) {
   ret i32 %result
 }
 
-; Op0 has no profile. Op1's weights describe the new select instead.
 define i32 @test_or_of_selects_second_has_profile(i1 %c, i32 %a, i32 %b, i32 %d, i32 %e) {
 ; CHECK-LABEL: @test_or_of_selects_second_has_profile(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[A:%.*]], [[D:%.*]]
@@ -1734,7 +1733,73 @@ define i32 @test_or_of_selects_second_has_profile(i1 %c, i32 %a, i32 %b, i32 %d,
   ret i32 %result
 }
 
-; Neither select has a profile. Leave new select without profile.
+define i32 @test_or_of_selects_unknown_then_known(i1 %c, i32 %a, i32 %b, i32 %d, i32 %e) {
+; CHECK-LABEL: @test_or_of_selects_unknown_then_known(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[A:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[B:%.*]], [[E:%.*]]
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[C:%.*]], i32 [[TMP1]], i32 [[TMP2]], !prof [[PROF3]]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %lhs_select = select i1 %c, i32 %a, i32 %b, !prof !4
+  %rhs_select = select i1 %c, i32 %d, i32 %e, !prof !2
+  %result = or i32 %lhs_select, %rhs_select
+  ret i32 %result
+}
+
+; Keep !unpredictable from the other select.
+define i32 @test_or_of_selects_unpredictable(i1 %c, i32 %a, i32 %b, i32 %d, i32 %e) {
+; CHECK-LABEL: @test_or_of_selects_unpredictable(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[A:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[B:%.*]], [[E:%.*]]
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[C:%.*]], i32 [[TMP1]], i32 [[TMP2]], !prof [[PROF2]], !unpredictable [[META4:![0-9]+]]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %lhs_select = select i1 %c, i32 %a, i32 %b, !prof !1
+  %rhs_select = select i1 %c, i32 %d, i32 %e, !unpredictable !3
+  %result = or i32 %lhs_select, %rhs_select
+  ret i32 %result
+}
+
+; Cross-block weights are ignored.
+define i32 @test_or_of_selects_cross_block(i32 %x, i32 %a, i32 %b, i32 %c, i32 %d) !prof !0 {
+; CHECK-LABEL: @test_or_of_selects_cross_block(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[X:%.*]], 10
+; CHECK-NEXT:    [[IS_NEG:%.*]] = icmp slt i32 [[X]], 0
+; CHECK-NEXT:    br i1 [[IS_NEG]], label [[NONPOS:%.*]], label [[CHECK_ZERO:%.*]], !prof [[PROF5:![0-9]+]]
+; CHECK:       check_zero:
+; CHECK-NEXT:    [[IS_ZERO:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    br i1 [[IS_ZERO]], label [[NONPOS]], label [[EXIT:%.*]], !prof [[PROF6:![0-9]+]]
+; CHECK:       nonpos:
+; CHECK-NEXT:    [[TMP0:%.*]] = or i32 [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[B:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[COND]], i32 [[TMP0]], i32 [[TMP1]], !prof [[PROF7:![0-9]+]]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[OR]], [[NONPOS]] ], [ 0, [[CHECK_ZERO]] ]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %cond = icmp sgt i32 %x, 10
+  %op0 = select i1 %cond, i32 %a, i32 %b, !prof !5
+  %is_neg = icmp slt i32 %x, 0
+  br i1 %is_neg, label %nonpos, label %check_zero, !prof !6
+
+check_zero:
+  %is_zero = icmp eq i32 %x, 0
+  br i1 %is_zero, label %nonpos, label %exit, !prof !7
+
+nonpos:
+  %op1 = select i1 %cond, i32 %c, i32 %d, !prof !8
+  %or = or i32 %op0, %op1
+  br label %exit
+
+exit:
+  %res = phi i32 [ %or, %nonpos ], [ 0, %check_zero ]
+  ret i32 %res
+}
+
+; No profile on either select. Don't invent one.
 define i32 @test_or_of_selects_no_profile(i1 %c, i32 %a, i32 %b, i32 %d, i32 %e) !prof !0 {
 ; CHECK-LABEL: @test_or_of_selects_no_profile(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[A:%.*]], [[D:%.*]]
@@ -1751,8 +1816,18 @@ define i32 @test_or_of_selects_no_profile(i1 %c, i32 %a, i32 %b, i32 %d, i32 %e)
 !0 = !{!"function_entry_count", i32 5260116}
 !1 = !{!"branch_weights", i32 38, i32 62}
 !2 = !{!"branch_weights", i32 41, i32 59}
+!3 = !{}
+!4 = !{!"unknown", !"instcombine"}
+!5 = !{!"branch_weights", i32 90, i32 10}
+!6 = !{!"branch_weights", i32 5, i32 95}
+!7 = !{!"branch_weights", i32 5, i32 90}
+!8 = !{!"branch_weights", i32 0, i32 10}
 ;.
 ; CHECK: [[PROF1]] = !{!"unknown", !"instcombine"}
 ; CHECK: [[PROF2]] = !{!"branch_weights", i32 38, i32 62}
 ; CHECK: [[PROF3]] = !{!"branch_weights", i32 41, i32 59}
+; CHECK: [[META4]] = !{}
+; CHECK: [[PROF5]] = !{!"branch_weights", i32 5, i32 95}
+; CHECK: [[PROF6]] = !{!"branch_weights", i32 5, i32 90}
+; CHECK: [[PROF7]] = !{!"branch_weights", i32 0, i32 10}
 ;.

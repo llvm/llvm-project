@@ -4158,6 +4158,33 @@ Instruction *InstCombinerImpl::FoldOrOfLogicalAnds(Value *Op0, Value *Op1) {
   return nullptr;
 }
 
+/// Only use selects in this block. Real weights beat an unknown profile.
+static SelectInst *profileInBlock(SelectInst *LHSSel, SelectInst *RHSSel,
+                                  BasicBlock *Block) {
+  SelectInst *FallbackSel = nullptr;
+  for (SelectInst *Sel : {LHSSel, RHSSel}) {
+    if (Sel->getParent() != Block)
+      continue;
+    if (hasBranchWeightMD(*Sel))
+      return Sel;
+    if (!FallbackSel && hasExplicitlyUnknownBranchWeights(*Sel))
+      FallbackSel = Sel;
+  }
+  return FallbackSel;
+}
+
+static MDNode *unpredictableInBlock(SelectInst *LHSSel, SelectInst *RHSSel,
+                                    BasicBlock *Block) {
+  if (LHSSel->getParent() == Block) {
+    if (MDNode *Unpredictable =
+            LHSSel->getMetadata(LLVMContext::MD_unpredictable))
+      return Unpredictable;
+  }
+  if (RHSSel->getParent() == Block)
+    return RHSSel->getMetadata(LLVMContext::MD_unpredictable);
+  return nullptr;
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -4545,16 +4572,19 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
         match(Op1, m_Select(m_Value(Y), m_Value(C), m_Value(D))) && X == Y) {
       Value *orTrue = Builder.CreateOr(A, C);
       Value *orFalse = Builder.CreateOr(B, D);
-      // Both selects test the same condition, so preserve the first available
-      // profile metadata from the original selects on the new select.
+      auto *LHSSel = cast<SelectInst>(Op0);
+      auto *RHSSel = cast<SelectInst>(Op1);
+      BasicBlock *Block = I.getParent();
       Instruction *MDFrom = nullptr;
-      if (!ProfcheckDisableMetadataFixes) {
-        if (cast<Instruction>(Op0)->getMetadata(LLVMContext::MD_prof))
-          MDFrom = cast<Instruction>(Op0);
-        else if (cast<Instruction>(Op1)->getMetadata(LLVMContext::MD_prof))
-          MDFrom = cast<Instruction>(Op1);
+      if (!ProfcheckDisableMetadataFixes)
+        MDFrom = profileInBlock(LHSSel, RHSSel, Block);
+      auto *Result =
+          SelectInst::Create(X, orTrue, orFalse, "", nullptr, MDFrom);
+      if (!Result->getMetadata(LLVMContext::MD_unpredictable)) {
+        if (MDNode *Unpredictable = unpredictableInBlock(LHSSel, RHSSel, Block))
+          Result->setMetadata(LLVMContext::MD_unpredictable, Unpredictable);
       }
-      return SelectInst::Create(X, orTrue, orFalse, "", nullptr, MDFrom);
+      return Result;
     }
   }
 
