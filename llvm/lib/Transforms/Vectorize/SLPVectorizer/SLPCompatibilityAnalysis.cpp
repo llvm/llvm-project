@@ -440,8 +440,8 @@ getLaneConstantCmp(const Instruction *I) {
 
 CmpSamePredicateHelper::MaskType
 CmpSamePredicateHelper::getLaneMask(const Value *V) {
-  if (V->getType()->isIntegerTy(1) && isa<ConstantInt, UndefValue>(V) &&
-      !isa<PoisonValue>(V))
+  if (isa<ConstantInt, UndefValue>(V) && !isa<PoisonValue>(V) &&
+      V->getType()->isIntegerTy(1))
     return AllPreds;
   auto *I = dyn_cast<Instruction>(V);
   if (!I)

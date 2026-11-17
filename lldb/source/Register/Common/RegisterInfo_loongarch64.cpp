@@ -20,25 +20,24 @@
 #define FCC_OFFSET(idx) ((idx)*1 + 32 * 8 + sizeof(RegisterInfo_loongarch64::GPR))
 #define FCSR_OFFSET (8 * 1 + 32 * 8 + sizeof(RegisterInfo_loongarch64::GPR))
 #define LSX_OFFSET(idx)                                                        \
-  ((idx) * 16 + sizeof(RegisterInfo_loongarch64::GPR) +                   \
+  ((idx) * 16 + sizeof(RegisterInfo_loongarch64::GPR) +                        \
    sizeof(RegisterInfo_loongarch64::FPR))
 #define LASX_OFFSET(idx)                                                       \
-  ((idx) * 32 + sizeof(RegisterInfo_loongarch64::GPR) +                   \
-   sizeof(RegisterInfo_loongarch64::FPR) +                                \
+  ((idx) * 32 + sizeof(RegisterInfo_loongarch64::GPR) +                        \
+   sizeof(RegisterInfo_loongarch64::FPR) +                                     \
    sizeof(RegisterInfo_loongarch64::LSX))
 
 #define REG_CONTEXT_SIZE                                                       \
-  (sizeof(RegisterInfo_loongarch64::GPR) +                                \
-   sizeof(RegisterInfo_loongarch64::FPR) +                                \
-   sizeof(RegisterInfo_loongarch64::LSX) +                                \
+  (sizeof(RegisterInfo_loongarch64::GPR) +                                     \
+   sizeof(RegisterInfo_loongarch64::FPR) +                                     \
+   sizeof(RegisterInfo_loongarch64::LSX) +                                     \
    sizeof(RegisterInfo_loongarch64::LASX))
 
 #define DECLARE_REGISTER_INFOS_LOONGARCH64_STRUCT
 #include "Register/Arch/RegisterInfos_loongarch64.h"
 #undef DECLARE_REGISTER_INFOS_LOONGARCH64_STRUCT
 
-const lldb_private::RegisterInfo *
-RegisterInfo_loongarch64::GetRegisterInfoPtr(
+const lldb_private::RegisterInfo *RegisterInfo_loongarch64::GetRegisterInfoPtr(
     const lldb_private::ArchSpec &target_arch) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::loongarch64:
