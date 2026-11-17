@@ -355,9 +355,16 @@ unsigned MIRVocabulary::getCommonOperandIndex(
     MachineOperand::MachineOperandType OperandType) const {
   assert(OperandType != MachineOperand::MO_Register &&
          "Expected non-register operand type");
+  assert(OperandType != MachineOperand::MO_DbgInstrRef &&
+         "MO_DbgInstrRef has no vocabulary entry");
   assert(OperandType > MachineOperand::MO_Register &&
-         OperandType < MachineOperand::MO_Last && "Operand type out of bounds");
-  return static_cast<unsigned>(OperandType) - 1;
+         OperandType <= MachineOperand::MO_Last &&
+         "Operand type out of bounds");
+  // CommonOperandNames skips MO_Register and MO_DbgInstrRef.
+  unsigned Index = static_cast<unsigned>(OperandType) - 1;
+  if (OperandType > MachineOperand::MO_DbgInstrRef)
+    --Index;
+  return Index;
 }
 
 std::optional<unsigned>
