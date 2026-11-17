@@ -11,6 +11,7 @@
 
 #include "mlir/IR/Location.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 #include "llvm/ADT/SmallVector.h"
@@ -62,6 +63,19 @@ mlir::Block *replaceThrowWithTryThrow(cir::ThrowOp throwOp,
 /// driver's dominance-order traversal would otherwise skip.
 void collectUnreachable(mlir::Operation *parent,
                         llvm::SmallVectorImpl<mlir::Operation *> &ops);
+
+/// Apply `patterns` greedily to `ops`, which must lie in `scope`, and to the
+/// operations the rewrites touch, as `mlir::applyOpPatternsGreedily` does under
+/// its default configuration with `scope`. It also rewrites the operations that
+/// control enters only through a `cir.goto` or a `cir.switch` (see
+/// `GotoAnalysis`). Until cir-flatten-cfg and cir-goto-solver turn those jumps
+/// into branches, no CFG edge leads to such code, so MLIR's driver skips it as
+/// unreachable. Unlike MLIR's driver, it folds an operation in place at most 64
+/// times, which ends folds that never stop succeeding on a cycle of SSA values.
+/// Return whether the IR changed.
+bool applyOpPatternsGreedily(llvm::ArrayRef<mlir::Operation *> ops,
+                             const mlir::FrozenRewritePatternSet &patterns,
+                             mlir::Region &scope);
 
 } // namespace cir
 

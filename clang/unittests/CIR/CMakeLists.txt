@@ -9,6 +9,7 @@ add_distinct_clang_unittest(CIRUnitTests
   ControlFlowTest.cpp
   FenvOpTest.cpp
   GetFloatingPointTypeTest.cpp
+  GotoAnalysisTest.cpp
   IntTypeABIAlignTest.cpp
   PointerLikeTest.cpp
   RecordMemberKindTest.cpp
@@ -23,6 +24,7 @@ add_distinct_clang_unittest(CIRUnitTests
   clangBasic
   clangCIRFrontendAction
   MLIRCIR
+  MLIRCIRAnalysis
   CIROpenACCSupport
   MLIRIR
   MLIROpenACCDialect

@@ -18,9 +18,9 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Region.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/Dialect/Transforms/CIRTransformUtils.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace mlir;
@@ -80,12 +80,13 @@ void CIRCanonicalizePass::runOnOperation() {
       ops.push_back(op);
   });
 
-  // Apply patterns. Scope the rewrite to the body region, which encloses
-  // the common ancestor the driver would otherwise search for.
-  GreedyRewriteConfig config;
-  config.setScope(&getOperation()->getRegion(0));
-  if (applyOpPatternsGreedily(ops, std::move(patterns), config).failed())
-    signalPassFailure();
+  // Apply patterns. CIR's driver also rewrites the code that control enters
+  // only through cir.goto or cir.switch, which MLIR's driver skips as
+  // unreachable until cir-flatten-cfg and cir-goto-solver turn those jumps into
+  // branches.
+  cir::applyOpPatternsGreedily(ops,
+                               FrozenRewritePatternSet(std::move(patterns)),
+                               getOperation()->getRegion(0));
 }
 
 } // namespace

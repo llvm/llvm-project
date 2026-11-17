@@ -4,6 +4,7 @@ add_clang_library(MLIRCIRTransforms
   CallConvLoweringPass.cpp
   CIRCanonicalize.cpp
   CIRFoldEmptyBranches.cpp
+  CIRGreedyRewriteDriver.cpp
   CIRSimplify.cpp
   CIRTransformUtils.cpp
   CXXABILowering.cpp
@@ -39,6 +40,7 @@ add_clang_library(MLIRCIRTransforms
   MLIRTransformUtils
 
   MLIRCIR
+  MLIRCIRAnalysis
   MLIRCIRInterfaces
   MLIRCIRTargetLowering
   MLIROpenACCDialect

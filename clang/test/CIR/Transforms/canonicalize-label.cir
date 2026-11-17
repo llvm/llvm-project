@@ -1,0 +1,522 @@
+// RUN: cir-opt %s -cir-canonicalize -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+module {
+  // cir.goto is not a CFG edge until the goto solver runs, so here the block
+  // that the label starts has no predecessors. The canonicalizer still
+  // simplifies it.
+  cir.func @label_block(%arg0: !s32i) -> !s32i {
+    cir.goto "out"
+  ^bb1:
+    cir.label "out"
+    cir.scope {
+    }
+    cir.br ^bb2
+  ^bb2:
+    cir.return %arg0 : !s32i
+  }
+  // CHECK:      cir.func{{.*}} @label_block(%[[ARG0:.*]]: !s32i) -> !s32i {
+  // CHECK-NEXT:   cir.goto "out"
+  // CHECK-NEXT: ^bb1:
+  // CHECK-NEXT:   cir.label "out"
+  // CHECK-NEXT:   cir.return %[[ARG0]] : !s32i
+  // CHECK-NEXT: }
+
+  // The canonicalizer also simplifies the blocks that the label block reaches.
+  cir.func @label_successor(%arg0: !cir.bool) {
+    cir.goto "out"
+  ^bb1:
+    cir.label "out"
+    cir.brcond %arg0 ^bb2, ^bb3
+  ^bb2:
+    cir.scope {
+    }
+    cir.return
+  ^bb3:
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @label_successor(%[[ARG0:.*]]: !cir.bool) {
+  // CHECK-NEXT:   cir.goto "out"
+  // CHECK-NEXT: ^bb1:
+  // CHECK-NEXT:   cir.label "out"
+  // CHECK-NEXT:   cir.brcond %[[ARG0]] ^bb2, ^bb3
+  // CHECK-NEXT: ^bb2:
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: ^bb3:
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // A goto to a label inside a scope enters the outer block at that scope.
+  // The canonicalizer simplifies the scope and the operations after it, but
+  // not the constant before it, which no jump reaches. It keeps the label at
+  // the start of its block.
+  cir.func @label_in_scope(%arg0: !s32i) -> !s32i {
+    cir.goto "in"
+  ^bb1:
+    %0 = cir.const #cir.int<7> : !s32i
+    cir.scope {
+      cir.br ^bb2
+    ^bb2:
+      cir.label "in"
+      cir.scope {
+      }
+      cir.yield
+    }
+    cir.br ^bb3
+  ^bb3:
+    cir.return %arg0 : !s32i
+  }
+  // CHECK:      cir.func{{.*}} @label_in_scope(%[[ARG0:.*]]: !s32i) -> !s32i {
+  // CHECK-NEXT:   cir.goto "in"
+  // CHECK-NEXT: ^bb1:
+  // CHECK-NEXT:   cir.const #cir.int<7> : !s32i
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:     cir.br ^[[LABEL:bb[0-9]+]]
+  // CHECK-NEXT:   ^[[LABEL]]:
+  // CHECK-NEXT:     cir.label "in"
+  // CHECK-NEXT:     cir.yield
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.return %[[ARG0]] : !s32i
+  // CHECK-NEXT: }
+
+  // Every block on the way to a nested label is entered at the operation that
+  // holds the label. The constants before those operations stay.
+  cir.func @nested_holders() {
+    cir.goto "in"
+  ^bb1:
+    %0 = cir.const #cir.int<1> : !s32i
+    cir.scope {
+      cir.goto "in"
+    ^bb2:
+      %1 = cir.const #cir.int<2> : !s32i
+      cir.scope {
+        cir.br ^bb3
+      ^bb3:
+        cir.label "in"
+        cir.scope {
+        }
+        cir.yield
+      }
+      cir.scope {
+      }
+      cir.yield
+    }
+    cir.scope {
+    }
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @nested_holders() {
+  // CHECK-NEXT:   cir.goto "in"
+  // CHECK-NEXT: ^bb1:
+  // CHECK-NEXT:   cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:     cir.goto "in"
+  // CHECK-NEXT:   ^bb{{[0-9]+}}:
+  // CHECK-NEXT:     cir.const #cir.int<2> : !s32i
+  // CHECK-NEXT:     cir.scope {
+  // CHECK-NEXT:       cir.br ^[[LABEL:bb[0-9]+]]
+  // CHECK-NEXT:     ^[[LABEL]]:
+  // CHECK-NEXT:       cir.label "in"
+  // CHECK-NEXT:       cir.yield
+  // CHECK-NEXT:     }
+  // CHECK-NEXT:     cir.yield
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // Control enters a block at its first holder, so the operations between two
+  // holders are reachable.
+  cir.func @two_holders() {
+    cir.goto "a"
+  ^bb1:
+    %0 = cir.const #cir.int<1> : !s32i
+    cir.scope {
+      cir.br ^bb2
+    ^bb2:
+      cir.label "a"
+      cir.yield
+    }
+    cir.scope {
+    }
+    cir.scope {
+      cir.goto "a"
+    ^bb3:
+      cir.label "b"
+      cir.goto "b"
+    }
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @two_holders() {
+  // CHECK-NEXT:   cir.goto "a"
+  // CHECK-NEXT: ^bb1:
+  // CHECK-NEXT:   cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:     cir.br ^bb1
+  // CHECK-NEXT:   ^bb1:
+  // CHECK-NEXT:     cir.label "a"
+  // CHECK-NEXT:     cir.yield
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:     cir.goto "a"
+  // CHECK-NEXT:   ^bb1:
+  // CHECK-NEXT:     cir.label "b"
+  // CHECK-NEXT:     cir.goto "b"
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // Control that enters a block at a holder also follows the block's edges.
+  cir.func @holder_successors(%arg0: !cir.bool) {
+    cir.goto "in"
+  ^bb1:
+    %0 = cir.const #cir.int<1> : !s32i
+    cir.scope {
+      cir.br ^bb2
+    ^bb2:
+      cir.label "in"
+      cir.yield
+    }
+    cir.brcond %arg0 ^bb3, ^bb4
+  ^bb3:
+    cir.scope {
+    }
+    cir.return
+  ^bb4:
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @holder_successors(%[[ARG0:.*]]: !cir.bool) {
+  // CHECK-NEXT:   cir.goto "in"
+  // CHECK-NEXT: ^bb1:
+  // CHECK-NEXT:   cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:     cir.br ^bb1
+  // CHECK-NEXT:   ^bb1:
+  // CHECK-NEXT:     cir.label "in"
+  // CHECK-NEXT:     cir.yield
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.brcond %[[ARG0]] ^bb2, ^bb3
+  // CHECK-NEXT: ^bb2:
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: ^bb3:
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // An edge from a later label block reaches the whole block that a jump
+  // enters at a holder, including the operations before the holder.
+  cir.func @edge_into_holder_block(%arg0: !cir.bool) {
+    cir.goto "a"
+  ^bb1:
+    cir.scope {
+    }
+    cir.scope {
+      cir.br ^bb2
+    ^bb2:
+      cir.label "b"
+      cir.yield
+    }
+    cir.return
+  ^bb3:
+    cir.label "a"
+    cir.brcond %arg0 ^bb1, ^bb4
+  ^bb4:
+    cir.goto "b"
+  }
+  // CHECK:      cir.func{{.*}} @edge_into_holder_block(%[[ARG0:.*]]: !cir.bool) {
+  // CHECK-NEXT:   cir.goto "a"
+  // CHECK-NEXT: ^bb1:
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:     cir.br ^bb1
+  // CHECK-NEXT:   ^bb1:
+  // CHECK-NEXT:     cir.label "b"
+  // CHECK-NEXT:     cir.yield
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: ^bb2:
+  // CHECK-NEXT:   cir.label "a"
+  // CHECK-NEXT:   cir.brcond %[[ARG0]] ^bb1, ^bb3
+  // CHECK-NEXT: ^bb3:
+  // CHECK-NEXT:   cir.goto "b"
+  // CHECK-NEXT: }
+
+  // Every region of an operation that holds a label counts as entered, here
+  // also the else region of the cir.if.
+  cir.func @if_holder(%arg0: !cir.bool) {
+    cir.goto "in"
+  ^bb1:
+    cir.if %arg0 {
+      cir.br ^bb2
+    ^bb2:
+      cir.label "in"
+      cir.yield
+    } else {
+      cir.scope {
+      }
+      cir.yield
+    }
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @if_holder(%[[ARG0:.*]]: !cir.bool) {
+  // CHECK-NEXT:   cir.goto "in"
+  // CHECK-NEXT: ^bb1:
+  // CHECK-NEXT:   cir.if %[[ARG0]] {
+  // CHECK-NEXT:     cir.br ^[[LABEL:bb[0-9]+]]
+  // CHECK-NEXT:   ^[[LABEL]]:
+  // CHECK-NEXT:     cir.label "in"
+  // CHECK-NEXT:     cir.yield
+  // CHECK-NEXT:   } else {
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // A label that only an indirect goto reaches.
+  cir.func @indirect_goto_label() {
+    %0 = cir.block_address <@indirect_goto_label, "a"> : !cir.ptr<!void>
+    cir.indirect_goto %0 : !cir.ptr<!void>
+  ^bb1:
+    cir.label "a"
+    cir.scope {
+    }
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @indirect_goto_label() {
+  // CHECK-NEXT:   %[[ADDR:.*]] = cir.block_address <@indirect_goto_label, "a">
+  // CHECK-NEXT:   cir.indirect_goto %[[ADDR]] : !cir.ptr<!void>
+  // CHECK-NEXT: ^bb1:
+  // CHECK-NEXT:   cir.label "a"
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // A goto into a case of a switch in a block with no predecessors.
+  cir.func @goto_into_case(%arg0: !s32i) {
+    cir.goto "in"
+  ^bb1:
+    cir.switch (%arg0 : !s32i) {
+      cir.case(equal, [#cir.int<1> : !s32i]) {
+        cir.br ^bb2
+      ^bb2:
+        cir.label "in"
+        cir.scope {
+        }
+        cir.break
+      }
+      cir.yield
+    }
+    cir.scope {
+    }
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @goto_into_case(%[[ARG0:.*]]: !s32i) {
+  // CHECK-NEXT:   cir.goto "in"
+  // CHECK-NEXT: ^bb1:
+  // CHECK-NEXT:   cir.switch(%[[ARG0]] : !s32i) {
+  // CHECK-NEXT:     cir.case(equal, [#cir.int<1> : !s32i]) {
+  // CHECK-NEXT:       cir.br ^[[LABEL:bb[0-9]+]]
+  // CHECK-NEXT:     ^[[LABEL]]:
+  // CHECK-NEXT:       cir.label "in"
+  // CHECK-NEXT:       cir.break
+  // CHECK-NEXT:     }
+  // CHECK-NEXT:     cir.yield
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // The block that holds a cir.case after a cir.break has no CFG predecessor
+  // either, but the cir.switch jumps to the case. The constant before the case
+  // stays.
+  cir.func @case_after_break(%arg0: !s32i) {
+    cir.switch(%arg0 : !s32i) {
+      cir.case(equal, [#cir.int<1> : !s32i]) {
+        cir.scope {
+          cir.break
+        ^bb1:
+          %0 = cir.const #cir.int<1> : !s32i
+          cir.case(equal, [#cir.int<2> : !s32i]) {
+            cir.scope {
+            }
+            cir.yield
+          }
+          cir.scope {
+          }
+          cir.yield
+        }
+        cir.yield
+      }
+      cir.yield
+    }
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @case_after_break(%[[ARG0:.*]]: !s32i) {
+  // CHECK-NEXT:   cir.switch(%[[ARG0]] : !s32i) {
+  // CHECK-NEXT:     cir.case(equal, [#cir.int<1> : !s32i]) {
+  // CHECK-NEXT:       cir.scope {
+  // CHECK-NEXT:         cir.break
+  // CHECK-NEXT:       ^bb1:
+  // CHECK-NEXT:         cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT:         cir.case(equal, [#cir.int<2> : !s32i]) {
+  // CHECK-NEXT:           cir.yield
+  // CHECK-NEXT:         }
+  // CHECK-NEXT:         cir.yield
+  // CHECK-NEXT:       }
+  // CHECK-NEXT:       cir.yield
+  // CHECK-NEXT:     }
+  // CHECK-NEXT:     cir.yield
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // A case nested in a scope after a cir.break makes that scope enter its
+  // block, which has no CFG predecessor.
+  cir.func @case_holder_after_break(%arg0: !s32i) {
+    cir.switch(%arg0 : !s32i) {
+      cir.case(equal, [#cir.int<1> : !s32i]) {
+        cir.break
+      ^bb1:
+        %0 = cir.const #cir.int<1> : !s32i
+        cir.scope {
+          cir.case(equal, [#cir.int<2> : !s32i]) {
+            cir.scope {
+            }
+            cir.yield
+          }
+          cir.yield
+        }
+        cir.yield
+      }
+      cir.yield
+    }
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @case_holder_after_break(%[[ARG0:.*]]: !s32i) {
+  // CHECK-NEXT:   cir.switch(%[[ARG0]] : !s32i) {
+  // CHECK-NEXT:     cir.case(equal, [#cir.int<1> : !s32i]) {
+  // CHECK-NEXT:       cir.break
+  // CHECK-NEXT:     ^bb1:
+  // CHECK-NEXT:       cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT:       cir.scope {
+  // CHECK-NEXT:         cir.case(equal, [#cir.int<2> : !s32i]) {
+  // CHECK-NEXT:           cir.yield
+  // CHECK-NEXT:         }
+  // CHECK-NEXT:       }
+  // CHECK-NEXT:       cir.yield
+  // CHECK-NEXT:     }
+  // CHECK-NEXT:     cir.yield
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // A case directly in a block of the switch body that only the switch enters.
+  cir.func @case_in_switch_block(%arg0: !s32i) {
+    cir.switch(%arg0 : !s32i) {
+      cir.case(equal, [#cir.int<1> : !s32i]) {
+        cir.break
+      }
+      cir.goto "out"
+    ^bb1:
+      cir.case(equal, [#cir.int<2> : !s32i]) {
+        cir.scope {
+        }
+        cir.break
+      }
+      cir.yield
+    }
+    cir.br ^bb2
+  ^bb2:
+    cir.label "out"
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @case_in_switch_block(%[[ARG0:.*]]: !s32i) {
+  // CHECK-NEXT:   cir.switch(%[[ARG0]] : !s32i) {
+  // CHECK-NEXT:     cir.case(equal, [#cir.int<1> : !s32i]) {
+  // CHECK-NEXT:       cir.break
+  // CHECK-NEXT:     }
+  // CHECK-NEXT:     cir.goto "out"
+  // CHECK-NEXT:   ^bb1:
+  // CHECK-NEXT:     cir.case(equal, [#cir.int<2> : !s32i]) {
+  // CHECK-NEXT:       cir.break
+  // CHECK-NEXT:     }
+  // CHECK-NEXT:     cir.yield
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.br ^bb1
+  // CHECK-NEXT: ^bb1:
+  // CHECK-NEXT:   cir.label "out"
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // Only its cir.switch jumps to a cir.case, so a case does not make a switch
+  // that nothing reaches reachable.
+  cir.func @case_does_not_enter_switch(%arg0: !s32i) {
+    cir.return
+  ^bb1:
+    cir.switch(%arg0 : !s32i) {
+      cir.case(equal, [#cir.int<1> : !s32i]) {
+        cir.scope {
+        }
+        cir.break
+      }
+      cir.yield
+    }
+    cir.scope {
+    }
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @case_does_not_enter_switch(%[[ARG0:.*]]: !s32i) {
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: ^bb1:
+  // CHECK-NEXT:   cir.switch(%[[ARG0]] : !s32i) {
+  // CHECK-NEXT:     cir.case(equal, [#cir.int<1> : !s32i]) {
+  // CHECK-NEXT:       cir.scope {
+  // CHECK-NEXT:       }
+  // CHECK-NEXT:       cir.break
+  // CHECK-NEXT:     }
+  // CHECK-NEXT:     cir.yield
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // A block that no edge and no label reaches stays as it is.
+  cir.func @dead_block() {
+    cir.return
+  ^bb1:
+    %0 = cir.const #cir.int<1> : !s32i
+    cir.scope {
+    }
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @dead_block() {
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: ^bb1:
+  // CHECK-NEXT:   cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // The verifier checks no dominance in a block that only a jump enters, so
+  // it can hold SSA cycles. Folding them must stop. The unused constant goes
+  // away, which shows that the block is visited.
+  cir.func @cycles_after_label() {
+    cir.goto "out"
+  ^bb1:
+    cir.label "out"
+    %c = cir.const #cir.int<0> : !s32i
+    %0 = cir.cast int_to_bool %1 : !s32i -> !cir.bool
+    %1 = cir.cast bool_to_int %0 : !cir.bool -> !s32i
+    %2 = cir.not %3 : !cir.bool
+    %3 = cir.not %2 : !cir.bool
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @cycles_after_label() {
+  // CHECK-NEXT:   cir.goto "out"
+  // CHECK-NEXT: ^bb1:
+  // CHECK-NEXT:   cir.label "out"
+  // CHECK-NEXT:   %[[A:[0-9]+]] = cir.cast int_to_bool %[[B:[0-9]+]] : !s32i -> !cir.bool
+  // CHECK-NEXT:   %[[B]] = cir.cast bool_to_int %[[A]] : !cir.bool -> !s32i
+  // CHECK-NEXT:   %[[C:[0-9]+]] = cir.not %[[D:[0-9]+]] : !cir.bool
+  // CHECK-NEXT:   %[[D]] = cir.not %[[C]] : !cir.bool
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+}
