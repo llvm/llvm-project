@@ -1996,6 +1996,15 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
     processAtomicInstr(InitLoaded);
   }
 
+  // Give the phi its backedge before emitting the loop body. The builder's
+  // InstSimplifyFolder may thread operations through the phi, and with only
+  // the entry value it would replace uses of %loaded with the initial load.
+  // Use a placeholder value and a temporary terminator (the folder looks at
+  // the incoming block's terminator) until the cmpxchg and branch exist.
+  Instruction *TmpTerm = Builder.CreateUnreachable();
+  Loaded->addIncoming(PoisonValue::get(ResultTy), LoopBB);
+  Builder.SetInsertPoint(TmpTerm);
+
   Value *NewVal = PerformOp(Builder, Loaded);
 
   Value *NewLoaded = nullptr;
@@ -2008,7 +2017,9 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
                 SSID, IsVolatile, Success, NewLoaded, MetadataSrc);
   assert(Success && NewLoaded);
 
-  Loaded->addIncoming(NewLoaded, LoopBB);
+  Loaded->setIncomingValueForBlock(LoopBB, NewLoaded);
+  TmpTerm->eraseFromParent();
+  Builder.SetInsertPoint(LoopBB);
 
   Instruction *CondBr = Builder.CreateCondBr(Success, ExitBB, LoopBB);
 
