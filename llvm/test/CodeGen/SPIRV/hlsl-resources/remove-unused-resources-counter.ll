@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=spirv-remove-unused-resources %s -o - | FileCheck %s
+; RUN: opt -S -passes=spirv-lower-resource-names,spirv-remove-unused-resources %s -o - | FileCheck %s
 ;
 ; When using entry point main, eliminate the unused buffer handle and
 ; it's associated counter handle
@@ -22,7 +22,7 @@
 ; CHECK-NOT: @.str =
 ; CHECK-LABEL: define void @main()
 ; CHECK-NOT: call target("spirv.VulkanBuffer",
-; CHECK: %[[USED:.*]] = call target("spirv.Image", {{.*}}) @llvm.spv.resource.handlefromimplicitbinding{{.*}}(i32 2, i32 0, i32 1, i32 0, ptr @.str.2)
+; CHECK: %[[USED:.*]] = call target("spirv.Image", {{.*}}) @llvm.spv.resource.handlefromimplicitbinding.mdname{{.*}}(i32 2, i32 0, i32 1, i32 0, metadata
 ; CHECK: @llvm.spv.resource.getpointer{{.*}}(target("spirv.Image", {{.*}}) %[[USED]], i32 0)
 ; CHECK: store float 1.000000e+00
 ; CHECK: ret void

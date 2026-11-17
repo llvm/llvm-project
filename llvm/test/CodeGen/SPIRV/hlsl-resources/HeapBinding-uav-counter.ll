@@ -15,11 +15,11 @@
 ; CHECK-DAG: OpDecorate [[Buf]] DescriptorSet 0
 ; CHECK-DAG: OpDecorate [[Buf]] Binding 1
 
-; CHECK-DAG: OpName [[Heap:%[0-9]+]] "ResourceDescriptorHeap"
+; CHECK-DAG: OpName [[Heap:%[0-9]+]] ".BufferHeap.1"
 ; CHECK-DAG: OpDecorate [[Heap]] DescriptorSet 0
 ; CHECK-DAG: OpDecorate [[Heap]] Binding 0
 
-; CHECK-DAG: OpName [[CounterHeap:%[0-9]+]] "ResourceDescriptorHeap.counter"
+; CHECK-DAG: OpName [[CounterHeap:%[0-9]+]] ".BufferHeap.1.counter"
 ; CHECK-DAG: OpDecorate [[CounterHeap]] DescriptorSet 0
 ; CHECK-DAG: OpDecorate [[CounterHeap]] Binding 2
 

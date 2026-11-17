@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=spirv-remove-unused-resources %s -o - | FileCheck %s
+; RUN: opt -S -passes=spirv-lower-resource-names,spirv-remove-unused-resources %s -o - | FileCheck %s
 
 ; Make sure the handle/global survive the removal pass since they're actually used
 ; Original HLSL:
@@ -15,7 +15,6 @@
 ; }
 
 ; CHECK: @_ZL4data.0 = internal {{.*}}global target("spirv.VulkanBuffer", %Data, 2, 0)
-; CHECK: @.str = private unnamed_addr constant [5 x i8] c"data\00"
 ; CHECK-LABEL: define internal {{.*}}@_Z8readDatav()
 ; CHECK: load target("spirv.VulkanBuffer", %Data, 2, 0), ptr @_ZL4data.0
 ; CHECK-LABEL: define void @main()

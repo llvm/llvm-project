@@ -29,23 +29,21 @@
 define void @main() local_unnamed_addr #0 {
 ; CHECK-NOT: OpCapability VariablePointersStorageBuffer
 ; CHECK-LABEL: main
-; CHECK:       %42 = OpFunction %2 None %3 ; -- Begin function main
+; CHECK:       %27 = OpFunction %2 None %3 ; -- Begin function main
 ; CHECK-NEXT:    %1 = OpLabel
-; CHECK-NEXT:    %43 = OpVariable %27 Function %37
-; CHECK-NEXT:    %44 = OpVariable %26 Function %38
-; CHECK-NEXT:    %45 = OpCopyObject %19 %39
-; CHECK-NEXT:    %46 = OpCopyObject %16 %40
-; CHECK-NEXT:    %47 = OpLoad %4 %41
-; CHECK-NEXT:    %48 = OpAccessChain %13 %45 %28 %47
-; CHECK-NEXT:    %49 = OpInBoundsAccessChain %9 %48 %30
-; CHECK-NEXT:    %50 = OpLoad %8 %49
-; CHECK-NEXT:    %51 = OpAccessChain %11 %46 %28 %47
-; CHECK-NEXT:    %52 = OpInBoundsAccessChain %9 %51 %28
-; CHECK-NEXT:    OpStore %52 %50
-; CHECK-NEXT:    %53 = OpAccessChain %6 %48 %28
-; CHECK-NEXT:    %54 = OpLoad %5 %53
-; CHECK-NEXT:    %55 = OpInBoundsAccessChain %6 %51 %30
-; CHECK-NEXT:    OpStore %55 %54
+; CHECK-NEXT:    %28 = OpCopyObject %19 %24
+; CHECK-NEXT:    %29 = OpCopyObject %16 %25
+; CHECK-NEXT:    %30 = OpLoad %4 %26
+; CHECK-NEXT:    %31 = OpAccessChain %13 %28 %21 %30
+; CHECK-NEXT:    %32 = OpInBoundsAccessChain %9 %31 %23
+; CHECK-NEXT:    %33 = OpLoad %8 %32
+; CHECK-NEXT:    %34 = OpAccessChain %11 %29 %21 %30
+; CHECK-NEXT:    %35 = OpInBoundsAccessChain %9 %34 %21
+; CHECK-NEXT:    OpStore %35 %33
+; CHECK-NEXT:    %36 = OpAccessChain %6 %31 %21
+; CHECK-NEXT:    %37 = OpLoad %5 %36
+; CHECK-NEXT:    %38 = OpInBoundsAccessChain %6 %34 %23
+; CHECK-NEXT:    OpStore %38 %37
 ; CHECK-NEXT:    OpReturn
 ; CHECK-NEXT:    OpFunctionEnd
 entry:
