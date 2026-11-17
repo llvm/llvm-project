@@ -101,10 +101,10 @@ define i32 @select_example_2(i32 %a, i32 %b, i1 zeroext %x, i32 %y) {
 ;
 ; RV32I-LATE-LABEL: select_example_2:
 ; RV32I-LATE:       # %bb.0: # %entry
-; RV32I-LATE-NEXT:    qc.li a0, 65543
-; RV32I-LATE-NEXT:    bnez a2, .LBB1_2
-; RV32I-LATE-NEXT:  # %bb.1: # %entry
 ; RV32I-LATE-NEXT:    mv a0, a1
+; RV32I-LATE-NEXT:    beqz a2, .LBB1_2
+; RV32I-LATE-NEXT:  # %bb.1: # %entry
+; RV32I-LATE-NEXT:    qc.li a0, 65543
 ; RV32I-LATE-NEXT:  .LBB1_2: # %entry
 ; RV32I-LATE-NEXT:    ret
 entry:
@@ -155,10 +155,10 @@ define i32 @select_example_3(i32 %a, i32 %b, i1 zeroext %x, i32 %y) {
 ;
 ; RV32I-LATE-LABEL: select_example_3:
 ; RV32I-LATE:       # %bb.0: # %entry
-; RV32I-LATE-NEXT:    qc.e.li a0, 4198928
-; RV32I-LATE-NEXT:    bnez a2, .LBB2_2
-; RV32I-LATE-NEXT:  # %bb.1: # %entry
 ; RV32I-LATE-NEXT:    mv a0, a1
+; RV32I-LATE-NEXT:    beqz a2, .LBB2_2
+; RV32I-LATE-NEXT:  # %bb.1: # %entry
+; RV32I-LATE-NEXT:    qc.e.li a0, 4198928
 ; RV32I-LATE-NEXT:  .LBB2_2: # %entry
 ; RV32I-LATE-NEXT:    ret
 entry:

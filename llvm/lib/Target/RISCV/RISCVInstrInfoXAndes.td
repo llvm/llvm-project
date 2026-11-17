@@ -955,7 +955,7 @@ class SFBNDS_BFO
   let Constraints = "$dst = $falsev";
 }
 
-let Predicates = [HasShortForwardBranchIALU] in {
+let Predicates = [HasLateSelectExpansion] in {
   def PseudoCCNDS_BFOS : SFBNDS_BFO;
   def PseudoCCNDS_BFOZ : SFBNDS_BFO;
 }
