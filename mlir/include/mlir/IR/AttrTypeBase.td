@@ -257,8 +257,8 @@ class AttrOrTypeDef<string valueType, string name, list<Trait> defTraits,
 
   // Optional. The partition of this def. `-gen-{attr,type}def-{decls,defs}`
   // generate the defs of one partition at a time with
-  // `-{attr,type}defs-partition=...`, which requires every generated def to be
-  // in a partition. Ignored without `-{attr,type}defs-partition`.
+  // `-{attr,type}def-partition=...`, which requires every generated def to be
+  // in a partition. Ignored without `-{attr,type}def-partition`.
   Partition partition = ?;
 }
 
