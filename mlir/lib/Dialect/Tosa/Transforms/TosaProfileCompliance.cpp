@@ -96,7 +96,7 @@ TosaProfileCompliance::TosaProfileCompliance() {
   static const TypeInfo fp8e5m2T = {mlir::Float8E5M2Type::getTypeID(), 8};
 
   // micro-scaling formats
-  // Note: these types exist to suppport the deprecated block_scaled operations
+  // Note: these types exist to support the deprecated block_scaled operations
   // and can be removed once those operations are removed.
   static const TypeInfo fp6e2m3T = {mlir::Float6E2M3FNType::getTypeID(), 6};
   static const TypeInfo fp6e3m2T = {mlir::Float6E3M2FNType::getTypeID(), 6};

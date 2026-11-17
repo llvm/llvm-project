@@ -48,7 +48,9 @@ func.func @char_type(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>, %arg1: index
   ^bb0(%arg4: index):
     %2 = hlfir.designate %arg0 (%arg4)  typeparams %arg3 : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
     %3 = hlfir.concat %2, %2 len %arg2 : (!fir.boxchar<1>, !fir.boxchar<1>, index) -> !hlfir.expr<!fir.char<1,?>>
-    hlfir.yield_element %3 : !hlfir.expr<!fir.char<1,?>>
+    hlfir.yield_element %3 : !hlfir.expr<!fir.char<1,?>> cleanup {
+      hlfir.destroy %3 : !hlfir.expr<!fir.char<1,?>>
+    }
   }
   return
 }
@@ -66,12 +68,14 @@ func.func @char_type(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>, %arg1: index
 // CHECK:      %[[VAL_10:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_9]])  typeparams %[[VAL_3]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
                // concatenation
 // CHECK:      %[[VAL_30:.*]]:2 = hlfir.declare %[[VAL_14:.*]] typeparams %[[VAL_13:.*]] uniq_name("tmp") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-// CHECK:      %[[VAL_31:.*]] = arith.constant false
+// CHECK:      %[[VAL_31:.*]] = arith.constant true
 // CHECK:      %[[VAL_32:.*]] = fir.undefined tuple<!fir.boxchar<1>, i1>
 // CHECK:      %[[VAL_33:.*]] = fir.insert_value %[[VAL_32]], %[[VAL_31]], [1 : index] : (tuple<!fir.boxchar<1>, i1>, i1) -> tuple<!fir.boxchar<1>, i1>
 // CHECK:      %[[VAL_34:.*]] = fir.insert_value %[[VAL_33]], %[[VAL_30]]#0, [0 : index] : (tuple<!fir.boxchar<1>, i1>, !fir.boxchar<1>) -> tuple<!fir.boxchar<1>, i1>
 // CHECK:      %[[VAL_35:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_9]])  typeparams %[[VAL_2]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
 // CHECK:      hlfir.assign %[[VAL_30]]#0 to %[[VAL_35]] temporary_lhs : !fir.boxchar<1>, !fir.boxchar<1>
+// CHECK:      %[[VAL_39:.*]] = fir.box_addr %[[VAL_30]]#0 : (!fir.boxchar<1>) -> !fir.heap<!fir.char<1,?>>
+// CHECK:      fir.freemem %[[VAL_39]] : !fir.heap<!fir.char<1,?>>
 // CHECK:    }
 // CHECK:    %[[VAL_36:.*]] = fir.undefined tuple<!fir.box<!fir.array<?x!fir.char<1,?>>>, i1>
 // CHECK:    %[[VAL_37:.*]] = fir.insert_value %[[VAL_36]], %[[VAL_7]], [1 : index] : (tuple<!fir.box<!fir.array<?x!fir.char<1,?>>>, i1>, i1) -> tuple<!fir.box<!fir.array<?x!fir.char<1,?>>>, i1>
@@ -84,7 +88,9 @@ func.func @derived_transpose(%arg0: !fir.box<!fir.array<?x?x!fir.type<t{field:f3
   ^bb0(%arg4: index, %arg5: index):
     %2 = hlfir.designate %arg0 (%arg4, %arg5) : (!fir.box<!fir.array<?x?x!fir.type<t{field:f32}>>>, index, index) -> !fir.box<!fir.type<t{field:f32}>>
     %3 = hlfir.as_expr %2 : (!fir.box<!fir.type<t{field:f32}>>) -> !hlfir.expr<!fir.type<t{field:f32}>>
-    hlfir.yield_element %3 : !hlfir.expr<!fir.type<t{field:f32}>>
+    hlfir.yield_element %3 : !hlfir.expr<!fir.type<t{field:f32}>> cleanup {
+      hlfir.destroy %3 : !hlfir.expr<!fir.type<t{field:f32}>>
+    }
   }
   return
 }
@@ -148,7 +154,9 @@ func.func @test_polymorphic(%arg0: !fir.class<!fir.type<_QMtypesTt>> {fir.bindc_
   ^bb0(%arg3: index, %arg4: index):
     %6 = hlfir.designate %2#0 (%arg3, %arg4)  : (!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, index, index) -> !fir.class<!fir.type<_QMtypesTt>>
     %7 = hlfir.as_expr %6 : (!fir.class<!fir.type<_QMtypesTt>>) -> !hlfir.expr<!fir.type<_QMtypesTt>?>
-    hlfir.yield_element %7 : !hlfir.expr<!fir.type<_QMtypesTt>?>
+    hlfir.yield_element %7 : !hlfir.expr<!fir.type<_QMtypesTt>?> cleanup {
+      hlfir.destroy %7 : !hlfir.expr<!fir.type<_QMtypesTt>?>
+    }
   }
   return
 }
@@ -197,7 +205,9 @@ func.func @test_polymorphic_expr(%arg0: !fir.class<!fir.type<_QMtypesTt>> {fir.b
   ^bb0(%arg3: index, %arg4: index):
     %6 = hlfir.designate %2#0 (%arg3, %arg4)  : (!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, index, index) -> !fir.class<!fir.type<_QMtypesTt>>
     %7 = hlfir.as_expr %6 : (!fir.class<!fir.type<_QMtypesTt>>) -> !hlfir.expr<!fir.type<_QMtypesTt>?>
-    hlfir.yield_element %7 : !hlfir.expr<!fir.type<_QMtypesTt>?>
+    hlfir.yield_element %7 : !hlfir.expr<!fir.type<_QMtypesTt>?> cleanup {
+      hlfir.destroy %7 : !hlfir.expr<!fir.type<_QMtypesTt>?>
+    }
   }
   %8 = hlfir.elemental %4 mold %5 unordered : (!fir.shape<2>, !hlfir.expr<?x?x!fir.type<_QMtypesTt>?>) -> !hlfir.expr<?x?x!fir.type<_QMtypesTt>?> {
   ^bb0(%arg3: index, %arg4: index):
@@ -261,9 +271,10 @@ func.func @test_polymorphic_expr(%arg0: !fir.class<!fir.type<_QMtypesTt>> {fir.b
 // CHECK:               %[[VAL_50:.*]] = fir.insert_value %[[VAL_49]], %[[VAL_46]], [0 : index] : (tuple<!fir.class<!fir.type<_QMtypesTt>>, i1>, !fir.class<!fir.type<_QMtypesTt>>) -> tuple<!fir.class<!fir.type<_QMtypesTt>>, i1>
 // CHECK:               %[[VAL_51:.*]] = hlfir.designate %[[VAL_41]]#0 (%[[VAL_45]], %[[VAL_44]])  : (!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, index, index) -> !fir.class<!fir.type<_QMtypesTt>>
 // CHECK:               hlfir.assign %[[VAL_46]] to %[[VAL_51]] temporary_lhs : !fir.class<!fir.type<_QMtypesTt>>, !fir.class<!fir.type<_QMtypesTt>>
-// CHECK:               %[[VAL_52:.*]] = fir.box_addr %[[VAL_46]] : (!fir.class<!fir.type<_QMtypesTt>>) -> !fir.heap<!fir.type<_QMtypesTt>>
-// CHECK:               %[[VAL_53:.*]] = fir.convert %[[VAL_46]] : (!fir.class<!fir.type<_QMtypesTt>>) -> !fir.box<none>
-// CHECK:               fir.call @_FortranADestroyWithoutFinalization(%[[VAL_53]]) : (!fir.box<none>) -> ()
+// The apply result borrows the first array's element. Consuming it must not
+// destroy its allocatable components.
+// CHECK-NOT:           @_FortranADestroyWithoutFinalization
+// CHECK-NOT:           fir.freemem
 // CHECK:             }
 // CHECK:           }
 // CHECK:           %[[VAL_54:.*]] = fir.undefined tuple<!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, i1>

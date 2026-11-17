@@ -419,12 +419,10 @@ public:
   /// system implies it or because ValueTracking can prove it.
   bool isKnownPositive(Value *V);
 
-  /// Returns the sign of \p V, if known. The result is false if \p V is known
-  /// to be non-negative. Otherwise it is true if \p V is known to be negative
-  /// (if \p StrictlyNegative), or non-positive (if not \p StrictlyNegative).
-  /// Returns std::nullopt if neither ValueTracking, nor the signed system can
-  /// prove either fact.
-  std::optional<bool> getKnownSign(Value *V, bool StrictlyNegative);
+  /// Returns true if \p V is known to be negative, false if \p V is known to be
+  /// nonnegative, or std::nullopt if neither the signed system nor
+  /// ValueTracking can prove it.
+  std::optional<bool> getKnownSign(Value *V);
 
   void addFact(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
                unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
@@ -630,16 +628,6 @@ static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
       return true;
   }
 
-  // A signed sum of operands with opposite signs cannot wrap.
-  if (Signed && Opcode == Instruction::Add) {
-    std::optional<bool> Op0Sign =
-        Info.getKnownSign(Op0, /*StrictlyNegative=*/false);
-    std::optional<bool> Op1Sign =
-        Info.getKnownSign(Op1, /*StrictlyNegative=*/false);
-    if (Op0Sign && Op1Sign && *Op0Sign != *Op1Sign)
-      return true;
-  }
-
   if (!Signed && (NoWrapFlags & OBO::NoSignedWrap) &&
       (Opcode == Instruction::Shl || Info.isKnownNonNegative(Op1)) &&
       Info.isKnownNonNegative(Op0))
@@ -786,15 +774,28 @@ static Decomposition decompose(Value *V, ConstraintInfo &Info, bool IsSigned,
 
 static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
                                    bool IsSigned, const DataLayout &DL) {
-  auto MergeResults = [&Info, IsSigned,
-                       &DL](Value *A, Value *B,
-                            bool IsSignedB) -> std::optional<Decomposition> {
+  auto MergeResults = [&Info, IsSigned, &DL](
+                          Value *A, Value *B, bool IsSignedB,
+                          bool IsSub = false) -> std::optional<Decomposition> {
     auto ResA = decompose(A, Info, IsSigned, DL);
     auto ResB = decompose(B, Info, IsSignedB, DL);
-    if (ResA.add(ResB))
+    if (IsSub ? ResA.sub(ResB) : ResA.add(ResB))
       return std::nullopt;
     return ResA;
   };
+
+  // An add/sub.with.overflow is only decomposed for the fact queued on its
+  // no-overflow edge, where it does not overflow.
+  if (auto *WO = dyn_cast<WithOverflowInst>(V)) {
+    Instruction::BinaryOps Opc = WO->getBinaryOp();
+    if ((Opc == Instruction::Add || Opc == Instruction::Sub) &&
+        isKnownNoWrap(Opc, WO->getLHS(), WO->getRHS(), WO->getNoWrapKind(),
+                      Info, IsSigned))
+      if (auto Decomp = MergeResults(WO->getLHS(), WO->getRHS(), IsSigned,
+                                     Opc == Instruction::Sub))
+        return *Decomp;
+    return V;
+  }
 
   Type *Ty = V->getType()->getScalarType();
   if (Ty->isPointerTy() && !IsSigned) {
@@ -1177,18 +1178,16 @@ bool ConstraintInfo::isKnownPositive(Value *V) {
          doesHold(CmpInst::ICMP_SGT, V, ConstantInt::get(V->getType(), 0));
 }
 
-std::optional<bool> ConstraintInfo::getKnownSign(Value *V,
-                                                 bool StrictlyNegative) {
+std::optional<bool> ConstraintInfo::getKnownSign(Value *V) {
   KnownBits Known = computeKnownBits(V, DL);
   if (Known.isNonNegative())
     return false;
-  if (StrictlyNegative ? Known.isNegative() : Known.isNonPositive())
+  if (Known.isNegative())
     return true;
   Constant *Zero = ConstantInt::get(V->getType(), 0);
   if (doesHold(CmpInst::ICMP_SGE, V, Zero))
     return false;
-  auto NegativePred = StrictlyNegative ? CmpInst::ICMP_SLT : CmpInst::ICMP_SLE;
-  if (doesHold(NegativePred, V, Zero))
+  if (doesHold(CmpInst::ICMP_SLT, V, Zero))
     return true;
   return std::nullopt;
 }
@@ -1840,6 +1839,17 @@ void State::addInfoFor(BasicBlock &BB) {
     return;
 
   Value *Cond = Br->getCondition();
+
+  // On the false successor of a branch on the overflow bit of an add/sub
+  // overflow intrinsic, its results equal the plain add/sub.
+  WithOverflowInst *WO;
+  if (match(Cond, m_ExtractValue<1>(m_WithOverflowInst(WO))) &&
+      WO->getBinaryOp() != Instruction::Mul &&
+      canAddSuccessor(BB, Br->getSuccessor(1)))
+    for (User *U : WO->users())
+      if (match(U, m_ExtractValue<0>(m_Value())))
+        WorkList.push_back(FactOrCheck::getConditionFact(
+            DT.getNode(Br->getSuccessor(1)), CmpInst::ICMP_EQ, U, WO));
 
   // If the condition is a chain of ORs/AND and the successor only has the
   // current block as predecessor, queue conditions for the successor.
@@ -2674,10 +2684,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
           // The operands also have the same sign: if one of them is known to
           // be non-negative (or negative), so is the other.
           if (A->getType()->isIntegerTy()) {
-            std::optional<bool> ASign =
-                Info.getKnownSign(A, /*StrictlyNegative=*/true);
-            std::optional<bool> BSign =
-                Info.getKnownSign(B, /*StrictlyNegative=*/true);
+            std::optional<bool> ASign = Info.getKnownSign(A);
+            std::optional<bool> BSign = Info.getKnownSign(B);
             if (ASign.has_value() != BSign.has_value()) {
               bool IsNegative = ASign ? *ASign : *BSign;
               Value *OtherOp = ASign ? B : A;

@@ -33,8 +33,6 @@
 
 using namespace llvm;
 
-static codegen::RegisterCodeGenFlags CGF;
-
 // extra command-line flags needed for LTOCodeGenerator
 static cl::opt<char>
     OptLevel("O",
