@@ -13,6 +13,7 @@
 #include "src/pthread/pthread_mutex_destroy.h"
 #include "src/pthread/pthread_mutex_init.h"
 #include "src/pthread/pthread_mutex_lock.h"
+#include "src/pthread/pthread_mutex_timedlock.h"
 #include "src/pthread/pthread_mutex_trylock.h"
 #include "src/pthread/pthread_mutex_unlock.h"
 #include "src/pthread/pthread_mutexattr_destroy.h"
@@ -156,6 +157,28 @@ void trylock_test() {
   LIBC_NAMESPACE::pthread_mutex_destroy(&trylock_mutex);
 }
 
+void timedlock_test() {
+  pthread_mutex_t timed_mutex;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(&timed_mutex, nullptr), 0);
+
+  // Invalid timespec (tv_nsec >= 1'000'000'000)
+  struct timespec invalid_ts = {0, 1000000000L};
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_timedlock(&timed_mutex, &invalid_ts),
+            EINVAL);
+
+  // Locking an unlocked mutex succeeds
+  struct timespec ts = {2000000000L, 0};
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_timedlock(&timed_mutex, &ts), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&timed_mutex), 0);
+
+  // Past timestamp on unlocked mutex should still succeed per POSIX
+  struct timespec past_ts = {0, 0};
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_timedlock(&timed_mutex, &past_ts), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&timed_mutex), 0);
+
+  LIBC_NAMESPACE::pthread_mutex_destroy(&timed_mutex);
+}
+
 void *trylock_other_thread(void *arg) {
   auto *mutex = reinterpret_cast<pthread_mutex_t *>(arg);
   int result = LIBC_NAMESPACE::pthread_mutex_trylock(mutex);
@@ -222,6 +245,8 @@ void initializer_acts_the_same_as_null_attr() {
   ASSERT_EQ(mutex_snapshot.__recursive, mutex_from_init_snapshot.__recursive);
   ASSERT_EQ(mutex_snapshot.__robust, mutex_from_init_snapshot.__robust);
   ASSERT_EQ(mutex_snapshot.__pshared, mutex_from_init_snapshot.__pshared);
+  ASSERT_EQ(mutex_snapshot.__error_checking,
+            mutex_from_init_snapshot.__error_checking);
   ASSERT_EQ(mutex_snapshot.__owner, mutex_from_init_snapshot.__owner);
   ASSERT_EQ(mutex_snapshot.__lock_count, mutex_from_init_snapshot.__lock_count);
 
@@ -234,6 +259,34 @@ void initializer_acts_the_same_as_null_attr() {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_trylock(&mutex_from_init), EBUSY);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&mutex_from_init), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_destroy(&mutex_from_init), 0);
+}
+
+void error_checking_mutex_test() {
+  pthread_mutexattr_t attr;
+  pthread_mutex_t error_checking_mutex;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_init(&attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_settype(&attr,
+                                                      PTHREAD_MUTEX_ERRORCHECK),
+            0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(&error_checking_mutex, &attr),
+            0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_destroy(&attr), 0);
+
+  pthread_mutex_t snapshot = snapshot_mutex(&error_checking_mutex);
+  ASSERT_TRUE(snapshot.__error_checking);
+  ASSERT_EQ(snapshot.__owner, 0);
+  ASSERT_EQ(snapshot.__lock_count, size_t(0));
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_lock(&error_checking_mutex), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_trylock(&error_checking_mutex),
+            EDEADLK);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_lock(&error_checking_mutex), EDEADLK);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&error_checking_mutex), 0);
+
+  snapshot = snapshot_mutex(&error_checking_mutex);
+  ASSERT_EQ(snapshot.__owner, 0);
+  ASSERT_EQ(snapshot.__lock_count, size_t(0));
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_destroy(&error_checking_mutex), 0);
 }
 
 static constexpr int THREAD_COUNT = 10;
@@ -298,6 +351,8 @@ TEST_MAIN() {
   trylock_test();
   recursive_mutex_test();
   initializer_acts_the_same_as_null_attr();
+  error_checking_mutex_test();
   multiple_waiters();
+  timedlock_test();
   return 0;
 }

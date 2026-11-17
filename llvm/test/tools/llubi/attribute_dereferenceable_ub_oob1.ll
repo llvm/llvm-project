@@ -13,6 +13,6 @@ define void @main() {
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   call void @callee(ptr %alloc) at @main
+; CHECK-NEXT: #0   call void @callee(ptr %alloc) at @main <stdin>:10
 ; CHECK-NEXT: Immediate UB detected: The value ptr 0x8 [alloc] violates dereferenceable{{(_or_null)?}}(8) attribute.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

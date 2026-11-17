@@ -5,6 +5,8 @@
 //
 // REQUIRES: aarch64-target-arch && glibc
 
+// UNSUPPORTED: rtsan
+
 #include <signal.h>
 
 int main() {

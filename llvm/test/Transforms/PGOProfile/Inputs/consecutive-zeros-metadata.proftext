@@ -1,0 +1,25 @@
+:ir
+test_call
+# Func Hash:
+170957022131388415
+# Num Counters:
+1
+# Counter Values:
+130
+# Num Value Kinds:
+1
+# ValueKind = IPVK_IndirectCallTarget:
+0
+# NumValueSites:
+1
+3
+func1:80
+** External Symbol **:20
+** External Symbol **:30
+func1
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+80

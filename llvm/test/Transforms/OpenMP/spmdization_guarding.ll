@@ -41,6 +41,9 @@
 @1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @0 }, align 8
 @LocGlob = private unnamed_addr addrspace(5) global i32 43
 @__omp_offloading_2a_fbfa7a_sequential_loop_l6_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
+@packet = external global i64
+@__omp_offloading_2a_fbfa7a_system_fence_l40_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
+@__omp_offloading_2a_fbfa7a_workgroup_fence_l40_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
 
 
 ; Function Attrs: convergent norecurse nounwind
@@ -49,12 +52,18 @@
 ; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
 ; CHECK: @LocGlob = private unnamed_addr addrspace(5) global i32 43
 ; CHECK: @__omp_offloading_2a_fbfa7a_sequential_loop_l6_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; CHECK: @packet = external global i64
+; CHECK: @__omp_offloading_2a_fbfa7a_system_fence_l40_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; CHECK: @__omp_offloading_2a_fbfa7a_workgroup_fence_l40_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ; CHECK: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 ;.
 ; CHECK-DISABLED: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; CHECK-DISABLED: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
 ; CHECK-DISABLED: @LocGlob = private unnamed_addr addrspace(5) global i32 43
 ; CHECK-DISABLED: @__omp_offloading_2a_fbfa7a_sequential_loop_l6_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; CHECK-DISABLED: @packet = external global i64
+; CHECK-DISABLED: @__omp_offloading_2a_fbfa7a_system_fence_l40_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; CHECK-DISABLED: @__omp_offloading_2a_fbfa7a_workgroup_fence_l40_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ; CHECK-DISABLED: @__omp_outlined__1_wrapper.ID = private constant i8 undef
 ;.
 define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %dyn, ptr %x, i64 %N) #0 {
@@ -126,7 +135,7 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I_0_I]], 1
 ; CHECK-NEXT:    br label [[FOR_COND_I]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       __omp_outlined__.exit:
-; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr null, i32 0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr null, i64 0, i32 0)
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr null, i32 0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr null, ptr null, i64 0, i32 0)
 ; CHECK-NEXT:    [[CALL_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10:[0-9]+]], !noalias [[META7]]
 ; CHECK-NEXT:    [[IDXPROM6_I:%.*]] = sext i32 [[CALL_I]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX7_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM6_I]]
@@ -201,10 +210,8 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK-DISABLED-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; CHECK-DISABLED-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
 ; CHECK-DISABLED:       is_worker_check:
-; CHECK-DISABLED-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; CHECK-DISABLED-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; CHECK-DISABLED-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; CHECK-DISABLED-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
+; CHECK-DISABLED-NEXT:    [[MAX_TEAM_THREADS:%.*]] = call i32 @__kmpc_get_max_team_threads(i32 0)
+; CHECK-DISABLED-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[MAX_TEAM_THREADS]]
 ; CHECK-DISABLED-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; CHECK-DISABLED:       worker_state_machine.begin:
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
@@ -377,6 +384,243 @@ define internal void @__omp_outlined__1_wrapper(i16 zeroext %0, i32 %1) {
   ret void
 }
 
+define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_system_fence_l40(ptr %dyn) #0 {
+; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_2a_fbfa7a_system_fence_l40
+; CHECK-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[INIT:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_2a_fbfa7a_system_fence_l40_kernel_environment, ptr [[DYN]])
+; CHECK-NEXT:    [[EXEC:%.*]] = icmp eq i32 [[INIT]], -1
+; CHECK-NEXT:    br i1 [[EXEC]], label [[USER:%.*]], label [[EXIT:%.*]]
+; CHECK:       user:
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr null, i32 0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__fence, ptr null, ptr null, i64 0, i32 0)
+; CHECK-NEXT:    br label [[REGION_CHECK_TID:%.*]]
+; CHECK:       region.check.tid:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label [[REGION_GUARDED:%.*]], label [[REGION_BARRIER:%.*]]
+; CHECK:       region.guarded:
+; CHECK-NEXT:    store i64 1, ptr @packet, align 8
+; CHECK-NEXT:    br label [[REGION_GUARDED_END:%.*]]
+; CHECK:       region.guarded.end:
+; CHECK-NEXT:    br label [[REGION_BARRIER]]
+; CHECK:       region.barrier:
+; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP1]])
+; CHECK-NEXT:    br label [[REGION_EXIT:%.*]]
+; CHECK:       region.exit:
+; CHECK-NEXT:    fence acquire
+; CHECK-NEXT:    br label [[REGION_CHECK_TID5:%.*]]
+; CHECK:       region.check.tid5:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[REGION_GUARDED4:%.*]], label [[REGION_BARRIER2:%.*]]
+; CHECK:       region.guarded4:
+; CHECK-NEXT:    store i64 2, ptr @packet, align 8
+; CHECK-NEXT:    br label [[REGION_GUARDED_END1:%.*]]
+; CHECK:       region.guarded.end1:
+; CHECK-NEXT:    br label [[REGION_BARRIER2]]
+; CHECK:       region.barrier2:
+; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP3]])
+; CHECK-NEXT:    br label [[REGION_EXIT3:%.*]]
+; CHECK:       region.exit3:
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr @packet, align 8
+; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 [[V]] to ptr
+; CHECK-NEXT:    call void @usei8ptr(ptr [[P]]) #[[ATTR11:[0-9]+]]
+; CHECK-NEXT:    call void @__kmpc_target_deinit()
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+; CHECK-DISABLED-LABEL: define {{[^@]+}}@__omp_offloading_2a_fbfa7a_system_fence_l40
+; CHECK-DISABLED-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
+; CHECK-DISABLED-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
+; CHECK-DISABLED-NEXT:    [[INIT:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_2a_fbfa7a_system_fence_l40_kernel_environment, ptr [[DYN]])
+; CHECK-DISABLED-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[INIT]], -1
+; CHECK-DISABLED-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; CHECK-DISABLED:       is_worker_check:
+; CHECK-DISABLED-NEXT:    [[MAX_TEAM_THREADS:%.*]] = call i32 @__kmpc_get_max_team_threads(i32 0)
+; CHECK-DISABLED-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[INIT]], [[MAX_TEAM_THREADS]]
+; CHECK-DISABLED-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
+; CHECK-DISABLED:       worker_state_machine.begin:
+; CHECK-DISABLED-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[INIT]])
+; CHECK-DISABLED-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
+; CHECK-DISABLED-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
+; CHECK-DISABLED-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
+; CHECK-DISABLED-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
+; CHECK-DISABLED:       worker_state_machine.finished:
+; CHECK-DISABLED-NEXT:    ret void
+; CHECK-DISABLED:       worker_state_machine.is_active.check:
+; CHECK-DISABLED-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
+; CHECK-DISABLED:       worker_state_machine.parallel_region.check:
+; CHECK-DISABLED-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
+; CHECK-DISABLED:       worker_state_machine.parallel_region.execute:
+; CHECK-DISABLED-NEXT:    call void @__omp_outlined__fence_wrapper(i16 0, i32 [[INIT]])
+; CHECK-DISABLED-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
+; CHECK-DISABLED:       worker_state_machine.parallel_region.check1:
+; CHECK-DISABLED-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
+; CHECK-DISABLED:       worker_state_machine.parallel_region.end:
+; CHECK-DISABLED-NEXT:    call void @__kmpc_kernel_end_parallel()
+; CHECK-DISABLED-NEXT:    br label [[WORKER_STATE_MACHINE_DONE_BARRIER]]
+; CHECK-DISABLED:       worker_state_machine.done.barrier:
+; CHECK-DISABLED-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[INIT]])
+; CHECK-DISABLED-NEXT:    br label [[WORKER_STATE_MACHINE_BEGIN]]
+; CHECK-DISABLED:       thread.user_code.check:
+; CHECK-DISABLED-NEXT:    [[EXEC:%.*]] = icmp eq i32 [[INIT]], -1
+; CHECK-DISABLED-NEXT:    br i1 [[EXEC]], label [[USER:%.*]], label [[EXIT:%.*]]
+; CHECK-DISABLED:       user:
+; CHECK-DISABLED-NEXT:    call void @__kmpc_parallel_60(ptr null, i32 0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__fence, ptr @__omp_outlined__fence_wrapper, ptr null, i64 0, i32 0)
+; CHECK-DISABLED-NEXT:    store i64 1, ptr @packet, align 8
+; CHECK-DISABLED-NEXT:    fence acquire
+; CHECK-DISABLED-NEXT:    store i64 2, ptr @packet, align 8
+; CHECK-DISABLED-NEXT:    [[V:%.*]] = load i64, ptr @packet, align 8
+; CHECK-DISABLED-NEXT:    [[P:%.*]] = inttoptr i64 [[V]] to ptr
+; CHECK-DISABLED-NEXT:    call void @usei8ptr(ptr [[P]]) #[[ATTR11:[0-9]+]]
+; CHECK-DISABLED-NEXT:    call void @__kmpc_target_deinit()
+; CHECK-DISABLED-NEXT:    br label [[EXIT]]
+; CHECK-DISABLED:       exit:
+; CHECK-DISABLED-NEXT:    ret void
+;
+  %init = call i32 @__kmpc_target_init(ptr @__omp_offloading_2a_fbfa7a_system_fence_l40_kernel_environment, ptr %dyn)
+  %exec = icmp eq i32 %init, -1
+  br i1 %exec, label %user, label %exit
+
+user:
+  call void @__kmpc_parallel_60(ptr null, i32 0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__fence, ptr @__omp_outlined__fence_wrapper, ptr null, i64 0, i32 0)
+  store i64 1, ptr @packet, align 8
+  fence acquire
+  store i64 2, ptr @packet, align 8
+  %v = load i64, ptr @packet, align 8
+  %p = inttoptr i64 %v to ptr
+  call void @usei8ptr(ptr %p)
+  call void @__kmpc_target_deinit()
+  br label %exit
+
+exit:
+  ret void
+}
+
+define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_workgroup_fence_l40(ptr %dyn) #0 {
+; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_2a_fbfa7a_workgroup_fence_l40
+; CHECK-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[INIT:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_2a_fbfa7a_workgroup_fence_l40_kernel_environment, ptr [[DYN]])
+; CHECK-NEXT:    [[EXEC:%.*]] = icmp eq i32 [[INIT]], -1
+; CHECK-NEXT:    br i1 [[EXEC]], label [[USER:%.*]], label [[EXIT:%.*]]
+; CHECK:       user:
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr null, i32 0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__fence, ptr null, ptr null, i64 0, i32 0)
+; CHECK-NEXT:    br label [[REGION_CHECK_TID:%.*]]
+; CHECK:       region.check.tid:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label [[REGION_GUARDED:%.*]], label [[REGION_BARRIER:%.*]]
+; CHECK:       region.guarded:
+; CHECK-NEXT:    store i64 1, ptr @packet, align 8
+; CHECK-NEXT:    fence syncscope("block") acquire
+; CHECK-NEXT:    store i64 2, ptr @packet, align 8
+; CHECK-NEXT:    br label [[REGION_GUARDED_END:%.*]]
+; CHECK:       region.guarded.end:
+; CHECK-NEXT:    br label [[REGION_BARRIER]]
+; CHECK:       region.barrier:
+; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP1]])
+; CHECK-NEXT:    br label [[REGION_EXIT:%.*]]
+; CHECK:       region.exit:
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr @packet, align 8
+; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 [[V]] to ptr
+; CHECK-NEXT:    call void @usei8ptr(ptr [[P]]) #[[ATTR11]]
+; CHECK-NEXT:    call void @__kmpc_target_deinit()
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+; CHECK-DISABLED-LABEL: define {{[^@]+}}@__omp_offloading_2a_fbfa7a_workgroup_fence_l40
+; CHECK-DISABLED-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
+; CHECK-DISABLED-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
+; CHECK-DISABLED-NEXT:    [[INIT:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_2a_fbfa7a_workgroup_fence_l40_kernel_environment, ptr [[DYN]])
+; CHECK-DISABLED-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[INIT]], -1
+; CHECK-DISABLED-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
+; CHECK-DISABLED:       is_worker_check:
+; CHECK-DISABLED-NEXT:    [[MAX_TEAM_THREADS:%.*]] = call i32 @__kmpc_get_max_team_threads(i32 0)
+; CHECK-DISABLED-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[INIT]], [[MAX_TEAM_THREADS]]
+; CHECK-DISABLED-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
+; CHECK-DISABLED:       worker_state_machine.begin:
+; CHECK-DISABLED-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[INIT]])
+; CHECK-DISABLED-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
+; CHECK-DISABLED-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
+; CHECK-DISABLED-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
+; CHECK-DISABLED-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
+; CHECK-DISABLED:       worker_state_machine.finished:
+; CHECK-DISABLED-NEXT:    ret void
+; CHECK-DISABLED:       worker_state_machine.is_active.check:
+; CHECK-DISABLED-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
+; CHECK-DISABLED:       worker_state_machine.parallel_region.check:
+; CHECK-DISABLED-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
+; CHECK-DISABLED:       worker_state_machine.parallel_region.execute:
+; CHECK-DISABLED-NEXT:    call void @__omp_outlined__fence_wrapper(i16 0, i32 [[INIT]])
+; CHECK-DISABLED-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
+; CHECK-DISABLED:       worker_state_machine.parallel_region.check1:
+; CHECK-DISABLED-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
+; CHECK-DISABLED:       worker_state_machine.parallel_region.end:
+; CHECK-DISABLED-NEXT:    call void @__kmpc_kernel_end_parallel()
+; CHECK-DISABLED-NEXT:    br label [[WORKER_STATE_MACHINE_DONE_BARRIER]]
+; CHECK-DISABLED:       worker_state_machine.done.barrier:
+; CHECK-DISABLED-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[INIT]])
+; CHECK-DISABLED-NEXT:    br label [[WORKER_STATE_MACHINE_BEGIN]]
+; CHECK-DISABLED:       thread.user_code.check:
+; CHECK-DISABLED-NEXT:    [[EXEC:%.*]] = icmp eq i32 [[INIT]], -1
+; CHECK-DISABLED-NEXT:    br i1 [[EXEC]], label [[USER:%.*]], label [[EXIT:%.*]]
+; CHECK-DISABLED:       user:
+; CHECK-DISABLED-NEXT:    call void @__kmpc_parallel_60(ptr null, i32 0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__fence, ptr @__omp_outlined__fence_wrapper, ptr null, i64 0, i32 0)
+; CHECK-DISABLED-NEXT:    store i64 1, ptr @packet, align 8
+; CHECK-DISABLED-NEXT:    fence syncscope("block") acquire
+; CHECK-DISABLED-NEXT:    store i64 2, ptr @packet, align 8
+; CHECK-DISABLED-NEXT:    [[V:%.*]] = load i64, ptr @packet, align 8
+; CHECK-DISABLED-NEXT:    [[P:%.*]] = inttoptr i64 [[V]] to ptr
+; CHECK-DISABLED-NEXT:    call void @usei8ptr(ptr [[P]]) #[[ATTR11]]
+; CHECK-DISABLED-NEXT:    call void @__kmpc_target_deinit()
+; CHECK-DISABLED-NEXT:    br label [[EXIT]]
+; CHECK-DISABLED:       exit:
+; CHECK-DISABLED-NEXT:    ret void
+;
+  %init = call i32 @__kmpc_target_init(ptr @__omp_offloading_2a_fbfa7a_workgroup_fence_l40_kernel_environment, ptr %dyn)
+  %exec = icmp eq i32 %init, -1
+  br i1 %exec, label %user, label %exit
+
+user:
+  call void @__kmpc_parallel_60(ptr null, i32 0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__fence, ptr @__omp_outlined__fence_wrapper, ptr null, i64 0, i32 0)
+  store i64 1, ptr @packet, align 8
+  fence syncscope("block") acquire
+  store i64 2, ptr @packet, align 8
+  %v = load i64, ptr @packet, align 8
+  %p = inttoptr i64 %v to ptr
+  call void @usei8ptr(ptr %p)
+  call void @__kmpc_target_deinit()
+  br label %exit
+
+exit:
+  ret void
+}
+
+define internal void @__omp_outlined__fence(ptr noalias, ptr noalias) {
+; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__fence
+; CHECK-SAME: (ptr noalias [[TMP0:%.*]], ptr noalias [[TMP1:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+; CHECK-DISABLED-LABEL: define {{[^@]+}}@__omp_outlined__fence
+; CHECK-DISABLED-SAME: (ptr noalias [[TMP0:%.*]], ptr noalias [[TMP1:%.*]]) {
+; CHECK-DISABLED-NEXT:    ret void
+;
+  ret void
+}
+
+define internal void @__omp_outlined__fence_wrapper(i16 zeroext, i32) {
+; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__fence_wrapper
+; CHECK-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+; CHECK-DISABLED-LABEL: define {{[^@]+}}@__omp_outlined__fence_wrapper
+; CHECK-DISABLED-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
+; CHECK-DISABLED-NEXT:    ret void
+;
+  ret void
+}
+
 declare void @__kmpc_parallel_60(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64, i32)
 
 ; Make it a weak definition so we will apply custom state machine rewriting but can't use the body in the reasoning.
@@ -431,7 +675,7 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 !7 = !{!"clang version 14.0.0"}
 !8 = !{!9}
 !9 = distinct !{!9, !10, !"__omp_outlined__: %__context"}
-!10 = distinct !{!10, !"__omp_outlined__"}
+!10 = distinct !{!10, i1 false, !"__omp_outlined__"}
 !11 = distinct !{!11, !12}
 !12 = !{!"llvm.loop.mustprogress"}
 ;.
@@ -446,6 +690,7 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 ; CHECK: attributes #[[ATTR8:[0-9]+]] = { convergent nounwind }
 ; CHECK: attributes #[[ATTR9]] = { nounwind willreturn "llvm.assume"="omp_no_openmp,ompx_spmd_amenable" }
 ; CHECK: attributes #[[ATTR10]] = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_amenable" }
+; CHECK: attributes #[[ATTR11]] = { "llvm.assume"="omp_no_openmp,ompx_spmd_amenable" }
 ;.
 ; CHECK-DISABLED: attributes #[[ATTR0]] = { convergent norecurse nounwind "frame-pointer"="all" "kernel" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
 ; CHECK-DISABLED: attributes #[[ATTR1:[0-9]+]] = { alwaysinline }
@@ -458,6 +703,7 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 ; CHECK-DISABLED: attributes #[[ATTR8:[0-9]+]] = { convergent nounwind }
 ; CHECK-DISABLED: attributes #[[ATTR9]] = { nounwind willreturn "llvm.assume"="omp_no_openmp,ompx_spmd_amenable" }
 ; CHECK-DISABLED: attributes #[[ATTR10]] = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_amenable" }
+; CHECK-DISABLED: attributes #[[ATTR11]] = { "llvm.assume"="omp_no_openmp,ompx_spmd_amenable" }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 0, i32 42, i32 16513658, !"sequential_loop", i32 6, i32 0}
 ; CHECK: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
@@ -468,7 +714,7 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 ; CHECK: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 ; CHECK: [[META7]] = !{[[META8:![0-9]+]]}
 ; CHECK: [[META8]] = distinct !{[[META8]], [[META9:![0-9]+]], !"__omp_outlined__: %__context"}
-; CHECK: [[META9]] = distinct !{[[META9]], !"__omp_outlined__"}
+; CHECK: [[META9]] = distinct !{[[META9]], i1 false, !"__omp_outlined__"}
 ; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META11:![0-9]+]]}
 ; CHECK: [[META11]] = !{!"llvm.loop.mustprogress"}
 ;.
@@ -481,7 +727,7 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 ; CHECK-DISABLED: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 ; CHECK-DISABLED: [[META7]] = !{[[META8:![0-9]+]]}
 ; CHECK-DISABLED: [[META8]] = distinct !{[[META8]], [[META9:![0-9]+]], !"__omp_outlined__: %__context"}
-; CHECK-DISABLED: [[META9]] = distinct !{[[META9]], !"__omp_outlined__"}
+; CHECK-DISABLED: [[META9]] = distinct !{[[META9]], i1 false, !"__omp_outlined__"}
 ; CHECK-DISABLED: [[LOOP10]] = distinct !{[[LOOP10]], [[META11:![0-9]+]]}
 ; CHECK-DISABLED: [[META11]] = !{!"llvm.loop.mustprogress"}
 ;.

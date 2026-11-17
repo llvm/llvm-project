@@ -194,6 +194,8 @@ def ranked_memref_to_numpy(ranked_memref):
     content_ptr = move_aligned_ptr_by_offset(
         ranked_memref[0].aligned, ranked_memref[0].offset
     )
+    if not hasattr(ranked_memref[0], "shape"):
+        return to_numpy(np.ctypeslib.as_array(content_ptr, shape=()))
     np_arr = np.ctypeslib.as_array(content_ptr, shape=ranked_memref[0].shape)
     strided_arr = np.lib.stride_tricks.as_strided(
         np_arr,

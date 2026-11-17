@@ -99,8 +99,16 @@ func.func @composite_construct_vector_wrong_count(%arg0: f32, %arg1: f32, %arg2 
 
 // -----
 
+func.func @composite_construct_vector_single_vector(%arg0: vector<4xf32>) -> vector<4xf32> {
+  // expected-error @+1 {{op has incorrect number of operands: expected at least 2 for a vector result, but provided 1}}
+  %0 = spirv.CompositeConstruct %arg0 : (vector<4xf32>) -> vector<4xf32>
+  return %0: vector<4xf32>
+}
+
+// -----
+
 func.func @composite_construct_vector_rank_two(%arg0: vector<2x2xi1>, %arg1: vector<2x2xi1>) -> vector<4x2xi1> {
-  // expected-error @+1 {{ op operand #0 must be variadic of void or bool or 8/16/32/64-bit integer or 16/32/64-bit float or BFloat16 or Float8E4M3 or Float8E5M2 or vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float or BFloat16 or Float8E4M3 or Float8E5M2 values of length 2/3/4/8/16 of ranks 1 or any SPIR-V pointer type or any SPIR-V array type or any SPIR-V runtime array type or any SPIR-V struct type or any SPIR-V cooperative matrix type or any SPIR-V matrix type or any SPIR-V sampled image type or any SPIR-V sampler type or any SPIR-V image type or any SPIR-V tensorArm type, but got 'vector<2x2xi1>'}}
+  // expected-error @+1 {{op operand #0 must be variadic of void or bool or 8/16/32/64-bit integer or 16/32/64-bit float or BFloat16 or Float8E4M3 or Float8E5M2 or vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1 or any SPIR-V pointer type or any SPIR-V array type or any SPIR-V runtime array type or any SPIR-V struct type or any SPIR-V cooperative matrix type or any SPIR-V matrix type or any SPIR-V sampled image type or any SPIR-V sampler type or any SPIR-V image type or any SPIR-V tensorArm type or vector of 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1 or vector of BFloat16 or Float8E4M3 or Float8E5M2 values of length 2/3/4/8/16 of ranks 1, but got 'vector<2x2xi1>'}}
   %0 = spirv.CompositeConstruct %arg0, %arg1 : (vector<2x2xi1>, vector<2x2xi1>) -> vector<4x2xi1>
   return %0: vector<4x2xi1>
 }
@@ -288,6 +296,26 @@ func.func @composite_insert_invalid_result_type(%arg0: !spirv.array<4xf32>, %arg
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.CopyObject
+//===----------------------------------------------------------------------===//
+
+func.func @copy_object(%arg0: vector<4xf32>) -> vector<4xf32> {
+  // CHECK: {{%.*}} = spirv.CopyObject {{%.*}} : vector<4xf32>
+  %0 = spirv.CopyObject %arg0 : vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// -----
+
+func.func @copy_object_type_mismatch(%arg0: f32) -> f64 {
+  // expected-error @+1 {{failed to verify that all of {operand, result} have same type}}
+  %0 = "spirv.CopyObject"(%arg0) : (f32) -> f64
+  return %0 : f64
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.VectorExtractDynamic
 //===----------------------------------------------------------------------===//
 
@@ -295,6 +323,24 @@ func.func @vector_dynamic_extract(%vec: vector<4xf32>, %id : i32) -> f32 {
   // CHECK: spirv.VectorExtractDynamic %{{.*}}[%{{.*}}] : vector<4xf32>, i32
   %0 = spirv.VectorExtractDynamic %vec[%id] : vector<4xf32>, i32
   return %0 : f32
+}
+
+func.func @vector_dynamic_extract_bf16(%vec: vector<4xbf16>, %id : i32) -> bf16 {
+  // CHECK: spirv.VectorExtractDynamic %{{.*}}[%{{.*}}] : vector<4xbf16>, i32
+  %0 = spirv.VectorExtractDynamic %vec[%id] : vector<4xbf16>, i32
+  return %0 : bf16
+}
+
+func.func @vector_dynamic_extract_f8E5M2(%vec: vector<4xf8E5M2>, %id : i32) -> f8E5M2 {
+  // CHECK: spirv.VectorExtractDynamic %{{.*}}[%{{.*}}] : vector<4xf8E5M2>, i32
+  %0 = spirv.VectorExtractDynamic %vec[%id] : vector<4xf8E5M2>, i32
+  return %0 : f8E5M2
+}
+
+func.func @vector_dynamic_extract_f8E4M3FN(%vec: vector<4xf8E4M3FN>, %id : i32) -> f8E4M3FN {
+  // CHECK: spirv.VectorExtractDynamic %{{.*}}[%{{.*}}] : vector<4xf8E4M3FN>, i32
+  %0 = spirv.VectorExtractDynamic %vec[%id] : vector<4xf8E4M3FN>, i32
+  return %0 : f8E4M3FN
 }
 
 //===----------------------------------------------------------------------===//
@@ -307,6 +353,24 @@ func.func @vector_dynamic_insert(%val: f32, %vec: vector<4xf32>, %id : i32) -> v
   return %0 : vector<4xf32>
 }
 
+func.func @vector_dynamic_insert_bf16(%val: bf16, %vec: vector<4xbf16>, %id : i32) -> vector<4xbf16> {
+  // CHECK: spirv.VectorInsertDynamic %{{.*}}, %{{.*}}[%{{.*}}] : vector<4xbf16>, i32
+  %0 = spirv.VectorInsertDynamic %val, %vec[%id] : vector<4xbf16>, i32
+  return %0 : vector<4xbf16>
+}
+
+func.func @vector_dynamic_insert_f8E5M2(%val: f8E5M2, %vec: vector<4xf8E5M2>, %id : i32) -> vector<4xf8E5M2> {
+  // CHECK: spirv.VectorInsertDynamic %{{.*}}, %{{.*}}[%{{.*}}] : vector<4xf8E5M2>, i32
+  %0 = spirv.VectorInsertDynamic %val, %vec[%id] : vector<4xf8E5M2>, i32
+  return %0 : vector<4xf8E5M2>
+}
+
+func.func @vector_dynamic_insert_f8E4M3FN(%val: f8E4M3FN, %vec: vector<4xf8E4M3FN>, %id : i32) -> vector<4xf8E4M3FN> {
+  // CHECK: spirv.VectorInsertDynamic %{{.*}}, %{{.*}}[%{{.*}}] : vector<4xf8E4M3FN>, i32
+  %0 = spirv.VectorInsertDynamic %val, %vec[%id] : vector<4xf8E4M3FN>, i32
+  return %0 : vector<4xf8E4M3FN>
+}
+
 // -----
 
 //===----------------------------------------------------------------------===//
@@ -317,6 +381,24 @@ func.func @vector_shuffle(%vector1: vector<4xf32>, %vector2: vector<2xf32>) -> v
   // CHECK: %{{.+}} = spirv.VectorShuffle [1 : i32, 3 : i32, -1 : i32] %{{.+}}, %arg1 : vector<4xf32>, vector<2xf32> -> vector<3xf32>
   %0 = spirv.VectorShuffle [1: i32, 3: i32, 0xffffffff: i32] %vector1, %vector2 : vector<4xf32>, vector<2xf32> -> vector<3xf32>
   return %0: vector<3xf32>
+}
+
+func.func @vector_shuffle_bf16(%vector1: vector<4xbf16>, %vector2: vector<2xbf16>) -> vector<3xbf16> {
+  // CHECK: %{{.+}} = spirv.VectorShuffle [1 : i32, 3 : i32, -1 : i32] %{{.+}}, %arg1 : vector<4xbf16>, vector<2xbf16> -> vector<3xbf16>
+  %0 = spirv.VectorShuffle [1: i32, 3: i32, 0xffffffff: i32] %vector1, %vector2 : vector<4xbf16>, vector<2xbf16> -> vector<3xbf16>
+  return %0: vector<3xbf16>
+}
+
+func.func @vector_shuffle_f8E5M2(%vector1: vector<4xf8E5M2>, %vector2: vector<2xf8E5M2>) -> vector<3xf8E5M2> {
+  // CHECK: %{{.+}} = spirv.VectorShuffle [1 : i32, 3 : i32, -1 : i32] %{{.+}}, %arg1 : vector<4xf8E5M2>, vector<2xf8E5M2> -> vector<3xf8E5M2>
+  %0 = spirv.VectorShuffle [1: i32, 3: i32, 0xffffffff: i32] %vector1, %vector2 : vector<4xf8E5M2>, vector<2xf8E5M2> -> vector<3xf8E5M2>
+  return %0: vector<3xf8E5M2>
+}
+
+func.func @vector_shuffle_f8E4M3FN(%vector1: vector<4xf8E4M3FN>, %vector2: vector<2xf8E4M3FN>) -> vector<3xf8E4M3FN> {
+  // CHECK: %{{.+}} = spirv.VectorShuffle [1 : i32, 3 : i32, -1 : i32] %{{.+}}, %arg1 : vector<4xf8E4M3FN>, vector<2xf8E4M3FN> -> vector<3xf8E4M3FN>
+  %0 = spirv.VectorShuffle [1: i32, 3: i32, 0xffffffff: i32] %vector1, %vector2 : vector<4xf8E4M3FN>, vector<2xf8E4M3FN> -> vector<3xf8E4M3FN>
+  return %0: vector<3xf8E4M3FN>
 }
 
 // -----

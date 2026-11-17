@@ -13,6 +13,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include "lldb/Core/UserSettingsController.h"
@@ -24,6 +25,7 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Event.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UserID.h"
@@ -64,6 +66,21 @@ public:
 
   uint64_t GetSingleThreadPlanTimeout() const;
 };
+
+/// A value a function returned.
+struct ReturnedValue {
+  lldb::ValueObjectSP valobj_sp;
+};
+
+/// An error a function threw instead of returning.
+struct ThrownError {
+  lldb::ValueObjectSP valobj_sp;
+};
+
+/// What a completed thread plan computed for the function it stepped out of or
+/// called: nothing, the value it returned, or the error it threw.
+using ThreadPlanReturnValue =
+    std::variant<std::monostate, ReturnedValue, ThrownError>;
 
 class Thread : public std::enable_shared_from_this<Thread>,
                public ThreadProperties,
@@ -828,7 +845,7 @@ public:
   ///     plan could not be queued.
   virtual lldb::ThreadPlanSP QueueThreadPlanForStepInRange(
       bool abort_other_plans, const AddressRange &range,
-      const SymbolContext &addr_context, const char *step_in_target,
+      const SymbolContext &addr_context, llvm::StringRef step_in_target,
       lldb::RunMode stop_other_threads, Status &status,
       LazyBool step_in_avoids_code_without_debug_info = eLazyBoolCalculate,
       LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate);
@@ -838,7 +855,7 @@ public:
   // step over a longer address range in a single operation.
   virtual lldb::ThreadPlanSP QueueThreadPlanForStepInRange(
       bool abort_other_plans, const LineEntry &line_entry,
-      const SymbolContext &addr_context, const char *step_in_target,
+      const SymbolContext &addr_context, llvm::StringRef step_in_target,
       lldb::RunMode stop_other_threads, Status &status,
       LazyBool step_in_avoids_code_without_debug_info = eLazyBoolCalculate,
       LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate);
@@ -1009,8 +1026,8 @@ public:
       bool stop_others, uint32_t frame_idx, Status &status);
 
   virtual lldb::ThreadPlanSP
-  QueueThreadPlanForStepScripted(bool abort_other_plans, const char *class_name,
-                                 StructuredData::ObjectSP extra_args_sp,
+  QueueThreadPlanForStepScripted(bool abort_other_plans,
+                                 const ScriptedMetadata &scripted_metadata,
                                  bool stop_other_threads, Status &status);
 
   // Thread Plan accessors:
@@ -1049,9 +1066,9 @@ public:
   /// Gets the outer-most return value from the completed plans
   ///
   /// \return
-  ///     A ValueObjectSP, either empty if there is no return value,
-  ///     or containing the return value.
-  lldb::ValueObjectSP GetReturnValueObject() const;
+  ///     The return value, which is empty if there is none, or the error the
+  ///     function threw.
+  ThreadPlanReturnValue GetReturnValue() const;
 
   /// Gets the outer-most expression variable from the completed plans
   ///
@@ -1460,6 +1477,10 @@ protected:
       m_active_frame_providers_by_thread;
   lldb::StackFrameListSP m_prev_frames_sp; ///< The previous stack frames from
                                            ///the last time this thread stopped.
+  /// The unwinder frame list from the last time this thread stopped. New
+  /// unwinder frame lists take their previous frames from here rather than
+  /// from m_prev_frames_sp.
+  lldb::StackFrameListSP m_prev_unwinder_frames_sp;
   std::optional<lldb::addr_t>
       m_prev_framezero_pc; ///< Frame 0's PC the last
                            /// time this thread was stopped.

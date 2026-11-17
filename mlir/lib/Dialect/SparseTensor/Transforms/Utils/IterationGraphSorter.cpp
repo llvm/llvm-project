@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "llvm/ADT/DenseSet.h"
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
@@ -82,11 +83,19 @@ inline static bool includesDenseOutput(SortMask mask) {
 
 /// Returns a sparsity rank for loop ordering: lower values indicate
 /// dimensions that should be placed in outer loops.
-/// 0 = Dense, 1 = Compressed, 2 = Singleton, 3 = Other/Unknown.
+/// When preferDenseOuter is true the ranking is
+///   0 = Dense, 1 = Compressed, 2 = Singleton, 3 = Other/Unknown.
+/// Otherwise
+///   0 = Singleton, 1 = Compressed, 2 = Dense, 3 = Other/Unknown.
 static unsigned getLoopSparsityRank(unsigned loop, ArrayRef<Value> allTensors,
-                                    ArrayRef<AffineMap> allMaps) {
-  // Start with highest rank.
-  unsigned minRank = 3;
+                                    ArrayRef<AffineMap> allMaps,
+                                    bool preferDenseOuter) {
+  const unsigned denseRank = preferDenseOuter ? 0 : 2;
+  const unsigned singletonRank = preferDenseOuter ? 2 : 0;
+  const unsigned compressedRank = 1;
+  const unsigned unknownRank = 3;
+
+  unsigned minRank = unknownRank;
 
   for (auto [tensor, map] : llvm::zip(allTensors, allMaps)) {
     // Check if this loop accesses this tensor.
@@ -105,19 +114,19 @@ static unsigned getLoopSparsityRank(unsigned loop, ArrayRef<Value> allTensors,
     if (loopAccessesTensor) {
       const auto enc = getSparseTensorEncoding(tensor.getType());
       if (!enc) {
-        // Dense tensor - lowest rank.
-        return 0;
+        // Dense tensor.
+        return denseRank;
       } else {
         // Sparse tensor - check the level type for this dimension.
         auto lvlTypes = enc.getLvlTypes();
         if (tensorDim < lvlTypes.size()) {
           auto lvlType = lvlTypes[tensorDim];
           if (isDenseLT(lvlType)) {
-            return 0; // Dense level.
+            return denseRank; // Dense level.
           } else if (isCompressedLT(lvlType)) {
-            minRank = std::min(minRank, 1u); // Compressed level.
+            minRank = std::min(minRank, compressedRank); // Compressed level.
           } else if (isSingletonLT(lvlType)) {
-            minRank = std::min(minRank, 2u); // Singleton level.
+            minRank = std::min(minRank, singletonRank); // Singleton level.
           }
         }
       }
@@ -125,6 +134,35 @@ static unsigned getLoopSparsityRank(unsigned loop, ArrayRef<Value> allTensors,
   }
 
   return minRank;
+}
+
+/// Count distinct input accesses whose indexing expressions use each loop.
+static SmallVector<unsigned> getLoopUseCounts(linalg::GenericOp genericOp) {
+  SmallVector<unsigned> counts(genericOp.getNumLoops(), 0);
+  llvm::SmallDenseSet<std::pair<Value, AffineMap>> seen;
+  auto maps = genericOp.getIndexingMapsArray();
+
+  for (auto [idx, input] : llvm::enumerate(genericOp.getDpsInputs())) {
+    if (genericOp.getRegion().front().getArgument(idx).use_empty())
+      continue;
+
+    AffineMap map = maps[idx];
+    if (!seen.insert({input, map}).second)
+      continue;
+
+    llvm::SmallDenseSet<unsigned> accessedLoops;
+    for (AffineExpr expr : map.getResults()) {
+      // Count dependencies within expressions.
+      expr.walk([&](AffineExpr subExpr) {
+        if (auto dim = dyn_cast<AffineDimExpr>(subExpr))
+          accessedLoops.insert(dim.getPosition());
+      });
+    }
+    // Each access contributes once per loop.
+    for (unsigned loop : accessedLoops)
+      ++counts[loop];
+  }
+  return counts;
 }
 
 AffineMap IterationGraphSorter::topoSort() {
@@ -154,6 +192,22 @@ AffineMap IterationGraphSorter::topoSort() {
     case sparse_tensor::LoopOrderingStrategy::kDefault:
       src = it.back();
       break;
+    case sparse_tensor::LoopOrderingStrategy::kLoopUseOuter:
+    case sparse_tensor::LoopOrderingStrategy::kLoopUseInner: {
+      // Loop use counts must already be populated.
+      assert(loopUseCounts.size() == numLoops);
+
+      const bool preferMore = strategy == LoopOrderingStrategy::kLoopUseOuter;
+      src = it.front();
+      for (unsigned candidate : it) {
+        unsigned count = loopUseCounts[candidate];
+        unsigned bestCount = loopUseCounts[src];
+
+        if (preferMore ? count > bestCount : count < bestCount)
+          src = candidate;
+      }
+      break;
+    }
     case sparse_tensor::LoopOrderingStrategy::kDenseOuter: {
       // Prefer dense, then compressed, then singleton dimensions outermost.
       // Create combined tensor and map lists for analysis.
@@ -164,10 +218,34 @@ AffineMap IterationGraphSorter::topoSort() {
 
       // Find loop with minimum (lowest) sparsity rank.
       unsigned minLoop = it[0];
-      unsigned minRank = getLoopSparsityRank(minLoop, allTensors, allMaps);
+      unsigned minRank =
+          getLoopSparsityRank(minLoop, allTensors, allMaps, true);
 
       for (auto candidateLoop : it) {
-        unsigned rank = getLoopSparsityRank(candidateLoop, allTensors, allMaps);
+        unsigned rank =
+            getLoopSparsityRank(candidateLoop, allTensors, allMaps, true);
+        if (rank < minRank || (rank == minRank && candidateLoop < minLoop)) {
+          minLoop = candidateLoop;
+          minRank = rank;
+        }
+      }
+      src = minLoop;
+      break;
+    }
+    case sparse_tensor::LoopOrderingStrategy::kSparseOuter: {
+      // Prefer singleton, then compressed, then dense dimensions outermost.
+      SmallVector<Value> allTensors = ins;
+      allTensors.push_back(out);
+      SmallVector<AffineMap> allMaps = loop2InsLvl;
+      allMaps.push_back(loop2OutLvl);
+
+      unsigned minLoop = it[0];
+      unsigned minRank =
+          getLoopSparsityRank(minLoop, allTensors, allMaps, false);
+
+      for (auto candidateLoop : it) {
+        unsigned rank =
+            getLoopSparsityRank(candidateLoop, allTensors, allMaps, false);
         if (rank < minRank || (rank == minRank && candidateLoop < minLoop)) {
           minLoop = candidateLoop;
           minRank = rank;
@@ -218,14 +296,14 @@ IterationGraphSorter IterationGraphSorter::fromGenericOp(
       genericOp.getIteratorTypesArray();
 
   return IterationGraphSorter(std::move(ins), std::move(loopMap), out, outMap,
-                              std::move(iterTypes), strategy);
+                              std::move(iterTypes), genericOp, strategy);
 }
 
 IterationGraphSorter::IterationGraphSorter(
     SmallVector<Value> &&insArg, SmallVector<AffineMap> &&loop2InsLvlArg,
     Value out, AffineMap loop2OutLvl,
     SmallVector<utils::IteratorType> &&iterTypesArg,
-    sparse_tensor::LoopOrderingStrategy strategy)
+    linalg::GenericOp genericOp, sparse_tensor::LoopOrderingStrategy strategy)
     : ins(std::move(insArg)), loop2InsLvl(std::move(loop2InsLvlArg)), out(out),
       loop2OutLvl(loop2OutLvl), iterTypes(std::move(iterTypesArg)),
       strategy(strategy) {
@@ -247,6 +325,15 @@ IterationGraphSorter::IterationGraphSorter(
     // Non-shaped (scalar) types behave like rank-0.
     return m.getNumResults() == 0;
   }));
+
+  switch (strategy) {
+  case LoopOrderingStrategy::kLoopUseOuter:
+  case LoopOrderingStrategy::kLoopUseInner:
+    loopUseCounts = getLoopUseCounts(genericOp);
+    break;
+  default:
+    break;
+  }
 
   itGraph.resize(getNumLoops(), std::vector<bool>(getNumLoops(), false));
   inDegree.resize(getNumLoops());

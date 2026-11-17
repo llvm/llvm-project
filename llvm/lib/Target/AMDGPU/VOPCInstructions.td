@@ -215,16 +215,9 @@ multiclass VOPC_NoSdst_Profile_t16<list<SchedReadWrite> sched, ValueType vt0, Va
 
 class VOPC_Pseudo <string opName, VOPC_Profile P, list<dag> pattern=[],
                    bit DefVcc = 1> :
-  InstSI<(outs), P.Ins32, "", pattern>,
-  VOP <opName>,
-  SIMCInstr<opName#"_e32", SIEncodingFamily.NONE> {
+  VOP_Pseudo<opName, "_e32", P, (outs), P.Ins32, "", pattern> {
 
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
-  let UseNamedOperandTable = 1;
-
-  string Mnemonic = opName;
-  string AsmOperands = P.Asm32;
+  let AsmOperands = P.Asm32;
 
   let Size = 4;
   let mayLoad = 0;
@@ -237,8 +230,6 @@ class VOPC_Pseudo <string opName, VOPC_Profile P, list<dag> pattern=[],
   let VOPC = 1;
   let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
   let Defs = !if(DefVcc, [VCC], []);
-
-  VOPProfile Pfl = P;
 }
 
 class VOPC_Real <VOPC_Pseudo ps, int EncodingFamily, string asm_name = ps.PseudoInstr> :
@@ -515,9 +506,11 @@ multiclass VOPC_F16 <string opName, SDPatternOperator cond = COND_NULL,
 multiclass VOPC_F32 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
   VOPC_Pseudos <opName, VOPC_I1_F32_F32, cond, revOp, 0>;
 
-let IsDPMACCInstruction = 1 in {
-  multiclass VOPC_F64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
-    VOPC_Pseudos <opName, VOPC_I1_F64_F64, cond, revOp, 0>;
+// The let must be inside the body: a let around a multiclass does not reach
+// the records it inherits from another multiclass.
+multiclass VOPC_F64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> {
+  let IsDPMACCInstruction = 1 in
+  defm NAME : VOPC_Pseudos <opName, VOPC_I1_F64_F64, cond, revOp, 0>;
 }
 
 multiclass VOPC_I16 <string opName, SDPatternOperator cond = COND_NULL,
@@ -536,9 +529,9 @@ multiclass VOPC_I16 <string opName, SDPatternOperator cond = COND_NULL,
 multiclass VOPC_I32 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
   VOPC_Pseudos <opName, VOPC_I1_I32_I32, cond, revOp, 0>;
 
-let IsDPMACCInstruction = 1 in {
-  multiclass VOPC_I64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
-    VOPC_Pseudos <opName, VOPC_I1_I64_I64, cond, revOp, 0>;
+multiclass VOPC_I64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> {
+  let IsDPMACCInstruction = 1 in
+  defm NAME : VOPC_Pseudos <opName, VOPC_I1_I64_I64, cond, revOp, 0>;
 }
 
 multiclass VOPCX_F16<string opName, string revOp = opName> {
@@ -556,9 +549,9 @@ multiclass VOPCX_F16<string opName, string revOp = opName> {
 multiclass VOPCX_F32 <string opName, string revOp = opName> :
   VOPCX_Pseudos <opName, VOPC_I1_F32_F32, VOPC_F32_F32, COND_NULL, revOp>;
 
-let IsDPMACCInstruction = 1 in {
-  multiclass VOPCX_F64 <string opName, string revOp = opName> :
-    VOPCX_Pseudos <opName, VOPC_I1_F64_F64, VOPC_F64_F64, COND_NULL, revOp>;
+multiclass VOPCX_F64 <string opName, string revOp = opName> {
+  let IsDPMACCInstruction = 1 in
+  defm NAME : VOPCX_Pseudos <opName, VOPC_I1_F64_F64, VOPC_F64_F64, COND_NULL, revOp>;
 }
 
 multiclass VOPCX_I16<string opName, string revOp = opName> {
@@ -576,9 +569,9 @@ multiclass VOPCX_I16<string opName, string revOp = opName> {
 multiclass VOPCX_I32 <string opName, string revOp = opName> :
   VOPCX_Pseudos <opName, VOPC_I1_I32_I32, VOPC_I32_I32, COND_NULL, revOp>;
 
-let IsDPMACCInstruction = 1 in {
-  multiclass VOPCX_I64 <string opName, string revOp = opName> :
-    VOPCX_Pseudos <opName, VOPC_I1_I64_I64, VOPC_I64_I64, COND_NULL, revOp>;
+multiclass VOPCX_I64 <string opName, string revOp = opName> {
+  let IsDPMACCInstruction = 1 in
+  defm NAME : VOPCX_Pseudos <opName, VOPC_I1_I64_I64, VOPC_I64_I64, COND_NULL, revOp>;
 }
 
 
@@ -620,6 +613,7 @@ defm V_CMPX_NEQ_F32 : VOPCX_F32 <"v_cmpx_neq_f32">;
 defm V_CMPX_NLT_F32 : VOPCX_F32 <"v_cmpx_nlt_f32">;
 defm V_CMPX_TRU_F32 : VOPCX_F32 <"v_cmpx_tru_f32">;
 
+let GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in {
 defm V_CMP_F_F64 : VOPC_F64 <"v_cmp_f_f64">;
 defm V_CMP_LT_F64 : VOPC_F64 <"v_cmp_lt_f64", COND_OLT, "v_cmp_gt_f64">;
 defm V_CMP_EQ_F64 : VOPC_F64 <"v_cmp_eq_f64", COND_OEQ>;
@@ -653,6 +647,7 @@ defm V_CMPX_NLE_F64 : VOPCX_F64 <"v_cmpx_nle_f64">;
 defm V_CMPX_NEQ_F64 : VOPCX_F64 <"v_cmpx_neq_f64">;
 defm V_CMPX_NLT_F64 : VOPCX_F64 <"v_cmpx_nlt_f64">;
 defm V_CMPX_TRU_F64 : VOPCX_F64 <"v_cmpx_tru_f64">;
+} // End GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true
 
 let SubtargetPredicate = isGFX6GFX7 in {
 
@@ -818,6 +813,7 @@ defm V_CMPX_NE_I32 : VOPCX_I32 <"v_cmpx_ne_i32">;
 defm V_CMPX_GE_I32 : VOPCX_I32 <"v_cmpx_ge_i32">;
 defm V_CMPX_T_I32 : VOPCX_I32 <"v_cmpx_t_i32">;
 
+let GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in {
 defm V_CMP_F_I64 : VOPC_I64 <"v_cmp_f_i64">;
 defm V_CMP_LT_I64 : VOPC_I64 <"v_cmp_lt_i64", COND_SLT, "v_cmp_gt_i64">;
 defm V_CMP_EQ_I64 : VOPC_I64 <"v_cmp_eq_i64">;
@@ -826,7 +822,6 @@ defm V_CMP_GT_I64 : VOPC_I64 <"v_cmp_gt_i64", COND_SGT>;
 defm V_CMP_NE_I64 : VOPC_I64 <"v_cmp_ne_i64">;
 defm V_CMP_GE_I64 : VOPC_I64 <"v_cmp_ge_i64", COND_SGE>;
 defm V_CMP_T_I64 : VOPC_I64 <"v_cmp_t_i64">;
-
 defm V_CMPX_F_I64 : VOPCX_I64 <"v_cmpx_f_i64">;
 defm V_CMPX_LT_I64 : VOPCX_I64 <"v_cmpx_lt_i64", "v_cmpx_gt_i64">;
 defm V_CMPX_EQ_I64 : VOPCX_I64 <"v_cmpx_eq_i64">;
@@ -835,6 +830,7 @@ defm V_CMPX_GT_I64 : VOPCX_I64 <"v_cmpx_gt_i64">;
 defm V_CMPX_NE_I64 : VOPCX_I64 <"v_cmpx_ne_i64">;
 defm V_CMPX_GE_I64 : VOPCX_I64 <"v_cmpx_ge_i64">;
 defm V_CMPX_T_I64 : VOPCX_I64 <"v_cmpx_t_i64">;
+} // End GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
 
 defm V_CMP_F_U32 : VOPC_I32 <"v_cmp_f_u32">;
 defm V_CMP_LT_U32 : VOPC_I32 <"v_cmp_lt_u32", COND_ULT, "v_cmp_gt_u32">;
@@ -854,6 +850,7 @@ defm V_CMPX_NE_U32 : VOPCX_I32 <"v_cmpx_ne_u32">;
 defm V_CMPX_GE_U32 : VOPCX_I32 <"v_cmpx_ge_u32">;
 defm V_CMPX_T_U32 : VOPCX_I32 <"v_cmpx_t_u32">;
 
+let GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in {
 defm V_CMP_F_U64 : VOPC_I64 <"v_cmp_f_u64">;
 defm V_CMP_LT_U64 : VOPC_I64 <"v_cmp_lt_u64", COND_ULT, "v_cmp_gt_u64">;
 defm V_CMP_EQ_U64 : VOPC_I64 <"v_cmp_eq_u64", COND_EQ>;
@@ -862,7 +859,6 @@ defm V_CMP_GT_U64 : VOPC_I64 <"v_cmp_gt_u64", COND_UGT>;
 defm V_CMP_NE_U64 : VOPC_I64 <"v_cmp_ne_u64", COND_NE>;
 defm V_CMP_GE_U64 : VOPC_I64 <"v_cmp_ge_u64", COND_UGE>;
 defm V_CMP_T_U64 : VOPC_I64 <"v_cmp_t_u64">;
-
 defm V_CMPX_F_U64 : VOPCX_I64 <"v_cmpx_f_u64">;
 defm V_CMPX_LT_U64 : VOPCX_I64 <"v_cmpx_lt_u64", "v_cmpx_gt_u64">;
 defm V_CMPX_EQ_U64 : VOPCX_I64 <"v_cmpx_eq_u64">;
@@ -871,6 +867,7 @@ defm V_CMPX_GT_U64 : VOPCX_I64 <"v_cmpx_gt_u64">;
 defm V_CMPX_NE_U64 : VOPCX_I64 <"v_cmpx_ne_u64">;
 defm V_CMPX_GE_U64 : VOPCX_I64 <"v_cmpx_ge_u64">;
 defm V_CMPX_T_U64 : VOPCX_I64 <"v_cmpx_t_u64">;
+} // End GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
 
 //===----------------------------------------------------------------------===//
 // Class instructions
@@ -1210,15 +1207,18 @@ multiclass VOPC_CLASS_F32 <string opName> {
 multiclass VOPCX_CLASS_F32 <string opName> :
   VOPCX_Class_Pseudos <opName, VOPC_I1_F32_I32, VOPC_F32_I32>;
 
-// FIXME: let IsDPMACCInstruction = 1 in
 multiclass VOPC_CLASS_F64 <string opName> {
+  let IsDPMACCInstruction = 1, GFX1250BlockingCycles = 32,
+      HasGFX1250BlockingCycles = true in
   defm NAME : VOPC_Class_Pseudos <opName, VOPC_I1_F64_I32, 0>;
   defm : VOPCClassPat64<NAME>;
 }
 
-// FIXME: let IsDPMACCInstruction = 1 in
-multiclass VOPCX_CLASS_F64 <string opName> :
-  VOPCX_Class_Pseudos <opName, VOPC_I1_F64_I32, VOPC_F64_I32>;
+multiclass VOPCX_CLASS_F64 <string opName> {
+  let IsDPMACCInstruction = 1, GFX1250BlockingCycles = 32,
+      HasGFX1250BlockingCycles = true in
+  defm NAME : VOPCX_Class_Pseudos <opName, VOPC_I1_F64_I32, VOPC_F64_I32>;
+}
 
 defm V_CMP_CLASS_F32 : VOPC_CLASS_F32 <"v_cmp_class_f32">;
 defm V_CMPX_CLASS_F32 : VOPCX_CLASS_F32 <"v_cmpx_class_f32">;

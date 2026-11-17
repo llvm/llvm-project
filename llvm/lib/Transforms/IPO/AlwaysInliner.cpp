@@ -21,6 +21,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -42,6 +43,7 @@ bool AlwaysInlineImpl(
   SmallSetVector<CallBase *, 16> Calls;
   bool Changed = false;
   SmallVector<Function *, 16> InlinedComdatFunctions;
+  SmallVector<Function *, 4> NeedFlattening;
 
   auto TryInline = [&](CallBase &CB, Function &Callee,
                        OptimizationRemarkEmitter &ORE, const char *InlineReason,
@@ -50,6 +52,22 @@ bool AlwaysInlineImpl(
     Function *Caller = CB.getCaller();
     DebugLoc DLoc = CB.getDebugLoc();
     BasicBlock *Block = CB.getParent();
+
+    TargetTransformInfo &CallerTTI = GetTTI(*Caller);
+    std::optional<InlineResult> CanInlineWithAttributes =
+        getAttributeBasedInliningDecision(CB, &Callee, CallerTTI, GetTLI);
+    if (!CanInlineWithAttributes || !CanInlineWithAttributes->isSuccess()) {
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc, Block)
+               << "'" << ore::NV("Callee", &Callee) << ", is not inlined into"
+               << ore::NV("Caller", Caller) << "': "
+               << ore::NV("Reason",
+                          CanInlineWithAttributes.has_value()
+                              ? CanInlineWithAttributes->getFailureReason()
+                              : "due to incompatible function attributes");
+      });
+      return false;
+    }
 
     InlineFunctionInfo IFI(GetAssumptionCache, &PSI);
     InlineResult Res = InlineFunction(
@@ -75,74 +93,10 @@ bool AlwaysInlineImpl(
     return true;
   };
 
-  for (Function &F : M) {
-    if (!F.hasFnAttribute(Attribute::Flatten))
-      continue;
-    SmallVector<std::pair<CallBase *, int>, 16> Worklist;
-    SmallVector<std::pair<Function *, int>, 16> InlineHistory;
-    SmallVector<CallBase *> NewCallSites;
-    OptimizationRemarkEmitter ORE(&F);
-
-    // Collect initial calls.
-    for (BasicBlock &BB : F) {
-      for (Instruction &I : BB) {
-        if (auto *CB = dyn_cast<CallBase>(&I)) {
-          Function *Callee = CB->getCalledFunction();
-          if (!Callee || Callee->isDeclaration())
-            continue;
-          Worklist.push_back({CB, -1});
-        }
-      }
-    }
-
-    while (!Worklist.empty()) {
-      auto Item = Worklist.pop_back_val();
-      CallBase *CB = Item.first;
-      int InlineHistoryID = Item.second;
-      Function *Callee = CB->getCalledFunction();
-      if (!Callee)
-        continue;
-
-      // Detect recursion.
-      if (Callee == &F) {
-        ORE.emit([&]() {
-          return OptimizationRemarkMissed("inline", "NotInlined",
-                                          CB->getDebugLoc(), CB->getParent())
-                 << "'" << ore::NV("Callee", Callee)
-                 << "' is not inlined into '"
-                 << ore::NV("Caller", CB->getCaller())
-                 << "': recursive call during flattening";
-        });
-        continue;
-      }
-
-      // Use getAttributeBasedInliningDecision for all attribute-based checks
-      // including TTI/TLI compatibility and isInlineViable.
-      TargetTransformInfo &CalleeTTI = GetTTI(*Callee);
-      auto Decision =
-          getAttributeBasedInliningDecision(*CB, Callee, CalleeTTI, GetTLI);
-      if (!Decision || !Decision->isSuccess())
-        continue;
-
-      if (!TryInline(*CB, *Callee, ORE, "flatten attribute", &NewCallSites))
-        continue;
-
-      Changed = true;
-
-      // Add new call sites from the inlined function to the worklist.
-      if (!NewCallSites.empty()) {
-        int NewHistoryID = InlineHistory.size();
-        InlineHistory.push_back({Callee, InlineHistoryID});
-        for (CallBase *NewCB : NewCallSites) {
-          Function *NewCallee = NewCB->getCalledFunction();
-          if (NewCallee && !NewCallee->isDeclaration())
-            Worklist.push_back({NewCB, NewHistoryID});
-        }
-      }
-    }
-  }
-
   for (Function &F : make_early_inc_range(M)) {
+    if (F.hasFnAttribute(Attribute::Flatten))
+      NeedFlattening.push_back(&F);
+
     if (F.isPresplitCoroutine())
       continue;
 
@@ -172,6 +126,72 @@ bool AlwaysInlineImpl(
           FAM->clear(F, F.getName());
         M.getFunctionList().erase(F);
         Changed = true;
+      }
+    }
+  }
+
+  // Flatten functions with the flatten attribute using a local worklist.
+  for (Function *F : NeedFlattening) {
+    SmallVector<std::pair<CallBase *, int>, 16> Worklist;
+    SmallVector<std::pair<Function *, int>, 16> InlineHistory;
+    SmallVector<CallBase *> NewCallSites;
+    OptimizationRemarkEmitter ORE(F);
+
+    // Collect initial calls.
+    for (BasicBlock &BB : *F) {
+      for (Instruction &I : BB) {
+        if (auto *CB = dyn_cast<CallBase>(&I)) {
+          Function *Callee = CB->getCalledFunction();
+          if (!Callee || Callee->isDeclaration())
+            continue;
+          Worklist.push_back({CB, -1});
+        }
+      }
+    }
+
+    while (!Worklist.empty()) {
+      auto Item = Worklist.pop_back_val();
+      CallBase *CB = Item.first;
+      int InlineHistoryID = Item.second;
+      Function *Callee = CB->getCalledFunction();
+      if (!Callee)
+        continue;
+
+      // Detect recursion.
+      if (Callee == F) {
+        ORE.emit([&]() {
+          return OptimizationRemarkMissed("inline", "NotInlined",
+                                          CB->getDebugLoc(), CB->getParent())
+                 << "'" << ore::NV("Callee", Callee)
+                 << "' is not inlined into '"
+                 << ore::NV("Caller", CB->getCaller())
+                 << "': recursive call during flattening";
+        });
+        continue;
+      }
+
+      // Use getAttributeBasedInliningDecision for all attribute-based checks
+      // including TTI/TLI compatibility and isInlineViable.
+      TargetTransformInfo &CallerTTI = GetTTI(*CB->getCaller());
+      auto Decision =
+          getAttributeBasedInliningDecision(*CB, Callee, CallerTTI, GetTLI);
+      if (!Decision || !Decision->isSuccess())
+        continue;
+
+      if (!TryInline(*CB, *Callee, ORE, "flatten attribute", &NewCallSites))
+        continue;
+
+      Changed = true;
+
+      // Add new call sites from the inlined function to the worklist.
+      if (!NewCallSites.empty()) {
+        int NewHistoryID = InlineHistory.size();
+        InlineHistory.push_back({Callee, InlineHistoryID});
+        for (CallBase *NewCB : NewCallSites) {
+          Function *NewCallee = NewCB->getCalledFunction();
+          if (NewCallee && !NewCallee->isDeclaration())
+            Worklist.push_back({NewCB, NewHistoryID});
+        }
       }
     }
   }

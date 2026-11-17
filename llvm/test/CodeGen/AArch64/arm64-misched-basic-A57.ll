@@ -7,7 +7,7 @@
 ; loads consecutively for this case and will cause stalls.
 ;
 ; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a57 -enable-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK: main:%bb.2
 ; CHECK: LDR
 ; CHECK: Latency : 4
@@ -16,7 +16,7 @@
 ; CHECK: LDR
 ; CHECK-NOT: LDR
 ; CHECK: {{.*}}
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 
 @main.x = private unnamed_addr constant [8 x i32] [i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1], align 4
 @main.y = private unnamed_addr constant [8 x i32] [i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2], align 4

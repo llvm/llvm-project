@@ -15,6 +15,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Error.h"
 
+#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
 #include "Plugins/Platform/Windows/PlatformWindows.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
@@ -57,6 +58,7 @@ public:
     ObjectFilePECOFF::Initialize();
     plugin::dwarf::SymbolFileDWARF::Initialize();
     TypeSystemClang::Initialize();
+    CPlusPlusLanguage::Initialize();
     SymbolFilePDB::Initialize();
 
     m_pdb_test_exe = GetInputFilePath("test-pdb.exe");
@@ -72,6 +74,7 @@ public:
 
   void TearDown() override {
     SymbolFilePDB::Terminate();
+    CPlusPlusLanguage::Terminate();
     TypeSystemClang::Terminate();
     plugin::dwarf::SymbolFileDWARF::Terminate();
     ObjectFilePECOFF::Terminate();
@@ -94,7 +97,7 @@ protected:
     if (!left.FileEquals(right))
       return false;
     // If BOTH have a directory, also compare the directories.
-    if (left.GetDirectory() && right.GetDirectory())
+    if (!left.GetDirectory().empty() && !right.GetDirectory().empty())
       return left.DirectoryEquals(right);
 
     // If one has a directory but not the other, they match.

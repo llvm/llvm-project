@@ -44,7 +44,7 @@ struct OptionEnumMapping<misc::UseInternalLinkageCheck::FixModeKind> {
 
 namespace clang::tidy::misc {
 
-static bool isInMainFile(SourceLocation L, SourceManager &SM,
+static bool isInMainFile(SourceLocation L, const SourceManager &SM,
                          const FileExtensionsSet &HeaderFileExtensions) {
   for (;;) {
     if (utils::isExpansionLocInHeaderFile(L, SM, HeaderFileExtensions))
@@ -67,12 +67,11 @@ AST_MATCHER(Decl, isFirstDecl) { return Node.isFirstDecl(); }
 AST_MATCHER(FunctionDecl, hasBody) { return Node.hasBody(); }
 
 AST_MATCHER(Decl, isInImportableModuleUnit) {
-  if (const Module *OwningModule = Node.getOwningModule())
-    if (OwningModule->Kind == Module::ModuleInterfaceUnit ||
-        OwningModule->Kind == Module::ModulePartitionInterface ||
-        OwningModule->Kind == Module::ModulePartitionImplementation)
-      return true;
-  return false;
+  const Module *OwningModule = Node.getOwningModule();
+  return OwningModule &&
+         (OwningModule->Kind == Module::ModuleInterfaceUnit ||
+          OwningModule->Kind == Module::ModulePartitionInterface ||
+          OwningModule->Kind == Module::ModulePartitionImplementation);
 }
 
 AST_MATCHER_P(Decl, isAllRedeclsInMainFile, const FileExtensionsSet *,

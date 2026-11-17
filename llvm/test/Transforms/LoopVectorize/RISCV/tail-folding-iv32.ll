@@ -34,12 +34,11 @@ define void @iv32(ptr noalias %a, ptr noalias %b, i32 %N) {
 ; NO-VP-NEXT:  entry:
 ; NO-VP-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
 ; NO-VP-NEXT:    [[TMP10:%.*]] = shl nuw i32 [[TMP0]], 2
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], [[TMP10]]
+; NO-VP-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP10]], i32 8)
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], [[UMAX]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
-; NO-VP-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vscale.i32()
-; NO-VP-NEXT:    [[TMP11:%.*]] = shl nuw i32 [[TMP1]], 2
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], [[TMP11]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], [[TMP10]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NO-VP:       vector.body:
@@ -48,7 +47,7 @@ define void @iv32(ptr noalias %a, ptr noalias %b, i32 %N) {
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP4]], align 4
 ; NO-VP-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 4 x i32> [[WIDE_LOAD]], ptr [[TMP6]], align 4
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP11]]
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP10]]
 ; NO-VP-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NO-VP:       middle.block:

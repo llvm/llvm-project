@@ -63,3 +63,8 @@ See also :py:class:`SBSymbolContext` and :py:class:`SBLineEntry`"
      @return
         A list of types in this compile unit that match type_mask"
 ) lldb::SBCompileUnit::GetTypes;
+
+%feature("docstring", "
+    Returns true if this compile unit was compiled with optimization,
+    false if unoptimized or unknown."
+) lldb::SBCompileUnit::GetIsOptimized;

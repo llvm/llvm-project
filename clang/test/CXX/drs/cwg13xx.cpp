@@ -296,6 +296,25 @@ namespace cwg1330 { // cwg1330: 4 c++11
 
 // cwg1334: sup 1719
 
+namespace cwg1336 { // cwg1336: 3.1
+#if __cplusplus >= 201103L
+struct A {
+  A(int, int);
+};
+
+struct B {
+  explicit B(int, int); // #cwg1336-B-ctor
+};
+
+void f() {
+  A a = {1, 2};
+  B b = {1, 2};
+  // expected-error@-1 {{chosen constructor is explicit in copy-initialization}}
+  //   expected-note@#cwg1336-B-ctor {{explicit constructor declared here}}
+}
+#endif
+} // namespace cwg1336
+
 namespace cwg1340 { // cwg1340: 2.9
 struct A;
 struct B;
@@ -711,9 +730,13 @@ namespace cwg1395 { // cwg1395: 16
 #if __cplusplus >= 201103L
   template <typename T, typename... U> void f(T, U...);
   template <typename T> void f(T);
+  // The non-pack overload is more specialized.
+  template <typename T, typename... U> constexpr int g(T, U...) { return 1; }
+  template <typename T> constexpr int g(T) { return 2; }
   void h(int i) {
     // This is made ambiguous by cwg692, but made valid again by cwg1395.
     f(&i);
+    static_assert(g(0) == 2, "");
   }
 #endif
 } // namespace cwg1395

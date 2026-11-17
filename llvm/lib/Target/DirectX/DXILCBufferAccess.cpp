@@ -6,19 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILCBufferAccess.h"
 #include "DirectX.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/Frontend/HLSL/CBuffer.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/ReplaceConstant.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #define DEBUG_TYPE "dxil-cbuffer-access"
 using namespace llvm;
@@ -40,7 +37,7 @@ static void replaceUsersOfGlobal(GlobalVariable *Global,
     U.set(Ptr);
   }
 
-  Global->removeFromParent();
+  Global->eraseFromParent();
 }
 
 static bool replaceCBufferAccesses(Module &M) {
@@ -50,20 +47,32 @@ static bool replaceCBufferAccesses(Module &M) {
     return false;
 
   SmallVector<Constant *> CBufferGlobals;
-  for (const hlsl::CBufferMapping &Mapping : *CBufMD)
+  SmallPtrSet<GlobalVariable *, 8> CBufferHandles;
+  for (const hlsl::CBufferMapping &Mapping : *CBufMD) {
+    CBufferHandles.insert(Mapping.Handle);
     for (const hlsl::CBufferMember &Member : Mapping.Members)
       CBufferGlobals.push_back(Member.GV);
+  }
   convertUsersOfConstantsToInstructions(CBufferGlobals);
 
   for (const hlsl::CBufferMapping &Mapping : *CBufMD)
     for (const hlsl::CBufferMember &Member : Mapping.Members)
       replaceUsersOfGlobal(Member.GV, Mapping.Handle, Member.Offset);
 
+  // Remove cbuffer handle globals from @llvm.compiler.used list.
+  llvm::removeFromUsedLists(M, [&](Constant *C) -> bool {
+    auto *GV = dyn_cast<GlobalVariable>(C);
+    return GV && CBufferHandles.contains(GV);
+  });
+  for (GlobalVariable *HandleGV : CBufferHandles)
+    HandleGV->removeDeadConstantUsers();
+
   CBufMD->eraseFromModule();
   return true;
 }
 
-PreservedAnalyses DXILCBufferAccess::run(Module &M, ModuleAnalysisManager &AM) {
+PreservedAnalyses DXILCBufferAccessPass::run(Module &M,
+                                             ModuleAnalysisManager &AM) {
   PreservedAnalyses PA;
   bool Changed = replaceCBufferAccesses(M);
 

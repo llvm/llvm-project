@@ -33,6 +33,7 @@ spirv.module Logical GLSL450 {
   spirv.func @foo() -> () "None" {
     // expected-error @+1 {{expected spirv.GlobalVariable symbol}}
     %0 = spirv.mlir.addressof @var2 : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Input>
+    spirv.Return
   }
 }
 
@@ -43,6 +44,7 @@ spirv.module Logical GLSL450 {
   spirv.func @foo() -> () "None" {
     // expected-error @+1 {{result type mismatch with the referenced global variable's type}}
     %0 = spirv.mlir.addressof @var1 : !spirv.ptr<f32, Input>
+    spirv.Return
   }
 }
 
@@ -66,6 +68,8 @@ func.func @const() -> () {
   // CHECK: spirv.Constant dense<4.200000e+00> : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
   // CHECK: spirv.Constant dense<0> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
   // CHECK: spirv.Constant dense<4> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
+  // CHECK: spirv.Constant [1 : i32, 2.000000e+00 : f32] : !spirv.struct<(i32, f32)>
+  // CHECK: spirv.Constant [1 : i32, [dense<2> : vector<2xi32>]] : !spirv.struct<(i32, !spirv.array<1 x vector<2xi32>>)>
 
   %0 = spirv.Constant true
   %1 = spirv.Constant 42 : i32
@@ -81,6 +85,8 @@ func.func @const() -> () {
   %11 = spirv.Constant dense<4.200000e+00> : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
   %12 = spirv.Constant dense<0> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
   %13 = spirv.Constant dense<4> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
+  %14 = spirv.Constant [1 : i32, 2.0 : f32] : !spirv.struct<(i32, f32)>
+  %15 = spirv.Constant [1 : i32, [dense<2> : vector<2xi32>]] : !spirv.struct<(i32, !spirv.array<1 x vector<2xi32>>)>
   return
 }
 
@@ -89,6 +95,37 @@ func.func @const() -> () {
 func.func @unaccepted_std_attr() -> () {
   // expected-error @+1 {{cannot have attribute: unit}}
   %0 = spirv.Constant unit : none
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @null_const
+func.func @null_const() -> () {
+  // CHECK: spirv.Constant #spirv.null : !spirv.ptr<i32, CrossWorkgroup>
+  %0 = spirv.Constant #spirv.null : !spirv.ptr<i32, CrossWorkgroup>
+  // CHECK: spirv.Constant #spirv.null : !spirv.array<4 x !spirv.ptr<f32, Function>>
+  %1 = spirv.Constant #spirv.null : !spirv.array<4 x !spirv.ptr<f32, Function>>
+  // CHECK: spirv.Constant #spirv.null : !spirv.struct<S, (i32, !spirv.ptr<f32, Function>)>
+  %2 = spirv.Constant #spirv.null : !spirv.struct<S, (i32, !spirv.ptr<f32, Function>)>
+  // CHECK: spirv.Constant [#spirv.null : !spirv.ptr<f32, Function>, 1 : i32] : !spirv.struct<(!spirv.ptr<f32, Function>, i32)>
+  %3 = spirv.Constant [#spirv.null : !spirv.ptr<f32, Function>, 1 : i32] : !spirv.struct<(!spirv.ptr<f32, Function>, i32)>
+  return
+}
+
+// -----
+
+func.func @null_const_scalar() -> () {
+  // expected-error @+1 {{must have spirv.ptr, spirv.array or spirv.struct result type for null value}}
+  %0 = spirv.Constant #spirv.null : i32
+  return
+}
+
+// -----
+
+func.func @null_const_type_mismatch() -> () {
+  // expected-error @+1 {{result type ('!spirv.ptr<i32, Function>') does not match value type ('!spirv.ptr<f32, Function>')}}
+  %0 = "spirv.Constant"() <{value = #spirv.null : !spirv.ptr<f32, Function>}> : () -> !spirv.ptr<i32, Function>
   return
 }
 
@@ -103,7 +140,7 @@ func.func @array_constant() -> () {
 // -----
 
 func.func @array_constant() -> () {
-  // expected-error @+1 {{must have spirv.array result type for array value}}
+  // expected-error @+1 {{must have spirv.array or spirv.struct result type for array value}}
   %0 = spirv.Constant [dense<3.0> : vector<2xf32>] : !spirv.rtarray<vector<2xf32>>
   return
 }
@@ -148,6 +185,30 @@ func.func @coop_matrix_const_non_splat() -> () {
 
 // -----
 
+func.func @struct_constant_wrong_member_count() -> () {
+  // expected-error @+1 {{number of constituents (1) does not match number of struct members (2)}}
+  %0 = spirv.Constant [1 : i32] : !spirv.struct<(i32, f32)>
+  return
+}
+
+// -----
+
+func.func @struct_constant_wrong_member_type() -> () {
+  // expected-error @+1 {{result type ('f32') does not match value type ('i32')}}
+  %0 = spirv.Constant [1 : i32, 2 : i32] : !spirv.struct<(i32, f32)>
+  return
+}
+
+// -----
+
+func.func @struct_constant_identified() -> () {
+  // expected-error @+1 {{cannot have an identified struct as a constant type}}
+  %0 = spirv.Constant [1 : i32] : !spirv.struct<S, (i32)>
+  return
+}
+
+// -----
+
 func.func @coop_matrix_const_non_dense() -> () {
     // expected-error @+2 {{floating point value not valid for specified type}}
     %0 = spirv.Constant 0.000000e+00 : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
@@ -170,7 +231,7 @@ func.func @coop_matrix_const_wrong_type() -> () {
 //===----------------------------------------------------------------------===//
 
 func.func @ccr_result_not_composite() -> () {
-  // expected-error @+1 {{op result #0 must be vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float or BFloat16 or Float8E4M3 or Float8E5M2 values of length 2/3/4/8/16 of ranks 1 or any SPIR-V array type or any SPIR-V runtime array type or any SPIR-V struct type or any SPIR-V cooperative matrix type or any SPIR-V matrix type or any SPIR-V tensorArm type, but got 'i32'}}
+  // expected-error @+1 {{op result #0 must be vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1 or vector of BFloat16 or Float8E4M3 or Float8E5M2 values of length 2/3/4/8/16 of ranks 1 or any SPIR-V array type or any SPIR-V runtime array type or any SPIR-V struct type or any SPIR-V cooperative matrix type or any SPIR-V matrix type or any SPIR-V tensorArm type, but got 'i32'}}
   %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : i32
   return
 }
@@ -314,6 +375,65 @@ spirv.module Logical GLSL450 {
    spirv.ExecutionMode @do_nothing "LocalSizeHint", 3, 4, 5
 }
 
+spirv.module Logical GLSL450 {
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // CHECK: spirv.ExecutionMode {{@.*}} "MaxWorkgroupSizeINTEL", 4, 4, 4
+   spirv.ExecutionMode @do_nothing "MaxWorkgroupSizeINTEL", 4, 4, 4
+}
+
+// Exercise every ExecutionMode that takes exactly one literal operand.
+spirv.module Logical GLSL450 {
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // CHECK: spirv.ExecutionMode {{@.*}} "Invocations", 4
+   spirv.ExecutionMode @do_nothing "Invocations", 4
+   // CHECK: spirv.ExecutionMode {{@.*}} "OutputVertices", 4
+   spirv.ExecutionMode @do_nothing "OutputVertices", 4
+   // CHECK: spirv.ExecutionMode {{@.*}} "VecTypeHint", 4
+   spirv.ExecutionMode @do_nothing "VecTypeHint", 4
+   // CHECK: spirv.ExecutionMode {{@.*}} "SubgroupSize", 4
+   spirv.ExecutionMode @do_nothing "SubgroupSize", 4
+   // CHECK: spirv.ExecutionMode {{@.*}} "SubgroupsPerWorkgroup", 4
+   spirv.ExecutionMode @do_nothing "SubgroupsPerWorkgroup", 4
+   // CHECK: spirv.ExecutionMode {{@.*}} "DenormPreserve", 32
+   spirv.ExecutionMode @do_nothing "DenormPreserve", 32
+   // CHECK: spirv.ExecutionMode {{@.*}} "DenormFlushToZero", 32
+   spirv.ExecutionMode @do_nothing "DenormFlushToZero", 32
+   // CHECK: spirv.ExecutionMode {{@.*}} "SignedZeroInfNanPreserve", 32
+   spirv.ExecutionMode @do_nothing "SignedZeroInfNanPreserve", 32
+   // CHECK: spirv.ExecutionMode {{@.*}} "RoundingModeRTE", 32
+   spirv.ExecutionMode @do_nothing "RoundingModeRTE", 32
+   // CHECK: spirv.ExecutionMode {{@.*}} "RoundingModeRTZ", 32
+   spirv.ExecutionMode @do_nothing "RoundingModeRTZ", 32
+   // CHECK: spirv.ExecutionMode {{@.*}} "OutputPrimitivesEXT", 4
+   spirv.ExecutionMode @do_nothing "OutputPrimitivesEXT", 4
+   // CHECK: spirv.ExecutionMode {{@.*}} "SharedLocalMemorySizeINTEL", 4
+   spirv.ExecutionMode @do_nothing "SharedLocalMemorySizeINTEL", 4
+   // CHECK: spirv.ExecutionMode {{@.*}} "RoundingModeRTPINTEL", 32
+   spirv.ExecutionMode @do_nothing "RoundingModeRTPINTEL", 32
+   // CHECK: spirv.ExecutionMode {{@.*}} "RoundingModeRTNINTEL", 32
+   spirv.ExecutionMode @do_nothing "RoundingModeRTNINTEL", 32
+   // CHECK: spirv.ExecutionMode {{@.*}} "FloatingPointModeALTINTEL", 32
+   spirv.ExecutionMode @do_nothing "FloatingPointModeALTINTEL", 32
+   // CHECK: spirv.ExecutionMode {{@.*}} "FloatingPointModeIEEEINTEL", 32
+   spirv.ExecutionMode @do_nothing "FloatingPointModeIEEEINTEL", 32
+   // CHECK: spirv.ExecutionMode {{@.*}} "MaxWorkDimINTEL", 3
+   spirv.ExecutionMode @do_nothing "MaxWorkDimINTEL", 3
+   // CHECK: spirv.ExecutionMode {{@.*}} "NumSIMDWorkitemsINTEL", 4
+   spirv.ExecutionMode @do_nothing "NumSIMDWorkitemsINTEL", 4
+   // CHECK: spirv.ExecutionMode {{@.*}} "SchedulerTargetFmaxMhzINTEL", 400
+   spirv.ExecutionMode @do_nothing "SchedulerTargetFmaxMhzINTEL", 400
+   // CHECK: spirv.ExecutionMode {{@.*}} "StreamingInterfaceINTEL", 0
+   spirv.ExecutionMode @do_nothing "StreamingInterfaceINTEL", 0
+   // CHECK: spirv.ExecutionMode {{@.*}} "NamedBarrierCountINTEL", 4
+   spirv.ExecutionMode @do_nothing "NamedBarrierCountINTEL", 4
+}
+
 // -----
 
 spirv.module Logical GLSL450 {
@@ -323,6 +443,50 @@ spirv.module Logical GLSL450 {
    spirv.EntryPoint "GLCompute" @do_nothing
    // expected-error @+1 {{custom op 'spirv.ExecutionMode' invalid execution_mode attribute specification: "GLCompute"}}
    spirv.ExecutionMode @do_nothing "GLCompute", 3, 4, 5
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionMode' op expected ExecutionMode that takes extra operands that are not <id> operands, got: LocalSizeId}}
+   spirv.ExecutionMode @do_nothing "LocalSizeId", 3, 4, 5
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionMode' op expected 0 value operand(s), got 1}}
+   spirv.ExecutionMode @do_nothing "ContractionOff", 3
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionMode' op expected 1 value operand(s), got 2}}
+   spirv.ExecutionMode @do_nothing "SubgroupSize", 3, 4
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionMode' op expected 3 value operand(s), got 2}}
+   spirv.ExecutionMode @do_nothing "LocalSize", 3, 4
 }
 
 // -----
@@ -391,6 +555,57 @@ spirv.module Logical GLSL450 {
    spirv.EntryPoint "GLCompute" @do_nothing
    // expected-error @+1 {{custom op 'spirv.ExecutionModeId' invalid kind of attribute specified}}
    spirv.ExecutionModeId @do_nothing "LocalSizeId" @x, @y, 2
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.SpecConstant @x = 3 : i32
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionModeId' op expected ExecutionMode that takes extra operands that are <id> operands, got: LocalSize}}
+   spirv.ExecutionModeId @do_nothing "LocalSize" @x
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.SpecConstant @x = 3 : i32
+   spirv.SpecConstant @y = 4 : i32
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionModeId' op expected 1 value operand(s), got 2}}
+   spirv.ExecutionModeId @do_nothing "SubgroupsPerWorkgroupId" @x, @y
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.SpecConstant @x = 3 : i32
+   spirv.SpecConstant @y = 4 : i32
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionModeId' op expected 3 value operand(s), got 2}}
+   spirv.ExecutionModeId @do_nothing "LocalSizeId" @x, @y
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.SpecConstant @x = 3 : i32
+   spirv.SpecConstant @y = 4 : i32
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionModeId' op cannot find symbol referenced by value operand: z}}
+   spirv.ExecutionModeId @do_nothing "LocalSizeId" @x, @y, @z
 }
 
 // -----
@@ -608,6 +823,56 @@ spirv.module Logical GLSL450 {
     spirv.GlobalVariable @var0 : !spirv.ptr<f32, Input>
     spirv.Return
   }
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @var0 {aliased_pointer} :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Private>
+  spirv.GlobalVariable @var1 {restrict_pointer} :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{must be decorated either 'AliasedPointer' or 'RestrictPointer'}}
+  spirv.GlobalVariable @var0 :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{must have exactly one aliasing decoration}}
+  spirv.GlobalVariable @var0 {aliased_pointer, restrict_pointer} :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @var0 {aliased_pointer} :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Private>
+  spirv.GlobalVariable @var1 {restrict_pointer} :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{must be decorated either 'AliasedPointer' or 'RestrictPointer'}}
+  spirv.GlobalVariable @var0 :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{must have exactly one aliasing decoration}}
+  spirv.GlobalVariable @var0 {aliased_pointer, restrict_pointer} :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Private>
 }
 
 // -----
@@ -1138,6 +1403,17 @@ spirv.module Logical GLSL450 {
 
     // expected-error @+1 {{invalid operand, must be defined by a constant operation}}
     %2 = spirv.SpecConstantOperation wraps "spirv.IAdd"(%1, %1) : (i32, i32) -> i32
+
+    spirv.Return
+  }
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0: i32) -> () "None" {
+    // expected-error @+1 {{invalid operand, must be defined by a constant operation}}
+    %0 = spirv.SpecConstantOperation wraps "spirv.IAdd"(%arg0, %arg0) : (i32, i32) -> i32
 
     spirv.Return
   }

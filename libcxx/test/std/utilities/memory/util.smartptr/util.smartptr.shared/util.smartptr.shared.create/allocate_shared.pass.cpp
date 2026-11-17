@@ -126,6 +126,7 @@ int main(int, char**)
 {
     test<bare_allocator<void> >();
     test<test_allocator<void> >();
+    test<complete_type_allocator<int> >();
 
     test_allocator_statistics alloc_stats;
     {

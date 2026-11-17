@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip %s \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip %s \
 // RUN:   -std=c++17 -O3 -mllvm -amdgpu-internalize-symbols -emit-llvm -o - \
 // RUN:   -cuid=123 | FileCheck -check-prefix=DEV %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x hip %s \
@@ -7,7 +7,7 @@
 
 // Negative tests.
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip %s \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip %s \
 // RUN:   -std=c++17 -O3 -mllvm -amdgpu-internalize-symbols -emit-llvm -o - \
 // RUN:   | FileCheck -check-prefix=DEV-NEG %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x hip %s \

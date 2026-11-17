@@ -426,6 +426,10 @@ defm : SBWriteResPair<WriteVarShuffle,  [SBPort15], 1, [1], 1, 5>;
 defm : SBWriteResPair<WriteVarShuffleX, [SBPort15], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteVarShuffleY, [SBPort15], 1, [1], 1, 7>;
 defm : SBWriteResPair<WriteVarShuffleZ, [SBPort15], 1, [1], 1, 7>; // Unsupported = 1
+defm : SBWriteResPair<WritePack,    [SBPort5], 1, [1], 1, 5>;
+defm : SBWriteResPair<WritePackX,   [SBPort15], 1, [1], 1, 6>;
+defm : SBWriteResPair<WritePackY,   [SBPort5], 1, [1], 1, 7>;
+defm : SBWriteResPair<WritePackZ,   [SBPort5], 1, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteBlend,   [SBPort15], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteBlendY,  [SBPort15], 1, [1], 1, 7>;
 defm : SBWriteResPair<WriteBlendZ,  [SBPort15], 1, [1], 1, 7>; // Unsupported = 1
@@ -582,8 +586,7 @@ def : WriteRes<WriteCLMulLd, [SBPort015, SBPort23]> {
 }
 
 // Load/store MXCSR.
-// FIXME: This is probably wrong. Only STMXCSR should require Port4.
-def : WriteRes<WriteLDMXCSR, [SBPort0,SBPort4,SBPort5,SBPort23]> { let Latency = 5; let NumMicroOps = 4; let ReleaseAtCycles = [1,1,1,1]; }
+def : WriteRes<WriteLDMXCSR, [SBPort0,SBPort5,SBPort23]> { let Latency = 5; let NumMicroOps = 3; let ReleaseAtCycles = [1,1,1]; }
 def : WriteRes<WriteSTMXCSR, [SBPort0,SBPort4,SBPort5,SBPort23]> { let Latency = 5; let NumMicroOps = 4; let ReleaseAtCycles = [1,1,1,1]; }
 
 def : WriteRes<WriteSystem,     [SBPort015]> { let Latency = 100; }

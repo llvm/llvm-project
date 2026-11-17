@@ -84,7 +84,7 @@ declare void @llvm.lifetime.end.p0(ptr nocapture) #4
 ; CHECK-NEXT:    br i1 [[TESTCOND]], label %[[COROSAVE:.*]], label %[[AFTER_AWAIT:.*]]
 ; CHECK:       [[COROSAVE]]:
 ; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 20
-; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    br i1 false, label %[[AWAIT_READY:.*]], label %[[AFTERCOROEND:.*]]
 ; CHECK:       [[AWAIT_READY]]:
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[REF_TMP7]], align 4
@@ -100,7 +100,7 @@ declare void @llvm.lifetime.end.p0(ptr nocapture) #4
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @a.resume(
+; CHECK-LABEL: define internal void @a.resume(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[VFRAME:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_RESUME:.*:]]
 ; CHECK-NEXT:    [[REF_TMP7:%.*]] = alloca %"struct.lean_future<int>::Awaiter", align 8
@@ -118,7 +118,7 @@ declare void @llvm.lifetime.end.p0(ptr nocapture) #4
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @a.destroy(
+; CHECK-LABEL: define internal void @a.destroy(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[VFRAME:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_DESTROY:.*:]]
 ; CHECK-NEXT:    [[REF_TMP7:%.*]] = alloca %"struct.lean_future<int>::Awaiter", align 8
@@ -136,7 +136,7 @@ declare void @llvm.lifetime.end.p0(ptr nocapture) #4
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @a.cleanup(
+; CHECK-LABEL: define internal void @a.cleanup(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[VFRAME:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_CLEANUP:.*:]]
 ; CHECK-NEXT:    [[REF_TMP7:%.*]] = alloca %"struct.lean_future<int>::Awaiter", align 8

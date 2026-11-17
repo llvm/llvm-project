@@ -15,7 +15,8 @@
 //      -o <file>
 //
 // The target defaults to the host target.
-// The cpu defaults to the 'native' host cpu.
+// The cpu is derived from the triple if not specified; pass -mcpu=native to
+// select the host cpu.
 // The output defaults to standard output.
 //
 //===----------------------------------------------------------------------===//
@@ -38,6 +39,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -54,6 +56,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
@@ -62,8 +65,6 @@
 #include "llvm/TargetParser/Host.h"
 
 using namespace llvm;
-
-static mc::RegisterMCTargetOptionsFlags MOF;
 
 static cl::OptionCategory ToolOptions("Tool Options");
 static cl::OptionCategory ViewOptions("View Options");
@@ -90,7 +91,7 @@ static cl::opt<std::string>
 static cl::opt<std::string>
     MCPU("mcpu",
          cl::desc("Target a specific cpu type (-mcpu=help for details)"),
-         cl::value_desc("cpu-name"), cl::cat(ToolOptions), cl::init("native"));
+         cl::value_desc("cpu-name"), cl::cat(ToolOptions), cl::init(""));
 
 static cl::list<std::string>
     MATTRS("mattr", cl::CommaSeparated,
@@ -377,7 +378,9 @@ int main(int argc, char **argv) {
   cl::HideUnrelatedOptions({&ToolOptions, &ViewOptions});
 
   // Parse flags and initialize target options.
-  cl::ParseCommandLineOptions(argc, argv,
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, mc::getToolOptions(),
+                              ArrayRef(argv, argc),
                               "llvm machine code performance analyzer.\n");
 
   Triple TheTriple(TripleNameOpt.empty()
@@ -425,11 +428,13 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  if (TheTriple.isAArch64() && STI->checkFeatures("+mca-streaming-sched"))
+    WithColor::warning()
+        << "AArch64 streaming SVE scheduling is enabled via "
+           "'-mattr=+mca-streaming-sched'; llvm-mca results are approximate.\n";
+
   if (WantsCPUHelp)
     return 0;
-
-  if (!STI->isCPUStringValid(MCPU))
-    return 1;
 
   if (!STI->getSchedModel().hasInstrSchedModel()) {
     WithColor::error()
@@ -451,7 +456,7 @@ int main(int argc, char **argv) {
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TheTriple));
   assert(MRI && "Unable to create target register info!");
 
-  MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
+  MCTargetOptions MCOptions = mc::getMCTargetOptions(LibraryOptions);
   std::unique_ptr<MCAsmInfo> MAI(
       TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   assert(MAI && "Unable to create target asm info!");
@@ -610,6 +615,8 @@ int main(int argc, char **argv) {
   mca::PipelineOptions PO(MicroOpQueue, DecoderThroughput, DispatchWidth,
                           RegisterFileSize, LoadQueueSize, StoreQueueSize,
                           AssumeNoAlias, EnableBottleneckAnalysis);
+  PO.ReservationStationScaleFactor =
+      MCSchedModel::getReservationStationScaleFactor(MCOptions);
 
   // Number each region in the sequence.
   unsigned RegionIdx = 0;
@@ -618,8 +625,8 @@ int main(int argc, char **argv) {
       TheTarget->createMCCodeEmitter(*MCII, ACtx));
   assert(MCE && "Unable to create code emitter!");
 
-  std::unique_ptr<MCAsmBackend> MAB(TheTarget->createMCAsmBackend(
-      *STI, *MRI, mc::InitMCTargetOptionsFromFlags()));
+  std::unique_ptr<MCAsmBackend> MAB(
+      TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
   assert(MAB && "Unable to create asm backend!");
 
   json::Object JSONOutput;
@@ -805,7 +812,8 @@ int main(int argc, char **argv) {
       Printer.addView(std::make_unique<mca::DispatchStatistics>());
 
     if (PrintSchedulerStats)
-      Printer.addView(std::make_unique<mca::SchedulerStatistics>(*STI));
+      Printer.addView(std::make_unique<mca::SchedulerStatistics>(
+          *STI, PO.ReservationStationScaleFactor));
 
     if (PrintRetireStats)
       Printer.addView(std::make_unique<mca::RetireControlUnitStatistics>(SM));
@@ -822,7 +830,7 @@ int main(int argc, char **argv) {
           TimelineMaxIterations ? TimelineMaxIterations : 10;
       Printer.addView(std::make_unique<mca::TimelineView>(
           *STI, *IP, Insts, std::min(TimelineIterations, S.getNumIterations()),
-          TimelineMaxCycles));
+          TimelineMaxCycles, PO.ReservationStationScaleFactor));
     }
 
     // Fetch custom Views that are to be placed after all other Views.

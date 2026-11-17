@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -triple amdgcn -target-cpu gfx942 -verify %s -fcuda-is-device
-// RUN: %clang_cc1 -fsyntax-only -triple x86_64 -aux-triple amdgcn -verify %s
+// RUN: %clang_cc1 -fsyntax-only -triple amdgpu9.42 -verify %s -fcuda-is-device
+// RUN: %clang_cc1 -fsyntax-only -triple x86_64 -aux-triple amdgpu -verify %s
 
 #define __device__ __attribute__((device))
 #define __shared__ __attribute__((shared))

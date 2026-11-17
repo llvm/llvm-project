@@ -240,6 +240,17 @@ public:
   static SamplerType get(MLIRContext *context);
 };
 
+// SPIR-V named barrier type (OpTypeNamedBarrier)
+class NamedBarrierType
+    : public Type::TypeBase<NamedBarrierType, SPIRVType, TypeStorage> {
+public:
+  using Base::Base;
+
+  static constexpr StringLiteral name = "spirv.named_barrier";
+
+  static NamedBarrierType get(MLIRContext *context);
+};
+
 /// SPIR-V struct type. Two kinds of struct types are supported:
 /// - Literal: a literal struct type is uniqued by its fields (types + offset
 /// info + decoration info).

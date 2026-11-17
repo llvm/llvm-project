@@ -105,10 +105,7 @@ struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
   void reset(const MachineFunction &MF);
 
   // Get function code size and cache the value.
-  // If \p IsLowerBound is set it returns a minimal code size which is safe
-  // to address.
-  uint64_t getFunctionCodeSize(const MachineFunction &MF,
-                               bool IsLowerBound = false);
+  uint64_t getFunctionCodeSize(const MachineFunction &MF);
 
   /// Compute the value of the ComputePGMRsrc1 register.
   const MCExpr *getComputePGMRSrc1(const GCNSubtarget &ST,
@@ -119,8 +116,6 @@ struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
   /// Compute the value of the ComputePGMRsrc2 register.
   const MCExpr *getComputePGMRSrc2(const GCNSubtarget &ST,
                                    MCContext &Ctx) const;
-  const MCExpr *getPGMRSrc2(CallingConv::ID CC, const GCNSubtarget &ST,
-                            MCContext &Ctx) const;
 };
 
 } // namespace llvm

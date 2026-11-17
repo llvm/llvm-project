@@ -12,6 +12,7 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_VECUTILS_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_VECUTILS_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/SandboxIR/Type.h"
@@ -22,12 +23,6 @@
 namespace llvm {
 /// Traits for DenseMap.
 template <> struct DenseMapInfo<SmallVector<sandboxir::Value *>> {
-  static inline SmallVector<sandboxir::Value *> getEmptyKey() {
-    return SmallVector<sandboxir::Value *>({(sandboxir::Value *)-1});
-  }
-  static inline SmallVector<sandboxir::Value *> getTombstoneKey() {
-    return SmallVector<sandboxir::Value *>({(sandboxir::Value *)-2});
-  }
   static unsigned getHashValue(const SmallVector<sandboxir::Value *> &Vec) {
     return hash_combine_range(Vec);
   }
@@ -38,6 +33,53 @@ template <> struct DenseMapInfo<SmallVector<sandboxir::Value *>> {
 };
 
 namespace sandboxir {
+
+/// An ArrayRef of Values or Instructions that we can print/dump for debugging.
+/// It is mainly used for the vectorizer's instr/value bundles.
+template <typename T> class BndlRef : public ArrayRef<T> {
+public:
+  // Inherit constructors.
+  using ArrayRef<T>::ArrayRef;
+
+#ifndef NDEBUG
+  /// Helper dump function for debugging.
+  void print(raw_ostream &OS) const {
+    for (const auto &[Idx, Val] : enumerate(*this))
+      OS << Idx << ". " << *Val << "\n";
+  }
+  LLVM_DUMP_METHOD void dump() const;
+#endif // NDEBUG
+};
+
+/// @name BndlRef Deduction guides
+/// @{
+/// Deduction guide to construct a BndlRef from a single element.
+template <typename T> BndlRef(const T &OneElt) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a pointer and length
+template <typename T> BndlRef(const T *data, size_t length) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a range
+template <typename T> BndlRef(const T *data, const T *end) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a SmallVector
+template <typename T> BndlRef(const SmallVectorImpl<T> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a SmallVector
+template <typename T, unsigned N>
+BndlRef(const SmallVector<T, N> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a std::vector
+template <typename T> BndlRef(const std::vector<T> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a std::array
+template <typename T, std::size_t N>
+BndlRef(const std::array<T, N> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from an BndlRef (const)
+template <typename T> BndlRef(const BndlRef<T> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from an BndlRef
+template <typename T> BndlRef(BndlRef<T> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a C array.
+template <typename T, size_t N> BndlRef(const T (&Arr)[N]) -> BndlRef<T>;
+/// @}
+
+class InstrMaps;
+
+using BundleTy = SmallVector<Value *, 4>;
 
 class VecUtils {
 public:
@@ -120,27 +162,78 @@ public:
     }
     return FixedVectorType::get(ElemTy, NumElts);
   }
+  /// Classifies whether all bundle elements are integers, halves, floats,
+  /// doubles, or pointers.
+  class BndlTypeClassifier {
+    unsigned NumIntElements = 0;
+    unsigned NumHalfElements = 0;
+    unsigned NumFloatElements = 0;
+    unsigned NumDoubleElements = 0;
+    unsigned NumPtrElements = 0;
+    unsigned NumElements = 0;
+
+  public:
+    template <typename T>
+    BndlTypeClassifier(BndlRef<T *> Bndl) : NumElements(Bndl.size()) {
+      for (T *V : Bndl) {
+        Type *ElmTy = VecUtils::getElementType(Utils::getExpectedType(V));
+        if (ElmTy->isIntegerTy())
+          ++NumIntElements;
+        else if (ElmTy->isHalfTy())
+          ++NumHalfElements;
+        else if (ElmTy->isFloatTy())
+          ++NumFloatElements;
+        else if (ElmTy->isDoubleTy())
+          ++NumDoubleElements;
+        else if (ElmTy->isPointerTy())
+          ++NumPtrElements;
+      }
+    }
+
+    bool areAllIntegers() const { return NumIntElements == NumElements; }
+    bool areAllHalves() const { return NumHalfElements == NumElements; }
+    bool areAllFloats() const { return NumFloatElements == NumElements; }
+    bool areAllDoubles() const { return NumDoubleElements == NumElements; }
+    bool areAllPointers() const { return NumPtrElements == NumElements; }
+  };
+
   /// \Returns the combined vector type for \p Bndl, even when the element types
-  /// differ. For example: i8,i8,i16 will return <4 x i8>. \Returns null if
-  /// types are of mixed float/integer types.
-  static Type *getCombinedVectorTypeFor(ArrayRef<Instruction *> Bndl,
+  /// differ. For example: i8,i8,i16 will return <4 x i8>. Homogeneous half,
+  /// float, and double bundles keep their element type; other mixed-type
+  /// bundles are combined into an integer vector.
+  template <typename T>
+  static Type *getCombinedVectorTypeFor(BndlRef<T *> Bndl,
                                         const DataLayout &DL) {
     assert(!Bndl.empty() && "Expected non-empty Bndl!");
     unsigned TotalBits = 0;
-    unsigned MinElmBits = std::numeric_limits<unsigned>::max();
-    Type *MinElmTy = nullptr;
-    for (auto [Idx, V] : enumerate(Bndl)) {
+    unsigned GCDBits = 0;
+    BndlTypeClassifier Classifier(Bndl);
+    for (auto *V : Bndl) {
       Type *ElmTy = getElementType(Utils::getExpectedType(V));
-
       unsigned ElmBits = Utils::getNumBits(ElmTy, DL);
-      TotalBits += ElmBits * VecUtils::getNumLanes(V);
-      if (ElmBits < MinElmBits) {
-        MinElmBits = ElmBits;
-        MinElmTy = ElmTy;
-      }
+      TotalBits += ElmBits * getNumLanes(V);
+      GCDBits = std::gcd(GCDBits, ElmBits);
     }
-    unsigned NumElms = TotalBits / MinElmBits;
-    return FixedVectorType::get(MinElmTy, NumElms);
+
+    auto &Ctx = Bndl[0]->getContext();
+    // Keep a half, float, or double lane type when every element has that type.
+    // Otherwise use an integer lane type, so an integer bundle such as
+    // {i32, i16, i16} is not rewritten as a float vector such as <4 x half>.
+    Type *VecElmTy = nullptr;
+    if (Classifier.areAllHalves())
+      VecElmTy = Type::getHalfTy(Ctx);
+    else if (Classifier.areAllFloats())
+      VecElmTy = Type::getFloatTy(Ctx);
+    else if (Classifier.areAllDoubles())
+      VecElmTy = Type::getDoubleTy(Ctx);
+    else
+      VecElmTy = IntegerType::get(Ctx, GCDBits);
+    return FixedVectorType::get(VecElmTy, TotalBits / GCDBits);
+  }
+
+  static Type *getCombinedVectorTypeFor(std::initializer_list<Value *> Bndl,
+                                        const DataLayout &DL) {
+    return getCombinedVectorTypeFor(BndlRef<Value *>(Bndl), DL);
   }
   /// \Returns the instruction in \p Instrs that is lowest in the BB. Expects
   /// that all instructions are in the same BB.
@@ -151,6 +244,16 @@ public:
         LowestI = I;
     }
     return LowestI;
+  }
+  /// \Returns the instruction in \p Instrs that is highest in the BB. Expects
+  /// that all instructions are in the same BB.
+  static Instruction *getHighest(ArrayRef<Instruction *> Instrs) {
+    Instruction *HighestI = Instrs.front();
+    for (auto *I : drop_begin(Instrs)) {
+      if (I->comesBefore(HighestI))
+        HighestI = I;
+    }
+    return HighestI;
   }
   /// \Returns the lowest instruction in \p Vals, or nullptr if no instructions
   /// are found. Skips instructions not in \p BB.
@@ -193,6 +296,20 @@ public:
     return LastI;
   }
 
+  /// \Returns the BB iterator after the lowest instruction in \p Vals
+  /// (skipping instructions not in \p BB), or the top of BB if no
+  /// instruction found in \p Vals.
+  static BasicBlock::iterator getInsertPointAfterInstrs(ArrayRef<Value *> Vals,
+                                                        BasicBlock *BB) {
+    auto *BotI = getLastPHIOrSelf(getLowest(Vals, BB));
+    if (BotI == nullptr)
+      // We are using BB->begin() (or after PHIs) as the fallback insert point.
+      return BB->empty()
+                 ? BB->begin()
+                 : std::next(getLastPHIOrSelf(&*BB->begin())->getIterator());
+    return std::next(BotI->getIterator());
+  }
+
   /// If all values in \p Bndl are of the same scalar type then return it,
   /// otherwise return nullptr.
   static Type *tryGetCommonScalarType(ArrayRef<Value *> Bndl) {
@@ -220,6 +337,14 @@ public:
   }
   /// \Returns the first integer power of 2 that is <= Num.
   LLVM_ABI static unsigned getFloorPowerOf2(unsigned Num);
+
+  /// For each user of lane 0 in \p Bndl, try to form a bundle of matching
+  /// users for all lanes. Returns all complete user bundles found.
+  /// \p Claimed contains instructions that have already been claimed by a
+  /// bundle.
+  LLVM_ABI static SmallVector<BundleTy>
+  getNextUserBundles(ArrayRef<Value *> Bndl, const InstrMaps &IMaps,
+                     SmallPtrSet<Instruction *, 4> &Claimed);
 
   /// Helper struct for `matchPack()`. Describes the instructions and operands
   /// of a pack pattern.
@@ -373,6 +498,38 @@ public:
     }
   };
 
+  /// Utility class to collect and erase dead instructions.
+  class DeadInstructionMorgue {
+  public:
+    DeadInstructionMorgue() = default;
+    DeadInstructionMorgue(const DeadInstructionMorgue &) = delete;
+
+    /// Record instructions in \p Bndl that may be dead after vectorization.
+    /// For load/store bundles, also record non-first-lane pointer operands;
+    /// the first lane's pointer is skipped because the vector load/store
+    /// reuses it. Erased later by \c tryEraseDeadInstrs().
+    template <typename T> void collectPotentiallyDeadInstrs(BndlRef<T *> Bndl);
+
+    /// Erase candidates recorded by \c collectPotentiallyDeadInstrs() that
+    /// now have no uses, then clear the candidate set.
+    LLVM_ABI void tryEraseDeadInstrs();
+
+#ifndef NDEBUG
+    void print(raw_ostream &OS) const {
+      OS << "DeadInstrCandidates:\n";
+      for (auto *I : DeadInstrCandidates)
+        OS << *I << '\n';
+    }
+    LLVM_DUMP_METHOD void debug() const {
+      print(dbgs());
+      dbgs() << '\n';
+    }
+#endif /* NDEBUG */
+
+  private:
+    DenseSet<Instruction *> DeadInstrCandidates;
+  };
+
   /// Helper for creating LaneValueEnumerator ranges. Can be used in for loops
   /// like: `for (auto [Lane, V] : enumerateLanes(Range))`
   template <typename ValueContainerT>
@@ -384,12 +541,41 @@ public:
     return make_range(Begin, End);
   }
 
+  /// Given the alignments of the instructions before vectorization, this
+  /// returns the alignment of the vectorized instruction.
+  template <typename AlignRangeT, typename TypeRangeT>
+  static Align getVecAlignment(AlignRangeT AlignRange, TypeRangeT TypeRange) {
+    assert(AlignRange.begin() != AlignRange.end() && "Expected non empty!");
+    assert(TypeRange.begin() != TypeRange.end() && "Expected non empty!");
+    assert(AlignRange.end() - AlignRange.begin() ==
+               TypeRange.end() - TypeRange.begin() &&
+           "Expected same size!");
+    // TODO: Implement smarter aligment deduction based on types.
+    // For now we return the alignment of the first element.
+    return *AlignRange.begin();
+  }
+
+  /// Helper for getVecAlignment(AlignRange, TypeRange).
+  template <typename InstrRangeT>
+  static Align getVecAlignment(InstrRangeT InstrRange) {
+    auto AlignRange = map_range(
+        InstrRange, [](auto *I) -> Align { return getLoadStoreAlignment(I); });
+    auto TypeRange = map_range(InstrRange, [](auto *I) -> Type * {
+      return Utils::getExpectedType(I);
+    });
+    return getVecAlignment(AlignRange, TypeRange);
+  }
+
 #ifndef NDEBUG
   /// Helper dump function for debugging.
   LLVM_DUMP_METHOD static void dump(ArrayRef<Value *> Bndl);
   LLVM_DUMP_METHOD static void dump(ArrayRef<Instruction *> Bndl);
 #endif // NDEBUG
 };
+
+extern template LLVM_TEMPLATE_ABI void
+    VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs<Instruction>(
+        BndlRef<Instruction *>);
 
 } // namespace sandboxir
 

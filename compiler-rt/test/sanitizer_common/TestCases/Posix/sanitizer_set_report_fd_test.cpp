@@ -8,6 +8,7 @@
 
 // REQUIRES: stable-runtime
 // UNSUPPORTED: android && asan
+// UNSUPPORTED: rtsan
 
 #include <sanitizer/common_interface_defs.h>
 #include <stdio.h>

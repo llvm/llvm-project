@@ -24,7 +24,7 @@ def user_is_root():
     return False
 
 
-class LLVMConfig(object):
+class LLVMConfig:
     def __init__(self, lit_config, config):
         self.lit_config = lit_config
         self.config = config
@@ -144,12 +144,21 @@ class LLVMConfig(object):
         if "thread" in sanitizers:
             features.add("tsan")
 
+        have_icu = getattr(config, "have_icu", None)
+        if have_icu:
+            features.add("icu")
+        have_iconv = getattr(config, "have_iconv", None)
+        if have_iconv:
+            features.add("iconv")
         have_zlib = getattr(config, "have_zlib", None)
         if have_zlib:
             features.add("zlib")
         have_zstd = getattr(config, "have_zstd", None)
         if have_zstd:
             features.add("zstd")
+        have_lzma = getattr(config, "have_lzma", None)
+        if have_lzma:
+            features.add("lzma")
 
         if getattr(config, "reverse_iteration", None):
             features.add("reverse_iteration")

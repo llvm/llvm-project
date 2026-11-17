@@ -22,11 +22,14 @@
 #include <sycl/__impl/info/device_type.hpp>
 #include <sycl/__impl/info/platform.hpp>
 
-#include <memory>
+#include <functional>
 #include <vector>
+
+#define SYCL_KHR_DEFAULT_CONTEXT 1
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
+class context;
 class device;
 
 namespace detail {
@@ -65,10 +68,10 @@ public:
   /// If there are no devices that match given device
   /// type, resulting vector is empty.
   ///
-  /// \param DeviceType is a SYCL device type.
+  /// \param type is a SYCL device type.
   /// \return a vector of SYCL devices matching given device type.
   std::vector<device>
-  get_devices(info::device_type DeviceType = info::device_type::all) const;
+  get_devices(info::device_type type = info::device_type::all) const;
 
   /// Queries this SYCL platform for info.
   ///
@@ -86,11 +89,11 @@ public:
   /// Indicates if all of the SYCL devices on this platform have the
   /// given aspect.
   ///
-  /// \param Aspect is one of the values defined in SYCL 2020 Section 4.6.4.5.
+  /// \param asp is one of the values defined in SYCL 2020 Section 4.6.4.5.
   ///
   /// \return true if all of the SYCL devices on this platform have the
   /// given aspect.
-  bool has(aspect Aspect) const;
+  bool has(aspect asp) const;
 
   /// Returns all SYCL platforms from all backends that are available in the
   /// system.
@@ -98,6 +101,10 @@ public:
   /// \return A std::vector containing all of the platforms from all backends
   /// that are available in the system.
   static std::vector<platform> get_platforms();
+
+  /// \return the context that contains all of the root devices that are
+  /// associated with this platform.
+  context khr_get_default_context() const;
 
 private:
   platform(detail::PlatformImpl &Impl) : impl(&Impl) {}

@@ -320,3 +320,24 @@ void incomplete_use(Incomplete &i) {
 #pragma acc parallel reduction(+:i)
   while (1);
 }
+
+namespace GH210877 {
+struct S {
+  decltype(nullptr) x;
+  S &operator*=(S &s);
+};
+
+void foo() {
+  S t;
+#pragma acc parallel reduction(* : t)
+  ;
+}
+
+template <typename T> void fooTempl() {
+  T t;
+#pragma acc parallel reduction(* : t)
+  ;
+}
+
+void bar() { fooTempl<S>(); }
+}

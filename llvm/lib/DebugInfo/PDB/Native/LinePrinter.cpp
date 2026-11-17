@@ -11,7 +11,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
-#include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/Native/InputFile.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
@@ -232,7 +231,8 @@ void LinePrinter::formatMsfStreamData(StringRef Label, PDBFile &File,
     assert(FoundRun.ByteLen >= RunOffset);
     uint64_t Len = FoundRun.ByteLen - RunOffset;
     Len = std::min(Len, Reader.bytesRemaining());
-    uint64_t Base = FoundRun.Block * File.getBlockSize() + RunOffset;
+    uint64_t Base =
+        static_cast<uint64_t>(FoundRun.Block) * File.getBlockSize() + RunOffset;
     ArrayRef<uint8_t> Data;
     consumeError(Reader.readBytes(Data, Len));
     OS << format_bytes_with_ascii(Data, Base, 32, 4,

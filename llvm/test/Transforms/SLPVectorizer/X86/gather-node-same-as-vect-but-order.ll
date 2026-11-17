@@ -7,8 +7,8 @@ define void @foo(ptr %i7, i32 %0, i1 %tobool62.not) {
 ; CHECK-LABEL: define void @foo(
 ; CHECK-SAME: ptr [[I7:%.*]], i32 [[TMP0:%.*]], i1 [[TOBOOL62_NOT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RC21:%.*]] = alloca [0 x [0 x %struct.rect]], i32 0, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[RC21:%.*]] = alloca [0 x [0 x [[STRUCT_RECT:%.*]]]], i32 0, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = sitofp <2 x i32> [[TMP3]] to <2 x float>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
@@ -16,8 +16,8 @@ define void @foo(ptr %i7, i32 %0, i1 %tobool62.not) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[Y0]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[I7]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x float>, ptr [[RC21]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> poison, float [[TMP6]], i32 2
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP10]], float [[TMP7]], i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> poison, float [[TMP6]], i64 2
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP10]], float [[TMP7]], i64 3
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x float> [[TMP9]], <4 x float> [[TMP11]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP12:%.*]] = fcmp olt <4 x float> [[TMP13]], zeroinitializer

@@ -59,11 +59,15 @@ volatile signed char sc;
 volatile signed short ss;
 volatile signed int si;
 volatile signed long long sl;
+volatile signed long long sl1;
+volatile signed long long sl2;
 volatile signed __int128 slll;
 volatile unsigned char uc;
 volatile unsigned short us;
 volatile unsigned int ui;
 volatile unsigned long long ul;
+volatile unsigned long long ul1;
+volatile unsigned long long ul2;
 volatile unsigned __int128 ulll;
 volatile double d;
 
@@ -769,9 +773,9 @@ void test_core(void) {
   // CHECK: call void @llvm.s390.vstl(<16 x i8> %{{.*}}, i32 %{{.*}}, ptr %{{.*}})
   // CHECK-ASM: vstl
 
-  vsl = vec_load_pair(sl + 1, sl - 1);
+  vsl = vec_load_pair(sl1 + 1, sl2 - 1);
   // CHECK-ASM: vlvgp
-  vul = vec_load_pair(ul + 1, ul - 1);
+  vul = vec_load_pair(ul1 + 1, ul2 - 1);
   // CHECK-ASM: vlvgp
 
   vuc = vec_genmask(0);
@@ -4850,11 +4854,11 @@ void test_float(void) {
   // (emulated)
   vd = vec_ctd(vsl, 31);
   // CHECK: [[VAL:%[^ ]+]] = sitofp <2 x i64> %{{.*}} to <2 x double>
-  // CHECK: fmul nnan <2 x double> [[VAL]], splat (double 0x3E00000000000000)
+  // CHECK: fmul nnan <2 x double> [[VAL]], splat (double f0x3E00000000000000)
   // (emulated)
   vd = vec_ctd(vul, 31);
   // CHECK: [[VAL:%[^ ]+]] = uitofp <2 x i64> %{{.*}} to <2 x double>
-  // CHECK: fmul nnan <2 x double> [[VAL]], splat (double 0x3E00000000000000)
+  // CHECK: fmul nnan <2 x double> [[VAL]], splat (double f0x3E00000000000000)
   // (emulated)
 
   vsl = vec_ctsl(vd, 0);
@@ -4872,11 +4876,11 @@ void test_float(void) {
   // CHECK: fptoui <2 x double> [[VAL]] to <2 x i64>
   // (emulated)
   vsl = vec_ctsl(vd, 31);
-  // CHECK: [[VAL:%[^ ]+]] = fmul <2 x double> %{{.*}}, splat (double 0x41E0000000000000)
+  // CHECK: [[VAL:%[^ ]+]] = fmul <2 x double> %{{.*}}, splat (double f0x41E0000000000000)
   // CHECK: fptosi <2 x double> [[VAL]] to <2 x i64>
   // (emulated)
   vul = vec_ctul(vd, 31);
-  // CHECK: [[VAL:%[^ ]+]] = fmul <2 x double> %{{.*}}, splat (double 0x41E0000000000000)
+  // CHECK: [[VAL:%[^ ]+]] = fmul <2 x double> %{{.*}}, splat (double f0x41E0000000000000)
   // CHECK: fptoui <2 x double> [[VAL]] to <2 x i64>
   // (emulated)
 

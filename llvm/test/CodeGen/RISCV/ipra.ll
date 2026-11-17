@@ -95,8 +95,8 @@ define internal void @foobar(ptr %live_throughout.0.val) norecurse nounwind {
 ; RV64-WITHFP-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
 ; RV64-WITHFP-NEXT:    addi s0, sp, 64
 ; RV64-WITHFP-NEXT:    mv a1, a0
-; RV64-WITHFP-NEXT:    addi a0, s0, -48
-; RV64-WITHFP-NEXT:    addi a2, s0, -52
+; RV64-WITHFP-NEXT:    addi a0, sp, 16
+; RV64-WITHFP-NEXT:    addi a2, sp, 12
 ; RV64-WITHFP-NEXT:    call bmp_iter_set_init
 ; RV64-WITHFP-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
@@ -110,8 +110,8 @@ define internal void @foobar(ptr %live_throughout.0.val) norecurse nounwind {
 ; RV32-WITHFP-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
 ; RV32-WITHFP-NEXT:    addi s0, sp, 48
 ; RV32-WITHFP-NEXT:    mv a1, a0
-; RV32-WITHFP-NEXT:    addi a0, s0, -32
-; RV32-WITHFP-NEXT:    addi a2, s0, -36
+; RV32-WITHFP-NEXT:    addi a0, sp, 16
+; RV32-WITHFP-NEXT:    addi a2, sp, 12
 ; RV32-WITHFP-NEXT:    call bmp_iter_set_init
 ; RV32-WITHFP-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload

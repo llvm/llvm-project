@@ -1,9 +1,9 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr7 \
-; RUN:     -mattr=+altivec  -vec-extabi -xcoff-traceback-table=true < %s | \
+; RUN:     -mattr=+altivec  -target-abi=vec-extabi -xcoff-traceback-table=true < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK-ASM,COMMON %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -function-sections \
-; RUN:     -mcpu=pwr7 -mattr=+altivec -vec-extabi < %s | \
+; RUN:     -mcpu=pwr7 -mattr=+altivec -target-abi=vec-extabi < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK-FUNC,COMMON %s
 
 ;; #include <altivec.h>

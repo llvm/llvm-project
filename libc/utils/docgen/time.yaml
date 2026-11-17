@@ -1,0 +1,143 @@
+standard: c23
+posix: posix-2024
+c-reference-root: chrono
+types:
+  clock_t:
+    c-definition: 7.29.1
+    c-reference: chrono/clock_t
+    in-latest-posix: ''
+  clockid_t:
+    in-latest-posix: ''
+  errno_t:
+    c-definition: K.3.8
+    c-reference: error
+  locale_t:
+    in-latest-posix: ''
+  pid_t:
+    in-latest-posix: ''
+  rsize_t:
+    c-definition: K.3.8
+    c-reference: error
+  size_t:
+    c-definition: 7.29.1
+    c-reference: types/size_t
+    in-latest-posix: ''
+  struct itimerspec:
+    in-latest-posix: ''
+  struct timespec:
+    c-definition: 7.29.1
+    c-reference: chrono/timespec
+    in-latest-posix: ''
+  struct tm:
+    c-definition: 7.29.1
+    c-reference: chrono/tm
+    in-latest-posix: ''
+  time_t:
+    c-definition: 7.29.1
+    c-reference: chrono/time_t
+    in-latest-posix: ''
+  timer_t:
+    in-latest-posix: ''
+objects:
+  daylight:
+    in-latest-posix: ''
+  getdate_err:
+    in-latest-posix: ''
+  timezone:
+    in-latest-posix: ''
+  tzname:
+    in-latest-posix: ''
+functions:
+  asctime:
+    c-definition: 7.27.2.1
+    in-latest-posix: ''
+  asctime_r:
+    in-latest-posix: ''
+  ctime:
+    c-definition: 7.27.2.2
+    in-latest-posix: ''
+  ctime_r:
+    in-latest-posix: ''
+  clock:
+    c-definition: 7.27.2.1
+    in-latest-posix: ''
+  clock_getcpuclockid:
+    in-latest-posix: ''
+  clock_getres:
+    in-latest-posix: ''
+  clock_gettime:
+    in-latest-posix: ''
+  clock_nanosleep:
+    in-latest-posix: ''
+  clock_settime:
+    in-latest-posix: ''
+  difftime:
+    c-definition: 7.27.2.2
+    in-latest-posix: ''
+  getdate:
+    in-latest-posix: ''
+  gmtime:
+    c-definition: 7.27.2.3
+    in-latest-posix: ''
+  gmtime_r:
+    in-latest-posix: ''
+  localtime:
+    c-definition: 7.27.2.4
+    in-latest-posix: ''
+  localtime_r:
+    in-latest-posix: ''
+  mktime:
+    c-definition: 7.27.2.3
+    in-latest-posix: ''
+  nanosleep:
+    in-latest-posix: ''
+  strftime:
+    c-definition: 7.27.3.5
+    in-latest-posix: ''
+  strftime_l:
+    in-latest-posix: ''
+  strptime:
+    in-latest-posix: ''
+  time:
+    c-definition: 7.27.2.4
+    in-latest-posix: ''
+  timespec_get:
+    c-definition: 7.27.2.5
+  timer_create:
+    in-latest-posix: ''
+  timer_delete:
+    in-latest-posix: ''
+  timer_gettime:
+    in-latest-posix: ''
+  timer_getoverrun:
+    in-latest-posix: ''
+  timer_settime:
+    in-latest-posix: ''
+  tzset:
+    in-latest-posix: ''
+  timespec_getres:
+    c-definition: 7.29.2.7
+    in-latest-posix: ''
+macros:
+  CLOCKS_PER_SEC:
+    c-definition: 7.29.1
+    c-reference: chrono/CLOCKS_PER_SEC
+    in-latest-posix: ''
+  CLOCK_MONOTONIC:
+    in-latest-posix: ''
+  CLOCK_PROCESS_CPUTIME_ID:
+    in-latest-posix: ''
+  CLOCK_REALTIME:
+    in-latest-posix: ''
+  CLOCK_THREAD_CPUTIME_ID:
+    in-latest-posix: ''
+  'NULL':
+    c-definition: 7.29.1
+    c-reference: types/NULL
+    in-latest-posix: ''
+  TIMER_ABSTIME:
+    in-latest-posix: ''
+  TIME_UTC:
+    c-definition: 7.29.1
+    c-reference: chrono/TIME_UTC
+    in-latest-posix: ''

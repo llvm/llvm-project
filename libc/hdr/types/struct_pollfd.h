@@ -16,8 +16,8 @@
 
 #else // overlay mode
 
-#include <poll.h>
+#include "hdr/poll_overlay.h"
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_TYPES_STRUCT_POLLFD_H

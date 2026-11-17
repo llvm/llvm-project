@@ -87,12 +87,12 @@ define <32 x float> @vfptrunc_v32f32_v32f64(<32 x double> %a, <32 x i1> %m, i32 
 ; CHECK-LABEL: vfptrunc_v32f32_v32f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vfncvt.f.f.w v24, v16
-; CHECK-NEXT:    vfncvt.f.f.w v16, v8
+; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vfncvt.f.f.w v8, v24
+; CHECK-NEXT:    vfncvt.f.f.w v24, v16
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; CHECK-NEXT:    vslideup.vi v16, v24, 16
-; CHECK-NEXT:    vmv.v.v v8, v16
+; CHECK-NEXT:    vslideup.vi v8, v24, 16
 ; CHECK-NEXT:    ret
   %v = call <32 x float> @llvm.vp.fptrunc.v32f64.v32f32(<32 x double> %a, <32 x i1> %m, i32 %vl)
   ret <32 x float> %v

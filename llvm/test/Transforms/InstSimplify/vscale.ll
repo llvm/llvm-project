@@ -152,7 +152,7 @@ define <vscale x 2 x i1> @cmp_le_smax_always_true(<vscale x 2 x i64> %x) {
 
 define <vscale x 4 x float> @bitcast() {
 ; CHECK-LABEL: @bitcast(
-; CHECK-NEXT:    ret <vscale x 4 x float> splat (float 0x36A0000000000000)
+; CHECK-NEXT:    ret <vscale x 4 x float> splat (float 1.401300e-45)
 ;
   %i1 = insertelement <vscale x 4 x i32> undef, i32 1, i32 0
   %i2 = shufflevector <vscale x 4 x i32> %i1, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
@@ -168,7 +168,7 @@ define <vscale x 4 x float> @bitcast() {
 
 define <vscale x 4 x ptr> @getelementptr_constant_foldable_1() {
 ; CHECK-LABEL: @getelementptr_constant_foldable_1(
-; CHECK-NEXT:    ret <vscale x 4 x ptr> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 4 x ptr> splat (ptr null)
 ;
   %ptr = getelementptr i32, <vscale x 4 x ptr> zeroinitializer, <vscale x 4 x i64> undef
   ret <vscale x 4 x ptr> %ptr
@@ -176,7 +176,7 @@ define <vscale x 4 x ptr> @getelementptr_constant_foldable_1() {
 
 define <vscale x 4 x ptr> @getelementptr_constant_foldable_2() {
 ; CHECK-LABEL: @getelementptr_constant_foldable_2(
-; CHECK-NEXT:    ret <vscale x 4 x ptr> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 4 x ptr> splat (ptr null)
 ;
   %ptr = getelementptr <vscale x 4 x i32>, ptr null, <vscale x 4 x i64> undef
   ret <vscale x 4 x ptr> %ptr

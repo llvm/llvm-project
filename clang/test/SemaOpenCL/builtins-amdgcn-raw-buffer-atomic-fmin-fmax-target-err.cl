@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -S -verify=expected -o - %s
+// RUN: %clang_cc1 -triple amdgpu-unknown-unknown -S -verify=expected -o - %s
 // REQUIRES: amdgpu-registered-target
 
 void test_raw_ptr_atomics(__amdgpu_buffer_rsrc_t rsrc, float f32, double f64, int offset, int soffset) {

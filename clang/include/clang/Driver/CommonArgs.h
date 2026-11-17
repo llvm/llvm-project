@@ -24,6 +24,19 @@ namespace clang {
 namespace driver {
 namespace tools {
 
+struct OffloadJobsOpt {
+  enum class Kind { Missing, Invalid, Jobserver, Fixed };
+
+  Kind K = Kind::Missing;
+  llvm::opt::Arg *A = nullptr;
+  StringRef Value;
+  unsigned NumThreads = 0;
+
+  bool isValid() const { return K == Kind::Jobserver || K == Kind::Fixed; }
+};
+
+OffloadJobsOpt parseOffloadJobs(const llvm::opt::ArgList &Args);
+
 void addPathIfExists(const Driver &D, const Twine &Path,
                      ToolChain::path_list &Paths);
 
@@ -37,10 +50,18 @@ void addLinkerCompressDebugSectionsOption(const ToolChain &TC,
                                           const llvm::opt::ArgList &Args,
                                           llvm::opt::ArgStringList &CmdArgs);
 
+void renderDebugInfoCompressionArgs(const llvm::opt::ArgList &Args,
+                                    llvm::opt::ArgStringList &CmdArgs,
+                                    const Driver &D, const ToolChain &TC);
+
+/// Whether Mach-O objects for \p T with DWARF \p DwarfVersion relocate offsets
+/// between DWARF sections.
+bool useMachORelocatableDwarf(const llvm::Triple &T, unsigned DwarfVersion);
+
 void claimNoWarnArgs(const llvm::opt::ArgList &Args);
 
 bool addSanitizerRuntimes(const ToolChain &TC, const llvm::opt::ArgList &Args,
-                          llvm::opt::ArgStringList &CmdArgs);
+                          llvm::opt::ArgStringList &CmdArgs, Compilation &C);
 
 void linkSanitizerRuntimeDeps(const ToolChain &TC,
                               const llvm::opt::ArgList &Args,
@@ -55,19 +76,6 @@ void linkXRayRuntimeDeps(const ToolChain &TC, const llvm::opt::ArgList &Args,
 void AddRunTimeLibs(const ToolChain &TC, const Driver &D,
                     llvm::opt::ArgStringList &CmdArgs,
                     const llvm::opt::ArgList &Args);
-
-void AddStaticDeviceLibsLinking(Compilation &C, const Tool &T,
-                                const JobAction &JA,
-                                const InputInfoList &Inputs,
-                                const llvm::opt::ArgList &DriverArgs,
-                                llvm::opt::ArgStringList &CmdArgs,
-                                StringRef Arch, StringRef Target,
-                                bool isBitCodeSDL);
-void AddStaticDeviceLibs(Compilation *C, const Tool *T, const JobAction *JA,
-                         const InputInfoList *Inputs, const Driver &D,
-                         const llvm::opt::ArgList &DriverArgs,
-                         llvm::opt::ArgStringList &CmdArgs, StringRef Arch,
-                         StringRef Target, bool isBitCodeSDL);
 
 const char *SplitDebugName(const JobAction &JA, const llvm::opt::ArgList &Args,
                            const InputInfo &Input, const InputInfo &Output);
@@ -131,6 +139,12 @@ void addArchSpecificRPath(const ToolChain &TC, const llvm::opt::ArgList &Args,
 void addOpenMPRuntimeLibraryPath(const ToolChain &TC,
                                  const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs);
+
+bool addLLVMOffloadingRuntime(const Compilation &C,
+                              llvm::opt::ArgStringList &CmdArgs,
+                              const ToolChain &TC,
+                              const llvm::opt::ArgList &Args);
+
 /// Returns true, if an OpenMP runtime has been added.
 bool addOpenMPRuntime(const Compilation &C, llvm::opt::ArgStringList &CmdArgs,
                       const ToolChain &TC, const llvm::opt::ArgList &Args,
@@ -141,10 +155,6 @@ bool addOpenMPRuntime(const Compilation &C, llvm::opt::ArgStringList &CmdArgs,
 void addOpenMPHostOffloadingArgs(const Compilation &C, const JobAction &JA,
                                  const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs);
-
-void addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
-                          const llvm::opt::ArgList &Args,
-                          llvm::opt::ArgStringList &CmdArgs);
 
 void addAsNeededOption(const ToolChain &TC, const llvm::opt::ArgList &Args,
                        llvm::opt::ArgStringList &CmdArgs, bool as_needed);
@@ -161,6 +171,11 @@ llvm::StringRef getLTOParallelism(const llvm::opt::ArgList &Args,
 bool areOptimizationsEnabled(const llvm::opt::ArgList &Args);
 
 bool isUseSeparateSections(const llvm::Triple &Triple);
+/// Append -ffunction-sections / -fdata-sections to \p CmdArgs when the
+/// corresponding flags are enabled (explicitly or by target default).
+void addSeparateSectionFlags(const llvm::Triple &Triple,
+                             const llvm::opt::ArgList &Args,
+                             llvm::opt::ArgStringList &CmdArgs);
 // Parse -mtls-dialect=. Return true if the target supports both general-dynamic
 // and TLSDESC, and TLSDESC is requested.
 bool isTLSDESCEnabled(const ToolChain &TC, const llvm::opt::ArgList &Args);
@@ -229,12 +244,21 @@ void addMachineOutlinerArgs(const Driver &D, const llvm::opt::ArgList &Args,
                             const llvm::Triple &Triple, bool IsLTO,
                             const StringRef PluginOptPrefix = "");
 
+void addSplitMachineFunctionsArgs(const Driver &D,
+                                  const llvm::opt::ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs,
+                                  const llvm::Triple &Triple);
+
 void addOpenMPDeviceRTL(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
                         StringRef BitcodeSuffix, const llvm::Triple &Triple,
                         const ToolChain &HostTC);
 
-void addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
+/// Try to link libclc, depending on the target ABI and command line
+/// arguments.
+///
+/// \return true if libclc should be linked for the compile.
+bool addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
                           const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args);
 
@@ -243,7 +267,8 @@ void addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
                            llvm::opt::ArgStringList &CmdArgs,
                            const llvm::Triple &Triple);
 void addOffloadCompressArgs(const llvm::opt::ArgList &TCArgs,
-                            llvm::opt::ArgStringList &CmdArgs);
+                            llvm::opt::ArgStringList &CmdArgs,
+                            bool EmitCompressionFormat = false);
 void addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
                 const llvm::Triple &Triple,
                 const llvm::Reloc::Model &RelocationModel,
@@ -275,15 +300,16 @@ const char *renderEscapedCommandLine(const ToolChain &TC,
 /// line options that were passed.
 bool shouldRecordCommandLine(const ToolChain &TC,
                              const llvm::opt::ArgList &Args,
-                             bool &FRecordCommandLine,
-                             bool &GRecordCommandLine);
+                             bool &FRecordCommandLine, bool &GRecordCommandLine,
+                             bool &DXRecordCommandLine);
 
 void renderGlobalISelOptions(const Driver &D, const llvm::opt::ArgList &Args,
                              llvm::opt::ArgStringList &CmdArgs,
                              const llvm::Triple &Triple);
 
 void renderCommonIntegerOverflowOptions(const llvm::opt::ArgList &Args,
-                                        llvm::opt::ArgStringList &CmdArgs);
+                                        llvm::opt::ArgStringList &CmdArgs,
+                                        bool IsMSVCCompat);
 
 bool shouldEnableVectorizerAtOLevel(const llvm::opt::ArgList &Args,
                                     bool isSlpVec);

@@ -9,6 +9,6 @@ entry:
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %ptr = call ptr @calloc(i64 -1, i64 2) => ptr 0x0 [dangling]
+; CHECK-NEXT:   %ptr = call ptr @calloc(i64 -1, i64 2) => ptr 0x0 [nullary]
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

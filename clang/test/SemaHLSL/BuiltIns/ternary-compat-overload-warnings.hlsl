@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=lerp %s 2>&1 | FileCheck %s -DFUNC=lerp
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-library -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=lerp %s 2>&1 | FileCheck %s -DFUNC=lerp
+
+using namespace hlsl;
 
 // ternary double overloads
 float test_ternary_double(double p0) {

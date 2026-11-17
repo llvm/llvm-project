@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 %s -triple=amdgcn-amd-amdhsa -std=c++11 -emit-llvm-only -fdump-vtable-layouts 2>&1 | FileCheck %s
+// RUN: %clang_cc1 %s -triple=amdgpu-amd-amdhsa -std=c++11 -emit-llvm-only -fdump-vtable-layouts 2>&1 | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple=amdgpu-amd-amdhsa -std=c++11 -emit-llvm-only -fdump-vtable-layouts 2>&1 | FileCheck %s %}
 
 // A collection of big class hierarchies and their vtables.
 

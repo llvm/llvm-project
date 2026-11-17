@@ -55,6 +55,12 @@ static bool isX86BareMetal(const llvm::Triple &Triple) {
          Triple.getEnvironmentName() == "elf";
 }
 
+/// Is the triple loongarch{32,64}-*-none-elf?
+static bool isLoongArchBareMetal(const llvm::Triple &Triple) {
+  return Triple.isLoongArch() && Triple.getOS() == llvm::Triple::UnknownOS &&
+         Triple.getEnvironmentName() == "elf";
+}
+
 static bool findRISCVMultilibs(const Driver &D,
                                const llvm::Triple &TargetTriple,
                                const ArgList &Args, DetectedMultilibs &Result) {
@@ -281,7 +287,8 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
 bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
   return arm::isARMEABIBareMetal(Triple) ||
          aarch64::isAArch64BareMetal(Triple) || isRISCVBareMetal(Triple) ||
-         isPPCBareMetal(Triple) || isX86BareMetal(Triple);
+         isPPCBareMetal(Triple) || isX86BareMetal(Triple) ||
+         isLoongArchBareMetal(Triple);
 }
 
 Tool *BareMetal::buildLinker() const {
@@ -320,6 +327,8 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     return;
 
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+    // The builtin include directory does not include any multilib path, as the
+    // builtin include files come from clang's build, not a runtimes build.
     SmallString<128> Dir(getDriver().ResourceDir);
     llvm::sys::path::append(Dir, "include");
     addSystemInclude(DriverArgs, CC1Args, Dir.str());
@@ -351,7 +360,7 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 }
 
 void BareMetal::addClangTargetOptions(const ArgList &DriverArgs,
-                                      ArgStringList &CC1Args,
+                                      ArgStringList &CC1Args, BoundArch BA,
                                       Action::OffloadKind) const {
   CC1Args.push_back("-nostdsysteminc");
 }
@@ -490,6 +499,7 @@ void baremetal::StaticLibTool::ConstructJob(Compilation &C, const JobAction &JA,
   ArgStringList CmdArgs;
   // Create and insert file members with a deterministic index.
   CmdArgs.push_back("rcsD");
+  Args.AddAllArgValues(CmdArgs, options::OPT_Xstatic_lib_tool);
   CmdArgs.push_back(Output.getFilename());
 
   for (const auto &II : Inputs) {
@@ -546,7 +556,7 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     return;
   }
 
-  if (Triple.isRISCV()) {
+  if (Triple.isLoongArch() || Triple.isRISCV()) {
     CmdArgs.push_back("-X");
     if (Args.hasArg(options::OPT_mno_relax))
       CmdArgs.push_back("--no-relax");
@@ -600,9 +610,8 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   for (const auto &LibPath : TC.getLibraryPaths())
     CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-L", LibPath)));
 
-  if (D.isUsingLTO())
-    addLTOOptions(TC, Args, CmdArgs, Output, Inputs,
-                  D.getLTOMode() == LTOK_Thin);
+  if (auto LTO = TC.getLTOMode(Args); LTO != LTOK_None)
+    addLTOOptions(TC, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
   TC.addProfileRTLibs(Args, CmdArgs);
@@ -649,12 +658,14 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 // BareMetal toolchain allows all sanitizers where the compiler generates valid
 // code, ignoring all runtime library support issues on the assumption that
 // baremetal targets typically implement their own runtime support.
-SanitizerMask BareMetal::getSupportedSanitizers() const {
+SanitizerMask
+BareMetal::getSupportedSanitizers(BoundArch BA,
+                                  Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64 ||
                          getTriple().getArch() == llvm::Triple::aarch64_be;
   const bool IsRISCV64 = getTriple().isRISCV64();
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::KernelAddress;
   Res |= SanitizerKind::PointerCompare;

@@ -25,16 +25,14 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Compression.h"
-#include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -59,25 +57,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "Opts.inc"
-#undef OPTION
-};
-
-class MLOptTable : public opt::GenericOptTable {
+class MLOptTable : public opt::OptTable {
 public:
-  MLOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                             /*IgnoreCase=*/false) {}
+  MLOptTable() : opt::OptTable(optionTables(), /*IgnoreCase=*/false) {}
 };
 } // namespace
 
@@ -285,6 +270,13 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
     SafeSEH = false;
   }
 
+  bool UnwindV3 = InputArgs.hasArg(OPT_unwindv3);
+  if (UnwindV3 && !TheTriple.isArch64Bit()) {
+    WithColor::warning()
+        << "/unwindv3 applies only to 64-bit X86 platforms; ignoring\n";
+    UnwindV3 = false;
+  }
+
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferPtr =
       MemoryBuffer::getFileOrSTDIN(InputFilename);
   if (std::error_code EC = BufferPtr.getError()) {
@@ -429,6 +421,9 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
     Str->emitSymbolAttribute(Feat00Sym, MCSA_Global);
     Str->emitAssignment(Feat00Sym, MCConstantExpr::create(Feat00Flags, Ctx));
   }
+
+  if (UnwindV3)
+    Str->setDefaultWinCFIUnwindVersion(3);
 
   int Res = 1;
   if (InputArgs.hasArg(OPT_as_lex)) {

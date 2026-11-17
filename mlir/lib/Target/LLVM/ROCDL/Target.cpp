@@ -39,7 +39,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 #include <cstdlib>
 #include <optional>
@@ -96,7 +96,8 @@ SerializeGPUModuleBase::SerializeGPUModuleBase(
     Operation &module, ROCDLTargetAttr target,
     const gpu::TargetOptions &targetOptions)
     : ModuleToObject(module, target.getTriple(), target.getChip(),
-                     target.getFeatures(), target.getO()),
+                     target.getFeatures(), target.getO(), {}, {}, {}, {},
+                     targetOptions.getLibraryOptions()),
       target(target), toolkitPath(targetOptions.getToolkitPath()),
       librariesToLink(targetOptions.getLibrariesToLink()) {
 

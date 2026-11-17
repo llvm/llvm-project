@@ -11,6 +11,8 @@
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/Language.h"
+#include "lldb/Target/Process.h"
+#include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 
 using namespace lldb;
@@ -78,9 +80,8 @@ void ExceptionSearchFilter::UpdateModuleListIfNeeded() {
   }
 }
 
-SearchFilterSP ExceptionSearchFilter::DoCreateCopy() {
-  return SearchFilterSP(
-      new ExceptionSearchFilter(TargetSP(), m_language, false));
+std::unique_ptr<SearchFilter> ExceptionSearchFilter::DoCreateCopy() {
+  return std::make_unique<ExceptionSearchFilter>(TargetSP(), m_language, false);
 }
 
 SearchFilter *ExceptionSearchFilter::CreateFromStructuredData(
@@ -136,7 +137,7 @@ public:
 
     SetActualResolver();
     if (m_actual_resolver_sp) {
-      s->Printf(" using: ");
+      s->PutCString(" using: ");
       m_actual_resolver_sp->GetDescription(s);
     } else
       s->Printf(" the correct runtime exception handler will be determined "
@@ -209,6 +210,28 @@ LanguageRuntime *LanguageRuntime::FindPlugin(Process *process,
 }
 
 LanguageRuntime::LanguageRuntime(Process *process) : Runtime(process) {}
+
+LanguageRuntime::ThrownErrorLocation::ThrownErrorLocation(
+    lldb::StackFrameSP callee_frame_sp) {
+  if (!callee_frame_sp)
+    return;
+  lldb::ProcessSP process_sp = callee_frame_sp->CalculateProcess();
+  if (!process_sp)
+    return;
+  m_runtime = process_sp->GetLanguageRuntime(
+      callee_frame_sp->GuessLanguage().AsLanguageType());
+  if (!m_runtime)
+    return;
+  m_location = m_runtime->GetThrownErrorLocation(*callee_frame_sp);
+}
+
+std::optional<lldb::ValueObjectSP>
+LanguageRuntime::ThrownErrorLocation::GetThrownError(
+    lldb::StackFrameSP caller_frame_sp) const {
+  if (!caller_frame_sp || !m_runtime || !m_location)
+    return std::nullopt;
+  return m_runtime->GetThrownError(*caller_frame_sp, *m_location);
+}
 
 BreakpointPreconditionSP
 LanguageRuntime::GetExceptionPrecondition(LanguageType language,

@@ -9,6 +9,11 @@ import os, signal, subprocess
 
 
 class SBModuleAPICase(TestBase):
+    NO_DEBUG_INFO_TESTCASE = True
+
+    # Shared build causes collisions in the ObjectArchive file cache
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         TestBase.setUp(self)
         self.background_pid = None
@@ -98,7 +103,7 @@ class SBModuleAPICase(TestBase):
         process = target.AttachToProcessWithID(
             self.dbg.GetListener(), self.background_pid, error
         )
-        self.assertTrue(error.Success() and process, PROCESS_IS_VALID)
+        self.assertSuccess(error)
         main_module = target.FindModule(lldb.SBFileSpec("a.out"))
         self.assertIsNotNone(main_module)
         self.assertFalse(

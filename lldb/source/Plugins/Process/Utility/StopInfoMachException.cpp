@@ -252,6 +252,27 @@ bool StopInfoMachException::DeterminePtrauthFailure(ExecutionContext &exe_ctx) {
   return false;
 }
 
+bool StopInfoMachException::DetermineCPA2Failure() {
+  const bool is_bad_access = (m_value == 1);
+  const bool is_cpa2_fault = (m_exc_code == 0x108);
+
+  // Check if subcode has address.
+  const bool has_fault_addr = (m_exc_data_count >= 2);
+
+  if (!is_bad_access || !is_cpa2_fault || !has_fault_addr)
+    return false;
+
+  const addr_t fault_address = m_exc_subcode;
+
+  StreamString strm;
+  strm.Printf("EXC_ARM_CPA_FAIL (code=%" PRIu64 ", address=0x%" PRIx64 ")\n",
+              m_exc_code, fault_address);
+  strm.Printf("Note: Checked Pointer Arithmetic failure detected.\n");
+
+  m_description = std::string(strm.GetString());
+  return true;
+}
+
 const char *StopInfoMachException::GetDescription() {
   if (!m_description.empty())
     return m_description.c_str();
@@ -305,6 +326,8 @@ const char *StopInfoMachException::GetDescription() {
       if (DeterminePtrauthFailure(exe_ctx))
         return m_description.c_str();
       if (DetermineTagMismatch())
+        return m_description.c_str();
+      if (DetermineCPA2Failure())
         return m_description.c_str();
       break;
 
@@ -826,6 +849,16 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
   return std::make_shared<StopInfoMachException>(
       thread, exc_type, exc_data_count, exc_code, exc_sub_code,
       not_stepping_but_got_singlestep_exception);
+}
+
+void StopInfoMachException::PerformAction([[maybe_unused]] Event *event_ptr) {
+  // This action currently only fires if the exception is an ARM breakpoint
+  // and if the PC is still at the instruction that caused the exception.
+  if (!(m_value == 6 /*EXC_BREAKPOINT*/ &&
+        m_exc_code == 1 /*EXC_ARM_BREAKPOINT*/) ||
+      m_exc_subcode != m_thread_wp.lock()->GetRegisterContext()->GetPC())
+    return;
+  SkipOverTrapInstruction();
 }
 
 // Detect an unusual situation on Darwin where:

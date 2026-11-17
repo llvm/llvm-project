@@ -217,10 +217,6 @@ class MDNodeMapper {
   /// Worklist of distinct nodes whose operands need to be remapped.
   SmallVector<MDNode *, 16> DistinctWorklist;
 
-  // Storage for a UniquedGraph.
-  SmallDenseMap<const Metadata *, Data, 32> InfoStorage;
-  SmallVector<MDNode *, 16> POTStorage;
-
 public:
   MDNodeMapper(Mapper &M) : M(M) {}
 
@@ -539,7 +535,7 @@ Value *Mapper::mapValue(const Value *V) {
   if (isa<ConstantTargetNone>(C))
     return getVM()[V] = Constant::getNullValue(NewTy);
   assert(isa<ConstantPointerNull>(C));
-  return getVM()[V] = ConstantPointerNull::get(cast<PointerType>(NewTy));
+  return getVM()[V] = ConstantPointerNull::get(NewTy);
 }
 
 void Mapper::remapDbgRecord(DbgRecord &DR) {
@@ -1044,7 +1040,7 @@ void Mapper::remapInstruction(Instruction *I) {
     LLVMContext &C = CB->getContext();
     AttributeList Attrs = CB->getAttributes();
     for (unsigned i = 0; i < Attrs.getNumAttrSets(); ++i) {
-      for (int AttrIdx = Attribute::FirstTypeAttr;
+      for (unsigned AttrIdx = Attribute::FirstTypeAttr;
            AttrIdx <= Attribute::LastTypeAttr; AttrIdx++) {
         Attribute::AttrKind TypedAttr = (Attribute::AttrKind)AttrIdx;
         if (Type *Ty =

@@ -1,4 +1,5 @@
 // RUN: mlir-opt -convert-spirv-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -convert-spirv-to-llvm='allow-pattern-rollback=0' %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // spirv.Constant
@@ -57,5 +58,12 @@ spirv.func @float_constant_scalar() "None" {
 spirv.func @float_constant_vector() "None" {
   // CHECK: llvm.mlir.constant(dense<[2.000000e+00, 3.000000e+00]> : vector<2xf32>) : vector<2xf32>
   %0 = spirv.Constant dense<[2.000000e+00, 3.000000e+00]> : vector<2xf32>
+  spirv.Return
+}
+
+// CHECK-LABEL: @constant_with_discardable_attr
+spirv.func @constant_with_discardable_attr() "None" {
+  // CHECK: llvm.mlir.constant(42 : i32) {test.marker = "keep"} : i32
+  %0 = "spirv.Constant"() <{value = 42 : i32}> {test.marker = "keep"} : () -> i32
   spirv.Return
 }

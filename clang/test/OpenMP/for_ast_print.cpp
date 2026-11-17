@@ -274,7 +274,7 @@ int main(int argc, char **argv) {
   // CHECK-NEXT: for (int i = 0; i < 10; ++i)
   // CHECK-NEXT: for (int j = 0; j < 10; ++j)
   // CHECK-NEXT: for (auto x : arr)
-  // CHECK-NEXT: foo() , (void)x;
+  // CHECK-NEXT: foo(), (void)x;
   char buf[9] = "01234567";
   char *p, *q;
 #pragma omp parallel

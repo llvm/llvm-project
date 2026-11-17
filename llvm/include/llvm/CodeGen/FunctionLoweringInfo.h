@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_FUNCTIONLOWERINGINFO_H
 #define LLVM_CODEGEN_FUNCTIONLOWERINGINFO_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
@@ -25,8 +26,10 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/KnownBits.h"
 #include <cassert>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -41,8 +44,11 @@ class MachineFunction;
 class MachineInstr;
 class MachineRegisterInfo;
 class MVT;
+class SDLoc;
+class SDValue;
 class SelectionDAG;
 class TargetLowering;
+struct EVT;
 
 template <typename T> class GenericSSAContext;
 using SSAContext = GenericSSAContext<Function>;
@@ -89,10 +95,26 @@ public:
 
   /// This method is called from TargetLowerinInfo::isSDNodeSourceOfDivergence
   /// to get the Value corresponding to the live-in virtual register.
-  const Value *getValueFromVirtualReg(Register Vreg);
+  LLVM_ABI const Value *getValueFromVirtualReg(Register Vreg);
 
   /// Track virtual registers created for exception pointers.
   DenseMap<const Value *, Register> CatchPadExceptionPointers;
+
+  /// A directly-lowered statepoint value (see willLowerDirectly): a leaf that
+  /// can be rebuilt at a gc.relocate in another block.
+  struct StatepointDirectLeaf {
+    enum LeafKind { FrameIndex, Constant, Undef };
+    LeafKind Kind;
+    APInt IntValue;      // Constant: the integer value.
+    int FrameIndexValue; // FrameIndex: the frame index.
+
+    /// Capture the leaf \p V, which must be a directly-lowered value.
+    LLVM_ABI explicit StatepointDirectLeaf(SDValue V);
+
+    /// Rebuild the captured leaf as a fresh SDValue of type \p VT.
+    LLVM_ABI SDValue rematerialize(SelectionDAG &DAG, const SDLoc &DL,
+                                   EVT VT) const;
+  };
 
   /// Helper object to track which of three possible relocation mechanisms are
   /// used for a particular value being relocated over a statepoint.
@@ -117,6 +139,10 @@ public:
       int FI;
       Register Reg;
     } payload;
+
+    // Set for a NoRelocate value whose gc.relocate is in another block; the
+    // directly-lowered leaf is rebuilt at the gc.relocate.
+    std::optional<StatepointDirectLeaf> RematLeaf;
   };
 
   /// Keep track of each value which was relocated and the strategy used to
@@ -187,6 +213,9 @@ public:
   /// SelectionDAGISel::PrepareEHLandingPad().
   Register ExceptionPointerVirtReg, ExceptionSelectorVirtReg;
 
+  /// The exception model in effect, resolved once per function.
+  ExceptionHandling ExceptionModel = ExceptionHandling::Default;
+
   /// The current call site index being processed, if any. 0 if none.
   unsigned CurCallSite = 0;
 
@@ -197,12 +226,12 @@ public:
   /// set - Initialize this FunctionLoweringInfo with the given Function
   /// and its associated MachineFunction.
   ///
-  void set(const Function &Fn, MachineFunction &MF, SelectionDAG *DAG);
+  LLVM_ABI void set(const Function &Fn, MachineFunction &MF, SelectionDAG *DAG);
 
   /// clear - Clear out all the function-specific state. This returns this
   /// FunctionLoweringInfo to an empty state, ready to be used for a
   /// different function.
-  void clear();
+  LLVM_ABI void clear();
 
   /// isExportedInst - Return true if the specified value is an instruction
   /// exported from its block.
@@ -215,13 +244,13 @@ public:
     return MBBMap[BB->getNumber()];
   }
 
-  Register CreateReg(MVT VT, bool isDivergent = false);
+  LLVM_ABI Register CreateReg(MVT VT, bool isDivergent = false);
 
-  Register CreateRegs(const Value *V);
+  LLVM_ABI Register CreateRegs(const Value *V);
 
-  Register CreateRegs(Type *Ty, bool isDivergent = false);
+  LLVM_ABI Register CreateRegs(Type *Ty, bool isDivergent = false);
 
-  Register InitializeRegForValue(const Value *V);
+  LLVM_ABI Register InitializeRegForValue(const Value *V);
 
   /// GetLiveOutRegInfo - Gets LiveOutInfo for a register, returning NULL if the
   /// register is a PHI destination and the PHI's LiveOutInfo is not valid.
@@ -241,7 +270,8 @@ public:
   /// the register's LiveOutInfo is for a smaller bit width, it is extended to
   /// the larger bit width by zero extension. The bit width must be no smaller
   /// than the LiveOutInfo's existing bit width.
-  const LiveOutInfo *GetLiveOutRegInfo(Register Reg, unsigned BitWidth);
+  LLVM_ABI const LiveOutInfo *GetLiveOutRegInfo(Register Reg,
+                                                unsigned BitWidth);
 
   /// AddLiveOutRegInfo - Adds LiveOutInfo for a register.
   void AddLiveOutRegInfo(Register Reg, unsigned NumSignBits,
@@ -259,13 +289,13 @@ public:
 
   /// ComputePHILiveOutRegInfo - Compute LiveOutInfo for a PHI's destination
   /// register based on the LiveOutInfo of its operands.
-  void ComputePHILiveOutRegInfo(const PHINode*);
+  LLVM_ABI void ComputePHILiveOutRegInfo(const PHINode *);
 
   /// InvalidatePHILiveOutRegInfo - Invalidates a PHI's LiveOutInfo, to be
   /// called when a block is visited before all of its predecessors.
   void InvalidatePHILiveOutRegInfo(const PHINode *PN) {
     // PHIs with no uses have no ValueMap entry.
-    DenseMap<const Value*, Register>::const_iterator It = ValueMap.find(PN);
+    auto It = ValueMap.find(PN);
     if (It == ValueMap.end())
       return;
 
@@ -279,13 +309,13 @@ public:
 
   /// setArgumentFrameIndex - Record frame index for the byval
   /// argument.
-  void setArgumentFrameIndex(const Argument *A, int FI);
+  LLVM_ABI void setArgumentFrameIndex(const Argument *A, int FI);
 
   /// getArgumentFrameIndex - Get frame index for the byval argument.
-  int getArgumentFrameIndex(const Argument *A);
+  LLVM_ABI int getArgumentFrameIndex(const Argument *A);
 
-  Register getCatchPadExceptionPointerVReg(const Value *CPI,
-                                           const TargetRegisterClass *RC);
+  LLVM_ABI Register getCatchPadExceptionPointerVReg(
+      const Value *CPI, const TargetRegisterClass *RC);
 
   /// Set the call site currently being processed.
   void setCurrentCallSite(unsigned Site) { CurCallSite = Site; }

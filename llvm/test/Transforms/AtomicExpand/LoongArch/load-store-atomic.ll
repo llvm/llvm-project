@@ -49,7 +49,7 @@ define i32 @load_acquire_i32(ptr %ptr) {
 
 define i64 @load_acquire_i64(ptr %ptr) {
 ; LA32-LABEL: @load_acquire_i64(
-; LA32-NEXT:    [[TMP1:%.*]] = call i64 @__atomic_load_8(ptr [[PTR:%.*]], i32 2)
+; LA32-NEXT:    [[TMP1:%.*]] = call i64 @__atomic_load_8(ptr [[PTR:%.*]], i32 signext 2)
 ; LA32-NEXT:    ret i64 [[TMP1]]
 ;
 ; LA64-LABEL: @load_acquire_i64(
@@ -107,7 +107,7 @@ define void @store_release_i32(ptr %ptr, i32 signext %v) {
 
 define void @store_release_i64(ptr %ptr, i64 %v) {
 ; LA32-LABEL: @store_release_i64(
-; LA32-NEXT:    call void @__atomic_store_8(ptr [[PTR:%.*]], i64 [[V:%.*]], i32 3)
+; LA32-NEXT:    call void @__atomic_store_8(ptr [[PTR:%.*]], i64 [[V:%.*]], i32 signext 3)
 ; LA32-NEXT:    ret void
 ;
 ; LA64-LABEL: @store_release_i64(

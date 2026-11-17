@@ -9,6 +9,7 @@ set(LLVM_OPTIONAL_SOURCES
   FunctionImplementation.cpp
   FunctionInterfaces.cpp
   IndexingMapOpInterface.cpp
+  InferIntDivisibilityOpInterface.cpp
   InferIntRangeInterface.cpp
   InferStridedMetadataInterface.cpp
   InferTypeOpInterface.cpp
@@ -66,6 +67,7 @@ add_mlir_library(MLIRFunctionInterfaces
 )
 
 add_mlir_interface_library(IndexingMapOpInterface)
+add_mlir_interface_library(InferIntDivisibilityOpInterface)
 add_mlir_interface_library(InferIntRangeInterface)
 
 add_mlir_library(MLIRInferStridedMetadataInterface
@@ -131,7 +133,6 @@ add_mlir_library(MLIRTilingInterface
 
   DEPENDS
   MLIRTilingInterfaceIncGen
-  MLIRDialectUtils
 
   LINK_LIBS PUBLIC
   MLIRIR
@@ -152,9 +153,10 @@ add_mlir_library(MLIRValueBoundsOpInterface
   MLIRViewLikeInterface
 
   LINK_LIBS PUBLIC
-  MLIRAnalysis
+  MLIRAnalysisPresburger
   MLIRDestinationStyleOpInterface
   MLIRIR
+  MLIRViewLikeInterface
   )
 
 add_subdirectory(Utils)

@@ -13,8 +13,8 @@ define void @main() {
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %ptr_storage = alloca i64, align 8 => ptr 0x8 [ptr_storage]
-; CHECK-NEXT:   %p = load ptr, ptr %ptr_storage, align 8 => ptr 0xE82FEEACEEB98B3E [dangling]
+; CHECK-NEXT:   %p = load ptr, ptr %ptr_storage, align 8 => ptr 0xE82FEEACEEB98B3E [nullary]
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   call void @callee(ptr %p) at @main
-; CHECK-NEXT: Immediate UB detected: The value ptr 0xE82FEEACEEB98B3E [dangling] violates dereferenceable{{(_or_null)?}}(4) attribute.
+; CHECK-NEXT: #0   call void @callee(ptr %p) at @main <stdin>:11
+; CHECK-NEXT: Immediate UB detected: The value ptr 0xE82FEEACEEB98B3E [nullary] violates dereferenceable{{(_or_null)?}}(4) attribute.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

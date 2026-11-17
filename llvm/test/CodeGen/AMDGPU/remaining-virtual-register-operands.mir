@@ -1,4 +1,4 @@
-# RUN: not llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -start-before=greedy,2 -filetype=null %s 2>&1 | FileCheck %s
+# RUN: not llc -mtriple=amdgpu9.08-amd-amdhsa -verify-machineinstrs -start-before=greedy,2 -filetype=null %s 2>&1 | FileCheck %s
 
 # This testcase fails register allocation at the same time it performs
 # virtual register splitting (by introducing VGPR to AGPR copies). We
@@ -18,7 +18,7 @@
     ret void
   }
 
-  attributes #0 = { "amdgpu-waves-per-eu"="10,10" "target-cpu"="gfx908" }
+  attributes #0 = { "amdgpu-waves-per-eu"="10,10" }
 
 ...
 ---
@@ -38,9 +38,6 @@ registers:
   - { id: 4, class: av_512, preferred-register: '$agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15',
       flags: [  ] }
   - { id: 5, class: areg_512, preferred-register: '%2', flags: [  ] }
-  - { id: 6, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 7, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 8, class: vgpr_32, preferred-register: '', flags: [  ] }
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr56_sgpr57_sgpr58_sgpr59'

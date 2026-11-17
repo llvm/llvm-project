@@ -29,9 +29,6 @@ public:
 
   FileAction();
 
-  /// Reset this FileAction to its default state.
-  void Clear();
-
   /// Configure this action to close a file descriptor.
   bool Close(int fd);
 

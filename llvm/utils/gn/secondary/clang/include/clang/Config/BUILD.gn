@@ -31,6 +31,7 @@ write_cmake_config("Config") {
     "CLANG_ENABLE_CIR=",
     "CLANG_SYSTEMZ_DEFAULT_ARCH=z10",
     "PPC_LINUX_DEFAULT_IEEELONGDOUBLE=",
+    "CLANG_USE_EXPERIMENTAL_CONST_INTERP=",
   ]
 
   if (clang_enable_static_analyzer) {
@@ -43,12 +44,14 @@ write_cmake_config("Config") {
     values += [
       "CLANG_HAVE_DLADDR=1",
       "CLANG_HAVE_DLFCN_H=1",
+      "CLANG_HAVE_EMUTLS_GET_ADDRESS=1",
       "CLANG_HAVE_RLIMITS=1",
     ]
   } else {
     values += [
       "CLANG_HAVE_DLADDR=",
       "CLANG_HAVE_DLFCN_H=",
+      "CLANG_HAVE_EMUTLS_GET_ADDRESS=",
       "CLANG_HAVE_RLIMITS=",
     ]
   }

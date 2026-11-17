@@ -37,3 +37,7 @@ const int compared = strcmp(_str, (const char *)_str2); // both-error {{initiali
 
 int ptrint = __builtin_bswap64("") == 0x1234 ? 1 : 0; // both-error {{incompatible pointer to integer conversion}} \
                                                       // both-error {{initializer element is not a compile-time constant}}
+
+void subclNonReadable() {
+  if(__builtin_subcl(0, 0, 0, &(*({ struct {} x; &x; }))) != 0) {} // both-error {{incompatible pointer types}}
+}

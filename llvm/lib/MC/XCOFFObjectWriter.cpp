@@ -553,6 +553,36 @@ static MCSectionXCOFF *getContainingCsect(const MCSymbolXCOFF *XSym) {
   return XSym->getRepresentedCsect();
 }
 
+// Checks that the section that contains the fragment F and the section
+// that contains the Target are different.
+static bool haveDifferentSections(const MCFragment &F, MCValue Target) {
+  const MCSymbol *TargetSym = Target.getAddSym();
+  if (!TargetSym)
+    return false;
+
+  // Target is externally defined.
+  if (!TargetSym->isDefined())
+    return true;
+
+  const MCSection *FragSection = F.getParent();
+  const MCSection *TargetSection = TargetSym->getFragment()->getParent();
+  return TargetSection != FragSection;
+}
+
+static bool callOverflows(MCFixupKindInfo Info, uint64_t FixedValue) {
+  if (Info.TargetSize != 24)
+    report_fatal_error("Unexpected call fixup kind for XCOFF");
+
+  return !isIntN(26, FixedValue);
+}
+
+static uint64_t normalizeCallOffset(MCFixupKindInfo Info, uint64_t Offset) {
+  if (Info.TargetSize != 24)
+    report_fatal_error("Unexpected call fixup kind for XCOFF");
+
+  return llvm::SignExtend64<26>(Offset);
+}
+
 void XCOFFWriter::executePostLayoutBinding() {
   for (const auto &S : *Asm) {
     auto *MCSec = static_cast<const MCSectionXCOFF *>(&S);
@@ -760,6 +790,14 @@ void XCOFFWriter::recordRelocation(const MCFragment &F, const MCFixup &Fixup,
     // and BR instr address plus any constant value.
     FixedValue = getVirtualAddress(SymA, SymASec) - BRInstrAddress +
                  Target.getConstant();
+
+    // If the offset overflows but the call crosses sections then we need to
+    // normalize the offset to be a valid value for encoding. Since the call
+    // crosses a CSECT boundary the linker may fix the overflow by using a
+    // trampoline, or rearranging the sections in the output file.
+    MCFixupKindInfo Info = Asm->getBackend().getFixupKindInfo(Fixup.getKind());
+    if (callOverflows(Info, FixedValue) && haveDifferentSections(F, Target))
+      FixedValue = normalizeCallOffset(Info, FixedValue);
   } else if (Type == XCOFF::RelocationType::R_REF) {
     // The FixedValue and FixupOffsetInCsect should always be 0 since it
     // specifies a nonrelocating reference.

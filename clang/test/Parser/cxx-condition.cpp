@@ -13,3 +13,18 @@ void f() {
 
   if (S a(42)) {} // expected-error {{variable declaration in condition cannot have a parenthesized initializer}}
 }
+
+#pragma clang diagnostic push
+#pragma clang diagnostic warning "-Wgnu-statement-expression"
+#pragma clang diagnostic warning "-Wgnu-conditional-omitted-operand"
+
+void extension_in_condition(int x, int y) {
+  if (__extension__({ 0; })) {}
+  if (__extension__(x ?: y) ==
+      (x ?: y)) {} // expected-warning {{use of GNU ?: conditional expression extension, omitting middle operand}}
+  if (__extension__ int z = (x ?: y);
+      z == (x ?: y)) {} // expected-warning {{use of GNU ?: conditional expression extension, omitting middle operand}}
+  for (; __extension__(x ?: y);) {}
+}
+
+#pragma clang diagnostic pop

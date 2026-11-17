@@ -17,6 +17,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include <utility>
 
 namespace llvm {
@@ -59,8 +60,9 @@ struct ImutKeyValueInfo {
 };
 
 template <typename KeyT, typename ValT,
-          typename ValInfo = ImutKeyValueInfo<KeyT,ValT>>
-class ImmutableMap {
+          typename ValInfo = ImutKeyValueInfo<KeyT, ValT>,
+          bool Canonicalize = true>
+class LLVM_ATTRIBUTE_WARN_UNUSED ImmutableMap {
 public:
   using value_type = typename ValInfo::value_type;
   using value_type_ref = typename ValInfo::value_type_ref;
@@ -68,7 +70,7 @@ public:
   using key_type_ref = typename ValInfo::key_type_ref;
   using data_type = typename ValInfo::data_type;
   using data_type_ref = typename ValInfo::data_type_ref;
-  using TreeTy = ImutAVLTree<ValInfo>;
+  using TreeTy = ImutAVLTree<ValInfo, Canonicalize>;
 
 protected:
   IntrusiveRefCntPtr<TreeTy> Root;
@@ -82,13 +84,11 @@ public:
 
   class Factory {
     typename TreeTy::Factory F;
-    const bool Canonicalize;
 
   public:
-    Factory(bool canonicalize = true) : Canonicalize(canonicalize) {}
+    Factory() = default;
 
-    Factory(BumpPtrAllocator &Alloc, bool canonicalize = true)
-        : F(Alloc), Canonicalize(canonicalize) {}
+    Factory(BumpPtrAllocator &Alloc) : F(Alloc) {}
 
     Factory(const Factory &) = delete;
     Factory &operator=(const Factory &) = delete;
@@ -98,12 +98,39 @@ public:
     [[nodiscard]] ImmutableMap add(ImmutableMap Old, key_type_ref K,
                                    data_type_ref D) {
       TreeTy *T = F.add(Old.Root.get(), std::pair<key_type, data_type>(K, D));
-      return ImmutableMap(Canonicalize ? F.getCanonicalTree(T): T);
+      if constexpr (Canonicalize)
+        return ImmutableMap(F.getCanonicalTree(T));
+      else
+        return ImmutableMap(T);
+    }
+
+    /// Merges \p A and \p B in a single traversal (see
+    /// ImutAVLFactory::mergeTrees), sharing subtrees the two maps do not
+    /// overlap. \p Combine(AElem, BElem) yields the stored element for a key;
+    /// \p KeepUnmatched governs keys unique to one side. \p SkipShared returns
+    /// a pointer-identical subtree unchanged in O(1); only pass true when the
+    /// merge is idempotent (Combine(a, a) == a, e.g. a lattice join). This is
+    /// more efficient than repeatedly adding \p B's entries to \p A when \p B
+    /// is large. Only valid for non-canonicalizing factories (the bulk path
+    /// does not canonicalize the nodes it creates). Does not short-circuit
+    /// equal/empty operands or reorder by size; callers wanting those apply
+    /// them first.
+    template <typename CombineFn>
+    [[nodiscard]] ImmutableMap mergeWith(ImmutableMap A, ImmutableMap B,
+                                         CombineFn Combine, bool KeepUnmatched,
+                                         bool SkipShared = false) {
+      static_assert(!Canonicalize,
+                    "mergeWith does not canonicalize the nodes it creates");
+      return ImmutableMap(F.mergeTrees(A.Root.get(), B.Root.get(), Combine,
+                                       KeepUnmatched, SkipShared));
     }
 
     [[nodiscard]] ImmutableMap remove(ImmutableMap Old, key_type_ref K) {
       TreeTy *T = F.remove(Old.Root.get(), K);
-      return ImmutableMap(Canonicalize ? F.getCanonicalTree(T): T);
+      if constexpr (Canonicalize)
+        return ImmutableMap(F.getCanonicalTree(T));
+      else
+        return ImmutableMap(T);
     }
 
     typename TreeTy::Factory *getTreeFactory() const {
@@ -115,13 +142,24 @@ public:
     return Root ? Root->contains(K) : false;
   }
 
+  /// Compares two maps for equality. For a canonicalizing factory, maps with
+  /// equal contents share the same tree, so this is an O(1) pointer comparison
+  /// (like ImmutableList); only maps created by the same factory may be
+  /// compared. Otherwise it is a structural comparison.
   [[nodiscard]] bool operator==(const ImmutableMap &RHS) const {
-    return Root && RHS.Root ? Root->isEqual(*RHS.Root.get()) : Root == RHS.Root;
+    if constexpr (Canonicalize)
+      return Root == RHS.Root;
+    else
+      return Root && RHS.Root ? Root->isEqual(*RHS.Root.get())
+                              : Root == RHS.Root;
   }
 
   [[nodiscard]] bool operator!=(const ImmutableMap &RHS) const {
-    return Root && RHS.Root ? Root->isNotEqual(*RHS.Root.get())
-                            : Root != RHS.Root;
+    if constexpr (Canonicalize)
+      return Root != RHS.Root;
+    else
+      return Root && RHS.Root ? Root->isNotEqual(*RHS.Root.get())
+                              : Root != RHS.Root;
   }
 
   [[nodiscard]] TreeTy *getRoot() const {

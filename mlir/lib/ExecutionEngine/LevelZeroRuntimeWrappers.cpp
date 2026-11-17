@@ -42,12 +42,22 @@ auto catchAll(F &&func) {
     ze_result_t status = (call);                                               \
     if (status != ZE_RESULT_SUCCESS) {                                         \
       const char *errorString;                                                 \
-      zeDriverGetLastErrorDescription(NULL, &errorString);                     \
-      std::cerr << "L0 error " << status << ": " << errorString << std::endl;  \
+      ze_result_t descriptionStatus =                                          \
+          zeDriverGetLastErrorDescriptionWrapper(&errorString);                \
+      if (descriptionStatus == ZE_RESULT_SUCCESS && errorString)               \
+        std::cerr << "L0 error " << status << ": " << errorString              \
+                  << std::endl;                                                \
+      else                                                                     \
+        std::cerr << "Level Zero call failed: " << #call << ", status=0x"      \
+                  << std::hex << static_cast<uint32_t>(status) << std::dec     \
+                  << std::endl;                                                \
       std::abort();                                                            \
     }                                                                          \
   }
 } // namespace
+
+static ze_result_t
+zeDriverGetLastErrorDescriptionWrapper(const char **errorString);
 
 //===----------------------------------------------------------------------===//
 // L0 RT context & device setters
@@ -338,6 +348,11 @@ static DynamicEventPool &getDynamicEventPool() {
   return dynEventPool;
 }
 
+static ze_result_t
+zeDriverGetLastErrorDescriptionWrapper(const char **errorString) {
+  return zeDriverGetLastErrorDescription(getRtContext().driver, errorString);
+}
+
 struct StreamWrapper {
   // avoid event pointer invalidations
   std::deque<ze_event_handle_t> implicitEventStack;
@@ -551,7 +566,7 @@ extern "C" ze_kernel_handle_t mgpuModuleGetFunction(ze_module_handle_t module,
 extern "C" void mgpuLaunchKernel(ze_kernel_handle_t kernel, size_t gridX,
                                  size_t gridY, size_t gridZ, size_t blockX,
                                  size_t blockY, size_t blockZ,
-                                 size_t sharedMemBytes, StreamWrapper *stream,
+                                 int32_t sharedMemBytes, StreamWrapper *stream,
                                  void **params, void ** /*extra*/,
                                  size_t paramsCount) {
 

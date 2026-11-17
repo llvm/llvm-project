@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -23,7 +24,6 @@ using namespace mlir::acc;
 using namespace mlir::LLVM;
 
 namespace {
-
 /// Test model that attaches ReducibleType to IntegerType for testing purposes.
 /// This only implements a small subset of reduction operators to exercise the
 /// interface - a real implementation would handle all valid operators.
@@ -40,7 +40,6 @@ struct TestReducibleIntegerModel
     }
   }
 };
-
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -56,6 +55,9 @@ protected:
       IntegerType::attachInterface<TestReducibleIntegerModel>(*ctx);
     });
     context.appendDialectRegistry(registry);
+    DialectRegistry extensions;
+    acc::registerAllExtensions(extensions);
+    context.appendDialectRegistry(extensions);
     context
         .loadDialect<acc::OpenACCDialect, arith::ArithDialect,
                      memref::MemRefDialect, func::FuncDialect, LLVMDialect>();
@@ -255,4 +257,69 @@ TEST_F(OpenACCTypeInterfacesTest, PointerLikeGenCastLLVMIntToPtrFromIndex) {
   auto intToPtr = dyn_cast<IntToPtrOp>(out.getDefiningOp());
   ASSERT_TRUE(intToPtr);
   EXPECT_TRUE(isa<arith::IndexCastUIOp>(intToPtr.getArg().getDefiningOp()));
+}
+
+TEST_F(OpenACCTypeInterfacesTest, PointerLikeGenCastPrivateTypeToMemref) {
+  Location loc = UnknownLoc::get(&context);
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  OpBuilder builder(module->getBodyRegion());
+  func::FuncOp fn = func::FuncOp::create(builder, loc, "cast_private_to_memref",
+                                         builder.getFunctionType({}, {}));
+  Block *block = fn.addEntryBlock();
+  builder.setInsertionPointToStart(block);
+
+  Type privateTy = PrivateType::get(&context, builder.getI8Type());
+  Type memrefTy = MemRefType::get({ShapedType::kDynamic}, builder.getI8Type());
+  Value handle = UndefOp::create(builder, loc, privateTy);
+  auto ptrLike = cast<PointerLikeType>(privateTy);
+  Value out = ptrLike.genCast(builder, loc, handle, memrefTy);
+  ASSERT_TRUE(out);
+  EXPECT_EQ(out.getType(), memrefTy);
+  auto unwrap = dyn_cast<UnwrapPrivateOp>(out.getDefiningOp());
+  ASSERT_TRUE(unwrap);
+  EXPECT_EQ(unwrap.getHandle(), handle);
+}
+
+//===----------------------------------------------------------------------===//
+// PointerLikeType::getAsMemRefType tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCTypeInterfacesTest, PointerLikeGetAsMemRefTypeRankedMemref) {
+  Location loc = UnknownLoc::get(&context);
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+
+  auto memTy = MemRefType::get({4, 8}, Float32Type::get(&context));
+  auto ptrLike = cast<PointerLikeType>(memTy);
+  EXPECT_EQ(ptrLike.getAsMemRefType(*module), memTy);
+}
+
+TEST_F(OpenACCTypeInterfacesTest, PointerLikeGetAsMemRefTypeUnrankedMemref) {
+  Location loc = UnknownLoc::get(&context);
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+
+  auto unrankedTy =
+      UnrankedMemRefType::get(Float32Type::get(&context), /*memorySpace=*/0);
+  auto ptrLike = cast<PointerLikeType>(unrankedTy);
+  EXPECT_FALSE(ptrLike.getAsMemRefType(*module));
+}
+
+TEST_F(OpenACCTypeInterfacesTest,
+       PointerLikeGetAsMemRefTypePrivateTypeMemrefBase) {
+  Location loc = UnknownLoc::get(&context);
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+
+  Type memrefTy = MemRefType::get({10}, IntegerType::get(&context, 64));
+  Type privateTy = PrivateType::get(&context, memrefTy);
+  auto ptrLike = cast<PointerLikeType>(privateTy);
+  EXPECT_EQ(ptrLike.getAsMemRefType(*module), memrefTy);
+}
+
+TEST_F(OpenACCTypeInterfacesTest,
+       PointerLikeGetAsMemRefTypePrivateTypeNonMemrefBase) {
+  Location loc = UnknownLoc::get(&context);
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+
+  Type privateTy = PrivateType::get(&context, IntegerType::get(&context, 8));
+  auto ptrLike = cast<PointerLikeType>(privateTy);
+  EXPECT_FALSE(ptrLike.getAsMemRefType(*module));
 }

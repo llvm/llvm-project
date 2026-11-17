@@ -423,7 +423,7 @@ define {<vscale x 2 x double>, <vscale x 2 x double>,<vscale x 2 x double>, <vsc
 }
 
 
-declare {<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.aarch64.sme.readz.horiz.za8.x2.nxv16i8(i32, i32)
+declare {<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.aarch64.sme.readz.horiz.x2.nxv16i8(i32, i32)
 declare {<vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.aarch64.sme.readz.horiz.x2.nxv8i16(i32, i32)
 declare {<vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.aarch64.sme.readz.horiz.x2.nxv4i32(i32, i32)
 declare {<vscale x 2 x i64>, <vscale x 2 x i64>} @llvm.aarch64.sme.readz.horiz.x2.nxv2i64(i32, i32)
@@ -432,7 +432,6 @@ declare {<vscale x 8 x half>, <vscale x 8 x half>} @llvm.aarch64.sme.readz.horiz
 declare {<vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sme.readz.horiz.x2.nxv4f32(i32, i32)
 declare {<vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sme.readz.horiz.x2.nxv2f64(i32, i32)
 
-declare {<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.aarch64.sme.readz.vert.za8.x2.nxv16i8(i32, i32)
 declare {<vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.aarch64.sme.readz.vert.x2.nxv8i16(i32, i32)
 declare {<vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.aarch64.sme.readz.vert.x2.nxv4i32(i32, i32)
 declare {<vscale x 2 x i64>, <vscale x 2 x i64>} @llvm.aarch64.sme.readz.vert.x2.nxv2i64(i32, i32)
@@ -441,7 +440,6 @@ declare {<vscale x 8 x half>, <vscale x 8 x half>} @llvm.aarch64.sme.readz.vert.
 declare {<vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sme.readz.vert.x2.nxv4f32(i32, i32)
 declare {<vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sme.readz.vert.x2.nxv2f64(i32, i32)
 
-declare {<vscale x 16 x i8>, <vscale x 16 x i8>,<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.aarch64.sme.readz.horiz.za8.x4.nxv16i8(i32, i32)
 declare {<vscale x 8 x i16>, <vscale x 8 x i16>,<vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.aarch64.sme.readz.horiz.x4.nxv8i16(i32, i32)
 declare {<vscale x 4 x i32>, <vscale x 4 x i32>,<vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.aarch64.sme.readz.horiz.x4.nxv4i32(i32, i32)
 declare {<vscale x 2 x i64>, <vscale x 2 x i64>,<vscale x 2 x i64>, <vscale x 2 x i64>} @llvm.aarch64.sme.readz.horiz.x4.nxv2i64(i32, i32)
@@ -450,7 +448,6 @@ declare {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale 
 declare {<vscale x 4 x float>, <vscale x 4 x float>,<vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sme.readz.horiz.x4.nxv4f32(i32, i32)
 declare {<vscale x 2 x double>, <vscale x 2 x double>,<vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sme.readz.horiz.x4.nxv2f64(i32, i32)
 
-declare {<vscale x 16 x i8>, <vscale x 16 x i8>,<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.aarch64.sme.readz.vert.za8.x4.nxv16i8(i32, i32)
 declare {<vscale x 8 x i16>, <vscale x 8 x i16>,<vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.aarch64.sme.readz.vert.x4.nxv8i16(i32, i32)
 declare {<vscale x 4 x i32>, <vscale x 4 x i32>,<vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.aarch64.sme.readz.vert.x4.nxv4i32(i32, i32)
 declare {<vscale x 2 x i64>, <vscale x 2 x i64>,<vscale x 2 x i64>, <vscale x 2 x i64>} @llvm.aarch64.sme.readz.vert.x4.nxv2i64(i32, i32)

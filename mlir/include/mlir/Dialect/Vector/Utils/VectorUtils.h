@@ -207,6 +207,29 @@ public:
                             PatternRewriter &rewriter) const = 0;
 };
 
+/// Convenience wrapper for patterns that are only intended for default
+/// contractions, i.e. contractions for which the combining op is an ADD.
+///
+/// When using this wrapper, implement `matchAndRewriteAddContractOp` instead
+/// of plain `matchAndRewrite`.
+struct AddContractionOpRewritePattern : OpRewritePattern<ContractionOp> {
+  using OpRewritePattern<ContractionOp>::OpRewritePattern;
+  using Base = AddContractionOpRewritePattern;
+
+private:
+  LogicalResult matchAndRewrite(vector::ContractionOp sourceOp,
+                                PatternRewriter &rewriter) const final {
+    if (sourceOp.getKind() != vector::CombiningKind::ADD)
+      return rewriter.notifyMatchFailure(sourceOp, "expected ADD contraction");
+    return matchAndRewriteAddContractOp(sourceOp, rewriter);
+  }
+
+public:
+  virtual LogicalResult
+  matchAndRewriteAddContractOp(vector::ContractionOp contractOp,
+                               PatternRewriter &rewriter) const = 0;
+};
+
 /// Returns true if the input Vector type can be linearized.
 ///
 /// Linearization is meant in the sense of flattening vectors, e.g.:
@@ -224,11 +247,17 @@ bool isLinearizableVector(VectorType type);
 /// `useInBoundsInsteadOfMasking` to `true` to use the "in_bounds" attribute
 /// instead of explicit masks.
 ///
-/// Note: all read offsets are set to 0.
+/// When `permutationMap` is provided the in_bounds attribute is inferred from
+/// it: dimension i is in-bounds when the map result is an AffineDimExpr
+/// pointing to a static memref dimension divisible by the vector size, or an
+/// AffineConstantExpr (broadcast). Custom`indices` must also be supplied in
+/// that case; if `indices` is empty, all offsets default to 0.
 Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
                              const VectorType &vecToReadTy,
                              std::optional<Value> padValue = std::nullopt,
-                             bool useInBoundsInsteadOfMasking = false);
+                             bool useInBoundsInsteadOfMasking = false,
+                             ArrayRef<Value> indices = {},
+                             AffineMap permutationMap = AffineMap());
 
 Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
                              ArrayRef<int64_t> inputVectorSizes,
@@ -243,11 +272,13 @@ Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
 /// `useInBoundsInsteadOfMasking` to `true` to use the "in_bounds" attribute
 /// instead of explicit masks.
 /// `writeIndices` specifies the offsets to use. If empty, all indices are set
-/// to 0.
+/// to 0. When `permutationMap` is provided, the in_bounds attribute is
+/// inferred from the map instead of the destination shape.
 Operation *createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
                                     Value vecToStore, Value dest,
                                     SmallVector<Value> writeIndices = {},
-                                    bool useInBoundsInsteadOfMasking = false);
+                                    bool useInBoundsInsteadOfMasking = false,
+                                    AffineMap permutationMap = AffineMap());
 
 /// Returns success if `inputVectorSizes` is a valid masking configuraion for
 /// given `shape`, i.e., it meets:

@@ -1,5 +1,5 @@
 ; RUN: opt < %s -passes=loop-vectorize,transform-warning -S -pass-remarks-missed='loop-vectorize' -pass-remarks-analysis='loop-vectorize' -vectorize-memory-check-threshold=1 -mtriple=x86_64-apple-macosx 2>&1 | FileCheck %s
-; RUN: opt < %s -passes=loop-vectorize,transform-warning -o /dev/null -pass-remarks-output=%t.yaml -vectorize-memory-check-threshold=1 -mtriple=x86_64-apple-macosx
+; RUN: opt < %s -passes=loop-vectorize,transform-warning -disable-output -pass-remarks-output=%t.yaml -vectorize-memory-check-threshold=1 -mtriple=x86_64-apple-macosx
 ; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
 
 ; C/C++ code for tests
@@ -48,6 +48,15 @@
 
 ; YAML:       --- !Analysis
 ; YAML-NEXT: Pass:            loop-vectorize
+; YAML-NEXT: Name:            NoCountableConditionInLatchBlock
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 5, Column: 9 }
+; YAML-NEXT: Function:        _Z4testPii
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'loop not vectorized: '
+; YAML-NEXT:   - String:          Latch block does not have a countable exit condition
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Analysis
+; YAML-NEXT: Pass:            loop-vectorize
 ; YAML-NEXT: Name:            UnsupportedUncountableLoop
 ; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 5, Column: 9 }
 ; YAML-NEXT: Function:        _Z4testPii
@@ -72,7 +81,7 @@
 ; YAML-NEXT:   - String:          'loop not vectorized: vectorization and interleaving are explicitly disabled, or the loop has already been vectorized
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !Analysis
-; YAML-NEXT: Pass:            ''
+; YAML-NEXT: Pass:            loop-vectorize
 ; YAML-NEXT: Name:            CantIdentifyArrayBounds
 ; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 19, Column: 5 }
 ; YAML-NEXT: Function:        _Z17test_array_boundsPiS_i
@@ -134,6 +143,15 @@
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'loop not vectorized: '
 ; YAML-NEXT:   - String:          loop induction variable could not be identified
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Analysis
+; YAML-NEXT: Pass:            loop-vectorize
+; YAML-NEXT: Name:            UnknownLatchExitCountEarlyExitLoop
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 27, Column: 3 }
+; YAML-NEXT: Function:        test_multiple_failures
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'loop not vectorized: '
+; YAML-NEXT:   - String:          Cannot vectorize early exit loop
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !Analysis
 ; YAML-NEXT: Pass:            loop-vectorize
@@ -320,7 +338,7 @@ declare i32 @foo(...)
 !12 = !DILocation(line: 3, column: 8, scope: !13)
 !13 = distinct !DILexicalBlock(line: 3, column: 3, file: !1, scope: !4)
 !14 = !{!14, !15, !15}
-!15 = !{!"llvm.loop.vectorize.enable", i1 true}
+!15 = !{!"llvm.loop.vectorize.enable"}
 !16 = !DILocation(line: 4, column: 5, scope: !17)
 !17 = distinct !DILexicalBlock(line: 3, column: 36, file: !1, scope: !13)
 !22 = !DILocation(line: 5, column: 9, scope: !23)

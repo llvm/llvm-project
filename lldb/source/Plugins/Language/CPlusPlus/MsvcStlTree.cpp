@@ -225,7 +225,8 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t>
+  GetIndexOfChildWithName(llvm::StringRef name) override {
     if (!m_inner_sp)
       return llvm::createStringError("there are no children");
     return m_inner_sp->GetIndexOfChildWithName(name);
@@ -315,7 +316,7 @@ lldb_private::formatters::MsvcStlTreeSyntheticFrontEnd::GetChildAtIndex(
   // all items named _Myval
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return val_sp->Clone(ConstString(name.GetString()));
+  return val_sp->Clone(name.GetString());
 }
 
 lldb::ChildCacheState

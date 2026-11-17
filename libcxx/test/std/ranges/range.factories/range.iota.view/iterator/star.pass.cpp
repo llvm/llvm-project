@@ -10,16 +10,16 @@
 
 // constexpr W operator*() const noexcept(is_nothrow_copy_constructible_v<W>);
 
-#include "test_macros.h"
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-sign-compare
 
-TEST_CLANG_DIAGNOSTIC_IGNORED("-Wsign-compare")
-TEST_GCC_DIAGNOSTIC_IGNORED("-Wsign-compare")
-TEST_MSVC_DIAGNOSTIC_IGNORED(4018) // various "signed/unsigned mismatch"
+// various "signed/unsigned mismatch"
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4018
 
 #include <ranges>
 #include <cassert>
 
 #include "../types.h"
+#include "test_macros.h"
 
 struct NotNoexceptCopy {
   using difference_type = int;
@@ -81,6 +81,12 @@ constexpr void testType() {
 constexpr bool test() {
   testType<SomeInt>();
   testType<NotNoexceptCopy>();
+#ifndef TEST_HAS_NO_INT128
+  testType<__int128_t>();
+  testType<__uint128_t>();
+#endif
+  testType<signed long long>();
+  testType<unsigned long long>();
   testType<signed long>();
   testType<unsigned long>();
   testType<int>();

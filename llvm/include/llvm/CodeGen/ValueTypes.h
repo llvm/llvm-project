@@ -116,6 +116,21 @@ namespace llvm {
       return getVectorVT(Context, getVectorElementType(), EC);
     }
 
+    /// Return a VT for a type whose attributes match ourselves with
+    /// the exception of the element count that is chosen by the caller.
+    EVT changeElementCount(LLVMContext &Context, ElementCount EC) const {
+      if (isSimple()) {
+        MVT M = getSimpleVT().changeElementCount(EC);
+        if (M != MVT::INVALID_SIMPLE_VALUE_TYPE)
+          return M;
+      }
+
+      EVT EltVT = getScalarType();
+      if (!isVector() && EC.isScalar())
+        return EltVT;
+      return getVectorVT(Context, EltVT, EC);
+    }
+
     /// Return a VT for a type whose attributes match ourselves with the
     /// exception of the element type that is chosen by the caller.
     EVT changeElementType(LLVMContext &Context, EVT EltVT) const {
@@ -177,10 +192,20 @@ namespace llvm {
       return isSimple() ? V.isVector() : isExtendedVector();
     }
 
+    /// Return true if this is a vector with matching element type.
+    bool isVectorOf(EVT EltVT) const {
+      return isVector() && getVectorElementType() == EltVT;
+    }
+
     /// Return true if this is a vector type where the runtime
     /// length is machine dependent
     bool isScalableVector() const {
       return isSimple() ? V.isScalableVector() : isExtendedScalableVector();
+    }
+
+    /// Return true if this is a scalable vector with matching element type.
+    bool isScalableVectorOf(EVT EltVT) const {
+      return isScalableVector() && getVectorElementType() == EltVT;
     }
 
     /// Return true if this is a vector value type.
@@ -189,6 +214,11 @@ namespace llvm {
     bool isFixedLengthVector() const {
       return isSimple() ? V.isFixedLengthVector()
                         : isExtendedFixedLengthVector();
+    }
+
+    /// Return true if this is a fixed length vector with matching element type.
+    bool isFixedLengthVectorOf(EVT EltVT) const {
+      return isFixedLengthVector() && getVectorElementType() == EltVT;
     }
 
     /// Return true if the type is a scalable type.
@@ -502,16 +532,20 @@ namespace llvm {
       }
     }
 
+    /// Implement operator<<.
+    LLVM_ABI void print(raw_ostream &OS) const;
+
     /// This function returns value type as a string, e.g. "i32".
-    LLVM_ABI std::string getEVTString() const;
+    std::string getEVTString() const {
+      std::string S;
+      llvm::raw_string_ostream Stream(S);
+      print(Stream);
+      return S;
+    }
 
     /// Support for debugging, callable in GDB: VT.dump()
     LLVM_ABI void dump() const;
 
-    /// Implement operator<<.
-    void print(raw_ostream &OS) const {
-      OS << getEVTString();
-    }
 
     /// This method returns an LLVM type corresponding to the specified EVT.
     /// For integer types, this returns an unsigned type. Note that this will

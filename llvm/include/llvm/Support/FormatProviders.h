@@ -325,18 +325,6 @@ struct format_provider<
   }
 };
 
-namespace support {
-namespace detail {
-template <typename IterT>
-using IterValue = typename std::iterator_traits<IterT>::value_type;
-
-template <typename IterT>
-struct range_item_has_provider
-    : public std::bool_constant<
-          !support::detail::uses_missing_provider<IterValue<IterT>>::value> {};
-} // namespace detail
-} // namespace support
-
 /// Implementation of format_provider<T> for ranges.
 ///
 /// This will print an arbitrary range as a delimited sequence of items.
@@ -399,8 +387,6 @@ template <typename IterT> class format_provider<llvm::iterator_range<IterT>> {
   }
 
 public:
-  static_assert(support::detail::range_item_has_provider<IterT>::value,
-                "Range value_type does not have a format provider!");
   static void format(const llvm::iterator_range<IterT> &V,
                      llvm::raw_ostream &Stream, StringRef Style) {
     StringRef Sep;
@@ -409,14 +395,14 @@ public:
     auto Begin = V.begin();
     auto End = V.end();
     if (Begin != End) {
-      auto Adapter = support::detail::build_format_adapter(*Begin);
-      Adapter.format(Stream, ArgStyle);
+      auto Adapter = support::detail::FormatFunctor(*Begin);
+      Adapter(Stream, ArgStyle);
       ++Begin;
     }
     while (Begin != End) {
       Stream << Sep;
-      auto Adapter = support::detail::build_format_adapter(*Begin);
-      Adapter.format(Stream, ArgStyle);
+      auto Adapter = support::detail::FormatFunctor(*Begin);
+      Adapter(Stream, ArgStyle);
       ++Begin;
     }
   }

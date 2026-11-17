@@ -27,7 +27,7 @@ namespace llvm {
 /// or remove control flow to put the CFG into a canonical form expected by
 /// other passes of the mid-level optimizer. Depending on the specified options,
 /// it may further optimize control-flow to create non-canonical forms.
-class SimplifyCFGPass : public PassInfoMixin<SimplifyCFGPass> {
+class SimplifyCFGPass : public OptionalPassInfoMixin<SimplifyCFGPass> {
   SimplifyCFGOptions Options;
 
 public:
@@ -47,7 +47,6 @@ public:
   printPipeline(raw_ostream &OS,
                 function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
-
 }
 
 #endif

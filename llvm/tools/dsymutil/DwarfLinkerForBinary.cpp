@@ -10,12 +10,10 @@
 #include "BinaryHolder.h"
 #include "DebugMap.h"
 #include "MachOUtils.h"
+#include "PseudoProbeLinker.h"
 #include "SwiftModule.h"
-#include "dsymutil.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -27,7 +25,6 @@
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
-#include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/Config/config.h"
 #include "llvm/DWARFLinker/Classic/DWARFLinker.h"
 #include "llvm/DWARFLinker/Classic/DWARFStreamer.h"
@@ -35,36 +32,24 @@
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
-#include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCCodeEmitter.h"
-#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/DJB.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -75,19 +60,14 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/ThreadPool.h"
-#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cinttypes>
-#include <climits>
 #include <cstdint>
-#include <cstdlib>
 #include <cstring>
 #include <limits>
 #include <memory>
@@ -99,8 +79,6 @@
 #include <vector>
 
 namespace llvm {
-
-static mc::RegisterMCTargetOptionsFlags MOF;
 
 using namespace dwarf_linker;
 
@@ -264,7 +242,7 @@ static Error emitRemarks(const LinkOptions &Options, StringRef BinaryPath,
 
 ErrorOr<std::unique_ptr<DWARFFile>> DwarfLinkerForBinary::loadObject(
     const DebugMapObject &Obj, const DebugMap &DebugMap,
-    remarks::RemarkLinker &RL,
+    remarks::RemarkLinker &RL, PseudoProbeLinker &PL,
     std::shared_ptr<DwarfLinkerForBinaryRelocationMap> DLBRM) {
   auto ErrorOrObj = loadObject(Obj, DebugMap.getTriple());
   std::unique_ptr<DWARFFile> Res;
@@ -288,6 +266,9 @@ ErrorOr<std::unique_ptr<DWARFFile>> DwarfLinkerForBinary::loadObject(
         Obj.getObjectFilename(), std::move(Context),
         std::make_unique<AddressManager>(*this, *ErrorOrObj, Obj, DLBRM),
         [&](StringRef FileName) { BinHolder.eraseObjectEntry(FileName); });
+
+    if (Error E = PL.collect(*ErrorOrObj))
+      reportWarning(toString(std::move(E)), Obj.getObjectFilename());
 
     Error E = RL.link(*ErrorOrObj);
     // FIXME: Remark parsing errors are not propagated to the user.
@@ -729,6 +710,7 @@ bool DwarfLinkerForBinary::linkImpl(
       GeneralLinker->setOutputDWARFEmitter(Streamer.get());
   }
 
+  PseudoProbeLinker PL(Options);
   remarks::RemarkLinker RL;
   if (!Options.RemarksPrependPath.empty())
     RL.setExternalFilePrependPath(Options.RemarksPrependPath);
@@ -743,6 +725,7 @@ bool DwarfLinkerForBinary::linkImpl(
   GeneralLinker->setNumThreads(Options.Threads);
   GeneralLinker->setPrependPath(Options.PrependPath);
   GeneralLinker->setKeepFunctionForStatic(Options.KeepFunctionForStatic);
+  GeneralLinker->setThreadPool(ThreadPool);
   GeneralLinker->setInputVerificationHandler(
       [&](const DWARFFile &File, llvm::StringRef Output) {
         std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
@@ -758,7 +741,7 @@ bool DwarfLinkerForBinary::linkImpl(
 
     auto DLBRelocMap = std::make_shared<DwarfLinkerForBinaryRelocationMap>();
     if (ErrorOr<std::unique_ptr<DWARFFile>> ErrorOrObj =
-            loadObject(Obj, DebugMap, RL, DLBRelocMap)) {
+            loadObject(Obj, DebugMap, RL, PL, DLBRelocMap)) {
       ObjectsForLinking.emplace_back(std::move(*ErrorOrObj), DLBRelocMap);
       return *ObjectsForLinking.back().Object;
     } else {
@@ -829,6 +812,56 @@ bool DwarfLinkerForBinary::linkImpl(
         MaxDWARFVersion = std::max(Unit.getVersion(), MaxDWARFVersion);
       };
 
+  if (Options.ResourceDir) {
+    // Collect .cas-config files. The build system might put these
+    // anywhere in the build directory, so dsymutil scans all parent
+    // paths of each object file. Their contents is a JSON dictionary,
+    // so this loop aggregates them in a JSON array.
+    llvm::StringSet<> VisitedPaths;
+    std::string CASConfigs = "[\n";
+    raw_string_ostream CASConfigStream(CASConfigs);
+    bool First = true;
+    for (const auto &Obj : Map.objects()) {
+      StringRef ObjPath = Obj->getObjectFilename();
+      for (StringRef Dir = sys::path::parent_path(ObjPath); !Dir.empty();
+           Dir = sys::path::parent_path(Dir)) {
+        if (!VisitedPaths.insert(Dir).second)
+          break;
+
+        SmallString<256> CASConfigPath(Dir);
+        sys::path::append(CASConfigPath, ".cas-config");
+        auto BufferOrErr = MemoryBuffer::getFile(CASConfigPath);
+        if (!BufferOrErr)
+          continue;
+
+        if (!First)
+          CASConfigStream << ",\n";
+        First = false;
+        CASConfigStream << (*BufferOrErr)->getBuffer().rtrim('\n');
+      }
+    }
+    CASConfigStream << "\n]\n";
+    if (!First) {
+      std::error_code EC;
+      SmallString<128> CASConfigsPath;
+      sys::path::append(CASConfigsPath, *Options.ResourceDir);
+      EC = sys::fs::create_directories(CASConfigsPath.str(), true,
+                                       sys::fs::perms::all_all);
+      if (EC) {
+        reportWarning("could not create directory '" + CASConfigsPath +
+                      "': " + EC.message());
+      } else {
+        sys::path::append(CASConfigsPath, "CASConfigs.json");
+        raw_fd_ostream OS(CASConfigsPath.str(), EC, sys::fs::OF_Text);
+        if (EC)
+          reportWarning("could not open '" + CASConfigsPath +
+                        "': " + EC.message());
+        else
+          OS << CASConfigs;
+      }
+    }
+  }
+
   llvm::StringSet<> SwiftModules;
   for (const auto &Obj : Map.objects()) {
     // N_AST objects (swiftmodule files) should get dumped directly into the
@@ -843,13 +876,13 @@ bool DwarfLinkerForBinary::linkImpl(
 
       auto ErrorOrMem = MemoryBuffer::getFile(File);
       if (!ErrorOrMem) {
-        reportWarning("Could not open '" + File + "'");
+        reportWarning("could not open '" + File + "'");
         continue;
       }
       auto FromInterfaceOrErr =
           IsBuiltFromSwiftInterface((*ErrorOrMem)->getBuffer());
       if (!FromInterfaceOrErr) {
-        reportWarning("Could not parse binary Swift module: " +
+        reportWarning("could not parse binary Swift module: " +
                           toString(FromInterfaceOrErr.takeError()),
                       Obj->getObjectFilename());
         // Only skip swiftmodules that could be parsed and are positively
@@ -893,7 +926,7 @@ bool DwarfLinkerForBinary::linkImpl(
 
     auto DLBRelocMap = std::make_shared<DwarfLinkerForBinaryRelocationMap>();
     if (ErrorOr<std::unique_ptr<DWARFFile>> ErrorOrObj =
-            loadObject(*Obj, Map, RL, DLBRelocMap)) {
+            loadObject(*Obj, Map, RL, PL, DLBRelocMap)) {
       ObjectsForLinking.emplace_back(std::move(*ErrorOrObj), DLBRelocMap);
       GeneralLinker->addObjectFile(*ObjectsForLinking.back().Object, Loader,
                                    OnCUDieLoaded);
@@ -924,6 +957,9 @@ bool DwarfLinkerForBinary::linkImpl(
   if (Error E = emitRemarks(Options, Map.getBinaryPath(), ArchName, RL))
     return error(toString(std::move(E)));
 
+  if (Error E = PL.emit(Map.getTriple()))
+    return error(toString(std::move(E)));
+
   if (Options.NoOutput)
     return true;
 
@@ -951,6 +987,12 @@ bool DwarfLinkerForBinary::linkImpl(
   return true;
 }
 
+static bool isDwarfSection(const object::MachOObjectFile &Obj,
+                           object::section_iterator Sec) {
+  return Sec != Obj.section_end() &&
+         Obj.getSectionFinalSegmentName(Sec->getRawDataRefImpl()) == "__DWARF";
+}
+
 /// Iterate over the relocations of the given \p Section and
 /// store the ones that correspond to debug map entries into the
 /// ValidRelocs array.
@@ -963,7 +1005,7 @@ void DwarfLinkerForBinary::AddressManager::findValidRelocsMachO(
     Linker.reportWarning("error reading section", DMO.getObjectFilename());
     return;
   }
-  DataExtractor Data(*ContentsOrErr, Obj.isLittleEndian(), 0);
+  DataExtractor Data(*ContentsOrErr, Obj.isLittleEndian());
   bool SkipNext = false;
 
   for (const object::RelocationRef &Reloc : Section.relocations()) {
@@ -1021,6 +1063,11 @@ void DwarfLinkerForBinary::AddressManager::findValidRelocsMachO(
       if (const auto *Mapping = DMO.lookupSymbol(*SymbolName))
         ValidRelocs.emplace_back(Offset64, RelocSize, Addend, Mapping->getKey(),
                                  Mapping->getValue());
+    } else if (isDwarfSection(Obj, Obj.getRelocationSection(RelocDataRef))) {
+      // A reference into a DWARF section holds an offset into that section,
+      // not an object address, so it must not be matched against the debug
+      // map. The linker rewrites these offsets itself.
+      continue;
     } else if (const auto *Mapping = DMO.lookupObjectAddress(SymAddress)) {
       // Do not store the addend. The addend was the address of the symbol in
       // the object file, the address in the binary that is stored in the debug

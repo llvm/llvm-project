@@ -1,5 +1,4 @@
 #include "a.h"
-#include <cstdio>
 
 bool foo() {
   A a1;

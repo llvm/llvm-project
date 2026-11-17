@@ -30,7 +30,6 @@ import lit.formats
 import lit.Test
 import lit.util
 
-
 kIsWindows = sys.platform in ["win32", "cygwin"]
 
 
@@ -71,10 +70,8 @@ class LibcTest(lit.formats.ExecutableTest):
         Recognized patterns (all must end with .__build__, optionally followed
         by .exe on Windows):
           libc.test.src.<category>.<test_name>.__build__
-          libc.test.src.<category>.<test_name>.__unit__[.<opts>...].__build__
-          libc.test.src.<category>.<test_name>.__hermetic__[.<opts>...].__build__
-          libc.test.include.<test_name>.__unit__[.<opts>...].__build__
-          libc.test.include.<test_name>.__hermetic__[.<opts>...].__build__
+          libc.test.src.<category>.<test_name>[.<opts>...].__build__
+          libc.test.include.<test_name>[.<opts>...].__build__
           libc.test.integration.<category>.<test_name>.__build__
         """
         test_name = filename
@@ -86,8 +83,7 @@ class LibcTest(lit.formats.ExecutableTest):
         if test_name.startswith("libc.test.src."):
             pass  # Accept all src tests ending in .__build__
         elif test_name.startswith("libc.test.include."):
-            if ".__unit__." not in test_name and ".__hermetic__." not in test_name:
-                return False
+            pass  # Accept all include tests ending in .__build__
         elif test_name.startswith("libc.test.integration."):
             pass  # Accept all integration tests ending in .__build__
         elif test_name.startswith("libc.test.shared."):
@@ -130,7 +126,7 @@ class LibcTest(lit.formats.ExecutableTest):
         If a sidecar <executable>.params file exists, it supplies the
         command-line arguments and environment variables for the test.
 
-        Honors litConfig.maxIndividualTestTime (set via --timeout) to
+        Honors test.config.maxIndividualTestTime (set via --timeout) to
         kill tests that exceed the per-test time limit.
         """
 
@@ -169,7 +165,7 @@ class LibcTest(lit.formats.ExecutableTest):
         env["PWD"] = exec_dir
         env.update(extra_env)
 
-        timeout = litConfig.maxIndividualTestTime
+        timeout = test.config.maxIndividualTestTime
 
         test_cmd_template = getattr(test.config, "libc_test_cmd", "")
         if test_cmd_template:

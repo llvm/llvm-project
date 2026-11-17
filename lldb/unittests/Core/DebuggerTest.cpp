@@ -13,6 +13,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "llvm/ADT/STLExtras.h"
 #include "gtest/gtest.h"
 
 using namespace lldb;
@@ -57,7 +58,7 @@ TEST_F(DebuggerTest,
   DebuggerSP debugger_sp = Debugger::CreateInstance();
 
   // No targets have been added, so no target is selected.
-  ASSERT_EQ(debugger_sp->GetSelectedTarget().get(), nullptr);
+  ASSERT_EQ(debugger_sp->GetTargetList().GetSelectedTarget().get(), nullptr);
 
   Target &dummy_target = debugger_sp->GetDummyTarget();
 
@@ -84,4 +85,22 @@ TEST_F(DebuggerTest,
   }
 
   Debugger::Destroy(debugger_sp);
+}
+
+TEST_F(DebuggerTest, DebuggerIterable) {
+  DebuggerSP debugger_a = Debugger::CreateInstance();
+  DebuggerSP debugger_b = Debugger::CreateInstance();
+
+  Debugger::DebuggerList debuggers;
+  for (const DebuggerSP &debugger_sp : Debugger::Debuggers())
+    debuggers.push_back(debugger_sp);
+
+  EXPECT_TRUE(llvm::is_contained(debuggers, debugger_a));
+  EXPECT_TRUE(llvm::is_contained(debuggers, debugger_b));
+
+  // This would deadlock/crash if the debugger list mutex was still held.
+  EXPECT_EQ(Debugger::GetNumDebuggers(), debuggers.size());
+
+  Debugger::Destroy(debugger_a);
+  Debugger::Destroy(debugger_b);
 }

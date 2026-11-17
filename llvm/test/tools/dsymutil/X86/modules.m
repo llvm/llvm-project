@@ -18,12 +18,59 @@ EOF
    clang -c -g odr_violation.c -o 2.o
 */
 
-// RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/modules \
+// RUN: dsymutil --linker classic -f -oso-prepend-path=%p/../Inputs/modules \
 // RUN:   -y %p/dummy-debug-map.map -o - \
-// RUN:     | llvm-dwarfdump -v --debug-info - | FileCheck %s
+// RUN:     | llvm-dwarfdump -v --debug-info - \
+// RUN:     | FileCheck %s --check-prefixes=CHECK,CLASSIC
 
-// RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/modules -y \
+// RUN: dsymutil --linker classic -f -oso-prepend-path=%p/../Inputs/modules -y \
 // RUN:   %p/dummy-debug-map.map -o %t 2>&1 | FileCheck --check-prefix=WARN %s
+// RUN: dsymutil --linker parallel -f -oso-prepend-path=%p/../Inputs/modules -y \
+// RUN:   %p/dummy-debug-map.map -o %t 2>&1 | FileCheck --check-prefix=WARN %s
+
+// The classic linker drops DW_AT_GNU_dwo_id; the parallel linker keeps it.
+// RUN: rm -rf %t.classic.dSYM
+// RUN: dsymutil --linker classic --accelerator Dwarf -verify -f \
+// RUN:   -oso-prepend-path=%p/../Inputs/modules \
+// RUN:   -y %p/dummy-debug-map.map -o %t.classic.dSYM
+// RUN: llvm-dwarfdump -v --debug-info %t.classic.dSYM \
+// RUN:     | FileCheck --check-prefix=ACCEL %s
+// RUN: rm -rf %t.parallel.dSYM
+// RUN: dsymutil --linker parallel --accelerator Dwarf -verify -f \
+// RUN:   -oso-prepend-path=%p/../Inputs/modules \
+// RUN:   -y %p/dummy-debug-map.map -o %t.parallel.dSYM
+// RUN: llvm-dwarfdump -v --debug-info %t.parallel.dSYM \
+// RUN:     | FileCheck --check-prefix=ACCEL %s
+
+// Foo imports Bar, so Foo.pcm carries a skeleton of Bar next to the module it
+// describes. That import has to resolve to the unit built from Bar.pcm, which
+// is the only one describing Bar in full. Both units offer the parallel linker
+// an anchor for Bar, so the winner must not depend on which is cloned first.
+
+// RUN: dsymutil --linker parallel -f -oso-prepend-path=%p/../Inputs/modules \
+// RUN:   -y %p/dummy-debug-map.map -o %t.threaded
+// RUN: dsymutil --linker parallel -f --num-threads 1 \
+// RUN:   -oso-prepend-path=%p/../Inputs/modules \
+// RUN:   -y %p/dummy-debug-map.map -o %t.serial
+// RUN: cmp %t.threaded %t.serial
+// RUN: llvm-dwarfdump --debug-info %t.threaded \
+// RUN:     | FileCheck --check-prefix=MODIMPORT %s
+
+// MODIMPORT:      0x0[[BAR:[0-9a-f]+]]: DW_TAG_module
+// MODIMPORT-NEXT:   DW_AT_name {{.*}}"Bar"
+// MODIMPORT:          DW_TAG_structure_type
+// MODIMPORT-NEXT:       DW_AT_name {{.*}}"Bar"
+// MODIMPORT:              DW_AT_name {{.*}}"value"
+// MODIMPORT:          DW_TAG_structure_type
+// MODIMPORT-NEXT:       DW_AT_name {{.*}}"PruneMeNot"
+
+// MODIMPORT:      DW_TAG_module
+// MODIMPORT-NEXT:   DW_AT_name {{.*}}"Foo"
+// MODIMPORT:      DW_TAG_imported_declaration
+// MODIMPORT-NOT:    DW_TAG
+// MODIMPORT:        DW_AT_import {{.*}}(0x{{0*}}[[BAR]] "Bar")
+
+// ACCEL: DW_TAG_compile_unit
 
 // WARN-NOT: warning: hash mismatch
 
@@ -31,7 +78,7 @@ EOF
 #ifdef BAR_H
 // ---------------------------------------------------------------------
 // CHECK:            DW_TAG_compile_unit
-// CHECK-NOT:          DW_AT_GNU_dwo_id
+// CLASSIC-NOT:        DW_AT_GNU_dwo_id
 // CHECK-NOT:        DW_TAG
 // CHECK:              DW_TAG_module
 // CHECK-NEXT:           DW_AT_name{{.*}}"Bar"
@@ -56,7 +103,7 @@ struct PruneMeNot;
 #ifdef FOO_H
 // ---------------------------------------------------------------------
 // CHECK:               DW_TAG_compile_unit
-// CHECK-NOT:             DW_AT_GNU_dwo_id
+// CLASSIC-NOT:           DW_AT_GNU_dwo_id
 // CHECK-NOT:             DW_TAG
 // CHECK: 0x0[[FOO:.*]]:  DW_TAG_module
 // CHECK-NEXT:              DW_AT_name{{.*}}"Foo"
@@ -95,7 +142,7 @@ Bar odr_violation = { 42 };
 // ---------------------------------------------------------------------
 
 // CHECK:    DW_TAG_compile_unit
-// CHECK-NOT:  DW_AT_GNU_dwo_id
+// CLASSIC-NOT: DW_AT_GNU_dwo_id
 // CHECK:      DW_AT_low_pc
 // CHECK-NOT:  DW_TAG_module
 // CHECK-NOT:  DW_TAG_typedef
@@ -134,7 +181,7 @@ int main(int argc, char **argv) {
 #endif
 
 // CHECK:     DW_TAG_compile_unit
-// CHECK-NOT:   DW_AT_GNU_dwo_id
+// CLASSIC-NOT: DW_AT_GNU_dwo_id
 // CHECK:       DW_AT_name {{.*}}"odr_violation.c"
 // CHECK: DW_TAG_variable
 // CHECK:   DW_AT_name {{.*}}"odr_violation"

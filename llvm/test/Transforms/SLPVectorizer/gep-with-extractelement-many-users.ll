@@ -8,7 +8,7 @@ define void @test() {
 ; CHECK-NEXT:    store double 0.000000e+00, ptr inttoptr (i64 872 to ptr), align 8
 ; CHECK-NEXT:    br label [[BB9:%.*]]
 ; CHECK:       bb9:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x ptr> [ getelementptr (i8, <2 x ptr> zeroinitializer, <2 x i64> <i64 32, i64 872>), [[BB:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x ptr> [ getelementptr (i8, <2 x ptr> splat (ptr null), <2 x i64> <i64 32, i64 872>), [[BB:%.*]] ]
 ; CHECK-NEXT:    ret void
 ;
 bb:

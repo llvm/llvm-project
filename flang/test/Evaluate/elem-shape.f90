@@ -5,7 +5,7 @@ module m
   subroutine sub(x,y)
     real :: x(:), y(:)
     optional x
-    !CHECK: PRINT *, int(size(y,dim=1,kind=8),kind=4)
+    !CHECK: PRINT *, __builtin_int(size(y,dim=1,kind=8),kind=4)
     print *, size(f(x,y))
   end
   elemental function f(x,y)

@@ -10,6 +10,9 @@
 
 // UNSUPPORTED: no-wide-characters
 
+// Missing wchar string formatting functions.
+// XFAIL: LLVM-LIBC-FIXME
+
 #include <cwchar>
 #include <ctime>
 #include <cstdarg>
@@ -108,8 +111,12 @@ int main(int, char**) {
   ASSERT_SAME_TYPE(wchar_t*, decltype(std::wmemmove(ws, L"", s)));
   ASSERT_SAME_TYPE(wchar_t*, decltype(std::wmemset(ws, L' ', s)));
   ASSERT_SAME_TYPE(std::size_t, decltype(std::wcsftime(ws, s, L"", tm)));
+  TEST_DIAGNOSTIC_PUSH
+  TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
+  TEST_GCC_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
   ASSERT_SAME_TYPE(wint_t, decltype(std::btowc(0)));
   ASSERT_SAME_TYPE(int, decltype(std::wctob(w)));
+  TEST_DIAGNOSTIC_POP
   ASSERT_SAME_TYPE(int, decltype(std::mbsinit(&mb)));
   ASSERT_SAME_TYPE(std::size_t, decltype(std::mbrlen("", s, &mb)));
   ASSERT_SAME_TYPE(std::size_t, decltype(std::mbrtowc(ws, "", s, &mb)));

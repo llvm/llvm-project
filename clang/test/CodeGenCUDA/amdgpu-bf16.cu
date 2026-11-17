@@ -2,7 +2,7 @@
 // REQUIRES: amdgpu-registered-target
 // REQUIRES: x86-registered-target
 
-// RUN: %clang_cc1 "-aux-triple" "x86_64-unknown-linux-gnu" "-triple" "amdgcn-amd-amdhsa" \
+// RUN: %clang_cc1 "-aux-triple" "x86_64-unknown-linux-gnu" "-triple" "amdgpu7.00-amd-amdhsa" \
 // RUN:    -fcuda-is-device "-aux-target-cpu" "x86-64" -emit-llvm -o - %s | FileCheck %s
 
 #include "Inputs/cuda.h"

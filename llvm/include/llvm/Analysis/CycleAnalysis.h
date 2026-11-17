@@ -21,8 +21,15 @@
 
 namespace llvm {
 
+/// Enable verification of cycle info.
+///
+/// The flag enables checks which are expensive and are disabled by default
+/// unless the `EXPENSIVE_CHECKS` macro is defined.  The `-verify-cycle-info`
+/// flag allows the checks to be enabled selectively without re-compilation.
+LLVM_ABI extern bool VerifyCycleInfo;
+
 /// Legacy analysis pass which computes a \ref CycleInfo.
-class CycleInfoWrapperPass : public FunctionPass {
+class LLVM_ABI CycleInfoWrapperPass : public FunctionPass {
   Function *F = nullptr;
   CycleInfo CI;
 
@@ -38,14 +45,13 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   void releaseMemory() override;
   void print(raw_ostream &OS, const Module *M = nullptr) const override;
-
-  // TODO: verify analysis?
+  void verifyAnalysis() const override;
 };
 
 /// Analysis pass which computes a \ref CycleInfo.
 class CycleAnalysis : public AnalysisInfoMixin<CycleAnalysis> {
   friend AnalysisInfoMixin<CycleAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   /// Provide the result typedef for this analysis pass.
@@ -54,26 +60,23 @@ public:
   using LegacyWrapper = CycleInfoWrapperPass;
 
   /// Run the analysis pass over a function and produce a dominator tree.
-  CycleInfo run(Function &F, FunctionAnalysisManager &);
-
-  bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &);
+  LLVM_ABI CycleInfo run(Function &F, FunctionAnalysisManager &);
 
   // TODO: verify analysis?
 };
 
-class CycleInfoPrinterPass : public PassInfoMixin<CycleInfoPrinterPass> {
+class CycleInfoPrinterPass
+    : public RequiredPassInfoMixin<CycleInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
-  explicit CycleInfoPrinterPass(raw_ostream &OS);
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
+  LLVM_ABI explicit CycleInfoPrinterPass(raw_ostream &OS);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-struct CycleInfoVerifierPass : public PassInfoMixin<CycleInfoVerifierPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
+struct CycleInfoVerifierPass
+    : public RequiredPassInfoMixin<CycleInfoVerifierPass> {
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // end namespace llvm

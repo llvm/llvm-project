@@ -8,6 +8,7 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "TypeDetail.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -17,6 +18,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/TensorEncoding.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/Sequence.h"
@@ -149,6 +151,32 @@ IntegerType::convertFromAttribute(Attribute attr,
 }
 
 //===----------------------------------------------------------------------===//
+// MXI8 Type
+//===----------------------------------------------------------------------===//
+
+llvm::FixedPointSemantics MXI8Type::getFixedPointSemantics() {
+  // Saturation is selected by a conversion operation, not by the value type.
+  return {/*Width=*/8, /*Scale=*/6, /*IsSigned=*/true,
+          /*IsSaturated=*/false, /*HasUnsignedPadding=*/false};
+}
+
+size_t MXI8Type::getDenseElementBitSize() const { return 8; }
+
+Attribute MXI8Type::convertToAttribute(ArrayRef<char> rawData) const {
+  return IntegerType::get(getContext(), 8).convertToAttribute(rawData);
+}
+
+LogicalResult
+MXI8Type::convertFromAttribute(Attribute attr,
+                               SmallVectorImpl<char> &result) const {
+  auto intAttr = dyn_cast<IntegerAttr>(attr);
+  if (!intAttr || !intAttr.getType().isSignlessInteger(8))
+    return failure();
+  return cast<IntegerType>(intAttr.getType())
+      .convertFromAttribute(attr, result);
+}
+
+//===----------------------------------------------------------------------===//
 // Index Type
 //===----------------------------------------------------------------------===//
 
@@ -192,6 +220,7 @@ FLOAT_TYPE_SEMANTICS(Float8E4M3FNUZType, Float8E4M3FNUZ)
 FLOAT_TYPE_SEMANTICS(Float8E4M3B11FNUZType, Float8E4M3B11FNUZ)
 FLOAT_TYPE_SEMANTICS(Float8E3M4Type, Float8E3M4)
 FLOAT_TYPE_SEMANTICS(Float8E8M0FNUType, Float8E8M0FNU)
+FLOAT_TYPE_SEMANTICS(Float8E5M3FNUType, Float8E5M3FNU)
 FLOAT_TYPE_SEMANTICS(BFloat16Type, BFloat)
 FLOAT_TYPE_SEMANTICS(Float16Type, IEEEhalf)
 FLOAT_TYPE_SEMANTICS(FloatTF32Type, FloatTF32)
@@ -435,7 +464,7 @@ bool TensorType::isValidElementType(Type type) {
   // types. Dialects are expected to verify that tensor types have a valid
   // element type within that dialect.
   return llvm::isa<ComplexType, FloatType, IntegerType, OpaqueType, VectorType,
-                   IndexType>(type) ||
+                   IndexType, MXI8Type>(type) ||
          !llvm::isa<BuiltinDialect>(type.getDialect());
 }
 
@@ -607,22 +636,6 @@ mlir::isRankReducedType(ShapedType originalType,
   return SliceVerificationResult::Success;
 }
 
-bool mlir::detail::isSupportedMemorySpace(Attribute memorySpace) {
-  // Empty attribute is allowed as default memory space.
-  if (!memorySpace)
-    return true;
-
-  // Supported built-in attributes.
-  if (llvm::isa<IntegerAttr, StringAttr, DictionaryAttr>(memorySpace))
-    return true;
-
-  // Allow custom dialect attributes.
-  if (!isa<BuiltinDialect>(memorySpace.getDialect()))
-    return true;
-
-  return false;
-}
-
 Attribute mlir::detail::wrapIntegerMemorySpace(unsigned memorySpace,
                                                MLIRContext *ctx) {
   if (memorySpace == 0)
@@ -778,9 +791,6 @@ LogicalResult MemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
   if (failed(layout.verifyLayout(shape, emitError)))
     return failure();
 
-  if (!isSupportedMemorySpace(memorySpace))
-    return emitError() << "unsupported memory space Attribute";
-
   return success();
 }
 
@@ -906,9 +916,6 @@ UnrankedMemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
                            Type elementType, Attribute memorySpace) {
   if (!BaseMemRefType::isValidElementType(elementType))
     return emitError() << "invalid memref element type";
-
-  if (!isSupportedMemorySpace(memorySpace))
-    return emitError() << "unsupported memory space Attribute";
 
   return success();
 }

@@ -97,8 +97,8 @@ LLVMInitializeBPFDisassembler() {
 }
 
 static const unsigned GPRDecoderTable[] = {
-    BPF::R0,  BPF::R1,  BPF::R2,  BPF::R3,  BPF::R4,  BPF::R5,
-    BPF::R6,  BPF::R7,  BPF::R8,  BPF::R9,  BPF::R10, BPF::R11};
+    BPF::R0, BPF::R1, BPF::R2, BPF::R3, BPF::R4,  BPF::R5,
+    BPF::R6, BPF::R7, BPF::R8, BPF::R9, BPF::R10, BPF::R11};
 
 static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t /*Address*/,
@@ -112,8 +112,8 @@ static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, unsigned RegNo,
 }
 
 static const unsigned GPR32DecoderTable[] = {
-    BPF::W0,  BPF::W1,  BPF::W2,  BPF::W3,  BPF::W4,  BPF::W5,
-    BPF::W6,  BPF::W7,  BPF::W8,  BPF::W9,  BPF::W10, BPF::W11};
+    BPF::W0, BPF::W1, BPF::W2, BPF::W3, BPF::W4,  BPF::W5,
+    BPF::W6, BPF::W7, BPF::W8, BPF::W9, BPF::W10, BPF::W11};
 
 static DecodeStatus
 DecodeGPR32RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t /*Address*/,

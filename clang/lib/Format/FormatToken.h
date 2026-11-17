@@ -76,9 +76,11 @@ namespace format {
   TYPE(DoWhile)                                                                \
   TYPE(ElseLBrace)                                                             \
   TYPE(ElseRBrace)                                                             \
+  TYPE(EnumEqual)                                                              \
   TYPE(EnumLBrace)                                                             \
   TYPE(EnumRBrace)                                                             \
   TYPE(EnumUnderlyingTypeColon)                                                \
+  TYPE(ExportLBrace)                                                           \
   TYPE(FatArrow)                                                               \
   TYPE(ForEachMacro)                                                           \
   TYPE(FunctionAnnotationRParen)                                               \
@@ -98,6 +100,7 @@ namespace format {
   TYPE(InheritanceComma)                                                       \
   TYPE(InlineASMBrace)                                                         \
   TYPE(InlineASMColon)                                                         \
+  TYPE(InlineASMParen)                                                         \
   TYPE(InlineASMSymbolicNameLSquare)                                           \
   TYPE(JavaAnnotation)                                                         \
   TYPE(JsAndAndEqual)                                                          \
@@ -329,9 +332,9 @@ struct FormatToken {
         EndsBinaryExpression(false), PartOfMultiVariableDeclStmt(false),
         ContinuesLineCommentSection(false), Finalized(false),
         ClosesRequiresClause(false), EndsCppAttributeGroup(false),
-        BlockKind(BK_Unknown), Decision(FD_Unformatted),
-        PackingKind(PPK_Inconclusive), TypeIsFinalized(false),
-        Type(TT_Unknown) {}
+        HasEnumTrailingCommaHandled(false), BlockKind(BK_Unknown),
+        Decision(FD_Unformatted), PackingKind(PPK_Inconclusive),
+        TypeIsFinalized(false), Type(TT_Unknown) {}
 
   /// The \c Token.
   Token Tok;
@@ -406,6 +409,9 @@ struct FormatToken {
 
   /// \c true if this token ends a group of C++ attributes.
   unsigned EndsCppAttributeGroup : 1;
+
+  /// \c true if a comma has been inserted or removed after the token.
+  unsigned HasEnumTrailingCommaHandled : 1;
 
 private:
   /// Contains the kind of block if this token is a brace.
@@ -625,6 +631,10 @@ public:
   ///   >0: number of right braces
   int8_t BraceCount = 0;
 
+  /// Whether a left brace was already inserted after this token when an
+  /// earlier run was analyzed.
+  bool LBraceInserted = false;
+
   /// If this token starts a block, this contains all the unwrapped lines
   /// in it.
   SmallVector<AnnotatedLine *, 1> Children;
@@ -826,7 +836,7 @@ public:
                    tok::kw_decltype, tok::kw_noexcept, tok::kw_static_assert,
                    tok::kw__Atomic,
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
                    tok::kw_requires);
   }
 
@@ -927,6 +937,10 @@ public:
 
   /// Returns \c true if this token ends a block indented initializer list.
   [[nodiscard]] bool isBlockIndentedInitRBrace(const FormatStyle &Style) const;
+
+  /// Returns \c true if a newline should exist between this token and a
+  /// preceding attribute.
+  [[nodiscard]] bool mustBreakAfterAttributes(const FormatStyle &Style) const;
 
   /// Returns \c true if this tokens starts a block-type list, i.e. a
   /// list that should be indented with a block indent.
@@ -1949,6 +1963,7 @@ struct AdditionalKeywords {
     case tok::kw_for:
     case tok::kw_if:
     case tok::kw_import:
+    case tok::kw_protected:
     case tok::kw_restrict:
     case tok::kw_signed:
     case tok::kw_static:
@@ -2121,6 +2136,9 @@ inline bool continuesLineComment(const FormatToken &FormatTok,
                                  const FormatToken *MinColumnToken) {
   if (!Previous || !MinColumnToken)
     return false;
+  // Do not continue a comment section across a formatting-disabled boundary.
+  if (FormatTok.Finalized != Previous->Finalized)
+    return false;
   unsigned MinContinueColumn =
       MinColumnToken->OriginalColumn + (isLineComment(*MinColumnToken) ? 0 : 1);
   return isLineComment(FormatTok) && FormatTok.NewlinesBefore == 1 &&
@@ -2130,6 +2148,15 @@ inline bool continuesLineComment(const FormatToken &FormatTok,
 
 // Returns \c true if \c Current starts a new parameter.
 bool startsNextParameter(const FormatToken &Current, const FormatStyle &Style);
+
+// Returns \c true if \c Tok is a function/storage specifier that may appear
+// before a function return type (e.g. ``static``, ``inline``, ``constexpr``).
+inline bool isReturnTypePrefixSpecifier(const FormatToken &Tok) {
+  return Tok.isOneOf(tok::kw_static, tok::kw_extern, tok::kw_inline,
+                     tok::kw_virtual, tok::kw_constexpr, tok::kw_consteval,
+                     tok::kw_friend, tok::kw_export, tok::kw__Noreturn,
+                     tok::kw___forceinline);
+}
 
 } // namespace format
 } // namespace clang

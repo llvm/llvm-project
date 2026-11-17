@@ -56,9 +56,9 @@ enum {
   NEEDS_GOT_DTPREL = 1 << 7,
   NEEDS_TLSIE = 1 << 8,
   NEEDS_GOT_AUTH = 1 << 9,
-  NEEDS_GOT_NONAUTH = 1 << 10,
+  // 1 << 10 unused
   NEEDS_TLSDESC_AUTH = 1 << 11,
-  NEEDS_TLSDESC_NONAUTH = 1 << 12,
+  // 1 << 12 unused
 };
 
 // The base class for real symbol classes.
@@ -78,9 +78,12 @@ public:
   // The file from which this symbol was created.
   InputFile *file;
 
-  // The default copy constructor is deleted due to atomic flags. Define one for
-  // places where no atomic is needed.
-  Symbol(const Symbol &o) { memcpy(static_cast<void *>(this), &o, sizeof(o)); }
+  // Symbols are referenced by pointer throughout the linker, so an implicit
+  // copy would create a dangerous duplicate; copy the needed members
+  // explicitly instead. Deleting the copy operations also suppresses the
+  // implicit move operations.
+  Symbol(const Symbol &o) = delete;
+  Symbol &operator=(const Symbol &) = delete;
 
 protected:
   const char *nameData;
@@ -104,9 +107,6 @@ public:
   uint8_t stOther; // st_other field value
 
   uint8_t symbolKind;
-
-  // The partition whose dynamic symbol table contains this symbol's definition.
-  uint8_t partition;
 
   // True if this symbol is preemptible at load time.
   //
@@ -144,6 +144,10 @@ public:
   // True if the name contains '@'.
   LLVM_PREFERRED_TYPE(bool)
   uint8_t hasVersionSuffix : 1;
+
+  // True if the symbol is in SymbolTable::getSymbols().
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t inserted : 1;
 
   // Symbol visibility. This is the computed minimum visibility of all
   // observed non-DSO symbols.
@@ -201,6 +205,7 @@ public:
   uint64_t getGotVA(Ctx &) const;
   uint64_t getGotPltOffset(Ctx &) const;
   uint64_t getGotPltVA(Ctx &) const;
+  uint64_t getPltOffset(Ctx &) const;
   uint64_t getPltVA(Ctx &) const;
   uint64_t getSize() const;
   OutputSection *getOutputSection() const;
@@ -239,8 +244,13 @@ protected:
   Symbol(Kind k, InputFile *file, StringRef name, uint8_t binding,
          uint8_t stOther, uint8_t type)
       : file(file), nameData(name.data()), nameSize(name.size()), type(type),
-        binding(binding), stOther(stOther), symbolKind(k), ltoCanOmit(false),
-        archSpecificBit(false) {}
+        binding(binding), stOther(stOther), symbolKind(k), isPreemptible(false),
+        isUsedInRegularObj(false), isExported(false), ltoCanOmit(false),
+        traced(false), hasVersionSuffix(false), inserted(false),
+        isInIplt(false), gotInIgot(false), folded(false),
+        archSpecificBit(false), scriptDefined(false), dsoDefined(false),
+        dsoProtected(false), versionScriptAssigned(false), thunkAccessed(false),
+        inDynamicList(false), referenced(false), referencedAfterWrap(false) {}
 
   void overwrite(Symbol &sym, Kind k) const {
     if (sym.traced)
@@ -299,12 +309,12 @@ public:
 
   // Temporary flags used to communicate which symbol entries need PLT and GOT
   // entries during postScanRelocations();
-  std::atomic<uint16_t> flags;
+  std::atomic<uint16_t> flags = 0;
 
   // A ctx.symAux index used to access GOT/PLT entry indexes. This is allocated
   // in postScanRelocations().
-  uint32_t auxIdx;
-  uint32_t dynsymIndex;
+  uint32_t auxIdx = 0;
+  uint32_t dynsymIndex = 0;
 
   // If `file` is SharedFile (for SharedSymbol or copy-relocated Defined), this
   // represents the Verdef index within the input DSO, which will be converted
@@ -312,7 +322,7 @@ public:
   // index (VER_NDX_LOCAL, VER_NDX_GLOBAL, or a named version).
   // VER_NDX_LOCAL indicates a defined symbol that has been localized by a
   // version script's local: directive or --exclude-libs.
-  uint16_t versionId;
+  uint16_t versionId = 0;
   LLVM_PREFERRED_TYPE(bool)
   uint8_t versionScriptAssigned : 1;
 
@@ -338,6 +348,11 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   uint8_t referencedAfterWrap : 1;
 
+  // True if this symbol is referenced by the embedded unoptimized part of
+  // dynamic debugging.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t isDynDbgRef : 1;
+
   void setFlags(uint16_t bits) {
     flags.fetch_or(bits, std::memory_order_relaxed);
   }
@@ -349,7 +364,8 @@ public:
   bool needsDynReloc() const {
     return flags.load(std::memory_order_relaxed) &
            (NEEDS_COPY | NEEDS_GOT | NEEDS_PLT | NEEDS_TLSDESC | NEEDS_TLSGD |
-            NEEDS_GOT_DTPREL | NEEDS_TLSIE);
+            NEEDS_GOT_DTPREL | NEEDS_TLSIE | NEEDS_GOT_AUTH |
+            NEEDS_TLSDESC_AUTH);
   }
   void allocateAux(Ctx &ctx) {
     assert(auxIdx == 0);
@@ -368,12 +384,10 @@ public:
 // Represents a symbol that is defined in the current output file.
 class Defined : public Symbol {
 public:
-  Defined(Ctx &ctx, InputFile *file, StringRef name, uint8_t binding,
-          uint8_t stOther, uint8_t type, uint64_t value, uint64_t size,
-          SectionBase *section)
+  Defined(InputFile *file, StringRef name, uint8_t binding, uint8_t stOther,
+          uint8_t type, uint64_t value, uint64_t size, SectionBase *section)
       : Symbol(DefinedKind, file, name, binding, stOther, type), value(value),
-        size(size), section(section) {
-  }
+        size(size), section(section) {}
   void overwrite(Symbol &sym) const;
 
   static bool classof(const Symbol *s) { return s->isDefined(); }
@@ -406,11 +420,10 @@ public:
 // section. (Therefore, the later passes don't see any CommonSymbols.)
 class CommonSymbol : public Symbol {
 public:
-  CommonSymbol(Ctx &ctx, InputFile *file, StringRef name, uint8_t binding,
+  CommonSymbol(InputFile *file, StringRef name, uint8_t binding,
                uint8_t stOther, uint8_t type, uint64_t alignment, uint64_t size)
       : Symbol(CommonKind, file, name, binding, stOther, type),
-        alignment(alignment), size(size) {
-  }
+        alignment(alignment), size(size) {}
   void overwrite(Symbol &sym) const {
     Symbol::overwrite(sym, CommonKind);
     auto &s = static_cast<CommonSymbol &>(sym);
@@ -523,7 +536,6 @@ union SymbolUnion {
 
 template <typename... T> Defined *makeDefined(T &&...args) {
   auto *sym = getSpecificAllocSingleton<SymbolUnion>().Allocate();
-  memset(sym, 0, sizeof(Symbol));
   auto &s = *new (reinterpret_cast<Defined *>(sym)) Defined(std::forward<T>(args)...);
   return &s;
 }

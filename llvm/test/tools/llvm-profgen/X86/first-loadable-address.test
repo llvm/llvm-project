@@ -1,0 +1,59 @@
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/first-loadable-address.exe
+# RUN: llvm-profgen --binary=%t/first-loadable-address.exe \
+# RUN:   --perfscript=%t/perfscript --skip-symbolization --format=text \
+# RUN:   --use-offset=1 --use-first-loadable-segment-as-base=1 \
+# RUN:   --output=%t/profile
+# RUN: FileCheck %s --input-file=%t/profile
+
+## The first PT_LOAD has a valid zero virtual address. Ensure it is not treated
+## as an unset value and overwritten by the following executable PT_LOAD.
+## With the default 4K page size, the text segment file offset is 0x1000, so the
+## mmap event uses that offset rather than zero.
+# CHECK:      0
+# CHECK-NEXT: 1
+# CHECK-NEXT: 11008->11000:1
+
+#--- binary.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+  Entry:   0x0000000000011000
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x0000000000011000
+    Offset:       0x0000000000001000
+    AddressAlign: 0x1
+    ## 11000: nop*8
+    ## 11008: ret
+    Content:      9090909090909090C3
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    Offset:   0x0
+    VAddr:    0x0
+    FileSize: 0x1000
+    MemSize:  0x1000
+    Align:    0x1000
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0x0000000000011000
+    Align:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+Symbols:
+  - Name:    foo
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x0000000000011000
+    Size:    0x9
+
+#--- perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000001000(0x1000) @ 0x1000 00:00 0 0]: r-xp /tmp/first-loadable-address.exe
+700000001000 0x700000001008/0x700000001000/P/-/-/0

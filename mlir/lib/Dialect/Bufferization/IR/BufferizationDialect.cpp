@@ -39,23 +39,13 @@ template <typename Tensor>
 struct BuiltinTensorExternalModel
     : TensorLikeType::ExternalModel<BuiltinTensorExternalModel<Tensor>,
                                     Tensor> {
-  llvm::FailureOr<BufferLikeType> getBufferType(
-      mlir::Type tensor, const BufferizationOptions &options,
-      llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
-    auto tensorType = cast<TensorType>(tensor);
-    auto memSpace = options.defaultMemorySpaceFn(tensorType);
-    if (!memSpace.has_value())
-      return emitError() << "could not infer memory space";
-
-    return cast<BufferLikeType>(
-        getMemRefType(tensorType, options, /*layout=*/{}, *memSpace));
-  }
-
   mlir::LogicalResult verifyCompatibleBufferType(
       mlir::Type tensor, BufferLikeType bufferType,
       llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
     auto tensorType = cast<ShapedType>(tensor);
-    auto memrefType = cast<ShapedType>(bufferType);
+    auto memrefType = dyn_cast<ShapedType>(bufferType);
+    if (!memrefType)
+      return emitError() << "expected a shaped buffer type";
 
     if (tensorType.getShape() != memrefType.getShape())
       return emitError() << "shapes do not match";

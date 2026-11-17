@@ -75,6 +75,7 @@ B bArray[2];
 
 // CHECK: define internal void @main()()
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 [numthreads(1, 1, 1)]
 void main() {
 // CHECK-NEXT: %[[TMP:.*]] = alloca %"class.hlsl::RWStructuredBuffer", align 4

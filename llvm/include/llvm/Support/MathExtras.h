@@ -22,6 +22,7 @@
 #include <cstring>
 #include <limits>
 #include <type_traits>
+#include <utility>
 
 namespace llvm {
 /// Some template parameter helpers to optimize for bitwidth, for functions that
@@ -319,12 +320,6 @@ template <size_t kValue> constexpr size_t ConstantLog2() {
   return llvm::countr_zero_constexpr(kValue);
 }
 
-template <size_t kValue>
-LLVM_DEPRECATED("Use ConstantLog2 instead", "ConstantLog2")
-constexpr size_t CTLog2() {
-  return ConstantLog2<kValue>();
-}
-
 /// Return the floor log base 2 of the specified value, -1 if the value is zero.
 /// (32 bit edition.)
 /// Ex. Log2_32(32) == 5, Log2_32(1) == 0, Log2_32(0) == -1, Log2_32(6) == 2
@@ -461,6 +456,11 @@ constexpr T divideNearest(U Numerator, V Denominator) {
   return (Numerator / Denominator) +
          (Mod > (static_cast<T>(Denominator) - 1) / 2);
 }
+
+/// Returns (\p X * \p Y) / \p Z rounded by round-half-up, like divideNearest.
+/// The product is computed in 128 bits, so it never overflows. Saturates to
+/// the maximum uint64_t value if the result does not fit in 64 bits.
+LLVM_ABI uint64_t mulDivNearest(uint64_t X, uint64_t Y, uint64_t Z);
 
 /// Returns the next integer (mod 2**nbits) that is greater than or equal to
 /// \p Value and is a multiple of \p Align. \p Align must be non-zero.
@@ -696,12 +696,11 @@ SaturatingMultiplyAdd(T X, T Y, T A, bool *ResultOverflowed = nullptr) {
 LLVM_ABI extern const float huge_valf;
 
 /// Add two signed integers, computing the two's complement truncated result,
-/// returning true if overflow occurred.
+/// returning a pair {result, overflow}, where "overflow" is a boolean value
+/// indicating whether an overflow occurred.
 template <typename T>
-std::enable_if_t<std::is_signed_v<T>, T> AddOverflow(T X, T Y, T &Result) {
-#if __has_builtin(__builtin_add_overflow)
-  return __builtin_add_overflow(X, Y, &Result);
-#else
+constexpr std::enable_if_t<std::is_signed_v<T>, std::pair<T, bool>>
+AddOverflow(T X, T Y) {
   // Perform the unsigned addition.
   using U = std::make_unsigned_t<T>;
   const U UX = static_cast<U>(X);
@@ -709,25 +708,36 @@ std::enable_if_t<std::is_signed_v<T>, T> AddOverflow(T X, T Y, T &Result) {
   const U UResult = UX + UY;
 
   // Convert to signed.
-  Result = static_cast<T>(UResult);
+  auto Result = static_cast<T>(UResult);
 
   // Adding two positive numbers should result in a positive number.
   if (X > 0 && Y > 0)
-    return Result <= 0;
+    return {Result, Result <= 0};
   // Adding two negatives should result in a negative number.
   if (X < 0 && Y < 0)
-    return Result >= 0;
-  return false;
+    return {Result, Result >= 0};
+  return {Result, false};
+}
+
+/// Add two signed integers, computing the two's complement truncated result,
+/// returning true if overflow occurred.
+template <typename T>
+std::enable_if_t<std::is_signed_v<T>, bool> AddOverflow(T X, T Y, T &Result) {
+#if __has_builtin(__builtin_add_overflow)
+  return __builtin_add_overflow(X, Y, &Result);
+#else
+  auto [Res, Ovf] = AddOverflow(X, Y);
+  Result = Res;
+  return Ovf;
 #endif
 }
 
 /// Subtract two signed integers, computing the two's complement truncated
-/// result, returning true if an overflow occurred.
+/// result, returning a pair {result, overflow}, where "overflow" is a
+/// boolean value indicating whether an overflow occurred.
 template <typename T>
-std::enable_if_t<std::is_signed_v<T>, T> SubOverflow(T X, T Y, T &Result) {
-#if __has_builtin(__builtin_sub_overflow)
-  return __builtin_sub_overflow(X, Y, &Result);
-#else
+constexpr std::enable_if_t<std::is_signed_v<T>, std::pair<T, bool>>
+SubOverflow(T X, T Y) {
   // Perform the unsigned addition.
   using U = std::make_unsigned_t<T>;
   const U UX = static_cast<U>(X);
@@ -735,25 +745,36 @@ std::enable_if_t<std::is_signed_v<T>, T> SubOverflow(T X, T Y, T &Result) {
   const U UResult = UX - UY;
 
   // Convert to signed.
-  Result = static_cast<T>(UResult);
+  auto Result = static_cast<T>(UResult);
 
   // Subtracting a positive number from a negative results in a negative number.
   if (X <= 0 && Y > 0)
-    return Result >= 0;
+    return {Result, Result >= 0};
   // Subtracting a negative number from a positive results in a positive number.
   if (X >= 0 && Y < 0)
-    return Result <= 0;
-  return false;
+    return {Result, Result <= 0};
+  return {Result, false};
+}
+
+/// Subtract two signed integers, computing the two's complement truncated
+/// result, returning true if an overflow occurred.
+template <typename T>
+std::enable_if_t<std::is_signed_v<T>, bool> SubOverflow(T X, T Y, T &Result) {
+#if __has_builtin(__builtin_sub_overflow)
+  return __builtin_sub_overflow(X, Y, &Result);
+#else
+  auto [Res, Ovf] = SubOverflow(X, Y);
+  Result = Res;
+  return Ovf;
 #endif
 }
 
 /// Multiply two signed integers, computing the two's complement truncated
-/// result, returning true if an overflow occurred.
+/// result, returning a pair {result, overflow}, where "overflow" is a
+/// boolean value indicating whether an overflow occurred.
 template <typename T>
-std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
-#if __has_builtin(__builtin_mul_overflow)
-  return __builtin_mul_overflow(X, Y, &Result);
-#else
+constexpr std::enable_if_t<std::is_signed_v<T>, std::pair<T, bool>>
+MulOverflow(T X, T Y) {
   // Perform the unsigned multiplication on absolute values.
   using U = std::make_unsigned_t<T>;
   const U UX = X < 0 ? (0 - static_cast<U>(X)) : static_cast<U>(X);
@@ -762,19 +783,33 @@ std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
 
   // Convert to signed.
   const bool IsNegative = (X < 0) ^ (Y < 0);
-  Result = IsNegative ? (0 - UResult) : UResult;
+  auto Result = IsNegative ? (0 - UResult) : UResult;
 
   // If any of the args was 0, result is 0 and no overflow occurs.
   if (UX == 0 || UY == 0)
-    return false;
+    return {Result, false};
 
   // UX and UY are in [1, 2^n], where n is the number of digits.
   // Check how the max allowed absolute value (2^n for negative, 2^(n-1) for
   // positive) divided by an argument compares to the other.
-  if (IsNegative)
-    return UX > (static_cast<U>(std::numeric_limits<T>::max()) + U(1)) / UY;
-  else
-    return UX > (static_cast<U>(std::numeric_limits<T>::max())) / UY;
+  bool Overflow =
+      IsNegative
+          ? UX > (static_cast<U>(std::numeric_limits<T>::max()) + U(1)) / UY
+          : UX > (static_cast<U>(std::numeric_limits<T>::max())) / UY;
+
+  return {Result, Overflow};
+}
+
+/// Multiply two signed integers, computing the two's complement truncated
+/// result, returning true if an overflow occurred.
+template <typename T>
+std::enable_if_t<std::is_signed_v<T>, bool> MulOverflow(T X, T Y, T &Result) {
+#if __has_builtin(__builtin_mul_overflow)
+  return __builtin_mul_overflow(X, Y, &Result);
+#else
+  auto [Res, Ovf] = MulOverflow(X, Y);
+  Result = Res;
+  return Ovf;
 #endif
 }
 
@@ -787,7 +822,7 @@ using stack_float_t = float;
 #endif
 
 /// Returns the number of digits in the given integer.
-int NumDigitsBase10(uint64_t X);
+LLVM_ABI int NumDigitsBase10(uint64_t X);
 
 } // namespace llvm
 

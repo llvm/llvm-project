@@ -35,7 +35,7 @@ llvm.func @task_privatization_test() {
 // CHECK:       entry:
 // CHECK:         br label %omp.private.init
 // CHECK:       omp.private.init:
-// CHECK:         %[[VAL_5:.*]] = tail call ptr @malloc(i64 ptrtoint (ptr getelementptr ([[STRUCT_KMP_PRIVATES_T:.*]], ptr null, i32 1) to i64))
+// CHECK:         %[[VAL_5:.*]] = tail call ptr @malloc(i64 4)
 // CHECK:         %[[VAL_7:.*]] = getelementptr { i32 }, ptr %[[VAL_5]], i32 0, i32 0
 // CHECK:         br label %omp.private.copy
 // CHECK:       omp.private.copy:

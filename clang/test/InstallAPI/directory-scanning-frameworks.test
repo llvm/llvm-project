@@ -1,8 +1,8 @@
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
 ; RUN: mkdir -p %t/SDKRoot/System/Library/Frameworks 
-; RUN: cp -r %S/Inputs/Simple/* %t/SDKRoot/System/Library/Frameworks/
-; RUN: cp -r %S/Inputs/Foundation/* %t/SDKRoot/System/Library/Frameworks/
+; RUN: cp -R %S/Inputs/Simple/* %t/SDKRoot/System/Library/Frameworks/
+; RUN: cp -R %S/Inputs/Foundation/* %t/SDKRoot/System/Library/Frameworks/
 # Skip over header that produces warnings.
 ; RUN: rm %t/SDKRoot/System/Library/Frameworks/Simple.framework/Headers/Simple.h
 

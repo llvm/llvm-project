@@ -23,7 +23,8 @@ using namespace lldb_private;
 CommandObjectApropos::CommandObjectApropos(CommandInterpreter &interpreter)
     : CommandObjectParsed(
           interpreter, "apropos",
-          "List debugger commands related to a word or subject.", nullptr) {
+          "List debugger commands and settings related to a word or subject.",
+          nullptr) {
   AddSimpleArgumentList(eArgTypeSearchWord);
 }
 
@@ -73,8 +74,8 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
       // Find all the properties matching the search word.
       size_t properties_max_len = 0;
       std::vector<const Property *> properties;
-      const size_t num_properties =
-          GetDebugger().Apropos(search_word, properties);
+      std::vector<const Property *> property_paths;
+      GetDebugger().Apropos(search_word, properties, property_paths);
       for (const Property *prop : properties) {
         StreamString qualified_name;
         prop->DumpQualifiedName(qualified_name);
@@ -82,7 +83,7 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
             std::max(properties_max_len, qualified_name.GetString().size());
       }
 
-      if (num_properties == 0) {
+      if (properties.empty() && property_paths.empty()) {
         result.AppendMessageWithFormatv(
             "No settings found pertaining to '{0}'. "
             "Try 'settings show' to see a complete list of "
@@ -90,18 +91,40 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
             args[0].c_str());
 
       } else {
-        result.AppendMessageWithFormatv(
-            "\nThe following settings variables may relate to '{0}': \n\n",
-            search_word);
-
-        const bool dump_qualified_name = true;
-        for (size_t i = 0; i < num_properties; ++i)
-          properties[i]->DumpDescription(
-              m_interpreter, result.GetOutputStream(), properties_max_len,
-              dump_qualified_name, highlight);
         return_status = eReturnStatusSuccessFinishResult;
-      }
 
+        if (!property_paths.empty()) {
+          result.AppendMessageWithFormatv(
+              "\nThe following settings paths may relate to '{0}': \n\n",
+              search_word);
+
+          auto &out_strm = result.GetOutputStream();
+          out_strm.IndentMore();
+          for (auto path : property_paths) {
+            StreamString qual_name_strm;
+            if (path->DumpQualifiedName(qual_name_strm, highlight)) {
+              result.GetOutputStream().Indent();
+              result.GetOutputStream() << qual_name_strm.GetString() << '\n';
+            }
+          }
+          out_strm.IndentLess();
+
+          result.AppendMessageWithFormatv("\n(use 'settings list <path>' to "
+                                          "show settings with a given path)");
+        }
+
+        if (!properties.empty()) {
+          result.AppendMessageWithFormatv(
+              "\nThe following settings variables may relate to '{0}': \n\n",
+              search_word);
+
+          const bool dump_qualified_name = true;
+          for (auto property : properties)
+            property->DumpDescription(m_interpreter, result.GetOutputStream(),
+                                      properties_max_len, dump_qualified_name,
+                                      highlight);
+        }
+      }
       result.SetStatus(return_status);
     } else {
       result.AppendError("'' is not a valid search word.\n");

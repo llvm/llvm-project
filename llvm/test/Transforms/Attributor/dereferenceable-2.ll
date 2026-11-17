@@ -211,7 +211,7 @@ exit:
 ; The 2nd and 3rd loads may never execute.
 
 define void @volatile_is_not_dereferenceable(ptr %ptr) {
-; CHECK: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite)
+; CHECK: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@volatile_is_not_dereferenceable
 ; CHECK-SAME: (ptr nofree align 2 [[PTR:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[T0:%.*]] = load volatile i16, ptr [[PTR]], align 2
@@ -565,7 +565,7 @@ end:
 ; CHECK: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
 ; CHECK: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; CHECK: attributes #[[ATTR2]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
-; CHECK: attributes #[[ATTR3]] = { nofree norecurse nounwind memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR3]] = { nofree norecurse nosync nounwind memory(argmem: readwrite) }
 ; CHECK: attributes #[[ATTR4]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ;.
 ; CHECK: [[META0]] = !{}

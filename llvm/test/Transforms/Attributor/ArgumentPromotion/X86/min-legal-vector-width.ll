@@ -544,7 +544,7 @@ attributes #5 = { argmemonly nounwind }
 ; CGSCC: attributes #[[ATTR1]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx512vl" }
 ; CGSCC: attributes #[[ATTR2]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx512vl" }
 ; CGSCC: attributes #[[ATTR3]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx2" }
-; CGSCC: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; CGSCC: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR5]] = { nofree willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR6]] = { nofree nounwind willreturn }
 ;.
@@ -552,7 +552,7 @@ attributes #5 = { argmemonly nounwind }
 ; TUNIT: attributes #[[ATTR1]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx512vl" }
 ; TUNIT: attributes #[[ATTR2]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx512vl" }
 ; TUNIT: attributes #[[ATTR3]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx2" }
-; TUNIT: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; TUNIT: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; TUNIT: attributes #[[ATTR5]] = { nofree willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR6]] = { nofree norecurse nosync nounwind willreturn }
 ;.

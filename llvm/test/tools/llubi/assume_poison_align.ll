@@ -7,6 +7,6 @@ define void @main() {
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   call void @llvm.assume(i1 true) [ "align"(ptr poison, i32 4) ] at @main
+; CHECK-NEXT: #0   call void @llvm.assume(i1 true) [ "align"(ptr poison, i32 4) ] at @main <stdin>:5
 ; CHECK-NEXT: Immediate UB detected: Assume on poison pointer.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

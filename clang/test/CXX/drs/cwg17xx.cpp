@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected
-// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,cxx11-17
+// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,cxx11-17
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,cxx11-17
 // RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
 // RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
 // RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
@@ -117,6 +117,23 @@ template B::B(int, double);
 #endif
 } // namespace cwg1738
 
+// cwg1739: na
+
+namespace cwg1742 { // cwg1742: 13
+#if __cplusplus >= 201103L
+enum struct E {
+  one
+};
+using E::one;
+// cxx11-17-error@-1 {{using declaration naming a scoped enumerator is a C++20 extension}}
+struct S {
+  using E::one;
+  // cxx11-17-error@-1 {{using declaration naming a scoped enumerator is a C++20 extension}}
+  // cxx11-17-error@-2 {{using declaration in class refers into 'E', which is not a class}}
+};
+#endif
+} // namespace cwg1742
+
 // cwg1748 is in cwg1748.cpp
 
 namespace cwg1753 { // cwg1753: 11
@@ -226,29 +243,50 @@ using Bind = Instantiate<Internal<Template>::template Bind, Argument>;
 namespace cwg1780 { // cwg1780: 23
 #if __cplusplus >= 201103L
 
+#if __cplusplus >= 201703L
+#define CONSTEXPR constexpr
+#elif __cplusplus >= 201103L
+#define CONSTEXPR
+#endif
+
 auto l = []() -> int { return 5; };
 using L = decltype(l);
 class A {
-#if __cplusplus >= 201703L
-    friend constexpr auto L::operator()() const -> int; // expected-error{{a member of a lambda should not be the target of a friend declaration}}
-#else
-    friend auto L::operator()() const -> int; // expected-error{{a member of a lambda should not be the target of a friend declaration}}
-#endif
+    friend CONSTEXPR auto L::operator()() const -> int;
+    // since-cxx11-error@-1 {{a member of a lambda should not be the target of a friend declaration}}
 };
 
+#undef CONSTEXPR
+
 #if __cplusplus >= 201402L
-auto gl = [](auto a) { return 5; };
+auto gl = [](auto a) { return 5; }; // #cwg1780-spec
 using GL = decltype(gl);
 
 template <>
-auto GL::operator()(int a) const { // expected-error{{lambda call operator should not be explicitly specialized or instantiated}}
+auto GL::operator()(int a) const {
+// since-cxx11-error@-1 {{a member of a lambda should not be explicitly specialized}}
+//   since-cxx11-note-re@#cwg1780-spec {{{{'\(lambda at .+\)'}} defined here}}
     return 6;
 }
 
-auto gll = [](auto a) { return 5; }; // expected-error{{lambda call operator should not be explicitly specialized or instantiated}}
+auto gll = [](auto a) -> int { return 5; }; // #cwg1780-inst
+
 using GLL = decltype(gll);
-template auto GLL::operator()<int>(int a) const; // expected-note{{in instantiation of function template specialization 'cwg1780::(lambda)::operator()<int>' requested here}}
+template auto GLL::operator()<int>(int a) const -> int;
+// since-cxx11-error@-1 {{a member of a lambda should not be explicitly instantiated}}
+//   since-cxx11-note-re@#cwg1780-inst {{{{'\(lambda at .+\)'}} defined here}}
 #endif
 
 #endif
 } // namespace cwg1780
+
+namespace cwg1795 { // cwg1795: 2.7
+namespace N {
+  struct S {}; // #cwg1795-S
+}
+namespace N {
+  struct S {};
+  // expected-error@-1 {{redefinition of 'S'}}
+  //   expected-note@#cwg1795-S {{previous definition is here}}
+}
+} // namespace cwg1795

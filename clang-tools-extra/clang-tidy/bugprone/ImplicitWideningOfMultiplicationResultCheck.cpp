@@ -104,6 +104,7 @@ void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
   const Expr *LHS = getLHSOfMulBinOp(E);
   if (!LHS)
     return;
+  const Expr *RHS = cast<BinaryOperator>(E)->getRHS()->IgnoreParens();
 
   // Ok, looks like we should diagnose this.
   diag(E->getBeginLoc(), "performing an implicit widening conversion to type "
@@ -111,10 +112,10 @@ void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
       << Ty << E->getType();
 
   {
-    auto Diag = diag(E->getBeginLoc(),
-                     "make conversion explicit to silence this warning",
-                     DiagnosticIDs::Note)
-                << E->getSourceRange();
+    const auto Diag = diag(E->getBeginLoc(),
+                           "make conversion explicit to silence this warning",
+                           DiagnosticIDs::Note)
+                      << E->getSourceRange();
     const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
         E->getEndLoc(), 0, *Result->SourceManager, getLangOpts());
     if (ShouldUseCXXStaticCast)
@@ -131,24 +132,32 @@ void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
   QualType WideExprTy;
   // Get Ty of the same signedness as ExprTy, because we only want to suggest
   // to widen the computation, but not change it's signedness domain.
-  if (Ty->isSignedIntegerType() == ETy->isSignedIntegerType()) {
+  // However, if ETy is only signed because both operands were of an
+  // unsigned type narrower than int (and thus got integer-promoted to the
+  // signed type int), the multiplication was never really operating in a
+  // signed domain to begin with, so don't force a signed widened type in
+  // that case either.
+  const bool BothOperandsWereUnsigned =
+      LHS->IgnoreImpCasts()->getType()->isUnsignedIntegerType() &&
+      RHS->IgnoreImpCasts()->getType()->isUnsignedIntegerType();
+  const bool EffectiveETyIsSigned =
+      ETy->isSignedIntegerType() && !BothOperandsWereUnsigned;
+  if (Ty->isSignedIntegerType() == EffectiveETyIsSigned) {
     WideExprTy = Ty;
   } else if (Ty->isSignedIntegerType()) {
-    assert(ETy->isUnsignedIntegerType() &&
-           "Expected source type to be signed.");
     WideExprTy = Context->getCorrespondingUnsignedType(Ty);
   } else {
     assert(Ty->isUnsignedIntegerType() &&
            "Expected target type to be unsigned.");
-    assert(ETy->isSignedIntegerType() &&
-           "Expected source type to be unsigned.");
+    assert(ETy->isSignedIntegerType() && "Expected source type to be signed.");
     WideExprTy = Context->getCorrespondingSignedType(Ty);
   }
 
   {
-    auto Diag = diag(E->getBeginLoc(), "perform multiplication in a wider type",
-                     DiagnosticIDs::Note)
-                << LHS->getSourceRange();
+    const auto Diag =
+        diag(E->getBeginLoc(), "perform multiplication in a wider type",
+             DiagnosticIDs::Note)
+        << LHS->getSourceRange();
 
     if (ShouldUseCXXStaticCast)
       Diag << FixItHint::CreateInsertion(LHS->getBeginLoc(),
@@ -225,10 +234,10 @@ void ImplicitWideningOfMultiplicationResultCheck::handlePointerOffsetting(
       << IndexExprType << TyAsString;
 
   {
-    auto Diag = diag(IndexExpr->getBeginLoc(),
-                     "make conversion explicit to silence this warning",
-                     DiagnosticIDs::Note)
-                << IndexExpr->getSourceRange();
+    const auto Diag = diag(IndexExpr->getBeginLoc(),
+                           "make conversion explicit to silence this warning",
+                           DiagnosticIDs::Note)
+                      << IndexExpr->getSourceRange();
     const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
         IndexExpr->getEndLoc(), 0, *Result->SourceManager, getLangOpts());
     if (ShouldUseCXXStaticCast)
@@ -244,7 +253,7 @@ void ImplicitWideningOfMultiplicationResultCheck::handlePointerOffsetting(
   }
 
   {
-    auto Diag =
+    const auto Diag =
         diag(IndexExpr->getBeginLoc(), "perform multiplication in a wider type",
              DiagnosticIDs::Note)
         << LHS->getSourceRange();

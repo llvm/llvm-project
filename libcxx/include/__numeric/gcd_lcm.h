@@ -20,6 +20,7 @@
 #include <__type_traits/is_signed.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/remove_cv.h>
+#include <__utility/checked_int.h>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -47,7 +48,7 @@ constexpr _LIBCPP_HIDE_FROM_ABI _Result __abs_in_type(_Source __t) noexcept {
 }
 
 template <class _Tp, class _Up>
-constexpr _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> gcd(_Tp __m, _Up __n) {
+[[nodiscard]] constexpr _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> gcd(_Tp __m, _Up __n) {
   static_assert(is_integral<_Tp>::value && is_integral<_Up>::value, "Arguments to gcd must be integer types");
   static_assert(!is_same<__remove_cv_t<_Tp>, bool>::value, "First argument to gcd cannot be bool");
   static_assert(!is_same<__remove_cv_t<_Up>, bool>::value, "Second argument to gcd cannot be bool");
@@ -95,7 +96,7 @@ constexpr _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> gcd(_Tp __m, _Up __n) {
 }
 
 template <class _Tp, class _Up>
-constexpr _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> lcm(_Tp __m, _Up __n) {
+[[nodiscard]] constexpr _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> lcm(_Tp __m, _Up __n) {
   static_assert(is_integral<_Tp>::value && is_integral<_Up>::value, "Arguments to lcm must be integer types");
   static_assert(!is_same<__remove_cv_t<_Tp>, bool>::value, "First argument to lcm cannot be bool");
   static_assert(!is_same<__remove_cv_t<_Up>, bool>::value, "Second argument to lcm cannot be bool");
@@ -105,10 +106,9 @@ constexpr _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> lcm(_Tp __m, _Up __n) {
   using _Rp  = common_type_t<_Tp, _Up>;
   _Rp __val1 = std::__abs_in_type<_Rp>(__m) / std::gcd(__m, __n);
   _Rp __val2 = std::__abs_in_type<_Rp>(__n);
-  _Rp __res;
-  [[maybe_unused]] bool __overflow = __builtin_mul_overflow(__val1, __val2, std::addressof(__res));
-  _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(!__overflow, "Overflow in lcm");
-  return __res;
+  auto __res = __checked_int(__val1) * __val2;
+  _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(!__res.__overflowed(), "Overflow in lcm");
+  return __res.__value();
 }
 
 #endif // _LIBCPP_STD_VER >= 17

@@ -334,7 +334,7 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
         .addImm((Imm >> 16) & 0xffff)
         .constrainAllUses(TII, TRI, RBI);
     BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Reg)
-        .addReg(TmpReg, RegState::Kill)
+        .addReg(TmpReg)
         .addImm(Imm & 0xffff)
         .constrainAllUses(TII, TRI, RBI);
     return true;
@@ -351,7 +351,7 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
         .addImm((Imm >> TZ) & 0xffff)
         .constrainAllUses(TII, TRI, RBI);
     BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDIC), Reg)
-        .addReg(TmpReg, RegState::Kill)
+        .addReg(TmpReg)
         .addImm(TZ)
         .addImm(LZ)
         .constrainAllUses(TII, TRI, RBI);
@@ -382,7 +382,7 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
         .addImm(Imm >> (48 - LZ) & 0xffff)
         .constrainAllUses(TII, TRI, RBI);
     BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
-        .addReg(TmpReg, RegState::Kill)
+        .addReg(TmpReg)
         .addImm(48 - LZ)
         .addImm(LZ)
         .constrainAllUses(TII, TRI, RBI);
@@ -410,7 +410,7 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
         .addImm((Imm >> TO) & 0xffff)
         .constrainAllUses(TII, TRI, RBI);
     BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
-        .addReg(TmpReg, RegState::Kill)
+        .addReg(TmpReg)
         .addImm(TO)
         .addImm(LZ)
         .constrainAllUses(TII, TRI, RBI);
@@ -426,7 +426,7 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
         .addImm(Lo32 & 0xffff)
         .constrainAllUses(TII, TRI, RBI);
     BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORIS8), Reg)
-        .addReg(TmpReg, RegState::Kill)
+        .addReg(TmpReg)
         .addImm(Lo32 >> 16)
         .constrainAllUses(TII, TRI, RBI);
     return true;
@@ -457,7 +457,7 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
         .addImm(RotImm & 0xffff)
         .constrainAllUses(TII, TRI, RBI);
     BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
-        .addReg(TmpReg, RegState::Kill)
+        .addReg(TmpReg)
         .addImm(Shift)
         .addImm(0)
         .constrainAllUses(TII, TRI, RBI);
@@ -482,11 +482,11 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
         .addImm(ImmHi16)
         .constrainAllUses(TII, TRI, RBI);
     BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
-        .addReg(TmpReg, RegState::Kill)
+        .addReg(TmpReg)
         .addImm((Imm >> TZ) & 0xffff)
         .constrainAllUses(TII, TRI, RBI);
     BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDIC), Reg)
-        .addReg(Tmp2Reg, RegState::Kill)
+        .addReg(Tmp2Reg)
         .addImm(TZ)
         .addImm(LZ)
         .constrainAllUses(TII, TRI, RBI);
@@ -508,11 +508,11 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
         .addImm((Imm >> (48 - LZ)) & 0xffff)
         .constrainAllUses(TII, TRI, RBI);
     BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
-        .addReg(TmpReg, RegState::Kill)
+        .addReg(TmpReg)
         .addImm((Imm >> (32 - LZ)) & 0xffff)
         .constrainAllUses(TII, TRI, RBI);
     BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
-        .addReg(Tmp2Reg, RegState::Kill)
+        .addReg(Tmp2Reg)
         .addImm(32 - LZ)
         .addImm(LZ)
         .constrainAllUses(TII, TRI, RBI);
@@ -531,11 +531,11 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
         .addImm((Imm >> (TO + 16)) & 0xffff)
         .constrainAllUses(TII, TRI, RBI);
     BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
-        .addReg(TmpReg, RegState::Kill)
+        .addReg(TmpReg)
         .addImm((Imm >> TO) & 0xffff)
         .constrainAllUses(TII, TRI, RBI);
     BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
-        .addReg(Tmp2Reg, RegState::Kill)
+        .addReg(Tmp2Reg)
         .addImm(TO)
         .addImm(LZ)
         .constrainAllUses(TII, TRI, RBI);
@@ -552,12 +552,12 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
         .addImm(ImmHi16)
         .constrainAllUses(TII, TRI, RBI);
     BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
-        .addReg(TmpReg, RegState::Kill)
+        .addReg(TmpReg)
         .addImm(Lo32 & 0xffff)
         .constrainAllUses(TII, TRI, RBI);
     BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDIMI), Reg)
         .addReg(Tmp2Reg)
-        .addReg(Tmp2Reg, RegState::Kill)
+        .addReg(Tmp2Reg)
         .addImm(32)
         .addImm(0)
         .constrainAllUses(TII, TRI, RBI);
@@ -581,11 +581,11 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
         .addImm(ImmHi16)
         .constrainAllUses(TII, TRI, RBI);
     BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
-        .addReg(TmpReg, RegState::Kill)
+        .addReg(TmpReg)
         .addImm(RotImm & 0xffff)
         .constrainAllUses(TII, TRI, RBI);
     BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
-        .addReg(Tmp2Reg, RegState::Kill)
+        .addReg(Tmp2Reg)
         .addImm(Shift)
         .addImm(0)
         .constrainAllUses(TII, TRI, RBI);
@@ -630,14 +630,14 @@ bool PPCInstructionSelector::selectI64Imm(MachineInstr &I,
     Register TmpReg =
         Lo16 ? MRI.createVirtualRegister(&PPC::G8RCRegClass) : DstReg;
     BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORIS8), TmpReg)
-        .addReg(Reg, RegState::Kill)
+        .addReg(Reg)
         .addImm(Hi16)
         .constrainAllUses(TII, TRI, RBI);
     Reg = TmpReg;
   }
   if (Lo16) {
     BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), DstReg)
-        .addReg(Reg, RegState::Kill)
+        .addReg(Reg)
         .addImm(Lo16)
         .constrainAllUses(TII, TRI, RBI);
   }

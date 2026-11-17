@@ -98,6 +98,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
@@ -108,6 +109,7 @@
 
 namespace llvm {
 
+struct AnalysisOptions;
 template <class GraphType> struct GraphTraits;
 class Function;
 class Loop;
@@ -316,10 +318,6 @@ public:
   MemoryUse(LLVMContext &C, MemoryAccess *DMA, Instruction *MI, BasicBlock *BB)
       : MemoryUseOrDef(C, DMA, MemoryUseVal, deleteMe, MI, BB, AllocMarker) {}
 
-  // allocate space for exactly one operand
-  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
-
   static bool classof(const Value *MA) {
     return MA->getValueID() == MemoryUseVal;
   }
@@ -380,10 +378,6 @@ public:
             unsigned Ver)
       : MemoryUseOrDef(C, DMA, MemoryDefVal, deleteMe, MI, BB, AllocMarker),
         ID(Ver) {}
-
-  // allocate space for exactly two operands
-  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   static bool classof(const Value *MA) {
     return MA->getValueID() == MemoryDefVal;
@@ -618,13 +612,6 @@ public:
         [&](const MemoryAccess *, const BasicBlock *B) { return BB == B; });
   }
 
-  // After deleting incoming memory access MA, the incoming accesses order may
-  // be changed.
-  void unorderedDeleteIncomingValue(const MemoryAccess *MA) {
-    unorderedDeleteIncomingIf(
-        [&](const MemoryAccess *M, const BasicBlock *) { return MA == M; });
-  }
-
   static bool classof(const Value *V) {
     return V->getValueID() == MemoryPhiVal;
   }
@@ -848,8 +835,13 @@ private:
   void prepareForMoveTo(MemoryAccess *, BasicBlock *);
   void verifyUseInDefs(MemoryAccess *, MemoryAccess *) const;
 
-  using AccessMap = DenseMap<const BasicBlock *, std::unique_ptr<AccessList>>;
-  using DefsMap = DenseMap<const BasicBlock *, std::unique_ptr<DefsList>>;
+  // The per-block lists live in UseOrDefAllocator, so only destroy them.
+  struct ListDeleter {
+    template <typename ListT> void operator()(ListT *L) const { L->~ListT(); }
+  };
+  template <typename ListT> using ListPtr = std::unique_ptr<ListT, ListDeleter>;
+  using AccessMap = DenseMap<const BasicBlock *, ListPtr<AccessList>>;
+  using DefsMap = DenseMap<const BasicBlock *, ListPtr<DefsList>>;
 
   void markUnreachableAsLiveOnEntry(BasicBlock *BB);
   MemoryPhi *createMemoryPhi(BasicBlock *BB);
@@ -866,10 +858,14 @@ private:
   AccessList *getOrCreateAccessList(const BasicBlock *);
   DefsList *getOrCreateDefsList(const BasicBlock *);
   void renumberBlock(const BasicBlock *) const;
+  const AnalysisOptions &Opts;
   AliasAnalysis *AA = nullptr;
   DominatorTree *DT;
   Function *F = nullptr;
   Loop *L = nullptr;
+
+  // Memory for MemoryUses, MemoryDefs and the per-block lists.
+  BumpPtrAllocatorImpl<MallocAllocator, 512, 512, 1> UseOrDefAllocator;
 
   // Memory SSA mappings
   DenseMap<const Value *, MemoryAccess *> ValueToMemoryAccess;
@@ -943,7 +939,8 @@ public:
 };
 
 /// Printer pass for \c MemorySSA.
-class MemorySSAPrinterPass : public PassInfoMixin<MemorySSAPrinterPass> {
+class MemorySSAPrinterPass
+    : public RequiredPassInfoMixin<MemorySSAPrinterPass> {
   raw_ostream &OS;
   bool EnsureOptimizedUses;
 
@@ -952,27 +949,22 @@ public:
       : OS(OS), EnsureOptimizedUses(EnsureOptimizedUses) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Printer pass for \c MemorySSA via the walker.
 class MemorySSAWalkerPrinterPass
-    : public PassInfoMixin<MemorySSAWalkerPrinterPass> {
+    : public RequiredPassInfoMixin<MemorySSAWalkerPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit MemorySSAWalkerPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for \c MemorySSA.
-struct MemorySSAVerifierPass : PassInfoMixin<MemorySSAVerifierPass> {
+struct MemorySSAVerifierPass : RequiredPassInfoMixin<MemorySSAVerifierPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Legacy analysis pass which computes \c MemorySSA.
@@ -1054,11 +1046,11 @@ public:
   ///
   /// This version of the function is mainly used to disambiguate phi translated
   /// pointers, where the value of a pointer may have changed from the initial
-  /// memory access. Note that this expects to be handed either a MemoryUse,
-  /// or an already potentially clobbering access. Unlike the above API, if
-  /// given a MemoryDef that clobbers the pointer as the starting access, it
-  /// will return that MemoryDef, whereas the above would return the clobber
-  /// starting from the use side of  the memory def.
+  /// memory access. Note that this expects to be handed a potentially
+  /// clobbering access (either a MemoryDef or a MemoryPhi). Unlike the above
+  /// API, if given a MemoryDef that clobbers the pointer as the starting
+  /// access, it will return that MemoryDef, whereas the above would return the
+  /// clobber starting from the use side of the memory def.
   virtual MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
                                                   const MemoryLocation &,
                                                   BatchAAResults &AA) = 0;
@@ -1207,16 +1199,6 @@ struct UpwardDefsElem {
 };
 
 template <> struct DenseMapInfo<UpwardDefsElem> {
-  static inline UpwardDefsElem getEmptyKey() {
-    return {DenseMapInfo<MemoryAccess *>::getEmptyKey(),
-            DenseMapInfo<MemoryLocation>::getEmptyKey(), false};
-  }
-
-  static inline UpwardDefsElem getTombstoneKey() {
-    return {DenseMapInfo<MemoryAccess *>::getTombstoneKey(),
-            DenseMapInfo<MemoryLocation>::getTombstoneKey(), false};
-  }
-
   static unsigned getHashValue(const UpwardDefsElem &Val) {
     return hash_combine(DenseMapInfo<MemoryAccess *>::getHashValue(Val.MA),
                         DenseMapInfo<MemoryLocation>::getHashValue(Val.Loc),
@@ -1334,11 +1316,6 @@ inline upward_defs_iterator upward_defs_begin(const UpwardDefsElem &Pair,
 }
 
 inline upward_defs_iterator upward_defs_end() { return upward_defs_iterator(); }
-
-inline iterator_range<upward_defs_iterator>
-upward_defs(const UpwardDefsElem &Pair, DominatorTree &DT) {
-  return make_range(upward_defs_begin(Pair, DT), upward_defs_end());
-}
 
 /// Walks the defining accesses of MemoryDefs. Stops after we hit something that
 /// has no defining use (e.g. a MemoryPhi or liveOnEntry). Note that, when

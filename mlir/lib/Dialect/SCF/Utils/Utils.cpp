@@ -363,11 +363,63 @@ void mlir::generateUnrolledLoop(
   loopBodyBlock->getTerminator()->setOperands(lastYielded);
 }
 
+/// Splits `forOp` into two consecutive loops at `splitPoint`.
+FailureOr<std::pair<scf::ForOp, scf::ForOp>>
+mlir::splitForOpAtPoint(RewriterBase &rewriter, scf::ForOp forOp,
+                        Value splitPoint) {
+  if (splitPoint.getType() != forOp.getLowerBound().getType())
+    return failure();
+
+  // Reject statically known violations of the split preconditions.
+  bool isUnsigned = forOp.getUnsignedCmp();
+  Value lbVal = forOp.getLowerBound();
+  Value ubVal = forOp.getUpperBound();
+  Value stepVal = forOp.getStep();
+  auto checkSplitPoint = [&](auto getBound) -> LogicalResult {
+    auto lb = getBound(lbVal);
+    auto ub = getBound(ubVal);
+    auto step = getBound(stepVal);
+    auto split = getBound(splitPoint);
+    if ((lb && split && *lb > *split) || (split && ub && *split >= *ub) ||
+        (step && *step <= 0))
+      return failure();
+    if (lb && step && split && (*split - *lb) % *step != 0)
+      return failure();
+    return success();
+  };
+  if (failed(isUnsigned ? checkSplitPoint(getConstantUIntValue)
+                        : checkSplitPoint(getConstantIntValue)))
+    return failure();
+
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPointAfter(forOp);
+  auto firstForOp = cast<scf::ForOp>(rewriter.clone(*forOp));
+  auto secondForOp = cast<scf::ForOp>(rewriter.clone(*forOp));
+  rewriter.modifyOpInPlace(firstForOp,
+                           [&] { firstForOp.setUpperBound(splitPoint); });
+  rewriter.modifyOpInPlace(secondForOp,
+                           [&] { secondForOp.setLowerBound(splitPoint); });
+
+  // Chain iter-args across the split:
+  //   - `secondForOp` is initialized from `firstForOp`'s results.
+  //   - Users of `forOp`'s results are redirected to `secondForOp`'s results,
+  //     so downstream code observes the final carried values.
+  rewriter.modifyOpInPlace(secondForOp, [&] {
+    secondForOp->setOperands(secondForOp.getNumControlOperands(),
+                             secondForOp.getInitArgs().size(),
+                             firstForOp.getResults());
+  });
+  rewriter.replaceOp(forOp, secondForOp.getResults());
+
+  return std::pair<scf::ForOp, scf::ForOp>{firstForOp, secondForOp};
+}
+
 /// Unrolls 'forOp' by 'unrollFactor', returns the unrolled main loop and the
 /// epilogue loop, if the loop is unrolled.
 FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     scf::ForOp forOp, uint64_t unrollFactor,
-    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn) {
+    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn,
+    bool shouldPromoteIfSingleIteration) {
   assert(unrollFactor > 0 && "expected positive unroll factor");
 
   // Return if the loop body is empty.
@@ -385,6 +437,16 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
   bool generateEpilogueLoop = true;
 
   std::optional<APInt> constTripCount = forOp.getStaticTripCount();
+  // A static trip count does not imply constant bounds: it is also known when
+  // the lower and the upper bound are the same value (zero iterations), when
+  // the lower bound is zero and the upper bound is the step (one iteration),
+  // and when the upper bound is a constant offset from a non-constant lower
+  // bound. The computation below reads all three bounds as constants, so fall
+  // back to the dynamic case unless they are.
+  if (constTripCount && !(getConstantAPIntValue(forOp.getLowerBound()) &&
+                          getConstantAPIntValue(forOp.getUpperBound()) &&
+                          getConstantAPIntValue(step)))
+    constTripCount = std::nullopt;
   if (constTripCount) {
     // Constant loop bounds computation.
     bool isUnsignedLoop = forOp.getUnsignedCmp();
@@ -408,7 +470,7 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     int64_t ubCst = getLoopBound(forOp.getUpperBound());
     int64_t stepCst = getLoopBound(step);
     if (unrollFactor == 1) {
-      if (constTripCount->isOne() &&
+      if (shouldPromoteIfSingleIteration && constTripCount->isOne() &&
           failed(forOp.promoteIfSingleIteration(rewriter)))
         return failure();
       return UnrolledLoopInfo{forOp, std::nullopt};
@@ -451,6 +513,15 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     auto upperBound = forOp.getUpperBound();
     Value diff =
         arith::SubIOp::create(boundsBuilder, loc, upperBound, lowerBound);
+    Value zero = arith::ConstantOp::create(
+        boundsBuilder, loc, boundsBuilder.getZeroAttr(diff.getType()));
+    Value nonEmpty = arith::CmpIOp::create(boundsBuilder, loc,
+                                           forOp.getUnsignedCmp()
+                                               ? arith::CmpIPredicate::ult
+                                               : arith::CmpIPredicate::slt,
+                                           lowerBound, upperBound);
+    diff = arith::SelectOp::create(boundsBuilder, loc, nonEmpty, diff, zero);
+
     Value tripCount = ceilDivPositive(boundsBuilder, loc, diff, step);
     Value unrollFactorCst = arith::ConstantOp::create(
         boundsBuilder, loc,
@@ -460,11 +531,11 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     // Compute tripCountEvenMultiple = tripCount - (tripCount % unrollFactor)
     Value tripCountEvenMultiple =
         arith::SubIOp::create(boundsBuilder, loc, tripCount, tripCountRem);
-    // Compute upperBoundUnrolled = lowerBound + tripCountEvenMultiple * step
+    // Compute upperBoundUnrolled = UpperBound + tripCountEvenMultiple * step
     upperBoundUnrolled = arith::AddIOp::create(
         boundsBuilder, loc, lowerBound,
         arith::MulIOp::create(boundsBuilder, loc, tripCountEvenMultiple, step));
-    // Scale 'step' by 'unrollFactor'.
+    // Compute stepUnrolled = step * unrollFactor
     stepUnrolled =
         arith::MulIOp::create(boundsBuilder, loc, step, unrollFactorCst);
   }
@@ -473,26 +544,19 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
 
   // Create epilogue clean up loop starting at 'upperBoundUnrolled'.
   if (generateEpilogueLoop) {
-    OpBuilder epilogueBuilder(forOp->getContext());
-    epilogueBuilder.setInsertionPointAfter(forOp);
-    auto epilogueForOp = cast<scf::ForOp>(epilogueBuilder.clone(*forOp));
-    epilogueForOp.setLowerBound(upperBoundUnrolled);
-
-    // Update uses of loop results.
-    auto results = forOp.getResults();
-    auto epilogueResults = epilogueForOp.getResults();
-
-    for (auto e : llvm::zip(results, epilogueResults)) {
-      std::get<0>(e).replaceAllUsesWith(std::get<1>(e));
-    }
-    epilogueForOp->setOperands(epilogueForOp.getNumControlOperands(),
-                               epilogueForOp.getInitArgs().size(), results);
-    if (epilogueForOp.promoteIfSingleIteration(rewriter).failed())
+    auto splitLoops = splitForOpAtPoint(rewriter, forOp, upperBoundUnrolled);
+    if (failed(splitLoops))
+      return failure();
+    forOp = splitLoops->first;
+    scf::ForOp epilogueForOp = splitLoops->second;
+    if (!shouldPromoteIfSingleIteration ||
+        epilogueForOp.promoteIfSingleIteration(rewriter).failed())
       resultLoops.epilogueLoopOp = epilogueForOp;
+  } else {
+    forOp.setUpperBound(upperBoundUnrolled);
   }
 
   // Create unrolled loop.
-  forOp.setUpperBound(upperBoundUnrolled);
   forOp.setStep(stepUnrolled);
 
   auto iterArgs = ValueRange(forOp.getRegionIterArgs());
@@ -509,8 +573,10 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
         return arith::AddIOp::create(b, loc, iv, stride);
       },
       annotateFn, iterArgs, yieldedValues);
-  // Promote the loop body up if this has turned into a single iteration loop.
-  if (forOp.promoteIfSingleIteration(rewriter).failed())
+  // Promote the loop body up if this has turned into a single iteration loop
+  // and `shouldPromoteIfSingleIteration` is true.
+  if (!shouldPromoteIfSingleIteration ||
+      forOp.promoteIfSingleIteration(rewriter).failed())
     resultLoops.mainLoopOp = forOp;
   return resultLoops;
 }
@@ -998,6 +1064,13 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
     auto yieldedVals = llvm::to_vector(innerTerminator->getOperands());
     assert(llvm::equal(outerLoop.getRegionIterArgs(), innerLoop.getInitArgs()));
     for (Value &yieldedVal : yieldedVals) {
+      // The yielded value may be the induction variable of the inner loop,
+      // which is about to be inlined and whose block argument is about to
+      // be destroyed. Use its replacement value instead.
+      if (yieldedVal == innerLoop.getInductionVar()) {
+        yieldedVal = delinearizeIvs[i];
+        continue;
+      }
       // The yielded value may be an iteration argument of the inner loop
       // which is about to be inlined.
       auto iter = llvm::find(innerLoop.getRegionIterArgs(), yieldedVal);
@@ -1278,17 +1351,15 @@ static void getPerfectlyNestedLoopsImpl(
 
 static Loops stripmineSink(scf::ForOp forOp, Value factor,
                            ArrayRef<scf::ForOp> targets) {
-  assert(!forOp.getUnsignedCmp() && "unsigned loops are not supported");
   auto originalStep = forOp.getStep();
   auto iv = forOp.getInductionVar();
+  bool isUnsigned = forOp.getUnsignedCmp();
 
   OpBuilder b(forOp);
   forOp.setStep(arith::MulIOp::create(b, forOp.getLoc(), originalStep, factor));
 
   Loops innerLoops;
   for (auto t : targets) {
-    assert(!t.getUnsignedCmp() && "unsigned loops are not supported");
-
     // Save information for splicing ops out of t when done
     auto begin = t.getBody()->begin();
     auto nOps = t.getBody()->getOperations().size();
@@ -1296,35 +1367,40 @@ static Loops stripmineSink(scf::ForOp forOp, Value factor,
     // Insert newForOp before the terminator of `t`.
     auto b = OpBuilder::atBlockTerminator((t.getBody()));
     Value stepped = arith::AddIOp::create(b, t.getLoc(), iv, forOp.getStep());
-    Value ub =
-        arith::MinSIOp::create(b, t.getLoc(), forOp.getUpperBound(), stepped);
+    Value ub;
+    if (isUnsigned)
+      ub =
+          arith::MinUIOp::create(b, t.getLoc(), forOp.getUpperBound(), stepped);
+    else
+      ub =
+          arith::MinSIOp::create(b, t.getLoc(), forOp.getUpperBound(), stepped);
 
     // Splice [begin, begin + nOps - 1) into `newForOp` and replace uses.
-    auto newForOp = scf::ForOp::create(b, t.getLoc(), iv, ub, originalStep);
+    auto newForOp =
+        scf::ForOp::create(b, t.getLoc(), iv, ub, originalStep,
+                           /*initArgs=*/t.getRegionIterArgs(),
+                           /*bodyBuilder=*/nullptr, /*unsignedCmp=*/isUnsigned);
     newForOp.getBody()->getOperations().splice(
         newForOp.getBody()->getOperations().begin(),
         t.getBody()->getOperations(), begin, std::next(begin, nOps - 1));
     replaceAllUsesInRegionWith(iv, newForOp.getInductionVar(),
                                newForOp.getRegion());
 
+    // Thread the iter_args of `t` through `newForOp`.
+    if (!t.getInitArgs().empty()) {
+      Operation *yieldOp = t.getBody()->getTerminator();
+      yieldOp->moveBefore(newForOp.getBody(), newForOp.getBody()->end());
+      for (auto [oldArg, newArg] :
+           llvm::zip_equal(t.getRegionIterArgs(), newForOp.getRegionIterArgs()))
+        replaceAllUsesInRegionWith(oldArg, newArg, newForOp.getRegion());
+      b.setInsertionPointToEnd(t.getBody());
+      scf::YieldOp::create(b, t.getLoc(), newForOp.getResults());
+    }
+
     innerLoops.push_back(newForOp);
   }
 
   return innerLoops;
-}
-
-// Stripmines a `forOp` by `factor` and sinks it under a single `target`.
-// Returns the new for operation, nested immediately under `target`.
-template <typename SizeType>
-static scf::ForOp stripmineSink(scf::ForOp forOp, SizeType factor,
-                                scf::ForOp target) {
-  // TODO: Use cheap structural assertions that targets are nested under
-  // forOp and that targets are not nested under each other when DominanceInfo
-  // exposes the capability. It seems overkill to construct a whole function
-  // dominance tree at this point.
-  auto res = stripmineSink(forOp, factor, ArrayRef<scf::ForOp>(target));
-  assert(res.size() == 1 && "Expected 1 inner forOp");
-  return res[0];
 }
 
 SmallVector<Loops, 8> mlir::tile(ArrayRef<scf::ForOp> forOps,
@@ -1374,15 +1450,6 @@ TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
   getPerfectlyNestedLoopsImpl(forOps, rootForOp, sizes.size());
   if (forOps.size() < sizes.size())
     sizes = sizes.take_front(forOps.size());
-
-  // The strip-mining transformation splices loop bodies into a new inner loop
-  // without threading iter_args.  If any of the collected loops carries
-  // iter_args, the splice would produce invalid IR (yielded values from the
-  // inner scope used in the outer terminator).  Skip the transformation in
-  // that case.
-  if (llvm::any_of(forOps,
-                   [](scf::ForOp op) { return !op.getInitArgs().empty(); }))
-    return {};
 
   // Compute the tile sizes such that i-th outer loop executes size[i]
   // iterations.  Given that the loop current executes

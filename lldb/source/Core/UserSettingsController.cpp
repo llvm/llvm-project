@@ -18,9 +18,6 @@ namespace lldb_private {
 class CommandInterpreter;
 }
 namespace lldb_private {
-class ConstString;
-}
-namespace lldb_private {
 class ExecutionContext;
 }
 namespace lldb_private {
@@ -75,11 +72,11 @@ Status Properties::DumpPropertyValue(const ExecutionContext *exe_ctx,
                                             dump_mask, is_json);
 }
 
-size_t
-Properties::Apropos(llvm::StringRef keyword,
-                    std::vector<const Property *> &matching_properties) const {
-  m_collection_sp->Apropos(keyword, matching_properties);
-  return matching_properties.size();
+void Properties::Apropos(
+    llvm::StringRef keyword, std::vector<const Property *> &matching_properties,
+    std::vector<const Property *> &matching_property_paths) const {
+  m_collection_sp->Apropos(keyword, matching_properties,
+                           matching_property_paths);
 }
 
 llvm::StringRef Properties::GetExperimentalSettingsName() {

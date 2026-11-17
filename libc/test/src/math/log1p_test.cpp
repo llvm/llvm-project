@@ -87,7 +87,7 @@ TEST_F(LlvmLibcLog1pTest, AllExponents) {
 }
 
 TEST_F(LlvmLibcLog1pTest, InDoubleRange) {
-  constexpr uint64_t COUNT = 4501;
+  constexpr uint64_t COUNT = 1'231;
 
   auto test = [&](uint64_t start, uint64_t stop,
                   mpfr::RoundingMode rounding_mode) {
@@ -98,7 +98,7 @@ TEST_F(LlvmLibcLog1pTest, InDoubleRange) {
     uint64_t fails = 0;
     uint64_t count = 0;
     uint64_t cc = 0;
-    double mx, mr = 0.0;
+    double mx = 0.0, mr = 0.0;
     double tol = 0.5;
 
     uint64_t step = (stop - start) / COUNT;

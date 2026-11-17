@@ -13,11 +13,11 @@ entry:
   br label %for.body
 
 ; VF_8-LABEL:  Checking a loop in 'i8_factor_2'
-; VF_8:          Cost of 2 for VF 8: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
-; VF_8:          Cost of 2 for VF 8: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
+; VF_8:          Cost of 2 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
+; VF_8:          Cost of 2 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
 ; VF_16-LABEL: Checking a loop in 'i8_factor_2'
-; VF_16:         Cost of 2 for VF 16: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
-; VF_16:         Cost of 2 for VF 16: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
+; VF_16:         Cost of 2 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
+; VF_16:         Cost of 2 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i8.2, ptr %data, i64 %i, i32 0
@@ -40,14 +40,14 @@ entry:
   br label %for.body
 
 ; VF_4-LABEL:  Checking a loop in 'i16_factor_2'
-; VF_4:          Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
-; VF_4:          Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
+; VF_4:          Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
+; VF_4:          Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
 ; VF_8-LABEL:  Checking a loop in 'i16_factor_2'
-; VF_8:          Cost of 2 for VF 8: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
-; VF_8:          Cost of 2 for VF 8: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
+; VF_8:          Cost of 2 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
+; VF_8:          Cost of 2 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
 ; VF_16-LABEL: Checking a loop in 'i16_factor_2'
-; VF_16:         Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
-; VF_16:         Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
+; VF_16:         Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
+; VF_16:         Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i16.2, ptr %data, i64 %i, i32 0
@@ -70,17 +70,17 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i32_factor_2'
-; VF_2:          Cost of 2 for VF 2: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
-; VF_2:          Cost of 2 for VF 2: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
+; VF_2:          Cost of 2 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
+; VF_2:          Cost of 2 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
 ; VF_4-LABEL:  Checking a loop in 'i32_factor_2'
-; VF_4:          Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
-; VF_4:          Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
+; VF_4:          Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
+; VF_4:          Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
 ; VF_8-LABEL:  Checking a loop in 'i32_factor_2'
-; VF_8:          Cost of 4 for VF 8: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
-; VF_8:          Cost of 4 for VF 8: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
+; VF_8:          Cost of 4 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
+; VF_8:          Cost of 4 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
 ; VF_16-LABEL: Checking a loop in 'i32_factor_2'
-; VF_16:         Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
-; VF_16:         Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
+; VF_16:         Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
+; VF_16:         Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i32.2, ptr %data, i64 %i, i32 0
@@ -103,11 +103,11 @@ entry:
   br label %for.body
 
 ; VF_4-LABEL: Checking a loop in 'half_factor_2'
-; VF_4:         Cost of 40 for VF 4: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
-; VF_4:         Cost of 40 for VF 4: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
+; VF_4:         Cost of 40 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
+; VF_4:         Cost of 40 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
 ; VF_8-LABEL: Checking a loop in 'half_factor_2'
-; VF_8:         Cost of 80 for VF 8: INTERLEAVE-GROUP with factor 2 at %tmp2, ir<%tmp0>
-; VF_8:         Cost of 80 for VF 8: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
+; VF_8:         Cost of 80 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
+; VF_8:         Cost of 80 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%tmp0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %half.2, ptr %data, i64 %i, i32 0

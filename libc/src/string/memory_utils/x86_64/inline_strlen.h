@@ -24,20 +24,20 @@ LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE static Mask
 compare_and_mask(const Vector *block_ptr, char c);
 
 template <typename Vector, typename Mask,
-          decltype(compare_and_mask<Vector, Mask>)>
+          Mask (*CompareAndMask)(const Vector *, char)>
 LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE static size_t
 string_length_vector(const char *src) {
   uintptr_t misalign_bytes = reinterpret_cast<uintptr_t>(src) % sizeof(Vector);
 
   const Vector *block_ptr =
       reinterpret_cast<const Vector *>(src - misalign_bytes);
-  auto cmp = compare_and_mask<Vector, Mask>(block_ptr, 0) >> misalign_bytes;
+  auto cmp = CompareAndMask(block_ptr, 0) >> misalign_bytes;
   if (cmp)
     return cpp::countr_zero(cmp);
 
   while (true) {
     block_ptr++;
-    cmp = compare_and_mask<Vector, Mask>(block_ptr, 0);
+    cmp = CompareAndMask(block_ptr, 0);
     if (cmp)
       return static_cast<size_t>(reinterpret_cast<uintptr_t>(block_ptr) -
                                  reinterpret_cast<uintptr_t>(src) +
@@ -50,21 +50,24 @@ LIBC_INLINE static void *
 calculate_find_first_character_return(const unsigned char *src, Mask c_mask,
                                       size_t n_left) {
   size_t c_offset = cpp::countr_zero(c_mask);
-  if (n_left < c_offset)
+  if (n_left <= c_offset)
     return nullptr;
   return const_cast<unsigned char *>(src) + c_offset;
 }
 
 template <typename Vector, typename Mask,
-          decltype(compare_and_mask<Vector, Mask>)>
+          Mask (*CompareAndMask)(const Vector *, char)>
 LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE static void *
 find_first_character_vector(const unsigned char *s, unsigned char c, size_t n) {
+  // s doesn't have to be dereferenceable if there is nothing to search.
+  if (n == 0)
+    return nullptr;
+
   uintptr_t misalign_bytes = reinterpret_cast<uintptr_t>(s) % sizeof(Vector);
 
   const Vector *block_ptr =
       reinterpret_cast<const Vector *>(s - misalign_bytes);
-  auto cmp_bytes =
-      compare_and_mask<Vector, Mask>(block_ptr, c) >> misalign_bytes;
+  auto cmp_bytes = CompareAndMask(block_ptr, c) >> misalign_bytes;
   if (cmp_bytes)
     return calculate_find_first_character_return<Mask>(
         reinterpret_cast<const unsigned char *>(block_ptr) + misalign_bytes,
@@ -73,7 +76,7 @@ find_first_character_vector(const unsigned char *s, unsigned char c, size_t n) {
   for (size_t bytes_checked = sizeof(Vector) - misalign_bytes;
        bytes_checked < n; bytes_checked += sizeof(Vector)) {
     block_ptr++;
-    cmp_bytes = compare_and_mask<Vector, Mask>(block_ptr, c);
+    cmp_bytes = CompareAndMask(block_ptr, c);
     if (cmp_bytes)
       return calculate_find_first_character_return<Mask>(
           reinterpret_cast<const unsigned char *>(block_ptr), cmp_bytes,
@@ -111,7 +114,7 @@ template <>
 LIBC_INLINE uint32_t
 compare_and_mask<__m256i, uint32_t>(const __m256i *block_ptr, char c) {
   __m256i b = _mm256_load_si256(block_ptr);
-  __m256i set = _mm256_set1_epi16(c);
+  __m256i set = _mm256_set1_epi8(c);
   __m256i cmp = _mm256_cmpeq_epi8(b, set);
   return _mm256_movemask_epi8(cmp);
 }

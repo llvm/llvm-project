@@ -14,18 +14,14 @@
 #include <__cstddef/byte.h>
 #include <__memory/allocator.h>
 #include <__ranges/concepts.h>
-#include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#if _LIBCPP_STD_VER >= 23
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-#if _LIBCPP_STD_VER >= 23
 
 namespace ranges {
 
@@ -40,10 +36,8 @@ elements_of(_Range&&, _Allocator = _Allocator()) -> elements_of<_Range&&, _Alloc
 
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
 
-_LIBCPP_POP_MACROS
+#endif // _LIBCPP_STD_VER >= 23
 
 #endif // _LIBCPP___RANGES_ELEMENTS_OF_H

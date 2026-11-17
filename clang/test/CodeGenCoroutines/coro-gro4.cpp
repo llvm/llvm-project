@@ -44,8 +44,8 @@ wrapper fn() { co_return; }
 // CHECK: call void @gro_destroy()
 // CHECK: ret void
 
-// CHECK: define internal fastcc void @_Z2fnv.resume
+// CHECK: define internal void @_Z2fnv.resume
 // CHECK-NOT: call void @gro_destroy()
 
-// CHECK: define internal fastcc void @_Z2fnv.destroy
+// CHECK: define internal void @_Z2fnv.destroy
 // CHECK-NOT: call void @gro_destroy()

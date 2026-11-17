@@ -16,6 +16,8 @@
 #include <memory>
 #include <cassert>
 
+#include "algorithms.h"
+#include "copy_move_types.h"
 #include "test_macros.h"
 #include "../overload_compare_iterator.h"
 
@@ -47,6 +49,23 @@ struct Nasty
 };
 
 int Nasty::counter_ = 0;
+
+TEST_CONSTEXPR_CXX26 bool test() {
+  const int n           = 3;
+  const ConstCopy in[n] = {ConstCopy(1), ConstCopy(2), ConstCopy(3)};
+  std::allocator<ConstCopy> alloc;
+  ConstCopy* out = alloc.allocate(n);
+
+  ConstCopy* result = std::uninitialized_copy_n(in, n, out);
+  assert(result == out + n);
+  for (int i = 0; i != n; ++i)
+    assert(out[i].val == in[i].val);
+
+  util::destroy(out, out + n);
+  alloc.deallocate(out, n);
+
+  return true;
+}
 
 int main(int, char**)
 {
@@ -115,5 +134,10 @@ int main(int, char**)
         }
     }
 
-  return 0;
+    test();
+#if TEST_STD_VER >= 26
+    static_assert(test());
+#endif
+
+    return 0;
 }

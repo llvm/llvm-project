@@ -39,9 +39,8 @@ LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE size_t string_length(const char *src) {
     return cpp::find_first_set(shift_mask<char>(mask, offset));
 
   for (;;) {
-    cpp::simd<char> chars = cpp::load<cpp::simd<char>>(++aligned,
-                                                       /*aligned=*/true);
-    cpp::simd_mask<char> mask = chars == null_byte;
+    chars = cpp::load<cpp::simd<char>>(++aligned, /*aligned=*/true);
+    mask = chars == null_byte;
     if (cpp::any_of(mask))
       return (reinterpret_cast<const char *>(aligned) - src) +
              cpp::find_first_set(mask);
@@ -51,13 +50,17 @@ LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE size_t string_length(const char *src) {
 LIBC_INLINE static void *calculate_find_first_character_return(
     const char *src, cpp::simd_mask<char> c_mask, size_t n_left) {
   size_t c_offset = cpp::find_first_set(c_mask);
-  if (n_left < c_offset)
+  if (n_left <= c_offset)
     return nullptr;
   return const_cast<char *>(src) + c_offset;
 }
 
 LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE static void *
 find_first_character(const unsigned char *s, unsigned char c, size_t n) {
+  // s doesn't have to be dereferenceable if there is nothing to search.
+  if (n == 0)
+    return nullptr;
+
   using Vector = cpp::simd<char>;
   using Mask = cpp::simd_mask<char>;
   Vector c_byte = c;
@@ -78,8 +81,8 @@ find_first_character(const unsigned char *s, unsigned char c, size_t n) {
   for (size_t bytes_checked = sizeof(Vector) - offset; bytes_checked < n;
        bytes_checked += sizeof(Vector)) {
     aligned++;
-    Vector chars = cpp::load<Vector>(aligned, /*aligned=*/true);
-    Mask cmp_v = chars == c_byte;
+    chars = cpp::load<Vector>(aligned, /*aligned=*/true);
+    cmp_v = chars == c_byte;
     if (cpp::any_of(cmp_v))
       return calculate_find_first_character_return(
           reinterpret_cast<const char *>(aligned), cmp_v, n - bytes_checked);

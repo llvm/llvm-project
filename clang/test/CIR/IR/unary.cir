@@ -4,10 +4,11 @@
 !s64i = !cir.int<s, 64>
 !u32i = !cir.int<u, 32>
 !u64i = !cir.int<u, 64>
+!cir_vec = !cir.vector<4 x !cir.float>
 
 module {
   cir.func @test_unary_unsigned() {
-    %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a"] {alignment = 4 : i64}
+    %0 = cir.alloca "a" align(4) : !cir.ptr<!u32i>
     %1 = cir.load %0 : !cir.ptr<!u32i>, !u32i
     %2 = cir.minus %1 : !u32i
     %3 = cir.not %1 : !u32i
@@ -16,7 +17,7 @@ module {
     cir.return
   }
 // CHECK: cir.func{{.*}} @test_unary_unsigned() {
-// CHECK:   %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a"] {alignment = 4 : i64}
+// CHECK:   %0 = cir.alloca "a" align(4) : !cir.ptr<!u32i>
 // CHECK:   %1 = cir.load %0 : !cir.ptr<!u32i>, !u32i
 // CHECK:   %2 = cir.minus %1 : !u32i
 // CHECK:   %3 = cir.not %1 : !u32i
@@ -26,7 +27,7 @@ module {
 // CHECK: }
 
   cir.func @test_unary_signed() {
-    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"] {alignment = 4 : i64}
+    %0 = cir.alloca "a" align(4) : !cir.ptr<!s32i>
     %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
     %2 = cir.minus nsw %1 : !s32i
     %3 = cir.not %1 : !s32i
@@ -35,12 +36,34 @@ module {
     cir.return
   }
 // CHECK: cir.func{{.*}} @test_unary_signed() {
-// CHECK:   %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"] {alignment = 4 : i64}
+// CHECK:   %0 = cir.alloca "a" align(4) : !cir.ptr<!s32i>
 // CHECK:   %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
 // CHECK:   %2 = cir.minus nsw %1 : !s32i
 // CHECK:   %3 = cir.not %1 : !s32i
 // CHECK:   %4 = cir.inc nsw %1 : !s32i
 // CHECK:   %5 = cir.dec nsw %1 : !s32i
+// CHECK:   cir.return
+// CHECK: }
+
+  cir.func @test_unary_fneg() {
+    %0 = cir.alloca "a" align(4) : !cir.ptr<!cir.float>
+    %1 = cir.load %0 : !cir.ptr<!cir.float>, !cir.float
+    %2 = cir.fneg %1 : !cir.float
+    cir.return
+  }
+// CHECK: cir.func{{.*}} @test_unary_fneg() {
+// CHECK:   %0 = cir.alloca "a" align(4) : !cir.ptr<!cir.float>
+// CHECK:   %1 = cir.load %0 : !cir.ptr<!cir.float>, !cir.float
+// CHECK:   %2 = cir.fneg %1 : !cir.float
+// CHECK:   cir.return
+// CHECK: }
+
+  cir.func @test_unary_fneg_vec(%arg0 : !cir_vec) {
+    %0 = cir.fneg %arg0 : !cir_vec
+    cir.return
+  }
+// CHECK: cir.func{{.*}} @test_unary_fneg_vec(%arg0: !cir.vector<4 x !cir.float>) {
+// CHECK:   %0 = cir.fneg %arg0 : !cir.vector<4 x !cir.float>
 // CHECK:   cir.return
 // CHECK: }
 }

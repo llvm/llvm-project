@@ -67,22 +67,29 @@ getDerivedParameter(const ClassTemplateSpecializationDecl *CRTP,
 static std::vector<FixItHint>
 hintMakeCtorPrivate(const CXXConstructorDecl *Ctor,
                     const std::string &OriginalAccess) {
-  std::vector<FixItHint> Hints;
-
-  Hints.emplace_back(FixItHint::CreateInsertion(
-      Ctor->getBeginLoc().getLocWithOffset(-1), "private:\n"));
-
   const ASTContext &ASTCtx = Ctor->getASTContext();
-  const SourceLocation CtorEndLoc =
-      Ctor->isExplicitlyDefaulted()
-          ? utils::lexer::findNextTerminator(Ctor->getEndLoc(),
-                                             ASTCtx.getSourceManager(),
-                                             ASTCtx.getLangOpts())
-          : Ctor->getEndLoc();
-  Hints.emplace_back(FixItHint::CreateInsertion(
-      CtorEndLoc.getLocWithOffset(1), '\n' + OriginalAccess + ':' + '\n'));
+  const SourceManager &SM = ASTCtx.getSourceManager();
+  const LangOptions &LangOpts = ASTCtx.getLangOpts();
 
-  return Hints;
+  // Insert right before the first token and after the last one, mapped out of
+  // macros. Give up if either end is in the middle of a macro expansion.
+  SourceLocation CtorBeginLoc = Ctor->getBeginLoc();
+  if (CtorBeginLoc.isMacroID() &&
+      !Lexer::isAtStartOfMacroExpansion(CtorBeginLoc, SM, LangOpts,
+                                        &CtorBeginLoc))
+    return {};
+
+  const SourceLocation CtorEndLoc = Lexer::getLocForEndOfToken(
+      Ctor->isExplicitlyDefaulted()
+          ? utils::lexer::findNextTerminator(Ctor->getEndLoc(), SM, LangOpts)
+          : Ctor->getEndLoc(),
+      0, SM, LangOpts);
+  if (CtorEndLoc.isInvalid())
+    return {};
+
+  return {FixItHint::CreateInsertion(CtorBeginLoc, "private:\n"),
+          FixItHint::CreateInsertion(CtorEndLoc,
+                                     '\n' + OriginalAccess + ':' + '\n')};
 }
 
 void CrtpConstructorAccessibilityCheck::registerMatchers(MatchFinder *Finder) {
@@ -129,8 +136,8 @@ void CrtpConstructorAccessibilityCheck::check(
         << HintFriend;
   }
 
-  auto WithFriendHintIfNeeded = [&](const DiagnosticBuilder &Diag,
-                                    bool NeedsFriend) {
+  const auto WithFriendHintIfNeeded = [&](const DiagnosticBuilder &Diag,
+                                          bool NeedsFriend) {
     if (NeedsFriend)
       Diag << HintFriend;
   };
@@ -159,15 +166,15 @@ void CrtpConstructorAccessibilityCheck::check(
 
     const bool IsPublic = Ctor->getAccess() == AS_public;
     const std::string Access = IsPublic ? "public" : "protected";
+    const std::vector<FixItHint> CtorHints = hintMakeCtorPrivate(Ctor, Access);
 
     WithFriendHintIfNeeded(
         diag(Ctor->getLocation(),
              "%0 constructor allows the CRTP to be %select{inherited "
              "from|constructed}1 as a regular template class; consider making "
              "it private%select{| and declaring the derived class as friend}2")
-            << Access << IsPublic << NeedsFriend
-            << hintMakeCtorPrivate(Ctor, Access),
-        NeedsFriend);
+            << Access << IsPublic << NeedsFriend << CtorHints,
+        NeedsFriend && !CtorHints.empty());
   }
 }
 

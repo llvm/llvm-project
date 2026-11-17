@@ -6,13 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "StackArrays.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
@@ -74,52 +77,6 @@ enum class AllocationState {
   Allocated,
 };
 
-/// Stores where an alloca should be inserted. If the PointerUnion is an
-/// Operation the alloca should be inserted /after/ the operation. If it is a
-/// block, the alloca can be placed anywhere in that block.
-class InsertionPoint {
-  llvm::PointerUnion<mlir::Operation *, mlir::Block *> location;
-  bool saveRestoreStack;
-
-  /// Get contained pointer type or nullptr
-  template <class T>
-  T *tryGetPtr() const {
-    // Use llvm::dyn_cast_if_present because location may be null here.
-    if (T *ptr = llvm::dyn_cast_if_present<T *>(location))
-      return ptr;
-    return nullptr;
-  }
-
-public:
-  template <class T>
-  InsertionPoint(T *ptr, bool saveRestoreStack = false)
-      : location(ptr), saveRestoreStack{saveRestoreStack} {}
-  InsertionPoint(std::nullptr_t null)
-      : location(null), saveRestoreStack{false} {}
-
-  /// Get contained operation, or nullptr
-  mlir::Operation *tryGetOperation() const {
-    return tryGetPtr<mlir::Operation>();
-  }
-
-  /// Get contained block, or nullptr
-  mlir::Block *tryGetBlock() const { return tryGetPtr<mlir::Block>(); }
-
-  /// Get whether the stack should be saved/restored. If yes, an llvm.stacksave
-  /// intrinsic should be added before the alloca, and an llvm.stackrestore
-  /// intrinsic should be added where the freemem is
-  bool shouldSaveRestoreStack() const { return saveRestoreStack; }
-
-  operator bool() const { return tryGetOperation() || tryGetBlock(); }
-
-  bool operator==(const InsertionPoint &rhs) const {
-    return (location == rhs.location) &&
-           (saveRestoreStack == rhs.saveRestoreStack);
-  }
-
-  bool operator!=(const InsertionPoint &rhs) const { return !(*this == rhs); }
-};
-
 /// Maps SSA values to their AllocationState at a particular program point.
 /// Also caches the insertion points for the new alloca operations
 class LatticePoint : public mlir::dataflow::AbstractDenseLattice {
@@ -172,74 +129,6 @@ protected:
   /// Visit control flow operations and decide whether to call visitOperation
   /// to apply the transfer function
   mlir::LogicalResult processOperation(mlir::Operation *op) override;
-};
-
-/// Drives analysis to find candidate fir.allocmem operations which could be
-/// moved to the stack. Intended to be used with mlir::Pass::getAnalysis
-class StackArraysAnalysisWrapper {
-public:
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(StackArraysAnalysisWrapper)
-
-  // Maps fir.allocmem -> place to insert alloca
-  using AllocMemMap = llvm::DenseMap<mlir::Operation *, InsertionPoint>;
-
-  StackArraysAnalysisWrapper(mlir::Operation *op) {}
-
-  // returns nullptr if analysis failed
-  const AllocMemMap *getCandidateOps(mlir::Operation *func);
-
-private:
-  llvm::DenseMap<mlir::Operation *, AllocMemMap> funcMaps;
-
-  llvm::LogicalResult analyseFunction(mlir::Operation *func);
-};
-
-/// Converts a fir.allocmem to a fir.alloca
-class AllocMemConversion : public mlir::OpRewritePattern<fir::AllocMemOp> {
-public:
-  explicit AllocMemConversion(
-      mlir::MLIRContext *ctx,
-      const StackArraysAnalysisWrapper::AllocMemMap &candidateOps,
-      std::optional<mlir::DataLayout> &dl,
-      std::optional<fir::KindMapping> &kindMap)
-      : OpRewritePattern(ctx), candidateOps{candidateOps}, dl{dl},
-        kindMap{kindMap} {}
-
-  llvm::LogicalResult
-  matchAndRewrite(fir::AllocMemOp allocmem,
-                  mlir::PatternRewriter &rewriter) const override;
-
-  /// Determine where to insert the alloca operation. The returned value should
-  /// be checked to see if it is inside a loop
-  static InsertionPoint
-  findAllocaInsertionPoint(fir::AllocMemOp &oldAlloc,
-                           const llvm::SmallVector<mlir::Operation *> &freeOps);
-
-private:
-  /// Handle to the DFA (already run)
-  const StackArraysAnalysisWrapper::AllocMemMap &candidateOps;
-
-  const std::optional<mlir::DataLayout> &dl;
-  const std::optional<fir::KindMapping> &kindMap;
-
-  /// If we failed to find an insertion point not inside a loop, see if it would
-  /// be safe to use an llvm.stacksave/llvm.stackrestore inside the loop
-  static InsertionPoint findAllocaLoopInsertionPoint(
-      fir::AllocMemOp &oldAlloc,
-      const llvm::SmallVector<mlir::Operation *> &freeOps);
-
-  /// Returns the alloca if it was successfully inserted, otherwise {}
-  std::optional<fir::AllocaOp>
-  insertAlloca(fir::AllocMemOp &oldAlloc,
-               mlir::PatternRewriter &rewriter) const;
-
-  /// Inserts a stacksave before oldAlloc and a stackrestore after each freemem
-  void insertStackSaveRestore(fir::AllocMemOp oldAlloc,
-                              mlir::PatternRewriter &rewriter) const;
-  /// Emit lifetime markers for newAlloc between oldAlloc and each freemem.
-  /// If the allocation is dynamic, no life markers are emitted.
-  void insertLifetimeMarkers(fir::AllocMemOp oldAlloc, fir::AllocaOp newAlloc,
-                             mlir::PatternRewriter &rewriter) const;
 };
 
 class StackArraysPass : public fir::impl::StackArraysBase<StackArraysPass> {
@@ -360,7 +249,15 @@ static mlir::Value lookThroughDeclaresAndConverts(mlir::Value value) {
       value = declareOp.getMemref();
     else if (auto convertOp = llvm::dyn_cast<fir::ConvertOp>(op))
       value = convertOp->getOperand(0);
-    else
+    else if (auto noReassoc = llvm::dyn_cast<fir::NoReassocOp>(op))
+      value = noReassoc.getVal();
+    else if (auto boxAddr = llvm::dyn_cast<fir::BoxAddrOp>(op)) {
+      auto box = lookThroughDeclaresAndConverts(boxAddr.getVal());
+      if (auto embox = box.getDefiningOp<fir::EmboxCharOp>())
+        value = embox.getMemref();
+      else
+        return value;
+    } else
       return value;
   }
   return value;
@@ -386,9 +283,10 @@ mlir::LogicalResult AllocationAnalysis::visitOperation(
     }
 
     auto retTy = allocmem.getAllocatedType();
-    if (!mlir::isa<fir::SequenceType>(retTy)) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "--Allocation is not for an array: skipping\n");
+    if (!fir::isStackArraysCandidateType(retTy)) {
+      LLVM_DEBUG(
+          llvm::dbgs()
+          << "--Allocation is not for an array or character: skipping\n");
       return mlir::success();
     }
 
@@ -462,7 +360,7 @@ mlir::LogicalResult AllocationAnalysis::processOperation(mlir::Operation *op) {
 }
 
 llvm::LogicalResult
-StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
+fir::StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
   assert(mlir::isa<mlir::func::FuncOp>(func));
   size_t nAllocs = 0;
   func->walk([&nAllocs](fir::AllocMemOp) { nAllocs++; });
@@ -528,11 +426,12 @@ StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
   // through the function because otherwise the allocation may have an intende
   // lifetime longer than the current stack frame (e.g. a heap allocation which
   // is then freed by another function).
+  fir::BlockStackScopesMap blockStackScopes;
   for (mlir::Value freedValue : freedValues) {
     fir::AllocMemOp allocmem = freedValue.getDefiningOp<fir::AllocMemOp>();
     InsertionPoint insertionPoint =
         AllocMemConversion::findAllocaInsertionPoint(
-            allocmem, allocToFreeMemMap[allocmem]);
+            allocmem, allocToFreeMemMap[allocmem], blockStackScopes);
     if (insertionPoint)
       candidateOps.insert({allocmem, insertionPoint});
   }
@@ -543,8 +442,8 @@ StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
   return mlir::success();
 }
 
-const StackArraysAnalysisWrapper::AllocMemMap *
-StackArraysAnalysisWrapper::getCandidateOps(mlir::Operation *func) {
+const fir::StackArraysAnalysisWrapper::AllocMemMap *
+fir::StackArraysAnalysisWrapper::getCandidateOps(mlir::Operation *func) {
   if (!funcMaps.contains(func))
     if (mlir::failed(analyseFunction(func)))
       return nullptr;
@@ -575,9 +474,8 @@ static mlir::Value convertAllocationType(mlir::PatternRewriter &rewriter,
   return conv;
 }
 
-llvm::LogicalResult
-AllocMemConversion::matchAndRewrite(fir::AllocMemOp allocmem,
-                                    mlir::PatternRewriter &rewriter) const {
+llvm::LogicalResult fir::AllocMemConversion::matchAndRewrite(
+    fir::AllocMemOp allocmem, mlir::PatternRewriter &rewriter) const {
   auto oldInsertionPt = rewriter.saveInsertionPoint();
   // add alloca operation
   std::optional<fir::AllocaOp> alloca = insertAlloca(allocmem, rewriter);
@@ -606,43 +504,84 @@ AllocMemConversion::matchAndRewrite(fir::AllocMemOp allocmem,
   return mlir::success();
 }
 
-static bool isInLoop(mlir::Block *block) {
-  return mlir::LoopLikeOpInterface::blockIsInLoop(block);
+/// Return true if \p block can reach itself, i.e. it belongs to a control flow
+/// graph loop. This mirrors the control flow graph part of
+/// mlir::LoopLikeOpInterface::blockIsInLoop, which cannot be used here because
+/// it also walks the parent operations (see isInStackGrowingLoop).
+static bool isInCFGLoop(mlir::Block *block) {
+  llvm::DenseSet<mlir::Block *> visited;
+  llvm::SmallVector<mlir::Block *> stack{block};
+  while (!stack.empty()) {
+    mlir::Block *current = stack.pop_back_val();
+    if (!visited.insert(current).second) {
+      if (current == block)
+        return true;
+      continue;
+    }
+    for (mlir::Block *successor : current->getSuccessors())
+      stack.push_back(successor);
+  }
+  return false;
 }
 
-static bool isInLoop(mlir::Operation *op) {
-  return isInLoop(op->getBlock()) ||
-         op->getParentOfType<mlir::LoopLikeOpInterface>();
+/// Return true if a stack allocation placed in \p block would be repeated
+/// without its stack space being given back, making the stack grow. Such an
+/// allocation needs an explicit stack save/restore around it.
+static bool isInStackGrowingLoop(mlir::Block *block) {
+  while (block) {
+    if (isInCFGLoop(block))
+      return true;
+    mlir::Operation *parent = block->getParentOp();
+    if (!parent || mlir::isa<mlir::FunctionOpInterface>(parent))
+      return false;
+    // A loop whose body is an automatic allocation scope (acc.loop for
+    // instance) gives its stack space back at the end of every iteration.
+    if (mlir::isa<mlir::LoopLikeOpInterface>(parent))
+      return !parent->hasTrait<mlir::OpTrait::AutomaticAllocationScope>();
+    block = parent->getBlock();
+  }
+  return false;
 }
 
-InsertionPoint AllocMemConversion::findAllocaInsertionPoint(
+static bool isInStackGrowingLoop(mlir::Operation *op) {
+  return isInStackGrowingLoop(op->getBlock());
+}
+
+fir::InsertionPoint fir::AllocMemConversion::findAllocaInsertionPoint(
     fir::AllocMemOp &oldAlloc,
-    const llvm::SmallVector<mlir::Operation *> &freeOps) {
+    const llvm::SmallVector<mlir::Operation *> &freeOps,
+    fir::BlockStackScopesMap &blockStackScopes) {
   // Ideally the alloca should be inserted at the end of the function entry
   // block so that we do not allocate stack space in a loop. However,
   // the operands to the alloca may not be available that early, so insert it
   // after the last operand becomes available
-  // If the old allocmem op was in an openmp region then it should not be moved
-  // outside of that
+  // It must also stay in the block where the enclosing construct expects its
+  // stack allocations: a construct modelling parallelism (an OpenACC compute
+  // construct or an outlineable OpenMP operation for instance) needs a distinct
+  // allocation for each of its concurrent executions.
   LLVM_DEBUG(llvm::dbgs() << "StackArrays: findAllocaInsertionPoint: "
                           << oldAlloc << "\n");
 
-  // check that an Operation or Block we are about to return is not in a loop
+  // check that an Operation or Block we are about to return does not make the
+  // stack grow
   auto checkReturn = [&](auto *point) -> InsertionPoint {
-    if (isInLoop(point)) {
+    if (isInStackGrowingLoop(point)) {
       mlir::Operation *oldAllocOp = oldAlloc.getOperation();
-      if (isInLoop(oldAllocOp)) {
+      if (isInStackGrowingLoop(oldAllocOp)) {
         // where we want to put it is in a loop, and even the old location is in
         // a loop. Give up.
-        return findAllocaLoopInsertionPoint(oldAlloc, freeOps);
+        return findAllocaLoopInsertionPoint(oldAlloc, freeOps,
+                                            blockStackScopes);
       }
       return {oldAllocOp};
     }
     return {point};
   };
 
-  auto oldOmpRegion =
-      oldAlloc->getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
+  // The earliest block where the alloca may be created, and the region it is
+  // part of, which the allocation cannot leave.
+  mlir::Block *allocaBlock = fir::getAllocaBlock(*oldAlloc->getParentRegion());
+  mlir::Region *allocaRegion = allocaBlock->getParent();
 
   // Find when the last operand value becomes available
   mlir::Block *operandsBlock = nullptr;
@@ -704,66 +643,97 @@ InsertionPoint AllocMemConversion::findAllocaInsertionPoint(
       }
     }
 
-    // check we aren't moving out of an omp region
-    auto lastOpOmpRegion =
-        lastOperand->getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
-    if (lastOpOmpRegion == oldOmpRegion)
+    // Check we aren't moving the allocation out of the region it belongs to.
+    if (allocaRegion->isAncestor(lastOperand->getParentRegion()))
       return checkReturn(lastOperand);
 
-    // Presumably this happened because the operands became ready before the
-    // start of this openmp region. (lastOpOmpRegion != oldOmpRegion) should
-    // imply that oldOmpRegion comes after lastOpOmpRegion.
-    return checkReturn(oldOmpRegion.getAllocaBlock());
+    // The operands became ready before the start of the enclosing construct.
+    LLVM_DEBUG(llvm::dbgs() << "--Last operand is defined outside of the "
+                               "region the allocation belongs to\n");
+    return checkReturn(allocaBlock);
   }
 
   // There were no value operands to the allocmem so we are safe to insert it
   // as early as we want
-
-  // handle openmp case
-  if (oldOmpRegion)
-    return checkReturn(oldOmpRegion.getAllocaBlock());
-
-  // fall back to the function entry block
-  mlir::func::FuncOp func = oldAlloc->getParentOfType<mlir::func::FuncOp>();
-  assert(func && "This analysis is run on func.func");
-  mlir::Block &entryBlock = func.getBlocks().front();
-  LLVM_DEBUG(llvm::dbgs() << "--Placing at the start of func entry block\n");
-  return checkReturn(&entryBlock);
+  LLVM_DEBUG(llvm::dbgs() << "--Placing at the start of the alloca block\n");
+  return checkReturn(allocaBlock);
 }
 
-InsertionPoint AllocMemConversion::findAllocaLoopInsertionPoint(
+/// Find whether a stack scope covering the whole \p block can be added without
+/// reclaiming pre-existing stack storage or interfering with another stack
+/// scope. The stack storage allocated inside an llvm.stacksave/
+/// llvm.stackrestore pair of the block, like the ones lowering emits around
+/// calls with a runtime-sized result, is reclaimed by that pair, assuming that
+/// the pairs are properly nested. These pairs are added to \p pairs when
+/// provided. Nested heap allocations are analyzed independently and either
+/// stay on the heap or receive a safe allocation scope of their own.
+static bool canAddBlockStackScope(
+    mlir::Block &block,
+    llvm::SmallVectorImpl<std::pair<mlir::Operation *, mlir::Operation *>>
+        *pairs = nullptr) {
+  for (auto it = block.begin(), end = block.end(); it != end; ++it) {
+    mlir::Operation *op = &*it;
+    if (mlir::isa<fir::AllocaOp, mlir::LLVM::AllocaOp,
+                  mlir::LLVM::StackRestoreOp>(op))
+      return false;
+    if (mlir::isa<mlir::LLVM::StackSaveOp>(op)) {
+      if (!op->hasOneUse())
+        return false;
+      mlir::Operation *restore = *op->user_begin();
+      if (!mlir::isa<mlir::LLVM::StackRestoreOp>(restore) ||
+          restore->getBlock() != &block)
+        return false;
+      if (pairs)
+        pairs->push_back({op, restore});
+      it = mlir::Block::iterator(restore);
+      continue;
+    }
+    if (op->hasTrait<mlir::OpTrait::AutomaticAllocationScope>())
+      continue;
+    for (mlir::Region &region : op->getRegions())
+      for (mlir::Block &nested : region)
+        if (!canAddBlockStackScope(nested))
+          return false;
+  }
+  return true;
+}
+
+fir::InsertionPoint fir::AllocMemConversion::findAllocaLoopInsertionPoint(
     fir::AllocMemOp &oldAlloc,
-    const llvm::SmallVector<mlir::Operation *> &freeOps) {
-  mlir::Operation *oldAllocOp = oldAlloc;
-  // This is only called as a last resort. We should try to insert at the
-  // location of the old allocation, which is inside of a loop, using
-  // llvm.stacksave/llvm.stackrestore
-
-  assert(freeOps.size() && "DFA should only return freed memory");
-
-  // Don't attempt to reason about a stacksave/stackrestore between different
-  // blocks
+    const llvm::SmallVector<mlir::Operation *> &freeOps,
+    fir::BlockStackScopesMap &blockStackScopes) {
+  mlir::Block *block = oldAlloc->getBlock();
+  assert(!freeOps.empty() && "DFA should only return freed memory");
+  // A single block scope reclaims every promoted allocation together,
+  // regardless of whether the individual lifetimes are nested or crossing. The
+  // stack space used by the block is then the sum of these allocations.
   for (mlir::Operation *free : freeOps)
-    if (free->getBlock() != oldAllocOp->getBlock())
+    if (free->getBlock() != block)
       return {nullptr};
 
-  // Check that there aren't any other stack allocations in between the
-  // stack save and stack restore
-  // note: for flang generated temporaries there should only be one free op
-  for (mlir::Operation *free : freeOps) {
-    for (mlir::Operation *op = oldAlloc; op && op != free;
-         op = op->getNextNode()) {
-      if (mlir::isa<fir::AllocaOp>(op))
-        return {nullptr};
+  auto [it, inserted] = blockStackScopes.try_emplace(block);
+  if (inserted)
+    it->second.canSaveRestore =
+        canAddBlockStackScope(*block, &it->second.pairs);
+  if (!it->second.canSaveRestore)
+    return {nullptr};
+  // An existing stack scope reclaims the allocations made inside it, so an
+  // allocation made inside one must be freed before the scope ends, and does
+  // not need a scope of its own.
+  bool saveRestoreStack = true;
+  for (auto [save, restore] : it->second.pairs)
+    if (save->isBeforeInBlock(oldAlloc) && oldAlloc->isBeforeInBlock(restore)) {
+      for (mlir::Operation *free : freeOps)
+        if (!free->isBeforeInBlock(restore))
+          return {nullptr};
+      saveRestoreStack = false;
     }
-  }
-
-  return InsertionPoint{oldAllocOp, /*shouldStackSaveRestore=*/true};
+  return InsertionPoint{oldAlloc.getOperation(), saveRestoreStack};
 }
 
 std::optional<fir::AllocaOp>
-AllocMemConversion::insertAlloca(fir::AllocMemOp &oldAlloc,
-                                 mlir::PatternRewriter &rewriter) const {
+fir::AllocMemConversion::insertAlloca(fir::AllocMemOp &oldAlloc,
+                                      mlir::PatternRewriter &rewriter) const {
   auto it = candidateOps.find(oldAlloc.getOperation());
   if (it == candidateOps.end())
     return {};
@@ -795,6 +765,9 @@ AllocMemConversion::insertAlloca(fir::AllocMemOp &oldAlloc,
   auto alloca =
       fir::AllocaOp::create(rewriter, loc, varTy, uniqName, bindcName,
                             oldAlloc.getTypeparams(), oldAlloc.getShape());
+  // Keep a requested alignment across the heap-to-stack conversion.
+  if (std::optional<std::int64_t> alignment = oldAlloc.getAlignment())
+    alloca.setAlignment(*alignment);
   if (emitLifetimeMarkers)
     insertLifetimeMarkers(oldAlloc, alloca, rewriter);
 
@@ -804,36 +777,28 @@ AllocMemConversion::insertAlloca(fir::AllocMemOp &oldAlloc,
 static void
 visitFreeMemOp(fir::AllocMemOp oldAlloc,
                const std::function<void(mlir::Operation *)> &callBack) {
-  for (mlir::Operation *user : oldAlloc->getUsers()) {
-    if (auto declareOp = mlir::dyn_cast_if_present<fir::DeclareOp>(user)) {
-      for (mlir::Operation *user : declareOp->getUsers()) {
-        if (mlir::isa<fir::FreeMemOp>(user))
-          callBack(user);
-      }
-    }
-
-    if (mlir::isa<fir::FreeMemOp>(user))
-      callBack(user);
-  }
+  mlir::Operation *parent = oldAlloc->getParentOp();
+  parent->walk([&](fir::FreeMemOp freeOp) {
+    if (lookThroughDeclaresAndConverts(freeOp->getOperand(0)) == oldAlloc)
+      callBack(freeOp);
+  });
 }
 
-void AllocMemConversion::insertStackSaveRestore(
+void fir::AllocMemConversion::insertStackSaveRestore(
     fir::AllocMemOp oldAlloc, mlir::PatternRewriter &rewriter) const {
+  mlir::Block *block = oldAlloc->getBlock();
+  if (!blocksWithStackSaveRestore.insert(block).second)
+    return;
   mlir::OpBuilder::InsertionGuard insertGuard(rewriter);
   auto mod = oldAlloc->getParentOfType<mlir::ModuleOp>();
   fir::FirOpBuilder builder{rewriter, mod};
-
-  builder.setInsertionPoint(oldAlloc);
+  builder.setInsertionPointToStart(block);
   mlir::Value sp = builder.genStackSave(oldAlloc.getLoc());
-
-  auto createStackRestoreCall = [&](mlir::Operation *user) {
-    builder.setInsertionPoint(user);
-    builder.genStackRestore(user->getLoc(), sp);
-  };
-  visitFreeMemOp(oldAlloc, createStackRestoreCall);
+  builder.setInsertionPoint(block->getTerminator());
+  builder.genStackRestore(oldAlloc.getLoc(), sp);
 }
 
-void AllocMemConversion::insertLifetimeMarkers(
+void fir::AllocMemConversion::insertLifetimeMarkers(
     fir::AllocMemOp oldAlloc, fir::AllocaOp newAlloc,
     mlir::PatternRewriter &rewriter) const {
   if (!dl || !kindMap)
@@ -866,22 +831,33 @@ llvm::StringRef StackArraysPass::getDescription() const {
 void StackArraysPass::runOnOperation() {
   mlir::func::FuncOp func = getOperation();
 
-  auto &analysis = getAnalysis<StackArraysAnalysisWrapper>();
-  const StackArraysAnalysisWrapper::AllocMemMap *candidateOps =
+  // This pass only runs under -fstack-arrays, so honor a function that opted
+  // out in its own policy (device code, where the stack is tiny). Functions
+  // without a policy of their own are left to the module setting.
+  if (std::optional<fir::AllocationPolicy> policy =
+          fir::getLocalAllocationPolicy(func))
+    if (!policy->stackArrays)
+      return;
+
+  auto &analysis = getAnalysis<fir::StackArraysAnalysisWrapper>();
+  const fir::StackArraysAnalysisWrapper::AllocMemMap *candidateOps =
       analysis.getCandidateOps(func);
   if (!candidateOps) {
     signalPassFailure();
     return;
   }
 
-  if (candidateOps->empty())
-    return;
-  runCount += candidateOps->size();
-
+  // An offload region runs on the device stack, which is far smaller than the
+  // host one, so its allocations stay on the heap like in a device procedure.
   llvm::SmallVector<mlir::Operation *> opsToConvert;
   opsToConvert.reserve(candidateOps->size());
   for (auto [op, _] : *candidateOps)
-    opsToConvert.push_back(op);
+    if (!fir::isInOffloadRegion(op))
+      opsToConvert.push_back(op);
+
+  if (opsToConvert.empty())
+    return;
+  runCount += opsToConvert.size();
 
   mlir::MLIRContext &context = getContext();
   mlir::RewritePatternSet patterns(&context);
@@ -899,7 +875,8 @@ void StackArraysPass::runOnOperation() {
   if (module)
     kindMap = fir::getKindMapping(module);
 
-  patterns.insert<AllocMemConversion>(&context, *candidateOps, dl, kindMap);
+  patterns.insert<fir::AllocMemConversion>(&context, *candidateOps, dl,
+                                           kindMap);
   if (mlir::failed(mlir::applyOpPatternsGreedily(
           opsToConvert, std::move(patterns), config))) {
     mlir::emitError(func->getLoc(), "error in stack arrays optimization\n");

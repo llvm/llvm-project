@@ -1,4 +1,9 @@
 ; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon -output-asm-variant=1 -show-encoding -print-imm-hex < %s | FileCheck %s
+; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon,+ite -filetype=obj < %s | llvm-objdump -d --mattr=+ite --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-ITE
+; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon,+ite -filetype=obj < %s | llvm-objdump -d --mattr=-ite --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-NO-ITE
+; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon,+brbe -filetype=obj < %s | llvm-objdump -d --mattr=+brbe --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-BRBE
+; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon,+brbe -filetype=obj < %s | llvm-objdump -d --mattr=-brbe --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-NO-BRBE
+; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon -filetype=obj < %s | llvm-objdump -d --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-RME
 
 foo:
 ;-----------------------------------------------------------------------------
@@ -525,6 +530,28 @@ foo:
 ; CHECK: sys #0x4, c8, c7, #0x6, x30
   sys #4, c8, c7, #6, x31
 ; CHECK: tlbi vmalls12e1
+
+  sys #3, c7, c2, #7, x2
+; CHECK-ITE: trcit x2
+; CHECK-NO-ITE: sys #3, c7, c2, #7, x2
+  sys #3, c7, c2, #7
+; CHECK-ITE: trcit xzr
+; CHECK-NO-ITE: sys #3, c7, c2, #7
+
+  sys #1, c7, c2, #4, x30
+; CHECK-BRBE: sys #1, c7, c2, #4, x30
+; CHECK-NO-BRBE: sys #1, c7, c2, #4, x30
+  sys #1, c7, c2, #4
+; CHECK-BRBE: brb iall
+; CHECK-NO-BRBE: sys #1, c7, c2, #4
+  sys #1, c7, c2, #5
+; CHECK-BRBE: brb inj
+; CHECK-NO-BRBE: sys #1, c7, c2, #5
+
+  sys #6, c7, c0, #0, x3
+; CHECK-RME: apas x3
+  sys #6, c7, c0, #0
+; CHECK-RME: apas xzr
 
   ic ialluis
 ; CHECK: ic ialluis                 ; encoding: [0x1f,0x71,0x08,0xd5]

@@ -22,19 +22,10 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
-
-// Command line option to control inlined_at enhancement to lineinfo support.
-// Valid only when debuginfo emissionkind is DebugDirectivesOnly or
-// LineTablesOnly.
-static cl::opt<bool> LineInfoWithInlinedAt(
-    "line-info-inlined-at",
-    cl::desc("Emit line with inlined_at enhancement for NVPTX"), cl::init(true),
-    cl::Hidden);
 
 NVPTXDwarfDebug::NVPTXDwarfDebug(AsmPrinter *A) : DwarfDebug(A) {
   // PTX emits debug strings inline (no .debug_str section), does not support
@@ -55,7 +46,8 @@ MCSymbol *NVPTXDwarfDebug::getOrCreateFuncNameSymbol(StringRef LinkageName) {
 bool NVPTXDwarfDebug::isEnhancedLineinfo(const MachineFunction &MF) const {
   const DISubprogram *SP = MF.getFunction().getSubprogram();
   const NVPTXSubtarget &STI = MF.getSubtarget<NVPTXSubtarget>();
-  return LineInfoWithInlinedAt && (STI.getPTXVersion() >= 72) && SP &&
+  return STI.getCLOpts().line_info_inlined_at &&
+         (STI.hasFeature(NVPTX::PTX72)) && SP &&
          (SP->getUnit()->isDebugDirectivesOnly() ||
           SP->getUnit()->getEmissionKind() == DICompileUnit::LineTablesOnly);
 }
@@ -278,4 +270,19 @@ void NVPTXDwarfDebug::addTargetVariableAttributes(
 
   CU.addUInt(Die, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1,
              TargetAddrSpace.value_or(DefaultAddrSpace));
+}
+
+void NVPTXDwarfDebug::finishTargetUnitAttributes(const DICompileUnit &DIUnit,
+                                                 DwarfCompileUnit &NewCU) {
+  uint16_t Dialect = DIUnit.getSourceLanguage().getDialect();
+  // A zero dialect means "no dialect specified"; nothing to emit. This field
+  // should have already been range-checked by the assembly parser, IR verifier,
+  // and bitcode reader.
+  assert(Dialect <= dwarf::DW_LLVM_LANG_DIALECT_max &&
+         "Invalid or unsupported NVPTX language dialect.");
+  if (Dialect == 0)
+    return;
+
+  NewCU.addUInt(NewCU.getUnitDie(), dwarf::DW_AT_LLVM_language_dialect,
+                dwarf::DW_FORM_data1, Dialect);
 }

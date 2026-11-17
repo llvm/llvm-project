@@ -60,7 +60,7 @@
 # BASEREL-HEADER:      Name: .reloc (2E 72 65 6C 6F 63 00 00)
 # BASEREL-HEADER-NEXT: VirtualSize: 0x20
 # BASEREL-HEADER-NEXT: VirtualAddress: 0x5000
-# BASEREL-HEADER-NEXT: RawDataSize: 512
+# BASEREL-HEADER-NEXT: RawDataSize: 0x200
 # BASEREL-HEADER-NEXT: PointerToRawData: 0xC00
 # BASEREL-HEADER-NEXT: PointerToRelocations: 0x0
 # BASEREL-HEADER-NEXT: PointerToLineNumbers: 0x0

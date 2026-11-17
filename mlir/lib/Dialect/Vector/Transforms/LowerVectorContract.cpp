@@ -71,10 +71,20 @@ static AffineMap adjustMap(AffineMap map, int64_t index,
   return AffineMap::get(map.getNumDims() - 1, 0, results, ctx);
 }
 
-// Helper method to possibly drop a dimension in a load.
-// TODO
-static Value reshapeLoad(Location loc, Value val, VectorType type,
-                         int64_t index, int64_t pos,
+/// Returns `val` with the dimension at position `index` dropped by indexing
+/// that dimension with `pos`.
+///
+/// If `index == -1`, returns `val` unchanged. If `index == 0`, the result is
+/// a single `vector.extract %val[pos]`.
+///
+/// Example (`index == 0`): extract the sub-vector at `pos` along the leading
+/// dimension.
+///   // val : vector<4x8xf32>, pos = 2
+///   %res = vector.extract %val[2] : vector<8xf32> from vector<4x8xf32>
+///
+/// For `index > 0`, recursively applies the same drop to each sub-vector of
+/// the leading dimension and reassembles the result.
+static Value reshapeLoad(Location loc, Value val, int64_t index, int64_t pos,
                          PatternRewriter &rewriter) {
   if (index == -1)
     return val;
@@ -84,23 +94,31 @@ static Value reshapeLoad(Location loc, Value val, VectorType type,
     return vector::ExtractOp::create(rewriter, loc, val, pos);
 
   // Unroll leading dimensions.
-  VectorType vType = VectorType::Builder(type).dropDim(0);
+  VectorType type = cast<VectorType>(val.getType());
   VectorType resType = VectorType::Builder(type).dropDim(index);
   Value result = arith::ConstantOp::create(rewriter, loc, resType,
                                            rewriter.getZeroAttr(resType));
   for (int64_t d = 0, e = resType.getDimSize(0); d < e; d++) {
     Value ext = vector::ExtractOp::create(rewriter, loc, val, d);
-    Value load = reshapeLoad(loc, ext, vType, index - 1, pos, rewriter);
+    Value load = reshapeLoad(loc, ext, index - 1, pos, rewriter);
     result = vector::InsertOp::create(rewriter, loc, load, result, d);
   }
   return result;
 }
 
-// Helper method to possibly drop a dimension in a store.
-// TODO
-static Value reshapeStore(Location loc, Value val, Value result,
-                          VectorType type, int64_t index, int64_t pos,
-                          PatternRewriter &rewriter) {
+/// Inserts `val` into `result` at position `pos` along dimension `index`.
+///
+/// This is the inverse of `reshapeLoad`. If `index == -1`, returns `val`. If
+/// `index == 0`, the result is a single `vector.insert %val, %result [pos]`.
+///
+/// Example (`index == 0`): insert `val` at `pos` along the leading dimension.
+///   // val : vector<4xf32>, acc : vector<2x4xf32>, pos = 1
+///   %res = vector.insert %val, %acc [1] : vector<4xf32> into vector<2x4xf32>
+///
+/// For `index > 0`, recursively applies the same insertion to each sub-vector
+/// of the leading dimension and reassembles the result.
+static Value reshapeStore(Location loc, Value val, Value result, int64_t index,
+                          int64_t pos, PatternRewriter &rewriter) {
   // Unmodified?
   if (index == -1)
     return val;
@@ -109,11 +127,11 @@ static Value reshapeStore(Location loc, Value val, Value result,
     return vector::InsertOp::create(rewriter, loc, val, result, pos);
 
   // Unroll leading dimensions.
-  VectorType vType = VectorType::Builder(type).dropDim(0);
+  VectorType type = cast<VectorType>(result.getType());
   for (int64_t d = 0, e = type.getDimSize(0); d < e; d++) {
     Value ext = vector::ExtractOp::create(rewriter, loc, result, d);
     Value ins = vector::ExtractOp::create(rewriter, loc, val, d);
-    Value sto = reshapeStore(loc, ins, ext, vType, index - 1, pos, rewriter);
+    Value sto = reshapeStore(loc, ins, ext, index - 1, pos, rewriter);
     result = vector::InsertOp::create(rewriter, loc, sto, result, d);
   }
   return result;
@@ -130,7 +148,9 @@ createContractArithOp(Location loc, Value x, Value y, Value acc,
 
   if (isInt) {
     if (kind == CombiningKind::MINNUMF || kind == CombiningKind::MAXNUMF ||
-        kind == CombiningKind::MINIMUMF || kind == CombiningKind::MAXIMUMF)
+        kind == CombiningKind::MINIMUMF || kind == CombiningKind::MAXIMUMF ||
+        kind == CombiningKind::MINIMUMNUMF ||
+        kind == CombiningKind::MAXIMUMNUMF)
       // Only valid for floating point types.
       return std::nullopt;
     mul = arith::MulIOp::create(rewriter, loc, x, y);
@@ -375,7 +395,8 @@ struct UnrolledOuterProductGenerator
     if (vecType)
       promotedType = vecType.clone(promotedType);
     if (isa<FloatType>(dstElementType))
-      return arith::ExtFOp::create(rewriter, loc, promotedType, v);
+      return arith::ExtFOp::create(rewriter, loc, promotedType, v,
+                                   /*fastmath=*/{});
     return arith::ExtSIOp::create(rewriter, loc, promotedType, v);
   }
 
@@ -624,6 +645,13 @@ FailureOr<Value> ContractionOpToDotLowering::matchAndRewriteMaskableOp(
 
   if (vectorContractLowering != vector::VectorContractLowering::Dot)
     return failure();
+
+  // A scalable dst dim can't be unrolled with a static trip count; check
+  // before any IR is created below.
+  if (auto dstType = dyn_cast<VectorType>(op.getResultType());
+      dstType && dstType.isScalable())
+    return rewriter.notifyMatchFailure(
+        op, "cannot unroll a scalable dimension in dot-product lowering");
 
   auto iteratorTypes = op.getIteratorTypes().getValue();
   static constexpr std::array<int64_t, 2> perm = {1, 0};
@@ -894,7 +922,7 @@ FailureOr<Value> ContractionOpLowering::matchAndRewriteMaskableOp(
 
   // TODO: the code below assumes the default contraction, make sure it supports
   // other kinds before enabling this lowering.
-  if (op.getKind() != vector::CombiningKind::ADD) {
+  if (!op.isAddKind()) {
     return rewriter.notifyMatchFailure(
         op, "contractions other than 'add' not supported");
   }
@@ -980,7 +1008,6 @@ FailureOr<Value> ContractionOpLowering::matchAndRewriteMaskableOp(
 }
 
 // Lower one parallel dimension.
-// Incidentally also tolerates unit-size (hence trivial) reduction dimensions.
 // TODO: consider reusing existing contract unrolling
 FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
                                                       vector::ContractionOp op,
@@ -1021,19 +1048,10 @@ FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
       diag << "expected either lhsIndex=" << lhsIndex
            << " or rhsIndex=" << rhsIndex << " to be nonnegative";
     });
-  // value_or(-1) means that we tolerate a dimension not appearing
-  // in the result map. That can't happen for actual parallel iterators, but
-  // the caller ContractionOpLowering::matchAndRewrite is currently calling
-  // lowerParallel also for the case of unit-size reduction dims appearing only
-  // on one of LHS or RHS, not both. At the moment, such cases are created by
-  // CastAwayContractionLeadingOneDim, so we need to either support that or
-  // modify that pattern.
+
   int64_t resIndex = getResultIndex(iMap[2], iterIndex).value_or(-1);
-  if (resIndex == -1 && dimSize != 1)
-    return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
-      diag << "expected the dimension for iterIndex=" << iterIndex
-           << " to either appear in the result map, or to be a unit dimension";
-    });
+  assert(resIndex != -1 && "A dimension missing from the accumulator indexing "
+                           "map is not a parallel dim!");
 
   // Construct new iterator types and affine map array attribute.
   std::array<AffineMap, 3> lowIndexingMaps = {
@@ -1049,21 +1067,20 @@ FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
                                            rewriter.getZeroAttr(resType));
 
   for (int64_t d = 0; d < dimSize; ++d) {
-    auto lhs = reshapeLoad(loc, op.getLhs(), lhsType, lhsIndex, d, rewriter);
-    auto rhs = reshapeLoad(loc, op.getRhs(), rhsType, rhsIndex, d, rewriter);
-    auto acc = reshapeLoad(loc, op.getAcc(), resType, resIndex, d, rewriter);
+    auto lhs = reshapeLoad(loc, op.getLhs(), lhsIndex, d, rewriter);
+    auto rhs = reshapeLoad(loc, op.getRhs(), rhsIndex, d, rewriter);
+    auto acc = reshapeLoad(loc, op.getAcc(), resIndex, d, rewriter);
 
     Value lowMask;
     if (mask)
-      lowMask = reshapeLoad(loc, mask, cast<VectorType>(mask.getType()),
-                            iterIndex, d, rewriter);
+      lowMask = reshapeLoad(loc, mask, iterIndex, d, rewriter);
 
     Operation *lowContract =
         vector::ContractionOp::create(rewriter, loc, lhs, rhs, acc, lowAffine,
                                       lowIter, op.getKind(), op.getFastmath());
     lowContract = maskOperation(rewriter, lowContract, lowMask);
-    result = reshapeStore(loc, lowContract->getResult(0), result, resType,
-                          resIndex, d, rewriter);
+    result = reshapeStore(loc, lowContract->getResult(0), result, resIndex, d,
+                          rewriter);
   }
   return result;
 }
@@ -1075,10 +1092,11 @@ FailureOr<Value> ContractionOpLowering::lowerReduction(
   VectorType lhsType = op.getLhsType();
   VectorType rhsType = op.getRhsType();
   Type resType = op.getResultType();
-  if (isa<VectorType>(resType))
+  auto resVectorType = dyn_cast<VectorType>(resType);
+  if (resVectorType && resVectorType.getRank() != 0)
     return rewriter.notifyMatchFailure(op,
                                        "did not expect a VectorType result");
-  bool isInt = isa<IntegerType>(resType);
+  bool isInt = isa<IntegerType>(getElementTypeOrSelf(resType));
   // Use iterator index 0.
   int64_t iterIndex = 0;
   SmallVector<AffineMap> iMap = op.getIndexingMapsArray();
@@ -1110,12 +1128,19 @@ FailureOr<Value> ContractionOpLowering::lowerReduction(
     auto kind = vector::CombiningKind::ADD;
 
     Value acc = op.getAcc();
+    // vector.reduction takes a scalar accumulator.
+    if (resVectorType)
+      acc = vector::ExtractOp::create(rewriter, loc, acc, ArrayRef<int64_t>{});
     Operation *reductionOp =
         acc ? vector::ReductionOp::create(rewriter, loc, kind, m, acc,
                                           op.getFastmath())
             : vector::ReductionOp::create(rewriter, loc, kind, m,
                                           op.getFastmath());
-    return maskOperation(rewriter, reductionOp, mask)->getResult(0);
+    Value reduced = maskOperation(rewriter, reductionOp, mask)->getResult(0);
+    if (resVectorType)
+      reduced =
+          vector::BroadcastOp::create(rewriter, loc, resVectorType, reduced);
+    return reduced;
   }
   // Construct new iterator types and affine map array attribute.
   std::array<AffineMap, 3> lowIndexingMaps = {
@@ -1131,12 +1156,11 @@ FailureOr<Value> ContractionOpLowering::lowerReduction(
   // the sum of all reductions is computed.
   Value result = op.getAcc();
   for (int64_t d = 0; d < dimSize; ++d) {
-    auto lhs = reshapeLoad(loc, op.getLhs(), lhsType, lhsIndex, d, rewriter);
-    auto rhs = reshapeLoad(loc, op.getRhs(), rhsType, rhsIndex, d, rewriter);
+    auto lhs = reshapeLoad(loc, op.getLhs(), lhsIndex, d, rewriter);
+    auto rhs = reshapeLoad(loc, op.getRhs(), rhsIndex, d, rewriter);
     Value newMask;
     if (mask)
-      newMask = reshapeLoad(loc, mask, cast<VectorType>(mask.getType()),
-                            iterIndex, d, rewriter);
+      newMask = reshapeLoad(loc, mask, iterIndex, d, rewriter);
 
     Operation *newContract = vector::ContractionOp::create(
         rewriter, loc, lhs, rhs, result, lowAffine, lowIter, op.getKind(),

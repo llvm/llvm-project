@@ -18,6 +18,12 @@ addha za0.d, p0/m, p0/m, z0.d
 // CHECK: error: instruction requires: sme-i16i64
 // CHECK-NEXT: addha za0.d, p0/m, p0/m, z0.d
 
+.arch_extension sme-f16f8f16
+.arch_extension nosme-f16f8f16
+fmopab za0.h, { z0.h, z1.h }, z0.b, z20.b
+// CHECK: error: instruction requires: sme-f16f8f16
+// CHECK-NEXT: fmopab za0.h, { z0.h, z1.h }, z0.b, z20.b
+
 .arch armv9-a+sme
 .arch armv9-a+nosme
 zero {za}
@@ -35,3 +41,9 @@ fmopa za0.d, p0/m, p0/m, z0.d, z0.d
 addha za0.d, p0/m, p0/m, z0.d
 // CHECK: error: instruction requires: sme-i16i64
 // CHECK-NEXT: addha za0.d, p0/m, p0/m, z0.d
+
+.arch armv9-a+sme-f16f8f16
+.arch armv9-a+nosme-f16f8f16
+fmopab za0.h, { z0.h, z1.h }, z0.b, z20.b
+// CHECK: error: instruction requires: sme-f16f8f16
+// CHECK-NEXT: fmopab za0.h, { z0.h, z1.h }, z0.b, z20.b

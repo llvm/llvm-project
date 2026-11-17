@@ -1,0 +1,82 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_LLDBSERVERACCELERATORPLUGIN_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_LLDBSERVERACCELERATORPLUGIN_H
+
+#include "lldb/Host/MainLoop.h"
+#include "lldb/Host/common/NativeProcessProtocol.h"
+#include "lldb/Utility/AcceleratorGDBRemotePackets.h"
+#include "llvm/ADT/StringRef.h"
+#include <memory>
+#include <optional>
+
+namespace lldb_private {
+
+namespace process_gdb_remote {
+class GDBRemoteCommunicationServerLLGS;
+} // namespace process_gdb_remote
+
+namespace lldb_server {
+
+class LLDBServerAcceleratorPlugin {
+public:
+  using GDBServer = process_gdb_remote::GDBRemoteCommunicationServerLLGS;
+  using Manager = NativeProcessProtocol::Manager;
+
+  LLDBServerAcceleratorPlugin(GDBServer &native_gdb_server,
+                              MainLoop &native_main_loop);
+  virtual ~LLDBServerAcceleratorPlugin();
+
+  virtual llvm::StringRef GetPluginName() = 0;
+
+  /// Return the LLDB settings needed to debug this accelerator.
+  ///
+  /// The settings select the accelerator dynamic loader and identify this
+  /// server-side plugin. They also determine whether dynamic-loader packets
+  /// are sent over the accelerator or native connection.
+  virtual std::optional<LLDBSettings> GetLLDBSettings() {
+    LLDBSettings settings;
+    settings.dyld_plugin_name = "accelerator-gdb-remote";
+    settings.accelerator_plugin_name = GetPluginName();
+    settings.send_dyld_packet_to_accelerator = true;
+    return settings;
+  }
+
+  virtual std::optional<AcceleratorActions> GetInitializeActions() = 0;
+
+  virtual llvm::Expected<AcceleratorBreakpointHitResponse>
+  BreakpointWasHit(AcceleratorBreakpointHitArgs &args) = 0;
+
+  /// Notify the plugin when the native process exits.
+  virtual void NativeProcessDidExit(const WaitStatus &exit_status) = 0;
+
+  /// Create an AcceleratorActions with an identifier unique within this plugin,
+  /// so identifiers from different actions don't collide.
+  AcceleratorActions GetNewAcceleratorAction() {
+    return AcceleratorActions(GetPluginName(),
+                              ++m_accelerator_action_identifier);
+  }
+
+  virtual std::optional<AcceleratorDynamicLoaderResponse>
+  GetDynamicLoaderLibraryInfos(const AcceleratorDynamicLoaderArgs &args) {
+    return std::nullopt;
+  }
+
+protected:
+  GDBServer &m_native_gdb_server;
+  MainLoop &m_native_main_loop;
+  std::unique_ptr<Manager> m_process_manager_up;
+  std::unique_ptr<GDBServer> m_accelerator_gdb_server;
+  int64_t m_accelerator_action_identifier = 0;
+};
+
+} // namespace lldb_server
+} // namespace lldb_private
+
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_LLDBSERVERACCELERATORPLUGIN_H

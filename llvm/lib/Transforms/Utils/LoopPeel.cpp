@@ -32,6 +32,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -89,7 +90,6 @@ static cl::opt<bool> EnablePeelingForIV(
 
 static const char *PeeledCountMetaData = "llvm.loop.peeled.count";
 
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 } // namespace llvm
 
 // Check whether we are capable of peeling this loop.
@@ -463,7 +463,8 @@ static unsigned peelToTurnInvariantLoadsDereferenceable(Loop &L,
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
         Value *Ptr = LI->getPointerOperand();
         if (DT.dominates(BB, Latch) && L.isLoopInvariant(Ptr) &&
-            !isDereferenceablePointer(Ptr, LI->getType(), DL, LI, AC, &DT))
+            !isDereferenceablePointer(Ptr, LI->getType(),
+                                      SimplifyQuery(DL, &DT, AC, LI)))
           LoadUsers.insert_range(I.users());
       }
     }
@@ -522,7 +523,7 @@ static bool shouldPeelLastIteration(Loop &L, CmpPredicate Pred,
                                    L.getLoopPredecessor()->getTerminator()))
     return false;
 
-  auto Guards = ScalarEvolution::LoopGuards::collect(&L, SE);
+  auto Guards = ScalarEvolution::LoopGuards::collectOnDemand(&L, SE);
   BTC = SE.applyLoopGuards(BTC, Guards);
   RightSCEV = SE.applyLoopGuards(RightSCEV, Guards);
   const SCEV *ValAtLastIter = LeftAR->evaluateAtIteration(BTC, SE);
@@ -594,27 +595,24 @@ countToEliminateCompares(Loop &L, unsigned MaxPeelCount, ScalarEvolution &SE,
     const SCEV *LeftSCEV = SE.getSCEV(LeftVal);
     const SCEV *RightSCEV = SE.getSCEV(RightVal);
 
+    // Check if we have a condition with one AddRec and one non AddRec
+    // expression. Avoid huge SCEV computations in the loop below, make sure we
+    // only consider AddRecs of the loop we are trying to peel.
+    bool Swap = !isa<SCEVAddRecExpr>(LeftSCEV);
+    const auto *LeftAR = dyn_cast<SCEVAddRecExpr>(Swap ? RightSCEV : LeftSCEV);
+    if (!LeftAR || !LeftAR->isAffine() || LeftAR->getLoop() != &L)
+      return;
+
     // Do not consider predicates that are known to be true or false
     // independently of the loop iteration.
     if (SE.evaluatePredicate(Pred, LeftSCEV, RightSCEV))
       return;
 
-    // Check if we have a condition with one AddRec and one non AddRec
-    // expression. Normalize LeftSCEV to be the AddRec.
-    if (!isa<SCEVAddRecExpr>(LeftSCEV)) {
-      if (isa<SCEVAddRecExpr>(RightSCEV)) {
-        std::swap(LeftSCEV, RightSCEV);
-        Pred = ICmpInst::getSwappedPredicate(Pred);
-      } else
-        return;
+    // Normalize LeftSCEV to be the AddRec.
+    if (Swap) {
+      std::swap(LeftSCEV, RightSCEV);
+      Pred = ICmpInst::getSwappedPredicate(Pred);
     }
-
-    const SCEVAddRecExpr *LeftAR = cast<SCEVAddRecExpr>(LeftSCEV);
-
-    // Avoid huge SCEV computations in the loop below, make sure we only
-    // consider AddRecs of the loop we are trying to peel.
-    if (!LeftAR->isAffine() || LeftAR->getLoop() != &L)
-      return;
     if (!(ICmpInst::isEquality(Pred) && LeftAR->hasNoSelfWrap()) &&
         !SE.getMonotonicPredicateType(LeftAR, Pred))
       return;
@@ -655,7 +653,6 @@ countToEliminateCompares(Loop &L, unsigned MaxPeelCount, ScalarEvolution &SE,
     }
 
     DesiredPeelCount = std::max(DesiredPeelCount, NewPeelCount);
-    DesiredPeelCountLast = std::max(DesiredPeelCountLast, NewPeelCount);
   };
 
   auto ComputePeelCountMinMax = [&](MinMaxIntrinsic *MinMax) {
@@ -876,7 +873,9 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
     LLVM_DEBUG(dbgs() << "Profile-based estimated trip count is "
                       << *EstimatedTripCount << "\n");
 
-    if (*EstimatedTripCount + AlreadyPeeled <= MaxPeelCount) {
+    std::optional<unsigned> TotalPeeled =
+        llvm::checkedAddUnsigned(*EstimatedTripCount, AlreadyPeeled);
+    if (TotalPeeled && *TotalPeeled <= MaxPeelCount) {
       unsigned PeelCount = *EstimatedTripCount;
       LLVM_DEBUG(dbgs() << "Peeling first " << PeelCount << " iterations.\n");
       PP.PeelCount = PeelCount;
@@ -1000,7 +999,7 @@ static void cloneLoopBlocks(
     // InsertTop, using the incoming value from the preheader for the original
     // preheader (when skipping the main loop) and the incoming value from the
     // latch for the latch (when continuing from the main loop).
-    IRBuilder<> B(InsertTop, InsertTop->getFirstNonPHIIt());
+    IRBuilder<> B(InsertTop->getFirstNonPHIIt());
     for (BasicBlock::iterator I = Header->begin(); isa<PHINode>(I); ++I) {
       PHINode *NewPHI = cast<PHINode>(VMap[&*I]);
       PHINode *PN = B.CreatePHI(NewPHI->getType(), 2);
@@ -1116,7 +1115,7 @@ void llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
   BasicBlock *PreHeader = L->getLoopPreheader();
   BasicBlock *Latch = L->getLoopLatch();
   SmallVector<std::pair<BasicBlock *, BasicBlock *>, 4> ExitEdges;
-  L->getExitEdges(ExitEdges);
+  LI->getExitEdges(*L, ExitEdges);
 
   // Remember dominators of blocks we might reach through exits to change them
   // later. Immediate dominator of such block might change, because we add more
@@ -1227,8 +1226,7 @@ void llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
       auto *BI = B.CreateCondBr(Cond, NewPreHeader, InsertTop);
       SmallVector<uint32_t> Weights;
       auto *OrigLatchBr = Latch->getTerminator();
-      auto HasBranchWeights = !ProfcheckDisableMetadataFixes &&
-                              extractBranchWeights(*OrigLatchBr, Weights);
+      auto HasBranchWeights = extractBranchWeights(*OrigLatchBr, Weights);
       if (HasBranchWeights) {
         // The probability that the new guard skips the loop to execute just one
         // iteration is the original loop's probability of exiting at the latch

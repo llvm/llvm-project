@@ -160,10 +160,6 @@ void ReserveShadowMemoryRange(uptr beg, uptr end, const char *name,
 void ProtectGap(uptr addr, uptr size, uptr zero_base_shadow_start,
                 uptr zero_base_max_shadow_start);
 
-// Find an available address space.
-uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
-                              uptr *largest_gap_found, uptr *max_occupied_addr);
-
 // Used to check if we can map shadow memory to a fixed location.
 bool MemoryRangeIsAvailable(uptr range_start, uptr range_end);
 // Releases memory pages entirely within the [beg, end) address range. Noop if
@@ -387,8 +383,8 @@ void ReportDeadlySignal(const SignalContext &sig, u32 tid,
                         const void *unwind_context);
 
 // Alternative signal stack (POSIX-only).
-void SetAlternateSignalStack();
-void UnsetAlternateSignalStack();
+void* SetAlternateSignalStack();
+void UnsetAlternateSignalStack(void* altstack_base);
 
 bool IsSignalHandlerFromSanitizer(int signum);
 bool SetSignalHandlerFromSanitizer(int signum, bool new_state);
@@ -1092,7 +1088,9 @@ struct StackDepotStats {
 // indicate that sanitizer allocator should not attempt to release memory to OS.
 const s32 kReleaseToOSIntervalNever = -1;
 
-void CheckNoDeepBind(const char *filename, int flag);
+// Platform hook invoked before dlopen. Performs platform-specific dlopen flag
+// checks (e.g. RTLD_DEEPBIND on Linux).
+void OnDlOpen(const char* filename, int flag);
 
 // Returns the requested amount of random data (up to 256 bytes) that can then
 // be used to seed a PRNG. Defaults to blocking like the underlying syscall.

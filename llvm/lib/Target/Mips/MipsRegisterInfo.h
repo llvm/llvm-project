@@ -22,7 +22,8 @@
 
 namespace llvm {
 
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 
 class MipsRegisterInfo : public MipsGenRegisterInfo {
 private:
@@ -35,7 +36,6 @@ public:
   static unsigned getPICCallReg();
 
   /// Code Generation virtual methods...
-  const TargetRegisterClass *getPointerRegClass(unsigned Kind) const override;
 
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;

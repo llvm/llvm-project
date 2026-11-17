@@ -9,6 +9,7 @@
 #include "src/time/localtime.h"
 #include "hdr/types/struct_tm.h"
 #include "hdr/types/time_t.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/null_check.h"
 #include "src/time/time_utils.h"
 
@@ -18,7 +19,12 @@ LLVM_LIBC_FUNCTION(struct tm *, localtime, (const time_t *timer)) {
   LIBC_CRASH_ON_NULLPTR(timer);
 
   static struct tm tm_out;
-  return time_utils::localtime_internal(timer, &tm_out);
+  auto res = time_utils::localtime_internal(timer, &tm_out);
+  if (!res) {
+    libc_errno = res.error();
+    return nullptr;
+  }
+  return res.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

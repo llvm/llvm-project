@@ -16,6 +16,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
+#include "llvm/ADT/SmallVector.h"
 #include <optional>
 
 namespace clang {
@@ -161,6 +162,59 @@ public:
   param_const_iterator param_end() const { return parameters().end(); }
   size_t param_size() const { return parameters().size(); }
   bool param_empty() const { return parameters().empty(); }
+
+  /// \returns actual arguments for expression-backed calls, or an empty list
+  /// for declaration-backed calls and call kinds with implicit or synthesized
+  /// argument lists, such as allocators and destructors. For instance member
+  /// calls, the implicit object argument is included as argument 0. For static
+  /// member operator calls, the object expression is omitted.
+  llvm::SmallVector<const Expr *, 4> arguments() const {
+    if (!E)
+      return {};
+
+    switch (K) {
+    case Function: {
+      llvm::SmallVector<const Expr *, 4> Args;
+      const auto *CE = cast<CallExpr>(E);
+      if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(CE))
+        Args.push_back(MCE->getImplicitObjectArgument());
+      Args.append(CE->arg_begin(), CE->arg_end());
+
+      // A static member operator (`operator()` or `operator[]`) is called with
+      // the object expression as argument 0; drop it so arguments match
+      // parameters.
+      if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(D);
+          isa<CXXOperatorCallExpr>(CE) && MD && MD->isStatic())
+        Args.erase(Args.begin());
+      return Args;
+    }
+    case Block: {
+      const auto *CE = cast<CallExpr>(E);
+      return {CE->arg_begin(), CE->arg_end()};
+    }
+    case ObjCMethod: {
+      const auto *ME = cast<ObjCMessageExpr>(E);
+      return {ME->arg_begin(), ME->arg_end()};
+    }
+    case Constructor: {
+      const auto *CE = cast<CXXConstructExpr>(E);
+      return {CE->arg_begin(), CE->arg_end()};
+    }
+    case Destructor:
+    case InheritedConstructor:
+    case Allocator:
+    case Deallocator:
+      return {};
+    }
+    llvm_unreachable("Unknown AnyCall::Kind");
+  }
+
+  // These methods materialize the normalized argument list on each call, which
+  // can be expensive if used repeatedly. Prefer caching `arguments()` locally
+  // when accessing multiple arguments.
+  size_t arg_size() const { return arguments().size(); }
+  bool arg_empty() const { return arguments().empty(); }
+  const Expr *getArg(unsigned I) const { return arguments()[I]; }
 
   QualType getReturnType(ASTContext &Ctx) const {
     switch (K) {

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// The seed-collection pass of the bottom-up vectorizer.
+// The seed-collection pass of the bundle vectorizer.
 //
 
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_PASSES_SEEDCOLLECTION_H
@@ -21,15 +21,16 @@ namespace llvm::sandboxir {
 /// like stores to consecutive memory addresses. It then goes over the collected
 /// seeds, slicing them into appropriately sized chunks, creating a Region with
 /// the seed slice as the Auxiliary vector and runs the region pass pipeline.
-class SeedCollection final : public FunctionPass {
+class LLVM_ABI SeedCollection final : public FunctionPass {
 
   /// The PM containing the pipeline of region passes.
   RegionPassManager RPM;
   /// The auxiliary argument passed to the pass that tells us that we should
   /// collect seeds of different types.
-  static constexpr StringRef DiffTypesArgStr = "enable-diff-types";
-  /// Collect seeds of different types.
-  bool AllowDiffTypes = false;
+  AuxPassArgsRegistry ArgsRegistry;
+  AuxPassArg AllowDiffTypes = ArgsRegistry.createArg("enable-diff-types");
+  AuxPassArg CollectLoads = ArgsRegistry.createArg("loads");
+  AuxPassArg CollectStores = ArgsRegistry.createArg("stores");
 
 public:
   SeedCollection(StringRef Pipeline, StringRef AuxArg);

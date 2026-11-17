@@ -25,6 +25,7 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 
 #include "test_allocator.h"
 #include "test_macros.h"

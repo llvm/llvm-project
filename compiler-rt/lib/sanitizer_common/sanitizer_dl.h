@@ -21,6 +21,14 @@ namespace __sanitizer {
 // - the main program itself, that contains the sanitizer.
 const char* DladdrSelfFName(void);
 
+// Returns the base address of the ELF header, taking custom base offsets
+// into account.
+char* DladdrElfHeaderBase(void* ld, char* addr);
+
+// Clears any pending dlerror() message on the current thread so that glibc
+// frees its per-thread error buffer before the thread is unregistered.
+void ClearDlerror();
+
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_DL_H

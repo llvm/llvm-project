@@ -8,6 +8,7 @@
 
 #include "hdr/sys_socket_macros.h"
 #include "hdr/types/ssize_t.h"
+#include "src/__support/CPP/scope.h"
 #include "src/sys/socket/shutdown.h"
 #include "src/sys/socket/socketpair.h"
 #include "src/unistd/close.h"
@@ -20,11 +21,16 @@
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcShutdownTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+using LIBC_NAMESPACE::cpp::scope_exit;
 
 TEST_F(LlvmLibcShutdownTest, ShutWrProducesEOF) {
   int sv[2];
   ASSERT_THAT(LIBC_NAMESPACE::socketpair(AF_UNIX, SOCK_STREAM, 0, sv),
               Succeeds(0));
+  scope_exit close_sv([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::close(sv[0]), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::close(sv[1]), Succeeds(0));
+  });
 
   // Shut down write on sv[0].
   ASSERT_THAT(LIBC_NAMESPACE::shutdown(sv[0], SHUT_WR), Succeeds(0));
@@ -33,15 +39,16 @@ TEST_F(LlvmLibcShutdownTest, ShutWrProducesEOF) {
   char read_buf[10];
   ASSERT_THAT(LIBC_NAMESPACE::read(sv[1], read_buf, sizeof(read_buf)),
               Succeeds<ssize_t>(0));
-
-  ASSERT_THAT(LIBC_NAMESPACE::close(sv[0]), Succeeds(0));
-  ASSERT_THAT(LIBC_NAMESPACE::close(sv[1]), Succeeds(0));
 }
 
 TEST_F(LlvmLibcShutdownTest, ShutRdPreventsReading) {
   int sv[2];
   ASSERT_THAT(LIBC_NAMESPACE::socketpair(AF_UNIX, SOCK_STREAM, 0, sv),
               Succeeds(0));
+  scope_exit close_sv([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::close(sv[0]), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::close(sv[1]), Succeeds(0));
+  });
 
   // Shut down read on sv[0].
   ASSERT_THAT(LIBC_NAMESPACE::shutdown(sv[0], SHUT_RD), Succeeds(0));
@@ -50,15 +57,16 @@ TEST_F(LlvmLibcShutdownTest, ShutRdPreventsReading) {
   char read_buf[10];
   ASSERT_THAT(LIBC_NAMESPACE::read(sv[0], read_buf, sizeof(read_buf)),
               Succeeds<ssize_t>(0));
-
-  ASSERT_THAT(LIBC_NAMESPACE::close(sv[0]), Succeeds(0));
-  ASSERT_THAT(LIBC_NAMESPACE::close(sv[1]), Succeeds(0));
 }
 
 TEST_F(LlvmLibcShutdownTest, ShutRdWrDoesBoth) {
   int sv[2];
   ASSERT_THAT(LIBC_NAMESPACE::socketpair(AF_UNIX, SOCK_STREAM, 0, sv),
               Succeeds(0));
+  scope_exit close_sv([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::close(sv[0]), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::close(sv[1]), Succeeds(0));
+  });
 
   // Shut down read and write on sv[0].
   ASSERT_THAT(LIBC_NAMESPACE::shutdown(sv[0], SHUT_RDWR), Succeeds(0));
@@ -69,9 +77,6 @@ TEST_F(LlvmLibcShutdownTest, ShutRdWrDoesBoth) {
               Succeeds<ssize_t>(0));
   ASSERT_THAT(LIBC_NAMESPACE::read(sv[1], read_buf, sizeof(read_buf)),
               Succeeds<ssize_t>(0));
-
-  ASSERT_THAT(LIBC_NAMESPACE::close(sv[0]), Succeeds(0));
-  ASSERT_THAT(LIBC_NAMESPACE::close(sv[1]), Succeeds(0));
 }
 
 TEST_F(LlvmLibcShutdownTest, FailsOnInvalidSocket) {

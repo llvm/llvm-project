@@ -46,8 +46,8 @@ define <vscale x 2 x i8> @intrinsic_sf_vfnrclip_x_f_qf_nxv2i8_nxv2f32(<vscale x 
 ; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    sf.vfnrclip.x.f.qf v9, v8, fa0
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i8> @llvm.riscv.sf.vfnrclip.x.f.qf.nxv2i8.nxv2f32.iXLen(
@@ -84,8 +84,8 @@ define <vscale x 4 x i8> @intrinsic_sf_vfnrclip_x_f_qf_nxv4i8_nxv4f32(<vscale x 
 ; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    sf.vfnrclip.x.f.qf v10, v8, fa0
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i8> @llvm.riscv.sf.vfnrclip.x.f.qf.nxv4i8.nxv4f32.iXLen(
@@ -122,8 +122,8 @@ define <vscale x 8 x i8> @intrinsic_sf_vfnrclip_x_f_qf_nxv8i8_nxv8f32(<vscale x 
 ; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; CHECK-NEXT:    sf.vfnrclip.x.f.qf v12, v8, fa0
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.sf.vfnrclip.x.f.qf.nxv8i8.nxv8f32.iXLen(
@@ -160,8 +160,8 @@ define <vscale x 16 x i8> @intrinsic_sf_vfnrclip_x_f_qf_nxv16i8_nxv16f32(<vscale
 ; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; CHECK-NEXT:    sf.vfnrclip.x.f.qf v16, v8, fa0
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    vmv.v.v v8, v16
+; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i8> @llvm.riscv.sf.vfnrclip.x.f.qf.nxv16i8.nxv16f32.iXLen(

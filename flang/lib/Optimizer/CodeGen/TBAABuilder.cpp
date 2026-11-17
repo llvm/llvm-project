@@ -12,7 +12,6 @@
 
 #include "flang/Optimizer/CodeGen/TBAABuilder.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <mlir/Dialect/LLVMIR/LLVMAttrs.h>
@@ -41,7 +40,7 @@ static llvm::cl::opt<bool> perFunctionTBAATrees(
 // the number of TBAA access tag attributes attached to operations.
 // It is set to kTagAttachmentUnlimited by default denoting "no limit".
 static constexpr unsigned kTagAttachmentUnlimited =
-    std::numeric_limits<unsigned>::max();
+    Fortran::common::numeric_limits<unsigned>::max();
 static llvm::cl::opt<unsigned>
     tagAttachmentLimit("tbaa-attach-tag-max", llvm::cl::desc(""),
                        llvm::cl::init(kTagAttachmentUnlimited));

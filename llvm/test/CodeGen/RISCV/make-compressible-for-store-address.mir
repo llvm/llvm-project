@@ -14,13 +14,12 @@
     ret void
   }
 
-  attributes #0 = { minsize }
+  attributes #0 = { optsize }
 
 ...
 ---
 name:            foo
 alignment:       2
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10' }
 body:             |

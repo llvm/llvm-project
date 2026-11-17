@@ -45,6 +45,8 @@ static constexpr TosaLevel TOSA_LEVEL_EIGHTK = {6,  8192, 8192, 256,
 static constexpr TosaLevel TOSA_LEVEL_NONE = {32, 2147483647, 2147483647, 2048,
                                               63, 256,        256,        64};
 
+TosaLevel getTosaLevelFromEnum(const Level level);
+
 TargetEnvAttr lookupTargetEnv(Operation *op);
 TargetEnvAttr getDefaultTargetEnv(MLIRContext *context);
 
@@ -131,14 +133,7 @@ public:
     return specificationVersion;
   }
 
-  TosaLevel getLevel() const {
-    if (level == Level::eightK)
-      return TOSA_LEVEL_EIGHTK;
-    else if (level == Level::none)
-      return TOSA_LEVEL_NONE;
-    else
-      llvm_unreachable("Unknown TOSA level");
-  };
+  TosaLevel getLevel() const { return level; };
 
   // Returns true if the given profile is allowed.
   bool allows(Profile prof) const { return enabledProfiles.count(prof) != 0; }
@@ -168,13 +163,14 @@ private:
   explicit TargetEnv(SpecificationVersion specificationVersion, Level level,
                      const ArrayRef<Profile> &profiles,
                      const ArrayRef<Extension> &extensions)
-      : specificationVersion(specificationVersion), level(level) {
+      : specificationVersion(specificationVersion),
+        level(getTosaLevelFromEnum(level)) {
     enabledProfiles.insert_range(profiles);
     enabledExtensions.insert_range(extensions);
   }
 
   TosaSpecificationVersion specificationVersion;
-  Level level;
+  TosaLevel level;
   llvm::SmallSet<Profile, 3> enabledProfiles;
   llvm::SmallSet<Extension, 13> enabledExtensions;
 };

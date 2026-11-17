@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -24,8 +25,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/type_traits.h"
 #include <utility>
 
 using namespace llvm;
@@ -109,6 +108,54 @@ public:
     return tmp;
   }
 };
+
+/// Returns the attributes of \p A that \p B does not have with the same value.
+static std::string getAttributesNotIn(AttributeSet A, AttributeSet B) {
+  SmallVector<std::string, 4> Result;
+  for (Attribute Attr : A) {
+    Attribute Other = Attr.isStringAttribute()
+                          ? B.getAttribute(Attr.getKindAsString())
+                          : B.getAttribute(Attr.getKindAsEnum());
+    if (Attr != Other)
+      Result.push_back(Attr.getAsString());
+  }
+  return join(Result, ", ");
+}
+
+/// Compares the function, return and parameter attributes of \p L and \p R.
+/// Logs the attributes that are on only one side if \p Complain is set.
+/// Returns true if they differ.
+static bool diffAttributes(DifferenceEngine &Engine, StringRef Prefix,
+                           AttributeList L, AttributeList R, unsigned NumParams,
+                           bool Complain) {
+  bool Differ = false;
+  auto DiffSlot = [&](const Twine &Slot, AttributeSet LS, AttributeSet RS) {
+    if (LS == RS)
+      return;
+    Differ = true;
+    if (!Complain)
+      return;
+    Engine.log((Prefix + Slot + " attributes differ:").str());
+    std::string LeftOnly = getAttributesNotIn(LS, RS);
+    std::string RightOnly = getAttributesNotIn(RS, LS);
+    if (!LeftOnly.empty())
+      Engine.log("  < " + LeftOnly);
+    if (!RightOnly.empty())
+      Engine.log("  > " + RightOnly);
+  };
+  DiffSlot("function", L.getFnAttrs(), R.getFnAttrs());
+  DiffSlot("return", L.getRetAttrs(), R.getRetAttrs());
+  for (unsigned I = 0; I != NumParams; ++I)
+    DiffSlot("parameter " + Twine(I), L.getParamAttrs(I), R.getParamAttrs(I));
+  return Differ;
+}
+
+/// Returns true if \p L and \p R, which have the same opcode, have different
+/// poison-generating flags.
+static bool hasDifferentFlags(const Instruction *L, const Instruction *R) {
+  return L->getRawSubclassOptionalData() != R->getRawSubclassOptionalData() ||
+         L->getFastMathFlagsOrNone() != R->getFastMathFlagsOrNone();
+}
 
 /// A function-scope difference engine.
 class FunctionDifferenceEngine {
@@ -339,11 +386,9 @@ class FunctionDifferenceEngine {
   void runBlockDiff(BasicBlock::const_iterator LI,
                     BasicBlock::const_iterator RI);
 
-  bool diffCallSites(const CallBase &L, const CallBase &R, bool Complain) {
-    // FIXME: call attributes
-    AssumptionContext AC = {L.getParent(), R.getParent()};
-    if (!equivalentAsOperands(L.getCalledOperand(), R.getCalledOperand(),
-                              &AC)) {
+  bool diffCallSites(const CallBase &L, const CallBase &R, bool Complain,
+                     const AssumptionContext *AC) {
+    if (!equivalentAsOperands(L.getCalledOperand(), R.getCalledOperand(), AC)) {
       if (Complain) Engine.log("called functions differ");
       return true;
     }
@@ -352,13 +397,18 @@ class FunctionDifferenceEngine {
       return true;
     }
     for (unsigned I = 0, E = L.arg_size(); I != E; ++I)
-      if (!equivalentAsOperands(L.getArgOperand(I), R.getArgOperand(I), &AC)) {
+      if (!equivalentAsOperands(L.getArgOperand(I), R.getArgOperand(I), AC)) {
         if (Complain)
           Engine.logf("arguments %l and %r differ")
               << L.getArgOperand(I) << R.getArgOperand(I);
         return true;
       }
-    return false;
+    bool Differ = L.getCallingConv() != R.getCallingConv();
+    if (Differ && Complain)
+      Engine.log("calling conventions differ");
+    Differ |= diffAttributes(Engine, "call ", L.getAttributes(),
+                             R.getAttributes(), L.arg_size(), Complain);
+    return Differ;
   }
 
   // If AllowAssumptions is enabled, whenever we encounter a pair of values
@@ -377,6 +427,12 @@ class FunctionDifferenceEngine {
       return true;
     }
 
+    if (hasDifferentFlags(L, R)) {
+      if (Complain)
+        Engine.log("different instruction flags");
+      return true;
+    }
+
     if (isa<CmpInst>(L)) {
       if (cast<CmpInst>(L)->getPredicate()
             != cast<CmpInst>(R)->getPredicate()) {
@@ -384,7 +440,8 @@ class FunctionDifferenceEngine {
         return true;
       }
     } else if (isa<CallInst>(L)) {
-      return diffCallSites(cast<CallInst>(*L), cast<CallInst>(*R), Complain);
+      return diffCallSites(cast<CallInst>(*L), cast<CallInst>(*R), Complain,
+                           AC);
     } else if (isa<PHINode>(L)) {
       const PHINode &LI = cast<PHINode>(*L);
       const PHINode &RI = cast<PHINode>(*R);
@@ -421,7 +478,7 @@ class FunctionDifferenceEngine {
     } else if (isa<InvokeInst>(L)) {
       const InvokeInst &LI = cast<InvokeInst>(*L);
       const InvokeInst &RI = cast<InvokeInst>(*R);
-      if (diffCallSites(LI, RI, Complain))
+      if (diffCallSites(LI, RI, Complain, AC))
         return true;
 
       if (TryUnify) {
@@ -444,7 +501,7 @@ class FunctionDifferenceEngine {
       for (unsigned I = 0; I < LI.getNumIndirectDests(); I++)
         tryUnify(LI.getIndirectDest(I), RI.getIndirectDest(I));
 
-      if (diffCallSites(LI, RI, Complain))
+      if (diffCallSites(LI, RI, Complain, AC))
         return true;
 
       if (TryUnify)
@@ -946,9 +1003,11 @@ void DifferenceEngine::diff(const Function *L, const Function *R) {
   Context C(*this, L, R);
 
   // FIXME: types
-  // FIXME: attributes and CC
-  // FIXME: parameter attributes
-  
+  if (L->getCallingConv() != R->getCallingConv())
+    log("different calling conventions");
+  diffAttributes(*this, "", L->getAttributes(), R->getAttributes(),
+                 std::max(L->arg_size(), R->arg_size()), /*Complain=*/true);
+
   // If both are declarations, we're done.
   if (L->empty() && R->empty())
     return;

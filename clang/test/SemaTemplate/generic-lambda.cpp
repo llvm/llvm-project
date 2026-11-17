@@ -27,7 +27,6 @@ template <class T1> X<X<X<T1>>> t1() {
 };
 template X<X<X<int>>> t1<int>();
 
-#if 0 // FIXME: crashes
 template<class T1> auto t2() {
   return []<class T2>(T2) {
     struct S {
@@ -59,7 +58,6 @@ template<class T1> C1<X<X<T1>>> auto t3() {
 };
 template C1<X<X<int>>> auto t3<int>();
 static_assert(is_same<decltype(t3<int>()), X<X<X<int>>>>);
-#endif
 
 namespace GH95735 {
 
@@ -83,3 +81,10 @@ int foo(auto... fn) {
 int v = foo(42);
 
 } // namespace GH95735
+
+namespace ExpectionSpec1 {
+  template <class> void f() {
+    [](auto...) noexcept(false) {}();
+  }
+  template void f<int>();
+} // namespace ExceptionSpec1

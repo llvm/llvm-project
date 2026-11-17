@@ -7,7 +7,7 @@
 
 define ppc_fp128 @nanl_empty() {
 ; CHECK-LABEL: define ppc_fp128 @nanl_empty() {
-; CHECK-NEXT:    ret ppc_fp128 0xM7FF80000000000000000000000000000
+; CHECK-NEXT:    ret ppc_fp128 +qnan
 ;
   %res = call ppc_fp128 @nanl(ptr @empty)
   ret ppc_fp128 %res
@@ -15,7 +15,7 @@ define ppc_fp128 @nanl_empty() {
 
 define ppc_fp128 @nanl_dec() {
 ; CHECK-LABEL: define ppc_fp128 @nanl_dec() {
-; CHECK-NEXT:    ret ppc_fp128 0xM7FF80000000000010000000000000000
+; CHECK-NEXT:    ret ppc_fp128 +nan(0x1)
 ;
   %res = call ppc_fp128 @nanl(ptr @dec)
   ret ppc_fp128 %res
@@ -23,7 +23,7 @@ define ppc_fp128 @nanl_dec() {
 
 define ppc_fp128 @nanl_hex() {
 ; CHECK-LABEL: define ppc_fp128 @nanl_hex() {
-; CHECK-NEXT:    ret ppc_fp128 0xM7FF800000000000F0000000000000000
+; CHECK-NEXT:    ret ppc_fp128 +nan(0xF)
 ;
   %res = call ppc_fp128 @nanl(ptr @hex)
   ret ppc_fp128 %res

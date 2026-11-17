@@ -69,13 +69,6 @@ public:
     track();
   }
 
-  /// Check whether this has a trivial destructor.
-  ///
-  /// If \c MD isn't replaceable, the destructor will be a no-op.
-  bool hasTrivialDestructor() const {
-    return !MD || !MetadataTracking::isReplaceable(*MD);
-  }
-
   bool operator==(const TrackingMDRef &X) const { return MD == X.MD; }
   bool operator!=(const TrackingMDRef &X) const { return MD != X.MD; }
 
@@ -130,9 +123,6 @@ public:
 
   void reset() { Ref.reset(); }
   void reset(T *MD) { Ref.reset(static_cast<Metadata *>(MD)); }
-
-  /// Check whether this has a trivial destructor.
-  bool hasTrivialDestructor() const { return Ref.hasTrivialDestructor(); }
 };
 
 using TrackingMDNodeRef = TypedTrackingMDRef<MDNode>;

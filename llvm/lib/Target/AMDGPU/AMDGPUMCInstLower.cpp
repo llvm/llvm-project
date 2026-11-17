@@ -13,9 +13,7 @@
 //
 
 #include "AMDGPUMCInstLower.h"
-#include "AMDGPU.h"
 #include "AMDGPUAsmPrinter.h"
-#include "AMDGPUMachineFunctionInfo.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -31,6 +29,8 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Support/AMDGPUAsyncStages.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
@@ -103,7 +103,16 @@ bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
   }
   case MachineOperand::MO_ExternalSymbol: {
     MCSymbol *Sym = Ctx.getOrCreateSymbol(StringRef(MO.getSymbolName()));
-    const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
+    const MCExpr *Expr =
+        MCSymbolRefExpr::create(Sym, getSpecifier(MO.getTargetFlags()), Ctx);
+    MCOp = MCOperand::createExpr(Expr);
+    return true;
+  }
+  case MachineOperand::MO_BlockAddress: {
+    MCSymbol *Sym = AP.GetBlockAddressSymbol(MO.getBlockAddress());
+    const MCSymbolRefExpr *Expr =
+        MCSymbolRefExpr::create(Sym, getSpecifier(MO.getTargetFlags()), Ctx);
+    assert(MO.getOffset() == 0);
     MCOp = MCOperand::createExpr(Expr);
     return true;
   }
@@ -277,7 +286,8 @@ const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV,
   // Intercept LDS variables with known addresses
   if (const GlobalVariable *GV = dyn_cast<const GlobalVariable>(CV)) {
     if (std::optional<uint32_t> Address =
-            AMDGPUMachineFunctionInfo::getLDSAbsoluteAddress(*GV)) {
+            AMDGPUMachineFunctionInfo::get32BitAbsoluteAddress(
+                *GV, AMDGPUAS::LOCAL_ADDRESS)) {
       auto *IntTy = Type::getInt32Ty(CV->getContext());
       return AsmPrinter::lowerConstant(ConstantInt::get(IntTy, *Address),
                                        BaseCV, Offset);
@@ -320,6 +330,9 @@ static void emitVGPRBlockComment(const MachineInstr *MI, const SIInstrInfo *TII,
 }
 
 void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  if (MI->isCall())
+    collectCallEdge(*MI);
+
   // FIXME: Enable feature predicate checks once all the test pass.
   // AMDGPU_MC::verifyInstructionPredicates(MI->getOpcode(),
   //                                        getSubtargetInfo().getFeatureBits());
@@ -363,15 +376,25 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
 
     if (MI->getOpcode() == AMDGPU::ASYNCMARK) {
-      if (isVerbose())
-        OutStreamer->emitRawComment(" asyncmark");
+      if (isVerbose()) {
+        std::string Comment;
+        raw_string_ostream OS(Comment);
+        OS << " asyncmark(stages="
+           << AMDGPU::asyncStagesFromMaskOperand(MI->getOperand(0).getImm())
+           << ')';
+        OutStreamer->emitRawComment(Comment);
+      }
       return;
     }
 
     if (MI->getOpcode() == AMDGPU::WAIT_ASYNCMARK) {
       if (isVerbose()) {
-        OutStreamer->emitRawComment(" wait_asyncmark(" +
-                                    Twine(MI->getOperand(0).getImm()) + ")");
+        std::string Comment;
+        raw_string_ostream OS(Comment);
+        OS << " wait_asyncmark(" << MI->getOperand(0).getImm() << ", stages="
+           << AMDGPU::asyncStagesFromMaskOperand(MI->getOperand(1).getImm())
+           << ')';
+        OutStreamer->emitRawComment(Comment);
       }
       return;
     }
@@ -439,13 +462,13 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     if (isVerbose() && (MI->getOpcode() == AMDGPU::S_SET_VGPR_MSB ||
                         (MI->getOpcode() == AMDGPU::S_SETREG_IMM32_B32 &&
-                         STI.has1024AddressableVGPRs()))) {
+                         STI.hasVGPRMSBs()))) {
       std::optional<unsigned> V;
       if (MI->getOpcode() == AMDGPU::S_SETREG_IMM32_B32)
         V = AMDGPU::convertSetRegImmToVgprMSBs(*MI,
                                                STI.hasSetregVGPRMSBFixup());
       else
-        V = MI->getOperand(0).getImm() & 0xff;
+        V = static_cast<unsigned>(MI->getOperand(0).getImm() & 0xff);
       if (V.has_value())
         OutStreamer->AddComment(
             " msbs: dst=" + Twine(*V >> 6) + " src0=" + Twine(*V & 3) +

@@ -13,17 +13,21 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/DiagnosticLex.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/TextEncoding.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaBPF.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
+#include "llvm/Support/TextEncoding.h"
 #include <optional>
 using namespace clang;
 using namespace sema;
@@ -235,7 +239,8 @@ getClobberConflictLocation(MultiExprArg Exprs, Expr **Constraints,
   return SourceLocation();
 }
 
-ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel) {
+ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel,
+                                       bool IsConstexpr) {
   if (!Expr)
     return ExprError();
 
@@ -244,6 +249,21 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel) {
     if (ForAsmLabel && SL->getString().empty()) {
       Diag(Expr->getBeginLoc(), diag::err_asm_operand_empty_string)
           << SL->getSourceRange();
+    }
+
+    if (!IsConstexpr &&
+        PP.getTextEncoding().getzOSFromAsmLiteralEncodingConverter() !=
+            nullptr) {
+      SmallString<16> ConvertedAsm;
+      [[maybe_unused]] std::error_code EC =
+          PP.getTextEncoding().getzOSFromAsmLiteralEncodingConverter()->convert(
+              SL->getString(), ConvertedAsm);
+      assert(!EC && "This conversion should always succeed");
+      QualType StrTy = Context.getStringLiteralArrayType(Context.CharTy,
+                                                         ConvertedAsm.size());
+      return StringLiteral::Create(Context, ConvertedAsm,
+                                   StringLiteralKind::Ordinary,
+                                   /*Pascal=*/false, StrTy, SL->getBeginLoc());
     }
     return SL;
   }
@@ -260,10 +280,27 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel) {
     Diag(Expr->getBeginLoc(), diag::err_asm_operand_empty_string);
   }
 
-  ConstantExpr *Res = ConstantExpr::Create(getASTContext(), Expr,
-                                           ConstantResultStorageKind::APValue);
-  Res->SetResult(V, getASTContext());
-  return Res;
+  // The evaluated string is in the literal encoding (-fexec-charset).
+  // Convert it back to UTF-8.
+  if (llvm::TextEncodingConverter *FromLiteral =
+          PP.getTextEncoding().getFromLiteralEncodingConverter()) {
+    std::string Raw = V.getCharArrayAsString();
+    SmallString<16> Converted;
+    if (std::error_code EC = FromLiteral->convert(Raw, Converted)) {
+      Diag(Expr->getBeginLoc(), diag::err_exec_charset_conversion_failed)
+          << EC.message() << /*from literal encoding to UTF-8*/ 2;
+      return ExprError();
+    }
+    llvm::APSInt Proto(Context.getTypeSize(Context.CharTy),
+                       Context.CharTy->isUnsignedIntegerType());
+    V = APValue(APValue::UninitArray{}, Converted.size(), Converted.size());
+    for (unsigned I = 0; I < Converted.size(); ++I) {
+      Proto = static_cast<unsigned char>(Converted[I]);
+      V.getArrayInitializedElt(I) = APValue(Proto);
+    }
+  }
+
+  return ConstantExpr::Create(getASTContext(), Expr, V);
 }
 
 StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
@@ -305,6 +342,12 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
 
     std::string ConstraintStr =
         GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(Constraint);
+
+    if (ConstraintStr.find('\0') != std::string::npos) {
+      Diag(Constraint->getBeginLoc(), diag::err_asm_constraint_embedded_null)
+          << /*output*/ 0;
+      return CreateGCCAsmStmt();
+    }
 
     TargetInfo::ConstraintInfo Info(ConstraintStr, OutputName);
     if (!Context.getTargetInfo().validateOutputConstraint(Info) &&
@@ -396,6 +439,12 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
     std::string ConstraintStr =
         GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(Constraint);
 
+    if (ConstraintStr.find('\0') != std::string::npos) {
+      Diag(Constraint->getBeginLoc(), diag::err_asm_constraint_embedded_null)
+          << /*input*/ 1;
+      return CreateGCCAsmStmt();
+    }
+
     TargetInfo::ConstraintInfo Info(ConstraintStr, InputName);
     if (!Context.getTargetInfo().validateInputConstraint(OutputConstraintInfos,
                                                          Info)) {
@@ -439,6 +488,9 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
         return StmtError();
 
       InputExpr = Exprs[i] = Result.get();
+
+      if (!Info.allowsRegister() && !Info.allowsMemory())
+        InputExpr = Exprs[i] = BPF().checkAsmImmediateOperand(InputExpr);
 
       if (Info.requiresImmediateConstant() && !Info.allowsRegister()) {
         if (!InputExpr->isValueDependent()) {
@@ -502,6 +554,12 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
 
     std::string Clobber =
         GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(ClobberExpr);
+
+    if (Clobber.find('\0') != std::string::npos) {
+      Diag(ClobberExpr->getBeginLoc(), diag::err_asm_constraint_embedded_null)
+          << /*clobber*/ 2;
+      return CreateGCCAsmStmt();
+    }
 
     if (!Context.getTargetInfo().isValidClobber(Clobber)) {
       targetDiag(ClobberExpr->getBeginLoc(),
@@ -717,10 +775,13 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
     if (!SmallerValueMentioned && !FPTiedToInt && InputDomain != AD_Other &&
         OutputConstraintInfos[TiedTo].allowsRegister()) {
 
-      // FIXME: GCC supports the OutSize to be 128 at maximum. Currently codegen
-      // crash when the size larger than the register size. So we limit it here.
-      if (OutTy->isStructureType() &&
-          Context.getIntTypeForBitwidth(OutSize, /*Signed*/ false).isNull()) {
+      // FIXME: GCC supports some non-scalar register outputs. Currently
+      // codegen crashes when the size cannot be represented by an integer type
+      // that fits in a general-purpose register.
+      bool FitsInGeneralPurposeRegister =
+          OutSize <= Context.getTargetInfo().getRegisterWidth() &&
+          !Context.getIntTypeForBitwidth(OutSize, /*Signed*/ false).isNull();
+      if (OutputDomain == AD_Other && !FitsInGeneralPurposeRegister) {
         targetDiag(OutputExpr->getExprLoc(), diag::err_store_value_to_reg);
         return NS;
       }

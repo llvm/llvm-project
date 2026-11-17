@@ -180,14 +180,23 @@ define <16 x i8> @concat_v16s8_v4s8(ptr %ptr) {
 }
 
 define <16 x i8> @concat_v16s8_v4s8_load(ptr %ptrA, ptr %ptrB, ptr %ptrC, ptr %ptrD) {
-; CHECK-LABEL: concat_v16s8_v4s8_load:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    ld1 { v0.s }[1], [x1]
-; CHECK-NEXT:    ldr s1, [x2]
-; CHECK-NEXT:    ld1 { v1.s }[1], [x3]
-; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: concat_v16s8_v4s8_load:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr s0, [x2]
+; CHECK-SD-NEXT:    ldr s1, [x0]
+; CHECK-SD-NEXT:    ld1 { v0.s }[1], [x3]
+; CHECK-SD-NEXT:    ld1 { v1.s }[1], [x1]
+; CHECK-SD-NEXT:    zip1 v0.2d, v1.2d, v0.2d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: concat_v16s8_v4s8_load:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr s0, [x0]
+; CHECK-GI-NEXT:    ldr s1, [x2]
+; CHECK-GI-NEXT:    ld1 { v0.s }[1], [x1]
+; CHECK-GI-NEXT:    ld1 { v1.s }[1], [x3]
+; CHECK-GI-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    ret
     %A = load <4 x i8>, ptr %ptrA
     %B = load <4 x i8>, ptr %ptrB
     %C = load <4 x i8>, ptr %ptrC
@@ -349,17 +358,11 @@ entry:
 }
 
 define <8 x i16> @concat_low_high_v8i16(<8 x i16> %a_vec, <8 x i16> %b_vec) {
-; CHECK-SD-LABEL: concat_low_high_v8i16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: concat_low_high_v8i16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov d1, v1.d[1]
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: concat_low_high_v8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov d1, v1.d[1]
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i3 = shufflevector <8 x i16> %a_vec, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %shuffle.i = shufflevector <8 x i16> %b_vec, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>

@@ -249,5 +249,86 @@ define i32 @adc_add_multi_use(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, ptr %5) no
   ret i32 %13
 }
 
+
+define i32 @adc_shl(i32 %a, i32 %b) {
+; X86-LABEL: adc_shl:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpl $70, {{[0-9]+}}(%esp)
+; X86-NEXT:    adcl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: adc_shl:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    cmpl $70, %esi
+; X64-NEXT:    adcl %edi, %eax
+; X64-NEXT:    retq
+  %add = shl i32 %a, 1
+  %cmp = icmp ult i32 %b, 70
+  %conv = zext i1 %cmp to i32
+  %add1 = or disjoint i32 %add, %conv
+  ret i32 %add1
+}
+
+define i32 @adc_test(i32 %a, i32 %b) {
+; X86-LABEL: adc_test:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpl $70, {{[0-9]+}}(%esp)
+; X86-NEXT:    adcl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: adc_test:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    cmpl $70, %esi
+; X64-NEXT:    adcl %edi, %eax
+; X64-NEXT:    retq
+  %add = add i32 %a, %a
+  %cmp = icmp ult i32 %b, 70
+  %conv = zext i1 %cmp to i32
+  %add1 = add i32 %add, %conv
+  ret i32 %add1
+}
+
 declare { i8, i32 } @llvm.x86.addcarry.32(i8, i32, i32)
 declare void @use(i8)
+
+define i32 @adc_fold_with_used_flag(i32 %a0) nounwind {
+; X86-LABEL: adc_fold_with_used_flag:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    xorl %esi, %esi
+; X86-NEXT:    btl $11, {{[0-9]+}}(%esp)
+; X86-NEXT:    adcl $100, %esi
+; X86-NEXT:    setb %al
+; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    calll use@PLT
+; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: adc_fold_with_used_flag:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    xorl %ebx, %ebx
+; X64-NEXT:    btl $11, %edi
+; X64-NEXT:    adcl $100, %ebx
+; X64-NEXT:    setb %al
+; X64-NEXT:    movzbl %al, %edi
+; X64-NEXT:    callq use@PLT
+; X64-NEXT:    movl %ebx, %eax
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    retq
+  %bit = lshr i32 %a0, 11
+  %mask = and i32 %bit, 1
+  %isz = trunc i32 %mask to i8
+  %adc = tail call { i8, i32 } @llvm.x86.addcarry.32(i8 %isz, i32 55, i32 45)
+  %carry = extractvalue { i8, i32 } %adc, 0
+  call void @use(i8 %carry)
+  %sum = extractvalue { i8, i32 } %adc, 1
+  ret i32 %sum
+}

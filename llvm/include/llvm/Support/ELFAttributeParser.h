@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -22,11 +23,11 @@ public:
   virtual Error parse(ArrayRef<uint8_t> Section, llvm::endianness Endian) {
     return llvm::Error::success();
   }
-  virtual std::optional<unsigned>
+  virtual std::optional<uint64_t>
   getAttributeValue(StringRef BuildAttrSubsectionName, unsigned Tag) const {
     return std::nullopt;
   }
-  virtual std::optional<unsigned> getAttributeValue(unsigned Tag) const {
+  virtual std::optional<uint64_t> getAttributeValue(unsigned Tag) const {
     return std::nullopt;
   }
   virtual std::optional<StringRef>

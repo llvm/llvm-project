@@ -136,4 +136,4 @@
 # CHECK-NEXT: 7.     1     1.0    1.0    12.0      j	.Lend
 # CHECK-NEXT: 8.     1     6.0    0.0    6.0       add	a7, a4, a0
 # CHECK-NEXT: 9.     1     1.0    1.0    12.0      nop
-# CHECK-NEXT:        1     3.3    0.6    5.8       <total>
+# CHECK-NEXT:        10    3.3    0.6    5.8       <total>

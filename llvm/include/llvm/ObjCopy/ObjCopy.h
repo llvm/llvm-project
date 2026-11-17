@@ -23,6 +23,14 @@ class Binary;
 namespace objcopy {
 class MultiFormatConfig;
 
+/// Returns the format name of \p B if it is an ObjectFile, or "" otherwise.
+LLVM_ABI StringRef getObjectFormatName(const object::Binary &B);
+
+/// Prints information about the input and output files involved in a copy
+/// operation to stdout.
+LLVM_ABI void printCopyMessage(StringRef InPath, StringRef InFormatName,
+                               StringRef OutPath, StringRef OutFormatName);
+
 /// Applies the transformations described by \p Config to
 /// each member in archive \p Ar.
 /// Writes a result in a file specified by \p Config.OutputFilename.

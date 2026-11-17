@@ -10,14 +10,14 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; A call whose argument can remain a scalar because it's sequential and only the
 ; starting value is required.
-define void @test_linear8(ptr noalias %a, ptr readnone %b, i64 %n) {
+define void @test_linear8(ptr noalias %a, ptr readnone %b, i64 %n) vscale_range(1,16) {
 ; NEON-LABEL: define void @test_linear8
-; NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) {
-; NEON:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR0:[0-9]+]]
+; NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; NEON:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR1:[0-9]+]]
 ;
 ; NEON_INTERLEAVE-LABEL: define void @test_linear8
-; NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) {
-; NEON_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR0:[0-9]+]]
+; NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; NEON_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR1:[0-9]+]]
 ;
 ; SVE_OR_NEON-LABEL: define void @test_linear8
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -25,15 +25,15 @@ define void @test_linear8(ptr noalias %a, ptr readnone %b, i64 %n) {
 ;
 ; SVE_OR_NEON_INTERLEAVE-LABEL: define void @test_linear8
 ; SVE_OR_NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; SVE_OR_NEON_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR1:[0-9]+]]
+; SVE_OR_NEON_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR2:[0-9]+]]
 ;
 ; SVE_TF-LABEL: define void @test_linear8
 ; SVE_TF-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; SVE_TF:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR1:[0-9]+]]
+; SVE_TF:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR2:[0-9]+]]
 ;
 ; SVE_TF_INTERLEAVE-LABEL: define void @test_linear8
 ; SVE_TF_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; SVE_TF_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR1:[0-9]+]]
+; SVE_TF_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR2:[0-9]+]]
 ;
 entry:
   br label %for.body
@@ -52,14 +52,14 @@ for.cond.cleanup:
   ret void
 }
 
-define void @test_vector_linear4(ptr noalias %a, ptr readnone %b, ptr readonly %c, i64 %n) {
+define void @test_vector_linear4(ptr noalias %a, ptr readnone %b, ptr readonly %c, i64 %n) vscale_range(1,16) {
 ; NEON-LABEL: define void @test_vector_linear4
-; NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) {
-; NEON:    [[DATA:%.*]] = call i32 @baz(i32 [[INPUT:%.*]], ptr [[GEPB:%.*]]) #[[ATTR1:[0-9]+]]
+; NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; NEON:    [[DATA:%.*]] = call i32 @baz(i32 [[INPUT:%.*]], ptr [[GEPB:%.*]]) #[[ATTR2:[0-9]+]]
 ;
 ; NEON_INTERLEAVE-LABEL: define void @test_vector_linear4
-; NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) {
-; NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @baz(i32 [[INPUT:%.*]], ptr [[GEPB:%.*]]) #[[ATTR1:[0-9]+]]
+; NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @baz(i32 [[INPUT:%.*]], ptr [[GEPB:%.*]]) #[[ATTR2:[0-9]+]]
 ;
 ; SVE_OR_NEON-LABEL: define void @test_vector_linear4
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
@@ -67,15 +67,15 @@ define void @test_vector_linear4(ptr noalias %a, ptr readnone %b, ptr readonly %
 ;
 ; SVE_OR_NEON_INTERLEAVE-LABEL: define void @test_vector_linear4
 ; SVE_OR_NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_OR_NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @baz(i32 [[INPUT:%.*]], ptr [[GEPB:%.*]]) #[[ATTR2:[0-9]+]]
+; SVE_OR_NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @baz(i32 [[INPUT:%.*]], ptr [[GEPB:%.*]]) #[[ATTR3:[0-9]+]]
 ;
 ; SVE_TF-LABEL: define void @test_vector_linear4
 ; SVE_TF-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_TF:    [[DATA:%.*]] = call i32 @baz(i32 [[INPUT:%.*]], ptr [[GEPB:%.*]]) #[[ATTR2:[0-9]+]]
+; SVE_TF:    [[DATA:%.*]] = call i32 @baz(i32 [[INPUT:%.*]], ptr [[GEPB:%.*]]) #[[ATTR3:[0-9]+]]
 ;
 ; SVE_TF_INTERLEAVE-LABEL: define void @test_vector_linear4
 ; SVE_TF_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_TF_INTERLEAVE:    [[DATA:%.*]] = call i32 @baz(i32 [[INPUT:%.*]], ptr [[GEPB:%.*]]) #[[ATTR2:[0-9]+]]
+; SVE_TF_INTERLEAVE:    [[DATA:%.*]] = call i32 @baz(i32 [[INPUT:%.*]], ptr [[GEPB:%.*]]) #[[ATTR3:[0-9]+]]
 ;
 entry:
   br label %for.body
@@ -96,14 +96,14 @@ for.cond.cleanup:
   ret void
 }
 
-define void @test_linear8_bad_stride(ptr noalias %a, ptr readnone %b, i64 %n) {
+define void @test_linear8_bad_stride(ptr noalias %a, ptr readnone %b, i64 %n) vscale_range(1,16) {
 ; NEON-LABEL: define void @test_linear8_bad_stride
-; NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) {
-; NEON:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR2:[0-9]+]]
+; NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; NEON:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR3:[0-9]+]]
 ;
 ; NEON_INTERLEAVE-LABEL: define void @test_linear8_bad_stride
-; NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) {
-; NEON_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR2:[0-9]+]]
+; NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; NEON_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR3:[0-9]+]]
 ;
 ; SVE_OR_NEON-LABEL: define void @test_linear8_bad_stride
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
@@ -111,15 +111,15 @@ define void @test_linear8_bad_stride(ptr noalias %a, ptr readnone %b, i64 %n) {
 ;
 ; SVE_OR_NEON_INTERLEAVE-LABEL: define void @test_linear8_bad_stride
 ; SVE_OR_NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_OR_NEON_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR3:[0-9]+]]
+; SVE_OR_NEON_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR4:[0-9]+]]
 ;
 ; SVE_TF-LABEL: define void @test_linear8_bad_stride
 ; SVE_TF-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_TF:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR3:[0-9]+]]
+; SVE_TF:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR4:[0-9]+]]
 ;
 ; SVE_TF_INTERLEAVE-LABEL: define void @test_linear8_bad_stride
 ; SVE_TF_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_TF_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR3:[0-9]+]]
+; SVE_TF_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR4:[0-9]+]]
 ;
 entry:
   br label %for.body
@@ -138,14 +138,14 @@ for.cond.cleanup:
   ret void
 }
 
-define void @test_linear16_wide_stride(ptr noalias %a, ptr readnone %b, i64 %n) {
+define void @test_linear16_wide_stride(ptr noalias %a, ptr readnone %b, i64 %n) vscale_range(1,16) {
 ; NEON-LABEL: define void @test_linear16_wide_stride
-; NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) {
-; NEON:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR2]]
+; NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; NEON:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR3]]
 ;
 ; NEON_INTERLEAVE-LABEL: define void @test_linear16_wide_stride
-; NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) {
-; NEON_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR2]]
+; NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; NEON_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR3]]
 ;
 ; SVE_OR_NEON-LABEL: define void @test_linear16_wide_stride
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
@@ -153,15 +153,15 @@ define void @test_linear16_wide_stride(ptr noalias %a, ptr readnone %b, i64 %n) 
 ;
 ; SVE_OR_NEON_INTERLEAVE-LABEL: define void @test_linear16_wide_stride
 ; SVE_OR_NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_OR_NEON_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR3]]
+; SVE_OR_NEON_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR4]]
 ;
 ; SVE_TF-LABEL: define void @test_linear16_wide_stride
 ; SVE_TF-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_TF:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR3]]
+; SVE_TF:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR4]]
 ;
 ; SVE_TF_INTERLEAVE-LABEL: define void @test_linear16_wide_stride
 ; SVE_TF_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_TF_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR3]]
+; SVE_TF_INTERLEAVE:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR4]]
 ;
 entry:
   br label %for.body
@@ -181,14 +181,14 @@ for.cond.cleanup:
   ret void
 }
 
-define void @test_linear4_linear8(ptr noalias %a, ptr readnone %b, ptr readonly %c, i64 %n) {
+define void @test_linear4_linear8(ptr noalias %a, ptr readnone %b, ptr readonly %c, i64 %n) vscale_range(1,16) {
 ; NEON-LABEL: define void @test_linear4_linear8
-; NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) {
-; NEON:    [[DATA:%.*]] = call i32 @quux(ptr [[GEPC:%.*]], ptr [[GEPB:%.*]]) #[[ATTR3:[0-9]+]]
+; NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; NEON:    [[DATA:%.*]] = call i32 @quux(ptr [[GEPC:%.*]], ptr [[GEPB:%.*]]) #[[ATTR4:[0-9]+]]
 ;
 ; NEON_INTERLEAVE-LABEL: define void @test_linear4_linear8
-; NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) {
-; NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @quux(ptr [[GEPC:%.*]], ptr [[GEPB:%.*]]) #[[ATTR3:[0-9]+]]
+; NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @quux(ptr [[GEPC:%.*]], ptr [[GEPB:%.*]]) #[[ATTR4:[0-9]+]]
 ;
 ; SVE_OR_NEON-LABEL: define void @test_linear4_linear8
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
@@ -196,15 +196,15 @@ define void @test_linear4_linear8(ptr noalias %a, ptr readnone %b, ptr readonly 
 ;
 ; SVE_OR_NEON_INTERLEAVE-LABEL: define void @test_linear4_linear8
 ; SVE_OR_NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_OR_NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @quux(ptr [[GEPC:%.*]], ptr [[GEPB:%.*]]) #[[ATTR4:[0-9]+]]
+; SVE_OR_NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @quux(ptr [[GEPC:%.*]], ptr [[GEPB:%.*]]) #[[ATTR5:[0-9]+]]
 ;
 ; SVE_TF-LABEL: define void @test_linear4_linear8
 ; SVE_TF-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_TF:    [[DATA:%.*]] = call i32 @quux(ptr [[GEPC:%.*]], ptr [[GEPB:%.*]]) #[[ATTR4:[0-9]+]]
+; SVE_TF:    [[DATA:%.*]] = call i32 @quux(ptr [[GEPC:%.*]], ptr [[GEPB:%.*]]) #[[ATTR5:[0-9]+]]
 ;
 ; SVE_TF_INTERLEAVE-LABEL: define void @test_linear4_linear8
 ; SVE_TF_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_TF_INTERLEAVE:    [[DATA:%.*]] = call i32 @quux(ptr [[GEPC:%.*]], ptr [[GEPB:%.*]]) #[[ATTR4:[0-9]+]]
+; SVE_TF_INTERLEAVE:    [[DATA:%.*]] = call i32 @quux(ptr [[GEPC:%.*]], ptr [[GEPB:%.*]]) #[[ATTR5:[0-9]+]]
 ;
 entry:
   br label %for.body
@@ -224,38 +224,34 @@ for.cond.cleanup:
   ret void
 }
 
-define void @test_linear3_non_ptr(ptr noalias %a, i64 %n) {
+define void @test_linear3_non_ptr(ptr noalias %a, i64 %n) vscale_range(1,16) {
 ; NEON-LABEL: define void @test_linear3_non_ptr
-; NEON-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) {
-; NEON:    [[TMP1:%.*]] = extractelement <4 x i32> [[TMP0:%.*]], i64 0
-; NEON:    [[TMP2:%.*]] = call <4 x i32> @vec_bar_linear3_nomask_neon(i32 [[TMP1]])
-; NEON:    [[DATA:%.*]] = call i32 @bar(i32 [[TREBLED:%.*]]) #[[ATTR4:[0-9]+]]
+; NEON-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; NEON:    [[TMP3:%.*]] = call <4 x i32> @vec_bar_linear3_nomask_neon(i32 [[TMP2:%.*]])
+; NEON:    [[DATA:%.*]] = call i32 @bar(i32 [[TREBLED:%.*]]) #[[ATTR5:[0-9]+]]
 ;
 ; NEON_INTERLEAVE-LABEL: define void @test_linear3_non_ptr
-; NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) {
-; NEON_INTERLEAVE:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP0:%.*]], i64 0
-; NEON_INTERLEAVE:    [[TMP3:%.*]] = call <4 x i32> @vec_bar_linear3_nomask_neon(i32 [[TMP2]])
-; NEON_INTERLEAVE:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP1:%.*]], i64 0
-; NEON_INTERLEAVE:    [[TMP5:%.*]] = call <4 x i32> @vec_bar_linear3_nomask_neon(i32 [[TMP4]])
-; NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @bar(i32 [[TREBLED:%.*]]) #[[ATTR4:[0-9]+]]
+; NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; NEON_INTERLEAVE:    [[TMP6:%.*]] = call <4 x i32> @vec_bar_linear3_nomask_neon(i32 [[TMP4:%.*]])
+; NEON_INTERLEAVE:    [[TMP7:%.*]] = call <4 x i32> @vec_bar_linear3_nomask_neon(i32 [[TMP5:%.*]])
+; NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @bar(i32 [[TREBLED:%.*]]) #[[ATTR5:[0-9]+]]
 ;
 ; SVE_OR_NEON-LABEL: define void @test_linear3_non_ptr
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_OR_NEON:    [[TMP7:%.*]] = extractelement <vscale x 4 x i32> [[TMP6:%.*]], i64 0
-; SVE_OR_NEON:    [[TMP8:%.*]] = call <vscale x 4 x i32> @vec_bar_linear3_nomask_sve(i32 [[TMP7]])
+; SVE_OR_NEON:    [[TMP4:%.*]] = call <vscale x 4 x i32> @vec_bar_linear3_nomask_sve(i32 [[TMP3:%.*]])
 ; SVE_OR_NEON:    [[DATA:%.*]] = call i32 @bar(i32 [[TREBLED:%.*]]) #[[ATTR7:[0-9]+]]
 ;
 ; SVE_OR_NEON_INTERLEAVE-LABEL: define void @test_linear3_non_ptr
 ; SVE_OR_NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_OR_NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @bar(i32 [[TREBLED:%.*]]) #[[ATTR5:[0-9]+]]
+; SVE_OR_NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @bar(i32 [[TREBLED:%.*]]) #[[ATTR6:[0-9]+]]
 ;
 ; SVE_TF-LABEL: define void @test_linear3_non_ptr
 ; SVE_TF-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_TF:    [[DATA:%.*]] = call i32 @bar(i32 [[TREBLED:%.*]]) #[[ATTR5:[0-9]+]]
+; SVE_TF:    [[DATA:%.*]] = call i32 @bar(i32 [[TREBLED:%.*]]) #[[ATTR6:[0-9]+]]
 ;
 ; SVE_TF_INTERLEAVE-LABEL: define void @test_linear3_non_ptr
 ; SVE_TF_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_TF_INTERLEAVE:    [[DATA:%.*]] = call i32 @bar(i32 [[TREBLED:%.*]]) #[[ATTR5:[0-9]+]]
+; SVE_TF_INTERLEAVE:    [[DATA:%.*]] = call i32 @bar(i32 [[TREBLED:%.*]]) #[[ATTR6:[0-9]+]]
 ;
 entry:
   br label %for.body
@@ -275,38 +271,34 @@ for.cond.cleanup:
   ret void
 }
 
-define void @test_linearn5_non_ptr_neg_stride(ptr noalias %a, i64 %n) {
+define void @test_linearn5_non_ptr_neg_stride(ptr noalias %a, i64 %n) vscale_range(1,16) {
 ; NEON-LABEL: define void @test_linearn5_non_ptr_neg_stride
-; NEON-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) {
-; NEON:    [[TMP1:%.*]] = extractelement <4 x i32> [[TMP0:%.*]], i64 0
-; NEON:    [[TMP2:%.*]] = call <4 x i32> @vec_bar_linearn5_nomask_neon(i32 [[TMP1]])
-; NEON:    [[DATA:%.*]] = call i32 @bar(i32 [[NEGSTRIDE:%.*]]) #[[ATTR5:[0-9]+]]
+; NEON-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; NEON:    [[TMP3:%.*]] = call <4 x i32> @vec_bar_linearn5_nomask_neon(i32 [[TMP2:%.*]])
+; NEON:    [[DATA:%.*]] = call i32 @bar(i32 [[NEGSTRIDE:%.*]]) #[[ATTR6:[0-9]+]]
 ;
 ; NEON_INTERLEAVE-LABEL: define void @test_linearn5_non_ptr_neg_stride
-; NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) {
-; NEON_INTERLEAVE:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP0:%.*]], i64 0
-; NEON_INTERLEAVE:    [[TMP3:%.*]] = call <4 x i32> @vec_bar_linearn5_nomask_neon(i32 [[TMP2]])
-; NEON_INTERLEAVE:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP1:%.*]], i64 0
-; NEON_INTERLEAVE:    [[TMP5:%.*]] = call <4 x i32> @vec_bar_linearn5_nomask_neon(i32 [[TMP4]])
-; NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @bar(i32 [[NEGSTRIDE:%.*]]) #[[ATTR5:[0-9]+]]
+; NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; NEON_INTERLEAVE:    [[TMP6:%.*]] = call <4 x i32> @vec_bar_linearn5_nomask_neon(i32 [[TMP4:%.*]])
+; NEON_INTERLEAVE:    [[TMP7:%.*]] = call <4 x i32> @vec_bar_linearn5_nomask_neon(i32 [[TMP5:%.*]])
+; NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @bar(i32 [[NEGSTRIDE:%.*]]) #[[ATTR6:[0-9]+]]
 ;
 ; SVE_OR_NEON-LABEL: define void @test_linearn5_non_ptr_neg_stride
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_OR_NEON:    [[TMP7:%.*]] = extractelement <vscale x 4 x i32> [[TMP6:%.*]], i64 0
-; SVE_OR_NEON:    [[TMP8:%.*]] = call <vscale x 4 x i32> @vec_bar_linearn5_nomask_sve(i32 [[TMP7]])
+; SVE_OR_NEON:    [[TMP4:%.*]] = call <vscale x 4 x i32> @vec_bar_linearn5_nomask_sve(i32 [[TMP3:%.*]])
 ; SVE_OR_NEON:    [[DATA:%.*]] = call i32 @bar(i32 [[NEGSTRIDE:%.*]]) #[[ATTR8:[0-9]+]]
 ;
 ; SVE_OR_NEON_INTERLEAVE-LABEL: define void @test_linearn5_non_ptr_neg_stride
 ; SVE_OR_NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_OR_NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @bar(i32 [[NEGSTRIDE:%.*]]) #[[ATTR6:[0-9]+]]
+; SVE_OR_NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @bar(i32 [[NEGSTRIDE:%.*]]) #[[ATTR7:[0-9]+]]
 ;
 ; SVE_TF-LABEL: define void @test_linearn5_non_ptr_neg_stride
 ; SVE_TF-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_TF:    [[DATA:%.*]] = call i32 @bar(i32 [[NEGSTRIDE:%.*]]) #[[ATTR6:[0-9]+]]
+; SVE_TF:    [[DATA:%.*]] = call i32 @bar(i32 [[NEGSTRIDE:%.*]]) #[[ATTR7:[0-9]+]]
 ;
 ; SVE_TF_INTERLEAVE-LABEL: define void @test_linearn5_non_ptr_neg_stride
 ; SVE_TF_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_TF_INTERLEAVE:    [[DATA:%.*]] = call i32 @bar(i32 [[NEGSTRIDE:%.*]]) #[[ATTR6:[0-9]+]]
+; SVE_TF_INTERLEAVE:    [[DATA:%.*]] = call i32 @bar(i32 [[NEGSTRIDE:%.*]]) #[[ATTR7:[0-9]+]]
 ;
 entry:
   br label %for.body
@@ -326,14 +318,14 @@ for.cond.cleanup:
   ret void
 }
 
-define void @test_linear8_return_void(ptr noalias %in, ptr noalias %out, i64 %n) {
+define void @test_linear8_return_void(ptr noalias %in, ptr noalias %out, i64 %n) vscale_range(1,16) {
 ; NEON-LABEL: define void @test_linear8_return_void
-; NEON-SAME: (ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]], i64 [[N:%.*]]) {
-; NEON:    call void @goo(i64 [[NUM:%.*]], ptr [[GEP_OUT:%.*]]) #[[ATTR6:[0-9]+]]
+; NEON-SAME: (ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; NEON:    call void @goo(i64 [[NUM:%.*]], ptr [[GEP_OUT:%.*]]) #[[ATTR7:[0-9]+]]
 ;
 ; NEON_INTERLEAVE-LABEL: define void @test_linear8_return_void
-; NEON_INTERLEAVE-SAME: (ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]], i64 [[N:%.*]]) {
-; NEON_INTERLEAVE:    call void @goo(i64 [[NUM:%.*]], ptr [[GEP_OUT:%.*]]) #[[ATTR6:[0-9]+]]
+; NEON_INTERLEAVE-SAME: (ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; NEON_INTERLEAVE:    call void @goo(i64 [[NUM:%.*]], ptr [[GEP_OUT:%.*]]) #[[ATTR7:[0-9]+]]
 ;
 ; SVE_OR_NEON-LABEL: define void @test_linear8_return_void
 ; SVE_OR_NEON-SAME: (ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
@@ -341,15 +333,15 @@ define void @test_linear8_return_void(ptr noalias %in, ptr noalias %out, i64 %n)
 ;
 ; SVE_OR_NEON_INTERLEAVE-LABEL: define void @test_linear8_return_void
 ; SVE_OR_NEON_INTERLEAVE-SAME: (ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_OR_NEON_INTERLEAVE:    call void @goo(i64 [[NUM:%.*]], ptr [[GEP_OUT:%.*]]) #[[ATTR7:[0-9]+]]
+; SVE_OR_NEON_INTERLEAVE:    call void @goo(i64 [[NUM:%.*]], ptr [[GEP_OUT:%.*]]) #[[ATTR8:[0-9]+]]
 ;
 ; SVE_TF-LABEL: define void @test_linear8_return_void
 ; SVE_TF-SAME: (ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_TF:    call void @goo(i64 [[NUM:%.*]], ptr [[GEP_OUT:%.*]]) #[[ATTR7:[0-9]+]]
+; SVE_TF:    call void @goo(i64 [[NUM:%.*]], ptr [[GEP_OUT:%.*]]) #[[ATTR8:[0-9]+]]
 ;
 ; SVE_TF_INTERLEAVE-LABEL: define void @test_linear8_return_void
 ; SVE_TF_INTERLEAVE-SAME: (ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_TF_INTERLEAVE:    call void @goo(i64 [[NUM:%.*]], ptr [[GEP_OUT:%.*]]) #[[ATTR7:[0-9]+]]
+; SVE_TF_INTERLEAVE:    call void @goo(i64 [[NUM:%.*]], ptr [[GEP_OUT:%.*]]) #[[ATTR8:[0-9]+]]
 ;
 entry:
   br label %for.body

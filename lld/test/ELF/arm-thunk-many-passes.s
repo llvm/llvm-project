@@ -1,13 +1,10 @@
 // REQUIRES: arm
-// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-linux-gnueabihf %s -o %t
-// RUN: echo "SECTIONS { \
-// RUN:       . = SIZEOF_HEADERS; \
-// RUN:       .text 0x00011000 : { *(.text.*) } \
-// RUN:       } \
-// RUN:       sym = .;" > %t.script
-// RUN: ld.lld --script %t.script %t -o %t2
-// RUN: llvm-readobj --sections --symbols %t2 | FileCheck --check-prefix=CHECK-ELF %s
-// RUN: llvm-objdump --no-show-raw-insn --start-address=0x11000 --stop-address=0x11048 -d %t2 | FileCheck %s
+// RUN: rm -rf %t && split-file %s %t && cd %t
+// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-linux-gnueabihf a.s -o a.o
+// RUN: ld.lld --script a.lds a.o -o exe
+// RUN: llvm-readobj --sections --symbols exe | FileCheck --check-prefix=CHECK-ELF %s
+// RUN: llvm-objdump --no-show-raw-insn --start-address=0x11000 --stop-address=0x11048 -d exe | FileCheck %s
+// RUN: rm a.o exe
 
 // An example of thunk generation that takes the maximum number of permitted
 // passes to converge. We start with a set of branches of which all but one are
@@ -54,6 +51,14 @@
 // CHECK-NEXT:    11040:       b.w     0xe11068 <__Thumbv7ABSLongThunk_f10>
 // CHECK-NEXT:    11044:       b.w     0xe11068 <__Thumbv7ABSLongThunk_f10>
 
+//--- a.lds
+SECTIONS {
+  . = SIZEOF_HEADERS;
+  .text 0x00011000 : { *(.text.*) }
+}
+sym = .;
+
+//--- a.s
 
         .thumb
         .section .text.00, "ax", %progbits

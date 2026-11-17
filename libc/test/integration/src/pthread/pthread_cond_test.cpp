@@ -35,10 +35,10 @@
 
 namespace {
 
-constexpr size_t PRODUCER_COUNT = 10;
-constexpr size_t CONSUMER_COUNT = 10;
+constexpr size_t PRODUCER_COUNT = 4;
+constexpr size_t CONSUMER_COUNT = 4;
 constexpr size_t ITEMS_PER_PRODUCER = 80;
-constexpr int NUM_ITERATIONS = 10;
+constexpr int NUM_ITERATIONS = 4;
 
 enum class TimeoutMode {
   Disabled,

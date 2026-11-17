@@ -192,8 +192,7 @@ void llvm::initDebugOptions() {
   *DebugOnly;
 }
 
-// Signal handlers - dump debug output on termination.
-static void debug_user_sig_handler(void *Cookie) {
+static void printDebugLogImpl() {
   // This is a bit sneaky.  Since this is under #ifndef NDEBUG, we
   // know that debug mode is enabled and dbgs() really is a
   // circular_raw_ostream.  If NDEBUG is defined, then dbgs() ==
@@ -202,6 +201,9 @@ static void debug_user_sig_handler(void *Cookie) {
       static_cast<circular_raw_ostream &>(llvm::dbgs());
   dbgout.flushBufferWithBanner();
 }
+
+// Signal handlers - dump debug output on termination.
+static void debug_user_sig_handler(void *Cookie) { printDebugLogImpl(); }
 
 /// dbgs - Return a circular-buffered debug stream.
 raw_ostream &llvm::dbgs() {
@@ -224,6 +226,11 @@ raw_ostream &llvm::dbgs() {
   return thestrm.strm;
 }
 
+void llvm::printDebugLog() {
+  if (EnableDebugBuffering && DebugFlag && *DebugBufferSize != 0)
+    printDebugLogImpl();
+}
+
 #else
 // Avoid "has no symbols" warning.
 namespace llvm {
@@ -233,6 +240,8 @@ namespace llvm {
   }
 }
 void llvm::initDebugOptions() {}
+
+void llvm::printDebugLog() {}
 #endif
 
 /// EnableDebugBuffering - Turn on signal handler installation.

@@ -75,9 +75,13 @@ namespace {
 lldb::ValueObjectSP GetCapturedThisValueObject(StackFrame *frame) {
   assert(frame);
 
-  if (auto thisValSP = frame->FindVariable(ConstString("this")))
+  if (auto thisValSP = frame->FindVariable(ConstString("this"))) {
     if (auto thisThisValSP = thisValSP->GetChildMemberWithName("this"))
       return thisThisValSP;
+    // With CodeView/PDB, the member is named "__this".
+    if (auto codeview_this_sp = thisValSP->GetChildMemberWithName("__this"))
+      return codeview_this_sp;
+  }
 
   return nullptr;
 }
@@ -666,7 +670,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     NameSearchContext &context) {
   assert(m_ast_context);
 
-  const ConstString name(context.m_decl_name.getAsString().c_str());
+  const auto name = context.m_decl_name.getAsString();
 
   Log *log = GetLog(LLDBLog::Expressions);
 
@@ -1324,9 +1328,11 @@ bool ClangExpressionDeclMap::LookupFunction(
         found_function_with_type_info = true;
       } else if (sym_ctx.symbol) {
         const Symbol *symbol = sym_ctx.symbol;
-        if (target && symbol->GetType() == eSymbolTypeReExported) {
-          symbol = symbol->ResolveReExportedSymbol(*target);
-          if (symbol == nullptr)
+        if (target) {
+          if (Symbol *actual =
+                  symbol->ResolveReExportedSymbol(*target, sym_ctx.module_sp))
+            symbol = actual;
+          else if (symbol->GetType() == eSymbolTypeReExported)
             continue;
         }
 
@@ -1370,7 +1376,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
 
   Log *log = GetLog(LLDBLog::Expressions);
 
-  const ConstString name(context.m_decl_name.getAsString().c_str());
+  const ConstString name(context.m_decl_name.getAsString());
   if (IgnoreName(name, false))
     return;
 
@@ -1601,7 +1607,7 @@ ClangExpressionDeclMap::AddExpressionVariable(NameSearchContext &context,
     var_decl = context.AddVarDecl(pt.GetLValueReferenceType());
 
   std::string decl_name(context.m_decl_name.getAsString());
-  ConstString entity_name(decl_name.c_str());
+  ConstString entity_name(decl_name);
   ClangExpressionVariable *entity(new ClangExpressionVariable(valobj));
   m_found_entities.AddNewlyConstructedVariable(entity);
 
@@ -1748,7 +1754,7 @@ void ClangExpressionDeclMap::AddOneGenericVariable(NameSearchContext &context,
   NamedDecl *var_decl = context.AddVarDecl(parser_type);
 
   std::string decl_name(context.m_decl_name.getAsString());
-  ConstString entity_name(decl_name.c_str());
+  ConstString entity_name(decl_name);
   ClangExpressionVariable *entity(new ClangExpressionVariable(
       m_parser_vars->m_exe_ctx.GetBestExecutionContextScope(), entity_name,
       user_type, m_parser_vars->m_target_info.byte_order,
@@ -1801,7 +1807,7 @@ void ClangExpressionDeclMap::AddOneRegister(NameSearchContext &context,
   m_found_entities.AddNewlyConstructedVariable(entity);
 
   std::string decl_name(context.m_decl_name.getAsString());
-  entity->SetName(ConstString(decl_name.c_str()));
+  entity->SetName(decl_name);
   entity->SetRegisterInfo(reg_info);
   entity->EnableParserVars(GetParserID());
   ClangExpressionVariable::ParserVars *parser_vars =
@@ -1950,7 +1956,7 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
   m_found_entities.AddNewlyConstructedVariable(entity);
 
   std::string decl_name(context.m_decl_name.getAsString());
-  entity->SetName(ConstString(decl_name.c_str()));
+  entity->SetName(decl_name);
   entity->SetCompilerType(function_clang_type);
   entity->EnableParserVars(GetParserID());
 

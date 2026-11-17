@@ -7,19 +7,58 @@
 //===----------------------------------------------------------------------===//
 
 #include <sycl/__impl/event.hpp>
+#include <sycl/__impl/exception.hpp>
 
 #include <detail/event_impl.hpp>
 
+#include <memory>
+#include <vector>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
+
+event::event() : impl(detail::EventImpl::createDefaultEvent()) {}
 
 backend event::get_backend() const noexcept { return impl->getBackend(); }
 
-void event::wait(const std::vector<event> &EventList) {
-  for (auto Event : EventList) {
-    Event.wait();
-  }
+void event::wait(const std::vector<event> &eventList) {
+  for (const event &Event : eventList)
+    detail::getSyclObjImpl(Event)->wait();
 }
 
 void event::wait() { impl->wait(); }
+
+void event::wait_and_throw() { impl->waitAndThrow(); }
+
+void event::wait_and_throw(const std::vector<event> &eventList) {
+  for (const event &Event : eventList)
+    detail::getSyclObjImpl(Event)->waitAndThrow();
+}
+
+std::vector<event> event::get_wait_list() {
+  const auto &WaitList = impl->getWaitList();
+  std::vector<event> Result;
+  Result.reserve(WaitList.size());
+
+  for (const auto &EventImpl : WaitList)
+    Result.push_back(detail::createSyclObjFromImpl<event>(EventImpl));
+
+  return Result;
+}
+
+template <typename Param>
+typename detail::is_event_profiling_info_desc_t<Param>
+event::get_profiling_info() const {
+  throw sycl::exception(make_error_code(errc::feature_not_supported),
+                        "Profiling features are not supported.");
+}
+
+#define _LIBSYCL_EXPORT_GET_PROFILING_INFO(Desc)                               \
+  template _LIBSYCL_EXPORT                                                     \
+      detail::is_event_profiling_info_desc_t<info::event_profiling::Desc>      \
+      event::get_profiling_info<info::event_profiling::Desc>() const;
+_LIBSYCL_EXPORT_GET_PROFILING_INFO(command_submit)
+_LIBSYCL_EXPORT_GET_PROFILING_INFO(command_start)
+_LIBSYCL_EXPORT_GET_PROFILING_INFO(command_end)
+#undef _LIBSYCL_EXPORT_GET_PROFILING_INFO
 
 _LIBSYCL_END_NAMESPACE_SYCL

@@ -44,7 +44,7 @@ namespace Fortran::parser {
 // R601 alphanumeric-character -> letter | digit | underscore
 // R603 name -> letter [alphanumeric-character]...
 constexpr auto nonDigitIdChar{letter || otherIdChar};
-constexpr auto rawName{nonDigitIdChar >> many(nonDigitIdChar || digit)};
+constexpr auto rawName{nonDigitIdChar >> skipMany(nonDigitIdChar || digit)};
 TYPE_PARSER(space >> sourced(rawName >> construct<Name>()))
 
 // R608 intrinsic-operator ->
@@ -124,7 +124,8 @@ TYPE_CONTEXT_PARSER("internal subprogram"_en_US,
     (construct<InternalSubprogram>(indirect(functionSubprogram)) ||
         construct<InternalSubprogram>(indirect(subroutineSubprogram))) /
             forceEndOfStmt ||
-        construct<InternalSubprogram>(indirect(compilerDirective)))
+        construct<InternalSubprogram>(indirect(compilerDirective)) ||
+        construct<InternalSubprogram>(misplacedOpenACCDeclareRecovery))
 
 // R511 internal-subprogram-part -> contains-stmt [internal-subprogram]...
 TYPE_CONTEXT_PARSER("internal subprogram part"_en_US,
@@ -167,7 +168,8 @@ TYPE_CONTEXT_PARSER("type spec"_en_US,
 // R703 declaration-type-spec ->
 //        intrinsic-type-spec | TYPE ( intrinsic-type-spec ) |
 //        TYPE ( derived-type-spec ) | CLASS ( derived-type-spec ) |
-//        CLASS ( * ) | TYPE ( * )
+//        CLASS ( * ) | TYPE ( * ) |
+//        TYPEOF ( data-ref ) | CLASSOF ( data-ref )
 // N.B. It is critical to distribute "parenthesized()" over the alternatives
 // for TYPE (...), rather than putting the alternatives within it, which
 // would fail on "TYPE(real_derived)" with a misrecognition of "real" as an
@@ -176,6 +178,12 @@ TYPE_CONTEXT_PARSER("type spec"_en_US,
 // type (BYTE or DOUBLECOMPLEX), not the extension intrinsic type.
 TYPE_CONTEXT_PARSER("declaration type spec"_en_US,
     construct<DeclarationTypeSpec>(intrinsicTypeSpec) ||
+        "TYPEOF" >>
+            parenthesized(construct<DeclarationTypeSpec>(
+                construct<DeclarationTypeSpec::TypeOf>(indirect(dataRef)))) ||
+        "CLASSOF" >>
+            parenthesized(construct<DeclarationTypeSpec>(
+                construct<DeclarationTypeSpec::ClassOf>(indirect(dataRef)))) ||
         "TYPE" >>
             (parenthesized(construct<DeclarationTypeSpec>(
                  !"DOUBLECOMPLEX"_tok >> !"BYTE"_tok >> intrinsicTypeSpec)) ||
@@ -395,7 +403,10 @@ TYPE_CONTEXT_PARSER("derived type definition"_en_US,
         many(unambiguousStatement(Parser<TypeParamDefStmt>{})),
         many(statement(Parser<PrivateOrSequence>{})),
         many(inContext("component"_en_US,
-            unambiguousStatement(Parser<ComponentDefStmt>{}))),
+            // A compiler directive consumes the end of its own line.
+            unterminatedStatement(
+                construct<ComponentDefStmt>(indirect(compilerDirective))) ||
+                unambiguousStatement(Parser<ComponentDefStmt>{}))),
         maybe(Parser<TypeBoundProcedurePart>{}),
         statement(Parser<EndTypeStmt>{})))
 
@@ -445,8 +456,7 @@ TYPE_PARSER(construct<TypeParamDecl>(name, maybe("=" >> scalarIntConstantExpr)))
 TYPE_PARSER(recovery(
     withMessage("expected component definition"_err_en_US,
         first(construct<ComponentDefStmt>(Parser<DataComponentDefStmt>{}),
-            construct<ComponentDefStmt>(Parser<ProcComponentDefStmt>{}),
-            construct<ComponentDefStmt>(indirect(compilerDirective)))),
+            construct<ComponentDefStmt>(Parser<ProcComponentDefStmt>{}))),
     construct<ComponentDefStmt>(inStmtErrorRecovery)))
 
 // R737 data-component-def-stmt ->
@@ -470,7 +480,7 @@ TYPE_PARSER(construct<ComponentAttrSpec>(accessSpec) ||
     construct<ComponentAttrSpec>("DIMENSION" >> componentArraySpec) ||
     construct<ComponentAttrSpec>(pointer) ||
     extension<LanguageFeature::CUDA>(
-        construct<ComponentAttrSpec>(Parser<common::CUDADataAttr>{})) ||
+        construct<ComponentAttrSpec>(Parser<CUDADataAttrSpec>{})) ||
     construct<ComponentAttrSpec>(recovery(
         fail<ErrorRecovery>(
             "type parameter definitions must appear before component declarations"_err_en_US),
@@ -560,9 +570,15 @@ TYPE_CONTEXT_PARSER("type bound procedure part"_en_US,
 //        final-procedure-stmt
 TYPE_CONTEXT_PARSER("type bound procedure binding"_en_US,
     recovery(
-        first(construct<TypeBoundProcBinding>(Parser<TypeBoundProcedureStmt>{}),
-            construct<TypeBoundProcBinding>(Parser<TypeBoundGenericStmt>{}),
-            construct<TypeBoundProcBinding>(Parser<FinalProcedureStmt>{})),
+        withMessage(
+            "expected a type-bound procedure binding (PROCEDURE, GENERIC, or FINAL) after CONTAINS"_err_en_US,
+            first(construct<TypeBoundProcBinding>(
+                      Parser<TypeBoundProcedureStmt>{}),
+                construct<TypeBoundProcBinding>(Parser<TypeBoundGenericStmt>{}),
+                construct<TypeBoundProcBinding>(Parser<FinalProcedureStmt>{}),
+                Parser<DataComponentDefStmt>{} >>
+                    fail<TypeBoundProcBinding>(
+                        "component definition must precede CONTAINS in a derived type"_err_en_US))),
         construct<TypeBoundProcBinding>(
             !"END"_tok >> SkipTo<'\n'>{} >> construct<ErrorRecovery>())))
 
@@ -669,6 +685,35 @@ TYPE_PARSER(
 TYPE_PARSER(recovery("END ENUM"_tok, constructEndStmtErrorRecovery) >>
     construct<EndEnumStmt>())
 
+// F2023 R766 enumeration-type-def ->
+//        enumeration-type-stmt
+//        enumeration-enumerator-stmt [ enumeration-enumerator-stmt ]...
+//        end-enumeration-type-stmt
+TYPE_CONTEXT_PARSER("enumeration type definition"_en_US,
+    construct<EnumerationTypeDef>(statement(Parser<EnumerationTypeStmt>{}),
+        some(unambiguousStatement(Parser<EnumerationEnumeratorStmt>{})),
+        statement(Parser<EndEnumerationTypeStmt>{})))
+
+// F2023 R767 enumeration-type-stmt ->
+//        ENUMERATION TYPE [ [ , access-spec ] :: ] enumeration-type-name
+TYPE_CONTEXT_PARSER("ENUMERATION TYPE statement"_en_US,
+    construct<EnumerationTypeStmt>(
+        "ENUMERATION TYPE" >> maybe("," >> accessSpec) / "::", name) ||
+        construct<EnumerationTypeStmt>(
+            "ENUMERATION TYPE" >> construct<std::optional<AccessSpec>>(), name))
+
+// F2023 R768 enumeration-enumerator-stmt -> ENUMERATOR [ :: ]
+// enumerator-name-list
+//   (Note: distinct from R761 enumerator-def-stmt — no "= expr" allowed here)
+TYPE_CONTEXT_PARSER("ENUMERATOR statement in ENUMERATION TYPE"_en_US,
+    construct<EnumerationEnumeratorStmt>(
+        "ENUMERATOR" >> maybe("::"_tok) >> nonemptyList(name)))
+
+// F2023 R769 end-enumeration-type-stmt ->
+//        END ENUMERATION TYPE [ enumeration-type-name ]
+TYPE_PARSER(construct<EndEnumerationTypeStmt>(recovery(
+    "END ENUMERATION TYPE" >> maybe(name), namedConstructEndStmtErrorRecovery)))
+
 // R801 type-declaration-stmt ->
 //        declaration-type-spec [[, attr-spec]... ::] entity-decl-list
 constexpr auto entityDeclWithoutEqInit{
@@ -692,8 +737,11 @@ TYPE_PARSER(
         "nonstandard usage: ',' in place of '::'"_port_en_US,
         construct<TypeDeclarationStmt>(declarationTypeSpec,
             defaulted("," >> nonemptyList(Parser<AttrSpec>{})),
-            withMessage("expected entity declarations"_err_en_US,
-                "," >> nonemptyList(entityDecl)))))
+            // Fail silently unless a ',' takes the place of '::', so the
+            // standard "expected '::'" is not joined by a spurious message.
+            lookAhead(","_tok) >>
+                withMessage("expected entity declarations"_err_en_US,
+                    "," >> nonemptyList(entityDecl)))))
 
 // R802 attr-spec ->
 //        access-spec | ALLOCATABLE | ASYNCHRONOUS |
@@ -722,7 +770,16 @@ TYPE_PARSER(construct<AttrSpec>(accessSpec) ||
     construct<AttrSpec>(construct<Value>("VALUE"_tok)) ||
     construct<AttrSpec>(construct<Volatile>("VOLATILE"_tok)) ||
     extension<LanguageFeature::CUDA>(
-        construct<AttrSpec>(Parser<common::CUDADataAttr>{})))
+        construct<AttrSpec>(Parser<CUDADataAttrSpec>{})))
+
+// CUDA-data-attr-spec -> CUDA-data-attr [( IMPLICIT )]
+// The parenthesized qualifier marks a compiler-applied attribute; it is
+// emitted into module files so the distinction survives, and is not meant to
+// be written in user code.
+TYPE_PARSER(construct<CUDADataAttrSpec>(Parser<common::CUDADataAttr>{},
+    maybe(
+        extension<LanguageFeature::CUDAImplicitDataAttrSpelling>(parenthesized(
+            construct<CUDADataAttrSpec::Implicit>("IMPLICIT" >> ok))))))
 
 // CUDA-data-attr ->
 //     CONSTANT | DEVICE | MANAGED | PINNED | SHARED | TEXTURE | UNIFIED
@@ -1304,6 +1361,8 @@ TYPE_PARSER(construct<StatOrErrmsg>("STAT =" >> statVariable) ||
 // !DIR$ UNROLL [n]
 // !DIR$ PREFETCH designator[, designator]...
 // !DIR$ IVDEP
+// !DIR$ ALIGN(n) [::] name-list
+// !DIR$ ATTRIBUTES ALIGN : n [::] name-list
 // !DIR$ <anything else>
 constexpr auto ignore_tkr{
     "IGNORE_TKR" >> optionalList(construct<CompilerDirective::IgnoreTKR>(
@@ -1344,6 +1403,13 @@ constexpr auto inlinealwaysDir{
 constexpr auto inlineDir{"INLINE" >> construct<CompilerDirective::Inline>()};
 constexpr auto ivdep{"IVDEP" >> construct<CompilerDirective::IVDep>()};
 constexpr auto simd{"SIMD" >> construct<CompilerDirective::Simd>()};
+// !DIR$ ALIGN(n) [::] name-list              (native spelling)
+// !DIR$ ATTRIBUTES ALIGN : n [::] name-list   (Intel-compatible spelling)
+constexpr auto alignNames{maybe("::"_tok) >> nonemptyList(name)};
+constexpr auto align{"ALIGN" >> construct<CompilerDirective::Align>(
+                                    parenthesized(digitString64), alignNames)};
+constexpr auto attributesAlign{"ATTRIBUTES ALIGN" >>
+    construct<CompilerDirective::Align>(":"_tok >> digitString64, alignNames)};
 TYPE_PARSER(beginDirective >> some(letter) >> "$ "_tok >>
     sourced((construct<CompilerDirective>(ignore_tkr) ||
                 construct<CompilerDirective>(loopCount) ||
@@ -1362,6 +1428,8 @@ TYPE_PARSER(beginDirective >> some(letter) >> "$ "_tok >>
                 construct<CompilerDirective>(inlineDir) ||
                 construct<CompilerDirective>(simd) ||
                 construct<CompilerDirective>(ivdep) ||
+                construct<CompilerDirective>(align) ||
+                construct<CompilerDirective>(attributesAlign) ||
                 construct<CompilerDirective>(
                     many(construct<CompilerDirective::NameValue>(
                         name, maybe(("="_tok || ":"_tok) >> digitString64))))) /

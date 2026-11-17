@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog \
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prolog-epilog \
 # RUN:    -filetype=obj | llvm-readobj --unwind - | FileCheck %s
 # Check save_fplr_x, set_fp, alloc_s
 
@@ -30,9 +30,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI: true
-registers:
 liveins:
   - { reg: '$w0', virtual-reg: '' }
   - { reg: '$w1', virtual-reg: '' }

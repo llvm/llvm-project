@@ -1,8 +1,7 @@
-# RUN: llc -mtriple=aarch64-- -start-after prologepilog -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-- -start-after prolog-epilog -o - %s | FileCheck %s
 ---
 name:            fun
 # CHECK: .cfi_startproc
-tracksRegLiveness: true
 frameInfo:
   stackSize:       16
   maxAlignment:    8

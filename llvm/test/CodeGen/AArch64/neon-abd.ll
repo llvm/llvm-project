@@ -597,7 +597,7 @@ define <8 x i32> @sabd_8h_bv_imm(<8 x i16> %a) {
 ; CHECK-LABEL: sabd_8h_bv_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x9, #549747425280 // =0x7fff800000
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    adrp x8, .LCPI45_0
 ; CHECK-NEXT:    movk x9, #69, lsl #48
 ; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI45_0]
@@ -619,7 +619,7 @@ define <8 x i32> @sabd_8h_bv_imm(<8 x i16> %a) {
 define <8 x i32> @uabd_8h_bv_imm(<8 x i16> %a) {
 ; CHECK-LABEL: uabd_8h_bv_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    adrp x8, .LCPI46_0
 ; CHECK-NEXT:    adrp x9, .LCPI46_1
 ; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI46_0]
@@ -785,6 +785,63 @@ define <4 x i16> @abs_diff_add_v4i16_rii(<4 x i16> %a) {
   %2 = trunc <4 x i32> %1 to <4 x i16>
   %conv1 = add nuw <4 x i16> %2, splat(i16 2371)
   ret <4 x i16> %conv1
+}
+
+; l < 2^63 <= r, so abdu(l, r) == r - l: should not become abs(sub).
+define <2 x i64> @uabd_known_order_v2i64(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: uabd_known_order_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    ushr v0.2d, v0.2d, #1
+; CHECK-NEXT:    fneg v2.2d, v2.2d
+; CHECK-NEXT:    orr v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    sub v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    ret
+  %l = lshr <2 x i64> %a, splat (i64 1)
+  %r = or <2 x i64> %b, splat (i64 -9223372036854775808)
+  %c = icmp ugt <2 x i64> %l, %r
+  %s1 = sub <2 x i64> %l, %r
+  %s2 = sub <2 x i64> %r, %l
+  %res = select <2 x i1> %c, <2 x i64> %s1, <2 x i64> %s2
+  ret <2 x i64> %res
+}
+
+; l < 2^31 <= r, so abdu(l, r) == r - l (uabd is legal, so it isn't expanded).
+define <4 x i32> @uabd_known_order_v4i32(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: uabd_known_order_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #1
+; CHECK-NEXT:    orr v1.4s, #128, lsl #24
+; CHECK-NEXT:    sub v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    ret
+  %l = lshr <4 x i32> %a, splat (i32 1)
+  %r = or <4 x i32> %b, splat (i32 -2147483648)
+  %c = icmp ugt <4 x i32> %l, %r
+  %s1 = sub <4 x i32> %l, %r
+  %s2 = sub <4 x i32> %r, %l
+  %res = select <4 x i1> %c, <4 x i32> %s1, <4 x i32> %s2
+  ret <4 x i32> %res
+}
+
+; pr233087: the low half becomes abdu(b, -1) == ~b: should not become abs(sub).
+define <4 x i64> @uabd_v4i64_pr233087(<4 x i64> %a, <4 x i64> %b) {
+; CHECK-LABEL: uabd_v4i64_pr233087:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI56_0
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI56_0]
+; CHECK-NEXT:    cmge v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    uqsub v1.2d, v0.2d, v3.2d
+; CHECK-NEXT:    uqsub v0.2d, v3.2d, v0.2d
+; CHECK-NEXT:    orr v1.16b, v0.16b, v1.16b
+; CHECK-NEXT:    mvn v0.16b, v2.16b
+; CHECK-NEXT:    ret
+  %cmp = icmp sge <4 x i64> %a, <i64 -9223372036854775808, i64 -9223372036854775808, i64 1, i64 -9223372036854775808>
+  %y = sext <4 x i1> %cmp to <4 x i64>
+  %c = icmp ugt <4 x i64> %b, %y
+  %s1 = sub <4 x i64> %b, %y
+  %s2 = sub <4 x i64> %y, %b
+  %r = select <4 x i1> %c, <4 x i64> %s1, <4 x i64> %s2
+  ret <4 x i64> %r
 }
 
 declare <8 x i8> @llvm.abs.v8i8(<8 x i8>, i1)

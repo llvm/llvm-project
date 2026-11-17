@@ -1,7 +1,7 @@
 ; RUN: not opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s 2>&1 | FileCheck %s
 
 ; DXIL operation firstbituhigh does not support double overload type
-; CHECK: intrinsic has incorrect argument type
+; CHECK: error: intrinsic argument 0 type (overload type 0) expected any integer or integer vector, but got double
 
 define noundef double @firstbituhigh_double(double noundef %a) {
 entry:

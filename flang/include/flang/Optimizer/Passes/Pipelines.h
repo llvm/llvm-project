@@ -22,15 +22,17 @@
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
+#include <functional>
 
 namespace fir {
+
+class GlobalOp;
 
 using PassConstructor = std::unique_ptr<mlir::Pass>();
 
@@ -62,11 +64,25 @@ void addNestedPassConditionally(mlir::PassManager &pm,
 }
 
 template <typename F>
-void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm, F ctor);
+void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm, F ctor) {
+  addNestedPassToOps<F, mlir::func::FuncOp, mlir::omp::DeclareMapperOp,
+                     mlir::omp::DeclareReductionOp, mlir::omp::PrivateClauseOp,
+                     fir::GlobalOp>(pm, ctor);
+}
 
 template <typename F>
 void addNestedPassToAllTopLevelOperationsConditionally(
-    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled, F ctor);
+    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled, F ctor) {
+  if (!disabled)
+    addNestedPassToAllTopLevelOperations<F>(pm, ctor);
+}
+
+template <typename F>
+void addPassToGPUModuleOperations(mlir::PassManager &pm, F ctor) {
+  mlir::OpPassManager &nestPM = pm.nest<mlir::gpu::GPUModuleOp>();
+  nestPM.addNestedPass<mlir::func::FuncOp>(ctor());
+  nestPM.addNestedPass<mlir::gpu::GPUFuncOp>(ctor());
+}
 
 /// Add MLIR Canonicalizer pass with region simplification disabled.
 /// FIR does not support the promotion of some SSA value to block arguments (or
@@ -81,8 +97,6 @@ void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm);
 
 void addCfgConversionPass(mlir::PassManager &pm,
                           const MLIRToLLVMPassPipelineConfig &config);
-
-void addAVC(mlir::PassManager &pm, const llvm::OptimizationLevel &optLevel);
 
 void addMemoryAllocationOpt(mlir::PassManager &pm);
 
@@ -117,9 +131,34 @@ void addLLVMDialectToLLVMPass(mlir::PassManager &pm, llvm::raw_ostream &output);
 /// Use inliner extension point callback to register the default inliner pass.
 void registerDefaultInlinerPass(MLIRToLLVMPassPipelineConfig &config);
 
+/// A callback run on the MLIRToLLVMPassPipelineConfig before the frontend
+/// builds the pipeline.
+using PassPipelineConfigCallback =
+    std::function<void(MLIRToLLVMPassPipelineConfig &)>;
+
+/// Register a callback that augments the MLIRToLLVMPassPipelineConfig before
+/// the frontend builds the pipeline. Call this from a static initializer in a
+/// plugin to add passes at the pipeline extension points. The callbacks are run
+/// in registration order, and must not themselves register callbacks.
+void registerPassPipelineConfigCallback(PassPipelineConfigCallback callback);
+
+/// Run the callbacks registered via registerPassPipelineConfigCallback on
+/// \p config.
+void invokePassPipelineConfigCallbacks(MLIRToLLVMPassPipelineConfig &config);
+
 /// Register the passes used in Flang's MLIR pass pipeline
 /// e.g. --mlir-print-ir-before=<pass> and similar.
 void registerFlangPipelinePasses();
+
+/// Create a pass pipeline for default FIR optimizations that run before CFG
+/// conversion.
+void createDefaultFIRPreCFGOptimizerPassPipeline(
+    mlir::PassManager &pm, MLIRToLLVMPassPipelineConfig &pc);
+
+/// Create a pass pipeline for default FIR optimizations that run after CFG
+/// conversion.
+void createDefaultFIRPostCFGOptimizerPassPipeline(
+    mlir::PassManager &pm, MLIRToLLVMPassPipelineConfig &pc);
 
 /// Create a pass pipeline for running default optimization passes for
 /// incremental conversion of FIR.
@@ -141,6 +180,9 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
                                   const MLIRToLLVMPassPipelineConfig &config);
 
 struct OpenMPFIRPassPipelineOpts {
+  /// Whether only OpenMP simd constructs are being honored.
+  bool isSimdOnly;
+
   /// Whether code is being generated for a target device rather than the host
   /// device
   bool isTargetDevice;

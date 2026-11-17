@@ -42,7 +42,8 @@ ConnectionGenericFile::~ConnectionGenericFile() {
 }
 
 void ConnectionGenericFile::InitializeEventHandles() {
-  m_event_handles[kInterruptEvent] = CreateEvent(NULL, FALSE, FALSE, NULL);
+  m_event_handles[kInterruptEvent] =
+      CreateEvent(nullptr, FALSE, FALSE, nullptr);
 
   // Note, we should use a manual reset event for the hEvent argument of the
   // OVERLAPPED.  This is because both WaitForMultipleObjects and
@@ -51,7 +52,7 @@ void ConnectionGenericFile::InitializeEventHandles() {
   // WaitForMultipleObjects will reset the event, return successfully, and then
   // GetOverlappedResult will block since the event is no longer signalled.
   m_event_handles[kBytesAvailableEvent] =
-      ::CreateEvent(NULL, TRUE, FALSE, NULL);
+      ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
 }
 
 bool ConnectionGenericFile::IsConnected() const {
@@ -88,8 +89,8 @@ lldb::ConnectionStatus ConnectionGenericFile::Connect(llvm::StringRef path,
     return eConnectionStatusError;
   }
   m_file = ::CreateFileW(wpath.c_str(), GENERIC_READ | GENERIC_WRITE,
-                         FILE_SHARE_READ, NULL, OPEN_ALWAYS,
-                         FILE_FLAG_OVERLAPPED, NULL);
+                         FILE_SHARE_READ, nullptr, OPEN_ALWAYS,
+                         FILE_FLAG_OVERLAPPED, nullptr);
   if (m_file == INVALID_HANDLE_VALUE) {
     if (error_ptr)
       *error_ptr = Status(::GetLastError(), eErrorTypeWin32);
@@ -117,6 +118,7 @@ lldb::ConnectionStatus ConnectionGenericFile::Disconnect(Status *error_ptr) {
   // Set the disconnect event so that any blocking reads unblock, then cancel
   // any pending IO operations.
   ::CancelIoEx(old_file, &m_overlapped);
+  m_read_pending = false;
 
   // Close the file handle if we owned it, but don't close the event handles.
   // We could always reconnect with the same Connection instance.
@@ -137,7 +139,8 @@ size_t ConnectionGenericFile::Read(void *dst, size_t dst_len,
     error_ptr->Clear();
 
   auto finish = [&](size_t bytes, ConnectionStatus s, DWORD error_code) {
-    m_read_pending = s == eConnectionStatusInterrupted;
+    m_read_pending =
+        s == eConnectionStatusInterrupted || s == eConnectionStatusTimedOut;
     status = s;
     if (error_ptr)
       *error_ptr = Status(error_code, eErrorTypeWin32);
@@ -164,7 +167,7 @@ size_t ConnectionGenericFile::Read(void *dst, size_t dst_len,
   DWORD read_error = ERROR_SUCCESS;
   if (!m_read_pending) {
     m_overlapped.hEvent = m_event_handles[kBytesAvailableEvent];
-    read_result = ::ReadFile(m_file, dst, dst_len, NULL, &m_overlapped);
+    read_result = ::ReadFile(m_file, dst, dst_len, nullptr, &m_overlapped);
     read_error = ::GetLastError();
   }
 
@@ -174,12 +177,14 @@ size_t ConnectionGenericFile::Read(void *dst, size_t dst_len,
       return finish(0, eConnectionStatusEndOfFile, 0);
     }
     // An unknown error occurred.  Fail out.
-    return finish(0, eConnectionStatusError, ::GetLastError());
+    return finish(0, eConnectionStatusError, read_error);
   }
 
-  if (!read_result || m_read_pending) {
-    // The expected return path.  The operation is pending.  Wait for the
-    // operation to complete or be interrupted.
+  if ((!m_read_pending && !read_result) ||
+      (m_read_pending && !HasOverlappedIoCompleted(&m_overlapped))) {
+    // The expected return path. The operation is pending. Wait for the
+    // operation to complete or be interrupted. A pending read that already
+    // completed skips the wait: finish() may have reset its event.
     DWORD milliseconds =
         timeout
             ? std::chrono::duration_cast<std::chrono::milliseconds>(*timeout)
@@ -243,10 +248,10 @@ size_t ConnectionGenericFile::Write(const void *src, size_t src_len,
   if (!IsConnected())
     return finish(0, eConnectionStatusNoConnection, ERROR_INVALID_HANDLE);
 
-  m_overlapped.hEvent = NULL;
+  m_overlapped.hEvent = nullptr;
 
   DWORD bytes_written = 0;
-  BOOL result = ::WriteFile(m_file, src, src_len, NULL, &m_overlapped);
+  BOOL result = ::WriteFile(m_file, src, src_len, nullptr, &m_overlapped);
   if (!result && ::GetLastError() != ERROR_IO_PENDING)
     return finish(0, eConnectionStatusError, ::GetLastError());
 

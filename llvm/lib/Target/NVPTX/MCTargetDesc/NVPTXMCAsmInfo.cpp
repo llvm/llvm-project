@@ -49,7 +49,6 @@ NVPTXMCAsmInfo::NVPTXMCAsmInfo(const Triple &TheTriple,
   SupportsSignedData = false;
 
   InternalSymbolPrefix = "$L__";
-  PrivateLabelPrefix = InternalSymbolPrefix;
 
   // TODO: Can we just disable this?
   WeakDirective = "\t// .weak\t";
@@ -60,4 +59,5 @@ NVPTXMCAsmInfo::NVPTXMCAsmInfo(const Triple &TheTriple,
   // ptxas does not support DWARF `.file fileno directory filename'
   // syntax as of v11.X.
   EnableDwarfFileDirectoryDefault = false;
+  HasAddrsigDirective = false;
 }

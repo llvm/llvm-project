@@ -16,7 +16,6 @@
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/tools.h"
-#include "flang/Semantics/attr.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
@@ -289,22 +288,22 @@ public:
         .Attach(doConcurrentSourcePosition_, GetEnclosingDoMsg());
   }
 
-  // C1145, C1146: cannot call ieee_[gs]et_flag, ieee_[gs]et_halting_mode,
-  // ieee_[gs]et_status, ieee_set_rounding_mode, or ieee_set_underflow_mode
+  // F2023 C1145, C1146: prohibit specified IEEE_EXCEPTIONS and
+  // IEEE_ARITHMETIC procedure references in DO CONCURRENT
   void Post(const parser::ProcedureDesignator &procedureDesignator) {
     if (auto *name{std::get_if<parser::Name>(&procedureDesignator.u)}) {
       if (name->symbol) {
         const Symbol &ultimate{name->symbol->GetUltimate()};
         const Scope &scope{ultimate.owner()};
-        if (const Symbol * module{scope.IsModule() ? scope.symbol() : nullptr};
-            module &&
-            (module->name() == "__fortran_ieee_arithmetic" ||
+        if (const Symbol *module{scope.IsModule() ? scope.symbol() : nullptr};
+            module && scope.parent().IsIntrinsicModules() &&
+            (module->name() == "ieee_arithmetic" ||
                 module->name() == "__fortran_ieee_exceptions")) {
           std::string s{ultimate.name().ToString()};
           static constexpr const char *badName[]{"ieee_get_flag",
-              "ieee_set_flag", "ieee_get_halting_mode", "ieee_set_halting_mode",
-              "ieee_get_status", "ieee_set_status", "ieee_set_rounding_mode",
-              "ieee_set_underflow_mode", nullptr};
+              "ieee_get_halting_mode", "ieee_set_halting_mode",
+              "ieee_get_status", "ieee_set_modes", "ieee_set_status",
+              "ieee_set_rounding_mode", "ieee_set_underflow_mode", nullptr};
           for (std::size_t j{0}; badName[j]; ++j) {
             if (s.find(badName[j]) != s.npos) {
               context_
@@ -709,6 +708,10 @@ private:
         }};
         supportedIdentifier = true;
         switch (reductionOperator.v) {
+        case parser::ReductionOperator::Operator::Minus:
+          context_.Say(currentStatementSourcePosition_,
+              "'-' is not a supported reduction operator in a DO CONCURRENT REDUCE locality specifier"_err_en_US);
+          break;
         case parser::ReductionOperator::Operator::Plus:
         case parser::ReductionOperator::Operator::Multiply:
           if (!(type->IsNumeric(TypeCategory::Complex) ||
@@ -1191,16 +1194,70 @@ static void CheckIoImpliedDoIndex(
   }
 }
 
+// F2023 12.6.3p7: The do-variable of an io-implied-do that is in another
+// io-implied-do shall not appear as, nor be associated with, the do-variable
+// of the containing io-implied-do.
+void DoForallChecker::CheckActiveIoImpliedDoVar(const parser::Name &name) {
+  if (!name.symbol) {
+    return;
+  }
+  const Symbol &resolved{ResolveAssociations(*name.symbol)};
+  const EquivalenceSet *equivSet{FindEquivalenceSet(resolved)};
+  for (const Symbol *active : activeIoImpliedDoVars_) {
+    const Symbol &activeResolved{ResolveAssociations(*active)};
+    bool associated{&resolved == &activeResolved};
+    if (!associated && equivSet) {
+      for (const EquivalenceObject &obj : *equivSet) {
+        if (obj.symbol == activeResolved) {
+          associated = true;
+          break;
+        }
+      }
+    }
+    if (associated) {
+      if (name.symbol == active) {
+        context_.Warn(common::UsageWarning::IoImpliedDoIndexConflict,
+            name.source,
+            "I/O implied DO index '%s' appears in an enclosing I/O implied DO loop and should not have the same name"_warn_en_US,
+            name.source);
+      } else {
+        context_.Warn(common::UsageWarning::IoImpliedDoIndexConflict,
+            name.source,
+            "I/O implied DO index '%s' should not be associated with do-variable '%s' of an enclosing I/O implied DO loop"_warn_en_US,
+            name.source, active->name());
+      }
+      break;
+    }
+  }
+  activeIoImpliedDoVars_.insert(name.symbol);
+}
+
+void DoForallChecker::Enter(const parser::OutputImpliedDo &outputImpliedDo) {
+  CheckActiveIoImpliedDoVar(parser::UnwrapRef<parser::Name>(
+      std::get<parser::IoImpliedDoControl>(outputImpliedDo.t).Name()));
+}
+
+void DoForallChecker::Enter(const parser::InputImpliedDo &inputImpliedDo) {
+  CheckActiveIoImpliedDoVar(parser::UnwrapRef<parser::Name>(
+      std::get<parser::IoImpliedDoControl>(inputImpliedDo.t).Name()));
+}
+
 void DoForallChecker::Leave(const parser::OutputImpliedDo &outputImpliedDo) {
-  CheckIoImpliedDoIndex(context_,
-      parser::UnwrapRef<parser::Name>(
-          std::get<parser::IoImpliedDoControl>(outputImpliedDo.t).Name()));
+  const auto &name{parser::UnwrapRef<parser::Name>(
+      std::get<parser::IoImpliedDoControl>(outputImpliedDo.t).Name())};
+  CheckIoImpliedDoIndex(context_, name);
+  if (name.symbol) {
+    activeIoImpliedDoVars_.erase(name.symbol);
+  }
 }
 
 void DoForallChecker::Leave(const parser::InputImpliedDo &inputImpliedDo) {
-  CheckIoImpliedDoIndex(context_,
-      parser::UnwrapRef<parser::Name>(
-          std::get<parser::IoImpliedDoControl>(inputImpliedDo.t).Name()));
+  const auto &name{parser::UnwrapRef<parser::Name>(
+      std::get<parser::IoImpliedDoControl>(inputImpliedDo.t).Name())};
+  CheckIoImpliedDoIndex(context_, name);
+  if (name.symbol) {
+    activeIoImpliedDoVars_.erase(name.symbol);
+  }
 }
 
 void DoForallChecker::Leave(const parser::StatVariable &statVariable) {

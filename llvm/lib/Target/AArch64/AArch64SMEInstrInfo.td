@@ -224,11 +224,11 @@ let Predicates = [HasSME_TMOP, HasSMEB16B16] in {
 }
 
 let Predicates = [HasSME_TMOP, HasSMEF8F16] in {
-  defm FTMOPA_M2ZZZI_BtoH : sme_tmopa_16b<0b01001, ZZ_b_mul_r, ZPR8, nxv16i8, "ftmopa", int_aarch64_sme_ftmopa_za16, [FPMR, FPCR]>;
+  defm FTMOPA_M2ZZZI_BtoH : sme_tmopa_16b<0b01001, ZZ_b_mul_r, ZPR8, nxv16i8, "ftmopa", int_aarch64_sme_fp8_ftmopa_za16, [FPMR, FPCR]>;
 }
 
 let Predicates = [HasSME_TMOP, HasSMEF8F32] in {
-  defm FTMOPA_M2ZZZI_BtoS : sme_tmopa_32b<0b01000, ZZ_b_mul_r, ZPR8, nxv16i8, "ftmopa", int_aarch64_sme_ftmopa_za32, [FPMR, FPCR]>;
+  defm FTMOPA_M2ZZZI_BtoS : sme_tmopa_32b<0b01000, ZZ_b_mul_r, ZPR8, nxv16i8, "ftmopa", int_aarch64_sme_fp8_ftmopa_za32, [FPMR, FPCR]>;
 }
 
 let Predicates = [HasSME] in {
@@ -279,12 +279,6 @@ def RestoreZAPseudo :
          (ins GPR64:$tpidr2_el0, GPR64sp:$tpidr2obj, i64imm:$restore_routine, variable_ops), []>,
          Sched<[]>;
 
-// Read and write TPIDR2_EL0
-def : Pat<(int_aarch64_sme_set_tpidr2 i64:$val),
-          (MSR 0xde85, GPR64:$val)>;
-def : Pat<(i64 (int_aarch64_sme_get_tpidr2)),
-          (MRS 0xde85)>;
-
 } // End let Predicates = [HasSMEandIsNonStreamingSafe]
 
 multiclass CoalescerBarrierPseudo<RegisterClass rc, list<ValueType> vts> {
@@ -327,7 +321,7 @@ def MSRpstatePseudo :
     Sched<[WriteSys]> {
   let hasPostISelHook = 1;
   let Uses = [VG];
-  let Defs = [VG];
+  let Defs = [VG, FPMR];
 }
 
 def : Pat<(AArch64_cond_smstart (i32 svcr_op:$pstate), (i64 timm0_31:$condition), (i64 GPR64:$pstatesm)),
@@ -1136,11 +1130,20 @@ let Predicates = [HasSME_MOP4, HasSMEF64F64] in {
   defm FMOP4S : sme2_fmop4as_fp64_non_widening<1, "fmop4s", "int_aarch64_sme_mop4s">;
 }
 
+// SME2 mixed-precision FP8 instructions
+let Predicates = [HasSMEF16F8F16] in {
+  def FMOPAB_M2ZZZ_BtoH: sme2_fp8_fmop_za16<"fmopab", 0b0>;
+  def FMOPAT_M2ZZZ_BtoH: sme2_fp8_fmop_za16<"fmopat", 0b1>;
+
+  defm FDOT_VG2_M2ZZIZ_BtoH  : sme2_fp8_fdot_za16_vg1x2<"fdot", 0b0>;
+  defm FVDOT_VG2_M2ZZIZ_BtoH : sme2_fp8_fdot_za16_vg1x2<"fvdot", 0b1>;
+}
+
 //===----------------------------------------------------------------------===//
 // SME2.3 instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasSME2p3] in {
-  def LUTI6_ZTZ       : sme2_lut_single<"luti6">;
+  defm LUTI6_ZTZ      : sme2_lut_single<"luti6", int_aarch64_sme_luti6_zt>;
   def LUTI6_4ZT3Z     : sme2_luti6_zt_consecutive<"luti6">;
   def LUTI6_S_4ZT3Z   : sme2_luti6_zt_strided<"luti6">;
   def LUTI6_4Z2Z2ZI   : sme2_luti6_vector_vg4_consecutive<"luti6">;

@@ -249,20 +249,6 @@ struct PointerSumTypeHelper : MemberTs... {
 template <typename TagT, typename... MemberTs>
 struct DenseMapInfo<PointerSumType<TagT, MemberTs...>> {
   using SumType = PointerSumType<TagT, MemberTs...>;
-  using HelperT = detail::PointerSumTypeHelper<TagT, MemberTs...>;
-  enum { SomeTag = HelperT::MinTag };
-  using SomePointerT =
-      typename HelperT::template Lookup<HelperT::MinTag>::PointerT;
-  using SomePointerInfo = DenseMapInfo<SomePointerT>;
-
-  static inline SumType getEmptyKey() {
-    return SumType::template create<SomeTag>(SomePointerInfo::getEmptyKey());
-  }
-
-  static inline SumType getTombstoneKey() {
-    return SumType::template create<SomeTag>(
-        SomePointerInfo::getTombstoneKey());
-  }
 
   static unsigned getHashValue(const SumType &Arg) {
     uintptr_t OpaqueValue = Arg.getOpaqueValue();

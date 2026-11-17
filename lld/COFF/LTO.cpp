@@ -56,7 +56,8 @@ std::string BitcodeCompiler::getThinLTOOutputFile(StringRef path) {
 
 lto::Config BitcodeCompiler::createConfig() {
   lto::Config c;
-  c.Options = initTargetOptionsFromCodeGenFlags();
+  c.LibraryOptions = &ctx.config.libraryOptions;
+  c.Options = getTargetOptions(ctx.config.libraryOptions);
   c.Options.EmitAddrsig = true;
   for (StringRef C : ctx.config.mllvmOpts)
     c.MllvmArgs.emplace_back(C.str());
@@ -68,8 +69,10 @@ lto::Config BitcodeCompiler::createConfig() {
 
   // Use static reloc model on 32-bit x86 because it usually results in more
   // compact code, and because there are also known code generation bugs when
-  // using the PIC model (see PR34306).
-  if (ctx.config.machine == COFF::IMAGE_FILE_MACHINE_I386)
+  // using the PIC model (see PR34306). Also on 32-bit ARM, where COFF has no
+  // relocation for PIC's PC-relative movw/movt.
+  if (ctx.config.machine == COFF::IMAGE_FILE_MACHINE_I386 ||
+      ctx.config.machine == COFF::IMAGE_FILE_MACHINE_ARMNT)
     c.RelocModel = Reloc::Static;
   else
     c.RelocModel = Reloc::PIC_;
@@ -81,8 +84,8 @@ lto::Config BitcodeCompiler::createConfig() {
   c.DiagHandler = diagnosticHandler;
   c.DwoDir = ctx.config.dwoDir.str();
   c.OptLevel = ctx.config.ltoo;
-  c.CPU = getCPUStr();
-  c.MAttrs = getMAttrs();
+  c.CPU = getCPUStr(ctx.config.libraryOptions);
+  c.MAttrs = getMAttrs(ctx.config.libraryOptions);
   std::optional<CodeGenOptLevel> optLevelOrNone = CodeGenOpt::getLevel(
       ctx.config.ltoCgo.value_or(args::getCGOptLevel(ctx.config.ltoo)));
   assert(optLevelOrNone && "Invalid optimization level!");
@@ -95,6 +98,11 @@ lto::Config BitcodeCompiler::createConfig() {
   c.SampleProfile = ctx.config.ltoSampleProfileName;
   c.TimeTraceEnabled = ctx.config.timeTraceEnabled;
   c.TimeTraceGranularity = ctx.config.timeTraceGranularity;
+  c.RemarksFilename = ctx.config.optRemarksFilename;
+  c.RemarksPasses = ctx.config.optRemarksPasses;
+  c.RemarksWithHotness = ctx.config.optRemarksWithHotness;
+  c.RemarksHotnessThreshold = ctx.config.optRemarksHotnessThreshold;
+  c.RemarksFormat = ctx.config.optRemarksFormat;
 
   if (ctx.config.emit == EmitKind::LLVM) {
     c.PreCodeGenModuleHook = [this](size_t task, const Module &m) {
@@ -126,17 +134,7 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
 
   // Initialize ltoObj.
   lto::ThinBackend backend;
-  if (!ctx.config.dtltoDistributor.empty()) {
-    backend = lto::createOutOfProcessThinBackend(
-        llvm::hardware_concurrency(ctx.config.thinLTOJobs),
-        /*OnWrite=*/nullptr,
-        /*ShouldEmitIndexFiles=*/false,
-        /*ShouldEmitImportFiles=*/false, ctx.config.outputFile,
-        ctx.config.dtltoDistributor, ctx.config.dtltoDistributorArgs,
-        ctx.config.dtltoCompiler, ctx.config.dtltoCompilerPrependArgs,
-        ctx.config.dtltoCompilerArgs, !ctx.config.saveTempsArgs.empty(),
-        createAddBufferFn(files, file_names));
-  } else if (ctx.config.thinLTOIndexOnly) {
+  if (ctx.config.thinLTOIndexOnly) {
     auto OnIndexWrite = [&](StringRef S) { thinIndices.erase(S); };
     backend = lto::createWriteIndexesThinBackend(
         llvm::hardware_concurrency(ctx.config.thinLTOJobs),
@@ -154,12 +152,22 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
                                         ctx.config.ltoPartitions);
   else
     ltoObj = std::make_unique<lto::DTLTO>(
-        createConfig(), backend, ctx.config.ltoPartitions,
-        llvm::lto::LTO::LTOKind::LTOK_Default, ctx.config.outputFile,
+        createConfig(), ctx.config.ltoPartitions,
+        llvm::lto::LTO::LTOKind::LTOK_Default, nullptr,
+        ctx.config.thinLTOEmitImportsFiles, ctx.config.thinLTOIndexOnly,
+        ctx.config.outputFile, ctx.config.dtltoDistributor,
+        ctx.config.dtltoDistributorArgs, ctx.config.dtltoCompiler,
+        ctx.config.dtltoCompilerPrependArgs, ctx.config.dtltoCompilerArgs,
+        createAddBufferFn(files, file_names),
         !ctx.config.saveTempsArgs.empty());
 }
 
 BitcodeCompiler::~BitcodeCompiler() = default;
+
+void BitcodeCompiler::waitForLTOCleanup() {
+  if (ltoObj)
+    ltoObj->waitForCleanup();
+}
 
 static void undefine(Symbol *s) { replaceSymbol<Undefined>(s, s->getName()); }
 
@@ -211,7 +219,8 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   FileCache cache;
   if (!ctx.config.ltoCache.empty())
     cache = check(localCache("ThinLTO", "Thin", ctx.config.ltoCache,
-                             createAddBufferFn(files, file_names)));
+                             createAddBufferFn(files, file_names),
+                             !ctx.config.dtltoDistributor.empty()));
 
   checkError(ltoObj->run(
       [&](size_t task, const Twine &moduleName) {
@@ -241,7 +250,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   }
 
   if (!ctx.config.ltoCache.empty())
-    pruneCache(ctx.config.ltoCache, ctx.config.ltoCachePolicy, files);
+    check(pruneCache(ctx.config.ltoCache, ctx.config.ltoCachePolicy, files));
 
   std::vector<InputFile *> ret;
   bool emitASM = ctx.config.emit == EmitKind::ASM;
@@ -287,4 +296,8 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   }
 
   return ret;
+}
+
+void BitcodeCompiler::setBitcodeLibFuncs(ArrayRef<StringRef> bitcodeLibFuncs) {
+  ltoObj->setBitcodeLibFuncs(bitcodeLibFuncs);
 }

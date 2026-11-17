@@ -1,9 +1,10 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GCN,GFX11 %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GCN,GFX1150 %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GCN,GFX12 %s
+# RUN: llc -mtriple=amdgpu11.00 -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GCN,GFX11 %s
+# RUN: llc -mtriple=amdgpu11.50 -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GCN,GFX1150 %s
+# RUN: llc -mtriple=amdgpu12.00 -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GCN,GFX12 %s
 
 ---
 name: waitcnt-gather-sample
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -19,6 +20,7 @@ body: |
 ...
 ---
 name: waitcnt-gather-sample-o
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -33,6 +35,7 @@ body: |
 ...
 ---
 name: waitcnt-sample-gather
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -48,6 +51,7 @@ body: |
 ...
 ---
 name: waitcnt-sample-load
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -64,6 +68,7 @@ body: |
 ...
 ---
 name: waitcnt-load-sample
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body: |

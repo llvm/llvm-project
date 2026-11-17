@@ -44,10 +44,9 @@ TSAN_INTERCEPTOR(kern_return_t, mach_vm_deallocate, vm_map_t target,
   SCOPED_TSAN_INTERCEPTOR(mach_vm_deallocate, target, address, size);
   if (target != mach_task_self())
     return REAL(mach_vm_deallocate)(target, address, size);
-  kern_return_t kr = REAL(mach_vm_deallocate)(target, address, size);
-  if (kr == KERN_SUCCESS && address)
+  if (address)
     UnmapShadow(thr, address, size);
-  return kr;
+  return REAL(mach_vm_deallocate)(target, address, size);
 }
 
 }  // namespace __tsan

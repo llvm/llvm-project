@@ -8,25 +8,40 @@
 
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 
-#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
-#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
-#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
-#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/Pass/Pass.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTOPENMPTOLLVMPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 
 namespace {
+
+static LogicalResult convertTypeAttr(Attribute &attr,
+                                     const TypeConverter &typeConverter) {
+  auto typeAttr = dyn_cast<TypeAttr>(attr);
+  if (!typeAttr)
+    return success();
+  Type convertedType = typeConverter.convertType(typeAttr.getValue());
+  if (!convertedType)
+    return failure();
+  attr = TypeAttr::get(convertedType);
+  return success();
+}
+
+static bool areTypeAttrsLegal(Operation *op,
+                              const TypeConverter &typeConverter) {
+  bool inherentAttrsLegal = true;
+  op->getName().walkInherentAttrs(op, [&](StringRef, Attribute &attr) {
+    if (auto typeAttr = dyn_cast<TypeAttr>(attr))
+      inherentAttrsLegal &= typeConverter.isLegal(typeAttr.getValue());
+  });
+  return inherentAttrsLegal &&
+         llvm::all_of(op->getDiscardableAttrs(), [&](NamedAttribute attr) {
+           auto typeAttr = dyn_cast<TypeAttr>(attr.getValue());
+           return !typeAttr || typeConverter.isLegal(typeAttr.getValue());
+         });
+}
 
 /// A pattern that converts the result and operand types, attributes, and region
 /// arguments of an OpenMP operation to the LLVM dialect.
@@ -60,20 +75,26 @@ struct OpenMPOpConversion : public ConvertOpToLLVMPattern<T> {
     if (failed(converter->convertTypes(op->getResultTypes(), resTypes)))
       return failure();
 
-    // Translate type attributes.
+    // Translate type attributes in the properties and discardable attributes.
     // They are kept unmodified except if they are type attributes.
-    SmallVector<NamedAttribute> convertedAttrs;
-    for (NamedAttribute attr : op->getAttrs()) {
-      if (auto typeAttr = dyn_cast<TypeAttr>(attr.getValue())) {
-        Type convertedType = converter->convertType(typeAttr.getValue());
-        if (!convertedType)
-          return rewriter.notifyMatchFailure(
-              op, "failed to convert type in attribute");
-        convertedAttrs.emplace_back(attr.getName(),
-                                    TypeAttr::get(convertedType));
-      } else {
-        convertedAttrs.push_back(attr);
-      }
+    typename T::Properties convertedProperties = op.getProperties();
+    LogicalResult attrConversionResult = success();
+    T::walkInherentAttrs(
+        op.getContext(), convertedProperties, [&](StringRef, Attribute &attr) {
+          if (succeeded(attrConversionResult))
+            attrConversionResult = convertTypeAttr(attr, *converter);
+        });
+    if (failed(attrConversionResult))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed to convert type in attribute");
+
+    SmallVector<NamedAttribute> convertedDiscardableAttrs;
+    for (NamedAttribute attr : op->getDiscardableAttrs()) {
+      Attribute convertedAttr = attr.getValue();
+      if (failed(convertTypeAttr(convertedAttr, *converter)))
+        return rewriter.notifyMatchFailure(
+            op, "failed to convert type in attribute");
+      convertedDiscardableAttrs.emplace_back(attr.getName(), convertedAttr);
     }
 
     // Translate operands.
@@ -99,7 +120,7 @@ struct OpenMPOpConversion : public ConvertOpToLLVMPattern<T> {
 
     // Create new operation.
     auto newOp = T::create(rewriter, op.getLoc(), resTypes, convertedOperands,
-                           convertedAttrs);
+                           convertedProperties, convertedDiscardableAttrs);
 
     // Translate regions.
     for (auto [originalRegion, convertedRegion] :
@@ -131,10 +152,7 @@ void mlir::configureOpenMPToLLVMConversionLegality(
                         [&](Region &region) {
                           return typeConverter.isLegal(&region);
                         }) &&
-           llvm::all_of(op->getAttrs(), [&](NamedAttribute attr) {
-             auto typeAttr = dyn_cast<TypeAttr>(attr.getValue());
-             return !typeAttr || typeConverter.isLegal(typeAttr.getValue());
-           });
+           areTypeAttrsLegal(op, typeConverter);
   });
 }
 
@@ -163,36 +181,6 @@ void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
 #define GET_OP_LIST
 #include "mlir/Dialect/OpenMP/OpenMPOps.cpp.inc"
       >(converter, patterns);
-}
-
-namespace {
-struct ConvertOpenMPToLLVMPass
-    : public impl::ConvertOpenMPToLLVMPassBase<ConvertOpenMPToLLVMPass> {
-  using Base::Base;
-
-  void runOnOperation() override;
-};
-} // namespace
-
-void ConvertOpenMPToLLVMPass::runOnOperation() {
-  auto module = getOperation();
-
-  // Convert to OpenMP operations with LLVM IR dialect
-  RewritePatternSet patterns(&getContext());
-  LLVMTypeConverter converter(&getContext());
-  arith::populateArithToLLVMConversionPatterns(converter, patterns);
-  cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
-  cf::populateAssertToLLVMConversionPattern(converter, patterns);
-  populateFinalizeMemRefToLLVMConversionPatterns(converter, patterns);
-  populateFuncToLLVMConversionPatterns(converter, patterns);
-  populateOpenMPToLLVMConversionPatterns(converter, patterns);
-
-  LLVMConversionTarget target(getContext());
-  target.addLegalOp<omp::BarrierOp, omp::FlushOp, omp::TaskwaitOp,
-                    omp::TaskyieldOp, omp::TerminatorOp>();
-  configureOpenMPToLLVMConversionLegality(target, converter);
-  if (failed(applyPartialConversion(module, target, std::move(patterns))))
-    signalPassFailure();
 }
 
 //===----------------------------------------------------------------------===//

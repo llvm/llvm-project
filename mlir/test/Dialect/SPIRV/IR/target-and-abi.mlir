@@ -257,45 +257,6 @@ func.func @target_env_cooperative_matrix_khr() attributes{
 
 // -----
 
-func.func @target_env_cooperative_matrix_nv() attributes{
-  // CHECK:      spirv.target_env = #spirv.target_env<
-  // CHECK-SAME:   SPV_NV_cooperative_matrix
-  // CHECK-SAME: #spirv.coop_matrix_props_nv<
-  // CHECK-SAME:   m_size = 8, n_size = 8, k_size = 32,
-  // CHECK-SAME:   a_type = i8, b_type = i8, c_type = i32,
-  // CHECK-SAME:   result_type = i32, scope = <Subgroup>>
-  // CHECK-SAME: #spirv.coop_matrix_props_nv<
-  // CHECK-SAME:   m_size = 8, n_size = 8, k_size = 16,
-  // CHECK-SAME:   a_type = f16, b_type = f16, c_type = f16,
-  // CHECK-SAME:   result_type = f16, scope = <Subgroup>>
-  spirv.target_env = #spirv.target_env<
-  #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class,
-                            SPV_NV_cooperative_matrix]>,
-  #spirv.resource_limits<
-    cooperative_matrix_properties_nv = [#spirv.coop_matrix_props_nv<
-      m_size = 8,
-      n_size = 8,
-      k_size = 32,
-      a_type = i8,
-      b_type = i8,
-      c_type = i32,
-      result_type = i32,
-      scope = #spirv.scope<Subgroup>
-    >, #spirv.coop_matrix_props_nv<
-      m_size = 8,
-      n_size = 8,
-      k_size = 16,
-      a_type = f16,
-      b_type = f16,
-      c_type = f16,
-      result_type = f16,
-      scope = #spirv.scope<Subgroup>
-    >]
-  >>
-} { return }
-
-// -----
-
 //===----------------------------------------------------------------------===//
 // spirv.vce
 //===----------------------------------------------------------------------===//
@@ -345,4 +306,15 @@ func.func @vce_wrong_capability() attributes {
 func.func @vce() attributes {
   // CHECK: #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>
   vce = #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>
+} { return }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.selection_control
+//===----------------------------------------------------------------------===//
+
+// expected-error@+1 {{'spirv.selection_control' must be a spirv::SelectionControlAttr}}
+func.func @selection_control_wrong_attr() attributes {
+  spirv.selection_control = 64
 } { return }

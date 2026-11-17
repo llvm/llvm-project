@@ -40,9 +40,10 @@
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Filesystem.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Parallel.h"
 #include "lld/Common/Strings.h"
+#include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -113,6 +114,18 @@ llvm::raw_fd_ostream Ctx::openAuxiliaryFile(llvm::StringRef filename,
   return {filename, ec, flags};
 }
 
+// Set up the parts of Ctx that both the top-level link and the nested dynamic
+// debugging link need. The caller initializes ctx.e beforehand.
+static void initContext(Ctx &ctx, LinkerScript &script, StringRef arg0) {
+  ctx.e.logName = args::getFilenameWithoutExe(arg0);
+  ctx.e.errorLimitExceededMsg = "too many errors emitted, stopping now (use "
+                                "--error-limit=0 to see all errors)";
+  ctx.script = &script;
+  ctx.symAux.emplace_back();
+  ctx.symtab = std::make_unique<SymbolTable>(ctx);
+  ctx.arg.progName = arg0;
+}
+
 namespace lld {
 namespace elf {
 bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
@@ -120,22 +133,9 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   // This driver-specific context will be freed later by unsafeLldMain().
   auto *context = new Ctx;
   Ctx &ctx = *context;
-
-  context->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
-  context->e.logName = args::getFilenameWithoutExe(args[0]);
-  context->e.errorLimitExceededMsg =
-      "too many errors emitted, stopping now (use "
-      "--error-limit=0 to see all errors)";
-
   LinkerScript script(ctx);
-  ctx.script = &script;
-  ctx.symAux.emplace_back();
-  ctx.symtab = std::make_unique<SymbolTable>(ctx);
-
-  ctx.partitions.clear();
-  ctx.partitions.emplace_back(ctx);
-
-  ctx.arg.progName = args[0];
+  ctx.e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
+  initContext(ctx, script, args[0]);
 
   ctx.driver.linkerMain(args);
 
@@ -210,8 +210,8 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
               mb.getBufferIdentifier() +
                   ": could not get the buffer for a child of the archive");
     if (addToTar)
-      ctx.tar->append(relativeToRoot(check(c.getFullName())),
-                      mbref.getBuffer());
+      job.tarEntries.emplace_back(relativeToRoot(check(c.getFullName())),
+                                  mbref.getBuffer());
     v.push_back(std::make_pair(mbref, c.getChildOffset()));
   }
   if (err)
@@ -225,7 +225,7 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
 }
 
 // Opens a file and create a file object. Path has to be resolved already.
-// Every regular input (not binary-format or linker scripts) is recorded as a
+// Every regular input (not linker scripts) is recorded as a
 // LoadJob. Inside createFiles() jobs batch up and are expanded in parallel at
 // the end. Outside createFiles() (e.g. addDependentLibrary during parseFiles)
 // the single job is expanded immediately.
@@ -237,25 +237,12 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     return;
   MemoryBufferRef mbref = *buffer;
 
-  if (ctx.arg.formatBinary) {
-    loadJobs.push_back({mbref,
-                        path,
-                        LoadJob::Binary,
-                        /*inWholeArchive=*/false,
-                        /*lazy=*/false,
-                        /*asNeeded=*/false,
-                        /*withLOption=*/false,
-                        nextGroupId,
-                        {},
-                        {}});
-  } else {
-    auto magic = identify_magic(mbref.getBuffer());
-    if (magic == file_magic::unknown) {
+  LoadJob::Kind kind = LoadJob::Binary;
+  if (!ctx.arg.formatBinary) {
+    switch (identify_magic(mbref.getBuffer())) {
+    case file_magic::unknown:
       readLinkerScript(ctx, mbref);
       return;
-    }
-    LoadJob::Kind kind;
-    switch (magic) {
     case file_magic::archive:
       kind = LoadJob::Archive;
       break;
@@ -276,21 +263,27 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
       Err(ctx) << path << ": unknown file type";
       return;
     }
-    loadJobs.push_back({mbref,
-                        path,
-                        kind,
-                        inWholeArchive,
-                        inLib,
-                        ctx.arg.asNeeded,
-                        withLOption,
-                        nextGroupId,
-                        {},
-                        {}});
   }
+  loadJobs.push_back({mbref,
+                      path,
+                      kind,
+                      inWholeArchive,
+                      inLib,
+                      ctx.arg.asNeeded,
+                      withLOption,
+                      nextGroupId,
+                      {},
+                      {},
+                      {}});
   if (!isInGroup)
     ++nextGroupId;
   if (!deferLoad)
     loadFiles();
+}
+
+// Add an ELF input file directly.
+void LinkerDriver::addFile(std::unique_ptr<ELFFileBase> ef) {
+  files.push_back(std::move(ef));
 }
 
 // Add a given library by searching it from input search paths.
@@ -399,6 +392,21 @@ static void checkOptions(Ctx &ctx) {
   if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
       ctx.arg.zCetReport != ReportPolicy::None)
     ErrAlways(ctx) << "-z cet-report only supported on X86 and X86_64";
+
+  if (ctx.arg.zMarkPlt) {
+    if (ctx.arg.emachine != EM_X86_64)
+      ErrAlways(ctx) << "-z mark-plt only supported on X86_64";
+    // The PLT entry address is stored in the JUMP_SLOT relocation's addend, so
+    // -z mark-plt requires RELA relocations. REL relocations have no addend
+    // field and the .got.plt entry is already occupied by the lazy-binding
+    // address, so the information would be silently lost.
+    else if (!ctx.arg.isRela)
+      ErrAlways(ctx) << "-z mark-plt requires -z rela";
+  }
+
+  if (ctx.arg.emachine == EM_CUDA && !ctx.arg.ltoEmitAsm && !ctx.arg.emitLLVM)
+    ErrAlways(ctx) << "CUDA input is only supported with --lto-emit-asm or "
+                      "--lto-emit-llvm";
 
   if (ctx.arg.pie && ctx.arg.shared)
     ErrAlways(ctx) << "-shared and -pie may not be used together";
@@ -522,8 +530,8 @@ static uint8_t getZStartStopVisibility(Ctx &ctx, opt::InputArgList &args) {
       else if (kv.second == "protected")
         ret = STV_PROTECTED;
       else
-        ErrAlways(ctx) << "unknown -z start-stop-visibility= value: "
-                       << StringRef(kv.second);
+        Err(ctx) << "unknown -z start-stop-visibility= value '"
+                 << StringRef(kv.second) << "'";
     }
   }
   return ret;
@@ -542,7 +550,7 @@ static GcsPolicy getZGcs(Ctx &ctx, opt::InputArgList &args) {
       else if (kv.second == "always")
         ret = GcsPolicy::Always;
       else
-        ErrAlways(ctx) << "unknown -z gcs= value: " << kv.second;
+        Err(ctx) << "unknown -z gcs= value '" << kv.second << "'";
     }
   }
   return ret;
@@ -563,7 +571,7 @@ static ZicfilpPolicy getZZicfilp(Ctx &ctx, opt::InputArgList &args) {
       else if (kv.second == "implicit")
         ret = ZicfilpPolicy::Implicit;
       else
-        ErrAlways(ctx) << "unknown -z zicfilp= value: " << kv.second;
+        Err(ctx) << "unknown -z zicfilp= value '" << kv.second << "'";
     }
   }
   return ret;
@@ -582,7 +590,7 @@ static ZicfissPolicy getZZicfiss(Ctx &ctx, opt::InputArgList &args) {
       else if (kv.second == "implicit")
         ret = ZicfissPolicy::Implicit;
       else
-        ErrAlways(ctx) << "unknown -z zicfiss= value: " << kv.second;
+        Err(ctx) << "unknown -z zicfiss= value '" << kv.second << "'";
     }
   }
   return ret;
@@ -601,7 +609,7 @@ static int getZMemtagMode(Ctx &ctx, opt::InputArgList &args) {
       else if (kv.second == "async")
         ret = ELF::NT_MEMTAG_LEVEL_ASYNC;
       else
-        ErrAlways(ctx) << "unknown -z memtag-mode= value: " << kv.second;
+        Err(ctx) << "unknown -z memtag-mode= value '" << kv.second << "'";
     }
   }
   return ret;
@@ -617,7 +625,7 @@ static void checkZOptions(Ctx &ctx, opt::InputArgList &args) {
   getZFlag(args, "dynamic-undefined-weak", "nodynamic-undefined-weak", false);
   for (auto *arg : args.filtered(OPT_z))
     if (!arg->isClaimed())
-      Warn(ctx) << "unknown -z value: " << StringRef(arg->getValue());
+      Warn(ctx) << "unknown -z value '" << StringRef(arg->getValue()) << "'";
 }
 
 constexpr const char *saveTempsValues[] = {
@@ -625,6 +633,11 @@ constexpr const char *saveTempsValues[] = {
     "opt",        "precodegen", "prelink", "combinedindex"};
 
 LinkerDriver::LinkerDriver(Ctx &ctx) : ctx(ctx) {}
+
+void LinkerDriver::waitForLTOCleanup() {
+  if (lto)
+    lto->waitForLTOCleanup();
+}
 
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ELFOptTable parser;
@@ -636,6 +649,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false) &&
       !args.hasArg(OPT_no_warnings);
   ctx.e.suppressWarnings = args.hasArg(OPT_no_warnings);
+  ctx.arg.noinhibitExec = args.hasArg(OPT_noinhibit_exec);
 
   // Handle -help
   if (args.hasArg(OPT_help)) {
@@ -660,7 +674,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (args.hasArg(OPT_v) || args.hasArg(OPT_version))
     Msg(ctx) << getLLDVersion() << " (compatible with GNU linkers)";
 
-  if (const char *path = getReproduceOption(args)) {
+  if (const char *path = getReproduceOption(args); !ctx.inDynDbgLink && path) {
     // Note that --reproduce is a debug option so you can ignore it
     // if you are trying to understand the whole picture of the code.
     Expected<std::unique_ptr<TarWriter>> errOrWriter =
@@ -677,6 +691,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     }
   }
 
+  initLLVM();
   readConfigs(ctx, args);
   checkZOptions(ctx, args);
 
@@ -694,7 +709,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   {
     llvm::TimeTraceScope timeScope("ExecuteLinker");
 
-    initLLVM();
     createFiles(args);
     if (errCount(ctx))
       return;
@@ -707,6 +721,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
     invokeELFT(link, args);
   }
+
+  // LTO cleanup may create time trace events. Wait for it to complete before
+  // writing the time trace data.
+  waitForLTOCleanup();
 
   if (ctx.arg.timeTraceEnabled) {
     checkError(ctx.e, timeTraceProfilerWrite(
@@ -1319,9 +1337,10 @@ static SmallVector<StringRef, 0> getSymbolOrderingFile(Ctx &ctx,
 
 static bool getIsRela(Ctx &ctx, opt::InputArgList &args) {
   // The psABI specifies the default relocation entry format.
-  bool rela = is_contained({EM_AARCH64, EM_AMDGPU, EM_HEXAGON, EM_LOONGARCH,
-                            EM_PPC, EM_PPC64, EM_RISCV, EM_S390, EM_X86_64},
-                           ctx.arg.emachine);
+  bool rela =
+      is_contained({EM_AARCH64, EM_AMDGPU, EM_HEXAGON, EM_LOONGARCH, EM_PPC,
+                    EM_PPC64, EM_RISCV, EM_S390, EM_SPARCV9, EM_X86_64},
+                   ctx.arg.emachine);
   // If -z rel or -z rela is specified, use the last option.
   for (auto *arg : args.filtered(OPT_z)) {
     StringRef s(arg->getValue());
@@ -1341,7 +1360,10 @@ static void parseClangOption(Ctx &ctx, StringRef opt, const Twine &msg) {
   raw_string_ostream os(err);
 
   const char *argv[] = {ctx.arg.progName.data(), opt.data()};
-  if (cl::ParseCommandLineOptions(2, argv, "", &os))
+  // Called after initLLVM() to ensure target-specific RegisterLibraryOptions
+  // have been called.
+  if (cl::parseCommandLineOptions(ctx.arg.libraryOptions, getToolOptions(),
+                                  argv, "", &os))
     return;
   ErrAlways(ctx) << msg << ": " << StringRef(err).trim();
 }
@@ -1412,7 +1434,11 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.dependencyFile = args.getLastArgValue(OPT_dependency_file);
   ctx.arg.dependentLibraries =
       args.hasFlag(OPT_dependent_libraries, OPT_no_dependent_libraries, true);
+#ifdef NDEBUG
+  ctx.arg.disableVerify = true;
+#else
   ctx.arg.disableVerify = args.hasArg(OPT_disable_verify);
+#endif
   ctx.arg.discard = getDiscard(args);
   ctx.arg.dtltoDistributor = args.getLastArgValue(OPT_thinlto_distributor_eq);
   ctx.arg.dtltoDistributorArgs =
@@ -1450,8 +1476,6 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.cmseOutputLib = args.getLastArgValue(OPT_out_implib);
   ctx.arg.fixCortexA8 =
       args.hasArg(OPT_fix_cortex_a8) && !args.hasArg(OPT_relocatable);
-  ctx.arg.fortranCommon =
-      args.hasFlag(OPT_fortran_common, OPT_no_fortran_common, false);
   ctx.arg.gcSections = args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false);
   ctx.arg.gnuUnique = args.hasFlag(OPT_gnu_unique, OPT_no_gnu_unique, true);
   ctx.arg.gdbIndex = args.hasFlag(OPT_gdb_index, OPT_no_gdb_index, false);
@@ -1500,9 +1524,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.mergeArmExidx =
       args.hasFlag(OPT_merge_exidx_entries, OPT_no_merge_exidx_entries, true);
   ctx.arg.mmapOutputFile =
-      args.hasFlag(OPT_mmap_output_file, OPT_no_mmap_output_file, false);
+      args.hasFlag(OPT_mmap_output_file, OPT_no_mmap_output_file, true);
   ctx.arg.nmagic = args.hasFlag(OPT_nmagic, OPT_no_nmagic, false);
-  ctx.arg.noinhibitExec = args.hasArg(OPT_noinhibit_exec);
   ctx.arg.nostdlib = args.hasArg(OPT_nostdlib);
   ctx.arg.oFormatBinary = isOutputFormatBinary(ctx, args);
   ctx.arg.omagic = args.hasFlag(OPT_omagic, OPT_no_omagic, false);
@@ -1658,6 +1681,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
   ctx.arg.zLrodataAfterBss =
       getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", false);
+  ctx.arg.zMarkPlt = getZFlag(args, "mark-plt", "nomark-plt", false);
   ctx.arg.zNoBtCfi = hasZOption(args, "nobtcfi");
   ctx.arg.zNodefaultlib = hasZOption(args, "nodefaultlib");
   ctx.arg.zNodelete = hasZOption(args, "nodelete");
@@ -1757,8 +1781,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       else if (option.second == "error")
         *reportArg.second = ReportPolicy::Error;
       else {
-        ErrAlways(ctx) << "unknown -z " << reportArg.first
-                       << "= value: " << option.second;
+        Err(ctx) << "unknown -z " << reportArg.first << "= value '"
+                 << option.second << "'";
         continue;
       }
       hasGcsReportDynamic |= option.first == "gcs-report-dynamic";
@@ -1823,8 +1847,6 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     else
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
-
-  cl::ResetAllOptionOccurrences();
 
   // Parse LTO options.
   if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
@@ -1962,15 +1984,12 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.versionDefinitions.push_back(
       {"global", (uint16_t)VER_NDX_GLOBAL, {}, {}});
 
-  // If --retain-symbol-file is used, we'll keep only the symbols listed in
-  // the file and discard all others.
+  // Keep only these symbols in .symtab (not .dynsym), matching GNU ld.
   if (auto *arg = args.getLastArg(OPT_retain_symbols_file)) {
-    ctx.arg.versionDefinitions[VER_NDX_LOCAL].nonLocalPatterns.push_back(
-        {"*", /*isExternCpp=*/false, /*hasWildcard=*/true});
+    ctx.arg.retainSymbols.emplace();
     if (std::optional<MemoryBufferRef> buffer = readFile(ctx, arg->getValue()))
       for (StringRef s : args::getLines(*buffer))
-        ctx.arg.versionDefinitions[VER_NDX_GLOBAL].nonLocalPatterns.push_back(
-            {s, /*isExternCpp=*/false, /*hasWildcard=*/false});
+        ctx.arg.retainSymbols->insert(s);
   }
 
   for (opt::Arg *arg : args.filtered(OPT_warn_backrefs_exclude)) {
@@ -2084,21 +2103,6 @@ static void setConfigs(Ctx &ctx, opt::InputArgList &args) {
   if (ctx.arg.outputFile.empty())
     ctx.arg.outputFile = "a.out";
 
-  // Fail early if the output file or map file is not writable. If a user has a
-  // long link, e.g. due to a large LTO link, they do not wish to run it and
-  // find that it failed because there was a mistake in their command-line.
-  {
-    llvm::TimeTraceScope timeScope("Create output files");
-    if (auto e = tryCreateFile(ctx.arg.outputFile))
-      ErrAlways(ctx) << "cannot open output file " << ctx.arg.outputFile << ": "
-                     << e.message();
-    if (auto e = tryCreateFile(ctx.arg.mapFile))
-      ErrAlways(ctx) << "cannot open map file " << ctx.arg.mapFile << ": "
-                     << e.message();
-    if (auto e = tryCreateFile(ctx.arg.whyExtract))
-      ErrAlways(ctx) << "cannot open --why-extract= file " << ctx.arg.whyExtract
-                     << ": " << e.message();
-  }
 }
 
 static bool isFormatBinary(Ctx &ctx, StringRef s) {
@@ -2202,6 +2206,9 @@ void LinkerDriver::loadFiles() {
   for (auto &job : loadJobs) {
     if (job.kind == LoadJob::Archive)
       archiveFiles.emplace_back(job.path, (unsigned)job.out.size());
+    if (ctx.tar)
+      for (const auto &[path, data] : job.tarEntries)
+        ctx.tar->append(path, data);
     files.append(std::make_move_iterator(job.out.begin()),
                  std::make_move_iterator(job.out.end()));
     ctx.memoryBuffers.append(std::make_move_iterator(job.thinBufs.begin()),
@@ -2668,7 +2675,7 @@ static void replaceCommonSymbols(Ctx &ctx) {
       auto *bss = make<BssSection>(ctx, "COMMON", s->size, s->alignment);
       bss->file = s->file;
       ctx.inputSections.push_back(bss);
-      Defined(ctx, s->file, StringRef(), s->binding, s->stOther, s->type,
+      Defined(s->file, StringRef(), s->binding, s->stOther, s->type,
               /*value=*/0, s->size, bss)
           .overwrite(*s);
     }
@@ -2731,6 +2738,11 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
           Err(ctx) << f << ": could not decode addrsig section: " << err;
           break;
         }
+        if (symIndex >= syms.size()) {
+          Err(ctx) << f << ": out of range symbol index " << symIndex
+                   << " in addrsig section";
+          break;
+        }
         markAddrsig(icfSafe, syms[symIndex]);
         cur += size;
       }
@@ -2743,65 +2755,8 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
   }
 }
 
-// This function reads a symbol partition specification section. These sections
-// are used to control which partition a symbol is allocated to. See
-// https://lld.llvm.org/Partitions.html for more details on partitions.
-template <typename ELFT>
-static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
-  // Read the relocation that refers to the partition's entry point symbol.
-  Symbol *sym;
-  const RelsOrRelas<ELFT> rels = s->template relsOrRelas<ELFT>();
-  auto readEntry = [](InputFile *file, const auto &rels) -> Symbol * {
-    for (const auto &rel : rels)
-      return &file->getRelocTargetSym(rel);
-    return nullptr;
-  };
-  if (rels.areRelocsCrel())
-    sym = readEntry(s->file, rels.crels);
-  else if (rels.areRelocsRel())
-    sym = readEntry(s->file, rels.rels);
-  else
-    sym = readEntry(s->file, rels.relas);
-  if (!isa_and_nonnull<Defined>(sym) || !sym->isExported)
-    return;
-
-  StringRef partName = reinterpret_cast<const char *>(s->content().data());
-  for (Partition &part : ctx.partitions) {
-    if (part.name == partName) {
-      sym->partition = part.getNumber(ctx);
-      return;
-    }
-  }
-
-  // Forbid partitions from being used on incompatible targets, and forbid them
-  // from being used together with various linker features that assume a single
-  // set of output sections.
-  if (ctx.script->hasSectionsCommand)
-    ErrAlways(ctx) << s->file
-                   << ": partitions cannot be used with the SECTIONS command";
-  if (ctx.script->hasPhdrsCommands())
-    ErrAlways(ctx) << s->file
-                   << ": partitions cannot be used with the PHDRS command";
-  if (!ctx.arg.sectionStartMap.empty())
-    ErrAlways(ctx) << s->file
-                   << ": partitions cannot be used with "
-                      "--section-start, -Ttext, -Tdata or -Tbss";
-  if (ctx.arg.emachine == EM_MIPS)
-    ErrAlways(ctx) << s->file << ": partitions cannot be used on this target";
-
-  // Impose a limit of no more than 254 partitions. This limit comes from the
-  // sizes of the Partition fields in InputSectionBase and Symbol, as well as
-  // the amount of space devoted to the partition number in RankFlags.
-  if (ctx.partitions.size() == 254)
-    Fatal(ctx) << "may not have more than 254 partitions";
-
-  ctx.partitions.emplace_back(ctx);
-  Partition &newPart = ctx.partitions.back();
-  newPart.name = partName;
-  sym->partition = newPart.getNumber(ctx);
-}
-
-static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
+void elf::markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
+  llvm::TimeTraceScope timeScope("Mark buffers as dontneed");
   // With --thinlto-index-only, all buffers are nearly unused from now on
   // (except symbol/section names used by infrequent passes). Mark input file
   // buffers as MADV_DONTNEED so that these pages can be reused by the expensive
@@ -2833,10 +2788,39 @@ static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
 template <class ELFT>
 void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
   llvm::TimeTraceScope timeScope("LTO");
+
+  // Collect the bitcode library functions that are not safe to call because
+  // they were not yet brought in the link. (Such symbols are lazy.)
+  llvm::BumpPtrAllocator alloc;
+  llvm::StringSaver saver(alloc);
+  SmallVector<StringRef> bitcodeLibFuncs;
+  if (!ctx.bitcodeFiles.empty()) {
+    // Triple must be captured before the bitcode is moved into the compiler.
+    // Note that the below assumes that the set of possible libfuncs is roughly
+    // equivalent for all bitcode translation units.
+    llvm::Triple tt =
+        llvm::Triple(ctx.bitcodeFiles.front()->obj->getTargetTriple());
+    for (StringRef libFunc : lto::LTO::getLibFuncSymbols(tt, saver))
+      if (Symbol *sym = ctx.symtab->find(libFunc);
+          sym && sym->isLazy() && isa<BitcodeFile>(sym->file))
+        bitcodeLibFuncs.push_back(libFunc);
+  }
+
   // Compile bitcode files and replace bitcode symbols.
   lto.reset(new BitcodeCompiler(ctx));
-  for (BitcodeFile *file : ctx.bitcodeFiles)
+  lto->setBitcodeLibFuncs(bitcodeLibFuncs);
+  DenseMap<const char *, MemoryBuffer *> bitcodeBufs;
+  if (skipLinkedOutput && !ctx.bitcodeFiles.empty()) {
+    bitcodeBufs.reserve(ctx.memoryBuffers.size());
+    for (MemoryBuffer &mb : llvm::make_pointee_range(ctx.memoryBuffers))
+      bitcodeBufs.try_emplace(mb.getBufferStart(), &mb);
+  }
+  for (BitcodeFile *file : ctx.bitcodeFiles) {
+    const char *bufStart = file->mb.getBufferStart();
     lto->add(*file);
+    if (MemoryBuffer *mb = bitcodeBufs.lookup(bufStart))
+      mb->dontNeedIfMmap();
+  }
 
   if (!ctx.bitcodeFiles.empty())
     markBuffersAsDontNeed(ctx, skipLinkedOutput);
@@ -3048,8 +3032,6 @@ static void readSecurityNotes(Ctx &ctx) {
       ctx.arg.emachine != EM_AARCH64 && ctx.arg.emachine != EM_RISCV)
     return;
 
-  ctx.arg.andFeatures = -1;
-
   StringRef referenceFileName;
   if (ctx.arg.emachine == EM_AARCH64) {
     auto it = llvm::find_if(ctx.objectFiles, [](const ELFFileBase *f) {
@@ -3071,6 +3053,14 @@ static void readSecurityNotes(Ctx &ctx) {
       return {ctx, DiagLevel::None};
     return {ctx, toDiagLevel(policy)};
   };
+
+  // We start with a mask with all bits set, unless we have no true object
+  // file like in ld -b binary invocations.
+  if (!ctx.objectFiles.empty())
+    ctx.arg.andFeatures = -1;
+  else
+    ctx.arg.andFeatures = 0;
+
   for (ELFFileBase *f : ctx.objectFiles) {
     uint32_t features = f->andFeatures;
 
@@ -3169,18 +3159,21 @@ static void readSecurityNotes(Ctx &ctx) {
     }
 
     if (ctx.aarch64PauthAbiCoreInfo != f->aarch64PauthAbiCoreInfo)
-      Err(ctx)
-          << "incompatible values of AArch64 PAuth core info found\n"
-          << "platform:\n"
-          << ">>> " << referenceFileName << ": 0x"
-          << toHex(ctx.aarch64PauthAbiCoreInfo->platform, /*LowerCase=*/true)
-          << "\n>>> " << f << ": 0x"
-          << toHex(f->aarch64PauthAbiCoreInfo->platform, /*LowerCase=*/true)
-          << "\nversion:\n"
-          << ">>> " << referenceFileName << ": 0x"
-          << toHex(ctx.aarch64PauthAbiCoreInfo->version, /*LowerCase=*/true)
-          << "\n>>> " << f << ": 0x"
-          << toHex(f->aarch64PauthAbiCoreInfo->version, /*LowerCase=*/true);
+      Err(ctx) << "incompatible values of AArch64 PAuth core info found\n"
+               << "platform:\n"
+               << ">>> " << referenceFileName << ": 0x"
+               << utohexstr(ctx.aarch64PauthAbiCoreInfo->platform,
+                            /*LowerCase=*/true, /*Width=*/16)
+               << "\n>>> " << f << ": 0x"
+               << utohexstr(f->aarch64PauthAbiCoreInfo->platform,
+                            /*LowerCase=*/true, /*Width=*/16)
+               << "\nversion:\n"
+               << ">>> " << referenceFileName << ": 0x"
+               << utohexstr(ctx.aarch64PauthAbiCoreInfo->version,
+                            /*LowerCase=*/true, /*Width=*/16)
+               << "\n>>> " << f << ": 0x"
+               << utohexstr(f->aarch64PauthAbiCoreInfo->version,
+                            /*LowerCase=*/true, /*Width=*/16);
   }
 
   // Force enable Shadow Stack.
@@ -3229,42 +3222,48 @@ static void readSecurityNotes(Ctx &ctx) {
           << "dependencies have the GCS marking.";
 }
 
-static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
-  switch (file->ekind) {
-  case ELF32LEKind:
-    cast<ObjFile<ELF32LE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
-    break;
-  case ELF32BEKind:
-    cast<ObjFile<ELF32BE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
-    break;
-  case ELF64LEKind:
-    cast<ObjFile<ELF64LE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
-    break;
-  case ELF64BEKind:
-    cast<ObjFile<ELF64BE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
-    break;
-  default:
-    llvm_unreachable("");
-  }
-}
+// Objects that support Dynamic Debugging contain an ELF Dynamic Debugging
+// section that embeds an unoptimized ELF file with debug information. We
+// extract these embedded ELF files to make a consolidated unoptimized
+// relocatable ELF file to embed in an ELF Dynamic Debugging section in the
+// output. See llvm/docs/DynamicDebugging.md for more details.
+template <class ELFT>
+static void linkDynamicDebug(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
+  Ctx dctx;
+  LinkerScript script(dctx);
+  dctx.e.initialize(ctx.e.outs(), ctx.e.errs(), ctx.e.exitEarly,
+                    ctx.e.disableOutput);
+  initContext(dctx, script, ctx.arg.progName);
+  dctx.inDynDbgLink = true;
+  dctx.dynDbgRelocatable = !ctx.arg.relocatable;
 
-static void postParseObjectFile(ELFFileBase *file) {
-  switch (file->ekind) {
-  case ELF32LEKind:
-    cast<ObjFile<ELF32LE>>(file)->postParse();
-    break;
-  case ELF32BEKind:
-    cast<ObjFile<ELF32BE>>(file)->postParse();
-    break;
-  case ELF64LEKind:
-    cast<ObjFile<ELF64LE>>(file)->postParse();
-    break;
-  case ELF64BEKind:
-    cast<ObjFile<ELF64BE>>(file)->postParse();
-    break;
-  default:
-    llvm_unreachable("");
+  for (auto *file : ctx.objectFiles) {
+    auto *obj = cast<ObjFile<ELFT>>(file);
+    if (obj->dynDbgSec) {
+      MemoryBufferRef mb(toStringRef(obj->dynDbgSec->contentMaybeDecompress()),
+                         obj->mb.getBufferIdentifier());
+      dctx.driver.addFile(createObjFile(dctx, mb));
+    }
   }
+
+  if (errCount(ctx))
+    return;
+
+  auto saveArg = [&](const Twine &arg) { return dctx.saver.save(arg).data(); };
+  std::vector<const char *> args{
+      dctx.arg.progName.data(), "-r", "-o", "-",
+      saveArg(Twine("-O") + Twine(ctx.arg.optimize))};
+  if (ctx.arg.resolveGroups)
+    args.push_back("--force-group-allocation");
+  for (const auto &ws : wrapped)
+    args.push_back(saveArg(Twine("--wrap=") + ws.sym->getName()));
+  dctx.driver.linkerMain(args);
+  if (errCount(dctx) > 0 || !dctx.dynDbgOutput) {
+    Err(ctx) << "failed to create relocatable dynamic debug object";
+    return;
+  }
+
+  ctx.dynDbgOutput = std::move(dctx.dynDbgOutput);
 }
 
 // Do actual linking. Note that when this function is called,
@@ -3285,6 +3284,14 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     ctx.symtab->addUnusedUndefined(name)->referenced = true;
 
   parseFiles(ctx, files);
+
+  // ICF is incompatible with dynamic debugging: the inner ELF references outer
+  // symbols that folding would merge away.
+  if (ctx.hasDynDbg && ctx.arg.icf != ICFLevel::None) {
+    Warn(ctx) << "ICF disabled because it is incompatible with dynamic "
+                 "debugging";
+    ctx.arg.icf = ICFLevel::None;
+  }
 
   // Create dynamic sections for dynamic linking and static PIE.
   ctx.hasDynsym = !ctx.sharedFiles.empty() || ctx.arg.isPic;
@@ -3349,10 +3356,15 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // No more lazy bitcode can be extracted at this point. Do post parse work
   // like checking duplicate symbols.
-  parallelForEach(ctx.objectFiles, [](ELFFileBase *file) {
-    initSectionsAndLocalSyms(file, /*ignoreComdats=*/false);
-  });
-  parallelForEach(ctx.objectFiles, postParseObjectFile);
+  {
+    llvm::TimeTraceScope timeScope("Initialize sections");
+    parallelForEachFineGrained(ctx.objectFiles, [](ELFFileBase *file) {
+      cast<ObjFile<ELFT>>(file)->initSectionsAndLocalSyms();
+    });
+    parallelForEachFineGrained(ctx.objectFiles, [](ELFFileBase *file) {
+      cast<ObjFile<ELFT>>(file)->postParse();
+    });
+  }
   parallelForEach(ctx.bitcodeFiles,
                   [](BitcodeFile *file) { file->postParse(); });
   for (auto &it : ctx.nonPrevailingSyms) {
@@ -3443,10 +3455,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // compileBitcodeFiles may have produced lto.tmp object files. After this, no
   // more file will be added.
   auto newObjectFiles = ArrayRef(ctx.objectFiles).slice(numObjsBeforeLTO);
-  parallelForEach(newObjectFiles, [](ELFFileBase *file) {
-    initSectionsAndLocalSyms(file, /*ignoreComdats=*/true);
+  parallelForEachFineGrained(newObjectFiles, [](ELFFileBase *file) {
+    cast<ObjFile<ELFT>>(file)->initSectionsAndLocalSyms();
   });
-  parallelForEach(newObjectFiles, postParseObjectFile);
+  parallelForEachFineGrained(newObjectFiles, [](ELFFileBase *file) {
+    cast<ObjFile<ELFT>>(file)->postParse();
+  });
   for (const DuplicateSymbol &d : ctx.duplicates)
     reportDuplicate(ctx, *d.sym, d.file, d.section, d.value);
 
@@ -3500,14 +3514,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   {
     llvm::TimeTraceScope timeScope("Strip sections");
-    if (ctx.hasSympart.load(std::memory_order_relaxed)) {
-      llvm::erase_if(ctx.inputSections, [&ctx = ctx](InputSectionBase *s) {
-        if (s->type != SHT_LLVM_SYMPART)
-          return false;
-        readSymbolPartitionSection<ELFT>(ctx, s);
-        return true;
-      });
-    }
     // We do not want to emit debug sections if --strip-all
     // or --strip-debug are given.
     if (ctx.arg.strip != StripPolicy::None) {
@@ -3528,10 +3534,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // a .d file to record build dependencies.
   if (!ctx.arg.dependencyFile.empty())
     writeDependencyFile(ctx);
-
-  // Now that the number of partitions is fixed, save a pointer to the main
-  // partition.
-  ctx.mainPart = &ctx.partitions[0];
 
   // Read .note.gnu.property sections from input object files which
   // contain a hint to tweak linker's and loader's behaviors.
@@ -3567,13 +3569,16 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Garbage collection and removal of shared symbols from unused shared objects.
   markLive<ELFT>(ctx);
 
-  // Make copies of any input sections that need to be copied into each
-  // partition.
-  copySectionsIntoPartitions(ctx);
-
   if (canHaveMemtagGlobals(ctx)) {
     llvm::TimeTraceScope timeScope("Process memory tagged symbols");
     createTaggedSymbols(ctx);
+  }
+
+  if (ctx.hasDynDbg) {
+    llvm::TimeTraceScope timeScope("Link dynamic debugging");
+    linkDynamicDebug<ELFT>(ctx, wrapped);
+    if (errCount(ctx))
+      return;
   }
 
   // Create synthesized sections such as .got and .plt. This is called before

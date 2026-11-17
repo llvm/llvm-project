@@ -1,13 +1,13 @@
-; RUN: llc < %s -show-mc-encoding -disable-promote-alloca-to-vector -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgcn | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc < %s -show-mc-encoding -disable-promote-alloca-to-vector -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC -check-prefix=HSA-PROMOTE %s
-; RUN: llc < %s -show-mc-encoding -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgcn | FileCheck %s -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC
-; RUN: llc < %s -show-mc-encoding -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgcn-amdhsa -mcpu=kaveri -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC -check-prefix=HSA-ALLOCA %s
-; RUN: llc < %s -show-mc-encoding -disable-promote-alloca-to-vector -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgcn-amdhsa -mcpu=tonga -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc < %s -show-mc-encoding -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgcn-amdhsa -mcpu=tonga -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE-VECT -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc < %s -show-mc-encoding -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgcn-amdhsa -mcpu=tonga -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc < %s -show-mc-encoding -disable-promote-alloca-to-vector -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgpu6.00 | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc < %s -show-mc-encoding -disable-promote-alloca-to-vector -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgpu7.00--amdhsa -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC -check-prefix=HSA-PROMOTE %s
+; RUN: llc < %s -show-mc-encoding -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgpu6.00 | FileCheck %s -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC
+; RUN: llc < %s -show-mc-encoding -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgpu7.00-amdhsa -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC -check-prefix=HSA-ALLOCA %s
+; RUN: llc < %s -show-mc-encoding -disable-promote-alloca-to-vector -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgpu8.02-amdhsa -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc < %s -show-mc-encoding -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgpu8.02-amdhsa -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE-VECT -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc < %s -show-mc-encoding -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -mtriple=amdgpu8.02-amdhsa -mattr=-unaligned-access-mode | FileCheck -enable-var-scope -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC %s
 
-; RUN: opt < %s -S -mtriple=amdgcn-unknown-amdhsa -data-layout=A5 -mcpu=kaveri -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector | FileCheck -enable-var-scope -check-prefix=HSAOPT -check-prefix=OPT %s
-; RUN: opt < %s -S -mtriple=amdgcn-unknown-unknown -data-layout=A5 -mcpu=kaveri -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector | FileCheck -enable-var-scope -check-prefix=NOHSAOPT -check-prefix=OPT %s
+; RUN: opt < %s -S -mtriple=amdgpu7.00-unknown-amdhsa -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector | FileCheck -enable-var-scope -check-prefix=HSAOPT -check-prefix=OPT %s
+; RUN: opt < %s -S -mtriple=amdgpu7.00-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector | FileCheck -enable-var-scope -check-prefix=NOHSAOPT -check-prefix=OPT %s
 
 ; RUN: llc < %s -mtriple=r600 -mcpu=cypress -disable-promote-alloca-to-vector | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
 ; RUN: llc < %s -mtriple=r600 -mcpu=cypress | FileCheck %s -check-prefix=R600-VECT -check-prefix=FUNC
@@ -46,9 +46,9 @@
 
 
 ; HSAOPT: [[DISPATCH_PTR:%[0-9]+]] = call noalias nonnull dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-; HSAOPT: [[GEP0:%[0-9]+]] = getelementptr inbounds i32, ptr addrspace(4) [[DISPATCH_PTR]], i64 1
+; HSAOPT: [[GEP0:%[0-9]+]] = getelementptr inbounds i8, ptr addrspace(4) [[DISPATCH_PTR]], i64 4
 ; HSAOPT: [[LDXY:%[0-9]+]] = load i32, ptr addrspace(4) [[GEP0]], align 4, !invariant.load !1
-; HSAOPT: [[GEP1:%[0-9]+]] = getelementptr inbounds i32, ptr addrspace(4) [[DISPATCH_PTR]], i64 2
+; HSAOPT: [[GEP1:%[0-9]+]] = getelementptr inbounds i8, ptr addrspace(4) [[DISPATCH_PTR]], i64 8
 ; HSAOPT: [[LDZU:%[0-9]+]] = load i32, ptr addrspace(4) [[GEP1]], align 4, !range !2, !invariant.load !1
 ; HSAOPT: [[EXTRACTY:%[0-9]+]] = lshr i32 [[LDXY]], 16
 
@@ -62,7 +62,7 @@
 ; HSAOPT: [[ADD_YZ_X_X_YZ_SIZE:%[0-9]+]] = add i32 [[YZ_X_XID]], [[Y_X_Z_SIZE]]
 ; HSAOPT: [[ADD_ZID:%[0-9]+]] = add i32 [[ADD_YZ_X_X_YZ_SIZE]], [[WORKITEM_ID_Z]]
 
-; HSAOPT: [[LOCAL_GEP:%[0-9]+]] = getelementptr inbounds [256 x [5 x i32]], ptr addrspace(3) @mova_same_clause.stack, i32 0, i32 [[ADD_ZID]]
+; HSAOPT: [[LOCAL_GEP:%[0-9]+]] = getelementptr inbounds [20 x i8], ptr addrspace(3) @mova_same_clause.stack, i32 [[ADD_ZID]]
 ; HSAOPT: %arrayidx1 = getelementptr inbounds [5 x i32], ptr addrspace(3) [[LOCAL_GEP]], i32 0, i32 {{%[0-9]+}}
 ; HSAOPT: %arrayidx3 = getelementptr inbounds [5 x i32], ptr addrspace(3) [[LOCAL_GEP]], i32 0, i32 {{%[0-9]+}}
 ; HSAOPT: %arrayidx12 = getelementptr inbounds [5 x i32], ptr addrspace(3) [[LOCAL_GEP]], i32 0, i32 1
@@ -93,7 +93,7 @@ entry:
 }
 
 ; OPT-LABEL: @high_alignment(
-; OPT: getelementptr inbounds [256 x [8 x i32]], ptr addrspace(3) @high_alignment.stack, i32 0, i32 %{{[0-9]+}}
+; OPT: getelementptr inbounds [32 x i8], ptr addrspace(3) @high_alignment.stack, i32 %{{[0-9]+}}
 define amdgpu_kernel void @high_alignment(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #0 {
 entry:
   %stack = alloca [8 x i32], align 16, addrspace(5)
@@ -387,7 +387,7 @@ define amdgpu_kernel void @ptrtoint(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
 }
 
 ; OPT-LABEL: @pointer_typed_alloca(
-; OPT:  getelementptr inbounds [256 x ptr addrspace(1)], ptr addrspace(3) @pointer_typed_alloca.A.addr, i32 0, i32 %{{[0-9]+}}
+; OPT:  getelementptr inbounds [8 x i8], ptr addrspace(3) @pointer_typed_alloca.A.addr, i32 %{{[0-9]+}}
 ; OPT: load ptr addrspace(1), ptr addrspace(3) %{{[0-9]+}}, align 4
 define amdgpu_kernel void @pointer_typed_alloca(ptr addrspace(1) %A) #1 {
 entry:

@@ -28,7 +28,7 @@ class DataExtractor;
 
 namespace symbolize {
 
-class SymbolizableObjectFile : public SymbolizableModule {
+class LLVM_ABI SymbolizableObjectFile : public SymbolizableModule {
 public:
   static Expected<std::unique_ptr<SymbolizableObjectFile>>
   create(const object::ObjectFile *Obj, std::unique_ptr<DIContext> DICtx,

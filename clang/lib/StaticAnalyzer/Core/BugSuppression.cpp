@@ -8,6 +8,7 @@
 
 #include "clang/StaticAnalyzer/Core/BugReporter/BugSuppression.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -246,7 +247,7 @@ preferTemplateDefinitionForTemplateSpecializations(const Decl *D) {
   // existing parent-chain walk find the suppression attribute.
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     if (const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern())
-      return Pattern;
+      return Pattern->getDefinition();
   }
 
   const auto *SpecializationDecl = dyn_cast<ClassTemplateSpecializationDecl>(D);
@@ -257,7 +258,7 @@ preferTemplateDefinitionForTemplateSpecializations(const Decl *D) {
   if (!InstantiatedFrom)
     return D;
 
-  if (const auto *Tmpl = InstantiatedFrom.dyn_cast<ClassTemplateDecl *>()) {
+  if (const auto *Tmpl = dyn_cast<ClassTemplateDecl *>(InstantiatedFrom)) {
     // Interestingly, the source template might be a forward declaration, so we
     // need to find the definition redeclaration.
     return chooseDefinitionRedecl(walkInstantiatedFromChain(Tmpl));

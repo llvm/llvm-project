@@ -7,7 +7,7 @@
 // RUN: FileCheck %s -input-file=%t/docs/html/GlobalNamespace/_ZTV9Rectangle.html -check-prefix=HTML-RECTANGLE
 // RUN: FileCheck %s -input-file=%t/docs/html/GlobalNamespace/_ZTV6Circle.html -check-prefix=HTML-CIRCLE
 
-// RUN: clang-doc --format=md_mustache --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
+// RUN: clang-doc --format=md --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
 // RUN: FileCheck %s -input-file=%t/docs/md/all_files.md -check-prefixes=MD-ALL-FILES
 // RUN: FileCheck %s -input-file=%t/docs/md/index.md -check-prefixes=MD-INDEX
 // RUN: FileCheck %s -input-file=%t/docs/md/GlobalNamespace/_ZTV5Shape.md -check-prefixes=MD-SHAPE
@@ -107,12 +107,11 @@ HTML-SHAPE-NEXT:                             </div>
 HTML-SHAPE-NEXT:                         <p>Defined at line {{[0-9]+}} of file {{.*}}include{{[/\\]}}Shape.h</p>
 HTML-SHAPE-NEXT:                         </div>
 HTML-SHAPE-NEXT:             </section>
-HTML-SHAPE-NEXT:         </div>   
-HTML-SHAPE-NEXT:    </div> 
+HTML-SHAPE-NEXT:         </div>
+HTML-SHAPE-NEXT:    </div>
 HTML-SHAPE-NEXT: </main>
 HTML-SHAPE-NEXT: </body>
 HTML-SHAPE-NEXT: </html>
-
 
 HTML-CALC-LABEL:<html lang="en-US">
 HTML-CALC-NEXT: <head>
@@ -319,7 +318,6 @@ HTML-CALC-NEXT: </main>
 HTML-CALC-NEXT: </body>
 HTML-CALC-NEXT: </html>
 
-
 HTML-RECTANGLE-LABEL:<html lang="en-US">
 HTML-RECTANGLE-NEXT: <head>
 HTML-RECTANGLE:      </head>
@@ -424,7 +422,6 @@ HTML-RECTANGLE-NEXT:    </div>
 HTML-RECTANGLE-NEXT: </main>
 HTML-RECTANGLE-NEXT: </body>
 HTML-RECTANGLE-NEXT: </html>
-
 
 HTML-CIRCLE-LABEL:<html lang="en-US">
 HTML-CIRCLE-NEXT: <head>
@@ -554,21 +551,21 @@ MD-CALC: **b** Second integer.
 MD-CALC: **return** int The sum of a and b.
 MD-CALC: ### subtract
 MD-CALC: *public int subtract(int a, int b)*
-MD-CALC: *Defined at .{{[\/]}}src{{[\/]}}Calculator.cpp#7*
+MD-CALC: *Defined at .{{[\/]}}src{{[\/]}}Calculator.cpp#5*
 MD-CALC: **brief** Subtracts the second integer from the first.
 MD-CALC: **a** First integer.
 MD-CALC: **b** Second integer.
 MD-CALC: **return** int The result of a - b.
 MD-CALC: ### multiply
 MD-CALC: *public int multiply(int a, int b)*
-MD-CALC: *Defined at .{{[\/]}}src{{[\/]}}Calculator.cpp#11*
+MD-CALC: *Defined at .{{[\/]}}src{{[\/]}}Calculator.cpp#7*
 MD-CALC: **brief** Multiplies two integers.
 MD-CALC: **a** First integer.
 MD-CALC: **b** Second integer.
 MD-CALC: **return** int The product of a and b.
 MD-CALC: ### divide
 MD-CALC: *public double divide(int a, int b)*
-MD-CALC: *Defined at .{{[\/]}}src{{[\/]}}Calculator.cpp#15*
+MD-CALC: *Defined at .{{[\/]}}src{{[\/]}}Calculator.cpp#9*
 MD-CALC: **brief** Divides the first integer by the second.
 MD-CALC: **a** First integer.
 MD-CALC: **b** Second integer.
@@ -602,7 +599,7 @@ MD-CIRCLE: **brief** Calculates the area of the circle.
 MD-CIRCLE: **return** double The area of the circle.
 MD-CIRCLE: ### perimeter
 MD-CIRCLE: *public double perimeter()*
-MD-CIRCLE: *Defined at .{{[\/]}}src{{[\/]}}Circle.cpp#9*
+MD-CIRCLE: *Defined at .{{[\/]}}src{{[\/]}}Circle.cpp#7*
 MD-CIRCLE: **brief** Calculates the perimeter of the circle.
 MD-CIRCLE: **return** double The perimeter of the circle.
 
@@ -628,7 +625,7 @@ MD-RECTANGLE: **brief** Calculates the area of the rectangle.
 MD-RECTANGLE: **return** double The area of the rectangle.
 MD-RECTANGLE: ### perimeter
 MD-RECTANGLE: *public double perimeter()*
-MD-RECTANGLE: *Defined at .{{[\/]}}src{{[\/]}}Rectangle.cpp#10*
+MD-RECTANGLE: *Defined at .{{[\/]}}src{{[\/]}}Rectangle.cpp#8*
 MD-RECTANGLE: **brief** Calculates the perimeter of the rectangle.
 MD-RECTANGLE: **return** double The perimeter of the rectangle.
 

@@ -6,80 +6,80 @@
  * has_one_bit pattern
  */
 unsigned has_one_bit_bithack(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return x && !(x & (x - 1));
 }
 
 unsigned long has_one_bit_bithack(unsigned long x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return x && !(x & (x - 1));
 }
 
 unsigned short has_one_bit_bithack(unsigned short x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return x && !(x & (x - 1));
 }
 
 unsigned has_one_bit_bithack_perm(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return x && !((x - 1) & (x));
 }
 
 unsigned has_one_bit_bithack_otherperm(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return !((x - 1) & (x)) && x;
 }
 
 unsigned has_one_bit_bithack_variant_neq(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return (x != 0) && !(x & (x - 1));
 }
 
 unsigned has_one_bit_bithack_variant_neq_perm(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return (x != 0) && !(x & (x - 1));
 }
 
 unsigned has_one_bit_bithack_variant_gt(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return (x > 0) && !(x & (x - 1));
 }
 
 unsigned has_one_bit_bithacks_variant_gte(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return (x >= 1) && !(x & (x - 1));
 }
 
 unsigned has_one_bit_bithacks_variant_lt(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return (0 < x) && !(x & (x - 1));
 }
 
 unsigned has_one_bit_bithacks_variant_lte(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return (1 <= x) && !(x & (x - 1));
 }
 
 unsigned has_one_bit_bithack_variant_gt_perm(unsigned x) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
-  // CHECK-FIXES: return std::has_one_bit(x);
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_single_bit(x);
   return (x > 0) && !(x & (x - 1));
 }
 
 #define HAS_ONE_BIT v && !(v & (v - 1))
 unsigned has_one_bit_bithack_macro(unsigned v) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_single_bit' instead [modernize-use-std-bit]
   // No fixes, it comes from macro expansion.
   return HAS_ONE_BIT;
 }

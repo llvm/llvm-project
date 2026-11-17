@@ -1447,18 +1447,18 @@ define <2 x i1> @ispositive_mask_v2i64_v2i1(<2 x i64> %x, <2 x i1> %y) {
 ; AVX512F-LABEL: ispositive_mask_v2i64_v2i1:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpsllq $63, %xmm1, %xmm1
-; AVX512F-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpcmpgtq %xmm2, %xmm0, %k1
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpcmpnltq %xmm2, %xmm0, %k1
+; AVX512F-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vptestmq %xmm1, %xmm1, %k1 {%k1}
-; AVX512F-NEXT:    vmovdqa64 %xmm2, %xmm0 {%k1} {z}
+; AVX512F-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512DQBW-LABEL: ispositive_mask_v2i64_v2i1:
 ; AVX512DQBW:       # %bb.0:
 ; AVX512DQBW-NEXT:    vpsllq $63, %xmm1, %xmm1
 ; AVX512DQBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512DQBW-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX512DQBW-NEXT:    vpcmpgtq %xmm3, %xmm0, %k1
+; AVX512DQBW-NEXT:    vpcmpnltq %xmm2, %xmm0, %k1
 ; AVX512DQBW-NEXT:    vpcmpgtq %xmm1, %xmm2, %k0 {%k1}
 ; AVX512DQBW-NEXT:    vpmovm2q %k0, %xmm0
 ; AVX512DQBW-NEXT:    retq
@@ -1489,18 +1489,19 @@ define <4 x i1> @is_positive_mask_v4i32_v4i1(<4 x i32> %x, <4 x i1> %y) {
 ; AVX512F-LABEL: is_positive_mask_v4i32_v4i1:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX512F-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpcmpgtd %xmm2, %xmm0, %k1
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpcmpnltd %xmm2, %xmm0, %k1
+; AVX512F-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vptestmd %xmm1, %xmm1, %k1 {%k1}
-; AVX512F-NEXT:    vmovdqa32 %xmm2, %xmm0 {%k1} {z}
+; AVX512F-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512DQBW-LABEL: is_positive_mask_v4i32_v4i1:
 ; AVX512DQBW:       # %bb.0:
 ; AVX512DQBW-NEXT:    vpslld $31, %xmm1, %xmm1
 ; AVX512DQBW-NEXT:    vpmovd2m %xmm1, %k1
-; AVX512DQBW-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX512DQBW-NEXT:    vpcmpgtd %xmm1, %xmm0, %k0 {%k1}
+; AVX512DQBW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512DQBW-NEXT:    vpcmpnltd %xmm1, %xmm0, %k0 {%k1}
 ; AVX512DQBW-NEXT:    vpmovm2d %k0, %xmm0
 ; AVX512DQBW-NEXT:    retq
   %cmp = icmp sgt <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -1537,8 +1538,7 @@ define <8 x i1> @is_positive_mask_v8i16_v8i1(<8 x i16> %x, <8 x i1> %y) {
 ; AVX512DQBW:       # %bb.0:
 ; AVX512DQBW-NEXT:    vpsllw $15, %xmm1, %xmm1
 ; AVX512DQBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512DQBW-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX512DQBW-NEXT:    vpcmpgtw %xmm3, %xmm0, %k1
+; AVX512DQBW-NEXT:    vpcmpnltw %xmm2, %xmm0, %k1
 ; AVX512DQBW-NEXT:    vpcmpgtw %xmm1, %xmm2, %k0 {%k1}
 ; AVX512DQBW-NEXT:    vpmovm2w %k0, %xmm0
 ; AVX512DQBW-NEXT:    retq
@@ -1580,8 +1580,8 @@ define <16 x i1> @is_positive_mask_v16i8_v16i1(<16 x i8> %x, <16 x i1> %y) {
 ; AVX512DQBW:       # %bb.0:
 ; AVX512DQBW-NEXT:    vpsllw $7, %xmm1, %xmm1
 ; AVX512DQBW-NEXT:    vpmovb2m %xmm1, %k1
-; AVX512DQBW-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX512DQBW-NEXT:    vpcmpgtb %xmm1, %xmm0, %k0 {%k1}
+; AVX512DQBW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512DQBW-NEXT:    vpcmpnltb %xmm1, %xmm0, %k0 {%k1}
 ; AVX512DQBW-NEXT:    vpmovm2b %k0, %xmm0
 ; AVX512DQBW-NEXT:    retq
   %cmp = icmp sgt <16 x i8> %x, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
@@ -1630,8 +1630,8 @@ define <4 x i1> @is_positive_mask_v4i64_v4i1(<4 x i64> %x, <4 x i1> %y) {
 ; AVX512F-LABEL: is_positive_mask_v4i64_v4i1:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX512F-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512F-NEXT:    vpcmpgtq %ymm2, %ymm0, %k1
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpcmpnltq %ymm2, %ymm0, %k1
 ; AVX512F-NEXT:    vptestmd %xmm1, %xmm1, %k1 {%k1}
 ; AVX512F-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
@@ -1642,8 +1642,7 @@ define <4 x i1> @is_positive_mask_v4i64_v4i1(<4 x i64> %x, <4 x i1> %y) {
 ; AVX512DQBW:       # %bb.0:
 ; AVX512DQBW-NEXT:    vpslld $31, %xmm1, %xmm1
 ; AVX512DQBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512DQBW-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
-; AVX512DQBW-NEXT:    vpcmpgtq %ymm3, %ymm0, %k1
+; AVX512DQBW-NEXT:    vpcmpnltq %ymm2, %ymm0, %k1
 ; AVX512DQBW-NEXT:    vpcmpgtd %xmm1, %xmm2, %k0 {%k1}
 ; AVX512DQBW-NEXT:    vpmovm2d %k0, %xmm0
 ; AVX512DQBW-NEXT:    vzeroupper
@@ -1688,10 +1687,11 @@ define <8 x i1> @is_positive_mask_v8i32_v8i1(<8 x i32> %x, <8 x i1> %y) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpmovsxwd %xmm1, %ymm1
 ; AVX512F-NEXT:    vpslld $31, %ymm1, %ymm1
-; AVX512F-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512F-NEXT:    vpcmpgtd %ymm2, %ymm0, %k1
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpcmpnltd %ymm2, %ymm0, %k1
+; AVX512F-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX512F-NEXT:    vptestmd %ymm1, %ymm1, %k1 {%k1}
-; AVX512F-NEXT:    vmovdqa32 %ymm2, %ymm0 {%k1} {z}
+; AVX512F-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
 ; AVX512F-NEXT:    vpmovdw %ymm0, %xmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -1700,8 +1700,8 @@ define <8 x i1> @is_positive_mask_v8i32_v8i1(<8 x i32> %x, <8 x i1> %y) {
 ; AVX512DQBW:       # %bb.0:
 ; AVX512DQBW-NEXT:    vpsllw $15, %xmm1, %xmm1
 ; AVX512DQBW-NEXT:    vpmovw2m %xmm1, %k1
-; AVX512DQBW-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX512DQBW-NEXT:    vpcmpgtd %ymm1, %ymm0, %k0 {%k1}
+; AVX512DQBW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512DQBW-NEXT:    vpcmpnltd %ymm1, %ymm0, %k0 {%k1}
 ; AVX512DQBW-NEXT:    vpmovm2w %k0, %xmm0
 ; AVX512DQBW-NEXT:    vzeroupper
 ; AVX512DQBW-NEXT:    retq
@@ -1759,8 +1759,8 @@ define <16 x i1> @is_positive_mask_v16i16_v16i1(<16 x i16> %x, <16 x i1> %y) {
 ; AVX512DQBW:       # %bb.0:
 ; AVX512DQBW-NEXT:    vpsllw $7, %xmm1, %xmm1
 ; AVX512DQBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512DQBW-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
-; AVX512DQBW-NEXT:    vpcmpgtw %ymm3, %ymm0, %k1
+; AVX512DQBW-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512DQBW-NEXT:    vpcmpnltw %ymm3, %ymm0, %k1
 ; AVX512DQBW-NEXT:    vpcmpgtb %xmm1, %xmm2, %k0 {%k1}
 ; AVX512DQBW-NEXT:    vpmovm2b %k0, %xmm0
 ; AVX512DQBW-NEXT:    vzeroupper
@@ -1792,15 +1792,15 @@ define <32 x i1> @is_positive_mask_v32i8_v32i1(<32 x i8> %x, <32 x i1> %y) {
 ; SSE2-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3],xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
-; SSE2-NEXT:    movd %r9d, %xmm4
 ; SSE2-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd {{.*#+}} xmm4 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1],xmm4[2],xmm2[2],xmm4[3],xmm2[3],xmm4[4],xmm2[4],xmm4[5],xmm2[5],xmm4[6],xmm2[6],xmm4[7],xmm2[7]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; SSE2-NEXT:    movd %r8d, %xmm2
-; SSE2-NEXT:    movd %ecx, %xmm3
+; SSE2-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3],xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
-; SSE2-NEXT:    movd %edx, %xmm6
-; SSE2-NEXT:    movd %esi, %xmm2
+; SSE2-NEXT:    movd {{.*#+}} xmm6 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm6[0],xmm2[1],xmm6[1],xmm2[2],xmm6[2],xmm2[3],xmm6[3],xmm2[4],xmm6[4],xmm2[5],xmm6[5],xmm2[6],xmm6[6],xmm2[7],xmm6[7]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1]
@@ -1820,32 +1820,29 @@ define <32 x i1> @is_positive_mask_v32i8_v32i1(<32 x i8> %x, <32 x i1> %y) {
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm6 = xmm6[0],xmm3[0],xmm6[1],xmm3[1],xmm6[2],xmm3[2],xmm6[3],xmm3[3],xmm6[4],xmm3[4],xmm6[5],xmm3[5],xmm6[6],xmm3[6],xmm6[7],xmm3[7]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm6 = xmm6[0],xmm4[0],xmm6[1],xmm4[1],xmm6[2],xmm4[2],xmm6[3],xmm4[3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm6 = xmm6[0],xmm5[0],xmm6[1],xmm5[1]
-; SSE2-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; SSE2-NEXT:    movd {{.*#+}} xmm4 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd %r8d, %xmm3
+; SSE2-NEXT:    movd %ecx, %xmm4
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3],xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
-; SSE2-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; SSE2-NEXT:    movd {{.*#+}} xmm5 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd %edx, %xmm3
+; SSE2-NEXT:    movd %esi, %xmm5
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1],xmm5[2],xmm3[2],xmm5[3],xmm3[3],xmm5[4],xmm3[4],xmm5[5],xmm3[5],xmm5[6],xmm3[6],xmm5[7],xmm3[7]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
 ; SSE2-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movd {{.*#+}} xmm4 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3],xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
-; SSE2-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd %r9d, %xmm3
 ; SSE2-NEXT:    movd {{.*#+}} xmm7 = mem[0],zero,zero,zero
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm7 = xmm7[0],xmm3[0],xmm7[1],xmm3[1],xmm7[2],xmm3[2],xmm7[3],xmm3[3],xmm7[4],xmm3[4],xmm7[5],xmm3[5],xmm7[6],xmm3[6],xmm7[7],xmm3[7]
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm7 = xmm7[0],xmm4[0],xmm7[1],xmm4[1],xmm7[2],xmm4[2],xmm7[3],xmm4[3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm7 = xmm7[0],xmm5[0],xmm7[1],xmm5[1]
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm7 = xmm7[0],xmm6[0]
-; SSE2-NEXT:    pcmpeqd %xmm3, %xmm3
-; SSE2-NEXT:    pcmpgtb %xmm3, %xmm0
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    pcmpgtb %xmm3, %xmm1
-; SSE2-NEXT:    pand %xmm7, %xmm1
-; SSE2-NEXT:    psllw $7, %xmm1
-; SSE2-NEXT:    pmovmskb %xmm1, %ecx
-; SSE2-NEXT:    shll $16, %ecx
-; SSE2-NEXT:    psllw $7, %xmm0
-; SSE2-NEXT:    pmovmskb %xmm0, %edx
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm7[0],xmm3[1],xmm7[1],xmm3[2],xmm7[2],xmm3[3],xmm7[3],xmm3[4],xmm7[4],xmm3[5],xmm7[5],xmm3[6],xmm7[6],xmm3[7],xmm7[7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1],xmm3[2],xmm4[2],xmm3[3],xmm4[3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1]
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm5 = xmm5[0],xmm6[0]
+; SSE2-NEXT:    psllw $7, %xmm5
+; SSE2-NEXT:    pandn %xmm5, %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %ecx
+; SSE2-NEXT:    psllw $7, %xmm2
+; SSE2-NEXT:    pandn %xmm2, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %edx
+; SSE2-NEXT:    shll $16, %edx
 ; SSE2-NEXT:    orl %ecx, %edx
 ; SSE2-NEXT:    movl %edx, (%rdi)
 ; SSE2-NEXT:    retq
@@ -1853,11 +1850,11 @@ define <32 x i1> @is_positive_mask_v32i8_v32i1(<32 x i8> %x, <32 x i1> %y) {
 ; SSE42-LABEL: is_positive_mask_v32i8_v32i1:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movq %rdi, %rax
-; SSE42-NEXT:    movd %esi, %xmm2
-; SSE42-NEXT:    pinsrb $1, %edx, %xmm2
-; SSE42-NEXT:    pinsrb $2, %ecx, %xmm2
-; SSE42-NEXT:    pinsrb $3, %r8d, %xmm2
-; SSE42-NEXT:    pinsrb $4, %r9d, %xmm2
+; SSE42-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE42-NEXT:    pinsrb $1, {{[0-9]+}}(%rsp), %xmm2
+; SSE42-NEXT:    pinsrb $2, {{[0-9]+}}(%rsp), %xmm2
+; SSE42-NEXT:    pinsrb $3, {{[0-9]+}}(%rsp), %xmm2
+; SSE42-NEXT:    pinsrb $4, {{[0-9]+}}(%rsp), %xmm2
 ; SSE42-NEXT:    pinsrb $5, {{[0-9]+}}(%rsp), %xmm2
 ; SSE42-NEXT:    pinsrb $6, {{[0-9]+}}(%rsp), %xmm2
 ; SSE42-NEXT:    pinsrb $7, {{[0-9]+}}(%rsp), %xmm2
@@ -1869,11 +1866,11 @@ define <32 x i1> @is_positive_mask_v32i8_v32i1(<32 x i8> %x, <32 x i1> %y) {
 ; SSE42-NEXT:    pinsrb $13, {{[0-9]+}}(%rsp), %xmm2
 ; SSE42-NEXT:    pinsrb $14, {{[0-9]+}}(%rsp), %xmm2
 ; SSE42-NEXT:    pinsrb $15, {{[0-9]+}}(%rsp), %xmm2
-; SSE42-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; SSE42-NEXT:    pinsrb $1, {{[0-9]+}}(%rsp), %xmm3
-; SSE42-NEXT:    pinsrb $2, {{[0-9]+}}(%rsp), %xmm3
-; SSE42-NEXT:    pinsrb $3, {{[0-9]+}}(%rsp), %xmm3
-; SSE42-NEXT:    pinsrb $4, {{[0-9]+}}(%rsp), %xmm3
+; SSE42-NEXT:    movd %esi, %xmm3
+; SSE42-NEXT:    pinsrb $1, %edx, %xmm3
+; SSE42-NEXT:    pinsrb $2, %ecx, %xmm3
+; SSE42-NEXT:    pinsrb $3, %r8d, %xmm3
+; SSE42-NEXT:    pinsrb $4, %r9d, %xmm3
 ; SSE42-NEXT:    pinsrb $5, {{[0-9]+}}(%rsp), %xmm3
 ; SSE42-NEXT:    pinsrb $6, {{[0-9]+}}(%rsp), %xmm3
 ; SSE42-NEXT:    pinsrb $7, {{[0-9]+}}(%rsp), %xmm3
@@ -1885,14 +1882,11 @@ define <32 x i1> @is_positive_mask_v32i8_v32i1(<32 x i8> %x, <32 x i1> %y) {
 ; SSE42-NEXT:    pinsrb $13, {{[0-9]+}}(%rsp), %xmm3
 ; SSE42-NEXT:    pinsrb $14, {{[0-9]+}}(%rsp), %xmm3
 ; SSE42-NEXT:    pinsrb $15, {{[0-9]+}}(%rsp), %xmm3
-; SSE42-NEXT:    pcmpeqd %xmm4, %xmm4
-; SSE42-NEXT:    pcmpgtb %xmm4, %xmm1
-; SSE42-NEXT:    pand %xmm3, %xmm1
-; SSE42-NEXT:    pcmpgtb %xmm4, %xmm0
-; SSE42-NEXT:    pand %xmm2, %xmm0
-; SSE42-NEXT:    psllw $7, %xmm0
+; SSE42-NEXT:    psllw $7, %xmm3
+; SSE42-NEXT:    pandn %xmm3, %xmm0
 ; SSE42-NEXT:    pmovmskb %xmm0, %ecx
-; SSE42-NEXT:    psllw $7, %xmm1
+; SSE42-NEXT:    psllw $7, %xmm2
+; SSE42-NEXT:    pandn %xmm2, %xmm1
 ; SSE42-NEXT:    pmovmskb %xmm1, %edx
 ; SSE42-NEXT:    shll $16, %edx
 ; SSE42-NEXT:    orl %ecx, %edx
@@ -1925,10 +1919,10 @@ define <32 x i1> @is_positive_mask_v32i8_v32i1(<32 x i8> %x, <32 x i1> %y) {
 ;
 ; AVX512DQBW-LABEL: is_positive_mask_v32i8_v32i1:
 ; AVX512DQBW:       # %bb.0:
+; AVX512DQBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512DQBW-NEXT:    vpsllw $7, %ymm1, %ymm1
 ; AVX512DQBW-NEXT:    vpmovb2m %ymm1, %k1
-; AVX512DQBW-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX512DQBW-NEXT:    vpcmpgtb %ymm1, %ymm0, %k0 {%k1}
+; AVX512DQBW-NEXT:    vpcmpnltb %ymm2, %ymm0, %k0 {%k1}
 ; AVX512DQBW-NEXT:    vpmovm2b %k0, %ymm0
 ; AVX512DQBW-NEXT:    retq
   %cmp = icmp sgt <32 x i8> %x, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
@@ -1949,12 +1943,10 @@ define <4 x i64> @PR52504(<4 x i16> %t3) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,0,1,1]
 ; SSE2-NEXT:    pcmpeqd %xmm4, %xmm4
 ; SSE2-NEXT:    pcmpgtd %xmm4, %xmm0
-; SSE2-NEXT:    pand %xmm0, %xmm1
 ; SSE2-NEXT:    pxor %xmm4, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,2,3,3]
 ; SSE2-NEXT:    pcmpgtd %xmm4, %xmm1
-; SSE2-NEXT:    pand %xmm1, %xmm3
 ; SSE2-NEXT:    pxor %xmm4, %xmm1
 ; SSE2-NEXT:    por %xmm3, %xmm1
 ; SSE2-NEXT:    retq

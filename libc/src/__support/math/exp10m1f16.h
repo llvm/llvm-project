@@ -13,7 +13,6 @@
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
-#include "exp10f16_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -25,6 +24,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/cpu_features.h"
+#include "src/__support/math/exp10f16_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -93,15 +93,7 @@ LIBC_INLINE constexpr float16 exp10m1f16(float16 x) {
       if (x_bits.is_inf())
         return FPBits::inf().get_val();
 
-      switch (fputil::quick_get_round()) {
-      case FE_TONEAREST:
-      case FE_UPWARD:
-        fputil::set_errno_if_required(ERANGE);
-        fputil::raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
-        return FPBits::inf().get_val();
-      default:
-        return FPBits::max_normal().get_val();
-      }
+      return fputil::set_overflow<float16>();
     }
 
     // When x < -11 * log10(2).
@@ -117,13 +109,20 @@ LIBC_INLINE constexpr float16 exp10m1f16(float16 x) {
       }
 
       // When x < -0x1.ce4p+1, round(10^x - 1, HP, RN) = -1.
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      fputil::raise_except_if_required(FE_INEXACT);
+      return FPBits::one(Sign::NEG).get_val();
+#else
       switch (fputil::quick_get_round()) {
       case FE_TONEAREST:
       case FE_DOWNWARD:
+        fputil::raise_except_if_required(FE_INEXACT);
         return FPBits::one(Sign::NEG).get_val();
       default:
+        fputil::raise_except_if_required(FE_INEXACT);
         return fputil::cast<float16>(-0x1.ffcp-1);
       }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     }
 
     // When |x| <= 2^(-3).
@@ -150,8 +149,8 @@ LIBC_INLINE constexpr float16 exp10m1f16(float16 x) {
   }
 
   // When x is 1, 2, or 3. These are hard-to-round cases with exact results.
-  // 10^4 - 1 = 9'999 is not exactly representable as a float16, but luckily the
-  // polynomial approximation gives the correct result for x = 4 in all
+  // 10^4 - 1 = 9'999 is not exactly representable as a float16, but luckily
+  // the polynomial approximation gives the correct result for x = 4 in all
   // rounding modes.
   if (LIBC_UNLIKELY((x_u & ~(0x3c00U | 0x4000U | 0x4200U | 0x4400U)) == 0)) {
     switch (x_u) {

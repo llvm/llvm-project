@@ -229,7 +229,8 @@ def start_gdb_log(debugger, command, result, dict):
     else:
         args_len = len(args)
         if args_len == 0:
-            g_log_file = tempfile.mktemp()
+            with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                g_log_file = tmp.name
         elif len(args) == 1:
             g_log_file = args[0]
 

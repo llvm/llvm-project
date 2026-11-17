@@ -25,12 +25,12 @@ namespace llvm {
 /// heuristics in the module level such like PriorityInlineOrder. It can be
 /// tuned with a number of parameters to control what cost model is used and
 /// what tradeoffs are made when making the decision.
-class ModuleInlinerPass : public PassInfoMixin<ModuleInlinerPass> {
+class ModuleInlinerPass : public OptionalPassInfoMixin<ModuleInlinerPass> {
 public:
-  ModuleInlinerPass(InlineParams Params = getInlineParams(),
+  ModuleInlinerPass(InlineParams Params,
                     InliningAdvisorMode Mode = InliningAdvisorMode::Default,
                     ThinOrFullLTOPhase LTOPhase = ThinOrFullLTOPhase::None)
-      : Params(Params), Mode(Mode), LTOPhase(LTOPhase){};
+      : Params(Params), Mode(Mode), LTOPhase(LTOPhase) {}
   ModuleInlinerPass(ModuleInlinerPass &&Arg) = default;
 
   LLVM_ABI PreservedAnalyses run(Module &, ModuleAnalysisManager &);

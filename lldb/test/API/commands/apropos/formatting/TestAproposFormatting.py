@@ -32,7 +32,6 @@ class AproposFormattingTest(PExpectTest):
         )
 
         self.expect_prompt()
-        self.quit()
 
     @skipIfAsan
     @skipIfEditlineSupportMissing
@@ -47,13 +46,32 @@ class AproposFormattingTest(PExpectTest):
         )
         self.expect_prompt()
 
-        self.child.sendline("apropos disass")
-        # Check command name highlighting.
-        self.child.expect_exact(ansi_green + "disass" + ansi_reset + "emble")
-        # Check settings name highlighting.
-        self.child.expect_exact(ansi_green + "disass" + ansi_reset + "embly-format")
+        self.child.sendline("apropos plug")
+        # Apropos should highlight in:
+        # Command names.
+        self.child.expect_exact(ansi_green + "plug" + ansi_reset + "in list")
+        # Command descriptions.
+        self.child.expect_exact(
+            "Report info about registered LLDB "
+            + ansi_green
+            + "plug"
+            + ansi_reset
+            + "ins."
+        )
+        # Settings paths.
+        self.child.expect_exact(
+            "platform." + ansi_green + "plug" + ansi_reset + "in.remote-android"
+        )
+        # Settings names.
+        self.child.expect_exact(
+            ansi_green
+            + "plug"
+            + ansi_reset
+            + "in.structured-data.darwin-log.auto-enable-options"
+        )
+        # Settings descriptions.
+        self.child.expect_exact("'" + ansi_green + "plug" + ansi_reset + "in")
         self.expect_prompt()
-        self.quit()
 
     @skipIfAsan
     @skipIfEditlineSupportMissing
@@ -75,4 +93,3 @@ class AproposFormattingTest(PExpectTest):
         self.child.expect_exact(ansi_green + "will")
         self.child.expect_exact("this" + ansi_reset)
         self.expect_prompt()
-        self.quit()

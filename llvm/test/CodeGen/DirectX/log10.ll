@@ -7,7 +7,7 @@ define noundef float @log10_float(float noundef %a) #0 {
 entry:
 ; DOPCHECK: call float @dx.op.unary.f32(i32 23, float %{{.*}})
 ; EXPCHECK: call float @llvm.log2.f32(float %a)
-; CHECK: fmul float 0x3FD3441340000000, %{{.*}}
+; CHECK: fmul float f0x3E9A209A, %{{.*}}
   %elt.log10 = call float @llvm.log10.f32(float %a)
   ret float %elt.log10
 }
@@ -16,7 +16,7 @@ define noundef half @log10_half(half noundef %a) #0 {
 entry:
 ; DOPCHECK: call half @dx.op.unary.f16(i32 23, half %{{.*}})
 ; EXPCHECK: call half @llvm.log2.f16(half %a)
-; CHECK: fmul half 0xH34D1, %{{.*}}
+; CHECK: fmul half 3.010250e-01, %{{.*}}
   %elt.log10 = call half @llvm.log10.f16(half %a)
   ret half %elt.log10
 }

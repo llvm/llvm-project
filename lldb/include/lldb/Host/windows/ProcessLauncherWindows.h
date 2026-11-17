@@ -108,8 +108,9 @@ public:
   static llvm::ErrorOr<std::vector<HANDLE>>
   GetInheritedHandles(STARTUPINFOEXW &startupinfoex,
                       const ProcessLaunchInfo *launch_info = nullptr,
-                      HANDLE stdout_handle = NULL, HANDLE stderr_handle = NULL,
-                      HANDLE stdin_handle = NULL);
+                      HANDLE stdout_handle = nullptr,
+                      HANDLE stderr_handle = nullptr,
+                      HANDLE stdin_handle = nullptr);
 
   static HANDLE GetStdioHandle(const ProcessLaunchInfo &launch_info, int fd);
 

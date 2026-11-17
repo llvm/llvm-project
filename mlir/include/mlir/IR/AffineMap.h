@@ -198,7 +198,9 @@ public:
 
   // Prints affine map to 'os'.
   void print(raw_ostream &os) const;
-  void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   unsigned getNumDims() const;
   unsigned getNumSymbols() const;
@@ -694,8 +696,8 @@ SmallVector<T> applyPermutationMap(AffineMap map, llvm::ArrayRef<T> source) {
 /// Calculates maximum dimension and symbol positions from the expressions
 /// in `exprsLists` and stores them in `maxDim` and `maxSym` respectively.
 template <typename AffineExprContainer>
-static void getMaxDimAndSymbol(ArrayRef<AffineExprContainer> exprsList,
-                               int64_t &maxDim, int64_t &maxSym) {
+void getMaxDimAndSymbol(ArrayRef<AffineExprContainer> exprsList,
+                        int64_t &maxDim, int64_t &maxSym) {
   for (const auto &exprs : exprsList) {
     for (auto expr : exprs) {
       expr.walk([&maxDim, &maxSym](AffineExpr e) {
@@ -715,14 +717,6 @@ namespace llvm {
 // AffineExpr hash just like pointers
 template <>
 struct DenseMapInfo<mlir::AffineMap> {
-  static mlir::AffineMap getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::AffineMap(static_cast<mlir::AffineMap::ImplType *>(pointer));
-  }
-  static mlir::AffineMap getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::AffineMap(static_cast<mlir::AffineMap::ImplType *>(pointer));
-  }
   static unsigned getHashValue(mlir::AffineMap val) {
     return mlir::hash_value(val);
   }

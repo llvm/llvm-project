@@ -10,7 +10,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 define i32 @clause_LiteralComputeWeight(ptr %call23) {
-; CGSCC: Function Attrs: nofree noreturn nounwind
+; CGSCC: Function Attrs: nofree noreturn nosync nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@clause_LiteralComputeWeight
 ; CGSCC-SAME: (ptr nofree readonly captures(none) [[CALL23:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -56,7 +56,7 @@ entry:
   ret ptr %0
 }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree noreturn nounwind }
+; CGSCC: attributes #[[ATTR0]] = { nofree noreturn nosync nounwind }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR2]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
 ; CGSCC: attributes #[[ATTR3]] = { nofree }

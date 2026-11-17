@@ -196,7 +196,8 @@ public:
 
   // Copy the cells in the intersection of
   // the rows between `fromRows` and `toRows` and
-  // the columns between `fromColumns` and `toColumns`, both inclusive.
+  // the columns between `fromColumns` and `toColumns`, inclusive on the left
+  // but exclusive on the right (same as canonical C++ ranges).
   Matrix<T> getSubMatrix(unsigned fromRow, unsigned toRow, unsigned fromColumn,
                          unsigned toColumn) const;
 
@@ -209,7 +210,9 @@ public:
 
   /// Print the matrix.
   void print(raw_ostream &os) const;
-  void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   /// Return whether the Matrix is in a consistent state with all its
   /// invariants satisfied.

@@ -14,7 +14,7 @@
 #include "llvm/DebugInfo/LogicalView/Readers/LVDWARFReader.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionUnit.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVLine.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
@@ -794,8 +794,14 @@ void LVDWARFReader::processLocationList(dwarf::Attribute Attr,
                                         bool CallSiteLocation) {
 
   auto ProcessLocationExpression = [&](const DWARFExpression &Expression) {
-    for (const DWARFExpression::Operation &Op : Expression)
+    for (const DWARFExpression::Operation &Op : Expression) {
+      // The operands of an operation that failed to decode are undefined, and
+      // nothing after it can be located. Stop rather than record a location
+      // built from them.
+      if (Op.isError())
+        break;
       CurrentSymbol->addLocationOperands(Op.getCode(), Op.getRawOperands());
+    }
   };
 
   DWARFUnit *U = Die.getDwarfUnit();
@@ -961,13 +967,11 @@ Error LVDWARFReader::loadTargetInfo(const ObjectFile &Obj) {
   Triple TT = Obj.makeTriple();
 
   // Features to be passed to target/subtarget
-  Expected<SubtargetFeatures> Features = Obj.getFeatures();
   SubtargetFeatures FeaturesValue;
-  if (!Features) {
+  if (Expected<SubtargetFeatures> Features = Obj.getFeatures())
+    FeaturesValue = std::move(*Features);
+  else
     consumeError(Features.takeError());
-    FeaturesValue = SubtargetFeatures();
-  }
-  FeaturesValue = *Features;
 
   StringRef CPU;
   if (auto OptCPU = Obj.tryGetCPUName())

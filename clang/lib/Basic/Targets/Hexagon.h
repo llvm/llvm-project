@@ -34,6 +34,7 @@ class LLVM_LIBRARY_VISIBILITY HexagonTargetInfo : public TargetInfo {
   bool HasHVX128B = false;
   bool HasHVXIeeeFp = false;
   bool HasAudio = false;
+  bool HasHLX = false;
   bool UseLongCalls = false;
 
 public:
@@ -123,7 +124,7 @@ public:
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     if (!isValidCPUName(Name))
       return false;
     CPU = Name;

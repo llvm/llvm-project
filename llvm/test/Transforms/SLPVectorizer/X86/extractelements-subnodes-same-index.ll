@@ -25,16 +25,16 @@ define i32 @test() {
 ; CHECK-NEXT:    store i32 [[LOAD32]], ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) null, i64 16), align 4
 ; CHECK-NEXT:    [[LOAD33:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) null, i64 12), align 4
 ; CHECK-NEXT:    store i32 [[LOAD33]], ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) null, i64 12), align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <24 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 poison, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, i32 [[LOAD]], i32 6
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <24 x i32> [[TMP0]], i32 [[LOAD9]], i32 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <24 x i32> [[TMP1]], i32 [[LOAD14]], i32 9
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <24 x i32> [[TMP2]], i32 [[LOAD15]], i32 10
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <24 x i32> [[TMP3]], i32 [[LOAD20]], i32 11
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <24 x i32> [[TMP4]], i32 [[LOAD21]], i32 12
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <24 x i32> [[TMP5]], i32 [[LOAD26]], i32 13
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <24 x i32> [[TMP6]], i32 [[LOAD27]], i32 14
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <24 x i32> [[TMP7]], i32 [[LOAD32]], i32 15
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <24 x i32> [[TMP8]], i32 [[LOAD33]], i32 16
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <24 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 poison, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, i32 [[LOAD]], i64 6
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <24 x i32> [[TMP0]], i32 [[LOAD9]], i64 8
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <24 x i32> [[TMP1]], i32 [[LOAD14]], i64 9
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <24 x i32> [[TMP2]], i32 [[LOAD15]], i64 10
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <24 x i32> [[TMP3]], i32 [[LOAD20]], i64 11
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <24 x i32> [[TMP4]], i32 [[LOAD21]], i64 12
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <24 x i32> [[TMP5]], i32 [[LOAD26]], i64 13
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <24 x i32> [[TMP6]], i32 [[LOAD27]], i64 14
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <24 x i32> [[TMP7]], i32 [[LOAD32]], i64 15
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <24 x i32> [[TMP8]], i32 [[LOAD33]], i64 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <24 x i32> @llvm.ctpop.v24i32(<24 x i32> [[TMP9]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.or.v24i32(<24 x i32> [[TMP10]])
 ; CHECK-NEXT:    ret i32 [[TMP11]]

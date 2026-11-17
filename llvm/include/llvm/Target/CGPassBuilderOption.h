@@ -21,6 +21,8 @@
 
 namespace llvm {
 
+class TargetMachine;
+
 enum class RunOutliner {
   TargetDefault,
   AlwaysOutline,
@@ -48,20 +50,21 @@ public:
 // Not one-on-one but mostly corresponding to commandline options in
 // TargetPassConfig.cpp.
 struct CGPassBuilderOption {
-  std::optional<bool> OptimizeRegAlloc;
+  cl::boolOrDefault OptimizeRegAlloc = cl::boolOrDefault::BOU_UNSET;
   std::optional<bool> EnableIPRA;
   bool DebugPM = false;
   bool DisableVerify = false;
   bool EnableImplicitNullChecks = false;
   bool EnableBlockPlacementStats = false;
   bool EnableGlobalMergeFunc = false;
-  bool EnableMachineFunctionSplitter = false;
   bool EnableSinkAndFold = false;
+  /// Run the machine scheduler while still in SSA, just before PHI
+  /// elimination.
+  bool EnableSSAMachineScheduler = false;
   bool EnableTailMerge = true;
   /// Enable LoopTermFold immediately after LSR.
   bool EnableLoopTermFold = false;
   bool MISchedPostRA = false;
-  bool EarlyLiveIntervals = false;
   bool EnableGCEmptyBlocks = false;
 
   bool DisableLSR = false;
@@ -84,14 +87,17 @@ struct CGPassBuilderOption {
   std::string FSProfileFile;
   std::string FSRemappingFile;
 
-  std::optional<bool> VerifyMachineCode;
-  std::optional<bool> EnableFastISelOption;
-  std::optional<bool> EnableGlobalISelOption;
-  std::optional<bool> DebugifyAndStripAll;
-  std::optional<bool> DebugifyCheckAndStripAll;
+  MachineVerifierMode VerifyMachineCode = MachineVerifierMode::End;
+
+  cl::boolOrDefault EnableFastISelOption = cl::boolOrDefault::BOU_UNSET;
+  cl::boolOrDefault EnableRegAllocFastTied = cl::boolOrDefault::BOU_UNSET;
+  cl::boolOrDefault EnableMachinePipeliner = cl::boolOrDefault::BOU_UNSET;
+  cl::boolOrDefault EnableGlobalISelOption = cl::boolOrDefault::BOU_UNSET;
+  cl::boolOrDefault DebugifyAndStripAll = cl::boolOrDefault::BOU_UNSET;
+  cl::boolOrDefault DebugifyCheckAndStripAll = cl::boolOrDefault::BOU_UNSET;
 };
 
-LLVM_ABI CGPassBuilderOption getCGPassBuilderOption();
+LLVM_ABI CGPassBuilderOption getCGPassBuilderOption(const TargetMachine &TM);
 
 } // namespace llvm
 

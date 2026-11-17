@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Common/static-multimap-view.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Transforms/Passes.h"

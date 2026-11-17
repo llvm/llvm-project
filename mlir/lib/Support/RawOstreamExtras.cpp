@@ -10,6 +10,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 llvm::raw_ostream &mlir::thread_safe_nulls() {
-  static thread_local llvm::raw_null_ostream stream;
+  static LLVM_THREAD_LOCAL llvm::raw_null_ostream stream;
   return stream;
 }

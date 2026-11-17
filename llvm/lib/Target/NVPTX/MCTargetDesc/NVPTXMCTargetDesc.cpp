@@ -24,6 +24,7 @@
 using namespace llvm;
 
 #define GET_INSTRINFO_MC_DESC
+#define GET_INSTRINFO_NAMED_OPS
 #define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "NVPTXGenInstrInfo.inc"
 

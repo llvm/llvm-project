@@ -41,8 +41,6 @@
 #include "flang/Common/indirection.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/type.h"
-#include <set>
-#include <type_traits>
 
 namespace Fortran::evaluate {
 template <typename Visitor, typename Result,
@@ -161,6 +159,9 @@ public:
   Result operator()(const DescriptorInquiry &x) const {
     return visitor_(x.base());
   }
+  Result operator()(const RankOneBoundElement &x) const {
+    return visitor_(x.base());
+  }
 
   // Calls
   Result operator()(const SpecificIntrinsic &) const {
@@ -178,9 +179,31 @@ public:
   Result operator()(const ActualArgument &x) const {
     if (const auto *symbol{x.GetAssumedTypeDummy()}) {
       return visitor_(*symbol);
-    } else {
-      return visitor_(x.UnwrapExpr());
     }
+    if (const auto *condArg{x.GetConditionalArg()}) {
+      return TraverseConditionalArg(*condArg);
+    }
+    return visitor_(x.UnwrapExpr());
+  }
+  Result TraverseConditionalArg(
+      const ActualArgument::ConditionalArg &ca) const {
+    Result result{visitor_.Default()};
+    result = visitor_.Combine(std::move(result), visitor_(ca.condition()));
+    if (ca.consequent()) {
+      result = visitor_.Combine(
+          std::move(result), visitor_(ca.consequent()->value()));
+    }
+    return ca.VisitTail(
+        [&](const ActualArgument::ConditionalArg &inner) {
+          return visitor_.Combine(
+              std::move(result), TraverseConditionalArg(inner));
+        },
+        [&](const ActualArgument::ConditionalArg::Consequent &cons) -> Result {
+          if (cons) {
+            return visitor_.Combine(std::move(result), visitor_(cons->value()));
+          }
+          return result;
+        });
   }
   Result operator()(const ProcedureRef &x) const {
     return Combine(x.proc(), x.arguments());

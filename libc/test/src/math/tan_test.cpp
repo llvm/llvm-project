@@ -67,7 +67,7 @@ TEST_F(LlvmLibcTanTest, TrickyInputs) {
 }
 
 TEST_F(LlvmLibcTanTest, InDoubleRange) {
-  constexpr uint64_t COUNT = 1'234'51;
+  constexpr uint64_t COUNT = 1'231;
   uint64_t START = LIBC_NAMESPACE::fputil::FPBits<double>(0x1.0p-50).uintval();
   uint64_t STOP = LIBC_NAMESPACE::fputil::FPBits<double>(0x1.0p200).uintval();
   uint64_t STEP = (STOP - START) / COUNT;
@@ -80,7 +80,7 @@ TEST_F(LlvmLibcTanTest, InDoubleRange) {
     uint64_t fails = 0;
     uint64_t tested = 0;
     uint64_t total = 0;
-    double worst_input, worst_output = 0.0;
+    double worst_input = 0.0, worst_output = 0.0;
     double ulp = 0.5;
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {

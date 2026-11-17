@@ -31,4 +31,6 @@ int main(int, char**) {
 
     TEST_IGNORE_NODISCARD M().upper_bound(C2Int{5});
   }
+
+  return 0;
 }

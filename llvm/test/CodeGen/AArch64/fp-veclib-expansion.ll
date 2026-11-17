@@ -8,8 +8,6 @@ define <2 x double> @frem_v2f64(<2 x double> %unused, <2 x double> %a, <2 x doub
 ; ARMPL-LABEL: frem_v2f64:
 ; ARMPL:       // %bb.0:
 ; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; ARMPL-NEXT:    .cfi_def_cfa_offset 16
-; ARMPL-NEXT:    .cfi_offset w30, -16
 ; ARMPL-NEXT:    mov v0.16b, v1.16b
 ; ARMPL-NEXT:    mov v1.16b, v2.16b
 ; ARMPL-NEXT:    bl armpl_vfmodq_f64
@@ -19,8 +17,6 @@ define <2 x double> @frem_v2f64(<2 x double> %unused, <2 x double> %a, <2 x doub
 ; SLEEF-LABEL: frem_v2f64:
 ; SLEEF:       // %bb.0:
 ; SLEEF-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; SLEEF-NEXT:    .cfi_def_cfa_offset 16
-; SLEEF-NEXT:    .cfi_offset w30, -16
 ; SLEEF-NEXT:    mov v0.16b, v1.16b
 ; SLEEF-NEXT:    mov v1.16b, v2.16b
 ; SLEEF-NEXT:    bl _ZGVnN2vv_fmod
@@ -34,8 +30,6 @@ define <4 x float> @frem_strict_v4f32(<4 x float> %unused, <4 x float> %a, <4 x 
 ; ARMPL-LABEL: frem_strict_v4f32:
 ; ARMPL:       // %bb.0:
 ; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; ARMPL-NEXT:    .cfi_def_cfa_offset 16
-; ARMPL-NEXT:    .cfi_offset w30, -16
 ; ARMPL-NEXT:    mov v0.16b, v1.16b
 ; ARMPL-NEXT:    mov v1.16b, v2.16b
 ; ARMPL-NEXT:    bl armpl_vfmodq_f32
@@ -45,8 +39,6 @@ define <4 x float> @frem_strict_v4f32(<4 x float> %unused, <4 x float> %a, <4 x 
 ; SLEEF-LABEL: frem_strict_v4f32:
 ; SLEEF:       // %bb.0:
 ; SLEEF-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; SLEEF-NEXT:    .cfi_def_cfa_offset 16
-; SLEEF-NEXT:    .cfi_offset w30, -16
 ; SLEEF-NEXT:    mov v0.16b, v1.16b
 ; SLEEF-NEXT:    mov v1.16b, v2.16b
 ; SLEEF-NEXT:    bl _ZGVnN4vv_fmodf
@@ -60,8 +52,6 @@ define <vscale x 4 x float> @frem_nxv4f32(<vscale x 4 x float> %unused, <vscale 
 ; ARMPL-LABEL: frem_nxv4f32:
 ; ARMPL:       // %bb.0:
 ; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; ARMPL-NEXT:    .cfi_def_cfa_offset 16
-; ARMPL-NEXT:    .cfi_offset w30, -16
 ; ARMPL-NEXT:    mov z0.d, z1.d
 ; ARMPL-NEXT:    mov z1.d, z2.d
 ; ARMPL-NEXT:    ptrue p0.s
@@ -72,8 +62,6 @@ define <vscale x 4 x float> @frem_nxv4f32(<vscale x 4 x float> %unused, <vscale 
 ; SLEEF-LABEL: frem_nxv4f32:
 ; SLEEF:       // %bb.0:
 ; SLEEF-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; SLEEF-NEXT:    .cfi_def_cfa_offset 16
-; SLEEF-NEXT:    .cfi_offset w30, -16
 ; SLEEF-NEXT:    mov z0.d, z1.d
 ; SLEEF-NEXT:    mov z1.d, z2.d
 ; SLEEF-NEXT:    ptrue p0.s
@@ -88,8 +76,6 @@ define <vscale x 2 x double> @frem_strict_nxv2f64(<vscale x 2 x double> %unused,
 ; ARMPL-LABEL: frem_strict_nxv2f64:
 ; ARMPL:       // %bb.0:
 ; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; ARMPL-NEXT:    .cfi_def_cfa_offset 16
-; ARMPL-NEXT:    .cfi_offset w30, -16
 ; ARMPL-NEXT:    mov z0.d, z1.d
 ; ARMPL-NEXT:    mov z1.d, z2.d
 ; ARMPL-NEXT:    ptrue p0.d
@@ -100,8 +86,6 @@ define <vscale x 2 x double> @frem_strict_nxv2f64(<vscale x 2 x double> %unused,
 ; SLEEF-LABEL: frem_strict_nxv2f64:
 ; SLEEF:       // %bb.0:
 ; SLEEF-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; SLEEF-NEXT:    .cfi_def_cfa_offset 16
-; SLEEF-NEXT:    .cfi_offset w30, -16
 ; SLEEF-NEXT:    mov z0.d, z1.d
 ; SLEEF-NEXT:    mov z1.d, z2.d
 ; SLEEF-NEXT:    ptrue p0.d
@@ -112,5 +96,193 @@ define <vscale x 2 x double> @frem_strict_nxv2f64(<vscale x 2 x double> %unused,
   ret <vscale x 2 x double> %res
 }
 
-attributes #0 = { "target-features"="+sve" }
-attributes #1 = { "target-features"="+sve" strictfp }
+; Expected to be widened.
+define <2 x float> @frem_v2f32(<2 x float> %unused, <2 x float> %a, <2 x float> %b) #0 {
+; ARMPL-LABEL: frem_v2f32:
+; ARMPL:       // %bb.0:
+; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; ARMPL-NEXT:    // kill: def $d2 killed $d2 def $q2
+; ARMPL-NEXT:    fmov d0, d1
+; ARMPL-NEXT:    mov v2.d[1], v2.d[0]
+; ARMPL-NEXT:    mov v0.d[1], v0.d[0]
+; ARMPL-NEXT:    mov v1.16b, v2.16b
+; ARMPL-NEXT:    bl armpl_vfmodq_f32
+; ARMPL-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; ARMPL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; ARMPL-NEXT:    ret
+;
+; SLEEF-LABEL: frem_v2f32:
+; SLEEF:       // %bb.0:
+; SLEEF-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; SLEEF-NEXT:    // kill: def $d2 killed $d2 def $q2
+; SLEEF-NEXT:    fmov d0, d1
+; SLEEF-NEXT:    mov v2.d[1], v2.d[0]
+; SLEEF-NEXT:    mov v0.d[1], v0.d[0]
+; SLEEF-NEXT:    mov v1.16b, v2.16b
+; SLEEF-NEXT:    bl _ZGVnN4vv_fmodf
+; SLEEF-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; SLEEF-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; SLEEF-NEXT:    ret
+  %res = frem <2 x float> %a, %b
+  ret <2 x float> %res
+}
+
+; Expected not to be widened.
+define <1 x double> @frem_v1f64(<1 x double> %unused, <1 x double> %a, <1 x double> %b) #0 {
+; ARMPL-LABEL: frem_v1f64:
+; ARMPL:       // %bb.0:
+; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; ARMPL-NEXT:    fmov d0, d1
+; ARMPL-NEXT:    fmov d1, d2
+; ARMPL-NEXT:    bl fmod
+; ARMPL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; ARMPL-NEXT:    ret
+;
+; SLEEF-LABEL: frem_v1f64:
+; SLEEF:       // %bb.0:
+; SLEEF-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; SLEEF-NEXT:    fmov d0, d1
+; SLEEF-NEXT:    fmov d1, d2
+; SLEEF-NEXT:    bl fmod
+; SLEEF-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; SLEEF-NEXT:    ret
+  %res = frem <1 x double> %a, %b
+  ret <1 x double> %res
+}
+
+; Expected to widen with a mask.
+define <vscale x 2 x float> @frem_nxv2f32(<vscale x 2 x float> %unused, <vscale x 2 x float> %a, <vscale x 2 x float> %b) #0 {
+; ARMPL-LABEL: frem_nxv2f32:
+; ARMPL:       // %bb.0:
+; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; ARMPL-NEXT:    pfalse p0.b
+; ARMPL-NEXT:    uzp1 z0.s, z1.s, z1.s
+; ARMPL-NEXT:    uzp1 z1.s, z2.s, z2.s
+; ARMPL-NEXT:    ptrue p1.d
+; ARMPL-NEXT:    uzp1 p0.s, p1.s, p0.s
+; ARMPL-NEXT:    bl armpl_svfmod_f32_x
+; ARMPL-NEXT:    uunpklo z0.d, z0.s
+; ARMPL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; ARMPL-NEXT:    ret
+;
+; SLEEF-LABEL: frem_nxv2f32:
+; SLEEF:       // %bb.0:
+; SLEEF-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; SLEEF-NEXT:    pfalse p0.b
+; SLEEF-NEXT:    uzp1 z0.s, z1.s, z1.s
+; SLEEF-NEXT:    uzp1 z1.s, z2.s, z2.s
+; SLEEF-NEXT:    ptrue p1.d
+; SLEEF-NEXT:    uzp1 p0.s, p1.s, p0.s
+; SLEEF-NEXT:    bl _ZGVsMxvv_fmodf
+; SLEEF-NEXT:    uunpklo z0.d, z0.s
+; SLEEF-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; SLEEF-NEXT:    ret
+  %res = frem <vscale x 2 x float> %a, %b
+  ret <vscale x 2 x float> %res
+}
+
+; Expected to get scalarized: no libcalls exist for this type.
+define <4 x half> @frem_v4f16(<4 x half> %unused, <4 x half> %a, <4 x half> %b) #0 {
+; ARMPL-LABEL: frem_v4f16:
+; ARMPL:       // %bb.0:
+; ARMPL-NEXT:    sub sp, sp, #64
+; ARMPL-NEXT:    // kill: def $d1 killed $d1 def $q1
+; ARMPL-NEXT:    // kill: def $d2 killed $d2 def $q2
+; ARMPL-NEXT:    stp q1, q2, [sp, #16] // 32-byte Folded Spill
+; ARMPL-NEXT:    mov h0, v1.h[1]
+; ARMPL-NEXT:    mov h1, v2.h[1]
+; ARMPL-NEXT:    str x30, [sp, #48] // 8-byte Spill
+; ARMPL-NEXT:    fcvt s0, h0
+; ARMPL-NEXT:    fcvt s1, h1
+; ARMPL-NEXT:    bl fmodf
+; ARMPL-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
+; ARMPL-NEXT:    fcvt h0, s0
+; ARMPL-NEXT:    fcvt s2, h1
+; ARMPL-NEXT:    str q0, [sp] // 16-byte Spill
+; ARMPL-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
+; ARMPL-NEXT:    fcvt s1, h0
+; ARMPL-NEXT:    fmov s0, s2
+; ARMPL-NEXT:    bl fmodf
+; ARMPL-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
+; ARMPL-NEXT:    fcvt h3, s0
+; ARMPL-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
+; ARMPL-NEXT:    mov h1, v1.h[2]
+; ARMPL-NEXT:    mov h2, v0.h[2]
+; ARMPL-NEXT:    ldr q0, [sp] // 16-byte Reload
+; ARMPL-NEXT:    mov v3.h[1], v0.h[0]
+; ARMPL-NEXT:    fcvt s0, h1
+; ARMPL-NEXT:    fcvt s1, h2
+; ARMPL-NEXT:    str q3, [sp] // 16-byte Spill
+; ARMPL-NEXT:    bl fmodf
+; ARMPL-NEXT:    ldp q1, q2, [sp, #16] // 32-byte Folded Reload
+; ARMPL-NEXT:    fcvt h0, s0
+; ARMPL-NEXT:    ldr q3, [sp] // 16-byte Reload
+; ARMPL-NEXT:    mov h1, v1.h[3]
+; ARMPL-NEXT:    mov h2, v2.h[3]
+; ARMPL-NEXT:    mov v3.h[2], v0.h[0]
+; ARMPL-NEXT:    fcvt s0, h1
+; ARMPL-NEXT:    fcvt s1, h2
+; ARMPL-NEXT:    str q3, [sp] // 16-byte Spill
+; ARMPL-NEXT:    bl fmodf
+; ARMPL-NEXT:    fcvt h1, s0
+; ARMPL-NEXT:    ldr q0, [sp] // 16-byte Reload
+; ARMPL-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
+; ARMPL-NEXT:    mov v0.h[3], v1.h[0]
+; ARMPL-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; ARMPL-NEXT:    add sp, sp, #64
+; ARMPL-NEXT:    ret
+;
+; SLEEF-LABEL: frem_v4f16:
+; SLEEF:       // %bb.0:
+; SLEEF-NEXT:    sub sp, sp, #64
+; SLEEF-NEXT:    // kill: def $d1 killed $d1 def $q1
+; SLEEF-NEXT:    // kill: def $d2 killed $d2 def $q2
+; SLEEF-NEXT:    stp q1, q2, [sp, #16] // 32-byte Folded Spill
+; SLEEF-NEXT:    mov h0, v1.h[1]
+; SLEEF-NEXT:    mov h1, v2.h[1]
+; SLEEF-NEXT:    str x30, [sp, #48] // 8-byte Spill
+; SLEEF-NEXT:    fcvt s0, h0
+; SLEEF-NEXT:    fcvt s1, h1
+; SLEEF-NEXT:    bl fmodf
+; SLEEF-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
+; SLEEF-NEXT:    fcvt h0, s0
+; SLEEF-NEXT:    fcvt s2, h1
+; SLEEF-NEXT:    str q0, [sp] // 16-byte Spill
+; SLEEF-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
+; SLEEF-NEXT:    fcvt s1, h0
+; SLEEF-NEXT:    fmov s0, s2
+; SLEEF-NEXT:    bl fmodf
+; SLEEF-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
+; SLEEF-NEXT:    fcvt h3, s0
+; SLEEF-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
+; SLEEF-NEXT:    mov h1, v1.h[2]
+; SLEEF-NEXT:    mov h2, v0.h[2]
+; SLEEF-NEXT:    ldr q0, [sp] // 16-byte Reload
+; SLEEF-NEXT:    mov v3.h[1], v0.h[0]
+; SLEEF-NEXT:    fcvt s0, h1
+; SLEEF-NEXT:    fcvt s1, h2
+; SLEEF-NEXT:    str q3, [sp] // 16-byte Spill
+; SLEEF-NEXT:    bl fmodf
+; SLEEF-NEXT:    ldp q1, q2, [sp, #16] // 32-byte Folded Reload
+; SLEEF-NEXT:    fcvt h0, s0
+; SLEEF-NEXT:    ldr q3, [sp] // 16-byte Reload
+; SLEEF-NEXT:    mov h1, v1.h[3]
+; SLEEF-NEXT:    mov h2, v2.h[3]
+; SLEEF-NEXT:    mov v3.h[2], v0.h[0]
+; SLEEF-NEXT:    fcvt s0, h1
+; SLEEF-NEXT:    fcvt s1, h2
+; SLEEF-NEXT:    str q3, [sp] // 16-byte Spill
+; SLEEF-NEXT:    bl fmodf
+; SLEEF-NEXT:    fcvt h1, s0
+; SLEEF-NEXT:    ldr q0, [sp] // 16-byte Reload
+; SLEEF-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
+; SLEEF-NEXT:    mov v0.h[3], v1.h[0]
+; SLEEF-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; SLEEF-NEXT:    add sp, sp, #64
+; SLEEF-NEXT:    ret
+  %res = frem <4 x half> %a, %b
+  ret <4 x half> %res
+}
+
+attributes #0 = { "target-features"="+sve" nounwind }
+attributes #1 = { "target-features"="+sve" strictfp nounwind }

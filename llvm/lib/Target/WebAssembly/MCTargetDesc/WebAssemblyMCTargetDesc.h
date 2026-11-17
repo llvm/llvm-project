@@ -84,6 +84,8 @@ enum OperandType {
   OPERAND_CATCH_LIST,
   /// Memory ordering immediate for atomic instructions.
   OPERAND_MEMORDER,
+  /// A vector of value types for select t*.
+  OPERAND_VALTYPE_LIST,
 };
 } // end namespace WebAssembly
 
@@ -108,8 +110,9 @@ enum TOF {
   MO_MEMORY_BASE_REL,
 
   // On a symbol operand this indicates that the immediate is the symbol
-  // address relative the __tls_base wasm global.
-  // Only applicable to data symbols.
+  // address relative to the TLS base. This is retrieved through
+  // __wasm_get_tls_base() when using libcall thread context, and the __tls_base
+  // global otherwise. Only applicable to data symbols.
   MO_TLS_BASE_REL,
 
   // On a symbol operand this indicates that the immediate is the symbol

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++11 -verify=expected,both %s
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++20 -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++11 -fms-extensions -verify=ref,both %s
-// RUN: %clang_cc1 -std=c++20 -fms-extensions -verify=ref,both %s
+// RUN: %clang_cc1                                         -fms-extensions -std=c++11 -verify=ref,both      %s
+// RUN: %clang_cc1                                         -fms-extensions -std=c++20 -verify=ref,both      %s
 
 
 using MaxBitInt = _BitInt(128);
@@ -296,6 +296,12 @@ namespace IncDec {
   static_assert(dec1(true) == 1, "");
   static_assert(dec1(false) == 1, "");
 #endif
+}
+
+namespace NegShift {
+  constexpr __int128_t a = ((__int128_t)1 << 127);
+  static_assert((2 >> a) == 1, ""); // both-error {{not an integral constant expression}} \
+                                    // both-note {{negative shift count -170141183460469231731687303715884105728}}
 }
 
 #if __cplusplus >= 201402L

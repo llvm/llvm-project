@@ -4,21 +4,15 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-from lldbsuite.test import configuration
+from lldbsuite.test.lldbarm64e import Arm64eTestBase
 
 
-class TestPtrAuth(TestBase):
+class TestPtrAuth(Arm64eTestBase):
     NO_DEBUG_INFO_TESTCASE = True
     SHARED_BUILD_TESTCASE = False
 
-    def build_arm64e(self):
-        self.build(
-            dictionary={"TRIPLE": configuration.triple.replace("arm64", "arm64e")}
-        )
-
-    @skipUnlessArm64eSupported
     def test(self):
-        self.build_arm64e()
+        self.build()
         _, process, _, _ = lldbutil.run_to_source_breakpoint(
             self, "// break in main", lldb.SBFileSpec("main.c")
         )
@@ -59,3 +53,22 @@ class TestPtrAuth(TestBase):
             "p pSpecial",
             substrs=["(__ptrauth(2,0,0) intp)", "(actual=0x"],
         )
+
+        special = self.frame().FindVariable("pSpecial")
+        signed = special.GetValueAsUnsigned()
+        stripped = special.GetValueAsAddress()
+        self.assertNotEqual(signed, stripped, "pSpecial carries signature bits")
+
+        unqualified_type = self.frame().FindVariable("pNormal").GetType()
+        cast = special.Cast(unqualified_type)
+        self.assertSuccess(cast.GetError())
+        self.assertEqual(cast.GetValueAsUnsigned(), stripped)
+        self.assertEqual(cast.GetLoadAddress(), special.GetLoadAddress())
+        self.assertEqual(cast.GetLocation(), special.GetLocation())
+        self.assertEqual(
+            cast.Cast(unqualified_type).GetLoadAddress(), special.GetLoadAddress()
+        )
+        self.assertEqual(
+            cast.Cast(unqualified_type).GetLocation(), special.GetLocation()
+        )
+        self.assertFailure(cast.CanSet(), "value is not in a writable location")

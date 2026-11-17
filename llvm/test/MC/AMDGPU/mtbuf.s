@@ -1,10 +1,10 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck -check-prefix=SICI %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck -check-prefix=SICI %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=VI %s
+// RUN: not llvm-mc -triple=amdgpu6.00 -show-encoding %s | FileCheck -check-prefix=SICI %s
+// RUN: not llvm-mc -triple=amdgpu7.04 -show-encoding %s | FileCheck -check-prefix=SICI %s
+// RUN: not llvm-mc -triple=amdgpu8.02 -show-encoding %s | FileCheck -check-prefix=VI %s
 
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s  -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICI-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire %s -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICI-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s   -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,VI-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu6.00 %s  -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICI-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu7.04 %s -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICI-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu8.02 %s   -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,VI-ERR --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // Positive tests for legacy dfmt/nfmt syntax.
@@ -118,16 +118,16 @@ tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1 nfmt:1,, s0
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1 dfmt:1 s0
-// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] nfmt:1 nfmt:1 s0
-// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1 nfmt:1 dfmt:1 s0
-// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] nfmt:1 dfmt:1 nfmt:1 s0
-// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1: nfmt:1 s0
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
@@ -293,7 +293,7 @@ tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s[255] format:[BUF_NUM_FORMAT_
 
 // Both legacy and symbolic formats are specified
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], dfmt:1 s0 format:[BUF_NUM_FORMAT_FLOAT]
-// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: duplicate format
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
 // Missing format number
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format: offset:52
@@ -372,7 +372,7 @@ tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7],, s0 format:[BUF_DATA_FORMAT_8]
 
 // Excessive commas
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0,, format:[BUF_DATA_FORMAT_8]
-// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 
 // Excessive commas
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_DATA_FORMAT_8],, offset:52

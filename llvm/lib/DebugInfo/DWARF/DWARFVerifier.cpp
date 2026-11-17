@@ -8,6 +8,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
@@ -298,6 +299,8 @@ unsigned DWARFVerifier::verifyUnitContents(DWARFUnit &Unit,
     }
 
     NumUnitErrors += verifyDebugInfoCallSite(Die);
+    NumUnitErrors += verifyDebugInfoSubprogram(Die);
+    verifyDebugInfoLocalEntities(Die);
   }
 
   DWARFDie Die = Unit.getUnitDIE(/* ExtractUnitDIEOnly = */ false);
@@ -386,6 +389,92 @@ unsigned DWARFVerifier::verifyDebugInfoCallSite(const DWARFDie &Die) {
   return 0;
 }
 
+unsigned DWARFVerifier::verifyDebugInfoSubprogram(const DWARFDie &Die) {
+  if (Die.getTag() != DW_TAG_subprogram)
+    return 0;
+
+  // Also show the immediate children: they are usually the reason an otherwise
+  // meaningless subprogram entry was emitted.
+  auto DumpWithChildren = [&]() {
+    DIDumpOptions ChildDumpOpts = DumpOpts;
+    ChildDumpOpts.ShowChildren = true;
+    ChildDumpOpts.ChildRecurseDepth = 1;
+    Die.dump(OS, 0, ChildDumpOpts);
+  };
+
+  // DW_AT_sibling only describes the shape of the DIE tree, so it doesn't say
+  // anything about the subprogram itself.
+  if (all_of(Die.attributes(), [](const DWARFAttribute &AttrValue) {
+        return AttrValue.Attr == DW_AT_sibling;
+      })) {
+    ErrorCategory.Report("Subprogram DIE has no attributes", [&]() {
+      error() << "Subprogram DIE has no attributes:\n";
+      DumpWithChildren();
+    });
+    return 1;
+  }
+
+  // DWARF doesn't require any of these, but without them a consumer can't
+  // find the subprogram by name, relate it to another entry, or map code to it.
+  if (!Die.find({DW_AT_name, DW_AT_linkage_name, DW_AT_MIPS_linkage_name,
+                 DW_AT_abstract_origin, DW_AT_specification, DW_AT_low_pc,
+                 DW_AT_ranges, DW_AT_entry_pc})) {
+    warn() << "Subprogram DIE has no name, abstract origin, specification or "
+              "address range:\n";
+    DumpWithChildren();
+  }
+
+  return 0;
+}
+
+static void verifySharedLocalEntities(const DWARFDie &Scope,
+                                      function_ref<void(DWARFDie)> VerifyF) {
+  for (DWARFDie Child : Scope.children()) {
+    switch (Child.getTag()) {
+    case DW_TAG_lexical_block:
+      verifySharedLocalEntities(Child, VerifyF);
+      break;
+    case DW_TAG_class_type:
+    case DW_TAG_structure_type:
+    case DW_TAG_union_type:
+    case DW_TAG_enumeration_type:
+    case DW_TAG_typedef:
+    case DW_TAG_imported_module:
+    case DW_TAG_imported_declaration:
+      VerifyF(Child);
+      break;
+    // TODO: Static local variables are shared by instances too, but they aren't
+    // checked here. A DW_TAG_variable doesn't say whether it is static, so it'd
+    // have to be inferred from DW_AT_location.
+    default:
+      break;
+    }
+  }
+}
+
+void DWARFVerifier::verifyDebugInfoLocalEntities(const DWARFDie &Die) {
+  if (Die.getTag() != DW_TAG_subprogram &&
+      Die.getTag() != DW_TAG_inlined_subroutine)
+    return;
+
+  DWARFDie Origin = Die.getAttributeValueAsReferencedDie(DW_AT_abstract_origin);
+  if (!Origin)
+    return;
+
+  // Verify that a concrete subprogram instance does not define its own local
+  // types or imported entities.
+  verifySharedLocalEntities(Die, [&](DWARFDie Entity) {
+    // It may refer to the entity in the abstract origin.
+    if (Entity.find(DW_AT_abstract_origin))
+      return;
+    warn() << formatv("{0} in concrete instance {1:x+8} of a subprogram should "
+                      "only be in its abstract origin {2:x+8}:\n",
+                      TagString(Entity.getTag()), Die.getOffset(),
+                      Origin.getOffset());
+    dump(Entity) << '\n';
+  });
+}
+
 unsigned DWARFVerifier::verifyAbbrevSection(const DWARFDebugAbbrev *Abbrev) {
   if (!Abbrev)
     return 0;
@@ -472,8 +561,6 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S) {
   bool isUnitDWARF64 = false;
   bool isHeaderChainValid = true;
   bool hasDIE = DebugInfoData.isValidOffset(Offset);
-  DWARFUnitVector TypeUnitVector;
-  DWARFUnitVector CompileUnitVector;
   while (hasDIE) {
     if (!verifyUnitHeader(DebugInfoData, &Offset, UnitIdx, UnitType,
                           isUnitDWARF64)) {
@@ -1142,7 +1229,7 @@ void DWARFVerifier::verifyDebugLineRows() {
       assert(HasFullPath && "Invalid index?");
       (void)HasFullPath;
       auto [It, Inserted] = FullPathMap.try_emplace(FullPath, FileIndex);
-      if (!Inserted && It->second != FileIndex && DumpOpts.Verbose) {
+      if (!Inserted && It->second != FileIndex && DumpOpts.ShowErrorDetails) {
         warn() << formatv(".debug_line[{0:x+8}].prologue.file_names[{1}] is a "
                           "duplicate of file_names[{2}]\n",
                           *toSectionOffset(Die.find(DW_AT_stmt_list)),
@@ -1206,8 +1293,7 @@ DWARFVerifier::DWARFVerifier(raw_ostream &S, DWARFContext &D,
                              DIDumpOptions DumpOpts)
     : OS(S), DCtx(D), DumpOpts(std::move(DumpOpts)), IsObjectFile(false),
       IsMachOObject(false) {
-  ErrorCategory.ShowDetail(this->DumpOpts.Verbose ||
-                           !this->DumpOpts.ShowAggregateErrors);
+  ErrorCategory.ShowDetail(this->DumpOpts.ShowErrorDetails);
   if (const auto *F = DCtx.getDWARFObj().getFile()) {
     IsObjectFile = F->isRelocatableObject();
     IsMachOObject = F->isMachO();
@@ -1773,15 +1859,23 @@ void DWARFVerifier::verifyNameIndexEntries(
     // call to properly deal with it. It isn't clear that getNonSkeletonUnitDIE
     // will return the unit DIE of DU if we aren't able to get the .dwo file,
     // but that is what the function currently does.
+    // A CU is a skeleton CU only when DWARF 5+ tags it as DW_TAG_skeleton_unit,
+    // or when, in older DWARF, the CU has no children.
+    DWARFDie UnitDie = DU->getUnitDIE();
+    auto IsSkeletonCU = [&]() {
+      if (DU->getVersion() >= 5)
+        return UnitDie.getTag() == dwarf::DW_TAG_skeleton_unit;
+      return !UnitDie.hasChildren();
+    };
+    bool IsSkeleton = DU->getDWOId() && IsSkeletonCU();
     DWARFUnit *NonSkeletonUnit = nullptr;
-    if (DU->getDWOId()) {
+    if (IsSkeleton) {
       auto Iter = CUOffsetsToDUMap.find(DU->getOffset());
       NonSkeletonUnit = Iter->second;
     } else {
       NonSkeletonUnit = DU;
     }
-    DWARFDie UnitDie = DU->getUnitDIE();
-    if (DU->getDWOId() && !NonSkeletonUnit->isDWOUnit()) {
+    if (IsSkeleton && !NonSkeletonUnit->isDWOUnit()) {
       ErrorCategory.Report("Unable to get load .dwo file", [&]() {
         error() << formatv(
             "Name Index @ {0:x}: Entry @ {1:x} unable to load "
@@ -1917,6 +2011,7 @@ static bool isVariableIndexable(const DWARFDie &Die, DWARFContext &DCtx) {
     DWARFExpression Expression(Data, U->getAddressByteSize(),
                                U->getFormParams().Format);
     bool IsInteresting =
+        Expression.isMemoryLocation() &&
         any_of(Expression, [](const DWARFExpression::Operation &Op) {
           return !Op.isError() && (Op.getCode() == DW_OP_addr ||
                                    Op.getCode() == DW_OP_form_tls_address ||
@@ -1978,8 +2073,17 @@ void DWARFVerifier::verifyNameIndexCompleteness(
   case DW_TAG_GNU_template_template_param:
     return;
 
-  // Object members aren't globally visible.
+  // Object members aren't globally visible. Properties are accessed through
+  // their containing subprogram/type, not looked up globally by name, so
+  // they belong in the same category.
   case DW_TAG_member:
+  case DW_TAG_property:
+    return;
+
+  // DW_TAG_LLVM_annotation DIEs attach metadata to other DIEs.
+  // Their DW_AT_name carries the annotation kind, not a globally visible
+  // symbol, so they should not be indexed.
+  case DW_TAG_LLVM_annotation:
     return;
 
   // According to a strict reading of the specification, enumerators should not
@@ -2329,20 +2433,19 @@ bool DWARFVerifier::verifyDebugStrOffsets(
     std::string Msg = toString(std::move(E));
     ErrorCategory.Report("String offset error", [&]() {
       error() << formatv("{0}: {1}\n", SectionName, Msg);
-      return false;
     });
   }
   return Success;
 }
 
-void OutputCategoryAggregator::Report(
-    StringRef s, std::function<void(void)> detailCallback) {
-  this->Report(s, "", detailCallback);
+void OutputCategoryAggregator::Report(StringRef s,
+                                      function_ref<void(void)> detailCallback) {
+  Report(s, "", detailCallback);
 }
 
-void OutputCategoryAggregator::Report(
-    StringRef category, StringRef sub_category,
-    std::function<void(void)> detailCallback) {
+void OutputCategoryAggregator::Report(StringRef category,
+                                      StringRef sub_category,
+                                      function_ref<void(void)> detailCallback) {
   std::lock_guard<std::mutex> Lock(WriteMutex);
   ++NumErrors;
   std::string category_str = std::string(category);
@@ -2356,13 +2459,13 @@ void OutputCategoryAggregator::Report(
 }
 
 void OutputCategoryAggregator::EnumerateResults(
-    std::function<void(StringRef, unsigned)> handleCounts) {
+    function_ref<void(StringRef, unsigned)> handleCounts) {
   for (const auto &[name, aggData] : Aggregation) {
     handleCounts(name, aggData.OverallCount);
   }
 }
 void OutputCategoryAggregator::EnumerateDetailedResultsFor(
-    StringRef category, std::function<void(StringRef, unsigned)> handleCounts) {
+    StringRef category, function_ref<void(StringRef, unsigned)> handleCounts) {
   const auto Agg = Aggregation.find(category);
   if (Agg != Aggregation.end()) {
     for (const auto &[name, aggData] : Agg->second.DetailedCounts) {

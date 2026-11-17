@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../../test/lib/Dialect/Test/TestDialect.h"
+#include "TestDialect.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/Parser/Parser.h"
 
@@ -49,7 +49,8 @@ TEST(DialectResourceBlobManagerTest, GetBlobMap) {
 
   Block *block = m->getBody();
   auto &op = block->getOperations().front();
-  auto resourceAttr = op.getAttrOfType<DenseResourceElementsAttr>("attr");
+  auto resourceAttr =
+      op.getDiscardableAttrOfType<DenseResourceElementsAttr>("attr");
   ASSERT_NE(resourceAttr, nullptr);
 
   const auto &dialectManager =

@@ -17,7 +17,7 @@ namespace math {
 
 LIBC_INLINE LIBC_CONSTEXPR float truncf(float x) {
 #if defined(__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC) &&                       \
-    !defined(LIBC_HAS_CONSTANT_EVALUATION)
+    !defined(LIBC_USE_CONSTEXPR)
   return __builtin_truncf(x);
 #else
   return fputil::trunc(x);

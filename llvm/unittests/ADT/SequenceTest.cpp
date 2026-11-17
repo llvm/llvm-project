@@ -25,6 +25,17 @@ namespace {
 using detail::canTypeFitValue;
 using detail::CheckedInt;
 
+namespace elem {
+template <typename Elem, Elem... Values, typename Range>
+constexpr bool ElementsAre(Range &&R) {
+  if (std::distance(R.begin(), R.end()) != sizeof...(Values))
+    return false;
+
+  int Idx = 0;
+  return ((*(R.begin() + (Idx++)) == Values) && ...);
+}
+} // namespace elem
+
 using IntegralTypes = testing::Types<uint8_t,   // 0
                                      uint16_t,  // 1
                                      uint32_t,  // 2
@@ -41,34 +52,50 @@ template <class T> class StrongIntTest : public testing::Test {};
 TYPED_TEST_SUITE(StrongIntTest, IntegralTypes, );
 TYPED_TEST(StrongIntTest, Operations) {
   using T = TypeParam;
-  auto Max = std::numeric_limits<T>::max();
-  auto Min = std::numeric_limits<T>::min();
+  constexpr auto Max = std::numeric_limits<T>::max();
+  constexpr auto Min = std::numeric_limits<T>::min();
 
   // We bail out for types that are not entirely representable within intmax_t.
-  if (!canTypeFitValue<intmax_t>(Max) || !canTypeFitValue<intmax_t>(Min))
-    return;
+  if constexpr (canTypeFitValue<intmax_t>(Max) &&
+                canTypeFitValue<intmax_t>(Min)) {
+    // All representable values convert back and forth.
+    EXPECT_EQ(CheckedInt::from(Min).template to<T>(), Min);
+    EXPECT_EQ(CheckedInt::from(Max).template to<T>(), Max);
 
-  // All representable values convert back and forth.
-  EXPECT_EQ(CheckedInt::from(Min).template to<T>(), Min);
-  EXPECT_EQ(CheckedInt::from(Max).template to<T>(), Max);
+    static_assert(CheckedInt::from(Min).template to<T>() == Min);
+    static_assert(CheckedInt::from(Max).template to<T>() == Max);
 
-  // Addition -2, -1, 0, 1, 2.
-  const T Expected = Max / 2;
-  const CheckedInt Actual = CheckedInt::from(Expected);
-  EXPECT_EQ((Actual + -2).template to<T>(), Expected - 2);
-  EXPECT_EQ((Actual + -1).template to<T>(), Expected - 1);
-  EXPECT_EQ((Actual + 0).template to<T>(), Expected);
-  EXPECT_EQ((Actual + 1).template to<T>(), Expected + 1);
-  EXPECT_EQ((Actual + 2).template to<T>(), Expected + 2);
+    // Addition -2, -1, 0, 1, 2.
+    constexpr T Expected = Max / 2;
+    constexpr CheckedInt Actual = CheckedInt::from(Expected);
+    EXPECT_EQ((Actual + -2).template to<T>(), Expected - 2);
+    EXPECT_EQ((Actual + -1).template to<T>(), Expected - 1);
+    EXPECT_EQ((Actual + 0).template to<T>(), Expected);
+    EXPECT_EQ((Actual + 1).template to<T>(), Expected + 1);
+    EXPECT_EQ((Actual + 2).template to<T>(), Expected + 2);
 
-  // EQ/NEQ
-  EXPECT_EQ(Actual, Actual);
-  EXPECT_NE(Actual, Actual + 1);
+    static_assert((Actual + -2).template to<T>() == Expected - 2);
+    static_assert((Actual + -1).template to<T>() == Expected - 1);
+    static_assert((Actual + 0).template to<T>() == Expected);
+    static_assert((Actual + 1).template to<T>() == Expected + 1);
+    static_assert((Actual + 2).template to<T>() == Expected + 2);
 
-  // Difference
-  EXPECT_EQ(Actual - Actual, 0);
-  EXPECT_EQ((Actual + 1) - Actual, 1);
-  EXPECT_EQ(Actual - (Actual + 2), -2);
+    // EQ/NEQ
+    EXPECT_EQ(Actual, Actual);
+    EXPECT_NE(Actual, Actual + 1);
+
+    static_assert(Actual == Actual);
+    static_assert(Actual != Actual + 1);
+
+    // Difference
+    EXPECT_EQ(Actual - Actual, 0);
+    EXPECT_EQ((Actual + 1) - Actual, 1);
+    EXPECT_EQ(Actual - (Actual + 2), -2);
+
+    static_assert(Actual - Actual == 0);
+    static_assert((Actual + 1) - Actual == 1);
+    static_assert(Actual - (Actual + 2) == -2);
+  }
 }
 
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
@@ -88,6 +115,9 @@ TEST(StrongIntDeathTest, OutOfBounds) {
 #endif
 
 TEST(SafeIntIteratorTest, Operations) {
+  constexpr detail::SafeIntIterator<int, false> CForward(0);
+  constexpr detail::SafeIntIterator<int, true> CReverse(0);
+
   detail::SafeIntIterator<int, false> Forward(0);
   detail::SafeIntIterator<int, true> Reverse(0);
 
@@ -114,15 +144,37 @@ TEST(SafeIntIteratorTest, Operations) {
   EXPECT_GE(Reverse, Reverse);
   EXPECT_GE(Reverse + 1, Reverse);
 
+  static_assert(CForward == CForward);
+  static_assert(CForward - 1 < CForward);
+  static_assert(CForward <= CForward);
+  static_assert(CForward - 1 <= CForward);
+  static_assert(CForward + 1 > CForward);
+  static_assert(CForward >= CForward);
+  static_assert(CForward + 1 >= CForward);
+
+  static_assert(CReverse == CReverse);
+  static_assert(CReverse - 1 < CReverse);
+  static_assert(CReverse <= CReverse);
+  static_assert(CReverse - 1 <= CReverse);
+  static_assert(CReverse + 1 > CReverse);
+  static_assert(CReverse >= CReverse);
+  static_assert(CReverse + 1 >= CReverse);
+
   // Dereference
   SetToZero();
   EXPECT_EQ(*Forward, 0);
   EXPECT_EQ(*Reverse, 0);
 
+  static_assert(*CForward == 0);
+  static_assert(*CReverse == 0);
+
   // Indexing
   SetToZero();
   EXPECT_EQ(Forward[2], 2);
   EXPECT_EQ(Reverse[2], -2);
+
+  static_assert(CForward[2] == 2);
+  static_assert(CReverse[2] == -2);
 
   // Pre-increment
   SetToZero();
@@ -168,9 +220,13 @@ TEST(SafeIntIteratorTest, Operations) {
   SetToZero();
   EXPECT_EQ(*(Forward + 3), 3);
   EXPECT_EQ(*(Reverse + 3), -3);
+  static_assert(*(CForward + 3) == 3);
+  static_assert(*(CReverse + 3) == -3);
   SetToZero();
   EXPECT_EQ(*(Forward - 4), -4);
   EXPECT_EQ(*(Reverse - 4), 4);
+  static_assert(*(CForward - 4) == -4);
+  static_assert(*(CReverse - 4) == 4);
 
   // Difference
   SetToZero();
@@ -180,33 +236,53 @@ TEST(SafeIntIteratorTest, Operations) {
   EXPECT_EQ(Forward - (Forward + 1), -1);
   EXPECT_EQ((Reverse + 1) - Reverse, 1);
   EXPECT_EQ(Reverse - (Reverse + 1), -1);
+
+  static_assert(CForward - CForward == 0);
+  static_assert(CReverse - CReverse == 0);
+  static_assert((CForward + 1) - CForward == 1);
+  static_assert(CForward - (CForward + 1) == -1);
+  static_assert((CReverse + 1) - CReverse == 1);
+  static_assert(CReverse - (CReverse + 1) == -1);
 }
 
 TEST(SequenceTest, Iteration) {
   EXPECT_THAT(seq(5), ElementsAre(0, 1, 2, 3, 4));
+  static_assert(elem::ElementsAre<int, 0, 1, 2, 3, 4>(seq(5)));
 
   EXPECT_THAT(seq(-4, 5), ElementsAre(-4, -3, -2, -1, 0, 1, 2, 3, 4));
+  static_assert(
+      elem::ElementsAre<int, -4, -3, -2, -1, 0, 1, 2, 3, 4>(seq(-4, 5)));
   EXPECT_THAT(reverse(seq(-4, 5)), ElementsAre(4, 3, 2, 1, 0, -1, -2, -3, -4));
 
   EXPECT_THAT(seq_inclusive(-4, 5),
               ElementsAre(-4, -3, -2, -1, 0, 1, 2, 3, 4, 5));
+  static_assert(elem::ElementsAre<int, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5>(
+      seq_inclusive(-4, 5)));
   EXPECT_THAT(reverse(seq_inclusive(-4, 5)),
               ElementsAre(5, 4, 3, 2, 1, 0, -1, -2, -3, -4));
+  // reverse is not constexpr
 }
 
 TEST(SequenceTest, Distance) {
-  const auto Forward = seq(0, 10);
+  constexpr auto Forward = seq(0, 10);
   EXPECT_EQ(std::distance(Forward.begin(), Forward.end()), 10);
   EXPECT_EQ(std::distance(Forward.rbegin(), Forward.rend()), 10);
+  static_assert(std::distance(Forward.begin(), Forward.end()) == 10);
+  static_assert(std::distance(Forward.rbegin(), Forward.rend()) == 10);
 }
 
 TEST(SequenceTest, Dereference) {
-  const auto Forward = seq(0, 10).begin();
+  constexpr auto Forward = seq(0, 10).begin();
   EXPECT_EQ(Forward[0], 0);
   EXPECT_EQ(Forward[2], 2);
-  const auto Backward = seq(0, 10).rbegin();
+  static_assert(Forward[0] == 0);
+  static_assert(Forward[2] == 2);
+
+  constexpr auto Backward = seq(0, 10).rbegin();
   EXPECT_EQ(Backward[0], 9);
   EXPECT_EQ(Backward[2], 7);
+  static_assert(Backward[0] == 9);
+  static_assert(Backward[2] == 7);
 }
 
 enum UntypedEnum { A = 3 };
@@ -225,7 +301,7 @@ private:
   friend struct llvm::enum_iteration_traits<NestedEnum3>;
 
 public:
-  static auto getNestedEnum3() { return NestedEnum3::F; }
+  static constexpr auto getNestedEnum3() { return NestedEnum3::F; }
 };
 
 } // namespace
@@ -261,42 +337,77 @@ TEST(StrongIntTest, Enums) {
   EXPECT_EQ(CheckedInt::from(B).to<TypedEnum>(), B);
   EXPECT_EQ(CheckedInt::from(X::ScopedEnum::C).to<X::ScopedEnum>(),
             X::ScopedEnum::C);
+
+  static_assert(CheckedInt::from(A).to<UntypedEnum>() == A);
+  static_assert(CheckedInt::from(B).to<TypedEnum>() == B);
+  static_assert(CheckedInt::from(X::ScopedEnum::C).to<X::ScopedEnum>() ==
+                X::ScopedEnum::C);
 }
 
 TEST(SequenceTest, IterableEnums) {
   EXPECT_THAT(enum_seq(UntypedEnum::A, UntypedEnum::A), IsEmpty());
+  static_assert(
+      elem::ElementsAre<UntypedEnum>(enum_seq(UntypedEnum::A, UntypedEnum::A)));
+
   EXPECT_THAT(enum_seq_inclusive(UntypedEnum::A, UntypedEnum::A),
               ElementsAre(UntypedEnum::A));
+  static_assert(elem::ElementsAre<UntypedEnum, UntypedEnum::A>(
+      enum_seq_inclusive(UntypedEnum::A, UntypedEnum::A)));
 
   EXPECT_THAT(enum_seq(TypedEnum::B, TypedEnum::B), IsEmpty());
+  static_assert(
+      elem::ElementsAre<TypedEnum>(enum_seq(TypedEnum::B, TypedEnum::B)));
   EXPECT_THAT(enum_seq_inclusive(TypedEnum::B, TypedEnum::B),
               ElementsAre(TypedEnum::B));
+  static_assert(elem::ElementsAre<TypedEnum, TypedEnum::B>(
+      enum_seq_inclusive(TypedEnum::B, TypedEnum::B)));
 
   EXPECT_THAT(enum_seq(X::ScopedEnum::C, X::ScopedEnum::C), IsEmpty());
+  static_assert(elem::ElementsAre<X::ScopedEnum>(
+      enum_seq(X::ScopedEnum::C, X::ScopedEnum::C)));
   EXPECT_THAT(enum_seq_inclusive(X::ScopedEnum::C, X::ScopedEnum::C),
               ElementsAre(X::ScopedEnum::C));
+  static_assert(elem::ElementsAre<X::ScopedEnum, X::ScopedEnum::C>(
+      enum_seq_inclusive(X::ScopedEnum::C, X::ScopedEnum::C)));
 
   EXPECT_THAT(enum_seq_inclusive(S::NestedEnum::D, S::NestedEnum::D),
               ElementsAre(S::NestedEnum::D));
+  static_assert(elem::ElementsAre<S::NestedEnum, S::NestedEnum::D>(
+      enum_seq_inclusive(S::NestedEnum::D, S::NestedEnum::D)));
   EXPECT_THAT(enum_seq_inclusive(S::getNestedEnum3(), S::getNestedEnum3()),
               ElementsAre(S::getNestedEnum3()));
+  static_assert(
+      elem::ElementsAre<decltype(S::getNestedEnum3()), S::getNestedEnum3()>(
+          enum_seq_inclusive(S::getNestedEnum3(), S::getNestedEnum3())));
 }
 
 TEST(SequenceTest, NonIterableEnums) {
   EXPECT_THAT(enum_seq(S::NestedEnum2::E, S::NestedEnum2::E,
                        force_iteration_on_noniterable_enum),
               IsEmpty());
+  static_assert(elem::ElementsAre<S::NestedEnum2>(
+      enum_seq(S::NestedEnum2::E, S::NestedEnum2::E,
+               force_iteration_on_noniterable_enum)));
+
   EXPECT_THAT(enum_seq_inclusive(S::NestedEnum2::E, S::NestedEnum2::E,
                                  force_iteration_on_noniterable_enum),
               ElementsAre(S::NestedEnum2::E));
+  static_assert(elem::ElementsAre<S::NestedEnum2, S::NestedEnum2::E>(
+      enum_seq_inclusive(S::NestedEnum2::E, S::NestedEnum2::E,
+                         force_iteration_on_noniterable_enum)));
 
   // Check that this also works with enums marked as iterable.
   EXPECT_THAT(enum_seq(UntypedEnum::A, UntypedEnum::A,
                        force_iteration_on_noniterable_enum),
               IsEmpty());
+  static_assert(elem::ElementsAre<UntypedEnum>(enum_seq(
+      UntypedEnum::A, UntypedEnum::A, force_iteration_on_noniterable_enum)));
   EXPECT_THAT(enum_seq_inclusive(UntypedEnum::A, UntypedEnum::A,
                                  force_iteration_on_noniterable_enum),
               ElementsAre(UntypedEnum::A));
+  static_assert(elem::ElementsAre<UntypedEnum, UntypedEnum::A>(
+      enum_seq_inclusive(UntypedEnum::A, UntypedEnum::A,
+                         force_iteration_on_noniterable_enum)));
 }
 
 // Reproducer for https://github.com/llvm/llvm-project/issues/61122

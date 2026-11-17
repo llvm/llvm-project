@@ -54,6 +54,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
 
@@ -74,7 +75,6 @@ class MIREmbedder;
 class SymbolicMIREmbedder;
 
 LLVM_ABI extern llvm::cl::OptionCategory MIR2VecCategory;
-LLVM_ABI extern cl::opt<float> OpcWeight, CommonOperandWeight, RegOperandWeight;
 
 using Embedding = ir2vec::Embedding;
 using MachineInstEmbeddingsMap = DenseMap<const MachineInstr *, Embedding>;
@@ -145,7 +145,6 @@ class MIRVocabulary {
 
   const TargetInstrInfo &TII;
   const TargetRegisterInfo &TRI;
-  const MachineRegisterInfo &MRI;
 
   void generateStorage(const VocabMap &OpcodeMap,
                        const VocabMap &CommonOperandMap,
@@ -157,11 +156,14 @@ class MIRVocabulary {
   LLVM_ABI unsigned getCanonicalOpcodeIndex(unsigned Opcode) const;
 
   /// Get index for a common (non-register) machine operand
-  unsigned
+  LLVM_ABI unsigned
   getCommonOperandIndex(MachineOperand::MachineOperandType OperandType) const;
 
-  /// Get index for a register machine operand
-  LLVM_ABI unsigned getRegisterOperandIndex(Register Reg) const;
+  /// Get index for a register machine operand. Returns std::nullopt if Reg
+  /// belongs to no register class, which is a valid outcome for some target
+  /// physical registers.
+  LLVM_ABI std::optional<unsigned>
+  getRegisterOperandIndex(Register Reg, const MachineRegisterInfo &MRI) const;
 
   // Accessors for operand types
   const Embedding &
@@ -170,7 +172,8 @@ class MIRVocabulary {
     return Storage[static_cast<unsigned>(Section::CommonOperands)][LocalIndex];
   }
 
-  const Embedding &operator[](Register Reg) const {
+  const Embedding &getRegisterEmbedding(Register Reg,
+                                        const MachineRegisterInfo &MRI) const {
     // Reg is sometimes NoRegister (0) for optional operands. We return a zero
     // vector in this case.
     if (!Reg.isValid())
@@ -184,43 +187,49 @@ class MIRVocabulary {
     if (Reg.isStack())
       return ZeroEmbedding;
 
-    unsigned LocalIndex = getRegisterOperandIndex(Reg);
+    // Registers that belong to no register class have no vocabulary entry;
+    // treat them like the other unmapped cases above.
+    std::optional<unsigned> LocalIndex = getRegisterOperandIndex(Reg, MRI);
+    if (!LocalIndex)
+      return ZeroEmbedding;
     auto SectionID =
         Reg.isPhysical() ? Section::PhyRegisters : Section::VirtRegisters;
-    return Storage[static_cast<unsigned>(SectionID)][LocalIndex];
+    return Storage[static_cast<unsigned>(SectionID)][*LocalIndex];
   }
 
   /// Get entity ID (flat index) for a common operand type
   /// This is used for triplet generation
-  LLVM_ABI unsigned getEntityIDForCommonOperand(
+  unsigned getEntityIDForCommonOperand(
       MachineOperand::MachineOperandType OperandType) const {
     return Layout.CommonOperandBase + getCommonOperandIndex(OperandType);
   }
 
   /// Get entity ID (flat index) for a register
   /// This is used for triplet generation
-  unsigned getEntityIDForRegister(Register Reg) const {
+  unsigned getEntityIDForRegister(Register Reg,
+                                  const MachineRegisterInfo &MRI) const {
     if (!Reg.isValid() || Reg.isStack())
       return Layout
           .VirtRegBase; // Return VirtRegBase for invalid/stack registers
-    unsigned LocalIndex = getRegisterOperandIndex(Reg);
+    std::optional<unsigned> LocalIndex = getRegisterOperandIndex(Reg, MRI);
+    // Registers without a register class share the invalid/stack fallback.
+    if (!LocalIndex)
+      return Layout.VirtRegBase;
     size_t BaseOffset =
         Reg.isPhysical() ? Layout.PhyRegBase : Layout.VirtRegBase;
-    return BaseOffset + LocalIndex;
+    return BaseOffset + *LocalIndex;
   }
 
 public:
   /// Static method for extracting base opcode names (public for testing)
-  LLVM_ABI_FOR_TEST static std::string
-  extractBaseOpcodeName(StringRef InstrName);
+  LLVM_ABI static std::string extractBaseOpcodeName(StringRef InstrName);
 
   /// Get indices from opcode or operand names. These are public for testing.
   /// String based lookups are inefficient and should be avoided in general.
-  LLVM_ABI_FOR_TEST unsigned
-  getCanonicalIndexForBaseName(StringRef BaseName) const;
-  LLVM_ABI_FOR_TEST unsigned
+  LLVM_ABI unsigned getCanonicalIndexForBaseName(StringRef BaseName) const;
+  LLVM_ABI unsigned
   getCanonicalIndexForOperandName(StringRef OperandName) const;
-  LLVM_ABI_FOR_TEST unsigned
+  LLVM_ABI unsigned
   getCanonicalIndexForRegisterClass(StringRef RegName,
                                     bool IsPhysical = true) const;
 
@@ -237,9 +246,10 @@ public:
 
   /// Get entity ID (flat index) for a machine operand
   /// This is used for triplet generation
-  unsigned getEntityIDForMachineOperand(const MachineOperand &MO) const {
+  unsigned getEntityIDForMachineOperand(const MachineOperand &MO,
+                                        const MachineRegisterInfo &MRI) const {
     if (MO.getType() == MachineOperand::MO_Register)
-      return getEntityIDForRegister(MO.getReg());
+      return getEntityIDForRegister(MO.getReg(), MRI);
     return getEntityIDForCommonOperand(MO.getType());
   }
 
@@ -249,10 +259,11 @@ public:
     return Storage[static_cast<unsigned>(Section::Opcodes)][LocalIndex];
   }
 
-  const Embedding &operator[](MachineOperand Operand) const {
+  const Embedding &getOperandEmbedding(const MachineOperand &Operand,
+                                       const MachineRegisterInfo &MRI) const {
     auto OperandType = Operand.getType();
     if (OperandType == MachineOperand::MO_Register)
-      return operator[](Operand.getReg());
+      return getRegisterEmbedding(Operand.getReg(), MRI);
     else
       return operator[](OperandType);
   }
@@ -266,16 +277,15 @@ public:
   MIRVocabulary() = delete;
 
   /// Factory method to create MIRVocabulary from vocabulary map
-  LLVM_ABI_FOR_TEST static Expected<MIRVocabulary>
+  LLVM_ABI static Expected<MIRVocabulary>
   create(VocabMap &&OpcMap, VocabMap &&CommonOperandsMap, VocabMap &&PhyRegMap,
          VocabMap &&VirtRegMap, const TargetInstrInfo &TII,
-         const TargetRegisterInfo &TRI, const MachineRegisterInfo &MRI);
+         const TargetRegisterInfo &TRI);
 
   /// Create a dummy vocabulary for testing purposes.
   LLVM_ABI static Expected<MIRVocabulary>
   createDummyVocabForTest(const TargetInstrInfo &TII,
-                          const TargetRegisterInfo &TRI,
-                          const MachineRegisterInfo &MRI, unsigned Dim = 1);
+                          const TargetRegisterInfo &TRI, unsigned Dim = 1);
 
   /// Total number of entries in the vocabulary
   size_t getCanonicalSize() const { return Storage.size(); }
@@ -283,8 +293,7 @@ public:
 private:
   MIRVocabulary(VocabMap &&OpcMap, VocabMap &&CommonOperandsMap,
                 VocabMap &&PhyRegMap, VocabMap &&VirtRegMap,
-                const TargetInstrInfo &TII, const TargetRegisterInfo &TRI,
-                const MachineRegisterInfo &MRI);
+                const TargetInstrInfo &TII, const TargetRegisterInfo &TRI);
 };
 
 /// Base class for MIR embedders
@@ -299,11 +308,7 @@ protected:
   /// Weight for opcode embeddings
   const float OpcWeight, CommonOperandWeight, RegOperandWeight;
 
-  MIREmbedder(const MachineFunction &MF, const MIRVocabulary &Vocab)
-      : MF(MF), Vocab(Vocab), Dimension(Vocab.getDimension()),
-        OpcWeight(mir2vec::OpcWeight),
-        CommonOperandWeight(mir2vec::CommonOperandWeight),
-        RegOperandWeight(mir2vec::RegOperandWeight) {}
+  LLVM_ABI MIREmbedder(const MachineFunction &MF, const MIRVocabulary &Vocab);
 
   /// Function to compute embeddings.
   LLVM_ABI Embedding computeEmbeddings() const;
@@ -347,13 +352,13 @@ public:
 /// Class for computing Symbolic embeddings
 /// Symbolic embeddings are constructed based on the entity-level
 /// representations obtained from the MIR Vocabulary.
-class SymbolicMIREmbedder : public MIREmbedder {
+class LLVM_ABI SymbolicMIREmbedder : public MIREmbedder {
 private:
   Embedding computeEmbeddings(const MachineInstr &MI) const override;
 
 public:
   SymbolicMIREmbedder(const MachineFunction &F, const MIRVocabulary &Vocab);
-  LLVM_ABI_FOR_TEST static std::unique_ptr<SymbolicMIREmbedder>
+  static std::unique_ptr<SymbolicMIREmbedder>
   create(const MachineFunction &MF, const MIRVocabulary &Vocab);
 };
 
@@ -382,8 +387,7 @@ private:
 };
 
 /// Pass to analyze and populate MIR2Vec vocabulary from a module
-class MIR2VecVocabLegacyAnalysis : public ImmutablePass {
-  using VocabVector = std::vector<mir2vec::Embedding>;
+class LLVM_ABI MIR2VecVocabLegacyAnalysis : public ImmutablePass {
   using VocabMap = std::map<std::string, mir2vec::Embedding>;
 
   StringRef getPassName() const override;
@@ -414,7 +418,7 @@ public:
 };
 
 /// This pass prints the embeddings in the MIR2Vec vocabulary
-class MIR2VecVocabPrinterLegacyPass : public MachineFunctionPass {
+class LLVM_ABI MIR2VecVocabPrinterLegacyPass : public MachineFunctionPass {
   raw_ostream &OS;
 
 public:
@@ -437,7 +441,7 @@ public:
 
 /// This pass prints the MIR2Vec embeddings for machine functions, basic blocks,
 /// and instructions
-class MIR2VecPrinterLegacyPass : public MachineFunctionPass {
+class LLVM_ABI MIR2VecPrinterLegacyPass : public MachineFunctionPass {
   raw_ostream &OS;
 
 public:

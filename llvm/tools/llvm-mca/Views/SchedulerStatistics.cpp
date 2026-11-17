@@ -18,10 +18,12 @@
 namespace llvm {
 namespace mca {
 
-SchedulerStatistics::SchedulerStatistics(const llvm::MCSubtargetInfo &STI)
-    : SM(STI.getSchedModel()), LQResourceID(0), SQResourceID(0), NumIssued(0),
-      NumCycles(0), MostRecentLoadDispatched(~0U),
-      MostRecentStoreDispatched(~0U),
+SchedulerStatistics::SchedulerStatistics(const llvm::MCSubtargetInfo &STI,
+                                         float ReservationStationScaleFactor)
+    : SM(STI.getSchedModel()),
+      ReservationStationScaleFactor(ReservationStationScaleFactor),
+      LQResourceID(0), SQResourceID(0), NumIssued(0), NumCycles(0),
+      MostRecentLoadDispatched(~0U), MostRecentStoreDispatched(~0U),
       Usage(STI.getSchedModel().NumProcResourceKinds, {0, 0, 0}) {
   if (SM.hasExtraProcessorInfo()) {
     const MCExtraProcessorInfo &EPI = SM.getExtraProcessorInfo();
@@ -138,12 +140,14 @@ void SchedulerStatistics::printSchedulerUsage(raw_ostream &OS) const {
   bool HasColors = FOS.has_colors();
   for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
     const MCProcResourceDesc &ProcResource = *SM.getProcResource(I);
-    if (ProcResource.BufferSize <= 0)
+    const int BufferSize =
+        SM.getResourceBufferSize(I, ReservationStationScaleFactor);
+    if (BufferSize <= 0)
       continue;
 
     const BufferUsage &BU = Usage[I];
     double AvgUsage = (double)BU.CumulativeNumUsedSlots / NumCycles;
-    double AlmostFullThreshold = (double)(ProcResource.BufferSize * 4) / 5;
+    double AlmostFullThreshold = (double)(BufferSize * 4) / 5;
     unsigned NormalizedAvg = floor((AvgUsage * 10) + 0.5) / 10;
     unsigned NormalizedThreshold = floor((AlmostFullThreshold * 10) + 0.5) / 10;
 
@@ -155,14 +159,13 @@ void SchedulerStatistics::printSchedulerUsage(raw_ostream &OS) const {
     if (HasColors)
       FOS.resetColor();
     FOS.PadToColumn(28);
-    if (HasColors &&
-        BU.MaxUsedSlots == static_cast<unsigned>(ProcResource.BufferSize))
+    if (HasColors && BU.MaxUsedSlots == static_cast<unsigned>(BufferSize))
       FOS.changeColor(raw_ostream::RED, true, false);
     FOS << BU.MaxUsedSlots;
     if (HasColors)
       FOS.resetColor();
     FOS.PadToColumn(39);
-    FOS << ProcResource.BufferSize << '\n';
+    FOS << BufferSize << '\n';
   }
 
   FOS.flush();

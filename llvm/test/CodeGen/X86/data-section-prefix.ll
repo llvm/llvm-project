@@ -1,5 +1,5 @@
-; RUN: llc -mtriple x86_64-linux-gnu -data-sections %s -o - | FileCheck %s --check-prefix=ELF
-; RUN: llc -mtriple x86_64-linux-gnu -unique-section-names=0 -data-sections %s -o - | FileCheck %s --check-prefix=ELF-NOUNIQ
+; RUN: llc -mtriple x86_64-linux-gnu -data-sections -partition-static-data-sections %s -o - | FileCheck %s --check-prefix=ELF
+; RUN: llc -mtriple x86_64-linux-gnu -unique-section-names=0 -data-sections -partition-static-data-sections %s -o - | FileCheck %s --check-prefix=ELF-NOUNIQ
 
 ; RUN: llc -mtriple x86_64-windows-msvc -data-sections %s -o - | FileCheck %s --check-prefix=COFF-MSVC
 

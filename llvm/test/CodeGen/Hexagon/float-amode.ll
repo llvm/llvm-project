@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -fp-contract=fast -disable-hexagon-peephole -disable-hexagon-amodeopt < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -disable-hexagon-peephole -disable-hexagon-amodeopt < %s | FileCheck %s
 
 ; The test checks for various addressing modes for floating point loads/stores.
 
@@ -25,8 +25,8 @@ entry:
   %1 = load ptr, ptr %arrayidx, align 4
   %arrayidx1 = getelementptr inbounds float, ptr %1, i32 %col1
   %2 = load float, ptr %arrayidx1, align 4
-  %mul = fmul float %2, 2.000000e+01
-  %add = fadd float %mul, 1.000000e+01
+  %mul = fmul contract float %2, 2.000000e+01
+  %add = fadd contract float %mul, 1.000000e+01
   %arrayidx3 = getelementptr inbounds ptr, ptr %0, i32 5
   %3 = load ptr, ptr %arrayidx3, align 4
   %arrayidx4 = getelementptr inbounds float, ptr %3, i32 %col1

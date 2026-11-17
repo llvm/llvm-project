@@ -6,10 +6,6 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifdef LIBC_MATH_USE_SYSTEM_FENV
-#undef LIBC_MATH_USE_SYSTEM_FENV
-#endif // LIBC_MATH_USE_SYSTEM_FENV
-
 #include "FEnvSafeTest.h"
 
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -45,16 +41,20 @@ void FEnvSafeTest::set_fenv(const fenv_t &fenv) {
   ASSERT_EQ(LIBC_NAMESPACE::fputil::set_env(&fenv), 0);
 }
 
-void FEnvSafeTest::expect_fenv_eq(const fenv_t &before_fenv,
-                                  const fenv_t &after_fenv) {
+void FEnvSafeTest::expect_fenv_eq([[maybe_unused]] const fenv_t &before_fenv,
+                                  [[maybe_unused]] const fenv_t &after_fenv) {
+#ifndef LIBC_MATH_USE_SYSTEM_FENV
+
 #if defined(LIBC_TARGET_ARCH_IS_AARCH64) && !defined(LIBC_COMPILER_IS_MSVC) && \
     defined(__ARM_FP)
   using FPState = LIBC_NAMESPACE::fputil::FEnv::FPState;
   const FPState &before_state = reinterpret_cast<const FPState &>(before_fenv);
   const FPState &after_state = reinterpret_cast<const FPState &>(after_fenv);
 
-  EXPECT_EQ(before_state.ControlWord, after_state.ControlWord);
-  EXPECT_EQ(before_state.StatusWord, after_state.StatusWord);
+  EXPECT_EQ(static_cast<uint32_t>(before_state.ControlWord),
+            static_cast<uint32_t>(after_state.ControlWord));
+  EXPECT_EQ(static_cast<uint32_t>(before_state.StatusWord),
+            static_cast<uint32_t>(after_state.StatusWord));
 
 #elif defined(LIBC_TARGET_ARCH_IS_X86)
   using LIBC_NAMESPACE::cpp::inline_copy;
@@ -112,12 +112,9 @@ void FEnvSafeTest::expect_fenv_eq(const fenv_t &before_fenv,
   const uint32_t &before_fcsr = reinterpret_cast<const uint32_t &>(before_fenv);
   const uint32_t &after_fcsr = reinterpret_cast<const uint32_t &>(after_fenv);
   EXPECT_EQ(before_fcsr, after_fcsr);
+#endif // LIBC_TARGET_ARCH_*
 
-#else
-  // No arch-specific `fenv_t` support, so nothing to compare.
-  (void)before_fenv;
-  (void)after_fenv;
-#endif
+#endif // LIBC_MATH_USE_SYSTEM_FENV
 }
 
 } // namespace testing
