@@ -2760,16 +2760,26 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
             ExtTy.getScalarSizeInBits() - ExtendeeTy.getScalarSizeInBits();
 
         if (SizeDiff <= MinShAmt) {
+          std::optional<bool> ExtendeeIsNeg;
           unsigned Tmp =
-              SizeDiff + computeNumSignBits(Extendee, DemandedElts, Depth + 1);
-          if (MaxShAmt < Tmp)
+              SizeDiff + computeNumSignBits(Extendee, DemandedElts, Depth + 1,
+                                            &ExtendeeIsNeg);
+          if (MaxShAmt < Tmp) {
+            if (IsNeg)
+              *IsNeg = ExtendeeIsNeg;
             return Tmp - MaxShAmt;
+          }
         }
       }
       // shl destroys sign bits, ensure it doesn't shift out all sign bits.
-      unsigned Tmp = computeNumSignBits(Src1, DemandedElts, Depth + 1);
-      if (MaxShAmt < Tmp)
+      std::optional<bool> Src1IsNeg;
+      unsigned Tmp =
+          computeNumSignBits(Src1, DemandedElts, Depth + 1, &Src1IsNeg);
+      if (MaxShAmt < Tmp) {
+        if (IsNeg)
+          *IsNeg = Src1IsNeg;
         return Tmp - MaxShAmt;
+      }
     }
     break;
   }
@@ -2809,9 +2819,14 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
 
     // Check if the sign bits of source go down as far as the truncated value.
     unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
-    unsigned NumSrcSignBits = computeNumSignBits(Src, DemandedElts, Depth + 1);
-    if (NumSrcSignBits > (NumSrcBits - TyBits))
+    std::optional<bool> SrcIsNeg;
+    unsigned NumSrcSignBits =
+        computeNumSignBits(Src, DemandedElts, Depth + 1, &SrcIsNeg);
+    if (NumSrcSignBits > (NumSrcBits - TyBits)) {
+      if (IsNeg)
+        *IsNeg = SrcIsNeg;
       return NumSrcSignBits - (NumSrcBits - TyBits);
+    }
     break;
   }
   case TargetOpcode::G_SELECT: {

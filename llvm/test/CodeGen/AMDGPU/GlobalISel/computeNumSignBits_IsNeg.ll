@@ -171,3 +171,55 @@ define amdgpu_ps void @mul24_smin(i8 %a, i8 %b, ptr addrspace(1) %p) {
   store i32 %r, ptr addrspace(1) %p
   ret void
 }
+
+; G_SHL+G_AND path: IsNeg=false shl(and x, 0xffff), 8 gives 8 leading zeros via getKnownBits fallback.
+define amdgpu_ps void @mul24_shl_and(i32 %x, i32 %y, ptr addrspace(1) %p) {
+; CHECK-LABEL: mul24_shl_and:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    v_mov_b32_e32 v4, 8
+; CHECK-NEXT:    v_lshlrev_b32_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; CHECK-NEXT:    v_and_b32_e32 v1, 0xffffff, v1
+; CHECK-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
+; CHECK-NEXT:    global_store_dword v[2:3], v0, off
+; CHECK-NEXT:    s_endpgm
+  %masked_x = and i32 %x, 65535
+  %shifted  = shl i32 %masked_x, 8
+  %masked_y = and i32 %y, 16777215
+  %r = mul i32 %shifted, %masked_y
+  store i32 %r, ptr addrspace(1) %p
+  ret void
+}
+
+; G_TRUNC+G_LSHR path: IsNeg=false trunc(lshr i64 x, 40) gives 8 leading zeros.
+define amdgpu_ps void @mul24_trunc_lshr(i64 %x, i32 %y, ptr addrspace(1) %p) {
+; CHECK-LABEL: mul24_trunc_lshr:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    v_lshrrev_b32_e32 v0, 8, v1
+; CHECK-NEXT:    v_and_b32_e32 v1, 0xffffff, v2
+; CHECK-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
+; CHECK-NEXT:    global_store_dword v[3:4], v0, off
+; CHECK-NEXT:    s_endpgm
+  %shifted = lshr i64 %x, 40
+  %tr      = trunc i64 %shifted to i32
+  %masked_y = and i32 %y, 16777215
+  %r = mul i32 %tr, %masked_y
+  store i32 %r, ptr addrspace(1) %p
+  ret void
+}
+
+; G_SHL+G_AND path with 0xff mask: IsNeg=false shl(and x, 0xff), 8 gives 16 leading zeros.
+define amdgpu_ps void @mul24_shl_and_0xff(i32 %x, i32 %y, ptr addrspace(1) %p) {
+; CHECK-LABEL: mul24_shl_and_0xff:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    v_mov_b32_e32 v4, 8
+; CHECK-NEXT:    v_lshlrev_b32_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; CHECK-NEXT:    v_mul_u32_u24_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; CHECK-NEXT:    global_store_dword v[2:3], v0, off
+; CHECK-NEXT:    s_endpgm
+  %masked_x = and i32 %x, 255
+  %shifted  = shl i32 %masked_x, 8
+  %masked_y = and i32 %y, 65535
+  %r = mul i32 %shifted, %masked_y
+  store i32 %r, ptr addrspace(1) %p
+  ret void
+}
