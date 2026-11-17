@@ -177,6 +177,8 @@
 ; CHECK-NEXT:       Shrink Wrapping analysis
 ; CHECK-NEXT:       Prologue/Epilogue Insertion & Frame Finalization
 ; CHECK-NEXT:       Machine Late Instructions Cleanup Pass
+; CHECK-NEXT:       Machine Cycle Info Analysis
+; CHECK-NEXT:       Machine Block Frequency Analysis
 ; CHECK-NEXT:       Control Flow Optimizer
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Tail Duplication
@@ -187,6 +189,7 @@
 ; CHECK-NEXT:       If Converter
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Machine Natural Loop Construction
+; CHECK-NEXT:       Machine Register Class Info Analysis
 ; CHECK-NEXT:       PostRA Machine Instruction Scheduler
 ; CHECK-NEXT:       Analyze Machine Code For Garbage Collection
 ; CHECK-NEXT:       Machine Cycle Info Analysis

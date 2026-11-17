@@ -159,7 +159,6 @@ STATISTIC(NumBytesStackSpace,
           "Number of bytes used for stack in all functions");
 
 void PEILegacy::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesCFG();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
