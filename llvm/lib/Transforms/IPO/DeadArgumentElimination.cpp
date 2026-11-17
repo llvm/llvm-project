@@ -709,7 +709,7 @@ void DeadArgumentEliminationPass::propagateLiveness(const RetOrArg &RA) {
 static AttributeSet dropRetOnlyCaptureComponents(LLVMContext &Ctx,
                                                  AttributeSet Attrs,
                                                  Type *NRetTy) {
-  if (NRetTy->isPointerTy() || !Attrs.hasAttribute(Attribute::Captures))
+  if (NRetTy->isPointerTy())
     return Attrs;
   CaptureInfo CI = Attrs.getCaptureInfo();
   if (capturesNothing(CI.getRetComponents() & ~CI.getOtherComponents()))
