@@ -26,10 +26,10 @@ int b __attribute__((guarded_by(rmu)));
 // The call's failure record survives a later acquisition by a blocking
 // call: the result is still falsy. A re-check inside the locked region
 // decides nothing new, but both of its edges are analyzed, so the dead
-// arm's release reaches the join: a lost-hold, a guarded-write and a
-// stray-release warning, none of which can happen at runtime.
+// arm's release reaches the join: a lost-hold and a guarded-write warning,
+// and a release that may not be held, none of which can happen at runtime.
 void failed_survives_lock() {
-  bool ok = mu.TryLock(); // expected-note {{mutex acquired here}}
+  bool ok = mu.TryLock();
   if (!ok) {
     mu.Lock(); // expected-note {{mutex acquired here}}
     if (ok) {
@@ -38,8 +38,7 @@ void failed_survives_lock() {
     a = 1; // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}} \
            // expected-warning {{mutex 'mu' is not held on every path through here}}
   }
-  mu.Unlock(); // expected-warning {{mutex 'mu' is not held on every path through here}} \
-               // expected-warning {{releasing mutex 'mu' that was not held}}
+  mu.Unlock(); // expected-warning {{releasing mutex 'mu' that may not be held}}
 }
 
 // A blocking acquisition leaves the call's released record stale beside
