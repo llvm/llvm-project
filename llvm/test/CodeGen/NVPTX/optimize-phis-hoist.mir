@@ -10,7 +10,7 @@ body:             |
 
     %0:b1 = IMPLICIT_DEF
     %1:b1 = IMPLICIT_DEF
-    CBranch killed %0, %bb.2, 0
+    CBranch %0, %bb.2, 0
 
   bb.1:
     successors: %bb.4
@@ -22,7 +22,7 @@ body:             |
     successors: %bb.3, %bb.4
 
     %3:b32 = MOV_F32_i float 1.000000e+00
-    CBranch killed %1, %bb.4, 0
+    CBranch %1, %bb.4, 0
 
   bb.3:
     successors: %bb.4
@@ -50,13 +50,13 @@ body:             |
 
     %0:b1 = IMPLICIT_DEF
     %1:b1 = IMPLICIT_DEF
-    CBranch killed %0, %bb.3, 0
+    CBranch %0, %bb.3, 0
 
   bb.1:
     successors: %bb.2, %bb.5
 
     %2:b32 = MOV_F32_i float 1.000000e+00
-    CBranch killed %1, %bb.5, 0
+    CBranch %1, %bb.5, 0
 
   bb.2:
     successors: %bb.5
@@ -69,7 +69,7 @@ body:             |
 
     %4:b32 = MOV_F32_i float 2.000000e+00
     %5:b1 = IMPLICIT_DEF
-    CBranch killed %5, %bb.5, 0
+    CBranch %5, %bb.5, 0
 
   bb.4:
     successors: %bb.5
@@ -97,7 +97,7 @@ body:             |
     successors: %bb.1, %bb.2
 
     %0:b1 = IMPLICIT_DEF
-    CBranch killed %0, %bb.2, 0
+    CBranch %0, %bb.2, 0
 
   bb.1:
     successors: %bb.3
@@ -134,7 +134,7 @@ body:             |
     successors: %bb.1, %bb.2
 
     %0:b1 = IMPLICIT_DEF
-    CBranch killed %0, %bb.2, 0
+    CBranch %0, %bb.2, 0
 
   bb.1:
     successors: %bb.3
@@ -171,7 +171,7 @@ body:             |
     successors: %bb.1, %bb.2
 
     %0:b1 = IMPLICIT_DEF
-    CBranch killed %0, %bb.2, 0
+    CBranch %0, %bb.2, 0
 
   bb.1:
     successors: %bb.3
@@ -206,7 +206,7 @@ body:             |
     successors: %bb.1, %bb.2
 
     %0:b1 = IMPLICIT_DEF
-    CBranch killed %0, %bb.2, 0
+    CBranch %0, %bb.2, 0
 
   bb.1:
     successors: %bb.3
@@ -253,7 +253,7 @@ body:             |
     successors: %bb.1, %bb.2
 
     %0:b1 = IMPLICIT_DEF
-    CBranch killed %0, %bb.2, 0
+    CBranch %0, %bb.2, 0
 
   bb.1:
     successors: %bb.3
@@ -290,7 +290,7 @@ body:             |
     %1:b1 = IMPLICIT_DEF
     %2:b32 = MOV_F32_i float 1.000000e+00
     %3:b32 = MOV_F32_i float 1.000000e+00
-    CBranch killed %0, %bb.2, 0
+    CBranch %0, %bb.2, 0
 
   bb.1:
     successors: %bb.3
@@ -322,7 +322,7 @@ body:             |
 
     %0:b1 = IMPLICIT_DEF
     %1:b1 = IMPLICIT_DEF
-    CBranch killed %0, %bb.2, 0
+    CBranch %0, %bb.2, 0
 
   bb.1:
     successors: %bb.4
@@ -334,7 +334,7 @@ body:             |
     successors: %bb.3, %bb.4
 
     %3:b64 = MOV_F64_i double 1.000000e+00
-    CBranch killed %1, %bb.4, 0
+    CBranch %1, %bb.4, 0
 
   bb.3:
     successors: %bb.4
@@ -362,7 +362,7 @@ body:             |
 
     %0:b1 = IMPLICIT_DEF
     %1:b1 = IMPLICIT_DEF
-    CBranch killed %0, %bb.2, 0
+    CBranch %0, %bb.2, 0
 
   bb.1:
     successors: %bb.3

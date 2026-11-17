@@ -232,7 +232,8 @@ MachineInstr *OptimizePHIs::getDefThroughCopies(Register Reg) {
 MachineInstr *OptimizePHIs::getMoveImmDef(Register Reg,
                                           const MachineInstr &PHI) {
   MachineInstr *Def = getDefThroughCopies(Reg);
-  if (!Def || !Def->isMoveImmediate() || Def->getNumImplicitOperands())
+  if (!Def || !Def->isMoveImmediate() || Def->getNumImplicitOperands() ||
+      Def->getNumOperands() != 2)
     return nullptr;
   const MachineOperand &Dst = Def->getOperand(0);
   if (!Dst.getReg().isVirtual() ||
