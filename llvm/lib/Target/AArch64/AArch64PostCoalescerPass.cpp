@@ -48,18 +48,6 @@ static bool expandFormTransposedRegTuple(MachineBasicBlock &MBB,
     MachineOperand &SrcOp = MI.getOperand(I + 1);
     OrigRegs.push_back(SrcOp.getReg());
 
-    // Ensure that if operand is killed, the kill flag is placed on the final
-    // copy for that operand.
-    if (SrcOp.isKill()) {
-      for (unsigned J = I + 2; J < MI.getNumOperands(); ++J) {
-        MachineOperand &LaterOp = MI.getOperand(J);
-        if (LaterOp.getReg() == SrcOp.getReg()) {
-          LaterOp.setIsKill();
-          SrcOp.setIsKill(false);
-        }
-      }
-    }
-
     RegState DefState = I == 0 ? RegState::Undef : RegState::NoFlags;
     MachineInstr *CopyMI =
         BuildMI(MBB, MI, DL, TII->get(AArch64::COPY_INTO_TRANSPOSED_TUPLE))

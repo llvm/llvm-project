@@ -237,7 +237,9 @@ def DREGSNOZ : RegisterClass<"AVR", [i16], 8,
                            R14R13, R12R11, R10R9)>;
 
 // Register class used for the stack read pseudo instruction.
-def GPRSP : RegisterClass<"AVR", [i16], 8, (add SP)>;
+def GPRSP : RegisterClass<"AVR", [i16], 8, (add SP)> {
+  let isAllocatable = 0;
+}
 
 // Status register.
 def SREG : AVRReg<14, "FLAGS">, DwarfRegNum<[88]>;

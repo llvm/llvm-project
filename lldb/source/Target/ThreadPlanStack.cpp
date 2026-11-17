@@ -296,16 +296,15 @@ lldb::ThreadPlanSP ThreadPlanStack::GetPlanByIndex(uint32_t plan_idx,
   return {};
 }
 
-lldb::ValueObjectSP ThreadPlanStack::GetReturnValueObject() const {
+ThreadPlanReturnValue ThreadPlanStack::GetReturnValue() const {
   llvm::sys::ScopedReader guard(m_stack_mutex);
   if (m_completed_plans.empty())
     return {};
 
   for (int i = m_completed_plans.size() - 1; i >= 0; i--) {
-    lldb::ValueObjectSP return_valobj_sp;
-    return_valobj_sp = m_completed_plans[i]->GetReturnValueObject();
-    if (return_valobj_sp)
-      return return_valobj_sp;
+    ThreadPlanReturnValue return_value = m_completed_plans[i]->GetReturnValue();
+    if (!std::holds_alternative<std::monostate>(return_value))
+      return return_value;
   }
   return {};
 }

@@ -18,6 +18,7 @@
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
@@ -131,7 +132,7 @@ using LocalToGlobalRegTable = std::map<Register, MCRegister>;
 using RegisterAliasMapTy =
     std::map<const MachineFunction *, LocalToGlobalRegTable>;
 using FPFastMathDefaultInfoMapTy =
-    DenseMap<const Function *, FPFastMathDefaultInfoVector>;
+    MapVector<const Function *, FPFastMathDefaultInfoVector>;
 
 // The struct contains results of the module analysis and methods
 // to access them.
@@ -183,6 +184,7 @@ struct ModuleAnalysisInfo {
     AMDGPUAtomicMDKind Kind;
   };
   SmallVector<InstrAuxDataRecord> InstrAuxDataRecords;
+  SmallVector<const MachineInstr *> DebugValueMIs;
 
   MCRegister getGlobalObjReg(const GlobalObject *GO) {
     assert(GO && "GlobalObject is null");

@@ -181,6 +181,15 @@ def _llvm_configure_impl(repository_ctx):
         vars = vars,
     )
 
+    # Read the source header itself so edits in a local checkout invalidate
+    # the substitution even when llvm-raw exposes the header through a symlink.
+    helper = repository_ctx.path(Label("//:llvm/include/llvm/Transforms/IPO/InstrumentorRuntimeHelper.h"))
+    repository_ctx.file(
+        "llvm/instrumentor.bzl",
+        content = "INSTRUMENTOR_RUNTIME_HELPER = {}\n".format(repr(repository_ctx.read(helper.realpath))),
+        executable = False,
+    )
+
     # Create a starlark file with the requested LLVM targets.
     llvm_targets = repository_ctx.attr.targets
     repository_ctx.file(

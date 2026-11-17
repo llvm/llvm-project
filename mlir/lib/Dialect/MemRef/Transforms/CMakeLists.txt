@@ -20,7 +20,7 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   NormalizeMemRefs.cpp
   ReifyResultShapes.cpp
   ResolveShapedTypeResultDims.cpp
-  RuntimeOpVerification.cpp
+  RuntimeVerifiableOpInterfaceImpl.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/MemRef
@@ -46,6 +46,7 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   MLIRTransforms
   MLIRValueBoundsOpInterface
   MLIRVectorDialect
+  MLIRVectorUtils
 )
 
 add_mlir_dialect_library(MLIRMemRefAllocationOpInterfaceImpl

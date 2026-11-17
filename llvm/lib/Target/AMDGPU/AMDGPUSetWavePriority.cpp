@@ -24,11 +24,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-set-wave-priority"
 
-static cl::opt<unsigned> DefaultVALUInstsThreshold(
-    "amdgpu-set-wave-priority-valu-insts-threshold",
-    cl::desc("VALU instruction count threshold for adjusting wave priority"),
-    cl::init(100), cl::Hidden);
-
 namespace {
 
 struct MBBInfo {
@@ -126,7 +121,8 @@ bool AMDGPUSetWavePriority::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
 
-  unsigned VALUInstsThreshold = DefaultVALUInstsThreshold;
+  unsigned VALUInstsThreshold =
+      ST.getCLOpts().set_wave_priority_valu_insts_threshold;
   Attribute A = F.getFnAttribute("amdgpu-wave-priority-threshold");
   if (A.isValid())
     A.getValueAsString().getAsInteger(0, VALUInstsThreshold);

@@ -91,6 +91,7 @@
 #include "llvm/Support/SipHash.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
@@ -304,6 +305,8 @@ RawComment *ASTContext::getRawCommentNoCacheImpl(
   // Decompose the end of the comment.
   const unsigned CommentEndOffset =
       Comments.getCommentEndOffset(CommentBeforeDecl);
+  if (CommentEndOffset > LocDecomp.second)
+    return nullptr;
 
   // Get the corresponding buffer.
   bool Invalid = false;
@@ -540,8 +543,18 @@ void ASTContext::attachCommentsToJustParsedDecls(ArrayRef<Decl *> Decls,
       if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
         continue;
 
+      const FileID DeclFile = SourceMgr.getDecomposedLoc(DeclLoc).first;
+      if (!DeclFile.isValid())
+        continue;
+
+      const auto *CommentsInDeclFile =
+          DeclFile == File ? CommentsInThisFile
+                           : Comments.getCommentsInFile(DeclFile);
+      if (!CommentsInDeclFile || CommentsInDeclFile->empty())
+        continue;
+
       if (RawComment *const DocComment =
-              getRawCommentNoCacheImpl(D, DeclLoc, *CommentsInThisFile)) {
+              getRawCommentNoCacheImpl(D, DeclLoc, *CommentsInDeclFile)) {
         cacheRawComment(D, *DocComment);
         comments::FullComment *FC = DocComment->parse(*this, PP, D);
         ParsedComments[D->getCanonicalDecl()] = FC;
@@ -2155,11 +2168,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     else if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate)
       // Adjust the alignment for fixed-length SVE predicates.
       Align = 16;
-    else if (VT->getVectorKind() == VectorKind::RVVFixedLengthData ||
-             VT->getVectorKind() == VectorKind::RVVFixedLengthMask ||
-             VT->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
-             VT->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
-             VT->getVectorKind() == VectorKind::RVVFixedLengthMask_4)
+    else if (isRVVFixedLengthVectorKind(VT->getVectorKind()))
       // Adjust the alignment for fixed-length RVV vectors.
       Align = std::min<unsigned>(64, Width);
     // Vector types have their natural alignment resist reduction by
@@ -9796,9 +9805,15 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
   case Type::DeducedTemplateSpecialization:
     return;
 
+  // An overflow behavior type has the representation of its underlying type.
+  case Type::OverflowBehavior:
+    getObjCEncodingForTypeImpl(
+        cast<OverflowBehaviorType>(CT)->getUnderlyingType(), S, Options, FD,
+        NotEncodedT);
+    return;
+
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
-  case Type::OverflowBehavior:
     llvm_unreachable("unexpected type");
 
   case Type::ArrayParameter:
@@ -10771,16 +10786,8 @@ bool ASTContext::areCompatibleVectorTypes(QualType FirstVec,
       First->getVectorKind() != VectorKind::SveFixedLengthPredicate &&
       Second->getVectorKind() != VectorKind::SveFixedLengthData &&
       Second->getVectorKind() != VectorKind::SveFixedLengthPredicate &&
-      First->getVectorKind() != VectorKind::RVVFixedLengthData &&
-      Second->getVectorKind() != VectorKind::RVVFixedLengthData &&
-      First->getVectorKind() != VectorKind::RVVFixedLengthMask &&
-      Second->getVectorKind() != VectorKind::RVVFixedLengthMask &&
-      First->getVectorKind() != VectorKind::RVVFixedLengthMask_1 &&
-      Second->getVectorKind() != VectorKind::RVVFixedLengthMask_1 &&
-      First->getVectorKind() != VectorKind::RVVFixedLengthMask_2 &&
-      Second->getVectorKind() != VectorKind::RVVFixedLengthMask_2 &&
-      First->getVectorKind() != VectorKind::RVVFixedLengthMask_4 &&
-      Second->getVectorKind() != VectorKind::RVVFixedLengthMask_4)
+      !isRVVFixedLengthVectorKind(First->getVectorKind()) &&
+      !isRVVFixedLengthVectorKind(Second->getVectorKind()))
     return true;
 
   // In OpenCL, treat half and _Float16 vector types as compatible.
@@ -10860,31 +10867,19 @@ bool ASTContext::areCompatibleRVVTypes(QualType FirstType,
   auto IsValidCast = [this](QualType FirstType, QualType SecondType) {
     if (const auto *BT = FirstType->getAs<BuiltinType>()) {
       if (const auto *VT = SecondType->getAs<VectorType>()) {
-        if (VT->getVectorKind() == VectorKind::RVVFixedLengthMask) {
+        if (isRVVFixedLengthMaskVectorKind(VT->getVectorKind())) {
           BuiltinVectorTypeInfo Info = getBuiltinVectorTypeInfo(BT);
+          // A mask typedef converts to and from the vbool<R>_t type it was
+          // written against: vbool<R>_t has RVVBitsPerBlock / R lanes at
+          // vscale=1.
           return FirstType->isRVVVLSBuiltinType() &&
                  Info.ElementType == BoolTy &&
-                 getTypeSize(SecondType) == ((getRVVTypeSize(*this, BT)));
+                 (llvm::RISCV::RVVBitsPerBlock >>
+                  getRVVFixedLengthMaskRatioLog2(VT->getVectorKind())) ==
+                     Info.EC.getKnownMinValue() &&
+                 VT->getRVVFixedLengthMaskLanes() == getRVVTypeSize(*this, BT);
         }
-        if (VT->getVectorKind() == VectorKind::RVVFixedLengthMask_1) {
-          BuiltinVectorTypeInfo Info = getBuiltinVectorTypeInfo(BT);
-          return FirstType->isRVVVLSBuiltinType() &&
-                 Info.ElementType == BoolTy &&
-                 getTypeSize(SecondType) == ((getRVVTypeSize(*this, BT) * 8));
-        }
-        if (VT->getVectorKind() == VectorKind::RVVFixedLengthMask_2) {
-          BuiltinVectorTypeInfo Info = getBuiltinVectorTypeInfo(BT);
-          return FirstType->isRVVVLSBuiltinType() &&
-                 Info.ElementType == BoolTy &&
-                 getTypeSize(SecondType) == ((getRVVTypeSize(*this, BT)) * 4);
-        }
-        if (VT->getVectorKind() == VectorKind::RVVFixedLengthMask_4) {
-          BuiltinVectorTypeInfo Info = getBuiltinVectorTypeInfo(BT);
-          return FirstType->isRVVVLSBuiltinType() &&
-                 Info.ElementType == BoolTy &&
-                 getTypeSize(SecondType) == ((getRVVTypeSize(*this, BT)) * 2);
-        }
-        if (VT->getVectorKind() == VectorKind::RVVFixedLengthData ||
+        if (isRVVFixedLengthDataVectorKind(VT->getVectorKind()) ||
             VT->getVectorKind() == VectorKind::Generic)
           return FirstType->isRVVVLSBuiltinType() &&
                  getTypeSize(SecondType) == getRVVTypeSize(*this, BT) &&

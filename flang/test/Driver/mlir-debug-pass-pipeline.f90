@@ -80,7 +80,7 @@ end program
 
 ! ALL-NEXT: 'func.func' Pipeline
 ! ALL-NEXT:   CudaHeapAllocPromotion
-! ALL-NEXT:   MemoryAllocationOpt
+! ALL-NEXT:   AllocationPlacement
 
 ! ALL-NEXT: Inliner
 ! ALL-NEXT: SimplifyRegionLite

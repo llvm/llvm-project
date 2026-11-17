@@ -14,13 +14,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_COSH_DOUBLE_EVAL_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_COSH_DOUBLE_EVAL_H
 
-#include "hdr/errno_macros.h"
-#include "hdr/fenv_macros.h"
-#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/except_value_utils.h"
-#include "src/__support/FPUtil/rounding_mode.h"
-#include "src/__support/common.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
@@ -64,16 +59,7 @@ LIBC_NOINLINE LIBC_INLINE double cosh_exceptional(double x) {
   if (xbits.is_inf())
     return FPBits::inf().get_val();
 
-  fputil::set_errno_if_required(ERANGE);
-  fputil::raise_overflow_except_if_required<double>();
-
-#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-  int rounding = fputil::quick_get_round();
-  if (LIBC_UNLIKELY(rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO))
-    return FPBits::max_normal().get_val();
-#endif // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-
-  return FPBits::inf().get_val();
+  return fputil::set_overflow<double>();
 }
 
 LIBC_ALWAYS_INLINE double cosh(double x) {
