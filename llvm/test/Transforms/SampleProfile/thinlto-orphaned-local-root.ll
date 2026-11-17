@@ -24,7 +24,8 @@
 ; RUN: %{post} %t/post.ll -sample-profile-file=%t/prof.txt 2>&1 | FileCheck %s --check-prefix=POST-ON
 
 ;; Post-link rejects R's profile when R is not local (it may have an
-;; out-of-line copy elsewhere), when G's call site does not account for all of
+;; out-of-line copy elsewhere), unless non-local recovery is enabled; or when
+;; G's call site does not account for all of
 ;; R's entries, or when R's checksum is stale.
 ; RUN: sed 's/DISPFlagLocalToUnit | //' %t/post.ll > %t/post-nonlocal.ll
 ; RUN: %{post} %t/post-nonlocal.ll -sample-profile-file=%t/prof.txt %{enable} 2>&1 \
@@ -35,6 +36,22 @@
 ; RUN: sed 's/^ !CFGChecksum: 2$/ !CFGChecksum: 9/' %t/prof.txt > %t/prof-stale.txt
 ; RUN: %{post} %t/post.ll -sample-profile-file=%t/prof-stale.txt %{enable} 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=POST-OFF --allow-empty
+
+;; Non-local recovery accepts R but retains the call-count and checksum checks.
+;; In pre-link, it also forwards a sole linkonce_odr callee's import GUIDs.
+; DEFINE: %{nonlocal} = %{post} %{enable} -sample-profile-orphaned-nonlocal-roots
+; RUN: %{nonlocal} %t/post-nonlocal.ll -sample-profile-file=%t/prof.txt 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=POST-ON
+; RUN: %{nonlocal} %t/post-nonlocal.ll -sample-profile-file=%t/prof-multi.txt 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=POST-OFF --allow-empty
+; RUN: %{nonlocal} %t/post-nonlocal.ll -sample-profile-file=%t/prof-stale.txt 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=POST-OFF --allow-empty
+; RUN: sed -e 's/define internal i64 @R/define linkonce_odr i64 @R/' \
+; RUN:   -e 's/DISPFlagLocalToUnit | //' %t/pre.ll > %t/pre-nonlocal.ll
+; RUN: %{pre} %t/pre-nonlocal.ll -sample-profile-file=%t/prof.txt %{enable} -S \
+; RUN:   | FileCheck %s --check-prefix=PRE-OFF
+; RUN: %{pre} %t/pre-nonlocal.ll -sample-profile-file=%t/prof.txt %{enable} \
+; RUN:   -sample-profile-orphaned-nonlocal-roots -S | FileCheck %s --check-prefix=PRE-NONLOCAL
 
 ;; The same profiles in extbinary format. Its reader loads only the profiles of
 ;; functions in the module, so post-link must load R's profile explicitly. The
@@ -102,6 +119,9 @@
 ; PRE-ON: define {{.*}} @G({{.*}} !prof ![[#G:]]
 ; PRE-ON-NOT: define {{.*}} @R(
 ; PRE-ON: ![[#G]] = !{!"function_entry_count", i64 1000, i64 -2953423517159131221}
+
+; PRE-NONLOCAL: define {{.*}} @G({{.*}} !prof ![[#G:]]
+; PRE-NONLOCAL: ![[#G]] = !{!"function_entry_count", i64 1000, i64 -2953423517159131221}
 
 ; POST-OFF-NOT: 'ext' inlined into 'G'
 ; POST-ON: remark: a.c:2:0: 'ext' inlined into 'G' to match profiling context with (cost=always): preinliner

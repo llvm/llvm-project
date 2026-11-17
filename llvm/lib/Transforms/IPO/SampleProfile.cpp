@@ -154,6 +154,12 @@ static cl::opt<bool> PreserveDeferredInlines(
         "In ThinLTO pre-link, add import hints for in-module targets of "
         "deferred indirect calls so they can be imported with the caller."));
 
+static cl::opt<bool> OrphanedNonLocalRoots(
+    "sample-profile-orphaned-nonlocal-roots", cl::Hidden, cl::init(false),
+    cl::desc("With -sample-profile-preserve-orphaned-inlines, also handle "
+             "non-local functions that pre-link inlines away, such as "
+             "linkonce_odr functions with no out-of-line copy."));
+
 static cl::opt<bool> PreserveOrphanedInlines(
     "sample-profile-preserve-orphaned-inlines", cl::Hidden, cl::init(true),
     cl::desc(
@@ -641,18 +647,23 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
   return it.first->second;
 }
 
-/// Return the top-level profile of local function \p SP, inlined at \p Loc of
+/// Return the top-level profile of function \p SP, inlined at \p Loc of
 /// \p CallerFS, when no other code can use it. This happens when the
 /// pre-inliner kept the function's profile top-level but ThinLTO pre-link
-/// inlined the function into its only caller and deleted it. If the reader has
-/// not loaded the profile, add the function's name to \p Missing.
+/// inlined the function into its only caller and deleted it. \p SP must be
+/// local unless -sample-profile-orphaned-nonlocal-roots is set: a non-local
+/// function can keep an out-of-line copy in another module, which also reads
+/// the profile. Retain the call-site count check below when considering its
+/// root. If the reader has not loaded the profile, add the function's name to
+/// \p Missing.
 const FunctionSamples *
 SampleProfileLoader::findOrphanedRoot(const FunctionSamples &CallerFS,
                                       const LineLocation &Loc,
                                       const DISubprogram &SP, StringRef Name,
                                       DenseSet<StringRef> *Missing) const {
   if (!PreserveOrphanedInlines ||
-      LTOPhase != ThinOrFullLTOPhase::ThinLTOPostLink || !SP.isLocalToUnit())
+      LTOPhase != ThinOrFullLTOPhase::ThinLTOPostLink ||
+      (!SP.isLocalToUnit() && !OrphanedNonLocalRoots))
     return nullptr;
   StringRef Canonical = FunctionSamples::getCanonicalFnName(Name);
   const Function *Def = SymbolMap.lookup(FunctionId(Canonical));
@@ -732,10 +743,13 @@ bool SampleProfileLoader::loadOrphanedRoots(Module &M) {
 }
 
 /// Return the caller of \p F if \p F is a local function with a single direct
-/// call, which the pre-link inliner normally inlines and then deletes.
+/// call, which the pre-link inliner normally inlines and then deletes. With
+/// -sample-profile-orphaned-nonlocal-roots, any function that can be deleted
+/// when unused (such as linkonce_odr) qualifies.
 static Function *getSoleCaller(Function &F) {
-  if (!F.hasLocalLinkage() || !F.hasOneUse() ||
-      F.hasFnAttribute(Attribute::NoInline))
+  bool Deletable = F.hasLocalLinkage() ||
+                   (OrphanedNonLocalRoots && F.isDiscardableIfUnused());
+  if (!Deletable || !F.hasOneUse() || F.hasFnAttribute(Attribute::NoInline))
     return nullptr;
   auto *CB = dyn_cast<CallBase>(F.user_back());
   return CB && CB->getCalledFunction() == &F ? CB->getFunction() : nullptr;
