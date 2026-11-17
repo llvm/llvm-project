@@ -19374,6 +19374,7 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   if (IsZeroElt || IsAllOnesElt) {
     // Lower insertion of v16i8/v32i8/v64i16 -1 elts as an 'OR' blend.
     // We don't deal with i8 0 since it appears to be handled elsewhere.
+    // Freeze the base element to prevent OR(poison,-1) -> poison folds.
     if (IsAllOnesElt &&
         ((VT == MVT::v16i8 && !Subtarget.hasSSE41()) ||
          ((VT == MVT::v32i8 || VT == MVT::v16i16) && !Subtarget.hasInt256()))) {
@@ -19382,6 +19383,7 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
       SmallVector<SDValue, 8> CstVectorElts(NumElts, ZeroCst);
       CstVectorElts[IdxVal] = OnesCst;
       SDValue CstVector = DAG.getBuildVector(VT, dl, CstVectorElts);
+      N0 = DAG.getFreeze(N0, APInt::getOneBitSet(NumElts, IdxVal));
       return DAG.getNode(ISD::OR, dl, VT, N0, CstVector);
     }
     // See if we can do this more efficiently with a blend shuffle with a
@@ -33261,10 +33263,37 @@ void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
   AI->eraseFromParent();
 }
 
+void X86TargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
+  assert(AI->getType()->isVectorTy() && AI->use_empty() &&
+         "Only unused vector logical atomicrmw is custom expanded");
+  IRBuilder<> Builder(AI);
+  const DataLayout &DL = AI->getDataLayout();
+  Type *IntTy = Builder.getIntNTy(DL.getTypeSizeInBits(AI->getType()));
+  Value *Val = Builder.CreateBitCast(AI->getValOperand(), IntTy);
+  AtomicRMWInst *NewAI = Builder.CreateAtomicRMW(
+      AI->getOperation(), AI->getPointerOperand(), Val, AI->getAlign(),
+      AI->getOrdering(), AI->getSyncScopeID());
+  NewAI->setVolatile(AI->isVolatile());
+  NewAI->copyMetadata(*AI);
+  AI->eraseFromParent();
+}
+
 TargetLowering::AtomicExpansionKind
 X86TargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   unsigned NativeWidth = Subtarget.is64Bit() ? 64 : 32;
   Type *MemType = AI->getType();
+
+  // x86 has no native atomic RMW operations for vectors. An unused and/or/xor
+  // that fits a GPR is bitcast to an integer so it can select to a lock
+  // prefixed instruction; everything else is expanded to a CmpXChg loop.
+  if (MemType->isVectorTy()) {
+    AtomicRMWInst::BinOp Op = AI->getOperation();
+    if ((Op == AtomicRMWInst::And || Op == AtomicRMWInst::Or ||
+         Op == AtomicRMWInst::Xor) &&
+        AI->use_empty() && MemType->getPrimitiveSizeInBits() <= NativeWidth)
+      return AtomicExpansionKind::CustomExpand;
+    return AtomicExpansionKind::CmpXChg;
+  }
 
   // If the operand is too big, we must see if cmpxchg8/16b is available
   // and default to library calls otherwise.
@@ -41020,51 +41049,6 @@ static bool matchBinaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
         Shuffle = ISD::OR;
         SrcVT = DstVT = MaskVT.changeTypeToInteger();
         return true;
-      }
-      if (NumV1Elts == NumV2Elts && NumV1Elts == NumMaskElts) {
-        // FIXME: handle mismatched sizes?
-        // TODO: investigate if `ISD::OR` handling in
-        // `TargetLowering::SimplifyDemandedVectorElts` can be improved instead.
-        auto computeKnownBitsElementWise = [&DAG](SDValue V) {
-          unsigned NumElts = V.getValueType().getVectorNumElements();
-          KnownBits Known(NumElts);
-          for (unsigned EltIdx = 0; EltIdx != NumElts; ++EltIdx) {
-            APInt Mask = APInt::getOneBitSet(NumElts, EltIdx);
-            KnownBits PeepholeKnown = DAG.computeKnownBits(V, Mask);
-            if (PeepholeKnown.isZero())
-              Known.Zero.setBit(EltIdx);
-            if (PeepholeKnown.isAllOnes())
-              Known.One.setBit(EltIdx);
-          }
-          return Known;
-        };
-
-        KnownBits V1Known = computeKnownBitsElementWise(V1);
-        KnownBits V2Known = computeKnownBitsElementWise(V2);
-
-        for (unsigned i = 0; i != NumMaskElts && IsBlend; ++i) {
-          int M = Mask[i];
-          if (M == SM_SentinelUndef)
-            continue;
-          if (M == SM_SentinelZero) {
-            IsBlend &= V1Known.Zero[i] && V2Known.Zero[i];
-            continue;
-          }
-          if (M == (int)i) {
-            IsBlend &= V2Known.Zero[i] || V1Known.One[i];
-            continue;
-          }
-          if (M == (int)(i + NumMaskElts)) {
-            IsBlend &= V1Known.Zero[i] || V2Known.One[i];
-            continue;
-          }
-          llvm_unreachable("will not get here.");
-        }
-        if (IsBlend) {
-          Shuffle = ISD::OR;
-          SrcVT = DstVT = MaskVT.changeTypeToInteger();
-          return true;
-        }
       }
     }
   }
@@ -64643,6 +64627,16 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
 
   // Any legal type not explicitly accounted for above here is desirable.
   return true;
+}
+
+bool X86TargetLowering::isTypeDesirableForOp(SDNode *N, EVT VT) const {
+  unsigned Opc = N->getOpcode();
+  // There are no vXi64 to f32 or f64 conversions without AVX512DQ.
+  if ((Opc == ISD::SINT_TO_FP || Opc == ISD::UINT_TO_FP) &&
+      VT.isVectorOf(MVT::i64) && !Subtarget.hasDQI() &&
+      !(Subtarget.hasFP16() && N->getValueType(0).isVectorOf(MVT::f16)))
+    return false;
+  return isTypeDesirableForOp(Opc, VT);
 }
 
 SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc &dl,

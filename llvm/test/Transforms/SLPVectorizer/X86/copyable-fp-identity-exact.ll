@@ -11,9 +11,10 @@ define void @copy_lanes_preservesign(ptr %p, ptr %q, i8 %k) denormal_fpenv(prese
 ; CHECK-NEXT:    ]
 ; CHECK:       mul:
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x float> [[TMP0]], <float 1.000000e+00, float 1.000000e+00, float 2.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP0]], <4 x i32> <i32 4, i32 5, i32 2, i32 7>
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x float> [ [[TMP0]], [[ENTRY:%.*]] ], [ [[TMP1]], [[MUL]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x float> [ [[TMP0]], [[ENTRY:%.*]] ], [ [[TMP2]], [[MUL]] ]
 ; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -57,7 +58,8 @@ define void @copy_lane_may_be_nan(ptr %q, float %a, float %b, float %c, float %d
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[C:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[D:%.*]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x float> [[TMP3]], <float 2.000000e+00, float 3.000000e+00, float 4.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -107,7 +109,8 @@ define void @copy_lane_not_nan_preservesign(ptr %q, float %a, float %b, float %c
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[C:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[D:%.*]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x float> [[TMP3]], <float 2.000000e+00, float 3.000000e+00, float 4.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -191,14 +194,15 @@ define void @copy_lane_fadd_and_select_user(ptr %q, i1 %k, float %a, float %b, f
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[C:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[D:%.*]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x float> [[TMP3]], <float 2.000000e+00, float 3.000000e+00, float 4.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> poison, float [[Y0:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[Y1:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP6]], float [[Y2:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[TMP7]], float [[Y3:%.*]], i64 3
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd <4 x float> [[TMP4]], [[TMP8]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd <4 x float> [[TMP9]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i1> poison, i1 [[K:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i1> [[TMP10]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP11]], <4 x float> [[TMP4]], <4 x float> [[TMP9]]
+; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP11]], <4 x float> [[TMP9]], <4 x float> [[TMP12]]
 ; CHECK-NEXT:    store <4 x float> [[TMP13]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -307,11 +311,12 @@ define void @copy_lane_fadd_user_output_flush(ptr %q, float %a, float %b, float 
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[C:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[D:%.*]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x float> [[TMP3]], <float 2.000000e+00, float 3.000000e+00, float 4.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> poison, float [[Y0:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP6]], float [[Y1:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[TMP7]], float [[Y2:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP8]], float [[Y3:%.*]], i64 3
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x float> [[TMP4]], [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x float> [[TMP5]], [[TMP9]]
 ; CHECK-NEXT:    store <4 x float> [[TMP10]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -367,7 +372,9 @@ define <4 x half> @chained_copy_lane_preservesign(<4 x half> %p) denormal_fpenv(
 ; CHECK-LABEL: @chained_copy_lane_preservesign(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = fmul <4 x half> [[P:%.*]], <half 2.000000e+00, half 3.000000e+00, half 4.000000e+00, half 1.000000e+00>
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub <4 x half> [[TMP0]], <half 1.000000e+00, half 2.000000e+00, half 3.000000e+00, half 0.000000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x half> [[TMP0]], <4 x half> [[P]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub <4 x half> [[TMP1]], <half 1.000000e+00, half 2.000000e+00, half 3.000000e+00, half 0.000000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x half> [[TMP2]], <4 x half> [[TMP1]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; CHECK-NEXT:    ret <4 x half> [[TMP3]]
 ;
 entry:
@@ -395,7 +402,9 @@ define <4 x half> @chained_copy_lane_may_be_nan(half nofpclass(nan) %a, half %d)
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x half> [[TMP0]], half [[D:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x half> [[TMP1]], <4 x half> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x half> [[TMP2]], <half 2.000000e+00, half 3.000000e+00, half 4.000000e+00, half 1.000000e+00>
-; CHECK-NEXT:    [[TMP6:%.*]] = fsub <4 x half> [[TMP3]], <half 1.000000e+00, half 2.000000e+00, half 3.000000e+00, half 0.000000e+00>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x half> [[TMP3]], <4 x half> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub <4 x half> [[TMP4]], <half 1.000000e+00, half 2.000000e+00, half 3.000000e+00, half 0.000000e+00>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x half> [[TMP5]], <4 x half> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; CHECK-NEXT:    ret <4 x half> [[TMP6]]
 ;
 entry:

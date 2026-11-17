@@ -14,6 +14,7 @@
 #define LLVM_PLUGINS_PASSPLUGIN_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -24,8 +25,12 @@
 
 namespace llvm {
 class Module;
+class ModuleSummaryIndex;
 class PassBuilder;
 class TargetMachine;
+namespace vfs {
+class FileSystem;
+} // namespace vfs
 
 /// \macro LLVM_PLUGIN_API_VERSION
 /// Identifies the API version understood by this plugin.
@@ -58,11 +63,20 @@ struct PassPluginLibraryInfo {
   void (*RegisterPassBuilderCallbacks)(PassBuilder &) = nullptr;
 
   /// Callback called before running the back-end passes on the module. The
-  /// callback can generate code itself by writing the expected output to OS and
-  /// returning true to prevent the default pipeline and further plugin
-  /// callbacks from running.
-  bool (*PreCodeGenCallback)(Module &, TargetMachine &, CodeGenFileType,
-                             raw_pwrite_stream &OS) = nullptr;
+  /// callback can generate code itself by writing the expected output to OS
+  /// and returning true to prevent the default pipeline and further plugin
+  /// callbacks from running. DwoOS behaves the same way with respect to the
+  /// return value. It is null unless the .dwo contents go to a separate file.
+  ///
+  /// The parameters match those of \c llvm::runCodeGenPipeline(), so the
+  /// callback can forward them to run an LLVM-based pipeline of its own.
+  /// Both signatures must be kept in lockstep.
+  bool (*PreCodeGenCallback)(TargetMachine &TM, Module &M,
+                             raw_pwrite_stream &OS, raw_pwrite_stream *DwoOS,
+                             CodeGenFileType CGFT, bool DisableVerify,
+                             bool DisableSimplifyLibCalls,
+                             const ModuleSummaryIndex *MSI,
+                             IntrusiveRefCntPtr<vfs::FileSystem> VFS) = nullptr;
 
   /// Callback receiving the arguments given to the plugin, e.g. by
   /// -plugin-arg=<PluginName>,<arg>, in order.
@@ -103,14 +117,14 @@ public:
       Info.RegisterPassBuilderCallbacks(PB);
   }
 
-  /// Invoke the pre-codegen callback.
-  bool invokePreCodeGenCallback(Module &M, TargetMachine &TM,
-                                CodeGenFileType CGFT,
-                                raw_pwrite_stream &OS) const {
-    if (Info.PreCodeGenCallback)
-      return Info.PreCodeGenCallback(M, TM, CGFT, OS);
-    return false;
-  }
+  /// Invoke the pre-codegen callback. Keep the signature in sync with
+  /// llvm::runCodeGenPipeline().
+  LLVM_ABI bool
+  invokePreCodeGenCallback(TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
+                           raw_pwrite_stream *DwoOS, CodeGenFileType CGFT,
+                           bool DisableVerify, bool DisableSimplifyLibCalls,
+                           const ModuleSummaryIndex *MSI,
+                           IntrusiveRefCntPtr<vfs::FileSystem> VFS) const;
 
 private:
   PassPlugin(const std::string &Filename, const sys::DynamicLibrary &Library)

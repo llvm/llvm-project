@@ -11,14 +11,12 @@
 # DEFINE: %{bolt} = llvm-bolt --relocs=0 --data=%t.fdata --split-functions \
 # DEFINE:   --split-all-cold --keep-nops --custom-allocation-vma=0x10000000
 # RUN: %{bolt} %t.bv -o %t.bv.bolt
-# RUN: %{bolt} %t.biv -o %t.biv.bolt
+# RUN: not %{bolt} %t.biv -o %t.biv.bolt 2>&1 | FileCheck %s --check-prefix=OUT-OF-RANGE
 # RUN: %{bolt} %t.fv -o %t.fv.bolt
-# RUN: %{bolt} %t.fiv -o %t.fiv.bolt
+# RUN: not %{bolt} %t.fiv -o %t.fiv.bolt 2>&1 | FileCheck %s --check-prefix=OUT-OF-RANGE
 
 # RUN: llvm-objdump -d %t.bv.bolt | FileCheck %s --check-prefixes=CHECK,BACKWARD-VALID
-# RUN: llvm-objdump -d %t.biv.bolt | FileCheck %s --check-prefixes=CHECK,BACKWARD-INVALID,INVALID
 # RUN: llvm-objdump -d %t.fv.bolt | FileCheck %s --check-prefixes=CHECK,FORWARD-VALID
-# RUN: llvm-objdump -d %t.fiv.bolt | FileCheck %s --check-prefixes=CHECK,FORWARD-INVALID,INVALID
 
 # CHECK-LABEL:            <_start>:
 
@@ -27,12 +25,7 @@
 # FORWARD-VALID:          b.eq 0x8000204 <_start+0xc>
 # FORWARD-VALID:          8000204: {{.*}} b 0x10000200 <_start.cold.0>
 
-# BACKWARD-INVALID:       b.eq 0x18000204 <_start+0xc>
-# BACKWARD-INVALID:       18000204: {{.*}} adrp x16, 0x10000000
-# FORWARD-INVALID:        b.eq 0x8000200 <_start+0xc>
-# FORWARD-INVALID:        8000200: {{.*}} adrp x16, 0x10000000
-# INVALID-NEXT:           add x16, x16, #0x200{{$}}
-# INVALID-NEXT:           br x16{{$}}
+# OUT-OF-RANGE: BOLT-ERROR: Unable to relax non-call branch beyond 128MiB
 
 # CHECK:                  0000000010000200 <_start.cold.0>:
 
