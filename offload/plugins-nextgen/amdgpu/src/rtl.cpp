@@ -2629,13 +2629,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
     HardwareParallelism = ComputeUnits * WavesPerCU;
 
-    // detect if device is an APU.
     if (auto Err = checkIfAPU())
       return Err;
 
     DeviceOptions =
         AMDGPUDeviceOptionsTy::getDeviceDefaults(ComputeUnitKind, IsAPU);
-    DeviceOptions.readFromEnv();
 
     // Get maximum size of any device queues and maximum number of queues.
     uint32_t MaxQueueSize;
