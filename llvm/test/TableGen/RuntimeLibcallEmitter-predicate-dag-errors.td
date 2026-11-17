@@ -40,4 +40,4 @@ def badpred : RuntimeLibcallAvailability<(all_of)>;
 #endif
 
 def Libc : LibcallLibrary<"libc", (add LibcallImpls<(add impl0), badpred>)>;
-def Sys : SystemRuntimeLibrary<isArch, (add Libc)>;
+def Sys : SystemRuntimeLibrary<isArch, ["libc"]>;

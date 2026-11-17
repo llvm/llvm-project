@@ -39,6 +39,10 @@ def gi_vop3_no_mods :
     GIComplexOperandMatcher<s32, "selectVOP3NoMods">,
     GIComplexPatternEquiv<VOP3NoMods>;
 
+def gi_vop3_no_op_sel_mods :
+    GIComplexOperandMatcher<s32, "selectVOP3NoOpSelMods">,
+    GIComplexPatternEquiv<VOP3NoOpSelMods>;
+
 def gi_vop3omods :
     GIComplexOperandMatcher<s32, "selectVOP3OMods">,
     GIComplexPatternEquiv<VOP3OMods>;
@@ -46,6 +50,14 @@ def gi_vop3omods :
 def gi_vop3pmods :
     GIComplexOperandMatcher<s32, "selectVOP3PMods">,
     GIComplexPatternEquiv<VOP3PMods>;
+
+def gi_vop3pmodspkfmaopsel0 :
+    GIComplexOperandMatcher<s32, "selectVOP3PModsPkFmaOpSel0">,
+    GIComplexPatternEquiv<VOP3PModsPkFmaOpSel0>;
+
+def gi_vop3pmodspkaddmulopsel0 :
+    GIComplexOperandMatcher<s32, "selectVOP3PModsPkAddMulOpSel0">,
+    GIComplexPatternEquiv<VOP3PModsPkAddMulOpSel0>;
 
 def gi_vop3pmodsdot :
     GIComplexOperandMatcher<s32, "selectVOP3PModsDOT">,
@@ -456,6 +468,9 @@ def gi_as_i16timm : GICustomOperandRenderer<"renderTruncTImm">,
 
 def gi_as_i8timm : GICustomOperandRenderer<"renderTruncTImm">,
   GISDNodeXFormEquiv<as_i8timm>;
+
+def gi_as_prefetch_len : GICustomOperandRenderer<"renderPrefetchLen">,
+  GISDNodeXFormEquiv<as_prefetch_len>;
 
 def gi_as_i1timm : GICustomOperandRenderer<"renderTruncTImm">,
   GISDNodeXFormEquiv<as_i1timm>;

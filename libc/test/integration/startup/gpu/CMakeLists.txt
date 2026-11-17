@@ -73,6 +73,8 @@ if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
       --threads 32
     COMPILE_OPTIONS
       -mno-wavefrontsize64
+    LINK_OPTIONS
+      -mno-wavefrontsize64
   )
 
   add_integration_test(
@@ -83,6 +85,8 @@ if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     LOADER_ARGS
       --threads 64
     COMPILE_OPTIONS
+      -mwavefrontsize64
+    LINK_OPTIONS
       -mwavefrontsize64
   )
 else()

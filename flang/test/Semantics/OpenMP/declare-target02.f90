@@ -16,16 +16,19 @@ program declare_target02
   !ERROR: A variable in a DECLARE TARGET directive cannot be an element of a common block
   !$omp declare target (a1)
 
+  !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !$omp declare target to (arr1_to)
 
   !$omp declare target enter (arr1_to)
 
+  !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !$omp declare target to (blk1_to)
 
   !$omp declare target enter (blk1_to)
 
+  !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !ERROR: A variable in a DECLARE TARGET directive cannot be an element of a common block
   !$omp declare target to (a1_to)
@@ -44,6 +47,7 @@ program declare_target02
   !ERROR: A variable in a DECLARE TARGET directive cannot appear in an EQUIVALENCE statement
   !$omp declare target (eq_a)
 
+  !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !ERROR: A variable in a DECLARE TARGET directive cannot appear in an EQUIVALENCE statement
   !$omp declare target to (eq_a)
@@ -57,6 +61,7 @@ program declare_target02
   !ERROR: A variable in a DECLARE TARGET directive cannot appear in an EQUIVALENCE statement
   !$omp declare target (eq_c)
 
+  !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !ERROR: A variable in a DECLARE TARGET directive cannot appear in an EQUIVALENCE statement
   !$omp declare target to (eq_c)
@@ -87,6 +92,7 @@ contains
     !ERROR: A variable in a DECLARE TARGET directive cannot be an element of a common block
     !$omp declare target (a3)
 
+    !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
     !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !$omp declare target to (arr2_to)
@@ -94,11 +100,13 @@ contains
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !$omp declare target enter (arr2_to)
 
+    !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
     !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
     !$omp declare target to (arr3_to)
 
     !$omp declare target enter (arr3_to)
 
+    !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
     !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
     !ERROR: A variable in a DECLARE TARGET directive cannot be an element of a common block
     !$omp declare target to (a2_to)
@@ -106,6 +114,7 @@ contains
     !ERROR: A variable in a DECLARE TARGET directive cannot be an element of a common block
     !$omp declare target enter (a2_to)
 
+    !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
     !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
     !ERROR: A variable in a DECLARE TARGET directive cannot be an element of a common block
     !$omp declare target to (a3_to)
@@ -137,15 +146,18 @@ module mod4
   !ERROR: A variable in a DECLARE TARGET directive cannot be an element of a common block
   !$omp declare target (a4)
 
+  !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !$omp declare target to (arr4_to)
 
   !$omp declare target enter (arr4_to)
 
+  !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !$omp declare target to (blk4_to)
   !$omp declare target enter (blk4_to)
 
+  !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !ERROR: A variable in a DECLARE TARGET directive cannot be an element of a common block
   !$omp declare target to (a4_to)
@@ -174,6 +186,7 @@ subroutine func5()
   !ERROR: A variable in a DECLARE TARGET directive cannot be an element of a common block
   !$omp declare target (a5)
 
+  !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
   !$omp declare target to (arr5_to)
@@ -181,6 +194,7 @@ subroutine func5()
   !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
   !$omp declare target enter (arr5_to)
 
+  !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
   !$omp declare target to (blk5_to)
@@ -188,6 +202,7 @@ subroutine func5()
   !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
   !$omp declare target enter (blk5_to)
 
+  !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !ERROR: A variable in a DECLARE TARGET directive cannot be an element of a common block
   !$omp declare target to (a5_to)

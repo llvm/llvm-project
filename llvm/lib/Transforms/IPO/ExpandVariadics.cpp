@@ -52,6 +52,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/ExpandVariadics.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Demangle/Demangle.h"
@@ -61,7 +62,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -71,22 +71,6 @@
 using namespace llvm;
 
 namespace {
-
-cl::opt<ExpandVariadicsMode> ExpandVariadicsModeOption(
-    DEBUG_TYPE "-override", cl::desc("Override the behaviour of " DEBUG_TYPE),
-    cl::init(ExpandVariadicsMode::Unspecified),
-    cl::values(clEnumValN(ExpandVariadicsMode::Unspecified, "unspecified",
-                          "Use the implementation defaults"),
-               clEnumValN(ExpandVariadicsMode::Disable, "disable",
-                          "Disable the pass entirely"),
-               clEnumValN(ExpandVariadicsMode::Optimize, "optimize",
-                          "Optimise without changing ABI"),
-               clEnumValN(ExpandVariadicsMode::Lowering, "lowering",
-                          "Change variadic calling convention")));
-
-bool commandLineOverride() {
-  return ExpandVariadicsModeOption != ExpandVariadicsMode::Unspecified;
-}
 
 // Instances of this class encapsulate the target-dependant behaviour as a
 // function of triple. Implementing a new ABI is adding a case to the switch
@@ -154,12 +138,10 @@ class ExpandVariadics : public ModulePass {
 
 public:
   static char ID;
-  const ExpandVariadicsMode Mode;
+  ExpandVariadicsMode Mode;
   std::unique_ptr<VariadicABIInfo> ABI;
 
-  ExpandVariadics(ExpandVariadicsMode Mode)
-      : ModulePass(ID),
-        Mode(commandLineOverride() ? ExpandVariadicsModeOption : Mode) {}
+  ExpandVariadics(ExpandVariadicsMode Mode) : ModulePass(ID), Mode(Mode) {}
 
   StringRef getPassName() const override { return "Expand variadic functions"; }
 
@@ -352,6 +334,11 @@ public:
 };
 
 bool ExpandVariadics::runOnModule(Module &M) {
+  ExpandVariadicsMode Override = getIPOOptions(M).expand_variadics_override;
+  bool HasOverride = Override != ExpandVariadicsMode::Unspecified;
+  if (HasOverride)
+    Mode = Override;
+
   bool Changed = false;
   if (Mode == ExpandVariadicsMode::Disable)
     return Changed;
@@ -361,11 +348,12 @@ bool ExpandVariadics::runOnModule(Module &M) {
   if (!ABI)
     return Changed;
 
-  if (!ABI->enableForTarget())
+  if (!HasOverride && !ABI->enableForTarget())
     return Changed;
 
   const DataLayout &DL = M.getDataLayout();
   IRBuilder<> Builder(M);
+  Builder.disableGEPCanonicalization();
 
   // Lowering needs to run on all functions exactly once.
   // Optimize could run on functions containing va_start exactly once.
@@ -1086,10 +1074,9 @@ struct SPIRV final : public VariadicABIInfo {
 
 struct Wasm final : public VariadicABIInfo {
 
-  bool enableForTarget() override {
-    // Currently wasm is only used for testing.
-    return commandLineOverride();
-  }
+  // Currently wasm is only used for testing, enabled by
+  // -expand-variadics-override.
+  bool enableForTarget() override { return false; }
 
   bool vaListPassedInSSARegister() override { return true; }
 

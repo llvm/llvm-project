@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=50
 ! The special variables omp_in, omp_out, omp_priv and omp_orig in DECLARE
 ! REDUCTION are scalars: any selectors in their designators must be component
 ! selectors.

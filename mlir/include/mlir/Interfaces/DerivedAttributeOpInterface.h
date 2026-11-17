@@ -13,8 +13,6 @@
 #ifndef MLIR_INTERFACES_DERIVEDATTRIBUTEOPINTERFACE_H_
 #define MLIR_INTERFACES_DERIVEDATTRIBUTEOPINTERFACE_H_
 
-#include "mlir/IR/OpDefinition.h"
-
 /// Include the generated interface declarations.
 #include "mlir/Interfaces/DerivedAttributeOpInterface.h.inc"
 

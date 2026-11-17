@@ -38,10 +38,15 @@ public:
     m_symbol_scope = symbol_scope;
   }
 
+  uint32_t GetTailCallDepth() const { return m_tail_call_depth; }
+
+  void SetTailCallDepth(uint32_t depth) { m_tail_call_depth = depth; }
+
   void Clear() {
     m_pc = LLDB_INVALID_ADDRESS;
     m_cfa = LLDB_INVALID_ADDRESS;
     m_symbol_scope = nullptr;
+    m_tail_call_depth = 0;
   }
 
   bool IsValid() const {
@@ -81,6 +86,11 @@ protected:
   /// since the are part of the Block and Symbol objects and can easily be used
   /// to tell if a stack ID is the same as another.
   SymbolContextScope *m_symbol_scope = nullptr;
+
+  /// For a synthesized tail call frame, which has the CFA of the younger frame
+  /// that replaced it, its position in the chain of tail calls after that
+  /// frame (1, 2, ...). 0 for every other frame.
+  uint32_t m_tail_call_depth = 0;
 };
 
 bool operator==(const StackID &lhs, const StackID &rhs);

@@ -106,6 +106,8 @@ bool IsStructureComponent(const Symbol &sym);
 bool IsPrivatizable(const Symbol &sym);
 bool IsVarOrFunctionRef(const MaybeExpr &expr);
 
+bool IsCoindexedObject(const parser::OmpObject &object);
+
 bool IsWholeAssumedSizeArray(const parser::OmpObject &object);
 
 bool IsExtendedListItem(
@@ -115,10 +117,18 @@ bool IsLocatorListItem(
 bool IsVariableListItem(
     const parser::OmpObject &object, SemanticsContext *semaCtx);
 
-bool IsSubstring(const parser::OmpObject &object, SemanticsContext *semaCtx);
+// Analyzes potential substrings and retains diagnostics; may modify semantic
+// state and the parse tree. A missing result indicates an invalid designator,
+// already diagnosed.
+std::optional<bool> IsSubstringAndValidate(
+    const parser::OmpObject &object, SemanticsContext *semaCtx);
 bool IsArrayElement(const parser::OmpObject &object, SemanticsContext *semaCtx);
 
 const Symbol *GetHostSymbol(const Symbol &sym);
+
+// Could a value of type "actual" be passed to a function taking the type
+// of "formal". This is not symmetric.
+bool IsTypeCompatible(const DeclTypeSpec &formal, const DeclTypeSpec &actual);
 
 // Resolve a user-defined reduction visible in scope under the mangled name
 // mangledName (e.g. "op.myop." for operator(.myop.), or a named reduction).
@@ -275,6 +285,11 @@ struct MetadirectiveCandidateSet {
   /// Null represents either a clause-free NOTHING fallback or no fallback.
   const parser::OmpDirectiveSpecification *fallback{nullptr};
 };
+
+const parser::OmpContextSelector *GetContextSelector(
+    const parser::OmpClause &clause);
+const parser::OmpDirectiveSpecification *GetDirectiveVariant(
+    const parser::OmpClause &clause);
 
 /// Build the statically applicable candidates for a METADIRECTIVE.
 ///

@@ -511,7 +511,7 @@ bool BundleVec::tryVectorize(BndlRef<Value *> Bndl,
 }
 
 bool BundleVec::runOnRegion(Region &Rgn, const Analyses &A) {
-  Opts = &Rgn.getContext().getLibraryOptions().get<VectorizeOptions>();
+  Opts = &getVectorizeOptions(Rgn.getContext());
   const auto &SeedSlice = Rgn.getAux();
   if (SeedSlice.size() < 2)
     return false;

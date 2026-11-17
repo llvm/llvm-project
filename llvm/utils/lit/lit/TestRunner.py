@@ -300,7 +300,7 @@ class InProcessPipe:
     # TODO: Replace __slots__ with @dataclass(slots=True)
     # once the minimum Python version is bumped to 3.10
     # https://github.com/llvm/llvm-project/issues/200531
-    __slots__ = ("returncode", "stdout", "stderr", "_out", "_err")
+    __slots__ = ("returncode", "stdout", "stderr", "_out", "_err", "_out_sink")
 
     def __init__(
         self,
@@ -339,6 +339,7 @@ class InProcessPipe:
         self._err = err_buf.getvalue() if err_buf is not None else b""
         self.stdout = io.BytesIO(self._out) if stage_io.capture_out else None
         self.stderr = io.BytesIO(self._err)
+        self._out_sink = stage_io.out_sink
 
     def communicate(self) -> tuple[bytes, bytes]:
         return (self._out, self._err)
@@ -949,6 +950,12 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                 exitCode = res
         else:
             exitCode = res
+
+    # Close any SpooledTemporaryFile output sinks created by in-process stages
+    # only after all downstream processes in the pipeline have exited.
+    for proc in procs:
+        if getattr(proc, "_out_sink", None) is not None:
+            proc._out_sink.close()
 
     # Remove any named temporary files we created.
     for f in named_temp_files:

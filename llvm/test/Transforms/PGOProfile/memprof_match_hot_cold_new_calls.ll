@@ -100,10 +100,16 @@ define dso_local noundef ptr @_Z3foov() !dbg !10 {
 entry:
   ; MEMPROF: call {{.*}} @_Znwm{{.*}} !memprof ![[M1:[0-9]+]], !callsite ![[C1:[0-9]+]]
   %call = call noalias noundef align 32 ptr @_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64 noundef 32, i64 noundef 32, ptr noundef nonnull align 1 dereferenceable(1) @_ZSt7nothrow, i8 noundef zeroext 0), !dbg !13
+  ; MEMPROF: call {{.*}} @__size_returning_new_hot_cold{{.*}} !memprof ![[M1]], !callsite ![[C1]]
+  %srn = call [2 x i64] @__size_returning_new_hot_cold(i64 noundef 32, i8 noundef zeroext 0), !dbg !13
+  ; MEMPROF: call {{.*}} @__size_returning_new_aligned_hot_cold{{.*}} !memprof ![[M1]], !callsite ![[C1]]
+  %srna = call [2 x i64] @__size_returning_new_aligned_hot_cold(i64 noundef 32, i64 noundef 32, i8 noundef zeroext 0), !dbg !13
   ret ptr %call
 }
 
 declare noundef ptr @_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64 noundef, i64 noundef, ptr noundef nonnull align 1 dereferenceable(1), i8 noundef zeroext)
+declare [2 x i64] @__size_returning_new_hot_cold(i64 noundef, i8 noundef zeroext)
+declare [2 x i64] @__size_returning_new_aligned_hot_cold(i64 noundef, i64 noundef, i8 noundef zeroext)
 
 ; MEMPROF: ![[M1]] = !{![[MIB1:[0-9]+]], ![[MIB2:[0-9]+]], ![[MIB3:[0-9]+]], ![[MIB4:[0-9]+]]}
 ; MEMPROF: ![[MIB1]] = !{![[STACK1:[0-9]+]], !"cold"}
