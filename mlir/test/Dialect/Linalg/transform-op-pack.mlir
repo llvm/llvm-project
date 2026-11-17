@@ -795,7 +795,7 @@ func.func @matmul_keep_layout_acc(%A: tensor<24x16xf32>, %B: tensor<16x16xf32>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.pack %0 packed_sizes = [12, 8, 1] keep_layout_operands = [2]
+    %1 = transform.structured.pack %0 packed_sizes = [12, 8, 1] operands_to_pack = [0, 1]
         : (!transform.any_op) -> (!transform.op<"linalg.generic">)
     transform.yield
   }
@@ -867,7 +867,7 @@ func.func @matmul_keep_layout_input(%A: tensor<24x16xf32>, %B: tensor<16x16xf32>
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.pack %0 packed_sizes = [12, 8, 4] keep_layout_operands = [0]
+    %1 = transform.structured.pack %0 packed_sizes = [12, 8, 4] operands_to_pack = [1, 2]
         : (!transform.any_op) -> (!transform.op<"linalg.generic">)
     transform.yield
   }
@@ -977,7 +977,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     // expected-error @below {{data tiling failed}}
-    %1 = transform.structured.pack %0 packed_sizes = [12, 8, 1] keep_layout_operands = [2]
+    %1 = transform.structured.pack %0 packed_sizes = [12, 8, 1] operands_to_pack = [0, 1]
         : (!transform.any_op) -> (!transform.op<"linalg.generic">)
     transform.yield
   }
@@ -1014,7 +1014,7 @@ module attributes {transform.with_named_sequence} {
     %1 = transform.structured.match ops{["affine.apply"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %2 = transform.structured.split %0 after %1 {dimension = 0} : !transform.any_op, !transform.any_op
     %main, %rest = transform.split_handle %2 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    %3 = transform.structured.pack %main packed_sizes = [12, 8, 0] keep_layout_operands = [2]
+    %3 = transform.structured.pack %main packed_sizes = [12, 8, 0] operands_to_pack = [0, 1]
         : (!transform.any_op) -> (!transform.op<"linalg.generic">)
     transform.yield
   }
@@ -1033,7 +1033,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     // expected-error @below {{data tiling failed}}
-    %1 = transform.structured.pack %0 packed_sizes = [12, 8, 1] keep_layout_operands = [3]
+    %1 = transform.structured.pack %0 packed_sizes = [12, 8, 1] operands_to_pack = [3]
         : (!transform.any_op) -> (!transform.op<"linalg.generic">)
     transform.yield
   }

@@ -1057,12 +1057,13 @@ def PackOp : Op<Transform_Dialect, "structured.pack", [
     This composition allows separating concerns and composes better compared
     to adding additional permutation attributes to this transform op.
 
-    #### Keep-layout operands
+    #### Operands to pack
 
-    Operands listed in `keep_layout_operands` (operand numbers, inputs first)
-    are not packed. Their packed dimensions are split into `[outer, inner]`
-    with a `tensor.expand_shape`, and an init is collapsed back after the op,
-    so no data moves. The packed sizes must be static. A static dimension must
+    By default all operands are packed. If `operands_to_pack` is present, only
+    the operands it lists (operand numbers, inputs first) are packed. The other
+    operands have their packed dimensions split into `[outer, inner]` with a
+    `tensor.expand_shape`, and an init is collapsed back after the op, so no
+    data moves. The packed sizes must be static. A static dimension must
     be a multiple of its size. A dynamic one is assumed to be (UB otherwise),
     for example after `transform.structured.split`.
 
@@ -1078,13 +1079,13 @@ def PackOp : Op<Transform_Dialect, "structured.pack", [
   let arguments = (ins TransformHandleTypeInterface:$target,
                    Variadic<TransformHandleTypeInterface>:$packed_sizes,
                    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_packed_sizes,
-                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$keep_layout_operands);
+                   OptionalAttr<DenseI64ArrayAttr>:$operands_to_pack);
   let results = (outs TransformHandleTypeInterface:$packed_op);
   let assemblyFormat = [{
     $target
     `packed_sizes` `=` custom<DynamicIndexList>($packed_sizes,
                                                 $static_packed_sizes)
-    (`keep_layout_operands` `=` $keep_layout_operands^ )? attr-dict
+    (`operands_to_pack` `=` $operands_to_pack^ )? attr-dict
     `:` functional-type(operands, results)
   }];
 

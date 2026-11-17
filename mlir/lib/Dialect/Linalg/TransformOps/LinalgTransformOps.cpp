@@ -1866,7 +1866,8 @@ void transform::PackOp::build(OpBuilder &builder, OperationState &result,
         /*resultType=*/linalgOpHType,
         /*target=*/target,
         /*dynamic_sizes=*/dynamicPackedSizes,
-        /*static_sizes=*/builder.getDenseI64ArrayAttr(staticPackedSizes));
+        /*static_sizes=*/builder.getDenseI64ArrayAttr(staticPackedSizes),
+        /*operands_to_pack=*/nullptr);
 }
 
 SmallVector<OpFoldResult> transform::PackOp::getMixedPackedSizes() {
@@ -1913,7 +1914,7 @@ transform::PackOp::apply(transform::TransformRewriter &rewriter,
 
   rewriter.setInsertionPoint(linalgOp);
   FailureOr<PackResult> maybeResult =
-      pack(rewriter, linalgOp, packedSizes, getKeepLayoutOperands());
+      pack(rewriter, linalgOp, packedSizes, getOperandsToPack());
   if (failed(maybeResult))
     return emitDefiniteFailure("data tiling failed");
 

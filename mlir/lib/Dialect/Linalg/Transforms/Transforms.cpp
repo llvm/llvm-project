@@ -570,19 +570,20 @@ expandPackedDims(RewriterBase &rewriter, Location loc, Value operand,
 /// Implement packing of a single LinalgOp by performing packing by
 /// `packedSizes`. There must be one packedSizes entry per `linalgOp` iterator.
 /// Return the packed Linalg op on success, failure otherwise.
-FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
-                                   linalg::LinalgOp linalgOp,
-                                   ArrayRef<OpFoldResult> packedSizes,
-                                   ArrayRef<int64_t> keepLayoutOperands) {
+FailureOr<PackResult>
+linalg::pack(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
+             ArrayRef<OpFoldResult> packedSizes,
+             std::optional<ArrayRef<int64_t>> operandsToPack) {
   if (packedSizes.size() != linalgOp.getNumLoops()) {
     return rewriter.notifyMatchFailure(linalgOp,
                                        "incorrect number of pack sizes");
   }
-  if (llvm::any_of(keepLayoutOperands, [&](int64_t operandNumber) {
+  if (operandsToPack &&
+      llvm::any_of(*operandsToPack, [&](int64_t operandNumber) {
         return operandNumber < 0 || operandNumber >= linalgOp->getNumOperands();
       })) {
     return rewriter.notifyMatchFailure(
-        linalgOp, "keepLayoutOperands has an operand number out of range");
+        linalgOp, "operandsToPack has an operand number out of range");
   }
   if (!linalgOp.hasPureTensorSemantics()) {
     return rewriter.notifyMatchFailure(
@@ -648,13 +649,13 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
         inputsAndInits.push_back(operand);
         continue;
       }
-      if (llvm::is_contained(keepLayoutOperands, pos)) {
+      if (operandsToPack && !llvm::is_contained(*operandsToPack, pos)) {
         FailureOr<tensor::ExpandShapeOp> expandOp =
             expandPackedDims(rewriter, loc, operand, innerPos, innerPackSizes,
                              indexingMaps[pos]);
         if (failed(expandOp)) {
           return rewriter.notifyMatchFailure(
-              linalgOp, "cannot split operand in keepLayoutOperands");
+              linalgOp, "cannot split operand not in operandsToPack");
         }
         expandOps.push_back(*expandOp);
         inputsAndInits.push_back(expandOp->getResult());

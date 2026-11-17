@@ -9,7 +9,7 @@
 
 // RUN: %{compile} | %{run} | FileCheck %s
 
-/// Pack a matmul with keep_layout_operands = [2]: A and B are packed, C stays
+/// Pack a matmul with operands_to_pack = [0, 1]: A and B are packed, C stays
 /// row-major. The dynamic case is split first so that the packed part has a
 /// multiple of the tile as M.
 
@@ -105,14 +105,14 @@ func.func private @printMemrefI32(%ptr : tensor<*xi32>)
 module @transforms attributes { transform.with_named_sequence } {
   transform.named_sequence @__transform_main(%module: !transform.any_op {transform.readonly}) {
     %mm = transform.structured.match ops{["linalg.matmul"]} attributes {keep_c} in %module : (!transform.any_op) -> !transform.any_op
-    %packed = transform.structured.pack %mm packed_sizes = [3, 4, 1] keep_layout_operands = [2]
+    %packed = transform.structured.pack %mm packed_sizes = [3, 4, 1] operands_to_pack = [0, 1]
         : (!transform.any_op) -> (!transform.op<"linalg.generic">)
 
     %mm_dyn = transform.structured.match ops{["linalg.matmul"]} attributes {keep_c_split} in %module : (!transform.any_op) -> !transform.any_op
     %point = transform.structured.match ops{["affine.apply"]} in %module : (!transform.any_op) -> !transform.any_op
     %parts = transform.structured.split %mm_dyn after %point {dimension = 0} : !transform.any_op, !transform.any_op
     %main, %rest = transform.split_handle %parts : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    %packed_dyn = transform.structured.pack %main packed_sizes = [3, 4, 0] keep_layout_operands = [2]
+    %packed_dyn = transform.structured.pack %main packed_sizes = [3, 4, 0] operands_to_pack = [0, 1]
         : (!transform.any_op) -> (!transform.op<"linalg.generic">)
 
     %packs = transform.structured.match ops{["linalg.pack"]} in %module : (!transform.any_op) -> !transform.op<"linalg.pack">
