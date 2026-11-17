@@ -1205,7 +1205,9 @@ bool AArch64DAGToDAGISel::SelectShiftedRegister(SDValue N, bool AllowROR,
     uint64_t ShrImm = 0;
     unsigned Opc, Immr, Imms;
     SDValue Opd0;
-    if ((Inner.getOpcode() == ISD::SHL || Inner.getOpcode() == ISD::AND) &&
+    if ((Inner.getOpcode() == ISD::SHL ||
+         (Inner.getOpcode() == ISD::AND &&
+          !isBitwiseNot(Inner.getOperand(0)))) &&
         Inner.hasOneUse() && isIntImmediate(N.getOperand(1), ShrImm) &&
         ShrImm > 0 && ShrImm < N.getValueSizeInBits() &&
         isBitfieldExtractOpFromShr(N.getNode(), Opc, Opd0, Immr, Imms, false))

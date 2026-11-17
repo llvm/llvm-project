@@ -98,3 +98,17 @@ define i64 @sub_and_lshr_i64(i64 %a, i64 %b) {
   %sub = sub i64 %b, %shr
   ret i64 %sub
 }
+
+define i32 @add_and_not_lshr(i32 %a, i32 %b) {
+; CHECK-LABEL: add_and_not_lshr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #32768 // =0x8000
+; CHECK-NEXT:    bic w8, w8, w0
+; CHECK-NEXT:    add w0, w1, w8, lsr #15
+; CHECK-NEXT:    ret
+  %not = xor i32 %a, -1
+  %and = and i32 %not, 32768
+  %shr = lshr i32 %and, 15
+  %add = add i32 %b, %shr
+  ret i32 %add
+}
