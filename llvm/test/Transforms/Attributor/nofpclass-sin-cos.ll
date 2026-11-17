@@ -7,7 +7,7 @@ declare float @llvm.cos.f32(float)
 define float @ret_sin(float %arg) {
 ; CHECK-LABEL: define nofpclass(inf) float @ret_sin
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.sin.f32(float [[ARG]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.sin.f32(float [[ARG]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.sin.f32(float %arg)
@@ -17,7 +17,7 @@ define float @ret_sin(float %arg) {
 define float @ret_cos(float %arg) {
 ; CHECK-LABEL: define nofpclass(inf) float @ret_cos
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.cos.f32(float [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.cos.f32(float [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.cos.f32(float %arg)
@@ -27,7 +27,7 @@ define float @ret_cos(float %arg) {
 define float @ret_sin_noinf(float nofpclass(inf) %arg) {
 ; CHECK-LABEL: define nofpclass(inf) float @ret_sin_noinf
 ; CHECK-SAME: (float nofpclass(inf) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.sin.f32(float nofpclass(inf) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.sin.f32(float nofpclass(inf) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.sin.f32(float %arg)
@@ -37,7 +37,7 @@ define float @ret_sin_noinf(float nofpclass(inf) %arg) {
 define float @ret_cos_noinf(float nofpclass(inf) %arg) {
 ; CHECK-LABEL: define nofpclass(inf) float @ret_cos_noinf
 ; CHECK-SAME: (float nofpclass(inf) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.cos.f32(float nofpclass(inf) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.cos.f32(float nofpclass(inf) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.cos.f32(float %arg)
@@ -47,7 +47,7 @@ define float @ret_cos_noinf(float nofpclass(inf) %arg) {
 define float @ret_sin_nonan(float nofpclass(nan) %arg) {
 ; CHECK-LABEL: define nofpclass(snan inf) float @ret_sin_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf) float @llvm.sin.f32(float nofpclass(nan) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf) float @llvm.sin.f32(float nofpclass(nan) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.sin.f32(float %arg)
@@ -57,7 +57,7 @@ define float @ret_sin_nonan(float nofpclass(nan) %arg) {
 define float @ret_cos_nonan(float nofpclass(nan) %arg) {
 ; CHECK-LABEL: define nofpclass(snan inf) float @ret_cos_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf) float @llvm.cos.f32(float nofpclass(nan) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf) float @llvm.cos.f32(float nofpclass(nan) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.cos.f32(float %arg)
@@ -67,7 +67,7 @@ define float @ret_cos_nonan(float nofpclass(nan) %arg) {
 define float @ret_sin_nonan_noinf(float nofpclass(nan inf) %arg) {
 ; CHECK-LABEL: define nofpclass(nan inf) float @ret_sin_nonan_noinf
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.sin.f32(float nofpclass(nan inf) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.sin.f32(float nofpclass(nan inf) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.sin.f32(float %arg)
@@ -77,7 +77,7 @@ define float @ret_sin_nonan_noinf(float nofpclass(nan inf) %arg) {
 define float @ret_cos_nonan_noinf(float nofpclass(nan inf) %arg) {
 ; CHECK-LABEL: define nofpclass(nan inf) float @ret_cos_nonan_noinf
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.cos.f32(float nofpclass(nan inf) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.cos.f32(float nofpclass(nan inf) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.cos.f32(float %arg)
@@ -88,7 +88,7 @@ define float @ret_cos_nonan_noinf(float nofpclass(nan inf) %arg) {
 define float @ret_sin_noqnan(float nofpclass(qnan) %arg) {
 ; CHECK-LABEL: define nofpclass(inf) float @ret_sin_noqnan
 ; CHECK-SAME: (float nofpclass(qnan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.sin.f32(float nofpclass(qnan) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.sin.f32(float nofpclass(qnan) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.sin.f32(float %arg)
@@ -98,7 +98,7 @@ define float @ret_sin_noqnan(float nofpclass(qnan) %arg) {
 define float @ret_cos_noqnan(float nofpclass(qnan) %arg) {
 ; CHECK-LABEL: define nofpclass(inf) float @ret_cos_noqnan
 ; CHECK-SAME: (float nofpclass(qnan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.cos.f32(float nofpclass(qnan) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.cos.f32(float nofpclass(qnan) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.cos.f32(float %arg)
@@ -109,7 +109,7 @@ define float @ret_cos_noqnan(float nofpclass(qnan) %arg) {
 define float @ret_sin_nosnan(float nofpclass(snan) %arg) {
 ; CHECK-LABEL: define nofpclass(snan inf) float @ret_sin_nosnan
 ; CHECK-SAME: (float nofpclass(snan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf) float @llvm.sin.f32(float nofpclass(snan) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf) float @llvm.sin.f32(float nofpclass(snan) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.sin.f32(float %arg)
@@ -119,7 +119,7 @@ define float @ret_sin_nosnan(float nofpclass(snan) %arg) {
 define float @ret_cos_nosnan(float nofpclass(snan) %arg) {
 ; CHECK-LABEL: define nofpclass(snan inf) float @ret_cos_nosnan
 ; CHECK-SAME: (float nofpclass(snan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf) float @llvm.cos.f32(float nofpclass(snan) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf) float @llvm.cos.f32(float nofpclass(snan) [[ARG]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.cos.f32(float %arg)
@@ -129,7 +129,7 @@ define float @ret_cos_nosnan(float nofpclass(snan) %arg) {
 define float @ret_sin_negsubnormal_mode_dynamic_dynamic(float nofpclass(nan inf zero psub norm) %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(nan inf) float @ret_sin_negsubnormal_mode_dynamic_dynamic
 ; CHECK-SAME: (float nofpclass(nan inf zero psub norm) [[ARG0:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.sin.f32(float nofpclass(nan inf zero psub norm) [[ARG0]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.sin.f32(float nofpclass(nan inf zero psub norm) [[ARG0]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.sin.f32(float %arg0)
@@ -139,15 +139,26 @@ define float @ret_sin_negsubnormal_mode_dynamic_dynamic(float nofpclass(nan inf 
 define float @ret_sin_negsubnormal_mode_ftpz_dapz(float nofpclass(nan inf zero psub norm) %arg0) #1 {
 ; CHECK-LABEL: define nofpclass(nan inf) float @ret_sin_negsubnormal_mode_ftpz_dapz
 ; CHECK-SAME: (float nofpclass(nan inf zero psub norm) [[ARG0:%.*]]) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.sin.f32(float nofpclass(nan inf zero psub norm) [[ARG0]]) #[[ATTR4]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) float @llvm.sin.f32(float nofpclass(nan inf zero psub norm) [[ARG0]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.sin.f32(float %arg0)
   ret float %call
 }
 
+define float @ret_sin_nsz__qnan_nsub__ieee_daz(float nofpclass(snan inf zero psub norm) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan inf) float @ret_sin_nsz__qnan_nsub__ieee_daz
+; CHECK-SAME: (float nofpclass(snan inf zero psub norm) [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf) float @llvm.sin.f32(float nofpclass(snan inf zero psub norm) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call nsz float @llvm.sin.f32(float %arg)
+  ret float %call
+}
+
 attributes #0 = { denormal_fpenv(dynamic|dynamic) }
 attributes #1 = { denormal_fpenv(positivezero|positivezero) }
+attributes #2 = { denormal_fpenv(ieee|preservesign) }
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; TUNIT: {{.*}}
