@@ -372,6 +372,9 @@ bool ToolInvocation::run() {
   for (const std::string &Str : CommandLine)
     Argv.push_back(Str.c_str());
   const char *const BinaryName = Argv[0];
+  llvm::raw_ostream &VerboseOS =
+      VerboseOutputStream ? *VerboseOutputStream : llvm::errs();
+  Action->setVerboseOutputStream(VerboseOS);
 
   // Parse diagnostic options from the driver command-line only if none were
   // explicitly set.
@@ -405,6 +408,7 @@ bool ToolInvocation::run() {
 
   const std::unique_ptr<driver::Driver> Driver(
       newDriver(&*Diagnostics, BinaryName, Files->getVirtualFileSystemPtr()));
+  Driver->setVerboseOutputStream(VerboseOS);
   // The "input file not found" diagnostics from the driver are useful.
   // The driver is only aware of the VFS working directory, but some clients
   // change this at the FileManager level instead.
@@ -431,9 +435,11 @@ bool ToolInvocation::runInvocation(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps) {
   // Show the invocation, with -v.
   if (Invocation->getHeaderSearchOpts().Verbose) {
-    llvm::errs() << "clang Invocation:\n";
-    Compilation->getJobs().Print(llvm::errs(), "\n", true);
-    llvm::errs() << "\n";
+    llvm::raw_ostream &OS =
+        VerboseOutputStream ? *VerboseOutputStream : llvm::errs();
+    OS << "clang Invocation:\n";
+    Compilation->getJobs().Print(OS, "\n", true);
+    OS << "\n";
   }
 
   return Action->runInvocation(std::move(Invocation), Files,
@@ -446,6 +452,8 @@ bool FrontendActionFactory::runInvocation(
     DiagnosticConsumer *DiagConsumer) {
   // Create a compiler instance to handle the actual work.
   CompilerInstance Compiler(std::move(Invocation), std::move(PCHContainerOps));
+  if (llvm::raw_ostream *OS = getVerboseOutputStream())
+    Compiler.setVerboseOutputStream(*OS);
   Compiler.setVirtualFileSystem(Files->getVirtualFileSystemPtr());
   Compiler.setFileManager(Files);
   Compiler.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
@@ -627,6 +635,8 @@ int ClangTool::run(ToolAction *Action) {
       ToolInvocation Invocation(std::move(CommandLine), Action, Files.get(),
                                 PCHContainerOps);
       Invocation.setDiagnosticConsumer(DiagConsumer);
+      if (VerboseOutputStream)
+        Invocation.setVerboseOutputStream(*VerboseOutputStream);
 
       if (!Invocation.run()) {
         // FIXME: Diagnostics should be used instead.

@@ -6,17 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InterpreterTestFixture.h"
+
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/Interpreter.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 using namespace clang;
 
 namespace {
+
+class IncrementalCompilerBuilderInterpreterTest : public InterpreterTestBase {};
 
 // Usually FrontendAction takes the raw pointers and wraps them back into
 // unique_ptrs in InitializeFileRemapping()
@@ -34,6 +39,27 @@ TEST(IncrementalCompilerBuilder, SetCompilerArgs) {
   auto CI = cantFail(CB.CreateCpp());
   EXPECT_TRUE(CI->getFrontendOpts().ASTDumpAll);
   cleanupRemappedFileBuffers(*CI);
+}
+
+TEST_F(IncrementalCompilerBuilderInterpreterTest, SetVerboseOutputStream) {
+  std::string Output;
+  llvm::raw_string_ostream OS(Output);
+  std::vector<const char *> ClangArgv = {"-v", "-nostdinc", "-nostdinc++"};
+  auto CB = clang::IncrementalCompilerBuilder();
+  CB.SetCompilerArgs(ClangArgv);
+  CB.SetVerboseOutputStream(OS);
+
+  auto CI = cantFail(CB.CreateCpp());
+  OS.flush();
+  EXPECT_NE(Output.find("clang version"), std::string::npos);
+  EXPECT_NE(Output.find("-cc1"), std::string::npos);
+
+  auto Interp = cantFail(clang::Interpreter::create(std::move(CI)));
+  OS.flush();
+  EXPECT_NE(Output.find("clang -cc1 version"), std::string::npos);
+  EXPECT_NE(Output.find("#include \"...\" search starts here:"),
+            std::string::npos);
+  EXPECT_NE(Output.find("End of search list."), std::string::npos);
 }
 
 TEST(IncrementalCompilerBuilder, SetTargetTriple) {
