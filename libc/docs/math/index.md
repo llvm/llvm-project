@@ -6,6 +6,7 @@
 :hidden: true
 
 log
+stdfix
 ```
 
 ## Source Locations
@@ -325,7 +326,8 @@ Notes:
 
 ## Fixed-point Arithmetics
 
-- {doc}`../headers/stdfix`
+- {doc}`stdfix`
+- Header implementation status: {doc}`../headers/stdfix`
 
 ## References
 

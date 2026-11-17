@@ -2537,6 +2537,172 @@ for.body:
 exit:
   ret void
 }
+
+; FIXME: %x should resume at 3.0e9, not -1294967296.0.
+define double @fp_iv_trip_count_above_signed_i32_max(ptr noalias %A) {
+; VEC4_INTERL1-LABEL: define double @fp_iv_trip_count_above_signed_i32_max(
+; VEC4_INTERL1-SAME: ptr noalias [[A:%.*]]) {
+; VEC4_INTERL1-NEXT:  [[ENTRY:.*:]]
+; VEC4_INTERL1-NEXT:    br label %[[VECTOR_PH:.*]]
+; VEC4_INTERL1:       [[VECTOR_PH]]:
+; VEC4_INTERL1-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VEC4_INTERL1:       [[VECTOR_BODY]]:
+; VEC4_INTERL1-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VEC4_INTERL1-NEXT:    [[VEC_IND:%.*]] = phi <4 x double> [ <double 0.000000e+00, double 1.000000e+00, double 2.000000e+00, double 3.000000e+00>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VEC4_INTERL1-NEXT:    [[TMP0:%.*]] = zext i32 [[INDEX]] to i64
+; VEC4_INTERL1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP0]]
+; VEC4_INTERL1-NEXT:    store <4 x double> [[VEC_IND]], ptr [[TMP1]], align 8
+; VEC4_INTERL1-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; VEC4_INTERL1-NEXT:    [[VEC_IND_NEXT]] = fadd reassoc <4 x double> [[VEC_IND]], splat (double 4.000000e+00)
+; VEC4_INTERL1-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], -1294967296
+; VEC4_INTERL1-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
+; VEC4_INTERL1:       [[MIDDLE_BLOCK]]:
+; VEC4_INTERL1-NEXT:    br label %[[SCALAR_PH:.*]]
+; VEC4_INTERL1:       [[SCALAR_PH]]:
+; VEC4_INTERL1-NEXT:    br label %[[LOOP:.*]]
+; VEC4_INTERL1:       [[LOOP]]:
+; VEC4_INTERL1-NEXT:    [[I:%.*]] = phi i32 [ -1294967296, %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; VEC4_INTERL1-NEXT:    [[X:%.*]] = phi double [ f0xC1D34BE880000000, %[[SCALAR_PH]] ], [ [[X_NEXT:%.*]], %[[LOOP]] ]
+; VEC4_INTERL1-NEXT:    [[IDX:%.*]] = zext i32 [[I]] to i64
+; VEC4_INTERL1-NEXT:    [[GEP:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[IDX]]
+; VEC4_INTERL1-NEXT:    store double [[X]], ptr [[GEP]], align 8
+; VEC4_INTERL1-NEXT:    [[X_NEXT]] = fadd reassoc double [[X]], 1.000000e+00
+; VEC4_INTERL1-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; VEC4_INTERL1-NEXT:    [[EC:%.*]] = icmp eq i32 [[I_NEXT]], -1294967295
+; VEC4_INTERL1-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP27:![0-9]+]]
+; VEC4_INTERL1:       [[EXIT]]:
+; VEC4_INTERL1-NEXT:    [[X_NEXT_LCSSA:%.*]] = phi double [ [[X_NEXT]], %[[LOOP]] ]
+; VEC4_INTERL1-NEXT:    ret double [[X_NEXT_LCSSA]]
+;
+; VEC4_INTERL2-LABEL: define double @fp_iv_trip_count_above_signed_i32_max(
+; VEC4_INTERL2-SAME: ptr noalias [[A:%.*]]) {
+; VEC4_INTERL2-NEXT:  [[ENTRY:.*:]]
+; VEC4_INTERL2-NEXT:    br label %[[VECTOR_PH:.*]]
+; VEC4_INTERL2:       [[VECTOR_PH]]:
+; VEC4_INTERL2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VEC4_INTERL2:       [[VECTOR_BODY]]:
+; VEC4_INTERL2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VEC4_INTERL2-NEXT:    [[VEC_IND:%.*]] = phi <4 x double> [ <double 0.000000e+00, double 1.000000e+00, double 2.000000e+00, double 3.000000e+00>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VEC4_INTERL2-NEXT:    [[STEP_ADD:%.*]] = fadd reassoc <4 x double> [[VEC_IND]], splat (double 4.000000e+00)
+; VEC4_INTERL2-NEXT:    [[TMP0:%.*]] = zext i32 [[INDEX]] to i64
+; VEC4_INTERL2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP0]]
+; VEC4_INTERL2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 32
+; VEC4_INTERL2-NEXT:    store <4 x double> [[VEC_IND]], ptr [[TMP1]], align 8
+; VEC4_INTERL2-NEXT:    store <4 x double> [[STEP_ADD]], ptr [[TMP2]], align 8
+; VEC4_INTERL2-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
+; VEC4_INTERL2-NEXT:    [[VEC_IND_NEXT]] = fadd reassoc <4 x double> [[STEP_ADD]], splat (double 4.000000e+00)
+; VEC4_INTERL2-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], -1294967296
+; VEC4_INTERL2-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
+; VEC4_INTERL2:       [[MIDDLE_BLOCK]]:
+; VEC4_INTERL2-NEXT:    br label %[[SCALAR_PH:.*]]
+; VEC4_INTERL2:       [[SCALAR_PH]]:
+; VEC4_INTERL2-NEXT:    br label %[[LOOP:.*]]
+; VEC4_INTERL2:       [[LOOP]]:
+; VEC4_INTERL2-NEXT:    [[I:%.*]] = phi i32 [ -1294967296, %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; VEC4_INTERL2-NEXT:    [[X:%.*]] = phi double [ f0xC1D34BE880000000, %[[SCALAR_PH]] ], [ [[X_NEXT:%.*]], %[[LOOP]] ]
+; VEC4_INTERL2-NEXT:    [[IDX:%.*]] = zext i32 [[I]] to i64
+; VEC4_INTERL2-NEXT:    [[GEP:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[IDX]]
+; VEC4_INTERL2-NEXT:    store double [[X]], ptr [[GEP]], align 8
+; VEC4_INTERL2-NEXT:    [[X_NEXT]] = fadd reassoc double [[X]], 1.000000e+00
+; VEC4_INTERL2-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; VEC4_INTERL2-NEXT:    [[EC:%.*]] = icmp eq i32 [[I_NEXT]], -1294967295
+; VEC4_INTERL2-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP27:![0-9]+]]
+; VEC4_INTERL2:       [[EXIT]]:
+; VEC4_INTERL2-NEXT:    [[X_NEXT_LCSSA:%.*]] = phi double [ [[X_NEXT]], %[[LOOP]] ]
+; VEC4_INTERL2-NEXT:    ret double [[X_NEXT_LCSSA]]
+;
+; VEC1_INTERL2-LABEL: define double @fp_iv_trip_count_above_signed_i32_max(
+; VEC1_INTERL2-SAME: ptr noalias [[A:%.*]]) {
+; VEC1_INTERL2-NEXT:  [[ENTRY:.*:]]
+; VEC1_INTERL2-NEXT:    br label %[[VECTOR_PH:.*]]
+; VEC1_INTERL2:       [[VECTOR_PH]]:
+; VEC1_INTERL2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VEC1_INTERL2:       [[VECTOR_BODY]]:
+; VEC1_INTERL2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VEC1_INTERL2-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 1
+; VEC1_INTERL2-NEXT:    [[TMP1:%.*]] = sitofp i32 [[INDEX]] to double
+; VEC1_INTERL2-NEXT:    [[TMP2:%.*]] = fmul reassoc double 1.000000e+00, [[TMP1]]
+; VEC1_INTERL2-NEXT:    [[TMP3:%.*]] = fadd reassoc double 0.000000e+00, [[TMP2]]
+; VEC1_INTERL2-NEXT:    [[TMP4:%.*]] = fadd reassoc double [[TMP3]], 1.000000e+00
+; VEC1_INTERL2-NEXT:    [[TMP5:%.*]] = zext i32 [[INDEX]] to i64
+; VEC1_INTERL2-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP0]] to i64
+; VEC1_INTERL2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP5]]
+; VEC1_INTERL2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP6]]
+; VEC1_INTERL2-NEXT:    store double [[TMP3]], ptr [[TMP7]], align 8
+; VEC1_INTERL2-NEXT:    store double [[TMP4]], ptr [[TMP8]], align 8
+; VEC1_INTERL2-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; VEC1_INTERL2-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], -1294967296
+; VEC1_INTERL2-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
+; VEC1_INTERL2:       [[MIDDLE_BLOCK]]:
+; VEC1_INTERL2-NEXT:    br label %[[SCALAR_PH:.*]]
+; VEC1_INTERL2:       [[SCALAR_PH]]:
+; VEC1_INTERL2-NEXT:    br label %[[LOOP:.*]]
+; VEC1_INTERL2:       [[LOOP]]:
+; VEC1_INTERL2-NEXT:    [[I:%.*]] = phi i32 [ -1294967296, %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; VEC1_INTERL2-NEXT:    [[X:%.*]] = phi double [ f0xC1D34BE880000000, %[[SCALAR_PH]] ], [ [[X_NEXT:%.*]], %[[LOOP]] ]
+; VEC1_INTERL2-NEXT:    [[IDX:%.*]] = zext i32 [[I]] to i64
+; VEC1_INTERL2-NEXT:    [[GEP:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[IDX]]
+; VEC1_INTERL2-NEXT:    store double [[X]], ptr [[GEP]], align 8
+; VEC1_INTERL2-NEXT:    [[X_NEXT]] = fadd reassoc double [[X]], 1.000000e+00
+; VEC1_INTERL2-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; VEC1_INTERL2-NEXT:    [[EC:%.*]] = icmp eq i32 [[I_NEXT]], -1294967295
+; VEC1_INTERL2-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP27:![0-9]+]]
+; VEC1_INTERL2:       [[EXIT]]:
+; VEC1_INTERL2-NEXT:    [[X_NEXT_LCSSA:%.*]] = phi double [ [[X_NEXT]], %[[LOOP]] ]
+; VEC1_INTERL2-NEXT:    ret double [[X_NEXT_LCSSA]]
+;
+; VEC2_INTERL1_PRED_STORE-LABEL: define double @fp_iv_trip_count_above_signed_i32_max(
+; VEC2_INTERL1_PRED_STORE-SAME: ptr noalias [[A:%.*]]) {
+; VEC2_INTERL1_PRED_STORE-NEXT:  [[ENTRY:.*:]]
+; VEC2_INTERL1_PRED_STORE-NEXT:    br label %[[VECTOR_PH:.*]]
+; VEC2_INTERL1_PRED_STORE:       [[VECTOR_PH]]:
+; VEC2_INTERL1_PRED_STORE-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VEC2_INTERL1_PRED_STORE:       [[VECTOR_BODY]]:
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[VEC_IND:%.*]] = phi <2 x double> [ <double 0.000000e+00, double 1.000000e+00>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP0:%.*]] = zext i32 [[INDEX]] to i64
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP0]]
+; VEC2_INTERL1_PRED_STORE-NEXT:    store <2 x double> [[VEC_IND]], ptr [[TMP1]], align 8
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[VEC_IND_NEXT]] = fadd reassoc <2 x double> [[VEC_IND]], splat (double 2.000000e+00)
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], -1294967296
+; VEC2_INTERL1_PRED_STORE-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
+; VEC2_INTERL1_PRED_STORE:       [[MIDDLE_BLOCK]]:
+; VEC2_INTERL1_PRED_STORE-NEXT:    br label %[[SCALAR_PH:.*]]
+; VEC2_INTERL1_PRED_STORE:       [[SCALAR_PH]]:
+; VEC2_INTERL1_PRED_STORE-NEXT:    br label %[[LOOP:.*]]
+; VEC2_INTERL1_PRED_STORE:       [[LOOP]]:
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[I:%.*]] = phi i32 [ -1294967296, %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[X:%.*]] = phi double [ f0xC1D34BE880000000, %[[SCALAR_PH]] ], [ [[X_NEXT:%.*]], %[[LOOP]] ]
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[IDX:%.*]] = zext i32 [[I]] to i64
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[GEP:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[IDX]]
+; VEC2_INTERL1_PRED_STORE-NEXT:    store double [[X]], ptr [[GEP]], align 8
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[X_NEXT]] = fadd reassoc double [[X]], 1.000000e+00
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[EC:%.*]] = icmp eq i32 [[I_NEXT]], -1294967295
+; VEC2_INTERL1_PRED_STORE-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP27:![0-9]+]]
+; VEC2_INTERL1_PRED_STORE:       [[EXIT]]:
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[X_NEXT_LCSSA:%.*]] = phi double [ [[X_NEXT]], %[[LOOP]] ]
+; VEC2_INTERL1_PRED_STORE-NEXT:    ret double [[X_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  %x = phi double [ 0.0, %entry ], [ %x.next, %loop ]
+  %idx = zext i32 %i to i64
+  %gep = getelementptr inbounds double, ptr %A, i64 %idx
+  store double %x, ptr %gep, align 8
+  %x.next = fadd reassoc double %x, 1.000000e+00
+  %i.next = add nuw i32 %i, 1
+  %ec = icmp eq i32 %i.next, 3000000001
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret double %x.next
+}
+
 !llvm.module.flags = !{!3}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1)

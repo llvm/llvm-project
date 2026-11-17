@@ -131,6 +131,7 @@ add_libc_test(
   DEPENDS
     libc.src.__support.alloc_checker
     libc.src.__support.checked_ptr
+    libc.src.__support.CPP.nullptr_t
     libc.src.__support.CPP.type_traits
     libc.src.__support.CPP.unique_ptr
     libc.src.__support.CPP.utility

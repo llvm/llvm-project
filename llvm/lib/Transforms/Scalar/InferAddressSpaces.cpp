@@ -717,6 +717,15 @@ InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) const {
     appendsFlatAddressExpressionToPostorderStack(Ptr, PostorderStack, Visited);
   };
 
+  // Constant expressions in instruction operands that were already checked for
+  // an addrspacecast from flat, see below.
+  DenseSet<ConstantExpr *> VisitedCE;
+  SmallVector<ConstantExpr *, 8> CEWorklist;
+  auto PushConstantExpr = [&](Value *V) {
+    if (auto *CE = dyn_cast<ConstantExpr>(V); CE && VisitedCE.insert(CE).second)
+      CEWorklist.push_back(CE);
+  };
+
   // Look at operations that may be interesting accelerate by moving to a known
   // address space. We aim at generating after loads and stores, but pure
   // addressing calculations may also be faster.
@@ -756,6 +765,21 @@ InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) const {
       if (auto *RV = RI->getReturnValue();
           RV && RV->getType()->isPtrOrPtrVectorTy())
         PushPtrOperand(RV);
+    }
+
+    // An addrspacecast from flat folded into a constant expression, possibly
+    // nested, is not an AddrSpaceCastInst, so the checks above miss it, e.g. in
+    // a call operand. Use its pointer operand as a root in the same way. Other
+    // constant expressions only produce another flat pointer.
+    for (Value *Op : I.operands())
+      PushConstantExpr(Op);
+    while (!CEWorklist.empty()) {
+      ConstantExpr *CE = CEWorklist.pop_back_val();
+      if (auto *ASC = dyn_cast<AddrSpaceCastOperator>(CE);
+          ASC && ASC->getSrcAddressSpace() == FlatAddrSpace)
+        PushPtrOperand(ASC->getPointerOperand());
+      for (Value *Op : CE->operands())
+        PushConstantExpr(Op);
     }
   }
 

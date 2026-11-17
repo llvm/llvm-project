@@ -3052,6 +3052,15 @@ bool OmpVariantMatchContext::matchesISATrait(llvm::StringRef rawString) const {
   return llvm::is_contained(tokens, want);
 }
 
+bool IsTypeCompatible(const DeclTypeSpec &formal, const DeclTypeSpec &actual) {
+  auto fdt = evaluate::DynamicType::From(formal);
+  auto adt = evaluate::DynamicType::From(actual);
+  if (fdt && adt) {
+    return fdt->IsTkCompatibleWith(*adt);
+  }
+  return false;
+}
+
 // User-defined reduction resolution, shared between the OpenMP semantic checks
 // and lowering. The two public entry points (FindUserReductionSymbol and
 // FindOperatorUserReductionSymbol) return the resolved (non-ultimate) reduction

@@ -53,7 +53,7 @@ jobs:
     timeout-minutes: 20
     runs-on: ubuntu-26.04
     container:
-      image: 'ghcr.io/llvm/libc-ubuntu-26.04:latest@sha256:5d836720f9ddf2cf17f27773830a5932e100af303ad1fe051a2bf889b59dfccd'
+      image: 'ghcr.io/llvm/libc-ubuntu-26.04:latest@sha256:589c2eae73af31daa0b82b074da719f7fe8ffa87ea0b58f128770a826a16619d'
     strategy:
       fail-fast: false # If one arch fails, let the other finish
       matrix:
@@ -91,10 +91,10 @@ jobs:
         run: |
           cmake -B build/clang -S runtimes -G Ninja \
             -DLLVM_ENABLE_RUNTIMES=libc \
-            -DCMAKE_C_COMPILER=clang-23 \
-            -DCMAKE_CXX_COMPILER=clang++-23 \
+            -DCMAKE_C_COMPILER=clang-24 \
+            -DCMAKE_CXX_COMPILER=clang++-24 \
             -DCMAKE_BUILD_TYPE=Release \
-            -DLLVM_USE_LINKER=lld-23 \
+            -DLLVM_USE_LINKER=lld-24 \
             -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }} \
             -DCMAKE_CROSSCOMPILING_EMULATOR=/__w/llvm-project/llvm-project/build/qemu-wrapper.sh
 
@@ -126,7 +126,7 @@ jobs:
     timeout-minutes: 20
     runs-on: ubuntu-26.04
     container:
-      image: 'ghcr.io/llvm/libc-ubuntu-26.04:latest@sha256:5d836720f9ddf2cf17f27773830a5932e100af303ad1fe051a2bf889b59dfccd'
+      image: 'ghcr.io/llvm/libc-ubuntu-26.04:latest@sha256:589c2eae73af31daa0b82b074da719f7fe8ffa87ea0b58f128770a826a16619d'
     strategy:
       fail-fast: false # If one arch fails, let the other finish
       matrix:

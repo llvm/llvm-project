@@ -4553,6 +4553,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // be simplified by a later pass either, so we try swapping the inner/outer
   // ORs in the hopes that we'll be able to simplify it this way.
   // (X|C) | V --> (X|V) | C
+  // V | (X|C) --> (X|V) | C
   // Pass the disjoint flag in the following two patterns:
   // 1. or-disjoint (or-disjoint X, C), V -->
   //    or-disjoint (or-disjoint X, V), C
@@ -4560,12 +4561,16 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // 2. or-disjoint (or X, C), V -->
   //    or (or-disjoint X, V), C
   ConstantInt *CI;
-  if (Op0->hasOneUse() && !match(Op1, m_ConstantInt()) &&
-      match(Op0, m_Or(m_Value(A), m_ConstantInt(CI)))) {
+  Instruction *InnerOr;
+  Value *V;
+  if (match(&I, m_c_Or(m_OneUse(m_Instruction(
+                           InnerOr, m_Or(m_Value(A), m_ConstantInt(CI)))),
+                       m_Value(V))) &&
+      !match(V, m_ConstantInt())) {
     bool IsDisjointOuter = cast<PossiblyDisjointInst>(I).isDisjoint();
-    bool IsDisjointInner = cast<PossiblyDisjointInst>(Op0)->isDisjoint();
-    Value *Inner = Builder.CreateOr(A, Op1, "", /*IsDisjoint=*/IsDisjointOuter);
-    Inner->takeName(Op0);
+    bool IsDisjointInner = cast<PossiblyDisjointInst>(InnerOr)->isDisjoint();
+    Value *Inner = Builder.CreateOr(A, V, "", /*IsDisjoint=*/IsDisjointOuter);
+    Inner->takeName(InnerOr);
     return IsDisjointOuter && IsDisjointInner
                ? BinaryOperator::CreateDisjointOr(Inner, CI)
                : BinaryOperator::CreateOr(Inner, CI);

@@ -268,10 +268,9 @@ void CIRGenItaniumCXXABI::emitInstanceFunctionProlog(SourceLocation loc,
   /// 1) getThisValue is currently protected
   /// 2) in theory, an ABI could implement 'this' returns some other way;
   ///    HasThisReturn only specifies a contract, not the implementation
-  if (hasThisReturn(cgf.curGD)) {
-    cgf.cgm.errorNYI(cgf.curFuncDecl->getLocation(),
-                     "emitInstanceFunctionProlog: hasThisReturn");
-  }
+  if (hasThisReturn(cgf.curGD))
+    cgf.getBuilder().createStore(cgf.getLoc(loc), cgf.cxxabiThisValue,
+                                 cgf.returnValue);
 }
 
 CIRGenCXXABI::AddedStructorArgCounts
@@ -525,6 +524,9 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
   vtable.setLinkage(linkage);
   mlir::SymbolTable::setSymbolVisibility(
       vtable, CIRGenModule::getMLIRVisibility(vtable));
+
+  if (cgm.mayVTableBeDuplicated(linkage))
+    vtable.setUnnamedAddr(true);
 
   if (cgm.supportsCOMDAT() && cir::isWeakForLinker(linkage))
     vtable.setSelfComdat();
@@ -1622,8 +1624,8 @@ cir::GlobalOp CIRGenItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *rd,
       cgm.getLoc(rd->getSourceRange()), name, vtableType,
       cir::GlobalLinkageKind::ExternalLinkage,
       cgm.getASTContext().toCharUnitsFromBits(ptrAlign));
-  // LLVM codegen handles unnamedAddr
-  assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+  if (!cgm.shouldEmitRTTI())
+    vtable.setUnnamedAddr(true);
 
   // In MS C++ if you have a class with virtual functions in which you are using
   // selective member import/export, then all virtual functions must be exported
@@ -1656,29 +1658,25 @@ CIRGenCallee CIRGenItaniumCXXABI::getVirtualFunctionPointer(
   } else {
     assert(!cir::MissingFeatures::emitTypeMetadataCodeForVCall());
 
-    mlir::Value vfuncLoad;
     if (cgm.getLangOpts().RelativeCXXABIVTables) {
       assert(!cir::MissingFeatures::vtableRelativeLayout());
       cgm.errorNYI(loc, "getVirtualFunctionPointer: isRelativeLayout");
     } else {
-      auto vtableSlotPtr = cir::VTableGetVirtualFnAddrOp::create(
-          builder, loc, builder.getPointerTo(tyPtr), vtable, vtableIndex);
-      vfuncLoad = builder.createAlignedLoad(loc, tyPtr, vtableSlotPtr,
-                                            cgf.getPointerAlign());
+      auto vfuncOp = cir::VTableGetVirtualFnOp::create(builder, loc, tyPtr,
+                                                       vtable, vtableIndex);
+
+      // Set invariant on the virtual function pointer load to indicate that
+      // function didn't change inside vtable.
+      // It's safe to add it without -fstrict-vtable-pointers, but it would not
+      // help in devirtualization because it will only matter if we will have 2
+      // the same virtual function loads from the same vtable load, which won't
+      // happen without enabled devirtualization with -fstrict-vtable-pointers.
+      if (cgm.getCodeGenOpts().OptimizationLevel > 0 &&
+          cgm.getCodeGenOpts().StrictVTablePointers)
+        vfuncOp.setInvariant(true);
+
+      vfunc = vfuncOp;
     }
-
-    // Set invariant on the cir.load of virtual function pointer to indicate
-    // that function didn't change inside vtable.
-    // It's safe to add it without -fstrict-vtable-pointers, but it would not
-    // help in devirtualization because it will only matter if we will have 2
-    // the same virtual function loads from the same vtable load, which won't
-    // happen without enabled devirtualization with -fstrict-vtable-pointers.
-    if (cgm.getCodeGenOpts().OptimizationLevel > 0 &&
-        cgm.getCodeGenOpts().StrictVTablePointers)
-      if (auto loadOp = vfuncLoad.getDefiningOp<cir::LoadOp>())
-        loadOp.setInvariant(true);
-
-    vfunc = vfuncLoad;
   }
 
   CIRGenCallee callee(gd, vfunc.getDefiningOp());

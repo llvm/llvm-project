@@ -376,3 +376,4 @@ body:             |
     %copy_assert_zext2:_(i32) = G_ASSERT_ZEXT %copy_assert_zext1(i32), 16
     %copy_assert_zext3:_(i32) = G_ASSERT_ZEXT %copy_assert_zext2(i32), 16
     G_BR %bb.0
+...
