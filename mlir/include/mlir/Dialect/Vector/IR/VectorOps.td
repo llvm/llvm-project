@@ -1383,7 +1383,8 @@ def Vector_TransferReadOp :
     When wrapped in `vector.mask`, only the lanes enabled by the mask access
     the MemRef/Tensor. The lanes disabled by the mask take the value of the
     pass-thru, if provided, and `padding` otherwise. An enabled lane that
-    accesses the MemRef/Tensor out-of-bounds is undefined behavior.
+    accesses the MemRef/Tensor out-of-bounds is undefined behavior, unless
+    `in_bounds` is false for that dimension.
 
     For every vector dimension, the boolean array attribute `in_bounds`
     specifies if the transfer is guaranteed to be within the source bounds. If
@@ -1641,7 +1642,8 @@ def Vector_TransferWriteOp :
     the MemRef/Tensor. The lanes disabled by the mask are not written: the
     MemRef keeps its previous contents and the result Tensor takes the
     corresponding elements of the destination Tensor. An enabled lane that
-    accesses the MemRef/Tensor out-of-bounds is undefined behavior.
+    accesses the MemRef/Tensor out-of-bounds is undefined behavior, unless
+    `in_bounds` is false for that dimension.
 
     For every vector dimension, the boolean array attribute `in_bounds`
     specifies if the transfer is guaranteed to be within the source bounds. If
