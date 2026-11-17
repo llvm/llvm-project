@@ -1007,7 +1007,7 @@ bool DefGenerator::emitDecls(StringRef selectedDialect,
             getDispatchName(dialect, "Printer", partition), Method::None);
         parser.writeDeclTo(indentedOs);
         printer.writeDeclTo(indentedOs);
-        declOs << llvm::formatv(hookDecl.data(),
+        declOs << llvm::formatv(hookDecl,
                                 getRegistrationHookName(dialect, partition),
                                 dialect.getCppClassName());
       };
@@ -1421,22 +1421,22 @@ void DefGenerator::emitRegistrationHooks(ArrayRef<AttrOrTypeDef> defs,
     // TUs (e.g. the transform dialect and its extensions), whose hooks would
     // cause multiple definition errors.
     os << "class " << dialectClass << ";\n"
-       << llvm::formatv(hookDef.data(), "[[maybe_unused]] static ",
+       << llvm::formatv(hookDef, "[[maybe_unused]] static ",
                         getRegistrationHookName(dialect, ""), dialectClass);
     emitInserts();
     return;
   }
 
   if (partitions.front() == selectedPartition) {
-    os << llvm::formatv(hookDef.data(), "",
-                        getRegistrationHookName(dialect, ""), dialectClass);
+    os << llvm::formatv(hookDef, "", getRegistrationHookName(dialect, ""),
+                        dialectClass);
     for (StringRef partition : partitions)
       os << "  " << dialect.getCppNamespace()
          << "::" << getRegistrationHookName(dialect, partition)
          << "(dialect);\n";
     os << "}\n";
   }
-  os << llvm::formatv(hookDef.data(), "",
+  os << llvm::formatv(hookDef, "",
                       getRegistrationHookName(dialect, selectedPartition),
                       dialectClass);
   emitInserts();
