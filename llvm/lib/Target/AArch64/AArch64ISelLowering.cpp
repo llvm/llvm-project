@@ -16311,7 +16311,8 @@ AArch64TargetLowering::LowerVECTOR_SHUFFLE_VAR(SDValue Op,
   SDValue Mask = Op.getOperand(1);
   SDLoc DL(Op);
 
-  assert(!VT.isScalableVector() && "Unexpected VECTOR_SHUFFLE_VAR");
+  assert((VT.is64BitVector() || VT.is128BitVector()) &&
+         "Unexpected VECTOR_SHUFFLE_VAR");
 
   EVT IdxVT = VT.changeVectorElementTypeToInteger();
   SDValue Idx = DAG.getZExtOrTrunc(Mask, DL, IdxVT);

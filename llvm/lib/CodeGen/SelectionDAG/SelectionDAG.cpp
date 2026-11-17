@@ -9068,7 +9068,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(VT.getVectorElementCount() == MaskVT.getVectorElementCount() &&
            "VECTOR_SHUFFLE_VAR mask has the wrong number of elements.");
     // The only in-range index is 0; any other index gives poison.
-    if (VT.isFixedLengthVector() && VT.getVectorNumElements() == 1)
+    if (VT.getVectorElementCount().isScalar())
       return N1;
     break;
   }
