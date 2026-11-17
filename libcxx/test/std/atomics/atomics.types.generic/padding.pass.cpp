@@ -10,6 +10,8 @@
 
 // Older Clang doesn't implement __builtin_clear_padding
 // XFAIL: clang-21, apple-clang-21, clang-22
+// Android's Clang 23 prebuilt predates __builtin_clear_padding
+// UNSUPPORTED: clang-23 && LIBCXX-ANDROID-FIXME
 
 // atomic<T>::compare_exchange_weak
 // atomic<T>::compare_exchange_strong
