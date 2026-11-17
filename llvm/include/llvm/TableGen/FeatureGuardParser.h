@@ -25,7 +25,8 @@ using RequiredFeatureSet = std::set<std::string>;
 // cannot be satisfied. Repeated clauses are discarded.
 using FeatureGuardAlternatives = std::set<RequiredFeatureSet>;
 
-// Parse ',' as conjunction and '|' as disjunction. Only spaces are treated as
+// Parse ',' as conjunction and '|' as disjunction. Mixing the operators at
+// the same parenthesis level is invalid. Only spaces are treated as
 // whitespace; tabs and line breaks are invalid. The result is in disjunctive
 // normal form.
 class FeatureGuardParser {
@@ -49,7 +50,7 @@ private:
 
   FeatureGuardAlternatives parseAtom() {
     if (consume("(")) {
-      FeatureGuardAlternatives G = parseOr();
+      FeatureGuardAlternatives G = parseExpression();
       if (!consume(")"))
         error("unclosed target guard expression");
       return G;
@@ -62,10 +63,27 @@ private:
     return {{Name.str()}};
   }
 
-  FeatureGuardAlternatives parseAnd() {
+  FeatureGuardAlternatives parseExpression() {
     FeatureGuardAlternatives LHS = parseAtom();
-    while (consume(",")) {
+    enum class Operator { None, And, Or };
+    Operator Current = Operator::None;
+    while (true) {
+      Operator Next;
+      if (consume(","))
+        Next = Operator::And;
+      else if (consume("|"))
+        Next = Operator::Or;
+      else
+        break;
+      if (Current != Operator::None && Current != Next)
+        error("mixed ',' and '|' in target guard; use parentheses to group "
+              "them");
+      Current = Next;
       FeatureGuardAlternatives RHS = parseAtom();
+      if (Current == Operator::Or) {
+        LHS.insert(RHS.begin(), RHS.end());
+        continue;
+      }
       FeatureGuardAlternatives Product;
       for (const RequiredFeatureSet &L : LHS) {
         for (const RequiredFeatureSet &R : RHS) {
@@ -79,15 +97,6 @@ private:
     return LHS;
   }
 
-  FeatureGuardAlternatives parseOr() {
-    FeatureGuardAlternatives LHS = parseAnd();
-    while (consume("|")) {
-      FeatureGuardAlternatives RHS = parseAnd();
-      LHS.insert(RHS.begin(), RHS.end());
-    }
-    return LHS;
-  }
-
 public:
   FeatureGuardParser(StringRef Text, ErrorHandler HandleError)
       : Remaining(Text), HandleError(HandleError) {}
@@ -96,7 +105,7 @@ public:
     Remaining = Remaining.trim(' ');
     if (Remaining.empty())
       return {};
-    FeatureGuardAlternatives G = parseOr();
+    FeatureGuardAlternatives G = parseExpression();
     if (!Remaining.trim(' ').empty())
       error("invalid target guard expression: " + Remaining);
     return G;

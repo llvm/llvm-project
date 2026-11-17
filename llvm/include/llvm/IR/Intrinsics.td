@@ -845,6 +845,8 @@ class DefaultAttrsIntrinsic<list<LLVMType> ret_types,
 // each position means. With no overload list, the guards apply to every valid
 // overload and this must be the intrinsic's only TargetGuards variant. A list
 // containing one empty type list matches an intrinsic with no overloaded types.
+// Guard expressions use ',' for AND and '|' for OR. Parentheses are required
+// when an expression uses both operators.
 class GuardedVariant<list<string> guards,
                      list<list<LLVMType>> overloads = []> {
   list<string> Guards = guards;

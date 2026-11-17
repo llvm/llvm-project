@@ -9,8 +9,8 @@ llvm_tablegen(AutomataTables.inc -gen-searchable-tables)
 llvm_tablegen(AutomataAutomata.inc -gen-automata)
 
 set(LLVM_TARGET_DEFINITIONS
-  ${LLVM_MAIN_SRC_DIR}/test/TableGen/IntrinsicFeatureChecksSingleGuard.td)
-llvm_tablegen(IntrinsicFeatureChecksSingleGuard.inc
+  ${LLVM_MAIN_SRC_DIR}/test/TableGen/IntrinsicFeatureChecksGuards.td)
+llvm_tablegen(IntrinsicFeatureChecksGuards.inc
   -gen-intrinsic-feature-checks
   -intrinsic-feature-prefix=test
   -intrinsic-feature-namespace=TestTarget

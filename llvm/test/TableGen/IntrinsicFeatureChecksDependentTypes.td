@@ -2,12 +2,12 @@
 // RUN:   -intrinsic-feature-prefix=test -intrinsic-feature-namespace=TestTarget \
 // RUN:   -I %p/../../include %s | FileCheck %s
 
-// Check the instantiated result and input types for each guarded overload.
-// CHECK-DAG: MVT::f32, MVT::v4i32, MVT::v4i1, MVT::v2f32, MVT::v8f16, MVT::v4f32, // int_test_dependent_float
-// CHECK-DAG: MVT::i32, MVT::i32, MVT::i16, MVT::i64, MVT::i16, // int_test_dependent_scalar
-// CHECK-DAG: MVT::nxv4i32, MVT::nxv2f32, MVT::nxv8f16, MVT::nxv4f32, // int_test_dependent_scalable
-// CHECK-DAG: MVT::v2i64, MVT::i32, MVT::v4i32, MVT::v4i64, // int_test_dependent_second_overload
-// CHECK-DAG: MVT::i32, MVT::v2i32, MVT::v8i16, MVT::v16i8, MVT::v4i32, MVT::v4i64, MVT::v4i16, // int_test_dependent_vector
+// Check that only overload types are stored, including every overload parameter.
+// CHECK-DAG: MVT::v4f32, // int_test_dependent_float
+// CHECK-DAG: MVT::i32, // int_test_dependent_scalar
+// CHECK-DAG: MVT::nxv4f32, // int_test_dependent_scalable
+// CHECK-DAG: MVT::v2i64, MVT::v4i32, // int_test_dependent_second_overload
+// CHECK-DAG: MVT::v4i32, // int_test_dependent_vector
 
 include "llvm/IR/Intrinsics.td"
 include "llvm/Target/TargetSubtarget.td"

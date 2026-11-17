@@ -25,8 +25,10 @@ TEST(FeatureGuardParserTest, EmptyGuard) {
 }
 
 TEST(FeatureGuardParserTest, ConjunctionAndDisjunction) {
-  EXPECT_EQ(parseGuard("a,b|c"), (FeatureGuardAlternatives{{"a", "b"}, {"c"}}));
-  EXPECT_EQ(parseGuard("a|b,c"), (FeatureGuardAlternatives{{"a"}, {"b", "c"}}));
+  EXPECT_EQ(parseGuard("(a,b)|c"),
+            (FeatureGuardAlternatives{{"a", "b"}, {"c"}}));
+  EXPECT_EQ(parseGuard("a|(b,c)"),
+            (FeatureGuardAlternatives{{"a"}, {"b", "c"}}));
 }
 
 TEST(FeatureGuardParserTest, ParenthesesDistributeConjunction) {
@@ -40,7 +42,7 @@ TEST(FeatureGuardParserTest, ParenthesesDistributeConjunction) {
 TEST(FeatureGuardParserTest, WhitespaceAndDuplicates) {
   EXPECT_EQ(parseGuard(" ( a | b ) , c "),
             (FeatureGuardAlternatives{{"a", "c"}, {"b", "c"}}));
-  EXPECT_EQ(parseGuard("a,a|a"), (FeatureGuardAlternatives{{"a"}}));
+  EXPECT_EQ(parseGuard("(a,a)|a"), (FeatureGuardAlternatives{{"a"}}));
 }
 
 TEST(FeatureGuardParserDeathTest, InvalidExpressions) {
@@ -51,6 +53,12 @@ TEST(FeatureGuardParserDeathTest, InvalidExpressions) {
   };
   EXPECT_EXIT(FeatureGuardParser("a|", ReportError).parse(),
               testing::ExitedWithCode(1), "expected feature in target guard");
+  EXPECT_EXIT(FeatureGuardParser("a|b,c", ReportError).parse(),
+              testing::ExitedWithCode(1),
+              "mixed ',' and '\\|' in target guard");
+  EXPECT_EXIT(FeatureGuardParser("a,b|c", ReportError).parse(),
+              testing::ExitedWithCode(1),
+              "mixed ',' and '\\|' in target guard");
   EXPECT_EXIT(FeatureGuardParser("(a|b", ReportError).parse(),
               testing::ExitedWithCode(1), "unclosed target guard expression");
   EXPECT_EXIT(FeatureGuardParser("a)b", ReportError).parse(),
