@@ -3003,6 +3003,12 @@ bool Sema::AttachBaseSpecifiers(CXXRecordDecl *Class,
   // Copy non-redundant base specifiers into permanent storage.
   unsigned NumGoodBases = 0;
   bool Invalid = false;
+
+  if (getLangOpts().HLSL && Bases.size() > 1) {
+    Diag(Bases[1]->getBeginLoc(), diag::err_hlsl_mult_inheritance);
+    Invalid = true;
+  }
+
   for (unsigned idx = 0; idx < Bases.size(); ++idx) {
     QualType NewBaseType
       = Context.getCanonicalType(Bases[idx]->getType());
