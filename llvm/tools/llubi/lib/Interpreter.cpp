@@ -1045,13 +1045,21 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return IsStore ? AnyValue() : Data;
   }
 
-  /// Implements llvm.vp.load and llvm.vp.store as the corresponding masked
+  /// Returns \p Ptr, the pointer argument of the VP memory intrinsic \p CB.
+  /// Without an align attribute it must have the ABI alignment of \p Ty.
+  AnyValue withVPDefaultAlign(CallBase &CB, AnyValue Ptr, Type *Ty) {
+    if (!cast<VPIntrinsic>(CB).getPointerAlignment())
+      applyAlignAttr(Ptr, DL.getABITypeAlign(Ty));
+    return Ptr;
+  }
+
+  /// Implements llvm.vp.{load,store,gather,scatter} as the corresponding masked
   /// intrinsic. Lanes at or past \p EVL are disabled even if their \p Mask lane
-  /// is poison, and without an align attribute the base pointer must have the
-  /// ABI alignment of the vector type.
-  AnyValue callVPLoadStoreIntrinsic(CallBase &CB, AnyValue Ptr,
+  /// is poison.
+  AnyValue callVPLoadStoreIntrinsic(CallBase &CB, const AnyValue &Ptr,
                                     const AnyValue &Mask, const AnyValue &EVL,
-                                    AnyValue Data, bool IsStore) {
+                                    AnyValue Data, MaskedAddrMode Mode,
+                                    bool IsStore) {
     StringRef IntrinsicName = Intrinsic::getBaseName(CB.getIntrinsicID());
     if (EVL.isPoison()) {
       reportImmediateUB() << IntrinsicName
@@ -1069,13 +1077,36 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     for (uint64_t I = EVLInt.getZExtValue(); I != EnabledMask.size(); ++I)
       EnabledMask[I] = AnyValue::boolean(false);
 
-    if (!CB.getParamAlign(IsStore ? 1 : 0)) {
-      Type *VecTy = IsStore ? CB.getArgOperand(0)->getType() : CB.getType();
-      applyAlignAttr(Ptr, DL.getABITypeAlign(VecTy));
-    }
     return callMaskedLoadStoreIntrinsic(CB, Ptr, std::move(EnabledMask),
-                                        std::move(Data),
-                                        MaskedAddrMode::Consecutive, IsStore);
+                                        std::move(Data), Mode, IsStore);
+  }
+
+  /// Implements llvm.experimental.vp.strided.{load,store} as a vp.gather or
+  /// vp.scatter of the pointers <Ptr, Ptr + Stride, Ptr + 2 * Stride, ...>,
+  /// where \p Stride is signed and the arithmetic wraps in the pointer index
+  /// type. Lane 0 is \p Ptr even if \p Stride is poison. The alignment, from
+  /// an align attribute or else the element type's ABI alignment, only applies
+  /// to \p Ptr, not to the other lanes' pointers.
+  AnyValue callVPStridedLoadStoreIntrinsic(CallBase &CB, const AnyValue &Ptr,
+                                           const AnyValue &Stride,
+                                           const AnyValue &Mask,
+                                           const AnyValue &EVL, AnyValue Data,
+                                           bool IsStore) {
+    const unsigned IndexBW =
+        DL.getIndexTypeSizeInBits(CB.getArgOperand(IsStore ? 1 : 0)->getType());
+    const AnyValue StrideIdx =
+        Context::canonicalizeIndex(Stride, IndexBW, GEPNoWrapFlags::none());
+    std::vector<AnyValue> LanePtrs(Mask.asAggregate().size(), Ptr);
+    for (auto [I, LanePtr] : drop_begin(enumerate(LanePtrs))) {
+      AnyValue AccumulatedOffset = AnyValue::poison();
+      LanePtr = Ctx.computeScaledPtrAdd(
+          Ptr, StrideIdx,
+          APInt(IndexBW, I, /*isSigned=*/false, /*implicitTrunc=*/true),
+          GEPNoWrapFlags::none(), AccumulatedOffset);
+    }
+    return callVPLoadStoreIntrinsic(CB, std::move(LanePtrs), Mask, EVL,
+                                    std::move(Data), MaskedAddrMode::PerLane,
+                                    IsStore);
   }
 
   /// Implements llvm.matrix.column.major.store. Column C of \p Data is stored
@@ -2158,12 +2189,40 @@ public:
                                           MaskedAddrMode::Compressed,
                                           /*IsStore=*/true);
     case Intrinsic::vp_load:
-      return callVPLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2],
-                                      AnyValue::getPoisonValue(Ctx, RetTy),
-                                      /*IsStore=*/false);
+      return callVPLoadStoreIntrinsic(
+          CB, withVPDefaultAlign(CB, Args[0], RetTy), Args[1], Args[2],
+          AnyValue::getPoisonValue(Ctx, RetTy), MaskedAddrMode::Consecutive,
+          /*IsStore=*/false);
     case Intrinsic::vp_store:
-      return callVPLoadStoreIntrinsic(CB, Args[1], Args[2], Args[3], Args[0],
-                                      /*IsStore=*/true);
+      return callVPLoadStoreIntrinsic(
+          CB, withVPDefaultAlign(CB, Args[1], CB.getArgOperand(0)->getType()),
+          Args[2], Args[3], Args[0], MaskedAddrMode::Consecutive,
+          /*IsStore=*/true);
+    case Intrinsic::vp_gather:
+      return callVPLoadStoreIntrinsic(
+          CB, withVPDefaultAlign(CB, Args[0], RetTy->getScalarType()), Args[1],
+          Args[2], AnyValue::getPoisonValue(Ctx, RetTy),
+          MaskedAddrMode::PerLane,
+          /*IsStore=*/false);
+    case Intrinsic::vp_scatter:
+      return callVPLoadStoreIntrinsic(
+          CB,
+          withVPDefaultAlign(CB, Args[1],
+                             CB.getArgOperand(0)->getType()->getScalarType()),
+          Args[2], Args[3], Args[0], MaskedAddrMode::PerLane,
+          /*IsStore=*/true);
+    case Intrinsic::experimental_vp_strided_load:
+      return callVPStridedLoadStoreIntrinsic(
+          CB, withVPDefaultAlign(CB, Args[0], RetTy->getScalarType()), Args[1],
+          Args[2], Args[3], AnyValue::getPoisonValue(Ctx, RetTy),
+          /*IsStore=*/false);
+    case Intrinsic::experimental_vp_strided_store:
+      return callVPStridedLoadStoreIntrinsic(
+          CB,
+          withVPDefaultAlign(CB, Args[1],
+                             CB.getArgOperand(0)->getType()->getScalarType()),
+          Args[2], Args[3], Args[4], Args[0],
+          /*IsStore=*/true);
     case Intrinsic::vp_merge: {
       std::vector<AnyValue> Cond(Args[0].asAggregate());
       const AnyValue &EVL = Args[3];
