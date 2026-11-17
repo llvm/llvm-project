@@ -74,7 +74,7 @@ bool lldb_private::operator!=(const StackID &lhs, const StackID &rhs) {
   return !(lhs == rhs);
 }
 
-bool StackID::IsYoungerThan(const StackID &other) const {
+bool StackID::IsYoungerThan(const StackID &other, Process &process) const {
   const lldb::addr_t lhs_cfa = GetCallFrameAddressWithoutMetadata();
   const lldb::addr_t rhs_cfa = other.GetCallFrameAddressWithoutMetadata();
 
