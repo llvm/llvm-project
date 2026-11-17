@@ -9,18 +9,24 @@
 #ifndef LLVM_LIB_TARGET_RISCV_RISCVSTATEATTRIBUTES_H
 #define LLVM_LIB_TARGET_RISCV_RISCVSTATEATTRIBUTES_H
 
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 
 namespace llvm {
 namespace RISCVState {
 
-inline constexpr StringLiteral Attributes[] = {
-    "riscv_in", "riscv_out", "riscv_inout", "riscv_preserves", "riscv_new"};
-
 inline bool hasAttribute(const Function &F) {
-  return any_of(Attributes, [&F](StringRef A) { return F.hasFnAttribute(A); });
+  for (Attribute A : F.getAttributes().getFnAttrs()) {
+    if (!A.isStringAttribute())
+      continue;
+
+    StringRef Kind = A.getKindAsString();
+    if (Kind == "riscv_in" || Kind == "riscv_out" ||
+        Kind == "riscv_inout" || Kind == "riscv_preserves" ||
+        Kind == "riscv_new")
+      return true;
+  }
+  return false;
 }
 
 } // namespace RISCVState
