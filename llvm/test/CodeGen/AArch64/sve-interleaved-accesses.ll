@@ -1616,32 +1616,21 @@ define void @store_bfloat_factor2(ptr %ptr, <16 x bfloat> %v0, <16 x bfloat> %v1
 
 ; Ensure vscale_range property does not affect scalable vector types.
 define void @deinterleave_nxptr_factor2(ptr %ptr) #2 {
-; CHECK-IAENABLED-LABEL: deinterleave_nxptr_factor2:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ptrue p0.d
-; CHECK-IAENABLED-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x0]
-; CHECK-IAENABLED-NEXT:    ld2d { z2.d, z3.d }, p0/z, [x0, #2, mul vl]
-; CHECK-IAENABLED-NEXT:    // fake_use: $z0
-; CHECK-IAENABLED-NEXT:    // fake_use: $z2
-; CHECK-IAENABLED-NEXT:    // fake_use: $z1 $z0_z1
-; CHECK-IAENABLED-NEXT:    // fake_use: $z3 $z2_z3
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: deinterleave_nxptr_factor2:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr z0, [x0, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x0]
-; CHECK-IADISABLED-NEXT:    ldr z2, [x0, #3, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z3, [x0, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    uzp1 z4.d, z1.d, z0.d
-; CHECK-IADISABLED-NEXT:    uzp2 z0.d, z1.d, z0.d
-; CHECK-IADISABLED-NEXT:    uzp2 z5.d, z3.d, z2.d
-; CHECK-IADISABLED-NEXT:    uzp1 z1.d, z3.d, z2.d
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1
-; CHECK-IADISABLED-NEXT:    // fake_use: $z0
-; CHECK-IADISABLED-NEXT:    // fake_use: $z5
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: deinterleave_nxptr_factor2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x0, #1, mul vl]
+; CHECK-NEXT:    ldr z1, [x0]
+; CHECK-NEXT:    ldr z2, [x0, #3, mul vl]
+; CHECK-NEXT:    ldr z3, [x0, #2, mul vl]
+; CHECK-NEXT:    uzp1 z4.d, z1.d, z0.d
+; CHECK-NEXT:    uzp2 z0.d, z1.d, z0.d
+; CHECK-NEXT:    uzp2 z5.d, z3.d, z2.d
+; CHECK-NEXT:    uzp1 z1.d, z3.d, z2.d
+; CHECK-NEXT:    // fake_use: $z4
+; CHECK-NEXT:    // fake_use: $z1
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z5
+; CHECK-NEXT:    ret
   %wide.vec = load <vscale x 8 x double>, ptr %ptr, align 8
   %ldN = tail call { <vscale x 4 x double>, <vscale x 4 x double> } @llvm.vector.deinterleave2.nxv8f64(<vscale x 8 x double> %wide.vec)
   %extract1 = extractvalue { <vscale x 4 x double>, <vscale x 4 x double> } %ldN, 0

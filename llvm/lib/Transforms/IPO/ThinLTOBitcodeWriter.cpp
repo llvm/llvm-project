@@ -31,14 +31,11 @@ using namespace llvm;
 namespace {
 
 // Promote each local-linkage entity defined by ExportM and used by ImportM by
-// changing visibility and appending ".llvm" + ModuleId (matching
+// changing visibility and appending ".llvm." + ModuleId (matching
 // ModuleSummaryIndex::getGlobalNameForLocal so downstream PGO, SamplePGO,
 // MemProf, and linker symbol canonicalization strip the promotion suffix).
 void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
                       SetVector<GlobalValue *> *PromoteExtra = nullptr) {
-  assert(ModuleId.starts_with(".") &&
-         "Expected getUniqueModuleId to return a leading dot");
-  StringRef ModuleHashStr = ModuleId.drop_front();
   DenseMap<const Comdat *, Comdat *> RenamedComdats;
   for (auto &ExportGV : ExportM.global_values()) {
     if (!ExportGV.hasLocalLinkage())
@@ -59,7 +56,7 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
     }
 
     std::string NewName =
-        ModuleSummaryIndex::getGlobalNameForLocal(Name, ModuleHashStr);
+        ModuleSummaryIndex::getGlobalNameForLocal(Name, ModuleId);
 
     if (const auto *C = ExportGV.getComdat())
       if (C->getName() == Name)
@@ -120,7 +117,8 @@ void promoteTypeIds(Module &M, StringRef ModuleId) {
     if (isa<MDNode>(MD) && cast<MDNode>(MD)->isDistinct()) {
       Metadata *&GlobalMD = LocalToGlobal[MD];
       if (!GlobalMD) {
-        std::string NewName = (Twine(LocalToGlobal.size()) + ModuleId).str();
+        std::string NewName =
+            (Twine(LocalToGlobal.size()) + "." + ModuleId).str();
         GlobalMD = MDString::get(M.getContext(), NewName);
       }
 

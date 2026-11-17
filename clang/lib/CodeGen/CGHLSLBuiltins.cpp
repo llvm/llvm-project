@@ -1224,6 +1224,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     QualType Ty = E->getArg(0)->getType();
     if (auto *VecTy = Ty->getAs<VectorType>())
       Ty = VecTy->getElementType();
+    else if (auto *MatTy = Ty->getAs<ConstantMatrixType>())
+      Ty = MatTy->getElementType();
 
     Intrinsic::ID Intr;
     if (Ty->isFloatingType()) {
