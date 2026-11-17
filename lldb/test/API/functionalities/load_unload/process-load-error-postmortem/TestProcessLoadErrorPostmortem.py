@@ -13,6 +13,7 @@ from lldbsuite.test import lldbutil
 class ProcessLoadErrorPostmortemTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIf(archs=no_match(["x86_64", "arm64", "arm64e", "aarch64"]))
     @skipIfWindows  # Windows does not support "process load" the same way.
     @skipIfRemote  # save-core / core loading is local-target only here.
     def test_load_image_error_replayed_on_core(self):

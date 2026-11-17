@@ -16,7 +16,6 @@
 #include "Shared/Utils.h"
 #include "Utils/ELF.h"
 
-#include "omptarget.h"
 
 #include "llvm/Frontend/Offloading/Utility.h"
 

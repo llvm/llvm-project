@@ -99,9 +99,9 @@
 ; REPLAY-ALL-FUNCTION-ALWAYS: '_Z3subii' inlined into '_Z3sumii' to match profiling context with (cost={{[-0-9]+}}
 
 ; REPLAY-ERROR: LLVM ERROR: could not open remarks file:
-; REPLAY-ERROR-SCOPE: for the --sample-profile-inline-replay-scope option: Cannot find option named 'function'!
-; REPLAY-ERROR-FALLBACK: for the --sample-profile-inline-replay-fallback option: Cannot find option named 'original'!
-; REPLAY-ERROR-FORMAT: for the --sample-profile-inline-replay-format option: Cannot find option named 'line'!
+; REPLAY-ERROR-SCOPE: invalid value 'function' in '-sample-profile-inline-replay-scope=function'
+; REPLAY-ERROR-FALLBACK: invalid value 'original' in '-sample-profile-inline-replay-fallback=original'
+; REPLAY-ERROR-FORMAT: invalid value 'line' in '-sample-profile-inline-replay-format=line'
 
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 

@@ -67,9 +67,6 @@ class TypeAttr<string S, AttrProperty I, list<AttrProperty> P> : Attr<S, I, P>;
 /// StringBool attribute.
 class StrBoolAttr<string S> : Attr<S, IntersectPreserve, []>;
 
-/// Arbitrary string attribute.
-class ComplexStrAttr<string S, list<AttrProperty> P> : Attr<S, IntersectPreserve, P>;
-
 /// ConstantRange attribute.
 class ConstantRangeAttr<string S, AttrProperty I, list<AttrProperty> P> : Attr<S, I, P>;
 
@@ -218,7 +215,14 @@ def DeadOnReturn : IntAttr<"dead_on_return", IntersectMin, [ParamAttr]>;
 def NoImplicitFloat : EnumAttr<"noimplicitfloat", IntersectPreserve, [FnAttr]>;
 
 /// inline=never.
+/// Note: optnone implies noinline (unless alwaysinline is also present). Use
+/// Function::isNoInline() or CallBase::isNoInline() rather than querying this
+/// attribute directly.
 def NoInline : EnumAttr<"noinline", IntersectPreserve, [FnAttr]>;
+
+/// Function is likely only referenced from the current module.
+def LikelyModuleLocal
+    : EnumAttr<"likely_module_local", IntersectAnd, [FnAttr]>;
 
 /// nooutline
 def NoOutline : EnumAttr<"nooutline", IntersectPreserve, [FnAttr]>;
@@ -342,6 +346,10 @@ def SanitizeAddress : EnumAttr<"sanitize_address", IntersectPreserve, [FnAttr]>;
 /// ThreadSanitizer is on.
 def SanitizeThread : EnumAttr<"sanitize_thread", IntersectPreserve, [FnAttr]>;
 
+/// ConcurrencySanitizer is on.
+def SanitizeConcurrency
+    : EnumAttr<"sanitize_concurrency", IntersectPreserve, [FnAttr]>;
+
 /// TypeSanitizer is on.
 def SanitizeType : EnumAttr<"sanitize_type", IntersectPreserve, [FnAttr]>;
 
@@ -448,23 +456,24 @@ def LoaderReplaceable : StrBoolAttr<"loader-replaceable">;
 // CompatRuleStrAttr takes the compare function and the string attribute for
 // checking compatibility for inline substitution.
 class CompatRule<string F> {
-  // The function's signature must match "bool(const Function&, const
-  // Function&)", where the first parameter is the reference to the caller and
-  // the second parameter is the reference to the callee. It must return false
-  // if the attributes of the caller and callee are incompatible, and true
-  // otherwise.
+  // The function's signature must match "bool(AttributeSet, AttributeSet)",
+  // where the first parameter is the function attributes of the caller and
+  // the second parameter is the function attributes of the callee. It must
+  // return false if the attributes of the caller and callee are incompatible,
+  // and true otherwise.
   string CompatFunc = F;
   string AttrName = "";
 }
 
 class CompatRuleStrAttr<string F, string Attr> : CompatRule<F> {
   // The checker function is extended with an third argument as the function
-  // attribute string "bool(const Function&, const Function&, const StringRef&)".
+  // attribute string "bool(AttributeSet, AttributeSet, StringRef)".
   string AttrName = Attr;
 }
 
 def : CompatRule<"isEqual<SanitizeAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeThreadAttr>">;
+def : CompatRule<"isEqual<SanitizeConcurrencyAttr>">;
 def : CompatRule<"isEqual<SanitizeTypeAttr>">;
 def : CompatRule<"isEqual<SanitizeMemoryAttr>">;
 def : CompatRule<"isEqual<SanitizeHWAddressAttr>">;
@@ -480,6 +489,7 @@ def : CompatRule<"checkDenormMode">;
 def : CompatRule<"checkStrictFP">;
 def : CompatRuleStrAttr<"isEqual", "sign-return-address">;
 def : CompatRuleStrAttr<"isEqual", "sign-return-address-key">;
+def : CompatRuleStrAttr<"isEqual", "sign-return-address-harden">;
 def : CompatRuleStrAttr<"isEqual", "branch-protection-pauth-lr">;
 
 class MergeRule<string F> {

@@ -183,6 +183,27 @@ func.func @load_unaligned_atomic(%ptr : !llvm.ptr) {
 
 // -----
 
+func.func @load_range_non_integer(%ptr : !llvm.ptr) {
+  // expected-error@below {{expected range bitwidth to match the integer (element) result type}}
+  %1 = llvm.load %ptr range<i32, 0, 10> : !llvm.ptr -> f32
+}
+
+// -----
+
+func.func @load_range_bitwidth_mismatch(%ptr : !llvm.ptr) {
+  // expected-error@below {{expected range bitwidth to match the integer (element) result type}}
+  %1 = llvm.load %ptr range<i64, 0, 10> : !llvm.ptr -> i32
+}
+
+// -----
+
+func.func @load_range_empty_or_full(%ptr : !llvm.ptr) {
+  // expected-error@below {{expected range to be neither empty nor full}}
+  %1 = llvm.load %ptr range<i32, 5, 5> : !llvm.ptr -> i32
+}
+
+// -----
+
 func.func @store_syncscope(%val : f32, %ptr : !llvm.ptr) {
   // expected-error@below {{expected syncscope to be null for non-atomic access}}
   "llvm.store"(%val, %ptr) <{syncscope = "singlethread"}> : (f32, !llvm.ptr) -> ()
@@ -305,6 +326,117 @@ func.func @call_non_llvm() {
   // expected-error@+1 {{'llvm.call' op 'standard_func_callee' does not reference a valid LLVM function}}
   llvm.call @standard_func_callee() : () -> ()
   llvm.return
+}
+
+// -----
+
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_unknown_symbol() -> i32 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op 'missing_callee' does not reference a symbol in the current scope}}
+  %0 = llvm.invoke @missing_callee() to ^bb1 unwind ^bb2 : () -> i32
+^bb1:
+  llvm.return %0 : i32
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i32) : i32
+  llvm.return %c : i32
+}
+
+// -----
+
+func.func private @standard_func_callee()
+
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_non_llvm() -> i32 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op 'standard_func_callee' does not reference a valid LLVM function, IFunc, or alias}}
+  %0 = llvm.invoke @standard_func_callee() to ^bb1 unwind ^bb2 : () -> i32
+^bb1:
+  llvm.return %0 : i32
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i32) : i32
+  llvm.return %c : i32
+}
+
+// -----
+
+llvm.func @foo(i32) -> i32
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_result_mismatch(%arg0: i32) -> i64 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op result type mismatch: 'i64' != 'i32'}}
+  %0 = llvm.invoke @foo(%arg0) to ^bb1 unwind ^bb2 : (i32) -> i64
+^bb1:
+  llvm.return %0 : i64
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i64) : i64
+  llvm.return %c : i64
+}
+
+// -----
+
+llvm.func @foo(i32) -> i32
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_arg_mismatch(%arg0: i64) -> i32 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op operand type mismatch: expected operand type 'i32', but provided 'i64' for operand number 0}}
+  %0 = llvm.invoke @foo(%arg0) to ^bb1 unwind ^bb2 : (i64) -> i32
+^bb1:
+  llvm.return %0 : i32
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i32) : i32
+  llvm.return %c : i32
+}
+
+// -----
+
+llvm.func @bar() -> ()
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_void_with_result() -> i32 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op calling function with void result must not produce values}}
+  %0 = llvm.invoke @bar() to ^bb1 unwind ^bb2 : () -> i32
+^bb1:
+  llvm.return %0 : i32
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i32) : i32
+  llvm.return %c : i32
+}
+
+// -----
+
+llvm.func @variadic(...)
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_vararg_missing_type(%arg0: i32) -> i32 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op missing var_callee_type attribute for vararg call}}
+  %0 = llvm.invoke @variadic(%arg0) to ^bb1 unwind ^bb2 : (i32) -> i32
+^bb1:
+  llvm.return %0 : i32
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i32) : i32
+  llvm.return %c : i32
+}
+
+// -----
+
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_indirect_non_ptr(%arg0: i32, %arg1: i32) -> i32 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op indirect call expects a pointer as callee: 'i32'}}
+  %0 = llvm.invoke %arg0(%arg1) to ^bb1 unwind ^bb2 : i32, (i32) -> i32
+^bb1:
+  llvm.return %0 : i32
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i32) : i32
+  llvm.return %c : i32
 }
 
 // -----
@@ -882,6 +1014,14 @@ func.func @atomicrmw_unexpected_xchg_type(%i1_ptr : !llvm.ptr, %i1 : i1) {
 func.func @atomicrmw_expected_int(%f32_ptr : !llvm.ptr, %f32 : f32) {
   // expected-error@+1 {{expected LLVM IR integer type}}
   %0 = llvm.atomicrmw max %f32_ptr, %f32 unordered : !llvm.ptr, f32
+  llvm.return
+}
+
+// -----
+
+func.func @atomicrmw_expected_float_ignore_denormal_mode(%i32_ptr : !llvm.ptr, %i32 : i32) {
+  // expected-error@+1 {{expected floating-point operation with 'ignore_denormal_mode'}}
+  %0 = llvm.atomicrmw ignore_denormal_mode add %i32_ptr, %i32 monotonic : !llvm.ptr, i32
   llvm.return
 }
 
@@ -1741,11 +1881,13 @@ llvm.func @invalid_var_callee_type_return_type_mismatch(%arg: i32)  {
 // -----
 
 llvm.func @non_variadic(%arg: i32)
+llvm.func @__gxx_personality_v0(...) -> i32
 
-llvm.func @invalid_var_callee_type(%arg: i32)  {
+llvm.func @invalid_var_callee_type(%arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{expected var_callee_type to be a variadic function type}}
   llvm.invoke @non_variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i32)>) : (i32) -> ()
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return
@@ -1754,11 +1896,13 @@ llvm.func @invalid_var_callee_type(%arg: i32)  {
 // -----
 
 llvm.func @variadic(%arg: i32, ...)
+llvm.func @__gxx_personality_v0(...) -> i32
 
-llvm.func @invalid_var_callee_type_num_parameters(%arg: i32)  {
+llvm.func @invalid_var_callee_type_num_parameters(%arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{expected var_callee_type to have at most 1 parameters}}
   llvm.invoke @variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i32, i64, ...)>) : (i32) -> ()
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return
@@ -1766,10 +1910,13 @@ llvm.func @invalid_var_callee_type_num_parameters(%arg: i32)  {
 
 // -----
 
-llvm.func @invalid_var_callee_type_num_parameters_indirect(%callee : !llvm.ptr, %arg: i32)  {
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invalid_var_callee_type_num_parameters_indirect(%callee : !llvm.ptr, %arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{expected var_callee_type to have at most 1 parameters}}
   llvm.invoke %callee(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i32, i64, ...)>) : !llvm.ptr, (i32) -> ()
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return
@@ -1778,11 +1925,13 @@ llvm.func @invalid_var_callee_type_num_parameters_indirect(%callee : !llvm.ptr, 
 // -----
 
 llvm.func @variadic(%arg: i32, ...)
+llvm.func @__gxx_personality_v0(...) -> i32
 
-llvm.func @invalid_var_callee_type_parameter_type_mismatch(%arg: i32)  {
+llvm.func @invalid_var_callee_type_parameter_type_mismatch(%arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{var_callee_type parameter type mismatch: 'i64' != 'i32'}}
   llvm.invoke @variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i64, ...)>) : (i32) -> ()
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return
@@ -1790,10 +1939,13 @@ llvm.func @invalid_var_callee_type_parameter_type_mismatch(%arg: i32)  {
 
 // -----
 
-llvm.func @invalid_var_callee_type_parameter_type_mismatch_indirect(%callee : !llvm.ptr, %arg: i32)  {
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invalid_var_callee_type_parameter_type_mismatch_indirect(%callee : !llvm.ptr, %arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{var_callee_type parameter type mismatch: 'i64' != 'i32'}}
   llvm.invoke %callee(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i64, ...)>) : !llvm.ptr, (i32) -> ()
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return
@@ -1802,11 +1954,13 @@ llvm.func @invalid_var_callee_type_parameter_type_mismatch_indirect(%callee : !l
 // -----
 
 llvm.func @variadic(%arg: i32, ...)
+llvm.func @__gxx_personality_v0(...) -> i32
 
-llvm.func @invalid_var_callee_type_non_void(%arg: i32)  {
+llvm.func @invalid_var_callee_type_non_void(%arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{expected var_callee_type to return void}}
   llvm.invoke @variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<i8 (i32, ...)>) : (i32) -> ()
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return
@@ -1815,11 +1969,13 @@ llvm.func @invalid_var_callee_type_non_void(%arg: i32)  {
 // -----
 
 llvm.func @variadic(%arg: i32, ...) -> i32
+llvm.func @__gxx_personality_v0(...) -> i32
 
-llvm.func @invalid_var_callee_type_return_type_mismatch(%arg: i32)  {
+llvm.func @invalid_var_callee_type_return_type_mismatch(%arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{var_callee_type return type mismatch: 'i8' != 'i32'}}
   %0 = llvm.invoke @variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<i8 (i32, ...)>) : (i32) -> (i32)
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return
@@ -2318,6 +2474,11 @@ llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_
 
 // -----
 
+// expected-error@+1 {{'llvm.mlir.ifunc' op must have a function resolver}}
+llvm.mlir.ifunc private @ifunc : !llvm.func<f32 (i64)>, !llvm.ptr @missing_resolver
+
+// -----
+
 llvm.func external @resolve_foo() -> !llvm.ptr
 // expected-error@+1 {{'llvm.mlir.ifunc' op 'common' linkage not supported in ifuncs}}
 llvm.mlir.ifunc common @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo dso_local
@@ -2462,5 +2623,74 @@ llvm.func @md_addrspacecast_int_operand() {
 llvm.func @nvvm_duplicate_fp_modifier(%a: f32, %b: f32) {
   // expected-error@+1 {{`ftz` clause can appear at most once in the expansion of the oilist directive}}
   %0 = nvvm.addf %a, %b ftz = true ftz = true : f32
+  llvm.return
+}
+
+// -----
+
+// expected-error@+1 {{expected '>'}}
+#loop_align_typed = #llvm.loop_annotation<align = 32 : i64>
+
+// -----
+
+// expected-error@+2 {{integer value too large}}
+// expected-error@+1 {{failed to parse LoopAnnotationAttr parameter 'align' which is to be a `uint32_t`}}
+#loop_align_too_large = #llvm.loop_annotation<align = 4294967296>
+
+// -----
+
+llvm.func @rocdl_asyncmark_unknown_stage() {
+  // expected-error@+1 {{custom op 'rocdl.asyncmark' expected string or keyword containing one of the following enum values for attribute 'stages' [all, tensor, global_load_async_to_lds, global_load_async_to_lds_mcast, global_store_async_from_lds, buffer_global_load]}}
+  rocdl.asyncmark stages = not_a_stage
+  llvm.return
+}
+
+// -----
+#tbaa_root = #llvm.tbaa_root<id = "Simple C++ TBAA">
+#tbaa_type_desc = #llvm.tbaa_type_desc<id = "omnipotent char", members = {<#tbaa_root, 0>}>
+#tbaa_type_desc1 = #llvm.tbaa_type_desc<id = "int", members = {<#tbaa_type_desc, 0>}>
+#tbaa_tag = #llvm.tbaa_tag<base_type = #tbaa_type_desc1, access_type = #tbaa_type_desc1, offset = 0>
+llvm.func @tbaa_struct_equal_offsets(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
+  %0 = llvm.mlir.constant(12 : i64) : i64
+  // Equal offsets are allowed: the rule is non-decreasing, not increasing.
+  "llvm.intr.memcpy"(%arg0, %arg1, %0) <{isVolatile = false, tbaa_struct = [#llvm.tbaa_struct_field<offset = 8, size = 4, tag = #tbaa_tag>, #llvm.tbaa_struct_field<offset = 8, size = 4, tag = #tbaa_tag>]}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+  llvm.return
+}
+
+// -----
+
+#tbaa_root = #llvm.tbaa_root<id = "Simple C++ TBAA">
+#tbaa_type_desc = #llvm.tbaa_type_desc<id = "omnipotent char", members = {<#tbaa_root, 0>}>
+#tbaa_type_desc1 = #llvm.tbaa_type_desc<id = "int", members = {<#tbaa_type_desc, 0>}>
+#tbaa_tag = #llvm.tbaa_tag<base_type = #tbaa_type_desc1, access_type = #tbaa_type_desc1, offset = 0>
+llvm.func @tbaa_struct_decreasing_memcpy(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
+  %0 = llvm.mlir.constant(12 : i64) : i64
+  // expected-error@+1 {{tbaa.struct field offsets must be non-decreasing}}
+  "llvm.intr.memcpy"(%arg0, %arg1, %0) <{isVolatile = false, tbaa_struct = [#llvm.tbaa_struct_field<offset = 8, size = 4, tag = #tbaa_tag>, #llvm.tbaa_struct_field<offset = 0, size = 4, tag = #tbaa_tag>]}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+  llvm.return
+}
+
+// -----
+
+#tbaa_root = #llvm.tbaa_root<id = "Simple C++ TBAA">
+#tbaa_type_desc = #llvm.tbaa_type_desc<id = "omnipotent char", members = {<#tbaa_root, 0>}>
+#tbaa_type_desc1 = #llvm.tbaa_type_desc<id = "int", members = {<#tbaa_type_desc, 0>}>
+#tbaa_tag = #llvm.tbaa_tag<base_type = #tbaa_type_desc1, access_type = #tbaa_type_desc1, offset = 0>
+llvm.func @tbaa_struct_decreasing_memmove(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
+  %0 = llvm.mlir.constant(12 : i64) : i64
+  // expected-error@+1 {{tbaa.struct field offsets must be non-decreasing}}
+  "llvm.intr.memmove"(%arg0, %arg1, %0) <{isVolatile = false, tbaa_struct = [#llvm.tbaa_struct_field<offset = 8, size = 4, tag = #tbaa_tag>, #llvm.tbaa_struct_field<offset = 0, size = 4, tag = #tbaa_tag>]}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+  llvm.return
+}
+
+// -----
+
+#tbaa_root = #llvm.tbaa_root<id = "Simple C++ TBAA">
+#tbaa_type_desc = #llvm.tbaa_type_desc<id = "omnipotent char", members = {<#tbaa_root, 0>}>
+#tbaa_type_desc1 = #llvm.tbaa_type_desc<id = "int", members = {<#tbaa_type_desc, 0>}>
+#tbaa_tag = #llvm.tbaa_tag<base_type = #tbaa_type_desc1, access_type = #tbaa_type_desc1, offset = 0>
+llvm.func @tbaa_struct_decreasing_memcpy_inline(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
+  // expected-error@+1 {{tbaa.struct field offsets must be non-decreasing}}
+  "llvm.intr.memcpy.inline"(%arg0, %arg1) <{isVolatile = false, len = 12 : i64, tbaa_struct = [#llvm.tbaa_struct_field<offset = 8, size = 4, tag = #tbaa_tag>, #llvm.tbaa_struct_field<offset = 0, size = 4, tag = #tbaa_tag>]}> : (!llvm.ptr, !llvm.ptr) -> ()
   llvm.return
 }

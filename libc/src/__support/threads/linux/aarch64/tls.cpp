@@ -8,6 +8,7 @@
 
 #include "config/app.h"
 #include "hdr/sys_mman_macros.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/exit.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
 #include "src/__support/OSUtil/syscall.h"
@@ -46,7 +47,7 @@ namespace LIBC_NAMESPACE_DECL {
       linux_syscalls::mmap(nullptr, alloc_size, PROT_READ | PROT_WRITE,
                            MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   if (!mmap_ret.has_value())
-    syscall_impl<long>(SYS_exit, 1);
+    linux_syscalls::exit(1);
   uintptr_t thread_ptr = uintptr_t(mmap_ret.value());
   uintptr_t tls_addr = thread_ptr + TCB_SIZE + padding;
   inline_memcpy(reinterpret_cast<char *>(tls_addr),

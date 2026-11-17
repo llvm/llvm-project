@@ -45,6 +45,12 @@ llvm::Type *IRTypeMapper::convertType(const abi::Type *ABIType) {
     Result = llvm::Type::getFloatingPointTy(Context, *Semantics);
     break;
   }
+  case abi::TypeKind::OpaqueFloat8:
+    // LLVM represents this format as a one-element i8 vector. The ABI
+    // type stays distinct so classification does not treat it as an
+    // integer or a short vector.
+    Result = llvm::FixedVectorType::get(llvm::Type::getInt8Ty(Context), 1);
+    break;
   case abi::TypeKind::Pointer:
     Result = llvm::PointerType::get(
         Context, cast<abi::PointerType>(ABIType)->getAddrSpace());
@@ -111,6 +117,15 @@ llvm::Type *IRTypeMapper::convertTupleType(const abi::TupleType *TT) {
 }
 
 llvm::Type *IRTypeMapper::convertRecordType(const abi::RecordType *RT) {
+  // A packed record is a sequence of fields with no alignment padding. Pure
+  // scalable aggregates use one as the unpadded coerce-and-expand type, and
+  // its fields may be scalable vectors.
+  if (RT->getPacking() == StructPacking::Packed) {
+    SmallVector<llvm::Type *, 8> FieldTypes;
+    for (const FieldInfo &Field : RT->getFields())
+      FieldTypes.push_back(convertType(Field.FieldType));
+    return llvm::StructType::get(Context, FieldTypes, /*isPacked=*/true);
+  }
   return createStructFromFields(RT->getFields(), RT->getSizeInBits(),
                                 RT->getAlignment(), RT->isUnion());
 }

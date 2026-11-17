@@ -325,8 +325,8 @@ static bool warnByDefaultOnWrongCase(StringRef Include) {
 ///
 /// \returns a similar string if exists. If no similar string exists,
 /// returns std::nullopt.
-static std::optional<StringRef>
-findSimilarStr(StringRef LHS, const std::vector<StringRef> &Candidates) {
+static std::optional<StringRef> findSimilarStr(StringRef LHS,
+                                               ArrayRef<StringRef> Candidates) {
   // We need to check if `Candidates` has the exact case-insensitive string
   // because the Levenshtein distance match does not care about it.
   for (StringRef C : Candidates) {
@@ -514,11 +514,23 @@ void Preprocessor::SuggestTypoedDirective(const Token &Tok,
   // directives.
   if (getLangOpts().AsmPreprocessor) return;
 
-  std::vector<StringRef> Candidates = {
-      "if", "ifdef", "ifndef", "elif", "else", "endif"
-  };
-  if (LangOpts.C23 || LangOpts.CPlusPlus23)
-    Candidates.insert(Candidates.end(), {"elifdef", "elifndef"});
+  // A known directive (e.g. #include or #define inside a skipped conditional
+  // block) is not a typo of a conditional; don't scan it.
+  if (getIdentifierInfo(Directive)->getPPKeywordID() != tok::pp_not_keyword)
+    return;
+
+  // The scan only feeds this diagnostic; skip it when the diagnostic is
+  // disabled at this location (e.g. -w).
+  if (getDiagnostics().isIgnored(diag::warn_pp_invalid_directive,
+                                 Tok.getLocation()))
+    return;
+
+  static constexpr StringRef AllCandidates[] = {
+      "if", "ifdef", "ifndef", "elif", "else", "endif", "elifdef", "elifndef"};
+  ArrayRef<StringRef> Candidates(AllCandidates);
+  // #elifdef/#elifndef are only suggested in C23/C++23 and later.
+  if (!LangOpts.C23 && !LangOpts.CPlusPlus23)
+    Candidates = Candidates.drop_back(2);
 
   if (std::optional<StringRef> Sugg = findSimilarStr(Directive, Candidates)) {
     // Directive cannot be coming from macro.
@@ -852,7 +864,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
           // looked up, etc, inside the #elif expression.
           assert(CurPPLexer->LexingRawMode && "We have to be skipping here!");
           CurPPLexer->LexingRawMode = false;
-          IdentifierInfo *IfNDefMacro = nullptr;
+          IdentifierLoc IfNDefMacro;
           DirectiveEvalResult DER = EvaluateDirectiveExpression(IfNDefMacro);
           // Stop if Lexer became invalid after hitting code completion token.
           if (!CurPPLexer)
@@ -1997,11 +2009,7 @@ void Preprocessor::EnterAnnotationToken(SourceRange Range,
   // FIXME: Produce this as the current token directly, rather than
   // allocating a new token for it.
   auto Tok = std::make_unique<Token[]>(1);
-  Tok[0].startToken();
-  Tok[0].setKind(Kind);
-  Tok[0].setLocation(Range.getBegin());
-  Tok[0].setAnnotationEndLoc(Range.getEnd());
-  Tok[0].setAnnotationValue(AnnotationVal);
+  Tok[0] = Token::createAnnotation(Kind, Range, AnnotationVal);
   EnterTokenStream(std::move(Tok), 1, true, /*IsReinject*/ false);
 }
 
@@ -3575,9 +3583,10 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
   ++NumIf;
 
   // Parse and evaluate the conditional expression.
-  IdentifierInfo *IfNDefMacro = nullptr;
+  IdentifierLoc IfNDefMacro;
   const DirectiveEvalResult DER = EvaluateDirectiveExpression(IfNDefMacro);
   const bool ConditionalTrue = DER.Conditional;
+  const IdentifierInfo *IfNDefMacroInfo = IfNDefMacro.getIdentifierInfo();
   // Lexer might become invalid if we hit code completion point while evaluating
   // expression.
   if (!CurPPLexer)
@@ -3586,9 +3595,9 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
   // If this condition is equivalent to #ifndef X, and if this is the first
   // directive seen, handle it for the multiple-include optimization.
   if (CurPPLexer->getConditionalStackDepth() == 0) {
-    if (!ReadAnyTokensBeforeDirective && IfNDefMacro && ConditionalTrue)
-      // FIXME: Pass in the location of the macro name, not the 'if' token.
-      CurPPLexer->MIOpt.EnterTopLevelIfndef(IfNDefMacro, IfToken.getLocation());
+    if (!ReadAnyTokensBeforeDirective && IfNDefMacroInfo && ConditionalTrue)
+      CurPPLexer->MIOpt.EnterTopLevelIfndef(IfNDefMacroInfo,
+                                            IfNDefMacro.getLoc());
     else
       CurPPLexer->MIOpt.EnterTopLevelConditional();
   }
@@ -3846,7 +3855,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
 
     // We do not consume the ( because EvaluateDirectiveExpression will lex
     // the next token for us.
-    IdentifierInfo *ParameterIfNDef = nullptr;
+    IdentifierLoc ParameterIfNDef;
     bool EvaluatedDefined;
     DirectiveEvalResult LimitEvalResult = EvaluateDirectiveExpression(
         ParameterIfNDef, CurTok, EvaluatedDefined, /*CheckForEOD=*/false);
@@ -3868,6 +3877,8 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
     // expression.
     if (EvaluatedDefined) {
       Diag(CurTok, diag::err_defined_in_pp_embed);
+      if (!CurTok.isOneOf(EndTokenKind, tok::eod))
+        DiscardUntilEndOfDirective(CurTok);
       return std::nullopt;
     }
 
@@ -3876,7 +3887,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       if (Result.isNegative()) {
         Diag(CurTok, diag::err_requires_positive_value)
             << toString(Result, 10) << /*positive*/ 0;
-        if (CurTok.isNot(EndTokenKind))
+        if (!CurTok.isOneOf(EndTokenKind, tok::eod))
           DiscardUntilEndOfDirective(CurTok);
         return std::nullopt;
       }
@@ -4063,10 +4074,7 @@ void Preprocessor::HandleEmbedDirectiveImpl(
   Data->BinaryData = BinaryContents;
   Data->FileName = FileName;
 
-  Toks[CurIdx].startToken();
-  Toks[CurIdx].setKind(tok::annot_embed);
-  Toks[CurIdx].setAnnotationRange(HashLoc);
-  Toks[CurIdx++].setAnnotationValue(Data);
+  Toks[CurIdx++] = Token::createAnnotation(tok::annot_embed, HashLoc, Data);
 
   // Now add the suffix tokens, if any.
   if (Params.MaybeSuffixParam) {
@@ -4081,11 +4089,9 @@ void Preprocessor::HandleEmbedDirectiveImpl(
 void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc,
                                         Token &EmbedTok) {
   // Give the usual extension/compatibility warnings.
-  if (LangOpts.C23)
-    Diag(EmbedTok, diag::warn_compat_pp_embed_directive);
-  else
-    Diag(EmbedTok, diag::ext_pp_embed_directive)
-        << (LangOpts.CPlusPlus ? /*Clang*/ 1 : /*C23*/ 0);
+  DiagCompat(EmbedTok, LangOpts.CPlusPlus
+                           ? diag_compat::cxx26_pp_embed_directive
+                           : diag_compat::c23_pp_embed_directive);
 
   // Parse the filename header
   Token FilenameTok;
@@ -4292,12 +4298,8 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
 
     case ImportAction::ModuleBegin:
       // Let the parser know we're textually entering the module.
-      DirToks.emplace_back();
-      DirToks.back().startToken();
-      DirToks.back().setKind(tok::annot_module_begin);
-      DirToks.back().setLocation(SemiLoc);
-      DirToks.back().setAnnotationEndLoc(SemiLoc);
-      DirToks.back().setAnnotationValue(Action.ModuleForHeader);
+      DirToks.push_back(Token::createAnnotation(
+          tok::annot_module_begin, SemiLoc, Action.ModuleForHeader));
       [[fallthrough]];
 
     case ImportAction::ModuleImport:

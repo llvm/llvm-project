@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/ModuleChild.h"
+#include <cassert>
 
 using namespace lldb_private;
 

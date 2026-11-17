@@ -37,14 +37,7 @@ define amdgpu_ps bfloat @fmul_bf16_vv(bfloat %a, bfloat %b) {
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; GFX1250-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX1250-NEXT:    v_bfe_u32 v1, v0, 16, 1
-; GFX1250-NEXT:    v_or_b32_e32 v2, 0x400000, v0
-; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
-; GFX1250-NEXT:    v_add3_u32 v1, v1, v0, 0x7fff
-; GFX1250-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc_lo
-; GFX1250-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, v0, v1
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = fmul bfloat %a, %b
   ret bfloat %result
@@ -90,16 +83,8 @@ define amdgpu_ps bfloat @fmul_bf16_ss(bfloat inreg %a, bfloat inreg %b) {
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    s_lshl_b32 s0, s0, 16
-; GFX1250-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX1250-NEXT:    s_mul_f32 s0, s0, s1
-; GFX1250-NEXT:    s_bfe_u32 s1, s0, 0x10010
-; GFX1250-NEXT:    s_or_b32 s2, s0, 0x400000
-; GFX1250-NEXT:    s_add_co_i32 s1, s1, s0
-; GFX1250-NEXT:    s_addk_co_i32 s1, 0x7fff
-; GFX1250-NEXT:    s_cmp_u_f32 s0, 0
-; GFX1250-NEXT:    s_cselect_b32 s0, s2, s1
-; GFX1250-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, s0, s1
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = fmul bfloat %a, %b
@@ -405,7 +390,7 @@ define amdgpu_ps <2 x bfloat> @fmul_v2bf16_vl(<2 x bfloat> %a) {
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_pk_mul_bf16 v0, 0x42c83f80, v0
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, v0, 0x42c83f80
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = fmul <2 x bfloat> %a, <bfloat 1.0, bfloat 100.0>
   ret <2 x bfloat> %result

@@ -21,8 +21,19 @@
 ; RUN: %python %S/../../../lib/Analysis/models/log_reader.py %t2 > %t2.readable
 ; RUN: FileCheck --input-file %t2.readable %s --check-prefixes=CHECK,ML
 
+; RUN: not llc -o /dev/null -mtriple=x86_64-linux-unknown -regalloc=greedy \
+; RUN:   -regalloc-enable-priority-advisor=development < %S/Inputs/input.ll 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=ERR
+; ERR: error: Regalloc development mode should be requested with at least logging enabled and/or a training model
+
+; RUN: not llc -o /dev/null -mtriple=x86_64-linux-unknown -regalloc=greedy \
+; RUN:   -regalloc-enable-priority-advisor=development \
+; RUN:   -regalloc-priority-training-log=%t.nodir/log < %S/Inputs/input.ll 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=ERR-LOG
+; ERR-LOG: error: {{.*}}.nodir/log
+
 ; CHECK-NOT: nan
 ; CHECK-LABEL: priority:
-; NOML-SAME: 2684358144.0
-; ML-SAME: 3567
+; NOML-SAME: 2684358400.0
+; ML-SAME: 3775
 ; CHECK-LABEL: reward:

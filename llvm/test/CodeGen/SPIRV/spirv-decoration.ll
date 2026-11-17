@@ -5,6 +5,10 @@
 ; CHECK-DAG: OpName %[[#FunBar:]] "bar"
 ; CHECK-DAG: OpDecorate %[[#GV]] LinkageAttributes "v" Export
 ; CHECK-DAG: OpDecorate %[[#GV]] Constant
+; CHECK-DAG: OpDecorateId %[[#GV]] AlignmentId %[[#C8:]]
+; CHECK-DAG: OpDecorateId %[[#GV]] MaxByteOffsetId %[[#C0:]]
+; CHECK-DAG: %[[#C8]] = OpConstant %[[#]] 8
+; CHECK-DAG: %[[#C0]] = OpConstantNull %[[#]]
 ; CHECK-DAG: OpDecorate %[[#Idx:]] UserSemantic "SemanticValue"
 ; CHECK: %[[#FunBar]] = OpFunction
 ; CHECK: %[[#Idx]] = OpInBoundsPtrAccessChain
@@ -24,8 +28,10 @@ entry:
   ret void
 }
 
-!0 = !{!1, !2}
+!0 = !{!1, !2, !5, !6}
 !1 = !{i32 22}                     ; 22 is Constant decoration
 !2 = !{i32 41, !"v", i32 0}        ; 41 is LinkageAttributes decoration with 2 extra operands
 !3 = !{!4}
 !4 = !{i32 5635, !"SemanticValue"} ; 5635 is UserSemantic decoration
+!5 = !{i32 46, i32 8}              ; 46 is AlignmentId decoration
+!6 = !{i32 47, i32 0}              ; 47 is MaxByteOffsetId decoration

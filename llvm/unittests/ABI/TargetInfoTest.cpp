@@ -70,6 +70,13 @@ private:
   llvm::abi::ABICompatInfo Compat;
 };
 
+// Exposes convertTypeForMem, which is protected on TargetInfo.
+class MemTargetInfo : public TestTargetInfo {
+public:
+  using TargetInfo::convertTypeForMem;
+  using TestTargetInfo::TestTargetInfo;
+};
+
 // A target lacking a 128-bit integer type, so the _BitInt register threshold
 // is the width of `long long`.
 class NoInt128TargetInfo : public TestTargetInfo {
@@ -312,6 +319,56 @@ TEST_F(TargetInfoTest, SingleElementStructNestedSingleElementReduces) {
   EXPECT_EQ(singleElement(Outer), F32);
 }
 
+// A vector's padding is part of the vector, so a struct holding only a
+// three-float vector or a one-element x87 vector reduces to the vector. Padding
+// past the vector still keeps the struct from reducing.
+TEST_F(TargetInfoTest, SingleElementStructPaddedVectorReduces) {
+  const ABIType *V3F32 =
+      TB.getVectorType(F32, llvm::ElementCount::getFixed(3), llvm::Align(16));
+  EXPECT_EQ(
+      singleElement(recordOf({FieldInfo(V3F32, 0)}, 128, llvm::Align(16))),
+      V3F32);
+  EXPECT_EQ(
+      singleElement(recordOf({FieldInfo(V3F32, 0)}, 256, llvm::Align(32))),
+      nullptr);
+
+  const ABIType *F80 =
+      TB.getFloatType(llvm::APFloat::x87DoubleExtended(), llvm::Align(16));
+  const ABIType *V1F80 =
+      TB.getVectorType(F80, llvm::ElementCount::getFixed(1), llvm::Align(16));
+  EXPECT_EQ(
+      singleElement(recordOf({FieldInfo(V1F80, 0)}, 128, llvm::Align(16))),
+      V1F80);
+}
+
+// A scalar's padding is part of the scalar, so a struct holding only an x87
+// long double, a bool or a _BitInt(17) reduces to it.  Padding past the scalar
+// still keeps the struct from reducing.
+TEST_F(TargetInfoTest, SingleElementStructPaddedScalarReduces) {
+  const ABIType *F80 =
+      TB.getFloatType(llvm::APFloat::x87DoubleExtended(), llvm::Align(16));
+  EXPECT_EQ(singleElement(recordOf({FieldInfo(F80, 0)}, 128, llvm::Align(16))),
+            F80);
+  EXPECT_EQ(singleElement(recordOf({FieldInfo(F80, 0)}, 256, llvm::Align(32))),
+            nullptr);
+
+  const ABIType *Bool = TB.getIntegerType(1, llvm::Align(1), /*Signed=*/false);
+  EXPECT_EQ(singleElement(recordOf({FieldInfo(Bool, 0)}, 8, llvm::Align(1))),
+            Bool);
+  EXPECT_EQ(singleElement(recordOf({FieldInfo(Bool, 0)}, 16, llvm::Align(2))),
+            nullptr);
+
+  const ABIType *BitInt17 = TB.getIntegerType(17, llvm::Align(4),
+                                              /*Signed=*/true,
+                                              /*IsBitInt=*/true);
+  EXPECT_EQ(
+      singleElement(recordOf({FieldInfo(BitInt17, 0)}, 32, llvm::Align(4))),
+      BitInt17);
+  EXPECT_EQ(
+      singleElement(recordOf({FieldInfo(BitInt17, 0)}, 64, llvm::Align(8))),
+      nullptr);
+}
+
 // A non-record type is never a single-element struct.
 TEST_F(TargetInfoTest, SingleElementStructNonRecordReturnsNull) {
   EXPECT_EQ(singleElement(I32), nullptr);
@@ -332,6 +389,221 @@ TEST_F(TargetInfoTest, NaturalAlignIndirectDefaultsToZeroAddrSpace) {
   ArgInfo AI = TI.getNaturalAlignIndirect(I32, TI.getAllocaAddrSpace());
   EXPECT_TRUE(AI.isIndirect());
   EXPECT_EQ(AI.getIndirectAddrSpace(), 0u);
+}
+
+// --- convertTypeForMem -------------------------------------------------------
+
+static const llvm::abi::RecordType *asRecord(const ABIType *Ty) {
+  return llvm::dyn_cast<llvm::abi::RecordType>(Ty);
+}
+
+static const llvm::abi::ArrayType *asI8Array(const ABIType *Ty) {
+  const auto *AT = llvm::dyn_cast<llvm::abi::ArrayType>(Ty);
+  if (!AT || AT->getElementType()->getSizeInBits().getFixedValue() != 8)
+    return nullptr;
+  return AT;
+}
+
+// A naturally aligned struct keeps the gap implicit and is not packed.
+TEST_F(TargetInfoTest, ConvertTypeForMemNaturalStructIsUnpacked) {
+  MemTargetInfo TI(TB);
+  const ABIType *I8 = TB.getIntegerType(8, llvm::Align(1), /*Signed=*/true);
+  const ABIType *S =
+      recordOf({FieldInfo(I8, 0), FieldInfo(I32, 32)}, 64, llvm::Align(4));
+  const llvm::abi::RecordType *Mem = asRecord(TI.convertTypeForMem(S));
+  ASSERT_NE(Mem, nullptr);
+  EXPECT_EQ(Mem->getPacking(), StructPacking::Default);
+  ASSERT_EQ(Mem->getNumFields(), 2u);
+  EXPECT_EQ(Mem->getFields()[0].FieldType, I8);
+  EXPECT_EQ(Mem->getFields()[1].FieldType, I32);
+}
+
+// The record has tail padding, but rounding the members up by the most aligned
+// member reaches the record size, so a non-packed struct produces that padding
+// without an array for it.
+TEST_F(TargetInfoTest, ConvertTypeForMemTailCoveredByMemberAlignIsImplicit) {
+  MemTargetInfo TI(TB);
+  const ABIType *I8 = TB.getIntegerType(8, llvm::Align(1), /*Signed=*/true);
+  // int at 0, char at byte 4, size 8 from the int's alignment.
+  const ABIType *S =
+      recordOf({FieldInfo(I32, 0), FieldInfo(I8, 32)}, 64, llvm::Align(4));
+  const llvm::abi::RecordType *Mem = asRecord(TI.convertTypeForMem(S));
+  ASSERT_NE(Mem, nullptr);
+  EXPECT_EQ(Mem->getPacking(), StructPacking::Default);
+  ASSERT_EQ(Mem->getNumFields(), 2u);
+  EXPECT_EQ(Mem->getFields()[0].FieldType, I32);
+  EXPECT_EQ(Mem->getFields()[1].FieldType, I8);
+}
+
+// alignas on the record does not raise the converted member alignment, so the
+// tail is an explicit i8 array. The record stays unpacked.
+TEST_F(TargetInfoTest, ConvertTypeForMemOveralignedTailIsExplicit) {
+  MemTargetInfo TI(TB);
+  const ABIType *S = recordOf({FieldInfo(I32, 0)}, 128, llvm::Align(16));
+  const llvm::abi::RecordType *Mem = asRecord(TI.convertTypeForMem(S));
+  ASSERT_NE(Mem, nullptr);
+  EXPECT_EQ(Mem->getPacking(), StructPacking::Default);
+  ASSERT_EQ(Mem->getNumFields(), 2u);
+  EXPECT_EQ(Mem->getFields()[0].FieldType, I32);
+  const llvm::abi::ArrayType *Tail = asI8Array(Mem->getFields()[1].FieldType);
+  ASSERT_NE(Tail, nullptr);
+  EXPECT_EQ(Tail->getNumElements(), 12u);
+}
+
+// An over-aligned member widens the gap before it and the tail. Both are
+// explicit, and the record stays unpacked.
+TEST_F(TargetInfoTest, ConvertTypeForMemOveralignedMemberPadsGapAndTail) {
+  MemTargetInfo TI(TB);
+  const ABIType *I8 = TB.getIntegerType(8, llvm::Align(1), /*Signed=*/true);
+  // char at 0, int at byte 16, size 32 from the member's alignment.
+  const ABIType *S =
+      recordOf({FieldInfo(I8, 0), FieldInfo(I32, 128)}, 256, llvm::Align(16));
+  const llvm::abi::RecordType *Mem = asRecord(TI.convertTypeForMem(S));
+  ASSERT_NE(Mem, nullptr);
+  EXPECT_EQ(Mem->getPacking(), StructPacking::Default);
+  ASSERT_EQ(Mem->getNumFields(), 4u);
+  EXPECT_EQ(Mem->getFields()[0].FieldType, I8);
+  const llvm::abi::ArrayType *Gap = asI8Array(Mem->getFields()[1].FieldType);
+  ASSERT_NE(Gap, nullptr);
+  EXPECT_EQ(Gap->getNumElements(), 15u);
+  EXPECT_EQ(Mem->getFields()[2].FieldType, I32);
+  const llvm::abi::ArrayType *Tail = asI8Array(Mem->getFields()[3].FieldType);
+  ASSERT_NE(Tail, nullptr);
+  EXPECT_EQ(Tail->getNumElements(), 12u);
+}
+
+// A misaligned field makes the record packed. A later field that sits at its
+// natural alignment still gets an explicit gap, and so does the tail.
+TEST_F(TargetInfoTest, ConvertTypeForMemPackedRecordKeepsNaturalGap) {
+  MemTargetInfo TI(TB);
+  const ABIType *I8 = TB.getIntegerType(8, llvm::Align(1), /*Signed=*/true);
+  // char, misaligned int at byte 1, naturally aligned int at byte 8, char at
+  // byte 12. Size 16.
+  const ABIType *S = recordOf({FieldInfo(I8, 0), FieldInfo(I32, 8),
+                               FieldInfo(I32, 64), FieldInfo(I8, 96)},
+                              128, llvm::Align(4));
+  const llvm::abi::RecordType *Mem = asRecord(TI.convertTypeForMem(S));
+  ASSERT_NE(Mem, nullptr);
+  EXPECT_EQ(Mem->getPacking(), StructPacking::Packed);
+  ASSERT_EQ(Mem->getNumFields(), 6u);
+  EXPECT_EQ(Mem->getFields()[0].FieldType, I8);
+  EXPECT_EQ(Mem->getFields()[1].FieldType, I32);
+  const llvm::abi::ArrayType *Gap = asI8Array(Mem->getFields()[2].FieldType);
+  ASSERT_NE(Gap, nullptr);
+  EXPECT_EQ(Gap->getNumElements(), 3u);
+  EXPECT_EQ(Mem->getFields()[3].FieldType, I32);
+  EXPECT_EQ(Mem->getFields()[4].FieldType, I8);
+  const llvm::abi::ArrayType *Tail = asI8Array(Mem->getFields()[5].FieldType);
+  ASSERT_NE(Tail, nullptr);
+  EXPECT_EQ(Tail->getNumElements(), 3u);
+}
+
+// A vector is converted with the alignment of its size rounded up to a power
+// of two, not the alignment the source language gave it. An AArch64
+// fixed-length SVE type wider than 16 bytes carries the smaller alignment, so
+// a record laid out from it is packed and the gap before the vector is an
+// explicit array.
+TEST_F(TargetInfoTest, ConvertTypeForMemVectorAlignsToItsSize) {
+  MemTargetInfo TI(TB);
+  const ABIType *I8 = TB.getIntegerType(8, llvm::Align(1), /*Signed=*/true);
+  // A 256-bit SVE predicate and data vector, both 16-byte aligned in C.
+  const ABIType *Pred =
+      TB.getVectorType(I8, llvm::ElementCount::getFixed(4), llvm::Align(2),
+                       llvm::abi::VectorKind::SVEPredicate);
+  const ABIType *Data =
+      TB.getVectorType(I32, llvm::ElementCount::getFixed(8), llvm::Align(16),
+                       llvm::abi::VectorKind::SVEData);
+  // 4-byte predicate, 32-byte vector at byte 16. Size 48.
+  const ABIType *S = recordOf({FieldInfo(Pred, 0), FieldInfo(Data, 128)}, 384,
+                              llvm::Align(16));
+  const llvm::abi::RecordType *Mem = asRecord(TI.convertTypeForMem(S));
+  ASSERT_NE(Mem, nullptr);
+  EXPECT_EQ(Mem->getPacking(), StructPacking::Packed);
+  ASSERT_EQ(Mem->getNumFields(), 3u);
+  EXPECT_EQ(Mem->getFields()[0].FieldType, Pred);
+  const llvm::abi::ArrayType *Gap = asI8Array(Mem->getFields()[1].FieldType);
+  ASSERT_NE(Gap, nullptr);
+  EXPECT_EQ(Gap->getNumElements(), 12u);
+  EXPECT_EQ(Mem->getFields()[2].FieldType, Data);
+}
+
+// The same alignment rule applies to the tail. The record size is a multiple
+// of the source alignment but not of the vector's converted alignment, so the
+// record is packed and the tail padding is an explicit array.
+TEST_F(TargetInfoTest, ConvertTypeForMemVectorTailIsExplicit) {
+  MemTargetInfo TI(TB);
+  const ABIType *I8 = TB.getIntegerType(8, llvm::Align(1), /*Signed=*/true);
+  const ABIType *Pred =
+      TB.getVectorType(I8, llvm::ElementCount::getFixed(4), llvm::Align(2),
+                       llvm::abi::VectorKind::SVEPredicate);
+  const ABIType *Data =
+      TB.getVectorType(I32, llvm::ElementCount::getFixed(8), llvm::Align(16),
+                       llvm::abi::VectorKind::SVEData);
+  // 32-byte vector, 4-byte predicate at byte 32. Size 48.
+  const ABIType *S = recordOf({FieldInfo(Data, 0), FieldInfo(Pred, 256)}, 384,
+                              llvm::Align(16));
+  const llvm::abi::RecordType *Mem = asRecord(TI.convertTypeForMem(S));
+  ASSERT_NE(Mem, nullptr);
+  EXPECT_EQ(Mem->getPacking(), StructPacking::Packed);
+  ASSERT_EQ(Mem->getNumFields(), 3u);
+  EXPECT_EQ(Mem->getFields()[0].FieldType, Data);
+  EXPECT_EQ(Mem->getFields()[1].FieldType, Pred);
+  const llvm::abi::ArrayType *Tail = asI8Array(Mem->getFields()[2].FieldType);
+  ASSERT_NE(Tail, nullptr);
+  EXPECT_EQ(Tail->getNumElements(), 12u);
+}
+
+// The tail is reached by an integer as wide as the most aligned member, so
+// the alignment that covers it is capped at getMaxIntegerAlign(). A member
+// aligned beyond that does not carry the tail, which is an explicit array even
+// though the record is not packed.
+TEST_F(TargetInfoTest, ConvertTypeForMemTailAlignCappedAtWidestInteger) {
+  MemTargetInfo TI(TB);
+  const ABIType *I8 = TB.getIntegerType(8, llvm::Align(1), /*Signed=*/true);
+  const ABIType *Pred =
+      TB.getVectorType(I8, llvm::ElementCount::getFixed(4), llvm::Align(2),
+                       llvm::abi::VectorKind::SVEPredicate);
+  const ABIType *Data =
+      TB.getVectorType(I32, llvm::ElementCount::getFixed(8), llvm::Align(16),
+                       llvm::abi::VectorKind::SVEData);
+  // 32-byte vector, 4-byte predicate at byte 32, alignas(64). Size 64. The
+  // members reach byte 36, which the vector's alignment of 32 would round to
+  // the record size, but the 16-byte cap only reaches byte 48.
+  const ABIType *S = recordOf({FieldInfo(Data, 0), FieldInfo(Pred, 256)}, 512,
+                              llvm::Align(64));
+  const llvm::abi::RecordType *Mem = asRecord(TI.convertTypeForMem(S));
+  ASSERT_NE(Mem, nullptr);
+  EXPECT_EQ(Mem->getPacking(), StructPacking::Default);
+  ASSERT_EQ(Mem->getNumFields(), 3u);
+  EXPECT_EQ(Mem->getFields()[0].FieldType, Data);
+  EXPECT_EQ(Mem->getFields()[1].FieldType, Pred);
+  const llvm::abi::ArrayType *Tail = asI8Array(Mem->getFields()[2].FieldType);
+  ASSERT_NE(Tail, nullptr);
+  EXPECT_EQ(Tail->getNumElements(), 28u);
+}
+
+// A packed member has converted alignment 1, so placing it at byte 1 does not
+// pack the outer record, and the naturally aligned field after it has no
+// explicit padding array.
+TEST_F(TargetInfoTest, ConvertTypeForMemPackedMemberHasAlignOne) {
+  MemTargetInfo TI(TB);
+  const ABIType *I8 = TB.getIntegerType(8, llvm::Align(1), /*Signed=*/true);
+  const ABIType *Inner =
+      recordOf({FieldInfo(I8, 0), FieldInfo(I32, 8)}, 40, llvm::Align(1));
+  // char, packed inner at byte 1, int at byte 8. Size 12.
+  const ABIType *Outer =
+      recordOf({FieldInfo(I8, 0), FieldInfo(Inner, 8), FieldInfo(I32, 64)}, 96,
+               llvm::Align(4));
+  const llvm::abi::RecordType *Mem = asRecord(TI.convertTypeForMem(Outer));
+  ASSERT_NE(Mem, nullptr);
+  EXPECT_EQ(Mem->getPacking(), StructPacking::Default);
+  ASSERT_EQ(Mem->getNumFields(), 3u);
+  EXPECT_EQ(Mem->getFields()[0].FieldType, I8);
+  const llvm::abi::RecordType *InnerMem =
+      asRecord(Mem->getFields()[1].FieldType);
+  ASSERT_NE(InnerMem, nullptr);
+  EXPECT_EQ(InnerMem->getPacking(), StructPacking::Packed);
+  EXPECT_EQ(Mem->getFields()[2].FieldType, I32);
 }
 
 } // namespace

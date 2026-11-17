@@ -35,7 +35,7 @@ llvm::SmallVector<MemorySlot> cir::AllocaOp::getPromotableSlots() {
 Value cir::AllocaOp::getDefaultValue(const MemorySlot &slot,
                                      OpBuilder &builder) {
   return cir::ConstantOp::create(builder, getLoc(),
-                                 cir::UndefAttr::get(slot.elemType));
+                                 cir::UndefAttr::get(slot.valueType));
 }
 
 void cir::AllocaOp::handleBlockArgument(const MemorySlot &slot,
@@ -73,13 +73,12 @@ bool cir::LoadOp::canUsesBeRemoved(
   if (blockingUses.size() != 1)
     return false;
 
-  // Volatile load or atomic load should not be removed.
-  if (getIsVolatile() || getMemOrder().has_value())
+  if (isVolatileOrAtomic())
     return false;
 
   Value blockingUse = (*blockingUses.begin())->get();
   return blockingUse == slot.ptr && getAddr() == slot.ptr &&
-         getType() == slot.elemType;
+         getType() == slot.valueType;
 }
 
 DeletionKind cir::LoadOp::removeBlockingUses(
@@ -112,13 +111,12 @@ bool cir::StoreOp::canUsesBeRemoved(
   if (blockingUses.size() != 1)
     return false;
 
-  // Volatile store or atomic store should not be removed.
-  if (getIsVolatile() || getMemOrder().has_value())
+  if (isVolatileOrAtomic())
     return false;
 
   Value blockingUse = (*blockingUses.begin())->get();
   return blockingUse == slot.ptr && getAddr() == slot.ptr &&
-         getValue() != slot.ptr && slot.elemType == getValue().getType();
+         getValue() != slot.ptr && slot.valueType == getValue().getType();
 }
 
 DeletionKind cir::StoreOp::removeBlockingUses(
@@ -142,7 +140,7 @@ bool cir::CopyOp::storesTo(const MemorySlot &slot) {
 
 Value cir::CopyOp::getStored(const MemorySlot &slot, OpBuilder &builder,
                              Value reachingDef, const DataLayout &dataLayout) {
-  return cir::LoadOp::create(builder, getLoc(), slot.elemType, getSrc());
+  return cir::LoadOp::create(builder, getLoc(), slot.valueType, getSrc());
 }
 
 DeletionKind cir::CopyOp::removeBlockingUses(
@@ -167,7 +165,7 @@ bool cir::CopyOp::canUsesBeRemoved(
     return false;
 
   return getCopySizeInBytes(dataLayout) ==
-         dataLayout.getTypeSize(slot.elemType);
+         dataLayout.getTypeSize(slot.valueType);
 }
 
 //===----------------------------------------------------------------------===//
@@ -202,7 +200,7 @@ bool cir::MatrixColumnMajorLoadOp::canUsesBeRemoved(
 
   Value blockingUse = (*blockingUses.begin())->get();
   return blockingUse == slot.ptr && getValue() == slot.ptr &&
-         getType() == slot.elemType;
+         getType() == slot.valueType;
 }
 
 DeletionKind cir::MatrixColumnMajorLoadOp::removeBlockingUses(
@@ -210,6 +208,48 @@ DeletionKind cir::MatrixColumnMajorLoadOp::removeBlockingUses(
     OpBuilder &builder, Value reachingDefinition,
     const DataLayout &dataLayout) {
   getResult().replaceAllUsesWith(reachingDefinition);
+  return DeletionKind::Delete;
+}
+
+//===----------------------------------------------------------------------===//
+// Interfaces for MatrixColumnMajorStoreOp
+//===----------------------------------------------------------------------===//
+
+bool cir::MatrixColumnMajorStoreOp::loadsFrom(const MemorySlot &slot) {
+  return false;
+}
+
+bool cir::MatrixColumnMajorStoreOp::storesTo(const MemorySlot &slot) {
+  return getValue() == slot.ptr;
+}
+
+Value cir::MatrixColumnMajorStoreOp::getStored(const MemorySlot &slot,
+                                               OpBuilder &builder,
+                                               Value reachingDef,
+                                               const DataLayout &dataLayout) {
+  return getMatrix();
+}
+
+bool cir::MatrixColumnMajorStoreOp::canUsesBeRemoved(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  if (blockingUses.size() != 1)
+    return false;
+
+  // Volatile store should not be removed.
+  if (getIsVolatile())
+    return false;
+
+  Value blockingUse = (*blockingUses.begin())->get();
+  return blockingUse == slot.ptr && getValue() == slot.ptr &&
+         getValue() != slot.ptr && slot.valueType == getValue().getType();
+}
+
+DeletionKind cir::MatrixColumnMajorStoreOp::removeBlockingUses(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    OpBuilder &builder, Value reachingDefinition,
+    const DataLayout &dataLayout) {
   return DeletionKind::Delete;
 }
 

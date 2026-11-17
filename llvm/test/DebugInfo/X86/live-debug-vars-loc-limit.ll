@@ -1,4 +1,4 @@
-; RUN: llc --stop-after=virtregrewriter -experimental-debug-variable-locations=false -o - %s | FileCheck %s
+; RUN: llc --stop-after=virt-reg-rewriter -experimental-debug-variable-locations=false -o - %s | FileCheck %s
 
 ; Check that any debug value with 64+ unique machine location operands is set
 ; undef by LiveDebugVariables.

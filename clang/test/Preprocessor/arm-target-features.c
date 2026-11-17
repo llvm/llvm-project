@@ -939,6 +939,11 @@
 // CHECK-V97A: #define __ARM_ARCH_9_7A__ 1
 // CHECK-V97A: #define __ARM_ARCH_PROFILE 'A'
 
+// RUN: %clang -target armv9.8a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V98A %s
+// CHECK-V98A: #define __ARM_ARCH 9
+// CHECK-V98A: #define __ARM_ARCH_9_8A__ 1
+// CHECK-V98A: #define __ARM_ARCH_PROFILE 'A'
+
 // RUN: %clang -target arm-none-none-eabi -march=armv7-m -mfpu=softvfp -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SOFTVFP %s
 // CHECK-SOFTVFP-NOT: #define __ARM_FP 0x
 

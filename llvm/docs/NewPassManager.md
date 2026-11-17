@@ -22,7 +22,7 @@ ModuleAnalysisManager MAM;
 // Take a look at the PassBuilder constructor parameters for more
 // customization, e.g. specifying a TargetMachine or various debugging
 // options.
-PassBuilder PB;
+PassBuilder PB(MyModule.getContext());
 
 // Register all the basic analyses with the managers.
 PB.registerModuleAnalyses(MAM);
@@ -152,7 +152,7 @@ cases, `PassBuilder` exposes callbacks that allow injecting passes into
 certain parts of the pipeline. For example,
 
 ```cpp
-PassBuilder PB;
+PassBuilder PB(Context);
 PB.registerPipelineStartEPCallback(
     [&](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
       MPM.addPass(FooPass());

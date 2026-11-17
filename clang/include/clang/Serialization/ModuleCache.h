@@ -13,10 +13,12 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
 
 #include <ctime>
 #include <memory>
+#include <optional>
 #include <sys/types.h>
 #include <system_error>
 
@@ -73,6 +75,13 @@ public:
   /// were validated.
   virtual void updateModuleTimestamp(StringRef ModuleFilename) = 0;
 
+  /// Whether the build system reported that \p Directory changed before the
+  /// build session started, or std::nullopt if this cache can't tell and the
+  /// file system has to be checked instead.
+  virtual std::optional<bool> isDirectoryInvalidated(StringRef Directory) {
+    return std::nullopt;
+  }
+
   /// Prune module files that haven't been accessed in a long time.
   virtual void maybePrune(StringRef Path, time_t PruneInterval,
                           time_t PruneAfter) = 0;
@@ -81,9 +90,14 @@ public:
   virtual InMemoryModuleCache &getInMemoryModuleCache() = 0;
   virtual const InMemoryModuleCache &getInMemoryModuleCache() const = 0;
 
-  /// Write the PCM contents to the given path in the module cache.
-  virtual std::error_code write(StringRef Path, llvm::MemoryBufferRef Buffer,
-                                off_t &Size, time_t &ModTime) = 0;
+  /// Write the PCM contents to the given path in the module cache. Takes
+  /// ownership of \p Buffer, so that it can be freed as soon as possible.
+  ///
+  /// Returns a buffer with the written contents, which readers in this process
+  /// should use instead of their own copy.
+  virtual llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+  write(StringRef Path, std::unique_ptr<llvm::MemoryBuffer> Buffer, off_t &Size,
+        time_t &ModTime) = 0;
 
   virtual Expected<std::unique_ptr<llvm::MemoryBuffer>>
   read(StringRef FileName, off_t &Size, time_t &ModTime) = 0;
@@ -109,8 +123,13 @@ void maybePruneImpl(StringRef Path, time_t PruneInterval, time_t PruneAfter,
                     llvm::function_ref<void(StringRef)> OnPrune = {});
 
 /// Shared implementation of `ModuleCache::write()`.
-std::error_code writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer,
-                          off_t &Size, time_t &ModTime);
+///
+/// If \p ReadBack is true, returns the contents of the written file, read back
+/// from the same file descriptor (and therefore immune to concurrent
+/// replacement of the file at \p Path). Otherwise, returns nullptr on success.
+llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer, off_t &Size,
+          time_t &ModTime, bool ReadBack);
 
 /// Shared implementation of `ModuleCache::read()`.
 Expected<std::unique_ptr<llvm::MemoryBuffer>>

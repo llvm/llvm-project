@@ -36,6 +36,8 @@
 !rec_SpanMixed =
     !cir.struct<"SpanMixed" {data !u8i, pad !cir.array<!u8i x 3>, empty !u8i,
                              pad !cir.array<!u8i x 3>}>
+!rec_VecLast =
+    !cir.struct<"VecLast" {data !cir.float, data !cir.vector<3 x !cir.float>}>
 
 module attributes {cir.triple = "x86_64-unknown-linux-gnu",
                    dlti.dl_spec = #dlti.dl_spec<>} {
@@ -167,6 +169,16 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu",
   cir.func @span_mixed(%arg0: !cir.ptr<!rec_SpanMixed>,
                        %arg1: !cir.ptr<!rec_SpanMixed>) {
     cir.copy %arg0 to %arg1 skip_tail_padding : !cir.ptr<!rec_SpanMixed>
+    cir.return
+  }
+
+  // A three-float vector is data through all 16 bytes of its alloc size.
+  // CHECK-LABEL: llvm.func @vec_last
+  // CHECK:         %[[N:.*]] = llvm.mlir.constant(32 : i64) : i64
+  // CHECK:         "llvm.intr.memcpy"(%{{.+}}, %{{.+}}, %[[N]])
+  cir.func @vec_last(%arg0: !cir.ptr<!rec_VecLast>,
+                     %arg1: !cir.ptr<!rec_VecLast>) {
+    cir.copy %arg0 to %arg1 skip_tail_padding : !cir.ptr<!rec_VecLast>
     cir.return
   }
 }

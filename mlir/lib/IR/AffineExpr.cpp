@@ -1356,8 +1356,12 @@ LogicalResult SimpleAffineExprFlattener::visitMulExpr(AffineBinaryOpExpr expr) {
 
   // Get the RHS constant.
   int64_t rhsConst = rhs[getConstantIndex()];
-  for (int64_t &lhsElt : lhs)
-    lhsElt *= rhsConst;
+  for (int64_t &lhsElt : lhs) {
+    auto [prod, overflow] = llvm::MulOverflow(lhsElt, rhsConst);
+    if (overflow)
+      return failure();
+    lhsElt = prod;
+  }
 
   return success();
 }
@@ -1369,7 +1373,10 @@ LogicalResult SimpleAffineExprFlattener::visitAddExpr(AffineBinaryOpExpr expr) {
   assert(lhs.size() == rhs.size());
   // Update the LHS in place.
   for (unsigned i = 0, e = rhs.size(); i < e; i++) {
-    lhs[i] += rhs[i];
+    auto [sum, overflow] = llvm::AddOverflow(lhs[i], rhs[i]);
+    if (overflow)
+      return failure();
+    lhs[i] = sum;
   }
   // Pop off the RHS.
   operandExprStack.pop_back();
