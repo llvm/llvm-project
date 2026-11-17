@@ -1152,6 +1152,7 @@ private:
   SmallVector<FragmentCluster, 4> Clusters;
   DenseMap<const BinaryBasicBlock *, Position> BBLayout;
   DenseMap<const MCSymbol *, Position> SymLayout;
+  DenseMap<const MCSymbol *, BinaryBasicBlock *> SymbolToBB;
 
   /// Long thunks whose out-of-layout targets need BTI fixups.
   SmallVector<std::pair<BinaryFunction *, const MCSymbol *>> PendingBTIFixups;
@@ -1287,6 +1288,13 @@ void ClusteredRelaxation::buildLayout() {
     return ClusterRanges;
   };
 
+  // Function symbols are emitted before the first block's alignment,
+  // so they may point to padding instead of the block's BTI landing.
+  auto needsAlignment = [&](const BinaryBasicBlock &BB) {
+    return (BC.AlignBlocks || BC.PreserveBlocksAlignment) &&
+           BB.getAlignment() > 1;
+  };
+
   uint64_t LayoutOffset = 0;
   auto addFragmentToCluster = [&](const OutputFragment &Fragment) {
     FragmentCluster &FC = Clusters.back();
@@ -1306,20 +1314,31 @@ void ClusteredRelaxation::buildLayout() {
     ++FC.NumFragments;
 
     // Map primary entry points.
-    if (FF.isMainFragment())
-      for (const MCSymbol *Symbol : BF.getSymbols())
+    if (FF.isMainFragment()) {
+      BinaryBasicBlock *BB = FF.empty() ? nullptr : FF.front();
+      for (const MCSymbol *Symbol : BF.getSymbols()) {
         SymLayout[Symbol] = {ClusterNum, FragmentOffset};
+        if (BC.usesBTI() && BB && !needsAlignment(*BB))
+          SymbolToBB[Symbol] = BB;
+      }
+    }
 
     uint64_t BBOffset = FragmentOffset;
-    for (const BinaryBasicBlock *BB : FF) {
+    for (BinaryBasicBlock *BB : FF) {
       BBLayout[BB] = {ClusterNum, BBOffset};
       // Map the local BB label.
-      if (const MCSymbol *Label = BB->getLabel())
+      if (const MCSymbol *Label = BB->getLabel()) {
         SymLayout[Label] = {ClusterNum, BBOffset};
+        if (BC.usesBTI())
+          SymbolToBB[Label] = BB;
+      }
       // Map the secondary entry point, which can differ from the BB label.
       if (MCSymbol *Label = BF.getLabelAtOffset(BB->getOffset()))
-        if (MCSymbol *EntrySymbol = BF.getSecondaryEntryPointSymbol(Label))
+        if (MCSymbol *EntrySymbol = BF.getSecondaryEntryPointSymbol(Label)) {
           SymLayout[EntrySymbol] = {ClusterNum, BBOffset};
+          if (BC.usesBTI())
+            SymbolToBB[EntrySymbol] = BB;
+        }
 
       BBOffset += BB->estimateSize();
     }
@@ -1574,6 +1593,16 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
 }
 
 void ClusteredRelaxation::relaxCalls() {
+  auto hasBTILanding = [&](const MCSymbol *Symbol) {
+    BinaryBasicBlock *BB = SymbolToBB.lookup(Symbol);
+    if (!BB)
+      return false;
+    MCInst *First = BB->getFirstNonPseudoInstr();
+    return First && (BC.MIB->isBTILandingPad(*First, BTIKind::C) ||
+                     BC.MIB->isBTILandingPad(*First, BTIKind::J) ||
+                     BC.MIB->isBTILandingPad(*First, BTIKind::JC));
+  };
+
   auto createLongThunk = [&](const MCSymbol *TargetSymbol, bool IsForward) {
     BinaryFunction *Thunk = nullptr;
     const size_t ThunkNumber = NumLongThunks++;
@@ -1652,11 +1681,12 @@ void ClusteredRelaxation::relaxCalls() {
 
   NumLongThunkCalls += OutOfLayoutCalls.size();
   // Process known targets from farthest to nearest for maximizing thunk reuse.
-  // BTI binaries use direct branch chains for in-layout targets.
-  const unsigned MaxThunks =
-      BC.usesBTI() ? MaxValue<unsigned> : opts::MaxThunkChainLength;
   for (auto &Calls : llvm::reverse(CallsByDistance)) {
     for (OutOfRangeRef &Call : Calls) {
+      const bool BTICompatible =
+          !BC.usesBTI() || hasBTILanding(Call.TargetSymbol);
+      const unsigned MaxThunks =
+          BTICompatible ? opts::MaxThunkChainLength : MaxValue<unsigned>;
       // Attempt a branch thunk chain if length is below threshold.
       if (const MCSymbol *Target =
               getOrCreateBranchThunkChain(Call, MaxThunks)) {
@@ -1667,7 +1697,7 @@ void ClusteredRelaxation::relaxCalls() {
         ++NumShortThunkCalls;
         continue;
       }
-      assert(!BC.usesBTI() && "expected branch thunk chain for BTI call");
+      assert(BTICompatible && "long thunk target lacks a BTI landing pad");
       // Otherwise fall back to a long thunk.
       ++NumLongThunkCalls;
       relaxCallWithLongThunk(Call);

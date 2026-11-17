@@ -1,7 +1,8 @@
 ## Check BTI fixups and call relaxation with clustered layout:
 ##  > A (old text) calls B (new text), whose entry needs BTI.
 ##  > D (new text) calls A (old text), whose entry NOP is patched to BTI.
-##  > In-layout calls use short thunk chains, which need no additional BTI.
+## In-layout calls use short thunk chains when their targets lack BTI.
+## Calls to targets with BTI can use long thunks.
 
 # REQUIRES: system-linux
 
@@ -25,10 +26,10 @@
 # CHECK-BOLT: BOLT-INFO: cluster: 2
 # CHECK-BOLT-NEXT: BOLT-INFO:   2 fragment(s)
 # CHECK-BOLT-NEXT: BOLT-INFO:   120 estimated bytes without thunks
-# CHECK-BOLT: BOLT-INFO: relaxed 2 calls with short thunks
-# CHECK-BOLT: BOLT-INFO: relaxed 1 calls with long thunks
-# CHECK-BOLT: BOLT-INFO: 4 short thunks created
-# CHECK-BOLT: BOLT-INFO: 1 long thunks created
+# CHECK-BOLT: BOLT-INFO: relaxed 1 calls with short thunks
+# CHECK-BOLT: BOLT-INFO: relaxed 2 calls with long thunks
+# CHECK-BOLT: BOLT-INFO: 2 short thunks created
+# CHECK-BOLT: BOLT-INFO: 2 long thunks created
 # CHECK-BOLT: BOLT-INFO: relaxed 2 unconditional branches
 # CHECK-BOLT: BOLT-INFO: 4 branch thunks created
 
@@ -118,7 +119,7 @@ E:
 
 ########################## Cluster 0 ##########################
 #
-# CHECK-OUTPUT:      <B>:
+# CHECK-OUTPUT:      [[#%.16x,B_ADDR:]] <B>:
 # CHECK-OUTPUT-NEXT: {{.*}} bti c
 # CHECK-OUTPUT-NEXT: {{.*}} cbz x0, {{.*}} <B+0xc>
 # CHECK-OUTPUT-NEXT: {{.*}} ret
@@ -139,9 +140,6 @@ E:
 #
 # CHECK-OUTPUT:      <__AArch64_backward_Thunk_C_0>:
 # CHECK-OUTPUT-NEXT: {{.*}} b {{.*}} <C>
-#
-# CHECK-OUTPUT:      <__AArch64_backward_Thunk_B_2>:
-# CHECK-OUTPUT-NEXT: {{.*}} b {{.*}} <B>
 #
 # CHECK-OUTPUT:      <D>:
 # CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_forward_ADRPThunk_A_0>
@@ -168,8 +166,10 @@ E:
 # CHECK-OUTPUT:      <__AArch64_backward_Thunk_C_1>:
 # CHECK-OUTPUT-NEXT: {{.*}} b {{.*}} <__AArch64_backward_Thunk_C_0>
 #
-# CHECK-OUTPUT:      <__AArch64_backward_Thunk_B_3>:
-# CHECK-OUTPUT-NEXT: {{.*}} b {{.*}} <__AArch64_backward_Thunk_B_2>
+# CHECK-OUTPUT:      <__AArch64_backward_ADRPThunk_B_1>:
+# CHECK-OUTPUT-NEXT: {{.*}} adrp x16, 0x[[#%x,B_PAGE:]]
+# CHECK-OUTPUT-NEXT: {{.*}} add x16, x16, #0x[[#%x,B_ADDR-B_PAGE]]
+# CHECK-OUTPUT-NEXT: {{.*}} br x16
 #
 # CHECK-OUTPUT:      <B.cold.0>:
 # CHECK-OUTPUT-NEXT: {{.*}} mov x0, #0x2
@@ -180,5 +180,5 @@ E:
 # CHECK-OUTPUT-NEXT: {{.*}} ret
 #
 # CHECK-OUTPUT:      <C.cold.0>:
-# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_Thunk_B_3>
+# CHECK-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64_backward_ADRPThunk_B_1>
 # CHECK-OUTPUT-NEXT: {{.*}} ret
