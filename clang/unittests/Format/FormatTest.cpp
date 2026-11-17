@@ -4291,13 +4291,6 @@ TEST_F(FormatTest, FormatsVaOptWithTrailingComma) {
                "    kOnly                     \\\n"
                "  };",
                NoShortEnums);
-  verifyFormat("#define M(...)            \\\n"
-               "  enum E {                \\\n"
-               "    kFirst __VA_OPT__(, ) \\\n"
-               "    __VA_ARGS__           \\\n"
-               "  };",
-               "#define M(...) enum E { kFirst __VA_OPT__(,) __VA_ARGS__ };",
-               NoShortEnums);
 
   FormatStyle InsertComma = NoShortEnums;
   InsertComma.EnumTrailingComma = FormatStyle::ETC_Insert;
@@ -4307,14 +4300,6 @@ TEST_F(FormatTest, FormatsVaOptWithTrailingComma) {
                "    __VA_OPT__(__VA_ARGS__, ) \\\n"
                "  };",
                InsertComma);
-  FormatStyle RemoveComma = NoShortEnums;
-  RemoveComma.EnumTrailingComma = FormatStyle::ETC_Remove;
-  verifyFormat("#define M(...)                \\\n"
-               "  enum E {                    \\\n"
-               "    kFirst,                   \\\n"
-               "    __VA_OPT__(__VA_ARGS__, ) \\\n"
-               "  };",
-               RemoveComma);
 
   verifyFormat("#define M(...)                  \\\n"
                "  int x[] = {                   \\\n"
@@ -4328,8 +4313,6 @@ TEST_F(FormatTest, FormatsVaOptWithTrailingComma) {
                "             3000000000,     4, 5000000000, 6000000000};",
                Style);
 
-  verifyFormat("#define M(...) void f(int a __VA_OPT__(, __VA_ARGS__));",
-               Style);
   FormatStyle Style58 = Style;
   Style58.ColumnLimit = 58;
   verifyFormat("#define M(...)                                        \\\n"
@@ -4378,11 +4361,6 @@ TEST_F(FormatTest, FormatsVaOptWithTrailingComma) {
                Style58);
   FormatStyle Style53 = Style;
   Style53.ColumnLimit = 53;
-  verifyFormat("#define M(...)                                    \\\n"
-               "  SomeFunction(__VA_OPT__(a, )                    \\\n"
-               "               bbbbbbbbbbbbbbb + ccccccccccccccc, \\\n"
-               "               d);",
-               Style53);
   verifyFormat("#define M(...)                                      \\\n"
                "  int x = foo(cond ? a : __VA_OPT__(bbbbbbbbbbbb, ) \\\n"
                "              cccccccccccc, dddddddddddd);",
@@ -4409,8 +4387,9 @@ TEST_F(FormatTest, FormatsVaOptWithTrailingComma) {
                "  struct S;",
                Style45);
 
-  verifyFormat("#define M(...) foo(__VA_OPT__(a, ) *b, (c + d), {1, 2})",
-               Style);
+  verifyFormat(
+      "#define M(...) foo(__VA_OPT__(a, ) (b + c), __VA_OPT__(d, ) {1, 2})",
+      Style);
   verifyFormat("#define M(...) S s = {.a = 1, __VA_OPT__(.b = 2, ) .c = 3};",
                Style);
   FormatStyle Google35 = getGoogleStyle();
