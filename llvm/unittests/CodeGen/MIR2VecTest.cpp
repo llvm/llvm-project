@@ -135,7 +135,7 @@ protected:
       std::initializer_list<std::pair<const char *, float>> PhyRegs,
       std::initializer_list<std::pair<const char *, float>> VirtRegs,
       unsigned Dimension = 2) {
-    assert(TII && TRI && MF && "Target info not initialized");
+    assert(TII && TRI && "Target info not initialized");
     VocabMap OpcodeMap, CommonOperandMap, PhyRegMap, VirtRegMap;
     for (const auto &[Name, Value] : Opcodes)
       OpcodeMap[Name] = Embedding(Dimension, Value);
@@ -162,7 +162,7 @@ protected:
 
     return MIRVocabulary::create(
         std::move(OpcodeMap), std::move(CommonOperandMap), std::move(PhyRegMap),
-        std::move(VirtRegMap), *TII, *TRI, MF->getRegInfo());
+        std::move(VirtRegMap), *TII, *TRI);
   }
 };
 
@@ -195,11 +195,10 @@ TEST_P(MIR2VecVocabEmptySectionTestFixture, EmptySectionFailsValidation) {
 
   ASSERT_TRUE(TII != nullptr);
   ASSERT_TRUE(TRI != nullptr);
-  ASSERT_TRUE(MF != nullptr);
 
   auto VocabOrErr = MIRVocabulary::create(
       std::move(OpcodeMap), std::move(CommonOperandMap), std::move(PhyRegMap),
-      std::move(VirtRegMap), *TII, *TRI, MF->getRegInfo());
+      std::move(VirtRegMap), *TII, *TRI);
   EXPECT_FALSE(static_cast<bool>(VocabOrErr))
       << "Factory method should fail when section " << EmptySection
       << " is empty";
@@ -365,8 +364,7 @@ protected:
 
 // Test factory method for creating embedder
 TEST_F(MIR2VecEmbeddingTestFixture, CreateSymbolicEmbedder) {
-  auto VocabOrErr =
-      MIRVocabulary::createDummyVocabForTest(*TII, *TRI, MF->getRegInfo(), 1);
+  auto VocabOrErr = MIRVocabulary::createDummyVocabForTest(*TII, *TRI, 1);
   ASSERT_TRUE(static_cast<bool>(VocabOrErr))
       << "Failed to create vocabulary: " << toString(VocabOrErr.takeError());
   auto &V = *VocabOrErr;
@@ -375,8 +373,7 @@ TEST_F(MIR2VecEmbeddingTestFixture, CreateSymbolicEmbedder) {
 }
 
 TEST_F(MIR2VecEmbeddingTestFixture, CreateInvalidMode) {
-  auto VocabOrErr =
-      MIRVocabulary::createDummyVocabForTest(*TII, *TRI, MF->getRegInfo(), 1);
+  auto VocabOrErr = MIRVocabulary::createDummyVocabForTest(*TII, *TRI, 1);
   ASSERT_TRUE(static_cast<bool>(VocabOrErr))
       << "Failed to create vocabulary: " << toString(VocabOrErr.takeError());
   auto &V = *VocabOrErr;
@@ -501,8 +498,7 @@ TEST_F(MIR2VecEmbeddingTestFixture, EmptyBasicBlock) {
   MF->push_back(MBB);
 
   // Create embedder
-  auto VocabOrErr =
-      MIRVocabulary::createDummyVocabForTest(*TII, *TRI, MF->getRegInfo(), 2);
+  auto VocabOrErr = MIRVocabulary::createDummyVocabForTest(*TII, *TRI, 2);
   ASSERT_TRUE(static_cast<bool>(VocabOrErr))
       << "Failed to create vocabulary: " << toString(VocabOrErr.takeError());
   auto &V = *VocabOrErr;

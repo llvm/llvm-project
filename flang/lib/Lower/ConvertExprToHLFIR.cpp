@@ -1138,6 +1138,22 @@ HlfirDesignatorBuilder::convertVectorSubscriptedExprToElementalAddr(
 // Binary Operation implementation
 //===--------------------------------------------------------------------===//
 
+/// Register the lifetime at the expression's creation point. Elemental kernels
+/// use their own context, emitted in the yield_element cleanup region.
+static void attachExprCleanup(mlir::Location loc, fir::FirOpBuilder &builder,
+                              mlir::Value expr,
+                              Fortran::lower::StatementContext &stmtCtx) {
+  fir::FirOpBuilder *bldr = &builder;
+  stmtCtx.attachCleanup([=]() { hlfir::DestroyOp::create(*bldr, loc, expr); });
+}
+
+static std::optional<hlfir::CleanupFunction>
+getElementCleanup(Fortran::lower::StatementContext &stmtCtx) {
+  if (!stmtCtx.hasCode())
+    return std::nullopt;
+  return [&stmtCtx]() { stmtCtx.finalizeAndReset(); };
+}
+
 template <typename T>
 struct BinaryOp {};
 
@@ -1148,10 +1164,10 @@ struct BinaryOp {};
       Fortran::evaluate::Type<Fortran::common::TypeCategory::GenBinTyCat>>> {  \
     using Op = Fortran::evaluate::GenBinEvOp<                                  \
         Fortran::evaluate::Type<Fortran::common::TypeCategory::GenBinTyCat>>;  \
-    static hlfir::EntityWithAttributes gen(mlir::Location loc,                 \
-                                           fir::FirOpBuilder &builder,         \
-                                           const Op &, hlfir::Entity lhs,      \
-                                           hlfir::Entity rhs) {                \
+    static hlfir::EntityWithAttributes                                         \
+    gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &,            \
+        hlfir::Entity lhs, hlfir::Entity rhs,                                  \
+        Fortran::lower::StatementContext &stmtCtx) {                           \
       if constexpr (Fortran::common::TypeCategory::GenBinTyCat ==              \
                     Fortran::common::TypeCategory::Unsigned) {                 \
         return hlfir::EntityWithAttributes{                                    \
@@ -1185,10 +1201,10 @@ struct BinaryOp<Fortran::evaluate::Divide<
     Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex>>> {
   using Op = Fortran::evaluate::Divide<
       Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex>>;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         const Op &op, hlfir::Entity lhs,
-                                         hlfir::Entity rhs) {
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &op,
+      hlfir::Entity lhs, hlfir::Entity rhs,
+      Fortran::lower::StatementContext &stmtCtx) {
     const int kind = op.kind();
     mlir::Type ty = Fortran::lower::getFIRType(
         builder.getContext(), Fortran::common::TypeCategory::Complex, kind,
@@ -1210,10 +1226,10 @@ struct BinaryOp<Fortran::evaluate::Divide<
 template <Fortran::common::TypeCategory TC>
 struct BinaryOp<Fortran::evaluate::Power<Fortran::evaluate::Type<TC>>> {
   using Op = Fortran::evaluate::Power<Fortran::evaluate::Type<TC>>;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         const Op &op, hlfir::Entity lhs,
-                                         hlfir::Entity rhs) {
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &op,
+      hlfir::Entity lhs, hlfir::Entity rhs,
+      Fortran::lower::StatementContext &stmtCtx) {
     const int kind = op.kind();
     mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, kind,
                                                /*params=*/{});
@@ -1225,10 +1241,10 @@ template <Fortran::common::TypeCategory TC>
 struct BinaryOp<
     Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC>>> {
   using Op = Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC>>;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         const Op &op, hlfir::Entity lhs,
-                                         hlfir::Entity rhs) {
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &op,
+      hlfir::Entity lhs, hlfir::Entity rhs,
+      Fortran::lower::StatementContext &stmtCtx) {
     const int kind = op.kind();
     mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, kind,
                                                /*params=*/{});
@@ -1239,10 +1255,10 @@ struct BinaryOp<
 template <Fortran::common::TypeCategory TC>
 struct BinaryOp<Fortran::evaluate::Extremum<Fortran::evaluate::Type<TC>>> {
   using Op = Fortran::evaluate::Extremum<Fortran::evaluate::Type<TC>>;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         const Op &op, hlfir::Entity lhs,
-                                         hlfir::Entity rhs) {
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &op,
+      hlfir::Entity lhs, hlfir::Entity rhs,
+      Fortran::lower::StatementContext &stmtCtx) {
     llvm::SmallVector<mlir::Value, 2> args{lhs, rhs};
     fir::ExtendedValue res = op.ordering == Fortran::evaluate::Ordering::Greater
                                  ? fir::genMax(builder, loc, args)
@@ -1261,9 +1277,9 @@ struct BinaryOp<Fortran::evaluate::Extremum<
     Fortran::evaluate::Type<Fortran::common::TypeCategory::Character>>> {
   using Op = Fortran::evaluate::Extremum<
       Fortran::evaluate::Type<Fortran::common::TypeCategory::Character>>;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &, const Op &,
-                                         hlfir::Entity, hlfir::Entity) {
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &, const Op &, hlfir::Entity,
+      hlfir::Entity, Fortran::lower::StatementContext &stmtCtx) {
     fir::emitFatalError(loc, "Fortran::evaluate::Extremum are unexpected");
   }
   static void genResultTypeParams(mlir::Location loc, fir::FirOpBuilder &,
@@ -1298,10 +1314,10 @@ struct BinaryOp<Fortran::evaluate::Relational<
     Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>> {
   using Op = Fortran::evaluate::Relational<
       Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         const Op &op, hlfir::Entity lhs,
-                                         hlfir::Entity rhs) {
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &op,
+      hlfir::Entity lhs, hlfir::Entity rhs,
+      Fortran::lower::StatementContext &stmtCtx) {
     auto cmp = mlir::arith::CmpIOp::create(
         builder, loc, Fortran::lower::translateSignedRelational(op.opr), lhs,
         rhs);
@@ -1314,10 +1330,10 @@ struct BinaryOp<Fortran::evaluate::Relational<
     Fortran::evaluate::Type<Fortran::common::TypeCategory::Unsigned>>> {
   using Op = Fortran::evaluate::Relational<
       Fortran::evaluate::Type<Fortran::common::TypeCategory::Unsigned>>;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         const Op &op, hlfir::Entity lhs,
-                                         hlfir::Entity rhs) {
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &op,
+      hlfir::Entity lhs, hlfir::Entity rhs,
+      Fortran::lower::StatementContext &stmtCtx) {
     const int kind = op.left().kind();
     int bits = Fortran::evaluate::Type<
         Fortran::common::TypeCategory::Integer>::Scalar::bits(kind);
@@ -1338,10 +1354,10 @@ struct BinaryOp<Fortran::evaluate::Relational<
     Fortran::evaluate::Type<Fortran::common::TypeCategory::Real>>> {
   using Op = Fortran::evaluate::Relational<
       Fortran::evaluate::Type<Fortran::common::TypeCategory::Real>>;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         const Op &op, hlfir::Entity lhs,
-                                         hlfir::Entity rhs) {
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &op,
+      hlfir::Entity lhs, hlfir::Entity rhs,
+      Fortran::lower::StatementContext &stmtCtx) {
     auto cmp = mlir::arith::CmpFOp::create(
         builder, loc, Fortran::lower::translateFloatRelational(op.opr), lhs,
         rhs);
@@ -1354,10 +1370,10 @@ struct BinaryOp<Fortran::evaluate::Relational<
     Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex>>> {
   using Op = Fortran::evaluate::Relational<
       Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex>>;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         const Op &op, hlfir::Entity lhs,
-                                         hlfir::Entity rhs) {
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &op,
+      hlfir::Entity lhs, hlfir::Entity rhs,
+      Fortran::lower::StatementContext &stmtCtx) {
     auto cmp = fir::CmpcOp::create(
         builder, loc, Fortran::lower::translateFloatRelational(op.opr), lhs,
         rhs);
@@ -1370,10 +1386,10 @@ struct BinaryOp<Fortran::evaluate::Relational<
     Fortran::evaluate::Type<Fortran::common::TypeCategory::Character>>> {
   using Op = Fortran::evaluate::Relational<
       Fortran::evaluate::Type<Fortran::common::TypeCategory::Character>>;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         const Op &op, hlfir::Entity lhs,
-                                         hlfir::Entity rhs) {
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &op,
+      hlfir::Entity lhs, hlfir::Entity rhs,
+      Fortran::lower::StatementContext &stmtCtx) {
     auto cmp = hlfir::CmpCharOp::create(
         builder, loc, translateSignedRelational(op.opr), lhs, rhs);
     return hlfir::EntityWithAttributes{cmp};
@@ -1383,10 +1399,10 @@ struct BinaryOp<Fortran::evaluate::Relational<
 template <>
 struct BinaryOp<Fortran::evaluate::LogicalOperation> {
   using Op = Fortran::evaluate::LogicalOperation;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         const Op &op, hlfir::Entity lhs,
-                                         hlfir::Entity rhs) {
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &op,
+      hlfir::Entity lhs, hlfir::Entity rhs,
+      Fortran::lower::StatementContext &stmtCtx) {
     bool lhsIsLogical = mlir::isa<fir::LogicalType>(lhs.getType());
     bool rhsIsLogical = mlir::isa<fir::LogicalType>(rhs.getType());
     if (lhsIsLogical || rhsIsLogical) {
@@ -1440,9 +1456,10 @@ struct BinaryOp<Fortran::evaluate::LogicalOperation> {
 template <>
 struct BinaryOp<Fortran::evaluate::ComplexConstructor> {
   using Op = Fortran::evaluate::ComplexConstructor;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder, const Op &,
-                                         hlfir::Entity lhs, hlfir::Entity rhs) {
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &,
+      hlfir::Entity lhs, hlfir::Entity rhs,
+      Fortran::lower::StatementContext &stmtCtx) {
     mlir::Value res =
         fir::factory::Complex{builder, loc}.createComplex(lhs, rhs);
     return hlfir::EntityWithAttributes{res};
@@ -1452,15 +1469,16 @@ struct BinaryOp<Fortran::evaluate::ComplexConstructor> {
 template <>
 struct BinaryOp<Fortran::evaluate::SetLength> {
   using Op = Fortran::evaluate::SetLength;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder, const Op &,
-                                         hlfir::Entity string,
-                                         hlfir::Entity length) {
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &,
+      hlfir::Entity string, hlfir::Entity length,
+      Fortran::lower::StatementContext &stmtCtx) {
     // The input length may be a user input and needs to be sanitized as per
     // Fortran 2018 7.4.4.2 point 5.
     mlir::Value safeLength = fir::factory::genMaxWithZero(builder, loc, length);
-    return hlfir::EntityWithAttributes{
-        hlfir::SetLengthOp::create(builder, loc, string, safeLength)};
+    auto result = hlfir::SetLengthOp::create(builder, loc, string, safeLength);
+    attachExprCleanup(loc, builder, result, stmtCtx);
+    return hlfir::EntityWithAttributes{result};
   }
   static void
   genResultTypeParams(mlir::Location, fir::FirOpBuilder &, hlfir::Entity,
@@ -1475,10 +1493,12 @@ struct BinaryOp<Fortran::evaluate::Concat> {
   using Op = Fortran::evaluate::Concat;
   hlfir::EntityWithAttributes gen(mlir::Location loc,
                                   fir::FirOpBuilder &builder, const Op &,
-                                  hlfir::Entity lhs, hlfir::Entity rhs) {
+                                  hlfir::Entity lhs, hlfir::Entity rhs,
+                                  Fortran::lower::StatementContext &stmtCtx) {
     assert(len && "genResultTypeParams must have been called");
     auto concat =
         hlfir::ConcatOp::create(builder, loc, mlir::ValueRange{lhs, rhs}, len);
+    attachExprCleanup(loc, builder, concat.getResult(), stmtCtx);
     return hlfir::EntityWithAttributes{concat.getResult()};
   }
   void
@@ -1510,9 +1530,9 @@ struct UnaryOp {};
 template <>
 struct UnaryOp<Fortran::evaluate::Not> {
   using Op = Fortran::evaluate::Not;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder, const Op &,
-                                         hlfir::Entity lhs) {
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &,
+      hlfir::Entity lhs, Fortran::lower::StatementContext &stmtCtx) {
     mlir::Value one = builder.createBool(loc, true);
     mlir::Value val = builder.createConvert(loc, builder.getI1Type(), lhs);
     return hlfir::EntityWithAttributes{
@@ -1525,9 +1545,9 @@ struct UnaryOp<Fortran::evaluate::Negate<
     Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>> {
   using Op = Fortran::evaluate::Negate<
       Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         const Op &op, hlfir::Entity lhs) {
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &op,
+      hlfir::Entity lhs, Fortran::lower::StatementContext &stmtCtx) {
     const int kind = op.kind();
     // Like LLVM, integer negation is the binary op "0 - value"
     mlir::Type type = Fortran::lower::getFIRType(
@@ -1544,9 +1564,9 @@ struct UnaryOp<Fortran::evaluate::Negate<
     Fortran::evaluate::Type<Fortran::common::TypeCategory::Unsigned>>> {
   using Op = Fortran::evaluate::Negate<
       Fortran::evaluate::Type<Fortran::common::TypeCategory::Unsigned>>;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         const Op &op, hlfir::Entity lhs) {
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &op,
+      hlfir::Entity lhs, Fortran::lower::StatementContext &stmtCtx) {
     const int kind = op.kind();
     int bits = Fortran::evaluate::Type<
         Fortran::common::TypeCategory::Integer>::Scalar::bits(kind);
@@ -1567,9 +1587,9 @@ struct UnaryOp<Fortran::evaluate::Negate<
     Fortran::evaluate::Type<Fortran::common::TypeCategory::Real>>> {
   using Op = Fortran::evaluate::Negate<
       Fortran::evaluate::Type<Fortran::common::TypeCategory::Real>>;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder, const Op &,
-                                         hlfir::Entity lhs) {
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &,
+      hlfir::Entity lhs, Fortran::lower::StatementContext &stmtCtx) {
     return hlfir::EntityWithAttributes{
         mlir::arith::NegFOp::create(builder, loc, lhs)};
   }
@@ -1580,9 +1600,9 @@ struct UnaryOp<Fortran::evaluate::Negate<
     Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex>>> {
   using Op = Fortran::evaluate::Negate<
       Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex>>;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder, const Op &,
-                                         hlfir::Entity lhs) {
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &,
+      hlfir::Entity lhs, Fortran::lower::StatementContext &stmtCtx) {
     return hlfir::EntityWithAttributes{fir::NegcOp::create(builder, loc, lhs)};
   }
 };
@@ -1590,9 +1610,9 @@ struct UnaryOp<Fortran::evaluate::Negate<
 template <>
 struct UnaryOp<Fortran::evaluate::ComplexComponent> {
   using Op = Fortran::evaluate::ComplexComponent;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         const Op &op, hlfir::Entity lhs) {
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &op,
+      hlfir::Entity lhs, Fortran::lower::StatementContext &stmtCtx) {
     mlir::Value res = fir::factory::Complex{builder, loc}.extractComplexPart(
         lhs, op.isImaginaryPart);
     return hlfir::EntityWithAttributes{res};
@@ -1602,12 +1622,14 @@ struct UnaryOp<Fortran::evaluate::ComplexComponent> {
 template <typename T>
 struct UnaryOp<Fortran::evaluate::Parentheses<T>> {
   using Op = Fortran::evaluate::Parentheses<T>;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         const Op &op, hlfir::Entity lhs) {
-    if (lhs.isVariable())
-      return hlfir::EntityWithAttributes{
-          hlfir::AsExprOp::create(builder, loc, lhs)};
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &op,
+      hlfir::Entity lhs, Fortran::lower::StatementContext &stmtCtx) {
+    if (lhs.isVariable()) {
+      auto result = hlfir::AsExprOp::create(builder, loc, lhs);
+      attachExprCleanup(loc, builder, result, stmtCtx);
+      return hlfir::EntityWithAttributes{result};
+    }
     return hlfir::EntityWithAttributes{
         hlfir::NoReassocOp::create(builder, loc, lhs.getType(), lhs)};
   }
@@ -1623,13 +1645,15 @@ struct UnaryOp<Fortran::evaluate::Parentheses<T>> {
 template <Fortran::common::TypeCategory TC1, Fortran::common::TypeCategory TC2>
 struct UnaryOp<Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1>, TC2>> {
   using Op = Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1>, TC2>;
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         const Op &op, hlfir::Entity lhs) {
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &builder, const Op &op,
+      hlfir::Entity lhs, Fortran::lower::StatementContext &stmtCtx) {
     int kind = op.kind();
     if constexpr (TC1 == Fortran::common::TypeCategory::Character &&
                   TC2 == TC1) {
-      return hlfir::convertCharacterKind(loc, builder, lhs, kind);
+      auto result = hlfir::convertCharacterKind(loc, builder, lhs, kind);
+      attachExprCleanup(loc, builder, result, stmtCtx);
+      return result;
     }
     mlir::Type type = Fortran::lower::getFIRType(builder.getContext(), TC1,
                                                  kind, /*params=*/{});
@@ -1894,13 +1918,13 @@ private:
           Fortran::lower::genEnumerationOrdinalDesignator(loc, builder, base);
     mlir::Value shape = hlfir::genShape(loc, builder, base);
     auto kernel = [&](mlir::Location l, fir::FirOpBuilder &b,
-                      mlir::ValueRange idx) -> hlfir::Entity {
+                      mlir::ValueRange idx) -> hlfir::ElementalKernelResult {
       mlir::Value elem =
           ordinals ? hlfir::loadTrivialScalar(
                          l, b, hlfir::getElementAt(l, b, *ordinals, idx))
                    : genEnumerationOrdinalValue(
                          l, b, hlfir::getElementAt(l, b, base, idx));
-      return hlfir::Entity{b.createConvert(l, eleTy, elem)};
+      return {hlfir::Entity{b.createConvert(l, eleTy, elem)}, std::nullopt};
     };
     mlir::Value elemental =
         hlfir::genElementalOp(loc, builder, eleTy, shape, /*typeParams=*/{},
@@ -1924,14 +1948,17 @@ private:
             loc, getConverter(), enumExpr, getSymMap(), getStmtCtx());
     assert(addrOp.getCleanup().empty() && "no clean-up expected");
     auto kernel = [&](mlir::Location l, fir::FirOpBuilder &b,
-                      mlir::ValueRange idx) -> hlfir::Entity {
+                      mlir::ValueRange idx) -> hlfir::ElementalKernelResult {
       mlir::IRMapping mapper;
       auto alwaysFalse = [](hlfir::ElementalOp) -> bool { return false; };
-      hlfir::Entity elem{
-          hlfir::inlineElementalOp(l, b, addrOp, idx, mapper, alwaysFalse)};
+      llvm::SmallVector<hlfir::CleanupFunction> cleanups;
+      hlfir::Entity elem{hlfir::inlineElementalOp(l, b, addrOp, idx, mapper,
+                                                  alwaysFalse, cleanups)};
+      assert(cleanups.empty() &&
+             "non-recursive address inlining has no cleanups");
       mlir::Value ordinal = hlfir::loadTrivialScalar(
           l, b, Fortran::lower::genEnumerationOrdinalDesignator(l, b, elem));
-      return hlfir::Entity{b.createConvert(l, eleTy, ordinal)};
+      return {hlfir::Entity{b.createConvert(l, eleTy, ordinal)}, std::nullopt};
     };
     mlir::Value elemental = hlfir::genElementalOp(
         loc, builder, eleTy, addrOp.getShape(), /*typeParams=*/{}, kernel,
@@ -1983,7 +2010,7 @@ private:
       unaryOp.genResultTypeParams(loc, builder, left, typeParams);
     }
     if (rank == 0)
-      return unaryOp.gen(loc, builder, op.derived(), left);
+      return unaryOp.gen(loc, builder, op.derived(), left, getStmtCtx());
 
     // Elemental expression.
     mlir::Type elementType;
@@ -1999,12 +2026,15 @@ private:
                                      /*params=*/{});
     }
     mlir::Value shape = hlfir::genShape(loc, builder, left);
-    auto genKernel = [&op, &left, &unaryOp](
-                         mlir::Location l, fir::FirOpBuilder &b,
-                         mlir::ValueRange oneBasedIndices) -> hlfir::Entity {
+    Fortran::lower::StatementContext elementContext;
+    auto genKernel =
+        [&op, &left, &unaryOp, &elementContext](
+            mlir::Location l, fir::FirOpBuilder &b,
+            mlir::ValueRange oneBasedIndices) -> hlfir::ElementalKernelResult {
       auto leftElement = hlfir::getElementAt(l, b, left, oneBasedIndices);
       auto leftVal = hlfir::loadTrivialScalar(l, b, leftElement);
-      return unaryOp.gen(l, b, op.derived(), leftVal);
+      auto result = unaryOp.gen(l, b, op.derived(), leftVal, elementContext);
+      return {result, getElementCleanup(elementContext)};
     };
     mlir::Value elemental = hlfir::genElementalOp(
         loc, builder, elementType, shape, typeParams, genKernel,
@@ -2042,7 +2072,8 @@ private:
       if (noReassoc)
         builder.setFastMathFlags(fmfBackup &
                                  ~mlir::arith::FastMathFlags::reassoc);
-      auto res = binaryOp.gen(loc, builder, op.derived(), left, right);
+      auto res =
+          binaryOp.gen(loc, builder, op.derived(), left, right, getStmtCtx());
       builder.setFastMathFlags(fmfBackup);
       return res;
     }
@@ -2071,9 +2102,11 @@ private:
       assert(right.isArray() && "must have at least one array operand");
       shape = hlfir::genShape(loc, builder, right);
     }
-    auto genKernel = [&op, &left, &right, &binaryOp, noReassoc](
-                         mlir::Location l, fir::FirOpBuilder &b,
-                         mlir::ValueRange oneBasedIndices) -> hlfir::Entity {
+    Fortran::lower::StatementContext elementContext;
+    auto genKernel =
+        [&op, &left, &right, &binaryOp, noReassoc, &elementContext](
+            mlir::Location l, fir::FirOpBuilder &b,
+            mlir::ValueRange oneBasedIndices) -> hlfir::ElementalKernelResult {
       auto fmfBackup = b.getFastMathFlags();
       if (noReassoc)
         b.setFastMathFlags(fmfBackup & ~mlir::arith::FastMathFlags::reassoc);
@@ -2081,9 +2114,10 @@ private:
       auto rightElement = hlfir::getElementAt(l, b, right, oneBasedIndices);
       auto leftVal = hlfir::loadTrivialScalar(l, b, leftElement);
       auto rightVal = hlfir::loadTrivialScalar(l, b, rightElement);
-      auto result = binaryOp.gen(l, b, op.derived(), leftVal, rightVal);
+      auto result =
+          binaryOp.gen(l, b, op.derived(), leftVal, rightVal, elementContext);
       b.setFastMathFlags(fmfBackup);
-      return result;
+      return {result, getElementCleanup(elementContext)};
     };
     auto iofBackup = builder.getIntegerOverflowFlags();
     // nsw is never added to operations on vector subscripts

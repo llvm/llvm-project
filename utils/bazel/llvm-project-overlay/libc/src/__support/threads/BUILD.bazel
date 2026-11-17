@@ -298,7 +298,7 @@ libc_support_library(
         ":mutex",
         ":thread_attributes",
         ":thread_headers",
-        "//libc:config_app_h",
+        "//libc/config:app_h",
         "//libc/hdr:errno_macros",
         "//libc/hdr:fcntl_macros",
         "//libc/hdr:sched_macros",
@@ -356,7 +356,7 @@ libc_support_library(
     }),
     deps = [
         ":tcb",
-        "//libc:config_app_h",
+        "//libc/config:app_h",
         "//libc/hdr:sys_mman_macros",
         "//libc/src/__support/OSUtil:syscall",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:exit",

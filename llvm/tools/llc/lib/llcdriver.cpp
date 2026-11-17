@@ -50,6 +50,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
@@ -60,9 +61,6 @@
 #include <memory>
 #include <optional>
 using namespace llvm;
-
-static codegen::RegisterMTuneFlag MTF;
-static codegen::RegisterSaveStatsFlag SSF;
 
 // General options for llc.  Other pass-specific options are specified
 // within the corresponding llc passes, and target-specific options
@@ -539,7 +537,6 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   TargetOptions Options;
   auto InitializeOptions = [&](const Triple &TheTriple) {
     Options = codegen::getTargetOptions(Context.getLibraryOptions(), TheTriple);
-    Options.MCOptions.LibraryOptions = &Context.getLibraryOptions();
 
     if (Options.XCOFFReadOnlyPointers) {
       if (!TheTriple.isOSAIX())
@@ -724,11 +721,16 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
 
   for (auto &Plugin : PluginList) {
     CodeGenFileType CGFT = codegen::getFileType(Context.getLibraryOptions());
-    if (Plugin.invokePreCodeGenCallback(*M, *Target, CGFT, Out->os())) {
+    if (Plugin.invokePreCodeGenCallback(
+            *Target, *M, Out->os(), DwoOut ? &DwoOut->os() : nullptr, CGFT,
+            NoVerify, DisableSimplifyLibCalls, /*MSI=*/nullptr,
+            vfs::getRealFileSystem())) {
       // TODO: Deduplicate code with below and the NewPMDriver.
       if (Context.getDiagHandlerPtr()->HasErrors)
         exit(1);
       Out->keep();
+      if (DwoOut)
+        DwoOut->keep();
       return 0;
     }
   }

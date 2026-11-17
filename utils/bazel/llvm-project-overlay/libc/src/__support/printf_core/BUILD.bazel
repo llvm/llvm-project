@@ -42,8 +42,8 @@ libc_support_library(
     deps = [
         ":printf_config",
         ":printf_core_structs",
-        "//libc:llvm_libc_macros_stdfix_macros",
         "//libc/hdr/types:wint_t",
+        "//libc/include:llvm_libc_macros_stdfix_macros",
         "//libc/src/__support:arg_list",
         "//libc/src/__support:common",
         "//libc/src/__support:ctype_utils",
