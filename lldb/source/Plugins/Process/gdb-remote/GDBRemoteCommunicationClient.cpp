@@ -4400,6 +4400,7 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
                   case eSymbolTypeCompiler:
                   case eSymbolTypeInstrumentation:
                   case eSymbolTypeTrampoline:
+                  case eSymbolTypeASTFile:
                     if (sc.module_sp->GetArchitecture()
                             .GetTriple()
                             .getObjectFormat() !=
