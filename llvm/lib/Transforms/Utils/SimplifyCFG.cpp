@@ -6406,10 +6406,6 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
       else
         FalseWeight += Weights[I];
     }
-    while (TrueWeight > UINT32_MAX || FalseWeight > UINT32_MAX) {
-      TrueWeight /= 2;
-      FalseWeight /= 2;
-    }
     setFittedBranchWeights(*NewBI, {TrueWeight, FalseWeight},
                            /*IsExpected=*/false, /*ElideAllZero=*/true);
   } else if (isa<CondBrInst>(NewBI)) {
