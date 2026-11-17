@@ -31,6 +31,9 @@ namespace llvm {
 class TargetLowering;
 class DataLayout;
 
+/// Three-state knowledge for a value's range.
+enum class KnownSign { Unknown, NonNeg, Neg };
+
 class LLVM_ABI GISelValueTracking : public GISelChangeObserver {
   MachineFunction &MF;
   MachineRegisterInfo &MRI;
@@ -49,11 +52,11 @@ class LLVM_ABI GISelValueTracking : public GISelChangeObserver {
                            const APInt &DemandedElts, unsigned Depth = 0);
 
   /// Compute the minimum number of sign bits for \p Src0 and \p Src1.
-  /// If \p IsNeg is provided, it is set to true if both are known negative,
-  /// false if both are known non-negative, or std::nullopt if unknown.
+  /// If \p Sign is provided, it is set to Neg if both are known negative,
+  /// NonNeg if both are known non-negative, or Unknown otherwise.
   unsigned computeNumSignBitsMin(Register Src0, Register Src1,
                                  const APInt &DemandedElts, unsigned Depth = 0,
-                                 std::optional<bool> *IsNeg = nullptr);
+                                 KnownSign *Sign = nullptr);
 
   void computeKnownFPClass(Register R, KnownFPClass &Known,
                            FPClassTest InterestedClasses, unsigned Depth);
@@ -95,14 +98,13 @@ public:
   void computeKnownBitsImpl(Register R, KnownBits &Known,
                             const APInt &DemandedElts, unsigned Depth = 0);
 
-  /// Compute the number of sign bits. If \p IsNeg is provided, it is set to
-  /// true if the value is known negative, false if known non-negative, or
-  /// std::nullopt if unknown.
+  /// Compute the number of sign bits. If \p Sign is provided, it is set to
+  /// Neg if the value is known negative, NonNeg if known
+  /// non-negative, or Unknown otherwise.
   unsigned computeNumSignBits(Register R, const APInt &DemandedElts,
-                              unsigned Depth = 0,
-                              std::optional<bool> *IsNeg = nullptr);
+                              unsigned Depth = 0, KnownSign *Sign = nullptr);
   unsigned computeNumSignBits(Register R, unsigned Depth = 0,
-                              std::optional<bool> *IsNeg = nullptr);
+                              KnownSign *Sign = nullptr);
 
   // KnownBitsAPI
   KnownBits getKnownBits(Register R);
