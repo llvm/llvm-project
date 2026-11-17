@@ -186,6 +186,29 @@ func.func @write_dyn_subview_in_scf_if(%v: vector<8x16xf32>, %w: vector<8x16xf32
 
 // -----
 
+// Negative: an out-of-bounds transfer (`in_bounds = [false]`) through a dynamic
+// subview is not promoted; lanes past the extent must be masked off instead.
+// TODO: Remove once out-of-bounds transfers are removed (#227821).
+
+// CHECK-LABEL: func.func @negative_read_dyn_subview_out_of_bounds(
+// CHECK:         memref.alloca
+// CHECK:         memref.subview
+// CHECK:         vector.transfer_read
+func.func @negative_read_dyn_subview_out_of_bounds(%v: vector<8x16xf32>, %n: index,
+                                                   %pad: f32) -> vector<8x16xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8x16xf32>
+  vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]}
+      : vector<8x16xf32>, memref<8x16xf32>
+  %sv = memref.subview %a[0, 0] [8, %n] [1, 1]
+      : memref<8x16xf32> to memref<8x?xf32, strided<[16, 1]>>
+  %r = vector.transfer_read %sv[%c0, %c0], %pad {in_bounds = [true, false]}
+      : memref<8x?xf32, strided<[16, 1]>>, vector<8x16xf32>
+  return %r : vector<8x16xf32>
+}
+
+// -----
+
 // Negative: a subview with a dynamic offset prevents buffer promotion.
 
 // CHECK-LABEL: func.func @negative_read_dyn_subview_dynamic_offset(

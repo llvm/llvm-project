@@ -79,8 +79,9 @@ isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
   if (!xferOp.getPermutationMap().isIdentity())
     return false;
 
-  // Lanes past a dynamic subview's extent must be masked off rather than read
-  // or written out-of-bounds.
+  // Out-of-bounds transfers (`in_bounds = [false]`) are not supported.
+  // Out-of-bounds lanes, e.g. past a dynamic subview's extent, must be masked
+  // off instead.
   if (xferOp.hasOutOfBoundsDim())
     return false;
 
