@@ -150,8 +150,6 @@ define i64 @live_out_scalar_vf(i64 %n) {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -160,10 +158,6 @@ define i64 @live_out_scalar_vf(i64 %n) {
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    [[STEP_ADD_3]] = add nuw <4 x i64> [[STEP_ADD_2]], splat (i64 4)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <4 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt <4 x i64> [[STEP_ADD_2]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt <4 x i64> [[STEP_ADD_3]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD_3]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -173,33 +167,19 @@ define i64 @live_out_scalar_vf(i64 %n) {
 ; CHECK-NEXT:    [[TMP29:%.*]] = shufflevector <4 x i64> [[VEC_IND]], <4 x i64> [[STEP_ADD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP31:%.*]] = shufflevector <4 x i64> [[STEP_ADD]], <4 x i64> [[STEP_ADD_2]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP33:%.*]] = shufflevector <4 x i64> [[STEP_ADD_2]], <4 x i64> [[STEP_ADD_3]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP4]], i1 false)
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 12, [[FIRST_INACTIVE_LANE]]
-; CHECK-NEXT:    [[FIRST_INACTIVE_LANE1:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP3]], i1 false)
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 8, [[FIRST_INACTIVE_LANE1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE1]], 4
-; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i64 [[TMP7]], i64 [[TMP6]]
-; CHECK-NEXT:    [[FIRST_INACTIVE_LANE2:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP2]], i1 false)
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 4, [[FIRST_INACTIVE_LANE2]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE2]], 4
-; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], i64 [[TMP10]], i64 [[TMP9]]
-; CHECK-NEXT:    [[FIRST_INACTIVE_LANE3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP1]], i1 false)
-; CHECK-NEXT:    [[TMP13:%.*]] = add i64 0, [[FIRST_INACTIVE_LANE3]]
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp ne i64 [[FIRST_INACTIVE_LANE3]], 4
-; CHECK-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], i64 [[TMP13]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP16:%.*]] = sub i64 [[TMP15]], 1
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i64> [[TMP27]], i64 [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = sub i64 [[TMP16]], 4
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TRIP_COUNT_MINUS_1]], [[INDEX]]
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i64> [[TMP27]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP18:%.*]] = sub i64 [[TMP7]], 4
 ; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i64> [[TMP29]], i64 [[TMP18]]
-; CHECK-NEXT:    [[TMP20:%.*]] = icmp uge i64 [[TMP16]], 4
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp uge i64 [[TMP7]], 4
 ; CHECK-NEXT:    [[TMP21:%.*]] = select i1 [[TMP20]], i64 [[TMP32]], i64 [[TMP17]]
-; CHECK-NEXT:    [[TMP22:%.*]] = sub i64 [[TMP16]], 8
+; CHECK-NEXT:    [[TMP22:%.*]] = sub i64 [[TMP7]], 8
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i64> [[TMP31]], i64 [[TMP22]]
-; CHECK-NEXT:    [[TMP24:%.*]] = icmp uge i64 [[TMP16]], 8
+; CHECK-NEXT:    [[TMP24:%.*]] = icmp uge i64 [[TMP7]], 8
 ; CHECK-NEXT:    [[TMP25:%.*]] = select i1 [[TMP24]], i64 [[TMP23]], i64 [[TMP21]]
-; CHECK-NEXT:    [[TMP26:%.*]] = sub i64 [[TMP16]], 12
+; CHECK-NEXT:    [[TMP26:%.*]] = sub i64 [[TMP7]], 12
 ; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x i64> [[TMP33]], i64 [[TMP26]]
-; CHECK-NEXT:    [[TMP28:%.*]] = icmp uge i64 [[TMP16]], 12
+; CHECK-NEXT:    [[TMP28:%.*]] = icmp uge i64 [[TMP7]], 12
 ; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP28]], i64 [[TMP30]], i64 [[TMP25]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       exit:

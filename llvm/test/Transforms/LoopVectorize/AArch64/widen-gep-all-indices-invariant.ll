@@ -11,6 +11,7 @@ define i32 @gep_with_all_invariant_operands(ptr %src.0, ptr %src.1, i64 %n, i1 %
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[SRC_0]], i64 [[N]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[COND]], ptr [[SRC_1]], ptr [[TMP8]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[TMP9]], i64 0
@@ -28,10 +29,8 @@ define i32 @gep_with_all_invariant_operands(ptr %src.0, ptr %src.1, i64 %n, i1 %
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], splat (i1 true)
-; CHECK-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> [[TMP12]], i1 false)
-; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 4 x i32> [[WIDE_MASKED_GATHER]], i64 [[LAST_ACTIVE_LANE]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TRIP_COUNT_MINUS_1]], [[INDEX]]
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 4 x i32> [[WIDE_MASKED_GATHER]], i64 [[TMP7]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 [[TMP16]]

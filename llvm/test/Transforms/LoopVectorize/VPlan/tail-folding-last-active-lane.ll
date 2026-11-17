@@ -42,12 +42,12 @@ define i32 @live_out_masked_memops(ptr noalias %p, i64 %n) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = last-active-lane vp<[[VP7]]>
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-lane vp<[[VP11]]>, ir<%x>
+; CHECK-NEXT:    EMIT vp<%last.active.lane> = sub vp<%trip.count.minus.1>, vp<[[VP4]]>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-lane vp<%last.active.lane>, ir<%x>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %x.lcssa = phi i32 [ %x, %loop ] (extra operand: vp<[[VP12]]> from middle.block)
+; CHECK-NEXT:    IR   %x.lcssa = phi i32 [ %x, %loop ] (extra operand: vp<[[VP11]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
@@ -74,6 +74,7 @@ define i32 @live_out_masked_memops(ptr noalias %p, i64 %n) {
 ; ALM-NEXT:  Successor(s): scalar.ph, vector.ph
 ; ALM-EMPTY:
 ; ALM-NEXT:  vector.ph:
+; ALM-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<%n>, ir<1>
 ; ALM-NEXT:    EMIT vp<%active.lane.mask.entry> = wide active lane mask ir<0>, ir<%n>, ir<1>
 ; ALM-NEXT:    EMIT vp<%extract.entry.alm.part> = extract-vector-for-part vp<%active.lane.mask.entry>, ir<0>
 ; ALM-NEXT:    EMIT-SCALAR vp<%trip.count.minus.vf> = call i64 @llvm.usub.sat(ir<%n>, vp<[[VP1]]>)
@@ -100,12 +101,12 @@ define i32 @live_out_masked_memops(ptr noalias %p, i64 %n) {
 ; ALM-NEXT:  Successor(s): middle.block
 ; ALM-EMPTY:
 ; ALM-NEXT:  middle.block:
-; ALM-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = last-active-lane vp<[[VP5]]>
-; ALM-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-lane vp<[[VP10]]>, ir<%x>
+; ALM-NEXT:    EMIT vp<%last.active.lane> = sub vp<%trip.count.minus.1>, vp<[[VP3]]>
+; ALM-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = extract-lane vp<%last.active.lane>, ir<%x>
 ; ALM-NEXT:  Successor(s): ir-bb<exit>
 ; ALM-EMPTY:
 ; ALM-NEXT:  ir-bb<exit>:
-; ALM-NEXT:    IR   %x.lcssa = phi i32 [ %x, %loop ] (extra operand: vp<[[VP11]]> from middle.block)
+; ALM-NEXT:    IR   %x.lcssa = phi i32 [ %x, %loop ] (extra operand: vp<[[VP10]]> from middle.block)
 ; ALM-NEXT:  No successors
 ; ALM-EMPTY:
 ; ALM-NEXT:  scalar.ph:
@@ -154,17 +155,14 @@ define i64 @live_out_no_other_mask_users(i64 %k, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<%n>, ir<1>
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP4]]>
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP3]]>
-; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP4]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
@@ -172,12 +170,12 @@ define i64 @live_out_no_other_mask_users(i64 %k, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    WIDEN ir<%x> = xor ir<%iv>, ir<%k>
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = last-active-lane vp<[[VP7]]>
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = extract-lane vp<[[VP9]]>, ir<%x>
+; CHECK-NEXT:    EMIT vp<%last.active.lane> = sub vp<%trip.count.minus.1>, vp<[[VP3]]>
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = extract-lane vp<%last.active.lane>, ir<%x>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %x.lcssa = phi i64 [ %x, %loop ] (extra operand: vp<[[VP10]]> from middle.block)
+; CHECK-NEXT:    IR   %x.lcssa = phi i64 [ %x, %loop ] (extra operand: vp<[[VP6]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
@@ -195,40 +193,35 @@ define i64 @live_out_no_other_mask_users(i64 %k, i64 %n) {
 ; ALM:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; ALM-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; ALM-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; ALM-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
 ; ALM-NEXT:  Live-in ir<%n> = original trip-count
 ; ALM-EMPTY:
 ; ALM-NEXT:  ir-bb<entry>:
 ; ALM-NEXT:  Successor(s): scalar.ph, vector.ph
 ; ALM-EMPTY:
 ; ALM-NEXT:  vector.ph:
-; ALM-NEXT:    EMIT vp<%active.lane.mask.entry> = wide active lane mask ir<0>, ir<%n>, ir<1>
-; ALM-NEXT:    EMIT vp<%extract.entry.alm.part> = extract-vector-for-part vp<%active.lane.mask.entry>, ir<0>
-; ALM-NEXT:    EMIT-SCALAR vp<%trip.count.minus.vf> = call i64 @llvm.usub.sat(ir<%n>, vp<[[VP1]]>)
+; ALM-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<%n>, ir<1>
 ; ALM-NEXT:  Successor(s): vector loop
 ; ALM-EMPTY:
 ; ALM-NEXT:  <x1> vector loop: {
 ; ALM-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; ALM-EMPTY:
 ; ALM-NEXT:    vector.body:
-; ALM-NEXT:      ACTIVE-LANE-MASK-PHI vp<[[VP5:%[0-9]+]]> = phi vp<%extract.entry.alm.part>, vp<%extract.next.alm.part>
 ; ALM-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; ALM-NEXT:      EMIT vp<%index.next> = add vp<[[VP3]]>, vp<[[VP1]]>
-; ALM-NEXT:      EMIT vp<%active.lane.mask.next> = wide active lane mask vp<[[VP3]]>, vp<%trip.count.minus.vf>, ir<1>
-; ALM-NEXT:      EMIT vp<%extract.next.alm.part> = extract-vector-for-part vp<%active.lane.mask.next>, ir<0>
-; ALM-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = not vp<%extract.next.alm.part>
-; ALM-NEXT:      EMIT branch-on-cond vp<[[VP6]]>
+; ALM-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; ALM-NEXT:    No successors
 ; ALM-NEXT:  }
 ; ALM-NEXT:  Successor(s): middle.block
 ; ALM-EMPTY:
 ; ALM-NEXT:  middle.block:
 ; ALM-NEXT:    WIDEN ir<%x> = xor ir<%iv>, ir<%k>
-; ALM-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = last-active-lane vp<[[VP5]]>
-; ALM-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = extract-lane vp<[[VP8]]>, ir<%x>
+; ALM-NEXT:    EMIT vp<%last.active.lane> = sub vp<%trip.count.minus.1>, vp<[[VP3]]>
+; ALM-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = extract-lane vp<%last.active.lane>, ir<%x>
 ; ALM-NEXT:  Successor(s): ir-bb<exit>
 ; ALM-EMPTY:
 ; ALM-NEXT:  ir-bb<exit>:
-; ALM-NEXT:    IR   %x.lcssa = phi i64 [ %x, %loop ] (extra operand: vp<[[VP9]]> from middle.block)
+; ALM-NEXT:    IR   %x.lcssa = phi i64 [ %x, %loop ] (extra operand: vp<[[VP6]]> from middle.block)
 ; ALM-NEXT:  No successors
 ; ALM-EMPTY:
 ; ALM-NEXT:  scalar.ph:
@@ -297,12 +290,12 @@ define i32 @first_order_recurrence(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = last-active-lane vp<[[VP7]]>
-; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = extract-lane vp<[[VP13]]>, vp<[[VP10]]>
+; CHECK-NEXT:    EMIT vp<%last.active.lane> = sub vp<%trip.count.minus.1>, vp<[[VP4]]>
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extract-lane vp<%last.active.lane>, vp<[[VP10]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %prev.lcssa = phi i32 [ %prev, %loop ] (extra operand: vp<[[VP14]]> from middle.block)
+; CHECK-NEXT:    IR   %prev.lcssa = phi i32 [ %prev, %loop ] (extra operand: vp<[[VP13]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
@@ -331,6 +324,7 @@ define i32 @first_order_recurrence(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; ALM-NEXT:  Successor(s): scalar.ph, vector.ph
 ; ALM-EMPTY:
 ; ALM-NEXT:  vector.ph:
+; ALM-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<%n>, ir<1>
 ; ALM-NEXT:    EMIT vp<%active.lane.mask.entry> = wide active lane mask ir<0>, ir<%n>, ir<1>
 ; ALM-NEXT:    EMIT vp<%extract.entry.alm.part> = extract-vector-for-part vp<%active.lane.mask.entry>, ir<0>
 ; ALM-NEXT:    EMIT-SCALAR vp<%trip.count.minus.vf> = call i64 @llvm.usub.sat(ir<%n>, vp<[[VP1]]>)
@@ -361,12 +355,12 @@ define i32 @first_order_recurrence(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; ALM-NEXT:  Successor(s): middle.block
 ; ALM-EMPTY:
 ; ALM-NEXT:  middle.block:
-; ALM-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = last-active-lane vp<[[VP5]]>
-; ALM-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extract-lane vp<[[VP12]]>, vp<[[VP8]]>
+; ALM-NEXT:    EMIT vp<%last.active.lane> = sub vp<%trip.count.minus.1>, vp<[[VP3]]>
+; ALM-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-lane vp<%last.active.lane>, vp<[[VP8]]>
 ; ALM-NEXT:  Successor(s): ir-bb<exit>
 ; ALM-EMPTY:
 ; ALM-NEXT:  ir-bb<exit>:
-; ALM-NEXT:    IR   %prev.lcssa = phi i32 [ %prev, %loop ] (extra operand: vp<[[VP13]]> from middle.block)
+; ALM-NEXT:    IR   %prev.lcssa = phi i32 [ %prev, %loop ] (extra operand: vp<[[VP12]]> from middle.block)
 ; ALM-NEXT:  No successors
 ; ALM-EMPTY:
 ; ALM-NEXT:  scalar.ph:
