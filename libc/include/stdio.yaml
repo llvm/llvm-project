@@ -379,6 +379,12 @@ functions:
     return_type: int
     arguments:
       - type: int
+  - name: putchar_unlocked
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: int
   - name: puts
     standards:
       - stdc

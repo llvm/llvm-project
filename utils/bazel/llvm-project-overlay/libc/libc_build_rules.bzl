@@ -400,7 +400,7 @@ def _libc_generated_headers_impl(ctx):
         fail("output_dir must be provided")
 
     # The entrypoint list can be long, so pass it to every hdrgen invocation
-    # via a single file. hdrgen supports "@file" argument expansion.
+    # via a single file. hdrgen supports `@file` argument expansion.
     entrypoints_rsp = ctx.actions.declare_file(ctx.label.name + ".entrypoints.rsp")
     ctx.actions.write(
         output = entrypoints_rsp,
@@ -442,7 +442,11 @@ def _libc_generated_headers_impl(ctx):
             progress_message = "Generating libc header %{output}",
         )
 
-    return [DefaultInfo(files = depset(outs))]
+    return [DefaultInfo(
+        files = depset(outs),
+        # Provide runfiles so that tests can inspect the output files.
+        runfiles = ctx.runfiles(files = outs),
+    )]
 
 libc_generated_headers = rule(
     doc = """Generates libc headers from libc_hdrgen_spec targets.""",

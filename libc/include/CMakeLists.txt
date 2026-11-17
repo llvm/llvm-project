@@ -1279,6 +1279,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  arpa_nameser
+  ../libc/include/arpa/nameser.yaml
+  arpa/nameser.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.arpa_nameser_macros
+)
+
+add_header_macro(
   termios
   ../libc/include/termios.yaml
   termios.h
