@@ -29,6 +29,7 @@
 ; GCN-O0-NEXT: amdgpu-lower-module-lds
 ; GCN-O0-NEXT: function
 ; GCN-O0-NEXT:   atomic-expand
+; GCN-O0-NEXT:   amdgpu-hoist-allocas
 ; GCN-O0-NEXT:   verify
 ; GCN-O0-NEXT:   unreachableblockelim
 ; GCN-O0-NEXT:   ee-instrument<post-inline>
@@ -132,6 +133,7 @@
 ; GCN-O2-NEXT: function
 ; GCN-O2-NEXT:   amdgpu-atomic-optimizer
 ; GCN-O2-NEXT:   atomic-expand
+; GCN-O2-NEXT:   amdgpu-hoist-allocas
 ; GCN-O2-NEXT:   amdgpu-promote-alloca
 ; GCN-O2-NEXT:   separate-const-offset-from-gep<>
 ; GCN-O2-NEXT:   slsr
@@ -320,6 +322,7 @@
 ; GCN-O3-NEXT: function
 ; GCN-O3-NEXT:   amdgpu-atomic-optimizer
 ; GCN-O3-NEXT:   atomic-expand
+; GCN-O3-NEXT:   amdgpu-hoist-allocas
 ; GCN-O3-NEXT:   amdgpu-promote-alloca
 ; GCN-O3-NEXT:   separate-const-offset-from-gep<>
 ; GCN-O3-NEXT:   slsr

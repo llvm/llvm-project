@@ -560,6 +560,16 @@ extern char &AMDGPURemoveIncompatibleFunctionsID;
 void initializeAMDGPULateCodeGenPrepareLegacyPass(PassRegistry &);
 extern char &AMDGPULateCodeGenPrepareLegacyID;
 
+FunctionPass *createAMDGPUHoistAllocasLegacyPass();
+void initializeAMDGPUHoistAllocasLegacyPass(PassRegistry &);
+extern char &AMDGPUHoistAllocasLegacyPassID;
+
+class AMDGPUHoistAllocasPass
+    : public RequiredPassInfoMixin<AMDGPUHoistAllocasPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
 FunctionPass *createAMDGPURewriteUndefForPHILegacyPass();
 void initializeAMDGPURewriteUndefForPHILegacyPass(PassRegistry &);
 extern char &AMDGPURewriteUndefForPHILegacyPassID;

@@ -160,6 +160,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUHSAMetadataStreamer.cpp",
     "AMDGPUHWEvents.cpp",
     "AMDGPUHazardLatency.cpp",
+    "AMDGPUHoistAllocas.cpp",
     "AMDGPUIGroupLP.cpp",
     "AMDGPUISelDAGToDAG.cpp",
     "AMDGPUISelLowering.cpp",
