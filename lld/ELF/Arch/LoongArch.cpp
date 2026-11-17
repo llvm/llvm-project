@@ -37,7 +37,7 @@ public:
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   bool usesOnlyLowPageBits(RelType type) const override;
-  template <class ELFT, class RelTy>
+  template <class RelTy>
   void scanSectionImpl(InputSectionBase &, Relocs<RelTy>, unsigned shard);
   void scanSection(InputSectionBase &sec, unsigned shard) override {
     if (ctx.arg.is64)
@@ -493,7 +493,7 @@ bool LoongArch::usesOnlyLowPageBits(RelType type) const {
   }
 }
 
-template <class ELFT, class RelTy>
+template <class RelTy>
 void LoongArch::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                                 unsigned shard) {
   RelocScan rs(ctx, &sec, shard);
@@ -501,12 +501,12 @@ void LoongArch::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     RelType type = it->getType(false);
     uint32_t symIndex = it->getSymbol(false);
-    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIndex);
+    Symbol &sym = sec.file->getSymbol(symIndex);
     uint64_t offset = it->r_offset;
     if (sym.isUndefined() && symIndex != 0 &&
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
       continue;
-    int64_t addend = rs.getAddend<ELFT>(*it, type);
+    int64_t addend = rs.getAddend(*it, type);
     RelExpr expr;
     // Relocation types that only need a RelExpr set `expr` and break out of
     // the switch to reach rs.process(). Types that need special handling

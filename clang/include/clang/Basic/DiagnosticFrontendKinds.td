@@ -227,6 +227,10 @@ def warn_fixit_no_changes : Note<
 def err_relocatable_without_isysroot : Error<
     "must specify system root with -isysroot when building a relocatable "
     "PCH file">;
+def err_pch_base_dir_is_cwd_relocatable : Error<
+    "-fpch-base-dir-is-cwd cannot be used with -relocatable-pch when building "
+    "a PCH file; the two options select different base directories for input "
+    "paths">;
 
 def warn_unknown_diag_option : Warning<
     "unknown %select{warning|remark}0 option '%1'%select{|; did you mean '%3'?}2">,

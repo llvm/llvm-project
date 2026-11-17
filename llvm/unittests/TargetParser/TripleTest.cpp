@@ -585,6 +585,13 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(VersionTuple(1, 9), T.getDXILVersion());
 
+  T = Triple("dxilv1.10-unknown-shadermodel6.10-library");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::DXILSubArch_v1_10, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(VersionTuple(1, 10), T.getDXILVersion());
+
   T = Triple("x86_64-unknown-fuchsia");
   EXPECT_EQ(Triple::x86_64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
@@ -1353,6 +1360,12 @@ TEST(TripleTest, ParsedIDs) {
   T = Triple("dxilv1.9-unknown-unknown");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::DXILSubArch_v1_9, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
+  T = Triple("dxilv1.10-unknown-unknown");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::DXILSubArch_v1_10, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
 
@@ -3805,16 +3818,16 @@ TEST(TripleTest, isArmMClass) {
   }
 }
 
-TEST(TripleTest, DXILNormaizeWithVersion) {
+TEST(TripleTest, DXILNormalizeWithVersion) {
   EXPECT_EQ("dxilv1.0-unknown-shadermodel6.0",
             Triple::normalize("dxilv1.0--shadermodel6.0"));
   EXPECT_EQ("dxilv1.0-unknown-shadermodel6.0",
             Triple::normalize("dxil--shadermodel6.0"));
   EXPECT_EQ("dxilv1.1-unknown-shadermodel6.1-library",
             Triple::normalize("dxil-shadermodel6.1-unknown-library"));
-  EXPECT_EQ("dxilv1.9-unknown-shadermodel6.x-unknown",
-            Triple::normalize("dxil-unknown-shadermodel6.x-unknown"));
-  EXPECT_EQ("dxilv1.9-unknown-shadermodel6.x-unknown",
+  EXPECT_EQ("dxilv1.9-unknown-shadermodel6.9-unknown",
+            Triple::normalize("dxil-unknown-shadermodel6.9-unknown"));
+  EXPECT_EQ("dxilv1.10-unknown-shadermodel6.x-unknown",
             Triple::normalize("dxil-unknown-shadermodel6.x-unknown"));
   EXPECT_EQ("dxil-unknown-unknown-unknown", Triple::normalize("dxil---"));
   EXPECT_EQ("dxilv1.0-pc-shadermodel5.0-compute",
@@ -4094,6 +4107,17 @@ TEST(DataLayoutTest, NVPTX) {
   EXPECT_THAT(PointerLayoutSpecs(TT64.computeDataLayout("shortptr")),
               testing::ElementsAre("p3:32:32", "p4:32:32", "p5:32:32",
                                    "p6:32:32", "p7:32:32", "p101:32:32"));
+}
+
+TEST(DataLayoutTest, PowerPC64FreeBSD) {
+  // FreeBSD uses the ELFv2 ABI on both big- and little-endian powerpc64 and
+  // shares the 16-byte stack alignment and the vector alignment of Linux.
+  EXPECT_EQ(Triple("powerpc64le-unknown-freebsd").computeDataLayout(),
+            Triple("powerpc64le-unknown-linux-gnu").computeDataLayout());
+  EXPECT_EQ(Triple("powerpc64le-unknown-freebsd").computeDataLayout(),
+            "e-m:e-Fn32-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512");
+  EXPECT_EQ(Triple("powerpc64-unknown-freebsd").computeDataLayout(),
+            "E-m:e-Fn32-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512");
 }
 
 TEST(DataLayoutTest, CheriRISCV32) {

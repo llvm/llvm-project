@@ -51,14 +51,14 @@ def libc_test(
       **kwargs: Attributes relevant for a cc_test.
     """
     deps = deps + [
-        "//libc:hdr_stdint_proxy",
-        "//libc:__support_macros_config",
-        "//libc:__support_libc_errno",
-        "//libc:errno",
-        "//libc:func_aligned_alloc",
-        "//libc:func_free",
-        "//libc:func_malloc",
-        "//libc:func_realloc",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/errno",
+        "//libc/hdr/func:aligned_alloc",
+        "//libc/hdr/func:free",
+        "//libc/hdr/func:malloc",
+        "//libc/hdr/func:realloc",
     ] + select({
         "//libc:full_build": [
             "//libc/startup/linux:crt1_library",
@@ -66,7 +66,7 @@ def libc_test(
             # The compiler may emit references to symbols it expects to exist,
             # like `memset`. These dependencies hermetically provide them.
             "//libc/test/UnitTest:HermeticTestUtils",
-            "//libc:__stack_chk_fail",  # Needed if -fstack-protector is set.
+            "//libc/src/compiler:__stack_chk_fail",  # Needed if -fstack-protector is set.
         ],
         "//conditions:default": [],
     })
@@ -116,7 +116,7 @@ def libc_test(
         copts = copts + libc_common_copts(),
         target_compatible_with = target_compatible_with,
         linkopts = linkopts,
-        linkstatic = 1,
+        linkstatic = True,
         tags = tags,
         **kwargs
     )
@@ -142,6 +142,6 @@ def libc_test_library(
         deps = deps + libc_common_deps(),
         copts = copts + libc_common_copts(),
         local_defines = local_defines + _TEST_DEFINES + LIBC_CONFIGURE_OPTIONS,
-        linkstatic = 1,
+        linkstatic = True,
         **kwargs
     )

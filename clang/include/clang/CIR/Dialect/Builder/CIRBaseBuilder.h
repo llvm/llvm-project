@@ -16,6 +16,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/IR/FPEnv.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -27,6 +28,18 @@
 #include "mlir/IR/Types.h"
 
 namespace cir {
+
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+
+/// No-wrap flags of a pointer offset computation: the subset of
+/// llvm::GEPNoWrapFlags that `cir.get_element` carries as its `in_bounds` and
+/// `no_unsigned_wrap` properties.
+enum class PtrOffsetFlags {
+  None = 0,
+  InBounds = 1 << 0,
+  NoUnsignedWrap = 1 << 1,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/NoUnsignedWrap)
+};
 
 class CIRBaseBuilderTy : public mlir::OpBuilder {
 
@@ -912,10 +925,9 @@ public:
     assert(cir::isFPOrVectorOfFPType(operand.getType()) &&
            "expected floating-point or vector-of-float type");
     assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fastMathFlags());
     // fneg does not raise FP exceptions or depend on the rounding mode, so it
     // never carries an fenv attribute.
-    return cir::FNegOp::create(*this, loc, operand);
+    return cir::FNegOp::create(*this, loc, operand, getFastMathFlagsAttr());
   }
 
   mlir::Value createXor(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {

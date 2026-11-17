@@ -273,8 +273,8 @@ static bool ConvertEnumCaseValue(SemanticsContext &context,
   evaluate::FoldingContext foldingContext{
       context.foldingContext(), foldingMessages};
   auto folded{evaluate::Fold(foldingContext, SomeExpr{*x->v})};
-  if (auto sc{
-          evaluate::GetScalarConstantValue<evaluate::SomeDerived>(folded)}) {
+  if (auto sc{evaluate::GetScalarConstantValue<
+          evaluate::Type<common::TypeCategory::Derived>>(folded)}) {
     if (auto ordExpr{sc->Find(ordSym)}) {
       x->v = std::move(*ordExpr);
       return true;

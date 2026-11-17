@@ -266,13 +266,15 @@ class LLVM_MemcpyIntrOpBase<string name> :
     LLVM_ZeroResultIntrOp<name, [0, 1, 2],
     [DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
-     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>],
+     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>,
+     DeclareOpInterfaceMethods<TBAAStructOpInterface>],
     /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1,
     /*requiresArgAndResultAttrs=*/1, /*requiresOpBundles=*/0,
     /*immArgPositions=*/[3], /*immArgAttrNames=*/["isVolatile"]> {
   dag args = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
                   Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
-                  AnySignlessInteger:$len, I1Attr:$isVolatile);
+                  AnySignlessInteger:$len, I1Attr:$isVolatile,
+                  OptionalAttr<LLVM_TBAAStructFieldArrayAttr>:$tbaa_struct);
   // Append the arguments defined by LLVM_IntrOpBase.
   let arguments = !con(args, baseArgs);
   let builders = [
@@ -284,11 +286,19 @@ class LLVM_MemcpyIntrOpBase<string name> :
     OpBuilder<(ins "Value":$dst, "Value":$src, "Value":$len,
                    "IntegerAttr":$isVolatile), [{
       build($_builder, $_state, dst, src, len, isVolatile,
+            /*tbaa_struct=*/nullptr,
             /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
             /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
             /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr);
     }]>
   ];
+
+  // The generated builder writes the alias metadata; tbaa.struct is specific to
+  // the aggregate-copy intrinsics, so it is appended here rather than in the
+  // shared alias code, which also covers loads and stores.
+  let llvmBuilder = baseLlvmBuilder # setAccessGroupsMetadataCode
+      # setAliasAnalysisMetadataCode # setTBAAStructMetadataCode
+      # baseLlvmBuilderArgAndResultAttrs # baseLlvmBuilderCoda;
 }
 
 def LLVM_MemcpyOp : LLVM_MemcpyIntrOpBase<"memcpy">;
@@ -298,13 +308,15 @@ def LLVM_MemcpyInlineOp :
     LLVM_ZeroResultIntrOp<"memcpy.inline", [0, 1, 2],
     [DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
-     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>],
+     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>,
+     DeclareOpInterfaceMethods<TBAAStructOpInterface>],
     /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1,
     /*requiresArgAndResultAttrs=*/1, /*requiresOpBundles=*/0,
     /*immArgPositions=*/[2, 3], /*immArgAttrNames=*/["len", "isVolatile"]> {
   dag args = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
                   Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
-                  APIntAttr:$len, I1Attr:$isVolatile);
+                  APIntAttr:$len, I1Attr:$isVolatile,
+                  OptionalAttr<LLVM_TBAAStructFieldArrayAttr>:$tbaa_struct);
   // Append the arguments defined by LLVM_IntrOpBase.
   let arguments = !con(args, baseArgs);
   let builders = [
@@ -316,11 +328,17 @@ def LLVM_MemcpyInlineOp :
     OpBuilder<(ins "Value":$dst, "Value":$src, "IntegerAttr":$len,
                    "IntegerAttr":$isVolatile), [{
       build($_builder, $_state, dst, src, len, isVolatile,
+            /*tbaa_struct=*/nullptr,
             /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
             /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
             /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr);
     }]>
   ];
+
+  // Same as the memcpy base: tbaa.struct is specific to the aggregate copies.
+  let llvmBuilder = baseLlvmBuilder # setAccessGroupsMetadataCode
+      # setAliasAnalysisMetadataCode # setTBAAStructMetadataCode
+      # baseLlvmBuilderArgAndResultAttrs # baseLlvmBuilderCoda;
 }
 
 def LLVM_MemsetOp : LLVM_ZeroResultIntrOp<"memset", [0, 2],
