@@ -38,7 +38,7 @@ class CIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
 
 def CIR_IntType : CIR_Type<"Int", "int", [
     DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
-        ["areCompatible", "verifyEntries", "getRequiredAlignment"]>,
+        ["areCompatible", "verifyEntries"]>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
     DeclareTypeInterfaceMethods<CIR_IntTypeInterface>,
 ]> {
@@ -96,6 +96,15 @@ def CIR_IntType : CIR_Type<"Int", "int", [
     static IntType getBitIntMaxAlignKey(mlir::MLIRContext *ctx) {
       return get(ctx, /*width=*/1, /*isSigned=*/false, /*isBitInt=*/true);
     }
+
+    /// The _BitInt alignment cap, in bits, held by the #cir.bitint_spec entry
+    /// in \p params, or the default cap when there is no entry.
+    static uint64_t
+    getBitIntMaxAlignBits(mlir::DataLayoutEntryListRef params);
+
+    /// The alignment, in bytes, that C requires of this _BitInt when the
+    /// target caps _BitInt alignment at \p maxAlignBits bits.
+    uint64_t getBitIntAlignRequirement(uint64_t maxAlignBits) const;
 
     /// Returns a minimum bitwidth of cir::IntType
     static unsigned minBitwidth() { return 1; }
@@ -208,8 +217,7 @@ def CIR_LongDouble : CIR_FloatType<"LongDouble", "long_double"> {
 //===----------------------------------------------------------------------===//
 
 def CIR_ComplexType : CIR_Type<"Complex", "complex", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
-        ["getRequiredAlignment"]>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
 ]> {
   let summary = "CIR complex type";
@@ -458,8 +466,7 @@ def CIR_BoolType : CIR_Type<"Bool", "bool", [
 //===----------------------------------------------------------------------===//
 
 def CIR_ArrayType : CIR_Type<"Array", "array", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
-        ["getRequiredAlignment"]>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface, ["isSized"]>,
 ]> {
   let summary = "CIR array type";
@@ -585,8 +592,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 //===----------------------------------------------------------------------===//
 
 def CIR_MatrixType : CIR_Type<"Matrix", "matrix", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
-        ["getRequiredAlignment"]>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
 ]> {
   let summary = "CIR matrix type";
@@ -759,8 +765,7 @@ def CIR_VoidType : CIR_Type<"Void", "void"> {
 //===----------------------------------------------------------------------===//
 
 def CIR_BitFieldType : CIR_Type<"BitField", "bitfield", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
-        ["getRequiredAlignment"]>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
 ]> {
   let summary = "CIR bit-field access unit member type";
@@ -900,8 +905,7 @@ def CIR_RecordMemberKind : CIR_I32Enum<
 //===----------------------------------------------------------------------===//
 
 def CIR_StructType : CIR_Type<"Struct", "struct", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
-        ["getRequiredAlignment"]>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
     MutableType,
 ]> {
@@ -1084,8 +1088,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
 //===----------------------------------------------------------------------===//
 
 def CIR_UnionType : CIR_Type<"Union", "union", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
-        ["getRequiredAlignment"]>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
     MutableType,
 ]> {

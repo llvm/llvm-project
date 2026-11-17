@@ -113,10 +113,10 @@ static bool memberIsEmptyRecord(mlir::Type ty) {
 /// entry for every record it names, so the computed fallback only serves
 /// hand-written CIR.
 static llvm::Align recordDeclaredAlign(ModuleOp modOp, cir::RecordType recTy,
-                                       const DataLayout &dl) {
+                                       const cir::CIRDataLayout &cirDL) {
   auto layout = cir::tryGetRecordLayout(modOp, recTy.getName());
   if (!layout)
-    return llvm::Align(dl.getTypeRequiredAlignment(recTy));
+    return llvm::Align(cirDL.getTypeRequiredAlignment(recTy));
   return llvm::Align(layout.getRecordAlign());
 }
 
@@ -125,10 +125,10 @@ static llvm::Align recordDeclaredAlign(ModuleOp modOp, cir::RecordType recTy,
 /// alignment, it comes from the module's record-layout metadata, and the
 /// computed fallback only serves hand-written CIR.
 static llvm::Align recordUnadjustedAlign(ModuleOp modOp, cir::RecordType recTy,
-                                         const DataLayout &dl) {
+                                         const cir::CIRDataLayout &cirDL) {
   auto layout = cir::tryGetRecordLayout(modOp, recTy.getName());
   if (!layout)
-    return llvm::Align(dl.getTypeRequiredAlignment(recTy));
+    return llvm::Align(cirDL.getTypeRequiredAlignment(recTy));
   return llvm::Align(layout.getUnadjustedAlign());
 }
 
@@ -336,13 +336,15 @@ static mlir::Type unwrapLongDoubleVectorElement(mlir::Type ty) {
 /// reach this function.
 static const llvm::abi::Type *mapCIRType(mlir::Type type,
                                          mlir::abi::ABITypeMapper &typeMapper,
-                                         const DataLayout &dl, ModuleOp modOp) {
+                                         const DataLayout &dl,
+                                         const cir::CIRDataLayout &cirDL,
+                                         ModuleOp modOp) {
   llvm::abi::TypeBuilder &tb = typeMapper.getTypeBuilder();
   return llvm::TypeSwitch<mlir::Type, const llvm::abi::Type *>(type)
       .Case([&](cir::IntType intTy) {
-        return tb.getIntegerType(intTy.getWidth(),
-                                 llvm::Align(dl.getTypeRequiredAlignment(type)),
-                                 intTy.isSigned(), intTy.getIsBitInt());
+        return tb.getIntegerType(
+            intTy.getWidth(), llvm::Align(cirDL.getTypeRequiredAlignment(type)),
+            intTy.isSigned(), intTy.getIsBitInt());
       })
       .Case([&](cir::PointerType ptrTy) {
         unsigned addrSpace = 0;
@@ -352,9 +354,10 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
           addrSpace = targetAsAttr.getValue();
         // Any address-space attribute is a qualifier.
         bool hasAddressSpaceQualifier = ptrTy.getAddrSpace() != nullptr;
-        return tb.getPointerType(dl.getTypeSizeInBits(type),
-                                 llvm::Align(dl.getTypeRequiredAlignment(type)),
-                                 addrSpace, hasAddressSpaceQualifier);
+        return tb.getPointerType(
+            dl.getTypeSizeInBits(type),
+            llvm::Align(cirDL.getTypeRequiredAlignment(type)), addrSpace,
+            hasAddressSpaceQualifier);
       })
       .Case([&](cir::VPtrType) {
         // cir::VPtrType carries no address-space parameter yet, so this
@@ -362,37 +365,39 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         assert(!cir::MissingFeatures::addressSpace());
         return tb.getPointerType(
             dl.getTypeSizeInBits(type),
-            llvm::Align(dl.getTypeRequiredAlignment(type)));
+            llvm::Align(cirDL.getTypeRequiredAlignment(type)));
       })
       .Case([&](cir::BoolType) {
         // A bool is a one-bit integer to the classifier, as QualTypeMapper
         // maps it, so a bool vector is sized one bit per element.
-        return tb.getIntegerType(1,
-                                 llvm::Align(dl.getTypeRequiredAlignment(type)),
-                                 /*Signed=*/false);
+        return tb.getIntegerType(
+            1, llvm::Align(cirDL.getTypeRequiredAlignment(type)),
+            /*Signed=*/false);
       })
       .Case([&](cir::VoidType) { return tb.getVoidType(); })
       .Case([&](cir::FPTypeInterface fpTy) {
         // LongDoubleType reports its underlying format's semantics, so the
         // classifier sees x87 or IEEE quad rather than the wrapper.
-        return tb.getFloatType(fpTy.getFloatSemantics(),
-                               llvm::Align(dl.getTypeRequiredAlignment(type)));
+        return tb.getFloatType(
+            fpTy.getFloatSemantics(),
+            llvm::Align(cirDL.getTypeRequiredAlignment(type)));
       })
       .Case([&](cir::ComplexType complexTy) {
         return tb.getComplexType(
-            mapCIRType(complexTy.getElementType(), typeMapper, dl, modOp),
-            llvm::Align(dl.getTypeRequiredAlignment(type)));
+            mapCIRType(complexTy.getElementType(), typeMapper, dl, cirDL,
+                       modOp),
+            llvm::Align(cirDL.getTypeRequiredAlignment(type)));
       })
       .Case([&](cir::VectorType vecTy) {
         // isSupportedType rejects a scalable vector, so the element count is
         // always fixed here.
         return tb.getVectorType(
-            mapCIRType(vecTy.getElementType(), typeMapper, dl, modOp),
-            vecTy.getSize(), llvm::Align(dl.getTypeRequiredAlignment(type)));
+            mapCIRType(vecTy.getElementType(), typeMapper, dl, cirDL, modOp),
+            vecTy.getSize(), llvm::Align(cirDL.getTypeRequiredAlignment(type)));
       })
       .Case([&](cir::ArrayType arrTy) {
         const llvm::abi::Type *elemAbi =
-            mapCIRType(arrTy.getElementType(), typeMapper, dl, modOp);
+            mapCIRType(arrTy.getElementType(), typeMapper, dl, cirDL, modOp);
         return tb.getArrayType(elemAbi, arrTy.getSize(),
                                dl.getTypeSizeInBits(type).getFixedValue());
       })
@@ -406,8 +411,9 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
           flags = flags | llvm::abi::RecordFlags::HasFlexibleArrayMember;
         llvm::TypeSize sizeBits = llvm::TypeSize::getFixed(
             dl.getTypeSizeInBits(type).getFixedValue());
-        llvm::Align align = recordDeclaredAlign(modOp, recTy, dl);
-        llvm::Align unadjustedAlign = recordUnadjustedAlign(modOp, recTy, dl);
+        llvm::Align align = recordDeclaredAlign(modOp, recTy, cirDL);
+        llvm::Align unadjustedAlign =
+            recordUnadjustedAlign(modOp, recTy, cirDL);
 
         // Mapped with no fields, an empty record reaches Ignore on its own.
         // The size still matters, since a target may pass a large empty
@@ -451,14 +457,15 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
             const bool holdsUnit = idx == 0 && unitTy;
             if (holdsUnit)
               fields.push_back(llvm::abi::FieldInfo(
-                  mapCIRType(unitTy, typeMapper, dl, modOp), offsetBits,
+                  mapCIRType(unitTy, typeMapper, dl, cirDL, modOp), offsetBits,
                   /*IsBitField=*/true, decl.getWidth(),
                   /*IsUnnamedBitField=*/decl.getIsUnnamed()));
             mlir::Type declaredTy = decl.getDeclaredType();
             if (!holdsUnit ||
                 dl.getTypeSizeInBits(declaredTy).getFixedValue() > unitBits)
               fields.push_back(llvm::abi::FieldInfo(
-                  mapCIRType(declaredTy, typeMapper, dl, modOp), offsetBits,
+                  mapCIRType(declaredTy, typeMapper, dl, cirDL, modOp),
+                  offsetBits,
                   /*IsBitField=*/true, holdsUnit ? 0 : decl.getWidth(),
                   /*IsUnnamedBitField=*/holdsUnit || decl.getIsUnnamed()));
           }
@@ -489,7 +496,7 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
                 memberIsEmptyRecord(variantTy))
               continue;
             fields.push_back(llvm::abi::FieldInfo(
-                mapCIRType(variantTy, typeMapper, dl, modOp)));
+                mapCIRType(variantTy, typeMapper, dl, cirDL, modOp)));
           }
           return tb.getUnionType(fields, sizeBits, align, unadjustedAlign,
                                  llvm::abi::StructPacking::Default, flags);
@@ -519,7 +526,7 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
                  "an empty-for-ABI member must not reach the classifier as an "
                  "unnamed bit-field");
           fields.push_back(llvm::abi::FieldInfo(
-              mapCIRType(fieldTy, typeMapper, dl, modOp),
+              mapCIRType(fieldTy, typeMapper, dl, cirDL, modOp),
               recTy.getElementOffset(dl, idx) * 8,
               /*IsBitField=*/isUnnamed, isUnnamed ? widthBits : 0,
               /*IsUnnamedBitField=*/isUnnamed));
@@ -733,10 +740,10 @@ CIRABIClassifierCommon::classifySignature(
 
   const llvm::abi::Type *retAbi =
       voidRet ? typeMapper.getTypeBuilder().getVoidType()
-              : mapCIRType(retCIR, typeMapper, dl, modOp);
+              : mapCIRType(retCIR, typeMapper, dl, cirDataLayout, modOp);
   SmallVector<const llvm::abi::Type *> argAbi;
   for (mlir::Type a : inputs)
-    argAbi.push_back(mapCIRType(a, typeMapper, dl, modOp));
+    argAbi.push_back(mapCIRType(a, typeMapper, dl, cirDataLayout, modOp));
 
   std::unique_ptr<llvm::abi::FunctionInfo> fi =
       llvm::abi::FunctionInfo::create(callConv, retAbi, argAbi, required);

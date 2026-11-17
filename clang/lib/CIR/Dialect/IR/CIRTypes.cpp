@@ -794,9 +794,10 @@ cir::PtrSpecAttr getPointerSpec(mlir::DataLayoutEntryListRef params,
 // entry. That is LongLongAlign's initial value.
 constexpr static uint64_t kDefaultBitIntMaxAlignBits = 64;
 
-/// The _BitInt alignment cap in bits. The #cir.bitint_spec entry holds
-/// TargetInfo::getBitIntMaxAlign().
-uint64_t getBitIntMaxAlignBits(mlir::DataLayoutEntryListRef params) {
+} // namespace
+
+/// The #cir.bitint_spec entry holds TargetInfo::getBitIntMaxAlign().
+uint64_t IntType::getBitIntMaxAlignBits(mlir::DataLayoutEntryListRef params) {
   for (mlir::DataLayoutEntryInterface entry : params) {
     if (!entry.isTypeEntry())
       continue;
@@ -805,7 +806,6 @@ uint64_t getBitIntMaxAlignBits(mlir::DataLayoutEntryListRef params) {
   }
   return kDefaultBitIntMaxAlignBits;
 }
-} // namespace
 
 llvm::TypeSize
 PointerType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
@@ -892,19 +892,6 @@ StructType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
   return computeStructAlignment(dataLayout);
 }
 
-uint64_t
-StructType::getRequiredAlignment(const ::mlir::DataLayout &dataLayout,
-                                 ::mlir::DataLayoutEntryListRef params) const {
-  if (getPacked())
-    return 1;
-  assert(isComplete() && "Cannot get layout of incomplete records");
-  uint64_t recordAlignment = 1;
-  for (mlir::Type ty : getMembers())
-    recordAlignment =
-        std::max(dataLayout.getTypeRequiredAlignment(ty), recordAlignment);
-  return recordAlignment;
-}
-
 // Sums the storage member's alloc size (if present) with the padding field's
 // size (if present).
 // A union whose member list came out empty has no storage type, so its whole
@@ -929,20 +916,6 @@ UnionType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
   if (!storage)
     return 1;
   return dataLayout.getTypeABIAlignment(storage);
-}
-
-uint64_t
-UnionType::getRequiredAlignment(const ::mlir::DataLayout &dataLayout,
-                                ::mlir::DataLayoutEntryListRef params) const {
-  if (getPacked())
-    return 1;
-  // The storage member has the largest ABI alignment, which need not be the
-  // largest required alignment, so every member contributes.
-  uint64_t unionAlignment = 1;
-  for (mlir::Type ty : getMembers())
-    unionAlignment =
-        std::max(dataLayout.getTypeRequiredAlignment(ty), unionAlignment);
-  return unionAlignment;
 }
 
 unsigned
@@ -1122,15 +1095,17 @@ void IntType::print(mlir::AsmPrinter &printer) const {
 llvm::TypeSize
 IntType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                            mlir::DataLayoutEntryListRef params) const {
-  return llvm::TypeSize::getFixed(getStorageTypeWidth(dataLayout));
+  if (!isBitInt())
+    return llvm::TypeSize::getFixed(getWidth());
+  uint64_t alignBits =
+      getBitIntAlignRequirement(getBitIntMaxAlignBits(params)) * 8;
+  return llvm::TypeSize::getFixed(llvm::alignTo(getWidth(), alignBits));
 }
 
 unsigned
 IntType::getStorageTypeWidth(const mlir::DataLayout &dataLayout) const {
-  if (!isBitInt())
-    return getWidth();
-  uint64_t alignBits = dataLayout.getTypeRequiredAlignment(*this) * 8;
-  return static_cast<unsigned>(llvm::alignTo(getWidth(), alignBits));
+  return static_cast<unsigned>(
+      dataLayout.getTypeSizeInBits(*this).getFixedValue());
 }
 
 uint64_t
@@ -1142,12 +1117,8 @@ IntType::getStorageTypeAlignment(const mlir::DataLayout &dataLayout) const {
   return dataLayout.getTypeABIAlignment(storageTy);
 }
 
-uint64_t
-IntType::getRequiredAlignment(const mlir::DataLayout &dataLayout,
-                              mlir::DataLayoutEntryListRef params) const {
-  if (!isBitInt())
-    return dataLayout.getTypeABIAlignment(*this);
-  uint64_t maxAlignBits = getBitIntMaxAlignBits(params);
+uint64_t IntType::getBitIntAlignRequirement(uint64_t maxAlignBits) const {
+  assert(isBitInt() && "only a _BitInt has a target alignment cap");
   uint64_t alignBits = std::min(
       static_cast<uint64_t>(llvm::PowerOf2Ceil(getWidth())), maxAlignBits);
   return std::max(alignBits / 8, static_cast<uint64_t>(1));
@@ -1361,12 +1332,6 @@ cir::ComplexType::getABIAlignment(const mlir::DataLayout &dataLayout,
   return dataLayout.getTypeABIAlignment(getElementType());
 }
 
-uint64_t cir::ComplexType::getRequiredAlignment(
-    const mlir::DataLayout &dataLayout,
-    mlir::DataLayoutEntryListRef params) const {
-  return dataLayout.getTypeRequiredAlignment(getElementType());
-}
-
 FuncType FuncType::clone(TypeRange inputs, TypeRange results) const {
   assert(results.size() == 1 && "expected exactly one result type");
   return get(llvm::to_vector(inputs), results[0], isVarArg());
@@ -1560,12 +1525,6 @@ ArrayType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
   return dataLayout.getTypeABIAlignment(getElementType());
 }
 
-uint64_t
-ArrayType::getRequiredAlignment(const ::mlir::DataLayout &dataLayout,
-                                ::mlir::DataLayoutEntryListRef params) const {
-  return dataLayout.getTypeRequiredAlignment(getElementType());
-}
-
 //===----------------------------------------------------------------------===//
 //  BitFieldType Definitions
 //===----------------------------------------------------------------------===//
@@ -1626,14 +1585,6 @@ BitFieldType::getABIAlignment(const mlir::DataLayout &dataLayout,
   // the record layout walk a zero-width bit-field without skipping it.
   if (mlir::Type storage = getStorageType())
     return dataLayout.getTypeABIAlignment(storage);
-  return 1;
-}
-
-uint64_t
-BitFieldType::getRequiredAlignment(const mlir::DataLayout &dataLayout,
-                                   mlir::DataLayoutEntryListRef params) const {
-  if (mlir::Type storage = getStorageType())
-    return dataLayout.getTypeRequiredAlignment(storage);
   return 1;
 }
 
@@ -1763,12 +1714,6 @@ uint64_t
 cir::MatrixType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                                  ::mlir::DataLayoutEntryListRef params) const {
   return dataLayout.getTypeABIAlignment(getElementType());
-}
-
-uint64_t cir::MatrixType::getRequiredAlignment(
-    const ::mlir::DataLayout &dataLayout,
-    ::mlir::DataLayoutEntryListRef params) const {
-  return dataLayout.getTypeRequiredAlignment(getElementType());
 }
 
 mlir::LogicalResult cir::MatrixType::verify(

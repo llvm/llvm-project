@@ -478,22 +478,6 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       }]
     >,
     StaticInterfaceMethod<
-      /*description=*/"Returns the alignment that the language and target "
-                      "guarantee for an object of the given type, computed "
-                      "using the relevant entries. The data layout object can "
-                      "be used for recursive queries.",
-      /*retTy=*/"uint64_t",
-      /*methodName=*/"getTypeRequiredAlignment",
-      /*args=*/(ins "::mlir::Type":$type,
-                    "const ::mlir::DataLayout &":$dataLayout,
-                    "::mlir::DataLayoutEntryListRef":$params),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        return ::mlir::detail::getDefaultRequiredAlignment(type, dataLayout,
-                                                          params);
-      }]
-    >,
-    StaticInterfaceMethod<
       /*description=*/"Returns the bitwidth that should be used when "
                       "performing index computations for the type computed "
                       "using the relevant entries. The data layout object can "
@@ -703,23 +687,6 @@ def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return $_type.getABIAlignment(dataLayout, params);
-      }]
-    >,
-    InterfaceMethod<
-      /*description=*/"Returns the alignment, in bytes, that the language "
-                      "and target guarantee for an object of this type, "
-                      "which is the alignment code may assume when it knows "
-                      "only the object's type. It defaults to the ABI "
-                      "alignment. A type overrides it when that guarantee "
-                      "differs from the ABI alignment used to lay the type "
-                      "out.",
-      /*retTy=*/"uint64_t",
-      /*methodName=*/"getRequiredAlignment",
-      /*args=*/(ins "const ::mlir::DataLayout &":$dataLayout,
-                    "::mlir::DataLayoutEntryListRef":$params),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        return ::mlir::detail::getTypeABIAlignment($_type, dataLayout);
       }]
     >,
     InterfaceMethod<

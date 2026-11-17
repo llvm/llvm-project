@@ -1,6 +1,7 @@
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace cir;
 
@@ -14,7 +15,11 @@ CIRDataLayout::CIRDataLayout(mlir::ModuleOp modOp) : layout(modOp) {
 
 void CIRDataLayout::reset(mlir::DataLayoutSpecInterface spec) {
   bigEndian = false;
+  bitIntMaxAlignBits = cir::IntType::getBitIntMaxAlignBits({});
   if (spec) {
+    bitIntMaxAlignBits = cir::IntType::getBitIntMaxAlignBits(
+        spec.getSpecForType(cir::IntType::getTypeID()));
+
     mlir::StringAttr key = mlir::StringAttr::get(
         spec.getContext(), mlir::DLTIDialect::kDataLayoutEndiannessKey);
     if (mlir::DataLayoutEntryInterface entry = spec.getSpecForIdentifier(key))
@@ -39,6 +44,43 @@ llvm::Align CIRDataLayout::getAlignment(mlir::Type ty, bool useABIAlign) const {
   unsigned align = useABIAlign ? layout.getTypeABIAlignment(ty)
                                : layout.getTypePreferredAlignment(ty);
   return llvm::Align(align);
+}
+
+uint64_t CIRDataLayout::getTypeRequiredAlignment(mlir::Type ty) const {
+  auto maxMemberAlignment = [&](llvm::ArrayRef<mlir::Type> members) {
+    uint64_t align = 1;
+    for (mlir::Type member : members)
+      align = std::max(align, getTypeRequiredAlignment(member));
+    return align;
+  };
+  return llvm::TypeSwitch<mlir::Type, uint64_t>(ty)
+      .Case([&](cir::IntType intTy) -> uint64_t {
+        if (intTy.isBitInt())
+          return intTy.getBitIntAlignRequirement(bitIntMaxAlignBits);
+        return layout.getTypeABIAlignment(intTy);
+      })
+      .Case([&](cir::StructType structTy) -> uint64_t {
+        if (structTy.getPacked())
+          return 1;
+        assert(structTy.isComplete() &&
+               "Cannot get layout of incomplete records");
+        return maxMemberAlignment(structTy.getMembers());
+      })
+      .Case([&](cir::UnionType unionTy) -> uint64_t {
+        if (unionTy.getPacked())
+          return 1;
+        return maxMemberAlignment(unionTy.getMembers());
+      })
+      .Case<cir::ArrayType, cir::ComplexType, cir::MatrixType>(
+          [&](auto elementsTy) -> uint64_t {
+            return getTypeRequiredAlignment(elementsTy.getElementType());
+          })
+      .Case([&](cir::BitFieldType bitFieldTy) -> uint64_t {
+        if (mlir::Type storage = bitFieldTy.getStorageType())
+          return getTypeRequiredAlignment(storage);
+        return 1;
+      })
+      .Default([&](mlir::Type ty) { return layout.getTypeABIAlignment(ty); });
 }
 
 // The implementation of this method is provided inline as it is particularly

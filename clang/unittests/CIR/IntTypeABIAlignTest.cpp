@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Unit tests for IntType::getABIAlignment and IntType::getRequiredAlignment.
+// Unit tests for IntType::getABIAlignment and
+// CIRDataLayout::getTypeRequiredAlignment.
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,6 +15,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "llvm/Support/MathExtras.h"
@@ -70,8 +72,8 @@ protected:
     }
     module->setAttr(mlir::DLTIDialect::kDataLayoutAttrName,
                     mlir::DataLayoutSpecAttr::get(&context, entries));
-    mlir::DataLayout dl(module);
-    Alignments result{dl.getTypeABIAlignment(ty),
+    cir::CIRDataLayout dl(module);
+    Alignments result{dl.layout.getTypeABIAlignment(ty),
                       dl.getTypeRequiredAlignment(ty)};
     module->erase();
     return result;

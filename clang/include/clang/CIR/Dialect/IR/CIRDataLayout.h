@@ -27,6 +27,10 @@ class CIRDataLayout {
 
   unsigned programAddrSpace = 0;
 
+  /// TargetInfo::getBitIntMaxAlign(), in bits, from the module's
+  /// #cir.bitint_spec entry.
+  uint64_t bitIntMaxAlignBits = 0;
+
 public:
   mlir::DataLayout layout;
 
@@ -46,6 +50,14 @@ public:
   llvm::Align getABITypeAlign(mlir::Type ty) const {
     return getAlignment(ty, true);
   }
+
+  /// Returns the alignment, in bytes, that the C type lowered to \p ty
+  /// requires. ABI classification, coercion temporaries, and accesses with no
+  /// explicit alignment use it. It differs from the ABI alignment of \p ty
+  /// for a _BitInt, whose alignment the target caps independently of its
+  /// storage, and for records, arrays, complex, and matrix types that contain
+  /// one.
+  uint64_t getTypeRequiredAlignment(mlir::Type ty) const;
 
   /// Returns the maximum number of bytes that may be overwritten by
   /// storing the specified type.

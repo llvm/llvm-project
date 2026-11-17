@@ -78,17 +78,9 @@ public:
   llvm::TypeSize getTypeAllocSize(Type type) const;
   uint64_t getTypeABIAlignment(Type type) const;
   uint64_t getTypePreferredAlignment(Type type) const;
-  uint64_t getTypeRequiredAlignment(Type type) const;
   std::optional<uint64_t> getTypeIndexBitwidth(Type type) const;
 };
 ```
-
-The required alignment is the alignment that the language and target guarantee
-for an object of the type, which is the alignment code may assume when it knows
-only the object's type. It equals the ABI alignment unless the type overrides
-it, which a type does when that guarantee differs from the ABI alignment used
-to lay the type out. The ABI alignment still determines the type's alloc size
-and its placement within aggregates.
 
 The user can construct the `DataLayout` object for the scope of interest. Since
 the data layout properties are fixed in the scope, they will be computed only
