@@ -1,4 +1,4 @@
-//===- LLVMMiscIntrinsicOps.cpp - LLVM dialect other intrinsics -----------===//
+//===- LLVMGeneralIntrinsicOps.cpp - LLVM general intrinsics --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the ops of op partition `MiscIntrinsic` of the LLVM
+// This file defines the ops of op partition `GeneralIntrinsic` of the LLVM
 // dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LLVMIR/LLVMMiscIntrinsicOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMGeneralIntrinsicOps.h"
 
 #include "IR/LLVMOps.h"
 #include "mlir/IR/Builders.h"
@@ -51,4 +51,4 @@ void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
 LogicalResult LLVM::AssumeOp::verify() { return verifyOperandBundles(*this); }
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/LLVMIR/LLVMMiscIntrinsicOps.cpp.inc"
+#include "mlir/Dialect/LLVMIR/LLVMGeneralIntrinsicOps.cpp.inc"

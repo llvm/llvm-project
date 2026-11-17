@@ -1,4 +1,4 @@
-//===- LLVMCastOps.cpp - LLVM dialect conversion ops ----------------------===//
+//===- LLVMConversionOps.cpp - LLVM dialect conversion ops ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the ops of op partition `Cast` of the LLVM dialect.
+// This file defines the ops of op partition `Conversion` of the LLVM dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LLVMIR/LLVMCastOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
 
 #include "IR/LLVMOps.h"
 #include "mlir/IR/Builders.h"
@@ -198,4 +198,4 @@ DeletionKind LLVM::AddrSpaceCastOp::removeBlockingUses(
 }
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/LLVMIR/LLVMCastOps.cpp.inc"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.cpp.inc"

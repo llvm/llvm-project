@@ -13,20 +13,26 @@ add_mlir_dialect_library(MLIRLLVMDialect
   IR/LLVMTypes.cpp
   IR/LLVMTypeSyntax.cpp
   IR/LLVMDialectBytecode.cpp
+  IR/LLVMAggregateOps.cpp
   IR/LLVMArithOps.cpp
-  IR/LLVMCastOps.cpp
+  IR/LLVMCallOps.cpp
+  IR/LLVMCodeGenIntrinsicOps.cpp
   IR/LLVMConstantOps.cpp
   IR/LLVMConstrainedIntrinsicOps.cpp
-  IR/LLVMControlFlowOps.cpp
+  IR/LLVMConversionOps.cpp
   IR/LLVMCoroIntrinsicOps.cpp
   IR/LLVMDebugIntrinsicOps.cpp
   IR/LLVMFloatIntrinsicOps.cpp
+  IR/LLVMGeneralIntrinsicOps.cpp
   IR/LLVMIntegerIntrinsicOps.cpp
   IR/LLVMMemoryIntrinsicOps.cpp
-  IR/LLVMMiscIntrinsicOps.cpp
   IR/LLVMMemoryOps.cpp
   IR/LLVMModuleOps.cpp
+  IR/LLVMTerminatorOps.cpp
+  IR/LLVMVarArgOps.cpp
   IR/LLVMVectorIntrinsicOps.cpp
+  IR/LLVMVectorOps.cpp
+  IR/LLVMVPIntrinsicOps.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR

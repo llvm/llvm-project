@@ -1,4 +1,4 @@
-//===- LLVMCastOps.h - LLVM dialect conversion ops --------------*- C++ -*-===//
+//===- LLVMCodeGenIntrinsicOps.h --------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the ops of op partition `Cast` of the LLVM dialect: the
-// conversion ops.
+// This file declares the ops of op partition `CodeGenIntrinsic` of the LLVM
+// dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LLVMIR_LLVMCASTOPS_H_
-#define MLIR_DIALECT_LLVMIR_LLVMCASTOPS_H_
+#ifndef MLIR_DIALECT_LLVMIR_LLVMCODEGENINTRINSICOPS_H_
+#define MLIR_DIALECT_LLVMIR_LLVMCODEGENINTRINSICOPS_H_
 
 #include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
-#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/LLVMIR/LLVMCastOps.h.inc"
+#include "mlir/Dialect/LLVMIR/LLVMCodeGenIntrinsicOps.h.inc"
 
-#endif // MLIR_DIALECT_LLVMIR_LLVMCASTOPS_H_
+#endif // MLIR_DIALECT_LLVMIR_LLVMCODEGENINTRINSICOPS_H_

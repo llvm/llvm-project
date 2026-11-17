@@ -13,17 +13,6 @@ include "mlir/Interfaces/MemorySlotInterfaces.td"
 // operations and intrinsics. However, we systematically prefix them with
 // "intr." to avoid potential name clashes.
 
-// Op partitions of the LLVM dialect intrinsic ops.
-// Intrinsics that fit no other partition are in `MiscIntrinsic`.
-def LLVM_ConstrainedIntrinsicPartition : Partition<"ConstrainedIntrinsic">;
-def LLVM_CoroIntrinsicPartition : Partition<"CoroIntrinsic">;
-def LLVM_DebugIntrinsicPartition : Partition<"DebugIntrinsic">;
-def LLVM_FloatIntrinsicPartition : Partition<"FloatIntrinsic">;
-def LLVM_IntegerIntrinsicPartition : Partition<"IntegerIntrinsic">;
-def LLVM_MemoryIntrinsicPartition : Partition<"MemoryIntrinsic">;
-def LLVM_MiscIntrinsicPartition : Partition<"MiscIntrinsic">;
-def LLVM_VectorIntrinsicPartition : Partition<"VectorIntrinsic">;
-
 class LLVM_UnaryIntrOpBase<string func, Type element,
                            list<Trait> traits = [], bit requiresFastmath = 0> :
     LLVM_OneResultIntrOp<func, [], [0],
@@ -124,14 +113,16 @@ def LLVM_AbsOp : LLVM_OneResultIntrOp<"abs", [], [0], [Pure],
 }
 } // let partition = LLVM_IntegerIntrinsicPartition
 
-let partition = LLVM_FloatIntrinsicPartition in {
+let partition = LLVM_GeneralIntrinsicPartition in {
 // Do not use LLVM_UnaryIntrOpF here: arithmetic.fence operates on floating
 // types, but the fence itself should not carry fastmath flags.
 def LLVM_ArithmeticFenceOp
     : LLVM_UnaryIntrOpBase<"arithmetic.fence", LLVM_AnyFloat> {
   let arguments = commonArgs;
 }
+} // let partition = LLVM_GeneralIntrinsicPartition
 
+let partition = LLVM_FloatIntrinsicPartition in {
 def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure],
   /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
   /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
@@ -172,7 +163,7 @@ def LLVM_Log10Op : LLVM_UnaryIntrOpF<"log10">;
 def LLVM_Log2Op : LLVM_UnaryIntrOpF<"log2">;
 def LLVM_LogOp : LLVM_UnaryIntrOpF<"log">;
 } // let partition = LLVM_FloatIntrinsicPartition
-let partition = LLVM_MemoryIntrinsicPartition in {
+let partition = LLVM_CodeGenIntrinsicPartition in {
 def LLVM_Prefetch : LLVM_ZeroResultIntrOp<"prefetch", [0],
   /*traits=*/[], /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
   /*requiresArgAndResultAttrs=*/0, /*requiresOpBundles=*/0,
@@ -180,7 +171,7 @@ def LLVM_Prefetch : LLVM_ZeroResultIntrOp<"prefetch", [0],
 > {
   let arguments = (ins LLVM_AnyPointer:$addr, I32Attr:$rw, I32Attr:$hint, I32Attr:$cache);
 }
-} // let partition = LLVM_MemoryIntrinsicPartition
+} // let partition = LLVM_CodeGenIntrinsicPartition
 let partition = LLVM_FloatIntrinsicPartition in {
 def LLVM_RoundEvenOp : LLVM_UnaryIntrOpF<"roundeven">;
 def LLVM_RoundOp : LLVM_UnaryIntrOpF<"round">;
@@ -422,7 +413,9 @@ def LLVM_MemsetInlineOp : LLVM_ZeroResultIntrOp<"memset.inline", [0, 2],
     }]>
   ];
 }
+} // let partition = LLVM_MemoryIntrinsicPartition
 
+let partition = LLVM_GeneralIntrinsicPartition in {
 def LLVM_NoAliasScopeDeclOp
     : LLVM_ZeroResultIntrOp<"experimental.noalias.scope.decl"> {
   let arguments = (ins LLVM_AliasScopeAttr:$scope);
@@ -457,11 +450,13 @@ def LLVM_PtrMaskOp
 
   let assemblyFormat = "$ptr `,` $mask attr-dict `:` functional-type(operands, results)";
 }
+} // let partition = LLVM_GeneralIntrinsicPartition
 
 //
 // Memory marker intrinsics.
 //
 
+let partition = LLVM_MemoryIntrinsicPartition in {
 /// Base operation for lifetime markers.
 class LLVM_LifetimeBaseOp<string opName> : LLVM_ZeroResultIntrOp<opName, [0],
     [DeclareOpInterfaceMethods<PromotableOpInterface>]> {
@@ -919,7 +914,7 @@ def LLVM_USHLSat : LLVM_BinarySameArgsIntrOpI<"ushl.sat">;
 // Optimization hint intrinsics.
 //
 
-let partition = LLVM_MiscIntrinsicPartition in {
+let partition = LLVM_GeneralIntrinsicPartition in {
 def LLVM_FakeUseOp : LLVM_ZeroResultIntrOp<"fake.use"> {
   let arguments = (ins Variadic<LLVM_Type>:$args);
   let assemblyFormat = "$args attr-dict `:` type($args)";
@@ -989,7 +984,7 @@ def LLVM_ThreadlocalAddressOp : LLVM_OneResultIntrOp<"threadlocal.address", [],
                                 [0], [Pure]> {
   let arguments = (ins LLVM_AnyPointer:$global);
 }
-} // let partition = LLVM_MiscIntrinsicPartition
+} // let partition = LLVM_GeneralIntrinsicPartition
 
 //
 // Coroutine intrinsics.
@@ -1238,7 +1233,7 @@ def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
 // Variadic function intrinsics.
 //
 
-let partition = LLVM_MemoryIntrinsicPartition in {
+let partition = LLVM_VarArgPartition in {
 def LLVM_VaStartOp : LLVM_ZeroResultIntrOp<"vastart", [0]>,
                      Arguments<(ins LLVM_AnyPointer:$arg_list)> {
   let assemblyFormat = "$arg_list attr-dict `:` qualified(type($arg_list))";
@@ -1256,24 +1251,24 @@ def LLVM_VaEndOp : LLVM_ZeroResultIntrOp<"vaend", [0]>,
   let assemblyFormat = "$arg_list attr-dict `:` qualified(type($arg_list))";
   let summary = "Destroys `arg_list`, which has been initialized by `intr.vastart` or `intr.vacopy`.";
 }
-} // let partition = LLVM_MemoryIntrinsicPartition
+} // let partition = LLVM_VarArgPartition
 
 //
 // Exception handling intrinsics.
 //
 
-let partition = LLVM_MiscIntrinsicPartition in {
+let partition = LLVM_GeneralIntrinsicPartition in {
 def LLVM_EhTypeidForOp : LLVM_OneResultIntrOp<"eh.typeid.for", [], [0]> {
     let arguments = (ins LLVM_AnyPointer:$type_info);
     let assemblyFormat = "$type_info attr-dict `:` functional-type(operands, results)";
 }
-} // let partition = LLVM_MiscIntrinsicPartition
+} // let partition = LLVM_GeneralIntrinsicPartition
 
 //
 // Stack save/restore intrinsics.
 //
 
-let partition = LLVM_MemoryIntrinsicPartition in {
+let partition = LLVM_CodeGenIntrinsicPartition in {
 def LLVM_StackSaveOp : LLVM_OneResultIntrOp<"stacksave", [0]> {
   let assemblyFormat = "attr-dict `:` qualified(type($res))";
 }
@@ -1282,7 +1277,7 @@ def LLVM_StackRestoreOp : LLVM_ZeroResultIntrOp<"stackrestore", [0]> {
   let arguments = (ins LLVM_AnyPointer:$ptr);
   let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
 }
-} // let partition = LLVM_MemoryIntrinsicPartition
+} // let partition = LLVM_CodeGenIntrinsicPartition
 
 //
 // Vector Reductions.
@@ -1734,7 +1729,7 @@ def LLVM_masked_compressstore
 // Annotate intrinsics.
 //
 
-let partition = LLVM_MiscIntrinsicPartition in {
+let partition = LLVM_GeneralIntrinsicPartition in {
 def LLVM_VarAnnotation
     : LLVM_ZeroResultIntrOp<"var.annotation", [0, 1],
         [AllTypesMatch<["annotation", "fileName", "attr"]>]> {
@@ -1789,16 +1784,18 @@ def LLVM_UBSanTrap : LLVM_ZeroResultIntrOp<"ubsantrap",
 
   let assemblyFormat = "`failureKind` `=` $failureKind attr-dict";
 }
-} // let partition = LLVM_MiscIntrinsicPartition
+} // let partition = LLVM_GeneralIntrinsicPartition
 
 //
 // Vector intrinsics.
 //
 
-let partition = LLVM_VectorIntrinsicPartition in {
+let partition = LLVM_GeneralIntrinsicPartition in {
 /// Create a call to vscale intrinsic.
 def LLVM_vscale : LLVM_IntrOp<"vscale", [0], [], [], 1>;
+} // let partition = LLVM_GeneralIntrinsicPartition
 
+let partition = LLVM_VectorIntrinsicPartition in {
 /// Create a call to stepvector intrinsic.
 def LLVM_StepVectorOp
     : LLVM_IntrOp<"stepvector", [0], [], [Pure], 1> {
@@ -1921,11 +1918,13 @@ def LLVM_vector_repeat
   let assemblyFormat = "`(` operands `)` attr-dict `:` "
                        "functional-type(operands, results)";
 }
+} // let partition = LLVM_VectorIntrinsicPartition
 
 //
 // LLVM Vector Predication operations.
 //
 
+let partition = LLVM_VPIntrinsicPartition in {
 class LLVM_VPBinaryBase<string mnem, Type element>
     : LLVM_OneResultIntrOp<"vp." # mnem, [0], [], [Pure]>,
       Arguments<(ins LLVM_VectorOf<element>:$lhs, LLVM_VectorOf<element>:$rhs,
@@ -1996,6 +1995,6 @@ def LLVM_VPStridedStoreOp
     : LLVM_ZeroResultIntrOp<"experimental.vp.strided.store",[0, 1, 2], []>,
       Arguments<(ins LLVM_AnyVector:$val, LLVM_AnyPointer:$ptr,
                      AnySignlessInteger:$stride, LLVM_VectorOf<I1>:$mask, I32:$evl)>;
-} // let partition = LLVM_VectorIntrinsicPartition
+} // let partition = LLVM_VPIntrinsicPartition
 
 #endif // LLVM_INTRINSIC_OP

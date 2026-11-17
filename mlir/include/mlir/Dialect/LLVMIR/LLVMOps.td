@@ -26,14 +26,6 @@ include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 
-// Op partitions of the LLVM dialect ops.
-def LLVM_ArithPartition : Partition<"Arith">;
-def LLVM_CastPartition : Partition<"Cast">;
-def LLVM_ConstantPartition : Partition<"Constant">;
-def LLVM_ControlFlowPartition : Partition<"ControlFlow">;
-def LLVM_MemoryPartition : Partition<"Memory">;
-def LLVM_ModulePartition : Partition<"Module">;
-
 class LLVM_Builder<string builder> {
   string llvmBuilder = builder;
 }
@@ -583,7 +575,7 @@ def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
 } // let partition = LLVM_MemoryPartition
 
 // Casts.
-let partition = LLVM_CastPartition in {
+let partition = LLVM_ConversionPartition in {
 class LLVM_CastOp<string mnemonic, string instName, Type type,
                   Type resultType, list<Trait> traits = []> :
     LLVM_Op<mnemonic, !listconcat([Pure], traits)>,
@@ -769,10 +761,10 @@ def LLVM_FPExtOp : LLVM_CastOpWithFastMathFlag<"fpext", "FPExt",
 def LLVM_FPTruncOp : LLVM_CastOpWithFastMathFlag<"fptrunc", "FPTrunc",
                                  LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
                                  LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
-} // let partition = LLVM_CastPartition
+} // let partition = LLVM_ConversionPartition
 
 // Call-related operations.
-let partition = LLVM_ControlFlowPartition in {
+let partition = LLVM_CallPartition in {
 def LLVM_InvokeOp
     : LLVM_Op<"invoke", [AttrSizedOperandSegments,
                          DeclareOpInterfaceMethods<BranchOpInterface>,
@@ -830,11 +822,13 @@ def LLVM_LandingpadOp : LLVM_Op<"landingpad"> {
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
+} // let partition = LLVM_CallPartition
 
 //===----------------------------------------------------------------------===//
 // VAArgOp
 //===----------------------------------------------------------------------===//
 
+let partition = LLVM_VarArgPartition in {
 def LLVM_VaArgOp : LLVM_Op<"va_arg"> {
   let arguments = (ins LLVM_AnyPointer:$arg);
   let results = (outs LLVM_Type:$res);
@@ -850,11 +844,13 @@ def LLVM_VaArgOp : LLVM_Op<"va_arg"> {
       $_location, $_resultType, $arg);
   }];
 }
+} // let partition = LLVM_VarArgPartition
 
 //===----------------------------------------------------------------------===//
 // CallOp
 //===----------------------------------------------------------------------===//
 
+let partition = LLVM_CallPartition in {
 def LLVM_CallOp
     : LLVM_MemAccessOpBase<
           "call", [AttrSizedOperandSegments,
@@ -958,13 +954,13 @@ def LLVM_CallOp
     LLVMFunctionType getCalleeFunctionType();
   }];
 }
-} // let partition = LLVM_ControlFlowPartition
+} // let partition = LLVM_CallPartition
 
 //===----------------------------------------------------------------------===//
 // ExtractElementOp
 //===----------------------------------------------------------------------===//
 
-let partition = LLVM_ArithPartition in {
+let partition = LLVM_VectorPartition in {
 def LLVM_ExtractElementOp : LLVM_Op<"extractelement", [Pure,
     TypesMatchWith<
         "result type matches vector element type", "vector", "res",
@@ -985,40 +981,6 @@ def LLVM_ExtractElementOp : LLVM_Op<"extractelement", [Pure,
   string mlirBuilder = [{
     $res = LLVM::ExtractElementOp::create($_builder,
       $_location, $vector, $position);
-  }];
-}
-
-//===----------------------------------------------------------------------===//
-// ExtractValueOp
-//===----------------------------------------------------------------------===//
-
-def LLVM_ExtractValueOp : LLVM_Op<"extractvalue", [Pure]> {
-  let summary = "Extract a value from an LLVM struct.";
-
-  let arguments = (ins LLVM_AnyAggregate:$container, DenseI64ArrayAttr:$position);
-  let results = (outs LLVM_Type:$res);
-
-  let builders = [
-    OpBuilder<(ins "Value":$container, "ArrayRef<int64_t>":$position)>
-  ];
-
-  let assemblyFormat = [{
-    $container `` $position attr-dict `:` type($container)
-    custom<InsertExtractValueElementType>(type($res), ref(type($container)),
-                                          ref($position))
-  }];
-
-  let hasFolder = 1;
-  let hasVerifier = 1;
-
-  string llvmInstName = "ExtractValue";
-  string llvmBuilder = [{
-    $res = builder.CreateExtractValue($container, extractPosition($position));
-  }];
-  string mlirBuilder = [{
-    auto *evInst = cast<llvm::ExtractValueInst>(inst);
-    $res = LLVM::ExtractValueOp::create($_builder, $_location,
-      $container, getPositionFromIndices(evInst->getIndices()));
   }];
 }
 
@@ -1051,39 +1013,6 @@ def LLVM_InsertElementOp : LLVM_Op<"insertelement", [Pure,
   string mlirBuilder = [{
     $res = LLVM::InsertElementOp::create($_builder,
       $_location, $vector, $value, $position);
-  }];
-}
-
-//===----------------------------------------------------------------------===//
-// InsertValueOp
-//===----------------------------------------------------------------------===//
-
-def LLVM_InsertValueOp : LLVM_Op<
-    "insertvalue", [Pure, AllTypesMatch<["container", "res"]>]> {
-  let summary = "Insert a value into an LLVM struct.";
-
-  let arguments = (ins LLVM_AnyAggregate:$container, LLVM_PrimitiveType:$value,
-                       DenseI64ArrayAttr:$position);
-  let results = (outs LLVM_AnyAggregate:$res);
-
-  let assemblyFormat = [{
-    $value `,` $container `` $position attr-dict `:` type($container)
-    custom<InsertExtractValueElementType>(type($value), ref(type($container)),
-                                          ref($position))
-  }];
-
-  let hasVerifier = 1;
-  let hasCanonicalizer = 1;
-
-  string llvmInstName = "InsertValue";
-  string llvmBuilder = [{
-    $res = builder.CreateInsertValue($container, $value,
-                                     extractPosition($position));
-  }];
-  string mlirBuilder = [{
-    auto *ivInst = cast<llvm::InsertValueInst>(inst);
-    $res = LLVM::InsertValueOp::create($_builder, $_location,
-      $container, $value, getPositionFromIndices(ivInst->getIndices()));
   }];
 }
 
@@ -1124,8 +1053,79 @@ def LLVM_ShuffleVectorOp : LLVM_Op<"shufflevector",
       $_location, $v1, $v2, mask);
   }];
 }
+} // let partition = LLVM_VectorPartition
+
+let partition = LLVM_AggregatePartition in {
+//===----------------------------------------------------------------------===//
+// ExtractValueOp
+//===----------------------------------------------------------------------===//
+
+def LLVM_ExtractValueOp : LLVM_Op<"extractvalue", [Pure]> {
+  let summary = "Extract a value from an LLVM struct.";
+
+  let arguments = (ins LLVM_AnyAggregate:$container, DenseI64ArrayAttr:$position);
+  let results = (outs LLVM_Type:$res);
+
+  let builders = [
+    OpBuilder<(ins "Value":$container, "ArrayRef<int64_t>":$position)>
+  ];
+
+  let assemblyFormat = [{
+    $container `` $position attr-dict `:` type($container)
+    custom<InsertExtractValueElementType>(type($res), ref(type($container)),
+                                          ref($position))
+  }];
+
+  let hasFolder = 1;
+  let hasVerifier = 1;
+
+  string llvmInstName = "ExtractValue";
+  string llvmBuilder = [{
+    $res = builder.CreateExtractValue($container, extractPosition($position));
+  }];
+  string mlirBuilder = [{
+    auto *evInst = cast<llvm::ExtractValueInst>(inst);
+    $res = LLVM::ExtractValueOp::create($_builder, $_location,
+      $container, getPositionFromIndices(evInst->getIndices()));
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// InsertValueOp
+//===----------------------------------------------------------------------===//
+
+def LLVM_InsertValueOp : LLVM_Op<
+    "insertvalue", [Pure, AllTypesMatch<["container", "res"]>]> {
+  let summary = "Insert a value into an LLVM struct.";
+
+  let arguments = (ins LLVM_AnyAggregate:$container, LLVM_PrimitiveType:$value,
+                       DenseI64ArrayAttr:$position);
+  let results = (outs LLVM_AnyAggregate:$res);
+
+  let assemblyFormat = [{
+    $value `,` $container `` $position attr-dict `:` type($container)
+    custom<InsertExtractValueElementType>(type($value), ref(type($container)),
+                                          ref($position))
+  }];
+
+  let hasVerifier = 1;
+  let hasCanonicalizer = 1;
+
+  string llvmInstName = "InsertValue";
+  string llvmBuilder = [{
+    $res = builder.CreateInsertValue($container, $value,
+                                     extractPosition($position));
+  }];
+  string mlirBuilder = [{
+    auto *ivInst = cast<llvm::InsertValueInst>(inst);
+    $res = LLVM::InsertValueOp::create($_builder, $_location,
+      $container, $value, getPositionFromIndices(ivInst->getIndices()));
+  }];
+}
+} // let partition = LLVM_AggregatePartition
 
 // Misc operations.
+let partition = LLVM_ArithPartition in {
 def LLVM_SelectOp
     : LLVM_Op<"select",
           [Pure, AllTypesMatch<["trueValue", "falseValue", "res"]>,
@@ -1162,7 +1162,7 @@ def LLVM_FreezeOp : LLVM_Op<"freeze", [Pure, SameOperandsAndResultType]> {
 } // let partition = LLVM_ArithPartition
 
 // Terminators.
-let partition = LLVM_ControlFlowPartition in {
+let partition = LLVM_TerminatorPartition in {
 def LLVM_BrOp : LLVM_TerminatorOp<"br",
     [DeclareOpInterfaceMethods<BranchOpInterface>, Pure]> {
   let hasCanonicalizeMethod = 1;
@@ -1360,7 +1360,7 @@ def LLVM_SwitchOp
     }
   }];
 }
-} // let partition = LLVM_ControlFlowPartition
+} // let partition = LLVM_TerminatorPartition
 
 ////////////////////////////////////////////////////////////////////////////////
 // Auxiliary operations (do not appear in LLVM IR but necessary for the dialect
@@ -1968,9 +1968,7 @@ def LLVM_BlockAddressOp : LLVM_Op<"blockaddress",
   let hasVerifier = 1;
   let hasFolder = 1;
 }
-} // let partition = LLVM_ConstantPartition
 
-let partition = LLVM_ControlFlowPartition in {
 def LLVM_BlockTagOp : LLVM_Op<"blocktag"> {
   let description = [{
     This operation uses a `tag` to uniquely identify an MLIR block in a
@@ -1997,7 +1995,9 @@ def LLVM_BlockTagOp : LLVM_Op<"blocktag"> {
   // Covered as part of LLVMFuncOp verifier.
   let hasVerifier = 0;
 }
+} // let partition = LLVM_ConstantPartition
 
+let partition = LLVM_TerminatorPartition in {
 //===----------------------------------------------------------------------===//
 // IndirectBrOp
 //===----------------------------------------------------------------------===//
@@ -2063,7 +2063,7 @@ def LLVM_IndirectBrOp : LLVM_TerminatorOp<"indirectbr",
     }
   }];
 }
-} // let partition = LLVM_ControlFlowPartition
+} // let partition = LLVM_TerminatorPartition
 
 let partition = LLVM_ModulePartition in {
 def LLVM_ComdatSelectorOp
@@ -2633,7 +2633,7 @@ def LLVM_FenceOp : LLVM_Op<"fence">, LLVM_MemOpPatterns {
 }
 } // let partition = LLVM_MemoryPartition
 
-let partition = LLVM_ControlFlowPartition in {
+let partition = LLVM_CallPartition in {
 def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let description = [{
     The InlineAsmOp mirrors the underlying LLVM semantics with a notable
@@ -2680,7 +2680,7 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
 
   let hasVerifier = 1;
 }
-} // let partition = LLVM_ControlFlowPartition
+} // let partition = LLVM_CallPartition
 
 //===--------------------------------------------------------------------===//
 // MetadataAsValueOp
@@ -2756,7 +2756,7 @@ def LLVM_MetadataAsValueOp
 // CallIntrinsicOp
 //===--------------------------------------------------------------------===//
 
-let partition = LLVM_ControlFlowPartition in {
+let partition = LLVM_CallPartition in {
 def LLVM_CallIntrinsicOp
     : LLVM_Op<"call_intrinsic",
               [ArgAndResultAttrsOpInterface,
@@ -2791,7 +2791,7 @@ def LLVM_CallIntrinsicOp
 
   let hasVerifier = 1;
 }
-} // let partition = LLVM_ControlFlowPartition
+} // let partition = LLVM_CallPartition
 
 let partition = LLVM_ModulePartition in {
 def LLVM_LinkerOptionsOp

@@ -13,9 +13,10 @@
 #include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 
 #include "IR/LLVMOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMControlFlowOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMTerminatorOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectImplementation.h"
