@@ -43,7 +43,7 @@ uint8_t ctx_at(cpp::string_view input, size_t pos, int cflags, int eflags) {
 } // namespace
 
 bool nullable(ExprId id, uint8_t anchor_ctx, const ExprPool &pool) {
-  const Expr &e = pool.get(id);
+  const Expr e = pool.get(id);
   if (e.nullable || !e.has_anchors || anchor_ctx == 0)
     return e.nullable;
   switch (e.kind) {
@@ -64,12 +64,12 @@ bool nullable(ExprId id, uint8_t anchor_ctx, const ExprPool &pool) {
   case ExprKind::Star:
     break;
   }
+  LIBC_ASSERT(false);
   __builtin_unreachable();
 }
 
 ErrorOr<ExprId> derivative(ExprId id, char c, ExprPool &pool,
                            uint8_t ctx_before) {
-  // Copy the 16-byte node by value as recursive calls below mutate pool.
   const Expr e = pool.get(id);
   switch (e.kind) {
   case ExprKind::EmptySet:

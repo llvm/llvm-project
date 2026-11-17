@@ -126,8 +126,8 @@ public:
   ExprPool(ExprPool &&) = delete;
   ExprPool &operator=(ExprPool &&) = delete;
 
-  /// Resolves an ExprId to a reference.
-  const Expr &get(ExprId id) const { return slot_at(id); }
+  /// Resolves an ExprId to a value copy of its 16-byte Expr node.
+  Expr get(ExprId id) const { return slot_at(id); }
 
   /// Resolves a ByteSet index to its 256-bit character set.
   const ByteSet &get_byte_set(uint32_t id) const {

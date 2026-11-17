@@ -125,7 +125,7 @@ ExprId &ExprPool::find_bucket(cpp::span<ExprId> table, const Expr &e) const {
   for (ExprId &slot : BucketProber(table, e.hash)) {
     if (slot == INVALID_EXPR_ID)
       return slot;
-    const Expr &cand = get(slot);
+    const Expr cand = get(slot);
     if (cand.hash == e.hash && cand == e)
       return slot;
   }
@@ -283,7 +283,7 @@ ErrorOr<ExprId> ExprPool::make_star(ExprId body) {
     return empty_str();
   // (R*)* = R* and (R{m,n})* = R* iff m <= 1 (since R^1 is in R{m,n} iff
   // m <= 1, whereas (a{2,3})* excludes "a").
-  const Expr &be = get(body);
+  const Expr be = get(body);
   if (be.kind == ExprKind::Star)
     return body;
   if (be.kind == ExprKind::Repeat && be.rep.min <= 1)
@@ -305,7 +305,7 @@ ErrorOr<ExprId> ExprPool::make_repeat(ExprId body, uint16_t min, uint16_t max) {
     return body;
   if (min == 0 && max == REPEAT_INF)
     return make_star(body);
-  const Expr &be = get(body);
+  const Expr be = get(body);
   if (be.kind == ExprKind::Star)
     return body;
   if (be.kind == ExprKind::Repeat && be.rep.min == 1 &&
@@ -329,14 +329,14 @@ ErrorOr<ExprId> ExprPool::make_concat(ExprId l, ExprId r) {
   if (r == EMPTY_STR_ID)
     return l;
   // (A · B) · C = A · (B · C) (Right-associative canonical form)
-  const Expr &le = get(l);
+  const Expr le = get(l);
   if (le.kind == ExprKind::Concat) {
     ErrorOr<ExprId> tail = make_concat(le.bin.right, r);
     if (!tail.has_value())
       return tail;
     return make_concat(le.bin.left, *tail);
   }
-  const Expr &re = get(r);
+  const Expr re = get(r);
   return intern(Expr::make_concat(
       l, r, le.nullable && re.nullable, le.has_anchors || re.has_anchors,
       le.has_repeat || re.has_repeat,
@@ -349,8 +349,8 @@ namespace {
 // when their repetition intervals overlap or are adjacent.  Returns
 // INVALID_EXPR_ID when the pair cannot be coalesced.
 ErrorOr<ExprId> coalesce_repeat_pair(ExprId a, ExprId b, ExprPool &pool) {
-  const Expr &ae = pool.get(a);
-  const Expr &be = pool.get(b);
+  const Expr ae = pool.get(a);
+  const Expr be = pool.get(b);
   if (!ae.has_repeat && !be.has_repeat)
     return INVALID_EXPR_ID;
   if (ae.kind == ExprKind::Concat && be.kind == ExprKind::Concat) {
@@ -401,6 +401,9 @@ ErrorOr<ExprId> coalesce_repeat_pair(ExprId a, ExprId b, ExprPool &pool) {
   }
   if (ae.kind != ExprKind::Repeat && be.kind != ExprKind::Repeat)
     return INVALID_EXPR_ID;
+  // When b is Repeat(a, ...) and a is itself a Repeat, pick body = a so
+  // get_interval(a, ae) matches [1, 1] via `id == body` symmetrically with
+  // coalesce_repeat_pair(b, a).
   ExprId body = (ae.kind == ExprKind::Repeat &&
                  !(be.kind == ExprKind::Repeat && be.rep.body == a))
                     ? ae.rep.body
@@ -442,8 +445,8 @@ ErrorOr<ExprId> coalesce_repeat_pair(ExprId a, ExprId b, ExprPool &pool) {
 // `spine`, returning INVALID_EXPR_ID if no branch coalesces.
 ErrorOr<ExprId> coalesce_item_into_spine(ExprId item, ExprId spine,
                                          ExprPool &pool) {
-  const Expr &item_e = pool.get(item);
-  const Expr &spine_e = pool.get(spine);
+  const Expr item_e = pool.get(item);
+  const Expr spine_e = pool.get(spine);
   if (!item_e.has_repeat && !spine_e.has_repeat)
     return INVALID_EXPR_ID;
   if (spine_e.kind != ExprKind::Alt)
@@ -475,8 +478,8 @@ ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
   if (l == r)
     return l;
 
-  const Expr &le = get(l);
-  const Expr &re = get(r);
+  const Expr le = get(l);
+  const Expr re = get(r);
   if (le.kind != ExprKind::Alt && re.kind != ExprKind::Alt) {
     ErrorOr<ExprId> coalesced = coalesce_repeat_pair(l, r, *this);
     if (!coalesced.has_value() || *coalesced != INVALID_EXPR_ID)
@@ -522,8 +525,8 @@ ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
     return rest;
   // When merging two Alt spines, `head` (or a newly coalesced interval in
   // `*rest`) may now coalesce across the two spines or out-of-order ExprIds.
-  const Expr &he = get(head);
-  const Expr &re_rest = get(*rest);
+  const Expr he = get(head);
+  const Expr re_rest = get(*rest);
   if (le.kind == ExprKind::Alt && re.kind == ExprKind::Alt &&
       (he.has_repeat || re_rest.has_repeat)) {
     ErrorOr<ExprId> c = coalesce_item_into_spine(head, *rest, *this);
