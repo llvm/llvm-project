@@ -3,26 +3,15 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-none-linux-gnu -global-isel | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 define <16 x i8> @div16xi8(<16 x i8> %x) {
-; CHECK-SD-LABEL: div16xi8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi v1.16b, #41
-; CHECK-SD-NEXT:    smull2 v2.8h, v0.16b, v1.16b
-; CHECK-SD-NEXT:    smull v0.8h, v0.8b, v1.8b
-; CHECK-SD-NEXT:    uzp2 v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    sshr v0.16b, v0.16b, #2
-; CHECK-SD-NEXT:    usra v0.16b, v0.16b, #7
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: div16xi8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.16b, #41
-; CHECK-GI-NEXT:    smull2 v2.8h, v0.16b, v1.16b
-; CHECK-GI-NEXT:    smull v0.8h, v0.8b, v1.8b
-; CHECK-GI-NEXT:    uzp2 v1.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    sshr v0.16b, v1.16b, #2
-; CHECK-GI-NEXT:    ushr v0.16b, v0.16b, #7
-; CHECK-GI-NEXT:    ssra v0.16b, v1.16b, #2
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: div16xi8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.16b, #41
+; CHECK-NEXT:    smull2 v2.8h, v0.16b, v1.16b
+; CHECK-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    uzp2 v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    sshr v0.16b, v0.16b, #2
+; CHECK-NEXT:    usra v0.16b, v0.16b, #7
+; CHECK-NEXT:    ret
   %div = sdiv <16 x i8> %x, <i8 25, i8 25, i8 25, i8 25, i8 25, i8 25, i8 25, i8 25, i8 25, i8 25, i8 25, i8 25, i8 25, i8 25, i8 25, i8 25>
   ret <16 x i8> %div
 }
@@ -47,10 +36,9 @@ define <8 x i16> @div8xi16(<8 x i16> %x) {
 ; CHECK-GI-NEXT:    smull2 v2.4s, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    smull v1.4s, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    uzp2 v1.8h, v1.8h, v2.8h
-; CHECK-GI-NEXT:    add v1.8h, v1.8h, v0.8h
-; CHECK-GI-NEXT:    sshr v0.8h, v1.8h, #12
-; CHECK-GI-NEXT:    ushr v0.8h, v0.8h, #15
-; CHECK-GI-NEXT:    ssra v0.8h, v1.8h, #12
+; CHECK-GI-NEXT:    add v0.8h, v1.8h, v0.8h
+; CHECK-GI-NEXT:    sshr v0.8h, v0.8h, #12
+; CHECK-GI-NEXT:    usra v0.8h, v0.8h, #15
 ; CHECK-GI-NEXT:    ret
   %div = sdiv <8 x i16> %x, <i16 6577, i16 6577, i16 6577, i16 6577, i16 6577, i16 6577, i16 6577, i16 6577>
   ret <8 x i16> %div
@@ -75,10 +63,9 @@ define <4 x i32> @div32xi4(<4 x i32> %x) {
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI2_0]
 ; CHECK-GI-NEXT:    smull2 v2.2d, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    smull v0.2d, v0.2s, v1.2s
-; CHECK-GI-NEXT:    uzp2 v1.4s, v0.4s, v2.4s
-; CHECK-GI-NEXT:    sshr v0.4s, v1.4s, #22
-; CHECK-GI-NEXT:    ushr v0.4s, v0.4s, #31
-; CHECK-GI-NEXT:    ssra v0.4s, v1.4s, #22
+; CHECK-GI-NEXT:    uzp2 v0.4s, v0.4s, v2.4s
+; CHECK-GI-NEXT:    sshr v0.4s, v0.4s, #22
+; CHECK-GI-NEXT:    usra v0.4s, v0.4s, #31
 ; CHECK-GI-NEXT:    ret
   %div = sdiv <4 x i32> %x, <i32 9542677, i32 9542677, i32 9542677, i32 9542677>
   ret <4 x i32> %div

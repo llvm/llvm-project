@@ -262,6 +262,38 @@ int main(int, char**) {
       }
 
       {
+        auto unary  = maybe_throw(tokens[5], [](int x) -> int { return x * 2; });
+        auto binary = maybe_throw(tokens[5], [](int x, int y) -> int { return x * y; });
+
+        // inclusive_scan(first, last, result)
+        assert_non_throwing([=, &policy] {
+          (void)std::inclusive_scan(policy, std::move(first1), std::move(last1), std::move(dest));
+        });
+
+        // inclusive_scan(first, last, result, binary)
+        assert_non_throwing([=, &policy] {
+          (void)std::inclusive_scan(policy, std::move(first1), std::move(last1), std::move(dest), binary);
+        });
+
+        // inclusive_scan(first, last, result, binary, init)
+        assert_non_throwing([=, &policy] {
+          (void)std::inclusive_scan(policy, std::move(first1), std::move(last1), std::move(dest), binary, val);
+        });
+
+        // transform_inclusive_scan(first, last, result, binary, unary)
+        assert_non_throwing([=, &policy] {
+          (void)std::transform_inclusive_scan(
+              policy, std::move(first1), std::move(last1), std::move(dest), binary, unary);
+        });
+
+        // transform_inclusive_scan(first, last, result, binary, unary, init)
+        assert_non_throwing([=, &policy] {
+          (void)std::transform_inclusive_scan(
+              policy, std::move(first1), std::move(last1), std::move(dest), binary, unary, val);
+        });
+      }
+
+      {
         auto comp = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
 
         // is_heap(first, last)
@@ -285,6 +317,20 @@ int main(int, char**) {
         // is_partitioned(first, last, pred)
         assert_non_throwing([=, &policy] {
           (void)std::is_partitioned(policy, std::move(first1), std::move(last1), pred);
+        });
+
+        // partition(first, last, pred)
+        assert_non_throwing([=, &policy] { (void)std::partition(policy, std::move(first1), std::move(last1), pred); });
+
+        // stable_partition(first, last, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::stable_partition(policy, std::move(first1), std::move(last1), pred);
+        });
+
+        // partition_copy(first, last, dest1, dest2, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::partition_copy(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(dest), pred);
         });
       }
 

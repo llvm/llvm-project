@@ -60,6 +60,7 @@ add_clang_library(clangCIR
   Targets/AMDGPU.cpp
   Targets/NVPTX.cpp
   Targets/SPIRV.cpp
+  Targets/SystemZ.cpp
 
   DISABLE_PCH_REUSE # PCH contains private headers
   PRECOMPILE_HEADERS
@@ -67,9 +68,7 @@ add_clang_library(clangCIR
 
   DEPENDS
   MLIRCIR
-  MLIRCIROpInterfacesIncGen
-  MLIRBuiltinLocationAttributesIncGen
-  MLIRBytecodeOpInterfaceIncGen
+  mlir-headers
 
   LINK_LIBS
   clangAST

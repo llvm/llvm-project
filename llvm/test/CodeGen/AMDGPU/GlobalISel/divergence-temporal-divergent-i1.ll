@@ -202,12 +202,12 @@ define void @nested_loops_temporal_divergence_inner(float %pre.cond.val, i32 %n.
 ; GFX10-NEXT:    ; =>This Loop Header: Depth=1
 ; GFX10-NEXT:    ; Child Loop BB3_2 Depth 2
 ; GFX10-NEXT:    s_ashr_i32 s7, s6, 31
-; GFX10-NEXT:    s_mov_b32 s4, s5
+; GFX10-NEXT:    s_mov_b32 s4, 0
 ; GFX10-NEXT:    s_lshl_b64 s[10:11], s[6:7], 2
 ; GFX10-NEXT:    ; implicit-def: $sgpr9
 ; GFX10-NEXT:    v_mov_b32_e32 v6, s10
 ; GFX10-NEXT:    v_mov_b32_e32 v7, s11
-; GFX10-NEXT:    s_mov_b32 s10, 0
+; GFX10-NEXT:    s_mov_b32 s10, s5
 ; GFX10-NEXT:    s_mov_b32 s11, 0
 ; GFX10-NEXT:    v_add_co_u32 v6, vcc_lo, v2, v6
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, v3, v7, vcc_lo
@@ -218,18 +218,18 @@ define void @nested_loops_temporal_divergence_inner(float %pre.cond.val, i32 %n.
 ; GFX10-NEXT:    v_cvt_f32_u32_e32 v6, s11
 ; GFX10-NEXT:    s_mov_b32 s12, exec_lo
 ; GFX10-NEXT:    s_andn2_b32 s9, s9, exec_lo
-; GFX10-NEXT:    s_xor_b32 s4, s4, s12
+; GFX10-NEXT:    s_xor_b32 s10, s10, s12
 ; GFX10-NEXT:    s_add_i32 s11, s11, 1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_cmp_gt_f32_e32 vcc_lo, v6, v0
-; GFX10-NEXT:    s_and_b32 s12, exec_lo, s4
+; GFX10-NEXT:    s_and_b32 s12, exec_lo, s10
 ; GFX10-NEXT:    s_or_b32 s9, s9, s12
-; GFX10-NEXT:    s_or_b32 s10, vcc_lo, s10
-; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s10
+; GFX10-NEXT:    s_or_b32 s4, vcc_lo, s4
+; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    s_cbranch_execnz .LBB3_2
 ; GFX10-NEXT:  ; %bb.3: ; %UseInst
 ; GFX10-NEXT:    ; in Loop: Header=BB3_1 Depth=1
-; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s10
+; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_mov_b32_e32 v6, s6
 ; GFX10-NEXT:    v_mov_b32_e32 v7, s7
 ; GFX10-NEXT:    v_cmp_lt_u32_e32 vcc_lo, s6, v1
@@ -293,12 +293,12 @@ define void @nested_loops_temporal_divergence_outer(float %pre.cond.val, i32 %n.
 ; GFX10-NEXT:    ; =>This Loop Header: Depth=1
 ; GFX10-NEXT:    ; Child Loop BB4_2 Depth 2
 ; GFX10-NEXT:    s_ashr_i32 s7, s6, 31
-; GFX10-NEXT:    s_mov_b32 s4, s5
+; GFX10-NEXT:    s_mov_b32 s4, 0
 ; GFX10-NEXT:    s_lshl_b64 s[10:11], s[6:7], 2
 ; GFX10-NEXT:    ; implicit-def: $sgpr9
 ; GFX10-NEXT:    v_mov_b32_e32 v6, s10
 ; GFX10-NEXT:    v_mov_b32_e32 v7, s11
-; GFX10-NEXT:    s_mov_b32 s10, 0
+; GFX10-NEXT:    s_mov_b32 s10, s5
 ; GFX10-NEXT:    s_mov_b32 s11, 0
 ; GFX10-NEXT:    v_add_co_u32 v6, vcc_lo, v2, v6
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, v3, v7, vcc_lo
@@ -309,18 +309,18 @@ define void @nested_loops_temporal_divergence_outer(float %pre.cond.val, i32 %n.
 ; GFX10-NEXT:    v_cvt_f32_u32_e32 v6, s11
 ; GFX10-NEXT:    s_mov_b32 s12, exec_lo
 ; GFX10-NEXT:    s_andn2_b32 s9, s9, exec_lo
-; GFX10-NEXT:    s_xor_b32 s4, s4, s12
+; GFX10-NEXT:    s_xor_b32 s10, s10, s12
 ; GFX10-NEXT:    s_add_i32 s11, s11, 1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_cmp_gt_f32_e32 vcc_lo, v6, v0
-; GFX10-NEXT:    s_and_b32 s12, exec_lo, s4
+; GFX10-NEXT:    s_and_b32 s12, exec_lo, s10
 ; GFX10-NEXT:    s_or_b32 s9, s9, s12
-; GFX10-NEXT:    s_or_b32 s10, vcc_lo, s10
-; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s10
+; GFX10-NEXT:    s_or_b32 s4, vcc_lo, s4
+; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    s_cbranch_execnz .LBB4_2
 ; GFX10-NEXT:  ; %bb.3: ; %UseInst
 ; GFX10-NEXT:    ; in Loop: Header=BB4_1 Depth=1
-; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s10
+; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_mov_b32_e32 v6, s6
 ; GFX10-NEXT:    v_mov_b32_e32 v7, s7
 ; GFX10-NEXT:    v_cmp_lt_u32_e32 vcc_lo, s6, v1
@@ -385,11 +385,11 @@ define void @nested_loops_temporal_divergence_both(float %pre.cond.val, i32 %n.i
 ; GFX10-NEXT:    ; =>This Loop Header: Depth=1
 ; GFX10-NEXT:    ; Child Loop BB5_2 Depth 2
 ; GFX10-NEXT:    s_ashr_i32 s7, s6, 31
-; GFX10-NEXT:    s_mov_b32 s4, s5
+; GFX10-NEXT:    s_mov_b32 s4, 0
 ; GFX10-NEXT:    s_lshl_b64 s[10:11], s[6:7], 2
 ; GFX10-NEXT:    v_mov_b32_e32 v8, s10
 ; GFX10-NEXT:    v_mov_b32_e32 v9, s11
-; GFX10-NEXT:    s_mov_b32 s10, 0
+; GFX10-NEXT:    s_mov_b32 s10, s5
 ; GFX10-NEXT:    s_mov_b32 s11, 0
 ; GFX10-NEXT:    v_add_co_u32 v8, vcc_lo, v2, v8
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v9, vcc_lo, v3, v9, vcc_lo
@@ -400,18 +400,18 @@ define void @nested_loops_temporal_divergence_both(float %pre.cond.val, i32 %n.i
 ; GFX10-NEXT:    v_cvt_f32_u32_e32 v8, s11
 ; GFX10-NEXT:    s_mov_b32 s12, exec_lo
 ; GFX10-NEXT:    s_andn2_b32 s9, s9, exec_lo
-; GFX10-NEXT:    s_xor_b32 s4, s4, s12
+; GFX10-NEXT:    s_xor_b32 s10, s10, s12
 ; GFX10-NEXT:    s_add_i32 s11, s11, 1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_cmp_gt_f32_e32 vcc_lo, v8, v0
-; GFX10-NEXT:    s_and_b32 s12, exec_lo, s4
+; GFX10-NEXT:    s_and_b32 s12, exec_lo, s10
 ; GFX10-NEXT:    s_or_b32 s9, s9, s12
-; GFX10-NEXT:    s_or_b32 s10, vcc_lo, s10
-; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s10
+; GFX10-NEXT:    s_or_b32 s4, vcc_lo, s4
+; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    s_cbranch_execnz .LBB5_2
 ; GFX10-NEXT:  ; %bb.3: ; %UseInst
 ; GFX10-NEXT:    ; in Loop: Header=BB5_1 Depth=1
-; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s10
+; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_mov_b32_e32 v8, s6
 ; GFX10-NEXT:    v_mov_b32_e32 v9, s7
 ; GFX10-NEXT:    v_cmp_lt_u32_e32 vcc_lo, s6, v1

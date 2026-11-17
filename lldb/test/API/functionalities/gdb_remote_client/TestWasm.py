@@ -1050,6 +1050,31 @@ class TestWasm(GDBRemoteTestBase):
 
         self.assertPacketLogReceived(["qWasmGlobal:0;0"])
 
+    @skipIfAsan
+    @skipIfXmlSupportMissing
+    def test_read_global_legacy_server_os_plugin_thread(self):
+        """Test that an OS plugin thread doesn't get in the way of computing the right frame."""
+
+        call_stacks = [WasmCallStack([WasmStackFrame(0x019C)])]
+        process, globals_addr = self.connect_to_globals(
+            call_stacks, supports_instance=False
+        )
+
+        os_plugin_path = os.path.join(self.getSourceDir(), "wasm_operating_system.py")
+        self.runCmd(
+            "settings set target.process.python-os-plugin-path '%s'" % os_plugin_path
+        )
+        # The thread wasm_operating_system.py reports.
+        thread = process.GetThreadByID(0x2)
+        self.assertTrue(thread.IsValid())
+        self.assertTrue(process.SetSelectedThread(thread))
+
+        error = lldb.SBError()
+        data = process.ReadMemory(globals_addr + 0, 4, error)
+        self.assertSuccess(error)
+        self.assertEqual(int.from_bytes(data, "little"), WASM_GLOBALS[0][1])
+        self.assertPacketLogReceived(["qWasmGlobal:0;0"])
+
     def reload_modules(self, modules, reloaded_modules):
         """
         Connect to a fake stub holding the given modules, continue it until it

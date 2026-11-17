@@ -107,7 +107,7 @@ _BitInt(40) bi40(_BitInt(40) x) { return x; }
 // CHECK: define dso_local i40 @bi40(i64 noundef %{{.*}})
 
 _BitInt(100) bi100(_BitInt(100) x) { return x; }
-// CHECK: define dso_local { i64, i64 } @bi100(i64 noundef %{{.*}}, i64 noundef %{{.*}})
+// CHECK: define dso_local i100 @bi100(i64 noundef %{{.*}}, i64 noundef %{{.*}})
 
 // On the stack a _BitInt is coerced to the integer covering its storage.
 void stkbi17(long a, long b, long c, long d, long e, long f, _BitInt(17) x) {}

@@ -93,10 +93,10 @@ void ParamPassing2(_BitInt(127) b, _BitInt(63) c) {}
 
 // Make sure we follow the signext rules for promotable integer types.
 void ParamPassing3(_BitInt(15) a, _BitInt(31) b) {}
-// LIN64: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
+// LIN64: define{{.*}} void @ParamPassing3(i15 %{{.+}}, i31 %{{.+}})
 // WIN64: define dso_local void @ParamPassing3(i15 %{{.+}}, i31 %{{.+}})
-// LIN32: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
-// WIN32: define dso_local void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
+// LIN32: define{{.*}} void @ParamPassing3(i15 %{{.+}}, i31 %{{.+}})
+// WIN32: define dso_local void @ParamPassing3(i15 %{{.+}}, i31 %{{.+}})
 // NVPTX64: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // NVPTX: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // SPARCV9: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
@@ -219,7 +219,7 @@ _BitInt(64) ReturnPassing2(void) { return 0; }
 // LA32: define{{.*}} i64 @ReturnPassing2(
 
 _BitInt(127) ReturnPassing3(void) { return 0; }
-// LIN64: define{{.*}} { i64, i64 } @ReturnPassing3(
+// LIN64: define{{.*}} i127 @ReturnPassing3(
 // WIN64: define dso_local void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
 // LIN32: define{{.*}} void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
 // WIN32: define dso_local void @ReturnPassing3(ptr dead_on_unwind noalias writable sret

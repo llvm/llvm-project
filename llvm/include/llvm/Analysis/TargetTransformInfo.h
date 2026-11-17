@@ -488,6 +488,12 @@ public:
   /// profitable to inline the call.
   LLVM_ABI uint64_t getMaxMemIntrinsicInlineSizeThreshold() const;
 
+  /// Returns the maximum length in bytes for which a memset with a
+  /// non-constant length, known to be bounded by that value, is preferably
+  /// expanded inline instead of calling the library. Zero disables the
+  /// expansion.
+  LLVM_ABI uint64_t getMaxBoundedMemSetInlineSize() const;
+
   /// \return The estimated number of case clusters when lowering \p 'SI'.
   /// \p JTSize Set a jump table size only when \p SI is suitable for a jump
   /// table.
@@ -672,6 +678,7 @@ public:
     unsigned ImmCost;
     unsigned SetupCost;
     unsigned ScaleCost;
+    unsigned NumPrePostIndex;
   };
 
   /// Parameters that control the generic loop unrolling transformation.
@@ -1152,6 +1159,11 @@ public:
   LLVM_ABI static VectorInstrContext
   getVectorInstrContextHint(const Instruction *I);
 
+  /// Calculates a VectorInstrContext from the values in \p VL at indices in
+  /// \p DemandedElts.
+  LLVM_ABI static VectorInstrContext
+  getVectorInstrContextHint(ArrayRef<Value *> VL, const APInt &DemandedElts);
+
   /// Calculates a VectorInstrContext for buildvector-like gather sequences.
   ///
   /// \p GatherUserOps must collect all users of \p Scalars relevant for
@@ -1449,15 +1461,18 @@ public:
   /// \return the value of vscale to tune the cost model for.
   LLVM_ABI std::optional<unsigned> getVScaleForTuning() const;
 
+  enum class VectorKind { FixedOrScalable, FixedWidth, Scalable };
+
   /// \return True if the vectorization factor should be chosen to
   /// make the vector of the smallest element type match the size of a
   /// vector register. For wider element types, this could result in
   /// creating vectors that span multiple vector registers.
   /// If false, the vectorization factor will be chosen based on the
-  /// size of the widest element type.
-  /// \p K Register Kind for vectorization.
-  LLVM_ABI bool
-  shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const;
+  /// size of the widest element type. The optional \p ElementTy parameter
+  /// allows targets to avoid maximizing bandwidth for specific element types
+  /// (e.g. `i1s`). \p K VectorKind for vectorization.
+  LLVM_ABI bool shouldMaximizeVectorBandwidth(VectorKind K,
+                                              Type *ElementTy = nullptr) const;
 
   /// \return The minimum vectorization factor for types of given element
   /// bit width, or 0 if there is no minimum VF. The returned value only
@@ -2099,9 +2114,11 @@ public:
   /// profitable, e.g. because the operands can be folded into a target
   /// instruction during instruction selection. After calling the function
   /// \p Ops contains the Uses to sink ordered by dominance (dominating users
-  /// come first).
+  /// come first). \p LI, when available, lets targets account for loop
+  /// boundaries when deciding profitability.
   LLVM_ABI bool isProfitableToSinkOperands(Instruction *I,
-                                           SmallVectorImpl<Use *> &Ops) const;
+                                           SmallVectorImpl<Use *> &Ops,
+                                           const LoopInfo *LI = nullptr) const;
 
   /// Return true if it's significantly cheaper to shift a vector by a uniform
   /// scalar than by an amount which will vary across each lane. On x86 before
@@ -2194,6 +2211,38 @@ public:
 
 private:
   std::unique_ptr<const TargetTransformInfoImplBase> TTIImpl;
+};
+
+/// Costs for each cost kind in a target cost table. Field order matches
+/// TargetCostKind, since table entries initialize these fields positionally.
+/// A cost of ~0U means the table provides no cost for that kind.
+struct CostKindCosts {
+  unsigned RecipThroughputCost = ~0U;
+  unsigned LatencyCost = ~0U;
+  unsigned CodeSizeCost = ~0U;
+  unsigned SizeAndLatencyCost = ~0U;
+
+  std::optional<unsigned>
+  operator[](TargetTransformInfo::TargetCostKind Kind) const {
+    unsigned Cost = ~0U;
+    switch (Kind) {
+    case TargetTransformInfo::TCK_RecipThroughput:
+      Cost = RecipThroughputCost;
+      break;
+    case TargetTransformInfo::TCK_Latency:
+      Cost = LatencyCost;
+      break;
+    case TargetTransformInfo::TCK_CodeSize:
+      Cost = CodeSizeCost;
+      break;
+    case TargetTransformInfo::TCK_SizeAndLatency:
+      Cost = SizeAndLatencyCost;
+      break;
+    }
+    if (Cost == ~0U)
+      return std::nullopt;
+    return Cost;
+  }
 };
 
 /// Analysis pass providing the \c TargetTransformInfo.

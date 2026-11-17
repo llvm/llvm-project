@@ -6,7 +6,7 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from typing import Callable, Dict, Iterable, List, NamedTuple, Optional
+from typing import Callable, Dict, Iterable, List, NamedTuple, Optional, Tuple
 import argparse
 import datetime
 import json
@@ -25,6 +25,9 @@ USER_AGENT = 'libcxx-lnt-tooling'
 # LNT instances can be slow: timeout after that many seconds.
 LNT_TIMEOUT_SECONDS = 120
 
+# The format of the timestamps in LNT reports, which are always in UTC.
+LNT_TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
+
 # How many results to ask for at once when paging. This is the largest page size LNT allows.
 LNT_PAGE_SIZE = 10000
 
@@ -41,9 +44,11 @@ def is_sha(string: str) -> bool:
     return len(string) == 40 and all(c in '0123456789abcdef' for c in string.lower())
 
 
-def lnt_suite_url(lnt_url: str, test_suite: str) -> str:
-    """Return the URL of a test suite in the REST API of a LNT instance."""
-    return f'{lnt_url.rstrip("/")}/api/suites/{urllib.parse.quote(test_suite, safe="")}'
+def lnt_suite_url(lnt_url: str, project: str, test_suite: str) -> str:
+    """Return the URL of a project's test suite in the REST API of a LNT instance."""
+    project = urllib.parse.quote(project, safe='')
+    test_suite = urllib.parse.quote(test_suite, safe='')
+    return f'{lnt_url.rstrip("/")}/api/projects/{project}/suites/{test_suite}'
 
 
 def lnt_request(url: str, body: Optional[bytes] = None, token: Optional[str] = None) -> dict:
@@ -76,17 +81,17 @@ def lnt_get(url: str) -> Optional[dict]:
         raise LNTError(f'GET {url} returned a malformed response: {error}')
 
 
-def benchmarked_commits(lnt_url: str, test_suite: str, machine: str,
+def benchmarked_commits(lnt_url: str, project: str, test_suite: str, machine: str,
                         submitted_before: Optional[str] = None) -> Optional[Dict[str, int]]:
     """
     Return {commit: number of runs} for a machine, or None if the instance has no
     such machine. With `submitted_before` (an ISO 8601 timestamp), only the runs
     submitted before that time are counted.
     """
-    base = lnt_suite_url(lnt_url, test_suite)
+    base = lnt_suite_url(lnt_url, project, test_suite)
     # Listing runs answers 404 both for an unknown suite and for an unknown machine: tell them apart.
     if lnt_get(base) is None:
-        raise LNTError(f'{lnt_url} has no test suite named {test_suite}')
+        raise LNTError(f'{lnt_url} has no test suite named {project}/{test_suite}')
 
     counts: Dict[str, int] = {}
     params = {'machine': machine, 'limit': LNT_PAGE_SIZE}
@@ -110,15 +115,21 @@ def benchmarked_commits(lnt_url: str, test_suite: str, machine: str,
 
 
 def write_lnt_report(path: pathlib.Path, machine: str, machine_fields: dict, commit: dict, tests: List[dict],
-                     measured_at: datetime.datetime, run_parameters: Optional[dict] = None) -> None:
-    """Write a LNT v5 run submission, ready to be submitted with `lnt v5 submit`."""
+                     measured_at: datetime.datetime, run_parameters: Optional[dict] = None,
+                     machine_settings: Optional[dict] = None) -> None:
+    """
+    Write a LNT v5 run submission, ready to be submitted with `lnt v5 submit`.
+
+    `machine_settings` holds the built-in attributes of the machine (e.g. `tracked`), as opposed to
+    its fields.
+    """
     report = {
         'format_version': '5',
         # Pick the UUID ourselves so that we can safely retry submitting this run if needed without
         # running the risk of storing the same run twice.
         'uuid': str(uuid.uuid4()),
-        'measured_at': measured_at.astimezone(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
-        'machine': {'name': machine, 'fields': machine_fields},
+        'measured_at': measured_at.astimezone(datetime.timezone.utc).strftime(LNT_TIMESTAMP_FORMAT),
+        'machine': {'name': machine, 'fields': machine_fields, **(machine_settings or {})},
         'commit': commit,
         'run_parameters': run_parameters or {},
         'tests': tests,
@@ -136,12 +147,16 @@ def parse_lnt_results(lines: Iterable[str]) -> List[dict]:
     n-th value of each metric is taken to belong to the n-th sample of that test.
     """
     tests: Dict[str, Dict[str, List[float]]] = {}
-    for line in lines:
+    for (number, line) in enumerate(lines, start=1):
         if not line.strip():
             continue
-        (key, value) = line.split()
-        (name, metric) = key.rsplit('.', 1)
-        tests.setdefault(name, {}).setdefault(metric, []).append(float(value))
+        try:
+            (key, value) = line.split()
+            (name, metric) = key.rsplit('.', 1)
+            parsed = float(value)
+        except ValueError:
+            raise ValueError(f'line {number} is not of the form `<test>.<metric> <value>`: {line.strip()!r}')
+        tests.setdefault(name, {}).setdefault(metric, []).append(parsed)
 
     result = []
     for (name, metrics) in tests.items():
@@ -169,6 +184,14 @@ def at_least(minimum: int) -> Callable[[str], int]:
             raise argparse.ArgumentTypeError(f'expected an integer no smaller than {minimum}, got {string}')
         return value
     return parse
+
+
+def key_value(string: str) -> Tuple[str, str]:
+    """An argparse type that accepts KEY=VALUE pairs, where the value may itself contain `=`."""
+    if '=' not in string:
+        raise argparse.ArgumentTypeError(f'expected KEY=VALUE, got {string!r}')
+    (key, value) = string.split('=', 1)
+    return (key, value)
 
 
 class Target(NamedTuple):
