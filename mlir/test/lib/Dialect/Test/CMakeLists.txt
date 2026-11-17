@@ -19,18 +19,18 @@ add_public_tablegen_target(MLIRTestInterfaceIncGen)
 set(LLVM_TARGET_DEFINITIONS TestOps.td)
 foreach(partition Core Syntax)
   mlir_tablegen(TestAttributes${partition}.h.inc -gen-attrdef-decls
-                -attrdefs-dialect=test -attrdefs-partition=${partition})
+                -attrdefs-dialect=test -attrdef-partition=${partition})
   mlir_tablegen(TestAttributes${partition}.cpp.inc -gen-attrdef-defs
-                -attrdefs-dialect=test -attrdefs-partition=${partition})
+                -attrdefs-dialect=test -attrdef-partition=${partition})
 endforeach()
 add_public_tablegen_target(MLIRTestAttrDefIncGen)
 
 set(LLVM_TARGET_DEFINITIONS TestTypeDefs.td)
 foreach(partition Core Syntax)
   mlir_tablegen(TestTypes${partition}.h.inc -gen-typedef-decls
-                -typedefs-dialect=test -typedefs-partition=${partition})
+                -typedefs-dialect=test -typedef-partition=${partition})
   mlir_tablegen(TestTypes${partition}.cpp.inc -gen-typedef-defs
-                -typedefs-dialect=test -typedefs-partition=${partition})
+                -typedefs-dialect=test -typedef-partition=${partition})
 endforeach()
 add_public_tablegen_target(MLIRTestTypeDefIncGen)
 

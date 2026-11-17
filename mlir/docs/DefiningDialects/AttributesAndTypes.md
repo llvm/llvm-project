@@ -1279,7 +1279,7 @@ let partition = MyDialect_LayoutAttrs in
 def MyLayoutAttr : MyDialect_Attr<"MyLayout", "layout"> { ... }
 ```
 
-Passing `-attrdefs-partition=<partition>` (or `-typedefs-partition=<partition>`)
+Passing `-attrdef-partition=<partition>` (or `-typedef-partition=<partition>`)
 with a partition name to `-gen-attrdef-decls` and `-gen-attrdef-defs` (or
 `-gen-typedef-decls` and `-gen-typedef-defs`) generates only the attributes (or
 types) of that partition. Every generated attribute or type must then be in a

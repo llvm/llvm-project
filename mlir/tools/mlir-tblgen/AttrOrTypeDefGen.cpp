@@ -1000,18 +1000,20 @@ bool DefGenerator::emitDecls(StringRef selectedDialect,
     if (!partitions.empty()) {
       raw_indented_ostream indentedOs(declOs);
       Dialect dialect = defs.front().getDialect();
-      const char *const hookDecl = "void {0}({1} *dialect);\n";
+      static constexpr StringLiteral hookDecl = "void {0}({1} *dialect);\n";
       auto declareFunctions = [&](StringRef partition) {
         auto [parser, printer] = createParsePrintDispatch(
             getDispatchName(dialect, "Parser", partition),
             getDispatchName(dialect, "Printer", partition), Method::None);
         parser.writeDeclTo(indentedOs);
         printer.writeDeclTo(indentedOs);
-        declOs << llvm::formatv(hookDecl,
+        declOs << llvm::formatv(hookDecl.data(),
                                 getRegistrationHookName(dialect, partition),
                                 dialect.getCppClassName());
       };
       declOs << "class " << dialect.getCppClassName() << ";\n";
+      // An empty partition name declares the functions of the dialect, which
+      // dispatch to (or register the defs of) every partition.
       declareFunctions("");
       llvm::NamespaceEmitter detailNs(declOs, "detail");
       for (StringRef partition : partitions)
@@ -1222,7 +1224,7 @@ SmallVector<StringRef> DefGenerator::selectPartition(
       defs, [](const AttrOrTypeDef &def) { return def.getDef(); });
   verifyPartitions(
       records, selectedPartition, isAttrGenerator ? "attribute" : "type",
-      isAttrGenerator ? "-attrdefs-partition" : "-typedefs-partition");
+      isAttrGenerator ? "-attrdef-partition" : "-typedef-partition");
 
   SmallVector<StringRef> partitions = getPartitionNames(records);
   tblgen::selectPartition(
@@ -1351,15 +1353,16 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs,
       Method::None);
   for (StringRef partition : partitions) {
     parseAll.body() << llvm::formatv(
-        "  if (::mlir::OptionalParseResult result = {0}::detail::{1}(parser, "
-        "mnemonic, {2}value); result.has_value())\n"
-        "    return result;\n",
+        R"(  if (::mlir::OptionalParseResult result = {0}::detail::{1}(parser, mnemonic, {2}value); result.has_value())
+    return result;
+)",
         dialect.getCppNamespace(),
         getDispatchName(dialect, "Parser", partition),
         isAttrGenerator ? "type, " : "");
     printAll.body() << llvm::formatv(
-        "  if (::mlir::succeeded({0}::detail::{1}(def, printer)))\n"
-        "    return ::mlir::success();\n",
+        R"(  if (::mlir::succeeded({0}::detail::{1}(def, printer)))
+    return ::mlir::success();
+)",
         dialect.getCppNamespace(),
         getDispatchName(dialect, "Printer", partition));
   }
@@ -1408,7 +1411,7 @@ void DefGenerator::emitRegistrationHooks(ArrayRef<AttrOrTypeDef> defs,
   Dialect dialect = defs.front().getDialect();
   std::string dialectClass = dialect.getCppClassName();
   DialectNamespaceEmitter ns(os, dialect);
-  const char *const hookDef = "{0}void {1}({2} *dialect) {{\n";
+  static constexpr StringLiteral hookDef = "{0}void {1}({2} *dialect) {{\n";
   auto emitInserts = [&] {
     for (const AttrOrTypeDef &def : defs)
       os << llvm::formatv("  ::mlir::Abstract{0}::insert<{1}>(*dialect);\n",
@@ -1422,15 +1425,15 @@ void DefGenerator::emitRegistrationHooks(ArrayRef<AttrOrTypeDef> defs,
     // TUs (e.g. the transform dialect and its extensions), whose hooks would
     // cause multiple definition errors.
     os << "class " << dialectClass << ";\n"
-       << llvm::formatv(hookDef, "[[maybe_unused]] static ",
+       << llvm::formatv(hookDef.data(), "[[maybe_unused]] static ",
                         getRegistrationHookName(dialect, ""), dialectClass);
     emitInserts();
     return;
   }
 
   if (partitions.front() == selectedPartition) {
-    os << llvm::formatv(hookDef, "", getRegistrationHookName(dialect, ""),
-                        dialectClass);
+    os << llvm::formatv(hookDef.data(), "",
+                        getRegistrationHookName(dialect, ""), dialectClass);
     for (StringRef partition : partitions)
       os << "  " << dialect.getCppNamespace()
          << "::detail::" << getRegistrationHookName(dialect, partition)
@@ -1438,7 +1441,7 @@ void DefGenerator::emitRegistrationHooks(ArrayRef<AttrOrTypeDef> defs,
     os << "}\n";
   }
   llvm::NamespaceEmitter detailNs(os, "detail");
-  os << llvm::formatv(hookDef, "",
+  os << llvm::formatv(hookDef.data(), "",
                       getRegistrationHookName(dialect, selectedPartition),
                       dialectClass);
   emitInserts();
@@ -1634,7 +1637,7 @@ static llvm::cl::opt<std::string>
                 llvm::cl::desc("Generate attributes for this dialect"),
                 llvm::cl::cat(attrdefGenCat), llvm::cl::CommaSeparated);
 static llvm::cl::opt<std::string> attrPartition(
-    "attrdefs-partition",
+    "attrdef-partition",
     llvm::cl::desc("Only generate the attributes in this partition (see "
                    "`AttrOrTypeDef::partition`)"),
     llvm::cl::cat(attrdefGenCat));
@@ -1677,7 +1680,7 @@ static llvm::cl::opt<std::string>
                 llvm::cl::desc("Generate types for this dialect"),
                 llvm::cl::cat(typedefGenCat), llvm::cl::CommaSeparated);
 static llvm::cl::opt<std::string> typePartition(
-    "typedefs-partition",
+    "typedef-partition",
     llvm::cl::desc("Only generate the types in this partition (see "
                    "`AttrOrTypeDef::partition`)"),
     llvm::cl::cat(typedefGenCat));

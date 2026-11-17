@@ -1,7 +1,7 @@
-// RUN: mlir-tblgen -gen-attrdef-decls -attrdefs-partition=Memory -I %S/../../include %s | FileCheck %s --check-prefix=DECLS
-// RUN: mlir-tblgen -gen-attrdef-defs -attrdefs-partition=Memory -I %S/../../include %s | FileCheck %s --check-prefix=DEFS
-// RUN: mlir-tblgen -gen-attrdef-defs -attrdefs-partition=Arith -I %S/../../include %s | FileCheck %s --check-prefix=FIRST
-// RUN: mlir-tblgen -gen-typedef-defs -typedefs-partition=Arith -I %S/../../include %s | FileCheck %s --check-prefix=TYPES
+// RUN: mlir-tblgen -gen-attrdef-decls -attrdef-partition=Memory -I %S/../../include %s | FileCheck %s --check-prefix=DECLS
+// RUN: mlir-tblgen -gen-attrdef-defs -attrdef-partition=Memory -I %S/../../include %s | FileCheck %s --check-prefix=DEFS
+// RUN: mlir-tblgen -gen-attrdef-defs -attrdef-partition=Arith -I %S/../../include %s | FileCheck %s --check-prefix=FIRST
+// RUN: mlir-tblgen -gen-typedef-defs -typedef-partition=Arith -I %S/../../include %s | FileCheck %s --check-prefix=TYPES
 // RUN: mlir-tblgen -gen-attrdef-defs -I %S/../../include %s | FileCheck %s --check-prefix=ALL
 
 include "mlir/IR/AttrTypeBase.td"
@@ -132,7 +132,7 @@ def IndexType : TypeDef<Test_Dialect, "Index"> {
 // TYPES: void registerTestDialectTypesArith(TestDialect *dialect) {
 // TYPES-NEXT:   ::mlir::AbstractType::insert<IndexType>(*dialect);
 
-// Without -attrdefs-partition, partitions are ignored. The dispatch functions
+// Without -attrdef-partition, partitions are ignored. The dispatch functions
 // and the hook that registers all defs are local to the definitions, since a
 // dialect may generate its attributes from several files. The dispatch
 // functions are also available under their former names.
