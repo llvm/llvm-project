@@ -17,6 +17,7 @@
 #include "hdr/sys_timerfd_macros.h"
 #include "hdr/time_macros.h"
 #include "hdr/types/ssize_t.h"
+#include "src/__support/CPP/scope.h"
 #include "src/fcntl/fcntl.h"
 #include "src/sys/timerfd/timerfd_create.h"
 #include "src/unistd/close.h"
@@ -26,12 +27,15 @@
 #include "test/UnitTest/Test.h"
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
+using LIBC_NAMESPACE::cpp::scope_exit;
 using LlvmLibcTimerfdCreateTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcTimerfdCreateTest, ZeroFlags) {
   int fd;
   ASSERT_THAT(fd = LIBC_NAMESPACE::timerfd_create(CLOCK_MONOTONIC, 0),
               returns(GE(0)).with_errno(EQ(0)));
+  scope_exit close_fd(
+      [&] { EXPECT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0)); });
 
   int flags;
   ASSERT_THAT(flags = LIBC_NAMESPACE::fcntl(fd, F_GETFD),
@@ -41,8 +45,6 @@ TEST_F(LlvmLibcTimerfdCreateTest, ZeroFlags) {
   ASSERT_THAT(flags = LIBC_NAMESPACE::fcntl(fd, F_GETFL),
               returns(GE(0)).with_errno(EQ(0)));
   EXPECT_EQ(flags & O_NONBLOCK, 0);
-
-  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 }
 
 TEST_F(LlvmLibcTimerfdCreateTest, CloexecAndNonblockRead) {
@@ -50,6 +52,8 @@ TEST_F(LlvmLibcTimerfdCreateTest, CloexecAndNonblockRead) {
   ASSERT_THAT(fd = LIBC_NAMESPACE::timerfd_create(CLOCK_REALTIME,
                                                   TFD_CLOEXEC | TFD_NONBLOCK),
               returns(GE(0)).with_errno(EQ(0)));
+  scope_exit close_fd(
+      [&] { EXPECT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0)); });
 
   int flags;
   ASSERT_THAT(flags = LIBC_NAMESPACE::fcntl(fd, F_GETFD),
@@ -68,8 +72,6 @@ TEST_F(LlvmLibcTimerfdCreateTest, CloexecAndNonblockRead) {
   // instead of blocking.
   EXPECT_THAT(LIBC_NAMESPACE::read(fd, &val, sizeof(val)),
               Fails<ssize_t>(EAGAIN));
-
-  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 }
 
 TEST_F(LlvmLibcTimerfdCreateTest, InvalidArgs) {

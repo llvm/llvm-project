@@ -13,6 +13,7 @@ add_libc_test(
     libc.hdr.sys_timerfd_macros
     libc.hdr.time_macros
     libc.hdr.types.ssize_t
+    libc.src.__support.CPP.scope
     libc.src.fcntl.fcntl
     libc.src.sys.timerfd.timerfd_create
     libc.src.unistd.close
