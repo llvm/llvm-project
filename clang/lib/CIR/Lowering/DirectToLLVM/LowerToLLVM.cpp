@@ -5259,7 +5259,15 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   ops.push_back(module);
   cir::collectUnreachable(module, ops);
 
-  if (failed(applyPartialConversion(ops, target, std::move(patterns)))) {
+  // One-shot conversion (no pattern rollback): rewrites materialize
+  // immediately, skipping the IRRewrite/value-mapping bookkeeping. The
+  // CIR patterns here are compatible: nothing dereferences the root op
+  // after replacement, and the cached symbol table is maintained
+  // explicitly at every module-symbol replacement.
+  mlir::ConversionConfig config;
+  config.allowPatternRollback = false;
+  if (failed(
+          applyPartialConversion(ops, target, std::move(patterns), config))) {
     signalPassFailure();
     return;
   }
