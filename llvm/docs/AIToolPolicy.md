@@ -59,7 +59,24 @@ intended to be learning opportunities for new contributors to get familiar with
 the codebase. Whether you are a newcomer or not, fully automating the process
 of fixing this issue squanders the learning opportunity and doesn't add much
 value to the project. **Using AI tools to fix issues labelled as "good first
-issues" is forbidden**.
+issues" is forbidden**. In particular:
+
+- **Investigating and diagnosing the issue.** Do not use generative AI tools to
+  interpret reproducers, error messages, or stack traces, determine the root
+  cause, or suggest which files, functions, or code paths to investigate.
+- **Designing, implementing, and validating the fix.** Do not use generative AI
+  tools to suggest a fix or where to make changes, generate or complete code,
+  design or write tests, interpret validation results, or review a patch before
+  submission. This applies **even if you ask only for hints rather than code, or
+  rewrite all of the resulting material yourself.**
+- **Writing and communicating with the community.** Write your own pull request
+  descriptions, commit messages, issue comments, and replies to reviewers. Do
+  not use generative AI tools to draft, rewrite, copy-edit, or expand that text.
+
+**Use AI tools for translation only when you wrote the original text yourself.**
+Do not add technical explanations, arguments, or conclusions that are not present
+in the original. Review the translation to ensure it accurately conveys your
+intended meaning.
 
 [good-first-issue]: https://github.com/llvm/llvm-project/issues/?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22
 
