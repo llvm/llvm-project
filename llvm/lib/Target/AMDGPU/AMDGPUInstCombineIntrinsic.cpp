@@ -552,11 +552,6 @@ static APInt defaultComponentBroadcast(Value *V) {
   return DemandedElts;
 }
 
-static Value *
-simplifyAMDGCNMemoryIntrinsicDemanded(const GCNSubtarget &ST, InstCombiner &IC,
-                                      IntrinsicInst &II, APInt DemandedElts,
-                                      int DMaskIdx = -1, bool IsLoad = true);
-
 /// Return true if it's legal to contract llvm.amdgcn.rcp(llvm.sqrt)
 static bool canContractSqrtToRsq(const FPMathOperator *SqrtOp) {
   return (SqrtOp->getType()->isFloatTy() &&
@@ -2222,11 +2217,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     else
       break;
 
-    int DMaskIdx = getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID()) ? 1 : -1;
-    if (simplifyAMDGCNMemoryIntrinsicDemanded(*ST, IC, II, DemandedElts,
-                                              DMaskIdx, false)) {
+    if (simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts))
       return IC.eraseInstFromFunction(II);
-    }
 
     break;
   }
@@ -2356,11 +2348,14 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 /// image and buffer loads.
 /// Note: This only supports non-TFE/LWE image intrinsic calls; those have
 ///       struct returns.
-static Value *simplifyAMDGCNMemoryIntrinsicDemanded(const GCNSubtarget &ST,
-                                                    InstCombiner &IC,
-                                                    IntrinsicInst &II,
-                                                    APInt DemandedElts,
-                                                    int DMaskIdx, bool IsLoad) {
+Value *GCNTTIImpl::simplifyAMDGCNMemoryIntrinsicDemanded(
+    InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts) const {
+  // Only stores return void here; image stores take the dmask after the
+  // stored value.
+  const bool IsLoad = !II.getType()->isVoidTy();
+  int DMaskIdx = -1;
+  if (getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID()))
+    DMaskIdx = IsLoad ? 0 : 1;
 
   auto *IIVTy = cast<FixedVectorType>(IsLoad ? II.getType()
                                              : II.getOperand(0)->getType());
@@ -2413,13 +2408,13 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(const GCNSubtarget &ST,
         // rather than loaded; leave such loads alone.
         const AMDGPU::GcnBufferFormatInfo *OldFormat =
             AMDGPU::getGcnBufferFormatInfo(
-                cast<ConstantInt>(Args[FormatIdx])->getZExtValue(), ST);
+                cast<ConstantInt>(Args[FormatIdx])->getZExtValue(), *ST);
         const AMDGPU::GcnBufferFormatInfo *NewFormat = nullptr;
         if (OldFormat && ActiveBits <= OldFormat->NumComponents)
           NewFormat = AMDGPU::getGcnBufferFormatInfo(
               OldFormat->BitsPerComp,
               OldFormat->NumComponents - UnusedComponentsAtFront,
-              OldFormat->NumFormat, ST);
+              OldFormat->NumFormat, *ST);
         if (NewFormat) {
           Args[FormatIdx] =
               ConstantInt::get(Args[FormatIdx]->getType(), NewFormat->Format);
@@ -2623,18 +2618,15 @@ std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
   case Intrinsic::amdgcn_readfirstlane:
     SimplifyAndSetOp(&II, 0, DemandedElts, UndefElts);
     return simplifyAMDGCNLaneIntrinsicDemanded(IC, II, DemandedElts, UndefElts);
-  default: {
+  default:
     if (const AMDGPU::BufferIntrinsicInfo *BufInfo =
             AMDGPU::lookupBufferIntrinsic(II.getIntrinsicID());
         BufInfo && (BufInfo->Kind == AMDGPU::BufferKindLoad ||
                     BufInfo->Kind == AMDGPU::BufferKindSLoad))
-      return simplifyAMDGCNMemoryIntrinsicDemanded(*ST, IC, II, DemandedElts);
-    if (getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID())) {
-      return simplifyAMDGCNMemoryIntrinsicDemanded(*ST, IC, II, DemandedElts,
-                                                   0);
-    }
+      return simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts);
+    if (getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID()))
+      return simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts);
     break;
-  }
   }
   return std::nullopt;
 }
