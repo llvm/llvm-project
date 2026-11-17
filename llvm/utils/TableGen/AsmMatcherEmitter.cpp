@@ -2102,6 +2102,8 @@ tryEmitLinearRegCoercion(CodeGenRegBank &RegBank, raw_ostream &OS,
   auto getEnum = [&](const Record *R) { return RegBank.getReg(R)->EnumValue; };
   unsigned FirstFrom = getEnum(Conversions[0].From);
   unsigned FirstTo = getEnum(Conversions[0].To);
+  assert(getEnum(Conversions[1].From) > FirstFrom &&
+         "getMembers() is sorted by EnumValue");
   if (getEnum(Conversions[1].To) <= FirstTo)
     return false;
   unsigned FromStride = getEnum(Conversions[1].From) - FirstFrom;
