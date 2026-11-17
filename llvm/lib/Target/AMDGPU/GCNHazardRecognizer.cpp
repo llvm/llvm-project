@@ -2988,7 +2988,9 @@ bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
   if (!TRI.isVGPR(MRI, AmtReg) || ((AmtReg - AMDGPU::VGPR0) & 7) != 7)
     return false;
 
-  if (AmtReg != AMDGPU::VGPR255 && MRI.isPhysRegUsed(AmtReg + 1))
+  // Registers clobbered by calls are not necessarily part of the allocation.
+  if (AmtReg != AMDGPU::VGPR255 &&
+      MRI.isPhysRegUsed(AmtReg + 1, /*SkipRegMaskTest=*/true))
     return false;
 
   assert(ST.needsAlignedVGPRs());
