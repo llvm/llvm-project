@@ -50,10 +50,10 @@ Arg ret_arg(const Arg *p) { return *p; }
 
 unsigned char take_arg(Arg a) { return a.type; }
 
-// CIR-LABEL: cir.func {{.*}} @_Z8take_arg3Arg(%arg0: !cir.ptr<!rec_Arg> {llvm.align = 16 : i64, llvm.byval = !rec_Arg, llvm.noundef} loc({{[^)]+}})) -> (!u8i {llvm.noundef, llvm.zeroext})
+// CIR-LABEL: cir.func {{.*}} @_Z8take_arg3Arg(%arg0: !cir.ptr<!rec_Arg> {llvm.align = 16 : i64, llvm.byval = !rec_Arg, llvm.noundef} loc({{[^)]+}})) -> (!u8i {llvm.noundef})
 // CIR:   cir.copy %arg0 align(16) to %{{[^ ]+}} align(16) : !cir.ptr<!rec_Arg>
 
-// LLVM-LABEL: define dso_local noundef zeroext i8 @_Z8take_arg3Arg(ptr noundef byval(%struct.Arg) align 16 %{{[^,)]+}})
+// LLVM-LABEL: define dso_local noundef i8 @_Z8take_arg3Arg(ptr noundef byval(%struct.Arg) align 16 %{{[^,)]+}})
 // LLVMCIR:   call void @llvm.memcpy.p0.p0.i64(ptr align 16 %{{[^,)]+}}, ptr align 16 %{{[^,)]+}}, i64 32, i1 false)
 // OGCG-NOT:  call void @llvm.memcpy
 
@@ -63,11 +63,11 @@ unsigned char take_arg(Arg a) { return a.type; }
 unsigned char call_take_arg(const Arg *p) { return take_arg(*p); }
 
 // CIR-LABEL: cir.func {{.*}} @_Z13call_take_argPK3Arg(
-// CIR:   cir.call @_Z8take_arg3Arg(%{{[^,)]+}}) : (!cir.ptr<!rec_Arg> {llvm.align = 16 : i64, llvm.byval = !rec_Arg, llvm.noundef}) -> (!u8i {llvm.noundef, llvm.zeroext})
+// CIR:   cir.call @_Z8take_arg3Arg(%{{[^,)]+}}) : (!cir.ptr<!rec_Arg> {llvm.align = 16 : i64, llvm.byval = !rec_Arg, llvm.noundef}) -> (!u8i {llvm.noundef})
 
-// LLVM-LABEL: define dso_local noundef zeroext i8 @_Z13call_take_argPK3Arg(ptr noundef %{{[^,)]+}})
+// LLVM-LABEL: define dso_local noundef i8 @_Z13call_take_argPK3Arg(ptr noundef %{{[^,)]+}})
 // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[TMP:[^,)]+]], ptr align 16 %{{[^,)]+}}, i64 32, i1 false)
-// LLVM:   call noundef zeroext i8 @_Z8take_arg3Arg(ptr noundef byval(%struct.Arg) align 16 %[[TMP]])
+// LLVM:   call noundef i8 @_Z8take_arg3Arg(ptr noundef byval(%struct.Arg) align 16 %[[TMP]])
 
 // NOMOVE-LABEL: define {{.*}}@_Z13call_take_argPK3Arg(
 // NOMOVE-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<[0-9]+ x x86_fp80>|<?\{ ?x86_fp80|%struct\.|%union\.)}}
@@ -77,11 +77,11 @@ unsigned char call_arg_ptr(unsigned char (*f)(Arg), const Arg *p) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z12call_arg_ptrPFh3ArgEPKS_(
-// CIR:   cir.call %{{[^(]+}}(%{{[^,)]+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Arg>) -> !u8i>>, !cir.ptr<!rec_Arg> {llvm.align = 16 : i64, llvm.byval = !rec_Arg, llvm.noundef}) -> (!u8i {llvm.noundef, llvm.zeroext})
+// CIR:   cir.call %{{[^(]+}}(%{{[^,)]+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Arg>) -> !u8i>>, !cir.ptr<!rec_Arg> {llvm.align = 16 : i64, llvm.byval = !rec_Arg, llvm.noundef}) -> (!u8i {llvm.noundef})
 
-// LLVM-LABEL: define dso_local noundef zeroext i8 @_Z12call_arg_ptrPFh3ArgEPKS_(ptr noundef %{{[^,)]+}}, ptr noundef %{{[^,)]+}})
+// LLVM-LABEL: define dso_local noundef i8 @_Z12call_arg_ptrPFh3ArgEPKS_(ptr noundef %{{[^,)]+}}, ptr noundef %{{[^,)]+}})
 // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[PTMP:[^,)]+]], ptr align 16 %{{[^,)]+}}, i64 32, i1 false)
-// LLVM:   call noundef zeroext i8 %{{[^(]+}}(ptr noundef byval(%struct.Arg) align 16 %[[PTMP]])
+// LLVM:   call noundef i8 %{{[^(]+}}(ptr noundef byval(%struct.Arg) align 16 %[[PTMP]])
 
 // NOMOVE-LABEL: define {{.*}}@_Z12call_arg_ptrPFh3ArgEPKS_(
 // NOMOVE-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<[0-9]+ x x86_fp80>|<?\{ ?x86_fp80|%struct\.|%union\.)}}

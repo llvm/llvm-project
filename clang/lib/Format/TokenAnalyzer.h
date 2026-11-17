@@ -97,7 +97,8 @@ protected:
   const Environment &Env;
   // AffectedRangeMgr stores ranges to be fixed.
   AffectedRangeManager AffectedRangeMgr;
-  SmallVector<SmallVector<UnwrappedLine, 16>, 2> UnwrappedLines;
+  SmallVector<UnwrappedLine, 16> UnwrappedLines;
+  std::function<void()> OnFinishRun;
   encoding::Encoding Encoding;
 };
 

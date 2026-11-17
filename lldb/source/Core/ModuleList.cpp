@@ -886,7 +886,7 @@ private:
     if (module.GetFileSpec().GetFilename().empty())
       return ModuleSP();
     llvm::StringRef name = module.GetFileSpec().GetFilename();
-    auto it = m_name_to_modules.find(ConstString(name));
+    auto it = m_name_to_modules.find(name);
     if (it == m_name_to_modules.end())
       return ModuleSP();
     const llvm::SmallVectorImpl<ModuleSP> &vector = it->second;
@@ -899,8 +899,7 @@ private:
 
   void FindModulesInMap(const ModuleSpec &module_spec,
                         ModuleList &matching_module_list) const {
-    auto it = m_name_to_modules.find(
-        ConstString(module_spec.GetFileSpec().GetFilename()));
+    auto it = m_name_to_modules.find(module_spec.GetFileSpec().GetFilename());
     if (it == m_name_to_modules.end())
       return;
     const llvm::SmallVectorImpl<ModuleSP> &vector = it->second;
@@ -914,12 +913,12 @@ private:
     llvm::StringRef name = module_sp->GetFileSpec().GetFilename();
     if (name.empty())
       return;
-    m_name_to_modules[ConstString(name)].push_back(module_sp);
+    m_name_to_modules[name].push_back(module_sp);
   }
 
   void RemoveFromMap(const ModuleWP module_wp, bool if_orphaned = false) {
     if (auto module_sp = module_wp.lock()) {
-      ConstString name = ConstString(module_sp->GetFileSpec().GetFilename());
+      llvm::StringRef name = module_sp->GetFileSpec().GetFilename();
       if (!m_name_to_modules.contains(name))
         return;
       llvm::SmallVectorImpl<ModuleSP> &vec = m_name_to_modules[name];
@@ -948,7 +947,7 @@ private:
     if (name.empty())
       return;
 
-    auto it = m_name_to_modules.find(ConstString(name));
+    auto it = m_name_to_modules.find(name);
     if (it == m_name_to_modules.end())
       return;
 
@@ -1010,7 +1009,7 @@ private:
 
   /// A hash map from a module's filename to all the modules that share that
   /// filename, for fast module lookups by name.
-  llvm::DenseMap<ConstString, llvm::SmallVector<ModuleSP, 1>> m_name_to_modules;
+  llvm::StringMap<llvm::SmallVector<ModuleSP, 1>> m_name_to_modules;
 
   /// The use count of a module held only by m_list and m_name_to_modules.
   static constexpr long kUseCountSharedModuleListOrphaned = 2;
@@ -1400,6 +1399,7 @@ bool ModuleList::LoadScriptingResourceInTargetForModule(Module &module,
 
   const bool trusted = platform_sp->IsSymbolFileTrusted(module);
 
+  llvm::SmallVector<const FileSpec *> scripts_to_load;
   for (const auto &[scripting_fspec, load_style] : file_specs) {
     if (load_style == eLoadScriptFromSymFileFalse)
       continue;
@@ -1437,12 +1437,22 @@ To run all discovered debug scripts in this session:
       continue;
     }
 
-    LLDB_LOG(log, "Auto-loading {0}", scripting_fspec.GetPath());
+    scripts_to_load.push_back(&scripting_fspec);
+  }
 
-    if (!LoadScriptingModule(scripting_fspec, *script_interpreter, target,
+  // Only load each module's scripts once per target. We record the module for
+  // all of its scripts at once, so that loading the first one doesn't skip the
+  // others.
+  if (scripts_to_load.empty() || !target.RecordScriptingResources(module))
+    return true;
+
+  for (const FileSpec *scripting_fspec : scripts_to_load) {
+    LLDB_LOG(log, "Auto-loading {0}", scripting_fspec->GetPath());
+
+    if (!LoadScriptingModule(*scripting_fspec, *script_interpreter, target,
                              error)) {
       LLDB_LOG(log, "Failed to load '{0}'. Remaining scripts won't be loaded.",
-               scripting_fspec.GetPath());
+               scripting_fspec->GetPath());
       return false;
     }
   }

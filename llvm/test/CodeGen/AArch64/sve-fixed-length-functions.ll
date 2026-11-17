@@ -109,24 +109,24 @@ define <1 x i16> @test_v1i16(<1 x i16> %unused, <1 x i16> %a) #0 {
 define <9 x i16> @test_v9i16(<9 x i16> %unused, <9 x i16> %a) #0 {
 ; CHECK-LABEL: test_v9i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr h0, [sp, #8]
-; CHECK-NEXT:    add x9, sp, #16
-; CHECK-NEXT:    ld1 { v0.h }[1], [x9]
-; CHECK-NEXT:    add x9, sp, #24
-; CHECK-NEXT:    ld1 { v0.h }[2], [x9]
-; CHECK-NEXT:    add x9, sp, #32
-; CHECK-NEXT:    ld1 { v0.h }[3], [x9]
-; CHECK-NEXT:    add x9, sp, #40
-; CHECK-NEXT:    ld1 { v0.h }[4], [x9]
-; CHECK-NEXT:    add x9, sp, #48
-; CHECK-NEXT:    ld1 { v0.h }[5], [x9]
-; CHECK-NEXT:    add x9, sp, #56
-; CHECK-NEXT:    ld1 { v0.h }[6], [x9]
-; CHECK-NEXT:    add x9, sp, #64
-; CHECK-NEXT:    ld1 { v0.h }[7], [x9]
-; CHECK-NEXT:    ldrh w9, [sp, #72]
-; CHECK-NEXT:    strh w9, [x8, #16]
-; CHECK-NEXT:    str q0, [x8]
+; CHECK-NEXT:    ldrh w9, [sp, #64]
+; CHECK-NEXT:    ldrh w10, [sp, #56]
+; CHECK-NEXT:    ldrh w11, [sp, #48]
+; CHECK-NEXT:    strh w9, [x8, #14]
+; CHECK-NEXT:    ldrh w9, [sp, #40]
+; CHECK-NEXT:    strh w10, [x8, #12]
+; CHECK-NEXT:    ldrh w10, [sp, #32]
+; CHECK-NEXT:    strh w11, [x8, #10]
+; CHECK-NEXT:    ldrh w11, [sp, #24]
+; CHECK-NEXT:    strh w9, [x8, #8]
+; CHECK-NEXT:    ldrh w9, [sp, #16]
+; CHECK-NEXT:    strh w10, [x8, #6]
+; CHECK-NEXT:    ldrh w10, [sp, #8]
+; CHECK-NEXT:    strh w11, [x8, #4]
+; CHECK-NEXT:    ldrh w11, [sp, #72]
+; CHECK-NEXT:    strh w9, [x8, #2]
+; CHECK-NEXT:    strh w10, [x8]
+; CHECK-NEXT:    strh w11, [x8, #16]
 ; CHECK-NEXT:    ret
   ret <9 x i16> %a
 }

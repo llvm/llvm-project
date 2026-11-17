@@ -18,8 +18,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SourceMgr.h"
@@ -27,9 +25,6 @@
 #include "gtest/gtest.h"
 
 namespace llvm {
-
-LLVM_ABI extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
-
 namespace {
 
 class ProfileSummaryInfoTest : public testing::Test {
@@ -392,8 +387,6 @@ TEST_F(ProfileSummaryInfoTest, SampleProfNoFuncEntryCount) {
 }
 
 TEST_F(ProfileSummaryInfoTest, PartialSampleProfWorkingSetSize) {
-  ScalePartialSampleProfileWorkingSetSize.setValue(true);
-
   // With PartialProfileRatio unset (zero.)
   auto M1 = makeLLVMModule("SampleProfile", /*NumCounts*/ 3,
                            /*IsPartialProfile*/ 1,

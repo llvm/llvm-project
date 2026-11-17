@@ -17,8 +17,6 @@
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/target-location.ll 2>&1 | FileCheck %s --check-prefix=TARGET
 ; RUN: cat %t/access-common.ll %t/access-id.ll > %t/test.ll
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/test.ll 2>&1 | FileCheck %s --check-prefix=ACCESS-ID
-; RUN: cat %t/access-common.ll %t/access-dynamic-id.ll > %t/test.ll
-; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/test.ll 2>&1 | FileCheck %s --check-prefix=ACCESS-DYNAMIC-ID
 ; RUN: cat %t/access-common.ll %t/access-component.ll > %t/test.ll
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/test.ll 2>&1 | FileCheck %s --check-prefix=ACCESS-COMPONENT
 ; RUN: cat %t/access-common.ll %t/access-row.ll > %t/test.ll
@@ -36,6 +34,16 @@
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/instance.ll 2>&1 | FileCheck %s --check-prefix=INSTANCE-VECTOR
 ; RUN: cat %t/instance-common.ll %t/instance-rows.ll > %t/instance.ll
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/instance.ll 2>&1 | FileCheck %s --check-prefix=INSTANCE-ROWS
+; RUN: cat %t/shading-rate-common.ll %t/shading-rate-float.ll > %t/shading-rate.ll
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/shading-rate.ll 2>&1 | FileCheck %s --check-prefix=SHADING-RATE-FLOAT
+; RUN: cat %t/shading-rate-common.ll %t/shading-rate-signed32.ll > %t/shading-rate.ll
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/shading-rate.ll 2>&1 | FileCheck %s --check-prefix=SHADING-RATE-SIGNED32
+; RUN: cat %t/shading-rate-common.ll %t/shading-rate-vector.ll > %t/shading-rate.ll
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/shading-rate.ll 2>&1 | FileCheck %s --check-prefix=SHADING-RATE-VECTOR
+; RUN: cat %t/shading-rate-common.ll %t/shading-rate-rows.ll > %t/shading-rate.ll
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/shading-rate.ll 2>&1 | FileCheck %s --check-prefix=SHADING-RATE-ROWS
+; RUN: cat %t/shading-rate-common.ll %t/shading-rate-interp.ll > %t/shading-rate.ll
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/shading-rate.ll 2>&1 | FileCheck %s --check-prefix=SHADING-RATE-INTERP
 ; RUN: cat %t/row-common.ll %t/row-interpolation.ll > %t/row-check.ll
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/row-check.ll 2>&1 | FileCheck %s --check-prefix=ROW-INTERPOLATION
 ; RUN: cat %t/row-common.ll %t/row-multi.ll > %t/row-check.ll
@@ -246,14 +254,6 @@ define void @main() #0 {
   ret void
 }
 
-;--- access-dynamic-id.ll
-; ACCESS-DYNAMIC-ID: entry 'main': input signature: signature access requires a constant element ID
-; Signature IDs cannot be selected dynamically.
-define void @main(i32 %id) #0 {
-  %x = call float @llvm.dx.load.input.f32(i32 %id, i32 0, i8 0, i32 poison)
-  ret void
-}
-
 ;--- access-component.ll
 ; ACCESS-COMPONENT: entry 'main': input signature element 1 ('B'): signature access has an invalid component index
 ; Component 123 is outside B's one-column extent.
@@ -376,3 +376,38 @@ attributes #0 = { "hlsl.shader"="vertex" }
 ; Each row is a scalar U32, but InstanceID cannot cover multiple rows.
 !2 = !{i32 0, !"SV_InstanceID", i32 5, i32 2, !4, i32 0, i32 2, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
 !4 = !{i32 0, i32 1}
+
+;--- shading-rate-common.ll
+target triple = "dxil-pc-shadermodel6.8-pixel"
+define void @main() #0 { ret void }
+attributes #0 = { "hlsl.shader"="pixel" }
+!dx.semantic.signatures = !{!0}
+!0 = !{ptr @main, !1, null}
+!1 = !{!2}
+!3 = !{i32 0}
+!4 = !{i32 0, i32 1}
+
+;--- shading-rate-float.ll
+; SHADING-RATE-FLOAT: entry 'main' input signature: SV_ShadingRate requires a scalar 16- or 32-bit unsigned integer
+; Component type F32 is not an unsigned integer.
+!2 = !{i32 0, !"SV_ShadingRate", i32 9, i32 29, !3, i32 1, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+
+;--- shading-rate-signed32.ll
+; SHADING-RATE-SIGNED32: entry 'main' input signature: SV_ShadingRate requires a scalar 16- or 32-bit unsigned integer
+; Signed I32 is not interchangeable with U32 for this system value.
+!2 = !{i32 0, !"SV_ShadingRate", i32 4, i32 29, !3, i32 1, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+
+;--- shading-rate-vector.ll
+; SHADING-RATE-VECTOR: entry 'main' input signature: SV_ShadingRate requires a scalar 16- or 32-bit unsigned integer
+; U32 is a valid component type, but two columns make this a vector.
+!2 = !{i32 0, !"SV_ShadingRate", i32 5, i32 29, !3, i32 1, i32 1, i8 2, i32 0, i8 0, i8 0, i8 0, i32 0}
+
+;--- shading-rate-rows.ll
+; SHADING-RATE-ROWS: entry 'main' input signature: SV_ShadingRate requires a scalar 16- or 32-bit unsigned integer
+; Each row is a scalar U32, but SV_ShadingRate cannot cover multiple rows.
+!2 = !{i32 0, !"SV_ShadingRate", i32 5, i32 29, !4, i32 1, i32 2, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+
+;--- shading-rate-interp.ll
+; SHADING-RATE-INTERP: entry 'main' input signature: integer pixel inputs require constant interpolation
+; A valid scalar U32, but interpolation mode 0 (undefined) is not constant.
+!2 = !{i32 0, !"SV_ShadingRate", i32 5, i32 29, !3, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}

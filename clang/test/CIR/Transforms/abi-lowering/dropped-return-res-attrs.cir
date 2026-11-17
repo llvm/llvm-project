@@ -32,7 +32,7 @@ module attributes {
   // The llvm.noundef on this return has nowhere to go once the result count
   // drops to zero, and a stale res_attrs fails the func verifier.
   cir.func @returns_big_res_attr() -> (!rec_Big {llvm.noundef})
-      attributes { test_classify = #indirect_return } {
+      requires_call_conv_lowering attributes { test_classify = #indirect_return } {
     %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
     %z = cir.const #cir.zero : !rec_Big
     cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
@@ -48,12 +48,12 @@ module attributes {
   // GENERIC:    sym_name = "returns_big_res_attr"
 
   cir.func private @returns_big() -> !rec_Big
-      attributes { test_classify = #indirect_return }
+      requires_call_conv_lowering attributes { test_classify = #indirect_return }
 
   // cir.call prints res_attrs through its result list, which is empty once
   // the call returns void, so only the generic form catches a stale one.
   cir.func @caller_res_attr() -> !s32i
-      attributes { test_classify = #caller_cls } {
+      requires_call_conv_lowering attributes { test_classify = #caller_cls } {
     %a = cir.alloca "a" align(8) : !cir.ptr<!rec_Big>
     %b = cir.alloca "b" align(8) : !cir.ptr<!rec_Big>
     %0 = cir.call @returns_big() : () -> (!rec_Big {llvm.noundef})
@@ -71,7 +71,7 @@ module attributes {
   // An Ignore return empties the result list without an sret pointer, so it
   // reaches the same state by a different route.
   cir.func @ignored_res_attr() -> (!s32i {llvm.noundef})
-      attributes { test_classify = #ignore_return } {
+      requires_call_conv_lowering attributes { test_classify = #ignore_return } {
     %0 = cir.const #cir.int<0> : !s32i
     cir.return %0 : !s32i
   }
@@ -82,10 +82,10 @@ module attributes {
   // GENERIC:    sym_name = "ignored_res_attr"
 
   cir.func private @ignored_ret() -> !s32i
-      attributes { test_classify = #ignore_return }
+      requires_call_conv_lowering attributes { test_classify = #ignore_return }
 
   cir.func @caller_ignored_res_attr() -> !s32i
-      attributes { test_classify = #caller_cls } {
+      requires_call_conv_lowering attributes { test_classify = #caller_cls } {
     %0 = cir.call @ignored_ret() : () -> (!s32i {llvm.noundef})
     %z = cir.const #cir.int<0> : !s32i
     cir.return %z : !s32i

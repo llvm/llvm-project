@@ -113,6 +113,7 @@ class TestDAP_runInTerminal_launcher(DAPTestCaseBase):
             [
                 self.lldb_dap_exe,
                 "--launch-target",
+                "--",
                 self.getBuildArtifact("INVALIDPROGRAM"),
             ],
             capture_output=True,
@@ -131,6 +132,7 @@ class TestDAP_runInTerminal_launcher(DAPTestCaseBase):
                     "--comm-file",
                     channel.path,
                     "--launch-target",
+                    "--",
                     self.getBuildArtifact("INVALIDPROGRAM"),
                 ],
                 universal_newlines=True,
@@ -157,6 +159,7 @@ class TestDAP_runInTerminal_launcher(DAPTestCaseBase):
                     "--comm-file",
                     channel.path,
                     "--launch-target",
+                    "--",
                     self.getBuildArtifact("a.out"),
                     "echo",
                     "foo",
@@ -170,7 +173,50 @@ class TestDAP_runInTerminal_launcher(DAPTestCaseBase):
 
             stdout, _ = proc.communicate()
 
-        self.assertIn("foo", stdout)
+        self.assertEqual(stdout, "echoed: foo\n")
+
+    def test_similar_target_and_adapter_options(self):
+        """The args for the target go to the target, even if they look like
+        lldb-dap options."""
+        self.build()
+        echo_args = ["--launch-target", "--version", "--", "other", "--help"]
+
+        with CommChannel(self.getBuildDir()) as channel:
+            proc = subprocess.Popen(
+                [
+                    self.lldb_dap_exe,
+                    "--launch-target",
+                    "--comm-file",
+                    channel.path,
+                    "--",
+                    self.getBuildArtifact("a.out"),
+                    "echo",
+                    *echo_args,
+                ],
+                universal_newlines=True,
+                stdout=subprocess.PIPE,
+            )
+
+            self.assertIn("pid", channel.read_message())
+            channel.send_did_attach()
+            stdout, _ = proc.communicate()
+
+        expected_output = stdout.splitlines()
+        self.assertEqual(len(echo_args), len(expected_output))
+
+        for arg, expected in zip(echo_args, expected_output):
+            self.assertEqual(f"echoed: {arg}", expected, f"for {arg=}")
+
+        self.assertEqual(proc.returncode, 0)
+
+    def test_launch_target_requires_target(self):
+        proc = subprocess.run(
+            [self.lldb_dap_exe, "--comm-file", "unused", "--launch-target", "--"],
+            capture_output=True,
+            universal_newlines=True,
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn('"--launch-target" requires a target after "--"', proc.stderr)
 
     def test_program_inherits_environment(self):
         self.build()
@@ -181,6 +227,7 @@ class TestDAP_runInTerminal_launcher(DAPTestCaseBase):
                     "--comm-file",
                     channel.path,
                     "--launch-target",
+                    "--",
                     self.getBuildArtifact("a.out"),
                     "env",
                 ],
@@ -204,6 +251,7 @@ class TestDAP_runInTerminal_launcher(DAPTestCaseBase):
                     "--comm-file",
                     channel.path,
                     "--launch-target",
+                    "--",
                     self.getBuildArtifact("a.out"),
                     "echo",
                     "foo",
@@ -219,3 +267,4 @@ class TestDAP_runInTerminal_launcher(DAPTestCaseBase):
 
         self.assertIn("Timed out trying to get messages from the debug adapter", stderr)
         self.assertNotIn("foo", stdout)
+        self.assertNotIn("echoed: ", stdout)

@@ -72,8 +72,10 @@ ISA naming string. Currently supported profiles:
 - `rva22s64`
 - `rva23u64`
 - `rva23s64`
+- `rva23p1s64`
 - `rvb23u64`
 - `rvb23s64`
+- `rvb23p1s64`
 
 Note that you can also append additional extension names to be enabled, e.g.
 `rva20u64_zicond` will enable the `zicond` extension in addition to those
@@ -83,14 +85,12 @@ Profiles that are not yet ratified cannot be used unless
 `-menable-experimental-extensions` (or equivalent for other tools) is
 specified. This applies to the following profiles:
 
-- `rva23p1s64`
-- `rvb23p1s64`
 - `rvm23u32`
 
 The `rva23p1s64` and `rvb23p1s64` profiles enable the same mandatory extensions
 as `rva23s64` and `rvb23s64`, respectively. Their additional optional extensions
 must be requested explicitly, for example
-`-march=rva23p1s64_ssctr -menable-experimental-extensions`.
+`-march=rva23p1s64_ssctr`.
 
 (riscv-extensions)=
 

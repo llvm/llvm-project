@@ -702,6 +702,22 @@ inline std::error_code file_size(const Twine &Path, uint64_t &Result) {
   return std::error_code();
 }
 
+/// Get file size.
+///
+/// @param FileHandle Input File
+/// @returns The size of the file in \a FileHandle, if successful, otherwise a
+///          std::error_code.
+#ifdef _WIN32
+LLVM_ABI ErrorOr<uint64_t> file_size(file_t FileHandle);
+#else
+inline ErrorOr<uint64_t> file_size(file_t FileHandle) {
+  file_status Status;
+  if (std::error_code EC = status(FileHandle, Status))
+    return EC;
+  return Status.getSize();
+}
+#endif
+
 /// Set the file modification and access time.
 ///
 /// @returns errc::success if the file times were successfully set, otherwise a
@@ -809,6 +825,11 @@ enum OpenFlags : unsigned {
   /// adds FILE_FLAG_BACKUP_SEMANTICS to the open flags so a handle to a
   /// directory can be obtained.
   OF_OpenDirectory = 128,
+
+  /// The file should be tagged as UTF-8 rather than the default IBM-1047
+  /// encoding. This flag should only be used with OF_Text. Only makes a
+  /// difference on z/OS.
+  OF_ForceUTF8 = 256,
 };
 
 /// Create a potentially unique file name but does not create it.
@@ -1228,6 +1249,15 @@ LLVM_ABI std::error_code
 tryLockFile(int FD,
             std::chrono::milliseconds Timeout = std::chrono::milliseconds(0),
             LockKind Kind = LockKind::Exclusive);
+
+/// Get the real path of an open file from its handle.
+///
+/// @param Handle      The descriptor representing the file.
+/// @param RealPath    RealPath is stored in this location on success.
+/// @returns success if the real path is successfully obtained,
+///          errc::not_supported if the platform cannot get it from a handle.
+LLVM_ABI std::error_code getRealPathFromHandle(file_t Handle,
+                                               SmallVectorImpl<char> &RealPath);
 
 /// Lock the file.
 ///

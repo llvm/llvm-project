@@ -14,16 +14,16 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXPF_FLOAT_EVAL_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXPF_FLOAT_EVAL_H
 
-#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
+#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
-#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/cpu_features.h"
+#include "src/__support/math/check/exp_exceptions.h"
 #include "src/__support/math/exp2f_float_utils.h"
 #include "src/__support/math/expf_float_utils.h"
 
@@ -33,13 +33,15 @@ namespace float_eval {
 
 LIBC_INLINE float expf(float x) {
   using FPBits = fputil::FPBits<float>;
+  using FPBounds = math::check::exp_internal::Bounds<float>;
+
   FPBits xbits(x);
 
   uint32_t x_u = xbits.uintval();
   uint32_t x_abs = x_u & 0x7fff'ffffU;
 
-  // When |x| >= 89, |x| < 2^-25, or x is nan
-  if (LIBC_UNLIKELY(x_abs >= 0x42b2'0000U || x_abs <= 0x3280'0000U)) {
+  // When |x| >= log(2^127 * (2 - 2^-23)), |x| < 2^-25, or x is nan
+  if (LIBC_UNLIKELY(x_abs >= FPBounds::UPPER_BITS || x_abs <= 0x3280'0000U)) {
     // |x| < 2^-25
     if (xbits.get_biased_exponent() <= 101) {
       return 1.0f + x;
@@ -53,27 +55,13 @@ LIBC_INLINE float expf(float x) {
       // exp(nan) = nan
       if (xbits.is_nan())
         return x;
-#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-      if (fputil::fenv_is_round_up())
-        return FPBits::min_subnormal().get_val();
-#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-      fputil::set_errno_if_required(ERANGE);
-      fputil::raise_except_if_required(FE_UNDERFLOW);
-      return 0.0f;
+      return fputil::set_underflow<float>();
     }
-    // x >= 89 or nan
-    if (xbits.is_pos() && (xbits.uintval() >= 0x42b2'0000)) {
+    // x >= log(2^127 * (2 - 2^-23)) or nan
+    if (xbits.is_pos() && (xbits.uintval() >= FPBounds::UPPER_BITS)) {
       // x is finite
-      if (xbits.uintval() < 0x7f80'0000U) {
-#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-        int rounding = fputil::quick_get_round();
-        if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
-          return FPBits::max_normal().get_val();
-#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-
-        fputil::set_errno_if_required(ERANGE);
-        fputil::raise_except_if_required(FE_OVERFLOW);
-      }
+      if (xbits.uintval() < 0x7f80'0000U)
+        return fputil::set_overflow<float>();
       // x is +inf or nan
       return x + FPBits::inf().get_val();
     }
@@ -120,11 +108,17 @@ LIBC_INLINE float expf(float x) {
   return exp2f_eval(u, k);
 }
 
+} // namespace float_eval
+
+namespace float_eval_cr_rn {
+
 // Designed for GPU performance. Correctly rounded only in round-to-nearest,
 // ties-to-even mode. Requires single-precision FMA. Does not support errno
 // or floating-point exception reporting.
-LIBC_INLINE float cr_expf_rn(float x) {
+LIBC_INLINE float expf(float x) {
   using FPBits = fputil::FPBits<float>;
+  using FPBounds = math::check::exp_internal::Bounds<float>;
+
   FPBits x_bits(x);
 
   uint32_t x_u = x_bits.uintval();
@@ -133,8 +127,8 @@ LIBC_INLINE float cr_expf_rn(float x) {
   // |x| <= 2^-25
   bool is_tiny = x_abs_u <= 0x3300'0000U;
 
-  // x > log(2^128) or x is nan
-  bool should_overflow = x_u > 0x42b1'7217U && x_u < 0x8000'0000U;
+  // x >= log(2^127 * (2 - 2^-23)) or x is nan
+  bool should_overflow = x_u >= FPBounds::UPPER_BITS && x_u < 0x8000'0000U;
 
   // x <= log(2^-150) or x is nan
   bool should_underflow = x_u >= 0xc2cf'f1b5U;
@@ -143,7 +137,7 @@ LIBC_INLINE float cr_expf_rn(float x) {
   bool is_neg_nan = should_underflow && x_bits.is_nan();
 
   // log(2^-150) < x < log(2^-126)
-  bool produces_subnormal = x_u >= 0xc2ae'ac50U && !should_underflow;
+  bool produces_subnormal = x_u >= FPBounds::LOWER_BITS && !should_underflow;
 
   // Use x_safe for range reduction to keep the conversion to int defined
   float x_safe = (should_underflow || should_overflow) ? 0.0f : x;
@@ -174,10 +168,10 @@ LIBC_INLINE float cr_expf_rn(float x) {
   u.lo += u_lo.lo;
 
   // Polynomial approximation: e^u
-  fputil::FloatFloat exp_u = cr_expf_rn_internal::exp_eval(u);
+  fputil::FloatFloat exp_u = expf_internal::exp_eval(u);
 
   // Reconstruction: 2^k * e^u
-  float res = cr_expf_rn_internal::scale_result(exp_u, k, produces_subnormal);
+  float res = expf_internal::scale_result(exp_u, k, produces_subnormal);
 
   // Special cases
   constexpr float INF = FPBits::inf().get_val();
@@ -189,7 +183,7 @@ LIBC_INLINE float cr_expf_rn(float x) {
   return res;
 }
 
-} // namespace float_eval
+} // namespace float_eval_cr_rn
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
 

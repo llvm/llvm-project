@@ -28,6 +28,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -671,38 +672,6 @@ void MipsAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
   if (closeP) O << ")";
 }
 
-void MipsAsmPrinter::
-printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &O) {
-  // Load/Store memory operands -- imm($reg)
-  // If PIC target the target is loaded as the
-  // pattern lw $25,%call16($28)
-
-  // opNum can be invalid if instruction has reglist as operand.
-  // MemOperand is always last operand of instruction (base + offset).
-  switch (MI->getOpcode()) {
-  default:
-    break;
-  case Mips::SWM32_MM:
-  case Mips::LWM32_MM:
-    opNum = MI->getNumOperands() - 2;
-    break;
-  }
-
-  printOperand(MI, opNum+1, O);
-  O << "(";
-  printOperand(MI, opNum, O);
-  O << ")";
-}
-
-void MipsAsmPrinter::
-printMemOperandEA(const MachineInstr *MI, int opNum, raw_ostream &O) {
-  // when using stack locations for not load/store instructions
-  // print the same way as all normal 3 operand instructions.
-  printOperand(MI, opNum, O);
-  O << ", ";
-  printOperand(MI, opNum+1, O);
-}
-
 void MipsAsmPrinter::printFCCOperand(const MachineInstr *MI, int opNum,
                                      raw_ostream &O) {
   const MachineOperand &MO = MI->getOperand(opNum);
@@ -1288,4 +1257,34 @@ LLVMInitializeMipsAsmPrinter() {
   RegisterAsmPrinter<MipsAsmPrinter> Y(getTheMipselTarget());
   RegisterAsmPrinter<MipsAsmPrinter> A(getTheMips64Target());
   RegisterAsmPrinter<MipsAsmPrinter> B(getTheMips64elTarget());
+}
+
+PreservedAnalyses MipsAsmPrinterBeginPass::run(Module &M,
+                                               ModuleAnalysisManager &MAM) {
+  MipsAsmPrinter &AsmPrinter = static_cast<MipsAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+MipsAsmPrinterPass::run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM) {
+  MipsAsmPrinter &AsmPrinter = static_cast<MipsAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses MipsAsmPrinterEndPass::run(Module &M,
+                                             ModuleAnalysisManager &MAM) {
+  MipsAsmPrinter &AsmPrinter = static_cast<MipsAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }

@@ -1577,3 +1577,44 @@ namespace DiscardedConstevalStruct {
     return (make(), 0); // both-warning {{left operand of comma operator has no effect}}
   }
 }
+
+namespace ConditionalOperatorInBORHS {
+  struct S { int x; };
+
+  struct a {
+    int c = 12;
+
+    constexpr int e() {
+
+      0 && (0 ? 0 : 0); // both-warning {{use of logical '&&' with constant operand}} \
+                        // both-note {{use '&' for a bitwise operation}} \
+                        // both-note {{remove constant to silence this warning}} \
+                        // both-warning {{expression result unused}}
+
+      int f = c;
+
+      return (f);
+    }
+  };
+  static_assert(a{}.e() == 12);
+}
+
+namespace BaseRedecl {
+  struct S;
+  struct A {
+    constexpr char foo() const { return 'A'; }
+    constexpr ~A() {}
+  };
+  struct S : A {};
+  struct B : S {};
+  struct N : B {};
+  struct C : A {
+    A *a;
+    constexpr C(A *a) : a(a) {}
+  };
+  struct D : N, C {
+    constexpr D() : C((B *)this) {}
+  };
+
+  constexpr D d;
+}

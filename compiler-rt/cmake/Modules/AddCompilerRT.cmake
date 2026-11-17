@@ -72,9 +72,10 @@ endfunction()
 #                                  CFLAGS <compile flags>
 #                                  DEFS <compile definitions>
 #                                  DEPS <dependencies>
+#                                  LINK_LIBS <linked libraries>
 #                                  ADDITIONAL_HEADERS <header files>)
 function(add_compiler_rt_object_libraries name)
-  cmake_parse_arguments(LIB "" "" "OS;ARCHS;SOURCES;CFLAGS;DEFS;DEPS;ADDITIONAL_HEADERS"
+  cmake_parse_arguments(LIB "" "" "OS;ARCHS;SOURCES;CFLAGS;DEFS;DEPS;LINK_LIBS;ADDITIONAL_HEADERS"
     ${ARGN})
   set(libnames)
   if(APPLE)
@@ -107,6 +108,9 @@ function(add_compiler_rt_object_libraries name)
     add_library(${libname} OBJECT ${LIB_SOURCES})
     if(LIB_DEPS)
       add_dependencies(${libname} ${LIB_DEPS})
+    endif()
+    if(LIB_LINK_LIBS)
+      target_link_libraries(${libname} PRIVATE ${LIB_LINK_LIBS})
     endif()
 
     # Strip out -msse3 if this isn't macOS.
@@ -450,7 +454,8 @@ function(add_compiler_rt_runtime name type)
         endif()
       endif()
       find_program(CODESIGN codesign)
-      if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*" AND CODESIGN)
+      get_filename_component(CLANG_LINKER_NAME "${CMAKE_LINKER}" NAME)
+      if (APPLE AND NOT CLANG_LINKER_NAME MATCHES "lld" AND CODESIGN)
         # Apple's linker signs the resulting dylib with an ad-hoc code signature in
         # most situations, except:
         # 1. Versions of ld64 prior to ld64-609 in Xcode 12 predate this behavior.
@@ -481,6 +486,7 @@ function(add_compiler_rt_runtime name type)
           COMMAND_EXPAND_LISTS
         )
       endif()
+      unset(CLANG_LINKER_NAME)
     endif()
 
     set(parent_target_arg)

@@ -4,7 +4,6 @@
 # Check that the register allocator gets hints to reuse registers of one of it's operands.
 ---
 name:            prioritize_movprfx_hints
-tracksRegLiveness: true
 isSSA:           false
 noVRegs:         false
 body:             |

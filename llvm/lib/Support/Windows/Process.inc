@@ -29,7 +29,9 @@
 
 #if !defined(__MINGW32__)
 #pragma comment(lib, "psapi.lib")
+#if !LLVM_WINDOWS_RESTRICTED_APIS
 #pragma comment(lib, "shell32.lib")
+#endif
 #endif
 
 //===----------------------------------------------------------------------===//

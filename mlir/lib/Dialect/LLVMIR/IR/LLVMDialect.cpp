@@ -14,6 +14,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 #include "IR/LLVMOps.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlowDialectInterface.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Attributes.h"
@@ -473,6 +474,42 @@ LogicalResult AllocaOp::canonicalize(AllocaOp op, PatternRewriter &rewriter) {
 //===----------------------------------------------------------------------===//
 // LLVM::BrOp
 //===----------------------------------------------------------------------===//
+
+LogicalResult BrOp::canonicalize(BrOp op, PatternRewriter &rewriter) {
+  // Merge a branch to a block that has a single predecessor, the same
+  // transform as cf::BranchOp; the successor block is inlined into the
+  // branch block and the branch is erased.
+  Block *succ = op.getDest();
+  Block *opParent = op->getBlock();
+  if (succ == opParent || !llvm::hasSingleElement(succ->getPredecessors()))
+    return failure();
+
+  // If any branch operand is itself a block argument of the successor,
+  // merging would replace uses of that argument with itself and leave
+  // dangling uses after the successor block is erased.
+  for (Value operand : op.getDestOperands())
+    if (auto arg = dyn_cast<BlockArgument>(operand))
+      if (arg.getOwner() == succ)
+        return failure();
+
+  // The successor must be mergeable. A landing pad must stay the first
+  // operation of its block, a block tag means the block address is taken,
+  // and merging would silently drop a loop annotation on the branch.
+  if (!succ->empty()) {
+    if (isa<LandingpadOp>(succ->front()))
+      return failure();
+    if (llvm::any_of(succ->without_terminator(),
+                     [](Operation &inner) { return isa<BlockTagOp>(inner); }))
+      return failure();
+  }
+  if (op.getLoopAnnotationAttr())
+    return failure();
+
+  SmallVector<Value> brOperands(op.getDestOperands());
+  rewriter.eraseOp(op);
+  rewriter.mergeBlocks(succ, opParent, brOperands);
+  return success();
+}
 
 SuccessorOperands BrOp::getSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
@@ -3035,8 +3072,8 @@ LogicalResult IFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   Operation *symbol =
       symbolTable.lookupSymbolIn(parentLLVMModule(*this), getResolverAttr());
   // This matches LLVM IR verification logic, see llvm/lib/IR/Verifier.cpp
-  auto resolver = dyn_cast<LLVMFuncOp>(symbol);
-  auto alias = dyn_cast<AliasOp>(symbol);
+  auto resolver = dyn_cast_if_present<LLVMFuncOp>(symbol);
+  auto alias = dyn_cast_if_present<AliasOp>(symbol);
   while (alias) {
     Block &initBlock = alias.getInitializerBlock();
     auto returnOp = cast<ReturnOp>(initBlock.getTerminator());
@@ -3181,9 +3218,9 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
     result.addAttribute(getComdatAttrName(result.name), comdat);
   if (functionEntryCount)
     result.addAttribute(getFunctionEntryCountAttrName(result.name),
-                        FunctionEntryCountAttr::get(
-                            builder.getContext(), *functionEntryCount,
-                            ProfileCountType::Real, ArrayRef<uint64_t>{}));
+                        FunctionEntryCountAttr::get(builder.getContext(),
+                                                    *functionEntryCount,
+                                                    ArrayRef<uint64_t>{}));
 #ifndef NDEBUG
   std::optional<NamedAttribute> duplicate = result.attributes.findDuplicate();
   if (duplicate.has_value()) {
@@ -4675,10 +4712,51 @@ Speculation::Speculatability SDivOp::getSpeculatability() {
 }
 
 //===----------------------------------------------------------------------===//
+// URemOp
+//===----------------------------------------------------------------------===//
+
+Speculation::Speculatability URemOp::getSpeculatability() {
+  // urem(x, 0) => UB
+  Value divisor = getRhs();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroU()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
+}
+
+//===----------------------------------------------------------------------===//
+// SRemOp
+//===----------------------------------------------------------------------===//
+
+Speculation::Speculatability SRemOp::getSpeculatability() {
+  // srem(x, 0) => UB
+  // srem(INT_MIN, -1) => UB
+  Value divisor = getRhs();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
+      matchPattern(divisor, m_IntRangeWithoutNegOneS()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
+}
+
+//===----------------------------------------------------------------------===//
 // LLVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
+namespace {
+struct LLVMSCFToControlFlowInterface : SCFToControlFlowDialectInterface {
+  using SCFToControlFlowDialectInterface::SCFToControlFlowDialectInterface;
+
+  bool shouldPropagateLoopAttribute(NamedAttribute attr) const override {
+    // Preserve the existing policy of forwarding LLVM-valued attributes,
+    // including loop annotations, during SCF-to-CF conversion.
+    return true;
+  }
+};
+} // namespace
+
 void LLVMDialect::initialize() {
+  addInterfaces<LLVMSCFToControlFlowInterface>();
   registerAttributes();
 
   // clang-format off
@@ -4806,7 +4884,8 @@ LogicalResult LLVMDialect::verifyParameterAttribute(Operation *op,
 
   // Check a unit attribute that is attached to an integer value.
   if (name == LLVMDialect::getSExtAttrName() ||
-      name == LLVMDialect::getZExtAttrName()) {
+      name == LLVMDialect::getZExtAttrName() ||
+      name == LLVMDialect::getNoExtAttrName()) {
     if (failed(checkUnitAttrType()))
       return failure();
     if (verifyValueType && failed(checkIntegerType()))

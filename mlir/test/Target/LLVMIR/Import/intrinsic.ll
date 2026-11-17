@@ -52,11 +52,11 @@ define void @exp10_test(float %0, <8 x float> %1) {
 }
 
 ; CHECK-LABEL:  llvm.func @ldexp_test
-define void @ldexp_test(float %0, <8 x float> %1, i32 %2) {
+define void @ldexp_test(float %0, <8 x float> %1, i32 %2, <8 x i32> %3) {
   ; CHECK:  llvm.intr.ldexp(%{{.*}}, %{{.*}}) : (f32, i32) -> f32
-  %4 = call float @llvm.ldexp.f32.i32(float %0, i32 %2)
-  ; CHECK:  llvm.intr.ldexp(%{{.*}}, %{{.*}}) : (vector<8xf32>, i32) -> vector<8xf32>
-  %5 = call <8 x float> @llvm.ldexp.v8f32.i32(<8 x float> %1, i32 %2)
+  %5 = call float @llvm.ldexp.f32.i32(float %0, i32 %2)
+  ; CHECK:  llvm.intr.ldexp(%{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xi32>) -> vector<8xf32>
+  %7 = call <8 x float> @llvm.ldexp.v8f32.v8i32(<8 x float> %1, <8 x i32> %3)
   ret void
 }
 
@@ -949,9 +949,9 @@ define void @coro_suspend(i1 %0) {
 }
 
 ; CHECK-LABEL:  llvm.func @coro_end
-define void @coro_end(ptr %0, i1 %1) {
+define void @coro_end(ptr %0) {
   ; CHECK:  llvm.intr.coro.end
-  call void @llvm.coro.end(ptr %0, i1 %1, token none)
+  call void @llvm.coro.end(ptr %0, i1 0, token none)
   ret void
 }
 
@@ -1121,6 +1121,13 @@ define void @vector_deinterleave2(<4 x double> %0, <vscale x 8 x i32> %1) {
   %3 = call { <2 x double>, <2 x double> } @llvm.vector.deinterleave2.v4f64(<4 x double> %0);
   ; CHECK: "llvm.intr.vector.deinterleave2"(%{{.*}}) : (vector<[8]xi32>) -> !llvm.struct<(vector<[4]xi32>, vector<[4]xi32>)>
   %4 = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %1);
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @vector_repeat
+define void @vector_repeat(<4 x float> %0) {
+  ; CHECK: llvm.intr.vector.repeat(%{{.*}}) : (vector<4xf32>) -> vector<[4]xf32>
+  %4 = call <vscale x 4 x float> @llvm.vector.repeat.nxv4f32.v4f32(<4 x float> %0);
   ret void
 }
 
@@ -1801,7 +1808,7 @@ declare <8 x float> @llvm.exp2.v8f32(<8 x float>)
 declare float @llvm.exp10.f32(float)
 declare <8 x float> @llvm.exp10.v8f32(<8 x float>)
 declare float @llvm.ldexp.f32.i32(float, i32)
-declare <8 x float> @llvm.ldexp.v8f32.i32(<8 x float>, i32)
+declare <8 x float> @llvm.ldexp.v8f32.v8i32(<8 x float>, <8 x i32>)
 declare { float, i32 } @llvm.frexp.f32.i32(float)
 declare { <8 x float>, i32 } @llvm.frexp.v8f32.i32(<8 x float>)
 declare { float, float } @llvm.modf.f32(float)
@@ -1974,7 +1981,7 @@ declare i64 @llvm.coro.align.i64()
 declare i32 @llvm.coro.align.i32()
 declare token @llvm.coro.save(ptr)
 declare i8 @llvm.coro.suspend(token, i1)
-declare void @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1 immarg, token)
 declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 declare void @llvm.coro.resume(ptr)
 declare ptr @llvm.coro.promise(ptr nocapture, i32, i1)
@@ -2063,6 +2070,9 @@ declare ptr @llvm.ptrmask.p0.i64(ptr, i64)
 declare <8 x ptr> @llvm.ptrmask.v8p0.v8i64(<8 x ptr>, <8 x i64>)
 declare <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float>, <4 x float>, i64)
 declare <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float>, i64)
+declare { <2 x double>, <2 x double> } @llvm.vector.deinterleave2.v4f64(<4 x double>)
+declare { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32>)
+declare <vscale x 4 x float> @llvm.vector.repeat.nxv4f32.v4f32(<4 x float>)
 declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
 declare <4 x float> @llvm.experimental.constrained.fadd.v4f32(<4 x float>, <4 x float>, metadata, metadata)
 declare float @llvm.experimental.constrained.fsub.f32(float, float, metadata, metadata)

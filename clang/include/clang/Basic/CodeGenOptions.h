@@ -283,6 +283,12 @@ public:
     ForceDisable, // Always disable regardless of the target default.
   };
 
+  enum class SmallIntABICompatKind {
+    Platform, // Compat with platform ABI (high bits unspecified).
+    Clang,    // Compat with old Clang ABI (high bits zero/sign-extended).
+    Both,     // Compat with both. Extend in caller, don't assume in callee.
+  };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 
@@ -297,6 +303,9 @@ public:
 
   /// The filename with path we use for coverage notes files.
   std::string CoverageNotesFile;
+
+  /// Whether to force absolute paths in coverage notes files.
+  bool UseAbsolutePathsInNotesFile;
 
   /// Regexes separated by a semi-colon to filter the files to instrument.
   std::string ProfileFilterFiles;

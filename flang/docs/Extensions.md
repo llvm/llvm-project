@@ -556,6 +556,11 @@ print *, is_contiguous(a(::2))                   ! prints T in Flang
 * A local data object may appear in a specification expression, even
   when it is not a dummy argument or in COMMON, so long as it is
   has the SAVE attribute and was initialized.
+* A nonallocatable nonpointer function result may be declared with a
+  rank-1 integer array as its bounds (F2023 R818 `explicit-shape-bounds-spec`),
+  e.g. `real :: res(shape_of_input)`.  F2023 C816 permits only an
+  `explicit-shape-spec-list` there, although R814 allows the rank-1 form
+  for other entities.
 * `PRINT namelistname` is accepted and interpreted as
   `WRITE(*,NML=namelistname)`, a near-universal extension.
 * A character length specifier in a component or entity declaration
@@ -596,6 +601,11 @@ end program
 * When the argument to intrinsic `ALLOCATED(p)` is actually a pointer
   rather than an allocatable, it is interpreted as `ASSOCIATED(p)` with a
   stern warning.
+* In formatted I/O, an item of enumeration type may correspond to a `G`
+  edit descriptor, which is processed like an `I` edit descriptor (the
+  value written or read is the ordinal position).  F2023 12.6.3 permits
+  only the `I`, `B`, `O`, and `Z` edit descriptors for enumeration type
+  items.  No diagnostic is issued.
 
 ### `SIMPLE` classification of extensions
 
@@ -754,6 +764,14 @@ The following extensions are not classified as `SIMPLE`: `CHDIR`, `DSECNDS`, `ET
   derived type not processed by defined I/O -- in unformatted I/O with an
   error.  This can be a temporary flang limitation while enumeration-type
   support is incomplete, not a standard requirement.
+
+* F2023 C712 prohibits only an assumed-type or intrinsic-type data-ref
+  in a `CLASSOF` type specifier, so it does not exclude a data-ref of a
+  non-extensible type, such as a `SEQUENCE` or `BIND(C)` derived type or
+  an enumeration type.  A polymorphic entity of such a type could never
+  have a dynamic type other than its declared type, and C705 prohibits
+  the equivalent `CLASS` type specifier.  Flang requires the data-ref of
+  `CLASSOF` to be of an extensible type and reports an error otherwise.
 
 ## Standard features that might as well not be
 

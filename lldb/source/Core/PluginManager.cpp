@@ -19,8 +19,9 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringList.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorExtras.h"
@@ -294,7 +295,12 @@ void PluginManager::Initialize() {
   }
 }
 
-void PluginManager::Terminate() { GetPluginRegistry().Terminate(); }
+static void ClearScriptInterpreterErrors();
+
+void PluginManager::Terminate() {
+  GetPluginRegistry().Terminate();
+  ClearScriptInterpreterErrors();
+}
 
 llvm::ArrayRef<PluginNamespace> PluginManager::GetPluginNamespaces() {
   static PluginNamespace PluginNamespaces[] = {
@@ -513,24 +519,6 @@ bool PluginManager::MatchPluginName(llvm::StringRef pattern,
   std::string qualified_name = (plugin_ns.name + "." + plugin_info.name).str();
   return pattern == qualified_name;
 }
-
-template <typename Callback> struct PluginInstance {
-  typedef Callback CallbackType;
-
-  PluginInstance() = default;
-  PluginInstance(llvm::StringRef name, llvm::StringRef description,
-                 Callback create_callback,
-                 DebuggerInitializeCallback debugger_init_callback = nullptr)
-      : name(name), description(description), enabled(true),
-        create_callback(create_callback),
-        debugger_init_callback(debugger_init_callback) {}
-
-  llvm::StringRef name;
-  llvm::StringRef description;
-  bool enabled;
-  Callback create_callback;
-  DebuggerInitializeCallback debugger_init_callback;
-};
 
 template <typename Instance> class PluginInstances {
 public:
@@ -1465,12 +1453,50 @@ PluginManager::GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
       none_instance = instance.create_callback;
 
     if (script_lang == instance.language)
-      return instance.create_callback(debugger);
+      return instance.create_callback(debugger, script_lang);
   }
 
   // If we didn't find one, return the ScriptInterpreter for the null language.
   assert(none_instance != nullptr);
-  return none_instance(debugger);
+  return none_instance(debugger, script_lang);
+}
+
+namespace {
+struct ScriptInterpreterErrors {
+  std::mutex mutex;
+  llvm::DenseMap<lldb::ScriptLanguage, Status> errors;
+};
+} // namespace
+
+static ScriptInterpreterErrors &GetScriptInterpreterErrors() {
+  static ScriptInterpreterErrors g_errors;
+  return g_errors;
+}
+
+static void ClearScriptInterpreterErrors() {
+  ScriptInterpreterErrors &errors = GetScriptInterpreterErrors();
+  std::lock_guard<std::mutex> guard(errors.mutex);
+  errors.errors.clear();
+}
+
+void PluginManager::SetScriptInterpreterError(lldb::ScriptLanguage script_lang,
+                                              llvm::Error error) {
+  ScriptInterpreterErrors &errors = GetScriptInterpreterErrors();
+  std::lock_guard<std::mutex> guard(errors.mutex);
+  if (error)
+    errors.errors[script_lang] = Status::FromError(std::move(error));
+  else
+    errors.errors.erase(script_lang);
+}
+
+llvm::Error
+PluginManager::GetScriptInterpreterError(lldb::ScriptLanguage script_lang) {
+  ScriptInterpreterErrors &errors = GetScriptInterpreterErrors();
+  std::lock_guard<std::mutex> guard(errors.mutex);
+  auto it = errors.errors.find(script_lang);
+  if (it == errors.errors.end())
+    return llvm::Error::success();
+  return it->second.ToError();
 }
 
 FileSpec PluginManager::GetScriptInterpreterLibraryPath(
@@ -2058,22 +2084,6 @@ LanguageSet PluginManager::GetAllTypeSystemSupportedLanguagesForExpressions() {
 
 #pragma mark ScriptedInterfaces
 
-struct ScriptedInterfaceInstance
-    : public PluginInstance<ScriptedInterfaceCreateInstance> {
-  ScriptedInterfaceInstance(llvm::StringRef name, llvm::StringRef description,
-                            ScriptedInterfaceCreateInstance create_callback,
-                            lldb::ScriptedExtension extension,
-                            lldb::ScriptLanguage language,
-                            ScriptedInterfaceUsages usages)
-      : PluginInstance<ScriptedInterfaceCreateInstance>(name, description,
-                                                        create_callback),
-        extension(extension), language(language), usages(usages) {}
-
-  lldb::ScriptedExtension extension;
-  lldb::ScriptLanguage language;
-  ScriptedInterfaceUsages usages;
-};
-
 typedef PluginInstances<ScriptedInterfaceInstance> ScriptedInterfaceInstances;
 
 static ScriptedInterfaceInstances &GetScriptedInterfaceInstances() {
@@ -2129,28 +2139,33 @@ PluginManager::GetScriptedInterfaceUsagesAtIndex(uint32_t idx) {
   return {};
 }
 
-void PluginManager::AutoCompleteScriptedExtension(
-    llvm::StringRef name, CompletionRequest &request,
+void PluginManager::ForEachScriptedExtension(
+    llvm::function_ref<void(const ScriptedInterfaceInstance &)> callback,
     lldb::ScriptLanguage language) {
-  llvm::StringSet<> emitted;
+  llvm::SmallSet<lldb::ScriptedExtension, 16> emitted;
   for (size_t idx = 0; idx < GetNumScriptedInterfaces(); idx++) {
     auto instance = GetScriptedInterfaceInstances().GetInstanceAtIndex(idx);
     if (!instance)
       continue;
-    // Filter to the requested language when the caller pinned one via
-    // `-l`. `eScriptLanguageUnknown` means "no filter".
     if (language != lldb::eScriptLanguageUnknown &&
         instance->language != language)
       continue;
-    llvm::StringLiteral extension_name =
-        ScriptInterpreter::ExtensionToString(instance->extension);
-    if (!extension_name.starts_with(name))
-      continue;
-    // A single extension can back multiple languages, so dedup entries
-    // we've already surfaced.
-    if (emitted.insert(extension_name).second)
-      request.AddCompletion(extension_name);
+    if (emitted.insert(instance->extension).second)
+      callback(*instance);
   }
+}
+
+void PluginManager::AutoCompleteScriptedExtension(
+    llvm::StringRef name, CompletionRequest &request,
+    lldb::ScriptLanguage language) {
+  ForEachScriptedExtension(
+      [&](const ScriptedInterfaceInstance &instance) {
+        llvm::StringLiteral extension_name =
+            ScriptInterpreter::ExtensionToString(instance.extension);
+        if (extension_name.starts_with(name))
+          request.AddCompletion(extension_name);
+      },
+      language);
 }
 
 #pragma mark REPL

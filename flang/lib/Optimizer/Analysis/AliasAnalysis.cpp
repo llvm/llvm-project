@@ -17,6 +17,7 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -473,7 +474,7 @@ bool AliasAnalysis::Source::isDeclaredAllocatable() const {
     return var && var.isAllocatable();
   };
 
-  auto value = origin.u.dyn_cast<mlir::Value>();
+  auto value = llvm::dyn_cast<mlir::Value>(origin.u);
   return (value && isAllocatable(value.getDefiningOp())) ||
          isAllocatable(origin.instantiationPoint);
 }
@@ -491,7 +492,7 @@ bool AliasAnalysis::Source::isCrayPointerOrPointee() const {
 }
 
 bool AliasAnalysis::Source::isDummyArgument() const {
-  if (auto v = origin.u.dyn_cast<mlir::Value>()) {
+  if (auto v = llvm::dyn_cast<mlir::Value>(origin.u)) {
     return fir::isDummyArgument(v);
   }
   return false;
@@ -1285,6 +1286,7 @@ AliasAnalysis::AliasAnalysis(AliasAnalysisRecursiveEffectsCache &cacheRef)
 
 AliasAnalysis::AliasAnalysis(AliasAnalysis &&other) noexcept
     : symTabMap(std::move(other.symTabMap)),
+      symbolLookupsDisabled(other.symbolLookupsDisabled),
       domInfoCache(std::move(other.domInfoCache)),
       sortedScopeCache(std::move(other.sortedScopeCache)),
       multiScopeCache(std::move(other.multiScopeCache)),
@@ -1501,6 +1503,15 @@ AliasAnalysisRecursiveEffectsCache::getModRefFromSummary(mlir::Operation *op,
 /// This is mostly inspired by MLIR::LocalAliasAnalysis, except that
 /// fir.call's are handled in a special way.
 ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
+  // TODO: remove the check for stacksave/stackrestore once these operations
+  // are updated with proper effects.
+  if (mlir::isa<mlir::LLVM::StackSaveOp, mlir::LLVM::StackRestoreOp>(op))
+    return ModRefResult::getNoModRef();
+  // TODO: remove the check once fir.unreachable is updated with proper
+  // effects.
+  if (mlir::isa<fir::UnreachableOp>(op))
+    return ModRefResult::getNoModRef();
+
   // If this AliasAnalysis is linked with a cache, route ops with
   // HasRecursiveMemoryEffects through it. Non-recursive ops fall through to
   // the inline path below; the cache eventually delegates back to
@@ -2282,6 +2293,8 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
 const mlir::SymbolTable *
 fir::AliasAnalysis::getNearestSymbolTable(mlir::Operation *from) {
   assert(from);
+  if (symbolLookupsDisabled)
+    return nullptr;
   Operation *symTabOp = mlir::SymbolTable::getNearestSymbolTable(from);
   if (!symTabOp)
     return nullptr;

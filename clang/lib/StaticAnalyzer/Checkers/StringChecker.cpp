@@ -88,7 +88,7 @@ void StringChecker::checkPreCall(const CallEvent &Call,
   }
 
   // We found a path on which the parameter is NULL.
-  if (ExplodedNode *N = C.generateErrorNode(C.getState())) {
+  if (ExplodedNode *N = C.addSink(C.getState())) {
     auto R = std::make_unique<PathSensitiveBugReport>(
         BT_Null, "The parameter must not be null", N);
     bugreporter::trackExpressionValue(N, Call.getArgExpr(0), *R);

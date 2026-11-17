@@ -16,8 +16,8 @@
 #include "Plugins/Process/Linux/Procfs.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Plugins/Process/Utility/MemoryTagManagerAArch64MTE.h"
-#include "Plugins/Process/Utility/RegisterInfo_arm64.h"
-#include "Plugins/Process/Utility/RegisterTypeDetector_arm64.h"
+#include "Register/Common/RegisterInfo_arm64.h"
+#include "Register/Common/RegisterTypeDetector_arm64.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -309,8 +309,8 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
 
 llvm::Expected<ArchSpec>
 NativeRegisterContextLinux::DetermineArchitecture(lldb::tid_t tid) {
-  return DetermineArchitectureViaGPR(
-      tid, RegisterInfo_arm64::GetGPRSizeStatic());
+  return DetermineArchitectureViaGPR(tid,
+                                     RegisterInfo_arm64::GetGPRSizeStatic());
 }
 
 NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
@@ -337,8 +337,7 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
     m_sve_state = SVEState::Disabled;
 }
 
-RegisterInfo_arm64 &
-NativeRegisterContextLinux_arm64::GetRegisterInfo() const {
+RegisterInfo_arm64 &NativeRegisterContextLinux_arm64::GetRegisterInfo() const {
   return static_cast<RegisterInfo_arm64 &>(*m_register_info_interface_up);
 }
 

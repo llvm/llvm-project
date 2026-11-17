@@ -2,7 +2,7 @@
 // RUN: %clang -x cl -ccc-print-phases -c %s 2>&1 | FileCheck %s -check-prefix=CHECK-PHASES
 
 // CHECK: "-o" "[[CLI_NAME:.+]].cli" "-x" "cl"
-// CHECK-NEXT:  "-o" "[[CLI_NAME]].bc" "-x" "cl-cpp-output"{{.*}}"[[CLI_NAME:.+]].cli"
+// CHECK:  "-o" "[[CLI_NAME]].bc" "-x" "cl-cpp-output"{{.*}}"[[CLI_NAME:.+]].cli"
 
 // CHECK-PHASES: 0: input, {{.*}}, cl
 // CHECK-PHASES: 1: preprocessor, {0}, cl-cpp-output

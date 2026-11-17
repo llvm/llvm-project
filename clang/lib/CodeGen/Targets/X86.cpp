@@ -459,6 +459,26 @@ bool X86_32ABIInfo::canExpandIndirectArgument(QualType Ty) const {
   return Size == getContext().getTypeSize(Ty);
 }
 
+static bool shouldExtendReturnType(const ABIInfo &Info, QualType RetTy) {
+  // Bools need to be zero-extended to 8 bits for all ABIs.
+  if (RetTy->isBooleanType())
+    return true;
+
+  // Promotable integer types get extended only for Darwin.
+  if (!Info.getTarget().getTriple().isOSDarwin())
+    return false;
+
+  return Info.isPromotableIntegerTypeForABI(RetTy);
+}
+
+static CodeGenOptions::SmallIntABICompatKind
+getEffectiveSmallIntABICompat(const CodeGenOptions &Opts,
+                              const llvm::Triple &T) {
+  if (T.isOSDarwin() || T.isPS())
+    return CodeGenOptions::SmallIntABICompatKind::Clang;
+  return Opts.getSmallIntABICompat();
+}
+
 ABIArgInfo X86_32ABIInfo::getIndirectReturnResult(QualType RetTy, CCState &State) const {
   // If the return value is indirect, then the hidden argument is consuming one
   // integer register.
@@ -544,7 +564,7 @@ ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
       // floating-point register. (MSVC does not apply this special case.)
       // We apply a similar transformation for pointer types to improve the
       // quality of the generated IR.
-      if (const Type *SeltTy = isSingleElementStruct(RetTy, getContext()))
+      if (const Type *SeltTy = isSingleElementRecord(RetTy, getContext()))
         if ((!IsWin32StructABI && SeltTy->isRealFloatingType())
             || SeltTy->hasPointerRepresentation())
           return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
@@ -565,8 +585,8 @@ ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
     if (EIT->getNumBits() > 64)
       return getIndirectReturnResult(RetTy, State);
 
-  return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
-                                               : ABIArgInfo::getDirect());
+  return shouldExtendReturnType(*this, RetTy) ? ABIArgInfo::getExtend(RetTy)
+                                              : ABIArgInfo::getDirect();
 }
 
 unsigned X86_32ABIInfo::getTypeStackAlignInBytes(QualType Ty,
@@ -631,7 +651,7 @@ ABIArgInfo X86_32ABIInfo::getIndirectResult(QualType Ty, bool ByVal,
       Realign);
 }
 
-/// Like isSingleElementStruct, but only looks through one level of records.
+/// Like isSingleElementRecord, but only looks through one level of records.
 /// This mirrors how GCC gives a record the mode of its only field.
 static const Type *getSingleFieldType(QualType T, ASTContext &Context) {
   const auto *RD = T->getAsRecordDecl();
@@ -692,7 +712,7 @@ static const Type *getSingleFieldType(QualType T, ASTContext &Context) {
 X86_32ABIInfo::Class X86_32ABIInfo::classify(QualType Ty) const {
   if (getContext().getLangOpts().isCompatibleWith(
           LangOptions::ClangABI::Ver23)) {
-    const Type *T = isSingleElementStruct(Ty, getContext());
+    const Type *T = isSingleElementRecord(Ty, getContext());
     if (!T)
       T = Ty.getTypePtr();
 
@@ -981,9 +1001,26 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
   bool InReg = shouldPrimitiveUseInReg(Ty, State);
 
   if (isPromotableIntegerTypeForABI(Ty)) {
-    if (InReg)
-      return ABIArgInfo::getExtendInReg(Ty, CGT.ConvertType(Ty));
-    return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
+    switch (getEffectiveSmallIntABICompat(getCodeGenOpts(),
+                                          getTarget().getTriple())) {
+    case CodeGenOptions::SmallIntABICompatKind::Platform:
+      if (Ty->isBooleanType()) {
+        // Bool should be extended to 8-bits. We can't express this right now,
+        // so use conservative extension.
+        return InReg
+                   ? ABIArgInfo::getConservativeExtendInReg(Ty,
+                                                            CGT.ConvertType(Ty))
+                   : ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
+      }
+      break;
+    case CodeGenOptions::SmallIntABICompatKind::Clang:
+      return InReg ? ABIArgInfo::getExtendInReg(Ty, CGT.ConvertType(Ty))
+                   : ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
+    case CodeGenOptions::SmallIntABICompatKind::Both:
+      return InReg ? ABIArgInfo::getConservativeExtendInReg(Ty,
+                                                            CGT.ConvertType(Ty))
+                   : ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
+    }
   }
 
   if (const auto *EIT = Ty->getAs<BitIntType>()) {
@@ -1220,7 +1257,7 @@ static void addX86InterruptAttrs(const FunctionDecl *FD, llvm::GlobalValue *GV,
   if (FD->getNumParams() == 0)
     return;
 
-  auto PtrTy = cast<PointerType>(FD->getParamDecl(0)->getType());
+  const auto *PtrTy = FD->getParamDecl(0)->getType()->castAs<PointerType>();
   llvm::Type *ByValTy = CGM.getTypes().ConvertType(PtrTy->getPointeeType());
   llvm::Attribute NewAttr = llvm::Attribute::getWithByValType(
     Fn->getContext(), ByValTy);
@@ -2385,8 +2422,8 @@ ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(QualType Ty) const {
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
     llvm::Type *IRTy = CGT.ConvertType(Ty);
-    return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty, IRTy)
-                                              : ABIArgInfo::getDirect(IRTy));
+    return shouldExtendReturnType(*this, Ty) ? ABIArgInfo::getExtend(Ty, IRTy)
+                                             : ABIArgInfo::getDirect(IRTy);
   }
 
   return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
@@ -2477,7 +2514,7 @@ ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
 llvm::Type *X86_64ABIInfo::GetByteVectorType(QualType Ty) const {
   // Wrapper structs/arrays that only contain vectors are passed just like
   // vectors; strip them off if present.
-  if (const Type *InnerTy = isSingleElementStruct(Ty, getContext()))
+  if (const Type *InnerTy = isSingleElementRecord(Ty, getContext()))
     Ty = QualType(InnerTy, 0);
 
   llvm::Type *IRType = CGT.ConvertType(Ty);
@@ -2829,17 +2866,16 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
   case Integer:
     ResType = GetINTEGERTypeAtOffset(CGT.ConvertType(RetTy), 0, RetTy, 0);
 
-    // If we have a sign or zero extended integer, make sure to return Extend
-    // so that the parameter gets the right LLVM IR attributes.
-    if (Hi == NoClass && isa<llvm::IntegerType>(ResType)) {
-      // Treat an enum type as its underlying type.
-      if (const auto *ED = RetTy->getAsEnumDecl())
-        RetTy = ED->getIntegerType();
+    // Treat an enum type as its underlying type.
+    if (const auto *ED = RetTy->getAsEnumDecl())
+      RetTy = ED->getIntegerType();
 
-      if (RetTy->isIntegralOrEnumerationType() &&
-          isPromotableIntegerTypeForABI(RetTy))
-        return ABIArgInfo::getExtend(RetTy);
-    }
+    // Always returns integral types as plain integers, without padding to a
+    // larger type or splitting into a struct. For some targets, small integers
+    // are additionally sign/zero extended.
+    if (RetTy->isIntegralOrEnumerationType())
+      return shouldExtendReturnType(*this, RetTy) ? ABIArgInfo::getExtend(RetTy)
+                                                  : ABIArgInfo::getDirect();
 
     if (ResType->isIntegerTy(128)) {
       // i128 are passed directly
@@ -2985,10 +3021,23 @@ X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
       // Treat an enum type as its underlying type.
       if (const auto *ED = Ty->getAsEnumDecl())
         Ty = ED->getIntegerType();
-
       if (Ty->isIntegralOrEnumerationType() &&
-          isPromotableIntegerTypeForABI(Ty))
-        return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
+          isPromotableIntegerTypeForABI(Ty)) {
+        switch (getEffectiveSmallIntABICompat(getCodeGenOpts(),
+                                              getTarget().getTriple())) {
+        case CodeGenOptions::SmallIntABICompatKind::Platform:
+          if (Ty->isBooleanType()) {
+            // Bool should be extended to 8-bits. We can't express this right
+            // now, so use conservative extension.
+            return ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
+          }
+          break;
+        case CodeGenOptions::SmallIntABICompatKind::Clang:
+          return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
+        case CodeGenOptions::SmallIntABICompatKind::Both:
+          return ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
+        }
+      }
     }
 
     if (ResType->isIntegerTy(128)) {
