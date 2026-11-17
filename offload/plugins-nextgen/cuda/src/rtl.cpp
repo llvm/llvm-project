@@ -17,7 +17,6 @@
 #include <unordered_map>
 
 #include "Shared/Debug.h"
-#include "Shared/Environment.h"
 
 #include "GlobalHandler.h"
 #include "OffloadAPI.h"

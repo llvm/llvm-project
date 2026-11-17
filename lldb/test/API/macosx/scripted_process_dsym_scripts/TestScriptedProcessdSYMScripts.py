@@ -12,8 +12,9 @@ from lldbsuite.test.lldbtest import *
 @skipUnlessDarwin
 class TestScriptedProcessdSYMScripts(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
-    RECORDS = ("payload_inits", "payload_targets")
+    RECORDS = ("payload_inits", "payload_targets", "payload_magics")
     LOAD_ADDR = 0x100000000
+    MH_MAGIC_64 = 0xFEEDFACF
 
     def setUp(self):
         TestBase.setUp(self)
@@ -28,6 +29,22 @@ class TestScriptedProcessdSYMScripts(TestBase):
         self.launch_scripted_processes(2)
         self.assertEqual(lldb.payload_inits, 2)
         self.assertEqual(lldb.payload_targets, [0, 1])
+
+    def test_one_shot_stop_hook_reads_image(self):
+        """The image's dSYM script adds a one-shot stop hook to each target,
+        which reads the image's Mach-O header through the scripted process at
+        its first stop. LLDB deletes the hook afterwards."""
+        targets = self.launch_scripted_processes(2)
+        self.assertEqual(
+            lldb.payload_magics, [(0, self.MH_MAGIC_64), (1, self.MH_MAGIC_64)]
+        )
+        for target in targets:
+            result = lldb.SBCommandReturnObject()
+            self.dbg.GetCommandInterpreter().HandleCommand(
+                "target stop-hook list", lldb.SBExecutionContext(target), result
+            )
+            self.assertCommandReturn(result)
+            self.assertIn("No stop hooks.", result.GetOutput())
 
     def launch_scripted_processes(self, count):
         """Launch count scripted processes, each in its own target, that all
