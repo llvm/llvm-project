@@ -541,12 +541,17 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
       Known.knownNot(fcNegInf);
   }
 
-  // Rule out normal.
-  if (KnownLHS.isKnownNever(fcPosSubnormal | fcPosNormal) &&
-      KnownRHS.isKnownNever(fcPosSubnormal | fcPosNormal))
+  // pnorm + finite and psub + psub may produce pnorm.
+  if (KnownLHS.isKnownNever(fcPosNormal) &&
+      KnownRHS.isKnownNever(fcPosNormal) &&
+      (KnownLHS.isKnownNever(fcPosSubnormal) ||
+       KnownRHS.isKnownNever(fcPosSubnormal)))
     Known.knownNot(fcPosNormal);
-  if (KnownLHS.isKnownNever(fcNegSubnormal | fcNegNormal) &&
-      KnownRHS.isKnownNever(fcNegSubnormal | fcNegNormal))
+  // nnorm + finite and nsub + nsub may produce nnorm.
+  if (KnownLHS.isKnownNever(fcNegNormal) &&
+      KnownRHS.isKnownNever(fcNegNormal) &&
+      (KnownLHS.isKnownNever(fcNegSubnormal) ||
+       KnownRHS.isKnownNever(fcNegSubnormal)))
     Known.knownNot(fcNegNormal);
 
   // psub + (zero | sub) and pnorm + (nsub | nnorm) may produce psub.
