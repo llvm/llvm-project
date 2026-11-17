@@ -2569,6 +2569,14 @@ bool Type::isArithmeticType() const {
   return isa<ComplexType>(CanonicalType) || isBitIntType();
 }
 
+bool Type::isBooleanEnumerationType() const {
+  const auto *ET = dyn_cast<EnumType>(CanonicalType);
+  if (!ET)
+    return false;
+  const EnumDecl *ED = ET->getDecl();
+  return ED->isFixed() && ED->getIntegerType()->isBooleanType();
+}
+
 bool Type::hasBooleanRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isBooleanType();

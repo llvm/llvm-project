@@ -1643,7 +1643,7 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   // TODO(leonardchan): When necessary, add another if statement checking for
   // conversions to fixed point types from other types.
   if (SrcType->isFixedPointType()) {
-    if (DstType->isBooleanType())
+    if (DstType->isBooleanType() || DstType->isBooleanEnumerationType())
       // It is important that we check this before checking if the dest type is
       // an integer because booleans are technically integer types.
       // We do not need to check the padding bit on unsigned types if unsigned
@@ -1679,7 +1679,8 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   llvm::Type *SrcTy = Src->getType();
 
   // Handle conversions to bool first, they are special: comparisons against 0.
-  if (DstType->isBooleanType())
+  // An enumeration whose underlying type is bool converts the same way.
+  if (DstType->isBooleanType() || DstType->isBooleanEnumerationType())
     return EmitConversionToBool(Src, SrcType);
 
   llvm::Type *DstTy = ConvertType(DstType);
@@ -1887,7 +1888,7 @@ Value *ScalarExprEmitter::EmitComplexToScalarConversion(
   SrcTy = SrcTy->castAs<ComplexType>()->getElementType();
 
   // Handle conversions to bool first, they are special: comparisons against 0.
-  if (DstTy->isBooleanType()) {
+  if (DstTy->isBooleanType() || DstTy->isBooleanEnumerationType()) {
     //  Complex != 0  -> (Real != 0) | (Imag != 0)
     Src.first = EmitScalarConversion(Src.first, SrcTy, DstTy, Loc);
     Src.second = EmitScalarConversion(Src.second, SrcTy, DstTy, Loc);
@@ -3041,7 +3042,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_FixedPointToBoolean:
     assert(E->getType()->isFixedPointType() &&
            "Expected src type to be fixed point type");
-    assert(DestTy->isBooleanType() && "Expected dest type to be boolean type");
+    assert((DestTy->isBooleanType() || DestTy->isBooleanEnumerationType()) &&
+           "Expected dest type to be a boolean type");
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc());
 
@@ -3353,7 +3355,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
 
   if (const AtomicType *atomicTy = type->getAs<AtomicType>()) {
     type = atomicTy->getValueType();
-    if (isInc && type->isBooleanType()) {
+    if (isInc && (type->isBooleanType() || type->isBooleanEnumerationType())) {
       llvm::Value *True = CGF.EmitToMemory(Builder.getTrue(), type);
       if (isPre) {
         Builder.CreateStore(True, LV.getAddress(), LV.isVolatileQualified())
@@ -3425,7 +3427,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
   //          -> bool = ((int)bool + 1 != 0)
   // An interesting aspect of this is that increment is always true.
   // Decrement does not have this property.
-  if (isInc && type->isBooleanType()) {
+  if (isInc && (type->isBooleanType() || type->isBooleanEnumerationType())) {
     value = Builder.getTrue();
 
   // Most common case by far: integer increment.
