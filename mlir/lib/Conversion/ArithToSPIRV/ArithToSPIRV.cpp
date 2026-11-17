@@ -516,6 +516,9 @@ struct CeilDivUIOpPattern final : OpConversionPattern<arith::CeilDivUIOp> {
     if (!dstType)
       return getTypeConversionFailure(rewriter, op);
 
+    if (!isa<IntegerType, VectorType>(dstType))
+      return rewriter.notifyMatchFailure(op, "expected scalar or vector type");
+
     if (!getElementTypeOrSelf(op.getType()).isIndex() &&
         dstType != op.getType())
       return op.emitError("bitwidth emulation is not implemented yet on "
@@ -554,6 +557,9 @@ struct CeilDivSIOpPattern final : OpConversionPattern<arith::CeilDivSIOp> {
     Type dstType = getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return getTypeConversionFailure(rewriter, op);
+
+    if (!isa<IntegerType, VectorType>(dstType))
+      return rewriter.notifyMatchFailure(op, "expected scalar or vector type");
 
     Location loc = op.getLoc();
     Value a = adaptor.getLhs();
@@ -594,6 +600,9 @@ struct FloorDivSIOpPattern final : OpConversionPattern<arith::FloorDivSIOp> {
     Type dstType = getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return getTypeConversionFailure(rewriter, op);
+
+    if (!isa<IntegerType, VectorType>(dstType))
+      return rewriter.notifyMatchFailure(op, "expected scalar or vector type");
 
     Location loc = op.getLoc();
     Value a = adaptor.getLhs();
