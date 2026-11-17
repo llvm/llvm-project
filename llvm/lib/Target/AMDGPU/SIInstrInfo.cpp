@@ -46,6 +46,7 @@ using namespace llvm;
 namespace llvm::AMDGPU {
 #define GET_ImageDimIntrinsicTable_IMPL
 #define GET_RsrcIntrinsics_IMPL
+#define GET_BufferIntrinsicsTable_IMPL
 #define GET_GFX1250BlockingCyclesTable_DECL
 #define GET_GFX1250BlockingCyclesTable_IMPL
 
@@ -5518,7 +5519,7 @@ static Register findImplicitSGPRRead(const MachineInstr &MI) {
 }
 
 static bool shouldReadExec(const MachineInstr &MI) {
-  if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true)) {
+  if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false)) {
     switch (MI.getOpcode()) {
     case AMDGPU::V_READLANE_B32:
     case AMDGPU::SI_RESTORE_S32_FROM_VGPR:
@@ -5582,7 +5583,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   if (!MRI.isSSA() && MI.isCopy())
     return verifyCopy(MI, MRI, ErrInfo);
 
-  if (SIInstrInfo::isGenericOpcode(Opcode))
+  if (SIInstrInfo::isGenericOpcode(Opcode) && !MI.isInlineAsm())
     return true;
 
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
@@ -6310,11 +6311,11 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   if (const MachineOperand *CPol = getNamedOperand(MI, AMDGPU::OpName::cpol)) {
     if (CPol->getImm() & AMDGPU::CPol::SCAL) {
       if (!ST.hasScaleOffset()) {
-        ErrInfo = "Subtarget does not support offset scaling";
+        ErrInfo = "subtarget does not support offset scaling";
         return false;
       }
       if (!AMDGPU::supportsScaleOffset(*this, MI.getOpcode())) {
-        ErrInfo = "Instruction does not support offset scaling";
+        ErrInfo = "instruction does not support offset scaling";
         return false;
       }
     }

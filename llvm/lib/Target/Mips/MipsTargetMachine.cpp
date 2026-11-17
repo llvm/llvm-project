@@ -129,23 +129,38 @@ MipselTargetMachine::MipselTargetMachine(const Target &T, const Triple &TT,
 
 const MipsSubtarget *
 MipsTargetMachine::getSubtargetImpl(const Function &F) const {
-  Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute FSAttr = F.getFnAttribute("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const MipsSubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
+
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+  Attrs.Mips16 = FnAttrs.getAttribute("mips16");
+  Attrs.NoMips16 = FnAttrs.getAttribute("nomips16");
+  Attrs.MicroMips = FnAttrs.getAttribute("micromips");
+  Attrs.NoMicroMips = FnAttrs.getAttribute("nomicromips");
+  Attrs.SoftFloat = FnAttrs.getAttribute("use-soft-float");
+  Attrs.ABIName = getTargetABIName(*M);
+
+  if (const MipsSubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
 
   std::string CPU =
-      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString().str() : TargetCPU;
   std::string FS =
-      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
-  bool hasMips16Attr = F.getFnAttribute("mips16").isValid();
-  bool hasNoMips16Attr = F.getFnAttribute("nomips16").isValid();
+      Attrs.FS.isValid() ? Attrs.FS.getValueAsString().str() : TargetFS;
+  bool hasMips16Attr = Attrs.Mips16.isValid();
+  bool hasNoMips16Attr = Attrs.NoMips16.isValid();
 
-  bool HasMicroMipsAttr = F.getFnAttribute("micromips").isValid();
-  bool HasNoMicroMipsAttr = F.getFnAttribute("nomicromips").isValid();
+  bool HasMicroMipsAttr = Attrs.MicroMips.isValid();
+  bool HasNoMicroMipsAttr = Attrs.NoMicroMips.isValid();
 
   // FIXME: This is related to the code below to reset the target options,
   // we need to know whether or not the soft float flag is set on the
   // function, so we can enable it as a subtarget feature.
-  bool softFloat = F.getFnAttribute("use-soft-float").getValueAsBool();
+  bool softFloat = Attrs.SoftFloat.getValueAsBool();
 
   if (hasMips16Attr)
     FS += FS.empty() ? "+mips16" : ",+mips16";
@@ -158,14 +173,13 @@ MipsTargetMachine::getSubtargetImpl(const Function &F) const {
   if (softFloat)
     FS += FS.empty() ? "+soft-float" : ",+soft-float";
 
-  StringRef ABIName = getTargetABIName(*F.getParent());
-
-  auto &I = SubtargetMap[CPU + FS + ABIName.str()];
+  auto &I = SubtargetMap[CPU + FS + Attrs.ABIName.str()];
   if (!I) {
     I = std::make_unique<MipsSubtarget>(
-        TargetTriple, CPU, FS, ABIName, isLittle, *this,
+        TargetTriple, CPU, FS, Attrs.ABIName, isLittle, *this,
         MaybeAlign(F.getParent()->getOverrideStackAlignment()));
   }
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 

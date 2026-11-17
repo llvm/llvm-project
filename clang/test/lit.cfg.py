@@ -297,6 +297,19 @@ config.substitutions.append(
 
 config.substitutions.append(
     (
+        "%clang_format_diff",
+        '"%s" %s'
+        % (
+            config.python_executable,
+            os.path.join(
+                config.clang_src_dir, "tools", "clang-format", "clang-format-diff.py"
+            ),
+        ),
+    )
+)
+
+config.substitutions.append(
+    (
         "%deps-to-rsp",
         '"%s" %s'
         % (
