@@ -179,43 +179,31 @@ fadd v23.4s, v1.4s, v2.4s
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      100
-# CHECK-NEXT: Total Cycles:      104
+# CHECK-NEXT: Total Cycles:      103
 # CHECK-NEXT: Total uOps:        100
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.96
-# CHECK-NEXT: IPC:               0.96
+# CHECK-NEXT: uOps Per Cycle:    0.97
+# CHECK-NEXT: IPC:               0.97
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [1] Code Region - ldr-q
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      100
-# CHECK-NEXT: Total Cycles:      104
+# CHECK-NEXT: Total Cycles:      203
 # CHECK-NEXT: Total uOps:        100
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.96
-# CHECK-NEXT: IPC:               0.96
-# CHECK-NEXT: Block RThroughput: 1.0
+# CHECK-NEXT: uOps Per Cycle:    0.49
+# CHECK-NEXT: IPC:               0.49
+# CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      [2] Code Region - ldp-q
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      100
-# CHECK-NEXT: Total Cycles:      203
-# CHECK-NEXT: Total uOps:        200
-
-# CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.99
-# CHECK-NEXT: IPC:               0.49
-# CHECK-NEXT: Block RThroughput: 2.0
-
-# CHECK:      [3] Code Region - ld1-4q
-
-# CHECK:      Iterations:        100
-# CHECK-NEXT: Instructions:      100
-# CHECK-NEXT: Total Cycles:      404
+# CHECK-NEXT: Total Cycles:      403
 # CHECK-NEXT: Total uOps:        100
 
 # CHECK:      Dispatch Width:    2
@@ -223,53 +211,65 @@ fadd v23.4s, v1.4s, v2.4s
 # CHECK-NEXT: IPC:               0.25
 # CHECK-NEXT: Block RThroughput: 4.0
 
+# CHECK:      [3] Code Region - ld1-4q
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      100
+# CHECK-NEXT: Total Cycles:      803
+# CHECK-NEXT: Total uOps:        100
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.12
+# CHECK-NEXT: IPC:               0.12
+# CHECK-NEXT: Block RThroughput: 8.0
+
 # CHECK:      [4] Code Region - ld4-4s
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      100
-# CHECK-NEXT: Total Cycles:      504
+# CHECK-NEXT: Total Cycles:      803
 # CHECK-NEXT: Total uOps:        100
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.20
-# CHECK-NEXT: IPC:               0.20
-# CHECK-NEXT: Block RThroughput: 5.0
+# CHECK-NEXT: uOps Per Cycle:    0.12
+# CHECK-NEXT: IPC:               0.12
+# CHECK-NEXT: Block RThroughput: 8.0
 
 # CHECK:      [5] Code Region - str-q
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      100
-# CHECK-NEXT: Total Cycles:      104
+# CHECK-NEXT: Total Cycles:      101
 # CHECK-NEXT: Total uOps:        100
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.96
-# CHECK-NEXT: IPC:               0.96
+# CHECK-NEXT: uOps Per Cycle:    0.99
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [6] Code Region - stp-q
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      100
-# CHECK-NEXT: Total Cycles:      104
+# CHECK-NEXT: Total Cycles:      200
 # CHECK-NEXT: Total uOps:        100
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.96
-# CHECK-NEXT: IPC:               0.96
-# CHECK-NEXT: Block RThroughput: 1.0
+# CHECK-NEXT: uOps Per Cycle:    0.50
+# CHECK-NEXT: IPC:               0.50
+# CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      [7] Code Region - st4-4s
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      100
-# CHECK-NEXT: Total Cycles:      304
+# CHECK-NEXT: Total Cycles:      497
 # CHECK-NEXT: Total uOps:        100
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.33
-# CHECK-NEXT: IPC:               0.33
-# CHECK-NEXT: Block RThroughput: 3.0
+# CHECK-NEXT: uOps Per Cycle:    0.20
+# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: Block RThroughput: 5.0
 
 # CHECK:      [8] Code Region - ldr-d-fadd-s
 
@@ -287,84 +287,84 @@ fadd v23.4s, v1.4s, v2.4s
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      104
+# CHECK-NEXT: Total Cycles:      204
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.92
-# CHECK-NEXT: IPC:               1.92
+# CHECK-NEXT: uOps Per Cycle:    0.98
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [10] Code Region - ldr-q-add-x
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      104
+# CHECK-NEXT: Total Cycles:      203
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.92
-# CHECK-NEXT: IPC:               1.92
-# CHECK-NEXT: Block RThroughput: 1.0
+# CHECK-NEXT: uOps Per Cycle:    0.99
+# CHECK-NEXT: IPC:               0.99
+# CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      [11] Code Region - ldr-q-fadd-2s
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      104
+# CHECK-NEXT: Total Cycles:      203
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.92
-# CHECK-NEXT: IPC:               1.92
-# CHECK-NEXT: Block RThroughput: 1.0
+# CHECK-NEXT: uOps Per Cycle:    0.99
+# CHECK-NEXT: IPC:               0.99
+# CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      [12] Code Region - ldr-q-fadd-4s
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      104
+# CHECK-NEXT: Total Cycles:      304
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.92
-# CHECK-NEXT: IPC:               1.92
-# CHECK-NEXT: Block RThroughput: 1.0
+# CHECK-NEXT: uOps Per Cycle:    0.66
+# CHECK-NEXT: IPC:               0.66
+# CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      [13] Code Region - ldp-s-fadd-s
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
 # CHECK-NEXT: Total Cycles:      204
-# CHECK-NEXT: Total uOps:        300
+# CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.47
+# CHECK-NEXT: uOps Per Cycle:    0.98
 # CHECK-NEXT: IPC:               0.98
-# CHECK-NEXT: Block RThroughput: 2.0
+# CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [14] Code Region - ldp-q-fadd-4s
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      204
-# CHECK-NEXT: Total uOps:        300
+# CHECK-NEXT: Total Cycles:      504
+# CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.47
-# CHECK-NEXT: IPC:               0.98
-# CHECK-NEXT: Block RThroughput: 2.0
+# CHECK-NEXT: uOps Per Cycle:    0.40
+# CHECK-NEXT: IPC:               0.40
+# CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      [15] Code Region - ld1r-fadd-s
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      104
+# CHECK-NEXT: Total Cycles:      204
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.92
-# CHECK-NEXT: IPC:               1.92
+# CHECK-NEXT: uOps Per Cycle:    0.98
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [16] Code Region - str-q-fadd-2s
@@ -383,43 +383,43 @@ fadd v23.4s, v1.4s, v2.4s
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      104
+# CHECK-NEXT: Total Cycles:      204
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.92
-# CHECK-NEXT: IPC:               1.92
+# CHECK-NEXT: uOps Per Cycle:    0.98
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [18] Code Region - stp-q-fadd-4s
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      104
+# CHECK-NEXT: Total Cycles:      304
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.92
-# CHECK-NEXT: IPC:               1.92
-# CHECK-NEXT: Block RThroughput: 1.0
+# CHECK-NEXT: uOps Per Cycle:    0.66
+# CHECK-NEXT: IPC:               0.66
+# CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      [19] Code Region - ldr-d-use-fadd
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      405
+# CHECK-NEXT: Total Cycles:      404
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.49
-# CHECK-NEXT: IPC:               0.49
+# CHECK-NEXT: uOps Per Cycle:    0.50
+# CHECK-NEXT: IPC:               0.50
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [20] Code Region - ldr-d-use-add
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      304
+# CHECK-NEXT: Total Cycles:      303
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
@@ -431,30 +431,6 @@ fadd v23.4s, v1.4s, v2.4s
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      405
-# CHECK-NEXT: Total uOps:        200
-
-# CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.49
-# CHECK-NEXT: IPC:               0.49
-# CHECK-NEXT: Block RThroughput: 1.0
-
-# CHECK:      [22] Code Region - ldr-q-use-add
-
-# CHECK:      Iterations:        100
-# CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      304
-# CHECK-NEXT: Total uOps:        200
-
-# CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.66
-# CHECK-NEXT: IPC:               0.66
-# CHECK-NEXT: Block RThroughput: 1.0
-
-# CHECK:      [23] Code Region - ldr-q-use-str
-
-# CHECK:      Iterations:        100
-# CHECK-NEXT: Instructions:      200
 # CHECK-NEXT: Total Cycles:      504
 # CHECK-NEXT: Total uOps:        200
 
@@ -463,40 +439,64 @@ fadd v23.4s, v1.4s, v2.4s
 # CHECK-NEXT: IPC:               0.40
 # CHECK-NEXT: Block RThroughput: 2.0
 
+# CHECK:      [22] Code Region - ldr-q-use-add
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      200
+# CHECK-NEXT: Total Cycles:      403
+# CHECK-NEXT: Total uOps:        200
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.50
+# CHECK-NEXT: IPC:               0.50
+# CHECK-NEXT: Block RThroughput: 2.0
+
+# CHECK:      [23] Code Region - ldr-q-use-str
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      200
+# CHECK-NEXT: Total Cycles:      401
+# CHECK-NEXT: Total uOps:        200
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.50
+# CHECK-NEXT: IPC:               0.50
+# CHECK-NEXT: Block RThroughput: 3.0
+
 # CHECK:      [24] Code Region - ldp-q-use-second
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      504
-# CHECK-NEXT: Total uOps:        300
+# CHECK-NEXT: Total Cycles:      704
+# CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.60
-# CHECK-NEXT: IPC:               0.40
-# CHECK-NEXT: Block RThroughput: 2.0
+# CHECK-NEXT: uOps Per Cycle:    0.28
+# CHECK-NEXT: IPC:               0.28
+# CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      [25] Code Region - ldr-q-post
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      801
-# CHECK-NEXT: Total uOps:        400
+# CHECK-NEXT: Total Cycles:      602
+# CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.50
-# CHECK-NEXT: IPC:               0.25
-# CHECK-NEXT: Block RThroughput: 2.0
+# CHECK-NEXT: uOps Per Cycle:    0.33
+# CHECK-NEXT: IPC:               0.33
+# CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      [26] Code Region - str-q-post
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      801
-# CHECK-NEXT: Total uOps:        400
+# CHECK-NEXT: Total Cycles:      401
+# CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
 # CHECK-NEXT: uOps Per Cycle:    0.50
-# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: IPC:               0.50
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      [27] Code Region - fmla-fadd

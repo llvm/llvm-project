@@ -98,21 +98,9 @@ def : WriteRes<WriteLD, [A53UnitLdSt]> { let Latency = 4; }
 def : WriteRes<WriteLDIdx, [A53UnitLdSt]> { let Latency = 4; }
 def : WriteRes<WriteLDHi, [A53UnitLdSt]> { let Latency = 4; }
 
-// Vector Load - Vector loads take 1-5 cycles to issue. For the WriteVecLd
-//               below, choosing the median of 3 which makes the latency 6.
-//               May model this more carefully in the future. The remaining
-//               A53WriteVLD# types represent the 1-5 cycle issues explicitly.
+// Vector Load
 def : WriteRes<WriteVLD, [A53UnitLdSt]> { let Latency = 6;
                                           let ReleaseAtCycles = [3]; }
-def A53WriteVLD1 : SchedWriteRes<[A53UnitLdSt]> { let Latency = 4; }
-def A53WriteVLD2 : SchedWriteRes<[A53UnitLdSt]> { let Latency = 5;
-                                                  let ReleaseAtCycles = [2]; }
-def A53WriteVLD3 : SchedWriteRes<[A53UnitLdSt]> { let Latency = 6;
-                                                  let ReleaseAtCycles = [3]; }
-def A53WriteVLD4 : SchedWriteRes<[A53UnitLdSt]> { let Latency = 7;
-                                                  let ReleaseAtCycles = [4]; }
-def A53WriteVLD5 : SchedWriteRes<[A53UnitLdSt]> { let Latency = 8;
-                                                  let ReleaseAtCycles = [5]; }
 
 // Pre/Post Indexing - Performed as part of address generation which is already
 //                     accounted for in the WriteST* latencies below
@@ -124,14 +112,9 @@ def : WriteRes<WriteSTP, [A53UnitLdSt]> { let Latency = 4; }
 def : WriteRes<WriteSTIdx, [A53UnitLdSt]> { let Latency = 4; }
 def : WriteRes<WriteSTX, [A53UnitLdSt]> { let Latency = 4; }
 
-// Vector Store - Similar to vector loads, can take 1-3 cycles to issue.
+// Vector Store
 def : WriteRes<WriteVST, [A53UnitLdSt]> { let Latency = 5;
                                           let ReleaseAtCycles = [2];}
-def A53WriteVST1 : SchedWriteRes<[A53UnitLdSt]> { let Latency = 4; }
-def A53WriteVST2 : SchedWriteRes<[A53UnitLdSt]> { let Latency = 5;
-                                                  let ReleaseAtCycles = [2]; }
-def A53WriteVST3 : SchedWriteRes<[A53UnitLdSt]> { let Latency = 6;
-                                                  let ReleaseAtCycles = [3]; }
 
 def : WriteRes<WriteAtomic, []> { let Unsupported = 1; }
 
@@ -502,82 +485,190 @@ def : ReadAdvance<ReadID, 1, [WriteImm,WriteI,
 def : InstRW<[WriteI], (instrs COPY)>;
 
 //---
-// Vector Loads
+// FP/ASIMD loads and stores
 //---
-def : InstRW<[A53WriteVLD1], (instregex "LD1i(8|16|32|64)$")>;
-def : InstRW<[A53WriteVLD1], (instregex "LD1Rv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[A53WriteVLD1], (instregex "LD1Onev(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[A53WriteVLD2], (instregex "LD1Twov(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[A53WriteVLD3], (instregex "LD1Threev(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[A53WriteVLD4], (instregex "LD1Fourv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[WriteAdr, A53WriteVLD1], (instregex "LD1i(8|16|32|64)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVLD1], (instregex "LD1Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVLD1], (instregex "LD1Onev(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVLD2], (instregex "LD1Twov(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVLD3], (instregex "LD1Threev(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVLD4], (instregex "LD1Fourv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
+// Measured on a Cortex-A53 (Raspberry Pi 3):
+// - A load moves 64 bits per cycle through the load/store unit, a store 128
+//   bits; ST3/ST4 take one more cycle. A misaligned access can take one more
+//   cycle, which is not known statically.
+// - For the same cycles the operation holds one FP/ASIMD datapath lane, so it
+//   pairs with a 64-bit operation but not with a Q-form. Loads that write
+//   several registers at once, replicate an element or insert into a lane
+//   hold both lanes.
+// - A loaded register is ready to an early reader two cycles after the last
+//   64-bit beat that carries it (D-form 3, Q-form 4, the second register of
+//   LDP D 4 and of LDP Q 6). A register list is one operand, so it gets the
+//   latency of its last register. Stores read their data late.
+// - A pre/post-indexed base register is ready one cycle after the last access
+//   cycle, at most four.
+// None of these writes waits for older, longer operations (RetireOOO).
+class A53VLd<int cycles, int lanes, int lat>
+    : SchedWriteRes<!if(!eq(lanes, 1), [A53UnitLdSt, A53UnitFPALU],
+                        [A53UnitLdSt, A53UnitFP0, A53UnitFP1])> {
+  let Latency = lat;
+  let ReleaseAtCycles = !listsplat(cycles, !add(lanes, 1));
+  let RetireOOO = 1;
+}
+class A53VLdHi<int lat> : SchedWriteRes<[]> {
+  let Latency = lat;
+  let NumMicroOps = 0;
+  let RetireOOO = 1;
+}
+class A53VSt<int cycles> : SchedWriteRes<[A53UnitLdSt, A53UnitFPALU]> {
+  let Latency = 1;
+  let ReleaseAtCycles = [cycles, cycles];
+  let RetireOOO = 1;
+}
+class A53WriteAdrN<int lat> : SchedWriteRes<[]> {
+  let Latency = lat;
+  let NumMicroOps = 0;
+  let RetireOOO = 1;
+}
 
-def : InstRW<[A53WriteVLD1], (instregex "LD2i(8|16|32|64)$")>;
-def : InstRW<[A53WriteVLD1], (instregex "LD2Rv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[A53WriteVLD2], (instregex "LD2Twov(8b|4h|2s)$")>;
-def : InstRW<[A53WriteVLD4], (instregex "LD2Twov(16b|8h|4s|2d)$")>;
-def : InstRW<[WriteAdr, A53WriteVLD1], (instregex "LD2i(8|16|32|64)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVLD1], (instregex "LD2Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVLD2], (instregex "LD2Twov(8b|4h|2s)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVLD4], (instregex "LD2Twov(16b|8h|4s|2d)_POST$")>;
+def A53WriteAdr2 : A53WriteAdrN<2>;
+def A53WriteAdr3 : A53WriteAdrN<3>;
+def A53WriteAdr4 : A53WriteAdrN<4>;
+def A53WriteVLd1x1L3 : A53VLd<1, 1, 3>;
+def A53WriteVLd1x2L3 : A53VLd<1, 2, 3>;
+def A53WriteVLd2x1L3 : A53VLd<2, 1, 3>;
+def A53WriteVLd2x1L4 : A53VLd<2, 1, 4>;
+def A53WriteVLd2x2L4 : A53VLd<2, 2, 4>;
+def A53WriteVLd3x2L5 : A53VLd<3, 2, 5>;
+def A53WriteVLd4x1L4 : A53VLd<4, 1, 4>;
+def A53WriteVLd4x2L6 : A53VLd<4, 2, 6>;
+def A53WriteVLd6x2L8 : A53VLd<6, 2, 8>;
+def A53WriteVLd8x2L10 : A53VLd<8, 2, 10>;
+def A53WriteVLdHiL3 : A53VLdHi<3>;
+def A53WriteVLdHiL4 : A53VLdHi<4>;
+def A53WriteVLdHiL6 : A53VLdHi<6>;
+def A53WriteVSt1 : A53VSt<1>;
+def A53WriteVSt2 : A53VSt<2>;
+def A53WriteVSt3 : A53VSt<3>;
+def A53WriteVSt4 : A53VSt<4>;
+def A53WriteVSt5 : A53VSt<5>;
 
-def : InstRW<[A53WriteVLD2], (instregex "LD3i(8|16|32|64)$")>;
-def : InstRW<[A53WriteVLD2], (instregex "LD3Rv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[A53WriteVLD4], (instregex "LD3Threev(8b|4h|2s|1d|16b|8h|4s)$")>;
-def : InstRW<[A53WriteVLD3], (instregex "LD3Threev2d$")>;
-def : InstRW<[WriteAdr, A53WriteVLD2], (instregex "LD3i(8|16|32|64)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVLD2], (instregex "LD3Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVLD4], (instregex "LD3Threev(8b|4h|2s|1d|16b|8h|4s)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVLD3], (instregex "LD3Threev2d_POST$")>;
-
-def : InstRW<[A53WriteVLD2], (instregex "LD4i(8|16|32|64)$")>;
-def : InstRW<[A53WriteVLD2], (instregex "LD4Rv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[A53WriteVLD5], (instregex "LD4Fourv(8b|4h|2s|1d|16b|8h|4s)$")>;
-def : InstRW<[A53WriteVLD4], (instregex "LD4Fourv(2d)$")>;
-def : InstRW<[WriteAdr, A53WriteVLD2], (instregex "LD4i(8|16|32|64)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVLD2], (instregex "LD4Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVLD5], (instregex "LD4Fourv(8b|4h|2s|1d|16b|8h|4s)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVLD4], (instregex "LD4Fourv(2d)_POST$")>;
-
-//---
-// Vector Stores
-//---
-def : InstRW<[A53WriteVST1], (instregex "ST1i(8|16|32|64)$")>;
-def : InstRW<[A53WriteVST1], (instregex "ST1Onev(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[A53WriteVST1], (instregex "ST1Twov(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[A53WriteVST2], (instregex "ST1Threev(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[A53WriteVST2], (instregex "ST1Fourv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[WriteAdr, A53WriteVST1], (instregex "ST1i(8|16|32|64)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVST1], (instregex "ST1Onev(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVST1], (instregex "ST1Twov(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVST2], (instregex "ST1Threev(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVST2], (instregex "ST1Fourv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-
-def : InstRW<[A53WriteVST1], (instregex "ST2i(8|16|32|64)$")>;
-def : InstRW<[A53WriteVST1], (instregex "ST2Twov(8b|4h|2s)$")>;
-def : InstRW<[A53WriteVST2], (instregex "ST2Twov(16b|8h|4s|2d)$")>;
-def : InstRW<[WriteAdr, A53WriteVST1], (instregex "ST2i(8|16|32|64)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVST1], (instregex "ST2Twov(8b|4h|2s)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVST2], (instregex "ST2Twov(16b|8h|4s|2d)_POST$")>;
-
-def : InstRW<[A53WriteVST2], (instregex "ST3i(8|16|32|64)$")>;
-def : InstRW<[A53WriteVST3], (instregex "ST3Threev(8b|4h|2s|1d|16b|8h|4s)$")>;
-def : InstRW<[A53WriteVST2], (instregex "ST3Threev(2d)$")>;
-def : InstRW<[WriteAdr, A53WriteVST2], (instregex "ST3i(8|16|32|64)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVST3], (instregex "ST3Threev(8b|4h|2s|1d|16b|8h|4s)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVST2], (instregex "ST3Threev(2d)_POST$")>;
-
-def : InstRW<[A53WriteVST2], (instregex "ST4i(8|16|32|64)$")>;
-def : InstRW<[A53WriteVST3], (instregex "ST4Fourv(8b|4h|2s|1d|16b|8h|4s)$")>;
-def : InstRW<[A53WriteVST2], (instregex "ST4Fourv(2d)$")>;
-def : InstRW<[WriteAdr, A53WriteVST2], (instregex "ST4i(8|16|32|64)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVST3], (instregex "ST4Fourv(8b|4h|2s|1d|16b|8h|4s)_POST$")>;
-def : InstRW<[WriteAdr, A53WriteVST2], (instregex "ST4Fourv(2d)_POST$")>;
+def : InstRW<[A53WriteVLd1x1L3],
+      (instregex "^LDR[BHSD](ui|roW|roX|l)$", "^LDUR[BHSD]i$",
+                 "^LD1Onev(8b|4h|2s|1d)$")>;
+def : InstRW<[A53WriteAdr2, A53WriteVLd1x1L3],
+      (instregex "^LDR[BHSD](pre|post)$", "^LD1Onev(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[A53WriteVLd2x1L4],
+      (instregex "^LDRQ(ui|roW|roX|l)$", "^LDURQi$",
+                 "^LD1Onev(16b|8h|4s|2d)$")>;
+def : InstRW<[A53WriteAdr3, A53WriteVLd2x1L4],
+      (instregex "^LDRQ(pre|post)$", "^LD1Onev(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[A53WriteVLd1x2L3, A53WriteVLdHiL3], (instregex "^LDN?PSi$")>;
+def : InstRW<[A53WriteAdr2, A53WriteVLd1x2L3, A53WriteVLdHiL3],
+      (instregex "^LDPS(pre|post)$")>;
+def : InstRW<[A53WriteVLd2x1L3, A53WriteVLdHiL4], (instregex "^LDN?PDi$")>;
+def : InstRW<[A53WriteAdr3, A53WriteVLd2x1L3, A53WriteVLdHiL4],
+      (instregex "^LDPD(pre|post)$")>;
+def : InstRW<[A53WriteVLd4x1L4, A53WriteVLdHiL6], (instregex "^LDN?PQi$")>;
+def : InstRW<[A53WriteAdr4, A53WriteVLd4x1L4, A53WriteVLdHiL6],
+      (instregex "^LDPQ(pre|post)$")>;
+def : InstRW<[A53WriteVLd2x2L4],
+      (instregex "^LD1Twov(8b|4h|2s|1d)$", "^LD2Twov(8b|4h|2s)$", "^LD2Rv1d$",
+                 "^LD2Rv2d$", "^LD2i64$", "^LD3Rv2s$", "^LD3Rv4s$", "^LD3i32$",
+                 "^LD4Rv2s$", "^LD4Rv4s$", "^LD4i32$")>;
+def : InstRW<[A53WriteAdr3, A53WriteVLd2x2L4],
+      (instregex "^LD1Twov(8b|4h|2s|1d)_POST$", "^LD2Twov(8b|4h|2s)_POST$",
+                 "^LD2Rv1d_POST$", "^LD2Rv2d_POST$", "^LD2i64_POST$",
+                 "^LD3Rv2s_POST$", "^LD3Rv4s_POST$", "^LD3i32_POST$",
+                 "^LD4Rv2s_POST$", "^LD4Rv4s_POST$", "^LD4i32_POST$")>;
+def : InstRW<[A53WriteVLd4x2L6],
+      (instregex "^LD1Twov(16b|8h|4s|2d)$", "^LD1Fourv(8b|4h|2s|1d)$",
+                 "^LD2Twov(16b|8h|4s|2d)$", "^LD4Fourv(8b|4h|2s)$",
+                 "^LD4Rv1d$", "^LD4Rv2d$", "^LD4i64$")>;
+def : InstRW<[A53WriteAdr4, A53WriteVLd4x2L6],
+      (instregex "^LD1Twov(16b|8h|4s|2d)_POST$",
+                 "^LD1Fourv(8b|4h|2s|1d)_POST$",
+                 "^LD2Twov(16b|8h|4s|2d)_POST$", "^LD4Fourv(8b|4h|2s)_POST$",
+                 "^LD4Rv1d_POST$", "^LD4Rv2d_POST$", "^LD4i64_POST$")>;
+def : InstRW<[A53WriteVLd3x2L5],
+      (instregex "^LD1Threev(8b|4h|2s|1d)$", "^LD3Threev(8b|4h|2s)$",
+                 "^LD3Rv1d$", "^LD3Rv2d$", "^LD3i64$")>;
+def : InstRW<[A53WriteAdr4, A53WriteVLd3x2L5],
+      (instregex "^LD1Threev(8b|4h|2s|1d)_POST$", "^LD3Threev(8b|4h|2s)_POST$",
+                 "^LD3Rv1d_POST$", "^LD3Rv2d_POST$", "^LD3i64_POST$")>;
+def : InstRW<[A53WriteVLd6x2L8],
+      (instregex "^LD1Threev(16b|8h|4s|2d)$", "^LD3Threev(16b|8h|4s|2d)$")>;
+def : InstRW<[A53WriteAdr4, A53WriteVLd6x2L8],
+      (instregex "^LD1Threev(16b|8h|4s|2d)_POST$",
+                 "^LD3Threev(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[A53WriteVLd8x2L10],
+      (instregex "^LD1Fourv(16b|8h|4s|2d)$", "^LD4Fourv(16b|8h|4s|2d)$")>;
+def : InstRW<[A53WriteAdr4, A53WriteVLd8x2L10],
+      (instregex "^LD1Fourv(16b|8h|4s|2d)_POST$",
+                 "^LD4Fourv(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[A53WriteVLd1x2L3],
+      (instregex "^LD1Rv8b$", "^LD1Rv16b$", "^LD1Rv4h$", "^LD1Rv8h$",
+                 "^LD1Rv2s$", "^LD1Rv4s$", "^LD1Rv1d$", "^LD1Rv2d$", "^LD1i8$",
+                 "^LD1i16$", "^LD1i32$", "^LD1i64$", "^LD2Rv8b$", "^LD2Rv16b$",
+                 "^LD2Rv4h$", "^LD2Rv8h$", "^LD2Rv2s$", "^LD2Rv4s$", "^LD2i8$",
+                 "^LD2i16$", "^LD2i32$", "^LD3Rv8b$", "^LD3Rv16b$",
+                 "^LD3Rv4h$", "^LD3Rv8h$", "^LD3i8$", "^LD3i16$", "^LD4Rv8b$",
+                 "^LD4Rv16b$", "^LD4Rv4h$", "^LD4Rv8h$", "^LD4i8$",
+                 "^LD4i16$")>;
+def : InstRW<[A53WriteAdr2, A53WriteVLd1x2L3],
+      (instregex "^LD1Rv8b_POST$", "^LD1Rv16b_POST$", "^LD1Rv4h_POST$",
+                 "^LD1Rv8h_POST$", "^LD1Rv2s_POST$", "^LD1Rv4s_POST$",
+                 "^LD1Rv1d_POST$", "^LD1Rv2d_POST$", "^LD1i8_POST$",
+                 "^LD1i16_POST$", "^LD1i32_POST$", "^LD1i64_POST$",
+                 "^LD2Rv8b_POST$", "^LD2Rv16b_POST$", "^LD2Rv4h_POST$",
+                 "^LD2Rv8h_POST$", "^LD2Rv2s_POST$", "^LD2Rv4s_POST$",
+                 "^LD2i8_POST$", "^LD2i16_POST$", "^LD2i32_POST$",
+                 "^LD3Rv8b_POST$", "^LD3Rv16b_POST$", "^LD3Rv4h_POST$",
+                 "^LD3Rv8h_POST$", "^LD3i8_POST$", "^LD3i16_POST$",
+                 "^LD4Rv8b_POST$", "^LD4Rv16b_POST$", "^LD4Rv4h_POST$",
+                 "^LD4Rv8h_POST$", "^LD4i8_POST$", "^LD4i16_POST$")>;
+def : InstRW<[A53WriteVSt1, A53ReadLate, A53ReadEarly, A53ReadEarly],
+      (instregex "^STR[BHSDQ](ui|roW|roX)$", "^STUR[BHSDQ]i$",
+                 "^ST1Onev(8b|4h|2s|1d)$", "^ST1Onev(16b|8h|4s|2d)$",
+                 "^ST1Twov(8b|4h|2s|1d)$", "^ST2Twov(8b|4h|2s)$", "^ST1i8$",
+                 "^ST1i16$", "^ST1i32$", "^ST1i64$", "^ST2i8$", "^ST2i16$",
+                 "^ST2i32$", "^ST2i64$")>;
+def : InstRW<[A53WriteAdr2, A53WriteVSt1, A53ReadLate, A53ReadEarly, A53ReadEarly],
+      (instregex "^STR[BHSDQ](pre|post)$", "^ST1Onev(8b|4h|2s|1d)_POST$",
+                 "^ST1Onev(16b|8h|4s|2d)_POST$", "^ST1Twov(8b|4h|2s|1d)_POST$",
+                 "^ST2Twov(8b|4h|2s)_POST$", "^ST1i8_POST$", "^ST1i16_POST$",
+                 "^ST1i32_POST$", "^ST1i64_POST$", "^ST2i8_POST$",
+                 "^ST2i16_POST$", "^ST2i32_POST$", "^ST2i64_POST$")>;
+def : InstRW<[A53WriteVSt1, A53ReadLate, A53ReadLate, A53ReadEarly, A53ReadEarly],
+      (instregex "^STN?P[SD]i$")>;
+def : InstRW<[A53WriteAdr2, A53WriteVSt1, A53ReadLate, A53ReadLate, A53ReadEarly, A53ReadEarly],
+      (instregex "^STP[SD](pre|post)$")>;
+def : InstRW<[A53WriteVSt2, A53ReadLate, A53ReadLate, A53ReadEarly, A53ReadEarly],
+      (instregex "^STN?PQi$")>;
+def : InstRW<[A53WriteAdr3, A53WriteVSt2, A53ReadLate, A53ReadLate, A53ReadEarly, A53ReadEarly],
+      (instregex "^STPQ(pre|post)$")>;
+def : InstRW<[A53WriteVSt2, A53ReadLate, A53ReadEarly, A53ReadEarly],
+      (instregex "^ST1Twov(16b|8h|4s|2d)$", "^ST1Threev(8b|4h|2s|1d)$",
+                 "^ST1Fourv(8b|4h|2s|1d)$", "^ST2Twov(16b|8h|4s|2d)$",
+                 "^ST3i8$", "^ST3i16$", "^ST3i32$", "^ST4i8$", "^ST4i16$",
+                 "^ST4i32$")>;
+def : InstRW<[A53WriteAdr3, A53WriteVSt2, A53ReadLate, A53ReadEarly, A53ReadEarly],
+      (instregex "^ST1Twov(16b|8h|4s|2d)_POST$",
+                 "^ST1Threev(8b|4h|2s|1d)_POST$",
+                 "^ST1Fourv(8b|4h|2s|1d)_POST$",
+                 "^ST2Twov(16b|8h|4s|2d)_POST$", "^ST3i8_POST$",
+                 "^ST3i16_POST$", "^ST3i32_POST$", "^ST4i8_POST$",
+                 "^ST4i16_POST$", "^ST4i32_POST$")>;
+def : InstRW<[A53WriteVSt3, A53ReadLate, A53ReadEarly, A53ReadEarly],
+      (instregex "^ST1Threev(16b|8h|4s|2d)$", "^ST3Threev(8b|4h|2s)$",
+                 "^ST4Fourv(8b|4h|2s)$", "^ST3i64$", "^ST4i64$")>;
+def : InstRW<[A53WriteAdr4, A53WriteVSt3, A53ReadLate, A53ReadEarly, A53ReadEarly],
+      (instregex "^ST1Threev(16b|8h|4s|2d)_POST$",
+                 "^ST3Threev(8b|4h|2s)_POST$", "^ST4Fourv(8b|4h|2s)_POST$",
+                 "^ST3i64_POST$", "^ST4i64_POST$")>;
+def : InstRW<[A53WriteVSt4, A53ReadLate, A53ReadEarly, A53ReadEarly],
+      (instregex "^ST1Fourv(16b|8h|4s|2d)$", "^ST3Threev(16b|8h|4s|2d)$")>;
+def : InstRW<[A53WriteAdr4, A53WriteVSt4, A53ReadLate, A53ReadEarly, A53ReadEarly],
+      (instregex "^ST1Fourv(16b|8h|4s|2d)_POST$",
+                 "^ST3Threev(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[A53WriteVSt5, A53ReadLate, A53ReadEarly, A53ReadEarly],
+      (instregex "^ST4Fourv(16b|8h|4s|2d)$")>;
+def : InstRW<[A53WriteAdr4, A53WriteVSt5, A53ReadLate, A53ReadEarly, A53ReadEarly],
+      (instregex "^ST4Fourv(16b|8h|4s|2d)_POST$")>;
 
 //---
 // Floating Point MAC, DIV, SQRT
