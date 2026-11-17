@@ -401,23 +401,27 @@ See [Target Extension Types for Inline SPIR-V and Decorated Types] for further d
 
 (spirv-intrinsics)=
 
-### Shared Local Memory model
+### Shared Local Memory Model
 
-SPIR-V objects can use `Workgroup` scope so they are visible for all invocations within a
-workgroup ([See SPIR-V specification 3.2.6](https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#Storage_Class)). Equivalent address space in LLVM IR is `addrspace(3)`.
-Usage of this address space is tightly connected to target runtime, because a dynamically sized object such as:
+SPIR-V objects can use the `Workgroup` storage class to be visible to all invocations
+within a workgroup (see [SPIR-V specification, section 3.2.6](https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#Storage_Class)).
+The equivalent address space in LLVM IR is `addrspace(3)`.
+Use of this address space is closely tied to the target runtime because dynamically
+sized objects require an API to specify their size. For example:
 
 `@buf = external addrspace(3) global [0 x i32], align 4`
 
-Requires APIs to specify it's size. Not every vendor supports the same APIs for the purpose.
-OpenCL and Level Zero runtimes, only allow sizing of such objects through kernel arguments
-in `Workgroup` scope. For the reason, the SPIR-V backend implements an additional pass which
-lowers unsized external arrays into OpenCL compatible trailing kernel argument. When a module
-containing such object is lowered, all operations on the array are translated into indirect
-reads and writes from a global slot containing a pointer to `Workgroup` memory area. The
-global slot is written to when any kernel from the module is ran, using value received
-in trailing kernel argument. Runtimes can detect if the pass was used by inspecting modules
-for `__spirv_dynamic_local_memory_present` global variable.
+Not all vendors support the same APIs for this purpose. OpenCL and Level Zero
+runtimes only allow the size of such objects to be specified through kernel
+arguments in the `Workgroup` storage class. For this reason, the SPIR-V backend
+implements an additional pass that lowers unsized external arrays to an
+OpenCL-compatible trailing kernel argument. When a module containing such an
+object is lowered, all operations on the array are translated into indirect reads
+and writes through a global slot containing a pointer to a `Workgroup` memory area.
+Whenever a kernel from the module is run, the global slot is initialized with the
+value passed through the trailing kernel argument. Runtimes can detect whether
+the pass was used by checking the module for the
+`__spirv_dynamic_local_memory_present` global variable.
 
 ### Target Intrinsics
 
