@@ -850,8 +850,8 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
       if (CurBB->isEntryBlock())
         return false;
 
-      // An unreachable block (for example one that SimplifyCFG has emptied but
-      // not yet removed) is on no path, so it cannot contain a free.
+      // CurBB is unreachable (for example, emptied by SimplifyCFG but not yet
+      // removed), so nothing in it can execute a free.
       continue;
     }
 
