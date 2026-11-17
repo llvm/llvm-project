@@ -2779,6 +2779,10 @@ private:
     /// Checks if the current node is a gather node.
     bool isGather() const { return State == NeedToGather; }
 
+    bool isInOrder() const {
+      return ReorderIndices.empty() && ReuseShuffleIndices.empty();
+    }
+
     /// Checks if the current node is in reverse order.
     bool isReverse() const {
       return !ReorderIndices.empty() && isReverseOrder(ReorderIndices);
@@ -7633,8 +7637,7 @@ void BoUpSLP::buildReorderableOperands(
       // simply add to the list of gathered ops.
       // If there are reused scalars, process this node as a regular vectorize
       // node, just reorder reuses mask.
-      if (TE->State == TreeEntry::ScatterVectorize &&
-          TE->ReuseShuffleIndices.empty() && TE->ReorderIndices.empty())
+      if (TE->State == TreeEntry::ScatterVectorize && TE->isInOrder())
         GatherOps.push_back(TE);
       continue;
     }
@@ -7870,7 +7873,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
                 if (VecOp)
                   Op = VecOp;
               }
-              if (Op->ReorderIndices.empty() && Op->ReuseShuffleIndices.empty())
+              if (Op->isInOrder())
                 return false;
             }
             return true;
@@ -7879,8 +7882,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
           if (!Users.empty() && !all_of(Users, [&](TreeEntry *UTE) {
                 if (!RevisitedOps.insert(UTE).second)
                   return false;
-                return UTE == Data.first || !UTE->ReorderIndices.empty() ||
-                       !UTE->ReuseShuffleIndices.empty() ||
+                return UTE == Data.first || !UTE->isInOrder() ||
                        (UTE->UserTreeIndex &&
                         UTE->UserTreeIndex.UserTE == Data.first) ||
                        (Data.first->UserTreeIndex &&
@@ -7928,7 +7930,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         }
         auto Res = OrdersUses.try_emplace(OrdersType(), 0);
         const auto AllowsReordering = [&](const TreeEntry *TE) {
-          if (!TE->ReorderIndices.empty() || !TE->ReuseShuffleIndices.empty() ||
+          if (!TE->isInOrder() ||
               (TE->State == TreeEntry::Vectorize && TE->isAltShuffle()) ||
               (IgnoreReorder && TE->Idx == 0))
             return true;
@@ -13733,7 +13735,7 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
       // as a vector.
       if (!canVectorStoreInsertValue(&TE))
         Count += 2;
-      if (!TE.ReorderIndices.empty() || !TE.ReuseShuffleIndices.empty())
+      if (!TE.isInOrder())
         ++Count;
       Total = SaturatingMultiplyAdd<uint64_t>(Count, Scale, Total);
       continue;
@@ -13747,7 +13749,7 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
       Count += TE.getNumOperands() - 1;
     else
       ++Count;
-    if (!TE.ReorderIndices.empty() || !TE.ReuseShuffleIndices.empty())
+    if (!TE.isInOrder())
       ++Count;
     Total = SaturatingMultiplyAdd<uint64_t>(Count, Scale, Total);
   }
@@ -14117,8 +14119,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   IsBSwap = false;
   ForLoads = false;
   if (TE.State != TreeEntry::Vectorize || TE.isAltShuffle() ||
-      !TE.ReorderIndices.empty() || !TE.ReuseShuffleIndices.empty() ||
-      MinBWs.contains(&TE) ||
+      !TE.isInOrder() || MinBWs.contains(&TE) ||
       any_of(TE.Scalars, [&](Value *V) { return !hasSingleReductionUse(V); }))
     return false;
   Type *ScalarTy = TE.getMainOp()->getType();
@@ -14133,8 +14134,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   // Lhs should be zext i<stride> to I<sz>.
   if (!(LhsTE->State == TreeEntry::Vectorize &&
         LhsTE->getOpcode() == Instruction::ZExt && !LhsTE->isAltShuffle() &&
-        LhsTE->ReorderIndices.empty() && LhsTE->ReuseShuffleIndices.empty() &&
-        !MinBWs.contains(LhsTE) &&
+        LhsTE->isInOrder() && !MinBWs.contains(LhsTE) &&
         all_of(LhsTE->Scalars, [](Value *V) { return V->hasOneUse(); })))
     return false;
   Type *SrcScalarTy = cast<ZExtInst>(LhsTE->getMainOp())->getSrcTy();
@@ -14142,8 +14142,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   if (!isPowerOf2_64(Stride) || Stride >= Sz || Sz % Stride != 0 ||
       !isPowerOf2_64(LhsTE->getVectorFactor()))
     return false;
-  if (!(RhsTE->isGather() && RhsTE->ReorderIndices.empty() &&
-        RhsTE->ReuseShuffleIndices.empty() && !MinBWs.contains(RhsTE)))
+  if (!(RhsTE->isGather() && RhsTE->isInOrder() && !MinBWs.contains(RhsTE)))
     return false;
   Order.clear();
   unsigned CurrentValue = 0;
@@ -14235,8 +14234,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
       Order.clear();
       // Check for loads in the ZExt node.
       const TreeEntry *SrcTE = getOperandEntry(LhsTE, /*Idx=*/0);
-      if (SrcTE->State == TreeEntry::Vectorize &&
-          SrcTE->ReorderIndices.empty() && SrcTE->ReuseShuffleIndices.empty() &&
+      if (SrcTE->State == TreeEntry::Vectorize && SrcTE->isInOrder() &&
           SrcTE->getOpcode() == Instruction::Load && !SrcTE->isAltShuffle() &&
           all_of(SrcTE->Scalars, [](Value *V) { return V->hasOneUse(); })) {
         LoadInst *LI = SrcTE->getFirstLoad();
@@ -14259,8 +14257,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   } else if (Order.empty() && DL->getTypeSizeInBits(SrcScalarTy) == ByteSize) {
     // Check for loads in the ZExt node.
     const TreeEntry *SrcTE = getOperandEntry(LhsTE, /*Idx=*/0);
-    if (SrcTE->State == TreeEntry::Vectorize && SrcTE->ReorderIndices.empty() &&
-        SrcTE->ReuseShuffleIndices.empty() &&
+    if (SrcTE->State == TreeEntry::Vectorize && SrcTE->isInOrder() &&
         SrcTE->getOpcode() == Instruction::Load && !SrcTE->isAltShuffle() &&
         all_of(SrcTE->Scalars, [](Value *V) { return V->hasOneUse(); })) {
       LoadInst *LI = SrcTE->getFirstLoad();
@@ -14339,8 +14336,7 @@ const BoUpSLP::TreeEntry *BoUpSLP::getBitPackSource(const TreeEntry &LhsTE,
   auto IsChainNode = [](const TreeEntry &TE) {
     return (TE.State == TreeEntry::Vectorize ||
             TE.CombinedOp == TreeEntry::ReducedBitPack) &&
-           TE.ReorderIndices.empty() && TE.ReuseShuffleIndices.empty() &&
-           !TE.hasCopyableElements() &&
+           TE.isInOrder() && !TE.hasCopyableElements() &&
            all_of(TE.Scalars, [](Value *V) { return V->hasOneUse(); });
   };
   const TreeEntry *AndTE = &LhsTE;
@@ -14357,8 +14353,7 @@ const BoUpSLP::TreeEntry *BoUpSLP::getBitPackSource(const TreeEntry &LhsTE,
       !IsChainNode(*ShiftTE))
     return &LhsTE;
   const TreeEntry *SrcTE = getOperandEntry(ShiftTE, /*Idx=*/0);
-  if (SrcTE->State != TreeEntry::Vectorize || !SrcTE->ReorderIndices.empty() ||
-      !SrcTE->ReuseShuffleIndices.empty())
+  if (SrcTE->State != TreeEntry::Vectorize || !SrcTE->isInOrder())
     return &LhsTE;
   const unsigned SrcBW = SrcTE->getMainOp()->getType()->getScalarSizeInBits();
   const unsigned FieldWidth = Info.FieldWidth;
@@ -14402,8 +14397,8 @@ bool BoUpSLP::matchesBitPack(const TreeEntry &TE) const {
          "Expected And or Shl node.");
   auto IsVectorizedOneUseNode = [&](const TreeEntry *N) {
     return N->State == TreeEntry::Vectorize && !N->isAltShuffle() &&
-           N->ReorderIndices.empty() && N->ReuseShuffleIndices.empty() &&
-           !MinBWs.contains(N) && all_of(N->Scalars, [&](Value *V) {
+           N->isInOrder() && !MinBWs.contains(N) &&
+           all_of(N->Scalars, [&](Value *V) {
              return (N->hasCopyableElements() && N->isCopyableElement(V)) ||
                     (N == &TE ? hasSingleReductionUse(V) : V->hasOneUse());
            });
@@ -14434,8 +14429,7 @@ bool BoUpSLP::matchesBitPack(const TreeEntry &TE) const {
   // The operand must be emitted as a plain vector in lane order: a vectorized
   // node or a simple gather.
   if ((!LhsTE->isGather() && LhsTE->State != TreeEntry::Vectorize) ||
-      (LhsTE->hasState() && LhsTE->isAltShuffle()) ||
-      !LhsTE->ReorderIndices.empty() || !LhsTE->ReuseShuffleIndices.empty() ||
+      (LhsTE->hasState() && LhsTE->isAltShuffle()) || !LhsTE->isInOrder() ||
       MinBWs.contains(LhsTE))
     return false;
   std::optional<BitPackInfo> Info = computeBitPackLayout(TE);
@@ -14487,9 +14481,7 @@ bool BoUpSLP::matchesInversedZExtSelect(
   if (CmpTE->State != TreeEntry::Vectorize || !CmpTE->isAltShuffle() ||
       (CmpTE->getOpcode() != Instruction::ICmp &&
        CmpTE->getOpcode() != Instruction::FCmp) ||
-      !CmpTE->ReorderIndices.empty() || !CmpTE->ReuseShuffleIndices.empty() ||
-      !Op1TE->ReorderIndices.empty() || !Op1TE->ReuseShuffleIndices.empty() ||
-      !Op2TE->ReorderIndices.empty() || !Op2TE->ReuseShuffleIndices.empty())
+      !CmpTE->isInOrder() || !Op1TE->isInOrder() || !Op2TE->isInOrder())
     return false;
   // The operands must be buildvectors/copyables.
   if (!Op1TE->isGather() || !Op2TE->isGather())
@@ -14541,7 +14533,7 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
          "Expected select node.");
   if (DL->isBigEndian())
     return false;
-  if (!SelectTE.ReorderIndices.empty() || !SelectTE.ReuseShuffleIndices.empty())
+  if (!SelectTE.isInOrder())
     return false;
   if (!isReductionTree() || SelectTE.Idx != 0)
     return false;
@@ -14557,8 +14549,7 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
   if (!Op1TE->isGather() || !Op2TE->isGather())
     return false;
   // No need to check for zeroes reordering.
-  if (!Op1TE->ReorderIndices.empty() || !Op1TE->ReuseShuffleIndices.empty() ||
-      !Op2TE->ReuseShuffleIndices.empty())
+  if (!Op1TE->isInOrder() || !Op2TE->ReuseShuffleIndices.empty())
     return false;
   Type *ScalarTy = Op1TE->Scalars.front()->getType();
   if (!ScalarTy->isIntegerTy())
@@ -14752,8 +14743,7 @@ void BoUpSLP::transformNodes() {
     const TreeEntry *LHS = getOperandEntry(&E, 0);
     const TreeEntry *RHS = getOperandEntry(&E, 1);
     auto IsOneUseVectorFMulOperand = [](const TreeEntry *TE) {
-      return TE->State == TreeEntry::Vectorize && TE->ReorderIndices.empty() &&
-             TE->ReuseShuffleIndices.empty() &&
+      return TE->State == TreeEntry::Vectorize && TE->isInOrder() &&
              TE->getOpcode() == Instruction::FMul && !TE->isAltShuffle() &&
              !TE->hasBlendedCopyables() && all_of(TE->Scalars, [&](Value *V) {
                return (TE->hasCopyableElements() && TE->isCopyableElement(V)) ||
@@ -18764,9 +18754,7 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
         if (TE.Idx == 0 && ScalarsSize == 2 && Op == Instruction::ICmp &&
             TreeSize > LimitTreeSize)
           return true;
-        if (ScalarsSize == 2 &&
-            (!TE.ReuseShuffleIndices.empty() || !TE.ReorderIndices.empty() ||
-             TE.isAltShuffle()))
+        if (ScalarsSize == 2 && (!TE.isInOrder() || TE.isAltShuffle()))
           return true;
         if (TE.hasCopyableElements() &&
             static_cast<unsigned>(count_if(
@@ -19269,7 +19257,7 @@ InstructionCost BoUpSLP::getSpillCost() {
     // A reordered or reuse-shuffled match materializes a separate shuffled
     // vector that is itself live across the call; only an exact match reuses
     // the same vector value.
-    if (!SameTE->ReorderIndices.empty() || !SameTE->ReuseShuffleIndices.empty())
+    if (!SameTE->isInOrder())
       return false;
 
     // Only permit an ordinary vectorized user.
@@ -23651,9 +23639,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         // nodes.
         ShuffleBuilder.resetForSameNode();
         // Full matched entry found, no need to insert subvectors.
-        if ((IsFullVectorMatch(FrontTE) &&
-             FrontTE->ReuseShuffleIndices.empty() &&
-             FrontTE->ReorderIndices.empty() &&
+        if ((IsFullVectorMatch(FrontTE) && FrontTE->isInOrder() &&
              E->getVectorFactor() == FrontTE->getVectorFactor()) ||
             (equal(E->Scalars, FrontTE->Scalars) &&
              equal(E->ReorderIndices, FrontTE->ReorderIndices) &&
@@ -24606,7 +24592,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       // absence of a reuse shuffle are guaranteed when the node is created, so
       // a lane maps to its own index.
       if (E->hasCopyableElements()) {
-        assert(E->ReorderIndices.empty() && E->ReuseShuffleIndices.empty() &&
+        assert(E->isInOrder() &&
                "Copyable extract lanes require identity order and no reuse.");
         for (auto [Idx, Scalar] : enumerate(E->Scalars))
           if (E->isCopyableElement(Scalar))
