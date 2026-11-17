@@ -15,3 +15,20 @@ bar
 1
 # Counter Values:
 100
+
+zero_mismatch
+# Func Hash:
+11111
+# Num Counters:
+2
+# Counter Values:
+0
+0
+
+zero_mismatch_hot_attr
+# Func Hash:
+11111
+# Num Counters:
+1
+# Counter Values:
+0

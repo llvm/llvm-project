@@ -154,6 +154,51 @@ TEST_P(MaybeSparseInstrProfTest, get_instr_prof_record) {
   ASSERT_TRUE(ErrorEquals(instrprof_error::unknown_function, R.takeError()));
 }
 
+TEST_F(InstrProfTest, get_instr_prof_record_mismatched_all_zeros) {
+  Writer.addRecord({"zero_fn", 0x1234, {0, 0, 0}}, Err);
+  Writer.addRecord({"mixed_fn", 0x1234, {0, 0}}, Err);
+  Writer.addRecord({"mixed_fn", 0x1235, {0, 5}}, Err);
+
+  NamedInstrProfRecord PseudoHotRec("pseudo_hot_fn", 0x1234, {0, 0});
+  PseudoHotRec.setPseudoCount(InstrProfRecord::PseudoHot);
+  Writer.addRecord(std::move(PseudoHotRec), Err);
+
+  NamedInstrProfRecord PseudoWarmRec("pseudo_warm_fn", 0x1234, {0, 0});
+  PseudoWarmRec.setPseudoCount(InstrProfRecord::PseudoWarm);
+  Writer.addRecord(std::move(PseudoWarmRec), Err);
+
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  uint64_t Sum = 999;
+  bool AllZeros = false;
+  auto R = Reader->getInstrProfRecord("zero_fn", 0x9999, "", &Sum, &AllZeros);
+  ASSERT_TRUE(ErrorEquals(instrprof_error::hash_mismatch, R.takeError()));
+  EXPECT_EQ(0U, Sum);
+  EXPECT_TRUE(AllZeros);
+
+  Sum = 0;
+  AllZeros = true;
+  R = Reader->getInstrProfRecord("mixed_fn", 0x9999, "", &Sum, &AllZeros);
+  ASSERT_TRUE(ErrorEquals(instrprof_error::hash_mismatch, R.takeError()));
+  EXPECT_EQ(5U, Sum);
+  EXPECT_FALSE(AllZeros);
+
+  Sum = 999;
+  AllZeros = true;
+  R = Reader->getInstrProfRecord("pseudo_hot_fn", 0x9999, "", &Sum, &AllZeros);
+  ASSERT_TRUE(ErrorEquals(instrprof_error::hash_mismatch, R.takeError()));
+  EXPECT_EQ(0U, Sum);
+  EXPECT_FALSE(AllZeros);
+
+  Sum = 999;
+  AllZeros = true;
+  R = Reader->getInstrProfRecord("pseudo_warm_fn", 0x9999, "", &Sum, &AllZeros);
+  ASSERT_TRUE(ErrorEquals(instrprof_error::hash_mismatch, R.takeError()));
+  EXPECT_EQ(0U, Sum);
+  EXPECT_FALSE(AllZeros);
+}
+
 TEST_P(MaybeSparseInstrProfTest, get_function_counts) {
   Writer.addRecord({"foo", 0x1234, {1, 2}}, Err);
   Writer.addRecord({"foo", 0x1235, {3, 4}}, Err);
