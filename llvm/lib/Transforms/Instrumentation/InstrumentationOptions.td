@@ -670,6 +670,8 @@ defm : ValueField<"pgo-trace-func-hash", "StringRef", "\"-\"",
   "Trace the hash of the function with this name">;
 defm : BoolField<"pgo-treat-unknown-as-cold", "false",
   "For cold function instrumentation, treat count unknown(e.g. unprofiled) functions as cold">;
+defm : BoolField<"pgo-use-treat-unknown-as-cold", "true",
+  "Treat unprofiled functions as cold during PGO profile use">;
 defm : BoolField<"pgo-use-treat-zero-mismatch-as-cold", "true",
   "Treat functions with all-zero mismatched profile counters as cold during PGO profile use">;
 defm : BoolField<"pgo-verify-bfi", "false",

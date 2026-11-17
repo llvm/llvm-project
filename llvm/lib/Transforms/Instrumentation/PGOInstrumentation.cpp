@@ -1009,6 +1009,7 @@ public:
 
   enum class RecordLookupState {
     Matched,
+    UnknownFunction,
     ZeroCountHashMismatch,
     OtherError,
   };
@@ -1274,6 +1275,7 @@ PGOUseFunc::handleInstrProfError(Error Err, uint64_t MismatchedFuncSum,
     LLVM_DEBUG(dbgs() << "Error in reading profile for Func "
                       << FuncInfo.FuncName << ": ");
     if (Err == instrprof_error::unknown_function) {
+      State = RecordLookupState::UnknownFunction;
       IsCS ? NumOfCSPGOMissing++ : NumOfPGOMissing++;
       SkipWarning = !Opts.pgo_warn_missing_function;
       LLVM_DEBUG(dbgs() << "unknown function");
@@ -2142,11 +2144,18 @@ static bool annotateAllFunctions(
                     HasSingleByteCoverage);
     PGOUseFunc::RecordLookupState LookupState = Func.getRecord(PGOReader.get());
     if (LookupState != PGOUseFunc::RecordLookupState::Matched) {
-      if (LookupState == PGOUseFunc::RecordLookupState::ZeroCountHashMismatch &&
-          Opts.pgo_use_treat_zero_mismatch_as_cold &&
-          (!IsCS || !F.getEntryCount()) && !F.hasFnAttribute(Attribute::Hot)) {
+      uint64_t MaxCount = PGOReader->getMaximumFunctionCount(IsCS);
+      bool ShouldMarkCold =
+          (LookupState ==
+               PGOUseFunc::RecordLookupState::ZeroCountHashMismatch &&
+           Opts.pgo_use_treat_zero_mismatch_as_cold) ||
+          (LookupState == PGOUseFunc::RecordLookupState::UnknownFunction &&
+           Opts.pgo_use_treat_unknown_as_cold && MaxCount != 0 &&
+           !F.getEntryCount() && !skipPGOGen(Opts, F));
+      if (ShouldMarkCold && (!IsCS || !F.getEntryCount()) &&
+          !F.hasFnAttribute(Attribute::Hot)) {
         F.setEntryCount(0);
-        if (PGOReader->getMaximumFunctionCount(IsCS) != 0)
+        if (MaxCount != 0)
           ColdFunctions.push_back(&F);
       }
       continue;
