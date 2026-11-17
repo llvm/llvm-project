@@ -10805,14 +10805,11 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
   if (!Info)
     return Info.takeError();
 
-  // Call the runtime API __tgt_mapper_num_components to get the number of
-  // pre-existing components.
-  Value *OffloadingArgs[] = {MapperHandle};
-  Value *PreviousSize = createRuntimeFunctionCall(
-      getOrCreateRuntimeFunction(M, OMPRTL___tgt_mapper_num_components),
-      OffloadingArgs);
-  Value *ShiftedPreviousSize =
-      Builder.CreateShl(PreviousSize, Builder.getInt64(getFlagMemberOffset()));
+  // Number of components already in the mapper handle, shifted into the
+  // MEMBER_OF field; assigned below, once a conditional leading parent (if
+  // any) has been pushed, and read by pushComponent through the reference
+  // capture.
+  Value *ShiftedPreviousSize = nullptr;
 
   // Emits a single mapper sub-component: computes the MEMBER_OF-adjusted map
   // type, applies map-type-modifier propagation, and pushes it either via a
@@ -11053,8 +11050,50 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     return EndBB;
   };
 
+  // A leading parent synthesized for the dynamic segments is pushed only when
+  // some segment will contribute components. Its own map type carries no
+  // MEMBER_OF bits, so it does not read ShiftedPreviousSize.
+  unsigned FirstStaticIdx = 0;
+  if (Info->LeadingParentCond) {
+    assert(PreserveMemberOfFlags &&
+           "conditional leading parent requires pre-shaped MEMBER_OF flags");
+    assert(!Info->BasePointers.empty() && "no leading parent component");
+    BasicBlock *PushBB =
+        BasicBlock::Create(M.getContext(), "omp.iterparent.push");
+    BasicBlock *ContBB =
+        BasicBlock::Create(M.getContext(), "omp.iterparent.cont");
+    Builder.CreateCondBr(Info->LeadingParentCond, PushBB, ContBB);
+    emitBlock(PushBB, MapperFn);
+    Value *CurNameArg = Info->Names.size()
+                            ? Info->Names[0]
+                            : Constant::getNullValue(Builder.getPtrTy());
+    pushComponent(
+        Info->BasePointers[0], Info->Pointers[0], Info->Sizes[0], CurNameArg,
+        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            Info->Types[0]),
+        Info->HasAttachPtr[0], /*ChildMapperFn=*/nullptr);
+    Builder.CreateBr(ContBB);
+    emitBlock(ContBB, MapperFn);
+    LastBB = ContBB;
+    FirstStaticIdx = 1;
+  }
+
+  // Call the runtime API __tgt_mapper_num_components to get the number of
+  // pre-existing components. The compile-time MEMBER_OF indices count the
+  // leading parent as component 0 whether or not it was pushed; reading the
+  // count after that push and subtracting one yields the right base in both
+  // cases (N if pushed, N - 1 if skipped, N being the count at body start).
+  Value *OffloadingArgs[] = {MapperHandle};
+  Value *PreviousSize = createRuntimeFunctionCall(
+      getOrCreateRuntimeFunction(M, OMPRTL___tgt_mapper_num_components),
+      OffloadingArgs);
+  if (Info->LeadingParentCond)
+    PreviousSize = Builder.CreateSub(PreviousSize, Builder.getInt64(1));
+  ShiftedPreviousSize =
+      Builder.CreateShl(PreviousSize, Builder.getInt64(getFlagMemberOffset()));
+
   // Fill up the runtime mapper handle for all statically-known components.
-  for (unsigned I = 0; I < Info->BasePointers.size(); ++I) {
+  for (unsigned I = FirstStaticIdx; I < Info->BasePointers.size(); ++I) {
     Value *CurNameArg = Info->Names.size()
                             ? Info->Names[I]
                             : Constant::getNullValue(Builder.getPtrTy());

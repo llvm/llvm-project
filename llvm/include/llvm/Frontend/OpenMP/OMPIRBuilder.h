@@ -3118,6 +3118,16 @@ public:
     };
     SmallVector<DynamicSegment, 0> DynamicSegments;
 
+    /// When set, the first statically-known component is a parent synthesized
+    /// only to group the DynamicSegments' components (via MEMBER_OF): it
+    /// spans the range those components cover and is pushed only if this i1
+    /// condition holds at runtime, typically "some segment has a non-zero
+    /// trip count". Skipping it when no component would be grouped under it
+    /// keeps the mapped variable from becoming device-present for an iterator
+    /// that expands to nothing. Consumed by emitUserDefinedMapper only; not
+    /// merged by append().
+    Value *LeadingParentCond = nullptr;
+
     /// Append arrays in \a CurInfo.
     void append(MapInfosTy &CurInfo) {
       BasePointers.append(CurInfo.BasePointers.begin(),

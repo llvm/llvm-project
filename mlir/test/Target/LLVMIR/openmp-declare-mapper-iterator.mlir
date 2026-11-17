@@ -7,10 +7,13 @@
 // __tgt_push_mapper_component since the trip count is not statically known.
 //
 // As for statically-known members, the iterated elements are grouped under a
-// parent component for the mapper variable via MEMBER_OF: a storage-only
-// component covering the variable is pushed first, and each element is pushed
-// with the array base as its base pointer, MEMBER_OF(1) in its map type, and
-// a size derived from its bounds.
+// parent component via MEMBER_OF. When the mapper does not map the variable
+// itself, a storage-only parent is synthesized that spans exactly the
+// elements the iterators expand to (its begin/end are the runtime min/max
+// over a pre-pass of the iterations) and is skipped when every iterator has a
+// zero trip count. It is pushed first; each element is then pushed with the
+// array base as its base pointer, MEMBER_OF(1) in its map type, and a size
+// derived from its bounds.
 
 module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   omp.declare_mapper @mapper_with_iterator : !llvm.struct<"mapper_type", (array<10 x i32>)> {
@@ -38,12 +41,37 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK: call void @__tgt_target_data_begin_mapper(ptr @{{.*}}, i64 -1, i32 1, ptr %{{.*}}, ptr %{{.*}}, ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr %.offload_mappers)
 
 // CHECK-LABEL: define internal void @.omp_mapper.mapper_with_iterator
-// CHECK: %[[NUM:.*]] = call i64 @__tgt_mapper_num_components(ptr %{{.*}})
-// CHECK: %[[SHIFTED:.*]] = shl i64 %[[NUM]], 48
+// The span accumulators live in the entry block.
+// CHECK-NEXT: entry:
+// CHECK-NEXT: %omp.iterparent.begin = alloca i64
+// CHECK-NEXT: %omp.iterparent.end = alloca i64
 //
-// Storage-only parent component covering the whole mapper variable (40 bytes).
+// Pre-pass over the iterations: min element address / max element end.
+// CHECK: store i64 -1, ptr %omp.iterparent.begin
+// CHECK: store i64 0, ptr %omp.iterparent.end
+// CHECK: omp_mapper.iterspan.body:
+// CHECK: %[[SBEGIN:.*]] = ptrtoint ptr %{{.*}} to i64
+// CHECK: %[[SEND:.*]] = add i64 %[[SBEGIN]], %{{.*}}
+// CHECK: call i64 @llvm.umin.i64(i64 %{{.*}}, i64 %[[SBEGIN]])
+// CHECK: call i64 @llvm.umax.i64(i64 %{{.*}}, i64 %[[SEND]])
+//
+// Storage-only parent spanning [min, max), pushed only if the iterator has a
+// non-zero trip count (folds to true here). The parent's begin is the span
+// start and its size the span length, not the whole variable.
+// CHECK: omp.it.cont:
+// CHECK: %[[PBEGIN:.*]] = inttoptr i64 %[[PB:.*]] to ptr
+// CHECK: %[[PSIZE:.*]] = sub i64 %{{.*}}, %[[PB]]
+// CHECK: br i1 true, label %omp.iterparent.push, label %omp.iterparent.cont
+// CHECK: omp.iterparent.push:
 // CHECK: %omp.maptype = phi i64 [ 0, %omp.type.alloc ], [ 0, %omp.type.to ], [ 0, %omp.type.from ], [ 0, %omp.type.to.else ]
-// CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %omp.arraymap.ptrcurrent, ptr %omp.arraymap.ptrcurrent, i64 40, i64 %omp.maptype.with.modifiers, ptr @{{.*}})
+// CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %omp.arraymap.ptrcurrent, ptr %[[PBEGIN]], i64 %[[PSIZE]], i64 %omp.maptype.with.modifiers, ptr @{{.*}})
+//
+// The component count is read after the conditional push; subtracting one
+// gives the MEMBER_OF base whether or not the parent was pushed.
+// CHECK: omp.iterparent.cont:
+// CHECK: %[[NUM:.*]] = call i64 @__tgt_mapper_num_components(ptr %{{.*}})
+// CHECK: %[[BASE:.*]] = sub i64 %[[NUM]], 1
+// CHECK: %[[SHIFTED:.*]] = shl i64 %[[BASE]], 48
 //
 // CHECK: omp_mapper.iterator.cond:
 // CHECK: %[[CMP:.*]] = icmp ult i64 %{{.*}}, 10
@@ -143,8 +171,17 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 }
 
 // CHECK-LABEL: define internal void @.omp_mapper.mapper_multidim_and_section
-// Storage parent covers the whole 80-byte struct.
-// CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %omp.arraymap.ptrcurrent, ptr %omp.arraymap.ptrcurrent, i64 80, i64 %{{.*}}, ptr @{{.*}})
+// Two iterator clauses: one pre-pass loop each, then their spans are merged
+// (each folded in only if that iterator has trips) into one storage parent.
+// CHECK: omp_mapper.iterspan.body:
+// CHECK: omp_mapper.iterspan.body{{[0-9]+}}:
+// CHECK: omp.it.cont{{[0-9]+}}:
+// CHECK: %[[MIN:.*]] = call i64 @llvm.umin.i64(i64 %{{.*}}, i64 %{{.*}})
+// CHECK: %[[MAX:.*]] = call i64 @llvm.umax.i64(i64 %{{.*}}, i64 %{{.*}})
+// CHECK: %[[PBEGIN:.*]] = inttoptr i64 %[[PB:.*]] to ptr
+// CHECK: %[[PSIZE:.*]] = sub i64 %{{.*}}, %[[PB]]
+// CHECK: omp.iterparent.push:
+// CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %omp.arraymap.ptrcurrent, ptr %[[PBEGIN]], i64 %[[PSIZE]], i64 %{{.*}}, ptr @{{.*}})
 //
 // a(2, i): two bounds, each with ub == lb, so (1 * 1) * 4 bytes. The constant
 // first-dimension factor folds away; the innermost element size (i32) is
@@ -171,11 +208,11 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // -----
 
 // When the mapper maps other members of the variable but not the variable
-// itself, the synthesized storage parent for the iterated elements must be
-// the first component: the runtime maps components in order and rejects a
-// later one that extends an earlier mapping. The static members' MEMBER_OF
-// then refers to their own (partial) parent at index 1, and the iterated
-// elements' MEMBER_OF to the storage parent at index 0.
+// itself, the static members already have a partial parent. The runtime maps
+// components in order and rejects a later one that extends an earlier
+// mapping, so rather than pushing a second parent for the iterated elements,
+// that partial parent is widened to also cover their span (when there are
+// any). Static and iterated members then share it via MEMBER_OF(1).
 
 module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   omp.declare_mapper @mapper_members_and_iterator : !llvm.struct<"s3", (i32, array<4 x i32>, i32)> {
@@ -205,18 +242,25 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 }
 
 // CHECK-LABEL: define internal void @.omp_mapper.mapper_members_and_iterator
+// Pre-pass over the iterated elements ...
+// CHECK: omp_mapper.iterspan.body:
+// CHECK: omp.it.cont:
+// ... then the partial parent's [begin, end) is widened to the union with the
+// span (the selects fold since the trip count is constant) ...
+// CHECK: %[[PBEGIN3:.*]] = select i1 true, i64 %{{.*}}, i64 %{{.*}}
+// CHECK: %[[PEND3:.*]] = select i1 true, i64 %{{.*}}, i64 %{{.*}}
+// CHECK: %[[PPTR3:.*]] = inttoptr i64 %[[PBEGIN3]] to ptr
+// CHECK: %[[PSIZE3:.*]] = sub i64 %[[PEND3]], %[[PBEGIN3]]
 // CHECK: %[[NUM3:.*]] = call i64 @__tgt_mapper_num_components(ptr %{{.*}})
 // CHECK: %[[SHIFTED3:.*]] = shl i64 %[[NUM3]], 48
-// Storage parent first (whole 24-byte struct) ...
-// CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %omp.arraymap.ptrcurrent, ptr %omp.arraymap.ptrcurrent, i64 24, i64 %{{.*}}, ptr @{{.*}})
-// ... then the static members' partial parent (base = struct, begin = first member) ...
-// CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %omp.arraymap.ptrcurrent, ptr %[[TAG:.*]], i64 %{{.*}}, i64 %{{.*}}, ptr @{{.*}})
-// ... the static members with MEMBER_OF(2) = 2 << 48 | TOFROM ...
-// CHECK: add nuw i64 562949953421315, %[[SHIFTED3]]
-// CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %[[TAG]], ptr %[[TAG]], i64 4, i64 %{{.*}}, ptr @{{.*}})
-// CHECK: add nuw i64 562949953421315, %[[SHIFTED3]]
+// ... and pushed unconditionally as the single parent (base = struct) ...
+// CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %omp.arraymap.ptrcurrent, ptr %[[PPTR3]], i64 %[[PSIZE3]], i64 %{{.*}}, ptr @{{.*}})
+// ... followed by the static members with MEMBER_OF(1) = 1 << 48 | TOFROM ...
+// CHECK: add nuw i64 281474976710659, %[[SHIFTED3]]
+// CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %[[TAG:.*]], ptr %[[TAG]], i64 4, i64 %{{.*}}, ptr @{{.*}})
+// CHECK: add nuw i64 281474976710659, %[[SHIFTED3]]
 // CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, i64 4, i64 %{{.*}}, ptr @{{.*}})
-// ... and the iterated elements with MEMBER_OF(1) = 1 << 48 | TOFROM.
+// ... and the iterated elements, also MEMBER_OF(1).
 // CHECK: omp_mapper.iterator.body:
 // CHECK: add nuw i64 281474976710659, %[[SHIFTED3]]
 // CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, ptr null)

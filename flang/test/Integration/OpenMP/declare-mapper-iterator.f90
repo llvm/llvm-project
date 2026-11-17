@@ -17,26 +17,46 @@
 
 subroutine f(arg)
   type :: s
+    integer :: n
     integer :: a(10)
   end type
   type(s) :: arg
 
-  !$omp declare mapper(m: s :: v) map(mapper(m), iterator(i = 1:10): v%a(i))
+  !$omp declare mapper(m: s :: v) map(iterator(i = 1:v%n): v%a(i))
   !$omp target data map(mapper(m): arg)
   !$omp end target data
 end
 
 ! CHECK-LABEL: define internal void @.omp_mapper._QQFfm
-! The iterator variable's storage is hoisted out of the per-element loop.
+! The iterator variable's storage and the span accumulators are hoisted out
+! of the per-element loop.
 ! CHECK-NEXT: entry:
 ! CHECK-NEXT: alloca i32
+! CHECK-NEXT: %omp.iterparent.begin = alloca i64
+! CHECK-NEXT: %omp.iterparent.end = alloca i64
 ! CHECK-NOT: alloca
-! Storage-only parent for the whole variable, then each element MEMBER_OF it.
-! CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %omp.arraymap.ptrcurrent, ptr %omp.arraymap.ptrcurrent, i64 40, i64 %{{.*}}, ptr @{{.*}})
+! A pre-pass over the iterations finds the span of the elements; a
+! storage-only parent for exactly that span is pushed only when the runtime
+! trip count is non-zero, then each element is pushed MEMBER_OF it.
+! CHECK: %[[HAS_TRIPS:.*]] = icmp ne i64 %{{.*}}, 0
+! CHECK: omp_mapper.iterspan.body:
+! CHECK: call i64 @llvm.umin.i64
+! CHECK: call i64 @llvm.umax.i64
+! CHECK: omp.it.cont:
+! CHECK: %[[ANY_TRIPS:.*]] = or i1 false, %[[HAS_TRIPS]]
+! CHECK: %[[PBEGIN:.*]] = inttoptr i64 %[[PB:.*]] to ptr
+! CHECK: %[[PSIZE:.*]] = sub i64 %{{.*}}, %[[PB]]
+! CHECK: br i1 %[[ANY_TRIPS]], label %omp.iterparent.push, label %omp.iterparent.cont
+! CHECK: omp.iterparent.push:
+! CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %omp.arraymap.ptrcurrent, ptr %[[PBEGIN]], i64 %[[PSIZE]], i64 %{{.*}}, ptr @{{.*}})
+! CHECK: omp.iterparent.cont:
+! CHECK: %[[NUM:.*]] = call i64 @__tgt_mapper_num_components(ptr %{{.*}})
+! CHECK: %[[BASE:.*]] = sub i64 %[[NUM]], 1
+! CHECK: shl i64 %[[BASE]], 48
 ! CHECK: omp_mapper.iterator.cond:
-! CHECK: icmp ult i64 %{{.*}}, 10
+! CHECK: icmp ult i64 %{{.*}}, %{{.*}}
 ! CHECK: omp_mapper.iterator.body:
-! CHECK: %[[FIELD:.*]] = getelementptr %_QFfTs, ptr %omp.arraymap.ptrcurrent, i32 0, i32 0
+! CHECK: %[[FIELD:.*]] = getelementptr %_QFfTs, ptr %omp.arraymap.ptrcurrent, i32 0, i32 1
 ! CHECK: %[[ELEM:.*]] = getelementptr inbounds [10 x i32], ptr %[[FIELD]], i64 0, i64 %{{.*}}
 ! CHECK: %[[SIZE:.*]] = mul i64 %{{.*}}, 4
 ! CHECK: add nuw i64 281474976710659, %{{.*}}

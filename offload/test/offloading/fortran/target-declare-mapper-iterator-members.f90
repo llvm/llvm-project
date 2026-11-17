@@ -1,9 +1,9 @@
 ! Offloading test checking a declare mapper that maps other members of the
 ! variable explicitly, plus elements of an array component via an iterator
-! modifier, without mapping the variable itself. The parent component for the
-! iterated elements must be the first one the mapper pushes; if it came after
-! the explicit members, the runtime would reject it as an extension of their
-! mapping.
+! modifier, without mapping the variable itself. The explicit members' parent
+! component is widened to also cover the iterated elements, so there is a
+! single parent; a second one would be rejected by the runtime as an extension
+! of the first.
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
