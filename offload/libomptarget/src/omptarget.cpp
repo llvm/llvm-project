@@ -80,7 +80,7 @@ static const int64_t MaxAlignment = 16;
 /// MaxAlignment above.
 static uint64_t getPartialStructRequiredAlignment(void *HstPtrBase) {
   int LowestOneBit = __builtin_ffsl(reinterpret_cast<uintptr_t>(HstPtrBase));
-  uint64_t BaseAlignment = 1 << (LowestOneBit - 1);
+  uint64_t BaseAlignment = static_cast<uint64_t>(1) << (LowestOneBit - 1);
   return MaxAlignment < BaseAlignment ? MaxAlignment : BaseAlignment;
 }
 
@@ -1025,7 +1025,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
   assert(StateInfo && "StateInfo is required for targetDataEnd for handling "
                       "FROM data transfers");
   int Ret = OFFLOAD_SUCCESS;
-  auto *PostProcessingPtrs = new SmallVector<PostProcessingInfo>();
+  auto PostProcessingPtrs = std::make_unique<SmallVector<PostProcessingInfo>>();
   // process each input.
   for (int32_t I = ArgNum - 1; I >= 0; --I) {
     // Ignore private variables and arrays - there is no mapping for them.
@@ -1321,11 +1321,13 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     PostProcessingPtrs->back().TPR.getEntry()->unlock();
   }
 
+  auto *PostProcessingRawPtrs = PostProcessingPtrs.release();
+
   // Add post-processing functions
   // TODO: We might want to remove `mutable` in the future by not changing the
   // captured variables somehow.
   AsyncInfo.addPostProcessingFunction([=, Device = &Device]() mutable -> int {
-    return postProcessingTargetDataEnd(Device, *PostProcessingPtrs);
+    return postProcessingTargetDataEnd(Device, *PostProcessingRawPtrs);
   });
 
   return Ret;

@@ -245,14 +245,9 @@ public:
   uint64_t decRefCount(bool UseHoldRefCount) const {
     uint64_t &ThisRefCount =
         UseHoldRefCount ? States->HoldRefCount : States->DynRefCount;
-    uint64_t OtherRefCount =
-        UseHoldRefCount ? States->DynRefCount : States->HoldRefCount;
-    (void)OtherRefCount;
     if (ThisRefCount != INFRefCount) {
       if (ThisRefCount > 0)
         --ThisRefCount;
-      else
-        assert(OtherRefCount >= 0 && "total refcount underflow");
     }
     return getTotalRefCount();
   }
@@ -349,7 +344,7 @@ struct HostDataToTargetMapKeyTy {
   HostDataToTargetMapKeyTy(uintptr_t Key) : KeyValue(Key) {}
   HostDataToTargetMapKeyTy(HostDataToTargetTy *HDTT)
       : KeyValue(HDTT->HstPtrBegin), HDTT(HDTT) {}
-  HostDataToTargetTy *HDTT;
+  HostDataToTargetTy *HDTT = nullptr;
 };
 inline bool operator<(const HostDataToTargetMapKeyTy &LHS,
                       const uintptr_t &RHS) {

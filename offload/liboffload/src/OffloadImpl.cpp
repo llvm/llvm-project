@@ -77,6 +77,9 @@ struct ol_device_impl_t {
       : DeviceNum(DeviceNum), Device(Device), Platform(Platform),
         Info(std::forward<InfoTreeNode>(DevInfo)) {}
 
+  ol_device_impl_t(const ol_device_impl_t &) = delete;
+  ol_device_impl_t &operator=(const ol_device_impl_t &) = delete;
+
   int DeviceNum;
   GenericDeviceTy *Device;
   ol_platform_impl_t &Platform;

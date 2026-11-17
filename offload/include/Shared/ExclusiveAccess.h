@@ -48,6 +48,8 @@ template <typename Ty> struct Accessor {
 
   /// Constructor to get exclusive access by taking it from \p Other.
   Accessor(Accessor<Ty> &&Other) : Ptr(Other.Ptr) { Other.Ptr = nullptr; }
+  Accessor &operator=(Accessor &&Other) = delete;
+  Accessor &operator=(Accessor &Other) = delete;
 
   Accessor(Accessor &Other) = delete;
 
