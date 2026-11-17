@@ -4055,6 +4055,81 @@ INTERCEPTOR(SIZE_T, wcrtomb, char *dest, wchar_t src, void *ps) {
 #define INIT_WCRTOMB
 #endif
 
+#if SANITIZER_INTERCEPT_C8RTOMB
+INTERCEPTOR(SIZE_T, c8rtomb, char *dest, char8_t src, void *ps) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, c8rtomb, dest, src, ps);
+  if (ps)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, ps, mbstate_t_sz);
+
+  if (!dest)
+    return REAL(c8rtomb)(dest, src, ps);
+
+  char local_dest[32];
+  SIZE_T res = REAL(c8rtomb)(local_dest, src, ps);
+  if (res != ((SIZE_T)-1)) {
+    CHECK_LE(res, sizeof(local_dest));
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dest, res);
+    internal_memcpy(dest, local_dest, res);
+  }
+  return res;
+}
+
+#define INIT_C8RTOMB COMMON_INTERCEPT_FUNCTION(c8rtomb);
+#else
+#define INIT_C8RTOMB
+#endif
+
+#if SANITIZER_INTERCEPT_C16RTOMB
+INTERCEPTOR(SIZE_T, c16rtomb, char *dest, char16_t src, void *ps) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, c16rtomb, dest, src, ps);
+  if (ps)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, ps, mbstate_t_sz);
+
+  if (!dest)
+    return REAL(c16rtomb)(dest, src, ps);
+
+  char local_dest[32];
+  SIZE_T res = REAL(c16rtomb)(local_dest, src, ps);
+  if (res != ((SIZE_T)-1)) {
+    CHECK_LE(res, sizeof(local_dest));
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dest, res);
+    internal_memcpy(dest, local_dest, res);
+  }
+  return res;
+}
+
+#define INIT_C16RTOMB COMMON_INTERCEPT_FUNCTION(c16rtomb);
+#else
+#define INIT_C16RTOMB
+#endif
+
+#if SANITIZER_INTERCEPT_C32RTOMB
+INTERCEPTOR(SIZE_T, c32rtomb, char *dest, wchar_t src, void *ps) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, c32rtomb, dest, src, ps);
+  if (ps)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, ps, mbstate_t_sz);
+
+  if (!dest)
+    return REAL(c32rtomb)(dest, src, ps);
+
+  char local_dest[32];
+  SIZE_T res = REAL(c32rtomb)(local_dest, src, ps);
+  if (res != ((SIZE_T)-1)) {
+    CHECK_LE(res, sizeof(local_dest));
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dest, res);
+    internal_memcpy(dest, local_dest, res);
+  }
+  return res;
+}
+
+#define INIT_C32RTOMB COMMON_INTERCEPT_FUNCTION(c32rtomb);
+#else
+#define INIT_C32RTOMB
+#endif
+
 #if SANITIZER_INTERCEPT_WCTOMB
 INTERCEPTOR(int, wctomb, char *dest, wchar_t src) {
   void *ctx;
@@ -10706,6 +10781,9 @@ static void InitializeCommonInterceptors() {
   INIT_WCSTOMBS;
   INIT_WCSNRTOMBS;
   INIT_WCRTOMB;
+  INIT_C8RTOMB;
+  INIT_C16RTOMB;
+  INIT_C32RTOMB;
   INIT_WCTOMB;
   INIT_TCGETATTR;
   INIT_REALPATH;

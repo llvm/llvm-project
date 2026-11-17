@@ -176,6 +176,9 @@ typedef signed char s8;
 typedef signed short s16;
 typedef signed int s32;
 typedef signed long long s64;
+#ifndef __cpp_char8_t
+typedef unsigned char char8_t;
+#endif
 #if SANITIZER_WINDOWS
 // On Windows, files are HANDLE, which is a synonim of void*.
 // Use void* to avoid including <windows.h> everywhere.

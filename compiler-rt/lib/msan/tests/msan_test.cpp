@@ -104,6 +104,21 @@ void *mempcpy(void *dest, const void *src, size_t n);
 # endif
 #endif
 
+#if defined __GLIBC__
+# define MSAN_TEST_UCHAR __GLIBC_PREREQ(2, 16)
+# define MSAN_TEST_UCHAR_C8 __GLIBC_PREREQ(2, 36)
+#elif defined __APPLE__
+# define MSAN_TEST_UCHAR 0
+# define MSAN_TEST_UCHAR_C8 0
+#else
+# define MSAN_TEST_UCHAR 1
+# define MSAN_TEST_UCHAR_C8 0
+#endif
+
+#if MSAN_TEST_UCHAR
+# include <uchar.h>
+#endif
+
 #if defined(__i386__) || defined(__x86_64__)
 # include <emmintrin.h>
 # define MSAN_HAS_M128 1
@@ -2137,6 +2152,40 @@ TEST(MemorySanitizer, wcrtomb) {
   EXPECT_EQ(buff[0], 'a');
 }
 
+#if MSAN_TEST_UCHAR
+# if MSAN_TEST_UCHAR_C8
+TEST(MemorySanitizer, c8rtomb) {
+  char8_t x = U'a';
+  char buff[10];
+  mbstate_t mbs;
+  memset(&mbs, 0, sizeof(mbs));
+  size_t res = c8rtomb(buff, x, &mbs);
+  EXPECT_EQ(res, (size_t)1);
+  EXPECT_EQ(buff[0], 'a');
+}
+# endif
+
+TEST(MemorySanitizer, c16rtomb) {
+  char16_t x = U'a';
+  char buff[10];
+  mbstate_t mbs;
+  memset(&mbs, 0, sizeof(mbs));
+  size_t res = c16rtomb(buff, x, &mbs);
+  EXPECT_EQ(res, (size_t)1);
+  EXPECT_EQ(buff[0], 'a');
+}
+
+TEST(MemorySanitizer, c32rtomb) {
+  char32_t x = U'a';
+  char buff[10];
+  mbstate_t mbs;
+  memset(&mbs, 0, sizeof(mbs));
+  size_t res = c32rtomb(buff, x, &mbs);
+  EXPECT_EQ(res, (size_t)1);
+  EXPECT_EQ(buff[0], 'a');
+}
+#endif
+
 TEST(MemorySanitizer, wctomb) {
   wchar_t x = L'a';
   char buff[10];
@@ -2176,6 +2225,46 @@ TEST(MemorySanitizer, mbrtowc) {
   EXPECT_GT(res, 0ULL);
   EXPECT_NOT_POISONED(wc);
 }
+
+#if MSAN_TEST_UCHAR
+# if MSAN_TEST_UCHAR_C8
+TEST(MemorySanitizer, mbrtoc8) {
+  mbstate_t mbs = {};
+
+  char8_t c8;
+  size_t res = mbrtoc8(&c8, "\377", 1, &mbs);
+  EXPECT_EQ(res, -1ULL);
+
+  res = mbrtoc8(&c8, "abc", 3, &mbs);
+  EXPECT_GT(res, 0ULL);
+  EXPECT_NOT_POISONED(c8);
+}
+# endif
+
+TEST(MemorySanitizer, mbrtoc16) {
+  mbstate_t mbs = {};
+
+  char16_t c16;
+  size_t res = mbrtoc16(&c16, "\377", 1, &mbs);
+  EXPECT_EQ(res, -1ULL);
+
+  res = mbrtoc16(&c16, "abc", 3, &mbs);
+  EXPECT_GT(res, 0ULL);
+  EXPECT_NOT_POISONED(c16);
+}
+
+TEST(MemorySanitizer, mbrtoc32) {
+  mbstate_t mbs = {};
+
+  char32_t c32;
+  size_t res = mbrtoc32(&c32, "\377", 1, &mbs);
+  EXPECT_EQ(res, -1ULL);
+
+  res = mbrtoc32(&c32, "abc", 3, &mbs);
+  EXPECT_GT(res, 0ULL);
+  EXPECT_NOT_POISONED(c32);
+}
+#endif
 
 TEST(MemorySanitizer, wcsftime) {
   wchar_t x[100];

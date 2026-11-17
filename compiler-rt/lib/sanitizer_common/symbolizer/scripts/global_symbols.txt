@@ -76,6 +76,9 @@ access U
 aligned_alloc U
 arc4random U
 bcmp U
+c16rtomb U
+c32rtomb U
+c8rtomb U
 calloc U
 catclose U
 catgets U
@@ -130,6 +133,9 @@ lseek64 U
 madvise U
 malloc U
 mbrlen U
+mbrtoc16 U
+mbrtoc32 U
+mbrtoc8 U
 mbrtowc U
 mbsnrtowcs U
 mbsrtowcs U
