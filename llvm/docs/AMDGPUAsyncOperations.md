@@ -26,10 +26,10 @@ The stages are:
 | Bit | Stage | Async operations |
 |---|---|---|
 | 0 | `TENSOR` | tensor loads and stores |
-| 1 | `GLOBAL_LOAD_ASYNC_TO_LDS` | global loads async to LDS |
+| 1 | `GLOBAL_LOAD_ASYNC_TO_LDS` | async global loads to LDS |
 | 2 | `GLOBAL_LOAD_ASYNC_TO_LDS_MCAST` | multicast (cluster) global loads async to LDS |
 | 3 | `GLOBAL_STORE_ASYNC_FROM_LDS` | async global stores from LDS |
-| 5 | `BUFFER_GLOBAL_LOAD` | buffer loads to LDS and pre-gfx1250 global loads to LDS |
+| 5 | `BUFFER_GLOBAL_LOAD` | async buffer loads to LDS and pre-gfx1250 async global loads to LDS |
 
 Bits 4 and 6 through 10 are reserved for future async operations, and no
 operation belongs to them yet.
@@ -223,12 +223,13 @@ void foo(global int *g, local int *l, tensor_desc t) {
   tensor_load_to_lds(l, t);
   asyncmark(TENSOR);
 
-  // Start a short LDS load and mark it in its own stage alone.
+  // Start a short async global load to LDS and mark it in its own stage alone.
   async_load_to_lds(l, g);
   asyncmark(GLOBAL_LOAD_ASYNC_TO_LDS);
 
-  // Wait for the LDS load only. The tensor load is still in flight: this wait
-  // does not name TENSOR, so it neither counts nor removes that asyncmark.
+  // Wait for the async global load to LDS only. The tensor load is still in
+  // flight: this wait does not name TENSOR, so it neither counts nor removes
+  // that asyncmark.
   wait.asyncmark(0, GLOBAL_LOAD_ASYNC_TO_LDS);
 
   // perform synchronization / use the data loaded by async_load_to_lds
