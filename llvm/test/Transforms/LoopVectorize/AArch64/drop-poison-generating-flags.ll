@@ -13,7 +13,7 @@ define void @check_widen_intrinsic_with_nnan(ptr noalias %dst.0, ptr noalias %ds
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE6:.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[SRC_1]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x double> @llvm.fabs.v4f64(<4 x double> [[WIDE_LOAD]])
@@ -22,40 +22,14 @@ define void @check_widen_intrinsic_with_nnan(ptr noalias %dst.0, ptr noalias %ds
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], -1
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr double, ptr [[DST_0]], i64 [[TMP6]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> zeroinitializer, ptr align 8 [[TMP7]], <4 x i1> [[TMP5]])
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP4]], i64 0
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
-; CHECK:       [[PRED_LOAD_IF]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = load double, ptr [[SRC_2]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x double> poison, double [[TMP10]], i64 0
-; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
-; CHECK:       [[PRED_LOAD_CONTINUE]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi <4 x double> [ poison, %[[VECTOR_BODY]] ], [ [[TMP8]], %[[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP4]], i64 1
-; CHECK-NEXT:    br i1 [[TMP13]], label %[[PRED_LOAD_IF1:.*]], label %[[PRED_LOAD_CONTINUE2:.*]]
-; CHECK:       [[PRED_LOAD_IF1]]:
-; CHECK-NEXT:    [[TMP14:%.*]] = load double, ptr [[SRC_2]], align 8
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x double> [[TMP11]], double [[TMP14]], i64 1
-; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE2]]
-; CHECK:       [[PRED_LOAD_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = phi <4 x double> [ [[TMP11]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP12]], %[[PRED_LOAD_IF1]] ]
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i1> [[TMP4]], i64 2
-; CHECK-NEXT:    br i1 [[TMP17]], label %[[PRED_LOAD_IF3:.*]], label %[[PRED_LOAD_CONTINUE4:.*]]
-; CHECK:       [[PRED_LOAD_IF3]]:
-; CHECK-NEXT:    [[TMP18:%.*]] = load double, ptr [[SRC_2]], align 8
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x double> [[TMP15]], double [[TMP18]], i64 2
-; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE4]]
-; CHECK:       [[PRED_LOAD_CONTINUE4]]:
-; CHECK-NEXT:    [[TMP19:%.*]] = phi <4 x double> [ [[TMP15]], %[[PRED_LOAD_CONTINUE2]] ], [ [[TMP16]], %[[PRED_LOAD_IF3]] ]
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i1> [[TMP4]], i64 3
-; CHECK-NEXT:    br i1 [[TMP21]], label %[[PRED_LOAD_IF5:.*]], label %[[PRED_LOAD_CONTINUE6]]
-; CHECK:       [[PRED_LOAD_IF5]]:
-; CHECK-NEXT:    [[TMP22:%.*]] = load double, ptr [[SRC_2]], align 8
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x double> [[TMP19]], double [[TMP22]], i64 3
-; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE6]]
-; CHECK:       [[PRED_LOAD_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP24:%.*]] = phi <4 x double> [ [[TMP19]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP20]], %[[PRED_LOAD_IF5]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP4]])
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i1> zeroinitializer, i1 [[TMP10]], i32 0
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[SRC_2]], <4 x i1> [[TMP11]], <4 x double> poison)
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x double> [[WIDE_MASKED_LOAD]], i64 0
 ; CHECK-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> zeroinitializer, ptr align 8 [[TMP7]], <4 x i1> [[TMP4]])
-; CHECK-NEXT:    [[TMP28:%.*]] = fcmp oeq <4 x double> [[TMP24]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = fcmp oeq double [[TMP8]], 0.000000e+00
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[TMP9]], i64 0
+; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP29:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP28]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP30:%.*]] = or <4 x i1> [[TMP5]], [[TMP29]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i32, ptr [[DST_1]], i64 [[TMP6]]
