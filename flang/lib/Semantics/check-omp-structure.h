@@ -545,6 +545,7 @@ private:
   void CheckAllowedRequiresClause(llvm::omp::Clause clause);
   void AddEndDirectiveClauses(const parser::OmpClauseList &clauses);
   void CheckTempDescriptorMappings();
+  void ClauseDecompPortabilityWarn(SemanticsContext &context_);
 
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
