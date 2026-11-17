@@ -7,7 +7,6 @@
 
 ---
 name:            test_anyext_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -30,7 +29,6 @@ body:             |
 
 ---
 name:            test_anyext_s16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -51,7 +49,6 @@ body:             |
 
 ---
 name:            test_anyext_s32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -70,7 +67,6 @@ body:             |
 
 ---
 name:            test_load_s32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -89,7 +85,6 @@ body:             |
 
 ---
 name:            test_load_mask_s8_s32_atomic
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -111,7 +106,6 @@ body:             |
 # The mask is equal to the memory size.
 ---
 name:            test_load_mask_s16_s16_atomic
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -132,7 +126,6 @@ body:             |
 # there's little point to folding.
 ---
 name:            test_load_mask_s8_s16_atomic
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -153,7 +146,6 @@ body:             |
 
 ---
 name:            test_load_mask_size_equals_dst_size
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -178,7 +170,6 @@ body:             |
 
 ---
 name:            test_zext
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -197,7 +188,6 @@ body:             |
 
 ---
 name:            test_zext_mask_larger_memsize
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -222,7 +212,6 @@ body:             |
 
 ---
 name:            test_sext
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -241,7 +230,6 @@ body:             |
 
 ---
 name:            test_sext_mask_larger_memsize
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -262,7 +250,6 @@ body:             |
 
 ---
 name:            test_non_pow2_memtype
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -286,7 +273,6 @@ body:             |
 
 ---
 name:            test_no_mask
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -307,7 +293,6 @@ body:             |
 
 ---
 name:            test_volatile
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -326,7 +311,6 @@ body:             |
 
 ---
 name:            test_volatile_mask_smaller_mem
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -346,7 +330,6 @@ body:             |
 ...
 ---
 name:            test_no_lookthrough_copies_multi_uses
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -371,11 +354,13 @@ body:             |
 
 ---
 name:            test_multi_use_load
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_multi_use_load
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(i32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
     ; CHECK-NEXT: G_STORE [[ZEXTLOAD]](i32), [[COPY1]](p0) :: (store (i8))
@@ -391,11 +376,13 @@ body:             |
 
 ---
 name:            test_multi_use_zextload
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_multi_use_zextload
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(i32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
     ; CHECK-NEXT: G_STORE [[ZEXTLOAD]](i32), [[COPY1]](p0) :: (store (i8))
@@ -411,11 +398,13 @@ body:             |
 
 ---
 name:            test_multi_use_sextload
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_multi_use_sextload
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 255
     ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p0) :: (load (i8))
@@ -433,11 +422,13 @@ body:             |
 
 ---
 name:            test_multi_use_load_large_mask
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_multi_use_load_large_mask
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 65535
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY]](p0) :: (load (i8))
@@ -455,11 +446,13 @@ body:             |
 
 ---
 name:            test_multi_use_sextload_large_mask
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_multi_use_sextload_large_mask
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 65535
     ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p0) :: (load (i8))
@@ -477,11 +470,13 @@ body:             |
 
 ---
 name:            test_multi_use_load_small_mask
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_multi_use_load_small_mask
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 255
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY]](p0) :: (load (i16))

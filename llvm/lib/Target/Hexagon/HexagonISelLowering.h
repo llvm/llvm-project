@@ -537,6 +537,25 @@ private:
   void ReplaceHvxNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                              SelectionDAG &DAG) const;
 
+  void initializeHLXLowering();
+  bool isHlxSingleTy(MVT Ty) const;
+  bool isHlxPairTy(MVT Ty) const;
+  bool isHlxOperation(SDNode *N, SelectionDAG &DAG) const;
+  bool allowsHlxMemoryAccess(MVT VecTy, MachineMemOperand::Flags Flags,
+                             unsigned *Fast) const;
+  TypePair typeHlxSplit(MVT VecTy) const;
+  SDValue splitHlxPairArgLoad(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                              SDValue BaseAddr, MVT PairTy,
+                              MachinePointerInfo PtrInfo) const;
+  void splitHlxPairArgStore(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                            SDValue StoreVal, SDValue BaseAddr, MVT PairTy,
+                            MachinePointerInfo PtrInfo,
+                            SmallVectorImpl<SDValue> &MemOpChains) const;
+  SDValue LowerHlxPairIntrinsic(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHlxMaskedOp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHlxSelect(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHlxOperation(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue combineTruncateBeforeLegal(SDValue Op, DAGCombinerInfo &DCI) const;
 
   SDValue combineConcatOfShuffles(SDValue Op, SelectionDAG &DAG) const;

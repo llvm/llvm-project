@@ -5,7 +5,6 @@
 ---
 name:            test
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef:   true
 registers:
 liveins:

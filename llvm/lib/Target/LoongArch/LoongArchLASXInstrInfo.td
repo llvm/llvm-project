@@ -2878,9 +2878,44 @@ def : Pat<(v4i32(fp_to_sint v4f64:$vj)),
                (XVFTINTRZ_L_D v4f64:$vj)),
               sub_128)>;
 
+// See the LSX counterpart in LoongArchLSXInstrInfo.td.
+multiclass PatVrFToIntRoundLASX<SDNode ToInt, SDNode ToIntSat, SDNode Round,
+                                string InstWS, string InstLD, string InstWD,
+                                string InstLS> {
+  def : Pat<(v8i32 (ToInt (Round v8f32:$vj))),
+            (!cast<LAInst>(InstWS) v8f32:$vj)>;
+  def : Pat<(v4i64 (ToInt (Round v4f64:$vj))),
+            (!cast<LAInst>(InstLD) v4f64:$vj)>;
+  def : Pat<(v8i32 (ToIntSat (Round v8f32:$vj), i32)),
+            (!cast<LAInst>(InstWS) v8f32:$vj)>;
+  def : Pat<(v4i64 (ToIntSat (Round v4f64:$vj), i64)),
+            (!cast<LAInst>(InstLD) v4f64:$vj)>;
+  def : Pat<(v8i32 (loongarch_vftintrz_w_d (Round v4f64:$vj),
+                                           (Round v4f64:$vk))),
+            (!cast<LAInst>(InstWD) v4f64:$vj, v4f64:$vk)>;
+  def : Pat<(v4i64 (ToInt (Round v4f32:$vj))),
+            (!cast<LAInst>(InstLS)
+                (XVPERMI_D (SUBREG_TO_REG v4f32:$vj, sub_128), 216))>;
+}
+
+defm : PatVrFToIntRoundLASX<fp_to_sint, fp_to_sint_sat, ffloor,
+                            "XVFTINTRM_W_S", "XVFTINTRM_L_D",
+                            "XVFTINTRM_W_D", "XVFTINTRML_L_S">;
+defm : PatVrFToIntRoundLASX<fp_to_sint, fp_to_sint_sat, fceil,
+                            "XVFTINTRP_W_S", "XVFTINTRP_L_D",
+                            "XVFTINTRP_W_D", "XVFTINTRPL_L_S">;
+defm : PatVrFToIntRoundLASX<fp_to_sint, fp_to_sint_sat, froundeven,
+                            "XVFTINTRNE_W_S", "XVFTINTRNE_L_D",
+                            "XVFTINTRNE_W_D", "XVFTINTRNEL_L_S">;
+defm : PatVrFToIntRoundLASX<fp_to_sint, fp_to_sint_sat, ftrunc,
+                            "XVFTINTRZ_W_S", "XVFTINTRZ_L_D",
+                            "XVFTINTRZ_W_D", "XVFTINTRZL_L_S">;
+
 // XVFTINTRZ_{W_SU/L_DU}
 def : Pat<(v8i32 (fp_to_uint v8f32:$vj)), (XVFTINTRZ_WU_S v8f32:$vj)>;
+def : Pat<(v8i32 (fp_to_uint (ftrunc v8f32:$vj))), (XVFTINTRZ_WU_S v8f32:$vj)>;
 def : Pat<(v4i64 (fp_to_uint v4f64:$vj)), (XVFTINTRZ_LU_D v4f64:$vj)>;
+def : Pat<(v4i64 (fp_to_uint (ftrunc v4f64:$vj))), (XVFTINTRZ_LU_D v4f64:$vj)>;
 def : Pat<(v4i64 (fp_to_uint v4f32:$vj)),
           (XVFTINTRZ_LU_D
               (XVFCVTL_D_S
