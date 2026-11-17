@@ -8,7 +8,8 @@ define void @test(ptr noalias %dst, double %a, double %b, ptr noalias %c) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> <double poison, double -0.000000e+00>, double [[A]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[B]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP2]], <2 x double> [[TMP3]], <2 x double> [[TMP1]])
-; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[DST]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> [[TMP1]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[DST]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %c0 = load double, ptr %c, align 8

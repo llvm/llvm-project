@@ -539,12 +539,6 @@ print *, is_contiguous(a(::2))                   ! prints T in Flang
 * A comma (or semicolon in `DECIMAL='COMMA'` or `DC` mode) in a
   fixed-width numeric input field terminates the field rather than
   signaling an invalid character error.
-* The `B`, `O`, and `Z` edit descriptors may be used with `CHARACTER`
-  items in formatted input and output.  The item's storage is edited as
-  an unsigned integer of `LEN` times the character kind bytes in the
-  host's byte order; on a little-endian host, `'AB'` is written by `Z4`
-  as `4241`.  F2023 13.7.2.4 p1 permits these edit descriptors only for
-  integer, real, complex, enum, and enumeration type items.
 * Arguments to the intrinsic functions `MAX` and `MIN` are converted
   when necessary to the type of the result.
   An `OPTIONAL`, `POINTER`, or `ALLOCATABLE` argument after
