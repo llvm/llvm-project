@@ -26,7 +26,9 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+#ifdef SA_RESTORER
 extern "C" void __restore_rt();
+#endif
 
 // The POSIX definition of struct sigaction and the sigaction data structure
 // expected by the rt_sigaction syscall differ in their definition. So, we
@@ -35,11 +37,14 @@ extern "C" void __restore_rt();
 //
 // NOTE: Though the kernel definition does not have a union to include the
 // handler taking siginfo_t * argument, one can set sa_handler to sa_sigaction
-// if SA_SIGINFO is set in sa_flags.
+// if SA_SIGINFO is set in sa_flags. Like the kernel, we only have sa_restorer
+// where SA_RESTORER is defined.
 struct KernelSigaction {
   LIBC_INLINE KernelSigaction &operator=(const struct sigaction &sa) {
     sa_flags = sa.sa_flags;
+#ifdef SA_RESTORER
     sa_restorer = sa.sa_restorer;
+#endif
     sa_mask = sa.sa_mask;
     if (sa_flags & SA_SIGINFO) {
       sa_sigaction = sa.sa_sigaction;
@@ -50,10 +55,12 @@ struct KernelSigaction {
   }
 
   LIBC_INLINE operator struct sigaction() const {
-    struct sigaction sa;
+    struct sigaction sa{};
     sa.sa_flags = static_cast<int>(sa_flags);
     sa.sa_mask = sa_mask;
+#ifdef SA_RESTORER
     sa.sa_restorer = sa_restorer;
+#endif
     if (sa_flags & SA_SIGINFO)
       sa.sa_sigaction = sa_sigaction;
     else
@@ -66,7 +73,9 @@ struct KernelSigaction {
     void (*sa_sigaction)(int, siginfo_t *, void *);
   };
   unsigned long sa_flags;
+#ifdef SA_RESTORER
   void (*sa_restorer)(void);
+#endif
   // Our public definition of sigset_t matches that of the kernel's definition.
   // So, we can use the public sigset_t type here.
   sigset_t sa_mask;
@@ -154,17 +163,19 @@ public:
 LIBC_INLINE ErrorOr<int>
 unchecked_sigaction(int signal, const struct sigaction *__restrict libc_new,
                     struct sigaction *__restrict libc_old) {
-  vdso::TypedSymbol<vdso::VDSOSym::RTSigReturn> rt_sigreturn;
   KernelSigaction kernel_new;
   if (libc_new) {
     kernel_new = *libc_new;
+#ifdef SA_RESTORER
+    vdso::TypedSymbol<vdso::VDSOSym::RTSigReturn> rt_sigreturn;
     if (!(kernel_new.sa_flags & SA_RESTORER)) {
       kernel_new.sa_flags |= SA_RESTORER;
       kernel_new.sa_restorer = rt_sigreturn ? rt_sigreturn : __restore_rt;
     }
+#endif
   }
 
-  KernelSigaction kernel_old;
+  KernelSigaction kernel_old{};
   int ret = LIBC_NAMESPACE::syscall_impl<int>(
       SYS_rt_sigaction, signal, libc_new ? &kernel_new : nullptr,
       libc_old ? &kernel_old : nullptr, sizeof(sigset_t));

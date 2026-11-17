@@ -72,10 +72,14 @@
 #define SA_NOCLDWAIT 0x00000002
 #define SA_SIGINFO 0x00000004
 #define SA_RESTART 0x10000000
-#define SA_RESTORER 0x04000000
 #define SA_ONSTACK 0x08000000
 #define SA_NODEFER 0x40000000
 #define SA_RESETHAND 0x80000000
+// Like the kernel, do not define SA_RESTORER on RISC-V, whose struct sigaction
+// has no sa_restorer field.
+#if !defined(__riscv)
+#define SA_RESTORER 0x04000000
+#endif
 
 // Signal stack flags
 #define SS_ONSTACK 0x1
