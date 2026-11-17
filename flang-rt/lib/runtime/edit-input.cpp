@@ -109,7 +109,6 @@ static RT_API_ATTRS bool EditBOZInput(
     return false;
   }
   // Reset to start of significant digits
-  auto fieldEnd{connection.positionInRecord - leftTabLimit};
   io.HandleAbsolutePosition(start);
   remaining.reset();
   // Make a second pass now that the digit count is known
@@ -152,17 +151,6 @@ static RT_API_ATTRS bool EditBOZInput(
     *data |= digit << shift;
     shift -= LOG2_BASE;
   }
-  // The second pass re-read characters already counted for SIZE=.  The
-  // distance it moved is exactly what it added, because the slow
-  // NextInField() path calls GotChar() once for each byte it moves past,
-  // while a padding blank at the end of the record neither moves nor counts.
-  // If the second pass is changed to read through a FastAsciiField, it should
-  // re-scan the digits without counting them instead of keeping this
-  // subtraction.
-  io.GotChar(
-      -static_cast<int>(connection.positionInRecord - leftTabLimit - start));
-  // Resume after the whole field, including any trailing blanks or separator.
-  io.HandleAbsolutePosition(fieldEnd);
   return CheckCompleteListDirectedField(io, edit);
 }
 
