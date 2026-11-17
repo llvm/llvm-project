@@ -208,7 +208,7 @@ YAMLRemarkParser::parseRemark(yaml::Document &RemarkEntry) {
       else
         return MaybeStr.takeError();
     } else if (KeyName == "Hotness") {
-      if (Expected<unsigned> MaybeU = parseUnsigned(RemarkField))
+      if (Expected<uint64_t> MaybeU = parseUnsigned<uint64_t>(RemarkField))
         TheRemark.Hotness = *MaybeU;
       else
         return MaybeU.takeError();
@@ -289,12 +289,13 @@ Expected<StringRef> YAMLRemarkParser::parseStr(yaml::KeyValueNode &Node) {
   return error("expected a value of scalar type.", Node);
 }
 
-Expected<unsigned> YAMLRemarkParser::parseUnsigned(yaml::KeyValueNode &Node) {
+template <typename T>
+Expected<T> YAMLRemarkParser::parseUnsigned(yaml::KeyValueNode &Node) {
   SmallVector<char, 4> Tmp;
   auto *Value = dyn_cast_if_present<yaml::ScalarNode>(Node.getValue());
   if (!Value)
     return error("expected a value of scalar type.", Node);
-  unsigned UnsignedValue = 0;
+  T UnsignedValue = 0;
   if (Value->getValue(Tmp).getAsInteger(10, UnsignedValue))
     return error("expected a value of integer type.", *Value);
   return UnsignedValue;

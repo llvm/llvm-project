@@ -88,8 +88,9 @@ protected:
   Expected<StringRef> parseKey(yaml::KeyValueNode &Node);
   /// Parse one value to a string.
   virtual Expected<StringRef> parseStr(yaml::KeyValueNode &Node);
-  /// Parse one value to an unsigned.
-  Expected<unsigned> parseUnsigned(yaml::KeyValueNode &Node);
+  /// Parse one value to an unsigned integer of the requested width.
+  template <typename T = unsigned>
+  Expected<T> parseUnsigned(yaml::KeyValueNode &Node);
   /// Parse a debug location.
   Expected<RemarkLocation> parseDebugLoc(yaml::KeyValueNode &Node);
   /// Parse an argument.
