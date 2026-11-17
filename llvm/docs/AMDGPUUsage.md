@@ -2147,6 +2147,7 @@ backend memory model when the target triple OS is `amdhsa` (see
 The memory model supported is based on the HSA memory model [{ref}`HSA <hsa>`] which is
 based in turn on HRF-indirect with scope inclusion [{ref}`HRF <hrf>`]. The happens-before
 relation is transitive over the synchronizes-with relation independent of scope
+(except as noted for {ref}`one-as syncscopes<amdgpu-one-as>`)
 and synchronizes-with allows the memory scope instances to be inclusive (see
 table {ref}`amdgpu-amdhsa-llvm-sync-scopes-table`). Concurrent atomic operations
 only operate atomically with respect to each other if they are included in each
@@ -2156,19 +2157,6 @@ all have inclusive scopes, then R returns `undef` (see {ref}`memmodel`).
 This is different to the OpenCL [{ref}`OpenCL <opencl>`] memory model which does not have scope
 inclusion and requires the memory scopes to exactly match. However, this
 is conservatively correct for OpenCL.
-
-There is a `one-as` variant for each sync scope. If a `release` or
-`acquire` operation with a `one-as` sync scope participates in a
-synchronization, only the effects of memory operations in the address space of
-the `one-as` operation are synchronized. The address space of a `fence`
-instruction with `one-as` sync scope is specified via
-`amdgpu-synchronize-as` MMRAs (see {ref}`amdgpu-fence-as`).
-
-:::{note}
-The behavior of `one-as` sync scopes is currently not well-founded in the
-memory model. Synchronization via a `one-as` sync scope effectively causes
-the happens-before relation to be non-transitive.
-:::
 
 :::{list-table} AMDHSA LLVM Sync Scopes
 :name: amdgpu-amdhsa-llvm-sync-scopes-table
@@ -2224,6 +2212,33 @@ the happens-before relation to be non-transitive.
 * - `singlethread-one-as`
   - Same as `singlethread` but only synchronizes with other operations within the same address space.
 :::
+
+(amdgpu-one-as)=
+
+#### `one-as` syncscopes
+
+There is a `one-as` variant for each scope which limits the synchronization to
+operations performed only in one address space:
+
+- When an atomic `release` or `acquire` operation specifies a `one-as`
+  syncscope, it synchronizes only the effects of memory operations performed in
+  the address space that the atomic itself operates on.
+- Similarly, when a `fence` operation specifies a `one-as` syncscope, it
+  synchronizes only the effects of memory operations performed in the specified
+  address space, and only when paired with an atomic in the same address space.
+
+The address space of a `fence` instruction with `one-as` sync scope is specified
+via `amdgpu-synchronize-as` MMRAs (see {ref}`amdgpu-fence-as`).
+
+**Limitations**
+
+- Synchronization through `one-as` sync scopes does not provide transitive
+  happens-before across address spaces. In other words, transitive
+  happens-before through a `one-as` operation requires every synchronization
+  link in the chain to include that operation's address space.
+- Specifying a `one-as` syncscope on a `fence` explicitly opts out of the
+  {ref}`synchronization established via barriers<amdgpu-barrier-memory-model>`,
+  since barrier objects do not access any of the memory address spaces.
 
 (amdgpu-fat-buffer-oob-handling)=
 
@@ -8735,36 +8750,30 @@ these sequences.
 - {ref}`amdgpu-amdhsa-memory-model-gfx12`
 - {ref}`amdgpu-amdhsa-memory-model-gfx12_5`
 
-(amdgpu-amdhsa-execution-barriers-memory-model)=
+(amdgpu-barrier-memory-model)=
 
-##### Execution Barriers
+##### `synchronizes-with` Using Barriers
 
 :::{note}
 See {ref}`amdgpu-execution-synchronization-barriers-execution-model` for definitions of
 the terminology used in this section.
 :::
 
-- A barrier *arrive* operation `A` can pair with a release fence program-ordered before it
-  to form a `barrier-arrive-release` `BR`. The synchronization scope and the set of address
-  spaces affected are determined by the release fence.
-- A barrier *wait* operation `W` can pair with an acquire fence program-ordered after it to
-  form a `barrier-wait-acquire` `BA`. The synchronization scope and the set of address
-  spaces affected are determined by the acquire fence.
+A release fence `FR` *synchronizes-with* an acquire fence `FA` in address
+space *AS* if and only if there exist a barrier *arrive* `A` and barrier *wait*
+`W` such that:
 
-A `BR` *synchronizes-with* `BA` in an address space *AS* if and only if:
-
+- `FR` is *program-ordered* before `A`.
 - `A` *barrier-executes-before* `W`.
-- *BA* and *BR*'s {ref}`synchronization scope<amdgpu-memory-scopes>` overlap.
-- *BA* and *BR*'s {ref}`synchronization scope<amdgpu-memory-scopes>`
-  allow cross address space synchronization (they cannot have `one-as`) {sup}`1`.
-- *BA* and *BR*'s address spaces both include *AS*.
+- `W` is *program-ordered* before `FA`.
+- The {ref}`synchronization scopes<amdgpu-memory-scopes>` of `FR` and `FA` overlap.
+- Both fences include *AS* in their sets of synchronized address spaces.
 
-Informally, we can deduce from the above rules that:
+A fence that specifies a {ref}`one-as syncscope<amdgpu-one-as>` cannot be
+paired in this manner with a barrier.
 
-- *Happens-before* is consistent with *barrier-executes-before*.
-
-{sup}`1`: This is a requirement due to how current hardware implements barrier operations.
-This limitation may be lifted in the future.
+Informally, we can deduce from the above rules that *happens-before* is
+consistent with *barrier-executes-before*.
 
 (amdgpu-fence-as)=
 
