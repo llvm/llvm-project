@@ -1002,10 +1002,18 @@ bool MachineOutliner::publishUnprofitableCandidates(InstructionMapper &Mapper) {
       return Other.EndIdx < ME.StartIdx;
     });
     for (const MatchedEntry &Other : ActiveMatches) {
-      if (Other.Count != ME.Count) {
+      if (Other.Count == ME.Count)
+        continue;
+      // A containing sequence already covers the instructions of a sequence
+      // nested in it, so drop only the nested group. A partial overlap drops
+      // both groups.
+      const bool MEContained = ME.EndIdx <= Other.EndIdx;
+      const bool OtherContained =
+          Other.StartIdx == ME.StartIdx && Other.EndIdx <= ME.EndIdx;
+      if (!OtherContained)
         ConflictingGroups.set(SequenceID);
+      if (!MEContained)
         ConflictingGroups.set(Other.Count - 1);
-      }
     }
     ActiveMatches.push_back(ME);
 
@@ -1023,10 +1031,10 @@ bool MachineOutliner::publishUnprofitableCandidates(InstructionMapper &Mapper) {
   bool Published = false;
   for (const auto &[SequenceID, Candidates] :
        llvm::enumerate(CandidateGroups)) {
-    // Publishing competing sequences would count the same instructions twice.
+    // Publishing overlapping sequences would count the same instructions twice.
     // Read mode prunes overlapping sites, but cannot reconcile their merged
-    // counts across modules. Conservatively discard both groups rather than
-    // assigning sites using a local order that can differ from Read mode.
+    // counts across modules. Conservatively discard conflicting groups rather
+    // than assigning sites using a local order that can differ from Read mode.
     if (Candidates.empty() || ConflictingGroups.test(SequenceID))
       continue;
 

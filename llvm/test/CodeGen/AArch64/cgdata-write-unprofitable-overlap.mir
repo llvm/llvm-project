@@ -20,36 +20,41 @@
 # globally. Outlining those B-C sites costs 2*4 + (8+4) = 20 bytes instead of
 # 2*8 = 16, even with one folded helper, despite the stale count of six.
 #
-# Suppress both conflicting groups, including B-C's standalone site. The
-# independent D-E group still publishes two sites and becomes profitable at
-# a merged count of four. Check actual Read-mode selection, not just counts.
+# B-C is nested in A-B-C, so publish only the containing A-B-C and drop B-C,
+# including its standalone site. A-B-C and the independent D-E group each
+# publish two sites and become profitable at a merged count of four. Check
+# actual Read-mode selection: A-B-C and D-E are outlined, B-C is left alone.
 #
-# COUNT-TWO: Terminals:       2
-# COUNT-FOUR: Terminals:       4
+# COUNT-TWO-COUNT-2: Terminals:       2
+# COUNT-FOUR-COUNT-2: Terminals:       4
 #
 # READ-LABEL: _abc1:
-# READ: orr w0, wzr, #0x3
-# READ-NEXT: orr w1, wzr, #0x7
-# READ-NEXT: orr w2, wzr, #0xf
-# READ-NEXT: ; InlineAsm Start
+# READ: bl _OUTLINED_FUNCTION_0.content.
 # READ-LABEL: _abc2:
-# READ: orr w0, wzr, #0x3
-# READ-NEXT: orr w1, wzr, #0x7
-# READ-NEXT: orr w2, wzr, #0xf
-# READ-NEXT: ; InlineAsm Start
+# READ: bl _OUTLINED_FUNCTION_1.content.
 # READ-LABEL: _bc:
 # READ: orr w1, wzr, #0x7
 # READ-NEXT: orr w2, wzr, #0xf
 # READ-NEXT: ; InlineAsm Start
 # READ-LABEL: _de1:
-# READ: bl _OUTLINED_FUNCTION_0.content.
+# READ: bl _OUTLINED_FUNCTION_2.content.
 # READ-LABEL: _de2:
-# READ: bl _OUTLINED_FUNCTION_1.content.
+# READ: bl _OUTLINED_FUNCTION_3.content.
 # READ-LABEL: _OUTLINED_FUNCTION_0.content.{{[0-9]+}}:
+# READ: orr w0, wzr, #0x3
+# READ-NEXT: orr w1, wzr, #0x7
+# READ-NEXT: orr w2, wzr, #0xf
+# READ-NEXT: ret
+# READ-LABEL: _OUTLINED_FUNCTION_1.content.{{[0-9]+}}:
+# READ: orr w0, wzr, #0x3
+# READ-NEXT: orr w1, wzr, #0x7
+# READ-NEXT: orr w2, wzr, #0xf
+# READ-NEXT: ret
+# READ-LABEL: _OUTLINED_FUNCTION_2.content.{{[0-9]+}}:
 # READ: orr w3, wzr, #0x1f
 # READ-NEXT: orr w4, wzr, #0x3f
 # READ-NEXT: ret
-# READ-LABEL: _OUTLINED_FUNCTION_1.content.{{[0-9]+}}:
+# READ-LABEL: _OUTLINED_FUNCTION_3.content.{{[0-9]+}}:
 # READ: orr w3, wzr, #0x1f
 # READ-NEXT: orr w4, wzr, #0x3f
 # READ-NEXT: ret
