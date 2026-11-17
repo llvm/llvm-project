@@ -23,6 +23,8 @@
 
 #include "SILowerI1Copies.h"
 #include "AMDGPU.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineIDFSSAUpdater.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/InitializePasses.h"
@@ -854,29 +856,52 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
 
 void Vreg1LoweringHelper::constrainAsLaneMask(AMDGPU::Incoming &In) {}
 
+static bool isNoReturnRejoin(const BasicBlock &BB, const BasicBlock *&Target) {
+  auto *Br = dyn_cast<UncondBrInst>(BB.getTerminator());
+  auto *Call = Br ? dyn_cast_or_null<CallInst>(Br->getPrevNode()) : nullptr;
+  if (!Call || isa<IntrinsicInst>(Call) || !Call->doesNotReturn())
+    return false;
+  Target = Br->getSuccessor(0);
+  return true;
+}
+
 /// AMDGPUUnifyDivergentExitNodes branches from blocks that call a noreturn
 /// function to the rest of the function, so that every divergent branch
 /// reconverges. Lane mask lowering relies on this through post-dominance. Once
 /// it is done, remove the edges so that nothing is live across the call.
-static bool removeEdgesAfterNoReturnCalls(MachineFunction &MF) {
+static bool removeEdgesAfterNoReturnCalls(MachineFunction &MF, bool Changed) {
   const SIInstrInfo *TII = MF.getSubtarget<GCNSubtarget>().getInstrInfo();
-  bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     const BasicBlock *BB = MBB.getBasicBlock();
-    auto *Br = BB ? dyn_cast<UncondBrInst>(BB->getTerminator()) : nullptr;
-    auto *Call = Br ? dyn_cast_or_null<CallInst>(Br->getPrevNode()) : nullptr;
-    if (!Call || isa<IntrinsicInst>(Call) || !Call->doesNotReturn() ||
-        MBB.succ_size() != 1)
+    const BasicBlock *Target = nullptr;
+    if (!BB || !isNoReturnRejoin(*BB, Target))
       continue;
 
-    MachineBasicBlock *Succ = *MBB.succ_begin();
-    if (Succ->getBasicBlock() == BB || Succ->pred_size() == 1)
-      continue;
+    SmallVector<MachineBasicBlock *, 4> Work;
+    SmallPtrSet<MachineBasicBlock *, 8> Seen;
+    Work.push_back(&MBB);
+    Seen.insert(&MBB);
+    while (!Work.empty()) {
+      MachineBasicBlock *Cur = Work.pop_back_val();
+      SmallVector<MachineBasicBlock *, 4> Succs(Cur->succ_begin(),
+                                                Cur->succ_end());
+      if (Succs.size() == 1 && Succs[0]->getBasicBlock() == Target &&
+          Succs[0]->pred_size() != 1) {
+        TII->removeBranch(*Cur);
+        Succs[0]->removePHIsIncomingValuesForPredecessor(*Cur);
+        Cur->removeSuccessor(Succs[0]);
+        Changed = true;
+        continue;
+      }
 
-    TII->removeBranch(MBB);
-    Succ->removePHIsIncomingValuesForPredecessor(MBB);
-    MBB.removeSuccessor(Succ);
-    Changed = true;
+      for (MachineBasicBlock *Succ : Succs) {
+        const BasicBlock *SuccBB = Succ->getBasicBlock();
+        if (SuccBB && SuccBB != BB)
+          continue;
+        if (Seen.insert(Succ).second)
+          Work.push_back(Succ);
+      }
+    }
   }
   return Changed;
 }
@@ -901,8 +926,8 @@ static bool runFixI1Copies(MachineFunction &MF, MachineDominatorTree &MDT,
   Changed |= Helper.lowerCopiesFromI1();
   Changed |= Helper.lowerPhis();
   Changed |= Helper.lowerCopiesToI1();
-  Changed = Helper.cleanConstrainRegs(Changed);
-  CFGChanged = removeEdgesAfterNoReturnCalls(MF);
+  Changed |= Helper.cleanConstrainRegs(Changed);
+  CFGChanged |= removeEdgesAfterNoReturnCalls(MF, Changed);
   return Changed || CFGChanged;
 }
 

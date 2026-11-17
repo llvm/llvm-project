@@ -22,6 +22,7 @@
 #include "AMDGPUUnifyDivergentExitNodes.h"
 #include "AMDGPU.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -282,16 +283,14 @@ bool AMDGPUUnifyDivergentExitNodesImpl::run(Function &F, DominatorTree *DT,
   bool Changed = false;
   std::vector<DominatorTree::UpdateType> Updates;
 
-  SmallPtrSet<BasicBlock *, 32> ReachesReturn;
-  SmallVector<BasicBlock *, 8> Worklist;
-  for (BasicBlock *BB : PDT.roots()) {
-    if (isa<ReturnInst>(BB->getTerminator()))
-      Worklist.push_back(BB);
-  }
-  while (!Worklist.empty()) {
-    BasicBlock *BB = Worklist.pop_back_val();
-    if (ReachesReturn.insert(BB).second)
-      append_range(Worklist, predecessors(BB));
+  // Blocks that can reach a return, including the return. Iteration fills the
+  // set.
+  df_iterator_default_set<BasicBlock *, 32> ReachesReturn;
+  for (BasicBlock *Root : PDT.roots()) {
+    if (!isa<ReturnInst>(Root->getTerminator()))
+      continue;
+    for (BasicBlock *BB : inverse_depth_first_ext(Root, ReachesReturn))
+      (void)BB;
   }
 
   SmallVector<BasicBlock *, 4> Roots;
