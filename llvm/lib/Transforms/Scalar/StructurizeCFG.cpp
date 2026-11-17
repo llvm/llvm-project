@@ -1443,14 +1443,17 @@ static bool runImpl(Function &F, DominatorTree &DT, LoopInfo &LI,
 
   LI.releaseMemory();
   LI.analyze(DT);
-  SmallDenseMap<Loop *, unsigned> NumOldLoops;
-  for (auto [Header, LoopID] : OldLoops)
-    if (Loop *L = LI.getLoopFor(Header))
-      ++NumOldLoops[L];
-  for (auto [Header, LoopID] : OldLoops)
-    if (Loop *L = LI.getLoopFor(Header);
-        L && LoopID && NumOldLoops.lookup(L) == 1)
+  SmallMapVector<Loop *, MDNode *, 8> LoopIDs;
+  for (auto [Header, LoopID] : OldLoops) {
+    if (Loop *L = LI.getLoopFor(Header)) {
+      if (auto [It, Inserted] = LoopIDs.try_emplace(L, LoopID); !Inserted)
+        It->second = nullptr;
+    }
+  }
+  for (auto [L, LoopID] : LoopIDs) {
+    if (LoopID)
       L->setLoopID(LoopID);
+  }
   return true;
 }
 
