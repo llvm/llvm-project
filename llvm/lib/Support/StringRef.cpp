@@ -210,14 +210,15 @@ size_t StringRef::rfind_insensitive(char C, size_t From) const {
 // Written to be vectorizable. GCC at -O3 fully unrolls the inner loop before
 // vectorizing, which leaves it scalar; the pragma prevents that.
 static size_t rfindByte(const char *Data, size_t End, char C) {
+  constexpr size_t VectorWidth = 16;
   size_t I = End;
-  for (; I >= 16; I -= 16) {
-    const char *Chunk = Data + I - 16;
+  for (; I >= VectorWidth; I -= VectorWidth) {
+    const char *Chunk = Data + I - VectorWidth;
     unsigned char Any = 0;
 #if defined(__GNUC__)
 #pragma GCC unroll 1
 #endif
-    for (int J = 0; J != 16; ++J)
+    for (size_t J = 0; J != VectorWidth; ++J)
       Any |= Chunk[J] == C;
     if (Any)
       break;
