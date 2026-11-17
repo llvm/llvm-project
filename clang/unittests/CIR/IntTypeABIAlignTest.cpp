@@ -53,8 +53,11 @@ protected:
   /// The ABI and language alignments of \p ty in a module whose data layout
   /// aligns i8 through i128 to their widths, as x86-64 does, and caps the
   /// language alignment of a _BitInt at \p bitIntMaxAlignBits, if given.
-  Alignments targetAlignments(mlir::Type ty,
-                              std::optional<uint32_t> bitIntMaxAlignBits = {}) {
+  /// \p recordLayouts become the module's cir.record_layouts entries.
+  Alignments
+  targetAlignments(mlir::Type ty,
+                   std::optional<uint32_t> bitIntMaxAlignBits = {},
+                   llvm::ArrayRef<mlir::NamedAttribute> recordLayouts = {}) {
     OpBuilder builder(&context);
     auto module = ModuleOp::create(builder.getUnknownLoc());
     auto i64 = mlir::IntegerType::get(&context, 64);
@@ -72,6 +75,9 @@ protected:
     }
     module->setAttr(mlir::DLTIDialect::kDataLayoutAttrName,
                     mlir::DataLayoutSpecAttr::get(&context, entries));
+    if (!recordLayouts.empty())
+      module->setAttr(CIRDialect::getRecordLayoutsAttrName(),
+                      mlir::DictionaryAttr::get(&context, recordLayouts));
     cir::CIRDataLayout dl(module);
     Alignments result{dl.layout.getTypeABIAlignment(ty),
                       dl.getTypeLanguageAlignment(ty)};
@@ -157,6 +163,38 @@ TEST_F(IntTypeABIAlignTest, UnionLanguageAlignmentUsesAllMembers) {
   Alignments alignments = targetAlignments(unionTy, 64);
   EXPECT_EQ(alignments.abi, 4u);
   EXPECT_EQ(alignments.language, 8u);
+}
+
+// struct Outer3 { char c; struct Inner3 { _BitInt(128) bi; } inner; } is
+// packed in CIR only so that inner sits at its C offset of 8, since Inner3's
+// ABI alignment is 16. Its language alignment is the record alignment in its
+// layout entry. Without an entry, the packed record gets 1.
+TEST_F(IntTypeABIAlignTest, PackedRecordLanguageAlignmentFromLayout) {
+  auto u8 = IntType::get(&context, 8, false);
+  auto s8 = IntType::get(&context, 8, true);
+  mlir::Type innerMembers[] = {
+      IntType::get(&context, 128, true, /*isBitInt=*/true)};
+  auto inner = StructType::get(&context, innerMembers,
+                               mlir::StringAttr::get(&context, "Inner3"),
+                               /*packed=*/false, /*is_class=*/false,
+                               RecordType::getAllDataKinds(innerMembers));
+  mlir::Type outerMembers[] = {s8, cir::ArrayType::get(u8, 7), inner};
+  RecordMemberKind outerKinds[] = {
+      RecordMemberKind::Data, RecordMemberKind::Pad, RecordMemberKind::Data};
+  auto outerName = mlir::StringAttr::get(&context, "Outer3");
+  auto outer = StructType::get(&context, outerMembers, outerName,
+                               /*packed=*/true, /*is_class=*/false, outerKinds);
+
+  mlir::NamedAttribute layouts[] = {mlir::NamedAttribute(
+      outerName, RecordLayoutAttr::get(&context, ArgPassingKind::CanPassInRegs,
+                                       /*has_trivial_dtor=*/true,
+                                       /*record_align=*/8))};
+  Alignments withLayout = targetAlignments(outer, 64, layouts);
+  EXPECT_EQ(withLayout.abi, 1u);
+  EXPECT_EQ(withLayout.language, 8u);
+
+  Alignments withoutLayout = targetAlignments(outer, 64);
+  EXPECT_EQ(withoutLayout.language, 1u);
 }
 
 } // namespace

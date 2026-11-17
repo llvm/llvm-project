@@ -106,24 +106,10 @@ static bool memberIsEmptyRecord(mlir::Type ty) {
   return recTy && recTy.isEmptyForABI();
 }
 
-/// A record's declared alignment, which the ABI uses for the byval and sret
-/// alignment of an indirect argument.  DataLayout derives alignment from the
-/// members, so it cannot see `__attribute__((aligned(N)))`.  The declared value
-/// comes from the module's record-layout metadata instead.  CIRGen emits an
-/// entry for every record it names, so the computed fallback only serves
-/// hand-written CIR.
-static llvm::Align recordDeclaredAlign(ModuleOp modOp, cir::RecordType recTy,
-                                       const cir::CIRDataLayout &cirDL) {
-  auto layout = cir::tryGetRecordLayout(modOp, recTy.getName());
-  if (!layout)
-    return llvm::Align(cirDL.getTypeLanguageAlignment(recTy));
-  return llvm::Align(layout.getRecordAlign());
-}
-
 /// A record's unadjusted alignment, the alignment its members give it before
-/// an alignment attribute on the record raises it.  Like the declared
-/// alignment, it comes from the module's record-layout metadata, and the
-/// computed fallback only serves hand-written CIR.
+/// an alignment attribute on the record raises it.  It comes from the module's
+/// record-layout metadata, and the computed fallback only serves hand-written
+/// CIR.
 static llvm::Align recordUnadjustedAlign(ModuleOp modOp, cir::RecordType recTy,
                                          const cir::CIRDataLayout &cirDL) {
   auto layout = cir::tryGetRecordLayout(modOp, recTy.getName());
@@ -411,7 +397,7 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
           flags = flags | llvm::abi::RecordFlags::HasFlexibleArrayMember;
         llvm::TypeSize sizeBits = llvm::TypeSize::getFixed(
             dl.getTypeSizeInBits(type).getFixedValue());
-        llvm::Align align = recordDeclaredAlign(modOp, recTy, cirDL);
+        llvm::Align align(cirDL.getTypeLanguageAlignment(recTy));
         llvm::Align unadjustedAlign =
             recordUnadjustedAlign(modOp, recTy, cirDL);
 

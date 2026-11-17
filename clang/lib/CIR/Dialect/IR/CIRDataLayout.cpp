@@ -1,4 +1,5 @@
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -9,7 +10,8 @@ using namespace cir;
 //                       DataLayout Class Implementation
 //===----------------------------------------------------------------------===//
 
-CIRDataLayout::CIRDataLayout(mlir::ModuleOp modOp) : layout(modOp) {
+CIRDataLayout::CIRDataLayout(mlir::ModuleOp modOp)
+    : module(modOp), layout(modOp) {
   reset(modOp.getDataLayoutSpec());
 }
 
@@ -59,17 +61,15 @@ uint64_t CIRDataLayout::getTypeLanguageAlignment(mlir::Type ty) const {
           return intTy.getBitIntAlignRequirement(bitIntMaxAlignBits);
         return layout.getTypeABIAlignment(intTy);
       })
-      .Case([&](cir::StructType structTy) -> uint64_t {
-        if (structTy.getPacked())
+      .Case([&](cir::RecordType recTy) -> uint64_t {
+        if (cir::RecordLayoutAttr recLayout =
+                cir::tryGetRecordLayout(module, recTy.getName()))
+          return recLayout.getRecordAlign();
+        // A record without a layout entry, such as one in hand-written CIR.
+        assert(recTy.isComplete() && "Cannot get layout of incomplete records");
+        if (recTy.getPacked())
           return 1;
-        assert(structTy.isComplete() &&
-               "Cannot get layout of incomplete records");
-        return maxMemberAlignment(structTy.getMembers());
-      })
-      .Case([&](cir::UnionType unionTy) -> uint64_t {
-        if (unionTy.getPacked())
-          return 1;
-        return maxMemberAlignment(unionTy.getMembers());
+        return maxMemberAlignment(recTy.getMembers());
       })
       .Case<cir::ArrayType, cir::ComplexType, cir::MatrixType>(
           [&](auto elementsTy) -> uint64_t {

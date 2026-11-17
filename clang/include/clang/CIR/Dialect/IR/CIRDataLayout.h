@@ -31,6 +31,9 @@ class CIRDataLayout {
   /// #cir.bitint_spec entry.
   uint64_t bitIntMaxAlignBits = 0;
 
+  /// The module whose cir.record_layouts entries give record alignments.
+  mlir::ModuleOp module;
+
 public:
   mlir::DataLayout layout;
 

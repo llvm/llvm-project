@@ -2523,17 +2523,10 @@ mlir::LogicalResult classifyRegisterPair(cir::VAArgOp op,
   return mlir::success();
 }
 
-/// The alignment an argument is placed at.  A record can require more than
-/// the types of its members imply, from an `aligned` attribute on the record
-/// or on one of its fields, and neither raises the alignment of any type.
-/// Only the record layout knows, so the member-derived value alone can be too
-/// small.
+/// The alignment an argument is placed at, which is the language alignment of
+/// its type.
 uint64_t argumentAreaAlign(mlir::Type ty, mlir::ModuleOp modOp) {
-  uint64_t align = cir::CIRDataLayout(modOp).getTypeLanguageAlignment(ty);
-  if (auto recTy = mlir::dyn_cast<cir::RecordType>(ty))
-    if (auto layout = cir::tryGetRecordLayout(modOp, recTy.getName()))
-      align = std::max<uint64_t>(align, layout.getRecordAlign());
-  return align;
+  return cir::CIRDataLayout(modOp).getTypeLanguageAlignment(ty);
 }
 
 mlir::Value roundPointerUpToAlignment(CIRBaseBuilderTy &b, mlir::Location loc,
