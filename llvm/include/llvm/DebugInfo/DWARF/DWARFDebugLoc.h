@@ -98,14 +98,6 @@ public:
     SmallVector<DWARFLocationEntry, 2> Entries;
   };
 
-private:
-  using LocationLists = SmallVector<LocationList, 4>;
-
-  /// A list of all the variables in the debug_loc section, each one describing
-  /// the locations in which the variable is stored.
-  LocationLists Locations;
-
-public:
   DWARFDebugLoc(DWARFDataExtractor Data)
       : DWARFLocationTable(std::move(Data)) {}
 
