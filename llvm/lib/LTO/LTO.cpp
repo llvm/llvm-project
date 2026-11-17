@@ -2157,9 +2157,9 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
       (WholeProgramVisibilityEnabledInLTO && !AlwaysRenamePromotedLocals)
           ? &ExternallyVisibleSymbolNames
           : nullptr;
-  runWholeProgramDevirtOnIndex(
-      ThinLTO.CombinedIndex, ExportedGUIDs, LocalWPDTargetsMap,
-      ExternallyVisibleSymbolNamesPtr, &RegularLTO.Ctx);
+  runWholeProgramDevirtOnIndex(ThinLTO.CombinedIndex, ExportedGUIDs,
+                               LocalWPDTargetsMap,
+                               ExternallyVisibleSymbolNamesPtr);
 
   auto isPrevailing = [&](GlobalValue::GUID GUID, const GlobalValueSummary *S) {
     return ThinLTO.isPrevailingModuleForGUID(GUID, S->modulePath());

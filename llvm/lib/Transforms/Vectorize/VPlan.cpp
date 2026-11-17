@@ -54,6 +54,10 @@
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
+
 /// @{
 /// Metadata attribute names
 const char LLVMLoopVectorizeFollowupAll[] = "llvm.loop.vectorize.followup_all";
@@ -1784,7 +1788,7 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
       return;
     auto &SE = *PSE.getSE();
     AverageVectorTripCount = SE.getSmallConstantTripCount(VectorLoop);
-    if (!AverageVectorTripCount)
+    if (ProfcheckDisableMetadataFixes || !AverageVectorTripCount)
       return;
     if (ScalarPH)
       RemainderAverageTripCount =

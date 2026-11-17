@@ -2225,9 +2225,14 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
   assert(!cir::MissingFeatures::opFuncExceptions());
   assert(!cir::MissingFeatures::opFuncParameterAttributes());
   assert(!cir::MissingFeatures::opFuncOperandBundles());
-  // The caller sets function attributes from the replacement's declaration.
-  // Copying the old attributes could retain incompatible assumptions from a
-  // different declaration that happens to share the same symbol name.
+  unsigned numInherentAttrs = 0;
+  oldFn->getName().walkInherentAttrs(
+      oldFn, [&](llvm::StringRef, mlir::Attribute &attr) {
+        numInherentAttrs += bool(attr);
+      });
+  if (numInherentAttrs <= 1)
+    errorNYI(old->getLoc(),
+             "replaceUsesOfNonProtoTypeWithRealFunction: Attribute forwarding");
 
   // Mark new function as originated from a no-proto declaration.
   newFn.setNoProto(oldFn.getNoProto());
@@ -2289,11 +2294,7 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
         realCallOp = builder.createIndirectCallOp(
             noProtoCallOp.getLoc(), casted, callFnType, callOperands);
       }
-      // The argument and result types are unchanged, so preserve their
-      // attributes and the call semantics. The new callee is already set.
-      for (mlir::NamedAttribute attr : noProtoCallOp->getAttrs())
-        if (attr.getName() != cir::CIRDialect::getCalleeAttrName())
-          realCallOp->setAttr(attr.getName(), attr.getValue());
+      realCallOp.setCallingConv(noProtoCallOp.getCallingConv());
 
       // Replace old no proto call with fixed call.
       noProtoCallOp.replaceAllUsesWith(realCallOp);

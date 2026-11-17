@@ -60,7 +60,11 @@ class TestModuleAliasedPath(TestBase):
         )
         self.assertEqual(main_bkpt.GetNumLocations(), 1)
 
-        _, process, _, _ = lldbutil.run_to_breakpoint_do_run(self, target, main_bkpt)
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        self.assertState(process.GetState(), lldb.eStateStopped)
+        self.assertIsNotNone(
+            lldbutil.get_one_thread_stopped_at_breakpoint(process, main_bkpt)
+        )
 
         lib_name = self.platformContext.getFullLibName("foo")
         for name in ["a.out", lib_name]:

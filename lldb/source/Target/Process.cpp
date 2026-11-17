@@ -2909,11 +2909,6 @@ Status Process::Launch(ProcessLaunchInfo &launch_info) {
   if (status.Fail())
     return status;
 
-  if (state_after_launch == eStateExited) {
-    HandlePrivateEvent(first_stop_event_sp);
-    return Status();
-  }
-
   if (state_after_launch != eStateStopped &&
       state_after_launch != eStateCrashed)
     return Status();
@@ -3035,9 +3030,9 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
   }
 
   if (state == eStateExited) {
-    // We exited while trying to launch. Don't call DidLaunch as that's not
-    // likely to work. Let Launch handle the event after restoring the outer
-    // launch listener.
+    // We exited while trying to launch somehow.  Don't call DidLaunch
+    // as that's not likely to work, and return an invalid pid.
+    HandlePrivateEvent(event_sp);
     return Status();
   }
 

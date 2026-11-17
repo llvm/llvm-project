@@ -156,10 +156,17 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
         side_effect.not_so_fancy = None
         side_effect.a_list_function = None
 
-        # Now finish, and make sure the return value is correct.
-        _, self.process, self.thread, _ = lldbutil.run_to_breakpoint_do_run(
-            self, self.target, body_bkpt
+        # Now launch the process, and do not stop at entry point.
+        self.process = self.target.LaunchSimple(
+            None, None, self.get_process_working_directory()
         )
+
+        self.assertTrue(self.process, PROCESS_IS_VALID)
+
+        # Now finish, and make sure the return value is correct.
+        threads = lldbutil.get_threads_stopped_at_breakpoint(self.process, body_bkpt)
+        self.assertEqual(len(threads), 1, "Stopped at inner breakpoint.")
+        self.thread = threads[0]
 
         print(
             "* Num Locations: {0} ; Hit Count {1}".format(

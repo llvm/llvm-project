@@ -83,7 +83,6 @@ public:
   void addFile(InputFile *file);
 
   void addClangLibSearchPaths(const std::string &argv0);
-  void addClangPerTargetRuntimeDirSearchPaths();
 
   // Used by ArchiveFile to enqueue members.
   void enqueueArchiveMember(const Archive::Child &c, const Archive::Symbol &sym,
@@ -205,7 +204,6 @@ private:
   llvm::SmallString<128> universalCRTLibPath;
   int sdkMajor = 0;
   llvm::SmallString<128> windowsSdkLibPath;
-  std::string clangRuntimeLibDir;
 
   // For linkreprofullpathrsp
   std::unique_ptr<llvm::raw_fd_ostream> reproFile;

@@ -102,6 +102,7 @@ class ProcessSaveCoreTestCase(TestBase):
     def test_save_core_to_nonwritable_dir(self):
         """Test that saving a core file to a non-writable directory produces a helpful error message."""
         self.build()
+        exe = self.getBuildArtifact("a.out")
 
         # Create a non-writable temporary directory.
         temp_dir = tempfile.mkdtemp()
@@ -120,7 +121,10 @@ class ProcessSaveCoreTestCase(TestBase):
         make_readonly(temp_dir)
         self.addTearDownHook(cleanup)
 
-        lldbutil.run_to_name_breakpoint(self, "bar")
+        target = self.dbg.CreateTarget(exe)
+        target.BreakpointCreateByName("bar")
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        self.assertState(process.GetState(), lldb.eStateStopped)
 
         # Try to save a core file to the non-writable directory.
         core_file = os.path.join(temp_dir, "core")

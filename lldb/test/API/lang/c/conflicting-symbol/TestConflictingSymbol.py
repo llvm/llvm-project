@@ -27,7 +27,7 @@ class TestConflictingSymbols(TestBase):
         # automatically uploaded
         environment = self.registerSharedLibrariesWithTarget(target, ["One", "Two"])
 
-        one_bkpt_id = lldbutil.run_break_set_by_source_regexp(
+        lldbutil.run_break_set_by_source_regexp(
             self, "// break here", extra_options="-f One.c", num_expected_locations=-2
         )
         lldbutil.run_break_set_by_source_regexp(
@@ -37,11 +37,16 @@ class TestConflictingSymbols(TestBase):
             self, "// break here", extra_options="-f main.c", num_expected_locations=1
         )
 
-        launch_info = target.GetLaunchInfo()
-        launch_info.SetEnvironmentEntries(environment, False)
-        launch_info.SetWorkingDirectory(self.get_process_working_directory())
-        lldbutil.run_to_breakpoint_do_run(
-            self, target, target.FindBreakpointByID(one_bkpt_id), launch_info
+        process = target.LaunchSimple(
+            None, environment, self.get_process_working_directory()
+        )
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        # The stop reason of the thread should be breakpoint.
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
         )
 
         lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)
@@ -102,15 +107,20 @@ class TestConflictingSymbols(TestBase):
         # automatically uploaded
         environment = self.registerSharedLibrariesWithTarget(target, ["One", "Two"])
 
-        bkpt_id = lldbutil.run_break_set_by_source_regexp(
+        lldbutil.run_break_set_by_source_regexp(
             self, "// break here", extra_options="-f main.c", num_expected_locations=1
         )
 
-        launch_info = target.GetLaunchInfo()
-        launch_info.SetEnvironmentEntries(environment, False)
-        launch_info.SetWorkingDirectory(self.get_process_working_directory())
-        lldbutil.run_to_breakpoint_do_run(
-            self, target, target.FindBreakpointByID(bkpt_id), launch_info
+        process = target.LaunchSimple(
+            None, environment, self.get_process_working_directory()
+        )
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        # The stop reason of the thread should be breakpoint.
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
         )
 
         # As we are shadowing the conflicting symbol, there should be no

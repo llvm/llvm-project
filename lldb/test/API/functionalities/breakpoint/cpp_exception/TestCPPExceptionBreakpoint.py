@@ -44,7 +44,17 @@ class TestCPPExceptionBreakpoint(TestBase):
         )
         self.assertTrue(exception_bkpt.IsValid(), "Created exception breakpoint.")
 
-        lldbutil.run_to_breakpoint_do_run(self, self.target, exception_bkpt)
+        process = self.target.LaunchSimple(
+            None, None, self.get_process_working_directory()
+        )
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        thread_list = lldbutil.get_threads_stopped_at_breakpoint(
+            process, exception_bkpt
+        )
+        self.assertEqual(
+            len(thread_list), 1, "One thread stopped at the exception breakpoint."
+        )
 
     def do_dummy_target_cpp_exception_bkpt(self):
         exe = self.getBuildArtifact("a.out")
@@ -67,4 +77,14 @@ class TestCPPExceptionBreakpoint(TestBase):
             "Target primed with exception breakpoint from dummy target.",
         )
 
-        lldbutil.run_to_breakpoint_do_run(self, self.target, exception_bkpt)
+        process = self.target.LaunchSimple(
+            None, None, self.get_process_working_directory()
+        )
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        thread_list = lldbutil.get_threads_stopped_at_breakpoint(
+            process, exception_bkpt
+        )
+        self.assertEqual(
+            len(thread_list), 1, "One thread stopped at the exception breakpoint."
+        )

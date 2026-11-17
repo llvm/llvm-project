@@ -22082,8 +22082,7 @@ Value *ARMTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
 
 void ARMTargetLowering::emitAtomicCmpXchgNoStoreLLBalance(
     IRBuilderBase &Builder) const {
-  if (!(Subtarget->isThumb() ? Subtarget->hasV7Clrex()
-                             : Subtarget->hasV6KOps()))
+  if (!Subtarget->hasV7Ops())
     return;
   Builder.CreateIntrinsic(Intrinsic::arm_clrex, {});
 }

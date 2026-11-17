@@ -17,7 +17,6 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/null_check.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -27,7 +26,7 @@ LLVM_LIBC_FUNCTION(size_t, regerror,
                     char *__restrict errbuf, size_t errbuf_size)) {
   (void)preg; // preg is reserved for implementation-specific messages.
 
-  cpp::string_view msg = [errcode]() -> cpp::string_view {
+  cpp::string_view msg = [errcode]() -> const char * {
     switch (errcode) {
     case 0:
       return "Success";
@@ -64,8 +63,7 @@ LLVM_LIBC_FUNCTION(size_t, regerror,
 
   size_t msg_len = msg.size() + 1; // include NUL
 
-  if (errbuf_size > 0) {
-    LIBC_CRASH_ON_NULLPTR(errbuf);
+  if (errbuf_size > 0 && errbuf) {
     size_t copy_len = msg_len < errbuf_size ? msg_len : errbuf_size;
     inline_memcpy(errbuf, msg.data(), copy_len - 1);
     errbuf[copy_len - 1] = '\0';

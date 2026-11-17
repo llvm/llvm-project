@@ -9,8 +9,10 @@ from lldbsuite.test import lldbutil
 
 
 class TestInlinedFunctionStatic(TestBase):
-    def continue_to(self, process, breakpoint):
-        threads = lldbutil.continue_to_breakpoint(process, breakpoint)
+    def continue_to(self, process, comment):
+        threads = lldbutil.continue_to_source_breakpoint(
+            self, process, "// break " + comment, lldb.SBFileSpec("main.c")
+        )
         self.assertEqual(len(threads), 1)
 
     def check(self, inlined, variables):
@@ -23,18 +25,14 @@ class TestInlinedFunctionStatic(TestBase):
     @skipIf(debug_info=["pdb"])
     def test(self):
         self.build()
-        source = lldb.SBFileSpec("main.c")
-        target, process, _, _ = lldbutil.run_to_source_breakpoint(
-            self, "// break inlined", source
+        _, process, _, _ = lldbutil.run_to_source_breakpoint(
+            self, "// break inlined", lldb.SBFileSpec("main.c")
         )
         self.check(True, {"calls": "41"})
 
-        nested_bkpt = target.BreakpointCreateBySourceRegex("// break nested", source)
-        both_bkpt = target.BreakpointCreateBySourceRegex("// break both", source)
-
         # The copy of both() inlined into main, then the out-of-line copy.
         for inlined, nested, total in ((True, "201", "101"), (False, "202", "102")):
-            self.continue_to(process, nested_bkpt)
+            self.continue_to(process, "nested")
             self.check(inlined, {"nested": nested, "total": total})
-            self.continue_to(process, both_bkpt)
+            self.continue_to(process, "both")
             self.check(inlined, {"total": total})

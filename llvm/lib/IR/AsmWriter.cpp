@@ -3412,8 +3412,6 @@ getWholeProgDevirtResKindName(WholeProgramDevirtResolution::Kind K) {
     return "singleImpl";
   case WholeProgramDevirtResolution::BranchFunnel:
     return "branchFunnel";
-  case WholeProgramDevirtResolution::Speculative:
-    return "speculative";
   }
   llvm_unreachable("invalid WholeProgramDevirtResolution kind");
 }
@@ -3508,8 +3506,7 @@ void AssemblyWriter::printWPDRes(const WholeProgramDevirtResolution &WPDRes) {
   Out << "wpdRes: (kind: ";
   Out << getWholeProgDevirtResKindName(WPDRes.TheKind);
 
-  if (WPDRes.TheKind == WholeProgramDevirtResolution::SingleImpl ||
-      WPDRes.TheKind == WholeProgramDevirtResolution::Speculative) {
+  if (WPDRes.TheKind == WholeProgramDevirtResolution::SingleImpl) {
     Out << ", singleImplName: \"";
     printEscapedString(WPDRes.SingleImplName, Out);
     Out << "\"";

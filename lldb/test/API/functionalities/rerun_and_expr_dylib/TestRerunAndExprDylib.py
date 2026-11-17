@@ -81,10 +81,11 @@ class TestRerunExprDylib(TestBase):
             }
         )
 
-        target, process, _, dlclose_bkpt = lldbutil.run_to_source_breakpoint(
-            self, "dlclose", lldb.SBFileSpec("main.cpp")
-        )
+        exe = self.getBuildArtifact("a.out")
+        target = self.dbg.CreateTarget(exe)
+        target.BreakpointCreateBySourceRegex("dlclose", lldb.SBFileSpec("main.cpp"))
         target.BreakpointCreateBySourceRegex("return", lldb.SBFileSpec("main.cpp"))
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         self.expect_expr(
             "*foo",
@@ -106,7 +107,7 @@ class TestRerunExprDylib(TestBase):
         # Rerun program within the same target
         process.Continue()
         process.Destroy()
-        _, process, _, _ = lldbutil.run_to_breakpoint_do_run(self, target, dlclose_bkpt)
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         self.expect_expr(
             "*foo",

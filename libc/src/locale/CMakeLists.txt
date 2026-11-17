@@ -4,13 +4,8 @@ add_object_library(
     locale.cpp
   HDRS
     locale.h
-    locale_data.h
   DEPENDS
     libc.hdr.types.locale_t
-    libc.src.__support.common
-    libc.src.__support.CPP.string_view
-    libc.src.__support.macros.attributes
-    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
@@ -32,14 +27,9 @@ add_entrypoint_object(
   HDRS
     newlocale.h
   DEPENDS
-    .locale
     libc.hdr.locale_macros
     libc.hdr.types.locale_t
-    libc.src.__support.common
-    libc.src.__support.CPP.string_view
-    libc.src.__support.libc_errno
-    libc.src.__support.macros.config
-    libc.src.errno.errno
+    .locale
 )
 
 add_entrypoint_object(
@@ -70,11 +60,8 @@ add_entrypoint_object(
   HDRS
     uselocale.h
   DEPENDS
-    .locale
-    libc.hdr.locale_macros
     libc.hdr.types.locale_t
-    libc.src.__support.common
-    libc.src.__support.macros.config
+    .locale
 )
 
 add_entrypoint_object(

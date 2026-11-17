@@ -2601,6 +2601,8 @@ if.end.icp:                                       ; preds = %if.false.orig_indir
   ret void
 ```
 
+This feature is temporarily ignored at the LLVM side when LTO is enabled.
+TODO: Update the comment when the LLVM side supports this feature for LTO.
 This feature is turned off by default.
 :::
 
@@ -2816,7 +2818,8 @@ file. Address-significance tables allow linkers to implement
 [safe ICF](https://research.google.com/pubs/archive/36912.pdf) without the false
 positives that can result from other implementation techniques such as
 relocation scanning. Address-significance tables are enabled by default
-on ELF targets when using the integrated assembler.
+on ELF targets when using the integrated assembler. This flag currently
+only has an effect on ELF targets.
 :::
 
 (funique_internal_linkage_names)=

@@ -509,6 +509,7 @@ bool PPCMIPeephole::simplifyCode() {
       // a def of an invalid register as the instruction is going away.
       if (!MRI->getUniqueVRegDef(RegToUpdate))
         MO.setReg(PPC::NoRegister);
+      MRI->clearKillFlags(RegToUpdate);
       for (MachineOperand &Def : MRI->def_operands(RegToUpdate))
         Def.setIsDead(false);
     }
@@ -1429,6 +1430,7 @@ bool PPCMIPeephole::simplifyCode() {
   for (Register Reg : RegsToUpdate) {
     if (MRI->reg_empty(Reg))
       continue;
+    MRI->clearKillFlags(Reg);
     for (MachineOperand &Def : MRI->def_operands(Reg))
       Def.setIsDead(false);
   }

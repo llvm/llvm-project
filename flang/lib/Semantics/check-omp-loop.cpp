@@ -481,6 +481,12 @@ void OmpStructureChecker::CheckUnrollFullTripCount(
   }
 }
 
+const parser::Name OmpStructureChecker::GetLoopIndex(
+    const parser::DoConstruct *x) {
+  using Bounds = parser::LoopControl::Bounds;
+  return std::get<Bounds>(x->GetLoopControl()->u).Name().thing;
+}
+
 void OmpStructureChecker::CheckIterationVariables(
     const parser::OpenMPLoopConstruct &x) {
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};

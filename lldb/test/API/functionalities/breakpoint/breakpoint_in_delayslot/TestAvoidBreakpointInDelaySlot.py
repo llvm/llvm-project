@@ -16,10 +16,18 @@ class AvoidBreakpointInDelaySlotAPITestCase(TestBase):
         exe = self.getBuildArtifact("a.out")
         self.expect("file " + exe, patterns=["Current executable set to .*a.out.*"])
 
-        target, _, _, breakpoint = lldbutil.run_to_name_breakpoint(
-            self, "main", bkpt_module="a.out"
+        # Create a target by the debugger.
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        breakpoint = target.BreakpointCreateByName("main", "a.out")
+        self.assertTrue(
+            breakpoint and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
         )
-        self.assertEqual(breakpoint.GetNumLocations(), 1)
+
+        # Now launch the process, and do not stop at entry point.
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        self.assertTrue(process, PROCESS_IS_VALID)
 
         list = target.FindFunctions("foo", lldb.eFunctionNameTypeAuto)
         self.assertEqual(list.GetSize(), 1)

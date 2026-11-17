@@ -22,7 +22,7 @@ class ProcessAPITestCase(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
 
-        (target, process, _, _) = lldbutil.run_to_source_breakpoint(
+        target, process, _, _ = lldbutil.run_to_source_breakpoint(
             self, "Set break point", lldb.SBFileSpec("main.cpp")
         )
 
@@ -33,7 +33,7 @@ class ProcessAPITestCase(TestBase):
         """Test that a launched process reports as a live debug session."""
         self.build()
 
-        (target, process, _, _) = lldbutil.run_to_source_breakpoint(
+        target, process, _, _ = lldbutil.run_to_source_breakpoint(
             self, "Set break point", lldb.SBFileSpec("main.cpp")
         )
 
@@ -322,9 +322,14 @@ class ProcessAPITestCase(TestBase):
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-        _, process, _, _ = lldbutil.run_to_line_breakpoint(
-            self, lldb.SBFileSpec("main.cpp"), self.line
-        )
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        breakpoint = target.BreakpointCreateByLocation("main.cpp", self.line)
+        self.assertTrue(breakpoint, VALID_BREAKPOINT)
+
+        # Launch the process, and do not stop at the entry point.
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         error = lldb.SBError()
         num = process.GetNumSupportedHardwareWatchpoints(error)
@@ -523,3 +528,47 @@ class ProcessAPITestCase(TestBase):
         error = process.DeallocateMemory(addr)
         if not error.Success():
             self.fail("SBProcess.DeallocateMemory() failed")
+
+    def test_process_extension(self):
+        "Test Python SBProcessExtension"
+        self.build()
+        target, process, thread, _ = lldbutil.run_to_source_breakpoint(
+            self,
+            "// Set break point at this line and check variable 'my_char'.",
+            lldb.SBFileSpec("main.cpp"),
+        )
+        # checking process status on break point
+        self.assertTrue(process.is_alive)
+        self.assertTrue(process.is_stopped)
+        self.assertFalse(process.is_running)
+        self.assertEqual(process.state, lldb.eStateStopped)
+
+        # checking process PID broadcaster and target
+        self.assertEqual(process.id, process.GetProcessID())
+        self.assertEqual(int(process), process.GetProcessID())
+        self.assertEqual(process.target, target)
+        self.assertTrue(process.broadcaster.IsValid())
+
+        # threads test
+        self.assertEqual(process.num_threads, len(process))
+        self.assertEqual(process.num_threads, len(process.threads))
+        self.assertEqual(process.num_threads, len(process.thread))
+        self.assertEqual(
+            [t.GetThreadID() for t in process],
+            [t.GetThreadID() for t in process.threads],
+        )
+
+        self.assertEqual(process.selected_thread.GetThreadID(), thread.GetThreadID())
+        process.selected_thread = process.thread[0]
+        self.assertEqual(
+            process.selected_thread.GetThreadID(), process.thread[0].GetThreadID()
+        )
+        
+        #checking status after continue and returning 0
+        process.Continue()
+        self.assertFalse(process.is_alive)
+        self.assertFalse(process.is_running)
+        self.assertFalse(process.is_stopped)
+        self.assertEqual(process.state, lldb.eStateExited)
+        self.assertEqual(process.exit_state ,0)
+        self.assertEqual(process.exit_description, process.GetExitDescription())

@@ -1,5 +1,4 @@
-// RUN: %libomp-compile && env OMP_NUM_THREADS_ALL=8 \
-// RUN:   env -u OMP_NUM_THREADS %libomp-run
+// RUN: %libomp-compile && env OMP_NUM_THREADS_ALL=8 %libomp-run
 //
 // OpenMP 6.0: every non-host device falls through to `_ALL` when no
 // `_DEV[_d]` is set.

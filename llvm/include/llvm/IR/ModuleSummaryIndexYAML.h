@@ -102,8 +102,6 @@ template <> struct ScalarEnumerationTraits<WholeProgramDevirtResolution::Kind> {
     io.enumCase(value, "SingleImpl", WholeProgramDevirtResolution::SingleImpl);
     io.enumCase(value, "BranchFunnel",
                 WholeProgramDevirtResolution::BranchFunnel);
-    io.enumCase(value, "Speculative",
-                WholeProgramDevirtResolution::Speculative);
   }
 };
 

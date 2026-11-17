@@ -12948,11 +12948,8 @@ static Intrinsic::ID getRVPScalarMulPartsIntrinsic(unsigned IntNo) {
 }
 
 /// Return the accumulate form of multiply-parts intrinsic \p IntNo, or
-/// Intrinsic::not_intrinsic if there is none for the input type \p SrcVT.
-static Intrinsic::ID getRVPMulPartsAccIntrinsic(unsigned IntNo, EVT SrcVT) {
-  if (SrcVT.getScalarSizeInBits() == 8)
-    return Intrinsic::not_intrinsic;
-
+/// Intrinsic::not_intrinsic if there is none.
+static Intrinsic::ID getRVPMulPartsAccIntrinsic(unsigned IntNo) {
   switch (IntNo) {
   default:
     return Intrinsic::not_intrinsic;
@@ -20071,11 +20068,10 @@ static SDValue combineAddMulParts(SDNode *N, SelectionDAG &DAG,
 
   for (unsigned I = 0; I != 2; ++I) {
     SDValue Mul = N->getOperand(I);
-    if (Mul.getOpcode() != ISD::INTRINSIC_WO_CHAIN ||
-        Mul.getNumOperands() <= 1 || !Mul.hasOneUse())
+    if (Mul.getOpcode() != ISD::INTRINSIC_WO_CHAIN || !Mul.hasOneUse())
       continue;
-    Intrinsic::ID AccId = getRVPMulPartsAccIntrinsic(
-        Mul.getConstantOperandVal(0), Mul.getOperand(1).getValueType());
+    Intrinsic::ID AccId =
+        getRVPMulPartsAccIntrinsic(Mul.getConstantOperandVal(0));
     if (AccId == Intrinsic::not_intrinsic)
       continue;
 

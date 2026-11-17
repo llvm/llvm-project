@@ -1085,8 +1085,7 @@ void ThinLTOCodeGenerator::run() {
   // performing IR-based WPD in hybrid regular/thin LTO mode).
   std::map<ValueInfo, std::vector<VTableSlotSummary>> LocalWPDTargetsMap;
   std::set<GlobalValue::GUID> ExportedGUIDs;
-  runWholeProgramDevirtOnIndex(*Index, ExportedGUIDs, LocalWPDTargetsMap,
-                               nullptr, nullptr);
+  runWholeProgramDevirtOnIndex(*Index, ExportedGUIDs, LocalWPDTargetsMap);
   GUIDPreservedSymbols.insert_range(ExportedGUIDs);
 
   // Compute prevailing symbols

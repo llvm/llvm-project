@@ -462,16 +462,17 @@ public:
                             cir::DynamicCastInfoAttr info) {
     auto castKind =
         isRefCast ? cir::DynamicCastKind::Ref : cir::DynamicCastKind::Ptr;
-    return cir::DynamicCastOp::create(*this, loc, destType, castKind, src,
-                                      info);
+    return cir::DynamicCastOp::create(*this, loc, destType, castKind, src, info,
+                                      /*relative_layout=*/false);
   }
 
-  mlir::Value createDynCastToVoid(mlir::Location loc, mlir::Value src) {
+  mlir::Value createDynCastToVoid(mlir::Location loc, mlir::Value src,
+                                  bool vtableUseRelativeLayout) {
     auto srcPtrTy = mlir::cast<cir::PointerType>(src.getType());
     cir::PointerType destTy = getVoidPtrTy(srcPtrTy.getAddrSpace());
-    return cir::DynamicCastOp::create(*this, loc, destTy,
-                                      cir::DynamicCastKind::Ptr, src,
-                                      cir::DynamicCastInfoAttr{});
+    return cir::DynamicCastOp::create(
+        *this, loc, destTy, cir::DynamicCastKind::Ptr, src,
+        cir::DynamicCastInfoAttr{}, vtableUseRelativeLayout);
   }
 
   //===--------------------------------------------------------------------===//

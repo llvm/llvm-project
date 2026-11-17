@@ -717,7 +717,12 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
         return false;
       if (RA.getExtraInfo().getStage(*Intf) == RS_Done)
         return false;
-      bool Urgent = isUrgentEviction(VirtReg, *Intf);
+      bool Urgent =
+          !VirtReg.isSpillable() &&
+          (Intf->isSpillable() ||
+           RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(VirtReg.reg())) <
+               RegClassInfo.getNumAllocatableRegs(
+                   MRI->getRegClass(Intf->reg())));
 
       unsigned IntfCascade = RA.getExtraInfo().getCascade(Intf->reg());
       // There is a potential that the model could be adversarial and
@@ -731,14 +736,9 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
           getEvictionCount(Intf->reg()) > MaxEvictionCount && !Urgent)
         return false;
 
-      // Only urgent evictions may evict unspillable ranges, as in the default
-      // advisor where their infinite weight fails shouldEvict.
-      if (!Urgent && !Intf->isSpillable())
-        return false;
-
       // Only evict older cascades or live ranges without a cascade.
       if (Cascade <= IntfCascade) {
-        if (!Urgent || Cascade == IntfCascade)
+        if (!Urgent)
           return false;
         ++NumUrgent;
       }
@@ -814,6 +814,7 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   }
   if (Available == 0) {
     // Nothing to decide, nothing to learn.
+    assert(!MustFindEviction);
     return MCRegister::NoRegister;
   }
   const size_t ValidPosLimit = Pos;

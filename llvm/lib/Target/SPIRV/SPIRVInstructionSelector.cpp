@@ -600,14 +600,12 @@ void SPIRVInstructionSelector::resetVRegsType(MachineFunction &MF) {
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     Register Reg = Register::index2VirtReg(I);
     LLT RegType = MRI.getType(Reg);
-    LLT ScalarTy =
-        RegType.isFloatOrFloatVector() ? LLT::float64() : LLT::integer(64);
     if (RegType.isScalar())
-      MRI.setType(Reg, ScalarTy);
+      MRI.setType(Reg, LLT::scalar(64));
     else if (RegType.isPointer())
       MRI.setType(Reg, LLT::pointer(0, 64));
     else if (RegType.isVector())
-      MRI.setType(Reg, LLT::fixed_vector(2, ScalarTy));
+      MRI.setType(Reg, LLT::fixed_vector(2, LLT::scalar(64)));
   }
   for (const auto &MBB : MF) {
     for (const auto &MI : MBB) {

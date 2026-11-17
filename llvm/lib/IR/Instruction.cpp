@@ -1375,32 +1375,7 @@ bool Instruction::mayThrow(bool IncludePhaseOneUnwind) const {
 }
 
 bool Instruction::mayHaveSideEffects() const {
-  switch (getOpcode()) {
-  case Instruction::Call:
-  case Instruction::Invoke:
-  case Instruction::CallBr:
-    return mayWriteToMemory() || mayThrow() || !willReturn();
-  case Instruction::Load:
-    // Ordered loads write to memory, and volatile loads may not return.
-    return !cast<LoadInst>(this)->isUnordered();
-  case Instruction::CleanupRet:
-    return cast<CleanupReturnInst>(this)->unwindsToCaller();
-  case Instruction::CatchSwitch:
-    return cast<CatchSwitchInst>(this)->unwindsToCaller();
-  case Instruction::Store:
-  case Instruction::VAArg:
-  case Instruction::Fence:
-  case Instruction::AtomicCmpXchg:
-  case Instruction::AtomicRMW:
-  case Instruction::CatchPad:
-  case Instruction::CatchRet:
-  case Instruction::Resume:
-    return true;
-  default:
-    assert(!mayWriteToMemory() && !mayThrow() && willReturn() &&
-           "missing instruction with side effects");
-    return false;
-  }
+  return mayWriteToMemory() || mayThrow() || !willReturn();
 }
 
 bool Instruction::isSafeToRemove() const {

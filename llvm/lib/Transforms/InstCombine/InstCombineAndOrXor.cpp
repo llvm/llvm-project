@@ -4144,15 +4144,20 @@ Instruction *InstCombinerImpl::FoldOrOfLogicalAnds(Value *Op0, Value *Op1) {
                                m_Not(m_Specific(SelOp0->getTrueValue())));
     if (MayNeedFreeze)
       C = Builder.CreateFreeze(C);
-    Value *C2 = nullptr, *A2 = nullptr, *B2 = nullptr;
-    if (match(Op0, m_LogicalAnd(m_Specific(C), m_Value(A2))) && SelOp0)
-      return SelectInst::Create(C, A, B, "", nullptr, SelOp0);
-    if (match(Op1, m_LogicalAnd(m_Not(m_Value(C2)), m_Value(B2))) && SelOp1) {
-      SelectInst *NewSI = SelectInst::Create(C, A, B, "", nullptr, SelOp1);
-      NewSI->swapProfMetadata();
-      return NewSI;
+    if (!ProfcheckDisableMetadataFixes) {
+      Value *C2 = nullptr, *A2 = nullptr, *B2 = nullptr;
+      if (match(Op0, m_LogicalAnd(m_Specific(C), m_Value(A2))) && SelOp0) {
+        return SelectInst::Create(C, A, B, "", nullptr, SelOp0);
+      } else if (match(Op1, m_LogicalAnd(m_Not(m_Value(C2)), m_Value(B2))) &&
+                 SelOp1) {
+        SelectInst *NewSI = SelectInst::Create(C, A, B, "", nullptr, SelOp1);
+        NewSI->swapProfMetadata();
+        return NewSI;
+      } else {
+        return createSelectInstWithUnknownProfile(C, A, B);
+      }
     }
-    return createSelectInstWithUnknownProfile(C, A, B);
+    return SelectInst::Create(C, A, B);
   }
 
   // (!C && A) || (C && B)
@@ -4170,15 +4175,20 @@ Instruction *InstCombinerImpl::FoldOrOfLogicalAnds(Value *Op0, Value *Op1) {
                                m_Not(m_Specific(SelOp1->getTrueValue())));
     if (MayNeedFreeze)
       C = Builder.CreateFreeze(C);
-    Value *C2 = nullptr, *A2 = nullptr, *B2 = nullptr;
-    if (match(Op0, m_LogicalAnd(m_Not(m_Value(C2)), m_Value(A2))) && SelOp0) {
-      SelectInst *NewSI = SelectInst::Create(C, B, A, "", nullptr, SelOp0);
-      NewSI->swapProfMetadata();
-      return NewSI;
+    if (!ProfcheckDisableMetadataFixes) {
+      Value *C2 = nullptr, *A2 = nullptr, *B2 = nullptr;
+      if (match(Op0, m_LogicalAnd(m_Not(m_Value(C2)), m_Value(A2))) && SelOp0) {
+        SelectInst *NewSI = SelectInst::Create(C, B, A, "", nullptr, SelOp0);
+        NewSI->swapProfMetadata();
+        return NewSI;
+      } else if (match(Op1, m_LogicalAnd(m_Specific(C), m_Value(B2))) &&
+                 SelOp1) {
+        return SelectInst::Create(C, B, A, "", nullptr, SelOp1);
+      } else {
+        return createSelectInstWithUnknownProfile(C, B, A);
+      }
     }
-    if (match(Op1, m_LogicalAnd(m_Specific(C), m_Value(B2))) && SelOp1)
-      return SelectInst::Create(C, B, A, "", nullptr, SelOp1);
-    return createSelectInstWithUnknownProfile(C, B, A);
+    return SelectInst::Create(C, B, A);
   }
 
   return nullptr;

@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LEX_TEXTENCODING_H
 
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm {
@@ -17,8 +18,6 @@ class TextEncodingConverter;
 } // namespace llvm
 
 namespace clang {
-class TargetInfo;
-
 enum ConversionAction {
   CA_NoConversion,
   CA_ToLiteralEncodingForAsm, // IBM-1047 on z/OS, UTF-8 on other platforms
@@ -53,7 +52,7 @@ public:
 
   static std::error_code
   setConvertersFromOptions(TextEncoding &TE, const clang::LangOptions &Opts,
-                           TargetInfo &TInfo);
+                           clang::TargetInfo &TInfo);
 
   llvm::StringRef getLiteralEncoding() { return LiteralEncoding; }
 };

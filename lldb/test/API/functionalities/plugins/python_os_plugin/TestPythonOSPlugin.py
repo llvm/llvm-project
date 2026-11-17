@@ -46,10 +46,26 @@ class PluginPythonOSPlugin(TestBase):
         # Set debugger into synchronous mode
         self.dbg.SetAsync(False)
 
+        # Create a target by the debugger.
+        exe = self.getBuildArtifact("a.out")
         python_os_plugin_path = os.path.join(self.getSourceDir(), "operating_system.py")
-        _, process, _, _ = lldbutil.run_to_source_breakpoint(
-            self, "// Set breakpoint here", lldb.SBFileSpec("main.c")
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        # Set breakpoints inside and outside methods that take pointers to the
+        # containing struct.
+        lldbutil.run_break_set_by_source_regexp(self, "// Set breakpoint here")
+
+        # Register our shared libraries for remote targets so they get
+        # automatically uploaded
+        arguments = None
+        environment = None
+
+        # Now launch the process, and do not stop at entry point.
+        process = target.LaunchSimple(
+            arguments, environment, self.get_process_working_directory()
         )
+        self.assertTrue(process, PROCESS_IS_VALID)
 
         # Make sure there are no OS plug-in created thread when we first stop
         # at our breakpoint in main
@@ -145,13 +161,29 @@ class PluginPythonOSPlugin(TestBase):
         # Set debugger into synchronous mode
         self.dbg.SetAsync(False)
 
+        # Create a target by the debugger.
+        exe = self.getBuildArtifact("a.out")
         python_os_plugin_path = os.path.join(
             self.getSourceDir(), "operating_system2.py"
         )
-        target, process, _, _ = lldbutil.run_to_source_breakpoint(
-            self, "// Set breakpoint here", lldb.SBFileSpec("main.c")
-        )
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        # Set breakpoints inside and outside methods that take pointers to the
+        # containing struct.
+        lldbutil.run_break_set_by_source_regexp(self, "// Set breakpoint here")
         stop_line = line_number("main.c", "// Set breakpoint here")
+
+        # Register our shared libraries for remote targets so they get
+        # automatically uploaded
+        arguments = None
+        environment = None
+
+        # Now launch the process, and do not stop at entry point.
+        process = target.LaunchSimple(
+            arguments, environment, self.get_process_working_directory()
+        )
+        self.assertTrue(process, PROCESS_IS_VALID)
 
         core_thread_zero = process.GetThreadAtIndex(0)
 

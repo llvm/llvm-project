@@ -470,7 +470,6 @@ enum Kind {
   kw_indir,
   kw_singleImpl,
   kw_branchFunnel,
-  kw_speculative,
   kw_singleImplName,
   kw_resByArg,
   kw_byArg,

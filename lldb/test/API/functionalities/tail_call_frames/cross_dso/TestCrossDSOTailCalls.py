@@ -1,6 +1,7 @@
 """Test that backtraces can follow cross-DSO tail calls"""
 
 
+import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -21,17 +22,17 @@ class TestCrossDSOTailCalls(TestBase):
         # automatically uploaded
         environment = self.registerSharedLibrariesWithTarget(target, ["One", "Two"])
 
-        bkpt_id = lldbutil.run_break_set_by_source_regexp(
+        lldbutil.run_break_set_by_source_regexp(
             self, "// break here", extra_options="-f Two.c"
         )
 
-        # We should be stopped in the second dylib.
-        launch_info = target.GetLaunchInfo()
-        launch_info.SetEnvironmentEntries(environment, False)
-        launch_info.SetWorkingDirectory(self.get_process_working_directory())
-        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
-            self, target, target.FindBreakpointByID(bkpt_id), launch_info
+        process = target.LaunchSimple(
+            None, environment, self.get_process_working_directory()
         )
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        # We should be stopped in the second dylib.
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
 
         # Debug helper:
         # self.runCmd("log enable -f /tmp/lldb.log lldb step")
