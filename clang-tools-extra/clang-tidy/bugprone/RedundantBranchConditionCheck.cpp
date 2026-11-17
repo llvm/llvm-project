@@ -153,7 +153,7 @@ public:
   void includeRemoveTFFixIt() {
     std::swap(ToremoveTF,
               Fixits[0]); // NOTE: in getFixItsinExpr the property always
-    // maintain that False or True replacement remain at start of
+    // maintained that False or True replacement remain at start of
     // SmallVector. if edit in future do not alter the property.
   }
 };
