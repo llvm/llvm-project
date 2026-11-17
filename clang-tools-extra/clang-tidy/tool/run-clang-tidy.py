@@ -707,6 +707,11 @@ async def main() -> None:
 
     returncode = 0
     semaphore = asyncio.Semaphore(max_task)
+    # Start the largest files first: they tend to take the longest, and the
+    # run cannot finish before the last of them does.
+    largest_first = sorted(
+        files, key=lambda f: (-os.path.getsize(f) if os.path.isfile(f) else 0, f)
+    )
     tasks = [
         asyncio.create_task(
             run_with_semaphore(
@@ -720,7 +725,7 @@ async def main() -> None:
                 profile_dir,
             )
         )
-        for f in files
+        for f in largest_first
     ]
 
     try:

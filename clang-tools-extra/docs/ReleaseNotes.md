@@ -143,6 +143,9 @@ infrastructure are described first, followed by tool-specific sections.
   `ImplementationFileExtensions` contains an invalid entry, such as one with a
   leading dot. The invalid option is now reported as a warning.
 
+- Improved {program}`run-clang-tidy.py` to start the largest files first, which
+  shortens runs where a few slow files would otherwise start last.
+
 #### New checks
 
 - New {doc}`bugprone-macro-condition
