@@ -1377,7 +1377,9 @@ void SampleProfileLoader::promoteMergeNotInlinedContextSamples(
     CallBase *I = Pair.first;
     const FunctionSamples *FS = Pair.second;
     Function *Callee = I->getCalledFunction();
-    if (!Callee) {
+    // The iterative inliner can still record targets it already inlined.
+    // Recover indirect targets only with the priority inliner's bookkeeping.
+    if (!Callee && CallsitePrioritizedInline) {
       Callee = SymbolMap.lookup(FS->getFunction());
       // Do not merge a recursive context into the profile that owns it.
       if (Callee == &F)
