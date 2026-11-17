@@ -20,7 +20,8 @@ add_libc_test(
     libc.hdr.types.struct_ip_opts
     libc.hdr.types.struct_ipv6_mreq
     libc.hdr.types.struct_sockaddr_in6
-    libc.src.__support.net.byte_order
+    libc.src.arpa.inet.htons
+    libc.src.arpa.inet.htonl
     libc.src.netinet.in6addr_any
     libc.src.netinet.in6addr_loopback
     libc.src.string.memcmp
@@ -34,6 +35,6 @@ add_libc_test(
     udp_test.cpp
   DEPENDS
     libc.hdr.types.struct_udphdr
-    libc.src.__support.net.byte_order
+    libc.src.arpa.inet.htons
     libc.src.string.memcmp
 )

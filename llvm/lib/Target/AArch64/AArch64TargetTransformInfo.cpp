@@ -6518,20 +6518,22 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
 
     // Try to find an unroll count that maximizes the use of the instruction
     // window, i.e. trying to fetch as many instructions per cycle as possible.
-    unsigned MaxInstsPerLine = 16;
-    unsigned UC = 1;
+    constexpr unsigned MaxInstsPerLine = 16;
+    constexpr unsigned MaxLines = 3;
+    constexpr unsigned MaxSizeWithUC = MaxInstsPerLine * MaxLines;
+    constexpr unsigned MaxUC = 8;
+
     unsigned BestUC = 1;
-    unsigned SizeWithBestUC = BestUC * Size;
-    while (UC <= 8) {
+    unsigned BestLineRemainder = Size % MaxInstsPerLine;
+    for (unsigned UC = 2; UC <= MaxUC; ++UC) {
       unsigned SizeWithUC = UC * Size;
-      if (SizeWithUC > 48)
+      if (SizeWithUC > MaxSizeWithUC)
         break;
-      if ((SizeWithUC % MaxInstsPerLine) == 0 ||
-          (SizeWithBestUC % MaxInstsPerLine) < (SizeWithUC % MaxInstsPerLine)) {
+      unsigned LineRemainder = SizeWithUC % MaxInstsPerLine;
+      if (LineRemainder == 0 || BestLineRemainder < LineRemainder) {
         BestUC = UC;
-        SizeWithBestUC = BestUC * Size;
+        BestLineRemainder = LineRemainder;
       }
-      UC++;
     }
 
     if (BestUC == 1)
