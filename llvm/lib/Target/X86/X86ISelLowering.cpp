@@ -61289,9 +61289,8 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
         (VT.getVectorElementType() == MVT::i64 && Subtarget.hasAVX512())) {
       APInt C;
       if (Op1.getOpcode() == ISD::AND && Op1->hasOneUse() &&
-          ISD::isBuildVectorAllZeros(Op0.getNode()) &&
-          ISD::isConstantSplatVector(Op1.getOperand(1).getNode(), C) &&
-          C.isOne()) {
+          ISD::isBuildVectorAllZeros(Op0) &&
+          ISD::isConstantSplatVector(Op1.getOperand(1), C) && C.isOne()) {
         SDValue VecConst = DAG.getConstant(
             VT.getVectorElementType().getSizeInBits() - 1, DL, VT);
         SDValue Shl =
