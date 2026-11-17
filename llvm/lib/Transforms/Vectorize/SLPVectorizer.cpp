@@ -155,6 +155,12 @@ namespace {
 /// A vectorized part of a split reduction, combined into the final reduction
 /// result by the horizontal reduction emitter.
 struct ReductionVectorPart {
+  ReductionVectorPart(Value *Vec, unsigned Scale, bool IsSigned,
+                      bool ReducedInTree, bool Negated,
+                      TTI::CastContextHint Ctx)
+      : Vec(Vec), Scale(Scale), IsSigned(IsSigned),
+        ReducedInTree(ReducedInTree), Negated(Negated), Ctx(Ctx) {}
+
   /// The vectorized value, tracked in case it is replaced while other parts
   /// are vectorized.
   WeakTrackingVH Vec;
@@ -33670,11 +33676,11 @@ public:
                        getNumElements(P.Vec->getType()) == Cnt;
               })) {
             Value *Splat = Builder.CreateVectorSplat(Cnt, Candidates.front());
-            VectorValuesAndScales.push_back({Splat, /*Scale=*/1,
-                                             /*IsSigned=*/true,
-                                             /*ReducedInTree=*/false,
-                                             GroupNegated,
-                                             TTI::CastContextHint::None});
+            VectorValuesAndScales.emplace_back(Splat, /*Scale=*/1,
+                                               /*IsSigned=*/true,
+                                               /*ReducedInTree=*/false,
+                                               GroupNegated,
+                                               TTI::CastContextHint::None);
           } else if (NeedsOrigOrder(Candidates.front())) {
             // Left for the scalar remainder.
             Cnt = 0;
@@ -34092,17 +34098,17 @@ public:
         Type *RedScalarTy = VecTy->getScalarType();
         // A group of negated reduced values (from an fsub/fneg in the chain)
         // is subtracted in the final combine.
-        VectorValuesAndScales.push_back(
-            {VectorizedRoot,
-             OptReusedScalars && SameScaleFactor
-                 ? SameValuesCounter.front().second
-                 : 1,
-             RedScalarTy != ScalarTy->getScalarType()
-                 ? NarrowedLeafShifts.empty() && V.isSignedMinBitwidthRootNode()
-                 : true,
-             V.isReducedBitcastRoot() || V.isReducedCmpBitcastRoot() ||
-                 !VectorizedRoot->getType()->isVectorTy(),
-             GroupNegated, V.getCastContextHint(V.getRootNode())});
+        VectorValuesAndScales.emplace_back(
+            VectorizedRoot,
+            OptReusedScalars && SameScaleFactor
+                ? SameValuesCounter.front().second
+                : 1,
+            RedScalarTy != ScalarTy->getScalarType()
+                ? NarrowedLeafShifts.empty() && V.isSignedMinBitwidthRootNode()
+                : true,
+            V.isReducedBitcastRoot() || V.isReducedCmpBitcastRoot() ||
+                !VectorizedRoot->getType()->isVectorTy(),
+            GroupNegated, V.getCastContextHint(V.getRootNode()));
         LoopAccVectorized = UseLoopAccForm;
 
         // Count vectorized reduced values to exclude them from final reduction.
