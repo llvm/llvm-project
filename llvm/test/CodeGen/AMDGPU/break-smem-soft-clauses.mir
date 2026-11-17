@@ -377,6 +377,7 @@ body: |
 # (MaxLookAhead = 5), so the clause must be tracked statefully rather than
 # reconstructed from the emitted-instruction window.
 name: break_smem_clause_war_distance_6
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -403,6 +404,7 @@ body: |
 # Same as above without the conflict: a long clause on its own must not get a
 # nop.
 name: smem_clause_distance_6_no_conflict
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -428,6 +430,7 @@ body: |
 # KILL is a meta instruction with no encoding, so it does not break the
 # hardware clause and the WAR across it must still be detected.
 name: kill_does_not_break_smem_clause
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -445,6 +448,7 @@ body: |
 ---
 # A KILL's operands are not part of the clause: overwriting them is fine.
 name: kill_operand_does_not_join_smem_clause
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -463,6 +467,7 @@ body: |
 # loads, the KILLs that ended the first bundle, then more loads. The KILLs do
 # not break the hardware clause, and load 17 overwrites load 1's address.
 name: break_smem_clause_kill_boundary_17_loads
+tracksRegLiveness: false
 
 body: |
   bb.0:

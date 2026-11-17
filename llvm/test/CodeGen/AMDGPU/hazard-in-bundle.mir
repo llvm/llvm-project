@@ -95,6 +95,7 @@ body: |
 # GCN:          }
 ---
 name: break_smem_clause_beyond_max_look_ahead_in_bundle
+tracksRegLiveness: false
 body: |
   bb.0:
     BUNDLE implicit-def $sgpr0, implicit-def $sgpr1, implicit-def $sgpr2, implicit-def $sgpr3, implicit-def $sgpr4, implicit-def $sgpr5, implicit-def $sgpr10, implicit $sgpr10_sgpr11, implicit $sgpr12_sgpr13, implicit $sgpr14_sgpr15, implicit $sgpr16_sgpr17, implicit $sgpr18_sgpr19, implicit $sgpr20_sgpr21, implicit $sgpr22_sgpr23 {

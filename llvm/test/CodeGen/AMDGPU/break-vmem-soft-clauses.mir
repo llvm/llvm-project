@@ -614,6 +614,7 @@ body: |
 # WAR at clause distance 6, beyond the scheduler lookahead window
 # (MaxLookAhead = 5).
 name: break_vmem_clause_war_distance_6
+tracksRegLiveness: false
 
 body: |
   bb.0:
