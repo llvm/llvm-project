@@ -1031,7 +1031,7 @@ bool DefGenerator::emitDecls(StringRef selectedDialect,
         printer.writeDeclTo(indentedOs);
         if (hasHook)
           declOs << llvm::formatv(
-              hookDecl.data(),
+              hookDecl,
               getRegistrationHookName(dialect, registrationName, partition),
               dialect.getCppClassName());
       };
@@ -1469,7 +1469,7 @@ void DefGenerator::emitRegistrationHooks(ArrayRef<AttrOrTypeDef> defs,
     os << "}\n";
   };
   if (selectedPartition.empty()) {
-    os << llvm::formatv(hookDef.data(),
+    os << llvm::formatv(hookDef,
                         getRegistrationHookName(dialect, registrationName, ""),
                         dialectClass);
     emitInserts();
@@ -1477,7 +1477,7 @@ void DefGenerator::emitRegistrationHooks(ArrayRef<AttrOrTypeDef> defs,
   }
 
   if (partitions.front() == selectedPartition) {
-    os << llvm::formatv(hookDef.data(),
+    os << llvm::formatv(hookDef,
                         getRegistrationHookName(dialect, registrationName, ""),
                         dialectClass);
     for (StringRef partition : partitions)
@@ -1487,7 +1487,7 @@ void DefGenerator::emitRegistrationHooks(ArrayRef<AttrOrTypeDef> defs,
     os << "}\n";
   }
   os << llvm::formatv(
-      hookDef.data(),
+      hookDef,
       getRegistrationHookName(dialect, registrationName, selectedPartition),
       dialectClass);
   emitInserts();
