@@ -49,7 +49,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -64,32 +63,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "hexagon-lowering"
-
-static cl::opt<bool> EmitJumpTables("hexagon-emit-jump-tables",
-  cl::init(true), cl::Hidden,
-  cl::desc("Control jump table emission on Hexagon target"));
-
-static cl::opt<bool>
-    EnableHexSDNodeSched("enable-hexagon-sdnode-sched", cl::Hidden,
-                         cl::desc("Enable Hexagon SDNode scheduling"));
-
-static cl::opt<int> MinimumJumpTables("minimum-jump-tables", cl::Hidden,
-                                      cl::init(5),
-                                      cl::desc("Set minimum jump tables"));
-
-static cl::opt<bool>
-    ConstantLoadsToImm("constant-loads-to-imm", cl::Hidden, cl::init(true),
-                       cl::desc("Convert constant loads to immediate values."));
-
-static cl::opt<bool> AlignLoads("hexagon-align-loads",
-  cl::Hidden, cl::init(false),
-  cl::desc("Rewrite unaligned loads as a pair of aligned loads"));
-
-static cl::opt<bool>
-    DisableArgsMinAlignment("hexagon-disable-args-min-alignment", cl::Hidden,
-                            cl::init(false),
-                            cl::desc("Disable minimum alignment of 1 for "
-                                     "arguments passed by value on stack"));
 
 // Implement calling convention for Hexagon.
 
@@ -482,7 +455,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, TreatAsVarArg, MF, ArgLocs, *DAG.getContext());
 
-  if (DisableArgsMinAlignment)
+  if (!Subtarget.getCLOpts().hexagon_args_min_alignment)
     CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon_Legacy);
   else
     CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon);
@@ -896,7 +869,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, TreatAsVarArg, MF, ArgLocs, *DAG.getContext());
 
-  if (DisableArgsMinAlignment)
+  if (!Subtarget.getCLOpts().hexagon_args_min_alignment)
     CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon_Legacy);
   else
     CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon);
@@ -1571,7 +1544,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setMaxAtomicSizeInBitsSupported(64);
   setMinCmpXchgSizeInBits(32);
 
-  if (EnableHexSDNodeSched)
+  if (ST.getCLOpts().enable_hexagon_sdnode_sched)
     setSchedulingPreference(Sched::VLIW);
   else
     setSchedulingPreference(Sched::Source);
@@ -1663,8 +1636,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32, Custom);
 
-  if (EmitJumpTables)
-    setMinimumJumpTableEntries(MinimumJumpTables);
+  if (ST.getCLOpts().hexagon_emit_jump_tables)
+    setMinimumJumpTableEntries(ST.getCLOpts().minimum_jump_tables);
   else
     setMinimumJumpTableEntries(std::numeric_limits<unsigned>::max());
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
@@ -3298,7 +3271,7 @@ HexagonTargetLowering::LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG)
   if (!LN->isUnindexed())
     DoDefault = true;
 
-  if (!AlignLoads) {
+  if (!Subtarget.getCLOpts().hexagon_align_loads) {
     if (allowsMemoryAccessForAlignment(Ctx, DL, LN->getMemoryVT(),
                                        *LN->getMemOperand()))
       return Op;
@@ -3814,7 +3787,7 @@ HexagonTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
 /// to just the constant itself.
 bool HexagonTargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                                               Type *Ty) const {
-  if (!ConstantLoadsToImm)
+  if (!Subtarget.getCLOpts().constant_loads_to_imm)
     return false;
 
   assert(Ty->isIntegerTy());

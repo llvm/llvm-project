@@ -48,7 +48,6 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -260,51 +259,7 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
     CFIInstBuilder(MBB, MI, MachineInstr::FrameDestroy).buildRestore(SCSPReg);
 }
 
-static cl::opt<bool> DisableDeallocRet("disable-hexagon-dealloc-ret",
-    cl::Hidden, cl::desc("Disable Dealloc Return for Hexagon target"));
-
-static cl::opt<unsigned>
-    NumberScavengerSlots("number-scavenger-slots", cl::Hidden,
-                         cl::desc("Set the number of scavenger slots"),
-                         cl::init(2));
-
-static cl::opt<int>
-    SpillFuncThreshold("spill-func-threshold", cl::Hidden,
-                       cl::desc("Specify O2(not Os) spill func threshold"),
-                       cl::init(6));
-
-static cl::opt<int>
-    SpillFuncThresholdOs("spill-func-threshold-Os", cl::Hidden,
-                         cl::desc("Specify Os spill func threshold"),
-                         cl::init(1));
-
-static cl::opt<bool> EnableStackOVFSanitizer(
-    "enable-stackovf-sanitizer", cl::Hidden,
-    cl::desc("Enable runtime checks for stack overflow."), cl::init(false));
-
-static cl::opt<bool>
-    EnableShrinkWrapping("hexagon-shrink-frame", cl::init(true), cl::Hidden,
-                         cl::desc("Enable stack frame shrink wrapping"));
-
-static cl::opt<unsigned>
-    ShrinkLimit("shrink-frame-limit",
-                cl::init(std::numeric_limits<unsigned>::max()), cl::Hidden,
-                cl::desc("Max count of stack frame shrink-wraps"));
-
-static cl::opt<bool>
-    EnableSaveRestoreLong("enable-save-restore-long", cl::Hidden,
-                          cl::desc("Enable long calls for save-restore stubs."),
-                          cl::init(false));
-
-static cl::opt<bool> EliminateFramePointer("hexagon-fp-elim", cl::init(true),
-    cl::Hidden, cl::desc("Refrain from using FP whenever possible"));
-
-static cl::opt<bool> OptimizeSpillSlots("hexagon-opt-spill", cl::Hidden,
-    cl::init(true), cl::desc("Optimize spill slots"));
-
 #ifndef NDEBUG
-static cl::opt<unsigned> SpillOptMax("spill-opt-max", cl::Hidden,
-    cl::init(std::numeric_limits<unsigned>::max()));
 static unsigned SpillOptCount = 0;
 #endif
 
@@ -510,8 +465,9 @@ void HexagonFrameLowering::findShrunkPrologEpilog(MachineFunction &MF,
   if (MF.getSubtarget<HexagonSubtarget>().isEnvironmentMusl() &&
       MF.getFunction().isVarArg())
     return;
-  if (ShrinkLimit.getPosition()) {
-    if (ShrinkCounter >= ShrinkLimit)
+  const auto &CLOpts = MF.getSubtarget<HexagonSubtarget>().getCLOpts();
+  if (CLOpts.shrink_frame_limit) {
+    if (ShrinkCounter >= *CLOpts.shrink_frame_limit)
       return;
     ShrinkCounter++;
   }
@@ -622,7 +578,7 @@ void HexagonFrameLowering::emitPrologue(MachineFunction &MF,
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
   MachineBasicBlock *PrologB = &MF.front(), *EpilogB = nullptr;
-  if (EnableShrinkWrapping)
+  if (MF.getSubtarget<HexagonSubtarget>().getCLOpts().hexagon_shrink_frame)
     findShrunkPrologEpilog(MF, PrologB, EpilogB);
 
   bool PrologueStubs = false;
@@ -883,7 +839,7 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
     // If the stack-checking is enabled, and we spilled the callee-saved
     // registers inline (i.e. did not use a spill function), then call
     // the stack checker directly.
-    if (EnableStackOVFSanitizer && !PrologueStubs)
+    if (HST.getCLOpts().enable_stackovf_sanitizer && !PrologueStubs)
       BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::PS_call_stk))
              .addExternalSymbol("__runtime_stack_check");
   } else if (NumBytes > 0) {
@@ -1023,7 +979,8 @@ void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
     // If the returning instruction is PS_jmpret, replace it with
     // dealloc_return, otherwise just add deallocframe. The function
     // could be returning via a tail call.
-    if (RetOpc != Hexagon::PS_jmpret || DisableDeallocRet || NeedsSCS) {
+    if (RetOpc != Hexagon::PS_jmpret || !HST.getCLOpts().hexagon_dealloc_ret ||
+        NeedsSCS) {
       BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::L2_deallocframe))
       .addDef(Hexagon::D15)
       .addReg(Hexagon::R30);
@@ -1469,6 +1426,7 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
 }
 
 bool HexagonFrameLowering::hasFPImpl(const MachineFunction &MF) const {
+  const auto &CLOpts = MF.getSubtarget<HexagonSubtarget>().getCLOpts();
   auto &MFI = MF.getFrameInfo();
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
   bool HasExtraAlign = HRI.hasStackRealignment(MF);
@@ -1494,11 +1452,11 @@ bool HexagonFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   // gated on stack size: the user/ABI-requested frame pointer is needed
   // regardless of whether the function currently has a stack frame.
   // Every other target checks DisableFramePointerElim unconditionally.
-  if (MF.disableFramePointerElim() || !EliminateFramePointer)
+  if (MF.disableFramePointerElim() || !CLOpts.hexagon_fp_elim)
     return true;
 
   if (MFI.getStackSize() > 0) {
-    if (EnableStackOVFSanitizer)
+    if (CLOpts.enable_stackovf_sanitizer)
       return true;
   }
 
@@ -1708,12 +1666,13 @@ MachineBasicBlock::iterator HexagonFrameLowering::insertCSRSpillsInBlock(
   if (useSpillFunction(MF, CSI)) {
     PrologueStubs = true;
     Register MaxReg = getMaxCalleeSavedReg(CSI, HRI);
-    bool StkOvrFlowEnabled = EnableStackOVFSanitizer;
+    bool StkOvrFlowEnabled = HST.getCLOpts().enable_stackovf_sanitizer;
     const char *SpillFun = getSpillFunctionFor(MaxReg, SK_ToMem,
                                                StkOvrFlowEnabled);
     auto &HTM = static_cast<const HexagonTargetMachine&>(MF.getTarget());
     bool IsPIC = HTM.isPositionIndependent();
-    bool LongCalls = HST.useLongCalls() || EnableSaveRestoreLong;
+    bool LongCalls =
+        HST.useLongCalls() || HST.getCLOpts().enable_save_restore_long;
 
     // Call spill function.
     DebugLoc DL = MI != MBB.end() ? MI->getDebugLoc() : DebugLoc();
@@ -1778,7 +1737,8 @@ bool HexagonFrameLowering::insertCSRRestoresInBlock(MachineBasicBlock &MBB,
     const char *RestoreFn = getSpillFunctionFor(MaxR, Kind);
     auto &HTM = static_cast<const HexagonTargetMachine&>(MF.getTarget());
     bool IsPIC = HTM.isPositionIndependent();
-    bool LongCalls = HST.useLongCalls() || EnableSaveRestoreLong;
+    bool LongCalls =
+        HST.useLongCalls() || HST.getCLOpts().enable_save_restore_long;
 
     // Call spill function.
     DebugLoc DL = MI != MBB.end() ? MI->getDebugLoc()
@@ -2631,6 +2591,7 @@ void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                                 BitVector &SavedRegs,
                                                 RegScavenger *RS) const {
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
+  const auto &CLOpts = MF.getSubtarget<HexagonSubtarget>().getCLOpts();
 
   SavedRegs.resize(HRI.getNumRegs());
 
@@ -2653,7 +2614,7 @@ void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // Replace predicate register pseudo spill code.
   SmallVector<Register,8> NewRegs;
   expandSpillMacros(MF, NewRegs);
-  if (OptimizeSpillSlots && !isOptNone(MF))
+  if (CLOpts.hexagon_opt_spill && !isOptNone(MF))
     optimizeSpillSlots(MF, NewRegs);
 
   // We need to reserve a spill slot if scavenging could potentially require
@@ -2675,7 +2636,7 @@ void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
       unsigned Num = 1;
       switch (RC->getID()) {
         case Hexagon::IntRegsRegClassID:
-          Num = NumberScavengerSlots;
+          Num = CLOpts.number_scavenger_slots;
           break;
         case Hexagon::HvxQRRegClassID:
           Num = 2; // Vector predicate spills also need a vector register.
@@ -2945,7 +2906,7 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
   });
 
 #ifndef NDEBUG
-  bool HasOptLimit = SpillOptMax.getPosition();
+  bool HasOptLimit = HST.getCLOpts().spill_opt_max.has_value();
 #endif
 
   // eliminate loads, when all loads eliminated, eliminate all stores.
@@ -2985,7 +2946,7 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
           continue;
 #ifndef NDEBUG
         if (HasOptLimit) {
-          if (SpillOptCount >= SpillOptMax)
+          if (SpillOptCount >= *HST.getCLOpts().spill_opt_max)
             return;
           SpillOptCount++;
         }
@@ -3295,8 +3256,9 @@ bool HexagonFrameLowering::useSpillFunction(const MachineFunction &MF,
       return false;
   }
 
-  unsigned Threshold = isOptSize(MF) ? SpillFuncThresholdOs
-                                     : SpillFuncThreshold;
+  const auto &CLOpts = MF.getSubtarget<HexagonSubtarget>().getCLOpts();
+  unsigned Threshold = isOptSize(MF) ? CLOpts.spill_func_threshold_os
+                                     : CLOpts.spill_func_threshold;
   return Threshold < NumCSI;
 }
 
@@ -3319,8 +3281,9 @@ bool HexagonFrameLowering::useRestoreFunction(const MachineFunction &MF,
   if (NumCSI <= 1)
     return false;
 
-  unsigned Threshold = isOptSize(MF) ? SpillFuncThresholdOs-1
-                                     : SpillFuncThreshold;
+  const auto &CLOpts = MF.getSubtarget<HexagonSubtarget>().getCLOpts();
+  unsigned Threshold = isOptSize(MF) ? CLOpts.spill_func_threshold_os - 1
+                                     : CLOpts.spill_func_threshold;
   return Threshold < NumCSI;
 }
 

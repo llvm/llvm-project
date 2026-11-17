@@ -3164,6 +3164,9 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/Hexagon/HexagonGenSubtargetInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":HexagonOptionsTableGen",
+        ],
     },
     {
         "name": "Lanai",
@@ -4238,6 +4241,15 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/AArch64/AArch64Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/AArch64/AArch64Options.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "HexagonOptionsTableGen",
+    strip_include_prefix = "lib/Target/Hexagon",
+    tbl_outs = {"lib/Target/Hexagon/HexagonOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/Hexagon/HexagonOptions.td",
     deps = [":OptParserTdFiles"],
 )
 

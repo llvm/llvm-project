@@ -1,3 +1,5 @@
+; RUN: llc -mtriple=hexagon -enable-hexagon-peephole=false < %s | FileCheck %s
+; Old spelling, still accepted as an alias.
 ; RUN: llc -mtriple=hexagon -disable-hexagon-peephole < %s | FileCheck %s
 
 ; Test that we're generating a 32-bit multiply high instead of a 64-bit version,

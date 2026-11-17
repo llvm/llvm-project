@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -disable-hexagon-peephole -disable-hexagon-amodeopt < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -enable-hexagon-peephole=false -disable-hexagon-amodeopt < %s | FileCheck %s
 
 ; The test checks for various addressing modes for floating point loads/stores.
 

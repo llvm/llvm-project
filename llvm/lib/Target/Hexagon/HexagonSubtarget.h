@@ -19,6 +19,7 @@
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSelectionDAGInfo.h"
+#include "llvm/ADT/BoolOrDefault.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
@@ -27,8 +28,12 @@
 #include "llvm/Support/Alignment.h"
 #include <bitset>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
+
+#define OPTIONS_STRUCT_DECL
+#include "HexagonOptions.inc"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "HexagonGenSubtargetInfo.inc"
@@ -43,6 +48,8 @@ class TargetMachine;
 class Triple;
 
 class HexagonSubtarget : public HexagonGenSubtargetInfo {
+  const HexagonOptions &CLOpts;
+
   virtual void anchor();
 
   bool UseHVX64BOps = false;
@@ -122,6 +129,7 @@ public:
                    const TargetMachine &TM);
 
   const Triple &getTargetTriple() const { return TargetTriple; }
+  const HexagonOptions &getCLOpts() const { return CLOpts; }
   bool isEnvironmentMusl() const {
     return TargetTriple.getEnvironment() == Triple::Musl;
   }

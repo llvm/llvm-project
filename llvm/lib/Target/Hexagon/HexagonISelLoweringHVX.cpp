@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #include <algorithm>
@@ -27,18 +26,6 @@
 #include <utility>
 
 using namespace llvm;
-
-static cl::opt<unsigned> HvxWidenThreshold("hexagon-hvx-widen",
-  cl::Hidden, cl::init(16),
-  cl::desc("Lower threshold (in bytes) for widening to HVX vectors"));
-
-static cl::opt<bool>
-    EnableFpFastConvert("hexagon-fp-fast-convert", cl::Hidden, cl::init(false),
-                        cl::desc("Enable FP fast conversion routine."));
-
-static cl::opt<bool>
-    EnableXQFFastConvert("hexagon-qf-fast-convert", cl::Hidden, cl::init(false),
-                         cl::desc("Enable XQF fast conversion routine."));
 
 static const MVT LegalV64[] =  { MVT::v64i8,  MVT::v32i16,  MVT::v16i32 };
 static const MVT LegalW64[] =  { MVT::v128i8, MVT::v64i16,  MVT::v32i32 };
@@ -636,8 +623,9 @@ HexagonTargetLowering::getPreferredHvxVectorAction(MVT VecTy) const {
     if (VecWidth > 2*HwWidth)
       return TargetLoweringBase::TypeSplitVector;
 
-    bool HaveThreshold = HvxWidenThreshold.getNumOccurrences() > 0;
-    if (HaveThreshold && 8*HvxWidenThreshold <= VecWidth)
+    bool HaveThreshold = Subtarget.getCLOpts().hexagon_hvx_widen.has_value();
+    if (HaveThreshold &&
+        8 * *Subtarget.getCLOpts().hexagon_hvx_widen <= VecWidth)
       return TargetLoweringBase::TypeWidenVector;
     if (VecWidth >= HwWidth/2 && VecWidth < HwWidth)
       return TargetLoweringBase::TypeWidenVector;
@@ -2524,23 +2512,27 @@ HexagonTargetLowering::LowerHvxIntrinsic(SDValue Op, SelectionDAG &DAG) const {
     const char *Name = nullptr;
     switch (IntNo) {
     case Intrinsic::hexagon_V6_vcvt_b_hf_128B: {
-      Name = EnableXQFFastConvert ? "__qf_fast_convert_hf_to_b_rne"
-                                  : "__qf_convert_hf_to_b_rne";
+      Name = Subtarget.getCLOpts().hexagon_qf_fast_convert
+                 ? "__qf_fast_convert_hf_to_b_rne"
+                 : "__qf_convert_hf_to_b_rne";
       break;
     }
     case Intrinsic::hexagon_V6_vcvt_h_hf_128B: {
-      Name = EnableXQFFastConvert ? "__qf_fast_convert_hf_to_h_rne"
-                                  : "__qf_convert_hf_to_h_rne";
+      Name = Subtarget.getCLOpts().hexagon_qf_fast_convert
+                 ? "__qf_fast_convert_hf_to_h_rne"
+                 : "__qf_convert_hf_to_h_rne";
       break;
     }
     case Intrinsic::hexagon_V6_vcvt_ub_hf_128B: {
-      Name = EnableXQFFastConvert ? "__qf_fast_convert_hf_to_ub_rne"
-                                  : "__qf_convert_hf_to_ub_rne";
+      Name = Subtarget.getCLOpts().hexagon_qf_fast_convert
+                 ? "__qf_fast_convert_hf_to_ub_rne"
+                 : "__qf_convert_hf_to_ub_rne";
       break;
     }
     case Intrinsic::hexagon_V6_vcvt_uh_hf_128B: {
-      Name = EnableXQFFastConvert ? "__qf_fast_convert_hf_to_uh_rne"
-                                  : "__qf_convert_hf_to_uh_rne";
+      Name = Subtarget.getCLOpts().hexagon_qf_fast_convert
+                 ? "__qf_fast_convert_hf_to_uh_rne"
+                 : "__qf_convert_hf_to_uh_rne";
       break;
     }
     default:
@@ -3299,12 +3291,13 @@ HexagonTargetLowering::ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const {
       SDValue ConvVec =
           getInstr(Hexagon::V6_vconv_h_hf_rnd, dl, ResTy, {Op0}, DAG);
       return ConvVec;
-    } else if (EnableFpFastConvert) {
+    } else if (Subtarget.getCLOpts().hexagon_fp_fast_convert) {
       // Vd32.h=Vu32.hf same as Q6_Vh_equals_Vhf
       SDValue ConvVec = getInstr(Hexagon::V6_vconv_h_hf, dl, ResTy, {Op0}, DAG);
       return ConvVec;
     }
-  } else if (EnableFpFastConvert && InpTy == MVT::v32f32) {
+  } else if (Subtarget.getCLOpts().hexagon_fp_fast_convert &&
+             InpTy == MVT::v32f32) {
     // Vd32.w=Vu32.sf same as Q6_Vw_equals_Vsf
     SDValue ConvVec = getInstr(Hexagon::V6_vconv_w_sf, dl, ResTy, {Op0}, DAG);
     return ConvVec;
