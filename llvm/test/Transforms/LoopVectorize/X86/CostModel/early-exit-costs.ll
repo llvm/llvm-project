@@ -5,16 +5,16 @@
 
 define i8 @i8_live_outs_in_early_exit(ptr align 8 dereferenceable(1024) %p1, ptr align 8 dereferenceable(1024) %p2) {
 ; CHECK-LABEL: 'i8_live_outs_in_early_exit'
-; CHECK:  Cost of 2 for VF 2: EMIT vp<%early.exit.value> = extract-lane vp<%first.active.lane>, ir<%ld1>
-; CHECK:  Cost of 2 for VF 2: EMIT vp<%early.exit.value>.1 = extract-lane vp<%first.active.lane>, ir<%ld2>
+; CHECK:  Cost of 3 for VF 2: EMIT vp<%early.exit.value> = extract-lane vp<%first.active.lane>, ir<%ld1>
+; CHECK:  Cost of 3 for VF 2: EMIT vp<%early.exit.value>.1 = extract-lane vp<%first.active.lane>, ir<%ld2>
 ; CHECK:  Cost of 2 for VF 4: EMIT vp<%early.exit.value> = extract-lane vp<%first.active.lane>, ir<%ld1>
 ; CHECK:  Cost of 2 for VF 4: EMIT vp<%early.exit.value>.1 = extract-lane vp<%first.active.lane>, ir<%ld2>
 ; CHECK:  Cost of 2 for VF 8: EMIT vp<%early.exit.value> = extract-lane vp<%first.active.lane>, ir<%ld1>
 ; CHECK:  Cost of 2 for VF 8: EMIT vp<%early.exit.value>.1 = extract-lane vp<%first.active.lane>, ir<%ld2>
-; CHECK:  Cost of 3 for VF 16: EMIT vp<%early.exit.value> = extract-lane vp<%first.active.lane>, ir<%ld1>
-; CHECK:  Cost of 3 for VF 16: EMIT vp<%early.exit.value>.1 = extract-lane vp<%first.active.lane>, ir<%ld2>
-; CHECK:  Cost of 5 for VF 32: EMIT vp<%early.exit.value> = extract-lane vp<%first.active.lane>, ir<%ld1>
-; CHECK:  Cost of 5 for VF 32: EMIT vp<%early.exit.value>.1 = extract-lane vp<%first.active.lane>, ir<%ld2>
+; CHECK:  Cost of 2 for VF 16: EMIT vp<%early.exit.value> = extract-lane vp<%first.active.lane>, ir<%ld1>
+; CHECK:  Cost of 2 for VF 16: EMIT vp<%early.exit.value>.1 = extract-lane vp<%first.active.lane>, ir<%ld2>
+; CHECK:  Cost of 2 for VF 32: EMIT vp<%early.exit.value> = extract-lane vp<%first.active.lane>, ir<%ld1>
+; CHECK:  Cost of 2 for VF 32: EMIT vp<%early.exit.value>.1 = extract-lane vp<%first.active.lane>, ir<%ld2>
 ; CHECK:  LV: Selecting VF: 32.
 ;
 entry:
