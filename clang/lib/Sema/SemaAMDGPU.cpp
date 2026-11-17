@@ -166,16 +166,11 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
 
     return false;
   }
-  case AMDGPU::BI__builtin_amdgcn_s_setreg:
-    return SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/0, /*Low=*/0,
-                                           /*High=*/UINT16_MAX);
   case AMDGPU::BI__builtin_amdgcn_flat_prefetch:
   case AMDGPU::BI__builtin_amdgcn_global_prefetch: {
     // Only th (bits 0-2, not 7), scope (bits 3-4) and nv (bit 5) may be set.
     llvm::APSInt CPol;
-    if (SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/1, /*Low=*/0,
-                                        /*High=*/63) ||
-        SemaRef.BuiltinConstantArg(TheCall, /*ArgNum=*/1, CPol))
+    if (SemaRef.BuiltinConstantArg(TheCall, /*ArgNum=*/1, CPol))
       return true;
     if ((CPol.getZExtValue() & 0x7) != 0x7)
       return false;
@@ -215,28 +210,6 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
     return checkMovDPPFunctionCall(TheCall, 2, 1);
   case AMDGPU::BI__builtin_amdgcn_update_dpp:
     return checkMovDPPFunctionCall(TheCall, 6, 2);
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f16_fp8:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_bf16_fp8:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f16_bf8:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_bf16_bf8:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f16_fp4:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_bf16_fp4:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f32_fp8:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f32_bf8:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f32_fp4:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f16_fp6:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_bf16_fp6:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f16_bf6:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_bf16_bf6:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_fp6:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_bf6:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_bf16_bf6:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_bf16_fp6:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f16_bf6:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f16_fp6:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f32_bf6:
-  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f32_fp6:
-    return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 15);
   case AMDGPU::BI__builtin_amdgcn_asyncmark:
   case AMDGPU::BI__builtin_amdgcn_wait_asyncmark: {
     bool IsMark = BuiltinID == AMDGPU::BI__builtin_amdgcn_asyncmark;
@@ -365,14 +338,6 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
   case AMDGPU::BI__builtin_amdgcn_image_sample_d_3d_v4f16_f32:
   case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32:
   case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f16_f32: {
-    StringRef FeatureList(
-        getASTContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
-    if (!Builtin::evaluateRequiredTargetFeatures(FeatureList,
-                                                 CallerFeatureMap)) {
-      Diag(TheCall->getBeginLoc(), diag::err_builtin_needs_feature)
-          << FD->getDeclName() << FeatureList;
-      return false;
-    }
 
     unsigned ArgCount = TheCall->getNumArgs() - 1;
     llvm::APSInt Result;
@@ -442,14 +407,6 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_3d_v4f16_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f16_i32: {
-    StringRef FeatureList(
-        getASTContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
-    if (!Builtin::evaluateRequiredTargetFeatures(FeatureList,
-                                                 CallerFeatureMap)) {
-      Diag(TheCall->getBeginLoc(), diag::err_builtin_needs_feature)
-          << FD->getDeclName() << FeatureList;
-      return false;
-    }
 
     unsigned ArgCount = TheCall->getNumArgs() - 1;
     llvm::APSInt Result;
@@ -497,16 +454,6 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
     }
     return false;
   }
-  case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x32_bf16:
-  case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x4_f32:
-  case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x32_f16:
-  case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x32_f16:
-  case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x32_bf16:
-  case AMDGPU::BI__builtin_amdgcn_wmma_bf16f32_16x16x32_bf16:
-    return SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/0, /*Low=*/0,
-                                           /*High=*/0) ||
-           SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/2, /*Low=*/0,
-                                           /*High=*/0);
   default:
     return false;
   }

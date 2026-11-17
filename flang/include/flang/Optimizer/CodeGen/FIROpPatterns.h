@@ -259,8 +259,7 @@ protected:
   // the program and allocation address space will be the default of 0 and no
   // cast will be emitted.
   mlir::Value
-  genAllocaAndAddrCastWithType(mlir::Location loc, mlir::Type llvmObjectTy,
-                               unsigned alignment,
+  genAllocaAndAddrCastWithType(mlir::Type llvmObjectTy, unsigned alignment,
                                mlir::ConversionPatternRewriter &rewriter) const;
 
   const fir::LLVMTypeConverter &lowerTy() const {

@@ -178,6 +178,10 @@ public:
   // return false from callback to stop iterating
   static void ForEach(llvm::function_ref<IterationAction(Language *)> callback);
 
+  /// Returns lldb_private::GetVersion(), followed by the GetVersionInfo() of
+  /// each registered language plugin, in language type order.
+  static std::string GetVersionWithLanguageInfo();
+
   virtual lldb::LanguageType GetLanguageType() const = 0;
 
   // Implement this function to return the user-defined entry point name
@@ -557,6 +561,10 @@ public:
   virtual llvm::StringRef GetCatchKeyword() const { return "catch"; }
 
   virtual FormatEntity::Entry GetFunctionNameFormat() const { return {}; }
+
+  /// Returns text to append to LLDB's version string, such as the
+  /// revisions of compilers embedded in this plugin.
+  virtual std::string GetVersionInfo() const { return {}; }
 
 protected:
   // Classes that inherit from Language can see and modify these

@@ -209,7 +209,7 @@ def hasRubinFamilySupport : PredOr<[SM107f]>;
 def hasSPCompress : PredOr<[SM107a]>;
 
 // Checks tcgen05.shift instruction support.
-def hasTcgen05ShiftSupport : PredOr<[SM100a, SM103a, SM110a]>;
+def hasTcgen05ShiftSupport : PredOr<[SM100a, SM103a, SM110a, SM107a]>;
 
 def hasTcgen05MMAScaleInputDImm : PredOr<[SM100f]>;
 def hasTcgen05MMAI8Kind : PredOr<[SM100a, SM110a]>;

@@ -388,6 +388,10 @@ static Value *copyFlags(const CallInst &Old, Value *New) {
 static Value *mergeAttributesAndFlags(CallInst *NewCI, const CallInst &Old) {
   NewCI->setAttributes(AttributeList::get(
       NewCI->getContext(), {NewCI->getAttributes(), Old.getAttributes()}));
+  if (NewCI->getType()->isVoidTy()) {
+    for (unsigned I = 0; I < NewCI->arg_size(); ++I)
+      NewCI->removeParamAttr(I, Attribute::Returned);
+  }
   NewCI->removeRetAttrs(AttributeFuncs::typeIncompatible(
       NewCI->getType(), NewCI->getRetAttributes()));
   for (unsigned I = 0; I < NewCI->arg_size(); ++I)
@@ -1110,10 +1114,7 @@ Value *LibCallSimplifier::optimizeStrNLen(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeWcslen(CallInst *CI, IRBuilderBase &B) {
   Module &M = *CI->getModule();
-  unsigned WCharSize = TLI->getWCharSize(M);
-  // We cannot perform this optimization without wchar_size metadata.
-  if (WCharSize == 0)
-    return nullptr;
+  unsigned WCharSize = M.getWCharSize();
 
   if (Value *V = optimizeStringLength(CI, B, WCharSize * 8))
     return V;
@@ -2854,9 +2855,9 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
   }
 
   // log(exp{,2,10}(y)) -> y*log({e,2,10})
-  // TODO: There is no exp10() intrinsic yet.
   if (ArgLb == ExpLb || ArgLb == Exp2Lb || ArgLb == Exp10Lb ||
-           ArgID == Intrinsic::exp || ArgID == Intrinsic::exp2) {
+      ArgID == Intrinsic::exp || ArgID == Intrinsic::exp2 ||
+      ArgID == Intrinsic::exp10) {
     Constant *Eul;
     if (ArgLb == ExpLb || ArgID == Intrinsic::exp)
       // FIXME: Add more precise value of e for long double.
@@ -4242,6 +4243,9 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_exp2:
   case LibFunc_exp2f:
     return optimizeExp2(CI, Builder);
+  case LibFunc_ldexp:
+  case LibFunc_ldexpf:
+  case LibFunc_ldexpl:
   case LibFunc_scalbn:
   case LibFunc_scalbnf:
   case LibFunc_scalbnl:
