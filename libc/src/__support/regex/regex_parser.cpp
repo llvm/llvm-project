@@ -34,9 +34,8 @@ namespace regex {
 
 namespace {
 
-// Returns true for backslash escape sequences that represent backreferences,
-// boundary assertions, or character-class shorthands rather than escaped
-// literal characters.
+// Returns true for backslash escape sequences that represent backreferences or
+// boundary assertions rather than escaped literal characters.
 constexpr bool is_unimplemented_ere_escape(char c) {
   switch (c) {
   case '1':
@@ -54,6 +53,7 @@ constexpr bool is_unimplemented_ere_escape(char c) {
   case '>':
   case 'A':
   case 'Z':
+  case 'z':
   case '`':
   case '\'':
     return true;
@@ -63,7 +63,8 @@ constexpr bool is_unimplemented_ere_escape(char c) {
 }
 
 // Parses a single collating element [[.c.]] or equivalence class [[=c=]].
-ErrorOr<uint8_t> parse_coll_elem(cpp::string_view &rem) {
+constexpr ErrorOr<uint8_t> parse_coll_elem(cpp::string_view &rem) {
+  LIBC_ASSERT(rem.starts_with("[.") || rem.starts_with("[="));
   cpp::string_view close_delim = rem.starts_with("[.") ? ".]" : "=]";
   rem.remove_prefix(2);
   // TODO: Adopt cpp::string_view::find once implemented in
@@ -78,14 +79,16 @@ ErrorOr<uint8_t> parse_coll_elem(cpp::string_view &rem) {
   rem.remove_prefix(delim_pos + 2);
   if (elem.size() == 1)
     return static_cast<uint8_t>(elem.front());
+  // "one" is Henry Spencer's cname.h ASCII collating-element test fixture.
   if (elem == "one")
     return static_cast<uint8_t>('1');
   return Error(REG_ECOLLATE);
 }
 
-// Parses a single bracket expression item (collating element or single byte).
-ErrorOr<uint8_t> parse_bracket_elem(cpp::string_view &rem) {
-  if (rem.starts_with("[.") || rem.starts_with("[="))
+// Parses a single bracket range endpoint (collating symbol or single byte).
+constexpr ErrorOr<uint8_t> parse_bracket_elem(cpp::string_view &rem) {
+  LIBC_ASSERT(!rem.empty());
+  if (rem.starts_with("[."))
     return parse_coll_elem(rem);
   uint8_t c = static_cast<uint8_t>(rem.front());
   rem.remove_prefix(1);
@@ -139,6 +142,16 @@ ErrorOr<ExprId> parse_bracket_expr(cpp::string_view &rem, int cflags,
       continue;
     }
 
+    if (rem.starts_with("[=")) {
+      ErrorOr<uint8_t> eq = parse_coll_elem(rem);
+      if (!eq.has_value())
+        return Error(eq.error());
+      bs.set(*eq);
+      if (rem.starts_with('-') && !rem.starts_with("-]"))
+        return Error(REG_ERANGE);
+      continue;
+    }
+
     ErrorOr<uint8_t> c1 = parse_bracket_elem(rem);
     if (!c1.has_value())
       return Error(c1.error());
@@ -147,7 +160,7 @@ ErrorOr<ExprId> parse_bracket_expr(cpp::string_view &rem, int cflags,
       rem.remove_prefix(1);
       if (rem.empty())
         return Error(REG_ERANGE);
-      if (rem.starts_with("[:"))
+      if (rem.starts_with("[:") || rem.starts_with("[="))
         return Error(REG_ERANGE);
       ErrorOr<uint8_t> c2 = parse_bracket_elem(rem);
       if (!c2.has_value())
