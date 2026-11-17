@@ -681,13 +681,16 @@ TEST_F(MIR2VecEmbeddingTestFixture, UnmappedOperandType) {
   ASSERT_TRUE(static_cast<bool>(VocabOrErr))
       << "Failed to create vocabulary: " << toString(VocabOrErr.takeError());
   auto &Vocab = *VocabOrErr;
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
 
   EXPECT_TRUE(
-      Vocab[MachineOperand::CreateDbgInstrRef(1, 0)].approximatelyEquals(
-          Embedding(3, 0.0f)));
+      Vocab.getOperandEmbedding(MachineOperand::CreateDbgInstrRef(1, 0), MRI)
+          .approximatelyEquals(Embedding(3, 0.0f)));
   EXPECT_TRUE(
-      Vocab[MachineOperand::CreateLaneMask(LaneBitmask(2))].approximatelyEquals(
-          Embedding(3, 0.7f * CommonOperandWeight)));
+      Vocab
+          .getOperandEmbedding(MachineOperand::CreateLaneMask(LaneBitmask(2)),
+                               MRI)
+          .approximatelyEquals(Embedding(3, 0.7f * CommonOperandWeight)));
 }
 
 // Test handling of both physical and virtual registers in an instruction
