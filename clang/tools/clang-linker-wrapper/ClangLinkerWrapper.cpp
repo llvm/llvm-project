@@ -157,8 +157,11 @@ using std::error_code;
 enum WrapperFlags {
   WrapperOnlyOption = (1 << 4), // Options only used by the linker wrapper.
   DeviceOnlyOption = (1 << 5),  // Options only used for device linking.
-  // Options only valid for GNU-style host linkers.
-  GNULinkerOnlyOption = (1 << 6),
+};
+
+/// Must not overlap with llvm::opt::DriverVisibility.
+enum WrapperVisibility {
+  GNULinkerVis = (1 << 1), // Options only valid for GNU-style host linkers.
 };
 
 enum ID {
@@ -1536,26 +1539,29 @@ int main(int Argc, char **Argv) {
   const OptTable &Tbl = getOptTable();
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
-  auto Args = Tbl.parseArgs(Argc, Argv, OPT_INVALID, Saver, [&](StringRef Err) {
-    reportError(createStringError(Err));
-  });
+  SmallVector<const char *, 0> ArgStrings;
+  cl::expandResponseFiles(Argc, Argv, /*EnvVar=*/nullptr, Saver, ArgStrings);
 
   // link.exe does not accept GNU -l or -L. The Clang driver already
   // rewrites -lfoo as foo.lib and -L<dir> as -libpath:<dir>. Parsing those
-  // options here reads -link as library "ink" and splits -LTCG into "-L"
-  // and "TCG". For a Windows MSVC host, parse again without them and
-  // forward -link and -LTCG unchanged.
-  if (llvm::Triple(Args.getLastArgValue(OPT_host_triple_EQ,
-                                        sys::getDefaultTargetTriple()))
-          .isWindowsMSVCEnvironment()) {
-    SmallVector<const char *, 0> ArgStrings;
-    for (unsigned I = 0, E = Args.getNumInputArgStrings(); I != E; ++I)
-      ArgStrings.push_back(Args.getArgString(I));
-    unsigned MissingArgIndex, MissingArgCount;
-    Args = Tbl.ParseArgs(ArgStrings, MissingArgIndex, MissingArgCount,
-                         /*FlagsToInclude=*/0,
-                         /*FlagsToExclude=*/GNULinkerOnlyOption);
+  // options here would read -link as library "ink" and split -LTCG into "-L"
+  // and "TCG". The host triple selects the visible options, so it is read
+  // before parsing.
+  std::string HostTriple = sys::getDefaultTargetTriple();
+  for (StringRef Arg : ArgStrings) {
+    if (Arg.consume_front("--host-triple="))
+      HostTriple = Arg.str();
   }
+  unsigned VisibilityMask = DefaultVis;
+  if (!llvm::Triple(HostTriple).isWindowsMSVCEnvironment())
+    VisibilityMask |= GNULinkerVis;
+
+  unsigned MissingArgIndex, MissingArgCount;
+  auto Args = Tbl.ParseArgs(ArgStrings, MissingArgIndex, MissingArgCount,
+                            Visibility(VisibilityMask));
+  if (MissingArgCount)
+    reportError(createStringError(Twine(Args.getArgString(MissingArgIndex)) +
+                                  ": missing argument"));
 
   if (Args.hasArg(OPT_help) || Args.hasArg(OPT_help_hidden)) {
     Tbl.printHelp(
