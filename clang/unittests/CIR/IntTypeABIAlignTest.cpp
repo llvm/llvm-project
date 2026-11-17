@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // Unit tests for IntType::getABIAlignment and
-// CIRDataLayout::getTypeRequiredAlignment.
+// CIRDataLayout::getTypeLanguageAlignment.
 //
 //===----------------------------------------------------------------------===//
 
@@ -47,12 +47,12 @@ protected:
 
   struct Alignments {
     uint64_t abi;
-    uint64_t required;
+    uint64_t language;
   };
 
-  /// The ABI and required alignments of \p ty in a module whose data layout
+  /// The ABI and language alignments of \p ty in a module whose data layout
   /// aligns i8 through i128 to their widths, as x86-64 does, and caps the
-  /// required alignment of a _BitInt at \p bitIntMaxAlignBits, if given.
+  /// language alignment of a _BitInt at \p bitIntMaxAlignBits, if given.
   Alignments targetAlignments(mlir::Type ty,
                               std::optional<uint32_t> bitIntMaxAlignBits = {}) {
     OpBuilder builder(&context);
@@ -74,7 +74,7 @@ protected:
                     mlir::DataLayoutSpecAttr::get(&context, entries));
     cir::CIRDataLayout dl(module);
     Alignments result{dl.layout.getTypeABIAlignment(ty),
-                      dl.getTypeRequiredAlignment(ty)};
+                      dl.getTypeLanguageAlignment(ty)};
     module->erase();
     return result;
   }
@@ -108,14 +108,14 @@ TEST_F(IntTypeABIAlignTest, NonFundamentalWidthIsPowerOfTwo) {
 // A sub-byte width must still report a valid, non-zero alignment.
 TEST_F(IntTypeABIAlignTest, SubByteWidth) { EXPECT_EQ(abiAlign(1, true), 1u); }
 
-// An ordinary integer's required alignment is its ABI alignment.
-TEST_F(IntTypeABIAlignTest, RequiredAlignmentOfOrdinaryInt) {
+// An ordinary integer's language alignment is its ABI alignment.
+TEST_F(IntTypeABIAlignTest, LanguageAlignmentOfOrdinaryInt) {
   Alignments i32 = targetAlignments(IntType::get(&context, 32, true));
   EXPECT_EQ(i32.abi, 4u);
-  EXPECT_EQ(i32.required, 4u);
+  EXPECT_EQ(i32.language, 4u);
   Alignments i128 = targetAlignments(IntType::get(&context, 128, true));
   EXPECT_EQ(i128.abi, 16u);
-  EXPECT_EQ(i128.required, 16u);
+  EXPECT_EQ(i128.language, 16u);
 }
 
 // A _BitInt's ABI alignment is the alignment of its storage integer.
@@ -124,16 +124,16 @@ TEST_F(IntTypeABIAlignTest, AlignmentsOfBitInt) {
   Alignments bitInt17 =
       targetAlignments(IntType::get(&context, 17, true, /*isBitInt=*/true));
   EXPECT_EQ(bitInt17.abi, 4u);
-  EXPECT_EQ(bitInt17.required, 4u);
+  EXPECT_EQ(bitInt17.language, 4u);
 }
 
-// x86-64 caps the required alignment of a _BitInt at 64 bits. _BitInt(65) is
+// x86-64 caps the language alignment of a _BitInt at 64 bits. _BitInt(65) is
 // then held in an i128, whose alignment of 16 is the ABI alignment.
-TEST_F(IntTypeABIAlignTest, BitIntMaxAlignCapsRequiredAlignment) {
+TEST_F(IntTypeABIAlignTest, BitIntMaxAlignCapsLanguageAlignment) {
   Alignments bitInt65 =
       targetAlignments(IntType::get(&context, 65, true, /*isBitInt=*/true), 64);
   EXPECT_EQ(bitInt65.abi, 16u);
-  EXPECT_EQ(bitInt65.required, 8u);
+  EXPECT_EQ(bitInt65.language, 8u);
 }
 
 // _BitInt(129) is 24 bytes, which an i192 cannot hold without padding, so it
@@ -142,13 +142,13 @@ TEST_F(IntTypeABIAlignTest, BitIntHeldAsBytes) {
   Alignments bitInt129 = targetAlignments(
       IntType::get(&context, 129, true, /*isBitInt=*/true), 64);
   EXPECT_EQ(bitInt129.abi, 1u);
-  EXPECT_EQ(bitInt129.required, 8u);
+  EXPECT_EQ(bitInt129.language, 8u);
 }
 
 // The int member has the higher ABI alignment, so it is the union's storage
-// type and sets the union's ABI alignment. The union's required alignment is
-// the largest required alignment of any member, which is the _BitInt's 8.
-TEST_F(IntTypeABIAlignTest, UnionRequiredAlignmentUsesAllMembers) {
+// type and sets the union's ABI alignment. The union's language alignment is
+// the largest language alignment of any member, which is the _BitInt's 8.
+TEST_F(IntTypeABIAlignTest, UnionLanguageAlignmentUsesAllMembers) {
   mlir::Type members[] = {IntType::get(&context, 129, true, /*isBitInt=*/true),
                           IntType::get(&context, 32, true)};
   auto padding = cir::ArrayType::get(IntType::get(&context, 8, false), 20);
@@ -156,7 +156,7 @@ TEST_F(IntTypeABIAlignTest, UnionRequiredAlignmentUsesAllMembers) {
                                 RecordType::getAllDataKinds(members));
   Alignments alignments = targetAlignments(unionTy, 64);
   EXPECT_EQ(alignments.abi, 4u);
-  EXPECT_EQ(alignments.required, 8u);
+  EXPECT_EQ(alignments.language, 8u);
 }
 
 } // namespace

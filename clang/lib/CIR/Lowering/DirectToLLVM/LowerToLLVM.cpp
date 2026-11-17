@@ -99,7 +99,7 @@ static mlir::InFlightDiagnostic emitTypeConversionError(mlir::Location loc,
 
 /// Alignment to use for a memory access whose op carries no explicit alignment.
 /// For _BitInt the storage integer iM's ABI alignment (e.g. i128's 16)
-/// over-aligns the value, so use the CIR _BitInt required alignment (e.g. 8).
+/// over-aligns the value, so use the _BitInt language alignment (e.g. 8).
 static uint64_t getMemoryFallbackAlignment(mlir::Operation *op,
                                            mlir::Type cirType,
                                            mlir::Type llvmMemType,
@@ -107,7 +107,7 @@ static uint64_t getMemoryFallbackAlignment(mlir::Operation *op,
   if (auto intTy = mlir::dyn_cast<cir::IntType>(cirType);
       intTy && intTy.isBitInt())
     return cir::CIRDataLayout(op->getParentOfType<mlir::ModuleOp>())
-        .getTypeRequiredAlignment(intTy);
+        .getTypeLanguageAlignment(intTy);
   return dataLayout.getTypeABIAlignment(llvmMemType);
 }
 
@@ -386,9 +386,9 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
       op.getCopySizeInBytes(cirDataLayout.layout));
   assert(!cir::MissingFeatures::aggValueSlotVolatile());
 
-  uint64_t dstTypeAlign = cirDataLayout.getTypeRequiredAlignment(
+  uint64_t dstTypeAlign = cirDataLayout.getTypeLanguageAlignment(
       op.getDst().getType().getPointee());
-  uint64_t srcTypeAlign = cirDataLayout.getTypeRequiredAlignment(
+  uint64_t srcTypeAlign = cirDataLayout.getTypeLanguageAlignment(
       op.getSrc().getType().getPointee());
 
   mlir::NamedAttribute dstAlignAttr = rewriter.getNamedAttr(

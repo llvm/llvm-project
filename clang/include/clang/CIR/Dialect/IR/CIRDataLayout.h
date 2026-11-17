@@ -51,13 +51,12 @@ public:
     return getAlignment(ty, true);
   }
 
-  /// Returns the alignment, in bytes, that the C type lowered to \p ty
-  /// requires. ABI classification, coercion temporaries, and accesses with no
-  /// explicit alignment use it. It differs from the ABI alignment of \p ty
-  /// for a _BitInt, whose alignment the target caps independently of its
-  /// storage, and for records, arrays, complex, and matrix types that contain
-  /// one.
-  uint64_t getTypeRequiredAlignment(mlir::Type ty) const;
+  /// Returns the alignment, in bytes, that the source language requires for
+  /// an object of type \p ty. ABI classification, coercion temporaries, and
+  /// accesses with no explicit alignment use it. The ABI alignment of \p ty is
+  /// the alignment of the memory representation \p ty lowers to, which record
+  /// layout and array strides use.
+  uint64_t getTypeLanguageAlignment(mlir::Type ty) const;
 
   /// Returns the maximum number of bytes that may be overwritten by
   /// storing the specified type.

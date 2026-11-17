@@ -46,11 +46,11 @@ llvm::Align CIRDataLayout::getAlignment(mlir::Type ty, bool useABIAlign) const {
   return llvm::Align(align);
 }
 
-uint64_t CIRDataLayout::getTypeRequiredAlignment(mlir::Type ty) const {
+uint64_t CIRDataLayout::getTypeLanguageAlignment(mlir::Type ty) const {
   auto maxMemberAlignment = [&](llvm::ArrayRef<mlir::Type> members) {
     uint64_t align = 1;
     for (mlir::Type member : members)
-      align = std::max(align, getTypeRequiredAlignment(member));
+      align = std::max(align, getTypeLanguageAlignment(member));
     return align;
   };
   return llvm::TypeSwitch<mlir::Type, uint64_t>(ty)
@@ -73,11 +73,11 @@ uint64_t CIRDataLayout::getTypeRequiredAlignment(mlir::Type ty) const {
       })
       .Case<cir::ArrayType, cir::ComplexType, cir::MatrixType>(
           [&](auto elementsTy) -> uint64_t {
-            return getTypeRequiredAlignment(elementsTy.getElementType());
+            return getTypeLanguageAlignment(elementsTy.getElementType());
           })
       .Case([&](cir::BitFieldType bitFieldTy) -> uint64_t {
         if (mlir::Type storage = bitFieldTy.getStorageType())
-          return getTypeRequiredAlignment(storage);
+          return getTypeLanguageAlignment(storage);
         return 1;
       })
       .Default([&](mlir::Type ty) { return layout.getTypeABIAlignment(ty); });

@@ -1566,8 +1566,8 @@ def CIR_PtrSpecAttr : CIR_Attr<"PtrSpec", "ptr_spec"> {
 def CIR_BitIntSpecAttr : CIR_Attr<"BitIntSpec", "bitint_spec"> {
   let summary = "!cir.int _BitInt data layout spec";
   let description = [{
-    Upper bound, in bits, on the required alignment of a `_BitInt`. This is
-    `TargetInfo::getBitIntMaxAlign()`. The required alignment of `_BitInt(N)`
+    Upper bound, in bits, on the language alignment of a `_BitInt`. This is
+    `TargetInfo::getBitIntMaxAlign()`. The language alignment of `_BitInt(N)`
     is `min(PowerOf2Ceil(N), max_align)` bits, and at least one byte. The cap
     does not apply to the `_BitInt`'s ABI alignment, which is the alignment
     of the integer that holds it, or 1 when it is held as bytes.
