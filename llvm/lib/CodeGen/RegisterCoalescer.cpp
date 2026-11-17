@@ -4260,12 +4260,26 @@ void RegisterCoalescer::joinAllIntervals() {
   LLVM_DEBUG(dbgs() << "********** JOINING INTERVALS ***********\n");
   assert(WorkList.empty() && LocalWorkList.empty() && "Old data still around.");
 
+  // Eliminate copies from constant physical registers before coalescing in
+  // block priority order. Otherwise a copy in a higher-priority block may merge
+  // the constant's interval with a PHI-elimination register that also holds
+  // other values. That complex interval can no longer be joined with the
+  // physical register, leaving unnecessary copies of the constant.
+  SmallVector<MachineInstr *, 8> ConstantCopies;
   std::vector<MBBPriorityInfo> MBBs;
   MBBs.reserve(MF->size());
   for (MachineBasicBlock &MBB : *MF) {
     MBBs.push_back(MBBPriorityInfo(&MBB, Loops->getLoopDepth(&MBB),
                                    JoinSplitEdges && isSplitEdge(&MBB)));
+    for (MachineInstr &MI : MBB) {
+      if (!MI.isCopy())
+        continue;
+      Register SrcReg = MI.getOperand(1).getReg();
+      if (SrcReg.isPhysical() && TRI->isConstantPhysReg(SrcReg))
+        ConstantCopies.push_back(&MI);
+    }
   }
+  copyCoalesceWorkList(ConstantCopies);
   llvm::sort(MBBs, [](const MBBPriorityInfo &LHS, const MBBPriorityInfo &RHS) {
     return compareMBBPriority(&LHS, &RHS) < 0;
   });

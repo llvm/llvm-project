@@ -1,0 +1,227 @@
+# RUN: llc -mtriple=riscv32 -run-pass=register-coalescer -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=riscv64 -run-pass=register-coalescer -verify-machineinstrs %s -o - | FileCheck %s
+
+# Coalescing the copy in bb.1 first merges the zero's live interval with the
+# PHI-elimination register, which also holds a nonzero value in bb.2. Coalesce
+# the copy from x0 before visiting blocks in priority order so that comparisons
+# do not need a register containing zero. The selected result still needs a
+# register: it must not be replaced with x0 on the nonzero path.
+---
+name: zero_copy_priority
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: zero_copy_priority
+  ; CHECK: bb.0:
+  ; CHECK-NOT: COPY $x0
+  ; CHECK: BNE [[COND:%[0-9]+]], $x0, %bb.2
+  ; CHECK: bb.1:
+  ; CHECK: [[RESULT:%[0-9]+]]:gpr = COPY $x0
+  ; CHECK-NEXT: BNE [[VALUE:%[0-9]+]], $x0, %bb.3
+  ; CHECK: bb.2:
+  ; CHECK: [[RESULT]]:gpr = COPY [[VALUE]]
+  ; CHECK: bb.3:
+  ; CHECK: $x10 = COPY [[RESULT]]
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $x10, $x11
+    %0:gpr = COPY $x0
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    BNE %1, %0, %bb.2
+    PseudoBR %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+    %3:gpr = COPY %0
+    BNE %2, %0, %bb.3
+    PseudoBR %bb.2
+
+  bb.2:
+    successors: %bb.3
+    %3:gpr = COPY %2
+    PseudoBR %bb.3
+
+  bb.3:
+    $x10 = COPY %3
+    PseudoRET implicit $x10
+...
+
+# Loop depth also causes copies using zero to be visited before its definition
+# in the preheader.
+---
+name: zero_copy_loop
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: zero_copy_loop
+  ; CHECK: bb.0:
+  ; CHECK-NOT: COPY $x0
+  ; CHECK: bb.1:
+  ; CHECK: [[RESULT:%[0-9]+]]:gpr = COPY $x0
+  ; CHECK-NEXT: BLT [[COUNTER:%[0-9]+]], $x0, %bb.3
+  ; CHECK: bb.2:
+  ; CHECK: [[RESULT]]:gpr = COPY
+  ; CHECK: [[COUNTER]]:gpr = ADDI [[COUNTER]], -1
+  ; CHECK-NEXT: BNE [[COUNTER]], $x0, %bb.1
+  ; CHECK: bb.3:
+  ; CHECK: $x10 = COPY [[RESULT]]
+  bb.0:
+    successors: %bb.1
+    liveins: $x10, $x11
+    %0:gpr = COPY $x0
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    PseudoBR %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+    %3:gpr = COPY %0
+    BLT %2, %0, %bb.3
+    PseudoBR %bb.2
+
+  bb.2:
+    successors: %bb.1, %bb.3
+    %3:gpr = COPY %1
+    %2:gpr = ADDI %2, -1
+    BNE %2, %0, %bb.1
+    PseudoBR %bb.3
+
+  bb.3:
+    $x10 = COPY %3
+    PseudoRET implicit $x10
+...
+
+# A pre-existing multi-value interval must not be replaced wholesale with x0.
+---
+name: multiple_values
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: multiple_values
+  ; CHECK: bb.0:
+  ; CHECK: [[RESULT:%[0-9]+]]:gpr = COPY $x0
+  ; CHECK: BNE {{%[0-9]+}}, [[RESULT]], %bb.2
+  ; CHECK: bb.1:
+  ; CHECK: [[RESULT]]:gpr = COPY {{%[0-9]+}}
+  ; CHECK: bb.2:
+  ; CHECK: $x10 = COPY [[RESULT]]
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $x10, $x11
+    %0:gpr = COPY $x0
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    BNE %1, %0, %bb.2
+    PseudoBR %bb.1
+
+  bb.1:
+    successors: %bb.2
+    %0:gpr = COPY %2
+    PseudoBR %bb.2
+
+  bb.2:
+    $x10 = COPY %0
+    PseudoRET implicit $x10
+...
+
+# A register class excluding x0 must still get a copy.
+---
+name: zero_copy_nox0
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: zero_copy_nox0
+  ; CHECK: [[ZERO:%[0-9]+]]:gprnox0 = COPY $x0
+  ; CHECK-NEXT: $x10 = COPY [[ZERO]]
+  bb.0:
+    %0:gprnox0 = COPY $x0
+    $x10 = COPY %0
+    PseudoRET implicit $x10
+...
+
+# Do not prioritize copies of architecturally nonconstant reserved registers.
+---
+name: nonconstant_physreg
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: nonconstant_physreg
+  ; CHECK: bb.0:
+  ; CHECK: [[RESULT:%[0-9]+]]:gpr = COPY $x2
+  ; CHECK: BNE {{%[0-9]+}}, [[RESULT]], %bb.2
+  ; CHECK: bb.1:
+  ; CHECK: BNE [[VALUE:%[0-9]+]], [[RESULT]], %bb.3
+  ; CHECK: bb.2:
+  ; CHECK: [[RESULT]]:gpr = COPY [[VALUE]]
+  ; CHECK: bb.3:
+  ; CHECK: $x10 = COPY [[RESULT]]
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $x10, $x11
+    %0:gpr = COPY $x2
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    BNE %1, %0, %bb.2
+    PseudoBR %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+    %3:gpr = COPY %0
+    BNE %2, %0, %bb.3
+    PseudoBR %bb.2
+
+  bb.2:
+    successors: %bb.3
+    %3:gpr = COPY %2
+    PseudoBR %bb.3
+
+  bb.3:
+    $x10 = COPY %3
+    PseudoRET implicit $x10
+...
+
+# Calls must not prevent using the architectural zero register in successor
+# blocks, and copying a zero into an ABI argument register is still required.
+---
+name: zero_copy_across_call
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack: true
+  hasCalls: true
+body: |
+  ; CHECK-LABEL: name: zero_copy_across_call
+  ; CHECK: bb.0:
+  ; CHECK: $x10 = COPY $x0
+  ; CHECK: PseudoCALL
+  ; CHECK: BNE {{%[0-9]+}}, $x0, %bb.2
+  ; CHECK: bb.1:
+  ; CHECK: [[RESULT:%[0-9]+]]:gpr = COPY $x0
+  ; CHECK-NEXT: BNE [[VALUE:%[0-9]+]], $x0, %bb.3
+  ; CHECK: bb.2:
+  ; CHECK: [[RESULT]]:gpr = COPY [[VALUE]]
+  ; CHECK: bb.3:
+  ; CHECK: $x10 = COPY [[RESULT]]
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $x10, $x11
+    %0:gpr = COPY $x0
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $x2, implicit $x2
+    $x10 = COPY %0
+    PseudoCALL target-flags(riscv-call) &callee, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit-def $x2
+    ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
+    BNE %1, %0, %bb.2
+    PseudoBR %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+    %3:gpr = COPY %0
+    BNE %2, %0, %bb.3
+    PseudoBR %bb.2
+
+  bb.2:
+    successors: %bb.3
+    %3:gpr = COPY %2
+    PseudoBR %bb.3
+
+  bb.3:
+    $x10 = COPY %3
+    PseudoRET implicit $x10
+...
