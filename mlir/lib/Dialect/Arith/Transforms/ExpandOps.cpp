@@ -66,6 +66,30 @@ static Type cloneToShapedType(Type cloneFrom, Type cloneTo) {
   return cloneTo;
 }
 
+/// Returns the exact f32 bits of the f8E8M0FNU `code`: code << 23, except 0x00
+/// (2^-127, 0x00400000) and, if `withNaN`, the NaN (0x7FC00000).
+static Value emitF8E8M0FNUToF32Bits(ImplicitLocOpBuilder &b,
+                                    PatternRewriter &rewriter, Value code,
+                                    bool withNaN) {
+  Location loc = b.getLoc();
+  Type i8Ty = code.getType();
+  Type i32Ty = cloneToShapedType(i8Ty, b.getI32Type());
+  Value cF32MantissaWidth = createConst(loc, i32Ty, 23, rewriter);
+  Value exti = arith::ExtUIOp::create(b, i32Ty, code);
+  Value f32Bits = arith::ShLIOp::create(b, exti, cF32MantissaWidth);
+  Value cF8Min = createConst(loc, i8Ty, 0, rewriter);
+  Value cF32Min = createConst(loc, i32Ty, 0x00400000, rewriter);
+  Value min = arith::CmpIOp::create(b, arith::CmpIPredicate::eq, code, cF8Min);
+  f32Bits = arith::SelectOp::create(b, min, cF32Min, f32Bits);
+  if (!withNaN)
+    return f32Bits;
+  Value cF8NaN = createConst(loc, i8Ty, 0xff, rewriter);
+  Value cF32NaN = createConst(loc, i32Ty, 0x7fc00000, rewriter);
+  Value isNan =
+      arith::CmpIOp::create(b, arith::CmpIPredicate::eq, code, cF8NaN);
+  return arith::SelectOp::create(b, isNan, cF32NaN, f32Bits);
+}
+
 /// Returns only the nnan flag from fastmath, or a null attribute if it is absent.
 static arith::FastMathFlagsAttr getNNaNOnly(MLIRContext *ctx,
                                             arith::FastMathFlagsAttr fastmath) {
@@ -368,33 +392,48 @@ struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
 
     Value bitcast = arith::BitcastOp::create(b, i8Ty, operand);
-    Value cF32MantissaWidth = createConst(op->getLoc(), i32Ty, 23, rewriter);
-    Value exti = arith::ExtUIOp::create(b, i32Ty, bitcast);
-    Value f32Bits = arith::ShLIOp::create(b, exti, cF32MantissaWidth);
-
-    // F8E8M0 has no zero representation.
-    // All zeros encoding represents 2^-127 which is an f32 subnormal.
-    Value cF8Min = createConst(op.getLoc(), i8Ty, 0, rewriter);
-    Value cF32Min = createConst(op.getLoc(), i32Ty, 0x00400000, rewriter);
-    Value isMin =
-        arith::CmpIOp::create(b, arith::CmpIPredicate::eq, bitcast, cF8Min);
-    f32Bits = arith::SelectOp::create(b, isMin, cF32Min, f32Bits);
-
     // If FastMathFlag allows no NaN checks, skip it
     auto fastMath = op.getFastmathAttr();
     bool NoNaN = fastMath
                      ? (fastMath.getValue() & arith::FastMathFlags::nnan) ==
                            arith::FastMathFlags::nnan
                      : false;
-    if (!NoNaN) {
-      Value cF8NaN = createConst(op.getLoc(), i8Ty, 0xff, rewriter);
-      Value cF32NaN = createConst(op.getLoc(), i32Ty, 0x7fc00000, rewriter);
-      Value isNan =
-          arith::CmpIOp::create(b, arith::CmpIPredicate::eq, bitcast, cF8NaN);
-      // select for NaNs: the quiet NaN, as the constant folder gives
-      f32Bits = arith::SelectOp::create(b, isNan, cF32NaN, f32Bits);
+    if (resultETy.isF64() || isa<Float80Type, Float128Type>(resultETy)) {
+      // Every finite code c is the normal f64 2^(c - 127): (c + 896) << 52.
+      Type i64Ty = cloneToShapedType(operandTy, b.getI64Type());
+      Type f64Ty = cloneToShapedType(operandTy, b.getF64Type());
+      Value code64 = arith::ExtUIOp::create(b, i64Ty, bitcast);
+      Value cBias = createConst(op.getLoc(), i64Ty, 1023 - 127, rewriter);
+      Value biasedExp = arith::AddIOp::create(b, code64, cBias);
+      Value cF64MantissaWidth = createConst(op.getLoc(), i64Ty, 52, rewriter);
+      Value f64Bits = arith::ShLIOp::create(b, biasedExp, cF64MantissaWidth);
+      if (!NoNaN) {
+        Value cF8NaN = createConst(op.getLoc(), i8Ty, 0xff, rewriter);
+        Value cF64NaN = createAPIntConst(
+            op.getLoc(), i64Ty, APInt(64, 0x7ff8000000000000), rewriter);
+        Value isNan =
+            arith::CmpIOp::create(b, arith::CmpIPredicate::eq, bitcast, cF8NaN);
+        f64Bits = arith::SelectOp::create(b, isNan, cF64NaN, f64Bits);
+      }
+      Value result = arith::BitcastOp::create(b, f64Ty, f64Bits);
+      if (resultETy.getIntOrFloatBitWidth() > 64)
+        result =
+            arith::ExtFOp::create(b, resultTy, result, op.getFastmathAttr());
+      rewriter.replaceOp(op, result);
+      return success();
     }
 
+    Value f32Bits =
+        emitF8E8M0FNUToF32Bits(b, rewriter, bitcast, /*withNaN=*/!NoNaN);
+    if (isa<BFloat16Type>(resultETy)) {
+      // bf16 has f32's exponent range: its bits are the f32 bits' high half.
+      Type i16Ty = cloneToShapedType(operandTy, b.getI16Type());
+      Value cHalf = createConst(op.getLoc(), i32Ty, 16, rewriter);
+      Value high = arith::ShRUIOp::create(b, f32Bits, cHalf);
+      Value bf16Bits = arith::TruncIOp::create(b, i16Ty, high);
+      rewriter.replaceOp(op, arith::BitcastOp::create(b, resultTy, bf16Bits));
+      return success();
+    }
     Value result = arith::BitcastOp::create(b, f32Ty, f32Bits);
     if (resultETy.getIntOrFloatBitWidth() < 32) {
       result = arith::TruncFOp::create(b, resultTy, result, nullptr,
