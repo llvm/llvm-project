@@ -1,4 +1,5 @@
-//===- SPIRVLowerResourceNames.cpp - Lower resource names to metadata -------===//
+//===- SPIRVLowerResourceNames.cpp - Lower resource names to metadata
+//-------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -65,8 +66,8 @@ static bool lowerResourceNames(Module &M) {
   return Changed;
 }
 
-PreservedAnalyses
-SPIRVLowerResourceNamesPass::run(Module &M, ModuleAnalysisManager &AM) {
+PreservedAnalyses SPIRVLowerResourceNamesPass::run(Module &M,
+                                                   ModuleAnalysisManager &AM) {
   return lowerResourceNames(M) ? PreservedAnalyses::none()
                                : PreservedAnalyses::all();
 }

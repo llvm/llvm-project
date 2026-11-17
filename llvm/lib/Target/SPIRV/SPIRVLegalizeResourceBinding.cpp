@@ -206,7 +206,7 @@ bool SPIRVLegalizeResourceBindingImpl::replaceImplicitBindingCalls(Module &M) {
 
     uint32_t OrderIdIdx;
     if (F.getIntrinsicID() ==
-            Intrinsic::spv_resource_handlefromimplicitbinding_mdname)
+        Intrinsic::spv_resource_handlefromimplicitbinding_mdname)
       OrderIdIdx = 0;
     else if (F.getIntrinsicID() ==
              Intrinsic::spv_resource_counterhandlefromimplicitbinding)
@@ -248,7 +248,7 @@ bool SPIRVLegalizeResourceBindingImpl::replaceImplicitBindingCalls(Module &M) {
 
     // Replace the implicit binding call with an explicit binding call.
     if (CI->getIntrinsicID() ==
-            Intrinsic::spv_resource_handlefromimplicitbinding_mdname)
+        Intrinsic::spv_resource_handlefromimplicitbinding_mdname)
       replaceWithHandleFromBinding(M, CI, DescSet, Binding,
                                    CI->getArgOperand(2), CI->getArgOperand(3),
                                    CI->getArgOperand(4));
@@ -264,10 +264,10 @@ bool SPIRVLegalizeResourceBindingImpl::replaceImplicitBindingCalls(Module &M) {
 }
 
 static Value *createHeapNameMetadata(LLVMContext &Ctx, StringRef Name,
-                                    unsigned ID) {
+                                     unsigned ID) {
   std::string HeapName = (Twine(".") + Name + "." + Twine(ID)).str();
   return MetadataAsValue::get(Ctx,
-                             MDNode::get(Ctx, MDString::get(Ctx, HeapName)));
+                              MDNode::get(Ctx, MDString::get(Ctx, HeapName)));
 }
 
 // The SPIR-V backend represents dynamic resources as unbounded resource arrays.
@@ -353,8 +353,7 @@ bool SPIRVLegalizeResourceBindingImpl::replaceHeapBindingCalls(Module &M) {
     [[maybe_unused]] TargetExtType *SamplerHandleType =
         cast<TargetExtType>(Samplers.front()->getReturnType());
 
-    Value *HeapName =
-        createHeapNameMetadata(M.getContext(), "SamplerHeap", 1);
+    Value *HeapName = createHeapNameMetadata(M.getContext(), "SamplerHeap", 1);
     for (Function *F : Samplers) {
       assert(F->getReturnType() == SamplerHandleType &&
              "sampler handle type mismatch");
