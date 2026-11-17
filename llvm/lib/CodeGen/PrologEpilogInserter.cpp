@@ -932,6 +932,7 @@ void PEIImpl::calculateFrameObjectOffsets(MachineFunction &MF) {
          "MFI.getMaxAlign should already account for all callee-saved "
          "registers without a fixed stack slot");
 
+  Offset = alignTo(Offset, TFI.calleeSaveAreaAligment());
   // FixedCSEnd is the stack offset to the end of the fixed and callee-save
   // stack area.
   int64_t FixedCSEnd = Offset;

@@ -3,6 +3,9 @@
 
 target triple = "aarch64-w64-windows-gnu"
 
+; Reduced from https://github.com/llvm/llvm-project/issues/242966. Check the
+; CSR area is not clobbered by locals.
+
 %struct.State = type { i32, ptr }
 
 define preserve_allcc double @_Z6handletdPc(i16 %fcw, double %x, ptr %frame) #0 {
@@ -49,15 +52,15 @@ define preserve_allcc double @_Z6handletdPc(i16 %fcw, double %x, ptr %frame) #0 
 ; CHECK-NEXT:    .seh_save_any_reg_p q30, 448
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    and w8, w0, #0xffff
-; CHECK-NEXT:    add x0, sp, #8
+; CHECK-NEXT:    mov x0, sp
 ; CHECK-NEXT:    fmov d8, d0
-; CHECK-NEXT:    str w8, [sp, #8]
-; CHECK-NEXT:    str x1, [sp, #16]
+; CHECK-NEXT:    str w8, [sp]
+; CHECK-NEXT:    str x1, [sp, #8]
 ; CHECK-NEXT:    bl consume
-; CHECK-NEXT:    ldrb w8, [sp, #8]
+; CHECK-NEXT:    ldrb w8, [sp]
 ; CHECK-NEXT:    tbz w8, #4, .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %if.then
-; CHECK-NEXT:    ldr x8, [sp, #16]
+; CHECK-NEXT:    ldr x8, [sp, #8]
 ; CHECK-NEXT:    mov w16, #1 // =0x1
 ; CHECK-NEXT:    strb w16, [x8, #1040]
 ; CHECK-NEXT:  .LBB0_2: // %if.end
