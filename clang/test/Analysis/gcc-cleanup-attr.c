@@ -155,10 +155,12 @@ int early_return_shape(void) {
 // Scope-exit shapes: goto, cleanup ordering and nesting.
 //===----------------------------------------------------------------------===//
 
+static int goto_probe_global;
+
 // The cleanup runs on every exit from the scope, including jumps.
 
 static void goto_cleanup(int *p) {
-  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+  goto_probe_global = 2;
   (void)p;
 }
 
@@ -166,12 +168,17 @@ void goto_out_of_block_scope(void) {
   {
     int x __attribute__((cleanup(goto_cleanup)));
     x = 1;
+    goto_probe_global = 1;
     goto out;
   }
-out:;
+out:
+  clang_analyzer_dump_int(goto_probe_global); // expected-warning {{2 S32b}}
 }
 
+// A jump that stays inside the variable's scope does not trigger the cleanup.
+
 static void goto_cleanup_at_function_scope(int *p) {
+  goto_probe_global = 3;
   clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
   (void)p;
 }
@@ -179,8 +186,10 @@ static void goto_cleanup_at_function_scope(int *p) {
 void goto_at_function_scope(void) {
   int x __attribute__((cleanup(goto_cleanup_at_function_scope)));
   x = 1;
+  goto_probe_global = 1;
   goto out;
-out:;
+out:
+  clang_analyzer_dump_int(goto_probe_global); // expected-warning {{1 S32b}}
 }
 
 // Two cleanup handlers in the same scope run in reverse declaration order,
@@ -206,20 +215,25 @@ void cleanup_runs_in_reverse_declaration_order(void) {
 } // order_side_effect (declared last) runs first, so the dump above prints 2.
 
 // A cleanup handler can declare cleanup-attributed variables of its own:
-// the nested cleanup runs when the inlined handler exits.
+// the nested cleanup runs when the inlined handler exits. 
+
+static int nested_probe_global;
 
 static void nested_cleanup(int *p) {
+  clang_analyzer_dump_int(nested_probe_global); // expected-warning {{2 S32b}}
   clang_analyzer_dump_int(*p); // expected-warning {{3 S32b}}
 }
 
 static void nested_handler(int *p) {
   int z __attribute__((cleanup(nested_cleanup)));
+  ++nested_probe_global;
   z = 3;
   (void)p;
 }
 
 void cleanup_nested_in_cleanup(void) {
   int x __attribute__((cleanup(nested_handler)));
+  nested_probe_global = 1;
   x = 42;
 }
 
@@ -228,7 +242,10 @@ void cleanup_nested_in_cleanup(void) {
 // cleanup call is processed within the inlined stack frame.
 //===----------------------------------------------------------------------===//
 
+static int inlined_probe_global;
+
 static void inlined_function_cleanup(int *p) {
+  clang_analyzer_dump_int(inlined_probe_global); // expected-warning {{1 S32b}}
   clang_analyzer_dump_int(*p); // expected-warning {{42 S32b}}
 }
 
@@ -238,5 +255,8 @@ static void inlined_function_with_cleanup(void) {
 }
 
 void cleanup_in_inlined_function(void) {
+  // This state is only visible if the cleanup is processed within the stack
+  // frame inlined into this function.
+  inlined_probe_global = 1;
   inlined_function_with_cleanup();
 }

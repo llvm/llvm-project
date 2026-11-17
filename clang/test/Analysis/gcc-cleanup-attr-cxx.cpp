@@ -6,7 +6,6 @@
 #include "Inputs/system-header-simulator-for-malloc.h"
 
 void clang_analyzer_dump_int(int);
-void clang_analyzer_warnIfReached(void);
 
 //===----------------------------------------------------------------------===//
 // For a variable with both a cleanup attribute and a non-trivial destructor,
@@ -33,11 +32,13 @@ void cleanup_runs_before_destructor(void) {
 
 //===----------------------------------------------------------------------===//
 // A cleanup-annotated variable inside a lambda body: the cleanup runs when
-// the lambda call operator is inlined.
+// the lambda call operator is inlined. 
 //===----------------------------------------------------------------------===//
 
+static int lambda_probe_global;
+
 static void lambda_cleanup(int *p) {
-  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+  ++lambda_probe_global;
   (void)p;
 }
 
@@ -46,15 +47,23 @@ void cleanup_in_lambda_body(void) {
     int z __attribute__((cleanup(lambda_cleanup)));
     z = 1;
   };
+  lambda_probe_global = 0;
+  clang_analyzer_dump_int(lambda_probe_global); // expected-warning {{0 S32b}}
   lam();
+  clang_analyzer_dump_int(lambda_probe_global); // expected-warning {{1 S32b}}
+  lam();
+  clang_analyzer_dump_int(lambda_probe_global); // expected-warning {{2 S32b}}
 }
 
 //===----------------------------------------------------------------------===//
 // A cleanup-annotated variable in a C++ function that the analyzer inlines:
-// the cleanup call is processed within the inlined stack frame.
+// the cleanup call is processed within the inlined stack frame. 
 //===----------------------------------------------------------------------===//
 
+static int inlined_probe_global;
+
 static void inlined_function_cleanup(int *p) {
+  clang_analyzer_dump_int(inlined_probe_global); // expected-warning {{1 S32b}}
   clang_analyzer_dump_int(*p); // expected-warning {{42 S32b}}
 }
 
@@ -64,5 +73,6 @@ static void inlined_function_with_cleanup(void) {
 }
 
 void cleanup_in_inlined_function(void) {
+  inlined_probe_global = 1;
   inlined_function_with_cleanup();
 }

@@ -47,7 +47,9 @@ static void multiline_cleanup(int **p) {
 }
 
 void null_deref_in_multiline_cleanup_attr(void) {
-  int *p __attribute__((cleanup( // expected-note {{Calling 'multiline_cleanup'}}
+  int *p __attribute__
+      ((
+        cleanup( // expected-note {{Calling 'multiline_cleanup'}}
       multiline_cleanup)));
   p = 0; // expected-note {{Null pointer value stored to 'p'}}
 }
