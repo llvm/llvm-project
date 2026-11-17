@@ -498,128 +498,127 @@ static void combineMetadata(Instruction *K, const Instruction *J,
 
     // TODO: Assert that this switch is exhaustive for fixed MD kinds.
     switch (Kind) {
-      default:
-        K->setMetadata(Kind, nullptr); // Remove unknown metadata
-        break;
-      case LLVMContext::MD_dbg:
-        llvm_unreachable("getAllMetadataOtherThanDebugLoc returned a MD_dbg");
-      case LLVMContext::MD_DIAssignID:
-        if (!AAOnly)
-          K->mergeDIAssignID(J);
-        break;
-      case LLVMContext::MD_tbaa:
-        if (DoesKMove)
-          K->setMetadata(Kind, MDNode::getMostGenericTBAA(JMD, KMD));
-        break;
-      case LLVMContext::MD_alias_scope:
-        if (DoesKMove)
-          K->setMetadata(Kind, MDNode::getMostGenericAliasScope(JMD, KMD));
-        break;
-      case LLVMContext::MD_noalias:
-      case LLVMContext::MD_mem_parallel_loop_access:
-        if (DoesKMove)
-          K->setMetadata(Kind, MDNode::intersect(JMD, KMD));
-        break;
-      case LLVMContext::MD_access_group:
-        if (DoesKMove)
-          K->setMetadata(LLVMContext::MD_access_group,
-                         intersectAccessGroups(K, J));
-        break;
-      case LLVMContext::MD_range:
-        if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
-          K->setMetadata(Kind, MDNode::getMostGenericRange(JMD, KMD));
-        break;
-      case LLVMContext::MD_nofpclass:
-        if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
-          K->setMetadata(Kind, MDNode::getMostGenericNoFPClass(JMD, KMD));
-        break;
-      case LLVMContext::MD_fpmath:
-        if (!AAOnly)
-          K->setMetadata(Kind, MDNode::getMostGenericFPMath(JMD, KMD));
-        break;
-      case LLVMContext::MD_invariant_load:
-      case LLVMContext::MD_invariant_group:
-        // If K moves, only keep the invariant metadata if it is present on
-        // both instructions; otherwise the invariant would be asserted on a
-        // path (J's) that never promised it. If K does not move, K stays on
-        // its original path, so its existing metadata remains valid.
-        if (DoesKMove)
-          K->setMetadata(Kind, JMD);
-        break;
-      case LLVMContext::MD_nonnull:
-        if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
-          K->setMetadata(Kind, JMD);
-        break;
-      // Keep empty cases for prof, mmra, memprof, and callsite to prevent them
-      // from being removed as unknown metadata. The actual merging is handled
-      // separately below.
-      case LLVMContext::MD_prof:
-      case LLVMContext::MD_mmra:
-      case LLVMContext::MD_memprof:
-      case LLVMContext::MD_callsite:
-        break;
-      case LLVMContext::MD_callee_type:
-        if (!AAOnly) {
-          K->setMetadata(LLVMContext::MD_callee_type,
-                         MDNode::getMergedCalleeTypeMetadata(KMD, JMD));
-        }
-        break;
-      case LLVMContext::MD_callees:
-        // If K moves, it replaces J on J's path and must allow J's callees as
-        // well. If K does not move, its callees remain valid.
-        if (!AAOnly && DoesKMove)
-          K->setMetadata(Kind, MDNode::getMergedCalleesMetadata(KMD, JMD));
-        break;
-      case LLVMContext::MD_align:
-        if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
-          K->setMetadata(
-              Kind, MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
-        break;
-      case LLVMContext::MD_dereferenceable:
-      case LLVMContext::MD_dereferenceable_or_null:
-        if (!AAOnly && DoesKMove)
-          K->setMetadata(Kind,
-            MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
-        break;
-      case LLVMContext::MD_preserve_access_index:
-        // Preserve !preserve.access.index in K.
-        break;
-      case LLVMContext::MD_noundef:
-        // If K does move, keep noundef if it is present in both instructions.
-        if (!AAOnly && DoesKMove)
-          K->setMetadata(Kind, JMD);
-        break;
-      case LLVMContext::MD_nontemporal:
-        // Preserve !nontemporal if it is present on both instructions.
-        if (!AAOnly)
-          K->setMetadata(Kind, JMD);
-        break;
-      case LLVMContext::MD_mem_cache_hint:
-        // Preserve !mem.cache_hint only if it is present and equivalent on both
-        // instructions.
-        if (!AAOnly && KMD != JMD)
-          K->setMetadata(Kind, nullptr);
-        break;
-      case LLVMContext::MD_noalias_addrspace:
-        if (DoesKMove)
-          K->setMetadata(Kind,
-                         MDNode::getMostGenericNoaliasAddrspace(JMD, KMD));
-        break;
-      case LLVMContext::MD_nosanitize:
-        // Preserve !nosanitize if both K and J have it.
+    default:
+      K->setMetadata(Kind, nullptr); // Remove unknown metadata
+      break;
+    case LLVMContext::MD_dbg:
+      llvm_unreachable("getAllMetadataOtherThanDebugLoc returned a MD_dbg");
+    case LLVMContext::MD_DIAssignID:
+      if (!AAOnly)
+        K->mergeDIAssignID(J);
+      break;
+    case LLVMContext::MD_tbaa:
+      if (DoesKMove)
+        K->setMetadata(Kind, MDNode::getMostGenericTBAA(JMD, KMD));
+      break;
+    case LLVMContext::MD_alias_scope:
+      if (DoesKMove)
+        K->setMetadata(Kind, MDNode::getMostGenericAliasScope(JMD, KMD));
+      break;
+    case LLVMContext::MD_noalias:
+    case LLVMContext::MD_mem_parallel_loop_access:
+      if (DoesKMove)
+        K->setMetadata(Kind, MDNode::intersect(JMD, KMD));
+      break;
+    case LLVMContext::MD_access_group:
+      if (DoesKMove)
+        K->setMetadata(LLVMContext::MD_access_group,
+                       intersectAccessGroups(K, J));
+      break;
+    case LLVMContext::MD_range:
+      if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
+        K->setMetadata(Kind, MDNode::getMostGenericRange(JMD, KMD));
+      break;
+    case LLVMContext::MD_nofpclass:
+      if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
+        K->setMetadata(Kind, MDNode::getMostGenericNoFPClass(JMD, KMD));
+      break;
+    case LLVMContext::MD_fpmath:
+      if (!AAOnly)
+        K->setMetadata(Kind, MDNode::getMostGenericFPMath(JMD, KMD));
+      break;
+    case LLVMContext::MD_invariant_load:
+    case LLVMContext::MD_invariant_group:
+      // If K moves, only keep the invariant metadata if it is present on
+      // both instructions; otherwise the invariant would be asserted on a
+      // path (J's) that never promised it. If K does not move, K stays on
+      // its original path, so its existing metadata remains valid.
+      if (DoesKMove)
         K->setMetadata(Kind, JMD);
-        break;
-      case LLVMContext::MD_captures:
-        K->setMetadata(
-            Kind, MDNode::fromCaptureComponents(
-                      K->getContext(), MDNode::toCaptureComponents(JMD) |
-                                           MDNode::toCaptureComponents(KMD)));
-        break;
-      case LLVMContext::MD_alloc_token:
-        if (!AAOnly && KMD != JMD)
-          K->setMetadata(Kind, MDNode::getMergedAllocTokenMetadata(KMD, JMD));
-        break;
+      break;
+    case LLVMContext::MD_nonnull:
+      if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
+        K->setMetadata(Kind, JMD);
+      break;
+    // Keep empty cases for prof, mmra, memprof, and callsite to prevent them
+    // from being removed as unknown metadata. The actual merging is handled
+    // separately below.
+    case LLVMContext::MD_prof:
+    case LLVMContext::MD_mmra:
+    case LLVMContext::MD_memprof:
+    case LLVMContext::MD_callsite:
+      break;
+    case LLVMContext::MD_callee_type:
+      if (!AAOnly) {
+        K->setMetadata(LLVMContext::MD_callee_type,
+                       MDNode::getMergedCalleeTypeMetadata(KMD, JMD));
       }
+      break;
+    case LLVMContext::MD_callees:
+      // If K moves, it replaces J on J's path and must allow J's callees as
+      // well. If K does not move, its callees remain valid.
+      if (!AAOnly && DoesKMove)
+        K->setMetadata(Kind, MDNode::getMergedCalleesMetadata(KMD, JMD));
+      break;
+    case LLVMContext::MD_align:
+      if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
+        K->setMetadata(
+            Kind, MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
+      break;
+    case LLVMContext::MD_dereferenceable:
+    case LLVMContext::MD_dereferenceable_or_null:
+      if (!AAOnly && DoesKMove)
+        K->setMetadata(
+            Kind, MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
+      break;
+    case LLVMContext::MD_preserve_access_index:
+      // Preserve !preserve.access.index in K.
+      break;
+    case LLVMContext::MD_noundef:
+      // If K does move, keep noundef if it is present in both instructions.
+      if (!AAOnly && DoesKMove)
+        K->setMetadata(Kind, JMD);
+      break;
+    case LLVMContext::MD_nontemporal:
+      // Preserve !nontemporal if it is present on both instructions.
+      if (!AAOnly)
+        K->setMetadata(Kind, JMD);
+      break;
+    case LLVMContext::MD_mem_cache_hint:
+      // Preserve !mem.cache_hint only if it is present and equivalent on both
+      // instructions.
+      if (!AAOnly && KMD != JMD)
+        K->setMetadata(Kind, nullptr);
+      break;
+    case LLVMContext::MD_noalias_addrspace:
+      if (DoesKMove)
+        K->setMetadata(Kind, MDNode::getMostGenericNoaliasAddrspace(JMD, KMD));
+      break;
+    case LLVMContext::MD_nosanitize:
+      // Preserve !nosanitize if both K and J have it.
+      K->setMetadata(Kind, JMD);
+      break;
+    case LLVMContext::MD_captures:
+      K->setMetadata(
+          Kind, MDNode::fromCaptureComponents(
+                    K->getContext(), MDNode::toCaptureComponents(JMD) |
+                                         MDNode::toCaptureComponents(KMD)));
+      break;
+    case LLVMContext::MD_alloc_token:
+      if (!AAOnly && KMD != JMD)
+        K->setMetadata(Kind, MDNode::getMergedAllocTokenMetadata(KMD, JMD));
+      break;
+    }
   }
 
   // Merge MMRAs.
@@ -676,4 +675,3 @@ void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
 void llvm::combineAAMetadata(Instruction *K, const Instruction *J) {
   combineMetadata(K, J, /*DoesKMove=*/true, /*AAOnly=*/true);
 }
-
