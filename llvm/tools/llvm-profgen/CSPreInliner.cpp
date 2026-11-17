@@ -25,7 +25,7 @@ STATISTIC(PreInlNumCSNotInlined,
           "Number of functions not inlined with context sensitive profile");
 STATISTIC(PreInlNumCSICPRejected,
           "Number of indirect call target contexts not inlined because the "
-          "sample profile loader would not promote them");
+          "pre-inliner ICP checks rejected them");
 STATISTIC(PreInlNumCSInlinedHitMinLimit,
           "Number of functions with FDO inline stopped due to min size limit");
 STATISTIC(PreInlNumCSInlinedHitMaxLimit,
@@ -55,8 +55,8 @@ static cl::opt<bool> SamplePreInlineReplay(
 
 static cl::opt<bool> CSPreinlHonorICPLimits(
     "csspgo-preinliner-honor-icp-limits", cl::Hidden, cl::init(true),
-    cl::desc("Do not inline indirect call target contexts that the sample "
-             "profile loader will not promote (see "
+    cl::desc("Apply indirect-call promotion checks when selecting contexts "
+             "for pre-inlining (see "
              "-sample-profile-icp-relative-hotness)."));
 
 static cl::opt<int> CSPreinlMultiplierForPrevInl(
@@ -86,6 +86,19 @@ CSPreInliner::CSPreInliner(SampleContextTracker &Tracker,
   ProfileICPRelativeHotnessSkip =
       getSampleProfileICPRelativeHotnessSkip(Binary.getLibraryOptions());
   ProfileICPMaxProm = getSampleProfileICPMaxProm(Binary.getLibraryOptions());
+
+  // Use the contextless summary computed before pre-inlining. The loader uses
+  // the emitted nested profile, whose summary depends on our inline decisions
+  // and can give a lower hot threshold.
+  //
+  // We deliberately keep the contextless threshold here. Using a lower estimate
+  // could allow more indirect targets to consume the caller's inline size
+  // budget, leaving less room for other profitable callees. Rejecting a context
+  // here leaves it on the existing base-profile merge path, so its samples can
+  // still guide optimization of the out-of-line function. The loader continues
+  // to apply its own hotness check.
+  HotCountThreshold = ProfileSummaryBuilder::getHotCountThreshold(
+      Summary->getDetailedSummary());
 }
 
 std::vector<FunctionId> CSPreInliner::buildTopDownOrder() {
@@ -118,15 +131,16 @@ std::vector<FunctionId> CSPreInliner::buildTopDownOrder() {
   return Order;
 }
 
-// Find the indirect call targets under CallerNode that the sample loader won't
-// promote, so we don't plan to inline them. The loader (see
+// Find indirect call targets to exclude from the pre-inline plan. Apply the
+// loader's promotion limits, using the contextless hot threshold as described
+// in the constructor. The loader (see
 // inlineHotFunctionsWithPriority) walks a call's targets from hottest to
 // coldest and promotes one only if it's hot, is at least
 // ProfileICPRelativeHotness percent of the site total (once the first
 // ProfileICPRelativeHotnessSkip targets are promoted), and fewer than
-// ProfileICPMaxProm targets have been promoted so far. Pre-inlining a target
-// that fails these checks just burns the caller's size budget and leaves its
-// samples nested at the call site instead of in its own profile.
+// ProfileICPMaxProm targets have been promoted so far. Keep rejected targets
+// out of the caller's inline size budget and leave their contexts for merging
+// into their base profiles.
 //
 // One wrinkle: nesting a target under the caller makes convertCSProfiles drop
 // its call-target entry, so the loader counts its head samples instead and the
@@ -157,8 +171,6 @@ CSPreInliner::getICPRejectedCallees(ContextTrieNode *CallerNode,
           {CalleeNode, CalleeSamples->getHeadSamplesEstimate()});
   }
 
-  uint64_t HotCountThreshold = ProfileSummaryBuilder::getHotCountThreshold(
-      Summary->getDetailedSummary());
   for (auto &Entry : CallSites) {
     const LineLocation &CallSite = Entry.first;
     // Only indirect calls are subject to ICP, so check the call probe type. It
@@ -219,7 +231,7 @@ CSPreInliner::getICPRejectedCallees(ContextTrieNode *CallerNode,
     for (size_t I = NumAccepted; I < Callees.size(); ++I) {
       const Target &T = Callees[I];
       Rejected.insert(T.Node);
-      LLVM_DEBUG(dbgs() << "    Not promotable by ICP: "
+      LLVM_DEBUG(dbgs() << "    Rejected by pre-inliner ICP checks: "
                         << ContextTracker.getContextString(T.Node) << " (head "
                         << T.HeadCount << ", site total " << SiteTotal
                         << ")\n");

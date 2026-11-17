@@ -26,6 +26,12 @@
 ; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-icp.prof --binary=%S/Inputs/fs-discriminator-probe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=0 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --sample-profile-icp-relative-hotness=20 --sample-profile-icp-max-prom=0 --output=%t-noprom
 ; RUN: FileCheck %s --input-file %t-noprom --check-prefix=CHECK-NOPROM --implicit-check-not="[quick_sort:4 @"
 
+; The cached hot threshold honors an explicit override. Even the hottest target
+; (600 samples) is rejected when the threshold is 601, preserving each target's
+; standalone profile.
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-icp.prof --binary=%S/Inputs/fs-discriminator-probe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=0 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --profile-summary-hot-count=601 --output=%t-hot-count
+; RUN: FileCheck %s --input-file %t-hot-count --check-prefix=CHECK-NOPROM --implicit-check-not="[quick_sort:4 @"
+
 ; CHECK-MAXPROM-DAG: [quick_sort:4 @ t1]:6000:600
 ; CHECK-MAXPROM-DAG: [quick_sort:4 @ t2]:2000:200
 ; CHECK-MAXPROM-DAG: [t3]:2000:200

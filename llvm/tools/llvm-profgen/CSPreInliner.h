@@ -33,8 +33,8 @@ struct ProfiledInlineCandidate {
   uint64_t CallsiteCount;
   // Size proxy for function under particular call context.
   uint64_t SizeCost;
-  // Indirect call target that SampleProfileLoader will not promote, so its
-  // context cannot be inlined and must be merged into the callee's base.
+  // Indirect call target rejected by the pre-inliner's ICP checks, so its
+  // context should follow the merge path into the callee's base profile.
   bool ICPRejected = false;
 };
 
@@ -92,6 +92,7 @@ private:
   unsigned ProfileICPRelativeHotness;
   unsigned ProfileICPRelativeHotnessSkip;
   unsigned ProfileICPMaxProm;
+  uint64_t HotCountThreshold;
   SampleContextTracker &ContextTracker;
   ProfiledBinary &Binary;
   ProfileSummary *Summary;
