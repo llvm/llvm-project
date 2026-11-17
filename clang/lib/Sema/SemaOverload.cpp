@@ -17429,6 +17429,10 @@ ExprResult Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
         QualType MemPtrType = Context.getMemberPointerType(
             Fn->getType(), Qualifier,
             cast<CXXRecordDecl>(Method->getDeclContext()));
+        if (CheckPtrAuthVirtualMemberPointer(UnOp->getOperatorLoc(), Method,
+                                             MemPtrType))
+          return ExprError();
+
         // Under the MS ABI, lock down the inheritance model now.
         if (Context.getTargetInfo().getCXXABI().isMicrosoft())
           (void)isCompleteType(UnOp->getOperatorLoc(), MemPtrType);

@@ -7523,6 +7523,8 @@ public:
   bool CheckUseOfCXXMethodAsAddressOfOperand(SourceLocation OpLoc,
                                              const Expr *Op,
                                              const CXXMethodDecl *MD);
+  bool CheckPtrAuthVirtualMemberPointer(SourceLocation OpLoc,
+                                        const CXXMethodDecl *MD, QualType MPTy);
 
   /// CheckAddressOfOperand - The operand of & must be either a function
   /// designator or an lvalue designating an object. If it is an lvalue, the

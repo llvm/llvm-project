@@ -277,7 +277,8 @@ public:
                                              unsigned numPrefixArgs,
                                              const FunctionDecl *ABIInfoFD);
   const CGFunctionInfo &
-  arrangeUnprototypedMustTailThunk(const CXXMethodDecl *MD);
+  arrangeUnprototypedMustTailThunk(const CXXMethodDecl *MD,
+                                   bool PreserveReturnType = false);
   const CGFunctionInfo &arrangeMSCtorClosure(const CXXConstructorDecl *CD,
                                                  CXXCtorType CT);
   const CGFunctionInfo &arrangeCXXMethodType(const CXXRecordDecl *RD,

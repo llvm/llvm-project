@@ -13,6 +13,7 @@
 
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
+#include "CGDebugInfo.h"
 #include "clang/AST/Attr.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 
@@ -366,4 +367,87 @@ CGCXXABI::AddedStructorArgCounts CGCXXABI::addImplicitConstructorArgs(
   }
   return AddedStructorArgCounts(AddedArgs.Prefix.size(),
                                 AddedArgs.Suffix.size());
+}
+
+llvm::Function *CGCXXABI::emitVirtualMemberPointerThunk(
+    const CXXMethodDecl *MD, StringRef ThunkName, SourceLocation DebugLoc,
+    bool AlwaysUnprototyped,
+    llvm::function_ref<CGCallee(CodeGenFunction &, llvm::FunctionType *)>
+        GetCallee) {
+  assert(!isa<CXXConstructorDecl>(MD) && !isa<CXXDestructorDecl>(MD) &&
+         "can't form pointers to ctors or virtual dtors");
+
+  // If the thunk has been generated previously, just return it.
+  if (llvm::GlobalValue *GV = CGM.getModule().getNamedValue(ThunkName))
+    return cast<llvm::Function>(GV);
+
+  bool IsUnprototyped = true;
+  const CGFunctionInfo *FnInfo;
+  if (AlwaysUnprototyped) {
+    FnInfo = &CGM.getTypes().arrangeUnprototypedMustTailThunk(
+        MD, /*PreserveReturnType=*/false);
+  } else if (!CGM.getTypes().isFuncTypeConvertible(
+                 MD->getType()->castAs<FunctionType>())) {
+    FnInfo = &CGM.getTypes().arrangeUnprototypedMustTailThunk(
+        MD, /*PreserveReturnType=*/true);
+  } else {
+    IsUnprototyped = false;
+    FnInfo = &CGM.getTypes().arrangeCXXMethodDeclaration(MD);
+  }
+
+  // Create the llvm::Function.
+  llvm::FunctionType *ThunkTy = CGM.getTypes().GetFunctionType(*FnInfo);
+  llvm::GlobalValue::LinkageTypes Linkage =
+      MD->isExternallyVisible() ? llvm::GlobalValue::LinkOnceODRLinkage
+                                : llvm::GlobalValue::InternalLinkage;
+  llvm::Function *ThunkFn =
+      llvm::Function::Create(ThunkTy, Linkage, ThunkName, &CGM.getModule());
+  assert(ThunkFn->getName() == ThunkName && "name was uniqued!");
+
+  if (MD->isExternallyVisible() && CGM.supportsCOMDAT())
+    ThunkFn->setComdat(CGM.getModule().getOrInsertComdat(ThunkFn->getName()));
+
+  CGM.SetLLVMFunctionAttributes(MD, *FnInfo, ThunkFn, /*IsThunk=*/true);
+  CGM.SetLLVMFunctionAttributesForDefinition(MD, ThunkFn);
+
+  // Stack protection sometimes gets inserted after the musttail call.
+  ThunkFn->removeFnAttr(llvm::Attribute::StackProtect);
+  ThunkFn->removeFnAttr(llvm::Attribute::StackProtectStrong);
+  ThunkFn->removeFnAttr(llvm::Attribute::StackProtectReq);
+
+  // If this thunk is unprototyped, add the "thunk" attribute so that LLVM
+  // knows that the prototype is incomplete and the caller is required to cast
+  // the prototype appropriately.
+  if (IsUnprototyped)
+    ThunkFn->addFnAttr("thunk");
+
+  // These thunks can be compared, so they are not unnamed.
+  ThunkFn->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::None);
+
+  // Start codegen.
+  CodeGenFunction CGF(CGM);
+  CGF.CurGD = GlobalDecl(MD);
+  CGF.CurFuncIsThunk = true;
+
+  // Build FunctionArgs. If unprototyped, only include the implicit 'this'
+  // parameter declaration.
+  FunctionArgList FunctionArgs;
+  if (IsUnprototyped)
+    buildThisParam(CGF, FunctionArgs);
+  else
+    CGF.BuildFunctionArgList(CGF.CurGD, FunctionArgs);
+
+  // Start defining the function.
+  CGF.StartFunction(GlobalDecl(), FnInfo->getReturnType(), ThunkFn, *FnInfo,
+                    FunctionArgs, MD->getLocation(), SourceLocation());
+
+  auto AL = ApplyDebugLocation::CreateDefaultArtificial(CGF, DebugLoc);
+  setCXXABIThisValue(CGF, loadIncomingCXXThis(CGF));
+
+  CGCallee Callee = GetCallee(CGF, ThunkTy);
+  CGF.EmitMustTailThunk(MD, getThisValue(CGF),
+                        {ThunkTy, Callee.getFunctionPointer()},
+                        Callee.getPointerAuthInfo());
+
+  return ThunkFn;
 }

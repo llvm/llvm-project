@@ -3426,77 +3426,19 @@ bool ItaniumCXXABI::NeedsVTTParameter(GlobalDecl GD) {
 
 llvm::Constant *
 ItaniumCXXABI::getOrCreateVirtualFunctionPointerThunk(const CXXMethodDecl *MD) {
-  SmallString<256> MethodName;
-  llvm::raw_svector_ostream Out(MethodName);
+  SmallString<256> ThunkName;
+  llvm::raw_svector_ostream Out(ThunkName);
   getMangleContext().mangleCXXName(MD, Out);
-  MethodName += "_vfpthunk_";
-  StringRef ThunkName = MethodName.str();
-  llvm::Function *ThunkFn;
-  if ((ThunkFn = cast_or_null<llvm::Function>(
-           CGM.getModule().getNamedValue(ThunkName))))
-    return ThunkFn;
+  ThunkName += "_vfpthunk_";
 
-  const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeCXXMethodDeclaration(MD);
-  llvm::FunctionType *ThunkTy = CGM.getTypes().GetFunctionType(FnInfo);
-  llvm::GlobalValue::LinkageTypes Linkage =
-      MD->isExternallyVisible() ? llvm::GlobalValue::LinkOnceODRLinkage
-                                : llvm::GlobalValue::InternalLinkage;
-  ThunkFn =
-      llvm::Function::Create(ThunkTy, Linkage, ThunkName, &CGM.getModule());
-  if (Linkage == llvm::GlobalValue::LinkOnceODRLinkage)
+  llvm::Function *ThunkFn = emitVirtualMemberPointerThunk(
+      MD, ThunkName, SourceLocation(), /*AlwaysUnprototyped=*/false,
+      [&](CodeGenFunction &CGF, llvm::FunctionType *ThunkTy) {
+        return getVirtualFunctionPointer(CGF, MD, getThisAddress(CGF), ThunkTy,
+                                         SourceLocation());
+      });
+  if (ThunkFn->hasLinkOnceODRLinkage())
     ThunkFn->setVisibility(llvm::GlobalValue::HiddenVisibility);
-  assert(ThunkFn->getName() == ThunkName && "name was uniqued!");
-
-  CGM.SetLLVMFunctionAttributes(MD, FnInfo, ThunkFn, /*IsThunk=*/true);
-  CGM.SetLLVMFunctionAttributesForDefinition(MD, ThunkFn);
-
-  // Stack protection sometimes gets inserted after the musttail call.
-  ThunkFn->removeFnAttr(llvm::Attribute::StackProtect);
-  ThunkFn->removeFnAttr(llvm::Attribute::StackProtectStrong);
-  ThunkFn->removeFnAttr(llvm::Attribute::StackProtectReq);
-
-  // Start codegen.
-  CodeGenFunction CGF(CGM);
-  CGF.CurGD = GlobalDecl(MD);
-  CGF.CurFuncIsThunk = true;
-
-  // Build FunctionArgs.
-  FunctionArgList FunctionArgs;
-  CGF.BuildFunctionArgList(CGF.CurGD, FunctionArgs);
-
-  CGF.StartFunction(GlobalDecl(), FnInfo.getReturnType(), ThunkFn, FnInfo,
-                    FunctionArgs, MD->getLocation(), SourceLocation());
-
-  // Emit an artificial location for this function.
-  auto AL = ApplyDebugLocation::CreateArtificial(CGF);
-
-  llvm::Value *ThisVal = loadIncomingCXXThis(CGF);
-  setCXXABIThisValue(CGF, ThisVal);
-
-  CallArgList CallArgs;
-  for (const VarDecl *VD : FunctionArgs)
-    CGF.EmitDelegateCallArg(CallArgs, VD, SourceLocation());
-
-  const FunctionProtoType *FPT = MD->getType()->getAs<FunctionProtoType>();
-  RequiredArgs Required = RequiredArgs::forPrototypePlus(FPT, /*this*/ 1);
-  const CGFunctionInfo &CallInfo =
-      CGM.getTypes().arrangeCXXMethodCall(CallArgs, FPT, Required, 0, MD);
-  CGCallee Callee = CGCallee::forVirtual(nullptr, GlobalDecl(MD),
-                                         getThisAddress(CGF), ThunkTy);
-  llvm::CallBase *CallOrInvoke;
-  CGF.EmitCall(CallInfo, Callee, ReturnValueSlot(), CallArgs, &CallOrInvoke,
-               /*IsMustTail=*/true, SourceLocation(), true);
-  auto *Call = cast<llvm::CallInst>(CallOrInvoke);
-  Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
-  if (Call->getType()->isVoidTy())
-    CGF.Builder.CreateRetVoid();
-  else
-    CGF.Builder.CreateRet(Call);
-
-  // Finish the function to maintain CodeGenFunction invariants.
-  // FIXME: Don't emit unreachable code.
-  CGF.EmitBlock(CGF.createBasicBlock());
-  CGF.FinishFunction();
   return ThunkFn;
 }
 

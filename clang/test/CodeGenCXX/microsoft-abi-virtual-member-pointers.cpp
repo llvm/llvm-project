@@ -186,4 +186,14 @@ void f() {
 // CHECK64: ret void
 // CHECK64: }
 
+namespace ReturnAttrs {
+struct S {
+  virtual int *f(int) __attribute__((returns_nonnull, malloc, alloc_size(2)));
+};
+auto mp = &S::f;
+// CHECK32: define linkonce_odr x86_thiscallcc void @"??_9S@ReturnAttrs@@$BA@AE"(ptr noundef %this, ...) {{.*}} comdat
+// CHECK64: define linkonce_odr void @"??_9S@ReturnAttrs@@$BA@AA"(ptr noundef %this, ...) {{.*}} comdat
+}
+
 // CHECK32: #[[ATTR]] = {{{.*}}"thunk"{{.*}}}
+// CHECK64: #[[ATTR]] = {{{.*}}"thunk"{{.*}}}

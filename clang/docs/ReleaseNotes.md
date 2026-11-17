@@ -1240,6 +1240,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   argument of `std::addressof`, and an unresolvable overload set is diagnosed.
   (#GH77928)
 
+- Clang no longer requires the parameter types of a virtual member function
+  to be complete when taking its address with pointer authentication
+  (`-fptrauth-calls`) enabled.
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made

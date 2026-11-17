@@ -2558,8 +2558,10 @@ public:
   void FinishObjCDirectPreconditionThunk();
 
   /// Emit a musttail call for a thunk with a potentially adjusted this pointer.
-  void EmitMustTailThunk(GlobalDecl GD, llvm::Value *AdjustedThisPtr,
-                         llvm::FunctionCallee Callee);
+  void
+  EmitMustTailThunk(GlobalDecl GD, llvm::Value *AdjustedThisPtr,
+                    llvm::FunctionCallee Callee,
+                    const CGPointerAuthInfo &PointerAuth = CGPointerAuthInfo());
 
   /// Generate a thunk for the given method.
   void generateThunk(llvm::Function *Fn, const CGFunctionInfo &FnInfo,
@@ -4705,8 +4707,7 @@ public:
   RValue EmitCall(const CGFunctionInfo &CallInfo, const CGCallee &Callee,
                   ReturnValueSlot ReturnValue, const CallArgList &Args,
                   llvm::CallBase **CallOrInvoke, bool IsMustTail,
-                  SourceLocation Loc,
-                  bool IsVirtualFunctionPointerThunk = false);
+                  SourceLocation Loc);
   RValue EmitCall(const CGFunctionInfo &CallInfo, const CGCallee &Callee,
                   ReturnValueSlot ReturnValue, const CallArgList &Args,
                   llvm::CallBase **CallOrInvoke = nullptr,

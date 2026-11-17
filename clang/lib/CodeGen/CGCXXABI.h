@@ -105,6 +105,17 @@ protected:
     return CGM.getCodeGenOpts().CtorDtorReturnThis;
   }
 
+  /// Get or create a musttail thunk that performs virtual dispatch for a
+  /// virtual member function pointer. If AlwaysUnprototyped is true, always
+  /// emit a void-returning unprototyped thunk; otherwise, emit a prototyped
+  /// thunk if the function type is convertible, and an unprototyped thunk that
+  /// preserves the return type if a parameter type is incomplete.
+  llvm::Function *emitVirtualMemberPointerThunk(
+      const CXXMethodDecl *MD, StringRef ThunkName, SourceLocation DebugLoc,
+      bool AlwaysUnprototyped,
+      llvm::function_ref<CGCallee(CodeGenFunction &, llvm::FunctionType *)>
+          GetCallee);
+
 public:
 
   virtual ~CGCXXABI();

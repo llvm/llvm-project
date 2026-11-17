@@ -2138,76 +2138,25 @@ MicrosoftCXXABI::enumerateVBTables(const CXXRecordDecl *RD) {
 llvm::Function *
 MicrosoftCXXABI::EmitVirtualMemPtrThunk(const CXXMethodDecl *MD,
                                         const MethodVFTableLocation &ML) {
-  assert(!isa<CXXConstructorDecl>(MD) && !isa<CXXDestructorDecl>(MD) &&
-         "can't form pointers to ctors or virtual dtors");
-
   // Calculate the mangled name.
   SmallString<256> ThunkName;
   llvm::raw_svector_ostream Out(ThunkName);
   getMangleContext().mangleVirtualMemPtrThunk(MD, ML, Out);
 
-  // If the thunk has been generated previously, just return it.
-  if (llvm::GlobalValue *GV = CGM.getModule().getNamedValue(ThunkName))
-    return cast<llvm::Function>(GV);
-
-  // Create the llvm::Function.
-  const CGFunctionInfo &FnInfo =
-      CGM.getTypes().arrangeUnprototypedMustTailThunk(MD);
-  llvm::FunctionType *ThunkTy = CGM.getTypes().GetFunctionType(FnInfo);
-  llvm::Function *ThunkFn =
-      llvm::Function::Create(ThunkTy, llvm::Function::ExternalLinkage,
-                             ThunkName.str(), &CGM.getModule());
-  assert(ThunkFn->getName() == ThunkName && "name was uniqued!");
-
-  ThunkFn->setLinkage(MD->isExternallyVisible()
-                          ? llvm::GlobalValue::LinkOnceODRLinkage
-                          : llvm::GlobalValue::InternalLinkage);
-  if (MD->isExternallyVisible())
-    ThunkFn->setComdat(CGM.getModule().getOrInsertComdat(ThunkFn->getName()));
-
-  CGM.SetLLVMFunctionAttributes(MD, FnInfo, ThunkFn, /*IsThunk=*/false);
-  CGM.SetLLVMFunctionAttributesForDefinition(MD, ThunkFn);
-
-  // Add the "thunk" attribute so that LLVM knows that the return type is
-  // meaningless. These thunks can be used to call functions with differing
-  // return types, and the caller is required to cast the prototype
-  // appropriately to extract the correct value.
-  ThunkFn->addFnAttr("thunk");
-
-  // These thunks can be compared, so they are not unnamed.
-  ThunkFn->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::None);
-
-  // Start codegen.
-  CodeGenFunction CGF(CGM);
-  CGF.CurGD = GlobalDecl(MD);
-  CGF.CurFuncIsThunk = true;
-
-  // Build FunctionArgs, but only include the implicit 'this' parameter
-  // declaration.
-  FunctionArgList FunctionArgs;
-  buildThisParam(CGF, FunctionArgs);
-
-  // Start defining the function.
-  CGF.StartFunction(GlobalDecl(), FnInfo.getReturnType(), ThunkFn, FnInfo,
-                    FunctionArgs, MD->getLocation(), SourceLocation());
-
-  ApplyDebugLocation AL(CGF, MD->getLocation());
-  setCXXABIThisValue(CGF, loadIncomingCXXThis(CGF));
-
-  // Load the vfptr and then callee from the vftable.  The callee should have
-  // adjusted 'this' so that the vfptr is at offset zero.
-  llvm::Type *ThunkPtrTy = CGF.DefaultPtrTy;
-  llvm::Value *VTable =
-      CGF.GetVTablePtr(getThisAddress(CGF), CGF.DefaultPtrTy, MD->getParent());
-
-  llvm::Value *VFuncPtr = CGF.Builder.CreateConstInBoundsGEP1_64(
-      ThunkPtrTy, VTable, ML.Index, "vfn");
-  llvm::Value *Callee =
-    CGF.Builder.CreateAlignedLoad(ThunkPtrTy, VFuncPtr, CGF.getPointerAlign());
-
-  CGF.EmitMustTailThunk(MD, getThisValue(CGF), {ThunkTy, Callee});
-
-  return ThunkFn;
+  return emitVirtualMemberPointerThunk(
+      MD, ThunkName, MD->getLocation(), /*AlwaysUnprototyped=*/true,
+      [&](CodeGenFunction &CGF, llvm::FunctionType *) {
+        // Load the vfptr and then callee from the vftable. The caller should
+        // have adjusted 'this' so that the vfptr is at offset zero.
+        llvm::Type *ThunkPtrTy = CGF.DefaultPtrTy;
+        llvm::Value *VTable = CGF.GetVTablePtr(
+            getThisAddress(CGF), CGF.DefaultPtrTy, MD->getParent());
+        llvm::Value *VFuncPtr = CGF.Builder.CreateConstInBoundsGEP1_64(
+            ThunkPtrTy, VTable, ML.Index, "vfn");
+        llvm::Value *Callee = CGF.Builder.CreateAlignedLoad(
+            ThunkPtrTy, VFuncPtr, CGF.getPointerAlign());
+        return CGCallee(GlobalDecl(MD), Callee);
+      });
 }
 
 void MicrosoftCXXABI::emitVirtualInheritanceTables(const CXXRecordDecl *RD) {

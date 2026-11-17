@@ -437,7 +437,8 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::FunctionCallee Callee,
 
 void CodeGenFunction::EmitMustTailThunk(GlobalDecl GD,
                                         llvm::Value *AdjustedThisPtr,
-                                        llvm::FunctionCallee Callee) {
+                                        llvm::FunctionCallee Callee,
+                                        const CGPointerAuthInfo &PointerAuth) {
   // Emitting a musttail call thunk doesn't use any of the CGCall.cpp machinery
   // to translate AST arguments into LLVM IR arguments.  For thunks, we know
   // that the caller prototype more or less matches the callee prototype with
@@ -462,9 +463,13 @@ void CodeGenFunction::EmitMustTailThunk(GlobalDecl GD,
     Builder.CreateStore(AdjustedThisPtr, ThisAddr);
   }
 
+  SmallVector<llvm::OperandBundleDef, 1> BundleList =
+      getBundlesForFunclet(Callee.getCallee());
+  EmitPointerAuthOperandBundle(PointerAuth, BundleList);
+
   // Emit the musttail call manually.  Even if the prologue pushed cleanups, we
   // don't actually want to run them.
-  llvm::CallInst *Call = Builder.CreateCall(Callee, Args);
+  llvm::CallInst *Call = Builder.CreateCall(Callee, Args, BundleList);
   Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
 
   // Apply the standard set of call attributes.
@@ -484,6 +489,9 @@ void CodeGenFunction::EmitMustTailThunk(GlobalDecl GD,
   // Finish the function to maintain CodeGenFunction invariants.
   // FIXME: Don't emit unreachable code.
   EmitBlock(createBasicBlock());
+
+  // Disable the final ARC autorelease.
+  AutoreleaseResult = false;
 
   FinishThunk();
 }

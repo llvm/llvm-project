@@ -122,10 +122,12 @@ struct Class0 {
 // CHECK: ret void
 
 // CHECK: define linkonce_odr hidden void @_ZN5Base08virtual1Ev_vfpthunk_(ptr noundef %[[THIS:.*]])
+// CHECK-NOT: unnamed_addr
+// ELF-SAME: comdat
+// CHECK-SAME: {
 // CHECK: %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // CHECK: store ptr %[[THIS]], ptr %[[THIS_ADDR]], align 8
 // CHECK: %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
-// CHECK-NEXT: %[[V0:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
 // CHECK-NEXT: %[[VTABLE:.*]] = load ptr, ptr %[[THIS1]], align 8
 // CHECK-NEXT: %[[V2:.*]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK-NEXT: %[[V3:.*]] = call i64 @llvm.ptrauth.auth(i64 %[[V2]], i32 2, i64 0)
@@ -134,12 +136,11 @@ struct Class0 {
 // CHECK-NEXT: %[[V5:.*]] = load ptr, ptr %[[VFN]], align 8
 // CHECK-NEXT: %[[V6:.*]] = ptrtoint ptr %[[VFN]] to i64
 // CHECK-NEXT: %[[V7:.*]] = call i64 @llvm.ptrauth.blend(i64 %[[V6]], i64 55600)
-// CHECK-NEXT: musttail call void %[[V5]](ptr noundef nonnull align {{[0-9]+}} dereferenceable(8) %[[V0]]) [ "ptrauth"(i32 0, i64 %[[V7]]) ]
+// CHECK-NEXT: musttail call void %[[V5]](ptr noundef nonnull align {{[0-9]+}} dereferenceable(8) %[[THIS1]]) [ "ptrauth"(i32 0, i64 %[[V7]]) ]
 // CHECK-NEXT: ret void
 
 // CHECK: define linkonce_odr hidden void @_ZN5Base08virtual3Ev_vfpthunk_(ptr noundef %{{.*}})
-// CHECK: load ptr, ptr %{{.*}}, align 8
-// CHECK: load ptr, ptr %{{.*}}, align 8
+// CHECK: %[[THIS1:.*]] = load ptr, ptr %{{.*}}, align 8
 // CHECK: %[[VTABLE:.*]] = load ptr, ptr %{{.*}}, align 8
 // CHECK: %[[V2:.*]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK: %[[V3:.*]] = call i64 @llvm.ptrauth.auth(i64 %[[V2]], i32 2, i64 0)
@@ -147,14 +148,12 @@ struct Class0 {
 // CHECK: getelementptr inbounds ptr, ptr %[[V4]], i64 1
 // CHECK: call i64 @llvm.ptrauth.blend(i64 %{{.*}}, i64 53007)
 
-// CHECK: define linkonce_odr hidden void @_ZN5Base016virtual_variadicEiz_vfpthunk_(ptr noundef %[[THIS:.*]], i32 noundef %0, ...)
+// CHECK: define linkonce_odr hidden void @_ZN5Base016virtual_variadicEiz_vfpthunk_(ptr noundef %[[THIS:.*]], i32 noundef %[[ARG0:.*]], ...)
 // CHECK: %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // CHECK-NEXT: %[[_ADDR:.*]] = alloca i32, align 4
 // CHECK-NEXT: store ptr %[[THIS]], ptr %[[THIS_ADDR]], align 8
-// CHECK: store i32 %0, ptr %[[_ADDR]], align 4
+// CHECK: store i32 %[[ARG0]], ptr %[[_ADDR]], align 4
 // CHECK: %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
-// CHECK-NEXT: %[[V1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
-// CHECK-NEXT: %[[V2:.*]] = load i32, ptr %[[_ADDR]], align 4
 // CHECK-NEXT: %[[VTABLE:.*]] = load ptr, ptr %[[THIS1]], align 8
 // CHECK-NEXT: %[[V4:.*]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK-NEXT: %[[V5:.*]] = call i64 @llvm.ptrauth.auth(i64 %[[V4]], i32 2, i64 0)
@@ -163,19 +162,18 @@ struct Class0 {
 // CHECK-NEXT: %[[V7:.*]] = load ptr, ptr %[[VFN]], align 8
 // CHECK-NEXT: %[[V8:.*]] = ptrtoint ptr %[[VFN]] to i64
 // CHECK-NEXT: %[[V9:.*]] = call i64 @llvm.ptrauth.blend(i64 %[[V8]], i64 7464)
-// CHECK-NEXT: musttail call void (ptr, i32, ...) %[[V7]](ptr noundef nonnull align {{[0-9]+}} dereferenceable(8) %[[V1]], i32 noundef %[[V2]], ...) [ "ptrauth"(i32 0, i64 %[[V9]]) ]
+// CHECK-NEXT: musttail call void (ptr, i32, ...) %[[V7]](ptr noundef nonnull align {{[0-9]+}} dereferenceable(8) %[[THIS1]], i32 noundef %[[ARG0]], ...) [ "ptrauth"(i32 0, i64 %[[V9]]) ]
 // CHECK-NEXT: ret void
 
 // CHECK: define linkonce_odr hidden void @_ZN8Derived08virtual6Ev_vfpthunk_(ptr noundef %[[THIS:.*]])
 // CHECK: %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // CHECK: store ptr %[[THIS]], ptr %[[THIS_ADDR]], align 8
 // CHECK: %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
-// CHECK: %[[V0:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
 // CHECK: %[[VTABLE:.*]] = load ptr, ptr %[[THIS1]], align 8
 // CHECK: %[[V1:.*]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK: %[[V2:.*]] = call i64 @llvm.ptrauth.auth(i64 %[[V1]], i32 2, i64 0)
 // CHECK: %[[V3:.*]] = inttoptr i64 %[[V2]] to ptr
-// CHECK: %[[VFN:.*]] = getelementptr inbounds ptr, ptr %[[V3]], i64 3 
+// CHECK: %[[VFN:.*]] = getelementptr inbounds ptr, ptr %[[V3]], i64 3
 // CHECK: %[[V5:.*]] = ptrtoint ptr %[[VFN]] to i64
 // CHECK: call i64 @llvm.ptrauth.blend(i64 %[[V5]], i64 55535)
 
@@ -189,7 +187,7 @@ struct Class0 {
 // call.
 
 // CHECK: define linkonce_odr hidden void @_ZN8Derived04sretEv_vfpthunk_(ptr dead_on_unwind noalias writable sret(%struct.A1) align 4 %[[AGG_RESULT:.*]], ptr noundef %{{.*}})
-// CHECK: musttail call void %{{.*}}(ptr dead_on_unwind writable  sret(%struct.A1) align 4 %[[AGG_RESULT]], ptr noundef nonnull align {{[0-9]+}} dereferenceable(8) %{{.*}}) [ "ptrauth"(i32 0, i64 %{{.*}}) ]
+// CHECK: musttail call void %{{.*}}(ptr dead_on_unwind writable sret(%struct.A1) align 4 %[[AGG_RESULT]], ptr noundef nonnull align {{[0-9]+}} dereferenceable(8) %{{.*}}) [ "ptrauth"(i32 0, i64 %{{.*}}) ]
 // CHECK-NEXT: ret void
 
 // Check that the thunk function doesn't destruct the trivial_abi argument.
@@ -208,7 +206,6 @@ struct Class0 {
 // CHECK: %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // CHECK: store ptr %[[THIS]], ptr %[[THIS_ADDR]], align 8
 // CHECK: %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
-// CHECK: %[[V0:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
 // CHECK: %[[VTABLE:.*]] = load ptr, ptr %[[THIS1]], align 8
 // CHECK: %[[V1:.*]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK: %[[V2:.*]] = call i64 @llvm.ptrauth.auth(i64 %[[V1]], i32 2, i64 0)
@@ -219,7 +216,6 @@ struct Class0 {
 // CHECK: %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // CHECK: store ptr %[[THIS]], ptr %[[THIS_ADDR]], align 8
 // CHECK: %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
-// CHECK: load ptr, ptr %[[THIS_ADDR]], align 8
 // CHECK: %[[VTABLE:.*]] = load ptr, ptr %[[THIS1]], align 8
 // CHECK: %[[V1:.*]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK: %[[V2:.*]] = call i64 @llvm.ptrauth.auth(i64 %[[V1]], i32 2, i64 0)
@@ -501,3 +497,89 @@ void test2() {
 }
 
 }
+
+namespace testIncompleteTypes {
+struct Incomplete;
+struct CompleteLater;
+struct LargeRet {
+  int data[16];
+};
+
+template <class T>
+struct Uninstantiated {
+  typename T::does_not_exist field;
+};
+
+struct S {
+  virtual void f_arg(Incomplete);
+  virtual int f_int_arg(Incomplete);
+  virtual LargeRet f_sret_arg(Incomplete);
+  virtual Uninstantiated<int> *f_tmpl(Uninstantiated<int>);
+  virtual LargeRet f_later(CompleteLater);
+  virtual Incomplete *f_attrs(Incomplete, int)
+      __attribute__((returns_nonnull, malloc, alloc_size(3)));
+  virtual void f_swift(int) __attribute__((swiftasynccall));
+};
+
+// CHECK-LABEL: define {{.*}}void @_ZN19testIncompleteTypes14take_addressesEv()
+// CHECK: store { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN19testIncompleteTypes1S5f_argENS_10IncompleteE_vfpthunk_, i32 0, i64 {{[0-9]+}}) to i64), i64 0 }
+// CHECK: store { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN19testIncompleteTypes1S9f_int_argENS_10IncompleteE_vfpthunk_, i32 0, i64 {{[0-9]+}}) to i64), i64 0 }
+// CHECK: store { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN19testIncompleteTypes1S10f_sret_argENS_10IncompleteE_vfpthunk_, i32 0, i64 {{[0-9]+}}) to i64), i64 0 }
+// CHECK: store { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN19testIncompleteTypes1S6f_tmplENS_14UninstantiatedIiEE_vfpthunk_, i32 0, i64 {{[0-9]+}}) to i64), i64 0 }
+// CHECK: store { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN19testIncompleteTypes1S7f_laterENS_13CompleteLaterE_vfpthunk_, i32 0, i64 {{[0-9]+}}) to i64), i64 0 }
+// CHECK: store { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN19testIncompleteTypes1S7f_attrsENS_10IncompleteEi_vfpthunk_, i32 0, i64 {{[0-9]+}}) to i64), i64 0 }
+// CHECK: store { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN19testIncompleteTypes1S7f_swiftEi_vfpthunk_, i32 0, i64 {{[0-9]+}}) to i64), i64 0 }
+
+// CHECK: define linkonce_odr hidden void @_ZN19testIncompleteTypes1S5f_argENS_10IncompleteE_vfpthunk_(ptr noundef %{{.*}}, ...) #[[THUNK_ATTR:[0-9]+]]
+// CHECK: musttail call void (ptr, ...) %{{.*}}(ptr noundef nonnull align {{[0-9]+}} dereferenceable(8) %{{.*}}, ...) [ "ptrauth"(i32 0, i64 %{{.*}}) ]
+// CHECK-NEXT: ret void
+
+// CHECK: define linkonce_odr hidden noundef i32 @_ZN19testIncompleteTypes1S9f_int_argENS_10IncompleteE_vfpthunk_(ptr noundef %{{.*}}, ...) #[[THUNK_ATTR]]
+// CHECK: %[[INT_CALL:.*]] = musttail call noundef i32 (ptr, ...) %{{.*}}(ptr noundef nonnull align {{[0-9]+}} dereferenceable(8) %{{.*}}, ...) [ "ptrauth"(i32 0, i64 %{{.*}}) ]
+// CHECK-NEXT: ret i32 %[[INT_CALL]]
+
+// CHECK: define linkonce_odr hidden void @_ZN19testIncompleteTypes1S10f_sret_argENS_10IncompleteE_vfpthunk_(ptr dead_on_unwind noalias writable sret(%"struct.testIncompleteTypes::LargeRet") align 4 %[[SRET0:.*]], ptr noundef %{{.*}}, ...) #[[THUNK_ATTR]]
+// CHECK: musttail call void (ptr, ptr, ...) %{{.*}}(ptr dead_on_unwind writable sret(%"struct.testIncompleteTypes::LargeRet") align 4 %[[SRET0]], ptr noundef nonnull align {{[0-9]+}} dereferenceable(8) %{{.*}}, ...) [ "ptrauth"(i32 0, i64 %{{.*}}) ]
+// CHECK-NEXT: ret void
+
+// CHECK: define linkonce_odr hidden noundef ptr @_ZN19testIncompleteTypes1S6f_tmplENS_14UninstantiatedIiEE_vfpthunk_(ptr noundef %{{.*}}, ...) #[[THUNK_ATTR]]
+// CHECK: %[[PTR_CALL:.*]] = musttail call noundef ptr (ptr, ...) %{{.*}}(ptr noundef nonnull align {{[0-9]+}} dereferenceable(8) %{{.*}}, ...) [ "ptrauth"(i32 0, i64 %{{.*}}) ]
+// CHECK-NEXT: ret ptr %[[PTR_CALL]]
+
+// CHECK: define linkonce_odr hidden void @_ZN19testIncompleteTypes1S7f_laterENS_13CompleteLaterE_vfpthunk_(ptr dead_on_unwind noalias writable sret(%"struct.testIncompleteTypes::LargeRet") align 4 %[[SRET:.*]], ptr noundef %{{.*}}, ...) #[[THUNK_ATTR]]
+// CHECK: musttail call void (ptr, ptr, ...) %{{.*}}(ptr dead_on_unwind writable sret(%"struct.testIncompleteTypes::LargeRet") align 4 %[[SRET]], ptr noundef nonnull align {{[0-9]+}} dereferenceable(8) %{{.*}}, ...) [ "ptrauth"(i32 0, i64 %{{.*}}) ]
+// CHECK-NEXT: ret void
+
+// CHECK: define linkonce_odr hidden noalias noundef nonnull ptr @_ZN19testIncompleteTypes1S7f_attrsENS_10IncompleteEi_vfpthunk_(ptr noundef %{{.*}}, ...) #[[THUNK_ATTR]]
+// CHECK: %[[ATTR_CALL:.*]] = musttail call noalias noundef nonnull ptr (ptr, ...) %{{.*}}(ptr noundef nonnull align {{[0-9]+}} dereferenceable(8) %{{.*}}, ...) [ "ptrauth"(i32 0, i64 %{{.*}}) ]
+// CHECK-NEXT: ret ptr %[[ATTR_CALL]]
+
+// CHECK: define linkonce_odr hidden swifttailcc void @_ZN19testIncompleteTypes1S7f_swiftEi_vfpthunk_(ptr noundef %{{.*}}, i32 noundef %{{.*}})
+// CHECK: musttail call swifttailcc void %{{.*}}(ptr noundef nonnull align {{[0-9]+}} dereferenceable(8) %{{.*}}, i32 noundef %{{.*}}) [ "ptrauth"(i32 0, i64 %{{.*}}) ]
+// CHECK-NEXT: ret void
+
+void take_addresses() {
+  auto p1 = &S::f_arg;
+  auto p2 = &S::f_int_arg;
+  auto p2_sret = &S::f_sret_arg;
+  auto p3 = &S::f_tmpl;
+  auto p4 = &S::f_later;
+  auto p5 = &S::f_attrs;
+  auto p6 = &S::f_swift;
+}
+} // namespace testIncompleteTypes
+
+namespace testIncompleteTypes {
+struct CompleteLater {
+  int data[16];
+};
+
+// CHECK-LABEL: define {{.*}}void @_ZN19testIncompleteTypes14call_completedEPNS_1SENS_13CompleteLaterE(
+// CHECK: call void %{{.*}}(ptr dead_on_unwind writable sret(%"struct.testIncompleteTypes::LargeRet") align 4 %{{.*}}, ptr noundef {{.*}}, ptr {{.*}}noundef {{.*}}) [ "ptrauth"(i32 0, i64 %{{.*}}) ]
+LargeRet call_completed(S *s, CompleteLater arg) {
+  auto p = &S::f_later;
+  return (s->*p)(arg);
+}
+} // namespace testIncompleteTypes
+
+// CHECK: attributes #[[THUNK_ATTR]] = {{{.*}}"thunk"{{.*}}}

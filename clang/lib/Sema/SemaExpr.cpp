@@ -15267,6 +15267,61 @@ bool Sema::CheckUseOfCXXMethodAsAddressOfOperand(SourceLocation OpLoc,
          << FixItHint::CreateInsertion(DRE->getSourceRange().getBegin(), Qual);
 }
 
+static bool canUseUnprototypedMustTailThunk(const ASTContext &Context,
+                                            const FunctionProtoType *FPT) {
+  CallingConv CC = FPT->getCallConv();
+  switch (Context.getTargetInfo().getTriple().getArch()) {
+  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_be:
+    return CC == CC_C;
+  case llvm::Triple::x86_64:
+    return CC == CC_C || CC == CC_Win64 || CC == CC_X86_64SysV;
+  case llvm::Triple::x86:
+    return (CC == CC_C || CC == CC_X86ThisCall) && !FPT->getHasRegParm();
+  default:
+    return false;
+  }
+}
+
+bool Sema::CheckPtrAuthVirtualMemberPointer(SourceLocation OpLoc,
+                                            const CXXMethodDecl *MD,
+                                            QualType MPTy) {
+  if (!getLangOpts().PointerAuthCalls || !MD->isVirtual() ||
+      isUnevaluatedContext() || MPTy->isDependentType())
+    return false;
+
+  // When pointer authentication is enabled, virtual member function pointers
+  // are implemented using virtual dispatch thunks. The return type must be
+  // complete because it can affect how 'this' is passed (for example, an
+  // indirect 'sret' return parameter precedes 'this' in the Itanium ABI on
+  // x86_64). Parameter types can remain incomplete when the target and calling
+  // convention support forwarding unprototyped arguments via a musttail thunk.
+  auto CheckComplete = [&](QualType T, bool IsParam, SourceLocation TypeLoc) {
+    if (RequireCompleteType(OpLoc, T, diag::err_incomplete_type)) {
+      Diag(OpLoc,
+           diag::note_ptrauth_virtual_function_pointer_incomplete_arg_ret)
+          << IsParam;
+      Diag(TypeLoc, diag::note_ptrauth_virtual_function_incomplete_arg_ret_type)
+          << T;
+      return true;
+    }
+    return false;
+  };
+
+  QualType RetTy = MD->getReturnType();
+  bool IsIncomplete = !RetTy->isVoidType() &&
+                      CheckComplete(RetTy, /*IsParam=*/false,
+                                    MD->getReturnTypeSourceRange().getBegin());
+
+  const auto *FPT = MD->getType()->castAs<FunctionProtoType>();
+  if (!canUseUnprototypedMustTailThunk(Context, FPT)) {
+    for (const ParmVarDecl *PVD : MD->parameters())
+      IsIncomplete |=
+          CheckComplete(PVD->getType(), /*IsParam=*/true, PVD->getBeginLoc());
+  }
+  return IsIncomplete;
+}
+
 QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
   if (const BuiltinType *PTy = OrigOp.get()->getType()->getAsPlaceholderType()){
     if (PTy->getKind() == BuiltinType::Overload) {
@@ -15372,38 +15427,8 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
     CheckUseOfCXXMethodAsAddressOfOperand(OpLoc, OrigOp.get(), MD);
     QualType MPTy = Context.getMemberPointerType(
         op->getType(), DRE->getQualifier(), MD->getParent());
-
-    if (getLangOpts().PointerAuthCalls && MD->isVirtual() &&
-        !isUnevaluatedContext() && !MPTy->isDependentType()) {
-      // When pointer authentication is enabled, argument and return types of
-      // vitual member functions must be complete. This is because vitrual
-      // member function pointers are implemented using virtual dispatch
-      // thunks and the thunks cannot be emitted if the argument or return
-      // types are incomplete.
-      auto ReturnOrParamTypeIsIncomplete = [&](QualType T,
-                                               SourceLocation DeclRefLoc,
-                                               SourceLocation RetArgTypeLoc) {
-        if (RequireCompleteType(DeclRefLoc, T, diag::err_incomplete_type)) {
-          Diag(DeclRefLoc,
-               diag::note_ptrauth_virtual_function_pointer_incomplete_arg_ret);
-          Diag(RetArgTypeLoc,
-               diag::note_ptrauth_virtual_function_incomplete_arg_ret_type)
-              << T;
-          return true;
-        }
-        return false;
-      };
-      QualType RetTy = MD->getReturnType();
-      bool IsIncomplete =
-          !RetTy->isVoidType() &&
-          ReturnOrParamTypeIsIncomplete(
-              RetTy, OpLoc, MD->getReturnTypeSourceRange().getBegin());
-      for (auto *PVD : MD->parameters())
-        IsIncomplete |= ReturnOrParamTypeIsIncomplete(PVD->getType(), OpLoc,
-                                                      PVD->getBeginLoc());
-      if (IsIncomplete)
-        return QualType();
-    }
+    if (CheckPtrAuthVirtualMemberPointer(OpLoc, MD, MPTy))
+      return QualType();
 
     // Under the MS ABI, lock down the inheritance model now.
     if (Context.getTargetInfo().getCXXABI().isMicrosoft())
