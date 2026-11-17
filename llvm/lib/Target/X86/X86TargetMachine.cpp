@@ -76,6 +76,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86FastPreTileConfigLegacyPass(PR);
   initializeX86FastTileConfigLegacyPass(PR);
   initializeMachineKCFILegacyPass(PR);
+  initializeMachineKCFISplitLegacyPass(PR);
   initializeX86LowerTileCopyLegacyPass(PR);
   initializeX86ExpandPseudoLegacyPass(PR);
   initializeX86DomainReassignmentLegacyPass(PR);
@@ -374,6 +375,7 @@ public:
   void addPostRegAlloc() override;
   void addPreEmitPass() override;
   void addPreEmitPass2() override;
+  void addPostBBSections() override;
   void addPreSched2() override;
   bool addRegAssignAndRewriteOptimized() override;
 
@@ -537,6 +539,8 @@ void X86PassConfig::addPreSched2() {
   addPass(createX86ExpandPseudoLegacyPass());
   addPass(createKCFIPass());
 }
+
+void X86PassConfig::addPostBBSections() { addPass(createKCFISplitPass()); }
 
 void X86PassConfig::addPreEmitPass() {
   if (getOptLevel() != CodeGenOptLevel::None) {

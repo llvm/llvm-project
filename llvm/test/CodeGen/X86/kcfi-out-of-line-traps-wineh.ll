@@ -64,4 +64,4 @@ cont:
 
 !llvm.module.flags = !{!0, !1}
 !0 = !{i32 4, !"kcfi", i32 1}
-!1 = !{i32 8, !"kcfi-out-of-line-traps", i32 1}
+!1 = !{i32 7, !"kcfi-out-of-line-traps", i32 1}

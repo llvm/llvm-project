@@ -2486,6 +2486,9 @@ public:
     llvm_unreachable("KCFI is not supported on this target");
   }
 
+  /// Return true if \p MI is a target KCFI_CHECK pseudo instruction.
+  virtual bool isKCFICheck(const MachineInstr &MI) const { return false; }
+
   /// Return true if the target implements EmitKCFIOutOfLineTrap for \p MF.
   virtual bool supportKCFIOutOfLineTraps(const MachineFunction &MF) const {
     return false;

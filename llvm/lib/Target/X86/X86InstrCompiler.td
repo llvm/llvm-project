@@ -282,13 +282,12 @@ let
 def KCFI_CHECK : PseudoI<
   (outs), (ins GR64:$ptr, i32imm:$type), []>, Sched<[]>;
 // KCFI_CHECK without the trap: it sets ZF if the type of $ptr is $type.
-let isNotDuplicable = 1 in
 def KCFI_CMP : PseudoI<
   (outs), (ins GR64:$ptr, i32imm:$type), []>, Sched<[]>;
 }
 
 // The trap that the branch after a KCFI_CMP goes to if ZF isn't set.
-let isTrap = 1, hasSideEffects = 1, isNotDuplicable = 1 in
+let isTrap = 1, hasSideEffects = 1 in
 def KCFI_TRAP : PseudoI<(outs), (ins), []>, Sched<[]>;
 
 //===----------------------------------------------------------------------===//

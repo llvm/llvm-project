@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs < %s | FileCheck %s --check-prefix=ASM
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=x86-64-v3 -enable-post-misched -verify-machineinstrs < %s | FileCheck %s --check-prefix=ASM
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=kcfi < %s | FileCheck %s --check-prefix=MIR
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=kcfi -enable-new-pm < %s | FileCheck %s --check-prefix=MIR
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -function-splitting=all < %s | FileCheck %s --check-prefix=SPLIT
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=kcfi-split < %s | FileCheck %s --check-prefix=MIR
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=kcfi-split -enable-new-pm < %s | FileCheck %s --check-prefix=MIR
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -verify-cfiinstrs -function-splitting=all < %s | FileCheck %s --check-prefix=SPLIT
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -x86-seses-enable-without-lvi-cfi -verify-machineinstrs < %s | FileCheck %s --check-prefix=SESES
 
 ;; With the kcfi-out-of-line-traps module flag, a KCFI check ends in a branch
@@ -47,7 +47,7 @@ define void @f1(ptr noundef %x) {
 ; MIR-NEXT:    liveins: {{.*}}$rdi
 ; MIR:         CALL64r killed $rdi, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
 ; MIR:       bb.1 (%ir-block.0):
-; MIR-NEXT:    nomerge KCFI_TRAP
+; MIR-NEXT:    KCFI_TRAP
   call void %x() [ "kcfi"(i32 12345678) ]
   ret void
 }
@@ -68,7 +68,7 @@ define void @f2(ptr noundef %x) {
 ; MIR:       bb.2 (%ir-block.0):
 ; MIR:         TAILJMPr64 killed $rdi, csr_64, implicit $rsp, implicit $ssp, implicit $rsp, implicit $ssp
 ; MIR:       bb.1 (%ir-block.0):
-; MIR-NEXT:    nomerge KCFI_TRAP
+; MIR-NEXT:    KCFI_TRAP
   tail call void %x() [ "kcfi"(i32 12345678) ]
   ret void
 }
@@ -91,7 +91,7 @@ define void @f3(ptr noundef %x) #0 {
 ; MIR-NEXT:    liveins: {{.*}}$r11
 ; MIR:         TAILJMPd64 &__llvm_retpoline_r11, csr_64, implicit $rsp, implicit $ssp, implicit $rsp, implicit $ssp, implicit killed $r11
 ; MIR:       bb.1 (%ir-block.0):
-; MIR-NEXT:    nomerge KCFI_TRAP
+; MIR-NEXT:    KCFI_TRAP
   tail call void %x() [ "kcfi"(i32 12345678) ]
   ret void
 }
@@ -117,7 +117,7 @@ define void @f4() {
 ; MIR-NEXT:    liveins: {{.*}}$r11
 ; MIR:         CALL64r $r11, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
 ; MIR:       bb.1 (%ir-block.0):
-; MIR-NEXT:    nomerge KCFI_TRAP
+; MIR-NEXT:    KCFI_TRAP
   %1 = load ptr, ptr @g, align 8
   call void %1() [ "kcfi"(i32 12345678) ]
   ret void
@@ -156,10 +156,10 @@ define void @f5(ptr noundef %x, ptr noundef %y) {
 ; MIR-NEXT:    JCC_1 %bb.1, 5, implicit $eflags
 ; MIR:       bb.2 (%ir-block.0):
 ; MIR:         CALL64r killed $rbx, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
-; MIR:       bb.1 (%ir-block.0):
-; MIR:         nomerge KCFI_TRAP
 ; MIR:       bb.3 (%ir-block.0):
-; MIR-NEXT:    nomerge KCFI_TRAP
+; MIR:         KCFI_TRAP
+; MIR:       bb.1 (%ir-block.0):
+; MIR-NEXT:    KCFI_TRAP
   call void %x() [ "kcfi"(i32 12345678) ]
   call void %y() [ "kcfi"(i32 12345678) ]
   ret void
@@ -202,8 +202,8 @@ err:
   resume { ptr, i32 } %exn
 }
 
-;; With a profile, the trap is cold, so it's split from the rest of the
-;; function.
+;; With a profile, the trap is cold, so it's split from the rest of the function
+;; into .text.split and .kcfi_traps links to .text.split.
 define void @f7(ptr noundef %x) !prof !16 {
 ; SPLIT-LABEL: f7:
 ; SPLIT:         addl -4(%rdi), %r10d
@@ -214,9 +214,66 @@ define void @f7(ptr noundef %x) !prof !16 {
 ; SPLIT-NEXT:  f7.cold:
 ; SPLIT-NEXT:    .cfi_startproc
 ; SPLIT-NEXT:    .cfi_def_cfa %rsp, 16
+; SPLIT:       .Ltmp{{[0-9]+}}:
+; SPLIT-NEXT:    ud2
+; SPLIT-NEXT:    .section .kcfi_traps,"ao",@progbits,.text.split.f7
+; SPLIT:         .size f7.cold
+  call void %x() [ "kcfi"(i32 12345678) ]
+  ret void
+}
+
+;; When the block containing the check is cold, the check, fallthrough call, and
+;; trap move together into .text.split, and .kcfi_traps links to .text.split.
+define void @f8(ptr noundef %x, i1 %c1, i1 %c2) !prof !16 {
+; SPLIT-LABEL: f8:
+; SPLIT-NOT:     callq *
+; SPLIT:         .section .text.split.f8,"ax",@progbits
+; SPLIT-NEXT:  f8.cold:
+; SPLIT:         addl -4(%rdi), %r10d
+; SPLIT-NEXT:    jne [[TRAP:\.LBB[0-9_]+]]
+; SPLIT:         callq *%rdi
+; SPLIT:       [[TRAP]]:
 ; SPLIT-NEXT:  .Ltmp{{[0-9]+}}:
 ; SPLIT-NEXT:    ud2
+; SPLIT-NEXT:    .section .kcfi_traps,"ao",@progbits,.text.split.f8
+; SPLIT:         .size f8.cold
+entry:
+  br i1 %c1, label %cold, label %check2, !prof !17
+check2:
+  br i1 %c2, label %cold2, label %hot, !prof !17
+cold:
   call void %x() [ "kcfi"(i32 12345678) ]
+  ret void
+cold2:
+  call void @cleanup()
+  ret void
+hot:
+  ret void
+}
+
+;; When BranchFolder tail-merges post-call code across two checks with different
+;; type hashes, KCFI checks remain bundled until KCFISplit so neither check is
+;; inverted to an inline trap.
+define void @f9(ptr noundef %x, i1 %c) {
+; ASM-LABEL: f9:
+; ASM:         addl -4(%rdi), %r10d
+; ASM-NEXT:    jne [[TRAP1:\.LBB[0-9_]+]]
+; ASM:         callq *%rdi
+; ASM:         addl -4(%rdi), %r10d
+; ASM-NEXT:    jne [[TRAP2:\.LBB[0-9_]+]]
+; ASM:         callq *%rdi
+; ASM:       [[TRAP1]]:
+; ASM:         ud2
+; ASM:       [[TRAP2]]:
+; ASM:         ud2
+  br i1 %c, label %left, label %right
+left:
+  call void %x() [ "kcfi"(i32 12345678) ]
+  call void @cleanup()
+  ret void
+right:
+  call void %x() [ "kcfi"(i32 87654321) ]
+  call void @cleanup()
   ret void
 }
 
@@ -224,7 +281,7 @@ attributes #0 = { "target-features"="+retpoline-indirect-branches,+retpoline-ind
 
 !llvm.module.flags = !{!0, !1, !2}
 !0 = !{i32 4, !"kcfi", i32 1}
-!1 = !{i32 8, !"kcfi-out-of-line-traps", i32 1}
+!1 = !{i32 7, !"kcfi-out-of-line-traps", i32 1}
 !2 = !{i32 1, !"ProfileSummary", !3}
 !3 = !{!4, !5, !6, !7, !8, !9, !10, !11}
 !4 = !{!"ProfileFormat", !"InstrProf"}
@@ -240,3 +297,4 @@ attributes #0 = { "target-features"="+retpoline-indirect-branches,+retpoline-ind
 !14 = !{i32 999900, i64 100, i32 1}
 !15 = !{i32 999999, i64 1, i32 2}
 !16 = !{!"function_entry_count", i64 7000}
+!17 = !{!"branch_weights", i32 0, i32 7000}

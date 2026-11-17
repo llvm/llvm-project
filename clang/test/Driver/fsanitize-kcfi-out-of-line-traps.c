@@ -6,7 +6,10 @@
 // RUN: %clang -c --target=x86_64-linux-gnu -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=INLINE --implicit-check-not="-fsanitize-kcfi-out-of-line-traps"
 // RUN: %clang -c --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize-kcfi-out-of-line-traps -fno-sanitize-kcfi-out-of-line-traps %s -### 2>&1 | FileCheck %s --check-prefix=INLINE --implicit-check-not="-fsanitize-kcfi-out-of-line-traps"
 // RUN: %clang -c --target=riscv64-linux-gnu -fsanitize=kcfi -fno-sanitize-kcfi-out-of-line-traps %s -### 2>&1 | FileCheck %s --check-prefix=INLINE --implicit-check-not="-fsanitize-kcfi-out-of-line-traps"
+// RUN: %clang -c --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize-kcfi-out-of-line-traps -fno-sanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=DISABLED --implicit-check-not="-fsanitize-kcfi-out-of-line-traps" --implicit-check-not="warning:" --implicit-check-not="error:"
+// RUN: %clang -c --target=riscv64-linux-gnu -fsanitize=kcfi -fsanitize-kcfi-out-of-line-traps -fno-sanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=DISABLED --implicit-check-not="-fsanitize-kcfi-out-of-line-traps" --implicit-check-not="warning:" --implicit-check-not="error:"
 // INLINE: "-cc1"{{.*}}"-fsanitize=kcfi"
+// DISABLED: "-cc1"
 
 // RUN: not %clang -c --target=riscv64-linux-gnu -fsanitize=kcfi -fsanitize-kcfi-out-of-line-traps %s -### 2>&1 | FileCheck %s --check-prefix=TARGET-RISCV
 // TARGET-RISCV: error: unsupported option '-fsanitize-kcfi-out-of-line-traps' for target 'riscv64-unknown-linux-gnu'

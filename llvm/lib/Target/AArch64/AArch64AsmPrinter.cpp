@@ -156,8 +156,6 @@ public:
       HwasanMemaccessTuple;
   std::map<HwasanMemaccessTuple, MCSymbol *> HwasanMemaccessSymbols;
   void LowerKCFI_CHECK(const MachineInstr &MI);
-  void LowerKCFI_TRAP(const MachineInstr &MI);
-  void emitKCFIBrk(Register AddrReg, Register TypeReg);
   void LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI);
   void emitHwasanMemaccessSymbols(Module &M);
 
@@ -703,13 +701,13 @@ void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   AArch64::KCFICheckRegs Regs = AArch64::getKCFICheckRegs(AddrReg);
 
   // KCFI_CMP is KCFI_CHECK without the trap: it's followed by the branch to
-  // its KCFI_TRAP, which falls through to the call.
+  // its trap block, which falls through to the call.
   bool IsCmp = MI.getOpcode() == AArch64::KCFI_CMP;
   if (IsCmp) {
 #ifndef NDEBUG
     // The branch to the trap is the first terminator after KCFI_CMP. Other
     // instructions (e.g. pseudo probes) may be in between, as long as they
-    // don't clobber NZCV or the registers reported by KCFI_TRAP.
+    // don't clobber NZCV or the trap registers.
     const TargetRegisterInfo *TRI =
         MI.getMF()->getSubtarget().getRegisterInfo();
     auto It = std::next(MI.getIterator()), End = MI.getParent()->instr_end();
@@ -769,27 +767,11 @@ void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
                      .addImm(AArch64CC::EQ)
                      .addExpr(MCSymbolRefExpr::create(Pass, OutContext)));
 
-  emitKCFIBrk(Regs.AddrReg, Regs.ExpectedTypeReg);
+  EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::BRK)
+                                   .addImm(AArch64::getKCFITrapESR(
+                                       *OutContext.getRegisterInfo(),
+                                       Regs.AddrReg, Regs.ExpectedTypeReg)));
   OutStreamer->emitLabel(Pass);
-}
-
-void AArch64AsmPrinter::emitKCFIBrk(Register AddrReg, Register TypeReg) {
-  // The base ESR is 0x8000 and the register information is encoded in bits
-  // 0-9 as follows:
-  // - 0-4: n, where register Xn contains the target address
-  // - 5-9: m, where register Wm contains the expected type hash
-  // Where n, m are in [0, 30].
-  const MCRegisterInfo *RI = OutContext.getRegisterInfo();
-  unsigned AddrIndex = RI->getEncodingValue(AddrReg);
-  unsigned TypeIndex = RI->getEncodingValue(TypeReg);
-  assert(AddrIndex < 31 && TypeIndex < 31 && "Invalid KCFI trap registers");
-
-  unsigned ESR = 0x8000 | (TypeIndex << 5) | AddrIndex;
-  EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::BRK).addImm(ESR));
-}
-
-void AArch64AsmPrinter::LowerKCFI_TRAP(const MachineInstr &MI) {
-  emitKCFIBrk(MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
 }
 
 void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
@@ -3986,10 +3968,6 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::KCFI_CHECK:
   case AArch64::KCFI_CMP:
     LowerKCFI_CHECK(*MI);
-    return;
-
-  case AArch64::KCFI_TRAP:
-    LowerKCFI_TRAP(*MI);
     return;
 
   case AArch64::HWASAN_CHECK_MEMACCESS:

@@ -338,10 +338,11 @@ to patch checks at boot.
 
 On x86-64 and AArch64, `-fsanitize-kcfi-out-of-line-traps` instead moves traps
 into cold basic blocks on a best-effort basis so passing checks fall through to
-the call and only failing checks branch. Out-of-line traps retain distinct
-debug locations (and `.kcfi_traps` entries on x86-64 or register-encoding `brk`
-immediates on AArch64); calls or functions that cannot be safely split keep
-inline traps.
+the call and only failing checks branch. Out-of-line traps retain the call's
+debug location (and `.kcfi_traps` entries on x86-64 or register-encoding `brk`
+immediates on AArch64) and are split into cold sections like other cold blocks
+when function or basic-block splitting is enabled; calls or functions that cannot
+be safely split keep inline traps.
 
 ## Member Function Pointer Call Checking
 

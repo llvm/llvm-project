@@ -102,6 +102,7 @@ LLVMInitializeAArch64Target() {
   initializeFalkorMarkStridedAccessesLegacyPass(PR);
   initializeLDTLSCleanupPass(PR);
   initializeMachineKCFILegacyPass(PR);
+  initializeMachineKCFISplitLegacyPass(PR);
   initializeMachineSMEABIPass(PR);
   initializeAArch64SRLTDefineSuperRegsLegacyPass(PR);
   initializeSMEPeepholeOptPass(PR);
@@ -787,6 +788,7 @@ void AArch64PassConfig::addPostBBSections() {
   addPass(createAArch64PointerAuthPass());
   if (CLOpts.enable_branch_targets)
     addPass(createAArch64BranchTargetsPass());
+  addPass(createKCFISplitPass());
   // Relax conditional branch instructions if they're otherwise out of
   // range of their destination.
   if (CLOpts.enable_branch_relax)

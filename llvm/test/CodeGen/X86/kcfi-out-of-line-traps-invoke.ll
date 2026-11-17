@@ -1,6 +1,6 @@
 ; RUN: split-file %s %t
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs < %t/base.ll | FileCheck %s --check-prefix=ASM
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=kcfi < %t/base.ll | FileCheck %s --check-prefix=MIR
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -verify-cfiinstrs < %t/base.ll | FileCheck %s --check-prefix=ASM
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=kcfi-split < %t/base.ll | FileCheck %s --check-prefix=MIR
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -verify-cfiinstrs -function-sections -basic-block-sections=all -basic-block-address-map -o %t.bbs.s < %t/base.ll
 ; RUN: FileCheck %s --check-prefix=BBS < %t.bbs.s
 ; RUN: llvm-mc -triple=x86_64-unknown-linux-gnu -filetype=obj -o /dev/null < %t.bbs.s
@@ -33,7 +33,6 @@ define void @f1(ptr noundef %x) personality ptr @__gxx_personality_v0 {
 ; ASM-NEXT:    callq *%rdi
 ; ASM-NEXT:  .Ltmp{{[0-9]+}}: # EH_LABEL
 ; ASM:       [[TRAP]]:
-; ASM-NEXT:    .cfi_def_cfa_offset 16
 ; ASM-NEXT:  .Ltmp{{[0-9]+}}:
 ; ASM-NEXT:    ud2
 
@@ -49,23 +48,22 @@ define void @f1(ptr noundef %x) personality ptr @__gxx_personality_v0 {
 ; MIR-NEXT:    CALL64r killed $rdi, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
 ; MIR-NEXT:    EH_LABEL
 ; MIR:       bb.3 (%ir-block.0):
-; MIR-NEXT:    nomerge KCFI_TRAP
+; MIR-NEXT:    KCFI_TRAP
 
 ; BBS-LABEL: f1:
 ; BBS:         addl -4(%rdi), %r10d
 ; BBS-NEXT:    jne [[TRAP:f1\.__part\.[0-9]+]]
-; BBS-NEXT:    jmp [[CALL:f1\.__part\.[0-9]+]]
-; BBS:       [[CALL]]:
 ; BBS:       [[BEGIN:\.Ltmp[0-9]+]]: # EH_LABEL
 ; BBS-NEXT:    callq *%rdi
 ; BBS-NEXT:  .LBB{{[0-9]+}}_1_CS0:
 ; BBS-NEXT:  [[END:\.Ltmp[0-9]+]]: # EH_LABEL
-; BBS:       [[TRAP]]:
-; BBS:         ud2
 ; BBS:       [[ERR:f1\.__part\.[0-9]+]]: # %err
 ; BBS:       [[LPAD:\.Ltmp[0-9]+]]: # EH_LABEL
+; BBS:       [[TRAP]]:
+; BBS:         ud2
+; BBS:         .section .kcfi_traps,"ao",@progbits,.text.f1,unique,3
 ; BBS:       .section .gcc_except_table.f1
-; BBS:         .uleb128 [[BEGIN]]-[[CALL]]
+; BBS:         .uleb128 [[BEGIN]]-.Lfunc_begin0
 ; BBS-NEXT:    .uleb128 [[END]]-[[BEGIN]]
 ; BBS-NEXT:    .uleb128 [[LPAD]]-[[ERR]]
   invoke void %x() [ "kcfi"(i32 12345678) ]
@@ -91,10 +89,6 @@ define void @f2(ptr noundef %x) personality ptr @__gxx_personality_v0 {
 ; BBS-NEXT:    movl $4282621618, %r10d # imm = 0xFF439EB2
 ; BBS-NEXT:    addl -4([[REG:%r[a-z0-9]+]]), %r10d
 ; BBS-NEXT:    jne [[TRAP:f2\.__part\.[0-9]+]]
-; BBS-NEXT:    jmp [[CALL:f2\.__part\.[0-9]+]]
-; BBS:       [[CALL]]:
-; BBS-NEXT:    .cfi_startproc
-; BBS:         .cfi_def_cfa %rsp, 32
 ; BBS:       [[BEGIN:\.Ltmp[0-9]+]]: # EH_LABEL
 ; BBS-NEXT:    .cfi_escape 0x2e, 0x10
 ; BBS-NEXT:    callq *[[REG]]
@@ -106,8 +100,9 @@ define void @f2(ptr noundef %x) personality ptr @__gxx_personality_v0 {
 ; BBS-NEXT:    .cfi_startproc
 ; BBS:         .cfi_def_cfa %rsp, 32
 ; BBS:         ud2
+; BBS:         .section .kcfi_traps,"ao",@progbits,.text.f2,unique,6
 ; BBS:       .section .gcc_except_table.f2
-; BBS:         .uleb128 [[BEGIN]]-[[CALL]]
+; BBS:         .uleb128 [[BEGIN]]-.Lfunc_begin1
 ; BBS-NEXT:    .uleb128 [[END]]-[[BEGIN]]
   invoke void %x(i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8) [ "kcfi"(i32 12345678) ]
     to label %cont
@@ -153,9 +148,9 @@ err:
 }
 
 ;; Checked call followed by checked invoke in the same block, exercised with a
-;; Propeller profile that inserts code prefetch hints/targets on the split
-;; invoke block and attempts path cloning of the KCFI_CMP block (which
-;; BasicBlockPathCloning rejects because KCFI_CMP is marked isNotDuplicable).
+;; Propeller profile that inserts code prefetch hints/targets in %join and
+;; attempts path cloning of %join (which BasicBlockPathCloning rejects because
+;; the bundled invoke / EH_LABEL block has non-duplicable instructions).
 define void @f4(i1 %cond, ptr noundef %x, ptr noundef %y) personality ptr @__gxx_personality_v0 {
 ; MIR-LABEL: name: f4
 ; MIR:       bb.3.join:
@@ -177,28 +172,30 @@ define void @f4(i1 %cond, ptr noundef %x, ptr noundef %y) personality ptr @__gxx
 ; PROP-LABEL: f4:
 ; PROP:       [[FNBEGIN:\.Lfunc_begin[0-9]+]]:
 ; PROP:       [[JOIN:\.LBB[0-9_]+]]: # %join
+; PROP:         callq side@PLT
+; PROP:         .globl __llvm_prefetch_target_f4_6_1
+; PROP-NEXT:  __llvm_prefetch_target_f4_6_1:
+; PROP-NEXT:    prefetchit1 __llvm_prefetch_target_side_0_0(%rip)
 ; PROP:         addl -4(%r14), %r10d
-; PROP-NEXT:    jne f4.cold
+; PROP-NEXT:    jne [[TRAP1:\.LBB[0-9_]+]]
 ; PROP:         callq *%r14
 ; PROP:         addl -4(%rbx), %r10d
-; PROP-NEXT:    jne .LBB{{[0-9_]+}}
+; PROP-NEXT:    jne [[TRAP2:\.LBB[0-9_]+]]
 ; PROP:       [[BEGIN:\.Ltmp[0-9]+]]: # EH_LABEL
-; PROP-NEXT:    callq *%rbx
-; PROP:         .globl __llvm_prefetch_target_f4_8_1
-; PROP-NEXT:  __llvm_prefetch_target_f4_8_1:
-; PROP-NEXT:    prefetchit1 __llvm_prefetch_target_side_0_0(%rip)
+; PROP:         callq *%rbx
 ; PROP:       [[END:\.Ltmp[0-9]+]]: # EH_LABEL
 ; PROP:         retq
 ; PROP:       [[RIGHT:f4\.__part\.[0-9]+]]: # %right
 ; PROP:         movl $2, %edi
 ; PROP-NEXT:    jmp [[JOIN]]
-; PROP:       f4.cold: # %join
-; PROP:       .Ltmp{{[0-9]+}}:
-; PROP-NEXT:    ud2
-; PROP:       .LBB{{[0-9_]+}}: # %join
-; PROP-NEXT:  .Ltmp{{[0-9]+}}:
-; PROP-NEXT:    ud2
+; PROP:       f4.cold: # %err
 ; PROP:       [[LPAD:\.Ltmp[0-9]+]]: # EH_LABEL
+; PROP:       [[TRAP1]]: # %join
+; PROP:         ud2
+; PROP:         .section .kcfi_traps,"ao",@progbits,.text.split.f4
+; PROP:       [[TRAP2]]: # %join
+; PROP:         ud2
+; PROP:         .section .kcfi_traps,"ao",@progbits,.text.split.f4
 ; PROP:       .section .gcc_except_table.f4
 ; PROP:         .uleb128 [[BEGIN]]-[[FNBEGIN]] # >> Call Site 2 <<
 ; PROP-NEXT:    .uleb128 [[END]]-[[BEGIN]]
@@ -229,16 +226,16 @@ err:
 
 !llvm.module.flags = !{!0, !1}
 !0 = !{i32 4, !"kcfi", i32 1}
-!1 = !{i32 8, !"kcfi-out-of-line-traps", i32 1}
+!1 = !{i32 7, !"kcfi-out-of-line-traps", i32 1}
 
 ;--- prof
 v1
 f f4
-p 1 6 10
-c 0 1 6 10 8 4
+p 1 6
+c 0 1 6 4
 c 2
-t 8,1
-i 8,1 side,0,0
+t 6,1
+i 6,1 side,0,0
 
 ;--- emutls.ll
 ;; An invoke whose argument lowering inserts a call (such as emulated TLS)
@@ -281,4 +278,4 @@ err:
 
 !llvm.module.flags = !{!0, !1}
 !0 = !{i32 4, !"kcfi", i32 1}
-!1 = !{i32 8, !"kcfi-out-of-line-traps", i32 1}
+!1 = !{i32 7, !"kcfi-out-of-line-traps", i32 1}

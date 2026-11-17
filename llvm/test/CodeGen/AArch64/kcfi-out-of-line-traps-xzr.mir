@@ -1,10 +1,8 @@
 # RUN: llc -mtriple=aarch64-- -start-before=kcfi -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ASM
-# RUN: llc -mtriple=aarch64-- -run-pass=kcfi -verify-machineinstrs %s -o - | llc -mtriple=aarch64-- -x mir -run-pass=none -verify-machineinstrs -o - | FileCheck %s --check-prefix=MIR
+# RUN: llc -mtriple=aarch64-- -run-pass=kcfi,kcfi-split -verify-machineinstrs %s -o - | llc -mtriple=aarch64-- -x mir -run-pass=none -verify-machineinstrs -o - | FileCheck %s --check-prefix=MIR
 
 ## A check of a call to xzr compares the expected type with zero, which it
-## moves into x16. The out-of-line trap encodes x16 in its BRK immediate without
-## marking x16 live-in to the trap block, and nomerge KCFI_TRAP round-trips
-## cleanly through MIR parsing.
+## moves into x16. The out-of-line trap encodes x16 in its BRK immediate.
 
 # ASM-LABEL: f:
 # ASM:         mov x16, xzr
@@ -25,7 +23,7 @@
 # MIR:         BLR $xzr, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
 # MIR:       [[TRAP]]:
 # MIR-NOT:     liveins:
-# MIR:         nomerge KCFI_TRAP undef $x16, undef $w17
+# MIR:         BRK 33328
 
 --- |
   define void @f() {
@@ -34,7 +32,7 @@
 
   !llvm.module.flags = !{!0, !1}
   !0 = !{i32 4, !"kcfi", i32 1}
-  !1 = !{i32 8, !"kcfi-out-of-line-traps", i32 1}
+  !1 = !{i32 7, !"kcfi-out-of-line-traps", i32 1}
 ...
 ---
 name:            f

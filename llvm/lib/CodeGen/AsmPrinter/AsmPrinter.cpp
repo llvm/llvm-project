@@ -1694,8 +1694,9 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
 
 void AsmPrinter::emitKCFITrapEntry(const MachineFunction &MF,
                                    const MCSymbol *Symbol) {
-  MCSection *Section =
-      getObjFileLowering().getKCFITrapSection(*MF.getSection());
+  const MCSection *TextSection = getCurrentSection();
+  MCSection *Section = getObjFileLowering().getKCFITrapSection(
+      *(TextSection ? TextSection : MF.getSection()));
   if (!Section)
     return;
 

@@ -9289,7 +9289,7 @@ bool X86InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   // ENDBR instructions should not be scheduled around.
   unsigned Opcode = MI.getOpcode();
   if (Opcode == X86::ENDBR64 || Opcode == X86::ENDBR32 ||
-      Opcode == X86::PLDTILECFGV || Opcode == X86::KCFI_CMP)
+      Opcode == X86::PLDTILECFGV)
     return true;
 
   // Frame setup and destroy can't be scheduled around.
@@ -10794,12 +10794,23 @@ X86InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
                                    unsigned Flags) const {
   MachineInstr &MI = *MIT;
 
-  // Don't outline KCFI checks or traps: LowerKCFI_CHECK reads
-  // patchable-function-prefix from the parent function, and each trap must
-  // remain a distinct site in its caller's section.
+  // Don't outline KCFI checks (including bundled tail-call checks) or traps:
+  // LowerKCFI_CHECK reads patchable-function-prefix from the parent function
+  // and must remain paired with its checked call, and KCFI_TRAP emits
+  // .kcfi_traps metadata linked to its caller's section.
   if (MI.getOpcode() == X86::KCFI_CHECK || MI.getOpcode() == X86::KCFI_CMP ||
       MI.getOpcode() == X86::KCFI_TRAP)
     return outliner::InstrType::Illegal;
+  if (MI.isBundle()) {
+    for (auto It = std::next(MI.getIterator()),
+              End = MI.getParent()->instr_end();
+         It != End && It->isBundledWithPred(); ++It) {
+      if (It->getOpcode() == X86::KCFI_CHECK)
+        return outliner::InstrType::Illegal;
+      if (!It->isDebugInstr())
+        break;
+    }
+  }
 
   // Is this a terminator for a basic block?
   if (MI.isTerminator())

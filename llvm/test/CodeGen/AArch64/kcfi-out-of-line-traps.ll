@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=aarch64-- -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ASM,OUTLINED
 ; RUN: llc -mtriple=aarch64-- -mcpu=cortex-a53 -enable-post-misched -verify-machineinstrs < %s | FileCheck %s --check-prefix=ASM
-; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -stop-after=kcfi < %s | FileCheck %s --check-prefix=MIR
-; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -function-splitting=all < %s | FileCheck %s --check-prefix=SPLIT
-; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -basic-block-sections=all < %s | FileCheck %s --check-prefix=BBS
+; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -stop-after=kcfi-split < %s | FileCheck %s --check-prefix=MIR
+; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -verify-cfiinstrs -function-splitting=all < %s | FileCheck %s --check-prefix=SPLIT
+; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -verify-cfiinstrs -basic-block-sections=all < %s | FileCheck %s --check-prefix=BBS
 
 ;; With the kcfi-out-of-line-traps module flag, a KCFI check ends in a branch
 ;; that's taken if the check fails, to a block that only has the trap, and the
@@ -32,7 +32,7 @@ define void @f1(ptr noundef %x) {
 ; MIR:         BLR killed $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
 ; MIR:       bb.1 (%ir-block.0):
 ; MIR-NOT:     liveins:
-; MIR:         nomerge KCFI_TRAP undef $x0, undef $w17
+; MIR:         BRK 33312
   call void %x() [ "kcfi"(i32 12345678) ]
   ret void
 }
@@ -53,7 +53,7 @@ define void @f2(ptr noundef %x) {
 ; MIR:         TCRETURNri killed $x0, 0, csr_aarch64_aapcs, implicit $sp
 ; MIR:       bb.1 (%ir-block.0):
 ; MIR-NOT:     liveins:
-; MIR:         nomerge KCFI_TRAP undef $x0, undef $w17
+; MIR:         BRK 33312
   tail call void %x() [ "kcfi"(i32 12345678) ]
   ret void
 }
@@ -73,26 +73,28 @@ define void @f3(ptr noundef %x) #1 {
 ; ASM-NEXT:    brk #0x8230
 
 ; MIR-LABEL: name: f3
-; MIR:         KCFI_CMP $x16, 12345678, implicit-def $x9, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
+; MIR:         KCFI_CMP killed $x16, 12345678, implicit-def $x9, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
 ; MIR-NEXT:    Bcc 1, %bb.1, implicit $nzcv
 ; MIR:       bb.2 (%ir-block.0):
 ; MIR-NEXT:    liveins: {{.*}}$x16
 ; MIR:         TCRETURNrix16x17 killed $x16, 0, csr_aarch64_aapcs, implicit $sp
 ; MIR:       bb.1 (%ir-block.0):
 ; MIR-NOT:     liveins:
-; MIR:         nomerge KCFI_TRAP undef $x16, undef $w17
+; MIR:         BRK 33328
 
-;; With basic block sections enabled on AArch64, KCFI falls back to inline
-;; bundled checks so x16 never spills or routes through a veneer.
+;; With basic block sections enabled on AArch64, the call stays paired in the
+;; entry section while BranchRelaxation routes the split trap section without
+;; spilling x16.
 ; BBS-LABEL: f3:
 ; BBS-NOT:     {{str|stp|ldr|ldp}} {{.*}}x16
-; BBS-NOT:     f3.__part
 ; BBS:         ldur w9, [x16, #-4]
 ; BBS:         cmp w9, w17
-; BBS-NEXT:    b.eq [[PASS:\.Ltmp[0-9]+]]
-; BBS-NEXT:    brk #0x8230
-; BBS-NEXT:  [[PASS]]:
+; BBS-NEXT:    b.eq [[BBS_CALL:\.LBB[0-9_]+]]
+; BBS:         b [[BBS_TRAP:f3\.__part\.[0-9]+]]
+; BBS:       [[BBS_CALL]]:
 ; BBS-NEXT:    br x16
+; BBS:       [[BBS_TRAP]]:
+; BBS:         brk #0x8230
 ; BBS:         .size f3,
   tail call void %x() [ "kcfi"(i32 12345678) ]
   ret void
@@ -111,14 +113,14 @@ define void @f4(ptr noundef %x) #2 {
 ; ASM-NEXT:    brk #0x8131
 
 ; MIR-LABEL: name: f4
-; MIR:         KCFI_CMP $x17, 12345678, implicit-def $x9, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
+; MIR:         KCFI_CMP killed $x17, 12345678, implicit-def $x9, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
 ; MIR-NEXT:    Bcc 1, %bb.1, implicit $nzcv
 ; MIR:       bb.2 (%ir-block.0):
 ; MIR-NEXT:    liveins: {{.*}}$x17
 ; MIR:         TCRETURNrix17 killed $x17, 0, csr_aarch64_aapcs, implicit $sp
 ; MIR:       bb.1 (%ir-block.0):
 ; MIR-NOT:     liveins:
-; MIR:         nomerge KCFI_TRAP undef $x17, undef $w9
+; MIR:         BRK 33073
   tail call void %x() [ "kcfi"(i32 12345678) ]
   ret void
 }
@@ -155,12 +157,12 @@ define void @f5(ptr noundef %x, ptr noundef %y) {
 ; MIR-NEXT:    Bcc 1, %bb.1, implicit $nzcv
 ; MIR:       bb.2 (%ir-block.0):
 ; MIR:         BLR killed $x19, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
-; MIR:       bb.1 (%ir-block.0):
-; MIR-NOT:     liveins:
-; MIR:         nomerge KCFI_TRAP undef $x19, undef $w17
 ; MIR:       bb.3 (%ir-block.0):
 ; MIR-NOT:     liveins:
-; MIR:         nomerge KCFI_TRAP undef $x0, undef $w17
+; MIR:         BRK 33312
+; MIR:       bb.1 (%ir-block.0):
+; MIR-NOT:     liveins:
+; MIR:         BRK 33331
   call void %x() [ "kcfi"(i32 12345678) ]
   call void %y() [ "kcfi"(i32 12345678) ]
   ret void
@@ -223,22 +225,22 @@ err:
   resume { ptr, i32 } %exn
 }
 
-;; A conditional branch can't go to another section, so the trap isn't split
-;; from the rest of the function with the cold blocks. That would have every
-;; check that passes take a branch over an unconditional one.
+;; With machine function splitting, a hot check's trap moves to .text.split
+;; while BranchRelaxation keeps passing checks falling through cleanly.
 define void @f8(ptr noundef %x, i1 %c) !prof !17 {
 ; SPLIT-LABEL: f8:
 ; SPLIT:         cmp w16, w17
-; SPLIT-NEXT:    b.ne [[TRAP:.LBB[0-9_]+]]
+; SPLIT-NEXT:    b.ne [[TRAMP:.LBB[0-9_]+]]
 ; SPLIT-NEXT:  // %bb.{{[0-9]+}}:
 ; SPLIT-NEXT:    blr x0
 ; SPLIT:         ret
-; SPLIT-NEXT:  [[TRAP]]:
-; SPLIT-NEXT:    brk #0x8220
+; SPLIT:       [[TRAMP]]:
+; SPLIT:         b [[TRAP:\.LBB[0-9_]+]]
 ; SPLIT:         .section .text.split.f8,"ax",@progbits
 ; SPLIT-NEXT:  f8.cold:
 ; SPLIT:         bl cleanup
-; SPLIT-NOT:     brk
+; SPLIT:       [[TRAP]]:
+; SPLIT-NEXT:    brk #0x8220
 ; SPLIT:         .size f8.cold
   br i1 %c, label %cold, label %hot, !prof !18
 cold:
@@ -264,21 +266,20 @@ define void @f9(ptr noundef %x) uwtable(async) {
   ret void
 }
 
-;; When the block containing the check is cold, KCFI_CMP, its call block, and
-;; its trap stay out of the cold section so machine function splitting never
-;; splits across the conditional branch or fallthrough call.
+;; When the block containing the check is cold, BasicBlockSections moves the
+;; bundled check to .text.split first, and KCFISplit then keeps KCFI_CMP, its
+;; fallthrough call block, and its trap together inside .text.split.
 define void @f10(ptr noundef %x, i1 %c1, i1 %c2) !prof !17 {
 ; SPLIT-LABEL: f10:
-; SPLIT-NOT:     .section .text.split.f10
-; SPLIT:         cmp w16, w17
-; SPLIT-NEXT:    b.ne [[TRAP:\.LBB[0-9_]+]]
-; SPLIT:         blr x0
-; SPLIT:       [[TRAP]]:
-; SPLIT-NEXT:    brk #0x8220
+; SPLIT-NOT:     blr x0
 ; SPLIT:         .section .text.split.f10,"ax",@progbits
 ; SPLIT-NEXT:  f10.cold:
-; SPLIT:         bl cleanup
-; SPLIT-NOT:     brk
+; SPLIT:         cmp w16, w17
+; SPLIT-NEXT:    b.ne [[TRAP:\.LBB[0-9_]+]]
+; SPLIT-NEXT:  // %bb.{{[0-9]+}}:
+; SPLIT-NEXT:    blr x0
+; SPLIT:       [[TRAP]]:
+; SPLIT-NEXT:    brk #0x8220
 ; SPLIT:         .size f10.cold
 entry:
   br i1 %c1, label %cold, label %check2, !prof !18
@@ -294,25 +295,27 @@ hot:
   ret void
 }
 
-;; When BranchFolder tail-merges two cold split call blocks, all predecessors
-;; end with KCFI_CMP, so the merged call block must still stay out of the cold
-;; section.
+;; When BranchFolder tail-merges post-call cleanup across cold checks with
+;; different type hashes, KCFI bundles prevent inverting the checks, and
+;; KCFISplit keeps both checks, calls, and traps out of line in .text.split.
 define void @f10_tailmerge(ptr noundef %x, i1 %c1, i1 %c2, i1 %c3) !prof !17 {
 ; SPLIT-LABEL: f10_tailmerge:
-; SPLIT:         cmp w16, w17
-; SPLIT-NEXT:    b.eq [[CALL:\.LBB[0-9_]+]]
-; SPLIT:         brk #0x8220
-; SPLIT:         cmp w16, w17
-; SPLIT-NEXT:    b.ne [[TRAP2:\.LBB[0-9_]+]]
-; SPLIT-NEXT:  [[CALL]]:
-; SPLIT-NEXT:    blr x0
-; SPLIT:       [[TRAP2]]:
-; SPLIT-NEXT:    brk #0x8220
+; SPLIT-NOT:     blr x0
 ; SPLIT:         .section .text.split.f10_tailmerge,"ax",@progbits
 ; SPLIT-NEXT:  f10_tailmerge.cold:
+; SPLIT:         cmp w16, w17
+; SPLIT-NEXT:    b.ne [[TRAP1:\.LBB[0-9_]+]]
+; SPLIT-NEXT:  // %bb.{{[0-9]+}}:
+; SPLIT-NEXT:    blr x0
+; SPLIT:         cmp w16, w17
+; SPLIT-NEXT:    b.ne [[TRAP2:\.LBB[0-9_]+]]
+; SPLIT-NEXT:  // %bb.{{[0-9]+}}:
+; SPLIT-NEXT:    blr x0
 ; SPLIT:         bl cleanup
-; SPLIT-NOT:     blr
-; SPLIT-NOT:     brk
+; SPLIT:       [[TRAP1]]:
+; SPLIT-NEXT:    brk #0x8220
+; SPLIT:       [[TRAP2]]:
+; SPLIT-NEXT:    brk #0x8220
 ; SPLIT:         .size f10_tailmerge.cold
 entry:
   br i1 %c1, label %cold1, label %check2, !prof !18
@@ -336,12 +339,61 @@ hot:
   ret void
 }
 
-;; KCFI_CMP and KCFI_TRAP are never outlined by the machine outliner, preserving
-;; patchable-function-prefix offsets, X16/X17/NZCV liveness, and distinct trap
-;; sites.
+;; With shrink-wrapping and machine function splitting, a cold prologue block
+;; and cold trap blocks both move to .text.split with valid CFI state.
+define void @f10_shrinkwrap(ptr noundef %x, i1 %c) uwtable(async) !prof !17 {
+; SPLIT-LABEL: f10_shrinkwrap:
+; SPLIT:         cmp w16, w17
+; SPLIT-NEXT:    b.ne [[TRAMP:\.LBB[0-9_]+]]
+; SPLIT:         blr x0
+; SPLIT:       [[TRAMP]]:
+; SPLIT:         b [[TRAP:\.LBB[0-9_]+]]
+; SPLIT:         .section .text.split.f10_shrinkwrap,"ax",@progbits
+; SPLIT-NEXT:  f10_shrinkwrap.cold:
+; SPLIT:         bl cleanup
+; SPLIT:       [[TRAP]]:
+; SPLIT-NEXT:    .cfi_restore_state
+; SPLIT-NEXT:    brk #0x8220
+; SPLIT:         .size f10_shrinkwrap.cold
+entry:
+  br i1 %c, label %cold, label %hot, !prof !18
+cold:
+  call void @cleanup()
+  ret void
+hot:
+  call void %x() [ "kcfi"(i32 12345678) ]
+  ret void
+}
+
+define void @f10_shrinkwrap_tail(ptr noundef %x, i1 %c) uwtable(async) !prof !17 {
+; SPLIT-LABEL: f10_shrinkwrap_tail:
+; SPLIT:         cmp w16, w17
+; SPLIT-NEXT:    b.ne [[TRAMP:\.LBB[0-9_]+]]
+; SPLIT:         br x0
+; SPLIT:       [[TRAMP]]:
+; SPLIT:         b [[TRAP:\.LBB[0-9_]+]]
+; SPLIT:         .section .text.split.f10_shrinkwrap_tail,"ax",@progbits
+; SPLIT-NEXT:  f10_shrinkwrap_tail.cold:
+; SPLIT:         bl cleanup
+; SPLIT:       [[TRAP]]:
+; SPLIT-NEXT:    brk #0x8220
+; SPLIT:         .size f10_shrinkwrap_tail.cold
+entry:
+  br i1 %c, label %cold, label %hot, !prof !18
+cold:
+  call void @cleanup()
+  ret void
+hot:
+  tail call void %x() [ "kcfi"(i32 12345678) ]
+  ret void
+}
+
+;; KCFI checks and traps are never outlined by the machine outliner (including
+;; bundled tail calls), preserving patchable-function-prefix offsets,
+;; X16/X17/NZCV liveness, and paired check/call blocks.
 define void @f11(ptr noundef %x, ptr %p) minsize "patchable-function-prefix"="2" {
 ; OUTLINED-LABEL: f11:
-; OUTLINED:         bl OUTLINED_FUNCTION_0
+; OUTLINED:         bl OUTLINED_FUNCTION_[[FN:[0-9]+]]
 ; OUTLINED-NEXT:    ldur w16, [x0, #-12]
 ; OUTLINED:         b.ne [[TRAP:.LBB[0-9_]+]]
 ; OUTLINED:       [[TRAP]]:
@@ -357,7 +409,7 @@ define void @f11(ptr noundef %x, ptr %p) minsize "patchable-function-prefix"="2"
 
 define void @f12(ptr noundef %x, ptr %p) minsize "patchable-function-prefix"="2" {
 ; OUTLINED-LABEL: f12:
-; OUTLINED:         bl OUTLINED_FUNCTION_0
+; OUTLINED:         bl OUTLINED_FUNCTION_[[FN]]
 ; OUTLINED-NEXT:    ldur w16, [x0, #-12]
 ; OUTLINED:         b.ne [[TRAP:.LBB[0-9_]+]]
 ; OUTLINED:       [[TRAP]]:
@@ -371,31 +423,70 @@ define void @f12(ptr noundef %x, ptr %p) minsize "patchable-function-prefix"="2"
   ret void
 }
 
-;; Functions with callee-pop stack arguments fall back to inline KCFI checks,
-;; and PAC-RET epilogue lowering unwraps the bundled tail call.
+define void @f12_tail1(ptr noundef %x, ptr %p) minsize "patchable-function-prefix"="2" {
+; OUTLINED-LABEL: f12_tail1:
+; OUTLINED:         ldur w16, [{{x[0-9]+}}, #-12]
+; OUTLINED:         b.ne [[TRAP:.LBB[0-9_]+]]
+; OUTLINED:         br {{x[0-9]+}}
+; OUTLINED:       [[TRAP]]:
+; OUTLINED-NEXT:    brk #0x8220
+  call void @cleanup()
+  store i32 1, ptr %p, align 4
+  %p1 = getelementptr i32, ptr %p, i64 1
+  store i32 2, ptr %p1, align 4
+  %p2 = getelementptr i32, ptr %p, i64 2
+  store i32 3, ptr %p2, align 4
+  tail call void %x() [ "kcfi"(i32 12345678) ]
+  ret void
+}
+
+define void @f12_tail2(ptr noundef %x, ptr %p) minsize "patchable-function-prefix"="2" {
+; OUTLINED-LABEL: f12_tail2:
+; OUTLINED:         ldur w16, [{{x[0-9]+}}, #-12]
+; OUTLINED:         b.ne [[TRAP:.LBB[0-9_]+]]
+; OUTLINED:         br {{x[0-9]+}}
+; OUTLINED:       [[TRAP]]:
+; OUTLINED-NEXT:    brk #0x8220
+  call void @cleanup()
+  store i32 1, ptr %p, align 4
+  %p1 = getelementptr i32, ptr %p, i64 1
+  store i32 2, ptr %p1, align 4
+  %p2 = getelementptr i32, ptr %p, i64 2
+  store i32 3, ptr %p2, align 4
+  tail call void %x() [ "kcfi"(i32 12345678) ]
+  ret void
+}
+
+;; Functions with callee-pop stack arguments and PAC-RET move KCFI traps out of
+;; line once epilogue/tail-call lowering finishes before KCFISplit.
 define tailcc void @f13(ptr noundef %x, i64, i64, i64, i64, i64, i64, i64, i64) #2 {
 ; ASM-LABEL: f13:
 ; ASM:         hint #29
 ; ASM-NEXT:    ldur w16, [x17, #-4]
 ; ASM:         cmp w16, w9
-; ASM-NEXT:    b.eq [[PASS:\.Ltmp[0-9]+]]
-; ASM-NEXT:    brk #0x8131
-; ASM-NEXT:  [[PASS]]:
+; ASM-NEXT:    b.ne [[TRAP:\.LBB[0-9_]+]]
+; ASM-NEXT:  // %bb.{{[0-9]+}}:
 ; ASM-NEXT:    br x17
+; ASM-NEXT:  [[TRAP]]:
+; ASM-NEXT:    brk #0x8131
 
 ; MIR-LABEL: name: f13
-; MIR:       BUNDLE{{.*}} {
-; MIR-NEXT:    KCFI_CHECK $x17, 12345678, implicit-def $x9, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
-; MIR-NEXT:    TCRETURNrix17 internal killed $x17, 0, csr_aarch64_aapcs, implicit $sp
-; MIR-NEXT:  }
+; MIR:         KCFI_CMP killed $x17, 12345678, implicit-def $x9, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
+; MIR-NEXT:    Bcc 1, %[[TRAP:bb\.[0-9]+]], implicit $nzcv
+; MIR:       bb.{{[0-9]+}} (%ir-block.{{[0-9]+}}):
+; MIR-NEXT:    liveins: {{.*}}$x17
+; MIR:         TCRETURNrix17 killed $x17, 0, csr_aarch64_aapcs, implicit $sp
+; MIR:       [[TRAP]] (%ir-block.{{[0-9]+}}):
+; MIR-NOT:     liveins:
+; MIR:         BRK 33073
   call void @cleanup()
   tail call tailcc void %x(ptr %x, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0) [ "kcfi"(i32 12345678) ]
   ret void
 }
 
 ;; Functions with Speculative Load Hardening fall back to inline KCFI checks so
-;; KCFI_CMP does not interfere with X16 taint tracking or degrade hardening to
-;; full barriers.
+;; out-of-line branches do not interfere with X16 taint tracking or degrade
+;; hardening to full barriers.
 define void @f14(ptr noundef %x) speculative_load_hardening {
 ; ASM-LABEL: f14:
 ; ASM-NOT:     dsb sy
@@ -410,22 +501,24 @@ define void @f14(ptr noundef %x) speculative_load_hardening {
   ret void
 }
 
-;; Functions with XRay instrumentation attributes fall back to inline KCFI checks
-;; so PATCHABLE_TAIL_CALL does not clobber X16/W17 after a split check.
+;; Functions with XRay instrumentation move KCFI traps out of line once XRay
+;; inserts PATCHABLE_TAIL_CALL before KCFISplit.
 define void @f15(ptr noundef %x, ptr noundef %y) "function-instrument"="xray-always" {
 ; ASM-LABEL: f15:
 ; ASM:         cmp w16, w17
-; ASM-NEXT:    b.eq [[PASS1:\.Ltmp[0-9]+]]
-; ASM-NEXT:    brk #0x8220
-; ASM-NEXT:  [[PASS1]]:
+; ASM-NEXT:    b.ne [[TRAP1:\.LBB[0-9_]+]]
+; ASM-NEXT:  // %bb.{{[0-9]+}}:
 ; ASM-NEXT:    blr x0
 ; ASM:       .Lxray_sled_{{[0-9]+}}:
 ; ASM:         ldur w16, [x0, #-4]
 ; ASM:         cmp w16, w17
-; ASM-NEXT:    b.eq [[PASS2:\.Ltmp[0-9]+]]
-; ASM-NEXT:    brk #0x8220
-; ASM-NEXT:  [[PASS2]]:
+; ASM-NEXT:    b.ne [[TRAP2:\.LBB[0-9_]+]]
+; ASM-NEXT:  // %bb.{{[0-9]+}}:
 ; ASM-NEXT:    br x0
+; ASM:       [[TRAP1]]:
+; ASM-NEXT:    brk #0x8220
+; ASM:       [[TRAP2]]:
+; ASM-NEXT:    brk #0x8220
   call void %x() [ "kcfi"(i32 12345678) ]
   tail call void %y() [ "kcfi"(i32 12345678) ]
   ret void
@@ -460,6 +553,10 @@ err:
 ; OUTLINED-NOT:     ldur
 ; OUTLINED-NOT:     brk
 ; OUTLINED:         ret
+; OUTLINED-LABEL: OUTLINED_FUNCTION_1:
+; OUTLINED-NOT:     ldur
+; OUTLINED-NOT:     brk
+; OUTLINED:         ret
 
 attributes #0 = { returns_twice }
 attributes #1 = { "branch-target-enforcement" }
@@ -467,7 +564,7 @@ attributes #2 = { "branch-target-enforcement" "branch-protection-pauth-lr" "sign
 
 !llvm.module.flags = !{!0, !1, !2, !3}
 !0 = !{i32 4, !"kcfi", i32 1}
-!1 = !{i32 8, !"kcfi-out-of-line-traps", i32 1}
+!1 = !{i32 7, !"kcfi-out-of-line-traps", i32 1}
 !2 = !{i32 8, !"branch-target-enforcement", i32 1}
 !3 = !{i32 1, !"ProfileSummary", !4}
 !4 = !{!5, !6, !7, !8, !9, !10, !11, !12}
