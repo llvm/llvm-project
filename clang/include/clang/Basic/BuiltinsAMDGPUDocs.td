@@ -1058,17 +1058,16 @@ to instruction memory, with the length specified by ``len``, which should be
 def DocCatAMDGPUHints : DocumentationCategory<"Pseudo-Instruction/Hint Builtins"> {
   let Content = [{
 These builtins do not correspond to a hardware instruction. They provide hints
-to tweak code generation, but do not change program semantics. The backend may
-ignore them, and they emit at most an assembly comment themselves.
+to configure code generation. The backend may ignore them, and they emit at most
+an assembly comment themselves.
 }];
 }
 
 def DocPadWaitcnt : Documentation {
   let Category = DocCatAMDGPUHints;
   let Content = [{
-Optional hint to request ``count`` padding instructions in the opposite edge of
-the branch whose arm contains this instruction. The supported ``counter``s are
-platform dependent. Currently only passing 0 to select VMcnt on gfx9 is
-supported.
+Optional hint to request ``count`` counter events on the opposite edge of the
+branch whose arm contains this call. Supported counters are platform dependent.
+Currently only passing 0 to select VMcnt on gfx942/gfx950 is supported.
 }];
 }

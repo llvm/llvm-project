@@ -833,20 +833,12 @@ def ROCDL_PadWaitcntOp
     Arguments<(ins ROCDL_WaitcntCounterAttr:$counter,
                    ConfinedAttr<I32Attr, [IntPositive]>:$count)> {
   let assemblyFormat = "enum($counter) `,` $count attr-dict";
-  let summary = "optional exact-count hint to pad the opposite branch arm";
+  let summary =
+      "optional hint to add counter events on the opposite branch edge";
   let description = [{
-    Requests exactly `count` extra counter events on the opposite edge of a
-    supported triangle or diamond. `counter` selects the counter to pad; `load`
-    (LOAD/VM, encoded as 0) is the only supported counter. `count` must be
-    positive. The current backend supports `BUFFER_INV 0` and accepts counts
-    1..62 on gfx942/gfx950. Out-of-range, unsupported, ambiguous, and repeated
-    requests are ignored.
-    The hint itself issues no event and does not authorize weaker waits.
-
-    Both arguments are immediate attributes. The operation lowers to
-    `llvm.amdgcn.pad.waitcnt`. The backend materializes accepted hints
-    immediately before waitcnt insertion, which then analyzes the padding and
-    preserves completion and ordering requirements.
+    Requests `count` extra counter events on the opposite edge of a conditional
+    branch. `counter` selects the counter to pad: `load` is the only supported
+    counter. `count` must be positive.
 
     Example:
     ```mlir

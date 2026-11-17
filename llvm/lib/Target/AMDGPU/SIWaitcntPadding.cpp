@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Materialize exact-count padding hints before waitcnt insertion analyzes the
-// machine function. The hint itself contributes no counter event and is
-// removed once considered, whether or not its request is accepted.
+// Lower waitcnt padding hints to actual padding before waitcnt insertion
+// analysis.
 //
 //===----------------------------------------------------------------------===//
 

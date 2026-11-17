@@ -409,7 +409,8 @@ def int_amdgcn_iglp_opt : ClangBuiltin<"__builtin_amdgcn_iglp_opt">,
   Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrConvergent,
                                 IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
-// Optional exact-count hint to pad the opposite arm of a supported branch.
+// Optional hint to add counter events on the opposite edge of a conditional
+// branch.
 // The hint itself has no hardware counter effect.
 def int_amdgcn_pad_waitcnt : ClangBuiltin<"__builtin_amdgcn_pad_waitcnt">,
   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty],
