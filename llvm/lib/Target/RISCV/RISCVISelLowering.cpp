@@ -30131,7 +30131,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       }
       break;
     case 'R':
-      if (((VT == MVT::i64 || VT == MVT::f64) && !Subtarget.is64Bit()) ||
+      if (((VT == MVT::i64 || (VT == MVT::f64 && Subtarget.hasStdExtZdinx())) &&
+           !Subtarget.is64Bit()) ||
           (VT == MVT::i128 && Subtarget.is64Bit()))
         return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
       break;
@@ -30204,7 +30205,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     if (!VT.isVector())
       return std::make_pair(0U, &RISCV::GPRCRegClass);
   } else if (Constraint == "cR") {
-    if (((VT == MVT::i64 || VT == MVT::f64) && !Subtarget.is64Bit()) ||
+    if (((VT == MVT::i64 || (VT == MVT::f64 && Subtarget.hasStdExtZdinx())) &&
+         !Subtarget.is64Bit()) ||
         (VT == MVT::i128 && Subtarget.is64Bit()))
       return std::make_pair(0U, &RISCV::GPRPairCRegClass);
   } else if (Constraint == "cf") {
