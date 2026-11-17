@@ -104,7 +104,8 @@ public:
   void setScratchSize(unsigned CC, const MCExpr *Val, MCContext &Ctx);
 
   // Set the backend stack size metadata, including the frames of the known
-  // non-chain callees. Recursion and indirect/external calls must be handled by
+  // non-chain callees (and unknown if `-amdgpu-assume-external-call-stack-size`
+  // is used). Recursion and indirect/external calls must be handled by
   // the consumer.
   void setBackendStackSize(unsigned CC, const MCExpr *Val);
 
