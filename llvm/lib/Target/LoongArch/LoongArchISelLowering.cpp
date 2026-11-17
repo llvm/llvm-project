@@ -6563,7 +6563,7 @@ static bool isCheapVNi128VectorOperand(SDValue V, MVT PartVT,
     SDValue Src = V.getOperand(0);
     switch (Src.getOpcode()) {
     case ISD::BUILD_VECTOR:
-      return ISD::isBuildVectorOfConstantSDNodes(Src.getNode());
+      return ISD::isBuildVectorOfConstantSDNodes(Src);
     case ISD::INSERT_VECTOR_ELT:
     case ISD::SCALAR_TO_VECTOR:
       return false;
@@ -6571,7 +6571,7 @@ static bool isCheapVNi128VectorOperand(SDValue V, MVT PartVT,
     return isVectorRegisterVT(Src.getValueType(), DAG);
   }
   default:
-    return ISD::isBuildVectorOfConstantSDNodes(V.getNode());
+    return ISD::isBuildVectorOfConstantSDNodes(V);
   }
 }
 
@@ -6589,7 +6589,8 @@ static bool isCheapVNi128VectorOperand(SDValue V, MVT PartVT,
 static SDValue performVNi128AddSubCombine(SDNode *N, SelectionDAG &DAG,
                                           TargetLowering::DAGCombinerInfo &DCI,
                                           const LoongArchSubtarget &Subtarget) {
-  assert(Subtarget.hasExtLSX() && "Unexpected combine");
+  if (!Subtarget.hasExtLSX())
+    return SDValue();
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
