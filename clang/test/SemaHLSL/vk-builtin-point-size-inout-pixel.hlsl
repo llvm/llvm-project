@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan1.3-pixel -hlsl-entry ps -fsyntax-only -verify %s
 
-// PointSize is never legal in a pixel shader. An `inout` parameter is
+// PointSize is never legal as a pixel shader output. An `inout` parameter is
 // currently treated as output-only here, so this is rejected (see the sibling
 // vk-builtin-point-size-inout-vertex.hlsl, where `inout` on a stage where
 // PointSize is a legal output is accepted).
