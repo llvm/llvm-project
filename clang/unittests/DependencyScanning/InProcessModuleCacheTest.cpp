@@ -8,6 +8,9 @@
 
 #include "gtest/gtest.h"
 
+#include <chrono>
+#include <thread>
+
 using namespace clang;
 using namespace clang::dependencies;
 
@@ -117,7 +120,7 @@ TEST(InProcessModuleCache, WriteReturnsSharedBuffer) {
 TEST(InProcessModuleCache, FlushInBackground) {
   AtomicLineLogger Logger;
   ModuleCacheEntries Entries;
-  Entries.startFlushing(Logger);
+  Entries.startBackgroundFlushing(Logger);
   std::shared_ptr<ModuleCache> ModCache =
       makeInProcessModuleCache(Entries, Logger);
 
@@ -136,7 +139,24 @@ TEST(InProcessModuleCache, FlushInBackground) {
   ASSERT_EQ(WrittenOrErr.getError(), std::error_code{});
   std::unique_ptr<llvm::MemoryBuffer> Written = std::move(*WrittenOrErr);
 
-  Entries.stopFlushing();
+  // Nothing guarantees the background thread gets scheduled before we stop it,
+  // and stopping leaves unflushed PCMs behind. Wait until it swaps in the
+  // memory-mapped buffer, which happens after the PCM appears on disk.
+  auto IsFlushed = [&] {
+    off_t ReadSize;
+    time_t ReadModTime;
+    auto Read = ModCache->read(Path, ReadSize, ReadModTime);
+    if (!Read) {
+      llvm::consumeError(Read.takeError());
+      return false;
+    }
+    return (*Read)->getBufferKind() == llvm::MemoryBuffer::MemoryBuffer_MMap;
+  };
+  auto Deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
+  while (!IsFlushed() && std::chrono::steady_clock::now() < Deadline)
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+  Entries.stopBackgroundFlushing();
 
   // The PCM got written to disk without an explicit flush.
   EXPECT_TRUE(llvm::sys::fs::exists(Path));

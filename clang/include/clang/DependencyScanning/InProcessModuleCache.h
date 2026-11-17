@@ -16,6 +16,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <deque>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -65,36 +66,34 @@ struct ModuleCacheEntries {
   void addInvalidatedPath(StringRef Path);
   std::optional<bool> isDirectoryInvalidated(StringRef Directory) const;
 
-  ~ModuleCacheEntries();
-
-  /// Flushes all PCMs built in-process that haven't been flushed yet to disk.
-  void flush();
+  /// Adds \p MapEntry into the queue of entries to be flushed.
+  void scheduleFlush(ModuleCacheMapEntry &MapEntry);
 
   /// Starts a background thread that flushes PCMs built in-process to disk as
   /// soon as they're written, replacing their in-memory buffers with
   /// memory-mapped files.
-  void startFlushing(AtomicLineLogger &Logger);
+  void startBackgroundFlushing(AtomicLineLogger &Logger);
 
-  /// Waits for the background thread to flush all written PCMs and stops it.
-  /// PCMs that failed to be written are kept in memory only.
-  void stopFlushing();
+  /// Stops the background thread as soon as it finishes flushing the current
+  /// PCM. PCMs it didn't get to are left for \c flushLeftovers().
+  void stopBackgroundFlushing();
 
-  /// Hands \p MapEntry, which was just written, to the background thread.
-  void addPending(ModuleCacheMapEntry &MapEntry);
+  /// Flushes all PCMs built in-process that haven't been flushed yet.
+  void flushLeftovers(AtomicLineLogger &Logger);
+
+  ~ModuleCacheEntries();
 
 private:
-  /// The body of the background thread, see \c startFlushing().
-  void flushInBackground(AtomicLineLogger &Logger);
+  /// Flushes a single cache entry.
+  static void flushEntry(StringRef Path, ModuleCacheEntry &Entry,
+                         AtomicLineLogger &Logger, bool ReadBack);
 
-  /// Flushes single entry, see \c startFlushing().
-  void flushEntry(ModuleCacheMapEntry &MapEntry, AtomicLineLogger &Logger);
-
-  /// Entries waiting to be flushed by the background thread. These point into
-  /// \c Map, whose entries have stable addresses.
-  std::mutex PendingMutex;
-  std::vector<ModuleCacheMapEntry *> Pending;
+  /// Entries waiting to be flushed. These point into \c Map, whose entries have
+  /// stable addresses.
+  std::mutex FlushMutex;
+  std::deque<ModuleCacheMapEntry *> FlushEntries;
   /// Notifies the background thread about new pending entries or stopping.
-  std::condition_variable PendingCondVar;
+  std::condition_variable FlushCondVar;
   bool StopFlushing = false;
   std::thread Flusher;
 

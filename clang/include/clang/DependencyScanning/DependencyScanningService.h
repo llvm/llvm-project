@@ -117,15 +117,15 @@ public:
     ModCacheEntries.ValidateAgainstInvalidatedPaths =
         this->Opts.ValidateAgainstInvalidatedPaths;
     if (this->Opts.FlushModuleCache)
-      ModCacheEntries.startFlushing(Logger);
+      ModCacheEntries.startBackgroundFlushing(Logger);
   }
 
   ~DependencyScanningService() {
-    // The background thread references the logger, which gets destroyed first.
-    ModCacheEntries.stopFlushing();
-    // Just in case, flush whatever the background thread failed to write.
-    if (Opts.FlushModuleCache)
-      ModCacheEntries.flush();
+    if (Opts.FlushModuleCache) {
+      ModCacheEntries.stopBackgroundFlushing();
+      // TODO: Consider allowing clients to skip this to terminate ASAP.
+      ModCacheEntries.flushLeftovers(Logger);
+    }
   }
 
   const DependencyScanningServiceOptions &getOpts() const { return Opts; }
