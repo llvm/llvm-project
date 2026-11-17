@@ -50,19 +50,33 @@ class NVVM_PTXBuilder_Op<string mnemonic, list<Trait> extraTraits = []> :
                           extraTraits)> {
 }
 
-// Op partitions of the NVVM dialect ops.
-// Ops that fit no other partition are in `Misc`. The special register ops set
-// their partition, `IndexSReg` or `MiscSReg`, in their base classes.
+// Op partitions of the NVVM dialect ops. They follow the instruction categories
+// of the PTX ISA (section numbers as of PTX ISA 9.5):
+//  - `Arith`: integer, floating-point, comparison and logic instructions
+//    (9.7.1-9.7.9).
+//  - `Convert`: the `cvt` data conversion instructions (9.7.10.24).
+//  - `DataMovement`: the other data movement and conversion instructions
+//    (9.7.10).
+//  - `Sync`: parallel synchronization and communication instructions (9.7.15).
+//  - `Mma`: warp-level matrix multiply-accumulate instructions (9.7.16).
+//  - `Wgmma`: asynchronous warpgroup-level matrix multiply-accumulate
+//    instructions (9.7.17).
+//  - `Tcgen05`: TensorCore 5th generation family instructions (9.7.18).
+//  - `IndexSReg` and `MiscSReg`: special registers that identify a thread in
+//    the thread hierarchy (10.1-10.17) and all others (10.18-10.37). Their ops
+//    set the partition in their base classes.
+//  - `Misc`: control flow and miscellaneous instructions (9.7.14 and 9.7.21),
+//    and ops without a PTX instruction.
 def NVVM_ArithPartition : Partition<"Arith">;
 def NVVM_ConvertPartition : Partition<"Convert">;
+def NVVM_DataMovementPartition : Partition<"DataMovement">;
 def NVVM_IndexSRegPartition : Partition<"IndexSReg">;
-def NVVM_MemoryPartition : Partition<"Memory">;
 def NVVM_MiscPartition : Partition<"Misc">;
 def NVVM_MiscSRegPartition : Partition<"MiscSReg">;
 def NVVM_MmaPartition : Partition<"Mma">;
 def NVVM_SyncPartition : Partition<"Sync">;
-def NVVM_TcgenPartition : Partition<"Tcgen">;
-def NVVM_WarpPartition : Partition<"Warp">;
+def NVVM_Tcgen05Partition : Partition<"Tcgen05">;
+def NVVM_WgmmaPartition : Partition<"Wgmma">;
 
 //===----------------------------------------------------------------------===//
 // NVVM attribute definitions
@@ -574,7 +588,7 @@ def NVVM_RsqrtOp
 // NVVM redux op definitions
 //===----------------------------------------------------------------------===//
 
-let partition = NVVM_WarpPartition in {
+let partition = NVVM_SyncPartition in {
 def NVVM_ReduxOp :
   NVVM_Op<"redux.sync", [NVVMRequiresSM<80>, AllTypesMatch<["res", "val"]>]>,
   Results<(outs AnyTypeOf<[I32, F32]>:$res)>,
@@ -608,7 +622,7 @@ def NVVM_ReduxOp :
     ) attr-dict `:` type($val) `->` type($res)
    }];   
 }
-} // let partition = NVVM_WarpPartition
+} // let partition = NVVM_SyncPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM nanosleep
@@ -1732,7 +1746,7 @@ def ShflKind : I32EnumAttr<"ShflKind", "NVVM shuffle kind",
 }
 def ShflKindAttr : EnumAttr<NVVM_Dialect, ShflKind, "shfl_kind">;
 
-let partition = NVVM_WarpPartition in {
+let partition = NVVM_DataMovementPartition in {
 def NVVM_ShflOp :
   NVVM_Op<"shfl.sync", [NVVMRequiresSM<30>, InferTypeOpAdaptor]>,
   Results<(outs AnyTypeOf<[I32, F32, LLVMStructType]>:$res)>,
@@ -1773,7 +1787,7 @@ def NVVM_ShflOp :
    }];
    let hasVerifier = 1;
 }
-} // let partition = NVVM_WarpPartition
+} // let partition = NVVM_DataMovementPartition
 
 def VoteSyncKindAny : I32EnumAttrCase<"any", 0>;
 def VoteSyncKindAll : I32EnumAttrCase<"all", 1>;
@@ -1789,7 +1803,7 @@ def VoteSyncKind : I32EnumAttr<"VoteSyncKind", "NVVM vote sync kind",
 
 def VoteSyncKindAttr : EnumAttr<NVVM_Dialect, VoteSyncKind, "vote_sync_kind">;
 
-let partition = NVVM_WarpPartition in {
+let partition = NVVM_SyncPartition in {
 def NVVM_VoteSyncOp
     : NVVM_Op<"vote.sync", [InferTypeOpAdaptor]>,
       Results<(outs AnyTypeOf<[I32, I1]>:$res)>,
@@ -1878,7 +1892,7 @@ def NVVM_ElectSyncOp : NVVM_Op<"elect.sync">
     $pred = builder.CreateExtractValue(resultTuple, 1);
   }];
 }
-} // let partition = NVVM_WarpPartition
+} // let partition = NVVM_SyncPartition
 
 //===----------------------------------------------------------------------===//
 // Permute Bytes (Prmt)
@@ -1903,7 +1917,7 @@ def PermuteMode : I32EnumAttr<"PermuteMode", "NVVM permute mode",
 
 def PermuteModeAttr : EnumAttr<NVVM_Dialect, PermuteMode, "permute_mode">;
 
-let partition = NVVM_ArithPartition in {
+let partition = NVVM_DataMovementPartition in {
 def NVVM_PermuteOp : NVVM_SingleResultIntrinsicOp<"prmt", [Pure]>,
                      Results<(outs I32:$res)>,
                      Arguments<(ins I32:$lo, Optional<I32>:$hi, I32:$selector,
@@ -1993,7 +2007,7 @@ def NVVM_PermuteOp : NVVM_SingleResultIntrinsicOp<"prmt", [Pure]>,
 
   let hasVerifier = 1;
 }
-} // let partition = NVVM_ArithPartition
+} // let partition = NVVM_DataMovementPartition
 
 def LoadCacheModifierCA : I32EnumAttrCase<"CA", 0, "ca">;
 def LoadCacheModifierCG : I32EnumAttrCase<"CG", 1, "cg">;
@@ -2017,7 +2031,7 @@ def LoadCacheModifierKind : I32EnumAttr<"LoadCacheModifierKind",
 
 def LoadCacheModifierAttr : EnumAttr<NVVM_Dialect, LoadCacheModifierKind, "load_cache_modifier">;
 
-let partition = NVVM_MemoryPartition in {
+let partition = NVVM_DataMovementPartition in {
 def NVVM_CpAsyncOp : NVVM_Op<"cp.async.shared.global">,
   Arguments<(ins LLVM_PointerShared:$dst,
                  LLVM_PointerGlobal:$src,
@@ -2060,7 +2074,9 @@ def NVVM_CpAsyncWaitGroupOp : NVVM_Op<"cp.async.wait.group">,
   }];
   let assemblyFormat = "$n attr-dict";
 }
+} // let partition = NVVM_DataMovementPartition
 
+let partition = NVVM_SyncPartition in {
 def NVVM_CpAsyncMBarrierArriveOp : NVVM_VoidIntrinsicOp<"cp.async.mbarrier.arrive"> {
   let summary = "NVVM Dialect Op for cp.async.mbarrier.arrive";
   let description = [{
@@ -2083,7 +2099,7 @@ def NVVM_CpAsyncMBarrierArriveOp : NVVM_VoidIntrinsicOp<"cp.async.mbarrier.arriv
     $addr oilist(`noinc` `=` $noinc) attr-dict `:` type(operands)
   }];
 }
-} // let partition = NVVM_MemoryPartition
+} // let partition = NVVM_SyncPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Conversion Ops (for "cvt.*" family of PTX instructions)
@@ -4596,7 +4612,7 @@ def CTAGroupKind : I32EnumAttr<"CTAGroupKind",
 def CTAGroupKindAttr :
   EnumAttr<NVVM_Dialect, CTAGroupKind, "cta_group">;
 
-let partition = NVVM_MemoryPartition in {
+let partition = NVVM_DataMovementPartition in {
 def NVVM_CpAsyncBulkCommitGroupOp : NVVM_Op<"cp.async.bulk.commit.group">,
   Arguments<(ins )> {
   let assemblyFormat = "attr-dict";
@@ -4901,7 +4917,7 @@ def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOverrideAddrOp :
 
     let hasVerifier = 1;
 }
-} // let partition = NVVM_MemoryPartition
+} // let partition = NVVM_DataMovementPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Prefetch Op
@@ -4918,7 +4934,7 @@ def PrefetchCacheLevel : I32Enum<"PrefetchCacheLevel",
 
 def PrefetchCacheLevelAttr : EnumAttr<NVVM_Dialect, PrefetchCacheLevel, "prefetch_cache_level">;
 
-let partition = NVVM_MemoryPartition in {
+let partition = NVVM_DataMovementPartition in {
 def NVVM_PrefetchOp : NVVM_Op<"prefetch",
     [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]> {
   let summary = "Brings the cache line containing an address into the specified cache level";
@@ -5086,7 +5102,7 @@ def NVVM_CpAsyncBulkTensorPrefetchOp :
 
   let hasVerifier = 1;
 }
-} // let partition = NVVM_MemoryPartition
+} // let partition = NVVM_DataMovementPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Reduction Ops
@@ -5111,7 +5127,7 @@ def TMAReduxKind : I32EnumAttr<"TMAReduxKind", "NVVM TMA redux kind",
 }
 def TMAReduxKindAttr : EnumAttr<NVVM_Dialect, TMAReduxKind, "tma_redux_kind">;
 
-let partition = NVVM_MemoryPartition in {
+let partition = NVVM_DataMovementPartition in {
 def NVVM_CpAsyncBulkTensorReduceOp :
   NVVM_Op<"cp.async.bulk.tensor.reduce", [AttrSizedOperandSegments]> {
   let arguments = (ins
@@ -5374,13 +5390,13 @@ def NVVM_CpAsyncBulkSharedCTAToGlobalOp :
     createIntrinsicCall(builder, id, args);
   }];
 }
-} // let partition = NVVM_MemoryPartition
+} // let partition = NVVM_DataMovementPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Wgmma Ops
 //===----------------------------------------------------------------------===//
 
-let partition = NVVM_MmaPartition in {
+let partition = NVVM_WgmmaPartition in {
 def NVVM_WgmmaFenceAlignedOp : NVVM_Op<"wgmma.fence.aligned", [NVVMRequiresSMa<[90]>]> {
   let arguments = (ins);
   let description = [{
@@ -5419,7 +5435,7 @@ def NVVM_WgmmaWaitGroupSyncOp : NVVM_Op<"wgmma.wait.group.sync.aligned", [NVVMRe
     createIntrinsicCall(builder, llvm::Intrinsic::nvvm_wgmma_wait_group_sync_aligned, builder.getInt64($group));
   }];
 }
-} // let partition = NVVM_MmaPartition
+} // let partition = NVVM_WgmmaPartition
 
 /// Enum attribute type for the negating of input operands
 def WGMMAScaleInNeg : I32EnumAttrCase<"neg", -1>;
@@ -5464,7 +5480,7 @@ def WGMMATypes : I32EnumAttr<"WGMMATypes", "NVVM WGMMA types",
 def WGMMATypesAttr : EnumAttr<NVVM_Dialect, WGMMATypes, "wgmma_type">;
 
 
-let partition = NVVM_MmaPartition in {
+let partition = NVVM_WgmmaPartition in {
 def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async", 
               [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>,
                 PredOpTrait<"input struct and result struct must be the same type",
@@ -5560,7 +5576,7 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
     bool getAsmValues(RewriterBase &, llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &);
   }];
 }
-} // let partition = NVVM_MmaPartition
+} // let partition = NVVM_WgmmaPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Griddepcontrol Ops
@@ -5576,7 +5592,7 @@ def GridDepActionKind : I32Enum<"GridDepActionKind", "Action kind for grid depen
 
 def GridDepActionAttr : EnumAttr<NVVM_Dialect, GridDepActionKind, "grid_dep_action">;
 
-let partition = NVVM_MiscPartition in {
+let partition = NVVM_SyncPartition in {
 def NVVM_GriddepcontrolOp : NVVM_Op<"griddepcontrol", []> {
   let description = [{
     If the $kind attribute is set to `wait`, it causes the 
@@ -5609,13 +5625,13 @@ def NVVM_GriddepcontrolOp : NVVM_Op<"griddepcontrol", []> {
       createIntrinsicCall(builder, id);
   }];
 }
-} // let partition = NVVM_MiscPartition
+} // let partition = NVVM_SyncPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Mapa Op
 //===----------------------------------------------------------------------===//
 
-let partition = NVVM_MemoryPartition in {
+let partition = NVVM_DataMovementPartition in {
 def NVVM_MapaOp: NVVM_Op<"mapa",
   [InputAddressIsCombinationOf<["a", "res"],
     [[LLVM_PointerShared, LLVM_PointerSharedCluster], [LLVM_PointerGeneric, LLVM_PointerGeneric]],
@@ -5634,7 +5650,7 @@ def NVVM_MapaOp: NVVM_Op<"mapa",
   
   let assemblyFormat = "$a`,` $b attr-dict `:` type($a) `->` type($res)";
 }
-} // let partition = NVVM_MemoryPartition
+} // let partition = NVVM_DataMovementPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM match.sync Op
@@ -5651,7 +5667,7 @@ def MatchSyncKind : I32EnumAttr<"MatchSyncKind", "NVVM match sync kind",
 
 def MatchSyncKindAttr : EnumAttr<NVVM_Dialect, MatchSyncKind, "match_sync_kind">;
 
-let partition = NVVM_WarpPartition in {
+let partition = NVVM_SyncPartition in {
 def NVVM_MatchSyncOp : NVVM_Op<"match.sync", [InferTypeOpAdaptor]>,
   Results<(outs AnyTypeOf<[I32, LLVMStructType]>:$res)>,
   Arguments<(ins I32:$thread_mask,
@@ -5683,13 +5699,13 @@ def NVVM_MatchSyncOp : NVVM_Op<"match.sync", [InferTypeOpAdaptor]>,
                        "type($val) `->` type($res)";
   let hasVerifier = 1;
 }
-} // let partition = NVVM_WarpPartition
+} // let partition = NVVM_SyncPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Bulk Store Op
 //===----------------------------------------------------------------------===//
 
-let partition = NVVM_MemoryPartition in {
+let partition = NVVM_DataMovementPartition in {
 def NVVM_BulkStoreOp: NVVM_Op<"st.bulk"> {
   let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr, AnyTypeOf<[I32, I64]>:$size, DefaultValuedAttr<I64Attr, "0">:$initVal);
 
@@ -5769,7 +5785,7 @@ def NVVM_AsyncStoreSharedOp:
                        LLVM_PointerSharedCluster:$mbarrier);
   let assemblyFormat = "$addr `,` $value `,` `mbarrier` `=` $mbarrier attr-dict `:` type($addr) `,` type($value) `,` type($mbarrier)";
 }
-} // let partition = NVVM_MemoryPartition
+} // let partition = NVVM_DataMovementPartition
 
 let partition = NVVM_MiscPartition in {
 def NVVM_Exit : NVVM_Op<"exit"> {
@@ -5827,7 +5843,7 @@ def Tcgen05WaitKind : I32EnumAttr<"Tcgen05WaitKind", "NVVM Tcgen05 wait kind",
 def Tcgen05WaitKindAttr :
   EnumAttr<NVVM_Dialect, Tcgen05WaitKind, "tcgen05_wait">;
 
-let partition = NVVM_TcgenPartition in {
+let partition = NVVM_Tcgen05Partition in {
 def NVVM_Tcgen05AllocOp : NVVM_VoidIntrinsicOp<"tcgen05.alloc",
     [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Tcgen05 alloc operation";
@@ -6020,7 +6036,7 @@ def NVVM_Tcgen05ShiftOp : NVVM_Op<"tcgen05.shift",
     createIntrinsicCall(builder, id, {$taddr});
   }];
 }
-} // let partition = NVVM_TcgenPartition
+} // let partition = NVVM_Tcgen05Partition
 
 def Shape128x256b : I32EnumAttrCase<"SHAPE_128x256b", 0, "shape_128x256b">;
 def Shape4x256b   : I32EnumAttrCase<"SHAPE_4x256b",   1, "shape_4x256b">;
@@ -6058,7 +6074,7 @@ def Tcgen05CpSrcFormat : I32EnumAttr<"Tcgen05CpSrcFormat", "tcgen05 cp source fo
 }
 def Tcgen05CpSrcFormatAttr : EnumAttr<NVVM_Dialect, Tcgen05CpSrcFormat, "tcgen05_cp_src_fmt">;
 
-let partition = NVVM_TcgenPartition in {
+let partition = NVVM_Tcgen05Partition in {
 def NVVM_Tcgen05CpOp : NVVM_Op<"tcgen05.cp", [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Tcgen05 copy operation";
   let description = [{
@@ -6169,7 +6185,7 @@ def NVVM_Tcgen05MmaSmemDescOp : NVVM_Op<"tcgen05.mma_smem_desc", []> {
     NVVM::Tcgen05MmaSmemDescOp::createSmemDescriptor(*op, moduleTranslation, builder);
   }];
 }
-} // let partition = NVVM_TcgenPartition
+} // let partition = NVVM_Tcgen05Partition
 
 //===----------------------------------------------------------------------===//
 // NVVM tcgen05 LdSt Shape Attr
@@ -6197,7 +6213,7 @@ def Tcgen05LdStShapeAttr: EnumAttr<NVVM_Dialect, Tcgen05LdStShape, "tcgen05_ldst
 // NVVM tcgen05.ld Op
 //===----------------------------------------------------------------------===//
 
-let partition = NVVM_TcgenPartition in {
+let partition = NVVM_Tcgen05Partition in {
 def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "tensor memory load instructions";
   let arguments = (ins
@@ -6461,7 +6477,7 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMf<[100, 101, 110]>]>
 
   let hasVerifier = 1;
 }
-} // let partition = NVVM_TcgenPartition
+} // let partition = NVVM_Tcgen05Partition
 
 //===----------------------------------------------------------------------===//
 // NVVM dot.accumulate Ops
@@ -6564,7 +6580,7 @@ def NVVM_DotAccumulate2WayOp : NVVM_SingleResultIntrinsicOp<"dot.accumulate.2way
 // NVVM clusterlaunchcontrol Ops.
 //===----------------------------------------------------------------------===//
 
-let partition = NVVM_MiscPartition in {
+let partition = NVVM_SyncPartition in {
 def NVVM_ClusterLaunchControlTryCancelOp
     : NVVM_Op<"clusterlaunchcontrol.try.cancel", [NVVMRequiresSM<100>]> {
   let summary = "Request atomically canceling the launch of a cluster that has not started running yet";
@@ -6606,7 +6622,7 @@ def NVVM_ClusterLaunchControlTryCancelOp
     createIntrinsicCall(builder, id, args);
   }];
 }
-} // let partition = NVVM_MiscPartition
+} // let partition = NVVM_SyncPartition
 
 def ClusterLaunchControlIsCanceled
   : I32EnumCase<"IS_CANCELED", 0, "is_canceled">;
@@ -6629,7 +6645,7 @@ def ClusterLaunchControlQueryTypeAttr
   : EnumAttr<NVVM_Dialect,
       ClusterLaunchControlQueryType, "cluster_launch_control_query_type">;
 
-let partition = NVVM_MiscPartition in {
+let partition = NVVM_SyncPartition in {
 def NVVM_ClusterLaunchControlQueryCancelOp
     : NVVM_Op<"clusterlaunchcontrol.query.cancel",
               [NVVMRequiresSM<100>, InferTypeOpAdaptor]> {
@@ -6672,7 +6688,7 @@ def NVVM_ClusterLaunchControlQueryCancelOp
     $res = createIntrinsicCall(builder, id, args);
   }];
 }
-} // let partition = NVVM_MiscPartition
+} // let partition = NVVM_SyncPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM tcgen05.mma Ops
@@ -6762,7 +6778,7 @@ defvar Tcgen05MMABlockScaleKindAttr =
   ConfinedAttr<Tcgen05MMAKindAttr,
     [EnumAttrIsOneOf<Tcgen05MMAKindAttr, Tcgen05MMABlockScaleKindList>]>;
 
-let partition = NVVM_TcgenPartition in {
+let partition = NVVM_Tcgen05Partition in {
 def NVVM_Tcgen05MMAOp : NVVM_Op<"tcgen05.mma",
     [AttrSizedOperandSegments, NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Performs MMA operation on 5th-gen tensor cores";
@@ -6929,7 +6945,7 @@ def NVVM_Tcgen05MMASparseOp : NVVM_Op<"tcgen05.mma.sp",
     createIntrinsicCall(builder, ID, args);
   }];
 }
-} // let partition = NVVM_TcgenPartition
+} // let partition = NVVM_Tcgen05Partition
 
 def Tcgen05MMABlockScaleDefault : I32EnumAttrCase<"DEFAULT", 0, "default">;
 def Tcgen05MMABlockScaleBlock16      : I32EnumAttrCase<"BLOCK16", 1, "block16">;
@@ -6947,7 +6963,7 @@ def Tcgen05MMABlockScale
 def Tcgen05MMABlockScaleAttr : EnumAttr<NVVM_Dialect, Tcgen05MMABlockScale,
                                           "tcgen05_mma_block_scale">;
 
-let partition = NVVM_TcgenPartition in {
+let partition = NVVM_Tcgen05Partition in {
 def NVVM_Tcgen05MMABlockScaleOp : NVVM_Op<"tcgen05.mma.block_scale",
     [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Performs block scaled MMA operation on 5th-gen tensor cores";
@@ -7103,7 +7119,7 @@ def NVVM_Tcgen05MMASparseBlockScaleOp : NVVM_Op<"tcgen05.mma.sp.block_scale",
     createIntrinsicCall(builder, ID, args);
   }];
 }
-} // let partition = NVVM_TcgenPartition
+} // let partition = NVVM_Tcgen05Partition
 
 def Tcgen05MMACollectorBBuffer0  : I32EnumAttrCase<"B0", 0, "b0">;
 def Tcgen05MMACollectorBBuffer1  : I32EnumAttrCase<"B1", 1, "b1">;
@@ -7121,7 +7137,7 @@ def Tcgen05MMACollectorBBuffer : I32EnumAttr<
 
 def Tcgen05MMACollectorBBufferAttr : EnumAttr<NVVM_Dialect, Tcgen05MMACollectorBBuffer, "tcgen05_mma_collectorb">;
 
-let partition = NVVM_TcgenPartition in {
+let partition = NVVM_Tcgen05Partition in {
 def NVVM_Tcgen05MMAWsOp : NVVM_Op<"tcgen05.mma.ws",
     [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Performs weight stationary convolution MMA operation on 5th-gen tensor cores";
@@ -7334,7 +7350,7 @@ def NVVM_Tcgen05MMADecompressBOp :
 
   let hasVerifier = true;
 }
-} // let partition = NVVM_TcgenPartition
+} // let partition = NVVM_Tcgen05Partition
 
 defvar Tcgen05MMABlockScaleDecompressBScaleList = [
     Tcgen05MMABlockScaleDefault,
@@ -7346,7 +7362,7 @@ defvar Tcgen05MMABlockScaleDecompressBScaleAttr =
     [EnumAttrIsOneOf<Tcgen05MMABlockScaleAttr,
                      Tcgen05MMABlockScaleDecompressBScaleList>]>;
 
-let partition = NVVM_TcgenPartition in {
+let partition = NVVM_Tcgen05Partition in {
 def NVVM_Tcgen05MMABlockScaleDecompressBOp :
     NVVM_VoidIntrinsicOp<"tcgen05.mma.block_scale.decompress_b",
                          [NVVMRequiresSMf<[107]>]> {
@@ -7409,7 +7425,7 @@ def NVVM_Tcgen05MMABlockScaleDecompressBOp :
     ) attr-dict `:` `(` type(operands) `)`
   }];
 }
-} // let partition = NVVM_TcgenPartition
+} // let partition = NVVM_Tcgen05Partition
 
 //===----------------------------------------------------------------------===//
 // NVVM sparse.compress and sparse.decompress Ops
@@ -7429,7 +7445,7 @@ defvar SPElemVectorType = FixedVectorOfRankAndType<[1], [I8, I16]>;
 defvar SPMetadataType = AnyTypeOf<[I32,
     FixedVectorOfRankAndLengthAndType<[1], [1, 2, 4, 8, 16, 32], [I32]>]>;
 
-let partition = NVVM_MiscPartition in {
+let partition = NVVM_DataMovementPartition in {
 def NVVM_SparseCompressOp : NVVM_Op<"sparse.compress",
     [Pure, NVVMRequiresSMa<[107]>]> {
   let summary = "Compress dense vector to structured sparse vector";
@@ -7572,7 +7588,7 @@ def NVVM_SparseDecompressOp : NVVM_Op<"sparse.decompress",
     NVVM::SparseDecompressOp::lowerToLLVMIR(*op, moduleTranslation, builder);
   }];
 }
-} // let partition = NVVM_MiscPartition
+} // let partition = NVVM_DataMovementPartition
 
 def SIMTFloatType : AnyTypeOf<[F16, BF16, F32, F64,
                       VectorOfLengthAndType<[2], [F16, BF16, F32, F64]>]>;
@@ -7934,7 +7950,7 @@ def TensormapFieldValueAttr :
     TensormapSwizzleModeAttr, TensormapSwizzleAtomicityAttr, 
     TensormapFillModeAttr]>;
 
-let partition = NVVM_MemoryPartition in {
+let partition = NVVM_DataMovementPartition in {
 def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace",
     [NVVMRequiresSMaOrSMf<[90, 103], [100, 101, 110, 120]>]> {
   let summary = "Modifies a field of the tensor-map object";
@@ -7983,7 +7999,7 @@ def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace",
     ($new_value_attr^):($new_value)? `in` $addr attr-dict `:` type(operands)
   }];
 }
-} // let partition = NVVM_MemoryPartition
+} // let partition = NVVM_DataMovementPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM target attribute.

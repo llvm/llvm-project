@@ -1,4 +1,4 @@
-//===- NVVMMemoryOps.cpp - NVVM dialect memory ops ------------------------===//
+//===- NVVMDataMovementOps.cpp - NVVM dialect data movement ops -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the ops of op partition `Memory` of the NVVM dialect.
+// This file defines the ops of op partition `DataMovement` of the NVVM dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LLVMIR/NVVMMemoryOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMDataMovementOps.h"
 
 #include "IR/NVVMOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Types.h"
@@ -24,6 +26,7 @@
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 
 #include <array>
@@ -466,6 +469,81 @@ LogicalResult NVVM::TensormapReplaceOp::verify() {
   return success();
 }
 
+LogicalResult ShflOp::verify() {
+  auto returnStructType = llvm::dyn_cast<LLVM::LLVMStructType>(getType());
+
+  auto verifyTypeError = [&](Twine desc, Type expectedType,
+                             Type actualType) -> LogicalResult {
+    return emitOpError("expected " + desc + " to be of type ")
+           << expectedType << " but got " << actualType << " instead";
+  };
+
+  if (returnStructType) {
+    if (!getReturnValueAndIsValid())
+      return emitOpError("\"return_value_and_is_valid\" attribute must be "
+                         "specified when the return type is a struct type");
+
+    if (returnStructType.getBody().size() != 2)
+      return emitOpError("expected return type to be a two-element struct");
+
+    llvm::ArrayRef<Type> returnStruct = returnStructType.getBody();
+    auto resultType = returnStruct[0];
+    if (resultType != getVal().getType())
+      return verifyTypeError("first element in the returned struct",
+                             getVal().getType(), resultType);
+
+    auto predicateType = returnStruct[1];
+    if (!predicateType.isInteger(1))
+      return verifyTypeError("second element in the returned struct",
+                             mlir::IntegerType::get(getContext(), 1),
+                             predicateType);
+  } else {
+    if (getReturnValueAndIsValid())
+      return emitOpError("expected return type to be a two-element struct");
+
+    if (getType() != getVal().getType())
+      return verifyTypeError("return type", getVal().getType(), getType());
+  }
+  return success();
+}
+
+LogicalResult
+ShflOp::inferReturnTypes(MLIRContext *context, std::optional<Location> location,
+                         ShflOp::Adaptor adaptor,
+                         SmallVectorImpl<Type> &inferredReturnTypes) {
+  Type valType = adaptor.getVal().getType();
+  if (adaptor.getReturnValueAndIsValid())
+    inferredReturnTypes.push_back(LLVM::LLVMStructType::getLiteral(
+        context, {valType, IntegerType::get(context, 1)}));
+  else
+    inferredReturnTypes.push_back(valType);
+  return success();
+}
+
+LogicalResult PermuteOp::verify() {
+  using Mode = NVVM::PermuteMode;
+  bool hasHi = static_cast<bool>(getHi());
+
+  switch (getMode()) {
+  case Mode::DEFAULT:
+  case Mode::F4E:
+  case Mode::B4E:
+    if (!hasHi)
+      return emitError("mode '") << getMode() << "' requires 'hi' operand.";
+    break;
+  case Mode::RC8:
+  case Mode::ECL:
+  case Mode::ECR:
+  case Mode::RC16:
+    if (hasHi)
+      return emitError("mode '")
+             << getMode() << "' does not accept 'hi' operand.";
+    break;
+  }
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // getIntrinsicID/getIntrinsicIDAndArgs methods
 //===----------------------------------------------------------------------===//
@@ -491,23 +569,6 @@ mlir::NVVM::IDArgPair AsyncStoreGlobalOp::getIntrinsicIDAndArgs(
                      {addr, value, isMultimem});
   }
   llvm_unreachable("unsupported scope for AsyncStoreGlobalOp");
-}
-
-mlir::NVVM::IDArgPair CpAsyncMBarrierArriveOp::getIntrinsicIDAndArgs(
-    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
-  auto thisOp = cast<NVVM::CpAsyncMBarrierArriveOp>(op);
-  bool isShared = isPtrInSharedCTASpace(thisOp.getAddr());
-
-  llvm::Intrinsic::ID id;
-  if (thisOp.getNoinc()) {
-    id = isShared ? llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive_noinc_shared
-                  : llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive_noinc;
-  } else {
-    id = isShared ? llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive_shared
-                  : llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive;
-  }
-
-  return {id, {mt.lookupValue(thisOp.getAddr())}};
 }
 
 #define CP_ASYNC_ID_IMPL(mod, size, suffix)                                    \
@@ -1175,5 +1236,120 @@ mlir::NVVM::IDArgPair TensormapReplaceOp::getIntrinsicIDAndArgs(
   return {IDs[fieldIndex], args};
 }
 
+mlir::NVVM::IDArgPair
+PermuteOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                                 llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::PermuteOp>(op);
+  NVVM::PermuteMode mode = thisOp.getMode();
+
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_prmt,     llvm::Intrinsic::nvvm_prmt_f4e,
+      llvm::Intrinsic::nvvm_prmt_b4e, llvm::Intrinsic::nvvm_prmt_rc8,
+      llvm::Intrinsic::nvvm_prmt_ecl, llvm::Intrinsic::nvvm_prmt_ecr,
+      llvm::Intrinsic::nvvm_prmt_rc16};
+
+  unsigned modeIndex = static_cast<unsigned>(mode);
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getLo()));
+
+  // Only first 3 modes (Default, f4e, b4e) need the hi operand.
+  if (modeIndex < 3)
+    args.push_back(mt.lookupValue(thisOp.getHi()));
+
+  args.push_back(mt.lookupValue(thisOp.getSelector()));
+
+  return {IDs[modeIndex], args};
+}
+
+//===----------------------------------------------------------------------===//
+// sparse.compress and sparse.decompress Ops
+//===----------------------------------------------------------------------===//
+
+// Returns the number of 32-bit registers in a metadata register bundle, which
+// is either an i32 or a vector of i32.
+static unsigned getNumSPRegisters(Type type) {
+  if (auto vecTy = dyn_cast<VectorType>(type))
+    return vecTy.getNumElements();
+  return 1;
+}
+
+// The repeat factor of spcompress and spdecompress is a power of two up to 64.
+static bool isValidSPRepFactor(unsigned repFactor) {
+  return llvm::isPowerOf2_32(repFactor) && repFactor <= 64;
+}
+
+LogicalResult SparseCompressOp::verify() {
+  auto dataTy = cast<VectorType>(getData().getType());
+  auto compressedTy = cast<VectorType>(getCompressedData().getType());
+  if (dataTy.getElementType() != compressedTy.getElementType())
+    return emitOpError(
+        "expects data and compressed data to have the same element type");
+
+  // data occupies 2 * repFactor 32-bit registers.
+  unsigned elemSize = dataTy.getElementTypeBitWidth();
+  unsigned dataBits = dataTy.getNumElements() * elemSize;
+  unsigned repFactor = dataBits / 64;
+  if (dataBits % 64 != 0 || !isValidSPRepFactor(repFactor))
+    return emitOpError("expects data to occupy 2 * repFactor 32-bit "
+                       "registers, where repFactor is a power of two up to 64");
+
+  // spcompress only supports the 2:4 sparsity factor.
+  if (2 * compressedTy.getNumElements() != dataTy.getNumElements())
+    return emitOpError(
+        "expects compressed data to have half as many elements as data");
+
+  unsigned numMetadataRegs =
+      llvm::divideCeil(repFactor * getIdxSize(), elemSize);
+  if (getNumSPRegisters(getMetadata().getType()) != numMetadataRegs)
+    return emitOpError("expects metadata to occupy ")
+           << numMetadataRegs << " 32-bit register(s)";
+
+  return success();
+}
+
+LogicalResult SparseDecompressOp::verify() {
+  auto dataTy = cast<VectorType>(getData().getType());
+  auto compressedTy = cast<VectorType>(getCompressedData().getType());
+  if (dataTy.getElementType() != compressedTy.getElementType())
+    return emitOpError(
+        "expects data and compressed data to have the same element type");
+
+  // data holds repFactor groups of numTgt elements, and compressed data holds
+  // numSrc elements for each of those groups.
+  unsigned idxSize = getIdxSize();
+  unsigned numTgt = getNumTgt();
+  unsigned numData = dataTy.getNumElements();
+  unsigned numCompressed = compressedTy.getNumElements();
+  unsigned repFactor = numData / numTgt;
+  if (numData % numTgt != 0 || !isValidSPRepFactor(repFactor))
+    return emitOpError("expects data to have repFactor * num_tgt elements, "
+                       "where repFactor is a power of two up to 64");
+
+  unsigned numSrc = numCompressed / repFactor;
+  if (numCompressed % repFactor != 0 ||
+      !llvm::is_contained({1u, 2u, 4u}, numSrc) || numSrc >= numTgt)
+    return emitOpError("unsupported sparsity factor: compressed data has ")
+           << numCompressed << " elements for " << repFactor << " group(s) of "
+           << numTgt << " elements";
+
+  unsigned elemSize = dataTy.getElementTypeBitWidth();
+  unsigned dataBits = numData * elemSize;
+  if (dataBits < 32 || dataBits > 4096)
+    return emitOpError("expects data to be between 32 and 4096 bits");
+
+  if (numSrc * elemSize > 32)
+    return emitOpError("expects at most 32 bits of compressed data per group");
+
+  if (idxSize == 2 && numTgt > 4)
+    return emitOpError("expects num_tgt to be at most 4 if idx_size is 2");
+
+  unsigned numMetadataRegs = llvm::divideCeil(numSrc * idxSize * repFactor, 32);
+  if (getNumSPRegisters(getMetadata().getType()) != numMetadataRegs)
+    return emitOpError("expects metadata to occupy ")
+           << numMetadataRegs << " 32-bit register(s)";
+
+  return success();
+}
+
 #define GET_OP_CLASSES
-#include "mlir/Dialect/LLVMIR/NVVMMemoryOps.cpp.inc"
+#include "mlir/Dialect/LLVMIR/NVVMDataMovementOps.cpp.inc"

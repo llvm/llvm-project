@@ -77,14 +77,14 @@ add_mlir_dialect_library(MLIRNVVMDialect
   IR/NVVMRequiresSMTraits.cpp
   IR/NVVMArithOps.cpp
   IR/NVVMConvertOps.cpp
+  IR/NVVMDataMovementOps.cpp
   IR/NVVMIndexSRegOps.cpp
-  IR/NVVMMemoryOps.cpp
   IR/NVVMMiscOps.cpp
   IR/NVVMMiscSRegOps.cpp
   IR/NVVMMmaOps.cpp
   IR/NVVMSyncOps.cpp
-  IR/NVVMTcgenOps.cpp
-  IR/NVVMWarpOps.cpp
+  IR/NVVMTcgen05Ops.cpp
+  IR/NVVMWgmmaOps.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR

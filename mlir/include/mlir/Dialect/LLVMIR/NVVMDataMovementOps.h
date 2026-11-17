@@ -1,4 +1,4 @@
-//===- NVVMTcgenOps.h - NVVM dialect tcgen05 ops ----------------*- C++ -*-===//
+//===- NVVMDataMovementOps.h - NVVM dialect data movement ops ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the ops of op partition `Tcgen` of the NVVM dialect: the
-// tcgen05 ops.
+// This file declares the ops of op partition `DataMovement` of the NVVM
+// dialect: the data movement instructions of PTX except `cvt`, i.e. the
+// asynchronous and bulk copies, prefetches, stores, shuffles, byte
+// permutations, sparse compressions, address mapping and tensor map updates.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LLVMIR_NVVMTCGENOPS_H_
-#define MLIR_DIALECT_LLVMIR_NVVMTCGENOPS_H_
+#ifndef MLIR_DIALECT_LLVMIR_NVVMDATAMOVEMENTOPS_H_
+#define MLIR_DIALECT_LLVMIR_NVVMDATAMOVEMENTOPS_H_
 
+#include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialectDecl.h"
@@ -21,6 +24,6 @@
 #include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/LLVMIR/NVVMTcgenOps.h.inc"
+#include "mlir/Dialect/LLVMIR/NVVMDataMovementOps.h.inc"
 
-#endif // MLIR_DIALECT_LLVMIR_NVVMTCGENOPS_H_
+#endif // MLIR_DIALECT_LLVMIR_NVVMDATAMOVEMENTOPS_H_

@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 //
 // This file declares the ops of op partition `Sync` of the NVVM dialect: the
-// barriers, fences and mbarriers.
+// parallel synchronization and communication ops, i.e. barriers, fences,
+// mbarriers, warp-level votes, matches and reductions, grid dependency control
+// and cluster launch control.
 //
 //===----------------------------------------------------------------------===//
 

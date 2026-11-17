@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file declares the ops of op partition `Arith` of the NVVM dialect: the
-// floating-point math, byte permutation and dot product ops.
+// floating-point math and dot product ops.
 //
 //===----------------------------------------------------------------------===//
 

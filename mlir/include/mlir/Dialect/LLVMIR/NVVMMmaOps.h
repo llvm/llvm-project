@@ -7,15 +7,14 @@
 //===----------------------------------------------------------------------===//
 //
 // This file declares the ops of op partition `Mma` of the NVVM dialect: the
-// matrix multiply-accumulate ops, including wmma, wgmma and the matrix loads
-// and stores.
+// warp-level matrix multiply-accumulate ops, including wmma and the matrix
+// loads, stores and transpositions.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_DIALECT_LLVMIR_NVVMMMAOPS_H_
 #define MLIR_DIALECT_LLVMIR_NVVMMMAOPS_H_
 
-#include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialectDecl.h"

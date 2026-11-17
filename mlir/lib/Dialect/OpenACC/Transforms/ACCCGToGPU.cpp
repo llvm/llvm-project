@@ -98,7 +98,6 @@
 #include "mlir/Dialect/GPU/Utils/GPUUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/LLVMIR/NVVMSyncOps.h"
-#include "mlir/Dialect/LLVMIR/NVVMWarpOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"

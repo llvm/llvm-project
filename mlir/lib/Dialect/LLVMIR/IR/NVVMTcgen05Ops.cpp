@@ -1,4 +1,4 @@
-//===- NVVMTcgenOps.cpp - NVVM dialect tcgen05 ops ------------------------===//
+//===- NVVMTcgen05Ops.cpp - NVVM dialect tcgen05 ops ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the ops of op partition `Tcgen` of the NVVM dialect.
+// This file defines the ops of op partition `Tcgen05` of the NVVM dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LLVMIR/NVVMTcgenOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMTcgen05Ops.h"
 
 #include "IR/NVVMOps.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -1115,4 +1115,4 @@ LogicalResult Tcgen05LdRedOp::verify() {
 }
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/LLVMIR/NVVMTcgenOps.cpp.inc"
+#include "mlir/Dialect/LLVMIR/NVVMTcgen05Ops.cpp.inc"

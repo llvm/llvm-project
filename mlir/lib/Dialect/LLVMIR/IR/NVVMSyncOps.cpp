@@ -255,6 +255,122 @@ LogicalResult NVVM::FenceProxySyncRestrictOp::verify() {
   return success();
 }
 
+LogicalResult NVVM::MatchSyncOp::verify() {
+  if (getKind() == NVVM::MatchSyncKind::all) {
+    auto type = llvm::dyn_cast<LLVM::LLVMStructType>(getType());
+    if (!type || type.getBody().size() != 2 ||
+        !type.getBody()[0].isInteger(32) || !type.getBody()[1].isInteger(1)) {
+      return emitOpError("match.sync 'all' returns a two element struct with "
+                         "first element as i32 and second element as i1");
+    }
+  } else {
+    if (!getType().isInteger(32)) {
+      return emitOpError("match.sync 'any' returns an i32");
+    }
+  }
+  return success();
+}
+
+LogicalResult MatchSyncOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location,
+    MatchSyncOp::Adaptor adaptor, SmallVectorImpl<Type> &inferredReturnTypes) {
+  if (adaptor.getKind() == NVVM::MatchSyncKind::all)
+    inferredReturnTypes.push_back(LLVM::LLVMStructType::getLiteral(
+        context,
+        {IntegerType::get(context, 32), IntegerType::get(context, 1)}));
+  else
+    inferredReturnTypes.push_back(IntegerType::get(context, 32));
+  return success();
+}
+
+LogicalResult NVVM::VoteSyncOp::verify() {
+  if (getKind() == NVVM::VoteSyncKind::ballot) {
+    if (!getType().isInteger(32)) {
+      return emitOpError("vote.sync 'ballot' returns an i32");
+    }
+  } else {
+    if (!getType().isInteger(1)) {
+      return emitOpError("vote.sync 'any', 'all' and 'uni' returns an i1");
+    }
+  }
+  return success();
+}
+
+LogicalResult VoteSyncOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location,
+    VoteSyncOp::Adaptor adaptor, SmallVectorImpl<Type> &inferredReturnTypes) {
+  unsigned width = adaptor.getKind() == NVVM::VoteSyncKind::ballot ? 32 : 1;
+  inferredReturnTypes.push_back(IntegerType::get(context, width));
+  return success();
+}
+
+LogicalResult NVVM::ReduxOp::verify() {
+  mlir::Type reduxType = getType();
+
+  if (!reduxType.isF32()) {
+    if (getAbs())
+      return emitOpError("abs attribute is supported only for f32 type");
+    if (getNan())
+      return emitOpError("nan attribute is supported only for f32 type");
+  }
+
+  NVVM::ReductionKind kind = getKind();
+  switch (kind) {
+  case NVVM::ReductionKind::ADD:
+  case NVVM::ReductionKind::AND:
+  case NVVM::ReductionKind::OR:
+  case NVVM::ReductionKind::XOR:
+  case NVVM::ReductionKind::MAX:
+  case NVVM::ReductionKind::MIN:
+  case NVVM::ReductionKind::UMAX:
+  case NVVM::ReductionKind::UMIN:
+    if (!reduxType.isInteger(32))
+      return emitOpError("'")
+             << kind << "' reduction kind unsupported with " << reduxType
+             << " type. Only supported type is 'i32'.";
+    break;
+  case NVVM::ReductionKind::FMIN:
+  case NVVM::ReductionKind::FMAX:
+    if (!reduxType.isF32())
+      return emitOpError("'")
+             << kind << "' reduction kind unsupported with " << reduxType
+             << " type. Only supported type is 'f32'.";
+    break;
+  }
+
+  return success();
+}
+
+LogicalResult NVVM::ClusterLaunchControlQueryCancelOp::verify() {
+  switch (getQueryType()) {
+  case NVVM::ClusterLaunchControlQueryType::IS_CANCELED:
+    if (!getType().isInteger(1))
+      return emitOpError("is_canceled query type returns an i1");
+    break;
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_X:
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_Y:
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_Z:
+    if (!getType().isInteger(32)) {
+      return emitOpError("get_first_cta_id_x, get_first_cta_id_y, "
+                         "get_first_cta_id_z query types return an i32");
+    }
+    break;
+  }
+  return success();
+}
+
+LogicalResult ClusterLaunchControlQueryCancelOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location,
+    ClusterLaunchControlQueryCancelOp::Adaptor adaptor,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  unsigned width =
+      adaptor.getQueryType() == NVVM::ClusterLaunchControlQueryType::IS_CANCELED
+          ? 1
+          : 32;
+  inferredReturnTypes.push_back(IntegerType::get(context, width));
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // getPtx methods
 //===----------------------------------------------------------------------===//
@@ -775,6 +891,68 @@ mlir::NVVM::IDArgPair MBarrierTryWaitOp::getIntrinsicIDAndArgs(
     args.push_back(mt.lookupValue(thisOp.getTicks()));
 
   return {id, std::move(args)};
+}
+
+NVVM::IDArgPair ClusterLaunchControlTryCancelOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::ClusterLaunchControlTryCancelOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(curOp.getSmemAddress()));
+  args.push_back(mt.lookupValue(curOp.getMbarrier()));
+
+  llvm::Intrinsic::ID intrinsicID =
+      curOp.getMulticast()
+          ? llvm::Intrinsic::
+                nvvm_clusterlaunchcontrol_try_cancel_async_multicast_shared
+          : llvm::Intrinsic::nvvm_clusterlaunchcontrol_try_cancel_async_shared;
+
+  return {intrinsicID, args};
+}
+
+NVVM::IDArgPair ClusterLaunchControlQueryCancelOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::ClusterLaunchControlQueryCancelOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(curOp.getTryCancelResponse()));
+
+  llvm::Intrinsic::ID intrinsicID;
+
+  switch (curOp.getQueryType()) {
+  case NVVM::ClusterLaunchControlQueryType::IS_CANCELED:
+    intrinsicID =
+        llvm::Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_is_canceled;
+    break;
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_X:
+    intrinsicID = llvm::Intrinsic::
+        nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_x;
+    break;
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_Y:
+    intrinsicID = llvm::Intrinsic::
+        nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_y;
+    break;
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_Z:
+    intrinsicID = llvm::Intrinsic::
+        nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_z;
+    break;
+  }
+  return {intrinsicID, args};
+}
+
+mlir::NVVM::IDArgPair CpAsyncMBarrierArriveOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncMBarrierArriveOp>(op);
+  bool isShared = isPtrInSharedCTASpace(thisOp.getAddr());
+
+  llvm::Intrinsic::ID id;
+  if (thisOp.getNoinc()) {
+    id = isShared ? llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive_noinc_shared
+                  : llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive_noinc;
+  } else {
+    id = isShared ? llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive_shared
+                  : llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive;
+  }
+
+  return {id, {mt.lookupValue(thisOp.getAddr())}};
 }
 
 #define GET_OP_CLASSES

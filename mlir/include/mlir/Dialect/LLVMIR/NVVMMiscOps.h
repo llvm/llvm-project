@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file declares the ops of op partition `Misc` of the NVVM dialect: the
-// ops that fit no other partition.
+// control flow and miscellaneous ops, and inline PTX.
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,11 +15,9 @@
 #define MLIR_DIALECT_LLVMIR_NVVMMISCOPS_H_
 
 #include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
-#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialectDecl.h"
 #include "mlir/Dialect/LLVMIR/NVVMIntrinsicLowering.h"
-#include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/NVVMMiscOps.h.inc"

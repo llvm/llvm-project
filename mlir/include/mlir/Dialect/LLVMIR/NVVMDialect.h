@@ -36,13 +36,13 @@
 ///// Ops /////
 #include "mlir/Dialect/LLVMIR/NVVMArithOps.h"
 #include "mlir/Dialect/LLVMIR/NVVMConvertOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMDataMovementOps.h"
 #include "mlir/Dialect/LLVMIR/NVVMIndexSRegOps.h"
-#include "mlir/Dialect/LLVMIR/NVVMMemoryOps.h"
 #include "mlir/Dialect/LLVMIR/NVVMMiscOps.h"
 #include "mlir/Dialect/LLVMIR/NVVMMiscSRegOps.h"
 #include "mlir/Dialect/LLVMIR/NVVMMmaOps.h"
 #include "mlir/Dialect/LLVMIR/NVVMSyncOps.h"
-#include "mlir/Dialect/LLVMIR/NVVMTcgenOps.h"
-#include "mlir/Dialect/LLVMIR/NVVMWarpOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMTcgen05Ops.h"
+#include "mlir/Dialect/LLVMIR/NVVMWgmmaOps.h"
 
 #endif /* MLIR_DIALECT_LLVMIR_NVVMDIALECT_H_ */
