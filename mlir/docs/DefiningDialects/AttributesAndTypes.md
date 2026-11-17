@@ -1285,15 +1285,3 @@ with a partition name to `-gen-attrdef-decls` and `-gen-attrdef-defs` (or
 types) of that partition. Every generated attribute or type must then be in a
 partition, and the specified partition must have attributes or types. Without
 the option, `partition` is ignored.
-
-The dialect calls the same functions with and without partitions:
-`register<DialectClass>Attributes` (or `register<DialectClass>Types`) to
-register the attributes (or types), and, if it implements its own parser and
-printer, `generated<DialectClass>AttributeParser` and
-`generated<DialectClass>AttributePrinter` (or `...Type...`).
-
-Without partitions, these are `static` functions of the definitions, which can
-only be called in the compilation unit that includes the definitions. With
-partitions, they are declared by the declarations of every partition, so they
-can be called in any compilation unit that includes the declarations of a
-partition.
