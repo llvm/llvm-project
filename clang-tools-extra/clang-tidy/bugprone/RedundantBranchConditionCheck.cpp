@@ -140,9 +140,9 @@ namespace {
 enum class SimpliFiedExprKind {
   True,
   False,
-  NonDeductible, // those expr where are only variable are cannont be minimize
-  FixUnavailible // when known variable came from macro we should only emit
-                 // warning as cannot be fixable without expandong macro.
+  NonDeductible, // those expr where are only variable are cannot be minimize
+  FixUnavailable // when known variable came from macro we should only emit
+                 // warning as cannot be fixable without expanding macro.
 };
 class ExprState {
 public:
@@ -183,7 +183,7 @@ static ExprState getFixItsinExpr(const Expr *ExprNode,
   // deduce it so unfixable.
   if (ExprRemImpPar->getExprLoc().isMacroID()) {
     if (isExprChild(ExprNode, KnownVarExpr, Ctx))
-      return ExprState{SimpliFiedExprKind::FixUnavailible, {}};
+      return ExprState{SimpliFiedExprKind::FixUnavailable, {}};
     return ExprState{SimpliFiedExprKind::NonDeductible, {}};
   }
   // to check whether Declaration Expr is The one Expr that we bound to InnerIf
@@ -212,7 +212,7 @@ static ExprState getFixItsinExpr(const Expr *ExprNode,
     auto InnerExpr = getFixItsinExpr(UO->getSubExpr(), KnownVarExpr, Ctx);
     const SourceLocation UOExprEnd =
         Lexer::getLocForEndOfToken(UO->getEndLoc(), 0, SM, LangOpts);
-    if (InnerExpr.ExprKind == SimpliFiedExprKind::FixUnavailible)
+    if (InnerExpr.ExprKind == SimpliFiedExprKind::FixUnavailable)
       return InnerExpr;
     if (InnerExpr.ExprKind == SimpliFiedExprKind::True &&
         !InnerExpr.HasSideEffect) {
@@ -245,9 +245,9 @@ static ExprState getFixItsinExpr(const Expr *ExprNode,
     ExprState LHS = getFixItsinExpr(BO->getLHS(), KnownVarExpr, Ctx);
     ExprState RHS = getFixItsinExpr(BO->getRHS(), KnownVarExpr, Ctx);
 
-    if (LHS.ExprKind == SimpliFiedExprKind::FixUnavailible ||
-        RHS.ExprKind == SimpliFiedExprKind::FixUnavailible) {
-      return ExprState{SimpliFiedExprKind::FixUnavailible, {}};
+    if (LHS.ExprKind == SimpliFiedExprKind::FixUnavailable ||
+        RHS.ExprKind == SimpliFiedExprKind::FixUnavailable) {
+      return ExprState{SimpliFiedExprKind::FixUnavailable, {}};
     }
     const SourceLocation BOEnd =
         Lexer::getLocForEndOfToken(BO->getEndLoc(), 0, SM, LangOpts);
@@ -386,7 +386,7 @@ void RedundantBranchConditionCheck::check(
                     << CondVar;
   auto FixItResult =
       getFixItsinExpr(InnerIf->getCond(), InnerIfVar, *Result.Context);
-  if (FixItResult.ExprKind == SimpliFiedExprKind::FixUnavailible)
+  if (FixItResult.ExprKind == SimpliFiedExprKind::FixUnavailable)
     return;
   if (FixItResult.ExprKind == SimpliFiedExprKind::NonDeductible) {
     for (const auto &FixIts : FixItResult.Fixits)
