@@ -18,8 +18,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/IR/Type.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -91,6 +89,8 @@ BitVector SparcRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Reserve ASR1-ASR31
   for (unsigned n = 0; n < 31; n++)
     Reserved.set(SP::ASR1 + n);
+
+  Reserved.set(SP::FSR);
 
   for (TargetRegisterClass::iterator i = SP::IntRegsRegClass.begin();
        i != SP::IntRegsRegClass.end(); ++i) {

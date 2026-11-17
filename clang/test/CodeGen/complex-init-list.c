@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin10 | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm %s -o - -triple=x86_64-apple-darwin10 | FileCheck %s %}
 
 // This file tests the clang extension which allows initializing the components
 // of a complex number individually using an initialization list.  (There is a

@@ -365,6 +365,8 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
   // Emit CFI start
   if (NeedsFDE) {
     Streamer.emitCFIStartProc(/*IsSimple=*/false);
+    if (Function.isSignalFrame())
+      Streamer.emitCFISignalFrame();
     if (Function.getPersonalityFunction() != nullptr)
       Streamer.emitCFIPersonality(Function.getPersonalityFunction(),
                                   Function.getPersonalityEncoding());

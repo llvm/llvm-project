@@ -28,11 +28,11 @@ struct OVERALIGNED A { A(); int n[128]; };
 
 // CHECK-LABEL: define {{.*}} @_Z2a0v()
 // CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @_ZnwmSt11align_val_t(i64 noundef 512, i64 noundef 32)
-// CHECK: call void @_ZdlPvSt11align_val_t(ptr noundef %[[ALLOC]], i64 noundef 32)
+// CHECK: call void @_ZdlPvSt11align_val_t(ptr allocptr noundef %[[ALLOC]], i64 noundef 32)
 // CHECK-MS-LABEL: define {{.*}} @"?a0@@YAPEAXXZ"()
 // CHECK-MS: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @"??2@YAPEAX_KW4align_val_t@std@@@Z"(i64 noundef 512, i64 noundef 32)
 // CHECK-MS: cleanuppad
-// CHECK-MS: call void @"??3@YAXPEAXW4align_val_t@std@@@Z"(ptr noundef %[[ALLOC]], i64 noundef 32)
+// CHECK-MS: call void @"??3@YAXPEAXW4align_val_t@std@@@Z"(ptr allocptr noundef %[[ALLOC]], i64 noundef 32)
 void *a0() { return new A; }
 
 // FIXME: Why don't we call the sized array deallocation overload in this case?
@@ -43,22 +43,22 @@ void *a0() { return new A; }
 // No array cookie.
 // CHECK-NOT: store
 // CHECK: invoke void @_ZN1AC1Ev(
-// CHECK: call void @_ZdaPvSt11align_val_t(ptr noundef %[[ALLOC]], i64 noundef 32)
+// CHECK: call void @_ZdaPvSt11align_val_t(ptr allocptr noundef %[[ALLOC]], i64 noundef 32)
 // CHECK-MS-LABEL: define {{.*}} @"?a1@@YAPEAXJ@Z"(
 // CHECK-MS: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @"??_U@YAPEAX_KW4align_val_t@std@@@Z"(i64 noundef %{{.*}}, i64 noundef 32)
 // No array cookie.
 // CHECK-MS-NOT: store
 // CHECK-MS: invoke noundef ptr @"??0A@@QEAA@XZ"(
 // CHECK-MS: cleanuppad
-// CHECK-MS: call void @"??_V@YAXPEAXW4align_val_t@std@@@Z"(ptr noundef %[[ALLOC]], i64 noundef 32)
+// CHECK-MS: call void @"??_V@YAXPEAXW4align_val_t@std@@@Z"(ptr allocptr noundef %[[ALLOC]], i64 noundef 32)
 void *a1(long n) { return new A[n]; }
 
 // CHECK-LABEL: define {{.*}} @_Z2a2P1A(
-// CHECK: call void @_ZdlPvmSt11align_val_t(ptr noundef %{{.*}}, i64 noundef 512, i64 noundef 32) #9
+// CHECK: call void @_ZdlPvmSt11align_val_t(ptr allocptr noundef %{{.*}}, i64 noundef 512, i64 noundef 32) #9
 void a2(A *p) { delete p; }
 
 // CHECK-LABEL: define {{.*}} @_Z2a3P1A(
-// CHECK: call void @_ZdaPvSt11align_val_t(ptr noundef %{{.*}}, i64 noundef 32) #9
+// CHECK: call void @_ZdaPvSt11align_val_t(ptr allocptr noundef %{{.*}}, i64 noundef 32) #9
 void a3(A *p) { delete[] p; }
 
 
@@ -170,7 +170,7 @@ void *d0() { return new (q) D; }
 #ifndef UNALIGNED
 // CHECK-LABEL: define {{.*}} @_Z2e0v(
 // CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 4 ptr @_ZnwmSt11align_val_t(i64 noundef 512, i64 noundef 4)
-// CHECK: call void @_ZdlPvSt11align_val_t(ptr noundef %[[ALLOC]], i64 noundef 4)
+// CHECK: call void @_ZdlPvSt11align_val_t(ptr allocptr noundef %[[ALLOC]], i64 noundef 4)
 void *e0() { return new (std::align_val_t(4)) A; }
 
 // CHECK-LABEL: define {{.*}} @_Z2e1v(

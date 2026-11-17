@@ -7,7 +7,6 @@
 //==-----------------------------------------------------------------------===//
 
 #include "SIFrameLowering.h"
-#include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -24,12 +23,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "frame-info"
-
-static cl::opt<bool> EnableSpillVGPRToAGPR(
-  "amdgpu-spill-vgpr-to-agpr",
-  cl::desc("Enable spilling VGPRs to AGPRs"),
-  cl::ReallyHidden,
-  cl::init(true));
 
 static constexpr unsigned SGPRBitSize = 32;
 static constexpr unsigned SGPRByteSize = SGPRBitSize / 8;
@@ -929,6 +922,50 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   }
 }
 
+void SIFrameLowering::emitEntryFunctionEpilogue(MachineFunction &MF,
+                                                MachineBasicBlock &MBB) const {
+  // Entry functions don't usually need an epilogue. The only exception is a
+  // block ending in a chain call (which is the only possible tail call in an
+  // entry function), in which case the current frame is becoming dead and we
+  // need to reset SP to point to the base of the stack. Other exits of the
+  // function, e.g. blocks ending in S_ENDPGM, don't need any of this.
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
+  assert(MBBI != MBB.end() && "return block should end in a terminator");
+  if (!TII->isTailCall(*MBBI))
+    return;
+
+  // If the prologue has set SP and there aren't any local variables, then we
+  // don't need to restore anything.
+  const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
+  if (requiresStackPointerReference(MF) && FrameInfo.getStackSize() == 0)
+    return;
+
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  const DebugLoc &DL = MBBI->getDebugLoc();
+
+  Register SPReg = MFI->getStackPtrOffsetReg();
+  assert(SPReg != AMDGPU::SP_REG);
+
+  // We need to either reset SP to point before the local variables, or to
+  // initialize it in case we skipped it in the prologue. In either case,
+  // the SP needs to be either 0 or point right after the space reserved for
+  // CWSR (which the prologue conveniently puts in FP).
+  if (mayReserveScratchForCWSR(MF)) {
+    assert(hasFP(MF));
+    Register FPReg = MFI->getFrameOffsetReg();
+    assert(FPReg != AMDGPU::FP_REG);
+    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::COPY), SPReg)
+        .addReg(FPReg)
+        .setMIFlag(MachineInstr::FrameDestroy);
+  } else {
+    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_MOV_B32), SPReg)
+        .addImm(0)
+        .setMIFlag(MachineInstr::FrameDestroy);
+  }
+}
+
 // Emit scratch RSRC setup code, assuming `ScratchRsrcReg != AMDGPU::NoReg`
 void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
     MachineFunction &MF, MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
@@ -1122,7 +1159,7 @@ void SIFrameLowering::emitPrologueEntryCFI(MachineBasicBlock &MBB,
   };
 
   // Emit CFI rules for caller saved Arch VGPRs which are clobbered
-  unsigned NumArchVGPRs = ST.hasVGPRMSBs() ? 1024 : 256;
+  unsigned NumArchVGPRs = ST.getAddressableNumArchVGPRs();
   for_each(AMDGPU::VGPR_32RegClass.getRegisters().take_front(NumArchVGPRs),
            ProcessReg);
 
@@ -1552,7 +1589,8 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   // If we allow spilling to AGPRs we may have saved FP but then spill
   // everything into AGPRs instead of the stack.
-  assert((HasFP || !FPSaved || !SavesStackRegs || EnableSpillVGPRToAGPR) &&
+  assert((HasFP || !FPSaved || !SavesStackRegs ||
+          ST.getCLOpts().spill_vgpr_to_agpr) &&
          "Saved FP but didn't need it");
 
   bool BPSaved = FuncInfo->hasPrologEpilogSGPRSpillEntry(BasePtrReg);
@@ -1571,8 +1609,10 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 void SIFrameLowering::emitEpilogue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
   const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
-  if (FuncInfo->isEntryFunction())
+  if (FuncInfo->isEntryFunction()) {
+    emitEntryFunctionEpilogue(MF, MBB);
     return;
+  }
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   if (FuncInfo->isChainFunction() && !MFI.hasTailCall())
@@ -1697,8 +1737,9 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
 
-  const bool SpillVGPRToAGPR = ST.hasMAIInsts() && FuncInfo->hasSpilledVGPRs()
-                               && EnableSpillVGPRToAGPR;
+  const bool SpillVGPRToAGPR = ST.hasMAIInsts() &&
+                               FuncInfo->hasSpilledVGPRs() &&
+                               ST.getCLOpts().spill_vgpr_to_agpr;
 
   if (SpillVGPRToAGPR) {
     // To track the spill frame indices handled in this pass.
@@ -2497,9 +2538,8 @@ bool SIFrameLowering::requiresStackPointerReference(
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // Entry points ordinarily don't need to initialize SP. We have to set it up
-  // for callees if there are any. Also note tail calls are only possible via
-  // the `llvm.amdgcn.cs.chain` intrinsic.
-  if (MFI.hasCalls() || MFI.hasTailCall())
+  // for callees if there are any.
+  if (MFI.hasCalls())
     return true;
 
   // We still need to initialize the SP if we're doing anything weird that

@@ -72,7 +72,7 @@ protected:
 
   Block *getGraphBlock(COFFSectionIndex SecIndex) const {
     if (SecIndex <= 0 ||
-        SecIndex >= static_cast<COFFSectionIndex>(GraphSymbols.size()))
+        SecIndex >= static_cast<COFFSectionIndex>(GraphBlocks.size()))
       return nullptr;
     return GraphBlocks[SecIndex];
   }

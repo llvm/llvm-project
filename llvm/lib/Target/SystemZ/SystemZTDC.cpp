@@ -45,8 +45,10 @@
 
 #include "SystemZ.h"
 #include "SystemZSubtarget.h"
+#include "SystemZTargetMachine.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -54,6 +56,7 @@
 #include "llvm/IR/IntrinsicsS390.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Target/TargetMachine.h"
 #include <set>
 
@@ -61,18 +64,20 @@ using namespace llvm;
 
 namespace {
 
-class SystemZTDCPass : public FunctionPass {
+class SystemZTDCLegacy : public FunctionPass {
 public:
   static char ID;
-  SystemZTDCPass() : FunctionPass(ID) {}
+  SystemZTDCLegacy() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetPassConfig>();
+    AU.setPreservesCFG();
  }
+};
 
-private:
+class SystemZTDCImpl {
   // Maps seen instructions that can be mapped to a TDC, values are
   // (TDC operand, TDC mask, worthy flag) triples.
   MapVector<Instruction *, std::tuple<Value *, int, bool>> ConvertedInsts;
@@ -107,19 +112,22 @@ private:
       }
     }
   }
+
+public:
+  bool runOnFunction(Function &F, SystemZTargetMachine &TM);
 };
 
 } // end anonymous namespace
 
-char SystemZTDCPass::ID = 0;
-INITIALIZE_PASS(SystemZTDCPass, "systemz-tdc",
+char SystemZTDCLegacy::ID = 0;
+INITIALIZE_PASS(SystemZTDCLegacy, "systemz-tdc",
                 "SystemZ Test Data Class optimization", false, false)
 
-FunctionPass *llvm::createSystemZTDCPass() {
-  return new SystemZTDCPass();
+FunctionPass *llvm::createSystemZTDCLegacyPass() {
+  return new SystemZTDCLegacy();
 }
 
-void SystemZTDCPass::convertFCmp(CmpInst &I) {
+void SystemZTDCImpl::convertFCmp(CmpInst &I) {
   Value *Op0 = I.getOperand(0);
   auto *Const = dyn_cast<ConstantFP>(I.getOperand(1));
   auto Pred = I.getPredicate();
@@ -229,7 +237,7 @@ void SystemZTDCPass::convertFCmp(CmpInst &I) {
   converted(&I, Op0, Mask, Worthy);
 }
 
-void SystemZTDCPass::convertICmp(CmpInst &I) {
+void SystemZTDCImpl::convertICmp(CmpInst &I) {
   Value *Op0 = I.getOperand(0);
   auto *Const = dyn_cast<ConstantInt>(I.getOperand(1));
   auto Pred = I.getPredicate();
@@ -284,7 +292,7 @@ void SystemZTDCPass::convertICmp(CmpInst &I) {
   }
 }
 
-void SystemZTDCPass::convertLogicOp(BinaryOperator &I) {
+void SystemZTDCImpl::convertLogicOp(BinaryOperator &I) {
   Value *Op0, *Op1;
   int Mask0, Mask1;
   bool Worthy0, Worthy1;
@@ -309,11 +317,8 @@ void SystemZTDCPass::convertLogicOp(BinaryOperator &I) {
   converted(&I, Op0, Mask, true);
 }
 
-bool SystemZTDCPass::runOnFunction(Function &F) {
-  auto &TPC = getAnalysis<TargetPassConfig>();
-  if (TPC.getTM<TargetMachine>()
-          .getSubtarget<SystemZSubtarget>(F)
-          .hasSoftFloat())
+bool SystemZTDCImpl::runOnFunction(Function &F, SystemZTargetMachine &TM) {
+  if (TM.getSubtarget<SystemZSubtarget>(F).hasSoftFloat())
     return false;
 
   ConvertedInsts.clear();
@@ -384,4 +389,19 @@ bool SystemZTDCPass::runOnFunction(Function &F) {
       I->eraseFromParent();
 
   return true;
+}
+
+bool SystemZTDCLegacy::runOnFunction(Function &F) {
+  auto &TPC = getAnalysis<TargetPassConfig>();
+  SystemZTDCImpl Impl;
+  return Impl.runOnFunction(F, TPC.getTM<SystemZTargetMachine>());
+}
+
+PreservedAnalyses SystemZTDCPass::run(Function &F,
+                                      FunctionAnalysisManager &FAM) {
+  SystemZTDCImpl Impl;
+  bool Changed = Impl.runOnFunction(F, TM);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none().preserveSet<CFGAnalyses>();
 }
