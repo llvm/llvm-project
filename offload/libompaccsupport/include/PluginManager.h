@@ -33,6 +33,7 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
 
+#include <atomic>
 #include <cstdint>
 #include <list>
 #include <memory>
@@ -49,9 +50,13 @@ struct PluginManager {
   using ExclusiveDevicesAccessorTy = Accessor<DeviceContainerTy>;
 
   PluginManager() {}
+  PluginManager(const PluginManager &) = delete;
+  PluginManager &operator=(const PluginManager &) = delete;
+  virtual ~PluginManager() = default;
 
   void init();
 
+  /// Deinitialize devices and release liboffload. Idempotent.
   void deinit();
 
   // Register a shared library with all (compatible) RTLs.
@@ -144,7 +149,15 @@ struct PluginManager {
   /// Return true if liboffload was initialized by init().
   bool isLibOffloadInitialized() const { return LibOffloadInitialized; }
 
+protected:
+  /// Called after each device enumeration, when liboffload lazily initializes
+  /// platforms and registers its exit handlers. May be called many times, so
+  /// overrides must be idempotent. An atexit handler registered here runs
+  /// before those of liboffload.
+  virtual void onPlatformsInitialized() {}
+
 private:
+  std::atomic<bool> Deinitialized{false};
   bool RTLsLoaded = false;
   // Whether init() called olInit, so deinit() must call olShutDown.
   bool LibOffloadInitialized = false;

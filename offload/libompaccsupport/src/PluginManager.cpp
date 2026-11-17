@@ -64,6 +64,9 @@ void PluginManager::init() {
 }
 
 void PluginManager::deinit() {
+  if (Deinitialized.exchange(true))
+    return;
+
   TIMESCOPE();
   ODBG(ODT_Deinit) << "Unloading RTLs...";
 
@@ -75,7 +78,9 @@ void PluginManager::deinit() {
   }
 
   Platforms.clear();
+
   if (LibOffloadInitialized) {
+    LibOffloadInitialized = false;
     if (auto Err = olShutDown())
       REPORT() << "Failed to denitialize liboffload: " << Err->Details;
   }
@@ -84,6 +89,9 @@ void PluginManager::deinit() {
 }
 
 bool PluginManager::initializeDevice(ol_device_handle_t DeviceHandle) {
+  if (Deinitialized)
+    return false;
+
   if (DeviceIds.find(DeviceHandle) != DeviceIds.end()) {
     auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
     (*ExclusiveDevicesAccessor)[DeviceIds[DeviceHandle]]->setHasPendingImages(
@@ -122,12 +130,17 @@ bool PluginManager::initializeDevice(ol_device_handle_t DeviceHandle) {
 }
 
 void PluginManager::initializeAllDevices() {
-  if (!LibOffloadInitialized)
+  if (!LibOffloadInitialized) {
+    if (Deinitialized)
+      ODBG(ODT_Deinit) << "Ignoring device initialization: runtime already "
+                          "deinitialized";
     return;
+  }
   if (auto Err = iterateDevices(
           [this](ol_device_handle_t Device) { initializeDevice(Device); })) {
     REPORT() << "Failed to iterate devices: " << toString(std::move(Err));
   }
+  onPlatformsInitialized();
 }
 
 // Returns a pointer to the binary descriptor, upgrading from a legacy format if
@@ -255,8 +268,12 @@ bool PluginManager::registerImageOnDevice(
 
 void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   // There are no devices to register with if liboffload was not initialized.
-  if (!LibOffloadInitialized)
+  if (!LibOffloadInitialized) {
+    if (Deinitialized)
+      ODBG(ODT_Deinit) << "Ignoring library registration: runtime already "
+                          "deinitialized";
     return;
+  }
 
   RTLsMtx.lock();
 
@@ -304,6 +321,7 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
       ODBG(ODT_Init) << "No RTL found for image " << Img->ImageStart << "!";
   }
   RTLsMtx.unlock();
+  onPlatformsInitialized();
 
   bool UseAutoZeroCopy = false;
 

@@ -23,6 +23,10 @@ class OmpPluginManager : public PluginManager {
 public:
   /// Table of cached implicit interop objects.
   InteropTblTy InteropTbl;
+
+protected:
+  /// Registers the exit-time teardown.
+  void onPlatformsInitialized() override;
 };
 } // namespace llvm::omp::target
 
@@ -32,6 +36,9 @@ extern std::atomic<int> RTLOngoingSyncs; // Counts ongoing external syncs
 
 /// Initialize the plugin manager and OpenMP runtime.
 void initRuntime();
+
+/// Idempotent runtime teardown.
+void teardownRuntime();
 
 /// Deinitialize the plugin and delete it.
 void deinitRuntime();
