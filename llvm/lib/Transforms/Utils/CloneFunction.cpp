@@ -1181,9 +1181,9 @@ void llvm::cloneNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
 
         // A cloned scope has to go into a clone of its domain if that domain
         // has disjoint scopes, otherwise the duplicated operations would become
-        // implicitly noalias with the original accesses (that are still using the
-        // original scope). We take care to duplicate all scopes of the domain
-        // in cloned code, see adaptNoAliasScope.
+        // implicitly noalias with the original accesses (that are still using
+        // the original scope). We take care to duplicate all scopes of the
+        // domain in cloned code, see adaptNoAliasScope.
         const MDNode *Domain = SNANode.getDomain();
         MDNode *NewDomain = const_cast<MDNode *>(Domain);
         if (AliasScopeDomainNode(Domain).hasDisjointScopes()) {
@@ -1214,7 +1214,8 @@ void llvm::adaptNoAliasScopes(
     for (const MDOperand &MDOp : ScopeList->operands()) {
       if (MDNode *MD = dyn_cast<MDNode>(MDOp)) {
         MDNode *NewMD = ClonedScopes.lookup(MD);
-        // Scopes must follow their domain if that domain is cloned, even if there isn't an llvm.experimental.noalias.scope.decl for them.
+        // Scopes must follow their domain if that domain is cloned, even if
+        // there isn't an llvm.experimental.noalias.scope.decl for them.
         if (!NewMD && !ClonedDomains.empty()) {
           AliasScopeNode SNANode(MD);
           if (MDNode *NewDomain = ClonedDomains.lookup(SNANode.getDomain())) {
