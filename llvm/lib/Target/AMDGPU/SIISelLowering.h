@@ -28,6 +28,7 @@ class SIMachineFunctionInfo;
 class SIRegisterInfo;
 
 namespace AMDGPU {
+struct BufferIntrinsicInfo;
 struct ImageDimIntrinsicInfo;
 }
 
@@ -98,10 +99,17 @@ private:
                        SDValue Offset, SDValue CachePolicy, SelectionDAG &DAG,
                        MachineMemOperand *MMO = nullptr) const;
 
-  SDValue lowerRawBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
-                                     unsigned NewOpcode) const;
-  SDValue lowerStructBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
-                                        unsigned NewOpcode) const;
+  SmallVector<SDValue, 10>
+  getBufferIntrinsicOps(SDValue Op, const AMDGPU::BufferIntrinsicInfo &Info,
+                        SelectionDAG &DAG, SDValue VData = SDValue()) const;
+  SDValue lowerBufferIntrinsicWithChain(SDValue Op,
+                                        const AMDGPU::BufferIntrinsicInfo &Info,
+                                        SelectionDAG &DAG) const;
+  SDValue lowerBufferIntrinsicVoid(SDValue Op,
+                                   const AMDGPU::BufferIntrinsicInfo &Info,
+                                   SelectionDAG &DAG) const;
+  SDValue lowerBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
+                                  unsigned NewOpcode) const;
 
   SDValue lowerWaveID(SelectionDAG &DAG, SDValue Op) const;
   SDValue lowerConstHwRegRead(SelectionDAG &DAG, SDValue Op,
@@ -554,6 +562,8 @@ public:
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
   ConstraintType getConstraintType(StringRef Constraint) const override;
+  InlineAsm::ConstraintCode
+  getInlineAsmMemConstraint(StringRef ConstraintCode) const override;
   void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;

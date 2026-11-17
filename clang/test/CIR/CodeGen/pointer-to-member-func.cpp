@@ -27,16 +27,16 @@ struct Foo {
 void (Foo::*m1_ptr)(int) = &Foo::m1;
 
 // CIR-BEFORE: cir.global external @m1_ptr = #cir.method<@_ZN3Foo2m1Ei> : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
-// CIR-AFTER-DAG:     cir.global "private" constant cir_private @[[NONVIRT_RET:.*]] = #cir.const_record<{#cir.global_view<@_ZN3Foo2m1Ei> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
-// CIR-AFTER-X86-DAG: cir.global "private" constant cir_private @[[VIRT_RET:.*]] = #cir.const_record<{#cir.int<9> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
-// CIR-AFTER-ARM-DAG: cir.global "private" constant cir_private @[[VIRT_RET:.*]] = #cir.const_record<{#cir.int<8> : !s64i, #cir.int<1> : !s64i}> : !rec_anon_struct
-// CIR-AFTER-DAG:     cir.global "private" constant cir_private @[[NULL_RET:.*]] = #cir.const_record<{#cir.int<0> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
+// CIR-AFTER-DAG:     cir.global "private" constant cir_private unnamed_addr @[[NONVIRT_RET:.*]] = #cir.const_record<{#cir.global_view<@_ZN3Foo2m1Ei> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
+// CIR-AFTER-X86-DAG: cir.global "private" constant cir_private unnamed_addr @[[VIRT_RET:.*]] = #cir.const_record<{#cir.int<9> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
+// CIR-AFTER-ARM-DAG: cir.global "private" constant cir_private unnamed_addr @[[VIRT_RET:.*]] = #cir.const_record<{#cir.int<8> : !s64i, #cir.int<1> : !s64i}> : !rec_anon_struct
+// CIR-AFTER-DAG:     cir.global "private" constant cir_private unnamed_addr @[[NULL_RET:.*]] = #cir.const_record<{#cir.int<0> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
 // CIR-AFTER:         cir.global external @m1_ptr = #cir.const_record<{#cir.global_view<@_ZN3Foo2m1Ei> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
 // LLVM-DAG:     @m1_ptr = global { i64, i64 } { i64 ptrtoint (ptr @_ZN3Foo2m1Ei to i64), i64 0 }
-// LLVM-DAG:     @[[NONVIRT_RET:.*]] = private constant { i64, i64 } { i64 ptrtoint (ptr @_ZN3Foo2m1Ei to i64), i64 0 }
-// LLVM-X86-DAG: @[[VIRT_RET:.*]] = private constant { i64, i64 } { i64 9, i64 0 }
-// LLVM-ARM-DAG: @[[VIRT_RET:.*]] = private constant { i64, i64 } { i64 8, i64 1 }
-// LLVM-DAG:     @[[NULL_RET:.*]] = private constant { i64, i64 } zeroinitializer
+// LLVM-DAG:     @[[NONVIRT_RET:.*]] = private unnamed_addr constant { i64, i64 } { i64 ptrtoint (ptr @_ZN3Foo2m1Ei to i64), i64 0 }
+// LLVM-X86-DAG: @[[VIRT_RET:.*]] = private unnamed_addr constant { i64, i64 } { i64 9, i64 0 }
+// LLVM-ARM-DAG: @[[VIRT_RET:.*]] = private unnamed_addr constant { i64, i64 } { i64 8, i64 1 }
+// LLVM-DAG:     @[[NULL_RET:.*]] = private unnamed_addr constant { i64, i64 } zeroinitializer
 // OGCG: @m1_ptr = global { i64, i64 } { i64 ptrtoint (ptr @_ZN3Foo2m1Ei to i64), i64 0 }
 
 // Global pointer to virtual method

@@ -6,7 +6,6 @@
 name:            indirectbr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; RV64I-LABEL: name: indirectbr
   ; RV64I: bb.0:

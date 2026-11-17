@@ -341,6 +341,30 @@ GDBRemoteCommunicationClient::AcceleratorBreakpointHit(
       response.GetStringRef(), llvm::toString(hit_response.takeError()));
 }
 
+std::optional<AcceleratorDynamicLoaderResponse>
+GDBRemoteCommunicationClient::GetAcceleratorDynamicLoaderLibraryInfos(
+    const AcceleratorDynamicLoaderArgs &args) {
+  StreamGDBRemote packet;
+  packet.PutCString("jAcceleratorPluginGetDynamicLoaderLibraryInfo:");
+  packet.PutAsJSON(args, /*hex_ascii=*/false);
+
+  StringExtractorGDBRemote response;
+  response.SetResponseValidatorToJSON();
+  if (SendPacketAndWaitForResponse(packet.GetString(), response) !=
+          PacketResult::Success ||
+      response.IsErrorResponse())
+    return std::nullopt;
+
+  llvm::Expected<AcceleratorDynamicLoaderResponse> parsed =
+      llvm::json::parse<AcceleratorDynamicLoaderResponse>(
+          response.Peek(), "AcceleratorDynamicLoaderResponse");
+  if (!parsed) {
+    llvm::consumeError(parsed.takeError());
+    return std::nullopt;
+  }
+  return *parsed;
+}
+
 bool GDBRemoteCommunicationClient::QueryNoAckModeSupported() {
   if (m_supports_not_sending_acks == eLazyBoolCalculate) {
     m_send_acks = true;

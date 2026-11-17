@@ -8439,6 +8439,16 @@ TEST_F(FormatTest, BreakFunctionDefinitionParameters) {
                "         d);\n"
                "}",
                Style);
+
+  Style.PackArguments.BreakAfter = 0;
+  verifyFormat("int x[] = {{\n"
+               "#if 1\n"
+               "    0\n"
+               "#else\n"
+               "    ;\n"
+               "#endif\n"
+               "}};",
+               Style);
 }
 
 TEST_F(FormatTest, BreakBeforeInlineASMColon) {
@@ -23019,6 +23029,17 @@ TEST_F(FormatTest, FileAndCode) {
                                    "#else\n"
                                    "#define B() [NSString a:@\"\"]\n"
                                    "#endif"));
+}
+
+TEST_F(FormatTest, GuessJavaScriptLanguageByFileName) {
+  for (StringRef FileName :
+       {"foo.js", "foo.mjs", "foo.cjs", "foo.ts", "foo.mts", "foo.cts",
+        "foo.JS", "foo.MJS", "foo.CJS", "foo.TS", "foo.MTS", "foo.CTS",
+        "foo.d.ts", "foo.d.mts", "foo.d.cts", "foo.mts.in",
+        "foo.cts.template"}) {
+    SCOPED_TRACE(FileName);
+    EXPECT_EQ(FormatStyle::LK_JavaScript, guessLanguage(FileName, ""));
+  }
 }
 
 TEST_F(FormatTest, GuessLanguageWithCpp11AttributeSpecifiers) {

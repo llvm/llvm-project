@@ -2038,7 +2038,7 @@ def FeatureExactAssembly
 
 foreach i = {1-31} in
   def FeatureReserveX#i :
-      SubtargetFeature<"reserve-x"#i, "UserReservedRegister[RISCV::X"#i#"]",
+      SubtargetFeature<"reserve-x"#i, "UserReservedXRegs["#i#"]",
                        "true", "Reserve X"#i>;
 
 def FeatureSaveRestore : SubtargetFeature<"save-restore", "EnableSaveRestore",

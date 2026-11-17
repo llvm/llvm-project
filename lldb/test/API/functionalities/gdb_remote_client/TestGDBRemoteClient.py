@@ -282,7 +282,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
             True,  # stop_at_entry
             error,
         )  # error
-        self.assertTrue(error.Success(), error.GetCString())
+        self.assertSuccess(error)
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetProcessID(), 16)
         self.assertEqual(self.server.responder.halt_reason_queries, 1)
@@ -382,7 +382,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
             self.assertTrue(error.Fail())
             self.assertRegex(error.GetCString(), "^process exited with status")
         else:
-            self.assertTrue(error.Success(), error.GetCString())
+            self.assertSuccess(error)
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetProcessID(), 16)
         self.assertEqual(self.server.responder.halt_reason_queries, 0)
@@ -465,7 +465,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
             True,  # stop_at_entry
             error,
         )  # error
-        self.assertTrue(error.Success(), error.GetCString())
+        self.assertSuccess(error)
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetProcessID(), 16)
 
