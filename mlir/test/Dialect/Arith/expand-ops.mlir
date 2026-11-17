@@ -376,6 +376,8 @@ func.func @invalid_scaling_truncf_to_f4E2M1FN(%arg0: f16, %arg1 : f8E5M2FNUZ) ->
 
 // -----
 
+// The NaN 0xFF gives the quiet NaN 0x7FC00000 (2143289344), as the constant
+// folder does.
 func.func @extf_f8E8M0FNU_to_f32(%arg0 : f8E8M0FNU) -> f32 {
     %0 = arith.extf %arg0 : f8E8M0FNU to f32
     return %0 : f32
@@ -391,7 +393,7 @@ func.func @extf_f8E8M0FNU_to_f32(%arg0 : f8E8M0FNU) -> f32 {
 // CHECK: %[[CMP_MIN:.+]] = arith.cmpi eq, %[[BITCAST]], %[[CF8MIN]] : i8
 // CHECK: %[[SELECT_MIN:.+]] = arith.select %[[CMP_MIN]], %[[CF32MIN]], %[[SHLI]] : i32
 // CHECK-DAG: %[[CF8NAN:.+]] = arith.constant -1 : i8
-// CHECK-DAG: %[[CF32NAN:.+]] = arith.constant -1 : i32
+// CHECK-DAG: %[[CF32NAN:.+]] = arith.constant 2143289344 : i32
 // CHECK: %[[CMP_NAN:.+]] = arith.cmpi eq, %[[BITCAST]], %[[CF8NAN]] : i8
 // CHECK: %[[SELECT_NAN:.+]] = arith.select %[[CMP_NAN]], %[[CF32NAN]], %[[SELECT_MIN]] : i32
 // CHECK: %[[RESULT:.+]] = arith.bitcast %[[SELECT_NAN]] : i32 to f32
@@ -433,7 +435,7 @@ func.func @extf_f8E8M0FNU_to_f16(%arg0 : f8E8M0FNU) -> f16 {
 // CHECK: %[[CMP_MIN:.+]] = arith.cmpi eq, %[[BITCAST]], %[[CF8MIN]] : i8
 // CHECK: %[[SELECT_MIN:.+]] = arith.select %[[CMP_MIN]], %[[CF32MIN]], %[[SHLI]] : i32
 // CHECK-DAG: %[[CF8NAN:.+]] = arith.constant -1 : i8
-// CHECK-DAG: %[[CF32NAN:.+]] = arith.constant -1 : i32
+// CHECK-DAG: %[[CF32NAN:.+]] = arith.constant 2143289344 : i32
 // CHECK: %[[CMP_NAN:.+]] = arith.cmpi eq, %[[BITCAST]], %[[CF8NAN]] : i8
 // CHECK: %[[SELECT_NAN:.+]] = arith.select %[[CMP_NAN]], %[[CF32NAN]], %[[SELECT_MIN]] : i32
 // CHECK: %[[F32_RESULT:.+]] = arith.bitcast %[[SELECT_NAN]] : i32 to f32
