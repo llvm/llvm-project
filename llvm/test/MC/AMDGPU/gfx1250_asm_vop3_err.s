@@ -337,3 +337,132 @@ v_add_f64_e64 v[4:5], lit64(1.0), v[8:9]
 // GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // GFX125X-ERR-NEXT:{{^}}v_add_f64_e64 v[4:5], lit64(1.0), v[8:9]
 // GFX125X-ERR-NEXT:{{^}}                            ^
+
+// v_cvt_sr_fp8_f16 and v_cvt_sr_bf8_f16 use op_sel bits 2 and 3 to select a
+// byte in vdst, which is exposed as byte_sel. Bits 0 and 1 must be left clear,
+// so there is no op_sel operand at all; in particular bit 0 is not a half
+// select for src0, so the src0.h form is not encodable. The VOP3 forms.
+
+v_cvt_sr_bf8_f16 v1, v2.h, v3
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_bf8_f16 v1, v2.h, v3
+// GFX125X-ERR-NEXT:{{^}}                     ^
+
+v_cvt_sr_bf8_f16 v1, |v2.h|, v3
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_bf8_f16 v1, |v2.h|, v3
+// GFX125X-ERR-NEXT:{{^}}                      ^
+
+v_cvt_sr_bf8_f16 v1, -v2.h, v3
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_bf8_f16 v1, -v2.h, v3
+// GFX125X-ERR-NEXT:{{^}}                      ^
+
+v_cvt_sr_bf8_f16 v1, v2.h, v3 byte_sel:1
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_bf8_f16 v1, v2.h, v3 byte_sel:1
+// GFX125X-ERR-NEXT:{{^}}                     ^
+
+v_cvt_sr_bf8_f16 v1, v2.h, v3 byte_sel:2
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_bf8_f16 v1, v2.h, v3 byte_sel:2
+// GFX125X-ERR-NEXT:{{^}}                     ^
+
+v_cvt_sr_bf8_f16 v1, v2.h, v3 byte_sel:3
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_bf8_f16 v1, v2.h, v3 byte_sel:3
+// GFX125X-ERR-NEXT:{{^}}                     ^
+
+v_cvt_sr_fp8_f16 v1, v2.h, v3
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_fp8_f16 v1, v2.h, v3
+// GFX125X-ERR-NEXT:{{^}}                     ^
+
+v_cvt_sr_fp8_f16 v1, |v2.h|, v3
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_fp8_f16 v1, |v2.h|, v3
+// GFX125X-ERR-NEXT:{{^}}                      ^
+
+v_cvt_sr_fp8_f16 v1, -v2.h, v3
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_fp8_f16 v1, -v2.h, v3
+// GFX125X-ERR-NEXT:{{^}}                      ^
+
+v_cvt_sr_fp8_f16 v1, v2.h, v3 byte_sel:1
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_fp8_f16 v1, v2.h, v3 byte_sel:1
+// GFX125X-ERR-NEXT:{{^}}                     ^
+
+v_cvt_sr_fp8_f16 v1, v2.h, v3 byte_sel:2
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_fp8_f16 v1, v2.h, v3 byte_sel:2
+// GFX125X-ERR-NEXT:{{^}}                     ^
+
+v_cvt_sr_fp8_f16 v1, v2.h, v3 byte_sel:3
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_fp8_f16 v1, v2.h, v3 byte_sel:3
+// GFX125X-ERR-NEXT:{{^}}                     ^
+
+// op_sel is not accepted in any form.
+
+v_cvt_sr_bf8_f16 v1, v2.l, v3 op_sel:[0,1]
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_bf8_f16 v1, v2.l, v3 op_sel:[0,1]
+// GFX125X-ERR-NEXT:{{^}}                              ^
+
+v_cvt_sr_fp8_f16 v1, v2.l, v3 op_sel:[0,1]
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_fp8_f16 v1, v2.l, v3 op_sel:[0,1]
+// GFX125X-ERR-NEXT:{{^}}                              ^
+
+v_cvt_sr_bf8_f16 v1, v2.l, v3 op_sel:[1]
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_bf8_f16 v1, v2.l, v3 op_sel:[1]
+// GFX125X-ERR-NEXT:{{^}}                              ^
+
+v_cvt_sr_fp8_f16 v1, v2.l, v3 op_sel:[1]
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_fp8_f16 v1, v2.l, v3 op_sel:[1]
+// GFX125X-ERR-NEXT:{{^}}                              ^
+
+// The DPP forms.
+
+v_cvt_sr_bf8_f16 v1, v2.h, v3 quad_perm:[0,1,2,3] fi:1
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_bf8_f16 v1, v2.h, v3 quad_perm:[0,1,2,3] fi:1
+// GFX125X-ERR-NEXT:{{^}}                     ^
+
+v_cvt_sr_bf8_f16 v1, v2.h, v3 byte_sel:3 quad_perm:[0,1,2,3]
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_bf8_f16 v1, v2.h, v3 byte_sel:3 quad_perm:[0,1,2,3]
+// GFX125X-ERR-NEXT:{{^}}                     ^
+
+v_cvt_sr_fp8_f16 v1, v2.h, v3 quad_perm:[0,1,2,3] fi:1
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_fp8_f16 v1, v2.h, v3 quad_perm:[0,1,2,3] fi:1
+// GFX125X-ERR-NEXT:{{^}}                     ^
+
+v_cvt_sr_fp8_f16 v1, v2.h, v3 byte_sel:3 quad_perm:[0,1,2,3]
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_fp8_f16 v1, v2.h, v3 byte_sel:3 quad_perm:[0,1,2,3]
+// GFX125X-ERR-NEXT:{{^}}                     ^
+
+v_cvt_sr_bf8_f16 v1, v2.h, v3 dpp8:[1,2,3,4,5,6,7,0] fi:1
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_bf8_f16 v1, v2.h, v3 dpp8:[1,2,3,4,5,6,7,0] fi:1
+// GFX125X-ERR-NEXT:{{^}}                     ^
+
+v_cvt_sr_bf8_f16 v1, v2.h, v3 byte_sel:3 dpp8:[1,2,3,4,5,6,7,0]
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_bf8_f16 v1, v2.h, v3 byte_sel:3 dpp8:[1,2,3,4,5,6,7,0]
+// GFX125X-ERR-NEXT:{{^}}                     ^
+
+v_cvt_sr_fp8_f16 v1, v2.h, v3 dpp8:[1,2,3,4,5,6,7,0] fi:1
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_fp8_f16 v1, v2.h, v3 dpp8:[1,2,3,4,5,6,7,0] fi:1
+// GFX125X-ERR-NEXT:{{^}}                     ^
+
+v_cvt_sr_fp8_f16 v1, v2.h, v3 byte_sel:3 dpp8:[1,2,3,4,5,6,7,0]
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_sr_fp8_f16 v1, v2.h, v3 byte_sel:3 dpp8:[1,2,3,4,5,6,7,0]
+// GFX125X-ERR-NEXT:{{^}}                     ^

@@ -8,7 +8,6 @@ define zeroext i16 @t1(i16 zeroext %x) nounwind readnone ssp {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    cmpi.w #26, (6,%sp)
 ; CHECK-NEXT:    shi %d0
-; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    and.l #1, %d0
 ; CHECK-NEXT:    lsl.l #5, %d0
 ; CHECK-NEXT:    rts
@@ -23,7 +22,6 @@ define zeroext i16 @t2(i16 zeroext %x) nounwind readnone ssp {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    cmpi.w #26, (6,%sp)
 ; CHECK-NEXT:    scs %d0
-; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    and.l #1, %d0
 ; CHECK-NEXT:    lsl.l #5, %d0
 ; CHECK-NEXT:    rts
@@ -42,7 +40,6 @@ define fastcc i64 @t3(i64 %x) nounwind readnone ssp {
 ; CHECK-NEXT:    sub.l #18, %d1
 ; CHECK-NEXT:    subx.l %d2, %d0
 ; CHECK-NEXT:    scs %d0
-; CHECK-NEXT:    moveq #0, %d1
 ; CHECK-NEXT:    move.b %d0, %d1
 ; CHECK-NEXT:    and.l #1, %d1
 ; CHECK-NEXT:    lsl.l #6, %d1

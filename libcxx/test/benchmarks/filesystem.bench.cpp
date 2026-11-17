@@ -131,9 +131,9 @@ TEST_ALIGN_BENCHMARK void BM_PathIterateOnceBackwards(benchmark::State& st, GenI
     auto I       = P.end();
     while (I != B) {
       --I;
-      benchmark::DoNotOptimize(*I);
+      benchmark::DoNotOptimize(I->native().data());
     }
-    benchmark::DoNotOptimize(*I);
+    benchmark::DoNotOptimize(I->native().data());
   }
 }
 BENCHMARK_CAPTURE(BM_PathIterateOnceBackwards, iterate_elements, getRandomStringInputs)

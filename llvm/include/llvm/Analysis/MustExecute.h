@@ -54,7 +54,7 @@ class raw_ostream;
 /// changes.
 class LoopSafetyInfo {
   // Used to update funclet bundle operands.
-  DenseMap<BasicBlock *, ColorVector> BlockColors;
+  mutable std::optional<DenseMap<BasicBlock *, ColorVector>> BlockColors;
 
   // Cache whether (the start of) this block is guaranteed to execute if the
   // loop is entered.
@@ -63,11 +63,11 @@ class LoopSafetyInfo {
   bool allLoopPathsLeadToBlockImpl(const BasicBlock *BB,
                                    const DominatorTree *DT) const;
 
+  /// Computes block colors.
+  void computeBlockColors() const;
+
 protected:
   const Loop *CurLoop;
-
-  /// Computes block colors.
-  LLVM_ABI void computeBlockColors();
 
 public:
   /// Returns block colors map that is used to update funclet operand bundles.

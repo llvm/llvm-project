@@ -1,8 +1,5 @@
 # Offloading Design & Internals
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 
@@ -349,19 +346,19 @@ related symbols.
   - `.omp_offloading_entries`
   - Dummy zero-sized object in the offload entries section to force linker to
     define begin/end symbols defined above.
-* - `.omp_offloading.device_image`
+* - `.llvm_offloading.device_image`
   - `__tgt_device_image`
   - `.omp_offloading_entries`
   - ELF device code object of the first image.
-* - `.omp_offloading.device_image.N`
+* - `.llvm_offloading.device_image.N`
   - `__tgt_device_image`
   - `.omp_offloading_entries`
   - ELF device code object of the (N+1)th image.
-* - `.omp_offloading.device_images`
+* - `.llvm_offloading.device_images`
   - `__tgt_device_image`
   - `.omp_offloading_entries`
   - Array of images.
-* - `.omp_offloading.descriptor`
+* - `.llvm_offloading.descriptor`
   - `__tgt_bin_desc`
   - `.omp_offloading_entries`
   - Binary descriptor object (see {ref}`binary-descriptor`)
@@ -408,12 +405,12 @@ static const __tgt_bin_desc BinDesc = {
 
 #### Global Constructor and Destructor
 
-The global constructor (`.omp_offloading.descriptor_reg()`) registers the
+The global constructor (`.llvm_offloading.descriptor_reg()`) registers the
 device images with the runtime by calling the `__tgt_register_lib()` runtime
 function. The constructor is explicitly defined in `.text.startup` section and
 is run once when the program starts. Similarly, the global destructor
-(`.omp_offloading.descriptor_unreg()`) calls `__tgt_unregister_lib()` for
-the destructor and is also defined in `.text.startup` section and run when the
+(`.llvm_offloading.descriptor_unreg()`) calls `__tgt_unregister_lib()` for the
+destructor and is also defined in `.text.startup` section and run when the
 program exits.
 
 ### Offloading Example

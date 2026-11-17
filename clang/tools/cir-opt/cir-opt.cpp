@@ -53,6 +53,9 @@ int main(int argc, char **argv) {
     return mlir::createCIRCanonicalizePass();
   });
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return mlir::createCIRFoldEmptyBranchesPass();
+  });
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
     return mlir::createCIRSimplifyPass();
   });
 
@@ -80,6 +83,18 @@ int main(int argc, char **argv) {
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
     return mlir::createCXXABILoweringPass();
+  });
+
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return mlir::createTargetLoweringPass();
+  });
+
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return mlir::createLoweringPreparePass();
+  });
+
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return mlir::createLibOptPass();
   });
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {

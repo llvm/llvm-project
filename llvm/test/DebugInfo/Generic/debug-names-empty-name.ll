@@ -1,5 +1,5 @@
 ; XFAIL: target={{.*}}-aix{{.*}}
-; RUN: %llc_dwarf -debugger-tune=lldb -accel-tables=Dwarf -filetype=obj -o %t < %s
+; RUN: %llc_dwarf -accel-tables=Dwarf -filetype=obj -o %t < %s
 ; RUN: llvm-dwarfdump -find=_GLOBAL__sub_I__ %t | FileCheck --check-prefix=INFO %s
 ; RUN: llvm-dwarfdump -debug-names %t | FileCheck --check-prefix=NAMES %s
 ; RUN: llvm-dwarfdump -debug-names -verify %t | FileCheck --check-prefix=VERIFY %s
@@ -24,7 +24,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5}
+!llvm.module.flags = !{!3, !4, !5, !9}
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 7.0.0 (trunk 329378) (llvm/trunk 329379)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !2)
@@ -36,3 +36,4 @@ entry:
 !6 = !{!"clang version 7.0.0 (trunk 329378) (llvm/trunk 329379)"}
 !7 = distinct !DISubprogram(linkageName: "_GLOBAL__sub_I__", scope: !1, file: !1, type: !8, isLocal: true, isDefinition: true, flags: DIFlagArtificial, isOptimized: false, unit: !0, retainedNodes: !2)
 !8 = !DISubroutineType(types: !2)
+!9 = !{i32 2, !"debugger-tuning", !"lldb"}

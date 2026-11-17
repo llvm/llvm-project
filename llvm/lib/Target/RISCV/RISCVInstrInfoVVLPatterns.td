@@ -42,6 +42,13 @@ def riscv_tuple_extract : RVSDNode<"TUPLE_EXTRACT",
                                    SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                         SDTCisVT<2, i32>]>>;
 
+// Reinterprets a RISC-V vector tuple value as a different vector tuple type
+// with the same register class (i.e. same NF and LMUL), but a different
+// minimum number of elements per field. This is a no-op at the register
+// level, unlike TUPLE_INSERT/TUPLE_EXTRACT which operate on individual
+// vector subregisters.
+def riscv_tuple_cast : RVSDNode<"TUPLE_CAST", SDTypeProfile<1, 1, []>>;
+
 
 //===----------------------------------------------------------------------===//
 // Helpers to define the VL patterns.
@@ -61,18 +68,6 @@ def SDT_RISCVIntBinOp_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
                                                 SDTCVecEltisVT<4, i1>,
                                                 SDTCisSameNumEltsAs<0, 4>,
                                                 SDTCisVT<5, XLenVT>]>;
-
-// Input: (vector, vector/scalar, passthru, mask, roundmode, vl)
-def SDT_RISCVVNBinOp_RM_VL : SDTypeProfile<1, 6, [SDTCisVec<0>, SDTCisInt<0>,
-                                                  SDTCisSameAs<0, 3>,
-                                                  SDTCisSameNumEltsAs<0, 1>,
-                                                  SDTCisVec<1>,
-                                                  SDTCisOpSmallerThanOp<2, 1>,
-                                                  SDTCisSameAs<0, 2>,
-                                                  SDTCisSameNumEltsAs<0, 4>,
-                                                  SDTCVecEltisVT<4, i1>,
-                                                  SDTCisVT<5, XLenVT>,
-                                                  SDTCisVT<6, XLenVT>]>;
 
 def SDT_RISCVFPUnOp_VL : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
                                               SDTCisVec<0>, SDTCisFP<0>,

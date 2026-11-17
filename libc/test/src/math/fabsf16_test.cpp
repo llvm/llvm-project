@@ -15,4 +15,4 @@
 
 #include "src/math/fabsf16.h"
 
-LIST_FABS_TESTS(float16, LIBC_NAMESPACE::fabsf16)
+LIST_FABS_TESTS(Fabsf16, float16, LIBC_NAMESPACE::fabsf16)

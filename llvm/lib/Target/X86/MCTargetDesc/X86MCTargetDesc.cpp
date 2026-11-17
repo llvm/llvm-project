@@ -17,6 +17,7 @@
 #include "X86IntelInstPrinter.h"
 #include "X86MCAsmInfo.h"
 #include "X86MCLFIRewriter.h"
+#include "X86MCOptions.h"
 #include "X86TargetStreamer.h"
 #include "llvm-c/Visibility.h"
 #include "llvm/ADT/APInt.h"
@@ -28,6 +29,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
@@ -44,6 +46,9 @@ using namespace llvm;
 
 #define GET_SUBTARGETINFO_MC_DESC
 #include "X86GenSubtargetInfo.inc"
+
+#define OPTIONS_STRUCT_DEFS
+#include "X86MCOptions.inc"
 
 std::string X86_MC::ParseX86Triple(const Triple &TT) {
   std::string FS;
@@ -801,6 +806,7 @@ createX86MCLFIRewriter(MCContext &Ctx,
 
 // Force static initialization.
 extern "C" LLVM_C_ABI void LLVMInitializeX86TargetMC() {
+  static opt::RegisterLibraryOptions<X86MCOptions> O;
   for (Target *T : {&getTheX86_32Target(), &getTheX86_64Target()}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn X(*T, createX86MCAsmInfo);

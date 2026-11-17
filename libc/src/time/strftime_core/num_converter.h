@@ -31,8 +31,8 @@ struct IntFormatSection {
   char padding_char = '0';
 };
 
-template <printf_core::WriteMode write_mode>
-LIBC_INLINE int write_padded_int(printf_core::Writer<write_mode> *writer,
+template <printf_core::OverflowMode overflow_mode>
+LIBC_INLINE int write_padded_int(printf_core::Writer<overflow_mode> *writer,
                                  const IntFormatSection &num_info) {
 
   DecFmt d(num_info.num);
@@ -193,8 +193,8 @@ get_int_format(const FormatSection &to_conv, const tm *timeptr) {
   return result;
 }
 
-template <printf_core::WriteMode write_mode>
-LIBC_INLINE int convert_int(printf_core::Writer<write_mode> *writer,
+template <printf_core::OverflowMode overflow_mode>
+LIBC_INLINE int convert_int(printf_core::Writer<overflow_mode> *writer,
                             const FormatSection &to_conv, const tm *timeptr) {
   auto num_info_or = get_int_format(to_conv, timeptr);
   if (!num_info_or)

@@ -47,6 +47,10 @@ std::tuple<int, unsigned, unsigned>
 mapBuiltinToOpcode(StringRef DemangledCall,
                    SPIRV::InstructionSet::InstructionSet Set);
 
+/// Whether lowerBuiltin() recognizes \p DemangledCall in \p Set.
+bool isBuiltin(StringRef DemangledCall,
+               SPIRV::InstructionSet::InstructionSet Set);
+
 /// Parses the provided \p ArgIdx argument base type in the \p DemangledCall
 /// skeleton. A base type is either a basic type (e.g. i32 for int), pointer
 /// element type (e.g. i8 for char*), or builtin type (TargetExtType).

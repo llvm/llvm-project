@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -stop-before=ppc-vsx-copy \
+; RUN: llc -stop-before=ppc-vsx-copy \
 ; RUN:  -mcpu=pwr4 -mattr=-altivec \
 ; RUN:  -mtriple powerpc-ibm-aix-xcoff < %s | \
 ; RUN: FileCheck --check-prefixes=CHECK,32BIT %s
@@ -7,7 +7,7 @@
 ; RUN:  -mtriple powerpc-ibm-aix-xcoff < %s | \
 ; RUN: FileCheck --check-prefixes=CHECKASM,ASM32BIT %s
 
-; RUN: llc -verify-machineinstrs -stop-before=ppc-vsx-copy \
+; RUN: llc -stop-before=ppc-vsx-copy \
 ; RUN:  -mcpu=pwr4 -mattr=-altivec \
 ; RUN:  -mtriple powerpc64-ibm-aix-xcoff --code-model=small < %s | \
 ; RUN: FileCheck --check-prefixes=CHECK,64BIT %s

@@ -28,6 +28,7 @@ EXPECTED_CORE_FRAMES = [
             presentationHint="deemphasize",
         ),
         instructionPointerReference="0x40011C",
+        compileUnitId=0,
     ),
     StackFrame(
         column=0,
@@ -41,6 +42,7 @@ EXPECTED_CORE_FRAMES = [
             presentationHint="deemphasize",
         ),
         instructionPointerReference="0x400142",
+        compileUnitId=0,
     ),
     StackFrame(
         column=0,
@@ -54,6 +56,7 @@ EXPECTED_CORE_FRAMES = [
             presentationHint="deemphasize",
         ),
         instructionPointerReference="0x40015F",
+        compileUnitId=0,
     ),
 ]
 
@@ -118,7 +121,7 @@ class TestDAP_coreFile(DAPTestCaseBase):
 
     def test_wrong_core_file(self):
         """Attaching with a file that isn't a real core should fail cleanly
-        during configurationDone rather than crashing the adapter."""
+        in the attach request rather than crashing the adapter."""
         exe_file = self.getSourcePath("linux-x86_64.out")
         wrong_core_file = self.getSourcePath("main.c")
 

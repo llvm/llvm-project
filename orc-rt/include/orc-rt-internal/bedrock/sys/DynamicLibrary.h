@@ -18,10 +18,10 @@
 #define ORC_RT_INTERNAL_BEDROCK_SYS_DYNAMICLIBRARY_H
 
 #include "orc-rt/support/Error.h"
+#include "orc-rt/support/RemoteSymbolLookupSet.h"
+#include "orc-rt/support/SymbolLookupResult.h"
 
-#include <optional>
 #include <string>
-#include <vector>
 
 namespace orc_rt::sys {
 
@@ -35,13 +35,14 @@ Expected<void *> loadLibrary(const std::string &Path);
 /// Unload a library previously returned by loadLibrary.
 Error unloadLibrary(void *Handle);
 
-/// Look Names up in Handle, returning one result per name in order.
+/// Look the names in Symbols up in Handle, returning one result per name in
+/// order. The lookup flags are ignored.
 ///
 /// A result is nullopt if the name is not present in the library, and a
 /// (possibly null) address if it is: a symbol genuinely located at address zero
 /// is reported as null rather than as missing.
-std::vector<std::optional<void *>>
-lookupLibrarySymbols(void *Handle, const std::vector<std::string> &Names);
+SymbolLookupResult lookupLibrarySymbols(void *Handle,
+                                        const RemoteSymbolLookupSet &Symbols);
 
 } // namespace orc_rt::sys
 

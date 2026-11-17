@@ -7,10 +7,9 @@
 ; 3. group_segment_fixed_size = 0 (linker patches it)
 ; 4. Named barrier is emitted as an SHN_AMDGPU_LDS symbol (.amdgpu_lds)
 
-@bar = internal addrspace(3) global [2 x target("amdgcn.named.barrier", 0)] poison
+@bar = internal addrspace(15) global [2 x target("amdgcn.named.barrier", 0)] poison
 
 ; CHECK-LABEL: kernel:
-; CHECK: s_mov_b32 s{{[0-9]+}}, __amdgpu_named_barrier.bar{{[^ @]*}}@abs32@lo
 ; CHECK: s_barrier_join m0
 ; CHECK: s_barrier_signal m0
 ; CHECK: s_barrier_wait 1
@@ -26,8 +25,6 @@
 ; CHECK:        .amdgpu_call helper
 ; CHECK:      .end_amdgpu_info
 
-; CHECK:      .amdgpu_lds __amdgpu_named_barrier.bar{{[^ ,]*}}, 32, 4
-
 ; ELF:      Section {
 ; ELF:        Name: .amdgpu.info
 ; ELF:        Type: SHT_PROGBITS
@@ -39,16 +36,16 @@
 ; ELF-DAG: R_AMDGPU_ABS64 helper
 
 define amdgpu_kernel void @kernel() {
-  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar)
-  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar, i32 3)
+  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) @bar)
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @bar, i32 3)
   call void @llvm.amdgcn.s.barrier.wait(i16 1)
   call void @helper()
   ret void
 }
 
 declare void @helper()
-declare void @llvm.amdgcn.s.barrier.join(ptr addrspace(3)) #0
-declare void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3), i32) #0
+declare void @llvm.amdgcn.s.barrier.join(ptr addrspace(15)) #0
+declare void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15), i32) #0
 declare void @llvm.amdgcn.s.barrier.wait(i16) #0
 
 attributes #0 = { convergent nounwind }

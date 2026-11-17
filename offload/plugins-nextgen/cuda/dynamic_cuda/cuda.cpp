@@ -70,6 +70,7 @@ DLWRAP(cuMemFreeAsync, 2)
 
 DLWRAP(cuMemPrefetchAsync, 4)
 DLWRAP(cuPointerGetAttribute, 3)
+DLWRAP(cuPointerGetAttributes, 4)
 
 DLWRAP(cuModuleGetFunction, 3)
 DLWRAP(cuModuleGetGlobal, 4)
@@ -127,9 +128,7 @@ DLWRAP_FINALIZE()
 #define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
 #endif
 
-static bool checkForCUDA() {
-  // return true if dlopen succeeded and all functions found
-
+static bool resolveSymbols(llvm::sys::DynamicLibrary &Lib, const char *Name) {
   // Prefer _v2 versions of functions if found in the library
   std::unordered_map<std::string, const char *> TryFirst = {
       {"cuMemAlloc", "cuMemAlloc_v2"},
@@ -146,6 +145,42 @@ static bool checkForCUDA() {
       {"cuDevicePrimaryCtxSetFlags", "cuDevicePrimaryCtxSetFlags_v2"},
   };
 
+  for (size_t I = 0; I < dlwrap::size(); I++) {
+    const char *Sym = dlwrap::symbol(I);
+
+    auto It = TryFirst.find(Sym);
+    if (It != TryFirst.end()) {
+      const char *First = It->second;
+      void *P = Lib.getAddressOfSymbol(First);
+      if (P) {
+        ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << First
+                        << ") -> " << P;
+        *dlwrap::pointer(I) = P;
+        continue;
+      }
+    }
+
+    void *P = Lib.getAddressOfSymbol(Sym);
+    if (P == nullptr) {
+      ODBG(OLDT_Init) << "Unable to find '" << Sym << "' in '" << Name << "'!";
+      return false;
+    }
+    ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
+                    << ") -> " << P;
+
+    *dlwrap::pointer(I) = P;
+  }
+
+  return true;
+}
+
+static bool checkForCUDA() {
+  // Resolve through the process rather than the library handle so that
+  // definitions already in the global scope take precedence like a normal link.
+  auto Process = llvm::sys::DynamicLibrary::getPermanentLibrary(nullptr);
+  if (resolveSymbols(Process, "<process>"))
+    return true;
+
   const char *CudaLib = DYNAMIC_CUDA_PATH;
   std::string ErrMsg;
   auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
@@ -156,34 +191,7 @@ static bool checkForCUDA() {
     return false;
   }
 
-  for (size_t I = 0; I < dlwrap::size(); I++) {
-    const char *Sym = dlwrap::symbol(I);
-
-    auto It = TryFirst.find(Sym);
-    if (It != TryFirst.end()) {
-      const char *First = It->second;
-      void *P = DynlibHandle->getAddressOfSymbol(First);
-      if (P) {
-        ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << First
-                        << ") -> " << P;
-        *dlwrap::pointer(I) = P;
-        continue;
-      }
-    }
-
-    void *P = DynlibHandle->getAddressOfSymbol(Sym);
-    if (P == nullptr) {
-      ODBG(OLDT_Init) << "Unable to find '" << Sym << "' in '" << CudaLib
-                      << "'!";
-      return false;
-    }
-    ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
-                    << ") -> " << P;
-
-    *dlwrap::pointer(I) = P;
-  }
-
-  return true;
+  return resolveSymbols(Process, CudaLib);
 }
 
 CUresult cuInit(unsigned X) {

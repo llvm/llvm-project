@@ -38,6 +38,7 @@ write_lit_config("lit_site_cfg") {
     "CLANGD_BUILD_DEXP=1",
     "CLANGD_ENABLE_REMOTE=0",
     "CLANGD_TIDY_CHECKS=1",
+    "CLANG_PLUGIN_SUPPORT=0",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_INCLUDE_BENCHMARKS=",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
@@ -56,6 +57,14 @@ write_lit_config("lit_site_cfg") {
     extra_values += [ "LLVM_ENABLE_ZLIB=1" ]
   } else {
     extra_values += [ "LLVM_ENABLE_ZLIB=0" ]
+  }
+
+  if (host_os == "mac") {
+    extra_values += [ "LLVM_PLUGIN_EXT=.dylib" ]
+  } else if (host_os == "win") {
+    extra_values += [ "LLVM_PLUGIN_EXT=.dll" ]
+  } else {
+    extra_values += [ "LLVM_PLUGIN_EXT=.so" ]
   }
 }
 

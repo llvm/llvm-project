@@ -10,40 +10,40 @@ define <4 x i32> @udiv_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i1> %m) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pslld $31, %xmm2
 ; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    paddd %xmm2, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE2-NEXT:    psubd %xmm2, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
-; SSE2-NEXT:    movd %xmm2, %ecx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
-; SSE2-NEXT:    movd %xmm2, %eax
+; SSE2-NEXT:    pcmpeqd %xmm3, %xmm3
+; SSE2-NEXT:    pxor %xmm2, %xmm3
+; SSE2-NEXT:    pand %xmm1, %xmm2
+; SSE2-NEXT:    psubd %xmm3, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[3,3,3,3]
+; SSE2-NEXT:    movd %xmm1, %ecx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    xorl %edx, %edx
 ; SSE2-NEXT:    divl %ecx
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[2,3,2,3]
 ; SSE2-NEXT:    movd %xmm3, %ecx
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movd %xmm3, %eax
 ; SSE2-NEXT:    xorl %edx, %edx
 ; SSE2-NEXT:    divl %ecx
 ; SSE2-NEXT:    movd %eax, %xmm3
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; SSE2-NEXT:    movd %xmm1, %ecx
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
+; SSE2-NEXT:    movd %xmm2, %ecx
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    xorl %edx, %edx
 ; SSE2-NEXT:    divl %ecx
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; SSE2-NEXT:    movd %xmm1, %ecx
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,1,1]
+; SSE2-NEXT:    movd %xmm2, %ecx
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    xorl %edx, %edx
 ; SSE2-NEXT:    divl %ecx
 ; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; SSE2-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm3[0]
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: udiv_v4i32:
@@ -208,19 +208,19 @@ define <4 x i64> @udiv_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm4[2,2,3,3]
 ; SSE2-NEXT:    pslld $31, %xmm6
 ; SSE2-NEXT:    psrad $31, %xmm6
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,0,1,1]
-; SSE2-NEXT:    pslld $31, %xmm4
-; SSE2-NEXT:    psrad $31, %xmm4
-; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [1,1]
-; SSE2-NEXT:    pand %xmm4, %xmm2
-; SSE2-NEXT:    pandn %xmm7, %xmm4
-; SSE2-NEXT:    por %xmm2, %xmm4
-; SSE2-NEXT:    movq %xmm4, %rcx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm4[0,0,1,1]
+; SSE2-NEXT:    pslld $31, %xmm7
+; SSE2-NEXT:    psrad $31, %xmm7
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [1,1]
+; SSE2-NEXT:    pand %xmm7, %xmm2
+; SSE2-NEXT:    pandn %xmm4, %xmm7
+; SSE2-NEXT:    por %xmm2, %xmm7
+; SSE2-NEXT:    movq %xmm7, %rcx
 ; SSE2-NEXT:    movq %xmm0, %rax
 ; SSE2-NEXT:    xorl %edx, %edx
 ; SSE2-NEXT:    divq %rcx
 ; SSE2-NEXT:    movq %rax, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm4[2,3,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm7[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm2, %rcx
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm5[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm2, %rax
@@ -229,7 +229,7 @@ define <4 x i64> @udiv_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m) {
 ; SSE2-NEXT:    movq %rax, %xmm2
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE2-NEXT:    pand %xmm6, %xmm3
-; SSE2-NEXT:    pandn %xmm7, %xmm6
+; SSE2-NEXT:    pandn %xmm4, %xmm6
 ; SSE2-NEXT:    por %xmm3, %xmm6
 ; SSE2-NEXT:    movq %xmm6, %rcx
 ; SSE2-NEXT:    movq %xmm1, %rax
@@ -353,40 +353,40 @@ define <2 x i32> @udiv_v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i1> %m) {
 ; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[2,3]
 ; SSE2-NEXT:    pslld $31, %xmm2
 ; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    paddd %xmm2, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE2-NEXT:    psubd %xmm2, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
-; SSE2-NEXT:    movd %xmm2, %ecx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
-; SSE2-NEXT:    movd %xmm2, %eax
+; SSE2-NEXT:    pcmpeqd %xmm3, %xmm3
+; SSE2-NEXT:    pxor %xmm2, %xmm3
+; SSE2-NEXT:    pand %xmm1, %xmm2
+; SSE2-NEXT:    psubd %xmm3, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[3,3,3,3]
+; SSE2-NEXT:    movd %xmm1, %ecx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    xorl %edx, %edx
 ; SSE2-NEXT:    divl %ecx
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[2,3,2,3]
 ; SSE2-NEXT:    movd %xmm3, %ecx
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movd %xmm3, %eax
 ; SSE2-NEXT:    xorl %edx, %edx
 ; SSE2-NEXT:    divl %ecx
 ; SSE2-NEXT:    movd %eax, %xmm3
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; SSE2-NEXT:    movd %xmm1, %ecx
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
+; SSE2-NEXT:    movd %xmm2, %ecx
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    xorl %edx, %edx
 ; SSE2-NEXT:    divl %ecx
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; SSE2-NEXT:    movd %xmm1, %ecx
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,1,1]
+; SSE2-NEXT:    movd %xmm2, %ecx
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    xorl %edx, %edx
 ; SSE2-NEXT:    divl %ecx
 ; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; SSE2-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm3[0]
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: udiv_v2i32:

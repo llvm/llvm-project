@@ -99,9 +99,9 @@ func.func @alloc_i32_2d(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>
 func.func @nonalloc_i32_array(%arg0: !fir.box<!fir.array<?xi32>>,
                                %arg1: !fir.ref<!fir.array<100xi32>>) {
   %c100 = arith.constant 100 : index
-  %0:2 = hlfir.declare %arg0 {uniq_name = "x"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("x") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %arg1(%1) {uniq_name = "y"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
+  %2:2 = hlfir.declare %arg1(%1) uniq_name("y") : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
   hlfir.assign %2#0 to %0#0 : !fir.ref<!fir.array<100xi32>>, !fir.box<!fir.array<?xi32>>
   return
 }
@@ -122,9 +122,9 @@ func.func @nonalloc_i32_array(%arg0: !fir.box<!fir.array<?xi32>>,
 func.func @nonalloc_f32_array(%arg0: !fir.box<!fir.array<?xf32>>,
                                %arg1: !fir.ref<!fir.array<100xf32>>) {
   %c100 = arith.constant 100 : index
-  %0:2 = hlfir.declare %arg0 {uniq_name = "x"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("x") : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %arg1(%1) {uniq_name = "y"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  %2:2 = hlfir.declare %arg1(%1) uniq_name("y") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
   hlfir.assign %2#0 to %0#0 : !fir.ref<!fir.array<100xf32>>, !fir.box<!fir.array<?xf32>>
   return
 }
@@ -139,9 +139,9 @@ func.func @nonalloc_f32_array(%arg0: !fir.box<!fir.array<?xf32>>,
 func.func @nonalloc_logical(%arg0: !fir.box<!fir.array<?x!fir.logical<4>>>,
                              %arg1: !fir.ref<!fir.array<100x!fir.logical<4>>>) {
   %c100 = arith.constant 100 : index
-  %0:2 = hlfir.declare %arg0 {uniq_name = "x"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("x") : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %arg1(%1) {uniq_name = "y"} : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
+  %2:2 = hlfir.declare %arg1(%1) uniq_name("y") : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
   hlfir.assign %2#0 to %0#0 : !fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>
   return
 }

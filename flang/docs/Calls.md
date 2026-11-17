@@ -8,11 +8,6 @@
 
 # Representation of Fortran function calls
 
-```{contents}
----
-local:
----
-```
 
 ## Procedure reference implementation protocol
 

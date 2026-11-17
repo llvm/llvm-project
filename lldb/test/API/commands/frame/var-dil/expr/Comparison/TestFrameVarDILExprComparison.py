@@ -11,6 +11,8 @@ from lldbsuite.test import lldbutil
 class TestFrameVarComparison(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    # Scoped enums require DW_AT_enum_class, which is a DWARF 4 feature.
+    @skipIf(dwarf_version=["<", "4"])
     def test_comparison(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

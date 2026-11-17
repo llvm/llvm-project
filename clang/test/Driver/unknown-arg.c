@@ -65,6 +65,13 @@
 
 // IGNORED: warning: unknown warning option '-Wunknown-to-clang-option'
 
+// RUN: %clang -S %s -o %t.s -fdiagnostics-format=sarif -Wunknown-to-clang-option
+
+// FIXME: unlike TextDiagnosticPrinter, SARIFDiagnosticPrinter can't yet emit
+// diagnostics in this limited mode without SourceManager, etc.
+// At the moment all we can do is to ensure we don't crash with and without
+// assertions.
+
 // RUN: %clang -### -offload-arch=sm_70 --offload-arch=sm_70 -offload-device-only -o ffload-device-only \
 // RUN:   -output -o foo %s 2>&1 | FileCheck --check-prefix=O-WARN %s
 //      O-WARN: warning: joined argument treated as '-o ffload-arch=sm_70'; did you mean '--offload-arch=sm_70'?

@@ -7,10 +7,10 @@
 omp.private {type = private} @_QFsub1Et1_private_rec__QFsub1Tt : !fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>
 func.func @_QPsub1() {
   %0 = fir.alloca !fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}> {bindc_name = "t1", uniq_name = "_QFsub1Et1"}
-  %1 = fir.declare %0 {uniq_name = "_QFsub1Et1"} : (!fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>) -> !fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>
+  %1 = fir.declare %0 uniq_name("_QFsub1Et1") : (!fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>) -> !fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>
 //CHECK: omp.parallel private(@_QFsub1Et1_private_rec__QFsub1Tt %{{.*}} -> %{{.*}} : !fir.ref<!fir.type<_QFsub1TtUnboxProc{p1:() -> ()}>>) {
   omp.parallel private(@_QFsub1Et1_private_rec__QFsub1Tt %1 -> %arg0 : !fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>) {
-    %2 = fir.declare %arg0 {uniq_name = "_QFsub1Et1"} : (!fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>) -> !fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>
+    %2 = fir.declare %arg0 uniq_name("_QFsub1Et1") : (!fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>) -> !fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>
     omp.terminator
   }
   return
@@ -24,7 +24,7 @@ omp.private {type = firstprivate} @_QFsub2Et1_firstprivate_box_heap_rec__QFsub2T
 //CHECK: ^bb0(%{{.*}}: !fir.ref<[[TYPE]]>, %{{.*}}: !fir.ref<[[TYPE]]>):
 ^bb0(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>, %arg1:!fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>):
   %0 = fir.alloca !fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>> {bindc_name = "t1", pinned, uniq_name = "_QFsub2Et1"}
-  %1 = fir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub2Et1"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>
+  %1 = fir.declare %0 uniq_name("_QFsub2Et1") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>
 //CHECK: omp.yield(%{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2TtUnboxProc{p1:() -> ()}>>>>)
   omp.yield(%1 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>)
 } copy {
@@ -56,11 +56,11 @@ omp.private {type = firstprivate} @_QFsub2Et1_firstprivate_box_heap_rec__QFsub2T
 }
 func.func @_QPsub2() {
   %0 = fir.alloca !fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>> {bindc_name = "t1", uniq_name = "_QFsub2Et1"}
-  %1 = fir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub2Et1"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>
+  %1 = fir.declare %0 uniq_name("_QFsub2Et1") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>
 //CHECK: omp.parallel private(@_QFsub2Et1_firstprivate_box_heap_rec__QFsub2Tt %{{.*}} -> %{{.*}} :
 //CHECK-SAME: !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2TtUnboxProc{p1:() -> ()}>>>>) {
   omp.parallel private(@_QFsub2Et1_firstprivate_box_heap_rec__QFsub2Tt %1 -> %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>) {
-    %2 = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub2Et1"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>
+    %2 = fir.declare %arg0 uniq_name("_QFsub2Et1") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>
     omp.terminator
   }
   return

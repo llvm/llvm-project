@@ -319,6 +319,8 @@ update_llubi_test_checks.py
 llubi
 ```
 
+(precommit-workflow-for-tests)=
+
 ### Precommit workflow for tests
 
 If the test does not crash, assert, or infinite loop, commit the test with
@@ -332,6 +334,8 @@ Remove TODO/FIXME comments added in the previous step if a problem is solved.
 
 Baseline tests (no-functional-change or NFC patch) may be pushed to main
 without pre-commit review if you have commit access.
+
+(best-practices-for-regression-tests)=
 
 ### Best practices for regression tests
 

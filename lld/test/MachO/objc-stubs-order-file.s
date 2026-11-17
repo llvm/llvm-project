@@ -16,9 +16,10 @@
 ## _hot is ordered first, so the stub it calls moves ahead of the others, which
 ## keep their relative order.
 # RUN: %lld -arch arm64 -e _main -U _objc_msgSend -o %t/ordered.out %t/a.o \
-# RUN:   -objc_stubs_small -order_file %t/order
+# RUN:   -objc_stubs_small -order_file %t/order -map %t/ordered.map
 # RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs --macho \
 # RUN:   %t/ordered.out | FileCheck %s --check-prefix=ORDERED
+# RUN: FileCheck %s --check-prefix=MAP < %t/ordered.map
 
 # RUN: %lld -arch arm64 -e _main -U _objc_msgSend -o %t/fast.out %t/a.o \
 # RUN:   -objc_stubs_fast -order_file %t/order
@@ -46,6 +47,12 @@
 # ORDERED-NEXT: _objc_msgSend$hot:
 # ORDERED:      _objc_msgSend$cold:
 # ORDERED:      _objc_msgSend$mild:
+
+# MAP: 0x[[#%.8X,OBJC_STUBS:]] 0x00000024 __TEXT __objc_stubs
+# MAP-LABEL: # Symbols:
+# MAP: 0x[[#OBJC_STUBS]] 0x0000000C [  0] _objc_msgSend$hot
+# MAP-NEXT: 0x[[#OBJC_STUBS+0xC]] 0x0000000C [  0] _objc_msgSend$cold
+# MAP-NEXT: 0x[[#OBJC_STUBS+0x18]] 0x0000000C [  0] _objc_msgSend$mild
 
 #--- a.s
 .text

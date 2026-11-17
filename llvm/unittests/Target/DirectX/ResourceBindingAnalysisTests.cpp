@@ -25,9 +25,9 @@ protected:
   LLVMContext *Context;
 
   virtual void SetUp() {
-    PB = new PassBuilder();
-    MAM = new ModuleAnalysisManager();
     Context = new LLVMContext();
+    PB = new PassBuilder(*Context);
+    MAM = new ModuleAnalysisManager();
     PB->registerModuleAnalyses(*MAM);
     MAM->registerPass([&] { return DXILResourceBindingAnalysis(); });
   }

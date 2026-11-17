@@ -24,7 +24,7 @@ subroutine test_capture_release(a,b,c)
   real(4) :: a, b, c
   !$omp atomic capture release
   c = a
-  a = a + b
+  a = a * b
   !$omp end atomic
 end subroutine
 

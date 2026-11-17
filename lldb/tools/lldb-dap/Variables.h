@@ -123,7 +123,7 @@ private:
       if (LLVM_UNLIKELY(reference_count >=
                         var_ref_t::k_max_variables_references)) {
         // We cannot add new variables to the pool;
-        return var_ref_t(var_ref_t::k_invalid_var_ref);
+        return var_ref_t::k_invalid_var_ref;
       }
 
       m_pool.emplace_back(std::make_unique<T>(std::forward<Args>(args)...));

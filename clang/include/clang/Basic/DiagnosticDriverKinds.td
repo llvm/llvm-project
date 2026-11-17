@@ -443,11 +443,14 @@ def err_drv_negative_columns : Error<
   "invalid value '%1' in '%0', value must be 'none' or a positive integer">;
 def err_drv_small_columns : Error<
   "invalid value '%1' in '%0', value must be '%2' or greater">;
+def err_drv_large_columns : Error<
+  "invalid value '%1' in '%0', value must be '%2' or smaller">;
 def warn_drv_fraw_string_literals_in_cxx11 : Warning<
   "ignoring '-f%select{no-|}0raw-string-literals', which is only valid for C and C++ standards before C++11">,
   InGroup<UnusedCommandLineArgument>;
 
-def err_drv_libclc_not_found : Error<"no libclc library '%0' found in the clang resource directory">;
+def err_drv_device_lib_not_found : Error<
+  "no %0 library '%1' found in the clang resource directory">;
 
 def err_drv_invalid_malign_branch_EQ : Error<
   "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;
@@ -487,9 +490,6 @@ def warn_drv_dwarf_version_limited_by_target : Warning<
   InGroup<UnsupportedTargetOpt>;
 def warn_c_kext : Warning<
   "ignoring -fapple-kext which is valid for C++ and Objective-C++ only">;
-def warn_ignoring_fdiscard_for_bitcode : Warning<
-  "ignoring -fdiscard-value-names for LLVM Bitcode">,
-  InGroup<UnusedCommandLineArgument>;
 def warn_drv_input_file_unused : Warning<
   "%0: '%1' input unused%select{ when '%3' is present|}2">,
   InGroup<UnusedCommandLineArgument>;
@@ -564,6 +564,8 @@ def warn_incompatible_sysroot : Warning<"using sysroot for '%0' but targeting '%
   InGroup<DiagGroup<"incompatible-sysroot">>;
 def warn_debug_compression_unavailable : Warning<"cannot compress debug sections (%0 not enabled)">,
   InGroup<DiagGroup<"debug-compression-unavailable">>;
+def err_drv_time_trace_compression_unavailable
+    : Error<"cannot compress time trace (%0 not enabled)">;
 def warn_drv_disabling_vptr_no_rtti_default : Warning<
   "implicitly disabling vptr sanitizer because rtti wasn't enabled">,
   InGroup<AutoDisableVptrSanitizer>;
@@ -576,6 +578,8 @@ def warn_ignoring_verify_debuginfo_preserve_export : Warning<
   InGroup<UnusedCommandLineArgument>;
 def warn_unsupported_branch_protection: Warning <
   "invalid branch protection option '%0' in '%1'">, InGroup<BranchProtection>;
+def warn_harden_pac_ret_requires_pac_ret: Warning<
+  "ignoring '-mharden-pac-ret' as it requires return address signing">, InGroup<UnusedCommandLineArgument>;
 def err_sls_hardening_arm_not_supported : Error<
   "-mharden-sls is only supported on armv7-a or later">;
 def warn_drv_large_data_threshold_invalid_code_model: Warning<

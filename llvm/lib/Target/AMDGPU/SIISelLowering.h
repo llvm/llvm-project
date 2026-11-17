@@ -19,6 +19,7 @@
 #include "SIDefines.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include <bitset>
 
 namespace llvm {
 
@@ -27,12 +28,18 @@ class SIMachineFunctionInfo;
 class SIRegisterInfo;
 
 namespace AMDGPU {
+struct BufferIntrinsicInfo;
 struct ImageDimIntrinsicInfo;
 }
 
 class SITargetLowering final : public AMDGPUTargetLowering {
 private:
   const GCNSubtarget *Subtarget;
+
+  /// Result types made Custom for ISD::INTRINSIC_W_CHAIN only so that
+  /// unsupported s_buffer_load result types can be diagnosed. Any other
+  /// intrinsic returning one of these must keep using generic legalization.
+  std::bitset<MVT::VALUETYPE_SIZE> SBufferLoadDiagnosticVTs;
 
 public:
   MVT getRegisterTypeForCallingConv(LLVMContext &Context,
@@ -47,6 +54,8 @@ public:
     unsigned &NumIntermediates, MVT &RegisterVT) const override;
 
   MachinePointerInfo getKernargSegmentPtrInfo(MachineFunction &MF) const;
+
+  bool isUniformLoad(const LoadSDNode *Load) const;
 
 private:
   SDValue lowerKernArgParameterPtr(SelectionDAG &DAG, const SDLoc &SL,
@@ -90,10 +99,17 @@ private:
                        SDValue Offset, SDValue CachePolicy, SelectionDAG &DAG,
                        MachineMemOperand *MMO = nullptr) const;
 
-  SDValue lowerRawBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
-                                     unsigned NewOpcode) const;
-  SDValue lowerStructBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
-                                        unsigned NewOpcode) const;
+  SmallVector<SDValue, 10>
+  getBufferIntrinsicOps(SDValue Op, const AMDGPU::BufferIntrinsicInfo &Info,
+                        SelectionDAG &DAG, SDValue VData = SDValue()) const;
+  SDValue lowerBufferIntrinsicWithChain(SDValue Op,
+                                        const AMDGPU::BufferIntrinsicInfo &Info,
+                                        SelectionDAG &DAG) const;
+  SDValue lowerBufferIntrinsicVoid(SDValue Op,
+                                   const AMDGPU::BufferIntrinsicInfo &Info,
+                                   SelectionDAG &DAG) const;
+  SDValue lowerBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
+                                  unsigned NewOpcode) const;
 
   SDValue lowerWaveID(SelectionDAG &DAG, SDValue Op) const;
   SDValue lowerConstHwRegRead(SelectionDAG &DAG, SDValue Op,
@@ -140,8 +156,8 @@ private:
   SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const;
-  SDValue adjustLoadValueType(unsigned Opcode, MemSDNode *M,
-                              SelectionDAG &DAG, ArrayRef<SDValue> Ops,
+  SDValue adjustLoadValueType(unsigned Opcode, MemSDNode *M, SelectionDAG &DAG,
+                              ArrayRef<SDValue> Ops,
                               bool IsIntrinsic = false) const;
 
   SDValue lowerIntrinsicLoad(MemSDNode *M, bool IsFormat, SelectionDAG &DAG,
@@ -180,6 +196,8 @@ private:
   SDValue lowerXMULO(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerXMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue getBaseSegmentAperture(unsigned AS, const SDLoc &DL,
+                                 SelectionDAG &DAG) const;
   SDValue getSegmentAperture(unsigned AS, const SDLoc &DL,
                              SelectionDAG &DAG) const;
 
@@ -219,6 +237,7 @@ private:
   SDValue performOrCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performXorCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performZeroOrAnyExtendCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performExtendTruncShiftCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSignExtendInRegCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performClassCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue getCanonicalConstantFP(SelectionDAG &DAG, const SDLoc &SL, EVT VT,
@@ -234,6 +253,8 @@ private:
   SDValue performMinMaxCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFMed3Combine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performCvtPkRTZCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performExponentOnlyScaleCombine(SDNode *N,
+                                          DAGCombinerInfo &DCI) const;
   SDValue performExtractVectorEltCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performInsertVectorEltCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFPRoundCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -355,10 +376,6 @@ public:
                           MachineFunction &MF,
                           unsigned IntrinsicID) const override;
 
-  void CollectTargetIntrinsicOperands(const CallInst &I,
-                                      SmallVectorImpl<SDValue> &Ops,
-                                      SelectionDAG &DAG) const override;
-
   bool getAddrModeArguments(const IntrinsicInst *I,
                             SmallVectorImpl<Value *> &Ops,
                             Type *&AccessTy) const override;
@@ -399,7 +416,8 @@ public:
 
   static bool isNonGlobalAddrSpace(unsigned AS);
 
-  bool isFreeAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
+  bool isFreeAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                           unsigned DestAS) const override;
 
   TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(MVT VT) const override;
@@ -412,6 +430,7 @@ public:
   bool isExtractVecEltCheap(EVT VT, unsigned Index) const override;
 
   bool isTypeDesirableForOp(unsigned Op, EVT VT) const override;
+  bool isTypeDesirableForOp(SDNode *N, EVT VT) const override;
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
@@ -543,6 +562,8 @@ public:
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
   ConstraintType getConstraintType(StringRef Constraint) const override;
+  InlineAsm::ConstraintCode
+  getInlineAsmMemConstraint(StringRef ConstraintCode) const override;
   void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
@@ -617,14 +638,13 @@ public:
   void emitExpandAtomicLoad(LoadInst *LI) const override;
   void emitExpandAtomicStore(StoreInst *SI) const override;
 
-  LoadInst *
-  lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;
-
   const TargetRegisterClass *getRegClassFor(MVT VT,
                                             bool isDivergent) const override;
   bool requiresUniformRegister(MachineFunction &MF,
                                const Value *V) const override;
-  Align getPrefLoopAlignment(MachineLoop *ML) const override;
+  Align
+  getPrefLoopAlignment(MachineLoop *ML,
+                       const MachineBasicBlock *BlockToAlign) const override;
   unsigned
   getMaxPermittedBytesForAlignment(MachineBasicBlock *MBB) const override;
 
@@ -660,10 +680,6 @@ public:
     const SIRegisterInfo &TRI,
     SIMachineFunctionInfo &Info) const;
 
-  void allocateSpecialInputVGPRs(CCState &CCInfo,
-                                 MachineFunction &MF,
-                                 const SIRegisterInfo &TRI,
-                                 SIMachineFunctionInfo &Info) const;
   void allocateSpecialInputVGPRsFixed(CCState &CCInfo,
                                       MachineFunction &MF,
                                       const SIRegisterInfo &TRI,

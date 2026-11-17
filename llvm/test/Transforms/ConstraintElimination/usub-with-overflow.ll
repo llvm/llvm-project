@@ -9,11 +9,9 @@ define i8 @usub_no_overflow_due_to_cmp_condition(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[MATH:%.*]], label [[EXIT_FAIL:%.*]]
 ; CHECK:       math:
-; CHECK-NEXT:    [[OP:%.*]] = tail call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[B]], i8 [[A]])
-; CHECK-NEXT:    [[STATUS:%.*]] = extractvalue { i8, i1 } [[OP]], 1
-; CHECK-NEXT:    br i1 [[STATUS]], label [[EXIT_FAIL]], label [[EXIT_OK:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = sub nuw i8 [[B]], [[A]]
+; CHECK-NEXT:    br i1 false, label [[EXIT_FAIL]], label [[EXIT_OK:%.*]]
 ; CHECK:       exit.ok:
-; CHECK-NEXT:    [[RES:%.*]] = extractvalue { i8, i1 } [[OP]], 0
 ; CHECK-NEXT:    ret i8 [[RES]]
 ; CHECK:       exit.fail:
 ; CHECK-NEXT:    ret i8 0
@@ -41,11 +39,9 @@ define i8 @usub_no_overflow_due_to_cmp_condition2(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_FAIL:%.*]], label [[MATH:%.*]]
 ; CHECK:       math:
-; CHECK-NEXT:    [[OP:%.*]] = tail call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[B]], i8 [[A]])
-; CHECK-NEXT:    [[STATUS:%.*]] = extractvalue { i8, i1 } [[OP]], 1
-; CHECK-NEXT:    br i1 [[STATUS]], label [[EXIT_FAIL]], label [[EXIT_OK:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = sub nuw i8 [[B]], [[A]]
+; CHECK-NEXT:    br i1 false, label [[EXIT_FAIL]], label [[EXIT_OK:%.*]]
 ; CHECK:       exit.ok:
-; CHECK-NEXT:    [[RES:%.*]] = extractvalue { i8, i1 } [[OP]], 0
 ; CHECK-NEXT:    ret i8 [[RES]]
 ; CHECK:       exit.fail:
 ; CHECK-NEXT:    ret i8 0
@@ -75,12 +71,11 @@ define i8 @sub_no_overflow_due_to_cmp_condition_result_used(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_FAIL:%.*]], label [[MATH:%.*]]
 ; CHECK:       math:
+; CHECK-NEXT:    [[RES:%.*]] = sub nuw i8 [[B]], [[A]]
 ; CHECK-NEXT:    [[OP:%.*]] = tail call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[B]], i8 [[A]])
 ; CHECK-NEXT:    call void @use_res({ i8, i1 } [[OP]])
-; CHECK-NEXT:    [[STATUS:%.*]] = extractvalue { i8, i1 } [[OP]], 1
-; CHECK-NEXT:    br i1 [[STATUS]], label [[EXIT_FAIL]], label [[EXIT_OK:%.*]]
+; CHECK-NEXT:    br i1 false, label [[EXIT_FAIL]], label [[EXIT_OK:%.*]]
 ; CHECK:       exit.ok:
-; CHECK-NEXT:    [[RES:%.*]] = extractvalue { i8, i1 } [[OP]], 0
 ; CHECK-NEXT:    ret i8 [[RES]]
 ; CHECK:       exit.fail:
 ; CHECK-NEXT:    ret i8 0
@@ -111,11 +106,9 @@ define i8 @usub_no_overflow_due_to_or_conds(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 [[C_2]], [[C_1]]
 ; CHECK-NEXT:    br i1 [[OR]], label [[EXIT_FAIL:%.*]], label [[MATH:%.*]]
 ; CHECK:       math:
-; CHECK-NEXT:    [[OP:%.*]] = tail call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[B]], i8 [[A]])
-; CHECK-NEXT:    [[STATUS:%.*]] = extractvalue { i8, i1 } [[OP]], 1
-; CHECK-NEXT:    br i1 [[STATUS]], label [[EXIT_FAIL]], label [[EXIT_OK:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = sub nuw i8 [[B]], [[A]]
+; CHECK-NEXT:    br i1 false, label [[EXIT_FAIL]], label [[EXIT_OK:%.*]]
 ; CHECK:       exit.ok:
-; CHECK-NEXT:    [[RES:%.*]] = extractvalue { i8, i1 } [[OP]], 0
 ; CHECK-NEXT:    ret i8 [[RES]]
 ; CHECK:       exit.fail:
 ; CHECK-NEXT:    ret i8 0
@@ -147,9 +140,7 @@ define i8 @usub_no_overflow_due_to_or_conds_sub_result_not_used(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 [[C_2]], [[C_1]]
 ; CHECK-NEXT:    br i1 [[OR]], label [[EXIT_FAIL:%.*]], label [[MATH:%.*]]
 ; CHECK:       math:
-; CHECK-NEXT:    [[OP:%.*]] = tail call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[B]], i8 [[A]])
-; CHECK-NEXT:    [[STATUS:%.*]] = extractvalue { i8, i1 } [[OP]], 1
-; CHECK-NEXT:    br i1 [[STATUS]], label [[EXIT_FAIL]], label [[EXIT_OK:%.*]]
+; CHECK-NEXT:    br i1 false, label [[EXIT_FAIL]], label [[EXIT_OK:%.*]]
 ; CHECK:       exit.ok:
 ; CHECK-NEXT:    ret i8 20
 ; CHECK:       exit.fail:
@@ -181,11 +172,9 @@ define i8 @usub_no_overflow_due_to_and_conds(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_1]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[MATH:%.*]], label [[EXIT_FAIL:%.*]]
 ; CHECK:       math:
-; CHECK-NEXT:    [[OP:%.*]] = tail call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[B]], i8 [[A]])
-; CHECK-NEXT:    [[STATUS:%.*]] = extractvalue { i8, i1 } [[OP]], 1
-; CHECK-NEXT:    br i1 [[STATUS]], label [[EXIT_FAIL]], label [[EXIT_OK:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = sub nuw i8 [[B]], [[A]]
+; CHECK-NEXT:    br i1 false, label [[EXIT_FAIL]], label [[EXIT_OK:%.*]]
 ; CHECK:       exit.ok:
-; CHECK-NEXT:    [[RES:%.*]] = extractvalue { i8, i1 } [[OP]], 0
 ; CHECK-NEXT:    ret i8 [[RES]]
 ; CHECK:       exit.fail:
 ; CHECK-NEXT:    ret i8 0
@@ -304,3 +293,34 @@ exit.fail:
   ret i8 0
 }
 
+
+declare void @use(i1)
+
+; The result is only used on the no-overflow edge, so it is %a - %b there.
+define void @usub_result_guarded(i8 %a, i8 %b) {
+; CHECK-LABEL: @usub_result_guarded(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[WO:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[WO]], 1
+; CHECK-NEXT:    br i1 [[OV]], label [[EXIT:%.*]], label [[NO_OV:%.*]]
+; CHECK:       no.ov:
+; CHECK-NEXT:    [[S:%.*]] = extractvalue { i8, i1 } [[WO]], 0
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %wo = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 %a, i8 %b)
+  %ov = extractvalue { i8, i1 } %wo, 1
+  br i1 %ov, label %exit, label %no.ov
+
+no.ov:
+  %s = extractvalue { i8, i1 } %wo, 0
+  %t = icmp ule i8 %s, %a
+  call void @use(i1 %t)
+  ret void
+
+exit:
+  ret void
+}

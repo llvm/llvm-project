@@ -46,6 +46,11 @@ def Doopf1 : Flag<["-"], "doopf1">, HelpText<"The doopf1 option">, Flags<[OptFla
 def Doopf2 : Flag<["-"], "doopf2">, HelpText<"The doopf2 option">, Flags<[OptFlag2]>;
 def Xyzzy1 : Flag<["-"], "xyzzy1">, HelpText<"The xyzzy1 option">, Visibility<[SubtoolVis]>;
 def Xyzzy2 : Flag<["-"], "xyzzy2">, HelpText<"The xyzzy2 option">, Visibility<[DefaultVis]>;
+def Xyzzy3 : Flag<["-"], "xyzzy3">, HelpText<"The xyzzy3 option"> {
+  let HelpTextsForVariants = [
+    HelpTextVariant<[SubtoolVis], "The xyzzy3 option for the subtool">,
+    HelpTextVariant<[MultiLineVis], "The xyzzy3 option for multiline">];
+}
 def Ermgh : Joined<["--"], "ermgh">, HelpText<"The ermgh option">, MetaVarName<"ERMGH">, Flags<[OptFlag1]>;
 def Fjormp : Flag<["--"], "fjormp">, HelpText<"The fjormp option">, Flags<[OptFlag1]>;
 

@@ -23,6 +23,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StringPool.h"
 #include "lldb/ValueObject/ValueObjectList.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
 
@@ -189,7 +190,7 @@ const char *SBModule::GetUUIDString() const {
   // then we don't need to worry about the lifetime of the string as it will
   // never go away once it has been put into the ConstString string pool
   const char *uuid_cstr =
-      ConstString(module_sp->GetUUID().GetAsString()).GetCString();
+      StringPool::GetSystemPool().Intern(module_sp->GetUUID().GetAsString());
   // Note: SBModule::GetUUIDString's expected behavior is to return nullptr if
   // the string we get is empty, so we must perform this check before returning.
   if (uuid_cstr && uuid_cstr[0])
@@ -303,6 +304,14 @@ size_t SBModule::GetNumSymbols() {
   if (Symtab *symtab = GetUnifiedSymbolTable(module_sp))
     return symtab->GetNumSymbols();
   return 0;
+}
+
+uint32_t SBModule::GetSymtabState() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (ModuleSP module_sp = GetSP())
+    return module_sp->GetSymtabState();
+  return eSymtabStateNone;
 }
 
 SBSymbol SBModule::GetSymbolAtIndex(size_t idx) {
@@ -692,5 +701,5 @@ const char *SBModule::GetObjectName() const {
 
   if (!m_opaque_sp)
     return nullptr;
-  return m_opaque_sp->GetObjectName().AsCString(nullptr);
+  return ConstString(m_opaque_sp->GetObjectName()).AsCString(nullptr);
 }

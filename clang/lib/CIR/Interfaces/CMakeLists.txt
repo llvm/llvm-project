@@ -8,13 +8,11 @@ add_clang_library(MLIRCIRInterfaces
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
 
   DEPENDS
-  MLIRCIRASTAttrInterfacesIncGen
   MLIRCIREnumsGen
-  MLIRCIRTypeInterfacesIncGen
-  MLIRCIRLoopOpInterfaceIncGen
-  MLIRCIROpInterfacesIncGen
+  mlir-headers
 
   LINK_LIBS
   MLIRIR
+  MLIRPtrMemorySpaceInterfaces
   MLIRSupport
  )

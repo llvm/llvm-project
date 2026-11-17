@@ -8,7 +8,8 @@
 ; RUN:   -r %t.o,foo,plx \
 ; RUN:   -r %t.o,memcmp,x \
 ; RUN:   -r %t.o,bcmp,pl \
-; RUN:   -r %t.o,bcmp_impl,x %t.o -save-temps
+; RUN:   -r %t.o,bcmp_impl,x \
+; RUN:   -r %t.o,_Unwind_Resume,pl %t.o -save-temps
 ; RUN: llvm-dis %t.lto.o.0.4.opt.bc -o - | FileCheck %s
 
 define i1 @foo(ptr %0, ptr %1, i64 %2) {
@@ -25,10 +26,16 @@ define i1 @foo(ptr %0, ptr %1, i64 %2) {
 declare i32 @memcmp(ptr, ptr, i64)
 declare i32 @bcmp_impl(ptr, ptr, i64)
 
-;; Ensure bcmp is not removed from module because it is external.
+;; Ensure bcmp and _Unwind_Resume are not removed from module
+;; because they are external libcalls.
 ; CHECK: define dso_local i32 @bcmp
 define i32 @bcmp(ptr %0, ptr %1, i64 %2) noinline {
   %r = call i32 @bcmp_impl(ptr %0, ptr %1, i64 %2)
   ret i32 %r
+}
+
+; CHECK: define dso_local void @_Unwind_Resume
+define void @_Unwind_Resume(ptr %0) noinline {
+  ret void
 }
 

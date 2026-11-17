@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator.h"
+#include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_report.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "tsan_interceptors.h"
@@ -43,19 +44,23 @@ DECLARE_REAL(void, free, void *ptr)
   invoke_malloc_hook(p, size);  \
   return p;
 
-#define OPERATOR_NEW_BODY_ALIGN(mangled_name, nothrow) \
-  if (in_symbolizer()) \
-    return InternalAlloc(size, nullptr, (uptr)align); \
-  void *p = 0; \
-  {  \
-    SCOPED_INTERCEPTOR_RAW(mangled_name, size); \
-    p = user_memalign(thr, pc, (uptr)align, size); \
-    if (!nothrow && UNLIKELY(!p)) { \
-      GET_STACK_TRACE_FATAL(thr, pc); \
-      ReportOutOfMemory(size, &stack); \
-    } \
-  }  \
-  invoke_malloc_hook(p, size);  \
+#define OPERATOR_NEW_BODY_ALIGN(mangled_name, nothrow)       \
+  if (in_symbolizer())                                       \
+    return InternalAlloc(size, nullptr, (uptr)align);        \
+  void* p = 0;                                               \
+  {                                                          \
+    SCOPED_INTERCEPTOR_RAW(mangled_name, size);              \
+    if (UNLIKELY(!CheckAlignedNewAlignment((uptr)align))) {  \
+      GET_STACK_TRACE_FATAL(thr, pc);                        \
+      ReportInvalidAllocationAlignment((uptr)align, &stack); \
+    }                                                        \
+    p = user_memalign(thr, pc, (uptr)align, size);           \
+    if (!nothrow && UNLIKELY(!p)) {                          \
+      GET_STACK_TRACE_FATAL(thr, pc);                        \
+      ReportOutOfMemory(size, &stack);                       \
+    }                                                        \
+  }                                                          \
+  invoke_malloc_hook(p, size);                               \
   return p;
 
 SANITIZER_INTERFACE_ATTRIBUTE

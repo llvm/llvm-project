@@ -699,6 +699,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(amdgpu_gfx_whole_wave);
   KEYWORD(tailcc);
   KEYWORD(m68k_rtdcc);
+  KEYWORD(wasm_emscripten_invokecc);
   KEYWORD(graalcc);
   KEYWORD(riscv_vector_cc);
   KEYWORD(riscv_vls_cc);
@@ -816,6 +817,8 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(summaries);
   KEYWORD(flags);
   KEYWORD(blockcount);
+  KEYWORD(cfiFunctionDefs);
+  KEYWORD(cfiFunctionDecls);
   KEYWORD(linkage);
   KEYWORD(visibility);
   KEYWORD(notEligibleToImport);
@@ -848,6 +851,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(critical);
   // Deprecated, keep in order to support old files.
   KEYWORD(relbf);
+  KEYWORD(indirect);
   KEYWORD(variable);
   KEYWORD(vTableFuncs);
   KEYWORD(virtFunc);
@@ -883,6 +887,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(indir);
   KEYWORD(singleImpl);
   KEYWORD(branchFunnel);
+  KEYWORD(speculative);
   KEYWORD(singleImplName);
   KEYWORD(resByArg);
   KEYWORD(byArg);
@@ -900,6 +905,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(versions);
   KEYWORD(memProf);
   KEYWORD(notcold);
+  KEYWORD(ambiguous);
 
 #undef KEYWORD
 
@@ -995,6 +1001,8 @@ lltok::Kind LLLexer::LexIdentifier() {
   INSTKEYWORD(cleanuppad,   CleanupPad);
 
   INSTKEYWORD(freeze,       Freeze);
+  INSTKEYWORD(bitinsert, BitInsert);
+  INSTKEYWORD(bitextract, BitExtract);
 
 #undef INSTKEYWORD
 

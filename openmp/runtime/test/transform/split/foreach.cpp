@@ -1,4 +1,5 @@
-// RUN: %libomp-cxx-compile-and-run | FileCheck %s --match-full-lines
+// RUN: %libomp-cxx-compile -fopenmp-version=60 && %libomp-run \
+// RUN:   | FileCheck %s --match-full-lines
 
 #include <cstdlib>
 #include <cstdio>

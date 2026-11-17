@@ -101,8 +101,8 @@ define fastcc <256 x i1> @load__vm256_stk() {
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -224(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB0_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB0_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -111,7 +111,7 @@ define fastcc <256 x i1> @load__vm256_stk() {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:  .LBB0_1:
 ; CHECK-NEXT:    ld %s16, 192(, %s11)
 ; CHECK-NEXT:    lvm %vm1, 0, %s16
 ; CHECK-NEXT:    ld %s16, 200(, %s11)
@@ -146,8 +146,8 @@ define fastcc <256 x i1> @load__vm256_stk_big_fit() {
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -2147483648(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB1_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB1_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -156,7 +156,7 @@ define fastcc <256 x i1> @load__vm256_stk_big_fit() {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB1_4:
+; CHECK-NEXT:  .LBB1_3:
 ; CHECK-NEXT:    ld %s16, 2147483616(, %s11)
 ; CHECK-NEXT:    lvm %vm1, 0, %s16
 ; CHECK-NEXT:    ld %s16, 2147483624(, %s11)
@@ -208,8 +208,8 @@ define fastcc <256 x i1> @load__vm256_stk_big() {
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s11, -1(%s13, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB2_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB2_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -218,7 +218,7 @@ define fastcc <256 x i1> @load__vm256_stk_big() {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB2_4:
+; CHECK-NEXT:  .LBB2_3:
 ; CHECK-NEXT:    lea %s13, -2147483648
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s13, (%s11, %s13)
@@ -273,8 +273,8 @@ define fastcc <256 x i1> @load__vm256_stk_big2() {
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s11, -1(%s13, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB3_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB3_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -283,7 +283,7 @@ define fastcc <256 x i1> @load__vm256_stk_big2() {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB3_4:
+; CHECK-NEXT:  .LBB3_3:
 ; CHECK-NEXT:    lea %s13, -2147483456
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s13, (%s11, %s13)
@@ -336,8 +336,8 @@ define fastcc <256 x i1> @load__vm256_stk_dyn(i64 noundef %0) {
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -272(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB4_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB4_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -346,7 +346,7 @@ define fastcc <256 x i1> @load__vm256_stk_dyn(i64 noundef %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB4_2:
+; CHECK-NEXT:  .LBB4_1:
 ; CHECK-NEXT:    sll %s0, %s0, 5
 ; CHECK-NEXT:    lea %s1, __ve_grow_stack@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
@@ -389,8 +389,8 @@ define fastcc <256 x i1> @load__vm256_stk_dyn_align(i64 noundef %0) {
 ; CHECK-NEXT:    lea %s11, -288(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
 ; CHECK-NEXT:    or %s17, 0, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB5_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB5_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -399,7 +399,7 @@ define fastcc <256 x i1> @load__vm256_stk_dyn_align(i64 noundef %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB5_2:
+; CHECK-NEXT:  .LBB5_1:
 ; CHECK-NEXT:    sll %s0, %s0, 5
 ; CHECK-NEXT:    lea %s1, __ve_grow_stack@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
@@ -443,8 +443,8 @@ define fastcc <256 x i1> @load__vm256_stk_dyn_align2(i64 noundef %0) {
 ; CHECK-NEXT:    lea %s11, -320(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (58)1
 ; CHECK-NEXT:    or %s17, 0, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB6_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB6_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -453,7 +453,7 @@ define fastcc <256 x i1> @load__vm256_stk_dyn_align2(i64 noundef %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB6_2:
+; CHECK-NEXT:  .LBB6_1:
 ; CHECK-NEXT:    sll %s0, %s0, 5
 ; CHECK-NEXT:    lea %s1, __ve_grow_stack@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
@@ -509,8 +509,8 @@ define fastcc <256 x i1> @load__vm256_stk_dyn_align_spill(i64 noundef %0) {
 ; CHECK-NEXT:    lea %s11, -320(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
 ; CHECK-NEXT:    or %s17, 0, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB7_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB7_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -519,7 +519,7 @@ define fastcc <256 x i1> @load__vm256_stk_dyn_align_spill(i64 noundef %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB7_2:
+; CHECK-NEXT:  .LBB7_1:
 ; CHECK-NEXT:    st %s18, 48(, %s9) # 8-byte Folded Spill
 ; CHECK-NEXT:    or %s18, 0, %s0
 ; CHECK-NEXT:    lea %s0, 15(, %s0)
@@ -596,8 +596,8 @@ define fastcc <512 x i1> @load__vm512_stk() {
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -256(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (58)1
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB8_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB8_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -606,7 +606,7 @@ define fastcc <512 x i1> @load__vm512_stk() {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB8_2:
+; CHECK-NEXT:  .LBB8_1:
 ; CHECK-NEXT:    # implicit-def: $vmp1
 ; CHECK-NEXT:    ld %s16, 192(, %s11)
 ; CHECK-NEXT:    lvm %vm3, 0, %s16
@@ -644,8 +644,8 @@ define fastcc <512 x i1> @load__vm512_stk_big_fit() {
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -2147483648(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (58)1
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB9_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB9_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -654,7 +654,7 @@ define fastcc <512 x i1> @load__vm512_stk_big_fit() {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB9_4:
+; CHECK-NEXT:  .LBB9_3:
 ; CHECK-NEXT:    # implicit-def: $vmp1
 ; CHECK-NEXT:    ld %s16, 2147483584(, %s11)
 ; CHECK-NEXT:    lvm %vm3, 0, %s16
@@ -715,8 +715,8 @@ define fastcc <512 x i1> @load__vm512_stk_big() {
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s11, -1(%s13, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (58)1
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB10_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB10_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -725,7 +725,7 @@ define fastcc <512 x i1> @load__vm512_stk_big() {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB10_4:
+; CHECK-NEXT:  .LBB10_3:
 ; CHECK-NEXT:    lea %s13, -2147483648
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s13, (%s11, %s13)
@@ -789,8 +789,8 @@ define fastcc <512 x i1> @load__vm512_stk_big2() {
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s11, -1(%s13, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (58)1
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB11_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB11_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -799,7 +799,7 @@ define fastcc <512 x i1> @load__vm512_stk_big2() {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB11_4:
+; CHECK-NEXT:  .LBB11_3:
 ; CHECK-NEXT:    lea %s13, -2147483456
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s13, (%s11, %s13)
@@ -864,8 +864,8 @@ define fastcc <512 x i1> @load__vm512_stk_dyn(i64 noundef %0) {
 ; CHECK-NEXT:    lea %s11, -320(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (58)1
 ; CHECK-NEXT:    or %s17, 0, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB12_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB12_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -874,7 +874,7 @@ define fastcc <512 x i1> @load__vm512_stk_dyn(i64 noundef %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB12_2:
+; CHECK-NEXT:  .LBB12_1:
 ; CHECK-NEXT:    sll %s0, %s0, 6
 ; CHECK-NEXT:    lea %s1, __ve_grow_stack@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
@@ -931,8 +931,8 @@ define fastcc <512 x i1> @load__vm512_stk_dyn_align(i64 noundef %0) {
 ; CHECK-NEXT:    lea %s11, -320(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
 ; CHECK-NEXT:    or %s17, 0, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB13_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB13_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -941,7 +941,7 @@ define fastcc <512 x i1> @load__vm512_stk_dyn_align(i64 noundef %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB13_2:
+; CHECK-NEXT:  .LBB13_1:
 ; CHECK-NEXT:    sll %s0, %s0, 6
 ; CHECK-NEXT:    lea %s1, __ve_grow_stack@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
@@ -998,8 +998,8 @@ define fastcc <512 x i1> @load__vm512_stk_dyn_align2(i64 noundef %0) {
 ; CHECK-NEXT:    lea %s11, -384(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (58)1
 ; CHECK-NEXT:    or %s17, 0, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB14_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB14_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -1008,7 +1008,7 @@ define fastcc <512 x i1> @load__vm512_stk_dyn_align2(i64 noundef %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB14_2:
+; CHECK-NEXT:  .LBB14_1:
 ; CHECK-NEXT:    sll %s0, %s0, 6
 ; CHECK-NEXT:    lea %s1, __ve_grow_stack@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
@@ -1086,8 +1086,8 @@ define fastcc <512 x i1> @load__vm512_stk_dyn_align_spill(i64 noundef %0) {
 ; CHECK-NEXT:    lea %s11, -384(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
 ; CHECK-NEXT:    or %s17, 0, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB15_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB15_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -1096,7 +1096,7 @@ define fastcc <512 x i1> @load__vm512_stk_dyn_align_spill(i64 noundef %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB15_2:
+; CHECK-NEXT:  .LBB15_1:
 ; CHECK-NEXT:    st %s18, 48(, %s9) # 8-byte Folded Spill
 ; CHECK-NEXT:    or %s18, 0, %s0
 ; CHECK-NEXT:    sll %s0, %s0, 6

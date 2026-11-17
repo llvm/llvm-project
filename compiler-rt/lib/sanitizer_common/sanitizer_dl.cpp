@@ -18,6 +18,9 @@
 #if SANITIZER_GLIBC
 #  include <dlfcn.h>
 #endif
+#if SANITIZER_GLIBC && !SANITIZER_GO
+#  include <resolv.h>
+#endif
 
 namespace __sanitizer {
 extern const char *SanitizerToolName;
@@ -43,6 +46,31 @@ char* DladdrElfHeaderBase(void* ld, char* addr) {
     addr = (char*)info.dli_fbase;
 #endif  // SANITIZER_GLIBC
   return addr;
+}
+
+void ClearDlerror() {
+#if SANITIZER_GLIBC && !SANITIZER_GO
+  // Starting with glibc 2.34
+  // (https://sourceware.org/git/?p=glibc.git;h=fada9018199c), failed dlfcn
+  // calls store a per-thread error struct in TLS (__libc_dlerror_result)
+  // instead of a pthread_key_t, and free it in __libc_thread_freeres() after
+  // pthread TSD destructors have already unregistered the thread from the
+  // sanitizer. Clear dlerror() while the thread is still tracked so that LSan
+  // does not report the pending error buffer as a leak if a leak check runs
+  // before __libc_thread_freeres().
+  dlerror();
+  dlerror();
+  // Similarly, glibc's resolver allocates per-thread nameserver state in _res
+  // (such as _res._u._ext.nsaddrs) and frees it in res_thread_freeres() during
+  // __libc_thread_freeres(), after pthread TSD destructors have already
+  // unregistered the thread. Free it here and reset _res.options (matching
+  // glibc's res_thread_freeres) so LSan does not report it as a leak and any
+  // subsequent TSD destructor using the resolver re-initializes _res cleanly.
+  if (_res.nscount > 0) {
+    res_nclose(&_res);
+    _res.options = 0;
+  }
+#endif
 }
 
 }  // namespace __sanitizer

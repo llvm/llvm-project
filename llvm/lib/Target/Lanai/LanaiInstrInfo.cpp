@@ -99,13 +99,12 @@ bool LanaiInstrInfo::areMemAccessesTriviallyDisjoint(
   // base registers are identical, and the offset of a lower memory access +
   // the width doesn't overlap the offset of a higher memory access,
   // then the memory accesses are different.
-  const TargetRegisterInfo *TRI = &getRegisterInfo();
   const MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
   int64_t OffsetA = 0, OffsetB = 0;
   LocationSize WidthA = LocationSize::precise(0),
                WidthB = LocationSize::precise(0);
-  if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA, TRI) &&
-      getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB, TRI)) {
+  if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA) &&
+      getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB)) {
     if (BaseOpA->isIdenticalTo(*BaseOpB)) {
       int LowOffset = std::min(OffsetA, OffsetB);
       int HighOffset = std::max(OffsetA, OffsetB);
@@ -735,9 +734,10 @@ Register LanaiInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-bool LanaiInstrInfo::getMemOperandWithOffsetWidth(
-    const MachineInstr &LdSt, const MachineOperand *&BaseOp, int64_t &Offset,
-    LocationSize &Width, const TargetRegisterInfo * /*TRI*/) const {
+bool LanaiInstrInfo::getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
+                                                  const MachineOperand *&BaseOp,
+                                                  int64_t &Offset,
+                                                  LocationSize &Width) const {
   // Handle only loads/stores with base register followed by immediate offset
   // and with add as ALU op.
   if (LdSt.getNumOperands() != 4)
@@ -778,8 +778,7 @@ bool LanaiInstrInfo::getMemOperandWithOffsetWidth(
 
 bool LanaiInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
-    const TargetRegisterInfo *TRI) const {
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width) const {
   switch (LdSt.getOpcode()) {
   default:
     return false;
@@ -794,7 +793,7 @@ bool LanaiInstrInfo::getMemOperandsWithOffsetWidth(
   case Lanai::LDBz_RI:
     const MachineOperand *BaseOp;
     OffsetIsScalable = false;
-    if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width, TRI))
+    if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width))
       return false;
     BaseOps.push_back(BaseOp);
     return true;

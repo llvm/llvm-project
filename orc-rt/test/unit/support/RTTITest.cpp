@@ -19,11 +19,20 @@ using namespace orc_rt;
 
 namespace {
 
-class MyBase : public RTTIExtends<MyBase, RTTIRoot> {};
+class MyBase : public RTTIExtends<MyBase, RTTIRoot> {
+public:
+  static constexpr const char *RTTIName = "::MyBase";
+};
 
-class MyDerivedA : public RTTIExtends<MyDerivedA, MyBase> {};
+class MyDerivedA : public RTTIExtends<MyDerivedA, MyBase> {
+public:
+  static constexpr const char *RTTIName = "::MyDerivedA";
+};
 
-class MyDerivedB : public RTTIExtends<MyDerivedB, MyBase> {};
+class MyDerivedB : public RTTIExtends<MyDerivedB, MyBase> {
+public:
+  static constexpr const char *RTTIName = "::MyDerivedB";
+};
 
 } // namespace
 

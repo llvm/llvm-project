@@ -34,7 +34,6 @@
 namespace llvm {
 cl::opt<bool>
     EnableSingleByteCoverage("enable-single-byte-coverage",
-                             llvm::cl::ZeroOrMore,
                              llvm::cl::desc("Enable single byte coverage"),
                              llvm::cl::Hidden, llvm::cl::init(false));
 } // namespace llvm
@@ -618,9 +617,9 @@ struct EmptyCoverageMappingBuilder : public CoverageMappingBuilder {
       : CoverageMappingBuilder(CVM, SM, LangOpts) {}
 
   void VisitDecl(const Decl *D) {
-    if (!D->hasBody())
+    Stmt *Body = D->getBody();
+    if (!Body)
       return;
-    auto Body = D->getBody();
     SourceLocation Start = getStart(Body);
     SourceLocation End = getEnd(Body);
     if (!SM.isWrittenInSameFile(Start, End)) {
