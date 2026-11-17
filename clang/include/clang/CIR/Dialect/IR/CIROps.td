@@ -505,17 +505,11 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
     cast operation. It is an optional `#cir.dyn_cast_info` attribute that is
     only present when the operation models a down-cast or a side-cast.
 
-    The `relative_layout` argument specifies whether the Itanium C++ ABI vtable
-    uses relative layout. It is only meaningful when the operation models a
-    cast-to-complete operation.
-
     Examples:
 
     ```
     %0 = cir.dyn_cast ptr %p : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
-    %1 = cir.dyn_cast ptr relative_layout %p : !cir.ptr<!rec_Base>
-              -> !cir.ptr<!rec_Derived>
-    %2 = cir.dyn_cast ref %r : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
+    %1 = cir.dyn_cast ref %r : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
               #cir.dyn_cast_info<
                 srcRtti = #cir.global_view<@_ZTI4Base> : !cir.ptr<!u8i>,
                 destRtti = #cir.global_view<@_ZTI7Derived> : !cir.ptr<!u8i>,
@@ -529,8 +523,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   let arguments = (ins
     CIR_DynamicCastKindAttr:$kind,
     CIR_PtrToRecordType:$src,
-    OptionalAttr<CIR_DynamicCastInfoAttr>:$info,
-    UnitAttr:$relative_layout
+    OptionalAttr<CIR_DynamicCastInfoAttr>:$info
   );
 
   let results = (outs
@@ -538,7 +531,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   );
 
   let assemblyFormat = [{
-    enum($kind) (`relative_layout` $relative_layout^)? $src
+    enum($kind) $src
     `:` qualified(type($src)) `->` qualified(type($result))
     (qualified($info)^)? attr-dict
   }];
@@ -1128,7 +1121,7 @@ def CIR_ReturnOp : CIR_Op<"return", [
 
 def CIR_IfOp : CIR_RegionBranchOpBase<"if", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
-]> {
+], ["getEntrySuccessorRegions"]> {
   let summary = "the if-then-else operation";
   let description = [{
     The `cir.if` operation represents an if-then-else construct for
@@ -3876,30 +3869,105 @@ def CIR_VTableGetVirtualFnOp : CIR_Op<"vtable.get_virtual_fn", [
 }
 
 //===----------------------------------------------------------------------===//
+// VTableGetOffsetOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableGetOffsetOp : CIR_Op<"vtable.get_offset", [
+  MemoryEffects<[MemRead]>
+]> {
+  let summary = "Get an offset stored in a vtable";
+  let description = [{
+    The `vtable.get_offset` operation reads an offset that is stored in an
+    object's vtable, such as the offset of a virtual base class or a virtual
+    adjustment for a thunk, in an ABI independent way.
+
+    The `vptr` operand must be a `!cir.vptr` value, which would have been
+    returned by a previous call to `cir.vtable.get_vptr`. The `index` operand
+    is the index of the entry in the vtable, counted from the address point.
+    Entries that precede the address point have a negative index.
+
+    The result is the value of the offset, in bytes.
+
+    Example:
+    ```
+    %3 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_D> -> !cir.ptr<!cir.vptr>
+    %4 = cir.load %3 : !cir.ptr<!cir.vptr>, !cir.vptr
+    %5 = cir.vtable.get_offset %4[-4] : !cir.vptr -> !s64i
+    ```
+  }];
+
+  let arguments = (ins CIR_VPtrType:$vptr, I64Attr:$index);
+  let results = (outs CIR_IntType:$result);
+
+  let assemblyFormat = [{
+    $vptr `[` $index `]` attr-dict
+    `:` qualified(type($vptr)) `->` qualified(type($result))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// VTableGetEntryOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableGetEntryOp : CIR_Op<"vtable.get_entry", [
+  MemoryEffects<[MemRead]>
+]> {
+  let summary = "Get a pointer entry from a vtable";
+  let description = [{
+    The `vtable.get_entry` operation reads an entry of an object's vtable that
+    holds a pointer, other than a virtual function. This is an ABI independent
+    abstraction of this operation: how the entry is stored and read is decided
+    when the operation is lowered.
+
+    The `vptr` operand must be a `!cir.vptr` value, which would have been
+    returned by a previous call to `cir.vtable.get_vptr`. The `index` operand
+    is the index of the entry in the vtable, counted from the address point.
+    Entries that precede the address point have a negative index.
+
+    The result is the pointer that the entry holds.
+
+    Example:
+    ```
+    %3 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_A> -> !cir.ptr<!cir.vptr>
+    %4 = cir.load %3 : !cir.ptr<!cir.vptr>, !cir.vptr
+    %5 = cir.vtable.get_entry %4[-1] : !cir.vptr
+                  -> !cir.ptr<!rec_std3A3Atype_info>
+    ```
+  }];
+
+  let arguments = (ins CIR_VPtrType:$vptr, I64Attr:$index);
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    $vptr `[` $index `]` attr-dict
+    `:` qualified(type($vptr)) `->` qualified(type($result))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // VTableGetTypeInfoOp
 //===----------------------------------------------------------------------===//
 
 def CIR_VTableGetTypeInfoOp : CIR_Op<"vtable.get_type_info", [
-  Pure
+  MemoryEffects<[MemRead]>
 ]> {
-  let summary = "Get the address of the type_info from the vtable";
+  let summary = "Get the type_info of an object from its vtable";
   let description = [{
-    The `vtable.get_type_info` operation retreives the address of the dynamic
-    type_info/rtti object from an object's vtable. This is an ABI independent
-    abstraction of this operation.
+    The `vtable.get_type_info` operation retrieves the pointer to the dynamic
+    type_info/rtti object from an object's vtable (__vptr). This is an ABI
+    independent abstraction of this operation: where the entry is, and how it
+    is stored and read, is decided when the operation is lowered.
 
     The `vptr` operand must be a `!cir.vptr` value, which would have been
     returned by a previous call to `cir.vtable.get_vptr`.
 
-    The return type is a loadable pointer to a `type_info` struct.
+    The result is the pointer to the `type_info` struct.
 
     Example:
     ```
     %5 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_A> -> !cir.ptr<!cir.vptr>
     %6 = cir.load align(8) %5 : !cir.ptr<!cir.vptr>, !cir.vptr
-    %7 = cir.vtable.get_type_info %6 : !cir.vptr -> !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>
-    %8 = cir.load align(8) %7 : !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>, !cir.ptr<!rec_std3A3Atype_info>
-
+    %7 = cir.vtable.get_type_info %6 : !cir.vptr -> !cir.ptr<!rec_std3A3Atype_info>
     ```
   }];
 
@@ -5127,17 +5195,20 @@ def CIR_CoroutineOp : CIR_Op<"coroutine", [
 
     - `unwind`: TODO.
 
-    - `destroy`: destroys the coroutine frame (`coro.free` + `delete`).
-      Reached by an explicit `destroy()` call on a suspended handle, by
-      normal completion through `initial_suspend`, `final_suspend`, or
-      by an exception escaping the coroutine. Falls through to `exit`
-      except when reached due to an escaping exception, where it continues
-      propagating that exception instead.
+    - `destroy`: destroys the coroutine state: the promise, then the
+      parameter copies, then the coroutine frame (`coro.free` + `delete`).
+      Reached by an explicit `destroy()` call on a suspended handle, or by
+      normal completion through `initial_suspend` or `final_suspend`, and
+      falls through to `exit`. It runs the destructors unconditionally, so an
+      exception must not reach it. An exception from one of these destructors
+      still destroys the remaining parameter copies and frees the frame before
+      it leaves the op, through `cir.cleanup.scope` operations of kind `all`
+      around them.
 
     - `exit`: the shared return-to-caller path. Reached directly from any
       suspend point that isn't being destroyed (the coroutine is just
-      pausing), and from `destroy` when it was entered via ordinary
-      dispatch. Holds `coro.end` + the actual `cir.return`.
+      pausing), and from `destroy`. Holds `coro.end` + the actual
+      `cir.return`.
 
   }];
 

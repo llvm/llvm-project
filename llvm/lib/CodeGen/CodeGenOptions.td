@@ -15,6 +15,13 @@ defm : ValueField<"propeller-infer-threshold", "float", "0.6f",
   "Threshold for infer stale profile">;
 defm : BoolField<"propeller-match-bbid", "false",
   "Match basic blocks using BBIDs instead of hashes for Propeller inference">;
+let MetaVarName = "<filename>" in
+defm : ValueField<"sample-profile-supplement", "StringRef", "",
+  "Sample profile used to supplement the weights of basic blocks without samples in another profile. "
+  "Currently used with basic-block-sections profile only.">;
+let MetaVarName = "<filename>" in
+defm : ValueField<"sample-profile-supplement-remapping-file", "StringRef", "",
+  "Symbol remapping file for -sample-profile-supplement">;
 
 // CodeGenPrepare.cpp
 defm : BoolField<"bbsections-guided-section-prefix", "true",
@@ -78,6 +85,179 @@ defm : BoolField<"profile-guided-section-prefix", "true",
 defm : BoolField<"profile-unknown-in-special-section", "false",
   "In profiling mode like sampleFDO, if a function doesn't have profile, we cannot tell the function is cold for sure because it may be a function newly added without ever being sampled. "
   "With the flag enabled, compiler can put such profile unknown functions into a special section, so runtime system can choose to handle it in a different way than .text section, to save RAM for example">;
+
+// EarlyIfConversion.cpp
+defm : ValueField<"early-ifcvt-cold-edge-threshold", "unsigned", "1",
+  "Cold edge probability threshold in percent for using no critical-path extension budget (0 disables the threshold)">;
+// Absolute maximum number of instructions allowed per speculated block.
+// This bypasses all other heuristics, so it should be set fairly high.
+defm : ValueField<"early-ifcvt-limit", "unsigned", "30",
+  "Maximum number of instructions per speculated block">;
+defm : ValueField<"early-ifcvt-max-region-instrs", "unsigned", "64",
+  "Limit the number of blocks and instructions examined when searching for calls between a load and the condition it feeds">;
+defm : ValueField<"early-ifcvt-max-steps", "unsigned", "16",
+  "Limit the number of steps taken when searching for a recently loaded value">;
+// Enable analysis of data dependent branches (conditions derived from loads).
+defm : BoolField<"enable-early-ifcvt-data-dependent", "false",
+  "Enable hard-to-predict branch analysis for if-conversion">;
+// Stress testing mode - disable heuristics.
+defm : BoolField<"stress-early-ifcvt", "false",
+  "Turn all knobs to 11">;
+
+// FixupStatepointCallerSaved.cpp
+defm : BoolField<"fixup-allow-gcptr-in-csr", "false",
+  "Allow passing GC Pointer arguments in callee saved registers">;
+// This is purely debugging option.
+// It may be handy for investigating statepoint spilling issues.
+defm : OptionalValueField<"fixup-max-csr-statepoints", "unsigned",
+  "Max number of statepoints allowed to pass GC Ptrs in registers">;
+defm : BoolField<"fixup-scs-enable-copy-propagation", "true",
+  "Enable simple copy propagation during register reloading">;
+defm : BoolField<"fixup-scs-extend-slot-size", "false",
+  "Allow spill in spill slot of greater size than register size">;
+
+// HardwareLoops.cpp
+defm : OptionalBoolField<"force-hardware-loop-guard",
+  "Force generation of loop guard intrinsic">;
+defm : OptionalBoolField<"force-hardware-loop-phi",
+  "Force hardware loop counter to be updated through a phi">;
+defm : OptionalBoolField<"force-hardware-loops",
+  "Force hardware loops intrinsics to be inserted">;
+defm : OptionalBoolField<"force-nested-hardware-loop",
+  "Force allowance of nested hardware loops">;
+defm : OptionalValueField<"hardware-loop-counter-bitwidth", "unsigned",
+  "Set the loop counter bitwidth">;
+defm : OptionalValueField<"hardware-loop-decrement", "unsigned",
+  "Set the loop decrement value">;
+
+// IfConversion.cpp
+defm : BoolField<"ifcvt-branch-fold", "true", "">;
+defm : BoolField<"ifcvt-diamond", "true", "">;
+defm : ValueField<"ifcvt-fn-start", "int", "-1", "">;
+defm : ValueField<"ifcvt-fn-stop", "int", "-1", "">;
+defm : BoolField<"ifcvt-forked-diamond", "true", "">;
+defm : ValueField<"ifcvt-limit", "int", "-1", "">;
+defm : BoolField<"ifcvt-simple", "true", "">;
+defm : BoolField<"ifcvt-simple-false", "true", "">;
+defm : BoolField<"ifcvt-triangle", "true", "">;
+defm : BoolField<"ifcvt-triangle-false", "true", "">;
+defm : BoolField<"ifcvt-triangle-rev", "true", "">;
+// TODO: Remove the old spellings after 2027-05.
+def : AliasOf<"disable-ifcvt-diamond", "ifcvt-diamond=false">;
+def : AliasOf<"disable-ifcvt-forked-diamond", "ifcvt-forked-diamond=false">;
+def : AliasOf<"disable-ifcvt-simple", "ifcvt-simple=false">;
+def : AliasOf<"disable-ifcvt-simple-false", "ifcvt-simple-false=false">;
+def : AliasOf<"disable-ifcvt-triangle", "ifcvt-triangle=false">;
+def : AliasOf<"disable-ifcvt-triangle-false", "ifcvt-triangle-false=false">;
+def : AliasOf<"disable-ifcvt-triangle-rev", "ifcvt-triangle-rev=false">;
+
+// MachineOutliner.cpp
+defm : BoolField<"append-content-hash-outlined-name", "true",
+  "This appends the content hash to the globally outlined function name. It's beneficial for enhancing the precision of the stable hash and for ordering the outlined functions">;
+// Set to true if the user wants the outliner to run on linkonceodr linkage
+// functions. This is false by default because the linker can dedupe linkonceodr
+// functions. Since the outliner is confined to a single module (modulo LTO),
+// this is off by default. It should, however, be the default behaviour in LTO.
+defm : BoolField<"enable-linkonceodr-outlining", "false",
+  "Enable the machine outliner on linkonceodr functions">;
+defm : BoolField<"global-outlining", "true",
+  "Enable global outlining, which generates or uses the codegen data">;
+// Number of times to re-run the outliner. This is not the total number of runs
+// as the outliner will run at least one time. The default value is set to 0,
+// meaning the outliner will run one time and rerun zero times after that.
+defm : ValueField<"machine-outliner-reruns", "unsigned", "0",
+  "Number of times to rerun the outliner after the initial outline">;
+defm : ValueField<"outliner-benefit-threshold", "unsigned", "1",
+  "The minimum size in bytes before an outlining candidate is accepted">;
+defm : BoolField<"outliner-leaf-descendants", "true",
+  "Consider all leaf descendants of internal nodes of the suffix tree as candidates for outlining (if false, only leaf children are considered)">;
+// TODO: Remove the old spelling after 2027-05.
+def : AliasOf<"disable-global-outlining", "global-outlining=false">;
+
+// MachineSink.cpp
+defm : ValueField<"machine-sink-cycle-limit", "unsigned", "50",
+  "The maximum number of instructions considered for cycle sinking">;
+defm : ValueField<"machine-sink-load-blocks-threshold", "unsigned", "20",
+  "Do not try to find alias store for a load if the block number in the straight line is higher than this threshold">;
+defm : ValueField<"machine-sink-load-instrs-threshold", "unsigned", "2000",
+  "Do not try to find alias store for a load if there is a in-path block whose instruction number is higher than this threshold">;
+defm : BoolField<"machine-sink-split", "true",
+  "Split critical edges during machine sinking">;
+defm : ValueField<"machine-sink-split-probability-threshold", "unsigned", "40",
+  "Percentage threshold for splitting single-instruction critical edge. If the branch threshold is higher than this threshold, we allow speculative execution of up to 1 instruction to avoid branching to splitted critical edge">;
+defm : BoolField<"sink-insts-to-avoid-spills", "false",
+  "Sink instructions into cycles to avoid register spills">;
+
+// PeepholeOptimizer.cpp
+// Specify whether or not the value tracking looks through complex
+// instructions. When this is false, the value tracker bails on everything that
+// is not a copy or a bitcast.
+defm : BoolField<"adv-copy-opt", "true",
+  "Enable advanced copy optimization">;
+defm : BoolField<"non-allocatable-phys-copy-opt", "true",
+  "Enable non-allocatable physical register copy optimization">;
+defm : BoolField<"peephole", "true",
+  "Enable the peephole optimizer">;
+defm : ValueField<"recurrence-chain-limit", "unsigned", "3",
+  "Maximum length of recurrence chain when evaluating the benefit of commuting operands">;
+defm : ValueField<"rewrite-phi-limit", "unsigned", "10",
+  "Limit the length of PHI chains to lookup">;
+// TODO: Remove the old spellings after 2027-05.
+def : AliasOf<"disable-adv-copy-opt", "adv-copy-opt=false">;
+def : AliasOf<"disable-non-allocatable-phys-copy-opt", "non-allocatable-phys-copy-opt=false">;
+def : AliasOf<"disable-peephole", "peephole=false">;
+
+// RegisterCoalescer.cpp
+// Temporary flag to test global copy optimization.
+defm : OptionalBoolField<"join-globalcopies",
+  "Coalesce copies that span blocks">;
+defm : BoolField<"join-liveintervals", "true",
+  "Coalesce copies">;
+// Temporary flag to test critical edge unsplitting.
+defm : BoolField<"join-splitedges", "false",
+  "Coalesce copies on split edges">;
+defm : ValueField<"large-interval-freq-threshold", "unsigned", "256",
+  "For a large interval, if it is coalesced with other live intervals many times more than the threshold, stop its coalescing to control the compile time">;
+defm : ValueField<"large-interval-size-threshold", "unsigned", "100",
+  "If the valnos size of an interval is larger than the threshold, it is regarded as a large interval">;
+defm : ValueField<"late-remat-update-threshold", "unsigned", "100",
+  "During rematerialization for a copy, if the def instruction has many other copy uses to be rematerialized, delay the multiple separate live interval update work and do them all at once after all those rematerialization are done. It will save a lot of repeated work">;
+defm : BoolField<"terminal-rule", "true",
+  "Apply the terminal rule">;
+defm : BoolField<"verify-coalescing", "false",
+  "Verify machine instrs before and after register coalescing">;
+
+// SelectOptimize.cpp
+defm : ValueField<"cold-operand-max-cost-multiplier", "unsigned", "1",
+  "Maximum cost multiplier of TCC_expensive for the dependence slice of a cold operand to be considered inexpensive">;
+defm : ValueField<"cold-operand-threshold", "unsigned", "20",
+  "Maximum frequency of path for an operand to be considered cold">;
+defm : ValueField<"mispredict-default-rate", "unsigned", "25",
+  "Default mispredict rate">;
+defm : ValueField<"select-opti-loop-cycle-gain-threshold", "unsigned", "4",
+  "Minimum gain per loop (in cycles) threshold">;
+defm : ValueField<"select-opti-loop-gradient-gain-threshold", "unsigned", "25",
+  "Gradient gain threshold (%)">;
+defm : BoolField<"select-opti-loop-level-heuristics", "true",
+  "Enable loop-level heuristics">;
+defm : ValueField<"select-opti-loop-relative-gain-threshold", "unsigned", "8",
+  "Minimum relative gain per loop threshold (1/X). Defaults to 12.5%">;
+// TODO: Remove the old spelling after 2027-05.
+def : AliasOf<"disable-loop-level-heuristics", "select-opti-loop-level-heuristics=false">;
+
+// TailDuplicator.cpp
+defm : ValueField<"tail-dup-indirect-size", "unsigned", "20",
+  "Maximum instructions to consider tail duplicating blocks that end with indirect branches">;
+defm : ValueField<"tail-dup-limit", "unsigned", "~0U", "">;
+defm : ValueField<"tail-dup-pred-size", "unsigned", "16",
+  "Maximum predecessors (maximum successors at the same time) to consider tail duplicating blocks">;
+// Heuristic for tail duplication.
+defm : ValueField<"tail-dup-size", "unsigned", "2",
+  "Maximum instructions to consider tail duplicating">;
+defm : ValueField<"tail-dup-succ-size", "unsigned", "16",
+  "Maximum successors (maximum predecessors at the same time) to consider tail duplicating blocks">;
+defm : BoolField<"tail-dup-verify", "false",
+  "Verify sanity of PHI instructions during taildup">;
 
 // TargetPassConfig.cpp
 defm : BoolField<"basic-block-section-match-infer", "false",
