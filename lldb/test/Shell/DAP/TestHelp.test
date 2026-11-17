@@ -1,11 +1,28 @@
-# RUN: lldb-dap --help | FileCheck %s
-# CHECK: --connection
-# CHECK: -g
-# CHECK: --help
-# CHECK: -h
-# CHECK: --list-processes
-# CHECK: --platform
-# CHECK: --platform-url
-# CHECK: --repl-mode
-# CHECK: --version
-# CHECK: --wait-for-debugger
+# RUN: lldb-dap --help | FileCheck %s --check-prefix=HELP \
+# RUN:   --implicit-check-not=--comm-file \
+# RUN:   --implicit-check-not=--debugger-pid \
+# RUN:   --implicit-check-not=--launch-target \
+# RUN:   --implicit-check-not=--stdio \
+# RUN:   --implicit-check-not=--wait-for-debugger \
+# RUN:   --implicit-check-not="lldb-dap -g"
+# HELP: --connection
+# HELP: --help
+# HELP: -h
+# HELP: --list-processes
+# HELP: --platform
+# HELP: --platform-url
+# HELP: --repl-mode
+# HELP: --version
+
+# RUN: lldb-dap --help-hidden | FileCheck %s --check-prefix=HIDDEN
+# HIDDEN: --comm-file
+# HIDDEN: --connection
+# HIDDEN: --debugger-pid
+# HIDDEN: -g
+# HIDDEN: --help-hidden
+# HIDDEN: --help
+# HIDDEN: --launch-target
+# HIDDEN: --list-processes
+# HIDDEN: --stdio
+# HIDDEN: --wait-for-debugger
+# HIDDEN: lldb-dap -g

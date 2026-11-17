@@ -71,8 +71,8 @@ bool isReductionCandidate(Instruction *I) {
 
 bool isOrLikeSelect(Instruction *I, const DataLayout &DL, unsigned MaxDepth) {
   Value *Cond, *FalseV, *CmpOp;
-  if (!I->getType()->isIntegerTy() || I->getType()->isIntegerTy(1) ||
-      !match(I, m_Select(m_Value(Cond), m_Value(), m_Value(FalseV))) ||
+  if (!match(I, m_Select(m_Value(Cond), m_Value(), m_Value(FalseV))) ||
+      !I->getType()->isIntegerTy() || I->getType()->isIntegerTy(1) ||
       match(FalseV, m_Zero()) ||
       !match(Cond, m_ICmp(m_Value(CmpOp), m_Constant())))
     return false;

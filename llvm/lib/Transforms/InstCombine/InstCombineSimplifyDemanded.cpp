@@ -2534,7 +2534,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                   Depth + 1))
         return I;
 
-      Known = KnownFPClass::fadd_self(KnownLHS, Mode);
+      Known = KnownFPClass::fadd_self(KnownLHS, RoundingMode::NearestTiesToEven,
+                                      Mode);
       KnownRHS = KnownLHS;
     } else {
       FPClassTest SrcDemandedMask = fcFinite;
@@ -2556,8 +2557,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
 
       Known = I->getOpcode() == Instruction::FAdd
-                  ? KnownFPClass::fadd(KnownLHS, KnownRHS, Mode)
-                  : KnownFPClass::fsub(KnownLHS, KnownRHS, Mode);
+                  ? KnownFPClass::fadd(KnownLHS, KnownRHS,
+                                       RoundingMode::NearestTiesToEven, Mode)
+                  : KnownFPClass::fsub(KnownLHS, KnownRHS,
+                                       RoundingMode::NearestTiesToEven, Mode);
     }
 
     Known.knownNot(~DemandedMask);
@@ -3507,7 +3510,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       Type *EltTy = VTy->getScalarType();
 
       if (EltTy->isIEEELikeFPTy()) {
-        DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+        const fltSemantics &Flt = EltTy->getFltSemantics();
+        DenormalMode Mode = F.getDenormalMode(Flt);
 
         FPClassTest SrcDemandedMask = DemandedMask;
 
@@ -3546,7 +3550,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
           return I;
 
         // Perform the canonicalization to see if this folded to a constant.
-        Known = KnownFPClass::canonicalize(KnownSrc, Mode);
+        Known = KnownFPClass::canonicalize(KnownSrc, Flt, Mode);
         Known.knownNot(~DemandedMask);
 
         if (Constant *SingleVal =

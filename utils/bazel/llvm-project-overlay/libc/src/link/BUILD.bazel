@@ -20,7 +20,7 @@ libc_function(
     srcs = ["_r_debug.cpp"],
     hdrs = ["_r_debug.h"],
     deps = [
-        "//libc:types_struct_r_debug",
+        "//libc/hdr/types:struct_r_debug",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
     ],
