@@ -19374,6 +19374,7 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   if (IsZeroElt || IsAllOnesElt) {
     // Lower insertion of v16i8/v32i8/v64i16 -1 elts as an 'OR' blend.
     // We don't deal with i8 0 since it appears to be handled elsewhere.
+    // Freeze the base element to prevent OR(poison,-1) -> poison folds.
     if (IsAllOnesElt &&
         ((VT == MVT::v16i8 && !Subtarget.hasSSE41()) ||
          ((VT == MVT::v32i8 || VT == MVT::v16i16) && !Subtarget.hasInt256()))) {
@@ -19382,6 +19383,7 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
       SmallVector<SDValue, 8> CstVectorElts(NumElts, ZeroCst);
       CstVectorElts[IdxVal] = OnesCst;
       SDValue CstVector = DAG.getBuildVector(VT, dl, CstVectorElts);
+      N0 = DAG.getFreeze(N0, APInt::getOneBitSet(NumElts, IdxVal));
       return DAG.getNode(ISD::OR, dl, VT, N0, CstVector);
     }
     // See if we can do this more efficiently with a blend shuffle with a
