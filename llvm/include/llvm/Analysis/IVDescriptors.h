@@ -55,6 +55,10 @@ enum class RecurKind {
   FMax,     ///< FP max implemented in terms of select(cmp()).
   FMinNum,  ///< FP min with llvm.minnum semantics including NaNs.
   FMaxNum,  ///< FP max with llvm.maxnum semantics including NaNs.
+  FMinSelect, ///< FP min implemented in terms of select(cmp()) without
+              ///< nnan/nsz, on IEEE types with IEEE denormals.
+  FMaxSelect, ///< FP max implemented in terms of select(cmp()) without
+              ///< nnan/nsz, on IEEE types with IEEE denormals.
   FMinimum, ///< FP min with llvm.minimum semantics
   FMaximum, ///< FP max with llvm.maximum semantics
   FMinimumNum, ///< FP min with llvm.minimumnum semantics
@@ -264,12 +268,19 @@ public:
     return Kind == RecurKind::FMinNum || Kind == RecurKind::FMaxNum;
   }
 
+  /// Returns true if the recurrence kind is a select-based floating-point
+  /// min/max kind without nnan/nsz.
+  static bool isFPMinMaxSelectRecurrenceKind(RecurKind Kind) {
+    return Kind == RecurKind::FMinSelect || Kind == RecurKind::FMaxSelect;
+  }
+
   /// Returns true if the recurrence kind is a floating-point min/max kind.
   static bool isFPMinMaxRecurrenceKind(RecurKind Kind) {
     return Kind == RecurKind::FMin || Kind == RecurKind::FMax ||
            Kind == RecurKind::FMinimum || Kind == RecurKind::FMaximum ||
            Kind == RecurKind::FMinimumNum || Kind == RecurKind::FMaximumNum ||
-           isFPMinMaxNumRecurrenceKind(Kind);
+           isFPMinMaxNumRecurrenceKind(Kind) ||
+           isFPMinMaxSelectRecurrenceKind(Kind);
   }
 
   /// Returns true if the recurrence kind is any min/max kind.
