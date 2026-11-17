@@ -2225,10 +2225,11 @@ operations performed only in one address space:
   the address space that the atomic itself operates on.
 - Similarly, when a `fence` operation specifies a `one-as` syncscope, it
   synchronizes only the effects of memory operations performed in the specified
-  address space, and only when paired with an atomic in the same address space.
+  address spaces, and only when paired with an atomic in one of those address
+  spaces.
 
-The address space of a `fence` instruction with `one-as` sync scope is specified
-via `amdgpu-synchronize-as` MMRAs (see {ref}`amdgpu-fence-as`).
+The address spaces of a `fence` instruction with `one-as` sync scope are
+specified via `amdgpu-synchronize-as` MMRAs (see {ref}`amdgpu-fence-as`).
 
 **Limitations**
 
@@ -8760,8 +8761,8 @@ the terminology used in this section.
 :::
 
 A release fence `FR` *synchronizes-with* an acquire fence `FA` in address
-space *AS* if and only if there exist a barrier *arrive* `A` and barrier *wait*
-`W` such that:
+space *AS* if there exist a barrier *arrive* `A` and barrier *wait* `W` such
+that:
 
 - `FR` is *program-ordered* before `A`.
 - `A` *barrier-executes-before* `W`.
