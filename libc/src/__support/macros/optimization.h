@@ -30,12 +30,15 @@ LIBC_ALWAYS_INLINE constexpr bool expects_bool_condition<bool>(bool value) {
   return value;
 }
 
-template <typename T>
-LIBC_ALWAYS_INLINE constexpr void do_not_optimize(T &) = delete;
+template <typename T> void do_not_optimize_impl(T &) = delete;
 
 // Zero-cost SSA value barrier for float and double: keeps `val` in its native
 // register class without spilling to memory or moving across GPR/FPR banks,
 // while preventing the optimizer from looking through or duplicating `val`.
+// Kept in non-constexpr helpers because C++17 rejects inline `asm` statements
+// directly inside `constexpr` functions (`-Wc++20-extensions`). Skipped on
+// `cl.exe` (`LIBC_COMPILER_IS_MSVC`, which excludes `clang-cl`) because MSVC
+// does not support GNU extended `asm` register constraints.
 LIBC_ALWAYS_INLINE void do_not_optimize_impl(LIBC_UNUSED float &val) {
 #if !defined(LIBC_COMPILER_IS_MSVC)
 #if defined(LIBC_TARGET_CPU_HAS_ARM_FPU_FLOAT)
@@ -78,16 +81,8 @@ LIBC_ALWAYS_INLINE void do_not_optimize_impl(LIBC_UNUSED double &val) {
 #endif // !LIBC_COMPILER_IS_MSVC
 }
 
-template <>
-LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT void do_not_optimize(float &val) {
-#if LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED
-  if (!__builtin_is_constant_evaluated())
-#endif
-    do_not_optimize_impl(val);
-}
-
-template <>
-LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT void do_not_optimize(double &val) {
+template <typename T>
+LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT void do_not_optimize(T &val) {
 #if LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED
   if (!__builtin_is_constant_evaluated())
 #endif
