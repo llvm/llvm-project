@@ -135,6 +135,7 @@ ErrorOr<ExprId> derivative(ExprId id, char c, ExprPool &pool,
     return pool.make_concat(*d_body, *tail);
   }
   }
+  LIBC_ASSERT(false);
   __builtin_unreachable();
 }
 
