@@ -864,7 +864,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
           // looked up, etc, inside the #elif expression.
           assert(CurPPLexer->LexingRawMode && "We have to be skipping here!");
           CurPPLexer->LexingRawMode = false;
-          IdentifierInfo *IfNDefMacro = nullptr;
+          IdentifierLoc IfNDefMacro;
           DirectiveEvalResult DER = EvaluateDirectiveExpression(IfNDefMacro);
           // Stop if Lexer became invalid after hitting code completion token.
           if (!CurPPLexer)
@@ -3583,9 +3583,10 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
   ++NumIf;
 
   // Parse and evaluate the conditional expression.
-  IdentifierInfo *IfNDefMacro = nullptr;
+  IdentifierLoc IfNDefMacro;
   const DirectiveEvalResult DER = EvaluateDirectiveExpression(IfNDefMacro);
   const bool ConditionalTrue = DER.Conditional;
+  const IdentifierInfo *IfNDefMacroInfo = IfNDefMacro.getIdentifierInfo();
   // Lexer might become invalid if we hit code completion point while evaluating
   // expression.
   if (!CurPPLexer)
@@ -3594,9 +3595,9 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
   // If this condition is equivalent to #ifndef X, and if this is the first
   // directive seen, handle it for the multiple-include optimization.
   if (CurPPLexer->getConditionalStackDepth() == 0) {
-    if (!ReadAnyTokensBeforeDirective && IfNDefMacro && ConditionalTrue)
-      // FIXME: Pass in the location of the macro name, not the 'if' token.
-      CurPPLexer->MIOpt.EnterTopLevelIfndef(IfNDefMacro, IfToken.getLocation());
+    if (!ReadAnyTokensBeforeDirective && IfNDefMacroInfo && ConditionalTrue)
+      CurPPLexer->MIOpt.EnterTopLevelIfndef(IfNDefMacroInfo,
+                                            IfNDefMacro.getLoc());
     else
       CurPPLexer->MIOpt.EnterTopLevelConditional();
   }
@@ -3854,7 +3855,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
 
     // We do not consume the ( because EvaluateDirectiveExpression will lex
     // the next token for us.
-    IdentifierInfo *ParameterIfNDef = nullptr;
+    IdentifierLoc ParameterIfNDef;
     bool EvaluatedDefined;
     DirectiveEvalResult LimitEvalResult = EvaluateDirectiveExpression(
         ParameterIfNDef, CurTok, EvaluatedDefined, /*CheckForEOD=*/false);

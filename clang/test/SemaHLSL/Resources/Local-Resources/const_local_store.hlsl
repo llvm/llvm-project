@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.6-compute %s -emit-llvm -o - -verify
 
+using namespace hlsl;
+
 // A const local resource rejects mutating methods. Reading is still allowed,
 // so LoadConst shows the restriction is on mutation rather than on const
 // resources generally.

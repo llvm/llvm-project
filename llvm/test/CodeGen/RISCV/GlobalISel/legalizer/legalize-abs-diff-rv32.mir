@@ -6,7 +6,6 @@
 
 ---
 name:            abds_i8
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -49,7 +48,6 @@ body:             |
 ...
 ---
 name:            abds_i16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -92,7 +90,6 @@ body:             |
 ...
 ---
 name:            abds_i32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -126,11 +123,13 @@ body:             |
 ...
 ---
 name:            abds_i64
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: abds_i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $x11
@@ -165,7 +164,6 @@ body:             |
 ...
 ---
 name:            abdu_i8
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -208,7 +206,6 @@ body:             |
 ...
 ---
 name:            abdu_i16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -251,7 +248,6 @@ body:             |
 ...
 ---
 name:            abdu_i32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -285,11 +281,13 @@ body:             |
 ...
 ---
 name:            abdu_i64
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: abdu_i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $x11

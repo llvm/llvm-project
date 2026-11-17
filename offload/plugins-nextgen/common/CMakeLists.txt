@@ -14,7 +14,6 @@ add_library(PluginCommon OBJECT
   src/GenericProfiler.cpp
   src/GlobalHandler.cpp
   src/JIT.cpp
-  src/RecordReplay.cpp
   src/RPC.cpp
   src/OffloadError.cpp
   src/Utils/ELF.cpp
@@ -51,7 +50,6 @@ target_include_directories(PluginCommon PUBLIC
   ${CMAKE_CURRENT_BINARY_DIR}/include
   ${CMAKE_CURRENT_BINARY_DIR}/../../liboffload/API
   ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
-  ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
   ${LIBOMPTARGET_INCLUDE_DIR}
 )
 

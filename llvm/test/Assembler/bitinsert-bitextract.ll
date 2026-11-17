@@ -100,3 +100,92 @@ define ptr addrspace(1) @bitextract_ty_non_address_bits(b128 %src) {
   %r = bitextract ptr addrspace(1), b128 %src, i32 0
   ret ptr addrspace(1) %r
 }
+
+; CHECK-LABEL: bitinsert_vec
+; CHECK: %r = bitinsert <4 x b32> %base, <4 x i8> %val, <4 x i32> splat (i32 8)
+define <4 x b32> @bitinsert_vec(<4 x b32> %base, <4 x i8> %val) {
+  %r = bitinsert <4 x b32> %base, <4 x i8> %val, <4 x i32> splat (i32 8)
+  ret <4 x b32> %r
+}
+
+; CHECK-LABEL: bitinsert_vec_var_offset
+; CHECK: %r = bitinsert <2 x b32> %base, <2 x i8> %val, <2 x i32> %off
+define <2 x b32> @bitinsert_vec_var_offset(<2 x b32> %base, <2 x i8> %val,
+                                           <2 x i32> %off) {
+  %r = bitinsert <2 x b32> %base, <2 x i8> %val, <2 x i32> %off
+  ret <2 x b32> %r
+}
+
+; CHECK-LABEL: bitinsert_vec_val_fp
+; CHECK: %r = bitinsert <2 x b64> %base, <2 x float> %val, <2 x i32> <i32 0, i32 32>
+define <2 x b64> @bitinsert_vec_val_fp(<2 x b64> %base, <2 x float> %val) {
+  %r = bitinsert <2 x b64> %base, <2 x float> %val, <2 x i32> <i32 0, i32 32>
+  ret <2 x b64> %r
+}
+
+; CHECK-LABEL: bitinsert_vec_val_byte
+; CHECK: %r = bitinsert <2 x b64> %base, <2 x b32> %val, <2 x i32> zeroinitializer
+define <2 x b64> @bitinsert_vec_val_byte(<2 x b64> %base, <2 x b32> %val) {
+  %r = bitinsert <2 x b64> %base, <2 x b32> %val, <2 x i32> zeroinitializer
+  ret <2 x b64> %r
+}
+
+; CHECK-LABEL: bitinsert_vec_val_ptr
+; CHECK: %r = bitinsert <2 x b128> %base, <2 x ptr addrspace(1)> %val, <2 x i32> zeroinitializer
+define <2 x b128> @bitinsert_vec_val_ptr(<2 x b128> %base,
+                                         <2 x ptr addrspace(1)> %val) {
+  %r = bitinsert <2 x b128> %base, <2 x ptr addrspace(1)> %val, <2 x i32> zeroinitializer
+  ret <2 x b128> %r
+}
+
+; CHECK-LABEL: bitinsert_scalable_vec
+; CHECK: %r = bitinsert <vscale x 4 x b32> %base, <vscale x 4 x i16> %val, <vscale x 4 x i32> %off
+define <vscale x 4 x b32> @bitinsert_scalable_vec(<vscale x 4 x b32> %base,
+                                                  <vscale x 4 x i16> %val,
+                                                  <vscale x 4 x i32> %off) {
+  %r = bitinsert <vscale x 4 x b32> %base, <vscale x 4 x i16> %val, <vscale x 4 x i32> %off
+  ret <vscale x 4 x b32> %r
+}
+
+; CHECK-LABEL: bitextract_vec
+; CHECK: %r = bitextract <4 x i8>, <4 x b32> %src, <4 x i32> splat (i32 8)
+define <4 x i8> @bitextract_vec(<4 x b32> %src) {
+  %r = bitextract <4 x i8>, <4 x b32> %src, <4 x i32> splat (i32 8)
+  ret <4 x i8> %r
+}
+
+; CHECK-LABEL: bitextract_vec_var_offset
+; CHECK: %r = bitextract <2 x i8>, <2 x b32> %src, <2 x i32> %off
+define <2 x i8> @bitextract_vec_var_offset(<2 x b32> %src, <2 x i32> %off) {
+  %r = bitextract <2 x i8>, <2 x b32> %src, <2 x i32> %off
+  ret <2 x i8> %r
+}
+
+; CHECK-LABEL: bitextract_vec_ty_fp
+; CHECK: %r = bitextract <2 x float>, <2 x b64> %src, <2 x i32> <i32 0, i32 32>
+define <2 x float> @bitextract_vec_ty_fp(<2 x b64> %src) {
+  %r = bitextract <2 x float>, <2 x b64> %src, <2 x i32> <i32 0, i32 32>
+  ret <2 x float> %r
+}
+
+; CHECK-LABEL: bitextract_vec_ty_byte
+; CHECK: %r = bitextract <2 x b32>, <2 x b64> %src, <2 x i32> zeroinitializer
+define <2 x b32> @bitextract_vec_ty_byte(<2 x b64> %src) {
+  %r = bitextract <2 x b32>, <2 x b64> %src, <2 x i32> zeroinitializer
+  ret <2 x b32> %r
+}
+
+; CHECK-LABEL: bitextract_vec_ty_ptr
+; CHECK: %r = bitextract <2 x ptr addrspace(1)>, <2 x b128> %src, <2 x i32> zeroinitializer
+define <2 x ptr addrspace(1)> @bitextract_vec_ty_ptr(<2 x b128> %src) {
+  %r = bitextract <2 x ptr addrspace(1)>, <2 x b128> %src, <2 x i32> zeroinitializer
+  ret <2 x ptr addrspace(1)> %r
+}
+
+; CHECK-LABEL: bitextract_scalable_vec
+; CHECK: %r = bitextract <vscale x 4 x i16>, <vscale x 4 x b32> %src, <vscale x 4 x i32> %off
+define <vscale x 4 x i16> @bitextract_scalable_vec(<vscale x 4 x b32> %src,
+                                                   <vscale x 4 x i32> %off) {
+  %r = bitextract <vscale x 4 x i16>, <vscale x 4 x b32> %src, <vscale x 4 x i32> %off
+  ret <vscale x 4 x i16> %r
+}

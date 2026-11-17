@@ -62,7 +62,6 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-
 add_libc_test(
   mbsrtowcs_test
   SUITE
@@ -745,7 +744,7 @@ if(LIBC_CONF_PRINTF_DISABLE_FLOAT)
   libc_add_definition(swprintf_test_copts "LIBC_COPT_PRINTF_DISABLE_FLOAT")
 endif()
 if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT OR
-  LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
+    LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
   libc_add_definition(swprintf_test_copts "LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
 endif()
 if(LIBC_CONF_PRINTF_DISABLE_INDEX_MODE)

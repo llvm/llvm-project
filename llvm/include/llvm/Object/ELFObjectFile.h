@@ -65,6 +65,7 @@ class LLVM_ABI ELFObjectFileBase : public ObjectFile {
   SubtargetFeatures getHexagonFeatures() const;
   Expected<SubtargetFeatures> getRISCVFeatures() const;
   SubtargetFeatures getLoongArchFeatures() const;
+  SubtargetFeatures getSparcFeatures() const;
 
   StringRef getAMDGPUCPUName() const;
   StringRef getNVPTXCPUName() const;

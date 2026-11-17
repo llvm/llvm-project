@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRV.h"
+#include "SPIRVSubtarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -22,19 +23,16 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 
 #define DEBUG_TYPE "spirv-remove-unused-resources"
 
 using namespace llvm;
 
-static cl::opt<bool> DisableSPIRVRemoveUnusedResources(
-    "disable-spirv-remove-unused-resources",
-    cl::desc("Disable spirv-remove-unused-resources pass"), cl::init(false),
-    cl::Hidden);
-
 static bool removeUnusedResources(Module &M) {
-  if (DisableSPIRVRemoveUnusedResources)
+  if (!M.getContext()
+           .getLibraryOptions()
+           .get<SPIRVOptions>()
+           .enable_remove_unused_resources)
     return false;
 
   SmallVector<IntrinsicInst *> Handles;

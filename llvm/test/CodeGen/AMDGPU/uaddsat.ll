@@ -73,32 +73,32 @@ define amdgpu_ps i16 @s_uaddsat_i16(i16 inreg %lhs, i16 inreg %rhs) {
 ;
 ; GFX8-LABEL: s_uaddsat_i16:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_and_b32 s1, 0xffff, s1
-; GFX8-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX8-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX8-NEXT:    s_add_i32 s0, s0, s1
 ; GFX8-NEXT:    s_min_u32 s0, s0, 0xffff
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_uaddsat_i16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_and_b32 s1, 0xffff, s1
-; GFX9-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX9-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX9-NEXT:    s_add_i32 s0, s0, s1
 ; GFX9-NEXT:    s_min_u32 s0, s0, 0xffff
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: s_uaddsat_i16:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_and_b32 s1, 0xffff, s1
-; GFX10-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX10-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX10-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX10-NEXT:    s_add_i32 s0, s0, s1
 ; GFX10-NEXT:    s_min_u32 s0, s0, 0xffff
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: s_uaddsat_i16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_and_b32 s1, 0xffff, s1
-; GFX11-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX11-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX11-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_add_i32 s0, s0, s1
 ; GFX11-NEXT:    s_min_u32 s0, s0, 0xffff

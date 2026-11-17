@@ -5,7 +5,6 @@
 ---
 name:            splatvector_nxv1i64
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; HasF64-LABEL: name: splatvector_nxv1i64
@@ -32,7 +31,6 @@ body:             |
 ---
 name:            splatvector_nxv2i64
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; HasF64-LABEL: name: splatvector_nxv2i64
@@ -59,7 +57,6 @@ body:             |
 ---
 name:            splatvector_nxv4i64
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; HasF64-LABEL: name: splatvector_nxv4i64
@@ -86,7 +83,6 @@ body:             |
 ---
 name:            splatvector_nxv8i64
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; HasF64-LABEL: name: splatvector_nxv8i64
