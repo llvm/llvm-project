@@ -2185,7 +2185,7 @@ void BinaryContext::preprocessDebugInfo() {
     uint16_t DwarfVersion = LineTable->Prologue.getVersion();
     BinaryLineTable.setFormat(LineTable->Prologue.getFormParams().Format);
     if (DwarfVersion >= 5) {
-      StringRef CUDir = CU->getCompilationDir();
+      StringRef CUCompDir = CU->getCompilationDir();
       StringRef CUName =
           dwarf::toString(CU->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
       if (std::optional<uint64_t> DWOID = CU->getDWOId()) {
@@ -2210,19 +2210,30 @@ void BinaryContext::preprocessDebugInfo() {
       std::optional<MD5::MD5Result> Checksum;
       if (LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = FileNames[0].Checksum;
-      StringRef Dir = dwarf::toString(
-          LineTable->Prologue.IncludeDirectories[FileNames[0].DirIdx], nullptr);
-      StringRef Name = dwarf::toString(FileNames[0].Name, nullptr);
+      StringRef CompDir =
+          dwarf::toString(LineTable->Prologue.IncludeDirectories[0], "");
+
+      SmallString<128> Name;
+      if (FileNames[0].DirIdx == 0) {
+        Name = dwarf::toString(FileNames[0].Name, "");
+      } else {
+        // If the first file name entry doesn't use dir index 0, then construct
+        // its absolute path.
+        Name = dwarf::toString(
+            LineTable->Prologue.IncludeDirectories[FileNames[0].DirIdx], "");
+        sys::path::append(Name, dwarf::toString(FileNames[0].Name, ""));
+      }
 
       // If the first directory/file name entry is not the same as
       // DW_AT_comp_dir/DW_AT_name (if the attribute exists), then the input
       // file has invalid DWARF. Emit a warning in this case, and use the line
       // table values for setting the root file.
-      if (!CUDir.empty() && Dir != CUDir) {
+      if (!CUCompDir.empty() && CompDir != CUCompDir) {
         this->errs() << "BOLT-WARNING: invalid DWARF detected in " << Filename
-                     << ": the first directory entry in the line table (" << Dir
+                     << ": the first directory entry in the line table ("
+                     << CompDir
                      << ") does not match the value of DW_AT_comp_dir ("
-                     << CUDir << ") for CU at offset 0x"
+                     << CUCompDir << ") for CU at offset 0x"
                      << Twine::utohexstr(CUID) << "\n";
       }
       if (!CUName.empty() && Name != CUName) {
@@ -2233,7 +2244,7 @@ void BinaryContext::preprocessDebugInfo() {
                      << Twine::utohexstr(CUID) << "\n";
       }
 
-      BinaryLineTable.setRootFile(Dir, Name, Checksum, std::nullopt);
+      BinaryLineTable.setRootFile(CompDir, Name, Checksum, std::nullopt);
     }
 
     BinaryLineTable.setDwarfVersion(DwarfVersion);
@@ -2246,7 +2257,7 @@ void BinaryContext::preprocessDebugInfo() {
       continue;
     }
     const uint32_t Offset = DwarfVersion < 5 ? 1 : 0;
-    for (size_t I = 0, Size = FileNames.size(); I != Size; ++I) {
+    for (size_t I = 1 - Offset, Size = FileNames.size(); I != Size; ++I) {
       // Dir indexes start at 1, as DWARF file numbers, and a dir index 0
       // means empty dir.
       StringRef Dir = "";
