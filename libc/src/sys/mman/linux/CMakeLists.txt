@@ -165,9 +165,10 @@ add_entrypoint_object(
   HDRS
     ../mlockall.h
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mlockall
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
