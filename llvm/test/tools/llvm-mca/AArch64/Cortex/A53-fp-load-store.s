@@ -503,7 +503,7 @@ fadd v23.4s, v1.4s, v2.4s
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      800
-# CHECK-NEXT: Total Cycles:      803
+# CHECK-NEXT: Total Cycles:      804
 # CHECK-NEXT: Total uOps:        800
 
 # CHECK:      Dispatch Width:    2

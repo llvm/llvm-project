@@ -26,11 +26,6 @@
 #   saba (64-bit) + fadd                1
 #   saba (Q-form) + saba                2
 #   saba (Q-form) + fadd                1.5
-#
-# A Q-form takes the two-unit lane resource twice, which gives the right
-# throughput on its own, but llvm-mca does not make it hold both lanes in the
-# same cycle: the mixed Q-form + scalar regions below report 1.5 cycles per
-# pair where hardware takes 2.
 
 # LLVM-MCA-BEGIN fadd-fadd
 fadd s16, s1, s2
@@ -172,25 +167,25 @@ fadd s17, s1, s2
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      199
+# CHECK-NEXT: Total Cycles:      200
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.01
-# CHECK-NEXT: IPC:               1.01
+# CHECK-NEXT: uOps Per Cycle:    1.00
+# CHECK-NEXT: IPC:               1.00
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      [2] Code Region - fcmp-fadd
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      154
+# CHECK-NEXT: Total Cycles:      204
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.30
-# CHECK-NEXT: IPC:               1.30
-# CHECK-NEXT: Block RThroughput: 1.5
+# CHECK-NEXT: uOps Per Cycle:    0.98
+# CHECK-NEXT: IPC:               0.98
+# CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [3] Code Region - fmulidx-fmulidx
 
@@ -220,13 +215,13 @@ fadd s17, s1, s2
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      154
+# CHECK-NEXT: Total Cycles:      204
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.30
-# CHECK-NEXT: IPC:               1.30
-# CHECK-NEXT: Block RThroughput: 1.5
+# CHECK-NEXT: uOps Per Cycle:    0.98
+# CHECK-NEXT: IPC:               0.98
+# CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [6] Code Region - fcmp-fadd-fadd
 
@@ -238,7 +233,7 @@ fadd s17, s1, s2
 # CHECK:      Dispatch Width:    2
 # CHECK-NEXT: uOps Per Cycle:    1.47
 # CHECK-NEXT: IPC:               1.47
-# CHECK-NEXT: Block RThroughput: 2.0
+# CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      [7] Code Region - fmulidx-fadd-fadd
 
@@ -268,25 +263,25 @@ fadd s17, s1, s2
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      154
+# CHECK-NEXT: Total Cycles:      204
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.30
-# CHECK-NEXT: IPC:               1.30
-# CHECK-NEXT: Block RThroughput: 1.5
+# CHECK-NEXT: uOps Per Cycle:    0.98
+# CHECK-NEXT: IPC:               0.98
+# CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [10] Code Region - fmulq-fadd
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      154
+# CHECK-NEXT: Total Cycles:      204
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.30
-# CHECK-NEXT: IPC:               1.30
-# CHECK-NEXT: Block RThroughput: 1.5
+# CHECK-NEXT: uOps Per Cycle:    0.98
+# CHECK-NEXT: IPC:               0.98
+# CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [11] Code Region - fmulq-fcmp
 
@@ -304,24 +299,24 @@ fadd s17, s1, s2
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      154
+# CHECK-NEXT: Total Cycles:      204
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.30
-# CHECK-NEXT: IPC:               1.30
-# CHECK-NEXT: Block RThroughput: 1.5
+# CHECK-NEXT: uOps Per Cycle:    0.98
+# CHECK-NEXT: IPC:               0.98
+# CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [13] Code Region - fmulidxq-fmulidxq
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      203
+# CHECK-NEXT: Total Cycles:      204
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.99
-# CHECK-NEXT: IPC:               0.99
+# CHECK-NEXT: uOps Per Cycle:    0.98
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      [14] Code Region - fdiv-fmul
@@ -412,7 +407,7 @@ fadd s17, s1, s2
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      401
+# CHECK-NEXT: Total Cycles:      403
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
@@ -424,10 +419,10 @@ fadd s17, s1, s2
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      254
+# CHECK-NEXT: Total Cycles:      304
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.79
-# CHECK-NEXT: IPC:               0.79
-# CHECK-NEXT: Block RThroughput: 2.5
+# CHECK-NEXT: uOps Per Cycle:    0.66
+# CHECK-NEXT: IPC:               0.66
+# CHECK-NEXT: Block RThroughput: 2.0

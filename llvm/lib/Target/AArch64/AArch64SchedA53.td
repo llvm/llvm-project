@@ -49,14 +49,16 @@ def A53UnitLdSt   : ProcResource<1> { let BufferSize = 0; } // Load/Store
 def A53UnitB      : ProcResource<1> { let BufferSize = 0; } // Branch
 // The FP/ASIMD datapath moves 128 bits per cycle, which it can spend either on
 // one 128-bit (Q-form) operation or on two 64-bit ones. Model this as two
-// lanes shared by the arithmetic and multiply operations: 64-bit and scalar
-// operations take a single lane, Q-form operations take both, so a Q-form FMUL
-// competes with a scalar FADD for them.
-// TODO: a Q-form should hold both lanes in the same cycle. Taking the
-// two-unit resource twice gives the right throughput for Q-forms on their
-// own, but llvm-mca lets a Q-form overlap a scalar operation, so a Q-form +
-// scalar pair is modelled at 1.5 cycles where hardware takes 2.
-def A53UnitFPALU  : ProcResource<2> { let BufferSize = 0; } // FP ALU/Mult
+// single-lane units shared by the arithmetic and multiply operations: 64-bit
+// and scalar operations take either lane (A53UnitFPALU), Q-form operations
+// take both lanes in the same cycle, so a Q-form FMUL does not issue next to a
+// scalar FADD.
+def A53UnitFP0    : ProcResource<1> { let BufferSize = 0; } // FP ALU/Mult lane 0
+def A53UnitFP1    : ProcResource<1> { let BufferSize = 0; } // FP ALU/Mult lane 1
+def A53UnitFPALU  : ProcResGroup<[A53UnitFP0, A53UnitFP1]> {
+  let BufferSize = 0;
+  let SchedModel = CortexA53Model;
+}
 // Divide and square root run in their own unit, without holding back the
 // arithmetic and multiply operations that follow them.
 def A53UnitFPDS   : ProcResource<2> { let BufferSize = 0; } // FP Div/Sqrt
@@ -159,7 +161,7 @@ def : WriteRes<WriteF, [A53UnitFPALU]> {
 // WriteFCmp has no latency. The compare reads its register operands one cycle
 // earlier than the other FP operations (A53ReadFCmpOp).
 def A53ReadFCmpOp : SchedReadAdvance<-1>;
-def : WriteRes<WriteFCmp, [A53UnitFPALU, A53UnitFPALU]> {
+def : WriteRes<WriteFCmp, [A53UnitFP0, A53UnitFP1]> {
   let Latency = 0;
   let RetireOOO = 1;
 }
@@ -184,7 +186,7 @@ def : WriteRes<WriteVd, [A53UnitFPALU]> {
 }
 // A 128-bit (Q-form) operation fills the whole 128-bit datapath, so it takes
 // both lanes.
-def : WriteRes<WriteVq, [A53UnitFPALU, A53UnitFPALU]> {
+def : WriteRes<WriteVq, [A53UnitFP0, A53UnitFP1]> {
   let Latency = 6;
   let RetireOOO = 1;
 }
@@ -201,7 +203,7 @@ def A53WriteFMulIdx : SchedWriteRes<[A53UnitFPALU, A53UnitFPRestricted]> {
   let Latency = 4;
   let RetireOOO = 1;
 }
-def A53WriteFMulIdxQ : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+def A53WriteFMulIdxQ : SchedWriteRes<[A53UnitFP0, A53UnitFP1]> {
   let Latency = 4;
   let RetireOOO = 1;
 }
@@ -229,7 +231,7 @@ def A53WriteFMACIdx : SchedWriteRes<[A53UnitFPALU, A53UnitFPRestricted]> {
   let RetireOOO = 1;
 }
 // Q-form multiply-accumulate fills the datapath and takes both lanes.
-def A53WriteFMACQ : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+def A53WriteFMACQ : SchedWriteRes<[A53UnitFP0, A53UnitFP1]> {
   let Latency = 8;
   let RetireOOO = 1;
 }
@@ -267,7 +269,7 @@ def A53WriteFRecpStep  : SchedWriteRes<[A53UnitFPALU]> {
   let Latency = 8;
   let RetireOOO = 1;
 }
-def A53WriteFRecpStepQ : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+def A53WriteFRecpStepQ : SchedWriteRes<[A53UnitFP0, A53UnitFP1]> {
   let Latency = 8;
   let RetireOOO = 1;
 }
@@ -275,7 +277,7 @@ def A53WriteFRecpEst   : SchedWriteRes<[A53UnitFPALU]> {
   let Latency = 4;
   let RetireOOO = 1;
 }
-def A53WriteFRecpEstQ  : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+def A53WriteFRecpEstQ  : SchedWriteRes<[A53UnitFP0, A53UnitFP1]> {
   let Latency = 4;
   let RetireOOO = 1;
 }
@@ -292,7 +294,7 @@ def A53WriteIMACIdx : SchedWriteRes<[A53UnitFPALU, A53UnitFPRestricted]> {
   let Latency = 4;
   let RetireOOO = 1;
 }
-def A53WriteIMACQ : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+def A53WriteIMACQ : SchedWriteRes<[A53UnitFP0, A53UnitFP1]> {
   let Latency = 4;
   let RetireOOO = 1;
 }
@@ -306,7 +308,7 @@ def A53WriteLogicD : SchedWriteRes<[A53UnitFPALU]> {
   let Latency = 2;
   let RetireOOO = 1;
 }
-def A53WriteLogicQ : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+def A53WriteLogicQ : SchedWriteRes<[A53UnitFP0, A53UnitFP1]> {
   let Latency = 2;
   let RetireOOO = 1;
 }
@@ -328,7 +330,7 @@ def A53WriteVecD_4 : SchedWriteRes<[A53UnitFPALU]> {
   let Latency = 4;
   let RetireOOO = 1;
 }
-def A53WriteVecQ_4 : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+def A53WriteVecQ_4 : SchedWriteRes<[A53UnitFP0, A53UnitFP1]> {
   let Latency = 4;
   let RetireOOO = 1;
 }
@@ -352,7 +354,7 @@ def A53WriteAccD : SchedWriteRes<[A53UnitFPALU, A53UnitFPRestricted]> {
   let ReleaseAtCycles = [1, 2];
   let RetireOOO = 1;
 }
-def A53WriteAccQ : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+def A53WriteAccQ : SchedWriteRes<[A53UnitFP0, A53UnitFP1]> {
   let Latency = 4;
   let ReleaseAtCycles = [2, 2];
   let RetireOOO = 1;
@@ -363,7 +365,7 @@ def A53WriteIVecD_2 : SchedWriteRes<[A53UnitFPALU]> {
   let Latency = 2;
   let RetireOOO = 1;
 }
-def A53WriteIVecQ_2 : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+def A53WriteIVecQ_2 : SchedWriteRes<[A53UnitFP0, A53UnitFP1]> {
   let Latency = 2;
   let RetireOOO = 1;
 }
@@ -371,7 +373,7 @@ def A53WriteIVecD_3 : SchedWriteRes<[A53UnitFPALU]> {
   let Latency = 3;
   let RetireOOO = 1;
 }
-def A53WriteIVecQ_3 : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+def A53WriteIVecQ_3 : SchedWriteRes<[A53UnitFP0, A53UnitFP1]> {
   let Latency = 3;
   let RetireOOO = 1;
 }
@@ -404,18 +406,17 @@ def A53ReadAcc2  : SchedReadAdvance<2>;
 // than AESE alone, so AESMC/AESIMC read an AESE/AESD result with no delay.
 // (Any other producer reaches an AESMC/AESIMC one cycle sooner on hardware,
 // which a single ReadAdvance cannot also express.)
-// On hardware a fused pair also issues in a single cycle; here AESMC keeps its
-// own datapath cycle, so independent fused pairs are modelled at one pair per
-// two cycles rather than one per cycle.
-def A53WriteAES : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+// A fused pair also issues in a single cycle, so AESMC/AESIMC take no datapath
+// lane: independent fused pairs issue one per cycle.
+def A53WriteAES : SchedWriteRes<[A53UnitFP0, A53UnitFP1]> {
   let Latency = 3;
   let RetireOOO = 1;
 }
-def A53WriteVecQ_6 : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+def A53WriteVecQ_6 : SchedWriteRes<[A53UnitFP0, A53UnitFP1]> {
   let Latency = 6;
   let RetireOOO = 1;
 }
-def A53WriteAESMC : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+def A53WriteAESMC : SchedWriteRes<[]> {
   let Latency = 3;
   let RetireOOO = 1;
 }

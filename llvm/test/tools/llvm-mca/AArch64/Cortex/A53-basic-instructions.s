@@ -1269,20 +1269,20 @@
 # CHECK-NEXT: [0.1] - A53UnitALU
 # CHECK-NEXT: [1]   - A53UnitB
 # CHECK-NEXT: [2]   - A53UnitDiv
-# CHECK-NEXT: [3.0] - A53UnitFPALU
-# CHECK-NEXT: [3.1] - A53UnitFPALU
-# CHECK-NEXT: [4.0] - A53UnitFPDS
-# CHECK-NEXT: [4.1] - A53UnitFPDS
-# CHECK-NEXT: [5]   - A53UnitFPRestricted
-# CHECK-NEXT: [6]   - A53UnitLdSt
-# CHECK-NEXT: [7]   - A53UnitMAC
+# CHECK-NEXT: [3]   - A53UnitFP0
+# CHECK-NEXT: [4]   - A53UnitFP1
+# CHECK-NEXT: [5.0] - A53UnitFPDS
+# CHECK-NEXT: [5.1] - A53UnitFPDS
+# CHECK-NEXT: [6]   - A53UnitFPRestricted
+# CHECK-NEXT: [7]   - A53UnitLdSt
+# CHECK-NEXT: [8]   - A53UnitMAC
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]    [7]
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5.0]  [5.1]  [6]    [7]    [8]
 # CHECK-NEXT: 249.50 249.50 27.00  4.00   143.50 143.50 115.00 115.00 3.00   471.00 50.00
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]    [7]    Instructions:
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5.0]  [5.1]  [6]    [7]    [8]    Instructions:
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -     add	w2, w3, #4095
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -     add	w30, w29, #1, lsl #12
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -     add	w13, w5, #4095, lsl #12
