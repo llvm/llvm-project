@@ -31,9 +31,9 @@ define dso_local void @ldst_double_tune_a53() #0 {
 
 ; CHECK-LABEL: ldst_double_tune_a53:
 ; CHECK: adrp [[RD:x[0-9]+]], var_double
+; CHECK-NEXT: fcvt
 ; CHECK-NEXT: ldr {{d[0-9]+}}, [[[RD]], {{#?}}:lo12:var_double]
 ; CHECK-NEXT: adrp [[RQ:x[0-9]+]], var_double2
-; CHECK: fcvt
 ; CHECK: str {{q[0-9]+}}, [[[RQ]], {{#?}}:lo12:var_double2]
 }
 
