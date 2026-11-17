@@ -177,7 +177,7 @@ format mode which accepts names without suffixes but matches all aliases.
 Plaintext, space-separated branch profile format written by `perf2bolt` and
 consumed by `llvm-bolt -data <file>`. Also produced by BOLT instrumentation.
 
-#### LBR mode format
+#### Branch profile format
 
 Each line records a branch:
 
@@ -199,7 +199,7 @@ Example:
 1 main 3fb 0 /lib/ld-2.21.so 12 4 221
 ```
 
-#### No-LBR mode format
+#### Non-brstack mode format
 
 Requires `no_lbr` header followed by an optional event name:
 

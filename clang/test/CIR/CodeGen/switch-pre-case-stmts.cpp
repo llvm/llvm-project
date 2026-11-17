@@ -28,14 +28,12 @@ void pre_case_label() {
 // LLVM:   i32 1, label %[[CASE1:.*]]
 // LLVM: ]
 // LLVM: [[LABEL:.*]]:{{.*}}; No predecessors!
-// LLVM: br label %[[JUMPS_TO_CASE1:.*]]
-// LLVM: [[JUMPS_TO_CASE1]]:
 // LLVM:   br label %[[CASE1]]
 // CIR inserts a bunch of 'empty' blocks all over the place that just jump to
 // the next, so unifying these check blocks/checking more is pretty
 // awful/doesn't result in good checks.
 // LLVM: [[END]]:
-// LLVM:   br label
+// LLVM:   ret void
 
 // OGCG-LABEL: define{{.*}} void @_Z14pre_case_labelv
 // OGCG: switch i32 1, label %[[END:.*]] [
@@ -75,17 +73,11 @@ void multiple_pre_case_labels() {
 // LLVM:     i32 1, label %[[CASE1:.*]]
 // LLVM:   ]
 // LLVM: [[LABEL1:.*]]:
-// LLVM:   br label %[[LABEL2:.*]]
-// LLVM: [[LABEL2]]:
-// LLVM:   br label %[[JUMPS_TO_CASE1:.*]]
-// LLVM: [[JUMPS_TO_CASE1]]:
 // LLVM:   br label %[[CASE1]]
 // LLVM: [[CASE1]]:
-// LLVM:   br label %[[JUMPS_TO_END:.*]]
-// LLVM: [[JUMPS_TO_END]]:
 // LLVM:   br label %[[END]]
 // LLVM: [[END]]:
-// LLVM:   br label
+// LLVM:   ret void
 
 // OGCG-LABEL: define{{.*}} @_Z24multiple_pre_case_labelsv
 // OGCG:   switch i32 1, label %[[END:.*]] [
@@ -160,17 +152,13 @@ void pre_case_if(int cond) {
 // LLVM:  switch i32 1, label %[[END:.*]] [
 // LLVM:    i32 1, label %[[CASE1:.*]]
 // LLVM:  ]
-// LLVM: [[ENTRY:.*]]:{{.*}}; No predecessors!
-// LLVM: br label %[[IF_BLOCK:.*]]
-// LLVM: [[IF_BLOCK]]:
+// LLVM: [[IF_BLOCK:.*]]:{{.*}}; No predecessors!
 // LLVM: load i32
 // LLVM: icmp ne i32
 // LLVM: br i1 %{{.*}}, label %[[TRUE:.*]], label %[[FALSE:.*]]
 // LLVM: [[TRUE]]:
 // LLVM: br label %[[FALSE]]
 // LLVM: [[FALSE]]:
-// LLVM: br label %[[JUMPS_TO_CASE1:.*]]
-// LLVM: [[JUMPS_TO_CASE1:.*]]:
 // LLVM: br label %[[CASE1]]
 // LLVM: [[CASE1]]:
 // LLVM: [[END]]:
@@ -258,8 +246,6 @@ void label_only_switch() {
 // LLVM:   switch i32 1, label %[[END:.*]] [
 // LLVM:   ]
 // LLVM: [[LABEL:.*]]:{{.*}}; No predecessors!
-// LLVM:   br label %[[JUMPS_TO_END:.*]]
-// LLVM: [[JUMPS_TO_END]]:
 // LLVM:   br label %[[END]]
 
 // OGCG-LABEL: define{{.*}} @_Z17label_only_switchv

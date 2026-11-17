@@ -40,7 +40,7 @@ end:
 // CIR:         }
 // CIR:         cir.return
 
-// LLVM-LABEL: define dso_local void @_Z24test_goto_within_cleanupb(i1 noundef zeroext %{{[^,)]+}})
+// LLVM-LABEL: define dso_local void @_Z24test_goto_within_cleanupb(i1 noundef %{{[^,)]+}})
 // LLVM:         %[[COND_ADDR:.*]] = alloca i8
 // LLVM:         %[[A_ADDR:.*]] = alloca %struct.StructWithDestructor
 // LLVM:         %[[COND_BYTE:.*]] = load i8, ptr %[[COND_ADDR]]
@@ -49,8 +49,6 @@ end:
 // LLVM:       [[GOTO_BB]]:
 // LLVM:         br label %[[LABEL_BB:[0-9]+]]
 // LLVM:       [[FALLTHROUGH]]:
-// LLVM:         br label %[[USE_BB:.*]]
-// LLVM:       [[USE_BB]]:
 // LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[A_ADDR]])
 // LLVM:         br label %[[LABEL_BB]]
 // LLVM:       [[LABEL_BB]]:
@@ -61,7 +59,7 @@ end:
 // LLVM-NOT:     call void @_ZN20StructWithDestructorD1Ev
 // LLVM:         ret void
 
-// OGCG-LABEL: define dso_local void @_Z24test_goto_within_cleanupb(i1 noundef zeroext %cond)
+// OGCG-LABEL: define dso_local void @_Z24test_goto_within_cleanupb(i1 noundef %cond)
 // OGCG:         %[[A_ADDR:.*]] = alloca %struct.StructWithDestructor
 // OGCG:         br i1 %{{.*}}, label %if.then, label %if.end
 // OGCG:       if.then:
@@ -111,7 +109,7 @@ skip:
 // CIR:         }
 // CIR:         cir.return
 
-// LLVM-LABEL: define dso_local void @_Z29test_goto_jump_into_nested_opbb(i1 noundef zeroext %{{[^,)]+}}, i1 noundef zeroext %{{[^,)]+}})
+// LLVM-LABEL: define dso_local void @_Z29test_goto_jump_into_nested_opbb(i1 noundef %{{[^,)]+}}, i1 noundef %{{[^,)]+}})
 // LLVM:         %[[COND1_ADDR:.*]] = alloca i8
 // LLVM:         %[[COND2_ADDR:.*]] = alloca i8
 // LLVM:         %[[A_ADDR:.*]] = alloca %struct.StructWithDestructor
@@ -121,27 +119,23 @@ skip:
 // LLVM:       [[GOTO_BB]]:
 // LLVM:         br label %[[SKIP_BB:[0-9]+]]
 // LLVM:       [[FALLTHROUGH]]:
-// LLVM:         br label %[[USE_BB:.*]]
-// LLVM:       [[USE_BB]]:
 // LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[A_ADDR]])
 // LLVM:         br label %[[COND2_BB:.*]]
 // LLVM:       [[COND2_BB]]:
 // LLVM:         %[[COND2_BYTE:.*]] = load i8, ptr %[[COND2_ADDR]]
 // LLVM:         %[[COND2_BIT:.*]] = trunc i8 %[[COND2_BYTE]] to i1
-// LLVM:         br i1 %[[COND2_BIT]], label %[[GOTO_BB2:.*]], label %[[MERGE:.*]]
+// LLVM:         br i1 %[[COND2_BIT]], label %[[GOTO_BB2:.*]], label %[[CLEANUP:.*]]
 // LLVM:       [[GOTO_BB2]]:
 // LLVM:         br label %[[SKIP_BB]]
 // LLVM:       [[SKIP_BB]]:
 // LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[A_ADDR]])
-// LLVM:         br label %[[MERGE]]
-// LLVM:       [[MERGE]]:
-// LLVM:         br label %[[CLEANUP:.*]]
+// LLVM:         br label %[[CLEANUP]]
 // LLVM:       [[CLEANUP]]:
 // LLVM:         call void @_ZN20StructWithDestructorD1Ev(ptr {{.*}} %[[A_ADDR]])
 // LLVM-NOT:     call void @_ZN20StructWithDestructorD1Ev
 // LLVM:         ret void
 
-// OGCG-LABEL: define dso_local void @_Z29test_goto_jump_into_nested_opbb(i1 noundef zeroext %cond1, i1 noundef zeroext %cond2)
+// OGCG-LABEL: define dso_local void @_Z29test_goto_jump_into_nested_opbb(i1 noundef %cond1, i1 noundef %cond2)
 // OGCG:         %[[COND1_ADDR:.*]] = alloca i8
 // OGCG:         %[[COND2_ADDR:.*]] = alloca i8
 // OGCG:         %[[A_ADDR:.*]] = alloca %struct.StructWithDestructor

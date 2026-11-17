@@ -532,6 +532,15 @@ public:
   }
 
 private:
+  // Returns true if the expression frees memory: a `delete` expression or a
+  // call to a freeing function (e.g. annotated with `ownership_takes`).
+  static bool isFreeingExpr(const Expr *InvalidationExpr) {
+    if (isa<CXXDeleteExpr>(InvalidationExpr))
+      return true;
+    const FunctionDecl *FD = FunctionCallInfo(InvalidationExpr).FD;
+    return FD && isFreeingFunction(*FD);
+  }
+
   struct LifetimeBoundMacroCache {
     bool IsBuilt = false;
     SmallVector<const IdentifierInfo *> Candidates;
@@ -604,7 +613,7 @@ private:
 
   void reportInvalidationSite(const Expr *InvalidationExpr,
                               StringRef InvalidatedSubject) {
-    auto Diag = isa<CXXDeleteExpr>(InvalidationExpr)
+    auto Diag = isFreeingExpr(InvalidationExpr)
                     ? diag::note_lifetime_safety_freed_here
                     : diag::note_lifetime_safety_invalidated_here;
     S.Diag(InvalidationExpr->getExprLoc(), Diag)
@@ -617,8 +626,8 @@ private:
                                       const Expr *InvalidationExpr,
                                       llvm::ArrayRef<const Expr *> ExprChain,
                                       const UseSite &Use) {
-    S.Diag(IssueLoc, getInvalidationWarnDiag(
-                         isa<CXXDeleteExpr>(InvalidationExpr), Use.getKind()))
+    S.Diag(IssueLoc, getInvalidationWarnDiag(isFreeingExpr(InvalidationExpr),
+                                             Use.getKind()))
         << InvalidatedSubject << IssueRange;
     reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
     reportAliasingChain(ExprChain);
@@ -752,13 +761,18 @@ private:
   }
 
   std::string getDiagSubjectDescription(const Expr *E) {
-    E = E->IgnoreImpCasts();
+    E = ignoreParensAndImpCasts(E);
+    if (const auto *DAE = dyn_cast<CXXDefaultArgExpr>(E))
+      return getDiagSubjectDescription(DAE->getExpr()->IgnoreParenBaseCasts());
     if (isa<MaterializeTemporaryExpr>(E))
       return "temporary object";
     if (isa<CXXNewExpr>(E))
       return "allocated object";
     if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
       return getDiagSubjectDescription(DRE->getDecl());
+    if (const auto *ME = dyn_cast<MemberExpr>(E))
+      if (const auto *VD = dyn_cast<VarDecl>(ME->getMemberDecl()))
+        return getDiagSubjectDescription(VD);
 
     if (const auto *CE = dyn_cast<CallExpr>(E)) {
       const auto *FD = CE->getDirectCallee();
@@ -768,6 +782,8 @@ private:
       llvm::raw_string_ostream OS(Name);
       FD->getNameForDiagnostic(OS, S.getPrintingPolicy(),
                                /*Qualified=*/false);
+      if (isAllocatingFunction(*FD))
+        return "object allocated by '" + Name + "'";
       return "result of call to '" + Name + "'";
     }
 
@@ -776,8 +792,8 @@ private:
   }
 
   bool shouldShowInAliasChain(const Expr *CurrExpr, const Expr *LastExpr) {
-    CurrExpr = CurrExpr->IgnoreImpCasts();
-    LastExpr = LastExpr->IgnoreImpCasts();
+    CurrExpr = ignoreParensAndImpCasts(CurrExpr);
+    LastExpr = ignoreParensAndImpCasts(LastExpr);
 
     if (!isa<CallExpr, DeclRefExpr>(CurrExpr))
       return false;

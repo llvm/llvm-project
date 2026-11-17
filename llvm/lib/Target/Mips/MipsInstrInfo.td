@@ -2329,7 +2329,8 @@ def BLTZL   : MMRel, CBranchZeroLikely<"bltzl", brtarget, GPR32Opnd>,
               BGEZ_FM<1, 2>, ISA_MIPS2_NOT_32R6_64R6;
 def B       : UncondBranch<BEQ, brtarget>, ISA_MIPS1;
 
-def JAL     : MMRel, JumpLink<"jal", calltarget>, FJ<3>, ISA_MIPS1_NOT_32R6_64R6;
+def JAL  : MMRel, JumpLink<"jal", calltarget>, FJ<3>, ISA_MIPS1;
+
 }
 
 let AdditionalPredicates = [NotInMicroMips, NoIndirectJumpGuards] in {
@@ -3235,16 +3236,16 @@ def : MipsPat<(MipsSync (i32 timmz)),
 
 // Call
 def : MipsPat<(MipsJmpLink (i32 texternalsym:$dst)),
-              (JAL texternalsym:$dst)>, ISA_MIPS1_NOT_32R6_64R6;
+              (JAL texternalsym:$dst)>, ISA_MIPS1;
 //def : MipsPat<(MipsJmpLink GPR32:$dst),
 //              (JALR GPR32:$dst)>;
 
 // Tail call
 let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsPat<(MipsTailCall (iPTR tglobaladdr:$dst)),
-                (TAILCALL tglobaladdr:$dst)>, ISA_MIPS1_NOT_32R6_64R6;
+                (TAILCALL tglobaladdr:$dst)>, ISA_MIPS1;
   def : MipsPat<(MipsTailCall (iPTR texternalsym:$dst)),
-                (TAILCALL texternalsym:$dst)>, ISA_MIPS1_NOT_32R6_64R6;
+                (TAILCALL texternalsym:$dst)>, ISA_MIPS1;
 }
 // hi/lo relocs
 multiclass MipsHiLoRelocs<Instruction Lui, Instruction Addiu,

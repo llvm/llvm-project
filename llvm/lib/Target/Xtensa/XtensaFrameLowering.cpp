@@ -367,7 +367,10 @@ void XtensaFrameLowering::processFunctionBeforeFrameFinalized(
   auto *XtensaFI = MF.getInfo<XtensaMachineFunctionInfo>();
   unsigned ScavSlotsNum = 0;
 
-  if (!isInt<12>(MaxSPOffset))
+  // Without a reserved call frame, adjusting SP around a call with stack
+  // arguments needs a scratch register.
+  if (!isInt<12>(MaxSPOffset) ||
+      (!hasReservedCallFrame(MF) && MFI.getMaxCallFrameSize() > 0))
     ScavSlotsNum = 1;
 
   // Far branches over 18-bit offset require a spill slot for scratch register.

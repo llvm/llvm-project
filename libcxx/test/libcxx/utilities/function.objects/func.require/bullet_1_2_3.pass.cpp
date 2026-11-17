@@ -263,7 +263,7 @@ struct ReferenceWrapper {
     constexpr operator Type&() const noexcept { return *ptr; }
 
     template <class... _ArgTypes>
-    constexpr std::__invoke_result_t<Type&, _ArgTypes...> operator()(_ArgTypes&&... __args) const {
+    constexpr std::__direct_invoke_result_t<Type&, _ArgTypes...> operator()(_ArgTypes&&... __args) const {
       return std::__invoke(get(), std::forward<_ArgTypes>(__args)...);
     }
 };

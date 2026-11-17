@@ -1,6 +1,6 @@
 set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
 set(LLVM_TARGET_DEFINITIONS InstrumentationOptions.td)
-tablegen(LLVM InstrumentationOptions.inc -gen-opt-parser-defs)
+llvm_tablegen(InstrumentationOptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(InstrumentationOptionsTableGen)
 
 add_llvm_component_library(LLVMInstrumentation

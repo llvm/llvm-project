@@ -15,7 +15,6 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
-class DominatorTree;
 class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
@@ -38,6 +37,10 @@ bool onlyFirstPartUsed(const VPValue *Def);
 
 /// Returns true if only scalar values of \p Def are used by all users.
 bool onlyScalarValuesUsed(const VPValue *Def);
+
+/// Returns true if only scalar values of \p Def are used by all users, either
+/// directly or by extracting a constant lane.
+bool onlyScalarValuesOrLanesUsed(const VPValue *Def);
 
 /// Get or create a VPValue that corresponds to the expansion of \p Expr. If \p
 /// Expr is a SCEVConstant or SCEVUnknown, return a VPValue wrapping the live-in
@@ -245,6 +248,12 @@ BranchProbability getExecutionProbability(BlockFrequency Freq);
 DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
 computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks);
 
+/// Get the value type of a VPInstruction or VPReplicateRecipe load or store.
+inline Type *getLoadStoreValueType(VPSingleDefRecipe *R) {
+  bool IsLoad = vputils::getOpcode(R) == Instruction::Load;
+  return (IsLoad ? R : R->getOperand(0))->getScalarType();
+}
+
 namespace detail {
 
 /// Template-independent implementation for pullOutPermutations.
@@ -293,6 +302,13 @@ class VPSCEVExpander {
   /// SCEV matches \p S. Returns the corresponding live-in VPValue, or nullptr
   /// if none is found.
   VPValue *tryToReuseIRValue(const SCEV *S);
+
+  /// Returns true if \p S can be expanded in IR, hoisted out of HoistOutOf.
+  bool canExpandInIR(const SCEV *S);
+
+  /// Expand the sum of \p Operands, with \p WrapFlags on the adds.
+  VPValue *expandAddOps(ArrayRef<const SCEV *> Operands,
+                        VPIRFlags::WrapFlagsTy WrapFlags);
 
   /// Expand pointer-typed \p S as a ptradd of its pointer base and offset.
   VPValue *expandAsPtrAdd(const SCEVNAryExpr *S);

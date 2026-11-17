@@ -143,7 +143,8 @@ private:
 
   std::vector<DataRegionData> DataRegions;
 
-  DenseMap<const MCSection *, uint64_t> SectionAddress;
+  /// Offset of each section's data from the start of all section data.
+  DenseMap<const MCSection *, uint64_t> SectionDataOffset;
 
   // List of sections in layout order. Virtual sections are after non-virtual
   // sections.
@@ -203,9 +204,7 @@ public:
   }
   MCLOHContainer &getLOHContainer() { return LOHContainer; }
 
-  uint64_t getSectionAddress(const MCSection *Sec) const {
-    return SectionAddress.lookup(Sec);
-  }
+  uint64_t getSectionAddress(const MCSection *Sec) const;
   uint64_t getSymbolAddress(const MCSymbol &S) const;
 
   uint64_t getFragmentAddress(const MCAssembler &Asm,
