@@ -563,6 +563,12 @@ private:
   void extendSegmentsToUses(LiveRange &Segments, ShrinkToUsesWorkList &WorkList,
                             Register Reg, LaneBitmask LaneMask);
 
+  using SubRangeUse = std::pair<SlotIndex, LaneBitmask>;
+  using SubRangeUseList = SmallVector<SubRangeUse, 16>;
+  void collectSubRangeUses(Register Reg, SubRangeUseList &Uses) const;
+  void shrinkSubRangeToUses(LiveInterval::SubRange &SR, Register Reg,
+                            ArrayRef<SubRangeUse> Uses);
+
   /// Helper function for repairIntervalsInRange(), walks backwards and
   /// creates/modifies live segments in \p LR to match the operands found.
   /// Only full operands or operands with subregisters matching \p LaneMask
