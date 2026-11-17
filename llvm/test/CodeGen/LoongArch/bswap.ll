@@ -339,8 +339,7 @@ define signext i32 @rot_bswap32(i32 signext %x) {
 ;
 ; LA64-LABEL: rot_bswap32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    revb.2w $a0, $a0
-; LA64-NEXT:    rotri.w $a0, $a0, 16
+; LA64-NEXT:    revb.2h $a0, $a0
 ; LA64-NEXT:    ret
   %b = call i32 @llvm.bswap.i32(i32 %x)
   %r = call i32 @llvm.fshl.i32(i32 %b, i32 %b, i32 16)
@@ -370,17 +369,7 @@ define signext i32 @masked32(i32 signext %x) {
 ;
 ; LA64-LABEL: masked32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a0, 8
-; LA64-NEXT:    lu12i.w $a2, -4081
-; LA64-NEXT:    ori $a2, $a2, 3840
-; LA64-NEXT:    lu32i.d $a2, 0
-; LA64-NEXT:    and $a1, $a1, $a2
-; LA64-NEXT:    srli.d $a0, $a0, 8
-; LA64-NEXT:    lu12i.w $a2, 4080
-; LA64-NEXT:    ori $a2, $a2, 255
-; LA64-NEXT:    and $a0, $a0, $a2
-; LA64-NEXT:    or $a0, $a1, $a0
-; LA64-NEXT:    addi.w $a0, $a0, 0
+; LA64-NEXT:    revb.2h $a0, $a0
 ; LA64-NEXT:    ret
   %hi = shl i32 %x, 8
   %him = and i32 %hi, -16711936
@@ -413,17 +402,7 @@ define signext i32 @masked32_commuted(i32 signext %x) {
 ;
 ; LA64-LABEL: masked32_commuted:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    srli.d $a1, $a0, 8
-; LA64-NEXT:    lu12i.w $a2, 4080
-; LA64-NEXT:    ori $a2, $a2, 255
-; LA64-NEXT:    and $a1, $a1, $a2
-; LA64-NEXT:    slli.d $a0, $a0, 8
-; LA64-NEXT:    lu12i.w $a2, -4081
-; LA64-NEXT:    ori $a2, $a2, 3840
-; LA64-NEXT:    lu32i.d $a2, 0
-; LA64-NEXT:    and $a0, $a0, $a2
-; LA64-NEXT:    or $a0, $a1, $a0
-; LA64-NEXT:    addi.w $a0, $a0, 0
+; LA64-NEXT:    revb.2h $a0, $a0
 ; LA64-NEXT:    ret
   %lo = lshr i32 %x, 8
   %lom = and i32 %lo, 16711935
@@ -459,17 +438,7 @@ define i64 @masked32_sext(i32 %x) {
 ;
 ; LA64-LABEL: masked32_sext:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    srli.d $a1, $a0, 8
-; LA64-NEXT:    lu12i.w $a2, 4080
-; LA64-NEXT:    ori $a2, $a2, 255
-; LA64-NEXT:    and $a1, $a1, $a2
-; LA64-NEXT:    slli.d $a0, $a0, 8
-; LA64-NEXT:    lu12i.w $a2, -4081
-; LA64-NEXT:    ori $a2, $a2, 3840
-; LA64-NEXT:    lu32i.d $a2, 0
-; LA64-NEXT:    and $a0, $a0, $a2
-; LA64-NEXT:    or $a0, $a1, $a0
-; LA64-NEXT:    addi.w $a0, $a0, 0
+; LA64-NEXT:    revb.2h $a0, $a0
 ; LA64-NEXT:    ret
   %lo = lshr i32 %x, 8
   %lom = and i32 %lo, 16711935
@@ -505,16 +474,8 @@ define i64 @masked32_zext(i32 %x) {
 ;
 ; LA64-LABEL: masked32_zext:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    srli.d $a1, $a0, 8
-; LA64-NEXT:    lu12i.w $a2, 4080
-; LA64-NEXT:    ori $a2, $a2, 255
-; LA64-NEXT:    and $a1, $a1, $a2
-; LA64-NEXT:    slli.d $a0, $a0, 8
-; LA64-NEXT:    lu12i.w $a2, -4081
-; LA64-NEXT:    ori $a2, $a2, 3840
-; LA64-NEXT:    lu32i.d $a2, 0
-; LA64-NEXT:    and $a0, $a0, $a2
-; LA64-NEXT:    or $a0, $a1, $a0
+; LA64-NEXT:    revb.2h $a0, $a0
+; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; LA64-NEXT:    ret
   %lo = lshr i32 %x, 8
   %lom = and i32 %lo, 16711935

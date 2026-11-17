@@ -2105,6 +2105,8 @@ def : Pat<(bitreverse (bswap GPR:$rj)), (BITREV_4B GPR:$rj)>;
 } // Predicates = [IsLA32, Has32S]
 
 let Predicates = [IsLA64] in {
+def : Pat<(loongarch_rotr_w (loongarch_revb_2w GPR:$rj), 16),
+          (REVB_2H GPR:$rj)>;
 def : Pat<(loongarch_revb_2w GPR:$rj), (REVB_2W GPR:$rj)>;
 def : Pat<(bswap GPR:$rj), (REVB_D GPR:$rj)>;
 def : Pat<(loongarch_bitrev_8b GPR:$rj), (BITREV_8B GPR:$rj)>;
