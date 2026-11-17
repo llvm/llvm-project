@@ -26,8 +26,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/raw_ostream.h"
 
+#include <optional>
 #include <string>
 
 static llvm::cl::OptionCategory
@@ -46,28 +46,28 @@ static llvm::cl::opt<std::string>
                    llvm::cl::value_desc("filename"), llvm::cl::init("-"),
                    llvm::cl::cat(CIROffloadMergeCategory));
 
-static int reportError(const llvm::Twine &message) {
-  llvm::errs() << "error: " << message << '\n';
-  return 1;
-}
-
-// The host/device role of a module comes from the LangOptions that CIRGen
-// records in cir.lowering_options.
-static mlir::FailureOr<cir::OffloadKind>
-getOffloadKind(mlir::ModuleOp moduleOp, llvm::StringRef fileName) {
+// The host/device role and language of a module come from the LangOptions
+// that CIRGen records in cir.lowering_options.
+static mlir::FailureOr<cir::LoweringOptionsAttr>
+getLoweringOptions(mlir::ModuleOp moduleOp) {
   auto loweringOpts = moduleOp->getAttrOfType<cir::LoweringOptionsAttr>(
       cir::CIRDialect::getLoweringOptionsAttrName());
   if (!loweringOpts) {
-    reportError("'" + fileName + "' has no '" +
-                cir::CIRDialect::getLoweringOptionsAttrName() + "' attribute");
+    mlir::emitError(moduleOp.getLoc())
+        << "expected '" << cir::CIRDialect::getLoweringOptionsAttrName()
+        << "' attribute";
+    return mlir::failure();
+  }
+  if (loweringOpts.getSyclIsDevice()) {
+    mlir::emitError(moduleOp.getLoc(),
+                    "SYCL compilations are not supported yet");
     return mlir::failure();
   }
   if (!loweringOpts.getCuda()) {
-    reportError("'" + fileName + "' is not a CUDA or HIP compilation");
+    mlir::emitError(moduleOp.getLoc(), "expected a CUDA or HIP compilation");
     return mlir::failure();
   }
-  return loweringOpts.getCudaIsDevice() ? cir::OffloadKind::Device
-                                        : cir::OffloadKind::Host;
+  return loweringOpts;
 }
 
 static void setOffloadAttrs(mlir::ModuleOp moduleOp, llvm::StringRef name,
@@ -80,26 +80,38 @@ static void setOffloadAttrs(mlir::ModuleOp moduleOp, llvm::StringRef name,
 
 static mlir::OwningOpRef<mlir::ModuleOp>
 combineInputs(mlir::MLIRContext &context) {
+  mlir::Location unknownLoc = mlir::UnknownLoc::get(&context);
   mlir::OwningOpRef<mlir::ModuleOp> hostModule;
   llvm::SmallVector<mlir::OwningOpRef<mlir::ModuleOp>> deviceModules;
+  std::optional<bool> isHIP;
 
   for (const std::string &fileName : InputFileNames) {
     mlir::OwningOpRef<mlir::ModuleOp> moduleOp =
         mlir::parseSourceFile<mlir::ModuleOp>(fileName,
                                               mlir::ParserConfig(&context));
     if (!moduleOp) {
-      reportError("failed to parse input file");
+      mlir::emitError(unknownLoc)
+          << "failed to parse input file '" << fileName << "'";
       return {};
     }
 
-    mlir::FailureOr<cir::OffloadKind> offloadKind =
-        getOffloadKind(*moduleOp, fileName);
-    if (mlir::failed(offloadKind))
+    mlir::FailureOr<cir::LoweringOptionsAttr> loweringOpts =
+        getLoweringOptions(*moduleOp);
+    if (mlir::failed(loweringOpts))
       return {};
 
-    if (*offloadKind == cir::OffloadKind::Host) {
+    // A CUDA host cannot be combined with HIP devices, or the other way round.
+    if (!isHIP)
+      isHIP = loweringOpts->getHip();
+    if (loweringOpts->getHip() != *isHIP) {
+      mlir::emitError(moduleOp->getLoc(),
+                      "expected all inputs to be CUDA or all to be HIP");
+      return {};
+    }
+
+    if (!loweringOpts->getCudaIsDevice()) {
       if (hostModule) {
-        reportError("expected exactly one host module");
+        mlir::emitError(moduleOp->getLoc(), "expected exactly one host module");
         return {};
       }
       setOffloadAttrs(*moduleOp, "host", cir::OffloadKind::Host);
@@ -114,18 +126,17 @@ combineInputs(mlir::MLIRContext &context) {
   }
 
   if (!hostModule) {
-    reportError("expected exactly one host module");
+    mlir::emitError(unknownLoc, "expected exactly one host module");
     return {};
   }
   if (deviceModules.empty()) {
-    reportError("expected at least one device module");
+    mlir::emitError(unknownLoc, "expected at least one device module");
     return {};
   }
 
   // The container verifier expects the host module first, followed by the
   // device modules.
-  mlir::ModuleOp container =
-      mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
+  mlir::ModuleOp container = mlir::ModuleOp::create(unknownLoc);
   container->setAttr(cir::CIRDialect::getOffloadContainerAttrName(),
                      mlir::UnitAttr::get(&context));
   container.getBody()->push_back(hostModule.release());
@@ -141,8 +152,10 @@ static int writeModuleToOutput(mlir::ModuleOp moduleOp,
   std::string errorMessage;
   std::unique_ptr<llvm::ToolOutputFile> outputFile =
       mlir::openOutputFile(outputFileName, &errorMessage);
-  if (!outputFile)
-    return reportError(errorMessage);
+  if (!outputFile) {
+    mlir::emitError(moduleOp.getLoc(), errorMessage);
+    return 1;
+  }
 
   // TODO: Support bytecode output.
   moduleOp->print(outputFile->os());
@@ -157,22 +170,28 @@ int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv,
                                     "CIR host-device offload merge\n");
 
-  if (!Combine)
-    return reportError("expected -combine");
-
   mlir::DialectRegistry registry;
   cir::registerAllDialects(registry);
   mlir::MLIRContext context(registry);
   context.loadDialect<cir::CIRDialect>();
+  mlir::Location unknownLoc = mlir::UnknownLoc::get(&context);
 
-  if (InputFileNames.empty())
-    return reportError("no input files");
+  if (!Combine) {
+    mlir::emitError(unknownLoc, "expected -combine");
+    return 1;
+  }
+  if (InputFileNames.empty()) {
+    mlir::emitError(unknownLoc, "no input files");
+    return 1;
+  }
 
   mlir::OwningOpRef<mlir::ModuleOp> container = combineInputs(context);
   if (!container)
     return 1;
-  if (mlir::failed(mlir::verify(*container)))
-    return reportError("failed to verify combined module");
+  if (mlir::failed(mlir::verify(*container))) {
+    mlir::emitError(container->getLoc(), "failed to verify combined module");
+    return 1;
+  }
 
   return writeModuleToOutput(*container, OutputFileName);
 }
