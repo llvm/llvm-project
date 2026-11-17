@@ -338,6 +338,34 @@ define ppc_fp128 @ret_sinpi_ppc_fp128_nosub(ppc_fp128 nofpclass(sub) %arg) {
   ret ppc_fp128 %sin
 }
 
+; sinpi(1.0 + x) can be approximated by -pi * x or -3.14159 * x. Since
+; -3.14159 * subnormal may still be subnormal, we cannot rule out subnormal.
+define ppc_fp128 @ret_sinpi_ppc_fp128_may_be_subnormal(ppc_fp128 nofpclass(nan inf zero sub) %arg) {
+; CHECK-LABEL: define nofpclass(nan inf) ppc_fp128 @ret_sinpi_ppc_fp128_may_be_subnormal
+; CHECK-SAME: (ppc_fp128 nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call { ppc_fp128, ppc_fp128 } @llvm.sincospi.ppcf128(ppc_fp128 nofpclass(nan inf zero sub) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[SIN:%.*]] = extractvalue { ppc_fp128, ppc_fp128 } [[CALL]], 0
+; CHECK-NEXT:    ret ppc_fp128 [[SIN]]
+;
+  %call = call {ppc_fp128, ppc_fp128} @llvm.sincospi.ppc_fp128(ppc_fp128 %arg)
+  %sin = extractvalue {ppc_fp128, ppc_fp128} %call, 0
+  ret ppc_fp128 %sin
+}
+
+; cospi(0.5 + x) can be approximated by -pi * x or -3.14159 * x. Since
+; -3.14159 * subnormal may still be subnormal, we cannot rule out subnormal.
+define ppc_fp128 @ret_cospi_ppc_fp128_may_be_subnormal(ppc_fp128 nofpclass(nan inf zero sub) %arg) {
+; CHECK-LABEL: define nofpclass(nan inf) ppc_fp128 @ret_cospi_ppc_fp128_may_be_subnormal
+; CHECK-SAME: (ppc_fp128 nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call { ppc_fp128, ppc_fp128 } @llvm.sincospi.ppcf128(ppc_fp128 nofpclass(nan inf zero sub) [[ARG]]) #[[ATTR5]]
+; CHECK-NEXT:    [[COS:%.*]] = extractvalue { ppc_fp128, ppc_fp128 } [[CALL]], 1
+; CHECK-NEXT:    ret ppc_fp128 [[COS]]
+;
+  %call = call {ppc_fp128, ppc_fp128} @llvm.sincospi.ppc_fp128(ppc_fp128 %arg)
+  %cos = extractvalue {ppc_fp128, ppc_fp128} %call, 1
+  ret ppc_fp128 %cos
+}
+
 attributes #0 = { denormal_fpenv(dynamic|dynamic) }
 attributes #1 = { denormal_fpenv(positivezero|positivezero) }
 
