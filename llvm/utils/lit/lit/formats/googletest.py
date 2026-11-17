@@ -325,6 +325,15 @@ class GoogleTest(TestFormat):
                             test.suite, testPath, test.config, test.file_path
                         )
 
+                        # Shard discovery cannot match individual test names. Apply
+                        # command-line expectations once the real names are known.
+                        subtest_file = os.sep.join(subtest.path_in_suite)
+                        subtest_name = subtest.getFullName()
+                        if subtest_file in opts.xfail or subtest_name in opts.xfail:
+                            subtest.xfails.append("*")
+                        if subtest_file in opts.xfail_not or subtest_name in opts.xfail_not:
+                            subtest.xfail_not = True
+
                         testname = testcase["name"] + "." + testinfo["name"]
                         header = f"Script:\n--\n%s --gtest_filter=%s\n--\n" % (
                             test.file_path,
@@ -348,7 +357,7 @@ class GoogleTest(TestFormat):
                         elif "failures" in testinfo:
                             returnCode = (
                                 lit.Test.XFAIL
-                                if test.isExpectedToFail()
+                                if test.isExpectedToFail() and not subtest.xfail_not
                                 else lit.Test.FAIL
                             )
                             output = header
