@@ -4,16 +4,12 @@
 ; When the compare feeds a select, the generic combiner inverts the
 ; true/false operands and drops the xori entirely.
 
-; TODO: The xori is redundant here. Once the setcc condition codes are
-; legalized, the select should absorb the inversion by swapping the
-; true/false operands, dropping the xori entirely.
 define i64 @sel_ge_reg(i64 %x, i64 %y, i64 %a, i64 %b) {
 ; CHECK-LABEL: sel_ge_reg:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slt $a0, $a0, $a1
-; CHECK-NEXT:    xori $a0, $a0, 1
-; CHECK-NEXT:    masknez $a1, $a3, $a0
-; CHECK-NEXT:    maskeqz $a0, $a2, $a0
+; CHECK-NEXT:    masknez $a1, $a2, $a0
+; CHECK-NEXT:    maskeqz $a0, $a3, $a0
 ; CHECK-NEXT:    or $a0, $a0, $a1
 ; CHECK-NEXT:    ret
   %c = icmp sge i64 %x, %y
@@ -21,15 +17,12 @@ define i64 @sel_ge_reg(i64 %x, i64 %y, i64 %a, i64 %b) {
   ret i64 %r
 }
 
-; TODO: Same as above; the xori should be dropped once the condition codes
-; are legalized.
 define i64 @sel_sle_reg(i64 %x, i64 %y, i64 %a, i64 %b) {
 ; CHECK-LABEL: sel_sle_reg:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slt $a0, $a1, $a0
-; CHECK-NEXT:    xori $a0, $a0, 1
-; CHECK-NEXT:    masknez $a1, $a3, $a0
-; CHECK-NEXT:    maskeqz $a0, $a2, $a0
+; CHECK-NEXT:    masknez $a1, $a2, $a0
+; CHECK-NEXT:    maskeqz $a0, $a3, $a0
 ; CHECK-NEXT:    or $a0, $a0, $a1
 ; CHECK-NEXT:    ret
   %c = icmp sle i64 %x, %y
@@ -37,16 +30,12 @@ define i64 @sel_sle_reg(i64 %x, i64 %y, i64 %a, i64 %b) {
   ret i64 %r
 }
 
-; TODO: The xori is redundant here. Once the setcc condition codes are
-; legalized, the select should absorb the inversion by swapping the
-; true/false operands, dropping the xori entirely.
 define i64 @sel_uge_reg(i64 %x, i64 %y, i64 %a, i64 %b) {
 ; CHECK-LABEL: sel_uge_reg:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sltu $a0, $a0, $a1
-; CHECK-NEXT:    xori $a0, $a0, 1
-; CHECK-NEXT:    masknez $a1, $a3, $a0
-; CHECK-NEXT:    maskeqz $a0, $a2, $a0
+; CHECK-NEXT:    masknez $a1, $a2, $a0
+; CHECK-NEXT:    maskeqz $a0, $a3, $a0
 ; CHECK-NEXT:    or $a0, $a0, $a1
 ; CHECK-NEXT:    ret
   %c = icmp uge i64 %x, %y
@@ -54,16 +43,12 @@ define i64 @sel_uge_reg(i64 %x, i64 %y, i64 %a, i64 %b) {
   ret i64 %r
 }
 
-; TODO: The xori is redundant here. Once the setcc condition codes are
-; legalized, the select should absorb the inversion by swapping the
-; true/false operands, dropping the xori entirely.
 define i64 @sel_ule_reg(i64 %x, i64 %y, i64 %a, i64 %b) {
 ; CHECK-LABEL: sel_ule_reg:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sltu $a0, $a1, $a0
-; CHECK-NEXT:    xori $a0, $a0, 1
-; CHECK-NEXT:    masknez $a1, $a3, $a0
-; CHECK-NEXT:    maskeqz $a0, $a2, $a0
+; CHECK-NEXT:    masknez $a1, $a2, $a0
+; CHECK-NEXT:    maskeqz $a0, $a3, $a0
 ; CHECK-NEXT:    or $a0, $a0, $a1
 ; CHECK-NEXT:    ret
   %c = icmp ule i64 %x, %y

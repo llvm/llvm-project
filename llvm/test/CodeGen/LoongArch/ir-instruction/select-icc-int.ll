@@ -85,9 +85,8 @@ define i32 @select_uge(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 ; LA64-LABEL: select_uge:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    sltu $a0, $a0, $a1
-; LA64-NEXT:    xori $a0, $a0, 1
-; LA64-NEXT:    masknez $a1, $a3, $a0
-; LA64-NEXT:    maskeqz $a0, $a2, $a0
+; LA64-NEXT:    masknez $a1, $a2, $a0
+; LA64-NEXT:    maskeqz $a0, $a3, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %cond = icmp uge i32 %a, %b
@@ -130,9 +129,8 @@ define i32 @select_ule(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 ; LA64-LABEL: select_ule:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    sltu $a0, $a1, $a0
-; LA64-NEXT:    xori $a0, $a0, 1
-; LA64-NEXT:    masknez $a1, $a3, $a0
-; LA64-NEXT:    maskeqz $a0, $a2, $a0
+; LA64-NEXT:    masknez $a1, $a2, $a0
+; LA64-NEXT:    maskeqz $a0, $a3, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %cond = icmp ule i32 %a, %b
@@ -175,9 +173,8 @@ define i32 @select_sge(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 ; LA64-LABEL: select_sge:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    slt $a0, $a0, $a1
-; LA64-NEXT:    xori $a0, $a0, 1
-; LA64-NEXT:    masknez $a1, $a3, $a0
-; LA64-NEXT:    maskeqz $a0, $a2, $a0
+; LA64-NEXT:    masknez $a1, $a2, $a0
+; LA64-NEXT:    maskeqz $a0, $a3, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %cond = icmp sge i32 %a, %b
@@ -220,9 +217,8 @@ define i32 @select_sle(i32 signext %a, i32 signext %b, i32 %x, i32 %y) {
 ; LA64-LABEL: select_sle:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    slt $a0, $a1, $a0
-; LA64-NEXT:    xori $a0, $a0, 1
-; LA64-NEXT:    masknez $a1, $a3, $a0
-; LA64-NEXT:    maskeqz $a0, $a2, $a0
+; LA64-NEXT:    masknez $a1, $a2, $a0
+; LA64-NEXT:    maskeqz $a0, $a3, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %cond = icmp sle i32 %a, %b
