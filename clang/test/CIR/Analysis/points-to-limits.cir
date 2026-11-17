@@ -1,0 +1,144 @@
+// RUN: split-file %s %t
+// RUN: cir-opt %t/operations.cir --remarks-filter=points-to -verify-diagnostics \
+// RUN:   -pass-pipeline='builtin.module(cir.func(test-cir-points-to{max-operations=5}))'
+// RUN: cir-opt %t/work.cir --remarks-filter=points-to -verify-diagnostics \
+// RUN:   -pass-pipeline='builtin.module(cir.func(test-cir-points-to{min-work=14 work-per-operation=1}))'
+// RUN: cir-opt %t/work-per-operation.cir --remarks-filter=points-to -verify-diagnostics \
+// RUN:   -pass-pipeline='builtin.module(cir.func(test-cir-points-to{min-work=1 work-per-operation=3}))'
+// RUN: cir-opt %t/set-size.cir --remarks-filter=points-to -verify-diagnostics \
+// RUN:   -pass-pipeline='builtin.module(cir.func(test-cir-points-to{max-set-size=2}))'
+
+//--- operations.cir
+
+// The limit is 5 operations, not counting the function itself. The first
+// function is at the limit and is analyzed. The second one has one more
+// operation, so the analysis gives up, and every value points to unknown
+// objects.
+
+!s32i = !cir.int<s, 32>
+cir.func @at_limit() {
+  %a = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+  %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  cir.store %a, %p : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  // expected-remark @below {{points to [a]}}
+  %v = cir.load %p : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  cir.return
+}
+
+// expected-remark @below {{gave up: more than 5 operations}}
+cir.func @over_limit() {
+  %a = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+  %b = cir.alloca "b" align(4) : !cir.ptr<!s32i>
+  %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  cir.store %a, %p : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  // expected-remark @below {{points to [unknown]}}
+  %v = cir.load %p : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  cir.return
+}
+
+//--- work.cir
+
+// The load comes before the store, so the sets only settle after visiting the
+// 5 operations of the function three times, 15 visits. The work limit is the
+// larger of 14 and one visit for each operation, so the analysis gives up.
+
+!s32i = !cir.int<s, 32>
+// expected-remark @below {{gave up: more than 14 operation visits}}
+cir.func @work() {
+  %a = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+  %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  // expected-remark @below {{points to [unknown]}}
+  %v = cir.load %p : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  cir.store %a, %p : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  cir.return
+}
+
+//--- work-per-operation.cir
+
+// The same function, with a work limit of three visits for each operation,
+// 15 visits, which is enough.
+
+!s32i = !cir.int<s, 32>
+cir.func @work_per_operation() {
+  %a = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+  %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  // expected-remark @below {{points to [a]}}
+  %v = cir.load %p : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  cir.store %a, %p : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  cir.return
+}
+
+//--- set-size.cir
+
+// The addresses of three slots are stored into `p`, more than the limit of two
+// objects, so the memory of `p` is replaced by unknown objects and a load from
+// `p` gives unknown. The three slots escape, and so does `x`, which `s1` holds.
+//
+// The address of `s4` is only known to reach `p` after the set was replaced,
+// because it is loaded from `q` before being stored there. It escapes when the
+// store into `p` is visited again, and so does `y`.
+
+!s32i = !cir.int<s, 32>
+!pi = !cir.ptr<!s32i>
+!ppi = !cir.ptr<!pi>
+!pppi = !cir.ptr<!ppi>
+cir.func @set_size() {
+  %x = cir.alloca "x" align(4) : !pi
+  %y = cir.alloca "y" align(4) : !pi
+  %s1 = cir.alloca "s1" align(8) : !ppi
+  %s2 = cir.alloca "s2" align(8) : !ppi
+  %s3 = cir.alloca "s3" align(8) : !ppi
+  %s4 = cir.alloca "s4" align(8) : !ppi
+  %p = cir.alloca "p" align(8) : !pppi
+  %q = cir.alloca "q" align(8) : !pppi
+  cir.store %x, %s1 : !pi, !ppi
+  cir.store %y, %s4 : !pi, !ppi
+  cir.store %s1, %p : !ppi, !pppi
+  cir.store %s2, %p : !ppi, !pppi
+  // expected-remark @below {{a set of 3 objects is replaced by unknown, the limit is 2}}
+  // expected-remark @below {{the address of s1 escapes}}
+  // expected-remark @below {{the address of s2 escapes}}
+  // expected-remark @below {{the address of s3 escapes}}
+  // expected-remark @below {{the address of x escapes}}
+  cir.store %s3, %p : !ppi, !pppi
+  // expected-remark @below {{points to [s4]}}
+  %l = cir.load %q : !pppi, !ppi
+  // expected-remark @below {{the address of s4 escapes}}
+  // expected-remark @below {{the address of y escapes}}
+  cir.store %l, %p : !ppi, !pppi
+  cir.store %s4, %q : !ppi, !pppi
+  // expected-remark @below {{points to [unknown]}}
+  %v = cir.load %p : !pppi, !ppi
+  // expected-remark @below {{points to [x, unknown]}}
+  %w = cir.load %s1 : !ppi, !pi
+  // expected-remark @below {{points to [y, unknown]}}
+  %z = cir.load %s4 : !ppi, !pi
+  cir.return
+}
+
+// `p1` holds the address of one object and `p2` of two, so a pointer that may
+// point to both slots loads three objects. Its set is replaced by unknown
+// objects, and the three objects escape.
+
+cir.func @value_set_size() {
+  %x = cir.alloca "x" align(4) : !pi
+  %y = cir.alloca "y" align(4) : !pi
+  %z = cir.alloca "z" align(4) : !pi
+  %p1 = cir.alloca "p1" align(8) : !ppi
+  %p2 = cir.alloca "p2" align(8) : !ppi
+  %pp = cir.alloca "pp" align(8) : !pppi
+  cir.store %x, %p1 : !pi, !ppi
+  cir.store %y, %p2 : !pi, !ppi
+  cir.store %z, %p2 : !pi, !ppi
+  cir.store %p1, %pp : !ppi, !pppi
+  cir.store %p2, %pp : !ppi, !pppi
+  // expected-remark @below {{points to [p1, p2]}}
+  %l = cir.load %pp : !pppi, !ppi
+  // expected-remark @below {{points to [unknown]}}
+  // expected-remark @below {{a set of 3 objects is replaced by unknown, the limit is 2}}
+  // expected-remark @below {{the address of x escapes}}
+  // expected-remark @below {{the address of y escapes}}
+  // expected-remark @below {{the address of z escapes}}
+  %v = cir.load %l : !ppi, !pi
+  cir.return
+}

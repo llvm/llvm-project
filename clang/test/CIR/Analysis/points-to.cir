@@ -1,0 +1,315 @@
+// RUN: cir-opt %s -pass-pipeline='builtin.module(cir.func(test-cir-points-to))' \
+// RUN:   --remarks-filter=points-to -split-input-file -verify-diagnostics
+
+// The analysis emits a remark with the points-to set of every loaded pointer,
+// and a remark for every object whose address escapes, on the operation that
+// makes it escape.
+
+// A pointer stored into a slot is loaded back from it.
+
+!s32i = !cir.int<s, 32>
+cir.func @store_load() {
+  %a = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+  %b = cir.alloca "b" align(4) : !cir.ptr<!s32i>
+  %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  %q = cir.alloca "q" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  cir.store %a, %p : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  cir.store %b, %q : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  // expected-remark @below {{points to [a]}}
+  %pa = cir.load %p : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  // expected-remark @below {{points to [b]}}
+  %pb = cir.load %q : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  cir.return
+}
+
+// -----
+
+// The analysis is flow insensitive: a load sees every pointer stored into the
+// slot, including stores that come after it.
+
+!s32i = !cir.int<s, 32>
+cir.func @flow_insensitive() {
+  %a = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+  %b = cir.alloca "b" align(4) : !cir.ptr<!s32i>
+  %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  cir.store %a, %p : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  // expected-remark @below {{points to [a, b]}}
+  %v = cir.load %p : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  cir.store %b, %p : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  cir.return
+}
+
+// -----
+
+// Two levels of indirection: the slot `pp` holds the address of `p`, which
+// holds the address of `a`.
+
+!s32i = !cir.int<s, 32>
+cir.func @double_indirection() {
+  %a = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+  %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  %pp = cir.alloca "pp" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+  cir.store %a, %p : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  cir.store %p, %pp : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+  // expected-remark @below {{points to [p]}}
+  %lp = cir.load %pp : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, !cir.ptr<!cir.ptr<!s32i>>
+  // expected-remark @below {{points to [a]}}
+  %la = cir.load %lp : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  cir.return
+}
+
+// -----
+
+// A store or a load through a pointer that may point to two slots may write or
+// read either of them.
+
+!s32i = !cir.int<s, 32>
+!pi = !cir.ptr<!s32i>
+!ppi = !cir.ptr<!pi>
+cir.func @two_slots() {
+  %a = cir.alloca "a" align(4) : !pi
+  %b = cir.alloca "b" align(4) : !pi
+  %p = cir.alloca "p" align(8) : !ppi
+  %q = cir.alloca "q" align(8) : !ppi
+  %pp = cir.alloca "pp" align(8) : !cir.ptr<!ppi>
+  cir.store %p, %pp : !ppi, !cir.ptr<!ppi>
+  cir.store %q, %pp : !ppi, !cir.ptr<!ppi>
+  // expected-remark @below {{points to [p, q]}}
+  %l = cir.load %pp : !cir.ptr<!ppi>, !ppi
+  cir.store %a, %l : !pi, !ppi
+  cir.store %b, %q : !pi, !ppi
+  // expected-remark @below {{points to [a]}}
+  %vp = cir.load %p : !ppi, !pi
+  // expected-remark @below {{points to [a, b]}}
+  %vq = cir.load %q : !ppi, !pi
+  // expected-remark @below {{points to [a, b]}}
+  %vl = cir.load %l : !ppi, !pi
+  cir.return
+}
+
+// -----
+
+// A null pointer points to no object, so storing it doesn't add unknown
+// objects to the slot.
+
+!s32i = !cir.int<s, 32>
+cir.func @null_pointer() {
+  %a = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+  %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  %null = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
+  cir.store %null, %p : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  cir.store %a, %p : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  // expected-remark @below {{points to [a]}}
+  %v = cir.load %p : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  cir.return
+}
+
+// -----
+
+// A store through a loaded pointer is seen by loads through the slot it
+// points to, even when the store is visited after the load.
+
+!s32i = !cir.int<s, 32>
+cir.func @store_through_loaded_pointer() {
+  %a = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+  %b = cir.alloca "b" align(4) : !cir.ptr<!s32i>
+  %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  %pp = cir.alloca "pp" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+  cir.store %a, %p : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  cir.store %p, %pp : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+  // expected-remark @below {{points to [a, b]}}
+  %v = cir.load %p : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  // expected-remark @below {{points to [p]}}
+  %lp = cir.load %pp : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, !cir.ptr<!cir.ptr<!s32i>>
+  cir.store %b, %lp : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  cir.return
+}
+
+// -----
+
+// Function arguments point to unknown objects, and so does anything loaded
+// through them.
+
+!s32i = !cir.int<s, 32>
+cir.func @argument(%arg: !cir.ptr<!cir.ptr<!s32i>>) {
+  // expected-remark @below {{points to [unknown]}}
+  %v = cir.load %arg : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  cir.return
+}
+
+// -----
+
+// Storing the address of `p` through an argument lets code outside the
+// function reach `p`, so its memory may hold any address, not only `a`, and
+// `a` escapes with it. The same holds when `p` is reached through `pp`. The
+// slot `q` did not escape and still holds only `c`.
+
+!s32i = !cir.int<s, 32>
+cir.func @escape_through_store(%arg: !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>) {
+  %a = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+  %c = cir.alloca "c" align(4) : !cir.ptr<!s32i>
+  %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  %q = cir.alloca "q" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  %pp = cir.alloca "pp" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+  cir.store %a, %p : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  cir.store %p, %pp : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+  cir.store %c, %q : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  // expected-remark @below {{the address of p escapes}}
+  // expected-remark @below {{the address of a escapes}}
+  cir.store %p, %arg : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+  // expected-remark @below {{points to [a, unknown]}}
+  %own = cir.load %p : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  // expected-remark @below {{points to [p]}}
+  %lp = cir.load %pp : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, !cir.ptr<!cir.ptr<!s32i>>
+  // expected-remark @below {{points to [a, unknown]}}
+  %inner = cir.load %lp : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  // expected-remark @below {{points to [c]}}
+  %other = cir.load %q : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  cir.return
+}
+
+// -----
+
+// The analysis does not model calls yet, so passing an address to a call makes
+// the object escape. The callee can reach `a` through `p`, so `a` escapes with
+// it.
+
+!s32i = !cir.int<s, 32>
+cir.func private @take(!cir.ptr<!cir.ptr<!s32i>>)
+cir.func @escape_through_call() {
+  %a = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+  %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  cir.store %a, %p : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  // expected-remark @below {{the address of p escapes}}
+  // expected-remark @below {{the address of a escapes}}
+  cir.call @take(%p) : (!cir.ptr<!cir.ptr<!s32i>>) -> ()
+  // expected-remark @below {{points to [a, unknown]}}
+  %v = cir.load %p : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  cir.return
+}
+
+// -----
+
+// The object an operation the analysis does not model operates on escapes.
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+cir.func @unmodeled_op() {
+  %a = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+  %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  cir.store %a, %p : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  // expected-remark @below {{the address of p escapes}}
+  // expected-remark @below {{the address of a escapes}}
+  %cast = cir.cast bitcast %p : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!u8i>
+  // expected-remark @below {{points to [a, unknown]}}
+  %v = cir.load %p : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  cir.return
+}
+
+// -----
+
+// A global is not tracked: its address points to unknown objects, and storing
+// an address into it makes the object escape. `a` is stored into `p` after `p`
+// escaped, so it escapes too.
+
+!s32i = !cir.int<s, 32>
+cir.global external @gp = #cir.ptr<null> : !cir.ptr<!cir.ptr<!s32i>>
+cir.func @global() {
+  %a = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+  %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  %g = cir.get_global @gp : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+  // expected-remark @below {{the address of p escapes}}
+  cir.store %p, %g : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+  // expected-remark @below {{the address of a escapes}}
+  cir.store %a, %p : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  // expected-remark @below {{points to [a, unknown]}}
+  %v = cir.load %p : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  // expected-remark @below {{points to [unknown]}}
+  %lg = cir.load %g : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, !cir.ptr<!cir.ptr<!s32i>>
+  cir.return
+}
+
+// -----
+
+// Values passed through region results are not followed yet: the result of the
+// cir.ternary points to unknown objects, and the yielded objects escape.
+
+!s32i = !cir.int<s, 32>
+cir.func @region_result(%c: !cir.bool) {
+  %a = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+  %b = cir.alloca "b" align(4) : !cir.ptr<!s32i>
+  %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  cir.store %a, %p : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  %r = cir.ternary(%c, true {
+    // expected-remark @below {{the address of p escapes}}
+    // expected-remark @below {{the address of a escapes}}
+    cir.yield %p : !cir.ptr<!cir.ptr<!s32i>>
+  }, false {
+    cir.yield %p : !cir.ptr<!cir.ptr<!s32i>>
+  }) : (!cir.bool) -> !cir.ptr<!cir.ptr<!s32i>>
+  // expected-remark @below {{points to [unknown]}}
+  %lr = cir.load %r : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  // expected-remark @below {{points to [a, unknown]}}
+  %v = cir.load %p : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  cir.return
+}
+
+// -----
+
+// Converting an address to an integer makes the object escape, and converting
+// an integer back to a pointer gives a pointer to unknown objects.
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+cir.func @ptr_to_int() {
+  %a = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+  %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  %i = cir.alloca "i" align(8) : !cir.ptr<!s64i>
+  cir.store %a, %p : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  // expected-remark @below {{the address of p escapes}}
+  // expected-remark @below {{the address of a escapes}}
+  %int = cir.cast ptr_to_int %p : !cir.ptr<!cir.ptr<!s32i>> -> !s64i
+  cir.store %int, %i : !s64i, !cir.ptr<!s64i>
+  // expected-remark @below {{points to [a, unknown]}}
+  %v = cir.load %p : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  %li = cir.load %i : !cir.ptr<!s64i>, !s64i
+  %back = cir.cast int_to_ptr %li : !s64i -> !cir.ptr<!cir.ptr<!s32i>>
+  // expected-remark @below {{points to [unknown]}}
+  %lb = cir.load %back : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  cir.return
+}
+
+// -----
+
+// A slot that is never stored to points to nothing.
+
+!s32i = !cir.int<s, 32>
+cir.func @never_stored() {
+  %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  // expected-remark @below {{points to []}}
+  %v = cir.load %p : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  cir.return
+}
+
+// -----
+
+// Storing into an object that already escaped makes the stored object escape:
+// the callee may have kept the address of `p`, so it can reach `a` and anything
+// stored in it, here `x`.
+
+!s32i = !cir.int<s, 32>
+cir.func private @take(!cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>)
+cir.func @store_into_escaped() {
+  %a = cir.alloca "a" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+  %x = cir.alloca "x" align(4) : !cir.ptr<!s32i>
+  cir.store %x, %a : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  // expected-remark @below {{the address of p escapes}}
+  cir.call @take(%p) : (!cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>) -> ()
+  // expected-remark @below {{the address of a escapes}}
+  // expected-remark @below {{the address of x escapes}}
+  cir.store %a, %p : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+  // expected-remark @below {{points to [x, unknown]}}
+  %v = cir.load %a : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  cir.return
+}
