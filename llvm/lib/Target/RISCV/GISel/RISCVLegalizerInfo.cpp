@@ -219,6 +219,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder(G_BITREVERSE)
       .customFor(ST.hasStdExtZbkb(), {s8})
+      .lowerIf(scalarNarrowerThan(0, 8))
+      .widenScalarToNextPow2(0)
       .maxScalar(0, sXLen)
       .lower();
 

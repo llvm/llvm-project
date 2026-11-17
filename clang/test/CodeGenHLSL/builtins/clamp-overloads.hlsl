@@ -14,6 +14,8 @@
 // RUN:  -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF \
 // RUN:  -DTARGET=spv -DFNATTRS="hidden spir_func noundef" -DFFNATTRS="nofpclass(nan inf)"
 
+using namespace hlsl;
+
 #ifdef __HLSL_ENABLE_16_BIT
 // NATIVE_HALF: define [[FNATTRS]] <4 x i16> {{.*}}test_clamp_short4_mismatch
 // NATIVE_HALF: [[CONV0:%.*]] = insertelement <4 x i16> poison, i16 %{{.*}}, i64 0
