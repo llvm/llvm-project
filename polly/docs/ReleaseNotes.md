@@ -36,3 +36,7 @@ branch.
   `-polly-isolate-complete-tiles-2nd-level` and
   `-polly-isolate-complete-register-tiles` do the same for the second level
   of tiling and for register tiling.
+- Polly now tiles outer permutable bands with parameter-independent schedules,
+  including bands around already tiled inner loops. Register tiling and
+  prevectorization still apply only to innermost bands. Outer-band tiling is
+  enabled by default and can be disabled with `-polly-tile-outer-bands=false`.
