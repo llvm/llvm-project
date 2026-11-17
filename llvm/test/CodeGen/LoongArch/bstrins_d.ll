@@ -211,9 +211,8 @@ define i64 @no_bstrins_d(i64 %a) nounwind {
 define i64 @fshl_pack(i8 %a, i56 %b) nounwind {
 ; CHECK-LABEL: fshl_pack:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bstrpick.d $a1, $a1, 55, 0
-; CHECK-NEXT:    slli.d $a0, $a0, 56
-; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    bstrins.d $a1, $a0, 63, 56
+; CHECK-NEXT:    move $a0, $a1
 ; CHECK-NEXT:    ret
   %ea = zext i8 %a to i64
   %eb = zext i56 %b to i64
@@ -226,10 +225,7 @@ define i64 @fshl_shl(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: fshl_shl:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli.d $a0, $a0, 21
-; CHECK-NEXT:    slli.d $a1, $a1, 10
-; CHECK-NEXT:    bstrpick.d $a1, $a1, 20, 10
-; CHECK-NEXT:    slli.d $a1, $a1, 10
-; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    bstrins.d $a0, $a1, 20, 10
 ; CHECK-NEXT:    ret
   %sb = shl i64 %b, 53
   %r = call i64 @llvm.fshl.i64(i64 %a, i64 %sb, i64 21)

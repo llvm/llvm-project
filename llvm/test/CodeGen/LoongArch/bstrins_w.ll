@@ -241,9 +241,8 @@ define i32 @no_bstrins_w(i32 %a) nounwind {
 define i32 @fshl_pack(i8 %a, i24 %b) nounwind {
 ; CHECK-LABEL: fshl_pack:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bstrpick.w $a1, $a1, 23, 0
-; CHECK-NEXT:    slli.w $a0, $a0, 24
-; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    bstrins.w $a1, $a0, 31, 24
+; CHECK-NEXT:    move $a0, $a1
 ; CHECK-NEXT:    ret
   %ea = zext i8 %a to i32
   %eb = zext i24 %b to i32
