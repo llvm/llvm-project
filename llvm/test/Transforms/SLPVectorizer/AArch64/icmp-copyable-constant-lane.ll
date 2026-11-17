@@ -586,3 +586,171 @@ entry:
   store i8 %z3, ptr %o3, align 1
   ret void
 }
+
+; The splat operand is an instruction of the block of the other compared
+; operands, the true lane compares constants.
+
+define void @self_compare_operand_block_value(ptr %r, <4 x i64> %va, i64 %n, ptr %p, ptr %out) {
+; CHECK-LABEL: define void @self_compare_operand_block_value(
+; CHECK-SAME: ptr [[R:%.*]], <4 x i64> [[VA:%.*]], i64 [[N:%.*]], ptr [[P:%.*]], ptr [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[PREHEADER:.*:]]
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze i64 [[N]]
+; CHECK-NEXT:    store i64 [[TMP3]], ptr [[P]], align 8
+; CHECK-NEXT:    [[V1:%.*]] = extractelement <4 x i64> [[VA]], i64 1
+; CHECK-NEXT:    [[A1:%.*]] = add i64 [[V1]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i64> [[VA]], <4 x i64> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i64> [[TMP0]], <i64 2, i64 3>
+; CHECK-NEXT:    br label %[[BODY:.*]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[C1:%.*]] = icmp ule i64 [[A1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule <2 x i64> [[TMP1]], [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x i8>, ptr [[R]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i8> [[TMP6]], zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i1> <i1 true, i1 poison, i1 poison, i1 poison>, i1 [[C1]], i64 1
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i1> [[TMP4]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i1> [[TMP11]], <4 x i1> [[TMP12]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP9:%.*]] = and <4 x i1> [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = zext <4 x i1> [[TMP9]] to <4 x i8>
+; CHECK-NEXT:    store <4 x i8> [[TMP10]], ptr [[OUT]], align 1
+; CHECK-NEXT:    ret void
+;
+preheader:
+  %fn = freeze i64 %n
+  store i64 %fn, ptr %p, align 8
+  %v1 = extractelement <4 x i64> %va, i64 1
+  %v2 = extractelement <4 x i64> %va, i64 2
+  %v3 = extractelement <4 x i64> %va, i64 3
+  %a1 = add i64 %v1, 1
+  %a2 = add i64 %v2, 2
+  %a3 = add i64 %v3, 3
+  br label %body
+
+body:
+  %r1p = getelementptr inbounds nuw i8, ptr %r, i64 1
+  %r2p = getelementptr inbounds nuw i8, ptr %r, i64 2
+  %r3p = getelementptr inbounds nuw i8, ptr %r, i64 3
+  %r0 = load i8, ptr %r, align 1
+  %r1 = load i8, ptr %r1p, align 1
+  %r2 = load i8, ptr %r2p, align 1
+  %r3 = load i8, ptr %r3p, align 1
+  %cmp0 = icmp eq i8 %r0, 0
+  %cmp1 = icmp eq i8 %r1, 0
+  %cmp2 = icmp eq i8 %r2, 0
+  %cmp3 = icmp eq i8 %r3, 0
+  %c1 = icmp ule i64 %a1, %fn
+  %c2 = icmp ule i64 %a2, %fn
+  %c3 = icmp ule i64 %a3, %fn
+  %and0 = and i1 %cmp0, true
+  %and1 = and i1 %cmp1, %c1
+  %and2 = and i1 %cmp2, %c2
+  %and3 = and i1 %cmp3, %c3
+  %z0 = zext i1 %and0 to i8
+  %z1 = zext i1 %and1 to i8
+  %z2 = zext i1 %and2 to i8
+  %z3 = zext i1 %and3 to i8
+  %o1 = getelementptr inbounds nuw i8, ptr %out, i64 1
+  %o2 = getelementptr inbounds nuw i8, ptr %out, i64 2
+  %o3 = getelementptr inbounds nuw i8, ptr %out, i64 3
+  store i8 %z0, ptr %out, align 1
+  store i8 %z1, ptr %o1, align 1
+  store i8 %z2, ptr %o2, align 1
+  store i8 %z3, ptr %o3, align 1
+  ret void
+}
+
+; The matching lanes are the majority of the odd number of lanes, the true lane
+; compares constants.
+
+define <3 x i8> @odd_lanes_majority(<4 x i64> %va, <4 x i64> %vb) {
+; CHECK-LABEL: define <3 x i8> @odd_lanes_majority(
+; CHECK-SAME: <4 x i64> [[VA:%.*]], <4 x i64> [[VB:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x i64> [[VA]], i64 1
+; CHECK-NEXT:    [[B1:%.*]] = extractelement <4 x i64> [[VB]], i64 1
+; CHECK-NEXT:    [[A2:%.*]] = extractelement <4 x i64> [[VA]], i64 2
+; CHECK-NEXT:    [[B2:%.*]] = extractelement <4 x i64> [[VB]], i64 2
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i64 [[A1]], [[B1]]
+; CHECK-NEXT:    [[C2:%.*]] = icmp ult i64 [[A2]], [[B2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <3 x i1> <i1 true, i1 poison, i1 poison>, i1 [[C1]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <3 x i1> [[TMP0]], i1 [[C2]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <3 x i1> [[TMP4]] to <3 x i8>
+; CHECK-NEXT:    ret <3 x i8> [[TMP5]]
+;
+entry:
+  %a1 = extractelement <4 x i64> %va, i64 1
+  %b1 = extractelement <4 x i64> %vb, i64 1
+  %a2 = extractelement <4 x i64> %va, i64 2
+  %b2 = extractelement <4 x i64> %vb, i64 2
+  %c1 = icmp ult i64 %a1, %b1
+  %c2 = icmp ult i64 %a2, %b2
+  %z0 = zext i1 true to i8
+  %z1 = zext i1 %c1 to i8
+  %z2 = zext i1 %c2 to i8
+  %v0 = insertelement <3 x i8> poison, i8 %z0, i64 0
+  %v1 = insertelement <3 x i8> %v0, i8 %z1, i64 1
+  %v2 = insertelement <3 x i8> %v1, i8 %z2, i64 2
+  ret <3 x i8> %v2
+}
+
+; The false lane of ult compares equal i1 zeros, so samesign is kept.
+
+define void @samesign_i1_equal_constants(ptr %r, <4 x i1> %va, <4 x i1> %vb, ptr %out) {
+; CHECK-LABEL: define void @samesign_i1_equal_constants(
+; CHECK-SAME: ptr [[R:%.*]], <4 x i1> [[VA:%.*]], <4 x i1> [[VB:%.*]], ptr [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x i1> [[VA]], i64 1
+; CHECK-NEXT:    [[B1:%.*]] = extractelement <4 x i1> [[VB]], i64 1
+; CHECK-NEXT:    [[C1:%.*]] = icmp samesign ult i1 [[A1]], [[B1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i1> [[VA]], <4 x i1> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i1> [[VB]], <4 x i1> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp samesign ult <2 x i1> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[R]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i8> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i1> <i1 false, i1 poison, i1 poison, i1 poison>, i1 [[C1]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i1> [[TMP2]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i1> [[TMP8]], <4 x i1> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i1> [[TMP4]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP5]] to <4 x i8>
+; CHECK-NEXT:    store <4 x i8> [[TMP6]], ptr [[OUT]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %r1p = getelementptr inbounds nuw i8, ptr %r, i64 1
+  %r2p = getelementptr inbounds nuw i8, ptr %r, i64 2
+  %r3p = getelementptr inbounds nuw i8, ptr %r, i64 3
+  %r0 = load i8, ptr %r, align 1
+  %r1 = load i8, ptr %r1p, align 1
+  %r2 = load i8, ptr %r2p, align 1
+  %r3 = load i8, ptr %r3p, align 1
+  %cmp0 = icmp eq i8 %r0, 0
+  %cmp1 = icmp eq i8 %r1, 0
+  %cmp2 = icmp eq i8 %r2, 0
+  %cmp3 = icmp eq i8 %r3, 0
+  %a1 = extractelement <4 x i1> %va, i64 1
+  %b1 = extractelement <4 x i1> %vb, i64 1
+  %a2 = extractelement <4 x i1> %va, i64 2
+  %b2 = extractelement <4 x i1> %vb, i64 2
+  %a3 = extractelement <4 x i1> %va, i64 3
+  %b3 = extractelement <4 x i1> %vb, i64 3
+  %c1 = icmp samesign ult i1 %a1, %b1
+  %c2 = icmp samesign ult i1 %a2, %b2
+  %c3 = icmp samesign ult i1 %a3, %b3
+  %or0 = or i1 false, %cmp0
+  %or1 = or i1 %c1, %cmp1
+  %or2 = or i1 %c2, %cmp2
+  %or3 = or i1 %c3, %cmp3
+  %z0 = zext i1 %or0 to i8
+  %z1 = zext i1 %or1 to i8
+  %z2 = zext i1 %or2 to i8
+  %z3 = zext i1 %or3 to i8
+  %o1 = getelementptr inbounds nuw i8, ptr %out, i64 1
+  %o2 = getelementptr inbounds nuw i8, ptr %out, i64 2
+  %o3 = getelementptr inbounds nuw i8, ptr %out, i64 3
+  store i8 %z0, ptr %out, align 1
+  store i8 %z1, ptr %o1, align 1
+  store i8 %z2, ptr %o2, align 1
+  store i8 %z3, ptr %o3, align 1
+  ret void
+}
