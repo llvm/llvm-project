@@ -56,6 +56,26 @@ selects.config_setting_group(
     ],
 )
 
+# True when libxml2 is built from source and linked statically rather than via
+# libLLVM.so. (Also true for macOS+auto, where the wrapper drops @libxml2, but
+# exporting an unused label is harmless.)
+selects.config_setting_group(
+    name = "llvm_libxml2_from_source_any",
+    match_any = [
+        ":llvm_libxml2_auto",
+        ":llvm_libxml2_external",
+    ],
+)
+
+selects.config_setting_group(
+    name = "llvm_libxml2_from_source",
+    match_all = [
+        "//llvm:link_llvm_dylib_disabled",
+        ":llvm_libxml2_from_source_any",
+    ],
+    visibility = ["//lldb:__pkg__"],
+)
+
 cc_library_wrapper(
     name = "libxml2",
     defines = select({

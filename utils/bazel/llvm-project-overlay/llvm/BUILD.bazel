@@ -69,6 +69,18 @@ config_setting(
     flag_values = {":link_llvm_dylib": "true"},
 )
 
+config_setting(
+    name = "link_llvm_dylib_disabled",
+    flag_values = {":link_llvm_dylib": "false"},
+    # Bazel checks a config_setting_group's members from the consuming target,
+    # so //lldb, which selects on //third-party:llvm_libxml2_from_source, needs
+    # to see this too.
+    visibility = [
+        "//lldb:__pkg__",
+        "//third-party:__pkg__",
+    ],
+)
+
 exports_files([
     "LICENSE.TXT",
     "cmake/modules/llvm-driver-template.cpp.in",

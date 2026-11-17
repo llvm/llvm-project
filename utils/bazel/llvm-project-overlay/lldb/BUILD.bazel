@@ -8,11 +8,11 @@ load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@build_bazel_apple_support//rules:apple_genrule.bzl", "apple_genrule")
-load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_import", "cc_library", "objc_library")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_shared_library", "objc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//:vars.bzl", "LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH", "LLVM_VERSION_SUFFIX", "PACKAGE_VERSION")
 load("//lldb/source/Plugins:plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "FALLBACK_PLUGINS", "OBJCPP_COPTS")
-load("//llvm:dylib.bzl", "llvm_dylib_deps", "shared_libraries")
+load("//llvm:dylib.bzl", "llvm_dylib_deps", "llvm_libxml2_exports")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
 package(
@@ -789,7 +789,7 @@ genrule(
 # cc_binary instead of cc_shared_library since the latter expects you to
 # re-export all transitive dependencies vs them being relinked into other
 # binaries.
-cc_binary(
+cc_shared_library(
     name = "lldb{}".format(PACKAGE_VERSION),
     additional_linker_inputs = select({
         "@platforms//os:linux": [
@@ -801,7 +801,11 @@ cc_binary(
         "//conditions:default": [],
     }),
     dynamic_deps = llvm_dylib_deps(),
-    linkopts = select({
+    # Dependents link lldb's libraries from here rather than their own copies.
+    # Without libLLVM.so, the source-built libxml2 is linked into liblldb and
+    # must be exported so dependents (lldb-dap, ...) can use it from there.
+    exports_filter = ["//lldb:__subpackages__"] + llvm_libxml2_exports(),
+    user_link_flags = select({
         "@platforms//os:linux": [
             "-Wl,--export-dynamic-symbol-list=$(location :gen_exports_file_linux)",
         ],
@@ -810,26 +814,103 @@ cc_binary(
         ],
         "//conditions:default": [],
     }),
-    linkshared = True,
     deps = [
         ":API",
+        ":Host",
         ":Interpreter",
-    ],
-)
-
-# cc_binary targets using linkshared=True to build a shared library cannot be
-# imported directly and instead need to be referenced indirectly through
-# cc_import
-cc_import(
-    name = "liblldb.wrapper",
-    shared_library = "lldb{}".format(PACKAGE_VERSION),
-    deps = [":liblldb_dynamic_deps"],
-)
-
-# The shared libraries liblldb is linked against, for its dependents.
-shared_libraries(
-    name = "liblldb_dynamic_deps",
-    deps = llvm_dylib_deps(),
+        ":ProtocolMCP",
+        ":Utility",
+        ":Version",
+        "//clang:analysis",
+        "//clang:apinotes",
+        "//clang:ast",
+        "//clang:ast_matchers",
+        "//clang:basic",
+        "//clang:dependency_scanning",
+        "//clang:driver",
+        "//clang:edit",
+        "//clang:format",
+        "//clang:frontend",
+        "//clang:lex",
+        "//clang:options",
+        "//clang:parse",
+        "//clang:rewrite",
+        "//clang:scalable_static_analysis_analyses",
+        "//clang:scalable_static_analysis_core",
+        "//clang:scalable_static_analysis_frontend",
+        "//clang:scalable_static_analysis_source_transformation",
+        "//clang:sema",
+        "//clang:serialization",
+        "//clang:support",
+        "//clang:tooling_core",
+        "//clang:tooling_inclusions",
+        "//clang:unified_symbol_resolution",
+    ] + select({
+        "//llvm:link_llvm_dylib_enabled": [],
+        "//conditions:default": [
+            "//llvm:AggressiveInstCombine",
+            "//llvm:Analysis",
+            "//llvm:AsmParser",
+            "//llvm:BinaryFormat",
+            "//llvm:BinaryFormatELF",
+            "//llvm:BitReader",
+            "//llvm:BitWriter",
+            "//llvm:BitstreamReader",
+            "//llvm:CFGuard",
+            "//llvm:CGData",
+            "//llvm:CodeGen",
+            "//llvm:CodeGenTypes",
+            "//llvm:Core",
+            "//llvm:Coroutines",
+            "//llvm:DebugInfoBTF",
+            "//llvm:DebugInfoCodeView",
+            "//llvm:DebugInfoDWARF",
+            "//llvm:DebugInfoDWARFLowLevel",
+            "//llvm:DebugInfoGSYM",
+            "//llvm:DebugInfoMSF",
+            "//llvm:DebugInfoPDB",
+            "//llvm:Demangle",
+            "//llvm:ExecutionEngine",
+            "//llvm:FrontendAtomic",
+            "//llvm:FrontendDirective",
+            "//llvm:FrontendHLSL",
+            "//llvm:FrontendOffloading",
+            "//llvm:FrontendOpenMP",
+            "//llvm:HTTP",
+            "//llvm:HipStdPar",
+            "//llvm:IPO",
+            "//llvm:IRPrinter",
+            "//llvm:IRReader",
+            "//llvm:InstCombine",
+            "//llvm:Instrumentation",
+            "//llvm:Linker",
+            "//llvm:MC",
+            "//llvm:MCDisassembler",
+            "//llvm:MCParser",
+            "//llvm:ObjCARC",
+            "//llvm:Object",
+            "//llvm:ObjectYAML",
+            "//llvm:Option",
+            "//llvm:OrcShared",
+            "//llvm:OrcTargetProcess",
+            "//llvm:PPCTargetParser",
+            "//llvm:Passes",
+            "//llvm:Plugins",
+            "//llvm:ProfileData",
+            "//llvm:Remarks",
+            "//llvm:SandboxIR",
+            "//llvm:Scalar",
+            "//llvm:Support",
+            "//llvm:Symbolize",
+            "//llvm:Target",
+            "//llvm:TargetParser",
+            "//llvm:Telemetry",
+            "//llvm:TextAPI",
+            "//llvm:TransformUtils",
+            "//llvm:Vectorize",
+            "//third-party:libxml2",
+        ],
+    }),
 )
 
 gentbl_cc_library(
@@ -855,10 +936,9 @@ cc_binary(
         "tools/driver/*.cpp",
         "tools/driver/*.h",
     ]),
-    dynamic_deps = llvm_dylib_deps(),
+    dynamic_deps = [":lldb{}".format(PACKAGE_VERSION)] + llvm_dylib_deps(),
     deps = [
         ":Headers",
-        ":liblldb.wrapper",
         ":lldb_options_inc_gen",
         "//llvm:Option",
         "//llvm:Support",
@@ -1112,7 +1192,7 @@ cc_binary(
     additional_linker_inputs = [
         ":lldb-dap-plist",
     ],
-    dynamic_deps = llvm_dylib_deps(),
+    dynamic_deps = [":lldb{}".format(PACKAGE_VERSION)] + llvm_dylib_deps(),
     includes = ["tools/lldb-dap"],
     linkopts = select({
         "@platforms//os:macos": [
@@ -1124,7 +1204,6 @@ cc_binary(
         ":Headers",
         ":Host",
         ":Utility",
-        ":liblldb.wrapper",
         ":lldb_dap_opts_gen",
         "//llvm:Option",
         "//llvm:Support",
@@ -1151,7 +1230,7 @@ cc_binary(
     additional_linker_inputs = [
         ":lldb-mcp-plist",
     ],
-    dynamic_deps = llvm_dylib_deps(),
+    dynamic_deps = [":lldb{}".format(PACKAGE_VERSION)] + llvm_dylib_deps(),
     includes = ["tools/lldb-mcp"],
     linkopts = select({
         "@platforms//os:macos": [
@@ -1164,7 +1243,6 @@ cc_binary(
         ":Host",
         ":ProtocolMCP",
         ":Utility",
-        ":liblldb.wrapper",
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:config",
