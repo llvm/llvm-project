@@ -17,6 +17,23 @@ namespace mlir {
 #include "clang/CIR/Dialect/Passes.h.inc"
 } // namespace mlir
 
+/// A plain description of `kind`, for the remark.
+static llvm::StringRef describe(cir::FunctionExitKind kind) {
+  switch (kind) {
+  case cir::FunctionExitKind::Unknown:
+    return "the body could not be analyzed";
+  case cir::FunctionExitKind::ReturnOnly:
+    return "control returns but never reaches the end of the body";
+  case cir::FunctionExitKind::NoReturn:
+    return "control never returns or reaches the end of the body";
+  case cir::FunctionExitKind::MayReachEnd:
+    return "control reaches the end of the body on some paths";
+  case cir::FunctionExitKind::MustReachEnd:
+    return "control leaves only by reaching the end of the body";
+  }
+  llvm_unreachable("unknown FunctionExitKind");
+}
+
 namespace {
 
 struct FunctionExitAnalysisPass
@@ -25,7 +42,8 @@ struct FunctionExitAnalysisPass
     for (cir::FunctionExitResult result :
          cir::analyzeFunctionExits(getOperation()))
       emitRemark(result.func.getLoc())
-          << "function exit: " << cir::stringifyFunctionExitKind(result.kind);
+          << "function exit: " << describe(result.kind) << " ["
+          << cir::stringifyFunctionExitKind(result.kind) << "]";
     markAllAnalysesPreserved();
   }
 };
