@@ -85,7 +85,7 @@ static SignReturnAddress GetSignReturnAddress(const Function &F) {
 
 static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
   if (F.hasFnAttribute("ptrauth-returns")) {
-    const Module& M = *F.getParent();
+    const Module &M = *F.getParent();
     return STI.getTargetLowering()->getTM().getLocalCodeKey(M) ==
            AArch64PACKey::IB;
   }

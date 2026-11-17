@@ -1535,8 +1535,7 @@ void AArch64AsmPrinter::emitXXStructor(const DataLayout &DL,
     PointerType *PtrTy = PointerType::get(C, 0);
 
     const auto &ATM = static_cast<AArch64TargetMachine &>(TM);
-    AArch64PACKey::ID InitFiniKey =
-        ATM.getGlobalCodeKey(*MMI->getModule());
+    AArch64PACKey::ID InitFiniKey = ATM.getGlobalCodeKey(*MMI->getModule());
     ConstantInt *Key = ConstantInt::get(Int32Ty, InitFiniKey);
     ConstantInt *IntDisc = ConstantInt::get(
         Int64Ty, AArch64PAuth::InitFiniPointerConstantDiscriminator);
@@ -3053,8 +3052,8 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
       bool IsFunctionTy = GAOp.getGlobal()->getValueType()->isFunctionTy();
       const auto &ATM = static_cast<AArch64TargetMachine &>(TM);
       const Module &M = *MMI->getModule();
-      auto AuthKey = IsFunctionTy ? ATM.getGlobalCodeKey(M)
-                                  : ATM.getGlobalDataKey(M);
+      auto AuthKey =
+          IsFunctionTy ? ATM.getGlobalCodeKey(M) : ATM.getGlobalDataKey(M);
       emitAUT(AuthKey, AArch64::X16, AArch64::X17);
 
       if (!STI->hasFPAC())
@@ -3135,8 +3134,8 @@ void AArch64AsmPrinter::LowerLOADgotAUTH(const MachineInstr &MI) {
   bool IsFunctionTy = GAMO.getGlobal()->getValueType()->isFunctionTy();
   const auto &ATM = static_cast<AArch64TargetMachine &>(TM);
   const Module &M = *MMI->getModule();
-  auto AuthKey = IsFunctionTy ? ATM.getGlobalCodeKey(M)
-                              : ATM.getGlobalDataKey(M);
+  auto AuthKey =
+      IsFunctionTy ? ATM.getGlobalCodeKey(M) : ATM.getGlobalDataKey(M);
   emitAUT(AuthKey, AuthResultReg, AArch64::X17);
 
   if (GAMO.getGlobal()->hasExternalWeakLinkage())
@@ -3156,8 +3155,7 @@ AArch64AsmPrinter::lowerBlockAddressConstant(const BlockAddress &BA) {
   const Function &Fn = *BA.getFunction();
 
   const auto &ATM = static_cast<AArch64TargetMachine &>(TM);
-  AArch64PACKey::ID Key =
-    ATM.getGlobalCodeKey(*MMI->getModule());
+  AArch64PACKey::ID Key = ATM.getGlobalCodeKey(*MMI->getModule());
   if (std::optional<uint16_t> BADisc =
           STI->getPtrAuthBlockAddressDiscriminatorIfEnabled(Fn))
     return AArch64AuthMCExpr::create(BAE, *BADisc, Key,
@@ -3861,9 +3859,9 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 #endif
 
     const auto &ATM = static_cast<AArch64TargetMachine &>(TM);
-    AArch64PACKey::ID Key =
-        ATM.getGlobalCodeKey(*MMI->getModule());
-    unsigned Opcode = getBranchOpcodeForKey(/* IsCall */ true, Key, /* IsZeroDisc */ false);
+    AArch64PACKey::ID Key = ATM.getGlobalCodeKey(*MMI->getModule());
+    unsigned Opcode =
+        getBranchOpcodeForKey(/* IsCall */ true, Key, /* IsZeroDisc */ false);
     MCInst Blra;
     Blra.setOpcode(Opcode);
     Blra.addOperand(MCOperand::createReg(AArch64::X16));

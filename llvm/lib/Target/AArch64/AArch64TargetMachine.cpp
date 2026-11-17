@@ -157,16 +157,14 @@ AArch64TargetMachine::getGlobalDataKey(const Module &M) const {
   return AArch64PACKey::DA;
 }
 
-AArch64PACKey::ID
-AArch64TargetMachine::getLocalCodeKey(const Module &M) const {
+AArch64PACKey::ID AArch64TargetMachine::getLocalCodeKey(const Module &M) const {
   if (getTargetTriple().isOSBinFormatELF())
     if (auto *Val = dyn_cast_or_null<MDString>(M.getModuleFlag("ptrauth-keys")))
       return parsePtrAuthKeys(Val->getString(), /* Start */ 4);
   return AArch64PACKey::IB;
 }
 
-AArch64PACKey::ID
-AArch64TargetMachine::getLocalDataKey(const Module &M) const {
+AArch64PACKey::ID AArch64TargetMachine::getLocalDataKey(const Module &M) const {
   if (getTargetTriple().isOSBinFormatELF())
     if (auto *Val = dyn_cast_or_null<MDString>(M.getModuleFlag("ptrauth-keys")))
       return parsePtrAuthKeys(Val->getString(), /* Start */ 6);

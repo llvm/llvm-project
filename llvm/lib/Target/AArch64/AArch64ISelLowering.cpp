@@ -13645,7 +13645,7 @@ SDValue AArch64TargetLowering::LowerBRIND(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
 
   SDValue Disc = DAG.getTargetConstant(*BADisc, DL, MVT::i64);
-  const Module& M = *MF.getFunction().getParent();
+  const Module &M = *MF.getFunction().getParent();
   AArch64PACKey::ID KeyId = getTM().getGlobalCodeKey(M);
   SDValue Key = DAG.getTargetConstant(KeyId, DL, MVT::i32);
   SDValue AddrDisc = DAG.getRegister(AArch64::XZR, MVT::i64);
@@ -13687,7 +13687,7 @@ SDValue AArch64TargetLowering::LowerBlockAddress(SDValue Op,
 
     SDValue Disc = DAG.getTargetConstant(*BADisc, DL, MVT::i64);
     MachineFunction &MF = DAG.getMachineFunction();
-    const Module& M = *MF.getFunction().getParent();
+    const Module &M = *MF.getFunction().getParent();
     AArch64PACKey::ID KeyId = getTM().getGlobalCodeKey(M);
     SDValue Key = DAG.getTargetConstant(KeyId, DL, MVT::i32);
     SDValue AddrDisc = DAG.getRegister(AArch64::XZR, MVT::i64);
