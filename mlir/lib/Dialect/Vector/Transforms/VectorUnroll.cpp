@@ -85,13 +85,13 @@ static Operation *cloneOpWithOperandsAndTypes(OpBuilder &builder, Location loc,
   return builder.create(state);
 }
 
-/// Return the target shape for unrolling for the given op, provided throgh its
+/// Return the target shape for unrolling for the given op, provided through its
 /// VectorUnrollOpInterface object, `iface`. Return std::nullopt if the op
 /// shouldn't be or cannot be unrolled.
 ///
 /// ATM, target shape can be specified two-fold:
 ///   1. Via `VectorUnrollOpInterface` (see `getDefaultUnrollTargetShape`).
-///   2. Via `UnrollVectorOptions ` (see `nativeShape`).
+///   2. Via `UnrollVectorOptions` (see `nativeShape`).
 ///
 /// Input from a "user" always takes precedence, i.e. 1. is used iff 2. (used
 /// for "user" input) is not available.
@@ -100,13 +100,14 @@ getTargetShape(const vector::UnrollVectorOptions &options,
                VectorUnrollOpInterface &iface) {
   auto op = iface.getOperation();
 
-  LDBG() << "Get unroll shape for op " << op->getName().getStringRef();
-  auto tS = iface.getDefaultUnrollTargetShape();
-
   if (options.filterConstraint && failed(options.filterConstraint(op))) {
     LDBG() << "--no filter constraint -> BAIL";
     return std::nullopt;
   }
+
+  LDBG() << "Get unroll shape for op " << op->getName().getStringRef();
+  auto tS = iface.getDefaultUnrollTargetShape();
+
   // Unrolling a masked op would put several ops inside its vector.mask region,
   // and the enclosing mask would not be sliced to match them.
   auto maskableOp = dyn_cast<vector::MaskableOpInterface>(op);
@@ -114,19 +115,13 @@ getTargetShape(const vector::UnrollVectorOptions &options,
     LDBG() << "--op is masked -> BAIL";
     return std::nullopt;
   }
-  auto unrollableVectorOp = dyn_cast<VectorUnrollOpInterface>(op);
-  if (!unrollableVectorOp) {
-    LDBG() << "--not an unrollable op -> BAIL";
-    return std::nullopt;
-  }
-  auto maybeUnrollShape = unrollableVectorOp.getIterationShapeToUnroll();
+  auto maybeUnrollShape = iface.getIterationShapeToUnroll();
   if (!maybeUnrollShape) {
     LDBG() << "--could not get shape of op " << *op << " -> BAIL";
     return std::nullopt;
   }
   LDBG() << "--vector op shape: " << llvm::interleaved(*maybeUnrollShape);
 
-  //
   std::optional<SmallVector<int64_t>> targetShape =
       options.nativeShape ? options.nativeShape(op) : tS;
   if (!targetShape) {
@@ -514,6 +509,8 @@ struct UnrollElementwisePattern : public RewritePattern {
       return failure();
     // TODO: This is shared between all Unroll patterns - merge.
     auto iface = dyn_cast<VectorUnrollOpInterface>(op);
+    if (!iface)
+      return rewriter.notifyMatchFailure(op, "Not an unrollable elem-wise Op!");
     auto targetShape = getTargetShape(options, iface);
     if (!targetShape)
       return failure();

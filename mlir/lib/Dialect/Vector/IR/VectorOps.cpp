@@ -68,14 +68,14 @@ enum class MaskFormat {
 };
 
 // Default target shape for unrolling CreateMaskOp and ConstantMaskOp
-std::optional<SmallVector<int64_t>> getDefaultTargetMaskShapeForUnroll() {
-
+static std::optional<SmallVector<int64_t>>
+getDefaultTargetMaskShapeForUnroll() {
   return SmallVector<int64_t>{8, 8};
 }
 
 // Default target shape for unrolling InterleaveOp and DeinterleaveOp
-std::optional<SmallVector<int64_t>> getDefaultTargetInterleaveShapeForUnroll() {
-
+static std::optional<SmallVector<int64_t>>
+getDefaultTargetInterleaveShapeForUnroll() {
   return SmallVector<int64_t>{2, 4};
 }
 
