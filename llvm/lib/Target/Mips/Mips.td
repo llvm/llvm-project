@@ -231,7 +231,7 @@ def FeatureUseCompactBranches
 def IsPTR64bit    :   Predicate<"Subtarget->isABI_N64()">,
                       AssemblerPredicate<(all_of FeaturePTR64Bit)>;
 def IsPTR32bit    :   Predicate<"!Subtarget->isABI_N64()">,
-                      AssemblerPredicate<(all_of (not FeaturePTR64Bit))>;
+                      AssemblerPredicate<(none_of FeaturePTR64Bit)>;
 def UseCompactBranches : Predicate<"Subtarget->useCompactBranches()">,
                          AssemblerPredicate<(all_of FeatureUseCompactBranches)>;
 

@@ -1,10 +1,8 @@
-import { DebugProtocol } from "@vscode/debugprotocol";
 import * as vscode from "vscode";
 
+import type { dap } from "@protocol/dap";
 import { DebugSessionTracker } from "../debug-session-tracker";
 import { DisposableContext } from "../disposable-context";
-
-import { SymbolType } from "..";
 import { getSymbolsTableHTMLContent } from "./symbols-webview-html";
 
 export class SymbolsProvider extends DisposableContext {
@@ -26,7 +24,7 @@ export class SymbolsProvider extends DisposableContext {
     this.pushSubscription(
       vscode.commands.registerCommand(
         "lldb-dap.modules.showSymbols",
-        (moduleItem: DebugProtocol.Module) => {
+        (moduleItem: dap.Module) => {
           const session = vscode.debug.activeDebugSession;
           if (!session) return;
 
@@ -76,7 +74,7 @@ export class SymbolsProvider extends DisposableContext {
 
   private async showSymbolsForModule(
     session: vscode.DebugSession,
-    module: DebugProtocol.Module,
+    module: dap.Module,
   ) {
     try {
       const symbols = await this.getSymbolsForModule(
@@ -102,16 +100,19 @@ export class SymbolsProvider extends DisposableContext {
   private async getSymbolsForModule(
     session: vscode.DebugSession,
     moduleId: string,
-  ): Promise<SymbolType[]> {
-    const symbols_response: { symbols: Array<SymbolType> } =
+  ): Promise<dap.ModuleSymbol[]> {
+    const symbols_response: { symbols: dap.ModuleSymbol[] } =
       await session.customRequest("__lldb_moduleSymbols", {
         moduleId,
         moduleName: "",
-      });
+      } satisfies dap.ModuleSymbolsArguments);
     return symbols_response?.symbols || [];
   }
 
-  private async showSymbolsInNewTab(moduleName: string, symbols: SymbolType[]) {
+  private async showSymbolsInNewTab(
+    moduleName: string,
+    symbols: dap.ModuleSymbol[],
+  ) {
     const panel = vscode.window.createWebviewPanel(
       "lldb-dap.symbols",
       `Symbols for ${moduleName}`,
@@ -163,7 +164,7 @@ export class SymbolsProvider extends DisposableContext {
 }
 
 class ModuleQuickPickItem implements vscode.QuickPickItem {
-  constructor(public readonly module: DebugProtocol.Module) {}
+  constructor(public readonly module: dap.Module) {}
 
   get label(): string {
     return this.module.name;

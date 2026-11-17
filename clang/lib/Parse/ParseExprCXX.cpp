@@ -28,6 +28,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <numeric>
+#include <optional>
 
 using namespace clang;
 
@@ -205,10 +206,11 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
       if (DS.getTypeSpecType() == DeclSpec::TST_error)
         return false;
 
-      QualType Pattern = Sema::GetTypeFromParser(DS.getRepAsType());
-      QualType Type =
-          Actions.ActOnPackIndexingType(Pattern, DS.getPackIndexingExpr(),
-                                        DS.getBeginLoc(), DS.getEllipsisLoc());
+      TypeSourceInfo *PatternTSI = nullptr;
+      QualType Pattern =
+          Sema::GetTypeFromParser(DS.getRepAsType(), &PatternTSI);
+      QualType Type = Actions.ActOnPackIndexingType(
+          Pattern, DS.getPackIndexingExpr(), DS.getBeginLoc());
 
       if (Type.isNull())
         return false;
@@ -226,13 +228,14 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
           getCurScope()->isFunctionDeclarationScope())
         Diag(Start, diag::warn_pre_cxx26_ambiguous_pack_indexing_type) << Type;
 
-      if (!TryConsumeToken(tok::coloncolon, CCLoc)) {
-        AnnotateExistingIndexedTypeNamePack(ParsedType::make(Type), Start,
-                                            EndLoc);
+      TryConsumeToken(tok::coloncolon, CCLoc);
+      ParsedType T = Actions.ActOnCXXNestedNameSpecifierIndexedPack(
+          SS, DS, PatternTSI, CCLoc, Type);
+      if (CCLoc.isInvalid()) {
+        AnnotateExistingIndexedTypeNamePack(T, Start, EndLoc);
         return false;
       }
-      if (Actions.ActOnCXXNestedNameSpecifierIndexedPack(SS, DS, CCLoc,
-                                                         std::move(Type)))
+      if (!T)
         SS.SetInvalid(SourceRange(Start, CCLoc));
       HasScopeSpecifier = true;
     }
@@ -1221,8 +1224,8 @@ bool Parser::isLambdaSpecifier() {
   return Tok.isOneOf(tok::kw_mutable, tok::arrow, tok::kw___attribute,
                      tok::kw_constexpr, tok::kw_consteval, tok::kw_static,
                      tok::kw___private, tok::kw___global, tok::kw___local,
-                     tok::kw___constant, tok::kw___generic, tok::kw_groupshared,
-                     tok::kw_requires, tok::kw_noexcept) ||
+                     tok::kw___constant, tok::kw___generic, tok::kw_requires,
+                     tok::kw_noexcept) ||
          Tok.isRegularKeywordAttribute() ||
          (Tok.is(tok::l_square) && NextToken().is(tok::l_square));
 }
@@ -1892,8 +1895,8 @@ Parser::ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
 Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
                                              SourceLocation Loc,
                                              Sema::ConditionKind CK,
-                                             bool MissingOK,
-                                             ForRangeInfo *FRI) {
+                                             bool MissingOK, ForRangeInfo *FRI,
+                                             bool AfterInitStmt) {
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
   PreferredType.enterCondition(Actions, Tok.getLocation());
 
@@ -1904,16 +1907,16 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
     return Sema::ConditionError();
   }
 
+  std::optional<ExtensionRAIIObject> ExtensionGuard;
+  SourceLocation ExtLoc;
   if (Tok.is(tok::kw___extension__)) {
     // The first clause of a condition may be a declaration used as an
     // init-statement (C2y), and that declaration may be prefixed by one or more
     // __extension__ markers. Consume them up front -- mirroring block-statement
     // parsing -- so the disambiguation below sees the real start of the
-    // declaration. The markers also silence extension diagnostics for the rest
-    // of the condition, including the diagnostic for the init-statement
-    // extension itself.
-    std::optional<ExtensionRAIIObject> ExtensionGuard;
+    // declaration.
     ExtensionGuard.emplace(Diags);
+    ExtLoc = ConsumeToken();
     while (TryConsumeToken(tok::kw___extension__))
       ;
   }
@@ -1937,7 +1940,10 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
   if (!getLangOpts().CPlusPlus) {
     if (isDeclarationStatement() && !isCXXSimpleDeclaration(false)) {
       // Accept a C2y declaration, *only* if it's not a simple declaration.
-      WarnOnInit();
+      // Only warn when the declaration is actually permitted here; otherwise
+      // we diagnose an error below.
+      if (InitStmt != nullptr)
+        WarnOnInit();
       DeclGroupPtrTy DG;
       SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
       ParsedAttributes DeclSpecAttrs(AttrFactory);
@@ -1946,14 +1952,21 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
                             DeclSpecAttrs);
       StmtResult DeclStmt = Actions.ActOnDeclStmt(DG, DeclStart, DeclEnd);
       if (InitStmt == nullptr) {
+        // Either the init-statement slot is already used up (the second
+        // clause of an 'if' or 'switch' must be an expression), or there is
+        // no such slot at all (a 'while' statement).
+        unsigned DiagID = AfterInitStmt ? diag::err_expected_expression
+                                        : diag::err_c_decl_in_while_statement;
         if (DeclStmt.isUsable())
-          Diag(DeclStmt.get()->getBeginLoc(), diag::err_expected_expression)
+          Diag(DeclStmt.get()->getBeginLoc(), DiagID)
               << DeclStmt.get()->getSourceRange();
         else
-          Diag(DeclStart, diag::err_expected_expression);
+          Diag(DeclStart, DiagID);
       } else
         *InitStmt = DeclStmt;
-      return ParseCondition(nullptr, Loc, CK, MissingOK);
+      ExtensionGuard.reset();
+      return ParseCondition(nullptr, Loc, CK, MissingOK, /*FRI=*/nullptr,
+                            /*AfterInitStmt=*/true);
     }
 
     // Handle '(; expr)', '([[...]]; expr)' and '(__attribute__((...)); expr)'
@@ -1966,7 +1979,9 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
       } else
         Diag(Null.get()->getBeginLoc(),
              diag::err_c2y_first_condition_clause_is_not_declaration);
-      return ParseCondition(nullptr, Loc, CK, MissingOK);
+      ExtensionGuard.reset();
+      return ParseCondition(nullptr, Loc, CK, MissingOK, /*FRI=*/nullptr,
+                            /*AfterInitStmt=*/true);
     }
   }
 
@@ -1987,7 +2002,9 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
       }
       ConsumeToken();
       *InitStmt = Actions.ActOnNullStmt(SemiLoc);
-      return ParseCondition(nullptr, Loc, CK, MissingOK);
+      ExtensionGuard.reset();
+      return ParseCondition(nullptr, Loc, CK, MissingOK, /*FRI=*/nullptr,
+                            /*AfterInitStmt=*/true);
     }
 
     EnterExpressionEvaluationContext Eval(
@@ -1996,7 +2013,10 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
         /*ExprContext=*/Sema::ExpressionEvaluationContextRecord::EK_Other,
         /*ShouldEnter=*/CK == Sema::ConditionKind::ConstexprIf);
 
-    ExprResult Expr = ParseExpression();
+    ExtensionGuard.reset();
+    ExprResult Expr = ExtLoc.isValid()
+                          ? ParseExpressionWithLeadingExtension(ExtLoc)
+                          : ParseExpression();
 
     if (Expr.isInvalid())
       return Sema::ConditionError();
@@ -2005,7 +2025,8 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
       WarnOnInit();
       *InitStmt = Actions.ActOnExprStmt(Expr.get());
       ConsumeToken();
-      return ParseCondition(nullptr, Loc, CK, MissingOK);
+      return ParseCondition(nullptr, Loc, CK, MissingOK, /*FRI=*/nullptr,
+                            /*AfterInitStmt=*/true);
     }
 
     return Actions.ActOnCondition(getCurScope(), Loc, Expr.get(), CK,
@@ -2025,7 +2046,9 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
                                   attrs, DeclSpecAttrs, /*RequireSemi=*/true);
     }
     *InitStmt = Actions.ActOnDeclStmt(DG, DeclStart, DeclEnd);
-    return ParseCondition(nullptr, Loc, CK, MissingOK);
+    ExtensionGuard.reset();
+    return ParseCondition(nullptr, Loc, CK, MissingOK, /*FRI=*/nullptr,
+                          /*AfterInitStmt=*/true);
   }
 
   case ConditionOrInitStatement::ForRangeDecl: {
@@ -2053,6 +2076,14 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
   // declarator
   Declarator DeclaratorInfo(DS, attrs, DeclaratorContext::Condition);
   ParseDeclarator(DeclaratorInfo);
+
+  // In C, only 'if' and 'switch' permit a declaration as the condition; a
+  // 'while' statement has no init-statement slot. Diagnose this before Sema
+  // gets a chance to complain about the declaration itself. (A declaration in
+  // the second clause of an 'if' or 'switch' is diagnosed by the caller.)
+  if (!getLangOpts().CPlusPlus && InitStmt == nullptr && !AfterInitStmt)
+    Diag(DeclaratorInfo.getBeginLoc(), diag::err_c_decl_in_while_statement)
+        << DeclaratorInfo.getSourceRange();
 
   // simple-asm-expr[opt]
   if (Tok.is(tok::kw_asm)) {
@@ -3711,11 +3742,7 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
   }
 
   // Create a fake EOF to mark end of Toks buffer.
-  Token AttrEnd;
-  AttrEnd.startToken();
-  AttrEnd.setKind(tok::eof);
-  AttrEnd.setLocation(Tok.getLocation());
-  AttrEnd.setEofData(Toks.data());
+  Token AttrEnd = Token::createEof(Tok.getLocation(), Toks.data());
   Toks.push_back(AttrEnd);
 
   // The current token should go after the cached tokens.

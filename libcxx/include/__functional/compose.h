@@ -26,7 +26,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __compose_op {
   template <class _Fn1, class _Fn2, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Fn1&& __f1, _Fn2&& __f2, _Args&&... __args) const noexcept(noexcept(
+  constexpr auto operator()(_Fn1&& __f1, _Fn2&& __f2, _Args&&... __args) const noexcept(noexcept(
       std::invoke(std::forward<_Fn1>(__f1), std::invoke(std::forward<_Fn2>(__f2), std::forward<_Args>(__args)...))))
       -> decltype(std::invoke(std::forward<_Fn1>(__f1),
                               std::invoke(std::forward<_Fn2>(__f2), std::forward<_Args>(__args)...))) {
@@ -40,7 +40,7 @@ struct __compose_t : __perfect_forward<__compose_op, _Fn1, _Fn2> {
 };
 
 template <class _Fn1, class _Fn2>
-_LIBCPP_HIDE_FROM_ABI constexpr auto __compose(_Fn1&& __f1, _Fn2&& __f2) noexcept(
+constexpr auto __compose(_Fn1&& __f1, _Fn2&& __f2) noexcept(
     noexcept(__compose_t<decay_t<_Fn1>, decay_t<_Fn2>>(std::forward<_Fn1>(__f1), std::forward<_Fn2>(__f2))))
     -> decltype(__compose_t<decay_t<_Fn1>, decay_t<_Fn2>>(std::forward<_Fn1>(__f1), std::forward<_Fn2>(__f2))) {
   return __compose_t<decay_t<_Fn1>, decay_t<_Fn2>>(std::forward<_Fn1>(__f1), std::forward<_Fn2>(__f2));

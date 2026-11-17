@@ -103,37 +103,21 @@ public:
 };
 
 // SI Passes
-FunctionPass *createGCNDPPCombinePass();
 FunctionPass *createSIAnnotateControlFlowLegacyPass();
-FunctionPass *createSIFoldOperandsLegacyPass();
-FunctionPass *createSIPeepholeSDWALegacyPass();
 FunctionPass *createSILowerI1CopiesLegacyPass();
 FunctionPass *createSIShrinkInstructionsLegacyPass();
-FunctionPass *createSILoadStoreOptimizerLegacyPass();
-FunctionPass *createSIWholeQuadModeLegacyPass();
-FunctionPass *createSIOptimizeExecMaskingPreRAPass();
-FunctionPass *createSIOptimizeVGPRLiveRangeLegacyPass();
-FunctionPass *createAMDGPUNextUseAnalysisLegacyPass();
-FunctionPass *createAMDGPUNextUseAnalysisPrinterLegacyPass();
-FunctionPass *createSIFixSGPRCopiesLegacyPass();
 FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
-FunctionPass *createSIPreAllocateWWMRegsLegacyPass();
-FunctionPass *createSIFormMemoryClausesLegacyPass();
-FunctionPass *createSIPostRA16BitMovFoldingPass();
 
-FunctionPass *createSIPostRABundlerPass();
 FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
 ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
-FunctionPass *createAMDGPUCodeGenPreparePass();
+FunctionPass *createAMDGPUCodeGenPreparePass(bool ExpandDiv64InIR);
 FunctionPass *createAMDGPULateCodeGenPrepareLegacyPass();
-FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *
 createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
 ModulePass *createAMDGPULowerBufferFatPointersPass();
 ModulePass *createAMDGPULowerIntrinsicsLegacyPass();
 FunctionPass *createSIModeRegisterPass();
-FunctionPass *createGCNPreRAOptimizationsLegacyPass();
 FunctionPass *createAMDGPUPreloadKernArgPrologLegacyPass();
 ModulePass *createAMDGPUPreloadKernelArgumentsLegacyPass(const TargetMachine *);
 
@@ -170,10 +154,10 @@ void initializeAMDGPUAlwaysInlinePass(PassRegistry&);
 
 void initializeAMDGPUAsmPrinterPass(PassRegistry &);
 
-// DPP/Iterative option enables the atomic optimizer with given strategy
-// whereas None disables the atomic optimizer.
-enum class ScanOptions { DPP, Iterative, None };
-FunctionPass *createAMDGPUAtomicOptimizerPass(ScanOptions ScanStrategy);
+namespace AMDGPU {
+enum class ScanOptions;
+} // namespace AMDGPU
+FunctionPass *createAMDGPUAtomicOptimizerPass(AMDGPU::ScanOptions ScanStrategy);
 void initializeAMDGPUAtomicOptimizerPass(PassRegistry &);
 extern char &AMDGPUAtomicOptimizerID;
 
@@ -185,7 +169,6 @@ FunctionPass *createAMDGPULowerKernelArgumentsPass();
 void initializeAMDGPULowerKernelArgumentsPass(PassRegistry &);
 extern char &AMDGPULowerKernelArgumentsID;
 
-FunctionPass *createAMDGPUPromoteKernelArgumentsPass();
 void initializeAMDGPUPromoteKernelArgumentsPass(PassRegistry &);
 extern char &AMDGPUPromoteKernelArgumentsID;
 
@@ -194,7 +177,6 @@ struct AMDGPUPromoteKernelArgumentsPass
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-ModulePass *createAMDGPULowerKernelAttributesPass();
 void initializeAMDGPULowerKernelAttributesPass(PassRegistry &);
 extern char &AMDGPULowerKernelAttributesID;
 
@@ -355,13 +337,13 @@ private:
 
 struct AMDGPUAtomicOptimizerPass
     : OptionalPassInfoMixin<AMDGPUAtomicOptimizerPass> {
-  AMDGPUAtomicOptimizerPass(TargetMachine &TM, ScanOptions ScanImpl)
+  AMDGPUAtomicOptimizerPass(TargetMachine &TM, AMDGPU::ScanOptions ScanImpl)
       : TM(TM), ScanImpl(ScanImpl) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
 private:
   TargetMachine &TM;
-  ScanOptions ScanImpl;
+  AMDGPU::ScanOptions ScanImpl;
 };
 
 struct AMDGPUInsertDelayAluPass
@@ -633,8 +615,7 @@ void initializeAMDGPUUnifyDivergentExitNodesLegacyPass(PassRegistry &);
 extern char &AMDGPUUnifyDivergentExitNodesID;
 
 ImmutablePass *createAMDGPUAAWrapperPass();
-void initializeAMDGPUAAWrapperPassPass(PassRegistry&);
-ImmutablePass *createAMDGPUExternalAAWrapperPass();
+void initializeAMDGPUAAWrapperPassPass(PassRegistry &);
 void initializeAMDGPUExternalAAWrapperPass(PassRegistry&);
 
 ModulePass *createAMDGPUExportKernelRuntimeHandlesLegacyPass();

@@ -70,10 +70,6 @@ class LongJmpPass : public BinaryFunctionPass {
   static constexpr size_t ShortestJumpBits = 11;
   static constexpr size_t ShortestJumpSpan = 1ULL << (ShortestJumpBits - 1);
 
-  /// The longest single-instruction branch.
-  static constexpr size_t LongestJumpBits = 28;
-  static constexpr size_t LongestJumpSpan = 1ULL << (LongestJumpBits - 1);
-
   /// Relax all internal function branches including those between fragments.
   /// Assume that fragments are placed in different sections but are within
   /// 128MB of each other. Return false and report an error if a branch cannot

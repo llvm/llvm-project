@@ -145,6 +145,22 @@ define <16 x i16> @one_umulh_v16i16_commute(<16 x i16> %a0) {
   ret <16 x i16> %1
 }
 
+define i1 @one_umulh_i1(i1 %a0) {
+; CHECK-LABEL: @one_umulh_i1(
+; CHECK-NEXT:    ret i1 false
+;
+  %1 = call i1 @llvm.umulh.i1(i1 %a0, i1 1)
+  ret i1 %1
+}
+
+define <2 x i1> @one_umulh_v2i1_commute(<2 x i1> %a0) {
+; CHECK-LABEL: @one_umulh_v2i1_commute(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %1 = call <2 x i1> @llvm.umulh.v2i1(<2 x i1> splat (i1 1), <2 x i1> %a0)
+  ret <2 x i1> %1
+}
+
 ;
 ; Constant Folding
 ;

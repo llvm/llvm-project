@@ -9,15 +9,17 @@ define void @cast_flags_mixed(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; CHECK-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
+; CHECK-NEXT:  Live-in ir<4> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
 ; CHECK-NEXT:    EMIT branch-on-cond ir<false>
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<4>, ir<1>
 ; CHECK-NEXT:    CLONE ir<%gep.zext> = getelementptr ir<%A>, ir<3>
 ; CHECK-NEXT:    CLONE ir<%gep.trunc> = getelementptr ir<%B>, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = wide-iv-step vp<[[VP0]]>, ir<1>
 ; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = wide-iv-step vp<[[VP0]]>, ir<1>
 ; CHECK-NEXT:  Successor(s): vector loop
@@ -30,8 +32,8 @@ define void @cast_flags_mixed(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = WIDEN-INDUCTION nuw ir<0>, ir<1>, vp<[[VP0]]>, vp<[[VP6]]>, vp<%step.add>.1
 ; CHECK-NEXT:      EMIT vp<%step.add> = add nsw ir<%iv>, vp<[[VP5]]>
 ; CHECK-NEXT:      EMIT vp<%step.add>.1 = add nuw vp<[[VP9]]>, vp<[[VP6]]>
-; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = icmp ule vp<[[VP9]]>, vp<[[VP3]]>
-; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = icmp ule vp<%step.add>.1, vp<[[VP3]]>
+; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = icmp ule vp<[[VP9]]>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = icmp ule vp<%step.add>.1, vp<[[VP4]]>
 ; CHECK-NEXT:      WIDEN-CAST ir<%sext.plain> = sext ir<%iv> to i64
 ; CHECK-NEXT:      WIDEN-CAST ir<%sext.plain>.1 = sext vp<%step.add> to i64
 ; CHECK-NEXT:    Successor(s): pred.store
@@ -103,13 +105,15 @@ define void @cast_flags_single(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; CHECK-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
+; CHECK-NEXT:  Live-in ir<4> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
 ; CHECK-NEXT:    EMIT branch-on-cond ir<false>
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<4>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = wide-iv-step vp<[[VP0]]>, ir<1>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
@@ -119,8 +123,8 @@ define void @cast_flags_single(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = WIDEN-INDUCTION nuw ir<0>, ir<1>, vp<[[VP0]]>, vp<[[VP5]]>, vp<%step.add>
 ; CHECK-NEXT:      EMIT vp<%step.add> = add nuw vp<[[VP8]]>, vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = icmp ule vp<[[VP8]]>, vp<[[VP3]]>
-; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = icmp ule vp<%step.add>, vp<[[VP3]]>
+; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = icmp ule vp<[[VP8]]>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = icmp ule vp<%step.add>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP11:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP6]]> * ir<1>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:

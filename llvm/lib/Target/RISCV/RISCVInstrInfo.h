@@ -204,8 +204,8 @@ public:
 
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
-      int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
-      const TargetRegisterInfo *TRI) const override;
+      int64_t &Offset, bool &OffsetIsScalable,
+      LocationSize &Width) const override;
 
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                            int64_t Offset1, bool OffsetIsScalable1,
@@ -216,8 +216,7 @@ public:
 
   bool getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
                                     const MachineOperand *&BaseOp,
-                                    int64_t &Offset, LocationSize &Width,
-                                    const TargetRegisterInfo *TRI) const;
+                                    int64_t &Offset, LocationSize &Width) const;
 
   bool areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
                                        const MachineInstr &MIb) const override;
@@ -229,16 +228,14 @@ public:
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const override;
 
-  // Return true if the function can safely be outlined from.
-  bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
-                                   bool OutlineFromLinkOnceODRs) const override;
-
   // Return true if MBB is safe to outline from, and return any target-specific
   // information in Flags.
   bool isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
                               unsigned &Flags) const override;
 
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
+
+  bool supportsSectionAwareOutlining() const override { return true; }
 
   // Return true if the candidate should be discarded from outlining.
   bool analyzeCandidate(outliner::Candidate &C) const;
@@ -283,10 +280,9 @@ public:
                                       LiveIntervals *LIS) const override;
 
   // MIR printer helper function to annotate Operands with a comment.
-  std::string
-  createMIROperandComment(const MachineInstr &MI, const MachineOperand &Op,
-                          unsigned OpIdx,
-                          const TargetRegisterInfo *TRI) const override;
+  std::string createMIROperandComment(const MachineInstr &MI,
+                                      const MachineOperand &Op,
+                                      unsigned OpIdx) const override;
 
   /// Generate code to multiply the value in DestReg by Amt - handles all
   /// the common optimizations for this idiom, and supports fallback for
@@ -347,6 +343,7 @@ public:
   /// Return true if the instruction requires an NTL hint to be emitted.
   bool requiresNTLHint(const MachineInstr &MI) const;
 
+  using TargetInstrInfo::isSafeToMove;
   /// Return true if moving \p From down to \p To won't cause any physical
   /// register reads or writes to be clobbered and no visible side effects are
   /// affected. From and To must be in the same block.

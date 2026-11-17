@@ -106,19 +106,27 @@ func.func @test_derived() {
 
 // -----
 
-// Test box type with heap scalar (needs destroy)
+// Test box type with heap scalar (needs destroy). Unallocated allocatables
+// keep a null private allocation.
 // CHECK: acc.private.recipe @private_box_heap_scalar : !fir.ref<!fir.box<!fir.heap<f64>>> init {
 // CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.box<!fir.heap<f64>>>):
-// CHECK:   %[[SCALAR:.*]] = fir.allocmem f64
-// CHECK:   %[[EMBOX:.*]] = fir.embox %[[SCALAR]] : (!fir.heap<f64>) -> !fir.box<!fir.heap<f64>>
+// CHECK:   %[[PRIVATE_ALLOC:.*]] = fir.if {{.*}} -> (!fir.heap<f64>) {
+// CHECK:     %[[SCALAR:.*]] = fir.allocmem f64
+// CHECK:     fir.result %[[SCALAR]] : !fir.heap<f64>
+// CHECK:   } else {
+// CHECK:     %[[NULL_ALLOC:.*]] = fir.zero_bits !fir.heap<f64>
+// CHECK:     fir.result %[[NULL_ALLOC]] : !fir.heap<f64>
+// CHECK:   }
+// CHECK:   %[[EMBOX:.*]] = fir.embox %[[PRIVATE_ALLOC]] : (!fir.heap<f64>) -> !fir.box<!fir.heap<f64>>
 // CHECK:   %[[BOXALLOC:.*]] = fir.alloca !fir.box<!fir.heap<f64>>
 // CHECK:   fir.store %[[EMBOX]] to %[[BOXALLOC]] : !fir.ref<!fir.box<!fir.heap<f64>>>
-// CHECK:   acc.yield %[[BOXALLOC]] : !fir.ref<!fir.box<!fir.heap<f64>>>
+// CHECK:   acc.yield %[[BOXALLOC]], %[[PRIVATE_ALLOC]] : !fir.ref<!fir.box<!fir.heap<f64>>>, !fir.heap<f64>
 // CHECK: } destroy {
-// CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.box<!fir.heap<f64>>>, %[[PRIVATE:.*]]: !fir.ref<!fir.box<!fir.heap<f64>>>):
-// CHECK:   %[[BOX:.*]] = fir.load %[[PRIVATE]] : !fir.ref<!fir.box<!fir.heap<f64>>>
-// CHECK:   %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<f64>>) -> !fir.heap<f64>
-// CHECK:   fir.freemem %[[ADDR]] : !fir.heap<f64>
+// CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.box<!fir.heap<f64>>>, %{{.*}}: !fir.ref<!fir.box<!fir.heap<f64>>>, %[[PRIVATE_ALLOC:.*]]: !fir.heap<f64>):
+// CHECK-NOT: fir.box_addr
+// CHECK:   fir.if {{.*}} {
+// CHECK:     fir.freemem %[[PRIVATE_ALLOC]] : !fir.heap<f64>
+// CHECK:   }
 // CHECK:   acc.terminator
 // CHECK: }
 
@@ -163,16 +171,23 @@ func.func @test_box_ptr_scalar() {
 
 // -----
 
-// Test box type with 1D heap array (needs destroy)
+// Test box type with 1D heap array (needs destroy). Unallocated allocatables
+// keep a null private allocation.
 // CHECK: acc.private.recipe @private_box_heap_array_1d : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> init {
 // CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>):
+// CHECK:   %[[PRIVATE_ALLOC:.*]] = fir.if {{.*}} -> (!fir.heap<!fir.array<?xf32>>) {
+// CHECK:     fir.allocmem !fir.array<?xf32>
+// CHECK:   } else {
+// CHECK:     fir.zero_bits !fir.heap<!fir.array<?xf32>>
+// CHECK:   }
 // CHECK:   %[[BOXALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>>
-// CHECK:   acc.yield %[[BOXALLOC]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+// CHECK:   acc.yield %[[BOXALLOC]], %[[PRIVATE_ALLOC]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.heap<!fir.array<?xf32>>
 // CHECK: } destroy {
-// CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, %[[PRIVATE:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>):
-// CHECK:   %[[BOX:.*]] = fir.load %[[PRIVATE]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-// CHECK:   %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
-// CHECK:   fir.freemem %[[ADDR]] : !fir.heap<!fir.array<?xf32>>
+// CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, %{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, %[[PRIVATE_ALLOC:.*]]: !fir.heap<!fir.array<?xf32>>):
+// CHECK-NOT: fir.box_addr
+// CHECK:   fir.if {{.*}} {
+// CHECK:     fir.freemem %[[PRIVATE_ALLOC]] : !fir.heap<!fir.array<?xf32>>
+// CHECK:   }
 // CHECK:   acc.terminator
 // CHECK: }
 
@@ -185,13 +200,22 @@ func.func @test_box_heap_array_1d() {
 
 // -----
 
-// Test box type with 2D heap array (needs destroy)
+// Test box type with 2D heap array (needs destroy). Unallocated allocatables
+// keep a null private allocation.
 // CHECK: acc.private.recipe @private_box_heap_array_2d : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi64>>>> init {
 // CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi64>>>>):
+// CHECK:   %[[PRIVATE_ALLOC:.*]] = fir.if {{.*}} -> (!fir.heap<!fir.array<?x?xi64>>) {
+// CHECK:     fir.allocmem !fir.array<?x?xi64>
+// CHECK:   } else {
+// CHECK:     fir.zero_bits !fir.heap<!fir.array<?x?xi64>>
+// CHECK:   }
 // CHECK:   %[[BOXALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi64>>>
-// CHECK:   acc.yield %[[BOXALLOC]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi64>>>>
+// CHECK:   acc.yield %[[BOXALLOC]], %[[PRIVATE_ALLOC]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi64>>>>, !fir.heap<!fir.array<?x?xi64>>
 // CHECK: } destroy {
-// CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi64>>>>, %{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi64>>>>):
+// CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi64>>>>, %{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi64>>>>, %[[PRIVATE_ALLOC:.*]]: !fir.heap<!fir.array<?x?xi64>>):
+// CHECK:   fir.if {{.*}} {
+// CHECK:     fir.freemem %[[PRIVATE_ALLOC]] : !fir.heap<!fir.array<?x?xi64>>
+// CHECK:   }
 // CHECK:   acc.terminator
 // CHECK: }
 

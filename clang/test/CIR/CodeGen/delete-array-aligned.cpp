@@ -27,7 +27,7 @@ void test_global_aligned(OverAlignedTy *p) { delete[] p; }
 // CIR-AFTER-NEXT: }
 
 // LLVM-LABEL: define dso_local void @_Z19test_global_alignedP13OverAlignedTy(
-// LLVM: call void @_ZdaPvSt11align_val_t(ptr {{(noundef )?}}%{{.*}}, i64 {{(noundef )?}}128)
+// LLVM: call void @_ZdaPvSt11align_val_t(ptr {{(allocptr )?}}{{(noundef )?}}%{{.*}}, i64 {{(noundef )?}}128)
 
 struct alignas(128) OverAlignedTyClassDelete {
   OverAlignedTyClassDelete();

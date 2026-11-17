@@ -41,7 +41,7 @@ Value ExecuteRegionOp::finalizePromotion(
       memoryslot::updateTerminator(&block, reachingDef, reachingAtBlockEnd);
 
   SmallVector<Type> resultTypes(getResultTypes());
-  resultTypes.push_back(slot.elemType);
+  resultTypes.push_back(slot.valueType);
 
   IRRewriter rewriter(builder);
   Operation *newOp =
@@ -68,7 +68,7 @@ void ForOp::setupPromotion(
   }
 
   getInitArgsMutable().append(reachingDef);
-  bodyRegion.addArgument(slot.elemType, slot.ptr.getLoc());
+  bodyRegion.addArgument(slot.valueType, slot.ptr.getLoc());
   regionsToProcess.insert({&bodyRegion, bodyRegion.getArguments().back()});
 }
 
@@ -84,7 +84,7 @@ Value ForOp::finalizePromotion(
   memoryslot::updateTerminator(getBody(), reachingDef, reachingAtBlockEnd);
 
   SmallVector<Type> resultTypes(getResultTypes());
-  resultTypes.push_back(slot.elemType);
+  resultTypes.push_back(slot.valueType);
 
   IRRewriter rewriter(builder);
   Operation *newOp =
@@ -157,7 +157,7 @@ Value IfOp::finalizePromotion(
   }
 
   SmallVector<Type> resultTypes(getResultTypes());
-  resultTypes.push_back(slot.elemType);
+  resultTypes.push_back(slot.valueType);
 
   Operation *newOp =
       memoryslot::replaceWithNewResults(rewriter, getOperation(), resultTypes);
@@ -199,7 +199,7 @@ Value IndexSwitchOp::finalizePromotion(
                                  reachingAtBlockEnd);
 
   SmallVector<Type> resultTypes(getResultTypes());
-  resultTypes.push_back(slot.elemType);
+  resultTypes.push_back(slot.valueType);
 
   Operation *newOp =
       memoryslot::replaceWithNewResults(rewriter, getOperation(), resultTypes);
@@ -281,10 +281,10 @@ void WhileOp::setupPromotion(
 
   getInitsMutable().append(reachingDef);
 
-  beforeRegion.addArgument(slot.elemType, slot.ptr.getLoc());
+  beforeRegion.addArgument(slot.valueType, slot.ptr.getLoc());
   regionsToProcess.insert({&beforeRegion, beforeRegion.getArguments().back()});
 
-  afterRegion.addArgument(slot.elemType, slot.ptr.getLoc());
+  afterRegion.addArgument(slot.valueType, slot.ptr.getLoc());
   regionsToProcess.insert({&afterRegion, afterRegion.getArguments().back()});
 }
 
@@ -304,7 +304,7 @@ Value WhileOp::finalizePromotion(
       &getAfter().back(), getAfter().getArguments().back(), reachingAtBlockEnd);
 
   SmallVector<Type> resultTypes(getResultTypes());
-  resultTypes.push_back(slot.elemType);
+  resultTypes.push_back(slot.valueType);
 
   IRRewriter rewriter(builder);
   Operation *newOp =

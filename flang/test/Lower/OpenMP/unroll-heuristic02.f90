@@ -47,7 +47,7 @@ end subroutine omp_unroll_heuristic_nested02
 !CHECK:           %[[VAL_20:.*]] = arith.select %[[VAL_18]], %[[VAL_19]], %[[VAL_15]] : i32
 !CHECK:           %[[VAL_21:.*]] = arith.select %[[VAL_18]], %[[VAL_14]], %[[VAL_13]] : i32
 !CHECK:           %[[VAL_22:.*]] = arith.select %[[VAL_18]], %[[VAL_13]], %[[VAL_14]] : i32
-!CHECK:           %[[VAL_23:.*]] = arith.subi %[[VAL_22]], %[[VAL_21]] overflow<nuw> : i32
+!CHECK:           %[[VAL_23:.*]] = arith.subi %[[VAL_22]], %[[VAL_21]] : i32
 !CHECK:           %[[VAL_24:.*]] = arith.divui %[[VAL_23]], %[[VAL_20]] : i32
 !CHECK:           %[[VAL_25:.*]] = arith.addi %[[VAL_24]], %[[VAL_17]] overflow<nuw> : i32
 !CHECK:           %[[VAL_26:.*]] = arith.cmpi slt, %[[VAL_22]], %[[VAL_21]] : i32
@@ -67,7 +67,7 @@ end subroutine omp_unroll_heuristic_nested02
 !CHECK:             %[[VAL_39:.*]] = arith.select %[[VAL_37]], %[[VAL_38]], %[[VAL_34]] : i32
 !CHECK:             %[[VAL_40:.*]] = arith.select %[[VAL_37]], %[[VAL_33]], %[[VAL_32]] : i32
 !CHECK:             %[[VAL_41:.*]] = arith.select %[[VAL_37]], %[[VAL_32]], %[[VAL_33]] : i32
-!CHECK:             %[[VAL_42:.*]] = arith.subi %[[VAL_41]], %[[VAL_40]] overflow<nuw> : i32
+!CHECK:             %[[VAL_42:.*]] = arith.subi %[[VAL_41]], %[[VAL_40]] : i32
 !CHECK:             %[[VAL_43:.*]] = arith.divui %[[VAL_42]], %[[VAL_39]] : i32
 !CHECK:             %[[VAL_44:.*]] = arith.addi %[[VAL_43]], %[[VAL_36]] overflow<nuw> : i32
 !CHECK:             %[[VAL_45:.*]] = arith.cmpi slt, %[[VAL_41]], %[[VAL_40]] : i32

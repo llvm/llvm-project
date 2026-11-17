@@ -480,16 +480,16 @@ define i8 @pr187458(<vscale x 64 x i8> %0, <vscale x 64 x i1> %mask) {
 ; RV32-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; RV32-NEXT:    vslidedown.vx v0, v0, a3
 ; RV32-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
-; RV32-NEXT:    vcpop.m a2, v0
-; RV32-NEXT:    slli a1, a0, 1
-; RV32-NEXT:    bnez a2, .LBB13_2
+; RV32-NEXT:    vcpop.m a1, v0
+; RV32-NEXT:    slli a2, a0, 1
+; RV32-NEXT:    bnez a1, .LBB13_2
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    vmv1r.v v0, v7
 ; RV32-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; RV32-NEXT:    vmv.v.i v8, 0
 ; RV32-NEXT:    vmerge.vvm v24, v8, v24, v0
 ; RV32-NEXT:    vredmaxu.vs v24, v24, v24
-; RV32-NEXT:    vmv.x.s a2, v24
+; RV32-NEXT:    vmv.x.s a1, v24
 ; RV32-NEXT:    j .LBB13_3
 ; RV32-NEXT:  .LBB13_2:
 ; RV32-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
@@ -497,8 +497,8 @@ define i8 @pr187458(<vscale x 64 x i8> %0, <vscale x 64 x i1> %mask) {
 ; RV32-NEXT:    vmv.v.i v16, 0
 ; RV32-NEXT:    vmerge.vvm v24, v16, v24, v0
 ; RV32-NEXT:    vredmaxu.vs v24, v24, v24
-; RV32-NEXT:    vmv.x.s a2, v24
-; RV32-NEXT:    add a2, a2, a1
+; RV32-NEXT:    vmv.x.s a1, v24
+; RV32-NEXT:    add a1, a1, a2
 ; RV32-NEXT:  .LBB13_3: # %entry
 ; RV32-NEXT:    srli a4, a0, 1
 ; RV32-NEXT:    vsetvli a5, zero, e8, m1, ta, ma
@@ -514,7 +514,7 @@ define i8 @pr187458(<vscale x 64 x i8> %0, <vscale x 64 x i1> %mask) {
 ; RV32-NEXT:    vid.v v16
 ; RV32-NEXT:    vmerge.vvm v16, v8, v16, v0
 ; RV32-NEXT:    vredmaxu.vs v16, v16, v16
-; RV32-NEXT:    vmv.x.s a1, v16
+; RV32-NEXT:    vmv.x.s a2, v16
 ; RV32-NEXT:    j .LBB13_6
 ; RV32-NEXT:  .LBB13_5:
 ; RV32-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
@@ -522,19 +522,19 @@ define i8 @pr187458(<vscale x 64 x i8> %0, <vscale x 64 x i1> %mask) {
 ; RV32-NEXT:    vmerge.vvm v16, v8, v16, v0
 ; RV32-NEXT:    vredmaxu.vs v16, v16, v16
 ; RV32-NEXT:    vmv.x.s a3, v16
-; RV32-NEXT:    add a1, a3, a1
+; RV32-NEXT:    add a2, a3, a2
 ; RV32-NEXT:  .LBB13_6: # %entry
 ; RV32-NEXT:    vsetvli a3, zero, e8, m4, ta, ma
 ; RV32-NEXT:    vcpop.m a3, v6
 ; RV32-NEXT:    beqz a3, .LBB13_8
 ; RV32-NEXT:  # %bb.7:
 ; RV32-NEXT:    slli a0, a0, 2
-; RV32-NEXT:    add a2, a1, a0
+; RV32-NEXT:    add a1, a2, a0
 ; RV32-NEXT:  .LBB13_8: # %entry
 ; RV32-NEXT:    addi a0, sp, 16
 ; RV32-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    vsetivli zero, 1, e8, m8, ta, ma
-; RV32-NEXT:    vslidedown.vx v8, v8, a2
+; RV32-NEXT:    vslidedown.vx v8, v8, a1
 ; RV32-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; RV32-NEXT:    vcpop.m a0, v7
 ; RV32-NEXT:    vmv.x.s a1, v8

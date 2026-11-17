@@ -828,6 +828,11 @@ static std::unique_ptr<llvm::MemoryBuffer>
 getInputBufferForModule(CompilerInstance &CI, Module *M) {
   FileManager &FileMgr = CI.getFileManager();
 
+  // Merge in directories the requesting instance enumerated on this module's
+  // behalf.
+  for (StringRef Dir : CI.getInheritedDirectoryDependencies())
+    M->addDirectoryDependency(Dir);
+
   // Collect the set of #includes we need to build the module.
   SmallString<256> HeaderContents;
   std::error_code Err = std::error_code();

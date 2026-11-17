@@ -1594,6 +1594,10 @@ let Command = "scripting extension list" in {
   def scripting_extension_list_json
       : Option<"json", "j">,
         Desc<"Output the scripted extension list in json format.">;
+  def scripting_extension_list_instances
+      : Option<"instances", "i">,
+        Desc<"List the instantiated scripted extensions, grouped by class, "
+             "instead of the available templates.">;
 }
 
 let Command = "scripting extension generate" in {
@@ -1800,6 +1804,15 @@ let Command = "target modules list" in {
         Desc<
             "Display whether the module is still in the "
             "the shared module cache (Y/N), and its shared pointer use_count.">;
+  def target_modules_list_symtab_flags
+      : Option<"symtab-state-flags", "F">,
+        Group<1>,
+        OptionalArg<"Width">,
+        Desc<"Display state about the symbol table with optional width: "
+             "C if it was read from the index cache, F if it was parsed from "
+             "the object file, W if it was written to the index cache, S if "
+             "a symbol file added or updated symbols, - if none of these "
+             "apply.">;
   def target_modules_list_pointer : Option<"pointer", "p">,
                                     Group<1>,
                                     OptionalArg<"None">,

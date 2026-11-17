@@ -61,7 +61,7 @@ end
 ! CHECK: %[[PTR:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFEp") fortran_attrs<pointer> data_attr(#cuf.cuda<device>)
 ! CHECK: %[[ACTIVE:.*]] = cuf.device_is_active : i1
 ! CHECK-NEXT: fir.if %[[ACTIVE]] {
-! CHECK-NEXT: fir.call @_QPcudadevicesynchronize()
+! CHECK-NEXT: cuf.device_synchronize
 ! CHECK-NEXT: cuf.free %[[PTR]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>{{.*}}
 ! CHECK: cuf.deallocate
 ! CHECK: cuf.free{{.*}}
@@ -72,7 +72,7 @@ end
 ! LATE: %[[PTR:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFEp") fortran_attrs<pointer> data_attr(#cuf.cuda<device>)
 ! LATE: %[[ACTIVE:.*]] = fir.call @_FortranACUFDeviceIsActive() : () -> i1
 ! LATE-NEXT: fir.if %[[ACTIVE]] {
-! LATE-NEXT: fir.call @_QPcudadevicesynchronize()
+! LATE-NEXT: fir.call @cudadevicesynchronize_()
 ! LATE-NEXT: cuf.free %[[PTR]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>{{.*}}
 ! LATE: cuf.deallocate
 ! LATE: cuf.free{{.*}}

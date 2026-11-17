@@ -92,7 +92,7 @@ uptr StackTrace::GetPreviousInstructionPc(uptr pc) {
   return pc - 8;
 #elif SANITIZER_RISCV64
   // RV-64 has variable instruction length...
-  // C extentions gives us 2-byte instructoins
+  // C extensions give us 2-byte instructions
   // RV-64 has 4-byte instructions
   // + RISC-V architecture allows instructions up to 8 bytes
   // It seems difficult to figure out the exact instruction length -

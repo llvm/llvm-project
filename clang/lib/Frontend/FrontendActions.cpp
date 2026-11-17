@@ -90,9 +90,9 @@ ASTDumpAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   CI.getLangOpts().CommentOpts.RetainComments = true;
   const FrontendOptions &Opts = CI.getFrontendOpts();
   return CreateASTDumper(nullptr /*Dump to stdout.*/, Opts.ASTDumpFilter,
-                         Opts.ASTDumpDecls, Opts.ASTDumpAll,
-                         Opts.ASTDumpLookups, Opts.ASTDumpDeclTypes,
-                         Opts.ASTDumpFormat);
+                         Opts.ASTDumpFilterPath, Opts.ASTDumpDecls,
+                         Opts.ASTDumpAll, Opts.ASTDumpLookups,
+                         Opts.ASTDumpDeclTypes, Opts.ASTDumpFormat);
 }
 
 std::unique_ptr<ASTConsumer>
@@ -137,6 +137,11 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 bool GeneratePCHAction::ComputeASTConsumerArguments(CompilerInstance &CI,
                                                     std::string &Sysroot) {
   Sysroot = CI.getHeaderSearchOpts().Sysroot;
+  if (CI.getFrontendOpts().RelocatablePCH &&
+      CI.getHeaderSearchOpts().PCHBaseDirIsCwd) {
+    CI.getDiagnostics().Report(diag::err_pch_base_dir_is_cwd_relocatable);
+    return false;
+  }
   if (CI.getFrontendOpts().RelocatablePCH && Sysroot.empty()) {
     CI.getDiagnostics().Report(diag::err_relocatable_without_isysroot);
     return false;

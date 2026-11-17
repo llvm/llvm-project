@@ -21,8 +21,11 @@ int main(int argc, char **argv) {
 // CHECK:      TranslationUnitDecl
 // CHECK-NEXT: |-FunctionDecl {{.*}} main 'int (int, char **)'
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} argc 'int'
-// CHECK-NEXT: | `-ParmVarDecl {{.*}} argv 'char **'
+// CHECK-NEXT: | |-ParmVarDecl {{.*}} argv 'char **'
+// CHECK-NEXT: | `-AsmLabelAttr {{.*}} Implicit "$__lldb_func::{{.*}}:main"
 // CHECK-NEXT: |-FunctionDecl {{.*}} static_fn 'int ()' static
+// CHECK-NEXT: | `-AsmLabelAttr {{.*}} Implicit "$__lldb_func::{{.*}}:static_fn"
 // CHECK-NEXT: `-FunctionDecl {{.*}} varargs_fn 'int (int, int, ...)'
 // CHECK-NEXT:   |-ParmVarDecl {{.*}} x 'int'
-// CHECK-NEXT:   `-ParmVarDecl {{.*}} y 'int'
+// CHECK-NEXT:   |-ParmVarDecl {{.*}} y 'int'
+// CHECK-NEXT:   `-AsmLabelAttr {{.*}} Implicit "$__lldb_func::{{.*}}:?varargs_fn@@YAHHHZZ"

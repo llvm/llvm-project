@@ -93,6 +93,13 @@ struct TrackCopyMove {
   }
 };
 
+struct StaticallyCallable {
+  static int operator()(int& out) noexcept {
+    out = 42;
+    return 42;
+  }
+};
+
 void test_default() {
   {
     std::function_ref<void()> f = [] {};
@@ -194,6 +201,14 @@ void test_default() {
     };
     std::function_ref<void(TrackCopyMove)> f = lambda;
     f(TrackCopyMove{});
+  }
+  {
+    // Non-void static operator() can bind to function_ref<void(int&)>
+    int expect_42 = 0;
+    StaticallyCallable sc;
+    std::function_ref<void(int&)> f = sc;
+    f(expect_42);
+    assert(expect_42 == 42);
   }
 }
 
@@ -298,6 +313,14 @@ void test_const() {
     };
     std::function_ref<void(TrackCopyMove) const> f = lambda;
     f(TrackCopyMove{});
+  }
+  {
+    // Non-void static operator() can bind to function_ref<void(int&) const>
+    int expect_42 = 0;
+    StaticallyCallable sc;
+    std::function_ref<void(int&) const> f = sc;
+    f(expect_42);
+    assert(expect_42 == 42);
   }
 }
 
@@ -404,6 +427,14 @@ void test_noexcept() {
     std::function_ref<void(TrackCopyMove) noexcept> f = lambda;
     f(TrackCopyMove{});
   }
+  {
+    // Non-void static operator() can bind to function_ref<void(int&) noexcept>
+    int expect_42 = 0;
+    StaticallyCallable sc;
+    std::function_ref<void(int&) noexcept> f = sc;
+    f(expect_42);
+    assert(expect_42 == 42);
+  }
 }
 
 void test_const_noexcept() {
@@ -508,6 +539,14 @@ void test_const_noexcept() {
     };
     std::function_ref<void(TrackCopyMove) const noexcept> f = lambda;
     f(TrackCopyMove{});
+  }
+  {
+    // Non-void static operator() can bind to function_ref<void(int&) const noexcept>
+    int expect_42 = 0;
+    StaticallyCallable sc;
+    std::function_ref<void(int&) const noexcept> f = sc;
+    f(expect_42);
+    assert(expect_42 == 42);
   }
 }
 
