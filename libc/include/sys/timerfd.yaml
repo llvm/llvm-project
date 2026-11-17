@@ -1,9 +1,17 @@
 header: sys/timerfd.h
 standards:
   - linux
-public_includes:
-  - time.h
 macros:
+  - macro_name: CLOCK_BOOTTIME
+    macro_header: time-macros.h
+  - macro_name: CLOCK_BOOTTIME_ALARM
+    macro_header: time-macros.h
+  - macro_name: CLOCK_MONOTONIC
+    macro_header: time-macros.h
+  - macro_name: CLOCK_REALTIME
+    macro_header: time-macros.h
+  - macro_name: CLOCK_REALTIME_ALARM
+    macro_header: time-macros.h
   - macro_name: TFD_CLOEXEC
     macro_header: sys-timerfd-macros.h
   - macro_name: TFD_NONBLOCK

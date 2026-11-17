@@ -1056,7 +1056,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.sys_timerfd_macros
-    .time
+    .llvm-libc-macros.time_macros
 )
 
 add_header_macro(
