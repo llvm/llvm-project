@@ -752,6 +752,7 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
       ArrayRef<const Value *> Args, const Instruction *CtxI = nullptr,
+      const TargetLibraryInfo *TLibInfo = nullptr,
       ArrayRef<const Value *> Scalars = {}) const {
     // Widenable conditions will eventually lower into constants, so some
     // operations with them will be trivially optimized away.

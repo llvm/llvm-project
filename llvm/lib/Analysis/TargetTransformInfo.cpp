@@ -1113,7 +1113,7 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
   }
 
   InstructionCost Cost = TTIImpl->getArithmeticInstrCost(
-      Opcode, Ty, CostKind, Op1Info, Op2Info, Args, CtxI, Scalars);
+      Opcode, Ty, CostKind, Op1Info, Op2Info, Args, CtxI, TLibInfo, Scalars);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
