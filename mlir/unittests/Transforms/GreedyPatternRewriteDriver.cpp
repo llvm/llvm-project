@@ -262,4 +262,56 @@ TEST_F(GreedyDeadnessTest, TerminatorsRemainLiveAfterRecursiveQuery) {
   EXPECT_FALSE(cache.isOpTriviallyDead(terminator));
   EXPECT_FALSE(cache.isOpTriviallyDead(*moduleOp));
 }
+
+class GreedyReachabilityTest : public testing::Test {
+protected:
+  GreedyReachabilityTest() { context.loadDialect<test::TestDialect>(); }
+
+  /// Parse a module with one region of the given blocks. The effect in the
+  /// last block is the operation the tests rewrite.
+  OwningOpRef<ModuleOp> parse(StringRef blocks) {
+    return parseSourceString<ModuleOp>(
+        ("\"test.one_region_op\"() ({\n" + blocks + effect +
+         "\"test.return\"() : () -> ()\n}) : () -> ()\n")
+            .str(),
+        &context);
+  }
+
+  /// Apply a pattern that marks `target` and return whether it applied.
+  bool rewrite(Operation *target,
+               std::function<bool(Operation *)> reachability = {}) {
+    auto mark = [&](PatternRewriter &rewriter) {
+      rewriter.modifyOpInPlace(
+          target, [&] { target->setAttr("marked", rewriter.getUnitAttr()); });
+    };
+    RewritePatternSet patterns(&context);
+    patterns.add<RewriteRoot>(&context, target, mark);
+    GreedyRewriteConfig config;
+    config.setReachability(std::move(reachability));
+    EXPECT_TRUE(succeeded(
+        applyOpPatternsGreedily(target, std::move(patterns), config)));
+    return target->hasAttr("marked");
+  }
+
+  MLIRContext context;
+};
+
+TEST_F(GreedyReachabilityTest, OverrideReachesBlockWithoutPredecessors) {
+  // The effect sits in a block that has no CFG path from the entry block.
+  OwningOpRef<ModuleOp> moduleOp =
+      parse("\"test.return\"() : () -> ()\n^bb1:\n");
+  ASSERT_TRUE(moduleOp);
+  Operation *target = &moduleOp->getBody()->front().getRegion(0).back().front();
+  EXPECT_FALSE(rewrite(target));
+  EXPECT_TRUE(rewrite(target, [](Operation *) { return true; }));
+}
+
+TEST_F(GreedyReachabilityTest, OverrideSkipsReachableOperation) {
+  OwningOpRef<ModuleOp> moduleOp = parse("");
+  ASSERT_TRUE(moduleOp);
+  Operation *target =
+      &moduleOp->getBody()->front().getRegion(0).front().front();
+  EXPECT_FALSE(rewrite(target, [](Operation *) { return false; }));
+  EXPECT_TRUE(rewrite(target));
+}
 } // namespace
