@@ -216,6 +216,8 @@ ErrorOr<ExprId> ExprPool::make_lit(char c) {
   return intern(Expr::make_literal(c));
 }
 ErrorOr<ExprId> ExprPool::make_anchor(uint8_t mask) {
+  if (mask == 0)
+    return Error(REG_BADPAT);
   return intern(Expr::make_anchor(mask));
 }
 
@@ -324,10 +326,11 @@ ErrorOr<ExprId> ExprPool::make_concat(ExprId l, ExprId r) {
   if (l == EMPTY_SET_ID || r == EMPTY_SET_ID)
     return empty_set();
   // ε · R = R · ε = R (Identity: empty string)
-  if (l == EMPTY_STR_ID)
-    return r;
-  if (r == EMPTY_STR_ID)
-    return l;
+  if (l == EMPTY_STR_ID || r == EMPTY_STR_ID) {
+    if (!ensure_initialized())
+      return Error(REG_ESPACE);
+    return (l == EMPTY_STR_ID) ? r : l;
+  }
   // (A · B) · C = A · (B · C) (Right-associative canonical form)
   const Expr le = get(l);
   if (le.kind == ExprKind::Concat) {
@@ -469,14 +472,12 @@ ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
   if (l == INVALID_EXPR_ID || r == INVALID_EXPR_ID)
     return Error(REG_BADPAT);
   // Apply basic algebraic identities for alternation:
-  // Ø | R = R | Ø = R (Identity: null set)
-  if (l == EMPTY_SET_ID)
-    return r;
-  if (r == EMPTY_SET_ID)
-    return l;
-  // R | R = R (Idempotency)
-  if (l == r)
-    return l;
+  // Ø | R = R | Ø = R (Identity: null set) and R | R = R (Idempotency)
+  if (l == EMPTY_SET_ID || r == EMPTY_SET_ID || l == r) {
+    if (!ensure_initialized())
+      return Error(REG_ESPACE);
+    return (l == EMPTY_SET_ID) ? r : l;
+  }
 
   const Expr le = get(l);
   const Expr re = get(r);
