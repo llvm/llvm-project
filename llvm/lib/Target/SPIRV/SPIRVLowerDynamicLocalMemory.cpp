@@ -41,7 +41,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Alignment.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/TargetParser/Triple.h"
@@ -52,10 +51,6 @@
 using namespace llvm;
 
 namespace {
-
-// Maximum alignment of SLM arguments provided by
-// Level Zero driver. Applicable only to Intel GPUs.
-constexpr Align LocalMemArgAlign = Align::Constant<32>();
 
 /// Returns whether \p GV is dynamic local memory: an external Workgroup array
 /// without a size.
@@ -153,14 +148,6 @@ bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
   // Leave the memory to be resolved by linking with a module defining kernels.
   if (Kernels.empty())
     return false;
-
-  for (GlobalVariable *GV : DynMems)
-    if (GV->getAlign().valueOrOne() > LocalMemArgAlign)
-      reportFatalUsageError(
-          "dynamic local memory '" + GV->getName() +
-          "' requires an alignment of " + Twine(GV->getAlign()->value()) +
-          " bytes, but at most " + Twine(LocalMemArgAlign.value()) +
-          " bytes are supported");
 
   unsigned LocalAS = storageClassToAddressSpace(SPIRV::StorageClass::Workgroup);
   auto *LocalPtrTy = PointerType::get(M.getContext(), LocalAS);
