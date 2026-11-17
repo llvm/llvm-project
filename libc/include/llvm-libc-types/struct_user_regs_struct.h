@@ -16,6 +16,8 @@
 
 #if defined(__x86_64__)
 #include "x86_64/struct_user_regs_struct.h"
+#elif defined(__aarch64__)
+#include "aarch64/struct_user_regs_struct.h"
 #else
 #error "struct user_regs_struct not available for your target architecture."
 #endif

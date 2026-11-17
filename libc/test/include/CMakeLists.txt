@@ -257,6 +257,33 @@ add_libc_test(
     libc.include.llvm-libc-macros.netinet_in_macros
 )
 
+add_libc_test(
+  ar_test
+  SUITE
+    libc-include-tests
+  SRCS
+    ar_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-types.struct_ar_hdr
+)
+
+if(LIBC_TARGET_ARCHITECTURE_IS_X86_64 OR LIBC_TARGET_ARCHITECTURE_IS_AARCH64)
+  add_libc_test(
+    sys_procfs_test
+    SUITE
+      libc-include-tests
+    SRCS
+      sys_procfs_test.cpp
+    DEPENDS
+      libc.include.llvm-libc-macros.sys_procfs_macros
+      libc.include.llvm-libc-types.elf_fpregset_t
+      libc.include.llvm-libc-types.elf_gregset_t
+      libc.include.llvm-libc-types.struct_elf_prpsinfo
+      libc.include.llvm-libc-types.struct_elf_prstatus
+      libc.include.llvm-libc-types.struct_user_regs_struct
+  )
+endif()
+
 add_subdirectory(net)
 
 add_libc_test(

@@ -1,5 +1,6 @@
 set(TARGET_PUBLIC_HEADERS
     libc.include.alloca
+    libc.include.ar
     libc.include.arpa_inet
     libc.include.assert
     libc.include.byteswap
@@ -63,6 +64,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_personality
     libc.include.sys_poll
     libc.include.sys_prctl
+    libc.include.sys_procfs
     libc.include.sys_queue
     libc.include.sys_random
     libc.include.sys_resource

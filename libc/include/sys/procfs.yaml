@@ -1,0 +1,22 @@
+header: sys/procfs.h
+standards:
+  - linux
+macros:
+  - macro_name: ELF_NGREG
+    macro_header: sys-procfs-macros.h
+  - macro_name: ELF_PRARGSZ
+    macro_header: sys-procfs-macros.h
+types:
+  - type_name: elf_fpregset_t
+  - type_name: elf_greg_t
+  - type_name: elf_gregset_t
+  - type_name: lwpid_t
+  - type_name: prfpregset_t
+  - type_name: prgregset_t
+  - type_name: prpsinfo_t
+  - type_name: prstatus_t
+  - type_name: psaddr_t
+  - type_name: struct_elf_prpsinfo
+  - type_name: struct_elf_prstatus
+  - type_name: struct_elf_siginfo
+  - type_name: struct_user_regs_struct

@@ -645,6 +645,46 @@ endif()
 add_type_header(mcontext_t HDR mcontext_t.h)
 add_type_header(ucontext_t HDR ucontext_t.h)
 add_type_header(struct_user_regs_struct HDR struct_user_regs_struct.h)
+add_type_header(struct_user_fpregs_struct HDR struct_user_fpregs_struct.h)
+add_header(elf_greg_t HDR elf_greg_t.h)
+add_header(
+  elf_gregset_t
+  HDR
+    elf_gregset_t.h
+  DEPENDS
+    .elf_greg_t
+    .struct_user_regs_struct
+    libc.include.llvm-libc-macros.sys_procfs_macros
+)
+add_header(elf_fpregset_t HDR elf_fpregset_t.h DEPENDS .struct_user_fpregs_struct)
+add_header(struct_elf_siginfo HDR struct_elf_siginfo.h)
+add_header(
+  struct_elf_prstatus
+  HDR
+    struct_elf_prstatus.h
+  DEPENDS
+    .elf_gregset_t
+    .pid_t
+    .struct_elf_siginfo
+    .struct_timeval
+)
+add_header(
+  struct_elf_prpsinfo
+  HDR
+    struct_elf_prpsinfo.h
+  DEPENDS
+    .gid_t
+    .pid_t
+    .uid_t
+    libc.include.llvm-libc-macros.sys_procfs_macros
+)
+add_header(prgregset_t HDR prgregset_t.h DEPENDS .elf_gregset_t)
+add_header(prfpregset_t HDR prfpregset_t.h DEPENDS .elf_fpregset_t)
+add_header(prstatus_t HDR prstatus_t.h DEPENDS .struct_elf_prstatus)
+add_header(prpsinfo_t HDR prpsinfo_t.h DEPENDS .struct_elf_prpsinfo)
+add_header(lwpid_t HDR lwpid_t.h DEPENDS .pid_t)
+add_header(psaddr_t HDR psaddr_t.h)
+add_header(struct_ar_hdr HDR struct_ar_hdr.h)
 
 # UEFI
 add_header(EFI_GUID HDR EFI_GUID.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
