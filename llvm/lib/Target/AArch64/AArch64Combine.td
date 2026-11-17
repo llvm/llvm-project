@@ -410,6 +410,15 @@ def split_store_zero_128 : GICombineRule<
   (apply [{ applySplitStoreZero128(*${d}, MRI, B, Observer); }])
 >;
 
+// Keeping the low half of a 128-bit vector is a concat with zeros, which
+// selects to a single fmov d.
+def and_keep_low_half : GICombineRule<
+  (defs root:$root),
+  (match (G_AND $dst, $src, $mask):$root,
+         [{ return matchAndKeepLowHalf(*${root}, MRI); }]),
+  (apply [{ applyAndKeepLowHalf(*${root}, MRI, B); }])
+>;
+
 def vector_sext_inreg_to_shift : GICombineRule<
   (defs root:$d),
   (match (G_SEXT_INREG $dst, $src, $imm):$d,
@@ -476,7 +485,7 @@ def AArch64PostLegalizerCombiner
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
                         extractvecelt_pairwise_add, redundant_or,
-                        mul_by_zero_one_vector,
+                        mul_by_zero_one_vector, and_keep_low_half,
                         mul_const, redundant_sext_inreg,
                         redundant_zext_sext_inreg, redundant_aext_sext_inreg,
                         redundant_aext_unmerge_sext_inreg, redundant_zext_unmerge_sext_inreg,

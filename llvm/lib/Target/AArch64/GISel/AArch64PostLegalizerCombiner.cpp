@@ -298,6 +298,56 @@ void applySplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI,
   Store.eraseFromParent();
 }
 
+/// Match a 128-bit vector G_AND whose constant mask keeps the low half of the
+/// lanes and clears the high half. That is the low half concatenated with
+/// zeros, which selects to a single fmov d.
+bool matchAndKeepLowHalf(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_AND);
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  // The half of a two-element vector would be a single-element vector, which
+  // can't be selected.
+  if (!Ty.isFixedVector() || Ty.getSizeInBits() != 128 ||
+      Ty.getNumElements() < 4)
+    return false;
+  // An AND feeding an OR is better matched as a bitwise select.
+  for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Dst))
+    if (UseMI.getOpcode() == TargetOpcode::G_OR)
+      return false;
+
+  // Constants are canonicalized to the RHS.
+  auto *Mask = getOpcodeDef<GBuildVector>(MI.getOperand(2).getReg(), MRI);
+  if (!Mask)
+    return false;
+  unsigned NumElts = Ty.getNumElements();
+  unsigned EltBits = Ty.getScalarSizeInBits();
+  for (unsigned I = 0; I != NumElts; ++I) {
+    auto C = getIConstantVRegValWithLookThrough(Mask->getSourceReg(I), MRI);
+    if (!C)
+      return false;
+    // Only the low EltBits of each element matter.
+    APInt V = C->Value.zextOrTrunc(EltBits);
+    // The low half of the lanes must be kept, and the high half cleared.
+    if (I < NumElts / 2 ? !V.isAllOnes() : !V.isZero())
+      return false;
+  }
+  return true;
+}
+
+void applyAndKeepLowHalf(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &B) {
+  B.setInstrAndDebugLoc(MI);
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  LLT EltTy = Ty.getElementType();
+  LLT HalfTy = LLT::fixed_vector(Ty.getNumElements() / 2, EltTy);
+  // The low half of the source.
+  auto Lo = B.buildExtractSubvector(HalfTy, MI.getOperand(1).getReg(), 0);
+  auto ZeroHalf = B.buildConstant(HalfTy, 0);
+  B.buildConcatVectors(Dst, {Lo.getReg(0), ZeroHalf.getReg(0)});
+  MI.eraseFromParent();
+}
+
 bool matchOrToBSP(MachineInstr &MI, MachineRegisterInfo &MRI,
                   std::tuple<Register, Register, Register> &MatchInfo) {
   const LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
