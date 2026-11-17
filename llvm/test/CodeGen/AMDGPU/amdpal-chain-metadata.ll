@@ -37,6 +37,13 @@
 ; EXTSTACK48:    .set .Lchain_and_indirect_gfx.private_seg_size, 32+max(48){{$}}
 ; CHECK:         .set .Lchain_and_indirect_gfx.has_indirect_call, 1{{$}}
 
+; CHECK-LABEL: {{^}}chain_preserve_callee:
+; CHECK:         .set .Lchain_preserve_callee.private_seg_size, 56{{$}}
+
+; The chain_preserve callee's larger stack must not show up here.
+; CHECK-LABEL: {{^}}chain_to_preserve_callee:
+; CHECK:         .set .Lchain_to_preserve_callee.private_seg_size, 24{{$}}
+
 ; CHECK-LABEL: .amdgpu_pal_metadata
 ; CHECK-NEXT: ---
 ; CHECK-NEXT: amdpal.pipelines:
@@ -67,6 +74,9 @@
 ; CHECK-LABEL:      chain_indirect_and_wwf:
 ; CHECK:             .backend_stack_size: 0x40{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x40{{$}}
+; CHECK-LABEL:      chain_to_preserve_callee:
+; CHECK:             .backend_stack_size: 0x18{{$}}
+; CHECK:             .stack_frame_size_in_bytes: 0x18{{$}}
 ; CHECK-LABEL:      gfx_alloca:
 ; CHECK:             .backend_stack_size: 0x1c{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x1c{{$}}
@@ -155,6 +165,21 @@ define amdgpu_cs_chain void @chain_and_indirect_gfx(ptr inreg %fp, <40 x i32> %v
   store i32 11, ptr addrspace(5) %a
   call amdgpu_gfx void %fp(ptr addrspace(5) %a)
   call void (ptr, i32, {}, <40 x i32>, i32, ...) @llvm.amdgcn.cs.chain.p0.i32.s.v40i32(ptr @amdgpu_cs_chain_func, i32 -1, {} inreg poison, <40 x i32> %v, i32 0)
+  unreachable
+}
+
+define amdgpu_cs_chain_preserve void @chain_preserve_callee() {
+.entry:
+  %a = alloca [13 x i32], addrspace(5)
+  store volatile i32 12, ptr addrspace(5) %a
+  ret void
+}
+
+define amdgpu_cs_chain void @chain_to_preserve_callee(<40 x i32> %v) {
+.entry:
+  %a = alloca [5 x i32], addrspace(5)
+  store volatile i32 13, ptr addrspace(5) %a
+  call void (ptr, i32, {}, <40 x i32>, i32, ...) @llvm.amdgcn.cs.chain.p0.i32.s.v40i32(ptr @chain_preserve_callee, i32 -1, {} inreg poison, <40 x i32> %v, i32 0)
   unreachable
 }
 
