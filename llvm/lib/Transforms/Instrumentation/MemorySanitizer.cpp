@@ -460,7 +460,7 @@ private:
   friend struct VarArgRISCVHelper;
   friend struct VarArgLoongArch64Helper;
   friend struct VarArgHexagonHelper;
-  friend struct VarArgGenericHelper;
+  friend struct VarArgNoByValHelper;
 
   void initializeModule(Module &M);
   void initializeCallbacks(Module &M, const TargetLibraryInfo &TLI);
@@ -10088,39 +10088,56 @@ struct VarArgHexagonHelper : public VarArgStackModelHelperBase {
   }
 };
 
-/// Implementation of VarArgHelper that is used for ARM32, MIPS, LoongArch64.
-struct VarArgGenericHelper : public VarArgStackModelHelperBase {
-  AllocaInst *VAArgTLSCopy = nullptr;
-  Value *VAArgSize = nullptr;
+/// Implementation of VarArgHelper that is used for ARM32 and MIPS.
+struct VarArgNoByValHelper : public VarArgStackModelHelperBase {
 
-  VarArgGenericHelper(Function &F, MemorySanitizer &MS,
+  VarArgNoByValHelper(Function &F, MemorySanitizer &MS,
                       MemorySanitizerVisitor &MSV, const unsigned VAListTagSize)
       : VarArgStackModelHelperBase(F, MS, MSV, VAListTagSize) {}
 
   void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
-    unsigned VAArgOffset = 0;
+    unsigned VAArgBase = 0;
+    unsigned VAArgOffset = VAArgBase;
     const DataLayout &DL = F.getDataLayout();
     unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
+    Align StackAlign = DL.getStackAlignment().value_or(Align(2 * IntptrSize));
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      if (IsFixed)
-        continue;
       uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
-      if (DL.isBigEndian()) {
+      Align ArgAlign = DL.getABITypeAlign(A->getType());
+      VAArgOffset = alignTo(VAArgOffset, Align(IntptrSize));
+      assert(!CB.paramHasAttr(ArgNo, Attribute::ByVal));
+      if (CB.paramHasAttr(ArgNo, Attribute::StructRet)) {
+        assert(A->getType()->isPointerTy());
+        assert(ArgNo == 0U);
+        VAArgOffset += IntptrSize;
+        VAArgBase = VAArgOffset;
+        continue;
+      }
+      if (ArgAlign < IntptrSize)
+        ArgAlign = Align(IntptrSize);
+      else if (ArgAlign > StackAlign)
+        ArgAlign = StackAlign;
+      VAArgOffset = alignTo(VAArgOffset, ArgAlign);
+      if (DL.isBigEndian() && ArgSize < IntptrSize) {
         // Adjusting the shadow for argument with size < IntptrSize to match the
         // placement of bits in big endian system
-        if (ArgSize < IntptrSize)
-          VAArgOffset += (IntptrSize - ArgSize);
+        VAArgOffset += (IntptrSize - ArgSize);
       }
-      Value *Base = getShadowPtrForVAArgument(IRB, VAArgOffset, ArgSize);
+      Value *Base =
+          getShadowPtrForVAArgument(IRB, VAArgOffset - VAArgBase, ArgSize);
       VAArgOffset += ArgSize;
-      VAArgOffset = alignTo(VAArgOffset, IntptrSize);
-      if (!Base)
+      if (IsFixed) {
+        VAArgBase = alignTo(VAArgOffset, IntptrSize);
         continue;
+      }
+      if (!Base)
+        break;
       IRB.CreateAlignedStore(MSV.getShadow(A), Base, kShadowTLSAlignment);
     }
 
-    Constant *TotalVAArgSize = ConstantInt::get(MS.IntptrTy, VAArgOffset);
+    Constant *TotalVAArgSize =
+        ConstantInt::get(MS.IntptrTy, VAArgOffset - VAArgBase);
     // Here using VAArgOverflowSizeTLS as VAArgSizeTLS to avoid creation of
     // a new class member i.e. it is the total size of all VarArgs.
     IRB.CreateStore(TotalVAArgSize, MS.VAArgOverflowSizeTLS);
@@ -10128,8 +10145,8 @@ struct VarArgGenericHelper : public VarArgStackModelHelperBase {
 };
 
 // ARM32 and MIPS share the same calling conventions regarding VAArgs.
-using VarArgARM32Helper = VarArgGenericHelper;
-using VarArgMIPSHelper = VarArgGenericHelper;
+using VarArgARM32Helper = VarArgNoByValHelper;
+using VarArgMIPSHelper = VarArgNoByValHelper;
 
 /// A no-op implementation of VarArgHelper.
 struct VarArgNoOpHelper : public VarArgHelper {
