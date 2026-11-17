@@ -3543,14 +3543,13 @@ static bool isConstPointeeParamType(QualType ParamType) {
   return T->isPointerType() && T->getPointeeType().isConstQualified();
 }
 
-/// Helper class for scanTrylockVars() that recursively visits a statement
-/// and collects the escaped and the modified local variables.
-class TrylockVarScanner {
+/// Helper class for scanEscapedVars() that recursively visits a statement
+/// and collects the escaped local variables.
+class EscapedVarScanner {
 public:
-  TrylockVarScanner(const ASTContext &Ctx,
-                    llvm::SmallPtrSetImpl<const ValueDecl *> &EscapedVars,
-                    llvm::SmallPtrSetImpl<const ValueDecl *> &ModifiedVars)
-      : Ctx(Ctx), EscapedVars(EscapedVars), ModifiedVars(ModifiedVars) {}
+  EscapedVarScanner(const ASTContext &Ctx,
+                    llvm::SmallPtrSetImpl<const ValueDecl *> &EscapedVars)
+      : Ctx(Ctx), EscapedVars(EscapedVars) {}
 
   void visit(const Stmt *S, bool InNestedClosure, bool LValueIsSafe) {
     static constexpr unsigned MaxASTWalkDepth = 512;
@@ -3577,11 +3576,8 @@ public:
   }
 
 private:
-  /// Record that the variable \p VD escapes and may be modified.
-  void recordEscapedVar(const ValueDecl *VD) {
-    EscapedVars.insert(VD);
-    ModifiedVars.insert(VD);
-  }
+  /// Record that the variable \p VD escapes.
+  void recordEscapedVar(const ValueDecl *VD) { EscapedVars.insert(VD); }
 
   /// If \p S is an operand that may not be evaluated, visit only its
   /// evaluated parts and return true.
@@ -3660,13 +3656,8 @@ private:
       SmallVector<const DeclRefExpr *, 2> DREs;
       collectModifiedLValueDREs(ModLV, DREs);
       const bool IsSafe = !cast<Expr>(S)->isGLValue() || LValueIsSafe;
-      for (const DeclRefExpr *DRE : DREs) {
-        if (IsSafe)
-          SafeDREs.insert(DRE);
-        if (isa<VarDecl>(DRE->getDecl()))
-          ModifiedVars.insert(
-              cast<ValueDecl>(DRE->getDecl()->getCanonicalDecl()));
-      }
+      if (IsSafe)
+        SafeDREs.insert(DREs.begin(), DREs.end());
     }
   }
 
@@ -3862,35 +3853,30 @@ private:
 
   const ASTContext &Ctx;
   llvm::SmallPtrSetImpl<const ValueDecl *> &EscapedVars;
-  llvm::SmallPtrSetImpl<const ValueDecl *> &ModifiedVars;
   llvm::SmallPtrSet<const DeclRefExpr *, 16> SafeDREs;
   unsigned Depth = 0;
 };
 } // namespace
 
-/// Scan a statement AST subtree \p Root and collect:
-///  - \p EscapedVars: variables that are referenced in any context other than
-///    a direct lvalue-to-rvalue read or a direct assignment/increment LHS
-///    whose resulting glvalue is not used by an enclosing expression (or that
-///    are referenced inside a nested lambda or block).
-///  - \p ModifiedVars: variables that are directly modified by an assignment
-///    or increment/decrement, or that escape.
+/// Scan a statement AST subtree \p Root and collect in \p EscapedVars the
+/// variables that are referenced in any context other than a direct
+/// lvalue-to-rvalue read or a direct assignment/increment LHS whose resulting
+/// glvalue is not used by an enclosing expression (or that are referenced
+/// inside a nested lambda or block).
 static void
-scanTrylockVars(const Stmt *Root, const ASTContext &Ctx,
-                llvm::SmallPtrSetImpl<const ValueDecl *> &EscapedVars,
-                llvm::SmallPtrSetImpl<const ValueDecl *> &ModifiedVars) {
+scanEscapedVars(const Stmt *Root, const ASTContext &Ctx,
+                llvm::SmallPtrSetImpl<const ValueDecl *> &EscapedVars) {
   if (!Root)
     return;
 
-  TrylockVarScanner Scanner(Ctx, EscapedVars, ModifiedVars);
+  EscapedVarScanner Scanner(Ctx, EscapedVars);
   Scanner.visit(Root, /*InNestedClosure=*/false,
                 /*LValueIsSafe=*/isa<CompoundStmt>(Root));
 }
 
 void ThreadSafetyAnalyzer::markEscapedLocalVars(AnalysisDeclContext &AC) {
   llvm::SmallPtrSet<const ValueDecl *, 16> EscapedVars;
-  llvm::SmallPtrSet<const ValueDecl *, 16> ModifiedVars;
-  scanTrylockVars(AC.getBody(), *ASTCtx, EscapedVars, ModifiedVars);
+  scanEscapedVars(AC.getBody(), *ASTCtx, EscapedVars);
   for (const ValueDecl *VD : EscapedVars)
     LocalVarMap.addEscapedVar(VD);
 }
