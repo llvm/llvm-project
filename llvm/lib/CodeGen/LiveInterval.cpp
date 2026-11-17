@@ -301,48 +301,6 @@ private:
   iterator findInsertPos(Segment S) { return llvm::upper_bound(*LR, S.start); }
 };
 
-//===----------------------------------------------------------------------===//
-//   Instantiation of the methods for calculation of live ranges
-//   based on a segment set.
-//===----------------------------------------------------------------------===//
-
-class CalcLiveRangeUtilSet;
-using CalcLiveRangeUtilSetBase =
-    CalcLiveRangeUtilBase<CalcLiveRangeUtilSet, LiveRange::SegmentSet::iterator,
-                          LiveRange::SegmentSet>;
-
-class CalcLiveRangeUtilSet : public CalcLiveRangeUtilSetBase {
-public:
-  CalcLiveRangeUtilSet(LiveRange *LR) : CalcLiveRangeUtilSetBase(LR) {}
-
-private:
-  friend CalcLiveRangeUtilSetBase;
-
-  LiveRange::SegmentSet &segmentsColl() { return *LR->segmentSet; }
-
-  void insertAtEnd(const Segment &S) {
-    LR->segmentSet->insert(LR->segmentSet->end(), S);
-  }
-
-  iterator find(SlotIndex Pos) {
-    iterator I =
-        LR->segmentSet->upper_bound(Segment(Pos, Pos.getNextSlot(), nullptr));
-    if (I == LR->segmentSet->begin())
-      return I;
-    iterator PrevI = std::prev(I);
-    if (Pos < (*PrevI).end)
-      return PrevI;
-    return I;
-  }
-
-  iterator findInsertPos(Segment S) {
-    iterator I = LR->segmentSet->upper_bound(S);
-    if (I != LR->segmentSet->end() && !(S.start < *I))
-      ++I;
-    return I;
-  }
-};
-
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -355,18 +313,10 @@ LiveRange::iterator LiveRange::find(SlotIndex Pos) {
 }
 
 VNInfo *LiveRange::createDeadDef(SlotIndex Def, VNInfo::Allocator &VNIAlloc) {
-  // Use the segment set, if it is available.
-  if (segmentSet != nullptr)
-    return CalcLiveRangeUtilSet(this).createDeadDef(Def, &VNIAlloc, nullptr);
-  // Otherwise use the segment vector.
   return CalcLiveRangeUtilVector(this).createDeadDef(Def, &VNIAlloc, nullptr);
 }
 
 VNInfo *LiveRange::createDeadDef(VNInfo *VNI) {
-  // Use the segment set, if it is available.
-  if (segmentSet != nullptr)
-    return CalcLiveRangeUtilSet(this).createDeadDef(VNI->def, nullptr, VNI);
-  // Otherwise use the segment vector.
   return CalcLiveRangeUtilVector(this).createDeadDef(VNI->def, nullptr, VNI);
 }
 
@@ -528,22 +478,51 @@ void LiveRange::RenumberValues() {
   }
 }
 
-void LiveRange::addSegmentToSet(Segment S) {
-  CalcLiveRangeUtilSet(this).addSegment(S);
-}
-
 LiveRange::iterator LiveRange::addSegment(Segment S) {
-  // Use the segment set, if it is available.
-  if (segmentSet != nullptr) {
-    addSegmentToSet(S);
-    return end();
-  }
-  // Otherwise use the segment vector.
   return CalcLiveRangeUtilVector(this).addSegment(S);
 }
 
+/// Merge \p NewSegs into the segments [Begin, Mid), filling
+/// [Begin, Mid + NewSegs.size()) from the back. Both are sorted by start.
+/// Returns the position of the first new segment.
+static LiveRange::iterator mergeBackward(LiveRange::iterator Begin,
+                                         LiveRange::iterator Mid,
+                                         ArrayRef<LiveRange::Segment> NewSegs) {
+  LiveRange::iterator Out = Mid + NewSegs.size();
+  for (size_t N = NewSegs.size(); N != 0;) {
+    if (Mid != Begin && NewSegs[N - 1].start < Mid[-1].start)
+      *--Out = *--Mid;
+    else
+      *--Out = NewSegs[--N];
+  }
+
+  return Out;
+}
+
+void LiveRange::addSegments(ArrayRef<Segment> NewSegs) {
+  if (NewSegs.empty())
+    return;
+
+  size_t NumOld = segments.size();
+  segments.resize(NumOld + NewSegs.size());
+  iterator First = mergeBackward(begin(), begin() + NumOld, NewSegs);
+
+  // Only segments from the first new one onward can need joining.
+  iterator Out = First == begin() ? First : std::prev(First);
+  for (iterator I = std::next(Out), E = end(); I != E; ++I) {
+    if (Out->valno == I->valno && Out->end >= I->start) {
+      Out->end = std::max(Out->end, I->end);
+      continue;
+    }
+
+    assert(Out->end <= I->start &&
+           "Overlapping segments with different values");
+    *++Out = *I;
+  }
+  segments.erase(std::next(Out), end());
+}
+
 LiveRange::iterator LiveRange::mergeAdjacentSegments(iterator I) {
-  assert(segmentSet == nullptr && "Cannot merge with active segment set");
   assert(I != end() && "Cannot merge end iterator");
 
   if (I != begin()) {
@@ -572,18 +551,10 @@ void LiveRange::append(const Segment S) {
 
 std::pair<VNInfo*,bool> LiveRange::extendInBlock(ArrayRef<SlotIndex> Undefs,
     SlotIndex StartIdx, SlotIndex Kill) {
-  // Use the segment set, if it is available.
-  if (segmentSet != nullptr)
-    return CalcLiveRangeUtilSet(this).extendInBlock(Undefs, StartIdx, Kill);
-  // Otherwise use the segment vector.
   return CalcLiveRangeUtilVector(this).extendInBlock(Undefs, StartIdx, Kill);
 }
 
 VNInfo *LiveRange::extendInBlock(SlotIndex StartIdx, SlotIndex Kill) {
-  // Use the segment set, if it is available.
-  if (segmentSet != nullptr)
-    return CalcLiveRangeUtilSet(this).extendInBlock(StartIdx, Kill);
-  // Otherwise use the segment vector.
   return CalcLiveRangeUtilVector(this).extendInBlock(StartIdx, Kill);
 }
 
@@ -788,16 +759,6 @@ VNInfo *LiveRange::MergeValueNumberInto(VNInfo *V1, VNInfo *V2) {
   markValNoForDeletion(V1);
 
   return V2;
-}
-
-void LiveRange::flushSegmentSet() {
-  assert(segmentSet != nullptr && "segment set must have been created");
-  assert(
-      segments.empty() &&
-      "segment set can be used only initially before switching to the array");
-  segments.append(segmentSet->begin(), segmentSet->end());
-  segmentSet = nullptr;
-  assert(verify());
 }
 
 bool LiveRange::isLiveAtIndexes(ArrayRef<SlotIndex> Slots) const {
@@ -1196,13 +1157,6 @@ static inline bool coalescable(const LiveRange::Segment &A,
 void LiveRangeUpdater::add(LiveRange::Segment Seg) {
   assert(LR && "Cannot add to a null destination");
 
-  // Fall back to the regular add method if the live range
-  // is using the segment set instead of the segment vector.
-  if (LR->segmentSet != nullptr) {
-    LR->addSegmentToSet(Seg);
-    return;
-  }
-
   // Flush the state if Start moves backwards.
   if (!LastStart.isValid() || LastStart > Seg.start) {
     if (isDirty())
@@ -1278,26 +1232,10 @@ void LiveRangeUpdater::add(LiveRange::Segment Seg) {
 // Merge as many spilled segments as possible into the gap between WriteI
 // and ReadI. Advance WriteI to reflect the inserted instructions.
 void LiveRangeUpdater::mergeSpills() {
-  // Perform a backwards merge of Spills and [SpillI;WriteI).
-  size_t GapSize = ReadI - WriteI;
-  size_t NumMoved = std::min(Spills.size(), GapSize);
-  LiveRange::iterator Src = WriteI;
-  LiveRange::iterator Dst = Src + NumMoved;
-  LiveRange::iterator SpillSrc = Spills.end();
-  LiveRange::iterator B = LR->begin();
-
-  // This is the new WriteI position after merging spills.
-  WriteI = Dst;
-
-  // Now merge Src and Spills backwards.
-  while (Src != Dst) {
-    if (Src != B && Src[-1].start > SpillSrc[-1].start)
-      *--Dst = *--Src;
-    else
-      *--Dst = *--SpillSrc;
-  }
-  assert(NumMoved == size_t(Spills.end() - SpillSrc));
-  Spills.erase(SpillSrc, Spills.end());
+  size_t NumMoved = std::min(Spills.size(), size_t(ReadI - WriteI));
+  mergeBackward(LR->begin(), WriteI, ArrayRef(Spills).take_back(NumMoved));
+  WriteI += NumMoved;
+  Spills.truncate(Spills.size() - NumMoved);
 }
 
 void LiveRangeUpdater::flush() {

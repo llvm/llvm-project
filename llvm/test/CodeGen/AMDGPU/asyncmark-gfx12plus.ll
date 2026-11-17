@@ -58,7 +58,6 @@ define void @interleaved_with_wave_barrier(ptr addrspace(1) %foo, ptr addrspace(
 ; GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v1, vcc_lo
 ; GISEL-NEXT:    v_add_co_u32 v10, vcc_lo, v8, 0x58
 ; GISEL-NEXT:    ; wave barrier
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, v9, vcc_lo
 ; GISEL-NEXT:    s_mov_b32 s0, 0x58
 ; GISEL-NEXT:    s_wait_loadcnt 0x0

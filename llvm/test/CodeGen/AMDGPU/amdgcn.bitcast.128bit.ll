@@ -564,7 +564,6 @@ define <4 x i32> @bitcast_v2i64_to_v4i32(<2 x i64> %a, i32 %b) #0 {
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-NEXT:  ; %bb.1: ; %cmp.true
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 3
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
@@ -4727,7 +4726,6 @@ define <4 x float> @bitcast_v2i64_to_v4f32(<2 x i64> %a, i32 %b) #0 {
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-NEXT:  ; %bb.1: ; %cmp.true
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 3
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
@@ -8764,7 +8762,6 @@ define <2 x double> @bitcast_v2i64_to_v2f64(<2 x i64> %a, i32 %b) #0 {
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-NEXT:  ; %bb.1: ; %cmp.true
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 3
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
@@ -9112,7 +9109,6 @@ define <8 x i16> @bitcast_v2i64_to_v8i16(<2 x i64> %a, i32 %b) #0 {
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-NEXT:  ; %bb.1: ; %cmp.true
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 3
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
@@ -9597,7 +9593,6 @@ define <8 x half> @bitcast_v2i64_to_v8f16(<2 x i64> %a, i32 %b) #0 {
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-NEXT:  ; %bb.1: ; %cmp.true
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 3
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
@@ -10126,7 +10121,6 @@ define <8 x bfloat> @bitcast_v2i64_to_v8bf16(<2 x i64> %a, i32 %b) #0 {
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-NEXT:  ; %bb.1: ; %cmp.true
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 3
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
@@ -11335,7 +11329,6 @@ define <16 x i8> @bitcast_v2i64_to_v16i8(<2 x i64> %a, i32 %b) #0 {
 ; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB68_4
 ; GFX11-TRUE16-NEXT:  ; %bb.3: ; %cmp.true
 ; GFX11-TRUE16-NEXT:    v_add_co_u32 v16, vcc_lo, v16, 3
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_add_co_ci_u32_e64 v17, null, 0, v17, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_add_co_u32 v10, vcc_lo, v10, 3
 ; GFX11-TRUE16-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, v11, vcc_lo
@@ -11400,7 +11393,6 @@ define <16 x i8> @bitcast_v2i64_to_v16i8(<2 x i64> %a, i32 %b) #0 {
 ; GFX11-FAKE16-NEXT:    s_cbranch_execz .LBB68_4
 ; GFX11-FAKE16-NEXT:  ; %bb.3: ; %cmp.true
 ; GFX11-FAKE16-NEXT:    v_add_co_u32 v16, vcc_lo, v16, 3
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_add_co_ci_u32_e64 v17, null, 0, v17, vcc_lo
 ; GFX11-FAKE16-NEXT:    v_add_co_u32 v18, vcc_lo, v18, 3
 ; GFX11-FAKE16-NEXT:    v_add_co_ci_u32_e64 v19, null, 0, v19, vcc_lo

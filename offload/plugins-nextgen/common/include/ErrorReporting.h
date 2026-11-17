@@ -143,6 +143,7 @@ class ErrorReporter {
         continue;
       }
       unsigned FrameIdx = std::stoi(Parts[0].drop_front(1).str());
+      assert(FrameIdx > 0 && "Unexpected underflow!");
       if (Start)
         FrameIdx -= 1;
       print(DarkPurple, "    %s", Parts[0].take_front().str().c_str());
@@ -163,15 +164,9 @@ class ErrorReporter {
       reportStackTrace(ATI->DeallocationTrace);
     }
 
-    if (ATI->HostPtr)
-      print(BoldLightPurple,
-            "Last allocation of size %lu for host pointer %p -> device pointer "
-            "%p:\n",
-            ATI->Size, ATI->HostPtr, ATI->DevicePtr);
-    else
-      print(BoldLightPurple,
-            "Last allocation of size %lu -> device pointer %p:\n", ATI->Size,
-            ATI->DevicePtr);
+    print(BoldLightPurple,
+          "Last allocation of size %lu -> device pointer %p:\n", ATI->Size,
+          ATI->DevicePtr);
     reportStackTrace(ATI->AllocationTrace);
     if (!ATI->LastAllocationInfo)
       return;
@@ -184,14 +179,8 @@ class ErrorReporter {
       print(BoldLightPurple, " #%u Prior deallocation of size %lu:\n", I,
             ATI->Size);
       reportStackTrace(ATI->DeallocationTrace);
-      if (ATI->HostPtr)
-        print(
-            BoldLightPurple,
-            " #%u Prior allocation for host pointer %p -> device pointer %p:\n",
-            I, ATI->HostPtr, ATI->DevicePtr);
-      else
-        print(BoldLightPurple, " #%u Prior allocation -> device pointer %p:\n",
-              I, ATI->DevicePtr);
+      print(BoldLightPurple, " #%u Prior allocation -> device pointer %p:\n", I,
+            ATI->DevicePtr);
       reportStackTrace(ATI->AllocationTrace);
       ++I;
     }

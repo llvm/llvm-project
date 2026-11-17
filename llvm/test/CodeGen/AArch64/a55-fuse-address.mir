@@ -17,7 +17,7 @@
   }
 
   attributes #0 = { "target-cpu"="cortex-a55" }
-
+...
 ---
 name: fuseaddress
 legalized: true
@@ -43,3 +43,4 @@ body: |
     %6:gpr32 = nsw MADDWrrr %2:gpr32, %5:gpr32, $wzr
     $w0 = COPY %6:gpr32
     RET_ReallyLR implicit $w0
+...

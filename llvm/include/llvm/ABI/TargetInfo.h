@@ -47,6 +47,17 @@ struct ABICompatInfo {
   ABICompatInfo() : IsMatrixHA(true) {}
 };
 
+/// How promotable integer arguments are passed on X86
+/// (-mextend-small-integers).
+enum class SmallIntABICompatKind {
+  /// Compat with platform ABI (high bits unspecified).
+  Platform,
+  /// Compat with old Clang ABI (high bits zero/sign-extended).
+  Clang,
+  /// Compat with both. Extend in caller, don't assume in callee.
+  Both,
+};
+
 /// Flags controlling X86-specific ABI compatibility behaviour.
 struct X86ABICompatInfo : ABICompatInfo {
   bool PassInt128VectorsInMem : 1;
@@ -55,11 +66,13 @@ struct X86ABICompatInfo : ABICompatInfo {
   bool HonorsRevision98 : 1;
   bool Clang11Compat : 1;
   bool ClassifyUnnamedBitFields : 1;
+  SmallIntABICompatKind SmallIntABICompat;
 
   X86ABICompatInfo()
       : PassInt128VectorsInMem(true), ReturnCXXRecordGreaterThan128InMem(true),
         ClassifyIntegerMMXAsSSE(true), HonorsRevision98(true),
-        Clang11Compat(true), ClassifyUnnamedBitFields(true) {}
+        Clang11Compat(true), ClassifyUnnamedBitFields(true),
+        SmallIntABICompat(SmallIntABICompatKind::Both) {}
 };
 
 class TargetInfo {
