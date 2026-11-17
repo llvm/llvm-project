@@ -424,8 +424,9 @@ infrastructure are described first, followed by tool-specific sections.
     `decltype((x))` and in the initializers and return statements of
     `decltype(auto)` declarations.
 
-  - Fixed an invalid fix-it that changed `&(S::value)` into the pointer-to-member
-    `&S::value`.
+  - Fixed false positives on parentheses around qualified non-static member
+    names in address-of expressions, where removing them would turn
+    `&(S::value)` into the pointer-to-member `&S::value`.
 
 - Fixed {doc}`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid

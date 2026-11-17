@@ -10,7 +10,11 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTPARENTHESESCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/DenseSet.h"
+#include <vector>
 
 namespace clang::tidy::readability {
 
@@ -24,12 +28,23 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void onEndOfTranslationUnit() override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus | LangOpts.C99;
   }
 
 private:
+  struct ParenLocations {
+    SourceLocation LParen;
+    SourceLocation RParen;
+    FixItHint LParenRemoval;
+  };
+
   const std::vector<StringRef> AllowedDecls;
+  // Defer diagnostics so required template parentheses also protect
+  // instantiations sharing their source locations.
+  std::vector<ParenLocations> RedundantParens;
+  llvm::DenseSet<SourceLocation> RequiredLParens;
 };
 
 } // namespace clang::tidy::readability

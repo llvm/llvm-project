@@ -45,9 +45,26 @@ AST_MATCHER(TypeLoc, isTypeOfExprTypeLoc) {
 
 AST_MATCHER(AutoType, isDecltypeAuto) { return Node.isDecltypeAuto(); }
 
-AST_MATCHER(MemberExpr, isQualified) { return Node.hasQualifier(); }
+AST_POLYMORPHIC_MATCHER(isQualified,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(MemberExpr, DeclRefExpr,
+                                                        UnresolvedMemberExpr)) {
+  return static_cast<bool>(Node.getQualifier());
+}
 
-AST_MATCHER(MemberExpr, isImplicitAccess) { return Node.isImplicitAccess(); }
+AST_MATCHER(UnresolvedMemberExpr, isUnresolvedImplicitAccess) {
+  return Node.isImplicitAccess();
+}
+
+AST_MATCHER(MemberExpr, isImplicitThisAccess) {
+  const Expr *Base = Node.getBase()->IgnoreParenImpCasts();
+  while (const auto *Member = dyn_cast<MemberExpr>(Base)) {
+    const auto *Field = dyn_cast<FieldDecl>(Member->getMemberDecl());
+    if (!Field || !Field->isAnonymousStructOrUnion())
+      break;
+    Base = Member->getBase()->IgnoreParenImpCasts();
+  }
+  return Base->isImplicitCXXThis();
+}
 
 // Skips the implicit casts, copies, temporaries, and conversion calls that
 // wrap an operand; they add no tokens, so they share the operand's range.
@@ -55,16 +72,16 @@ AST_MATCHER_P(Expr, hasParentIgnoringImplicit,
               ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
   const SourceRange Range = Node.getSourceRange();
   const Expr *E = &Node;
-  while (true) {
+  do {
     const DynTypedNodeList Parents = Finder->getASTContext().getParents(*E);
     if (Parents.size() != 1)
       return false;
     E = Parents[0].get<Expr>();
     if (!E)
       return false;
-    if (E->getSourceRange() != Range)
-      return InnerMatcher.matches(*E, Finder, Builder);
-  }
+  } while (E->getSourceRange() == Range);
+
+  return InnerMatcher.matches(*E, Finder, Builder);
 }
 
 } // namespace
@@ -123,10 +140,13 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
       subExpr(ignoringParens(DecltypeOperand)),
       anyOf(hasParent(typeLoc(loc(decltypeType()))), InDecltypeAutoContext,
             hasParent(exprWithCleanups(InDecltypeAutoContext))));
-  // &S::value is a pointer-to-member; T::value may instantiate to one.
+  // Unlike &(this->S::x), &(S::x) may form a pointer-to-member if unwrapped.
+  // Field DeclRefExprs cover unevaluated operands.
   const auto MemberAddressOperand = expr(anyOf(
-      memberExpr(isQualified(), isImplicitAccess()),
-      dependentScopeDeclRefExpr(), declRefExpr(isInTemplateInstantiation())));
+      memberExpr(isQualified(), isImplicitThisAccess()),
+      dependentScopeDeclRefExpr(),
+      unresolvedMemberExpr(isQualified(), isUnresolvedImplicitAccess()),
+      declRefExpr(isQualified(), to(anyOf(fieldDecl(), indirectFieldDecl())))));
   const auto AddressOf = expr(
       anyOf(unaryOperator(hasOperatorName("&")),
             cxxOperatorCallExpr(hasOperatorName("&"), argumentCountIs(1))));
@@ -154,14 +174,28 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
                              IsMemberAddressOperand)))
           .bind("dup"),
       this);
+  Finder->addMatcher(parenExpr(IsMemberAddressOperand).bind("required"), this);
 }
 
 void RedundantParenthesesCheck::check(const MatchFinder::MatchResult &Result) {
+  if (const auto *Required = Result.Nodes.getNodeAs<ParenExpr>("required")) {
+    RequiredLParens.insert(Required->getLParen());
+    return;
+  }
   const auto *PE = Result.Nodes.getNodeAs<ParenExpr>("dup");
-  diag(PE->getBeginLoc(), "redundant parentheses around expression")
-      << createSpacedRemoval(PE->getLParen(), *Result.SourceManager,
-                             getLangOpts())
-      << FixItHint::CreateRemoval(PE->getRParen());
+  RedundantParens.push_back(
+      {PE->getLParen(), PE->getRParen(),
+       createSpacedRemoval(PE->getLParen(), *Result.SourceManager,
+                           getLangOpts())});
+}
+
+void RedundantParenthesesCheck::onEndOfTranslationUnit() {
+  for (const ParenLocations &Parens : RedundantParens)
+    if (!RequiredLParens.contains(Parens.LParen))
+      diag(Parens.LParen, "redundant parentheses around expression")
+          << Parens.LParenRemoval << FixItHint::CreateRemoval(Parens.RParen);
+  RedundantParens.clear();
+  RequiredLParens.clear();
 }
 
 } // namespace clang::tidy::readability
