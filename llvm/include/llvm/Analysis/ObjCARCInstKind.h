@@ -27,7 +27,8 @@ namespace objcarc {
 /// of a User or CallOrUser).
 enum class ARCInstKind {
   Retain,                   ///< objc_retain
-  RetainRV,                 ///< objc_retainAutoreleasedReturnValue
+  RetainRV,                 ///< objc_retainAutoreleasedReturnValue,
+                            ///< objc_claimAutoreleasedReturnValue
   UnsafeClaimRV,            ///< objc_unsafeClaimAutoreleasedReturnValue
   RetainBlock,              ///< objc_retainBlock
   Release,                  ///< objc_release

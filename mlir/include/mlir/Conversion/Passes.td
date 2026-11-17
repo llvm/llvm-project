@@ -975,7 +975,7 @@ def ConvertMathToEmitC  : Pass<"convert-math-to-emitc"> {
   let dependentDialects = ["emitc::EmitCDialect"];
   let options = [
     Option<"languageTarget", "language-target", "::mlir::emitc::LanguageTarget",
-      /*default=*/"::mlir::emitc::LanguageTarget::c99", "Select the language standard target for callees (c99 or cpp11).",
+      /*default=*/"::mlir::emitc::LanguageTarget::cpp11", "Select the language standard target for callees (c99 or cpp11).",
       [{::llvm::cl::values(
             clEnumValN(::mlir::emitc::LanguageTarget::c99, "c99", "c99"),
             clEnumValN(::mlir::emitc::LanguageTarget::cpp11, "cpp11", "cpp11")
@@ -1383,6 +1383,8 @@ def ConvertSPIRVToLLVMPass : Pass<"convert-spirv-to-llvm", "ModuleOp"> {
 	     clEnumValN(::mlir::spirv::ClientAPI::Vulkan, "Vulkan", "Vulkan"),
 	     clEnumValN(::mlir::spirv::ClientAPI::WebGPU, "WebGPU", "WebGPU")
 	   )}]>,
+    Option<"allowPatternRollback", "allow-pattern-rollback", "bool", "true",
+           "Experimental performance flag to disallow pattern rollback">,
   ];
 }
 
@@ -1463,12 +1465,13 @@ def TosaToLinalg
            "bool", /*default=*/"false",
            "Always perform the reduce constant optimization">,
     Option<"allowNonFinites", "allow-non-finites", "bool",
-           /*default=*/"false",
+           /*default=*/"true",
            "When enabled, float min/max reductions are seeded with the "
            "infinite identity mandated by the TOSA specification. When "
-           "disabled (default), the largest finite value is used instead. "
+           "disabled, the largest finite value is used instead. "
            "This controls only compiler-generated identity values; NaN "
-           "results required by nan_mode are unaffected.">
+           "results required by nan_mode are unaffected. Does not affect "
+           "IGNORE-mode NaN seeds.">
   ];
 }
 
@@ -1489,10 +1492,10 @@ def TosaToLinalgNamed
            "bool", /*default=*/"false",
            "Prefer generating linalg.conv_2d_nhwc_hwcf over linalg.conv_2d_nhwc_fhwc">,
       Option<"allowNonFinites", "allow-non-finites", "bool",
-           /*default=*/"false",
+           /*default=*/"true",
            "When enabled, float max pooling is seeded with the infinite "
-           "identity mandated by the TOSA specification. When disabled "
-           "(default), the largest finite value is used instead. This "
+           "identity mandated by the TOSA specification. When disabled, "
+           "the largest finite value is used instead. This "
            "controls only compiler-generated identity values; NaN results "
            "required by nan_mode are unaffected.">
   ];
@@ -1614,18 +1617,25 @@ def UBToSPIRVConversionPass : Pass<"convert-ub-to-spirv"> {
 // VectorToGPU
 //===----------------------------------------------------------------------===//
 
-def ConvertVectorToGPU : Pass<"convert-vector-to-gpu"> {
+def ConvertVectorToGPUPass : Pass<"convert-vector-to-gpu"> {
   let summary = "Lower the operations from the vector dialect into the GPU "
                 "dialect";
-  let constructor = "mlir::createConvertVectorToGPUPass()";
   let dependentDialects = [
     "memref::MemRefDialect", "gpu::GPUDialect", "affine::AffineDialect",
     "vector::VectorDialect"
   ];
+}
 
-  let options = [
-    Option<"useNvGpu", "use-nvgpu", "bool", /*default=*/"false",
-      "convert to NvGPU ops instead of GPU dialect ops">
+//===----------------------------------------------------------------------===//
+// VectorToNVGPU
+//===----------------------------------------------------------------------===//
+
+def ConvertVectorToNVGPUPass : Pass<"convert-vector-to-nvgpu"> {
+  let summary = "Lower the operations from the vector dialect into the NVGPU "
+                "dialect";
+  let dependentDialects = [
+    "memref::MemRefDialect", "gpu::GPUDialect", "affine::AffineDialect",
+    "vector::VectorDialect", "nvgpu::NVGPUDialect"
   ];
 }
 
