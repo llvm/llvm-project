@@ -781,3 +781,15 @@ add_fp_unittest(
   COMPILE_OPTIONS
     ${swprintf_test_copts}
 )
+
+add_fp_unittest(
+  vswprintf_test
+  SUITE
+    libc-wchar-tests
+  SRCS
+    vswprintf_test.cpp
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.wchar.vswprintf
+)
