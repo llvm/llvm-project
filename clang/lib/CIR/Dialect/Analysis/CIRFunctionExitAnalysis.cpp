@@ -35,17 +35,21 @@ LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 /// How control can leave a region or a structured operation.
 enum class Exits : uint8_t {
   None = 0,
+  /// Falls through to the next operation.
   Normal = 1 << 0,
+  /// `cir.break` out of the enclosing loop or switch.
   Break = 1 << 1,
+  /// `cir.continue` to the next loop iteration.
   Continue = 1 << 2,
+  /// `cir.return` from a return statement, or `cir.co_return`.
   ExplicitReturn = 1 << 3,
+  /// Reaches the implicit `cir.return` at the end of the body.
   ImplicitReturn = 1 << 4,
-  // A reachable noreturn call, user trap, throw or `__builtin_unreachable`:
-  // the edges CheckFallThrough uses to tell MaybeFallThrough from
-  // AlwaysFallThrough.
+  /// Noreturn call, trap, throw or `__builtin_unreachable`.
   NoReturn = 1 << 5,
-  // Outcomes of a reachable `cir.condition` terminating the region.
+  /// The region's `cir.condition` may be true.
   CondTrue = 1 << 6,
+  /// The region's `cir.condition` may be false.
   CondFalse = 1 << 7,
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/CondFalse)
 };

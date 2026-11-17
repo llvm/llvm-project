@@ -29,17 +29,15 @@ namespace cir {
 
 /// How control can leave a function. Mirrors Sema's ControlFlowKind.
 enum class FunctionExitKind {
-  /// The function was not analyzed (e.g. it has no body).
+  /// Not analyzed, e.g. no body.
   Unknown,
-  /// Control leaves only through explicit returns; the end of the body is
-  /// unreachable.
+  /// Returns; never reaches the end of the body.
   ReturnOnly,
-  /// Control never leaves: neither a return nor the end of the body is
-  /// reachable.
+  /// Neither returns nor reaches the end.
   NoReturn,
-  /// Control reaches the end of the body on some paths only.
+  /// Reaches the end on some paths only.
   MayReachEnd,
-  /// Control reaches the end of the body on every path that completes.
+  /// Leaves only by reaching the end.
   MustReachEnd,
 };
 
