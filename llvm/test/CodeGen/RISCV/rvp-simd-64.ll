@@ -10221,8 +10221,8 @@ define <2 x i32> @test_select_cmp_const_v2i32(<2 x i32> %a, <2 x i32> %c) {
 ; RV32-LABEL: test_select_cmp_const_v2i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    pmsltu.dw a0, a2, a0
-; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    andi a0, a0, 16
+; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    slli a0, a0, 4
 ; RV32-NEXT:    li a1, 7
 ; RV32-NEXT:    ret
 ;
