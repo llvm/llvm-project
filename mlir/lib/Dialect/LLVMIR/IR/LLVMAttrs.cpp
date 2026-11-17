@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Ptr/IR/PtrEnums.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/LLVMContext.h"

@@ -15,7 +15,8 @@
 
 #include "orc-rt/support/Error.h"
 #include "orc-rt/support/Mangling.h"
-#include "orc-rt/support/SymbolLookupSet.h"
+#include "orc-rt/support/RemoteSymbolLookupSet.h"
+#include "orc-rt/support/SymbolLookupResult.h"
 #include "orc-rt/support/move_only_function.h"
 
 #include <algorithm>
@@ -124,7 +125,7 @@ public:
   /// Missing symbols are reported as described by SymbolLookupResult: a missing
   /// weakly referenced symbol yields a null address, and a missing required
   /// symbol yields an empty optional.
-  SymbolLookupResult lookup(const SymbolLookupSet &LS) const noexcept {
+  SymbolLookupResult lookup(const RemoteSymbolLookupSet &LS) const noexcept {
     SymbolLookupResult Result;
     Result.reserve(LS.size());
     for (auto &[Name, Flags] : LS) {

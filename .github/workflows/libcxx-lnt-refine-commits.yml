@@ -159,8 +159,9 @@ jobs:
       - name: Detect changepoints
         if: ${{ steps.restore-refinements.outputs.cache-hit != 'true' }}
         run: |
-          libcxx/utils/ci/lnt/detect-changepoints --input "${RUNNER_TEMP}/series/series.jsonl" --series-by test \
-                                                  --aggregate median --jobs "$(nproc)" -v --output changes.jsonl
+          libcxx/utils/ci/lnt/detect-changepoints --input "${RUNNER_TEMP}/series/series.jsonl" --y "metrics.${METRIC}" \
+                                                  --series-by test --aggregate median --jobs "$(nproc)" -v           \
+                                                  --output changes.jsonl
 
       - name: Select refinement commits
         if: ${{ steps.restore-refinements.outputs.cache-hit != 'true' }}

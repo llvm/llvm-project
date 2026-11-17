@@ -9,8 +9,6 @@
 #ifndef MLIR_DIALECT_TENSOR_IR_TENSORDIALECT_H_
 #define MLIR_DIALECT_TENSOR_IR_TENSORDIALECT_H_
 
-#include "mlir/IR/Dialect.h"
-
 #include "mlir/Dialect/Tensor/IR/TensorOpsDialect.h.inc"
 
 #endif // MLIR_DIALECT_TENSOR_IR_TENSORDIALECT_H_

@@ -552,8 +552,8 @@ It is expected that `addr` was previously initialized using
 ```llvm
 declare void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
 declare void @llvm.nvvm.mbarrier.expect.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+declare void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
+declare void @llvm.nvvm.mbarrier.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
 ```
 
 ##### Overview:
@@ -567,6 +567,10 @@ is a 32-bit unsigned integer value.
 The `.space.{cta/cluster}` indicates the address space where the mbarrier
 object resides.
 
+The shared::cluster forms take two additional arguments that select the
+multicast form; see
+[Shared Cluster Multicast Forms](#shared-cluster-multicast-forms).
+
 The `.scope.{cta/cluster}` denotes the set of threads that can directly
 observe the synchronizing effect of the mbarrier operation. When scope is
 "cta", all threads executing in the same CTA (as the current thread) can
@@ -579,6 +583,24 @@ then the behavior of this intrinsic is undefined. This intrinsic has
 `relaxed` semantics and hence does not provide any memory ordering
 or visibility guarantees.
 
+##### Shared Cluster Multicast Forms
+
+The shared::cluster forms of these intrinsics take two additional arguments,
+a 32-bit `%mc` and a compile-time constant `%flag_mc` flag. The
+flag selects the PTX form that is emitted:
+
+- When `%flag_mc` is `false`, `%mc` is ignored and the operation is
+  performed on the single mbarrier object at `%addr`.
+- When `%flag_mc` is `true`, the operation is performed on the mbarrier
+  object at the same CTA-relative offset as `%addr` in the shared memory of
+  every CTA of the cluster whose `%cluster_ctarank` is set in `%mc`.
+  This is the `.multicast::cluster::32b` form, which requires `sm_107f` or
+  later in the same family and PTX ISA 9.4 or later, the version that
+  introduced the qualifier.
+
+For more information, refer
+[PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier).
+
 #### '`llvm.nvvm.mbarrier.complete.tx`'
 
 ##### Syntax:
@@ -586,8 +608,8 @@ or visibility guarantees.
 ```llvm
 declare void @llvm.nvvm.mbarrier.complete.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
 declare void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.complete.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+declare void @llvm.nvvm.mbarrier.complete.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
+declare void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
 ```
 
 ##### Overview:
@@ -597,6 +619,10 @@ count of the mbarrier object at `%addr` by `%tx_count`. The `%tx_count`
 is a 32-bit unsigned integer value. As a result of this decrement,
 the mbarrier can potentially complete its current phase and transition
 to the next phase.
+
+The shared::cluster forms of these intrinsics take the additional `%mc`
+and `%flag_mc` arguments described in
+[Shared Cluster Multicast Forms](#shared-cluster-multicast-forms).
 
 ##### Semantics:
 
@@ -610,13 +636,13 @@ The semantics of these intrinsics are identical to those of the
 ```llvm
 declare i64  @llvm.nvvm.mbarrier.arrive.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
 declare i64  @llvm.nvvm.mbarrier.arrive.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+declare void @llvm.nvvm.mbarrier.arrive.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %mc, i1 immarg %flag_mc)
+declare void @llvm.nvvm.mbarrier.arrive.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %mc, i1 immarg %flag_mc)
 
 declare i64  @llvm.nvvm.mbarrier.arrive.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
 declare i64  @llvm.nvvm.mbarrier.arrive.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+declare void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %mc, i1 immarg %flag_mc)
+declare void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %mc, i1 immarg %flag_mc)
 ```
 
 ##### Overview:
@@ -654,6 +680,10 @@ corresponding acquire operations (such as mbarrier.test.wait) synchronize
 with this release. The `relaxed` variants of these intrinsics do not
 provide any memory ordering or visibility guarantees.
 
+The shared::cluster forms of these intrinsics take the additional `%mc`
+and `%flag_mc` arguments described in
+[Shared Cluster Multicast Forms](#shared-cluster-multicast-forms).
+
 #### '`llvm.nvvm.mbarrier.arrive.expect.tx`'
 
 ##### Syntax:
@@ -661,13 +691,13 @@ provide any memory ordering or visibility guarantees.
 ```llvm
 declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
 declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+declare void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
+declare void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
 
 declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
 declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+declare void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
+declare void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
 ```
 
 ##### Overview:
@@ -677,6 +707,10 @@ the `@llvm.nvvm.mbarrier.arrive` intrinsics except that they also
 perform an `expect-tx` operation \_prior\_ to the `arrive` operation.
 The `%tx_count` specifies the transaction count for the `expect-tx`
 operation and the count for the `arrive` operation is assumed to be 1.
+
+The shared::cluster forms of these intrinsics take the additional `%mc`
+and `%flag_mc` arguments described in
+[Shared Cluster Multicast Forms](#shared-cluster-multicast-forms).
 
 ##### Semantics:
 
@@ -690,13 +724,13 @@ The semantics of these intrinsics are identical to those of the
 ```llvm
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+declare void @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %mc, i1 immarg %flag_mc)
+declare void @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %mc, i1 immarg %flag_mc)
 
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+declare void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %mc, i1 immarg %flag_mc)
+declare void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count, i32 %mc, i1 immarg %flag_mc)
 ```
 
 ##### Overview:
@@ -705,6 +739,10 @@ The `@llvm.nvvm.mbarrier.arrive.drop.*` intrinsics decrement the
 expected arrival count of the mbarrier object at `%addr` by
 `%count` and then perform an `arrive` operation with `%count`.
 The `%count` is a 32-bit integer.
+
+The shared::cluster forms of these intrinsics take the additional `%mc`
+and `%flag_mc` arguments described in
+[Shared Cluster Multicast Forms](#shared-cluster-multicast-forms).
 
 ##### Semantics:
 
@@ -718,13 +756,13 @@ The semantics of these intrinsics are identical to those of the
 ```llvm
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
+declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
 
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
 declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
-declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
+declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count, i32 %mc, i1 immarg %flag_mc)
 ```
 
 ##### Overview:
@@ -736,6 +774,10 @@ the below operations on the mbarrier located at `%addr`.
   of the mbarrier by `%tx_count`, a 32-bit unsigned integer value.
 - Decrement the expected arrival count of the mbarrier by 1.
 - Perform an `arrive` operation on the mbarrier with a value of 1.
+
+The shared::cluster forms of these intrinsics take the additional `%mc`
+and `%flag_mc` arguments described in
+[Shared Cluster Multicast Forms](#shared-cluster-multicast-forms).
 
 ##### Semantics:
 
@@ -3907,10 +3949,10 @@ declare void @llvm.nvvm.tcgen05.commit.mc.{cg1,cg2}.p3.i32(ptr addrspace(3) %mba
 declare void @llvm.nvvm.tcgen05.commit.smem.a.read.{cg1,cg2}.p0(ptr %bar_addr)
 declare void @llvm.nvvm.tcgen05.commit.smem.a.read.{cg1,cg2}.p3(ptr addrspace(3) %bar_addr)
 
-declare void @llvm.nvvm.tcgen05.commit.smem.a.read.mc.{cg1,cg2}.p0.i16(ptr %bar_addr, i16 %cta_mask)
-declare void @llvm.nvvm.tcgen05.commit.smem.a.read.mc.{cg1,cg2}.p0.i32(ptr %bar_addr, i32 %cta_mask)
-declare void @llvm.nvvm.tcgen05.commit.smem.a.read.mc.{cg1,cg2}.p3.i16(ptr addrspace(3) %bar_addr, i16 %cta_mask)
-declare void @llvm.nvvm.tcgen05.commit.smem.a.read.mc.{cg1,cg2}.p3.i32(ptr addrspace(3) %bar_addr, i32 %cta_mask)
+declare void @llvm.nvvm.tcgen05.commit.smem.a.read.mc.{cg1,cg2}.p0.i16(ptr %bar_addr, i16 %mc)
+declare void @llvm.nvvm.tcgen05.commit.smem.a.read.mc.{cg1,cg2}.p0.i32(ptr %bar_addr, i32 %mc)
+declare void @llvm.nvvm.tcgen05.commit.smem.a.read.mc.{cg1,cg2}.p3.i16(ptr addrspace(3) %bar_addr, i16 %mc)
+declare void @llvm.nvvm.tcgen05.commit.smem.a.read.mc.{cg1,cg2}.p3.i32(ptr addrspace(3) %bar_addr, i32 %mc)
 ```
 
 ##### Overview:

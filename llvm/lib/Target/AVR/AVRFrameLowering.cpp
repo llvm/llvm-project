@@ -20,12 +20,18 @@
 
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
+
+using namespace llvm;
 
 namespace llvm {
 
@@ -445,72 +451,95 @@ void AVRFrameLowering::determineCalleeSaves(MachineFunction &MF,
   }
 }
 
+} // end of namespace llvm
+
+namespace {
 /// The frame analyzer pass.
 ///
 /// Scans the function for allocas and used arguments
 /// that are passed through the stack.
-struct AVRFrameAnalyzer : public MachineFunctionPass {
+struct AVRFrameAnalyzerLegacy : public MachineFunctionPass {
   static char ID;
-  AVRFrameAnalyzer() : MachineFunctionPass(ID) {}
+  AVRFrameAnalyzerLegacy() : MachineFunctionPass(ID) {}
 
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    const MachineFrameInfo &MFI = MF.getFrameInfo();
-    AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
-    // If there are no fixed frame indexes during this stage it means there
-    // are allocas present in the function.
-    if (MFI.getNumObjects() != MFI.getNumFixedObjects()) {
-      // Check for the type of allocas present in the function. We only care
-      // about fixed size allocas so do not give false positives if only
-      // variable sized allocas are present.
-      for (unsigned i = 0, e = MFI.getObjectIndexEnd(); i != e; ++i) {
-        if (!MFI.isVariableSizedObjectIndex(i) && !MFI.isDeadObjectIndex(i)) {
-          AFI->setHasAllocas(true);
-          break;
-        }
+  StringRef getPassName() const override { return "AVR Frame Analyzer"; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+
+} // namespace
+
+char AVRFrameAnalyzerLegacy::ID = 0;
+
+/// Creates instance of the frame analyzer pass.
+FunctionPass *llvm::createAVRFrameAnalyzerLegacyPass() {
+  return new AVRFrameAnalyzerLegacy();
+}
+
+static bool runFrameAnalyzer(MachineFunction &MF) {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
+
+  // If there are no fixed frame indexes during this stage it means there
+  // are allocas present in the function.
+  if (MFI.getNumObjects() != MFI.getNumFixedObjects()) {
+    // Check for the type of allocas present in the function. We only care
+    // about fixed size allocas so do not give false positives if only
+    // variable sized allocas are present.
+    for (unsigned i = 0, e = MFI.getObjectIndexEnd(); i != e; ++i) {
+      if (!MFI.isVariableSizedObjectIndex(i) && !MFI.isDeadObjectIndex(i)) {
+        AFI->setHasAllocas(true);
+        break;
       }
     }
+  }
 
-    // If there are fixed frame indexes present, scan the function to see if
-    // they are really being used.
-    if (MFI.getNumFixedObjects() == 0) {
-      return false;
-    }
-
-    // Ok fixed frame indexes present, now scan the function to see if they
-    // are really being used, otherwise we can ignore them.
-    for (const MachineBasicBlock &BB : MF) {
-      for (const MachineInstr &MI : BB) {
-        int Opcode = MI.getOpcode();
-
-        if ((Opcode != AVR::LDDRdPtrQ) && (Opcode != AVR::LDDWRdPtrQ) &&
-            (Opcode != AVR::STDPtrQRr) && (Opcode != AVR::STDWPtrQRr) &&
-            (Opcode != AVR::FRMIDX)) {
-          continue;
-        }
-
-        for (const MachineOperand &MO : MI.operands()) {
-          if (!MO.isFI()) {
-            continue;
-          }
-
-          if (MFI.isFixedObjectIndex(MO.getIndex())) {
-            AFI->setHasStackArgs(true);
-            return false;
-          }
-        }
-      }
-    }
-
+  // If there are fixed frame indexes present, scan the function to see if
+  // they are really being used.
+  if (MFI.getNumFixedObjects() == 0) {
     return false;
   }
 
-  StringRef getPassName() const override { return "AVR Frame Analyzer"; }
-};
+  // Ok fixed frame indexes present, now scan the function to see if they
+  // are really being used, otherwise we can ignore them.
+  for (const MachineBasicBlock &BB : MF) {
+    for (const MachineInstr &MI : BB) {
+      int Opcode = MI.getOpcode();
 
-char AVRFrameAnalyzer::ID = 0;
+      if ((Opcode != AVR::LDDRdPtrQ) && (Opcode != AVR::LDDWRdPtrQ) &&
+          (Opcode != AVR::STDPtrQRr) && (Opcode != AVR::STDWPtrQRr) &&
+          (Opcode != AVR::FRMIDX)) {
+        continue;
+      }
 
-/// Creates instance of the frame analyzer pass.
-FunctionPass *createAVRFrameAnalyzerPass() { return new AVRFrameAnalyzer(); }
+      for (const MachineOperand &MO : MI.operands()) {
+        if (!MO.isFI()) {
+          continue;
+        }
 
-} // end of namespace llvm
+        if (MFI.isFixedObjectIndex(MO.getIndex())) {
+          AFI->setHasStackArgs(true);
+          return false;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+bool AVRFrameAnalyzerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runFrameAnalyzer(MF);
+}
+
+PreservedAnalyses
+AVRFrameAnalyzerPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  runFrameAnalyzer(MF);
+  return PreservedAnalyses::all();
+}

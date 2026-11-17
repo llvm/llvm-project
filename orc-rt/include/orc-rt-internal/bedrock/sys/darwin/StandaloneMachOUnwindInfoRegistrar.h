@@ -64,7 +64,7 @@ public:
   static Expected<Registration>
   enable(SimpleSymbolTable &ST,
          SimpleSymbolTable::MutatorFn AddInterface =
-             sps_ci::addStandaloneMachOUnwindInfoRegistrar);
+             sps::ci::addStandaloneMachOUnwindInfoRegistrar);
 
   static Error registerSections(std::vector<ExecutorAddrRange> CodeRanges,
                                 ExecutorAddr DSOBase,

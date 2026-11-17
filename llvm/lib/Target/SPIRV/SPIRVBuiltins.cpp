@@ -4092,7 +4092,7 @@ static SPIRVTypeInst getInlineSpirvType(const TargetExtType *ExtensionType,
          "parameter");
   auto Opcode = ExtensionType->getIntParameter(0);
 
-  SmallVector<MCOperand> Operands;
+  SmallVector<MachineOperand> Operands;
   for (Type *Param : ExtensionType->type_params()) {
     if (const TargetExtType *ParamEType = dyn_cast<TargetExtType>(Param)) {
       if (ParamEType->getName() == "spirv.IntegralConstant") {
@@ -4109,8 +4109,10 @@ static SPIRVTypeInst getInlineSpirvType(const TargetExtType *ExtensionType,
         SPIRVTypeInst OperandSPIRVType = GR->getOrCreateSPIRVType(
             OperandType, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
 
-        Operands.push_back(MCOperand::createReg(GR->buildConstantInt(
-            OperandValue, MIRBuilder, OperandSPIRVType, true)));
+        Operands.push_back(MachineOperand::CreateReg(
+            GR->buildConstantInt(OperandValue, MIRBuilder, OperandSPIRVType,
+                                 true),
+            /*isDef=*/false));
         continue;
       } else if (ParamEType->getName() == "spirv.Literal") {
         assert(ParamEType->getNumTypeParameters() == 0 &&
@@ -4122,13 +4124,15 @@ static SPIRVTypeInst getInlineSpirvType(const TargetExtType *ExtensionType,
 
         auto OperandValue = ParamEType->getIntParameter(0);
 
-        Operands.push_back(MCOperand::createImm(OperandValue));
+        Operands.push_back(MachineOperand::CreateImm(OperandValue));
         continue;
       }
     }
     SPIRVTypeInst TypeOperand = GR->getOrCreateSPIRVType(
         Param, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
-    Operands.push_back(MCOperand::createReg(GR->getSPIRVTypeID(TypeOperand)));
+    Operands.push_back(
+        MachineOperand::CreateReg(GR->getSPIRVTypeID(TypeOperand),
+                                  /*isDef=*/false));
   }
 
   return GR->getOrCreateUnknownType(ExtensionType, MIRBuilder, Opcode,

@@ -25,11 +25,7 @@
 ---
 name:            debug_uses
 alignment:       4
-tracksRegLiveness: true
 isSSA:           true
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: debug_uses
