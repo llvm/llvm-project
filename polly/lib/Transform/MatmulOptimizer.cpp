@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
@@ -808,12 +809,58 @@ static isl::schedule_node createExtensionNode(isl::schedule_node Node,
 /// -polly-pattern-matching-max-stack-array-size and that is not negative, and
 /// on the stack otherwise.
 static void setPackedArrayAllocation(ScopArrayInfo *SAI,
-                                     ArrayRef<unsigned> DimSizes) {
+                                     ArrayRef<uint64_t> DimSizes) {
   uint64_t Size = SAI->getElemSizeInBytes();
-  for (unsigned DimSize : DimSizes)
+  for (uint64_t DimSize : DimSizes)
     Size *= DimSize;
   SAI->setIsOnHeap(MaxStackArraySize >= 0 &&
                    Size > uint64_t(MaxStackArraySize));
+}
+
+/// Bound each packed array dimension by one plus the maximum index reached by
+/// Access on Domain, without exceeding the corresponding tile size.
+static std::vector<unsigned> getPackedArraySizes(isl::map Access,
+                                                 isl::set Domain,
+                                                 ArrayRef<unsigned> TileSizes) {
+  std::vector<unsigned> Sizes(TileSizes.begin(), TileSizes.end());
+  isl::set Accessed = Access.intersect_domain(Domain).range();
+  for (unsigned i = 0; i < Sizes.size(); ++i) {
+    isl::val Max = Accessed.dim_max_val(i);
+    if (Max.is_null())
+      return Sizes;
+    if (Max.is_int() && Max.is_nonneg() && Max.lt(Sizes[i]))
+      Sizes[i] = Max.get_num_si() + 1;
+  }
+  return Sizes;
+}
+
+/// Create or enlarge a shared packing buffer to cover all matmuls in the SCoP.
+static ScopArrayInfo *createPackedArray(Scop *S, Type *ElementType,
+                                        const char *Name,
+                                        ArrayRef<unsigned> Bounds) {
+  // Retrieve the shared buffer without comparing operand-specific bounds.
+  ScopArrayInfo *Array = S->createScopArrayInfo(ElementType, Name, {});
+  std::vector<uint64_t> Sizes(Bounds.begin(), Bounds.end());
+  const DataLayout &DL = S->getFunction().getParent()->getDataLayout();
+  uint64_t AccessElemSize = DL.getTypeAllocSize(ElementType);
+  uint64_t ArrayElemSize = Array->getElemSizeInBytes();
+  if (ArrayElemSize && AccessElemSize % ArrayElemSize == 0)
+    Sizes.back() *= AccessElemSize / ArrayElemSize;
+
+  auto *SizeType = Type::getInt64Ty(S->getSE()->getContext());
+  std::vector<const SCEV *> SCEVSizes;
+  for (unsigned I = 0; I < Sizes.size(); ++I) {
+    if (I < Array->getNumberOfDimensions()) {
+      if (auto *Known =
+              dyn_cast_or_null<SCEVConstant>(Array->getDimensionSize(I)))
+        Sizes[I] = std::max(Sizes[I], Known->getAPInt().getZExtValue());
+    }
+    SCEVSizes.push_back(Sizes[I] ? S->getSE()->getConstant(SizeType, Sizes[I])
+                                 : nullptr);
+  }
+  Array->updateSizes(SCEVSizes, false /* CheckConsistency */);
+  setPackedArrayAllocation(Array, Sizes);
+  return Array;
 }
 
 static isl::schedule_node optimizePackedB(isl::schedule_node Node,
@@ -828,15 +875,14 @@ static isl::schedule_node optimizePackedB(isl::schedule_node Node,
   unsigned FirstDimSize = MacroParams.Nc / MicroParams.Nr;
   unsigned SecondDimSize = MacroParams.Kc;
   unsigned ThirdDimSize = MicroParams.Nr;
-  ScopArrayInfo *PackedB =
-      S->createScopArrayInfo(MMI.B->getElementType(), "Packed_B",
-                             {FirstDimSize, SecondDimSize, ThirdDimSize});
-  setPackedArrayAllocation(PackedB,
-                           {FirstDimSize, SecondDimSize, ThirdDimSize});
+  isl::map AccRelPackedB = getMatMulAccRel(MapOldIndVar, 3, 7);
+  std::vector<unsigned> Sizes = getPackedArraySizes(
+      AccRelPackedB, Domain, {FirstDimSize, SecondDimSize, ThirdDimSize});
+  ScopArrayInfo *PackedB = createPackedArray(S, MMI.B->getElementType(),
+                                             "Packed_B", Sizes);
 
   // Compute the access relation for copying from B to PackedB.
   isl::map AccRelB = MMI.B->getLatestAccessRelation();
-  isl::map AccRelPackedB = getMatMulAccRel(MapOldIndVar, 3, 7);
   AccRelPackedB =
       AccRelPackedB.set_tuple_id(isl::dim::out, PackedB->getBasePtrId());
 
@@ -869,15 +915,14 @@ static isl::schedule_node optimizePackedA(isl::schedule_node Node, ScopStmt *,
   unsigned FirstDimSize = MacroParams.Mc / MicroParams.Mr;
   unsigned SecondDimSize = MacroParams.Kc;
   unsigned ThirdDimSize = MicroParams.Mr;
-  ScopArrayInfo *PackedA = Stmt->getParent()->createScopArrayInfo(
-      MMI.A->getElementType(), "Packed_A",
-      {FirstDimSize, SecondDimSize, ThirdDimSize});
-  setPackedArrayAllocation(PackedA,
-                           {FirstDimSize, SecondDimSize, ThirdDimSize});
+isl::map AccRelPackedA = getMatMulAccRel(MapOldIndVar, 4, 6);
+  std::vector<unsigned> Sizes = getPackedArraySizes(
+      AccRelPackedA, Domain, {FirstDimSize, SecondDimSize, ThirdDimSize});
+  ScopArrayInfo *PackedA = createPackedArray(
+      Stmt->getParent(), MMI.A->getElementType(), "Packed_A", Sizes);
 
   // Compute the access relation for copying from A to PackedA.
   isl::map AccRelA = MMI.A->getLatestAccessRelation();
-  isl::map AccRelPackedA = getMatMulAccRel(MapOldIndVar, 4, 6);
   AccRelPackedA =
       AccRelPackedA.set_tuple_id(isl::dim::out, PackedA->getBasePtrId());
   // { MemrefA[] -> PackedA[] }
