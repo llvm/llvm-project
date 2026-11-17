@@ -48,6 +48,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -686,18 +687,22 @@ SampleProfileLoader::findOrphanedRoot(const FunctionSamples &CallerFS,
   }
   if (Target->second < Root->getHeadSamples())
     return nullptr;
+  // Import does not copy llvm.pseudo_probe_desc, so an imported inline frame
+  // may have no descriptor in this module. Check its hash when one is present.
   if (FunctionSamples::ProfileIsProbeBased) {
     const PseudoProbeDescriptor *Desc = ProbeManager->getDesc(Root->getGUID());
-    if (!Desc || ProbeManager->profileIsHashMismatched(*Desc, *Root))
+    if (Desc && ProbeManager->profileIsHashMismatched(*Desc, *Root))
       return nullptr;
   }
   return Root;
 }
 
 /// Load the top-level profiles that findOrphanedRoot needs. An extbinary reader
-/// loads only the profiles of functions in \p M, so it misses those of local
-/// functions that pre-link inlined and deleted. A loaded profile can expose a
-/// deeper miss, so repeat until no new name is found.
+/// loads only the profiles of functions in \p M, so it misses those of
+/// functions that pre-link inlined and deleted. Follow nested profiles into
+/// callee bodies too, including imported callees without their own root. A
+/// loaded profile can expose a deeper miss, so repeat until no new name is
+/// found.
 bool SampleProfileLoader::loadOrphanedRoots(Module &M) {
   DenseSet<StringRef> Requested;
   while (true) {
@@ -707,26 +712,53 @@ bool SampleProfileLoader::loadOrphanedRoots(Module &M) {
                         StringRef Name) {
       return findOrphanedRoot(CallerFS, Loc, SP, Name, &Names);
     };
-    for (const Function &F : M) {
-      const FunctionSamples *FS =
-          F.isDeclaration() ? nullptr : Reader->getSamplesFor(F);
-      if (!FS)
+    // Scan each function with a top-level profile from that profile. Also
+    // scan each callee with a body that has a nested profile at a call site,
+    // from that nested profile: post-link inlines such a callee to match the
+    // profile, and its body can hold orphaned frames. The callee can be an
+    // imported function without a top-level profile, or an indirect target.
+    using Scan = std::pair<const Function *, const FunctionSamples *>;
+    SmallVector<Scan> Worklist;
+    DenseSet<Scan> Scanned;
+    for (const Function &F : M)
+      if (!F.isDeclaration())
+        if (const FunctionSamples *FS = Reader->getSamplesFor(F))
+          Worklist.emplace_back(&F, FS);
+    while (!Worklist.empty()) {
+      Scan Item = Worklist.pop_back_val();
+      if (!Scanned.insert(Item).second)
         continue;
+      auto [F, FS] = Item;
       // The lookup depends only on the inlinee and the inline chain, not on
       // the line of the instruction.
-      DenseSet<std::pair<const DILocation *, const DISubprogram *>> Visited;
-      for (const BasicBlock &BB : F)
-        for (const Instruction &I : BB) {
-          const DILocation *DIL = I.getDebugLoc();
-          if (!DIL || !DIL->getInlinedAt() ||
-              (FunctionSamples::ProfileIsProbeBased && !extractProbe(I)))
-            continue;
-          auto Key = std::make_pair(DIL->getInlinedAt(),
-                                    DIL->getScope()->getSubprogram());
-          if (Visited.insert(Key).second)
-            FS->findFunctionSamples(DIL, Reader->getRemapper(),
-                                    &FuncNameToProfNameMap, Fallback);
+      DenseMap<std::pair<const DILocation *, const DISubprogram *>,
+               const FunctionSamples *>
+          Frames;
+      for (const Instruction &I : instructions(*F)) {
+        const DILocation *DIL = I.getDebugLoc();
+        if (!DIL || (FunctionSamples::ProfileIsProbeBased && !extractProbe(I)))
+          continue;
+        const FunctionSamples *Frame = FS;
+        if (DIL->getInlinedAt()) {
+          auto [It, Inserted] = Frames.try_emplace(std::make_pair(
+              DIL->getInlinedAt(), DIL->getScope()->getSubprogram()));
+          if (Inserted)
+            It->second = FS->findFunctionSamples(
+                DIL, Reader->getRemapper(), &FuncNameToProfNameMap, Fallback);
+          Frame = It->second;
         }
+        if (!Frame || !isa<CallBase>(I))
+          continue;
+        const FunctionSamplesMap *Callees = Frame->findFunctionSamplesMapAt(
+            FunctionSamples::getCallSiteIdentifier(DIL));
+        if (!Callees)
+          continue;
+        for (const auto &[Name, CalleeFS] : *Callees) {
+          const Function *Callee = SymbolMap.lookup(Name);
+          if (Callee && !Callee->isDeclaration())
+            Worklist.emplace_back(Callee, &CalleeFS);
+        }
+      }
     }
     Names.remove_if([&](StringRef N) { return Requested.contains(N); });
     if (Names.empty())
@@ -757,6 +789,8 @@ static Function *getSoleCaller(Function &F) {
 
 /// The import GUIDs collected for a function that will be inlined and deleted
 /// would be deleted with it. Copy them to its callers up to one that survives.
+/// A caller without samples has entry count -1, which getEntryCount() reports
+/// as unknown; it still carries import GUIDs, so keep its count as is.
 void SampleProfileLoader::hoistImportsOfSoleCallees(Module &M) {
   for (Function &F : M) {
     DenseSet<GlobalValue::GUID> Imports = F.getImportGUIDs();
@@ -764,11 +798,13 @@ void SampleProfileLoader::hoistImportsOfSoleCallees(Module &M) {
       continue;
     SmallPtrSet<Function *, 4> Visited = {&F};
     for (Function *Caller = getSoleCaller(F);
-         Caller && Caller->getEntryCount() && Visited.insert(Caller).second;
+         Caller && Caller->hasMetadata(LLVMContext::MD_prof) &&
+         Visited.insert(Caller).second;
          Caller = getSoleCaller(*Caller)) {
       DenseSet<GlobalValue::GUID> Merged = Caller->getImportGUIDs();
       Merged.insert_range(Imports);
-      Caller->setEntryCount(*Caller->getEntryCount(), &Merged);
+      Caller->setEntryCount(Caller->getEntryCount().value_or(uint64_t(-1)),
+                            &Merged);
     }
   }
 }
