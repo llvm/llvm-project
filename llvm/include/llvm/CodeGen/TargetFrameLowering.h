@@ -202,8 +202,8 @@ public:
     return false;
   }
 
-  /// Returns the aligment for the callee-save area of the stack (in bytes).
-  virtual unsigned calleeSaveAreaAligment() const { return 1; }
+  /// Returns the alignment for the callee-save area of the stack (in bytes).
+  virtual unsigned calleeSaveAreaAlignment() const { return 1; }
 
   /// Returns true if the target can safely skip saving callee-saved registers
   /// for noreturn nounwind functions.

@@ -2905,7 +2905,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (hasFP(MF) && AFI->hasSwiftAsyncContext())
     CSStackSize += 8;
 
-  unsigned CSAlign = calleeSaveAreaAligment();
+  unsigned CSAlign = calleeSaveAreaAlignment();
   uint64_t AlignedCSStackSize = alignTo(CSStackSize, CSAlign);
   LLVM_DEBUG(dbgs() << "Estimated stack frame size: "
                     << EstimatedStackSize + AlignedCSStackSize << " bytes.\n");
