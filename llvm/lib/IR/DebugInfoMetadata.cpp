@@ -1838,6 +1838,7 @@ unsigned DIExpression::ExprOperand::getSize() const {
   case dwarf::DW_OP_deref_size:
   case dwarf::DW_OP_xderef_size:
   case dwarf::DW_OP_plus_uconst:
+  case dwarf::DW_OP_LLVM_user:
   case dwarf::DW_OP_LLVM_tag_offset:
   case dwarf::DW_OP_LLVM_entry_value:
   case dwarf::DW_OP_LLVM_arg:
@@ -1908,6 +1909,12 @@ bool DIExpression::isValid() const {
     switch (Op) {
     default:
       return false;
+    case dwarf::DW_OP_LLVM_user:
+      // Only operandless sub-operations are represented by this two-element
+      // encoding. Reject unknown sub-operations rather than misparsing them.
+      if (I->getArg(0) != dwarf::DW_OP_LLVM_form_aspace_address)
+        return false;
+      break;
     case dwarf::DW_OP_LLVM_fragment:
       // A fragment operator must appear at the end.
       return I->get() + I->getSize() == E->get();
