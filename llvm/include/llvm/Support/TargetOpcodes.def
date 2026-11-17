@@ -53,7 +53,9 @@ HANDLE_TARGET_OPCODE(EXTRACT_SUBREG)
 /// anyext operations on target architectures which support it.
 HANDLE_TARGET_OPCODE(INSERT_SUBREG)
 
-/// IMPLICIT_DEF - This is the MachineInstr-level equivalent of undef.
+/// IMPLICIT_DEF - Defines a register without a value. Both undef and poison
+/// are selected to it, and each use may observe a different value.
+// TODO: Rename this to POISON once everyone handles it like poison.
 HANDLE_TARGET_OPCODE(IMPLICIT_DEF)
 
 /// Explicit undef initialization used past IMPLICIT_DEF elimination in cases
@@ -862,6 +864,12 @@ HANDLE_TARGET_OPCODE(G_BITREVERSE)
 // Generic carry-less multiply instruction.
 HANDLE_TARGET_OPCODE(G_CLMUL)
 
+// Generic carry-less multiply high instruction.
+HANDLE_TARGET_OPCODE(G_CLMULH)
+
+// Generic reversed carry-less multiply instruction.
+HANDLE_TARGET_OPCODE(G_CLMULR)
+
 /// Floating point ceil.
 HANDLE_TARGET_OPCODE(G_FCEIL)
 
@@ -976,6 +984,8 @@ HANDLE_TARGET_OPCODE(G_VECREDUCE_FMAX)
 HANDLE_TARGET_OPCODE(G_VECREDUCE_FMIN)
 HANDLE_TARGET_OPCODE(G_VECREDUCE_FMAXIMUM)
 HANDLE_TARGET_OPCODE(G_VECREDUCE_FMINIMUM)
+HANDLE_TARGET_OPCODE(G_VECREDUCE_FMAXIMUMNUM)
+HANDLE_TARGET_OPCODE(G_VECREDUCE_FMINIMUMNUM)
 HANDLE_TARGET_OPCODE(G_VECREDUCE_ADD)
 HANDLE_TARGET_OPCODE(G_VECREDUCE_MUL)
 HANDLE_TARGET_OPCODE(G_VECREDUCE_AND)

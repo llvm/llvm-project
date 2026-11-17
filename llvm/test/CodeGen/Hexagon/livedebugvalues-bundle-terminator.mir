@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass=livedebugvalues -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -march=hexagon -run-pass=live-debug-values %s -o - | FileCheck %s
 # CHECK: BUNDLE
 --- |
 
@@ -22,7 +22,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 4, alignment: 4 }
 body:             |

@@ -31,7 +31,6 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-forward.h"
@@ -50,15 +49,15 @@ public:
   TypeSummaryImpl::Flags m_flags;
   StringList m_target_types;
   FormatterMatchType m_match_type;
-  ConstString m_name;
+  std::string m_name;
   std::string m_category;
   uint32_t m_ptr_match_depth;
 
   ScriptAddOptions(const TypeSummaryImpl::Flags &flags,
-                   FormatterMatchType match_type, ConstString name,
+                   FormatterMatchType match_type, std::string name,
                    std::string catg, uint32_t m_ptr_match_depth)
-      : m_flags(flags), m_match_type(match_type), m_name(name),
-        m_category(catg), m_ptr_match_depth(m_ptr_match_depth) {}
+      : m_flags(flags), m_match_type(match_type), m_name(std::move(name)),
+        m_category(std::move(catg)), m_ptr_match_depth(m_ptr_match_depth) {}
 
   typedef std::shared_ptr<ScriptAddOptions> SharedPointer;
 };
@@ -144,7 +143,7 @@ private:
     TypeSummaryImpl::Flags m_flags;
     FormatterMatchType m_match_type = eFormatterMatchExact;
     std::string m_format_string;
-    ConstString m_name;
+    std::string m_name;
     std::string m_python_script;
     std::string m_python_function;
     bool m_is_add_script = false;
@@ -224,16 +223,15 @@ public:
                 Status error;
 
                 for (const std::string &type_name : options->m_target_types) {
-                  AddSummary(ConstString(type_name), script_format,
-                             options->m_match_type, options->m_category,
-                             &error);
+                  AddSummary(type_name, script_format, options->m_match_type,
+                             options->m_category, &error);
                   if (error.Fail()) {
                     LockedStreamFile locked_stream = error_sp->Lock();
                     locked_stream.Printf("error: %s", error.AsCString());
                   }
                 }
 
-                if (options->m_name) {
+                if (!options->m_name.empty()) {
                   CommandObjectTypeSummaryAdd::AddNamedSummary(
                       options->m_name, script_format, &error);
                   if (error.Fail()) {
@@ -282,11 +280,11 @@ public:
     io_handler.SetIsDone(true);
   }
 
-  bool AddSummary(ConstString type_name, lldb::TypeSummaryImplSP entry,
+  bool AddSummary(std::string type_name, lldb::TypeSummaryImplSP entry,
                   FormatterMatchType match_type, std::string category,
                   Status *error = nullptr);
 
-  bool AddNamedSummary(ConstString summary_name, lldb::TypeSummaryImplSP entry,
+  bool AddNamedSummary(std::string summary_name, lldb::TypeSummaryImplSP entry,
                        Status *error = nullptr);
 
 protected:
@@ -475,14 +473,14 @@ protected:
                     class_name_str.c_str());
 
                 lldb::TypeCategoryImplSP category;
-                DataVisualization::Categories::GetCategory(
-                    ConstString(options->m_category), category);
+                DataVisualization::Categories::GetCategory(options->m_category,
+                                                           category);
 
                 Status error;
 
                 for (const std::string &type_name : options->m_target_types) {
                   if (!type_name.empty()) {
-                    if (AddSynth(ConstString(type_name), synth_provider,
+                    if (AddSynth(type_name, synth_provider,
                                  options->m_match_type, options->m_category,
                                  &error)) {
                       LockedStreamFile locked_stream = error_sp->Lock();
@@ -529,7 +527,7 @@ public:
 
   ~CommandObjectTypeSynthAdd() override = default;
 
-  bool AddSynth(ConstString type_name, lldb::SyntheticChildrenSP entry,
+  bool AddSynth(std::string type_name, lldb::SyntheticChildrenSP entry,
                 FormatterMatchType match_type, std::string category_name,
                 Status *error);
 };
@@ -695,7 +693,7 @@ protected:
                       .SetSkipReferences(m_command_options.m_skip_references));
     else
       entry = std::make_shared<TypeFormatImpl_EnumType>(
-          ConstString(m_command_options.m_custom_type_name),
+          m_command_options.m_custom_type_name,
           TypeFormatImpl::Flags()
               .SetCascades(m_command_options.m_cascade)
               .SetSkipPointers(m_command_options.m_skip_pointers)
@@ -704,8 +702,8 @@ protected:
     // now I have a valid format, let's add it to every type
 
     TypeCategoryImplSP category_sp;
-    DataVisualization::Categories::GetCategory(
-        ConstString(m_command_options.m_category), category_sp);
+    DataVisualization::Categories::GetCategory(m_command_options.m_category,
+                                               category_sp);
     if (!category_sp)
       return;
 
@@ -836,7 +834,9 @@ public:
   }
 
 protected:
-  virtual bool FormatterSpecificDeletion(ConstString typeCS) { return false; }
+  virtual bool FormatterSpecificDeletion(llvm::StringRef typeCS) {
+    return false;
+  }
 
   void DoExecute(Args &command, CommandReturnObject &result) override {
     const size_t argc = command.GetArgumentCount();
@@ -846,10 +846,9 @@ protected:
       return;
     }
 
-    const char *typeA = command.GetArgumentAtIndex(0);
-    ConstString typeCS(typeA);
+    llvm::StringRef typeCS = command.GetArgumentAtIndex(0);
 
-    if (!typeCS) {
+    if (typeCS.empty()) {
       result.AppendError("empty typenames not allowed");
       return;
     }
@@ -876,8 +875,8 @@ protected:
       extra_deletion = FormatterSpecificDeletion(typeCS);
     } else {
       lldb::TypeCategoryImplSP category;
-      DataVisualization::Categories::GetCategory(
-          ConstString(m_options.m_category.c_str()), category);
+      DataVisualization::Categories::GetCategory(m_options.m_category,
+                                                 category);
       if (category)
         delete_category = category->Delete(typeCS, m_formatter_kind);
       extra_deletion = FormatterSpecificDeletion(typeCS);
@@ -886,7 +885,7 @@ protected:
     if (delete_category || extra_deletion) {
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
-      result.AppendErrorWithFormat("no custom formatter for %s", typeA);
+      result.AppendErrorWithFormatv("no custom formatter for {0}", typeCS);
     }
   }
 };
@@ -959,12 +958,10 @@ protected:
     } else {
       lldb::TypeCategoryImplSP category;
       if (command.GetArgumentCount() > 0) {
-        const char *cat_name = command.GetArgumentAtIndex(0);
-        ConstString cat_nameCS(cat_name);
-        DataVisualization::Categories::GetCategory(cat_nameCS, category);
+        llvm::StringRef cat_name = command.GetArgumentAtIndex(0);
+        DataVisualization::Categories::GetCategory(cat_name, category);
       } else {
-        DataVisualization::Categories::GetCategory(ConstString(nullptr),
-                                                   category);
+        DataVisualization::Categories::GetCategory(llvm::StringRef(), category);
       }
       category->Clear(m_formatter_kind);
     }
@@ -1115,12 +1112,12 @@ protected:
           [&result, &formatter_regex,
            &any_printed](const TypeMatcher &type_matcher,
                          const FormatterSharedPointer &format_sp) -> bool {
-        if (ShouldListItem(type_matcher.GetMatchString().GetStringRef(),
+        if (ShouldListItem(type_matcher.GetMatchString(),
                            formatter_regex.get())) {
           any_printed = true;
-          result.GetOutputStream().Printf(
-              "%s: %s\n", type_matcher.GetMatchString().GetCString(),
-              format_sp->GetDescription().c_str());
+          result.GetOutputStream().Format("{0}: {1}\n",
+                                          type_matcher.GetMatchString(),
+                                          format_sp->GetDescription());
         }
         return true;
       };
@@ -1222,7 +1219,7 @@ Status CommandObjectTypeSummaryAdd::CommandOptions::SetOptionValue(
       m_match_type = eFormatterMatchCallback;
     break;
   case 'n':
-    m_name.SetString(option_arg);
+    m_name = std::string(option_arg);
     break;
   case 'o':
     m_python_script = std::string(option_arg);
@@ -1257,7 +1254,7 @@ void CommandObjectTypeSummaryAdd::CommandOptions::OptionParsingStarting(
       .SetHideItemNames(false);
 
   m_match_type = eFormatterMatchExact;
-  m_name.Clear();
+  m_name.clear();
   m_python_script = "";
   m_python_function = "";
   m_format_string = "";
@@ -1271,7 +1268,7 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
     Args &command, CommandReturnObject &result) {
   const size_t argc = command.GetArgumentCount();
 
-  if (argc < 1 && !m_options.m_name) {
+  if (argc < 1 && m_options.m_name.empty()) {
     result.AppendErrorWithFormat("%s takes one or more args",
                                  m_cmd_name.c_str());
     return false;
@@ -1360,7 +1357,7 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
   Status error;
 
   for (auto &entry : command.entries()) {
-    AddSummary(ConstString(entry.ref()), script_format, m_options.m_match_type,
+    AddSummary(entry.ref().str(), script_format, m_options.m_match_type,
                m_options.m_category, &error);
     if (error.Fail()) {
       result.AppendError(error.AsCString());
@@ -1368,7 +1365,7 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
     }
   }
 
-  if (m_options.m_name) {
+  if (!m_options.m_name.empty()) {
     AddNamedSummary(m_options.m_name, script_format, &error);
     if (error.Fail()) {
       result.AppendError(error.AsCString());
@@ -1384,7 +1381,7 @@ bool CommandObjectTypeSummaryAdd::Execute_PythonClassSummary(
     Args &command, CommandReturnObject &result) {
   const size_t argc = command.GetArgumentCount();
 
-  if (argc < 1 && !m_options.m_name) {
+  if (argc < 1 && m_options.m_name.empty()) {
     result.AppendErrorWithFormat("%s takes one or more args",
                                  m_cmd_name.c_str());
     return false;
@@ -1402,7 +1399,7 @@ bool CommandObjectTypeSummaryAdd::Execute_PythonClassSummary(
   Status error;
 
   for (auto &entry : command.entries()) {
-    AddSummary(ConstString(entry.ref()), script_format, m_options.m_match_type,
+    AddSummary(entry.ref().str(), script_format, m_options.m_match_type,
                m_options.m_category, &error);
     if (error.Fail()) {
       result.AppendError(error.AsCString());
@@ -1410,7 +1407,7 @@ bool CommandObjectTypeSummaryAdd::Execute_PythonClassSummary(
     }
   }
 
-  if (m_options.m_name) {
+  if (!m_options.m_name.empty()) {
     AddNamedSummary(m_options.m_name, script_format, &error);
     if (error.Fail()) {
       result.AppendError(error.AsCString());
@@ -1428,7 +1425,7 @@ bool CommandObjectTypeSummaryAdd::Execute_StringSummary(
     Args &command, CommandReturnObject &result) {
   const size_t argc = command.GetArgumentCount();
 
-  if (argc < 1 && !m_options.m_name) {
+  if (argc < 1 && m_options.m_name.empty()) {
     result.AppendErrorWithFormat("%s takes one or more args",
                                  m_cmd_name.c_str());
     return false;
@@ -1470,10 +1467,9 @@ bool CommandObjectTypeSummaryAdd::Execute_StringSummary(
       result.AppendError("empty typenames not allowed");
       return false;
     }
-    ConstString typeCS(arg_entry.ref());
 
-    AddSummary(typeCS, entry, m_options.m_match_type, m_options.m_category,
-               &error);
+    AddSummary(arg_entry.ref().str(), entry, m_options.m_match_type,
+               m_options.m_category, &error);
 
     if (error.Fail()) {
       result.AppendError(error.AsCString());
@@ -1481,7 +1477,7 @@ bool CommandObjectTypeSummaryAdd::Execute_StringSummary(
     }
   }
 
-  if (m_options.m_name) {
+  if (!m_options.m_name.empty()) {
     AddNamedSummary(m_options.m_name, entry, &error);
     if (error.Fail()) {
       result.AppendError(error.AsCString());
@@ -1628,23 +1624,21 @@ void CommandObjectTypeSummaryAdd::DoExecute(Args &command,
     result.SetStatus(eReturnStatusSuccessFinishResult);
 }
 
-static bool FixArrayTypeNameWithRegex(ConstString &type_name) {
-  llvm::StringRef type_name_ref(type_name.GetStringRef());
+static bool FixArrayTypeNameWithRegex(std::string &type_name) {
+  llvm::StringRef type_name_ref(type_name);
 
   if (type_name_ref.ends_with("[]")) {
-    std::string type_name_str(type_name.GetCString());
-    type_name_str.resize(type_name_str.length() - 2);
-    if (type_name_str.back() != ' ')
-      type_name_str.append(" ?\\[[0-9]+\\]");
+    type_name.resize(type_name.length() - 2);
+    if (type_name.back() != ' ')
+      type_name.append(" ?\\[[0-9]+\\]");
     else
-      type_name_str.append("\\[[0-9]+\\]");
-    type_name.SetCString(type_name_str.c_str());
+      type_name.append("\\[[0-9]+\\]");
     return true;
   }
   return false;
 }
 
-bool CommandObjectTypeSummaryAdd::AddNamedSummary(ConstString summary_name,
+bool CommandObjectTypeSummaryAdd::AddNamedSummary(std::string summary_name,
                                                   TypeSummaryImplSP entry,
                                                   Status *error) {
   // system named summaries do not exist (yet?)
@@ -1652,14 +1646,13 @@ bool CommandObjectTypeSummaryAdd::AddNamedSummary(ConstString summary_name,
   return true;
 }
 
-bool CommandObjectTypeSummaryAdd::AddSummary(ConstString type_name,
+bool CommandObjectTypeSummaryAdd::AddSummary(std::string type_name,
                                              TypeSummaryImplSP entry,
                                              FormatterMatchType match_type,
                                              std::string category_name,
                                              Status *error) {
   lldb::TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString(category_name),
-                                             category);
+  DataVisualization::Categories::GetCategory(category_name, category);
 
   if (match_type == eFormatterMatchExact) {
     if (FixArrayTypeNameWithRegex(type_name))
@@ -1668,7 +1661,7 @@ bool CommandObjectTypeSummaryAdd::AddSummary(ConstString type_name,
 
   if (match_type == eFormatterMatchRegex) {
     match_type = eFormatterMatchRegex;
-    RegularExpression typeRX(type_name.GetStringRef());
+    RegularExpression typeRX(type_name);
     if (!typeRX.IsValid()) {
       if (error)
         *error = Status::FromErrorString(
@@ -1678,17 +1671,16 @@ bool CommandObjectTypeSummaryAdd::AddSummary(ConstString type_name,
   }
 
   if (match_type == eFormatterMatchCallback) {
-    const char *function_name = type_name.AsCString(nullptr);
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
-    if (interpreter && !interpreter->CheckObjectExists(function_name)) {
+    if (interpreter && !interpreter->CheckObjectExists(type_name.c_str())) {
       *error = Status::FromErrorStringWithFormat(
           "The provided recognizer function \"%s\" does not exist - "
           "please define it before attempting to use this summary.\n",
-          function_name);
+          type_name.c_str());
       return false;
     }
   }
-  category->AddTypeSummary(type_name.GetStringRef(), match_type, entry);
+  category->AddTypeSummary(llvm::StringRef(type_name), match_type, entry);
   return true;
 }
 
@@ -1703,7 +1695,7 @@ public:
   ~CommandObjectTypeSummaryDelete() override = default;
 
 protected:
-  bool FormatterSpecificDeletion(ConstString typeCS) override {
+  bool FormatterSpecificDeletion(llvm::StringRef typeCS) override {
     if (m_options.m_language != lldb::eLanguageTypeUnknown)
       return false;
     return DataVisualization::NamedSummaryFormats::Delete(typeCS);
@@ -1739,9 +1731,9 @@ protected:
       DataVisualization::NamedSummaryFormats::ForEach(
           [&result](const TypeMatcher &type_matcher,
                     const TypeSummaryImplSP &summary_sp) -> bool {
-            result.GetOutputStream().Printf(
-                "%s: %s\n", type_matcher.GetMatchString().GetCString(),
-                summary_sp->GetDescription().c_str());
+            result.GetOutputStream().Format("{0}: {1}\n",
+                                            type_matcher.GetMatchString(),
+                                            summary_sp->GetDescription());
             return true;
           });
       return true;
@@ -1823,7 +1815,7 @@ protected:
 
     for (auto &entry : command.entries()) {
       TypeCategoryImplSP category_sp;
-      if (DataVisualization::Categories::GetCategory(ConstString(entry.ref()),
+      if (DataVisualization::Categories::GetCategory(entry.ref(),
                                                      category_sp) &&
           category_sp) {
         category_sp->AddLanguage(m_options.m_cate_language.GetCurrentValue());
@@ -1910,10 +1902,9 @@ protected:
       DataVisualization::Categories::EnableStar();
     } else if (argc > 0) {
       for (int i = argc - 1; i >= 0; i--) {
-        const char *typeA = command.GetArgumentAtIndex(i);
-        ConstString typeCS(typeA);
+        llvm::StringRef typeCS = command.GetArgumentAtIndex(i);
 
-        if (!typeCS) {
+        if (typeCS.empty()) {
           result.AppendError("empty category name not allowed");
           return;
         }
@@ -1961,10 +1952,9 @@ protected:
 
     // the order is not relevant here
     for (int i = argc - 1; i >= 0; i--) {
-      const char *typeA = command.GetArgumentAtIndex(i);
-      ConstString typeCS(typeA);
+      llvm::StringRef typeCS = command.GetArgumentAtIndex(i);
 
-      if (!typeCS) {
+      if (typeCS.empty()) {
         result.AppendError("empty category name not allowed");
         return;
       }
@@ -2053,10 +2043,9 @@ protected:
     } else if (argc > 0) {
       // the order is not relevant here
       for (int i = argc - 1; i >= 0; i--) {
-        const char *typeA = command.GetArgumentAtIndex(i);
-        ConstString typeCS(typeA);
+        llvm::StringRef typeCS = command.GetArgumentAtIndex(i);
 
-        if (!typeCS) {
+        if (typeCS.empty()) {
           result.AppendError("empty category name not allowed");
           return;
         }
@@ -2266,8 +2255,7 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
   // now I have a valid provider, let's add it to every type
 
   lldb::TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString(m_options.m_category),
-                                             category);
+  DataVisualization::Categories::GetCategory(m_options.m_category, category);
 
   Status error;
 
@@ -2277,9 +2265,8 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
       return false;
     }
 
-    ConstString typeCS(arg_entry.ref());
-    if (!AddSynth(typeCS, entry, m_options.m_match_type, m_options.m_category,
-                  &error)) {
+    if (!AddSynth(arg_entry.ref().str(), entry, m_options.m_match_type,
+                  m_options.m_category, &error)) {
       result.AppendError(error.AsCString());
       return false;
     }
@@ -2297,14 +2284,13 @@ CommandObjectTypeSynthAdd::CommandObjectTypeSynthAdd(
   AddSimpleArgumentList(eArgTypeName, eArgRepeatPlus);
 }
 
-bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
+bool CommandObjectTypeSynthAdd::AddSynth(std::string type_name,
                                          SyntheticChildrenSP entry,
                                          FormatterMatchType match_type,
                                          std::string category_name,
                                          Status *error) {
   lldb::TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString(category_name),
-                                             category);
+  DataVisualization::Categories::GetCategory(category_name, category);
 
   if (match_type == eFormatterMatchExact) {
     if (FixArrayTypeNameWithRegex(type_name))
@@ -2331,7 +2317,7 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
   }
 
   if (match_type == eFormatterMatchRegex) {
-    RegularExpression typeRX(type_name.GetStringRef());
+    RegularExpression typeRX(type_name);
     if (!typeRX.IsValid()) {
       if (error)
         *error = Status::FromErrorString(
@@ -2341,18 +2327,17 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
   }
 
   if (match_type == eFormatterMatchCallback) {
-    const char *function_name = type_name.AsCString(nullptr);
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
-    if (interpreter && !interpreter->CheckObjectExists(function_name)) {
+    if (interpreter && !interpreter->CheckObjectExists(type_name.c_str())) {
       *error = Status::FromErrorStringWithFormat(
           "The provided recognizer function \"%s\" does not exist - "
           "please define it before attempting to use this summary.\n",
-          function_name);
+          type_name.c_str());
       return false;
     }
   }
 
-  category->AddTypeSynthetic(type_name.GetStringRef(), match_type, entry);
+  category->AddTypeSynthetic(type_name, match_type, entry);
   return true;
 }
 
@@ -2439,12 +2424,11 @@ private:
 
   enum FilterFormatType { eRegularFilter, eRegexFilter };
 
-  bool AddFilter(ConstString type_name, TypeFilterImplSP entry,
+  bool AddFilter(std::string type_name, TypeFilterImplSP entry,
                  FilterFormatType type, std::string category_name,
                  Status *error) {
     lldb::TypeCategoryImplSP category;
-    DataVisualization::Categories::GetCategory(ConstString(category_name),
-                                               category);
+    DataVisualization::Categories::GetCategory(category_name, category);
 
     if (type == eRegularFilter) {
       if (FixArrayTypeNameWithRegex(type_name))
@@ -2475,7 +2459,7 @@ private:
     FormatterMatchType match_type = eFormatterMatchExact;
     if (type == eRegexFilter) {
       match_type = eFormatterMatchRegex;
-      RegularExpression typeRX(type_name.GetStringRef());
+      RegularExpression typeRX(type_name);
       if (!typeRX.IsValid()) {
         if (error)
           *error = Status::FromErrorString(
@@ -2483,7 +2467,7 @@ private:
         return false;
       }
     }
-    category->AddTypeFilter(type_name.GetStringRef(), match_type, entry);
+    category->AddTypeFilter(llvm::StringRef(type_name), match_type, entry);
     return true;
   }
 
@@ -2564,8 +2548,7 @@ protected:
     // now I have a valid provider, let's add it to every type
 
     lldb::TypeCategoryImplSP category;
-    DataVisualization::Categories::GetCategory(
-        ConstString(m_options.m_category), category);
+    DataVisualization::Categories::GetCategory(m_options.m_category, category);
 
     Status error;
 
@@ -2577,8 +2560,7 @@ protected:
         return;
       }
 
-      ConstString typeCS(arg_entry.ref());
-      if (!AddFilter(typeCS, entry,
+      if (!AddFilter(arg_entry.ref().str(), entry,
                      m_options.m_regex ? eRegexFilter : eRegularFilter,
                      m_options.m_category, &error)) {
         result.AppendError(error.AsCString());

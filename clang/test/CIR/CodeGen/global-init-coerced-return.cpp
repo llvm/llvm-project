@@ -12,13 +12,13 @@ Pair makePair();
 // runs, so its coercion slot has no enclosing cir.func to be placed in.
 Pair g = makePair();
 
-// CIR: cir.func private @_Z8makePairv() -> !rec_anon_struct
-
 // The slot lands first in the block the initializer is later outlined into.
 // CIR-LABEL: cir.func internal private @__cxx_global_var_init()
 // CIR-NEXT:    %[[COERCE:.+]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_anon_struct>
 // CIR:         %[[RET:.+]] = cir.call @_Z8makePairv() : () -> !rec_anon_struct
 // CIR-NEXT:    cir.store %[[RET]], %[[COERCE]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
+
+// CIR: cir.func private @_Z8makePairv() -> !rec_anon_struct
 
 // LLVM-LABEL: define internal void @__cxx_global_var_init()
 // LLVM-NEXT:    %[[COERCE:.+]] = alloca { i64, i64 }, align 8

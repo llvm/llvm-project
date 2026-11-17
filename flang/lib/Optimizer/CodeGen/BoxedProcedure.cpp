@@ -16,12 +16,10 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace fir {
@@ -194,39 +192,6 @@ private:
   mlir::Location loc;
 };
 
-/// Set the "executable-stack" LLVM module flag on \p module, which makes the
-/// backend mark the `.note.GNU-stack` section executable on ELF targets.
-static void requestExecutableStack(mlir::ModuleOp module) {
-  mlir::MLIRContext *context{module.getContext()};
-  auto key{mlir::StringAttr::get(context, "executable-stack")};
-  // The flag merges with `Max`, since the linked result needs an executable
-  // stack as soon as any one of the modules linked into it does.
-  auto flag{mlir::LLVM::ModuleFlagAttr::get(
-      context, mlir::LLVM::ModFlagBehavior::Max, key,
-      mlir::IntegerAttr::get(mlir::IntegerType::get(context, 32), 1))};
-
-  // Add to the module flags that are already there, if any. A key may appear
-  // only once, so overwrite any "executable-stack" already present instead of
-  // appending a second one; a request for 1 wins over whatever it held.
-  for (auto flagsOp : module.getOps<mlir::LLVM::ModuleFlagsOp>()) {
-    llvm::SmallVector<mlir::Attribute> flags{flagsOp.getFlags().getValue()};
-    auto *existing = llvm::find_if(flags, [&](mlir::Attribute attr) {
-      return mlir::cast<mlir::LLVM::ModuleFlagAttrInterface>(attr)
-                 .getModuleFlagKey() == key;
-    });
-    if (existing == flags.end())
-      flags.push_back(flag);
-    else
-      *existing = flag;
-    flagsOp.setFlagsAttr(mlir::ArrayAttr::get(context, flags));
-    return;
-  }
-
-  mlir::OpBuilder builder{module.getBody(), module.getBody()->begin()};
-  mlir::LLVM::ModuleFlagsOp::create(builder, module.getLoc(),
-                                    builder.getArrayAttr({flag}));
-}
-
 /// A `boxproc` is an abstraction for a Fortran procedure reference. Typically,
 /// Fortran procedures can be referenced directly through a function pointer.
 /// However, Fortran has one-level dynamic scoping between a host procedure and
@@ -249,7 +214,6 @@ public:
   inline mlir::ModuleOp getModule() { return getOperation(); }
 
   void runOnOperation() override final {
-    needsExecutableStack = false;
     if (useThunks) {
       auto *context = &getContext();
       mlir::IRRewriter rewriter(context);
@@ -272,16 +236,10 @@ public:
           processOp(op, rewriter, typeConverter);
         });
       }
-
-      if (needsExecutableStack)
-        requestExecutableStack(getModule());
     }
   }
 
 private:
-  /// Set when a stack based trampoline has been emitted.
-  bool needsExecutableStack = false;
-
   /// Trampoline handles collected while processing a function.
   /// Each entry is a Value representing the opaque handle returned
   /// by _FortranATrampolineInit, which must be freed before the
@@ -478,10 +436,7 @@ private:
             rewriter.replaceOpWithNewOp<ConvertOp>(embox, toTy, callableAddr);
           }
         } else {
-          // Legacy stack-based trampoline path. The thunk is built in the host
-          // procedure's stack frame and jumped to, so request an executable
-          // stack.
-          needsExecutableStack = true;
+          // Legacy stack-based trampoline path.
           FirOpBuilder builder(rewriter, module);
           mlir::Type i8Ty{builder.getI8Type()};
           mlir::Type i8Ptr{builder.getRefType(i8Ty)};

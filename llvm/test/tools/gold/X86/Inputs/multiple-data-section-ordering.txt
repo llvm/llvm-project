@@ -1,0 +1,5 @@
+.data : {
+    *(.data.tin)
+    *(.data.dipsy)
+    *(.data.pat)
+}

@@ -35,8 +35,15 @@ public:
         const override;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
         CallingConv::ID) const override;
+  /// Mask for calls that pass or return values in HLX registers.
+  const uint32_t *getHLXCallPreservedMask() const;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
+
+  /// Compute the first available callee-saved register to use as the
+  /// aligned-stack base register when this function needs dynamic stack
+  /// realignment. This does not update the machine function info.
+  Register computeStackAlignBaseRegister(const MachineFunction &MF) const;
 
   bool eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
         unsigned FIOperandNum, RegScavenger *RS = nullptr) const override;
@@ -64,15 +71,13 @@ public:
   Register getFrameRegister(const MachineFunction &MF) const override;
   Register getFrameRegister() const;
   Register getStackRegister() const;
+  Register getVTCMStackRegister() const;
 
   unsigned getHexagonSubRegIndex(const TargetRegisterClass &RC,
         unsigned GenIdx) const;
 
   const MCPhysReg *getCallerSavedRegs(const MachineFunction *MF,
         const TargetRegisterClass *RC) const;
-
-  const TargetRegisterClass *
-  getPointerRegClass(unsigned Kind = 0) const override;
 
   /// Returns true if the given reserved physical register is live across
   /// function calls/returns.
@@ -85,6 +90,12 @@ public:
   bool isFakeReg(MCPhysReg Reg) const;
 
   bool isEHReturnCalleeSaveReg(Register Reg) const;
+
+private:
+  BitVector getBaseReservedRegs(const MachineFunction &MF) const;
+  Register
+  computeStackAlignBaseRegister(const MachineFunction &MF,
+                                const BitVector &BaseReservedRegs) const;
 };
 
 } // end namespace llvm

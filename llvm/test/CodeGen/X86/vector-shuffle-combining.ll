@@ -2034,6 +2034,7 @@ define <16 x i8> @combine_and_or_shuffle(<16 x i8> %x, <16 x i8> %y) {
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3],xmm0[4],xmm3[4],xmm0[5],xmm3[5],xmm0[6],xmm3[6],xmm0[7],xmm3[7]
 ; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: combine_and_or_shuffle:
@@ -3214,7 +3215,7 @@ define void @PR43024() {
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovss %xmm0, (%rax)
 ; AVX-NEXT:    retq
-  store <4 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x0, float 0x0>, ptr undef, align 16
+  store <4 x float> <float +qnan, float +qnan, float 0x0, float 0x0>, ptr undef, align 16
   %1 = load <4 x float>, ptr undef, align 16
   %2 = fmul <4 x float> %1, <float 0x0, float 0x0, float 0x0, float 0x0>
   %3 = shufflevector <4 x float> %2, <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
@@ -3287,7 +3288,7 @@ define void @PR43024_strictfp() strictfp {
 ; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovss %xmm0, (%rax)
 ; AVX-NEXT:    retq
-  store <4 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x0, float 0x0>, ptr undef, align 16
+  store <4 x float> <float +qnan, float +qnan, float 0x0, float 0x0>, ptr undef, align 16
   %1 = load <4 x float>, ptr undef, align 16
   %2 = call <4 x float> @llvm.experimental.constrained.fmul.v4f32(<4 x float> %1, <4 x float> zeroinitializer, metadata !"round.dynamic", metadata !"fpexcept.strict")
   %3 = shufflevector <4 x float> %2, <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
@@ -3757,7 +3758,7 @@ entry:
   %8 = shufflevector <2 x float> %6, <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %9 = shufflevector <4 x float> undef, <4 x float> %8, <4 x i32> <i32 0, i32 4, i32 5, i32 undef>
   %10 = insertelement <4 x float> %9, float %7, i32 3
-  %11 = insertelement <4 x float> %2, float 0x7FF8000000000000, i32 1
+  %11 = insertelement <4 x float> %2, float +qnan, i32 1
   %12 = insertelement <4 x float> %11, float undef, i32 0
   %13 = insertelement <4 x float> %12, float undef, i32 2
   %14 = fadd <4 x float> %10, %13

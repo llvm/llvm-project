@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -fms-compatibility -Wrelaxed-constant-fold %s
+// RUN: %clang_cc1 -fsyntax-only -verify -fms-compatibility -Wrelaxed-constant-fold -fexperimental-new-constant-interpreter %s
 
 typedef long long LONG_PTR;
 typedef long LONG;

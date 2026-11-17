@@ -171,7 +171,7 @@ kmp_uint64 distributedBarrier::go_release() {
 void distributedBarrier::go_reset() {
   for (size_t j = 0; j < max_threads; ++j) {
     for (size_t i = 0; i < distributedBarrier::MAX_ITERS; ++i) {
-      flags[i][j].stillNeed = 1;
+      flags[i][j].stillNeed.store(1, std::memory_order_relaxed);
     }
     go[j].go.store(0);
     iter[j].iter = 0;
@@ -188,7 +188,7 @@ void distributedBarrier::init(size_t nthr) {
 
   for (size_t i = 0; i < max_threads; i++) {
     for (size_t j = 0; j < distributedBarrier::MAX_ITERS; j++) {
-      flags[j][i].stillNeed = 1;
+      flags[j][i].stillNeed.store(1, std::memory_order_relaxed);
     }
     go[i].go.store(0);
     iter[i].iter = 0;
@@ -291,8 +291,11 @@ static void __kmp_dist_barrier_gather(
       threads_pending = 0;
       // Check all the flags every time to avoid branch misspredict
       for (size_t thr = group_start; thr < group_end; thr++) {
-        // Each thread uses a different cache line
-        threads_pending += b->flags[my_current_iter][thr].stillNeed;
+        // Each thread uses a different cache line. Use relaxed loads while
+        // polling; the acquire is performed once after the loop observes that
+        // all threads have arrived.
+        threads_pending += b->flags[my_current_iter][thr].stillNeed.load(
+            std::memory_order_relaxed);
       }
       // Execute tasks here
       if (__kmp_tasking_mode != tskm_immediate_exec) {
@@ -320,6 +323,9 @@ static void __kmp_dist_barrier_gather(
         this_thr->th.th_reap_state = KMP_NOT_SAFE_TO_REAP;
       }
     } while (threads_pending > 0);
+    // Acquire: now that all monitored stillNeed=0 stores are observed, make the
+    // arrived threads' pre-barrier writes (incl. reduce_data) visible here.
+    std::atomic_thread_fence(std::memory_order_acquire);
 
     if (reduce) { // Perform reduction if needed
       OMPT_REDUCTION_DECL(this_thr, gtid);
@@ -333,15 +339,18 @@ static void __kmp_dist_barrier_gather(
     }
 
     // Set flag for next iteration
-    b->flags[my_next_iter][tid].stillNeed = 1;
+    b->flags[my_next_iter][tid].stillNeed.store(1, std::memory_order_relaxed);
     // Each thread uses a different cache line; resets stillNeed to 0 to
-    // indicate it has reached the barrier
-    b->flags[my_current_iter][tid].stillNeed = 0;
+    // indicate it has reached the barrier. Release so that this thread's
+    // pre-barrier writes are visible to whoever observes the 0.
+    b->flags[my_current_iter][tid].stillNeed.store(0,
+                                                   std::memory_order_release);
 
     do { // wait for all group leaders
       threads_pending = 0;
       for (size_t thr = 0; thr < nproc; thr += b->threads_per_group) {
-        threads_pending += b->flags[my_current_iter][thr].stillNeed;
+        threads_pending += b->flags[my_current_iter][thr].stillNeed.load(
+            std::memory_order_relaxed);
       }
       // Execute tasks here
       if (__kmp_tasking_mode != tskm_immediate_exec) {
@@ -369,6 +378,8 @@ static void __kmp_dist_barrier_gather(
         this_thr->th.th_reap_state = KMP_NOT_SAFE_TO_REAP;
       }
     } while (threads_pending > 0);
+    // Acquire: pair with the group leaders' releasing stillNeed=0 stores.
+    std::atomic_thread_fence(std::memory_order_acquire);
 
     if (reduce) { // Perform reduction if needed
       if (KMP_MASTER_TID(tid)) { // Master reduces over group leaders
@@ -384,10 +395,12 @@ static void __kmp_dist_barrier_gather(
     }
   } else {
     // Set flag for next iteration
-    b->flags[my_next_iter][tid].stillNeed = 1;
+    b->flags[my_next_iter][tid].stillNeed.store(1, std::memory_order_relaxed);
     // Each thread uses a different cache line; resets stillNeed to 0 to
-    // indicate it has reached the barrier
-    b->flags[my_current_iter][tid].stillNeed = 0;
+    // indicate it has reached the barrier. Release so that this thread's
+    // pre-barrier writes are visible to whoever observes the 0.
+    b->flags[my_current_iter][tid].stillNeed.store(0,
+                                                   std::memory_order_release);
   }
 
   KMP_MFENCE();
@@ -1815,11 +1828,13 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
   kmp_team_t *team = this_thr->th.th_team;
   int status = 0;
   is_cancellable<cancellable> cancelled;
-#if OMPT_SUPPORT && OMPT_OPTIONAL
+#if OMPT_SUPPORT
+  ompt_sync_region_t barrier_kind;
+#if OMPT_OPTIONAL
   ompt_data_t *my_task_data;
   ompt_data_t *my_parallel_data;
   void *return_address;
-  ompt_sync_region_t barrier_kind;
+#endif
 #endif
 
   KA_TRACE(15, ("__kmp_barrier: T#%d(%d:%d) has arrived\n", gtid,
@@ -1827,11 +1842,11 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
 
 #if OMPT_SUPPORT
   if (ompt_enabled.enabled) {
+    barrier_kind = __ompt_get_barrier_kind(bt, this_thr);
 #if OMPT_OPTIONAL
     my_task_data = OMPT_CUR_TASK_DATA(this_thr);
     my_parallel_data = OMPT_CUR_TEAM_DATA(this_thr);
     return_address = OMPT_LOAD_RETURN_ADDRESS(gtid);
-    barrier_kind = __ompt_get_barrier_kind(bt, this_thr);
     if (ompt_enabled.ompt_callback_sync_region) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region)(
           barrier_kind, ompt_scope_begin, my_parallel_data, my_task_data,
@@ -2265,6 +2280,9 @@ void __kmp_join_barrier(int gtid) {
 
 #if OMPT_SUPPORT
   if (ompt_enabled.enabled) {
+    ompt_state_t ompt_state = ompt_state_wait_barrier_implicit_parallel;
+    if (this_thr->th.ompt_thread_info.parallel_flags & ompt_parallel_league)
+      ompt_state = ompt_state_wait_barrier_teams;
 #if OMPT_OPTIONAL
     ompt_data_t *my_task_data;
     ompt_data_t *my_parallel_data;
@@ -2277,11 +2295,8 @@ void __kmp_join_barrier(int gtid) {
     my_task_data = OMPT_CUR_TASK_DATA(this_thr);
     my_parallel_data = OMPT_CUR_TEAM_DATA(this_thr);
     ompt_sync_region_t sync_kind = ompt_sync_region_barrier_implicit_parallel;
-    ompt_state_t ompt_state = ompt_state_wait_barrier_implicit_parallel;
-    if (this_thr->th.ompt_thread_info.parallel_flags & ompt_parallel_league) {
+    if (this_thr->th.ompt_thread_info.parallel_flags & ompt_parallel_league)
       sync_kind = ompt_sync_region_barrier_teams;
-      ompt_state = ompt_state_wait_barrier_teams;
-    }
     if (ompt_enabled.ompt_callback_sync_region) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region)(
           sync_kind, ompt_scope_begin, my_parallel_data, my_task_data, codeptr);

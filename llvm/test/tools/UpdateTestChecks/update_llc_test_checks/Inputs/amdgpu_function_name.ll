@@ -1,6 +1,6 @@
 ; Check that we accept functions with '$' in the name.
 
-; RUN: llc -mtriple=amdgcn-amd-amdhsa < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa < %s | FileCheck %s
 
 define hidden i32 @"_Z54bar$ompvariant$bar"() {
 entry:

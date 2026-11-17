@@ -1898,15 +1898,23 @@ multiclass VPseudoILoad<bit Ordered> {
           defvar idxEMUL = !cast<LMULInfo>("V_" # IdxLInfo);
           defvar Vreg = dataEMUL.vrclass;
           defvar IdxVreg = idxEMUL.vrclass;
-          defvar HasConstraint = !ne(dataEEW, idxEEW);
-          defvar TypeConstraints = 
+          // When the data EEW is smaller than the index EEW, the destination
+          // may overlap the index operand as long as the overlap is in the
+          // lowest-numbered part of the index register group. If the index
+          // EMUL is no larger than 1 then both operands are a single register,
+          // so any overlap is necessarily the lowest-numbered part and no
+          // constraint is needed.
+          defvar EarlyClobber = !if(!lt(dataEEW, idxEEW),
+                                    !gt(idxEMULOctuple, 8),
+                                    !ne(dataEEW, idxEEW));
+          defvar TypeConstraints =
             !if(!eq(dataEEW, idxEEW), 1, !if(!gt(dataEEW, idxEEW), !if(!ge(idxEMULOctuple, 8), 3, 1), 2));
           let VLMul = dataEMUL.value in {
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo :
-              VPseudoILoadNoMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered, HasConstraint, TypeConstraints>,
+              VPseudoILoadNoMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered, EarlyClobber, TypeConstraints>,
               VLXSched<dataEEW, Ordered, DataLInfo, IdxLInfo>;
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo # "_MASK" :
-              VPseudoILoadMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered, HasConstraint, TypeConstraints>,
+              VPseudoILoadMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered, EarlyClobber, TypeConstraints>,
               RISCVMaskedPseudo<MaskIdx=3>,
               VLXSched<dataEEW, Ordered, DataLInfo, IdxLInfo>;
           }

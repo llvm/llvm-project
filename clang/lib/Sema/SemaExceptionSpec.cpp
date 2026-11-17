@@ -1385,6 +1385,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::UnaryExprOrTypeTraitExprClass:
   case Expr::UnresolvedLookupExprClass:
   case Expr::UnresolvedMemberExprClass:
+  case Expr::DependentTemplateIdExprClass:
     // FIXME: Many of the above can throw.
     return CT_Cannot;
 
@@ -1511,6 +1512,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OMPUnrollDirectiveClass:
   case Stmt::OMPReverseDirectiveClass:
   case Stmt::OMPInterchangeDirectiveClass:
+  case Stmt::OMPFlattenDirectiveClass:
   case Stmt::OMPSplitDirectiveClass:
   case Stmt::OMPFuseDirectiveClass:
   case Stmt::OMPSingleDirectiveClass:
@@ -1550,6 +1552,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OMPTargetTeamsGenericLoopDirectiveClass:
   case Stmt::OMPParallelGenericLoopDirectiveClass:
   case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
+  case Stmt::OMPTargetGenericLoopDirectiveClass:
   case Stmt::ReturnStmtClass:
   case Stmt::SEHExceptStmtClass:
   case Stmt::SEHFinallyStmtClass:

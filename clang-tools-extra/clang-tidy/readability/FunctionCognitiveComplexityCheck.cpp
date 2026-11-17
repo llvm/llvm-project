@@ -26,7 +26,6 @@
 #include <cassert>
 #include <optional>
 #include <stack>
-#include <tuple>
 #include <utility>
 
 using namespace clang::ast_matchers;
@@ -485,7 +484,7 @@ void FunctionCognitiveComplexityCheck::storeOptions(
 
 void FunctionCognitiveComplexityCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      functionDecl(isDefinition(),
+      functionDecl(isDefinition(), hasBody(stmt()),
                    unless(anyOf(isDefaulted(), isDeleted(), isWeak())))
           .bind("func"),
       this);

@@ -8,7 +8,7 @@
 ; YAML-NEXT: Function:        fmul_splat
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Stores SLP vectorized with cost '
-; YAML-NEXT:   - Cost:            '-7'
+; YAML-NEXT:   - Cost:            '-9'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '4'
 ; YAML-NEXT: ...
@@ -18,7 +18,7 @@
 ; YAML-NEXT: Function:        fmul_splat_nested
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Stores SLP vectorized with cost '
-; YAML-NEXT:   - Cost:            '-13'
+; YAML-NEXT:   - Cost:            '-15'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '8'
 ; YAML-NEXT: ...

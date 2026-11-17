@@ -162,12 +162,12 @@ const char *Section::GetTypeAsCString() const {
 }
 
 Section::Section(const ModuleSP &module_sp, ObjectFile *obj_file,
-                 user_id_t sect_id, ConstString name, SectionType sect_type,
+                 user_id_t sect_id, std::string name, SectionType sect_type,
                  addr_t file_addr, addr_t byte_size, lldb::offset_t file_offset,
                  lldb::offset_t file_size, uint32_t log2align, uint32_t flags)
     : ModuleChild(module_sp), UserID(sect_id), Flags(flags),
-      m_obj_file(obj_file), m_type(sect_type), m_parent_wp(), m_name(name),
-      m_file_addr(file_addr), m_byte_size(byte_size),
+      m_obj_file(obj_file), m_type(sect_type), m_parent_wp(),
+      m_name(std::move(name)), m_file_addr(file_addr), m_byte_size(byte_size),
       m_file_offset(file_offset), m_file_size(file_size),
       m_log2align(log2align), m_children(), m_fake(false), m_encrypted(false),
       m_thread_specific(false), m_readable(false), m_writable(false),
@@ -175,12 +175,12 @@ Section::Section(const ModuleSP &module_sp, ObjectFile *obj_file,
 
 Section::Section(const lldb::SectionSP &parent_section_sp,
                  const ModuleSP &module_sp, ObjectFile *obj_file,
-                 user_id_t sect_id, ConstString name, SectionType sect_type,
+                 user_id_t sect_id, std::string name, SectionType sect_type,
                  addr_t file_addr, addr_t byte_size, lldb::offset_t file_offset,
                  lldb::offset_t file_size, uint32_t log2align, uint32_t flags)
     : ModuleChild(module_sp), UserID(sect_id), Flags(flags),
-      m_obj_file(obj_file), m_type(sect_type), m_parent_wp(), m_name(name),
-      m_file_addr(file_addr), m_byte_size(byte_size),
+      m_obj_file(obj_file), m_type(sect_type), m_parent_wp(),
+      m_name(std::move(name)), m_file_addr(file_addr), m_byte_size(byte_size),
       m_file_offset(file_offset), m_file_size(file_size),
       m_log2align(log2align), m_children(), m_fake(false), m_encrypted(false),
       m_thread_specific(false), m_readable(false), m_writable(false),

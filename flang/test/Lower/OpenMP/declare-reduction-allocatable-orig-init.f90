@@ -20,7 +20,7 @@ subroutine test_udr_orig_init()
   end do
 end subroutine
 
-! CHECK-LABEL: omp.declare_reduction @{{.*}}myinit_byref_box_heap_i32 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK-LABEL: omp.declare_reduction @{{.*}}myinit_byref_box_heap_i32 byref_element_type({{.*}}) : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:       init {
 ! CHECK:       ^bb0(%[[MOLD:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>, %[[ALLOC:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>):
 ! The loaded original element must reach the private element store, not be
@@ -29,7 +29,7 @@ end subroutine
 ! CHECK:         %[[MADDR:.*]] = fir.box_addr %[[MBOX]]
 ! CHECK:         %[[ORIG:.*]] = fir.load %[[MADDR]] : !fir.heap<i32>
 ! CHECK:         fir.store %[[ORIG]] to %[[OTMP:.*]] : !fir.ref<i32>
-! CHECK:         %[[ODECL:.*]]:2 = hlfir.declare %[[OTMP]] {{.*}}uniq_name = "omp_orig"
+! CHECK:         %[[ODECL:.*]]:2 = hlfir.declare %[[OTMP]] {{.*}}uniq_name("omp_orig")
 ! CHECK:         %[[PVAL:.*]] = fir.load %[[ODECL]]#0 : !fir.ref<i32>
 ! CHECK:         %[[PRIV:.*]] = fir.allocmem i32
 ! CHECK:         fir.store %[[PVAL]] to %[[PRIV]] : !fir.heap<i32>

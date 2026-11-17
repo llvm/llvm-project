@@ -17,7 +17,7 @@ int addrcmp(const void* a, const void* b) {
   // LLVM-NOT: sdiv
   // LLVM: trunc i64 %[[SUB]] to i32
 
-  // TODO: Fix inconsistency with LLVM (ptrtoint vs ptrtoaddr)
+  // TODO: Fix inconsistency with LLVM (ptrtoint vs ptrtoaddr).
   // OGCG-LABEL: define dso_local i32 @addrcmp(
   // OGCG: %[[PTR_A:.*]] = ptrtoaddr ptr {{.*}} to i64
   // OGCG: %[[PTR_B:.*]] = ptrtoaddr ptr {{.*}} to i64
@@ -42,7 +42,7 @@ unsigned long long test_ptr_diff(int *a, int* b) {
   // LLVM: %[[RETLOAD:.*]] = load i64, ptr %[[RETADDR]], align
   // LLVM: ret i64 %[[RETLOAD]]
 
-  // TODO: Fix inconsistency with LLVM (ptrtoint vs ptrtoaddr)
+  // TODO: Fix inconsistency with LLVM (ptrtoint vs ptrtoaddr).
   // OGCG-LABEL: define dso_local i64 @test_ptr_diff(
   // OGCG: %[[IA:.*]] = ptrtoaddr ptr %{{.*}} to i64
   // OGCG: %[[IB:.*]] = ptrtoaddr ptr %{{.*}} to i64

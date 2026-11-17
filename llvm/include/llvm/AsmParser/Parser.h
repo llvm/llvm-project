@@ -13,6 +13,7 @@
 #ifndef LLVM_ASMPARSER_PARSER_H
 #define LLVM_ASMPARSER_PARSER_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/AsmParser/AsmParserContext.h"
@@ -210,6 +211,15 @@ LLVM_ABI DIExpression *
 parseDIExpressionBodyAtBeginning(StringRef Asm, unsigned &Read,
                                  SMDiagnostic &Err, const Module &M,
                                  const SlotMapping *Slots);
+
+/// Parse standalone metadata definitions using and updating the supplied slot
+/// mapping. Each string must contain exactly one complete definition.
+/// \param ErrorDefinitionIndex The index of the definition containing an error.
+/// \return true on error.
+LLVM_ABI bool parseMetadataDefinitions(ArrayRef<StringRef> Definitions,
+                                       SMDiagnostic &Err, const Module &M,
+                                       SlotMapping &Slots,
+                                       unsigned &ErrorDefinitionIndex);
 
 } // End llvm namespace
 

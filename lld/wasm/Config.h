@@ -15,6 +15,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Support/CachePruning.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include <optional>
 
 namespace llvm {
@@ -39,6 +40,7 @@ class UndefinedFunction;
 class DefinedGlobal;
 class UndefinedGlobal;
 class TableSymbol;
+class InputChunk;
 
 // For --unresolved-symbols.
 enum class UnresolvedPolicy { ReportError, Warn, Ignore, ImportDynamic };
@@ -135,6 +137,7 @@ struct Config {
   std::optional<std::vector<std::string>> features;
   std::optional<std::vector<std::string>> extraFeatures;
   llvm::SmallVector<uint8_t, 0> buildIdVector;
+  llvm::cl::LibraryOptionsContext libraryOptions;
 
   bool isMultithreaded() const { return sharedMemory || cooperativeThreading; }
 };
@@ -151,6 +154,7 @@ struct Ctx {
   llvm::SmallVector<InputFunction *, 0> syntheticFunctions;
   llvm::SmallVector<InputGlobal *, 0> syntheticGlobals;
   llvm::SmallVector<InputTable *, 0> syntheticTables;
+  llvm::SmallVector<InputChunk *, 0> syntheticInputSegments;
 
   // linker-generated symbols
   struct WasmSym {

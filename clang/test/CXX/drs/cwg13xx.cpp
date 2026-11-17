@@ -730,9 +730,13 @@ namespace cwg1395 { // cwg1395: 16
 #if __cplusplus >= 201103L
   template <typename T, typename... U> void f(T, U...);
   template <typename T> void f(T);
+  // The non-pack overload is more specialized.
+  template <typename T, typename... U> constexpr int g(T, U...) { return 1; }
+  template <typename T> constexpr int g(T) { return 2; }
   void h(int i) {
     // This is made ambiguous by cwg692, but made valid again by cwg1395.
     f(&i);
+    static_assert(g(0) == 2, "");
   }
 #endif
 } // namespace cwg1395

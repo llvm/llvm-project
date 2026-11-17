@@ -28,7 +28,7 @@ func.func @fpext_e8m0_to_f16(%in : vector<16xf8E8M0FNU>) {
 
 func.func @fpext_bad_rounding(%in : vector<16xf8E5M2>) {
   // expected-error @+1 {{'nvgpu.extf' op expects RN rounding mode, but got #nvvm.fp_rnd_mode<rz>}}
-  %out = nvgpu.extf %in {rnd = #nvvm.fp_rnd_mode<rz>}
+  %out = nvgpu.extf %in <{rnd = #nvvm.fp_rnd_mode<rz>}>
       : vector<16xf8E5M2> to vector<16xf16>
   return
 }
@@ -37,7 +37,7 @@ func.func @fpext_bad_rounding(%in : vector<16xf8E5M2>) {
 
 func.func @fpext_relu_bf16(%in : vector<8xf8E5M2>) {
   // expected-error @+1 {{'nvgpu.extf' op relu is not supported for bf16 destination}}
-  %out = nvgpu.extf %in {relu = true} : vector<8xf8E5M2> to vector<8xbf16>
+  %out = nvgpu.extf %in <{relu = true}> : vector<8xf8E5M2> to vector<8xbf16>
   return
 }
 

@@ -8,6 +8,7 @@
 
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/ADT/GenericCycleImpl.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSSAContext.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -16,7 +17,8 @@
 
 using namespace llvm;
 
-template class llvm::GenericCycleInfo<llvm::MachineSSAContext>;
+template class LLVM_ABI_FOR_TEST
+    llvm::GenericCycleInfo<llvm::MachineSSAContext>;
 
 char MachineCycleInfoWrapperPass::ID = 0;
 
@@ -46,6 +48,11 @@ void MachineCycleInfoWrapperPass::print(raw_ostream &OS, const Module *) const {
   CI.print(OS);
 }
 
+void MachineCycleInfoWrapperPass::verifyAnalysis() const {
+  if (VerifyCycleInfo)
+    CI.verify();
+}
+
 void MachineCycleInfoWrapperPass::releaseMemory() {
   CI.clear();
   F = nullptr;
@@ -61,7 +68,7 @@ MachineCycleAnalysis::run(MachineFunction &MF,
   return MCI;
 }
 
-bool MachineCycleAnalysis::invalidate(
+bool MachineCycleInfo::invalidate(
     MachineFunction &, const PreservedAnalyses &PA,
     MachineFunctionAnalysisManager::Invalidator &) {
   // Check whether the analysis, all analyses on functions, or the function's
@@ -115,6 +122,13 @@ MachineCycleInfoPrinterPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
+PreservedAnalyses
+MachineCycleInfoVerifierPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  MFAM.getResult<MachineCycleAnalysis>(MF).verify();
+  return PreservedAnalyses::all();
+}
+
 bool llvm::isCycleInvariant(const MachineCycleInfo &CI, CycleRef Cycle,
                             MachineInstr &I) {
   MachineFunction *MF = I.getParent()->getParent();
@@ -143,7 +157,7 @@ bool llvm::isCycleInvariant(const MachineCycleInfo &CI, CycleRef Cycle,
         // then this use is safe to hoist.
         if (!MRI->isConstantPhysReg(Reg) &&
             !(TRI->isCallerPreservedPhysReg(Reg.asMCReg(), *I.getMF())) &&
-            !TII->isIgnorableUse(MO))
+            !TII->isIgnorableUse(I, I.getOperandNo(&MO)))
           return false;
         // Otherwise it's safe to move.
         continue;

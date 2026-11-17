@@ -82,8 +82,7 @@ void PDLPatternModule::mergeIn(PDLPatternModule &&other) {
     registerRewriteFunction(it.first(), std::move(it.second));
   for (auto &it : other.configs)
     configs.emplace_back(std::move(it));
-  for (auto &it : other.configMap)
-    configMap.insert(it);
+  configMap.insert_range(other.configMap);
 
   // Steal the other state if we have no patterns.
   if (!pdlModule) {

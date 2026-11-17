@@ -27,6 +27,7 @@
 ; CHECK:   scalarize-masked-mem-intrin
 ; CHECK:   expand-reductions
 ; CHECK:   codegenprepare
+; CHECK:   sjlj-eh-prepare
 ; CHECK:   dwarf-eh-prepare
 ; CHECK:   inline-asm-prepare
 ; CHECK:   safe-stack
@@ -49,9 +50,8 @@
 ; CHECK:     dead-mi-elimination
 ; CHECK:     detect-dead-lanes
 ; CHECK:     init-undef
-; CHECK:     process-imp-defs
+; CHECK:     process-implicit-defs
 ; CHECK:     unreachable-mbb-elimination
-; CHECK:     require<live-vars>
 ; CHECK:     require<machine-loops>
 ; CHECK:     phi-node-elimination
 ; CHECK:     two-address-instruction
@@ -80,7 +80,7 @@
 ; CHECK:     xray-instrumentation
 ; CHECK:     patchable-function
 ; CHECK:     lanai-delay-slot-fillter
-; CHECK:     FuncletLayoutPass
+; CHECK:     funclet-layout
 ; CHECK:     remove-loads-into-fake-uses
 ; CHECK:     StackMapLivenessPass
 ; CHECK:     live-debug-values

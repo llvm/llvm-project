@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the MemProfUsePass class and related utilities.
+// This file declares the MemProfUsePass class and related utilities for
+// profile-guided memory optimization (MemPGO).
 //
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_MEMPROFUSE_H
@@ -17,15 +18,12 @@
 #include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 
 namespace llvm {
 class IndexedInstrProfReader;
 class Module;
 class TargetLibraryInfo;
-
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 class MemProfUsePass : public OptionalPassInfoMixin<MemProfUsePass> {
 public:

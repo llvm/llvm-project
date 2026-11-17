@@ -101,17 +101,14 @@ TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
 
 TEST(CompilerInstance,
     OpenAccDefaultNoneScalarsStrictDisableOptionUsesDriverTable) {
-  CompilerInstance compInst;
-  compInst.createDiagnostics();
-
-  auto invocation = std::make_shared<CompilerInvocation>();
-  invocation->getTargetOpts().triple =
-      llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
-
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
 
-  compInst.setInvocation(std::move(invocation));
+  CompilerInstance compInst;
+  compInst.createDiagnostics();
+  compInst.getInvocation().getTargetOpts().triple =
+      llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
+
   ASSERT_TRUE(compInst.setUpTargetMachine());
   auto &context = compInst.createNewSemanticsContext();
 

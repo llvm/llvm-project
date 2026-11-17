@@ -118,7 +118,7 @@ important:
 
 - `CMAKE_SYSTEM_NAME`: Perhaps surprisingly, explicitly setting this
   variable [causes CMake to set
-  CMAKE_CROSSCOMPIILING](https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html#variable:CMAKE_CROSSCOMPILING).
+  CMAKE_CROSSCOMPILING](https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html#variable:CMAKE_CROSSCOMPILING).
 - `CMAKE_{C,CXX}_COMPILER_TARGET`: This will be used to set the
   `--target` argument to `clang`. The triple should match the triple used
   within the sysroot (i.e. `$SYSROOT/usr/lib/$TARGET` should exist).
@@ -135,7 +135,7 @@ important:
   for the target system into system directories for the host system. It is
   not required unless you are going to use the `install` target.
 
-See [LLVM's build documentation](https://llvm.org/docs/CMake.html#frequently-used-cmake-variables) for more
+See [LLVM's build documentation](CMake.md#frequently-used-cmake-variables) for more
 guidance on CMake variables (e.g. `LLVM_TARGETS_TO_BUILD` may be useful if
 your cross-compiled binaries only need to support compiling for one target).
 
@@ -222,6 +222,5 @@ tar -czvf clang-$TARGET.tar.gz -C $HOME clang-$TARGET
 The generated toolchain is portable, but requires compatible versions of any
 shared libraries it links against. This means using a sysroot that is as
 similar to your target operating system as possible is desirable. Other [CMake
-variables](https://llvm.org/docs/CMake.html#frequently-used-cmake-variables)
+variables](CMake.md#frequently-used-cmake-variables)
 may be helpful, for instance `LLVM_STATIC_LINK_CXX_STDLIB`.
-

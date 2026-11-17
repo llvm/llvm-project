@@ -6,6 +6,9 @@ modernize-use-nullptr
 The check converts the usage of null pointer constants (e.g. ``NULL``, ``0``)
 to use the new C++11 and C23 ``nullptr`` keyword.
 
+It also replaces references to ``decltype(nullptr)`` with ``std::nullptr_t``
+from ``<cstdef>``.
+
 Example
 -------
 
@@ -21,10 +24,14 @@ Example
     return 0;
   }
 
+  void expect_null(decltype(nullptr));
+
 
 transforms to:
 
 .. code-block:: c++
+
+  #include <cstddef>
 
   void assignment() {
     char *a = nullptr;
@@ -36,6 +43,9 @@ transforms to:
     return nullptr;
   }
 
+  void expect_null(std::nullptr_t);
+
+
 Options
 -------
 
@@ -43,13 +53,23 @@ Options
 
   Semicolon-separated list of regular expressions to match pointer types for
   which implicit casts will be ignored. Default value:
-  `std::_CmpUnspecifiedParam::;^std::__cmp_cat::__unspec`.
+  `std::_CmpUnspecifiedParam::;^std::__cmp_cat::__unspec;^std::__cmp_cat::__literal_zero`.
 
 .. option:: NullMacros
 
    Comma-separated list of macro names that will be transformed along with
    ``NULL``. By default this check will only replace the ``NULL`` macro and will
    skip any similar user-defined macros.
+
+.. option:: UseNullptrT
+
+   Boolean controlling whether we should replace ``decltype(nullptr)`` with the
+   type ``std::nullptr_t`` from ``<cstddef>``. Defaults to ``true``.
+
+.. option:: IncludeStyle
+
+   A string specifying which include-style is used, `llvm` or `google`. Default
+   is `llvm`.
 
 Example
 ^^^^^^^

@@ -74,6 +74,7 @@ static_library("LLVMWebAssemblyCodeGen") {
     "//llvm/lib/IR",
     "//llvm/lib/IRPrinter",
     "//llvm/lib/MC",
+    "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",

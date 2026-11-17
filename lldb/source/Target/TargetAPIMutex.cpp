@@ -8,29 +8,26 @@
 
 #include "lldb/Target/TargetAPIMutex.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Policy.h"
 
 using namespace lldb_private;
 
+void TargetAPIMutex::Resolve() {
+  if (!m_target_sp)
+    return;
+
+  std::recursive_mutex *real_mutex = m_target_sp->GetAPIMutexForCurrentPolicy();
+  m_mutex = real_mutex
+                ? std::shared_ptr<std::recursive_mutex>(m_target_sp, real_mutex)
+                : nullptr;
+}
+
 void TargetAPIMutex::lock() {
-  if (m_target_sp) {
-    Policy policy = PolicyStack::Get().Current();
-    std::recursive_mutex &real_mutex = policy.view == Policy::View::Private
-                                           ? m_target_sp->m_private_mutex
-                                           : m_target_sp->m_mutex;
-    m_mutex = std::shared_ptr<std::recursive_mutex>(m_target_sp, &real_mutex);
-  }
+  Resolve();
   if (m_mutex)
     m_mutex->lock();
 }
 
 bool TargetAPIMutex::try_lock() {
-  if (m_target_sp) {
-    Policy policy = PolicyStack::Get().Current();
-    std::recursive_mutex &real_mutex = policy.view == Policy::View::Private
-                                           ? m_target_sp->m_private_mutex
-                                           : m_target_sp->m_mutex;
-    m_mutex = std::shared_ptr<std::recursive_mutex>(m_target_sp, &real_mutex);
-  }
+  Resolve();
   return m_mutex ? m_mutex->try_lock() : true;
 }

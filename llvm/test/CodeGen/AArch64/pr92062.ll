@@ -10,8 +10,8 @@ define void @foo() {
 ; CHECK:       // %bb.0: // %bb
 ; CHECK-NEXT:    adrp x8, :got:p
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:p]
-; CHECK-NEXT:    ldr x8, [x8]
 ; CHECK-NEXT:    mov x9, xzr
+; CHECK-NEXT:    ldr x8, [x8]
 ; CHECK-NEXT:    str x8, [x9]
 ; CHECK-NEXT:    ret
 bb:

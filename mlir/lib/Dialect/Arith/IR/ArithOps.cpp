@@ -22,11 +22,13 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -83,12 +85,48 @@ static IntegerAttr xorIntegerAttrs(PatternRewriter &builder, Value res,
   return applyToIntegerAttrs(builder, res, lhs, rhs, std::bit_xor<APInt>());
 }
 
-// Merge overflow flags from 2 ops, selecting the most conservative combination.
+// Intersect overflow flags. Callers must ensure the common flags remain valid
+// after rewriting.
 static IntegerOverflowFlagsAttr
 mergeOverflowFlags(IntegerOverflowFlagsAttr val1,
                    IntegerOverflowFlagsAttr val2) {
   return IntegerOverflowFlagsAttr::get(val1.getContext(),
                                        val1.getValue() & val2.getValue());
+}
+
+using OverflowCheckedBinaryOp = APInt (APInt::*)(const APInt &, bool &) const;
+
+// For fixed-width integers, if combining the constants does not overflow, the
+// reassociated expression has the same mathematical result as the original
+// expression. Common source flags then rule out overflow in the new operation.
+static IntegerOverflowFlagsAttr mergeOverflowFlagsForReassociation(
+    IntegerOverflowFlagsAttr val1, IntegerOverflowFlagsAttr val2, Attribute lhs,
+    Attribute rhs, OverflowCheckedBinaryOp signedOp,
+    OverflowCheckedBinaryOp unsignedOp) {
+  IntegerOverflowFlags flags = val1.getValue() & val2.getValue();
+  if (flags == IntegerOverflowFlags::none)
+    return IntegerOverflowFlagsAttr::get(val1.getContext(), flags);
+
+  auto lhsAttr = llvm::cast<IntegerAttr>(lhs);
+  auto rhsAttr = llvm::cast<IntegerAttr>(rhs);
+  // TODO: Handle index separately; its storage width is not its target width.
+  if (isa<IndexType>(lhsAttr.getType()))
+    return IntegerOverflowFlagsAttr::get(val1.getContext(), flags);
+
+  const APInt &lhsValue = lhsAttr.getValue();
+  const APInt &rhsValue = rhsAttr.getValue();
+  bool overflow;
+  if (bitEnumContainsAny(flags, IntegerOverflowFlags::nsw)) {
+    (void)(lhsValue.*signedOp)(rhsValue, overflow);
+    if (overflow)
+      flags = bitEnumClear(flags, IntegerOverflowFlags::nsw);
+  }
+  if (bitEnumContainsAny(flags, IntegerOverflowFlags::nuw)) {
+    (void)(lhsValue.*unsignedOp)(rhsValue, overflow);
+    if (overflow)
+      flags = bitEnumClear(flags, IntegerOverflowFlags::nuw);
+  }
+  return IntegerOverflowFlagsAttr::get(val1.getContext(), flags);
 }
 
 /// Invert an integer comparison predicate.
@@ -461,7 +499,7 @@ void arith::AddIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 //===----------------------------------------------------------------------===//
 
 std::optional<SmallVector<int64_t, 4>>
-arith::AddUIExtendedOp::getShapeForUnroll() {
+arith::AddUIExtendedOp::getIterationShapeToUnroll() {
   if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
@@ -525,7 +563,7 @@ void arith::AddUIExtendedOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 std::optional<SmallVector<int64_t, 4>>
-arith::SubUIExtendedOp::getShapeForUnroll() {
+arith::SubUIExtendedOp::getIterationShapeToUnroll() {
   if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
@@ -697,7 +735,7 @@ void arith::MulIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 //===----------------------------------------------------------------------===//
 
 std::optional<SmallVector<int64_t, 4>>
-arith::MulSIExtendedOp::getShapeForUnroll() {
+arith::MulSIExtendedOp::getIterationShapeToUnroll() {
   if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
@@ -741,7 +779,7 @@ void arith::MulSIExtendedOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 std::optional<SmallVector<int64_t, 4>>
-arith::MulUIExtendedOp::getShapeForUnroll() {
+arith::MulUIExtendedOp::getIterationShapeToUnroll() {
   if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
@@ -1051,6 +1089,17 @@ OpFoldResult arith::FloorDivSIOp::fold(FoldAdaptor adaptor) {
   return overflowOrDiv ? Attribute() : result;
 }
 
+Speculation::Speculatability FloorDivSIOp::getSpeculatability() {
+  // Division by zero is UB.
+  // Signed division overflow (INT_MIN / -1) is also UB.
+  Value divisor = getRhs();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
+      matchPattern(divisor, m_IntRangeWithoutNegOneS()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
+}
+
 //===----------------------------------------------------------------------===//
 // RemUIOp
 //===----------------------------------------------------------------------===//
@@ -1132,11 +1181,13 @@ Speculation::Speculatability arith::RemSIOp::getSpeculatability() {
 // AndIOp
 //===----------------------------------------------------------------------===//
 
-/// Fold `and(a, and(a, b))` to `and(a, b)`
-static Value foldAndIofAndI(arith::AndIOp op) {
+/// Fold `op(a, op(a, b))` to `op(a, b)` for an associative, commutative and
+/// idempotent `op` (e.g. `and`, `or`).
+template <typename OpTy>
+static Value foldIdempotentOfSameOp(OpTy op) {
   for (bool reversePrev : {false, true}) {
     auto prev = (reversePrev ? op.getRhs() : op.getLhs())
-                    .getDefiningOp<arith::AndIOp>();
+                    .template getDefiningOp<OpTy>();
     if (!prev)
       continue;
 
@@ -1170,7 +1221,7 @@ OpFoldResult arith::AndIOp::fold(FoldAdaptor adaptor) {
     return Builder(getContext()).getZeroAttr(getType());
 
   /// and(a, and(a, b)) -> and(a, b)
-  if (Value result = foldAndIofAndI(*this))
+  if (Value result = foldIdempotentOfSameOp(*this))
     return result;
 
   return constFoldBinaryOp<IntegerAttr>(
@@ -1203,6 +1254,10 @@ OpFoldResult arith::OrIOp::fold(FoldAdaptor adaptor) {
                                           m_ConstantInt(&intValue))) &&
       intValue.isAllOnes())
     return getLhs().getDefiningOp<XOrIOp>().getRhs();
+
+  /// or(a, or(a, b)) -> or(a, b)
+  if (Value result = foldIdempotentOfSameOp(*this))
+    return result;
 
   return constFoldBinaryOp<IntegerAttr>(
       adaptor.getOperands(),
@@ -1261,8 +1316,12 @@ OpFoldResult arith::NegFOp::fold(FoldAdaptor adaptor) {
   /// negf(negf(x)) -> x
   if (auto op = this->getOperand().getDefiningOp<arith::NegFOp>())
     return op.getOperand();
-  return constFoldUnaryOp<FloatAttr>(adaptor.getOperands(),
-                                     [](const APFloat &a) { return -a; });
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        if (!APFloat::semanticsHasSignedRepr(a.getSemantics()))
+          return std::nullopt;
+        return -a;
+      });
 }
 
 //===----------------------------------------------------------------------===//
@@ -1295,6 +1354,9 @@ OpFoldResult arith::AddFOp::fold(FoldAdaptor adaptor) {
   // addf(x, -0) -> x
   if (matchPattern(adaptor.getRhs(), m_NegZeroFloat()))
     return getLhs();
+  if (matchPattern(adaptor.getRhs(), m_PosZeroFloat()) &&
+      bitEnumContainsAll(adaptor.getFastmath(), FastMathFlags::nsz))
+    return getLhs();
 
   auto rm = getRoundingmode();
   return constFoldBinaryOp<FloatAttr>(
@@ -1318,10 +1380,19 @@ OpFoldResult arith::SubFOp::fold(FoldAdaptor adaptor) {
   // subf(x, +0) -> x
   if (matchPattern(adaptor.getRhs(), m_PosZeroFloat()))
     return getLhs();
+  if (matchPattern(adaptor.getRhs(), m_NegZeroFloat()) &&
+      bitEnumContainsAll(adaptor.getFastmath(), FastMathFlags::nsz))
+    return getLhs();
 
   auto rm = getRoundingmode();
-  return constFoldBinaryOp<FloatAttr>(
-      adaptor.getOperands(), [rm](const APFloat &a, const APFloat &b) {
+  return constFoldBinaryOpConditional<FloatAttr>(
+      adaptor.getOperands(),
+      [rm](const APFloat &a, const APFloat &b) -> std::optional<APFloat> {
+        // A negative difference is not representable in types such as
+        // f8E8M0FNU, and APFloat::subtract does not support computing it.
+        if (!APFloat::semanticsHasSignedRepr(a.getSemantics()) &&
+            a.compare(b) == APFloat::cmpLessThan)
+          return std::nullopt;
         APFloat result(a);
         result.subtract(b, convertArithRoundingModeToLLVMIR(rm));
         return result;
@@ -1334,71 +1405,6 @@ void arith::SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 }
 
 namespace {
-
-// A helper for the conversion:
-//
-//    trunc(extremum(ext(lhs), ext(rhs))) -> extremum(lhs, rhs)
-//
-// To make sure that type conversion won't lose information.
-//
-// For floating point conversion, we can't allow conversion between
-// -0 and +0. More importantly, we can't allow a conversion from
-// sNaN to qNaN. That changes semantics.
-// When `ignoreNaNs` is set, differences between NaN representations
-// may be ignored, but source non-finite values must not become
-// finite.
-static bool isLosslesslyConvertibleTo(const llvm::fltSemantics &from,
-                                      const llvm::fltSemantics &to,
-                                      bool ignoreNaNs = false) {
-  if (!llvm::APFloatBase::isRepresentableBy(from, to))
-    return false;
-
-  if ((from.hasZero && !to.hasZero) ||
-      (from.hasSignedRepr && !to.hasSignedRepr))
-    return false;
-
-  // NegativeZero NaN encoding repurposes the negative-zero bit pattern, so a
-  // conversion to such a format cannot preserve a source negative zero.
-  bool fromHasSignedZero =
-      from.hasZero && from.hasSignedRepr &&
-      from.nanEncoding != llvm::fltNanEncoding::NegativeZero;
-  bool toHasSignedZero = to.hasZero && to.hasSignedRepr &&
-                         to.nanEncoding != llvm::fltNanEncoding::NegativeZero;
-  if (fromHasSignedZero && !toHasSignedZero)
-    return false;
-
-  // isRepresentableBy compares the normalized exponent ranges. Also ensure
-  // that the smallest source value, which may be denormal, is represented
-  // exactly by the destination semantics.
-  llvm::APFloat smallestFrom = llvm::APFloat::getSmallest(from);
-  bool losesInfo = false;
-  (void)smallestFrom.convert(to, llvm::APFloat::rmNearestTiesToEven,
-                             &losesInfo);
-  if (losesInfo)
-    return false;
-
-  if (from.nonFiniteBehavior == llvm::fltNonfiniteBehavior::FiniteOnly)
-    return true;
-
-  // If we're ignoring NaNs, we can return early if the nonFiniteBehavior
-  // matches.
-  if (ignoreNaNs)
-    return to.nonFiniteBehavior != llvm::fltNonfiniteBehavior::FiniteOnly;
-
-  if (from.nonFiniteBehavior == llvm::fltNonfiniteBehavior::IEEE754) {
-    // Converting an IEEE signaling NaN to another semantics quiets it, so the
-    // original value cannot be recovered by converting it back.
-    return false;
-  }
-
-  // NanOnly formats have no signaling NaNs. IEEE semantics can represent
-  // their quiet NaNs; conversions between NanOnly formats are conservatively
-  // accepted only when they use the same NaN encoding.
-  if (to.nonFiniteBehavior == llvm::fltNonfiniteBehavior::IEEE754)
-    return true;
-  return to.nonFiniteBehavior == llvm::fltNonfiniteBehavior::NanOnly &&
-         from.nanEncoding == to.nanEncoding;
-}
 
 /// Narrow an extremum whose operands were extended from the result type:
 ///
@@ -1450,14 +1456,15 @@ struct NarrowExtremum final : OpRewritePattern<TruncOp> {
       if constexpr (std::is_same_v<TruncOp, TruncFOp>)
         ignoreNaNs =
             bitEnumContainsAll(extremumOp.getFastmath(), FastMathFlags::nnan);
-      if (!isLosslesslyConvertibleTo(narrowSemantics, wideSemantics,
-                                     ignoreNaNs))
+      if (!llvm::APFloatBase::isLosslesslyConvertibleTo(
+              narrowSemantics, wideSemantics, ignoreNaNs))
         return failure();
     }
 
-    rewriter.replaceOpWithNewOp<ExtremumOp>(truncOp, TypeRange{narrowType},
-                                            ValueRange{lhs, rhs},
-                                            extremumOp->getAttrs());
+    rewriter.replaceOpWithNewOp<ExtremumOp>(
+        truncOp, TypeRange{narrowType}, ValueRange{lhs, rhs},
+        extremumOp.getProperties(),
+        extremumOp->getDiscardableAttrDictionary().getValue());
     return success();
   }
 };
@@ -1494,6 +1501,22 @@ OpFoldResult arith::MaxNumFOp::fold(FoldAdaptor adaptor) {
     return getLhs();
 
   return constFoldBinaryOp<FloatAttr>(adaptor.getOperands(), llvm::maxnum);
+}
+
+//===----------------------------------------------------------------------===//
+// MaximumNumFOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult arith::MaximumNumFOp::fold(FoldAdaptor adaptor) {
+  // maximumnumf(x,x) -> x
+  if (getLhs() == getRhs())
+    return getRhs();
+
+  // maximumnumf(x, NaN) -> x
+  if (matchPattern(adaptor.getRhs(), m_NaNFloat()))
+    return getLhs();
+
+  return constFoldBinaryOp<FloatAttr>(adaptor.getOperands(), llvm::maximumnum);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1575,6 +1598,22 @@ OpFoldResult arith::MinNumFOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// MinimumNumFOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult arith::MinimumNumFOp::fold(FoldAdaptor adaptor) {
+  // minimumnumf(x,x) -> x
+  if (getLhs() == getRhs())
+    return getRhs();
+
+  // minimumnumf(x, NaN) -> x
+  if (matchPattern(adaptor.getRhs(), m_NaNFloat()))
+    return getLhs();
+
+  return constFoldBinaryOp<FloatAttr>(adaptor.getOperands(), llvm::minimumnum);
+}
+
+//===----------------------------------------------------------------------===//
 // MinSIOp
 //===----------------------------------------------------------------------===//
 
@@ -1629,11 +1668,17 @@ OpFoldResult arith::MulFOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_OneFloat()))
     return getLhs();
 
+  // Match LLVM InstSimplify: with nnan+nsz, X * 0 -> 0 for a non-constant X.
+  // When both operands are constants, fall through to APFloat so IEEE signed
+  // zeros are preserved (e.g. (-c) * +0.0 == -0.0).
   if (arith::bitEnumContainsAll(getFastmath(), arith::FastMathFlags::nnan |
-                                                   arith::FastMathFlags::nsz)) {
+                                                   arith::FastMathFlags::nsz) &&
+      !(adaptor.getLhs() && adaptor.getRhs())) {
     // mulf(x, 0) -> 0
     if (matchPattern(adaptor.getRhs(), m_AnyZeroFloat()))
       return getRhs();
+    if (matchPattern(adaptor.getLhs(), m_AnyZeroFloat()))
+      return getLhs();
   }
 
   auto rm = getRoundingmode();
@@ -1925,6 +1970,93 @@ LogicalResult arith::ExtFOp::verify() { return verifyExtOp<FloatType>(*this); }
 // ScalingExtFOp
 //===----------------------------------------------------------------------===//
 
+/// Fold `calculate` element-wise over the operands of a scaling cast op. The
+/// `constFoldBinaryOp` helpers cannot be used: they bail out unless both
+/// operands have the same type, and `in` and `scale` never do.
+static Attribute foldScalingCastOp(
+    Attribute inAttr, Attribute scaleAttr, Type resultType,
+    function_ref<std::optional<APFloat>(const APFloat &, const APFloat &)>
+        calculate) {
+  // Poison propagates, as it does in the generic constant folders.
+  if (isa_and_nonnull<ub::PoisonAttr>(inAttr))
+    return inAttr;
+  if (isa_and_nonnull<ub::PoisonAttr>(scaleAttr))
+    return scaleAttr;
+
+  if (!inAttr || !scaleAttr || !resultType)
+    return {};
+
+  if (auto inFloat = dyn_cast<FloatAttr>(inAttr)) {
+    auto scaleFloat = dyn_cast<FloatAttr>(scaleAttr);
+    if (!scaleFloat)
+      return {};
+    std::optional<APFloat> result =
+        calculate(inFloat.getValue(), scaleFloat.getValue());
+    if (!result)
+      return {};
+    return FloatAttr::get(resultType, *result);
+  }
+
+  auto inElements = dyn_cast<DenseFPElementsAttr>(inAttr);
+  auto scaleElements = dyn_cast<DenseFPElementsAttr>(scaleAttr);
+  auto shapedResultType = dyn_cast<ShapedType>(resultType);
+  if (!inElements || !scaleElements || !shapedResultType ||
+      !shapedResultType.hasStaticShape() ||
+      inElements.getNumElements() != scaleElements.getNumElements())
+    return {};
+
+  // Both operands are splats, so avoid expanding the elements out.
+  if (inElements.isSplat() && scaleElements.isSplat()) {
+    std::optional<APFloat> result =
+        calculate(inElements.getSplatValue<APFloat>(),
+                  scaleElements.getSplatValue<APFloat>());
+    if (!result)
+      return {};
+    return DenseElementsAttr::get(shapedResultType, *result);
+  }
+
+  SmallVector<APFloat> results;
+  results.reserve(inElements.getNumElements());
+  for (const auto &[in, scale] : llvm::zip_equal(inElements, scaleElements)) {
+    std::optional<APFloat> result = calculate(in, scale);
+    if (!result)
+      return {};
+    results.push_back(*result);
+  }
+  return DenseElementsAttr::get(shapedResultType, results);
+}
+
+/// Only scales that already are f8E8M0FNU fold. What a wider scale means is
+/// unsettled -- the tree does not say whether truncating one to f8E8M0FNU
+/// rounds or takes its exponent -- so a folder should not settle it, see
+/// https://github.com/llvm/llvm-project/issues/215295.
+static bool isFoldableScalingScale(Value scale) {
+  return isa<Float8E8M0FNUType>(getElementTypeOrSelf(scale.getType()));
+}
+
+OpFoldResult arith::ScalingExtFOp::fold(FoldAdaptor adaptor) {
+  // scaling_extf(in, scale) -> mulf(extf(in), extf(scale)), matching the
+  // expansion in ExpandOps.cpp. As in arith.extf, the widening steps only fold
+  // when they are lossless.
+  if (!isFoldableScalingScale(getScale()))
+    return {};
+
+  auto resElemType = cast<FloatType>(getElementTypeOrSelf(getType()));
+  const llvm::fltSemantics &resSemantics = resElemType.getFloatSemantics();
+  return foldScalingCastOp(
+      adaptor.getIn(), adaptor.getScale(), getType(),
+      [&resSemantics](const APFloat &in,
+                      const APFloat &scale) -> std::optional<APFloat> {
+        FailureOr<APFloat> inExt = convertFloatValue(in, resSemantics);
+        FailureOr<APFloat> scaleExt = convertFloatValue(scale, resSemantics);
+        if (failed(inExt) || failed(scaleExt))
+          return std::nullopt;
+        APFloat result(*inExt);
+        result.multiply(*scaleExt, kDefaultRoundingMode);
+        return result;
+      });
+}
+
 bool arith::ScalingExtFOp::areCastCompatible(TypeRange inputs,
                                              TypeRange outputs) {
   return checkWidthChangeCast<std::greater, FloatType>(inputs.front(), outputs);
@@ -1958,9 +2090,11 @@ OpFoldResult arith::TruncIOp::fold(FoldAdaptor adaptor) {
       return src;
   }
 
-  // trunci(trunci(a)) -> trunci(a))
-  if (matchPattern(getOperand(), m_Op<arith::TruncIOp>())) {
-    setOperand(getOperand().getDefiningOp()->getOperand(0));
+  // trunci(trunci(a)) -> trunci(a)
+  if (auto truncOp = getOperand().getDefiningOp<arith::TruncIOp>()) {
+    // Preserve a flag only if both truncations are lossless in that signedness.
+    setOverflowFlags(getOverflowFlags() & truncOp.getOverflowFlags());
+    setOperand(truncOp.getIn());
     return getResult();
   }
 
@@ -2005,8 +2139,9 @@ OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
         cast<FloatType>(getElementTypeOrSelf(extOp.getType()));
     // Check whether every source value round-trips through the intermediate
     // type, including signaling NaNs and signed zero.
-    if (isLosslesslyConvertibleTo(srcType.getFloatSemantics(),
-                                  intermediateType.getFloatSemantics())) {
+    if (llvm::APFloatBase::isLosslesslyConvertibleTo(
+            srcType.getFloatSemantics(),
+            intermediateType.getFloatSemantics())) {
       // truncf(extf(a)) -> truncf(a)
       if (srcType.getWidth() > resElemType.getWidth()) {
         setOperand(src);
@@ -2039,8 +2174,10 @@ void arith::TruncFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                   MLIRContext *context) {
   patterns.add<NarrowExtremum<TruncFOp, ExtFOp, MaximumFOp>,
                NarrowExtremum<TruncFOp, ExtFOp, MaxNumFOp>,
+               NarrowExtremum<TruncFOp, ExtFOp, MaximumNumFOp>,
                NarrowExtremum<TruncFOp, ExtFOp, MinimumFOp>,
                NarrowExtremum<TruncFOp, ExtFOp, MinNumFOp>,
+               NarrowExtremum<TruncFOp, ExtFOp, MinimumNumFOp>,
                TruncFSIToFPToSIToFP, TruncFUIToFPToUIToFP>(context);
 }
 
@@ -2102,6 +2239,35 @@ LogicalResult arith::ConvertFOp::verify() {
 //===----------------------------------------------------------------------===//
 // ScalingTruncFOp
 //===----------------------------------------------------------------------===//
+
+OpFoldResult arith::ScalingTruncFOp::fold(FoldAdaptor adaptor) {
+  // scaling_truncf(in, scale) -> truncf(in / extf(scale)), matching the
+  // expansion in ExpandOps.cpp. Unlike scaling_extf, the scale is widened to
+  // the type of `in` rather than to the result type.
+  if (!isFoldableScalingScale(getScale()))
+    return {};
+
+  auto inElemType = cast<FloatType>(getElementTypeOrSelf(getIn().getType()));
+  auto resElemType = cast<FloatType>(getElementTypeOrSelf(getType()));
+  const llvm::fltSemantics &inSemantics = inElemType.getFloatSemantics();
+  const llvm::fltSemantics &resSemantics = resElemType.getFloatSemantics();
+  llvm::RoundingMode roundingMode =
+      convertArithRoundingModeToLLVMIR(getRoundingmode());
+  return foldScalingCastOp(
+      adaptor.getIn(), adaptor.getScale(), getType(),
+      [&](const APFloat &in, const APFloat &scale) -> std::optional<APFloat> {
+        FailureOr<APFloat> scaleExt = convertFloatValue(scale, inSemantics);
+        if (failed(scaleExt))
+          return std::nullopt;
+        APFloat quotient(in);
+        quotient.divide(*scaleExt, kDefaultRoundingMode);
+        FailureOr<APFloat> result =
+            convertFloatValue(quotient, resSemantics, roundingMode);
+        if (failed(result))
+          return std::nullopt;
+        return *result;
+      });
+}
 
 bool arith::ScalingTruncFOp::areCastCompatible(TypeRange inputs,
                                                TypeRange outputs) {
@@ -2188,6 +2354,11 @@ OpFoldResult arith::SIToFPOp::fold(FoldAdaptor adaptor) {
         FloatType floatTy = llvm::cast<FloatType>(resEleType);
         APFloat apf(floatTy.getFloatSemantics(),
                     APInt::getZero(floatTy.getWidth()));
+        if (a.isNegative() &&
+            !APFloat::semanticsHasSignedRepr(floatTy.getFloatSemantics())) {
+          castStatus = false;
+          return apf;
+        }
         apf.convertFromAPInt(a, /*IsSigned=*/true,
                              APFloat::rmNearestTiesToEven);
         return apf;
@@ -2611,6 +2782,7 @@ OpFoldResult arith::CmpFOp::fold(FoldAdaptor adaptor) {
   return BoolAttr::get(getContext(), val);
 }
 
+namespace {
 class CmpFIntToFPConst final : public OpRewritePattern<CmpFOp> {
 public:
   using Base::Base;
@@ -2682,6 +2854,34 @@ public:
     // Number of bits representing values, as opposed to the sign
     auto valueBits = isUnsigned ? intWidth : (intWidth - 1);
 
+    const llvm::fltSemantics &semantics = floatTy.getFloatSemantics();
+
+    // Conservatively require an exact representation of integer zero. For
+    // example, f8E8M0FNU converts zero to its smallest positive value.
+    if (!APFloat::semanticsHasZero(semantics))
+      return failure();
+
+    // Signed inputs may be negative, which e.g. f8E5M3FNU cannot represent.
+    // Do not try to convert the signed minimum below for such formats.
+    if (!isUnsigned && !APFloat::semanticsHasSignedRepr(semantics))
+      return failure();
+
+    if (!APFloat::semanticsHasInf(semantics)) {
+      // Overflow can produce NaN or saturate to a finite value:
+      // - sitofp(1000 : i32) to f8E4M3FN is NaN, so cmpf ogt against 0.0
+      //   is false, whereas cmpi sgt against integer zero would be true.
+      // - uitofp(8 : i4) to f6E2M3FN saturates to 7.5. Equality against 7.5
+      //   is true, but the fractional-constant logic below would fold it to
+      //   false. Its four bits of precision do not prevent overflow.
+      //
+      // Conservatively require the enclosing 2^valueBits (and its negative
+      // for signed inputs) to be representable, so rounding stays within
+      // finite bounds. Equality at the exponent bound is safe.
+      if (APFloat::semanticsMaxExponent(semantics) <
+          static_cast<int>(valueBits))
+        return failure();
+    }
+
     // Following test does NOT adjust intWidth downwards for signed inputs,
     // because the most negative value still requires all the mantissa bits
     // to distinguish it from one less than that value.
@@ -2690,8 +2890,9 @@ public:
       int exponent = ilogb(rhs);
       if (exponent == APFloat::IEK_Inf) {
         int maxExponent = ilogb(APFloat::getLargest(rhs.getSemantics()));
-        if (maxExponent < (int)valueBits) {
-          // Conversion could create infinity.
+        if (maxExponent < static_cast<int>(valueBits)) {
+          // Conversion could create infinity. For example, sitofp(65536 : i32)
+          // to f16 is +inf, so equality against +inf can be true.
           return failure();
         }
       } else {
@@ -2707,11 +2908,13 @@ public:
     // Convert to equivalent cmpi predicate
     CmpIPredicate pred;
     switch (op.getPredicate()) {
+    case CmpFPredicate::AlwaysTrue:
     case CmpFPredicate::ORD:
       // Int to fp conversion doesn't create a nan (ord checks neither is a nan)
       rewriter.replaceOpWithNewOp<ConstantIntOp>(op, /*value=*/true,
                                                  /*width=*/1);
       return success();
+    case CmpFPredicate::AlwaysFalse:
     case CmpFPredicate::UNO:
       // Int to fp conversion doesn't create a nan (uno checks either is a nan)
       rewriter.replaceOpWithNewOp<ConstantIntOp>(op, /*value=*/false,
@@ -2895,6 +3098,7 @@ public:
     return success();
   }
 };
+} // namespace
 
 void arith::CmpFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                 MLIRContext *context) {
@@ -2905,6 +3109,7 @@ void arith::CmpFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 // SelectOp
 //===----------------------------------------------------------------------===//
 
+namespace {
 //  select %arg, %c1, %c0 => extui %arg
 struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
   using Base::Base;
@@ -2938,6 +3143,130 @@ struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
     return failure();
   }
 };
+} // namespace
+
+///   select(M, F(a0, a1, ..., a_n), F(b0, b1, ..., b_n))
+///     -> F(select(M, a0, b0), select(M, a1, b1), ...) for pure and
+///   elementwise F.
+///
+/// Correctness provement:
+///
+///   Let's discuss the cases ignoring poison first.
+///
+///   As F is elementwise, we have
+///
+///      F(a1, a2, ..., a_n)[p] = F(a1[p], a2[p], ..., a_n[p])
+///
+///   then for
+///
+///      L = select(M, F(a0, a1, ..., a_n), F(b0, b1, ..., b_n))
+///      R = F(select(M, a0, b0), select(M, a1, b1), ....)
+///
+///   for any position p, we have:
+///
+///      if M[p] == true, then L[p] == F(a)[p] == F(a[p]) == F(select(true, a[p], b[p])) == R[p]
+///      if M[p] == false, then L[p] == F(b)[p] == F(b[p]) == F(select(false, a[p], b[p])) == R[p]
+///
+///   And F is pure, so that we can move and reduce F.
+///   So select(M, F(a0, a1, ..., a_n), F(b0, b1, ..., b_n)) is equal to
+///   F(select(M, a0, b0), select(M, a1, b1), ...) ignoring poison.
+///
+///   Let's consider the poison value now. ArithBase.td says:
+///
+///       Unless otherwise stated, the operations within this dialect
+///       propagate poison values, i.e., if any of its inputs are poison, then the
+///       output is poison.
+///
+///   So most F, F(poison) = poison
+///
+///   Then for any position p, if a[p] is poison
+///
+///       if M[p] == true, L[p] == f(a[p]) == poison == F(select(true, a[p], b[p])) == R[p]
+///       if M[p] == false, L[p] == f(b[p]) == F(select(false, a[p], b[p])) == R[p]
+///       if M[p] == P, L[p] == poison == F(select(P, a, b)) == R[p]
+///
+///   Then the transformation doesn't change poison propagation.
+///
+///   For F which doesn't meet the assumption, this transformation may change the
+///   poison propagation, but the language allows us to replace poison with a undef
+///   or any value with the same type. So this is still valid transformation.
+struct SelectCommonElementwiseOp : public OpRewritePattern<arith::SelectOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(arith::SelectOp op,
+                                PatternRewriter &rewriter) const override {
+    Operation *lhs = op.getTrueValue().getDefiningOp();
+    Operation *rhs = op.getFalseValue().getDefiningOp();
+    if (!lhs || !rhs || lhs == rhs)
+      return failure();
+
+    // Do not hoist a select through selects: rewriting
+    // select(c, select(d, a, b), select(d, x, y)) into
+    // select(d, select(c, a, x), select(c, b, y)) matches again with c and d
+    // swapped, so the greedy rewriter never converges.
+    if (isa<arith::SelectOp>(lhs))
+      return failure();
+
+    for (Operation *producer : {lhs, rhs}) {
+      // Avoid sinking loop invariant code into the loop.
+      //
+      // TODO: handle the cases by introducing more CFG/Loop analysis.
+      if (producer->getBlock() != op->getBlock())
+        return failure();
+
+      // `isEquivalentTo` doesn't catch all cases, so we conservatively match
+      // the cases we know how to convert
+      if (producer->getNumResults() != 1 || !producer->hasOneUse() ||
+          producer->getNumRegions() != 0 || producer->getNumSuccessors() != 0 ||
+          !producer->hasTrait<OpTrait::Elementwise>() || !isPure(producer))
+        return failure();
+    }
+
+    // Check if the lhs and the rhs are the same kind of op, have the
+    // same structure of inputs, types, and attributes.
+    if (!OperationEquivalence::isEquivalentTo(
+            lhs, rhs, OperationEquivalence::ignoreValueEquivalence, nullptr,
+            OperationEquivalence::IgnoreLocations))
+      return failure();
+
+    DenseMap<std::pair<Value, Value>, Value> selected;
+    SmallVector<Operation *> createdSelects;
+    SmallVector<Value> operands;
+    Type conditionType = op.getCondition().getType();
+    for (auto [a, b] : llvm::zip(lhs->getOperands(), rhs->getOperands())) {
+      // For select(c, F(a, k), F(b, k)), we should transform it into
+      // F(select(c, a, b), k) instead of F(select(c, a, b), select(c, k, k))
+      if (a == b) {
+        operands.push_back(a);
+        continue;
+      }
+      if (!conditionType.isSignlessInteger(1) &&
+          (!isa<VectorType, TensorType>(a.getType()) ||
+           cast<ShapedType>(a.getType()).clone(rewriter.getI1Type()) !=
+               conditionType)) {
+
+        for (Operation *created : llvm::reverse(createdSelects))
+          rewriter.eraseOp(created);
+        return failure();
+      }
+
+      // Always creating a new pair would not merging equivalent results.
+      auto [it, inserted] = selected.try_emplace(std::make_pair(a, b));
+      if (inserted) {
+        auto select = arith::SelectOp::create(rewriter, op.getLoc(),
+                                             op.getCondition(), a, b);
+        it->second = select;
+        createdSelects.push_back(select);
+      }
+      operands.push_back(it->second);
+    }
+
+    Operation *common = rewriter.clone(*lhs);
+    common->setOperands(operands);
+    rewriter.replaceOp(op, common->getResults());
+    return success();
+  }
+};
 
 void arith::SelectOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
@@ -2949,6 +3278,7 @@ void arith::SelectOp::getCanonicalizationPatterns(RewritePatternSet &results,
               SelectCmpIUgtToMinUI, SelectCmpIUleToMaxUI, SelectCmpIUleToMinUI,
               SelectCmpIUltToMaxUI, SelectCmpIUltToMinUI, SelectToExtUI>(
       context);
+  results.add<SelectCommonElementwiseOp>(context);
 }
 
 OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {
@@ -3055,7 +3385,7 @@ ParseResult SelectOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void arith::SelectOp::print(OpAsmPrinter &p) {
   p << " " << getOperands();
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
   p << " : ";
   if (ShapedType condType = dyn_cast<ShapedType>(getCondition().getType()))
     p << condType << ", ";
@@ -3196,7 +3526,9 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
   case AtomicRMWKind::maxnumf: {
     const llvm::fltSemantics &semantic =
         llvm::cast<FloatType>(resultType).getFloatSemantics();
-    APFloat identity = APFloat::getNaN(semantic, /*Negative=*/true);
+    APFloat identity = useOnlyFiniteValue
+                           ? APFloat::getLargest(semantic, /*Negative=*/true)
+                           : APFloat::getNaN(semantic, /*Negative=*/true);
     return builder.getFloatAttr(resultType, identity);
   }
   case AtomicRMWKind::addf:
@@ -3225,7 +3557,9 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
   case AtomicRMWKind::minnumf: {
     const llvm::fltSemantics &semantic =
         llvm::cast<FloatType>(resultType).getFloatSemantics();
-    APFloat identity = APFloat::getNaN(semantic, /*Negative=*/false);
+    APFloat identity = useOnlyFiniteValue
+                           ? APFloat::getLargest(semantic, /*Negative=*/false)
+                           : APFloat::getNaN(semantic, /*Negative=*/false);
     return builder.getFloatAttr(resultType, identity);
   }
   case AtomicRMWKind::mins:
@@ -3280,6 +3614,16 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
     arith::FastMathFlagsAttr fmfAttr = fmfOpInterface.getFastMathFlagsAttr();
     useOnlyFiniteValue =
         bitEnumContainsAny(fmfAttr.getValue(), arith::FastMathFlags::ninf);
+    if (*maybeKind == AtomicRMWKind::maxnumf ||
+        *maybeKind == AtomicRMWKind::minnumf) {
+      if (bitEnumContainsAny(fmfAttr.getValue(), arith::FastMathFlags::nnan)) {
+        *maybeKind = *maybeKind == AtomicRMWKind::maxnumf
+                         ? AtomicRMWKind::maximumf
+                         : AtomicRMWKind::minimumf;
+      } else {
+        useOnlyFiniteValue = false;
+      }
+    }
   }
 
   // Builder only used as helper for attribute creation.

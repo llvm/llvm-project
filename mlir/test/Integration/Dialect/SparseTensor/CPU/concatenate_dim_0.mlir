@@ -55,28 +55,28 @@ module {
 
   // Concats all sparse matrices (with different encodings) to a sparse matrix.
   func.func @concat_sparse_sparse(%arg0: tensor<2x4xf64, #MAT_C_C>, %arg1: tensor<3x4xf64, #MAT_C_D>, %arg2: tensor<4x4xf64, #MAT_D_C>) -> tensor<9x4xf64, #MAT_C_C> {
-    %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 0 : index}
+    %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 dimension = 0
          : tensor<2x4xf64, #MAT_C_C>, tensor<3x4xf64, #MAT_C_D>, tensor<4x4xf64, #MAT_D_C> to tensor<9x4xf64, #MAT_C_C>
     return %0 : tensor<9x4xf64, #MAT_C_C>
   }
 
   // Concats all sparse matrices (with different encodings) to a dense matrix.
   func.func @concat_sparse_dense(%arg0: tensor<2x4xf64, #MAT_C_C>, %arg1: tensor<3x4xf64, #MAT_C_D>, %arg2: tensor<4x4xf64, #MAT_D_C>) -> tensor<9x4xf64> {
-    %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 0 : index}
+    %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 dimension = 0
          : tensor<2x4xf64, #MAT_C_C>, tensor<3x4xf64, #MAT_C_D>, tensor<4x4xf64, #MAT_D_C> to tensor<9x4xf64>
     return %0 : tensor<9x4xf64>
   }
 
   // Concats mix sparse and dense matrices to a sparse matrix.
   func.func @concat_mix_sparse(%arg0: tensor<2x4xf64>, %arg1: tensor<3x4xf64, #MAT_C_D>, %arg2: tensor<4x4xf64, #MAT_D_C>) -> tensor<9x4xf64, #MAT_C_C> {
-    %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 0 : index}
+    %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 dimension = 0
          : tensor<2x4xf64>, tensor<3x4xf64, #MAT_C_D>, tensor<4x4xf64, #MAT_D_C> to tensor<9x4xf64, #MAT_C_C>
     return %0 : tensor<9x4xf64, #MAT_C_C>
   }
 
   // Concats mix sparse and dense matrices to a dense matrix.
   func.func @concat_mix_dense(%arg0: tensor<2x4xf64>, %arg1: tensor<3x4xf64, #MAT_C_D>, %arg2: tensor<4x4xf64, #MAT_D_C>) -> tensor<9x4xf64> {
-    %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 0 : index}
+    %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 dimension = 0
          : tensor<2x4xf64>, tensor<3x4xf64, #MAT_C_D>, tensor<4x4xf64, #MAT_D_C> to tensor<9x4xf64>
     return %0 : tensor<9x4xf64>
   }

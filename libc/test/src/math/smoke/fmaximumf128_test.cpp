@@ -8,6 +8,11 @@
 
 #include "FMaximumTest.h"
 
+#include "src/__support/FPUtil/float128.h"
 #include "src/math/fmaximumf128.h"
 
-LIST_FMAXIMUM_TESTS(float128, LIBC_NAMESPACE::fmaximumf128)
+#ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
+using float128 = LIBC_NAMESPACE::fputil::Float128;
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
+
+LIST_FMAXIMUM_TESTS(Fmaximumf128, float128, LIBC_NAMESPACE::fmaximumf128)

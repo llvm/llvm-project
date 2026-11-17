@@ -239,7 +239,7 @@ TEST(struct_big_1)
 // CHECK-LABEL: define {{.*}} void @return_struct_big_1(ptr dead_on_unwind noalias writable sret
 
 // Should not be byval.
-// CHECK-LABEL: define {{.*}} void @take_struct_big_1(ptr nofree align 8 dead_on_return dereferenceable(40){{( %.*)?}})
+// CHECK-LABEL: define {{.*}} void @take_struct_big_1(ptr nofreeobj align 8 dead_on_return dereferenceable(40){{( %.*)?}})
 
 /*****************************************************************************/
 /********************************* TYPE MERGING ******************************/

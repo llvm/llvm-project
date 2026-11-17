@@ -29,7 +29,7 @@
 // CHECK-PIE-LD: "Scrt1.o" "crti.o" "crtbeginS.o"
 // CHECK-PIE-LD: "crtendS.o" "crtn.o"
 //
-// CHECK-NOPIE-LD: "-nopie"
+// CHECK-NOPIE-LD: "-no-pie"
 //
 // CHECK-DYNAMIC-NO-PIC-32: "-mrelocation-model" "dynamic-no-pic"
 // CHECK-DYNAMIC-NO-PIC-32-NOT: "-pic-level"
@@ -264,7 +264,7 @@
 // RUN: %clang -c %s -target i386-pc-openbsd -fno-pie -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIC
 //
-// On OpenBSD, -nopie needs to be passed through to the linker.
+// On OpenBSD, -no-pie needs to be passed through to the linker.
 // RUN: %clang %s -target i386-pc-openbsd -nopie -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NOPIE-LD
 // Try with the alias

@@ -12,6 +12,18 @@
 
 using namespace lldb_private::process_gdb_remote;
 
+class TestGDBRemoteCommunicationServerLLGS
+    : public GDBRemoteCommunicationServerLLGS {
+public:
+  using GDBRemoteCommunicationServerLLGS::XMLEncodeAttributeValue;
+};
+
+TEST(GDBRemoteCommunicationServerLLGSTest, XMLEncodeAttributeValue) {
+  EXPECT_EQ(TestGDBRemoteCommunicationServerLLGS::XMLEncodeAttributeValue(
+                "type<>&\"'"),
+            "type&lt;&gt;&amp;&quot;&apos;");
+}
+
 TEST(GDBRemoteCommunicationServerLLGSTest, LLGSArgToURL) {
   // LLGS new-style URLs should be passed through (indepenently of
   // --reverse-connect)

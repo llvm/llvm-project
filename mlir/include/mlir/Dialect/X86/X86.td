@@ -77,7 +77,8 @@ def MaskCompressOp : AVX512_Op<"mask.compress", [Pure,
                    OptionalAttr<ElementsAttr>:$constant_src);
   let results = (outs VectorOfLengthAndType<[16, 8],
                                             [F32, I32, F64, I64]>:$dst);
-  let assemblyFormat = "$k `,` $a (`,` $src^)? attr-dict"
+  let assemblyFormat = "$k `,` $a (`,` $src^)? "
+                       "(`constant_src` `=` $constant_src^)? attr-dict"
                        " `:` type($dst) (`,` type($src)^)?";
   let hasVerifier = 1;
 
@@ -691,6 +692,7 @@ def CvtPackedOddIndexedToF32Op
 
 class AMX_Type<string typeName, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<X86_Dialect, "AMX" # typeName, traits> {
+  let cppIncludes = ["mlir/Dialect/X86/X86Dialect.h"];
   let mnemonic = "amx." # typeMnemonic;
 }
 

@@ -20,10 +20,8 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #define GET_ATTRDEF_CLASSES
@@ -1092,9 +1090,10 @@ AffineMap mlir::sparse_tensor::inferLvlToDim(AffineMap dimToLvl,
 
 AffineMap mlir::sparse_tensor::inverseBlockSparsity(AffineMap dimToLvl,
                                                     MLIRContext *context) {
-  SmallVector<AffineExpr> lvlExprs;
+  // The results of lvlToDim follow the dimension order, so the vector is
+  // filled by dimension position rather than by expression kind.
+  SmallVector<AffineExpr> lvlExprs(dimToLvl.getNumDims());
   auto numLvls = dimToLvl.getNumResults();
-  lvlExprs.reserve(numLvls);
   // lvlExprComponents stores information of the floordiv and mod operations
   // applied to the same dimension, so as to build the lvlToDim map.
   std::map<unsigned, SmallVector<AffineExpr, 3>> lvlExprComponents;
@@ -1124,7 +1123,8 @@ AffineMap mlir::sparse_tensor::inverseBlockSparsity(AffineMap dimToLvl,
         assert(false && "expected floordiv or mod");
       }
     } else {
-      lvlExprs.push_back(getAffineDimExpr(i, context));
+      auto pos = cast<AffineDimExpr>(result).getPosition();
+      lvlExprs[pos] = getAffineDimExpr(i, context);
     }
   }
   // Build lvlExprs from lvlExprComponents.
@@ -1138,8 +1138,11 @@ AffineMap mlir::sparse_tensor::inverseBlockSparsity(AffineMap dimToLvl,
         AffineExprKind::Mul, components.second[0], components.second[1]);
     auto addOp =
         getAffineBinaryOpExpr(AffineExprKind::Add, mulOp, components.second[2]);
-    lvlExprs.push_back(addOp);
+    lvlExprs[components.first] = addOp;
   }
+  // Dimensions that do not appear in dimToLvl (this is also applied to
+  // indexing maps) get no result.
+  llvm::erase_if(lvlExprs, [](AffineExpr expr) { return !expr; });
   return dimToLvl.get(dimToLvl.getNumResults(), 0, lvlExprs, context);
 }
 
@@ -1799,7 +1802,7 @@ static LogicalResult verifyNumBlockArgs(T *op, Region &region,
 }
 
 LogicalResult BinaryOp::verify() {
-  NamedAttrList attrs = (*this)->getAttrs();
+  NamedAttrList attrs = (*this)->getDiscardableAttrDictionary().getValue();
   Type leftType = getX().getType();
   Type rightType = getY().getType();
   Type outputType = getOutput().getType();
@@ -2441,7 +2444,7 @@ LogicalResult ExtractValOp::verify() {
 }
 
 struct RemoveUnusedLvlCrds : public OpRewritePattern<IterateOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(IterateOp iterateOp,
                                 PatternRewriter &rewriter) const override {

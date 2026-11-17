@@ -5,7 +5,7 @@ module attributes {omp.is_target_device = true, llvm.target_triple = "amdgcn-amd
   llvm.func @_QQmain() attributes {fir.bindc_name = "main"} {
 
     %ga = llvm.mlir.addressof @global_a : !llvm.ptr
-    %map_a = omp.map.info var_ptr(%ga : !llvm.ptr, i32) map_clauses(tofrom) capture(ByCopy) -> !llvm.ptr {name = "i"}
+    %map_a = omp.map.info var_ptr(%ga : !llvm.ptr, i32) map_clauses(tofrom) capture(ByCopy) name("i") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map_a -> %arg1 : !llvm.ptr) {
       %loaded = llvm.load %arg1 : !llvm.ptr -> i32
 
@@ -28,7 +28,7 @@ module attributes {omp.is_target_device = true, llvm.target_triple = "amdgcn-amd
   // allocate a per-contention-group copy in the shared address space.
   llvm.func @teams_equiv() {
     %gt = llvm.mlir.addressof @global_teams : !llvm.ptr
-    %map_t = omp.map.info var_ptr(%gt : !llvm.ptr, i32) map_clauses(tofrom) capture(ByCopy) -> !llvm.ptr {name = "t"}
+    %map_t = omp.map.info var_ptr(%gt : !llvm.ptr, i32) map_clauses(tofrom) capture(ByCopy) name("t") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map_t -> %arg1 : !llvm.ptr) {
       %loaded = llvm.load %arg1 : !llvm.ptr -> i32
       omp.teams {

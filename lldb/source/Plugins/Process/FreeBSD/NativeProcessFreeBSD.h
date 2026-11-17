@@ -10,7 +10,6 @@
 #define liblldb_NativeProcessFreeBSD_H_
 
 #include "Plugins/Process/POSIX/NativeProcessELF.h"
-#include "Plugins/Process/Utility/NativeProcessSoftwareSingleStep.h"
 
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -62,8 +61,8 @@ public:
   Status ReadMemory(const ProcessAddress &addr, void *buf, size_t size,
                     size_t &bytes_read) override;
 
-  Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
-                     size_t &bytes_written) override;
+  Status DoWriteMemory(lldb::addr_t addr, const void *buf, size_t size,
+                       size_t &bytes_written) override;
 
   size_t UpdateThreads() override;
 

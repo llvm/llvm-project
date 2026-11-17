@@ -331,8 +331,7 @@ protected:
 
   class ExprBitfields {
     friend class ASTStmtReader; // deserialization
-    friend class AtomicExpr; // ctor
-    friend class BlockDeclRefExpr; // ctor
+    friend class AtomicExpr;    // ctor
     friend class CallExpr; // ctor
     friend class CXXConstructExpr; // ctor
     friend class CXXDependentScopeMemberExpr; // ctor
@@ -995,6 +994,9 @@ protected:
 
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsBooleanTypeTrait : 1;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsComparisonResult : 1;
 
     /// If this expression is a non value-dependent boolean trait,
     /// this indicates whether the trait evaluated true or false.
@@ -3093,10 +3095,10 @@ public:
 
   SourceLocation getBeginLoc() const { return getKwLoc(); }
   SourceLocation getEndLoc() const {
-    return hasLabelTarget() ? getLabelLoc() : getKwLoc();
+    return isNamed() ? getLabelLoc() : getKwLoc();
   }
 
-  bool hasLabelTarget() const { return TargetLabel != nullptr; }
+  bool isNamed() const { return TargetLabel != nullptr; }
 
   SourceLocation getLabelLoc() const { return LabelLoc; }
   void setLabelLoc(SourceLocation L) { LabelLoc = L; }
@@ -3106,7 +3108,9 @@ public:
   void setLabelDecl(LabelDecl *S) { TargetLabel = S; }
 
   /// If this is a named break/continue, get the loop or switch statement
-  /// that this targets.
+  /// that this targets. May return null if the target LabelStmt has not
+  /// yet been created. Asserts if this is an unnamed break/continue.
+  /// \pre `isNamed()`
   const Stmt *getNamedLoopOrSwitch() const;
 
   // Iterators

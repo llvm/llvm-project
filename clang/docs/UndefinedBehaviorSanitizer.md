@@ -1,8 +1,5 @@
 # UndefinedBehaviorSanitizer
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

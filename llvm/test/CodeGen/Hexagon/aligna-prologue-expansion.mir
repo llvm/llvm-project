@@ -1,6 +1,6 @@
 # RUN: llc -mtriple=hexagon -run-pass prolog-epilog %s -o - | FileCheck %s
 # RUN: llc -mtriple=hexagon -run-pass prolog-epilog -spill-func-threshold=0 %s -o - | FileCheck --check-prefix=SPILL-FUNC %s
-# RUN: llc -mtriple=hexagon -run-pass prolog-epilog -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass prolog-epilog %s -o - | FileCheck %s
 #
 # Verify that PS_aligna is placed AFTER all CSR spills.
 #
@@ -33,7 +33,6 @@
 ---
 name:            test_aligna_expansion
 alignment:       16
-tracksRegLiveness: true
 machineFunctionInfo:
   stackAlignBaseReg: '$r16'
 frameInfo:
@@ -57,7 +56,6 @@ body:             |
     renamable $r20 = COPY killed $r3
     renamable $r21 = COPY killed $r2
     renamable $r22 = COPY killed $r1
-    $r16 = PS_aligna 128, implicit killed $r30
     renamable $r25 = A2_tfrsi 0
     renamable $r2 = A2_tfrsi 0
     renamable $r23 = PS_alloca killed renamable $r6, 128, implicit-def dead $r29

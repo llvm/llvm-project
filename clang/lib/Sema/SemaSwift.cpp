@@ -39,6 +39,16 @@ SwiftNameAttr *SemaSwift::mergeNameAttr(Decl *D, const SwiftNameAttr &SNA,
   return ::new (getASTContext()) SwiftNameAttr(getASTContext(), SNA, Name);
 }
 
+SwiftAttrAttr *SemaSwift::mergeAttrAttr(Decl *D, const SwiftAttrAttr &SAA) {
+  // A declaration may carry any number of 'swift_attr's; the string argument
+  // identifies each one, so only an identical one is a duplicate.
+  for (const auto *A : D->specific_attrs<SwiftAttrAttr>())
+    if (A->getAttribute() == SAA.getAttribute())
+      return nullptr;
+  return ::new (getASTContext())
+      SwiftAttrAttr(getASTContext(), SAA, SAA.getAttribute());
+}
+
 /// Pointer-like types in the default address space.
 static bool isValidSwiftContextType(QualType Ty) {
   if (!Ty->hasPointerRepresentation())

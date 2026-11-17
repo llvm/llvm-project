@@ -3,5 +3,5 @@ declare_args() {
   llvm_enable_reverse_iteration = false
 
   # Enable OnDiskCAS.
-  llvm_enable_ondisk_cas = current_cpu == "x64" || current_cpu == "arm64"
+  llvm_enable_ondisk_cas = false
 }

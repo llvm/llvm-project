@@ -67,14 +67,14 @@ mlir::func::FuncOp
 fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp,
                                     const mlir::SymbolTable *symbolTable,
                                     llvm::StringRef name) {
-  if (symbolTable)
-    if (auto func = symbolTable->lookup<mlir::func::FuncOp>(name)) {
+  if (symbolTable) {
+    auto func = symbolTable->lookup<mlir::func::FuncOp>(name);
 #ifdef EXPENSIVE_CHECKS
-      assert(func == modOp.lookupSymbol<mlir::func::FuncOp>(name) &&
-             "symbolTable and module out of sync");
+    assert(func == modOp.lookupSymbol<mlir::func::FuncOp>(name) &&
+           "symbolTable and module out of sync");
 #endif
-      return func;
-    }
+    return func;
+  }
   return modOp.lookupSymbol<mlir::func::FuncOp>(name);
 }
 
@@ -82,15 +82,17 @@ mlir::func::FuncOp
 fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp,
                                     const mlir::SymbolTable *symbolTable,
                                     mlir::SymbolRefAttr symbol) {
-  if (symbolTable)
-    if (auto func = symbolTable->lookup<mlir::func::FuncOp>(
-            symbol.getLeafReference())) {
+  // The symbol table only covers the module's own symbols: a nested reference
+  // must be resolved through the nested symbol tables.
+  if (symbolTable && symbol.getNestedReferences().empty()) {
+    auto func =
+        symbolTable->lookup<mlir::func::FuncOp>(symbol.getRootReference());
 #ifdef EXPENSIVE_CHECKS
-      assert(func == modOp.lookupSymbol<mlir::func::FuncOp>(symbol) &&
-             "symbolTable and module out of sync");
+    assert(func == modOp.lookupSymbol<mlir::func::FuncOp>(symbol) &&
+           "symbolTable and module out of sync");
 #endif
-      return func;
-    }
+    return func;
+  }
   return modOp.lookupSymbol<mlir::func::FuncOp>(symbol);
 }
 
@@ -98,14 +100,14 @@ fir::GlobalOp
 fir::FirOpBuilder::getNamedGlobal(mlir::ModuleOp modOp,
                                   const mlir::SymbolTable *symbolTable,
                                   llvm::StringRef name) {
-  if (symbolTable)
-    if (auto global = symbolTable->lookup<fir::GlobalOp>(name)) {
+  if (symbolTable) {
+    auto global = symbolTable->lookup<fir::GlobalOp>(name);
 #ifdef EXPENSIVE_CHECKS
-      assert(global == modOp.lookupSymbol<fir::GlobalOp>(name) &&
-             "symbolTable and module out of sync");
+    assert(global == modOp.lookupSymbol<fir::GlobalOp>(name) &&
+           "symbolTable and module out of sync");
 #endif
-      return global;
-    }
+    return global;
+  }
   return modOp.lookupSymbol<fir::GlobalOp>(name);
 }
 
@@ -161,6 +163,24 @@ mlir::Value fir::FirOpBuilder::createIntegerConstant(mlir::Location loc,
     else if (intType.isSigned())
       TODO(loc, "signed integer constant");
   }
+
+  mlir::Value cstValue = mlir::arith::ConstantOp::create(
+      *this, loc, cstType, getIntegerAttr(cstType, cst));
+  return createConvert(loc, ty, cstValue);
+}
+
+mlir::Value fir::FirOpBuilder::createIntegerConstant(mlir::Location loc,
+                                                     mlir::Type ty,
+                                                     const llvm::APInt &cst) {
+  auto intType = mlir::cast<mlir::IntegerType>(ty);
+  assert(intType.getWidth() == cst.getBitWidth() && "bit width mismatch");
+  // Signed and unsigned constants must be encoded as signless
+  // arith.constant followed by fir.convert cast.
+  mlir::Type cstType = ty;
+  if (intType.isUnsigned())
+    cstType = mlir::IntegerType::get(getContext(), intType.getWidth());
+  else if (intType.isSigned())
+    TODO(loc, "signed integer constant");
 
   mlir::Value cstValue = mlir::arith::ConstantOp::create(
       *this, loc, cstType, getIntegerAttr(cstType, cst));
@@ -278,36 +298,49 @@ mlir::Value fir::FirOpBuilder::allocateLocal(
 }
 
 /// Get the block for adding Allocas.
+mlir::Block *fir::getAllocaBlock(mlir::Region &region) {
+  // Find the closest parent operation that knows where its allocas belong.
+  for (mlir::Region *current = &region; current;
+       current = current->getParentRegion()) {
+    mlir::Operation *parent = current->getParentOp();
+    if (!parent)
+      break;
+
+    if (auto accComputeRegionIface =
+            mlir::dyn_cast<mlir::acc::ComputeRegionOpInterface>(parent))
+      return accComputeRegionIface.getAllocaBlock();
+
+    // Offload regions are isolated from above, so allocas cannot be hoisted
+    // past them.
+    if (auto accOffloadRegionIface =
+            mlir::dyn_cast<mlir::acc::OffloadRegionOpInterface>(parent))
+      return &accOffloadRegionIface.getOffloadRegion().front();
+
+    if (auto ompOutlineableIface =
+            mlir::dyn_cast<mlir::omp::OutlineableOpenMPOpInterface>(parent))
+      return ompOutlineableIface.getAllocaBlock();
+
+    if (auto recipeIface =
+            mlir::dyn_cast<mlir::accomp::RecipeInterface>(parent))
+      return recipeIface.getAllocaBlock(*current);
+
+    if (auto cufKernelOp = mlir::dyn_cast<cuf::KernelOp>(parent))
+      return &cufKernelOp.getRegion().front();
+
+    if (auto doConcurentOp = mlir::dyn_cast<fir::DoConcurrentOp>(parent))
+      return doConcurentOp.getBody();
+
+    if (mlir::isa<fir::LocalitySpecifierOp, fir::DeclareReductionOp>(parent))
+      return &current->front();
+  }
+
+  auto func = region.getParentOfType<mlir::func::FuncOp>();
+  assert(func && "region must be inside a function");
+  return &func.front();
+}
+
 mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
-  if (auto accComputeRegionIface =
-          getRegion().getParentOfType<mlir::acc::ComputeRegionOpInterface>()) {
-    return accComputeRegionIface.getAllocaBlock();
-  }
-
-  if (auto ompOutlineableIface =
-          getRegion()
-              .getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>()) {
-    return ompOutlineableIface.getAllocaBlock();
-  }
-
-  if (auto recipeIface =
-          getRegion().getParentOfType<mlir::accomp::RecipeInterface>()) {
-    return recipeIface.getAllocaBlock(getRegion());
-  }
-
-  if (auto cufKernelOp = getRegion().getParentOfType<cuf::KernelOp>())
-    return &cufKernelOp.getRegion().front();
-
-  if (auto doConcurentOp = getRegion().getParentOfType<fir::DoConcurrentOp>())
-    return doConcurentOp.getBody();
-
-  if (auto firLocalOp = getRegion().getParentOfType<fir::LocalitySpecifierOp>())
-    return &getRegion().front();
-
-  if (auto firLocalOp = getRegion().getParentOfType<fir::DeclareReductionOp>())
-    return &getRegion().front();
-
-  return getEntryBlock();
+  return fir::getAllocaBlock(getRegion());
 }
 
 static mlir::ArrayAttr makeI64ArrayAttr(llvm::ArrayRef<int64_t> values,
@@ -334,7 +367,8 @@ mlir::Value fir::FirOpBuilder::createTemporaryAlloc(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::ValueRange lenParams, mlir::ValueRange shape,
     llvm::ArrayRef<mlir::NamedAttribute> attrs,
-    std::optional<Fortran::common::CUDADataAttr> cudaAttr) {
+    std::optional<Fortran::common::CUDADataAttr> cudaAttr,
+    std::optional<std::int64_t> alignment) {
   assert(!mlir::isa<fir::ReferenceType>(type) && "cannot be a reference");
   // If the alloca is inside an OpenMP Op which will be outlined then pin
   // the alloca here.
@@ -346,9 +380,12 @@ mlir::Value fir::FirOpBuilder::createTemporaryAlloc(
                                 /*unique_name=*/llvm::StringRef{}, name, attr,
                                 lenParams, shape, attrs);
   } else {
-    return fir::AllocaOp::create(*this, loc, type,
-                                 /*unique_name=*/llvm::StringRef{}, name,
-                                 pinned, lenParams, shape, attrs);
+    auto alloca = fir::AllocaOp::create(*this, loc, type,
+                                        /*unique_name=*/llvm::StringRef{}, name,
+                                        pinned, lenParams, shape, attrs);
+    if (alignment)
+      alloca.setAlignment(*alignment);
+    return alloca;
   }
 }
 
@@ -358,7 +395,8 @@ mlir::Value fir::FirOpBuilder::createTemporary(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::ValueRange shape, mlir::ValueRange lenParams,
     llvm::ArrayRef<mlir::NamedAttribute> attrs,
-    std::optional<Fortran::common::CUDADataAttr> cudaAttr) {
+    std::optional<Fortran::common::CUDADataAttr> cudaAttr,
+    std::optional<std::int64_t> alignment) {
   llvm::SmallVector<mlir::Value> dynamicShape =
       fir::factory::elideExtentsAlreadyInType(type, shape);
   llvm::SmallVector<mlir::Value> dynamicLength =
@@ -370,8 +408,8 @@ mlir::Value fir::FirOpBuilder::createTemporary(
     setInsertionPointToStart(getAllocaBlock());
   }
 
-  mlir::Value ae = createTemporaryAlloc(loc, type, name, dynamicLength,
-                                        dynamicShape, attrs, cudaAttr);
+  mlir::Value ae = createTemporaryAlloc(
+      loc, type, name, dynamicLength, dynamicShape, attrs, cudaAttr, alignment);
 
   if (hoistAlloc)
     restoreInsertionPoint(insPt);
@@ -381,23 +419,28 @@ mlir::Value fir::FirOpBuilder::createTemporary(
 mlir::Value fir::FirOpBuilder::createHeapTemporary(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::ValueRange shape, mlir::ValueRange lenParams,
-    llvm::ArrayRef<mlir::NamedAttribute> attrs) {
+    llvm::ArrayRef<mlir::NamedAttribute> attrs,
+    std::optional<std::int64_t> alignment) {
   llvm::SmallVector<mlir::Value> dynamicShape =
       fir::factory::elideExtentsAlreadyInType(type, shape);
   llvm::SmallVector<mlir::Value> dynamicLength =
       fir::factory::elideLengthsAlreadyInType(type, lenParams);
 
   assert(!mlir::isa<fir::ReferenceType>(type) && "cannot be a reference");
-  return fir::AllocMemOp::create(*this, loc, type,
-                                 /*unique_name=*/llvm::StringRef{}, name,
-                                 dynamicLength, dynamicShape, attrs);
+  auto heap = fir::AllocMemOp::create(*this, loc, type,
+                                      /*unique_name=*/llvm::StringRef{}, name,
+                                      dynamicLength, dynamicShape, attrs);
+  if (alignment)
+    heap.setAlignment(*alignment);
+  return heap;
 }
 
 std::pair<mlir::Value, bool> fir::FirOpBuilder::createAndDeclareTemp(
     mlir::Location loc, mlir::Type baseType, mlir::Value shape,
     llvm::ArrayRef<mlir::Value> extents, llvm::ArrayRef<mlir::Value> typeParams,
     const std::function<decltype(FirOpBuilder::genTempDeclareOp)> &genDeclare,
-    mlir::Value polymorphicMold, bool useStack, llvm::StringRef tmpName) {
+    mlir::Value polymorphicMold, bool useStack, llvm::StringRef tmpName,
+    std::optional<std::int64_t> alignment) {
   if (polymorphicMold) {
     // Create *allocated* polymorphic temporary using the dynamic type
     // of the mold and the provided shape/extents.
@@ -413,9 +456,12 @@ std::pair<mlir::Value, bool> fir::FirOpBuilder::createAndDeclareTemp(
   }
   mlir::Value allocmem;
   if (useStack)
-    allocmem = createTemporary(loc, baseType, tmpName, extents, typeParams);
+    allocmem =
+        createTemporary(loc, baseType, tmpName, extents, typeParams,
+                        /*attrs=*/{}, /*cudaAttr=*/std::nullopt, alignment);
   else
-    allocmem = createHeapTemporary(loc, baseType, tmpName, extents, typeParams);
+    allocmem = createHeapTemporary(loc, baseType, tmpName, extents, typeParams,
+                                   /*attrs=*/{}, alignment);
   mlir::Value base = genDeclare(*this, loc, allocmem, tmpName, shape,
                                 typeParams, fir::FortranVariableFlagsAttr{});
   return {base, !useStack};
@@ -450,7 +496,7 @@ void fir::FirOpBuilder::genStackRestore(mlir::Location loc,
 /// must have a unique name to identify and reference it.
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
-    mlir::StringAttr linkage, mlir::Attribute value, bool isConst,
+    fir::LinkageAttr linkage, mlir::Attribute value, bool isConst,
     bool isTarget, cuf::DataAttributeAttr dataAttr, bool setDefaultAlignment) {
   if (auto global = getNamedGlobal(name))
     return global;
@@ -470,15 +516,14 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   if (setDefaultAlignment && mlir::isa<fir::SequenceType>(type))
     glob.setAlignment(fir::defaultArrayGlobalAlignment);
   restoreInsertionPoint(insertPt);
-  if (symbolTable)
-    symbolTable->insert(glob);
+  fir::registerSymbol(symbolTable, glob);
   return glob;
 }
 
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name, bool isConst,
     bool isTarget, std::function<void(FirOpBuilder &)> bodyBuilder,
-    mlir::StringAttr linkage, cuf::DataAttributeAttr dataAttr,
+    fir::LinkageAttr linkage, cuf::DataAttributeAttr dataAttr,
     bool setDefaultAlignment) {
   if (auto global = getNamedGlobal(name))
     return global;
@@ -487,6 +532,9 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   setInsertionPoint(module.getBody(), module.getBody()->end());
   auto glob = fir::GlobalOp::create(*this, loc, name, isConst, isTarget, type,
                                     mlir::Attribute{}, linkage);
+  // Register the global before building its body so that a lookup made by
+  // the body builder finds it, as it did when lookups walked the module.
+  fir::registerSymbol(symbolTable, glob);
   // Set default alignment for array globals.
   if (setDefaultAlignment && mlir::isa<fir::SequenceType>(type))
     glob.setAlignment(fir::defaultArrayGlobalAlignment);
@@ -496,8 +544,6 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   setInsertionPointToStart(&block);
   bodyBuilder(*this);
   restoreInsertionPoint(insertPt);
-  if (symbolTable)
-    symbolTable->insert(glob);
   return glob;
 }
 
@@ -512,8 +558,7 @@ fir::FirOpBuilder::createTypeInfoOp(mlir::Location loc,
   InsertPoint insertPoint = saveInsertionPoint();
   setInsertionPoint(module.getBody(), module.getBody()->end());
   auto typeInfo = fir::TypeInfoOp::create(*this, loc, recordType, parentType);
-  if (symbolTable)
-    symbolTable->insert(typeInfo);
+  fir::registerSymbol(symbolTable, typeInfo);
   return {typeInfo, insertPoint};
 }
 
@@ -846,7 +891,9 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc, mlir::Type boxType,
       tdesc);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void fir::FirOpBuilder::dumpFunc() { getFunction().dump(); }
+#endif
 
 static mlir::Value
 genNullPointerComparison(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -1389,86 +1436,6 @@ void fir::factory::genScalarAssignment(
   }
 }
 
-static void genComponentByComponentAssignment(fir::FirOpBuilder &builder,
-                                              mlir::Location loc,
-                                              const fir::ExtendedValue &lhs,
-                                              const fir::ExtendedValue &rhs,
-                                              bool isTemporaryLHS) {
-  auto lbaseType = fir::unwrapPassByRefType(fir::getBase(lhs).getType());
-  auto lhsType = mlir::dyn_cast<fir::RecordType>(lbaseType);
-  assert(lhsType && "lhs must be a scalar record type");
-  auto rbaseType = fir::unwrapPassByRefType(fir::getBase(rhs).getType());
-  auto rhsType = mlir::dyn_cast<fir::RecordType>(rbaseType);
-  assert(rhsType && "rhs must be a scalar record type");
-  auto fieldIndexType = fir::FieldType::get(lhsType.getContext());
-  for (auto [lhsPair, rhsPair] :
-       llvm::zip(lhsType.getTypeList(), rhsType.getTypeList())) {
-    auto &[lFieldName, lFieldTy] = lhsPair;
-    auto &[rFieldName, rFieldTy] = rhsPair;
-    assert(!fir::hasDynamicSize(lFieldTy) && !fir::hasDynamicSize(rFieldTy));
-    mlir::Value rField =
-        fir::FieldIndexOp::create(builder, loc, fieldIndexType, rFieldName,
-                                  rhsType, fir::getTypeParams(rhs));
-    auto rFieldRefType = builder.getRefType(rFieldTy);
-    mlir::Value fromCoor = fir::CoordinateOp::create(
-        builder, loc, rFieldRefType, fir::getBase(rhs), rField);
-    mlir::Value field =
-        fir::FieldIndexOp::create(builder, loc, fieldIndexType, lFieldName,
-                                  lhsType, fir::getTypeParams(lhs));
-    auto fieldRefType = builder.getRefType(lFieldTy);
-    mlir::Value toCoor = fir::CoordinateOp::create(builder, loc, fieldRefType,
-                                                   fir::getBase(lhs), field);
-    std::optional<fir::DoLoopOp> outerLoop;
-    if (auto sequenceType = mlir::dyn_cast<fir::SequenceType>(lFieldTy)) {
-      // Create loops to assign array components elements by elements.
-      // Note that, since these are components, they either do not overlap,
-      // or are the same and exactly overlap. They also have compile time
-      // constant shapes.
-      mlir::Type idxTy = builder.getIndexType();
-      llvm::SmallVector<mlir::Value> indices;
-      mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
-      mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-      for (auto extent : llvm::reverse(sequenceType.getShape())) {
-        // TODO: add zero size test !
-        mlir::Value ub = builder.createIntegerConstant(loc, idxTy, extent - 1);
-        auto loop = fir::DoLoopOp::create(builder, loc, zero, ub, one);
-        if (!outerLoop)
-          outerLoop = loop;
-        indices.push_back(loop.getInductionVar());
-        builder.setInsertionPointToStart(loop.getBody());
-      }
-      // Set indices in column-major order.
-      std::reverse(indices.begin(), indices.end());
-      auto elementRefType = builder.getRefType(sequenceType.getEleTy());
-      toCoor = fir::CoordinateOp::create(builder, loc, elementRefType, toCoor,
-                                         indices);
-      fromCoor = fir::CoordinateOp::create(builder, loc, elementRefType,
-                                           fromCoor, indices);
-    }
-    if (auto fieldEleTy = fir::unwrapSequenceType(lFieldTy);
-        mlir::isa<fir::BaseBoxType>(fieldEleTy)) {
-      assert(mlir::isa<fir::PointerType>(
-                 mlir::cast<fir::BaseBoxType>(fieldEleTy).getEleTy()) &&
-             "allocatable members require deep copy");
-      auto fromPointerValue = fir::LoadOp::create(builder, loc, fromCoor);
-      auto castTo = builder.createConvert(loc, fieldEleTy, fromPointerValue);
-      fir::StoreOp::create(builder, loc, castTo, toCoor);
-    } else {
-      auto from =
-          fir::factory::componentToExtendedValue(builder, loc, fromCoor);
-      auto to = fir::factory::componentToExtendedValue(builder, loc, toCoor);
-      // If LHS finalization is needed it is expected to be done
-      // for the parent record, so that component-by-component
-      // assignments may avoid finalization calls.
-      fir::factory::genScalarAssignment(builder, loc, to, from,
-                                        /*needFinalization=*/false,
-                                        isTemporaryLHS);
-    }
-    if (outerLoop)
-      builder.setInsertionPointAfter(*outerLoop);
-  }
-}
-
 /// Can the assignment of this record type be implement with a simple memory
 /// copy (it requires no deep copy or user defined assignment of components )?
 static bool recordTypeCanBeMemCopied(fir::RecordType recordType) {
@@ -1527,6 +1494,18 @@ void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
   bool disjoint = isTemporaryLHS || !recTy.isSequence() ||
                   (aa.alias(fir::getBase(lhs), fir::getBase(rhs)) ==
                    mlir::AliasResult::NoAlias);
+  // noOverlap is only safe when the operands are *known* to be
+  // non-overlapping: either the LHS is a compiler temporary (can't alias
+  // anything the user wrote), or alias analysis explicitly confirmed
+  // NoAlias.  The !recTy.isSequence() branch of disjoint is an assumption
+  // -- non-SEQUENCE types are expected to be disjoint, but a Cray pointee
+  // aliasing a TARGET variable is a documented counter-example (see
+  // flang/docs/Aliasing.md).  Using no_overlap on an assumed-disjoint pair
+  // emits memcpy, which has undefined behaviour for overlapping operands.
+  // Without no_overlap, fir.copy lowers to memmove, which is always safe.
+  bool noOverlap =
+      isTemporaryLHS || (aa.alias(fir::getBase(lhs), fir::getBase(rhs)) ==
+                         mlir::AliasResult::NoAlias);
   if ((needFinalization && mayHaveFinalizer(recTy, builder)) ||
       hasBoxOperands || !recordTypeCanBeMemCopied(recTy) || !disjoint) {
     auto to = fir::getBase(builder.createBox(loc, lhs));
@@ -1545,15 +1524,34 @@ void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
     return;
   }
 
-  // Otherwise, the derived type has compile time constant size and for which
-  // the component by component assignment can be replaced by a memory copy.
-  // Since we do not know the size of the derived type in lowering, do a
-  // component by component assignment. Note that a single fir.load/fir.store
-  // could be used on "small" record types, but as the type size grows, this
-  // leads to issues in LLVM (long compile times, long IR files, and even
-  // asserts at some point). Since there is no good size boundary, just always
-  // use component by component assignment here.
-  genComponentByComponentAssignment(builder, loc, lhs, rhs, isTemporaryLHS);
+  // Otherwise, the derived type has compile time constant size, no
+  // allocatable components, and no user-defined assignment. The size of the
+  // type is not known at this point in lowering, but fir.copy defers the size
+  // computation to codegen where the LLVM data layout is available. That allows
+  // it to copy the full allocated storage including any ABI tail-padding bytes,
+  // which a field-by-field copy would silently skip. Preserving those bytes
+  // matters for SEQUENCE types whose storage is reinterpreted via EQUIVALENCE
+  // or TRANSFER.
+  mlir::Value fromAddr = fir::getBase(rhs);
+  mlir::Value toAddr = fir::getBase(lhs);
+  // Ensure we have raw ref<RecordType> pointers for fir.copy.
+  // Use a per-operand target type that preserves the operand's volatility.
+  // If either operand is !fir.ref<T, volatile>, the target type is also
+  // !fir.ref<T, volatile>, so any emitted fir.convert does not strip the
+  // volatile qualifier and passes ConvertOp::verify under
+  // --strict-fir-volatile-verifier.  A convert is only emitted when the
+  // element type differs (e.g. a module record type assigned to a
+  // structurally identical local SEQUENCE type); when the types already
+  // match no convert is emitted at all.
+  auto fromRefTy =
+      builder.getRefType(recTy, fir::isa_volatile_type(fromAddr.getType()));
+  if (fromAddr.getType() != fromRefTy)
+    fromAddr = builder.createConvert(loc, fromRefTy, fromAddr);
+  auto toRefTy =
+      builder.getRefType(recTy, fir::isa_volatile_type(toAddr.getType()));
+  if (toAddr.getType() != toRefTy)
+    toAddr = builder.createConvert(loc, toRefTy, toAddr);
+  fir::CopyOp::create(builder, loc, fromAddr, toAddr, noOverlap);
 }
 
 mlir::Value fir::factory::createZeroValue(fir::FirOpBuilder &builder,

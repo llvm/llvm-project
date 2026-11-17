@@ -14,3 +14,16 @@
 // RUN: %clangxx -### --target=spirv64 --sycl-link -v %t.bc 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=VERBOSE
 // VERBOSE: "{{.*}}clang-sycl-linker{{.*}}" {{.*}}"-v"
+
+// Test that -triple is propagated from --target and passed to clang-sycl-linker.
+// Test that no -march= results in no -arch= in clang-sycl-linker command line.
+// RUN: %clangxx -### --target=spirv64-unknown-unknown --sycl-link %t.bc 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=FINALIZE --implicit-check-not=-arch
+// FINALIZE: "{{.*}}clang-sycl-linker{{.*}}" "-triple=spirv64-unknown-unknown" "{{.*}}.bc" "-o" "a.out"{{$}}
+
+// Test -triple=/-arch= passed to clang-sycl-linker, when they are
+// passed via -Xlinker, and derived from --target/-march=.
+// Test that the target triple is passed on as spelled rather than padded out to a full triple.
+// RUN: %clangxx -### --target=spirv64 --sycl-link -march=bmg_g21 -Xlinker -triple=spirv64-unknown-unknown -Xlinker -arch=bar %t.bc 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=OVERRIDE
+// OVERRIDE: "{{.*}}clang-sycl-linker{{.*}}" "-triple=spirv64" "-arch=bmg_g21" "-triple=spirv64-unknown-unknown" "-arch=bar" "{{.*}}.bc" "-o" "a.out"{{$}}

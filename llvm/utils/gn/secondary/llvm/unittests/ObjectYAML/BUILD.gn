@@ -7,6 +7,7 @@ unittest("ObjectYAMLTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "ContiguousBlobAccumulatorTest.cpp",
     "DWARFYAMLTest.cpp",
     "DXContainerYAMLTest.cpp",
     "ELFYAMLTest.cpp",

@@ -90,7 +90,8 @@ std::initializer_list<int> thread_local x = {1, 2, 3, 4};
 // AMDGCN: @[[REFTMP1:.*]] = private addrspace(4) constant [2 x i32] [i32 42, i32 43], align 4
 // AMDGCN: @[[REFTMP2:.*]] = private addrspace(4) constant [3 x %{{.*}}] [%{{.*}} { i32 1 }, %{{.*}} { i32 2 }, %{{.*}} { i32 3 }], align 4
 
-// CHECK: appending global
+// X86: appending global
+// AMDGCN: appending addrspace(1) global
 
 // thread_local initializer:
 // X86-LABEL: define internal void @__cxx_global_var_init

@@ -98,6 +98,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
+    libc.src.errno.errno
 )
 
 add_perf_binary(
@@ -151,6 +152,17 @@ add_perf_binary(
   DEPENDS
     .perf_test
     libc.src.math.exp10f16
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
+  exp10f_perf
+  SRCS
+    exp10f_perf.cpp
+  DEPENDS
+    .perf_test
+    libc.src.math.exp10f
   COMPILE_OPTIONS
     -fno-builtin
 )
@@ -438,10 +450,9 @@ add_perf_binary(
     libc.src.math.roundevenf16
     libc.src.math.truncf
     libc.src.math.truncf16
+    libc.test.UnitTest.FPTestHelpers
   COMPILE_OPTIONS
     -fno-builtin
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
 add_perf_binary(

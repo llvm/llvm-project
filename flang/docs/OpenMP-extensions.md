@@ -11,11 +11,6 @@
 
 See also {doc}`OpenMPSupport` for a general overview of OpenMP support in Flang.
 
-```{contents}
----
-local:
----
-```
 
 The Flang compiler supports several extensions to OpenMP API features, providing enhanced parallelism and data management capabilities for Fortran applications.  This document outlines the supported extensions and their usage within Flang.
 

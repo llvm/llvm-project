@@ -38,8 +38,8 @@ func.func @test_load_store_zaq0() attributes {llvm.arm_locally_streaming} {
   /// Allocate memory for two 128-bit tiles (A and B) and fill them a constant.
   /// The tiles are allocated as bytes so we can fill and print them, as there's
   /// very little that can be done with 128-bit types directly.
-  %tile_a_bytes = memref.alloca(%zaq_size_bytes) {alignment = 16} : memref<?xi8>
-  %tile_b_bytes = memref.alloca(%zaq_size_bytes) {alignment = 16} : memref<?xi8>
+  %tile_a_bytes = memref.alloca(%zaq_size_bytes) alignment = 16 : memref<?xi8>
+  %tile_b_bytes = memref.alloca(%zaq_size_bytes) alignment = 16 : memref<?xi8>
   %fill_a_i8 = arith.constant 7 : i8
   %fill_b_i8 = arith.constant 64 : i8
   linalg.fill ins(%fill_a_i8 : i8) outs(%tile_a_bytes : memref<?xi8>)

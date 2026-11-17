@@ -842,8 +842,8 @@ void Serializer::handleCompoundConstraints(
   } else if (Constraint->getStmtClass() ==
              Stmt::ConceptSpecializationExprClass) {
     auto *Concept = dyn_cast<ConceptSpecializationExpr>(Constraint);
-    ConstraintInfo CI(getUSRForDecl(Concept->getNamedConcept()),
-                      Concept->getNamedConcept()->getNameAsString());
+    ConstraintInfo CI(getUSRForDecl(Concept->getConceptDecl()),
+                      Concept->getConceptDecl()->getNameAsString());
     CI.ConstraintExpr = internString(exprToString(Concept));
     ConstraintInfos.push_back(CI);
   }
@@ -864,8 +864,8 @@ void Serializer::populateConstraints(TemplateInfo &I, const TemplateDecl *D) {
     if (const auto *ConstraintExpr =
             dyn_cast_or_null<ConceptSpecializationExpr>(
                 Constraint.ConstraintExpr)) {
-      ConstraintInfo CI(getUSRForDecl(ConstraintExpr->getNamedConcept()),
-                        ConstraintExpr->getNamedConcept()->getNameAsString());
+      ConstraintInfo CI(getUSRForDecl(ConstraintExpr->getConceptDecl()),
+                        ConstraintExpr->getConceptDecl()->getNameAsString());
       CI.ConstraintExpr = internString(exprToString(ConstraintExpr));
       LocalConstraints.push_back(std::move(CI));
     } else {

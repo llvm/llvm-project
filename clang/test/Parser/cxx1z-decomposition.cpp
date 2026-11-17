@@ -121,7 +121,7 @@ namespace BadSpecifiers {
                        // CHECK: :[[@LINE-1]]:13: error: structured binding declaration '[K]' requires an initializer; expected '=' or braced initializer list
     int [5] arr = {0}; // expected-error {{place the brackets after the name}}
 
-    auto *[f] = s; // expected-error {{cannot be declared with type 'auto *'}} expected-error {{incompatible initializer}}
+    auto *[f] = s; // expected-error {{cannot be declared with type 'auto *'}}
     auto S::*[g] = s; // expected-error {{cannot be declared with type 'auto S::*'}} expected-error {{incompatible initializer}}
 
     // ref-qualifiers are OK.
@@ -213,7 +213,6 @@ void invalid_attributes() {
   // pre2c-warning@+1 {{an attribute specifier sequence attached to a structured binding declaration is a C++2c extension}}
   auto [a alignas(42) // expected-error {{'alignas' attribute only applies to variables, data members and tag types}}
       [[assume(true), // expected-error {{'assume' attribute cannot be applied to a declaration}}
-        carries_dependency, // expected-error {{'carries_dependency' attribute only applies to parameters, Objective-C methods, and functions}}
         fallthrough,  // expected-error {{'fallthrough' attribute cannot be applied to a declaration}}
         likely, // expected-error {{'likely' attribute cannot be applied to a declaration}}
         unlikely, // expected-error {{'unlikely' attribute cannot be applied to a declaration}}

@@ -142,6 +142,12 @@ public:
     All,
   };
 
+  enum class HLSLSemanticSignaturePackingMode {
+    Default,
+    PrefixStable,
+    Optimized,
+  };
+
   enum InlineAsmDialectKind {
     IAD_ATT,
     IAD_Intel,
@@ -199,7 +205,38 @@ public:
   }
 
   /// Possible exception handling behavior.
-  enum class ExceptionHandlingKind { None, SjLj, WinEH, DwarfCFI, Wasm };
+  enum class ExceptionHandlingKind {
+    Default,
+    None,
+    SjLj,
+    WinEH,
+    DwarfCFI,
+    Wasm,
+    Emscripten
+  };
+
+  /// Translate a clang ExceptionHandlingKind into the corresponding LLVM
+  /// ExceptionHandling model.
+  static llvm::ExceptionHandling
+  toExceptionHandling(ExceptionHandlingKind Kind) {
+    switch (Kind) {
+    case ExceptionHandlingKind::Default:
+      return llvm::ExceptionHandling::Default;
+    case ExceptionHandlingKind::None:
+      return llvm::ExceptionHandling::None;
+    case ExceptionHandlingKind::SjLj:
+      return llvm::ExceptionHandling::SjLj;
+    case ExceptionHandlingKind::WinEH:
+      return llvm::ExceptionHandling::WinEH;
+    case ExceptionHandlingKind::DwarfCFI:
+      return llvm::ExceptionHandling::DwarfCFI;
+    case ExceptionHandlingKind::Wasm:
+      return llvm::ExceptionHandling::Wasm;
+    case ExceptionHandlingKind::Emscripten:
+      return llvm::ExceptionHandling::Emscripten;
+    }
+    llvm_unreachable("invalid ExceptionHandlingKind");
+  }
 
   enum class SwiftAsyncFramePointerKind {
     Auto, // Choose Swift async extended frame info based on deployment target.
@@ -246,6 +283,12 @@ public:
     ForceDisable, // Always disable regardless of the target default.
   };
 
+  enum class SmallIntABICompatKind {
+    Platform, // Compat with platform ABI (high bits unspecified).
+    Clang,    // Compat with old Clang ABI (high bits zero/sign-extended).
+    Both,     // Compat with both. Extend in caller, don't assume in callee.
+  };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 
@@ -260,6 +303,9 @@ public:
 
   /// The filename with path we use for coverage notes files.
   std::string CoverageNotesFile;
+
+  /// Whether to force absolute paths in coverage notes files.
+  bool UseAbsolutePathsInNotesFile;
 
   /// Regexes separated by a semi-colon to filter the files to instrument.
   std::string ProfileFilterFiles;
@@ -637,6 +683,10 @@ public:
     return getExceptionHandling() == ExceptionHandlingKind::Wasm;
   }
 
+  bool hasEmscriptenExceptions() const {
+    return getExceptionHandling() == ExceptionHandlingKind::Emscripten;
+  }
+
   /// Check if Clang profile instrumenation is on.
   bool hasProfileClangInstr() const {
     return getProfileInstr() ==
@@ -726,6 +776,10 @@ public:
     }
     llvm_unreachable("Unknown BoolFromMem enum");
   }
+
+  /// Remap specified path prefix using provided DebugPrefixMap map.
+  /// Returns updated path or unchanged if no substitution was found.
+  std::string remapDebugPathPrefix(StringRef Path) const;
 };
 
 }  // end namespace clang

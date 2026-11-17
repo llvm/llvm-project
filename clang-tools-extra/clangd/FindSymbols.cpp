@@ -16,6 +16,7 @@
 #include "index/Symbol.h"
 #include "index/SymbolLocation.h"
 #include "support/Logger.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"

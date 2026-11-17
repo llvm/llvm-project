@@ -97,17 +97,15 @@ public:
   static unsigned getHashValue(const Fortran::evaluate::ComplexPart &x) {
     return getHashValue(x.complex()) - static_cast<unsigned>(x.part());
   }
-  template <Fortran::common::TypeCategory TC1, int KIND,
+  template <Fortran::common::TypeCategory TC1,
             Fortran::common::TypeCategory TC2>
   static unsigned getHashValue(
-      const Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1, KIND>, TC2>
-          &x) {
+      const Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1>, TC2> &x) {
+    const int kind{x.kind()};
     return getHashValue(x.left()) - (static_cast<unsigned>(TC1) + 2u) -
-           (static_cast<unsigned>(KIND) + 5u);
+           (static_cast<unsigned>(kind) + 5u);
   }
-  template <int KIND>
-  static unsigned
-  getHashValue(const Fortran::evaluate::ComplexComponent<KIND> &x) {
+  static unsigned getHashValue(const Fortran::evaluate::ComplexComponent &x) {
     return getHashValue(x.left()) -
            (static_cast<unsigned>(x.isImaginaryPart) + 1u) * 3u;
   }
@@ -115,47 +113,54 @@ public:
   static unsigned getHashValue(const Fortran::evaluate::Parentheses<T> &x) {
     return getHashValue(x.left()) * 17u;
   }
-  template <Fortran::common::TypeCategory TC, int KIND>
+  template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
-      const Fortran::evaluate::Negate<Fortran::evaluate::Type<TC, KIND>> &x) {
+      const Fortran::evaluate::Negate<Fortran::evaluate::Type<TC>> &x) {
+    const int kind{x.kind()};
     return getHashValue(x.left()) - (static_cast<unsigned>(TC) + 5u) -
-           (static_cast<unsigned>(KIND) + 7u);
+           (static_cast<unsigned>(kind) + 7u);
   }
-  template <Fortran::common::TypeCategory TC, int KIND>
-  static unsigned getHashValue(
-      const Fortran::evaluate::Add<Fortran::evaluate::Type<TC, KIND>> &x) {
+  template <Fortran::common::TypeCategory TC>
+  static unsigned
+  getHashValue(const Fortran::evaluate::Add<Fortran::evaluate::Type<TC>> &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) + getHashValue(x.right())) * 23u +
-           static_cast<unsigned>(TC) + static_cast<unsigned>(KIND);
+           static_cast<unsigned>(TC) + static_cast<unsigned>(kind);
   }
-  template <Fortran::common::TypeCategory TC, int KIND>
+  template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
-      const Fortran::evaluate::Subtract<Fortran::evaluate::Type<TC, KIND>> &x) {
+      const Fortran::evaluate::Subtract<Fortran::evaluate::Type<TC>> &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 19u +
-           static_cast<unsigned>(TC) + static_cast<unsigned>(KIND);
+           static_cast<unsigned>(TC) + static_cast<unsigned>(kind);
   }
-  template <Fortran::common::TypeCategory TC, int KIND>
+  template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
-      const Fortran::evaluate::Multiply<Fortran::evaluate::Type<TC, KIND>> &x) {
+      const Fortran::evaluate::Multiply<Fortran::evaluate::Type<TC>> &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) + getHashValue(x.right())) * 29u +
-           static_cast<unsigned>(TC) + static_cast<unsigned>(KIND);
+           static_cast<unsigned>(TC) + static_cast<unsigned>(kind);
   }
-  template <Fortran::common::TypeCategory TC, int KIND>
+  template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
-      const Fortran::evaluate::Divide<Fortran::evaluate::Type<TC, KIND>> &x) {
+      const Fortran::evaluate::Divide<Fortran::evaluate::Type<TC>> &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 31u +
-           static_cast<unsigned>(TC) + static_cast<unsigned>(KIND);
+           static_cast<unsigned>(TC) + static_cast<unsigned>(kind);
   }
-  template <Fortran::common::TypeCategory TC, int KIND>
-  static unsigned getHashValue(
-      const Fortran::evaluate::Power<Fortran::evaluate::Type<TC, KIND>> &x) {
+  template <Fortran::common::TypeCategory TC>
+  static unsigned
+  getHashValue(const Fortran::evaluate::Power<Fortran::evaluate::Type<TC>> &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 37u +
-           static_cast<unsigned>(TC) + static_cast<unsigned>(KIND);
+           static_cast<unsigned>(TC) + static_cast<unsigned>(kind);
   }
-  template <Fortran::common::TypeCategory TC, int KIND>
+  template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
-      const Fortran::evaluate::Extremum<Fortran::evaluate::Type<TC, KIND>> &x) {
+      const Fortran::evaluate::Extremum<Fortran::evaluate::Type<TC>> &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) + getHashValue(x.right())) * 41u +
-           static_cast<unsigned>(TC) + static_cast<unsigned>(KIND) +
+           static_cast<unsigned>(TC) + static_cast<unsigned>(kind) +
            static_cast<unsigned>(x.ordering) * 7u;
   }
   template <typename T>
@@ -163,28 +168,27 @@ public:
     return getHashValue(x.condition()) * 151u -
            getHashValue(x.thenValue()) * 3u + getHashValue(x.elseValue());
   }
-  template <Fortran::common::TypeCategory TC, int KIND>
+  template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
-      const Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC, KIND>>
-          &x) {
+      const Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC>> &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 43u +
-           static_cast<unsigned>(TC) + static_cast<unsigned>(KIND);
+           static_cast<unsigned>(TC) + static_cast<unsigned>(kind);
   }
-  template <int KIND>
-  static unsigned
-  getHashValue(const Fortran::evaluate::ComplexConstructor<KIND> &x) {
+  static unsigned getHashValue(const Fortran::evaluate::ComplexConstructor &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 47u +
-           static_cast<unsigned>(KIND);
+           static_cast<unsigned>(kind);
   }
-  template <int KIND>
-  static unsigned getHashValue(const Fortran::evaluate::Concat<KIND> &x) {
+  static unsigned getHashValue(const Fortran::evaluate::Concat &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 53u +
-           static_cast<unsigned>(KIND);
+           static_cast<unsigned>(kind);
   }
-  template <int KIND>
-  static unsigned getHashValue(const Fortran::evaluate::SetLength<KIND> &x) {
+  static unsigned getHashValue(const Fortran::evaluate::SetLength &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 59u +
-           static_cast<unsigned>(KIND);
+           static_cast<unsigned>(kind);
   }
   static unsigned getHashValue(const Fortran::semantics::SymbolRef &sym) {
     return getHashValue(sym.get());
@@ -251,22 +255,20 @@ public:
     // FIXME: hash the contents.
     return 149u;
   }
-  template <int KIND>
-  static unsigned getHashValue(const Fortran::evaluate::Not<KIND> &x) {
-    return getHashValue(x.left()) * 61u + static_cast<unsigned>(KIND);
+  static unsigned getHashValue(const Fortran::evaluate::Not &x) {
+    const int kind{x.kind()};
+    return getHashValue(x.left()) * 61u + static_cast<unsigned>(kind);
   }
-  template <int KIND>
-  static unsigned
-  getHashValue(const Fortran::evaluate::LogicalOperation<KIND> &x) {
+  static unsigned getHashValue(const Fortran::evaluate::LogicalOperation &x) {
     unsigned result = getHashValue(x.left()) + getHashValue(x.right());
     return result * 67u + static_cast<unsigned>(x.logicalOperator) * 5u;
   }
-  template <Fortran::common::TypeCategory TC, int KIND>
+  template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
-      const Fortran::evaluate::Relational<Fortran::evaluate::Type<TC, KIND>>
-          &x) {
+      const Fortran::evaluate::Relational<Fortran::evaluate::Type<TC>> &x) {
+    const int kind{x.left().kind()};
     return (getHashValue(x.left()) + getHashValue(x.right())) * 71u +
-           static_cast<unsigned>(TC) + static_cast<unsigned>(KIND) +
+           static_cast<unsigned>(TC) + static_cast<unsigned>(kind) +
            static_cast<unsigned>(x.opr) * 11u;
   }
   template <typename A>
@@ -284,10 +286,9 @@ public:
     return Fortran::common::visit(
         [&](const auto &v) { return getHashValue(v); }, x.u);
   }
-  template <int BITS>
   static unsigned
-  getHashValue(const Fortran::evaluate::value::Integer<BITS> &x) {
-    return static_cast<unsigned>(x.ToSInt());
+  getHashValue(const Fortran::evaluate::value::IntegerValue &x) {
+    return static_cast<unsigned>(x.ToInt64());
   }
   static unsigned getHashValue(const Fortran::evaluate::NullPointer &x) {
     return ~179u;
@@ -374,27 +375,27 @@ public:
   template <typename A, Fortran::common::TypeCategory TC2>
   static bool isEqual(const Fortran::evaluate::Convert<A, TC2> &x,
                       const Fortran::evaluate::Convert<A, TC2> &y) {
-    return isEqual(x.left(), y.left());
+    return x.kind() == y.kind() && isEqual(x.left(), y.left());
   }
-  template <int KIND>
-  static bool isEqual(const Fortran::evaluate::ComplexComponent<KIND> &x,
-                      const Fortran::evaluate::ComplexComponent<KIND> &y) {
-    return isEqual(x.left(), y.left()) &&
+  static bool isEqual(const Fortran::evaluate::ComplexComponent &x,
+                      const Fortran::evaluate::ComplexComponent &y) {
+    return x.kind() == y.kind() && isEqual(x.left(), y.left()) &&
            x.isImaginaryPart == y.isImaginaryPart;
   }
   template <typename T>
   static bool isEqual(const Fortran::evaluate::Parentheses<T> &x,
                       const Fortran::evaluate::Parentheses<T> &y) {
-    return isEqual(x.left(), y.left());
+    return x.kind() == y.kind() && isEqual(x.left(), y.left());
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Negate<A> &x,
                       const Fortran::evaluate::Negate<A> &y) {
-    return isEqual(x.left(), y.left());
+    return x.kind() == y.kind() && isEqual(x.left(), y.left());
   }
   template <typename A>
   static bool isBinaryEqual(const A &x, const A &y) {
-    return isEqual(x.left(), y.left()) && isEqual(x.right(), y.right());
+    return x.kind() == y.kind() && isEqual(x.left(), y.left()) &&
+           isEqual(x.right(), y.right());
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Add<A> &x,
@@ -429,7 +430,7 @@ public:
   template <typename T>
   static bool isEqual(const Fortran::evaluate::ConditionalExpr<T> &x,
                       const Fortran::evaluate::ConditionalExpr<T> &y) {
-    return isEqual(x.condition(), y.condition()) &&
+    return x.kind() == y.kind() && isEqual(x.condition(), y.condition()) &&
            isEqual(x.thenValue(), y.thenValue()) &&
            isEqual(x.elseValue(), y.elseValue());
   }
@@ -438,19 +439,16 @@ public:
                       const Fortran::evaluate::RealToIntPower<A> &y) {
     return isBinaryEqual(x, y);
   }
-  template <int KIND>
-  static bool isEqual(const Fortran::evaluate::ComplexConstructor<KIND> &x,
-                      const Fortran::evaluate::ComplexConstructor<KIND> &y) {
+  static bool isEqual(const Fortran::evaluate::ComplexConstructor &x,
+                      const Fortran::evaluate::ComplexConstructor &y) {
     return isBinaryEqual(x, y);
   }
-  template <int KIND>
-  static bool isEqual(const Fortran::evaluate::Concat<KIND> &x,
-                      const Fortran::evaluate::Concat<KIND> &y) {
+  static bool isEqual(const Fortran::evaluate::Concat &x,
+                      const Fortran::evaluate::Concat &y) {
     return isBinaryEqual(x, y);
   }
-  template <int KIND>
-  static bool isEqual(const Fortran::evaluate::SetLength<KIND> &x,
-                      const Fortran::evaluate::SetLength<KIND> &y) {
+  static bool isEqual(const Fortran::evaluate::SetLength &x,
+                      const Fortran::evaluate::SetLength &y) {
     return isBinaryEqual(x, y);
   }
   static bool isEqual(const Fortran::semantics::SymbolRef &x,
@@ -531,6 +529,8 @@ public:
   template <typename A>
   static bool isEqual(const Fortran::evaluate::ArrayConstructor<A> &x,
                       const Fortran::evaluate::ArrayConstructor<A> &y) {
+    if (x.kind() != y.kind())
+      return false;
     bool checkCharacterType = true;
     if constexpr (A::category == Fortran::common::TypeCategory::Character) {
       checkCharacterType = isEqual(*x.LEN(), *y.LEN());
@@ -541,16 +541,17 @@ public:
   }
   static bool isEqual(const Fortran::evaluate::ImpliedDoIndex &x,
                       const Fortran::evaluate::ImpliedDoIndex &y) {
-    return toStringRef(x.name) == toStringRef(y.name);
+    return x.kind() == y.kind() && toStringRef(x.name) == toStringRef(y.name);
   }
   static bool isEqual(const Fortran::evaluate::TypeParamInquiry &x,
                       const Fortran::evaluate::TypeParamInquiry &y) {
-    return isEqual(x.base(), y.base()) && isEqual(x.parameter(), y.parameter());
+    return x.kind() == y.kind() && isEqual(x.base(), y.base()) &&
+           isEqual(x.parameter(), y.parameter());
   }
   static bool isEqual(const Fortran::evaluate::DescriptorInquiry &x,
                       const Fortran::evaluate::DescriptorInquiry &y) {
-    return isEqual(x.base(), y.base()) && x.field() == y.field() &&
-           x.dimension() == y.dimension();
+    return x.kind() == y.kind() && isEqual(x.base(), y.base()) &&
+           x.field() == y.field() && x.dimension() == y.dimension();
   }
   static bool isEqual(const Fortran::evaluate::RankOneBoundElement &x,
                       const Fortran::evaluate::RankOneBoundElement &y) {
@@ -558,6 +559,8 @@ public:
   }
   static bool isEqual(const Fortran::evaluate::StructureConstructor &x,
                       const Fortran::evaluate::StructureConstructor &y) {
+    if (x.kind() != y.kind())
+      return false;
     const auto &xValues = x.values();
     const auto &yValues = y.values();
     if (xValues.size() != yValues.size())
@@ -575,43 +578,48 @@ public:
     }
     return true;
   }
-  template <int KIND>
-  static bool isEqual(const Fortran::evaluate::Not<KIND> &x,
-                      const Fortran::evaluate::Not<KIND> &y) {
-    return isEqual(x.left(), y.left());
+  static bool isEqual(const Fortran::evaluate::Not &x,
+                      const Fortran::evaluate::Not &y) {
+    return x.kind() == y.kind() && isEqual(x.left(), y.left());
   }
-  template <int KIND>
-  static bool isEqual(const Fortran::evaluate::LogicalOperation<KIND> &x,
-                      const Fortran::evaluate::LogicalOperation<KIND> &y) {
-    return isEqual(x.left(), y.left()) && isEqual(x.right(), y.right());
+  static bool isEqual(const Fortran::evaluate::LogicalOperation &x,
+                      const Fortran::evaluate::LogicalOperation &y) {
+    return x.kind() == y.kind() && isEqual(x.left(), y.left()) &&
+           isEqual(x.right(), y.right());
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Relational<A> &x,
                       const Fortran::evaluate::Relational<A> &y) {
-    return isEqual(x.left(), y.left()) && isEqual(x.right(), y.right());
+    return x.kind() == y.kind() && isEqual(x.left(), y.left()) &&
+           isEqual(x.right(), y.right());
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Expr<A> &x,
                       const Fortran::evaluate::Expr<A> &y) {
-    return Fortran::common::visit(
-        [&](const auto &v, const auto &w) { return isEqual(v, w); }, x.u, y.u);
+    return x.kind() == y.kind() &&
+           Fortran::common::visit(
+               [&](const auto &v, const auto &w) { return isEqual(v, w); }, x.u,
+               y.u);
   }
   static bool
   isEqual(const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &x,
           const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &y) {
-    return Fortran::common::visit(
-        [&](const auto &v, const auto &w) { return isEqual(v, w); }, x.u, y.u);
+    return x.kind() == y.kind() &&
+           Fortran::common::visit(
+               [&](const auto &v, const auto &w) { return isEqual(v, w); }, x.u,
+               y.u);
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Designator<A> &x,
                       const Fortran::evaluate::Designator<A> &y) {
-    return Fortran::common::visit(
-        [&](const auto &v, const auto &w) { return isEqual(v, w); }, x.u, y.u);
+    return x.kind() == y.kind() &&
+           Fortran::common::visit(
+               [&](const auto &v, const auto &w) { return isEqual(v, w); }, x.u,
+               y.u);
   }
-  template <int BITS>
-  static bool isEqual(const Fortran::evaluate::value::Integer<BITS> &x,
-                      const Fortran::evaluate::value::Integer<BITS> &y) {
-    return x == y;
+  static bool isEqual(const Fortran::evaluate::value::IntegerValue &x,
+                      const Fortran::evaluate::value::IntegerValue &y) {
+    return x.kind() == y.kind() && x == y;
   }
   static bool isEqual(const Fortran::evaluate::NullPointer &x,
                       const Fortran::evaluate::NullPointer &y) {
@@ -672,7 +680,7 @@ void privatizeSymbol(
     llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps,
     std::optional<llvm::omp::Directive> dir,
-    bool forceHeapAllocationForPrivateDynamicArrays) {
+    bool forceHeapAllocationForPrivateDynamicArrays, bool isLinear) {
   constexpr bool isDoConcurrent =
       std::is_same_v<OpType, fir::LocalitySpecifierOp>;
   mlir::OpBuilder::InsertPoint dcIP;
@@ -685,6 +693,16 @@ void privatizeSymbol(
 
   const semantics::Symbol *sym =
       isDoConcurrent ? &symToPrivatize->GetUltimate() : symToPrivatize;
+  // The original value of a DO CONCURRENT locality-spec entity is that of the
+  // variable it names in the enclosing scope, which may itself be a LOCAL or
+  // LOCAL_INIT entity of an enclosing DO CONCURRENT (F2023 11.1.7.5). Look it
+  // up from the host symbol so that SymMap::getKey finds that entity; the
+  // ultimate symbol `sym` still names the privatizer.
+  const semantics::Symbol *hostSym = sym;
+  if (isDoConcurrent)
+    if (const auto *hostAssoc =
+            symToPrivatize->detailsIf<semantics::HostAssocDetails>())
+      hostSym = &hostAssoc->symbol();
   // Module variables accessed via USE inside nested BLOCKs may not be
   // instantiated yet. Ensure they are bound before looking up the host box.
   const auto &ultimate = sym->GetUltimate();
@@ -695,7 +713,7 @@ void privatizeSymbol(
         converter, Fortran::lower::pft::Variable{ultimate, /*global=*/true},
         symTable, storeMap);
   }
-  lower::SymbolBox hsb = symTable.lookupSymbol(*sym);
+  lower::SymbolBox hsb = symTable.lookupSymbol(*hostSym);
   assert(hsb && "Host symbol box not found");
 
   mlir::Location symLoc = hsb.getAddr().getLoc();
@@ -710,6 +728,8 @@ void privatizeSymbol(
   // not emit the copy region when dealing with the SIMD directive.
   if (dir && dir == llvm::omp::Directive::OMPD_simd)
     emitCopyRegion = false;
+  assert((!isLinear || std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) &&
+         "only omp.private has a `linear` type");
 
   mlir::Value privVal = hsb.getAddr();
   mlir::Type allocType = privVal.getType();
@@ -749,8 +769,12 @@ void privatizeSymbol(
     // Boxes should be passed by reference into nested regions:
     auto oldIP = firOpBuilder.saveInsertionPoint();
     firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
+    // Get name so later passes (e.g. MapsForPrivatizedSymbols) can report it in
+    // offload info.
+    mlir::Location boxLoc = mlir::NameLoc::get(
+        firOpBuilder.getStringAttr(sym->name().ToString()), symLoc);
     auto alloca =
-        fir::AllocaOp::create(firOpBuilder, symLoc, privVal.getType());
+        fir::AllocaOp::create(firOpBuilder, boxLoc, privVal.getType());
     firOpBuilder.restoreInsertionPoint(oldIP);
     fir::StoreOp::create(firOpBuilder, symLoc, privVal, alloca);
     privVal = alloca;
@@ -765,7 +789,8 @@ void privatizeSymbol(
     auto moduleOp = firOpBuilder.getModule();
     std::string privatizerPrefix =
         converter.mangleName(*sym) +
-        (emitCopyRegion ? "_firstprivate" : "_private");
+        (emitCopyRegion ? "_firstprivate"
+                        : (isLinear ? "_linear" : "_private"));
     if (forceHeapAllocation)
       privatizerPrefix += "_heap";
     auto uniquePrivatizerName = fir::getTypeAsString(
@@ -787,12 +812,15 @@ void privatizeSymbol(
 
     if constexpr (std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) {
       result = OpType::create(
-          firOpBuilder, symLoc, uniquePrivatizerName, allocType,
+          firOpBuilder, symLoc, uniquePrivatizerName,
+          /*sym_visibility=*/nullptr, allocType,
           emitCopyRegion ? mlir::omp::DataSharingClauseType::FirstPrivate
+          : isLinear     ? mlir::omp::DataSharingClauseType::Linear
                          : mlir::omp::DataSharingClauseType::Private);
     } else {
       result =
-          OpType::create(firOpBuilder, symLoc, uniquePrivatizerName, allocType,
+          OpType::create(firOpBuilder, symLoc, uniquePrivatizerName,
+                         /*sym_visibility=*/nullptr, allocType,
                          emitCopyRegion ? fir::LocalitySpecifierType::LocalInit
                                         : fir::LocalitySpecifierType::Local);
     }
@@ -813,8 +841,7 @@ void privatizeSymbol(
         mlir::isa<fir::BaseBoxType>(allocType) ||
         mlir::isa<fir::BoxCharType>(allocType);
     if (needsInitialization) {
-      lower::SymbolBox hsb = symTable.lookupSymbol(
-          isDoConcurrent ? symToPrivatize->GetUltimate() : *symToPrivatize);
+      lower::SymbolBox hsb = symTable.lookupSymbol(*hostSym);
 
       assert(hsb && "Host symbol box not found");
       hlfir::Entity entity{hsb.getAddr()};
@@ -886,6 +913,20 @@ void privatizeSymbol(
       }
     }
 
+    // A `linear` privatizer of a descriptor gives the address of its data.
+    if constexpr (std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) {
+      if (isLinear && mlir::isa<fir::BaseBoxType>(allocType)) {
+        mlir::Block *block =
+            firOpBuilder.createBlock(&result.getDataAddressRegion(),
+                                     /*insertPt=*/{}, {argType}, {symLoc});
+        firOpBuilder.setInsertionPointToEnd(block);
+        mlir::Value box =
+            fir::LoadOp::create(firOpBuilder, symLoc, block->getArgument(0));
+        mlir::Value addr = fir::BoxAddrOp::create(firOpBuilder, symLoc, box);
+        mlir::omp::YieldOp::create(firOpBuilder, symLoc, addr);
+      }
+    }
+
     return result;
   }();
 
@@ -910,7 +951,7 @@ privatizeSymbol<mlir::omp::PrivateClauseOp, mlir::omp::PrivateClauseOps>(
     const semantics::Symbol *symToPrivatize,
     mlir::omp::PrivateClauseOps *clauseOps,
     std::optional<llvm::omp::Directive> dir,
-    bool forceHeapAllocationForPrivateDynamicArrays);
+    bool forceHeapAllocationForPrivateDynamicArrays, bool isLinear);
 
 template void
 privatizeSymbol<fir::LocalitySpecifierOp, fir::LocalitySpecifierOperands>(
@@ -921,6 +962,24 @@ privatizeSymbol<fir::LocalitySpecifierOp, fir::LocalitySpecifierOperands>(
     const semantics::Symbol *symToPrivatize,
     fir::LocalitySpecifierOperands *clauseOps,
     std::optional<llvm::omp::Directive> dir,
-    bool forceHeapAllocationForPrivateDynamicArrays);
+    bool forceHeapAllocationForPrivateDynamicArrays, bool isLinear);
+
+llvm::SmallVector<const semantics::Symbol *>
+getCommonBlockStorageMembers(const semantics::Symbol &commonBlock) {
+  llvm::SmallVector<const semantics::Symbol *> members;
+  const semantics::Scope &scope = commonBlock.owner();
+  if (scope.equivalenceSets().empty()) {
+    for (const auto &object :
+         commonBlock.get<semantics::CommonBlockDetails>().objects())
+      members.push_back(&*object);
+    return members;
+  }
+  // An object EQUIVALENCEd with a member is in the block's storage without
+  // being in a COMMON statement, so look at every symbol of the scope.
+  for (const auto &[name, symbol] : scope)
+    if (semantics::FindCommonBlockContaining(*symbol) == &commonBlock)
+      members.push_back(&*symbol);
+  return members;
+}
 
 } // end namespace Fortran::lower

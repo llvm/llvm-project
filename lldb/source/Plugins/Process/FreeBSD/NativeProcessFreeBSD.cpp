@@ -900,8 +900,8 @@ Status NativeProcessFreeBSD::ReadMemory(const ProcessAddress &process_addr,
   return Status();
 }
 
-Status NativeProcessFreeBSD::WriteMemory(lldb::addr_t addr, const void *buf,
-                                         size_t size, size_t &bytes_written) {
+Status NativeProcessFreeBSD::DoWriteMemory(lldb::addr_t addr, const void *buf,
+                                           size_t size, size_t &bytes_written) {
   const unsigned char *src = static_cast<const unsigned char *>(buf);
   Status error;
   struct ptrace_io_desc io;
@@ -1063,7 +1063,8 @@ NativeProcessFreeBSD::SaveCore(llvm::StringRef path_hint) {
   }
   error = PtraceWrapper(PT_COREDUMP, GetID(), &pc, sizeof(pc));
 
-  std::error_code close_err = closeFile(pc.pc_fd);
+  llvm::sys::fs::file_t fd = pc.pc_fd;
+  std::error_code close_err = closeFile(fd);
   if (error.Fail())
     return error.ToError();
   if (close_err)

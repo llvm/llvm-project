@@ -25,11 +25,11 @@
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 64 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 1 : index
-// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 1 : index} : tensor<64x32xf64, #sparse{{[0-9]*}}> to memref<?xindex>
-// CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_1]] {level = 1 : index} : tensor<64x32xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_1]] level = 1 : tensor<64x32xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_1]] level = 1 : tensor<64x32xf64, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<64x32xf64, #sparse{{[0-9]*}}> to memref<?xf64>
-// CHECK-DAG:       %[[VAL_11:.*]] = sparse_tensor.positions %[[VAL_2]] {level = 1 : index} : tensor<64x32xf64, #sparse{{[0-9]*}}> to memref<?xindex>
-// CHECK-DAG:       %[[VAL_12:.*]] = sparse_tensor.coordinates %[[VAL_2]] {level = 1 : index} : tensor<64x32xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_11:.*]] = sparse_tensor.positions %[[VAL_2]] level = 1 : tensor<64x32xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_12:.*]] = sparse_tensor.coordinates %[[VAL_2]] level = 1 : tensor<64x32xf64, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_13:.*]] = sparse_tensor.values %[[VAL_2]] : tensor<64x32xf64, #sparse{{[0-9]*}}> to memref<?xf64>
 // CHECK-DAG:       %[[VAL_14:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<f64> to memref<f64>
 // CHECK:           %[[VAL_15:.*]] = memref.load %[[VAL_14]][] : memref<f64>

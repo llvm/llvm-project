@@ -1,6 +1,22 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -finclude-default-header -DTEXTURE=Texture2D -DCOORD_TYPE=float2 -DLOCATION=int3 -DINDEX=uint2 -verify %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -finclude-default-header -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 -DLOCATION=int4 -DINDEX=uint3 -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DTEXTURE=Texture2D -DCOORD_TYPE=float2 \
+// RUN:   -DGRAD_TYPE=float2 -DLOAD_TYPE=int3 -DINDEX_TYPE=uint2 -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DTEXTURE=Texture2DArray \
+// RUN:   -DCOORD_TYPE=float3 -DGRAD_TYPE=float2 -DLOAD_TYPE=int4 \
+// RUN:   -DINDEX_TYPE=uint3 -verify %s
 
+// Parameterized over the texture types in the RUN lines above; adding a texture
+// of another dimension only requires new RUN lines.
+//
+//   TEXTURE            resource type name
+//   COORD_TYPE         sample location type (DIM components plus the array
+//                      slice)
+//   GRAD_TYPE          SampleGrad ddx/ddy type, one component per resource
+//                      dimension
+//   LOAD_TYPE          Load location type
+//   INDEX_TYPE         operator[] index type
+//
 // Textures with a 'double' element type are valid declarations, but sampling
 // from them and gathering on them is not supported.
 
@@ -22,7 +38,7 @@ void main(COORD_TYPE uv) {
 
   // expected-error@* {{'SampleGrad' is not supported for resources containing 'double'}}
   // expected-note-re@*:* {{in instantiation of member function 'hlsl::Texture{{.+}}<double>::SampleGrad' requested here}}
-  Tex.SampleGrad(Samp, uv, float2(0, 0), float2(0, 0));
+  Tex.SampleGrad(Samp, uv, (GRAD_TYPE)0, (GRAD_TYPE)0);
 
   // expected-error@* {{'SampleLevel' is not supported for resources containing 'double'}}
   // expected-note-re@*:* {{in instantiation of member function 'hlsl::Texture{{.+}}<double>::SampleLevel' requested here}}
@@ -62,8 +78,8 @@ void main(COORD_TYPE uv) {
   TexVec.Gather(Samp, uv);
 
   // Loading from and subscripting textures containing doubles is allowed.
-  double a = Tex.Load((LOCATION)0);
-  double b = Tex[(INDEX)0];
-  double2 c = TexVec.Load((LOCATION)0);
-  double2 d = TexVec[(INDEX)0];
+  double a = Tex.Load((LOAD_TYPE)0);
+  double b = Tex[(INDEX_TYPE)0];
+  double2 c = TexVec.Load((LOAD_TYPE)0);
+  double2 d = TexVec[(INDEX_TYPE)0];
 }

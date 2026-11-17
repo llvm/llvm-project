@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:   --gpu-lower-to-rocdl-pipeline="chip=%chip" \
+// RUN:   --gpu-lower-to-rocdl-pipeline="arch=%chip" \
 // RUN: | mlir-runner \
 // RUN:   --shared-libs=%mlir_rocm_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \

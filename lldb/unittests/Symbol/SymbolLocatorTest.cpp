@@ -53,6 +53,9 @@ std::optional<FileSpec> g_object_file;
 /// What the symbol file locator claims to have found, if anything.
 std::optional<FileSpec> g_symbol_file;
 
+/// What the symbol server claims to have downloaded, if anything.
+std::optional<FileSpec> g_downloaded_symbol_file;
+
 /// When set, the symbol server fails the way a failure to launch it does, with
 /// an errno rather than a message.
 bool g_symbol_server_errno = false;
@@ -83,8 +86,8 @@ std::optional<ModuleSpec> LocateExecutableObjectFile(const ModuleSpec &spec) {
   return located;
 }
 
-bool DownloadObjectAndSymbolFile(ModuleSpec &, Status &error, bool force_lookup,
-                                 bool) {
+bool DownloadObjectAndSymbolFile(ModuleSpec &module_spec, Status &error,
+                                 bool force_lookup, bool) {
   g_calls.downloaded = true;
   if (!force_lookup)
     return false;
@@ -92,7 +95,11 @@ bool DownloadObjectAndSymbolFile(ModuleSpec &, Status &error, bool force_lookup,
     error = Status(std::make_error_code(std::errc::too_many_files_open));
   else
     error = Status::FromErrorString("the symbol server said no");
-  return false;
+  // A server that delivers is under no obligation to leave the Status alone.
+  if (!g_downloaded_symbol_file)
+    return false;
+  module_spec.GetSymbolFileSpec() = *g_downloaded_symbol_file;
+  return true;
 }
 
 SymbolLocator *CreateSymbolLocator() { return nullptr; }
@@ -154,6 +161,7 @@ public:
     g_calls.Clear();
     g_object_file = std::nullopt;
     g_symbol_file = std::nullopt;
+    g_downloaded_symbol_file = std::nullopt;
     g_symbol_server_errno = false;
     g_only_with_uuid = false;
     g_barrier = nullptr;
@@ -244,6 +252,24 @@ TEST_F(SymbolLocatorTest, BinaryWithoutSymbolsIsASuccess) {
   ASSERT_TRUE(result->symbol_error);
   EXPECT_EQ("the symbol server said no",
             llvm::toString(std::move(*result->symbol_error)));
+}
+
+TEST_F(SymbolLocatorTest, ASuccessfulDownloadIsNotASymbolError) {
+  // A symbol server that delivered has nothing left to explain.
+  g_object_file = m_binary;
+  g_downloaded_symbol_file = m_symbols;
+  SymbolLocator::Request request;
+  request.external_lookup = true;
+
+  llvm::Expected<SymbolLocator::Result> result =
+      SymbolLocator::Locate(request, FileSpecList());
+
+  ASSERT_THAT_EXPECTED(result, llvm::Succeeded());
+  EXPECT_EQ(m_symbols, result->module_spec.GetSymbolFileSpec());
+  // Consumed in the failure message, because an unchecked Error aborts when it
+  // goes out of scope.
+  EXPECT_FALSE(result->symbol_error)
+      << llvm::toString(std::move(*result->symbol_error));
 }
 
 TEST_F(SymbolLocatorTest, SymbolFileWithoutBinaryIsAMiss) {

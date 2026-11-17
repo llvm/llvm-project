@@ -20,8 +20,7 @@ subroutine test_udr_real_allocatable()
   end do
 end subroutine
 
-! CHECK-LABEL: omp.declare_reduction @{{.*}}rmax_byref_box_heap_f32 : !fir.ref<!fir.box<!fir.heap<f32>>>
-! CHECK-SAME:  attributes {byref_element_type = f32}
+! CHECK-LABEL: omp.declare_reduction @{{.*}}rmax_byref_box_heap_f32 byref_element_type({{.*}}) : !fir.ref<!fir.box<!fir.heap<f32>>>
 ! CHECK:       alloc {
 ! CHECK:         fir.alloca !fir.box<!fir.heap<f32>>
 ! CHECK:         omp.yield
@@ -33,7 +32,7 @@ end subroutine
 ! CHECK:         %[[MADDR:.*]] = fir.box_addr %[[MBOX]]
 ! CHECK:         %[[ORIG:.*]] = fir.load %[[MADDR]] : !fir.heap<f32>
 ! CHECK:         fir.store %[[ORIG]] to %[[OTMP:.*]] : !fir.ref<f32>
-! CHECK:         %[[ODECL:.*]]:2 = hlfir.declare %[[OTMP]] {{.*}}uniq_name = "omp_orig"
+! CHECK:         %[[ODECL:.*]]:2 = hlfir.declare %[[OTMP]] {{.*}}uniq_name("omp_orig")
 ! CHECK:         %[[PVAL:.*]] = fir.load %[[ODECL]]#0 : !fir.ref<f32>
 ! CHECK:         %[[PRIV:.*]] = fir.allocmem f32
 ! CHECK:         fir.store %[[PVAL]] to %[[PRIV]] : !fir.heap<f32>

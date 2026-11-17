@@ -54,8 +54,6 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
         InstrumentationMap::SledContainer &Sleds,
         InstrumentationMap::FunctionAddressMap &FunctionAddresses,
         InstrumentationMap::FunctionAddressReverseMap &FunctionIds) {
-  InstrumentationMap Map;
-
   // Find the section named "xray_instr_map".
   if ((!ObjFile.getBinary()->isELF() && !ObjFile.getBinary()->isMachO()) ||
       !(ObjFile.getBinary()->getArch() == Triple::x86_64 ||
@@ -63,7 +61,8 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
         ObjFile.getBinary()->getArch() == Triple::ppc64le ||
         ObjFile.getBinary()->getArch() == Triple::arm ||
         ObjFile.getBinary()->getArch() == Triple::aarch64 ||
-        ObjFile.getBinary()->getArch() == Triple::riscv64))
+        ObjFile.getBinary()->getArch() == Triple::riscv64 ||
+        ObjFile.getBinary()->getArch() == Triple::systemz))
     return make_error<StringError>(
         "File format not supported (only does ELF and Mach-O little endian "
         "64-bit).",
@@ -167,7 +166,8 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
   int32_t FuncId = 1;
   uint64_t CurFn = 0;
   for (; C != Contents.bytes_end(); C += ELFSledEntrySize) {
-    DataExtractor Extractor(ArrayRef<uint8_t>(C, ELFSledEntrySize), true);
+    DataExtractor Extractor(ArrayRef<uint8_t>(C, ELFSledEntrySize),
+                            ObjFile.getBinary()->isLittleEndian());
     Sleds.push_back({});
     auto &Entry = Sleds.back();
     uint64_t OffsetPtr = 0;

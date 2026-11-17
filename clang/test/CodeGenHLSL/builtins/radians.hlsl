@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -O1 -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -finclude-default-header -x hlsl -triple \
+// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
+// RUN:   -emit-llvm -O1 -o - | FileCheck %s %}
 
 // Note: the 1.745610e-02 and f0x3C8EFA35 constants below equal Pi/180.
 
@@ -37,3 +40,10 @@ float3 test_radians_float3(float3 p0) { return radians(p0); }
 // CHECK: [[MUL:%.*]] = fmul reassoc nnan ninf nsz arcp afn <4 x float> %{{.*}}, splat (float f0x3C8EFA35)
 // CHECK-NEXT: ret <4 x float> [[MUL]]
 float4 test_radians_float4(float4 p0) { return radians(p0); }
+
+// CHECK-LABEL: test_radians_float5
+// CHECK: [[MUL:%.*]] = fmul reassoc nnan ninf nsz arcp afn <5 x float> %{{.*}}, splat (float f0x3C8EFA35)
+// CHECK-NEXT: ret <5 x float> [[MUL]]
+vector<float, 5> test_radians_float5(vector<float, 5> p0) {
+	return radians(p0);
+}

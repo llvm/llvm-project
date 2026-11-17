@@ -12,8 +12,8 @@ define void @scalar_copy(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i160 [[TMP1]] to i128
 ; CHECK-NEXT:    [[X_PTR_RSRC:%.*]] = inttoptr i128 [[TMP2]] to ptr addrspace(8)
 ; CHECK-NEXT:    [[X_PTR_OFF:%.*]] = trunc i160 [[X]] to i32
-; CHECK-NEXT:    [[B1:%.*]] = getelementptr i160, ptr [[B]], i64 1
-; CHECK-NEXT:    store i160 [[X]], ptr [[B1]], align 32
+; CHECK-NEXT:    [[B11:%.*]] = getelementptr i8, ptr [[B]], i64 32
+; CHECK-NEXT:    store i160 [[X]], ptr [[B11]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %x = load ptr addrspace(7), ptr %a
@@ -30,8 +30,8 @@ define void @vector_copy(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i160> [[TMP1]] to <4 x i128>
 ; CHECK-NEXT:    [[X_PTR_RSRC:%.*]] = inttoptr <4 x i128> [[TMP2]] to <4 x ptr addrspace(8)>
 ; CHECK-NEXT:    [[X_PTR_OFF:%.*]] = trunc <4 x i160> [[X]] to <4 x i32>
-; CHECK-NEXT:    [[B1:%.*]] = getelementptr <4 x i160>, ptr [[B]], i64 2
-; CHECK-NEXT:    store <4 x i160> [[X]], ptr [[B1]], align 128
+; CHECK-NEXT:    [[B11:%.*]] = getelementptr i8, ptr [[B]], i64 256
+; CHECK-NEXT:    store <4 x i160> [[X]], ptr [[B11]], align 128
 ; CHECK-NEXT:    ret void
 ;
   %x = load <4 x ptr addrspace(7)>, ptr %a
@@ -43,15 +43,15 @@ define void @vector_copy(ptr %a, ptr %b) {
 define void @alloca(ptr %a, ptr %b) {
 ; CHECK-LABEL: define void @alloca
 ; CHECK-SAME: (ptr [[A:%.*]], ptr [[B:%.*]]) {
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [5 x i160], align 32, addrspace(5)
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [160 x i8], align 32, addrspace(5)
 ; CHECK-NEXT:    [[X:%.*]] = load i160, ptr [[A]], align 32
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i160 [[X]], 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i160 [[TMP1]] to i128
 ; CHECK-NEXT:    [[X_PTR_RSRC:%.*]] = inttoptr i128 [[TMP2]] to ptr addrspace(8)
 ; CHECK-NEXT:    [[X_PTR_OFF:%.*]] = trunc i160 [[X]] to i32
-; CHECK-NEXT:    [[L:%.*]] = getelementptr i160, ptr addrspace(5) [[ALLOCA]], i32 1
-; CHECK-NEXT:    store i160 [[X]], ptr addrspace(5) [[L]], align 32
-; CHECK-NEXT:    [[Y:%.*]] = load i160, ptr addrspace(5) [[L]], align 32
+; CHECK-NEXT:    [[L1:%.*]] = getelementptr i8, ptr addrspace(5) [[ALLOCA]], i32 32
+; CHECK-NEXT:    store i160 [[X]], ptr addrspace(5) [[L1]], align 32
+; CHECK-NEXT:    [[Y:%.*]] = load i160, ptr addrspace(5) [[L1]], align 32
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i160 [[Y]], 32
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i160 [[TMP3]] to i128
 ; CHECK-NEXT:    [[Y_PTR_RSRC:%.*]] = inttoptr i128 [[TMP4]] to ptr addrspace(8)
@@ -71,39 +71,204 @@ define void @alloca(ptr %a, ptr %b) {
 define void @complex_copy(ptr %a, ptr %b) {
 ; CHECK-LABEL: define void @complex_copy
 ; CHECK-SAME: (ptr [[A:%.*]], ptr [[B:%.*]]) {
-; CHECK-NEXT:    [[X:%.*]] = load { [2 x i160], i32, i160 }, ptr [[A]], align 32
-; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { [2 x i160], i32, i160 } [[X]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue [2 x i160] [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i160 [[TMP2]], 32
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i160 [[TMP3]] to i128
-; CHECK-NEXT:    [[X_0_0_PTR_RSRC:%.*]] = inttoptr i128 [[TMP4]] to ptr addrspace(8)
-; CHECK-NEXT:    [[X_0_0_PTR_OFF:%.*]] = trunc i160 [[TMP2]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[X_0_0_PTR_RSRC]], 0
-; CHECK-NEXT:    [[X_0_0_PTR:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP5]], i32 [[X_0_0_PTR_OFF]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue [2 x { ptr addrspace(8), i32 }] poison, { ptr addrspace(8), i32 } [[X_0_0_PTR]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue [2 x i160] [[TMP1]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr i160 [[TMP7]], 32
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i160 [[TMP8]] to i128
-; CHECK-NEXT:    [[X_0_1_PTR_RSRC:%.*]] = inttoptr i128 [[TMP9]] to ptr addrspace(8)
-; CHECK-NEXT:    [[X_0_1_PTR_OFF:%.*]] = trunc i160 [[TMP7]] to i32
-; CHECK-NEXT:    [[TMP10:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[X_0_1_PTR_RSRC]], 0
-; CHECK-NEXT:    [[X_0_1_PTR:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP10]], i32 [[X_0_1_PTR_OFF]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = insertvalue [2 x { ptr addrspace(8), i32 }] [[TMP6]], { ptr addrspace(8), i32 } [[X_0_1_PTR]], 1
-; CHECK-NEXT:    [[TMP12:%.*]] = insertvalue { [2 x { ptr addrspace(8), i32 }], i32, { ptr addrspace(8), i32 } } poison, [2 x { ptr addrspace(8), i32 }] [[TMP11]], 0
-; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { [2 x i160], i32, i160 } [[X]], 1
-; CHECK-NEXT:    [[TMP14:%.*]] = insertvalue { [2 x { ptr addrspace(8), i32 }], i32, { ptr addrspace(8), i32 } } [[TMP12]], i32 [[TMP13]], 1
-; CHECK-NEXT:    [[TMP15:%.*]] = extractvalue { [2 x i160], i32, i160 } [[X]], 2
-; CHECK-NEXT:    [[TMP16:%.*]] = lshr i160 [[TMP15]], 32
-; CHECK-NEXT:    [[TMP17:%.*]] = trunc i160 [[TMP16]] to i128
-; CHECK-NEXT:    [[X_2_PTR_RSRC:%.*]] = inttoptr i128 [[TMP17]] to ptr addrspace(8)
-; CHECK-NEXT:    [[X_2_PTR_OFF:%.*]] = trunc i160 [[TMP15]] to i32
-; CHECK-NEXT:    [[TMP18:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[X_2_PTR_RSRC]], 0
-; CHECK-NEXT:    [[X_2_PTR:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP18]], i32 [[X_2_PTR_OFF]], 1
-; CHECK-NEXT:    [[TMP19:%.*]] = insertvalue { [2 x { ptr addrspace(8), i32 }], i32, { ptr addrspace(8), i32 } } [[TMP14]], { ptr addrspace(8), i32 } [[X_2_PTR]], 2
-; CHECK-NEXT:    store { [2 x i160], i32, i160 } [[X]], ptr [[B]], align 32
+; CHECK-NEXT:    [[X_0_0:%.*]] = load i160, ptr [[A]], align 32
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i160 [[X_0_0]], 32
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i160 [[TMP1]] to i128
+; CHECK-NEXT:    [[X_0_0_PTR_RSRC:%.*]] = inttoptr i128 [[TMP2]] to ptr addrspace(8)
+; CHECK-NEXT:    [[X_0_0_PTR_OFF:%.*]] = trunc i160 [[X_0_0]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[X_0_0_PTR_RSRC]], 0
+; CHECK-NEXT:    [[X_0_0_PTR:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP3]], i32 [[X_0_0_PTR_OFF]], 1
+; CHECK-NEXT:    [[X_0_0_AGG:%.*]] = insertvalue { [2 x { ptr addrspace(8), i32 }], i32, { ptr addrspace(8), i32 } } poison, { ptr addrspace(8), i32 } [[X_0_0_PTR]], 0, 0
+; CHECK-NEXT:    [[A_OFF_32:%.*]] = getelementptr nuw i8, ptr [[A]], i64 32
+; CHECK-NEXT:    [[X_0_1:%.*]] = load i160, ptr [[A_OFF_32]], align 32
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i160 [[X_0_1]], 32
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i160 [[TMP4]] to i128
+; CHECK-NEXT:    [[X_0_1_PTR_RSRC:%.*]] = inttoptr i128 [[TMP5]] to ptr addrspace(8)
+; CHECK-NEXT:    [[X_0_1_PTR_OFF:%.*]] = trunc i160 [[X_0_1]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[X_0_1_PTR_RSRC]], 0
+; CHECK-NEXT:    [[X_0_1_PTR:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP6]], i32 [[X_0_1_PTR_OFF]], 1
+; CHECK-NEXT:    [[X_0_1_AGG:%.*]] = insertvalue { [2 x { ptr addrspace(8), i32 }], i32, { ptr addrspace(8), i32 } } [[X_0_0_AGG]], { ptr addrspace(8), i32 } [[X_0_1_PTR]], 0, 1
+; CHECK-NEXT:    [[A_OFF_64:%.*]] = getelementptr nuw i8, ptr [[A]], i64 64
+; CHECK-NEXT:    [[X_1:%.*]] = load i32, ptr [[A_OFF_64]], align 32
+; CHECK-NEXT:    [[X_1_AGG:%.*]] = insertvalue { [2 x { ptr addrspace(8), i32 }], i32, { ptr addrspace(8), i32 } } [[X_0_1_AGG]], i32 [[X_1]], 1
+; CHECK-NEXT:    [[A_OFF_96:%.*]] = getelementptr nuw i8, ptr [[A]], i64 96
+; CHECK-NEXT:    [[X_2:%.*]] = load i160, ptr [[A_OFF_96]], align 32
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i160 [[X_2]], 32
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc i160 [[TMP7]] to i128
+; CHECK-NEXT:    [[X_2_PTR_RSRC:%.*]] = inttoptr i128 [[TMP8]] to ptr addrspace(8)
+; CHECK-NEXT:    [[X_2_PTR_OFF:%.*]] = trunc i160 [[X_2]] to i32
+; CHECK-NEXT:    [[TMP9:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[X_2_PTR_RSRC]], 0
+; CHECK-NEXT:    [[X_2_PTR:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP9]], i32 [[X_2_PTR_OFF]], 1
+; CHECK-NEXT:    [[X_2_AGG:%.*]] = insertvalue { [2 x { ptr addrspace(8), i32 }], i32, { ptr addrspace(8), i32 } } [[X_1_AGG]], { ptr addrspace(8), i32 } [[X_2_PTR]], 2
+; CHECK-NEXT:    store i160 [[X_0_0]], ptr [[B]], align 32
+; CHECK-NEXT:    [[B_OFF_32:%.*]] = getelementptr nuw i8, ptr [[B]], i64 32
+; CHECK-NEXT:    store i160 [[X_0_1]], ptr [[B_OFF_32]], align 32
+; CHECK-NEXT:    [[B_OFF_64:%.*]] = getelementptr nuw i8, ptr [[B]], i64 64
+; CHECK-NEXT:    store i32 [[X_1]], ptr [[B_OFF_64]], align 32
+; CHECK-NEXT:    [[B_OFF_96:%.*]] = getelementptr nuw i8, ptr [[B]], i64 96
+; CHECK-NEXT:    store i160 [[X_2]], ptr [[B_OFF_96]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %x = load {[2 x ptr addrspace(7)], i32, ptr addrspace(7)}, ptr %a
   store {[2 x ptr addrspace(7)], i32, ptr addrspace(7)} %x, ptr %b
   ret void
+}
+
+;; The conversion of %p for the store in %then must not be reused by the
+;; store in %else, since neither block dominates the other.
+define void @two_stores_same_value(i1 %cond, ptr addrspace(7) %p, ptr %a, ptr %b) {
+; CHECK-LABEL: define void @two_stores_same_value
+; CHECK-SAME: (i1 [[COND:%.*]], { ptr addrspace(8), i32 } [[P:%.*]], ptr [[A:%.*]], ptr [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[P]], 0
+; CHECK-NEXT:    [[P_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[P]], 1
+; CHECK-NEXT:    br i1 [[COND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[P_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[P_RSRC]] to i160
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i160 [[P_INT_RSRC]], 32
+; CHECK-NEXT:    [[P_INT_OFF:%.*]] = zext i32 [[P_OFF]] to i160
+; CHECK-NEXT:    [[P_INT:%.*]] = or i160 [[TMP0]], [[P_INT_OFF]]
+; CHECK-NEXT:    store i160 [[P_INT]], ptr [[A]], align 32
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[P_INT1_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[P_RSRC]] to i160
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i160 [[P_INT1_RSRC]], 32
+; CHECK-NEXT:    [[P_INT1_OFF:%.*]] = zext i32 [[P_OFF]] to i160
+; CHECK-NEXT:    [[P_INT1:%.*]] = or i160 [[TMP1]], [[P_INT1_OFF]]
+; CHECK-NEXT:    store i160 [[P_INT1]], ptr [[B]], align 32
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %then, label %else
+then:
+  store ptr addrspace(7) %p, ptr %a
+  br label %exit
+else:
+  store ptr addrspace(7) %p, ptr %b
+  br label %exit
+exit:
+  ret void
+}
+
+%struct.has_p7 = type { i32, ptr addrspace(7) }
+
+;; ptr addrspace(7)'s 256-bit alignment puts field 1 at byte offset 32;
+;; instcombine bakes that into an i8 GEP before this pass runs, so both
+;; functions below must load at offset 32.
+define ptr addrspace(7) @struct_field_baked_offset(ptr addrspace(5) %agg) {
+; CHECK-LABEL: define { ptr addrspace(8), i32 } @struct_field_baked_offset
+; CHECK-SAME: (ptr addrspace(5) [[AGG:%.*]]) {
+; CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[AGG]], i32 32
+; CHECK-NEXT:    [[P:%.*]] = load i160, ptr addrspace(5) [[F]], align 32
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i160 [[P]], 32
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i160 [[TMP1]] to i128
+; CHECK-NEXT:    [[P_PTR_RSRC:%.*]] = inttoptr i128 [[TMP2]] to ptr addrspace(8)
+; CHECK-NEXT:    [[P_PTR_OFF:%.*]] = trunc i160 [[P]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[P_PTR_RSRC]], 0
+; CHECK-NEXT:    [[P_PTR:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP3]], i32 [[P_PTR_OFF]], 1
+; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[P_PTR]]
+;
+  %f = getelementptr inbounds i8, ptr addrspace(5) %agg, i32 32
+  %p = load ptr addrspace(7), ptr addrspace(5) %f, align 32
+  ret ptr addrspace(7) %p
+}
+
+define ptr addrspace(7) @struct_field_gep(ptr addrspace(5) %agg) {
+; CHECK-LABEL: define { ptr addrspace(8), i32 } @struct_field_gep
+; CHECK-SAME: (ptr addrspace(5) [[AGG:%.*]]) {
+; CHECK-NEXT:    [[F1:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[AGG]], i32 32
+; CHECK-NEXT:    [[P:%.*]] = load i160, ptr addrspace(5) [[F1]], align 32
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i160 [[P]], 32
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i160 [[TMP1]] to i128
+; CHECK-NEXT:    [[P_PTR_RSRC:%.*]] = inttoptr i128 [[TMP2]] to ptr addrspace(8)
+; CHECK-NEXT:    [[P_PTR_OFF:%.*]] = trunc i160 [[P]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[P_PTR_RSRC]], 0
+; CHECK-NEXT:    [[P_PTR:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP3]], i32 [[P_PTR_OFF]], 1
+; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[P_PTR]]
+;
+  %f = getelementptr inbounds %struct.has_p7, ptr addrspace(5) %agg, i32 0, i32 1
+  %p = load ptr addrspace(7), ptr addrspace(5) %f, align 32
+  ret ptr addrspace(7) %p
+}
+
+define void @struct_copy(ptr addrspace(5) %a, ptr addrspace(5) %b) {
+; CHECK-LABEL: define void @struct_copy
+; CHECK-SAME: (ptr addrspace(5) [[A:%.*]], ptr addrspace(5) [[B:%.*]]) {
+; CHECK-NEXT:    [[X_0:%.*]] = load i32, ptr addrspace(5) [[A]], align 32
+; CHECK-NEXT:    [[X_0_AGG:%.*]] = insertvalue [[TMP0:%.*]] poison, i32 [[X_0]], 0
+; CHECK-NEXT:    [[A_OFF_32:%.*]] = getelementptr nuw i8, ptr addrspace(5) [[A]], i32 32
+; CHECK-NEXT:    [[X_1:%.*]] = load i160, ptr addrspace(5) [[A_OFF_32]], align 32
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i160 [[X_1]], 32
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i160 [[TMP1]] to i128
+; CHECK-NEXT:    [[X_1_PTR_RSRC:%.*]] = inttoptr i128 [[TMP2]] to ptr addrspace(8)
+; CHECK-NEXT:    [[X_1_PTR_OFF:%.*]] = trunc i160 [[X_1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[X_1_PTR_RSRC]], 0
+; CHECK-NEXT:    [[X_1_PTR:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP3]], i32 [[X_1_PTR_OFF]], 1
+; CHECK-NEXT:    [[X_1_AGG:%.*]] = insertvalue [[TMP0]] [[X_0_AGG]], { ptr addrspace(8), i32 } [[X_1_PTR]], 1
+; CHECK-NEXT:    store i32 [[X_0]], ptr addrspace(5) [[B]], align 32
+; CHECK-NEXT:    [[B_OFF_32:%.*]] = getelementptr nuw i8, ptr addrspace(5) [[B]], i32 32
+; CHECK-NEXT:    store i160 [[X_1]], ptr addrspace(5) [[B_OFF_32]], align 32
+; CHECK-NEXT:    ret void
+;
+  %x = load %struct.has_p7, ptr addrspace(5) %a, align 32
+  store %struct.has_p7 %x, ptr addrspace(5) %b, align 32
+  ret void
+}
+
+;; sizeof(%struct.has_p7) is 64; a frontend-emitted memcpy of that constant
+;; size must not overrun the lowered alloca.
+define void @struct_alloca_size() {
+; CHECK-LABEL: define void @struct_alloca_size() {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [64 x i8], align 32, addrspace(5)
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca %struct.has_p7, align 32, addrspace(5)
+  ret void
+}
+
+;; Zero-sized members access no bytes and must not produce leaf accesses of
+;; their own (the buffer intrinsics can't be mangled for {}).
+define void @zero_size_member(ptr %a, ptr %b) {
+; CHECK-LABEL: define void @zero_size_member
+; CHECK-SAME: (ptr [[A:%.*]], ptr [[B:%.*]]) {
+; CHECK-NEXT:    [[X_0:%.*]] = load i160, ptr [[A]], align 32
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i160 [[X_0]], 32
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i160 [[TMP1]] to i128
+; CHECK-NEXT:    [[X_0_PTR_RSRC:%.*]] = inttoptr i128 [[TMP2]] to ptr addrspace(8)
+; CHECK-NEXT:    [[X_0_PTR_OFF:%.*]] = trunc i160 [[X_0]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[X_0_PTR_RSRC]], 0
+; CHECK-NEXT:    [[X_0_PTR:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP3]], i32 [[X_0_PTR_OFF]], 1
+; CHECK-NEXT:    [[X_0_AGG:%.*]] = insertvalue { { ptr addrspace(8), i32 }, {}, [0 x i32] } poison, { ptr addrspace(8), i32 } [[X_0_PTR]], 0
+; CHECK-NEXT:    store i160 [[X_0]], ptr [[B]], align 32
+; CHECK-NEXT:    ret void
+;
+  %x = load { ptr addrspace(7), {}, [0 x i32] }, ptr %a
+  store { ptr addrspace(7), {}, [0 x i32] } %x, ptr %b
+  ret void
+}
+
+;; <4 x i160> has the same allocation size as <4 x p7>, so vector allocas
+;; keep the remapped vector type instead of decaying to a byte array.
+define void @vector_alloca() {
+; CHECK-LABEL: define void @vector_alloca() {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca <4 x i160>, align 128, addrspace(5)
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca <4 x ptr addrspace(7)>, addrspace(5)
+  ret void
+}
+
+;; GEPs over p7 itself step by its 32-byte allocation size, not by the
+;; 24-byte allocation size of i160.
+define ptr addrspace(5) @gep_p7_stride(ptr addrspace(5) %p, i32 %i) {
+; CHECK-LABEL: define ptr addrspace(5) @gep_p7_stride
+; CHECK-SAME: (ptr addrspace(5) [[P:%.*]], i32 [[I:%.*]]) {
+; CHECK-NEXT:    [[Q_IDX:%.*]] = mul i32 [[I]], 32
+; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i8, ptr addrspace(5) [[P]], i32 [[Q_IDX]]
+; CHECK-NEXT:    ret ptr addrspace(5) [[Q1]]
+;
+  %q = getelementptr ptr addrspace(7), ptr addrspace(5) %p, i32 %i
+  ret ptr addrspace(5) %q
 }
