@@ -996,7 +996,7 @@ bool DefGenerator::emitDecls(StringRef selectedDialect,
 
     // When generating by partition, declare the parse and print dispatch
     // functions and the registration hook of the dialect, as well as those of
-    // all partitions, which they call, in the `detail` namespace.
+    // all partitions, which they call.
     if (!partitions.empty()) {
       raw_indented_ostream indentedOs(declOs);
       Dialect dialect = defs.front().getDialect();
@@ -1015,7 +1015,6 @@ bool DefGenerator::emitDecls(StringRef selectedDialect,
       // An empty partition name declares the functions of the dialect, which
       // dispatch to (or register the defs of) every partition.
       declareFunctions("");
-      llvm::NamespaceEmitter detailNs(declOs, "detail");
       for (StringRef partition : partitions)
         declareFunctions(partition);
     }
@@ -1337,11 +1336,8 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs,
   }
 
   DialectNamespaceEmitter ns(os, dialect);
-  {
-    llvm::NamespaceEmitter detailNs(os, "detail");
-    parse.writeDefTo(indentedOs, "");
-    printer.writeDefTo(indentedOs, "");
-  }
+  parse.writeDefTo(indentedOs, "");
+  printer.writeDefTo(indentedOs, "");
 
   // The first partition by name also emits the dispatch functions of the
   // dialect, which try the dispatch functions of every partition in turn.
@@ -1353,14 +1349,14 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs,
       Method::None);
   for (StringRef partition : partitions) {
     parseAll.body() << llvm::formatv(
-        R"(  if (::mlir::OptionalParseResult result = {0}::detail::{1}(parser, mnemonic, {2}value); result.has_value())
+        R"(  if (::mlir::OptionalParseResult result = {0}::{1}(parser, mnemonic, {2}value); result.has_value())
     return result;
 )",
         dialect.getCppNamespace(),
         getDispatchName(dialect, "Parser", partition),
         isAttrGenerator ? "type, " : "");
     printAll.body() << llvm::formatv(
-        R"(  if (::mlir::succeeded({0}::detail::{1}(def, printer)))
+        R"(  if (::mlir::succeeded({0}::{1}(def, printer)))
     return ::mlir::success();
 )",
         dialect.getCppNamespace(),
@@ -1401,9 +1397,9 @@ void DefGenerator::emitLegacyParsePrintDispatch(const Dialect &dialect) {
 }
 
 /// Emit the hooks that register the defs with their dialect. When generating
-/// by partition, the hook of the partition is emitted in the `detail`
-/// namespace, and the first partition by name also emits the hook that calls
-/// the hooks of all partitions, all of which are declared by every partition.
+/// by partition, the hook of the partition is emitted, and the first partition
+/// by name also emits the hook that calls the hooks of all partitions, all of
+/// which are declared by every partition.
 /// Otherwise, the hook registering all defs is a static function.
 void DefGenerator::emitRegistrationHooks(ArrayRef<AttrOrTypeDef> defs,
                                          StringRef selectedPartition,
@@ -1436,11 +1432,10 @@ void DefGenerator::emitRegistrationHooks(ArrayRef<AttrOrTypeDef> defs,
                         getRegistrationHookName(dialect, ""), dialectClass);
     for (StringRef partition : partitions)
       os << "  " << dialect.getCppNamespace()
-         << "::detail::" << getRegistrationHookName(dialect, partition)
+         << "::" << getRegistrationHookName(dialect, partition)
          << "(dialect);\n";
     os << "}\n";
   }
-  llvm::NamespaceEmitter detailNs(os, "detail");
   os << llvm::formatv(hookDef.data(), "",
                       getRegistrationHookName(dialect, selectedPartition),
                       dialectClass);
