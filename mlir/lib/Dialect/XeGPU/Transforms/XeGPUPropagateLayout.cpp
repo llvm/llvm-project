@@ -76,11 +76,13 @@ namespace {
 ///     Requests are kept in one value -> layout map (requestedLayouts), which
 ///     each consumer overwrites. Because consumers are visited from farthest to
 ///     nearest, no program-order numbering is needed.
-///   - Transfer functions (visit*Op) are pure. They take the layouts requested
-///     for the op's results, return the layouts the op requests of its
-///     operands, and may replace a result layout the op requires (e.g. a
-///     reduction). The driver (visitRegularOp) writes the result layouts and
-///     tensor_desc types into the IR, including the scalar result of a
+///   - Transfer functions (visit*Op) do not modify the IR. They take the
+///     layouts requested for the op's results, return the layouts the op
+///     requests of its operands, and may replace a result layout the op
+///     requires (e.g. a reduction). Anchor transfer functions also return the
+///     layout attributes they decide for the op (AnchorLayouts). The driver
+///     (visitRegularOp) writes all of these into the IR: anchor attributes,
+///     result layouts and tensor_desc types, including the scalar result of a
 ///     reduction.
 ///   - Anchors decide once. Load rules do not need a consumer layout: without
 ///     one, load_nd, load_gather and load_matrix take their own instruction's
@@ -154,28 +156,37 @@ private:
   // Transfer functions fill `operands` with requested layouts. `results` starts
   // with layouts requested by consumers and may be overridden by the op.
   using LayoutsMutRef = MutableArrayRef<xegpu::DistributeLayoutAttr>;
+  // Anchor transfer functions only read the layouts requested for their
+  // results; an anchor's decision is returned in AnchorLayouts instead.
+  using LayoutsRef = ArrayRef<xegpu::DistributeLayoutAttr>;
+  // Layout attributes an anchor transfer function decides for its op, by
+  // attribute name. The driver (visitRegularOp) writes them into the IR, so
+  // the transfer functions themselves do not modify the IR.
+  using AnchorLayouts =
+      SmallVector<std::pair<StringAttr, xegpu::DistributeLayoutAttr>, 3>;
 
   void visitOperation(Operation *op, LayoutsMutRef operands,
-                      LayoutsMutRef results);
+                      LayoutsMutRef results, AnchorLayouts &anchorLayouts);
 
   void visitDpasOp(xegpu::DpasOp dpas, LayoutsMutRef operands,
-                   LayoutsMutRef results);
+                   LayoutsRef results, AnchorLayouts &anchorLayouts);
   void visitDpasMxOp(xegpu::DpasMxOp dpasMx, LayoutsMutRef operands,
-                     LayoutsMutRef results);
+                     LayoutsRef results, AnchorLayouts &anchorLayouts);
   void visitStoreNdOp(xegpu::StoreNdOp store, LayoutsMutRef operands,
-                      LayoutsMutRef results);
+                      LayoutsRef results, AnchorLayouts &anchorLayouts);
   void visitStoreScatterOp(xegpu::StoreScatterOp storeScatter,
-                           LayoutsMutRef operands, LayoutsMutRef results);
+                           LayoutsMutRef operands, LayoutsRef results,
+                           AnchorLayouts &anchorLayouts);
   void visitLoadNdOp(xegpu::LoadNdOp load, LayoutsMutRef operands,
-                     LayoutsMutRef results);
+                     LayoutsRef results, AnchorLayouts &anchorLayouts);
   void visitLoadGatherOp(xegpu::LoadGatherOp load, LayoutsMutRef operands,
-                         LayoutsMutRef results);
+                         LayoutsRef results, AnchorLayouts &anchorLayouts);
   void visitPrefetchNdOp(xegpu::PrefetchNdOp prefetch, LayoutsMutRef operands,
-                         LayoutsMutRef results);
+                         LayoutsRef results, AnchorLayouts &anchorLayouts);
   void visitLoadMatrixOp(xegpu::LoadMatrixOp load, LayoutsMutRef operands,
-                         LayoutsMutRef results);
+                         LayoutsRef results, AnchorLayouts &anchorLayouts);
   void visitStoreMatrixOp(xegpu::StoreMatrixOp store, LayoutsMutRef operands,
-                          LayoutsMutRef results);
+                          LayoutsRef results, AnchorLayouts &anchorLayouts);
   void visitConvertLayoutOp(xegpu::ConvertLayoutOp convertLayout,
                             LayoutsMutRef operands, LayoutsMutRef results);
   void visitTransposeOp(vector::TransposeOp transpose, LayoutsMutRef operands,
@@ -214,20 +225,29 @@ private:
 } // namespace
 
 void LayoutPropagation::visitOperation(Operation *op, LayoutsMutRef operands,
-                                       LayoutsMutRef results) {
+                                       LayoutsMutRef results,
+                                       AnchorLayouts &anchorLayouts) {
   TypeSwitch<Operation *>(op)
-      .Case([&](xegpu::DpasOp op) { visitDpasOp(op, operands, results); })
-      .Case([&](xegpu::DpasMxOp op) { visitDpasMxOp(op, operands, results); })
-      .Case([&](xegpu::StoreNdOp op) { visitStoreNdOp(op, operands, results); })
-      .Case([&](xegpu::StoreScatterOp op) {
-        visitStoreScatterOp(op, operands, results);
+      .Case([&](xegpu::DpasOp op) {
+        visitDpasOp(op, operands, results, anchorLayouts);
       })
-      .Case([&](xegpu::LoadNdOp op) { visitLoadNdOp(op, operands, results); })
+      .Case([&](xegpu::DpasMxOp op) {
+        visitDpasMxOp(op, operands, results, anchorLayouts);
+      })
+      .Case([&](xegpu::StoreNdOp op) {
+        visitStoreNdOp(op, operands, results, anchorLayouts);
+      })
+      .Case([&](xegpu::StoreScatterOp op) {
+        visitStoreScatterOp(op, operands, results, anchorLayouts);
+      })
+      .Case([&](xegpu::LoadNdOp op) {
+        visitLoadNdOp(op, operands, results, anchorLayouts);
+      })
       .Case([&](xegpu::LoadGatherOp op) {
-        visitLoadGatherOp(op, operands, results);
+        visitLoadGatherOp(op, operands, results, anchorLayouts);
       })
       .Case([&](xegpu::PrefetchNdOp op) {
-        visitPrefetchNdOp(op, operands, results);
+        visitPrefetchNdOp(op, operands, results, anchorLayouts);
       })
       .Case([&](vector::TransposeOp op) {
         visitTransposeOp(op, operands, results);
@@ -257,10 +277,10 @@ void LayoutPropagation::visitOperation(Operation *op, LayoutsMutRef operands,
         visitInsertStridedSliceOp(op, operands, results);
       })
       .Case([&](xegpu::LoadMatrixOp op) {
-        visitLoadMatrixOp(op, operands, results);
+        visitLoadMatrixOp(op, operands, results, anchorLayouts);
       })
       .Case([&](xegpu::StoreMatrixOp op) {
-        visitStoreMatrixOp(op, operands, results);
+        visitStoreMatrixOp(op, operands, results, anchorLayouts);
       })
       .Case([&](xegpu::ConvertLayoutOp op) {
         visitConvertLayoutOp(op, operands, results);
@@ -325,7 +345,8 @@ LayoutPropagation::getNumSgOrFail(Operation *op, int sgSize,
 
 void LayoutPropagation::visitPrefetchNdOp(xegpu::PrefetchNdOp prefetch,
                                           LayoutsMutRef operands,
-                                          LayoutsMutRef results) {
+                                          LayoutsRef results,
+                                          AnchorLayouts &anchorLayouts) {
 
   xegpu::DistributeLayoutAttr prefetchLayout;
   const auto *uArch = xegpu::uArch::getUArch(getChipStr(prefetch).value_or(""));
@@ -349,7 +370,7 @@ void LayoutPropagation::visitPrefetchNdOp(xegpu::PrefetchNdOp prefetch,
             "Failed to identify lane layouts for the specified inst_data.");
         return;
       }
-      prefetch.setLayoutAttr(*completed);
+      anchorLayouts.emplace_back(prefetch.getLayoutAttrName(), *completed);
       prefetchLayout = *completed;
     }
   } else {
@@ -367,7 +388,7 @@ void LayoutPropagation::visitPrefetchNdOp(xegpu::PrefetchNdOp prefetch,
       return;
     }
     prefetchLayout = layoutAttr;
-    prefetch.setLayoutAttr(layoutAttr);
+    anchorLayouts.emplace_back(prefetch.getLayoutAttrName(), layoutAttr);
   }
   // Propagate the layout to the source tensor descriptor.
   operands[0] = prefetchLayout;
@@ -499,7 +520,8 @@ void LayoutPropagation::visitShapeCastOp(vector::ShapeCastOp shapeCast,
 
 /// Set the layouts for DPAS A, B, and C operands.
 void LayoutPropagation::visitDpasOp(xegpu::DpasOp dpas, LayoutsMutRef operands,
-                                    LayoutsMutRef results) {
+                                    LayoutsRef results,
+                                    AnchorLayouts &anchorLayouts) {
   xegpu::DistributeLayoutAttr dpasALayout;
   xegpu::DistributeLayoutAttr dpasBLayout;
   xegpu::DistributeLayoutAttr dpasCDLayout;
@@ -532,9 +554,9 @@ void LayoutPropagation::visitDpasOp(xegpu::DpasOp dpas, LayoutsMutRef operands,
         return;
       }
       auto [completedA, completedB, completedCD] = *completed;
-      dpas.setLayoutAAttr(completedA);
-      dpas.setLayoutBAttr(completedB);
-      dpas.setLayoutCdAttr(completedCD);
+      anchorLayouts.emplace_back(dpas.getLayoutAAttrName(), completedA);
+      anchorLayouts.emplace_back(dpas.getLayoutBAttrName(), completedB);
+      anchorLayouts.emplace_back(dpas.getLayoutCdAttrName(), completedCD);
       dpasALayout = completedA;
       dpasBLayout = completedB;
       dpasCDLayout = completedCD;
@@ -563,9 +585,10 @@ void LayoutPropagation::visitDpasOp(xegpu::DpasOp dpas, LayoutsMutRef operands,
 
     std::tie(requiredALayout, requiredBLayout, requiredCDLayoutAttr) = *layouts;
 
-    dpas.setLayoutAAttr(requiredALayout);
-    dpas.setLayoutBAttr(requiredBLayout);
-    dpas.setLayoutCdAttr(requiredCDLayoutAttr);
+    anchorLayouts.emplace_back(dpas.getLayoutAAttrName(), requiredALayout);
+    anchorLayouts.emplace_back(dpas.getLayoutBAttrName(), requiredBLayout);
+    anchorLayouts.emplace_back(dpas.getLayoutCdAttrName(),
+                               requiredCDLayoutAttr);
     dpasALayout = requiredALayout;
     dpasBLayout = requiredBLayout;
     dpasCDLayout = requiredCDLayoutAttr;
@@ -581,7 +604,8 @@ void LayoutPropagation::visitDpasOp(xegpu::DpasOp dpas, LayoutsMutRef operands,
 /// (optional)
 void LayoutPropagation::visitDpasMxOp(xegpu::DpasMxOp dpasMx,
                                       LayoutsMutRef operands,
-                                      LayoutsMutRef results) {
+                                      LayoutsRef results,
+                                      AnchorLayouts &anchorLayouts) {
 
   // Initialize layout variables
   xegpu::DistributeLayoutAttr dpasMxALayout, dpasMxBLayout, dpasMxCDLayout;
@@ -641,18 +665,20 @@ void LayoutPropagation::visitDpasMxOp(xegpu::DpasMxOp dpasMx,
       }
       auto [completedA, completedB, completedCD, completedAScale,
             completedBScale] = *completed;
-      dpasMx.setLayoutAAttr(completedA);
-      dpasMx.setLayoutBAttr(completedB);
-      dpasMx.setLayoutCdAttr(completedCD);
+      anchorLayouts.emplace_back(dpasMx.getLayoutAAttrName(), completedA);
+      anchorLayouts.emplace_back(dpasMx.getLayoutBAttrName(), completedB);
+      anchorLayouts.emplace_back(dpasMx.getLayoutCdAttrName(), completedCD);
       dpasMxALayout = completedA;
       dpasMxBLayout = completedB;
       dpasMxCDLayout = completedCD;
       if (completedAScale) {
-        dpasMx.setLayoutAScaleAttr(completedAScale);
+        anchorLayouts.emplace_back(dpasMx.getLayoutAScaleAttrName(),
+                                   completedAScale);
         dpasMxAScaleLayout = completedAScale;
       }
       if (completedBScale) {
-        dpasMx.setLayoutBScaleAttr(completedBScale);
+        anchorLayouts.emplace_back(dpasMx.getLayoutBScaleAttrName(),
+                                   completedBScale);
         dpasMxBScaleLayout = completedBScale;
       }
     }
@@ -681,13 +707,16 @@ void LayoutPropagation::visitDpasMxOp(xegpu::DpasMxOp dpasMx,
     std::tie(requiredALayout, requiredBLayout, requiredCDLayoutAttr,
              requiredAScaleLayout, requiredBScaleLayout) = *layouts;
 
-    dpasMx.setLayoutAAttr(requiredALayout);
-    dpasMx.setLayoutBAttr(requiredBLayout);
-    dpasMx.setLayoutCdAttr(requiredCDLayoutAttr);
+    anchorLayouts.emplace_back(dpasMx.getLayoutAAttrName(), requiredALayout);
+    anchorLayouts.emplace_back(dpasMx.getLayoutBAttrName(), requiredBLayout);
+    anchorLayouts.emplace_back(dpasMx.getLayoutCdAttrName(),
+                               requiredCDLayoutAttr);
     if (requiredAScaleLayout)
-      dpasMx.setLayoutAScaleAttr(requiredAScaleLayout);
+      anchorLayouts.emplace_back(dpasMx.getLayoutAScaleAttrName(),
+                                 requiredAScaleLayout);
     if (requiredBScaleLayout)
-      dpasMx.setLayoutBScaleAttr(requiredBScaleLayout);
+      anchorLayouts.emplace_back(dpasMx.getLayoutBScaleAttrName(),
+                                 requiredBScaleLayout);
 
     dpasMxALayout = requiredALayout;
     dpasMxBLayout = requiredBLayout;
@@ -724,7 +753,8 @@ void LayoutPropagation::visitDpasMxOp(xegpu::DpasMxOp dpasMx,
 /// Set the layout for the value and tensor descriptor operands in StoreNdOp.
 void LayoutPropagation::visitStoreNdOp(xegpu::StoreNdOp store,
                                        LayoutsMutRef operands,
-                                       LayoutsMutRef results) {
+                                       LayoutsRef results,
+                                       AnchorLayouts &anchorLayouts) {
   xegpu::DistributeLayoutAttr storeLayout;
   const auto *uArch = xegpu::uArch::getUArch(getChipStr(store).value_or(""));
   if (!uArch)
@@ -749,7 +779,7 @@ void LayoutPropagation::visitStoreNdOp(xegpu::StoreNdOp store,
             "Failed to identify lane layouts for the specified inst_data.");
         return;
       }
-      store.setLayoutAttr(*completed);
+      anchorLayouts.emplace_back(store.getLayoutAttrName(), *completed);
       storeLayout = *completed;
     }
   } else {
@@ -764,7 +794,7 @@ void LayoutPropagation::visitStoreNdOp(xegpu::StoreNdOp store,
       return;
     }
     storeLayout = layoutAttr;
-    store.setLayoutAttr(layoutAttr);
+    anchorLayouts.emplace_back(store.getLayoutAttrName(), layoutAttr);
   }
   // Propagate the layout to the value operand.
   // Both operands should have the same layout
@@ -776,7 +806,8 @@ void LayoutPropagation::visitStoreNdOp(xegpu::StoreNdOp store,
 /// LoadNdOp.
 void LayoutPropagation::visitLoadNdOp(xegpu::LoadNdOp load,
                                       LayoutsMutRef operands,
-                                      LayoutsMutRef results) {
+                                      LayoutsRef results,
+                                      AnchorLayouts &anchorLayouts) {
   xegpu::DistributeLayoutAttr loadLayout;
 
   const auto *uArch = xegpu::uArch::getUArch(getChipStr(load).value_or(""));
@@ -802,7 +833,7 @@ void LayoutPropagation::visitLoadNdOp(xegpu::LoadNdOp load,
             "Failed to identify lane layouts for the specified inst_data.");
         return;
       }
-      load.setLayoutAttr(*completed);
+      anchorLayouts.emplace_back(load.getLayoutAttrName(), *completed);
       loadLayout = *completed;
     }
   } else {
@@ -818,7 +849,7 @@ void LayoutPropagation::visitLoadNdOp(xegpu::LoadNdOp load,
       return;
     }
     loadLayout = layoutAttr;
-    load.setLayoutAttr(layoutAttr);
+    anchorLayouts.emplace_back(load.getLayoutAttrName(), layoutAttr);
   }
   // Propagate the new layout to the tensor descriptor operand.
   operands[0] = loadLayout;
@@ -1001,7 +1032,8 @@ void LayoutPropagation::visitInsertStridedSliceOp(
 /// offset operands in LoadGatherOp.
 void LayoutPropagation::visitLoadGatherOp(xegpu::LoadGatherOp load,
                                           LayoutsMutRef operands,
-                                          LayoutsMutRef results) {
+                                          LayoutsRef results,
+                                          AnchorLayouts &anchorLayouts) {
   xegpu::DistributeLayoutAttr requiredAnchorLayoutAttr;
   xegpu::DistributeLayoutAttr anchorLayoutAttr = load.getLayoutAttr();
   const auto *uArch = xegpu::uArch::getUArch(getChipStr(load).value_or(""));
@@ -1031,7 +1063,8 @@ void LayoutPropagation::visitLoadGatherOp(xegpu::LoadGatherOp load,
         return;
       }
       requiredAnchorLayoutAttr = *completed;
-      load.setLayoutAttr(requiredAnchorLayoutAttr);
+      anchorLayouts.emplace_back(load.getLayoutAttrName(),
+                                 requiredAnchorLayoutAttr);
     }
   } else if (!resVecTy) {
     load.emitWarning("Not propagating, non-vector payload supplied.");
@@ -1044,7 +1077,8 @@ void LayoutPropagation::visitLoadGatherOp(xegpu::LoadGatherOp load,
     requiredAnchorLayoutAttr = xegpu::setupLoadGatherAnchorLayout(
         layoutKind, resVecTy, contigChunkSize, consumerLayoutAttr,
         numSgOrErr.value_or(0), uArch);
-    load.setLayoutAttr(requiredAnchorLayoutAttr);
+    anchorLayouts.emplace_back(load.getLayoutAttrName(),
+                               requiredAnchorLayoutAttr);
   }
 
   // Propagate the new layout to the tensor descriptor operand.
@@ -1059,7 +1093,8 @@ void LayoutPropagation::visitLoadGatherOp(xegpu::LoadGatherOp load,
 /// in the StoreScatterOp.
 void LayoutPropagation::visitStoreScatterOp(xegpu::StoreScatterOp storeScatter,
                                             LayoutsMutRef operands,
-                                            LayoutsMutRef results) {
+                                            LayoutsRef results,
+                                            AnchorLayouts &anchorLayouts) {
 
   xegpu::DistributeLayoutAttr requiredAnchorLayoutAttr;
   xegpu::DistributeLayoutAttr anchorLayoutAttr = storeScatter.getLayoutAttr();
@@ -1090,7 +1125,8 @@ void LayoutPropagation::visitStoreScatterOp(xegpu::StoreScatterOp storeScatter,
         return;
       }
       requiredAnchorLayoutAttr = *completed;
-      storeScatter.setLayoutAttr(requiredAnchorLayoutAttr);
+      anchorLayouts.emplace_back(storeScatter.getLayoutAttrName(),
+                                 requiredAnchorLayoutAttr);
     }
   } else {
     if (!srcVecTy) {
@@ -1108,7 +1144,8 @@ void LayoutPropagation::visitStoreScatterOp(xegpu::StoreScatterOp storeScatter,
                   "Failed to determine required layout for store scatter.");
       return;
     }
-    storeScatter.setLayoutAttr(requiredAnchorLayoutAttr);
+    anchorLayouts.emplace_back(storeScatter.getLayoutAttrName(),
+                               requiredAnchorLayoutAttr);
   }
 
   // Propagate the payload operand layout
@@ -1123,7 +1160,8 @@ void LayoutPropagation::visitStoreScatterOp(xegpu::StoreScatterOp storeScatter,
 
 void LayoutPropagation::visitLoadMatrixOp(xegpu::LoadMatrixOp loadMatrixOp,
                                           LayoutsMutRef operands,
-                                          LayoutsMutRef results) {
+                                          LayoutsRef results,
+                                          AnchorLayouts &anchorLayouts) {
 
   xegpu::DistributeLayoutAttr consumerLayoutAttr = results[0];
   xegpu::DistributeLayoutAttr anchorLayout = loadMatrixOp.getLayoutAttr();
@@ -1146,13 +1184,15 @@ void LayoutPropagation::visitLoadMatrixOp(xegpu::LoadMatrixOp loadMatrixOp,
     auto requiredAnchorLayoutAttr = xegpu::setupLoadMatrixAnchorLayout(
         layoutKind, resVecTy, chunkSize, consumerLayoutAttr,
         numSgOrErr.value_or(0), uArch);
-    loadMatrixOp.setLayoutAttr(requiredAnchorLayoutAttr);
+    anchorLayouts.emplace_back(loadMatrixOp.getLayoutAttrName(),
+                               requiredAnchorLayoutAttr);
   }
 }
 
 void LayoutPropagation::visitStoreMatrixOp(xegpu::StoreMatrixOp storeMatrix,
                                            LayoutsMutRef operands,
-                                           LayoutsMutRef results) {
+                                           LayoutsRef results,
+                                           AnchorLayouts &anchorLayouts) {
   xegpu::DistributeLayoutAttr requiredAnchorLayoutAttr;
   xegpu::DistributeLayoutAttr anchorLayoutAttr = storeMatrix.getLayoutAttr();
   VectorType srcVecTy = llvm::cast<VectorType>(storeMatrix.getData().getType());
@@ -1178,7 +1218,8 @@ void LayoutPropagation::visitStoreMatrixOp(xegpu::StoreMatrixOp storeMatrix,
         return;
       }
       requiredAnchorLayoutAttr = *completed;
-      storeMatrix.setLayoutAttr(requiredAnchorLayoutAttr);
+      anchorLayouts.emplace_back(storeMatrix.getLayoutAttrName(),
+                                 requiredAnchorLayoutAttr);
     }
   } else {
     int chunkSize =
@@ -1194,7 +1235,8 @@ void LayoutPropagation::visitStoreMatrixOp(xegpu::StoreMatrixOp storeMatrix,
                   "Failed to determine required layout for store matrix.");
       return;
     }
-    storeMatrix.setLayoutAttr(requiredAnchorLayoutAttr);
+    anchorLayouts.emplace_back(storeMatrix.getLayoutAttrName(),
+                               requiredAnchorLayoutAttr);
   }
   operands[0] = requiredAnchorLayoutAttr;
 }
@@ -1215,15 +1257,24 @@ void LayoutPropagation::visitRegularOp(Operation *op) {
         return getRequestedLayout(result);
       });
   SmallVector<xegpu::DistributeLayoutAttr> operandLayouts(op->getNumOperands());
-  visitOperation(op, operandLayouts, resultLayouts);
+  AnchorLayouts anchorLayouts;
+  visitOperation(op, operandLayouts, resultLayouts, anchorLayouts);
 
   for (auto [operand, layout] :
        llvm::zip_equal(op->getOperands(), operandLayouts))
     recordRequestedLayout(operand, layout);
 
-  // Anchor visitors have already stored their selected layouts.
-  if (isa<xegpu::AnchorLayoutInterface>(op))
+  // An anchor's decision lives in its layout attributes, not in result
+  // layouts.
+  if (isa<xegpu::AnchorLayoutInterface>(op)) {
+    for (auto [name, layout] : anchorLayouts) {
+      if (layout)
+        op->setAttr(name, layout);
+      else
+        op->removeAttr(name);
+    }
     return;
+  }
   // Scalar reductions also need a result layout: conflict resolution uses it
   // to derive operand layouts and insert an anchor convert_layout.
   for (auto [result, layout] :
