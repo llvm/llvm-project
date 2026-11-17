@@ -133,10 +133,11 @@ static cl::opt<bool> BBSectionsDetectSourceDrift(
 static cl::opt<bool> AlignBlocksInBBSections(
     "align-blocks-in-bbsections",
     cl::desc("Defer basic block alignment from MachineBlockPlacement to "
-             "BasicBlockSections"),
+             "BasicBlockSections. Only has an effect when the "
+             "BasicBlockSections pass runs (i.e., with -basic-block-sections, "
+             "-basic-block-address-map, or -function-splitting=all); "
+             "otherwise MachineBlockPlacement aligns blocks as usual."),
     cl::init(false), cl::Hidden);
-
-bool llvm::shouldAlignBlocksInBBSections() { return AlignBlocksInBBSections; }
 
 bool llvm::shouldAlignBlocksInBBSections(const TargetMachine &TM) {
   return AlignBlocksInBBSections &&

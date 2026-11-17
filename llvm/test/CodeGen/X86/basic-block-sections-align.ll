@@ -50,12 +50,10 @@
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,SPLIT,ALIGN
 ;;
 ;; 7. Enabling -align-blocks-in-bbsections without basic-block-sections (or
-;;    function splitting / bb-addr-map) emits a warning and has no effect
-;;    (MachineBlockPlacement still aligns blocks as usual).
-; RUN: llc < test.ll -O2 -mtriple=x86_64-pc-linux -align-blocks-in-bbsections 2>&1 \
-; RUN:   | FileCheck %s --check-prefixes=CHECK,NOSPLIT,NOALIGN,NOBBSECTIONS
-
-; NOBBSECTIONS: warning: -align-blocks-in-bbsections has no effect when basic-block-sections is not enabled.
+;;    function splitting / bb-addr-map) has no effect (MachineBlockPlacement
+;;    still aligns blocks as usual).
+; RUN: llc < test.ll -O2 -mtriple=x86_64-pc-linux -align-blocks-in-bbsections \
+; RUN:   | FileCheck %s --check-prefixes=CHECK,NOSPLIT,NOALIGN
 
 ; CHECK-LABEL: test_propeller:
 ; CHECK:       # %bb.0:                                # %entry

@@ -38,9 +38,6 @@ LLVM_ABI void avoidZeroOffsetLandingPad(MachineFunction &MF);
 /// practice.
 LLVM_ABI bool hasInstrProfHashMismatch(MachineFunction &MF);
 
-/// Returns true if the -align-blocks-in-bbsections flag is enabled.
-LLVM_ABI bool shouldAlignBlocksInBBSections();
-
 /// Returns true if basic block alignment is deferred from
 /// `MachineBlockPlacement` to `BasicBlockSections` for `TM`.
 LLVM_ABI bool shouldAlignBlocksInBBSections(const TargetMachine &TM);
