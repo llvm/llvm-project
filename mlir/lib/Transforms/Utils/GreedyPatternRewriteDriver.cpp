@@ -461,7 +461,7 @@ public:
   }
 
   void notifyOperationModified(Operation *op) override {
-    cache.invalidate(op);
+    cache.invalidateAncestors(op);
     ForwardingListener::notifyOperationModified(op);
   }
 
