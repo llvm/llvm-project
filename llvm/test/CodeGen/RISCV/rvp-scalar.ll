@@ -1819,6 +1819,47 @@ define i64 @lshr_sext_i32_2(i32 %x) {
   ret i64 %b
 }
 
+define <1 x i64> @lshr_zext_v1i32_i1(<1 x i32> %x, <1 x i1> %s) {
+; RV32-LABEL: lshr_zext_v1i32_i1:
+; RV32:       # %bb.0:
+; RV32-NEXT:    andi a1, a1, 1
+; RV32-NEXT:    srl a0, a0, a1
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: lshr_zext_v1i32_i1:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    andi a1, a1, 1
+; RV64-NEXT:    srl a0, a0, a1
+; RV64-NEXT:    ret
+  %a = zext <1 x i32> %x to <1 x i64>
+  %wide = zext <1 x i1> %s to <1 x i64>
+  %r = lshr <1 x i64> %a, %wide
+  ret <1 x i64> %r
+}
+
+define <1 x i64> @ashr_sext_v1i32_i1(<1 x i32> %x, <1 x i1> %s) {
+; RV32-LABEL: ashr_sext_v1i32_i1:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srai a2, a0, 31
+; RV32-NEXT:    andi a1, a1, 1
+; RV32-NEXT:    srx a0, a2, a1
+; RV32-NEXT:    mv a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: ashr_sext_v1i32_i1:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    andi a1, a1, 1
+; RV64-NEXT:    sra a0, a0, a1
+; RV64-NEXT:    ret
+  %a = sext <1 x i32> %x to <1 x i64>
+  %wide = zext <1 x i1> %s to <1 x i64>
+  %r = ashr <1 x i64> %a, %wide
+  ret <1 x i64> %r
+}
+
 ; Test that mulh continues to be used with P.
 define i32 @mulh_i32(i32 %x, i32 %y) {
 ; RV32-LABEL: mulh_i32:

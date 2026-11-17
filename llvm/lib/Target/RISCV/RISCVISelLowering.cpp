@@ -9693,9 +9693,13 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return lowerToScalableOp(Op, DAG);
     }
     assert(Op.getOpcode() != ISD::SSHLSAT);
-    // This can be called for an i32 shift amount that needs to be promoted.
-    assert(Op.getOperand(1).getValueType() == MVT::i32 && Subtarget.is64Bit() &&
-           "Unexpected custom legalisation");
+    // This can be called for an i32 shift amount that needs to be promoted on
+    // RV64 or an i64 shift amount that needs to be expanded on RV32+P.
+    assert(
+        ((Subtarget.is64Bit() && Op.getOperand(1).getValueType() == MVT::i32) ||
+         (!Subtarget.is64Bit() && Subtarget.hasStdExtP() &&
+          Op.getOperand(1).getValueType() == MVT::i64)) &&
+        "Unexpected custom legalisation");
     return SDValue();
   case ISD::MASKED_UDIV:
   case ISD::MASKED_SDIV:
