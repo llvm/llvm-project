@@ -38,6 +38,7 @@ void scoped_load(struct Big *ptr) {
   __scoped_atomic_load(ptr, &b, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
   // CIR:      %[[DEST_SLOT:.+]] = cir.alloca "b" align(4) : !cir.ptr<!rec_Big>
   // CIR:      %[[PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
+  // CIR-NEXT: %{{.+}} = cir.const #cir.int<0> : !s32i
   // CIR-NEXT: %[[PTR_INTPTR:.+]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
   // CIR-NEXT: %[[DEST_INTPTR:.+]] = cir.cast bitcast %[[DEST_SLOT]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
   // CIR-NEXT: %[[SIZE:.+]] = cir.const #cir.int<24> : !u64i
@@ -102,6 +103,7 @@ void scoped_store(struct Big *dest, struct Big *val) {
 
   __scoped_atomic_store(dest, val, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
   // CIR:      %[[DEST_PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
+  // CIR-NEXT: %{{.+}} = cir.const #cir.int<0> : !s32i
   // CIR-NEXT: %[[VALUE_PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
   // CIR-NEXT: %[[DEST_INTPTR:.+]] = cir.cast bitcast %[[DEST_PTR]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
   // CIR-NEXT: %[[VALUE_INTPTR:.+]] = cir.cast bitcast %[[VALUE_PTR]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
@@ -177,6 +179,7 @@ void scoped_exchange(struct Big *ptr, struct Big *val, struct Big *old) {
   // CIR-NEXT: %[[VAL:.*]] = cir.alloca "val" align(8) init : !cir.ptr<!cir.ptr<!rec_Big>>
   // CIR-NEXT: %[[OLD:.*]] = cir.alloca "old" align(8) init : !cir.ptr<!cir.ptr<!rec_Big>>
   // CIR:      %[[LOAD_PTR:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
+  // CIR-NEXT: %{{.+}} = cir.const #cir.int<0> : !s32i
   // CIR-NEXT: %[[LOAD_VAL:.*]] = cir.load align(8) %[[VAL]] : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
   // CIR-NEXT: %[[LOAD_OLD:.*]] = cir.load align(8) %[[OLD]] : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
   // CIR-NEXT: %[[CAST_PTR:.*]] = cir.cast bitcast %[[LOAD_PTR]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>
@@ -284,6 +287,7 @@ void scoped_cmpxchg(struct Big *ptr, struct Big *expected, struct Big *desired) 
 
   __scoped_atomic_compare_exchange(ptr, expected, desired, /*weak=*/0, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE, __MEMORY_SCOPE_SYSTEM);
   // CIR:      %[[PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
+  // CIR-NEXT: %{{.+}} = cir.const #cir.int<0> : !s32i
   // CIR-NEXT: %[[EXPECTED:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
   // CIR-NEXT: %[[DESIRED:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
   // CIR-NEXT: %[[PTR_INTPTR:.+]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!rec_Big> -> !cir.ptr<!cir.int<u, 192>>

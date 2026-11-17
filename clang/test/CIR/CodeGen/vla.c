@@ -445,6 +445,8 @@ double vla_param_2d(int n, double m[n][n], int i, int j) {
 // CIR:   cir.store{{.*}} %[[M_ARG]], %[[M_ADDR]]
 // CIR:   cir.store{{.*}} %[[I_ARG]], %[[I_ADDR]]
 // CIR:   cir.store{{.*}} %[[J_ARG]], %[[J_ADDR]]
+// CIR:   %[[N_OUTER:.*]] = cir.load{{.*}} %[[N_ADDR]]
+// CIR:   %{{.+}} = cir.cast integral %[[N_OUTER]] : !s32i -> !u64i
 // CIR:   %[[N:.*]] = cir.load{{.*}} %[[N_ADDR]]
 // CIR:   %[[VLA_SIZE:.*]] = cir.cast integral %[[N]] : !s32i -> !u64i
 // CIR:   %[[M:.*]] = cir.load{{.*}} %[[M_ADDR]]
@@ -467,6 +469,8 @@ double vla_param_2d(int n, double m[n][n], int i, int j) {
 // LLVM:   store ptr %[[M_ARG]], ptr %[[M_ADDR]]
 // LLVM:   store i32 %[[I_ARG]], ptr %[[I_ADDR]]
 // LLVM:   store i32 %[[J_ARG]], ptr %[[J_ADDR]]
+// LLVM:   %[[N_OUTER:.*]] = load i32, ptr %[[N_ADDR]]
+// LLVM:   %{{.+}} = sext i32 %[[N_OUTER]] to i64
 // LLVM:   %[[N:.*]] = load i32, ptr %[[N_ADDR]]
 // LLVM:   %[[VLA_SIZE:.*]] = sext i32 %[[N]] to i64
 // LLVM:   %[[M:.*]] = load ptr, ptr %[[M_ADDR]]
@@ -512,12 +516,14 @@ void complex_vla_cast(int n) {
 // CIR:   %[[LEN_ADDR:.*]] = cir.alloca "n" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   %[[SAVED_STACK:.*]] = cir.alloca "saved_stack" {{.*}} : !cir.ptr<!cir.ptr<!u8i>>
 // CIR:   cir.store %{{.*}}, %[[LEN_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR:   %[[LEN_UNUSED:.*]] = cir.load {{.*}} %[[LEN_ADDR]] : !cir.ptr<!s32i>, !s32i
+// CIR:   %{{.+}} = cir.cast integral %[[LEN_UNUSED]] : !s32i -> !u64i
 // CIR:   %[[LEN:.*]] = cir.load {{.*}} %[[LEN_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:   %[[LEN_SIZE_T:.*]] = cir.cast integral %[[LEN]] : !s32i -> !u64i
 // CIR:   %[[STACK_PTR:.*]] = cir.stacksave : !cir.ptr<!u8i>
 // CIR:   cir.store {{.*}} %[[STACK_PTR]], %[[SAVED_STACK]] : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
 // CIR:   cir.cleanup.scope {
-// CIR:     %[[ArR:.*]] = cir.alloca "arr" {{.*}} size(%3) : !cir.ptr<!cir.complex<!cir.float>>
+// CIR:     %[[ArR:.*]] = cir.alloca "arr" {{.*}} size(%[[LEN_SIZE_T]]) : !cir.ptr<!cir.complex<!cir.float>>
 // CIR:     cir.yield
 // CIR:   } cleanup normal {
 // CIR:     %[[STACK_RESTORE_PTR:.*]] = cir.load {{.*}} %[[SAVED_STACK]] : !cir.ptr<!cir.ptr<!u8i>>, !cir.ptr<!u8i>
@@ -529,6 +535,8 @@ void complex_vla_cast(int n) {
 // LLVM:   %[[LEN_ADDR:.*]] = alloca i32, align 4
 // LLVM:   %[[SAVED_STACK:.*]] = alloca ptr, align 8
 // LLVM:   store i32 %{{.*}}, ptr %[[LEN_ADDR]], align 4
+// LLVM:   %[[LEN_UNUSED:.*]] = load i32, ptr %[[LEN_ADDR]], align 4
+// LLVM:   %{{.+}} = sext i32 %[[LEN_UNUSED]] to i64
 // LLVM:   %[[LEN:.*]] = load i32, ptr %[[LEN_ADDR]], align 4
 // LLVM:   %[[LEN_SIZE_T:.*]] = sext i32 %[[LEN]] to i64
 // LLVM:   %[[STACK_PTR:.*]] = call ptr @llvm.stacksave.p0()

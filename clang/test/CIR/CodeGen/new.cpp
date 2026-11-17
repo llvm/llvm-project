@@ -464,6 +464,7 @@ void t_new_huge_float_size() {
 }
 
 // CHECK:  cir.func {{.*}} @_Z21t_new_huge_float_sizev()
+// CHECK:    %{{.+}} = cir.const #cir.int<18446744073709551615> : !u64i
 // CHECK:    %[[ALLOCATION_SIZE:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
 // CHECK:    %{{.*}} = cir.call @_Znam(%[[ALLOCATION_SIZE]]) {allocsize = array<i32: 0>, builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noalias, llvm.nonnull, llvm.noundef})
 
@@ -1140,6 +1141,7 @@ void test_array_new_with_ctor_partial_init_list() {
 
 // CIR-BEFORE-LPP: cir.func {{.*}} @_Z42test_array_new_with_ctor_partial_init_listv
 // CIR-BEFORE-LPP:    %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!cir.ptr<!rec_G>>
+// CIR-BEFORE-LPP:    %{{.+}} = cir.const #cir.int<8> : !u64i
 // CIR-BEFORE-LPP:    %[[EIGHT:.*]] = cir.const #cir.int<8> : !u64i
 // CIR-BEFORE-LPP:    %[[RAW_PTR:.*]] = cir.call @_Znam(%[[EIGHT]]) {allocsize = array<i32: 0>, builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>} : (!u64i {llvm.noundef})
 // CIR-BEFORE-LPP:    %[[BEGIN:.*]] = cir.cast bitcast %[[RAW_PTR]] : !cir.ptr<!void> -> !cir.ptr<!rec_G>
@@ -1161,6 +1163,7 @@ void test_array_new_with_ctor_partial_init_list() {
 
 // CHECK:  cir.func {{.*}} @_Z42test_array_new_with_ctor_partial_init_listv
 // CHECK:    %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!cir.ptr<!rec_G>>
+// CHECK:    %{{.+}} = cir.const #cir.int<8> : !u64i
 // CHECK:    %[[EIGHT:.*]] = cir.const #cir.int<8> : !u64i
 // CHECK:    %[[RAW_PTR:.*]] = cir.call @_Znam(%[[EIGHT]]) {allocsize = array<i32: 0>, builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>} : (!u64i {llvm.noundef})
 // CHECK:    %[[BEGIN:.*]] = cir.cast bitcast %[[RAW_PTR]] : !cir.ptr<!void> -> !cir.ptr<!rec_G>
@@ -1240,6 +1243,7 @@ namespace gh227980 {
   }
 
 // CHECK-LABEL: cir.func{{.*}}@_ZN8gh22798015huge_float_sizeEv()
+// CHECK: %{{.+}} = cir.const #cir.int<18446744073709551615> : !u64i
 // CHECK: %[[NEG:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
 // CHECK: cir.call @_Znam(%[[NEG]]) {allocsize = array<i32: 0>, builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>} : (!u64i {llvm.noundef})
 
