@@ -115,6 +115,7 @@ class ShTestLldb(ShTest):
                     )
                 break
         return lldbflakes.execute_with_reruns(
+            test,
             lambda: ShTest.execute(self, test, litConfig)
         )
 

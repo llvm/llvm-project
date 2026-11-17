@@ -36,6 +36,7 @@ class LLDBTest(TestFormat):
 
     def execute(self, test, litConfig):
         return lldbflakes.execute_with_reruns(
+            test,
             lambda: lit.Test.Result(*self._execute_once(test, litConfig))
         )
 
