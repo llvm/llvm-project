@@ -30,8 +30,7 @@ enum class SVEState : uint8_t {
   StreamingFPSIMD
 };
 
-class RegisterInfo_arm64
-    : public lldb_private::RegisterInfoAndSetInterface {
+class RegisterInfo_arm64 : public lldb_private::RegisterInfoAndSetInterface {
 public:
   enum { GPRegSet = 0, FPRegSet };
 
@@ -102,7 +101,7 @@ public:
   };
 
   RegisterInfo_arm64(const lldb_private::ArchSpec &target_arch,
-                          lldb_private::Flags opt_regsets);
+                     lldb_private::Flags opt_regsets);
 
   static size_t GetGPRSizeStatic();
   size_t GetGPRSize() const override { return GetGPRSizeStatic(); }

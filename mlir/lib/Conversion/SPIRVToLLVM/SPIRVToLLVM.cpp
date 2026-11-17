@@ -729,6 +729,19 @@ public:
   }
 };
 
+/// Converts `spirv.CopyObject` by forwarding its operand.
+class CopyObjectPattern : public SPIRVToLLVMConversion<spirv::CopyObjectOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::CopyObjectOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::CopyObjectOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOp(op, adaptor.getOperand());
+    return success();
+  }
+};
+
 /// Converts SPIR-V operations that have straightforward LLVM equivalent
 /// into LLVM dialect operations.
 template <typename SPIRVOp, typename LLVMOp>
@@ -2679,7 +2692,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       LoadStorePattern<spirv::StoreOp>, VariablePattern,
 
       // Miscellaneous ops
-      CompositeExtractPattern, CompositeInsertPattern,
+      CompositeExtractPattern, CompositeInsertPattern, CopyObjectPattern,
       DirectConversionPattern<spirv::SelectOp, LLVM::SelectOp>,
       DirectConversionPattern<spirv::UndefOp, LLVM::UndefOp>,
       VectorShufflePattern,

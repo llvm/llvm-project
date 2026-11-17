@@ -7345,7 +7345,7 @@ static bool isSupportedMetadirectiveLoopCompilerDirective(
       parser::CompilerDirective::ForceInline, parser::CompilerDirective::Inline,
       parser::CompilerDirective::NoInline,
       parser::CompilerDirective::InlineAlways, parser::CompilerDirective::IVDep,
-      parser::CompilerDirective::Simd>;
+      parser::CompilerDirective::Simd, parser::CompilerDirective::Align>;
 
   return common::visit(
       [](const auto &value) {

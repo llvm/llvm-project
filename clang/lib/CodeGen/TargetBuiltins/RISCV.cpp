@@ -1722,6 +1722,43 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     ID = Intrinsic::riscv_ssh1sadd_i32;
     break;
 
+  // Scalar Saturating and Rounding Shift
+  case RISCV::BI__builtin_riscv_ssha_i32:
+    ID = Intrinsic::riscv_ssha_i32;
+    break;
+  case RISCV::BI__builtin_riscv_sshar_i32:
+    ID = Intrinsic::riscv_sshar_i32;
+    break;
+  case RISCV::BI__builtin_riscv_sshl_u32:
+    ID = Intrinsic::riscv_sshl_u32;
+    break;
+  case RISCV::BI__builtin_riscv_sshlr_u32:
+    ID = Intrinsic::riscv_sshlr_u32;
+    break;
+  case RISCV::BI__builtin_riscv_sha_i64:
+    ID = Intrinsic::riscv_sha_i64;
+    break;
+  case RISCV::BI__builtin_riscv_shar_i64:
+    ID = Intrinsic::riscv_shar_i64;
+    break;
+  case RISCV::BI__builtin_riscv_shl_u64:
+    ID = Intrinsic::riscv_shl_u64;
+    break;
+  case RISCV::BI__builtin_riscv_shlr_u64:
+    ID = Intrinsic::riscv_shlr_u64;
+    break;
+
+  // Scalar Comparison
+  case RISCV::BI__builtin_riscv_mseq_u32:
+    ID = Intrinsic::riscv_mseq_u32;
+    break;
+  case RISCV::BI__builtin_riscv_mslt_i32:
+    ID = Intrinsic::riscv_mslt_i32;
+    break;
+  case RISCV::BI__builtin_riscv_msltu_u32:
+    ID = Intrinsic::riscv_msltu_u32;
+    break;
+
   // Scalar Multiply High
   case RISCV::BI__builtin_riscv_mulhr_i32:
   case RISCV::BI__builtin_riscv_mulhru_u32:
@@ -1765,6 +1802,29 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_mhraccsu_i32:
     ID = Intrinsic::riscv_mhraccsu_i32;
     break;
+  case RISCV::BI__builtin_riscv_mhacc_h0_i32:
+  case RISCV::BI__builtin_riscv_mhacc_h1_i32:
+  case RISCV::BI__builtin_riscv_mhaccsu_h0_i32:
+  case RISCV::BI__builtin_riscv_mhaccsu_h1_i32: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_mhacc_h0_i32:
+      ID = Intrinsic::riscv_mhacc_h0_i32;
+      break;
+    case RISCV::BI__builtin_riscv_mhacc_h1_i32:
+      ID = Intrinsic::riscv_mhacc_h1_i32;
+      break;
+    case RISCV::BI__builtin_riscv_mhaccsu_h0_i32:
+      ID = Intrinsic::riscv_mhaccsu_h0_i32;
+      break;
+    case RISCV::BI__builtin_riscv_mhaccsu_h1_i32:
+      ID = Intrinsic::riscv_mhaccsu_h1_i32;
+      break;
+    }
+    IntrinsicTypes = {Ops[2]->getType()};
+    break;
+  }
 
   // Scalar "Q-format" Multiplication
   case RISCV::BI__builtin_riscv_mulq_i32:
