@@ -2453,6 +2453,9 @@ func.func @vector_multi_reduction_unit_dimensions_fastmath(%source: vector<5x1x4
 
 // -----
 
+// The accumulator is the value the masked lanes keep, so it ends up as the
+// right-hand operand of the reduction op and as the on-false value of the
+// select.
 // CHECK-LABEL:   func.func @vector_multi_reduction_scalable(
 // CHECK-SAME:     %[[VAL_0:.*]]: vector<1x[4]x1xf32>,
 // CHECK-SAME:     %[[VAL_1:.*]]: vector<1x[4]xf32>,
@@ -2472,6 +2475,9 @@ func.func @vector_multi_reduction_scalable(%source: vector<1x[4]x1xf32>,
 
 // -----
 
+// As above: the accumulator is the passthrough of the masked select, so it is
+// the right-hand operand of the arith.mulf and the on-false value of the
+// select.
 // CHECK-LABEL: func @masked_vector_multi_reduction_unit_dimensions
 //  CHECK-SAME: %[[VAL_0:.*]]: vector<5x1x4x1x20xf32>, %[[VAL_1:.*]]: vector<5x4x20xf32>,
 //  CHECK-SAME: %[[VAL_2:.*]]: vector<5x1x4x1x20xi1>)
@@ -2514,6 +2520,8 @@ func.func @vector_multi_reduction_unit_dimensions_single_elem(%source: vector<1x
 
 // -----
 
+// Same for the scalar case: the accumulator (%[[VAL_1]]) is the on-false value
+// of the select, not the extracted source element.
 // CHECK-LABEL: func @masked_vector_multi_reduction_unit_dimensions_single_elem(
 //  CHECK-SAME: %[[VAL_0:.*]]: vector<1x1x1xf32>, %[[VAL_1:.*]]: f32,
 //  CHECK-SAME: %[[VAL_2:.*]]: vector<1x1x1xi1>)
@@ -2528,6 +2536,10 @@ func.func @masked_vector_multi_reduction_unit_dimensions_single_elem(%source: ve
 
 // -----
 
+// The mask is all false, so no element is reduced and the accumulator has to
+// come back unchanged. Once everything is folded away the function is just the
+// constant 42; a wrong passthrough (the source instead of the accumulator) in
+// the masked select would leave 7 here.
 // CHECK-LABEL: func @masked_vector_multi_reduction_unit_dimensions_false_mask(
 //       CHECK:   %[[RESULT:.*]] = arith.constant 42 : i32
 //  CHECK-NEXT:   return %[[RESULT]] : i32
@@ -2544,6 +2556,10 @@ func.func @masked_vector_multi_reduction_unit_dimensions_false_mask() -> i32 {
 
 // -----
 
+// Only the second row is masked in, so row 0 has to keep the accumulator (42)
+// while row 1 reduces maxui(9, 3) = 9. The expected constant is therefore
+// dense<[42, 9]>; picking up the source as the passthrough of the masked select
+// would give dense<[77, 9]> instead.
 // CHECK-LABEL: func @masked_vector_multi_reduction_unit_dimensions_mixed_mask(
 //       CHECK:   %[[RESULT:.*]] = arith.constant dense<[42, 9]> : vector<2xi32>
 //  CHECK-NEXT:   return %[[RESULT]] : vector<2xi32>
