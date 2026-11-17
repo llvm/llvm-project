@@ -22653,15 +22653,17 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
         SDValue VMask = getMaskNode(InvMask8, MVT::v8i1, Subtarget, DAG, dl);
         SDValue Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, MVT::v8i16, VecSrc);
         SDValue Zero = DAG.getConstant(0, dl, MVT::v8i16);
-        SDValue VSelect =
-            DAG.getNode(ISD::VSELECT, dl, MVT::v8i16, VMask, Cvt, Zero);
         if (SatWidth == 16) {
+          SDValue VSelect =
+              DAG.getNode(ISD::VSELECT, dl, MVT::v8i16, VMask, Cvt, Zero);
           SDValue Res = DAG.getExtractVectorElt(dl, MVT::i16, VSelect, 0);
           return DAG.getZExtOrTrunc(Res, dl, DstVT);
         }
         uint64_t MaxVal = (1ULL << SatWidth) - 1;
-        VSelect = DAG.getNode(ISD::UMIN, dl, MVT::v8i16, VSelect,
-                              DAG.getConstant(MaxVal, dl, MVT::v8i16));
+        SDValue Min = DAG.getNode(ISD::UMIN, dl, MVT::v8i16, Cvt,
+                                  DAG.getConstant(MaxVal, dl, MVT::v8i16));
+        SDValue VSelect =
+            DAG.getNode(ISD::VSELECT, dl, MVT::v8i16, VMask, Min, Zero);
         SDValue Res = DAG.getExtractVectorElt(dl, MVT::i16, VSelect, 0);
         return DAG.getZExtOrTrunc(Res, dl, DstVT);
       }
@@ -22685,25 +22687,33 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
           SDValue Res = DAG.getExtractVectorElt(dl, MVT::i16, Trunc, 0);
           return DAG.getZExtOrTrunc(Res, dl, DstVT);
         }
-        SDValue VSelect;
-        if (SrcVT == MVT::f64) {
-          SDValue VMask = getMaskNode(InvMask8, MVT::v2i1, Subtarget, DAG, dl);
-          SDValue Zero = DAG.getConstant(0, dl, MVT::v4i32);
-          VSelect = DAG.getNode(X86ISD::MCVTTP2UI, dl, MVT::v4i32, VecSrc, Zero,
-                                VMask);
-        } else {
-          SDValue VMask = getMaskNode(InvMask8, MVT::v4i1, Subtarget, DAG, dl);
-          SDValue Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, MVT::v4i32, VecSrc);
-          SDValue Zero = DAG.getConstant(0, dl, MVT::v4i32);
-          VSelect = DAG.getNode(ISD::VSELECT, dl, MVT::v4i32, VMask, Cvt, Zero);
-        }
         if (SatWidth == 32) {
+          SDValue VSelect;
+          if (SrcVT == MVT::f64) {
+            SDValue VMask =
+                getMaskNode(InvMask8, MVT::v2i1, Subtarget, DAG, dl);
+            SDValue Zero = DAG.getConstant(0, dl, MVT::v4i32);
+            VSelect = DAG.getNode(X86ISD::MCVTTP2UI, dl, MVT::v4i32, VecSrc,
+                                  Zero, VMask);
+          } else {
+            SDValue VMask =
+                getMaskNode(InvMask8, MVT::v4i1, Subtarget, DAG, dl);
+            SDValue Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, MVT::v4i32, VecSrc);
+            SDValue Zero = DAG.getConstant(0, dl, MVT::v4i32);
+            VSelect =
+                DAG.getNode(ISD::VSELECT, dl, MVT::v4i32, VMask, Cvt, Zero);
+          }
           SDValue Res = DAG.getExtractVectorElt(dl, MVT::i32, VSelect, 0);
           return DAG.getZExtOrTrunc(Res, dl, DstVT);
         }
+        SDValue VMask = getMaskNode(InvMask8, MVT::v4i1, Subtarget, DAG, dl);
+        SDValue Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, MVT::v4i32, VecSrc);
         uint64_t MaxVal = (1ULL << SatWidth) - 1;
-        VSelect = DAG.getNode(ISD::UMIN, dl, MVT::v4i32, VSelect,
-                              DAG.getConstant(MaxVal, dl, MVT::v4i32));
+        SDValue Min = DAG.getNode(ISD::UMIN, dl, MVT::v4i32, Cvt,
+                                  DAG.getConstant(MaxVal, dl, MVT::v4i32));
+        SDValue Zero = DAG.getConstant(0, dl, MVT::v4i32);
+        SDValue VSelect =
+            DAG.getNode(ISD::VSELECT, dl, MVT::v4i32, VMask, Min, Zero);
         SDValue Res = DAG.getExtractVectorElt(dl, MVT::i32, VSelect, 0);
         return DAG.getZExtOrTrunc(Res, dl, DstVT);
       }
@@ -22712,15 +22722,17 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
         SDValue VMask = getMaskNode(InvMask8, MVT::v2i1, Subtarget, DAG, dl);
         SDValue Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, MVT::v2i64, VecSrc);
         SDValue Zero = DAG.getConstant(0, dl, MVT::v2i64);
-        SDValue VSelect =
-            DAG.getNode(ISD::VSELECT, dl, MVT::v2i64, VMask, Cvt, Zero);
         if (SatWidth == 64) {
+          SDValue VSelect =
+              DAG.getNode(ISD::VSELECT, dl, MVT::v2i64, VMask, Cvt, Zero);
           SDValue Res = DAG.getExtractVectorElt(dl, MVT::i64, VSelect, 0);
           return DAG.getZExtOrTrunc(Res, dl, DstVT);
         }
         uint64_t MaxVal = (1ULL << SatWidth) - 1;
-        VSelect = DAG.getNode(ISD::UMIN, dl, MVT::v2i64, VSelect,
-                              DAG.getConstant(MaxVal, dl, MVT::v2i64));
+        SDValue Min = DAG.getNode(ISD::UMIN, dl, MVT::v2i64, Cvt,
+                                  DAG.getConstant(MaxVal, dl, MVT::v2i64));
+        SDValue VSelect =
+            DAG.getNode(ISD::VSELECT, dl, MVT::v2i64, VMask, Min, Zero);
         SDValue Res = DAG.getExtractVectorElt(dl, MVT::i64, VSelect, 0);
         return DAG.getZExtOrTrunc(Res, dl, DstVT);
       }
