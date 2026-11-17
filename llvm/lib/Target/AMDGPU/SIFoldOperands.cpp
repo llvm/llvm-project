@@ -2114,7 +2114,7 @@ bool SIFoldOperandsImpl::tryFoldAndCSelectExec(MachineInstr &MI) const {
     // known not to change in between.
     if (!SelMO.isReg() || !SelMO.getReg().isVirtual() || SelMO.getSubReg() ||
         !MaskMO.isReg() || MaskMO.getSubReg() ||
-        !(MaskMO.getReg().isVirtual() || MaskMO.getReg() == LMC.ExecReg) ||
+        (MaskMO.getReg().isPhysical() && MaskMO.getReg() != LMC.ExecReg) ||
         !MRI->hasOneNonDBGUse(SelMO.getReg()))
       continue;
 
@@ -2135,7 +2135,8 @@ bool SIFoldOperandsImpl::tryFoldAndCSelectExec(MachineInstr &MI) const {
     MachineOperand &Arm = Sel->getOperand(ArmIdx);
     const bool IsAllOnesArm = Arm.isImm() && Arm.getImm() == -1;
     const bool IsExecArm = Arm.isReg() && Arm.getReg() == LMC.ExecReg;
-    if (!IsAllOnesArm && !(IsExecArm && TII->isMaskedByExec(MaskReg, MI, *MRI)))
+    if (!IsAllOnesArm &&
+        (!IsExecArm || !TII->isMaskedByExec(MaskReg, MI, *MRI)))
       continue;
 
     // A def of %mask in another block dominates the S_CSELECT; in the same
