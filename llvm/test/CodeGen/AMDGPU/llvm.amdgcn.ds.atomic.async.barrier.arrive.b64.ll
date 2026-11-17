@@ -2,8 +2,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.50 < %s | FileCheck --check-prefix=GCN %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.50 < %s | FileCheck --check-prefix=GCN %s
 
-declare void @llvm.amdgcn.ds.atomic.async.barrier.arrive.b64(ptr addrspace(3))
-
 define void @test_ds_atomic_async_barrier_arrive_b64(ptr addrspace(3) %bar) {
 ; GCN-LABEL: test_ds_atomic_async_barrier_arrive_b64:
 ; GCN:       ; %bb.0: ; %entry
