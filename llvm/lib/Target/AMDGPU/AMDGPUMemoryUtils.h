@@ -15,6 +15,11 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 
 namespace llvm {
 
@@ -156,6 +161,27 @@ SIAtomicAddrSpace getSynchronizeAddrSpace(const Instruction &I);
 SIAtomicAddrSpace getSynchronizeAddrSpace(const MMRAMetadata &MMRA,
                                           const Function *DiagFn = nullptr,
                                           const DebugLoc &DL = {});
+
+/// Convert \p GV, an LDS-like variable (such as a named barrier), to an
+/// external declaration so that the linker can allocate it. A declaration
+/// cannot be in a comdat, so this also removes \p GV from its comdat.
+inline void externalizeLDSGlobalForObjectLinking(GlobalVariable &GV) {
+  assert(GV.getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
+         GV.getAddressSpace() == AMDGPUAS::BARRIER);
+  GV.setInitializer(nullptr);
+  GV.setLinkage(GlobalValue::ExternalLinkage);
+  GV.setComdat(nullptr);
+}
+
+/// Record in the amdgpu.lds.uses metadata that \p F uses the LDS variable
+/// \p GV.
+inline void recordLDSUseForObjectLinking(Function &F, GlobalVariable &GV) {
+  assert(F.getParent() == GV.getParent());
+  NamedMDNode *LDSMD =
+      F.getParent()->getOrInsertNamedMetadata("amdgpu.lds.uses");
+  LDSMD->addOperand(MDNode::get(
+      F.getContext(), {ValueAsMetadata::get(&F), ValueAsMetadata::get(&GV)}));
+}
 
 } // end namespace AMDGPU
 
