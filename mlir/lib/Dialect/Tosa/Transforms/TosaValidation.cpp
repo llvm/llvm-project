@@ -1395,9 +1395,8 @@ LogicalResult checkErrorIfTile(Operation *op) {
   if (failed(tileOp.getConstantMultiples(multiples)))
     return success();
 
-  // Preserve the existing allowance for -1.
-  if (llvm::any_of(multiples, [](int64_t v) { return v <= 0 && v != -1; }))
-    return op->emitOpError("multiples values must be > 0 or -1, got [")
+  if (llvm::any_of(multiples, [](int64_t v) { return v <= 0; }))
+    return op->emitOpError("multiples values must be > 0, got [")
            << multiples << "]";
 
   return success();

@@ -22,21 +22,11 @@ func.func @test_avg_pool2d_zero_dim_input(%arg0: tensor<1x0x?x9xf32>, %arg1: ten
 
 // -----
 
-// Keep invalid tiles through canonicalization so that tosa-validate diagnoses
-// their multiples before conversion.
-func.func @tile_broadcast_negative_multiple(%arg0: tensor<1xf32>, %arg1: tensor<4xf32>) -> tensor<4xf32> {
-  %multiples = tosa.const_shape values(dense<-2> : tensor<1xindex>) : () -> !tosa.shape<1>
-  // expected-error@+1 {{'tosa.tile' op multiples values must be > 0 or -1, got [-2]}}
-  %tile = tosa.tile %arg0, %multiples : (tensor<1xf32>, !tosa.shape<1>) -> tensor<4xf32>
-  %add = tosa.add %tile, %arg1 : (tensor<4xf32>, tensor<4xf32>) -> tensor<4xf32>
-  return %add : tensor<4xf32>
-}
-
-// -----
-
+// Keep the tile with a zero multiple through canonicalization so that
+// tosa-validate can diagnose it before conversion.
 func.func @tile_broadcast_zero_multiple(%arg0: tensor<1xf32>, %arg1: tensor<4xf32>) -> tensor<4xf32> {
   %multiples = tosa.const_shape values(dense<0> : tensor<1xindex>) : () -> !tosa.shape<1>
-  // expected-error@+1 {{'tosa.tile' op multiples values must be > 0 or -1, got [0]}}
+  // expected-error@+1 {{'tosa.tile' op multiples values must be > 0, got [0]}}
   %tile = tosa.tile %arg0, %multiples : (tensor<1xf32>, !tosa.shape<1>) -> tensor<4xf32>
   %add = tosa.add %tile, %arg1 : (tensor<4xf32>, tensor<4xf32>) -> tensor<4xf32>
   return %add : tensor<4xf32>

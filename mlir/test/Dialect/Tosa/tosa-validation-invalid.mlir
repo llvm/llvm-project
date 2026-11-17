@@ -490,3 +490,38 @@ func.func @test_slice_dynamic_input_dimension(%arg0: tensor<?x11x7xi32>) -> tens
   %0 = tosa.slice %arg0, %start, %size : (tensor<?x11x7xi32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<2x4x3xi32>
   return %0 : tensor<2x4x3xi32>
 }
+
+// -----
+
+func.func @test_tile_negative_multiple(%arg0: tensor<4x31xf32>) {
+  %multiples = tosa.const_shape values(dense<[2, -2]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.tile' op multiples values must be > 0, got [2, -2]}}
+  %0 = tosa.tile %arg0, %multiples : (tensor<4x31xf32>, !tosa.shape<2>) -> tensor<8x?xf32>
+  return
+}
+
+// -----
+
+func.func @test_tile_zero_multiple(%arg0: tensor<4x31xf32>) {
+  %multiples = tosa.const_shape values(dense<[0, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.tile' op multiples values must be > 0, got [0, 2]}}
+  %0 = tosa.tile %arg0, %multiples : (tensor<4x31xf32>, !tosa.shape<2>) -> tensor<?x62xf32>
+  return
+}
+
+// -----
+
+func.func @test_tile_minus_one_multiple(%arg0: tensor<4x31xf32>) {
+  %multiples = tosa.const_shape values(dense<[2, -1]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.tile' op multiples values must be > 0, got [2, -1]}}
+  %0 = tosa.tile %arg0, %multiples : (tensor<4x31xf32>, !tosa.shape<2>) -> tensor<8x?xf32>
+  return
+}
+
+// -----
+
+func.func @test_tile_nonconstant_multiples(%arg0: tensor<?xf32>) -> tensor<?xf32> {
+  %multiples = tosa.dim %arg0 axis(0) : (tensor<?xf32>) -> !tosa.shape<1>
+  %0 = tosa.tile %arg0, %multiples : (tensor<?xf32>, !tosa.shape<1>) -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}

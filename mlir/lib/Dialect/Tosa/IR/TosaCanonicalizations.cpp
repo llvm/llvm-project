@@ -2386,7 +2386,6 @@ static LogicalResult verifyTileIsBroadcast(tosa::TileOp tileOp) {
     return failure();
 
   for (const auto [index, multiple] : llvm::enumerate(multiples)) {
-    // Do not hide invalid multiples from tosa-validate.
     if (multiple <= 0 && multiple != -1)
       return failure();
     if (multiple == 1)
