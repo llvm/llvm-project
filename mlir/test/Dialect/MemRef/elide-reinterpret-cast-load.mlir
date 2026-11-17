@@ -271,6 +271,44 @@ func.func private @collapse_3d_moved_unit_dims(%i : index, %j : index,
   return
 }
 
+// CHECK-LABEL: func.func private @window_last_row(
+// CHECK-SAME:    %[[K:[A-Za-z0-9_]+]]: index
+// CHECK-SAME:    %[[SRC:.*]]: memref<1x513x40xf32>) {
+func.func private @window_last_row(%k : index, %src : memref<1x513x40xf32>) {
+  // CHECK:       %[[IDX:.*]] = arith.constant 0 : index
+  %idx = arith.constant 0 : index
+  // CHECK-NOT:   memref.reinterpret_cast
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [20480], sizes: [1, 1, 40], strides: [20520, 40, 1]
+    : memref<1x513x40xf32>
+      to memref<1x1x40xf32, strided<[20520, 40, 1], offset: 20480>>
+  // CHECK:       %[[ROW:.*]] = arith.constant 512 : index
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[IDX]], %[[ROW]], %[[K]]] : memref<1x513x40xf32>
+  %0 = memref.load %reinterpret_cast[%idx, %idx, %k]
+    : memref<1x1x40xf32, strided<[20520, 40, 1], offset: 20480>>
+  return
+}
+
+// CHECK-LABEL: func.func private @window_dynamic_index(
+// CHECK-SAME:    %[[I:[A-Za-z0-9_]+]]: index
+// CHECK-SAME:    %[[J:[A-Za-z0-9_]+]]: index
+// CHECK-SAME:    %[[SRC:.*]]: memref<4x8xf32>) {
+func.func private @window_dynamic_index(%i : index, %j : index,
+    %src : memref<4x8xf32>) {
+  // CHECK-NOT:   memref.reinterpret_cast
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [11], sizes: [2, 4], strides: [8, 1]
+    : memref<4x8xf32> to memref<2x4xf32, strided<[8, 1], offset: 11>>
+  // CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+  // CHECK-DAG:   %[[C3:.*]] = arith.constant 3 : index
+  // CHECK-DAG:   %[[I1:.*]] = arith.addi %[[I]], %[[C1]] : index
+  // CHECK-DAG:   %[[J3:.*]] = arith.addi %[[J]], %[[C3]] : index
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[I1]], %[[J3]]] : memref<4x8xf32>
+  %0 = memref.load %reinterpret_cast[%i, %j]
+    : memref<2x4xf32, strided<[8, 1], offset: 11>>
+  return
+}
+
 //===----------------------------------------------------------------------===//
 // Negative tests (must NOT rewrite)
 //===----------------------------------------------------------------------===//
@@ -288,6 +326,64 @@ func.func private @negative_nonzero_offset(
   // CHECK:       memref.load %[[RC]]
   %0 = memref.load %reinterpret_cast[%idx_1, %idx_1, %idx_2]
     : memref<1x1x100xf32, strided<[1, 1, 1], offset: 1>>
+  return
+}
+
+// CHECK-LABEL: func.func private @negative_window_out_of_bounds(
+// CHECK-SAME:    %[[SRC:.*]]: memref<4x8xf32>) {
+func.func private @negative_window_out_of_bounds(%src : memref<4x8xf32>) {
+  %idx = arith.constant 0 : index
+  // CHECK:       %[[RC:.*]] = memref.reinterpret_cast %[[SRC]]
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [6], sizes: [2, 4], strides: [8, 1]
+    : memref<4x8xf32> to memref<2x4xf32, strided<[8, 1], offset: 6>>
+  // CHECK:       memref.load %[[RC]]
+  %0 = memref.load %reinterpret_cast[%idx, %idx]
+    : memref<2x4xf32, strided<[8, 1], offset: 6>>
+  return
+}
+
+// CHECK-LABEL: func.func private @negative_window_strides_mismatch(
+// CHECK-SAME:    %[[SRC:.*]]: memref<4x8xf32>) {
+func.func private @negative_window_strides_mismatch(%src : memref<4x8xf32>) {
+  %idx = arith.constant 1 : index
+  // CHECK:       %[[RC:.*]] = memref.reinterpret_cast %[[SRC]]
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [0], sizes: [2, 4], strides: [16, 1]
+    : memref<4x8xf32> to memref<2x4xf32, strided<[16, 1]>>
+  // CHECK:       memref.load %[[RC]]
+  %0 = memref.load %reinterpret_cast[%idx, %idx]
+    : memref<2x4xf32, strided<[16, 1]>>
+  return
+}
+
+// CHECK-LABEL: func.func private @negative_window_offset_past_end(
+// CHECK-SAME:    %[[SRC:.*]]: memref<4x8xf32>) {
+func.func private @negative_window_offset_past_end(%src : memref<4x8xf32>) {
+  %idx = arith.constant 0 : index
+  // CHECK:       %[[RC:.*]] = memref.reinterpret_cast %[[SRC]]
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [32], sizes: [1, 1], strides: [8, 1]
+    : memref<4x8xf32> to memref<1x1xf32, strided<[8, 1], offset: 32>>
+  // CHECK:       memref.load %[[RC]]
+  %0 = memref.load %reinterpret_cast[%idx, %idx]
+    : memref<1x1xf32, strided<[8, 1], offset: 32>>
+  return
+}
+
+// CHECK-LABEL: func.func private @negative_window_non_identity_source(
+// CHECK-SAME:    %[[SRC:.*]]: memref<4x8xf32, strided<[8, 1], offset: 5>>) {
+func.func private @negative_window_non_identity_source(
+    %src : memref<4x8xf32, strided<[8, 1], offset: 5>>) {
+  %idx = arith.constant 0 : index
+  // CHECK:       %[[RC:.*]] = memref.reinterpret_cast %[[SRC]]
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [8], sizes: [2, 4], strides: [8, 1]
+    : memref<4x8xf32, strided<[8, 1], offset: 5>>
+      to memref<2x4xf32, strided<[8, 1], offset: 8>>
+  // CHECK:       memref.load %[[RC]]
+  %0 = memref.load %reinterpret_cast[%idx, %idx]
+    : memref<2x4xf32, strided<[8, 1], offset: 8>>
   return
 }
 

@@ -532,6 +532,36 @@ getNonUnitDimMapping(memref::ReinterpretCastOp rc) {
   return mapping;
 }
 
+/// Returns per-dim source offsets if `rc` is an in-bounds, rank-preserving
+/// window at a static offset that reuses the identity-layout source strides.
+///
+/// Example:
+///   memref.reinterpret_cast %src to offset: [20480], sizes: [1, 1, 40],
+///     strides: [20520, 40, 1] : memref<1x513x40xf32> to ...
+///   returns [0, 512, 0].
+static std::optional<SmallVector<int64_t>>
+getWindowOffsets(memref::ReinterpretCastOp rc) {
+  auto srcTy = cast<MemRefType>(rc.getSource().getType());
+  auto resTy = cast<MemRefType>(rc.getResult().getType());
+  ArrayRef<int64_t> offsets = rc.getStaticOffsets();
+  // FIXME: Despite what `getStaticOffsets` implies, `reinterpret_cast` takes
+  // only a single offset. That should be fixed at the op definition level.
+  assert(offsets.size() == 1 && "Expecting single offset");
+  if (srcTy.getRank() != resTy.getRank() || !srcTy.hasStaticShape() ||
+      !resTy.hasStaticShape() || !srcTy.getLayout().isIdentity() ||
+      ShapedType::isDynamic(offsets[0]) ||
+      offsets[0] >= srcTy.getNumElements() ||
+      computeStrides(srcTy.getShape()) != rc.getStaticStrides())
+    return std::nullopt;
+
+  SmallVector<int64_t> offs = *delinearizeStaticRCOffset(rc);
+  for (auto [off, resSize, srcSize] :
+       llvm::zip_equal(offs, resTy.getShape(), srcTy.getShape()))
+    if (off + resSize > srcSize)
+      return std::nullopt;
+  return offs;
+}
+
 /// Checks statically known and constant indices accessed by a load from a
 /// unit-dim insertion/removal reinterpret_cast to ensure in-bounds only access.
 /// Fully dynamic indices are skipped (there is no way to verify them).
@@ -551,10 +581,69 @@ getNonUnitDimMapping(memref::ReinterpretCastOp rc) {
   return true;
 }
 
+/// Maps load indices onto the reinterpret_cast source, with unit dims at 0.
+static SmallVector<Value> mapUnitDimIndices(PatternRewriter &rewriter,
+                                            memref::LoadOp op,
+                                            memref::ReinterpretCastOp rc,
+                                            const NonUnitDimMapping &mapping) {
+  auto rcInputTy = cast<MemRefType>(rc.getSource().getType());
+
+  int64_t rcInputRank = rcInputTy.getRank();
+
+  SmallVector<Value> oldIdxs(op.getIndices().begin(), op.getIndices().end());
+
+  // Prefer reusing an explicit constant-zero index from the old load.
+  Value zeroIndex;
+  for (Value idx : oldIdxs) {
+    std::optional<int64_t> idxVal = getConstantIndex(idx);
+    if (idxVal && *idxVal == 0) {
+      zeroIndex = idx;
+      break;
+    }
+  }
+  if (!zeroIndex)
+    zeroIndex = arith::ConstantIndexOp::create(rewriter, op.getLoc(), 0);
+
+  // Initialize new load indices to all 0s.
+  SmallVector<Value> rcInputIdxs(rcInputRank, zeroIndex);
+  for (auto [inputDim, outputDim] : mapping)
+    rcInputIdxs[inputDim] = oldIdxs[outputDim];
+  return rcInputIdxs;
+}
+
+/// Shifts each load index by the window offset of its dimension.
+static SmallVector<Value> shiftWindowIndices(PatternRewriter &rewriter,
+                                             memref::LoadOp op,
+                                             ArrayRef<int64_t> offsets) {
+  SmallVector<Value> rcInputIdxs;
+  for (auto [off, idx] : llvm::zip_equal(offsets, op.getIndices())) {
+    if (off == 0) {
+      rcInputIdxs.push_back(idx);
+    } else if (std::optional<int64_t> idxVal = getConstantIndex(idx)) {
+      rcInputIdxs.push_back(
+          arith::ConstantIndexOp::create(rewriter, op.getLoc(), *idxVal + off));
+    } else {
+      rcInputIdxs.push_back(arith::AddIOp::create(
+          rewriter, op.getLoc(), idx,
+          arith::ConstantIndexOp::create(rewriter, op.getLoc(), off)));
+    }
+  }
+  return rcInputIdxs;
+}
+
 /// Rewrites `memref.load` through a reinterpret_cast that only inserts/removes
-/// unit dimensions by mapping the load indices directly onto the source MemRef.
+/// unit dimensions, or selects an in-bounds window, by mapping the load indices
+/// directly onto the source MemRef.
 ///
-/// Shape restriction gated by getNonUnitDimMapping().
+/// Shape restriction gated by getNonUnitDimMapping() or getWindowOffsets().
+///
+/// BEFORE (window, OFF = D * M + E)
+///   %view = memref.reinterpret_cast %src to offset: [OFF], sizes: [N, K],
+///     strides: [M, 1] : memref<PxMxf32> to memref<NxKxf32, ...>
+///   %v = memref.load %view[%i, %j]
+///
+/// AFTER
+///   %v = memref.load %src[%i + D, %j + E] : memref<PxMxf32>
 ///
 /// BEFORE (rank expansion)
 ///   %view = memref.reinterpret_cast %src
@@ -582,37 +671,18 @@ public:
     if (!rc)
       return rewriter.notifyMatchFailure(
           op, "target is not a memref.reinterpret_cast");
-    std::optional<NonUnitDimMapping> dimMapping = getNonUnitDimMapping(rc);
-    if (!dimMapping)
+    SmallVector<Value> rcInputIdxs;
+    if (std::optional<NonUnitDimMapping> dimMapping = getNonUnitDimMapping(rc))
+      rcInputIdxs = mapUnitDimIndices(rewriter, op, rc, *dimMapping);
+    else if (std::optional<SmallVector<int64_t>> offsets = getWindowOffsets(rc))
+      rcInputIdxs = shiftWindowIndices(rewriter, op, *offsets);
+    else
       return rewriter.notifyMatchFailure(
-          op, "reinterpret_cast is not a unit-dim insertion/removal preserving "
-              "non-unit dimensions");
+          op, "reinterpret_cast is neither a unit-dim insertion/removal "
+              "preserving non-unit dimensions nor an in-bounds window");
 
     assert(areIndicesInBounds(op) &&
            "load from reinterpret_cast indexes out of bounds!");
-
-    auto rcInputTy = cast<MemRefType>(rc.getSource().getType());
-
-    int64_t rcInputRank = rcInputTy.getRank();
-
-    SmallVector<Value> oldIdxs(op.getIndices().begin(), op.getIndices().end());
-
-    // Prefer reusing an explicit constant-zero index from the old load.
-    Value zeroIndex;
-    for (Value idx : oldIdxs) {
-      std::optional<int64_t> idxVal = getConstantIndex(idx);
-      if (idxVal && *idxVal == 0) {
-        zeroIndex = idx;
-        break;
-      }
-    }
-    if (!zeroIndex)
-      zeroIndex = arith::ConstantIndexOp::create(rewriter, op.getLoc(), 0);
-
-    // Initialize new load indices to all 0s.
-    SmallVector<Value> rcInputIdxs(rcInputRank, zeroIndex);
-    for (auto [inputDim, outputDim] : *dimMapping)
-      rcInputIdxs[inputDim] = oldIdxs[outputDim];
 
     auto rcInput = rc.getSource();
     // If the only user of rc is the current Op (which is about to be erased),
@@ -649,7 +719,7 @@ struct ElideReinterpretCastPass
       auto rc = op.getMemRef().getDefiningOp<memref::ReinterpretCastOp>();
       if (!rc)
         return true;
-      return !getNonUnitDimMapping(rc);
+      return !getNonUnitDimMapping(rc) && !getWindowOffsets(rc);
     });
     target.addLegalDialect<arith::ArithDialect, memref::MemRefDialect,
                            scf::SCFDialect>();
