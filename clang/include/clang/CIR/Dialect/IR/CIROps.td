@@ -229,6 +229,15 @@ defvar CIR_FenvOpTraits = [
 // dynamically via FenvOpTrait, so they must not inherit NoMemoryEffect.
 defvar CIR_DynamicMemoryEffects = 0;
 
+// Declares isVolatileOrAtomic() on cir.load and cir.store.
+defvar CIR_VolatileOrAtomicAccessDecl = [{
+  /// Returns true if the access is volatile or atomic. Such an access must
+  /// stay as written: it cannot be removed, merged or reordered.
+  bool isVolatileOrAtomic() {
+    return getIsVolatile() || getMemOrder().has_value();
+  }
+}];
+
 //===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//
@@ -867,7 +876,8 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
 def CIR_LoadOp : CIR_Op<"load", [
   TypesMatchWith<"type of 'result' matches pointee type of 'addr'",
     "addr", "result", "mlir::cast<cir::PointerType>($_self).getPointee()">,
-  DeclareOpInterfaceMethods<PromotableMemOpInterface>
+  DeclareOpInterfaceMethods<PromotableMemOpInterface>,
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
 ]> {
   let summary = "Load value from memory adddress";
   let description = [{
@@ -905,8 +915,7 @@ def CIR_LoadOp : CIR_Op<"load", [
     ```
   }];
 
-  let arguments = (ins Arg<CIR_PointerType, "the address to load from",
-                           [MemRead]>:$addr,
+  let arguments = (ins Arg<CIR_PointerType, "the address to load from">:$addr,
                        UnitAttr:$isDeref,
                        UnitAttr:$is_volatile,
                        UnitAttr:$is_nontemporal,
@@ -941,6 +950,8 @@ def CIR_LoadOp : CIR_Op<"load", [
             cir::MemOrderAttr{}, /*invariant=*/false);
     }]>
   ];
+
+  let extraClassDeclaration = CIR_VolatileOrAtomicAccessDecl;
 
   // FIXME: add verifier.
 }
@@ -1051,6 +1062,8 @@ def CIR_StoreOp : CIR_Op<"store", [
             /*mem_order=*/cir::MemOrderAttr());
     }]>
   ];
+
+  let extraClassDeclaration = CIR_VolatileOrAtomicAccessDecl;
 
   // FIXME: add verifier.
 }
@@ -2219,6 +2232,9 @@ def CIR_FNegOp : CIR_UnaryOp<"fneg", CIR_AnyFloatOrVecOfFloatType> {
     The `cir.fneg` operation negates the operand. The operand and result must
     have the same type.
 
+    The optional `fastmath_flags` attribute holds the fast-math flags of the
+    operation.
+
     Example:
 
     ```
@@ -2227,6 +2243,19 @@ def CIR_FNegOp : CIR_UnaryOp<"fneg", CIR_AnyFloatOrVecOfFloatType> {
     %5 = cir.fneg %4 : !cir.vector<4 x !cir.float>
     ```
   }];
+
+  let arguments = !con(commonArgs, (ins
+      OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags));
+
+  let assemblyFormat = [{
+    $input `:` type($input) prop-dict attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$input), [{
+      build($_builder, $_state, input, cir::FastMathFlagsAttr{});
+    }]>
+  ];
 
   let hasFolder = 1;
 
@@ -4052,7 +4081,9 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
 // GetBitfieldOp
 //===----------------------------------------------------------------------===//
 
-def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
+def CIR_GetBitfieldOp : CIR_Op<"get_bitfield", [
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
+]> {
   let summary = "Get the information for a bitfield member";
   let description = [{
     The `cir.get_bitfield` operation provides a load-like access to
@@ -4101,7 +4132,7 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
     }];
 
   let arguments = (ins
-    Arg<CIR_PointerType, "the address to load from", [MemRead]>:$addr,
+    Arg<CIR_PointerType, "the address to load from">:$addr,
     CIR_BitfieldInfoAttr:$bitfield_info,
     DefaultValuedOptionalAttr<I64Attr, "0">:$alignment,
     UnitAttr:$is_volatile
@@ -6047,6 +6078,15 @@ def CIR_AsmFlavor : CIR_I32Enum<"AsmFlavor", "ATT or Intel",
 
 def CIR_AsmFlavorAttr : CIR_EnumAttr<CIR_AsmFlavor, "asm_flavor">;
 
+def CIR_EmptyDictAttr : Attr<CPred<
+  "::llvm::isa<::mlir::DictionaryAttr>($_self) && "
+  "::llvm::cast<::mlir::DictionaryAttr>($_self).empty()">,
+  "empty dictionary">;
+
+def CIR_AsmOperandAttrArray : CIR_TypedArrayAttrBase<
+  AnyAttrOf<[UnitAttr, CIR_EmptyDictAttr]>,
+  "array of unit attributes or empty dictionaries">;
+
 def CIR_InlineAsmOp : CIR_Op<"asm",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let description = [{
@@ -6060,9 +6100,9 @@ def CIR_InlineAsmOp : CIR_Op<"asm",
     - the output variable index referenced by the input operands.
     - the index of early-clobber operand
 
-    Operand attributes are a storage, where each element corresponds to the
-    operand with the same index. The first index relates to the operation
-    result (if any).
+    `operand_attrs` has one entry per operand, in operand order: a unit
+    attribute marks a memory operand (printed as `maybe_memory`) and an empty
+    dictionary marks any other operand.
     The operands themselves are stored as VariadicOfVariadic in the following
     order: output, input and then in/out operands. When several output operands
     are present, the result type may be represented as an anonymous record type.
@@ -6112,7 +6152,8 @@ def CIR_InlineAsmOp : CIR_Op<"asm",
   let arguments =
       (ins VariadicOfVariadic<AnyType, "operands_segments">:$asm_operands,
           StrAttr:$asm_string, StrAttr:$constraints, UnitAttr:$side_effects,
-          UnitAttr:$convergent, CIR_AsmFlavorAttr:$asm_flavor, ArrayAttr:$operand_attrs,
+          UnitAttr:$convergent, CIR_AsmFlavorAttr:$asm_flavor,
+          CIR_AsmOperandAttrArray:$operand_attrs,
           DenseI32ArrayAttr:$operands_segments);
 
   let builders = [OpBuilder<(ins
@@ -6121,7 +6162,19 @@ def CIR_InlineAsmOp : CIR_Op<"asm",
       "bool":$sideEffects, "bool":$convergent, "AsmFlavor":$asmFlavor,
       "llvm::ArrayRef<mlir::Attribute>":$operandAttrs)>];
 
+  let extraClassDeclaration = [{
+    /// Returns true if the asm operand at `index`, counted over all asm
+    /// operands, is a memory operand: the address of an lvalue that the asm
+    /// reads or writes, from a constraint such as "=*m". It is printed as
+    /// `maybe_memory`.
+    bool isMemoryOperand(unsigned index) {
+      assert(index < getOperandAttrs().size() && "operand index out of range");
+      return mlir::isa<mlir::UnitAttr>(getOperandAttrs()[index]);
+    }
+  }];
+
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -6804,7 +6857,7 @@ def CIR_VecFCmpOp : CIR_Op<"vec.fcmp",
             cir::FenvAttr{});
     }]>
   ];
-
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -6841,12 +6894,12 @@ def CIR_VecShuffleOp : CIR_Op<"vec.shuffle", [
   }];
 
   let arguments = (ins
-    CIR_VectorType:$vec1,
-    CIR_VectorType:$vec2,
+    CIR_AnyVectorOrMatrixType:$vec1,
+    CIR_AnyVectorOrMatrixType:$vec2,
     CIR_IntArrayAttr:$indices
   );
 
-  let results = (outs CIR_VectorType:$result);
+  let results = (outs CIR_AnyVectorOrMatrixType:$result);
   let assemblyFormat = [{
     `(` $vec1 `,` $vec2 `:` qualified(type($vec1)) `)` $indices `:`
      qualified(type($result)) attr-dict
@@ -6962,8 +7015,7 @@ def CIR_VecSplatOp : CIR_Op<"vec.splat", [
   }];
 
   let arguments = (ins CIR_VectorElementType:$value);
-  let results = (outs AnyTypeOf<[CIR_VectorType, CIR_MatrixType],
-                                "vector or matrix type">:$result);
+  let results = (outs CIR_AnyVectorOrMatrixType:$result);
 
   let assemblyFormat = [{
     $value `:` type($value) `,` qualified(type($result)) attr-dict
@@ -7093,6 +7145,7 @@ def CIR_MatrixInsertOp : CIR_Op<"matrix.insert", [
 
 def CIR_MatrixColumnMajorLoadOp : CIR_Op<"matrix.column_major_load", [
   DeclareOpInterfaceMethods<PromotableMemOpInterface>,
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
 ]> {
   let summary = "Matrix column major load";
   let description = [{
@@ -7120,7 +7173,7 @@ def CIR_MatrixColumnMajorLoadOp : CIR_Op<"matrix.column_major_load", [
   }];
 
   let arguments = (ins
-    Arg<CIR_PointerType, "the address to load from", [MemRead]>:$value,
+    Arg<CIR_PointerType, "the address to load from">:$value,
     CIR_IntType:$stride,
     UnitAttr:$is_volatile
   );
@@ -9165,6 +9218,8 @@ def CIR_ModfOp : CIR_Op<"modf", [Pure]> {
   }];
 }
 
+// The optional `fastmath_flags` attribute holds the fast-math flags of the
+// operation.
 class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     : CIR_Op<mnemonic,
              !listconcat([SameOperandsAndResultType], CIR_FenvOpTraits)>
@@ -9173,19 +9228,21 @@ class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     CIR_AnyFloatOrVecOfFloatType:$a,
     CIR_AnyFloatOrVecOfFloatType:$b,
     CIR_AnyFloatOrVecOfFloatType:$c,
-    OptionalAttr<CIR_FenvAttr>:$fenv
+    OptionalAttr<CIR_FenvAttr>:$fenv,
+    OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags
   );
 
   let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
 
   let assemblyFormat = [{
-    $a `,` $b `,` $c `:` type($a) (`fenv` `` $fenv^)? attr-dict
+    $a `,` $b `,` $c `:` type($a) (`fenv` `` $fenv^)? prop-dict attr-dict
   }];
 
   let builders = [
     OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$a, "mlir::Value":$b,
                    "mlir::Value":$c), [{
-      build($_builder, $_state, result, a, b, c, cir::FenvAttr{});
+      build($_builder, $_state, result, a, b, c, cir::FenvAttr{},
+            cir::FastMathFlagsAttr{});
     }]>
   ];
 

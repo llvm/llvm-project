@@ -4035,7 +4035,7 @@ define amdgpu_ps void @s_mul_u64_sext_with_vregs(ptr addrspace(1) %out, ptr addr
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mad_u64_u32 v[2:3], s0, v4, 0x50, 0
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v4, 31, v4
-; GFX10-NEXT:    v_mad_u64_u32 v[3:4], s0, v4, 0x50, v[3:4]
+; GFX10-NEXT:    v_mad_i32_i24 v3, v4, 0x50, v3
 ; GFX10-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -4044,9 +4044,8 @@ define amdgpu_ps void @s_mul_u64_sext_with_vregs(ptr addrspace(1) %out, ptr addr
 ; GFX11-NEXT:    global_load_b32 v4, v[2:3], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mad_u64_u32 v[2:3], null, v4, 0x50, 0
-; GFX11-NEXT:    v_ashrrev_i32_e32 v6, 31, v4
-; GFX11-NEXT:    v_mad_u64_u32 v[4:5], null, v6, 0x50, v[3:4]
-; GFX11-NEXT:    v_mov_b32_e32 v3, v4
+; GFX11-NEXT:    v_ashrrev_i32_e32 v4, 31, v4
+; GFX11-NEXT:    v_mad_i32_i24 v3, v4, 0x50, v3
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX11-NEXT:    s_endpgm
 ;

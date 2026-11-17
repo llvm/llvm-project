@@ -63,22 +63,6 @@ regBankSelected: false
 selected:        false
 failedISel:      false
 hasWinCFI:       false
-registers:
-  - { id: 0, class: intregs, preferred-register: '' }
-  - { id: 1, class: intregs, preferred-register: '' }
-  - { id: 2, class: intregs, preferred-register: '' }
-  - { id: 3, class: intregs, preferred-register: '' }
-  - { id: 4, class: intregs, preferred-register: '' }
-  - { id: 5, class: intregs, preferred-register: '' }
-  - { id: 6, class: intregs, preferred-register: '' }
-  - { id: 7, class: intregs, preferred-register: '' }
-  - { id: 8, class: predregs, preferred-register: '' }
-  - { id: 9, class: predregs, preferred-register: '' }
-  - { id: 10, class: intregs, preferred-register: '' }
-  - { id: 11, class: intregs, preferred-register: '' }
-  - { id: 12, class: intregs, preferred-register: '' }
-  - { id: 13, class: predregs, preferred-register: '' }
-  - { id: 14, class: intregs, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%6' }
   - { reg: '$r1', virtual-reg: '%7' }

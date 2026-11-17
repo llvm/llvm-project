@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 
 @requireNotWasm("return value is unrecoverable from the operand stack at a step-out")
 class TestCase(TestBase):
+    @skipIf(archs=["arm$"], oslist=["freebsd", "linux"], bugnumber="llvm.org/pr44132")
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.c"))

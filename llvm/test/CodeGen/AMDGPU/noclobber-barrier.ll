@@ -825,7 +825,7 @@ define amdgpu_kernel void @fence_in_loop(ptr addrspace(3) %p3, ptr addrspace(1) 
 ; GCN-NEXT:    s_load_dword s2, s[4:5], 0x24
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
-; GCN-NEXT:    s_and_b64 vcc, exec, -1
+; GCN-NEXT:    s_mov_b64 vcc, exec
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, s2
 ; GCN-NEXT:    ds_write_b32 v1, v0

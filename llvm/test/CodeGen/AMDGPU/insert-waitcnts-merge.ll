@@ -112,7 +112,7 @@ define amdgpu_kernel void @widget(ptr addrspace(1) %arg, i1 %arg1) #0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR renamable $vgpr1, renamable $vgpr1, renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s32) into %ir.arg.load, addrspace 1)
   ; CHECK-NEXT:   renamable $vgpr4 = GLOBAL_LOAD_DWORD renamable $vgpr2_vgpr3, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) null`, addrspace 1)
-  ; CHECK-NEXT:   renamable $vcc = S_AND_B64 $exec, 0, implicit-def dead $scc
+  ; CHECK-NEXT:   $vcc = S_MOV_B64 0
   ; CHECK-NEXT:   S_CBRANCH_VCCZ %bb.6, implicit killed $vcc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.9:
