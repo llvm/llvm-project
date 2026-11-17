@@ -15,7 +15,7 @@ typedef float v1f32 __attribute__((ext_vector_type(1)));
 typedef unsigned _BitInt(8) v4ub8 __attribute__((ext_vector_type(4)));
 
 // CHECK-LABEL: define dso_local float @from_f8e5m2_to_f32(
-// CHECK-SAME: i8 noundef zeroext [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: i8 noundef [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    store i8 [[B]], ptr [[B_ADDR]], align 1
@@ -28,7 +28,7 @@ float from_f8e5m2_to_f32(unsigned char b) {
 }
 
 // CHECK-LABEL: define dso_local half @from_f8e5m2_to_f16(
-// CHECK-SAME: i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: i8 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    store i8 [[B]], ptr [[B_ADDR]], align 1
@@ -41,7 +41,7 @@ _Float16 from_f8e5m2_to_f16(unsigned char b) {
 }
 
 // CHECK-LABEL: define dso_local bfloat @from_f8e5m2_to_bf16(
-// CHECK-SAME: i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: i8 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    store i8 [[B]], ptr [[B_ADDR]], align 1
@@ -54,7 +54,7 @@ __bf16 from_f8e5m2_to_bf16(unsigned char b) {
 }
 
 // CHECK-LABEL: define dso_local float @from_f8e4m3fn_to_f32(
-// CHECK-SAME: i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: i8 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    store i8 [[B]], ptr [[B_ADDR]], align 1
@@ -67,7 +67,7 @@ float from_f8e4m3fn_to_f32(unsigned char b) {
 }
 
 // CHECK-LABEL: define dso_local half @from_f8e4m3fn_to_f16(
-// CHECK-SAME: i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: i8 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    store i8 [[B]], ptr [[B_ADDR]], align 1
@@ -80,7 +80,7 @@ _Float16 from_f8e4m3fn_to_f16(unsigned char b) {
 }
 
 // CHECK-LABEL: define dso_local bfloat @from_f8e4m3fn_to_bf16(
-// CHECK-SAME: i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: i8 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    store i8 [[B]], ptr [[B_ADDR]], align 1
@@ -93,7 +93,7 @@ __bf16 from_f8e4m3fn_to_bf16(unsigned char b) {
 }
 
 // CHECK-LABEL: define dso_local float @from_f8e5m3fnu_to_f32(
-// CHECK-SAME: i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: i8 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    store i8 [[B]], ptr [[B_ADDR]], align 1
@@ -106,7 +106,7 @@ float from_f8e5m3fnu_to_f32(unsigned char b) {
 }
 
 // CHECK-LABEL: define dso_local half @from_f8e5m3fnu_to_f16(
-// CHECK-SAME: i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: i8 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    store i8 [[B]], ptr [[B_ADDR]], align 1
@@ -119,7 +119,7 @@ _Float16 from_f8e5m3fnu_to_f16(unsigned char b) {
 }
 
 // CHECK-LABEL: define dso_local bfloat @from_f8e5m3fnu_to_bf16(
-// CHECK-SAME: i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: i8 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    store i8 [[B]], ptr [[B_ADDR]], align 1
@@ -132,7 +132,7 @@ __bf16 from_f8e5m3fnu_to_bf16(unsigned char b) {
 }
 
 // CHECK-LABEL: define dso_local float @from_signed_f8e5m2(
-// CHECK-SAME: i8 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: i8 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    store i8 [[B]], ptr [[B_ADDR]], align 1
@@ -145,7 +145,7 @@ float from_signed_f8e5m2(signed char b) {
 }
 
 // CHECK-LABEL: define dso_local float @from_bitint_f8e5m2(
-// CHECK-SAME: i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: i8 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    store i8 [[B]], ptr [[B_ADDR]], align 1
