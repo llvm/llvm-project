@@ -703,6 +703,22 @@ void DeadArgumentEliminationPass::propagateLiveness(const RetOrArg &RA) {
   Uses.erase(Begin, I);
 }
 
+/// If the new return type is no longer a pointer, a function parameter cannot
+/// be captured through the return value anymore. Thus, strip the return-only
+/// components from its captures attribute.
+static AttributeSet dropRetOnlyCaptureComponents(LLVMContext &Ctx,
+                                                 AttributeSet Attrs,
+                                                 Type *NRetTy) {
+  if (NRetTy->isPointerTy() || !Attrs.hasAttribute(Attribute::Captures))
+    return Attrs;
+  CaptureInfo CI = Attrs.getCaptureInfo();
+  if (capturesNothing(CI.getRetComponents() & ~CI.getOtherComponents()))
+    return Attrs;
+  AttrBuilder ParamAttrs(Ctx, Attrs);
+  ParamAttrs.addCapturesAttr(CaptureInfo(CI.getOtherComponents()));
+  return AttributeSet::get(Ctx, ParamAttrs);
+}
+
 /// Remove any arguments and return values from F that are not in LiveValues.
 /// Transform the function and all the callees of the function to not have these
 /// arguments and return values.
@@ -843,6 +859,10 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
   AttributeSet FnAttrs =
       PAL.getFnAttrs().removeAttribute(F->getContext(), Attribute::AllocSize);
 
+  // Strip ret-only captures attribute if the new return type is not a pointer.
+  for (AttributeSet &Attrs : ArgAttrVec)
+    Attrs = dropRetOnlyCaptureComponents(F->getContext(), Attrs, NRetTy);
+
   // Reconstruct the AttributesList based on the vector we constructed.
   assert(ArgAttrVec.size() == Params.size());
   AttributeList NewPAL =
@@ -912,6 +932,9 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
       Args.push_back(*I);
       ArgAttrVec.push_back(CallPAL.getParamAttrs(Pi));
     }
+
+    for (AttributeSet &Attrs : ArgAttrVec)
+      Attrs = dropRetOnlyCaptureComponents(F->getContext(), Attrs, NRetTy);
 
     // Reconstruct the AttributesList based on the vector we constructed.
     assert(ArgAttrVec.size() == Args.size());
