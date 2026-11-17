@@ -835,8 +835,13 @@ private:
   void prepareForMoveTo(MemoryAccess *, BasicBlock *);
   void verifyUseInDefs(MemoryAccess *, MemoryAccess *) const;
 
-  using AccessMap = DenseMap<const BasicBlock *, std::unique_ptr<AccessList>>;
-  using DefsMap = DenseMap<const BasicBlock *, std::unique_ptr<DefsList>>;
+  // The per-block lists live in UseOrDefAllocator, so only destroy them.
+  struct ListDeleter {
+    template <typename ListT> void operator()(ListT *L) const { L->~ListT(); }
+  };
+  template <typename ListT> using ListPtr = std::unique_ptr<ListT, ListDeleter>;
+  using AccessMap = DenseMap<const BasicBlock *, ListPtr<AccessList>>;
+  using DefsMap = DenseMap<const BasicBlock *, ListPtr<DefsList>>;
 
   void markUnreachableAsLiveOnEntry(BasicBlock *BB);
   MemoryPhi *createMemoryPhi(BasicBlock *BB);
@@ -859,7 +864,7 @@ private:
   Function *F = nullptr;
   Loop *L = nullptr;
 
-  // Memory for MemoryUses and MemoryDefs.
+  // Memory for MemoryUses, MemoryDefs and the per-block lists.
   BumpPtrAllocatorImpl<MallocAllocator, 512, 512, 1> UseOrDefAllocator;
 
   // Memory SSA mappings

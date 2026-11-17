@@ -654,9 +654,12 @@ AtomicExpandImpl::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
   copyMetadataForAtomic(*NewRMWI, *RMWI);
   LLVM_DEBUG(dbgs() << "Replaced " << *RMWI << " with " << *NewRMWI << "\n");
 
-  Value *NewRVal =
-      Builder.CreateBitPreservingCastChain(*DL, NewRMWI, RMWI->getType());
-  RMWI->replaceAllUsesWith(NewRVal);
+  if (!RMWI->use_empty()) {
+    Value *NewRVal =
+        Builder.CreateBitPreservingCastChain(*DL, NewRMWI, RMWI->getType());
+    RMWI->replaceAllUsesWith(NewRVal);
+  }
+
   RMWI->eraseFromParent();
   return NewRMWI;
 }
@@ -685,6 +688,7 @@ void AtomicExpandImpl::expandElementwiseAtomicRMW(AtomicRMWInst *AI) {
   Value *Val = AI->getValOperand();
 
   ReplacementIRBuilder Builder(AI, *DL);
+  Builder.disableGEPCanonicalization();
   IntegerType *IdxTy =
       DL->getIndexType(AI->getContext(), AI->getPointerAddressSpace());
 
@@ -883,6 +887,10 @@ void AtomicExpandImpl::expandAtomicStoreToXChg(StoreInst *SI) {
       SI->getAlign(), RMWOrdering, SI->getSyncScopeID());
   AI->setVolatile(SI->isVolatile());
   SI->eraseFromParent();
+
+  if (TLI->shouldCastAtomicRMWIInIR(AI) ==
+      TargetLoweringBase::AtomicExpansionKind::CastToInteger)
+    AI = convertAtomicXchgToIntegerType(AI);
 
   // Now we have an appropriate swap instruction, lower it as usual.
   tryExpandAtomicRMW(AI);
