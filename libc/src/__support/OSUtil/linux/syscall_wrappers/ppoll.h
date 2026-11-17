@@ -40,6 +40,10 @@ LIBC_INLINE ErrorOr<int> ppoll(struct pollfd *fds, nfds_t nfds,
   // signals. NSIG is the signal count, so NSIG / 8 gives the byte size.
   const size_t SIGSETSIZE = NSIG / 8;
 
+#if !defined(SYS_ppoll) && !defined(SYS_ppoll_time64)
+#error "ppoll and ppoll_time64 syscalls not available."
+#endif
+
   // Pick the syscall whose timespec layout matches ours. SYS_ppoll_time64 takes
   // 64-bit members. The legacy SYS_ppoll takes two longs, so it is only safe
   // when time_t is as wide as long.
