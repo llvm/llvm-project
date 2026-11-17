@@ -24,6 +24,8 @@ define signext i32 @foo() #1 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    addi s0, sp, 32
 ; CHECK-NEXT:    .cfi_def_cfa s0, 0
 ; CHECK-NEXT:    .cfi_remember_state
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:  .Ltmp0: # EH_LABEL
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    # implicit-def: $x10
@@ -57,6 +59,9 @@ define signext i32 @foo() #1 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    .cfi_restore_state
 ; CHECK-NEXT:    call _Unwind_Resume
 entry:
+  ; A scalable vector stack object leaves the call frame unreserved, so sp has
+  ; to be restored from the frame pointer, which is the case this test is for.
+  %vec = alloca <vscale x 1 x i8>
   invoke void @_Z3fooiiiiiiiiiiPi(i32 signext poison, i32 signext poison, i32 signext poison, i32 signext poison, i32 signext poison, i32 signext poison, i32 signext poison, i32 signext poison, i32 poison, i32 poison, i32 poison)
           to label %try.cont.unreachable unwind label %lpad
 

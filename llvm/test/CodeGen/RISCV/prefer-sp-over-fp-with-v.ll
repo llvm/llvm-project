@@ -9,9 +9,11 @@
 ; RUN:   | FileCheck -check-prefix=RV64-NO-VEXT %s
 
 ; Test that the SP-over-FP preference does not fire when V extension is
-; enabled.
+; enabled. @foo_vec spills a vector register around the call under +v, so it
+; holds a scalable vector stack object there.
 
 declare void @use(ptr)
+declare riscv_vector_cc void @use_vcc(ptr)
 
 define i32 @foo(i32 %a, i32 %b) nounwind {
 ; RV32-VEXT-LABEL: foo:
@@ -69,6 +71,425 @@ define i32 @foo(i32 %a, i32 %b) nounwind {
 ; RV64-VEXT-NEXT:    ret
 ;
 ; RV64-NO-VEXT-LABEL: foo:
+; RV64-NO-VEXT:       # %bb.0:
+; RV64-NO-VEXT-NEXT:    addi sp, sp, -32
+; RV64-NO-VEXT-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64-NO-VEXT-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-NO-VEXT-NEXT:    addi s0, sp, 32
+; RV64-NO-VEXT-NEXT:    sw a0, 12(sp)
+; RV64-NO-VEXT-NEXT:    sw a1, 8(sp)
+; RV64-NO-VEXT-NEXT:    addi a0, sp, 12
+; RV64-NO-VEXT-NEXT:    call use
+; RV64-NO-VEXT-NEXT:    lw a0, 12(sp)
+; RV64-NO-VEXT-NEXT:    lw a1, 8(sp)
+; RV64-NO-VEXT-NEXT:    addw a0, a0, a1
+; RV64-NO-VEXT-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64-NO-VEXT-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-NO-VEXT-NEXT:    addi sp, sp, 32
+; RV64-NO-VEXT-NEXT:    ret
+  %x = alloca i32
+  %y = alloca i32
+  store i32 %a, ptr %x
+  store i32 %b, ptr %y
+  call void @use(ptr %x)
+  %v1 = load i32, ptr %x
+  %v2 = load i32, ptr %y
+  %sum = add i32 %v1, %v2
+  ret i32 %sum
+}
+
+define i32 @foo_vec(i32 %a, i32 %b, ptr %p, ptr %q) nounwind {
+; RV32-VEXT-LABEL: foo_vec:
+; RV32-VEXT:       # %bb.0:
+; RV32-VEXT-NEXT:    addi sp, sp, -32
+; RV32-VEXT-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32-VEXT-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32-VEXT-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32-VEXT-NEXT:    addi s0, sp, 32
+; RV32-VEXT-NEXT:    csrr a4, vlenb
+; RV32-VEXT-NEXT:    sub sp, sp, a4
+; RV32-VEXT-NEXT:    mv s1, a3
+; RV32-VEXT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-VEXT-NEXT:    vle32.v v8, (a2)
+; RV32-VEXT-NEXT:    csrr a2, vlenb
+; RV32-VEXT-NEXT:    sub a2, s0, a2
+; RV32-VEXT-NEXT:    addi a2, a2, -32
+; RV32-VEXT-NEXT:    vs1r.v v8, (a2) # vscale x 8-byte Folded Spill
+; RV32-VEXT-NEXT:    sw a0, -24(s0)
+; RV32-VEXT-NEXT:    sw a1, -28(s0)
+; RV32-VEXT-NEXT:    addi a0, s0, -24
+; RV32-VEXT-NEXT:    call use
+; RV32-VEXT-NEXT:    lw a0, -24(s0)
+; RV32-VEXT-NEXT:    lw a1, -28(s0)
+; RV32-VEXT-NEXT:    add a0, a0, a1
+; RV32-VEXT-NEXT:    csrr a1, vlenb
+; RV32-VEXT-NEXT:    sub a1, s0, a1
+; RV32-VEXT-NEXT:    addi a1, a1, -32
+; RV32-VEXT-NEXT:    vl1r.v v8, (a1) # vscale x 8-byte Folded Reload
+; RV32-VEXT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-VEXT-NEXT:    vse32.v v8, (s1)
+; RV32-VEXT-NEXT:    addi sp, s0, -32
+; RV32-VEXT-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32-VEXT-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32-VEXT-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32-VEXT-NEXT:    addi sp, sp, 32
+; RV32-VEXT-NEXT:    ret
+;
+; RV32-NO-VEXT-LABEL: foo_vec:
+; RV32-NO-VEXT:       # %bb.0:
+; RV32-NO-VEXT-NEXT:    addi sp, sp, -48
+; RV32-NO-VEXT-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
+; RV32-NO-VEXT-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
+; RV32-NO-VEXT-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
+; RV32-NO-VEXT-NEXT:    sw s2, 32(sp) # 4-byte Folded Spill
+; RV32-NO-VEXT-NEXT:    sw s3, 28(sp) # 4-byte Folded Spill
+; RV32-NO-VEXT-NEXT:    sw s4, 24(sp) # 4-byte Folded Spill
+; RV32-NO-VEXT-NEXT:    sw s5, 20(sp) # 4-byte Folded Spill
+; RV32-NO-VEXT-NEXT:    addi s0, sp, 48
+; RV32-NO-VEXT-NEXT:    mv s1, a3
+; RV32-NO-VEXT-NEXT:    lw s2, 0(a2)
+; RV32-NO-VEXT-NEXT:    lw s3, 4(a2)
+; RV32-NO-VEXT-NEXT:    lw s4, 8(a2)
+; RV32-NO-VEXT-NEXT:    lw s5, 12(a2)
+; RV32-NO-VEXT-NEXT:    sw a0, 16(sp)
+; RV32-NO-VEXT-NEXT:    sw a1, 12(sp)
+; RV32-NO-VEXT-NEXT:    addi a0, sp, 16
+; RV32-NO-VEXT-NEXT:    call use
+; RV32-NO-VEXT-NEXT:    lw a0, 16(sp)
+; RV32-NO-VEXT-NEXT:    lw a1, 12(sp)
+; RV32-NO-VEXT-NEXT:    add a0, a0, a1
+; RV32-NO-VEXT-NEXT:    sw s2, 0(s1)
+; RV32-NO-VEXT-NEXT:    sw s3, 4(s1)
+; RV32-NO-VEXT-NEXT:    sw s4, 8(s1)
+; RV32-NO-VEXT-NEXT:    sw s5, 12(s1)
+; RV32-NO-VEXT-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
+; RV32-NO-VEXT-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
+; RV32-NO-VEXT-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
+; RV32-NO-VEXT-NEXT:    lw s2, 32(sp) # 4-byte Folded Reload
+; RV32-NO-VEXT-NEXT:    lw s3, 28(sp) # 4-byte Folded Reload
+; RV32-NO-VEXT-NEXT:    lw s4, 24(sp) # 4-byte Folded Reload
+; RV32-NO-VEXT-NEXT:    lw s5, 20(sp) # 4-byte Folded Reload
+; RV32-NO-VEXT-NEXT:    addi sp, sp, 48
+; RV32-NO-VEXT-NEXT:    ret
+;
+; RV64-VEXT-LABEL: foo_vec:
+; RV64-VEXT:       # %bb.0:
+; RV64-VEXT-NEXT:    addi sp, sp, -48
+; RV64-VEXT-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; RV64-VEXT-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; RV64-VEXT-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
+; RV64-VEXT-NEXT:    addi s0, sp, 48
+; RV64-VEXT-NEXT:    csrr a4, vlenb
+; RV64-VEXT-NEXT:    sub sp, sp, a4
+; RV64-VEXT-NEXT:    mv s1, a3
+; RV64-VEXT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-VEXT-NEXT:    vle32.v v8, (a2)
+; RV64-VEXT-NEXT:    csrr a2, vlenb
+; RV64-VEXT-NEXT:    sub a2, s0, a2
+; RV64-VEXT-NEXT:    addi a2, a2, -48
+; RV64-VEXT-NEXT:    vs1r.v v8, (a2) # vscale x 8-byte Folded Spill
+; RV64-VEXT-NEXT:    sw a0, -44(s0)
+; RV64-VEXT-NEXT:    sw a1, -48(s0)
+; RV64-VEXT-NEXT:    addi a0, s0, -44
+; RV64-VEXT-NEXT:    call use
+; RV64-VEXT-NEXT:    lw a0, -44(s0)
+; RV64-VEXT-NEXT:    lw a1, -48(s0)
+; RV64-VEXT-NEXT:    addw a0, a0, a1
+; RV64-VEXT-NEXT:    csrr a1, vlenb
+; RV64-VEXT-NEXT:    sub a1, s0, a1
+; RV64-VEXT-NEXT:    addi a1, a1, -48
+; RV64-VEXT-NEXT:    vl1r.v v8, (a1) # vscale x 8-byte Folded Reload
+; RV64-VEXT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-VEXT-NEXT:    vse32.v v8, (s1)
+; RV64-VEXT-NEXT:    addi sp, s0, -48
+; RV64-VEXT-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64-VEXT-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64-VEXT-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64-VEXT-NEXT:    addi sp, sp, 48
+; RV64-VEXT-NEXT:    ret
+;
+; RV64-NO-VEXT-LABEL: foo_vec:
+; RV64-NO-VEXT:       # %bb.0:
+; RV64-NO-VEXT-NEXT:    addi sp, sp, -48
+; RV64-NO-VEXT-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; RV64-NO-VEXT-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; RV64-NO-VEXT-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
+; RV64-NO-VEXT-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
+; RV64-NO-VEXT-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; RV64-NO-VEXT-NEXT:    addi s0, sp, 48
+; RV64-NO-VEXT-NEXT:    mv s1, a3
+; RV64-NO-VEXT-NEXT:    ld s2, 0(a2)
+; RV64-NO-VEXT-NEXT:    ld s3, 8(a2)
+; RV64-NO-VEXT-NEXT:    sw a0, 4(sp)
+; RV64-NO-VEXT-NEXT:    sw a1, 0(sp)
+; RV64-NO-VEXT-NEXT:    addi a0, sp, 4
+; RV64-NO-VEXT-NEXT:    call use
+; RV64-NO-VEXT-NEXT:    lw a0, 4(sp)
+; RV64-NO-VEXT-NEXT:    lw a1, 0(sp)
+; RV64-NO-VEXT-NEXT:    addw a0, a0, a1
+; RV64-NO-VEXT-NEXT:    sd s2, 0(s1)
+; RV64-NO-VEXT-NEXT:    sd s3, 8(s1)
+; RV64-NO-VEXT-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64-NO-VEXT-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64-NO-VEXT-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64-NO-VEXT-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64-NO-VEXT-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
+; RV64-NO-VEXT-NEXT:    addi sp, sp, 48
+; RV64-NO-VEXT-NEXT:    ret
+  %x = alloca i32
+  %y = alloca i32
+  store i32 %a, ptr %x
+  store i32 %b, ptr %y
+  %v = load <4 x i32>, ptr %p
+  call void @use(ptr %x)
+  store <4 x i32> %v, ptr %q
+  %v1 = load i32, ptr %x
+  %v2 = load i32, ptr %y
+  %sum = add i32 %v1, %v2
+  ret i32 %sum
+}
+
+; A riscv_vector_cc function has callee-saved vector registers. It saves none
+; of them if all it calls is another riscv_vector_cc function.
+define riscv_vector_cc i32 @foo_vcc(i32 %a, i32 %b) nounwind {
+; RV32-VEXT-LABEL: foo_vcc:
+; RV32-VEXT:       # %bb.0:
+; RV32-VEXT-NEXT:    addi sp, sp, -16
+; RV32-VEXT-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-VEXT-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-VEXT-NEXT:    addi s0, sp, 16
+; RV32-VEXT-NEXT:    sw a0, -12(s0)
+; RV32-VEXT-NEXT:    sw a1, -16(s0)
+; RV32-VEXT-NEXT:    addi a0, s0, -12
+; RV32-VEXT-NEXT:    call use_vcc
+; RV32-VEXT-NEXT:    lw a0, -12(s0)
+; RV32-VEXT-NEXT:    lw a1, -16(s0)
+; RV32-VEXT-NEXT:    add a0, a0, a1
+; RV32-VEXT-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-VEXT-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-VEXT-NEXT:    addi sp, sp, 16
+; RV32-VEXT-NEXT:    ret
+;
+; RV32-NO-VEXT-LABEL: foo_vcc:
+; RV32-NO-VEXT:       # %bb.0:
+; RV32-NO-VEXT-NEXT:    addi sp, sp, -16
+; RV32-NO-VEXT-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NO-VEXT-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-NO-VEXT-NEXT:    addi s0, sp, 16
+; RV32-NO-VEXT-NEXT:    sw a0, 4(sp)
+; RV32-NO-VEXT-NEXT:    sw a1, 0(sp)
+; RV32-NO-VEXT-NEXT:    addi a0, sp, 4
+; RV32-NO-VEXT-NEXT:    call use_vcc
+; RV32-NO-VEXT-NEXT:    lw a0, 4(sp)
+; RV32-NO-VEXT-NEXT:    lw a1, 0(sp)
+; RV32-NO-VEXT-NEXT:    add a0, a0, a1
+; RV32-NO-VEXT-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NO-VEXT-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-NO-VEXT-NEXT:    addi sp, sp, 16
+; RV32-NO-VEXT-NEXT:    ret
+;
+; RV64-VEXT-LABEL: foo_vcc:
+; RV64-VEXT:       # %bb.0:
+; RV64-VEXT-NEXT:    addi sp, sp, -32
+; RV64-VEXT-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64-VEXT-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-VEXT-NEXT:    addi s0, sp, 32
+; RV64-VEXT-NEXT:    sw a0, -20(s0)
+; RV64-VEXT-NEXT:    sw a1, -24(s0)
+; RV64-VEXT-NEXT:    addi a0, s0, -20
+; RV64-VEXT-NEXT:    call use_vcc
+; RV64-VEXT-NEXT:    lw a0, -20(s0)
+; RV64-VEXT-NEXT:    lw a1, -24(s0)
+; RV64-VEXT-NEXT:    addw a0, a0, a1
+; RV64-VEXT-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64-VEXT-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-VEXT-NEXT:    addi sp, sp, 32
+; RV64-VEXT-NEXT:    ret
+;
+; RV64-NO-VEXT-LABEL: foo_vcc:
+; RV64-NO-VEXT:       # %bb.0:
+; RV64-NO-VEXT-NEXT:    addi sp, sp, -32
+; RV64-NO-VEXT-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64-NO-VEXT-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-NO-VEXT-NEXT:    addi s0, sp, 32
+; RV64-NO-VEXT-NEXT:    sw a0, 12(sp)
+; RV64-NO-VEXT-NEXT:    sw a1, 8(sp)
+; RV64-NO-VEXT-NEXT:    addi a0, sp, 12
+; RV64-NO-VEXT-NEXT:    call use_vcc
+; RV64-NO-VEXT-NEXT:    lw a0, 12(sp)
+; RV64-NO-VEXT-NEXT:    lw a1, 8(sp)
+; RV64-NO-VEXT-NEXT:    addw a0, a0, a1
+; RV64-NO-VEXT-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64-NO-VEXT-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-NO-VEXT-NEXT:    addi sp, sp, 32
+; RV64-NO-VEXT-NEXT:    ret
+  %x = alloca i32
+  %y = alloca i32
+  store i32 %a, ptr %x
+  store i32 %b, ptr %y
+  call riscv_vector_cc void @use_vcc(ptr %x)
+  %v1 = load i32, ptr %x
+  %v2 = load i32, ptr %y
+  %sum = add i32 %v1, %v2
+  ret i32 %sum
+}
+
+; @use may clobber every vector register, so the callee-saved ones are saved
+; under +v.
+define riscv_vector_cc i32 @foo_vcc_clobber(i32 %a, i32 %b) nounwind {
+; RV32-VEXT-LABEL: foo_vcc_clobber:
+; RV32-VEXT:       # %bb.0:
+; RV32-VEXT-NEXT:    addi sp, sp, -32
+; RV32-VEXT-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32-VEXT-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32-VEXT-NEXT:    addi s0, sp, 32
+; RV32-VEXT-NEXT:    csrr a2, vlenb
+; RV32-VEXT-NEXT:    slli a3, a2, 4
+; RV32-VEXT-NEXT:    sub a2, a3, a2
+; RV32-VEXT-NEXT:    sub sp, sp, a2
+; RV32-VEXT-NEXT:    csrr a2, vlenb
+; RV32-VEXT-NEXT:    sub a2, s0, a2
+; RV32-VEXT-NEXT:    addi a2, a2, -32
+; RV32-VEXT-NEXT:    vs1r.v v1, (a2) # vscale x 8-byte Folded Spill
+; RV32-VEXT-NEXT:    csrr a2, vlenb
+; RV32-VEXT-NEXT:    slli a3, a2, 1
+; RV32-VEXT-NEXT:    add a2, a3, a2
+; RV32-VEXT-NEXT:    sub a2, s0, a2
+; RV32-VEXT-NEXT:    addi a2, a2, -32
+; RV32-VEXT-NEXT:    vs2r.v v2, (a2) # vscale x 16-byte Folded Spill
+; RV32-VEXT-NEXT:    csrr a2, vlenb
+; RV32-VEXT-NEXT:    slli a3, a2, 3
+; RV32-VEXT-NEXT:    sub a2, a3, a2
+; RV32-VEXT-NEXT:    sub a2, s0, a2
+; RV32-VEXT-NEXT:    addi a2, a2, -32
+; RV32-VEXT-NEXT:    vs4r.v v4, (a2) # vscale x 32-byte Folded Spill
+; RV32-VEXT-NEXT:    csrr a2, vlenb
+; RV32-VEXT-NEXT:    slli a3, a2, 4
+; RV32-VEXT-NEXT:    sub a2, a3, a2
+; RV32-VEXT-NEXT:    sub a2, s0, a2
+; RV32-VEXT-NEXT:    addi a2, a2, -32
+; RV32-VEXT-NEXT:    vs8r.v v24, (a2) # vscale x 64-byte Folded Spill
+; RV32-VEXT-NEXT:    sw a0, -20(s0)
+; RV32-VEXT-NEXT:    sw a1, -24(s0)
+; RV32-VEXT-NEXT:    addi a0, s0, -20
+; RV32-VEXT-NEXT:    call use
+; RV32-VEXT-NEXT:    lw a0, -20(s0)
+; RV32-VEXT-NEXT:    lw a1, -24(s0)
+; RV32-VEXT-NEXT:    add a0, a0, a1
+; RV32-VEXT-NEXT:    csrr a1, vlenb
+; RV32-VEXT-NEXT:    sub a1, s0, a1
+; RV32-VEXT-NEXT:    addi a1, a1, -32
+; RV32-VEXT-NEXT:    vl1r.v v1, (a1) # vscale x 8-byte Folded Reload
+; RV32-VEXT-NEXT:    csrr a1, vlenb
+; RV32-VEXT-NEXT:    slli a2, a1, 1
+; RV32-VEXT-NEXT:    add a1, a2, a1
+; RV32-VEXT-NEXT:    sub a1, s0, a1
+; RV32-VEXT-NEXT:    addi a1, a1, -32
+; RV32-VEXT-NEXT:    vl2r.v v2, (a1) # vscale x 16-byte Folded Reload
+; RV32-VEXT-NEXT:    csrr a1, vlenb
+; RV32-VEXT-NEXT:    slli a2, a1, 3
+; RV32-VEXT-NEXT:    sub a1, a2, a1
+; RV32-VEXT-NEXT:    sub a1, s0, a1
+; RV32-VEXT-NEXT:    addi a1, a1, -32
+; RV32-VEXT-NEXT:    vl4r.v v4, (a1) # vscale x 32-byte Folded Reload
+; RV32-VEXT-NEXT:    csrr a1, vlenb
+; RV32-VEXT-NEXT:    slli a2, a1, 4
+; RV32-VEXT-NEXT:    sub a1, a2, a1
+; RV32-VEXT-NEXT:    sub a1, s0, a1
+; RV32-VEXT-NEXT:    addi a1, a1, -32
+; RV32-VEXT-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; RV32-VEXT-NEXT:    addi sp, s0, -32
+; RV32-VEXT-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32-VEXT-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32-VEXT-NEXT:    addi sp, sp, 32
+; RV32-VEXT-NEXT:    ret
+;
+; RV32-NO-VEXT-LABEL: foo_vcc_clobber:
+; RV32-NO-VEXT:       # %bb.0:
+; RV32-NO-VEXT-NEXT:    addi sp, sp, -16
+; RV32-NO-VEXT-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NO-VEXT-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-NO-VEXT-NEXT:    addi s0, sp, 16
+; RV32-NO-VEXT-NEXT:    sw a0, 4(sp)
+; RV32-NO-VEXT-NEXT:    sw a1, 0(sp)
+; RV32-NO-VEXT-NEXT:    addi a0, sp, 4
+; RV32-NO-VEXT-NEXT:    call use
+; RV32-NO-VEXT-NEXT:    lw a0, 4(sp)
+; RV32-NO-VEXT-NEXT:    lw a1, 0(sp)
+; RV32-NO-VEXT-NEXT:    add a0, a0, a1
+; RV32-NO-VEXT-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NO-VEXT-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-NO-VEXT-NEXT:    addi sp, sp, 16
+; RV32-NO-VEXT-NEXT:    ret
+;
+; RV64-VEXT-LABEL: foo_vcc_clobber:
+; RV64-VEXT:       # %bb.0:
+; RV64-VEXT-NEXT:    addi sp, sp, -48
+; RV64-VEXT-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; RV64-VEXT-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; RV64-VEXT-NEXT:    addi s0, sp, 48
+; RV64-VEXT-NEXT:    csrr a2, vlenb
+; RV64-VEXT-NEXT:    slli a3, a2, 4
+; RV64-VEXT-NEXT:    sub a2, a3, a2
+; RV64-VEXT-NEXT:    sub sp, sp, a2
+; RV64-VEXT-NEXT:    csrr a2, vlenb
+; RV64-VEXT-NEXT:    sub a2, s0, a2
+; RV64-VEXT-NEXT:    addi a2, a2, -48
+; RV64-VEXT-NEXT:    vs1r.v v1, (a2) # vscale x 8-byte Folded Spill
+; RV64-VEXT-NEXT:    csrr a2, vlenb
+; RV64-VEXT-NEXT:    slli a3, a2, 1
+; RV64-VEXT-NEXT:    add a2, a3, a2
+; RV64-VEXT-NEXT:    sub a2, s0, a2
+; RV64-VEXT-NEXT:    addi a2, a2, -48
+; RV64-VEXT-NEXT:    vs2r.v v2, (a2) # vscale x 16-byte Folded Spill
+; RV64-VEXT-NEXT:    csrr a2, vlenb
+; RV64-VEXT-NEXT:    slli a3, a2, 3
+; RV64-VEXT-NEXT:    sub a2, a3, a2
+; RV64-VEXT-NEXT:    sub a2, s0, a2
+; RV64-VEXT-NEXT:    addi a2, a2, -48
+; RV64-VEXT-NEXT:    vs4r.v v4, (a2) # vscale x 32-byte Folded Spill
+; RV64-VEXT-NEXT:    csrr a2, vlenb
+; RV64-VEXT-NEXT:    slli a3, a2, 4
+; RV64-VEXT-NEXT:    sub a2, a3, a2
+; RV64-VEXT-NEXT:    sub a2, s0, a2
+; RV64-VEXT-NEXT:    addi a2, a2, -48
+; RV64-VEXT-NEXT:    vs8r.v v24, (a2) # vscale x 64-byte Folded Spill
+; RV64-VEXT-NEXT:    sw a0, -36(s0)
+; RV64-VEXT-NEXT:    sw a1, -40(s0)
+; RV64-VEXT-NEXT:    addi a0, s0, -36
+; RV64-VEXT-NEXT:    call use
+; RV64-VEXT-NEXT:    lw a0, -36(s0)
+; RV64-VEXT-NEXT:    lw a1, -40(s0)
+; RV64-VEXT-NEXT:    addw a0, a0, a1
+; RV64-VEXT-NEXT:    csrr a1, vlenb
+; RV64-VEXT-NEXT:    sub a1, s0, a1
+; RV64-VEXT-NEXT:    addi a1, a1, -48
+; RV64-VEXT-NEXT:    vl1r.v v1, (a1) # vscale x 8-byte Folded Reload
+; RV64-VEXT-NEXT:    csrr a1, vlenb
+; RV64-VEXT-NEXT:    slli a2, a1, 1
+; RV64-VEXT-NEXT:    add a1, a2, a1
+; RV64-VEXT-NEXT:    sub a1, s0, a1
+; RV64-VEXT-NEXT:    addi a1, a1, -48
+; RV64-VEXT-NEXT:    vl2r.v v2, (a1) # vscale x 16-byte Folded Reload
+; RV64-VEXT-NEXT:    csrr a1, vlenb
+; RV64-VEXT-NEXT:    slli a2, a1, 3
+; RV64-VEXT-NEXT:    sub a1, a2, a1
+; RV64-VEXT-NEXT:    sub a1, s0, a1
+; RV64-VEXT-NEXT:    addi a1, a1, -48
+; RV64-VEXT-NEXT:    vl4r.v v4, (a1) # vscale x 32-byte Folded Reload
+; RV64-VEXT-NEXT:    csrr a1, vlenb
+; RV64-VEXT-NEXT:    slli a2, a1, 4
+; RV64-VEXT-NEXT:    sub a1, a2, a1
+; RV64-VEXT-NEXT:    sub a1, s0, a1
+; RV64-VEXT-NEXT:    addi a1, a1, -48
+; RV64-VEXT-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; RV64-VEXT-NEXT:    addi sp, s0, -48
+; RV64-VEXT-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64-VEXT-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64-VEXT-NEXT:    addi sp, sp, 48
+; RV64-VEXT-NEXT:    ret
+;
+; RV64-NO-VEXT-LABEL: foo_vcc_clobber:
 ; RV64-NO-VEXT:       # %bb.0:
 ; RV64-NO-VEXT-NEXT:    addi sp, sp, -32
 ; RV64-NO-VEXT-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
