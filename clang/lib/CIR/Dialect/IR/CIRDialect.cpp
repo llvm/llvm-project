@@ -2867,9 +2867,24 @@ cir::VTableAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   std::optional<mlir::Attribute> init = op.getInitialValue();
   if (!init)
     return success();
-  if (!isa<cir::VTableAttr>(*init))
+  auto vtable = dyn_cast<cir::VTableAttr>(*init);
+  if (!vtable)
     return emitOpError("Expected #cir.vtable in initializer for global '")
            << name << "'";
+
+  // The address point has to be the one that the vtable records for the
+  // array that it points into.
+  cir::AddressPointAttr addressPoint = getAddressPoint();
+  mlir::ArrayAttr addressPoints = vtable.getAddressPoints();
+  if (addressPoint.getIndex() < 0 ||
+      static_cast<size_t>(addressPoint.getIndex()) >= addressPoints.size())
+    return emitOpError("address point refers to vtable ")
+           << addressPoint.getIndex() << ", but '" << name << "' has "
+           << addressPoints.size() << " vtables";
+  if (addressPoint != addressPoints[addressPoint.getIndex()])
+    return emitOpError("address point ")
+           << addressPoint << " does not match the address point "
+           << addressPoints[addressPoint.getIndex()] << " of '" << name << "'";
   return success();
 }
 

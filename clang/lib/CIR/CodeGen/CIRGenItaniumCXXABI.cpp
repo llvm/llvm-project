@@ -525,6 +525,9 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
   mlir::SymbolTable::setSymbolVisibility(
       vtable, CIRGenModule::getMLIRVisibility(vtable));
 
+  if (cgm.mayVTableBeDuplicated(linkage))
+    vtable.setUnnamedAddr(true);
+
   if (cgm.supportsCOMDAT() && cir::isWeakForLinker(linkage))
     vtable.setSelfComdat();
 
@@ -1391,21 +1394,8 @@ mlir::Value CIRGenItaniumCXXABI::emitTypeid(CIRGenFunction &cgf, QualType srcTy,
   auto *classDecl = srcTy->castAsCXXRecordDecl();
   mlir::Location loc = cgm.getLoc(classDecl->getSourceRange());
   mlir::Value vptr = cgf.getVTablePtr(loc, thisPtr, classDecl);
-  mlir::Value vtbl;
-
-  // TODO(cir): In classic codegen relative layouts cause us to do a
-  // 'load_relative' of -4 here. We probably don't want to reprensent this in
-  // CIR at all, but we should have the NYI here since this could be
-  // meaningful/notable for implementation of relative layout in the future.
-  if (cgm.getLangOpts().RelativeCXXABIVTables)
-    cgm.errorNYI("buildVTablePointer: isRelativeLayout");
-  else
-    vtbl = cir::VTableGetTypeInfoOp::create(
-        cgf.getBuilder(), loc, cgf.getBuilder().getPointerTo(typeInfoPtrTy),
-        vptr);
-
-  return cgf.getBuilder().createAlignedLoad(loc, typeInfoPtrTy, vtbl,
-                                            cgf.getPointerAlign());
+  return cir::VTableGetTypeInfoOp::create(cgf.getBuilder(), loc, typeInfoPtrTy,
+                                          vptr);
 }
 
 mlir::Attribute CIRGenItaniumCXXABI::getAddrOfRTTIDescriptor(mlir::Location loc,
@@ -1621,8 +1611,8 @@ cir::GlobalOp CIRGenItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *rd,
       cgm.getLoc(rd->getSourceRange()), name, vtableType,
       cir::GlobalLinkageKind::ExternalLinkage,
       cgm.getASTContext().toCharUnitsFromBits(ptrAlign));
-  // LLVM codegen handles unnamedAddr
-  assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+  if (!cgm.shouldEmitRTTI())
+    vtable.setUnnamedAddr(true);
 
   // In MS C++ if you have a class with virtual functions in which you are using
   // selective member import/export, then all virtual functions must be exported

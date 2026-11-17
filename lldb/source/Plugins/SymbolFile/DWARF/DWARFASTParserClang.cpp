@@ -3486,6 +3486,9 @@ static DWARFDIE FindFirstChildWithAbstractOrigin(const DWARFDIE &block,
 clang::DeclContext *
 DWARFASTParserClang::GetDeclContextForBlock(const DWARFDIE &die) {
   assert(die.Tag() == DW_TAG_lexical_block);
+  if (DWARFDIE abstract_die = die.GetReferencedDIE(DW_AT_abstract_origin))
+    return GetClangDeclContextForDIE(abstract_die);
+
   DWARFDIE containing_function_with_abstract_origin =
       GetContainingFunctionWithAbstractOrigin(die);
   if (!containing_function_with_abstract_origin) {
