@@ -520,22 +520,54 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
 
   // Rule out infinity.
   if (KnownLHS.isKnownNever(fcPosInf) && KnownRHS.isKnownNever(fcPosInf)) {
-    // Adding a non-zero finite positive value to a large finite positive value
-    // may overflow.
-    if ((KnownLHS.isKnownNever(fcPosNormal) ||
-         KnownRHS.isKnownNever(fcPosSubnormal | fcPosNormal)) &&
-        (KnownRHS.isKnownNever(fcPosNormal) ||
-         KnownLHS.isKnownNever(fcPosSubnormal | fcPosNormal)))
+    switch (RM) {
+    case RoundingMode::TowardZero:
+    case RoundingMode::TowardNegative:
+      // Positive overflow saturates to max-pos-normal.
       Known.knownNot(fcPosInf);
+      break;
+    case RoundingMode::NearestTiesToEven:
+    case RoundingMode::NearestTiesToAway:
+      // Adding two large finite positive values may overflow.
+      if (KnownLHS.isKnownNever(fcPosNormal) ||
+          KnownRHS.isKnownNever(fcPosNormal))
+        Known.knownNot(fcPosInf);
+      break;
+    default:
+      // Adding a non-zero finite positive value to a large finite positive
+      // value may overflow.
+      if ((KnownLHS.isKnownNever(fcPosNormal) ||
+           KnownRHS.isKnownNever(fcPosSubnormal | fcPosNormal)) &&
+          (KnownRHS.isKnownNever(fcPosNormal) ||
+           KnownLHS.isKnownNever(fcPosSubnormal | fcPosNormal)))
+        Known.knownNot(fcPosInf);
+      break;
+    }
   }
   if (KnownLHS.isKnownNever(fcNegInf) && KnownRHS.isKnownNever(fcNegInf)) {
-    // Adding a non-zero finite negative value to a large finite negative value
-    // may overflow.
-    if ((KnownLHS.isKnownNever(fcNegNormal) ||
-         KnownRHS.isKnownNever(fcNegSubnormal | fcNegNormal)) &&
-        (KnownRHS.isKnownNever(fcNegNormal) ||
-         KnownLHS.isKnownNever(fcNegSubnormal | fcNegNormal)))
+    switch (RM) {
+    case RoundingMode::TowardZero:
+    case RoundingMode::TowardPositive:
+      // Negative overflow saturates to max-neg-normal.
       Known.knownNot(fcNegInf);
+      break;
+    case RoundingMode::NearestTiesToEven:
+    case RoundingMode::NearestTiesToAway:
+      // Adding two large finite negative values may overflow.
+      if (KnownLHS.isKnownNever(fcNegNormal) ||
+          KnownRHS.isKnownNever(fcNegNormal))
+        Known.knownNot(fcNegInf);
+      break;
+    default:
+      // Adding a non-zero finite negative value to a large finite negative
+      // value may overflow.
+      if ((KnownLHS.isKnownNever(fcNegNormal) ||
+           KnownRHS.isKnownNever(fcNegSubnormal | fcNegNormal)) &&
+          (KnownRHS.isKnownNever(fcNegNormal) ||
+           KnownLHS.isKnownNever(fcNegSubnormal | fcNegNormal)))
+        Known.knownNot(fcNegInf);
+      break;
+    }
   }
 
   // pnorm + finite and psub + psub may produce pnorm.
@@ -654,16 +686,34 @@ KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc_,
                                      RoundingMode RM, DenormalMode Mode) {
   KnownFPClass KnownSrc = applyInputDenormalMode(KnownSrc_, Mode);
 
-  // TODO: Refine fadd_self for directed rounding modes.
-
   KnownFPClass Known;
 
   Known.propagateNonNaN(KnownSrc);
 
-  if (KnownSrc.isKnownNever(fcPosNormal | fcPosInf))
-    Known.knownNot(fcPosInf);
-  if (KnownSrc.isKnownNever(fcNegNormal | fcNegInf))
-    Known.knownNot(fcNegInf);
+  switch (RM) {
+  case RoundingMode::TowardZero:
+  case RoundingMode::TowardNegative:
+    // Positive overflow saturates to max-pos-normal.
+    if (KnownSrc.isKnownNever(fcPosInf))
+      Known.knownNot(fcPosInf);
+    break;
+  default:
+    if (KnownSrc.isKnownNever(fcPosNormal | fcPosInf))
+      Known.knownNot(fcPosInf);
+    break;
+  }
+  switch (RM) {
+  case RoundingMode::TowardZero:
+  case RoundingMode::TowardPositive:
+    // Negative overflow saturates to max-neg-normal.
+    if (KnownSrc.isKnownNever(fcNegInf))
+      Known.knownNot(fcNegInf);
+    break;
+  default:
+    if (KnownSrc.isKnownNever(fcNegNormal | fcNegInf))
+      Known.knownNot(fcNegInf);
+    break;
+  }
 
   if (KnownSrc.isKnownNever(fcPosSubnormal | fcPosNormal))
     Known.knownNot(fcPosNormal);
