@@ -22617,10 +22617,7 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
   if (!IsSigned && Subtarget.hasVLX() && SatWidth <= 64) {
     bool IsFP16 = SrcVT == MVT::f16 && Subtarget.hasFP16();
     bool IsDQI = (SrcVT == MVT::f32 || SrcVT == MVT::f64) && Subtarget.hasDQI();
-    unsigned Precision = SrcVT == MVT::f64   ? 53
-                         : SrcVT == MVT::f32 ? 24
-                         : SrcVT == MVT::f16 ? 11
-                                             : 8;
+    unsigned Precision = APFloat::semanticsPrecision(SrcVT.getFltSemantics());
     // For non-pow2 cases where the clamping value can be precisely
     // represented in src floating-point, fall through to default FP clamp.
     bool NeedsNewSeq = isPowerOf2_32(SatWidth) || SatWidth > Precision;
