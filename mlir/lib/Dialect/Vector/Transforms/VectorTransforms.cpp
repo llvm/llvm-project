@@ -1306,6 +1306,7 @@ public:
     rewriter.setInsertionPoint(loadOp);
     Location loc = loadOp.getLoc();
     ArithIndexingBuilder idxBuilderf(rewriter, loc);
+    // One offset per memref dimension, as the load has one index per dimension.
     SmallVector<int64_t> offsets(indices.size(), 0);
     bool hasDynamicOffset = false;
     for (auto i : llvm::seq<int64_t>(rankOffset, indices.size() - finalRank)) {
