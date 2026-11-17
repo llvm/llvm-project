@@ -21,17 +21,16 @@ struct AMDGPUDeviceOptionsTy {
   DeviceOptionTy<bool> UseMultipleSdmaEngines{
       "LIBOMPTARGET_AMDGPU_USE_MULTIPLE_SDMA_ENGINES", false};
 
-  /// Get the defaults for architectures. Values set through
-  /// environment variables override the architecture defaults.
-  static AMDGPUDeviceOptionsTy getDeviceDefaults(StringRef Arch, bool IsAPU) {
-    AMDGPUDeviceOptionsTy Options;
+  AMDGPUDeviceOptionsTy() = default;
+
+  /// Initialize the options with the defaults for the architecture. Values set
+  /// through environment variables override the architecture defaults.
+  AMDGPUDeviceOptionsTy(StringRef Arch, bool IsAPU) {
     // Adjust the defaults here for specific architectures.
 
     // Read the environment variables after the architecture defaults are set so
     // that values set by the user take precedence.
-    Options.UseMultipleSdmaEngines.readFromEnv();
-
-    return Options;
+    UseMultipleSdmaEngines.readFromEnv();
   }
 };
 

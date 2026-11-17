@@ -2632,8 +2632,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (auto Err = checkIfAPU())
       return Err;
 
-    DeviceOptions =
-        AMDGPUDeviceOptionsTy::getDeviceDefaults(ComputeUnitKind, IsAPU);
+    DeviceOptions = AMDGPUDeviceOptionsTy(ComputeUnitKind, IsAPU);
 
     // Get maximum size of any device queues and maximum number of queues.
     uint32_t MaxQueueSize;
