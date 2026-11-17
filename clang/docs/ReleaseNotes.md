@@ -468,7 +468,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   extensions. `-fspv-extension=all` restores the previous behavior.
 
 - `-fdevirtualize-speculatively` can now also be used to enable speculative
-  devirtualization when using LTO, with the exception of Distributed ThinLTO.
+  devirtualization when using LTO.
 
 ### Removed Compiler Flags
 
