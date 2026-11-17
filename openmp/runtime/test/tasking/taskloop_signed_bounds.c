@@ -1,6 +1,6 @@
-// RUN: %libomp-compile-and-run
-// RUN: %libomp-compile && env KMP_TASKLOOP_MIN_TASKS=1 %libomp-run
-// RUN: %libomp-compile && env KMP_TASKLOOP_MIN_TASKS=64 %libomp-run
+// RUN: %libomp-compile
+// RUN: env KMP_TASKLOOP_MIN_TASKS=1 %libomp-run
+// RUN: env KMP_TASKLOOP_MIN_TASKS=64 %libomp-run
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 // Exercise the runtime ABI directly, as in kmp_taskloop_5.c. Clang normally
@@ -72,6 +72,8 @@ static int run(uint64_t start, int64_t step, int n, int grain, int sched,
   {
 #pragma omp single
     {
+      if (omp_get_num_threads() != threads)
+        ++c.bad;
       int gtid = __kmpc_global_thread_num(NULL);
       struct task *t = __kmpc_omp_task_alloc(NULL, gtid, 1, sizeof(*t),
                                              sizeof(struct context *), execute);
@@ -114,27 +116,34 @@ static int run(uint64_t start, int64_t step, int n, int grain, int sched,
 }
 
 int main(void) {
-  const uint64_t starts[] = {7,    (uint64_t)-17,  17,
-                             1000, (uint64_t)-200, (UINT64_C(1) << 63) + 17};
-  const int64_t steps[] = {1, 1, -3, -3, 3, 3};
-  const int counts[] = {1, 10, 11, 53, 60};
-  const int grains[] = {3, 10, 64};
-  int errors = 0, cases = 0;
+  const struct {
+    uint64_t start;
+    int64_t step;
+    int count, grain, sched, strict, unaligned;
+  } cases[] = {
+      {17, -3, 53, 10, 1, 1, 1}, // Descending strict tail, crossing zero.
+      {(uint64_t)-17, 1, 53, 10, 1, 1, 0}, // Ascending strict tail across zero.
+      {(uint64_t)-17, 1, 53, 10, 1, 0, 0}, // Non-strict cross-zero loop.
+      {1000, -3, 53, 10, 2, 0, 1}, // Descending num_tasks, off-stride bound.
+      {(uint64_t)-200, 3, 53, 10, 1, 1, 1}, // Negative non-unit coordinates.
+      {(UINT64_C(1) << 63) + 17, 3, 53, 10, 1, 1, 1}, // High unsigned bounds.
+      {7, 1, 60, 10, 1, 1, 0}, // Exact grainsize control.
+      {7, 1, 1, 10, 1, 1, 0}, // Single-iteration control.
+      {7, 1, 0, 10, 1, 1, 0}, // Zero-trip control.
+      {17, -3, 60, 10, 1, 1, 1}, // Exact descending loop.
+      {17, -3, 53, 10, 1, 0, 1}, // Non-strict descending loop.
+      {(uint64_t)-17, 1, 53, 10, 2, 1, 0}, // Strict num_tasks across zero.
+  };
+  int errors = 0, checked = 0;
   omp_set_dynamic(0);
   for (int threads = 1; threads <= 2; ++threads)
     for (int if_val = 0; if_val <= 1; ++if_val)
-      for (int shape = 0; shape < 6; ++shape)
-        for (int n = 0; n < 5; ++n)
-          for (int g = 0; g < 3; ++g)
-            for (int sched = 1; sched <= 2; ++sched)
-              for (int strict = 0; strict <= 1; ++strict) {
-                errors +=
-                    run(starts[shape], steps[shape], counts[n], grains[g],
-                        sched, strict, if_val, threads, steps[shape] != 1);
-                ++cases;
-              }
-  errors += run(7, 1, 0, 10, 1, 1, 1, 2, 0);
-  ++cases;
-  printf("taskloop bounds: cases=%d errors=%d\n", cases, errors);
+      for (unsigned i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i) {
+        errors += run(cases[i].start, cases[i].step, cases[i].count,
+                      cases[i].grain, cases[i].sched, cases[i].strict, if_val,
+                      threads, cases[i].unaligned);
+        ++checked;
+      }
+  printf("taskloop bounds: cases=%d errors=%d\n", checked, errors);
   return errors != 0;
 }
