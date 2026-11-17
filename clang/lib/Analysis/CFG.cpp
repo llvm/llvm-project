@@ -1994,7 +1994,6 @@ void CFGBuilder::addAutomaticObjDestruction(LocalScope::const_iterator B,
 
   SmallVector<VarDecl *, 10> DeclsNeedDestruction;
   for (VarDecl *VD : llvm::make_range(B, E))
-    // if (needsAutomaticDestruction(VD))
     DeclsNeedDestruction.push_back(VD);
 
   for (VarDecl *VD : llvm::reverse(DeclsNeedDestruction)) {
@@ -2020,13 +2019,6 @@ void CFGBuilder::addAutomaticObjDestruction(LocalScope::const_iterator B,
     // objects, we end lifetime with scope end. Since the SCOPE_END CFG
     // marker has the value of LifetimeEnds, the LifetimeEnds marker also
     // covers trivial destructors and local variables. See #201123.
-    // Egyelore legyen ez a komment, de meg kene nezni, h nem e helyesebb
-    // ha a trivialis destruktorokat kulon az exit handling-es fuggvenyben
-    // kezelem. Logikatlan, hogy a trivialis destruktort is egy olyan fuggv
-    // kezel, aminek feladata az automatic object destruction. Viszont ha
-    // kulon akarom kezelni akkor megint kell a helper fuggveny, ami megadja
-    // az osszes VarDecl-t forditott sorrendben a ket fuggveny szamara.
-    // Kitorolni es a PR-ban ezt leirni!!!!!
     if (BuildOpts.AddLifetime)
       appendLifetimeEnds(Block, VD, S);
     if (BuildOpts.AddImplicitDtors && !hasTrivialDestructor(VD))
