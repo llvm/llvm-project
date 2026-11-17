@@ -3934,11 +3934,11 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (!::CheckOrImm(MatcherTable, MatcherIndex, N, *this)) break;
       continue;
     case OPC_CheckImmAllOnesV:
-      if (!ISD::isConstantSplatVectorAllOnes(N.getNode()))
+      if (!ISD::isConstantSplatVectorAllOnes(N))
         break;
       continue;
     case OPC_CheckImmAllZerosV:
-      if (!ISD::isConstantSplatVectorAllZeros(N.getNode()))
+      if (!ISD::isConstantSplatVectorAllZeros(N))
         break;
       continue;
     case OPC_CheckUndef:
@@ -4590,6 +4590,39 @@ bool SelectionDAGISel::isOrEquivalentToAdd(const SDNode *N) const {
     return (Off >= 0) && (((A.value() - 1) & Off) == unsigned(Off));
   }
   return false;
+}
+
+bool SelectionDAGISel::selectShiftAmountMask(SDValue N, unsigned ShiftWidth,
+                                             SDValue &ShAmt) const {
+  assert(isPowerOf2_32(ShiftWidth) && "Unexpected max shift amount!");
+  unsigned ShiftBits = Log2_32(ShiftWidth);
+
+  // A truncation that keeps the low ShiftBits bits doesn't change the bits the
+  // shift reads.
+  if (N.getOpcode() == ISD::TRUNCATE &&
+      N.getScalarValueSizeInBits() >= ShiftBits)
+    N = N.getOperand(0);
+
+  if (N.getOpcode() != ISD::AND || !isa<ConstantSDNode>(N.getOperand(1)))
+    return false;
+
+  const APInt &AndMask = N.getConstantOperandAPInt(1);
+  if (AndMask.getBitWidth() < ShiftBits)
+    return false;
+
+  // Since the max shift amount is a power of 2 we can subtract 1 to make a
+  // mask that covers the bits needed to represent all shift amounts.
+  APInt ShMask(AndMask.getBitWidth(), ShiftWidth - 1);
+  if (!ShMask.isSubsetOf(AndMask)) {
+    // SimplifyDemandedBits may have optimized the mask so try restoring any
+    // bits that are known zero.
+    KnownBits Known = CurDAG->computeKnownBits(N.getOperand(0));
+    if (!ShMask.isSubsetOf(AndMask | Known.Zero))
+      return false;
+  }
+
+  ShAmt = N.getOperand(0);
+  return true;
 }
 
 void SelectionDAGISel::CannotYetSelect(SDNode *N) {

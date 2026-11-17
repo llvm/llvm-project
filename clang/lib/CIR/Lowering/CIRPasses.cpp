@@ -15,6 +15,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -67,6 +68,11 @@ getX86ABICompatInfo(const llvm::Triple &triple,
       compat > clang::LangOptions::ClangABI::Ver20 && !triple.isPS();
   abiCompat.Clang11Compat =
       compat <= clang::LangOptions::ClangABI::Ver11 || triple.isPS();
+  // Match the classic CodeGen default of -msmall-int-abi-compat.
+  assert(!cir::MissingFeatures::smallIntABICompatOption());
+  abiCompat.SmallIntABICompat = triple.isOSDarwin() || triple.isPS()
+                                    ? llvm::abi::SmallIntABICompatKind::Clang
+                                    : llvm::abi::SmallIntABICompatKind::Both;
   return abiCompat;
 }
 

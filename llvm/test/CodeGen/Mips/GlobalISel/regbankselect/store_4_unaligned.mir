@@ -30,7 +30,6 @@
 name:            store_float_align1
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12
@@ -58,7 +57,6 @@ body:             |
 name:            store_float_align4
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12
@@ -85,7 +83,6 @@ body:             |
 name:            store_i32_align8
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4

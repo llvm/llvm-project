@@ -196,10 +196,13 @@ DefGen::DefGen(const AttrOrTypeDef &def)
     : def(def), params(def.getParameters()), defCls(def.getCppClassName()),
       valueType(isa<AttrDef>(def) ? "Attribute" : "Type"),
       defType(isa<AttrDef>(def) ? "Attr" : "Type") {
-  // Check that all parameters have names.
-  for (const AttrOrTypeParameter &param : def.getParameters())
+  // Check that all parameters have names and record the headers declaring
+  // their types.
+  for (const AttrOrTypeParameter &param : def.getParameters()) {
     if (param.isAnonymous())
       llvm::PrintFatalError("all parameters must have a name");
+    llvm::append_range(requiredIncludes, param.getCppIncludes());
+  }
 
   // If a storage class is needed, create one.
   if (def.getNumParameters() > 0)

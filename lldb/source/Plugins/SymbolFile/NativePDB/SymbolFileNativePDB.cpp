@@ -181,18 +181,6 @@ loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
   return pdb;
 }
 
-static bool IsFunctionPrologue(const CompilandIndexItem &cci,
-                               lldb::addr_t addr) {
-  // FIXME: Implement this.
-  return false;
-}
-
-static bool IsFunctionEpilogue(const CompilandIndexItem &cci,
-                               lldb::addr_t addr) {
-  // FIXME: Implement this.
-  return false;
-}
-
 // See llvm::codeview::TypeIndex::simpleTypeName as well as strForPrimitiveTi
 // from the original pdbdump:
 // https://github.com/microsoft/microsoft-pdb/blob/805655a28bd8198004be2ac27e6e0290121a5e89/pdbdump/pdbdump.cpp#L1896-L1974
@@ -519,12 +507,10 @@ Block *SymbolFileNativePDB::CreateBlock(PdbCompilandSymId block_id) {
     if (block_base >= func_base)
       child_block->AddRange(Block::Range(block_base - func_base, block.CodeSize));
     else {
-      GetObjectFile()->GetModule()->ReportError(
+      GetObjectFile()->GetModule()->ReportInternalError(
           "S_BLOCK32 at modi: {0:d} offset: {1:d}: adding range "
           "[{2:x16}-{3:x16}) which has a base that is less than the "
-          "function's "
-          "low PC 0x%" PRIx64 ". Please file a bug and attach the file at the "
-          "start of this error message",
+          "function's low PC {4:x16}",
           block_id.modi, block_id.offset, block_base,
           block_base + block.CodeSize, func_base);
     }
@@ -1548,6 +1534,50 @@ uint32_t SymbolFileNativePDB::ResolveSymbolContext(
   return sc_list.GetSize() - prev_size;
 }
 
+/// Record where a procedure's prologue ends and its epilogue begins in the line
+/// table.
+///
+/// The procedure record has them as the offsets DbgStart and DbgEnd. Either
+/// is 0 if the producer didn't provide it.
+void SymbolFileNativePDB::MarkPrologueAndEpilogue(LineSet &line_set,
+                                                  lldb::addr_t func_addr,
+                                                  const ProcSym &proc) {
+  auto entry_containing = [&](lldb::addr_t addr) {
+    auto it = line_set.upper_bound(
+        LineTable::Entry(addr, 0, 0, 0, false, false, false, false, false));
+    if (it == line_set.begin())
+      return line_set.end();
+    --it;
+    if (it->is_terminal_entry || it->file_addr < func_addr)
+      return line_set.end();
+    return it;
+  };
+
+  if (proc.DbgStart != 0 && proc.DbgStart < proc.CodeSize) {
+    lldb::addr_t addr = func_addr + proc.DbgStart;
+    auto it = entry_containing(addr);
+    if (it != line_set.end()) {
+      LineTable::Entry entry = *it;
+      if (entry.file_addr == addr)
+        line_set.erase(it);
+      entry.file_addr = addr;
+      entry.is_prologue_end = true;
+      line_set.insert(entry);
+    }
+  }
+
+  if (proc.DbgEnd > proc.DbgStart && proc.DbgEnd < proc.CodeSize) {
+    lldb::addr_t addr = func_addr + proc.DbgEnd;
+    auto it = entry_containing(addr);
+    if (it != line_set.end() && it->file_addr == addr) {
+      LineTable::Entry entry = *it;
+      line_set.erase(it);
+      entry.is_epilogue_begin = true;
+      line_set.insert(entry);
+    }
+  }
+}
+
 bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
   // Unfortunately LLDB is set up to parse the entire compile unit line table
   // all at once, even if all it really needs is line info for a specific
@@ -1570,7 +1600,7 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
   // in this CU. Add line entries into the set first so that if there are line
   // entries with same addres, the later is always more accurate than the
   // former.
-  std::set<LineTable::Entry, LineTableEntryComparator> line_set;
+  LineSet line_set;
 
   // This is basically a copy of the .debug$S subsections from all original COFF
   // object files merged together with address relocations applied.  We are
@@ -1609,8 +1639,11 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
       }
       CompilandIndexItem::GlobalLineTable::Entry line_entry(
           LLDB_INVALID_ADDRESS, 0);
-      for (const LineNumberEntry &entry : group.LineNumbers) {
+      const bool has_columns = lines.hasColumnInfo() &&
+                               group.Columns.size() == group.LineNumbers.size();
+      for (const auto &[i, entry] : llvm::enumerate(group.LineNumbers)) {
         LineInfo cur_info(entry.Flags);
+        uint16_t column = has_columns ? group.Columns[i].StartColumn : 0;
 
         if (cur_info.isAlwaysStepInto() || cur_info.isNeverStepInto())
           continue;
@@ -1618,13 +1651,10 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
         uint64_t addr = virtual_addr + entry.Offset;
 
         bool is_statement = cur_info.isStatement();
-        bool is_prologue = IsFunctionPrologue(*cii, addr);
-        bool is_epilogue = IsFunctionEpilogue(*cii, addr);
-
         uint32_t lno = cur_info.getStartLine();
 
-        LineTable::Entry new_entry(addr, lno, 0, file_index, is_statement, false,
-                                 is_prologue, is_epilogue, false);
+        LineTable::Entry new_entry(addr, lno, column, file_index, is_statement,
+                                   false, false, false, false);
         // Terminal entry has lower precedence than new entry.
         auto iter = line_set.find(new_entry);
         if (iter != line_set.end() && iter->is_terminal_entry)
@@ -1662,9 +1692,15 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
     uint32_t record_offset = iter.offset();
     CVSymbol func_record =
         cii->m_debug_stream.readSymbolAtOffset(record_offset);
-    SegmentOffsetLength sol = GetSegmentOffsetAndLength(func_record);
+    ProcSym proc(static_cast<SymbolRecordKind>(func_record.kind()));
+    if (llvm::Error error =
+            SymbolDeserializer::deserializeAs<ProcSym>(func_record, proc)) {
+      llvm::consumeError(std::move(error));
+      iter = syms.at(getScopeEndOffset(func_record));
+      continue;
+    }
     addr_t file_vm_addr =
-        m_index->MakeVirtualAddress(sol.so.segment, sol.so.offset);
+        m_index->MakeVirtualAddress(proc.Segment, proc.CodeOffset);
     if (file_vm_addr == LLDB_INVALID_ADDRESS) {
       iter = syms.at(getScopeEndOffset(func_record));
       continue;
@@ -1694,6 +1730,9 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
       return true;
     };
     ParseSymbolArrayInScope(func_id, parse_inline_sites);
+
+    MarkPrologueAndEpilogue(line_set, file_vm_addr, proc);
+
     // Jump to the end of the function record.
     iter = syms.at(getScopeEndOffset(func_record));
   }

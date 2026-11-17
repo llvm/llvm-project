@@ -1,0 +1,23 @@
+add_libc_testsuite(libc-sys-timerfd-tests)
+
+add_libc_test(
+  timerfd_create_test
+  SUITE
+    libc-sys-timerfd-tests
+  SRCS
+    timerfd_create_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.sys_timerfd_macros
+    libc.hdr.time_macros
+    libc.hdr.types.ssize_t
+    libc.src.__support.CPP.scope
+    libc.src.fcntl.fcntl
+    libc.src.sys.timerfd.timerfd_create
+    libc.src.unistd.close
+    libc.src.unistd.read
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
