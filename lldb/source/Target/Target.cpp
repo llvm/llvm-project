@@ -1976,6 +1976,39 @@ void Target::NotifyModulesRemoved(lldb_private::ModuleList &module_list) {
   ModulesDidUnload(module_list, false);
 }
 
+bool Target::RecordScriptingResources(Module &module) {
+  Log *log = GetLog(LLDBLog::Modules | LLDBLog::Script);
+
+  if (GetReloadModuleScripts()) {
+    LLDB_LOG(log,
+             "Loading the scripts of '{0}' every time: "
+             "target.experimental.reload-module-scripts is set",
+             module.GetFileSpec());
+    return true;
+  }
+
+  // We key the record by UUID rather than by Module, because LLDB can create a
+  // new Module for the same binary, for example after the file moved. Running
+  // its scripts again would duplicate what they already added to this target,
+  // like stop hooks.
+  const UUID &uuid = module.GetUUID();
+  if (!uuid.IsValid()) {
+    LLDB_LOG(log, "Loading the scripts of '{0}' every time: it has no UUID",
+             module.GetFileSpec());
+    return true;
+  }
+
+  std::lock_guard<std::mutex> guard(m_loaded_scripts_mutex);
+  if (!m_loaded_scripts.insert(uuid).second) {
+    LLDB_LOG(log,
+             "Skipping the scripts of '{0}': this target already loaded them",
+             module.GetFileSpec());
+    return false;
+  }
+  LLDB_LOG(log, "Loading the scripts of '{0}'", module.GetFileSpec());
+  return true;
+}
+
 void Target::ModulesDidLoad(ModuleList &module_list) {
   if (GetPreloadSymbols())
     module_list.PreloadSymbols(GetParallelModuleLoad());
@@ -3376,9 +3409,19 @@ bool Target::RunStopHooks(bool at_initial_stop) {
   // active_hooks list before iterating over the hooks has this effect.
   for (auto cur_hook_sp : active_hooks) {
     bool any_thread_matched = false;
+    bool deleted_one_shot = false;
     for (auto exc_ctx : exc_ctx_with_reasons) {
       if (!cur_hook_sp->ExecutionContextPasses(exc_ctx))
         continue;
+
+      // A one-shot hook runs for every thread it applies to at this stop, and
+      // votes on continuing like any other hook. We delete it before it first
+      // runs, so it can't run again at a stop it causes by resuming the
+      // process. active_hooks still holds it for the other threads.
+      if (cur_hook_sp->IsOneShot() && !deleted_one_shot) {
+        RemoveStopHookByID(cur_hook_sp->GetID());
+        deleted_one_shot = true;
+      }
 
       bool suppress_output = cur_hook_sp->GetSuppressOutput();
       if (print_hook_header && !any_thread_matched && !suppress_output) {
@@ -4232,7 +4275,8 @@ Target::StopHook::StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid)
 Target::StopHook::StopHook(const StopHook &rhs)
     : UserID(rhs.GetID()), m_target_sp(rhs.m_target_sp),
       m_specifier_sp(rhs.m_specifier_sp), m_thread_spec_up(),
-      m_active(rhs.m_active), m_auto_continue(rhs.m_auto_continue) {
+      m_active(rhs.m_active), m_auto_continue(rhs.m_auto_continue),
+      m_one_shot(rhs.m_one_shot) {
   if (rhs.m_thread_spec_up)
     m_thread_spec_up = std::make_unique<ThreadSpec>(*rhs.m_thread_spec_up);
 }
@@ -4280,6 +4324,9 @@ void Target::StopHook::GetDescription(Stream &s,
 
   if (m_auto_continue)
     s.Indent("AutoContinue on\n");
+
+  if (m_one_shot)
+    s.Indent("One-shot\n");
 
   if (m_specifier_sp) {
     s.Indent();
@@ -5301,6 +5348,11 @@ bool TargetProperties::GetUseDILForCreatingValues() const {
         .value_or(false);
   else
     return true;
+}
+
+bool TargetProperties::GetReloadModuleScripts() const {
+  return GetExperimentalPropertyValue(ePropertyReloadModuleScripts)
+      .value_or(false);
 }
 
 void TargetProperties::SetUseDILForCreatingValues(bool b) {

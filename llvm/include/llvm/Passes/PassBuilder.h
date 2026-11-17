@@ -66,7 +66,7 @@ public:
   bool LoopUnrolling = true;
 
   /// Tuning option to enable/disable loop interchange.
-  std::optional<bool> LoopInterchange;
+  bool LoopInterchange = true;
 
   /// Tuning option to enable/disable loop fusion.
   bool LoopFusion = false;

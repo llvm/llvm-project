@@ -49,15 +49,6 @@ spirv.func @cooperative_matrix_load_function(%ptr : !spirv.ptr<i32, Function>, %
   spirv.Return
 }
 
-// CHECK-LABEL: @cooperative_matrix_load_stride_i16
-spirv.func @cooperative_matrix_load_stride_i16(%ptr : !spirv.ptr<i32, StorageBuffer>, %stride : i16) "None" {
-  // CHECK:      {{%.*}} = spirv.KHR.CooperativeMatrixLoad {{%.*}}, {{%.*}}, <RowMajor> :
-  // CHECK-SAME:   !spirv.ptr<i32, StorageBuffer>, i16 -> !spirv.coopmatrix<16x8xi32, Workgroup, MatrixA>
-  %0 = spirv.KHR.CooperativeMatrixLoad %ptr, %stride, <RowMajor> :
-    !spirv.ptr<i32, StorageBuffer>, i16 -> !spirv.coopmatrix<16x8xi32, Workgroup, MatrixA>
-  spirv.Return
-}
-
 // CHECK-LABEL: @cooperative_matrix_load_aligned
 spirv.func @cooperative_matrix_load_aligned(%ptr : !spirv.ptr<i32, StorageBuffer>, %stride : i32) "None" {
   // CHECK:      {{%.*}} = spirv.KHR.CooperativeMatrixLoad {{%.*}}, {{%.*}}, <RowMajor>, <Aligned>, 16 :
@@ -88,17 +79,6 @@ spirv.func @cooperative_matrix_store_memoperand(%ptr : !spirv.ptr<i32, StorageBu
   spirv.Return
 }
 
-// CHECK-LABEL: @cooperative_matrix_store_stride_i16
-spirv.func @cooperative_matrix_store_stride_i16(%ptr : !spirv.ptr<i32, StorageBuffer>,
-                                                %m : !spirv.coopmatrix<8x16xi32, Subgroup, MatrixB>,
-                                                %stride : i16) "None" {
-  // CHECK:       spirv.KHR.CooperativeMatrixStore {{%.*}}, {{%.*}}, {{%.*}}, <ColumnMajor> :
-  // CHECK-SAME:    !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<8x16xi32, Subgroup, MatrixB>, i16
-  spirv.KHR.CooperativeMatrixStore %ptr, %m, %stride, <ColumnMajor> :
-    !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<8x16xi32, Subgroup, MatrixB>, i16
-  spirv.Return
-}
-
 // CHECK-LABEL: @cooperative_matrix_store_aligned
 spirv.func @cooperative_matrix_store_aligned(%ptr : !spirv.ptr<i32, StorageBuffer>, %stride : i32,
                                      %m : !spirv.coopmatrix<8x16xi32, Workgroup, MatrixA>) "None" {
@@ -115,6 +95,15 @@ spirv.func @cooperative_matrix_load_bad_ptr(%ptr : !spirv.ptr<!spirv.struct<(f32
   // expected-error @+1 {{Pointer must point to a scalar or vector type}}
   %0 = spirv.KHR.CooperativeMatrixLoad %ptr, %stride, <ColumnMajor> :
     !spirv.ptr<!spirv.struct<(f32 [0])>, StorageBuffer>, i32 -> !spirv.coopmatrix<8x16xi32, Subgroup, MatrixA>
+  spirv.Return
+}
+
+// -----
+
+spirv.func @cooperative_matrix_load_bad_stride(%ptr : !spirv.ptr<i32, StorageBuffer>, %stride : i64) "None" {
+  // expected-error @+1 {{op operand #1 must be 32-bit integer, but got 'i64'}}
+  %0 = spirv.KHR.CooperativeMatrixLoad %ptr, %stride, <RowMajor> :
+    !spirv.ptr<i32, StorageBuffer>, i64 -> !spirv.coopmatrix<16x8xi32, Workgroup, MatrixA>
   spirv.Return
 }
 
@@ -181,6 +170,17 @@ spirv.func @cooperative_matrix_store_bad_object_type(%ptr : !spirv.ptr<i32, Stor
   // expected-error @+1 {{op operand #1 must be any SPIR-V cooperative matrix type}}
   spirv.KHR.CooperativeMatrixStore %ptr, %stride, %stride, <RowMajor> :
     !spirv.ptr<i32, StorageBuffer>, i32, i32
+  spirv.Return
+}
+
+// -----
+
+spirv.func @cooperative_matrix_store_bad_stride(%ptr : !spirv.ptr<i32, StorageBuffer>,
+                                                %m : !spirv.coopmatrix<8x16xi32, Subgroup, MatrixB>,
+                                                %stride : i16) "None" {
+  // expected-error @+1 {{op operand #2 must be 32-bit integer, but got 'i16'}}
+  spirv.KHR.CooperativeMatrixStore %ptr, %m, %stride, <ColumnMajor> :
+    !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<8x16xi32, Subgroup, MatrixB>, i16
   spirv.Return
 }
 

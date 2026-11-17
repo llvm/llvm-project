@@ -13,6 +13,7 @@
 
 #include "LlvmState.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -27,7 +28,8 @@ constexpr char kTriple[] = "x86_64-unknown-linux";
 class X86TestBase : public ::testing::Test {
 protected:
   X86TestBase(std::string CPUName = "haswell", const char *Features = "")
-      : State(cantFail(LLVMState::Create(kTriple, CPUName, Features))) {}
+      : State(cantFail(
+            LLVMState::create(LibraryOptions, kTriple, CPUName, Features))) {}
 
   static void SetUpTestCase() {
     LLVMInitializeX86TargetInfo();
@@ -38,6 +40,7 @@ protected:
     InitializeX86ExegesisTarget();
   }
 
+  cl::LibraryOptionsContext LibraryOptions;
   const LLVMState State;
 };
 

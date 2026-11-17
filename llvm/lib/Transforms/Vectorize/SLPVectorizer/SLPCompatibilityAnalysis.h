@@ -195,6 +195,11 @@ public:
 /// Checks if \p I is a call to llvm.fma or llvm.fmuladd.
 bool isFMAOrFMulAdd(const Instruction *I);
 
+/// How the FP identity ops of the copyable lanes produce the lane values:
+/// exactly, inexactly (a NaN may be quieted and a subnormal flushed, so the
+/// vector is valid only for FP math) or with the original values blended in.
+enum class FPCopyables { Exact, Inexact, Blended };
+
 /// Main data required for vectorization of instructions.
 class InstructionsState {
   /// MainOp and AltOp are primarily determined by getSameOpcode. Currently,
@@ -230,6 +235,8 @@ class InstructionsState {
   /// fmuladd(a, b, -0.0)/fmuladd(1.0, a, b), absorbing the binop instead of
   /// computing and gathering its result.
   bool AbsorbCopyableFMulOrFAdd = false;
+  /// How the FP identity ops produce the values of the copyable lanes.
+  FPCopyables FPCopyablesKind = FPCopyables::Exact;
 
 public:
   Instruction *getMainOp() const {
@@ -346,6 +353,15 @@ public:
   void setAbsorbCopyableFMulOrFAdd(bool Absorb) {
     AbsorbCopyableFMulOrFAdd = Absorb;
   }
+
+  /// Returns how the FP identity ops produce the values of the copyable lanes.
+  FPCopyables getFPCopyables() const {
+    assert(valid() && "InstructionsState is invalid.");
+    return FPCopyablesKind;
+  }
+
+  /// Sets how the FP identity ops produce the values of the copyable lanes.
+  void setFPCopyables(FPCopyables Kind) { FPCopyablesKind = Kind; }
 };
 
 /// Checks if \p V is a single-use fmul/fadd with operands outside \p VL.
