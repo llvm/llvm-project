@@ -244,7 +244,7 @@ define <4 x float> @uitofp_trunc_nuw_v4i64_v4f32(<4 x i64> %a0) {
 ;
 ; VLDQ-LABEL: uitofp_trunc_nuw_v4i64_v4f32:
 ; VLDQ:       # %bb.0:
-; VLDQ-NEXT:    vcvtuqq2ps %ymm0, %xmm0
+; VLDQ-NEXT:    vcvtqq2ps %ymm0, %xmm0
 ; VLDQ-NEXT:    vzeroupper
 ; VLDQ-NEXT:    retq
   %t = trunc nuw <4 x i64> %a0 to <4 x i32>
