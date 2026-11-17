@@ -13,7 +13,6 @@
 
 #include "hdr/stdio_macros.h"
 #include "src/__support/CPP/scope.h"
-#include "src/__support/macros/properties/os.h"
 #include "src/stdio/fclose.h"
 #include "src/stdio/ferror.h"
 #include "src/stdio/fflush.h"
@@ -30,10 +29,8 @@
 using LIBC_NAMESPACE::cpp::scope_exit;
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
-class LlvmLibcPutcharUnlockedTest
-    : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {};
+using LlvmLibcPutcharUnlockedTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-#if defined(LIBC_TARGET_OS_IS_POSIX) || defined(LIBC_TARGET_OS_IS_LINUX)
 TEST_F(LlvmLibcPutcharUnlockedTest, WriteToStdout) {
   const auto FILENAME =
       libc_make_test_file_path("putchar_unlocked_stdout.test");
@@ -89,4 +86,3 @@ TEST_F(LlvmLibcPutcharUnlockedTest, ReadOnlyStream) {
   ASSERT_THAT(LIBC_NAMESPACE::putchar_unlocked('X'), Fails(EBADF, EOF));
   EXPECT_NE(LIBC_NAMESPACE::ferror(LIBC_NAMESPACE::stdout), 0);
 }
-#endif

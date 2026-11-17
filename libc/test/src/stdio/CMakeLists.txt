@@ -532,7 +532,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.stdio_macros
     libc.src.__support.CPP.scope
-    libc.src.__support.macros.properties.os
     libc.src.stdio.fclose
     libc.src.stdio.ferror
     libc.src.stdio.fflush
