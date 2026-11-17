@@ -18,6 +18,7 @@
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cstddef>
 #include <memory>
@@ -59,6 +60,13 @@ struct AliasAnalysis {
              Null,
              /// Unique memory allocated by an operation, e.g.
              /// by fir::AllocaOp or fir::AllocMemOp.
+             /// An allocation that is not declared as a variable may become
+             /// the data of a descriptor, e.g. when an assignment allocates
+             /// an allocatable variable. If its address is stored into
+             /// exactly one descriptor, the allocation gets the source of the
+             /// data of that descriptor instead. If its address is stored
+             /// into more than one descriptor, or into other memory, its
+             /// source is Indirect.
              Allocate,
              /// A global object allocated statically on the module level.
              Global,
@@ -457,7 +465,31 @@ private:
                                            bool collectScopedOrigins);
 
   /// Clear the getSource() memoization cache.
-  void clearSourceCache() { getSourceCache.clear(); }
+  void clearSourceCache() {
+    getSourceCache.clear();
+    publicationCache.clear();
+  }
+
+  /// Where the address of an allocation is stored.
+  struct AllocationPublication {
+    enum class Kind {
+      /// The allocation is declared as a variable, or its address is not
+      /// stored into memory.
+      None,
+      /// The address is stored only into the descriptor at \c descriptor.
+      Descriptor,
+      /// The address is stored into several descriptors, or into memory
+      /// that is not a descriptor.
+      Unknown
+    };
+    Kind kind = Kind::None;
+    mlir::Value descriptor;
+  };
+
+  /// Find where the address of \p allocation is stored, following the values
+  /// that carry it: the views of the allocation, arith.select, and the
+  /// operands forwarded by branches and region terminators.
+  AllocationPublication getAllocationPublication(mlir::OpResult allocation);
 
   /// Build an intermediate Source rooted at the declare captured by the
   /// snapshot. Reuses getSource(declValue) for the SourceKind / origin
@@ -547,6 +579,16 @@ private:
   /// while \c sourceCacheEnabled is set. This is a frozen snapshot cache with
   /// no automatic invalidation (see getSource()).
   llvm::DenseMap<std::pair<mlir::Value, unsigned>, Source> getSourceCache;
+
+  /// Memoized getAllocationPublication() results. Populated and cleared
+  /// together with getSourceCache.
+  llvm::DenseMap<mlir::Value, AllocationPublication> publicationCache;
+
+  /// The allocations whose source getSource() is computing from the
+  /// descriptor they are stored into. The source of that descriptor may
+  /// depend on the allocation itself, e.g. when the descriptor is a component
+  /// of the allocation.
+  llvm::SmallPtrSet<mlir::Value, 4> allocationsInProgress;
 
   /// Whether getSource() should consult/populate getSourceCache.
   bool sourceCacheEnabled = false;
