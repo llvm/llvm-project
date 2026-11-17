@@ -1892,6 +1892,10 @@ mlir::Value hlfir::ElementalOp::getElementEntity() {
   return mlir::cast<hlfir::YieldElementOp>(getBody()->back()).getElementValue();
 }
 
+mlir::Region *hlfir::ElementalOp::getElementCleanup() {
+  return &mlir::cast<hlfir::YieldElementOp>(getBody()->back()).getCleanup();
+}
+
 llvm::LogicalResult hlfir::ElementalOp::verify() {
   mlir::Value mold = getMold();
   hlfir::ExprType resultType = mlir::cast<hlfir::ExprType>(getType());
@@ -1940,6 +1944,29 @@ llvm::LogicalResult hlfir::DestroyOp::verify() {
           "the element type must be finalizable, when 'finalize' is set");
   }
 
+  return mlir::success();
+}
+
+/// Erase a character expression whose only uses are hlfir.destroy, together
+/// with these hlfir.destroy. Only the character operations creating their own
+/// result storage are considered, since other expression producers may reuse
+/// storage that the hlfir.destroy releases.
+llvm::LogicalResult
+hlfir::DestroyOp::canonicalize(DestroyOp destroy,
+                               mlir::PatternRewriter &rewriter) {
+  mlir::Value expr = destroy.getExpr();
+  mlir::Operation *producer = expr.getDefiningOp();
+  if (!mlir::isa_and_nonnull<hlfir::ConcatOp, hlfir::CharTrimOp,
+                             hlfir::SetLengthOp, hlfir::CharExtremumOp>(
+          producer) ||
+      !mlir::wouldOpBeTriviallyDead(producer) ||
+      !llvm::all_of(expr.getUsers(), [](mlir::Operation *user) {
+        return mlir::isa<hlfir::DestroyOp>(user);
+      }))
+    return mlir::failure();
+  for (mlir::Operation *user : llvm::make_early_inc_range(expr.getUsers()))
+    rewriter.eraseOp(user);
+  rewriter.eraseOp(producer);
   return mlir::success();
 }
 

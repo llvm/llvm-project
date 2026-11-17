@@ -217,10 +217,6 @@ class MDNodeMapper {
   /// Worklist of distinct nodes whose operands need to be remapped.
   SmallVector<MDNode *, 16> DistinctWorklist;
 
-  // Storage for a UniquedGraph.
-  SmallDenseMap<const Metadata *, Data, 32> InfoStorage;
-  SmallVector<MDNode *, 16> POTStorage;
-
 public:
   MDNodeMapper(Mapper &M) : M(M) {}
 

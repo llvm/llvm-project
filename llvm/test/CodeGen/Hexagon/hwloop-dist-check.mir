@@ -98,23 +98,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 1, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 2, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 3, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 4, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 5, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 6, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 7, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 8, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 9, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 10, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 11, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 12, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 13, class: predregs, preferred-register: '', flags: [  ] }
-  - { id: 14, class: predregs, preferred-register: '', flags: [  ] }
-  - { id: 15, class: intregs, preferred-register: '', flags: [  ] }
 liveins:
   - { reg: '$r0', virtual-reg: '%9' }
 frameInfo:
@@ -198,21 +181,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 1, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 2, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 3, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 4, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 5, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 6, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 7, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 8, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 9, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 10, class: intregs, preferred-register: '', flags: [  ] }
-  - { id: 11, class: predregs, preferred-register: '', flags: [  ] }
-  - { id: 12, class: predregs, preferred-register: '', flags: [  ] }
-  - { id: 13, class: intregs, preferred-register: '', flags: [  ] }
 liveins:
   - { reg: '$r0', virtual-reg: '%9' }
 frameInfo:

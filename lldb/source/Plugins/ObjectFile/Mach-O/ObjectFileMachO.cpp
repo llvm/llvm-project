@@ -22,6 +22,7 @@
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -2105,6 +2106,17 @@ ParseNList(DataExtractor &nlist_data, lldb::offset_t &nlist_data_offset,
   return nlist;
 }
 
+static void UpdateHasSourceFilesAndDebugMap(SymbolType type,
+                                            const struct nlist_64 &nlist,
+                                            bool &has_source_files,
+                                            bool &has_debug_map) {
+  if (type == eSymbolTypeSourceFile)
+    has_source_files = true;
+  else if (type == eSymbolTypeObjectFile && nlist.n_type == N_OSO &&
+           nlist.n_desc == 1)
+    has_debug_map = true;
+}
+
 enum { DebugSymbols = true, NonDebugSymbols = false };
 
 void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
@@ -2234,6 +2246,9 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   SectionList *section_list = GetSectionList();
   if (section_list == nullptr)
     return;
+
+  bool has_source_files = false;
+  bool has_debug_map = false;
 
   const uint32_t addr_byte_size = m_data_nsp->GetAddressByteSize();
   const ByteOrder byte_order = m_data_nsp->GetByteOrder();
@@ -2619,73 +2634,86 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     UndefinedNameToDescMap undefined_name_to_desc;
     SymbolIndexToName reexport_shlib_needs_fixup;
 
-    dyld_for_each_installed_shared_cache(^(dyld_shared_cache_t shared_cache) {
-      uuid_t cache_uuid;
-      dyld_shared_cache_copy_uuid(shared_cache, &cache_uuid);
-      if (found_image)
+    // Compute the size of the string table. We need to ask dyld for a
+    // new SPI to avoid this step.
+    auto nlist_extraction_block = ^(const void *nlistStart, uint64_t nlistCount,
+                                    const char *stringTable) {
+      if (!nlistStart || !nlistCount)
         return;
 
-        if (process_shared_cache_uuid.IsValid() &&
-          process_shared_cache_uuid != UUID(&cache_uuid, 16))
+      // The buffers passed here are valid only inside the block.
+      // Use vm_read to make a cheap copy of them available for our
+      // processing later.
+      kern_return_t ret = vm_read(mach_task_self(), (vm_address_t)nlistStart,
+                                  nlist_byte_size * nlistCount,
+                                  &vm_nlist_memory, &vm_nlist_bytes_read);
+      if (ret != KERN_SUCCESS)
+        return;
+      assert(vm_nlist_bytes_read == nlist_byte_size * nlistCount);
+
+      // We don't know the size of the string table. It's cheaper
+      // to map the whole VM region than to determine the size by
+      // parsing all the nlist entries.
+      vm_address_t string_address = (vm_address_t)stringTable;
+      vm_size_t region_size;
+      mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
+      vm_region_basic_info_data_t info;
+      memory_object_name_t object;
+      ret = vm_region_64(mach_task_self(), &string_address, &region_size,
+                         VM_REGION_BASIC_INFO_64, (vm_region_info_t)&info,
+                         &info_count, &object);
+      if (ret != KERN_SUCCESS)
         return;
 
-      dyld_shared_cache_for_each_image(shared_cache, ^(dyld_image_t image) {
-        uuid_t dsc_image_uuid;
+      ret = vm_read(mach_task_self(), (vm_address_t)stringTable,
+                    region_size - ((vm_address_t)stringTable - string_address),
+                    &vm_string_memory, &vm_string_bytes_read);
+      if (ret != KERN_SUCCESS)
+        return;
+
+      nlist_buffer = (void *)vm_nlist_memory;
+      string_table = (char *)vm_string_memory;
+      nlist_count = nlistCount;
+    };
+
+    // The shared-cache-binary-loading setting only exists for hosts without
+    // the indexing SPIs.
+    SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
+        image_uuid, process_shared_cache_uuid,
+        eSymbolSharedCacheUseHostAndInferiorSharedCache);
+    if (void *image = image_info.GetImageBaton()) {
+      found_image = true;
+      dyld_image_local_nlist_content_4Symbolication((dyld_image_t)image,
+                                                    nlist_extraction_block);
+    }
+
+    // Images outside the indexed caches need the much slower enumeration.
+    if (!found_image) {
+      dyld_for_each_installed_shared_cache(^(dyld_shared_cache_t shared_cache) {
+        uuid_t cache_uuid;
+        dyld_shared_cache_copy_uuid(shared_cache, &cache_uuid);
         if (found_image)
           return;
 
-        dyld_image_copy_uuid(image, &dsc_image_uuid);
-        if (image_uuid != UUID(dsc_image_uuid, 16))
+        if (process_shared_cache_uuid.IsValid() &&
+            process_shared_cache_uuid != UUID(&cache_uuid, 16))
           return;
 
-        found_image = true;
+        dyld_shared_cache_for_each_image(shared_cache, ^(dyld_image_t image) {
+          uuid_t dsc_image_uuid;
+          if (found_image)
+            return;
 
-        // Compute the size of the string table. We need to ask dyld for a
-        // new SPI to avoid this step.
-        dyld_image_local_nlist_content_4Symbolication(
-            image, ^(const void *nlistStart, uint64_t nlistCount,
-                     const char *stringTable) {
-              if (!nlistStart || !nlistCount)
-                return;
+          dyld_image_copy_uuid(image, &dsc_image_uuid);
+          if (image_uuid != UUID(dsc_image_uuid, 16))
+            return;
 
-              // The buffers passed here are valid only inside the block.
-              // Use vm_read to make a cheap copy of them available for our
-              // processing later.
-              kern_return_t ret =
-                  vm_read(mach_task_self(), (vm_address_t)nlistStart,
-                          nlist_byte_size * nlistCount, &vm_nlist_memory,
-                          &vm_nlist_bytes_read);
-              if (ret != KERN_SUCCESS)
-                return;
-              assert(vm_nlist_bytes_read == nlist_byte_size * nlistCount);
-
-              // We don't know the size of the string table. It's cheaper
-              // to map the whole VM region than to determine the size by
-              // parsing all the nlist entries.
-              vm_address_t string_address = (vm_address_t)stringTable;
-              vm_size_t region_size;
-              mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
-              vm_region_basic_info_data_t info;
-              memory_object_name_t object;
-              ret = vm_region_64(mach_task_self(), &string_address,
-                                 &region_size, VM_REGION_BASIC_INFO_64,
-                                 (vm_region_info_t)&info, &info_count, &object);
-              if (ret != KERN_SUCCESS)
-                return;
-
-              ret = vm_read(mach_task_self(), (vm_address_t)stringTable,
-                            region_size -
-                                ((vm_address_t)stringTable - string_address),
-                            &vm_string_memory, &vm_string_bytes_read);
-              if (ret != KERN_SUCCESS)
-                return;
-
-              nlist_buffer = (void *)vm_nlist_memory;
-              string_table = (char *)vm_string_memory;
-              nlist_count = nlistCount;
-            });
+          found_image = true;
+          dyld_image_local_nlist_content_4Symbolication(image,
+                                                        nlist_extraction_block);
+        });
       });
-    });
+    }
     if (nlist_buffer) {
       DataExtractor dsc_local_symbols_data(nlist_buffer,
                                            nlist_count * nlist_byte_size,
@@ -3450,6 +3478,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                             sym[sym_idx].GetAddress().GetFileAddress());
                       }
                       sym[sym_idx].SetFlags(nlist.n_type << 16 | nlist.n_desc);
+                      UpdateHasSourceFilesAndDebugMap(
+                          type, nlist, has_source_files, has_debug_map);
 
                       if (demangled_is_synthesized)
                         sym[sym_idx].SetDemangledNameIsSynthesized(true);
@@ -4185,6 +4215,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
           add_symbol_addr(sym[sym_idx].GetAddress().GetFileAddress());
       }
       sym[sym_idx].SetFlags(nlist.n_type << 16 | nlist.n_desc);
+      UpdateHasSourceFilesAndDebugMap(type, nlist, has_source_files,
+                                      has_debug_map);
       if (nlist.n_desc & N_WEAK_REF)
         sym[sym_idx].SetIsWeak(true);
 
@@ -4456,6 +4488,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       }
     }
   }
+
+  // Set these after the last Resize(), which clears whether the symbol table
+  // has source files.
+  symtab.SetHasSourceFiles(has_source_files);
+  symtab.SetHasDebugMap(has_debug_map);
 }
 
 void ObjectFileMachO::Dump(Stream *s) {

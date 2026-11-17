@@ -3670,6 +3670,7 @@ cc_library(
         ":IR",
         ":LLVMCommonConversion",
         ":LinalgDialect",
+        ":LoopLikeInterface",
         ":MemRefDialect",
         ":NVGPUDialect",
         ":NVGPUToNVVM",
@@ -3758,6 +3759,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":BuiltinDialectTdFiles",
+        ":ControlFlowInterfacesTdFiles",
         ":OpBaseTdFiles",
     ],
 )
@@ -3811,6 +3813,7 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/WasmSSA/IR/WasmSSAOps.td",
     deps = [
+        ":ControlFlowInterfacesTdFiles",
         ":FunctionInterfacesTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":WasmSSATdFiles",
@@ -3837,6 +3840,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BytecodeOpInterface",
+        ":ControlFlowInterfaces",
         ":DialectUtils",
         ":FunctionInterfaces",
         ":IR",
@@ -5317,6 +5321,7 @@ cc_library(
         ":GPUUtils",
         ":IR",
         ":LinalgDialect",
+        ":LoopLikeInterface",
         ":MemRefDialect",
         ":MemRefTransforms",
         ":MemRefUtils",
@@ -5641,6 +5646,7 @@ cc_library(
         ":MemorySlotInterfaces",
         ":MemorySlotInterfacesIncGen",
         ":PtrDialect",
+        ":SCFToControlFlowDialectInterface",
         ":SideEffectInterfaces",
         ":Support",
         ":ViewLikeInterface",
@@ -8228,6 +8234,7 @@ cc_library(
         ":FuncDialect",
         ":IR",
         ":LinalgDialect",
+        ":LoopLikeInterface",
         ":MemRefDialect",
         ":Pass",
         ":RuntimeVerifiableOpInterface",
@@ -8760,6 +8767,26 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "SCFToControlFlowDialectInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Conversion/SCFToControlFlow/SCFToControlFlowDialectInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Conversion/SCFToControlFlow/SCFToControlFlowDialectInterface.td",
+    deps = [":OpBaseTdFiles"],
+)
+
+cc_library(
+    name = "SCFToControlFlowDialectInterface",
+    hdrs = ["include/mlir/Conversion/SCFToControlFlow/SCFToControlFlowDialectInterface.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":SCFToControlFlowDialectInterfaceIncGen",
+    ],
+)
+
 cc_library(
     name = "SCFToControlFlow",
     srcs = ["lib/Conversion/SCFToControlFlow/SCFToControlFlow.cpp"],
@@ -8770,8 +8797,8 @@ cc_library(
         ":ControlFlowDialect",
         ":ConversionPassIncGen",
         ":IR",
-        ":LLVMDialect",
         ":SCFDialect",
+        ":SCFToControlFlowDialectInterface",
         ":SCFTransforms",
         ":TransformUtils",
         ":Transforms",
@@ -12218,6 +12245,7 @@ cc_library(
         ":FuncDialect",
         ":IR",
         ":LinalgDialect",
+        ":LoopLikeInterface",
         ":MemRefDialect",
         ":Pass",
         ":SCFDialect",
@@ -14779,6 +14807,7 @@ cc_library(
         ":FunctionInterfaces",
         ":IR",
         ":LinalgDialect",
+        ":LoopLikeInterface",
         ":MemRefDialect",
         ":TensorDialect",
         ":TransformDialect",
