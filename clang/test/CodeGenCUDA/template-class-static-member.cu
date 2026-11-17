@@ -1,13 +1,16 @@
 // RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device \
 // RUN:   -emit-llvm -o - -x hip %s | FileCheck -check-prefix=DEV %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu-amd-amdhsa -fcuda-is-device   -emit-llvm -o - -x hip %s | FileCheck -check-prefix=DEV %s %}
 
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -std=c++11 \
 // RUN:   -emit-llvm -o - -x hip %s | FileCheck -check-prefix=HOST %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-gnu-linux -std=c++11   -emit-llvm -o - -x hip %s | FileCheck -check-prefix=HOST %s %}
 
 // Negative tests.
 
 // RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device \
 // RUN:   -emit-llvm -o - -x hip %s | FileCheck -check-prefix=DEV-NEG %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu-amd-amdhsa -fcuda-is-device   -emit-llvm -o - -x hip %s | FileCheck -check-prefix=DEV-NEG %s %}
 
 #include "Inputs/cuda.h"
 

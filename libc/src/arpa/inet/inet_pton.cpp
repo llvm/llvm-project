@@ -29,11 +29,12 @@ LLVM_LIBC_FUNCTION(int, inet_pton,
                    (int af, const char *__restrict src, void *__restrict dst)) {
   LIBC_CRASH_ON_NULLPTR(src);
   LIBC_CRASH_ON_NULLPTR(dst);
-  if (af != AF_INET) {
-    libc_errno = EAFNOSUPPORT;
-    return -1;
-  }
-  return net::str_to_ipv4(src, *reinterpret_cast<struct in_addr *>(dst));
+  if (af == AF_INET)
+    return net::str_to_ipv4(src, *reinterpret_cast<struct in_addr *>(dst));
+  if (af == AF_INET6)
+    return net::str_to_ipv6(src, *reinterpret_cast<struct in6_addr *>(dst));
+  libc_errno = EAFNOSUPPORT;
+  return -1;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

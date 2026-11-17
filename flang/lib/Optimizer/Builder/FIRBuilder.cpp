@@ -67,14 +67,14 @@ mlir::func::FuncOp
 fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp,
                                     const mlir::SymbolTable *symbolTable,
                                     llvm::StringRef name) {
-  if (symbolTable)
-    if (auto func = symbolTable->lookup<mlir::func::FuncOp>(name)) {
+  if (symbolTable) {
+    auto func = symbolTable->lookup<mlir::func::FuncOp>(name);
 #ifdef EXPENSIVE_CHECKS
-      assert(func == modOp.lookupSymbol<mlir::func::FuncOp>(name) &&
-             "symbolTable and module out of sync");
+    assert(func == modOp.lookupSymbol<mlir::func::FuncOp>(name) &&
+           "symbolTable and module out of sync");
 #endif
-      return func;
-    }
+    return func;
+  }
   return modOp.lookupSymbol<mlir::func::FuncOp>(name);
 }
 
@@ -82,15 +82,17 @@ mlir::func::FuncOp
 fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp,
                                     const mlir::SymbolTable *symbolTable,
                                     mlir::SymbolRefAttr symbol) {
-  if (symbolTable)
-    if (auto func = symbolTable->lookup<mlir::func::FuncOp>(
-            symbol.getLeafReference())) {
+  // The symbol table only covers the module's own symbols: a nested reference
+  // must be resolved through the nested symbol tables.
+  if (symbolTable && symbol.getNestedReferences().empty()) {
+    auto func =
+        symbolTable->lookup<mlir::func::FuncOp>(symbol.getRootReference());
 #ifdef EXPENSIVE_CHECKS
-      assert(func == modOp.lookupSymbol<mlir::func::FuncOp>(symbol) &&
-             "symbolTable and module out of sync");
+    assert(func == modOp.lookupSymbol<mlir::func::FuncOp>(symbol) &&
+           "symbolTable and module out of sync");
 #endif
-      return func;
-    }
+    return func;
+  }
   return modOp.lookupSymbol<mlir::func::FuncOp>(symbol);
 }
 
@@ -98,14 +100,14 @@ fir::GlobalOp
 fir::FirOpBuilder::getNamedGlobal(mlir::ModuleOp modOp,
                                   const mlir::SymbolTable *symbolTable,
                                   llvm::StringRef name) {
-  if (symbolTable)
-    if (auto global = symbolTable->lookup<fir::GlobalOp>(name)) {
+  if (symbolTable) {
+    auto global = symbolTable->lookup<fir::GlobalOp>(name);
 #ifdef EXPENSIVE_CHECKS
-      assert(global == modOp.lookupSymbol<fir::GlobalOp>(name) &&
-             "symbolTable and module out of sync");
+    assert(global == modOp.lookupSymbol<fir::GlobalOp>(name) &&
+           "symbolTable and module out of sync");
 #endif
-      return global;
-    }
+    return global;
+  }
   return modOp.lookupSymbol<fir::GlobalOp>(name);
 }
 
@@ -161,6 +163,24 @@ mlir::Value fir::FirOpBuilder::createIntegerConstant(mlir::Location loc,
     else if (intType.isSigned())
       TODO(loc, "signed integer constant");
   }
+
+  mlir::Value cstValue = mlir::arith::ConstantOp::create(
+      *this, loc, cstType, getIntegerAttr(cstType, cst));
+  return createConvert(loc, ty, cstValue);
+}
+
+mlir::Value fir::FirOpBuilder::createIntegerConstant(mlir::Location loc,
+                                                     mlir::Type ty,
+                                                     const llvm::APInt &cst) {
+  auto intType = mlir::cast<mlir::IntegerType>(ty);
+  assert(intType.getWidth() == cst.getBitWidth() && "bit width mismatch");
+  // Signed and unsigned constants must be encoded as signless
+  // arith.constant followed by fir.convert cast.
+  mlir::Type cstType = ty;
+  if (intType.isUnsigned())
+    cstType = mlir::IntegerType::get(getContext(), intType.getWidth());
+  else if (intType.isSigned())
+    TODO(loc, "signed integer constant");
 
   mlir::Value cstValue = mlir::arith::ConstantOp::create(
       *this, loc, cstType, getIntegerAttr(cstType, cst));
@@ -347,7 +367,8 @@ mlir::Value fir::FirOpBuilder::createTemporaryAlloc(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::ValueRange lenParams, mlir::ValueRange shape,
     llvm::ArrayRef<mlir::NamedAttribute> attrs,
-    std::optional<Fortran::common::CUDADataAttr> cudaAttr) {
+    std::optional<Fortran::common::CUDADataAttr> cudaAttr,
+    std::optional<std::int64_t> alignment) {
   assert(!mlir::isa<fir::ReferenceType>(type) && "cannot be a reference");
   // If the alloca is inside an OpenMP Op which will be outlined then pin
   // the alloca here.
@@ -359,9 +380,12 @@ mlir::Value fir::FirOpBuilder::createTemporaryAlloc(
                                 /*unique_name=*/llvm::StringRef{}, name, attr,
                                 lenParams, shape, attrs);
   } else {
-    return fir::AllocaOp::create(*this, loc, type,
-                                 /*unique_name=*/llvm::StringRef{}, name,
-                                 pinned, lenParams, shape, attrs);
+    auto alloca = fir::AllocaOp::create(*this, loc, type,
+                                        /*unique_name=*/llvm::StringRef{}, name,
+                                        pinned, lenParams, shape, attrs);
+    if (alignment)
+      alloca.setAlignment(*alignment);
+    return alloca;
   }
 }
 
@@ -371,7 +395,8 @@ mlir::Value fir::FirOpBuilder::createTemporary(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::ValueRange shape, mlir::ValueRange lenParams,
     llvm::ArrayRef<mlir::NamedAttribute> attrs,
-    std::optional<Fortran::common::CUDADataAttr> cudaAttr) {
+    std::optional<Fortran::common::CUDADataAttr> cudaAttr,
+    std::optional<std::int64_t> alignment) {
   llvm::SmallVector<mlir::Value> dynamicShape =
       fir::factory::elideExtentsAlreadyInType(type, shape);
   llvm::SmallVector<mlir::Value> dynamicLength =
@@ -383,8 +408,8 @@ mlir::Value fir::FirOpBuilder::createTemporary(
     setInsertionPointToStart(getAllocaBlock());
   }
 
-  mlir::Value ae = createTemporaryAlloc(loc, type, name, dynamicLength,
-                                        dynamicShape, attrs, cudaAttr);
+  mlir::Value ae = createTemporaryAlloc(
+      loc, type, name, dynamicLength, dynamicShape, attrs, cudaAttr, alignment);
 
   if (hoistAlloc)
     restoreInsertionPoint(insPt);
@@ -394,23 +419,28 @@ mlir::Value fir::FirOpBuilder::createTemporary(
 mlir::Value fir::FirOpBuilder::createHeapTemporary(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::ValueRange shape, mlir::ValueRange lenParams,
-    llvm::ArrayRef<mlir::NamedAttribute> attrs) {
+    llvm::ArrayRef<mlir::NamedAttribute> attrs,
+    std::optional<std::int64_t> alignment) {
   llvm::SmallVector<mlir::Value> dynamicShape =
       fir::factory::elideExtentsAlreadyInType(type, shape);
   llvm::SmallVector<mlir::Value> dynamicLength =
       fir::factory::elideLengthsAlreadyInType(type, lenParams);
 
   assert(!mlir::isa<fir::ReferenceType>(type) && "cannot be a reference");
-  return fir::AllocMemOp::create(*this, loc, type,
-                                 /*unique_name=*/llvm::StringRef{}, name,
-                                 dynamicLength, dynamicShape, attrs);
+  auto heap = fir::AllocMemOp::create(*this, loc, type,
+                                      /*unique_name=*/llvm::StringRef{}, name,
+                                      dynamicLength, dynamicShape, attrs);
+  if (alignment)
+    heap.setAlignment(*alignment);
+  return heap;
 }
 
 std::pair<mlir::Value, bool> fir::FirOpBuilder::createAndDeclareTemp(
     mlir::Location loc, mlir::Type baseType, mlir::Value shape,
     llvm::ArrayRef<mlir::Value> extents, llvm::ArrayRef<mlir::Value> typeParams,
     const std::function<decltype(FirOpBuilder::genTempDeclareOp)> &genDeclare,
-    mlir::Value polymorphicMold, bool useStack, llvm::StringRef tmpName) {
+    mlir::Value polymorphicMold, bool useStack, llvm::StringRef tmpName,
+    std::optional<std::int64_t> alignment) {
   if (polymorphicMold) {
     // Create *allocated* polymorphic temporary using the dynamic type
     // of the mold and the provided shape/extents.
@@ -426,9 +456,12 @@ std::pair<mlir::Value, bool> fir::FirOpBuilder::createAndDeclareTemp(
   }
   mlir::Value allocmem;
   if (useStack)
-    allocmem = createTemporary(loc, baseType, tmpName, extents, typeParams);
+    allocmem =
+        createTemporary(loc, baseType, tmpName, extents, typeParams,
+                        /*attrs=*/{}, /*cudaAttr=*/std::nullopt, alignment);
   else
-    allocmem = createHeapTemporary(loc, baseType, tmpName, extents, typeParams);
+    allocmem = createHeapTemporary(loc, baseType, tmpName, extents, typeParams,
+                                   /*attrs=*/{}, alignment);
   mlir::Value base = genDeclare(*this, loc, allocmem, tmpName, shape,
                                 typeParams, fir::FortranVariableFlagsAttr{});
   return {base, !useStack};
@@ -483,8 +516,7 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   if (setDefaultAlignment && mlir::isa<fir::SequenceType>(type))
     glob.setAlignment(fir::defaultArrayGlobalAlignment);
   restoreInsertionPoint(insertPt);
-  if (symbolTable)
-    symbolTable->insert(glob);
+  fir::registerSymbol(symbolTable, glob);
   return glob;
 }
 
@@ -500,6 +532,9 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   setInsertionPoint(module.getBody(), module.getBody()->end());
   auto glob = fir::GlobalOp::create(*this, loc, name, isConst, isTarget, type,
                                     mlir::Attribute{}, linkage);
+  // Register the global before building its body so that a lookup made by
+  // the body builder finds it, as it did when lookups walked the module.
+  fir::registerSymbol(symbolTable, glob);
   // Set default alignment for array globals.
   if (setDefaultAlignment && mlir::isa<fir::SequenceType>(type))
     glob.setAlignment(fir::defaultArrayGlobalAlignment);
@@ -509,8 +544,6 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   setInsertionPointToStart(&block);
   bodyBuilder(*this);
   restoreInsertionPoint(insertPt);
-  if (symbolTable)
-    symbolTable->insert(glob);
   return glob;
 }
 
@@ -525,8 +558,7 @@ fir::FirOpBuilder::createTypeInfoOp(mlir::Location loc,
   InsertPoint insertPoint = saveInsertionPoint();
   setInsertionPoint(module.getBody(), module.getBody()->end());
   auto typeInfo = fir::TypeInfoOp::create(*this, loc, recordType, parentType);
-  if (symbolTable)
-    symbolTable->insert(typeInfo);
+  fir::registerSymbol(symbolTable, typeInfo);
   return {typeInfo, insertPoint};
 }
 
@@ -859,7 +891,9 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc, mlir::Type boxType,
       tdesc);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void fir::FirOpBuilder::dumpFunc() { getFunction().dump(); }
+#endif
 
 static mlir::Value
 genNullPointerComparison(fir::FirOpBuilder &builder, mlir::Location loc,

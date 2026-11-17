@@ -1,4 +1,5 @@
-// Test that -fstack-arrays is not honored inside an offload region: the region
+// Test that -fstack-arrays is not honored inside an offload region (an OpenACC
+// compute construct, a cuf.kernel loop or a gpu.launch): the region
 // runs on the device stack, which is far smaller than the host one, so its
 // runtime-sized temporaries stay on the heap while the same allocation in host
 // code goes on the stack. The size based part of the policy still applies, so
@@ -101,6 +102,27 @@ func.func @dynamic_temp_in_cuf_kernel(%n: index) {
     fir.store %v to %e : !fir.ref<i32>
     fir.freemem %0 : !fir.heap<!fir.array<?xi32>>
     "fir.end"() : () -> ()
+  }
+  return
+}
+
+// A runtime-sized alloca inside a gpu.launch is moved to the heap: the launch
+// body runs on the device as well.
+// CHECK-LABEL: func.func @dynamic_alloca_in_gpu_launch
+// CHECK: gpu.launch
+// CHECK: fir.allocmem !fir.array<?xi32>, %{{.*}}
+// CHECK: fir.freemem
+// CHECK-NOT: fir.alloca
+func.func @dynamic_alloca_in_gpu_launch(%n: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %v = arith.constant 0 : i32
+  gpu.launch blocks(%bx, %by, %bz) in (%sbx = %c1, %sby = %c1, %sbz = %c1)
+             threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) {
+    %0 = fir.alloca !fir.array<?xi32>, %n
+    %e = fir.coordinate_of %0, %c0 : (!fir.ref<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+    fir.store %v to %e : !fir.ref<i32>
+    gpu.terminator
   }
   return
 }

@@ -19,9 +19,7 @@ using namespace cir;
 #include "clang/CIR/MissingFeatures.h"
 
 bool CIRGlobalValueInterface::hasDefaultVisibility() {
-  assert(!cir::MissingFeatures::hiddenVisibility());
-  assert(!cir::MissingFeatures::protectedVisibility());
-  return isPublic() || isPrivate();
+  return getGlobalVisibility() == cir::VisibilityKind::Default;
 }
 
 bool CIRGlobalValueInterface::canBenefitFromLocalAlias() {

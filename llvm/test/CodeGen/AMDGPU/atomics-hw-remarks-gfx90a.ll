@@ -1,14 +1,13 @@
-; RUN: llc -mtriple=amdgpu9.0a --pass-remarks=si-lower \
-; RUN:      %s -o - 2>&1 | FileCheck %s --check-prefix=GFX90A-HW
+; RUN: llc -mtriple=amdgpu9.0a --pass-remarks='si-lower|atomic-expand' %s -o - 2>&1 | FileCheck --check-prefix=GFX90A-HW %s
 
-; GFX90A-HW: Hardware instruction generated for atomic fadd operation at memory scope agent due to an unsafe request.
-; GFX90A-HW: Hardware instruction generated for atomic fadd operation at memory scope workgroup due to an unsafe request.
-; GFX90A-HW: Hardware instruction generated for atomic fadd operation at memory scope wavefront due to an unsafe request.
-; GFX90A-HW: Hardware instruction generated for atomic fadd operation at memory scope singlethread due to an unsafe request.
-; GFX90A-HW: Hardware instruction generated for atomic fadd operation at memory scope agent-one-as due to an unsafe request.
-; GFX90A-HW: Hardware instruction generated for atomic fadd operation at memory scope workgroup-one-as due to an unsafe request.
-; GFX90A-HW: Hardware instruction generated for atomic fadd operation at memory scope wavefront-one-as due to an unsafe request.
-; GFX90A-HW: Hardware instruction generated for atomic fadd operation at memory scope singlethread-one-as due to an unsafe request.
+; GFX90A-HW: hardware instruction generated for atomic fadd at agent scope since memory is not fine-grained (!amdgpu.no.fine.grained.memory), and the floating-point environment flushes denormals
+; GFX90A-HW: hardware instruction generated for atomic fadd at workgroup scope since memory is not fine-grained (!amdgpu.no.fine.grained.memory), and the floating-point environment flushes denormals
+; GFX90A-HW: hardware instruction generated for atomic fadd at wavefront scope since memory is not fine-grained (!amdgpu.no.fine.grained.memory), and the floating-point environment flushes denormals
+; GFX90A-HW: hardware instruction generated for atomic fadd at singlethread scope since memory is not fine-grained (!amdgpu.no.fine.grained.memory), and the floating-point environment flushes denormals
+; GFX90A-HW: hardware instruction generated for atomic fadd at agent-one-as scope since memory is not fine-grained (!amdgpu.no.fine.grained.memory), and the floating-point environment flushes denormals
+; GFX90A-HW: hardware instruction generated for atomic fadd at workgroup-one-as scope since memory is not fine-grained (!amdgpu.no.fine.grained.memory), and the floating-point environment flushes denormals
+; GFX90A-HW: hardware instruction generated for atomic fadd at wavefront-one-as scope since memory is not fine-grained (!amdgpu.no.fine.grained.memory), and the floating-point environment flushes denormals
+; GFX90A-HW: hardware instruction generated for atomic fadd at singlethread-one-as scope since memory is not fine-grained (!amdgpu.no.fine.grained.memory), and the floating-point environment flushes denormals
 
 ; GFX90A-HW-LABEL: atomic_add_unsafe_hw:
 ; GFX90A-HW:    ds_add_f64 v0, v[2:3]

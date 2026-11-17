@@ -15,15 +15,18 @@ define void @my_function(ptr addrspace(3) %lds_arg) sanitize_address {
 ; CHECK-LABEL: define void @my_function(
 ; CHECK-SAME: ptr addrspace(3) [[LDS_ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [1 x ptr addrspace(3)], ptr addrspace(1) @llvm.amdgcn.sw.lds.base.table, i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr addrspace(1) @llvm.amdgcn.sw.lds.base.table, i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(3), ptr addrspace(1) [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr addrspace(3) [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr addrspace(3) [[LDS_ARG]] to i32
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP4]], i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sext i32 [[TMP5]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP4]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[LDS_VAL:%.*]] = load i32, ptr addrspace(1) [[TMP6]], align 4
 ; CHECK-NEXT:    [[NEW_LDS_VAL:%.*]] = add i32 [[LDS_VAL]], 1
 ; CHECK-NEXT:    [[TMP24:%.*]] = ptrtoint ptr addrspace(3) [[LDS_ARG]] to i32
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP4]], i32 [[TMP24]]
+; CHECK-NEXT:    [[TMP11:%.*]] = sext i32 [[TMP24]] to i64
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP4]], i64 [[TMP11]]
 ; CHECK-NEXT:    store i32 [[NEW_LDS_VAL]], ptr addrspace(1) [[TMP25]], align 4
 ; CHECK-NEXT:    ret void
 ;

@@ -12,9 +12,11 @@
 
 ; CHECK: .lrodata.cst16 {{.*}} AMl
 ; CHECK: .lrodata.cst4  {{.*}} AMl
+; CHECK: .lrodata       {{.*}} Al
 
 ; MED: .rodata.cst16 {{.*}} AM
 ; MED: .rodata.cst4  {{.*}} AM
+; MED: .rodata       {{.*}} A {{.*}}
 
 ; ASM-MED: movaps .LCPI0_0(%rip),
 ; ASM-LARGE: movabsq $.LCPI0_0@GOTOFF,
@@ -65,6 +67,14 @@ exit:
 define float @scalar_const(float %x) {
   %r = fadd float %x, 1.0
   ret float %r
+}
+
+; A 64-byte vector constant is not mergeable and goes to .lrodata.
+define <16 x float> @wide() "target-features"="+avx512f" {
+  ret <16 x float> <float 1.0, float 2.0, float 3.0, float 4.0,
+                    float 5.0, float 6.0, float 7.0, float 8.0,
+                    float 9.0, float 10.0, float 11.0, float 12.0,
+                    float 13.0, float 14.0, float 15.0, float 16.0>
 }
 
 !llvm.module.flags = !{!1}

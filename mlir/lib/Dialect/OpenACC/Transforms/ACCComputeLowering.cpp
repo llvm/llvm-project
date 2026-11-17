@@ -43,6 +43,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -75,7 +76,6 @@ using namespace mlir;
 using namespace mlir::acc;
 
 namespace {
-
 //===----------------------------------------------------------------------===//
 // Helper functions
 //===----------------------------------------------------------------------===//
@@ -162,7 +162,8 @@ struct SizedLevel {
 };
 using SizedLevelMap = DenseMap<Operation *, SmallVector<SizedLevel>>;
 
-/// Record a sized clause if `size` is a constant; NYI otherwise.
+/// Record a sized clause if `size` is a constant. A non-constant vector or
+/// worker clause is ignored. Other non-constant sizes are NYI.
 static LogicalResult tryAddSizedLevel(SizedLevelMap &sizedLevelMap,
                                       Operation *computeOp, LoopOp loopOp,
                                       ParLevel level, Value size,
@@ -171,6 +172,14 @@ static LogicalResult tryAddSizedLevel(SizedLevelMap &sizedLevelMap,
     return success();
   std::optional<int64_t> constSize = getConstantIntValue(size);
   if (!constSize) {
+    if (level == ParLevel::vector || level == ParLevel::worker) {
+      accSupport.emitRemark(loopOp,
+                            level == ParLevel::vector
+                                ? "ignoring non-constant vector clause"
+                                : "ignoring non-constant worker clause",
+                            DEBUG_TYPE);
+      return success();
+    }
     accSupport.emitNYI(loopOp.getLoc(),
                        "non-constant sized parallelism clause");
     return failure();
@@ -337,10 +346,23 @@ public:
   LogicalResult matchAndRewrite(LoopOp loopOp,
                                 PatternRewriter &rewriter) const override {
     if (loopOp.getUnstructured()) {
+      // An independent loop is asserted parallel but cannot be parallelized
+      // once it is lowered as a region of blocks. Record that, so the loss
+      // can be reported instead of silently running the loop sequentially.
+      bool lostIndependence =
+          loopOp.getDefaultOrDeviceTypeParallelism(deviceType) ==
+              LoopParMode::loop_independent &&
+          !isOpInSerialRegion(loopOp) &&
+          (isOpInComputeRegion(loopOp) ||
+           isSpecializedAccRoutine(
+               loopOp->getParentOfType<FunctionOpInterface>()));
       auto executeRegion =
           convertUnstructuredACCLoopToSCFExecuteRegion(loopOp, rewriter);
       if (!executeRegion)
         return failure();
+      if (lostIndependence)
+        executeRegion->setDiscardableAttr(
+            getUnstructuredIndependentLoopAttrName(), rewriter.getUnitAttr());
       rewriter.replaceOp(loopOp, executeRegion);
       return success();
     }
@@ -463,6 +485,11 @@ class ACCComputeLowering
 public:
   using ACCComputeLoweringBase::ACCComputeLoweringBase;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ACCComputeLoweringBase::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   void runOnOperation() override {
     auto op = getOperation();
     auto *context = op.getContext();
@@ -493,5 +520,4 @@ public:
       return signalPassFailure();
   }
 };
-
 } // namespace

@@ -1,4 +1,3 @@
-import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
@@ -25,12 +24,14 @@ class TestMoveNearest(TestBase):
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target, VALID_TARGET)
 
-        lldbutil.run_break_set_by_symbol(self, "main", sym_exact=True)
+        bkpt_id = lldbutil.run_break_set_by_symbol(self, "main", sym_exact=True)
         environment = self.registerSharedLibrariesWithTarget(target, ["foo"])
-        process = target.LaunchSimple(
-            None, environment, self.get_process_working_directory()
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetEnvironmentEntries(environment, False)
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        lldbutil.run_to_breakpoint_do_run(
+            self, target, target.FindBreakpointByID(bkpt_id), launch_info
         )
-        self.assertState(process.GetState(), lldb.eStateStopped)
 
         # Regardless of the -m value the breakpoint should have exactly one
         # location on the foo functions

@@ -20,16 +20,24 @@ def VectorUnrollOpInterface : OpInterface<"VectorUnrollOpInterface"> {
     Encodes properties of an operation on vectors that can be unrolled.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/VectorInterfaces.h"];
 
   let methods = [
     InterfaceMethod<
       /*desc=*/[{
-        Return the shape ratio of unrolling to the target vector shape
-        `targetShape`. Return `std::nullopt` if the op cannot be unrolled to the
-        target vector shape.
+        Return the shape of the iteration space to unroll.
+
+        For most vector operations, this is identical to the result shape.
+        For operations such as vector.contract, it also includes reduction
+        dimensions that are absent from the result shape, so unrolling accounts
+        for all iteration dimensions.
+
+        For operations that support both vector and scalar operands, return
+        the iteration shape when operating on vectors, or std::nullopt when
+        operating on scalars to indicate that there is nothing to unroll.
       }],
       /*retTy=*/"::std::optional<::llvm::SmallVector<int64_t, 4>>",
-      /*methodName=*/"getShapeForUnroll",
+      /*methodName=*/"getIterationShapeToUnroll",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
@@ -74,6 +82,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     transfer (see `getPermutationMap`).
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/VectorInterfaces.h"];
 
   let methods = [
     InterfaceMethod<

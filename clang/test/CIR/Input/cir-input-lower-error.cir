@@ -1,0 +1,24 @@
+// Errors from lowering ClangIR input to LLVM IR are diagnosed, not crashed on.
+// The ctor region of @gs is only removed by LoweringPrepare, which is not run
+// on ClangIR input.
+
+// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - 2>&1 \
+// RUN:   | FileCheck %s --implicit-check-not=error:
+// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-obj %s -o /dev/null 2>&1 \
+// RUN:   | FileCheck %s --implicit-check-not=error:
+
+// No partial output is left behind.
+// RUN: rm -f %t.o && not %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-obj %s -o %t.o 2>/dev/null
+// RUN: not ls %t.o
+
+// CHECK: cir-input-lower-error.cir:[[@LINE+6]]:3: error: GlobalOp ctor and dtor regions should be removed in LoweringPrepare
+// CHECK: cir-input-lower-error.cir:[[@LINE+5]]:3: error: failed to legalize operation 'cir.global'
+
+!rec_S = !cir.struct<"S" {data !cir.int<s, 32>}>
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func private @_ZN1SC1Ev(!cir.ptr<!rec_S>)
+  cir.global external @gs = #cir.zero : !rec_S ctor {
+    %0 = cir.get_global @gs : !cir.ptr<!rec_S>
+    cir.call @_ZN1SC1Ev(%0) : (!cir.ptr<!rec_S>) -> ()
+  }
+}

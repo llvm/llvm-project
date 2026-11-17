@@ -89,7 +89,7 @@ protected:
   }
 
 public:
-  CtxProfAnalysisTest() {
+  CtxProfAnalysisTest() : PB(C) {
     PB.registerModuleAnalyses(MAM);
     PB.registerCGSCCAnalyses(CGAM);
     PB.registerFunctionAnalyses(FAM);

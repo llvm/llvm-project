@@ -745,7 +745,7 @@ func.func @unused_iteration_space_dim_contraction(
 
 func.func @unused_iteration_space_dim_contraction(
     %lhs: tensor<8x4x1xf32>, %rhs: tensor<1x64xf32>, %init: tensor<4x64xf32>) {
-  // expected-error @+1 {{iteration space dim at index 3 is neither a contracting dim nor of parallel iteration type}}
+  // expected-error @+1 {{reduction dim at index 3 must appear in both LHS and RHS}}
   linalg.contract
       indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>,
                        affine_map<(d0, d1, d2, d3) -> (d2, d1)>,

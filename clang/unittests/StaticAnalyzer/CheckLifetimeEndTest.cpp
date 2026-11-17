@@ -41,7 +41,7 @@ public:
                                      D->getDeclName().getAsString(), Count);
 
     ExplodedNode *Node = C.generateNonFatalErrorNode(State);
-    EXPECT_TRUE(Node != nullptr);
+    ASSERT_TRUE(Node != nullptr);
 
     auto Report = std::make_unique<PathSensitiveBugReport>(
         LifetimeEndNode, Description.str(), Node);

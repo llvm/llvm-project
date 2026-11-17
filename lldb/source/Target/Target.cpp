@@ -196,7 +196,8 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
       m_target_session_name(
           llvm::formatv("Session {0}", m_target_unique_id).str()),
       m_frame_recognizer_manager_up(
-          std::make_unique<StackFrameRecognizerManager>()) {
+          std::make_unique<StackFrameRecognizerManager>()),
+      m_target_groups(debugger, debugger.GetTargetGroupList().m_mutex) {
   SetEventName(eBroadcastBitBreakpointChanged, "breakpoint-changed");
   SetEventName(eBroadcastBitModulesLoaded, "modules-loaded");
   SetEventName(eBroadcastBitModulesUnloaded, "modules-unloaded");
@@ -247,7 +248,11 @@ void Target::PrimeFromDummyTarget(Target &target) {
   for (auto const &elem : target.m_breakpoint_overrides) {
     BreakpointResolverOverrideUP new_override_up =
         elem.second->CopyIntoNewTarget(*this);
-    if (new_override_up->Validate())
+    if (llvm::Error error = new_override_up->HasErrors())
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Breakpoints), std::move(error),
+                     "Can't copy breakpoint override from the dummy target: "
+                     "{0}");
+    else
       AddBreakpointResolverOverride(std::move(new_override_up));
   }
 
@@ -387,6 +392,7 @@ void Target::SetREPL(lldb::LanguageType language, lldb::REPLSP repl_sp) {
 }
 
 void Target::Destroy() {
+  m_target_groups.RemoveTarget(shared_from_this());
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   m_valid = false;
   DeleteCurrentProcess();
@@ -409,6 +415,18 @@ void Target::Destroy() {
   m_repl_map.clear();
   Args signal_args;
   ClearDummySignals(signal_args);
+}
+
+std::vector<TargetGroupSP> Target::GetTargetGroups() const {
+  return m_target_groups.GetGroups();
+}
+
+void Target::AddTargetGroup(const TargetGroupSP &group_sp) {
+  m_target_groups.Add(group_sp);
+}
+
+void Target::RemoveTargetGroup(const TargetGroup *group) {
+  m_target_groups.Remove(group);
 }
 
 llvm::StringRef Target::GetABIName() const {
@@ -977,7 +995,7 @@ llvm::Expected<lldb::user_id_t> Target::AddBreakpointResolverOverride(
       new ScriptedBreakpointResolverOverride(*this, std::string(description),
                                              type_mask, std::string(class_name),
                                              impl));
-  llvm::Error error = new_override_up->Validate();
+  llvm::Error error = new_override_up->HasErrors();
   if (error)
     return error;
 
@@ -1958,6 +1976,39 @@ void Target::NotifyModulesRemoved(lldb_private::ModuleList &module_list) {
   ModulesDidUnload(module_list, false);
 }
 
+bool Target::RecordScriptingResources(Module &module) {
+  Log *log = GetLog(LLDBLog::Modules | LLDBLog::Script);
+
+  if (GetReloadModuleScripts()) {
+    LLDB_LOG(log,
+             "Loading the scripts of '{0}' every time: "
+             "target.experimental.reload-module-scripts is set",
+             module.GetFileSpec());
+    return true;
+  }
+
+  // We key the record by UUID rather than by Module, because LLDB can create a
+  // new Module for the same binary, for example after the file moved. Running
+  // its scripts again would duplicate what they already added to this target,
+  // like stop hooks.
+  const UUID &uuid = module.GetUUID();
+  if (!uuid.IsValid()) {
+    LLDB_LOG(log, "Loading the scripts of '{0}' every time: it has no UUID",
+             module.GetFileSpec());
+    return true;
+  }
+
+  std::lock_guard<std::mutex> guard(m_loaded_scripts_mutex);
+  if (!m_loaded_scripts.insert(uuid).second) {
+    LLDB_LOG(log,
+             "Skipping the scripts of '{0}': this target already loaded them",
+             module.GetFileSpec());
+    return false;
+  }
+  LLDB_LOG(log, "Loading the scripts of '{0}'", module.GetFileSpec());
+  return true;
+}
+
 void Target::ModulesDidLoad(ModuleList &module_list) {
   if (GetPreloadSymbols())
     module_list.PreloadSymbols(GetParallelModuleLoad());
@@ -1979,6 +2030,10 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
     if (m_process_sp) {
       m_process_sp->ModulesDidLoad(module_list);
     }
+    m_scratch_type_system_map.ForEach([&](lldb::TypeSystemSP type_system) {
+      type_system->ModulesDidLoad(module_list);
+      return true;
+    });
     RunModuleHooks(/*is_load=*/true);
     auto data_sp =
         std::make_shared<TargetEventData>(shared_from_this(), module_list);
@@ -2223,6 +2278,7 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
   if (file_cache_read_buffer && file_cache_bytes_read > 0) {
     // Reading from the process failed. If we've previously succeeded in reading
     // something from the file cache, then copy that over and return that.
+    error.Clear();
     std::memcpy(dst, file_cache_read_buffer.get(), file_cache_bytes_read);
     return file_cache_bytes_read;
   }
@@ -2468,7 +2524,8 @@ bool Target::ReadPointerFromMemory(const Address &addr, Status &error,
 }
 
 ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
-                                   bool notify, Status *error_ptr) {
+                                   bool notify, Status *error_ptr,
+                                   bool invoke_symbol_locators) {
   ModuleSP module_sp;
 
   Status error;
@@ -2528,16 +2585,16 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
       // suitable image.
       if (m_image_search_paths.GetSize()) {
         ModuleSpec transformed_spec(module_spec);
-        ConstString transformed_dir;
+        std::string transformed_dir;
         if (m_image_search_paths.RemapPath(
-                ConstString(module_spec.GetFileSpec().GetDirectory()),
-                transformed_dir)) {
+                module_spec.GetFileSpec().GetDirectory(), transformed_dir)) {
           transformed_spec.GetFileSpec().SetDirectory(transformed_dir);
           transformed_spec.GetFileSpec().SetFilename(
                 module_spec.GetFileSpec().GetFilename());
           transformed_spec.SetTarget(shared_from_this());
-          error = ModuleList::GetSharedModule(transformed_spec, module_sp,
-                                              &old_modules, &did_create_module);
+          error = ModuleList::GetSharedModule(
+              transformed_spec, module_sp, &old_modules, &did_create_module,
+              /*invoke_locate_callback=*/true, invoke_symbol_locators);
         }
       }
     }
@@ -2553,11 +2610,12 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
       // cache.
       if (module_spec.GetUUID().IsValid()) {
         // We have a UUID, it is OK to check the global module list...
-        error = ModuleList::GetSharedModule(module_spec, module_sp,
-                                            &old_modules, &did_create_module);
+        error = ModuleList::GetSharedModule(
+            module_spec, module_sp, &old_modules, &did_create_module,
+            /*invoke_locate_callback=*/true, invoke_symbol_locators);
       }
 
-      if (!module_sp) {
+      if (!module_sp && invoke_symbol_locators) {
         // The platform is responsible for finding and caching an appropriate
         // module in the shared module cache.
         if (m_platform_sp) {
@@ -3351,9 +3409,19 @@ bool Target::RunStopHooks(bool at_initial_stop) {
   // active_hooks list before iterating over the hooks has this effect.
   for (auto cur_hook_sp : active_hooks) {
     bool any_thread_matched = false;
+    bool deleted_one_shot = false;
     for (auto exc_ctx : exc_ctx_with_reasons) {
       if (!cur_hook_sp->ExecutionContextPasses(exc_ctx))
         continue;
+
+      // A one-shot hook runs for every thread it applies to at this stop, and
+      // votes on continuing like any other hook. We delete it before it first
+      // runs, so it can't run again at a stop it causes by resuming the
+      // process. active_hooks still holds it for the other threads.
+      if (cur_hook_sp->IsOneShot() && !deleted_one_shot) {
+        RemoveStopHookByID(cur_hook_sp->GetID());
+        deleted_one_shot = true;
+      }
 
       bool suppress_output = cur_hook_sp->GetSuppressOutput();
       if (print_hook_header && !any_thread_matched && !suppress_output) {
@@ -4207,7 +4275,8 @@ Target::StopHook::StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid)
 Target::StopHook::StopHook(const StopHook &rhs)
     : UserID(rhs.GetID()), m_target_sp(rhs.m_target_sp),
       m_specifier_sp(rhs.m_specifier_sp), m_thread_spec_up(),
-      m_active(rhs.m_active), m_auto_continue(rhs.m_auto_continue) {
+      m_active(rhs.m_active), m_auto_continue(rhs.m_auto_continue),
+      m_one_shot(rhs.m_one_shot) {
   if (rhs.m_thread_spec_up)
     m_thread_spec_up = std::make_unique<ThreadSpec>(*rhs.m_thread_spec_up);
 }
@@ -4255,6 +4324,9 @@ void Target::StopHook::GetDescription(Stream &s,
 
   if (m_auto_continue)
     s.Indent("AutoContinue on\n");
+
+  if (m_one_shot)
+    s.Indent("One-shot\n");
 
   if (m_specifier_sp) {
     s.Indent();
@@ -5276,6 +5348,11 @@ bool TargetProperties::GetUseDILForCreatingValues() const {
         .value_or(false);
   else
     return true;
+}
+
+bool TargetProperties::GetReloadModuleScripts() const {
+  return GetExperimentalPropertyValue(ePropertyReloadModuleScripts)
+      .value_or(false);
 }
 
 void TargetProperties::SetUseDILForCreatingValues(bool b) {

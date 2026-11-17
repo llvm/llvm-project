@@ -284,20 +284,20 @@ define i64 @even_index_sum_uadd_with_overflow(ptr %p, i64 %count) {
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[NN]])
 ; CHECK-NEXT:    [[EZ:%.*]] = icmp eq i64 [[COUNT]], 0
 ; CHECK-NEXT:    br i1 [[EZ]], label %[[EXIT:.*]], label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER1:.*]]:
+; CHECK-NEXT:    [[OOB:%.*]] = icmp ult i64 [[IV:%.*]], [[COUNT]]
+; CHECK-NEXT:    br i1 [[OOB]], label %[[LOOP_HEADER]], label %[[TRAP:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[ACC:%.*]] = phi i64 [ [[ACC_NEXT:%.*]], %[[BODY:.*]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[BODY]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[OOB:%.*]] = icmp ult i64 [[IV]], [[COUNT]]
-; CHECK-NEXT:    br i1 [[OOB]], label %[[BODY]], label %[[TRAP:.*]]
-; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[P]], i64 [[IV]]
+; CHECK-NEXT:    [[IV2:%.*]] = phi i64 [ [[IV]], %[[LOOP_HEADER1]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i64 [ [[ACC_NEXT:%.*]], %[[LOOP_HEADER1]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[P]], i64 [[IV2]]
 ; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[A]], align 8
 ; CHECK-NEXT:    [[ACC_NEXT]] = add i64 [[V]], [[ACC]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 2
-; CHECK-NEXT:    [[EC_NOT:%.*]] = icmp slt i64 [[IV_NEXT]], [[COUNT]]
-; CHECK-NEXT:    br i1 [[EC_NOT]], label %[[LOOP_HEADER]], label %[[EXIT]]
+; CHECK-NEXT:    [[IV]] = add nuw i64 [[IV2]], 2
+; CHECK-NEXT:    [[EC_NOT:%.*]] = icmp slt i64 [[IV]], [[COUNT]]
+; CHECK-NEXT:    br i1 [[EC_NOT]], label %[[LOOP_HEADER1]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[ACC_NEXT]], %[[BODY]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[ACC_NEXT]], %[[LOOP_HEADER]] ]
 ; CHECK-NEXT:    ret i64 [[R]]
 ; CHECK:       [[TRAP]]:
 ; CHECK-NEXT:    tail call void @llvm.trap()

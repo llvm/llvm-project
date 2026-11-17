@@ -10,6 +10,7 @@
 # GCN-NEXT: s_nop
 # GCN-NEXT: flat_load_dword
 name:            mai_hazard_pass_ordering_optimize_vcc_branch
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec

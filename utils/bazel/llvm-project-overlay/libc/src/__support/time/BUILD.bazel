@@ -1,0 +1,83 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "time",
+    hdrs = glob(["*.h"]),
+    deps = [
+        "//libc/hdr:time_macros",
+        "//libc/hdr/types:clockid_t",
+        "//libc/hdr/types:struct_timespec",
+        "//libc/hdr/types:time_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:error_or",
+        "//libc/src/__support:libc_assert",
+        "//libc/src/__support/CPP:expected",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "clock_conversion",
+    hdrs = ["clock_conversion.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":clock_gettime",
+        ":time",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "clock_gettime",
+    srcs = ["linux/clock_gettime.cpp"],
+    hdrs = ["clock_gettime.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//libc/hdr/types:clockid_t",
+        "//libc/hdr/types:struct_timespec",
+        "//libc/src/__support:common",
+        "//libc/src/__support:error_or",
+        "//libc/src/__support/OSUtil:vdso",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:clock_gettime",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "clock_settime",
+    srcs = ["linux/clock_settime.cpp"],
+    hdrs = ["clock_settime.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//libc/hdr/types:clockid_t",
+        "//libc/hdr/types:struct_timespec",
+        "//libc/src/__support:common",
+        "//libc/src/__support:error_or",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:clock_settime",
+        "//libc/src/__support/macros:config",
+    ],
+)

@@ -170,7 +170,7 @@ if.then:                                          ; preds = %do.body1
 ; CHECK-NEXT: successors
 ; CHECK-NEXT: {{^ *$}}
 ; CHECK-NEXT:    %5:gr32 = MOV32rm $rip, 1, $noreg, @g_a, $noreg
-; CHECK-NEXT:    MOV32mr %stack.1.b.addr, 1, $noreg, 0, $noreg, killed %5
+; CHECK-NEXT:    MOV32mr %stack.1.b.addr, 1, $noreg, 0, $noreg, %5
 ; CHECK-NEXT:    DBG_VALUE %stack.1.b.addr, $noreg, ![[b]], !DIExpression(DW_OP_deref)
 ; CHECK-NEXT:    MOV32mi %stack.3.d.addr, 1, $noreg, 0, $noreg, 6
 ; CHECK-NEXT:    DBG_VALUE 8, $noreg, ![[e]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)

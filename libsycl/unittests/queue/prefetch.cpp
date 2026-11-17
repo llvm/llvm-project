@@ -25,7 +25,7 @@ TEST(Queue, TwoPrefetches) {
   mock::MockWrapper Mock;
   queue Q;
 
-  void *Ptr = reinterpret_cast<void *>(1);
+  const void *Ptr = reinterpret_cast<void *>(1);
 
   constexpr ol_mem_migration_flags_t ExpectedFlag =
       OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE;
