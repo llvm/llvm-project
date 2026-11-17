@@ -2718,7 +2718,8 @@ SDValue SITargetLowering::convertABITypeToValueType(SelectionDAG &DAG,
                       DAG.getValueType(ValVT));
     return DAG.getNode(ISD::TRUNCATE, SL, ValVT, Val);
   case CCValAssign::AExt:
-    return DAG.getNode(ISD::TRUNCATE, SL, ValVT, Val);
+    Val = DAG.getNode(ISD::TRUNCATE, SL, ValVT.changeTypeToInteger(), Val);
+    return DAG.getBitcast(ValVT, Val);
   default:
     llvm_unreachable("Unknown loc info!");
   }
@@ -2744,6 +2745,10 @@ SDValue SITargetLowering::lowerStackParameter(SelectionDAG &DAG,
 
   // Create load nodes to retrieve arguments from the stack.
   SDValue FIN = DAG.getFrameIndex(FI, MVT::i32);
+  MachinePointerInfo PtrInfo =
+      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI);
+  if (VA.getLocInfo() == CCValAssign::AExt)
+    return DAG.getLoad(VA.getValVT(), SL, Chain, FIN, PtrInfo);
 
   // For NON_EXTLOAD, generic code in getLoad assert(ValVT == MemVT)
   ISD::LoadExtType ExtType = ISD::NON_EXTLOAD;
@@ -2761,14 +2766,10 @@ SDValue SITargetLowering::lowerStackParameter(SelectionDAG &DAG,
   case CCValAssign::ZExt:
     ExtType = ISD::ZEXTLOAD;
     break;
-  case CCValAssign::AExt:
-    ExtType = ISD::EXTLOAD;
-    break;
   }
 
-  SDValue ArgValue = DAG.getExtLoad(
-      ExtType, SL, VA.getLocVT(), Chain, FIN,
-      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI), MemVT);
+  SDValue ArgValue =
+      DAG.getExtLoad(ExtType, SL, VA.getLocVT(), Chain, FIN, PtrInfo, MemVT);
 
   SDValue ConvertedVal = convertABITypeToValueType(DAG, ArgValue, VA, SL);
   if (ConvertedVal == ArgValue)
@@ -3816,10 +3817,7 @@ SDValue SITargetLowering::LowerFormalArguments(
       llvm_unreachable("Unexpected register class in LowerFormalArguments!");
 
     Reg = MF.addLiveIn(Reg, RC);
-    bool CopyAsI32 =
-        VT.getSizeInBits() == 16 &&
-        (RC == &AMDGPU::SGPR_32RegClass || !Subtarget->useRealTrue16Insts());
-    SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, CopyAsI32 ? MVT::i32 : VT);
+    SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, VT);
     if (Arg.Flags.isInReg() && RC == &AMDGPU::VGPR_32RegClass) {
       // FIXME: Need to forward the chains created by `CopyFromReg`s, make sure
       // they will read physical regs before any side effect instructions.
@@ -3828,9 +3826,6 @@ SDValue SITargetLowering::LowerFormalArguments(
       Val = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Val.getValueType(),
                         ReadFirstLane, Val);
     }
-
-    if (CopyAsI32)
-      Val = DAG.getBitcast(VT, DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Val));
 
     if (Arg.Flags.isSRet()) {
       // The return object should be reasonably addressable.
@@ -4548,6 +4543,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       Arg = DAG.getNode(ISD::SIGN_EXTEND, DL, VA.getLocVT(), Arg);
       break;
     case CCValAssign::AExt:
+      Arg = DAG.getBitcast(VA.getValVT().changeTypeToInteger(), Arg);
       Arg = DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), Arg);
       break;
     case CCValAssign::FPExt:
