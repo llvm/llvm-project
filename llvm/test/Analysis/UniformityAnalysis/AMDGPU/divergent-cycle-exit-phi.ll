@@ -117,8 +117,8 @@ exit.uniform:
 ; is the use of %i outside the cycle.
 define amdgpu_kernel void @header_divergent_cycle_exit_phi(i32 %n, i32 %m) {
 ; CHECK-LABEL: UniformityInfo for function 'header_divergent_cycle_exit_phi':
-; CHECK-NOT: DIVERGENT:   %i.lcssa
-; CHECK-NOT: DIVERGENT:   %r
+; CHECK: DIVERGENT:   %i.lcssa
+; CHECK: DIVERGENT:   %r
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %div.cond = icmp ult i32 %tid, 7
@@ -177,7 +177,7 @@ exit:
 ; blocks.
 define amdgpu_kernel void @nested_header_divergent_cycle_exit_phi(i32 %n, i32 %m) {
 ; CHECK-LABEL: UniformityInfo for function 'nested_header_divergent_cycle_exit_phi':
-; CHECK-NOT: DIVERGENT:   %i.lcssa
+; CHECK: DIVERGENT:   %i.lcssa
 ; CHECK-NOT: DIVERGENT:   %o.next
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
