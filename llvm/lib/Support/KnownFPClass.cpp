@@ -180,8 +180,13 @@ KnownFPClass KnownFPClass::minMaxLike(const KnownFPClass &KnownLHS_,
 }
 
 KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
-                                        DenormalMode DenormMode) {
+                                        const fltSemantics &Flt,
+                                        DenormalMode Mode) {
   KnownFPClass Known;
+
+  // TODO: implement for x86_fp80
+  if (!APFloat::isIEEELikeFP(Flt))
+    return Known;
 
   // Canonicalize may flush denormals to zero, so we have to consider the
   // denormal mode to preserve known-not-0 knowledge.
@@ -194,11 +199,9 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
   else
     Known.knownNot(fcSNan);
 
-  // FIXME: Missing check of IEEE like types.
-
   // If the parent function flushes denormals, the canonical output cannot be a
   // denormal.
-  if (DenormMode == DenormalMode::getIEEE()) {
+  if (Mode == DenormalMode::getIEEE()) {
     if (KnownSrc.isKnownNever(fcPosZero))
       Known.knownNot(fcPosZero);
     if (KnownSrc.isKnownNever(fcNegZero))
@@ -206,10 +209,10 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
     return Known;
   }
 
-  if (DenormMode.inputsAreZero() || DenormMode.outputsAreZero())
+  if (Mode.inputsAreZero() || Mode.outputsAreZero())
     Known.knownNot(fcSubnormal);
 
-  if (DenormMode == DenormalMode::getPreserveSign()) {
+  if (Mode == DenormalMode::getPreserveSign()) {
     if (KnownSrc.isKnownNever(fcPosZero | fcPosSubnormal))
       Known.knownNot(fcPosZero);
     if (KnownSrc.isKnownNever(fcNegZero | fcNegSubnormal))
@@ -217,9 +220,9 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
     return Known;
   }
 
-  if (DenormMode.Input == DenormalMode::PositiveZero ||
-      (DenormMode.Output == DenormalMode::PositiveZero &&
-       DenormMode.Input == DenormalMode::IEEE)) {
+  if (Mode.Input == DenormalMode::PositiveZero ||
+      (Mode.Output == DenormalMode::PositiveZero &&
+       Mode.Input == DenormalMode::IEEE)) {
     // -0.0 is not a subnormal and should not be flushed.
     if (KnownSrc.isKnownNever(fcNegZero))
       Known.knownNot(fcNegZero);
