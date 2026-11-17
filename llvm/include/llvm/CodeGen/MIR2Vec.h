@@ -369,21 +369,12 @@ public:
 /// independently of the pass manager infrastructure. For pass-based usage,
 /// see MIR2VecVocabLegacyAnalysis and MIR2VecVocabAnalysis.
 class MIR2VecVocabProvider {
-  using VocabMap = std::map<std::string, mir2vec::Embedding>;
-
 public:
   MIR2VecVocabProvider(const MachineModuleInfo &MMI) : MMI(MMI) {}
 
   LLVM_ABI Expected<mir2vec::MIRVocabulary> getVocabulary(const Module &M);
 
-  /// Build the vocabulary for \p MF.
-  LLVM_ABI static Expected<mir2vec::MIRVocabulary>
-  getVocabulary(const MachineFunction &MF);
-
 private:
-  static Error readVocabulary(VocabMap &OpcVocab, VocabMap &CommonOperandVocab,
-                              VocabMap &PhyRegVocabMap,
-                              VocabMap &VirtRegVocabMap);
   const MachineModuleInfo &MMI;
 };
 

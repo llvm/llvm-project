@@ -446,38 +446,11 @@ Expected<MIRVocabulary> MIRVocabulary::createDummyVocabForTest(
 // MIR2VecVocabProvider and MIR2VecVocabLegacyAnalysis
 //===----------------------------------------------------------------------===//
 
-Expected<mir2vec::MIRVocabulary>
-MIR2VecVocabProvider::getVocabulary(const Module &M) {
-  for (const auto &F : M) {
-    if (F.isDeclaration())
-      continue;
+using VocabMap = std::map<std::string, Embedding>;
 
-    if (auto *MF = MMI.getMachineFunction(F))
-      return getVocabulary(*MF);
-  }
-  return createStringError(errc::invalid_argument,
-                           "No machine functions found in module");
-}
-
-Expected<mir2vec::MIRVocabulary>
-MIR2VecVocabProvider::getVocabulary(const MachineFunction &MF) {
-  VocabMap OpcVocab, CommonOperandVocab, PhyRegVocabMap, VirtRegVocabMap;
-
-  if (Error Err = readVocabulary(OpcVocab, CommonOperandVocab, PhyRegVocabMap,
-                                 VirtRegVocabMap))
-    return std::move(Err);
-
-  const TargetSubtargetInfo &ST = MF.getSubtarget();
-  return mir2vec::MIRVocabulary::create(
-      std::move(OpcVocab), std::move(CommonOperandVocab),
-      std::move(PhyRegVocabMap), std::move(VirtRegVocabMap), *ST.getInstrInfo(),
-      *ST.getRegisterInfo());
-}
-
-Error MIR2VecVocabProvider::readVocabulary(VocabMap &OpcodeVocab,
-                                           VocabMap &CommonOperandVocab,
-                                           VocabMap &PhyRegVocabMap,
-                                           VocabMap &VirtRegVocabMap) {
+static Error readVocabulary(VocabMap &OpcodeVocab, VocabMap &CommonOperandVocab,
+                            VocabMap &PhyRegVocabMap,
+                            VocabMap &VirtRegVocabMap) {
   if (VocabFile.empty())
     return createStringError(
         errc::invalid_argument,
@@ -526,6 +499,34 @@ Error MIR2VecVocabProvider::readVocabulary(VocabMap &OpcodeVocab,
   return Error::success();
 }
 
+static Expected<mir2vec::MIRVocabulary>
+buildVocabulary(const MachineFunction &MF) {
+  VocabMap OpcVocab, CommonOperandVocab, PhyRegVocabMap, VirtRegVocabMap;
+
+  if (Error Err = readVocabulary(OpcVocab, CommonOperandVocab, PhyRegVocabMap,
+                                 VirtRegVocabMap))
+    return std::move(Err);
+
+  const TargetSubtargetInfo &ST = MF.getSubtarget();
+  return mir2vec::MIRVocabulary::create(
+      std::move(OpcVocab), std::move(CommonOperandVocab),
+      std::move(PhyRegVocabMap), std::move(VirtRegVocabMap), *ST.getInstrInfo(),
+      *ST.getRegisterInfo());
+}
+
+Expected<mir2vec::MIRVocabulary>
+MIR2VecVocabProvider::getVocabulary(const Module &M) {
+  for (const auto &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    if (auto *MF = MMI.getMachineFunction(F))
+      return buildVocabulary(*MF);
+  }
+  return createStringError(errc::invalid_argument,
+                           "No machine functions found in module");
+}
+
 char MIR2VecVocabLegacyAnalysis::ID = 0;
 INITIALIZE_PASS_BEGIN(MIR2VecVocabLegacyAnalysis, "mir2vec-vocab-analysis",
                       "MIR2Vec Vocabulary Analysis", false, true)
@@ -542,7 +543,7 @@ AnalysisKey MIR2VecVocabAnalysis::Key;
 MIR2VecVocabAnalysis::Result
 MIR2VecVocabAnalysis::run(MachineFunction &MF,
                           MachineFunctionAnalysisManager &MFAM) {
-  auto VocabOrErr = MIR2VecVocabProvider::getVocabulary(MF);
+  auto VocabOrErr = buildVocabulary(MF);
   if (!VocabOrErr)
     reportFatalUsageError(VocabOrErr.takeError());
   return std::move(*VocabOrErr);
