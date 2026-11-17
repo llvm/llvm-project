@@ -277,6 +277,8 @@ public:
     performIfOmptInitialized(begin());
   }
   ~InterfaceRAII() { performIfOmptInitialized(end()); }
+  InterfaceRAII(const InterfaceRAII &Other) = delete;
+  InterfaceRAII &operator=(const InterfaceRAII &Other) = delete;
 
 private:
   void begin() {
@@ -323,6 +325,9 @@ public:
     if (IsSetter)
       ReturnAddress = nullptr;
   }
+  ReturnAddressSetterRAII(const ReturnAddressSetterRAII &Other) = delete;
+  ReturnAddressSetterRAII &
+  operator=(const ReturnAddressSetterRAII &Other) = delete;
 
 private:
   // Did this object set the thread-local return address?
