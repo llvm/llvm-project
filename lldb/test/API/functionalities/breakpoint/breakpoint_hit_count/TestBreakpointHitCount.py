@@ -27,9 +27,7 @@ class BreakpointHitCountTestCase(TestBase):
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        from lldbsuite.test.lldbutil import get_stopped_thread
-
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
             thread.IsValid(), "There should be a thread stopped due to breakpoint"
         )
@@ -51,11 +49,11 @@ class BreakpointHitCountTestCase(TestBase):
 
     def do_test_breakpoint_location_hit_count(self):
         """Use Python APIs to check breakpoint hit count."""
-        target = self.createTestTarget()
-
         # Create a breakpoint in main.cpp by name 'a',
         # there should be two locations.
-        breakpoint = target.BreakpointCreateByName("a", "a.out")
+        _, process, thread, breakpoint = lldbutil.run_to_name_breakpoint(
+            self, "a", bkpt_module="a.out"
+        )
         self.assertTrue(
             breakpoint and breakpoint.GetNumLocations() == 2, VALID_BREAKPOINT
         )
@@ -67,18 +65,7 @@ class BreakpointHitCountTestCase(TestBase):
         location2 = breakpoint.GetLocationAtIndex(1)
         self.assertTrue(location2 and location2.IsEnabled(), VALID_BREAKPOINT_LOCATION)
 
-        # Launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
         # Verify 1st breakpoint location is hit.
-        from lldbsuite.test.lldbutil import get_stopped_thread
-
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(), "There should be a thread stopped due to breakpoint"
-        )
-
         frame0 = thread.GetFrameAtIndex(0)
         location1 = breakpoint.FindLocationByAddress(frame0.GetPC())
         self.assertEqual(
@@ -93,7 +80,7 @@ class BreakpointHitCountTestCase(TestBase):
         process.Continue()
 
         # Verify 2nd breakpoint location is hit.
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
             thread.IsValid(), "There should be a thread stopped due to breakpoint"
         )
@@ -113,7 +100,7 @@ class BreakpointHitCountTestCase(TestBase):
         process.Continue()
 
         # Verify 2nd breakpoint location is hit again.
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
             thread.IsValid(), "There should be a thread stopped due to breakpoint"
         )

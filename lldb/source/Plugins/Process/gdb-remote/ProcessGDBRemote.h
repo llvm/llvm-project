@@ -379,6 +379,8 @@ protected:
 
   void SetLastStopPacket(const StringExtractorGDBRemote &response);
 
+  void SetExitStatusFromStopReply(StringExtractorGDBRemote &response);
+
   bool ParsePythonTargetDefinition(const FileSpec &target_definition_fspec);
 
   DataExtractor GetAuxvData() override;
