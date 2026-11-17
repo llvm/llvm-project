@@ -1323,6 +1323,8 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
       return AddressClass::eRuntime;
     case eSymbolTypeReExported:
       return AddressClass::eRuntime;
+    case eSymbolTypeASTFile:
+      return AddressClass::eDebug;
     }
   }
   return AddressClass::eUnknown;
@@ -2956,6 +2958,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       case N_LENG:
         // second stab entry with length information
         type = eSymbolTypeAdditional;
+        break;
+
+      case N_AST:
+        // AST file path: name,,NO_SECT,0,0
+        type = eSymbolTypeASTFile;
         break;
 
       default:

@@ -64629,6 +64629,16 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
   return true;
 }
 
+bool X86TargetLowering::isTypeDesirableForOp(SDNode *N, EVT VT) const {
+  unsigned Opc = N->getOpcode();
+  // There are no vXi64 to f32 or f64 conversions without AVX512DQ.
+  if ((Opc == ISD::SINT_TO_FP || Opc == ISD::UINT_TO_FP) &&
+      VT.isVectorOf(MVT::i64) && !Subtarget.hasDQI() &&
+      !(Subtarget.hasFP16() && N->getValueType(0).isVectorOf(MVT::f16)))
+    return false;
+  return isTypeDesirableForOp(Opc, VT);
+}
+
 SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc &dl,
                                                   SDValue Value, SDValue Addr,
                                                   int JTI,
