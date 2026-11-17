@@ -6533,18 +6533,27 @@ void VPlanTransforms::expandMaskBeforeFirst(VPlan &Plan, VPCostContext &Ctx,
            vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       VPValue *X;
-      if (!match(&R, m_Intrinsic<Intrinsic::mask_beforefirst>(m_VPValue(X))))
+      if (!match(&R,
+                 m_WidenIntrinsic<Intrinsic::mask_beforefirst>(m_VPValue(X))))
         continue;
       auto *BeforeFirst = cast<VPWidenIntrinsicRecipe>(&R);
+      Type *Ty = Plan.getVF().getScalarType();
       auto IsCheap = [&](ElementCount VF) {
-        return BeforeFirst->computeCost(VF, Ctx) <=
-               TargetTransformInfo::TCC_Expensive;
+        Type *MaskTy = toVectorTy(X->getScalarType(), VF);
+        Type *IdxTy = Plan.getDataLayout().getIndexType(Plan.getContext(), 0);
+        IntrinsicCostAttributes CttzElts(
+            Intrinsic::experimental_cttz_elts, IdxTy,
+            {MaskTy, Type::getInt1Ty(Ctx.LLVMCtx)});
+        IntrinsicCostAttributes ActiveLaneMask(Intrinsic::get_active_lane_mask,
+                                               MaskTy, {Ty, Ty});
+        return BeforeFirst->computeCost(VF, Ctx) <
+               Ctx.TTI.getIntrinsicInstrCost(CttzElts, Ctx.CostKind) +
+                   Ctx.TTI.getIntrinsicInstrCost(ActiveLaneMask, Ctx.CostKind);
       };
       if (LoopVectorizationPlanner::getDecisionAndClampRange(IsCheap, Range))
         continue;
 
       VPBuilder Builder(BeforeFirst);
-      Type *Ty = Plan.getVF().getScalarType();
       DebugLoc DL = BeforeFirst->getDebugLoc();
       VPValue *FirstActive = Builder.createScalarZExtOrTrunc(
           Builder.createFirstActiveLane(X, DL), Ty, DL);
