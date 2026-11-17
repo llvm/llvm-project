@@ -1,0 +1,38 @@
+# Only the first positional argument is an object; the rest are source files.
+# Warn when one of those source files looks like an object, since the user
+# probably meant to load it with -object. Files found by scanning a directory
+# aren't checked.
+
+RUN: rm -rf %t && mkdir -p %t/dir
+RUN: cp %S/Inputs/mcdc-const.o %t/dir/found-by-scan.o
+RUN: llvm-ar rc %t/archive.a %S/Inputs/mcdc-const.o
+
+# use_1.covmapping will play the role of the object passed correctly;
+# The others will be objects accidentally passed as source.
+RUN: llvm-cov show -dump-collected-paths \
+RUN:   -instr-profile %S/Inputs/multiple_objects/merged.profdata \
+RUN:   %S/Inputs/multiple_objects/use_1.covmapping \
+RUN:   %S/Inputs/multiple_objects/use_2.covmapping \
+RUN:   %S/Inputs/mcdc-const.o \
+RUN:   %S/Inputs/binary-formats.macho64l \
+RUN:   %S/Inputs/universal-binary \
+RUN:   %t/archive.a \
+RUN:   %S/Inputs/multiple_objects/use_1.cc \
+RUN:   %t/dir \
+RUN:   2> %t/err | FileCheck --check-prefix=PATHS \
+RUN:   --implicit-check-not=use_1.covmapping %s
+RUN: FileCheck --check-prefix=WARN --implicit-check-not=warning: %s < %t/err
+
+PATHS:      {{.*}}use_2.covmapping
+PATHS-NEXT: {{.*}}mcdc-const.o
+PATHS-NEXT: {{.*}}binary-formats.macho64l
+PATHS-NEXT: {{.*}}universal-binary
+PATHS-NEXT: {{.*}}archive.a
+PATHS-NEXT: {{.*}}use_1.cc
+PATHS-NEXT: {{.*}}dir{{[/\\]}}found-by-scan.o
+
+WARN:      warning: {{.*}}use_2.covmapping: object file will be treated as a source file; use -object to specify additional objects
+WARN-NEXT: warning: {{.*}}mcdc-const.o: object file will be treated as a source file; use -object to specify additional objects
+WARN-NEXT: warning: {{.*}}binary-formats.macho64l: object file will be treated as a source file; use -object to specify additional objects
+WARN-NEXT: warning: {{.*}}universal-binary: object file will be treated as a source file; use -object to specify additional objects
+WARN-NEXT: warning: {{.*}}archive.a: object file will be treated as a source file; use -object to specify additional objects

@@ -22,12 +22,15 @@
 #include "SourceCoverageView.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Debuginfod/BuildIDFetcher.h"
 #include "llvm/Debuginfod/Debuginfod.h"
 #include "llvm/HTTP/HTTPClient.h"
 #include "llvm/Object/BuildID.h"
+#include "llvm/Object/SymbolicFile.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -194,6 +197,25 @@ static std::string getErrorString(const Twine &Message, StringRef Whence,
     Str += Whence.str() + ": ";
   Str += Message.str() + "\n";
   return Str;
+}
+
+/// Returns true if \p Path is a file the coverage reader can load: an object
+/// file, an archive, a universal binary, or the testing format.
+static bool isCoverageObjectFile(StringRef Path) {
+  if (!sys::fs::is_regular_file(Path))
+    return false;
+  auto BufOrErr = MemoryBuffer::getFile(Path, /*IsText=*/false,
+                                        /*RequiresNullTerminator=*/false);
+  if (!BufOrErr)
+    return false;
+  StringRef Buf = (*BufOrErr)->getBuffer();
+  if (Buf.size() > sizeof(TestingFormatMagic) &&
+      support::endian::read64le(Buf.data()) == TestingFormatMagic)
+    return true;
+  file_magic Magic = identify_magic(Buf);
+  return Magic == file_magic::archive ||
+         Magic == file_magic::macho_universal_binary ||
+         object::SymbolicFile::isSymbolicFile(Magic, /*Context=*/nullptr);
 }
 
 void CodeCoverageTool::error(const Twine &Message, StringRef Whence) {
@@ -958,8 +980,13 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     }
 
     // FilenameFilters are applied even when InputSourceFiles specified.
-    for (const std::string &File : InputSourceFiles)
+    for (const std::string &File : InputSourceFiles) {
+      if (isCoverageObjectFile(File))
+        warning("object file will be treated as a source file; use -object "
+                "to specify additional objects",
+                File);
       collectPaths(File);
+    }
 
     if (DebugDumpCollectedPaths) {
       for (const std::string &SF : SourceFiles)
