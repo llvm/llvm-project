@@ -1473,41 +1473,41 @@ define <7 x i1> @test17(<7 x i1> %a, <7 x i1> %b, <7 x i1> %c, <7 x i1> %d, <7 x
 ; KNL_X32-NEXT:    vptestmq %zmm0, %zmm1, %k1 {%k1}
 ; KNL_X32-NEXT:    vpinsrb $6, 256(%esp), %xmm2, %xmm1
 ; KNL_X32-NEXT:    vpmovzxbq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero,xmm1[2],zero,zero,zero,zero,zero,zero,zero,xmm1[3],zero,zero,zero,zero,zero,zero,zero,xmm1[4],zero,zero,zero,zero,zero,zero,zero,xmm1[5],zero,zero,zero,zero,zero,zero,zero,xmm1[6],zero,zero,zero,zero,zero,zero,zero,xmm1[7],zero,zero,zero,zero,zero,zero,zero
-; KNL_X32-NEXT:    vptestmq %zmm0, %zmm1, %k4 {%k1}
-; KNL_X32-NEXT:    kshiftrw $6, %k4, %k0
-; KNL_X32-NEXT:    kshiftrw $5, %k4, %k1
-; KNL_X32-NEXT:    kshiftrw $4, %k4, %k2
-; KNL_X32-NEXT:    kshiftrw $3, %k4, %k3
-; KNL_X32-NEXT:    kshiftrw $1, %k4, %k5
-; KNL_X32-NEXT:    kmovw %k5, %eax
-; KNL_X32-NEXT:    kshiftrw $2, %k4, %k5
-; KNL_X32-NEXT:    kmovw %k4, %ecx
+; KNL_X32-NEXT:    vptestmq %zmm0, %zmm1, %k0 {%k1}
+; KNL_X32-NEXT:    kshiftrw $1, %k0, %k1
+; KNL_X32-NEXT:    kmovw %k1, %eax
+; KNL_X32-NEXT:    kshiftrw $2, %k0, %k1
+; KNL_X32-NEXT:    kmovw %k0, %ecx
 ; KNL_X32-NEXT:    andb $1, %cl
 ; KNL_X32-NEXT:    andb $1, %al
 ; KNL_X32-NEXT:    addb %al, %al
 ; KNL_X32-NEXT:    orb %cl, %al
-; KNL_X32-NEXT:    kmovw %k5, %edx
-; KNL_X32-NEXT:    andb $1, %dl
-; KNL_X32-NEXT:    shlb $2, %dl
-; KNL_X32-NEXT:    orb %al, %dl
-; KNL_X32-NEXT:    kmovw %k3, %ecx
+; KNL_X32-NEXT:    kmovw %k1, %ecx
+; KNL_X32-NEXT:    kshiftrw $3, %k0, %k1
 ; KNL_X32-NEXT:    andb $1, %cl
-; KNL_X32-NEXT:    shlb $3, %cl
-; KNL_X32-NEXT:    orb %dl, %cl
-; KNL_X32-NEXT:    kmovw %k2, %eax
+; KNL_X32-NEXT:    shlb $2, %cl
+; KNL_X32-NEXT:    orb %al, %cl
+; KNL_X32-NEXT:    kmovw %k1, %eax
+; KNL_X32-NEXT:    kshiftrw $4, %k0, %k1
 ; KNL_X32-NEXT:    andb $1, %al
-; KNL_X32-NEXT:    shlb $4, %al
+; KNL_X32-NEXT:    shlb $3, %al
 ; KNL_X32-NEXT:    orb %cl, %al
 ; KNL_X32-NEXT:    kmovw %k1, %ecx
+; KNL_X32-NEXT:    kshiftrw $6, %k0, %k1
+; KNL_X32-NEXT:    kshiftrw $5, %k0, %k0
 ; KNL_X32-NEXT:    andb $1, %cl
-; KNL_X32-NEXT:    shlb $5, %cl
+; KNL_X32-NEXT:    shlb $4, %cl
 ; KNL_X32-NEXT:    orb %al, %cl
-; KNL_X32-NEXT:    kmovw %k0, %edx
-; KNL_X32-NEXT:    shlb $6, %dl
-; KNL_X32-NEXT:    orb %cl, %dl
+; KNL_X32-NEXT:    kmovw %k0, %eax
+; KNL_X32-NEXT:    andb $1, %al
+; KNL_X32-NEXT:    shlb $5, %al
+; KNL_X32-NEXT:    orb %cl, %al
+; KNL_X32-NEXT:    kmovw %k1, %ecx
+; KNL_X32-NEXT:    shlb $6, %cl
+; KNL_X32-NEXT:    orb %al, %cl
 ; KNL_X32-NEXT:    movl 4(%esp), %eax
-; KNL_X32-NEXT:    andb $127, %dl
-; KNL_X32-NEXT:    movb %dl, (%eax)
+; KNL_X32-NEXT:    andb $127, %cl
+; KNL_X32-NEXT:    movb %cl, (%eax)
 ; KNL_X32-NEXT:    retl $4
 ;
 ; FASTISEL-LABEL: test17:

@@ -196,13 +196,13 @@ define <4 x float> @sitofp_v4f32_v4i64(<4 x i64> %x) #0 {
 ; CHECK-NEXT:    mov x8, v0.d[1]
 ; CHECK-NEXT:    fmov x9, d0
 ; CHECK-NEXT:    scvtf s0, x9
-; CHECK-NEXT:    mov x9, v1.d[1]
 ; CHECK-NEXT:    scvtf s2, x8
 ; CHECK-NEXT:    fmov x8, d1
-; CHECK-NEXT:    scvtf s1, x8
 ; CHECK-NEXT:    mov v0.s[1], v2.s[0]
-; CHECK-NEXT:    mov v0.s[2], v1.s[0]
-; CHECK-NEXT:    scvtf s1, x9
+; CHECK-NEXT:    scvtf s2, x8
+; CHECK-NEXT:    mov x8, v1.d[1]
+; CHECK-NEXT:    mov v0.s[2], v2.s[0]
+; CHECK-NEXT:    scvtf s1, x8
 ; CHECK-NEXT:    mov v0.s[3], v1.s[0]
 ; CHECK-NEXT:    ret
   %val = call <4 x float> @llvm.experimental.constrained.sitofp.v4f32.v4i64(<4 x i64> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0

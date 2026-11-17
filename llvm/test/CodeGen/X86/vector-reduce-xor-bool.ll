@@ -961,16 +961,16 @@ define zeroext i1 @trunc_v32i16_v32i1(<32 x i16>) nounwind {
 ; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm1
 ; AVX512F-NEXT:    vpslld $31, %zmm1, %zmm1
 ; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
-; AVX512F-NEXT:    kmovw %k0, %ecx
+; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
 ; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; AVX512F-NEXT:    vpslld $31, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %ecx
+; AVX512F-NEXT:    shll $16, %ecx
+; AVX512F-NEXT:    orl %eax, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    kmovw %k0, %edx
-; AVX512F-NEXT:    shll $16, %edx
-; AVX512F-NEXT:    orl %ecx, %edx
-; AVX512F-NEXT:    xorl %edx, %eax
+; AVX512F-NEXT:    xorl %ecx, %eax
 ; AVX512F-NEXT:    xorb %ah, %al
 ; AVX512F-NEXT:    setnp %al
 ; AVX512F-NEXT:    vzeroupper
@@ -2085,16 +2085,16 @@ define zeroext i1 @icmp0_v32i16_v32i1(<32 x i16>) nounwind {
 ; AVX512F-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm2
 ; AVX512F-NEXT:    vpmovsxwd %ymm2, %zmm2
 ; AVX512F-NEXT:    vptestmd %zmm2, %zmm2, %k0
-; AVX512F-NEXT:    kmovw %k0, %ecx
+; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
 ; AVX512F-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %ecx
+; AVX512F-NEXT:    shll $16, %ecx
+; AVX512F-NEXT:    orl %eax, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    kmovw %k0, %edx
-; AVX512F-NEXT:    shll $16, %edx
-; AVX512F-NEXT:    orl %ecx, %edx
-; AVX512F-NEXT:    xorl %edx, %eax
+; AVX512F-NEXT:    xorl %ecx, %eax
 ; AVX512F-NEXT:    xorb %ah, %al
 ; AVX512F-NEXT:    setnp %al
 ; AVX512F-NEXT:    vzeroupper
@@ -3420,17 +3420,17 @@ define zeroext i1 @icmp_v32i16_v32i1(<32 x i16> %0, <32 x i16> %01) nounwind {
 ; AVX512F-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm2
 ; AVX512F-NEXT:    vpmovsxwd %ymm2, %zmm2
 ; AVX512F-NEXT:    vptestmd %zmm2, %zmm2, %k0
-; AVX512F-NEXT:    kmovw %k0, %ecx
+; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
 ; AVX512F-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %ecx
+; AVX512F-NEXT:    shll $16, %ecx
+; AVX512F-NEXT:    orl %eax, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    kmovw %k0, %edx
-; AVX512F-NEXT:    shll $16, %edx
-; AVX512F-NEXT:    orl %ecx, %edx
-; AVX512F-NEXT:    xorl %edx, %eax
+; AVX512F-NEXT:    xorl %ecx, %eax
 ; AVX512F-NEXT:    xorb %ah, %al
 ; AVX512F-NEXT:    setnp %al
 ; AVX512F-NEXT:    vzeroupper

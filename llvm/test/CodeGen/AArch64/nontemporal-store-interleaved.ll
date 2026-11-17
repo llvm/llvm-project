@@ -2325,48 +2325,48 @@ define void @test_stnp_interleaved_store2_v2i24_non_pow2_elt_size(<2 x i24> %v0,
 ; CHECK-LE:       // %bb.0: // %entry
 ; CHECK-LE-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-LE-NEXT:    zip1 v2.2s, v0.2s, v1.2s
+; CHECK-LE-NEXT:    mov w8, v1.s[1]
 ; CHECK-LE-NEXT:    fmov w9, s0
 ; CHECK-LE-NEXT:    str h0, [x0]
-; CHECK-LE-NEXT:    mov w8, v1.s[1]
+; CHECK-LE-NEXT:    zip1 v2.2s, v0.2s, v1.2s
 ; CHECK-LE-NEXT:    dup v1.2s, v0.s[1]
 ; CHECK-LE-NEXT:    lsr w9, w9, #16
-; CHECK-LE-NEXT:    mov w10, v2.s[1]
-; CHECK-LE-NEXT:    strb w9, [x0, #2]
-; CHECK-LE-NEXT:    fmov w9, s1
 ; CHECK-LE-NEXT:    sturh w8, [x0, #9]
 ; CHECK-LE-NEXT:    lsr w8, w8, #16
-; CHECK-LE-NEXT:    str h1, [x0, #6]
+; CHECK-LE-NEXT:    strb w9, [x0, #2]
+; CHECK-LE-NEXT:    mov w9, v2.s[1]
 ; CHECK-LE-NEXT:    strb w8, [x0, #11]
-; CHECK-LE-NEXT:    lsr w8, w10, #16
+; CHECK-LE-NEXT:    fmov w8, s1
+; CHECK-LE-NEXT:    str h1, [x0, #6]
+; CHECK-LE-NEXT:    sturh w9, [x0, #3]
 ; CHECK-LE-NEXT:    lsr w9, w9, #16
-; CHECK-LE-NEXT:    sturh w10, [x0, #3]
-; CHECK-LE-NEXT:    strb w8, [x0, #5]
-; CHECK-LE-NEXT:    strb w9, [x0, #8]
+; CHECK-LE-NEXT:    lsr w8, w8, #16
+; CHECK-LE-NEXT:    strb w9, [x0, #5]
+; CHECK-LE-NEXT:    strb w8, [x0, #8]
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_stnp_interleaved_store2_v2i24_non_pow2_elt_size:
 ; CHECK-BE:       // %bb.0: // %entry
 ; CHECK-BE-NEXT:    rev64 v1.2s, v1.2s
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
-; CHECK-BE-NEXT:    zip1 v2.2s, v0.2s, v1.2s
-; CHECK-BE-NEXT:    fmov w9, s0
 ; CHECK-BE-NEXT:    mov w8, v1.s[1]
+; CHECK-BE-NEXT:    fmov w9, s0
+; CHECK-BE-NEXT:    zip1 v2.2s, v0.2s, v1.2s
 ; CHECK-BE-NEXT:    dup v1.2s, v0.s[1]
 ; CHECK-BE-NEXT:    stur b0, [x0, #2]
 ; CHECK-BE-NEXT:    lsr w9, w9, #8
-; CHECK-BE-NEXT:    mov w10, v2.s[1]
 ; CHECK-BE-NEXT:    strb w8, [x0, #11]
 ; CHECK-BE-NEXT:    lsr w8, w8, #8
 ; CHECK-BE-NEXT:    strh w9, [x0]
-; CHECK-BE-NEXT:    fmov w9, s1
+; CHECK-BE-NEXT:    mov w9, v2.s[1]
 ; CHECK-BE-NEXT:    sturh w8, [x0, #9]
+; CHECK-BE-NEXT:    fmov w8, s1
 ; CHECK-BE-NEXT:    stur b1, [x0, #8]
-; CHECK-BE-NEXT:    lsr w8, w10, #8
+; CHECK-BE-NEXT:    strb w9, [x0, #5]
 ; CHECK-BE-NEXT:    lsr w9, w9, #8
-; CHECK-BE-NEXT:    strb w10, [x0, #5]
-; CHECK-BE-NEXT:    sturh w8, [x0, #3]
-; CHECK-BE-NEXT:    strh w9, [x0, #6]
+; CHECK-BE-NEXT:    lsr w8, w8, #8
+; CHECK-BE-NEXT:    sturh w9, [x0, #3]
+; CHECK-BE-NEXT:    strh w8, [x0, #6]
 ; CHECK-BE-NEXT:    ret
 entry:
   %shuffle = shufflevector <2 x i24> %v0, <2 x i24> %v1,
@@ -3288,48 +3288,48 @@ define void @test_stnp_interleaved_store2_v2i24_non_pow2_elt_size_intrinsic(<2 x
 ; CHECK-LE:       // %bb.0: // %entry
 ; CHECK-LE-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-LE-NEXT:    zip1 v2.2s, v0.2s, v1.2s
+; CHECK-LE-NEXT:    mov w8, v1.s[1]
 ; CHECK-LE-NEXT:    fmov w9, s0
 ; CHECK-LE-NEXT:    str h0, [x0]
-; CHECK-LE-NEXT:    mov w8, v1.s[1]
+; CHECK-LE-NEXT:    zip1 v2.2s, v0.2s, v1.2s
 ; CHECK-LE-NEXT:    dup v1.2s, v0.s[1]
 ; CHECK-LE-NEXT:    lsr w9, w9, #16
-; CHECK-LE-NEXT:    mov w10, v2.s[1]
-; CHECK-LE-NEXT:    strb w9, [x0, #2]
-; CHECK-LE-NEXT:    fmov w9, s1
 ; CHECK-LE-NEXT:    sturh w8, [x0, #9]
 ; CHECK-LE-NEXT:    lsr w8, w8, #16
-; CHECK-LE-NEXT:    str h1, [x0, #6]
+; CHECK-LE-NEXT:    strb w9, [x0, #2]
+; CHECK-LE-NEXT:    mov w9, v2.s[1]
 ; CHECK-LE-NEXT:    strb w8, [x0, #11]
-; CHECK-LE-NEXT:    lsr w8, w10, #16
+; CHECK-LE-NEXT:    fmov w8, s1
+; CHECK-LE-NEXT:    str h1, [x0, #6]
+; CHECK-LE-NEXT:    sturh w9, [x0, #3]
 ; CHECK-LE-NEXT:    lsr w9, w9, #16
-; CHECK-LE-NEXT:    sturh w10, [x0, #3]
-; CHECK-LE-NEXT:    strb w8, [x0, #5]
-; CHECK-LE-NEXT:    strb w9, [x0, #8]
+; CHECK-LE-NEXT:    lsr w8, w8, #16
+; CHECK-LE-NEXT:    strb w9, [x0, #5]
+; CHECK-LE-NEXT:    strb w8, [x0, #8]
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_stnp_interleaved_store2_v2i24_non_pow2_elt_size_intrinsic:
 ; CHECK-BE:       // %bb.0: // %entry
 ; CHECK-BE-NEXT:    rev64 v1.2s, v1.2s
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
-; CHECK-BE-NEXT:    zip1 v2.2s, v0.2s, v1.2s
-; CHECK-BE-NEXT:    fmov w9, s0
 ; CHECK-BE-NEXT:    mov w8, v1.s[1]
+; CHECK-BE-NEXT:    fmov w9, s0
+; CHECK-BE-NEXT:    zip1 v2.2s, v0.2s, v1.2s
 ; CHECK-BE-NEXT:    dup v1.2s, v0.s[1]
 ; CHECK-BE-NEXT:    stur b0, [x0, #2]
 ; CHECK-BE-NEXT:    lsr w9, w9, #8
-; CHECK-BE-NEXT:    mov w10, v2.s[1]
 ; CHECK-BE-NEXT:    strb w8, [x0, #11]
 ; CHECK-BE-NEXT:    lsr w8, w8, #8
 ; CHECK-BE-NEXT:    strh w9, [x0]
-; CHECK-BE-NEXT:    fmov w9, s1
+; CHECK-BE-NEXT:    mov w9, v2.s[1]
 ; CHECK-BE-NEXT:    sturh w8, [x0, #9]
+; CHECK-BE-NEXT:    fmov w8, s1
 ; CHECK-BE-NEXT:    stur b1, [x0, #8]
-; CHECK-BE-NEXT:    lsr w8, w10, #8
+; CHECK-BE-NEXT:    strb w9, [x0, #5]
 ; CHECK-BE-NEXT:    lsr w9, w9, #8
-; CHECK-BE-NEXT:    strb w10, [x0, #5]
-; CHECK-BE-NEXT:    sturh w8, [x0, #3]
-; CHECK-BE-NEXT:    strh w9, [x0, #6]
+; CHECK-BE-NEXT:    lsr w8, w8, #8
+; CHECK-BE-NEXT:    sturh w9, [x0, #3]
+; CHECK-BE-NEXT:    strh w8, [x0, #6]
 ; CHECK-BE-NEXT:    ret
 entry:
   %interleave = call <4 x i24> @llvm.vector.interleave2.v4i24(<2 x i24> %v0, <2 x i24> %v1)

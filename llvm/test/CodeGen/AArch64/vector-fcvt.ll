@@ -87,27 +87,27 @@ define <8 x float> @sitofp_i32_float(<8 x i32> %a) {
 define <8 x float> @sitofp_i64_float(<8 x i64> %a) {
 ; CHECK-LABEL: sitofp_i64_float:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, v0.d[1]
-; CHECK-NEXT:    mov x9, v2.d[1]
+; CHECK-NEXT:    mov x9, v0.d[1]
+; CHECK-NEXT:    mov x8, v2.d[1]
 ; CHECK-NEXT:    fmov x10, d0
-; CHECK-NEXT:    fmov x11, d2
 ; CHECK-NEXT:    scvtf s0, x10
-; CHECK-NEXT:    mov x10, v3.d[1]
-; CHECK-NEXT:    scvtf s4, x8
-; CHECK-NEXT:    scvtf s5, x9
-; CHECK-NEXT:    scvtf s2, x11
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    fmov x11, d3
-; CHECK-NEXT:    mov x8, v1.d[1]
-; CHECK-NEXT:    scvtf s1, x9
+; CHECK-NEXT:    scvtf s4, x9
+; CHECK-NEXT:    fmov x9, d2
+; CHECK-NEXT:    scvtf s5, x8
+; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    scvtf s2, x9
+; CHECK-NEXT:    mov x9, v1.d[1]
+; CHECK-NEXT:    scvtf s1, x8
+; CHECK-NEXT:    fmov x8, d3
 ; CHECK-NEXT:    mov v0.s[1], v4.s[0]
-; CHECK-NEXT:    scvtf s3, x11
 ; CHECK-NEXT:    mov v2.s[1], v5.s[0]
 ; CHECK-NEXT:    scvtf s4, x8
+; CHECK-NEXT:    mov x8, v3.d[1]
 ; CHECK-NEXT:    mov v0.s[2], v1.s[0]
-; CHECK-NEXT:    scvtf s1, x10
-; CHECK-NEXT:    mov v2.s[2], v3.s[0]
-; CHECK-NEXT:    mov v0.s[3], v4.s[0]
+; CHECK-NEXT:    scvtf s3, x9
+; CHECK-NEXT:    mov v2.s[2], v4.s[0]
+; CHECK-NEXT:    scvtf s1, x8
+; CHECK-NEXT:    mov v0.s[3], v3.s[0]
 ; CHECK-NEXT:    mov v2.s[3], v1.s[0]
 ; CHECK-NEXT:    mov v1.16b, v2.16b
 ; CHECK-NEXT:    ret
@@ -192,27 +192,27 @@ define <8 x float> @uitofp_i32_float(<8 x i32> %a) {
 define <8 x float> @uitofp_i64_float(<8 x i64> %a) {
 ; CHECK-LABEL: uitofp_i64_float:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, v0.d[1]
-; CHECK-NEXT:    mov x9, v2.d[1]
+; CHECK-NEXT:    mov x9, v0.d[1]
+; CHECK-NEXT:    mov x8, v2.d[1]
 ; CHECK-NEXT:    fmov x10, d0
-; CHECK-NEXT:    fmov x11, d2
 ; CHECK-NEXT:    ucvtf s0, x10
-; CHECK-NEXT:    mov x10, v3.d[1]
-; CHECK-NEXT:    ucvtf s4, x8
-; CHECK-NEXT:    ucvtf s5, x9
-; CHECK-NEXT:    ucvtf s2, x11
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    fmov x11, d3
-; CHECK-NEXT:    mov x8, v1.d[1]
-; CHECK-NEXT:    ucvtf s1, x9
+; CHECK-NEXT:    ucvtf s4, x9
+; CHECK-NEXT:    fmov x9, d2
+; CHECK-NEXT:    ucvtf s5, x8
+; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    ucvtf s2, x9
+; CHECK-NEXT:    mov x9, v1.d[1]
+; CHECK-NEXT:    ucvtf s1, x8
+; CHECK-NEXT:    fmov x8, d3
 ; CHECK-NEXT:    mov v0.s[1], v4.s[0]
-; CHECK-NEXT:    ucvtf s3, x11
 ; CHECK-NEXT:    mov v2.s[1], v5.s[0]
 ; CHECK-NEXT:    ucvtf s4, x8
+; CHECK-NEXT:    mov x8, v3.d[1]
 ; CHECK-NEXT:    mov v0.s[2], v1.s[0]
-; CHECK-NEXT:    ucvtf s1, x10
-; CHECK-NEXT:    mov v2.s[2], v3.s[0]
-; CHECK-NEXT:    mov v0.s[3], v4.s[0]
+; CHECK-NEXT:    ucvtf s3, x9
+; CHECK-NEXT:    mov v2.s[2], v4.s[0]
+; CHECK-NEXT:    ucvtf s1, x8
+; CHECK-NEXT:    mov v0.s[3], v3.s[0]
 ; CHECK-NEXT:    mov v2.s[3], v1.s[0]
 ; CHECK-NEXT:    mov v1.16b, v2.16b
 ; CHECK-NEXT:    ret

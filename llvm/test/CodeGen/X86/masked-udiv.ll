@@ -694,9 +694,9 @@ define <2 x i128> @udiv_v2i128(<2 x i128> %x, <2 x i128> %y, <2 x i1> %m) nounwi
 ; AVX512-NEXT:    movq %rdi, %rbx
 ; AVX512-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; AVX512-NEXT:    vpmovq2m %xmm0, %k0
-; AVX512-NEXT:    kshiftrb $1, %k0, %k1
 ; AVX512-NEXT:    kmovd %k0, %r14d
-; AVX512-NEXT:    kmovd %k1, %eax
+; AVX512-NEXT:    kshiftrb $1, %k0, %k0
+; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    andb $1, %al
 ; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = [1,0,0,0]
 ; AVX512-NEXT:    negb %al

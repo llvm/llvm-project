@@ -8,18 +8,14 @@
 
 ---
 # %acc is live around the loop and redefined by the copy, so the copy is a
-# candidate for constraining.
-#
-# FIXME: This copy is between register banks, so it can never be coalesced and
-# the edge is pointless.
+# candidate for constraining. But it is between register banks, so it can never
+# be coalesced and no edges are added.
 name: fpr_to_gpr_copy
 tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: fpr_to_gpr_copy
-  ; CHECK: SU([[USE:[0-9]+]]): %{{[0-9]+}}:gpr32 = UMOVvi32
-  ; CHECK: Successors:
-  ; CHECK: SU([[COPY:[0-9]+]]): Ord  Latency=0 Weak
-  ; CHECK: SU([[COPY]]): %acc:gpr32 = COPY
+  ; CHECK: SU(0): STRWui %acc
+  ; CHECK-NOT: Ord  Latency=0 Weak
   bb.0:
     successors: %bb.1
     liveins: $q0, $x0
@@ -42,15 +38,13 @@ body: |
     RET_ReallyLR
 ...
 ---
-# FIXME: Likewise for a GPR to FPR copy.
+# Likewise for a GPR to FPR copy.
 name: gpr_to_fpr_copy
 tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: gpr_to_fpr_copy
-  ; CHECK: SU([[USE:[0-9]+]]): %{{[0-9]+}}:gpr64 = ORRXrs
-  ; CHECK: Successors:
-  ; CHECK: SU([[COPY:[0-9]+]]): Ord  Latency=0 Weak
-  ; CHECK: SU([[COPY]]): %acc:fpr64 = COPY
+  ; CHECK: SU(0): STRDui %acc
+  ; CHECK-NOT: Ord  Latency=0 Weak
   bb.0:
     successors: %bb.1
     liveins: $x0, $x1

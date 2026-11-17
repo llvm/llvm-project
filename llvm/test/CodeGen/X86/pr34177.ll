@@ -49,7 +49,6 @@ define void @test(<4 x i64> %a, <4 x x86_fp80> %b, ptr %c) local_unnamed_addr {
 ; AVX512VL-LABEL: test:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %k0
-; AVX512VL-NEXT:    kshiftrb $2, %k0, %k1
 ; AVX512VL-NEXT:    kmovd %k0, %eax
 ; AVX512VL-NEXT:    testb $8, %al
 ; AVX512VL-NEXT:    fld1
@@ -62,7 +61,8 @@ define void @test(<4 x i64> %a, <4 x x86_fp80> %b, ptr %c) local_unnamed_addr {
 ; AVX512VL-NEXT:    testb $1, %al
 ; AVX512VL-NEXT:    fld %st(2)
 ; AVX512VL-NEXT:    fcmovne %st(4), %st
-; AVX512VL-NEXT:    kmovd %k1, %eax
+; AVX512VL-NEXT:    kshiftrb $2, %k0, %k0
+; AVX512VL-NEXT:    kmovd %k0, %eax
 ; AVX512VL-NEXT:    testb $1, %al
 ; AVX512VL-NEXT:    fxch %st(3)
 ; AVX512VL-NEXT:    fcmovne %st(4), %st

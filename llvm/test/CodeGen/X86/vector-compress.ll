@@ -1657,17 +1657,12 @@ define <32 x i8> @test_compress_v32i8(<32 x i8> %vec, <32 x i1> %mask, <32 x i8>
 ; AVX512VL-ONLY-NEXT:    andq $-32, %rsp
 ; AVX512VL-ONLY-NEXT:    subq $32, %rsp
 ; AVX512VL-ONLY-NEXT:    vpsllw $7, %ymm1, %ymm1
-; AVX512VL-ONLY-NEXT:    vpmovb2m %ymm1, %k5
-; AVX512VL-ONLY-NEXT:    kshiftrd $31, %k5, %k0
-; AVX512VL-ONLY-NEXT:    kshiftrd $30, %k5, %k1
-; AVX512VL-ONLY-NEXT:    kshiftrd $29, %k5, %k2
-; AVX512VL-ONLY-NEXT:    kshiftrd $28, %k5, %k3
-; AVX512VL-ONLY-NEXT:    kshiftrd $27, %k5, %k4
-; AVX512VL-ONLY-NEXT:    kshiftrd $2, %k5, %k6
-; AVX512VL-ONLY-NEXT:    kshiftrd $1, %k5, %k7
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
+; AVX512VL-ONLY-NEXT:    vpmovb2m %ymm1, %k1
+; AVX512VL-ONLY-NEXT:    kshiftrd $1, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrd $2, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    vmovaps %ymm2, (%rsp)
-; AVX512VL-ONLY-NEXT:    vmovdqu8 {{.*#+}} ymm1 {%k5} {z} = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX512VL-ONLY-NEXT:    vmovdqu8 {{.*#+}} ymm1 {%k1} {z} = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; AVX512VL-ONLY-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX512VL-ONLY-NEXT:    vpaddb %xmm2, %xmm1, %xmm1
 ; AVX512VL-ONLY-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
@@ -1683,7 +1678,7 @@ define <32 x i8> @test_compress_v32i8(<32 x i8> %vec, <32 x i1> %mask, <32 x i8>
 ; AVX512VL-ONLY-NEXT:    andl $31, %eax
 ; AVX512VL-ONLY-NEXT:    movzbl (%rsp,%rax), %eax
 ; AVX512VL-ONLY-NEXT:    vpextrb $0, %xmm0, (%rsp)
-; AVX512VL-ONLY-NEXT:    kmovd %k5, %edx
+; AVX512VL-ONLY-NEXT:    kmovd %k1, %edx
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $1, %xmm0, (%rsp,%rdx)
@@ -1692,35 +1687,34 @@ define <32 x i8> @test_compress_v32i8(<32 x i8> %vec, <32 x i1> %mask, <32 x i8>
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    movl %ecx, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $2, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k6, %edx
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    movl %edx, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $3, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kshiftrd $26, %k5, %k6
-; AVX512VL-ONLY-NEXT:    kshiftrd $3, %k5, %k7
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrd $4, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kshiftrd $3, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrd $4, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    movl %ecx, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $4, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrd $5, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrd $5, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    movl %edx, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $5, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrd $6, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrd $6, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrd $7, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrd $7, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
@@ -1730,21 +1724,21 @@ define <32 x i8> @test_compress_v32i8(<32 x i8> %vec, <32 x i1> %mask, <32 x i8>
 ; AVX512VL-ONLY-NEXT:    movl %edx, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $31, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $7, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrd $8, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrd $9, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kshiftrd $8, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrd $9, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $31, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $8, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrd $10, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrd $10, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
@@ -1754,21 +1748,21 @@ define <32 x i8> @test_compress_v32i8(<32 x i8> %vec, <32 x i1> %mask, <32 x i8>
 ; AVX512VL-ONLY-NEXT:    movl %ecx, %edx
 ; AVX512VL-ONLY-NEXT:    andl $31, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $10, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrd $11, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrd $12, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kshiftrd $11, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrd $12, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $31, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $11, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrd $13, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrd $13, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
@@ -1778,29 +1772,29 @@ define <32 x i8> @test_compress_v32i8(<32 x i8> %vec, <32 x i1> %mask, <32 x i8>
 ; AVX512VL-ONLY-NEXT:    movl %edx, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $31, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $13, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrd $14, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrd $15, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kshiftrd $14, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrd $15, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $31, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $14, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrd $16, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrd $16, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $31, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $15, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrd $17, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrd $17, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
@@ -1808,112 +1802,118 @@ define <32 x i8> @test_compress_v32i8(<32 x i8> %vec, <32 x i1> %mask, <32 x i8>
 ; AVX512VL-ONLY-NEXT:    andl $31, %ecx
 ; AVX512VL-ONLY-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512VL-ONLY-NEXT:    vpextrb $0, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrd $18, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrd $18, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $31, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $1, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    movl %ecx, %edx
-; AVX512VL-ONLY-NEXT:    andl $31, %edx
-; AVX512VL-ONLY-NEXT:    vpextrb $2, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrd $19, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrd $20, %k5, %k7
+; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
+; AVX512VL-ONLY-NEXT:    andl $31, %ecx
+; AVX512VL-ONLY-NEXT:    vpextrb $2, %xmm0, (%rsp,%rcx)
+; AVX512VL-ONLY-NEXT:    kshiftrd $19, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrd $20, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $31, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $3, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrd $21, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrd $21, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $31, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $4, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    movl %edx, %ecx
-; AVX512VL-ONLY-NEXT:    andl $31, %ecx
-; AVX512VL-ONLY-NEXT:    vpextrb $5, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrd $22, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrd $23, %k5, %k7
+; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
+; AVX512VL-ONLY-NEXT:    andl $31, %edx
+; AVX512VL-ONLY-NEXT:    vpextrb $5, %xmm0, (%rsp,%rdx)
+; AVX512VL-ONLY-NEXT:    kshiftrd $22, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrd $23, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $31, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $6, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrd $25, %k5, %k7
-; AVX512VL-ONLY-NEXT:    kshiftrd $24, %k5, %k5
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrd $24, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $31, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $7, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    movl %ecx, %edx
-; AVX512VL-ONLY-NEXT:    andl $31, %edx
-; AVX512VL-ONLY-NEXT:    vpextrb $8, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k5, %edx
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
-; AVX512VL-ONLY-NEXT:    movl %edx, %ecx
+; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $31, %ecx
-; AVX512VL-ONLY-NEXT:    vpextrb $9, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
+; AVX512VL-ONLY-NEXT:    vpextrb $8, %xmm0, (%rsp,%rcx)
+; AVX512VL-ONLY-NEXT:    kshiftrd $25, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrd $26, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
-; AVX512VL-ONLY-NEXT:    kmovd %k6, %edx
+; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
+; AVX512VL-ONLY-NEXT:    andl $31, %edx
+; AVX512VL-ONLY-NEXT:    vpextrb $9, %xmm0, (%rsp,%rdx)
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrd $27, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $31, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $10, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k4, %ecx
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $31, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $11, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k3, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrd $28, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrd $29, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $31, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $12, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k2, %ecx
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrd $30, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $31, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $13, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    movl %ecx, %edx
-; AVX512VL-ONLY-NEXT:    andl $31, %edx
-; AVX512VL-ONLY-NEXT:    vpextrb $14, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k1, %edx
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
+; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
+; AVX512VL-ONLY-NEXT:    andl $31, %ecx
+; AVX512VL-ONLY-NEXT:    vpextrb $14, %xmm0, (%rsp,%rcx)
+; AVX512VL-ONLY-NEXT:    kshiftrd $31, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movl %edx, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $31, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $15, %xmm0, (%rsp,%rcx)
@@ -2799,17 +2799,12 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX512VL-ONLY-NEXT:    andq $-64, %rsp
 ; AVX512VL-ONLY-NEXT:    subq $64, %rsp
 ; AVX512VL-ONLY-NEXT:    vpsllw $7, %zmm1, %zmm1
-; AVX512VL-ONLY-NEXT:    vpmovb2m %zmm1, %k5
-; AVX512VL-ONLY-NEXT:    kshiftrq $63, %k5, %k0
-; AVX512VL-ONLY-NEXT:    kshiftrq $62, %k5, %k1
-; AVX512VL-ONLY-NEXT:    kshiftrq $61, %k5, %k2
-; AVX512VL-ONLY-NEXT:    kshiftrq $60, %k5, %k3
-; AVX512VL-ONLY-NEXT:    kshiftrq $59, %k5, %k4
-; AVX512VL-ONLY-NEXT:    kshiftrq $2, %k5, %k6
+; AVX512VL-ONLY-NEXT:    vpmovb2m %zmm1, %k1
+; AVX512VL-ONLY-NEXT:    kshiftrq $1, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
 ; AVX512VL-ONLY-NEXT:    vmovaps %zmm2, (%rsp)
-; AVX512VL-ONLY-NEXT:    kshiftrq $1, %k5, %k7
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    vmovdqu8 {{.*#+}} zmm1 {%k5} {z} = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX512VL-ONLY-NEXT:    kshiftrq $2, %k1, %k0
+; AVX512VL-ONLY-NEXT:    vmovdqu8 {{.*#+}} zmm1 {%k1} {z} = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; AVX512VL-ONLY-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
 ; AVX512VL-ONLY-NEXT:    vpaddb %ymm2, %ymm1, %ymm1
 ; AVX512VL-ONLY-NEXT:    vextracti128 $1, %ymm1, %xmm2
@@ -2827,7 +2822,7 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX512VL-ONLY-NEXT:    andl $63, %eax
 ; AVX512VL-ONLY-NEXT:    movzbl (%rsp,%rax), %eax
 ; AVX512VL-ONLY-NEXT:    vpextrb $0, %xmm0, (%rsp)
-; AVX512VL-ONLY-NEXT:    kmovd %k5, %edx
+; AVX512VL-ONLY-NEXT:    kmovd %k1, %edx
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $1, %xmm0, (%rsp,%rdx)
@@ -2836,58 +2831,57 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    movl %ecx, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $2, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k6, %edx
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    movl %edx, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $3, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kshiftrq $5, %k5, %k6
-; AVX512VL-ONLY-NEXT:    kshiftrq $3, %k5, %k7
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $4, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kshiftrq $3, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrq $4, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    movl %ecx, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $4, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $5, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    movl %edx, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $5, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k6, %ecx
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    movl %ecx, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $6, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kshiftrq $58, %k5, %k6
-; AVX512VL-ONLY-NEXT:    kshiftrq $6, %k5, %k7
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $7, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kshiftrq $6, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $7, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    movl %edx, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $7, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $8, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $9, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kshiftrq $8, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $9, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $8, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $10, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrq $10, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
@@ -2897,21 +2891,21 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX512VL-ONLY-NEXT:    movl %ecx, %edx
 ; AVX512VL-ONLY-NEXT:    andl $63, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $10, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $11, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $12, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kshiftrq $11, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrq $12, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $63, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $11, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $13, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $13, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
@@ -2921,29 +2915,29 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX512VL-ONLY-NEXT:    movl %edx, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $13, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $14, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $15, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kshiftrq $14, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $15, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $14, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $16, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrq $16, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $63, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $15, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $17, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $17, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
@@ -2951,128 +2945,128 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512VL-ONLY-NEXT:    vpextrb $0, %xmm1, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $18, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrq $18, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $63, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $1, %xmm1, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    movl %ecx, %edx
-; AVX512VL-ONLY-NEXT:    andl $63, %edx
-; AVX512VL-ONLY-NEXT:    vpextrb $2, %xmm1, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $19, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $20, %k5, %k7
+; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
+; AVX512VL-ONLY-NEXT:    andl $63, %ecx
+; AVX512VL-ONLY-NEXT:    vpextrb $2, %xmm1, (%rsp,%rcx)
+; AVX512VL-ONLY-NEXT:    kshiftrq $19, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrq $20, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $63, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $3, %xmm1, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $21, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $21, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $4, %xmm1, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    movl %edx, %ecx
-; AVX512VL-ONLY-NEXT:    andl $63, %ecx
-; AVX512VL-ONLY-NEXT:    vpextrb $5, %xmm1, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $22, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $23, %k5, %k7
+; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
+; AVX512VL-ONLY-NEXT:    andl $63, %edx
+; AVX512VL-ONLY-NEXT:    vpextrb $5, %xmm1, (%rsp,%rdx)
+; AVX512VL-ONLY-NEXT:    kshiftrq $22, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $23, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $6, %xmm1, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $24, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrq $24, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $63, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $7, %xmm1, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    movl %ecx, %edx
-; AVX512VL-ONLY-NEXT:    andl $63, %edx
-; AVX512VL-ONLY-NEXT:    vpextrb $8, %xmm1, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $25, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $26, %k5, %k7
+; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
+; AVX512VL-ONLY-NEXT:    andl $63, %ecx
+; AVX512VL-ONLY-NEXT:    vpextrb $8, %xmm1, (%rsp,%rcx)
+; AVX512VL-ONLY-NEXT:    kshiftrq $25, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrq $26, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $63, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $9, %xmm1, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $27, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $27, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $10, %xmm1, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    movl %edx, %ecx
-; AVX512VL-ONLY-NEXT:    andl $63, %ecx
-; AVX512VL-ONLY-NEXT:    vpextrb $11, %xmm1, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $28, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $29, %k5, %k7
+; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
+; AVX512VL-ONLY-NEXT:    andl $63, %edx
+; AVX512VL-ONLY-NEXT:    vpextrb $11, %xmm1, (%rsp,%rdx)
+; AVX512VL-ONLY-NEXT:    kshiftrq $28, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $29, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $12, %xmm1, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $30, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrq $30, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $63, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $13, %xmm1, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    movl %ecx, %edx
-; AVX512VL-ONLY-NEXT:    andl $63, %edx
-; AVX512VL-ONLY-NEXT:    vpextrb $14, %xmm1, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $31, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $32, %k5, %k7
+; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
+; AVX512VL-ONLY-NEXT:    andl $63, %ecx
+; AVX512VL-ONLY-NEXT:    vpextrb $14, %xmm1, (%rsp,%rcx)
+; AVX512VL-ONLY-NEXT:    kshiftrq $31, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrq $32, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $63, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $15, %xmm1, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $33, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $33, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
@@ -3083,21 +3077,21 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX512VL-ONLY-NEXT:    movl %edx, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $1, %xmm1, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $34, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $35, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kshiftrq $34, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $35, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $2, %xmm1, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $36, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrq $36, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
@@ -3107,21 +3101,21 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX512VL-ONLY-NEXT:    movl %ecx, %edx
 ; AVX512VL-ONLY-NEXT:    andl $63, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $4, %xmm1, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $37, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $38, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kshiftrq $37, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrq $38, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $63, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $5, %xmm1, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $39, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $39, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
@@ -3131,21 +3125,21 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX512VL-ONLY-NEXT:    movl %edx, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $7, %xmm1, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $40, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $41, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kshiftrq $40, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $41, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $8, %xmm1, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $42, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrq $42, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
@@ -3155,21 +3149,21 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX512VL-ONLY-NEXT:    movl %ecx, %edx
 ; AVX512VL-ONLY-NEXT:    andl $63, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $10, %xmm1, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $43, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $44, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kshiftrq $43, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrq $44, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $63, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $11, %xmm1, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $45, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $45, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
@@ -3179,29 +3173,29 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX512VL-ONLY-NEXT:    movl %edx, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $13, %xmm1, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $46, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $47, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kshiftrq $46, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $47, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $14, %xmm1, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $48, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrq $48, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $63, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $15, %xmm1, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $49, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $49, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
@@ -3209,112 +3203,118 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
 ; AVX512VL-ONLY-NEXT:    vpextrb $0, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $50, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrq $50, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $63, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $1, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    movl %ecx, %edx
-; AVX512VL-ONLY-NEXT:    andl $63, %edx
-; AVX512VL-ONLY-NEXT:    vpextrb $2, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $51, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $52, %k5, %k7
+; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
+; AVX512VL-ONLY-NEXT:    andl $63, %ecx
+; AVX512VL-ONLY-NEXT:    vpextrb $2, %xmm0, (%rsp,%rcx)
+; AVX512VL-ONLY-NEXT:    kshiftrq $51, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrq $52, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $63, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $3, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $53, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $53, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $4, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    movl %edx, %ecx
-; AVX512VL-ONLY-NEXT:    andl $63, %ecx
-; AVX512VL-ONLY-NEXT:    vpextrb $5, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $54, %k5, %k7
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %edx
-; AVX512VL-ONLY-NEXT:    kshiftrq $55, %k5, %k7
+; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
+; AVX512VL-ONLY-NEXT:    andl $63, %edx
+; AVX512VL-ONLY-NEXT:    vpextrb $5, %xmm0, (%rsp,%rdx)
+; AVX512VL-ONLY-NEXT:    kshiftrq $54, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $55, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $6, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
-; AVX512VL-ONLY-NEXT:    kshiftrq $57, %k5, %k7
-; AVX512VL-ONLY-NEXT:    kshiftrq $56, %k5, %k5
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrq $56, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $63, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $7, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    movl %ecx, %edx
-; AVX512VL-ONLY-NEXT:    andl $63, %edx
-; AVX512VL-ONLY-NEXT:    vpextrb $8, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k5, %edx
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
-; AVX512VL-ONLY-NEXT:    movl %edx, %ecx
+; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
-; AVX512VL-ONLY-NEXT:    vpextrb $9, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k7, %ecx
+; AVX512VL-ONLY-NEXT:    vpextrb $8, %xmm0, (%rsp,%rcx)
+; AVX512VL-ONLY-NEXT:    kshiftrq $57, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrq $58, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
-; AVX512VL-ONLY-NEXT:    kmovd %k6, %edx
+; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
+; AVX512VL-ONLY-NEXT:    andl $63, %edx
+; AVX512VL-ONLY-NEXT:    vpextrb $9, %xmm0, (%rsp,%rdx)
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $59, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $10, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k4, %ecx
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $63, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $11, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k3, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $60, %k1, %k0
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
+; AVX512VL-ONLY-NEXT:    kshiftrq $61, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
 ; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $12, %xmm0, (%rsp,%rcx)
-; AVX512VL-ONLY-NEXT:    kmovd %k2, %ecx
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %ecx
+; AVX512VL-ONLY-NEXT:    kshiftrq $62, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movzbl %cl, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rdx, %rcx
 ; AVX512VL-ONLY-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX512VL-ONLY-NEXT:    andl $63, %edx
 ; AVX512VL-ONLY-NEXT:    vpextrb $13, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    movl %ecx, %edx
-; AVX512VL-ONLY-NEXT:    andl $63, %edx
-; AVX512VL-ONLY-NEXT:    vpextrb $14, %xmm0, (%rsp,%rdx)
-; AVX512VL-ONLY-NEXT:    kmovd %k1, %edx
+; AVX512VL-ONLY-NEXT:    kmovd %k0, %edx
 ; AVX512VL-ONLY-NEXT:    movzbl %dl, %edx
 ; AVX512VL-ONLY-NEXT:    andl $1, %edx
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rdx
+; AVX512VL-ONLY-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
+; AVX512VL-ONLY-NEXT:    andl $63, %ecx
+; AVX512VL-ONLY-NEXT:    vpextrb $14, %xmm0, (%rsp,%rcx)
+; AVX512VL-ONLY-NEXT:    kshiftrq $63, %k1, %k0
 ; AVX512VL-ONLY-NEXT:    movl %edx, %ecx
 ; AVX512VL-ONLY-NEXT:    andl $63, %ecx
 ; AVX512VL-ONLY-NEXT:    vpextrb $15, %xmm0, (%rsp,%rcx)

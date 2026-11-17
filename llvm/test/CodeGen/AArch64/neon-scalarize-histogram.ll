@@ -91,21 +91,21 @@ define void @histogram_i32_literal_alltruemask(ptr %base, <4 x i32> %indices) {
 ; CHECK-NEXT:    add v2.2d, v1.2d, v2.2d
 ; CHECK-NEXT:    add v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    fmov x8, d2
-; CHECK-NEXT:    mov x9, v2.d[1]
-; CHECK-NEXT:    ldr w10, [x8]
-; CHECK-NEXT:    add w10, w10, #1
-; CHECK-NEXT:    str w10, [x8]
-; CHECK-NEXT:    ldr w8, [x9]
+; CHECK-NEXT:    mov x10, v2.d[1]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    add w9, w9, #1
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    ldr w8, [x10]
 ; CHECK-NEXT:    add w8, w8, #1
-; CHECK-NEXT:    str w8, [x9]
+; CHECK-NEXT:    str w8, [x10]
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    mov x9, v0.d[1]
-; CHECK-NEXT:    ldr w10, [x8]
-; CHECK-NEXT:    add w10, w10, #1
-; CHECK-NEXT:    str w10, [x8]
-; CHECK-NEXT:    ldr w8, [x9]
+; CHECK-NEXT:    mov x10, v0.d[1]
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    add w9, w9, #1
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    ldr w8, [x10]
 ; CHECK-NEXT:    add w8, w8, #1
-; CHECK-NEXT:    str w8, [x9]
+; CHECK-NEXT:    str w8, [x10]
 ; CHECK-NEXT:    ret
 
   %buckets = getelementptr i32, ptr %base, <4 x i32> %indices

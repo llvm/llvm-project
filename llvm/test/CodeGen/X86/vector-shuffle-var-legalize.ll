@@ -388,15 +388,15 @@ define <8 x i32> @split_v8i32_v8i1(<8 x i32> %v, <8 x i1> %mask) {
 ; AVX512-NEXT:    kmovd %k1, %ecx
 ; AVX512-NEXT:    kshiftrw $1, %k0, %k1
 ; AVX512-NEXT:    kmovd %k1, %edx
-; AVX512-NEXT:    kshiftrw $7, %k0, %k1
-; AVX512-NEXT:    kshiftrw $6, %k0, %k2
-; AVX512-NEXT:    kshiftrw $4, %k0, %k3
-; AVX512-NEXT:    kshiftrw $5, %k0, %k4
 ; AVX512-NEXT:    kmovd %k0, %esi
+; AVX512-NEXT:    kshiftrw $7, %k0, %k1
 ; AVX512-NEXT:    kmovd %k1, %edi
-; AVX512-NEXT:    kmovd %k2, %r8d
-; AVX512-NEXT:    kmovd %k3, %r9d
-; AVX512-NEXT:    kmovd %k4, %r10d
+; AVX512-NEXT:    kshiftrw $6, %k0, %k1
+; AVX512-NEXT:    kmovd %k1, %r8d
+; AVX512-NEXT:    kshiftrw $4, %k0, %k1
+; AVX512-NEXT:    kmovd %k1, %r9d
+; AVX512-NEXT:    kshiftrw $5, %k0, %k0
+; AVX512-NEXT:    kmovd %k0, %r10d
 ; AVX512-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX512-NEXT:    movzbl %r10b, %r10d
 ; AVX512-NEXT:    andl $1, %r10d

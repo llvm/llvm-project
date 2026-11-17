@@ -309,22 +309,22 @@ define <2 x i48> @umulh_v2i48(<2 x i48> %x, <2 x i48> %y) nounwind {
 ;
 ; CHECK-GI-LABEL: umulh_v2i48:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov x9, d0
+; CHECK-GI-NEXT:    fmov x8, d0
 ; CHECK-GI-NEXT:    fmov x10, d1
-; CHECK-GI-NEXT:    mov x8, v0.d[1]
+; CHECK-GI-NEXT:    mov x9, v0.d[1]
 ; CHECK-GI-NEXT:    mov x11, v1.d[1]
-; CHECK-GI-NEXT:    and x9, x9, #0xffffffffffff
-; CHECK-GI-NEXT:    and x10, x10, #0xffffffffffff
-; CHECK-GI-NEXT:    mul x12, x9, x10
 ; CHECK-GI-NEXT:    and x8, x8, #0xffffffffffff
-; CHECK-GI-NEXT:    umulh x9, x9, x10
-; CHECK-GI-NEXT:    and x10, x11, #0xffffffffffff
-; CHECK-GI-NEXT:    mul x11, x8, x10
+; CHECK-GI-NEXT:    and x10, x10, #0xffffffffffff
+; CHECK-GI-NEXT:    mul x12, x8, x10
+; CHECK-GI-NEXT:    and x9, x9, #0xffffffffffff
 ; CHECK-GI-NEXT:    umulh x8, x8, x10
-; CHECK-GI-NEXT:    extr x9, x9, x12, #48
-; CHECK-GI-NEXT:    fmov d0, x9
-; CHECK-GI-NEXT:    extr x8, x8, x11, #48
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    and x10, x11, #0xffffffffffff
+; CHECK-GI-NEXT:    mul x11, x9, x10
+; CHECK-GI-NEXT:    umulh x9, x9, x10
+; CHECK-GI-NEXT:    extr x8, x8, x12, #48
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    extr x9, x9, x11, #48
+; CHECK-GI-NEXT:    mov v0.d[1], x9
 ; CHECK-GI-NEXT:    ret
   %r = call <2 x i48> @llvm.umulh(<2 x i48> %x, <2 x i48> %y)
   ret <2 x i48> %r

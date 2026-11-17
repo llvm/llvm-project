@@ -29,13 +29,13 @@ define <4 x i32> @any_of_select_vf4(<4 x i32> %mask, <4 x i32> %a, <4 x i32> %b)
 ; CHECK-GI-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
 ; CHECK-GI-NEXT:    mov w9, v0.s[2]
-; CHECK-GI-NEXT:    fmov w11, s0
-; CHECK-GI-NEXT:    mov w10, v0.s[3]
+; CHECK-GI-NEXT:    fmov w10, s0
+; CHECK-GI-NEXT:    mov w11, v0.s[3]
 ; CHECK-GI-NEXT:    and w8, w8, #0x1
-; CHECK-GI-NEXT:    bfi w11, w8, #1, #31
+; CHECK-GI-NEXT:    bfi w10, w8, #1, #31
 ; CHECK-GI-NEXT:    and w8, w9, #0x1
-; CHECK-GI-NEXT:    and w9, w10, #0x1
-; CHECK-GI-NEXT:    orr w8, w11, w8, lsl #2
+; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    orr w8, w10, w8, lsl #2
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #3
 ; CHECK-GI-NEXT:    strb w8, [sp, #15]
 ; CHECK-GI-NEXT:    and w8, w8, #0xff
@@ -71,13 +71,13 @@ define <4 x i8> @any_of_select_v4i8(<4 x i32> %mask, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK-GI-NEXT:    movi d3, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
 ; CHECK-GI-NEXT:    mov w9, v0.s[2]
-; CHECK-GI-NEXT:    fmov w11, s0
-; CHECK-GI-NEXT:    mov w10, v0.s[3]
+; CHECK-GI-NEXT:    fmov w10, s0
+; CHECK-GI-NEXT:    mov w11, v0.s[3]
 ; CHECK-GI-NEXT:    and w8, w8, #0x1
-; CHECK-GI-NEXT:    bfi w11, w8, #1, #31
+; CHECK-GI-NEXT:    bfi w10, w8, #1, #31
 ; CHECK-GI-NEXT:    and w8, w9, #0x1
-; CHECK-GI-NEXT:    and w9, w10, #0x1
-; CHECK-GI-NEXT:    orr w8, w11, w8, lsl #2
+; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    orr w8, w10, w8, lsl #2
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #3
 ; CHECK-GI-NEXT:    strb w8, [sp, #15]
 ; CHECK-GI-NEXT:    and w8, w8, #0xff

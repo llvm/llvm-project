@@ -66,41 +66,40 @@ define void @load_factor3(ptr %ptr) #0 {
 ; CHECK-IADISABLED-NEXT:    stp w12, w9, [sp, #176]
 ; CHECK-IADISABLED-NEXT:    fmov w12, s5
 ; CHECK-IADISABLED-NEXT:    mov w9, v0.s[2]
+; CHECK-IADISABLED-NEXT:    mov z5.s, z1.s[7]
 ; CHECK-IADISABLED-NEXT:    stp w12, w10, [sp, #168]
 ; CHECK-IADISABLED-NEXT:    fmov w10, s3
 ; CHECK-IADISABLED-NEXT:    stp w9, w10, [sp, #88]
 ; CHECK-IADISABLED-NEXT:    ldr z3, [x8]
 ; CHECK-IADISABLED-NEXT:    mov w11, v3.s[1]
-; CHECK-IADISABLED-NEXT:    mov z5.s, z3.s[4]
+; CHECK-IADISABLED-NEXT:    mov z4.s, z3.s[4]
 ; CHECK-IADISABLED-NEXT:    fmov w9, s3
 ; CHECK-IADISABLED-NEXT:    mov w8, v3.s[3]
 ; CHECK-IADISABLED-NEXT:    mov w10, v3.s[2]
-; CHECK-IADISABLED-NEXT:    mov z4.s, z3.s[5]
-; CHECK-IADISABLED-NEXT:    mov z3.s, z2.s[5]
+; CHECK-IADISABLED-NEXT:    mov z3.s, z3.s[5]
 ; CHECK-IADISABLED-NEXT:    stp w9, w11, [sp, #64]
-; CHECK-IADISABLED-NEXT:    fmov w9, s5
-; CHECK-IADISABLED-NEXT:    mov z5.s, z1.s[4]
-; CHECK-IADISABLED-NEXT:    str s4, [sp, #84]
-; CHECK-IADISABLED-NEXT:    mov z4.s, z1.s[7]
-; CHECK-IADISABLED-NEXT:    mov w11, v1.s[1]
-; CHECK-IADISABLED-NEXT:    str w10, [sp, #72]
-; CHECK-IADISABLED-NEXT:    fmov w10, s3
-; CHECK-IADISABLED-NEXT:    stp w8, w9, [sp, #76]
-; CHECK-IADISABLED-NEXT:    mov w9, v2.s[2]
-; CHECK-IADISABLED-NEXT:    add x8, sp, #64
-; CHECK-IADISABLED-NEXT:    ldr z3, [x8]
-; CHECK-IADISABLED-NEXT:    fmov w8, s4
-; CHECK-IADISABLED-NEXT:    mov z4.s, z0.s[6]
-; CHECK-IADISABLED-NEXT:    str w11, [sp, #128]
-; CHECK-IADISABLED-NEXT:    mov w11, v1.s[2]
-; CHECK-IADISABLED-NEXT:    stp w9, w10, [sp, #140]
-; CHECK-IADISABLED-NEXT:    fmov w9, s5
-; CHECK-IADISABLED-NEXT:    fmov w10, s0
-; CHECK-IADISABLED-NEXT:    stp w9, w8, [sp, #132]
-; CHECK-IADISABLED-NEXT:    mov w8, v0.s[3]
 ; CHECK-IADISABLED-NEXT:    fmov w9, s4
-; CHECK-IADISABLED-NEXT:    str w10, [sp, #52]
-; CHECK-IADISABLED-NEXT:    stp w8, w9, [sp, #56]
+; CHECK-IADISABLED-NEXT:    mov z4.s, z2.s[5]
+; CHECK-IADISABLED-NEXT:    str w10, [sp, #72]
+; CHECK-IADISABLED-NEXT:    str s3, [sp, #84]
+; CHECK-IADISABLED-NEXT:    stp w8, w9, [sp, #76]
+; CHECK-IADISABLED-NEXT:    mov w8, v2.s[2]
+; CHECK-IADISABLED-NEXT:    fmov w10, s4
+; CHECK-IADISABLED-NEXT:    mov z4.s, z1.s[4]
+; CHECK-IADISABLED-NEXT:    add x9, sp, #64
+; CHECK-IADISABLED-NEXT:    ldr z3, [x9]
+; CHECK-IADISABLED-NEXT:    mov w9, v1.s[1]
+; CHECK-IADISABLED-NEXT:    stp w8, w10, [sp, #140]
+; CHECK-IADISABLED-NEXT:    fmov w10, s5
+; CHECK-IADISABLED-NEXT:    fmov w8, s4
+; CHECK-IADISABLED-NEXT:    mov z5.s, z0.s[6]
+; CHECK-IADISABLED-NEXT:    str w9, [sp, #128]
+; CHECK-IADISABLED-NEXT:    fmov w9, s0
+; CHECK-IADISABLED-NEXT:    stp w8, w10, [sp, #132]
+; CHECK-IADISABLED-NEXT:    mov w10, v0.s[3]
+; CHECK-IADISABLED-NEXT:    fmov w8, s5
+; CHECK-IADISABLED-NEXT:    str w9, [sp, #52]
+; CHECK-IADISABLED-NEXT:    stp w10, w8, [sp, #56]
 ; CHECK-IADISABLED-NEXT:    add x8, sp, #128
 ; CHECK-IADISABLED-NEXT:    ldr z4, [x8]
 ; CHECK-IADISABLED-NEXT:    mov w8, v4.s[3]
@@ -109,38 +108,39 @@ define void @load_factor3(ptr %ptr) #0 {
 ; CHECK-IADISABLED-NEXT:    mov z5.s, z4.s[4]
 ; CHECK-IADISABLED-NEXT:    stp w9, w8, [sp, #40]
 ; CHECK-IADISABLED-NEXT:    fmov w8, s4
-; CHECK-IADISABLED-NEXT:    mov z4.s, z2.s[6]
-; CHECK-IADISABLED-NEXT:    str s5, [sp, #48]
 ; CHECK-IADISABLED-NEXT:    mov w9, v2.s[3]
-; CHECK-IADISABLED-NEXT:    mov z5.s, z1.s[5]
+; CHECK-IADISABLED-NEXT:    str s5, [sp, #48]
+; CHECK-IADISABLED-NEXT:    mov z4.s, z2.s[6]
+; CHECK-IADISABLED-NEXT:    mov z5.s, z0.s[4]
 ; CHECK-IADISABLED-NEXT:    stp w8, w10, [sp, #32]
 ; CHECK-IADISABLED-NEXT:    add x8, sp, #32
 ; CHECK-IADISABLED-NEXT:    fmov w10, s2
-; CHECK-IADISABLED-NEXT:    ldr z1, [x8]
+; CHECK-IADISABLED-NEXT:    ldr z2, [x8]
+; CHECK-IADISABLED-NEXT:    mov w8, v1.s[2]
 ; CHECK-IADISABLED-NEXT:    str s4, [sp, #112]
-; CHECK-IADISABLED-NEXT:    mov z4.s, z0.s[4]
-; CHECK-IADISABLED-NEXT:    mov w8, v0.s[1]
-; CHECK-IADISABLED-NEXT:    mov z2.s, z0.s[7]
-; CHECK-IADISABLED-NEXT:    str s5, [sp, #100]
+; CHECK-IADISABLED-NEXT:    mov z4.s, z1.s[5]
+; CHECK-IADISABLED-NEXT:    mov z1.s, z0.s[7]
 ; CHECK-IADISABLED-NEXT:    stp w10, w9, [sp, #104]
-; CHECK-IADISABLED-NEXT:    fmov w9, s4
-; CHECK-IADISABLED-NEXT:    str w11, [sp, #96]
-; CHECK-IADISABLED-NEXT:    str s2, [sp, #28]
-; CHECK-IADISABLED-NEXT:    stp w8, w9, [sp, #20]
+; CHECK-IADISABLED-NEXT:    mov w9, v0.s[1]
+; CHECK-IADISABLED-NEXT:    str w8, [sp, #96]
+; CHECK-IADISABLED-NEXT:    fmov w8, s5
+; CHECK-IADISABLED-NEXT:    str s4, [sp, #100]
+; CHECK-IADISABLED-NEXT:    str s1, [sp, #28]
+; CHECK-IADISABLED-NEXT:    stp w9, w8, [sp, #20]
 ; CHECK-IADISABLED-NEXT:    add x8, sp, #96
 ; CHECK-IADISABLED-NEXT:    ldr z0, [x8]
 ; CHECK-IADISABLED-NEXT:    mov w8, v0.s[3]
 ; CHECK-IADISABLED-NEXT:    mov w9, v0.s[2]
 ; CHECK-IADISABLED-NEXT:    mov w10, v0.s[1]
-; CHECK-IADISABLED-NEXT:    mov z2.s, z0.s[4]
 ; CHECK-IADISABLED-NEXT:    stp w9, w8, [sp, #8]
 ; CHECK-IADISABLED-NEXT:    fmov w8, s0
-; CHECK-IADISABLED-NEXT:    str s2, [sp, #16]
+; CHECK-IADISABLED-NEXT:    mov z0.s, z0.s[4]
 ; CHECK-IADISABLED-NEXT:    stp w8, w10, [sp]
 ; CHECK-IADISABLED-NEXT:    mov x8, sp
+; CHECK-IADISABLED-NEXT:    str s0, [sp, #16]
 ; CHECK-IADISABLED-NEXT:    ldr z0, [x8]
 ; CHECK-IADISABLED-NEXT:    // fake_use: $z3
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1
+; CHECK-IADISABLED-NEXT:    // fake_use: $z2
 ; CHECK-IADISABLED-NEXT:    // fake_use: $z0
 ; CHECK-IADISABLED-NEXT:    mov sp, x29
 ; CHECK-IADISABLED-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
@@ -183,51 +183,51 @@ define void @load_factor4(ptr %ptr) #0 {
 ; CHECK-IADISABLED-NEXT:    zip1 z4.d, z0.d, z1.d
 ; CHECK-IADISABLED-NEXT:    trn2 z7.d, z0.d, z1.d
 ; CHECK-IADISABLED-NEXT:    stp d3, d2, [sp, #144]
+; CHECK-IADISABLED-NEXT:    zip1 z6.d, z3.d, z2.d
+; CHECK-IADISABLED-NEXT:    trn1 z16.d, z3.d, z2.d
+; CHECK-IADISABLED-NEXT:    trn2 z2.d, z3.d, z2.d
 ; CHECK-IADISABLED-NEXT:    mov z5.d, z4.d[1]
 ; CHECK-IADISABLED-NEXT:    fmov x9, d4
 ; CHECK-IADISABLED-NEXT:    str x9, [sp, #96]
 ; CHECK-IADISABLED-NEXT:    str d5, [sp, #104]
-; CHECK-IADISABLED-NEXT:    zip1 z5.d, z3.d, z2.d
 ; CHECK-IADISABLED-NEXT:    ldr z4, [x8]
 ; CHECK-IADISABLED-NEXT:    add x8, sp, #96
-; CHECK-IADISABLED-NEXT:    mov z16.d, z5.d[3]
-; CHECK-IADISABLED-NEXT:    mov z5.d, z5.d[2]
-; CHECK-IADISABLED-NEXT:    mov z6.d, z4.d[2]
+; CHECK-IADISABLED-NEXT:    mov z5.d, z4.d[2]
 ; CHECK-IADISABLED-NEXT:    mov z4.d, z4.d[3]
-; CHECK-IADISABLED-NEXT:    fmov x9, d6
+; CHECK-IADISABLED-NEXT:    fmov x9, d5
+; CHECK-IADISABLED-NEXT:    mov z5.d, z6.d[3]
+; CHECK-IADISABLED-NEXT:    mov z6.d, z6.d[2]
 ; CHECK-IADISABLED-NEXT:    str d4, [sp, #120]
-; CHECK-IADISABLED-NEXT:    mov z6.d, z7.d[1]
 ; CHECK-IADISABLED-NEXT:    str x9, [sp, #112]
 ; CHECK-IADISABLED-NEXT:    fmov x9, d7
-; CHECK-IADISABLED-NEXT:    trn1 z7.d, z3.d, z2.d
+; CHECK-IADISABLED-NEXT:    mov z7.d, z7.d[1]
 ; CHECK-IADISABLED-NEXT:    ldr z4, [x8]
-; CHECK-IADISABLED-NEXT:    str d16, [sp, #88]
-; CHECK-IADISABLED-NEXT:    zip2 z16.d, z0.d, z1.d
-; CHECK-IADISABLED-NEXT:    fmov x8, d5
-; CHECK-IADISABLED-NEXT:    trn2 z2.d, z3.d, z2.d
-; CHECK-IADISABLED-NEXT:    str d6, [sp, #72]
-; CHECK-IADISABLED-NEXT:    mov z5.d, z7.d[2]
-; CHECK-IADISABLED-NEXT:    str x9, [sp, #64]
-; CHECK-IADISABLED-NEXT:    add x9, sp, #64
-; CHECK-IADISABLED-NEXT:    mov z6.d, z16.d[1]
-; CHECK-IADISABLED-NEXT:    mov z7.d, z7.d[3]
+; CHECK-IADISABLED-NEXT:    fmov x8, d6
+; CHECK-IADISABLED-NEXT:    zip2 z6.d, z0.d, z1.d
+; CHECK-IADISABLED-NEXT:    str d5, [sp, #88]
+; CHECK-IADISABLED-NEXT:    mov z5.d, z16.d[2]
 ; CHECK-IADISABLED-NEXT:    mov z1.d, z1.d[3]
-; CHECK-IADISABLED-NEXT:    str x8, [sp, #80]
-; CHECK-IADISABLED-NEXT:    fmov x8, d16
-; CHECK-IADISABLED-NEXT:    mov z3.d, z2.d[3]
-; CHECK-IADISABLED-NEXT:    ldr z16, [x9]
-; CHECK-IADISABLED-NEXT:    mov z2.d, z2.d[2]
+; CHECK-IADISABLED-NEXT:    str x9, [sp, #64]
 ; CHECK-IADISABLED-NEXT:    mov z0.d, z0.d[3]
+; CHECK-IADISABLED-NEXT:    str x8, [sp, #80]
+; CHECK-IADISABLED-NEXT:    add x8, sp, #64
+; CHECK-IADISABLED-NEXT:    str d7, [sp, #72]
+; CHECK-IADISABLED-NEXT:    mov z7.d, z16.d[3]
+; CHECK-IADISABLED-NEXT:    ldr z3, [x8]
+; CHECK-IADISABLED-NEXT:    fmov x8, d6
+; CHECK-IADISABLED-NEXT:    mov z6.d, z6.d[1]
 ; CHECK-IADISABLED-NEXT:    str d7, [sp, #56]
 ; CHECK-IADISABLED-NEXT:    str x8, [sp, #32]
 ; CHECK-IADISABLED-NEXT:    fmov x8, d5
+; CHECK-IADISABLED-NEXT:    mov z5.d, z2.d[3]
+; CHECK-IADISABLED-NEXT:    mov z2.d, z2.d[2]
 ; CHECK-IADISABLED-NEXT:    str d6, [sp, #40]
 ; CHECK-IADISABLED-NEXT:    str x8, [sp, #48]
 ; CHECK-IADISABLED-NEXT:    add x8, sp, #32
-; CHECK-IADISABLED-NEXT:    ldr z5, [x8]
+; CHECK-IADISABLED-NEXT:    ldr z6, [x8]
 ; CHECK-IADISABLED-NEXT:    fmov x8, d2
 ; CHECK-IADISABLED-NEXT:    stp d0, d1, [sp, #160]
-; CHECK-IADISABLED-NEXT:    str d3, [sp, #24]
+; CHECK-IADISABLED-NEXT:    str d5, [sp, #24]
 ; CHECK-IADISABLED-NEXT:    str x8, [sp, #16]
 ; CHECK-IADISABLED-NEXT:    add x8, sp, #160
 ; CHECK-IADISABLED-NEXT:    ldr z0, [x8]
@@ -238,8 +238,8 @@ define void @load_factor4(ptr %ptr) #0 {
 ; CHECK-IADISABLED-NEXT:    str d1, [sp, #8]
 ; CHECK-IADISABLED-NEXT:    ldr z0, [x8]
 ; CHECK-IADISABLED-NEXT:    // fake_use: $z4
-; CHECK-IADISABLED-NEXT:    // fake_use: $z16
-; CHECK-IADISABLED-NEXT:    // fake_use: $z5
+; CHECK-IADISABLED-NEXT:    // fake_use: $z3
+; CHECK-IADISABLED-NEXT:    // fake_use: $z6
 ; CHECK-IADISABLED-NEXT:    // fake_use: $z0
 ; CHECK-IADISABLED-NEXT:    mov sp, x29
 ; CHECK-IADISABLED-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
@@ -499,38 +499,38 @@ define void @load_ptrvec_factor3(ptr %ptr) #0 {
 ; CHECK-IADISABLED-NEXT:    str x9, [sp, #88]
 ; CHECK-IADISABLED-NEXT:    str x10, [sp, #176]
 ; CHECK-IADISABLED-NEXT:    fmov x10, d4
+; CHECK-IADISABLED-NEXT:    mov z4.d, z2.d[3]
 ; CHECK-IADISABLED-NEXT:    stp x11, x10, [sp, #160]
-; CHECK-IADISABLED-NEXT:    add x10, sp, #64
+; CHECK-IADISABLED-NEXT:    mov x10, v1.d[1]
+; CHECK-IADISABLED-NEXT:    mov z1.d, z1.d[2]
 ; CHECK-IADISABLED-NEXT:    ldr z3, [x8]
 ; CHECK-IADISABLED-NEXT:    mov x8, v3.d[1]
 ; CHECK-IADISABLED-NEXT:    fmov x9, d3
-; CHECK-IADISABLED-NEXT:    mov z4.d, z3.d[2]
-; CHECK-IADISABLED-NEXT:    mov z3.d, z2.d[3]
-; CHECK-IADISABLED-NEXT:    str d4, [sp, #80]
+; CHECK-IADISABLED-NEXT:    mov z3.d, z3.d[2]
+; CHECK-IADISABLED-NEXT:    str d3, [sp, #80]
 ; CHECK-IADISABLED-NEXT:    stp x9, x8, [sp, #64]
-; CHECK-IADISABLED-NEXT:    mov x9, v1.d[1]
 ; CHECK-IADISABLED-NEXT:    fmov x8, d2
-; CHECK-IADISABLED-NEXT:    ldr z4, [x10]
-; CHECK-IADISABLED-NEXT:    mov z2.d, z2.d[1]
-; CHECK-IADISABLED-NEXT:    mov z1.d, z1.d[2]
-; CHECK-IADISABLED-NEXT:    stp x9, x8, [sp, #128]
-; CHECK-IADISABLED-NEXT:    fmov x8, d3
+; CHECK-IADISABLED-NEXT:    add x9, sp, #64
+; CHECK-IADISABLED-NEXT:    ldr z3, [x9]
 ; CHECK-IADISABLED-NEXT:    add x9, sp, #128
+; CHECK-IADISABLED-NEXT:    mov z2.d, z2.d[1]
+; CHECK-IADISABLED-NEXT:    stp x10, x8, [sp, #128]
+; CHECK-IADISABLED-NEXT:    fmov x8, d4
 ; CHECK-IADISABLED-NEXT:    str x8, [sp, #144]
 ; CHECK-IADISABLED-NEXT:    fmov x8, d5
 ; CHECK-IADISABLED-NEXT:    str x8, [sp, #56]
-; CHECK-IADISABLED-NEXT:    ldr z3, [x9]
-; CHECK-IADISABLED-NEXT:    mov x8, v3.d[1]
-; CHECK-IADISABLED-NEXT:    mov z5.d, z3.d[2]
-; CHECK-IADISABLED-NEXT:    fmov x9, d3
-; CHECK-IADISABLED-NEXT:    mov z3.d, z0.d[3]
-; CHECK-IADISABLED-NEXT:    str d5, [sp, #48]
+; CHECK-IADISABLED-NEXT:    ldr z4, [x9]
+; CHECK-IADISABLED-NEXT:    mov x8, v4.d[1]
+; CHECK-IADISABLED-NEXT:    fmov x9, d4
+; CHECK-IADISABLED-NEXT:    mov z4.d, z4.d[2]
+; CHECK-IADISABLED-NEXT:    str d4, [sp, #48]
+; CHECK-IADISABLED-NEXT:    mov z4.d, z0.d[3]
 ; CHECK-IADISABLED-NEXT:    stp x9, x8, [sp, #32]
 ; CHECK-IADISABLED-NEXT:    add x8, sp, #32
 ; CHECK-IADISABLED-NEXT:    ldr z5, [x8]
 ; CHECK-IADISABLED-NEXT:    fmov x8, d0
 ; CHECK-IADISABLED-NEXT:    stp d1, d2, [sp, #96]
-; CHECK-IADISABLED-NEXT:    str d3, [sp, #24]
+; CHECK-IADISABLED-NEXT:    str d4, [sp, #24]
 ; CHECK-IADISABLED-NEXT:    str x8, [sp, #16]
 ; CHECK-IADISABLED-NEXT:    add x8, sp, #96
 ; CHECK-IADISABLED-NEXT:    ldr z0, [x8]
@@ -540,7 +540,7 @@ define void @load_ptrvec_factor3(ptr %ptr) #0 {
 ; CHECK-IADISABLED-NEXT:    mov x8, sp
 ; CHECK-IADISABLED-NEXT:    str d1, [sp, #8]
 ; CHECK-IADISABLED-NEXT:    ldr z0, [x8]
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
+; CHECK-IADISABLED-NEXT:    // fake_use: $z3
 ; CHECK-IADISABLED-NEXT:    // fake_use: $z5
 ; CHECK-IADISABLED-NEXT:    // fake_use: $z0
 ; CHECK-IADISABLED-NEXT:    mov sp, x29
@@ -584,51 +584,51 @@ define void @load_ptrvec_factor4(ptr %ptr) #0 {
 ; CHECK-IADISABLED-NEXT:    zip1 z4.d, z0.d, z1.d
 ; CHECK-IADISABLED-NEXT:    trn2 z7.d, z0.d, z1.d
 ; CHECK-IADISABLED-NEXT:    stp d3, d2, [sp, #144]
+; CHECK-IADISABLED-NEXT:    zip1 z6.d, z3.d, z2.d
+; CHECK-IADISABLED-NEXT:    trn1 z16.d, z3.d, z2.d
+; CHECK-IADISABLED-NEXT:    trn2 z2.d, z3.d, z2.d
 ; CHECK-IADISABLED-NEXT:    mov z5.d, z4.d[1]
 ; CHECK-IADISABLED-NEXT:    fmov x9, d4
 ; CHECK-IADISABLED-NEXT:    str x9, [sp, #96]
 ; CHECK-IADISABLED-NEXT:    str d5, [sp, #104]
-; CHECK-IADISABLED-NEXT:    zip1 z5.d, z3.d, z2.d
 ; CHECK-IADISABLED-NEXT:    ldr z4, [x8]
 ; CHECK-IADISABLED-NEXT:    add x8, sp, #96
-; CHECK-IADISABLED-NEXT:    mov z16.d, z5.d[3]
-; CHECK-IADISABLED-NEXT:    mov z5.d, z5.d[2]
-; CHECK-IADISABLED-NEXT:    mov z6.d, z4.d[2]
+; CHECK-IADISABLED-NEXT:    mov z5.d, z4.d[2]
 ; CHECK-IADISABLED-NEXT:    mov z4.d, z4.d[3]
-; CHECK-IADISABLED-NEXT:    fmov x9, d6
+; CHECK-IADISABLED-NEXT:    fmov x9, d5
+; CHECK-IADISABLED-NEXT:    mov z5.d, z6.d[3]
+; CHECK-IADISABLED-NEXT:    mov z6.d, z6.d[2]
 ; CHECK-IADISABLED-NEXT:    str d4, [sp, #120]
-; CHECK-IADISABLED-NEXT:    mov z6.d, z7.d[1]
 ; CHECK-IADISABLED-NEXT:    str x9, [sp, #112]
 ; CHECK-IADISABLED-NEXT:    fmov x9, d7
-; CHECK-IADISABLED-NEXT:    trn1 z7.d, z3.d, z2.d
+; CHECK-IADISABLED-NEXT:    mov z7.d, z7.d[1]
 ; CHECK-IADISABLED-NEXT:    ldr z4, [x8]
-; CHECK-IADISABLED-NEXT:    str d16, [sp, #88]
-; CHECK-IADISABLED-NEXT:    zip2 z16.d, z0.d, z1.d
-; CHECK-IADISABLED-NEXT:    fmov x8, d5
-; CHECK-IADISABLED-NEXT:    trn2 z2.d, z3.d, z2.d
-; CHECK-IADISABLED-NEXT:    str d6, [sp, #72]
-; CHECK-IADISABLED-NEXT:    mov z5.d, z7.d[2]
-; CHECK-IADISABLED-NEXT:    str x9, [sp, #64]
-; CHECK-IADISABLED-NEXT:    add x9, sp, #64
-; CHECK-IADISABLED-NEXT:    mov z6.d, z16.d[1]
-; CHECK-IADISABLED-NEXT:    mov z7.d, z7.d[3]
+; CHECK-IADISABLED-NEXT:    fmov x8, d6
+; CHECK-IADISABLED-NEXT:    zip2 z6.d, z0.d, z1.d
+; CHECK-IADISABLED-NEXT:    str d5, [sp, #88]
+; CHECK-IADISABLED-NEXT:    mov z5.d, z16.d[2]
 ; CHECK-IADISABLED-NEXT:    mov z1.d, z1.d[3]
-; CHECK-IADISABLED-NEXT:    str x8, [sp, #80]
-; CHECK-IADISABLED-NEXT:    fmov x8, d16
-; CHECK-IADISABLED-NEXT:    mov z3.d, z2.d[3]
-; CHECK-IADISABLED-NEXT:    ldr z16, [x9]
-; CHECK-IADISABLED-NEXT:    mov z2.d, z2.d[2]
+; CHECK-IADISABLED-NEXT:    str x9, [sp, #64]
 ; CHECK-IADISABLED-NEXT:    mov z0.d, z0.d[3]
+; CHECK-IADISABLED-NEXT:    str x8, [sp, #80]
+; CHECK-IADISABLED-NEXT:    add x8, sp, #64
+; CHECK-IADISABLED-NEXT:    str d7, [sp, #72]
+; CHECK-IADISABLED-NEXT:    mov z7.d, z16.d[3]
+; CHECK-IADISABLED-NEXT:    ldr z3, [x8]
+; CHECK-IADISABLED-NEXT:    fmov x8, d6
+; CHECK-IADISABLED-NEXT:    mov z6.d, z6.d[1]
 ; CHECK-IADISABLED-NEXT:    str d7, [sp, #56]
 ; CHECK-IADISABLED-NEXT:    str x8, [sp, #32]
 ; CHECK-IADISABLED-NEXT:    fmov x8, d5
+; CHECK-IADISABLED-NEXT:    mov z5.d, z2.d[3]
+; CHECK-IADISABLED-NEXT:    mov z2.d, z2.d[2]
 ; CHECK-IADISABLED-NEXT:    str d6, [sp, #40]
 ; CHECK-IADISABLED-NEXT:    str x8, [sp, #48]
 ; CHECK-IADISABLED-NEXT:    add x8, sp, #32
-; CHECK-IADISABLED-NEXT:    ldr z5, [x8]
+; CHECK-IADISABLED-NEXT:    ldr z6, [x8]
 ; CHECK-IADISABLED-NEXT:    fmov x8, d2
 ; CHECK-IADISABLED-NEXT:    stp d0, d1, [sp, #160]
-; CHECK-IADISABLED-NEXT:    str d3, [sp, #24]
+; CHECK-IADISABLED-NEXT:    str d5, [sp, #24]
 ; CHECK-IADISABLED-NEXT:    str x8, [sp, #16]
 ; CHECK-IADISABLED-NEXT:    add x8, sp, #160
 ; CHECK-IADISABLED-NEXT:    ldr z0, [x8]
@@ -639,8 +639,8 @@ define void @load_ptrvec_factor4(ptr %ptr) #0 {
 ; CHECK-IADISABLED-NEXT:    str d1, [sp, #8]
 ; CHECK-IADISABLED-NEXT:    ldr z0, [x8]
 ; CHECK-IADISABLED-NEXT:    // fake_use: $z4
-; CHECK-IADISABLED-NEXT:    // fake_use: $z16
-; CHECK-IADISABLED-NEXT:    // fake_use: $z5
+; CHECK-IADISABLED-NEXT:    // fake_use: $z3
+; CHECK-IADISABLED-NEXT:    // fake_use: $z6
 ; CHECK-IADISABLED-NEXT:    // fake_use: $z0
 ; CHECK-IADISABLED-NEXT:    mov sp, x29
 ; CHECK-IADISABLED-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
@@ -981,18 +981,18 @@ define void @load_min_not_max(ptr %ptr) #1 {
 ; CHECK-IADISABLED-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; CHECK-IADISABLED-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; CHECK-IADISABLED-NEXT:    fmov x8, d0
-; CHECK-IADISABLED-NEXT:    mov z3.d, z0.d[3]
+; CHECK-IADISABLED-NEXT:    mov z4.d, z0.d[3]
 ; CHECK-IADISABLED-NEXT:    mov z2.d, z0.d[2]
-; CHECK-IADISABLED-NEXT:    mov z4.d, z1.d[2]
+; CHECK-IADISABLED-NEXT:    mov z3.d, z1.d[2]
 ; CHECK-IADISABLED-NEXT:    fmov x9, d1
 ; CHECK-IADISABLED-NEXT:    str x8, [sp, #16]
 ; CHECK-IADISABLED-NEXT:    mov x8, v0.d[1]
 ; CHECK-IADISABLED-NEXT:    mov z0.d, z1.d[3]
-; CHECK-IADISABLED-NEXT:    fmov x11, d3
+; CHECK-IADISABLED-NEXT:    fmov x11, d4
+; CHECK-IADISABLED-NEXT:    str d2, [sp, #24]
 ; CHECK-IADISABLED-NEXT:    str x9, [sp]
 ; CHECK-IADISABLED-NEXT:    mov x9, v1.d[1]
-; CHECK-IADISABLED-NEXT:    str d2, [sp, #24]
-; CHECK-IADISABLED-NEXT:    str d4, [sp, #8]
+; CHECK-IADISABLED-NEXT:    str d3, [sp, #8]
 ; CHECK-IADISABLED-NEXT:    ld1d { z1.d }, p0/z, [x10]
 ; CHECK-IADISABLED-NEXT:    stp x8, x11, [sp, #48]
 ; CHECK-IADISABLED-NEXT:    fmov x8, d0
@@ -1084,14 +1084,14 @@ define void @load_min_ge_type(ptr %ptr) #2 {
 ; CHECK-IADISABLED-NEXT:    fmov x8, d1
 ; CHECK-IADISABLED-NEXT:    fmov x10, d3
 ; CHECK-IADISABLED-NEXT:    stp x8, x10, [sp, #48]
-; CHECK-IADISABLED-NEXT:    mov x8, v1.d[1]
-; CHECK-IADISABLED-NEXT:    add x10, sp, #32
-; CHECK-IADISABLED-NEXT:    ld1d { z1.d }, p0/z, [x10]
+; CHECK-IADISABLED-NEXT:    mov x10, v1.d[1]
+; CHECK-IADISABLED-NEXT:    add x8, sp, #32
+; CHECK-IADISABLED-NEXT:    ld1d { z1.d }, p0/z, [x8]
 ; CHECK-IADISABLED-NEXT:    str x9, [sp]
+; CHECK-IADISABLED-NEXT:    mov x8, sp
 ; CHECK-IADISABLED-NEXT:    str d0, [sp, #8]
 ; CHECK-IADISABLED-NEXT:    str d2, [sp, #24]
-; CHECK-IADISABLED-NEXT:    str x8, [sp, #16]
-; CHECK-IADISABLED-NEXT:    mov x8, sp
+; CHECK-IADISABLED-NEXT:    str x10, [sp, #16]
 ; CHECK-IADISABLED-NEXT:    ld1d { z0.d }, p0/z, [x8]
 ; CHECK-IADISABLED-NEXT:    // fake_use: $z1
 ; CHECK-IADISABLED-NEXT:    // fake_use: $z0
