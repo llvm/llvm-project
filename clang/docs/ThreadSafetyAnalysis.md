@@ -482,7 +482,16 @@ as `ACQUIRE`. See {ref}`mutexheader`, below, for example uses.
 
 The capability is tracked as conditionally ("try") held from the call until a
 recognized branch on its return value: on the success path the capability is
-held, on the failure path it is not. A conditionally held capability does not
+held, on the failure path it is not. A branch is recognized when it tests the
+call's result directly or through a local variable, including a variable that
+merges the result with an earlier constant initializer
+(`bool ok = false; if (...) ok = mu.TryLock(); if (ok) ...`) -- when the
+variable is true despite the false initializer, the try-acquire must have
+succeeded. A branch on the result also revives an acquisition the analysis lost at a
+merge it could not carry the hold through, since the branch proves the call
+acquired the capability -- but only that acquisition, and only while nothing
+on the path contradicts the stored result: a release of the capability, or
+another acquisition of it, leaves the branch with nothing to revive. A conditionally held capability does not
 satisfy requirements such as `GUARDED_BY` or `REQUIRES` and it also violates
 `LOCKS_EXCLUDED` and negative requirements (`REQUIRES(!mu)`). Acquiring a
 non-reentrant lock again before branching on the return value warns that it may
@@ -502,8 +511,9 @@ not hold the capability, or at the end of the function -- since the capability
 may then be leaked. That covers a result never used to determine success, and
 also one the analysis cannot follow to a branch: stored in a member or a
 parameter, or simply returned to the caller. One acquisition is reported once,
-at the first merge that loses it. Loop merges are exempt for now: a result may
-be checked on the paths around the loop.
+at the first merge that loses it. A loop merge is exempt only while the result
+is branched on somewhere around the loop; a result never checked anywhere warns
+at the loop merge too.
 
 ```c++
 Mutex mu;

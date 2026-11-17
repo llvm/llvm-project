@@ -74,3 +74,27 @@ void two_proofs_one_release() {
   }
 } // expected-warning 2 {{mutex 'rmu' is not held on every path through here}} \
   // expected-warning {{unchecked result of try-acquire; mutex 'rmu' may still be held at the end of function}}
+
+// A stale result blocks per call: another call's release on the other
+// side of a join says nothing about this call's result, so the hold this
+// call proved is still carried, demoted to its conditional try fact, into
+// the rebranch on its stored result. (A single negative fact per
+// capability could not tell whose stale truth would do the resurrecting,
+// and refused the demotion: the hold was lost at the join, the guarded
+// write and the release under the rebranch both warned.)
+void stale_result_blocks_per_call(bool c) {
+  bool ok = false, ok2 = false;
+  if (c) {
+    ok = mu.TryLock();
+    if (!ok)
+      return;
+  } else {
+    ok2 = mu.TryLock();
+    if (ok2)
+      mu.Unlock();
+  }
+  if (ok) {
+    a = 1;
+    mu.Unlock();
+  }
+}

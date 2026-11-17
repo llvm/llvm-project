@@ -204,6 +204,22 @@ public:
 
   void needsNegative() EXCLUSIVE_LOCKS_REQUIRED(!mu);
 
+  // A conditional fact carried past an unrelated join is resolved by the
+  // later branch on the stored result, and the acquisition checks still run
+  // only at the call (one diagnostic at the TryLock, none at the branches --
+  // resolving is not a new acquisition).
+  void tryLockReaddChecksOnce(bool c, bool d) {
+    bool b = false;
+    if (c)
+      b = mu.TryLock(); // expected-warning{{acquiring mutex 'mu' requires negative capability '!mu'}}
+    if (d) {
+      a = 0;            // expected-warning{{writing variable 'a' requires holding mutex 'mu' exclusively}}
+    }
+    if (b) {
+      mu.Unlock();
+    }
+  }
+
   // A failed try-acquire proves nothing about whether the thread holds the
   // capability -- it fails for other reasons too -- so its failure edge
   // keeps what preceded the call: without a declared '!mu', the acquire
