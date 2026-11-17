@@ -702,7 +702,7 @@ Error GenericDeviceTy::dataMemcpy(void *DstPtr, const void *SrcPtr,
   return Err;
 }
 
-Error GenericDeviceTy::dataMemcpy3D(const Copy3DTy &Copy,
+Error GenericDeviceTy::dataMemcpy3D(const Copy3DDescTy &Copy,
                                     __tgt_async_info *AsyncInfo) {
   if (Copy.Extent[0] == 0 || Copy.Extent[1] == 0 || Copy.Extent[2] == 0)
     return Plugin::success();

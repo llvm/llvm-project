@@ -1298,10 +1298,10 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
   return Error::success();
 }
 
-static GenericDeviceTy::Copy3DTy
-makeCopy3D(void *DstPtr, const ol_memcpy3d_layout_t &Dst, bool DstIsHost,
-           const void *SrcPtr, const ol_memcpy3d_layout_t &Src, bool SrcIsHost,
-           ol_dimensions_t Size) {
+static GenericDeviceTy::Copy3DDescTy
+makeCopy3DDesc(void *DstPtr, const ol_memcpy3d_layout_t &Dst, bool DstIsHost,
+               const void *SrcPtr, const ol_memcpy3d_layout_t &Src,
+               bool SrcIsHost, ol_dimensions_t Size) {
   return {DstPtr,
           SrcPtr,
           {Dst.Offset.x, Dst.Offset.y, Dst.Offset.z},
@@ -1315,6 +1315,54 @@ makeCopy3D(void *DstPtr, const ol_memcpy3d_layout_t &Dst, bool DstIsHost,
           SrcIsHost};
 }
 
+// Copy a region one row at a time with olMemcpy. Used for backends without
+// native 2D/3D copies.
+static Error copyRows(ol_queue_handle_t Queue,
+                      const GenericDeviceTy::Copy3DDescTy &Copy,
+                      ol_device_handle_t DstDevice,
+                      ol_device_handle_t SrcDevice) {
+  auto *Dst = static_cast<char *>(Copy.DstPtr);
+  auto *Src = static_cast<const char *>(Copy.SrcPtr);
+  for (size_t Z = 0; Z < Copy.Extent[2]; ++Z)
+    for (size_t Y = 0; Y < Copy.Extent[1]; ++Y) {
+      char *DstRow = Dst + (Copy.DstOffset[2] + Z) * Copy.DstSlicePitch +
+                     (Copy.DstOffset[1] + Y) * Copy.DstPitch +
+                     Copy.DstOffset[0];
+      const char *SrcRow = Src + (Copy.SrcOffset[2] + Z) * Copy.SrcSlicePitch +
+                           (Copy.SrcOffset[1] + Y) * Copy.SrcPitch +
+                           Copy.SrcOffset[0];
+      if (auto Res = olMemcpy_impl(Queue, DstRow, DstDevice, SrcRow, SrcDevice,
+                                   Copy.Extent[0]))
+        return Res;
+    }
+  return Error::success();
+}
+
+// Copy with the native 3D copy of \p Device, or row by row if its backend does
+// not support the copy. A null device means host memory.
+static Error copy3D(ol_device_handle_t Device, ol_queue_handle_t Queue,
+                    const GenericDeviceTy::Copy3DDescTy &Copy,
+                    ol_device_handle_t DstDevice,
+                    ol_device_handle_t SrcDevice) {
+  bool Unsupported = false;
+  Error Res = handleErrors(
+      Device->Device->dataMemcpy3D(Copy, Queue ? Queue->AsyncInfo : nullptr),
+      [&](std::unique_ptr<error::OffloadError> E) -> Error {
+        // INVALID_SIZE: a value exceeds what the backend's native copy takes.
+        std::error_code EC = E->convertToErrorCode();
+        if (EC == error::make_error_code(ErrorCode::UNSUPPORTED) ||
+            EC == error::make_error_code(ErrorCode::INVALID_SIZE)) {
+          Unsupported = true;
+          return Error::success();
+        }
+        return Error(std::move(E));
+      });
+  if (Unsupported && !Res)
+    return copyRows(Queue, Copy, Copy.DstIsHost ? nullptr : DstDevice,
+                    Copy.SrcIsHost ? nullptr : SrcDevice);
+  return Res;
+}
+
 Error olMemcpy3D_impl(ol_queue_handle_t Queue, void *DstPtr,
                       ol_device_handle_t DstDevice,
                       const ol_memcpy3d_layout_t *DstLayout, const void *SrcPtr,
@@ -1326,7 +1374,8 @@ Error olMemcpy3D_impl(ol_queue_handle_t Queue, void *DstPtr,
 
   // The slice pitch of a layout is only meaningful if that layout spans or
   // starts past the first slice. Otherwise ignore it (and zero it so backends
-  // that look at both slice pitches never see an unvalidated value).
+  // that look at both slice pitches never see an unvalidated value). This must
+  // match Copy3DDescTy::dstUsesSlices() and srcUsesSlices().
   auto UsesSlices = [&](const ol_memcpy3d_layout_t &Layout) {
     return Size.z > 1 || Layout.Offset.z > 0;
   };
@@ -1354,21 +1403,53 @@ Error olMemcpy3D_impl(ol_queue_handle_t Queue, void *DstPtr,
   bool IsDstHost = isHostDevice(DstDevice);
   bool IsSrcHost = isHostDevice(SrcDevice);
 
-  GenericDeviceTy::Copy3DTy Copy =
-      makeCopy3D(DstPtr, Dst, IsDstHost, SrcPtr, Src, IsSrcHost, Size);
+  GenericDeviceTy::Copy3DDescTy Copy =
+      makeCopy3DDesc(DstPtr, Dst, IsDstHost, SrcPtr, Src, IsSrcHost, Size);
 
   if (IsDstHost && IsSrcHost) {
-    if (!Queue) {
-      Copy.copyHost();
-      return Error::success();
-    }
-    return Queue->Device->Device->dataMemcpy3D(Copy, Queue->AsyncInfo);
+    // A queue of the host device keeps the copy asynchronous. Otherwise the
+    // copy is done on the CPU once the work enqueued on the queue completed.
+    if (Queue && isHostDevice(Queue->Device))
+      return copy3D(Queue->Device, Queue, Copy, DstDevice, SrcDevice);
+    if (Queue)
+      if (auto Res = olSyncQueue_impl(Queue))
+        return Res;
+    Copy.copyHost();
+    return Error::success();
   }
 
-  // A device can always exchange data with itself.
-  if (!IsDstHost && !IsSrcHost && !canExchangeData(SrcDevice, DstDevice))
-    return createOffloadError(ErrorCode::UNSUPPORTED,
-                              "3D copy between devices without direct access");
+  // Devices that cannot exchange data directly stage the region through a
+  // packed host buffer, as olMemcpy does.
+  if (!IsDstHost && !IsSrcHost && !canExchangeData(SrcDevice, DstDevice)) {
+    if (Queue)
+      if (auto Res = olSyncQueue_impl(Queue))
+        return Res;
+
+    // Size of the packed region in bytes. Reject sizes that overflow size_t,
+    // which would make the buffer smaller than the region copied into it.
+    size_t Bytes;
+    if (__builtin_mul_overflow((size_t)Size.x, (size_t)Size.y, &Bytes) ||
+        __builtin_mul_overflow(Bytes, (size_t)Size.z, &Bytes))
+      return createOffloadError(ErrorCode::INVALID_SIZE,
+                                "the copied region is too large");
+    void *Buffer = malloc(Bytes);
+    if (!Buffer)
+      return createOffloadError(ErrorCode::OUT_OF_RESOURCES,
+                                "Couldn't allocate a buffer for transfer");
+
+    // The staging buffer holds only the copied region, tightly packed.
+    ol_memcpy3d_layout_t Packed = {
+        {0, 0, 0}, Size.x, Size.z > 1 ? (size_t)Size.x * Size.y : 0};
+    GenericDeviceTy::Copy3DDescTy ToHost =
+        makeCopy3DDesc(Buffer, Packed, true, SrcPtr, Src, false, Size);
+    GenericDeviceTy::Copy3DDescTy FromHost =
+        makeCopy3DDesc(DstPtr, Dst, false, Buffer, Packed, true, Size);
+    Error Res = copy3D(SrcDevice, nullptr, ToHost, nullptr, SrcDevice);
+    if (!Res)
+      Res = copy3D(DstDevice, nullptr, FromHost, DstDevice, nullptr);
+    free(Buffer);
+    return Res;
+  }
 
   // As in olMemcpy, the source device performs the copy unless it is the host.
   ol_device_handle_t Device = IsSrcHost ? DstDevice : SrcDevice;
@@ -1377,7 +1458,7 @@ Error olMemcpy3D_impl(ol_queue_handle_t Queue, void *DstPtr,
         ErrorCode::INVALID_QUEUE,
         "the queue does not belong to the device performing the copy");
 
-  return Device->Device->dataMemcpy3D(Copy, Queue ? Queue->AsyncInfo : nullptr);
+  return copy3D(Device, Queue, Copy, DstDevice, SrcDevice);
 }
 
 Error olMemFill_impl(ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,

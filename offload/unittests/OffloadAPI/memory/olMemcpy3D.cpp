@@ -14,7 +14,7 @@
 #include <vector>
 
 using olMemcpy3DTest = OffloadQueueTest;
-OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olMemcpy3DTest);
+OFFLOAD_TESTS_INSTANTIATE_HOST_DEVICE_FIXTURE(olMemcpy3DTest);
 
 namespace {
 ol_result_t copy3D(ol_queue_handle_t Queue, void *DstPtr,
@@ -307,6 +307,8 @@ TEST_P(olMemcpy3DTest, SuccessMixedSliceUsageIgnoresUnusedSlicePitch) {
 }
 
 TEST_P(olMemcpy3DTest, InvalidQueueWrongDevice) {
+  if (Device == Host)
+    GTEST_SKIP() << "Needs two devices of the same platform";
   ol_device_handle_t Other = nullptr;
   for (const auto &D : TestEnvironment::getDevices())
     if (D.Handle != Device && D.Handle != Host) {
@@ -353,9 +355,11 @@ TEST_P(olMemcpy3DTest, SuccessDtoDNoQueue) {
   ASSERT_SUCCESS(olMemFree(Context, B));
 }
 
-// Device to device across two different devices. Either succeeds (devices can
-// exchange data directly) or reports UNSUPPORTED.
+// Device to device across two different devices, directly or through the
+// host staging fallback. Copies a sub-region and checks nothing else changes.
 TEST_P(olMemcpy3DTest, DtoDTwoDevices) {
+  if (Device == Host)
+    GTEST_SKIP() << "Needs two devices of the same platform";
   ol_device_handle_t Other = nullptr;
   for (const auto &D : TestEnvironment::getDevices())
     if (D.Handle != Device && D.Handle != Host) {
@@ -370,25 +374,32 @@ TEST_P(olMemcpy3DTest, DtoDTwoDevices) {
   ASSERT_SUCCESS(olCreateContext(2, Both, &Ctx));
   std::vector<uint8_t> Input(Total);
   std::iota(Input.begin(), Input.end(), 0);
+  std::vector<uint8_t> Zeros(Total, 0);
   std::vector<uint8_t> Output(Total, 0);
   void *A, *B;
   ASSERT_SUCCESS(olMemAlloc(Ctx, Device, OL_ALLOC_TYPE_DEVICE, Total, &A));
   ASSERT_SUCCESS(olMemAlloc(Ctx, Other, OL_ALLOC_TYPE_DEVICE, Total, &B));
   ASSERT_SUCCESS(olMemcpy(nullptr, A, Device, Input.data(), Host, Total));
+  ASSERT_SUCCESS(olMemcpy(nullptr, B, Other, Zeros.data(), Host, Total));
 
-  ol_dimensions_t Zero = {0, 0, 0};
-  ol_result_t Res =
-      copy3D(nullptr, B, Other, Zero, Pitch, SlicePitch, A, Device, Zero, Pitch,
-             SlicePitch, {Pitch, Rows, Slices});
-  if (Res && Res->Code == OL_ERRC_UNSUPPORTED) {
-    ASSERT_SUCCESS(olMemFree(Ctx, A));
-    ASSERT_SUCCESS(olMemFree(Ctx, B));
-    ASSERT_SUCCESS(olDestroyContext(Ctx));
-    GTEST_SKIP() << "Devices cannot exchange data directly";
-  }
-  ASSERT_SUCCESS(Res);
+  ol_dimensions_t SrcOff = {4, 2, 1};
+  ol_dimensions_t DstOff = {1, 1, 0};
+  ol_dimensions_t Extent = {10, 3, 2};
+  ASSERT_SUCCESS(copy3D(nullptr, B, Other, DstOff, Pitch, SlicePitch, A, Device,
+                        SrcOff, Pitch, SlicePitch, Extent));
   ASSERT_SUCCESS(olMemcpy(nullptr, Output.data(), Host, B, Other, Total));
-  ASSERT_EQ(Input, Output);
+  for (size_t Z = 0; Z < Slices; ++Z)
+    for (size_t Y = 0; Y < Rows; ++Y)
+      for (size_t X = 0; X < Pitch; ++X) {
+        bool In = X >= DstOff.x && X < DstOff.x + Extent.x && Y >= DstOff.y &&
+                  Y < DstOff.y + Extent.y && Z >= DstOff.z &&
+                  Z < DstOff.z + Extent.z;
+        uint8_t Expected = In ? Input[(Z - DstOff.z + SrcOff.z) * SlicePitch +
+                                      (Y - DstOff.y + SrcOff.y) * Pitch +
+                                      (X - DstOff.x) + SrcOff.x]
+                              : 0;
+        ASSERT_EQ(Output[Z * SlicePitch + Y * Pitch + X], Expected);
+      }
   ASSERT_SUCCESS(olMemFree(Ctx, A));
   ASSERT_SUCCESS(olMemFree(Ctx, B));
   ASSERT_SUCCESS(olDestroyContext(Ctx));

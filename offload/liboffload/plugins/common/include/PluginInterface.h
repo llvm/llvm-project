@@ -997,7 +997,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Copy a 2D/3D region between pitched layouts. Offsets and pitches are in
   /// bytes for x; y counts rows and z counts slices.
-  struct Copy3DTy {
+  struct Copy3DDescTy {
     void *DstPtr;
     const void *SrcPtr;
     size_t DstOffset[3];
@@ -1010,11 +1010,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     bool DstIsHost;
     bool SrcIsHost;
 
-    /// The slice pitches only matter if the copy spans or starts past the
-    /// first slice.
-    bool usesSlices() const {
-      return Extent[2] > 1 || DstOffset[2] > 0 || SrcOffset[2] > 0;
-    }
+    /// The slice pitch of a layout only matters if the copy spans or starts
+    /// past the first slice of that layout. Otherwise it is zero.
+    bool dstUsesSlices() const { return Extent[2] > 1 || DstOffset[2] > 0; }
+    bool srcUsesSlices() const { return Extent[2] > 1 || SrcOffset[2] > 0; }
 
     /// Whether all offsets, extents and pitches fit in 32 bits.
     bool fitsIn32Bits() const {
@@ -1024,7 +1023,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
           return false;
       if (DstPitch > Max || SrcPitch > Max)
         return false;
-      return !usesSlices() || (DstSlicePitch <= Max && SrcSlicePitch <= Max);
+      return (!dstUsesSlices() || DstSlicePitch <= Max) &&
+             (!srcUsesSlices() || SrcSlicePitch <= Max);
     }
 
     /// Perform the copy on the CPU. Both pointers must be host accessible.
@@ -1040,8 +1040,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                       Extent[0]);
     }
   };
-  Error dataMemcpy3D(const Copy3DTy &Copy, __tgt_async_info *AsyncInfo);
-  virtual Error dataMemcpy3DImpl(const Copy3DTy &Copy,
+  Error dataMemcpy3D(const Copy3DDescTy &Copy, __tgt_async_info *AsyncInfo);
+  virtual Error dataMemcpy3DImpl(const Copy3DDescTy &Copy,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) {
     return Plugin::error(error::ErrorCode::UNSUPPORTED,
                          "3D copies are not supported by this plugin");

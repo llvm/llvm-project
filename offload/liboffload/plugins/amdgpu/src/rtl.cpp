@@ -350,7 +350,7 @@ static Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst,
 }
 
 /// Dispatches an asynchronous 3D memory copy.
-static Error asyncMemCopy3D(const GenericDeviceTy::Copy3DTy &Copy,
+static Error asyncMemCopy3D(const GenericDeviceTy::Copy3DDescTy &Copy,
                             hsa_agent_t CopyAgent, uint32_t NumDepSignals,
                             const hsa_signal_t *DepSignals,
                             hsa_signal_t CompletionSignal) {
@@ -374,7 +374,19 @@ static Error asyncMemCopy3D(const GenericDeviceTy::Copy3DTy &Copy,
   hsa_status_t S = hsa_amd_memory_async_copy_rect(
       &Dst, &DstOffset, &Src, &SrcOffset, &Range, CopyAgent, Dir, NumDepSignals,
       DepSignals, CompletionSignal);
-  return Plugin::check(S, "error in hsa_amd_memory_async_copy_rect: %s");
+  // The runtime rejects configurations it cannot do natively with an invalid
+  // argument. Report those as unsupported so liboffload falls back to row
+  // copies, and pass any other failure through.
+  if (S == HSA_STATUS_ERROR_INVALID_ARGUMENT) {
+    ODBG(OLDT_Tool) << "hsa_amd_memory_async_copy_rect rejected the copy, "
+                       "requesting fallback";
+    return Plugin::error(ErrorCode::UNSUPPORTED,
+                         "hsa_amd_memory_async_copy_rect rejected the copy");
+  }
+  if (auto Err =
+          Plugin::check(S, "error in hsa_amd_memory_async_copy_rect: %s"))
+    return Err;
+  return Error::success();
 }
 
 static Error getTargetTripleAndFeatures(hsa_agent_t Agent,
@@ -1925,7 +1937,7 @@ public:
                                    OutputSignal->get());
   }
 
-  Error pushMemoryCopy3DAsync(const GenericDeviceTy::Copy3DTy &Copy,
+  Error pushMemoryCopy3DAsync(const GenericDeviceTy::Copy3DDescTy &Copy,
                               hsa_agent_t CopyAgent) {
     AMDGPUSignalTy *OutputSignal;
     if (auto Err = SignalManager.getResources(/*Num=*/1, &OutputSignal))
@@ -3325,21 +3337,13 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
-  Error dataMemcpy3DImpl(const Copy3DTy &Copy,
+  Error dataMemcpy3DImpl(const Copy3DDescTy &Copy,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     if (!Copy.fitsIn32Bits())
       return Plugin::error(ErrorCode::INVALID_SIZE,
                            "3D copy offset, extent or pitch exceeds 32 bits");
 
-    if (Copy.DstIsHost && Copy.SrcIsHost) {
-      if (AsyncInfoWrapper.hasQueue())
-        if (auto Err = synchronize(AsyncInfoWrapper))
-          return Err;
-      Copy.copyHost();
-      return Plugin::success();
-    }
-
-    Copy3DTy Local = Copy;
+    Copy3DDescTy Local = Copy;
     void *Locked[2] = {nullptr, nullptr};
     const void *Unpinned[2] = {nullptr, nullptr};
 

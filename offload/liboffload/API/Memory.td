@@ -248,7 +248,9 @@ def olMemcpy3D : Function {
         "Size.x is the width of the copied region in bytes, Size.y the number of rows and Size.z the number of slices.",
         "Pitch is the distance in bytes between consecutive rows; SlicePitch the distance in bytes between consecutive slices.",
         "For host pointers, use the host device belonging to the OL_PLATFORM_BACKEND_HOST platform, or pass NULL.",
-        "Two non-host devices must be able to exchange data directly; unlike olMemcpy there is no fallback through a host buffer, and OL_ERRC_UNSUPPORTED is returned otherwise.",
+        "If the two devices cannot exchange data directly, the copy is staged through a temporary host buffer and is synchronous: the queue, if given, is synchronized first.",
+        "If the backend has no native 2D/3D copy, or cannot represent the offsets and pitches, the region is copied one row at a time.",
+        "A copy between two host pointers is performed on the CPU after synchronizing the queue, if given.",
         "The source and destination regions must not overlap.",
         "The copy is performed by the destination device for a host-to-device copy, and by the source device otherwise (as for olMemcpy). The queue, if given, must belong to that device.",
         "SlicePitch must be a multiple of Pitch and large enough to hold the rows copied; it is ignored for a single-slice copy at z offset 0.",
@@ -265,9 +267,8 @@ def olMemcpy3D : Function {
         Param<"ol_dimensions_t", "Size", "extent of the region (x in bytes, y in rows, z in slices)", PARAM_IN>,
     ];
     let returns = [
-        Return<"OL_ERRC_INVALID_SIZE", ["a pitch is smaller than the extent it must cover, or a value exceeds what the backend supports"]>,
-        Return<"OL_ERRC_INVALID_QUEUE", ["`Queue` does not belong to the device performing the copy"]>,
-        Return<"OL_ERRC_UNSUPPORTED", ["the backend does not support 2D or 3D copies, or the devices cannot exchange data directly"]>
+        Return<"OL_ERRC_INVALID_SIZE", ["a pitch is smaller than the extent it must cover"]>,
+        Return<"OL_ERRC_INVALID_QUEUE", ["`Queue` does not belong to the device performing the copy"]>
     ];
 }
 

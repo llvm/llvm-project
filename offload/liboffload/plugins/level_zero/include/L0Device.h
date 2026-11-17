@@ -557,7 +557,7 @@ public:
                          GenericProfilerTy *ProfilerPtr) override;
   Error dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
                        AsyncInfoWrapperTy &AsyncInfoWrapper) override;
-  Error dataMemcpy3DImpl(const Copy3DTy &Copy,
+  Error dataMemcpy3DImpl(const Copy3DDescTy &Copy,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
                          void *DstPtr, int64_t Size,

@@ -403,7 +403,7 @@ Error L0DeviceTy::dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
   return enqueueMemCopy(DstPtr, SrcPtr, Size, AsyncInfoWrapper);
 }
 
-Error L0DeviceTy::dataMemcpy3DImpl(const Copy3DTy &Copy,
+Error L0DeviceTy::dataMemcpy3DImpl(const Copy3DDescTy &Copy,
                                    AsyncInfoWrapperTy &AsyncInfoWrapper) {
   if (!Copy.fitsIn32Bits())
     return Plugin::error(ErrorCode::INVALID_SIZE,
