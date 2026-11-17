@@ -99,6 +99,21 @@ static void expectTerminatorSuccessors(Region &region,
                          "region #" + std::to_string(region.getRegionNumber()));
 }
 
+/// Check the successors of the cir.condition that terminates `cond` when its
+/// condition is the constant `value`.
+static void expectConstConditionSuccessors(Region &cond, bool value,
+                                           ArrayRef<Region *> expected) {
+  RegionBranchTerminatorOpInterface term = getTerminator(cond);
+  if (!term)
+    return;
+  Attribute operands[] = {cir::BoolAttr::get(term->getContext(), value)};
+  SmallVector<RegionSuccessor> successors;
+  term.getSuccessorRegions(operands, successors);
+  expectRegionSuccessors(successors, expected,
+                         value ? "constant true condition"
+                               : "constant false condition");
+}
+
 /// Verify control flow interface consistency beyond what mlir::verify checks:
 ///   - Every non-empty region is reachable
 ///   - Every non-empty region has at least one branching terminator
@@ -563,6 +578,106 @@ TEST_F(CIRControlFlowTest, ForOpWithCleanup) {
   expectTerminatorSuccessors(*cleanup, {&forOp.getCond(), nullptr});
 
   verifyControlFlowInterfaceConsistency(forOp);
+}
+
+TEST_F(CIRControlFlowTest, WhileOpConstantCondition) {
+  OwningOpRef<ModuleOp> module = parse(R"CIR(
+    cir.func @f(%cond : !cir.bool) {
+      cir.while {
+        cir.condition(%cond)
+      } do {
+        cir.yield
+      }
+      cir.return
+    }
+  )CIR");
+  auto whileOp = findFirstOp<cir::WhileOp>(*module);
+
+  // Without a break, a true condition never leaves the loop.
+  expectConstConditionSuccessors(whileOp.getCond(), true, {&whileOp.getBody()});
+  expectConstConditionSuccessors(whileOp.getCond(), false, {nullptr});
+}
+
+TEST_F(CIRControlFlowTest, WhileOpConstantTrueWithBreak) {
+  OwningOpRef<ModuleOp> module = parse(R"CIR(
+    cir.func @f(%cond : !cir.bool) {
+      cir.while {
+        cir.condition(%cond)
+      } do {
+        cir.scope {
+          cir.if %cond {
+            cir.break
+          }
+        }
+        cir.yield
+      }
+      cir.return
+    }
+  )CIR");
+  auto whileOp = findFirstOp<cir::WhileOp>(*module);
+
+  // cir.break is not a region branch terminator, so the exit edge is kept.
+  expectConstConditionSuccessors(whileOp.getCond(), true,
+                                 {&whileOp.getBody(), nullptr});
+}
+
+TEST_F(CIRControlFlowTest, WhileOpConstantTrueWithBreakAndCleanup) {
+  OwningOpRef<ModuleOp> module = parse(R"CIR(
+    cir.func @f(%cond : !cir.bool) {
+      cir.while {
+        cir.condition(%cond)
+      } do {
+        cir.if %cond {
+          cir.break
+        }
+        cir.yield
+      } cleanup all {
+        cir.yield
+      }
+      cir.return
+    }
+  )CIR");
+  auto whileOp = findFirstOp<cir::WhileOp>(*module);
+  Region *cleanup = whileOp.maybeGetCleanup();
+  ASSERT_NE(cleanup, nullptr);
+
+  // The exit goes through the cleanup region, as on the false edge.
+  expectConstConditionSuccessors(whileOp.getCond(), true,
+                                 {&whileOp.getBody(), cleanup});
+}
+
+TEST_F(CIRControlFlowTest, WhileOpConstantTrueWithInnerBreaks) {
+  OwningOpRef<ModuleOp> module = parse(R"CIR(
+    !s32i = !cir.int<s, 32>
+    cir.func @f(%cond : !cir.bool, %val : !s32i) {
+      cir.while {
+        cir.condition(%cond)
+      } do {
+        cir.while {
+          cir.condition(%cond)
+        } do {
+          cir.break
+        }
+        cir.switch (%val : !s32i) {
+          cir.case (default, []) {
+            cir.break
+          }
+          cir.yield
+        }
+        cir.yield
+      }
+      cir.return
+    }
+  )CIR");
+  // The walk is post-order, so the first loop found is the inner one.
+  auto inner = findFirstOp<cir::WhileOp>(*module);
+  auto outer = inner->getParentOfType<cir::WhileOp>();
+  ASSERT_TRUE(outer);
+
+  // The breaks leave the inner loop and the switch, not the outer loop.
+  expectConstConditionSuccessors(inner.getCond(), true,
+                                 {&inner.getBody(), nullptr});
+  expectConstConditionSuccessors(outer.getCond(), true, {&outer.getBody()});
 }
 
 TEST_F(CIRControlFlowTest, CleanupScopeOpYieldAll) {

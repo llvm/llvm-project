@@ -827,6 +827,21 @@ cir::RegisterExitDtorOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 // BranchOpTerminatorInterface Methods
 //===----------------------------------
 
+/// Return true if a cir.break may leave `loop`. A break nested in an inner
+/// loop or switch leaves that operation instead.
+static bool mayBreakOutOf(cir::LoopOpInterface loop) {
+  mlir::Operation *loopOp = loop.getOperation();
+  return loopOp
+      ->walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
+        if (op != loopOp && isa<cir::LoopOpInterface, cir::SwitchOp>(op))
+          return mlir::WalkResult::skip();
+        if (isa<cir::BreakOp>(op))
+          return mlir::WalkResult::interrupt();
+        return mlir::WalkResult::advance();
+      })
+      .wasInterrupted();
+}
+
 void cir::ConditionOp::getSuccessorRegions(
     ArrayRef<Attribute> operands, SmallVectorImpl<RegionSuccessor> &regions) {
   // A constant condition selects only one of the successors below.
@@ -837,10 +852,13 @@ void cir::ConditionOp::getSuccessorRegions(
 
   // Parent is a loop: condition may branch to the body, or on the false edge
   // to the per-iteration cleanup region if present, otherwise to the parent op.
+  // cir.break is not a region branch terminator (see the FIXME in
+  // getLoopOpSuccessorRegions), so the false edge also stands for the loop
+  // exit through a break and is kept when the loop may break.
   if (auto loopOp = dyn_cast<LoopOpInterface>(getOperation()->getParentOp())) {
     if (mayBeTrue)
       regions.emplace_back(&loopOp.getBody());
-    if (mayBeFalse) {
+    if (mayBeFalse || mayBreakOutOf(loopOp)) {
       if (mlir::Region *cleanup = loopOp.maybeGetCleanup())
         regions.emplace_back(cleanup);
       else
