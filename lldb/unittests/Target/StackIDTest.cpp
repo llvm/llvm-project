@@ -33,6 +33,11 @@ public:
   }
   bool DoUpdateThreadList(ThreadList &, ThreadList &) override { return false; }
   llvm::StringRef GetPluginName() override { return "Dummy"; }
+  CFAComparison CompareCFAs(const StackID &, const StackID &) override {
+    return m_opinion;
+  }
+
+  CFAComparison m_opinion = CFAComparison::NoOpinion;
 };
 
 class StackIDTest : public ::testing::Test {
@@ -57,7 +62,7 @@ public:
 
 protected:
   DebuggerSP m_debugger_sp;
-  ProcessSP m_process_sp;
+  std::shared_ptr<DummyProcess> m_process_sp;
 };
 } // namespace
 
@@ -78,4 +83,14 @@ TEST_F(StackIDTest, TailCallDepthOrdersFramesSharingACFA) {
   EXPECT_FALSE(outer_tail_caller.IsYoungerThan(tail_caller, process));
   EXPECT_TRUE(outer_tail_caller.IsYoungerThan(caller, process));
   EXPECT_FALSE(caller.IsYoungerThan(outer_tail_caller, process));
+}
+
+TEST_F(StackIDTest, ProcessOrdersCFAs) {
+  StackID younger(0x1000, 0x7f00, nullptr, nullptr);
+  StackID older(0x1000, 0x7f10, nullptr, nullptr);
+  // Without an opinion from the process, the stack is assumed to grow down.
+  EXPECT_TRUE(younger.IsYoungerThan(older, *m_process_sp));
+
+  m_process_sp->m_opinion = CFAComparison::Older;
+  EXPECT_FALSE(younger.IsYoungerThan(older, *m_process_sp));
 }

@@ -15,6 +15,9 @@ namespace lldb_private {
 
 class Process;
 
+/// How the call frame addresses of two frames order them.
+enum class CFAComparison { Younger, Older, NoOpinion };
+
 class StackID {
 public:
   StackID() = default;
