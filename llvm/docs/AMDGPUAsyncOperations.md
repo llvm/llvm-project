@@ -27,7 +27,7 @@ The stages are:
 |---|---|---|
 | 0 | `TENSOR` | tensor loads and stores |
 | 1 | `GLOBAL_LOAD_ASYNC_TO_LDS` | async global loads to LDS |
-| 2 | `GLOBAL_LOAD_ASYNC_TO_LDS_MCAST` | multicast (cluster) global loads async to LDS |
+| 2 | `GLOBAL_LOAD_ASYNC_TO_LDS_MCAST` | multicast (cluster) async global loads to LDS |
 | 3 | `GLOBAL_STORE_ASYNC_FROM_LDS` | async global stores from LDS |
 | 5 | `BUFFER_GLOBAL_LOAD` | async buffer loads to LDS and pre-gfx1250 async global loads to LDS |
 
