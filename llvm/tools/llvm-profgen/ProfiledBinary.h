@@ -342,6 +342,10 @@ class ProfiledBinary {
   // Function name to probe frame map for top-level outlined functions.
   StringMap<MCDecodedPseudoProbeInlineTree *> TopLevelProbeFrameMap;
 
+  // Indirect call probes by (function GUID, probe index), from every function
+  // in the binary. Filled by decodePseudoProbe.
+  DenseSet<std::pair<uint64_t, uint32_t>> IndirectCallProbes;
+
   bool UseFSDiscriminator = false;
 
   // Whether we need to symbolize all instructions to get function context size.
@@ -435,6 +439,10 @@ public:
   ProfiledBinary(const cl::LibraryOptionsContext &LibraryOptions,
                  const StringRef ExeBinPath, const StringRef DebugBinPath);
   ~ProfiledBinary();
+
+  const cl::LibraryOptionsContext &getLibraryOptions() const {
+    return LibraryOptions;
+  }
 
   /// Decode the interesting parts of the binary and build internal data
   /// structures. On high level, the parts of interest are:
@@ -699,6 +707,13 @@ public:
   }
   const MCPseudoProbeFuncDesc *getFuncDescForGUID(uint64_t GUID) {
     return ProbeDecoder.getFuncDescForGUID(GUID);
+  }
+
+  // Returns whether a copy of function \p GUID in the binary has an indirect
+  // call probe with index \p Index. All functions are checked, including the
+  // ones whose probes were not decoded because they have no samples.
+  bool isIndirectCallProbe(uint64_t GUID, uint32_t Index) const {
+    return IndirectCallProbes.contains({GUID, Index});
   }
 
   const MCPseudoProbeFuncDesc *

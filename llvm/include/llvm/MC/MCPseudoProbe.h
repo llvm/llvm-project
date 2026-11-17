@@ -57,6 +57,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
@@ -436,6 +437,10 @@ public:
 
   using Uint64Set = DenseSet<uint64_t>;
   using Uint64Map = DenseMap<uint64_t, uint64_t>;
+  // Called with the GUID of the function that owns a probe, the probe index and
+  // the probe type.
+  using ProbeCallback =
+      function_ref<void(uint64_t Guid, uint32_t Index, PseudoProbeType Type)>;
 
   // Decode pseudo_probe_desc section to build GUID to PseudoProbeFuncDesc map.
   // If pseudo_probe_desc section is mapped to memory and \p IsMMapped is true,
@@ -451,10 +456,12 @@ public:
                     const Uint64Set &GuidFilter);
 
   // Decode pseudo_probe section to build address to probes map for specifed
-  // functions only.
+  // functions only. If \p Callback is set, also call it for every probe in the
+  // section, including the probes of functions that the GUID filter skips.
   LLVM_ABI bool buildAddress2ProbeMap(const uint8_t *Start, std::size_t Size,
                                       const Uint64Set &GuildFilter,
-                                      const Uint64Map &FuncStartAddrs);
+                                      const Uint64Map &FuncStartAddrs,
+                                      ProbeCallback Callback = nullptr);
 
   // Print pseudo_probe_desc section info
   LLVM_ABI void printGUID2FuncDescMap(raw_ostream &OS);
@@ -530,7 +537,8 @@ private:
   bool buildAddress2ProbeMap(MCDecodedPseudoProbeInlineTree *Cur,
                              uint64_t &LastAddr, const Uint64Set &GuildFilter,
                              const Uint64Map &FuncStartAddrs,
-                             const uint32_t CurChildIndex);
+                             const uint32_t CurChildIndex,
+                             ProbeCallback Callback);
 };
 
 } // end namespace llvm

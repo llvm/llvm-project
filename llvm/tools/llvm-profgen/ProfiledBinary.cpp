@@ -548,9 +548,19 @@ void ProfiledBinary::decodePseudoProbe(const ObjectFile *Obj) {
             "Pseudo Probe decoder fail in .pseudo_probe_desc section");
     } else if (SectionName == ".pseudo_probe") {
       StringRef Contents = unwrapOrError(Section.getContents(), FileName);
+      // Record the indirect call probes of every function, not only of the
+      // decoded ones. A copy without samples is not decoded, but it can be the
+      // only copy that keeps the indirect call, e.g. when the other copies
+      // inlined its targets.
+      auto RecordIndirectCallProbe = [&](uint64_t Guid, uint32_t Index,
+                                         PseudoProbeType Type) {
+        if (Type == PseudoProbeType::IndirectCall)
+          IndirectCallProbes.insert({Guid, Index});
+      };
       if (!ProbeDecoder.buildAddress2ProbeMap(
               reinterpret_cast<const uint8_t *>(Contents.data()),
-              Contents.size(), GuidFilter, FuncStartAddresses))
+              Contents.size(), GuidFilter, FuncStartAddresses,
+              RecordIndirectCallProbe))
         exitWithError("Pseudo Probe decoder fail in .pseudo_probe section");
     }
   }
