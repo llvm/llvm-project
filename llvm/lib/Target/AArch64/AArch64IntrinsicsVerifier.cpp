@@ -10,18 +10,21 @@
 #include "AArch64Subtarget.h"
 #include "AArch64TargetMachine.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/IntrinsicFeatureGuard.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cassert>
 
 using namespace llvm;
 
@@ -29,31 +32,7 @@ using namespace llvm;
 
 namespace {
 
-struct IntrinsicFeatureGuard {
-  unsigned FirstClause;
-  unsigned NumClauses;
-  const char *Expression;
-};
-
-struct IntrinsicFeatureVariant {
-  unsigned FirstType;
-  unsigned NumResults;
-  unsigned NumInputs;
-  unsigned FirstGuard;
-  unsigned NumGuards;
-  bool AppliesToAllTypes;
-};
-
 #include "AArch64GenIntrinsicFeatureChecks.inc"
-
-static_assert(
-    [] {
-      for (const auto &Variant : AArch64IntrinsicVariants)
-        if (Variant.NumGuards != 2)
-          return false;
-      return true;
-    }(),
-    "AArch64 variants need two mode guards");
 
 // A streaming-compatible function can enter streaming mode with SME. These
 // features are the minimum implied by SME and are available in that mode.
@@ -61,61 +40,58 @@ static constexpr FeatureBitset AArch64StreamingModeFeatures = {
     AArch64::FeatureBF16, AArch64::FeatureFPARMv8, AArch64::FeatureFullFP16,
     AArch64::FeatureNEON, AArch64::FeatureSME};
 
-static bool matchesType(Type *Actual, MVT::SimpleValueType Expected,
-                        const DataLayout &DL) {
-  if (Expected == MVT::iPTR)
+static bool matchesType(Type *Actual, Type *Expected, const DataLayout &DL) {
+  if (Actual == Expected)
+    return true;
+  if (Expected->isPointerTy())
     return Actual->isPointerTy();
-  if (auto *Vector = dyn_cast<VectorType>(Actual)) {
-    if (auto *Pointer = dyn_cast<PointerType>(Vector->getElementType())) {
-      MVT Element = MVT::getIntegerVT(
-          DL.getPointerSizeInBits(Pointer->getAddressSpace()));
-      return MVT::getVectorVT(Element, Vector->getElementCount()) == Expected;
+  if (auto *ActualVector = dyn_cast<VectorType>(Actual)) {
+    if (auto *ExpectedVector = dyn_cast<VectorType>(Expected)) {
+      auto *Pointer = dyn_cast<PointerType>(ActualVector->getElementType());
+      return Pointer &&
+             ExpectedVector->getElementType()->isIntegerTy(
+                 DL.getPointerSizeInBits(Pointer->getAddressSpace())) &&
+             ActualVector->getElementCount() ==
+                 ExpectedVector->getElementCount();
     }
-    if (MVT::getVT(Vector->getElementType(), /*HandleUnknown=*/true) ==
-        MVT::Other)
-      return false;
   }
-  return MVT::getVT(Actual, /*HandleUnknown=*/true) == Expected;
+  if (auto *ActualStruct = dyn_cast<StructType>(Actual)) {
+    if (auto *ExpectedStruct = dyn_cast<StructType>(Expected)) {
+      if (ActualStruct->getNumElements() != ExpectedStruct->getNumElements())
+        return false;
+      for (unsigned I = 0; I < ActualStruct->getNumElements(); ++I)
+        if (!matchesType(ActualStruct->getElementType(I),
+                         ExpectedStruct->getElementType(I), DL))
+          return false;
+      return true;
+    }
+  }
+  return false;
 }
 
 static bool matchesSignature(const IntrinsicInst &Call,
                              const IntrinsicFeatureVariant &V) {
   if (V.AppliesToAllTypes)
     return true;
-  if (Call.arg_size() != V.NumInputs)
+  FunctionType *Expected = getAArch64IntrinsicFunctionType(
+      Call.getContext(), Call.getIntrinsicID(), V);
+  FunctionType *Actual = Call.getFunctionType();
+  if (Actual->getNumParams() != Expected->getNumParams() ||
+      Actual->isVarArg() != Expected->isVarArg())
     return false;
-
-  ArrayRef Types(AArch64IntrinsicTypes + V.FirstType,
-                 V.NumResults + V.NumInputs);
   const DataLayout &DL = Call.getDataLayout();
-  Type *Result = Call.getType();
-  if (V.NumResults == 0) {
-    if (!Result->isVoidTy())
-      return false;
-  } else if (V.NumResults == 1) {
-    if (!matchesType(Result, Types[0], DL))
-      return false;
-  } else {
-    auto *Struct = dyn_cast<StructType>(Result);
-    if (!Struct || Struct->getNumElements() != V.NumResults)
-      return false;
-    for (unsigned I = 0; I < V.NumResults; ++I)
-      if (!matchesType(Struct->getElementType(I), Types[I], DL))
-        return false;
-  }
-
-  for (unsigned I = 0; I < V.NumInputs; ++I)
-    if (!matchesType(Call.getArgOperand(I)->getType(), Types[V.NumResults + I],
-                     DL))
+  if (!matchesType(Actual->getReturnType(), Expected->getReturnType(), DL))
+    return false;
+  for (unsigned I = 0; I < Actual->getNumParams(); ++I)
+    if (!matchesType(Actual->getParamType(I), Expected->getParamType(I), DL))
       return false;
   return true;
 }
 
 static bool hasFeatures(const IntrinsicFeatureGuard &Guard,
                         const FeatureBitset &Available) {
-  for (unsigned I = 0; I < Guard.NumClauses; ++I) {
-    const FeatureBitset &Required =
-        AArch64IntrinsicFeatureClauses[Guard.FirstClause + I];
+  for (const FeatureBitset &Required :
+       getAArch64IntrinsicFeatureAlternatives(Guard)) {
     if ((Available & Required) == Required)
       return true;
   }
@@ -133,7 +109,8 @@ struct IntrinsicCheckResult {
 static IntrinsicCheckResult checkIntrinsic(const IntrinsicInst &II,
                                            const AArch64Subtarget &ST) {
   IntrinsicCheckResult Result;
-  ArrayRef Variants = getAArch64IntrinsicVariants(II.getIntrinsicID());
+  ArrayRef<IntrinsicFeatureVariant> Variants =
+      getAArch64IntrinsicVariants(II.getIntrinsicID());
   if (Variants.empty())
     return Result;
   Result.HasGuards = true;
@@ -145,16 +122,17 @@ static IntrinsicCheckResult checkIntrinsic(const IntrinsicInst &II,
   const FeatureBitset StreamingAvailable =
       BothModes ? Available | AArch64StreamingModeFeatures : Available;
 
-  for (const auto &V : Variants) {
+  for (const IntrinsicFeatureVariant &V : Variants) {
+    assert(V.NumGuards == 2 && "AArch64 variants need two mode guards");
     if (!matchesSignature(II, V))
       continue;
     Result.FoundSignature = true;
     // AArch64 uses guard 0 for non-streaming mode and guard 1 for
     // streaming mode.
-    const auto &NonStreamingGuard = AArch64IntrinsicFeatureGuards
-        [AArch64IntrinsicGuardIndices[V.FirstGuard]];
-    const auto &StreamingGuard = AArch64IntrinsicFeatureGuards
-        [AArch64IntrinsicGuardIndices[V.FirstGuard + 1]];
+    const IntrinsicFeatureGuard &NonStreamingGuard =
+        getAArch64IntrinsicFeatureGuard(V, 0);
+    const IntrinsicFeatureGuard &StreamingGuard =
+        getAArch64IntrinsicFeatureGuard(V, 1);
     if ((!Streaming || BothModes) &&
         !hasFeatures(NonStreamingGuard, Available)) {
       Result.Failed = &NonStreamingGuard;
