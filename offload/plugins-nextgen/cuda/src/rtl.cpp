@@ -17,7 +17,6 @@
 #include <unordered_map>
 
 #include "Shared/Debug.h"
-#include "Shared/Environment.h"
 
 #include "GlobalHandler.h"
 #include "OffloadAPI.h"
@@ -1692,6 +1691,13 @@ struct CUDAPluginContextTy final : public PluginContextTy {
                                               Attrs, Data, CUPtr))
       return Plugin::error(error::ErrorCode::NOT_FOUND,
                            "cuPointerGetAttributes failed: %d", Res);
+
+    // For pointers CUDA does not know about (e.g. plain host memory), some
+    // driver versions report success but leave the attributes unset. A valid
+    // CUmemorytype is never 0.
+    if (MemType == 0)
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "pointer is not a known allocation in this context");
 
     ol_alloc_type_t Kind = OL_ALLOC_TYPE_DEVICE;
     if (IsManaged)

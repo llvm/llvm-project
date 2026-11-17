@@ -882,17 +882,10 @@ LowerItaniumCXXABI::lowerDynamicCast(cir::DynamicCastOp op,
 mlir::Value
 LowerItaniumCXXABI::lowerVTableGetTypeInfo(cir::VTableGetTypeInfoOp op,
                                            mlir::OpBuilder &builder) const {
-  mlir::Location loc = op->getLoc();
-  auto offset = cir::ConstantOp::create(
-      builder, op->getLoc(), cir::IntAttr::get(getPtrDiffCIRTy(lm), -1));
-
-  // Cast the vptr to type_info-ptr, so that we can go backwards 1 pointer.
-  auto vptrCast = cir::CastOp::create(builder, loc, op.getType(),
-                                      cir::CastKind::bitcast, op.getVptr());
-
-  return cir::PtrStrideOp::create(builder, loc, vptrCast.getType(), vptrCast,
-                                  offset)
-      .getResult();
+  // The Itanium ABI always places the pointer to the type_info at entry -1 in
+  // the vtable.
+  return cir::VTableGetEntryOp::create(builder, op->getLoc(), op.getType(),
+                                       op.getVptr(), /*index=*/-1);
 }
 
 clang::CharUnits LowerItaniumCXXABI::getArrayCookieSizeImpl(

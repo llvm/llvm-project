@@ -99,10 +99,6 @@ private:
 
   Function *F;
 
-  /// The current module ID that is used to name a static object as a comdat
-  /// group.
-  std::string CurModuleUniqueId;
-
   /// A CFG hash code used to identify a function code changes.
   uint64_t FunctionHash;
 
