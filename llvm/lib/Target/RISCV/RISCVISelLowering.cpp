@@ -25555,6 +25555,8 @@ static SDValue performSHLCombine(SDNode *N,
 static SDValue combineMinMaxToSat(SDNode *N,
                                   TargetLowering::DAGCombinerInfo &DCI,
                                   const RISCVSubtarget &Subtarget) {
+  using namespace SDPatternMatch;
+
   if (!DCI.isAfterLegalizeDAG())
     return SDValue();
 
@@ -25566,23 +25568,12 @@ static SDValue combineMinMaxToSat(SDNode *N,
   if (VT != Subtarget.getXLenVT())
     return SDValue();
 
-  SDValue N0 = N->getOperand(0);
-
-  if ((N0.getOpcode() != ISD::SMIN && N0.getOpcode() != ISD::SMAX) ||
-      !isa<ConstantSDNode>(N->getOperand(1)) ||
-      !isa<ConstantSDNode>(N0.getOperand(1)))
-    return SDValue();
-
-  SDValue Min = SDValue(N, 0);
-  SDValue Max = N0;
-  SDValue Input = N0.getOperand(0);
-  if (Min.getOpcode() == ISD::SMAX)
-    std::swap(Min, Max);
-
-  APInt MinC = Min.getConstantOperandAPInt(1);
-  APInt MaxC = Max.getConstantOperandAPInt(1);
-
-  if (Min.getOpcode() != ISD::SMIN || Max.getOpcode() != ISD::SMAX ||
+  SDValue Input;
+  APInt MinC, MaxC;
+  if ((!sd_match(N, m_SMax(m_SMin(m_Value(Input), m_ConstInt(MinC)),
+                           m_ConstInt(MaxC))) &&
+       !sd_match(N, m_SMin(m_SMax(m_Value(Input), m_ConstInt(MaxC)),
+                           m_ConstInt(MinC)))) ||
       !(MinC + 1).isPowerOf2())
     return SDValue();
 
@@ -25603,9 +25594,8 @@ static SDValue combineMinMaxToSat(SDNode *N,
 // i32 value Lo, i.e. Hi == (sra Lo, 31). Used to fold ADDD/SUBD of a
 // sign-extended operand into the WADDA/WSUBA widening accumulate nodes.
 static bool isI32SignExtended(SDValue Lo, SDValue Hi) {
-  return Hi.getOpcode() == ISD::SRA && Hi.getOperand(0) == Lo &&
-         isa<ConstantSDNode>(Hi.getOperand(1)) &&
-         Hi.getConstantOperandVal(1) == 31;
+  using namespace SDPatternMatch;
+  return sd_match(Hi, m_Sra(m_Specific(Lo), m_SpecificInt(31)));
 }
 
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
