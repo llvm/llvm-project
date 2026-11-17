@@ -760,8 +760,9 @@ void CIRRecordLowering::accumulateFields(bool nonVirtualBaseType) {
       // Use base subobject layout for potentially-overlapping fields,
       // as it is done in RecordLayoutBuilder.
       //
-      // The mark comes from isEmptyFieldForABI, not the isEmptyFieldForLayout
-      // above.  Neither predicate subsumes the other.
+      // The mark comes from isEmptyFieldForABI, instead of the
+      // isEmptyFieldForCIRLayout above, since fields emitted here can still be
+      // empty for the ABI.
       members.push_back(MemberInfo(
           bitsToCharUnits(getFieldBitOffset(*field)),
           MemberInfo::InfoKind::Field,
