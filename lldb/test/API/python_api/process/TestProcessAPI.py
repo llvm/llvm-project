@@ -22,7 +22,7 @@ class ProcessAPITestCase(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
 
-        (target, process, _, _) = lldbutil.run_to_source_breakpoint(
+        target, process, _, _ = lldbutil.run_to_source_breakpoint(
             self, "Set break point", lldb.SBFileSpec("main.cpp")
         )
 
@@ -33,7 +33,7 @@ class ProcessAPITestCase(TestBase):
         """Test that a launched process reports as a live debug session."""
         self.build()
 
-        (target, process, _, _) = lldbutil.run_to_source_breakpoint(
+        target, process, _, _ = lldbutil.run_to_source_breakpoint(
             self, "Set break point", lldb.SBFileSpec("main.cpp")
         )
 
@@ -528,3 +528,17 @@ class ProcessAPITestCase(TestBase):
         error = process.DeallocateMemory(addr)
         if not error.Success():
             self.fail("SBProcess.DeallocateMemory() failed")
+
+    def test_process_extension(self):
+        "Test Python SBProcessExtension"
+        self.build()
+        target, process, thread, _ = lldbutil.run_to_source_breakpoint(
+            self,
+            "// Set break point at this line and check variable 'my_char'.",
+            lldb.SBFileSpec("main.cpp"),
+        )
+        # checking process status on break point
+        self.assertTrue(process.is_alive)
+        self.assertTrue(process.is_stopped)
+        self.assertFalse(process.is_running)
+        self.assertEqual(process.state, lldb.eStateStopped)
