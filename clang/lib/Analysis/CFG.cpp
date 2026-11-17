@@ -1993,14 +1993,12 @@ void CFGBuilder::addAutomaticObjDestruction(LocalScope::const_iterator B,
     return;
 
   SmallVector<VarDecl *, 10> DeclsNeedDestruction;
-  DeclsNeedDestruction.reserve(B.distance(E));
-
-  for (VarDecl* D : llvm::make_range(B, E))
-    if (needsAutomaticDestruction(D))
-      DeclsNeedDestruction.push_back(D);
+  for (VarDecl *VD : llvm::make_range(B, E))
+    // if (needsAutomaticDestruction(VD))
+    DeclsNeedDestruction.push_back(VD);
 
   for (VarDecl *VD : llvm::reverse(DeclsNeedDestruction)) {
-    if (BuildOpts.AddImplicitDtors) {
+    if (BuildOpts.AddImplicitDtors && needsAutomaticDestruction(VD)) {
       // If this destructor is marked as a no-return destructor, we need to
       // create a new block for the destructor which does not have as a
       // successor anything built thus far: control won't flow out of this
@@ -2019,7 +2017,16 @@ void CFGBuilder::addAutomaticObjDestruction(LocalScope::const_iterator B,
 
     // Add LifetimeEnd after automatic obj with non-trivial destructors,
     // as they end their lifetime when the destructor returns. For trivial
-    // objects, we end lifetime with scope end.
+    // objects, we end lifetime with scope end. Since the SCOPE_END CFG
+    // marker has the value of LifetimeEnds, the LifetimeEnds marker also
+    // covers trivial destructors and local variables. See #201123.
+    // Egyelore legyen ez a komment, de meg kene nezni, h nem e helyesebb
+    // ha a trivialis destruktorokat kulon az exit handling-es fuggvenyben
+    // kezelem. Logikatlan, hogy a trivialis destruktort is egy olyan fuggv
+    // kezel, aminek feladata az automatic object destruction. Viszont ha
+    // kulon akarom kezelni akkor megint kell a helper fuggveny, ami megadja
+    // az osszes VarDecl-t forditott sorrendben a ket fuggveny szamara.
+    // Kitorolni es a PR-ban ezt leirni!!!!!
     if (BuildOpts.AddLifetime)
       appendLifetimeEnds(Block, VD, S);
     if (BuildOpts.AddImplicitDtors && !hasTrivialDestructor(VD))
@@ -2044,27 +2051,6 @@ void CFGBuilder::addScopeExitHandling(LocalScope::const_iterator B,
     autoCreateBlock();
     appendScopeEnd(Block, B.getFirstVarInScope(), S);
   }
-
-  if (!BuildOpts.AddLifetime)
-    return;
-
-  // We need to perform the scope leaving in reverse order
-  SmallVector<VarDecl *, 10> DeclsTrivial;
-  DeclsTrivial.reserve(B.distance(E));
-
-  // Objects with trivial destructor ends their lifetime when their storage
-  // is destroyed, for automatic variables, this happens when the end of the
-  // scope is added.
-  for (VarDecl* D : llvm::make_range(B, E))
-    if (!needsAutomaticDestruction(D))
-      DeclsTrivial.push_back(D);
-
-  if (DeclsTrivial.empty())
-    return;
-
-  autoCreateBlock();
-  for (VarDecl *VD : llvm::reverse(DeclsTrivial))
-    appendLifetimeEnds(Block, VD, S);
 }
 
 /// addScopeChangesHandling - appends information about destruction, lifetime
