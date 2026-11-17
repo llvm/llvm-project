@@ -305,3 +305,87 @@ body:             |
     $vgpr1 = V_DOT4C_I32_I8_e32 $vgpr7, $vgpr7, $vgpr1, implicit $exec
     renamable $vgpr6_vgpr7 = V_LSHRREV_B64_e64 killed $vgpr7, killed $vgpr6_vgpr7, implicit $exec
 ...
+
+# FIXME:
+# The call clobbers v64 through its regmask, but nothing in the function
+# references v64, so v63 is still the highest allocated VGPR and the
+# workaround must be applied.
+---
+name:            highest_reg_shift_amt_v63_call_clobbers_v64
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr4_sgpr5, $sgpr82_sgpr83, $vgpr63
+
+    ; GCN-LABEL: name: highest_reg_shift_amt_v63_call_clobbers_v64
+    ; GCN: liveins: $sgpr4_sgpr5, $sgpr82_sgpr83, $vgpr63
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr30_sgpr31 = SI_CALL killed $sgpr4_sgpr5, 0, csr_amdgpu_gfx90ainsts
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = V_LSHRREV_B64_e64 killed $vgpr63, killed $sgpr82_sgpr83, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit $vgpr2_vgpr3
+    $sgpr30_sgpr31 = SI_CALL killed $sgpr4_sgpr5, 0, csr_amdgpu_gfx90ainsts
+    renamable $vgpr2_vgpr3 = V_LSHRREV_B64_e64 killed $vgpr63, killed $sgpr82_sgpr83, implicit $exec
+    S_ENDPGM 0, implicit $vgpr2_vgpr3
+...
+
+# v64 is referenced by an instruction, so v63 is not the highest allocated
+# VGPR and no workaround is needed.
+---
+name:            shift_amt_v63_v64_defined_call
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr4_sgpr5, $sgpr82_sgpr83, $vgpr63
+
+    ; GCN-LABEL: name: shift_amt_v63_v64_defined_call
+    ; GCN: liveins: $sgpr4_sgpr5, $sgpr82_sgpr83, $vgpr63
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr30_sgpr31 = SI_CALL killed $sgpr4_sgpr5, 0, csr_amdgpu_gfx90ainsts
+    ; GCN-NEXT: $vgpr64 = IMPLICIT_DEF
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = V_LSHRREV_B64_e64 killed $vgpr63, killed $sgpr82_sgpr83, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit $vgpr2_vgpr3, implicit $vgpr64
+    $sgpr30_sgpr31 = SI_CALL killed $sgpr4_sgpr5, 0, csr_amdgpu_gfx90ainsts
+    $vgpr64 = IMPLICIT_DEF
+    renamable $vgpr2_vgpr3 = V_LSHRREV_B64_e64 killed $vgpr63, killed $sgpr82_sgpr83, implicit $exec
+    S_ENDPGM 0, implicit $vgpr2_vgpr3, implicit $vgpr64
+...
+
+# The callee needs 72 VGPRs, so the kernel's allocation is max(64, 72) and v64
+# is allocated: the shift by v63 is not affected by the erratum. The hazard
+# recognizer cannot see the callee's VGPR count, so the workaround is applied
+# conservatively.
+---
+name:            callee_uses_v71
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr30_sgpr31
+
+    ; GCN-LABEL: name: callee_uses_v71
+    ; GCN: liveins: $sgpr30_sgpr31
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr71 = IMPLICIT_DEF
+    ; GCN-NEXT: S_SETPC_B64_return killed $sgpr30_sgpr31, implicit killed $vgpr71
+    $vgpr71 = IMPLICIT_DEF
+    S_SETPC_B64_return killed $sgpr30_sgpr31, implicit killed $vgpr71
+...
+
+---
+name:            highest_reg_shift_amt_v63_callee_uses_v71
+tracksRegLiveness: true
+frameInfo:
+  hasCalls: true
+body:             |
+  bb.0:
+    liveins: $sgpr4_sgpr5, $sgpr82_sgpr83, $vgpr63
+
+    ; GCN-LABEL: name: highest_reg_shift_amt_v63_callee_uses_v71
+    ; GCN: liveins: $sgpr4_sgpr5, $sgpr82_sgpr83, $vgpr63
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $sgpr30_sgpr31 = SI_CALL killed $sgpr4_sgpr5, @callee_uses_v71, csr_amdgpu_gfx90ainsts
+    ; GCN-NEXT: renamable $vgpr2_vgpr3 = V_LSHRREV_B64_e64 killed $vgpr63, killed $sgpr82_sgpr83, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit $vgpr2_vgpr3
+    $sgpr30_sgpr31 = SI_CALL killed $sgpr4_sgpr5, @callee_uses_v71, csr_amdgpu_gfx90ainsts
+    renamable $vgpr2_vgpr3 = V_LSHRREV_B64_e64 killed $vgpr63, killed $sgpr82_sgpr83, implicit $exec
+    S_ENDPGM 0, implicit $vgpr2_vgpr3
+...
