@@ -2748,29 +2748,6 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
   if (SrcBank->getID() == AMDGPU::VGPRRegBankID && DstSize <= 32) {
     // 64-bit should have been split up in RegBankSelect
 
-    if (Signed && SrcSize == 16 && STI.hasTrue16BitInsts()) {
-      bool RealTrue16 = STI.useRealTrue16Insts();
-      const TargetRegisterClass &SrcRC =
-          RealTrue16 && SrcTy.getSizeInBits() == 16 ? AMDGPU::VGPR_16RegClass
-                                                    : AMDGPU::VGPR_32RegClass;
-      if (!RBI.constrainGenericRegister(SrcReg, SrcRC, *MRI) ||
-          !RBI.constrainGenericRegister(DstReg, AMDGPU::VGPR_32RegClass, *MRI))
-        return false;
-
-      unsigned SrcSubReg = RealTrue16 && SrcTy.getSizeInBits() > 16
-                               ? AMDGPU::lo16
-                               : AMDGPU::NoSubRegister;
-      unsigned CvtOpc = RealTrue16 ? AMDGPU::V_CVT_I32_I16_t16_e64
-                                   : AMDGPU::V_CVT_I32_I16_fake16_e64;
-      auto ExtI = BuildMI(MBB, I, DL, TII.get(CvtOpc), DstReg);
-      if (RealTrue16)
-        ExtI.addImm(SISrcMods::NONE).addReg(SrcReg, {}, SrcSubReg).addImm(0);
-      else
-        ExtI.addReg(SrcReg);
-      I.eraseFromParent();
-      return true;
-    }
-
     // Try to use an and with a mask if it will save code size.
     unsigned Mask;
     if (!Signed && shouldUseAndMask(SrcSize, Mask)) {
@@ -2784,11 +2761,15 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
     }
 
     const unsigned BFE = Signed ? AMDGPU::V_BFE_I32_e64 : AMDGPU::V_BFE_U32_e64;
-    MachineInstr *ExtI =
-      BuildMI(MBB, I, DL, TII.get(BFE), DstReg)
-      .addReg(SrcReg)
-      .addImm(0) // Offset
-      .addImm(SrcSize); // Width
+    Register BFESource = SrcReg;
+    if (Signed && SrcTy.getSizeInBits() == 16 && STI.useRealTrue16Insts() &&
+        RBI.constrainGenericRegister(SrcReg, AMDGPU::VGPR_16RegClass, *MRI))
+      BFESource =
+          TII.buildVGPR32FromLo16(MBB, I, DL, SrcReg, AMDGPU::NoSubRegister);
+    MachineInstr *ExtI = BuildMI(MBB, I, DL, TII.get(BFE), DstReg)
+                             .addReg(BFESource)
+                             .addImm(0)        // Offset
+                             .addImm(SrcSize); // Width
     I.eraseFromParent();
     constrainSelectedInstRegOperands(*ExtI, TII, TRI, RBI);
     return true;

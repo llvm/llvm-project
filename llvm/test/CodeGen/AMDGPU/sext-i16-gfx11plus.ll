@@ -5,6 +5,10 @@
 ; RUN: llc -global-isel -mtriple=amdgpu11.00 -mattr=+real-true16 -verify-machineinstrs < %s | FileCheck %s --check-prefix=GISEL-REAL16
 ; RUN: llc -global-isel -mtriple=amdgpu11.00 -mattr=-real-true16 -verify-machineinstrs < %s | FileCheck %s --check-prefix=GISEL-FAKE16
 ; RUN: llc -global-isel -mtriple=amdgpu9.42 -verify-machineinstrs < %s | FileCheck %s --check-prefix=GISEL-GFX942
+; RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 -verify-machineinstrs -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=ISEL
+; RUN: llc -mtriple=amdgpu11.00 -mattr=-real-true16 -verify-machineinstrs -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=ISEL
+; RUN: llc -mtriple=amdgpu12.50 -mattr=+real-true16 -verify-machineinstrs -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=ISEL
+; RUN: llc -mtriple=amdgpu12.50 -mattr=-real-true16 -verify-machineinstrs -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=ISEL
 
 define i32 @sext_i16(i16 %v, ptr addrspace(1) %p) {
 ; GFX942-LABEL: sext_i16:
@@ -370,6 +374,16 @@ define i64 @sext_i16_add_i64(i16 %v, i16 %w, ptr addrspace(1) %p) {
   ret i64 %res
 }
 
+; ISEL-LABEL: name: sext_i16_add_i32_i64
+; ISEL: [[EXT:%.+]]:vgpr_32 = V_BFE_I32_e64 {{.+}}, 0, 16,
+; ISEL-NOT: V_BFE_I32_e64
+; ISEL: [[HI:%.+]]:vgpr_32 = V_ASHRREV_I32_e32 31, [[EXT]],
+; ISEL: [[WIDE:%.+]]:vreg_64{{(_align2)?}} = REG_SEQUENCE [[EXT]], %subreg.sub0, [[HI]], %subreg.sub1
+; ISEL-NOT: V_BFE_I32_e64
+; ISEL: GLOBAL_STORE_DWORD {{.+}}, [[EXT]],
+; ISEL: GLOBAL_STORE_DWORDX2 {{.+}}, [[WIDE]],
+; ISEL-NOT: V_BFE_I32_e64
+; ISEL: SI_RETURN
 define i64 @sext_i16_add_i32_i64(i16 %v, i16 %w, ptr addrspace(1) %p, ptr addrspace(1) %q) {
 ; GFX942-LABEL: sext_i16_add_i32_i64:
 ; GFX942:       ; %bb.0:
