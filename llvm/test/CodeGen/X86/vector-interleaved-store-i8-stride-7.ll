@@ -1722,8 +1722,7 @@ define void @store_i8_stride7_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm13 = xmm1[u,u],zero,zero,xmm1[2,u,u,u,u],zero,zero,xmm1[3,u,u,u,u]
 ; AVX-NEXT:    vpor %xmm13, %xmm12, %xmm12
 ; AVX-NEXT:    vinsertf128 $1, %xmm12, %ymm11, %ymm11
-; AVX-NEXT:    vmovaps {{.*#+}} ymm12 = [255,255,255,255,0,0,0,255,255,255,255,0,0,0,255,255,255,255,0,0,0,255,255,255,255,0,0,0,255,255,255,255]
-; AVX-NEXT:    vandnps %ymm11, %ymm12, %ymm11
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm11, %ymm11
 ; AVX-NEXT:    vorps %ymm3, %ymm11, %ymm3
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm8 = zero,zero,zero,zero,zero,xmm8[10,11],zero,zero,zero,zero,zero,xmm8[12,13],zero,zero
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm9 = zero,zero,zero,xmm9[10,11],zero,zero,zero,zero,zero,xmm9[12,13],zero,zero,zero,zero

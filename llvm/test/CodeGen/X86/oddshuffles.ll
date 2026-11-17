@@ -173,13 +173,13 @@ define void @v5f32(<4 x float> %a, <4 x float> %b, ptr %p) nounwind {
 define void @v7i8(<4 x i8> %a, <4 x i8> %b, ptr %p) nounwind {
 ; SSE2-LABEL: v7i8:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,1,3,4,5,6,7]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [0,255,0,255,0,255,255,255,255,255,255,255,255,255,255,255]
 ; SSE2-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[2,2,3,0,4,5,6,7]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [0,255,0,255,0,255,255,255,255,255,255,255,255,255,255,255]
 ; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,1,3,4,5,6,7]
 ; SSE2-NEXT:    pandn %xmm0, %xmm2
 ; SSE2-NEXT:    por %xmm1, %xmm2
 ; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax

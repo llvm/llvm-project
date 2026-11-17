@@ -5285,12 +5285,12 @@ static SDValue getEXTEND_VECTOR_INREG(unsigned Opcode, const SDLoc &DL, EVT VT,
   return DAG.getNode(Opcode, DL, VT, In);
 }
 
-// Create OR(AND(FREEZE(LHS),MASK),AND(FREEZE(RHS),~MASK)) bit select pattern.
-// Freeze inputs to prevent AND(poison,0) -> poison folds.
+// Create OR(AND(LHS,MASK),AND(RHS,~MASK)) bit select pattern.
+// NOTE: Caller must freeze inputs to prevent AND(poison,0) -> poison folds.
 static SDValue getBitSelect(const SDLoc &DL, MVT VT, SDValue LHS, SDValue RHS,
                             SDValue Mask, SelectionDAG &DAG) {
-  LHS = DAG.getNode(ISD::AND, DL, VT, DAG.getFreeze(LHS), Mask);
-  RHS = DAG.getNode(X86ISD::ANDNP, DL, VT, Mask, DAG.getFreeze(RHS));
+  LHS = DAG.getNode(ISD::AND, DL, VT, LHS, Mask);
+  RHS = DAG.getNode(X86ISD::ANDNP, DL, VT, Mask, RHS);
   return DAG.getNode(ISD::OR, DL, VT, LHS, RHS);
 }
 
@@ -11419,13 +11419,22 @@ static SDValue lowerShuffleAsBitBlend(const SDLoc &DL, MVT VT, SDValue V1,
   unsigned EltSizeInBIts = VT.getScalarSizeInBits();
   APInt Zero = APInt::getZero(EltSizeInBIts);
   APInt AllOnes = APInt::getAllOnes(EltSizeInBIts);
+  APInt DemandedV1 = APInt::getZero(Mask.size());
+  APInt DemandedV2 = APInt::getZero(Mask.size());
   SmallVector<APInt, 16> MaskOps;
-  for (int i = 0, Size = Mask.size(); i < Size; ++i) {
-    if (Mask[i] >= 0 && Mask[i] != i && Mask[i] != i + Size)
+  for (int I = 0, Size = Mask.size(); I < Size; ++I) {
+    if (Mask[I] >= 0 && Mask[I] != I && Mask[I] != I + Size)
       return SDValue(); // Shuffled input!
-    MaskOps.push_back(Mask[i] < Size ? AllOnes : Zero);
+    if (0 <= Mask[I] && Mask[I] < Size)
+      DemandedV1.setBit(Mask[I]);
+    else if (Size <= Mask[I])
+      DemandedV2.setBit(Mask[I] - Size);
+    MaskOps.push_back(Mask[I] < Size ? AllOnes : Zero);
   }
   SDValue V1Mask = getConstVector(MaskOps, VT, DAG, DL);
+  // Freeze inputs to prevent AND(poison,0) -> poison folds.
+  V1 = DAG.getFreeze(V1, DemandedV1);
+  V2 = DAG.getFreeze(V2, DemandedV2);
   return getBitSelect(DL, VT, V1, V2, V1Mask, DAG);
 }
 
