@@ -5669,6 +5669,14 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                                getASTContext().UnsignedIntTy);
     break;
   }
+  case Builtin::BI__builtin_hlsl_isdebuggingenabled: {
+    if (!getASTContext().getTargetInfo().getTriple().isDXIL()) {
+      SemaRef.Diag(TheCall->getBeginLoc(),
+                   diag::err_builtin_target_unsupported);
+      return true;
+    }
+    return false;
+  }
   }
   return false;
 }
