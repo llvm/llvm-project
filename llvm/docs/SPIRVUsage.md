@@ -401,6 +401,24 @@ See [Target Extension Types for Inline SPIR-V and Decorated Types] for further d
 
 (spirv-intrinsics)=
 
+### Shared Local Memory model
+
+SPIR-V objects can use `Workgroup` scope so they are visible for all invocations within a
+workgroup ([See SPIR-V specification 3.2.6](https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#Storage_Class)). Equivalent address space in LLVM IR is `addrspace(3)`.
+Usage of this address space is tightly connected to target runtime, because a dynamically sized object such as:
+
+`@buf = external addrspace(3) global [0 x i32], align 4`
+
+Requires APIs to specify it's size. Not every vendor supports the same APIs for the purpose.
+OpenCL and Level Zero runtimes, only allow sizing of such objects through kernel arguments
+in `Workgroup` scope. For the reason, the SPIR-V backend implements an additional pass which
+lowers unsized external arrays into OpenCL compatible trailing kernel argument. When a module
+containing such object is lowered, all operations on the array are translated into indirect
+reads and writes from a global slot containing a pointer to `Workgroup` memory area. The
+global slot is written to when any kernel from the module is ran, using value received
+in trailing kernel argument. Runtimes can detect if the pass was used by inspecting modules
+for `__spirv_dynamic_local_memory_present` global variable.
+
 ### Target Intrinsics
 
 The SPIR-V backend employs several LLVM IR intrinsics that facilitate various low-level
