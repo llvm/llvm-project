@@ -45,10 +45,10 @@ define protected amdgpu_kernel void @memcpy_1025_bytes(ptr addrspace(1) %dst, pt
 ; CHECK:       [[STATIC_MEMCPY_EXPANSION_MAIN_BODY]]:
 ; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], %[[STATIC_MEMCPY_EXPANSION_MAIN_BODY]] ], !dbg [[DBG16]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[LOOP_INDEX]], !dbg [[DBG16]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 1, !dbg [[DBG16]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 1, !dbg [[DBG16]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[LOOP_INDEX]], !dbg [[DBG16]]
-; CHECK-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 1, !dbg [[DBG16]]
-; CHECK-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 256, !dbg [[DBG16]]
+; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 1, !dbg [[DBG16]]
+; CHECK-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 16, !dbg [[DBG16]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 1024, !dbg [[DBG16]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[STATIC_MEMCPY_EXPANSION_MAIN_BODY]], label %[[STATIC_MEMCPY_POST_EXPANSION:.*]], !dbg [[DBG16]]
 ; CHECK:       [[STATIC_MEMCPY_POST_EXPANSION]]:
@@ -70,10 +70,10 @@ define protected amdgpu_kernel void @memcpy_2048_bytes(ptr addrspace(1) %dst, pt
 ; CHECK:       [[STATIC_MEMCPY_EXPANSION_MAIN_BODY]]:
 ; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], %[[STATIC_MEMCPY_EXPANSION_MAIN_BODY]] ], !dbg [[DBG21]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[LOOP_INDEX]], !dbg [[DBG21]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 1, !dbg [[DBG21]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 1, !dbg [[DBG21]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[LOOP_INDEX]], !dbg [[DBG21]]
-; CHECK-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 1, !dbg [[DBG21]]
-; CHECK-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 256, !dbg [[DBG21]]
+; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 1, !dbg [[DBG21]]
+; CHECK-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 16, !dbg [[DBG21]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 2048, !dbg [[DBG21]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[STATIC_MEMCPY_EXPANSION_MAIN_BODY]], label %[[STATIC_MEMCPY_POST_EXPANSION:.*]], !dbg [[DBG21]]
 ; CHECK:       [[STATIC_MEMCPY_POST_EXPANSION]]:
@@ -158,20 +158,20 @@ define protected amdgpu_kernel void @memmove_1025_bytes(ptr addrspace(1) %dst, p
 ; CHECK-NEXT:    br label %[[MEMMOVE_BWD_LOOP:.*]], !dbg [[DBG31]]
 ; CHECK:       [[MEMMOVE_BWD_LOOP]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], %[[MEMMOVE_BWD_LOOP]] ], [ 1024, %[[MEMMOVE_BWD_RESIDUAL]] ], !dbg [[DBG31]]
-; CHECK-NEXT:    [[BWD_INDEX]] = sub i64 [[TMP4]], 256, !dbg [[DBG31]]
+; CHECK-NEXT:    [[BWD_INDEX]] = sub i64 [[TMP4]], 16, !dbg [[DBG31]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[BWD_INDEX]], !dbg [[DBG31]]
-; CHECK-NEXT:    [[ELEMENT:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP5]], align 1, !dbg [[DBG31]]
+; CHECK-NEXT:    [[ELEMENT:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP5]], align 1, !dbg [[DBG31]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[BWD_INDEX]], !dbg [[DBG31]]
-; CHECK-NEXT:    store <64 x i32> [[ELEMENT]], ptr addrspace(1) [[TMP6]], align 1, !dbg [[DBG31]]
+; CHECK-NEXT:    store <4 x i32> [[ELEMENT]], ptr addrspace(1) [[TMP6]], align 1, !dbg [[DBG31]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[BWD_INDEX]], 0, !dbg [[DBG31]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MEMMOVE_DONE:.*]], label %[[MEMMOVE_BWD_LOOP]], !dbg [[DBG31]]
 ; CHECK:       [[MEMMOVE_FWD_LOOP]]:
 ; CHECK-NEXT:    [[FWD_INDEX:%.*]] = phi i64 [ [[TMP10:%.*]], %[[MEMMOVE_FWD_LOOP]] ], [ 0, [[TMP0:%.*]] ], !dbg [[DBG31]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[FWD_INDEX]], !dbg [[DBG31]]
-; CHECK-NEXT:    [[ELEMENT1:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP8]], align 1, !dbg [[DBG31]]
+; CHECK-NEXT:    [[ELEMENT1:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP8]], align 1, !dbg [[DBG31]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[FWD_INDEX]], !dbg [[DBG31]]
-; CHECK-NEXT:    store <64 x i32> [[ELEMENT1]], ptr addrspace(1) [[TMP9]], align 1, !dbg [[DBG31]]
-; CHECK-NEXT:    [[TMP10]] = add i64 [[FWD_INDEX]], 256, !dbg [[DBG31]]
+; CHECK-NEXT:    store <4 x i32> [[ELEMENT1]], ptr addrspace(1) [[TMP9]], align 1, !dbg [[DBG31]]
+; CHECK-NEXT:    [[TMP10]] = add i64 [[FWD_INDEX]], 16, !dbg [[DBG31]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[TMP10]], 1024, !dbg [[DBG31]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[MEMMOVE_FWD_RESIDUAL:.*]], label %[[MEMMOVE_FWD_LOOP]], !dbg [[DBG31]]
 ; CHECK:       [[MEMMOVE_FWD_RESIDUAL]]:
@@ -195,20 +195,20 @@ define protected amdgpu_kernel void @memmove_2048_bytes(ptr addrspace(1) %dst, p
 ; CHECK-NEXT:    br i1 [[COMPARE_SRC_DST]], label %[[MEMMOVE_BWD_LOOP:.*]], label %[[MEMMOVE_FWD_LOOP:.*]], !dbg [[DBG36]]
 ; CHECK:       [[MEMMOVE_BWD_LOOP]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], %[[MEMMOVE_BWD_LOOP]] ], [ 2048, [[TMP0:%.*]] ], !dbg [[DBG36]]
-; CHECK-NEXT:    [[BWD_INDEX]] = sub i64 [[TMP1]], 256, !dbg [[DBG36]]
+; CHECK-NEXT:    [[BWD_INDEX]] = sub i64 [[TMP1]], 16, !dbg [[DBG36]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[BWD_INDEX]], !dbg [[DBG36]]
-; CHECK-NEXT:    [[ELEMENT:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP2]], align 1, !dbg [[DBG36]]
+; CHECK-NEXT:    [[ELEMENT:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP2]], align 1, !dbg [[DBG36]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[BWD_INDEX]], !dbg [[DBG36]]
-; CHECK-NEXT:    store <64 x i32> [[ELEMENT]], ptr addrspace(1) [[TMP3]], align 1, !dbg [[DBG36]]
+; CHECK-NEXT:    store <4 x i32> [[ELEMENT]], ptr addrspace(1) [[TMP3]], align 1, !dbg [[DBG36]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[BWD_INDEX]], 0, !dbg [[DBG36]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MEMMOVE_DONE:.*]], label %[[MEMMOVE_BWD_LOOP]], !dbg [[DBG36]]
 ; CHECK:       [[MEMMOVE_FWD_LOOP]]:
 ; CHECK-NEXT:    [[FWD_INDEX:%.*]] = phi i64 [ [[TMP7:%.*]], %[[MEMMOVE_FWD_LOOP]] ], [ 0, [[TMP0]] ], !dbg [[DBG36]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[FWD_INDEX]], !dbg [[DBG36]]
-; CHECK-NEXT:    [[ELEMENT1:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP5]], align 1, !dbg [[DBG36]]
+; CHECK-NEXT:    [[ELEMENT1:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP5]], align 1, !dbg [[DBG36]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[FWD_INDEX]], !dbg [[DBG36]]
-; CHECK-NEXT:    store <64 x i32> [[ELEMENT1]], ptr addrspace(1) [[TMP6]], align 1, !dbg [[DBG36]]
-; CHECK-NEXT:    [[TMP7]] = add i64 [[FWD_INDEX]], 256, !dbg [[DBG36]]
+; CHECK-NEXT:    store <4 x i32> [[ELEMENT1]], ptr addrspace(1) [[TMP6]], align 1, !dbg [[DBG36]]
+; CHECK-NEXT:    [[TMP7]] = add i64 [[FWD_INDEX]], 16, !dbg [[DBG36]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 2048, !dbg [[DBG36]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MEMMOVE_DONE]], label %[[MEMMOVE_FWD_LOOP]], !dbg [[DBG36]]
 ; CHECK:       [[MEMMOVE_DONE]]:
@@ -258,15 +258,15 @@ define protected amdgpu_kernel void @memset(ptr addrspace(1) %dst, i8 %value, i6
 define protected amdgpu_kernel void @memset_1025_bytes(ptr addrspace(1) %dst, i8 %value) {
 ; CHECK-LABEL: define protected amdgpu_kernel void @memset_1025_bytes(
 ; CHECK-SAME: ptr addrspace(1) [[DST:%.*]], i8 [[VALUE:%.*]]) !dbg [[DBG43:![0-9]+]] {
-; CHECK-NEXT:    [[SETVALUE_SPLAT_SPLATINSERT:%.*]] = insertelement <256 x i8> poison, i8 [[VALUE]], i64 0, !dbg [[DBG46:![0-9]+]]
-; CHECK-NEXT:    [[SETVALUE_SPLAT_SPLAT:%.*]] = shufflevector <256 x i8> [[SETVALUE_SPLAT_SPLATINSERT]], <256 x i8> poison, <256 x i32> zeroinitializer, !dbg [[DBG46]]
-; CHECK-NEXT:    [[SETVALUE_SPLAT_CAST:%.*]] = bitcast <256 x i8> [[SETVALUE_SPLAT_SPLAT]] to <64 x i32>, !dbg [[DBG46]]
+; CHECK-NEXT:    [[SETVALUE_SPLAT_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[VALUE]], i64 0, !dbg [[DBG46:![0-9]+]]
+; CHECK-NEXT:    [[SETVALUE_SPLAT_SPLAT:%.*]] = shufflevector <16 x i8> [[SETVALUE_SPLAT_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer, !dbg [[DBG46]]
+; CHECK-NEXT:    [[SETVALUE_SPLAT_CAST:%.*]] = bitcast <16 x i8> [[SETVALUE_SPLAT_SPLAT]] to <4 x i32>, !dbg [[DBG46]]
 ; CHECK-NEXT:    br label %[[LOADSTORELOOP:.*]], !dbg [[DBG46]]
 ; CHECK:       [[LOADSTORELOOP]]:
 ; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP2:%.*]], %[[LOADSTORELOOP]] ], !dbg [[DBG46]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[LOOP_INDEX]], !dbg [[DBG46]]
-; CHECK-NEXT:    store <64 x i32> [[SETVALUE_SPLAT_CAST]], ptr addrspace(1) [[TMP1]], align 1, !dbg [[DBG46]]
-; CHECK-NEXT:    [[TMP2]] = add i64 [[LOOP_INDEX]], 256, !dbg [[DBG46]]
+; CHECK-NEXT:    store <4 x i32> [[SETVALUE_SPLAT_CAST]], ptr addrspace(1) [[TMP1]], align 1, !dbg [[DBG46]]
+; CHECK-NEXT:    [[TMP2]] = add i64 [[LOOP_INDEX]], 16, !dbg [[DBG46]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], 1024, !dbg [[DBG46]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[LOADSTORELOOP]], label %[[SPLIT:.*]], !dbg [[DBG46]]
 ; CHECK:       [[SPLIT]]:
@@ -282,15 +282,15 @@ define protected amdgpu_kernel void @memset_1025_bytes(ptr addrspace(1) %dst, i8
 define protected amdgpu_kernel void @memset_2048_bytes(ptr addrspace(1) %dst, i8 %value) {
 ; CHECK-LABEL: define protected amdgpu_kernel void @memset_2048_bytes(
 ; CHECK-SAME: ptr addrspace(1) [[DST:%.*]], i8 [[VALUE:%.*]]) !dbg [[DBG48:![0-9]+]] {
-; CHECK-NEXT:    [[SETVALUE_SPLAT_SPLATINSERT:%.*]] = insertelement <256 x i8> poison, i8 [[VALUE]], i64 0, !dbg [[DBG51:![0-9]+]]
-; CHECK-NEXT:    [[SETVALUE_SPLAT_SPLAT:%.*]] = shufflevector <256 x i8> [[SETVALUE_SPLAT_SPLATINSERT]], <256 x i8> poison, <256 x i32> zeroinitializer, !dbg [[DBG51]]
-; CHECK-NEXT:    [[SETVALUE_SPLAT_CAST:%.*]] = bitcast <256 x i8> [[SETVALUE_SPLAT_SPLAT]] to <64 x i32>, !dbg [[DBG51]]
+; CHECK-NEXT:    [[SETVALUE_SPLAT_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[VALUE]], i64 0, !dbg [[DBG51:![0-9]+]]
+; CHECK-NEXT:    [[SETVALUE_SPLAT_SPLAT:%.*]] = shufflevector <16 x i8> [[SETVALUE_SPLAT_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer, !dbg [[DBG51]]
+; CHECK-NEXT:    [[SETVALUE_SPLAT_CAST:%.*]] = bitcast <16 x i8> [[SETVALUE_SPLAT_SPLAT]] to <4 x i32>, !dbg [[DBG51]]
 ; CHECK-NEXT:    br label %[[LOADSTORELOOP:.*]], !dbg [[DBG51]]
 ; CHECK:       [[LOADSTORELOOP]]:
 ; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP2:%.*]], %[[LOADSTORELOOP]] ], !dbg [[DBG51]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[LOOP_INDEX]], !dbg [[DBG51]]
-; CHECK-NEXT:    store <64 x i32> [[SETVALUE_SPLAT_CAST]], ptr addrspace(1) [[TMP1]], align 1, !dbg [[DBG51]]
-; CHECK-NEXT:    [[TMP2]] = add i64 [[LOOP_INDEX]], 256, !dbg [[DBG51]]
+; CHECK-NEXT:    store <4 x i32> [[SETVALUE_SPLAT_CAST]], ptr addrspace(1) [[TMP1]], align 1, !dbg [[DBG51]]
+; CHECK-NEXT:    [[TMP2]] = add i64 [[LOOP_INDEX]], 16, !dbg [[DBG51]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], 2048, !dbg [[DBG51]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[LOADSTORELOOP]], label %[[SPLIT:.*]], !dbg [[DBG51]]
 ; CHECK:       [[SPLIT]]:
