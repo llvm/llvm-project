@@ -7766,13 +7766,16 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
       LT.second.getScalarSizeInBits() == SrcTy->getScalarSizeInBits()) {
     unsigned NumSrcElts = SrcVTy->getNumElements();
     unsigned NumLTElts = LT.second.getVectorNumElements();
+    // Widen only if the result fits in the legal type and either the sources
+    // or the result is narrower than it. The widened shuffle has the legal
+    // width in both so the recursive call does not widen it again.
     if (Mask.size() <= NumLTElts &&
         (NumSrcElts < NumLTElts || Mask.size() < NumLTElts)) {
       SmallVector<int, 16> WideMask(NumLTElts, PoisonMaskElem);
       for (auto [I, M] : enumerate(Mask)) {
         if (M == PoisonMaskElem)
           continue;
-        WideMask[I] = M < (int)NumSrcElts ? M : M - NumSrcElts + NumLTElts;
+        WideMask[I] = (M < (int)NumSrcElts) ? M : (M - NumSrcElts + NumLTElts);
       }
       auto *WideTy = FixedVectorType::get(SrcTy->getScalarType(), NumLTElts);
       return getShuffleCost(Kind, WideTy, WideTy, CostKind, WideMask, 0,
