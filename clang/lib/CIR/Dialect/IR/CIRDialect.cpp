@@ -563,6 +563,21 @@ void cir::AllocaOp::build(mlir::OpBuilder &odsBuilder,
   odsState.addTypes(addr);
 }
 
+bool cir::usesRelativeVTables(mlir::ModuleOp mod) {
+  auto loweringOpts = mod->getAttrOfType<cir::LoweringOptionsAttr>(
+      cir::CIRDialect::getLoweringOptionsAttrName());
+  return loweringOpts && loweringOpts.getRelativeCxxAbiVtables();
+}
+
+uint64_t cir::getVTableEntrySize(mlir::ModuleOp mod,
+                                 const mlir::DataLayout &dataLayout) {
+  // Relative layout entries are 32-bit offsets.
+  if (usesRelativeVTables(mod))
+    return 4;
+  return dataLayout.getTypeSize(
+      cir::PointerType::get(cir::VoidType::get(mod.getContext())));
+}
+
 cir::AllocaOp cir::getUnderlyingAlloca(mlir::Value addr) {
   mlir::Value ptr = addr;
   while (cir::CastOp castOp = ptr.getDefiningOp<cir::CastOp>()) {

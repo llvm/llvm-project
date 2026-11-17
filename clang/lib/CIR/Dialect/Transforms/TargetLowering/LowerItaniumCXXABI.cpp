@@ -782,55 +782,28 @@ static mlir::Value buildDynamicCastAfterNullCheck(cir::DynamicCastOp op,
 static mlir::Value buildDynamicCastToVoidAfterNullCheck(
     cir::DynamicCastOp op, cir::LowerModule &lm, mlir::OpBuilder &builder) {
   mlir::Location loc = op.getLoc();
-  bool vtableUsesRelativeLayout = op.getRelativeLayout();
 
   // TODO(cir): consider address space of the vtable pointer.
   assert(!cir::MissingFeatures::addressSpace());
 
-  mlir::Type vtableElemTy;
-  uint64_t vtableElemAlign;
-  if (vtableUsesRelativeLayout) {
-    vtableElemTy =
-        cir::IntType::get(builder.getContext(), 32, /*isSigned=*/true);
-    vtableElemAlign = 4;
-  } else {
-    vtableElemTy = getPtrDiffCIRTy(lm);
-    vtableElemAlign = llvm::divideCeil(
-        lm.getTarget().getPointerAlign(clang::LangAS::Default), 8);
-  }
-
-  mlir::Type vtableElemPtrTy = cir::PointerType::get(vtableElemTy);
-  mlir::Type i64Ty = cir::IntType::get(builder.getContext(), /*width=*/64,
-                                       /*isSigned=*/true);
-
   // Access vtable to get the offset from the given object to its containing
   // complete object.
-  // TODO: Add a specialized operation to get the object offset?
+  uint64_t vptrAlign = llvm::divideCeil(
+      lm.getTarget().getPointerAlign(clang::LangAS::Default), 8);
   auto vptrPtr = cir::VTableGetVPtrOp::create(builder, loc, op.getSrc());
-  mlir::Value vptr = cir::LoadOp::create(
-      builder, loc, vptrPtr,
-      /*isDeref=*/false,
-      /*is_volatile=*/false,
-      /*isNontemporal=*/false,
-      /*alignment=*/builder.getI64IntegerAttr(vtableElemAlign),
-      /*sync_scope=*/cir::SyncScopeKindAttr(),
-      /*mem_order=*/cir::MemOrderAttr(),
-      /*invariant=*/false);
-  mlir::Value elementPtr = cir::CastOp::create(builder, loc, vtableElemPtrTy,
-                                               cir::CastKind::bitcast, vptr);
-  mlir::Value minusTwo =
-      cir::ConstantOp::create(builder, loc, cir::IntAttr::get(i64Ty, -2));
-  mlir::Value offsetToTopSlotPtr = cir::PtrStrideOp::create(
-      builder, loc, vtableElemPtrTy, elementPtr, minusTwo);
-  mlir::Value offsetToTop = cir::LoadOp::create(
-      builder, loc, offsetToTopSlotPtr,
-      /*isDeref=*/false,
-      /*is_volatile=*/false,
-      /*isNontemporal=*/false,
-      /*alignment=*/builder.getI64IntegerAttr(vtableElemAlign),
-      /*sync_scope=*/cir::SyncScopeKindAttr(),
-      /*mem_order=*/cir::MemOrderAttr(),
-      /*invariant=*/false);
+  mlir::Value vptr =
+      cir::LoadOp::create(builder, loc, vptrPtr,
+                          /*isDeref=*/false,
+                          /*is_volatile=*/false,
+                          /*isNontemporal=*/false,
+                          /*alignment=*/builder.getI64IntegerAttr(vptrAlign),
+                          /*sync_scope=*/cir::SyncScopeKindAttr(),
+                          /*mem_order=*/cir::MemOrderAttr(),
+                          /*invariant=*/false);
+  // The Itanium ABI always places an offset to the complete object at entry -2
+  // in the vtable.
+  mlir::Value offsetToTop = cir::VTableGetOffsetOp::create(
+      builder, loc, getPtrDiffCIRTy(lm), vptr, /*index=*/-2);
 
   // Add the offset to the given pointer to get the cast result.
   // Cast the input pointer to a uint8_t* to allow pointer arithmetic.
