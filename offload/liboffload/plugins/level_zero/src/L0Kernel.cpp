@@ -233,19 +233,6 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
           LaunchArgs.NumArgs, KernelPR.NumKernelArgs);
   }
 
-  if (KernelPR.NumKernelArgs == LaunchArgs.NumArgs + 1) {
-    KEnv.HasDynSharedMemoryArg = true;
-  } else if (KernelPR.NumKernelArgs == LaunchArgs.NumArgs) {
-    KEnv.DynSharedMemorySize = 0;
-  } else {
-    return Plugin::error(
-        ErrorCode::INVALID_ARGUMENT,
-        "number of arguments (%u) does not match the number of arguments "
-        "expected by the kernel (%u), not counting a trailing `__local` "
-        "argument for the dynamic shared memory",
-        LaunchArgs.NumArgs, KernelPR.NumKernelArgs);
-  }
-
   assert(Queue->getUserCtx() && "Queue must belong to a plugin context");
   if (auto Err = setIndirectFlags(L0Device, *Queue->getUserCtx(), KEnv))
     return Err;
