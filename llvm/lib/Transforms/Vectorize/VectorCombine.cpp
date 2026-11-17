@@ -7094,13 +7094,8 @@ bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
   LoadInst *WideLoad = Builder.CreateAlignedLoad(
       WideTy, LowLoad->getPointerOperand(), LowLoad->getAlign());
 
-  // Set the metadata on the wide load. copyMetadataForLoad seeds it from
-  // LowLoad, then combineMetadataForCSE intersects every known kind against
-  // HighLoad (taking the most-generic value where applicable, keeping facts
-  // only where both loads agree, and dropping unknown metadata), so nothing is
-  // asserted over the combined load unless justified by both halves.
-  copyMetadataForLoad(*WideLoad, *LowLoad);
-  combineMetadataForCSE(WideLoad, HighLoad, /*DoesKMove=*/true);
+  // Merge metadata from both loads over the combined access.
+  propagateMetadata(WideLoad, {LowLoad, HighLoad});
 
   for (ShuffleVectorInst *SV : Shuffles) {
     SmallVector<int, 32> NewMask;

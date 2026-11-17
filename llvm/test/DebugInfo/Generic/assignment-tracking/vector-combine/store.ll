@@ -10,7 +10,7 @@ define void @scalar_store(i8 %x) !dbg !6 {
 ; CHECK-SAME: i8 [[X:%.*]]) !dbg [[DBG4:![0-9]+]] {
 ; CHECK-NEXT:    [[P:%.*]] = alloca <16 x i8>, align 16
 ; CHECK-NEXT:    call void @init(ptr [[P]]), !dbg [[DBG7:![0-9]+]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i8>, ptr [[P]], i64 0, i64 3, !dbg [[DBG7]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 3, !dbg [[DBG7]]
 ; CHECK-NEXT:    store i8 [[X]], ptr [[TMP1]], align 1, !dbg [[DBG7]], !DIAssignID [[DIASSIGNID8:![0-9]+]]
 ; CHECK-NEXT:      #dbg_assign(<16 x i8> poison, [[META9:![0-9]+]], !DIExpression(), [[DIASSIGNID8]], ptr [[P]], !DIExpression(), [[DBG7]])
 ; CHECK-NEXT:    call void @observe(ptr [[P]]), !dbg [[DBG7]]
@@ -32,9 +32,9 @@ define void @two_updates(i8 %x, i8 %y) !dbg !17 {
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) !dbg [[DBG14:![0-9]+]] {
 ; CHECK-NEXT:    [[P:%.*]] = alloca <16 x i8>, align 16
 ; CHECK-NEXT:    call void @init(ptr [[P]]), !dbg [[DBG15:![0-9]+]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i8>, ptr [[P]], i64 0, i64 3, !dbg [[DBG15]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 3, !dbg [[DBG15]]
 ; CHECK-NEXT:    store i8 [[X]], ptr [[TMP1]], align 1, !dbg [[DBG15]], !DIAssignID [[DIASSIGNID16:![0-9]+]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <16 x i8>, ptr [[P]], i64 0, i64 7, !dbg [[DBG15]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 7, !dbg [[DBG15]]
 ; CHECK-NEXT:    store i8 [[Y]], ptr [[TMP2]], align 1, !dbg [[DBG15]], !DIAssignID [[DIASSIGNID16]]
 ; CHECK-NEXT:      #dbg_assign(<16 x i8> poison, [[META17:![0-9]+]], !DIExpression(), [[DIASSIGNID16]], ptr [[P]], !DIExpression(), [[DBG15]])
 ; CHECK-NEXT:    call void @observe(ptr [[P]]), !dbg [[DBG15]]

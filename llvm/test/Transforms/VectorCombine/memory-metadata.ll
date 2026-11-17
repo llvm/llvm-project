@@ -16,7 +16,7 @@ define i32 @extract_zero(ptr %p) {
 define i32 @extract_nonzero(ptr %p) {
 ; CHECK-LABEL: define i32 @extract_nonzero(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[P]], i64 0, i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP1]], align 8, !tbaa [[CHAR_TBAA0]], !range [[RNG3]], !invariant.load [[META4]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.access.group [[ACC_GRP9]], !noundef [[META4]], !annotation [[META10]], !nosanitize [[META4]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META13]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -31,7 +31,7 @@ define i32 @extract_dynamic(ptr %p, i32 %index) {
 ; CHECK-NEXT:    [[INDEX_FROZEN:%.*]] = freeze i32 [[INDEX]]
 ; CHECK-NEXT:    [[IDX:%.*]] = and i32 [[INDEX_FROZEN]], 3
 ; CHECK-NEXT:    [[IDX_GEPIDX:%.*]] = zext i32 [[IDX]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[P]], i64 0, i64 [[IDX_GEPIDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[IDX_GEPIDX]]
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP1]], align 4, !tbaa [[CHAR_TBAA0]], !range [[RNG3]], !invariant.load [[META4]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.access.group [[ACC_GRP9]], !noundef [[META4]], !annotation [[META10]], !nosanitize [[META4]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META13]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -44,7 +44,7 @@ define i32 @extract_dynamic(ptr %p, i32 %index) {
 define float @extract_float(ptr %p) {
 ; CHECK-LABEL: define float @extract_float(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x float>, ptr [[P]], i64 0, i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
 ; CHECK-NEXT:    [[R:%.*]] = load float, ptr [[TMP1]], align 4, !fpmath [[META15:![0-9]+]], !invariant.load [[META4]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.access.group [[ACC_GRP9]], !noundef [[META4]], !annotation [[META10]], !nosanitize [[META4]], !mmra [[META11]], !noalias.addrspace [[META12]], !nofpclass [[META16:![0-9]+]], !mem.cache_hint [[META13]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -92,7 +92,7 @@ define void @store_zero(ptr %p, i8 %x, i32 %index) {
 define void @store_nonzero(ptr %p, i8 %x, i32 %index) {
 ; CHECK-LABEL: define void @store_nonzero(
 ; CHECK-SAME: ptr [[P:%.*]], i8 [[X:%.*]], i32 [[INDEX:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i8>, ptr [[P]], i64 0, i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 3
 ; CHECK-NEXT:    store i8 [[X]], ptr [[TMP1]], align 1, !tbaa [[CHAR_TBAA0]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.access.group [[ACC_GRP9]], !annotation [[META10]], !nosanitize [[META4]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META17]]
 ; CHECK-NEXT:    ret void
 ;
@@ -108,7 +108,7 @@ define void @store_dynamic(ptr %p, i8 %x, i32 %index) {
 ; CHECK-NEXT:    [[INDEX_FROZEN:%.*]] = freeze i32 [[INDEX]]
 ; CHECK-NEXT:    [[IDX:%.*]] = and i32 [[INDEX_FROZEN]], 15
 ; CHECK-NEXT:    [[IDX_GEPIDX:%.*]] = zext i32 [[IDX]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i8>, ptr [[P]], i64 0, i64 [[IDX_GEPIDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[IDX_GEPIDX]]
 ; CHECK-NEXT:    store i8 [[X]], ptr [[TMP1]], align 1, !tbaa [[CHAR_TBAA0]], !alias.scope [[META5]], !noalias [[META5]], !nontemporal [[META8]], !llvm.access.group [[ACC_GRP9]], !annotation [[META10]], !nosanitize [[META4]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META17]]
 ; CHECK-NEXT:    ret void
 ;
@@ -124,7 +124,7 @@ define void @store_dynamic(ptr %p, i8 %x, i32 %index) {
 define i32 @extract_struct_field(ptr %p) {
 ; CHECK-LABEL: define i32 @extract_struct_field(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[P]], i64 0, i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP1]], align 4, !tbaa [[INT_TBAA18:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -136,7 +136,7 @@ define i32 @extract_struct_field(ptr %p) {
 define void @store_struct_field(ptr %p, i32 %x) {
 ; CHECK-LABEL: define void @store_struct_field(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[P]], i64 0, i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
 ; CHECK-NEXT:    store i32 [[X]], ptr [[TMP1]], align 4, !tbaa [[INT_TBAA18]]
 ; CHECK-NEXT:    ret void
 ;
@@ -149,7 +149,7 @@ define void @store_struct_field(ptr %p, i32 %x) {
 define void @scalar_store(ptr %p, i8 %x) {
 ; CHECK-LABEL: define void @scalar_store(
 ; CHECK-SAME: ptr [[P:%.*]], i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i8>, ptr [[P]], i64 0, i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 3
 ; CHECK-NEXT:    store i8 [[X]], ptr [[TMP1]], align 1, !pcsections [[META20:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
