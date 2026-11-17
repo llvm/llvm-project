@@ -455,9 +455,11 @@ private:
   friend struct VarArgPowerPC64Helper;
   friend struct VarArgPowerPC32Helper;
   friend struct VarArgSystemZHelper;
+  friend struct VarArgHexagonMuslHelper;
   friend struct VarArgI386Helper;
   friend struct VarArgRISCVHelper;
   friend struct VarArgLoongArch64Helper;
+  friend struct VarArgHexagonHelper;
   friend struct VarArgGenericHelper;
 
   void initializeModule(Module &M);
@@ -9642,6 +9644,158 @@ struct VarArgSystemZHelper : public VarArgHelperBase {
   }
 };
 
+/// Implementation of VarArgHelper that is used for Hexagon in Linux and MUSL
+/// environments.
+struct VarArgHexagonMuslHelper : public VarArgHelperBase {
+  static const unsigned kHexagonGrArgSize = 24;
+
+  AllocaInst *VAArgTLSCopy = nullptr;
+  Value *VAArgSize = nullptr;
+
+  VarArgHexagonMuslHelper(Function &F, MemorySanitizer &MS,
+                          MemorySanitizerVisitor &MSV,
+                          const unsigned VAListTagSize)
+      : VarArgHelperBase(F, MS, MSV, VAListTagSize) {}
+
+  void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
+    unsigned GpRegBase = 0;
+    unsigned GpRegOffset = GpRegBase;
+    unsigned OverflowBase = 0;
+    unsigned OverflowOffset = OverflowBase;
+    const DataLayout &DL = F.getDataLayout();
+    unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
+    Align StackAlign = DL.getStackAlignment().value_or(Align(2 * IntptrSize));
+    for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
+      bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
+      bool IsFirstVA = (ArgNo == CB.getFunctionType()->getNumParams());
+      uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
+      Align ArgAlign = DL.getABITypeAlign(A->getType());
+      Value *Base = nullptr;
+      GpRegOffset = alignTo(GpRegOffset, Align(IntptrSize));
+      assert(!CB.paramHasAttr(ArgNo, Attribute::ByVal));
+      if (CB.paramHasAttr(ArgNo, Attribute::StructRet)) {
+        assert(A->getType()->isPointerTy());
+        assert(ArgNo == 0U);
+        GpRegOffset += IntptrSize;
+        continue;
+      }
+      if (ArgSize <= IntptrSize && GpRegOffset + ArgSize <= kHexagonGrArgSize) {
+        if (IsFirstVA) {
+          GpRegBase = GpRegOffset;
+        }
+        if (!IsFixed)
+          Base =
+              getShadowPtrForVAArgument(IRB, GpRegOffset - GpRegBase, ArgSize);
+        GpRegOffset += IntptrSize;
+      } else if (ArgSize <= 2 * IntptrSize &&
+                 alignTo(GpRegOffset, Align(2 * IntptrSize)) + ArgSize <=
+                     kHexagonGrArgSize) {
+        GpRegOffset = alignTo(GpRegOffset, Align(2 * IntptrSize));
+        if (IsFirstVA) {
+          GpRegBase = GpRegOffset;
+        }
+        if (!IsFixed)
+          Base =
+              getShadowPtrForVAArgument(IRB, GpRegOffset - GpRegBase, ArgSize);
+        GpRegOffset += 2 * IntptrSize;
+      } else {
+        if (ArgAlign < IntptrSize)
+          ArgAlign = Align(IntptrSize);
+        else if (ArgAlign > StackAlign)
+          ArgAlign = StackAlign;
+        OverflowOffset = alignTo(OverflowOffset, ArgAlign);
+        if (IsFirstVA) {
+          OverflowBase = OverflowOffset;
+        }
+        if (DL.isBigEndian() && ArgSize < IntptrSize) {
+          // Adjusting the shadow for argument with size < IntptrSize to match
+          // the placement of bits in big endian system
+          OverflowOffset += (IntptrSize - ArgSize);
+        }
+        if (!IsFixed)
+          Base = getShadowPtrForVAArgument(
+              IRB, kHexagonGrArgSize + OverflowOffset - OverflowBase, ArgSize);
+        OverflowOffset += ArgSize;
+      }
+
+      if (Base)
+        IRB.CreateAlignedStore(MSV.getShadow(A), Base, kShadowTLSAlignment);
+    }
+
+    Constant *TotalVAArgSize =
+        ConstantInt::get(MS.IntptrTy, OverflowOffset - OverflowBase);
+    // Here using VAArgOverflowSizeTLS as VAArgSizeTLS to avoid creation of
+    // a new class member i.e. it is the total size of all VarArgs.
+    IRB.CreateStore(TotalVAArgSize, MS.VAArgOverflowSizeTLS);
+  }
+
+  void finalizeInstrumentation() override {
+    assert(!VAArgSize && !VAArgTLSCopy &&
+           "finalizeInstrumentation called twice");
+    IRBuilder<> IRB(MSV.FnPrologueEnd);
+    VAArgSize = IRB.CreateLoad(MS.IntptrTy, MS.VAArgOverflowSizeTLS);
+    Value *CopySize = IRB.CreateAdd(
+        VAArgSize, ConstantInt::get(MS.IntptrTy, kHexagonGrArgSize));
+    CopySize =
+        IRB.CreateBinaryIntrinsic(Intrinsic::umin, CopySize,
+                                  ConstantInt::get(MS.IntptrTy, kParamTLSSize));
+
+    if (!VAStartInstrumentationList.empty()) {
+      // If there is a va_start in this function, make a backup copy of
+      // va_arg_tls somewhere in the function entry block.
+      VAArgTLSCopy = IRB.CreateAlloca(Type::getInt8Ty(*MS.C), CopySize);
+      VAArgTLSCopy->setAlignment(kShadowTLSAlignment);
+      IRB.CreateMemCpy(VAArgTLSCopy, kShadowTLSAlignment, MS.VAArgTLS,
+                       kShadowTLSAlignment, CopySize);
+    }
+
+    // Instrument va_start.
+    // Copy va_list shadow from the backup copy of the TLS contents.
+    for (CallInst *OrigInst : VAStartInstrumentationList) {
+      NextNodeIRBuilder IRB(OrigInst);
+      Value *VAListTag = OrigInst->getArgOperand(0);
+      Value *SavedRegAreaPtrPtr = VAListTag;
+      Value *SavedRegAreaEndPtrPtr =
+          IRB.CreatePtrAdd(VAListTag, ConstantInt::get(MS.IntptrTy, 4));
+      Value *OverflowAreaPtrPtr =
+          IRB.CreatePtrAdd(VAListTag, ConstantInt::get(MS.IntptrTy, 8));
+
+      const DataLayout &DL = F.getDataLayout();
+      unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
+      const Align Alignment = Align(IntptrSize);
+
+      { // Copy saved_reg area
+        Value *SavedRegAreaPtr = IRB.CreateLoad(MS.PtrTy, SavedRegAreaPtrPtr);
+        Value *SavedRegAreaEndPtr =
+            IRB.CreateLoad(MS.PtrTy, SavedRegAreaEndPtrPtr);
+        Value *SavedRegAreaSize =
+            IRB.CreatePtrDiff(SavedRegAreaEndPtr, SavedRegAreaPtr);
+
+        Value *SavedRegAreaShadowPtr, *SavedRegAreaOriginPtr;
+        std::tie(SavedRegAreaShadowPtr, SavedRegAreaOriginPtr) =
+            MSV.getShadowOriginPtr(SavedRegAreaPtr, IRB, IRB.getInt8Ty(),
+                                   Alignment, /*isStore*/ true);
+        IRB.CreateMemCpy(SavedRegAreaShadowPtr, Alignment, VAArgTLSCopy,
+                         Alignment, SavedRegAreaSize);
+      }
+
+      { // Copy overflow area
+        Value *OverflowAreaPtr = IRB.CreateLoad(MS.PtrTy, OverflowAreaPtrPtr);
+
+        Value *OverflowAreaShadowPtr, *OverflowAreaOriginPtr;
+        std::tie(OverflowAreaShadowPtr, OverflowAreaOriginPtr) =
+            MSV.getShadowOriginPtr(OverflowAreaPtr, IRB, IRB.getInt8Ty(),
+                                   Alignment, /*isStore*/ true);
+
+        Value *OverflowVAArgTLSCopyPtr = IRB.CreatePtrAdd(
+            VAArgTLSCopy, ConstantInt::get(MS.IntptrTy, kHexagonGrArgSize));
+        IRB.CreateMemCpy(OverflowAreaShadowPtr, Alignment,
+                         OverflowVAArgTLSCopyPtr, Alignment, CopySize);
+      }
+    }
+  }
+};
+
 /// i386-specific implementation of VarArgHelper.
 struct VarArgI386Helper : public VarArgStackModelHelperBase {
 
@@ -9860,6 +10014,80 @@ struct VarArgLoongArch64Helper : public VarArgStackModelHelperBase {
   }
 };
 
+/// Implementation of VarArgHelper that is used for Hexagon.
+struct VarArgHexagonHelper : public VarArgStackModelHelperBase {
+  static const unsigned kHexagonGrArgSize = 24;
+
+  AllocaInst *VAArgTLSCopy = nullptr;
+  Value *VAArgSize = nullptr;
+
+  VarArgHexagonHelper(Function &F, MemorySanitizer &MS,
+                      MemorySanitizerVisitor &MSV, const unsigned VAListTagSize)
+      : VarArgStackModelHelperBase(F, MS, MSV, VAListTagSize) {}
+
+  void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
+    unsigned VAArgBase = 0;
+    unsigned VAArgOffset = VAArgBase;
+    unsigned GpRegOffset = 0;
+    const DataLayout &DL = F.getDataLayout();
+    unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
+    Align StackAlign = DL.getStackAlignment().value_or(Align(2 * IntptrSize));
+    for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
+      bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
+      uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
+      Align ArgAlign = DL.getABITypeAlign(A->getType());
+      GpRegOffset = alignTo(GpRegOffset, Align(IntptrSize));
+      assert(!CB.isByValArgument(ArgNo));
+      if (CB.paramHasAttr(ArgNo, Attribute::StructRet)) {
+        assert(A->getType()->isPointerTy());
+        assert(ArgNo == 0U);
+        GpRegOffset += IntptrSize;
+        continue;
+      }
+      if (IsFixed) {
+        if (ArgSize <= IntptrSize &&
+            GpRegOffset + ArgSize <= kHexagonGrArgSize) {
+          GpRegOffset += IntptrSize;
+          continue;
+        }
+        if (ArgSize <= 2 * IntptrSize &&
+            alignTo(GpRegOffset, Align(2 * IntptrSize)) + ArgSize <=
+                kHexagonGrArgSize) {
+          GpRegOffset =
+              alignTo(GpRegOffset, Align(2 * IntptrSize)) + 2 * IntptrSize;
+          continue;
+        }
+      }
+      if (ArgAlign < IntptrSize)
+        ArgAlign = Align(IntptrSize);
+      else if (ArgAlign > StackAlign)
+        ArgAlign = StackAlign;
+      VAArgOffset = alignTo(VAArgOffset, ArgAlign);
+      if (DL.isBigEndian() && ArgSize < IntptrSize) {
+        // Adjusting the shadow for argument with size < IntptrSize to match the
+        // placement of bits in big endian system
+        VAArgOffset += (IntptrSize - ArgSize);
+      }
+      Value *Base =
+          getShadowPtrForVAArgument(IRB, VAArgOffset - VAArgBase, ArgSize);
+      VAArgOffset += ArgSize;
+      if (IsFixed) {
+        VAArgBase = alignTo(VAArgOffset, IntptrSize);
+        continue;
+      }
+      if (!Base)
+        break;
+      IRB.CreateAlignedStore(MSV.getShadow(A), Base, kShadowTLSAlignment);
+    }
+
+    Constant *TotalVAArgSize =
+        ConstantInt::get(MS.IntptrTy, VAArgOffset - VAArgBase);
+    // Here using VAArgOverflowSizeTLS as VAArgSizeTLS to avoid creation of
+    // a new class member i.e. it is the total size of all VarArgs.
+    IRB.CreateStore(TotalVAArgSize, MS.VAArgOverflowSizeTLS);
+  }
+};
+
 /// Implementation of VarArgHelper that is used for ARM32, MIPS, LoongArch64.
 struct VarArgGenericHelper : public VarArgStackModelHelperBase {
   AllocaInst *VAArgTLSCopy = nullptr;
@@ -9899,11 +10127,9 @@ struct VarArgGenericHelper : public VarArgStackModelHelperBase {
   }
 };
 
-// ARM32, Loongarch64, MIPS and RISCV share the same calling conventions
-// regarding VAArgs.
+// ARM32 and MIPS share the same calling conventions regarding VAArgs.
 using VarArgARM32Helper = VarArgGenericHelper;
 using VarArgMIPSHelper = VarArgGenericHelper;
-using VarArgHexagonHelper = VarArgGenericHelper;
 
 /// A no-op implementation of VarArgHelper.
 struct VarArgNoOpHelper : public VarArgHelper {
@@ -9966,8 +10192,12 @@ static VarArgHelper *CreateVarArgHelper(Function &Func, MemorySanitizer &Msan,
     return new VarArgLoongArch64Helper(Func, Msan, Visitor,
                                        /*VAListTagSize=*/8);
 
-  if (TargetTriple.getArch() == Triple::hexagon)
-    return new VarArgHexagonHelper(Func, Msan, Visitor, /*VAListTagSize=*/12);
+  if (TargetTriple.getArch() == Triple::hexagon) {
+    if (TargetTriple.isOSLinux() || TargetTriple.isMusl())
+      return new VarArgHexagonMuslHelper(Func, Msan, Visitor, /*VAListTagSize=*/12);
+
+    return new VarArgHexagonHelper(Func, Msan, Visitor, /*VAListTagSize=*/4);
+  }
 
   return new VarArgNoOpHelper(Func, Msan, Visitor);
 }

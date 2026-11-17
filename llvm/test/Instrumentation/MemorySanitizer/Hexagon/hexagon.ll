@@ -10,6 +10,8 @@ define void @Store(ptr nocapture %p, i32 %x) nounwind sanitize_memory {
 ; CHECK-SAME: ptr captures(none) [[P:%.*]], i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP5]], i32 800)
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i32 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i32
@@ -23,6 +25,8 @@ define void @Store(ptr nocapture %p, i32 %x) nounwind sanitize_memory {
 ; ORIGIN-SAME: ptr captures(none) [[P:%.*]], i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; ORIGIN-NEXT:  [[ENTRY:.*:]]
 ; ORIGIN-NEXT:    [[TMP0:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
+; ORIGIN-NEXT:    [[TMP8:%.*]] = add i32 [[TMP0]], 24
+; ORIGIN-NEXT:    [[TMP9:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP8]], i32 800)
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i32 8), align 8
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i32 8), align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
@@ -51,6 +55,8 @@ define i32 @Load(ptr nocapture %p) nounwind sanitize_memory {
 ; CHECK-SAME: ptr captures(none) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP5]], i32 800)
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i32
@@ -64,6 +70,8 @@ define i32 @Load(ptr nocapture %p) nounwind sanitize_memory {
 ; ORIGIN-SAME: ptr captures(none) [[P:%.*]]) #[[ATTR0]] {
 ; ORIGIN-NEXT:  [[ENTRY:.*:]]
 ; ORIGIN-NEXT:    [[TMP0:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
+; ORIGIN-NEXT:    [[TMP8:%.*]] = add i32 [[TMP0]], 24
+; ORIGIN-NEXT:    [[TMP9:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP8]], i32 800)
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr [[P]], align 4
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P]] to i32
