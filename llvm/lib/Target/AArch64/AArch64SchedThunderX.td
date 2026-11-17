@@ -32,6 +32,7 @@ def ThunderXT8XModel : SchedMachineModel {
                                                      HasFPv2]);
   // FIXME: Remove when all errors have been fixed.
   let FullInstRWOverlapCheck = 0;
+  // FIXME: Remove when all errors have been fixed.
   let WarnRedundantInstRW = 0;
 }
 

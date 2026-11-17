@@ -28,6 +28,7 @@ class SISchedMachineModel : SchedMachineModel {
 def SIFullSpeedModel : SISchedMachineModel;
 def SIQuarterSpeedModel : SISchedMachineModel;
 def SIDPFullSpeedModel : SISchedMachineModel {
+  // FIXME: Remove when all errors have been fixed.
   let WarnRedundantInstRW = 0;
 }
 def SIDPGFX942FullSpeedModel : SISchedMachineModel;

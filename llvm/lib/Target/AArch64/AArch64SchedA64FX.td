@@ -26,6 +26,7 @@ def A64FXModel : SchedMachineModel {
                                                     HasCSSC, HasMOPS, HasMOPS_GO,
                                                     HasFPv2]);
   let FullInstRWOverlapCheck = 0;
+  // FIXME: Remove when all errors have been fixed.
   let WarnRedundantInstRW = 0;
 }
 

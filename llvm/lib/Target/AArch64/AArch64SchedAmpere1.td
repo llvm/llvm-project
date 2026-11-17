@@ -28,6 +28,7 @@ def Ampere1Model : SchedMachineModel {
                                                     SMEUnsupported.F,
                                                     PAUnsupported.F,
                                                     [HasMTE, HasFPv2]);
+  // FIXME: Remove when all errors have been fixed.
   let WarnRedundantInstRW = 0;
 }
 
