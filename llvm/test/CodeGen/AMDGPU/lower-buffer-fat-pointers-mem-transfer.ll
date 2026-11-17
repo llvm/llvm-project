@@ -150,25 +150,10 @@ define void @memcpy_known_small(ptr addrspace(7) inreg %src, ptr addrspace(7) in
 ; CHECK-NEXT:    [[DST_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[DST]], 1
 ; CHECK-NEXT:    [[SRC_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[SRC]], 0
 ; CHECK-NEXT:    [[SRC_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[SRC]], 1
-; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[SRC_OFF]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = insertelement <4 x i32> poison, i32 [[DOTOFF_0]], i64 0
-; CHECK-NEXT:    [[DOTOFF_PTR_4:%.*]] = add i32 [[SRC_OFF]], 4
-; CHECK-NEXT:    [[DOTOFF_4:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_4]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_1:%.*]] = insertelement <4 x i32> [[DOTSLICE_0]], i32 [[DOTOFF_4]], i64 1
-; CHECK-NEXT:    [[DOTOFF_PTR_8:%.*]] = add i32 [[SRC_OFF]], 8
-; CHECK-NEXT:    [[DOTOFF_8:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_8]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_2:%.*]] = insertelement <4 x i32> [[DOTSLICE_1]], i32 [[DOTOFF_8]], i64 2
-; CHECK-NEXT:    [[DOTOFF_PTR_12:%.*]] = add i32 [[SRC_OFF]], 12
-; CHECK-NEXT:    [[DOTOFF_12:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_12]], i32 0, i32 0)
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[DOTSLICE_2]], i32 [[DOTOFF_12]], i64 3
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_0]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DST_OFF]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_1:%.*]] = add i32 [[DST_OFF]], 4
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_4]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_1]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_2:%.*]] = add i32 [[DST_OFF]], 8
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_8]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_2]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_3:%.*]] = add i32 [[DST_OFF]], 12
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_12]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_3]], i32 0, i32 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 [[SRC_OFF]], 16
+; CHECK-NEXT:    br label %[[STATIC_MEMCPY_EXPANSION_MAIN_BODY:.*]]
+; CHECK:       [[STATIC_MEMCPY_EXPANSION_MAIN_BODY]]:
+; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP6:%.*]], %[[STATIC_MEMCPY_EXPANSION_MAIN_BODY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[SRC_OFF]], [[LOOP_INDEX]]
 ; CHECK-NEXT:    [[DOTOFF_01:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP2]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTSLICE_02:%.*]] = insertelement <4 x i32> poison, i32 [[DOTOFF_01]], i64 0
 ; CHECK-NEXT:    [[DOTOFF_PTR_43:%.*]] = add i32 [[TMP2]], 4
@@ -180,7 +165,7 @@ define void @memcpy_known_small(ptr addrspace(7) inreg %src, ptr addrspace(7) in
 ; CHECK-NEXT:    [[DOTOFF_PTR_129:%.*]] = add i32 [[TMP2]], 12
 ; CHECK-NEXT:    [[DOTOFF_1210:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_129]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[DOTSLICE_28]], i32 [[DOTOFF_1210]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw i32 [[DST_OFF]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[DST_OFF]], [[LOOP_INDEX]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_01]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP4]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_111:%.*]] = add i32 [[TMP4]], 4
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_44]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_111]], i32 0, i32 0)
@@ -188,6 +173,10 @@ define void @memcpy_known_small(ptr addrspace(7) inreg %src, ptr addrspace(7) in
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_87]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_212]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_313:%.*]] = add i32 [[TMP4]], 12
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_1210]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_313]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP6]] = add i32 [[LOOP_INDEX]], 16
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP6]], 32
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[STATIC_MEMCPY_EXPANSION_MAIN_BODY]], label %[[STATIC_MEMCPY_POST_EXPANSION:.*]]
+; CHECK:       [[STATIC_MEMCPY_POST_EXPANSION]]:
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p7.p7.i32(ptr addrspace(7) %dst, ptr addrspace(7) %src, i32 32, i1 false)
@@ -216,16 +205,60 @@ define void @memcpy_known_tail(ptr addrspace(7) inreg %src, ptr addrspace(7) inr
 ; CHECK-NEXT:    [[DST_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[DST]], 1
 ; CHECK-NEXT:    [[SRC_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[SRC]], 0
 ; CHECK-NEXT:    [[SRC_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[SRC]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.amdgcn.raw.ptr.buffer.load.i64(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[SRC_OFF]], i32 0, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i64(i64 [[TMP1]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DST_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[SRC_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP1]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DST_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP23:%.*]] = add nuw i32 [[SRC_OFF]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP23]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP25:%.*]] = add nuw i32 [[DST_OFF]], 1
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP3]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP25]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP35:%.*]] = add nuw i32 [[SRC_OFF]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP35]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP37:%.*]] = add nuw i32 [[DST_OFF]], 2
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP6]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP37]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP41:%.*]] = add nuw i32 [[SRC_OFF]], 3
+; CHECK-NEXT:    [[TMP42:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP41]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP43:%.*]] = add nuw i32 [[DST_OFF]], 3
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP42]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP43]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP11:%.*]] = add nuw i32 [[SRC_OFF]], 4
+; CHECK-NEXT:    [[TMP12:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP11]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP13:%.*]] = add nuw i32 [[DST_OFF]], 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP12]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP13]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP14:%.*]] = add nuw i32 [[SRC_OFF]], 5
+; CHECK-NEXT:    [[TMP15:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP14]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP16:%.*]] = add nuw i32 [[DST_OFF]], 5
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP15]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP16]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP17:%.*]] = add nuw i32 [[SRC_OFF]], 6
+; CHECK-NEXT:    [[TMP18:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP17]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP19:%.*]] = add nuw i32 [[DST_OFF]], 6
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP18]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP19]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP20:%.*]] = add nuw i32 [[SRC_OFF]], 7
+; CHECK-NEXT:    [[TMP21:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP20]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP22:%.*]] = add nuw i32 [[DST_OFF]], 7
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP21]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP22]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 [[SRC_OFF]], 8
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP2]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP24:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP2]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw i32 [[DST_OFF]], 8
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[TMP3]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP4]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP24]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP4]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP26:%.*]] = add nuw i32 [[SRC_OFF]], 9
+; CHECK-NEXT:    [[TMP27:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP26]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP28:%.*]] = add nuw i32 [[DST_OFF]], 9
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP27]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP28]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP29:%.*]] = add nuw i32 [[SRC_OFF]], 10
+; CHECK-NEXT:    [[TMP30:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP29]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP31:%.*]] = add nuw i32 [[DST_OFF]], 10
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP30]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP31]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP32:%.*]] = add nuw i32 [[SRC_OFF]], 11
+; CHECK-NEXT:    [[TMP33:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP32]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP34:%.*]] = add nuw i32 [[DST_OFF]], 11
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP33]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP34]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nuw i32 [[SRC_OFF]], 12
-; CHECK-NEXT:    [[TMP6:%.*]] = call i16 @llvm.amdgcn.raw.ptr.buffer.load.i16(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP5]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP36:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP5]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nuw i32 [[DST_OFF]], 12
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[TMP6]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP7]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP36]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP7]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP38:%.*]] = add nuw i32 [[SRC_OFF]], 13
+; CHECK-NEXT:    [[TMP39:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP38]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP40:%.*]] = add nuw i32 [[DST_OFF]], 13
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP39]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP40]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nuw i32 [[SRC_OFF]], 14
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP8]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nuw i32 [[DST_OFF]], 14
@@ -249,196 +282,16 @@ define void @memcpy_known_i64(ptr addrspace(7) inreg %src, ptr addrspace(7) inre
 ; CHECK-NEXT:    [[LOOP_INDEX_C:%.*]] = trunc i64 [[LOOP_INDEX]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[SRC_OFF]], [[LOOP_INDEX_C]]
 ; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP1]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = insertelement <64 x i32> poison, i32 [[DOTOFF_0]], i64 0
+; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = insertelement <4 x i32> poison, i32 [[DOTOFF_0]], i64 0
 ; CHECK-NEXT:    [[DOTOFF_PTR_4:%.*]] = add i32 [[TMP1]], 4
 ; CHECK-NEXT:    [[DOTOFF_4:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_4]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_1:%.*]] = insertelement <64 x i32> [[DOTSLICE_0]], i32 [[DOTOFF_4]], i64 1
+; CHECK-NEXT:    [[DOTSLICE_1:%.*]] = insertelement <4 x i32> [[DOTSLICE_0]], i32 [[DOTOFF_4]], i64 1
 ; CHECK-NEXT:    [[DOTOFF_PTR_8:%.*]] = add i32 [[TMP1]], 8
 ; CHECK-NEXT:    [[DOTOFF_8:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_8]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_2:%.*]] = insertelement <64 x i32> [[DOTSLICE_1]], i32 [[DOTOFF_8]], i64 2
+; CHECK-NEXT:    [[DOTSLICE_2:%.*]] = insertelement <4 x i32> [[DOTSLICE_1]], i32 [[DOTOFF_8]], i64 2
 ; CHECK-NEXT:    [[DOTOFF_PTR_12:%.*]] = add i32 [[TMP1]], 12
 ; CHECK-NEXT:    [[DOTOFF_12:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_12]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_3:%.*]] = insertelement <64 x i32> [[DOTSLICE_2]], i32 [[DOTOFF_12]], i64 3
-; CHECK-NEXT:    [[DOTOFF_PTR_16:%.*]] = add i32 [[TMP1]], 16
-; CHECK-NEXT:    [[DOTOFF_16:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_16]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_4:%.*]] = insertelement <64 x i32> [[DOTSLICE_3]], i32 [[DOTOFF_16]], i64 4
-; CHECK-NEXT:    [[DOTOFF_PTR_20:%.*]] = add i32 [[TMP1]], 20
-; CHECK-NEXT:    [[DOTOFF_20:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_20]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_5:%.*]] = insertelement <64 x i32> [[DOTSLICE_4]], i32 [[DOTOFF_20]], i64 5
-; CHECK-NEXT:    [[DOTOFF_PTR_24:%.*]] = add i32 [[TMP1]], 24
-; CHECK-NEXT:    [[DOTOFF_24:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_24]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_6:%.*]] = insertelement <64 x i32> [[DOTSLICE_5]], i32 [[DOTOFF_24]], i64 6
-; CHECK-NEXT:    [[DOTOFF_PTR_28:%.*]] = add i32 [[TMP1]], 28
-; CHECK-NEXT:    [[DOTOFF_28:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_28]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_7:%.*]] = insertelement <64 x i32> [[DOTSLICE_6]], i32 [[DOTOFF_28]], i64 7
-; CHECK-NEXT:    [[DOTOFF_PTR_32:%.*]] = add i32 [[TMP1]], 32
-; CHECK-NEXT:    [[DOTOFF_32:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_32]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_8:%.*]] = insertelement <64 x i32> [[DOTSLICE_7]], i32 [[DOTOFF_32]], i64 8
-; CHECK-NEXT:    [[DOTOFF_PTR_36:%.*]] = add i32 [[TMP1]], 36
-; CHECK-NEXT:    [[DOTOFF_36:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_36]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_9:%.*]] = insertelement <64 x i32> [[DOTSLICE_8]], i32 [[DOTOFF_36]], i64 9
-; CHECK-NEXT:    [[DOTOFF_PTR_40:%.*]] = add i32 [[TMP1]], 40
-; CHECK-NEXT:    [[DOTOFF_40:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_40]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_10:%.*]] = insertelement <64 x i32> [[DOTSLICE_9]], i32 [[DOTOFF_40]], i64 10
-; CHECK-NEXT:    [[DOTOFF_PTR_44:%.*]] = add i32 [[TMP1]], 44
-; CHECK-NEXT:    [[DOTOFF_44:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_44]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_11:%.*]] = insertelement <64 x i32> [[DOTSLICE_10]], i32 [[DOTOFF_44]], i64 11
-; CHECK-NEXT:    [[DOTOFF_PTR_48:%.*]] = add i32 [[TMP1]], 48
-; CHECK-NEXT:    [[DOTOFF_48:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_48]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_12:%.*]] = insertelement <64 x i32> [[DOTSLICE_11]], i32 [[DOTOFF_48]], i64 12
-; CHECK-NEXT:    [[DOTOFF_PTR_52:%.*]] = add i32 [[TMP1]], 52
-; CHECK-NEXT:    [[DOTOFF_52:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_52]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_13:%.*]] = insertelement <64 x i32> [[DOTSLICE_12]], i32 [[DOTOFF_52]], i64 13
-; CHECK-NEXT:    [[DOTOFF_PTR_56:%.*]] = add i32 [[TMP1]], 56
-; CHECK-NEXT:    [[DOTOFF_56:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_56]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_14:%.*]] = insertelement <64 x i32> [[DOTSLICE_13]], i32 [[DOTOFF_56]], i64 14
-; CHECK-NEXT:    [[DOTOFF_PTR_60:%.*]] = add i32 [[TMP1]], 60
-; CHECK-NEXT:    [[DOTOFF_60:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_60]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_15:%.*]] = insertelement <64 x i32> [[DOTSLICE_14]], i32 [[DOTOFF_60]], i64 15
-; CHECK-NEXT:    [[DOTOFF_PTR_64:%.*]] = add i32 [[TMP1]], 64
-; CHECK-NEXT:    [[DOTOFF_64:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_64]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_16:%.*]] = insertelement <64 x i32> [[DOTSLICE_15]], i32 [[DOTOFF_64]], i64 16
-; CHECK-NEXT:    [[DOTOFF_PTR_68:%.*]] = add i32 [[TMP1]], 68
-; CHECK-NEXT:    [[DOTOFF_68:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_68]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_17:%.*]] = insertelement <64 x i32> [[DOTSLICE_16]], i32 [[DOTOFF_68]], i64 17
-; CHECK-NEXT:    [[DOTOFF_PTR_72:%.*]] = add i32 [[TMP1]], 72
-; CHECK-NEXT:    [[DOTOFF_72:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_72]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_18:%.*]] = insertelement <64 x i32> [[DOTSLICE_17]], i32 [[DOTOFF_72]], i64 18
-; CHECK-NEXT:    [[DOTOFF_PTR_76:%.*]] = add i32 [[TMP1]], 76
-; CHECK-NEXT:    [[DOTOFF_76:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_76]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_19:%.*]] = insertelement <64 x i32> [[DOTSLICE_18]], i32 [[DOTOFF_76]], i64 19
-; CHECK-NEXT:    [[DOTOFF_PTR_80:%.*]] = add i32 [[TMP1]], 80
-; CHECK-NEXT:    [[DOTOFF_80:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_80]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_20:%.*]] = insertelement <64 x i32> [[DOTSLICE_19]], i32 [[DOTOFF_80]], i64 20
-; CHECK-NEXT:    [[DOTOFF_PTR_84:%.*]] = add i32 [[TMP1]], 84
-; CHECK-NEXT:    [[DOTOFF_84:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_84]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_21:%.*]] = insertelement <64 x i32> [[DOTSLICE_20]], i32 [[DOTOFF_84]], i64 21
-; CHECK-NEXT:    [[DOTOFF_PTR_88:%.*]] = add i32 [[TMP1]], 88
-; CHECK-NEXT:    [[DOTOFF_88:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_88]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_22:%.*]] = insertelement <64 x i32> [[DOTSLICE_21]], i32 [[DOTOFF_88]], i64 22
-; CHECK-NEXT:    [[DOTOFF_PTR_92:%.*]] = add i32 [[TMP1]], 92
-; CHECK-NEXT:    [[DOTOFF_92:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_92]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_23:%.*]] = insertelement <64 x i32> [[DOTSLICE_22]], i32 [[DOTOFF_92]], i64 23
-; CHECK-NEXT:    [[DOTOFF_PTR_96:%.*]] = add i32 [[TMP1]], 96
-; CHECK-NEXT:    [[DOTOFF_96:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_96]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_24:%.*]] = insertelement <64 x i32> [[DOTSLICE_23]], i32 [[DOTOFF_96]], i64 24
-; CHECK-NEXT:    [[DOTOFF_PTR_100:%.*]] = add i32 [[TMP1]], 100
-; CHECK-NEXT:    [[DOTOFF_100:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_100]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_25:%.*]] = insertelement <64 x i32> [[DOTSLICE_24]], i32 [[DOTOFF_100]], i64 25
-; CHECK-NEXT:    [[DOTOFF_PTR_104:%.*]] = add i32 [[TMP1]], 104
-; CHECK-NEXT:    [[DOTOFF_104:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_104]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_26:%.*]] = insertelement <64 x i32> [[DOTSLICE_25]], i32 [[DOTOFF_104]], i64 26
-; CHECK-NEXT:    [[DOTOFF_PTR_108:%.*]] = add i32 [[TMP1]], 108
-; CHECK-NEXT:    [[DOTOFF_108:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_108]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_27:%.*]] = insertelement <64 x i32> [[DOTSLICE_26]], i32 [[DOTOFF_108]], i64 27
-; CHECK-NEXT:    [[DOTOFF_PTR_112:%.*]] = add i32 [[TMP1]], 112
-; CHECK-NEXT:    [[DOTOFF_112:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_112]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_28:%.*]] = insertelement <64 x i32> [[DOTSLICE_27]], i32 [[DOTOFF_112]], i64 28
-; CHECK-NEXT:    [[DOTOFF_PTR_116:%.*]] = add i32 [[TMP1]], 116
-; CHECK-NEXT:    [[DOTOFF_116:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_116]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_29:%.*]] = insertelement <64 x i32> [[DOTSLICE_28]], i32 [[DOTOFF_116]], i64 29
-; CHECK-NEXT:    [[DOTOFF_PTR_120:%.*]] = add i32 [[TMP1]], 120
-; CHECK-NEXT:    [[DOTOFF_120:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_120]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_30:%.*]] = insertelement <64 x i32> [[DOTSLICE_29]], i32 [[DOTOFF_120]], i64 30
-; CHECK-NEXT:    [[DOTOFF_PTR_124:%.*]] = add i32 [[TMP1]], 124
-; CHECK-NEXT:    [[DOTOFF_124:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_124]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_31:%.*]] = insertelement <64 x i32> [[DOTSLICE_30]], i32 [[DOTOFF_124]], i64 31
-; CHECK-NEXT:    [[DOTOFF_PTR_128:%.*]] = add i32 [[TMP1]], 128
-; CHECK-NEXT:    [[DOTOFF_128:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_128]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_32:%.*]] = insertelement <64 x i32> [[DOTSLICE_31]], i32 [[DOTOFF_128]], i64 32
-; CHECK-NEXT:    [[DOTOFF_PTR_132:%.*]] = add i32 [[TMP1]], 132
-; CHECK-NEXT:    [[DOTOFF_132:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_132]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_33:%.*]] = insertelement <64 x i32> [[DOTSLICE_32]], i32 [[DOTOFF_132]], i64 33
-; CHECK-NEXT:    [[DOTOFF_PTR_136:%.*]] = add i32 [[TMP1]], 136
-; CHECK-NEXT:    [[DOTOFF_136:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_136]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_34:%.*]] = insertelement <64 x i32> [[DOTSLICE_33]], i32 [[DOTOFF_136]], i64 34
-; CHECK-NEXT:    [[DOTOFF_PTR_140:%.*]] = add i32 [[TMP1]], 140
-; CHECK-NEXT:    [[DOTOFF_140:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_140]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_35:%.*]] = insertelement <64 x i32> [[DOTSLICE_34]], i32 [[DOTOFF_140]], i64 35
-; CHECK-NEXT:    [[DOTOFF_PTR_144:%.*]] = add i32 [[TMP1]], 144
-; CHECK-NEXT:    [[DOTOFF_144:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_144]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_36:%.*]] = insertelement <64 x i32> [[DOTSLICE_35]], i32 [[DOTOFF_144]], i64 36
-; CHECK-NEXT:    [[DOTOFF_PTR_148:%.*]] = add i32 [[TMP1]], 148
-; CHECK-NEXT:    [[DOTOFF_148:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_148]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_37:%.*]] = insertelement <64 x i32> [[DOTSLICE_36]], i32 [[DOTOFF_148]], i64 37
-; CHECK-NEXT:    [[DOTOFF_PTR_152:%.*]] = add i32 [[TMP1]], 152
-; CHECK-NEXT:    [[DOTOFF_152:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_152]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_38:%.*]] = insertelement <64 x i32> [[DOTSLICE_37]], i32 [[DOTOFF_152]], i64 38
-; CHECK-NEXT:    [[DOTOFF_PTR_156:%.*]] = add i32 [[TMP1]], 156
-; CHECK-NEXT:    [[DOTOFF_156:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_156]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_39:%.*]] = insertelement <64 x i32> [[DOTSLICE_38]], i32 [[DOTOFF_156]], i64 39
-; CHECK-NEXT:    [[DOTOFF_PTR_160:%.*]] = add i32 [[TMP1]], 160
-; CHECK-NEXT:    [[DOTOFF_160:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_160]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_40:%.*]] = insertelement <64 x i32> [[DOTSLICE_39]], i32 [[DOTOFF_160]], i64 40
-; CHECK-NEXT:    [[DOTOFF_PTR_164:%.*]] = add i32 [[TMP1]], 164
-; CHECK-NEXT:    [[DOTOFF_164:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_164]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_41:%.*]] = insertelement <64 x i32> [[DOTSLICE_40]], i32 [[DOTOFF_164]], i64 41
-; CHECK-NEXT:    [[DOTOFF_PTR_168:%.*]] = add i32 [[TMP1]], 168
-; CHECK-NEXT:    [[DOTOFF_168:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_168]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_42:%.*]] = insertelement <64 x i32> [[DOTSLICE_41]], i32 [[DOTOFF_168]], i64 42
-; CHECK-NEXT:    [[DOTOFF_PTR_172:%.*]] = add i32 [[TMP1]], 172
-; CHECK-NEXT:    [[DOTOFF_172:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_172]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_43:%.*]] = insertelement <64 x i32> [[DOTSLICE_42]], i32 [[DOTOFF_172]], i64 43
-; CHECK-NEXT:    [[DOTOFF_PTR_176:%.*]] = add i32 [[TMP1]], 176
-; CHECK-NEXT:    [[DOTOFF_176:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_176]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_44:%.*]] = insertelement <64 x i32> [[DOTSLICE_43]], i32 [[DOTOFF_176]], i64 44
-; CHECK-NEXT:    [[DOTOFF_PTR_180:%.*]] = add i32 [[TMP1]], 180
-; CHECK-NEXT:    [[DOTOFF_180:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_180]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_45:%.*]] = insertelement <64 x i32> [[DOTSLICE_44]], i32 [[DOTOFF_180]], i64 45
-; CHECK-NEXT:    [[DOTOFF_PTR_184:%.*]] = add i32 [[TMP1]], 184
-; CHECK-NEXT:    [[DOTOFF_184:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_184]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_46:%.*]] = insertelement <64 x i32> [[DOTSLICE_45]], i32 [[DOTOFF_184]], i64 46
-; CHECK-NEXT:    [[DOTOFF_PTR_188:%.*]] = add i32 [[TMP1]], 188
-; CHECK-NEXT:    [[DOTOFF_188:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_188]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_47:%.*]] = insertelement <64 x i32> [[DOTSLICE_46]], i32 [[DOTOFF_188]], i64 47
-; CHECK-NEXT:    [[DOTOFF_PTR_192:%.*]] = add i32 [[TMP1]], 192
-; CHECK-NEXT:    [[DOTOFF_192:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_192]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_48:%.*]] = insertelement <64 x i32> [[DOTSLICE_47]], i32 [[DOTOFF_192]], i64 48
-; CHECK-NEXT:    [[DOTOFF_PTR_196:%.*]] = add i32 [[TMP1]], 196
-; CHECK-NEXT:    [[DOTOFF_196:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_196]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_49:%.*]] = insertelement <64 x i32> [[DOTSLICE_48]], i32 [[DOTOFF_196]], i64 49
-; CHECK-NEXT:    [[DOTOFF_PTR_200:%.*]] = add i32 [[TMP1]], 200
-; CHECK-NEXT:    [[DOTOFF_200:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_200]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_50:%.*]] = insertelement <64 x i32> [[DOTSLICE_49]], i32 [[DOTOFF_200]], i64 50
-; CHECK-NEXT:    [[DOTOFF_PTR_204:%.*]] = add i32 [[TMP1]], 204
-; CHECK-NEXT:    [[DOTOFF_204:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_204]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_51:%.*]] = insertelement <64 x i32> [[DOTSLICE_50]], i32 [[DOTOFF_204]], i64 51
-; CHECK-NEXT:    [[DOTOFF_PTR_208:%.*]] = add i32 [[TMP1]], 208
-; CHECK-NEXT:    [[DOTOFF_208:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_208]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_52:%.*]] = insertelement <64 x i32> [[DOTSLICE_51]], i32 [[DOTOFF_208]], i64 52
-; CHECK-NEXT:    [[DOTOFF_PTR_212:%.*]] = add i32 [[TMP1]], 212
-; CHECK-NEXT:    [[DOTOFF_212:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_212]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_53:%.*]] = insertelement <64 x i32> [[DOTSLICE_52]], i32 [[DOTOFF_212]], i64 53
-; CHECK-NEXT:    [[DOTOFF_PTR_216:%.*]] = add i32 [[TMP1]], 216
-; CHECK-NEXT:    [[DOTOFF_216:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_216]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_54:%.*]] = insertelement <64 x i32> [[DOTSLICE_53]], i32 [[DOTOFF_216]], i64 54
-; CHECK-NEXT:    [[DOTOFF_PTR_220:%.*]] = add i32 [[TMP1]], 220
-; CHECK-NEXT:    [[DOTOFF_220:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_220]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_55:%.*]] = insertelement <64 x i32> [[DOTSLICE_54]], i32 [[DOTOFF_220]], i64 55
-; CHECK-NEXT:    [[DOTOFF_PTR_224:%.*]] = add i32 [[TMP1]], 224
-; CHECK-NEXT:    [[DOTOFF_224:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_224]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_56:%.*]] = insertelement <64 x i32> [[DOTSLICE_55]], i32 [[DOTOFF_224]], i64 56
-; CHECK-NEXT:    [[DOTOFF_PTR_228:%.*]] = add i32 [[TMP1]], 228
-; CHECK-NEXT:    [[DOTOFF_228:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_228]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_57:%.*]] = insertelement <64 x i32> [[DOTSLICE_56]], i32 [[DOTOFF_228]], i64 57
-; CHECK-NEXT:    [[DOTOFF_PTR_232:%.*]] = add i32 [[TMP1]], 232
-; CHECK-NEXT:    [[DOTOFF_232:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_232]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_58:%.*]] = insertelement <64 x i32> [[DOTSLICE_57]], i32 [[DOTOFF_232]], i64 58
-; CHECK-NEXT:    [[DOTOFF_PTR_236:%.*]] = add i32 [[TMP1]], 236
-; CHECK-NEXT:    [[DOTOFF_236:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_236]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_59:%.*]] = insertelement <64 x i32> [[DOTSLICE_58]], i32 [[DOTOFF_236]], i64 59
-; CHECK-NEXT:    [[DOTOFF_PTR_240:%.*]] = add i32 [[TMP1]], 240
-; CHECK-NEXT:    [[DOTOFF_240:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_240]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_60:%.*]] = insertelement <64 x i32> [[DOTSLICE_59]], i32 [[DOTOFF_240]], i64 60
-; CHECK-NEXT:    [[DOTOFF_PTR_244:%.*]] = add i32 [[TMP1]], 244
-; CHECK-NEXT:    [[DOTOFF_244:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_244]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_61:%.*]] = insertelement <64 x i32> [[DOTSLICE_60]], i32 [[DOTOFF_244]], i64 61
-; CHECK-NEXT:    [[DOTOFF_PTR_248:%.*]] = add i32 [[TMP1]], 248
-; CHECK-NEXT:    [[DOTOFF_248:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_248]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_62:%.*]] = insertelement <64 x i32> [[DOTSLICE_61]], i32 [[DOTOFF_248]], i64 62
-; CHECK-NEXT:    [[DOTOFF_PTR_252:%.*]] = add i32 [[TMP1]], 252
-; CHECK-NEXT:    [[DOTOFF_252:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_252]], i32 0, i32 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <64 x i32> [[DOTSLICE_62]], i32 [[DOTOFF_252]], i64 63
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[DOTSLICE_2]], i32 [[DOTOFF_12]], i64 3
 ; CHECK-NEXT:    [[LOOP_INDEX_C1:%.*]] = trunc i64 [[LOOP_INDEX]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[DST_OFF]], [[LOOP_INDEX_C1]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_0]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP3]], i32 0, i32 0)
@@ -448,127 +301,7 @@ define void @memcpy_known_i64(ptr addrspace(7) inreg %src, ptr addrspace(7) inre
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_8]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_2]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_3:%.*]] = add i32 [[TMP3]], 12
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_12]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_3]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_4:%.*]] = add i32 [[TMP3]], 16
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_16]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_4]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_5:%.*]] = add i32 [[TMP3]], 20
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_20]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_5]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_6:%.*]] = add i32 [[TMP3]], 24
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_24]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_6]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_7:%.*]] = add i32 [[TMP3]], 28
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_28]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_7]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_8:%.*]] = add i32 [[TMP3]], 32
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_32]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_8]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_9:%.*]] = add i32 [[TMP3]], 36
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_36]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_9]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_10:%.*]] = add i32 [[TMP3]], 40
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_40]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_10]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_11:%.*]] = add i32 [[TMP3]], 44
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_44]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_11]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_12:%.*]] = add i32 [[TMP3]], 48
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_48]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_12]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_13:%.*]] = add i32 [[TMP3]], 52
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_52]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_13]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_14:%.*]] = add i32 [[TMP3]], 56
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_56]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_14]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_15:%.*]] = add i32 [[TMP3]], 60
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_60]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_15]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_16:%.*]] = add i32 [[TMP3]], 64
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_64]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_16]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_17:%.*]] = add i32 [[TMP3]], 68
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_68]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_17]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_18:%.*]] = add i32 [[TMP3]], 72
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_72]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_18]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_19:%.*]] = add i32 [[TMP3]], 76
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_76]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_19]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_20:%.*]] = add i32 [[TMP3]], 80
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_80]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_20]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_21:%.*]] = add i32 [[TMP3]], 84
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_84]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_21]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_22:%.*]] = add i32 [[TMP3]], 88
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_88]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_22]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_23:%.*]] = add i32 [[TMP3]], 92
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_92]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_23]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_24:%.*]] = add i32 [[TMP3]], 96
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_96]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_24]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_25:%.*]] = add i32 [[TMP3]], 100
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_100]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_25]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_26:%.*]] = add i32 [[TMP3]], 104
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_104]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_26]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_27:%.*]] = add i32 [[TMP3]], 108
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_108]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_27]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_28:%.*]] = add i32 [[TMP3]], 112
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_112]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_28]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_29:%.*]] = add i32 [[TMP3]], 116
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_116]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_29]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_30:%.*]] = add i32 [[TMP3]], 120
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_120]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_30]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_31:%.*]] = add i32 [[TMP3]], 124
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_124]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_31]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_32:%.*]] = add i32 [[TMP3]], 128
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_128]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_32]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_33:%.*]] = add i32 [[TMP3]], 132
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_132]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_33]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_34:%.*]] = add i32 [[TMP3]], 136
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_136]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_34]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_35:%.*]] = add i32 [[TMP3]], 140
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_140]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_35]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_36:%.*]] = add i32 [[TMP3]], 144
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_144]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_36]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_37:%.*]] = add i32 [[TMP3]], 148
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_148]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_37]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_38:%.*]] = add i32 [[TMP3]], 152
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_152]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_38]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_39:%.*]] = add i32 [[TMP3]], 156
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_156]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_39]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_40:%.*]] = add i32 [[TMP3]], 160
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_160]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_40]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_41:%.*]] = add i32 [[TMP3]], 164
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_164]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_41]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_42:%.*]] = add i32 [[TMP3]], 168
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_168]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_42]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_43:%.*]] = add i32 [[TMP3]], 172
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_172]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_43]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_44:%.*]] = add i32 [[TMP3]], 176
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_176]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_44]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_45:%.*]] = add i32 [[TMP3]], 180
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_180]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_45]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_46:%.*]] = add i32 [[TMP3]], 184
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_184]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_46]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_47:%.*]] = add i32 [[TMP3]], 188
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_188]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_47]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_48:%.*]] = add i32 [[TMP3]], 192
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_192]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_48]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_49:%.*]] = add i32 [[TMP3]], 196
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_196]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_49]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_50:%.*]] = add i32 [[TMP3]], 200
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_200]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_50]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_51:%.*]] = add i32 [[TMP3]], 204
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_204]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_51]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_52:%.*]] = add i32 [[TMP3]], 208
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_208]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_52]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_53:%.*]] = add i32 [[TMP3]], 212
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_212]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_53]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_54:%.*]] = add i32 [[TMP3]], 216
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_216]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_54]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_55:%.*]] = add i32 [[TMP3]], 220
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_220]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_55]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_56:%.*]] = add i32 [[TMP3]], 224
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_224]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_56]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_57:%.*]] = add i32 [[TMP3]], 228
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_228]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_57]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_58:%.*]] = add i32 [[TMP3]], 232
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_232]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_58]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_59:%.*]] = add i32 [[TMP3]], 236
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_236]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_59]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_60:%.*]] = add i32 [[TMP3]], 240
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_240]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_61:%.*]] = add i32 [[TMP3]], 244
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_244]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_61]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_62:%.*]] = add i32 [[TMP3]], 248
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_248]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_62]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_63:%.*]] = add i32 [[TMP3]], 252
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_252]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_63]], i32 0, i32 0)
-; CHECK-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 256
+; CHECK-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 8192
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[STATIC_MEMCPY_LOOP_EXPANSION_MAIN_BODY]], label %[[STATIC_MEMCPY_POST_LOOP_EXPANSION:.*]]
 ; CHECK:       [[STATIC_MEMCPY_POST_LOOP_EXPANSION]]:
@@ -585,25 +318,10 @@ define void @memcpy_known_i32_volatile(ptr addrspace(7) inreg %src, ptr addrspac
 ; CHECK-NEXT:    [[DST_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[DST]], 1
 ; CHECK-NEXT:    [[SRC_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[SRC]], 0
 ; CHECK-NEXT:    [[SRC_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[SRC]], 1
-; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[SRC_OFF]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = insertelement <4 x i32> poison, i32 [[DOTOFF_0]], i64 0
-; CHECK-NEXT:    [[DOTOFF_PTR_4:%.*]] = add i32 [[SRC_OFF]], 4
-; CHECK-NEXT:    [[DOTOFF_4:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_4]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[DOTSLICE_1:%.*]] = insertelement <4 x i32> [[DOTSLICE_0]], i32 [[DOTOFF_4]], i64 1
-; CHECK-NEXT:    [[DOTOFF_PTR_8:%.*]] = add i32 [[SRC_OFF]], 8
-; CHECK-NEXT:    [[DOTOFF_8:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_8]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[DOTSLICE_2:%.*]] = insertelement <4 x i32> [[DOTSLICE_1]], i32 [[DOTOFF_8]], i64 2
-; CHECK-NEXT:    [[DOTOFF_PTR_12:%.*]] = add i32 [[SRC_OFF]], 12
-; CHECK-NEXT:    [[DOTOFF_12:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_12]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[DOTSLICE_2]], i32 [[DOTOFF_12]], i64 3
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_0]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DST_OFF]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[DOTPART_1:%.*]] = add i32 [[DST_OFF]], 4
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_4]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_1]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[DOTPART_2:%.*]] = add i32 [[DST_OFF]], 8
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_8]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_2]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[DOTPART_3:%.*]] = add i32 [[DST_OFF]], 12
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_12]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_3]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 [[SRC_OFF]], 16
+; CHECK-NEXT:    br label %[[STATIC_MEMCPY_EXPANSION_MAIN_BODY:.*]]
+; CHECK:       [[STATIC_MEMCPY_EXPANSION_MAIN_BODY]]:
+; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP6:%.*]], %[[STATIC_MEMCPY_EXPANSION_MAIN_BODY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[SRC_OFF]], [[LOOP_INDEX]]
 ; CHECK-NEXT:    [[DOTOFF_01:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP2]], i32 0, i32 -2147483648)
 ; CHECK-NEXT:    [[DOTSLICE_02:%.*]] = insertelement <4 x i32> poison, i32 [[DOTOFF_01]], i64 0
 ; CHECK-NEXT:    [[DOTOFF_PTR_43:%.*]] = add i32 [[TMP2]], 4
@@ -615,7 +333,7 @@ define void @memcpy_known_i32_volatile(ptr addrspace(7) inreg %src, ptr addrspac
 ; CHECK-NEXT:    [[DOTOFF_PTR_129:%.*]] = add i32 [[TMP2]], 12
 ; CHECK-NEXT:    [[DOTOFF_1210:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_129]], i32 0, i32 -2147483648)
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[DOTSLICE_28]], i32 [[DOTOFF_1210]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw i32 [[DST_OFF]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[DST_OFF]], [[LOOP_INDEX]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_01]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP4]], i32 0, i32 -2147483648)
 ; CHECK-NEXT:    [[DOTPART_111:%.*]] = add i32 [[TMP4]], 4
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_44]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_111]], i32 0, i32 -2147483648)
@@ -623,6 +341,10 @@ define void @memcpy_known_i32_volatile(ptr addrspace(7) inreg %src, ptr addrspac
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_87]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_212]], i32 0, i32 -2147483648)
 ; CHECK-NEXT:    [[DOTPART_313:%.*]] = add i32 [[TMP4]], 12
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_1210]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_313]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[TMP6]] = add i32 [[LOOP_INDEX]], 16
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP6]], 32
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[STATIC_MEMCPY_EXPANSION_MAIN_BODY]], label %[[STATIC_MEMCPY_POST_EXPANSION:.*]]
+; CHECK:       [[STATIC_MEMCPY_POST_EXPANSION]]:
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p7.p7.i32(ptr addrspace(7) %dst, ptr addrspace(7) %src, i32 32, i1 true)
@@ -1098,25 +820,10 @@ define void @memcpy.inline_known_small(ptr addrspace(7) inreg %src, ptr addrspac
 ; CHECK-NEXT:    [[DST_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[DST]], 1
 ; CHECK-NEXT:    [[SRC_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[SRC]], 0
 ; CHECK-NEXT:    [[SRC_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[SRC]], 1
-; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[SRC_OFF]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = insertelement <4 x i32> poison, i32 [[DOTOFF_0]], i64 0
-; CHECK-NEXT:    [[DOTOFF_PTR_4:%.*]] = add i32 [[SRC_OFF]], 4
-; CHECK-NEXT:    [[DOTOFF_4:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_4]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_1:%.*]] = insertelement <4 x i32> [[DOTSLICE_0]], i32 [[DOTOFF_4]], i64 1
-; CHECK-NEXT:    [[DOTOFF_PTR_8:%.*]] = add i32 [[SRC_OFF]], 8
-; CHECK-NEXT:    [[DOTOFF_8:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_8]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_2:%.*]] = insertelement <4 x i32> [[DOTSLICE_1]], i32 [[DOTOFF_8]], i64 2
-; CHECK-NEXT:    [[DOTOFF_PTR_12:%.*]] = add i32 [[SRC_OFF]], 12
-; CHECK-NEXT:    [[DOTOFF_12:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_12]], i32 0, i32 0)
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[DOTSLICE_2]], i32 [[DOTOFF_12]], i64 3
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_0]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DST_OFF]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_1:%.*]] = add i32 [[DST_OFF]], 4
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_4]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_1]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_2:%.*]] = add i32 [[DST_OFF]], 8
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_8]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_2]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_3:%.*]] = add i32 [[DST_OFF]], 12
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_12]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_3]], i32 0, i32 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 [[SRC_OFF]], 16
+; CHECK-NEXT:    br label %[[STATIC_MEMCPY_EXPANSION_MAIN_BODY:.*]]
+; CHECK:       [[STATIC_MEMCPY_EXPANSION_MAIN_BODY]]:
+; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP6:%.*]], %[[STATIC_MEMCPY_EXPANSION_MAIN_BODY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[SRC_OFF]], [[LOOP_INDEX]]
 ; CHECK-NEXT:    [[DOTOFF_01:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP2]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTSLICE_02:%.*]] = insertelement <4 x i32> poison, i32 [[DOTOFF_01]], i64 0
 ; CHECK-NEXT:    [[DOTOFF_PTR_43:%.*]] = add i32 [[TMP2]], 4
@@ -1128,7 +835,7 @@ define void @memcpy.inline_known_small(ptr addrspace(7) inreg %src, ptr addrspac
 ; CHECK-NEXT:    [[DOTOFF_PTR_129:%.*]] = add i32 [[TMP2]], 12
 ; CHECK-NEXT:    [[DOTOFF_1210:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_129]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[DOTSLICE_28]], i32 [[DOTOFF_1210]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw i32 [[DST_OFF]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[DST_OFF]], [[LOOP_INDEX]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_01]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP4]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_111:%.*]] = add i32 [[TMP4]], 4
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_44]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_111]], i32 0, i32 0)
@@ -1136,6 +843,10 @@ define void @memcpy.inline_known_small(ptr addrspace(7) inreg %src, ptr addrspac
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_87]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_212]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_313:%.*]] = add i32 [[TMP4]], 12
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_1210]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_313]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP6]] = add i32 [[LOOP_INDEX]], 16
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP6]], 32
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[STATIC_MEMCPY_EXPANSION_MAIN_BODY]], label %[[STATIC_MEMCPY_POST_EXPANSION:.*]]
+; CHECK:       [[STATIC_MEMCPY_POST_EXPANSION]]:
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.inline.p7.p7.i32(ptr addrspace(7) %dst, ptr addrspace(7) %src, i32 32, i1 false)
@@ -1164,16 +875,60 @@ define void @memcpy.inline_known_tail(ptr addrspace(7) inreg %src, ptr addrspace
 ; CHECK-NEXT:    [[DST_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[DST]], 1
 ; CHECK-NEXT:    [[SRC_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[SRC]], 0
 ; CHECK-NEXT:    [[SRC_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[SRC]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.amdgcn.raw.ptr.buffer.load.i64(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[SRC_OFF]], i32 0, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i64(i64 [[TMP1]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DST_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[SRC_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP1]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DST_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP23:%.*]] = add nuw i32 [[SRC_OFF]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP23]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP25:%.*]] = add nuw i32 [[DST_OFF]], 1
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP3]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP25]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP35:%.*]] = add nuw i32 [[SRC_OFF]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP35]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP37:%.*]] = add nuw i32 [[DST_OFF]], 2
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP6]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP37]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP41:%.*]] = add nuw i32 [[SRC_OFF]], 3
+; CHECK-NEXT:    [[TMP42:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP41]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP43:%.*]] = add nuw i32 [[DST_OFF]], 3
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP42]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP43]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP11:%.*]] = add nuw i32 [[SRC_OFF]], 4
+; CHECK-NEXT:    [[TMP12:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP11]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP13:%.*]] = add nuw i32 [[DST_OFF]], 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP12]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP13]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP14:%.*]] = add nuw i32 [[SRC_OFF]], 5
+; CHECK-NEXT:    [[TMP15:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP14]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP16:%.*]] = add nuw i32 [[DST_OFF]], 5
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP15]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP16]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP17:%.*]] = add nuw i32 [[SRC_OFF]], 6
+; CHECK-NEXT:    [[TMP18:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP17]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP19:%.*]] = add nuw i32 [[DST_OFF]], 6
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP18]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP19]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP20:%.*]] = add nuw i32 [[SRC_OFF]], 7
+; CHECK-NEXT:    [[TMP21:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP20]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP22:%.*]] = add nuw i32 [[DST_OFF]], 7
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP21]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP22]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 [[SRC_OFF]], 8
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP2]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP24:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP2]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw i32 [[DST_OFF]], 8
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[TMP3]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP4]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP24]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP4]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP26:%.*]] = add nuw i32 [[SRC_OFF]], 9
+; CHECK-NEXT:    [[TMP27:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP26]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP28:%.*]] = add nuw i32 [[DST_OFF]], 9
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP27]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP28]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP29:%.*]] = add nuw i32 [[SRC_OFF]], 10
+; CHECK-NEXT:    [[TMP30:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP29]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP31:%.*]] = add nuw i32 [[DST_OFF]], 10
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP30]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP31]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP32:%.*]] = add nuw i32 [[SRC_OFF]], 11
+; CHECK-NEXT:    [[TMP33:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP32]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP34:%.*]] = add nuw i32 [[DST_OFF]], 11
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP33]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP34]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nuw i32 [[SRC_OFF]], 12
-; CHECK-NEXT:    [[TMP6:%.*]] = call i16 @llvm.amdgcn.raw.ptr.buffer.load.i16(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP5]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP36:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP5]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nuw i32 [[DST_OFF]], 12
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[TMP6]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP7]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP36]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP7]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP38:%.*]] = add nuw i32 [[SRC_OFF]], 13
+; CHECK-NEXT:    [[TMP39:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP38]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP40:%.*]] = add nuw i32 [[DST_OFF]], 13
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[TMP39]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP40]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nuw i32 [[SRC_OFF]], 14
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP8]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nuw i32 [[DST_OFF]], 14
@@ -1197,196 +952,16 @@ define void @memcpy.inline_known_i64(ptr addrspace(7) inreg %src, ptr addrspace(
 ; CHECK-NEXT:    [[LOOP_INDEX_C:%.*]] = trunc i64 [[LOOP_INDEX]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[SRC_OFF]], [[LOOP_INDEX_C]]
 ; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP1]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = insertelement <64 x i32> poison, i32 [[DOTOFF_0]], i64 0
+; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = insertelement <4 x i32> poison, i32 [[DOTOFF_0]], i64 0
 ; CHECK-NEXT:    [[DOTOFF_PTR_4:%.*]] = add i32 [[TMP1]], 4
 ; CHECK-NEXT:    [[DOTOFF_4:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_4]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_1:%.*]] = insertelement <64 x i32> [[DOTSLICE_0]], i32 [[DOTOFF_4]], i64 1
+; CHECK-NEXT:    [[DOTSLICE_1:%.*]] = insertelement <4 x i32> [[DOTSLICE_0]], i32 [[DOTOFF_4]], i64 1
 ; CHECK-NEXT:    [[DOTOFF_PTR_8:%.*]] = add i32 [[TMP1]], 8
 ; CHECK-NEXT:    [[DOTOFF_8:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_8]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_2:%.*]] = insertelement <64 x i32> [[DOTSLICE_1]], i32 [[DOTOFF_8]], i64 2
+; CHECK-NEXT:    [[DOTSLICE_2:%.*]] = insertelement <4 x i32> [[DOTSLICE_1]], i32 [[DOTOFF_8]], i64 2
 ; CHECK-NEXT:    [[DOTOFF_PTR_12:%.*]] = add i32 [[TMP1]], 12
 ; CHECK-NEXT:    [[DOTOFF_12:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_12]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_3:%.*]] = insertelement <64 x i32> [[DOTSLICE_2]], i32 [[DOTOFF_12]], i64 3
-; CHECK-NEXT:    [[DOTOFF_PTR_16:%.*]] = add i32 [[TMP1]], 16
-; CHECK-NEXT:    [[DOTOFF_16:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_16]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_4:%.*]] = insertelement <64 x i32> [[DOTSLICE_3]], i32 [[DOTOFF_16]], i64 4
-; CHECK-NEXT:    [[DOTOFF_PTR_20:%.*]] = add i32 [[TMP1]], 20
-; CHECK-NEXT:    [[DOTOFF_20:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_20]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_5:%.*]] = insertelement <64 x i32> [[DOTSLICE_4]], i32 [[DOTOFF_20]], i64 5
-; CHECK-NEXT:    [[DOTOFF_PTR_24:%.*]] = add i32 [[TMP1]], 24
-; CHECK-NEXT:    [[DOTOFF_24:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_24]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_6:%.*]] = insertelement <64 x i32> [[DOTSLICE_5]], i32 [[DOTOFF_24]], i64 6
-; CHECK-NEXT:    [[DOTOFF_PTR_28:%.*]] = add i32 [[TMP1]], 28
-; CHECK-NEXT:    [[DOTOFF_28:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_28]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_7:%.*]] = insertelement <64 x i32> [[DOTSLICE_6]], i32 [[DOTOFF_28]], i64 7
-; CHECK-NEXT:    [[DOTOFF_PTR_32:%.*]] = add i32 [[TMP1]], 32
-; CHECK-NEXT:    [[DOTOFF_32:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_32]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_8:%.*]] = insertelement <64 x i32> [[DOTSLICE_7]], i32 [[DOTOFF_32]], i64 8
-; CHECK-NEXT:    [[DOTOFF_PTR_36:%.*]] = add i32 [[TMP1]], 36
-; CHECK-NEXT:    [[DOTOFF_36:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_36]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_9:%.*]] = insertelement <64 x i32> [[DOTSLICE_8]], i32 [[DOTOFF_36]], i64 9
-; CHECK-NEXT:    [[DOTOFF_PTR_40:%.*]] = add i32 [[TMP1]], 40
-; CHECK-NEXT:    [[DOTOFF_40:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_40]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_10:%.*]] = insertelement <64 x i32> [[DOTSLICE_9]], i32 [[DOTOFF_40]], i64 10
-; CHECK-NEXT:    [[DOTOFF_PTR_44:%.*]] = add i32 [[TMP1]], 44
-; CHECK-NEXT:    [[DOTOFF_44:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_44]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_11:%.*]] = insertelement <64 x i32> [[DOTSLICE_10]], i32 [[DOTOFF_44]], i64 11
-; CHECK-NEXT:    [[DOTOFF_PTR_48:%.*]] = add i32 [[TMP1]], 48
-; CHECK-NEXT:    [[DOTOFF_48:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_48]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_12:%.*]] = insertelement <64 x i32> [[DOTSLICE_11]], i32 [[DOTOFF_48]], i64 12
-; CHECK-NEXT:    [[DOTOFF_PTR_52:%.*]] = add i32 [[TMP1]], 52
-; CHECK-NEXT:    [[DOTOFF_52:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_52]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_13:%.*]] = insertelement <64 x i32> [[DOTSLICE_12]], i32 [[DOTOFF_52]], i64 13
-; CHECK-NEXT:    [[DOTOFF_PTR_56:%.*]] = add i32 [[TMP1]], 56
-; CHECK-NEXT:    [[DOTOFF_56:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_56]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_14:%.*]] = insertelement <64 x i32> [[DOTSLICE_13]], i32 [[DOTOFF_56]], i64 14
-; CHECK-NEXT:    [[DOTOFF_PTR_60:%.*]] = add i32 [[TMP1]], 60
-; CHECK-NEXT:    [[DOTOFF_60:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_60]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_15:%.*]] = insertelement <64 x i32> [[DOTSLICE_14]], i32 [[DOTOFF_60]], i64 15
-; CHECK-NEXT:    [[DOTOFF_PTR_64:%.*]] = add i32 [[TMP1]], 64
-; CHECK-NEXT:    [[DOTOFF_64:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_64]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_16:%.*]] = insertelement <64 x i32> [[DOTSLICE_15]], i32 [[DOTOFF_64]], i64 16
-; CHECK-NEXT:    [[DOTOFF_PTR_68:%.*]] = add i32 [[TMP1]], 68
-; CHECK-NEXT:    [[DOTOFF_68:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_68]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_17:%.*]] = insertelement <64 x i32> [[DOTSLICE_16]], i32 [[DOTOFF_68]], i64 17
-; CHECK-NEXT:    [[DOTOFF_PTR_72:%.*]] = add i32 [[TMP1]], 72
-; CHECK-NEXT:    [[DOTOFF_72:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_72]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_18:%.*]] = insertelement <64 x i32> [[DOTSLICE_17]], i32 [[DOTOFF_72]], i64 18
-; CHECK-NEXT:    [[DOTOFF_PTR_76:%.*]] = add i32 [[TMP1]], 76
-; CHECK-NEXT:    [[DOTOFF_76:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_76]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_19:%.*]] = insertelement <64 x i32> [[DOTSLICE_18]], i32 [[DOTOFF_76]], i64 19
-; CHECK-NEXT:    [[DOTOFF_PTR_80:%.*]] = add i32 [[TMP1]], 80
-; CHECK-NEXT:    [[DOTOFF_80:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_80]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_20:%.*]] = insertelement <64 x i32> [[DOTSLICE_19]], i32 [[DOTOFF_80]], i64 20
-; CHECK-NEXT:    [[DOTOFF_PTR_84:%.*]] = add i32 [[TMP1]], 84
-; CHECK-NEXT:    [[DOTOFF_84:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_84]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_21:%.*]] = insertelement <64 x i32> [[DOTSLICE_20]], i32 [[DOTOFF_84]], i64 21
-; CHECK-NEXT:    [[DOTOFF_PTR_88:%.*]] = add i32 [[TMP1]], 88
-; CHECK-NEXT:    [[DOTOFF_88:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_88]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_22:%.*]] = insertelement <64 x i32> [[DOTSLICE_21]], i32 [[DOTOFF_88]], i64 22
-; CHECK-NEXT:    [[DOTOFF_PTR_92:%.*]] = add i32 [[TMP1]], 92
-; CHECK-NEXT:    [[DOTOFF_92:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_92]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_23:%.*]] = insertelement <64 x i32> [[DOTSLICE_22]], i32 [[DOTOFF_92]], i64 23
-; CHECK-NEXT:    [[DOTOFF_PTR_96:%.*]] = add i32 [[TMP1]], 96
-; CHECK-NEXT:    [[DOTOFF_96:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_96]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_24:%.*]] = insertelement <64 x i32> [[DOTSLICE_23]], i32 [[DOTOFF_96]], i64 24
-; CHECK-NEXT:    [[DOTOFF_PTR_100:%.*]] = add i32 [[TMP1]], 100
-; CHECK-NEXT:    [[DOTOFF_100:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_100]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_25:%.*]] = insertelement <64 x i32> [[DOTSLICE_24]], i32 [[DOTOFF_100]], i64 25
-; CHECK-NEXT:    [[DOTOFF_PTR_104:%.*]] = add i32 [[TMP1]], 104
-; CHECK-NEXT:    [[DOTOFF_104:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_104]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_26:%.*]] = insertelement <64 x i32> [[DOTSLICE_25]], i32 [[DOTOFF_104]], i64 26
-; CHECK-NEXT:    [[DOTOFF_PTR_108:%.*]] = add i32 [[TMP1]], 108
-; CHECK-NEXT:    [[DOTOFF_108:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_108]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_27:%.*]] = insertelement <64 x i32> [[DOTSLICE_26]], i32 [[DOTOFF_108]], i64 27
-; CHECK-NEXT:    [[DOTOFF_PTR_112:%.*]] = add i32 [[TMP1]], 112
-; CHECK-NEXT:    [[DOTOFF_112:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_112]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_28:%.*]] = insertelement <64 x i32> [[DOTSLICE_27]], i32 [[DOTOFF_112]], i64 28
-; CHECK-NEXT:    [[DOTOFF_PTR_116:%.*]] = add i32 [[TMP1]], 116
-; CHECK-NEXT:    [[DOTOFF_116:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_116]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_29:%.*]] = insertelement <64 x i32> [[DOTSLICE_28]], i32 [[DOTOFF_116]], i64 29
-; CHECK-NEXT:    [[DOTOFF_PTR_120:%.*]] = add i32 [[TMP1]], 120
-; CHECK-NEXT:    [[DOTOFF_120:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_120]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_30:%.*]] = insertelement <64 x i32> [[DOTSLICE_29]], i32 [[DOTOFF_120]], i64 30
-; CHECK-NEXT:    [[DOTOFF_PTR_124:%.*]] = add i32 [[TMP1]], 124
-; CHECK-NEXT:    [[DOTOFF_124:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_124]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_31:%.*]] = insertelement <64 x i32> [[DOTSLICE_30]], i32 [[DOTOFF_124]], i64 31
-; CHECK-NEXT:    [[DOTOFF_PTR_128:%.*]] = add i32 [[TMP1]], 128
-; CHECK-NEXT:    [[DOTOFF_128:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_128]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_32:%.*]] = insertelement <64 x i32> [[DOTSLICE_31]], i32 [[DOTOFF_128]], i64 32
-; CHECK-NEXT:    [[DOTOFF_PTR_132:%.*]] = add i32 [[TMP1]], 132
-; CHECK-NEXT:    [[DOTOFF_132:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_132]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_33:%.*]] = insertelement <64 x i32> [[DOTSLICE_32]], i32 [[DOTOFF_132]], i64 33
-; CHECK-NEXT:    [[DOTOFF_PTR_136:%.*]] = add i32 [[TMP1]], 136
-; CHECK-NEXT:    [[DOTOFF_136:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_136]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_34:%.*]] = insertelement <64 x i32> [[DOTSLICE_33]], i32 [[DOTOFF_136]], i64 34
-; CHECK-NEXT:    [[DOTOFF_PTR_140:%.*]] = add i32 [[TMP1]], 140
-; CHECK-NEXT:    [[DOTOFF_140:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_140]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_35:%.*]] = insertelement <64 x i32> [[DOTSLICE_34]], i32 [[DOTOFF_140]], i64 35
-; CHECK-NEXT:    [[DOTOFF_PTR_144:%.*]] = add i32 [[TMP1]], 144
-; CHECK-NEXT:    [[DOTOFF_144:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_144]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_36:%.*]] = insertelement <64 x i32> [[DOTSLICE_35]], i32 [[DOTOFF_144]], i64 36
-; CHECK-NEXT:    [[DOTOFF_PTR_148:%.*]] = add i32 [[TMP1]], 148
-; CHECK-NEXT:    [[DOTOFF_148:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_148]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_37:%.*]] = insertelement <64 x i32> [[DOTSLICE_36]], i32 [[DOTOFF_148]], i64 37
-; CHECK-NEXT:    [[DOTOFF_PTR_152:%.*]] = add i32 [[TMP1]], 152
-; CHECK-NEXT:    [[DOTOFF_152:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_152]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_38:%.*]] = insertelement <64 x i32> [[DOTSLICE_37]], i32 [[DOTOFF_152]], i64 38
-; CHECK-NEXT:    [[DOTOFF_PTR_156:%.*]] = add i32 [[TMP1]], 156
-; CHECK-NEXT:    [[DOTOFF_156:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_156]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_39:%.*]] = insertelement <64 x i32> [[DOTSLICE_38]], i32 [[DOTOFF_156]], i64 39
-; CHECK-NEXT:    [[DOTOFF_PTR_160:%.*]] = add i32 [[TMP1]], 160
-; CHECK-NEXT:    [[DOTOFF_160:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_160]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_40:%.*]] = insertelement <64 x i32> [[DOTSLICE_39]], i32 [[DOTOFF_160]], i64 40
-; CHECK-NEXT:    [[DOTOFF_PTR_164:%.*]] = add i32 [[TMP1]], 164
-; CHECK-NEXT:    [[DOTOFF_164:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_164]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_41:%.*]] = insertelement <64 x i32> [[DOTSLICE_40]], i32 [[DOTOFF_164]], i64 41
-; CHECK-NEXT:    [[DOTOFF_PTR_168:%.*]] = add i32 [[TMP1]], 168
-; CHECK-NEXT:    [[DOTOFF_168:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_168]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_42:%.*]] = insertelement <64 x i32> [[DOTSLICE_41]], i32 [[DOTOFF_168]], i64 42
-; CHECK-NEXT:    [[DOTOFF_PTR_172:%.*]] = add i32 [[TMP1]], 172
-; CHECK-NEXT:    [[DOTOFF_172:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_172]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_43:%.*]] = insertelement <64 x i32> [[DOTSLICE_42]], i32 [[DOTOFF_172]], i64 43
-; CHECK-NEXT:    [[DOTOFF_PTR_176:%.*]] = add i32 [[TMP1]], 176
-; CHECK-NEXT:    [[DOTOFF_176:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_176]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_44:%.*]] = insertelement <64 x i32> [[DOTSLICE_43]], i32 [[DOTOFF_176]], i64 44
-; CHECK-NEXT:    [[DOTOFF_PTR_180:%.*]] = add i32 [[TMP1]], 180
-; CHECK-NEXT:    [[DOTOFF_180:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_180]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_45:%.*]] = insertelement <64 x i32> [[DOTSLICE_44]], i32 [[DOTOFF_180]], i64 45
-; CHECK-NEXT:    [[DOTOFF_PTR_184:%.*]] = add i32 [[TMP1]], 184
-; CHECK-NEXT:    [[DOTOFF_184:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_184]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_46:%.*]] = insertelement <64 x i32> [[DOTSLICE_45]], i32 [[DOTOFF_184]], i64 46
-; CHECK-NEXT:    [[DOTOFF_PTR_188:%.*]] = add i32 [[TMP1]], 188
-; CHECK-NEXT:    [[DOTOFF_188:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_188]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_47:%.*]] = insertelement <64 x i32> [[DOTSLICE_46]], i32 [[DOTOFF_188]], i64 47
-; CHECK-NEXT:    [[DOTOFF_PTR_192:%.*]] = add i32 [[TMP1]], 192
-; CHECK-NEXT:    [[DOTOFF_192:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_192]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_48:%.*]] = insertelement <64 x i32> [[DOTSLICE_47]], i32 [[DOTOFF_192]], i64 48
-; CHECK-NEXT:    [[DOTOFF_PTR_196:%.*]] = add i32 [[TMP1]], 196
-; CHECK-NEXT:    [[DOTOFF_196:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_196]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_49:%.*]] = insertelement <64 x i32> [[DOTSLICE_48]], i32 [[DOTOFF_196]], i64 49
-; CHECK-NEXT:    [[DOTOFF_PTR_200:%.*]] = add i32 [[TMP1]], 200
-; CHECK-NEXT:    [[DOTOFF_200:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_200]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_50:%.*]] = insertelement <64 x i32> [[DOTSLICE_49]], i32 [[DOTOFF_200]], i64 50
-; CHECK-NEXT:    [[DOTOFF_PTR_204:%.*]] = add i32 [[TMP1]], 204
-; CHECK-NEXT:    [[DOTOFF_204:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_204]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_51:%.*]] = insertelement <64 x i32> [[DOTSLICE_50]], i32 [[DOTOFF_204]], i64 51
-; CHECK-NEXT:    [[DOTOFF_PTR_208:%.*]] = add i32 [[TMP1]], 208
-; CHECK-NEXT:    [[DOTOFF_208:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_208]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_52:%.*]] = insertelement <64 x i32> [[DOTSLICE_51]], i32 [[DOTOFF_208]], i64 52
-; CHECK-NEXT:    [[DOTOFF_PTR_212:%.*]] = add i32 [[TMP1]], 212
-; CHECK-NEXT:    [[DOTOFF_212:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_212]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_53:%.*]] = insertelement <64 x i32> [[DOTSLICE_52]], i32 [[DOTOFF_212]], i64 53
-; CHECK-NEXT:    [[DOTOFF_PTR_216:%.*]] = add i32 [[TMP1]], 216
-; CHECK-NEXT:    [[DOTOFF_216:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_216]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_54:%.*]] = insertelement <64 x i32> [[DOTSLICE_53]], i32 [[DOTOFF_216]], i64 54
-; CHECK-NEXT:    [[DOTOFF_PTR_220:%.*]] = add i32 [[TMP1]], 220
-; CHECK-NEXT:    [[DOTOFF_220:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_220]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_55:%.*]] = insertelement <64 x i32> [[DOTSLICE_54]], i32 [[DOTOFF_220]], i64 55
-; CHECK-NEXT:    [[DOTOFF_PTR_224:%.*]] = add i32 [[TMP1]], 224
-; CHECK-NEXT:    [[DOTOFF_224:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_224]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_56:%.*]] = insertelement <64 x i32> [[DOTSLICE_55]], i32 [[DOTOFF_224]], i64 56
-; CHECK-NEXT:    [[DOTOFF_PTR_228:%.*]] = add i32 [[TMP1]], 228
-; CHECK-NEXT:    [[DOTOFF_228:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_228]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_57:%.*]] = insertelement <64 x i32> [[DOTSLICE_56]], i32 [[DOTOFF_228]], i64 57
-; CHECK-NEXT:    [[DOTOFF_PTR_232:%.*]] = add i32 [[TMP1]], 232
-; CHECK-NEXT:    [[DOTOFF_232:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_232]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_58:%.*]] = insertelement <64 x i32> [[DOTSLICE_57]], i32 [[DOTOFF_232]], i64 58
-; CHECK-NEXT:    [[DOTOFF_PTR_236:%.*]] = add i32 [[TMP1]], 236
-; CHECK-NEXT:    [[DOTOFF_236:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_236]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_59:%.*]] = insertelement <64 x i32> [[DOTSLICE_58]], i32 [[DOTOFF_236]], i64 59
-; CHECK-NEXT:    [[DOTOFF_PTR_240:%.*]] = add i32 [[TMP1]], 240
-; CHECK-NEXT:    [[DOTOFF_240:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_240]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_60:%.*]] = insertelement <64 x i32> [[DOTSLICE_59]], i32 [[DOTOFF_240]], i64 60
-; CHECK-NEXT:    [[DOTOFF_PTR_244:%.*]] = add i32 [[TMP1]], 244
-; CHECK-NEXT:    [[DOTOFF_244:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_244]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_61:%.*]] = insertelement <64 x i32> [[DOTSLICE_60]], i32 [[DOTOFF_244]], i64 61
-; CHECK-NEXT:    [[DOTOFF_PTR_248:%.*]] = add i32 [[TMP1]], 248
-; CHECK-NEXT:    [[DOTOFF_248:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_248]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSLICE_62:%.*]] = insertelement <64 x i32> [[DOTSLICE_61]], i32 [[DOTOFF_248]], i64 62
-; CHECK-NEXT:    [[DOTOFF_PTR_252:%.*]] = add i32 [[TMP1]], 252
-; CHECK-NEXT:    [[DOTOFF_252:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_252]], i32 0, i32 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <64 x i32> [[DOTSLICE_62]], i32 [[DOTOFF_252]], i64 63
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[DOTSLICE_2]], i32 [[DOTOFF_12]], i64 3
 ; CHECK-NEXT:    [[LOOP_INDEX_C1:%.*]] = trunc i64 [[LOOP_INDEX]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[DST_OFF]], [[LOOP_INDEX_C1]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_0]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP3]], i32 0, i32 0)
@@ -1396,127 +971,7 @@ define void @memcpy.inline_known_i64(ptr addrspace(7) inreg %src, ptr addrspace(
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_8]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_2]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_3:%.*]] = add i32 [[TMP3]], 12
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_12]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_3]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_4:%.*]] = add i32 [[TMP3]], 16
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_16]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_4]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_5:%.*]] = add i32 [[TMP3]], 20
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_20]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_5]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_6:%.*]] = add i32 [[TMP3]], 24
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_24]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_6]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_7:%.*]] = add i32 [[TMP3]], 28
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_28]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_7]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_8:%.*]] = add i32 [[TMP3]], 32
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_32]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_8]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_9:%.*]] = add i32 [[TMP3]], 36
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_36]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_9]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_10:%.*]] = add i32 [[TMP3]], 40
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_40]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_10]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_11:%.*]] = add i32 [[TMP3]], 44
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_44]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_11]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_12:%.*]] = add i32 [[TMP3]], 48
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_48]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_12]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_13:%.*]] = add i32 [[TMP3]], 52
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_52]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_13]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_14:%.*]] = add i32 [[TMP3]], 56
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_56]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_14]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_15:%.*]] = add i32 [[TMP3]], 60
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_60]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_15]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_16:%.*]] = add i32 [[TMP3]], 64
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_64]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_16]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_17:%.*]] = add i32 [[TMP3]], 68
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_68]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_17]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_18:%.*]] = add i32 [[TMP3]], 72
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_72]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_18]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_19:%.*]] = add i32 [[TMP3]], 76
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_76]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_19]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_20:%.*]] = add i32 [[TMP3]], 80
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_80]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_20]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_21:%.*]] = add i32 [[TMP3]], 84
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_84]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_21]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_22:%.*]] = add i32 [[TMP3]], 88
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_88]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_22]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_23:%.*]] = add i32 [[TMP3]], 92
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_92]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_23]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_24:%.*]] = add i32 [[TMP3]], 96
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_96]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_24]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_25:%.*]] = add i32 [[TMP3]], 100
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_100]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_25]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_26:%.*]] = add i32 [[TMP3]], 104
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_104]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_26]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_27:%.*]] = add i32 [[TMP3]], 108
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_108]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_27]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_28:%.*]] = add i32 [[TMP3]], 112
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_112]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_28]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_29:%.*]] = add i32 [[TMP3]], 116
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_116]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_29]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_30:%.*]] = add i32 [[TMP3]], 120
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_120]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_30]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_31:%.*]] = add i32 [[TMP3]], 124
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_124]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_31]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_32:%.*]] = add i32 [[TMP3]], 128
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_128]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_32]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_33:%.*]] = add i32 [[TMP3]], 132
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_132]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_33]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_34:%.*]] = add i32 [[TMP3]], 136
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_136]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_34]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_35:%.*]] = add i32 [[TMP3]], 140
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_140]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_35]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_36:%.*]] = add i32 [[TMP3]], 144
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_144]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_36]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_37:%.*]] = add i32 [[TMP3]], 148
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_148]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_37]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_38:%.*]] = add i32 [[TMP3]], 152
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_152]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_38]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_39:%.*]] = add i32 [[TMP3]], 156
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_156]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_39]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_40:%.*]] = add i32 [[TMP3]], 160
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_160]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_40]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_41:%.*]] = add i32 [[TMP3]], 164
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_164]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_41]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_42:%.*]] = add i32 [[TMP3]], 168
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_168]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_42]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_43:%.*]] = add i32 [[TMP3]], 172
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_172]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_43]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_44:%.*]] = add i32 [[TMP3]], 176
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_176]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_44]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_45:%.*]] = add i32 [[TMP3]], 180
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_180]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_45]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_46:%.*]] = add i32 [[TMP3]], 184
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_184]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_46]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_47:%.*]] = add i32 [[TMP3]], 188
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_188]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_47]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_48:%.*]] = add i32 [[TMP3]], 192
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_192]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_48]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_49:%.*]] = add i32 [[TMP3]], 196
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_196]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_49]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_50:%.*]] = add i32 [[TMP3]], 200
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_200]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_50]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_51:%.*]] = add i32 [[TMP3]], 204
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_204]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_51]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_52:%.*]] = add i32 [[TMP3]], 208
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_208]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_52]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_53:%.*]] = add i32 [[TMP3]], 212
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_212]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_53]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_54:%.*]] = add i32 [[TMP3]], 216
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_216]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_54]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_55:%.*]] = add i32 [[TMP3]], 220
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_220]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_55]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_56:%.*]] = add i32 [[TMP3]], 224
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_224]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_56]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_57:%.*]] = add i32 [[TMP3]], 228
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_228]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_57]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_58:%.*]] = add i32 [[TMP3]], 232
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_232]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_58]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_59:%.*]] = add i32 [[TMP3]], 236
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_236]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_59]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_60:%.*]] = add i32 [[TMP3]], 240
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_240]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_61:%.*]] = add i32 [[TMP3]], 244
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_244]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_61]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_62:%.*]] = add i32 [[TMP3]], 248
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_248]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_62]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_63:%.*]] = add i32 [[TMP3]], 252
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_252]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_63]], i32 0, i32 0)
-; CHECK-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 256
+; CHECK-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 8192
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[STATIC_MEMCPY_LOOP_EXPANSION_MAIN_BODY]], label %[[STATIC_MEMCPY_POST_LOOP_EXPANSION:.*]]
 ; CHECK:       [[STATIC_MEMCPY_POST_LOOP_EXPANSION]]:
@@ -1533,25 +988,10 @@ define void @memcpy.inline_known_i32_volatile(ptr addrspace(7) inreg %src, ptr a
 ; CHECK-NEXT:    [[DST_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[DST]], 1
 ; CHECK-NEXT:    [[SRC_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[SRC]], 0
 ; CHECK-NEXT:    [[SRC_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[SRC]], 1
-; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[SRC_OFF]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = insertelement <4 x i32> poison, i32 [[DOTOFF_0]], i64 0
-; CHECK-NEXT:    [[DOTOFF_PTR_4:%.*]] = add i32 [[SRC_OFF]], 4
-; CHECK-NEXT:    [[DOTOFF_4:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_4]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[DOTSLICE_1:%.*]] = insertelement <4 x i32> [[DOTSLICE_0]], i32 [[DOTOFF_4]], i64 1
-; CHECK-NEXT:    [[DOTOFF_PTR_8:%.*]] = add i32 [[SRC_OFF]], 8
-; CHECK-NEXT:    [[DOTOFF_8:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_8]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[DOTSLICE_2:%.*]] = insertelement <4 x i32> [[DOTSLICE_1]], i32 [[DOTOFF_8]], i64 2
-; CHECK-NEXT:    [[DOTOFF_PTR_12:%.*]] = add i32 [[SRC_OFF]], 12
-; CHECK-NEXT:    [[DOTOFF_12:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_12]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[DOTSLICE_2]], i32 [[DOTOFF_12]], i64 3
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_0]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DST_OFF]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[DOTPART_1:%.*]] = add i32 [[DST_OFF]], 4
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_4]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_1]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[DOTPART_2:%.*]] = add i32 [[DST_OFF]], 8
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_8]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_2]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[DOTPART_3:%.*]] = add i32 [[DST_OFF]], 12
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_12]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_3]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 [[SRC_OFF]], 16
+; CHECK-NEXT:    br label %[[STATIC_MEMCPY_EXPANSION_MAIN_BODY:.*]]
+; CHECK:       [[STATIC_MEMCPY_EXPANSION_MAIN_BODY]]:
+; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP6:%.*]], %[[STATIC_MEMCPY_EXPANSION_MAIN_BODY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[SRC_OFF]], [[LOOP_INDEX]]
 ; CHECK-NEXT:    [[DOTOFF_01:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP2]], i32 0, i32 -2147483648)
 ; CHECK-NEXT:    [[DOTSLICE_02:%.*]] = insertelement <4 x i32> poison, i32 [[DOTOFF_01]], i64 0
 ; CHECK-NEXT:    [[DOTOFF_PTR_43:%.*]] = add i32 [[TMP2]], 4
@@ -1563,7 +1003,7 @@ define void @memcpy.inline_known_i32_volatile(ptr addrspace(7) inreg %src, ptr a
 ; CHECK-NEXT:    [[DOTOFF_PTR_129:%.*]] = add i32 [[TMP2]], 12
 ; CHECK-NEXT:    [[DOTOFF_1210:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_129]], i32 0, i32 -2147483648)
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[DOTSLICE_28]], i32 [[DOTOFF_1210]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw i32 [[DST_OFF]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[DST_OFF]], [[LOOP_INDEX]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_01]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP4]], i32 0, i32 -2147483648)
 ; CHECK-NEXT:    [[DOTPART_111:%.*]] = add i32 [[TMP4]], 4
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_44]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_111]], i32 0, i32 -2147483648)
@@ -1571,6 +1011,10 @@ define void @memcpy.inline_known_i32_volatile(ptr addrspace(7) inreg %src, ptr a
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_87]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_212]], i32 0, i32 -2147483648)
 ; CHECK-NEXT:    [[DOTPART_313:%.*]] = add i32 [[TMP4]], 12
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_1210]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_313]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[TMP6]] = add i32 [[LOOP_INDEX]], 16
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP6]], 32
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[STATIC_MEMCPY_EXPANSION_MAIN_BODY]], label %[[STATIC_MEMCPY_POST_EXPANSION:.*]]
+; CHECK:       [[STATIC_MEMCPY_POST_EXPANSION]]:
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.inline.p7.p7.i32(ptr addrspace(7) %dst, ptr addrspace(7) %src, i32 32, i1 true)
@@ -1960,14 +1404,10 @@ define void @memset_known_small(ptr addrspace(7) inreg %ptr) {
 ; CHECK-SAME: { ptr addrspace(8), i32 } inreg [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
 ; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 0), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[PTR_OFF]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_1:%.*]] = add i32 [[PTR_OFF]], 4
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 1), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_1]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_2:%.*]] = add i32 [[PTR_OFF]], 8
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 2), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_2]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_3:%.*]] = add i32 [[PTR_OFF]], 12
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 3), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_3]], i32 0, i32 0)
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[PTR_OFF]], 16
+; CHECK-NEXT:    br label %[[STATIC_MEMSET_EXPANSION_MAIN_BODY:.*]]
+; CHECK:       [[STATIC_MEMSET_EXPANSION_MAIN_BODY]]:
+; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP2:%.*]], %[[STATIC_MEMSET_EXPANSION_MAIN_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[PTR_OFF]], [[LOOP_INDEX]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 0), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP1]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_11:%.*]] = add i32 [[TMP1]], 4
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 1), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_11]], i32 0, i32 0)
@@ -1975,6 +1415,10 @@ define void @memset_known_small(ptr addrspace(7) inreg %ptr) {
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 2), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_22]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_33:%.*]] = add i32 [[TMP1]], 12
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 3), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_33]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP2]] = add i32 [[LOOP_INDEX]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 32
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[STATIC_MEMSET_EXPANSION_MAIN_BODY]], label %[[STATIC_MEMSET_POST_EXPANSION:.*]]
+; CHECK:       [[STATIC_MEMSET_POST_EXPANSION]]:
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p7.i32(ptr addrspace(7) %ptr, i8 1, i32 32, i1 false)
@@ -1998,11 +1442,33 @@ define void @memset_known_tail(ptr addrspace(7) inreg %ptr) {
 ; CHECK-SAME: { ptr addrspace(8), i32 } inreg [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
 ; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i64(i64 bitcast (<8 x i8> splat (i8 1) to i64), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[PTR_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[PTR_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP8:%.*]] = add nuw i32 [[PTR_OFF]], 1
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP8]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP12:%.*]] = add nuw i32 [[PTR_OFF]], 2
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP12]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP14:%.*]] = add nuw i32 [[PTR_OFF]], 3
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP14]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw i32 [[PTR_OFF]], 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP4]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP5:%.*]] = add nuw i32 [[PTR_OFF]], 5
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP5]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP6:%.*]] = add nuw i32 [[PTR_OFF]], 6
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP6]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP7:%.*]] = add nuw i32 [[PTR_OFF]], 7
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP7]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[PTR_OFF]], 8
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 bitcast (<4 x i8> splat (i8 1) to i32), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP1]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP1]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP9:%.*]] = add nuw i32 [[PTR_OFF]], 9
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP9]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP10:%.*]] = add nuw i32 [[PTR_OFF]], 10
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP10]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP11:%.*]] = add nuw i32 [[PTR_OFF]], 11
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP11]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i32 [[PTR_OFF]], 12
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 bitcast (<2 x i8> splat (i8 1) to i16), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP3]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP3]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP13:%.*]] = add nuw i32 [[PTR_OFF]], 13
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP13]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 [[PTR_OFF]], 14
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP2]], i32 0, i32 0)
 ; CHECK-NEXT:    ret void
@@ -2021,134 +1487,14 @@ define void @memset_known_i64(ptr addrspace(7) inreg %ptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[STATIC_MEMSET_LOOP_EXPANSION_MAIN_BODY]] ]
 ; CHECK-NEXT:    [[DOTC:%.*]] = trunc i64 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[PTR_OFF]], [[DOTC]]
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 0), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP2]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 0), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP2]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_1:%.*]] = add i32 [[TMP2]], 4
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 1), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_1]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 1), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_1]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_2:%.*]] = add i32 [[TMP2]], 8
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 2), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_2]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 2), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_2]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_3:%.*]] = add i32 [[TMP2]], 12
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 3), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_3]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_4:%.*]] = add i32 [[TMP2]], 16
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 4), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_4]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_5:%.*]] = add i32 [[TMP2]], 20
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 5), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_5]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_6:%.*]] = add i32 [[TMP2]], 24
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 6), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_6]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_7:%.*]] = add i32 [[TMP2]], 28
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 7), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_7]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_8:%.*]] = add i32 [[TMP2]], 32
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 8), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_8]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_9:%.*]] = add i32 [[TMP2]], 36
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 9), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_9]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_10:%.*]] = add i32 [[TMP2]], 40
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 10), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_10]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_11:%.*]] = add i32 [[TMP2]], 44
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 11), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_11]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_12:%.*]] = add i32 [[TMP2]], 48
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 12), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_12]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_13:%.*]] = add i32 [[TMP2]], 52
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 13), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_13]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_14:%.*]] = add i32 [[TMP2]], 56
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 14), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_14]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_15:%.*]] = add i32 [[TMP2]], 60
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 15), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_15]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_16:%.*]] = add i32 [[TMP2]], 64
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 16), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_16]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_17:%.*]] = add i32 [[TMP2]], 68
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 17), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_17]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_18:%.*]] = add i32 [[TMP2]], 72
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 18), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_18]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_19:%.*]] = add i32 [[TMP2]], 76
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 19), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_19]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_20:%.*]] = add i32 [[TMP2]], 80
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 20), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_20]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_21:%.*]] = add i32 [[TMP2]], 84
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 21), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_21]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_22:%.*]] = add i32 [[TMP2]], 88
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 22), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_22]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_23:%.*]] = add i32 [[TMP2]], 92
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 23), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_23]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_24:%.*]] = add i32 [[TMP2]], 96
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 24), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_24]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_25:%.*]] = add i32 [[TMP2]], 100
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 25), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_25]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_26:%.*]] = add i32 [[TMP2]], 104
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 26), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_26]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_27:%.*]] = add i32 [[TMP2]], 108
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 27), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_27]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_28:%.*]] = add i32 [[TMP2]], 112
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 28), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_28]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_29:%.*]] = add i32 [[TMP2]], 116
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 29), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_29]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_30:%.*]] = add i32 [[TMP2]], 120
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 30), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_30]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_31:%.*]] = add i32 [[TMP2]], 124
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 31), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_31]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_32:%.*]] = add i32 [[TMP2]], 128
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 32), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_32]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_33:%.*]] = add i32 [[TMP2]], 132
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 33), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_33]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_34:%.*]] = add i32 [[TMP2]], 136
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 34), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_34]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_35:%.*]] = add i32 [[TMP2]], 140
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 35), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_35]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_36:%.*]] = add i32 [[TMP2]], 144
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 36), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_36]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_37:%.*]] = add i32 [[TMP2]], 148
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 37), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_37]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_38:%.*]] = add i32 [[TMP2]], 152
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 38), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_38]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_39:%.*]] = add i32 [[TMP2]], 156
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 39), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_39]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_40:%.*]] = add i32 [[TMP2]], 160
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 40), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_40]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_41:%.*]] = add i32 [[TMP2]], 164
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 41), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_41]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_42:%.*]] = add i32 [[TMP2]], 168
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 42), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_42]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_43:%.*]] = add i32 [[TMP2]], 172
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 43), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_43]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_44:%.*]] = add i32 [[TMP2]], 176
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 44), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_44]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_45:%.*]] = add i32 [[TMP2]], 180
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 45), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_45]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_46:%.*]] = add i32 [[TMP2]], 184
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 46), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_46]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_47:%.*]] = add i32 [[TMP2]], 188
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 47), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_47]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_48:%.*]] = add i32 [[TMP2]], 192
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 48), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_48]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_49:%.*]] = add i32 [[TMP2]], 196
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 49), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_49]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_50:%.*]] = add i32 [[TMP2]], 200
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 50), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_50]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_51:%.*]] = add i32 [[TMP2]], 204
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 51), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_51]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_52:%.*]] = add i32 [[TMP2]], 208
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 52), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_52]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_53:%.*]] = add i32 [[TMP2]], 212
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 53), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_53]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_54:%.*]] = add i32 [[TMP2]], 216
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 54), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_54]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_55:%.*]] = add i32 [[TMP2]], 220
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 55), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_55]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_56:%.*]] = add i32 [[TMP2]], 224
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 56), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_56]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_57:%.*]] = add i32 [[TMP2]], 228
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 57), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_57]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_58:%.*]] = add i32 [[TMP2]], 232
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 58), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_58]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_59:%.*]] = add i32 [[TMP2]], 236
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 59), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_59]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_60:%.*]] = add i32 [[TMP2]], 240
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 60), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_61:%.*]] = add i32 [[TMP2]], 244
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 61), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_61]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_62:%.*]] = add i32 [[TMP2]], 248
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 62), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_62]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_63:%.*]] = add i32 [[TMP2]], 252
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 63), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_63]], i32 0, i32 0)
-; CHECK-NEXT:    [[TMP3]] = add i64 [[TMP1]], 256
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 3), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_3]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP3]] = add i64 [[TMP1]], 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 8192
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[STATIC_MEMSET_LOOP_EXPANSION_MAIN_BODY]], label %[[STATIC_MEMSET_POST_LOOP_EXPANSION:.*]]
 ; CHECK:       [[STATIC_MEMSET_POST_LOOP_EXPANSION]]:
@@ -2163,14 +1509,10 @@ define void @memset_known_i32_volatile(ptr addrspace(7) inreg %ptr) {
 ; CHECK-SAME: { ptr addrspace(8), i32 } inreg [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
 ; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 0), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[PTR_OFF]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[DOTPART_1:%.*]] = add i32 [[PTR_OFF]], 4
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 1), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_1]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[DOTPART_2:%.*]] = add i32 [[PTR_OFF]], 8
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 2), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_2]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[DOTPART_3:%.*]] = add i32 [[PTR_OFF]], 12
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 3), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_3]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[PTR_OFF]], 16
+; CHECK-NEXT:    br label %[[STATIC_MEMSET_EXPANSION_MAIN_BODY:.*]]
+; CHECK:       [[STATIC_MEMSET_EXPANSION_MAIN_BODY]]:
+; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP2:%.*]], %[[STATIC_MEMSET_EXPANSION_MAIN_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[PTR_OFF]], [[LOOP_INDEX]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 0), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP1]], i32 0, i32 -2147483648)
 ; CHECK-NEXT:    [[DOTPART_11:%.*]] = add i32 [[TMP1]], 4
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 1), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_11]], i32 0, i32 -2147483648)
@@ -2178,6 +1520,10 @@ define void @memset_known_i32_volatile(ptr addrspace(7) inreg %ptr) {
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 2), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_22]], i32 0, i32 -2147483648)
 ; CHECK-NEXT:    [[DOTPART_33:%.*]] = add i32 [[TMP1]], 12
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 3), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_33]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[TMP2]] = add i32 [[LOOP_INDEX]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 32
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[STATIC_MEMSET_EXPANSION_MAIN_BODY]], label %[[STATIC_MEMSET_POST_EXPANSION:.*]]
+; CHECK:       [[STATIC_MEMSET_POST_EXPANSION]]:
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p7.i32(ptr addrspace(7) %ptr, i8 1, i32 32, i1 true)
@@ -2284,14 +1630,10 @@ define void @memset.inline_known_small(ptr addrspace(7) inreg %ptr) {
 ; CHECK-SAME: { ptr addrspace(8), i32 } inreg [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
 ; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 0), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[PTR_OFF]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_1:%.*]] = add i32 [[PTR_OFF]], 4
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 1), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_1]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_2:%.*]] = add i32 [[PTR_OFF]], 8
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 2), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_2]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_3:%.*]] = add i32 [[PTR_OFF]], 12
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 3), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_3]], i32 0, i32 0)
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[PTR_OFF]], 16
+; CHECK-NEXT:    br label %[[STATIC_MEMSET_EXPANSION_MAIN_BODY:.*]]
+; CHECK:       [[STATIC_MEMSET_EXPANSION_MAIN_BODY]]:
+; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP2:%.*]], %[[STATIC_MEMSET_EXPANSION_MAIN_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[PTR_OFF]], [[LOOP_INDEX]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 0), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP1]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_11:%.*]] = add i32 [[TMP1]], 4
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 1), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_11]], i32 0, i32 0)
@@ -2299,6 +1641,10 @@ define void @memset.inline_known_small(ptr addrspace(7) inreg %ptr) {
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 2), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_22]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_33:%.*]] = add i32 [[TMP1]], 12
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 3), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_33]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP2]] = add i32 [[LOOP_INDEX]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 32
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[STATIC_MEMSET_EXPANSION_MAIN_BODY]], label %[[STATIC_MEMSET_POST_EXPANSION:.*]]
+; CHECK:       [[STATIC_MEMSET_POST_EXPANSION]]:
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.inline.p7.i32(ptr addrspace(7) %ptr, i8 1, i32 32, i1 false)
@@ -2322,11 +1668,33 @@ define void @memset.inline_known_tail(ptr addrspace(7) inreg %ptr) {
 ; CHECK-SAME: { ptr addrspace(8), i32 } inreg [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
 ; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i64(i64 bitcast (<8 x i8> splat (i8 1) to i64), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[PTR_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[PTR_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP8:%.*]] = add nuw i32 [[PTR_OFF]], 1
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP8]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP12:%.*]] = add nuw i32 [[PTR_OFF]], 2
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP12]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP14:%.*]] = add nuw i32 [[PTR_OFF]], 3
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP14]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw i32 [[PTR_OFF]], 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP4]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP5:%.*]] = add nuw i32 [[PTR_OFF]], 5
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP5]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP6:%.*]] = add nuw i32 [[PTR_OFF]], 6
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP6]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP7:%.*]] = add nuw i32 [[PTR_OFF]], 7
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP7]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[PTR_OFF]], 8
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 bitcast (<4 x i8> splat (i8 1) to i32), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP1]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP1]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP9:%.*]] = add nuw i32 [[PTR_OFF]], 9
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP9]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP10:%.*]] = add nuw i32 [[PTR_OFF]], 10
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP10]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP11:%.*]] = add nuw i32 [[PTR_OFF]], 11
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP11]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i32 [[PTR_OFF]], 12
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 bitcast (<2 x i8> splat (i8 1) to i16), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP3]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP3]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP13:%.*]] = add nuw i32 [[PTR_OFF]], 13
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP13]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 [[PTR_OFF]], 14
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP2]], i32 0, i32 0)
 ; CHECK-NEXT:    ret void
@@ -2345,134 +1713,14 @@ define void @memset.inline_known_i64(ptr addrspace(7) inreg %ptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[STATIC_MEMSET_LOOP_EXPANSION_MAIN_BODY]] ]
 ; CHECK-NEXT:    [[DOTC:%.*]] = trunc i64 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[PTR_OFF]], [[DOTC]]
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 0), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP2]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 0), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP2]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_1:%.*]] = add i32 [[TMP2]], 4
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 1), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_1]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 1), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_1]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_2:%.*]] = add i32 [[TMP2]], 8
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 2), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_2]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 2), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_2]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_3:%.*]] = add i32 [[TMP2]], 12
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 3), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_3]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_4:%.*]] = add i32 [[TMP2]], 16
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 4), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_4]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_5:%.*]] = add i32 [[TMP2]], 20
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 5), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_5]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_6:%.*]] = add i32 [[TMP2]], 24
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 6), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_6]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_7:%.*]] = add i32 [[TMP2]], 28
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 7), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_7]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_8:%.*]] = add i32 [[TMP2]], 32
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 8), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_8]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_9:%.*]] = add i32 [[TMP2]], 36
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 9), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_9]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_10:%.*]] = add i32 [[TMP2]], 40
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 10), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_10]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_11:%.*]] = add i32 [[TMP2]], 44
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 11), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_11]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_12:%.*]] = add i32 [[TMP2]], 48
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 12), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_12]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_13:%.*]] = add i32 [[TMP2]], 52
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 13), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_13]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_14:%.*]] = add i32 [[TMP2]], 56
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 14), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_14]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_15:%.*]] = add i32 [[TMP2]], 60
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 15), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_15]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_16:%.*]] = add i32 [[TMP2]], 64
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 16), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_16]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_17:%.*]] = add i32 [[TMP2]], 68
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 17), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_17]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_18:%.*]] = add i32 [[TMP2]], 72
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 18), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_18]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_19:%.*]] = add i32 [[TMP2]], 76
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 19), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_19]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_20:%.*]] = add i32 [[TMP2]], 80
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 20), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_20]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_21:%.*]] = add i32 [[TMP2]], 84
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 21), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_21]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_22:%.*]] = add i32 [[TMP2]], 88
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 22), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_22]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_23:%.*]] = add i32 [[TMP2]], 92
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 23), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_23]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_24:%.*]] = add i32 [[TMP2]], 96
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 24), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_24]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_25:%.*]] = add i32 [[TMP2]], 100
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 25), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_25]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_26:%.*]] = add i32 [[TMP2]], 104
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 26), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_26]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_27:%.*]] = add i32 [[TMP2]], 108
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 27), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_27]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_28:%.*]] = add i32 [[TMP2]], 112
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 28), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_28]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_29:%.*]] = add i32 [[TMP2]], 116
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 29), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_29]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_30:%.*]] = add i32 [[TMP2]], 120
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 30), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_30]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_31:%.*]] = add i32 [[TMP2]], 124
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 31), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_31]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_32:%.*]] = add i32 [[TMP2]], 128
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 32), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_32]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_33:%.*]] = add i32 [[TMP2]], 132
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 33), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_33]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_34:%.*]] = add i32 [[TMP2]], 136
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 34), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_34]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_35:%.*]] = add i32 [[TMP2]], 140
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 35), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_35]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_36:%.*]] = add i32 [[TMP2]], 144
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 36), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_36]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_37:%.*]] = add i32 [[TMP2]], 148
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 37), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_37]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_38:%.*]] = add i32 [[TMP2]], 152
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 38), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_38]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_39:%.*]] = add i32 [[TMP2]], 156
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 39), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_39]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_40:%.*]] = add i32 [[TMP2]], 160
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 40), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_40]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_41:%.*]] = add i32 [[TMP2]], 164
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 41), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_41]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_42:%.*]] = add i32 [[TMP2]], 168
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 42), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_42]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_43:%.*]] = add i32 [[TMP2]], 172
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 43), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_43]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_44:%.*]] = add i32 [[TMP2]], 176
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 44), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_44]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_45:%.*]] = add i32 [[TMP2]], 180
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 45), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_45]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_46:%.*]] = add i32 [[TMP2]], 184
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 46), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_46]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_47:%.*]] = add i32 [[TMP2]], 188
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 47), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_47]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_48:%.*]] = add i32 [[TMP2]], 192
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 48), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_48]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_49:%.*]] = add i32 [[TMP2]], 196
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 49), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_49]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_50:%.*]] = add i32 [[TMP2]], 200
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 50), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_50]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_51:%.*]] = add i32 [[TMP2]], 204
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 51), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_51]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_52:%.*]] = add i32 [[TMP2]], 208
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 52), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_52]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_53:%.*]] = add i32 [[TMP2]], 212
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 53), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_53]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_54:%.*]] = add i32 [[TMP2]], 216
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 54), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_54]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_55:%.*]] = add i32 [[TMP2]], 220
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 55), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_55]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_56:%.*]] = add i32 [[TMP2]], 224
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 56), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_56]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_57:%.*]] = add i32 [[TMP2]], 228
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 57), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_57]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_58:%.*]] = add i32 [[TMP2]], 232
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 58), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_58]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_59:%.*]] = add i32 [[TMP2]], 236
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 59), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_59]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_60:%.*]] = add i32 [[TMP2]], 240
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 60), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_61:%.*]] = add i32 [[TMP2]], 244
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 61), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_61]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_62:%.*]] = add i32 [[TMP2]], 248
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 62), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_62]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_63:%.*]] = add i32 [[TMP2]], 252
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<64 x i32> bitcast (<256 x i8> splat (i8 1) to <64 x i32>), i64 63), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_63]], i32 0, i32 0)
-; CHECK-NEXT:    [[TMP3]] = add i64 [[TMP1]], 256
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 3), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_3]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP3]] = add i64 [[TMP1]], 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 8192
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[STATIC_MEMSET_LOOP_EXPANSION_MAIN_BODY]], label %[[STATIC_MEMSET_POST_LOOP_EXPANSION:.*]]
 ; CHECK:       [[STATIC_MEMSET_POST_LOOP_EXPANSION]]:
@@ -2487,14 +1735,10 @@ define void @memset.inline_known_i32_volatile(ptr addrspace(7) inreg %ptr) {
 ; CHECK-SAME: { ptr addrspace(8), i32 } inreg [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
 ; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 0), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[PTR_OFF]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[DOTPART_1:%.*]] = add i32 [[PTR_OFF]], 4
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 1), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_1]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[DOTPART_2:%.*]] = add i32 [[PTR_OFF]], 8
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 2), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_2]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[DOTPART_3:%.*]] = add i32 [[PTR_OFF]], 12
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 3), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_3]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[PTR_OFF]], 16
+; CHECK-NEXT:    br label %[[STATIC_MEMSET_EXPANSION_MAIN_BODY:.*]]
+; CHECK:       [[STATIC_MEMSET_EXPANSION_MAIN_BODY]]:
+; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP2:%.*]], %[[STATIC_MEMSET_EXPANSION_MAIN_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[PTR_OFF]], [[LOOP_INDEX]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 0), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP1]], i32 0, i32 -2147483648)
 ; CHECK-NEXT:    [[DOTPART_11:%.*]] = add i32 [[TMP1]], 4
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 1), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_11]], i32 0, i32 -2147483648)
@@ -2502,6 +1746,10 @@ define void @memset.inline_known_i32_volatile(ptr addrspace(7) inreg %ptr) {
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 2), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_22]], i32 0, i32 -2147483648)
 ; CHECK-NEXT:    [[DOTPART_33:%.*]] = add i32 [[TMP1]], 12
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 extractelement (<4 x i32> bitcast (<16 x i8> splat (i8 1) to <4 x i32>), i64 3), ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_33]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[TMP2]] = add i32 [[LOOP_INDEX]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 32
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[STATIC_MEMSET_EXPANSION_MAIN_BODY]], label %[[STATIC_MEMSET_POST_EXPANSION:.*]]
+; CHECK:       [[STATIC_MEMSET_POST_EXPANSION]]:
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.inline.p7.i32(ptr addrspace(7) %ptr, i8 1, i32 32, i1 true)
@@ -2611,11 +1859,17 @@ define void @memset_pattern_known_small(ptr addrspace(7) inreg %ptr) {
 ; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
 ; CHECK-NEXT:    br label %[[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY:.*]]
 ; CHECK:       [[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY]] ]
-; CHECK-NEXT:    [[DOTIDX:%.*]] = mul nsw i32 [[TMP1]], 4
+; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY]] ]
+; CHECK-NEXT:    [[DOTIDX:%.*]] = mul nsw i32 [[LOOP_INDEX]], 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[PTR_OFF]], [[DOTIDX]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP2]], i32 0, i32 0)
-; CHECK-NEXT:    [[TMP3]] = add i32 [[TMP1]], 1
+; CHECK-NEXT:    [[DOTPART_1:%.*]] = add i32 [[TMP2]], 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_1]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_2:%.*]] = add i32 [[TMP2]], 8
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_2]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_3:%.*]] = add i32 [[TMP2]], 12
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_3]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP3]] = add i32 [[LOOP_INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[TMP3]], 32
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY]], label %[[SPLIT:.*]]
 ; CHECK:       [[SPLIT]]:
@@ -2634,7 +1888,7 @@ define void @memset_pattern_known_i64(ptr addrspace(7) inreg %ptr) {
 ; CHECK:       [[LOADSTORELOOP]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP5:%.*]], %[[LOADSTORELOOP]] ]
 ; CHECK-NEXT:    [[DOTC:%.*]] = trunc i64 [[TMP1]] to i32
-; CHECK-NEXT:    [[DOTIDX1:%.*]] = mul nsw i32 [[DOTC]], 256
+; CHECK-NEXT:    [[DOTIDX1:%.*]] = mul nsw i32 [[DOTC]], 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[PTR_OFF]], [[DOTIDX1]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP8]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_1:%.*]] = add i32 [[TMP8]], 4
@@ -2643,127 +1897,7 @@ define void @memset_pattern_known_i64(ptr addrspace(7) inreg %ptr) {
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_2]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_3:%.*]] = add i32 [[TMP8]], 12
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_3]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_4:%.*]] = add i32 [[TMP8]], 16
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_4]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_5:%.*]] = add i32 [[TMP8]], 20
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_5]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_6:%.*]] = add i32 [[TMP8]], 24
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_6]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_7:%.*]] = add i32 [[TMP8]], 28
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_7]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_8:%.*]] = add i32 [[TMP8]], 32
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_8]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_9:%.*]] = add i32 [[TMP8]], 36
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_9]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_10:%.*]] = add i32 [[TMP8]], 40
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_10]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_11:%.*]] = add i32 [[TMP8]], 44
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_11]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_12:%.*]] = add i32 [[TMP8]], 48
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_12]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_13:%.*]] = add i32 [[TMP8]], 52
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_13]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_14:%.*]] = add i32 [[TMP8]], 56
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_14]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_15:%.*]] = add i32 [[TMP8]], 60
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_15]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_16:%.*]] = add i32 [[TMP8]], 64
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_16]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_17:%.*]] = add i32 [[TMP8]], 68
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_17]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_18:%.*]] = add i32 [[TMP8]], 72
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_18]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_19:%.*]] = add i32 [[TMP8]], 76
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_19]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_20:%.*]] = add i32 [[TMP8]], 80
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_20]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_21:%.*]] = add i32 [[TMP8]], 84
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_21]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_22:%.*]] = add i32 [[TMP8]], 88
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_22]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_23:%.*]] = add i32 [[TMP8]], 92
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_23]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_24:%.*]] = add i32 [[TMP8]], 96
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_24]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_25:%.*]] = add i32 [[TMP8]], 100
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_25]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_26:%.*]] = add i32 [[TMP8]], 104
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_26]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_27:%.*]] = add i32 [[TMP8]], 108
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_27]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_28:%.*]] = add i32 [[TMP8]], 112
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_28]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_29:%.*]] = add i32 [[TMP8]], 116
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_29]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_30:%.*]] = add i32 [[TMP8]], 120
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_30]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_31:%.*]] = add i32 [[TMP8]], 124
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_31]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_32:%.*]] = add i32 [[TMP8]], 128
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_32]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_33:%.*]] = add i32 [[TMP8]], 132
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_33]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_34:%.*]] = add i32 [[TMP8]], 136
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_34]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_35:%.*]] = add i32 [[TMP8]], 140
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_35]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_36:%.*]] = add i32 [[TMP8]], 144
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_36]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_37:%.*]] = add i32 [[TMP8]], 148
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_37]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_38:%.*]] = add i32 [[TMP8]], 152
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_38]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_39:%.*]] = add i32 [[TMP8]], 156
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_39]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_40:%.*]] = add i32 [[TMP8]], 160
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_40]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_41:%.*]] = add i32 [[TMP8]], 164
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_41]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_42:%.*]] = add i32 [[TMP8]], 168
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_42]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_43:%.*]] = add i32 [[TMP8]], 172
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_43]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_44:%.*]] = add i32 [[TMP8]], 176
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_44]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_45:%.*]] = add i32 [[TMP8]], 180
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_45]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_46:%.*]] = add i32 [[TMP8]], 184
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_46]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_47:%.*]] = add i32 [[TMP8]], 188
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_47]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_48:%.*]] = add i32 [[TMP8]], 192
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_48]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_49:%.*]] = add i32 [[TMP8]], 196
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_49]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_50:%.*]] = add i32 [[TMP8]], 200
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_50]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_51:%.*]] = add i32 [[TMP8]], 204
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_51]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_52:%.*]] = add i32 [[TMP8]], 208
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_52]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_53:%.*]] = add i32 [[TMP8]], 212
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_53]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_54:%.*]] = add i32 [[TMP8]], 216
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_54]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_55:%.*]] = add i32 [[TMP8]], 220
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_55]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_56:%.*]] = add i32 [[TMP8]], 224
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_56]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_57:%.*]] = add i32 [[TMP8]], 228
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_57]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_58:%.*]] = add i32 [[TMP8]], 232
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_58]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_59:%.*]] = add i32 [[TMP8]], 236
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_59]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_60:%.*]] = add i32 [[TMP8]], 240
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_61:%.*]] = add i32 [[TMP8]], 244
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_61]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_62:%.*]] = add i32 [[TMP8]], 248
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_62]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_63:%.*]] = add i32 [[TMP8]], 252
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_63]], i32 0, i32 0)
-; CHECK-NEXT:    [[TMP5]] = add i64 [[TMP1]], 64
+; CHECK-NEXT:    [[TMP5]] = add i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP5]], 8192
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[LOADSTORELOOP]], label %[[SPLIT:.*]]
 ; CHECK:       [[SPLIT]]:
@@ -2780,11 +1914,17 @@ define void @memset_pattern_known_i32_volatile(ptr addrspace(7) inreg %ptr) {
 ; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
 ; CHECK-NEXT:    br label %[[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY:.*]]
 ; CHECK:       [[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY]] ]
-; CHECK-NEXT:    [[DOTIDX:%.*]] = mul nsw i32 [[TMP1]], 4
+; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY]] ]
+; CHECK-NEXT:    [[DOTIDX:%.*]] = mul nsw i32 [[LOOP_INDEX]], 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[PTR_OFF]], [[DOTIDX]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[TMP2]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    [[TMP3]] = add i32 [[TMP1]], 1
+; CHECK-NEXT:    [[DOTPART_1:%.*]] = add i32 [[TMP2]], 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_1]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTPART_2:%.*]] = add i32 [[TMP2]], 8
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_2]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTPART_3:%.*]] = add i32 [[TMP2]], 12
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 1, ptr addrspace(8) align 1 [[PTR_RSRC]], i32 [[DOTPART_3]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[TMP3]] = add i32 [[LOOP_INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[TMP3]], 32
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY]], label %[[SPLIT:.*]]
 ; CHECK:       [[SPLIT]]:

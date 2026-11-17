@@ -369,6 +369,17 @@ uint64_t GCNTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
   return 1024;
 }
 
+bool GCNTTIImpl::allowsMemcpyAccess(LLVMContext &Context, EVT VT,
+                                    unsigned SrcAddrSpace,
+                                    unsigned DestAddrSpace, Align SrcAlign,
+                                    Align DestAlign) const {
+  const DataLayout &DL = getDataLayout();
+  return TLI->allowsMemoryAccessForAlignment(Context, DL, VT, SrcAddrSpace,
+                                             SrcAlign) &&
+         TLI->allowsMemoryAccessForAlignment(Context, DL, VT, DestAddrSpace,
+                                             DestAlign);
+}
+
 Type *GCNTTIImpl::getMemcpyLoopLoweringType(
     LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
     unsigned DestAddrSpace, Align SrcAlign, Align DestAlign,
@@ -388,8 +399,13 @@ Type *GCNTTIImpl::getMemcpyLoopLoweringType(
   // performance for length values that are smaller or slightly larger than the
   // total size of the type returned here. Mitigating that would require a more
   // complex lowering for variable-length memcpy and memmove.
+  //
+  // Also don't unroll if the accesses will be split below dword size, since
+  // that only increases register pressure.
   unsigned I32EltsInVector = 4;
-  if (CLOpts.memcpy_loop_unroll > 0 && isa<ConstantInt>(Length))
+  if (CLOpts.memcpy_loop_unroll > 0 && isa<ConstantInt>(Length) &&
+      allowsMemcpyAccess(Context, MVT::i32, SrcAddrSpace, DestAddrSpace,
+                         SrcAlign, DestAlign))
     return FixedVectorType::get(Type::getInt32Ty(Context),
                                 CLOpts.memcpy_loop_unroll * I32EltsInVector);
 
@@ -407,28 +423,20 @@ void GCNTTIImpl::getMemcpyLoopResidualLoweringType(
         OpsOut, Context, RemainingBytes, SrcAddrSpace, DestAddrSpace, SrcAlign,
         DestAlign, AtomicCpySize);
 
-  Type *I32x4Ty = FixedVectorType::get(Type::getInt32Ty(Context), 4);
-  while (RemainingBytes >= 16) {
-    OpsOut.push_back(I32x4Ty);
-    RemainingBytes -= 16;
-  }
-
-  Type *I64Ty = Type::getInt64Ty(Context);
-  while (RemainingBytes >= 8) {
-    OpsOut.push_back(I64Ty);
-    RemainingBytes -= 8;
-  }
-
-  Type *I32Ty = Type::getInt32Ty(Context);
-  while (RemainingBytes >= 4) {
-    OpsOut.push_back(I32Ty);
-    RemainingBytes -= 4;
-  }
-
-  Type *I16Ty = Type::getInt16Ty(Context);
-  while (RemainingBytes >= 2) {
-    OpsOut.push_back(I16Ty);
-    RemainingBytes -= 2;
+  const std::pair<Type *, EVT> Ops[] = {
+      {FixedVectorType::get(Type::getInt32Ty(Context), 4), MVT::v4i32},
+      {Type::getInt64Ty(Context), MVT::i64},
+      {Type::getInt32Ty(Context), MVT::i32},
+      {Type::getInt16Ty(Context), MVT::i16}};
+  for (auto [Ty, VT] : Ops) {
+    unsigned Size = VT.getStoreSize();
+    EVT CheckVT = Size >= 4 ? MVT::i32 : VT;
+    if (RemainingBytes < Size ||
+        !allowsMemcpyAccess(Context, CheckVT, SrcAddrSpace, DestAddrSpace,
+                            SrcAlign, DestAlign))
+      continue;
+    for (; RemainingBytes >= Size; RemainingBytes -= Size)
+      OpsOut.push_back(Ty);
   }
 
   Type *I8Ty = Type::getInt8Ty(Context);
