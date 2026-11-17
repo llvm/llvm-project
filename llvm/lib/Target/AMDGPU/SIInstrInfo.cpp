@@ -8275,15 +8275,13 @@ void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &MI, unsigned OpIdx,
 
   int16_t RCID = getOpRegClassID(get(Opcode).operands()[OpIdx]);
   const TargetRegisterClass *ExpectedRC = RI.getRegClass(RCID);
-  if (RI.getMatchingSuperRegClass(CurrRC, ExpectedRC, AMDGPU::lo16)) {
-    // Default to the lo16 only if the subregister is not specified.
-    if (Op.getSubReg() == AMDGPU::NoSubRegister)
-      Op.setSubReg(AMDGPU::lo16);
+  const TargetRegisterClass *CurrSRC =
+      RI.getSubRegisterClass(CurrRC, Op.getSubReg());
+  if (RI.getMatchingSuperRegClass(CurrSRC, ExpectedRC, AMDGPU::lo16)) {
+    Op.setSubReg(RI.composeSubRegIndices(Op.getSubReg(), AMDGPU::lo16));
     return;
   }
 
-  const TargetRegisterClass *CurrSRC =
-      RI.getSubRegisterClass(CurrRC, Op.getSubReg());
   if (RI.getMatchingSuperRegClass(ExpectedRC, CurrSRC, AMDGPU::lo16)) {
     Op.setReg(buildVGPR32FromLo16(*MBB, MI, MI.getDebugLoc(), Op.getReg(),
                                   Op.getSubReg()));
