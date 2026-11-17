@@ -1,4 +1,4 @@
-// RUN: %libomp-compile
+// RUN: %libomp-compile -std=c11
 // RUN: env KMP_LOCK_KIND=ticket %libomp-run
 // RUN: env KMP_LOCK_KIND=ticket KMP_CONSISTENCY_CHECK=all %libomp-run
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -11,6 +11,8 @@
 
 // The relaxed handshake arranges a failed try followed by a successful try.
 // It must not provide the payload's release/acquire synchronization itself.
+// This functional check may pass before the fix; it does not deterministically
+// reproduce a weak-memory outcome.
 int main(void) {
   omp_lock_t lock;
   omp_nest_lock_t nested;
