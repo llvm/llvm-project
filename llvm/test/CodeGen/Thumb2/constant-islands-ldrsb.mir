@@ -14,7 +14,6 @@
 ---
 name:            t2LDRSBpci
 alignment:       4
-tracksRegLiveness: true
 constants:
   - id:              0
     value:           'i32 0'
@@ -37,7 +36,6 @@ body:             |
 ---
 name:            t2LDRSHpci
 alignment:       4
-tracksRegLiveness: true
 constants:
   - id:              0
     value:           'i32 0'

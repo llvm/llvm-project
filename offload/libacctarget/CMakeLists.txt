@@ -17,8 +17,6 @@ endif()
 target_link_libraries(acctarget PRIVATE ${llvm_libs})
 target_include_directories(acctarget PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR} ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
-  ${CMAKE_CURRENT_SOURCE_DIR}/../plugins-nextgen/common/include
-  ${CMAKE_CURRENT_BINARY_DIR}/../plugins-nextgen/common/include
 )
 
 if(LLVM_HAVE_LINK_VERSION_SCRIPT)

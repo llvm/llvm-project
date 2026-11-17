@@ -1101,6 +1101,7 @@ TEST(OrderedExtensionMap, ExtensionsAreCorrectlyOrdered) {
   EXPECT_THAT(ExtNames,
               ElementsAre("i", "y", "m", "l", "c", "zicsr", "zmfoo", "zfinx",
                           "zzfoo", "sbar", "sfoo", "xbar", "xfoo"));
+  EXPECT_NE(Exts.find(StringRef("zicsr")), Exts.end());
 }
 
 TEST(ParseArchString, ZceImplication) {

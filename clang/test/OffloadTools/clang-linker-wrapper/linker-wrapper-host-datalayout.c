@@ -21,7 +21,7 @@
 // The image offsets should use the host's 32-bit size_t type, instead of the
 // incorrect i64 according to the default DataLayout.
 
-// CHECK: @.omp_offloading.device_images =
-// CHECK-SAME: getelementptr (i8, ptr @.omp_offloading.device_image, i32 {{[0-9]+}})
+// CHECK: @.llvm_offloading.device_images =
+// CHECK-SAME: getelementptr (i8, ptr @.llvm_offloading.device_image, i32 {{[0-9]+}})
 
 __attribute__((visibility("protected"), used)) int x;

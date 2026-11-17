@@ -120,6 +120,7 @@
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/CodeGen/HardwareLoops.h"
+#include "llvm/CodeGen/IfConversion.h"
 #include "llvm/CodeGen/ImplicitNullChecks.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InitUndef.h"
@@ -575,7 +576,8 @@ PassBuilder::PassBuilder(LLVMContext &Context, TargetMachine *TM,
                          PassInstrumentationCallbacks *PIC,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS)
     : Context(Context), Opts(getPassesOptions(Context)), TM(TM),
-      PTO(PTO ? *PTO : PipelineTuningOptions(&Context.getLibraryOptions())),
+      PTO(PTO.value_or(PipelineTuningOptions())
+              .resolve(Context.getLibraryOptions())),
       PGOOpt(PGOOpt), PIC(PIC), FS(std::move(FS)) {
   if (TM)
     TM->registerPassBuilderCallbacks(*this);

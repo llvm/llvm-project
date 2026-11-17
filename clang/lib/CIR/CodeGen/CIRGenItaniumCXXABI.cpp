@@ -282,14 +282,14 @@ CIRGenItaniumCXXABI::buildStructorSignature(
   // All parameters are already in place except VTT, which goes after 'this'.
   // These are clang types, so we don't need to worry about sret yet.
 
-  // Check if we need to add a VTT parameter (which has type void **).
+  // Check if we need to add a VTT parameter (which has type global void **).
   if ((isa<CXXConstructorDecl>(gd.getDecl()) ? gd.getCtorType() == Ctor_Base
                                              : gd.getDtorType() == Dtor_Base) &&
       cast<CXXMethodDecl>(gd.getDecl())->getParent()->getNumVBases() != 0) {
-    assert(!cir::MissingFeatures::addressSpace());
+    LangAS as = cgm.getGlobalVarAddressSpace(nullptr);
+    QualType q = astContext.getAddrSpaceQualType(astContext.VoidPtrTy, as);
     argTys.insert(argTys.begin() + 1,
-                  astContext.getPointerType(
-                      CanQualType::CreateUnsafe(astContext.VoidPtrTy)));
+                  astContext.getPointerType(CanQualType::CreateUnsafe(q)));
     return AddedStructorArgCounts::withPrefix(1);
   }
 
@@ -357,7 +357,11 @@ static void emitConstructorDestructorAlias(CIRGenModule &cgm,
   auto aliasee = cast<cir::FuncOp>(cgm.getAddrOfGlobal(targetDecl));
 
   // Populate actual alias.
-  cgm.emitAliasForGlobal(mangledName, entry, aliasDecl, aliasee, linkage);
+  cir::FuncOp alias =
+      cgm.emitAliasForGlobal(mangledName, entry, aliasDecl, aliasee, linkage);
+
+  // Alias constructors and destructors are always unnamed_addr.
+  alias.setUnnamedAddr(true);
 }
 
 void CIRGenItaniumCXXABI::emitCXXStructor(GlobalDecl gd) {
@@ -414,8 +418,9 @@ void CIRGenItaniumCXXABI::addImplicitStructorParams(CIRGenFunction &cgf,
     ASTContext &astContext = cgm.getASTContext();
 
     // FIXME: avoid the fake decl
-    assert(!cir::MissingFeatures::addressSpace());
-    QualType t = astContext.getPointerType(astContext.VoidPtrTy);
+    LangAS as = cgm.getGlobalVarAddressSpace(nullptr);
+    QualType q = astContext.getAddrSpaceQualType(astContext.VoidPtrTy, as);
+    QualType t = astContext.getPointerType(q);
     auto *vttDecl = ImplicitParamDecl::Create(
         astContext, /*DC=*/nullptr, md->getLocation(),
         &astContext.Idents.get("vtt"), t, ImplicitParamKind::CXXVTT);
@@ -467,9 +472,10 @@ CIRGenCXXABI::AddedStructorArgs CIRGenItaniumCXXABI::getImplicitConstructorArgs(
   // some targets.
   mlir::Value vtt =
       cgf.getVTTParameter(GlobalDecl(d, type), forVirtualBase, delegating);
-  QualType vttTy =
-      cgm.getASTContext().getPointerType(cgm.getASTContext().VoidPtrTy);
-  assert(!cir::MissingFeatures::addressSpace());
+  ASTContext &astContext = cgm.getASTContext();
+  LangAS as = cgm.getGlobalVarAddressSpace(nullptr);
+  QualType q = astContext.getAddrSpaceQualType(astContext.VoidPtrTy, as);
+  QualType vttTy = astContext.getPointerType(q);
   return AddedStructorArgs::withPrefix({{vtt, vttTy}});
 }
 
@@ -513,8 +519,12 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
   cgvt.createVTableInitializer(vtable, vtLayout, rtti,
                                cir::isLocalLinkage(linkage));
 
-  // Set the correct linkage.
+  // Set the correct linkage. The global was created as a declaration, which
+  // MLIR requires to be private, so the visibility has to follow the linkage of
+  // the definition.
   vtable.setLinkage(linkage);
+  mlir::SymbolTable::setSymbolVisibility(
+      vtable, CIRGenModule::getMLIRVisibility(vtable));
 
   if (cgm.supportsCOMDAT() && cir::isWeakForLinker(linkage))
     vtable.setSelfComdat();
@@ -637,7 +647,7 @@ public:
   /// Build the RTTI type info struct for the given type.
   mlir::Attribute buildTypeInfo(mlir::Location loc, QualType ty,
                                 cir::GlobalLinkageKind linkage,
-                                mlir::SymbolTable::Visibility visibility);
+                                cir::VisibilityKind globalVisibility);
 };
 
 /// ShouldUseExternalRTTIDescriptor - Returns whether the type information for
@@ -1137,27 +1147,26 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(mlir::Location loc,
 
   // Give the type_info object and name the formal visibility of the
   // type itself.
-  assert(!cir::MissingFeatures::hiddenVisibility());
-  assert(!cir::MissingFeatures::protectedVisibility());
-
-  mlir::SymbolTable::Visibility symVisibility;
-  if (cir::isLocalLinkage(linkage))
+  cir::VisibilityKind globalVisibility;
+  if (cir::isLocalLinkage(linkage)) {
     // If the linkage is local, only default visibility makes sense.
-    symVisibility = mlir::SymbolTable::Visibility::Public;
-  else if (cxxABI.classifyRTTIUniqueness(ty, linkage) ==
-           CIRGenItaniumCXXABI::RUK_NonUniqueHidden) {
+    globalVisibility = cir::VisibilityKind::Default;
+  } else if (cxxABI.classifyRTTIUniqueness(ty, linkage) ==
+             CIRGenItaniumCXXABI::RUK_NonUniqueHidden) {
     cgm.errorNYI(
         "buildTypeInfo: classifyRTTIUniqueness == RUK_NonUniqueHidden");
-    symVisibility = CIRGenModule::getMLIRVisibility(ty->getVisibility());
-  } else
-    symVisibility = CIRGenModule::getMLIRVisibility(ty->getVisibility());
+    globalVisibility = cir::VisibilityKind::Hidden;
+  } else {
+    globalVisibility = CIRGenModule::getCIRVisibilityKind(ty->getVisibility());
+  }
 
-  return buildTypeInfo(loc, ty, linkage, symVisibility);
+  return buildTypeInfo(loc, ty, linkage, globalVisibility);
 }
 
-mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
-    mlir::Location loc, QualType ty, cir::GlobalLinkageKind linkage,
-    mlir::SymbolTable::Visibility visibility) {
+mlir::Attribute
+CIRGenItaniumRTTIBuilder::buildTypeInfo(mlir::Location loc, QualType ty,
+                                        cir::GlobalLinkageKind linkage,
+                                        cir::VisibilityKind globalVisibility) {
   CIRGenBuilderTy &builder = cgm.getBuilder();
 
   assert(!cir::MissingFeatures::setDLLStorageClass());
@@ -1340,15 +1349,19 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   // All of this is to say that it's important that both the type_info
   // object and the type_info name be uniqued when weakly emitted.
 
-  mlir::SymbolTable::setSymbolVisibility(typeName, visibility);
+  mlir::SymbolTable::setSymbolVisibility(
+      typeName, CIRGenModule::getMLIRVisibilityFromCIRLinkage(linkage));
+  typeName.setGlobalVisibility(globalVisibility);
   assert(!cir::MissingFeatures::setDLLStorageClass());
   assert(!cir::MissingFeatures::opGlobalPartition());
-  assert(!cir::MissingFeatures::setDSOLocal());
+  cgm.setDSOLocal(static_cast<mlir::Operation *>(typeName));
 
-  mlir::SymbolTable::setSymbolVisibility(gv, visibility);
+  mlir::SymbolTable::setSymbolVisibility(
+      gv, CIRGenModule::getMLIRVisibilityFromCIRLinkage(linkage));
+  gv.setGlobalVisibility(globalVisibility);
   assert(!cir::MissingFeatures::setDLLStorageClass());
   assert(!cir::MissingFeatures::opGlobalPartition());
-  assert(!cir::MissingFeatures::setDSOLocal());
+  cgm.setDSOLocal(static_cast<mlir::Operation *>(gv));
 
   CIRGenModule::setInitializer(gv, init);
   return builder.getGlobalViewAttr(builder.getUInt8PtrTy(), gv);
@@ -1643,29 +1656,25 @@ CIRGenCallee CIRGenItaniumCXXABI::getVirtualFunctionPointer(
   } else {
     assert(!cir::MissingFeatures::emitTypeMetadataCodeForVCall());
 
-    mlir::Value vfuncLoad;
     if (cgm.getLangOpts().RelativeCXXABIVTables) {
       assert(!cir::MissingFeatures::vtableRelativeLayout());
       cgm.errorNYI(loc, "getVirtualFunctionPointer: isRelativeLayout");
     } else {
-      auto vtableSlotPtr = cir::VTableGetVirtualFnAddrOp::create(
-          builder, loc, builder.getPointerTo(tyPtr), vtable, vtableIndex);
-      vfuncLoad = builder.createAlignedLoad(loc, tyPtr, vtableSlotPtr,
-                                            cgf.getPointerAlign());
+      auto vfuncOp = cir::VTableGetVirtualFnOp::create(builder, loc, tyPtr,
+                                                       vtable, vtableIndex);
+
+      // Set invariant on the virtual function pointer load to indicate that
+      // function didn't change inside vtable.
+      // It's safe to add it without -fstrict-vtable-pointers, but it would not
+      // help in devirtualization because it will only matter if we will have 2
+      // the same virtual function loads from the same vtable load, which won't
+      // happen without enabled devirtualization with -fstrict-vtable-pointers.
+      if (cgm.getCodeGenOpts().OptimizationLevel > 0 &&
+          cgm.getCodeGenOpts().StrictVTablePointers)
+        vfuncOp.setInvariant(true);
+
+      vfunc = vfuncOp;
     }
-
-    // Set invariant on the cir.load of virtual function pointer to indicate
-    // that function didn't change inside vtable.
-    // It's safe to add it without -fstrict-vtable-pointers, but it would not
-    // help in devirtualization because it will only matter if we will have 2
-    // the same virtual function loads from the same vtable load, which won't
-    // happen without enabled devirtualization with -fstrict-vtable-pointers.
-    if (cgm.getCodeGenOpts().OptimizationLevel > 0 &&
-        cgm.getCodeGenOpts().StrictVTablePointers)
-      if (auto loadOp = vfuncLoad.getDefiningOp<cir::LoadOp>())
-        loadOp.setInvariant(true);
-
-    vfunc = vfuncLoad;
   }
 
   CIRGenCallee callee(gd, vfunc.getDefiningOp());
@@ -2101,7 +2110,6 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
 
   // TODO: When sanitizer support is implemented, we'll need to
   // get the address space from `newPtr`.
-  assert(!cir::MissingFeatures::addressSpace());
   assert(!cir::MissingFeatures::sanitizers());
 
   ASTContext &ctx = cgm.getASTContext();
@@ -2114,9 +2122,8 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
   assert(cookieSize == getArrayCookieSizeImpl(elementType));
 
   mlir::Type u8Ty = cgf.getBuilder().getUInt8Ty();
-  cir::PointerType u8PtrTy = cgf.getBuilder().getUInt8PtrTy();
   mlir::Value baseBytePtr =
-      cgf.getBuilder().createBitcast(newPtr.getPointer(), u8PtrTy);
+      cgf.getBuilder().createPtrBitcast(newPtr.getPointer(), u8Ty);
 
   // Compute an offset to the cookie.
   CharUnits cookieOffset = cookieSize - sizeSize;

@@ -179,3 +179,19 @@
 // RUN: --check-prefix=CHECK-FIXED-I4 \
 // RUN: --check-prefix=CHECK-FIXED-I5 \
 // RUN: < %t %s
+
+// RUN: %clang --target=sparc-none-gnu -mno-app-regs -### %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-NO-APP-REGS %s
+// RUN: %clang --target=sparc64-unknown-openbsd -mno-app-regs -### %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-NO-APP-REGS %s
+// RUN: %clang --target=sparc64-unknown-openbsd -mapp-regs -mno-app-regs -### %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-NO-APP-REGS %s
+// CHECK-NO-APP-REGS: "-target-feature" "+reserve-g2" "-target-feature" "+reserve-g3" "-target-feature" "+reserve-g4"
+
+// RUN: %clang --target=sparc64-unknown-openbsd -### %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-APP-REGS %s
+// RUN: %clang --target=sparc64-unknown-openbsd -mapp-regs -### %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-APP-REGS %s
+// RUN: %clang --target=sparc64-unknown-openbsd -mno-app-regs -mapp-regs -### %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-APP-REGS %s
+// CHECK-APP-REGS-NOT: "+reserve-g{{[234]}}"

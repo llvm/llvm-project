@@ -48,10 +48,10 @@ body:             |
   bb.2:
     S_NOP 0, implicit-def $sgpr4_sgpr5_sgpr6_sgpr7
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %0:vreg_64 = BUFFER_LOAD_FORMAT_XY_IDXEN killed %1, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), addrspace 8)
+    %0:vreg_64 = BUFFER_LOAD_FORMAT_XY_IDXEN %1, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), addrspace 8)
 
   bb.3:
-    EXP 0, killed %0.sub0, killed %0.sub1, undef %2:vgpr_32, undef %2:vgpr_32, 0, 0, 0, implicit $exec
+    EXP 0, %0.sub0, %0.sub1, undef %2:vgpr_32, undef %2:vgpr_32, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -98,10 +98,10 @@ body:             |
   bb.2:
     S_NOP 0, implicit-def $sgpr4_sgpr5_sgpr6_sgpr7
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %0:vreg_96 = BUFFER_LOAD_FORMAT_XYZ_IDXEN killed %1, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), addrspace 8)
+    %0:vreg_96 = BUFFER_LOAD_FORMAT_XYZ_IDXEN %1, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), addrspace 8)
 
   bb.3:
-    EXP 0, killed %0.sub0, killed %0.sub1, killed %0.sub2, undef %2:vgpr_32, 0, 0, 0, implicit $exec
+    EXP 0, %0.sub0, %0.sub1, %0.sub2, undef %2:vgpr_32, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -148,10 +148,10 @@ body:             |
   bb.2:
     S_NOP 0, implicit-def $sgpr4_sgpr5_sgpr6_sgpr7
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %0:vreg_96 = BUFFER_LOAD_FORMAT_XYZ_IDXEN killed %1, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), addrspace 8)
+    %0:vreg_96 = BUFFER_LOAD_FORMAT_XYZ_IDXEN %1, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), addrspace 8)
 
   bb.3:
-    EXP 0, killed %0.sub0, killed %0.sub1, killed %0.sub2, undef %2:vgpr_32, 0, 0, 0, implicit $exec
+    EXP 0, %0.sub0, %0.sub1, %0.sub2, undef %2:vgpr_32, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -201,10 +201,10 @@ body:             |
   bb.2:
     S_NOP 0, implicit-def $sgpr4_sgpr5_sgpr6_sgpr7
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %0:vreg_64 = BUFFER_LOAD_FORMAT_XY_IDXEN killed %1, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), addrspace 8)
+    %0:vreg_64 = BUFFER_LOAD_FORMAT_XY_IDXEN %1, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), addrspace 8)
 
   bb.3:
-    EXP 0, killed %0.sub0, killed %0.sub1, undef %2:vgpr_32, undef %2:vgpr_32, 0, 0, 0, implicit $exec
+    EXP 0, %0.sub0, %0.sub1, undef %2:vgpr_32, undef %2:vgpr_32, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -252,10 +252,10 @@ body:             |
   bb.2:
     S_NOP 0, implicit-def $sgpr4_sgpr5_sgpr6_sgpr7
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %0:vreg_64 = BUFFER_LOAD_FORMAT_XY_IDXEN killed %1, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), addrspace 8)
+    %0:vreg_64 = BUFFER_LOAD_FORMAT_XY_IDXEN %1, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), addrspace 8)
 
   bb.3:
-    EXP 0, killed %0.sub0, killed %0.sub0, undef %2:vgpr_32, undef %2:vgpr_32, 0, 0, 0, implicit $exec
+    EXP 0, %0.sub0, %0.sub0, undef %2:vgpr_32, undef %2:vgpr_32, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
