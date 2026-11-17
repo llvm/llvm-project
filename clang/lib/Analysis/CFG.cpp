@@ -2028,8 +2028,8 @@ void CFGBuilder::addAutomaticObjDestruction(LocalScope::const_iterator B,
   }
 }
 
-/// Add ScopeEnd CFG elements for each element in the CFG leaving a
-/// local scope. Assumes that range [B, E) corresponds to single scope.
+/// Add ScopeEnd CFG elements for the local scope that is being left.
+/// Assumes that range [B, E) corresponds to single scope.
 void CFGBuilder::addScopeExitHandling(LocalScope::const_iterator B,
                                       LocalScope::const_iterator E, Stmt *S) {
   assert(!B.inSameLocalScope(E));
