@@ -122,7 +122,7 @@ aese	v19.16b, v1.16b
 # CHECK:      Dispatch Width:    2
 # CHECK-NEXT: uOps Per Cycle:    0.99
 # CHECK-NEXT: IPC:               0.99
-# CHECK-NEXT: Block RThroughput: 2.0
+# CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -134,7 +134,7 @@ aese	v19.16b, v1.16b
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      3     1.00                        aese	v0.16b, v1.16b
-# CHECK-NEXT:  1      3     1.00                        aesmc	v0.16b, v0.16b
+# CHECK-NEXT:  1      3     0.50                        aesmc	v0.16b, v0.16b
 
 # CHECK:      [2] Code Region - aesd-aesimc-pair
 
@@ -146,7 +146,7 @@ aese	v19.16b, v1.16b
 # CHECK:      Dispatch Width:    2
 # CHECK-NEXT: uOps Per Cycle:    0.99
 # CHECK-NEXT: IPC:               0.99
-# CHECK-NEXT: Block RThroughput: 2.0
+# CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -158,19 +158,19 @@ aese	v19.16b, v1.16b
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      3     1.00                        aesd	v0.16b, v1.16b
-# CHECK-NEXT:  1      3     1.00                        aesimc	v0.16b, v0.16b
+# CHECK-NEXT:  1      3     0.50                        aesimc	v0.16b, v0.16b
 
 # CHECK:      [3] Code Region - aese-aesmc-pairs-independent
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      800
-# CHECK-NEXT: Total Cycles:      802
+# CHECK-NEXT: Total Cycles:      403
 # CHECK-NEXT: Total uOps:        800
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.00
-# CHECK-NEXT: IPC:               1.00
-# CHECK-NEXT: Block RThroughput: 8.0
+# CHECK-NEXT: uOps Per Cycle:    1.99
+# CHECK-NEXT: IPC:               1.99
+# CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -182,13 +182,13 @@ aese	v19.16b, v1.16b
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      3     1.00                        aese	v16.16b, v1.16b
-# CHECK-NEXT:  1      3     1.00                        aesmc	v16.16b, v16.16b
+# CHECK-NEXT:  1      3     0.50                        aesmc	v16.16b, v16.16b
 # CHECK-NEXT:  1      3     1.00                        aese	v17.16b, v1.16b
-# CHECK-NEXT:  1      3     1.00                        aesmc	v17.16b, v17.16b
+# CHECK-NEXT:  1      3     0.50                        aesmc	v17.16b, v17.16b
 # CHECK-NEXT:  1      3     1.00                        aese	v18.16b, v1.16b
-# CHECK-NEXT:  1      3     1.00                        aesmc	v18.16b, v18.16b
+# CHECK-NEXT:  1      3     0.50                        aesmc	v18.16b, v18.16b
 # CHECK-NEXT:  1      3     1.00                        aese	v19.16b, v1.16b
-# CHECK-NEXT:  1      3     1.00                        aesmc	v19.16b, v19.16b
+# CHECK-NEXT:  1      3     0.50                        aesmc	v19.16b, v19.16b
 
 # CHECK:      [4] Code Region - sha1h
 
@@ -473,12 +473,12 @@ aese	v19.16b, v1.16b
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      400
-# CHECK-NEXT: Total Cycles:      402
+# CHECK-NEXT: Total Cycles:      403
 # CHECK-NEXT: Total uOps:        400
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.00
-# CHECK-NEXT: IPC:               1.00
+# CHECK-NEXT: uOps Per Cycle:    0.99
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Instruction Info:

@@ -37,8 +37,8 @@
 # CHECK-NEXT:  1      3     1.00                        addv	b0, v0.16b
 # CHECK-NEXT:  1      3     1.00                        aesd	v0.16b, v0.16b
 # CHECK-NEXT:  1      3     1.00                        aese	v0.16b, v0.16b
-# CHECK-NEXT:  1      3     1.00                        aesimc	v0.16b, v0.16b
-# CHECK-NEXT:  1      3     1.00                        aesmc	v0.16b, v0.16b
+# CHECK-NEXT:  1      3     0.50                        aesimc	v0.16b, v0.16b
+# CHECK-NEXT:  1      3     0.50                        aesmc	v0.16b, v0.16b
 # CHECK-NEXT:  1      2     0.50                        and	v0.8b, v0.8b, v0.8b
 # CHECK-NEXT:  1      2     0.50                        bic	v0.4h, #15, lsl #8
 # CHECK-NEXT:  1      2     1.00                        bic	v23.8h, #101
@@ -1577,20 +1577,20 @@
 # CHECK-NEXT: [0.1] - A53UnitALU
 # CHECK-NEXT: [1]   - A53UnitB
 # CHECK-NEXT: [2]   - A53UnitDiv
-# CHECK-NEXT: [3.0] - A53UnitFPALU
-# CHECK-NEXT: [3.1] - A53UnitFPALU
-# CHECK-NEXT: [4.0] - A53UnitFPDS
-# CHECK-NEXT: [4.1] - A53UnitFPDS
-# CHECK-NEXT: [5]   - A53UnitFPRestricted
-# CHECK-NEXT: [6]   - A53UnitLdSt
-# CHECK-NEXT: [7]   - A53UnitMAC
+# CHECK-NEXT: [3]   - A53UnitFP0
+# CHECK-NEXT: [4]   - A53UnitFP1
+# CHECK-NEXT: [5.0] - A53UnitFPDS
+# CHECK-NEXT: [5.1] - A53UnitFPDS
+# CHECK-NEXT: [6]   - A53UnitFPRestricted
+# CHECK-NEXT: [7]   - A53UnitLdSt
+# CHECK-NEXT: [8]   - A53UnitMAC
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]    [7]
-# CHECK-NEXT:  -      -      -      -     1003.50 1003.50 76.00 76.00 134.00 466.00  -
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5.0]  [5.1]  [6]    [7]    [8]
+# CHECK-NEXT:  -      -      -      -     1001.50 1001.50 76.00 76.00 134.00 466.00  -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]    [7]    Instructions:
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5.0]  [5.1]  [6]    [7]    [8]    Instructions:
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -     abs	d29, d24
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -     abs	v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -     abs	v0.2d, v0.2d
@@ -1618,8 +1618,8 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -     1.00    -      -     addv	b0, v0.16b
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -     aesd	v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -     aese	v0.16b, v0.16b
-# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -     aesimc	v0.16b, v0.16b
-# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -     aesmc	v0.16b, v0.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     aesimc	v0.16b, v0.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     aesmc	v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -     and	v0.8b, v0.8b, v0.8b
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -     bic	v0.4h, #15, lsl #8
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -      -     bic	v23.8h, #101
