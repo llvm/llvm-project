@@ -1060,6 +1060,107 @@ TEST_P(RemarkHistoryTest, OwnsQueryAndHistoryStrings) {
   }
 }
 
+TEST_P(RemarkHistoryTest, LocationQueriesAcrossReplacementAndReset) {
+  engine().enableHistory();
+  Location loc = FileLineColLoc::get(&context, "input.mlir", 7, 2);
+  Location wrapped = NameLoc::get(StringAttr::get(&context, "wrapped"), loc);
+  Location absent = FileLineColLoc::get(&context, "missing.mlir", 1, 1);
+  auto opts = remark::RemarkOpts::name("Candidate").category("Opt");
+  auto query = remark::RemarkQuery{}.at(loc);
+
+  auto emitted = emit(loc, opts);
+  flush();
+  auto replaced = emit(loc, opts.function("old"));
+  EXPECT_THAT(engine().findRemarks(query.function("old")),
+              ElementsAre(replaced));
+  auto survivor = emit(loc, opts.function("new"));
+  auto other = emit(loc, opts.name("Other"));
+  auto wrappedId = emit(wrapped, opts);
+  // Grow both indexes after recording the candidates we will query.
+  for (unsigned i = 0; i < 128; ++i)
+    emit(FileLineColLoc::get(&context, "other.mlir", i + 1, 1), opts);
+
+  SmallVector<remark::RemarkId> expected{emitted};
+  if (!isFinal())
+    expected.push_back(replaced);
+  expected.append({survivor, other});
+  EXPECT_THAT(engine().findRemarks(query), ElementsAreArray(expected));
+  EXPECT_THAT(engine().findRemarks(query.name("Candidate").function("new")),
+              ElementsAre(survivor));
+  EXPECT_THAT(engine().findRemarks(remark::RemarkQuery{}.at(wrapped)),
+              ElementsAre(wrappedId));
+  EXPECT_THAT(engine().findRemarks(remark::RemarkQuery{}.at(absent)),
+              IsEmpty());
+  EXPECT_THAT(engine().findRemarks(remark::RemarkQuery::named("Other")),
+              ElementsAre(other));
+  flush();
+  EXPECT_THAT(engine().findRemarks(query), ElementsAreArray(expected));
+
+  engine().clearHistory();
+  EXPECT_THAT(engine().findRemarks(query), IsEmpty());
+  EXPECT_THAT(engine().findRemarks(remark::RemarkQuery{}.at(wrapped)),
+              IsEmpty());
+  auto pending = emit(loc, opts);
+  EXPECT_THAT(engine().findRemarks(query), ElementsAre(pending));
+  engine().enableHistory(false);
+  EXPECT_THAT(engine().findRemarks(query), IsEmpty());
+  engine().enableHistory();
+  if (isFinal())
+    EXPECT_THAT(engine().findRemarks(query), ElementsAre(pending));
+  else
+    EXPECT_THAT(engine().findRemarks(query), IsEmpty());
+  flush();
+  engine().clearHistory();
+  auto next = emit(loc, opts);
+  EXPECT_THAT(engine().findRemarks(query), ElementsAre(next));
+}
+
+TEST(Remark, LocationVisitorSupportsExistingPolicyOverrides) {
+  class PendingPolicy : public remark::detail::RemarkEmittingPolicyBase {
+  public:
+    void reportRemark(const remark::detail::Remark &remark) override {
+      pending.push_back(remark);
+    }
+    void finalize() override { pending.clear(); }
+    void forEachPendingRemark(
+        llvm::function_ref<void(const remark::detail::Remark &)> callback)
+        const override {
+      for (const auto &remark : pending)
+        callback(remark);
+    }
+
+  private:
+    SmallVector<remark::detail::Remark, 0> pending;
+  };
+
+  MLIRContext context;
+  remark::RemarkCategories categories;
+  categories.passed = "Opt";
+  ASSERT_TRUE(succeeded(remark::enableOptimizationRemarks(
+      context, nullptr, std::make_unique<PendingPolicy>(), categories)));
+  auto *engine = context.getRemarkEngine();
+  engine->enableHistory();
+  ASSERT_TRUE(engine->isPassedOptRemarkEnabled("Opt"));
+  Location loc = FileLineColLoc::get(&context, "input.mlir", 1, 1);
+  Location otherLoc = NameLoc::get(StringAttr::get(&context, "wrapped"), loc);
+  auto opts = remark::RemarkOpts::name("Candidate").category("Opt");
+  remark::RemarkId target, other;
+  {
+    auto first = remark::passed(loc, opts);
+    target = first.getId();
+    auto second = remark::passed(otherLoc, opts);
+    other = second.getId();
+  }
+  SmallVector<remark::RemarkId> visited;
+  engine->getRemarkEmittingPolicy()->forEachPendingRemarkAt(
+      loc, [&](const auto &remark) { visited.push_back(remark.getId()); });
+  EXPECT_THAT(visited, ElementsAre(target));
+  EXPECT_THAT(engine->findRemarks(remark::RemarkQuery{}.at(loc)),
+              ElementsAre(target));
+  EXPECT_THAT(engine->findRemarks(remark::RemarkQuery{}),
+              ElementsAre(target, other));
+}
+
 TEST_P(RemarkHistoryTest, QueryLinksSnapshotAndSerialization) {
   engine().enableHistory();
   Location loc = UnknownLoc::get(&context);
@@ -1521,7 +1622,7 @@ TEST_P(RemarkHistoryTest, ConcurrentReportsAndQueries) {
             loc,
             remark::RemarkOpts::name(name).category("Opt").function(function))
             << remark::relatedTo(remark::RemarkQuery{}.function(function));
-        (void)engine().findRemarks(remark::RemarkQuery{});
+        (void)engine().findRemarks(remark::RemarkQuery{}.at(loc));
       }
     });
   for (std::thread &thread : threads)

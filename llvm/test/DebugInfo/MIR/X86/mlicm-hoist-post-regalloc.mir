@@ -64,30 +64,24 @@
 ...
 ---
 name:            Process
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr64 }
-  - { id: 2, class: gr64 }
-  - { id: 3, class: gr32 }
-  - { id: 4, class: gr64 }
 body:             |
   bb.0.entry:
     successors: %bb.1.while.body(0x80000000)
     liveins: $rdi
 
     DBG_VALUE $rdi, _, !17, !DIExpression(), debug-location !18
-    %2 = COPY $rdi
+    %2:gr64 = COPY $rdi
     DBG_VALUE %2, _, !17, !DIExpression(), debug-location !18
 
   bb.1.while.body:
     successors: %bb.1.while.body(0x80000000)
 
-    %0 = PHI %2, %bb.0.entry, %1, %bb.1.while.body
+    %0:gr64 = PHI %2, %bb.0.entry, %1, %bb.1.while.body
     DBG_VALUE %0, _, !17, !DIExpression(), debug-location !18
-    %1 = ADD64ri32 %0, 4, implicit-def dead $eflags, debug-location !20
+    %1:gr64 = ADD64ri32 %0, 4, implicit-def dead $eflags, debug-location !20
     DBG_VALUE %1, _, !17, !DIExpression(), debug-location !18
-    %3 = MOV32rm %0, 1, _, 0, _, debug-location !21 :: (load (s32) from %ir.p.addr.0)
-    %4 = MOV64rm $rip, 1, _, target-flags(x86-gotpcrel) @x, _, debug-location !22 :: (load (s64) from got)
+    %3:gr32 = MOV32rm %0, 1, _, 0, _, debug-location !21 :: (load (s32) from %ir.p.addr.0)
+    %4:gr64 = MOV64rm $rip, 1, _, target-flags(x86-gotpcrel) @x, _, debug-location !22 :: (load (s64) from got)
     MOV32mr %4, 1, _, 0, _, %3, debug-location !22 :: (store (s32) into @x)
     JMP_1 %bb.1.while.body, debug-location !23
 

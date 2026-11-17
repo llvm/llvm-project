@@ -26,7 +26,6 @@
 
 #include "ErrorReporting.h"
 #include "Shared/Debug.h"
-#include "Shared/Environment.h"
 #include "Shared/RefCnt.h"
 #include "Shared/Utils.h"
 #include "Utils/ELF.h"

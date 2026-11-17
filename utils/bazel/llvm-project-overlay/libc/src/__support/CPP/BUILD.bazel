@@ -259,8 +259,8 @@ libc_support_library(
     ],
     deps = [
         ":nullptr_t",
-        "//libc:llvm_libc_macros_stdfix_macros",
         "//libc/hdr:stdint_proxy",
+        "//libc/include:llvm_libc_macros_stdfix_macros",
         "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros/properties:compiler",
