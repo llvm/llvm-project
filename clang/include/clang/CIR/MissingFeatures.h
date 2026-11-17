@@ -31,7 +31,6 @@ struct MissingFeatures {
 
   // Unhandled global/linkage information.
   static bool opGlobalThreadLocal() { return false; }
-  static bool opGlobalUnnamedAddr() { return false; }
   static bool opGlobalVisibility() { return false; }
   static bool opGlobalDLLImportExport() { return false; }
   static bool opGlobalPartition() { return false; }
