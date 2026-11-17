@@ -56,17 +56,6 @@ getMemoryAccessInfo(const Instruction &I,
   const auto *II = dyn_cast<IntrinsicInst>(&I);
   if (!II)
     return std::nullopt;
-  if (const auto *VP = dyn_cast<VPIntrinsic>(II)) {
-    auto Ptr = VPIntrinsic::getMemoryPointerParamPos(VP->getIntrinsicID());
-    if (!Ptr)
-      return std::nullopt;
-    if (auto Data = VPIntrinsic::getMemoryDataParamPos(VP->getIntrinsicID()))
-      return MemoryAccessInfo{VP->getArgOperand(*Data)->getType(), *Ptr, false};
-    Type *Ty = VP->getType();
-    if (VP->getIntrinsicID() == Intrinsic::vp_load_ff)
-      Ty = Ty->getStructElementType(0);
-    return MemoryAccessInfo{Ty, *Ptr, true};
-  }
   switch (II->getIntrinsicID()) {
   case Intrinsic::experimental_vector_histogram_add:
   case Intrinsic::experimental_vector_histogram_uadd_sat:
@@ -78,6 +67,7 @@ getMemoryAccessInfo(const Instruction &I,
   case Intrinsic::masked_load:
   case Intrinsic::masked_gather:
   case Intrinsic::masked_expandload:
+  case Intrinsic::vp_load:
     return MemoryAccessInfo{II->getType(), 0, true};
   case Intrinsic::masked_store:
   case Intrinsic::masked_scatter:
