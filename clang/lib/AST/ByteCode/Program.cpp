@@ -13,7 +13,9 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/ExprCXX.h"
 
+#define DEBUG_TYPE "exprconstant"
 using namespace clang;
 using namespace clang::interp;
 
@@ -161,7 +163,7 @@ UnsignedOrNone Program::createGlobal(DeclOrExpr D, QualType Ty, bool IsExtern,
                             /*IsMutable=*/false, IsVolatile);
   else
     Desc = createDescriptor(D, Ty.getTypePtr(), IsConst, IsTemporary,
-                            /*IsMutable=*/false, IsVolatile);
+                            /*IsMutable=*/false, IsVolatile, Init);
 
   if (!Desc)
     return std::nullopt;
@@ -336,6 +338,75 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   return R;
 }
 
+// The expression we use for the filler can only work if the computed value for
+// it is independent of its position in the array. We cannot really *know* if an
+// expression has this propery, so we're conservative here.
+//
+// To summarize, we only allow ImplicitValueInitExprs, or InitListExprs
+// consisting of such.
+static bool maybeDependentArrayFiller(const Expr *Filler) {
+  assert(Filler);
+
+  if (isa<ImplicitValueInitExpr>(Filler))
+    return false;
+  if (const auto *ILE = dyn_cast<InitListExpr>(Filler)) {
+    for (unsigned I = 0, N = ILE->getNumInits(); I != N; ++I) {
+      if (maybeDependentArrayFiller(ILE->getInit(I)))
+        return true;
+    }
+
+    if (const Expr *F = ILE->getArrayFiller())
+      return maybeDependentArrayFiller(F);
+    return false;
+  }
+  return true;
+}
+
+/// Returns how many of the \p NumElems elements of an array initialized by
+/// \p Init need storage. Elements initialized by a zero filler share one
+/// element, e.g. `int A[100] = {1, 2};` stores 3 elements.
+///
+/// The returned value includes the filler element.
+static size_t getNumStoredElems(const VarDecl *VD, size_t NumElems,
+                                const Expr *Init) {
+  assert(Init);
+  // Only global variables.
+  if (!Context::shouldBeGloballyIndexed(VD))
+    return NumElems;
+
+  // char foo[1000] = "abc"
+  if (const auto *SL = dyn_cast<StringLiteral>(Init))
+    return std::min<size_t>(SL->getLength() + 1, NumElems);
+
+  const auto *ILE = dyn_cast<InitListExpr>(Init);
+  if (!ILE)
+    return NumElems;
+
+  // char foo[1000] = {"abc"}
+  if (ILE->isStringLiteralInit()) {
+    // ObjCEncodeExpr can also appear here.
+    if (const auto *SL = dyn_cast<StringLiteral>(ILE->getInit(0)))
+      return std::min<size_t>(SL->getLength() + 1, NumElems);
+    return NumElems;
+  }
+
+  // An EmbedExpr initializes more than one element.
+  if (llvm::any_of(ILE->inits(), [](const Expr *E) {
+        return isa<EmbedExpr>(E->IgnoreParenImpCasts());
+      }))
+    return NumElems;
+
+  assert(ILE->getType()->isArrayType());
+  const Expr *Filler = ILE->getArrayFiller();
+  if (!Filler)
+    return NumElems;
+
+  if (maybeDependentArrayFiller(Filler))
+    return NumElems;
+
+  return std::min<size_t>(ILE->getNumInits() + 1, NumElems);
+}
+
 Descriptor *Program::createDescriptor(DeclOrExpr D, const Type *Ty,
                                       bool IsConst, bool IsTemporary,
                                       bool IsMutable, bool IsVolatile,
@@ -354,14 +425,23 @@ Descriptor *Program::createDescriptor(DeclOrExpr D, const Type *Ty,
     // Array of well-known bounds.
     if (const auto *CAT = dyn_cast<ConstantArrayType>(ArrayType)) {
       size_t NumElems = CAT->getZExtSize();
+      // The actual number of elements we will allocate storage for.
+      size_t NumStoredElems = NumElems;
+      if (Init && D.isVarDecl())
+        NumStoredElems = getNumStoredElems(D.asVarDecl(), NumElems, Init);
+
+      // This only relevant for tests/SemaCXX/large-array-init.cpp.
+      LLVM_DEBUG(llvm::dbgs() << "The number of elements to initialize: "
+                              << (NumStoredElems - 1) << ".\n");
+
       if (OptPrimType T = Ctx.classify(ElemTy)) {
         // Arrays of primitives.
         unsigned ElemSize = primSize(*T);
         if ((Descriptor::MaxArrayElemBytes / ElemSize) < NumElems) {
           return nullptr;
         }
-        return allocateDescriptor(D, CAT, *T, NumElems, IsConst, IsTemporary,
-                                  IsMutable, IsVolatile);
+        return allocateDescriptor(D, CAT, *T, NumElems, NumStoredElems, IsConst,
+                                  IsTemporary, IsMutable, IsVolatile);
       }
         // Arrays of composites. In this case, the array is a list of pointers,
         // followed by the actual elements.
@@ -372,8 +452,8 @@ Descriptor *Program::createDescriptor(DeclOrExpr D, const Type *Ty,
       unsigned ElemSize = ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
       if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems)
         return nullptr;
-      return allocateDescriptor(D, Ty, ElemDesc, NumElems, IsConst, IsTemporary,
-                                IsMutable);
+      return allocateDescriptor(D, Ty, ElemDesc, NumElems, NumStoredElems,
+                                IsConst, IsTemporary, IsMutable);
     }
 
     // Array of unknown bounds - cannot be accessed and pointer arithmetic
@@ -405,7 +485,7 @@ Descriptor *Program::createDescriptor(DeclOrExpr D, const Type *Ty,
     if (!ElemTy)
       return nullptr;
 
-    return allocateDescriptor(D, CT, *ElemTy, 2, IsConst, IsTemporary,
+    return allocateDescriptor(D, CT, *ElemTy, 2, 2, IsConst, IsTemporary,
                               IsMutable, IsVolatile);
   }
 
@@ -415,7 +495,8 @@ Descriptor *Program::createDescriptor(DeclOrExpr D, const Type *Ty,
     if (!ElemTy)
       return nullptr;
 
-    return allocateDescriptor(D, VT, *ElemTy, VT->getNumElements(), IsConst,
+    unsigned NumElems = VT->getNumElements();
+    return allocateDescriptor(D, VT, *ElemTy, NumElems, NumElems, IsConst,
                               IsTemporary, IsMutable, IsVolatile);
   }
 
@@ -425,8 +506,9 @@ Descriptor *Program::createDescriptor(DeclOrExpr D, const Type *Ty,
     if (!ElemTy)
       return nullptr;
 
-    return allocateDescriptor(D, MT, *ElemTy, MT->getNumElementsFlattened(),
-                              IsConst, IsTemporary, IsMutable, IsVolatile);
+    unsigned NumElems = MT->getNumElementsFlattened();
+    return allocateDescriptor(D, MT, *ElemTy, NumElems, NumElems, IsConst,
+                              IsTemporary, IsMutable, IsVolatile);
   }
 
   return nullptr;

@@ -499,6 +499,9 @@ protected:
   /// variable. This is set in visitInitializer().
   bool Initializing = false;
   const VarDecl *InitializingDecl = nullptr;
+  /// Root initializer of the global array being initialized, if that array
+  /// only stores one filler element. See Descriptor::HasFiller.
+  const Expr *FillerSlotInit = nullptr;
 
   llvm::SmallVector<InitLink> InitStack;
   bool InitStackActive = false;

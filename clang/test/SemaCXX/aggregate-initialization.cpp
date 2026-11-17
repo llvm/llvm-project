@@ -2,6 +2,11 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++14 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++2a %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++14 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++2a %s -fexperimental-new-constant-interpreter
+
 
 // Verify that using an initializer list for a non-aggregate looks for
 // constructors..

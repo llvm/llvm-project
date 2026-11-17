@@ -45,7 +45,7 @@ std::optional<Pointer> MemberPointer::toPointer(const Context &Ctx) const {
     const Record *FieldRecord = Ctx.getRecord(FieldParent);
 
     Offset += FieldRecord->getField(FD)->Offset;
-    if (Offset > CastedBase.block()->getSize())
+    if (Offset > CastedBase.block()->getAddressableSize())
       return std::nullopt;
 
     if (const RecordDecl *BaseDecl = Base.getDeclPtr().getRecord()->getDecl();
@@ -64,10 +64,10 @@ std::optional<Pointer> MemberPointer::toPointer(const Context &Ctx) const {
   }
 
   assert(BaseRecord);
-  if (Offset > CastedBase.block()->getSize())
+  if (Offset > CastedBase.block()->getAddressableSize())
     return std::nullopt;
 
-  assert(Offset <= CastedBase.block()->getSize());
+  assert(Offset <= CastedBase.block()->getAddressableSize());
   return Pointer(const_cast<Block *>(Base.block()), Offset, Offset);
 }
 

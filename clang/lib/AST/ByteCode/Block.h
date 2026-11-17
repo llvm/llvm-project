@@ -71,12 +71,14 @@ public:
 
   Block(unsigned EvalID, UnsignedOrNone DeclID, const Descriptor *Desc,
         BlockKind K, BlockFlags Flags = BlockFlags::empty())
-      : Desc(Desc), DescSize(Desc->getAllocSize()), DeclID(DeclID),
+      : Desc(Desc), DescSize(Desc->getAllocSize()),
+        AddressableSize(Desc->getAddressableSize()), DeclID(DeclID),
         EvalID(EvalID), Flags(Flags), Kind(K), MDSize(getMetadataSize(K)) {}
 
   Block(unsigned EvalID, const Descriptor *Desc, BlockKind K,
         BlockFlags Flags = BlockFlags::empty())
-      : Desc(Desc), DescSize(Desc->getAllocSize()), EvalID(EvalID),
+      : Desc(Desc), DescSize(Desc->getAllocSize()),
+        AddressableSize(Desc->getAddressableSize()), EvalID(EvalID),
         Flags(Flags), Kind(K), MDSize(getMetadataSize(K)) {}
 
   /// Number of bytes needed to allocate the block.
@@ -121,6 +123,9 @@ public:
   bool isAccessible() const { return Flags.V == 0; }
   /// Returns the size of the block, excluding metadata.
   unsigned getSize() const { return DescSize; }
+  /// Returns the size of the block as seen by pointers, excluding metadata.
+  /// Exceeds getSize() for arrays with a filler, see Descriptor::HasFiller.
+  unsigned getAddressableSize() const { return AddressableSize; }
   /// Returns the size of the block, including metadata.
   unsigned getAllocSize() const { return DescSize + MDSize; }
   /// Returns the declaration ID.
@@ -227,6 +232,7 @@ private:
   Pointer *Pointers = nullptr;
   /// Size of the data(), excluding block-level metadata.
   const unsigned DescSize;
+  const unsigned AddressableSize;
   /// Unique identifier of the declaration.
   const UnsignedOrNone DeclID = std::nullopt;
   const unsigned EvalID = ~0u;

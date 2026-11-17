@@ -2562,12 +2562,19 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
       }
     }
 
-    // Expand the filler expression.
-    // FIXME: This should go away.
+    // Expand the filler expression. Global arrays with a filler only store
+    // one filler element.
     if (ArrayFiller && !isa<NoInitExpr>(ArrayFiller)) {
-      for (; ElementIndex != NumElems; ++ElementIndex) {
+      if (FillerSlotInit == E) {
+        // Only initialize the filler element.
         if (!this->visitArrayElemInit(ElementIndex, ArrayFiller, InitT))
           return false;
+      } else {
+        // Expand the InitListExpr's filler to all the allocated array elements.
+        for (; ElementIndex != NumElems; ++ElementIndex) {
+          if (!this->visitArrayElemInit(ElementIndex, ArrayFiller, InitT))
+            return false;
+        }
       }
     }
 
@@ -3212,38 +3219,38 @@ bool Compiler<Emitter>::VisitStringLiteral(const StringLiteral *E) {
   unsigned ArraySize = CAT->getZExtSize();
   unsigned N = std::min(ArraySize, E->getLength());
   unsigned CharWidth = E->getCharByteWidth();
+  assert(CharWidth == 1 || CharWidth == 2 || CharWidth == 4);
+
+  auto initElem = [&](unsigned Index, uint32_t CodeUnit) -> bool {
+    if (CharWidth == 1)
+      return this->emitConstSint8(CodeUnit, E) &&
+             this->emitInitElemSint8(Index, E);
+    else if (CharWidth == 2)
+      return this->emitConstUint16(CodeUnit, E) &&
+             this->emitInitElemUint16(Index, E);
+    else
+      return this->emitConstUint32(CodeUnit, E) &&
+             this->emitInitElemUint32(Index, E);
+  };
 
   for (unsigned I = 0; I != N; ++I) {
     uint32_t CodeUnit = E->getCodeUnit(I);
-
-    if (CharWidth == 1) {
-      this->emitConstSint8(CodeUnit, E);
-      this->emitInitElemSint8(I, E);
-    } else if (CharWidth == 2) {
-      this->emitConstUint16(CodeUnit, E);
-      this->emitInitElemUint16(I, E);
-    } else if (CharWidth == 4) {
-      this->emitConstUint32(CodeUnit, E);
-      this->emitInitElemUint32(I, E);
-    } else {
-      llvm_unreachable("unsupported character width");
-    }
+    if (!initElem(I, CodeUnit))
+      return false;
   }
+
+  // Special case: If this is initializing a global variable with an array
+  // filler, skip the rest of the string since it's just the filler element
+  // anyway.
+  // FIXME: For the `foo[100] = {"abc"}` case, the FillerSlotInit is the
+  // InitListExpr, not the StringLiteral, so this has no effect.
+  if (FillerSlotInit == E)
+    return initElem(N, 0);
 
   // Fill up the rest of the char array with NUL bytes.
   for (unsigned I = N; I != ArraySize; ++I) {
-    if (CharWidth == 1) {
-      this->emitConstSint8(0, E);
-      this->emitInitElemSint8(I, E);
-    } else if (CharWidth == 2) {
-      this->emitConstUint16(0, E);
-      this->emitInitElemUint16(I, E);
-    } else if (CharWidth == 4) {
-      this->emitConstUint32(0, E);
-      this->emitInitElemUint32(I, E);
-    } else {
-      llvm_unreachable("unsupported character width");
-    }
+    if (!initElem(I, 0))
+      return false;
   }
 
   return true;
@@ -5765,6 +5772,9 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
     if (!this->emitStartInit(Init))
       return false;
 
+    const Descriptor *Desc = P.getGlobal(*GlobalIndex)->getDescriptor();
+    llvm::SaveAndRestore FillerSAR(FillerSlotInit,
+                                   Desc->hasFiller() ? Init : nullptr);
     if (!visitInitializer(Init))
       return false;
 

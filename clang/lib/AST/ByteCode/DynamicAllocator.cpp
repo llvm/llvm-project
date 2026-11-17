@@ -37,10 +37,10 @@ Block *DynamicAllocator::allocate(const Expr *Source, PrimType T,
                                   Form AllocForm) {
   // Create a new descriptor for an array of the specified size and
   // element type.
-  const Descriptor *D =
-      allocateDescriptor(Source, nullptr, T, NumElements, /*IsConst=*/false,
-                         /*IsTemporary=*/false, /*IsMutable=*/false,
-                         /*IsVolatile=*/false);
+  const Descriptor *D = allocateDescriptor(
+      Source, nullptr, T, NumElements, NumElements, /*IsConst=*/false,
+      /*IsTemporary=*/false, /*IsMutable=*/false,
+      /*IsVolatile=*/false);
 
   return allocate(D, EvalID, AllocForm);
 }
@@ -52,7 +52,7 @@ Block *DynamicAllocator::allocate(const Descriptor *ElementDesc,
   // element type.
   // FIXME: Pass proper element type.
   const Descriptor *D = allocateDescriptor(
-      ElementDesc->asExpr(), nullptr, ElementDesc, NumElements,
+      ElementDesc->asExpr(), nullptr, ElementDesc, NumElements, NumElements,
       /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false);
   return allocate(D, EvalID, AllocForm);
 }

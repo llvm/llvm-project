@@ -53,7 +53,7 @@ static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
   const Descriptor *BaseDesc = BasePtr.getFieldDesc();
   assert(BaseDesc->isArray());
 
-  size_t NumElems = BaseDesc->getNumElems();
+  size_t NumElems = BaseDesc->getNumStoredElems();
   if (NumElems == 0)
     return true;
 
@@ -246,7 +246,7 @@ static void collectBlocks(PtrView Ptr,
   }
 
   if (Desc->isPrimitiveArray() && Desc->getPrimType() == PT_Ptr) {
-    for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
+    for (unsigned I = 0, N = Desc->getNumStoredElems(); I != N; ++I) {
       Pointer ElemPointee = Ptr.elem<Pointer>(I);
       if (isUsefulPtr(ElemPointee) && !Blocks.contains(ElemPointee.block()))
         collectBlocks(ElemPointee.view(), Blocks);
@@ -255,7 +255,7 @@ static void collectBlocks(PtrView Ptr,
   }
 
   if (Desc->isCompositeArray() && isOrHasPtr(Desc->ElemDesc)) {
-    for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
+    for (unsigned I = 0, N = Desc->getNumStoredElems(); I != N; ++I) {
       PtrView ElemPtr = Ptr.atIndex(I).narrow();
       collectBlocks(ElemPtr, Blocks);
     }
@@ -504,7 +504,7 @@ static bool lvalFields(InterpState &S, const ASTContext &Ctx, PtrView Ptr,
   }
 
   if (FieldDesc->isPrimitiveArray() && FieldDesc->getPrimType() == PT_Ptr) {
-    for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I) {
+    for (unsigned I = 0, N = FieldDesc->getNumStoredElems(); I != N; ++I) {
       Pointer Pointee = Ptr.elem<Pointer>(I);
 
       if (!Pointee.isBlockPointer() ||
@@ -521,7 +521,7 @@ static bool lvalFields(InterpState &S, const ASTContext &Ctx, PtrView Ptr,
     if (FieldDesc->ElemRecord && !FieldDesc->ElemRecord->hasPtrField())
       return true;
 
-    for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I) {
+    for (unsigned I = 0, N = FieldDesc->getNumStoredElems(); I != N; ++I) {
       PtrView Elem = Ptr.atIndex(I).narrow();
       if (!lvalFields(S, Ctx, Elem, FieldDesc->getElemQualType(), Info,
                       ConstexprKind, CheckedBlocks))

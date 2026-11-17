@@ -742,7 +742,7 @@ bool PtrView::isElementInitialized(unsigned Index) const {
 
     if (!IM.hasInitMap())
       return false;
-    return IM->isElementInitialized(Index);
+    return IM->isElementInitialized(Desc->toStoredIndex(Index));
   }
   return isInitialized();
 }
@@ -757,7 +757,7 @@ bool Pointer::isElementAlive(unsigned Index) const {
   if (IM.allInitialized())
     return true;
 
-  return IM->isElementAlive(Index);
+  return IM->isElementAlive(getFieldDesc()->toStoredIndex(Index));
 }
 
 Lifetime PtrView::getLifetime() const {
@@ -780,7 +780,9 @@ Lifetime PtrView::getLifetime() const {
       return getArray().getLifetime();
     }
 
-    return IM->isElementAlive(getIndex()) ? Lifetime::Started : Lifetime::Ended;
+    return IM->isElementAlive(Desc->toStoredIndex(getIndex()))
+               ? Lifetime::Started
+               : Lifetime::Ended;
   }
 
   return getDescriptor(Offset)->LifeState;
@@ -801,12 +803,14 @@ void PtrView::setLifeState(Lifetime L) const {
     assert(L == Lifetime::Started || L == Lifetime::Ended);
     InitMapPtr &IM = getInitMap();
     if (!IM.hasInitMap())
-      IM.setInitMap(new InitMap(Desc->getNumElems(), IM.allInitialized()));
+      IM.setInitMap(
+          new InitMap(Desc->getNumStoredElems(), IM.allInitialized()));
 
+    unsigned Index = Desc->toStoredIndex(getIndex());
     if (L == Lifetime::Ended)
-      IM->endElementLifetime(getIndex());
+      IM->endElementLifetime(Index);
     else if (L == Lifetime::Started)
-      IM->startElementLifetime(getIndex());
+      IM->startElementLifetime(Index);
     assert(isArrayRoot() || (this->getLifetime() == L));
     return;
   }
@@ -848,13 +852,12 @@ void PtrView::initializeElement(unsigned Index) const {
   if (IM.allInitialized())
     return;
 
-  if (!IM.hasInitMap()) {
-    const Descriptor *Desc = getFieldDesc();
-    IM.setInitMap(new InitMap(Desc->getNumElems()));
-  }
+  const Descriptor *Desc = getFieldDesc();
+  if (!IM.hasInitMap())
+    IM.setInitMap(new InitMap(Desc->getNumStoredElems()));
   assert(IM.hasInitMap());
 
-  if (IM->initializeElement(Index))
+  if (IM->initializeElement(Desc->toStoredIndex(Index)))
     IM.noteAllInitialized();
 }
 
@@ -1196,20 +1199,28 @@ static bool toRValue(const Context &Ctx, QualType Ty, PtrView Ptr, APValue &R) {
   if (const auto *AT = Ty->getAsArrayTypeUnsafe()) {
     if (!FieldDesc->isArray())
       return false;
-    const size_t NumElems = Ptr.getNumElems();
     QualType ElemTy = AT->getElementType();
-    R = APValue(APValue::UninitArray{}, NumElems, NumElems);
-
-    bool Ok = true;
     OptPrimType ElemT = Ctx.classify(ElemTy);
-    for (unsigned I = 0; I != NumElems; ++I) {
-      APValue &Slot = R.getArrayInitializedElt(I);
+    auto elemToRValue = [&](unsigned I, APValue &Slot) -> bool {
       if (ElemT) {
         TYPE_SWITCH(*ElemT, Slot = Ptr.elem<T>(I).toAPValue(ASTCtx));
-      } else {
-        Ok &= toRValue(Ctx, ElemTy, Ptr.atIndex(I).narrow(), Slot);
+        return true;
       }
-    }
+      return toRValue(Ctx, ElemTy, Ptr.atIndex(I).narrow(), Slot);
+    };
+
+    // The filler slot becomes the APValue filler.
+    unsigned NumElems = Ptr.getNumElems();
+    size_t InitializedElems = NumElems;
+    if (FieldDesc->hasFiller())
+      InitializedElems = FieldDesc->getNumStoredElems() - 1;
+    R = APValue(APValue::UninitArray{}, InitializedElems, NumElems);
+
+    bool Ok = true;
+    for (unsigned I = 0; I != InitializedElems; ++I)
+      Ok &= elemToRValue(I, R.getArrayInitializedElt(I));
+    if (R.hasArrayFiller())
+      Ok &= elemToRValue(InitializedElems, R.getArrayFiller());
     return Ok;
   }
 

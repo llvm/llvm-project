@@ -68,7 +68,7 @@ struct PtrView {
   }
 
   InlineDescriptor *getInlineDesc() const {
-    assert(Base <= Pointee->getSize());
+    assert(Base <= Pointee->getAddressableSize());
     assert(Base != 0);
     return getDescriptor(Base);
   }
@@ -76,7 +76,30 @@ struct PtrView {
   InlineDescriptor *getDescriptor(unsigned Offset) const {
     assert(Offset != 0 && "Not a nested pointer");
     assert(Offset >= sizeof(InlineDescriptor));
-    return reinterpret_cast<InlineDescriptor *>(Pointee->data() + Offset) - 1;
+    return reinterpret_cast<InlineDescriptor *>(
+        data(Offset - sizeof(InlineDescriptor)));
+  }
+
+  /// Returns the address of the byte at \p Off. Filler elements share the
+  /// storage of the filler slot, see Descriptor::HasFiller.
+  std::byte *data(uint64_t Off) const {
+    if (LLVM_UNLIKELY(Off >= Pointee->getSize()))
+      Off = getDeclDesc()->toStorageOffset(Off);
+    return Pointee->data() + Off;
+  }
+
+  /// Returns the distance from Base to the parent object. Filler elements
+  /// share the inline descriptor of the filler slot, whose offset is only
+  /// correct for the slot itself.
+  unsigned getOffsetInParent() const {
+    unsigned Off = getInlineDesc()->Offset;
+    if (LLVM_LIKELY(Base < Pointee->getSize()))
+      return Off;
+
+    // A filler element of the root array.
+    if (getDeclDesc()->toStorageOffset(Base) == Off)
+      return Base;
+    return Off;
   }
 
   const Descriptor *getFieldDesc() const {
@@ -132,7 +155,7 @@ struct PtrView {
       return PtrView{Pointee, Base, Base};
 
     // Step into the containing array, if inside one.
-    unsigned Next = Base - getInlineDesc()->Offset;
+    unsigned Next = Base - getOffsetInParent();
     const Descriptor *Desc =
         (Next == 0) ? getDeclDesc() : getDescriptor(Next)->Desc;
     if (!Desc->IsArray)
@@ -171,7 +194,7 @@ struct PtrView {
     return getFieldDesc()->isUnknownSizeArray();
   }
 
-  bool isPastEnd() const { return Offset > Pointee->getSize(); }
+  bool isPastEnd() const { return Offset > Pointee->getAddressableSize(); }
 
   unsigned getOffset() const {
     assert(Offset != PastEndMark);
@@ -248,10 +271,9 @@ struct PtrView {
     assert(Pointee);
 
     if (isArrayRoot())
-      return *reinterpret_cast<T *>(Pointee->data() + Base +
-                                    sizeof(InitMapPtr));
+      return *reinterpret_cast<T *>(data(Base + sizeof(InitMapPtr)));
 
-    return *reinterpret_cast<T *>(Pointee->data() + Offset);
+    return *reinterpret_cast<T *>(data(Offset));
   }
 
   template <typename T> T &elem(unsigned I) const {
@@ -262,13 +284,13 @@ struct PtrView {
 
     unsigned ElemByteOffset = I * getFieldDesc()->getElemSize();
     unsigned ReadOffset = Base + sizeof(InitMapPtr) + ElemByteOffset;
-    assert(ReadOffset + sizeof(T) <= Pointee->getSize());
+    assert(ReadOffset + sizeof(T) <= Pointee->getAddressableSize());
 
-    return *reinterpret_cast<T *>(Pointee->data() + ReadOffset);
+    return *reinterpret_cast<T *>(data(ReadOffset));
   }
 
   [[nodiscard]] PtrView getBase() const {
-    unsigned NewBase = Base - getInlineDesc()->Offset;
+    unsigned NewBase = Base - getOffsetInParent();
     return PtrView{Pointee, NewBase, NewBase};
   }
 
@@ -330,7 +352,7 @@ struct PtrView {
   bool allElementsInitialized() const;
   bool isElementInitialized(unsigned Index) const;
   InitMapPtr &getInitMap() const {
-    return *reinterpret_cast<InitMapPtr *>(Pointee->data() + Base);
+    return *reinterpret_cast<InitMapPtr *>(data(Base));
   }
   void initialize() const;
   void activate() const;
@@ -339,6 +361,11 @@ struct PtrView {
   Lifetime getLifetime() const;
   void startLifetime() const { setLifeState(Lifetime::Started); }
   void endLifetime() const { setLifeState(Lifetime::Ended); }
+
+  bool isFillerElement() const {
+    const Descriptor *Desc = getDeclDesc();
+    return Desc->hasFiller() && Offset >= Desc->getFillerOffset();
+  }
 
   bool operator==(const PtrView &Other) const {
     return Other.Pointee == Pointee && Base == Other.Base &&
@@ -1025,7 +1052,7 @@ public:
           Lit->getBytes().data() + (Offset * Lit->getCharByteWidth()));
     }
     assert(isBlockPointer());
-    return BS.Pointee->data() + Offset;
+    return view().data(Offset);
   }
 
   /// Returns the index into an array.
@@ -1066,11 +1093,27 @@ public:
     if (isStringPointer())
       return Offset >= (Str.getLiteral()->getLength() + 1);
 
-    return !isZero() && Offset > BS.Pointee->getSize();
+    return !isZero() && Offset > BS.Pointee->getAddressableSize();
   }
 
   /// Checks if the pointer is an out-of-bounds element pointer.
   bool isElementPastEnd() const { return Offset == PtrView::PastEndMark; }
+
+  /// Returns how many of the \p N elements starting at this pointer are
+  /// stored contiguously. The rest are zero filler elements.
+  unsigned getNumContiguousElems(unsigned N) const {
+    if (!isBlockPointer())
+      return N;
+    const Descriptor *Desc = getFieldDesc();
+    if (!Desc->hasFiller())
+      return N;
+
+    unsigned NumStored = Desc->getNumStoredElems();
+    unsigned Index = getIndex();
+    if (Index >= NumStored)
+      return 0;
+    return std::min(N, NumStored - Index);
+  }
 
   /// Checks if the pointer is pointing to a zero-size array.
   bool isZeroSizeArray() const {
@@ -1112,7 +1155,7 @@ public:
     assert(isBlockPointer());
     assert(BS.Pointee);
     assert(isDereferencable());
-    assert(Offset + sizeof(T) <= BS.Pointee->getSize());
+    assert(Offset + sizeof(T) <= BS.Pointee->getAddressableSize());
     return view().deref<T>();
   }
 
@@ -1121,7 +1164,7 @@ public:
     if (isBlockPointer()) {
       assert(BS.Pointee);
       assert(isDereferencable());
-      assert(Offset + sizeof(T) <= BS.Pointee->getSize());
+      assert(Offset + sizeof(T) <= BS.Pointee->getAddressableSize());
       return view().deref<T>();
     }
 
@@ -1329,7 +1372,7 @@ private:
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {
     assert(isBlockPointer());
-    assert(BS.Base <= BS.Pointee->getSize());
+    assert(BS.Base <= BS.Pointee->getAddressableSize());
     assert(BS.Base != 0);
     return getDescriptor(BS.Base);
   }

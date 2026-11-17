@@ -134,6 +134,10 @@ private:
   const unsigned Size;
   /// Size of the allocation (storage), in host bytes.
   const unsigned AllocSize;
+  /// Number of array elements backed by storage.
+  /// This is either the same as `getNumElems()`, or it is
+  /// less and HasFiller is true.
+  const unsigned NumStoredElems = 0;
 
   /// Value to denote arrays of unknown size.
   static constexpr unsigned UnknownSizeMark = (unsigned)-1;
@@ -163,6 +167,8 @@ public:
   const bool IsVolatile = false;
   /// Flag indicating if the block is an array.
   const bool IsArray = false;
+  /// Whether NumStoredElems is less than the number of elements.
+  const bool HasFiller = false;
 
   /// Storage management methods.
   const BlockCtorFn CtorFn = nullptr;
@@ -174,7 +180,8 @@ public:
 
   /// Allocates a descriptor for an array of primitives.
   Descriptor(DeclOrExpr D, const Type *SourceTy, PrimType Type, size_t NumElems,
-             bool IsConst, bool IsTemporary, bool IsMutable, bool IsVolatile);
+             size_t NumStoredElems, bool IsConst, bool IsTemporary,
+             bool IsMutable, bool IsVolatile);
 
   /// Allocates a descriptor for an array of primitives of unknown size.
   Descriptor(DeclOrExpr D, PrimType Type, bool IsConst, bool IsTemporary,
@@ -182,7 +189,8 @@ public:
 
   /// Allocates a descriptor for an array of composites.
   Descriptor(DeclOrExpr D, const Type *SourceTy, const Descriptor *Elem,
-             unsigned NumElems, bool IsConst, bool IsTemporary, bool IsMutable);
+             unsigned NumElems, unsigned NumStoredElems, bool IsConst,
+             bool IsTemporary, bool IsMutable);
 
   /// Allocates a descriptor for an array of composites of unknown size.
   Descriptor(DeclOrExpr D, const Descriptor *Elem, bool IsTemporary,
@@ -248,6 +256,43 @@ public:
   /// Returns the number of elements stored in the block.
   unsigned getNumElems() const {
     return Size == UnknownSizeMark ? 0 : (getSize() / getElemSize());
+  }
+  /// Returns the number of array elements backed by storage.
+  unsigned getNumStoredElems() const { return NumStoredElems; }
+  /// Checks if filler elements share storage, see NumStoredElems.
+  bool hasFiller() const { return HasFiller; }
+  /// Maps an element index to the index of its storage.
+  unsigned toStoredIndex(unsigned I) const {
+    if (LLVM_LIKELY(!HasFiller))
+      return I;
+    return std::min(I, NumStoredElems - 1);
+  }
+  /// Returns the byte offset of the filler slot in the data.
+  unsigned getFillerOffset() const {
+    assert(HasFiller);
+    unsigned Offset = (NumStoredElems - 1) * ElemSize;
+    if (isPrimitiveArray())
+      Offset += sizeof(InitMapPtr);
+    return Offset;
+  }
+  /// Maps a byte offset into the data to the offset of its storage.
+  uint64_t toStorageOffset(uint64_t Offset) const {
+    if (LLVM_LIKELY(!HasFiller))
+      return Offset;
+
+    // Offsets past the filler slot wrap around inside of it, e.g. with an
+    // element size of 4 and the slot at 8, offset 21 maps to 9.
+    uint64_t FillerOffset = getFillerOffset();
+    if (Offset < FillerOffset)
+      return Offset;
+    return FillerOffset + ((Offset - FillerOffset) % ElemSize);
+  }
+  /// Returns the data size as seen by pointers. Same as getAllocSize(),
+  /// plus the filler elements without storage.
+  unsigned getAddressableSize() const {
+    if (LLVM_LIKELY(!HasFiller))
+      return AllocSize;
+    return AllocSize + ((getNumElems() - NumStoredElems) * ElemSize);
   }
 
   /// Checks if the descriptor is of an array of primitives.

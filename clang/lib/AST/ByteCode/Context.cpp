@@ -262,10 +262,14 @@ bool Context::evaluateStringRepr(const EvalSettings &Settings,
 
       const char *Addr = reinterpret_cast<const char *>(Ptr.getRawAddress());
 
-      if (Ptr.isStringPointer())
+      if (Ptr.isStringPointer()) {
         Result.assign(Addr, Size - static_cast<unsigned>(Limited));
-      else
-        Result.assign(Addr, Size);
+      } else {
+        // Filler elements are zero.
+        unsigned NumContiguous = Ptr.getNumContiguousElems(Size);
+        Result.assign(Addr, NumContiguous);
+        Result.append(Size - NumContiguous, '\0');
+      }
     }
 
     return true;
@@ -322,7 +326,7 @@ bool Context::evaluateString(const EvalSettings &Settings, const Expr *E,
         Result.assign(Chars, N - 1);
         return true;
       }
-      unsigned Length = strnlen(Chars, N);
+      unsigned Length = strnlen(Chars, Ptr.getNumContiguousElems(N));
       // Wasn't null terminated.
       if (N == Length)
         return false;
@@ -403,7 +407,7 @@ std::optional<uint64_t> Context::evaluateStrlen(const EvalSettings &Settings,
 
     unsigned N = Ptr.getNumElems();
     if (Ptr.elemSize() == 1) {
-      unsigned Size = N - Ptr.getIndex();
+      unsigned Size = Ptr.getNumContiguousElems(N) - Ptr.getIndex();
       Result =
           strnlen(reinterpret_cast<const char *>(Ptr.getRawAddress()), Size);
       return Result != Size;
