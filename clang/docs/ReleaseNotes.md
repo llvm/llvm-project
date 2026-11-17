@@ -565,6 +565,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `__builtin___vsprintf_chk`, or `__builtin_sprintf` is called with a format
   string whose output exceeds the destination buffer size.
 
+- `-Wfortify-source` now diagnoses when `memccpy`, `memset_explicit`, or
+  `explicit_bzero` is called with a size argument larger than the destination
+  buffer.
+
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
   source. (#GH219803)
