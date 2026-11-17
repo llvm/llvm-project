@@ -3185,6 +3185,15 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     }
   }
 
+  if (const auto *Fn = dyn_cast_if_present<FunctionDecl>(TargetDecl)) {
+    if (Fn->isReplaceableGlobalAllocationFunction() &&
+        Fn->getDeclName().isAnyOperatorDelete()) {
+      auto IRArgs = IRFunctionArgs.getIRArgs(0);
+      assert(IRArgs.second == 1 && "Expected only a single pointer to delete.");
+      ArgAttrs[IRArgs.first].addAttribute(llvm::Attribute::AllocatedPointer);
+    }
+  }
+
   unsigned ArgNo = 0;
   for (CGFunctionInfo::const_arg_iterator I = FI.arg_begin(), E = FI.arg_end();
        I != E; ++I, ++ArgNo) {
@@ -4631,6 +4640,29 @@ void CodeGenFunction::EmitReturnValueCheck(llvm::Value *RV) {
   // it.
   if (ReturnBlock.isValid() && ReturnBlock.getBlock()->use_empty())
     return;
+
+  if (SanOpts.has(SanitizerKind::Alignment)) {
+    if (const AllocAlignAttr *AA = CurCodeDecl->getAttr<AllocAlignAttr>()) {
+      if (isa<FunctionDecl>(CurCodeDecl)) {
+        unsigned PI = AA->getParamIndex().getLLVMIndex();
+        llvm::Value *Alignment = CurFn->getArg(PI);
+        emitReturnAlignmentAssumptionCheck(RV, FnRetTy, AA->getLocation(),
+                                           Alignment);
+      }
+    }
+    if (const AssumeAlignedAttr *AA =
+            CurCodeDecl->getAttr<AssumeAlignedAttr>()) {
+      llvm::Value *Alignment = EmitScalarExpr(AA->getAlignment());
+      llvm::ConstantInt *OffsetCI = nullptr;
+      if (Expr *Offset = AA->getOffset()) {
+        OffsetCI = cast<llvm::ConstantInt>(EmitScalarExpr(Offset));
+        if (OffsetCI->isNullValue()) // Canonicalize zero offset to no offset.
+          OffsetCI = nullptr;
+      }
+      emitReturnAlignmentAssumptionCheck(RV, FnRetTy, AA->getLocation(),
+                                         Alignment, OffsetCI);
+    }
+  }
 
   ReturnsNonNullAttr *RetNNAttr = nullptr;
   if (SanOpts.has(SanitizerKind::ReturnsNonnullAttribute))
