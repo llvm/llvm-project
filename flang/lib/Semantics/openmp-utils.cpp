@@ -295,8 +295,16 @@ bool IsWholeAssumedSizeArray(const parser::OmpObject &object) {
   return false;
 }
 
+bool IsCoindexedObject(const parser::OmpObject &object) {
+  const auto *designator{GetDesignatorFromObj(object)};
+  return designator && parser::GetCoindexedNamedObject(*designator);
+}
+
 bool IsExtendedListItem(
     const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (IsCoindexedObject(object)) {
+    return false;
+  }
   if (IsVariableListItem(object, semaCtx)) {
     return true;
   }
@@ -310,6 +318,9 @@ bool IsExtendedListItem(
 
 bool IsLocatorListItem(
     const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (IsCoindexedObject(object)) {
+    return false;
+  }
   if (IsVariableListItem(object, semaCtx) || GetLocatorFromObj(object)) {
     return true;
   }
@@ -324,6 +335,9 @@ bool IsLocatorListItem(
 
 bool IsVariableListItem(
     const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (IsCoindexedObject(object)) {
+    return false;
+  }
   if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
     return IsVariableListItem(*sym);
   }

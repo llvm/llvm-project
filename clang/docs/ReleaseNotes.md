@@ -467,6 +467,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   extensions that DXC implements, as `-fspv-extension=DXC` does, instead of all
   extensions. `-fspv-extension=all` restores the previous behavior.
 
+- `-fdevirtualize-speculatively` can now also be used to enable speculative
+  devirtualization when using LTO, with the exception of Distributed ThinLTO.
+
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
@@ -1587,6 +1590,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 %   - Diagnostic changes
 
 #### Improvements
+
+- The user can opt in to analyze functions coming from files participating in
+  unity or jumbo builds as analysis entry points with
+  `-analyzer-config unitybuild-file-extensions=<file-extensions>`.
+  The default behavior is unchanged.
 
 - `unix.StdCLibraryFunctions` now ignores `restrict` qualifiers in C library
   declarations such as `fopen` when targeting MSVC to avoid false negatives in
