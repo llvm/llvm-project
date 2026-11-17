@@ -1,33 +1,31 @@
-; -sample-profile-orphaned-nonlocal-roots extends the orphaned-root handling of
-; -sample-profile-preserve-orphaned-inlines to non-local functions. R below is a
-; linkonce_odr function that pre-link inlines into H. H is defined in another
-; module and imported into G's module. G's profile has H nested, and H's frame
-; calls R only as a call target, so R's samples are in R's top-level profile.
+; -sample-profile-preserve-orphaned-inlines handles local and non-local roots
+; and is enabled by default. R below is a linkonce_odr function that pre-link
+; inlines into H. H is defined in another module and imported into G's module.
+; G's profile has H nested, and H's frame calls R only as a call target, so R's
+; samples are in R's top-level profile.
 
 ;; Pre-link: G has no samples, so its entry count is -1. R's import GUIDs are
 ;; still copied to G.
 ; RUN: split-file %s %t
 ; DEFINE: %{pre} = opt %t/pre.ll -passes='thinlto-pre-link<O2>' \
-; DEFINE:   -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%t/prof-pre.txt \
-; DEFINE:   -sample-profile-preserve-orphaned-inlines -S
-; RUN: %{pre} | FileCheck %s --check-prefix=PRE-OFF
-; RUN: %{pre} -sample-profile-orphaned-nonlocal-roots | FileCheck %s --check-prefix=PRE-ON
+; DEFINE:   -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%t/prof-pre.txt -S
+; RUN: %{pre} -sample-profile-preserve-orphaned-inlines=false | FileCheck %s --check-prefix=PRE-OFF
+; RUN: %{pre} | FileCheck %s --check-prefix=PRE-ON
 
 ;; Post-link: H has no top-level profile, so finding R's root needs a scan of
 ;; H's body from G's nested profile. R has no probe descriptor in G's module,
 ;; as import does not copy descriptors.
 ; RUN: llvm-profdata merge --sample --extbinary %t/prof.txt -o %t/prof.extbinary
 ; DEFINE: %{post} = opt %t/post.ll -passes='thinlto<O2>' -pgo-kind=pgo-sample-use-pipeline \
-; DEFINE:   -sample-profile-file=%t/prof.extbinary -sample-profile-preserve-orphaned-inlines \
+; DEFINE:   -sample-profile-file=%t/prof.extbinary \
 ; DEFINE:   -pass-remarks=sample-profile-inline -o /dev/null
-; RUN: %{post} 2>&1 | FileCheck %s --check-prefix=POST-OFF
-; RUN: %{post} -sample-profile-orphaned-nonlocal-roots 2>&1 \
+; RUN: %{post} -sample-profile-preserve-orphaned-inlines=false 2>&1 | FileCheck %s --check-prefix=POST-OFF
+; RUN: %{post} 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=POST-ON
 ;; The call-site check still applies.
 ; RUN: sed 's/^R:2000:1000$/R:2000:2000/' %t/prof.txt | llvm-profdata merge --sample \
 ; RUN:   --extbinary - -o %t/prof-multi.extbinary
-; RUN: %{post} -sample-profile-orphaned-nonlocal-roots \
-; RUN:   -sample-profile-file=%t/prof-multi.extbinary 2>&1 | FileCheck %s --check-prefix=POST-OFF
+; RUN: %{post} -sample-profile-file=%t/prof-multi.extbinary 2>&1 | FileCheck %s --check-prefix=POST-OFF
 
 ; PRE-OFF: define {{.*}} @G({{.*}} !prof ![[#G:]]
 ; PRE-OFF: ![[#G]] = !{!"function_entry_count", i64 -1}

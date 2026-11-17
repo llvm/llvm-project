@@ -23,12 +23,11 @@
 ; RUN:   | FileCheck %s --check-prefix=POST-OFF --allow-empty
 ; RUN: %{post} %t/post.ll -sample-profile-file=%t/prof.txt 2>&1 | FileCheck %s --check-prefix=POST-ON
 
-;; Post-link rejects R's profile when R is not local (it may have an
-;; out-of-line copy elsewhere), unless non-local recovery is enabled; or when
-;; G's call site does not account for all of
-;; R's entries, or when R's checksum is stale.
+;; Post-link recovers non-local roots by default too. Disabling recovery
+;; rejects them. Both local and non-local roots retain the call-count and
+;; checksum checks.
 ; RUN: sed 's/DISPFlagLocalToUnit | //' %t/post.ll > %t/post-nonlocal.ll
-; RUN: %{post} %t/post-nonlocal.ll -sample-profile-file=%t/prof.txt %{enable} 2>&1 \
+; RUN: %{post} %t/post-nonlocal.ll -sample-profile-file=%t/prof.txt -sample-profile-preserve-orphaned-inlines=false 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=POST-OFF --allow-empty
 ; RUN: sed 's/^R:2000:1000$/R:2000:2000/' %t/prof.txt > %t/prof-multi.txt
 ; RUN: %{post} %t/post.ll -sample-profile-file=%t/prof-multi.txt %{enable} 2>&1 \
@@ -37,21 +36,19 @@
 ; RUN: %{post} %t/post.ll -sample-profile-file=%t/prof-stale.txt %{enable} 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=POST-OFF --allow-empty
 
-;; Non-local recovery accepts R but retains the call-count and checksum checks.
-;; In pre-link, it also forwards a sole linkonce_odr callee's import GUIDs.
-; DEFINE: %{nonlocal} = %{post} %{enable} -sample-profile-orphaned-nonlocal-roots
-; RUN: %{nonlocal} %t/post-nonlocal.ll -sample-profile-file=%t/prof.txt 2>&1 \
+; RUN: %{post} %t/post-nonlocal.ll -sample-profile-file=%t/prof.txt 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=POST-ON
-; RUN: %{nonlocal} %t/post-nonlocal.ll -sample-profile-file=%t/prof-multi.txt 2>&1 \
+; RUN: %{post} %t/post-nonlocal.ll -sample-profile-file=%t/prof-multi.txt 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=POST-OFF --allow-empty
-; RUN: %{nonlocal} %t/post-nonlocal.ll -sample-profile-file=%t/prof-stale.txt 2>&1 \
+; RUN: %{post} %t/post-nonlocal.ll -sample-profile-file=%t/prof-stale.txt 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=POST-OFF --allow-empty
+;; Pre-link also forwards a sole linkonce_odr callee's import GUIDs by default.
 ; RUN: sed -e 's/define internal i64 @R/define linkonce_odr i64 @R/' \
 ; RUN:   -e 's/DISPFlagLocalToUnit | //' %t/pre.ll > %t/pre-nonlocal.ll
-; RUN: %{pre} %t/pre-nonlocal.ll -sample-profile-file=%t/prof.txt %{enable} -S \
+; RUN: %{pre} %t/pre-nonlocal.ll -sample-profile-file=%t/prof.txt -sample-profile-preserve-orphaned-inlines=false -S \
 ; RUN:   | FileCheck %s --check-prefix=PRE-OFF
-; RUN: %{pre} %t/pre-nonlocal.ll -sample-profile-file=%t/prof.txt %{enable} \
-; RUN:   -sample-profile-orphaned-nonlocal-roots -S | FileCheck %s --check-prefix=PRE-NONLOCAL
+; RUN: %{pre} %t/pre-nonlocal.ll -sample-profile-file=%t/prof.txt -S \
+; RUN:   | FileCheck %s --check-prefix=PRE-NONLOCAL
 
 ;; The same profiles in extbinary format. Its reader loads only the profiles of
 ;; functions in the module, so post-link must load R's profile explicitly. The
@@ -64,7 +61,13 @@
 ; RUN:   | FileCheck %s --check-prefix=POST-OFF --allow-empty
 ; RUN: %{post} %t/post.ll -sample-profile-file=%t/prof.extbinary %{enable} 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=POST-ON
-; RUN: %{post} %t/post-nonlocal.ll -sample-profile-file=%t/prof.extbinary %{enable} 2>&1 \
+; RUN: %{post} %t/post-nonlocal.ll -sample-profile-file=%t/prof.extbinary 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=POST-ON
+; RUN: %{post} %t/post-nonlocal.ll -sample-profile-file=%t/prof.extbinary -sample-profile-preserve-orphaned-inlines=false 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=POST-OFF --allow-empty
+; RUN: %{post} %t/post-nonlocal.ll -sample-profile-file=%t/prof-multi.extbinary 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=POST-OFF --allow-empty
+; RUN: %{post} %t/post-nonlocal.ll -sample-profile-file=%t/prof-stale.extbinary 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=POST-OFF --allow-empty
 ; RUN: %{post} %t/post.ll -sample-profile-file=%t/prof-multi.extbinary %{enable} 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=POST-OFF --allow-empty
