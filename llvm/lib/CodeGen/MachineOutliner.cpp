@@ -56,6 +56,7 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/MachineOutliner.h"
 #include "CodeGenOptions.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -1223,42 +1224,41 @@ bool MachineOutliner::outline(
         // instruction. It also updates call site information for moved
         // code.
         SmallSet<Register, 2> UseRegs, DefRegs;
+        const TargetRegisterInfo &TRI =
+            *MBB.getParent()->getSubtarget().getRegisterInfo();
+        BitVector DefUnits(TRI.getNumRegUnits());
         // Copy over the defs in the outlined range.
         // First inst in outlined range <-- Anything that's defined in this
         // ...                           .. range has to be added as an
         // implicit Last inst in outlined range  <-- def to the call
         // instruction. Also remove call site information for outlined block
         // of code. The exposed uses need to be copied in the outlined range.
-        for (MachineBasicBlock::reverse_iterator
-                 Iter = EndIt.getReverse(),
-                 Last = std::next(CallInst.getReverse());
-             Iter != Last; Iter++) {
-          MachineInstr *MI = &*Iter;
-          if (MI->isDebugInstr())
+        for (MachineInstr &MI : make_range(CallInst, std::next(EndIt))) {
+          if (MI.isDebugInstr())
             continue;
-          SmallSet<Register, 2> InstrUseRegs;
-          for (MachineOperand &MOP : MI->operands()) {
-            // Skip over anything that isn't a register.
-            if (!MOP.isReg())
+          // A read is an exposed use unless the range wrote all of it first.
+          for (const MachineOperand &MOP : MI.all_uses()) {
+            Register Reg = MOP.getReg();
+            if (!Reg || MOP.isUndef())
               continue;
-
-            if (MOP.isDef()) {
-              // Introduce DefRegs set to skip the redundant register.
-              DefRegs.insert(MOP.getReg());
-              if (UseRegs.count(MOP.getReg()) &&
-                  !InstrUseRegs.count(MOP.getReg()))
-                // Since the regiester is modeled as defined,
-                // it is not necessary to be put in use register set.
-                UseRegs.erase(MOP.getReg());
-            } else if (!MOP.isUndef()) {
-              // Any register which is not undefined should
-              // be put in the use register set.
-              UseRegs.insert(MOP.getReg());
-              InstrUseRegs.insert(MOP.getReg());
-            }
+            if (Reg.isPhysical() &&
+                all_of(TRI.regunits(Reg.asMCReg()), [&](MCRegUnit Unit) {
+                  return DefUnits.test(static_cast<unsigned>(Unit));
+                }))
+              continue;
+            UseRegs.insert(Reg);
           }
-          if (MI->isCandidateForAdditionalCallInfo())
-            MI->getMF()->eraseAdditionalCallInfo(MI);
+          for (const MachineOperand &MOP : MI.all_defs()) {
+            Register Reg = MOP.getReg();
+            if (!Reg)
+              continue;
+            DefRegs.insert(Reg);
+            if (Reg.isPhysical())
+              for (MCRegUnit Unit : TRI.regunits(Reg.asMCReg()))
+                DefUnits.set(static_cast<unsigned>(Unit));
+          }
+          if (MI.isCandidateForAdditionalCallInfo())
+            MI.getMF()->eraseAdditionalCallInfo(&MI);
         }
 
         for (const Register &I : DefRegs)

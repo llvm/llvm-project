@@ -1,0 +1,55 @@
+# RUN: llc -mtriple=armv7a-- -mattr=+vfp2 -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+
+# The outlined range fully defines $d0 through $s0 and $s1, so the call must
+# not get an implicit use of $d0.
+
+--- |
+  define void @subreg_halves_then_super() #0 { ret void }
+
+  attributes #0 = { minsize optsize }
+...
+---
+
+name:           subreg_halves_then_super
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: subreg_halves_then_super
+  ; CHECK:      BL @OUTLINED_FUNCTION_0
+  ; CHECK-NOT:  $d0
+  ; CHECK-SAME: {{$}}
+  ; CHECK:      BL @OUTLINED_FUNCTION_0
+  ; CHECK-NOT:  $d0
+  ; CHECK-SAME: {{$}}
+  ; CHECK:      BL @OUTLINED_FUNCTION_0
+  ; CHECK-NOT:  $d0
+  ; CHECK-SAME: {{$}}
+  ; CHECK:      BX_RET
+
+  ; CHECK-LABEL: name: OUTLINED_FUNCTION_0
+  ; CHECK:      $s0 = VLDRS $r0, 0, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: $s1 = VLDRS $r0, 1, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: VSTRD $d0, $r1, 0, 14 /* CC::al */, $noreg
+  bb.0:
+    liveins: $r0, $r1, $lr
+    $s0 = VLDRS $r0, 0, 14, $noreg
+    $s1 = VLDRS $r0, 1, 14, $noreg
+    VSTRD $d0, $r1, 0, 14, $noreg
+    VSTRD $d0, $r1, 2, 14, $noreg
+    VSTRD $d0, $r1, 4, 14, $noreg
+    VSTRD $d0, $r1, 6, 14, $noreg
+    $r0 = ADDri $r0, 8, 14, $noreg, $noreg
+    $s0 = VLDRS $r0, 0, 14, $noreg
+    $s1 = VLDRS $r0, 1, 14, $noreg
+    VSTRD $d0, $r1, 0, 14, $noreg
+    VSTRD $d0, $r1, 2, 14, $noreg
+    VSTRD $d0, $r1, 4, 14, $noreg
+    VSTRD $d0, $r1, 6, 14, $noreg
+    $r0 = ADDri $r0, 8, 14, $noreg, $noreg
+    $s0 = VLDRS $r0, 0, 14, $noreg
+    $s1 = VLDRS $r0, 1, 14, $noreg
+    VSTRD $d0, $r1, 0, 14, $noreg
+    VSTRD $d0, $r1, 2, 14, $noreg
+    VSTRD $d0, $r1, 4, 14, $noreg
+    VSTRD $d0, $r1, 6, 14, $noreg
+    BX_RET 14, $noreg
+...
