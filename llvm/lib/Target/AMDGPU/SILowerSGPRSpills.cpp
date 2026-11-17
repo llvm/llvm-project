@@ -48,12 +48,6 @@ static LaneVGPRInsertPt insertPt(MachineBasicBlock *MBB,
   return {MBB, It};
 }
 
-static bool hasVolatileOrAtomicMemOperand(const MachineInstr &MI) {
-  return llvm::any_of(MI.memoperands(), [](const MachineMemOperand *MMO) {
-    return MMO->isVolatile() || MMO->isAtomic();
-  });
-}
-
 static cl::opt<unsigned> MaxNumVGPRsForWwmAllocation(
     "amdgpu-num-vgprs-for-wwm-alloc",
     cl::desc("Max num VGPRs for whole-wave register allocation."),
@@ -129,8 +123,25 @@ INITIALIZE_PASS_END(SILowerSGPRSpillsLegacy, DEBUG_TYPE,
 
 char &llvm::SILowerSGPRSpillsLegacyID = SILowerSGPRSpillsLegacy::ID;
 
+static bool hasOtherFrameIndexUse(const MachineFunction &MF, int FI,
+                                  const MachineInstr &Save,
+                                  const MachineInstr &Restore) {
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      if (&MI == &Save || &MI == &Restore)
+        continue;
+      if (llvm::any_of(MI.operands(), [FI](const MachineOperand &MO) {
+            return MO.isFI() && MO.getIndex() == FI;
+          }))
+        return true;
+    }
+  }
+  return false;
+}
+
 /// Remove a restore which immediately reads back the value just saved from the
-/// same SGPR. Keep the save, since a later restore may still need it.
+/// same SGPR. Remove the save as well if nothing else references its frame
+/// index.
 bool SILowerSGPRSpills::eliminateRedundantRestores(
     MachineFunction &MF, ArrayRef<int> CalleeSavedFIs) {
   bool Changed = false;
@@ -145,8 +156,7 @@ bool SILowerSGPRSpills::eliminateRedundantRestores(
       auto RestoreIt = Restore.getIterator();
       if (RestoreIt == MBB.begin())
         continue;
-      MachineInstr &Save = *prev_nodbg(RestoreIt, MBB.instr_begin(),
-                                       /*SkipPseudoOp=*/false);
+      MachineInstr &Save = *std::prev(RestoreIt);
       if (!TII->isSGPRSpill(Save) || !Save.mayStore() || Save.isBundled() ||
           Save.getFlag(MachineInstr::FrameSetup) ||
           Save.getFlag(MachineInstr::FrameDestroy))
@@ -164,12 +174,18 @@ bool SILowerSGPRSpills::eliminateRedundantRestores(
           RestoreSize != SaveSize || RestoreFI != SaveFI ||
           llvm::is_contained(CalleeSavedFIs, SaveFI) ||
           MF.getFrameInfo().getStackID(SaveFI) != TargetStackID::SGPRSpill ||
-          !SaveData || SaveData->isUndef() ||
-          hasVolatileOrAtomicMemOperand(Save) ||
-          hasVolatileOrAtomicMemOperand(Restore))
+          !SaveData || SaveData->isUndef())
         continue;
 
-      Save.clearRegisterKills(SaveReg, TRI);
+      const bool RemoveSave = !hasOtherFrameIndexUse(MF, SaveFI, Save, Restore);
+      if (RemoveSave) {
+        if (Indexes)
+          Indexes->removeMachineInstrFromMaps(Save);
+        Save.eraseFromParent();
+        MF.getFrameInfo().RemoveStackObject(SaveFI);
+      } else {
+        Save.clearRegisterKills(SaveReg, TRI);
+      }
       if (Indexes)
         Indexes->removeMachineInstrFromMaps(Restore);
       Restore.eraseFromParent();
