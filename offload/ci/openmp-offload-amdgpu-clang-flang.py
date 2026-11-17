@@ -42,12 +42,12 @@ with worker.run(
 
     with w.step("test-openmp"):
         w.run_ninja(
-            ["check-openmp"], add_env={"HSA_ENABLE_SDMA": "0"}, builddir=llvmbuilddir
+            ["check-openmp"], builddir=llvmbuilddir
         )
 
     with w.step("Add check check-offload"):
         w.run_ninja(
-            ["check-offload"], add_env={"HSA_ENABLE_SDMA": "0"}, builddir=llvmbuilddir
+            ["check-offload"], builddir=llvmbuilddir
         )
 
     with w.step("LLVM: Install", halt_on_fail=True):
