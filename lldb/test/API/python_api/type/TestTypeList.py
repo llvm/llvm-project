@@ -355,7 +355,6 @@ class TypeAndTypeListTestCase(TestBase):
         # And an over-aligned type.
         self.assertEqual(module.FindFirstType("OverAlignedStruct").GetByteAlign(), 128)
 
-    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_GetByteStride(self):
         """Exercise SBType::GetByteStride"""
         self.build()
