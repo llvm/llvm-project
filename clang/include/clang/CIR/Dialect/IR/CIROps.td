@@ -2232,6 +2232,9 @@ def CIR_FNegOp : CIR_UnaryOp<"fneg", CIR_AnyFloatOrVecOfFloatType> {
     The `cir.fneg` operation negates the operand. The operand and result must
     have the same type.
 
+    The optional `fastmath_flags` attribute holds the fast-math flags of the
+    operation.
+
     Example:
 
     ```
@@ -2240,6 +2243,19 @@ def CIR_FNegOp : CIR_UnaryOp<"fneg", CIR_AnyFloatOrVecOfFloatType> {
     %5 = cir.fneg %4 : !cir.vector<4 x !cir.float>
     ```
   }];
+
+  let arguments = !con(commonArgs, (ins
+      OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags));
+
+  let assemblyFormat = [{
+    $input `:` type($input) prop-dict attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$input), [{
+      build($_builder, $_state, input, cir::FastMathFlagsAttr{});
+    }]>
+  ];
 
   let hasFolder = 1;
 
@@ -3860,30 +3876,68 @@ def CIR_VTableGetVirtualFnOp : CIR_Op<"vtable.get_virtual_fn", [
 }
 
 //===----------------------------------------------------------------------===//
+// VTableGetEntryOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableGetEntryOp : CIR_Op<"vtable.get_entry", [
+  MemoryEffects<[MemRead]>
+]> {
+  let summary = "Get a pointer entry from a vtable";
+  let description = [{
+    The `vtable.get_entry` operation reads an entry of an object's vtable that
+    holds a pointer, other than a virtual function. This is an ABI independent
+    abstraction of this operation: how the entry is stored and read is decided
+    when the operation is lowered.
+
+    The `vptr` operand must be a `!cir.vptr` value, which would have been
+    returned by a previous call to `cir.vtable.get_vptr`. The `index` operand
+    is the index of the entry in the vtable, counted from the address point.
+    Entries that precede the address point have a negative index.
+
+    The result is the pointer that the entry holds.
+
+    Example:
+    ```
+    %3 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_A> -> !cir.ptr<!cir.vptr>
+    %4 = cir.load %3 : !cir.ptr<!cir.vptr>, !cir.vptr
+    %5 = cir.vtable.get_entry %4[-1] : !cir.vptr
+                  -> !cir.ptr<!rec_std3A3Atype_info>
+    ```
+  }];
+
+  let arguments = (ins CIR_VPtrType:$vptr, I64Attr:$index);
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    $vptr `[` $index `]` attr-dict
+    `:` qualified(type($vptr)) `->` qualified(type($result))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // VTableGetTypeInfoOp
 //===----------------------------------------------------------------------===//
 
 def CIR_VTableGetTypeInfoOp : CIR_Op<"vtable.get_type_info", [
-  Pure
+  MemoryEffects<[MemRead]>
 ]> {
-  let summary = "Get the address of the type_info from the vtable";
+  let summary = "Get the type_info of an object from its vtable";
   let description = [{
-    The `vtable.get_type_info` operation retreives the address of the dynamic
-    type_info/rtti object from an object's vtable. This is an ABI independent
-    abstraction of this operation.
+    The `vtable.get_type_info` operation retrieves the pointer to the dynamic
+    type_info/rtti object from an object's vtable (__vptr). This is an ABI
+    independent abstraction of this operation: where the entry is, and how it
+    is stored and read, is decided when the operation is lowered.
 
     The `vptr` operand must be a `!cir.vptr` value, which would have been
     returned by a previous call to `cir.vtable.get_vptr`.
 
-    The return type is a loadable pointer to a `type_info` struct.
+    The result is the pointer to the `type_info` struct.
 
     Example:
     ```
     %5 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_A> -> !cir.ptr<!cir.vptr>
     %6 = cir.load align(8) %5 : !cir.ptr<!cir.vptr>, !cir.vptr
-    %7 = cir.vtable.get_type_info %6 : !cir.vptr -> !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>
-    %8 = cir.load align(8) %7 : !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>, !cir.ptr<!rec_std3A3Atype_info>
-
+    %7 = cir.vtable.get_type_info %6 : !cir.vptr -> !cir.ptr<!rec_std3A3Atype_info>
     ```
   }];
 
@@ -6878,12 +6932,12 @@ def CIR_VecShuffleOp : CIR_Op<"vec.shuffle", [
   }];
 
   let arguments = (ins
-    CIR_VectorType:$vec1,
-    CIR_VectorType:$vec2,
+    CIR_AnyVectorOrMatrixType:$vec1,
+    CIR_AnyVectorOrMatrixType:$vec2,
     CIR_IntArrayAttr:$indices
   );
 
-  let results = (outs CIR_VectorType:$result);
+  let results = (outs CIR_AnyVectorOrMatrixType:$result);
   let assemblyFormat = [{
     `(` $vec1 `,` $vec2 `:` qualified(type($vec1)) `)` $indices `:`
      qualified(type($result)) attr-dict
@@ -6999,8 +7053,7 @@ def CIR_VecSplatOp : CIR_Op<"vec.splat", [
   }];
 
   let arguments = (ins CIR_VectorElementType:$value);
-  let results = (outs AnyTypeOf<[CIR_VectorType, CIR_MatrixType],
-                                "vector or matrix type">:$result);
+  let results = (outs CIR_AnyVectorOrMatrixType:$result);
 
   let assemblyFormat = [{
     $value `:` type($value) `,` qualified(type($result)) attr-dict
@@ -9203,6 +9256,8 @@ def CIR_ModfOp : CIR_Op<"modf", [Pure]> {
   }];
 }
 
+// The optional `fastmath_flags` attribute holds the fast-math flags of the
+// operation.
 class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     : CIR_Op<mnemonic,
              !listconcat([SameOperandsAndResultType], CIR_FenvOpTraits)>
@@ -9211,19 +9266,21 @@ class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     CIR_AnyFloatOrVecOfFloatType:$a,
     CIR_AnyFloatOrVecOfFloatType:$b,
     CIR_AnyFloatOrVecOfFloatType:$c,
-    OptionalAttr<CIR_FenvAttr>:$fenv
+    OptionalAttr<CIR_FenvAttr>:$fenv,
+    OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags
   );
 
   let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
 
   let assemblyFormat = [{
-    $a `,` $b `,` $c `:` type($a) (`fenv` `` $fenv^)? attr-dict
+    $a `,` $b `,` $c `:` type($a) (`fenv` `` $fenv^)? prop-dict attr-dict
   }];
 
   let builders = [
     OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$a, "mlir::Value":$b,
                    "mlir::Value":$c), [{
-      build($_builder, $_state, result, a, b, c, cir::FenvAttr{});
+      build($_builder, $_state, result, a, b, c, cir::FenvAttr{},
+            cir::FastMathFlagsAttr{});
     }]>
   ];
 

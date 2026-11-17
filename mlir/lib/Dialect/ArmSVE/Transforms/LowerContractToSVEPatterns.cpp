@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements lowering patterns from vector.contract to operations
-// that map to instructions from the SVE FEAT_I8MM and FEAT_BF16 extensions.
+// that map to instructions from the SVE ISA, including matrix-multiplication
+// extensions: FEAT_I8MM and FEAT_BF16.
 //
 // TODO: There may be opportunities to unify this with a similar pattern
 // for Neon. See:
@@ -20,6 +21,7 @@
 #include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h"
 #include "mlir/Dialect/ArmSVE/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/AffineMap.h"
@@ -578,6 +580,163 @@ public:
   }
 };
 
+/// A helper for LowerContractionToSVEIndexedFMLAPatterns to check the
+/// preconditions. Check the pattern for an overview of the conditions to
+/// check.
+static LogicalResult matchIndexed(vector::ContractionOp op,
+                                  PatternRewriter &rewriter) {
+  // Check iterator types for matrix multiplication.
+  // TODO: Extract to a helper hook.
+  auto itTypes = op.getIteratorTypesArray();
+  if (itTypes.size() != 3 || itTypes[0] != vector::IteratorType::parallel ||
+      itTypes[1] != vector::IteratorType::parallel ||
+      itTypes[2] != vector::IteratorType::reduction)
+    return rewriter.notifyMatchFailure(
+        op, "iterator types do not correspond to matrix multiplication");
+
+  // Verify that the permutation maps represent a plain matmul:
+  //   lhs: (d0, d1, d2) -> (d0, d2)
+  //   rhs: (d0, d1, d2) -> (d1, d2)
+  //   acc: (d0, d1, d2) -> (d0, d1)
+  // TODO: Extract to a helper hook.
+  if (op.getIndexingMapsArray()[0] !=
+          AffineMap::getMultiDimMapWithTargets(3, ArrayRef{0u, 2u},
+                                               op.getContext()) ||
+      op.getIndexingMapsArray()[1] !=
+          AffineMap::getMultiDimMapWithTargets(3, ArrayRef{2u, 1u},
+                                               op.getContext()) ||
+      op.getIndexingMapsArray()[2] != AffineMap::getMultiDimMapWithTargets(
+                                          3, ArrayRef{0u, 1u}, op.getContext()))
+    return rewriter.notifyMatchFailure(op, "non-matching permutation maps");
+
+  // Check the combining kind is addition.
+  // TODO: Extract to a helper hook.
+  if (op.getKind() != vector::CombiningKind::ADD)
+    return rewriter.notifyMatchFailure(op, "combining kind is not an addition");
+
+  // Check the operands have the supported shape:
+  //  * LHS: <1 x 4>
+  //  * RHS: <4 x [8]>
+  //  * ACC: <1 x [8]>
+  VectorType lhsType = op.getLhsType();
+  VectorType rhsType = op.getRhsType();
+  auto m = lhsType.getDimSize(0);
+  auto n = rhsType.getDimSize(1);
+  auto k = rhsType.getDimSize(0);
+
+  if (rhsType.getScalableDims()[0] || !rhsType.getScalableDims()[1] ||
+      lhsType.isScalable() || lhsType.getDimSize(1) != k || k != 4 || m != 1 ||
+      n != 8)
+    return rewriter.notifyMatchFailure(op, "non-matching operand shape");
+
+  // Check that output element type is Float32.
+  auto outTy = dyn_cast<VectorType>(op.getResultType());
+  if (!outTy || outTy.getElementType() != rewriter.getF32Type())
+    return rewriter.notifyMatchFailure(op,
+                                       "output type is not a vector of f32");
+
+  // Check that the input element type is Float32.
+  if (lhsType.getElementType() != rewriter.getF32Type())
+    return rewriter.notifyMatchFailure(op,
+                                       "input type is not a vector of bf16");
+
+  return success();
+}
+
+/// Lowers a matching contraction operation to SVE's "indexed" FMLAs (FP32)
+///
+/// The input contraction must represent a plain matrix-multiplication with the
+/// following dimensions:
+///
+///   vector.contract #matmul_trait %lhs, %rhs, %acc
+///     : vector<1x4xf32>, vector<4x[8]xf32> into vector<1x[8]xf32>
+///
+/// It is lowered to a sequence of indexed FMLAs, one per reduction dimension
+/// (pseudo-code illustration):
+///
+///   %acc = fmla %acc, %rhs, %lhs[0]
+///   %acc = fmla %acc, %rhs, %lhs[1]
+///   %acc = fmla %acc, %rhs, %lhs[2]
+///   %acc = fmla %acc, %rhs, %lhs[3]
+///
+/// Note that the relative order of `%rhs` and `%lhs` is reversed to match the
+/// SVE Op semantics.
+///
+/// The actual output is a bit more complex - input vectors
+/// (e.g. vector<[8]xf32>) are broken down into valid SVE vectors (e.g.
+/// vector<[4]xf32>) that the FMLA Op expects.
+class LowerContractionToSVEIndexedFMLAPatterns
+    : public OpRewritePattern<vector::ContractionOp> {
+  using Base::Base;
+
+public:
+  LogicalResult matchAndRewrite(vector::ContractionOp op,
+                                PatternRewriter &rewriter) const override {
+    // Check the specific preconditions.
+    if (failed(matchIndexed(op, rewriter)))
+      return failure();
+
+    auto loc = op.getLoc();
+    auto acc = op.getAcc();
+
+    // Legal type for indexed FMLA:
+    //  * vector<[4]xf32> rather than the input vector<[8]xf32>
+    mlir::VectorType legalType =
+        VectorType::get({4}, rewriter.getF32Type(), {true});
+
+    // Prepare LHS for indexed FMLA (2D -> 1D):
+    //  * vector<1x4xf32> -> vector<[4]xf32>
+    auto lhs1D = vector::ExtractOp::create(rewriter, loc, op.getLhs(), 0);
+    auto repeatedTy =
+        VectorType::get({4}, rewriter.getF32Type(), /*scalableDims=*/{true});
+    Value lhsScalable =
+        LLVM::vector_repeat::create(rewriter, loc, repeatedTy, lhs1D)
+            .getResult();
+
+    // Prepare ACC for indexed FMLA (split into legal vectors):
+    //    vector<1x[8]xf32> -> [vector<[4]xf32>, vector<[4]xf32>]
+    auto accRow = vector::ExtractOp::create(rewriter, loc, acc, 0);
+    auto acc0 =
+        vector::ScalableExtractOp::create(rewriter, loc, legalType, accRow, 0)
+            .getResult();
+    auto acc1 =
+        vector::ScalableExtractOp::create(rewriter, loc, legalType, accRow, 4)
+            .getResult();
+
+    // Loop over the reduction lanes
+    for (size_t laneIdx = 0; laneIdx < 4; ++laneIdx) {
+      auto lane = arith::ConstantIntOp::create(rewriter, loc, laneIdx, 32);
+
+      // Prepare RHS for indexed FMLA (select one row and split):
+      //    vector<4x[8]xf32> -> [vector<[4]xf32>, vector<[4]xf32>]
+      auto rhsRow =
+          vector::ExtractOp::create(rewriter, loc, op.getRhs(), laneIdx);
+      auto rhs0 = vector::ScalableExtractOp::create(rewriter, loc, legalType,
+                                                    rhsRow, 0);
+      auto rhs1 = vector::ScalableExtractOp::create(rewriter, loc, legalType,
+                                                    rhsRow, 4);
+
+      // FMLAs - note that the LHS and RHS operands from vector.contract are
+      // passed in the reverse order:
+      //    %acc = fmla %acc, %rhs, %lhs[0]
+      acc0 = arm_sve::FmlaOp::create(rewriter, loc, legalType, acc0, rhs0,
+                                     lhsScalable, lane)
+                 .getResult();
+      acc1 = arm_sve::FmlaOp::create(rewriter, loc, legalType, acc1, rhs1,
+                                     lhsScalable, lane)
+                 .getResult();
+    }
+
+    // Store the result back
+    acc = vector::ScalableInsertOp::create(rewriter, loc, acc0, accRow, 0);
+    acc = vector::ScalableInsertOp::create(rewriter, loc, acc1, acc, 4);
+
+    rewriter.replaceOp(op, vector::ShapeCastOp::create(
+                               rewriter, loc, op.getResultType(), acc));
+
+    return success();
+  }
+};
 } // namespace
 
 void mlir::arm_sve::populateLowerContractionToSVEI8MMPatterns(
@@ -590,4 +749,11 @@ void mlir::arm_sve::populateLowerContractionToSVEBFMMLAPatterns(
     RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
   patterns.add<LowerContractionToSVEBFMMLAPattern>(context, /*benefit=*/2);
+}
+
+void mlir::arm_sve::populateLowerContractionToSVEIndexedFMLAPatterns(
+    RewritePatternSet &patterns) {
+  MLIRContext *context = patterns.getContext();
+  patterns.add<LowerContractionToSVEIndexedFMLAPatterns>(context,
+                                                         /*benefit=*/2);
 }
