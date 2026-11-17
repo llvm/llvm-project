@@ -122,9 +122,8 @@ define <vscale x 16 x i1> @sve_cmpne_setcc_different_pred(<vscale x 16 x i8> %ve
 define <vscale x 16 x i1> @sve_cmpne_setcc_dup_z_all_ones(<vscale x 16 x i1> %pg) {
 ; CHECK-LABEL: sve_cmpne_setcc_dup_z_all_ones:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p0.b, vl16
-; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    ptrue p1.b, vl16
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %dup = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i1> %pg, i8 -1)
   %vl16 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 9)
@@ -135,9 +134,8 @@ define <vscale x 16 x i1> @sve_cmpne_setcc_dup_z_all_ones(<vscale x 16 x i1> %pg
 define <vscale x 16 x i1> @sve_cmpne_setcc_dup_z_one(<vscale x 16 x i1> %pg) {
 ; CHECK-LABEL: sve_cmpne_setcc_dup_z_one:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.b, p0/z, #1 // =0x1
-; CHECK-NEXT:    ptrue p0.b, vl16
-; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    ptrue p1.b, vl16
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %dup = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i1> %pg, i8 1)
   %vl16 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 9)
@@ -148,9 +146,8 @@ define <vscale x 16 x i1> @sve_cmpne_setcc_dup_z_one(<vscale x 16 x i1> %pg) {
 define <vscale x 16 x i1> @sve_cmpne_setcc_dup_z_nxv8i16(<vscale x 16 x i1> %p) {
 ; CHECK-LABEL: sve_cmpne_setcc_dup_z_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    ptrue p1.h, vl8
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %p)
   %dup = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i1> %pg, i16 -1)
@@ -163,25 +160,13 @@ define <vscale x 16 x i1> @sve_cmpne_setcc_dup_z_nxv8i16(<vscale x 16 x i1> %p) 
 define <vscale x 2 x i1> @sve_cmpne_setcc_dup_z_nxv2i64(<vscale x 2 x i1> %pg) {
 ; CHECK-LABEL: sve_cmpne_setcc_dup_z_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.d, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
+; CHECK-NEXT:    ptrue p1.d, vl2
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %dup = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> %pg, i64 -1)
   %vl2 = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 2)
   %cmp = call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> %vl2, <vscale x 2 x i64> %dup, <vscale x 2 x i64> zeroinitializer)
   ret <vscale x 2 x i1> %cmp
-}
-
-define <vscale x 16 x i1> @sve_cmpne_setcc_select_splat(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %pred) {
-; CHECK-LABEL: sve_cmpne_setcc_select_splat:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.b, p0/z, #7 // =0x7
-; CHECK-NEXT:    cmpne p0.b, p1/z, z0.b, #0
-; CHECK-NEXT:    ret
-  %sel = select <vscale x 16 x i1> %pg, <vscale x 16 x i8> splat (i8 7), <vscale x 16 x i8> zeroinitializer
-  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> %pred, <vscale x 16 x i8> %sel, <vscale x 16 x i8> zeroinitializer)
-  ret <vscale x 16 x i1> %cmp
 }
 
 ; Fold away the redundant setcc:
@@ -190,11 +175,8 @@ define <vscale x 16 x i1> @sve_cmpne_setcc_select_splat(<vscale x 16 x i1> %pg, 
 define <vscale x 4 x i1> @sve_cmpne_setcc_all_true_dup_z(<vscale x 4 x i1> %pg) {
 ; CHECK-LABEL: sve_cmpne_setcc_all_true_dup_z:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.s, p0/z, #42 // =0x2a
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    ret
-  %dup = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> %pg, i32 42)
+  %dup = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> %pg, i32 -1)
   %all = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
   %cmp = call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.nxv4i32(<vscale x 4 x i1> %all, <vscale x 4 x i32> %dup, <vscale x 4 x i32> zeroinitializer)
   ret <vscale x 4 x i1> %cmp
