@@ -202,3 +202,17 @@ TEST_F(LlvmLibcScandirTest, TestBadDirname) {
   ASSERT_THAT(LIBC_NAMESPACE::scandir("", &namelist, NULL, NULL),
               Fails(ENOENT, -1));
 }
+
+#if defined(LIBC_ADD_NULL_CHECKS)
+
+TEST_F(LlvmLibcScandirTest, NullPointerCrash) {
+  struct dirent **namelist = nullptr;
+  ASSERT_DEATH(
+      [&]() { LIBC_NAMESPACE::scandir(nullptr, &namelist, nullptr, nullptr); },
+      WITH_SIGNAL(-1));
+  ASSERT_DEATH(
+      [&]() { LIBC_NAMESPACE::scandir("fake_dir", nullptr, nullptr, nullptr); },
+      WITH_SIGNAL(-1));
+}
+
+#endif // defined(LIBC_ADD_NULL_CHECKS)

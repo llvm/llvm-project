@@ -2355,6 +2355,7 @@ static bool hoistGEP(Instruction &I, Loop &L, const LICMDependencies &Deps) {
 
   BasicBlock *Preheader = L.getLoopPreheader();
   IRBuilder<> Builder(Preheader->getTerminator());
+  Builder.disableGEPCanonicalization();
   Value *NewSrc = Builder.CreateGEP(GEP->getSourceElementType(), SrcPtr,
                                     SmallVector<Value *>(GEP->indices()),
                                     "invariant.gep", IsInBounds);

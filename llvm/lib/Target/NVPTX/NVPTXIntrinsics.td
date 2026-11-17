@@ -1810,10 +1810,26 @@ foreach op = ["expect_tx", "complete_tx"] in {
     foreach space = ["space_cta", "space_cluster"] in {
       defvar intr = !cast<Intrinsic>(MBAR_UTIL<op, scope, space>.intr_name);
       defvar suffix = StrJoin<"_", [op, scope, space]>.ret;
+      defvar asm_str = MBAR_UTIL<op, scope, space, "relaxed">.asm_str;
+
+      // The shared::cluster form additionally carries a 32-bit CTA mask.
+      defvar is_mc_space = !eq(space, "space_cluster");
+
       def mbar_ # suffix : BasicNVPTXInst<(outs), (ins ADDR:$addr, B32:$tx_count),
-                           MBAR_UTIL<op, scope, space, "relaxed">.asm_str,
-                           [(intr addr:$addr, i32:$tx_count)]>,
+                           asm_str,
+                           !if(is_mc_space,
+                               [(intr addr:$addr, i32:$tx_count, (i32 srcvalue), 0)],
+                               [(intr addr:$addr, i32:$tx_count)])>,
                            Requires<[PTX80, SM90]>;
+
+      if is_mc_space then {
+        def mbar_ # suffix # "_MC" : NVPTXInst<(outs),
+                              (ins ADDR:$addr, B32:$tx_count, B32:$mc),
+                              !subst(".b64", ".multicast::cluster::32b.b64", asm_str)
+                                # " [$addr], $tx_count, $mc;",
+                              [(intr addr:$addr, i32:$tx_count, i32:$mc, -1)]>,
+                              Requires<[hasRubinFamilySupport]>;
+      }
     } // space
   } // scope
 } // op
@@ -1842,8 +1858,14 @@ multiclass MBAR_ARR_INTR<string op, string scope, string sem,
   def _CLUSTER : NVPTXInst<(outs),
                  (ins ADDR:$addr, B32:$tx_count),
                  asm_cluster # " _, [$addr], $tx_count;",
-                 [(intr_cluster addr:$addr, i32:$tx_count)]>,
+                 [(intr_cluster addr:$addr, i32:$tx_count, (i32 srcvalue), 0)]>,
                  Requires<pred>;
+  def _CLUSTER_MC : NVPTXInst<(outs),
+                    (ins ADDR:$addr, B32:$tx_count, B32:$mc),
+                    !subst(".b64", ".multicast::cluster::32b.b64", asm_cluster)
+                      # " _, [$addr], $tx_count, $mc;",
+                    [(intr_cluster addr:$addr, i32:$tx_count, i32:$mc, -1)]>,
+                    Requires<[hasRubinFamilySupport]>;
 }
 foreach op = ["arrive", "arrive.expect_tx",
               "arrive_drop", "arrive_drop.expect_tx"] in {
@@ -2457,6 +2479,27 @@ foreach rnd = FPRoundingModes in {
            (!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", sat]>.ret)
              (f32 (fpextend type:$a)), (f32 (fpextend type:$b)), f32:$c, rnd_imm))]>,
         Requires<[SM100]>;
+
+  let Predicates = [hasFP16x2MixedPrecisionSupport] in {
+    foreach t = [F16X2RT, BF16X2RT] in {
+      def FMA_ # !toupper(rnd # "_f32x2_" # t.PtxType # "_f32x2_f32x2") :
+        BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, B64:$b, B64:$c),
+          "fma." # rnd # ".f32x2." # t.PtxType # ".f32x2.f32x2">;
+
+      defvar Inst = !cast<Instruction>("FMA_" # !toupper(rnd # "_f32x2_" # t.PtxType #
+                                                         "_f32x2_f32x2"));
+
+      def : Pat<(v2f32 (int_nvvm_fma (fpextend_v2f32_from_packed t.Ty:$a),
+                                     v2f32:$b, v2f32:$c, rnd_imm)),
+                (Inst $a, $b, $c)>;
+
+      def : Pat<(v2f32 (int_nvvm_fma
+                        (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
+                                                    t.Ty.ElementType:$a1),
+                        v2f32:$b, v2f32:$c, rnd_imm)),
+                (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b, $c)>;
+    }
+  }
 }
 
 // Pattern for llvm.fma.f32 intrinsic when there is no FTZ flag
@@ -2466,6 +2509,19 @@ let Predicates = [SM100, doNoF32FTZ] in {
   def : Pat<(f32 (fma (f32 (fpextend bf16:$a)), (f32 (fpextend bf16:$b)), f32:$c)),
             (FMA_RN_F32_BF16 B16:$a, B16:$b, B32:$c)>;
 }
+
+let Predicates = [hasFP16x2MixedPrecisionSupport, doNoF32FTZ] in
+  foreach t = [F16X2RT, BF16X2RT] in {
+    defvar Inst = !cast<Instruction>("FMA_RN_F32X2_" # !toupper(t.PtxType) # "_F32X2_F32X2");
+
+    def : Pat<(v2f32 (fma (fpextend_v2f32_from_packed t.Ty:$a), v2f32:$b, v2f32:$c)),
+              (Inst $a, $b, $c)>;
+
+    def : Pat<(v2f32 (fma (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
+                                                     t.Ty.ElementType:$a1),
+                          v2f32:$b, v2f32:$c)),
+              (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b, $c)>;
+  }
 
 foreach ty = [F16RT, F16X2RT, BF16RT, BF16X2RT] in {
   foreach relu = ["", "_relu"] in {

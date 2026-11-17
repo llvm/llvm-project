@@ -44,7 +44,6 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
@@ -80,8 +79,6 @@
 #include <vector>
 
 namespace llvm {
-
-static mc::RegisterMCTargetOptionsFlags MOF;
 
 using namespace dwarf_linker;
 
@@ -990,6 +987,12 @@ bool DwarfLinkerForBinary::linkImpl(
   return true;
 }
 
+static bool isDwarfSection(const object::MachOObjectFile &Obj,
+                           object::section_iterator Sec) {
+  return Sec != Obj.section_end() &&
+         Obj.getSectionFinalSegmentName(Sec->getRawDataRefImpl()) == "__DWARF";
+}
+
 /// Iterate over the relocations of the given \p Section and
 /// store the ones that correspond to debug map entries into the
 /// ValidRelocs array.
@@ -1060,6 +1063,11 @@ void DwarfLinkerForBinary::AddressManager::findValidRelocsMachO(
       if (const auto *Mapping = DMO.lookupSymbol(*SymbolName))
         ValidRelocs.emplace_back(Offset64, RelocSize, Addend, Mapping->getKey(),
                                  Mapping->getValue());
+    } else if (isDwarfSection(Obj, Obj.getRelocationSection(RelocDataRef))) {
+      // A reference into a DWARF section holds an offset into that section,
+      // not an object address, so it must not be matched against the debug
+      // map. The linker rewrites these offsets itself.
+      continue;
     } else if (const auto *Mapping = DMO.lookupObjectAddress(SymAddress)) {
       // Do not store the addend. The addend was the address of the symbol in
       // the object file, the address in the binary that is stored in the debug

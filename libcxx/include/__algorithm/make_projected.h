@@ -33,16 +33,17 @@ struct _ProjectedPred {
   _LIBCPP_CONSTEXPR _ProjectedPred(_Pred& __pred_arg, _Proj& __proj_arg) : __pred(__pred_arg), __proj(__proj_arg) {}
 
   template <class _Tp>
-  __invoke_result_t<_Pred&, decltype(std::__invoke(std::declval<_Proj&>(), std::declval<_Tp>()))> _LIBCPP_CONSTEXPR
+  __direct_invoke_result_t<_Pred&,
+                           decltype(std::__invoke(std::declval<_Proj&>(), std::declval<_Tp>()))> _LIBCPP_CONSTEXPR
 
   operator()(_Tp&& __v) const {
     return std::__invoke(__pred, std::__invoke(__proj, std::forward<_Tp>(__v)));
   }
 
   template <class _T1, class _T2>
-  __invoke_result_t<_Pred&,
-                    decltype(std::__invoke(std::declval<_Proj&>(), std::declval<_T1>())),
-                    decltype(std::__invoke(std::declval<_Proj&>(), std::declval<_T2>()))> _LIBCPP_CONSTEXPR
+  __direct_invoke_result_t<_Pred&,
+                           decltype(std::__invoke(std::declval<_Proj&>(), std::declval<_T1>())),
+                           decltype(std::__invoke(std::declval<_Proj&>(), std::declval<_T2>()))> _LIBCPP_CONSTEXPR
 
   operator()(_T1&& __lhs, _T2&& __rhs) const {
     return std::__invoke(

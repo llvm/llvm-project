@@ -646,6 +646,13 @@ FailureOr<Value> ContractionOpToDotLowering::matchAndRewriteMaskableOp(
   if (vectorContractLowering != vector::VectorContractLowering::Dot)
     return failure();
 
+  // A scalable dst dim can't be unrolled with a static trip count; check
+  // before any IR is created below.
+  if (auto dstType = dyn_cast<VectorType>(op.getResultType());
+      dstType && dstType.isScalable())
+    return rewriter.notifyMatchFailure(
+        op, "cannot unroll a scalable dimension in dot-product lowering");
+
   auto iteratorTypes = op.getIteratorTypes().getValue();
   static constexpr std::array<int64_t, 2> perm = {1, 0};
   Location loc = op.getLoc();
@@ -915,7 +922,7 @@ FailureOr<Value> ContractionOpLowering::matchAndRewriteMaskableOp(
 
   // TODO: the code below assumes the default contraction, make sure it supports
   // other kinds before enabling this lowering.
-  if (op.getKind() != vector::CombiningKind::ADD) {
+  if (!op.isAddKind()) {
     return rewriter.notifyMatchFailure(
         op, "contractions other than 'add' not supported");
   }
@@ -1085,10 +1092,11 @@ FailureOr<Value> ContractionOpLowering::lowerReduction(
   VectorType lhsType = op.getLhsType();
   VectorType rhsType = op.getRhsType();
   Type resType = op.getResultType();
-  if (isa<VectorType>(resType))
+  auto resVectorType = dyn_cast<VectorType>(resType);
+  if (resVectorType && resVectorType.getRank() != 0)
     return rewriter.notifyMatchFailure(op,
                                        "did not expect a VectorType result");
-  bool isInt = isa<IntegerType>(resType);
+  bool isInt = isa<IntegerType>(getElementTypeOrSelf(resType));
   // Use iterator index 0.
   int64_t iterIndex = 0;
   SmallVector<AffineMap> iMap = op.getIndexingMapsArray();
@@ -1120,12 +1128,19 @@ FailureOr<Value> ContractionOpLowering::lowerReduction(
     auto kind = vector::CombiningKind::ADD;
 
     Value acc = op.getAcc();
+    // vector.reduction takes a scalar accumulator.
+    if (resVectorType)
+      acc = vector::ExtractOp::create(rewriter, loc, acc, ArrayRef<int64_t>{});
     Operation *reductionOp =
         acc ? vector::ReductionOp::create(rewriter, loc, kind, m, acc,
                                           op.getFastmath())
             : vector::ReductionOp::create(rewriter, loc, kind, m,
                                           op.getFastmath());
-    return maskOperation(rewriter, reductionOp, mask)->getResult(0);
+    Value reduced = maskOperation(rewriter, reductionOp, mask)->getResult(0);
+    if (resVectorType)
+      reduced =
+          vector::BroadcastOp::create(rewriter, loc, resVectorType, reduced);
+    return reduced;
   }
   // Construct new iterator types and affine map array attribute.
   std::array<AffineMap, 3> lowIndexingMaps = {

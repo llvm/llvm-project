@@ -129,7 +129,6 @@ add_header_library(
     libc.src.__support.sign
 )
 
-
 add_header_library(
   sqrt
   HDRS

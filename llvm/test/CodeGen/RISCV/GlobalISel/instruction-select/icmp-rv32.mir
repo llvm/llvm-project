@@ -4,7 +4,6 @@
 name:            cmp_ult_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -28,7 +27,6 @@ body:             |
 name:            cmp_slt_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -52,7 +50,6 @@ body:             |
 name:            cmp_ugt_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -76,7 +73,6 @@ body:             |
 name:            cmp_sgt_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -100,7 +96,6 @@ body:             |
 name:            cmp_eq_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -125,7 +120,6 @@ body:             |
 name:            cmp_ne_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -150,7 +144,6 @@ body:             |
 name:            cmp_ule_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -175,7 +168,6 @@ body:             |
 name:            cmp_sle_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -200,7 +192,6 @@ body:             |
 name:            cmp_uge_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -225,7 +216,6 @@ body:             |
 name:            cmp_sge_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -250,7 +240,6 @@ body:             |
 name:            cmp_ult_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -274,7 +263,6 @@ body:             |
 name:            cmp_slt_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -298,7 +286,6 @@ body:             |
 name:            cmp_ugt_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -322,7 +309,6 @@ body:             |
 name:            cmp_sgt_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -346,7 +332,6 @@ body:             |
 name:            cmp_eq_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -371,7 +356,6 @@ body:             |
 name:            cmp_ne_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -396,7 +380,6 @@ body:             |
 name:            cmp_ule_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -421,7 +404,6 @@ body:             |
 name:            cmp_sle_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -446,7 +428,6 @@ body:             |
 name:            cmp_uge_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -471,7 +452,6 @@ body:             |
 name:            cmp_sge_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -496,7 +476,6 @@ body:             |
 name:            cmp_ulti_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -519,7 +498,6 @@ body:             |
 name:            cmp_slti_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -542,7 +520,6 @@ body:             |
 name:            cmp_ugti_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -566,7 +543,6 @@ body:             |
 name:            cmp_sgti_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -590,7 +566,6 @@ body:             |
 name:            cmp_eqi_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -614,7 +589,6 @@ body:             |
 name:            cmp_nei_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -638,7 +612,6 @@ body:             |
 name:            cmp_ulei_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -661,7 +634,6 @@ body:             |
 name:            cmp_slei_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -684,7 +656,6 @@ body:             |
 name:            cmp_ugei_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -708,7 +679,6 @@ body:             |
 name:            cmp_sgei_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -732,7 +702,6 @@ body:             |
 name:            cmp_ulti_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -756,7 +725,6 @@ body:             |
 name:            cmp_slti_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -780,7 +748,6 @@ body:             |
 name:            cmp_ugti_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -804,7 +771,6 @@ body:             |
 name:            cmp_sgti_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -828,7 +794,6 @@ body:             |
 name:            cmp_eqi_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -853,7 +818,6 @@ body:             |
 name:            cmp_nei_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -878,7 +842,6 @@ body:             |
 name:            cmp_ulei_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -903,7 +866,6 @@ body:             |
 name:            cmp_slei_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -928,7 +890,6 @@ body:             |
 name:            cmp_ugei_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -953,7 +914,6 @@ body:             |
 name:            cmp_sgei_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -978,7 +938,6 @@ body:             |
 name:            cmp_eq0_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -1001,7 +960,6 @@ body:             |
 name:            cmp_eq0_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -1024,7 +982,6 @@ body:             |
 name:            cmp_ne0_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -1047,7 +1004,6 @@ body:             |
 name:            cmp_ne0_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -1070,7 +1026,6 @@ body:             |
 name:            cmp_ugt_neg1_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -1094,7 +1049,6 @@ body:             |
 name:            cmp_ugt_neg1_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10

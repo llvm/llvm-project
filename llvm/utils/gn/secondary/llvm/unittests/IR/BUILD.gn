@@ -39,6 +39,7 @@ unittest("IRTests") {
     "LibraryOptionsContextTest.cpp",
     "MDBuilderTest.cpp",
     "ManglerTest.cpp",
+    "MemCacheHintTest.cpp",
     "MemoryModelRelaxationAnnotationsTest.cpp",
     "MetadataTest.cpp",
     "ModuleSummaryIndexTest.cpp",

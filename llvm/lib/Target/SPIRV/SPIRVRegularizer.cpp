@@ -170,8 +170,34 @@ static void runLowerI1Comparisons(Function &F) {
   }
 }
 
+// OpSwitch requires an integer selector, but i1 maps to OpTypeBool. Lower
+// boolean switches to branches. This runs before structurization, so that
+// merge instructions match the resulting CFG.
+static void runLowerI1Switches(Function &F) {
+  for (BasicBlock &BB : F) {
+    auto *SI = dyn_cast<SwitchInst>(BB.getTerminator());
+    if (!SI || !SI->getCondition()->getType()->isIntegerTy(1))
+      continue;
+    BasicBlock *Dests[2] = {SI->getDefaultDest(), SI->getDefaultDest()};
+    for (auto Case : SI->cases())
+      Dests[Case.getCaseValue()->isOne()] = Case.getCaseSuccessor();
+    // Both values have a case, so the default is unreachable.
+    if (SI->getNumCases() == 2)
+      SI->getDefaultDest()->removePredecessor(&BB);
+    Instruction *Br;
+    if (SI->getNumCases() == 0)
+      Br = UncondBrInst::Create(Dests[0], SI->getIterator());
+    else
+      Br = CondBrInst::Create(SI->getCondition(), Dests[1], Dests[0],
+                              SI->getIterator());
+    Br->copyMetadata(*SI, {LLVMContext::MD_dbg, LLVMContext::MD_loop});
+    SI->eraseFromParent();
+  }
+}
+
 static bool runImpl(Function &F) {
   runLowerI1Comparisons(F);
+  runLowerI1Switches(F);
   runLowerConstExpr(F);
   return true;
 }

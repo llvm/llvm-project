@@ -899,7 +899,7 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; X86-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[LOOP]] ]
 ; X86-NEXT:    [[TMP1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[LOOP]] ]
 ; X86-NEXT:    [[LD_ADDR:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV]]
-; X86-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[LD_ADDR]], i64 4
+; X86-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[LD_ADDR]], i64 16
 ; X86-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[LD_ADDR]], align 4
 ; X86-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP9]], align 4
 ; X86-NEXT:    [[TMP2:%.*]] = icmp slt <4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
@@ -956,7 +956,7 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; AVX512-NEXT:    [[TMP0:%.*]] = phi <16 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; AVX512-NEXT:    [[TMP9:%.*]] = phi <16 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
 ; AVX512-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[INDEX]]
-; AVX512-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 16
+; AVX512-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 64
 ; AVX512-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i32>, ptr [[TMP1]], align 4
 ; AVX512-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i32>, ptr [[TMP10]], align 4
 ; AVX512-NEXT:    [[TMP2:%.*]] = icmp slt <16 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]

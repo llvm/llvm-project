@@ -337,7 +337,7 @@ void GCNRematStrategy::rematerializeFor(
           for (const auto &[UseRegion, _] : Reg.Uses) {
             if (UseRegion == Reg.DefRegion)
               continue;
-            LaneBitmask LiveInMask = getLiveIns(UseRegion).at(UseReg);
+            LaneBitmask LiveInMask = Regions.getLiveIns(UseRegion).at(UseReg);
             LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
             // If this register has lanes not covered by the LiveIns, be sure
             // they do not map to any subrange. ref:

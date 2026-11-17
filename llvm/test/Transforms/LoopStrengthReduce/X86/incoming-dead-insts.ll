@@ -14,8 +14,6 @@ define i64 @redundant_iv_crit_edge_exit(i64 %n) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ 3, %[[ENTRY]] ]
-; CHECK-NEXT:    [[IV2:%.*]] = phi i64 [ 2, %[[ENTRY]] ], [ [[IV2_NEXT:%.*]], %[[LOOP_LATCH]] ]
-; CHECK-NEXT:    [[IV2_NEXT]] = add nuw nsw i64 [[IV2]], 1
 ; CHECK-NEXT:    [[EARLY_COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[EARLY_COND]], label %[[LOOP_LATCH]], label %[[LOOP_HEADER_EXIT_CRIT_EDGE:.*]]
 ; CHECK:       [[LOOP_LATCH]]:
@@ -28,7 +26,6 @@ define i64 @redundant_iv_crit_edge_exit(i64 %n) {
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_HEADER_EXIT_CRIT_EDGE]]:
 ; CHECK-NEXT:    [[LSR_IV_LCSSA:%.*]] = phi i64 [ [[LSR_IV]], %[[LOOP_HEADER]] ]
-; CHECK-NEXT:    [[SPLIT:%.*]] = phi i64 [ [[IV2_NEXT]], %[[LOOP_HEADER]] ]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[LSR_IV_LCSSA]], %[[LOOP_HEADER_EXIT_CRIT_EDGE]] ], [ [[RES_PH]], %[[EXITSPLIT]] ]

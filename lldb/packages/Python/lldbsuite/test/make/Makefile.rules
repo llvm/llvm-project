@@ -255,7 +255,7 @@ ifeq ($(CC_TYPE), clang)
 endif
 
 ifeq "$(MAKE_PDB)" "YES"
-	DEBUG_INFO_FLAG ?= -g -gcodeview
+	DEBUG_INFO_FLAG ?= -g -gcodeview -gcolumn-info
 endif
 
 # If the OS is Windows, we need to pass -gdwarf to clang, otherwise it will build

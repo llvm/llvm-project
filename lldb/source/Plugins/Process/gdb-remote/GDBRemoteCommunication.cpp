@@ -709,7 +709,7 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
   }
 
   // Resume the search so a packet that arrives in many reads is scanned once.
-  // DecompressPacket may rewrite m_bytes, so start over when it is enabled.
+  // DecompressPacket may rewrite m_bytes, so start over when compression is on.
   const size_t hash_search_start =
       CompressionIsEnabled() ? 0 : m_hash_search_start;
   m_hash_search_start = 0;
