@@ -43,7 +43,7 @@ libc_test(
         "//libc/hdr/types:struct_sockaddr_in6",
         "//libc/hdr/types:struct_sockaddr_un",
         "//libc/src/__support/CPP:scope",
-        "//libc/src/arpa/inet:htonl",
+        "//libc/src/__support/net:byte_order",
         "//libc/src/stdio:remove",
         "//libc/src/sys/socket",
         "//libc/src/sys/socket:bind",
