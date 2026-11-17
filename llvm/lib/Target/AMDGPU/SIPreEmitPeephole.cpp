@@ -19,6 +19,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "GCNHazardRecognizer.h"
 #include "GCNSubtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -61,6 +62,7 @@ private:
                             MachineBasicBlock *&TrueMBB,
                             MachineBasicBlock *&FalseMBB,
                             SmallVectorImpl<MachineOperand> &Cond);
+  bool hasPendingWMMACoexecutionHazard(const MachineInstr &Branch) const;
   bool mustRetainExeczBranch(const MachineInstr &Branch,
                              const MachineBasicBlock &From,
                              const MachineBasicBlock &To) const;
@@ -473,13 +475,71 @@ public:
   }
 };
 
+// Returns true if an XDL WMMA co-execution hazard may still be unresolved when
+// \p Branch is reached. VALUs skipped because EXEC = 0 do not issue, so they
+// must not count toward resolving it.
+bool SIPreEmitPeephole::hasPendingWMMACoexecutionHazard(
+    const MachineInstr &Branch) const {
+  const unsigned Window = GCNHazardRecognizer::getMaxWMMACoexecutionWaitStates(
+      Branch.getMF()->getSubtarget<GCNSubtarget>());
+
+  // Scans backwards, counting VALUs into \p VALUs. Returns true on reaching an
+  // XDL WMMA whose window is not yet covered.
+  auto Scan = [&](MachineBasicBlock::const_reverse_instr_iterator I,
+                  MachineBasicBlock::const_reverse_instr_iterator E,
+                  unsigned &VALUs) {
+    for (; I != E && VALUs < Window; ++I) {
+      if (I->isBundle() || I->isMetaInstruction())
+        continue;
+      if (TII->isXDLWMMA(*I))
+        return true;
+      if (SIInstrInfo::isVALU(*I, /*AllowLDSDMA=*/true))
+        ++VALUs;
+    }
+    return false;
+  };
+
+  const MachineBasicBlock *MBB = Branch.getParent();
+  unsigned VALUs = 0;
+  if (Scan(std::next(Branch.getReverseIterator()), MBB->instr_rend(), VALUs))
+    return true;
+  if (VALUs >= Window)
+    return false;
+
+  // Fewest VALUs between the end of each visited block and Branch.
+  DenseMap<const MachineBasicBlock *, unsigned> MinVALUsAtEnd;
+  SmallVector<std::pair<const MachineBasicBlock *, unsigned>, 8> Worklist;
+  for (const MachineBasicBlock *Pred : MBB->predecessors())
+    Worklist.emplace_back(Pred, VALUs);
+
+  while (!Worklist.empty()) {
+    auto [Block, Count] = Worklist.pop_back_val();
+    auto [It, Inserted] = MinVALUsAtEnd.try_emplace(Block, Count);
+    if (!Inserted) {
+      if (It->second <= Count)
+        continue;
+      It->second = Count;
+    }
+    if (Scan(Block->instr_rbegin(), Block->instr_rend(), Count))
+      return true;
+    if (Count >= Window)
+      continue;
+    for (const MachineBasicBlock *Pred : Block->predecessors())
+      Worklist.emplace_back(Pred, Count);
+  }
+  return false;
+}
+
 bool SIPreEmitPeephole::mustRetainExeczBranch(
     const MachineInstr &Branch, const MachineBasicBlock &From,
     const MachineBasicBlock &To) const {
   assert(is_contained(Branch.getParent()->successors(), &From));
   BranchWeightCostModel CostModel{*TII, Branch, From};
+  bool HasVALU = false;
 
   const MachineFunction *MF = From.getParent();
+  const bool CheckWMMA =
+      MF->getSubtarget<GCNSubtarget>().hasWMMACoexecutionHazards();
   for (MachineFunction::const_iterator MBBI(&From), ToI(&To), End = MF->end();
        MBBI != End && MBBI != ToI; ++MBBI) {
     const MachineBasicBlock &MBB = *MBBI;
@@ -501,12 +561,21 @@ bool SIPreEmitPeephole::mustRetainExeczBranch(
       if (TII->hasUnwantedEffectsWhenEXECEmpty(MI))
         return true;
 
+      // An XDL WMMA is not skipped when EXEC = 0, but the VALUs after it are,
+      // so they cannot cover its hazard window.
+      if (CheckWMMA && TII->isXDLWMMA(MI))
+        return true;
+
       if (!CostModel.isProfitable(MI))
         return true;
+
+      HasVALU |= SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true);
     }
   }
 
-  return false;
+  // Keep the skip so the hazard recognizer pads the path around the region
+  // instead of counting VALUs that may be skipped as spacing.
+  return CheckWMMA && HasVALU && hasPendingWMMACoexecutionHazard(Branch);
 }
 } // namespace
 

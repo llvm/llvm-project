@@ -2786,6 +2786,11 @@ static unsigned getWMMAHazardInstInCategory(const MachineInstr &MI,
   return Category;
 }
 
+unsigned
+GCNHazardRecognizer::getMaxWMMACoexecutionWaitStates(const GCNSubtarget &ST) {
+  return ST.hasGFX125xLowestRateWMMA() ? 17 : 9;
+}
+
 int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
   if (!ST.hasWMMACoexecutionHazards())
     return 0;
@@ -2805,8 +2810,8 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
   const bool IsLowestRateWMMA = ST.hasGFX125xLowestRateWMMA();
   ArrayRef<int> RequiredWaitStates =
       IsWMMA ? ArrayRef<int>(WMMAWaitStates) : ArrayRef<int>(VALUWaitStates);
-  const int MaxWaitStates =
-      IsWMMA ? (IsLowestRateWMMA ? 17 : 9) : (IsLowestRateWMMA ? 16 : 8);
+  const int MaxWaitStates = IsWMMA ? getMaxWMMACoexecutionWaitStates(ST)
+                                   : (IsLowestRateWMMA ? 16 : 8);
 
   auto WindowFor = [=](const MachineInstr &I) -> std::optional<int> {
     if (!TII->isXDLWMMA(I))
