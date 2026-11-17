@@ -7,8 +7,7 @@ target triple = "i686-pc-linux-gnu"
 define i32 @main() {
 ; CHECK-LABEL: define i32 @main() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP:%.*]] = call ptr @ctime(ptr null)
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[TMP]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @ctime(ptr null)
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
@@ -57,8 +56,7 @@ define i32 @test1(ptr %a) {
 ; CHECK-LABEL: define i32 @test1(
 ; CHECK-SAME: ptr [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i32
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @fn1(i32 [[TMP0]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @fn1(ptr [[A]])
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
 entry:
@@ -111,8 +109,9 @@ entry:
 declare i1 @fn5(ptr byval({ i32, i32 }) align 4 %r)
 
 define i1 @test5(ptr %ptr) {
-; CHECK-LABEL: define i1 @test5(ptr %ptr) {
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-LABEL: define i1 @test5(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i32 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @fn5(i32 [[TMP2]], i32 [[TMP4]])
@@ -137,7 +136,7 @@ define void @bundles_callee(i32) {
 define void @bundles() {
 ; CHECK-LABEL: define void @bundles() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @bundles_callee(i32 0) [ "deopt"() ]
+; CHECK-NEXT:    call void @bundles_callee() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ;
 entry:
