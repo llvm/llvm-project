@@ -1190,7 +1190,7 @@ This function uses the following formula: X * 2^Exp
   let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
+  let VaryingMatDims = AllMatDims;
 }
 
 // Returns the length of the specified floating-point vector.
