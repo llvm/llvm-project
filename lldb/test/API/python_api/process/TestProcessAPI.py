@@ -563,3 +563,12 @@ class ProcessAPITestCase(TestBase):
         self.assertEqual(
             process.selected_thread.GetThreadID(), process.thread[0].GetThreadID()
         )
+        
+        #checking status after continue and returning 0
+        process.Continue()
+        self.assertFalse(process.is_alive)
+        self.assertFalse(process.is_running)
+        self.assertFalse(process.is_stopped)
+        self.assertEqual(process.state, lldb.eStateExited)
+        self.assertEqual(process.exit_state ,0)
+        self.assertEqual(process.exit_description, process.GetExitDescription())
