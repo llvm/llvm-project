@@ -71,8 +71,8 @@ mlir_tablegen(NVVMRequiresSMTraits.cpp.inc -gen-op-interface-defs)
 add_mlir_dialect_tablegen_target(MLIRNVVMRequiresSMTraitsIncGen)
 
 set(LLVM_TARGET_DEFINITIONS NVVMOps.td)
-foreach(partition Arith Convert DataMovement IndexSReg Misc MiscSReg Mma Sync
-                  Tcgen05 Wgmma)
+foreach(partition Arith AsyncCopy Convert DataMovement IndexSReg MBarrier Misc
+                  MiscSReg Mma Sync Tcgen05 Wgmma)
   mlir_tablegen(NVVM${partition}Ops.h.inc -gen-op-decls
                 -op-partition=${partition})
   mlir_tablegen(NVVM${partition}Ops.cpp.inc -gen-op-defs

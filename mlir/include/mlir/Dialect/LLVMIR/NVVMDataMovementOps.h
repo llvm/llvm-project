@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 //
 // This file declares the ops of op partition `DataMovement` of the NVVM
-// dialect: the data movement instructions of PTX except `cvt`, i.e. the
-// asynchronous and bulk copies, prefetches, stores, shuffles, byte
-// permutations, sparse compressions, address mapping and tensor map updates.
+// dialect: the data movement instructions of PTX except `cvt` and the
+// asynchronous copies, i.e. prefetches, stores, shuffles, byte permutations,
+// sparse compressions and address mapping.
 //
 //===----------------------------------------------------------------------===//
 

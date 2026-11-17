@@ -55,9 +55,13 @@ class NVVM_PTXBuilder_Op<string mnemonic, list<Trait> extraTraits = []> :
 //  - `Arith`: integer, floating-point, comparison and logic instructions
 //    (9.7.1-9.7.9).
 //  - `Convert`: the `cvt` data conversion instructions (9.7.10.24).
+//  - `AsyncCopy`: the asynchronous copy instructions and `tensormap.replace`
+//    (9.7.10.28 and 9.7.10.29).
 //  - `DataMovement`: the other data movement and conversion instructions
 //    (9.7.10).
-//  - `Sync`: parallel synchronization and communication instructions (9.7.15).
+//  - `MBarrier`: the mbarrier instructions (9.7.15.16).
+//  - `Sync`: the other parallel synchronization and communication instructions
+//    (9.7.15).
 //  - `Mma`: warp-level matrix multiply-accumulate instructions (9.7.16).
 //  - `Wgmma`: asynchronous warpgroup-level matrix multiply-accumulate
 //    instructions (9.7.17).
@@ -68,9 +72,11 @@ class NVVM_PTXBuilder_Op<string mnemonic, list<Trait> extraTraits = []> :
 //  - `Misc`: control flow and miscellaneous instructions (9.7.14 and 9.7.21),
 //    and ops without a PTX instruction.
 def NVVM_ArithPartition : Partition<"Arith">;
+def NVVM_AsyncCopyPartition : Partition<"AsyncCopy">;
 def NVVM_ConvertPartition : Partition<"Convert">;
 def NVVM_DataMovementPartition : Partition<"DataMovement">;
 def NVVM_IndexSRegPartition : Partition<"IndexSReg">;
+def NVVM_MBarrierPartition : Partition<"MBarrier">;
 def NVVM_MiscPartition : Partition<"Misc">;
 def NVVM_MiscSRegPartition : Partition<"MiscSReg">;
 def NVVM_MmaPartition : Partition<"Mma">;
@@ -684,7 +690,7 @@ def NVVM_PMEventOp : NVVM_VoidIntrinsicOp<"pmevent">,
 // NVVM Split arrive/wait barrier
 //===----------------------------------------------------------------------===//
 
-let partition = NVVM_SyncPartition in {
+let partition = NVVM_MBarrierPartition in {
 /// mbarrier.init instruction with generic pointer type
 def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init",
     [NVVMRequiresSM<80>]>,
@@ -1288,7 +1294,7 @@ def NVVM_MBarrierTryWaitOp : NVVM_SingleResultIntrinsicOp<"mbarrier.try_wait",
   }];
   let hasVerifier = 1;
 }
-} // let partition = NVVM_SyncPartition
+} // let partition = NVVM_MBarrierPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM synchronization op definitions
@@ -2031,7 +2037,7 @@ def LoadCacheModifierKind : I32EnumAttr<"LoadCacheModifierKind",
 
 def LoadCacheModifierAttr : EnumAttr<NVVM_Dialect, LoadCacheModifierKind, "load_cache_modifier">;
 
-let partition = NVVM_DataMovementPartition in {
+let partition = NVVM_AsyncCopyPartition in {
 def NVVM_CpAsyncOp : NVVM_Op<"cp.async.shared.global">,
   Arguments<(ins LLVM_PointerShared:$dst,
                  LLVM_PointerGlobal:$src,
@@ -2074,9 +2080,9 @@ def NVVM_CpAsyncWaitGroupOp : NVVM_Op<"cp.async.wait.group">,
   }];
   let assemblyFormat = "$n attr-dict";
 }
-} // let partition = NVVM_DataMovementPartition
+} // let partition = NVVM_AsyncCopyPartition
 
-let partition = NVVM_SyncPartition in {
+let partition = NVVM_MBarrierPartition in {
 def NVVM_CpAsyncMBarrierArriveOp : NVVM_VoidIntrinsicOp<"cp.async.mbarrier.arrive"> {
   let summary = "NVVM Dialect Op for cp.async.mbarrier.arrive";
   let description = [{
@@ -2099,7 +2105,7 @@ def NVVM_CpAsyncMBarrierArriveOp : NVVM_VoidIntrinsicOp<"cp.async.mbarrier.arriv
     $addr oilist(`noinc` `=` $noinc) attr-dict `:` type(operands)
   }];
 }
-} // let partition = NVVM_SyncPartition
+} // let partition = NVVM_MBarrierPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Conversion Ops (for "cvt.*" family of PTX instructions)
@@ -4612,7 +4618,7 @@ def CTAGroupKind : I32EnumAttr<"CTAGroupKind",
 def CTAGroupKindAttr :
   EnumAttr<NVVM_Dialect, CTAGroupKind, "cta_group">;
 
-let partition = NVVM_DataMovementPartition in {
+let partition = NVVM_AsyncCopyPartition in {
 def NVVM_CpAsyncBulkCommitGroupOp : NVVM_Op<"cp.async.bulk.commit.group">,
   Arguments<(ins )> {
   let assemblyFormat = "attr-dict";
@@ -4917,7 +4923,7 @@ def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOverrideAddrOp :
 
     let hasVerifier = 1;
 }
-} // let partition = NVVM_DataMovementPartition
+} // let partition = NVVM_AsyncCopyPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Prefetch Op
@@ -5038,7 +5044,9 @@ def NVVM_PrefetchValidAddrOp :
                         builder.getVoidTy(), {$addr});
   }];
 }
+} // let partition = NVVM_DataMovementPartition
 
+let partition = NVVM_AsyncCopyPartition in {
 def NVVM_CpAsyncBulkPrefetchOp : NVVM_VoidIntrinsicOp<"cp.async.bulk.prefetch"> {
   let summary = "Async bulk prefetch from global memory to L2 cache";
   let description = [{
@@ -5102,7 +5110,7 @@ def NVVM_CpAsyncBulkTensorPrefetchOp :
 
   let hasVerifier = 1;
 }
-} // let partition = NVVM_DataMovementPartition
+} // let partition = NVVM_AsyncCopyPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Reduction Ops
@@ -5127,7 +5135,7 @@ def TMAReduxKind : I32EnumAttr<"TMAReduxKind", "NVVM TMA redux kind",
 }
 def TMAReduxKindAttr : EnumAttr<NVVM_Dialect, TMAReduxKind, "tma_redux_kind">;
 
-let partition = NVVM_DataMovementPartition in {
+let partition = NVVM_AsyncCopyPartition in {
 def NVVM_CpAsyncBulkTensorReduceOp :
   NVVM_Op<"cp.async.bulk.tensor.reduce", [AttrSizedOperandSegments]> {
   let arguments = (ins
@@ -5390,7 +5398,7 @@ def NVVM_CpAsyncBulkSharedCTAToGlobalOp :
     createIntrinsicCall(builder, id, args);
   }];
 }
-} // let partition = NVVM_DataMovementPartition
+} // let partition = NVVM_AsyncCopyPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Wgmma Ops
@@ -7950,7 +7958,7 @@ def TensormapFieldValueAttr :
     TensormapSwizzleModeAttr, TensormapSwizzleAtomicityAttr, 
     TensormapFillModeAttr]>;
 
-let partition = NVVM_DataMovementPartition in {
+let partition = NVVM_AsyncCopyPartition in {
 def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace",
     [NVVMRequiresSMaOrSMf<[90, 103], [100, 101, 110, 120]>]> {
   let summary = "Modifies a field of the tensor-map object";
@@ -7999,7 +8007,7 @@ def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace",
     ($new_value_attr^):($new_value)? `in` $addr attr-dict `:` type(operands)
   }];
 }
-} // let partition = NVVM_DataMovementPartition
+} // let partition = NVVM_AsyncCopyPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM target attribute.

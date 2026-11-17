@@ -7,16 +7,15 @@
 //===----------------------------------------------------------------------===//
 //
 // This file declares the ops of op partition `Sync` of the NVVM dialect: the
-// parallel synchronization and communication ops, i.e. barriers, fences,
-// mbarriers, warp-level votes, matches and reductions, grid dependency control
-// and cluster launch control.
+// parallel synchronization and communication ops except mbarriers, i.e.
+// barriers, fences, warp-level votes, matches and reductions, grid dependency
+// control and cluster launch control.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_DIALECT_LLVMIR_NVVMSYNCOPS_H_
 #define MLIR_DIALECT_LLVMIR_NVVMSYNCOPS_H_
 
-#include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialectDecl.h"

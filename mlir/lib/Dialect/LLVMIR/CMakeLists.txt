@@ -76,9 +76,11 @@ add_mlir_dialect_library(MLIRNVVMDialect
   IR/BasicPtxBuilderInterface.cpp
   IR/NVVMRequiresSMTraits.cpp
   IR/NVVMArithOps.cpp
+  IR/NVVMAsyncCopyOps.cpp
   IR/NVVMConvertOps.cpp
   IR/NVVMDataMovementOps.cpp
   IR/NVVMIndexSRegOps.cpp
+  IR/NVVMMBarrierOps.cpp
   IR/NVVMMiscOps.cpp
   IR/NVVMMiscSRegOps.cpp
   IR/NVVMMmaOps.cpp
