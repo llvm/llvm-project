@@ -100,7 +100,8 @@ static void expectTerminatorSuccessors(Region &region,
 }
 
 /// Check the successors of the cir.condition that terminates `cond` when its
-/// condition is the constant `value`.
+/// condition is the constant `value`. As elsewhere, nullptr in `expected` is
+/// the parent: control leaves the loop.
 static void expectConstConditionSuccessors(Region &cond, bool value,
                                            ArrayRef<Region *> expected) {
   RegionBranchTerminatorOpInterface term = getTerminator(cond);
@@ -616,9 +617,52 @@ TEST_F(CIRControlFlowTest, WhileOpConstantTrueWithBreak) {
   )CIR");
   auto whileOp = findFirstOp<cir::WhileOp>(*module);
 
-  // cir.break is not a region branch terminator, so the exit edge is kept.
+  // cir.break is not a region branch terminator, so the exit edge (nullptr)
+  // is kept.
   expectConstConditionSuccessors(whileOp.getCond(), true,
                                  {&whileOp.getBody(), nullptr});
+}
+
+TEST_F(CIRControlFlowTest, ForOpConstantTrueWithBreak) {
+  OwningOpRef<ModuleOp> module = parse(R"CIR(
+    cir.func @f(%cond : !cir.bool) {
+      cir.for : cond {
+        cir.condition(%cond)
+      } body {
+        cir.if %cond {
+          cir.break
+        }
+        cir.yield
+      } step {
+        cir.yield
+      }
+      cir.return
+    }
+  )CIR");
+  auto forOp = findFirstOp<cir::ForOp>(*module);
+
+  expectConstConditionSuccessors(forOp.getCond(), true,
+                                 {&forOp.getBody(), nullptr});
+}
+
+TEST_F(CIRControlFlowTest, DoWhileOpConstantTrueWithBreak) {
+  OwningOpRef<ModuleOp> module = parse(R"CIR(
+    cir.func @f(%cond : !cir.bool) {
+      cir.do {
+        cir.if %cond {
+          cir.break
+        }
+        cir.yield
+      } while {
+        cir.condition(%cond)
+      }
+      cir.return
+    }
+  )CIR");
+  auto doWhileOp = findFirstOp<cir::DoWhileOp>(*module);
+
+  expectConstConditionSuccessors(doWhileOp.getCond(), true,
+                                 {&doWhileOp.getBody(), nullptr});
 }
 
 TEST_F(CIRControlFlowTest, WhileOpConstantTrueWithBreakAndCleanup) {
