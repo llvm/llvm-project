@@ -69,7 +69,7 @@ void bad6(void) {
 void bad7(void) {
   mtx_lock(&mtx1);
   mtx_lock(&mtx2);
-  mtx_unlock(&mtx1); // lor-warning {{This was not the most recently acquired lock. Possible lock order reversal}}
+  mtx_unlock(&mtx1); // lor-warning {{This was not the most recently acquired lock; possible lock order reversal}}
   mtx_unlock(&mtx2);
 }
 

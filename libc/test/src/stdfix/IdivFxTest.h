@@ -1,17 +1,23 @@
-//===-- Utility class to test idivfx functions ------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Utility class to test idivfx functions.
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_TEST_SRC_STDFIX_IDIVFXTEST_H
+#define LLVM_LIBC_TEST_SRC_STDFIX_IDIVFXTEST_H
 
 #include "test/UnitTest/Test.h"
 
-#include "src/__support/fixed_point/fx_rep.h"
-#include "src/__support/macros/sanitizer.h"
-
 #include "hdr/signal_macros.h"
+#include "src/__support/fixed_point/fx_rep.h"
 
 template <typename T, typename XType>
 class IdivFxTest : public LIBC_NAMESPACE::testing::Test {
@@ -61,7 +67,7 @@ public:
     }
   }
 
-  void testInvalidNumbers(IdivFxFunc func) {
+  void testInvalidNumbers([[maybe_unused]] IdivFxFunc func) {
     constexpr bool has_integral = (FXRep::INTEGRAL_LEN > 0);
 
     EXPECT_DEATH([func] { func(0.5, 0.0); }, WITH_SIGNAL(-1));
@@ -89,3 +95,5 @@ public:
   }                                                                            \
   static_assert(true, "Require semicolon.")
 #endif // LIBC_ADD_NULL_CHECKS
+
+#endif // LLVM_LIBC_TEST_SRC_STDFIX_IDIVFXTEST_H

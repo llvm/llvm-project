@@ -50,9 +50,8 @@ bool MIR2VecTool::initializeVocabularyForLayout(const Module &M) {
 
     const TargetInstrInfo &TII = *MF->getSubtarget().getInstrInfo();
     const TargetRegisterInfo &TRI = *MF->getSubtarget().getRegisterInfo();
-    const MachineRegisterInfo &MRI = MF->getRegInfo();
 
-    auto VocabOrErr = MIRVocabulary::createDummyVocabForTest(TII, TRI, MRI, 1);
+    auto VocabOrErr = MIRVocabulary::createDummyVocabForTest(TII, TRI, 1);
     if (!VocabOrErr) {
       WithColor::error(errs(), ToolName)
           << "Failed to create dummy vocabulary - "
@@ -95,7 +94,8 @@ TripletResult MIR2VecTool::generateTriplets(const MachineFunction &MF) const {
 
       unsigned ArgIndex = 0;
       for (const MachineOperand &MO : MI.operands()) {
-        auto OperandID = Vocab->getEntityIDForMachineOperand(MO);
+        auto OperandID =
+            Vocab->getEntityIDForMachineOperand(MO, MF.getRegInfo());
         unsigned RelationID = MIRArgRelation + ArgIndex;
         Result.Triplets.push_back({OpcodeID, OperandID, RelationID});
         LLVM_DEBUG({
