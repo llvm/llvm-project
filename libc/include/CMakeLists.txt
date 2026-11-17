@@ -1050,6 +1050,16 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_timerfd
+  ../libc/include/sys/timerfd.yaml
+  sys/timerfd.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_timerfd_macros
+    .llvm-libc-macros.time_macros
+)
+
+add_header_macro(
   sys_types
   ../libc/include/sys/types.yaml
   sys/types.h
@@ -1276,6 +1286,15 @@ add_header_macro(
     .llvm-libc-types.struct_in_addr
     .llvm-libc-macros.inet_address_macros
     .netinet_in
+)
+
+add_header_macro(
+  arpa_nameser
+  ../libc/include/arpa/nameser.yaml
+  arpa/nameser.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.arpa_nameser_macros
 )
 
 add_header_macro(

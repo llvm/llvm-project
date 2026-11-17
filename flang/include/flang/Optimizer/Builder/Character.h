@@ -63,11 +63,6 @@ public:
   void createAssign(const fir::ExtendedValue &lhs,
                     const fir::ExtendedValue &rhs);
 
-  /// Create lhs // rhs in a stack or heap temporary.
-  fir::CharBoxValue createConcatenate(const fir::CharBoxValue &lhs,
-                                      const fir::CharBoxValue &rhs,
-                                      bool useHeap = false);
-
   /// Create {max,min}(lhs,rhs) in a stack or heap temporary.
   fir::CharBoxValue createCharExtremum(bool predIsMin,
                                        llvm::ArrayRef<fir::CharBoxValue> opCBVs,
@@ -201,7 +196,6 @@ private:
   fir::CharBoxValue materializeValue(mlir::Value str);
   mlir::Value getCharBoxBuffer(const fir::CharBoxValue &box);
   mlir::Value createElementAddr(mlir::Value buffer, mlir::Value index);
-  mlir::Value createLoadCharAt(mlir::Value buff, mlir::Value index);
   void createStoreCharAt(mlir::Value str, mlir::Value index, mlir::Value c);
   void createLengthOneAssign(const fir::CharBoxValue &lhs,
                              const fir::CharBoxValue &rhs);

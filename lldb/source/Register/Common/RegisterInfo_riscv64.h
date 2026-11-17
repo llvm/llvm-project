@@ -15,8 +15,7 @@
 #include "lldb/lldb-private.h"
 #include <map>
 
-class RegisterInfo_riscv64
-    : public lldb_private::RegisterInfoAndSetInterface {
+class RegisterInfo_riscv64 : public lldb_private::RegisterInfoAndSetInterface {
 public:
   enum { GPRegSet = 0 };
 
@@ -43,7 +42,7 @@ public:
   };
 
   RegisterInfo_riscv64(const lldb_private::ArchSpec &target_arch,
-                            lldb_private::Flags opt_regsets);
+                       lldb_private::Flags opt_regsets);
 
   void AddRegSetGP();
 

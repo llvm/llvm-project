@@ -59,12 +59,15 @@ private:
 
   /// Return how we should legalize values of this type.
   TargetLowering::LegalizeTypeAction getTypeAction(EVT VT) const {
+    // Simple types only need a table lookup, not the type to transform to.
+    if (VT.isSimple())
+      return TLI.getTypeAction(VT.getSimpleVT());
     return TLI.getTypeAction(*DAG.getContext(), VT);
   }
 
   /// Return true if this type is legal on this target.
   bool isTypeLegal(EVT VT) const {
-    return TLI.getTypeAction(*DAG.getContext(), VT) == TargetLowering::TypeLegal;
+    return getTypeAction(VT) == TargetLowering::TypeLegal;
   }
 
   /// Return true if this is a simple legal type.
