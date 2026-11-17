@@ -93,8 +93,7 @@ static void EncodeDecode(const Symtab &object, ByteOrder byte_order) {
   DataExtractor data(bytes.data(), bytes.size(), byte_order, addr_size);
   SymtabTester decoded_object(object.GetObjectFile());
   offset_t data_offset = 0;
-  bool uuid_mismatch = false;
-  decoded_object.Decode(data, &data_offset, uuid_mismatch);
+  decoded_object.Decode(data, &data_offset);
   ASSERT_EQ(object.GetNumSymbols(), decoded_object.GetNumSymbols());
   for (size_t i = 0; i < object.GetNumSymbols(); ++i)
     EXPECT_EQ(*object.SymbolAtIndex(i), *decoded_object.SymbolAtIndex(i));
@@ -118,9 +117,7 @@ static void DecodeAndCompare(llvm::ArrayRef<uint8_t> bytes,
   DataExtractor data(bytes.data(), bytes.size(), eByteOrderLittle, 8);
   Symtab decoded(expected.GetObjectFile());
   offset_t data_offset = 0;
-  bool signature_mismatch = false;
-  ASSERT_TRUE(decoded.Decode(data, &data_offset, signature_mismatch));
-  ASSERT_FALSE(signature_mismatch);
+  ASSERT_TRUE(decoded.Decode(data, &data_offset));
   ASSERT_EQ(expected.GetNumSymbols(), decoded.GetNumSymbols());
   for (size_t i = 0; i < expected.GetNumSymbols(); ++i)
     EXPECT_EQ(*expected.SymbolAtIndex(i), *decoded.SymbolAtIndex(i));
@@ -864,10 +861,8 @@ LinkEditData:
                      eByteOrderLittle, 8);
   Symtab symtab(objfile);
   offset_t data_offset = 0;
-  bool uuid_mismatch = false; // Gets set to true if signature doesn't match.
-  const bool success = symtab.Decode(data, &data_offset, uuid_mismatch);
+  const bool success = symtab.Decode(data, &data_offset);
   ASSERT_EQ(success, true);
-  ASSERT_EQ(uuid_mismatch, false);
   // The yaml contains N_SO and N_OSO debug map symbols.
   EXPECT_TRUE(symtab.HasDebugMap());
   EXPECT_TRUE(symtab.HasSourceFiles());
