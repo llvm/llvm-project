@@ -1278,9 +1278,14 @@ static bool isCirFunctionPointerType(mlir::Type ty) {
 static Value tryFoldCastChain(cir::CastOp op) {
   cir::CastOp head = op, tail = op;
 
+  // A block with no CFG path from the entry may hold a cycle of casts, since
+  // the verifier checks dominance only along such paths.
+  llvm::SmallPtrSet<mlir::Operation *, 8> visited;
   while (op) {
     if (!isIntOrBoolCast(op))
       break;
+    if (!visited.insert(op).second)
+      return {};
     head = op;
     op = head.getSrc().getDefiningOp<cir::CastOp>();
   }

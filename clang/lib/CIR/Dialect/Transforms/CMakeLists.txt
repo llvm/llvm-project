@@ -39,6 +39,7 @@ add_clang_library(MLIRCIRTransforms
   MLIRTransformUtils
 
   MLIRCIR
+  MLIRCIRAnalysis
   MLIRCIRInterfaces
   MLIRCIRTargetLowering
   MLIROpenACCDialect

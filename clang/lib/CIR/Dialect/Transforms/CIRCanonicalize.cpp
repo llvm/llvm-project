@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Config/mlir-config.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Operation.h"
@@ -19,6 +20,7 @@
 #include "mlir/IR/Region.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "clang/CIR/Dialect/Analysis/GotoAnalysis.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -81,9 +83,26 @@ void CIRCanonicalizePass::runOnOperation() {
   });
 
   // Apply patterns. Scope the rewrite to the body region, which encloses
-  // the common ancestor the driver would otherwise search for.
+  // the common ancestor the driver would otherwise search for. Until
+  // cir-flatten-cfg and cir-goto-solver turn cir.goto and cir.switch into
+  // branches, the code they enter has no CFG predecessor, so GotoAnalysis
+  // tells the driver what control reaches. As the driver's listener, it stays
+  // up to date while the patterns rewrite the IR.
+  cir::GotoAnalysis reachability(getOperation());
   GreedyRewriteConfig config;
-  config.setScope(&getOperation()->getRegion(0));
+  config.setScope(&getOperation()->getRegion(0))
+      .setListener(&reachability)
+      .setReachability([&](Operation *op) {
+        bool reachable = reachability.isReachable(op);
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+        // The analysis may over-approximate after a jump target moves, but it
+        // must reach whatever a fresh analysis reaches.
+        assert(
+            (reachable || !cir::GotoAnalysis(getOperation()).isReachable(op)) &&
+            "cached reachability misses an operation that control reaches");
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+        return reachable;
+      });
   if (applyOpPatternsGreedily(ops, std::move(patterns), config).failed())
     signalPassFailure();
 }
