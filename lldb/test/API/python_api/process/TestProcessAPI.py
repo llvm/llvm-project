@@ -542,10 +542,24 @@ class ProcessAPITestCase(TestBase):
         self.assertTrue(process.is_stopped)
         self.assertFalse(process.is_running)
         self.assertEqual(process.state, lldb.eStateStopped)
-        
-        #checking process PID broadcaster and target
-        self.assertEqual(process.id,process.GetProcessID())
-        self.assertEqual(int(process),process.GetProcessID())
+
+        # checking process PID broadcaster and target
+        self.assertEqual(process.id, process.GetProcessID())
+        self.assertEqual(int(process), process.GetProcessID())
         self.assertEqual(process.target, target)
         self.assertTrue(process.broadcaster.IsValid())
-        
+
+        # threads test
+        self.assertEqual(process.num_threads, len(process))
+        self.assertEqual(process.num_threads, len(process.threads))
+        self.assertEqual(process.num_threads, len(process.thread))
+        self.assertEqual(
+            [t.GetThreadID() for t in process],
+            [t.GetThreadID() for t in process.threads],
+        )
+
+        self.assertEqual(process.selected_thread.GetThreadID(), thread.GetThreadID())
+        process.selected_thread = process.thread[0]
+        self.assertEqual(
+            process.selected_thread.GetThreadID(), process.thread[0].GetThreadID()
+        )
