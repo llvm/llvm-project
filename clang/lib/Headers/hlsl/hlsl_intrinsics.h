@@ -26,16 +26,16 @@ namespace hlsl {
 
 template <typename T, int R, int C>
 constexpr matrix<float, R, C> asfloat(matrix<T, R, C> V) {
-  return hlsl::bit_cast<float, T, R, C>(V);
+  return __detail::bit_cast<float, T, R, C>(V);
 }
 
 template <typename T, int N>
 constexpr vector<float, N> asfloat(vector<T, N> V) {
-  return hlsl::bit_cast<float, T, N>(V);
+  return __detail::bit_cast<float, T, N>(V);
 }
 
 template <typename T> constexpr float asfloat(T F) {
-  return hlsl::bit_cast<float, T>(F);
+  return __detail::bit_cast<float, T>(F);
 }
 
 //===----------------------------------------------------------------------===//
@@ -48,15 +48,15 @@ template <typename T> constexpr float asfloat(T F) {
 
 template <typename T, int R, int C>
 constexpr matrix<int, R, C> asint(matrix<T, R, C> V) {
-  return hlsl::bit_cast<int, T, R, C>(V);
+  return __detail::bit_cast<int, T, R, C>(V);
 }
 
 template <typename T, int N> constexpr vector<int, N> asint(vector<T, N> V) {
-  return hlsl::bit_cast<int, T, N>(V);
+  return __detail::bit_cast<int, T, N>(V);
 }
 
 template <typename T> constexpr int asint(T F) {
-  return hlsl::bit_cast<int, T>(F);
+  return __detail::bit_cast<int, T>(F);
 }
 
 //===----------------------------------------------------------------------===//
@@ -75,7 +75,7 @@ constexpr __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
                                     __detail::is_same<uint16_t, T>::value ||
                                     __detail::is_same<half, T>::value,
                                 vector<int16_t, N>> asint16(vector<T, N> V) {
-  return hlsl::bit_cast<int16_t, T, N>(V);
+  return __detail::bit_cast<int16_t, T, N>(V);
 }
 
 template <typename T>
@@ -84,7 +84,7 @@ constexpr __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
                                     __detail::is_same<uint16_t, T>::value ||
                                     __detail::is_same<half, T>::value,
                                 int16_t> asint16(T F) {
-  return hlsl::bit_cast<int16_t, T>(F);
+  return __detail::bit_cast<int16_t, T>(F);
 }
 #endif
 
@@ -98,15 +98,15 @@ constexpr __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
 
 template <typename T, int R, int C>
 constexpr matrix<uint, R, C> asuint(matrix<T, R, C> V) {
-  return hlsl::bit_cast<uint, T, R, C>(V);
+  return __detail::bit_cast<uint, T, R, C>(V);
 }
 
 template <typename T, int N> constexpr vector<uint, N> asuint(vector<T, N> V) {
-  return hlsl::bit_cast<uint, T, N>(V);
+  return __detail::bit_cast<uint, T, N>(V);
 }
 
 template <typename T> constexpr uint asuint(T F) {
-  return hlsl::bit_cast<uint, T>(F);
+  return __detail::bit_cast<uint, T>(F);
 }
 
 //===----------------------------------------------------------------------===//
@@ -146,7 +146,7 @@ constexpr __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
                                     __detail::is_same<uint16_t, T>::value ||
                                     __detail::is_same<half, T>::value,
                                 vector<uint16_t, N>> asuint16(vector<T, N> V) {
-  return hlsl::bit_cast<uint16_t, T, N>(V);
+  return __detail::bit_cast<uint16_t, T, N>(V);
 }
 
 template <typename T>
@@ -155,7 +155,7 @@ constexpr __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
                                     __detail::is_same<uint16_t, T>::value ||
                                     __detail::is_same<half, T>::value,
                                 uint16_t> asuint16(T F) {
-  return hlsl::bit_cast<uint16_t, T>(F);
+  return __detail::bit_cast<uint16_t, T>(F);
 }
 #endif
 
