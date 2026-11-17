@@ -4076,6 +4076,12 @@ inline bool BitCastPrim(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
     bool HasIndeterminateBits = false;
 
     Bits FullBitWidth(ResultBitWidth);
+
+    // FIXME: Since we support bitcasts of bitfields, we should also support
+    // this.
+    if (!FullBitWidth.isFullByte())
+      return false;
+
     Bits BitWidth = FullBitWidth;
 
     if constexpr (std::is_same_v<T, Floating>) {
