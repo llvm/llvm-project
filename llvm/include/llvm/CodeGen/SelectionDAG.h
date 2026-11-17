@@ -85,6 +85,7 @@ class SDDbgValue;
 class SDDbgOperand;
 class SDDbgLabel;
 class SelectionDAG;
+struct SelectionDAGOptions;
 class SelectionDAGTargetInfo;
 class TargetLibraryInfo;
 class TargetLowering;
@@ -230,6 +231,7 @@ class SelectionDAG {
   const TargetLowering *TLI = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
   const LibcallLoweringInfo *Libcalls = nullptr;
+  const SelectionDAGOptions *DAGOpts = nullptr;
 
   const FunctionVarLocs *FnVarLocs = nullptr;
   MachineFunction *MF;
@@ -470,9 +472,6 @@ public:
   // Maximum depth for recursive analysis such as computeKnownBits, etc.
   static constexpr unsigned MaxRecursionDepth = 6;
 
-  // Returns the maximum steps for SDNode->hasPredecessor() like searches.
-  LLVM_ABI static unsigned getHasPredecessorMaxSteps();
-
   LLVM_ABI explicit SelectionDAG(const TargetMachine &TM, CodeGenOptLevel);
   SelectionDAG(const SelectionDAG &) = delete;
   SelectionDAG &operator=(const SelectionDAG &) = delete;
@@ -508,6 +507,9 @@ public:
 
   LLVM_ABI bool hasSwiftErrorArg() const;
 
+  // Returns the maximum steps for SDNode->hasPredecessor() like searches.
+  LLVM_ABI unsigned getHasPredecessorMaxSteps() const;
+
   CodeGenOptLevel getOptLevel() const { return OptLevel; }
   const DataLayout &getDataLayout() const { return MF->getDataLayout(); }
   const TargetMachine &getTarget() const { return TM; }
@@ -526,9 +528,7 @@ public:
   /// available, otherwise return nullptr.
   const FunctionVarLocs *getFunctionVarLocs() const { return FnVarLocs; }
   LLVMContext *getContext() const { return Context; }
-  cl::LibraryOptionsContext &getLibraryOptions() const {
-    return Context->getLibraryOptions();
-  }
+  const SelectionDAGOptions &getSelectionDAGOptions() const { return *DAGOpts; }
   ProfileSummaryInfo *getPSI() const { return PSI; }
   BlockFrequencyInfo *getBFI() const { return BFI; }
 

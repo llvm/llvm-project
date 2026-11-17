@@ -33,8 +33,6 @@ defm : BoolField<"cgp-addr-sink-new-phis", "false",
   "Allow creation of Phis in Address sinking">;
 defm : BoolField<"cgp-addr-sink-new-select", "true",
   "Allow creation of selects in Address sinking">;
-defm : OptionalBoolField<"cgp-addr-sink-using-gep",
-  "Address sinking in CGP using GEPs">;
 defm : BoolField<"cgp-andcmp-sinking", "true",
   "Enable sinking and/cmp into branches">;
 defm : BoolField<"cgp-branch-opts", "true",

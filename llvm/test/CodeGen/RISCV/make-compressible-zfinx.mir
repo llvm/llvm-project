@@ -105,7 +105,6 @@
 ...
 ---
 name:            store_common_value_float
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11, $x12
@@ -126,7 +125,6 @@ body:             |
 ...
 ---
 name:            store_common_ptr_float
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10_w, $x11_w, $x12_w, $x16
@@ -147,7 +145,6 @@ body:             |
 ...
 ---
 name:            load_common_ptr_float
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x16
@@ -168,7 +165,6 @@ body:             |
 ...
 ---
 name:            store_large_offset_float
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11_w, $x11_w, $x12_w, $x13_w
@@ -191,7 +187,6 @@ body:             |
 ...
 ---
 name:            load_large_offset_float
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -212,7 +207,6 @@ body:             |
 ...
 ---
 name:            store_common_value_float_no_opt
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x16_w
@@ -228,7 +222,6 @@ body:             |
 ...
 ---
 name:            store_common_ptr_float_no_opt
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x16, $x10_w
@@ -244,7 +237,6 @@ body:             |
 ...
 ---
 name:            load_common_ptr_float_no_opt
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x16
@@ -260,7 +252,6 @@ body:             |
 ...
 ---
 name:            store_large_offset_float_no_opt
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11_w, $x12_w
@@ -278,7 +269,6 @@ body:             |
 ...
 ---
 name:            load_large_offset_float_no_opt
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10

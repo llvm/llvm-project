@@ -7,7 +7,6 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:
@@ -41,7 +40,6 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:

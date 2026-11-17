@@ -37,8 +37,7 @@ define void @load_store_i16(ptr noalias %a, ptr align 2 dereferenceable(2000) %e
 ; AVX512-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i16>, ptr [[TMP0]], align 2
 ; AVX512-NEXT:    [[TMP1:%.*]] = icmp sgt <32 x i16> [[WIDE_LOAD]], splat (i16 500)
 ; AVX512-NEXT:    [[TMP2:%.*]] = freeze <32 x i1> [[TMP1]]
-; AVX512-NEXT:    [[TMP3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v32i1(<32 x i1> [[TMP2]], i1 false)
-; AVX512-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 0, i64 [[TMP3]])
+; AVX512-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <32 x i1> @llvm.mask.beforefirst.v32i1(<32 x i1> [[TMP2]])
 ; AVX512-NEXT:    [[TMP4:%.*]] = getelementptr i16, ptr [[A]], i64 [[INDEX]]
 ; AVX512-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <32 x i16> @llvm.masked.load.v32i16.p0(ptr align 2 [[TMP4]], <32 x i1> [[UNCOUNTABLE_EXIT_MASK]], <32 x i16> poison)
 ; AVX512-NEXT:    [[TMP5:%.*]] = add <32 x i16> [[WIDE_MASKED_LOAD]], splat (i16 1)
@@ -49,6 +48,7 @@ define void @load_store_i16(ptr noalias %a, ptr align 2 dereferenceable(2000) %e
 ; AVX512-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
 ; AVX512-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AVX512:       [[MIDDLE_BLOCK]]:
+; AVX512-NEXT:    [[TMP3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v32i1(<32 x i1> [[TMP2]], i1 false)
 ; AVX512-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], [[TMP3]]
 ; AVX512-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 1000
 ; AVX512-NEXT:    br i1 [[TMP10]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
@@ -205,8 +205,7 @@ define void @load_i32_store_i16(ptr noalias %a, ptr noalias %b, ptr align 2 dere
 ; AVX512-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i16>, ptr [[TMP0]], align 2
 ; AVX512-NEXT:    [[TMP1:%.*]] = icmp sgt <16 x i16> [[WIDE_LOAD]], splat (i16 500)
 ; AVX512-NEXT:    [[TMP2:%.*]] = freeze <16 x i1> [[TMP1]]
-; AVX512-NEXT:    [[TMP3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v16i1(<16 x i1> [[TMP2]], i1 false)
-; AVX512-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 0, i64 [[TMP3]])
+; AVX512-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <16 x i1> @llvm.mask.beforefirst.v16i1(<16 x i1> [[TMP2]])
 ; AVX512-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[B]], i64 [[INDEX]]
 ; AVX512-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr align 4 [[TMP4]], <16 x i1> [[UNCOUNTABLE_EXIT_MASK]], <16 x i32> poison)
 ; AVX512-NEXT:    [[TMP5:%.*]] = add <16 x i32> [[WIDE_MASKED_LOAD]], splat (i32 1)
@@ -219,6 +218,7 @@ define void @load_i32_store_i16(ptr noalias %a, ptr noalias %b, ptr align 2 dere
 ; AVX512-NEXT:    [[TMP10:%.*]] = or i1 [[TMP8]], [[TMP9]]
 ; AVX512-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; AVX512:       [[MIDDLE_BLOCK]]:
+; AVX512-NEXT:    [[TMP3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v16i1(<16 x i1> [[TMP2]], i1 false)
 ; AVX512-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], [[TMP3]]
 ; AVX512-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[TMP11]], 1000
 ; AVX512-NEXT:    br i1 [[TMP12]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
@@ -407,8 +407,7 @@ define void @load_store_i16_pseudoprobe(ptr noalias %a, ptr align 2 dereferencea
 ; AVX512-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i16>, ptr [[TMP0]], align 2
 ; AVX512-NEXT:    [[TMP1:%.*]] = icmp sgt <32 x i16> [[WIDE_LOAD]], splat (i16 500)
 ; AVX512-NEXT:    [[TMP2:%.*]] = freeze <32 x i1> [[TMP1]]
-; AVX512-NEXT:    [[TMP3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v32i1(<32 x i1> [[TMP2]], i1 false)
-; AVX512-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 0, i64 [[TMP3]])
+; AVX512-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <32 x i1> @llvm.mask.beforefirst.v32i1(<32 x i1> [[TMP2]])
 ; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
 ; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
 ; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
@@ -481,6 +480,7 @@ define void @load_store_i16_pseudoprobe(ptr noalias %a, ptr align 2 dereferencea
 ; AVX512-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
 ; AVX512-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; AVX512:       [[MIDDLE_BLOCK]]:
+; AVX512-NEXT:    [[TMP3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v32i1(<32 x i1> [[TMP2]], i1 false)
 ; AVX512-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], [[TMP3]]
 ; AVX512-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP8]], 1000
 ; AVX512-NEXT:    br i1 [[TMP9]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]

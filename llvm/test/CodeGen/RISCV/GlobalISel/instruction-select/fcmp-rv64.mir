@@ -6,7 +6,6 @@
 name:            fcmp_oeq_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_f, $f11_f
@@ -30,7 +29,6 @@ body:             |
 name:            fcmp_ogt_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_f, $f11_f
@@ -54,7 +52,6 @@ body:             |
 name:            fcmp_oge_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_f, $f11_f
@@ -78,7 +75,6 @@ body:             |
 name:            fcmp_olt_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_f, $f11_f
@@ -102,7 +98,6 @@ body:             |
 name:            fcmp_ole_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_f, $f11_f
@@ -126,7 +121,6 @@ body:             |
 name:            fcmp_one_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_f, $f11_f
@@ -152,7 +146,6 @@ body:             |
 name:            fcmp_ord_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_f, $f11_f
@@ -178,7 +171,6 @@ body:             |
 name:            fcmp_ueq_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_f, $f11_f
@@ -205,7 +197,6 @@ body:             |
 name:            fcmp_ugt_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_f, $f11_f
@@ -230,7 +221,6 @@ body:             |
 name:            fcmp_uge_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_f, $f11_f
@@ -255,7 +245,6 @@ body:             |
 name:            fcmp_ult_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_f, $f11_f
@@ -280,7 +269,6 @@ body:             |
 name:            fcmp_ule_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_f, $f11_f
@@ -305,7 +293,6 @@ body:             |
 name:            fcmp_une_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_f, $f11_f
@@ -330,7 +317,6 @@ body:             |
 name:            fcmp_uno_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_f, $f11_f
@@ -357,7 +343,6 @@ body:             |
 name:            fcmp_oeq_f64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_d, $f11_d
@@ -381,7 +366,6 @@ body:             |
 name:            fcmp_ogt_f64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_d, $f11_d
@@ -405,7 +389,6 @@ body:             |
 name:            fcmp_oge_f64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_d, $f11_d
@@ -429,7 +412,6 @@ body:             |
 name:            fcmp_olt_f64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_d, $f11_d
@@ -453,7 +435,6 @@ body:             |
 name:            fcmp_ole_f64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_d, $f11_d
@@ -477,7 +458,6 @@ body:             |
 name:            fcmp_one_f64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_d, $f11_d
@@ -503,7 +483,6 @@ body:             |
 name:            fcmp_ord_f64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_d, $f11_d
@@ -529,7 +508,6 @@ body:             |
 name:            fcmp_ueq_f64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_d, $f11_d
@@ -556,7 +534,6 @@ body:             |
 name:            fcmp_ugt_f64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_d, $f11_d
@@ -581,7 +558,6 @@ body:             |
 name:            fcmp_uge_f64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_d, $f11_d
@@ -606,7 +582,6 @@ body:             |
 name:            fcmp_ult_f64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_d, $f11_d
@@ -631,7 +606,6 @@ body:             |
 name:            fcmp_ule_f64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_d, $f11_d
@@ -656,7 +630,6 @@ body:             |
 name:            fcmp_une_f64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_d, $f11_d
@@ -681,7 +654,6 @@ body:             |
 name:            fcmp_uno_f64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_d, $f11_d

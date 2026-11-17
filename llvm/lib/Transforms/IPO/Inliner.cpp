@@ -114,14 +114,6 @@ InlinerPass::getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
   return *IAA->getAdvisor();
 }
 
-void makeFunctionBodyUnreachable(Function &F) {
-  F.dropAllReferences();
-  for (BasicBlock &BB : make_early_inc_range(F))
-    BB.eraseFromParent();
-  BasicBlock *BB = BasicBlock::Create(F.getContext(), "", &F);
-  new UnreachableInst(F.getContext(), BB);
-}
-
 PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
                                    CGSCCAnalysisManager &AM, LazyCallGraph &CG,
                                    CGSCCUpdateResult &UR) {

@@ -855,7 +855,7 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) vsca
 ; NEON-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; NEON-NEXT:    [[TMP1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
 ; NEON-NEXT:    [[LD_ADDR:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV]]
-; NEON-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[LD_ADDR]], i64 4
+; NEON-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[LD_ADDR]], i64 16
 ; NEON-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[LD_ADDR]], align 4
 ; NEON-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP9]], align 4
 ; NEON-NEXT:    [[TMP2:%.*]] = icmp slt <4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
@@ -915,7 +915,7 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) vsca
 ; SVE-NEXT:    [[TMP4:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[TMP15:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP16:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[INDEX]]
-; SVE-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 [[TMP3]]
+; SVE-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP5]], i64 [[TMP3]]
 ; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP5]], align 4
 ; SVE-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x i32>, ptr [[TMP17]], align 4
 ; SVE-NEXT:    [[TMP6:%.*]] = icmp slt <vscale x 4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
