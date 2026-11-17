@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Test SPS serialization for SymbolLookupFlags and SymbolLookupSet APIs.
+// Test SPS serialization for SymbolLookupFlags, SymbolLookupSet, and
+// RemoteSymbolLookupSet.
 //
 //===----------------------------------------------------------------------===//
 
@@ -50,11 +51,30 @@ TEST(SPSSymbolLookupSetTest, SymbolLookupFlagsWireFormat) {
   }
 }
 
+TEST(SPSSymbolLookupSetTest, RemoteSymbolLookupSetSerialization) {
+  blobSerializationRoundTrip<SPSSymbolLookupSet, RemoteSymbolLookupSet>(
+      RemoteSymbolLookupSet(), seqEqual<RemoteSymbolLookupSet>);
+  blobSerializationRoundTrip<SPSSymbolLookupSet, RemoteSymbolLookupSet>(
+      RemoteSymbolLookupSet(
+          {{"foo", SymbolLookupFlags::RequiredSymbol},
+           {"bar", SymbolLookupFlags::WeaklyReferencedSymbol}}),
+      seqEqual<RemoteSymbolLookupSet>);
+}
+
 TEST(SPSSymbolLookupSetTest, SymbolLookupSetSerialization) {
-  blobSerializationRoundTrip<SPSSymbolLookupSet, SymbolLookupSet>(
-      SymbolLookupSet(), seqEqual<SymbolLookupSet>);
-  blobSerializationRoundTrip<SPSSymbolLookupSet, SymbolLookupSet>(
-      SymbolLookupSet({{"foo", SymbolLookupFlags::RequiredSymbol},
-                       {"bar", SymbolLookupFlags::WeaklyReferencedSymbol}}),
-      seqEqual<SymbolLookupSet>);
+  // An interned set serializes as names and flags, and reads back as a
+  // RemoteSymbolLookupSet.
+  StringPool SP;
+  SymbolLookupSet LS(
+      {{SP.intern("foo"), SymbolLookupFlags::RequiredSymbol},
+       {SP.intern("bar"), SymbolLookupFlags::WeaklyReferencedSymbol}});
+
+  auto B = spsSerialize<SPSArgList<SPSSymbolLookupSet>>(LS);
+  ASSERT_TRUE(B);
+  RemoteSymbolLookupSet RLS;
+  ASSERT_TRUE(spsDeserialize<SPSArgList<SPSSymbolLookupSet>>(*B, RLS));
+  RemoteSymbolLookupSet Expected(
+      {{"foo", SymbolLookupFlags::RequiredSymbol},
+       {"bar", SymbolLookupFlags::WeaklyReferencedSymbol}});
+  EXPECT_TRUE(seqEqual(RLS, Expected));
 }

@@ -61,6 +61,7 @@ add_orc_rt_unittest(SupportTests
   support/ProxyTest.cpp
   support/RTTICrossDylibTest.cpp
   support/RTTITest.cpp
+  support/RemoteSymbolLookupSetTest.cpp
   support/StringExtrasTest.cpp
   support/StringPoolTest.cpp
   support/SymbolLookupResultTest.cpp

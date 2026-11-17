@@ -12,6 +12,7 @@
 #include "multiply_add.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h" // LIBC_DO_NOT_OPTIMIZE
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 #include "src/__support/number_pair.h"
 
@@ -173,6 +174,10 @@ LIBC_INLINE LIBC_CONSTEXPR NumberPair<T> exact_mult(T a, T b) {
 
   if constexpr (TargetHasFmaInstruction<T>::VALUE) {
     r.hi = a * b;
+    // Prevent `-r.hi` below from being rewritten into `a * (-b)` when `a * b`
+    // is duplicated (e.g. by SLP vectorization), which breaks directed
+    // rounding modes (`RU(a * (-b)) != -RU(a * b)`).
+    LIBC_DO_NOT_OPTIMIZE_ROUNDING(r.hi);
     r.lo = fputil::multiply_add(a, b, -r.hi);
   } else {
     // Dekker's Product.
@@ -231,6 +236,7 @@ LIBC_INLINE NumberPair<T> div(const NumberPair<T> &a, const NumberPair<T> &b) {
   NumberPair<T> r;
   T q = T(1) / b.hi;
   r.hi = a.hi * q;
+  LIBC_DO_NOT_OPTIMIZE_ROUNDING(r.hi);
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA
   T e_hi = fputil::multiply_add(b.hi, -r.hi, a.hi);
