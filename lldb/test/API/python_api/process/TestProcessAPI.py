@@ -542,3 +542,10 @@ class ProcessAPITestCase(TestBase):
         self.assertTrue(process.is_stopped)
         self.assertFalse(process.is_running)
         self.assertEqual(process.state, lldb.eStateStopped)
+        
+        #checking process PID broadcaster and target
+        self.assertEqual(process.id,process.GetProcessID())
+        self.assertEqual(int(process),process.GetProcessID())
+        self.assertEqual(process.target, target)
+        self.assertTrue(process.broadcaster.IsValid())
+        
