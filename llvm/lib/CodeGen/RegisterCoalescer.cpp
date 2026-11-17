@@ -275,7 +275,7 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
 
   /// Fix up the subranges of \p LI after values were pruned by the join:
   /// re-extend the pruned PHI inputs in PHIKills to their remaining defs, and
-  /// shrink the subranges in ShrinkMask.
+  /// request a shrink of LI if any subrange is in ShrinkMask.
   void updatePrunedSubRanges(LiveInterval &LI);
 
   /// If the given machine operand reads only undefined lanes add an undef
@@ -1980,13 +1980,8 @@ void RegisterCoalescer::updatePrunedSubRanges(LiveInterval &LI) {
       LIS->extendToIndices(S, EndPoints, Undefs);
     }
 
-    if ((S.LaneMask & ShrinkMask).none())
-      continue;
-
-    LLVM_DEBUG(dbgs() << "Shrink LaneUses (Lane " << PrintLaneMask(S.LaneMask)
-                      << ")\n");
-    LIS->shrinkToUses(S, LI.reg());
-    ShrinkMainRange = true;
+    if ((S.LaneMask & ShrinkMask).any())
+      ShrinkMainRange = true;
   }
 
   LI.removeEmptySubRanges();
