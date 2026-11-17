@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 %s -triple s390x-ibm-zos -emit-llvm -O1 -o - | FileCheck %s
+// REQUIRES: systemz-registered-target
+
 // Give a warning and ignore the pragma map.
 void rp(void) asm("rp_ext");
 void rp(void);
