@@ -327,8 +327,8 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
   }
 
   // FLANG_ERROR_BACKTRACE overrides the -fbacktrace default. The value must
-  // be 0 or 1. Any other value is ignored. -fno-backtrace supplies "0" when
-  // the variable is not already set.
+  // be exactly 0 or 1. Any other value is ignored. -fno-backtrace supplies
+  // "0" when the variable is not already set.
   backtrace = true;
   if (auto *x{std::getenv("FLANG_ERROR_BACKTRACE")}) {
     char *end;
@@ -337,7 +337,9 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
       backtrace = (n != 0);
     } else {
       std::fprintf(stderr,
-          "Fortran runtime: FLANG_ERROR_BACKTRACE=%s is invalid; ignored\n", x);
+          "Fortran runtime: FLANG_ERROR_BACKTRACE=%s is invalid; "
+          "ignored; valid values are 0 and 1\n",
+          x);
     }
   }
 
