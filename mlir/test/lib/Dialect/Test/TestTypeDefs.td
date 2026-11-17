@@ -22,9 +22,17 @@ include "mlir/IR/BuiltinTypeInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.td"
 
-// All of the types will extend this class.
+// All of the types will extend this class. See TestAttrDefs.td for the
+// partitions.
 class Test_Type<string name, list<Trait> traits = []>
-    : TypeDef<Test_Dialect, name, traits>;
+    : TypeDef<Test_Dialect, name, traits> {
+  let partition = Test_AttrTypeCorePartition;
+}
+
+class Test_SyntaxType<string name, list<Trait> traits = []>
+    : Test_Type<name, traits> {
+  let partition = Test_AttrTypeSyntaxPartition;
+}
 
 def SimpleTypeA : Test_Type<"SimpleA"> {
   let mnemonic = "smpla";
@@ -54,7 +62,7 @@ def CompoundTypeA : Test_Type<"CompoundA"> {
 }
 
 // A more complex and nested parameterized type.
-def CompoundNestedInnerType : Test_Type<"CompoundNestedInner"> {
+def CompoundNestedInnerType : Test_SyntaxType<"CompoundNestedInner"> {
   let mnemonic = "cmpnd_inner";
   // List of type parameters.
   let parameters = (
@@ -65,7 +73,7 @@ def CompoundNestedInnerType : Test_Type<"CompoundNestedInner"> {
   let assemblyFormat = "`<` $some_int $cmpdA `>`";
 }
 
-def CompoundNestedOuterType : Test_Type<"CompoundNestedOuter"> {
+def CompoundNestedOuterType : Test_SyntaxType<"CompoundNestedOuter"> {
   let mnemonic = "cmpnd_nested_outer";
 
   // List of type parameters.
@@ -73,7 +81,7 @@ def CompoundNestedOuterType : Test_Type<"CompoundNestedOuter"> {
   let assemblyFormat = "`<` `i`  $inner `>`";
 }
 
-def CompoundNestedOuterTypeQual : Test_Type<"CompoundNestedOuterQual"> {
+def CompoundNestedOuterTypeQual : Test_SyntaxType<"CompoundNestedOuterQual"> {
   let mnemonic = "cmpnd_nested_outer_qual";
 
   // List of type parameters.
@@ -133,7 +141,7 @@ class FieldInfo_Type<string name> : Test_Type<name> {
     // An ArrayRef of something which requires allocation in the storage
     // constructor.
     ArrayRefOfSelfAllocationParameter<
-      "::test::FieldInfo", // FieldInfo is defined/declared in TestTypes.h.
+      "::test::FieldInfo", // FieldInfo is defined/declared in TestTypesCore.h.
       "Models struct fields">: $fields
   );
   let hasCustomAssemblyFormat = 1;
@@ -183,7 +191,7 @@ def TestTypeWithTrait : Test_Type<"TestTypeWithTrait", [TestTypeTrait]> {
 }
 
 // Type with assembly format.
-def TestTypeWithFormat : Test_Type<"TestTypeWithFormat"> {
+def TestTypeWithFormat : Test_SyntaxType<"TestTypeWithFormat"> {
   let parameters = (
     ins
     TestParamOne:$one,
@@ -196,7 +204,7 @@ def TestTypeWithFormat : Test_Type<"TestTypeWithFormat"> {
 }
 
 // Test dispatch to parseField
-def TestTypeNoParser : Test_Type<"TestTypeNoParser"> {
+def TestTypeNoParser : Test_SyntaxType<"TestTypeNoParser"> {
   let parameters = (
     ins
     "uint32_t":$one,
@@ -209,7 +217,7 @@ def TestTypeNoParser : Test_Type<"TestTypeNoParser"> {
   let assemblyFormat = "`<` $one `,` `[` $two `]` `,` $three `,` $four `>`";
 }
 
-def TestTypeStructCaptureAll : Test_Type<"TestStructTypeCaptureAll"> {
+def TestTypeStructCaptureAll : Test_SyntaxType<"TestStructTypeCaptureAll"> {
   let parameters = (
     ins
     "int":$v0,
@@ -222,7 +230,7 @@ def TestTypeStructCaptureAll : Test_Type<"TestStructTypeCaptureAll"> {
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
-def TestTypeOptionalParam : Test_Type<"TestTypeOptionalParam"> {
+def TestTypeOptionalParam : Test_SyntaxType<"TestTypeOptionalParam"> {
   let parameters = (ins
     OptionalParameter<"std::optional<int>">:$a,
     "int":$b,
@@ -233,7 +241,7 @@ def TestTypeOptionalParam : Test_Type<"TestTypeOptionalParam"> {
   let assemblyFormat = "`<` $a `,` $b ( `,` $c^)? `>`";
 }
 
-def TestTypeOptionalParams : Test_Type<"TestTypeOptionalParams"> {
+def TestTypeOptionalParams : Test_SyntaxType<"TestTypeOptionalParams"> {
   let parameters = (ins OptionalParameter<"std::optional<int>">:$a,
                         StringRefParameter<>:$b);
   let mnemonic = "optional_params";
@@ -241,55 +249,55 @@ def TestTypeOptionalParams : Test_Type<"TestTypeOptionalParams"> {
 }
 
 def TestTypeOptionalParamsAfterRequired
-    : Test_Type<"TestTypeOptionalParamsAfterRequired"> {
+    : Test_SyntaxType<"TestTypeOptionalParamsAfterRequired"> {
   let parameters = (ins StringRefParameter<>:$a,
                         OptionalParameter<"std::optional<int>">:$b);
   let mnemonic = "optional_params_after";
   let assemblyFormat = "`<` params `>`";
 }
 
-def TestTypeOptionalStruct : Test_Type<"TestTypeOptionalStruct"> {
+def TestTypeOptionalStruct : Test_SyntaxType<"TestTypeOptionalStruct"> {
   let parameters = (ins OptionalParameter<"std::optional<int>">:$a,
                         StringRefParameter<>:$b);
   let mnemonic = "optional_struct";
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
-def TestTypeAllOptionalParams : Test_Type<"TestTypeAllOptionalParams"> {
+def TestTypeAllOptionalParams : Test_SyntaxType<"TestTypeAllOptionalParams"> {
   let parameters = (ins OptionalParameter<"std::optional<int>">:$a,
                         OptionalParameter<"std::optional<int>">:$b);
   let mnemonic = "all_optional_params";
   let assemblyFormat = "`<` params `>`";
 }
 
-def TestTypeAllOptionalStruct : Test_Type<"TestTypeAllOptionalStruct"> {
+def TestTypeAllOptionalStruct : Test_SyntaxType<"TestTypeAllOptionalStruct"> {
   let parameters = (ins OptionalParameter<"std::optional<int>">:$a,
                         OptionalParameter<"std::optional<int>">:$b);
   let mnemonic = "all_optional_struct";
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
-def TestTypeOptionalGroup : Test_Type<"TestTypeOptionalGroup"> {
+def TestTypeOptionalGroup : Test_SyntaxType<"TestTypeOptionalGroup"> {
   let parameters = (ins "int":$a, OptionalParameter<"std::optional<int>">:$b);
   let mnemonic = "optional_group";
   let assemblyFormat = "`<` (`(` $b^ `)`) : (`x`)? $a `>`";
 }
 
-def TestTypeOptionalGroupParams : Test_Type<"TestTypeOptionalGroupParams"> {
+def TestTypeOptionalGroupParams : Test_SyntaxType<"TestTypeOptionalGroupParams"> {
   let parameters = (ins DefaultValuedParameter<"std::optional<int>", "10">:$a,
                         OptionalParameter<"std::optional<int>">:$b);
   let mnemonic = "optional_group_params";
   let assemblyFormat = "`<` (`(` params^ `)`) : (`x`)? `>`";
 }
 
-def TestTypeOptionalGroupStruct : Test_Type<"TestTypeOptionalGroupStruct"> {
+def TestTypeOptionalGroupStruct : Test_SyntaxType<"TestTypeOptionalGroupStruct"> {
   let parameters = (ins OptionalParameter<"std::optional<int>">:$a,
                         OptionalParameter<"std::optional<int>">:$b);
   let mnemonic = "optional_group_struct";
   let assemblyFormat = "`<` (`(` struct(params)^ `)`) : (`x`)? `>`";
 }
 
-def TestTypeSpaces : Test_Type<"TestTypeSpaceS"> {
+def TestTypeSpaces : Test_SyntaxType<"TestTypeSpaceS"> {
   let parameters = (ins "int":$a, "int":$b);
   let mnemonic = "spaces";
   let assemblyFormat = "`<` ` ` $a `\\n` `(` `)` `` `(` `)` $b `>`";
@@ -309,7 +317,7 @@ class DefaultValuedAPFloat<string value>
   }() }];
 }
 
-def TestTypeAPFloat : Test_Type<"TestTypeAPFloat"> {
+def TestTypeAPFloat : Test_SyntaxType<"TestTypeAPFloat"> {
   let parameters = (ins
     DefaultValuedAPFloat<"APFloat::getZero(APFloat::IEEEdouble())">:$a
   );
@@ -317,7 +325,7 @@ def TestTypeAPFloat : Test_Type<"TestTypeAPFloat"> {
   let assemblyFormat = "`<` $a `>`";
 }
 
-def TestTypeOptionalValueType : Test_Type<"TestTypeOptionalValueType"> {
+def TestTypeOptionalValueType : Test_SyntaxType<"TestTypeOptionalValueType"> {
   let parameters = (ins
     OptionalParameter<"std::optional<int>">:$value
   );
@@ -325,7 +333,7 @@ def TestTypeOptionalValueType : Test_Type<"TestTypeOptionalValueType"> {
   let assemblyFormat = "(`<` $value^ `>`)?";
 }
 
-def TestTypeDefaultValuedType : Test_Type<"TestTypeDefaultValuedType"> {
+def TestTypeDefaultValuedType : Test_SyntaxType<"TestTypeDefaultValuedType"> {
   let parameters = (ins
     DefaultValuedParameter<"mlir::IntegerType",
                            "mlir::IntegerType::get($_ctxt, 32)">:$type
@@ -334,21 +342,21 @@ def TestTypeDefaultValuedType : Test_Type<"TestTypeDefaultValuedType"> {
   let assemblyFormat = "`<` (`(` $type^ `)`)? `>`";
 }
 
-def TestTypeCustom : Test_Type<"TestTypeCustom"> {
+def TestTypeCustom : Test_SyntaxType<"TestTypeCustom"> {
   let parameters = (ins "int":$a, OptionalParameter<"std::optional<int>">:$b);
   let mnemonic = "custom_type";
   let assemblyFormat = [{ `<` custom<CustomTypeA>($a) ``
                               custom<CustomTypeB>(ref($a), $b) `>` }];
 }
 
-def TestTypeCustomSpacing : Test_Type<"TestTypeCustomSpacing"> {
+def TestTypeCustomSpacing : Test_SyntaxType<"TestTypeCustomSpacing"> {
   let parameters = (ins "int":$a, "int":$b);
   let mnemonic = "custom_type_spacing";
   let assemblyFormat = [{ `<` custom<CustomTypeA>($a)
                               custom<CustomTypeA>($b) `>` }];
 }
 
-def TestTypeCustomString : Test_Type<"TestTypeCustomString"> {
+def TestTypeCustomString : Test_SyntaxType<"TestTypeCustomString"> {
   let parameters = (ins StringRefParameter<>:$foo);
   let mnemonic = "custom_type_string";
   let assemblyFormat = [{ `<` custom<FooString>($foo)
@@ -362,19 +370,19 @@ def TestCustomStorageCtor : Test_Type<"TestCustomStorageCtor"> {
     let hasStorageCustomConstructor = 1;
 }
 
-def TestTypeOptionalString : Test_Type<"TestTypeOptionalString"> {
+def TestTypeOptionalString : Test_SyntaxType<"TestTypeOptionalString"> {
   let parameters = (ins StringRefParameter<"description", [{"default"}]>:$str);
   let mnemonic = "optional_type_string";
   let assemblyFormat = [{ (`<` $str^ `>`)? }];
 }
 
-def TestTypeElseAnchor : Test_Type<"TestTypeElseAnchor"> {
+def TestTypeElseAnchor : Test_SyntaxType<"TestTypeElseAnchor"> {
   let parameters = (ins OptionalParameter<"std::optional<int>">:$a);
   let mnemonic = "else_anchor";
   let assemblyFormat = "`<` (`?`) : ($a^)? `>`";
 }
 
-def TestTypeElseAnchorStruct : Test_Type<"TestTypeElseAnchorStruct"> {
+def TestTypeElseAnchorStruct : Test_SyntaxType<"TestTypeElseAnchorStruct"> {
   let parameters = (ins OptionalParameter<"std::optional<int>">:$a,
                         OptionalParameter<"std::optional<int>">:$b);
   let mnemonic = "else_anchor_struct";
@@ -524,7 +532,7 @@ def TestBaseBody : Test_Type<"TestBaseBody",
   let mnemonic = "test_base_body";
 }
 
-def TestTypeNewlineAndIndent : Test_Type<"TestTypeNewlineAndIndent"> {
+def TestTypeNewlineAndIndent : Test_SyntaxType<"TestTypeNewlineAndIndent"> {
   let mnemonic = "newline_and_indent";
   let hasCustomAssemblyFormat = 1;
 }

@@ -15,6 +15,7 @@
 #include "OpClass.h"
 #include "OpFormatGen.h"
 #include "OpGenHelpers.h"
+#include "PartitionHelpers.h"
 #include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Builder.h"
@@ -4783,15 +4784,12 @@ static SmallVector<Dialect> getOpDialects(ArrayRef<const Record *> defs) {
 static SmallVector<StringRef>
 getAllOpPartitions(const Dialect &dialect, ArrayRef<const Record *> defs,
                    ArrayRef<const Record *> otherPartitionDefs) {
-  llvm::SetVector<StringRef> partitions;
+  SmallVector<const Record *> dialectDefs;
   for (const Record *def :
        concat<const Record *const>(defs, otherPartitionDefs))
     if (def->getValueAsDef("opDialect") == dialect.getDef())
-      partitions.insert(getOpPartitionName(*def));
-
-  SmallVector<StringRef> result = partitions.takeVector();
-  llvm::sort(result);
-  return result;
+      dialectDefs.push_back(def);
+  return getPartitionNames(dialectDefs);
 }
 
 /// Emit the declarations of the op registration hooks of every dialect with

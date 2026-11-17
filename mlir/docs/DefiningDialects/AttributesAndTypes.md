@@ -524,17 +524,19 @@ the syntax for the Attribute or Type is simply the mnemonic.
 
 For each dialect, two "dispatch" functions will be created: one for parsing and
 one for printing. These static functions are placed alongside the class
-definitions and have the following function signatures:
+definitions in the C++ namespace of the dialect and have the following function
+signatures, where `<DialectClass>` is the C++ class name of the dialect:
 
 ```c++
-static OptionalParseResult generatedAttributeParser(
+static OptionalParseResult generated<DialectClass>AttributeParser(
     AsmParser &parser, StringRef *mnemonic, Type type, Attribute &value);
-static LogicalResult generatedAttributePrinter(Attribute def,
-                                               AsmPrinter &printer);
+static LogicalResult generated<DialectClass>AttributePrinter(
+    Attribute def, AsmPrinter &printer);
 
-static OptionalParseResult generatedTypeParser(
+static OptionalParseResult generated<DialectClass>TypeParser(
     AsmParser &parser, StringRef *mnemonic, Type &value);
-static LogicalResult generatedTypePrinter(Type def, AsmPrinter &printer);
+static LogicalResult generated<DialectClass>TypePrinter(
+    Type def, AsmPrinter &printer);
 ```
 
 If `*mnemonic` is empty, the parsers first parse the mnemonic. Otherwise, they
@@ -1252,3 +1254,46 @@ void MyDialect::initialize() {
   registerMyDialectTypes(this);
 }
 ```
+
+#### Logical Sharding with Partitions
+
+Like [ops](Operations.md/#logical-sharding-with-op-partitions), attributes and
+types can be grouped into named partitions by setting their `partition` to a
+`Partition` record, so that each partition is generated into its own
+declaration and definition files:
+
+```tablegen
+def MyDialect_CoreAttrs : Partition<"Core">;
+def MyDialect_LayoutAttrs : Partition<"Layout">;
+
+class MyDialect_Attr<string name, string attrMnemonic>
+    : AttrDef<MyDialect, name> {
+  let mnemonic = attrMnemonic;
+  // Attributes are in partition `Core`, unless they set another partition.
+  let partition = MyDialect_CoreAttrs;
+}
+
+def MyIntAttr : MyDialect_Attr<"MyInt", "int"> { ... }
+
+let partition = MyDialect_LayoutAttrs in
+def MyLayoutAttr : MyDialect_Attr<"MyLayout", "layout"> { ... }
+```
+
+Passing `-attrdefs-partition=<partition>` (or `-typedefs-partition=<partition>`)
+with a partition name to `-gen-attrdef-decls` and `-gen-attrdef-defs` (or
+`-gen-typedef-decls` and `-gen-typedef-defs`) generates only the attributes (or
+types) of that partition. Every generated attribute or type must then be in a
+partition, and the specified partition must have attributes or types. Without
+the option, `partition` is ignored.
+
+The dialect calls the same functions with and without partitions:
+`register<DialectClass>Attributes` (or `register<DialectClass>Types`) to
+register the attributes (or types), and, if it implements its own parser and
+printer, `generated<DialectClass>AttributeParser` and
+`generated<DialectClass>AttributePrinter` (or `...Type...`).
+
+Without partitions, these are `static` functions of the definitions, which can
+only be called in the compilation unit that includes the definitions. With
+partitions, they are declared by the declarations of every partition, so they
+can be called in any compilation unit that includes the declarations of a
+partition.

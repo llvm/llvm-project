@@ -8,7 +8,7 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
-#include "TestTypes.h"
+#include "TestTypesCore.h"
 #include "mlir/Bytecode/Encoding.h"
 #include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"

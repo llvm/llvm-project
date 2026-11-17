@@ -8,7 +8,7 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
-#include "TestTypes.h"
+#include "TestTypesCore.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -452,6 +452,77 @@ dialectCanonicalizationPattern(TestDialectCanonicalizerOp op,
 void TestDialect::getCanonicalizationPatterns(
     RewritePatternSet &results) const {
   results.add(&dialectCanonicalizationPattern);
+}
+
+Type TestDialect::parseType(DialectAsmParser &parser) const {
+  StringRef typeTag;
+  {
+    Type genType;
+    auto parseResult =
+        generatedTestDialectTypeParser(parser, &typeTag, genType);
+    if (parseResult.has_value())
+      return genType;
+  }
+
+  {
+    Type dynType;
+    auto parseResult = parseOptionalDynamicType(typeTag, parser, dynType);
+    if (parseResult.has_value()) {
+      if (succeeded(parseResult.value()))
+        return dynType;
+      return Type();
+    }
+  }
+
+  if (typeTag != "test_rec") {
+    parser.emitError(parser.getNameLoc()) << "unknown type!";
+    return Type();
+  }
+
+  StringRef name;
+  if (parser.parseLess() || parser.parseKeyword(&name))
+    return Type();
+  auto rec = TestRecursiveType::get(parser.getContext(), name);
+
+  FailureOr<AsmParser::CyclicParseReset> cyclicParse =
+      parser.tryStartCyclicParse(rec);
+
+  // If this type already has been parsed above in the stack, expect just the
+  // name.
+  if (failed(cyclicParse)) {
+    if (failed(parser.parseGreater()))
+      return Type();
+    return rec;
+  }
+
+  // Otherwise, parse the body and update the type.
+  if (failed(parser.parseComma()))
+    return Type();
+  Type subtype = parseType(parser);
+  if (!subtype || failed(parser.parseGreater()) || failed(rec.setBody(subtype)))
+    return Type();
+
+  return rec;
+}
+
+void TestDialect::printType(Type type, DialectAsmPrinter &printer) const {
+  if (succeeded(generatedTestDialectTypePrinter(type, printer)))
+    return;
+
+  if (succeeded(printIfDynamicType(type, printer)))
+    return;
+
+  auto rec = llvm::cast<TestRecursiveType>(type);
+
+  FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrint =
+      printer.tryStartCyclicPrint(rec);
+
+  printer << "test_rec<" << rec.getName();
+  if (succeeded(cyclicPrint)) {
+    printer << ", ";
+    printType(rec.getBody(), printer);
+  }
+  printer << ">";
 }
 
 //===----------------------------------------------------------------------===//

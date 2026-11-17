@@ -102,7 +102,8 @@ class Dialect {
 }
 
 // A partition of the definitions of a dialect, for "logical sharding" of their
-// generated declarations and definitions. See `Op::partition`.
+// generated declarations and definitions. See `Op::partition` and
+// `AttrOrTypeDef::partition`.
 class Partition<string name> {
   // The name of the partition, a C++ identifier. Generators select a partition
   // by this name, e.g. `-gen-op-decls` and `-gen-op-defs` with
