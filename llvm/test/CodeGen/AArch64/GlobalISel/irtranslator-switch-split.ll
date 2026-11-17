@@ -16,37 +16,38 @@ define i32 @scanfile(i32 %call148, ptr %p) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    cmp w0, #1
-; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    b.ge LBB0_3
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    cbnz w8, LBB0_7
+; CHECK-NEXT:    cbnz w0, LBB0_7
 ; CHECK-NEXT:  LBB0_2: ; %common.ret1
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB0_3: ; %entry
 ; CHECK-NEXT:    b.eq LBB0_10
 ; CHECK-NEXT:  ; %bb.4: ; %entry
-; CHECK-NEXT:    cmp w8, #2
+; CHECK-NEXT:    cmp w0, #2
 ; CHECK-NEXT:    b.eq LBB0_6
 ; CHECK-NEXT:  ; %bb.5: ; %entry
-; CHECK-NEXT:    cmp w8, #3
+; CHECK-NEXT:    cmp w0, #3
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    b.ne LBB0_2
 ; CHECK-NEXT:  LBB0_6: ; %sw.bb300
 ; CHECK-NEXT:    bl _logg
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB0_7: ; %entry
-; CHECK-NEXT:    cmn w8, #2
+; CHECK-NEXT:    cmn w0, #2
 ; CHECK-NEXT:    b.eq LBB0_9
 ; CHECK-NEXT:  ; %bb.8: ; %entry
-; CHECK-NEXT:    cmn w8, #1
+; CHECK-NEXT:    cmn w0, #1
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    b.ne LBB0_2
 ; CHECK-NEXT:  LBB0_9: ; %sw.bb150
 ; CHECK-NEXT:    bl _logg
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:  LBB0_10: ; %sw.bb178
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    str wzr, [x1]
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:    ret
