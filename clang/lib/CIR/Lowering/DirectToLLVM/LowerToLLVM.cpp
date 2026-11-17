@@ -700,11 +700,33 @@ static mlir::Value createConstrainedFPIntrinsicCall(
 }
 
 template <typename LLVMOp>
+mlir::LogicalResult lowerFPOp(mlir::Operation *op, mlir::ValueRange operands,
+                              cir::FastMathFlagsAttr fastmath,
+                              const mlir::TypeConverter &typeConverter,
+                              mlir::ConversionPatternRewriter &rewriter) {
+  mlir::Type llvmResTy = typeConverter.convertType(op->getResultTypes()[0]);
+  if (!llvmResTy)
+    return op->emitError("expected LLVM result type for floating-point op");
+
+  auto newOp = rewriter.replaceOpWithNewOp<LLVMOp>(
+      op, mlir::TypeRange{llvmResTy}, operands,
+      cir::getDefaultProperties<LLVMOp>(op->getContext()));
+  if (fastmath)
+    mlir::cast<mlir::LLVM::FastmathFlagsInterface>(newOp.getOperation())
+        .setFastmathAttr(mlir::LLVM::FastmathFlagsAttr::get(
+            rewriter.getContext(), convertFastMathFlags(fastmath.getValue())));
+  return mlir::success();
+}
+
+template <typename LLVMOp>
 mlir::LogicalResult lowerConstrainableFPOp(
     mlir::Operation *op, mlir::ValueRange operands, cir::FenvAttr fenv,
     cir::FastMathFlagsAttr fastmath, const mlir::TypeConverter &typeConverter,
     mlir::ConversionPatternRewriter &rewriter,
     llvm::StringRef constrainedMnemonic, bool hasRoundingMode) {
+  if (!fenv)
+    return lowerFPOp<LLVMOp>(op, operands, fastmath, typeConverter, rewriter);
+
   mlir::Type llvmResTy = typeConverter.convertType(op->getResultTypes()[0]);
   if (!llvmResTy)
     return op->emitError("expected LLVM result type for floating-point op");
@@ -712,17 +734,6 @@ mlir::LogicalResult lowerConstrainableFPOp(
   mlir::LLVM::FastmathFlags fastmathFlags = {};
   if (fastmath)
     fastmathFlags = convertFastMathFlags(fastmath.getValue());
-
-  if (!fenv) {
-    auto newOp = rewriter.replaceOpWithNewOp<LLVMOp>(
-        op, mlir::TypeRange{llvmResTy}, operands,
-        cir::getDefaultProperties<LLVMOp>(op->getContext()));
-    if (fastmathFlags != mlir::LLVM::FastmathFlags::none)
-      mlir::cast<mlir::LLVM::FastmathFlagsInterface>(newOp.getOperation())
-          .setFastmathAttr(mlir::LLVM::FastmathFlagsAttr::get(
-              rewriter.getContext(), fastmathFlags));
-    return mlir::success();
-  }
 
   return lowerToConstrainedFPIntrinsic(op, operands, fenv, llvmResTy, rewriter,
                                        constrainedMnemonic, hasRoundingMode,
@@ -5749,6 +5760,32 @@ mlir::LogicalResult CIRToLLVMVTableGetVirtualFnOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMVTableGetEntryOpLowering::matchAndRewrite(
+    cir::VTableGetEntryOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(!cir::MissingFeatures::vtableRelativeLayout());
+  if (usesRelativeVTables(op->getParentOfType<mlir::ModuleOp>()))
+    return op.emitError(
+        "NYI: pointer entry lookup in a relative layout vtable");
+
+  mlir::Type resultType = getTypeConverter()->convertType(op.getType());
+  if (!resultType)
+    return emitTypeConversionError(op, op.getType());
+
+  // The entry is the pointer itself: load it from its slot.
+  auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  mlir::Value index = mlir::LLVM::ConstantOp::create(
+      rewriter, op.getLoc(), rewriter.getI64Type(),
+      rewriter.getI64IntegerAttr(op.getIndex()));
+  mlir::Value slot = mlir::LLVM::GEPOp::create(
+      rewriter, op.getLoc(), ptrTy, ptrTy, adaptor.getVptr(),
+      llvm::ArrayRef<mlir::LLVM::GEPArg>{index},
+      mlir::LLVM::GEPNoWrapFlags::inbounds);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(
+      op, resultType, slot, dataLayout.getTypeABIAlignment(ptrTy));
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMVTTAddrPointOpLowering::matchAndRewrite(
     cir::VTTAddrPointOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -6166,12 +6203,10 @@ mlir::LogicalResult CIRToLLVMComplexCreateOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMComplexRealOpLowering::matchAndRewrite(
     cir::ComplexRealOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Type resultLLVMTy = getTypeConverter()->convertType(op.getType());
   mlir::Value operand = adaptor.getOperand();
   if (mlir::isa<cir::ComplexType>(op.getOperand().getType())) {
-    operand = mlir::LLVM::ExtractValueOp::create(
-        rewriter, op.getLoc(), resultLLVMTy, operand,
-        llvm::ArrayRef<std::int64_t>{0});
+    operand = rewriter.createOrFold<mlir::LLVM::ExtractValueOp>(
+        op.getLoc(), operand, llvm::ArrayRef<std::int64_t>{0});
   }
   rewriter.replaceOp(op, operand);
   return mlir::success();
@@ -6185,8 +6220,8 @@ mlir::LogicalResult CIRToLLVMComplexImagOpLowering::matchAndRewrite(
   mlir::Location loc = op.getLoc();
 
   if (mlir::isa<cir::ComplexType>(op.getOperand().getType())) {
-    operand = mlir::LLVM::ExtractValueOp::create(
-        rewriter, loc, resultLLVMTy, operand, llvm::ArrayRef<std::int64_t>{1});
+    operand = rewriter.createOrFold<mlir::LLVM::ExtractValueOp>(
+        loc, operand, llvm::ArrayRef<std::int64_t>{1});
   } else {
     mlir::TypedAttr zeroAttr = rewriter.getZeroAttr(resultLLVMTy);
     operand =

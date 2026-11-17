@@ -3200,6 +3200,13 @@ struct SelectCommonElementwiseOp : public OpRewritePattern<arith::SelectOp> {
     if (!lhs || !rhs || lhs == rhs)
       return failure();
 
+    // Do not hoist a select through selects: rewriting
+    // select(c, select(d, a, b), select(d, x, y)) into
+    // select(d, select(c, a, x), select(c, b, y)) matches again with c and d
+    // swapped, so the greedy rewriter never converges.
+    if (isa<arith::SelectOp>(lhs))
+      return failure();
+
     for (Operation *producer : {lhs, rhs}) {
       // Avoid sinking loop invariant code into the loop.
       //

@@ -338,9 +338,33 @@ TEST_F(ModuleCacheTest, WriteReportsFullSize) {
   StringRef Contents = "contents\n";
   off_t Size;
   time_t ModTime;
-  ASSERT_EQ(writeImpl(Path, MemoryBufferRef(Contents, Path), Size, ModTime),
+  ASSERT_EQ(writeImpl(Path, MemoryBufferRef(Contents, Path), Size, ModTime,
+                      /*ReadBack=*/false)
+                .getError(),
             std::error_code{});
   EXPECT_EQ(Size, off_t(Contents.size()));
+}
+
+// Test that the buffer returned from write() is memory-mapped to the written
+// file (for files large enough to be mmapped).
+TEST_F(ModuleCacheTest, WriteReturnsMappedBuffer) {
+  SmallString<256> Path(ModuleCachePath);
+  sys::path::append(Path, "M.pcm");
+
+  std::string Contents(1024 * 1024, 'x');
+  auto Given = MemoryBuffer::getMemBuffer(Contents, Path);
+  ASSERT_NE(Given->getBufferKind(), MemoryBuffer::MemoryBuffer_MMap);
+
+  off_t Size;
+  time_t ModTime;
+  std::shared_ptr<ModuleCache> ModCache = createCrossProcessModuleCache();
+  auto WrittenOrErr = ModCache->write(Path, std::move(Given), Size, ModTime);
+  ASSERT_EQ(WrittenOrErr.getError(), std::error_code{});
+  auto Written = std::move(*WrittenOrErr);
+  ASSERT_TRUE(Written);
+  // Written buffer refers to the mmaped file contents.
+  EXPECT_EQ(Written->getBufferKind(), MemoryBuffer::MemoryBuffer_MMap);
+  EXPECT_EQ(Written->getBuffer(), Contents);
 }
 
 } // anonymous namespace
