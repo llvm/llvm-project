@@ -405,10 +405,20 @@ TEST_F(SymtabTest, TestHasDebugMapAndSourceFiles) {
   symtab.SetHasDebugMap(true);
   EXPECT_TRUE(symtab.HasDebugMap());
 
-  // Resizing the symbol table calculates whether there are source files
-  // again.
-  symtab.Resize(1);
-  EXPECT_FALSE(symtab.HasSourceFiles());
+  // Resize is only used to add symbols, so once there are source files it
+  // doesn't calculate this again, even when the object file plug-in set it.
+  Symtab resized_symtab(/*objfile=*/nullptr);
+  resized_symtab.AddSymbol(MakeSymbol(0, eSymbolTypeCode, 0));
+  resized_symtab.SetHasSourceFiles(true);
+  resized_symtab.Resize(2);
+  EXPECT_TRUE(resized_symtab.HasSourceFiles());
+
+  // A source file symbol may be filled in through the pointer Resize returns,
+  // so if there were no source files, Resize makes it calculate this again.
+  resized_symtab.SetHasSourceFiles(false);
+  Symbol *symbols = resized_symtab.Resize(3);
+  symbols[2] = MakeSymbol(2, eSymbolTypeSourceFile, 0x640000);
+  EXPECT_TRUE(resized_symtab.HasSourceFiles());
 
   // Adding a source file symbol updates the value set by the object file
   // plug-in.

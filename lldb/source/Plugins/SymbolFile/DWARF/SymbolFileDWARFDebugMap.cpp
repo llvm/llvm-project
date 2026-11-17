@@ -298,8 +298,7 @@ void SymbolFileDWARFDebugMap::InitOSO() {
   if (!symtab)
     return;
 
-  // Avoid searching all of the symbols for N_OSO entries when the object file
-  // didn't find a debug map while parsing the symbol table.
+  // Avoid searching for N_OSO entries when we know none exist.
   if (!symtab->HasDebugMap())
     return;
 

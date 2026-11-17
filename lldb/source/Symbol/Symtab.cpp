@@ -56,9 +56,12 @@ Symbol *Symtab::Resize(size_t count) {
   // Clients should grab the mutex from this symbol table and lock it manually
   // when calling this function to avoid performance issues.
   m_symbols.resize(count);
-  // Callers fill in the symbols through the returned pointer, so calculate
-  // this again when it is requested unless the object file plug-in sets it.
-  m_has_source_files.reset();
+  // Callers fill in the new symbols through the returned pointer, and one of
+  // them may be a source file symbol. If we already know there are source
+  // files, that stays true. Otherwise calculate this again when it is
+  // requested, unless the object file plug-in sets it.
+  if (!m_has_source_files.value_or(false))
+    m_has_source_files.reset();
   return m_symbols.empty() ? nullptr : &m_symbols[0];
 }
 

@@ -2105,9 +2105,6 @@ ParseNList(DataExtractor &nlist_data, lldb::offset_t &nlist_data_offset,
   return nlist;
 }
 
-/// Note whether a symbol of type \a type, added to the symbol table from
-/// \a nlist, is a source file (N_SO) or an object file in a DWARF + debug map
-/// (N_OSO with an n_desc of 1, see SymbolFileDWARFDebugMap::InitOSO()).
 static void UpdateHasSourceFilesAndDebugMap(SymbolType type,
                                             const struct nlist_64 &nlist,
                                             bool &has_source_files,
@@ -2249,9 +2246,6 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   if (section_list == nullptr)
     return;
 
-  // Whether we add any source file symbols, or any symbols for object files
-  // in a DWARF + debug map, so we can tell the symbol table without it having
-  // to search all of the symbols.
   bool has_source_files = false;
   bool has_debug_map = false;
 
