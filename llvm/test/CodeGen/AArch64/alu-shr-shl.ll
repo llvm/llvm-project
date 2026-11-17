@@ -78,8 +78,8 @@ define i32 @sub_shl_multiuse(i32 %a, i32 %b, ptr %p) {
 define i32 @add_and_lshr(i32 %a, i32 %b) {
 ; CHECK-LABEL: add_and_lshr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xff0
-; CHECK-NEXT:    add w0, w1, w8, lsr #4
+; CHECK-NEXT:    ubfx w8, w0, #4, #8
+; CHECK-NEXT:    add w0, w1, w8
 ; CHECK-NEXT:    ret
   %and = and i32 %a, 4080
   %shr = lshr i32 %and, 4
@@ -90,8 +90,8 @@ define i32 @add_and_lshr(i32 %a, i32 %b) {
 define i64 @sub_and_lshr_i64(i64 %a, i64 %b) {
 ; CHECK-LABEL: sub_and_lshr_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x8, x0, #0xffffff00
-; CHECK-NEXT:    sub x0, x1, x8, lsr #8
+; CHECK-NEXT:    lsr w8, w0, #8
+; CHECK-NEXT:    sub x0, x1, x8
 ; CHECK-NEXT:    ret
   %and = and i64 %a, 4294967040
   %shr = lshr i64 %and, 8

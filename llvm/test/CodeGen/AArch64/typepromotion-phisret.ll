@@ -238,7 +238,6 @@ define i16 @signext_bitcast_phi_select(i16 signext %start, ptr %in) {
 ; CHECK-LABEL: signext_bitcast_phi_select:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w9, #-1 // =0xffffffff
-; CHECK-NEXT:    mov w10, #32768 // =0x8000
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    cmp w9, w0, sxth
 ; CHECK-NEXT:    b.lt .LBB6_3
@@ -250,8 +249,9 @@ define i16 @signext_bitcast_phi_select(i16 signext %start, ptr %in) {
 ; CHECK-NEXT:    b.eq .LBB6_4
 ; CHECK-NEXT:  // %bb.2: // %if.else
 ; CHECK-NEXT:    // in Loop: Header=BB6_1 Depth=1
-; CHECK-NEXT:    bic w8, w10, w0
-; CHECK-NEXT:    add w0, w0, w8, lsr #15
+; CHECK-NEXT:    mvn w8, w0
+; CHECK-NEXT:    ubfx w8, w8, #15, #1
+; CHECK-NEXT:    add w0, w8, w0
 ; CHECK-NEXT:    cmp w9, w0, sxth
 ; CHECK-NEXT:    b.ge .LBB6_1
 ; CHECK-NEXT:  .LBB6_3:

@@ -1198,15 +1198,16 @@ bool AArch64DAGToDAGISel::SelectShiftedRegister(SDValue N, bool AllowROR,
   if (!AllowROR && ShType == AArch64_AM::ROR)
     return false;
 
-  // Don't match if the SRA/SRL can be folded with an SHL to form a SBFM/UBFM.
+  // Don't match if the SRA/SRL can be folded with an SHL or AND to form a
+  // SBFM/UBFM.
   if (N.getOpcode() == ISD::SRA || N.getOpcode() == ISD::SRL) {
     SDValue Inner = N.getOperand(0);
     uint64_t ShrImm = 0;
     unsigned Opc, Immr, Imms;
     SDValue Opd0;
-    if (Inner.getOpcode() == ISD::SHL && Inner.hasOneUse() &&
-        isIntImmediate(N.getOperand(1), ShrImm) && ShrImm > 0 &&
-        ShrImm < N.getValueSizeInBits() &&
+    if ((Inner.getOpcode() == ISD::SHL || Inner.getOpcode() == ISD::AND) &&
+        Inner.hasOneUse() && isIntImmediate(N.getOperand(1), ShrImm) &&
+        ShrImm > 0 && ShrImm < N.getValueSizeInBits() &&
         isBitfieldExtractOpFromShr(N.getNode(), Opc, Opd0, Immr, Imms, false))
       return false;
   }
