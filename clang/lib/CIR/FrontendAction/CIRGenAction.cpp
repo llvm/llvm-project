@@ -66,13 +66,13 @@ getBackendActionFromOutputType(CIRGenAction::OutputType Action) {
   llvm_unreachable("Unsupported output type!");
 }
 
-static std::unique_ptr<llvm::Module>
-lowerFromCIRToLLVMIR(mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx,
-                     bool EnableOpenMP,
-                     llvm::StringRef mlirSaveTempsOutFile = {},
-                     llvm::vfs::FileSystem *fs = nullptr) {
+static std::unique_ptr<llvm::Module> lowerFromCIRToLLVMIR(
+    mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx, bool EnableOpenMP,
+    llvm::StringRef mlirSaveTempsOutFile = {},
+    llvm::vfs::FileSystem *fs = nullptr, bool enableOptimizations = false) {
   return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx, EnableOpenMP,
-                                              mlirSaveTempsOutFile, fs);
+                                              mlirSaveTempsOutFile, fs,
+                                              enableOptimizations);
 }
 
 // Print \p MLIRModule the way -emit-cir does, so that CIR emitted from source
@@ -106,7 +106,7 @@ static void embedSYCLDeviceBinary(CompilerInstance &CI, llvm::Module &M) {
 
 // Emits the output requested by \p Action for \p MlirModule, a CIR module that
 // has been through the CIR-to-CIR pipeline. Language facts are read from the
-// module's #cir.lowering_lang_options and target facts from \p CI, so this
+// module's #cir.lowering_options and target facts from \p CI, so this
 // does not need an ASTContext and can also run on CIR loaded from a file.
 // \p AddFunctionSourceLocations, if set, runs on the lowered LLVM module
 // before linking.
@@ -156,8 +156,8 @@ static void emitCIRModuleOutput(
 
     // Read the lowering facts before lowering rewrites the module. Without the
     // attribute (e.g. hand-written CIR) every fact defaults to off.
-    auto LangOptsAttr = MlirModule->getAttrOfType<cir::LoweringLangOptionsAttr>(
-        cir::CIRDialect::getLoweringLangOptionsAttrName());
+    auto LangOptsAttr = MlirModule->getAttrOfType<cir::LoweringOptionsAttr>(
+        cir::CIRDialect::getLoweringOptionsAttrName());
     const bool EnableOpenMP = LangOptsAttr && LangOptsAttr.getOpenmp();
 
     // Route LLVM backend diagnostics (optimization remarks, unsupported
@@ -175,9 +175,12 @@ static void emitCIRModuleOutput(
     // sandbox.
     LLVMCtx.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
 
+    // Enable the llvm-simplify-cfg pass when optimizations are on
+    // (-O1 and up); at -O0 the lowered IR keeps its raw shape.
     std::unique_ptr<llvm::Module> LLVMModule =
         lowerFromCIRToLLVMIR(MlirModule, LLVMCtx, EnableOpenMP,
-                             mlirSaveTempsOutFile, &CI.getVirtualFileSystem());
+                             mlirSaveTempsOutFile, &CI.getVirtualFileSystem(),
+                             /*enableOptimizations=*/CGO.OptimizationLevel > 0);
     if (!LLVMModule) {
       // Lowering errors are already routed through the MLIR diagnostic
       // handler. Only emit the generic error if nothing was reported.

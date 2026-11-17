@@ -79,7 +79,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 callsEHReturn:   false
 callsUnwindInit: false
@@ -90,11 +89,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: gpr32, preferred-register: '' }
-  - { id: 1, class: gpr32, preferred-register: '' }
-  - { id: 2, class: gpr32common, preferred-register: '' }
-  - { id: 3, class: gpr32sp, preferred-register: '' }
 liveins:
   - { reg: '$w0', virtual-reg: '%0' }
   - { reg: '$w1', virtual-reg: '%1' }
@@ -152,7 +146,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 callsEHReturn:   false
 callsUnwindInit: false
@@ -163,11 +156,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: gpr32common, preferred-register: '' }
-  - { id: 1, class: gpr32sp, preferred-register: '' }
-  - { id: 2, class: gpr64common, preferred-register: '' }
-  - { id: 3, class: gpr32all, preferred-register: '' }
 liveins:
   - { reg: '$w0', virtual-reg: '%0' }
 frameInfo:

@@ -59,6 +59,18 @@
 using namespace clang;
 using namespace clang::CodeGen;
 
+static SourceLocation getMacroDebugLoc(const CodeGenModule &CGM,
+                                       SourceLocation Loc) {
+  if (CGM.getCodeGenOpts().DebugInfoMacroExpansionLoc)
+    return Loc;
+  // Resolving the file location of very deep macro expansion chains is
+  // expensive, so fall back to the expansion location for them.
+  const SourceManager &SM = CGM.getContext().getSourceManager();
+  SourceLocation FileLoc =
+      SM.getFileLoc(Loc, CGM.getCodeGenOpts().DebugInfoMacroMaxDepth);
+  return FileLoc.isValid() ? FileLoc : SM.getExpansionLoc(Loc);
+}
+
 static uint32_t getTypeAlignIfRequired(const Type *Ty, const ASTContext &Ctx) {
   auto TI = Ctx.getTypeInfo(Ty);
   if (TI.isAlignRequired())
@@ -346,7 +358,7 @@ void CGDebugInfo::setLocation(SourceLocation Loc) {
     return;
 
   SourceManager &SM = CGM.getContext().getSourceManager();
-  SourceLocation NewLoc = SM.getExpansionLoc(Loc);
+  SourceLocation NewLoc = SM.getExpansionLoc(getMacroDebugLoc(CGM, Loc));
   if (CurLoc != NewLoc) {
     CurLoc = NewLoc;
     CurLocFile = nullptr;
@@ -589,6 +601,7 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
     FileName = TheCU->getFile()->getFilename();
     CSInfo = TheCU->getFile()->getChecksum();
   } else {
+    Loc = getMacroDebugLoc(CGM, Loc);
     if (Loc == CurLoc && CurLocFile)
       return CurLocFile;
 
@@ -613,13 +626,17 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
 
   // Put Checksum at a scope where it will persist past the createFile call.
   SmallString<64> Checksum;
+  // Reuse the checksum CreateCompileUnit already computed for the main file.
+  if (!CSInfo && FID == SM.getMainFileID() && TheCU)
+    CSInfo = TheCU->getFile()->getChecksum();
   if (!CSInfo) {
     std::optional<llvm::DIFile::ChecksumKind> CSKind =
       computeChecksum(FID, Checksum);
     if (CSKind)
       CSInfo.emplace(*CSKind, Checksum);
   }
-  return createFile(FileName, CSInfo, getSource(SM, SM.getFileID(Loc)));
+  return createFile(FileName, CSInfo,
+                    getSource(SM, SM.getFileID(getMacroDebugLoc(CGM, Loc))));
 }
 
 llvm::DIFile *CGDebugInfo::createFile(
@@ -670,9 +687,10 @@ unsigned CGDebugInfo::getLineNumber(SourceLocation Loc) {
   if (Loc.isInvalid())
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
-  if (Loc == CurLoc)
+  SourceLocation DebugLoc = getMacroDebugLoc(CGM, Loc);
+  if (DebugLoc == CurLoc)
     return CurLocLine;
-  return SM.getPresumedLoc(Loc).getLine();
+  return SM.getPresumedLoc(DebugLoc).getLine();
 }
 
 unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc) {
@@ -684,7 +702,7 @@ unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc) {
   if (Loc.isInvalid() && CurLoc.isInvalid())
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
-  SourceLocation DebugLoc = Loc.isValid() ? Loc : CurLoc;
+  SourceLocation DebugLoc = Loc.isValid() ? getMacroDebugLoc(CGM, Loc) : CurLoc;
   if (DebugLoc == CurLoc)
     return CurLocColumn;
   PresumedLoc PLoc = SM.getPresumedLoc(DebugLoc);
@@ -855,9 +873,14 @@ void CGDebugInfo::CreateCompileUnit() {
   // file was specified with an absolute path.
   if (CSKind)
     CSInfo.emplace(*CSKind, Checksum);
-  llvm::DIFile *CUFile = DBuilder.createFile(
-      remapDIPath(MainFileName), remapDIPath(getCurrentDirname()), CSInfo,
-      getSource(SM, SM.getMainFileID()));
+  const llvm::StringRef cwd =
+      !CGOpts.EmitCodeView ||
+              (CGOpts.EmitCodeView && CGOpts.CodeViewEmitCurrentWorkdir)
+          ? getCurrentDirname()
+          : llvm::StringRef("");
+  llvm::DIFile *CUFile =
+      DBuilder.createFile(remapDIPath(MainFileName), remapDIPath(cwd), CSInfo,
+                          getSource(SM, SM.getMainFileID()));
 
   StringRef Sysroot, SDK;
   if (CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::LLDB) {
@@ -5331,7 +5354,9 @@ void CGDebugInfo::EmitLocation(CGBuilderTy &Builder, SourceLocation Loc) {
   // Update our current location
   setLocation(Loc);
 
-  if (CurLoc.isInvalid() || LexicalBlockStack.empty())
+  if (CurLoc.isInvalid() ||
+      (CGM.getCodeGenOpts().DebugInfoMacroExpansionLoc && CurLoc.isMacroID()) ||
+      LexicalBlockStack.empty())
     return;
 
   llvm::MDNode *Scope = LexicalBlockStack.back();
@@ -6604,15 +6629,15 @@ void CGDebugInfo::AddStringLiteralDebugInfo(llvm::GlobalVariable *GV,
                                             const StringLiteral *S) {
   SourceLocation Loc = S->getStrTokenLoc(0);
   SourceManager &SM = CGM.getContext().getSourceManager();
-  PresumedLoc PLoc = SM.getPresumedLoc(Loc);
+  PresumedLoc PLoc = SM.getPresumedLoc(getMacroDebugLoc(CGM, Loc));
   if (!PLoc.isValid())
     return;
 
   llvm::DIFile *File = getOrCreateFile(Loc);
   llvm::DIGlobalVariableExpression *Debug =
       DBuilder.createGlobalVariableExpression(
-          nullptr, StringRef(), StringRef(), getOrCreateFile(Loc),
-          getLineNumber(Loc), getOrCreateType(S->getType(), File), true);
+          nullptr, StringRef(), StringRef(), File, getLineNumber(Loc),
+          getOrCreateType(S->getType(), File), true);
   GV->addDebugInfo(Debug);
 }
 

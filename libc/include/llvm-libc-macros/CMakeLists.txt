@@ -43,6 +43,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  arpa_nameser_macros
+  HDR
+    arpa-nameser-macros.h
+)
+
+add_macro_header(
   assert_macros
   HDR
     assert-macros.h
@@ -326,6 +332,8 @@ add_macro_header(
   sys_shm_macros
   HDR
     sys-shm-macros.h
+  DEPENDS
+    .stdint_macros
 )
 
 add_macro_header(

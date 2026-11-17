@@ -39,7 +39,7 @@ bool Record::hasTrivialDtor() const {
 }
 
 const Record::Field *Record::findField(unsigned Offset) const {
-  if (auto It = llvm::find_if(
+  if (const auto *It = llvm::find_if(
           Fields,
           [=](const Record::Field &F) -> bool { return F.Offset == Offset; });
       It != Fields.end())
@@ -64,7 +64,7 @@ const Record::Base *Record::getBase(QualType T) const {
 }
 
 const Record::Base *Record::findBase(unsigned Offset) const {
-  if (auto It = llvm::find_if(
+  if (const auto *It = llvm::find_if(
           Bases,
           [=](const Record::Base &B) -> bool { return B.Offset == Offset; });
       It != Bases.end())
@@ -73,10 +73,10 @@ const Record::Base *Record::findBase(unsigned Offset) const {
 }
 
 const Record::Base *Record::findVirtualBase(const RecordDecl *FD) const {
-  if (auto *It = llvm::find_if(
+  if (const auto *It = llvm::find_if(
           VirtualBases,
           [=](const Record::Base &B) -> bool { return B.Decl == FD; });
-      It != Bases.end())
+      It != VirtualBases.end())
     return &*It;
   return nullptr;
 }

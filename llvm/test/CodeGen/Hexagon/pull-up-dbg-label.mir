@@ -66,7 +66,6 @@
 
 ---
 name: f0
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, size: 8, alignment: 8, offset: -16 }
   - { id: 1, size: 8, alignment: 8, offset: -8 }

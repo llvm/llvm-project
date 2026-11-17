@@ -24,6 +24,15 @@
 # RUN: not ld.lld %t.err.o -o /dev/null --gc-sections 2>&1 | FileCheck %s --check-prefix=GC
 # GC: error: relocation refers to a discarded section: .foo
 
+## A local section symbol with an out-of-bounds st_value is not copied to
+## .symtab, so its value is unused. A non-local one is checked.
+# RUN: echo '.section .foo,"aM",@progbits,8; .quad 0' | llvm-mc -filetype=obj -triple=x86_64 - -o %t.sec.o
+# RUN: llvm-objcopy --add-symbol=.foo=.foo:9,section,local --add-symbol=.foo=.foo:0x200000000,section,local %t.sec.o %t.sec1.o
+# RUN: ld.lld %t.sec1.o -shared -o /dev/null
+# RUN: llvm-objcopy --add-symbol=.foo=.foo:9,section %t.sec.o %t.sec2.o
+# RUN: not ld.lld %t.sec2.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=SECSYM --implicit-check-not=error:
+# SECSYM: error: {{.*}}:(.foo): offset 0x9 is outside the section
+
 # RUN: ld.lld -r %t.o -o %t.ro
 # RUN: llvm-readelf -s -r %t.ro | FileCheck %s --check-prefix=RELOC
 

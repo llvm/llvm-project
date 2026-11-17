@@ -23,11 +23,6 @@ ORC_RT_C_EXTERN_C_BEGIN
  */
 typedef struct orc_rt_OpaqueSession *orc_rt_SessionRef;
 
-/**
- * Identifies a handler in the controller that is callable by the executor.
- */
-typedef void *orc_rt_ControllerHandlerTag;
-
 ORC_RT_C_EXTERN_C_END
 
 #endif /* ORC_RT_C_SUPPORT_CORETYPES_H */

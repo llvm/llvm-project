@@ -1235,15 +1235,26 @@ private:
 #endif /* defined __HVX__ && (__HVX_LENGTH__ == 128) */
 #endif /* __HVX_ARCH__ >= 65 */
 
-/* Predicates */
+#if __HLX_ARCH__ >= 85
+  typedef short HEXAGON_Vect16384 __attribute__((__vector_size__(2048)))
+  __attribute__((aligned(2048)));
 
-typedef int HEXAGON_Pred;
+  typedef long HEXAGON_Vect32768 __attribute__((__vector_size__(4096)))
+  __attribute__((aligned(2048)));
 
-/***
- *** backward compatibility aliases
- ***/
+#define HLX_Vector HEXAGON_Vect16384
+#define HLX_VectorPair HEXAGON_Vect32768
+#endif /* __HLX_ARCH__ >= 85 */
 
-/* Old names */
+  /* Predicates */
+
+  typedef int HEXAGON_Pred;
+
+  /***
+   *** backward compatibility aliases
+   ***/
+
+  /* Old names */
 #define Q6Vect Q6Vect64
 #define Q6V_GET_D Q6V64_GET_D
 #define Q6V_GET_UD Q6V64_GET_UD
@@ -1299,741 +1310,662 @@ typedef int HEXAGON_Pred;
 #define Q6VectC Q6Vect64C
 #endif /* __cplusplus */
 
-/* 64 Bit Vectors */
+  /* 64 Bit Vectors */
 
-typedef long long __attribute__((__may_alias__)) Q6Vect64;
+  typedef long long __attribute__((__may_alias__)) Q6Vect64;
 
-/* Extract doubleword macros */
+  /* Extract doubleword macros */
 
 #define Q6V64_GET_D(v) (v)
 #define Q6V64_GET_UD(v) ((unsigned long long)(v))
 
-/* Extract word macros */
+  /* Extract word macros */
 
-#define Q6V64_GET_W0(v)                                                        \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      int w[2];                                                                \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.w[0];                                                \
-  })
-#define Q6V64_GET_W1(v)                                                        \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      int w[2];                                                                \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.w[1];                                                \
-  })
-#define Q6V64_GET_UW0(v)                                                       \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      unsigned int uw[2];                                                      \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.uw[0];                                               \
-  })
-#define Q6V64_GET_UW1(v)                                                       \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      unsigned int uw[2];                                                      \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.uw[1];                                               \
-  })
+#define Q6V64_GET_W0(v)                                                      \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        int w[2];                                                              \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.w[0];                                              \
+    })
+#define Q6V64_GET_W1(v)                                                      \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        int w[2];                                                              \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.w[1];                                              \
+    })
+#define Q6V64_GET_UW0(v)                                                     \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        unsigned int uw[2];                                                    \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.uw[0];                                             \
+    })
+#define Q6V64_GET_UW1(v)                                                     \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        unsigned int uw[2];                                                    \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.uw[1];                                             \
+    })
 
-/* Extract half word macros */
+  /* Extract half word macros */
 
-#define Q6V64_GET_H0(v)                                                        \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      short h[4];                                                              \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.h[0];                                                \
-  })
-#define Q6V64_GET_H1(v)                                                        \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      short h[4];                                                              \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.h[1];                                                \
-  })
-#define Q6V64_GET_H2(v)                                                        \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      short h[4];                                                              \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.h[2];                                                \
-  })
-#define Q6V64_GET_H3(v)                                                        \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      short h[4];                                                              \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.h[3];                                                \
-  })
-#define Q6V64_GET_UH0(v)                                                       \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      unsigned short uh[4];                                                    \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.uh[0];                                               \
-  })
-#define Q6V64_GET_UH1(v)                                                       \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      unsigned short uh[4];                                                    \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.uh[1];                                               \
-  })
-#define Q6V64_GET_UH2(v)                                                       \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      unsigned short uh[4];                                                    \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.uh[2];                                               \
-  })
-#define Q6V64_GET_UH3(v)                                                       \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      unsigned short uh[4];                                                    \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.uh[3];                                               \
-  })
+#define Q6V64_GET_H0(v)                                                      \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        short h[4];                                                            \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.h[0];                                              \
+    })
+#define Q6V64_GET_H1(v)                                                      \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        short h[4];                                                            \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.h[1];                                              \
+    })
+#define Q6V64_GET_H2(v)                                                      \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        short h[4];                                                            \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.h[2];                                              \
+    })
+#define Q6V64_GET_H3(v)                                                      \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        short h[4];                                                            \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.h[3];                                              \
+    })
+#define Q6V64_GET_UH0(v)                                                     \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        unsigned short uh[4];                                                  \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.uh[0];                                             \
+    })
+#define Q6V64_GET_UH1(v)                                                     \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        unsigned short uh[4];                                                  \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.uh[1];                                             \
+    })
+#define Q6V64_GET_UH2(v)                                                     \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        unsigned short uh[4];                                                  \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.uh[2];                                             \
+    })
+#define Q6V64_GET_UH3(v)                                                     \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        unsigned short uh[4];                                                  \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.uh[3];                                             \
+    })
 
-/* Extract byte macros */
+  /* Extract byte macros */
 
-#define Q6V64_GET_B0(v)                                                        \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      signed char b[8];                                                        \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.b[0];                                                \
-  })
-#define Q6V64_GET_B1(v)                                                        \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      signed char b[8];                                                        \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.b[1];                                                \
-  })
-#define Q6V64_GET_B2(v)                                                        \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      signed char b[8];                                                        \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.b[2];                                                \
-  })
-#define Q6V64_GET_B3(v)                                                        \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      signed char b[8];                                                        \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.b[3];                                                \
-  })
-#define Q6V64_GET_B4(v)                                                        \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      signed char b[8];                                                        \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.b[4];                                                \
-  })
-#define Q6V64_GET_B5(v)                                                        \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      signed char b[8];                                                        \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.b[5];                                                \
-  })
-#define Q6V64_GET_B6(v)                                                        \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      signed char b[8];                                                        \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.b[6];                                                \
-  })
-#define Q6V64_GET_B7(v)                                                        \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      signed char b[8];                                                        \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.b[7];                                                \
-  })
-#define Q6V64_GET_UB0(v)                                                       \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      unsigned char ub[8];                                                     \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.ub[0];                                               \
-  })
-#define Q6V64_GET_UB1(v)                                                       \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      unsigned char ub[8];                                                     \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.ub[1];                                               \
-  })
-#define Q6V64_GET_UB2(v)                                                       \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      unsigned char ub[8];                                                     \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.ub[2];                                               \
-  })
-#define Q6V64_GET_UB3(v)                                                       \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      unsigned char ub[8];                                                     \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.ub[3];                                               \
-  })
-#define Q6V64_GET_UB4(v)                                                       \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      unsigned char ub[8];                                                     \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.ub[4];                                               \
-  })
-#define Q6V64_GET_UB5(v)                                                       \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      unsigned char ub[8];                                                     \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.ub[5];                                               \
-  })
-#define Q6V64_GET_UB6(v)                                                       \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      unsigned char ub[8];                                                     \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.ub[6];                                               \
-  })
-#define Q6V64_GET_UB7(v)                                                       \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      unsigned char ub[8];                                                     \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.ub[7];                                               \
-  })
+#define Q6V64_GET_B0(v)                                                      \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        signed char b[8];                                                      \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.b[0];                                              \
+    })
+#define Q6V64_GET_B1(v)                                                      \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        signed char b[8];                                                      \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.b[1];                                              \
+    })
+#define Q6V64_GET_B2(v)                                                      \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        signed char b[8];                                                      \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.b[2];                                              \
+    })
+#define Q6V64_GET_B3(v)                                                      \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        signed char b[8];                                                      \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.b[3];                                              \
+    })
+#define Q6V64_GET_B4(v)                                                      \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        signed char b[8];                                                      \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.b[4];                                              \
+    })
+#define Q6V64_GET_B5(v)                                                      \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        signed char b[8];                                                      \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.b[5];                                              \
+    })
+#define Q6V64_GET_B6(v)                                                      \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        signed char b[8];                                                      \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.b[6];                                              \
+    })
+#define Q6V64_GET_B7(v)                                                      \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        signed char b[8];                                                      \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.b[7];                                              \
+    })
+#define Q6V64_GET_UB0(v)                                                     \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        unsigned char ub[8];                                                   \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.ub[0];                                             \
+    })
+#define Q6V64_GET_UB1(v)                                                     \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        unsigned char ub[8];                                                   \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.ub[1];                                             \
+    })
+#define Q6V64_GET_UB2(v)                                                     \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        unsigned char ub[8];                                                   \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.ub[2];                                             \
+    })
+#define Q6V64_GET_UB3(v)                                                     \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        unsigned char ub[8];                                                   \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.ub[3];                                             \
+    })
+#define Q6V64_GET_UB4(v)                                                     \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        unsigned char ub[8];                                                   \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.ub[4];                                             \
+    })
+#define Q6V64_GET_UB5(v)                                                     \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        unsigned char ub[8];                                                   \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.ub[5];                                             \
+    })
+#define Q6V64_GET_UB6(v)                                                     \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        unsigned char ub[8];                                                   \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.ub[6];                                             \
+    })
+#define Q6V64_GET_UB7(v)                                                     \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        unsigned char ub[8];                                                   \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.ub[7];                                             \
+    })
 
-/* NOTE: All set macros return a Q6Vect64 type */
+  /* NOTE: All set macros return a Q6Vect64 type */
 
-/* Set doubleword macro */
+  /* Set doubleword macro */
 
 #define Q6V64_PUT_D(v, new) (new)
 
-/* Set word macros */
+  /* Set word macros */
 
 #ifdef __qdsp6__
 
-#define Q6V64_PUT_W0(v, new)                                                   \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      int w[2];                                                                \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.w[0] = (new);                                        \
-    _Q6V64_internal_union.d;                                                   \
-  })
-#define Q6V64_PUT_W1(v, new)                                                   \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      int w[2];                                                                \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.w[1] = (new);                                        \
-    _Q6V64_internal_union.d;                                                   \
-  })
+#define Q6V64_PUT_W0(v, new)                                                 \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        int w[2];                                                              \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.w[0] = (new);                                      \
+      _Q6V64_internal_union.d;                                                 \
+    })
+#define Q6V64_PUT_W1(v, new)                                                 \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        int w[2];                                                              \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.w[1] = (new);                                      \
+      _Q6V64_internal_union.d;                                                 \
+    })
 
 #else /* !__qdsp6__ */
 
-#define Q6V64_PUT_W0(v, new)                                                   \
-  (((v) & 0xffffffff00000000LL) | ((Q6Vect64)((unsigned int)(new))))
-#define Q6V64_PUT_W1(v, new)                                                   \
-  (((v) & 0x00000000ffffffffLL) | (((Q6Vect64)(new)) << 32LL))
+#define Q6V64_PUT_W0(v, new)                                                 \
+    (((v) & 0xffffffff00000000LL) | ((Q6Vect64)((unsigned int)(new))))
+#define Q6V64_PUT_W1(v, new)                                                 \
+    (((v) & 0x00000000ffffffffLL) | (((Q6Vect64)(new)) << 32LL))
 
 #endif /* !__qdsp6__ */
 
-/* Set half word macros */
+  /* Set half word macros */
 
 #ifdef __qdsp6__
 
-#define Q6V64_PUT_H0(v, new)                                                   \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      short h[4];                                                              \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.h[0] = (new);                                        \
-    _Q6V64_internal_union.d;                                                   \
-  })
-#define Q6V64_PUT_H1(v, new)                                                   \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      short h[4];                                                              \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.h[1] = (new);                                        \
-    _Q6V64_internal_union.d;                                                   \
-  })
-#define Q6V64_PUT_H2(v, new)                                                   \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      short h[4];                                                              \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.h[2] = (new);                                        \
-    _Q6V64_internal_union.d;                                                   \
-  })
-#define Q6V64_PUT_H3(v, new)                                                   \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      short h[4];                                                              \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.h[3] = (new);                                        \
-    _Q6V64_internal_union.d;                                                   \
-  })
+#define Q6V64_PUT_H0(v, new)                                                 \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        short h[4];                                                            \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.h[0] = (new);                                      \
+      _Q6V64_internal_union.d;                                                 \
+    })
+#define Q6V64_PUT_H1(v, new)                                                 \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        short h[4];                                                            \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.h[1] = (new);                                      \
+      _Q6V64_internal_union.d;                                                 \
+    })
+#define Q6V64_PUT_H2(v, new)                                                 \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        short h[4];                                                            \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.h[2] = (new);                                      \
+      _Q6V64_internal_union.d;                                                 \
+    })
+#define Q6V64_PUT_H3(v, new)                                                 \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        short h[4];                                                            \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.h[3] = (new);                                      \
+      _Q6V64_internal_union.d;                                                 \
+    })
 
 #else /* !__qdsp6__ */
 
-#define Q6V64_PUT_H0(v, new)                                                   \
-  (((v) & 0xffffffffffff0000LL) | ((Q6Vect64)((unsigned short)(new))))
-#define Q6V64_PUT_H1(v, new)                                                   \
-  (((v) & 0xffffffff0000ffffLL) | (((Q6Vect64)((unsigned short)(new))) << 16LL))
-#define Q6V64_PUT_H2(v, new)                                                   \
-  (((v) & 0xffff0000ffffffffLL) | (((Q6Vect64)((unsigned short)(new))) << 32LL))
-#define Q6V64_PUT_H3(v, new)                                                   \
-  (((v) & 0x0000ffffffffffffLL) | (((Q6Vect64)(new)) << 48LL))
+#define Q6V64_PUT_H0(v, new)                                                 \
+    (((v) & 0xffffffffffff0000LL) | ((Q6Vect64)((unsigned short)(new))))
+#define Q6V64_PUT_H1(v, new)                                                 \
+    (((v) & 0xffffffff0000ffffLL) |                                            \
+     (((Q6Vect64)((unsigned short)(new))) << 16LL))
+#define Q6V64_PUT_H2(v, new)                                                 \
+    (((v) & 0xffff0000ffffffffLL) |                                            \
+     (((Q6Vect64)((unsigned short)(new))) << 32LL))
+#define Q6V64_PUT_H3(v, new)                                                 \
+    (((v) & 0x0000ffffffffffffLL) | (((Q6Vect64)(new)) << 48LL))
 
 #endif /* !__qdsp6__ */
 
-/* Set byte macros */
+  /* Set byte macros */
 
 #ifdef __qdsp6__
 
-#define Q6V64_PUT_B0(v, new)                                                   \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      char b[8];                                                               \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.b[0] = (new);                                        \
-    _Q6V64_internal_union.d;                                                   \
-  })
-#define Q6V64_PUT_B1(v, new)                                                   \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      char b[8];                                                               \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.b[1] = (new);                                        \
-    _Q6V64_internal_union.d;                                                   \
-  })
-#define Q6V64_PUT_B2(v, new)                                                   \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      char b[8];                                                               \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.b[2] = (new);                                        \
-    _Q6V64_internal_union.d;                                                   \
-  })
-#define Q6V64_PUT_B3(v, new)                                                   \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      char b[8];                                                               \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.b[3] = (new);                                        \
-    _Q6V64_internal_union.d;                                                   \
-  })
-#define Q6V64_PUT_B4(v, new)                                                   \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      char b[8];                                                               \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.b[4] = (new);                                        \
-    _Q6V64_internal_union.d;                                                   \
-  })
-#define Q6V64_PUT_B5(v, new)                                                   \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      char b[8];                                                               \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.b[5] = (new);                                        \
-    _Q6V64_internal_union.d;                                                   \
-  })
-#define Q6V64_PUT_B6(v, new)                                                   \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      char b[8];                                                               \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.b[6] = (new);                                        \
-    _Q6V64_internal_union.d;                                                   \
-  })
-#define Q6V64_PUT_B7(v, new)                                                   \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      char b[8];                                                               \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.d = (v);                                             \
-    _Q6V64_internal_union.b[7] = (new);                                        \
-    _Q6V64_internal_union.d;                                                   \
-  })
+#define Q6V64_PUT_B0(v, new)                                                 \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        char b[8];                                                             \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.b[0] = (new);                                      \
+      _Q6V64_internal_union.d;                                                 \
+    })
+#define Q6V64_PUT_B1(v, new)                                                 \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        char b[8];                                                             \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.b[1] = (new);                                      \
+      _Q6V64_internal_union.d;                                                 \
+    })
+#define Q6V64_PUT_B2(v, new)                                                 \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        char b[8];                                                             \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.b[2] = (new);                                      \
+      _Q6V64_internal_union.d;                                                 \
+    })
+#define Q6V64_PUT_B3(v, new)                                                 \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        char b[8];                                                             \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.b[3] = (new);                                      \
+      _Q6V64_internal_union.d;                                                 \
+    })
+#define Q6V64_PUT_B4(v, new)                                                 \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        char b[8];                                                             \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.b[4] = (new);                                      \
+      _Q6V64_internal_union.d;                                                 \
+    })
+#define Q6V64_PUT_B5(v, new)                                                 \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        char b[8];                                                             \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.b[5] = (new);                                      \
+      _Q6V64_internal_union.d;                                                 \
+    })
+#define Q6V64_PUT_B6(v, new)                                                 \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        char b[8];                                                             \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.b[6] = (new);                                      \
+      _Q6V64_internal_union.d;                                                 \
+    })
+#define Q6V64_PUT_B7(v, new)                                                 \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        char b[8];                                                             \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.d = (v);                                           \
+      _Q6V64_internal_union.b[7] = (new);                                      \
+      _Q6V64_internal_union.d;                                                 \
+    })
 
 #else /* !__qdsp6__ */
 
-#define Q6V64_PUT_B0(v, new)                                                   \
-  (((v) & 0xffffffffffffff00LL) | ((Q6Vect64)((unsigned char)(new))))
-#define Q6V64_PUT_B1(v, new)                                                   \
-  (((v) & 0xffffffffffff00ffLL) | (((Q6Vect64)((unsigned char)(new))) << 8LL))
-#define Q6V64_PUT_B2(v, new)                                                   \
-  (((v) & 0xffffffffff00ffffLL) | (((Q6Vect64)((unsigned char)(new))) << 16LL))
-#define Q6V64_PUT_B3(v, new)                                                   \
-  (((v) & 0xffffffff00ffffffLL) | (((Q6Vect64)((unsigned char)(new))) << 24LL))
-#define Q6V64_PUT_B4(v, new)                                                   \
-  (((v) & 0xffffff00ffffffffLL) | (((Q6Vect64)((unsigned char)(new))) << 32LL))
-#define Q6V64_PUT_B5(v, new)                                                   \
-  (((v) & 0xffff00ffffffffffLL) | (((Q6Vect64)((unsigned char)(new))) << 40LL))
-#define Q6V64_PUT_B6(v, new)                                                   \
-  (((v) & 0xff00ffffffffffffLL) | (((Q6Vect64)((unsigned char)(new))) << 48LL))
-#define Q6V64_PUT_B7(v, new)                                                   \
-  (((v) & 0x00ffffffffffffffLL) | (((Q6Vect64)(new)) << 56LL))
+#define Q6V64_PUT_B0(v, new)                                                 \
+    (((v) & 0xffffffffffffff00LL) | ((Q6Vect64)((unsigned char)(new))))
+#define Q6V64_PUT_B1(v, new)                                                 \
+    (((v) & 0xffffffffffff00ffLL) | (((Q6Vect64)((unsigned char)(new))) << 8LL))
+#define Q6V64_PUT_B2(v, new)                                                 \
+    (((v) & 0xffffffffff00ffffLL) |                                            \
+     (((Q6Vect64)((unsigned char)(new))) << 16LL))
+#define Q6V64_PUT_B3(v, new)                                                 \
+    (((v) & 0xffffffff00ffffffLL) |                                            \
+     (((Q6Vect64)((unsigned char)(new))) << 24LL))
+#define Q6V64_PUT_B4(v, new)                                                 \
+    (((v) & 0xffffff00ffffffffLL) |                                            \
+     (((Q6Vect64)((unsigned char)(new))) << 32LL))
+#define Q6V64_PUT_B5(v, new)                                                 \
+    (((v) & 0xffff00ffffffffffLL) |                                            \
+     (((Q6Vect64)((unsigned char)(new))) << 40LL))
+#define Q6V64_PUT_B6(v, new)                                                 \
+    (((v) & 0xff00ffffffffffffLL) |                                            \
+     (((Q6Vect64)((unsigned char)(new))) << 48LL))
+#define Q6V64_PUT_B7(v, new)                                                 \
+    (((v) & 0x00ffffffffffffffLL) | (((Q6Vect64)(new)) << 56LL))
 
 #endif /* !__qdsp6__ */
 
-/* NOTE: All create macros return a Q6Vect64 type */
+  /* NOTE: All create macros return a Q6Vect64 type */
 
-/* Create from a doubleword */
+  /* Create from a doubleword */
 
 #define Q6V64_CREATE_D(d) (d)
 
-/* Create from words */
+  /* Create from words */
 
 #ifdef __qdsp6__
 
-#define Q6V64_CREATE_W(w1, w0)                                                 \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      int w[2];                                                                \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.w[0] = (w0);                                         \
-    _Q6V64_internal_union.w[1] = (w1);                                         \
-    _Q6V64_internal_union.d;                                                   \
-  })
+#define Q6V64_CREATE_W(w1, w0)                                               \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        int w[2];                                                              \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.w[0] = (w0);                                       \
+      _Q6V64_internal_union.w[1] = (w1);                                       \
+      _Q6V64_internal_union.d;                                                 \
+    })
 
 #else /* !__qdsp6__ */
 
-#define Q6V64_CREATE_W(w1, w0)                                                 \
-  ((((Q6Vect64)(w1)) << 32LL) | ((Q6Vect64)((w0) & 0xffffffff)))
+#define Q6V64_CREATE_W(w1, w0)                                               \
+    ((((Q6Vect64)(w1)) << 32LL) | ((Q6Vect64)((w0) & 0xffffffff)))
 
 #endif /* !__qdsp6__ */
 
-/* Create from half words */
+  /* Create from half words */
 
 #ifdef __qdsp6__
 
-#define Q6V64_CREATE_H(h3, h2, h1, h0)                                         \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      short h[4];                                                              \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.h[0] = (h0);                                         \
-    _Q6V64_internal_union.h[1] = (h1);                                         \
-    _Q6V64_internal_union.h[2] = (h2);                                         \
-    _Q6V64_internal_union.h[3] = (h3);                                         \
-    _Q6V64_internal_union.d;                                                   \
-  })
+#define Q6V64_CREATE_H(h3, h2, h1, h0)                                       \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        short h[4];                                                            \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.h[0] = (h0);                                       \
+      _Q6V64_internal_union.h[1] = (h1);                                       \
+      _Q6V64_internal_union.h[2] = (h2);                                       \
+      _Q6V64_internal_union.h[3] = (h3);                                       \
+      _Q6V64_internal_union.d;                                                 \
+    })
 
 #else /* !__qdsp6__ */
 
-#define Q6V64_CREATE_H(h3, h2, h1, h0)                                         \
-  ((((Q6Vect64)(h3)) << 48LL) | (((Q6Vect64)((h2) & 0xffff)) << 32LL) |        \
-   (((Q6Vect64)((h1) & 0xffff)) << 16LL) | ((Q6Vect64)((h0) & 0xffff)))
+#define Q6V64_CREATE_H(h3, h2, h1, h0)                                       \
+    ((((Q6Vect64)(h3)) << 48LL) | (((Q6Vect64)((h2) & 0xffff)) << 32LL) |      \
+     (((Q6Vect64)((h1) & 0xffff)) << 16LL) | ((Q6Vect64)((h0) & 0xffff)))
 
 #endif /* !__qdsp6__ */
 
-/* Create from bytes */
+  /* Create from bytes */
 
 #ifdef __qdsp6__
 
-#define Q6V64_CREATE_B(b7, b6, b5, b4, b3, b2, b1, b0)                         \
-  __extension__({                                                              \
-    union {                                                                    \
-      long long d;                                                             \
-      char b[8];                                                               \
-    } _Q6V64_internal_union;                                                   \
-    _Q6V64_internal_union.b[0] = (b0);                                         \
-    _Q6V64_internal_union.b[1] = (b1);                                         \
-    _Q6V64_internal_union.b[2] = (b2);                                         \
-    _Q6V64_internal_union.b[3] = (b3);                                         \
-    _Q6V64_internal_union.b[4] = (b4);                                         \
-    _Q6V64_internal_union.b[5] = (b5);                                         \
-    _Q6V64_internal_union.b[6] = (b6);                                         \
-    _Q6V64_internal_union.b[7] = (b7);                                         \
-    _Q6V64_internal_union.d;                                                   \
-  })
+#define Q6V64_CREATE_B(b7, b6, b5, b4, b3, b2, b1, b0)                       \
+    __extension__({                                                            \
+      union {                                                                  \
+        long long d;                                                           \
+        char b[8];                                                             \
+      } _Q6V64_internal_union;                                                 \
+      _Q6V64_internal_union.b[0] = (b0);                                       \
+      _Q6V64_internal_union.b[1] = (b1);                                       \
+      _Q6V64_internal_union.b[2] = (b2);                                       \
+      _Q6V64_internal_union.b[3] = (b3);                                       \
+      _Q6V64_internal_union.b[4] = (b4);                                       \
+      _Q6V64_internal_union.b[5] = (b5);                                       \
+      _Q6V64_internal_union.b[6] = (b6);                                       \
+      _Q6V64_internal_union.b[7] = (b7);                                       \
+      _Q6V64_internal_union.d;                                                 \
+    })
 
 #else /* !__qdsp6__ */
 
-#define Q6V64_CREATE_B(b7, b6, b5, b4, b3, b2, b1, b0)                         \
-  ((((Q6Vect64)(b7)) << 56LL) | (((Q6Vect64)((b6) & 0xff)) << 48LL) |          \
-   (((Q6Vect64)((b5) & 0xff)) << 40LL) | (((Q6Vect64)((b4) & 0xff)) << 32LL) | \
-   (((Q6Vect64)((b3) & 0xff)) << 24LL) | (((Q6Vect64)((b2) & 0xff)) << 16LL) | \
-   (((Q6Vect64)((b1) & 0xff)) << 8LL) | ((Q6Vect64)((b0) & 0xff)))
+#define Q6V64_CREATE_B(b7, b6, b5, b4, b3, b2, b1, b0)                       \
+    ((((Q6Vect64)(b7)) << 56LL) | (((Q6Vect64)((b6) & 0xff)) << 48LL) |        \
+     (((Q6Vect64)((b5) & 0xff)) << 40LL) |                                     \
+     (((Q6Vect64)((b4) & 0xff)) << 32LL) |                                     \
+     (((Q6Vect64)((b3) & 0xff)) << 24LL) |                                     \
+     (((Q6Vect64)((b2) & 0xff)) << 16LL) |                                     \
+     (((Q6Vect64)((b1) & 0xff)) << 8LL) | ((Q6Vect64)((b0) & 0xff)))
 
 #endif /* !__qdsp6__ */
 
 #ifdef __cplusplus
 
-class Q6Vect64C {
-public:
-  // Constructors
-  Q6Vect64C(long long d = 0) : data(d) {};
-  Q6Vect64C(int w1, int w0) : data(Q6V64_CREATE_W(w1, w0)) {};
-  Q6Vect64C(short h3, short h2, short h1, short h0)
-      : data(Q6V64_CREATE_H(h3, h2, h1, h0)) {};
-  Q6Vect64C(signed char b7, signed char b6, signed char b5, signed char b4,
-            signed char b3, signed char b2, signed char b1, signed char b0)
-      : data(Q6V64_CREATE_B(b7, b6, b5, b4, b3, b2, b1, b0)) {};
-  Q6Vect64C(const Q6Vect64C &v) : data(v.data) {};
+  class Q6Vect64C {
+  public:
+    // Constructors
+    Q6Vect64C(long long d = 0) : data(d) {};
+    Q6Vect64C(int w1, int w0) : data(Q6V64_CREATE_W(w1, w0)) {};
+    Q6Vect64C(short h3, short h2, short h1, short h0)
+        : data(Q6V64_CREATE_H(h3, h2, h1, h0)) {};
+    Q6Vect64C(signed char b7, signed char b6, signed char b5, signed char b4,
+              signed char b3, signed char b2, signed char b1, signed char b0)
+        : data(Q6V64_CREATE_B(b7, b6, b5, b4, b3, b2, b1, b0)) {};
+    Q6Vect64C(const Q6Vect64C &v) : data(v.data) {};
 
-  Q6Vect64C &operator=(const Q6Vect64C &v) {
-    data = v.data;
-    return *this;
-  };
+    Q6Vect64C &operator=(const Q6Vect64C &v) {
+      data = v.data;
+      return *this;
+    };
 
-  operator long long() {
-    return data;
-  };
+    operator long long() { return data; };
 
-  // Extract doubleword methods
-  long long D(void) {
-    return Q6V64_GET_D(data);
-  };
-  unsigned long long UD(void) {
-    return Q6V64_GET_UD(data);
-  };
+    // Extract doubleword methods
+    long long D(void) { return Q6V64_GET_D(data); };
+    unsigned long long UD(void) { return Q6V64_GET_UD(data); };
 
-  // Extract word methods
-  int W0(void) {
-    return Q6V64_GET_W0(data);
-  };
-  int W1(void) {
-    return Q6V64_GET_W1(data);
-  };
-  unsigned int UW0(void) {
-    return Q6V64_GET_UW0(data);
-  };
-  unsigned int UW1(void) {
-    return Q6V64_GET_UW1(data);
-  };
+    // Extract word methods
+    int W0(void) { return Q6V64_GET_W0(data); };
+    int W1(void) { return Q6V64_GET_W1(data); };
+    unsigned int UW0(void) { return Q6V64_GET_UW0(data); };
+    unsigned int UW1(void) { return Q6V64_GET_UW1(data); };
 
-  // Extract half word methods
-  short H0(void) {
-    return Q6V64_GET_H0(data);
-  };
-  short H1(void) {
-    return Q6V64_GET_H1(data);
-  };
-  short H2(void) {
-    return Q6V64_GET_H2(data);
-  };
-  short H3(void) {
-    return Q6V64_GET_H3(data);
-  };
-  unsigned short UH0(void) {
-    return Q6V64_GET_UH0(data);
-  };
-  unsigned short UH1(void) {
-    return Q6V64_GET_UH1(data);
-  };
-  unsigned short UH2(void) {
-    return Q6V64_GET_UH2(data);
-  };
-  unsigned short UH3(void) {
-    return Q6V64_GET_UH3(data);
-  };
+    // Extract half word methods
+    short H0(void) { return Q6V64_GET_H0(data); };
+    short H1(void) { return Q6V64_GET_H1(data); };
+    short H2(void) { return Q6V64_GET_H2(data); };
+    short H3(void) { return Q6V64_GET_H3(data); };
+    unsigned short UH0(void) { return Q6V64_GET_UH0(data); };
+    unsigned short UH1(void) { return Q6V64_GET_UH1(data); };
+    unsigned short UH2(void) { return Q6V64_GET_UH2(data); };
+    unsigned short UH3(void) { return Q6V64_GET_UH3(data); };
 
-  // Extract byte methods
-  signed char b0(void) { return Q6V64_GET_B0(data); };
-  signed char B0(void) { return b0(); };
-  signed char B1(void) {
-    return Q6V64_GET_B1(data);
-  };
-  signed char B2(void) {
-    return Q6V64_GET_B2(data);
-  };
-  signed char B3(void) {
-    return Q6V64_GET_B3(data);
-  };
-  signed char B4(void) {
-    return Q6V64_GET_B4(data);
-  };
-  signed char B5(void) {
-    return Q6V64_GET_B5(data);
-  };
-  signed char B6(void) {
-    return Q6V64_GET_B6(data);
-  };
-  signed char B7(void) {
-    return Q6V64_GET_B7(data);
-  };
-  unsigned char UB0(void) {
-    return Q6V64_GET_UB0(data);
-  };
-  unsigned char UB1(void) {
-    return Q6V64_GET_UB1(data);
-  };
-  unsigned char UB2(void) {
-    return Q6V64_GET_UB2(data);
-  };
-  unsigned char UB3(void) {
-    return Q6V64_GET_UB3(data);
-  };
-  unsigned char UB4(void) {
-    return Q6V64_GET_UB4(data);
-  };
-  unsigned char UB5(void) {
-    return Q6V64_GET_UB5(data);
-  };
-  unsigned char UB6(void) {
-    return Q6V64_GET_UB6(data);
-  };
-  unsigned char UB7(void) {
-    return Q6V64_GET_UB7(data);
-  };
+    // Extract byte methods
+    signed char b0(void) { return Q6V64_GET_B0(data); };
+    signed char B0(void) { return b0(); };
+    signed char B1(void) { return Q6V64_GET_B1(data); };
+    signed char B2(void) { return Q6V64_GET_B2(data); };
+    signed char B3(void) { return Q6V64_GET_B3(data); };
+    signed char B4(void) { return Q6V64_GET_B4(data); };
+    signed char B5(void) { return Q6V64_GET_B5(data); };
+    signed char B6(void) { return Q6V64_GET_B6(data); };
+    signed char B7(void) { return Q6V64_GET_B7(data); };
+    unsigned char UB0(void) { return Q6V64_GET_UB0(data); };
+    unsigned char UB1(void) { return Q6V64_GET_UB1(data); };
+    unsigned char UB2(void) { return Q6V64_GET_UB2(data); };
+    unsigned char UB3(void) { return Q6V64_GET_UB3(data); };
+    unsigned char UB4(void) { return Q6V64_GET_UB4(data); };
+    unsigned char UB5(void) { return Q6V64_GET_UB5(data); };
+    unsigned char UB6(void) { return Q6V64_GET_UB6(data); };
+    unsigned char UB7(void) { return Q6V64_GET_UB7(data); };
 
-  // NOTE: All set methods return a Q6Vect64C type
+    // NOTE: All set methods return a Q6Vect64C type
 
-  // Set doubleword method
-  Q6Vect64C D(long long d) {
-    return Q6Vect64C(Q6V64_PUT_D(data, d));
-  };
+    // Set doubleword method
+    Q6Vect64C D(long long d) { return Q6Vect64C(Q6V64_PUT_D(data, d)); };
 
-  // Set word methods
-  Q6Vect64C W0(int w) {
-    return Q6Vect64C(Q6V64_PUT_W0(data, w));
-  };
-  Q6Vect64C W1(int w) {
-    return Q6Vect64C(Q6V64_PUT_W1(data, w));
-  };
+    // Set word methods
+    Q6Vect64C W0(int w) { return Q6Vect64C(Q6V64_PUT_W0(data, w)); };
+    Q6Vect64C W1(int w) { return Q6Vect64C(Q6V64_PUT_W1(data, w)); };
 
-  // Set half word methods
-  Q6Vect64C H0(short h) {
-    return Q6Vect64C(Q6V64_PUT_H0(data, h));
-  };
-  Q6Vect64C H1(short h) {
-    return Q6Vect64C(Q6V64_PUT_H1(data, h));
-  };
-  Q6Vect64C H2(short h) {
-    return Q6Vect64C(Q6V64_PUT_H2(data, h));
-  };
-  Q6Vect64C H3(short h) {
-    return Q6Vect64C(Q6V64_PUT_H3(data, h));
-  };
+    // Set half word methods
+    Q6Vect64C H0(short h) { return Q6Vect64C(Q6V64_PUT_H0(data, h)); };
+    Q6Vect64C H1(short h) { return Q6Vect64C(Q6V64_PUT_H1(data, h)); };
+    Q6Vect64C H2(short h) { return Q6Vect64C(Q6V64_PUT_H2(data, h)); };
+    Q6Vect64C H3(short h) { return Q6Vect64C(Q6V64_PUT_H3(data, h)); };
 
-  // Set byte methods
-  Q6Vect64C b0(signed char b) { return Q6Vect64C(Q6V64_PUT_B0(data, b)); };
-  Q6Vect64C B0(signed char b) { return b0(b); };
-  Q6Vect64C B1(signed char b) {
-    return Q6Vect64C(Q6V64_PUT_B1(data, b));
-  };
-  Q6Vect64C B2(signed char b) {
-    return Q6Vect64C(Q6V64_PUT_B2(data, b));
-  };
-  Q6Vect64C B3(signed char b) {
-    return Q6Vect64C(Q6V64_PUT_B3(data, b));
-  };
-  Q6Vect64C B4(signed char b) {
-    return Q6Vect64C(Q6V64_PUT_B4(data, b));
-  };
-  Q6Vect64C B5(signed char b) {
-    return Q6Vect64C(Q6V64_PUT_B5(data, b));
-  };
-  Q6Vect64C B6(signed char b) {
-    return Q6Vect64C(Q6V64_PUT_B6(data, b));
-  };
-  Q6Vect64C B7(signed char b) {
-    return Q6Vect64C(Q6V64_PUT_B7(data, b));
-  };
+    // Set byte methods
+    Q6Vect64C b0(signed char b) { return Q6Vect64C(Q6V64_PUT_B0(data, b)); };
+    Q6Vect64C B0(signed char b) { return b0(b); };
+    Q6Vect64C B1(signed char b) { return Q6Vect64C(Q6V64_PUT_B1(data, b)); };
+    Q6Vect64C B2(signed char b) { return Q6Vect64C(Q6V64_PUT_B2(data, b)); };
+    Q6Vect64C B3(signed char b) { return Q6Vect64C(Q6V64_PUT_B3(data, b)); };
+    Q6Vect64C B4(signed char b) { return Q6Vect64C(Q6V64_PUT_B4(data, b)); };
+    Q6Vect64C B5(signed char b) { return Q6Vect64C(Q6V64_PUT_B5(data, b)); };
+    Q6Vect64C B6(signed char b) { return Q6Vect64C(Q6V64_PUT_B6(data, b)); };
+    Q6Vect64C B7(signed char b) { return Q6Vect64C(Q6V64_PUT_B7(data, b)); };
 
-private:
-  long long data;
-};
+  private:
+    long long data;
+  };
 
 #endif /* __cplusplus */
 
