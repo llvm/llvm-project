@@ -9,7 +9,9 @@
 // At -O0 the pass is off and the raw shape is preserved.
 
 // LLVM-OPT-LABEL: define {{.*}} @_Z11fwd_if_elseiii(
-// LLVM-OPT:       store i32 %2, ptr {{%.*}}, align 4
+// LLVM-OPT:       store i32 %{{.*}}, ptr {{%.*}}, align 4
+// LLVM-OPT-NEXT:  store i32 %{{.*}}, ptr {{%.*}}, align 4
+// LLVM-OPT-NEXT:  store i32 %{{.*}}, ptr {{%.*}}, align 4
 // LLVM-OPT-NEXT:  [[LOAD:%.*]] = load i32, ptr {{%.*}}, align 4
 // LLVM-OPT-NEXT:  [[CMP:%.*]] = icmp ne i32 [[LOAD]], 0
 // LLVM-OPT-NEXT:  br i1 [[CMP]], label {{%.*}}, label {{%.*}}
@@ -53,5 +55,7 @@ __attribute__((optnone)) int fwd_optnone(int c, int a, int b) {
 }
 
 // LLVM-O0-LABEL: define {{.*}} @_Z11fwd_if_elseiii(
-// LLVM-O0:       store i32 %2, ptr {{%.*}}, align 4
+// LLVM-O0:       store i32 %{{.*}}, ptr {{%.*}}, align 4
+// LLVM-O0-NEXT:  store i32 %{{.*}}, ptr {{%.*}}, align 4
+// LLVM-O0-NEXT:  store i32 %{{.*}}, ptr {{%.*}}, align 4
 // LLVM-O0-NEXT:  br label {{%.*}}

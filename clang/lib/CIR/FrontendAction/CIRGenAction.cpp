@@ -177,9 +177,10 @@ static void emitCIRModuleOutput(
 
     // Enable the llvm-simplify-cfg pass when optimizations are on
     // (-O1 and up); at -O0 the lowered IR keeps its raw shape.
-    std::unique_ptr<llvm::Module> LLVMModule = lowerFromCIRToLLVMIR(
-        MlirModule, LLVMCtx, EnableOpenMP, mlirSaveTempsOutFile,
-        &CI.getVirtualFileSystem(), CGO.OptimizationLevel > 0);
+    std::unique_ptr<llvm::Module> LLVMModule =
+        lowerFromCIRToLLVMIR(MlirModule, LLVMCtx, EnableOpenMP,
+                             mlirSaveTempsOutFile, &CI.getVirtualFileSystem(),
+                             /*enableOptimizations=*/CGO.OptimizationLevel > 0);
     if (!LLVMModule) {
       // Lowering errors are already routed through the MLIR diagnostic
       // handler. Only emit the generic error if nothing was reported.
