@@ -19878,6 +19878,9 @@ combineAddOfExtsAlreadyExtended(SDNode *N, SelectionDAG &DAG,
       !DAG.getTargetLoweringInfo().isTypeLegal(RHSSrcVT))
     return SDValue();
 
+  if (!DAG.willNotOverflowAdd(ExtOpc == ISD::SIGN_EXTEND, LHSSrc, RHSSrc))
+    return SDValue();
+
   EVT CommonVT = LHSSrcVT;
   SDLoc DL(N);
   if (LHSSrcVT != RHSSrcVT) {
@@ -19889,9 +19892,6 @@ combineAddOfExtsAlreadyExtended(SDNode *N, SelectionDAG &DAG,
       CommonVT = LHSSrcVT;
     }
   }
-
-  if (!DAG.willNotOverflowAdd(ExtOpc == ISD::SIGN_EXTEND, LHSSrc, RHSSrc))
-    return SDValue();
 
   SDValue Add = DAG.getNode(ISD::ADD, DL, CommonVT, LHSSrc, RHSSrc);
   return DAG.getNode(ExtOpc, DL, N->getValueType(0), Add);
