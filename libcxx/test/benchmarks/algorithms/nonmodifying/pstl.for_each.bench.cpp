@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++17
+// REQUIRES: std-at-least-c++20
 
 // UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
@@ -33,12 +33,12 @@ int main(int argc, char** argv) {
   // A function that does significant work per element
   auto expensive = [](double& x) { x = std::pow(std::exp(std::sqrt(std::sin(std::cos(x)) + 1.0)), 1.7); };
 
-  auto bm = [](auto cnt, std::string name, auto&& policy, auto&& func) {
+  auto bm = []<class Container>(std::type_identity<Container>, std::string name, auto&& policy, auto&& func) {
     benchmark::RegisterBenchmark(
         name,
         [&policy, &func](auto& st) {
           std::size_t size = st.range(0);
-          decltype(cnt) c(size);
+          Container c(size);
           std::iota(c.begin(), c.end(), 1.);
           for ([[maybe_unused]] auto _ : st) {
             benchmark::ClobberMemory();
@@ -52,8 +52,8 @@ int main(int argc, char** argv) {
         ->UseRealTime();
   };
 
-  auto vec  = std::vector<double>{};
-  auto list = std::forward_list<double>{};
+  auto vec  = std::type_identity<std::vector<double>>{};
+  auto list = std::type_identity<std::forward_list<double>>{};
 
 #if defined(TEST_PSTL_ENABLE_SEQ_BASELINES)
   bm(vec, "std::for_each(std::execution::seq, vector<double>) (minimal)", std::execution::seq, minimal);
