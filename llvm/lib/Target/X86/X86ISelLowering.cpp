@@ -19374,6 +19374,7 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   if (IsZeroElt || IsAllOnesElt) {
     // Lower insertion of v16i8/v32i8/v64i16 -1 elts as an 'OR' blend.
     // We don't deal with i8 0 since it appears to be handled elsewhere.
+    // Freeze the base element to prevent OR(poison,-1) -> poison folds.
     if (IsAllOnesElt &&
         ((VT == MVT::v16i8 && !Subtarget.hasSSE41()) ||
          ((VT == MVT::v32i8 || VT == MVT::v16i16) && !Subtarget.hasInt256()))) {
@@ -19382,6 +19383,7 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
       SmallVector<SDValue, 8> CstVectorElts(NumElts, ZeroCst);
       CstVectorElts[IdxVal] = OnesCst;
       SDValue CstVector = DAG.getBuildVector(VT, dl, CstVectorElts);
+      N0 = DAG.getFreeze(N0, APInt::getOneBitSet(NumElts, IdxVal));
       return DAG.getNode(ISD::OR, dl, VT, N0, CstVector);
     }
     // See if we can do this more efficiently with a blend shuffle with a
@@ -31320,6 +31322,11 @@ static SDValue LowerShiftByScalarImmediate(SDValue Op, SelectionDAG &DAG,
                          DAG.getTargetConstant(0, dl, MVT::i8));
     }
 
+    // Freeze shifted value - we're either increasing uses or shifting as a
+    // vXi16 type which can potentially propagate poison from one i8 element to
+    // the entire i16.
+    R = DAG.getFreeze(R);
+
     if (Op.getOpcode() == ISD::SHL) {
       // Make a large shift.
       SDValue SHL = getTargetVShiftByConstNode(X86ISD::VSHLI, dl, ShiftVT, R,
@@ -31341,7 +31348,6 @@ static SDValue LowerShiftByScalarImmediate(SDValue Op, SelectionDAG &DAG,
     if (Op.getOpcode() == ISD::SRA) {
       // ashr(R, 1) === xor(avgceilu(R,-1),and(not(R),MIN_SIGNED))
       if (ShiftAmt == 1) {
-        R = DAG.getFreeze(R);
         SDValue AllOnes = DAG.getAllOnesConstant(dl, VT);
         SDValue Avg = DAG.getNode(ISD::AVGCEILU, dl, VT, R, AllOnes);
         SDValue Not = DAG.getNode(ISD::XOR, dl, VT, R, AllOnes);
@@ -41043,51 +41049,6 @@ static bool matchBinaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
         Shuffle = ISD::OR;
         SrcVT = DstVT = MaskVT.changeTypeToInteger();
         return true;
-      }
-      if (NumV1Elts == NumV2Elts && NumV1Elts == NumMaskElts) {
-        // FIXME: handle mismatched sizes?
-        // TODO: investigate if `ISD::OR` handling in
-        // `TargetLowering::SimplifyDemandedVectorElts` can be improved instead.
-        auto computeKnownBitsElementWise = [&DAG](SDValue V) {
-          unsigned NumElts = V.getValueType().getVectorNumElements();
-          KnownBits Known(NumElts);
-          for (unsigned EltIdx = 0; EltIdx != NumElts; ++EltIdx) {
-            APInt Mask = APInt::getOneBitSet(NumElts, EltIdx);
-            KnownBits PeepholeKnown = DAG.computeKnownBits(V, Mask);
-            if (PeepholeKnown.isZero())
-              Known.Zero.setBit(EltIdx);
-            if (PeepholeKnown.isAllOnes())
-              Known.One.setBit(EltIdx);
-          }
-          return Known;
-        };
-
-        KnownBits V1Known = computeKnownBitsElementWise(V1);
-        KnownBits V2Known = computeKnownBitsElementWise(V2);
-
-        for (unsigned i = 0; i != NumMaskElts && IsBlend; ++i) {
-          int M = Mask[i];
-          if (M == SM_SentinelUndef)
-            continue;
-          if (M == SM_SentinelZero) {
-            IsBlend &= V1Known.Zero[i] && V2Known.Zero[i];
-            continue;
-          }
-          if (M == (int)i) {
-            IsBlend &= V2Known.Zero[i] || V1Known.One[i];
-            continue;
-          }
-          if (M == (int)(i + NumMaskElts)) {
-            IsBlend &= V1Known.Zero[i] || V2Known.One[i];
-            continue;
-          }
-          llvm_unreachable("will not get here.");
-        }
-        if (IsBlend) {
-          Shuffle = ISD::OR;
-          SrcVT = DstVT = MaskVT.changeTypeToInteger();
-          return true;
-        }
       }
     }
   }
