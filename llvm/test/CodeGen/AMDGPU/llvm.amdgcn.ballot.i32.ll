@@ -156,8 +156,7 @@ define amdgpu_cs i32 @branch_uniform_ballot_eq_zero_non_compare(i32 inreg %v) {
 ; CHECK-LABEL: branch_uniform_ballot_eq_zero_non_compare:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_bitcmp1_b32 s0, 0
-; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
+; CHECK-NEXT:    s_cselect_b32 vcc_lo, exec_lo, 0
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB10_2
 ; CHECK-NEXT:  ; %bb.1: ; %true
 ; CHECK-NEXT:    s_mov_b32 s0, 42
@@ -351,8 +350,7 @@ define amdgpu_cs i32 @branch_uniform_ballot_eq_zero_and(i32 inreg %v1, i32 inreg
 ; CHECK-NEXT:    s_cmp_lt_u32 s0, 12
 ; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
 ; CHECK-NEXT:    s_cmp_gt_u32 s1, 34
-; CHECK-NEXT:    s_cselect_b32 s1, -1, 0
-; CHECK-NEXT:    s_and_b32 s0, s0, s1
+; CHECK-NEXT:    s_cselect_b32 s0, s0, 0
 ; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB18_2
 ; CHECK-NEXT:  ; %bb.1: ; %true
