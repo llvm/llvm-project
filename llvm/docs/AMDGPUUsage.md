@@ -2573,9 +2573,9 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
     - 0x0010: All VMEM instructions may be scheduled across sched_barrier.
       This includes LDSDMA instructions.
     - 0x0020: VMEM read instructions may be scheduled across sched_barrier.
-      This does not include LDSDMA loads, even though they also read from global memory; only loads targeting VGPRs are classified as VMEM read.
+      This does not include global or buffer loads to LDS, even though they also read from global memory; only loads targeting VGPRs are classified as VMEM read.
     - 0x0040: VMEM write instructions may be scheduled across sched_barrier.
-      This does not include LDSDMA stores, even though they also write to global memory; only stores sourcing from VGPRs are classified as VMEM write.
+      This does not include global stores from LDS, even though they also write to global memory; only stores sourcing from VGPRs are classified as VMEM write.
     - 0x0080: All DS instructions may be scheduled across sched_barrier.
       This includes LDSDMA instructions.
     - 0x0100: All DS read instructions may be scheduled across sched_barrier.

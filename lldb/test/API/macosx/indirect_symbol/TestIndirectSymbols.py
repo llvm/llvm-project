@@ -41,17 +41,7 @@ class TestIndirectFunctions(TestBase):
         )
         self.assertTrue(break2, VALID_BREAKPOINT)
 
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, break1)
-        if len(threads) != 1:
-            self.fail("Failed to stop at breakpoint 1.")
-
-        thread = threads[0]
+        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(self, target, break1)
 
         # Now do a step-into, and we should end up in the hidden target of this
         # indirect function.

@@ -73,7 +73,7 @@ char **__attribute__((assume_aligned(128)))
 // CHECK-SANITIZE-TRAP-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
 // CHECK-SANITIZE-TRAP-NEXT:    br i1 [[MASKCOND]], label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF1:![0-9]+]], !nosanitize [[META2:![0-9]+]]
 // CHECK-SANITIZE-TRAP:       trap:
-// CHECK-SANITIZE-TRAP-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], !nosanitize [[META2]]
+// CHECK-SANITIZE-TRAP-NEXT:    call void @llvm.ubsantrap(i8 26) #[[ATTR3:[0-9]+]], !nosanitize [[META2]]
 // CHECK-SANITIZE-TRAP-NEXT:    unreachable, !nosanitize [[META2]]
 // CHECK-SANITIZE-TRAP:       cont:
 // CHECK-SANITIZE-TRAP-NEXT:    ret ptr [[TMP0]]
