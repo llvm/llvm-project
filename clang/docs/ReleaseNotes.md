@@ -1617,6 +1617,11 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 ### Sanitizers
 
+- Sanitizer Special Case Lists (`-fsanitize-ignorelist`) and warning
+  suppression mappings (`--warning-suppression-mappings`) now recognize version
+  6 of the Special Case List format (indicated by `#!special-case-list-v6`),
+  which disallows entries without a preceding section header instead of placing
+  them in the implicit `[*]` section.
 - Added the `typefunchash` and `typefunchashpointersplit` token assignment
   modes for `-fsanitize=alloc-token`, selected with
   `-Xclang -falloc-token-mode=<mode>`. These modes derive token IDs from both
