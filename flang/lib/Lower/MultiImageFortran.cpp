@@ -13,10 +13,13 @@
 
 #include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/MIFCommon.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "mlir/IR/IRMapping.h"
@@ -476,6 +479,22 @@ mlir::Value Fortran::lower::genAllocateCoarray(
     uniqName = converter.mangleName(sym);
   mif::AllocCoarrayOp::create(builder, loc, addr, uniqName, lcobounds,
                               ucobounds, stat, errmsg);
+
+  if (const auto *details =
+          sym.GetUltimate()
+              .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    Fortran::lower::SymMap symMap;
+    Fortran::lower::StatementContext stmtCtx;
+    if (details->init()) {
+      hlfir::Entity initVal = Fortran::lower::convertExprToHLFIR(
+          loc, converter, *details->init(), symMap, stmtCtx);
+      hlfir::Entity base{addr};
+      base = hlfir::derefPointersAndAllocatables(loc, builder, base);
+      hlfir::AssignOp::create(builder, loc, initVal, base);
+      stmtCtx.finalizeAndPop();
+    }
+  }
   return stat;
 }
 
