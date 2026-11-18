@@ -2703,6 +2703,8 @@ static isl_stat cut_to_hyperplane(struct isl_tab *tab, struct isl_tab_var *var)
 	isl_int *row;
 	int sgn;
 	unsigned off = 2 + tab->M;
+	int var_is_row;
+	int var_index;
 
 	if (var->is_zero)
 		return isl_stat_ok;
@@ -2710,6 +2712,12 @@ static isl_stat cut_to_hyperplane(struct isl_tab *tab, struct isl_tab_var *var)
 		isl_die(isl_tab_get_ctx(tab), isl_error_invalid,
 			"expecting non-redundant non-negative variable",
 			return isl_stat_error);
+
+	/* Save var fields before isl_tab_extend_cons, which may realloc
+	 * tab->con and invalidate the var pointer.
+	 */
+	var_is_row = var->is_row;
+	var_index = var->index;
 
 	if (isl_tab_extend_cons(tab, 1) < 0)
 		return isl_stat_error;
@@ -2725,14 +2733,14 @@ static isl_stat cut_to_hyperplane(struct isl_tab *tab, struct isl_tab_var *var)
 	tab->row_var[tab->n_row] = ~r;
 	row = tab->mat->row[tab->n_row];
 
-	if (var->is_row) {
-		isl_int_set(row[0], tab->mat->row[var->index][0]);
+	if (var_is_row) {
+		isl_int_set(row[0], tab->mat->row[var_index][0]);
 		isl_seq_neg(row + 1,
-			    tab->mat->row[var->index] + 1, 1 + tab->n_col);
+			    tab->mat->row[var_index] + 1, 1 + tab->n_col);
 	} else {
 		isl_int_set_si(row[0], 1);
 		isl_seq_clr(row + 1, 1 + tab->n_col);
-		isl_int_set_si(row[off + var->index], -1);
+		isl_int_set_si(row[off + var_index], -1);
 	}
 
 	tab->n_row++;
