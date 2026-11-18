@@ -49,6 +49,16 @@ def FeatureEIJMPCALL : SubtargetFeature<"eijmpcall", "HasEIJMPCALL", "true",
                                         "The device supports the "
                                         "`EIJMP`/`EICALL` instructions">;
 
+// The device supports `FLMAP` flash bank data mapping to the data space.
+def FeatureFLMAP : SubtargetFeature<"flmap", "HasFLMAP", "true",
+                                        "The device supports the "
+                                        "`FLMAP` mapping">;
+
+// The device maps all flash (<= 32kB) to the data space.
+def FeatureMAP : SubtargetFeature<"map", "HasMAP", "true",
+                                        "The device maps all flash (<= 32kB) "
+                                        "to the data space">;
+
 // The device supports `ADDI Rd, K`, `SUBI Rd, K`.
 def FeatureADDSUBIW : SubtargetFeature<"addsubiw", "HasADDSUBIW", "true",
                                        "Enable 16-bit register-immediate "
@@ -220,6 +230,7 @@ def FamilyXMEGA3 : Family<"xmega3",
                           [FamilyAVR0, FeatureLPM, FeatureIJMPCALL,
                            FeatureADDSUBIW, FeatureSRAM, FeatureJMPCALL,
                            FeatureMultiplication, FeatureMOVW, FeatureLPMX,
+                           FeatureMAP,
                            FeatureBREAK, FeatureLowByteFirst]>;
 
 def FamilyXMEGA4 : Family<"xmega4",
@@ -228,6 +239,7 @@ def FamilyXMEGA4 : Family<"xmega4",
                            FeatureMultiplication, FeatureMOVW, FeatureLPMX,
                            FeatureELPM, FeatureELPMX,
                            FeatureSPM, FeatureSPMX,
+                           FeatureFLMAP,
                            FeatureBREAK, FeatureLowByteFirst]>;
 
 def FamilyXMEGA : Family<"xmega",
@@ -275,9 +287,9 @@ def : Device<"avr5", FamilyAVR5, ELFArchAVR5>;
 def : Device<"avr51", FamilyAVR51, ELFArchAVR51>;
 def : Device<"avr6", FamilyAVR6, ELFArchAVR6>;
 def : Device<"avrxmega1", FamilyXMEGA, ELFArchXMEGA1>;
-def : Device<"avrxmega2", FamilyXMEGA, ELFArchXMEGA2>;
+def : Device<"avrxmega2", FamilyXMEGA2, ELFArchXMEGA2>;
 def : Device<"avrxmega3", FamilyXMEGA3, ELFArchXMEGA3>;
-def : Device<"avrxmega4", FamilyXMEGA, ELFArchXMEGA4>;
+def : Device<"avrxmega4", FamilyXMEGA4, ELFArchXMEGA4>;
 def : Device<"avrxmega5", FamilyXMEGA, ELFArchXMEGA5>;
 def : Device<"avrxmega6", FamilyXMEGA, ELFArchXMEGA6>;
 def : Device<"avrxmega7", FamilyXMEGA, ELFArchXMEGA7>;
@@ -596,26 +608,26 @@ def : Device<"atmega4809", FamilyXMEGA3, ELFArchXMEGA3>;
 
 // Additions from gcc 14:
 
-def : Device<"avr64da28", FamilyXMEGA2, ELFArchXMEGA2>;
-def : Device<"avr64da32", FamilyXMEGA2, ELFArchXMEGA2>;
-def : Device<"avr64da48", FamilyXMEGA2, ELFArchXMEGA2>;
-def : Device<"avr64da64", FamilyXMEGA2, ELFArchXMEGA2>;
-def : Device<"avr64db28", FamilyXMEGA2, ELFArchXMEGA2>;
-def : Device<"avr64db32", FamilyXMEGA2, ELFArchXMEGA2>;
-def : Device<"avr64db48", FamilyXMEGA2, ELFArchXMEGA2>;
-def : Device<"avr64db64", FamilyXMEGA2, ELFArchXMEGA2>;
-def : Device<"avr64dd14", FamilyXMEGA2, ELFArchXMEGA2>;
-def : Device<"avr64dd20", FamilyXMEGA2, ELFArchXMEGA2>;
-def : Device<"avr64dd28", FamilyXMEGA2, ELFArchXMEGA2>;
-def : Device<"avr64dd32", FamilyXMEGA2, ELFArchXMEGA2>;
-def : Device<"avr64du28", FamilyXMEGA2, ELFArchXMEGA2>;
-def : Device<"avr64du32", FamilyXMEGA2, ELFArchXMEGA2>;
-def : Device<"avr64ea28", FamilyXMEGA2, ELFArchXMEGA2>;
-def : Device<"avr64ea32", FamilyXMEGA2, ELFArchXMEGA2>;
-def : Device<"avr64ea48", FamilyXMEGA2, ELFArchXMEGA2>;
-def : Device<"avr64sd28", FamilyXMEGA2, ELFArchXMEGA2>;
-def : Device<"avr64sd32", FamilyXMEGA2, ELFArchXMEGA2>;
-def : Device<"avr64sd48", FamilyXMEGA2, ELFArchXMEGA2>;
+def : Device<"avr64da28", FamilyXMEGA2, ELFArchXMEGA2, [FeatureFLMAP]>;
+def : Device<"avr64da32", FamilyXMEGA2, ELFArchXMEGA2, [FeatureFLMAP]>;
+def : Device<"avr64da48", FamilyXMEGA2, ELFArchXMEGA2, [FeatureFLMAP]>;
+def : Device<"avr64da64", FamilyXMEGA2, ELFArchXMEGA2, [FeatureFLMAP]>;
+def : Device<"avr64db28", FamilyXMEGA2, ELFArchXMEGA2, [FeatureFLMAP]>;
+def : Device<"avr64db32", FamilyXMEGA2, ELFArchXMEGA2, [FeatureFLMAP]>;
+def : Device<"avr64db48", FamilyXMEGA2, ELFArchXMEGA2, [FeatureFLMAP]>;
+def : Device<"avr64db64", FamilyXMEGA2, ELFArchXMEGA2, [FeatureFLMAP]>;
+def : Device<"avr64dd14", FamilyXMEGA2, ELFArchXMEGA2, [FeatureFLMAP]>;
+def : Device<"avr64dd20", FamilyXMEGA2, ELFArchXMEGA2, [FeatureFLMAP]>;
+def : Device<"avr64dd28", FamilyXMEGA2, ELFArchXMEGA2, [FeatureFLMAP]>;
+def : Device<"avr64dd32", FamilyXMEGA2, ELFArchXMEGA2, [FeatureFLMAP]>;
+def : Device<"avr64du28", FamilyXMEGA2, ELFArchXMEGA2, [FeatureFLMAP]>;
+def : Device<"avr64du32", FamilyXMEGA2, ELFArchXMEGA2, [FeatureFLMAP]>;
+def : Device<"avr64ea28", FamilyXMEGA2, ELFArchXMEGA2, [FeatureFLMAP]>;
+def : Device<"avr64ea32", FamilyXMEGA2, ELFArchXMEGA2, [FeatureFLMAP]>;
+def : Device<"avr64ea48", FamilyXMEGA2, ELFArchXMEGA2, [FeatureFLMAP]>;
+def : Device<"avr64sd28", FamilyXMEGA2, ELFArchXMEGA2, [FeatureFLMAP]>;
+def : Device<"avr64sd32", FamilyXMEGA2, ELFArchXMEGA2, [FeatureFLMAP]>;
+def : Device<"avr64sd48", FamilyXMEGA2, ELFArchXMEGA2, [FeatureFLMAP]>;
 
 def : Device<"avr16dd20", FamilyXMEGA3, ELFArchXMEGA3>;
 def : Device<"avr16dd28", FamilyXMEGA3, ELFArchXMEGA3>;
