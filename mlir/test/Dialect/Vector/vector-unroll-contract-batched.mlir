@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-vector-unrolling-patterns=unroll-based-on-type -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-vector-unrolling-patterns -split-input-file | FileCheck %s
 
 func.func @vector_contract_batched(%lhs: vector<8x8x4xf32>, %rhs: vector<8x8x4xf32>, %init: vector<8x8x8xf32>) -> vector<8x8x8xf32> {
   %0 = vector.contract

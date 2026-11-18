@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -test-vector-unrolling-patterns=unroll-based-on-type -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -test-vector-unrolling-patterns="unroll-based-on-type unroll-order=2,0,1" -split-input-file | FileCheck %s --check-prefix=ORDER
+// RUN: mlir-opt %s -test-vector-unrolling-patterns -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-vector-unrolling-patterns="unroll-order=2,0,1" -split-input-file | FileCheck %s --check-prefix=ORDER
 
 func.func @vector_contract_f32(%lhs : vector<8x4xf32>, %rhs : vector<8x4xf32>,
                           %init : vector<8x8xf32>) -> vector<8x8xf32> {

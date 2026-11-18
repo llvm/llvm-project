@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-vector-unrolling-patterns=unroll-based-on-type -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-vector-unrolling-patterns -split-input-file | FileCheck %s
 
 func.func @vector_fma(%a: vector<4x4xf32>, %b: vector<4x4xf32>, %c: vector<4x4xf32>) -> vector<4x4xf32> {
   %0 = vector.fma %a, %b, %c: vector<4x4xf32>
