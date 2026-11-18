@@ -386,7 +386,7 @@ def hlsl_all : HLSLBuiltin<"all"> {
 \fn bool all(T x)
 \brief Returns True if all components of the \a x parameter are non-zero;
 otherwise, false.
-\param x The input value.
+\param x The input scalar, vector, or matrix.
 }];
   let ParamNames = ["V"];
   let Body = "return V != 0;";
@@ -396,7 +396,7 @@ otherwise, false.
   let VaryingScalar = 1;
 }
 
-def hlsl_all_vector : HLSLBuiltin<"all"> {
+def hlsl_all_aggregate : HLSLBuiltin<"all"> {
   let ParamNames = ["V"];
   let DetailFunc = "all_impl";
   let Args = [Varying];
@@ -404,6 +404,7 @@ def hlsl_all_vector : HLSLBuiltin<"all"> {
   let VaryingTypes = AllTypesWithBool;
   let VaryingVecSizes = [2, 3, 4];
   let VaryingLongVector = 1;
+  let VaryingMatDims = AllMatDims;
 }
 
 // Returns the boolean AND of two boolean scalars, vectors, or matrices.
@@ -423,7 +424,7 @@ def hlsl_any : HLSLBuiltin<"any"> {
 \fn bool any(T x)
 \brief Returns True if any components of the \a x parameter are non-zero;
 otherwise, false.
-\param x The input value.
+\param x The input scalar, vector, or matrix.
 }];
   let ParamNames = ["V"];
   let Body = "return V != 0;";
@@ -433,7 +434,7 @@ otherwise, false.
   let VaryingScalar = 1;
 }
 
-def hlsl_any_vector : HLSLBuiltin<"any"> {
+def hlsl_any_aggregate : HLSLBuiltin<"any"> {
   let ParamNames = ["V"];
   let DetailFunc = "any_impl";
   let Args = [Varying];
@@ -441,6 +442,7 @@ def hlsl_any_vector : HLSLBuiltin<"any"> {
   let VaryingTypes = AllTypesWithBool;
   let VaryingVecSizes = [2, 3, 4];
   let VaryingLongVector = 1;
+  let VaryingMatDims = AllMatDims;
 }
 
 // Reinterprets a cast value (two 32-bit values) into a double.
