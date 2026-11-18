@@ -742,7 +742,7 @@ func.func @overlapping_read_intervals_nested_effects(%arg0: memref<2xi32>, %cond
 
 // An earlier starting read must observe writes before a cached range.
 // CHECK-LABEL: @earlier_write_in_extended_interval
-func.func @earlier_write_in_extended_interval(%arg0: memref<2xi32>) -> (i32, i32, i32) {
+func.func @earlier_write_in_extended_interval(%arg0: memref<2xi32>) -> (i32, i32, i32, i32) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   // CHECK: %[[A:.*]] = memref.load
@@ -751,11 +751,14 @@ func.func @earlier_write_in_extended_interval(%arg0: memref<2xi32>) -> (i32, i32
   memref.store %a, %arg0[%c0] : memref<2xi32>
   // CHECK-NEXT: %[[B:.*]] = memref.load
   %b = memref.load %arg0[%c1] : memref<2xi32>
+  // Keep an intervening operation alive so the query for %b1 caches a range.
+  // CHECK-NEXT: %[[SUM:.*]] = arith.addi %[[B]], %[[B]]
+  %sum = arith.addi %b, %b : i32
   %b1 = memref.load %arg0[%c1] : memref<2xi32>
   // CHECK-NEXT: %[[A1:.*]] = memref.load
   %a1 = memref.load %arg0[%c0] : memref<2xi32>
-  // CHECK-NEXT: return %[[A]], %[[B]], %[[A1]]
-  return %a, %b1, %a1 : i32, i32, i32
+  // CHECK-NEXT: return %[[A]], %[[B]], %[[A1]], %[[SUM]]
+  return %a, %b1, %a1, %sum : i32, i32, i32, i32
 }
 
 // -----
