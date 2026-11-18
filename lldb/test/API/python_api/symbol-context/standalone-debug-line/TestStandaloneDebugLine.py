@@ -61,3 +61,8 @@ class StandaloneDebugLineTestCase(TestBase):
         self.assertEqual(breakpoint.GetNumLocations(), 1)
         breakpoint_address = breakpoint.GetLocationAtIndex(0).GetAddress()
         self.assertEqual(breakpoint_address, address)
+
+        # A type lookup visits every DWARF unit to find external modules. The
+        # synthetic compile unit has no DWARF unit, so the lookup must find
+        # nothing instead of asking for one.
+        self.assertFalse(target.FindFirstType("no_such_type").IsValid())

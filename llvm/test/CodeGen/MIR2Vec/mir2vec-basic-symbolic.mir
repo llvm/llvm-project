@@ -1,5 +1,9 @@
 # REQUIRES: x86-registered-target
 # RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=none -print-mir2vec -mir2vec-vocab-path=%S/Inputs/mir2vec_dummy_3D_vocab.json %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -passes='print<mir2vec>' -mir2vec-vocab-path=%S/Inputs/mir2vec_dummy_3D_vocab.json %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: not llc -mtriple=x86_64-unknown-linux-gnu -passes='print<mir2vec>' %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
+
+# ERR: LLVM ERROR: MIR2Vec vocabulary file path not specified; set it using --mir2vec-vocab-path
 
 --- |
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
@@ -20,11 +24,6 @@
 name:            add_function
 alignment:       16
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: gr32 }
-  - { id: 1, class: gr32 }
-  - { id: 2, class: gr32 }
-  - { id: 3, class: gr32 }
 liveins:
   - { reg: '$edi', virtual-reg: '%0' }
   - { reg: '$esi', virtual-reg: '%1' }

@@ -394,6 +394,21 @@ add_generic_entrypoint_object(
 )
 
 add_generic_entrypoint_object(
+  putchar_unlocked
+  SRCS
+    putchar_unlocked.cpp
+  HDRS
+    ../putchar_unlocked.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.hdr.types.size_t
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.errno.errno
+    libc.src.stdio.stdout
+)
+
+add_generic_entrypoint_object(
   fgetc
   SRCS
     fgetc.cpp
@@ -606,6 +621,47 @@ add_generic_entrypoint_object(
     libc.hdr.types.FILE
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
+)
+
+if(TARGET libc.src.__support.File.file)
+  add_header_library(
+    getdelim_impl
+    HDRS
+      getdelim_impl.h
+    DEPENDS
+      libc.hdr.errno_macros
+      libc.hdr.types.size_t
+      libc.hdr.types.ssize_t
+      libc.src.__support.CPP.limits
+      libc.src.__support.CPP.new
+      libc.src.__support.CPP.unique_ptr
+      libc.src.__support.File.file
+      libc.src.__support.checked_ptr
+      libc.src.__support.error_or
+      libc.src.__support.macros.attributes
+      libc.src.__support.macros.config
+      libc.src.__support.macros.optimization
+      libc.src.string.memory_utils.inline_memcpy
+  )
+endif()
+
+add_generic_entrypoint_object(
+  getline
+  SRCS
+    getline.cpp
+  HDRS
+    ../getline.h
+  DEPENDS
+    .getdelim_impl
+    libc.hdr.types.FILE
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
 )
 
 add_generic_entrypoint_object(

@@ -1331,6 +1331,12 @@ defm VOPD3F64OPYSrcHazard : AMDGPUSubtargetFeature<"vopd3-f64-opy-src-hazard",
   /*GenPredicate=*/0
 >;
 
+defm TransF16ToPartialVGPRWriteHazard : AMDGPUSubtargetFeature<"trans-f16-to-partial-vgpr-write-hazard",
+  "A 16-bit write by TRANS VALU needs 4 VALU instructions or va_vdst(0) wait "
+  "before the other half of the same register can be overwritten",
+  /*GenPredicate=*/0
+>;
+
 defm SALUFloatInsts : AMDGPUSubtargetFeature<"salu-float",
   "Has SALU floating point instructions"
 >;
@@ -2637,6 +2643,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    FeatureUnusableSAddPCI64,
+   FeatureTransF16ToPartialVGPRWriteHazard,
    ])>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2677,6 +2684,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    FeatureUnusableSAddPCI64,
+   FeatureTransF16ToPartialVGPRWriteHazard,
    ])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2717,6 +2725,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureNoMTypeNC,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
+   FeatureTransF16ToPartialVGPRWriteHazard,
    ])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
@@ -2743,6 +2752,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureNeedsTDMDrain,
    FeatureUnusableSAddPCI64,
    FeatureMcastFullMaskBug,
+   FeatureTransF16ToPartialVGPRWriteHazard,
    ])>;
 
 def FeatureISAVersion13 : FeatureSet<
