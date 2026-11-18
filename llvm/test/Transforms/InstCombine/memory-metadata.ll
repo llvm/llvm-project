@@ -205,6 +205,19 @@ define <2 x i32> @unmask_pcsections(ptr %p) {
   ret <2 x i32> %v
 }
 
+; TODO: Check whether invariant.load can be kept after exposing inactive lanes.
+; This records the existing behavior while preserving the cache policy.
+define <2 x i32> @speculated_masked_load(ptr dereferenceable(8) %p, <2 x i1> %mask) {
+; CHECK-LABEL: define <2 x i32> @speculated_masked_load(
+; CHECK-SAME: ptr dereferenceable(8) [[P:%.*]], <2 x i1> [[MASK:%.*]]) {
+; CHECK-NEXT:    [[UNMASKEDLOAD:%.*]] = load <2 x i32>, ptr [[P]], align 1, !invariant.load [[META4]], !mem.cache_hint [[META13]]
+; CHECK-NEXT:    [[V:%.*]] = select <2 x i1> [[MASK]], <2 x i32> [[UNMASKEDLOAD]], <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[V]]
+;
+  %v = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr %p, <2 x i1> %mask, <2 x i32> zeroinitializer), !mem.cache_hint !16, !invariant.load !0
+  ret <2 x i32> %v
+}
+
 !0 = !{}
 !1 = !{i32 1}
 !2 = !{!"preserved memory metadata"}
