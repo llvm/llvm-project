@@ -527,6 +527,9 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   /// This class should not be copied.
   GenELF64PluginTy(const GenELF64PluginTy &) = delete;
   GenELF64PluginTy(GenELF64PluginTy &&) = delete;
+  GenELF64PluginTy &operator=(const GenELF64PluginTy &) = delete;
+  GenELF64PluginTy &operator=(GenELF64PluginTy &&) = delete;
+  ~GenELF64PluginTy() = default;
   /// Initialize the plugin and return the number of devices.
   Expected<int32_t> initImpl() override {
     ODBG(OLDT_Init) << "GenELF64 plugin detected " << ODBG_IF_LEVEL(2)

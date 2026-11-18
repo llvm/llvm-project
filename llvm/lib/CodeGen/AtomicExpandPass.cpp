@@ -825,7 +825,7 @@ bool AtomicExpandImpl::expandAtomicLoadToCmpXchg(LoadInst *LI) {
   bool NeedBitcast = Ty->isFloatingPointTy() || Ty->isVectorTy();
   Type *CmpXchgTy = Ty;
   if (NeedBitcast)
-    CmpXchgTy = Builder.getIntNTy(Ty->getPrimitiveSizeInBits());
+    CmpXchgTy = getCorrespondingIntegerType(Ty, *DL);
   Constant *DummyVal = Constant::getNullValue(CmpXchgTy);
 
   AtomicCmpXchgInst *Pair = Builder.CreateAtomicCmpXchg(
@@ -835,7 +835,7 @@ bool AtomicExpandImpl::expandAtomicLoadToCmpXchg(LoadInst *LI) {
   Pair->setVolatile(LI->isVolatile());
   Value *Loaded = Builder.CreateExtractValue(Pair, 0, "loaded");
   if (NeedBitcast)
-    Loaded = Builder.CreateBitCast(Loaded, Ty);
+    Loaded = Builder.CreateBitPreservingCastChain(*DL, Loaded, Ty);
 
   LI->replaceAllUsesWith(Loaded);
   LI->eraseFromParent();

@@ -79,6 +79,18 @@ bool ProcessWasm::CanDebug(lldb::TargetSP target_sp,
   return false;
 }
 
+CFAComparison ProcessWasm::CompareCFAs(const StackID &lhs, const StackID &rhs) {
+  const wasm_addr_t lhs_cfa = lhs.GetCallFrameAddressWithoutMetadata();
+  const wasm_addr_t rhs_cfa = rhs.GetCallFrameAddressWithoutMetadata();
+  // UnwindWasm numbers engine frames from the outermost one.
+  if (lhs_cfa.GetType() != WasmAddressType::Invalid ||
+      rhs_cfa.GetType() != WasmAddressType::Invalid ||
+      lhs_cfa.GetOffset() == rhs_cfa.GetOffset())
+    return CFAComparison::NoOpinion;
+  return lhs_cfa.GetOffset() > rhs_cfa.GetOffset() ? CFAComparison::Younger
+                                                   : CFAComparison::Older;
+}
+
 std::shared_ptr<ThreadGDBRemote> ProcessWasm::CreateThread(lldb::tid_t tid) {
   if (!GetTarget().GetArchitecture().GetTriple().isWasm())
     return ProcessGDBRemote::CreateThread(tid);
