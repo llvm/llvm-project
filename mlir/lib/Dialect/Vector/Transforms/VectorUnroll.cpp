@@ -167,7 +167,6 @@ checkSupportedMaskedTransferUnrolling(TransferOpTy xferOp,
     return rewriter.notifyMatchFailure(xferOp, "masked scalable transfer");
   return success();
 }
-namespace {
 
 /// Wrap `tiledXferOp`, the new transfer for one tile, in a vector.mask with the
 /// tile of `maskingOp`'s mask (and passthru, if any) at `offsets` with shape
