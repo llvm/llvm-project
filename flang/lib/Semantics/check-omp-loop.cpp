@@ -271,8 +271,9 @@ OmpStructureChecker::GetOrderedApplyDirectives(
       orderedDirectives;
   const auto &height{GetHeightWithReason(spec, version)};
   auto [generatedLoops, _]{GetGeneratedNestDepthWithReason(spec, version)};
-  if (!generatedLoops)
+  if (!generatedLoops) {
     return orderedDirectives; // empty
+  }
 
   int64_t maxLoops{spec.DirId() == llvm::omp::Directive::OMPD_tile ||
               spec.DirId() == llvm::omp::Directive::OMPD_stripe
@@ -299,8 +300,8 @@ OmpStructureChecker::GetOrderedApplyDirectives(
 
       int64_t addedHeight{IsInnerLoopModifier(applyClause) && height
               ? height.value.value()
-              : 0} auto loopModifier{
-          GetLoopModifierWithReason(spec, clause, version)};
+              : 0};
+      auto loopModifier{GetLoopModifierWithReason(spec, clause, version)};
       if (!loopModifier) {
         return orderedDirectives; // empty
       }

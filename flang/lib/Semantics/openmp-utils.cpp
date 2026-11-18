@@ -988,7 +988,7 @@ const parser::OmpDirectiveSpecification *GetOutermostApplyFullUnroll(
 static bool IsOutermostApplyFullUnroll(
     const parser::ExecutionPartConstruct &epc) {
   if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(epc)}) {
-    return getOutermostApplyFullUnroll(omp->BeginDir());
+    return GetOutermostApplyFullUnroll(omp->BeginDir());
   }
   return false;
 }
@@ -1300,7 +1300,7 @@ GetApplyDirectives(const parser::OmpDirectiveSpecification &spec,
               : 0};
 
       if (indexList && indexList.value.value().size() == directiveList.size()) {
-        auto itV { orderedDirectives.begin() }
+        auto itV{orderedDirectives.begin()};
         for (const auto [index, dir] :
             llvm::zip_equal(indexList.value.value(), directiveList)) {
           while (itV != orderedDirectives.end() &&
@@ -2420,7 +2420,7 @@ static Reason WhyNotWellFormed(
     } else if (!IsLoopTransforming(beginSpec.DirId())) {
       reason.Say(source,
           "Only loop-transforming constructs are allowed inside loop constructs"_because_en_US);
-    } else if (auto unroll{getOutermostApplyFullUnroll(beginSpec)}) {
+    } else if (auto unroll{GetOutermostApplyFullUnroll(beginSpec)}) {
       reason.Say(unroll->source, MsgConstructDoesNotResult,
           "Fully unrolled loop",
           isSequence ? "a loop nest or a loop sequence" : "a loop nest");
