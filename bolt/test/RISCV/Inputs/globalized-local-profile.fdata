@@ -1,0 +1,8 @@
+0 [unknown] 0 1 PG.Lfoo/1 0 0 100
+1 PG.Lfoo/1 0 1 PG.Lfoo/1 c 0 90
+1 PG.Lfoo/1 0 1 PG.Lfoo/1 4 0 10
+0 [unknown] 0 1 .Lbar/1 0 0 200
+1 .Lbar/1 0 1 .Lbar/1 c 0 180
+1 .Lbar/1 0 1 .Lbar/1 4 0 20
+0 [unknown] 0 1 PG.Lpriority 0 0 300
+0 [unknown] 0 1 .Lpriority 0 0 900

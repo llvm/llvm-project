@@ -1276,14 +1276,25 @@ void DataReader::buildLTONameMaps() {
 }
 
 template <typename MapTy>
+static typename MapTy::mapped_type *fetchMapEntryForName(MapTy &Map,
+                                                         StringRef Name) {
+  // Prefer the full escaped name, including any "PG" prefix and local symbol
+  // ID. Fall back to the original symbol name for profiles without the added
+  // prefix.
+  auto I = Map.find(getEscapedName(Name));
+  if (I == Map.end())
+    I = Map.find(normalizeName(Name));
+  return I != Map.end() ? &I->second : nullptr;
+}
+
+template <typename MapTy>
 static typename MapTy::mapped_type *
 fetchMapEntry(MapTy &Map, const std::vector<MCSymbol *> &Symbols) {
   // Do a reverse order iteration since the name in profile has a higher chance
   // of matching a name at the end of the list.
   for (const MCSymbol *Symbol : llvm::reverse(Symbols)) {
-    auto I = Map.find(normalizeName(Symbol->getName()));
-    if (I != Map.end())
-      return &I->second;
+    if (auto *Entry = fetchMapEntryForName(Map, Symbol->getName()))
+      return Entry;
   }
   return nullptr;
 }
@@ -1294,9 +1305,8 @@ fetchMapEntry(MapTy &Map, const std::vector<StringRef> &FuncNames) {
   // Do a reverse order iteration since the name in profile has a higher chance
   // of matching a name at the end of the list.
   for (StringRef Name : llvm::reverse(FuncNames)) {
-    auto I = Map.find(normalizeName(Name));
-    if (I != Map.end())
-      return &I->second;
+    if (auto *Entry = fetchMapEntryForName(Map, Name))
+      return Entry;
   }
   return nullptr;
 }
@@ -1321,9 +1331,8 @@ fetchMapEntriesRegex(MapTy &Map,
         AllData.insert(AllData.end(), CommonData.begin(), CommonData.end());
       }
     } else {
-      auto I = Map.find(Name);
-      if (I != Map.end())
-        return {&I->second};
+      if (auto *Entry = fetchMapEntryForName(Map, FuncName))
+        return {Entry};
     }
   }
   return AllData;
