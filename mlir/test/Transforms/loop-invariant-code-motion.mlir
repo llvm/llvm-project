@@ -1636,6 +1636,52 @@ func.func @hoist_from_execute_region(%a: i32, %b: i32, %buf: memref<?xi32>,
 
 // -----
 
+// The enclosing loop can be any loop-like op.
+
+// CHECK-LABEL: func @hoist_from_scf_if_in_parallel(
+//  CHECK-SAME:     %[[A:.*]]: i32, %[[B:.*]]: i32,
+//       CHECK:   %[[ADD:.*]] = arith.addi %[[A]], %[[B]]
+//       CHECK:   scf.parallel
+//       CHECK:     scf.if
+//       CHECK:       memref.store %[[ADD]]
+func.func @hoist_from_scf_if_in_parallel(%a: i32, %b: i32,
+                                         %buf: memref<?xi32>, %lb: index,
+                                         %ub: index, %step: index) {
+  scf.parallel (%i) = (%lb) to (%ub) step (%step) {
+    %cond = arith.cmpi eq, %i, %lb : index
+    scf.if %cond {
+      %add = arith.addi %a, %b : i32
+      memref.store %add, %buf[%i] : memref<?xi32>
+    }
+  }
+  return
+}
+
+// -----
+
+// Invariant ops are hoisted out of the whole loop nest.
+
+// CHECK-LABEL: func @hoist_from_affine_if_in_loop_nest(
+//  CHECK-SAME:     %[[A:.*]]: f32,
+//       CHECK:   %[[ADD:.*]] = arith.addf %[[A]], %[[A]]
+//       CHECK:   affine.for
+//       CHECK:     affine.for
+//       CHECK:       affine.if
+//       CHECK:         affine.store %[[ADD]]
+func.func @hoist_from_affine_if_in_loop_nest(%a: f32, %buf: memref<10xf32>) {
+  affine.for %i = 0 to 10 {
+    affine.for %j = 0 to 10 {
+      affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)>(%i, %i) {
+        %add = arith.addf %a, %a : f32
+        affine.store %add, %buf[%i] : memref<10xf32>
+      }
+    }
+  }
+  return
+}
+
+// -----
+
 // Chains of invariant ops are hoisted across nesting levels.
 
 // CHECK-LABEL: func @hoist_chain_across_nested_ifs(
