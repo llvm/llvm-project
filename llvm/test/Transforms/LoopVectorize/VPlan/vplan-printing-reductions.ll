@@ -820,6 +820,60 @@ exit:
   ret i32 %add
 }
 
+define i32 @print_mulacc_negated_no_ext(ptr %a, ptr %b) {
+; CHECK-LABEL: VPlan for loop in 'print_mulacc_negated_no_ext'
+; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<1024> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%accum> = phi (add) vp<[[VP3]]>, vp<[[VP8:%[0-9]+]]>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[VP5]]>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.a>
+; CHECK-NEXT:      WIDEN ir<%load.a> = load vp<[[VP6]]>
+; CHECK-NEXT:      CLONE ir<%gep.b> = getelementptr ir<%b>, vp<[[VP5]]>
+; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.b>
+; CHECK-NEXT:      WIDEN ir<%load.b> = load vp<[[VP7]]>
+; CHECK-NEXT:      EXPRESSION vp<[[VP8]]> = ir<%accum> + reduce.add (sub (0, mul ir<%load.b>, ir<%load.a>))
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %accum = phi i32 [ 0, %entry ], [ %add, %loop ]
+  %gep.a = getelementptr i32, ptr %a, i64 %iv
+  %load.a = load i32, ptr %gep.a, align 4
+  %gep.b = getelementptr i32, ptr %b, i64 %iv
+  %load.b = load i32, ptr %gep.b, align 4
+  %mul = mul i32 %load.b, %load.a
+  %sub = sub i32 0, %mul
+  %add = add i32 %accum, %sub
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret i32 %add
+}
+
 define i64 @print_mulacc_sub_extended(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
 ; CHECK-LABEL: VPlan for loop in 'print_mulacc_sub_extended'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
