@@ -8,10 +8,10 @@
 // those notes have to be expected by file and line.
 // expected-note@mock-types.h:37 + {{Calling '~RefPtr'}}
 // expected-note@mock-types.h:299 + {{Calling 'deref'}}
-// expected-note@mock-types.h:313 + {{Calling 'derefIfNotNull'}}
-// expected-note@mock-types.h:380 + {{Calling 'deref'}}
-// expected-note@mock-types.h:399 + {{Calling '~RefPtr'}}
-// expected-note@mock-types.h:440 + {{Could destruct an object}}
+// expected-note@mock-types.h:316 + {{Calling 'derefIfNotNull'}}
+// expected-note@mock-types.h:383 + {{Calling 'deref'}}
+// expected-note@mock-types.h:402 + {{Calling '~RefPtr'}}
+// expected-note@mock-types.h:443 + {{Could destruct an object}}
 
 void *memcpy(void *dst, const void *src, unsigned int size);
 void *malloc(unsigned int size);
@@ -532,16 +532,48 @@ void noopWithLambda(Callback) {
 
 void [[clang::annotate_type("webkit.nodelete")]] deleteInLambda(SomeObject* someObj) {
   callLambda([&]() {
-    // expected-warning@-1{{A function 'deleteInLambda' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
     delete someObj;
+    // expected-warning@-1{{A function 'deleteInLambda' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
   });
 }
 
 void [[clang::annotate_type("webkit.nodelete")]] deleteInLambda2(SomeObject* someObj) {
   noopWithLambda([&]() {
-    // expected-warning@-1{{A function 'deleteInLambda2' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
     delete someObj;
+    // expected-warning@-1{{A function 'deleteInLambda2' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
   });
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] trivialLambda(SomeObject* someObj) {
+  callLambda([&]() {
+    someObj->doTrivialWork();
+  });
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] trivialLambdaNeverCalled(SomeObject* someObj) {
+  noopWithLambda([someObj]() {
+    someObj->doTrivialWork();
+  });
+}
+
+template <typename Callback, typename Arg>
+void callLambdaWithArg(Callback callback, Arg arg) {
+  callback(arg);
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] trivialGenericLambda(SomeObject* someObj) {
+  callLambdaWithArg([](auto* obj) { obj->doTrivialWork(); }, someObj);
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] uninstantiatedGenericLambda() {
+  noopWithLambda([](auto* obj) { delete obj; });
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] deleteInGenericLambda(SomeObject* someObj) {
+  callLambdaWithArg([](auto* obj) {
+    delete obj;
+    // expected-warning@-1{{A function 'deleteInGenericLambda' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }, someObj);
 }
 
 void [[clang::annotate_type("webkit.nodelete")]] deleteIfNeeded(SomeObject* someObj) {
@@ -978,3 +1010,62 @@ void [[clang::annotate_type("webkit.nodelete")]] destructiveObjectInBraces() {
 }
 
 } // namespace std_initializer_list
+
+namespace implicit_destructor {
+
+// An implicit or =default destructor has no body in the AST, so deciding it
+// from the body alone classifies every non-trivially-destructible class as
+// unsafe. What it actually does is destroy the bases and members, so ask
+// those instead. Closure types hit this constantly: their destructor is
+// always implicit.
+
+struct SafeMember {
+  ~SafeMember() { m_count = 0; }
+  unsigned m_count { 0 };
+};
+
+struct DeletingMember {
+  ~DeletingMember() { delete m_obj; }
+  // expected-note@-1 3 {{Could destruct an object}}
+  SomeObject* m_obj { nullptr };
+};
+
+struct SafeAggregate { SafeMember member; };
+struct DeletingAggregate { DeletingMember member; }; // expected-note {{Calling '~DeletingMember'}}
+struct DerivedFromSafe : SafeMember { };
+struct DerivedFromDeleting : DeletingMember { }; // expected-note {{Calling '~DeletingMember'}}
+
+void [[clang::annotate_type("webkit.nodelete")]] takeSafe(const SafeAggregate&) { }
+void [[clang::annotate_type("webkit.nodelete")]] takeDeleting(const DeletingAggregate&) { }
+void [[clang::annotate_type("webkit.nodelete")]] takeDerivedFromSafe(const DerivedFromSafe&) { }
+void [[clang::annotate_type("webkit.nodelete")]] takeDerivedFromDeleting(const DerivedFromDeleting&) { }
+
+void [[clang::annotate_type("webkit.nodelete")]] safeTemporary() {
+  takeSafe(SafeAggregate { });
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] deletingTemporary() {
+  takeDeleting(DeletingAggregate { });
+  // expected-warning@-1{{A function 'deletingTemporary' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] safeBaseTemporary() {
+  takeDerivedFromSafe(DerivedFromSafe { });
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] deletingBaseTemporary() {
+  takeDerivedFromDeleting(DerivedFromDeleting { });
+  // expected-warning@-1{{A function 'deletingBaseTemporary' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] safeCaptureByValue() {
+  noopWithLambda([member = SafeMember { }]() { });
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] deletingCaptureByValue() {
+  noopWithLambda([member = DeletingMember { }]() { });
+  // expected-note@-1 {{Calling '~DeletingMember'}}
+  // expected-warning@-2{{A function 'deletingCaptureByValue' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+} // namespace implicit_destructor

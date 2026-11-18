@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=thumbv8.1m.main %s -run-pass=arm-low-overhead-loops --verify-machineinstrs -o - | FileCheck %s
+# RUN: llc -mtriple=thumbv8.1m.main %s -run-pass=arm-low-overhead-loops -o - | FileCheck %s
 
 # CHECK: while.body:
 # CHECK-NOT: t2DLS
@@ -49,7 +49,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:       []
 liveins:

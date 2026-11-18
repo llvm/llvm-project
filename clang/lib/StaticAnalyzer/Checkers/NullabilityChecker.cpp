@@ -477,6 +477,8 @@ void NullabilityChecker::reportBugIfInvariantHolds(
     StringRef Msg, ErrorKind Error, const BugType &BT, ExplodedNode *N,
     const MemRegion *Region, CheckerContext &C, const Stmt *ValueExpr,
     bool SuppressPath) const {
+  if (!N)
+    return;
   ProgramStateRef OriginalState = N->getState();
 
   if (checkInvariantViolation(OriginalState, N, C))
@@ -484,6 +486,8 @@ void NullabilityChecker::reportBugIfInvariantHolds(
   if (SuppressPath) {
     OriginalState = OriginalState->set<InvariantViolated>(true);
     N = C.addTransition(OriginalState, N);
+    if (!N)
+      return;
   }
 
   reportBug(Msg, Error, BT, N, Region, C.getBugReporter(), ValueExpr);
@@ -708,7 +712,7 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
     if (NullReturnedFromNonnull.isEnabled() &&
         RetExprTypeLevelNullability != Nullability::Nonnull &&
         !InSuppressedMethodFamily) {
-      ExplodedNode *N = C.generateErrorNode(State);
+      ExplodedNode *N = C.addSink(State);
       if (!N)
         return;
 
@@ -805,7 +809,7 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
         ArgExprTypeLevelNullability != Nullability::Nonnull &&
         RequiredNullability == Nullability::Nonnull &&
         isDiagnosableCall(Call)) {
-      ExplodedNode *N = C.generateErrorNode(State);
+      ExplodedNode *N = C.addSink(State);
       if (!N)
         return;
 
@@ -1288,7 +1292,7 @@ void NullabilityChecker::checkBind(SVal L, SVal V, const Stmt *S,
       ValNullability != Nullability::Nonnull &&
       ValueExprTypeLevelNullability != Nullability::Nonnull &&
       !isARCNilInitializedLocal(C, S)) {
-    ExplodedNode *N = C.generateErrorNode(State);
+    ExplodedNode *N = C.addSink(State);
     if (!N)
       return;
 

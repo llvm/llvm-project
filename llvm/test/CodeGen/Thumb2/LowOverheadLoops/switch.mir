@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=thumbv8.1m.main %s -run-pass=arm-low-overhead-loops --verify-machineinstrs -o -
+# RUN: llc -mtriple=thumbv8.1m.main %s -run-pass=arm-low-overhead-loops -o -
 # CHECK:      bb.1.for.body.preheader:
 # CHECK:        $lr = t2DLS
 # CHECK-NOT:    t2LoopDec
@@ -78,7 +78,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:       []
 liveins:

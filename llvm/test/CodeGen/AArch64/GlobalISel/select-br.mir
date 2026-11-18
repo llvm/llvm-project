@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-- -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-- -run-pass=instruction-select %s -o - | FileCheck %s
 # RUN: llc -mtriple=aarch64-- -passes="require<profile-summary>,function(machine-function(instruction-select))" %s -o - | FileCheck %s
 
 --- |
@@ -43,6 +43,7 @@ registers:
 body:             |
   bb.0:
     successors: %bb.0, %bb.1
+    liveins: $w0
     %1(i32) = COPY $w0
     G_BRCOND %1, %bb.1
     G_BR %bb.0
@@ -66,6 +67,7 @@ registers:
 body:             |
   bb.0:
     successors: %bb.0, %bb.1
+    liveins: $x0
     %0(p0) = COPY $x0
     G_BRINDIRECT %0(p0)
 

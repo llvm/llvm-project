@@ -127,6 +127,17 @@ def ACCOptimizeFirstprivateMap
     pass-by-value instead of using global memory mapping through the
     runtime.
   }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect", "fir::FIROpsDialect",
+                           "mlir::arith::ArithDialect"];
+}
+
+def ACCOptimizeDataMapping
+    : Pass<"acc-optimize-data-mapping", "mlir::ModuleOp"> {
+  let summary = "Change an implicit copy to a copyin";
+  let description = [{
+    Changes an implicit copy to a copyin for named constants and for
+    variables that are not modified inside the compute region.
+  }];
   let dependentDialects = ["mlir::acc::OpenACCDialect", "fir::FIROpsDialect"];
 }
 

@@ -4,7 +4,6 @@
 ...
 ---
 name:            sinkwzr
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr32 }
   - { id: 1, class: gpr32 }

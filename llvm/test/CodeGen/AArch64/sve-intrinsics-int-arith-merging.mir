@@ -16,7 +16,6 @@
 ---
 name:            bic_i16_zero
 alignment:       4
-tracksRegLiveness: true
 tracksDebugUserValues: true
 registers:       []
 liveins:

@@ -54,6 +54,8 @@ LOOP-INTERCHANGE: "-floop-interchange"
 
 RUN: %{lto2-elf} -enable-loopinterchange=false 2>&1 | \
 RUN:   FileCheck %s --check-prefixes=ARGS,NO-LOOP-INTERCHANGE,ERR
+RUN: %{lld} -mllvm -enable-loopinterchange=false 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=ARGS,NO-LOOP-INTERCHANGE,ERR
 NO-LOOP-INTERCHANGE-NOT: "-floop-interchange"
 
 ## PIC is forwarded as -fpic for ELF targets but not for COFF targets because

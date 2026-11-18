@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -85,7 +86,6 @@ static void transformGlobalArray(StringRef ArrayName, Module &M,
   if (!GVCtor)
     return;
 
-  IRBuilder<> IRB(M);
   SmallVector<Constant *, 16> CurrentCtors;
   bool Changed = false;
   StructType *EltTy =
@@ -378,7 +378,7 @@ std::string llvm::getUniqueModuleId(Module *M) {
 
   SmallString<32> Str;
   MD5::stringifyResult(R, Str);
-  return ("." + Str).str();
+  return std::string(Str);
 }
 
 GlobalVariable *llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,

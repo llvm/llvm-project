@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/VirtualOutputBackend.h"
 #include <cassert>
@@ -147,6 +148,10 @@ class CompilerInstance : public ModuleLoader {
   /// The frontend timer.
   std::unique_ptr<llvm::Timer> FrontendTimer;
 
+  /// The -mllvm options of per-context libraries, which every LLVMContext that
+  /// compiles for this instance receives.
+  llvm::cl::LibraryOptionsContext LibraryOptions;
+
   /// The ASTReader, if one exists.
   IntrusiveRefCntPtr<ASTReader> TheASTReader;
 
@@ -263,6 +268,15 @@ public:
 
   /// Load the list of plugins requested in the \c FrontendOptions.
   void LoadRequestedPlugins();
+
+  /// Parse and apply LLVM command line arguments from FrontendOptions.
+  /// This processes the LLVMArgs option that comes from -mllvm flags.
+  /// This should be called after plugins are loaded and before ExecuteAction.
+  void parseLLVMArgs();
+
+  const llvm::cl::LibraryOptionsContext &getLibraryOptions() const {
+    return LibraryOptions;
+  }
 
   /// @}
   /// @name Compiler Invocation and Options

@@ -53,8 +53,9 @@ bool FIROpenACCSupportAnalysis::isValidSymbolUse(Operation *user,
   return fir::acc::isValidSymbolUse(user, symbol, definingOpPtr);
 }
 
-bool FIROpenACCSupportAnalysis::isValidValueUse(Value v, Region &region) {
-  return fir::acc::isValidValueUse(v, region);
+bool FIROpenACCSupportAnalysis::isValidValueUse(
+    Value v, Region &region, SymbolTableCollection *symbolTables) {
+  return fir::acc::isValidValueUse(v, region, symbolTables);
 }
 
 std::optional<mlir::acc::TypeSizeAndAlignment>

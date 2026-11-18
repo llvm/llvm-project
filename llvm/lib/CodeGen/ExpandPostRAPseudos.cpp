@@ -25,7 +25,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "postrapseudos"
+#define DEBUG_TYPE "post-ra-pseudos"
 
 namespace {
 struct ExpandPostRA {

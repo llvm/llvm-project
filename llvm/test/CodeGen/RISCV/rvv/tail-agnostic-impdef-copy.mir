@@ -25,7 +25,6 @@
 ---
 name:            masked_load_nxv8i64
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: vr }

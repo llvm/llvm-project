@@ -1,15 +1,16 @@
-if (LLVM_HAVE_MLIR_LOWERING)
-  include(MLGOLower)
-  mlgo_lower_models(
-    "${LLVM_MLGO_MODELS}"
-    "${LLVM_MLGO_MLIR_OPT}"
-    "${LLVM_MLGO_MLIR_TRANSLATE}"
-    regalloc
-    llvm/CodeGen
-    RegAllocEvictModels
-    MLDeps
-  )
-elseif (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
+include(MLGOLower)
+mlgo_lower_models(
+  "${LLVM_MLGO_MODELS}"
+  "${LLVM_MLGO_MLIR_OPT}"
+  "${LLVM_MLGO_MLIR_TRANSLATE}"
+  regalloc
+  llvm/CodeGen
+  RegAllocEvictModels
+  "../Analysis/models/regalloc-eviction-test-model.inc"
+  "${LLVM_MAIN_SRC_DIR}/../mlir/test/Integration/Dialect/EmitC/regalloc-eviction-test-model-tosa.mlir"
+  MLDeps
+)
+if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   include(TensorFlowCompile)
   set(LLVM_RAEVICT_MODEL_PATH_DEFAULT "models/regalloc-eviction")
 
@@ -35,7 +36,7 @@ endif()
 
 set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
 set(LLVM_TARGET_DEFINITIONS CodeGenOptions.td)
-tablegen(LLVM CodeGenOptions.inc -gen-opt-parser-defs)
+llvm_tablegen(CodeGenOptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(CodeGenOptionsTableGen)
 
 add_llvm_component_library(LLVMCodeGen
@@ -118,7 +119,6 @@ add_llvm_component_library(LLVMCodeGen
   LiveRegMatrix.cpp
   LiveRegUnits.cpp
   LiveStacks.cpp
-  LiveVariables.cpp
   CodeGenTargetMachineImpl.cpp
   LocalStackSlotAllocation.cpp
   LoopTraversal.cpp
@@ -144,7 +144,6 @@ add_llvm_component_library(LLVMCodeGen
   MachineFunction.cpp
   MachineFunctionPass.cpp
   MachineFunctionPrinterPass.cpp
-  MachineFunctionSplitter.cpp
   MachineIDFSSAUpdater.cpp
   MachineInstrBundle.cpp
   MachineInstr.cpp

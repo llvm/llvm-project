@@ -68,6 +68,14 @@ class LiveIntervals {
   /// Live interval pointers for all the virtual registers.
   IndexedMap<LiveInterval *, VirtReg2IndexFunctor> VirtRegIntervals;
 
+  /// Indexed by block number. A block has been queued as live-out by the
+  /// current extendSegmentsToUses call iff its entry equals LiveOutTag.
+  SmallVector<unsigned, 0> LiveOutTags;
+
+  /// Tag for the current extendSegmentsToUses call, incremented on each call
+  /// so stale LiveOutTags entries never need clearing.
+  unsigned LiveOutTag = 0;
+
   /// Sorted list of instructions with register mask operands. Always use the
   /// 'r' slot, RegMasks are normal clobbers, not early clobbers.
   SmallVector<SlotIndex, 8> RegMaskSlots;
@@ -251,6 +259,10 @@ public:
   }
 
   SlotIndexes *getSlotIndexes() const { return Indexes; }
+
+  /// Remove intervals for virtual registers no instruction refers to any
+  /// more. Their segments sit on erased indexes. Returns the number removed.
+  LLVM_ABI unsigned removeUnreferencedIntervals();
 
   /// Returns true if the specified machine instr has been removed or was
   /// never entered in the map.

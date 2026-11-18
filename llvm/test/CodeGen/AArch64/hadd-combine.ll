@@ -95,19 +95,10 @@ define <8 x i16> @haddu_const_both() {
 }
 
 define <8 x i16> @haddu_const_bothhigh() {
-; CHECK-SD-LABEL: haddu_const_bothhigh:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mvni v0.8h, #1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: haddu_const_bothhigh:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d0, #0xffffffffffffffff
-; CHECK-GI-NEXT:    mvni v1.4h, #1
-; CHECK-GI-NEXT:    uaddl v1.4s, v1.4h, v0.4h
-; CHECK-GI-NEXT:    shrn v0.4h, v1.4s, #1
-; CHECK-GI-NEXT:    shrn2 v0.8h, v1.4s, #1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: haddu_const_bothhigh:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvni v0.8h, #1
+; CHECK-NEXT:    ret
   %ext1 = zext <8 x i16> <i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534> to <8 x i32>
   %ext2 = zext <8 x i16> <i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535> to <8 x i32>
   %add = add <8 x i32> %ext1, %ext2
@@ -341,9 +332,7 @@ define <8 x i16> @hadds_const_bothhigh() {
 ; CHECK-GI-LABEL: hadds_const_bothhigh:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI19_0
-; CHECK-GI-NEXT:    mvni v0.8h, #128, lsl #8
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI19_0]
-; CHECK-GI-NEXT:    shadd v0.8h, v1.8h, v0.8h
+; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI19_0]
 ; CHECK-GI-NEXT:    ret
   %ext1 = sext <8 x i16> <i16 32766, i16 32766, i16 32766, i16 32766, i16 32766, i16 32766, i16 32766, i16 32766> to <8 x i32>
   %ext2 = sext <8 x i16> <i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767> to <8 x i32>
@@ -615,21 +604,10 @@ define <8 x i16> @rhaddu_const_both() {
 }
 
 define <8 x i16> @rhaddu_const_bothhigh() {
-; CHECK-SD-LABEL: rhaddu_const_bothhigh:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi v0.2d, #0xffffffffffffffff
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: rhaddu_const_bothhigh:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d0, #0xffffffffffffffff
-; CHECK-GI-NEXT:    mvni v1.4h, #1
-; CHECK-GI-NEXT:    movi v2.4s, #1
-; CHECK-GI-NEXT:    uaddl v0.4s, v1.4h, v0.4h
-; CHECK-GI-NEXT:    add v1.4s, v0.4s, v2.4s
-; CHECK-GI-NEXT:    shrn v0.4h, v1.4s, #1
-; CHECK-GI-NEXT:    shrn2 v0.8h, v1.4s, #1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: rhaddu_const_bothhigh:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-NEXT:    ret
   %ext1 = zext <8 x i16> <i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534> to <8 x i32>
   %ext2 = zext <8 x i16> <i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535> to <8 x i32>
   %add1 = add <8 x i32> %ext1, %ext2
@@ -863,18 +841,10 @@ define <8 x i16> @rhadds_const_both() {
 }
 
 define <8 x i16> @rhadds_const_bothhigh() {
-; CHECK-SD-LABEL: rhadds_const_bothhigh:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mvni v0.8h, #128, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: rhadds_const_bothhigh:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI49_0
-; CHECK-GI-NEXT:    mvni v0.8h, #128, lsl #8
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI49_0]
-; CHECK-GI-NEXT:    srhadd v0.8h, v1.8h, v0.8h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: rhadds_const_bothhigh:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvni v0.8h, #128, lsl #8
+; CHECK-NEXT:    ret
   %ext1 = sext <8 x i16> <i16 32766, i16 32766, i16 32766, i16 32766, i16 32766, i16 32766, i16 32766, i16 32766> to <8 x i32>
   %ext2 = sext <8 x i16> <i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767> to <8 x i32>
   %add1 = add <8 x i32> %ext1, %ext2
@@ -1522,11 +1492,10 @@ define <8 x i8> @dontcrashonnvcasts() {
 ;
 ; CHECK-GI-LABEL: dontcrashonnvcasts:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-GI-NEXT:    adrp x8, .LCPI91_0
+; CHECK-GI-NEXT:    movi d0, #0x000000ff000000
+; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI91_0]
-; CHECK-GI-NEXT:    urhadd v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    urhadd v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    ret
   %vrhadd_v.i = tail call <8 x i8> @llvm.aarch64.neon.urhadd.v8i8(<8 x i8> <i8 0, i8 0, i8 0, i8 -1, i8 0, i8 0, i8 0, i8 0>, <8 x i8> zeroinitializer)

@@ -29,7 +29,6 @@
 ...
 ---
 name:            constraint_h
-tracksRegLiveness: true
 registers:
   - { id: 0, class: hgpr }
   - { id: 1, class: tgpr }

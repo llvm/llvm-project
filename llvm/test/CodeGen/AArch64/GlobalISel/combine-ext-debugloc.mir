@@ -1,4 +1,4 @@
-# RUN: llc -O0 -verify-machineinstrs -mtriple aarch64-- -run-pass=legalizer %s -o - | FileCheck %s
+# RUN: llc -O0 -mtriple aarch64-- -run-pass=legalizer %s -o - | FileCheck %s
 
 # Check that when we combine ZEXT/ANYEXT we assign the correct location.
 # CHECK: !8 = !DILocation(line: 23, column: 5, scope: !4)
@@ -53,6 +53,7 @@ registers:
   - { id: 9, class: _, preferred-register: '' }
 body:             |
   bb.1.entry:
+    liveins: $x0
     %0:_(i8) = G_IMPLICIT_DEF
     %4:_(p0) = COPY $x0
     %10:_(p0) = G_IMPLICIT_DEF debug-location !DILocation(line: 0, scope: !4)

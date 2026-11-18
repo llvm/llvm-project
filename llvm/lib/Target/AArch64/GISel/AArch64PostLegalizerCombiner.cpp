@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "AArch64GlobalISelUtils.h"
 #include "AArch64TargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
@@ -40,6 +41,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/Support/Debug.h"
 
 #define GET_GICOMBINER_DEPS
@@ -173,7 +175,7 @@ bool matchAArch64MulConstCombine(
     // Conservatively do not lower to shift+add+shift if the mul might be
     // folded into madd or msub.
     if (MRI.hasOneNonDBGUse(Dst)) {
-      MachineInstr &UseMI = *MRI.use_instr_begin(Dst);
+      MachineInstr &UseMI = *MRI.use_instr_nodbg_begin(Dst);
       unsigned UseOpc = UseMI.getOpcode();
       if (UseOpc == TargetOpcode::G_ADD || UseOpc == TargetOpcode::G_PTR_ADD ||
           UseOpc == TargetOpcode::G_SUB)
@@ -560,6 +562,26 @@ static bool matchSubAddMulReassoc(Register Mul1, Register Mul2, Register Sub,
   return true;
 }
 
+/// Match a vector G_ASHR/G_LSHR whose amount is not a valid immediate. These
+/// are lowered to SSHL/USHL of the negated amount by vashr_to_sshl and
+/// vlshr_to_ushl, so the negation can be folded into a constant amount.
+/// Splat-immediate shifts are left for vashr_vlshr_imm.
+bool matchVAshrLshrToSShl(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_ASHR ||
+         MI.getOpcode() == TargetOpcode::G_LSHR);
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  if (!Ty.isVector())
+    return false;
+  // Leave shifts by zero to the identity combines, which remove them.
+  if (isBuildVectorAllZeros(*MRI.getVRegDef(MI.getOperand(2).getReg()), MRI,
+                            /*AllowUndef=*/true))
+    return false;
+  // Leave shifts by a valid immediate to vashr_vlshr_imm.
+  int64_t Cnt;
+  return !AArch64GISelUtils::isVShiftRImm(MI.getOperand(2).getReg(), MRI, Ty,
+                                          Cnt);
+}
+
 class AArch64PostLegalizerCombinerImpl : public Combiner {
 protected:
   const CombinerHelper Helper;
@@ -654,12 +676,6 @@ static bool tryOptimizeConsecStores(SmallVectorImpl<StoreInfo> &Stores,
   return true;
 }
 
-static cl::opt<bool>
-    EnableConsecutiveMemOpOpt("aarch64-postlegalizer-consecutive-memops",
-                              cl::init(true), cl::Hidden,
-                              cl::desc("Enable consecutive memop optimization "
-                                       "in AArch64PostLegalizerCombiner"));
-
 static bool optimizeConsecutiveMemOpAddressing(MachineFunction &MF,
                                                CSEMIRBuilder &MIB) {
   // This combine needs to run after all reassociations/folds on pointer
@@ -686,7 +702,9 @@ static bool optimizeConsecutiveMemOpAddressing(MachineFunction &MF,
   bool Changed = false;
   auto &MRI = MF.getRegInfo();
 
-  if (!EnableConsecutiveMemOpOpt)
+  if (!MF.getSubtarget<AArch64Subtarget>()
+           .getCLOpts()
+           .postlegalizer_consecutive_memops)
     return Changed;
 
   SmallVector<StoreInfo, 8> Stores;
@@ -763,9 +781,8 @@ static bool optimizeConsecutiveMemOpAddressing(MachineFunction &MF,
           continue;
 
         Register PtrReg = St->getPointerReg();
-        if (mi_match(
-                PtrReg, MRI,
-                m_OneNonDBGUse(m_GPtrAdd(m_Reg(PtrBaseReg), m_ICst(Offset))))) {
+        if (mi_match(PtrReg, MRI,
+                     m_OneUse(m_GPtrAdd(m_Reg(PtrBaseReg), m_ICst(Offset))))) {
           GPtrAdd *PtrAdd = cast<GPtrAdd>(MRI.getVRegDef(PtrReg));
           StoreInfo New = {St, PtrAdd, Offset.getSExtValue(), StoredValTy};
 

@@ -1,4 +1,4 @@
-# RUN: llc -O1 -start-before=greedy -stop-after=virtregrewriter -o /dev/null %s -debug-only=livedebugvars 2>&1 -experimental-debug-variable-locations=false | FileCheck -check-prefix=CHECKDBG %s
+# RUN: llc -O1 -start-before=greedy -stop-after=virt-reg-rewriter -o /dev/null %s -debug-only=livedebugvars 2>&1 -experimental-debug-variable-locations=false | FileCheck -check-prefix=CHECKDBG %s
 
 # REQUIRES: asserts
 
@@ -100,7 +100,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32, preferred-register: '' }
   - { id: 1, class: gr64, preferred-register: '' }

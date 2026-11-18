@@ -580,7 +580,9 @@ public:
   void set_enumeratorDefaultAccess(Attr a) { enumeratorDefaultAccess_ = a; }
   // Name of the hidden component created for an enumeration type to hold
   // the 1-based enumerator ordinal.
-  static constexpr char ordinalComponentName[]{"__ordinal"};
+  // Copy-initialized: MSVC 19.29 (VS 2019 16.11) rejects a braced string
+  // literal for an in-class static constexpr array.
+  static constexpr char ordinalComponentName[] = "__ordinal";
   int enumeratorCount() const { return enumeratorCount_; }
   void set_enumeratorCount(int n) { enumeratorCount_ = n; }
   std::map<SourceName, SymbolRef> &finals() { return finals_; }
@@ -945,7 +947,8 @@ public:
       AccPrivate, AccFirstPrivate, AccShared,
       // OpenACC data-mapping attribute
       AccCopy, AccCopyIn, AccCopyInReadOnly, AccCopyOut, AccCreate, AccDelete,
-      AccPresent, AccLink, AccDeviceResident, AccDevicePtr, AccUseDevice,
+      AccNoCreate, AccPresent, AccLink, AccDeviceResident, AccDevicePtr,
+      AccUseDevice,
       // OpenACC declare
       AccDeclare,
       // OpenACC declare on allocatable/pointer needs cross-TU action recipes
@@ -971,7 +974,7 @@ public:
       OmpThreadprivate, OmpDeclareReduction, OmpFlushed, OmpCriticalLock,
       OmpIfSpecified, OmpNone, OmpPreDetermined, OmpExplicit, OmpImplicit,
       OmpDependObject, OmpInclusiveScan, OmpExclusiveScan, OmpInScanReduction,
-      OmpUniform);
+      OmpUniform, OmpAssumesNoOpenmp);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }

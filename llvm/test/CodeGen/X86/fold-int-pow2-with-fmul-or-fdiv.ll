@@ -1484,7 +1484,7 @@ define half @fdiv_pow_shl_cnt_in_bounds(i16 %cnt) nounwind {
 ; CHECK-SSE-NEXT:    shll $10, %edi
 ; CHECK-SSE-NEXT:    movl $28672, %eax # imm = 0x7000
 ; CHECK-SSE-NEXT:    subl %edi, %eax
-; CHECK-SSE-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-SSE-NEXT:    movd %eax, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX-LABEL: fdiv_pow_shl_cnt_in_bounds:
@@ -1492,7 +1492,7 @@ define half @fdiv_pow_shl_cnt_in_bounds(i16 %cnt) nounwind {
 ; CHECK-AVX-NEXT:    shll $10, %edi
 ; CHECK-AVX-NEXT:    movl $28672, %eax # imm = 0x7000
 ; CHECK-AVX-NEXT:    subl %edi, %eax
-; CHECK-AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; CHECK-AVX-NEXT:    vmovd %eax, %xmm0
 ; CHECK-AVX-NEXT:    retq
   %shl = shl nuw i16 1, %cnt
   %conv = uitofp i16 %shl to half
@@ -1506,7 +1506,7 @@ define half @fdiv_pow_shl_cnt_in_bounds2(i16 %cnt) nounwind {
 ; CHECK-SSE-NEXT:    shll $10, %edi
 ; CHECK-SSE-NEXT:    movl $18432, %eax # imm = 0x4800
 ; CHECK-SSE-NEXT:    subl %edi, %eax
-; CHECK-SSE-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-SSE-NEXT:    movd %eax, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX-LABEL: fdiv_pow_shl_cnt_in_bounds2:
@@ -1514,7 +1514,7 @@ define half @fdiv_pow_shl_cnt_in_bounds2(i16 %cnt) nounwind {
 ; CHECK-AVX-NEXT:    shll $10, %edi
 ; CHECK-AVX-NEXT:    movl $18432, %eax # imm = 0x4800
 ; CHECK-AVX-NEXT:    subl %edi, %eax
-; CHECK-AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; CHECK-AVX-NEXT:    vmovd %eax, %xmm0
 ; CHECK-AVX-NEXT:    retq
   %shl = shl nuw i16 1, %cnt
   %conv = uitofp i16 %shl to half
@@ -1804,8 +1804,8 @@ define double @fmul_pow_shl_cnt_fail_knownbits_bad_exp(i64 %cnt) nounwind {
 ; CHECK-SKX:       # %bb.0:
 ; CHECK-SKX-NEXT:    andb $15, %dil
 ; CHECK-SKX-NEXT:    movl $1, %eax
-; CHECK-SKX-NEXT:    shlxq %rdi, %rax, %rax
-; CHECK-SKX-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
+; CHECK-SKX-NEXT:    shlxl %edi, %eax, %eax
+; CHECK-SKX-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
 ; CHECK-SKX-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-SKX-NEXT:    retq
   %cnt_masked = and i64 %cnt, 15
@@ -1857,8 +1857,8 @@ define double @fdiv_pow_shl_cnt_fail_knownbits_bad_exp(i64 %cnt) nounwind {
 ; CHECK-SKX:       # %bb.0:
 ; CHECK-SKX-NEXT:    andb $15, %dil
 ; CHECK-SKX-NEXT:    movl $1, %eax
-; CHECK-SKX-NEXT:    shlxq %rdi, %rax, %rax
-; CHECK-SKX-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
+; CHECK-SKX-NEXT:    shlxl %edi, %eax, %eax
+; CHECK-SKX-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
 ; CHECK-SKX-NEXT:    vmovsd {{.*#+}} xmm1 = [5.4683415146672981E-304,0.0E+0]
 ; CHECK-SKX-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
 ; CHECK-SKX-NEXT:    retq

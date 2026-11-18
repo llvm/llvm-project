@@ -8,12 +8,14 @@
 define void @index_pair(ptr %idx, ptr %t, ptr %u, ptr %o) {
 ; CHECK-LABEL: define void @index_pair(
 ; CHECK-SAME: ptr [[IDX:%.*]], ptr [[T:%.*]], ptr [[U:%.*]], ptr [[O:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[IDX]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i64> [[TMP1]], splat (i64 1234)
-; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], splat (i64 1023)
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP3]], i64 0
+; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[IDX]], align 8
+; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds i8, ptr [[IDX]], i64 8
+; CHECK-NEXT:    [[B:%.*]] = load i64, ptr [[IDX1]], align 8
+; CHECK-NEXT:    [[X0:%.*]] = xor i64 [[A]], 1234
+; CHECK-NEXT:    [[X1:%.*]] = xor i64 [[B]], 1234
+; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[X0]], 1023
+; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[X1]], 1023
 ; CHECK-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, ptr [[T]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[U]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[G0]], align 4
 ; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[G1]], align 4
@@ -40,16 +42,24 @@ define void @index_pair(ptr %idx, ptr %t, ptr %u, ptr %o) {
 define void @index_quad(ptr %idx, ptr %t, ptr %u, ptr %v, ptr %w, ptr %o) {
 ; CHECK-LABEL: define void @index_quad(
 ; CHECK-SAME: ptr [[IDX:%.*]], ptr [[T:%.*]], ptr [[U:%.*]], ptr [[V:%.*]], ptr [[W:%.*]], ptr [[O:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[IDX]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i64> [[TMP1]], splat (i64 1234)
-; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i64> [[TMP2]], splat (i64 1023)
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP3]], i64 0
+; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[IDX]], align 8
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[IDX]], i64 8
+; CHECK-NEXT:    [[B:%.*]] = load i64, ptr [[P1]], align 8
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[IDX]], i64 16
+; CHECK-NEXT:    [[C:%.*]] = load i64, ptr [[P2]], align 8
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, ptr [[IDX]], i64 24
+; CHECK-NEXT:    [[D:%.*]] = load i64, ptr [[P3]], align 8
+; CHECK-NEXT:    [[X0:%.*]] = xor i64 [[A]], 1234
+; CHECK-NEXT:    [[X1:%.*]] = xor i64 [[B]], 1234
+; CHECK-NEXT:    [[X2:%.*]] = xor i64 [[C]], 1234
+; CHECK-NEXT:    [[X3:%.*]] = xor i64 [[D]], 1234
+; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[X0]], 1023
+; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[X1]], 1023
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[X2]], 1023
+; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[X3]], 1023
 ; CHECK-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, ptr [[T]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[U]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP3]], i64 2
 ; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, ptr [[V]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP3]], i64 3
 ; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, ptr [[W]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[G0]], align 4
 ; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[G1]], align 4

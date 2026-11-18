@@ -569,7 +569,7 @@ X86TargetLowering::getIRStackGuard(IRBuilderBase &IRB,
     if (Subtarget.isTargetFuchsia())
       return SegmentOffset(IRB, 0x10, AddressSpace);
 
-    Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+    Module *M = IRB.getModule();
     // Specially, some users may customize the base reg and offset.
     int Offset = M->getStackProtectorGuardOffset();
     // If we don't set -stack-protector-guard-offset value:
@@ -617,14 +617,12 @@ void X86TargetLowering::insertSSPDeclarations(
       SecurityCookieVar != RTLIB::Unsupported) {
     // MSVC CRT provides functionalities for stack protection.
     // MSVC CRT has a global variable holding security cookie.
-    M.getOrInsertGlobal(getLibcallImplName(SecurityCookieVar),
-                        PointerType::getUnqual(M.getContext()));
+    const RTLIB::RuntimeLibcallsInfo &RTLCI = Libcalls.getRuntimeLibcallsInfo();
+    RTLCI.getOrInsertImplGlobal(M, SecurityCookieVar);
 
     // MSVC CRT has a function to validate security cookie.
     FunctionCallee SecurityCheckCookie =
-        M.getOrInsertFunction(getLibcallImplName(SecurityCheckCookieLibcall),
-                              Type::getVoidTy(M.getContext()),
-                              PointerType::getUnqual(M.getContext()));
+        RTLCI.getOrInsertLibcallDecl(M, SecurityCheckCookieLibcall);
 
     if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee())) {
       F->setCallingConv(CallingConv::X86_FastCall);
@@ -2183,7 +2181,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // own caller's stack.
     NumBytes = 0;
   else if (ShouldGuaranteeTCO && canGuaranteeTCO(CallConv))
-    NumBytes = GetAlignedArgumentStackSize(NumBytes, DAG);
+    // The callee pops this amount, so compute it as LowerFormalArguments does.
+    NumBytes = GetAlignedArgumentStackSize(CCInfo.getStackSize(), DAG);
 
   // A sibcall is ABI-compatible and does not need to adjust the stack pointer.
   int FPDiff = 0;
@@ -2606,6 +2605,18 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         GA->getGlobal(), dl, GA->getValueType(0), 0, X86II::MO_NO_FLAG);
   }
 
+  if (Is64Bit && !Subtarget.isTarget64BitILP32() &&
+      Callee.getValueType() == MVT::i32) {
+    // On 64-bit targets, extend 32-bit MS __ptr32 callees before the call.
+    // Use sign-extension for __sptr and zero-extension for __uptr.
+    assert(CB && "CallBase expected for 32-bit callee");
+    ISD::NodeType ExtOpc = ISD::SIGN_EXTEND;
+    unsigned AS = CB->getCalledOperand()->getType()->getPointerAddressSpace();
+    if (AS == X86AS::PTR32_UPTR)
+      ExtOpc = ISD::ZERO_EXTEND;
+    Callee = DAG.getNode(ExtOpc, dl, MVT::i64, Callee);
+  }
+
   SmallVector<SDValue, 8> Ops;
 
   if (!IsSibcall && isTailCall && !IsMustTail) {
@@ -2932,35 +2943,28 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
   return Bytes == MFI.getObjectSize(FI);
 }
 
-static bool
-mayBeSRetTailCallCompatible(const TargetLowering::CallLoweringInfo &CLI,
-                            Register CallerSRetReg) {
-  const auto &Outs = CLI.Outs;
-  const auto &OutVals = CLI.OutVals;
-
-  // We know the caller has a sret pointer argument (CallerSRetReg). Locate the
-  // operand index within the callee that may have a sret pointer too.
-  unsigned Pos = 0;
-  for (unsigned E = Outs.size(); Pos != E; ++Pos)
-    if (Outs[Pos].Flags.isSRet())
-      break;
-  // Bail out if the callee has not any sret argument.
-  if (Pos == Outs.size())
+/// Return true if the call forwards the caller's own sret pointer to the callee
+/// as its sret argument. We prove this in IR, since SelectionDAG is built per
+/// basic block and the caller's sret pointer is only visible as a function
+/// argument in the entry block.
+static bool isCallerSRetForwarded(const CallBase *CB, const Function &CallerF) {
+  if (!CB)
     return false;
 
-  // At this point, either the caller is forwarding its sret argument to the
-  // callee, or the callee is being passed a different sret pointer. We now look
-  // for a CopyToReg, where the callee sret argument is written into a new vreg
-  // (which should later be %rax/%eax, if this is returned).
-  SDValue SRetArgVal = OutVals[Pos];
-  for (SDNode *User : SRetArgVal->users()) {
-    if (User->getOpcode() != ISD::CopyToReg)
-      continue;
-    Register Reg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
-    if (Reg == CallerSRetReg && User->getOperand(2) == SRetArgVal)
-      return true;
-  }
+  // The verifier allows at most one sret parameter. A caller with a sret return
+  // register but no sret Argument has an implicit sret from a demoted return,
+  // which cannot be forwarded from IR.
+  const Argument *CallerSRet =
+      llvm::find_if(CallerF.args(),
+                    [](const Argument &Arg) { return Arg.hasStructRetAttr(); });
+  if (CallerSRet == CallerF.arg_end())
+    return false;
 
+  // Check that the callee receives it as its sret argument.
+  for (const Use &U : CB->args())
+    if (U.get() == CallerSRet &&
+        CB->paramHasAttr(CB->getArgOperandNo(&U), Attribute::StructRet))
+      return true;
   return false;
 }
 
@@ -3039,11 +3043,11 @@ bool X86TargetLowering::isEligibleForSiblingCallOpt(
   // Avoid sibcall optimization if we are an sret return function and the callee
   // is incompatible, unless such premises are proven wrong. See comment in
   // LowerReturn about why hasStructRetAttr is insufficient.
-  if (Register SRetReg = FuncInfo->getSRetReturnReg()) {
+  if (FuncInfo->getSRetReturnReg()) {
     // For a compatible tail call the callee must return our sret pointer. So it
     // needs to be (a) an sret function itself and (b) we pass our sret as its
-    // sret. Condition #b is harder to determine.
-    if (!mayBeSRetTailCallCompatible(CLI, SRetReg))
+    // sret.
+    if (!isCallerSRetForwarded(CLI.CB, CallerF))
       return false;
   } else if (hasCalleePopSRet(Outs, ArgLocs, Subtarget))
     // The callee pops an sret, so we cannot tail-call, as our caller doesn't

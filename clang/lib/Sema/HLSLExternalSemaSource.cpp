@@ -884,8 +884,8 @@ enum class AtomicOverloadShape {
 
 // Build a single overload of an HLSL atomic intrinsic in the hlsl namespace.
 // `dest` is an address-space-qualified reference; `original_value` (when
-// present) is a plain reference. The synthesized FunctionDecl aliases the
-// underlying clang builtin via BuiltinAliasAttr.
+// present) is an HLSL `out` parameter. The synthesized FunctionDecl aliases
+// the underlying clang builtin via BuiltinAliasAttr.
 static void buildAtomicOverload(Sema &S, NamespaceDecl *NS, StringRef FuncName,
                                 StringRef BuiltinName, QualType ElemTy,
                                 LangAS DestAS, AtomicOverloadShape Shape) {
@@ -893,7 +893,7 @@ static void buildAtomicOverload(Sema &S, NamespaceDecl *NS, StringRef FuncName,
 
   QualType DestTy =
       AST.getLValueReferenceType(AST.getAddrSpaceQualType(ElemTy, DestAS));
-  QualType OrigRefTy = AST.getLValueReferenceType(ElemTy);
+  QualType OrigRefTy = S.HLSL().getInoutParameterType(ElemTy);
 
   SmallVector<QualType, 4> ParamTypes = {DestTy, ElemTy};
   switch (Shape) {
@@ -918,11 +918,20 @@ static void buildAtomicOverload(Sema &S, NamespaceDecl *NS, StringRef FuncName,
                                           "original_value"};
   const bool IsCompare = Shape == AtomicOverloadShape::CompareStore ||
                          Shape == AtomicOverloadShape::CompareExchange;
+  const bool HasOriginalValue =
+      Shape == AtomicOverloadShape::BinaryWithOriginal ||
+      Shape == AtomicOverloadShape::CompareExchange;
   ArrayRef<const char *> ParamNames = IsCompare
                                           ? ArrayRef<const char *>(CompareNames)
                                           : ArrayRef<const char *>(BinaryNames);
 
   FunctionProtoType::ExtProtoInfo EPI;
+  SmallVector<FunctionType::ExtParameterInfo, 4> ParamExtInfos(
+      ParamTypes.size());
+  if (HasOriginalValue) {
+    ParamExtInfos.back() = ParamExtInfos.back().withABI(ParameterABI::HLSLOut);
+    EPI.ExtParameterInfos = ParamExtInfos.data();
+  }
   QualType FuncTy = AST.getFunctionType(AST.VoidTy, ParamTypes, EPI);
   auto *TSInfo = AST.getTrivialTypeSourceInfo(FuncTy, SourceLocation());
 
@@ -942,6 +951,9 @@ static void buildAtomicOverload(Sema &S, NamespaceDecl *NS, StringRef FuncName,
         AST, FD, SourceLocation(), SourceLocation(), &PII, ParamType,
         AST.getTrivialTypeSourceInfo(ParamType, SourceLocation()), SC_None,
         nullptr);
+    if (HasOriginalValue && I == ParamTypes.size() - 1)
+      Parm->addAttr(HLSLParamModifierAttr::Create(
+          AST, SourceRange(), HLSLParamModifierAttr::Keyword_out));
     Parm->setScopeInfo(0, I++);
     ParmDecls.push_back(Parm);
   }

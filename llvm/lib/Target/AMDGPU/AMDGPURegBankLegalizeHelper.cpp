@@ -269,7 +269,7 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   // Update EXEC, save the original EXEC value to SavedExec.
   B.buildInstr(LMC.AndSaveExecOpc)
       .addDef(SavedExec)
-      .addReg(CondRegLM, RegState::Kill)
+      .addReg(CondRegLM)
       .setOperandDead(3);
   MRI.setSimpleHint(SavedExec, CondRegLM);
 
@@ -1707,11 +1707,10 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
 
     B.setInstrAndDebugLoc(MI);
     if (Ty.getSizeInBits() > 32) {
-      auto UnmergeV2S16 =
-          B.buildUnmerge({SgprRB, V2S16}, Unmerge->getSourceReg());
-      for (unsigned i = 0; i < UnmergeV2S16->getNumDefs(); ++i) {
-        auto [Dst0I32, Dst1I32] =
-            unpackAExt(UnmergeV2S16->getOperand(i).getReg());
+      auto UnmergeI32 = B.buildUnmerge(SgprRB_I32, Unmerge->getSourceReg());
+      unsigned NumDefs = UnmergeI32->getNumDefs();
+      for (unsigned i = 0; i < NumDefs; ++i) {
+        auto [Dst0I32, Dst1I32] = unpackAExt(UnmergeI32.getReg(i));
         B.buildTrunc(MI.getOperand(i * 2).getReg(), Dst0I32);
         B.buildTrunc(MI.getOperand(i * 2 + 1).getReg(), Dst1I32);
       }

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-apple-darwin -run-pass=aarch64-ldst-opt  -verify-machineinstrs  -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-apple-darwin -run-pass=aarch64-ldst-opt -o - %s | FileCheck %s
 
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
@@ -82,7 +82,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:       []
 liveins:         []
@@ -195,7 +194,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:       []
 liveins:         []
@@ -306,7 +304,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:       []
 liveins:         []

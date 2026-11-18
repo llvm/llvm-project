@@ -11,10 +11,10 @@
 
 #include <algorithm>
 
-#include "Plugins/Process/Utility/RegisterContextDarwin_arm.h"
-#include "Plugins/Process/Utility/RegisterContextDarwin_arm64.h"
-#include "Plugins/Process/Utility/RegisterContextDarwin_riscv32.h"
-#include "Plugins/Process/Utility/RegisterContextDarwin_x86_64.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_arm.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_arm64.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_riscv32.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_x86_64.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -48,6 +48,8 @@
 #include "lldb/Host/SafeMachO.h"
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Compression.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -2926,7 +2928,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                             const char *so_path = sym[sym_idx - 1]
                                                       .GetMangled()
                                                       .GetDemangledName()
-                                                      .AsCString();
+                                                      .AsCString(nullptr);
                             if (so_path && so_path[0]) {
                               std::string full_so_path(so_path);
                               const size_t double_slash_pos =
@@ -3268,7 +3270,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                               } else {
                                 type = eSymbolTypeData;
                               }
-                            } else if (symbol_sect_name.starts_with("__IMPORT")) 
+                            } else if (symbol_sect_name.starts_with(
+                                           "__IMPORT")) {
                               type = eSymbolTypeTrampoline;
                             } else if (symbol_section->IsDescendant(
                                            objc_section_sp.get())) {
@@ -5385,6 +5388,54 @@ bool ObjectFileMachO::GetCorefileThreadExtraInfos(
   return false;
 }
 
+/// Return the payload of an LC_NOTE, decompressing it if needed.
+///
+/// A payload is either stored as is, or compressed in the layout of a GNU
+/// .zdebug section:
+///
+///   offset  size  contents
+///        0     4  magic "ZLIB"
+///        4     8  uncompressed size, big-endian uint64_t
+///       12     n  RFC 1950 zlib stream
+///
+/// The size is big-endian regardless of the corefile's byte order. An
+/// uncompressed payload must not start with the magic.
+static llvm::Expected<std::string> ReadLCNotePayload(const DataExtractor &data,
+                                                     lldb::offset_t offset,
+                                                     uint64_t size) {
+  const uint8_t *bytes = data.PeekData(offset, size);
+  if (!bytes)
+    return llvm::createStringError(
+        "payload of %" PRIu64 " bytes is out of bounds", size);
+  llvm::ArrayRef<uint8_t> payload(bytes, size);
+
+  constexpr llvm::StringLiteral magic = "ZLIB";
+  constexpr size_t header_size = magic.size() + sizeof(uint64_t);
+  if (!llvm::toStringRef(payload).starts_with(magic))
+    return llvm::toStringRef(payload).str();
+  if (payload.size() < header_size)
+    return llvm::createStringError("compressed payload header is truncated");
+
+  uint64_t uncompressed_size =
+      llvm::support::endian::read64be(payload.data() + magic.size());
+  llvm::ArrayRef<uint8_t> compressed = payload.drop_front(header_size);
+  // Deflate cannot exceed a 1032:1 ratio. A larger claimed size is corrupt and
+  // must not size the allocation.
+  if (uncompressed_size / 1032 > compressed.size())
+    return llvm::createStringError("uncompressed size %" PRIu64
+                                   " is impossible for %zu compressed bytes",
+                                   uncompressed_size, compressed.size());
+  if (!llvm::compression::zlib::isAvailable())
+    return llvm::createStringError(
+        "payload is zlib-compressed but LLDB was built without zlib");
+
+  llvm::SmallVector<uint8_t, 0> uncompressed;
+  if (llvm::Error err = llvm::compression::zlib::decompress(
+          compressed, uncompressed, uncompressed_size))
+    return err;
+  return llvm::toStringRef(uncompressed).str();
+}
+
 StructuredData::ObjectSP ObjectFileMachO::GetCorefileProcessMetadata() {
   ModuleSP module_sp(GetModule());
   if (!module_sp)
@@ -5401,18 +5452,16 @@ StructuredData::ObjectSP ObjectFileMachO::GetCorefileProcessMetadata() {
         log,
         "Multiple 'process metadata' LC_NOTEs found, only using the first.");
 
-  auto [payload_offset, strsize] = lc_notes[0];
-  std::string buf(strsize, '\0');
-  if (m_data_nsp->CopyData(payload_offset, strsize, buf.data()) != strsize) {
-    LLDB_LOGF(log,
-              "Unable to read %" PRIu64
-              " bytes of 'process metadata' LC_NOTE JSON contents",
-              strsize);
+  auto [payload_offset, payload_size] = lc_notes[0];
+  llvm::Expected<std::string> json =
+      ReadLCNotePayload(*m_data_nsp, payload_offset, payload_size);
+  if (!json) {
+    LLDB_LOG_ERROR(log, json.takeError(),
+                   "Unable to read 'process metadata' LC_NOTE: {0}");
     return {};
   }
-  while (buf.back() == '\0')
-    buf.resize(buf.size() - 1);
-  StructuredData::ObjectSP object_sp = StructuredData::ParseJSON(buf);
+  StructuredData::ObjectSP object_sp =
+      StructuredData::ParseJSON(llvm::StringRef(*json).rtrim('\0'));
   if (!object_sp) {
     LLDB_LOGF(log, "Unable to read 'process metadata' LC_NOTE, did not "
                    "parse as valid JSON.");

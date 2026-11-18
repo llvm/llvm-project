@@ -4,6 +4,7 @@
 # installed. Don't add them here to "complete" the list. An installed header
 # must not include an internal one, or the installed tree won't compile.
 set(ORC_RT_HEADERS
+    orc-rt-c/bedrock/ControllerHandlerTag.h
     orc-rt-c/bedrock/Session.h
     orc-rt-c/support/Compiler.h
     orc-rt-c/support/CoreTypes.h
@@ -13,8 +14,6 @@ set(ORC_RT_HEADERS
     orc-rt-c/support/RTTI.h
     orc-rt-c/support/WrapperFunction.h
     orc-rt/bedrock/BootstrapInfo.h
-    orc-rt/bedrock/ConnectionSpec.h
-    orc-rt/bedrock/ConnectorRegistry.h
     orc-rt/bedrock/ExecutorProcessInfo.h
     orc-rt/bedrock/InProcessControllerAccess.h
     orc-rt/bedrock/NativeDylibManager.h
@@ -23,19 +22,24 @@ set(ORC_RT_HEADERS
     orc-rt/bedrock/Session.h
     orc-rt/bedrock/SimpleNativeMemoryMap.h
     orc-rt/bedrock/SimpleSymbolTable.h
-    orc-rt/bedrock/SocketConnector.h
-    orc-rt/bedrock/SocketHandle.h
     orc-rt/bedrock/TaskGroup.h
     orc-rt/bedrock/ThreadPoolRunner.h
-    orc-rt/bedrock/VettedPeer.h
     orc-rt/bedrock/sps/AllSPSCI.h
     orc-rt/bedrock/sps/CallSPSCI.h
     orc-rt/bedrock/sps/GDBJITRegistrarSPSCI.h
+    orc-rt/bedrock/sps/LookupInJITDylibSPS.h
     orc-rt/bedrock/sps/MemoryAccessSPSCI.h
     orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h
     orc-rt/bedrock/sps/SimpleNativeMemoryMapSPSCI.h
-    orc-rt/bedrock/sps/SimpleRemoteCA.h
-    orc-rt/bedrock/sps/SimpleRemoteCAOverSocket.h
+    orc-rt/connect-socket/SocketConnector.h
+    orc-rt/connect-socket/SocketHandle.h
+    orc-rt/connect-socket/sps/SimpleRemoteCAOverSocket.h
+    orc-rt/connect-tcp/TCP.h
+    orc-rt/connect-tcp/TCPConnector.h
+    orc-rt/connect/ConnectionSpec.h
+    orc-rt/connect/ConnectorRegistry.h
+    orc-rt/connect/VettedPeer.h
+    orc-rt/connect/sps/SimpleRemoteCA.h
     orc-rt/support/AllocAction.h
     orc-rt/support/BitmaskEnum.h
     orc-rt/support/CCallback.h
@@ -45,6 +49,7 @@ set(ORC_RT_HEADERS
     orc-rt/support/ExecutorAddress.h
     orc-rt/support/IntervalMap.h
     orc-rt/support/IntervalSet.h
+    orc-rt/support/JITDylibLookupFlags.h
     orc-rt/support/LockedAccess.h
     orc-rt/support/MacroUtils.h
     orc-rt/support/Mangling.h
@@ -52,6 +57,8 @@ set(ORC_RT_HEADERS
     orc-rt/support/Proxy.h
     orc-rt/support/RTTI.h
     orc-rt/support/StringPool.h
+    orc-rt/support/SymbolLookupFlags.h
+    orc-rt/support/SymbolLookupSet.h
     orc-rt/support/WrapperFunction.h
     orc-rt/support/bind.h
     orc-rt/support/bit.h
@@ -60,7 +67,9 @@ set(ORC_RT_HEADERS
     orc-rt/support/scope_exit.h
     orc-rt/support/span.h
     orc-rt/support/sps/SPSAllocAction.h
+    orc-rt/support/sps/SPSJITDylibLookupFlags.h
     orc-rt/support/sps/SPSMemoryFlags.h
+    orc-rt/support/sps/SPSSymbolLookupSet.h
     orc-rt/support/sps/SPSWrapperFunction.h
     orc-rt/support/sps/SPSWrapperFunctionBuffer.h
     orc-rt/support/sps/SimplePackedSerialization.h

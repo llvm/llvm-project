@@ -624,6 +624,10 @@ following requirements:
 The attribute shall be present on the first declaration of a function and
 may optionally be present on subsequent declarations.
 
+SYCL prohibits calls to a variadic function in device functions. Since there is
+little reason to emit a function that cannot be called, the attribute is ignored,
+with a warning, when applied to a variadic function.
+
 When compiling for a SYCL device target that does not support the generic
 address space, the function shall not specify a raw pointer or reference type
 as the return type or as a parameter type.
@@ -638,6 +642,8 @@ The following examples demonstrate the use of this attribute:
 [[clang::sycl_external]] extern void Baz(); // Ok.
 
 [[clang::sycl_external]] static void Quux() { /* ... */ } // error:  Quux() has internal linkage.
+
+[[clang::sycl_external]] void Corge(int, ...); // warning: attribute ignored;  Corge() is variadic.
 ```
 
   }];
@@ -7017,13 +7023,11 @@ rarely executed, whereas `preserve_most` function calls are intended to be
 on the hot path and definitely executed a lot. Furthermore `preserve_most`
 doesn't prevent the inliner from inlining the function call.
 
-This calling convention will be used by a future version of the Objective-C
-runtime and should therefore still be considered experimental at this time.
-Although this convention was created to optimize certain runtime calls to
-the Objective-C runtime, it is not limited to this runtime and might be used
-by other runtimes in the future too. The current implementation only
-supports X86-64 and AArch64, but the intention is to support more architectures
-in the future.
+This convention was created to optimize certain runtime calls to the
+Objective-C runtime, but it is not limited to that runtime; it is also used by
+other runtimes and libraries, such as the Swift runtime and the Linux kernel.
+The current implementation only supports X86-64 and AArch64, but the intention
+is to support more architectures in the future.
   }];
 }
 
@@ -8327,6 +8331,7 @@ zx_status_t zx_handle_close(zx_handle_t handle [[clang::release_handle("tag")]])
 
 def UnsafeBufferUsageDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "unsafe_buffer_usage";
   let Content = [{
 The attribute `[[clang::unsafe_buffer_usage]]` should be placed on functions
 that need to be avoided as they are prone to buffer overflows or unsafe buffer
@@ -8427,6 +8432,44 @@ alternatives, though the attribute can be used even when the fix can't be automa
 
   Here, every read/write to the fields `ptr1`, `ptr2`, `buf` and `sz` will trigger a warning
   that the field has been explicitly marked as unsafe due to unsafe-buffer operations.
+
+- Attribute attached to container constructors and factory functions: The
+  spellings `[[clang::unsafe_buffer_usage_in_container]]` and
+  `[[clang::unsafe_buffer_usage("container")]]` are equivalent and can be
+  placed on two-parameter constructors and factory functions of container or
+  view types (such as custom span types taking a `(pointer, size)` or
+  `(begin, end)` pair) to opt them in to `-Wunsafe-buffer-usage-in-container`.
+
+  Unlike the general `[[clang::unsafe_buffer_usage]]` attribute, which warns on
+  every call, this form suppresses the warning when the argument pair is
+  provably safe -- for example, when constructing from `c.data(), c.size()` or
+  `c.begin(), c.end()` on the same container object `c`, a constant-sized array
+  with a matching bound, `&var, 1`, or a `0` size:
+
+  ```c++
+  template <typename T>
+  class CustomSpan {
+  public:
+    [[clang::unsafe_buffer_usage_in_container]]
+    CustomSpan(T *ptr, size_t size);
+
+    template <typename It>
+    [[clang::unsafe_buffer_usage("container")]]
+    CustomSpan(It first, It last);
+  };
+
+  template <typename T>
+  [[clang::unsafe_buffer_usage("container")]]
+  CustomSpan<T> MakeCustomSpan(T *ptr, size_t size);
+
+  void example(int *p, size_t n, MyVector<int> &v) {
+    CustomSpan<int> s1(p, n);                     // warning: decoupled pointer and size
+    auto s2 = MakeCustomSpan(p, n);               // warning: decoupled pointer and size
+    CustomSpan<int> s3(v.data(), v.size());       // no warning
+    CustomSpan<int> s4(v.begin(), v.end());       // no warning
+    auto s5 = MakeCustomSpan(v.data(), v.size()); // no warning
+  }
+  ```
 
   }];
 }
@@ -9372,6 +9415,39 @@ The full documentation is available here: <https://learn.microsoft.com/en-us/win
   }];
 }
 
+def HLSLInterpolationModifierDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "HLSL Interpolation Modifiers";
+  let Content = [{
+The HLSL keywords `nointerpolation`, `linear`, `centroid`,
+`noperspective`, `sample`, and `center` control interpolation of pixel
+shader inputs and vertex shader outputs.
+
+When applied to an aggregate type, the modifier propagates recursively to every
+scalar or vector of the type. A modifier on an inner field overrides one
+inherited from an enclosing declaration.
+
+`nointerpolation` cannot be combined with another interpolation modifier.
+For pixel shader inputs and vertex shader outputs, it cannot be used on
+`SV_Position`. Integer, boolean, and 64-bit floating-point components only
+support `nointerpolation`.
+
+Unqualified pixel shader inputs and vertex shader outputs default to `linear`
+for floating-point components of at most 32 bits and `nointerpolation` otherwise.
+In DirectX signatures, `SV_Position` uses the corresponding `noperspective` mode.
+Vertex shader inputs, pixel shader outputs, and signatures in other shader
+stages have no interpolation mode so their interpolation modifiers are ignored.
+
+For SPIR-V targets, `nointerpolation`, `noperspective`, `centroid`, and `sample`
+emit `Flat`, `NoPerspective`, `Centroid`, and `Sample` decorations, respectively.
+`linear` and `center` use the SPIR-V defaults and require no decoration.
+Sample-qualified interfaces also require the `SampleRateShading` capability.
+For `SV_Barycentrics` inputs, `noperspective` selects the `BaryCoordNoPerspKHR`
+built-in instead of adding a `NoPerspective` decoration; `centroid` and `sample`
+still decorate the selected built-in.
+  }];
+}
+
 def HLSLParamQualifierDocs : Documentation {
   let Category = DocCatVariable;
   let Heading = "HLSL Parameter Modifiers";
@@ -9676,6 +9752,26 @@ fields. This parameter has no effect when used outside of an entrypoint
 parameter/parameter field/return value.
 
 This attribute maps to the `Location` SPIR-V decoration.
+  }];
+}
+
+def HLSLVkBuiltInDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Some Vulkan built-in variables have no equivalent in native HLSL, so no
+system-value semantic can express them. The `[[vk::builtin]]` attribute marks a
+stage input/output variable as a SPIR-V built-in variable, identified by name.
+Allowed on function parameters, function returns, and struct fields. This
+attribute has no effect when used outside of an entrypoint parameter/parameter
+field/return value.
+
+The attribute is only available when targeting SPIR-V. For any other target it
+is ignored with an "unknown attribute ignored" warning.
+
+The attribute takes a single string literal argument naming the built-in.
+No built-in names are supported yet: every name is currently rejected with an
+error. Supported built-in names are added incrementally, each landing together
+with its own type/stage validation and CodeGen support.
   }];
 }
 

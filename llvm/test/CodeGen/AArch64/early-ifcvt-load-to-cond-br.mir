@@ -5,7 +5,6 @@
 ---
 name:            arg_to_cond_branch
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-COMMON-LABEL: name: arg_to_cond_branch
   ; CHECK-COMMON: bb.0:
@@ -55,7 +54,6 @@ body:             |
 ---
 name:            load_from_constant_pool_to_cond_branch
 alignment:       4
-tracksRegLiveness: true
 constants:
   - id:          0
     value:       i32 100
@@ -112,7 +110,6 @@ body:             |
 ---
 name:            load_from_constant_pool_to_cond_branch_with_cbz
 alignment:       4
-tracksRegLiveness: true
 constants:
   - id:          0
     value:       i32 100
@@ -165,7 +162,6 @@ body:             |
 ---
 name:            load_to_cond_branch
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-DEFAULT-LABEL: name: load_to_cond_branch
   ; CHECK-DEFAULT: bb.0:
@@ -231,7 +227,6 @@ body:             |
 ---
 name:            cbz_arg_to_cond_branch
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-COMMON-LABEL: name: cbz_arg_to_cond_branch
   ; CHECK-COMMON: bb.0:
@@ -278,7 +273,6 @@ body:             |
 ---
 name:            cbz_load_to_cond_branch
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-DEFAULT-LABEL: name: cbz_load_to_cond_branch
   ; CHECK-DEFAULT: bb.0:
@@ -343,7 +337,6 @@ body:             |
 ---
 name:            tbz_arg_to_cond_branch
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-COMMON-LABEL: name: tbz_arg_to_cond_branch
   ; CHECK-COMMON: bb.0:
@@ -390,7 +383,6 @@ body:             |
 ---
 name:            tbz_load_to_cond_branch
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-DEFAULT-LABEL: name: tbz_load_to_cond_branch
   ; CHECK-DEFAULT: bb.0:
@@ -454,7 +446,6 @@ body:             |
 ---
 name:            mixed_cp_and_mem_load_to_cond_branch
 alignment:       4
-tracksRegLiveness: true
 constants:
   - id:          0
     value:       i32 100
@@ -530,7 +521,6 @@ body:             |
 ---
 name:            hot_branch_load_to_cond_branch
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-COMMON-LABEL: name: hot_branch_load_to_cond_branch
   ; CHECK-COMMON: bb.0:
@@ -581,7 +571,6 @@ body:             |
 ---
 name:            invariant_load_to_cond_branch
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-COMMON-LABEL: name: invariant_load_to_cond_branch
   ; CHECK-COMMON: bb.0:
@@ -632,7 +621,6 @@ body:             |
 ---
 name:            load_outside_loop_branch_inside
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-COMMON-LABEL: name: load_outside_loop_branch_inside
   ; CHECK-COMMON: bb.0:
@@ -705,7 +693,6 @@ body:             |
 ---
 name:            load_inside_loop_branch_inside
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-DEFAULT-LABEL: name: load_inside_loop_branch_inside
   ; CHECK-DEFAULT: bb.0:
@@ -803,7 +790,6 @@ body:             |
 ---
 name:            load_branch_separate_bbs_in_loop
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-DEFAULT-LABEL: name: load_branch_separate_bbs_in_loop
   ; CHECK-DEFAULT: bb.0:
@@ -913,7 +899,6 @@ body:             |
 ---
 name:            call_between_load_and_branch
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-COMMON-LABEL: name: call_between_load_and_branch
   ; CHECK-COMMON: bb.0:
@@ -966,7 +951,6 @@ body:             |
 ---
 name:            load_cond_and_branch_pred_bb
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-DEFAULT-LABEL: name: load_cond_and_branch_pred_bb
   ; CHECK-DEFAULT: bb.0:
@@ -1046,7 +1030,6 @@ body:             |
 ---
 name:            load_cond_and_branch_pred_bb_with_call
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-COMMON-LABEL: name: load_cond_and_branch_pred_bb_with_call
   ; CHECK-COMMON: bb.0:
@@ -1109,7 +1092,6 @@ body:             |
 ---
 name:            load_in_pred_call_in_head
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-COMMON-LABEL: name: load_in_pred_call_in_head
   ; CHECK-COMMON: bb.0:
@@ -1172,7 +1154,6 @@ body:             |
 ---
 name:            load_in_loop_not_immediate_pred
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-DEFAULT-LABEL: name: load_in_loop_not_immediate_pred
   ; CHECK-DEFAULT: bb.0:
@@ -1285,7 +1266,6 @@ body:             |
 ---
 name:            load_in_loop_call_in_intermediate_block
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-COMMON-LABEL: name: load_in_loop_call_in_intermediate_block
   ; CHECK-COMMON: bb.0:
@@ -1378,7 +1358,6 @@ body:             |
 ---
 name:            load_to_cond_in_backedge
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64sp }
   - { id: 1, class: gpr32 }
@@ -1447,7 +1426,6 @@ body:             |
 ---
 name:            load_in_pred_call_in_empty_intermediate_block
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-COMMON-LABEL: name: load_in_pred_call_in_empty_intermediate_block
   ; CHECK-COMMON: bb.0:
@@ -1534,7 +1512,6 @@ body:             |
 ---
 name:            load_in_pred_diamond_call_in_one_arm
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-COMMON-LABEL: name: load_in_pred_diamond_call_in_one_arm
   ; CHECK-COMMON: bb.0:
@@ -1631,7 +1608,6 @@ body:             |
 ---
 name:            load_in_pred_call_on_unreachable_path
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-DEFAULT-LABEL: name: load_in_pred_call_on_unreachable_path
   ; CHECK-DEFAULT: bb.0:
@@ -1750,7 +1726,6 @@ body:             |
 ---
 name:            call_in_block_with_early_exit_before_condition
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-COMMON-LABEL: name: call_in_block_with_early_exit_before_condition
   ; CHECK-COMMON: bb.0:
@@ -1835,7 +1810,6 @@ body:             |
 ---
 name:            call_in_block_before_load
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-DEFAULT-LABEL: name: call_in_block_before_load
   ; CHECK-DEFAULT: bb.0:
@@ -1927,7 +1901,6 @@ body:             |
 ---
 name:            load_in_pred_call_in_block_behind_load
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-DEFAULT-LABEL: name: load_in_pred_call_in_block_behind_load
   ; CHECK-DEFAULT: bb.0:
@@ -2064,7 +2037,6 @@ body:             |
 ---
 name:            load_in_pred_call_in_chained_diamond_arm
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-COMMON-LABEL: name: load_in_pred_call_in_chained_diamond_arm
   ; CHECK-COMMON: bb.0:
@@ -2195,7 +2167,6 @@ body:             |
 ---
 name:            call_between_load_and_cbz
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-COMMON-LABEL: name: call_between_load_and_cbz
   ; CHECK-COMMON: bb.0:
@@ -2246,7 +2217,6 @@ body:             |
 ---
 name:            cbz_cond_def_in_pred_call_in_head
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-COMMON-LABEL: name: cbz_cond_def_in_pred_call_in_head
   ; CHECK-COMMON: bb.0:
@@ -2307,7 +2277,6 @@ body:             |
 ---
 name:            call_before_load_carried_by_phi
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-COMMON-LABEL: name: call_before_load_carried_by_phi
   ; CHECK-COMMON: bb.0:
@@ -2406,7 +2375,6 @@ body:             |
 ---
 name:            two_regions_share_call_block
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-COMMON-LABEL: name: two_regions_share_call_block
   ; CHECK-COMMON: bb.0:

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux -std=c++20 -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-unknown-linux -std=c++20 -emit-llvm -o - %s | FileCheck %s %}
 
 // CHECK-DAG: define {{.*}} @_ZeqRK6TargetS1_({{.*}}) [[NORMAL_ATTRS:#[0-9]+]]
 // CHECK-DAG: define {{.*}} @_ZeqRK12StrictTargetS1_({{.*}}) [[STRICT_ATTRS:#[0-9]+]]

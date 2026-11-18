@@ -109,28 +109,29 @@ define void @vld3(ptr nocapture readonly %pSrc, ptr noalias nocapture %pDst, i32
 ; CHECK-IADISABLED:       .Lfunc_begin1:
 ; CHECK-IADISABLED-NEXT:    .cfi_startproc
 ; CHECK-IADISABLED-NEXT:  // %bb.0: // %entry
+; CHECK-IADISABLED-NEXT:    adrp x8, .LCPI1_0
+; CHECK-IADISABLED-NEXT:    adrp x9, .LCPI1_1
+; CHECK-IADISABLED-NEXT:    adrp x10, .LCPI1_2
+; CHECK-IADISABLED-NEXT:    ldr q0, [x8, :lo12:.LCPI1_0]
+; CHECK-IADISABLED-NEXT:    ldr q1, [x9, :lo12:.LCPI1_1]
+; CHECK-IADISABLED-NEXT:    ldr q2, [x10, :lo12:.LCPI1_2]
 ; CHECK-IADISABLED-NEXT:    mov x8, xzr
 ; CHECK-IADISABLED-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-IADISABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IADISABLED-NEXT:    ldp q0, q1, [x0]
-; CHECK-IADISABLED-NEXT:    ldr q4, [x0, #32]
-; CHECK-IADISABLED-NEXT:    add x0, x0, #48
-; CHECK-IADISABLED-NEXT:    fmul v4.4s, v4.4s, v4.4s
-; CHECK-IADISABLED-NEXT:    fmul v0.4s, v0.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    fmul v1.4s, v1.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    mov v2.16b, v0.16b
-; CHECK-IADISABLED-NEXT:    rev64 v3.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    mov v2.s[1], v0.s[3]
-; CHECK-IADISABLED-NEXT:    mov v3.s[0], v0.s[1]
-; CHECK-IADISABLED-NEXT:    mov v2.s[2], v1.s[2]
-; CHECK-IADISABLED-NEXT:    mov v1.s[0], v0.s[2]
-; CHECK-IADISABLED-NEXT:    mov v3.s[3], v4.s[2]
-; CHECK-IADISABLED-NEXT:    mov v2.s[3], v4.s[1]
-; CHECK-IADISABLED-NEXT:    mov v1.s[2], v4.s[0]
-; CHECK-IADISABLED-NEXT:    fadd v0.4s, v3.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    mov v1.s[3], v4.s[3]
-; CHECK-IADISABLED-NEXT:    fadd v0.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    str q0, [x1, x8]
+; CHECK-IADISABLED-NEXT:    ldp q4, q3, [x0, #16]
+; CHECK-IADISABLED-NEXT:    ldr q5, [x0], #48
+; CHECK-IADISABLED-NEXT:    fmul v18.4s, v3.4s, v3.4s
+; CHECK-IADISABLED-NEXT:    fmul v17.4s, v4.4s, v4.4s
+; CHECK-IADISABLED-NEXT:    fmul v16.4s, v5.4s, v5.4s
+; CHECK-IADISABLED-NEXT:    tbl v3.16b, { v16.16b, v17.16b }, v0.16b
+; CHECK-IADISABLED-NEXT:    tbl v4.16b, { v16.16b, v17.16b }, v1.16b
+; CHECK-IADISABLED-NEXT:    mov v3.s[3], v18.s[1]
+; CHECK-IADISABLED-NEXT:    mov v4.s[3], v18.s[2]
+; CHECK-IADISABLED-NEXT:    mov v17.s[0], v16.s[2]
+; CHECK-IADISABLED-NEXT:    fadd v3.4s, v4.4s, v3.4s
+; CHECK-IADISABLED-NEXT:    tbl v4.16b, { v17.16b, v18.16b }, v2.16b
+; CHECK-IADISABLED-NEXT:    fadd v3.4s, v3.4s, v4.4s
+; CHECK-IADISABLED-NEXT:    str q3, [x1, x8]
 ; CHECK-IADISABLED-NEXT:    add x8, x8, #16
 ; CHECK-IADISABLED-NEXT:    cmp x8, #1, lsl #12 // =4096
 ; CHECK-IADISABLED-NEXT:    b.ne .LBB1_1
@@ -221,37 +222,39 @@ define void @vld4(ptr nocapture readonly %pSrc, ptr noalias nocapture %pDst, i32
 ; CHECK-IADISABLED:       .Lfunc_begin2:
 ; CHECK-IADISABLED-NEXT:    .cfi_startproc
 ; CHECK-IADISABLED-NEXT:  // %bb.0: // %entry
+; CHECK-IADISABLED-NEXT:    adrp x8, .LCPI2_0
+; CHECK-IADISABLED-NEXT:    adrp x9, .LCPI2_1
+; CHECK-IADISABLED-NEXT:    ldr q0, [x8, :lo12:.LCPI2_0]
+; CHECK-IADISABLED-NEXT:    ldr q1, [x9, :lo12:.LCPI2_1]
 ; CHECK-IADISABLED-NEXT:    mov x8, xzr
 ; CHECK-IADISABLED-NEXT:  .LBB2_1: // %vector.body
 ; CHECK-IADISABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IADISABLED-NEXT:    ldp q0, q1, [x0]
+; CHECK-IADISABLED-NEXT:    ldp q5, q2, [x0, #32]
 ; CHECK-IADISABLED-NEXT:    add x9, x1, x8
-; CHECK-IADISABLED-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-IADISABLED-NEXT:    ldp q4, q3, [x0], #64
 ; CHECK-IADISABLED-NEXT:    add x8, x8, #32
+; CHECK-IADISABLED-NEXT:    fmul v7.4s, v2.4s, v2.4s
 ; CHECK-IADISABLED-NEXT:    cmp x8, #2, lsl #12 // =8192
-; CHECK-IADISABLED-NEXT:    add x0, x0, #64
-; CHECK-IADISABLED-NEXT:    fmul v1.4s, v1.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    fmul v0.4s, v0.4s, v0.4s
 ; CHECK-IADISABLED-NEXT:    fmul v3.4s, v3.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    fmul v2.4s, v2.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v4.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    zip1 v6.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    trn2 v7.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    zip1 v5.4s, v2.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    zip2 v1.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v0.4s, v4.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    trn1 v4.4s, v2.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    zip2 v3.4s, v2.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    ext v2.16b, v2.16b, v5.16b, #8
-; CHECK-IADISABLED-NEXT:    mov v7.d[1], v5.d[1]
-; CHECK-IADISABLED-NEXT:    mov v1.d[1], v4.d[1]
-; CHECK-IADISABLED-NEXT:    mov v0.d[1], v3.d[1]
-; CHECK-IADISABLED-NEXT:    mov v6.d[1], v2.d[1]
-; CHECK-IADISABLED-NEXT:    fadd v0.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    fadd v2.4s, v7.4s, v6.4s
-; CHECK-IADISABLED-NEXT:    zip2 v1.4s, v2.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    zip1 v0.4s, v2.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    stp q0, q1, [x9]
+; CHECK-IADISABLED-NEXT:    fmul v6.4s, v5.4s, v5.4s
+; CHECK-IADISABLED-NEXT:    fmul v2.4s, v4.4s, v4.4s
+; CHECK-IADISABLED-NEXT:    tbl v5.16b, { v6.16b, v7.16b }, v0.16b
+; CHECK-IADISABLED-NEXT:    zip1 v16.4s, v6.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    trn1 v18.4s, v6.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    zip1 v4.4s, v2.4s, v3.4s
+; CHECK-IADISABLED-NEXT:    trn2 v17.4s, v2.4s, v3.4s
+; CHECK-IADISABLED-NEXT:    zip2 v6.4s, v6.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    zip2 v7.4s, v2.4s, v3.4s
+; CHECK-IADISABLED-NEXT:    tbl v2.16b, { v2.16b, v3.16b }, v1.16b
+; CHECK-IADISABLED-NEXT:    mov v4.d[1], v5.d[1]
+; CHECK-IADISABLED-NEXT:    mov v17.d[1], v16.d[1]
+; CHECK-IADISABLED-NEXT:    mov v7.d[1], v18.d[1]
+; CHECK-IADISABLED-NEXT:    mov v2.d[1], v6.d[1]
+; CHECK-IADISABLED-NEXT:    fadd v3.4s, v17.4s, v4.4s
+; CHECK-IADISABLED-NEXT:    fadd v2.4s, v2.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    zip2 v4.4s, v3.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    zip1 v2.4s, v3.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    stp q2, q4, [x9]
 ; CHECK-IADISABLED-NEXT:    b.ne .LBB2_1
 ; CHECK-IADISABLED-NEXT:  // %bb.2: // %while.end
 ; CHECK-IADISABLED-NEXT:    ret
@@ -290,10 +293,8 @@ define void @vld4(ptr nocapture readonly %pSrc, ptr noalias nocapture %pDst, i32
 ; CHECK-GI-NEXT:    mov v4.s[3], v1.s[2]
 ; CHECK-GI-NEXT:    mov v0.s[3], v1.s[3]
 ; CHECK-GI-NEXT:    fadd v1.4s, v3.4s, v2.4s
-; CHECK-GI-NEXT:    fadd v0.4s, v0.4s, v4.4s
-; CHECK-GI-NEXT:    zip1 v2.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    zip2 v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    stp q2, q0, [x9]
+; CHECK-GI-NEXT:    fadd v2.4s, v0.4s, v4.4s
+; CHECK-GI-NEXT:    st2 { v1.4s, v2.4s }, [x9]
 ; CHECK-GI-NEXT:    b.ne .LBB2_1
 ; CHECK-GI-NEXT:  // %bb.2: // %while.end
 ; CHECK-GI-NEXT:    ret
@@ -513,28 +514,29 @@ define void @vld3_multiuse(ptr nocapture readonly %pSrc, ptr noalias nocapture %
 ; CHECK-IADISABLED:       .Lfunc_begin5:
 ; CHECK-IADISABLED-NEXT:    .cfi_startproc
 ; CHECK-IADISABLED-NEXT:  // %bb.0: // %entry
+; CHECK-IADISABLED-NEXT:    adrp x8, .LCPI5_0
+; CHECK-IADISABLED-NEXT:    adrp x9, .LCPI5_1
+; CHECK-IADISABLED-NEXT:    adrp x10, .LCPI5_2
+; CHECK-IADISABLED-NEXT:    ldr q0, [x8, :lo12:.LCPI5_0]
+; CHECK-IADISABLED-NEXT:    ldr q1, [x9, :lo12:.LCPI5_1]
+; CHECK-IADISABLED-NEXT:    ldr q2, [x10, :lo12:.LCPI5_2]
 ; CHECK-IADISABLED-NEXT:    mov x8, xzr
 ; CHECK-IADISABLED-NEXT:  .LBB5_1: // %vector.body
 ; CHECK-IADISABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IADISABLED-NEXT:    ldp q0, q1, [x0]
-; CHECK-IADISABLED-NEXT:    ldr q4, [x0, #32]
-; CHECK-IADISABLED-NEXT:    add x0, x0, #48
-; CHECK-IADISABLED-NEXT:    fmul v4.4s, v4.4s, v4.4s
-; CHECK-IADISABLED-NEXT:    fmul v0.4s, v0.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    fmul v1.4s, v1.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    mov v2.16b, v0.16b
-; CHECK-IADISABLED-NEXT:    rev64 v3.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    mov v2.s[1], v0.s[3]
-; CHECK-IADISABLED-NEXT:    mov v3.s[0], v0.s[1]
-; CHECK-IADISABLED-NEXT:    mov v2.s[2], v1.s[2]
-; CHECK-IADISABLED-NEXT:    mov v1.s[0], v0.s[2]
-; CHECK-IADISABLED-NEXT:    mov v3.s[3], v4.s[2]
-; CHECK-IADISABLED-NEXT:    mov v2.s[3], v4.s[1]
-; CHECK-IADISABLED-NEXT:    mov v1.s[2], v4.s[0]
-; CHECK-IADISABLED-NEXT:    fadd v0.4s, v3.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    mov v1.s[3], v4.s[3]
-; CHECK-IADISABLED-NEXT:    fadd v0.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    str q0, [x1, x8]
+; CHECK-IADISABLED-NEXT:    ldp q4, q3, [x0, #16]
+; CHECK-IADISABLED-NEXT:    ldr q5, [x0], #48
+; CHECK-IADISABLED-NEXT:    fmul v18.4s, v3.4s, v3.4s
+; CHECK-IADISABLED-NEXT:    fmul v17.4s, v4.4s, v4.4s
+; CHECK-IADISABLED-NEXT:    fmul v16.4s, v5.4s, v5.4s
+; CHECK-IADISABLED-NEXT:    tbl v3.16b, { v16.16b, v17.16b }, v0.16b
+; CHECK-IADISABLED-NEXT:    tbl v4.16b, { v16.16b, v17.16b }, v1.16b
+; CHECK-IADISABLED-NEXT:    mov v3.s[3], v18.s[1]
+; CHECK-IADISABLED-NEXT:    mov v4.s[3], v18.s[2]
+; CHECK-IADISABLED-NEXT:    mov v17.s[0], v16.s[2]
+; CHECK-IADISABLED-NEXT:    fadd v3.4s, v4.4s, v3.4s
+; CHECK-IADISABLED-NEXT:    tbl v4.16b, { v17.16b, v18.16b }, v2.16b
+; CHECK-IADISABLED-NEXT:    fadd v3.4s, v3.4s, v4.4s
+; CHECK-IADISABLED-NEXT:    str q3, [x1, x8]
 ; CHECK-IADISABLED-NEXT:    add x8, x8, #16
 ; CHECK-IADISABLED-NEXT:    cmp x8, #1, lsl #12 // =4096
 ; CHECK-IADISABLED-NEXT:    b.ne .LBB5_1
@@ -623,37 +625,39 @@ define void @vld4_multiuse(ptr nocapture readonly %pSrc, ptr noalias nocapture %
 ; CHECK-IADISABLED:       .Lfunc_begin6:
 ; CHECK-IADISABLED-NEXT:    .cfi_startproc
 ; CHECK-IADISABLED-NEXT:  // %bb.0: // %entry
+; CHECK-IADISABLED-NEXT:    adrp x8, .LCPI6_0
+; CHECK-IADISABLED-NEXT:    adrp x9, .LCPI6_1
+; CHECK-IADISABLED-NEXT:    ldr q0, [x8, :lo12:.LCPI6_0]
+; CHECK-IADISABLED-NEXT:    ldr q1, [x9, :lo12:.LCPI6_1]
 ; CHECK-IADISABLED-NEXT:    mov x8, xzr
 ; CHECK-IADISABLED-NEXT:  .LBB6_1: // %vector.body
 ; CHECK-IADISABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IADISABLED-NEXT:    ldp q0, q1, [x0]
+; CHECK-IADISABLED-NEXT:    ldp q5, q2, [x0, #32]
 ; CHECK-IADISABLED-NEXT:    add x9, x1, x8
-; CHECK-IADISABLED-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-IADISABLED-NEXT:    ldp q4, q3, [x0], #64
 ; CHECK-IADISABLED-NEXT:    add x8, x8, #32
+; CHECK-IADISABLED-NEXT:    fmul v7.4s, v2.4s, v2.4s
 ; CHECK-IADISABLED-NEXT:    cmp x8, #2, lsl #12 // =8192
-; CHECK-IADISABLED-NEXT:    add x0, x0, #64
-; CHECK-IADISABLED-NEXT:    fmul v1.4s, v1.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    fmul v0.4s, v0.4s, v0.4s
 ; CHECK-IADISABLED-NEXT:    fmul v3.4s, v3.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    fmul v2.4s, v2.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v4.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    zip1 v6.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    trn2 v7.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    zip1 v5.4s, v2.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    zip2 v1.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v0.4s, v4.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    trn1 v4.4s, v2.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    zip2 v3.4s, v2.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    ext v2.16b, v2.16b, v5.16b, #8
-; CHECK-IADISABLED-NEXT:    mov v7.d[1], v5.d[1]
-; CHECK-IADISABLED-NEXT:    mov v1.d[1], v4.d[1]
-; CHECK-IADISABLED-NEXT:    mov v0.d[1], v3.d[1]
-; CHECK-IADISABLED-NEXT:    mov v6.d[1], v2.d[1]
-; CHECK-IADISABLED-NEXT:    fadd v0.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    fadd v2.4s, v7.4s, v6.4s
-; CHECK-IADISABLED-NEXT:    zip2 v1.4s, v2.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    zip1 v0.4s, v2.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    stp q0, q1, [x9]
+; CHECK-IADISABLED-NEXT:    fmul v6.4s, v5.4s, v5.4s
+; CHECK-IADISABLED-NEXT:    fmul v2.4s, v4.4s, v4.4s
+; CHECK-IADISABLED-NEXT:    tbl v5.16b, { v6.16b, v7.16b }, v0.16b
+; CHECK-IADISABLED-NEXT:    zip1 v16.4s, v6.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    trn1 v18.4s, v6.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    zip1 v4.4s, v2.4s, v3.4s
+; CHECK-IADISABLED-NEXT:    trn2 v17.4s, v2.4s, v3.4s
+; CHECK-IADISABLED-NEXT:    zip2 v6.4s, v6.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    zip2 v7.4s, v2.4s, v3.4s
+; CHECK-IADISABLED-NEXT:    tbl v2.16b, { v2.16b, v3.16b }, v1.16b
+; CHECK-IADISABLED-NEXT:    mov v4.d[1], v5.d[1]
+; CHECK-IADISABLED-NEXT:    mov v17.d[1], v16.d[1]
+; CHECK-IADISABLED-NEXT:    mov v7.d[1], v18.d[1]
+; CHECK-IADISABLED-NEXT:    mov v2.d[1], v6.d[1]
+; CHECK-IADISABLED-NEXT:    fadd v3.4s, v17.4s, v4.4s
+; CHECK-IADISABLED-NEXT:    fadd v2.4s, v2.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    zip2 v4.4s, v3.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    zip1 v2.4s, v3.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    stp q2, q4, [x9]
 ; CHECK-IADISABLED-NEXT:    b.ne .LBB6_1
 ; CHECK-IADISABLED-NEXT:  // %bb.2: // %while.end
 ; CHECK-IADISABLED-NEXT:    ret
@@ -692,10 +696,8 @@ define void @vld4_multiuse(ptr nocapture readonly %pSrc, ptr noalias nocapture %
 ; CHECK-GI-NEXT:    mov v4.s[3], v1.s[2]
 ; CHECK-GI-NEXT:    mov v0.s[3], v1.s[3]
 ; CHECK-GI-NEXT:    fadd v1.4s, v3.4s, v2.4s
-; CHECK-GI-NEXT:    fadd v0.4s, v0.4s, v4.4s
-; CHECK-GI-NEXT:    zip1 v2.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    zip2 v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    stp q2, q0, [x9]
+; CHECK-GI-NEXT:    fadd v2.4s, v0.4s, v4.4s
+; CHECK-GI-NEXT:    st2 { v1.4s, v2.4s }, [x9]
 ; CHECK-GI-NEXT:    b.ne .LBB6_1
 ; CHECK-GI-NEXT:  // %bb.2: // %while.end
 ; CHECK-GI-NEXT:    ret
@@ -866,22 +868,22 @@ define void @transpose_s16_8x8_simpler2(ptr nocapture noundef %a) {
 ; CHECK-GI-NEXT:    .cfi_startproc
 ; CHECK-GI-NEXT:  // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldp q0, q1, [x0]
-; CHECK-GI-NEXT:    adrp x8, .LCPI8_1
 ; CHECK-GI-NEXT:    ldp q2, q3, [x0, #32]
-; CHECK-GI-NEXT:    adrp x9, .LCPI8_0
-; CHECK-GI-NEXT:    ldp q4, q5, [x0, #64]
-; CHECK-GI-NEXT:    ldp q6, q7, [x0, #96]
+; CHECK-GI-NEXT:    ldp q4, q5, [x0, #96]
 ; CHECK-GI-NEXT:    trn1 v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    trn1 v2.8h, v2.8h, v3.8h
-; CHECK-GI-NEXT:    trn1 v1.8h, v4.8h, v5.8h
-; CHECK-GI-NEXT:    ldr q4, [x8, :lo12:.LCPI8_1]
-; CHECK-GI-NEXT:    ldr q5, [x9, :lo12:.LCPI8_0]
-; CHECK-GI-NEXT:    trn1 v3.8h, v6.8h, v7.8h
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v4.16b
-; CHECK-GI-NEXT:    tbl v1.16b, { v2.16b, v3.16b }, v5.16b
-; CHECK-GI-NEXT:    zip1 v2.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    zip2 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    str q2, [x0]
+; CHECK-GI-NEXT:    trn1 v1.8h, v2.8h, v3.8h
+; CHECK-GI-NEXT:    trn1 v2.8h, v4.8h, v5.8h
+; CHECK-GI-NEXT:    ldp q3, q4, [x0, #64]
+; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #12
+; CHECK-GI-NEXT:    trn1 v3.8h, v3.8h, v4.8h
+; CHECK-GI-NEXT:    ext v2.16b, v1.16b, v2.16b, #12
+; CHECK-GI-NEXT:    zip2 v0.4s, v0.4s, v3.4s
+; CHECK-GI-NEXT:    zip2 v2.4s, v1.4s, v2.4s
+; CHECK-GI-NEXT:    mov v0.s[1], v3.s[0]
+; CHECK-GI-NEXT:    mov v2.s[0], v1.s[0]
+; CHECK-GI-NEXT:    zip1 v1.4s, v0.4s, v2.4s
+; CHECK-GI-NEXT:    zip2 v0.4s, v0.4s, v2.4s
+; CHECK-GI-NEXT:    str q1, [x0]
 ; CHECK-GI-NEXT:    str q0, [x0, #64]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1263,10 +1265,8 @@ define void @store_factor2(ptr %ptr, <4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-GI-NEXT:    .cfi_startproc
 ; CHECK-GI-NEXT:  // %bb.0:
 ; CHECK-GI-NEXT:    trn1 v2.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    trn1 v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    zip1 v1.4s, v2.4s, v0.4s
-; CHECK-GI-NEXT:    zip2 v0.4s, v2.4s, v0.4s
-; CHECK-GI-NEXT:    stp q1, q0, [x0]
+; CHECK-GI-NEXT:    trn1 v3.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    st2 { v2.4s, v3.4s }, [x0]
 ; CHECK-GI-NEXT:    ret
   %v0 = shufflevector <4 x i32> %a0, <4 x i32> %a1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   %v1 = shufflevector <4 x i32> %a1, <4 x i32> %a0, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
@@ -1294,13 +1294,12 @@ define void @store_factor2_high(ptr %ptr, ptr %ptr2, <4 x i32> %a0, <4 x i32> %a
 ; CHECK-GI-NEXT:    .cfi_startproc
 ; CHECK-GI-NEXT:  // %bb.0:
 ; CHECK-GI-NEXT:    trn1 v2.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    adrp x8, .LCPI12_0
-; CHECK-GI-NEXT:    trn1 v3.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI12_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v2.16b, v3.16b }, v0.16b
-; CHECK-GI-NEXT:    zip2 v1.4s, v2.4s, v3.4s
-; CHECK-GI-NEXT:    str q0, [x0]
-; CHECK-GI-NEXT:    str q1, [x1]
+; CHECK-GI-NEXT:    trn1 v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    zip1 v1.4s, v2.4s, v0.4s
+; CHECK-GI-NEXT:    trn1 v1.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    zip2 v0.4s, v2.4s, v0.4s
+; CHECK-GI-NEXT:    str q1, [x0]
+; CHECK-GI-NEXT:    str q0, [x1]
 ; CHECK-GI-NEXT:    ret
   %v0 = shufflevector <4 x i32> %a0, <4 x i32> %a1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   %v1 = shufflevector <4 x i32> %a1, <4 x i32> %a0, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
@@ -1327,12 +1326,9 @@ define void @store_factor2_high2(ptr %ptr, ptr %ptr2, <4 x i32> %a0, <4 x i32> %
 ; CHECK-GI:       .Lfunc_begin13:
 ; CHECK-GI-NEXT:    .cfi_startproc
 ; CHECK-GI-NEXT:  // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI13_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI13_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl v2.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    zip1 v2.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    zip2 v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    trn1 v2.4s, v2.4s, v1.4s
 ; CHECK-GI-NEXT:    str q2, [x0]
 ; CHECK-GI-NEXT:    str q0, [x1]
 ; CHECK-GI-NEXT:    ret
@@ -1381,29 +1377,16 @@ define void @store_factor3(ptr %ptr, <4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2
 ; CHECK-GI:       .Lfunc_begin14:
 ; CHECK-GI-NEXT:    .cfi_startproc
 ; CHECK-GI-NEXT:  // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    adrp x8, .LCPI14_0
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    ldr q4, [x8, :lo12:.LCPI14_0]
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    tbl v5.16b, { v0.16b, v1.16b }, v4.16b
-; CHECK-GI-NEXT:    tbl v6.16b, { v1.16b, v2.16b }, v4.16b
-; CHECK-GI-NEXT:    mov v3.16b, v0.16b
-; CHECK-GI-NEXT:    tbl v0.16b, { v2.16b, v3.16b }, v4.16b
-; CHECK-GI-NEXT:    mov s1, v5.s[0]
-; CHECK-GI-NEXT:    mov s2, v6.s[1]
-; CHECK-GI-NEXT:    mov s3, v0.s[2]
-; CHECK-GI-NEXT:    mov v1.s[1], v6.s[0]
-; CHECK-GI-NEXT:    mov v2.s[1], v0.s[1]
-; CHECK-GI-NEXT:    mov v3.s[1], v5.s[3]
-; CHECK-GI-NEXT:    mov v1.s[2], v0.s[0]
-; CHECK-GI-NEXT:    mov v2.s[2], v5.s[2]
-; CHECK-GI-NEXT:    mov v3.s[2], v6.s[3]
-; CHECK-GI-NEXT:    mov v1.s[3], v5.s[1]
-; CHECK-GI-NEXT:    mov v2.s[3], v6.s[2]
-; CHECK-GI-NEXT:    mov v3.s[3], v0.s[3]
-; CHECK-GI-NEXT:    stp q1, q2, [x0]
-; CHECK-GI-NEXT:    str q3, [x0, #32]
+; CHECK-GI-NEXT:    ext v3.16b, v0.16b, v1.16b, #12
+; CHECK-GI-NEXT:    ext v6.16b, v1.16b, v2.16b, #12
+; CHECK-GI-NEXT:    zip2 v3.4s, v0.4s, v3.4s
+; CHECK-GI-NEXT:    mov v3.s[0], v0.s[0]
+; CHECK-GI-NEXT:    ext v0.16b, v2.16b, v0.16b, #12
+; CHECK-GI-NEXT:    zip2 v4.4s, v1.4s, v6.4s
+; CHECK-GI-NEXT:    mov v4.s[0], v1.s[0]
+; CHECK-GI-NEXT:    zip2 v5.4s, v2.4s, v0.4s
+; CHECK-GI-NEXT:    mov v5.s[0], v2.s[0]
+; CHECK-GI-NEXT:    st3 { v3.4s, v4.4s, v5.4s }, [x0]
 ; CHECK-GI-NEXT:    ret
   %v0 = shufflevector <4 x i32> %a0, <4 x i32> %a1, <4 x i32> <i32 0, i32 5, i32 3, i32 6>
   %v1 = shufflevector <4 x i32> %a1, <4 x i32> %a2, <4 x i32> <i32 0, i32 5, i32 3, i32 6>
@@ -1454,27 +1437,10 @@ define void @store_factor4(ptr %ptr, <4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2
 ; CHECK-GI-NEXT:    .cfi_startproc
 ; CHECK-GI-NEXT:  // %bb.0:
 ; CHECK-GI-NEXT:    trn1 v4.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    trn1 v1.4s, v1.4s, v2.4s
-; CHECK-GI-NEXT:    trn1 v2.4s, v2.4s, v3.4s
-; CHECK-GI-NEXT:    trn1 v0.4s, v3.4s, v0.4s
-; CHECK-GI-NEXT:    mov s5, v4.s[0]
-; CHECK-GI-NEXT:    mov s6, v4.s[1]
-; CHECK-GI-NEXT:    mov s7, v4.s[2]
-; CHECK-GI-NEXT:    mov s4, v4.s[3]
-; CHECK-GI-NEXT:    mov v5.s[1], v1.s[0]
-; CHECK-GI-NEXT:    mov v6.s[1], v1.s[1]
-; CHECK-GI-NEXT:    mov v7.s[1], v1.s[2]
-; CHECK-GI-NEXT:    mov v4.s[1], v1.s[3]
-; CHECK-GI-NEXT:    mov v5.s[2], v2.s[0]
-; CHECK-GI-NEXT:    mov v6.s[2], v2.s[1]
-; CHECK-GI-NEXT:    mov v7.s[2], v2.s[2]
-; CHECK-GI-NEXT:    mov v4.s[2], v2.s[3]
-; CHECK-GI-NEXT:    mov v5.s[3], v0.s[0]
-; CHECK-GI-NEXT:    mov v6.s[3], v0.s[1]
-; CHECK-GI-NEXT:    mov v7.s[3], v0.s[2]
-; CHECK-GI-NEXT:    mov v4.s[3], v0.s[3]
-; CHECK-GI-NEXT:    stp q5, q6, [x0]
-; CHECK-GI-NEXT:    stp q7, q4, [x0, #32]
+; CHECK-GI-NEXT:    trn1 v5.4s, v1.4s, v2.4s
+; CHECK-GI-NEXT:    trn1 v6.4s, v2.4s, v3.4s
+; CHECK-GI-NEXT:    trn1 v7.4s, v3.4s, v0.4s
+; CHECK-GI-NEXT:    st4 { v4.4s, v5.4s, v6.4s, v7.4s }, [x0]
 ; CHECK-GI-NEXT:    ret
   %v0 = shufflevector <4 x i32> %a0, <4 x i32> %a1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   %v1 = shufflevector <4 x i32> %a1, <4 x i32> %a2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
@@ -1526,12 +1492,10 @@ define void @vld2_intrinsic(ptr nocapture readonly %pSrc, ptr noalias nocapture 
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  .LBB17_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldp q1, q0, [x0], #32
-; CHECK-NEXT:    uzp1 v2.4s, v1.4s, v0.4s
-; CHECK-NEXT:    uzp2 v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    fmul v1.4s, v2.4s, v2.4s
-; CHECK-NEXT:    fmla v1.4s, v0.4s, v0.4s
-; CHECK-NEXT:    str q1, [x1, x8]
+; CHECK-NEXT:    ld2 { v0.4s, v1.4s }, [x0], #32
+; CHECK-NEXT:    fmul v2.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmla v2.4s, v1.4s, v1.4s
+; CHECK-NEXT:    str q2, [x1, x8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #1, lsl #12 // =4096
 ; CHECK-NEXT:    b.ne .LBB17_1
@@ -1545,11 +1509,10 @@ define void @vld2_intrinsic(ptr nocapture readonly %pSrc, ptr noalias nocapture 
 ; CHECK-GI-NEXT:    mov x8, xzr
 ; CHECK-GI-NEXT:  .LBB17_1: // %vector.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-GI-NEXT:    ldp q0, q1, [x0], #32
-; CHECK-GI-NEXT:    uzp1 v2.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    fmul v2.4s, v2.4s, v2.4s
-; CHECK-GI-NEXT:    fmla v2.4s, v0.4s, v0.4s
+; CHECK-GI-NEXT:    ld2 { v0.4s, v1.4s }, [x0]
+; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    fmul v2.4s, v0.4s, v0.4s
+; CHECK-GI-NEXT:    fmla v2.4s, v1.4s, v1.4s
 ; CHECK-GI-NEXT:    str q2, [x1, x8]
 ; CHECK-GI-NEXT:    add x8, x8, #16
 ; CHECK-GI-NEXT:    cmp x8, #1, lsl #12 // =4096
@@ -1649,47 +1612,25 @@ while.end:                                        ; preds = %vector.body
 
 
 define void @vld4_intrinsic(ptr nocapture readonly %pSrc, ptr noalias nocapture %pDst, i32 %numSamples) {
-; CHECK-IAENABLED-LABEL: vld4_intrinsic:
-; CHECK-IAENABLED:       .Lfunc_begin19:
-; CHECK-IAENABLED-NEXT:    .cfi_startproc
-; CHECK-IAENABLED-NEXT:  // %bb.0: // %entry
-; CHECK-IAENABLED-NEXT:    mov x8, xzr
-; CHECK-IAENABLED-NEXT:  .LBB19_1: // %vector.body
-; CHECK-IAENABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IAENABLED-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x0], #64
-; CHECK-IAENABLED-NEXT:    add x9, x1, x8
-; CHECK-IAENABLED-NEXT:    add x8, x8, #32
-; CHECK-IAENABLED-NEXT:    cmp x8, #2, lsl #12 // =8192
-; CHECK-IAENABLED-NEXT:    fmul v4.4s, v0.4s, v0.4s
-; CHECK-IAENABLED-NEXT:    fmla v4.4s, v1.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    fmul v5.4s, v2.4s, v2.4s
-; CHECK-IAENABLED-NEXT:    fmla v5.4s, v3.4s, v3.4s
-; CHECK-IAENABLED-NEXT:    st2 { v4.4s, v5.4s }, [x9]
-; CHECK-IAENABLED-NEXT:    b.ne .LBB19_1
-; CHECK-IAENABLED-NEXT:  // %bb.2: // %while.end
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: vld4_intrinsic:
-; CHECK-IADISABLED:       .Lfunc_begin19:
-; CHECK-IADISABLED-NEXT:    .cfi_startproc
-; CHECK-IADISABLED-NEXT:  // %bb.0: // %entry
-; CHECK-IADISABLED-NEXT:    mov x8, xzr
-; CHECK-IADISABLED-NEXT:  .LBB19_1: // %vector.body
-; CHECK-IADISABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IADISABLED-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x0], #64
-; CHECK-IADISABLED-NEXT:    add x9, x1, x8
-; CHECK-IADISABLED-NEXT:    add x8, x8, #32
-; CHECK-IADISABLED-NEXT:    cmp x8, #2, lsl #12 // =8192
-; CHECK-IADISABLED-NEXT:    fmul v4.4s, v0.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    fmul v5.4s, v2.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    fmla v4.4s, v1.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    fmla v5.4s, v3.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    zip2 v0.4s, v4.4s, v5.4s
-; CHECK-IADISABLED-NEXT:    zip1 v1.4s, v4.4s, v5.4s
-; CHECK-IADISABLED-NEXT:    stp q1, q0, [x9]
-; CHECK-IADISABLED-NEXT:    b.ne .LBB19_1
-; CHECK-IADISABLED-NEXT:  // %bb.2: // %while.end
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: vld4_intrinsic:
+; CHECK:       .Lfunc_begin19:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB19_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x0], #64
+; CHECK-NEXT:    add x9, x1, x8
+; CHECK-NEXT:    add x8, x8, #32
+; CHECK-NEXT:    cmp x8, #2, lsl #12 // =8192
+; CHECK-NEXT:    fmul v4.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmla v4.4s, v1.4s, v1.4s
+; CHECK-NEXT:    fmul v5.4s, v2.4s, v2.4s
+; CHECK-NEXT:    fmla v5.4s, v3.4s, v3.4s
+; CHECK-NEXT:    st2 { v4.4s, v5.4s }, [x9]
+; CHECK-NEXT:    b.ne .LBB19_1
+; CHECK-NEXT:  // %bb.2: // %while.end
+; CHECK-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: vld4_intrinsic:
 ; CHECK-GI:       .Lfunc_begin19:
@@ -1703,12 +1644,10 @@ define void @vld4_intrinsic(ptr nocapture readonly %pSrc, ptr noalias nocapture 
 ; CHECK-GI-NEXT:    add x8, x8, #32
 ; CHECK-GI-NEXT:    cmp x8, #2, lsl #12 // =8192
 ; CHECK-GI-NEXT:    fmul v4.4s, v0.4s, v0.4s
-; CHECK-GI-NEXT:    fmul v5.4s, v2.4s, v2.4s
 ; CHECK-GI-NEXT:    fmla v4.4s, v1.4s, v1.4s
+; CHECK-GI-NEXT:    fmul v5.4s, v2.4s, v2.4s
 ; CHECK-GI-NEXT:    fmla v5.4s, v3.4s, v3.4s
-; CHECK-GI-NEXT:    zip2 v0.4s, v4.4s, v5.4s
-; CHECK-GI-NEXT:    zip1 v1.4s, v4.4s, v5.4s
-; CHECK-GI-NEXT:    stp q1, q0, [x9]
+; CHECK-GI-NEXT:    st2 { v4.4s, v5.4s }, [x9]
 ; CHECK-GI-NEXT:    b.ne .LBB19_1
 ; CHECK-GI-NEXT:  // %bb.2: // %while.end
 ; CHECK-GI-NEXT:    ret
@@ -1758,16 +1697,12 @@ define void @twosrc_intrinsic(ptr nocapture readonly %pSrc, ptr nocapture readon
 ; CHECK-NEXT:    add x9, x0, x8
 ; CHECK-NEXT:    add x10, x1, x8
 ; CHECK-NEXT:    add x8, x8, #32
-; CHECK-NEXT:    ldp q1, q0, [x9]
+; CHECK-NEXT:    ld2 { v0.4s, v1.4s }, [x9]
 ; CHECK-NEXT:    cmp x8, #2, lsl #12 // =8192
-; CHECK-NEXT:    ldp q3, q2, [x10]
-; CHECK-NEXT:    uzp1 v4.4s, v1.4s, v0.4s
-; CHECK-NEXT:    uzp2 v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    uzp1 v5.4s, v3.4s, v2.4s
-; CHECK-NEXT:    uzp2 v1.4s, v3.4s, v2.4s
-; CHECK-NEXT:    fmul v2.4s, v5.4s, v4.4s
-; CHECK-NEXT:    fmla v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    str q2, [x2], #16
+; CHECK-NEXT:    ld2 { v2.4s, v3.4s }, [x10]
+; CHECK-NEXT:    fmul v4.4s, v2.4s, v0.4s
+; CHECK-NEXT:    fmla v4.4s, v1.4s, v3.4s
+; CHECK-NEXT:    str q4, [x2], #16
 ; CHECK-NEXT:    b.ne .LBB20_1
 ; CHECK-NEXT:  // %bb.2: // %while.end
 ; CHECK-NEXT:    ret
@@ -1782,15 +1717,11 @@ define void @twosrc_intrinsic(ptr nocapture readonly %pSrc, ptr nocapture readon
 ; CHECK-GI-NEXT:    add x9, x0, x8
 ; CHECK-GI-NEXT:    add x10, x1, x8
 ; CHECK-GI-NEXT:    add x8, x8, #32
-; CHECK-GI-NEXT:    ldp q0, q1, [x9]
+; CHECK-GI-NEXT:    ld2 { v0.4s, v1.4s }, [x9]
 ; CHECK-GI-NEXT:    cmp x8, #2, lsl #12 // =8192
-; CHECK-GI-NEXT:    ldp q2, q3, [x10]
-; CHECK-GI-NEXT:    uzp1 v4.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    uzp1 v5.4s, v2.4s, v3.4s
-; CHECK-GI-NEXT:    uzp2 v1.4s, v2.4s, v3.4s
-; CHECK-GI-NEXT:    fmul v4.4s, v5.4s, v4.4s
-; CHECK-GI-NEXT:    fmla v4.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    ld2 { v2.4s, v3.4s }, [x10]
+; CHECK-GI-NEXT:    fmul v4.4s, v2.4s, v0.4s
+; CHECK-GI-NEXT:    fmla v4.4s, v3.4s, v1.4s
 ; CHECK-GI-NEXT:    str q4, [x2], #16
 ; CHECK-GI-NEXT:    b.ne .LBB20_1
 ; CHECK-GI-NEXT:  // %bb.2: // %while.end
@@ -1829,41 +1760,22 @@ while.end:                                        ; preds = %vector.body
 
 
 define void @vld2_multiuse_intrinsic(ptr nocapture readonly %pSrc, ptr noalias nocapture %pDst, i32 %numSamples) {
-; CHECK-IAENABLED-LABEL: vld2_multiuse_intrinsic:
-; CHECK-IAENABLED:       .Lfunc_begin21:
-; CHECK-IAENABLED-NEXT:    .cfi_startproc
-; CHECK-IAENABLED-NEXT:  // %bb.0: // %entry
-; CHECK-IAENABLED-NEXT:    mov x8, xzr
-; CHECK-IAENABLED-NEXT:  .LBB21_1: // %vector.body
-; CHECK-IAENABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IAENABLED-NEXT:    ld2 { v0.4s, v1.4s }, [x0], #32
-; CHECK-IAENABLED-NEXT:    fmul v2.4s, v0.4s, v0.4s
-; CHECK-IAENABLED-NEXT:    fmla v2.4s, v1.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    str q2, [x1, x8]
-; CHECK-IAENABLED-NEXT:    add x8, x8, #16
-; CHECK-IAENABLED-NEXT:    cmp x8, #1, lsl #12 // =4096
-; CHECK-IAENABLED-NEXT:    b.ne .LBB21_1
-; CHECK-IAENABLED-NEXT:  // %bb.2: // %while.end
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: vld2_multiuse_intrinsic:
-; CHECK-IADISABLED:       .Lfunc_begin21:
-; CHECK-IADISABLED-NEXT:    .cfi_startproc
-; CHECK-IADISABLED-NEXT:  // %bb.0: // %entry
-; CHECK-IADISABLED-NEXT:    mov x8, xzr
-; CHECK-IADISABLED-NEXT:  .LBB21_1: // %vector.body
-; CHECK-IADISABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IADISABLED-NEXT:    ldp q1, q0, [x0], #32
-; CHECK-IADISABLED-NEXT:    uzp1 v2.4s, v1.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v0.4s, v1.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    fmul v1.4s, v2.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    fmla v1.4s, v0.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    str q1, [x1, x8]
-; CHECK-IADISABLED-NEXT:    add x8, x8, #16
-; CHECK-IADISABLED-NEXT:    cmp x8, #1, lsl #12 // =4096
-; CHECK-IADISABLED-NEXT:    b.ne .LBB21_1
-; CHECK-IADISABLED-NEXT:  // %bb.2: // %while.end
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: vld2_multiuse_intrinsic:
+; CHECK:       .Lfunc_begin21:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB21_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld2 { v0.4s, v1.4s }, [x0], #32
+; CHECK-NEXT:    fmul v2.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmla v2.4s, v1.4s, v1.4s
+; CHECK-NEXT:    str q2, [x1, x8]
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    cmp x8, #1, lsl #12 // =4096
+; CHECK-NEXT:    b.ne .LBB21_1
+; CHECK-NEXT:  // %bb.2: // %while.end
+; CHECK-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: vld2_multiuse_intrinsic:
 ; CHECK-GI:       .Lfunc_begin21:
@@ -1872,12 +1784,11 @@ define void @vld2_multiuse_intrinsic(ptr nocapture readonly %pSrc, ptr noalias n
 ; CHECK-GI-NEXT:    mov x8, xzr
 ; CHECK-GI-NEXT:  .LBB21_1: // %vector.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-GI-NEXT:    ldp q0, q1, [x0], #32
-; CHECK-GI-NEXT:    uzp1 v2.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    fmul v1.4s, v2.4s, v2.4s
-; CHECK-GI-NEXT:    fmla v1.4s, v0.4s, v0.4s
-; CHECK-GI-NEXT:    str q1, [x1, x8]
+; CHECK-GI-NEXT:    ld2 { v0.4s, v1.4s }, [x0]
+; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    fmul v2.4s, v0.4s, v0.4s
+; CHECK-GI-NEXT:    fmla v2.4s, v1.4s, v1.4s
+; CHECK-GI-NEXT:    str q2, [x1, x8]
 ; CHECK-GI-NEXT:    add x8, x8, #16
 ; CHECK-GI-NEXT:    cmp x8, #1, lsl #12 // =4096
 ; CHECK-GI-NEXT:    b.ne .LBB21_1
@@ -1973,47 +1884,25 @@ while.end:                                        ; preds = %vector.body
 
 
 define void @vld4_multiuse_intrinsic(ptr nocapture readonly %pSrc, ptr noalias nocapture %pDst, i32 %numSamples) {
-; CHECK-IAENABLED-LABEL: vld4_multiuse_intrinsic:
-; CHECK-IAENABLED:       .Lfunc_begin23:
-; CHECK-IAENABLED-NEXT:    .cfi_startproc
-; CHECK-IAENABLED-NEXT:  // %bb.0: // %entry
-; CHECK-IAENABLED-NEXT:    mov x8, xzr
-; CHECK-IAENABLED-NEXT:  .LBB23_1: // %vector.body
-; CHECK-IAENABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IAENABLED-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x0], #64
-; CHECK-IAENABLED-NEXT:    add x9, x1, x8
-; CHECK-IAENABLED-NEXT:    add x8, x8, #32
-; CHECK-IAENABLED-NEXT:    cmp x8, #2, lsl #12 // =8192
-; CHECK-IAENABLED-NEXT:    fmul v4.4s, v0.4s, v0.4s
-; CHECK-IAENABLED-NEXT:    fmla v4.4s, v1.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    fmul v5.4s, v2.4s, v2.4s
-; CHECK-IAENABLED-NEXT:    fmla v5.4s, v3.4s, v3.4s
-; CHECK-IAENABLED-NEXT:    st2 { v4.4s, v5.4s }, [x9]
-; CHECK-IAENABLED-NEXT:    b.ne .LBB23_1
-; CHECK-IAENABLED-NEXT:  // %bb.2: // %while.end
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: vld4_multiuse_intrinsic:
-; CHECK-IADISABLED:       .Lfunc_begin23:
-; CHECK-IADISABLED-NEXT:    .cfi_startproc
-; CHECK-IADISABLED-NEXT:  // %bb.0: // %entry
-; CHECK-IADISABLED-NEXT:    mov x8, xzr
-; CHECK-IADISABLED-NEXT:  .LBB23_1: // %vector.body
-; CHECK-IADISABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IADISABLED-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x0], #64
-; CHECK-IADISABLED-NEXT:    add x9, x1, x8
-; CHECK-IADISABLED-NEXT:    add x8, x8, #32
-; CHECK-IADISABLED-NEXT:    cmp x8, #2, lsl #12 // =8192
-; CHECK-IADISABLED-NEXT:    fmul v4.4s, v0.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    fmul v5.4s, v2.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    fmla v4.4s, v1.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    fmla v5.4s, v3.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    zip2 v0.4s, v4.4s, v5.4s
-; CHECK-IADISABLED-NEXT:    zip1 v1.4s, v4.4s, v5.4s
-; CHECK-IADISABLED-NEXT:    stp q1, q0, [x9]
-; CHECK-IADISABLED-NEXT:    b.ne .LBB23_1
-; CHECK-IADISABLED-NEXT:  // %bb.2: // %while.end
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: vld4_multiuse_intrinsic:
+; CHECK:       .Lfunc_begin23:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB23_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x0], #64
+; CHECK-NEXT:    add x9, x1, x8
+; CHECK-NEXT:    add x8, x8, #32
+; CHECK-NEXT:    cmp x8, #2, lsl #12 // =8192
+; CHECK-NEXT:    fmul v4.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmla v4.4s, v1.4s, v1.4s
+; CHECK-NEXT:    fmul v5.4s, v2.4s, v2.4s
+; CHECK-NEXT:    fmla v5.4s, v3.4s, v3.4s
+; CHECK-NEXT:    st2 { v4.4s, v5.4s }, [x9]
+; CHECK-NEXT:    b.ne .LBB23_1
+; CHECK-NEXT:  // %bb.2: // %while.end
+; CHECK-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: vld4_multiuse_intrinsic:
 ; CHECK-GI:       .Lfunc_begin23:
@@ -2027,12 +1916,10 @@ define void @vld4_multiuse_intrinsic(ptr nocapture readonly %pSrc, ptr noalias n
 ; CHECK-GI-NEXT:    add x8, x8, #32
 ; CHECK-GI-NEXT:    cmp x8, #2, lsl #12 // =8192
 ; CHECK-GI-NEXT:    fmul v4.4s, v0.4s, v0.4s
-; CHECK-GI-NEXT:    fmul v5.4s, v2.4s, v2.4s
 ; CHECK-GI-NEXT:    fmla v4.4s, v1.4s, v1.4s
+; CHECK-GI-NEXT:    fmul v5.4s, v2.4s, v2.4s
 ; CHECK-GI-NEXT:    fmla v5.4s, v3.4s, v3.4s
-; CHECK-GI-NEXT:    zip2 v0.4s, v4.4s, v5.4s
-; CHECK-GI-NEXT:    zip1 v1.4s, v4.4s, v5.4s
-; CHECK-GI-NEXT:    stp q1, q0, [x9]
+; CHECK-GI-NEXT:    st2 { v4.4s, v5.4s }, [x9]
 ; CHECK-GI-NEXT:    b.ne .LBB23_1
 ; CHECK-GI-NEXT:  // %bb.2: // %while.end
 ; CHECK-GI-NEXT:    ret
@@ -2147,18 +2034,18 @@ define void @transpose_s16_8x8_simpler2_intrinsic(ptr nocapture noundef %a) {
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x0, #64]
-; CHECK-NEXT:    ldp q4, q5, [x0, #96]
+; CHECK-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-NEXT:    ldp q4, q5, [x0, #64]
+; CHECK-NEXT:    ldp q6, q7, [x0, #96]
 ; CHECK-NEXT:    trn1 v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    zip1 v1.8h, v2.8h, v3.8h
-; CHECK-NEXT:    trn1 v2.8h, v4.8h, v5.8h
-; CHECK-NEXT:    ldp q3, q4, [x0, #32]
-; CHECK-NEXT:    zip1 v3.8h, v3.8h, v4.8h
-; CHECK-NEXT:    dup v1.4s, v1.s[0]
-; CHECK-NEXT:    uzp1 v2.4s, v0.4s, v2.4s
-; CHECK-NEXT:    zip1 v1.4s, v1.4s, v3.4s
-; CHECK-NEXT:    zip2 v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    str q1, [x0]
+; CHECK-NEXT:    zip1 v2.8h, v4.8h, v5.8h
+; CHECK-NEXT:    trn1 v3.8h, v6.8h, v7.8h
+; CHECK-NEXT:    trn1 v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    uzp1 v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    zip1 v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    zip2 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    str q2, [x0]
 ; CHECK-NEXT:    str q0, [x0, #64]
 ; CHECK-NEXT:    ret
 ;
@@ -2167,22 +2054,22 @@ define void @transpose_s16_8x8_simpler2_intrinsic(ptr nocapture noundef %a) {
 ; CHECK-GI-NEXT:    .cfi_startproc
 ; CHECK-GI-NEXT:  // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ldp q0, q1, [x0]
-; CHECK-GI-NEXT:    adrp x8, .LCPI25_1
 ; CHECK-GI-NEXT:    ldp q2, q3, [x0, #32]
-; CHECK-GI-NEXT:    adrp x9, .LCPI25_0
-; CHECK-GI-NEXT:    ldp q4, q5, [x0, #64]
-; CHECK-GI-NEXT:    ldp q6, q7, [x0, #96]
+; CHECK-GI-NEXT:    ldp q4, q5, [x0, #96]
 ; CHECK-GI-NEXT:    trn1 v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    trn1 v2.8h, v2.8h, v3.8h
-; CHECK-GI-NEXT:    trn1 v1.8h, v4.8h, v5.8h
-; CHECK-GI-NEXT:    ldr q4, [x8, :lo12:.LCPI25_1]
-; CHECK-GI-NEXT:    ldr q5, [x9, :lo12:.LCPI25_0]
-; CHECK-GI-NEXT:    trn1 v3.8h, v6.8h, v7.8h
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v4.16b
-; CHECK-GI-NEXT:    tbl v1.16b, { v2.16b, v3.16b }, v5.16b
-; CHECK-GI-NEXT:    zip1 v2.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    zip2 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    str q2, [x0]
+; CHECK-GI-NEXT:    trn1 v1.8h, v2.8h, v3.8h
+; CHECK-GI-NEXT:    trn1 v2.8h, v4.8h, v5.8h
+; CHECK-GI-NEXT:    ldp q3, q4, [x0, #64]
+; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #12
+; CHECK-GI-NEXT:    trn1 v3.8h, v3.8h, v4.8h
+; CHECK-GI-NEXT:    ext v2.16b, v1.16b, v2.16b, #12
+; CHECK-GI-NEXT:    zip2 v0.4s, v0.4s, v3.4s
+; CHECK-GI-NEXT:    zip2 v2.4s, v1.4s, v2.4s
+; CHECK-GI-NEXT:    mov v0.s[1], v3.s[0]
+; CHECK-GI-NEXT:    mov v2.s[0], v1.s[0]
+; CHECK-GI-NEXT:    zip1 v1.4s, v0.4s, v2.4s
+; CHECK-GI-NEXT:    zip2 v0.4s, v0.4s, v2.4s
+; CHECK-GI-NEXT:    str q1, [x0]
 ; CHECK-GI-NEXT:    str q0, [x0, #64]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -2367,36 +2254,22 @@ define void @transpose_s16_8x8_intrinsic(ptr nocapture noundef %0, ptr nocapture
 }
 
 define void @store_factor2_intrinsic(ptr %ptr, <4 x i32> %a0, <4 x i32> %a1) {
-; CHECK-IAENABLED-LABEL: store_factor2_intrinsic:
-; CHECK-IAENABLED:       .Lfunc_begin27:
-; CHECK-IAENABLED-NEXT:    .cfi_startproc
-; CHECK-IAENABLED-NEXT:  // %bb.0:
-; CHECK-IAENABLED-NEXT:    trn1 v2.4s, v0.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    trn1 v3.4s, v1.4s, v0.4s
-; CHECK-IAENABLED-NEXT:    st2 { v2.4s, v3.4s }, [x0]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: store_factor2_intrinsic:
-; CHECK-IADISABLED:       .Lfunc_begin27:
-; CHECK-IADISABLED-NEXT:    .cfi_startproc
-; CHECK-IADISABLED-NEXT:  // %bb.0:
-; CHECK-IADISABLED-NEXT:    uzp1 v2.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    uzp1 v1.4s, v1.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    ext v0.16b, v2.16b, v0.16b, #8
-; CHECK-IADISABLED-NEXT:    uzp2 v1.4s, v2.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    uzp1 v0.4s, v2.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    stp q0, q1, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: store_factor2_intrinsic:
+; CHECK:       .Lfunc_begin27:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    trn1 v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    trn1 v3.4s, v1.4s, v0.4s
+; CHECK-NEXT:    st2 { v2.4s, v3.4s }, [x0]
+; CHECK-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_factor2_intrinsic:
 ; CHECK-GI:       .Lfunc_begin27:
 ; CHECK-GI-NEXT:    .cfi_startproc
 ; CHECK-GI-NEXT:  // %bb.0:
 ; CHECK-GI-NEXT:    trn1 v2.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    trn1 v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    zip1 v1.4s, v2.4s, v0.4s
-; CHECK-GI-NEXT:    zip2 v0.4s, v2.4s, v0.4s
-; CHECK-GI-NEXT:    stp q1, q0, [x0]
+; CHECK-GI-NEXT:    trn1 v3.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    st2 { v2.4s, v3.4s }, [x0]
 ; CHECK-GI-NEXT:    ret
   %v0 = shufflevector <4 x i32> %a0, <4 x i32> %a1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   %v1 = shufflevector <4 x i32> %a1, <4 x i32> %a0, <4 x i32> <i32 0, i32 4, i32 2, i32 6>

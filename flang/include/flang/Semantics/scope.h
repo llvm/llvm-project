@@ -16,6 +16,7 @@
 #include "flang/Parser/message.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 #include <list>
 #include <map>
 #include <optional>
@@ -235,8 +236,7 @@ public:
   const DeclTypeSpec *FindType(const DeclTypeSpec &) const;
   const DeclTypeSpec &MakeNumericType(TypeCategory, KindExpr &&kind);
   const DeclTypeSpec &MakeLogicalType(KindExpr &&kind);
-  const DeclTypeSpec &MakeCharacterType(
-      ParamValue &&length, KindExpr &&kind = KindExpr{0});
+  const DeclTypeSpec &MakeCharacterType(ParamValue &&length, KindExpr &&kind);
   DeclTypeSpec &MakeDerivedType(DeclTypeSpec::Category, DerivedTypeSpec &&);
   const DeclTypeSpec &MakeTypeStarType();
   const DeclTypeSpec &MakeClassStarType();
@@ -274,6 +274,13 @@ public:
 
   bool hasSAVE() const { return hasSAVE_; }
   void set_hasSAVE(bool yes = true) { hasSAVE_ = yes; }
+
+  const std::set<llvm::omp::Directive> &ompAssumesAbsent() const {
+    return ompAssumesAbsent_;
+  }
+  void add_ompAssumesAbsent(llvm::omp::Directive directive) {
+    ompAssumesAbsent_.insert(directive);
+  }
 
   // The range of the source of this and nested scopes.
   const parser::CharBlock &sourceRange() const { return sourceRange_; }
@@ -327,6 +334,7 @@ private:
   std::optional<ImportKind> importKind_;
   std::set<SourceName> importNames_;
   UnorderedSymbolSet openACCMappedSymbols_;
+  std::set<llvm::omp::Directive> ompAssumesAbsent_;
   DerivedTypeSpec *derivedTypeSpec_{nullptr}; // dTS->scope() == this
   parser::Message::Reference instantiationContext_;
   bool hasSAVE_{false}; // scope has a bare SAVE statement

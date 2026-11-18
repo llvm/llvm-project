@@ -1273,6 +1273,19 @@ TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison_assume) {
   EXPECT_TRUE(isGuaranteedNotToBeUndefOrPoison(A, &AC, CtxI3, &DT));
 }
 
+TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison_nnan_noundef) {
+  parseAssembly("declare float @foo()\n"
+                "define void @test() {\n"
+                "  %A = call nnan noundef float @foo()\n"
+                "  %A2 = call ninf noundef float @foo()\n"
+                "  ret void\n"
+                "}");
+  EXPECT_FALSE(canCreateUndefOrPoison(cast<Operator>(A)));
+  EXPECT_TRUE(isGuaranteedNotToBeUndefOrPoison(A));
+  EXPECT_FALSE(canCreateUndefOrPoison(cast<Operator>(A2)));
+  EXPECT_TRUE(isGuaranteedNotToBeUndefOrPoison(A2));
+}
+
 TEST_F(ValueTrackingTest, canCreatePoisonOrUndef) {
   std::string AsmHead =
       "@s = external dso_local global i32, align 1\n"
@@ -1935,6 +1948,44 @@ TEST_F(ComputeKnownFPClassTest, FRemDemandRHSForSNaN) {
 
   EXPECT_TRUE(KnownQNan.isKnownNever(fcSNan));
   EXPECT_FALSE(KnownQNan.isKnownNever(fcQNan));
+}
+
+TEST_F(ComputeKnownFPClassTest, FMADemandNaN) {
+  parseAssembly(R"(
+    declare float @llvm.canonicalize.f32(float)
+    declare float @llvm.fma.f32(float, float, float)
+    declare float @llvm.fmuladd.f32(float, float, float)
+
+    define float @test(float %x, float %y, float %z) {
+      %x.canon = call float @llvm.canonicalize.f32(float %x)
+      %y.canon = call float @llvm.canonicalize.f32(float %y)
+      %z.canon = call float @llvm.canonicalize.f32(float %z)
+      %A = call float @llvm.fma.f32(float %x.canon, float %y.canon,
+                                    float %z.canon)
+      %A2 = call float @llvm.fmuladd.f32(float %x.canon, float %y.canon,
+                                         float %z.canon)
+      ret float %A
+    })");
+
+  KnownFPClass SNaNQueryFMA =
+      computeKnownFPClass(A, M->getDataLayout(), fcSNan);
+  EXPECT_TRUE(SNaNQueryFMA.isKnownNever(fcSNan));
+  EXPECT_FALSE(SNaNQueryFMA.isKnownNever(fcQNan));
+
+  KnownFPClass QNaNQueryFMA =
+      computeKnownFPClass(A, M->getDataLayout(), fcQNan);
+  EXPECT_TRUE(QNaNQueryFMA.isKnownNever(fcSNan));
+  EXPECT_FALSE(QNaNQueryFMA.isKnownNever(fcQNan));
+
+  KnownFPClass SNaNQueryFMulAdd =
+      computeKnownFPClass(A2, M->getDataLayout(), fcSNan);
+  EXPECT_TRUE(SNaNQueryFMulAdd.isKnownNever(fcSNan));
+  EXPECT_FALSE(SNaNQueryFMulAdd.isKnownNever(fcQNan));
+
+  KnownFPClass QNaNQueryFMulAdd =
+      computeKnownFPClass(A2, M->getDataLayout(), fcQNan);
+  EXPECT_TRUE(QNaNQueryFMulAdd.isKnownNever(fcSNan));
+  EXPECT_FALSE(QNaNQueryFMulAdd.isKnownNever(fcQNan));
 }
 
 TEST_F(ComputeKnownFPClassTest, PowUseRHSToRuleOutNegativeResults) {

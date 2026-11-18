@@ -225,7 +225,8 @@ define float @exp2_f32(float %x) #0 {
 
 define float @rint_f32(float %x) #0 {
 ; CHECK-LABEL: rint_f32:
-; CHECK: jal rintf
+; CHECK-R2: jal rintf
+; CHECK-R6: rint.s
   %val = call float @llvm.experimental.constrained.rint.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -530,7 +531,8 @@ define double @exp2_f64(double %x) #0 {
 
 define double @rint_f64(double %x) #0 {
 ; CHECK-LABEL: rint_f64:
-; CHECK: jal rint
+; CHECK-R2: jal rint
+; CHECK-R6: rint.d
   %val = call double @llvm.experimental.constrained.rint.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }

@@ -13,6 +13,7 @@
 #include "orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h"
 #include "orc-rt/bedrock/NativeDylibManager.h"
 #include "orc-rt/bedrock/Session.h"
+#include "orc-rt/support/sps/SPSSymbolLookupSet.h"
 #include "orc-rt/support/sps/SPSWrapperFunction.h"
 
 #include "BedrockTestUtils.h"
@@ -26,41 +27,10 @@ using namespace orc_rt::test;
 
 using ::testing::Ne;
 
-namespace orc_rt {
-
-/// SPS serialization for NativeDylibManager::LookupFlags as a bool.
-///
-/// Duplicated from NativeDylibManagerSPSCI.cpp so the test can serialize
-/// SymbolLookupSet values when invoking the SPS wrapper via
-/// SPSWrapperFunction<...>::call.
-template <>
-class SPSSerializationTraits<bool, NativeDylibManager::LookupFlags> {
-public:
-  static size_t size(NativeDylibManager::LookupFlags) { return sizeof(bool); }
-
-  static bool serialize(SPSOutputBuffer &OB,
-                        NativeDylibManager::LookupFlags L) {
-    return SPSSerializationTraits<bool, bool>::serialize(
-        OB, L == NativeDylibManager::RequiredSymbol);
-  }
-
-  static bool deserialize(SPSInputBuffer &IB,
-                          NativeDylibManager::LookupFlags &L) {
-    bool Required;
-    if (!SPSSerializationTraits<bool, bool>::deserialize(IB, Required))
-      return false;
-    L = Required ? NativeDylibManager::RequiredSymbol
-                 : NativeDylibManager::WeaklyReferencedSymbol;
-    return true;
-  }
-};
-
-} // namespace orc_rt
-
 namespace {
 // Local aliases for brevity in test bodies.
-constexpr auto Req = NativeDylibManager::RequiredSymbol;
-constexpr auto Weak = NativeDylibManager::WeaklyReferencedSymbol;
+constexpr auto Req = SymbolLookupFlags::RequiredSymbol;
+constexpr auto Weak = SymbolLookupFlags::WeaklyReferencedSymbol;
 } // namespace
 
 // Wrap a symbol-name string literal in the platform's linker-mangling.
@@ -99,10 +69,9 @@ protected:
 
   template <typename OnCompleteFn>
   void spsLookup(OnCompleteFn &&OnComplete, void *Handle,
-                 NativeDylibManager::SymbolLookupSet Symbols) {
+                 SymbolLookupSet Symbols) {
     using SPSSig = SPSExpected<SPSSequence<SPSOptional<SPSExecutorAddr>>>(
-        SPSExecutorAddr, SPSExecutorAddr,
-        SPSSequence<SPSTuple<SPSString, bool>>);
+        SPSExecutorAddr, SPSExecutorAddr, SPSSymbolLookupSet);
     SPSWrapperFunction<SPSSig>::call(
         caller(orc_rt_ci_sps_NativeDylibManager_lookup),
         std::forward<OnCompleteFn>(OnComplete), NDM.get(), Handle,
@@ -146,8 +115,7 @@ TEST_F(NativeDylibManagerSPSCITest, LoadEmptyPathReturnsGlobalHandle) {
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
   ASSERT_THAT_EXPECTED(*Handle, Succeeded());
 
-  std::future<Expected<Expected<std::vector<std::optional<void *>>>>>
-      LookupResult;
+  std::future<Expected<Expected<SymbolLookupResult>>> LookupResult;
   spsLookup(waitFor(LookupResult), **Handle, {{MANGLED("malloc"), Req}});
   auto AddrsOrErr = LookupResult.get();
   ASSERT_THAT_EXPECTED(AddrsOrErr, Succeeded());
@@ -166,8 +134,7 @@ TEST_F(NativeDylibManagerSPSCITest, LookupSingleSymbol) {
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
   ASSERT_THAT_EXPECTED(*Handle, Succeeded());
 
-  std::future<Expected<Expected<std::vector<std::optional<void *>>>>>
-      LookupResult;
+  std::future<Expected<Expected<SymbolLookupResult>>> LookupResult;
   spsLookup(waitFor(LookupResult), **Handle,
             {{MANGLED("NativeDylibManagerTestFunc"), Req}});
   auto AddrsOrErr = LookupResult.get();
@@ -178,7 +145,7 @@ TEST_F(NativeDylibManagerSPSCITest, LookupSingleSymbol) {
   ASSERT_TRUE(Addrs[0].has_value());
   EXPECT_NE(*Addrs[0], nullptr);
 
-  auto *Func = reinterpret_cast<int (*)()>(*Addrs[0]);
+  auto *Func = reinterpret_cast<int (*)()>(const_cast<void *>(*Addrs[0]));
   EXPECT_EQ(Func(), 42);
 }
 
@@ -189,8 +156,7 @@ TEST_F(NativeDylibManagerSPSCITest, LookupMultipleSymbols) {
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
   ASSERT_THAT_EXPECTED(*Handle, Succeeded());
 
-  std::future<Expected<Expected<std::vector<std::optional<void *>>>>>
-      LookupResult;
+  std::future<Expected<Expected<SymbolLookupResult>>> LookupResult;
   spsLookup(waitFor(LookupResult), **Handle,
             {{MANGLED("NativeDylibManagerTestFunc"), Req},
              {MANGLED("NativeDylibManagerTestFunc2"), Req}});
@@ -204,8 +170,8 @@ TEST_F(NativeDylibManagerSPSCITest, LookupMultipleSymbols) {
   EXPECT_NE(*Addrs[0], nullptr);
   EXPECT_NE(*Addrs[1], nullptr);
 
-  auto *Func1 = reinterpret_cast<int (*)()>(*Addrs[0]);
-  auto *Func2 = reinterpret_cast<int (*)()>(*Addrs[1]);
+  auto *Func1 = reinterpret_cast<int (*)()>(const_cast<void *>(*Addrs[0]));
+  auto *Func2 = reinterpret_cast<int (*)()>(const_cast<void *>(*Addrs[1]));
   EXPECT_EQ(Func1(), 42);
   EXPECT_EQ(Func2(), 7);
 }
@@ -217,8 +183,7 @@ TEST_F(NativeDylibManagerSPSCITest, LookupWeakMissingSymbol) {
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
   ASSERT_THAT_EXPECTED(*Handle, Succeeded());
 
-  std::future<Expected<Expected<std::vector<std::optional<void *>>>>>
-      LookupResult;
+  std::future<Expected<Expected<SymbolLookupResult>>> LookupResult;
   spsLookup(waitFor(LookupResult), **Handle,
             {{MANGLED("no_such_symbol"), Weak}});
   auto AddrsOrErr = LookupResult.get();
@@ -238,8 +203,7 @@ TEST_F(NativeDylibManagerSPSCITest, LookupRequiredMissingSymbol) {
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
   ASSERT_THAT_EXPECTED(*Handle, Succeeded());
 
-  std::future<Expected<Expected<std::vector<std::optional<void *>>>>>
-      LookupResult;
+  std::future<Expected<Expected<SymbolLookupResult>>> LookupResult;
   spsLookup(waitFor(LookupResult), **Handle,
             {{MANGLED("no_such_symbol"), Req}});
   auto AddrsOrErr = LookupResult.get();
@@ -258,8 +222,7 @@ TEST_F(NativeDylibManagerSPSCITest, LookupMixedRequiredAndWeak) {
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
   ASSERT_THAT_EXPECTED(*Handle, Succeeded());
 
-  std::future<Expected<Expected<std::vector<std::optional<void *>>>>>
-      LookupResult;
+  std::future<Expected<Expected<SymbolLookupResult>>> LookupResult;
   spsLookup(waitFor(LookupResult), **Handle,
             {{MANGLED("NativeDylibManagerTestFunc"), Req},
              {MANGLED("no_such_symbol"), Weak}});

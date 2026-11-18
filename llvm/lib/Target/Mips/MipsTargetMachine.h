@@ -25,6 +25,8 @@
 namespace llvm {
 
 class MipsTargetMachine : public CodeGenTargetMachineImpl {
+  const MipsOptions &CLOpts;
+  const MipsMCOptions &MCCLOpts;
   bool isLittle;
   bool IsJIT;
   // Used to initialize module-wide object-file policy.
@@ -43,6 +45,8 @@ public:
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
+  const MipsOptions &getCLOpts() const { return CLOpts; }
+  const MipsMCOptions &getMCCLOpts() const { return MCCLOpts; }
   const MipsSubtarget *getSubtargetImpl(const Function &F) const override;
 
   // Pass Pipeline Configuration
@@ -67,6 +71,14 @@ public:
 
   bool isLittleEndian() const { return isLittle; }
   bool isJIT() const { return IsJIT; }
+
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
+
+  Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                             raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opt, MCContext &Ctx,
+                             PassInstrumentationCallbacks *PIC) override;
 };
 
 /// Mips32/64 big endian target machine.

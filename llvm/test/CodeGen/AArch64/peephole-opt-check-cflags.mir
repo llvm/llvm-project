@@ -42,8 +42,8 @@ body:             |
     %44 = MOVi32imm 1
     %46 = MOVi32imm 1
     %47 = MOVi32imm 1
-    %48 = nsw SUBSWrr killed %43, killed %46, implicit-def dead $nzcv
-    %49 = nsw SUBSWrr killed %44, killed %47, implicit-def dead $nzcv
+    %48 = nsw SUBSWrr %43, %46, implicit-def dead $nzcv
+    %49 = nsw SUBSWrr %44, %47, implicit-def dead $nzcv
     %50 = SUBSWri %48, 0, 0, implicit-def $nzcv
     %51 = CSNEGWr %48, %48, 5, implicit $nzcv
     %52 = SUBSWri %49, 0, 0, implicit-def $nzcv

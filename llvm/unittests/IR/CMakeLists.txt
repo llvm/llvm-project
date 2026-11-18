@@ -35,6 +35,7 @@ add_llvm_unittest(IRTests
   InstructionsTest.cpp
   IntrinsicsTest.cpp
   LegacyPassManagerTest.cpp
+  LibraryOptionsContextTest.cpp
   MDBuilderTest.cpp
   MemoryModelRelaxationAnnotationsTest.cpp
   ManglerTest.cpp

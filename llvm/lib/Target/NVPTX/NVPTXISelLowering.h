@@ -113,6 +113,7 @@ public:
 
   // Get whether we should use instructions that flush floating-point denormals
   // to sign-preserving zero.
+  bool useF16FTZ(const MachineFunction &MF) const;
   bool useF32FTZ(const MachineFunction &MF) const;
 
   SDValue getSqrtEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,

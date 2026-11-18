@@ -55,6 +55,13 @@ entry:
 
 declare signext i32 @callout(i32 signext)
 
+define hidden void @DoQuoted() {
+entry:
+  call void @Caller(ptr noundef @"Do'Quoted&Func")
+  ret void
+}
+declare void @"Do'Quoted&Func"()
+
 ; CHECK: stdin#C CSECT
 ; CHECK: C_WSA64 CATTR ALIGN(4),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(stdi
 ; CHECK:                in#S)
@@ -75,3 +82,4 @@ declare signext i32 @callout(i32 signext)
 ; CHECK: DoFunc@indirect XATTR LINKAGE(XPLINK),REFERENCE(CODE,INDIRECT),SCOPE(EX
 ; CHECK:                PORT)
 ; CHECK: DoFunc@indirect ALIAS C'DoFunc'
+; CHECK: ALIAS C'Do''Quoted&&Func'

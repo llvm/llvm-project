@@ -127,7 +127,10 @@
         omp_lock_hint_speculative    = omp_sync_hint_speculative,
         kmp_lock_hint_hle            = (1<<16),
         kmp_lock_hint_rtm            = (1<<17),
-        kmp_lock_hint_adaptive       = (1<<18)
+        kmp_lock_hint_adaptive       = (1<<18),
+        ompx_fast_fp_atomics         = (1<<19),
+        ompx_unsafe_fp_atomics       = ompx_fast_fp_atomics,
+        ompx_safe_fp_atomics         = (1<<20)
     } omp_sync_hint_t;
 
     /* lock hint type for dynamic user lock */

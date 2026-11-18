@@ -31,7 +31,6 @@
 name:            global_addr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprb, preferred-register: '' }
 body:             |
@@ -64,7 +63,6 @@ body:             |
 name:            extern_weak_global_addr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprb, preferred-register: '' }
 body:             |
@@ -97,7 +95,6 @@ body:             |
 name:            local_global_addr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprb, preferred-register: '' }
 body:             |

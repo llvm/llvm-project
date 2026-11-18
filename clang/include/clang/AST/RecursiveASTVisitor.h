@@ -1469,7 +1469,7 @@ DEF_TRAVERSE_TYPELOC(DecltypeType, {
 })
 
 DEF_TRAVERSE_TYPELOC(PackIndexingType, {
-  TRY_TO(TraverseType(TL.getPattern()));
+  TRY_TO(TraverseTypeLoc(TL.getPatternLoc()));
   TRY_TO(TraverseStmt(TL.getTypePtr()->getIndexExpr()));
 })
 
@@ -3454,6 +3454,9 @@ DEF_TRAVERSE_STMT(OMPParallelGenericLoopDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
 DEF_TRAVERSE_STMT(OMPTargetParallelGenericLoopDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
+DEF_TRAVERSE_STMT(OMPTargetGenericLoopDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
 DEF_TRAVERSE_STMT(OMPAssumeDirective,

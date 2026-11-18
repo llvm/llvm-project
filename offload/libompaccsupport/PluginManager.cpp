@@ -11,8 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "PluginManager.h"
-#include "OffloadPolicy.h"
+#include "OmpAccError.h"
 #include "OpenMP/OMPT/Interface.h"
+#include "OpenMP/OffloadRTL.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 #include "Shared/Profile.h"
@@ -23,6 +24,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <string>
 
 #ifdef OMPT_SUPPORT
@@ -31,38 +33,32 @@ using namespace llvm::omp::target::ompt;
 
 using namespace llvm;
 using namespace llvm::sys;
+using namespace llvm::omp::target::error;
 using namespace llvm::omp::target::debug;
-
-PluginManager *PM = nullptr;
-
-namespace llvm::offload::tmp {
-GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
-int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
-} // namespace llvm::offload::tmp
+using namespace llvm::omp::target::helpers;
 
 void PluginManager::init() {
   TIMESCOPE();
-  if (OffloadPolicy::isOffloadDisabled()) {
-    ODBG(ODT_Init) << "Offload is disabled. Skipping plugin initialization";
-    return;
-  }
 
   ODBG(ODT_Init) << "Loading RTLs";
-  if (ol_result_t Res = olInit(nullptr))
+  if (ol_result_t Res = olInit(nullptr)) {
     REPORT() << "Failed to initialize liboffload: " << Res->Details;
+    return;
+  }
+  LibOffloadInitialized = true;
 
-  if (ol_result_t Res = olIteratePlatforms(
+  if (auto Err = iteratePlatforms(
           [](ol_platform_handle_t Platform, void *Data) {
             auto *PM = static_cast<PluginManager *>(Data);
-            auto *Plugin =
-                llvm::offload::tmp::__ol_tgt_GetPluginFromPlatform(Platform);
-            ODBG(ODT_Init) << "Adding plugin " << Plugin->getName()
+            PlatformTy &P =
+                PM->Platforms
+                    .try_emplace(Platform, PlatformTy::create(Platform))
+                    .first->second;
+            ODBG(ODT_Init) << "Added plugin " << P.getName()
                            << " from liboffload";
-            PM->Plugins.push_back(Plugin);
-            return true;
           },
           this))
-    REPORT() << "Failed to iterate platforms: " << Res->Details;
+    REPORT() << "Failed to iterate platforms: " << toString(std::move(Err));
 
   ODBG(ODT_Init) << "RTLs loaded!";
 }
@@ -71,24 +67,27 @@ void PluginManager::deinit() {
   TIMESCOPE();
   ODBG(ODT_Deinit) << "Unloading RTLs...";
 
-  OMPT_IF_BUILT_AND_INITIALIZED({
-    auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
-    for (DeviceTy &Device : devices(ExclusiveDevicesAccessor))
-      performOmptCallback(device_finalize, Device.DeviceID);
-  });
+  auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
+  for (DeviceTy &Device : devices(ExclusiveDevicesAccessor)) {
+    if (auto Err = Device.deinit())
+      REPORT() << "Failed to deinitialize device " << Device.DeviceID << ": "
+               << toString(std::move(Err));
+  }
 
-  Plugins.clear();
-  if (auto Err = olShutDown())
-    REPORT() << "Failed to denitialize liboffload: " << Err->Details;
+  Platforms.clear();
+  if (LibOffloadInitialized) {
+    if (auto Err = olShutDown())
+      REPORT() << "Failed to denitialize liboffload: " << Err->Details;
+  }
 
   ODBG(ODT_Deinit) << "RTLs unloaded!";
 }
 
 bool PluginManager::initializeDevice(ol_device_handle_t DeviceHandle) {
-  if (PM->DeviceIds.find(DeviceHandle) != PM->DeviceIds.end()) {
+  if (DeviceIds.find(DeviceHandle) != DeviceIds.end()) {
     auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
-    (*ExclusiveDevicesAccessor)[PM->DeviceIds[DeviceHandle]]
-        ->setHasPendingImages(true);
+    (*ExclusiveDevicesAccessor)[DeviceIds[DeviceHandle]]->setHasPendingImages(
+        true);
     return true;
   }
 
@@ -100,21 +99,16 @@ bool PluginManager::initializeDevice(ol_device_handle_t DeviceHandle) {
     return false;
   }
 
-  GenericPluginTy &Plugin =
-      *llvm::offload::tmp::__ol_tgt_GetPluginFromPlatform(PlatformHandle);
-  int32_t DeviceId =
-      llvm::offload::tmp::__ol_tgt_GetPluginDeviceId(DeviceHandle);
-
   // Initialize the device information for the RTL we are about to use.
   auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
 
   int32_t UserId = ExclusiveDevicesAccessor->size();
 
   auto Device =
-      std::make_unique<DeviceTy>(&Plugin, UserId, DeviceId, DeviceHandle);
+      std::make_unique<DeviceTy>(UserId, PlatformHandle, DeviceHandle, this);
   if (auto Err = Device->init()) {
     std::string InfoMsg = toString(std::move(Err));
-    ODBG(ODT_Init) << "Failed to init device " << DeviceId << ": " << InfoMsg;
+    ODBG(ODT_Init) << "Failed to init device " << UserId << ": " << InfoMsg;
     return false;
   }
 
@@ -122,23 +116,18 @@ bool PluginManager::initializeDevice(ol_device_handle_t DeviceHandle) {
 
   // We need to map between the liboffload device handle and the OpenMP device
   // id.
-  PM->DeviceIds[DeviceHandle] = UserId;
+  DeviceIds[DeviceHandle] = UserId;
 
   return true;
 }
 
 void PluginManager::initializeAllDevices() {
+  if (!LibOffloadInitialized)
+    return;
   if (auto Err = iterateDevices(
-          [](ol_device_handle_t Device) { PM->initializeDevice(Device); })) {
+          [this](ol_device_handle_t Device) { initializeDevice(Device); })) {
     REPORT() << "Failed to iterate devices: " << toString(std::move(Err));
   }
-  // After all plugins are initialized, register atExit cleanup handlers
-  std::atexit([]() {
-    // Interop cleanup should be done before the plugins are deinitialized as
-    // the backend libraries may be already unloaded.
-    if (PM)
-      PM->InteropTbl.clear();
-  });
 }
 
 // Returns a pointer to the binary descriptor, upgrading from a legacy format if
@@ -208,21 +197,10 @@ bool PluginManager::registerImageOnDevice(
     PlatformHandle = nullptr;
   }
 
-  llvm::SmallString<256> PlatformName("Unknown");
-  if (PlatformHandle) {
-    size_t PlatformNameSize = 0;
-    if (olGetPlatformInfoSize(PlatformHandle, OL_PLATFORM_INFO_NAME,
-                              &PlatformNameSize))
-      PlatformNameSize = 0;
-
-    PlatformName.resize(PlatformNameSize);
-    if (PlatformNameSize > 0) {
-      if (olGetPlatformInfo(PlatformHandle, OL_PLATFORM_INFO_NAME,
-                            PlatformNameSize, PlatformName.data()))
-        PlatformName = "Unknown";
-    } else
-      PlatformName = "Unknown";
-  }
+  llvm::StringRef PlatformName = "Unknown";
+  if (PlatformHandle)
+    if (const PlatformTy *Platform = getPlatform(PlatformHandle))
+      PlatformName = Platform->getName();
 
   // We only want a single matching image to be registered for each binary
   // descriptor. This prevents multiple of the same image from being registered
@@ -238,7 +216,11 @@ bool PluginManager::registerImageOnDevice(
   ODBG(ODT_Init) << "Image " << Img->ImageStart << " with RTL " << PlatformName
                  << " on device " << DeviceHandle;
 
-  initializeDevice(DeviceHandle);
+  if (!initializeDevice(DeviceHandle)) {
+    ODBG(ODT_Init) << "Skipping image " << Img->ImageStart << " on device "
+                   << DeviceHandle << ": device failed to initialize";
+    return false;
+  }
 
   // Initialize (if necessary) translation table for this library.
   std::lock_guard<std::mutex> LG(TrlTblMtx);
@@ -255,7 +237,7 @@ bool PluginManager::registerImageOnDevice(
   ODBG(ODT_Init) << "Registering image " << Img->ImageStart << " with RTL "
                  << PlatformName;
 
-  auto UserId = DeviceIds[DeviceHandle];
+  auto UserId = DeviceIds.at(DeviceHandle);
   if (TT.TargetsTable.size() < static_cast<size_t>(UserId + 1)) {
     TT.DeviceTables.resize(UserId + 1, {});
     TT.TargetsImages.resize(UserId + 1, nullptr);
@@ -268,12 +250,15 @@ bool PluginManager::registerImageOnDevice(
   TT.TargetsTable[UserId] = nullptr;
 
   UsedDevices.push_back(DeviceHandle);
-  UsedImages.insert(Img);
   return true;
 }
 
 void PluginManager::registerLib(__tgt_bin_desc *Desc) {
-  PM->RTLsMtx.lock();
+  // There are no devices to register with if liboffload was not initialized.
+  if (!LibOffloadInitialized)
+    return;
+
+  RTLsMtx.lock();
 
   // Upgrade the entries from the legacy implementation if necessary.
   Desc = upgradeLegacyEntries(Desc);
@@ -283,11 +268,11 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
        llvm::make_range(Desc->HostEntriesBegin, Desc->HostEntriesEnd))
     if (Entry.Kind == object::OffloadKind::OFK_OpenMP &&
         Entry.Flags == OMP_REGISTER_REQUIRES)
-      PM->addRequirements(Entry.Data);
+      addRequirements(Entry.Data);
 
   // Extract the executable image and extra information if available.
   for (int32_t i = 0; i < Desc->NumDeviceImages; ++i)
-    PM->addDeviceImage(*Desc, Desc->DeviceImages[i]);
+    addDeviceImage(*Desc, Desc->DeviceImages[i]);
 
   // Register the images with the RTLs that understand them, if any.
   llvm::SmallVector<ol_device_handle_t> UsedDevices;
@@ -296,18 +281,19 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
     __tgt_device_image *Img = &Desc->DeviceImages[i];
 
     struct RegisterImageState {
+      PluginManager *PM;
       __tgt_bin_desc *Desc;
       __tgt_device_image *Img;
       llvm::SmallVectorImpl<ol_device_handle_t> &UsedDevices;
       bool FoundRTL = false;
-    } State{Desc, Img, UsedDevices, false};
+    } State{this, Desc, Img, UsedDevices, false};
 
     if (ol_result_t Res = olIterateCompatibleDevices(
             Img->ImageStart, utils::getPtrDiff(Img->ImageEnd, Img->ImageStart),
             [](ol_device_handle_t DeviceHandle, void *Data) {
               auto &State = *static_cast<RegisterImageState *>(Data);
-              if (PM->registerImageOnDevice(DeviceHandle, State.Desc, State.Img,
-                                            State.UsedDevices))
+              if (State.PM->registerImageOnDevice(DeviceHandle, State.Desc,
+                                                  State.Img, State.UsedDevices))
                 State.FoundRTL = true;
               return true;
             },
@@ -317,7 +303,7 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
     if (!State.FoundRTL)
       ODBG(ODT_Init) << "No RTL found for image " << Img->ImageStart << "!";
   }
-  PM->RTLsMtx.unlock();
+  RTLsMtx.unlock();
 
   bool UseAutoZeroCopy = false;
 
@@ -335,88 +321,79 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   ODBG(ODT_Init) << "Done registering entries!";
 }
 
-// Temporary forward declaration, old style CTor/DTor handling is going away.
-int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
-           KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo);
+void PluginManager::unloadPrograms(const void *Key, TranslationTable &TT) {
+  // To avoid calling destructors with the lock held, make a list first and
+  // then traverse the list to destroy programs.
+  llvm::SmallVector<DeviceTy *> DevicesToVisit;
+  {
+    auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
+    for (size_t DeviceId = 0;
+         DeviceId <
+         std::min(TT.TargetsEntries.size(), ExclusiveDevicesAccessor->size());
+         ++DeviceId)
+      DevicesToVisit.push_back((*ExclusiveDevicesAccessor)[DeviceId].get());
+  }
+
+  // Destroy in reverse device order, mirroring the load order.
+  for (size_t DeviceId = DevicesToVisit.size(); DeviceId-- > 0;)
+    DevicesToVisit[DeviceId]->unloadProgram(
+        Key, TT.TargetsEntries[DeviceId],
+        llvm::ArrayRef<llvm::offloading::EntryTy>(TT.HostTable.EntriesBegin,
+                                                  TT.HostTable.EntriesEnd));
+}
 
 void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
   ODBG(ODT_Deinit) << "Unloading target library!";
 
   Desc = upgradeLegacyEntries(Desc);
 
-  PM->RTLsMtx.lock();
-  // Find which RTL understands each image, if any.
-  for (DeviceImageTy &DI : PM->deviceImages()) {
-    // Obtain the image and information that was previously extracted.
-    __tgt_device_image *Img = &DI.getExecutableImage();
-
-    GenericPluginTy *FoundRTL = NULL;
-
-    // Scan the RTLs that have associated images until we find one that supports
-    // the current image. We only need to scan RTLs that are already being used.
-    for (auto &R : plugins()) {
-      if (R.is_initialized())
-        continue;
-
-      // Ensure that we do not use any unused images associated with this RTL.
-      if (!UsedImages.contains(Img))
-        continue;
-
-      FoundRTL = &R;
-
-      ODBG(ODT_Deinit) << "Unregistered image " << Img->ImageStart
-                       << " from RTL";
-
-      break;
-    }
-
-    // if no RTL was found proceed to unregister the next image
-    if (!FoundRTL) {
-      ODBG(ODT_Deinit) << "No RTLs in use support the image "
-                       << Img->ImageStart;
+  // Remove entries from HostPtrToTableMap
+  {
+    std::lock_guard<std::mutex> TblMapLock(TblMapMtx);
+    for (llvm::offloading::EntryTy *Cur = Desc->HostEntriesBegin;
+         Cur < Desc->HostEntriesEnd; ++Cur) {
+      if (Cur->Kind == object::OffloadKind::OFK_OpenMP)
+        HostPtrToTableMap.erase(Cur->Address);
     }
   }
-  PM->RTLsMtx.unlock();
-  ODBG(ODT_Deinit) << "Done unregistering images!";
 
-  // Remove entries from PM->HostPtrToTableMap
-  PM->TblMapMtx.lock();
-  for (llvm::offloading::EntryTy *Cur = Desc->HostEntriesBegin;
-       Cur < Desc->HostEntriesEnd; ++Cur) {
-    if (Cur->Kind == object::OffloadKind::OFK_OpenMP)
-      PM->HostPtrToTableMap.erase(Cur->Address);
+  // Remove the translation table for this descriptor.
+  std::optional<TranslationTable> TT;
+  {
+    std::lock_guard<std::mutex> TrlTblLock(TrlTblMtx);
+    auto TransTable = HostEntriesBeginToTransTable.find(Desc->HostEntriesBegin);
+    if (TransTable != HostEntriesBeginToTransTable.end()) {
+      TT = std::move(TransTable->second);
+      HostEntriesBeginToTransTable.erase(TransTable);
+      llvm::erase(HostEntriesBeginRegistrationOrder, Desc->HostEntriesBegin);
+    }
   }
 
-  // Remove translation table for this descriptor.
-  auto TransTable =
-      PM->HostEntriesBeginToTransTable.find(Desc->HostEntriesBegin);
-  if (TransTable != PM->HostEntriesBeginToTransTable.end()) {
+  if (TT) {
     ODBG(ODT_Deinit) << "Removing translation table for descriptor "
                      << Desc->HostEntriesBegin;
-    PM->HostEntriesBeginToTransTable.erase(TransTable);
+    unloadPrograms(Desc->HostEntriesBegin, *TT);
   } else {
     ODBG(ODT_Deinit) << "Translation table for descriptor "
                      << Desc->HostEntriesBegin << " cannot be found, probably "
                      << "it has been already removed.";
   }
 
-  PM->TblMapMtx.unlock();
-
   ODBG(ODT_Deinit) << "Done unregistering library!";
 }
 
 /// Map global data and execute pending ctors
-static int loadImagesOntoDevice(DeviceTy &Device) {
+int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
   /*
    * Map global data
    */
   int32_t DeviceId = Device.DeviceID;
   int Rc = OFFLOAD_SUCCESS;
   {
-    std::lock_guard<decltype(PM->TrlTblMtx)> LG(PM->TrlTblMtx);
-    for (auto *HostEntriesBegin : PM->HostEntriesBeginRegistrationOrder) {
+    std::lock_guard<decltype(TrlTblMtx)> LG(TrlTblMtx);
+    for (auto *HostEntriesBegin : HostEntriesBeginRegistrationOrder) {
       TranslationTable *TransTable =
-          &PM->HostEntriesBeginToTransTable[HostEntriesBegin];
+          &HostEntriesBeginToTransTable[HostEntriesBegin];
       ODBG(ODT_Init) << "Trans table " << TransTable->HostTable.EntriesBegin
                      << " : " << TransTable->HostTable.EntriesEnd;
       if (TransTable->HostTable.EntriesBegin ==
@@ -441,12 +418,16 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
       }
 
       // 2) Load the image onto the given device.
-      auto BinaryOrErr = Device.loadBinary(Img);
-      if (llvm::Error Err = BinaryOrErr.takeError()) {
+      auto LoadedOrErr = Device.loadBinary(Img);
+      if (llvm::Error Err = LoadedOrErr.takeError()) {
         REPORT() << "Failed to load image " << llvm::toString(std::move(Err));
         Rc = OFFLOAD_FAIL;
         break;
       }
+
+      // The device keeps the program until the library is unregistered.
+      ProgramTy &Program =
+          Device.addProgram(HostEntriesBegin, std::move(*LoadedOrErr));
 
       // 3) Create the translation table.
       llvm::SmallVector<llvm::offloading::EntryTy> &DeviceEntries =
@@ -456,48 +437,49 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
         if (Entry.Kind != object::OffloadKind::OFK_OpenMP)
           continue;
 
-        __tgt_device_binary &Binary = *BinaryOrErr;
-
         llvm::offloading::EntryTy DeviceEntry = Entry;
         if (Entry.Size) {
-          if (!(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT_VTABLE))
-            if (Device.RTL->get_global(Binary, Entry.Size, Entry.SymbolName,
-                                       &DeviceEntry.Address) != OFFLOAD_SUCCESS)
-              REPORT() << "Failed to load symbol " << Entry.SymbolName;
+          if (!(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT_VTABLE)) {
+            auto AddrOrErr = Device.getAndRecordGlobalAddress(
+                Program, Entry.SymbolName, Entry.Size);
+            if (!AddrOrErr) {
+              REPORT() << "Failed to load symbol " << Entry.SymbolName << ": "
+                       << llvm::toString(AddrOrErr.takeError());
+            } else {
+              DeviceEntry.Address = *AddrOrErr;
+            }
+          }
 
           // If unified memory is active, the corresponding global is a device
           // reference to the host global. We need to initialize the pointer on
           // the device to point to the memory on the host.
           if (!(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT_VTABLE) &&
               !(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT) &&
-              ((PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
-               (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)))
-            if (Device.RTL->data_submit(DeviceId, DeviceEntry.Address,
-                                        Entry.Address,
-                                        Entry.Size) != OFFLOAD_SUCCESS)
+              ((getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
+               (getRequirements() & OMPX_REQ_AUTO_ZERO_COPY))) {
+            if (Device.submitDataSync(DeviceEntry.Address, Entry.Address,
+                                      Entry.Size) != OFFLOAD_SUCCESS)
               REPORT() << "Failed to write symbol for USM " << Entry.SymbolName;
+          }
         } else if (Entry.Address) {
-          if (Device.RTL->get_function(Binary, Entry.SymbolName,
-                                       &DeviceEntry.Address) !=
-              OFFLOAD_SUCCESS) {
-            REPORT() << "Failed to load kernel " << Entry.SymbolName;
+          auto AddrOrErr = Program.getKernelAddress(Entry.SymbolName);
+          if (!AddrOrErr) {
+            REPORT() << "Failed to load kernel " << Entry.SymbolName << ": "
+                     << llvm::toString(AddrOrErr.takeError());
           } else {
+            ol_symbol_handle_t KernelSym = *AddrOrErr;
+            DeviceEntry.Address = KernelSym;
+
             // Read this kernel's launch-geometry properties once, from its
             // "<name>_kernel_environment" global, and cache them on the device
             // for use at launch time.
             SmallString<128> EnvName(Entry.SymbolName);
             EnvName += "_kernel_environment";
-            llvm::omp::target::plugin::GenericDeviceTy &GenericDevice =
-                Device.RTL->getDevice(Device.RTLDeviceID);
             KernelEnvironmentTy KernelEnv{};
-            llvm::omp::target::plugin::GlobalTy KernelEnvGlobal(
-                EnvName, sizeof(KernelEnv), &KernelEnv);
-            auto &Image =
-                *reinterpret_cast<llvm::omp::target::plugin::DeviceImageTy *>(
-                    Binary.handle);
-            if (auto Err =
-                    GenericDevice.Plugin.getGlobalHandler().readGlobalFromImage(
-                        GenericDevice, Image, KernelEnvGlobal)) {
+            // Read the kernel environment from the image on the host; it is
+            // constant, so no device access is needed.
+            if (auto Err = Program.readGlobalFromImage(
+                    EnvName.c_str(), &KernelEnv, sizeof(KernelEnv))) {
               std::string ErrStr = toString(std::move(Err));
               KernelEnv = KernelEnvironmentTy{};
               KernelEnv.Configuration.ExecMode =
@@ -510,30 +492,41 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
                              KernelEnv.Configuration.ExecMode))
                   << " execution mode";
             }
+            uint32_t StaticBlockMemSize = 0;
+            uint32_t KernelMaxThreads = 0;
+            if (auto Res = olGetSymbolInfo(
+                    KernelSym, OL_SYMBOL_INFO_KERNEL_STATIC_BLOCK_MEM_SIZE,
+                    sizeof(StaticBlockMemSize), &StaticBlockMemSize))
+              REPORT() << "Failed to query static block memory size of "
+                       << Entry.SymbolName << ": " << Res->Details;
+            if (auto Res = olGetSymbolInfo(
+                    KernelSym, OL_SYMBOL_INFO_KERNEL_MAX_THREADS,
+                    sizeof(KernelMaxThreads), &KernelMaxThreads))
+              REPORT() << "Failed to query max threads of " << Entry.SymbolName
+                       << ": " << Res->Details;
 
-            auto *Kernel =
-                reinterpret_cast<llvm::omp::target::plugin::GenericKernelTy *>(
-                    DeviceEntry.Address);
             const auto &Cfg = KernelEnv.Configuration;
             KernelLaunchInfoTy LaunchInfo;
+            LaunchInfo.Name = Entry.SymbolName;
+            LaunchInfo.Program = &Program;
             LaunchInfo.Mode =
                 static_cast<llvm::omp::OMPTgtExecModeFlags>(Cfg.ExecMode);
             LaunchInfo.ReductionDataSize = Cfg.ReductionDataSize;
-            LaunchInfo.StaticBlockMemSize = Kernel->getStaticBlockMemSize();
+            LaunchInfo.StaticBlockMemSize = StaticBlockMemSize;
             // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max,
             // further clamped to the kernel function's own driver-reported
             // maximum.
+            uint32_t DeviceThreadLimit = Device.getThreadLimit();
             LaunchInfo.MaxNumThreads =
-                std::min(Cfg.MaxThreads > 0
-                             ? std::min(Cfg.MaxThreads,
-                                        int32_t(GenericDevice.getThreadLimit()))
-                             : GenericDevice.getThreadLimit(),
-                         Kernel->getMaxThreads());
+                std::min(Cfg.MaxThreads > 0 ? std::min(uint32_t(Cfg.MaxThreads),
+                                                       DeviceThreadLimit)
+                                            : DeviceThreadLimit,
+                         KernelMaxThreads);
+            uint32_t DefaultNumThreads = Device.getDefaultNumThreads();
             LaunchInfo.PreferredNumThreads =
                 Cfg.MinThreads > 0
-                    ? std::max(Cfg.MinThreads,
-                               int32_t(GenericDevice.getDefaultNumThreads()))
-                    : GenericDevice.getDefaultNumThreads();
+                    ? std::max(Cfg.MinThreads, int32_t(DefaultNumThreads))
+                    : DefaultNumThreads;
 
             Device.setKernelLaunchInfo(DeviceEntry.Address, LaunchInfo);
           }
@@ -631,8 +624,8 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
   {
     auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
     if (DeviceNo >= ExclusiveDevicesAccessor->size())
-      return error::createOffloadError(
-          error::ErrorCode::INVALID_VALUE,
+      return createError(
+          ErrorCode::InvalidValue,
           "device number '%i' out of range, only %i devices available",
           DeviceNo, ExclusiveDevicesAccessor->size());
 
@@ -642,8 +635,25 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
   // Check whether global data has been mapped for this device
   if (DevicePtr->hasPendingImages())
     if (loadImagesOntoDevice(*DevicePtr) != OFFLOAD_SUCCESS)
-      return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
-                                       "failed to load images on device '%i'",
-                                       DeviceNo);
+      return createError(ErrorCode::BackendFailure,
+                         "failed to load images on device '%i'", DeviceNo);
   return *DevicePtr;
+}
+
+int PluginManager::getNumActivePlugins() const {
+  if (!LibOffloadInitialized)
+    return 0;
+  int count = 0;
+  if (auto Err = iteratePlatforms(
+          [](ol_platform_handle_t Platform, void *Data) {
+            bool Active = false;
+            if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_ACTIVE,
+                                  sizeof(Active), &Active) == OL_SUCCESS &&
+                Active)
+              ++(*static_cast<int *>(Data));
+          },
+          static_cast<void *>(&count))) {
+    consumeError(std::move(Err));
+  }
+  return count;
 }

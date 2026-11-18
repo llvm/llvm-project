@@ -317,3 +317,86 @@ define ptr @ptr_eq_replace_freeze2(ptr %p, ptr %q) {
   %select = select i1 %cmp.fr, ptr %gep1, ptr %gep2
   ret ptr %select
 }
+
+; The inner select shares the condition of the outer select, so the inner
+; select can be resolved to %p when simplifying the true arm of the outer
+; select. This allows the select of two GEPs with a common base to be folded
+; into a single GEP.
+define ptr @shared_select_cond(ptr %p, i1 %c) {
+; CHECK-LABEL: @shared_select_cond(
+; CHECK-NEXT:    [[RESULT_V:%.*]] = select i1 [[C:%.*]], i64 48, i64 40
+; CHECK-NEXT:    [[RESULT:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 [[RESULT_V]]
+; CHECK-NEXT:    ret ptr [[RESULT]]
+;
+  %base = select i1 %c, ptr %p, ptr null
+  %left = getelementptr inbounds i8, ptr %base, i64 48
+  %right = getelementptr inbounds i8, ptr %p, i64 40
+  %result = select i1 %c, ptr %left, ptr %right
+  ret ptr %result
+}
+
+define ptr @shared_select_cond_swapped(ptr %p, i1 %c) {
+; CHECK-LABEL: @shared_select_cond_swapped(
+; CHECK-NEXT:    [[RESULT_V:%.*]] = select i1 [[C:%.*]], i64 40, i64 48
+; CHECK-NEXT:    [[RESULT:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 [[RESULT_V]]
+; CHECK-NEXT:    ret ptr [[RESULT]]
+;
+  %base = select i1 %c, ptr null, ptr %p
+  %left = getelementptr inbounds i8, ptr %base, i64 48
+  %right = getelementptr inbounds i8, ptr %p, i64 40
+  %result = select i1 %c, ptr %right, ptr %left
+  ret ptr %result
+}
+
+; Make sure the condition computation used in the original motivating case
+; from clang's CodeGenFunction::EmitCXXConstructorCall is handled.
+define ptr @shared_select_cond_icmp(i16 %tag, ptr %p) {
+; CHECK-LABEL: @shared_select_cond_icmp(
+; CHECK-NEXT:    [[KIND:%.*]] = and i16 [[TAG:%.*]], 511
+; CHECK-NEXT:    [[MATCH:%.*]] = icmp eq i16 [[KIND]], 118
+; CHECK-NEXT:    [[RESULT_V:%.*]] = select i1 [[MATCH]], i64 48, i64 40
+; CHECK-NEXT:    [[RESULT:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 [[RESULT_V]]
+; CHECK-NEXT:    ret ptr [[RESULT]]
+;
+  %kind = and i16 %tag, 511
+  %match = icmp eq i16 %kind, 118
+  %base = select i1 %match, ptr %p, ptr null
+  %left = getelementptr inbounds i8, ptr %base, i64 48
+  %right = getelementptr inbounds i8, ptr %p, i64 40
+  %result = select i1 %match, ptr %left, ptr %right
+  ret ptr %result
+}
+
+; Negative test: the inner select has another use, so it cannot be rewritten.
+define ptr @shared_select_cond_extra_use(ptr %p, ptr %q, i1 %c) {
+; CHECK-LABEL: @shared_select_cond_extra_use(
+; CHECK-NEXT:    [[BASE:%.*]] = select i1 [[C:%.*]], ptr [[P:%.*]], ptr null
+; CHECK-NEXT:    [[LEFT:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE]], i64 48
+; CHECK-NEXT:    store ptr [[BASE]], ptr [[Q:%.*]], align 8
+; CHECK-NEXT:    [[RIGHT:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 40
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[C]], ptr [[LEFT]], ptr [[RIGHT]]
+; CHECK-NEXT:    ret ptr [[RESULT]]
+;
+  %base = select i1 %c, ptr %p, ptr null
+  %left = getelementptr inbounds i8, ptr %base, i64 48
+  store ptr %base, ptr %q
+  %right = getelementptr inbounds i8, ptr %p, i64 40
+  %result = select i1 %c, ptr %left, ptr %right
+  ret ptr %result
+}
+
+; Vector variant of @shared_select_cond: the shared-condition inner select is
+; resolved, but the select of two GEPs is not folded into a single GEP.
+define <2 x ptr> @shared_select_cond_vec_gep(<2 x ptr> %p, <2 x i1> %c) {
+; CHECK-LABEL: @shared_select_cond_vec_gep(
+; CHECK-NEXT:    [[LEFT:%.*]] = getelementptr i8, <2 x ptr> [[P:%.*]], i64 48
+; CHECK-NEXT:    [[RIGHT:%.*]] = getelementptr i8, <2 x ptr> [[P]], i64 40
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x ptr> [[LEFT]], <2 x ptr> [[RIGHT]]
+; CHECK-NEXT:    ret <2 x ptr> [[R]]
+;
+  %base = select <2 x i1> %c, <2 x ptr> %p, <2 x ptr> zeroinitializer
+  %left = getelementptr i8, <2 x ptr> %base, i64 48
+  %right = getelementptr i8, <2 x ptr> %p, i64 40
+  %r = select <2 x i1> %c, <2 x ptr> %left, <2 x ptr> %right
+  ret <2 x ptr> %r
+}

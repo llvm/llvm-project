@@ -24,6 +24,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/SemaAMDGPU.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaRISCV.h"
@@ -986,6 +987,11 @@ void CastOperation::CheckDynamicCast() {
     SrcExpr = ExprError();
     return;
   }
+
+  // Similarly, dynamic_cast is not available in CUDA device code, except for
+  // dynamic_cast to void*.
+  if (Self.getLangOpts().CUDA && !DestPointee->isVoidType())
+    Self.CUDA().checkRTTIUse(OpRange.getBegin(), "dynamic_cast");
 
   // Warns when dynamic_cast is used with RTTI data disabled.
   if (!Self.getLangOpts().RTTIData) {
@@ -2966,6 +2972,7 @@ bool CastOperation::CheckHLSLCStyleCast(CheckedConversionKind CCK) {
       SrcExpr = Self.ImpCastExprToType(
           SrcExpr.get(), MT->getElementType(), CK_HLSLMatrixTruncation,
           SrcExpr.get()->getValueKind(), nullptr, CCK);
+
     // Inserting a scalar cast here allows for a simplified codegen in
     // the case the destTy is a vector
     if (const VectorType *DVT = DestType->getAs<VectorType>())
@@ -2973,6 +2980,15 @@ bool CastOperation::CheckHLSLCStyleCast(CheckedConversionKind CCK) {
           SrcExpr.get(), DVT->getElementType(),
           Self.PrepareScalarCast(SrcExpr, DVT->getElementType()),
           SrcExpr.get()->getValueKind(), nullptr, CCK);
+
+    // Inserting a scalar cast here allows for a simplified codegen in
+    // the case the destTy is a matrix
+    if (const MatrixType *DMT = DestType->getAs<MatrixType>())
+      SrcExpr = Self.ImpCastExprToType(
+          SrcExpr.get(), DMT->getElementType(),
+          Self.PrepareScalarCast(SrcExpr, DMT->getElementType()),
+          SrcExpr.get()->getValueKind(), nullptr, CCK);
+
     Kind = CK_HLSLAggregateSplatCast;
     return true;
   }
