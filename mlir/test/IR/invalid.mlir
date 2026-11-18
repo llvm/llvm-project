@@ -699,3 +699,12 @@ func.func @drop_references_on_block_parse_error(){
   }) : () -> ()
   return
 }
+
+// -----
+
+func.func @redefined_recursive_alias_type() {
+  "test.dummy_op_for_roundtrip"() : () -> !test.test_rec_alias<redef, i32>
+  // expected-error @below {{recursive alias 'redef' redefined with a different body}}
+  "test.dummy_op_for_roundtrip"() : () -> !test.test_rec_alias<redef, i64>
+  return
+}
