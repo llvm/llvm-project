@@ -142,6 +142,15 @@ KMP_PREFIX_UNDERSCORE(\proc):
 	.globl KMP_PREFIX_UNDERSCORE($0)
 KMP_PREFIX_UNDERSCORE($0):
 .endmacro
+
+.macro KMP_CFI_DEF_OFFSET
+.endmacro
+.macro KMP_CFI_OFFSET
+.endmacro
+.macro KMP_CFI_RESTORE
+.endmacro
+.macro KMP_CFI_DEF
+.endmacro
 # elif KMP_OS_WINDOWS
 #  define KMP_PREFIX_UNDERSCORE(x) x  // no extra underscore for Windows/ARM64 symbols
 // Format labels so that they don't override function names in gdb's backtraces
@@ -159,6 +168,15 @@ KMP_PREFIX_UNDERSCORE($0):
 	ALIGN 2
 	.globl KMP_PREFIX_UNDERSCORE(\proc)
 KMP_PREFIX_UNDERSCORE(\proc):
+.endm
+
+.macro KMP_CFI_DEF_OFFSET sz
+.endm
+.macro KMP_CFI_OFFSET reg, sz
+.endm
+.macro KMP_CFI_RESTORE reg
+.endm
+.macro KMP_CFI_DEF reg, sz
 .endm
 # else // KMP_OS_DARWIN || KMP_OS_WINDOWS
 #  define KMP_PREFIX_UNDERSCORE(x) x  // no extra underscore for Linux* OS symbols
@@ -186,6 +204,19 @@ KMP_PREFIX_UNDERSCORE(\proc):
 	.globl KMP_PREFIX_UNDERSCORE(\proc)
 KMP_PREFIX_UNDERSCORE(\proc):
 	.cfi_startproc
+.endm
+
+.macro KMP_CFI_DEF_OFFSET sz
+	.cfi_def_cfa_offset	\sz
+.endm
+.macro KMP_CFI_OFFSET reg, sz
+	.cfi_offset	\reg,\sz
+.endm
+.macro KMP_CFI_RESTORE reg
+	.cfi_restore	\reg
+.endm
+.macro KMP_CFI_DEF reg, sz
+	.cfi_def_cfa	\reg,\sz
 .endm
 # endif // KMP_OS_DARWIN
 
@@ -219,6 +250,12 @@ KMP_PREFIX_UNDERSCORE(\proc):
 #  define PAC_FLAG GNU_PROPERTY_AARCH64_FEATURE_1_PAC
 # else
 #  define PAC_FLAG 0
+# endif
+
+# if PAC_FLAG != 0 && !KMP_OS_DARWIN && !KMP_OS_WINDOWS
+#  define KMP_CFI_NEGATE_RA_STATE .cfi_negate_ra_state
+# else
+#  define KMP_CFI_NEGATE_RA_STATE
 # endif
 
 # if (BTI_FLAG | PAC_FLAG) != 0
@@ -1357,12 +1394,23 @@ __tid = 8
 	.text
 	PROC __kmp_invoke_microtask
 	PACBTI_C
+	KMP_CFI_NEGATE_RA_STATE
 
 # if OMPT_SUPPORT
 	stp	x19, x20, [sp, #-16]!
+	KMP_CFI_DEF_OFFSET 16
+	KMP_CFI_OFFSET x19, -16
+	KMP_CFI_OFFSET x20, -8
+#  define KMP_FRAME_SIZE 32
+# else
+#  define KMP_FRAME_SIZE 16
 # endif
 	stp	x29, x30, [sp, #-16]!
+	KMP_CFI_DEF_OFFSET KMP_FRAME_SIZE
+	KMP_CFI_OFFSET x29, -KMP_FRAME_SIZE
+	KMP_CFI_OFFSET x30, -KMP_FRAME_SIZE+8
 	mov	x29, sp
+	KMP_CFI_DEF x29, KMP_FRAME_SIZE
 
 	orr	w9, wzr, #1
 	add	w9, w9, w3, lsr #1
@@ -1416,11 +1464,19 @@ KMP_LABEL(kmp_1):
 	orr	w0, wzr, #1
 	mov	sp, x29
 	ldp	x29, x30, [sp], #16
+	KMP_CFI_DEF sp, KMP_FRAME_SIZE-16
+	KMP_CFI_RESTORE x29
+	KMP_CFI_RESTORE x30
 # if OMPT_SUPPORT
 	str	xzr, [x19]
 	ldp	x19, x20, [sp], #16
+	KMP_CFI_DEF_OFFSET 0
+	KMP_CFI_RESTORE x19
+	KMP_CFI_RESTORE x20
 # endif
+# undef KMP_FRAME_SIZE
 	PACBTI_RET
+	KMP_CFI_NEGATE_RA_STATE
 	ret
 
 	DEBUG_INFO __kmp_invoke_microtask
@@ -1487,10 +1543,25 @@ __tid = 8
 // mark_begin;
 	.text
 	PROC __kmp_invoke_microtask
+# if !KMP_OS_DARWIN && !KMP_OS_WINDOWS
+	.fnstart
+	.save	{r4-r11,lr}
+	.pad	#4
+# endif
 
 	// Pushing one extra register (r3) to keep the stack aligned
 	// for when we call pkfn below
 	push	{r3-r11,lr}
+	KMP_CFI_DEF_OFFSET 10*4
+	KMP_CFI_OFFSET lr, -4
+	KMP_CFI_OFFSET r11, -8
+	KMP_CFI_OFFSET r10, -12
+	KMP_CFI_OFFSET r9, -16
+	KMP_CFI_OFFSET r8, -20
+	KMP_CFI_OFFSET r7, -24
+	KMP_CFI_OFFSET r6, -28
+	KMP_CFI_OFFSET r5, -32
+	KMP_CFI_OFFSET r4, -36
 	// Load p_argv and &exit_frame
 	ldr	r4, [sp, #10*4]
 # if OMPT_SUPPORT
@@ -1504,7 +1575,11 @@ __tid = 8
 # define FP r11
 # define FPOFF 8*4
 #endif
+# if !KMP_OS_DARWIN && !KMP_OS_WINDOWS
+	.setfp	FP, sp, #FPOFF
+# endif
 	add	FP, sp, #FPOFF
+	KMP_CFI_DEF FP, 10*4-FPOFF
 # if OMPT_SUPPORT
 	mov	r10, r5
 	str	FP, [r10]
@@ -1559,6 +1634,7 @@ KMP_LABEL(kmp_1):
 
 	sub	r4, FP, #FPOFF
 	mov	sp, r4
+	KMP_CFI_DEF sp, 10*4
 # undef FP
 # undef FPOFF
 
@@ -1567,6 +1643,9 @@ KMP_LABEL(kmp_1):
 	str	r1, [r10]
 # endif
 	pop	{r3-r11,pc}
+# if !KMP_OS_DARWIN && !KMP_OS_WINDOWS
+	.fnend
+# endif
 
 	DEBUG_INFO __kmp_invoke_microtask
 // -- End  __kmp_invoke_microtask
