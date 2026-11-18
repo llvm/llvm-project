@@ -32,80 +32,38 @@ entry:
   ret i32 %0
 }
 
+; Offsets outside of the global are not folded into the PC-relative relocation,
+; since the relocation also includes the distance to the PC and could go out
+; of range at link time.
 define dso_local signext i32 @getElementLocalNegative() local_unnamed_addr {
 ; CHECK-S-LABEL: getElementLocalNegative:
 ; CHECK-S:       # %bb.0: # %entry
-; CHECK-S-NEXT:    plwa r3, array2@PCREL-8(0), 1
+; CHECK-S-NEXT:    paddi r3, 0, array2@PCREL, 1
+; CHECK-S-NEXT:    lwa r3, -8(r3)
 ; CHECK-S-NEXT:    blr
 ; CHECK-O-LABEL: <getElementLocalNegative>:
-; CHECK-O:         plwa 3, 0(0), 1
-; CHECK-O-NEXT:      R_PPC64_PCREL34      array2-0x8
+; CHECK-O:         paddi 3, 0, 0, 1
+; CHECK-O-NEXT:      R_PPC64_PCREL34      array2
+; CHECK-O-NEXT:    lwa 3, -8(3)
 ; CHECK-O-NEXT:    blr
 entry:
   %0 = load i32, ptr getelementptr inbounds ([10 x i32], ptr @array2, i64 0, i64 -2), align 4
   ret i32 %0
 }
 
-; Offsets outside of +/-16MB are not folded into the PC-relative relocation,
-; since the relocation also includes the distance to the PC and could go out
-; of range at link time.
-define dso_local signext i32 @getElementLocalLargestOffset() local_unnamed_addr {
-; CHECK-S-LABEL: getElementLocalLargestOffset:
-; CHECK-S:       # %bb.0: # %entry
-; CHECK-S-NEXT:    plwa r3, array2@PCREL+16777212(0), 1
-; CHECK-S-NEXT:    blr
-; CHECK-O-LABEL: <getElementLocalLargestOffset>:
-; CHECK-O:         plwa 3, 0(0), 1
-; CHECK-O-NEXT:      R_PPC64_PCREL34      array2+0xfffffc
-; CHECK-O-NEXT:    blr
-entry:
-  %0 = load i32, ptr getelementptr inbounds (i8, ptr @array2, i64 16777212), align 4
-  ret i32 %0
-}
-
-define dso_local signext i32 @getElementLocalTooLargeOffset() local_unnamed_addr {
-; CHECK-S-LABEL: getElementLocalTooLargeOffset:
+define dso_local signext i32 @getElementLocalOutOfBounds() local_unnamed_addr {
+; CHECK-S-LABEL: getElementLocalOutOfBounds:
 ; CHECK-S:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    paddi r3, 0, array2@PCREL, 1
-; CHECK-S-NEXT:    plwa r3, 16777216(r3), 0
+; CHECK-S-NEXT:    lwa r3, 44(r3)
 ; CHECK-S-NEXT:    blr
-; CHECK-O-LABEL: <getElementLocalTooLargeOffset>:
+; CHECK-O-LABEL: <getElementLocalOutOfBounds>:
 ; CHECK-O:         paddi 3, 0, 0, 1
 ; CHECK-O-NEXT:      R_PPC64_PCREL34      array2
-; CHECK-O-NEXT:    plwa 3, 16777216(3), 0
+; CHECK-O-NEXT:    lwa 3, 44(3)
 ; CHECK-O-NEXT:    blr
 entry:
-  %0 = load i32, ptr getelementptr inbounds (i8, ptr @array2, i64 16777216), align 4
-  ret i32 %0
-}
-
-define dso_local signext i32 @getElementLocalSmallestOffset() local_unnamed_addr {
-; CHECK-S-LABEL: getElementLocalSmallestOffset:
-; CHECK-S:       # %bb.0: # %entry
-; CHECK-S-NEXT:    plwa r3, array2@PCREL-16777216(0), 1
-; CHECK-S-NEXT:    blr
-; CHECK-O-LABEL: <getElementLocalSmallestOffset>:
-; CHECK-O:         plwa 3, 0(0), 1
-; CHECK-O-NEXT:      R_PPC64_PCREL34      array2-0x1000000
-; CHECK-O-NEXT:    blr
-entry:
-  %0 = load i32, ptr getelementptr inbounds (i8, ptr @array2, i64 -16777216), align 4
-  ret i32 %0
-}
-
-define dso_local signext i32 @getElementLocalTooSmallOffset() local_unnamed_addr {
-; CHECK-S-LABEL: getElementLocalTooSmallOffset:
-; CHECK-S:       # %bb.0: # %entry
-; CHECK-S-NEXT:    paddi r3, 0, array2@PCREL, 1
-; CHECK-S-NEXT:    plwa r3, -16777220(r3), 0
-; CHECK-S-NEXT:    blr
-; CHECK-O-LABEL: <getElementLocalTooSmallOffset>:
-; CHECK-O:         paddi 3, 0, 0, 1
-; CHECK-O-NEXT:      R_PPC64_PCREL34      array2
-; CHECK-O-NEXT:    plwa 3, -16777220(3), 0
-; CHECK-O-NEXT:    blr
-entry:
-  %0 = load i32, ptr getelementptr inbounds (i8, ptr @array2, i64 -16777220), align 4
+  %0 = load i32, ptr getelementptr ([10 x i32], ptr @array2, i64 0, i64 11), align 4
   ret i32 %0
 }
 
@@ -121,7 +79,7 @@ define dso_local signext i32 @getElementLocalHugeOffset() local_unnamed_addr {
 ; CHECK-O-NEXT:    plwa 3, 8589934588(3), 0
 ; CHECK-O-NEXT:    blr
 entry:
-  %0 = load i32, ptr getelementptr inbounds (i8, ptr @array2, i64 8589934588), align 4
+  %0 = load i32, ptr getelementptr (i8, ptr @array2, i64 8589934588), align 4
   ret i32 %0
 }
 
