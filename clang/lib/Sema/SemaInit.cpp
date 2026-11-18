@@ -1606,8 +1606,8 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
     // Fall through for subaggregate initialization
   } else if (ElemType->isScalarType() || ElemType->isAtomicType()) {
     // FIXME: Need to handle atomic aggregate types with implicit init lists.
-    return CheckScalarType(Entity, IList, ElemType, Index,
-                           StructuredList, StructuredIndex);
+    return CheckScalarType(Entity, IList, ElemType, Index, StructuredList,
+                           StructuredIndex);
   } else if (const ArrayType *arrayType =
                  SemaRef.Context.getAsArrayType(ElemType)) {
     // arrayType can be incomplete if we're initializing a flexible
@@ -6980,8 +6980,26 @@ void InitializationSequence::InitializeFrom(Sema &S,
       return;
 
     // Handle initialization in C
+    // Check for atomic destinations and unwrap to the underlying value type if
+    // the source is non-atomic. Perform the atomic conversion later
+    bool NeedAtomicConversion = false;
+    if (const AtomicType *AtomicDest = DestType->getAs<AtomicType>()) {
+      bool SourceIsAtomicOrPtrToAtomic =
+          (SourceType->isAtomicType() ||
+           (SourceType->isPointerType() &&
+            SourceType->getPointeeType()->isAtomicType()));
+      if (SourceType.isNull() || !SourceIsAtomicOrPtrToAtomic) {
+        DestType = AtomicDest->getValueType();
+        NeedAtomicConversion = true;
+      }
+    }
+
     AddCAssignmentStep(DestType);
     MaybeProduceObjCObject(S, *this, Entity);
+
+    // Add atomic conversion if needed
+    if (!Failed() && NeedAtomicConversion)
+      AddAtomicConversionStep(Entity.getType());
     return;
   }
 
@@ -7122,13 +7140,25 @@ void InitializationSequence::InitializeFrom(Sema &S,
   //      initializer expression to the cv-unqualified version of the
   //      destination type; no user-defined conversions are considered.
 
-  ImplicitConversionSequence ICS
-    = S.TryImplicitConversion(Initializer, DestType,
-                              /*SuppressUserConversions*/true,
-                              Sema::AllowedExplicit::None,
-                              /*InOverloadResolution*/ false,
-                              /*CStyle=*/Kind.isCStyleOrFunctionalCast(),
-                              allowObjCWritebackConversion);
+  // Check for atomic destinations and unwrap to the underlying value type if
+  // the source is non-atomic. Perform the atomic conversion later
+  bool NeedAtomicConversion = false;
+  if (const AtomicType *AtomicDest = DestType->getAs<AtomicType>()) {
+    bool SourceIsAtomicOrPtrToAtomic =
+        (SourceType->isAtomicType() ||
+         (SourceType->isPointerType() &&
+          SourceType->getPointeeType()->isAtomicType()));
+    if (SourceType.isNull() || !SourceIsAtomicOrPtrToAtomic) {
+      DestType = AtomicDest->getValueType();
+      NeedAtomicConversion = true;
+    }
+  }
+
+  ImplicitConversionSequence ICS = S.TryImplicitConversion(
+      Initializer, DestType,
+      /*SuppressUserConversions*/ true, Sema::AllowedExplicit::None,
+      /*InOverloadResolution*/ false,
+      /*CStyle=*/Kind.isCStyleOrFunctionalCast(), allowObjCWritebackConversion);
 
   if (ICS.isStandard() &&
       ICS.Standard.Second == ICK_Writeback_Conversion) {
@@ -7167,6 +7197,10 @@ void InitializationSequence::InitializeFrom(Sema &S,
     AddConversionSequenceStep(ICS, DestType, TopLevelOfInitList);
 
     MaybeProduceObjCObject(S, *this, Entity);
+
+    // Add atomic conversion if needed
+    if (!Failed() && NeedAtomicConversion)
+      AddAtomicConversionStep(Entity.getType());
   }
 }
 
@@ -8639,11 +8673,10 @@ ExprResult InitializationSequence::Perform(Sema &S,
                                         Step->Type, InitialCurInit.get());
 
       bool Complained;
-      if (S.DiagnoseAssignmentResult(ConvTy, Kind.getLocation(),
-                                     Step->Type, SourceType,
-                                     InitialCurInit.get(),
-                                     getAssignmentAction(Entity, true),
-                                     &Complained)) {
+      if (S.DiagnoseAssignmentResult(
+              ConvTy, Kind.getLocation(), Entity.getType(), SourceType,
+              InitialCurInit.get(), getAssignmentAction(Entity, true),
+              &Complained)) {
         PrintInitLocationNote(S, Entity);
         return ExprError();
       } else if (Complained)
