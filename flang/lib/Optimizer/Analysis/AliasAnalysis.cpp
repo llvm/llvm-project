@@ -1367,6 +1367,8 @@ AliasAnalysis::AliasAnalysis(AliasAnalysis &&other) noexcept
       sortedScopeCache(std::move(other.sortedScopeCache)),
       multiScopeCache(std::move(other.multiScopeCache)),
       getSourceCache(std::move(other.getSourceCache)),
+      publicationCache(std::move(other.publicationCache)),
+      allocationsInProgress(std::move(other.allocationsInProgress)),
       sourceCacheEnabled(other.sourceCacheEnabled),
       sourceCacheHits(other.sourceCacheHits),
       sourceCacheMisses(other.sourceCacheMisses), cache(other.cache) {
