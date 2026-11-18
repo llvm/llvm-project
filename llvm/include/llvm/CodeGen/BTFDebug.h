@@ -430,12 +430,7 @@ public:
   size_t addString(StringRef S) { return StringTable.addString(S); }
 
   /// Get the type id for a particular DIType.
-  uint32_t getTypeId(const DIType *Ty) {
-    assert(Ty && "Invalid null Type");
-    assert(DIToIdMap.find(Ty) != DIToIdMap.end() &&
-           "DIType not added in the BDIToIdMap");
-    return DIToIdMap[Ty];
-  }
+  uint32_t getTypeId(const DIType *Ty) { return DIToIdMap.lookup(Ty); }
 
   /// Called at the beginning of instruction processing, before line info.
   /// Subclasses can override to handle target-specific instruction processing

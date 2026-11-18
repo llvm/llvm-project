@@ -4782,7 +4782,11 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
       SplitDWARFInlining = false;
     }
   }
-  if (const Arg *A = Args.getLastArg(options::OPT_g_Group)) {
+  const Arg *LastDebugArg = nullptr;
+  for (const Arg *A : Args.filtered(options::OPT_g_Group))
+    if (!A->getOption().matches(options::OPT_gbtf))
+      LastDebugArg = A;
+  if (const Arg *A = LastDebugArg) {
     DebugInfoKind = llvm::codegenoptions::DebugInfoConstructor;
 
     // If the last option explicitly specified a debug-info level, use it.
@@ -4829,7 +4833,8 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
 
   bool EmitBTF = false;
   if (const Arg *A = Args.getLastArg(options::OPT_gbtf))
-    EmitBTF = checkDebugInfoOption(A, Args, D, TC);
+    EmitBTF = TC.getTriple().isOSBinFormatELF() &&
+              checkDebugInfoOption(A, Args, D, TC);
 
   // BTF reads IR debug metadata, which requires DWARF generation.
   if (EmitBTF) {

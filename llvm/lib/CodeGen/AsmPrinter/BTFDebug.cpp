@@ -638,6 +638,7 @@ void BTFDebug::visitSubroutineType(
     const DISubroutineType *STy, bool ForSubprog,
     const SmallDenseMap<uint32_t, StringRef> &FuncArgNames, uint32_t &TypeId,
     bool VoidReturn) {
+  TypeId = 0;
   DITypeArray Elements = STy->getTypeArray();
   uint32_t VLen = Elements.size() - 1;
   if (VLen > BTF::MAX_VLEN)
@@ -748,9 +749,14 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
                                uint32_t &TypeId) {
   DINodeArray DIElements = CTy->getElements();
   SmallVector<const DINode *, 8> Elements(DIElements.begin(), DIElements.end());
+  if (CTy->getTag() == dwarf::DW_TAG_class_type)
+    llvm::erase_if(Elements, [](const DINode *Element) {
+      return Element->getTag() != dwarf::DW_TAG_member &&
+             Element->getTag() != dwarf::DW_TAG_variant_part;
+    });
   // Structure elements must have nondecreasing offsets in BTF. Preserve DI
   // order for union and variant-part records.
-  if (CTy->getTag() == dwarf::DW_TAG_structure_type)
+  if (IsStruct)
     llvm::stable_sort(Elements, [](const DINode *LHS, const DINode *RHS) {
       return getBTFRecordElementOffset(LHS) < getBTFRecordElementOffset(RHS);
     });
@@ -835,6 +841,8 @@ void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
   const DIType *ElemType = tryRemoveAtomicType(CTy->getBaseType());
   visitTypeEntry(ElemType, ElemTypeId, false, false);
   if (!ElemTypeId) {
+    if (!Asm->TM.getTargetTriple().isBPF())
+      return;
     SmallString<128> Message;
     raw_svector_ostream Err(Message);
     Err << "unsupported BTF array element type";
@@ -902,13 +910,17 @@ void BTFDebug::visitCompositeType(const DICompositeType *CTy,
                                   uint32_t &TypeId) {
   auto Tag = CTy->getTag();
   switch (Tag) {
+  case dwarf::DW_TAG_class_type:
   case dwarf::DW_TAG_structure_type:
   case dwarf::DW_TAG_union_type:
   case dwarf::DW_TAG_variant_part:
     if (CTy->isForwardDecl())
       visitFwdDeclType(CTy, Tag == dwarf::DW_TAG_union_type, TypeId);
     else
-      visitStructType(CTy, Tag == dwarf::DW_TAG_structure_type, TypeId);
+      visitStructType(CTy,
+                      Tag == dwarf::DW_TAG_structure_type ||
+                          Tag == dwarf::DW_TAG_class_type,
+                      TypeId);
     break;
   case dwarf::DW_TAG_array_type:
     visitArrayType(CTy, TypeId);
@@ -917,7 +929,7 @@ void BTFDebug::visitCompositeType(const DICompositeType *CTy,
     visitEnumType(CTy, TypeId);
     break;
   default:
-    llvm_unreachable("Unexpected DI tag of a composite type");
+    break;
   }
 }
 
@@ -925,6 +937,7 @@ bool BTFDebug::IsForwardDeclCandidate(const DIType *Base) {
   if (const auto *CTy = dyn_cast<DICompositeType>(Base)) {
     auto CTag = CTy->getTag();
     if ((CTag == dwarf::DW_TAG_structure_type ||
+         CTag == dwarf::DW_TAG_class_type ||
          CTag == dwarf::DW_TAG_union_type) &&
         !CTy->getName().empty() && !CTy->isForwardDecl())
       return true;
@@ -990,6 +1003,7 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
 
 void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
                               bool CheckPointer, bool SeenPointer) {
+  TypeId = 0;
   if (!Ty || DIToIdMap.find(Ty) != DIToIdMap.end()) {
     TypeId = DIToIdMap[Ty];
 
@@ -1029,8 +1043,6 @@ void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
     visitCompositeType(CTy, TypeId);
   else if (const auto *DTy = dyn_cast<DIDerivedType>(Ty))
     visitDerivedType(DTy, TypeId, CheckPointer, SeenPointer);
-  else
-    llvm_unreachable("Unknown DIType");
 }
 
 void BTFDebug::visitTypeEntry(const DIType *Ty) {
@@ -1270,14 +1282,17 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   } else {
     SecNameOff = addString(".text");
   }
-  FuncInfoTable[SecNameOff].push_back(FuncInfo);
+  if (FuncTypeId)
+    FuncInfoTable[SecNameOff].push_back(FuncInfo);
 }
 
 uint32_t BTFDebug::processFunctionType(
     const MachineFunction *MF, const DISubprogram *SP,
     const SmallDenseMap<uint32_t, StringRef> &FuncArgNames) {
-  uint32_t ProtoTypeId;
+  uint32_t ProtoTypeId = 0;
   visitSubroutineType(SP->getType(), true, FuncArgNames, ProtoTypeId);
+  if (!ProtoTypeId)
+    return 0;
   uint8_t Scope = SP->isLocalToUnit() ? BTF::FUNC_STATIC : BTF::FUNC_GLOBAL;
   return processDISubprogram(SP, ProtoTypeId, Scope);
 }
@@ -1377,7 +1392,7 @@ void BTFDebug::processGlobals() {
     }
 
     // Skip .maps sections (BPF-specific).
-    if (SecName.starts_with(".maps"))
+    if (Asm->TM.getTargetTriple().isBPF() && SecName.starts_with(".maps"))
       continue;
 
     // Create a .rodata datasec if the global variable is an initialized
@@ -1473,6 +1488,8 @@ void BTFDebug::processFuncPrototypes(const Function *F) {
   uint32_t ProtoTypeId;
   const SmallDenseMap<uint32_t, StringRef> FuncArgNames;
   visitSubroutineType(SP->getType(), false, FuncArgNames, ProtoTypeId);
+  if (!ProtoTypeId)
+    return;
   uint32_t FuncId = processDISubprogram(SP, ProtoTypeId, BTF::FUNC_EXTERN);
 
   if (F->hasSection()) {

@@ -366,6 +366,11 @@ void BPFBTFDebug::processGlobals() {
   }
   // Then process all non-.maps globals via the base class.
   BTFDebug::processGlobals();
+
+  // The trap call may have been removed during machine-level optimization.
+  for (const Function &F : *MMI->getModule())
+    if (F.getName() == BPF_TRAP)
+      processFuncPrototypes(&F);
 }
 
 void BPFBTFDebug::generatePatchImmReloc(const MCSymbol *ORSym, uint32_t RootId,
@@ -415,7 +420,7 @@ void BPFBTFDebug::processGlobalValue(const MachineOperand &MO) {
 uint32_t BPFBTFDebug::processFunctionType(
     const MachineFunction *MF, const DISubprogram *SP,
     const SmallDenseMap<uint32_t, StringRef> &FuncArgNames) {
-  uint32_t ProtoTypeId;
+  uint32_t ProtoTypeId = 0;
   uint8_t Scope = SP->isLocalToUnit() ? BTF::FUNC_STATIC : BTF::FUNC_GLOBAL;
   bool IsNocall = SP->getType()->getCC() == dwarf::DW_CC_nocall;
   bool VoidReturn = MF->getFunction().getReturnType()->isVoidTy();
@@ -454,6 +459,8 @@ uint32_t BPFBTFDebug::processFunctionType(
   // type if compiler removed it.
   visitSubroutineType(SP->getType(), true, FuncArgNames, ProtoTypeId,
                       VoidReturn);
+  if (!ProtoTypeId)
+    return 0;
   return processDISubprogram(SP, ProtoTypeId, Scope);
 }
 
@@ -490,9 +497,9 @@ bool BPFBTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
       const GlobalVariable *GVar = dyn_cast<GlobalVariable>(MO.getGlobal());
       if (GVar) {
         // Emit "mov ri, <imm>" for patched insns.
-        auto IMGIt = PatchImms.find(GVar);
-        if (IMGIt != PatchImms.end()) {
-          auto Imm = IMGIt->second;
+        if (GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr) ||
+            GVar->hasAttribute(BPFCoreSharedInfo::TypeIdAttr)) {
+          auto Imm = PatchImms[GVar];
           auto Reloc = Imm.second;
           if (Reloc == BTF::ENUM_VALUE_EXISTENCE || Reloc == BTF::ENUM_VALUE ||
               Reloc == BTF::BTF_TYPE_ID_LOCAL ||
@@ -528,15 +535,4 @@ bool BPFBTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
     }
   }
   return false;
-}
-
-void BPFBTFDebug::endModule() {
-  // BPF_TRAP may lose its call site during MachineIR optimization,
-  // so ensure its prototype is always emitted.
-  for (const Function &F : *MMI->getModule()) {
-    if (F.getName() == BPF_TRAP)
-      processFuncPrototypes(&F);
-  }
-
-  BTFDebug::endModule();
 }

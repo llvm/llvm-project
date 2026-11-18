@@ -3,6 +3,10 @@
 // -gbtf forwards to cc1.
 // RUN: %clang --target=x86_64-linux-gnu -gbtf -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=BTF %s
+// RUN: %clang --target=x86_64-pc-windows-msvc -g -gbtf -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=WINDOWS %s
+// RUN: %clang --target=x86_64-pc-windows-msvc -gbtf -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=WINDOWS-NODEBUG %s
 //
 // -gbtf alone implies debug info (LimitedDebugInfo).
 // RUN: %clang --target=x86_64-linux-gnu -gbtf -### %s 2>&1 \
@@ -21,7 +25,12 @@
 // RUN:   | FileCheck -check-prefix=BTF %s
 
 // BTF: "-gbtf"
-// BTF-DEBUGINFO: "-debug-info-kind=
+// BTF-DEBUGINFO: "-debug-info-kind=limited"
 // NO-BTF-NOT: "-gbtf"
+// WINDOWS-NOT: "-gbtf"
+// WINDOWS: "-gcodeview"
+// WINDOWS-NOT: "-gbtf"
+// WINDOWS-NODEBUG-NOT: "-gbtf"
+// WINDOWS-NODEBUG-NOT: "-debug-info-kind=
 
 int main(void) { return 0; }

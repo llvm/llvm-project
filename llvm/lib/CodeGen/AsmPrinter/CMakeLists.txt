@@ -37,7 +37,6 @@ add_llvm_component_library(LLVMAsmPrinter
   CodeGen
   CodeGenTypes
   Core
-  DebugInfoBTF
   DebugInfoCodeView
   DebugInfoDWARF
   DebugInfoDWARFLowLevel

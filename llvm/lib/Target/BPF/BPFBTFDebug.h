@@ -61,7 +61,6 @@ public:
   bool InstLower(const MachineInstr *MI, MCInst &OutMI);
 
   void processBeginInstruction(const MachineInstr *MI) override;
-  void endModule() override;
 };
 
 } // end namespace llvm
