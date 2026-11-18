@@ -186,7 +186,7 @@ export namespace std {
   using std::hash;
 
   // [util.smartptr.atomic], atomic smart pointers
-  // using std::atomic;
+  using std::atomic;
 
 #if _LIBCPP_STD_VER >= 23
   // [out.ptr.t], class template out_ptr_t

@@ -598,6 +598,9 @@ public:
     return __r;
   }
 
+  template <class>
+  friend struct atomic;
+
 private:
   template <class _Yp, bool = is_function<_Yp>::value>
   struct __shared_ptr_default_allocator {
@@ -1296,6 +1299,17 @@ public:
   friend class weak_ptr;
   template <class _Up>
   friend class shared_ptr;
+
+  template <class>
+  friend struct atomic;
+
+  template <class _Yp, class _CntrlBlk>
+  _LIBCPP_HIDE_FROM_ABI static weak_ptr<_Tp> __create_with_control_block(_Yp* __p, _CntrlBlk* __cntrl) _NOEXCEPT {
+    weak_ptr<_Tp> __r;
+    __r.__ptr_   = __p;
+    __r.__cntrl_ = __cntrl;
+    return __r;
+  }
 };
 
 #if _LIBCPP_STD_VER >= 17
@@ -1556,6 +1570,10 @@ inline _LIBCPP_HIDE_FROM_ABI bool atomic_compare_exchange_weak_explicit(
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
+
+#if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
+#  include <__memory/atomic_shared_ptr.h>
+#endif
 
 _LIBCPP_POP_MACROS
 
