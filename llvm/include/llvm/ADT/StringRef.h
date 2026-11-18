@@ -734,7 +734,10 @@ public:
   /// \param Separator The character to split on.
   /// \returns The split substrings.
   [[nodiscard]] std::pair<StringRef, StringRef> split(char Separator) const {
-    return split(StringRef(&Separator, 1));
+    size_t Idx = find(Separator);
+    if (Idx == npos)
+      return {*this, StringRef()};
+    return {slice(0, Idx), substr(Idx + 1)};
   }
 
   /// Split into two substrings around the first occurrence of a separator
