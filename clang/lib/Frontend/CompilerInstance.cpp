@@ -1135,19 +1135,16 @@ void CompilerInstance::LoadRequestedPlugins() {
   }
 }
 
-void CompilerInstance::parseLLVMArgs() {
-  if (!getFrontendOpts().LLVMArgs.empty()) {
-    unsigned NumArgs = getFrontendOpts().LLVMArgs.size();
-    auto Args = std::make_unique<const char *[]>(NumArgs + 2);
-    Args[0] = "clang (LLVM option parsing)";
-    for (unsigned i = 0; i != NumArgs; ++i)
-      Args[i + 1] = getFrontendOpts().LLVMArgs[i].c_str();
-    Args[NumArgs + 1] = nullptr;
-    llvm::cl::parseCommandLineOptions(LibraryOptions,
-                                      ArrayRef(Args.get(), NumArgs + 1),
-                                      /*Overview=*/"", /*Errs=*/nullptr,
-                                      /*VFS=*/&getVirtualFileSystem());
-  }
+bool CompilerInstance::parseLLVMArgs(raw_ostream *Errs) {
+  const std::vector<std::string> &LLVMArgs = getFrontendOpts().LLVMArgs;
+  if (LLVMArgs.empty())
+    return true;
+  SmallVector<const char *> Args = {"clang (LLVM option parsing)"};
+  for (const std::string &Arg : LLVMArgs)
+    Args.push_back(Arg.c_str());
+  return llvm::cl::parseCommandLineOptions(LibraryOptions, Args,
+                                           /*Overview=*/"", Errs,
+                                           &getVirtualFileSystem());
 }
 
 /// Determine the appropriate source input kind based on language
@@ -1396,8 +1393,11 @@ CompilerInstance::compileModule(SourceLocation ImportLoc, StringRef ModuleName,
       !Instance.getFrontendOpts().AllowPCMWithCompilerErrors)
     return nullptr;
 
+  // PCMs don't need to be null-terminated. Since the buffer typically has no
+  // spare capacity, adding the terminator would reallocate and copy it.
   return std::make_unique<llvm::SmallVectorMemoryBuffer>(
-      std::move(Buffer), Instance.getFrontendOpts().OutputFile);
+      std::move(Buffer), Instance.getFrontendOpts().OutputFile,
+      /*RequiresNullTerminator=*/false);
 }
 
 static OptionalFileEntryRef getPublicModuleMap(FileEntryRef File,

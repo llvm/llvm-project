@@ -655,11 +655,11 @@ TEST_P(RealValueKind, EXPONENT) {
   const int kind{GetParam()};
 
   // The Fortran EXPONENT() intrinsic returns the unbiased exponent, plus one.
-  EXPECT_EQ(1, (RealValue{kind, 1.0}.EXPONENT().ToInt64()));
-  EXPECT_EQ(2, (RealValue{kind, 2.0}.EXPONENT().ToInt64()));
-  EXPECT_EQ(3, (RealValue{kind, 4.0}.EXPONENT().ToInt64()));
-  EXPECT_EQ(0, RealValue::Zero(kind).EXPONENT().ToInt64());
-  EXPECT_EQ(4, (RealValue{kind, 1.0}.EXPONENT().kind())); // INTEGER(4) result
+  EXPECT_EQ(1, (RealValue{kind, 1.0}.EXPONENT(4).ToInt64()));
+  EXPECT_EQ(2, (RealValue{kind, 2.0}.EXPONENT(4).ToInt64()));
+  EXPECT_EQ(3, (RealValue{kind, 4.0}.EXPONENT(4).ToInt64()));
+  EXPECT_EQ(0, RealValue::Zero(kind).EXPONENT(4).ToInt64());
+  EXPECT_EQ(4, (RealValue{kind, 1.0}.EXPONENT(4).kind())); // INTEGER(4) result
 }
 
 TEST_P(RealValueKind, RRSPACING) {

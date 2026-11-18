@@ -1080,8 +1080,8 @@ TEST(ValueTracking, propagatesPoison) {
       {true, "call float @llvm.nearbyint.f32(float %fx)", 0},
       {true, "call float @llvm.round.f32(float %fx)", 0},
       {true, "call float @llvm.roundeven.f32(float %fx)", 0},
-      {false, "call i32 @llvm.lround.f32(float %fx)", 0},
-      {false, "call i64 @llvm.llround.f32(float %fx)", 0},
+      {true, "call i32 @llvm.lround.f32(float %fx)", 0},
+      {true, "call i64 @llvm.llround.f32(float %fx)", 0},
       {true, "call i32 @llvm.lrint.f32(float %fx)", 0},
       {true, "call i64 @llvm.llrint.f32(float %fx)", 0},
       {true, "call float @llvm.fmuladd.f32(float %fx, float %fx, float %fy)",
@@ -1271,6 +1271,19 @@ TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison_assume) {
   EXPECT_FALSE(isGuaranteedNotToBeUndefOrPoison(A, &AC, CtxI, &DT));
   EXPECT_FALSE(isGuaranteedNotToBeUndefOrPoison(A, &AC, CtxI2, &DT));
   EXPECT_TRUE(isGuaranteedNotToBeUndefOrPoison(A, &AC, CtxI3, &DT));
+}
+
+TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison_nnan_noundef) {
+  parseAssembly("declare float @foo()\n"
+                "define void @test() {\n"
+                "  %A = call nnan noundef float @foo()\n"
+                "  %A2 = call ninf noundef float @foo()\n"
+                "  ret void\n"
+                "}");
+  EXPECT_FALSE(canCreateUndefOrPoison(cast<Operator>(A)));
+  EXPECT_TRUE(isGuaranteedNotToBeUndefOrPoison(A));
+  EXPECT_FALSE(canCreateUndefOrPoison(cast<Operator>(A2)));
+  EXPECT_TRUE(isGuaranteedNotToBeUndefOrPoison(A2));
 }
 
 TEST_F(ValueTrackingTest, canCreatePoisonOrUndef) {

@@ -11,8 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 #include <cassert>
-#include <cmath>
-#include <limits>
 #include <string>
 
 #include "xray-graph-diff.h"
@@ -21,7 +19,6 @@
 
 #include "xray-color-helper.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/XRay/Trace.h"
 
 using namespace llvm;
