@@ -1273,12 +1273,10 @@ private:
     if (Current->is(tok::l_brace) && Current->is(BK_Block))
       ++Left->BlockParameterCount;
     FormatToken *Comma = nullptr;
-    if (Current->is(tok::comma)) {
+    if (Current->is(tok::comma))
       Comma = Current;
-    } else if (Current->Previous &&
-               Current->Previous->is(TT_TrailingCommaVaOptRParen)) {
+    else if (Current->Previous->is(TT_TrailingCommaVaOptRParen))
       Comma = Current->Previous;
-    }
     if (Comma) {
       ++Left->ParameterCount;
       if (!Left->Role)
@@ -1892,7 +1890,7 @@ private:
         // literals.
         if (CurrentToken->isNot(tok::comment) &&
             !CurrentToken->TokenText.starts_with("//")) {
-          CurrentToken->setType(TT_ImplicitStringLiteral);
+          CurrentToken->overwriteFixedType(TT_ImplicitStringLiteral);
         }
         next();
       }
@@ -1905,7 +1903,7 @@ private:
     // warning or error.
     next();
     while (CurrentToken) {
-      CurrentToken->setType(TT_ImplicitStringLiteral);
+      CurrentToken->overwriteFixedType(TT_ImplicitStringLiteral);
       next();
     }
   }
@@ -1921,7 +1919,7 @@ private:
       next(); // Consume first token (so we fix leading whitespace).
       while (CurrentToken) {
         if (IsMarkOrRegion || CurrentToken->Previous->is(TT_BinaryOperator))
-          CurrentToken->setType(TT_ImplicitStringLiteral);
+          CurrentToken->overwriteFixedType(TT_ImplicitStringLiteral);
         next();
       }
     }
@@ -3310,7 +3308,10 @@ public:
       if (TrailingCommaRParen) {
         if (Precedence > prec::Comma)
           break;
+        if (LatestOperator)
+          LatestOperator->NextOperator = TrailingCommaRParen;
         LatestOperator = TrailingCommaRParen;
+        TrailingCommaRParen->OperatorIndex = OperatorIndex++;
         TrailingCommaRParen = nullptr;
         continue;
       }
@@ -3674,6 +3675,7 @@ private:
   const AdditionalKeywords &Keywords;
   const AnnotatedLine &Line;
   FormatToken *Current;
+  // Set when a consumed scope closed with TT_TrailingCommaVaOptRParen.
   FormatToken *TrailingCommaRParen = nullptr;
 };
 
@@ -5684,8 +5686,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   }
   if (Right.is(tok::comma))
     return false;
-  if (Left.is(TT_TrailingCommaVaOptRParen) && !Right.closesScope())
+  if (Left.is(TT_TrailingCommaVaOptRParen) && !Right.closesScope() &&
+      Right.isNot(tok::semi)) {
     return true;
+  }
   if (Right.is(TT_ObjCBlockLParen))
     return true;
   if (Right.is(TT_CtorInitializerColon))

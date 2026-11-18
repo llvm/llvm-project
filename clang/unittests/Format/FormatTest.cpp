@@ -27196,16 +27196,35 @@ TEST_F(FormatTest, FormatsVaOptWithTrailingComma) {
   OnePerLine.PackParameters.BinPack = FormatStyle::BPPS_AlwaysOnePerLine;
   verifyFormat("#define M(...)                   \\\n"
                "  struct S {                     \\\n"
+               "    template <__VA_OPT__(int, )> \\\n"
                "    void f(__VA_OPT__(int a, )   \\\n"
                "           int b,                \\\n"
                "           __VA_OPT__(int c, )); \\\n"
                "  };",
                OnePerLine);
 
-  verifyFormat("#define M(...)                         \\\n"
-               "  SomeFunction(x, a + b __VA_OPT__(, ) \\\n"
-               "               ccc + ddddddddddddddd, y);",
+  verifyFormat("#define M(...)                            \\\n"
+               "  SomeFunction(x, y, a + b __VA_OPT__(, ) \\\n"
+               "               ccc + ddddddddddddddd, z);",
                Style50);
+
+  verifyFormat("#define M(...)                                   \\\n"
+               "  foo(x,                                         \\\n"
+               "      bbbbbbbbbbbbbb(cccccccccccc, dddddddddddd) \\\n"
+               "          __VA_OPT__(, )                         \\\n"
+               "      e);",
+               Style50);
+
+  verifyFormat("#define M(...)                        \\\n"
+               "  foo(aaaaaaaaaaaa +                  \\\n"
+               "          bbbbbbbbbbbb __VA_OPT__(, ) \\\n"
+               "      c, d, e);",
+               Style40);
+
+  verifyFormat("#define M(...)                    \\\n"
+               "  void f(__VA_OPT__(int aaaaaa, ) \\\n"
+               "         int bbbbbbbbbbbb);",
+               Style40);
 
   FormatStyle DontAlign = Style50;
   DontAlign.AlignAfterOpenBracket = false;
@@ -27218,6 +27237,7 @@ TEST_F(FormatTest, FormatsVaOptWithTrailingComma) {
 
   verifyFormat("#define M(...) foo(__VA_OPT__(a, ) (b + c), __VA_OPT__(d, ))",
                Style);
+  verifyFormat("#define M(...) __VA_OPT__(a, );", Style);
 
   verifyFormat("#define M(...)                 \\\n"
                "  void g() {                   \\\n"

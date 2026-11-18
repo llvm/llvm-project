@@ -4707,6 +4707,19 @@ TEST_F(TokenAnnotatorTest, VaOptWithTrailingComma) {
   // Not TT_TrailingCommaVaOptRParen.
   EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_Unknown);
 
+  Tokens = annotate("#define M(...) foo(__VA_OPT__(&S::operator, ) x)");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  // Not TT_TrailingCommaVaOptRParen.
+  EXPECT_TOKEN(Tokens[15], tok::r_paren, TT_Unknown);
+
+  Tokens = annotate("#define M(...) <__VA_OPT__(a, )>");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[11], tok::r_paren, TT_ImplicitStringLiteral);
+
+  Tokens = annotate("void g() { #error __VA_OPT__(a, ) x }");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[11], tok::r_paren, TT_ImplicitStringLiteral);
+
   FormatStyle AttrStyle = getLLVMStyle();
   AttrStyle.AttributeMacros.push_back("__VA_OPT__");
   Tokens = annotate("#define M(...) void f(__VA_OPT__(a, ) int x);", AttrStyle);

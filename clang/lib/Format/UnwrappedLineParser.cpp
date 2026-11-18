@@ -2788,7 +2788,8 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
           LParen->setFinalizedType(TT_TypeDeclarationParen);
           RParen->setFinalizedType(TT_TypeDeclarationParen);
         } else if (IsCpp && Prev->is(Keywords.kw___VA_OPT__) &&
-                   Prev->is(TT_Unknown) && RParen->Previous->is(tok::comma)) {
+                   Prev->is(TT_Unknown) && RParen->Previous->is(tok::comma) &&
+                   RParen->Previous->Previous->isNot(tok::kw_operator)) {
           RParen->setFinalizedType(TT_TrailingCommaVaOptRParen);
         } else if (Prev->is(tok::greater) && RParen->Previous == LParen) {
           Prev->setFinalizedType(TT_TemplateCloser);

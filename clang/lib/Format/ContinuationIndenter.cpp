@@ -1273,7 +1273,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   }
 
   if ((PreviousNonComment &&
-       PreviousNonComment->isOneOf(tok::comma, tok::semi) &&
+       PreviousNonComment->isOneOf(tok::comma, tok::semi,
+                                   TT_TrailingCommaVaOptRParen) &&
        !CurrentState.AvoidBinPacking) ||
       Previous.is(TT_BinaryOperator)) {
     CurrentState.BreakBeforeParameter = false;
@@ -1954,7 +1955,8 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
                     !State.Stack.back().NoLineBreakInOperand;
   moveStatePastScopeOpener(State, Newline);
   moveStatePastFakeRParens(State);
-  // Reset after popping __VA_OPT__(...) and any operand fake parens.
+  // Operand fake parens end on ')', so reset here rather than at the comma
+  // check above.
   if (Current.is(TT_TrailingCommaVaOptRParen))
     State.Stack.back().NoLineBreakInOperand = false;
 

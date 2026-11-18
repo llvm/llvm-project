@@ -357,8 +357,11 @@ bool startsNextParameter(const FormatToken &Current, const FormatStyle &Style) {
     return true;
   if (Current.is(TT_QtProperty))
     return true;
-  return Previous.isOneOf(tok::comma, TT_TrailingCommaVaOptRParen) &&
-         Current.isNot(tok::r_paren) && !Current.isTrailingComment() &&
+  return ((Previous.is(tok::comma) &&
+           Current.isNot(TT_TrailingCommaVaOptRParen)) ||
+          (Previous.is(TT_TrailingCommaVaOptRParen) &&
+           !Current.closesScope())) &&
+         !Current.isTrailingComment() &&
          ((Previous.isNot(TT_CtorInitializerComma) ||
            Style.BreakConstructorInitializers !=
                FormatStyle::BCIS_BeforeComma) &&
