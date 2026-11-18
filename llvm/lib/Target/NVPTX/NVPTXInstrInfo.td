@@ -1602,7 +1602,7 @@ def cond2cc : SDNodeXForm<cond, [{
 multiclass FSETP<RegTyInfo t, bit allow_ftz = true, list<Predicate> preds = []> {
   defvar ftz_str = !if(allow_ftz, "$ftz", "");
   defvar flags = !con((ins CmpMode:$cmp), !if(allow_ftz, (ins FTZFlagFor<t>.ret:$ftz), (ins)));
-  let hasSideEffects = false in
+  let hasSideEffects = false, isCompare = 1 in
     def NAME : BasicFlagsNVPTXInst<(outs B1:$dst), (ins t.SrcOp:$a, t.SrcOp:$b), flags,
         "setp.${cmp:FCmp}" # ftz_str # "." # t.PtxType>;
   def : Pat<(i1 (setcc t.Ty:$a, t.Ty:$b, cond:$cc)),
@@ -1610,9 +1610,10 @@ multiclass FSETP<RegTyInfo t, bit allow_ftz = true, list<Predicate> preds = []> 
 }
 
 multiclass ISETP<RegTyInfo t> {
-  def NAME : BasicFlagsNVPTXInst<(outs B1:$dst),
-      (ins t.RegOrImm:$a, t.RegOrImm:$b), (ins CmpMode:$cmp),
-      "setp.${cmp:ICmp}.${cmp:IType}" # t.Size>;
+  let isCompare = 1 in
+    def NAME : BasicFlagsNVPTXInst<(outs B1:$dst),
+        (ins t.RegOrImm:$a, t.RegOrImm:$b), (ins CmpMode:$cmp),
+        "setp.${cmp:ICmp}.${cmp:IType}" # t.Size>;
   def : Pat<(i1 (setcc t.Ty:$a, t.Ty:$b, cond:$cc)),
             (!cast<NVPTXInst>(NAME) t.ImmNode:$a, t.ImmNode:$b, (cond2cc $cc))>;
 }
