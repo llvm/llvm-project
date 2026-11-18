@@ -1575,8 +1575,9 @@ void ShrinkWrapping::insertUpdatedCFI(unsigned CSR, int SPValPush,
         --InstIter;
       }
     }
-    // Are we at the first basic block or hot-cold split point?
-    if (!PrevBB || (BF.isSplit() && BB->isCold() != PrevBB->isCold())) {
+    // Are we at the first basic block or a fragment split point?
+    if (!PrevBB ||
+        (BF.isSplit() && BB->getFragmentNum() != PrevBB->getFragmentNum())) {
       if (InAffectedZoneAtBegin)
         insertCFIsForPushOrPop(*BB, BB->begin(), CSR, true, 0, SPValPush);
     } else if (InAffectedZoneAtBegin != PrevAffectedZone) {
@@ -1621,7 +1622,8 @@ void ShrinkWrapping::rebuildCFIForSP() {
         SPVal = CurVal;
       }
     }
-    if (BF.isSplit() && PrevBB && BB->isCold() != PrevBB->isCold())
+    if (BF.isSplit() && PrevBB &&
+        BB->getFragmentNum() != PrevBB->getFragmentNum())
       BF.addCFIInstruction(
           BB, BB->begin(),
           MCCFIInstruction::cfiDefCfaOffset(nullptr, -SPValAtBegin));
