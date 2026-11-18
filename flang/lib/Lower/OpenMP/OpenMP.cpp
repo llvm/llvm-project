@@ -55,9 +55,11 @@
 #include "flang/Support/OpenMP-utils.h"
 #include "flang/Utils/OpenMP.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Support/StateStack.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/DenseMap.h"
@@ -69,6 +71,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
+#include "llvm/IR/Assumptions.h"
 #include <atomic>
 
 using namespace Fortran::lower::omp;
@@ -8398,10 +8401,67 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                  queue.begin());
 }
 
+namespace {
+class ScopedNoOpenMPCalls final : public mlir::OpBuilder::Listener {
+public:
+  ScopedNoOpenMPCalls(fir::FirOpBuilder &builder, bool enabled)
+      : builder(builder), previousListener(builder.getListener()),
+        function(builder.getFunction()), enabled(enabled) {
+    if (enabled)
+      builder.setListener(this);
+  }
+
+  ~ScopedNoOpenMPCalls() override {
+    if (enabled)
+      builder.setListener(previousListener);
+  }
+
+  void notifyOperationInserted(mlir::Operation *operation,
+                               mlir::OpBuilder::InsertPoint previous) override {
+    if (mlir::isa<mlir::CallOpInterface>(operation) &&
+        operation->getParentOfType<mlir::func::FuncOp>() == function) {
+      mlir::NamedAttrList attributes;
+      if (auto existing = operation->getAttrOfType<mlir::DictionaryAttr>(
+              "default_func_attrs"))
+        attributes.assign(existing.begin(), existing.end());
+      auto assumption = mlir::dyn_cast_or_null<mlir::StringAttr>(
+          attributes.get(llvm::AssumptionAttrKey));
+      llvm::SmallVector<llvm::StringRef> assumptions;
+      if (assumption)
+        assumption.getValue().split(assumptions, ',', -1, false);
+      if (!llvm::is_contained(assumptions, "omp_no_openmp")) {
+        std::string value = assumption ? assumption.getValue().str() : "";
+        if (!value.empty())
+          value += ',';
+        value += "omp_no_openmp";
+        attributes.set(llvm::AssumptionAttrKey, builder.getStringAttr(value));
+        operation->setAttr("default_func_attrs",
+                           attributes.getDictionary(builder.getContext()));
+      }
+    }
+    if (previousListener)
+      previousListener->notifyOperationInserted(operation, previous);
+  }
+
+  void notifyBlockInserted(mlir::Block *block, mlir::Region *previous,
+                           mlir::Region::iterator previousIt) override {
+    if (previousListener)
+      previousListener->notifyBlockInserted(block, previous, previousIt);
+  }
+
+private:
+  fir::FirOpBuilder &builder;
+  mlir::OpBuilder::Listener *previousListener;
+  mlir::func::FuncOp function;
+  bool enabled;
+};
+} // namespace
+
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpAssumeDirective &assumeConstruct) {
+  bool noOpenMP = false;
   if (!semaCtx.langOptions().OpenMPSimd) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     lower::StatementContext stmtCtx;
@@ -8409,6 +8469,13 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     const parser::OmpDirectiveSpecification &beginSpec =
         assumeConstruct.BeginDir();
     for (const parser::OmpClause &clause : beginSpec.Clauses().v) {
+      if (const auto *noOpenmp =
+              std::get_if<parser::OmpClause::NoOpenmp>(&clause.u)) {
+        noOpenMP = !noOpenmp->v ||
+                   semantics::omp::GetLogicalArgument(noOpenmp->v, semaCtx)
+                       .value_or(false);
+        continue;
+      }
       mlir::Location clauseLoc = converter.genLocation(clause.source);
       const auto *holds = std::get_if<parser::OmpClause::Holds>(&clause.u);
       if (!holds) {
@@ -8426,6 +8493,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     }
     stmtCtx.finalizeAndPop();
   }
+  ScopedNoOpenMPCalls scopedCalls(converter.getFirOpBuilder(), noOpenMP);
   genNestedEvaluations(converter, eval);
 }
 
