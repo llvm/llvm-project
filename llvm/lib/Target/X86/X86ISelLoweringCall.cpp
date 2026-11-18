@@ -49,7 +49,8 @@ static void errorUnsupported(SelectionDAG &DAG, const SDLoc &dl,
 /// Returns true if a CC can dynamically exclude a register from the list of
 /// callee-saved-registers (TargetRegistryInfo::getCalleeSavedRegs()) based on
 /// the return registers.
-static bool shouldDisableRetRegFromCSR(CallingConv::ID CC) {
+static bool shouldDisableRetRegFromCSR(CallingConv::ID CC,
+                                       const X86Subtarget &Subtarget) {
   switch (CC) {
   default:
     return false;
@@ -57,6 +58,15 @@ static bool shouldDisableRetRegFromCSR(CallingConv::ID CC) {
   case CallingConv::PreserveMost:
   case CallingConv::PreserveAll:
     return true;
+  case CallingConv::Cold:
+    // On x86-64, coldcc uses CSR_64_MostRegs, which includes registers that
+    // are also used for return values, such as RCX, RDX, XMM0 and XMM1.
+    // On 32-bit x86, coldcc uses the C callee-saved registers: CSR_32 (ESI,
+    // EDI, EBX, EBP) contains no return registers, and CSR_32EHRet adds EAX
+    // and EDX only for functions that call llvm.eh.return. There they must
+    // stay callee-saved so that the eh_return epilogue reloads the values the
+    // unwinder stored in their save slots.
+    return Subtarget.is64Bit();
   }
 }
 
@@ -789,7 +799,7 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // For example, when they are used as return registers (preserve_* and X86's
   // regcall) or for argument passing (X86's regcall).
   bool ShouldDisableCalleeSavedRegister =
-      shouldDisableRetRegFromCSR(CallConv) ||
+      shouldDisableRetRegFromCSR(CallConv, Subtarget) ||
       MF.getFunction().hasFnAttribute("no_caller_saved_registers");
 
   if (CallConv == CallingConv::X86_INTR && !Outs.empty())
@@ -2685,7 +2695,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // RegMask for calling conventions that disable only return registers (e.g.
   // preserve_most) will be modified later in LowerCallResult.
   bool ShouldDisableArgRegs = shouldDisableArgRegFromCSR(CallConv) || HasNCSR;
-  if (ShouldDisableArgRegs || shouldDisableRetRegFromCSR(CallConv)) {
+  if (ShouldDisableArgRegs || shouldDisableRetRegFromCSR(CallConv, Subtarget)) {
     const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
 
     // Allocate a new Reg Mask and copy Mask.
