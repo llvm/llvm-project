@@ -381,9 +381,10 @@ static std::vector<DynTypedMatcher> taggedMatchers(
   std::vector<DynTypedMatcher> Matchers;
   Matchers.reserve(Cases.size());
   for (const auto &Case : Cases) {
-    std::string Tag = (TagBase + Twine(Case.first)).str();
     // HACK: Many matchers are not bindable, so ensure that tryBind will work.
     DynTypedMatcher BoundMatcher(Case.second.Matcher);
+    const auto [_, ID] = BoundMatcher.getID();
+    std::string Tag = (TagBase + Twine(ID)).str();
     BoundMatcher.setAllowBind(true);
     auto M = *BoundMatcher.tryBind(Tag);
     Matchers.push_back(!M.getTraversalKind()
@@ -468,7 +469,8 @@ size_t transformer::detail::findSelectedCase(const MatchResult &Result,
 
   auto &NodesMap = Result.Nodes.getMap();
   for (size_t i = 0, N = Rule.Cases.size(); i < N; ++i) {
-    std::string Tag = ("Tag" + Twine(i)).str();
+    const auto [_, ID] = Rule.Cases[i].Matcher.getID();
+    std::string Tag = ("Tag" + Twine(ID)).str();
     if (NodesMap.find(Tag) != NodesMap.end())
       return i;
   }
