@@ -547,8 +547,7 @@ DataType DataTypes::getTypeFromPrefix(StringRef Prefix) {
           .Case("%v4d", {4, 64, PISA::RegEncoder::REG})
           .Default({0, 0, 0});
 
-  if (std::get<0>(Result) == 0)
-    llvm_unreachable("Unknown type prefix");
+  assert(std::get<0>(Result) != 0 && "Unknown type prefix");
 
   return DataType{std::get<0>(Result), std::get<1>(Result),
                   std::get<2>(Result)};
