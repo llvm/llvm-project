@@ -641,17 +641,6 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
       NewOps.push_back(LaneDefs->second[Lane.getKnownLane()]);
       continue;
     }
-    if (Lane.getKind() == VPLane::Kind::ScalableLast) {
-      // Look through mandatory Unpack.
-      [[maybe_unused]] bool Matched =
-          match(Op, m_VPInstruction<VPInstruction::Unpack>(m_VPValue(Op)));
-      assert(Matched && "original op must have been Unpack");
-      auto *ExtractPart =
-          Builder.createNaryOp(VPInstruction::ExtractLastPart, {Op});
-      NewOps.push_back(
-          Builder.createNaryOp(VPInstruction::ExtractLastLane, {ExtractPart}));
-      continue;
-    }
     if (vputils::isSingleScalar(Op)) {
       NewOps.push_back(Op);
       continue;
