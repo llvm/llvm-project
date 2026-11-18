@@ -787,6 +787,10 @@ static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
   // An add/sub.with.overflow is only decomposed for the fact queued on its
   // no-overflow edge, where it does not overflow.
   if (auto *WO = dyn_cast<WithOverflowInst>(V)) {
+    // Skip undef and poison operands, e.g. set by replaceOverflowUses. This
+    // also guards against ssub(undef, undef) decomposing as 0.
+    if (any_of(WO->args(), IsaPred<UndefValue>))
+      return V;
     Instruction::BinaryOps Opc = WO->getBinaryOp();
     if ((Opc == Instruction::Add || Opc == Instruction::Sub) &&
         isKnownNoWrap(Opc, WO->getLHS(), WO->getRHS(), WO->getNoWrapKind(),
@@ -2671,7 +2675,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       }
 
       Info.addFact(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
-      if (ReproducerModule && DFSInStack.size() > ReproducerCondStack.size())
+      // A fact between an integer and an overflow intrinsic (a struct) cannot
+      // be materialized as an icmp; a placeholder is added below instead.
+      if (ReproducerModule && DFSInStack.size() > ReproducerCondStack.size() &&
+          A->getType() == B->getType())
         ReproducerCondStack.emplace_back(Pred, A, B);
 
       if (ICmpInst::isRelational(Pred)) {
@@ -2856,6 +2863,18 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
           dumpUnpackedICmp(dbgs(), CB.DoesHold.Pred, CB.DoesHold.Op0,
                            CB.DoesHold.Op1);
           dbgs() << " does not hold.\n";
+        });
+        continue;
+      }
+      // The EQ fact for an add/sub.with.overflow result holds only while the
+      // result still extracts from the intrinsic. replaceOverflowUses may have
+      // replaced the intrinsic after the fact was queued.
+      if (isa<WithOverflowInst>(B) &&
+          cast<ExtractValueInst>(A)->getAggregateOperand() != B) {
+        LLVM_DEBUG({
+          dbgs() << "Not adding fact ";
+          dumpUnpackedICmp(dbgs(), Pred, A, B);
+          dbgs() << " because the intrinsic was replaced.\n";
         });
         continue;
       }

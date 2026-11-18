@@ -442,8 +442,9 @@ define void @ssub_replaced_before_eq_fact(i32 %y) {
 ; CHECK-NEXT:    [[CY:%.*]] = icmp sgt i32 [[Y]], 1
 ; CHECK-NEXT:    br i1 [[CY]], label [[EXIT]], label [[BODY:%.*]]
 ; CHECK:       body:
-; CHECK-NEXT:    [[YM:%.*]] = add nuw nsw i32 [[Y]], -1
-; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[YM:%.*]] = add nsw i32 [[Y]], -1
+; CHECK-NEXT:    [[NEG:%.*]] = icmp slt i32 [[YM]], 0
+; CHECK-NEXT:    call void @use(i1 [[NEG]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -489,8 +490,9 @@ define void @ssub_replaced_before_eq_fact_loop() {
 ; CHECK-NEXT:    br i1 [[CY]], label [[EXIT:%.*]], label [[BODY]]
 ; CHECK:       body:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[Y]], -1
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[Y_NEXT]] = add nuw nsw i32 [[Y]], 1
+; CHECK-NEXT:    [[NEG:%.*]] = icmp slt i32 [[TMP0]], 0
+; CHECK-NEXT:    call void @use(i1 [[NEG]])
+; CHECK-NEXT:    [[Y_NEXT]] = add i32 [[Y]], 1
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -534,7 +536,8 @@ define void @ssub_undef_operands_eq_fact(i32 %y) {
 ; CHECK-NEXT:    br i1 [[LIM_OV]], label [[EXIT:%.*]], label [[NEXT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    [[LIM:%.*]] = extractvalue { i32, i1 } [[LIM_S]], 0
-; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[LIM_ZERO:%.*]] = icmp eq i32 [[LIM]], 0
+; CHECK-NEXT:    call void @use(i1 [[LIM_ZERO]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -571,7 +574,8 @@ define void @ssub_replaced_extra_struct_user(i32 %a, i32 %y) {
 ; CHECK-NEXT:    [[CY:%.*]] = icmp sle i32 [[Y]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CY]], label [[BODY:%.*]], label [[EXIT]]
 ; CHECK:       body:
-; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[Y]], 0
+; CHECK-NEXT:    call void @use(i1 [[C]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
