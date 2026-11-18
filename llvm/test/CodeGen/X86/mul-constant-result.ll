@@ -199,7 +199,7 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X64-HSW-NEXT:    cmovel %ecx, %eax
 ; X64-HSW-NEXT:    decl %edi
 ; X64-HSW-NEXT:    cmpl $31, %edi
-; X64-HSW-NEXT:    ja .LBB0_31
+; X64-HSW-NEXT:    ja .LBB0_32
 ; X64-HSW-NEXT:  # %bb.1:
 ; X64-HSW-NEXT:    jmpq *.LJTI0_0(,%rdi,8)
 ; X64-HSW-NEXT:  .LBB0_2:
@@ -209,142 +209,142 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X64-HSW-NEXT:  .LBB0_3:
 ; X64-HSW-NEXT:    leal (%rax,%rax,8), %ecx
 ; X64-HSW-NEXT:    leal (%rcx,%rcx,2), %ecx
-; X64-HSW-NEXT:    jmp .LBB0_22
+; X64-HSW-NEXT:    jmp .LBB0_23
 ; X64-HSW-NEXT:  .LBB0_4:
 ; X64-HSW-NEXT:    movl %eax, %ecx
 ; X64-HSW-NEXT:    shll $4, %ecx
-; X64-HSW-NEXT:    jmp .LBB0_22
+; X64-HSW-NEXT:    jmp .LBB0_23
 ; X64-HSW-NEXT:  .LBB0_5:
 ; X64-HSW-NEXT:    leal (%rax,%rax,4), %eax
-; X64-HSW-NEXT:  .LBB0_13:
 ; X64-HSW-NEXT:    leal (%rax,%rax,2), %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
-; X64-HSW-NEXT:  .LBB0_6:
+; X64-HSW-NEXT:  .LBB0_7:
 ; X64-HSW-NEXT:    shll $2, %eax
+; X64-HSW-NEXT:  .LBB0_14:
 ; X64-HSW-NEXT:    leal (%rax,%rax,2), %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
-; X64-HSW-NEXT:  .LBB0_8:
+; X64-HSW-NEXT:  .LBB0_9:
 ; X64-HSW-NEXT:    leal (%rax,%rax,2), %ecx
 ; X64-HSW-NEXT:    leal (%rax,%rcx,4), %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
-; X64-HSW-NEXT:  .LBB0_10:
+; X64-HSW-NEXT:  .LBB0_11:
 ; X64-HSW-NEXT:    addl %eax, %eax
-; X64-HSW-NEXT:  .LBB0_7:
+; X64-HSW-NEXT:  .LBB0_8:
 ; X64-HSW-NEXT:    leal (%rax,%rax,4), %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
-; X64-HSW-NEXT:  .LBB0_11:
+; X64-HSW-NEXT:  .LBB0_12:
 ; X64-HSW-NEXT:    leal (%rax,%rax,4), %ecx
 ; X64-HSW-NEXT:    leal (%rcx,%rcx,4), %ecx
-; X64-HSW-NEXT:    jmp .LBB0_22
-; X64-HSW-NEXT:  .LBB0_12:
+; X64-HSW-NEXT:    jmp .LBB0_23
+; X64-HSW-NEXT:  .LBB0_13:
 ; X64-HSW-NEXT:    leal (%rax,%rax,4), %eax
 ; X64-HSW-NEXT:    leal (%rax,%rax,4), %eax
-; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
-; X64-HSW-NEXT:    retq
-; X64-HSW-NEXT:  .LBB0_14:
-; X64-HSW-NEXT:    shll $4, %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_15:
-; X64-HSW-NEXT:    shll $2, %eax
+; X64-HSW-NEXT:    shll $4, %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_16:
-; X64-HSW-NEXT:    shll $3, %eax
+; X64-HSW-NEXT:    shll $2, %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_17:
-; X64-HSW-NEXT:    shll $5, %eax
+; X64-HSW-NEXT:    shll $3, %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_18:
-; X64-HSW-NEXT:    addl %eax, %eax
-; X64-HSW-NEXT:  .LBB0_29:
-; X64-HSW-NEXT:    leal (%rax,%rax,8), %eax
+; X64-HSW-NEXT:    shll $5, %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_19:
+; X64-HSW-NEXT:    addl %eax, %eax
+; X64-HSW-NEXT:  .LBB0_30:
+; X64-HSW-NEXT:    leal (%rax,%rax,8), %eax
+; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-HSW-NEXT:    retq
+; X64-HSW-NEXT:  .LBB0_20:
 ; X64-HSW-NEXT:    leal (%rax,%rax,4), %ecx
 ; X64-HSW-NEXT:    leal (%rax,%rcx,4), %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
-; X64-HSW-NEXT:  .LBB0_20:
+; X64-HSW-NEXT:  .LBB0_21:
 ; X64-HSW-NEXT:    addl %eax, %eax
 ; X64-HSW-NEXT:    leal (%rax,%rax,2), %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
-; X64-HSW-NEXT:  .LBB0_21:
+; X64-HSW-NEXT:  .LBB0_22:
 ; X64-HSW-NEXT:    leal (%rax,%rax,4), %ecx
 ; X64-HSW-NEXT:    leal (%rax,%rcx,4), %ecx
-; X64-HSW-NEXT:  .LBB0_22:
+; X64-HSW-NEXT:  .LBB0_23:
 ; X64-HSW-NEXT:    addl %eax, %ecx
 ; X64-HSW-NEXT:    movl %ecx, %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
-; X64-HSW-NEXT:  .LBB0_23:
+; X64-HSW-NEXT:  .LBB0_24:
 ; X64-HSW-NEXT:    leal (%rax,%rax), %ecx
 ; X64-HSW-NEXT:    shll $4, %eax
 ; X64-HSW-NEXT:    subl %ecx, %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
-; X64-HSW-NEXT:  .LBB0_25:
-; X64-HSW-NEXT:    leal (,%rax,8), %ecx
-; X64-HSW-NEXT:    jmp .LBB0_34
 ; X64-HSW-NEXT:  .LBB0_26:
+; X64-HSW-NEXT:    leal (,%rax,8), %ecx
+; X64-HSW-NEXT:    jmp .LBB0_35
+; X64-HSW-NEXT:  .LBB0_27:
 ; X64-HSW-NEXT:    leal (%rax,%rax,8), %ecx
 ; X64-HSW-NEXT:    leal (%rax,%rcx,2), %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
-; X64-HSW-NEXT:  .LBB0_27:
+; X64-HSW-NEXT:  .LBB0_28:
 ; X64-HSW-NEXT:    leal (%rax,%rax,4), %ecx
 ; X64-HSW-NEXT:    leal (%rax,%rcx,2), %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
-; X64-HSW-NEXT:  .LBB0_30:
+; X64-HSW-NEXT:  .LBB0_31:
 ; X64-HSW-NEXT:    movl %eax, %ecx
 ; X64-HSW-NEXT:    shll $5, %ecx
-; X64-HSW-NEXT:    jmp .LBB0_34
-; X64-HSW-NEXT:  .LBB0_31:
-; X64-HSW-NEXT:    xorl %eax, %eax
+; X64-HSW-NEXT:    jmp .LBB0_35
 ; X64-HSW-NEXT:  .LBB0_32:
+; X64-HSW-NEXT:    xorl %eax, %eax
+; X64-HSW-NEXT:  .LBB0_33:
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
-; X64-HSW-NEXT:  .LBB0_33:
+; X64-HSW-NEXT:  .LBB0_34:
 ; X64-HSW-NEXT:    leal (%rax,%rax,2), %ecx
 ; X64-HSW-NEXT:    shll $3, %ecx
-; X64-HSW-NEXT:  .LBB0_34:
+; X64-HSW-NEXT:  .LBB0_35:
 ; X64-HSW-NEXT:    subl %eax, %ecx
 ; X64-HSW-NEXT:    movl %ecx, %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
-; X64-HSW-NEXT:  .LBB0_36:
+; X64-HSW-NEXT:  .LBB0_37:
 ; X64-HSW-NEXT:    shll $2, %eax
 ; X64-HSW-NEXT:    leal (%rax,%rax,4), %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
-; X64-HSW-NEXT:  .LBB0_37:
+; X64-HSW-NEXT:  .LBB0_38:
 ; X64-HSW-NEXT:    shll $3, %eax
 ; X64-HSW-NEXT:    leal (%rax,%rax,2), %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
-; X64-HSW-NEXT:  .LBB0_38:
+; X64-HSW-NEXT:  .LBB0_39:
 ; X64-HSW-NEXT:    leal (%rax,%rax,8), %ecx
 ; X64-HSW-NEXT:    leal (%rcx,%rcx,2), %ecx
 ; X64-HSW-NEXT:    addl %eax, %eax
 ; X64-HSW-NEXT:    addl %ecx, %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
-; X64-HSW-NEXT:  .LBB0_39:
+; X64-HSW-NEXT:  .LBB0_40:
 ; X64-HSW-NEXT:    leal (%rax,%rax), %ecx
 ; X64-HSW-NEXT:    shll $5, %eax
 ; X64-HSW-NEXT:    subl %ecx, %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-HSW-NEXT:    retq
-; X64-HSW-NEXT:  .LBB0_40:
+; X64-HSW-NEXT:  .LBB0_41:
 ; X64-HSW-NEXT:    leal (%rax,%rax,8), %eax
 ; X64-HSW-NEXT:    leal (%rax,%rax,2), %eax
 ; X64-HSW-NEXT:    # kill: def $eax killed $eax killed $rax
