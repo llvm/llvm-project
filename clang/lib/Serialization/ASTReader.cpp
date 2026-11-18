@@ -6713,7 +6713,8 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
 
       // Once we've loaded the set of exports, there's no reason to keep
       // the parsed, unresolved exports around.
-      CurrentModule->UnresolvedExports.clear();
+      CurrentModule->clearUnresolvedExports();
+      CurrentModule->UnresolvedWildcardExport = false;
       break;
 
     case SUBMODULE_REQUIRES:

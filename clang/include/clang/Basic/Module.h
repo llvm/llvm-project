@@ -585,6 +585,12 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned NamedModuleHasInit : 1;
 
+  /// Whether the module map declares a plain \c export * for this module
+  /// that hasn't been resolved yet. It's kept apart from \c UnresolvedExports,
+  /// since it's by far the most common export declaration.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned UnresolvedWildcardExport : 1;
+
   /// Describes the visibility of the various names within a
   /// particular module.
   enum NameVisibilityKind {
@@ -624,9 +630,6 @@ public:
     /// module itself).
     bool Wildcard;
   };
-
-  /// The set of export declarations that have yet to be resolved.
-  SmallVector<UnresolvedExportDecl, 1> UnresolvedExports;
 
   /// A library or framework to link against when an entity from this
   /// module is used.
@@ -768,6 +771,10 @@ private:
     /// module, but were not imported.
     llvm::SmallVector<ModuleRef, 0> AffectingClangModules;
 
+    /// The set of export declarations that have yet to be resolved, other than
+    /// a plain \c export * (see \c UnresolvedWildcardExport).
+    SmallVector<UnresolvedExportDecl, 0> UnresolvedExports;
+
     /// The directly used modules.
     SmallVector<Module *, 0> DirectUses;
 
@@ -882,6 +889,19 @@ public:
   void addAffectingClangModule(ModuleRef M) {
     Cold.getOrCreate().AffectingClangModules.push_back(M);
   }
+
+  /// The set of export declarations that have yet to be resolved, other than
+  /// a plain \c export * (see \c UnresolvedWildcardExport).
+  ArrayRef<UnresolvedExportDecl> getUnresolvedExports() const {
+    return Cold.get().UnresolvedExports;
+  }
+  void addUnresolvedExport(UnresolvedExportDecl Export) {
+    Cold.getOrCreate().UnresolvedExports.push_back(std::move(Export));
+  }
+  SmallVector<UnresolvedExportDecl, 0> takeUnresolvedExports() {
+    return Cold.take(&ColdMembers::UnresolvedExports);
+  }
+  void clearUnresolvedExports() { Cold.clear(&ColdMembers::UnresolvedExports); }
 
   /// The directly used modules.
   ArrayRef<Module *> getDirectUses() const { return Cold.get().DirectUses; }

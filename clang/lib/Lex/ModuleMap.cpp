@@ -1674,16 +1674,20 @@ LLVM_DUMP_METHOD void ModuleMap::dump() {
 }
 
 bool ModuleMap::resolveExports(Module *Mod, bool Complain) {
-  auto Unresolved = std::move(Mod->UnresolvedExports);
-  Mod->UnresolvedExports.clear();
-  for (auto &UE : Unresolved) {
+  // A plain 'export *' doesn't refer to any module, so it always resolves.
+  if (Mod->UnresolvedWildcardExport) {
+    Mod->Exports.push_back(Module::ExportDecl(nullptr, true));
+    Mod->UnresolvedWildcardExport = false;
+  }
+
+  for (auto &UE : Mod->takeUnresolvedExports()) {
     Module::ExportDecl Export = resolveExport(Mod, UE, Complain);
     if (Export.first || Export.second)
       Mod->Exports.push_back(Export);
     else
-      Mod->UnresolvedExports.push_back(UE);
+      Mod->addUnresolvedExport(std::move(UE));
   }
-  return !Mod->UnresolvedExports.empty();
+  return !Mod->getUnresolvedExports().empty();
 }
 
 bool ModuleMap::resolveUses(Module *Mod, bool Complain) {
@@ -2260,8 +2264,13 @@ void ModuleMapLoader::handleUmbrellaDirDecl(
 }
 
 void ModuleMapLoader::handleExportDecl(const modulemap::ExportDecl &ED) {
+  if (ED.Id.empty()) {
+    assert(ED.Wildcard && "Invalid export declaration");
+    ActiveModule->UnresolvedWildcardExport = true;
+    return;
+  }
   Module::UnresolvedExportDecl Unresolved = {ED.Location, ED.Id, ED.Wildcard};
-  ActiveModule->UnresolvedExports.push_back(Unresolved);
+  ActiveModule->addUnresolvedExport(std::move(Unresolved));
 }
 
 void ModuleMapLoader::handleExportAsDecl(const modulemap::ExportAsDecl &EAD) {
