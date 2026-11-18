@@ -13,7 +13,7 @@
 #include "mlir/Dialect/LLVMIR/NVVMArithOps.h"
 
 #include "IR/NVVMOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
