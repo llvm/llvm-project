@@ -163,6 +163,7 @@ insertPrefetchHints(MachineFunction &MF,
           // available.
           if (!WeakFallbackSym->isBindingSet()) {
             WeakFallbackSym->setBinding(ELF::STB_WEAK);
+            WeakFallbackSym->setVisibility(ELF::STV_HIDDEN);
             PrefetchInstr->setPostInstrSymbol(MF, WeakFallbackSym);
           }
         }
