@@ -90,9 +90,7 @@ class DocgenTest(unittest.TestCase):
         self.assertTrue(Header("assert.h").implements_macro("assert"))
         self.assertTrue(Header("math.h").implements_macro("isnan"))
         self.assertTrue(Header("math.h").implements_macro("isgreater"))
-        self.assertFalse(
-            Header("math.h").implements_macro("__STDC_VERSION_MATH_H__")
-        )
+        self.assertFalse(Header("math.h").implements_macro("__STDC_VERSION_MATH_H__"))
         self.assertFalse(Header("sys/syscall.h").macro_file_exists())
         self.assertTrue(Header("sys/syscall.h").implements_macro("SYS_read"))
         self.assertTrue(Header("errno.h").implements_macro("errno"))
