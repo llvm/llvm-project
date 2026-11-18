@@ -17376,13 +17376,18 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     assert(N->getValueType(0) == MVT::i32 && "Unexpected custom legalisation");
     if (getTypeAction(*DAG.getContext(), Op0.getValueType()) !=
         TargetLowering::TypeSoftenFloat) {
-      if (!isTypeLegal(Op0.getValueType()))
+      // [b]f16 that isn't legal can still be extended to f32 and converted with
+      // fcvt if f32 is legal.
+      bool PromoteViaF32 = ((Op0.getValueType() == MVT::f16 &&
+                             !Subtarget.hasStdExtZfhOrZhinx()) ||
+                            Op0.getValueType() == MVT::bf16) &&
+                           Subtarget.hasStdExtFOrZfinx();
+      if (!PromoteViaF32 && !isTypeLegal(Op0.getValueType()))
         return;
       if (IsStrict) {
         SDValue Chain = N->getOperand(0);
-        // In absence of Zfh, promote f16 to f32, then convert.
-        if (Op0.getValueType() == MVT::f16 &&
-            !Subtarget.hasStdExtZfhOrZhinx()) {
+        // In absence of Zfh, promote [b]f16 to f32, then convert.
+        if (PromoteViaF32) {
           Op0 = DAG.getNode(ISD::STRICT_FP_EXTEND, DL, {MVT::f32, MVT::Other},
                             {Chain, Op0});
           Chain = Op0.getValue(1);
@@ -17399,9 +17404,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       }
       // For bf16, or f16 in absence of Zfh, promote [b]f16 to f32 and then
       // convert.
-      if ((Op0.getValueType() == MVT::f16 &&
-           !Subtarget.hasStdExtZfhOrZhinx()) ||
-          Op0.getValueType() == MVT::bf16)
+      if (PromoteViaF32)
         Op0 = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op0);
 
       unsigned Opc = IsSigned ? RISCVISD::FCVT_W_RV64 : RISCVISD::FCVT_WU_RV64;
