@@ -71,26 +71,50 @@ define void @test_memset_inline_8bytes(ptr %dst, i8 %val) {
 define void @test_memset_inline_8bytes_align2(ptr %dst, i8 %val) {
 ; RV32I-LABEL: test_memset_inline_8bytes_align2:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    sb a1, 0(a0)
-; RV32I-NEXT:    sb a1, 1(a0)
-; RV32I-NEXT:    sb a1, 2(a0)
-; RV32I-NEXT:    sb a1, 3(a0)
-; RV32I-NEXT:    sb a1, 4(a0)
-; RV32I-NEXT:    sb a1, 5(a0)
-; RV32I-NEXT:    sb a1, 6(a0)
-; RV32I-NEXT:    sb a1, 7(a0)
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    .cfi_def_cfa_offset 16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    .cfi_offset ra, -4
+; RV32I-NEXT:    .cfi_offset s0, -8
+; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    zext.b a0, a1
+; RV32I-NEXT:    li a1, 257
+; RV32I-NEXT:    call __mulsi3
+; RV32I-NEXT:    sh a0, 0(s0)
+; RV32I-NEXT:    sh a0, 2(s0)
+; RV32I-NEXT:    sh a0, 4(s0)
+; RV32I-NEXT:    sh a0, 6(s0)
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: test_memset_inline_8bytes_align2:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sb a1, 0(a0)
-; RV64I-NEXT:    sb a1, 1(a0)
-; RV64I-NEXT:    sb a1, 2(a0)
-; RV64I-NEXT:    sb a1, 3(a0)
-; RV64I-NEXT:    sb a1, 4(a0)
-; RV64I-NEXT:    sb a1, 5(a0)
-; RV64I-NEXT:    sb a1, 6(a0)
-; RV64I-NEXT:    sb a1, 7(a0)
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    .cfi_def_cfa_offset 16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    .cfi_offset ra, -8
+; RV64I-NEXT:    .cfi_offset s0, -16
+; RV64I-NEXT:    mv s0, a0
+; RV64I-NEXT:    zext.b a0, a1
+; RV64I-NEXT:    li a1, 257
+; RV64I-NEXT:    call __muldi3
+; RV64I-NEXT:    sh a0, 0(s0)
+; RV64I-NEXT:    sh a0, 2(s0)
+; RV64I-NEXT:    sh a0, 4(s0)
+; RV64I-NEXT:    sh a0, 6(s0)
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
   call void @llvm.memset.inline.p0.i64(ptr align 2 %dst, i8 %val, i64 8, i1 false)
   ret void
@@ -99,26 +123,49 @@ define void @test_memset_inline_8bytes_align2(ptr %dst, i8 %val) {
 define void @test_memset_inline_8bytes_align4(ptr %dst, i8 %val) {
 ; RV32I-LABEL: test_memset_inline_8bytes_align4:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    sb a1, 0(a0)
-; RV32I-NEXT:    sb a1, 1(a0)
-; RV32I-NEXT:    sb a1, 2(a0)
-; RV32I-NEXT:    sb a1, 3(a0)
-; RV32I-NEXT:    sb a1, 4(a0)
-; RV32I-NEXT:    sb a1, 5(a0)
-; RV32I-NEXT:    sb a1, 6(a0)
-; RV32I-NEXT:    sb a1, 7(a0)
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    .cfi_def_cfa_offset 16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    .cfi_offset ra, -4
+; RV32I-NEXT:    .cfi_offset s0, -8
+; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    lui a2, 4112
+; RV32I-NEXT:    zext.b a0, a1
+; RV32I-NEXT:    addi a1, a2, 257
+; RV32I-NEXT:    call __mulsi3
+; RV32I-NEXT:    sw a0, 0(s0)
+; RV32I-NEXT:    sw a0, 4(s0)
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: test_memset_inline_8bytes_align4:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sb a1, 0(a0)
-; RV64I-NEXT:    sb a1, 1(a0)
-; RV64I-NEXT:    sb a1, 2(a0)
-; RV64I-NEXT:    sb a1, 3(a0)
-; RV64I-NEXT:    sb a1, 4(a0)
-; RV64I-NEXT:    sb a1, 5(a0)
-; RV64I-NEXT:    sb a1, 6(a0)
-; RV64I-NEXT:    sb a1, 7(a0)
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    .cfi_def_cfa_offset 16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    .cfi_offset ra, -8
+; RV64I-NEXT:    .cfi_offset s0, -16
+; RV64I-NEXT:    mv s0, a0
+; RV64I-NEXT:    lui a2, 4112
+; RV64I-NEXT:    addi a2, a2, 257
+; RV64I-NEXT:    zext.b a0, a1
+; RV64I-NEXT:    mv a1, a2
+; RV64I-NEXT:    call __muldi3
+; RV64I-NEXT:    sw a0, 0(s0)
+; RV64I-NEXT:    sw a0, 4(s0)
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
   call void @llvm.memset.inline.p0.i64(ptr align 4 %dst, i8 %val, i64 8, i1 false)
   ret void
