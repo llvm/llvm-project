@@ -18,6 +18,7 @@ include_directories(${CLANG_LINT_SOURCE_DIR})
 include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/../../include-cleaner/include")
 
 add_extra_unittest(ClangTidyTests
+  AnalyzeAsAttrValidatorTest.cpp
   AddConstTest.cpp
   ClangTidyDiagnosticConsumerTest.cpp
   ClangTidyOptionsTest.cpp

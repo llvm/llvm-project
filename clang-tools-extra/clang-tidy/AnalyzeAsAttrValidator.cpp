@@ -296,14 +296,6 @@ private:
   unsigned Pending = 0;
 };
 
-/// A class that `analyze_as_class` may name, the standard library header that
-/// declares it, and the check that gives the annotation a meaning.
-struct AnalyzeAsTarget {
-  llvm::StringRef Name;
-  llvm::StringRef Header;
-  llvm::StringRef Check;
-};
-
 /// Every supported `analyze_as_class` argument. To support another class, add
 /// a row here once a check models it.
 constexpr AnalyzeAsTarget KnownTargets[] = {
@@ -312,8 +304,10 @@ constexpr AnalyzeAsTarget KnownTargets[] = {
     // {"std::vector", "<vector>", "<check-that-models-std-vector>"},
 };
 
-const AnalyzeAsTarget *findTarget(llvm::StringRef Name) {
-  for (const AnalyzeAsTarget &T : KnownTargets)
+const AnalyzeAsTarget *findTarget(llvm::StringRef Name,
+                                  llvm::ArrayRef<AnalyzeAsTarget> Table =
+                                      KnownTargets) {
+  for (const AnalyzeAsTarget &T : Table)
     if (T.Name == Name)
       return &T;
   return nullptr;
@@ -534,16 +528,24 @@ public:
     //   uses analyze_as, if any) and stay silent on its methods;
     // - known class whose check is disabled: nothing uses it, stay silent;
     // - known class whose check is enabled: validate against the header AST.
+    auto IsEnabled = [this](llvm::StringRef Check) {
+      return Context.isCheckEnabled(Check);
+    };
     std::vector<const AnalyzeAsAttrCollector::Found *> ToValidate;
     for (const auto &F : Collector.Results) {
-      const AnalyzeAsTarget *T = findTarget(F.Query.Target);
-      if (!T) {
-        if (F.Query.IsClass)
-          reportUnknownClass(F);
-        continue;
-      }
-      if (Context.isCheckEnabled(T->Check))
+      AnalyzeAsDecision D =
+          classifyAnalyzeAsTarget(F.Query.Target, KnownTargets, IsEnabled);
+      switch (D.Action) {
+      case AnalyzeAsDecision::Validate:
         ToValidate.push_back(&F);
+        break;
+      case AnalyzeAsDecision::ReportUnknown:
+        if (F.Query.IsClass)
+          reportUnknownClass(F, D.Check);
+        break;
+      case AnalyzeAsDecision::Silent:
+        break;
+      }
     }
     if (ToValidate.empty())
       return;
@@ -569,21 +571,15 @@ public:
   }
 
 private:
-  /// An `analyze_as_class` naming a class no check supports. Reported under
-  /// the first enabled check that uses analyze_as attributes, so it shows up
-  /// (and can be suppressed) like that check's own warnings; if none is
-  /// enabled, the annotation is irrelevant to this run and nothing is said.
-  void reportUnknownClass(const AnalyzeAsAttrCollector::Found &F) {
-    const AnalyzeAsTarget *Enabled = nullptr;
+  /// An `analyze_as_class` naming a class no check supports, reported under
+  /// `Check` so it shows up (and can be suppressed) like that check's own
+  /// warnings.
+  void reportUnknownClass(const AnalyzeAsAttrCollector::Found &F,
+                          llvm::StringRef Check) {
     std::string Supported;
-    for (const AnalyzeAsTarget &T : KnownTargets) {
-      if (!Enabled && Context.isCheckEnabled(T.Check))
-        Enabled = &T;
+    for (const AnalyzeAsTarget &T : KnownTargets)
       Supported += (Supported.empty() ? "" : ", ") + T.Name.str();
-    }
-    if (!Enabled)
-      return;
-    report(Enabled->Check, F.Loc,
+    report(Check, F.Loc,
            llvm::formatv("'analyze_as_class' argument \"{0}\" is not a "
                          "supported class; supported: {1}",
                          F.Query.Text, Supported)
@@ -600,6 +596,24 @@ private:
 };
 
 } // namespace
+
+AnalyzeAsDecision
+classifyAnalyzeAsTarget(llvm::StringRef Target,
+                        llvm::ArrayRef<AnalyzeAsTarget> Table,
+                        llvm::function_ref<bool(llvm::StringRef)> IsEnabled) {
+  if (const AnalyzeAsTarget *T = findTarget(Target, Table)) {
+    // Supported class: only worth validating if its check will use it.
+    if (IsEnabled(T->Check))
+      return {AnalyzeAsDecision::Validate, T->Check};
+    return {AnalyzeAsDecision::Silent, {}};
+  }
+  // Unsupported class: report it under the first enabled check that uses
+  // analyze_as attributes; if there is none, it is irrelevant to this run.
+  for (const AnalyzeAsTarget &T : Table)
+    if (IsEnabled(T.Check))
+      return {AnalyzeAsDecision::ReportUnknown, T.Check};
+  return {AnalyzeAsDecision::Silent, {}};
+}
 
 std::unique_ptr<ASTConsumer>
 createAnalyzeAsAttrValidationConsumer(ClangTidyContext &Context,
