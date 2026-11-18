@@ -776,7 +776,8 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   }
 
   // Do this after any importing so that imported code is updated.
-  updatePublicTypeTestCalls(Mod, CombinedIndex.withWholeProgramVisibility());
+  updatePublicTypeTestCalls(Mod, CombinedIndex.withWholeProgramVisibility(),
+                            CombinedIndex.withSpeculativeDevirt());
 
   if (Conf.PostImportModuleHook && !Conf.PostImportModuleHook(Task, Mod))
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));

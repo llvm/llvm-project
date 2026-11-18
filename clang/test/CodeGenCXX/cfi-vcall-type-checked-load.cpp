@@ -69,38 +69,41 @@ struct DerivedSameLayoutFromPublic : Public {};
 // XDSOT-NEXT:    ret void
 //
 // VFEFULL-LABEL: define hidden void @call_hidden(
-// VFEFULL-SAME: ptr noundef [[P:%.*]]) #[[ATTR0:[0-9]+]] !guid [[META4:![0-9]+]] {
+// VFEFULL-SAME: ptr noundef [[P:%.*]]) #[[ATTR0:[0-9]+]] !guid [[META10:![0-9]+]] {
 // VFEFULL-NEXT:  [[ENTRY:.*:]]
 // VFEFULL-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // VFEFULL-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // VFEFULL-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // VFEFULL-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// VFEFULL-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 8, metadata !"_ZTS6Hidden"), !nosanitize [[META5:![0-9]+]]
-// VFEFULL-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META5]]
-// VFEFULL-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF6:![0-9]+]], !nosanitize [[META5]]
+// VFEFULL-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 8, metadata !"_ZTS6Hidden"), !nosanitize [[META11:![0-9]+]]
+// VFEFULL-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META11]]
+// VFEFULL-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META11]]
+// VFEFULL-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF12:![0-9]+]], !nosanitize [[META11]]
 // VFEFULL:       [[HANDLER_CFI_CHECK_FAIL]]:
-// VFEFULL-NEXT:    call void @__ubsan_handle_cfi_check_fail() #[[ATTR3:[0-9]+]], !nosanitize [[META5]]
-// VFEFULL-NEXT:    br label %[[CONT]], !nosanitize [[META5]]
+// VFEFULL-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META11]]
+// VFEFULL-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP3]] to i64, !nosanitize [[META11]]
+// VFEFULL-NEXT:    call void @__ubsan_handle_cfi_check_fail(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.1, i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR4:[0-9]+]], !nosanitize [[META11]]
+// VFEFULL-NEXT:    br label %[[CONT]], !nosanitize [[META11]]
 // VFEFULL:       [[CONT]]:
-// VFEFULL-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META5]]
-// VFEFULL-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
+// VFEFULL-NEXT:    [[TMP6:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META11]]
+// VFEFULL-NEXT:    call void [[TMP6]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
 // VFEFULL-NEXT:    ret void
 //
 // VFECROSS_MIN-LABEL: define hidden void @call_hidden(
-// VFECROSS_MIN-SAME: ptr noundef [[P:%.*]]) #[[ATTR0:[0-9]+]] !guid [[META10:![0-9]+]] {
+// VFECROSS_MIN-SAME: ptr noundef [[P:%.*]]) #[[ATTR0:[0-9]+]] !guid [[META15:![0-9]+]] {
 // VFECROSS_MIN-NEXT:  [[ENTRY:.*:]]
 // VFECROSS_MIN-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // VFECROSS_MIN-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // VFECROSS_MIN-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // VFECROSS_MIN-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// VFECROSS_MIN-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 8, metadata !"_ZTS6Hidden"), !nosanitize [[META11:![0-9]+]]
-// VFECROSS_MIN-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META11]]
-// VFECROSS_MIN-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF12:![0-9]+]], !nosanitize [[META11]]
-// VFECROSS_MIN:       [[HANDLER_CFI_CHECK_FAIL]]:
-// VFECROSS_MIN-NEXT:    call void @__ubsan_handle_cfi_check_fail_minimal() #[[ATTR7:[0-9]+]], !nosanitize [[META11]]
-// VFECROSS_MIN-NEXT:    br label %[[CONT]], !nosanitize [[META11]]
-// VFECROSS_MIN:       [[CONT]]:
-// VFECROSS_MIN-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META11]]
+// VFECROSS_MIN-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 8, metadata !"_ZTS6Hidden"), !nosanitize [[META16:![0-9]+]]
+// VFECROSS_MIN-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META16]]
+// VFECROSS_MIN-NEXT:    br i1 [[TMP2]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !prof [[PROF17:![0-9]+]], !nosanitize [[META16]]
+// VFECROSS_MIN:       [[CFI_SLOWPATH]]:
+// VFECROSS_MIN-NEXT:    call void @__cfi_slowpath_diag(i64 2113178649093603051, ptr [[VTABLE]], ptr @anon.93ff3a23323713a2f8f8fa200a6533af.1) #[[ATTR7:[0-9]+]], !nosanitize [[META16]]
+// VFECROSS_MIN-NEXT:    br label %[[CFI_CONT]], !nosanitize [[META16]]
+// VFECROSS_MIN:       [[CFI_CONT]]:
+// VFECROSS_MIN-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META16]]
 // VFECROSS_MIN-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
 // VFECROSS_MIN-NEXT:    ret void
 //
@@ -173,10 +176,9 @@ struct DerivedSameLayoutFromPublic : Public {};
 // VFE_NOCFI-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // VFE_NOCFI-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // VFE_NOCFI-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// VFE_NOCFI-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 8, metadata !"_ZTS6Hidden"), !nosanitize [[META5:![0-9]+]]
-// VFE_NOCFI-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META5]]
-// VFE_NOCFI-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META5]]
-// VFE_NOCFI-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
+// VFE_NOCFI-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 8, metadata !"_ZTS6Hidden")
+// VFE_NOCFI-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0
+// VFE_NOCFI-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
 // VFE_NOCFI-NEXT:    ret void
 //
 // STRICT-LABEL: define hidden void @call_hidden(
@@ -241,7 +243,7 @@ extern "C" void call_hidden(Hidden *p) {
 // XDSOT-NEXT:    ret void
 //
 // VFEFULL-LABEL: define hidden void @call_public(
-// VFEFULL-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META7:![0-9]+]] {
+// VFEFULL-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META13:![0-9]+]] {
 // VFEFULL-NEXT:  [[ENTRY:.*:]]
 // VFEFULL-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // VFEFULL-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
@@ -253,17 +255,17 @@ extern "C" void call_hidden(Hidden *p) {
 // VFEFULL-NEXT:    ret void
 //
 // VFECROSS_MIN-LABEL: define hidden void @call_public(
-// VFECROSS_MIN-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META13:![0-9]+]] {
+// VFECROSS_MIN-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META18:![0-9]+]] {
 // VFECROSS_MIN-NEXT:  [[ENTRY:.*:]]
 // VFECROSS_MIN-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // VFECROSS_MIN-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // VFECROSS_MIN-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // VFECROSS_MIN-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// VFECROSS_MIN-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS6Public"), !nosanitize [[META11]]
-// VFECROSS_MIN-NEXT:    br i1 [[TMP1]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !prof [[PROF12]], !nosanitize [[META11]]
+// VFECROSS_MIN-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS6Public"), !nosanitize [[META16]]
+// VFECROSS_MIN-NEXT:    br i1 [[TMP1]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !prof [[PROF17]], !nosanitize [[META16]]
 // VFECROSS_MIN:       [[CFI_SLOWPATH]]:
-// VFECROSS_MIN-NEXT:    call void @__cfi_slowpath_diag(i64 7659278028533726273, ptr [[VTABLE]], ptr @anon.93ff3a23323713a2f8f8fa200a6533af.1) #[[ATTR8:[0-9]+]], !nosanitize [[META11]]
-// VFECROSS_MIN-NEXT:    br label %[[CFI_CONT]], !nosanitize [[META11]]
+// VFECROSS_MIN-NEXT:    call void @__cfi_slowpath_diag(i64 7659278028533726273, ptr [[VTABLE]], ptr @anon.93ff3a23323713a2f8f8fa200a6533af.3) #[[ATTR7]], !nosanitize [[META16]]
+// VFECROSS_MIN-NEXT:    br label %[[CFI_CONT]], !nosanitize [[META16]]
 // VFECROSS_MIN:       [[CFI_CONT]]:
 // VFECROSS_MIN-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 0
 // VFECROSS_MIN-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VFN]], align 8
@@ -306,7 +308,7 @@ extern "C" void call_hidden(Hidden *p) {
 // SPEC-NEXT:    ret void
 //
 // VFE_NOCFI-LABEL: define hidden void @call_public(
-// VFE_NOCFI-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META6:![0-9]+]] {
+// VFE_NOCFI-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META5:![0-9]+]] {
 // VFE_NOCFI-NEXT:  [[ENTRY:.*:]]
 // VFE_NOCFI-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // VFE_NOCFI-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
@@ -362,29 +364,27 @@ extern "C" void call_public(Public *p) {
 // XDSOT-NEXT:    ret void
 //
 // VFEFULL-LABEL: define hidden void @call_no_sanitize(
-// VFEFULL-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META8:![0-9]+]] {
+// VFEFULL-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META14:![0-9]+]] {
 // VFEFULL-NEXT:  [[ENTRY:.*:]]
 // VFEFULL-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // VFEFULL-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // VFEFULL-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // VFEFULL-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// VFEFULL-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 8, metadata !"_ZTS6Hidden"), !nosanitize [[META5]]
-// VFEFULL-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META5]]
-// VFEFULL-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META5]]
-// VFEFULL-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
+// VFEFULL-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 8, metadata !"_ZTS6Hidden")
+// VFEFULL-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0
+// VFEFULL-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
 // VFEFULL-NEXT:    ret void
 //
 // VFECROSS_MIN-LABEL: define hidden void @call_no_sanitize(
-// VFECROSS_MIN-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META14:![0-9]+]] {
+// VFECROSS_MIN-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META19:![0-9]+]] {
 // VFECROSS_MIN-NEXT:  [[ENTRY:.*:]]
 // VFECROSS_MIN-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // VFECROSS_MIN-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // VFECROSS_MIN-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // VFECROSS_MIN-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// VFECROSS_MIN-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 8, metadata !"_ZTS6Hidden"), !nosanitize [[META11]]
-// VFECROSS_MIN-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META11]]
-// VFECROSS_MIN-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META11]]
-// VFECROSS_MIN-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
+// VFECROSS_MIN-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 8, metadata !"_ZTS6Hidden")
+// VFECROSS_MIN-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0
+// VFECROSS_MIN-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
 // VFECROSS_MIN-NEXT:    ret void
 //
 // MS-LABEL: define dso_local void @call_no_sanitize(
@@ -429,16 +429,15 @@ extern "C" void call_public(Public *p) {
 // SPEC-NEXT:    ret void
 //
 // VFE_NOCFI-LABEL: define hidden void @call_no_sanitize(
-// VFE_NOCFI-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META7:![0-9]+]] {
+// VFE_NOCFI-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META6:![0-9]+]] {
 // VFE_NOCFI-NEXT:  [[ENTRY:.*:]]
 // VFE_NOCFI-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // VFE_NOCFI-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // VFE_NOCFI-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // VFE_NOCFI-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// VFE_NOCFI-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 8, metadata !"_ZTS6Hidden"), !nosanitize [[META5]]
-// VFE_NOCFI-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META5]]
-// VFE_NOCFI-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META5]]
-// VFE_NOCFI-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
+// VFE_NOCFI-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 8, metadata !"_ZTS6Hidden")
+// VFE_NOCFI-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0
+// VFE_NOCFI-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
 // VFE_NOCFI-NEXT:    ret void
 //
 // STRICT-LABEL: define hidden void @call_no_sanitize(
@@ -506,7 +505,7 @@ extern "C" __attribute__((no_sanitize("cfi-vcall"))) void call_no_sanitize(Hidde
 // XDSOT-NEXT:    ret void
 //
 // VFEFULL-LABEL: define hidden void @call_derived_same_layout(
-// VFEFULL-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META9:![0-9]+]] {
+// VFEFULL-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META15:![0-9]+]] {
 // VFEFULL-NEXT:  [[ENTRY:.*:]]
 // VFEFULL-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // VFEFULL-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
@@ -515,21 +514,24 @@ extern "C" __attribute__((no_sanitize("cfi-vcall"))) void call_no_sanitize(Hidde
 // VFEFULL-NEXT:    br i1 [[ISNULL]], label %[[DELETE_END:.*]], label %[[DELETE_NOTNULL:.*]]
 // VFEFULL:       [[DELETE_NOTNULL]]:
 // VFEFULL-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// VFEFULL-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 24, metadata !"_ZTS6Hidden"), !nosanitize [[META5]]
-// VFEFULL-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META5]]
-// VFEFULL-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF6]], !nosanitize [[META5]]
+// VFEFULL-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 24, metadata !"_ZTS6Hidden"), !nosanitize [[META11]]
+// VFEFULL-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META11]]
+// VFEFULL-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META11]]
+// VFEFULL-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF12]], !nosanitize [[META11]]
 // VFEFULL:       [[HANDLER_CFI_CHECK_FAIL]]:
-// VFEFULL-NEXT:    call void @__ubsan_handle_cfi_check_fail() #[[ATTR3]], !nosanitize [[META5]]
-// VFEFULL-NEXT:    br label %[[CONT]], !nosanitize [[META5]]
+// VFEFULL-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META11]]
+// VFEFULL-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP3]] to i64, !nosanitize [[META11]]
+// VFEFULL-NEXT:    call void @__ubsan_handle_cfi_check_fail(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.2, i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR4]], !nosanitize [[META11]]
+// VFEFULL-NEXT:    br label %[[CONT]], !nosanitize [[META11]]
 // VFEFULL:       [[CONT]]:
-// VFEFULL-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META5]]
-// VFEFULL-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR4:[0-9]+]]
+// VFEFULL-NEXT:    [[TMP6:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META11]]
+// VFEFULL-NEXT:    call void [[TMP6]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR5:[0-9]+]]
 // VFEFULL-NEXT:    br label %[[DELETE_END]]
 // VFEFULL:       [[DELETE_END]]:
 // VFEFULL-NEXT:    ret void
 //
 // VFECROSS_MIN-LABEL: define hidden void @call_derived_same_layout(
-// VFECROSS_MIN-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META15:![0-9]+]] {
+// VFECROSS_MIN-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META20:![0-9]+]] {
 // VFECROSS_MIN-NEXT:  [[ENTRY:.*:]]
 // VFECROSS_MIN-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // VFECROSS_MIN-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
@@ -538,15 +540,15 @@ extern "C" __attribute__((no_sanitize("cfi-vcall"))) void call_no_sanitize(Hidde
 // VFECROSS_MIN-NEXT:    br i1 [[ISNULL]], label %[[DELETE_END:.*]], label %[[DELETE_NOTNULL:.*]]
 // VFECROSS_MIN:       [[DELETE_NOTNULL]]:
 // VFECROSS_MIN-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// VFECROSS_MIN-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 24, metadata !"_ZTS6Hidden"), !nosanitize [[META11]]
-// VFECROSS_MIN-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META11]]
-// VFECROSS_MIN-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF12]], !nosanitize [[META11]]
-// VFECROSS_MIN:       [[HANDLER_CFI_CHECK_FAIL]]:
-// VFECROSS_MIN-NEXT:    call void @__ubsan_handle_cfi_check_fail_minimal() #[[ATTR7]], !nosanitize [[META11]]
-// VFECROSS_MIN-NEXT:    br label %[[CONT]], !nosanitize [[META11]]
-// VFECROSS_MIN:       [[CONT]]:
-// VFECROSS_MIN-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META11]]
-// VFECROSS_MIN-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR8]]
+// VFECROSS_MIN-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 24, metadata !"_ZTS6Hidden"), !nosanitize [[META16]]
+// VFECROSS_MIN-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META16]]
+// VFECROSS_MIN-NEXT:    br i1 [[TMP2]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !prof [[PROF17]], !nosanitize [[META16]]
+// VFECROSS_MIN:       [[CFI_SLOWPATH]]:
+// VFECROSS_MIN-NEXT:    call void @__cfi_slowpath_diag(i64 2113178649093603051, ptr [[VTABLE]], ptr @anon.93ff3a23323713a2f8f8fa200a6533af.4) #[[ATTR7]], !nosanitize [[META16]]
+// VFECROSS_MIN-NEXT:    br label %[[CFI_CONT]], !nosanitize [[META16]]
+// VFECROSS_MIN:       [[CFI_CONT]]:
+// VFECROSS_MIN-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META16]]
+// VFECROSS_MIN-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR7]]
 // VFECROSS_MIN-NEXT:    br label %[[DELETE_END]]
 // VFECROSS_MIN:       [[DELETE_END]]:
 // VFECROSS_MIN-NEXT:    ret void
@@ -629,7 +631,7 @@ extern "C" __attribute__((no_sanitize("cfi-vcall"))) void call_no_sanitize(Hidde
 // SPEC-NEXT:    ret void
 //
 // VFE_NOCFI-LABEL: define hidden void @call_derived_same_layout(
-// VFE_NOCFI-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META8:![0-9]+]] {
+// VFE_NOCFI-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META7:![0-9]+]] {
 // VFE_NOCFI-NEXT:  [[ENTRY:.*:]]
 // VFE_NOCFI-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // VFE_NOCFI-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
@@ -638,10 +640,9 @@ extern "C" __attribute__((no_sanitize("cfi-vcall"))) void call_no_sanitize(Hidde
 // VFE_NOCFI-NEXT:    br i1 [[ISNULL]], label %[[DELETE_END:.*]], label %[[DELETE_NOTNULL:.*]]
 // VFE_NOCFI:       [[DELETE_NOTNULL]]:
 // VFE_NOCFI-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// VFE_NOCFI-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 24, metadata !"_ZTS17DerivedSameLayout"), !nosanitize [[META5]]
-// VFE_NOCFI-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META5]]
-// VFE_NOCFI-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META5]]
-// VFE_NOCFI-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR2:[0-9]+]]
+// VFE_NOCFI-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 24, metadata !"_ZTS17DerivedSameLayout")
+// VFE_NOCFI-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0
+// VFE_NOCFI-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR2:[0-9]+]]
 // VFE_NOCFI-NEXT:    br label %[[DELETE_END]]
 // VFE_NOCFI:       [[DELETE_END]]:
 // VFE_NOCFI-NEXT:    ret void
@@ -713,38 +714,41 @@ extern "C" void call_derived_same_layout(DerivedSameLayout *p) {
 // XDSOT-NEXT:    ret void
 //
 // VFEFULL-LABEL: define hidden void @call_derived_public(
-// VFEFULL-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META10:![0-9]+]] {
+// VFEFULL-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META16:![0-9]+]] {
 // VFEFULL-NEXT:  [[ENTRY:.*:]]
 // VFEFULL-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // VFEFULL-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // VFEFULL-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // VFEFULL-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// VFEFULL-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 32, metadata !"_ZTS17DerivedFromPublic"), !nosanitize [[META5]]
-// VFEFULL-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META5]]
-// VFEFULL-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF6]], !nosanitize [[META5]]
+// VFEFULL-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 32, metadata !"_ZTS17DerivedFromPublic"), !nosanitize [[META11]]
+// VFEFULL-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META11]]
+// VFEFULL-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META11]]
+// VFEFULL-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF12]], !nosanitize [[META11]]
 // VFEFULL:       [[HANDLER_CFI_CHECK_FAIL]]:
-// VFEFULL-NEXT:    call void @__ubsan_handle_cfi_check_fail() #[[ATTR3]], !nosanitize [[META5]]
-// VFEFULL-NEXT:    br label %[[CONT]], !nosanitize [[META5]]
+// VFEFULL-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META11]]
+// VFEFULL-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP3]] to i64, !nosanitize [[META11]]
+// VFEFULL-NEXT:    call void @__ubsan_handle_cfi_check_fail(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.4, i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR4]], !nosanitize [[META11]]
+// VFEFULL-NEXT:    br label %[[CONT]], !nosanitize [[META11]]
 // VFEFULL:       [[CONT]]:
-// VFEFULL-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META5]]
-// VFEFULL-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(16) [[TMP0]])
+// VFEFULL-NEXT:    [[TMP6:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META11]]
+// VFEFULL-NEXT:    call void [[TMP6]](ptr noundef nonnull align 8 dereferenceable(16) [[TMP0]])
 // VFEFULL-NEXT:    ret void
 //
 // VFECROSS_MIN-LABEL: define hidden void @call_derived_public(
-// VFECROSS_MIN-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META16:![0-9]+]] {
+// VFECROSS_MIN-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META21:![0-9]+]] {
 // VFECROSS_MIN-NEXT:  [[ENTRY:.*:]]
 // VFECROSS_MIN-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // VFECROSS_MIN-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // VFECROSS_MIN-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // VFECROSS_MIN-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// VFECROSS_MIN-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 32, metadata !"_ZTS17DerivedFromPublic"), !nosanitize [[META11]]
-// VFECROSS_MIN-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META11]]
-// VFECROSS_MIN-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF12]], !nosanitize [[META11]]
-// VFECROSS_MIN:       [[HANDLER_CFI_CHECK_FAIL]]:
-// VFECROSS_MIN-NEXT:    call void @__ubsan_handle_cfi_check_fail_minimal() #[[ATTR7]], !nosanitize [[META11]]
-// VFECROSS_MIN-NEXT:    br label %[[CONT]], !nosanitize [[META11]]
-// VFECROSS_MIN:       [[CONT]]:
-// VFECROSS_MIN-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META11]]
+// VFECROSS_MIN-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 32, metadata !"_ZTS17DerivedFromPublic"), !nosanitize [[META16]]
+// VFECROSS_MIN-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META16]]
+// VFECROSS_MIN-NEXT:    br i1 [[TMP2]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !prof [[PROF17]], !nosanitize [[META16]]
+// VFECROSS_MIN:       [[CFI_SLOWPATH]]:
+// VFECROSS_MIN-NEXT:    call void @__cfi_slowpath_diag(i64 -6426894850856698049, ptr [[VTABLE]], ptr @anon.93ff3a23323713a2f8f8fa200a6533af.6) #[[ATTR7]], !nosanitize [[META16]]
+// VFECROSS_MIN-NEXT:    br label %[[CFI_CONT]], !nosanitize [[META16]]
+// VFECROSS_MIN:       [[CFI_CONT]]:
+// VFECROSS_MIN-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META16]]
 // VFECROSS_MIN-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(16) [[TMP0]])
 // VFECROSS_MIN-NEXT:    ret void
 //
@@ -804,16 +808,15 @@ extern "C" void call_derived_same_layout(DerivedSameLayout *p) {
 // SPEC-NEXT:    ret void
 //
 // VFE_NOCFI-LABEL: define hidden void @call_derived_public(
-// VFE_NOCFI-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META9:![0-9]+]] {
+// VFE_NOCFI-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META8:![0-9]+]] {
 // VFE_NOCFI-NEXT:  [[ENTRY:.*:]]
 // VFE_NOCFI-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // VFE_NOCFI-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // VFE_NOCFI-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // VFE_NOCFI-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// VFE_NOCFI-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 32, metadata !"_ZTS17DerivedFromPublic"), !nosanitize [[META5]]
-// VFE_NOCFI-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META5]]
-// VFE_NOCFI-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META5]]
-// VFE_NOCFI-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(16) [[TMP0]])
+// VFE_NOCFI-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 32, metadata !"_ZTS17DerivedFromPublic")
+// VFE_NOCFI-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0
+// VFE_NOCFI-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(16) [[TMP0]])
 // VFE_NOCFI-NEXT:    ret void
 //
 // STRICT-LABEL: define hidden void @call_derived_public(
@@ -888,7 +891,7 @@ extern "C" void call_derived_public(DerivedFromPublic *p) {
 // XDSOT-NEXT:    ret void
 //
 // VFEFULL-LABEL: define hidden void @delete_derived_same_layout_from_public(
-// VFEFULL-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META11:![0-9]+]] {
+// VFEFULL-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META17:![0-9]+]] {
 // VFEFULL-NEXT:  [[ENTRY:.*:]]
 // VFEFULL-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // VFEFULL-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
@@ -899,13 +902,13 @@ extern "C" void call_derived_public(DerivedFromPublic *p) {
 // VFEFULL-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
 // VFEFULL-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 3
 // VFEFULL-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[VFN]], align 8
-// VFEFULL-NEXT:    call void [[TMP1]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR4]]
+// VFEFULL-NEXT:    call void [[TMP1]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR5]]
 // VFEFULL-NEXT:    br label %[[DELETE_END]]
 // VFEFULL:       [[DELETE_END]]:
 // VFEFULL-NEXT:    ret void
 //
 // VFECROSS_MIN-LABEL: define hidden void @delete_derived_same_layout_from_public(
-// VFECROSS_MIN-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META17:![0-9]+]] {
+// VFECROSS_MIN-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META22:![0-9]+]] {
 // VFECROSS_MIN-NEXT:  [[ENTRY:.*:]]
 // VFECROSS_MIN-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // VFECROSS_MIN-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
@@ -914,15 +917,15 @@ extern "C" void call_derived_public(DerivedFromPublic *p) {
 // VFECROSS_MIN-NEXT:    br i1 [[ISNULL]], label %[[DELETE_END:.*]], label %[[DELETE_NOTNULL:.*]]
 // VFECROSS_MIN:       [[DELETE_NOTNULL]]:
 // VFECROSS_MIN-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// VFECROSS_MIN-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS6Public"), !nosanitize [[META11]]
-// VFECROSS_MIN-NEXT:    br i1 [[TMP1]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !prof [[PROF12]], !nosanitize [[META11]]
+// VFECROSS_MIN-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS6Public"), !nosanitize [[META16]]
+// VFECROSS_MIN-NEXT:    br i1 [[TMP1]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !prof [[PROF17]], !nosanitize [[META16]]
 // VFECROSS_MIN:       [[CFI_SLOWPATH]]:
-// VFECROSS_MIN-NEXT:    call void @__cfi_slowpath_diag(i64 7659278028533726273, ptr [[VTABLE]], ptr @anon.93ff3a23323713a2f8f8fa200a6533af.2) #[[ATTR8]], !nosanitize [[META11]]
-// VFECROSS_MIN-NEXT:    br label %[[CFI_CONT]], !nosanitize [[META11]]
+// VFECROSS_MIN-NEXT:    call void @__cfi_slowpath_diag(i64 7659278028533726273, ptr [[VTABLE]], ptr @anon.93ff3a23323713a2f8f8fa200a6533af.7) #[[ATTR7]], !nosanitize [[META16]]
+// VFECROSS_MIN-NEXT:    br label %[[CFI_CONT]], !nosanitize [[META16]]
 // VFECROSS_MIN:       [[CFI_CONT]]:
 // VFECROSS_MIN-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 3
 // VFECROSS_MIN-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VFN]], align 8
-// VFECROSS_MIN-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR8]]
+// VFECROSS_MIN-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR7]]
 // VFECROSS_MIN-NEXT:    br label %[[DELETE_END]]
 // VFECROSS_MIN:       [[DELETE_END]]:
 // VFECROSS_MIN-NEXT:    ret void
@@ -978,7 +981,7 @@ extern "C" void call_derived_public(DerivedFromPublic *p) {
 // SPEC-NEXT:    ret void
 //
 // VFE_NOCFI-LABEL: define hidden void @delete_derived_same_layout_from_public(
-// VFE_NOCFI-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META10:![0-9]+]] {
+// VFE_NOCFI-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] !guid [[META9:![0-9]+]] {
 // VFE_NOCFI-NEXT:  [[ENTRY:.*:]]
 // VFE_NOCFI-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // VFE_NOCFI-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
@@ -987,10 +990,9 @@ extern "C" void call_derived_public(DerivedFromPublic *p) {
 // VFE_NOCFI-NEXT:    br i1 [[ISNULL]], label %[[DELETE_END:.*]], label %[[DELETE_NOTNULL:.*]]
 // VFE_NOCFI:       [[DELETE_NOTNULL]]:
 // VFE_NOCFI-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// VFE_NOCFI-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 24, metadata !"_ZTS27DerivedSameLayoutFromPublic"), !nosanitize [[META5]]
-// VFE_NOCFI-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META5]]
-// VFE_NOCFI-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META5]]
-// VFE_NOCFI-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR2]]
+// VFE_NOCFI-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 24, metadata !"_ZTS27DerivedSameLayoutFromPublic")
+// VFE_NOCFI-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0
+// VFE_NOCFI-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR2]]
 // VFE_NOCFI-NEXT:    br label %[[DELETE_END]]
 // VFE_NOCFI:       [[DELETE_END]]:
 // VFE_NOCFI-NEXT:    ret void
@@ -1043,23 +1045,23 @@ extern "C" void delete_derived_same_layout_from_public(DerivedSameLayoutFromPubl
 // XDSOT: [[META12]] = !{i64 -1300877796466697334}
 // XDSOT: [[META13]] = !{i64 -3011432234017786520}
 //.
-// VFEFULL: [[META4]] = !{i64 -8223949192042198753}
-// VFEFULL: [[META5]] = !{}
-// VFEFULL: [[PROF6]] = !{!"branch_weights", i32 1048575, i32 1}
-// VFEFULL: [[META7]] = !{i64 4735877602249467044}
-// VFEFULL: [[META8]] = !{i64 7641651042058123257}
-// VFEFULL: [[META9]] = !{i64 -4426688768985367573}
-// VFEFULL: [[META10]] = !{i64 -1300877796466697334}
-// VFEFULL: [[META11]] = !{i64 -3011432234017786520}
+// VFEFULL: [[META10]] = !{i64 -8223949192042198753}
+// VFEFULL: [[META11]] = !{}
+// VFEFULL: [[PROF12]] = !{!"branch_weights", i32 1048575, i32 1}
+// VFEFULL: [[META13]] = !{i64 4735877602249467044}
+// VFEFULL: [[META14]] = !{i64 7641651042058123257}
+// VFEFULL: [[META15]] = !{i64 -4426688768985367573}
+// VFEFULL: [[META16]] = !{i64 -1300877796466697334}
+// VFEFULL: [[META17]] = !{i64 -3011432234017786520}
 //.
-// VFECROSS_MIN: [[META10]] = !{i64 -8223949192042198753}
-// VFECROSS_MIN: [[META11]] = !{}
-// VFECROSS_MIN: [[PROF12]] = !{!"branch_weights", i32 1048575, i32 1}
-// VFECROSS_MIN: [[META13]] = !{i64 4735877602249467044}
-// VFECROSS_MIN: [[META14]] = !{i64 7641651042058123257}
-// VFECROSS_MIN: [[META15]] = !{i64 -4426688768985367573}
-// VFECROSS_MIN: [[META16]] = !{i64 -1300877796466697334}
-// VFECROSS_MIN: [[META17]] = !{i64 -3011432234017786520}
+// VFECROSS_MIN: [[META15]] = !{i64 -8223949192042198753}
+// VFECROSS_MIN: [[META16]] = !{}
+// VFECROSS_MIN: [[PROF17]] = !{!"branch_weights", i32 1048575, i32 1}
+// VFECROSS_MIN: [[META18]] = !{i64 4735877602249467044}
+// VFECROSS_MIN: [[META19]] = !{i64 7641651042058123257}
+// VFECROSS_MIN: [[META20]] = !{i64 -4426688768985367573}
+// VFECROSS_MIN: [[META21]] = !{i64 -1300877796466697334}
+// VFECROSS_MIN: [[META22]] = !{i64 -3011432234017786520}
 //.
 // MS: [[META12]] = !{i64 -8223949192042198753}
 // MS: [[META13]] = !{}
@@ -1089,12 +1091,11 @@ extern "C" void delete_derived_same_layout_from_public(DerivedSameLayoutFromPubl
 // SPEC: [[META16]] = !{i64 -3011432234017786520}
 //.
 // VFE_NOCFI: [[META4]] = !{i64 -8223949192042198753}
-// VFE_NOCFI: [[META5]] = !{}
-// VFE_NOCFI: [[META6]] = !{i64 4735877602249467044}
-// VFE_NOCFI: [[META7]] = !{i64 7641651042058123257}
-// VFE_NOCFI: [[META8]] = !{i64 -4426688768985367573}
-// VFE_NOCFI: [[META9]] = !{i64 -1300877796466697334}
-// VFE_NOCFI: [[META10]] = !{i64 -3011432234017786520}
+// VFE_NOCFI: [[META5]] = !{i64 4735877602249467044}
+// VFE_NOCFI: [[META6]] = !{i64 7641651042058123257}
+// VFE_NOCFI: [[META7]] = !{i64 -4426688768985367573}
+// VFE_NOCFI: [[META8]] = !{i64 -1300877796466697334}
+// VFE_NOCFI: [[META9]] = !{i64 -3011432234017786520}
 //.
 // STRICT: [[META13]] = !{i64 -8223949192042198753}
 // STRICT: [[META14]] = !{}

@@ -39,7 +39,7 @@ struct S2 {
 // NOSTD-WPD: call i1 @llvm.type.test
 // NOSTD-WPD: call void @__ubsan_handle_cfi_check_fail_abort(ptr
 // NOSTD-VFE: call { ptr, i1 } @llvm.type.checked.load
-// NOSTD-VFE: call void @__ubsan_handle_cfi_check_fail_abort()
+// NOSTD-VFE: call void @__ubsan_handle_cfi_check_fail_abort(ptr
 void s1f(S1 *s1) {
   s1->f();
 }
@@ -54,7 +54,7 @@ void s1f(S1 *s1) {
 // NOSTD-WPD-NOT: call void @__ubsan_handle_cfi_check_fail
 // NOSTD-WPD: ret void
 // NOSTD-VFE: call { ptr, i1 } @llvm.type.checked.load
-// NOSTD-VFE: extractvalue { ptr, i1 } {{.*}}, 1
+// NOSTD-VFE-NOT: extractvalue { ptr, i1 } {{.*}}, 1
 // NOSTD-VFE-NOT: call void @__ubsan_handle_cfi_check_fail
 // NOSTD-VFE: ret void
 void s2f(std::S2 *s2) {
@@ -74,7 +74,7 @@ struct DerivedFromS2 : std::S2 {};
 // NOSTD-WPD-NOT: call void @__ubsan_handle_cfi_check_fail
 // NOSTD-WPD: ret void
 // NOSTD-VFE: call { ptr, i1 } @llvm.type.checked.load(ptr {{.*}}, i32 16, metadata !"_ZTSSt2S2")
-// NOSTD-VFE: extractvalue { ptr, i1 } {{.*}}, 1
+// NOSTD-VFE-NOT: extractvalue { ptr, i1 } {{.*}}, 1
 // NOSTD-VFE-NOT: call void @__ubsan_handle_cfi_check_fail
 // NOSTD-VFE: ret void
 void d2f(DerivedFromS2 *d) {
