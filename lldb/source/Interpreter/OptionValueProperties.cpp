@@ -344,7 +344,7 @@ void OptionValueProperties::DumpValue(const ExecutionContext *exe_ctx,
       OptionValue *option_value = property->GetValue().get();
       assert(option_value);
       // Skip unmodified settings if only changed ones were requested, and
-      // unmodified deprecated settings unless those were requested. 
+      // unmodified deprecated settings unless those were requested.
       if (((dump_mask & eDumpOptionOnlyChanged) ||
            property->IsHidden(include_deprecated)) &&
           option_value->IsDefault())

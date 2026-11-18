@@ -4,7 +4,6 @@ from dataclasses import dataclass
 import json
 import re
 
-
 PropertyDef = Dict[str, Any]
 
 
@@ -75,9 +74,7 @@ def print_property(f: TextIO, path: str, property: Property):
     f.write(f"```{{lldbsetting}} {path}\n")
     f.write(f':type: "{property.type}"\n\n')
     if property.deprecated:
-        f.write(
-            "**Deprecated:** this setting may be removed in a future release.\n\n"
-        )
+        f.write("**Deprecated:** this setting may be removed in a future release.\n\n")
     f.write(property.description)
     f.write("\n\n")
     if property.default:
