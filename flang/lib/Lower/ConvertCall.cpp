@@ -1228,8 +1228,12 @@ static hlfir::EntityWithAttributes genStmtFunctionRef(
   symMap.popScope();
   // The result must not be a variable.
   result = hlfir::loadTrivialScalar(loc, builder, result);
-  if (result.isVariable())
+  if (result.isVariable()) {
     result = hlfir::Entity{hlfir::AsExprOp::create(builder, loc, result)};
+    fir::FirOpBuilder *bldr = &builder;
+    stmtCtx.attachCleanup(
+        [=]() { hlfir::DestroyOp::create(*bldr, loc, result); });
+  }
   for (auto associate : exprAssociations)
     hlfir::EndAssociateOp::create(builder, loc, associate);
   return hlfir::EntityWithAttributes{result};
@@ -2783,18 +2787,20 @@ public:
             loc,
             "compute elemental PDT function result length parameters in HLFIR");
     }
-    auto genKernel = [&](mlir::Location l, fir::FirOpBuilder &b,
-                         mlir::ValueRange oneBasedIndices) -> hlfir::Entity {
+    auto genKernel =
+        [&](mlir::Location l, fir::FirOpBuilder &b,
+            mlir::ValueRange oneBasedIndices) -> hlfir::ElementalKernelResult {
       callContext.stmtCtx.pushScope();
       for (auto &preparedActual : loweredActuals)
         if (preparedActual)
           preparedActual->setElementalIndices(oneBasedIndices);
       auto res = *impl().genElementalKernel(loweredActuals, callContext);
-      callContext.stmtCtx.finalizeAndPop();
-      // Note that an hlfir.destroy is not emitted for the result since it
-      // is still used by the hlfir.yield_element that also marks its last
-      // use.
-      return res;
+      if (mlir::isa<hlfir::ExprType>(res.getType())) {
+        fir::FirOpBuilder *bldr = &b;
+        callContext.stmtCtx.attachCleanup(
+            [=]() { hlfir::DestroyOp::create(*bldr, l, res); });
+      }
+      return {res, [&callContext]() { callContext.stmtCtx.finalizeAndPop(); }};
     };
     mlir::Value polymorphicMold;
     if (fir::isPolymorphicType(*callContext.resultType))
@@ -3865,9 +3871,14 @@ hlfir::Entity Fortran::lower::PreparedActualArgument::getActual(
       std::get<hlfir::ElementalAddrOp>(actual);
   mlir::IRMapping mapper;
   auto alwaysFalse = [](hlfir::ElementalOp) -> bool { return false; };
+  llvm::SmallVector<hlfir::CleanupFunction> cleanups;
   mlir::Value addr = hlfir::inlineElementalOp(
       loc, builder, elementalAddr, *oneBasedElementalIndices, mapper,
-      /*mustRecursivelyInline=*/alwaysFalse);
+      /*mustRecursivelyInline=*/alwaysFalse, cleanups);
+  // Subscript expressions are evaluated outside elemental_addr and cleaned
+  // up by the enclosing statement. This call only clones the address kernel:
+  // it does not recursively inline applies (which could add element cleanups).
+  assert(cleanups.empty() && "non-recursive address inlining has no cleanups");
   assert(elementalAddr.getCleanup().empty() && "no clean-up expected");
   elementalAddr.erase();
   return hlfir::Entity{addr};

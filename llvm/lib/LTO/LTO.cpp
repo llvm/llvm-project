@@ -1386,11 +1386,18 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
 
   // Finalize linking of regular LTO modules containing summaries now that
   // we have computed liveness information.
-  {
-    llvm::TimeTraceScope timeScope("Link regular LTO");
-    for (auto &M : RegularLTO.ModsWithSummaries)
-      if (Error Err = linkRegularLTO(std::move(M), /*LivenessFromIndex=*/true))
-        return Err;
+  if (!RegularLTO.ModsWithSummaries.empty()) {
+    {
+      llvm::TimeTraceScope timeScope("Link regular LTO");
+      for (auto &M : RegularLTO.ModsWithSummaries)
+        if (Error Err =
+                linkRegularLTO(std::move(M), /*LivenessFromIndex=*/true))
+          return Err;
+      RegularLTO.ModsWithSummaries.clear();
+      RegularLTO.ModsWithSummaries.shrink_to_fit();
+    }
+    if (Conf.PostRegularLTOLinkHook)
+      Conf.PostRegularLTOLinkHook();
   }
 
   // Ensure we don't have inconsistently split LTO units with type tests.
@@ -2150,9 +2157,9 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
       (WholeProgramVisibilityEnabledInLTO && !AlwaysRenamePromotedLocals)
           ? &ExternallyVisibleSymbolNames
           : nullptr;
-  runWholeProgramDevirtOnIndex(ThinLTO.CombinedIndex, ExportedGUIDs,
-                               LocalWPDTargetsMap,
-                               ExternallyVisibleSymbolNamesPtr);
+  runWholeProgramDevirtOnIndex(
+      ThinLTO.CombinedIndex, ExportedGUIDs, LocalWPDTargetsMap,
+      ExternallyVisibleSymbolNamesPtr, &RegularLTO.Ctx);
 
   auto isPrevailing = [&](GlobalValue::GUID GUID, const GlobalValueSummary *S) {
     return ThinLTO.isPrevailingModuleForGUID(GUID, S->modulePath());

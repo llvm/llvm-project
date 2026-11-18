@@ -6,13 +6,12 @@ define void @test(ptr noalias %p, ptr noalias %q) {
 ; CHECK-SAME: ptr noalias [[P:%.*]], ptr noalias [[Q:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[P]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i16> [[TMP1]], splat (i16 255)
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc <2 x i16> [[TMP2]] to <2 x i8>
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <2 x i8> [[TMP3]] to <2 x i16>
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <2 x i16> [[TMP4]] to <2 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <2 x i16> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul <2 x i32> [[TMP5]], splat (i32 16843009)
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc <2 x i16> [[TMP2]] to <2 x i8>
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <2 x i8> [[TMP3]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult <2 x i32> [[TMP7]], splat (i32 1879048192)
-; CHECK-NEXT:    [[TMP9:%.*]] = or <2 x i16> [[TMP1]], [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = or <2 x i16> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext <2 x i16> [[TMP9]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult <2 x i32> [[TMP10]], splat (i32 1879048192)
 ; CHECK-NEXT:    [[TMP12:%.*]] = sext <2 x i1> [[TMP8]] to <2 x i32>

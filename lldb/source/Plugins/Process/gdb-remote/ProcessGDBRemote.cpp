@@ -893,6 +893,7 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
     // Send the environment and the program + arguments after we connect
     m_gdb_comm.SendEnvironment(launch_info.GetEnvironment());
 
+    StringExtractorGDBRemote response;
     {
       // Scope for the scoped timeout object
       GDBRemoteCommunication::ScopedTimeout timeout(m_gdb_comm,
@@ -914,11 +915,14 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
                                       exe_file.GetPath(/*denormalize=*/true));
         }
       }
-      if (llvm::Error err = m_gdb_comm.LaunchProcess(args)) {
+      llvm::Expected<StringExtractorGDBRemote> launch_response =
+          m_gdb_comm.LaunchProcess(args);
+      if (!launch_response) {
         error = Status::FromErrorStringWithFormatv(
             "Cannot launch '{0}': {1}", args.GetArgumentAtIndex(0),
-            llvm::fmt_consume(std::move(err)));
+            llvm::fmt_consume(launch_response.takeError()));
       } else {
+        response = std::move(*launch_response);
         SetID(m_gdb_comm.GetCurrentProcessID());
       }
     }
@@ -930,8 +934,8 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
       return error;
     }
 
-    StringExtractorGDBRemote response;
-    if (m_gdb_comm.GetStopReply(response)) {
+    if (response.IsStopReply(StringExtractorGDBRemote::ValidStop) ||
+        m_gdb_comm.GetStopReply(response)) {
       SetLastStopPacket(response);
 
       const ArchSpec &process_arch = m_gdb_comm.GetProcessArchitecture();
@@ -944,7 +948,11 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
           GetTarget().MergeArchitecture(host_arch);
       }
 
-      SetPrivateState(SetThreadStopInfo(response));
+      StateType state = SetThreadStopInfo(response);
+      if (state == eStateExited)
+        SetExitStatusFromStopReply(response);
+      else
+        SetPrivateState(state);
 
       if (!disable_stdio) {
         if (pty.GetPrimaryFileDescriptor() != PseudoTerminal::invalid_fd) {
@@ -2904,6 +2912,24 @@ void ProcessGDBRemote::SetLastStopPacket(
   m_last_stop_packet = response;
 }
 
+void ProcessGDBRemote::SetExitStatusFromStopReply(
+    StringExtractorGDBRemote &response) {
+  response.SetFilePos(1);
+  int exit_status = response.GetHexU8();
+  std::string desc_string;
+  if (response.GetBytesLeft() > 0 && response.GetChar() == ';') {
+    llvm::StringRef desc_str;
+    llvm::StringRef desc_token;
+    while (response.GetNameColonValue(desc_token, desc_str)) {
+      if (desc_token != "description")
+        continue;
+      StringExtractor extractor(desc_str);
+      extractor.GetHexByteString(desc_string);
+    }
+  }
+  SetExitStatus(exit_status, desc_string);
+}
+
 void ProcessGDBRemote::SetUnixSignals(const UnixSignalsSP &signals_sp) {
   Process::SetUnixSignals(std::make_shared<GDBRemoteSignals>(signals_sp));
 }
@@ -4251,21 +4277,7 @@ thread_result_t ProcessGDBRemote::AsyncThread() {
             case eStateExited: {
               SetLastStopPacket(response);
               ClearThreadIDList();
-              response.SetFilePos(1);
-
-              int exit_status = response.GetHexU8();
-              std::string desc_string;
-              if (response.GetBytesLeft() > 0 && response.GetChar('-') == ';') {
-                llvm::StringRef desc_str;
-                llvm::StringRef desc_token;
-                while (response.GetNameColonValue(desc_token, desc_str)) {
-                  if (desc_token != "description")
-                    continue;
-                  StringExtractor extractor(desc_str);
-                  extractor.GetHexByteString(desc_string);
-                }
-              }
-              SetExitStatus(exit_status, desc_string.c_str());
+              SetExitStatusFromStopReply(response);
               done = true;
               break;
             }

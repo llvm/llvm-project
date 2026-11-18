@@ -264,6 +264,7 @@ struct IteratorMapInfo {
 /// Properties needed to validate an iterator map locator without lowering it.
 /// Unsupported DataRef forms are classified without evaluating their bases.
 struct IteratorMapObjectAnalysis {
+  const semantics::Symbol *rootSym = nullptr;
   bool isDerivedTypeMember = false;
   bool hasArrayValuedParent = false;
   // Own the validated reference so lowering can reuse it after analysis.
@@ -275,12 +276,11 @@ IteratorMapObjectAnalysis analyzeIteratorMapObject(const omp::Object &object);
 
 /// Lower a locator to its array base and iterator-dependent map bounds.
 /// \p arrayRef must be the supported reference returned by locator analysis.
-IteratorMapInfo genIteratorMapInfo(Fortran::lower::AbstractConverter &converter,
-                                   fir::FirOpBuilder &builder,
-                                   Fortran::lower::StatementContext &stmtCtx,
-                                   const omp::Object &object,
-                                   const evaluate::ArrayRef &arrayRef,
-                                   mlir::Location loc);
+IteratorMapInfo genIteratorMapInfo(
+    Fortran::lower::AbstractConverter &converter, fir::FirOpBuilder &builder,
+    Fortran::semantics::SemanticsContext &semaCtx,
+    Fortran::lower::StatementContext &stmtCtx, const omp::Object &object,
+    const evaluate::ArrayRef &arrayRef, mlir::Location loc);
 
 /// Walk the already-emitted MLIR parent operations starting from \p op and
 /// collect the implied OpenMP construct traits in outermost-to-innermost
@@ -296,6 +296,13 @@ void collectEnclosingConstructTraits(
 /// Return true when \p module is being compiled for an AMDGPU device or all of
 /// its offload targets are AMDGPU devices.
 bool hasOnlyAMDGCNTargets(mlir::ModuleOp module);
+
+/// In host offload compilation, report not yet implemented if the implicit
+/// default mapper for \p typeSpec would skip a component type's default mapper
+/// that has iterator map entries.
+void checkImplicitMapperComponents(lower::AbstractConverter &converter,
+                                   mlir::Location loc,
+                                   const semantics::DerivedTypeSpec &typeSpec);
 
 /// Return true when unified shared memory is required by either the OpenMP
 /// module attributes or a source-level `requires` directive.
