@@ -7,12 +7,12 @@
 define amdgpu_kernel void @test_kernel(i32 %val) #0 {
 ; CHECK-LABEL: test_kernel:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_mov_b32 s33, 0
-; CHECK-NEXT:    s_mov_b32 s32, 0x180000
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
+; CHECK-NEXT:    s_mov_b32 s33, 0
+; CHECK-NEXT:    s_mov_b32 s32, 0x180000
 ; CHECK-NEXT:    ; implicit-def: $vgpr40 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    v_writelane_b32 v40, s16, 0
 ; CHECK-NEXT:    s_mov_b32 s13, s15

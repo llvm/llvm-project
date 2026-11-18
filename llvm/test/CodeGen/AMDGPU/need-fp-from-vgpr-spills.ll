@@ -66,11 +66,11 @@ bb:
 define amdgpu_kernel void @kernel_call() {
 ; CHECK-LABEL: kernel_call:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
+; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    ; implicit-def: $vgpr3 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    v_writelane_b32 v3, s16, 0
 ; CHECK-NEXT:    s_mov_b32 s13, s15
@@ -127,11 +127,11 @@ bb:
 define amdgpu_kernel void @kernel_tailcall() {
 ; CHECK-LABEL: kernel_tailcall:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
+; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    ; implicit-def: $vgpr3 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    v_writelane_b32 v3, s16, 0
 ; CHECK-NEXT:    s_mov_b32 s13, s15
@@ -241,11 +241,11 @@ entry:
 define protected amdgpu_kernel void @kernel() {
 ; CHECK-LABEL: kernel:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
+; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    ; implicit-def: $vgpr3 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    v_writelane_b32 v3, s16, 0
 ; CHECK-NEXT:    s_mov_b32 s13, s15

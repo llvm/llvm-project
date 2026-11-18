@@ -27,8 +27,8 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform(i32 %n) #0 {
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dword s5, s[8:9], 0x0
 ; GFX9-GISEL-NEXT:    s_add_u32 s0, s0, s17
-; GFX9-GISEL-NEXT:    s_movk_i32 s32, 0x400
 ; GFX9-GISEL-NEXT:    s_addc_u32 s1, s1, 0
+; GFX9-GISEL-NEXT:    s_movk_i32 s32, 0x400
 ; GFX9-GISEL-NEXT:    s_mov_b32 s4, s32
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_lshl2_add_u32 s5, s5, 15
@@ -82,8 +82,8 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_over_aligned(i
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_uniform_over_aligned:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_load_dword s4, s[8:9], 0x0
-; GFX9-SDAG-NEXT:    s_movk_i32 s32, 0x2000
 ; GFX9-SDAG-NEXT:    s_add_u32 s0, s0, s17
+; GFX9-SDAG-NEXT:    s_movk_i32 s32, 0x2000
 ; GFX9-SDAG-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX9-SDAG-NEXT:    s_add_i32 s5, s32, 0x1fff
 ; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -102,8 +102,8 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_over_aligned(i
 ; GFX9-GISEL-LABEL: test_dynamic_stackalloc_kernel_uniform_over_aligned:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dword s4, s[8:9], 0x0
-; GFX9-GISEL-NEXT:    s_movk_i32 s32, 0x2000
 ; GFX9-GISEL-NEXT:    s_add_u32 s0, s0, s17
+; GFX9-GISEL-NEXT:    s_movk_i32 s32, 0x2000
 ; GFX9-GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX9-GISEL-NEXT:    s_add_u32 s5, s32, 0x1fff
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -180,8 +180,8 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_under_aligned(
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dword s5, s[8:9], 0x0
 ; GFX9-GISEL-NEXT:    s_add_u32 s0, s0, s17
-; GFX9-GISEL-NEXT:    s_movk_i32 s32, 0x400
 ; GFX9-GISEL-NEXT:    s_addc_u32 s1, s1, 0
+; GFX9-GISEL-NEXT:    s_movk_i32 s32, 0x400
 ; GFX9-GISEL-NEXT:    s_mov_b32 s4, s32
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_lshl2_add_u32 s5, s5, 15
@@ -236,9 +236,9 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent() #0 {
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_add_u32 s0, s0, s17
 ; GFX9-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
+; GFX9-SDAG-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX9-SDAG-NEXT:    s_mov_b32 s33, 0
 ; GFX9-SDAG-NEXT:    s_movk_i32 s32, 0x400
-; GFX9-SDAG-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, 0x1ff0, v0
 ; GFX9-SDAG-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, v0, s[4:5]
@@ -267,11 +267,11 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent() #0 {
 ;
 ; GFX9-GISEL-LABEL: test_dynamic_stackalloc_kernel_divergent:
 ; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_movk_i32 s32, 0x400
 ; GFX9-GISEL-NEXT:    s_add_u32 s0, s0, s17
+; GFX9-GISEL-NEXT:    s_movk_i32 s32, 0x400
 ; GFX9-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
-; GFX9-GISEL-NEXT:    s_mov_b32 s33, 0
 ; GFX9-GISEL-NEXT:    s_addc_u32 s1, s1, 0
+; GFX9-GISEL-NEXT:    s_mov_b32 s33, 0
 ; GFX9-GISEL-NEXT:    s_mov_b32 s6, s32
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX9-GISEL-NEXT:    s_or_saveexec_b64 s[4:5], -1
@@ -369,9 +369,9 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent_over_aligned
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_add_u32 s0, s0, s17
 ; GFX9-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
+; GFX9-SDAG-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX9-SDAG-NEXT:    s_mov_b32 s33, 0
 ; GFX9-SDAG-NEXT:    s_movk_i32 s32, 0x2000
-; GFX9-SDAG-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, 0x1ff0, v0
 ; GFX9-SDAG-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, v0, s[4:5]
@@ -403,9 +403,9 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent_over_aligned
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_add_u32 s0, s0, s17
 ; GFX9-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
+; GFX9-GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX9-GISEL-NEXT:    s_mov_b32 s33, 0
 ; GFX9-GISEL-NEXT:    s_movk_i32 s32, 0x2000
-; GFX9-GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX9-GISEL-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, v0, s[4:5]
@@ -506,9 +506,9 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent_under_aligne
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_divergent_under_aligned:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_add_u32 s0, s0, s17
+; GFX9-SDAG-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX9-SDAG-NEXT:    s_mov_b32 s33, 0
 ; GFX9-SDAG-NEXT:    s_movk_i32 s32, 0x400
-; GFX9-SDAG-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX9-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX9-SDAG-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, v0, s[4:5]
@@ -537,11 +537,11 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent_under_aligne
 ;
 ; GFX9-GISEL-LABEL: test_dynamic_stackalloc_kernel_divergent_under_aligned:
 ; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_movk_i32 s32, 0x400
 ; GFX9-GISEL-NEXT:    s_add_u32 s0, s0, s17
+; GFX9-GISEL-NEXT:    s_movk_i32 s32, 0x400
 ; GFX9-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 4, 15
-; GFX9-GISEL-NEXT:    s_mov_b32 s33, 0
 ; GFX9-GISEL-NEXT:    s_addc_u32 s1, s1, 0
+; GFX9-GISEL-NEXT:    s_mov_b32 s33, 0
 ; GFX9-GISEL-NEXT:    s_mov_b32 s6, s32
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX9-GISEL-NEXT:    s_or_saveexec_b64 s[4:5], -1

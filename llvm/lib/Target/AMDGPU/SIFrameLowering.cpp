@@ -848,6 +848,27 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   }
   assert(ScratchWaveOffsetReg || !PreloadedScratchWaveOffsetReg);
 
+  bool NeedsFlatScratchInit =
+      MFI->getUserSGPRInfo().hasFlatScratchInit() &&
+      (MRI.isPhysRegUsed(AMDGPU::FLAT_SCR) || FrameInfo.hasCalls() ||
+       (!allStackObjectsAreDead(FrameInfo) && ST.hasFlatScratchEnabled()));
+
+  if ((NeedsFlatScratchInit || ScratchRsrcReg) &&
+      PreloadedScratchWaveOffsetReg && !ST.hasArchitectedFlatScratch()) {
+    MRI.addLiveIn(PreloadedScratchWaveOffsetReg);
+    MBB.addLiveIn(PreloadedScratchWaveOffsetReg);
+  }
+
+  if (NeedsFlatScratchInit) {
+    emitEntryFunctionFlatScratchInit(MF, MBB, I, DL, ScratchWaveOffsetReg);
+  }
+
+  if (ScratchRsrcReg) {
+    emitEntryFunctionScratchRsrcRegSetup(MF, MBB, I, DL,
+                                         PreloadedScratchRsrcReg,
+                                         ScratchRsrcReg, ScratchWaveOffsetReg);
+  }
+
   unsigned Offset = FrameInfo.getStackSize() * getScratchScaleFactor(ST);
   if (!mayReserveScratchForCWSR(MF)) {
     if (hasFP(MF)) {
@@ -898,27 +919,6 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
             .addImm(Offset + VGPRSize);
       }
     }
-  }
-
-  bool NeedsFlatScratchInit =
-      MFI->getUserSGPRInfo().hasFlatScratchInit() &&
-      (MRI.isPhysRegUsed(AMDGPU::FLAT_SCR) || FrameInfo.hasCalls() ||
-       (!allStackObjectsAreDead(FrameInfo) && ST.hasFlatScratchEnabled()));
-
-  if ((NeedsFlatScratchInit || ScratchRsrcReg) &&
-      PreloadedScratchWaveOffsetReg && !ST.hasArchitectedFlatScratch()) {
-    MRI.addLiveIn(PreloadedScratchWaveOffsetReg);
-    MBB.addLiveIn(PreloadedScratchWaveOffsetReg);
-  }
-
-  if (NeedsFlatScratchInit) {
-    emitEntryFunctionFlatScratchInit(MF, MBB, I, DL, ScratchWaveOffsetReg);
-  }
-
-  if (ScratchRsrcReg) {
-    emitEntryFunctionScratchRsrcRegSetup(MF, MBB, I, DL,
-                                         PreloadedScratchRsrcReg,
-                                         ScratchRsrcReg, ScratchWaveOffsetReg);
   }
 }
 
