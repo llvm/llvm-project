@@ -1395,7 +1395,8 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
   for (int idx = MaxFunctionScopesIndex; NumCapturingClosures;
        --idx, --NumCapturingClosures) {
     CapturingScopeInfo *CSI = cast<CapturingScopeInfo>(FunctionScopes[idx]);
-    bool CaptureByCopy = ByCopy && idx == MaxFunctionScopesIndex;
+    // An enclosing block or captured region can only capture the pointer.
+    bool CaptureByCopy = ByCopy && isa<LambdaScopeInfo>(CSI);
 
     // The type of the corresponding data member (not a 'this' pointer if 'by
     // copy').

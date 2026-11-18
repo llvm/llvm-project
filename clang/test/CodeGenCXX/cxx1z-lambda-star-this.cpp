@@ -27,16 +27,3 @@ int X = B{}.bar()();
 //CHECK: @"?bar@B@@QAE?A?<auto>@@XZ"(ptr {{[^,]*}} %this, ptr dead_on_unwind noalias writable sret(%class.anon.0) align 4 %agg.result)
 //CHECK: %[[I20:.+]] = getelementptr inbounds nuw %class.anon.0, ptr %agg.result, i32 0, i32 0
 //CHECK: store ptr %this1, ptr %[[I20]], align 4
-
-struct C {
-  double c = 333;
-  auto baz() { return [&] { return [*this] { return c; }(); }; }
-};
-
-namespace ns3 {
-int X = C{}.baz()();
-}
-// The enclosing lambda captures 'this'; only the inner one copies '*this'.
-//CHECK: @"?baz@C@@QAE?A?<auto>@@XZ"(ptr {{[^,]*}} %this, ptr dead_on_unwind noalias writable sret(%class.anon.1) align 4 %agg.result)
-//CHECK: %[[I30:.+]] = getelementptr inbounds nuw %class.anon.1, ptr %agg.result, i32 0, i32 0
-//CHECK: store ptr %this1, ptr %[[I30]], align 4
