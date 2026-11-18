@@ -26,7 +26,7 @@
 ; BANK: Region register pressure: VGPRs: {{[0-9]+}} (AV: {{[0-9]+}}) AGPRs: {{[0-9]+}}
 ; NOBANK: Region register pressure: VGPRs: {{[0-9]+}} (AV: {{[0-9]+}}) AGPRs: {{[0-9]+}}
 
-; EarlyMachineLICM counts the av_* copies of the MFMA operands as VGPR pressure
+; EarlyMachineLICM sees the pressure of the av_* copies of the MFMA operands
 ; and keeps most of them in the loop, so no configuration predicts a spill.
 ; The kernel reaches the occupancy of 6 that "amdgpu-waves-per-eu" allows and
 ; does not spill. avgpr-banking.mir checks the spill predictions with and

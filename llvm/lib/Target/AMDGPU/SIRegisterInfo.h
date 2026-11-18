@@ -376,9 +376,6 @@ public:
 
   const int *getRegUnitPressureSets(MCRegUnit RegUnit) const override;
 
-  const int *
-  getRegClassPressureSets(const TargetRegisterClass *RC) const override;
-
   MCRegister getReturnAddressReg(const MachineFunction &MF) const;
 
   const TargetRegisterClass *
