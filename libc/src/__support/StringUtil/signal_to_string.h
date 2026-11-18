@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_SIGNAL_TO_STRING_H
 #define LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_SIGNAL_TO_STRING_H
 
+#include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/config.h"
@@ -19,6 +19,12 @@ namespace LIBC_NAMESPACE_DECL {
 cpp::string_view get_signal_string(int err_num);
 
 cpp::string_view get_signal_string(int err_num, cpp::span<char> buffer);
+
+cpp::string_view get_signal_name(int sig_num);
+
+cpp::string_view get_signal_name(int sig_num, cpp::span<char> buffer);
+
+cpp::optional<int> get_signal_number(cpp::string_view sig_name);
 
 } // namespace LIBC_NAMESPACE_DECL
 
