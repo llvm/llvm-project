@@ -662,6 +662,7 @@ if (LIBC_TYPES_HAS_NATIVE_FLOAT128)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
     # stdlib.h _Float128 entrypoints
     libc.src.stdlib.strfromf128
+    libc.src.stdlib.strtof128
   )
 endif()
 

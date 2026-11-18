@@ -320,6 +320,7 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(

@@ -30,6 +30,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/macros/properties/types.h"
 #include "src/__support/math_extras.h"
 #include "src/__support/str_to_integer.h"
 #include "src/__support/str_to_num_result.h"
@@ -86,8 +87,9 @@ set_implicit_bit<long double>(fputil::FPBits<long double> &result) {
 // (https://nigeltao.github.io/blog/2020/eisel-lemire.html) and the golang
 // implementation, also by Nigel Tao
 // (https://github.com/golang/go/blob/release-branch.go1.16/src/strconv/eisel_lemire.go#L25)
-// for some optimizations as well as handling 32 bit floats.
-template <class T>
+// for some optimizations as well as handling 32 bit floats. This implementation
+// of Eisel-Lemire cannot handle anything longer than a double.
+template <class T, cpp::enable_if_t<sizeof(T) <= 8, int> = 0>
 LIBC_INLINE cpp::optional<ExpandedFloat<T>>
 eisel_lemire(ExpandedFloat<T> init_num,
              RoundDirection round = RoundDirection::Nearest) {
@@ -96,11 +98,6 @@ eisel_lemire(ExpandedFloat<T> init_num,
 
   StorageType mantissa = init_num.mantissa;
   int32_t exp_10 = init_num.exponent;
-
-  if (sizeof(T) > 8) { // This algorithm cannot handle anything longer than a
-                       // double, so we skip straight to the fallback.
-    return cpp::nullopt;
-  }
 
   // Exp10 Range
   if (exp_10 < DETAILED_POWERS_OF_TEN_MIN_EXP_10 ||
@@ -196,16 +193,19 @@ eisel_lemire(ExpandedFloat<T> init_num,
   return output;
 }
 
-// TODO: Re-enable eisel-lemire for long double is double double once it's
-// properly supported.
-#if !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64) &&                             \
-    !defined(LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE)
-template <>
-LIBC_INLINE cpp::optional<ExpandedFloat<long double>>
-eisel_lemire<long double>(ExpandedFloat<long double> init_num,
-                          RoundDirection round) {
-  using FPBits = typename fputil::FPBits<long double>;
+template <class T, cpp::enable_if_t<(sizeof(T) > 8), int> = 0>
+LIBC_INLINE cpp::optional<ExpandedFloat<T>>
+eisel_lemire(ExpandedFloat<T> init_num,
+             RoundDirection round = RoundDirection::Nearest) {
+  using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
+
+  // TODO: Re-enable eisel-lemire for long double is double double once it's
+  // properly supported.
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE)
+  if constexpr (cpp::is_same_v<T, long double>)
+    return cpp::nullopt;
+#endif
 
   UInt128 mantissa = init_num.mantissa;
   int32_t exp_10 = init_num.exponent;
@@ -315,13 +315,11 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
     return cpp::nullopt;
   }
 
-  ExpandedFloat<long double> output;
+  ExpandedFloat<T> output;
   output.mantissa = static_cast<StorageType>(final_mantissa);
   output.exponent = exp_2;
   return output;
 }
-#endif // !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64) &&
-       // !defined(LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE)
 
 // The nth item in POWERS_OF_TWO represents the greatest power of two less than
 // 10^n. This tells us how much we can safely shift without overshooting.
@@ -478,7 +476,7 @@ LIBC_INLINE FloatConvertReturn<T> simple_decimal_conversion(
 // exact digits stored by the float type, described in
 // Gay DM, Correctly rounded binary-decimal and decimal-binary conversions;
 // 1990. AT&T Bell Laboratories Numerical Analysis Manuscript 90-10.
-template <class T> class ClingerConsts;
+template <typename T, typename U = void> class ClingerConsts;
 
 template <> class ClingerConsts<float> {
 public:
@@ -549,9 +547,75 @@ public:
   static constexpr int32_t DIGITS_IN_MANTISSA = 15;
   static constexpr double MAX_EXACT_INT = 9007199254740991.0;
 };
-#else
+#elif !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
 #error "Unknown long double type"
 #endif
+
+#if defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
+// If `LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128` is defined, `long double` will have
+// the same format as `float128`, but they may still be distinct types.
+template <typename T>
+class ClingerConsts<T, cpp::enable_if_t<cpp::is_same_v<T, float128> &&
+                                        !cpp::is_same_v<T, long double>>> {
+public:
+  static constexpr float128 POWERS_OF_TEN_ARRAY[] = {
+      1e0,
+      1e1,
+      1e2,
+      1e3,
+      1e4,
+      1e5,
+      1e6,
+      1e7,
+      1e8,
+      1e9,
+      1e10,
+      1e11,
+      1e12,
+      1e13,
+      1e14,
+      1e15,
+      1e16,
+      1e17,
+      1e18,
+      1e19,
+      1e20,
+      1e21,
+      1e22,
+      float128(1e22) * 1e1,
+      float128(1e22) * 1e2,
+      float128(1e22) * 1e3,
+      float128(1e22) * 1e4,
+      float128(1e22) * 1e5,
+      float128(1e22) * 1e6,
+      float128(1e22) * 1e7,
+      float128(1e22) * 1e8,
+      float128(1e22) * 1e9,
+      float128(1e22) * 1e10,
+      float128(1e22) * 1e11,
+      float128(1e22) * 1e12,
+      float128(1e22) * 1e13,
+      float128(1e22) * 1e14,
+      float128(1e22) * 1e15,
+      float128(1e22) * 1e16,
+      float128(1e22) * 1e17,
+      float128(1e22) * 1e18,
+      float128(1e22) * 1e19,
+      float128(1e22) * 1e20,
+      float128(1e22) * 1e21,
+      float128(1e22) * 1e22,
+      float128(1e22) * float128(1e22) * 1e1,
+      float128(1e22) * float128(1e22) * 1e2,
+      float128(1e22) * float128(1e22) * 1e3,
+      float128(1e22) * float128(1e22) * 1e4};
+  static constexpr int32_t EXACT_POWERS_OF_TEN = 48;
+  static constexpr int32_t DIGITS_IN_MANTISSA = 33;
+  // 2^113 - 1 = 10384593717069655257060992658440191.0
+  static constexpr float128 MAX_EXACT_INT =
+      (float128(0x1ffffffffffffULL) * float128(0x1.0p64)) +
+      float128(0xffffffffffffffffULL);
+};
+#endif // defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
 
 // Take an exact mantissa and exponent and attempt to convert it using only
 // exact floating point arithmetic. This only handles numbers with low

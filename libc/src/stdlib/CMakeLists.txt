@@ -193,6 +193,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strtof128
+  SRCS
+    strtof128.cpp
+  HDRS
+    strtof128.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.str_to_float
+)
+
+add_entrypoint_object(
   strtod
   SRCS
     strtod.cpp
