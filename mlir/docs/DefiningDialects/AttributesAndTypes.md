@@ -537,7 +537,8 @@ static OptionalParseResult generatedTypeParser(
 static LogicalResult generatedTypePrinter(Type def, AsmPrinter &printer);
 ```
 
-The parsers parse the mnemonic. If an attribute or type has the mnemonic,
+If `*mnemonic` is empty, the parsers first parse the mnemonic. Otherwise, they
+use `*mnemonic` without parsing it. If an attribute or type has the mnemonic,
 they call its parser and return whether it succeeded. Otherwise, they set
 `*mnemonic` to the mnemonic and return `std::nullopt`, so that the dialect can
 try to parse it in other ways. The printers return `failure` if the attribute
