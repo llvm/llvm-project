@@ -53,6 +53,7 @@
 #include "SIFixSGPRCopies.h"
 #include "SIFixVGPRCopies.h"
 #include "SIFoldOperands.h"
+#include "SIFoldPackedMoves.h"
 #include "SIFormMemoryClauses.h"
 #include "SILoadStoreOptimizer.h"
 #include "SILowerControlFlow.h"
@@ -95,6 +96,7 @@
 #include "llvm/CodeGen/PostRAHazardRecognizer.h"
 #include "llvm/CodeGen/RegAllocGreedyPass.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
+#include "llvm/CodeGen/RegisterCoalescerPass.h"
 #include "llvm/CodeGen/RenameIndependentSubregs.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/StackSlotColoring.h"
@@ -501,6 +503,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIFixSGPRCopiesLegacyPass(*PR);
   initializeSIFixVGPRCopiesLegacyPass(*PR);
   initializeSIFoldOperandsLegacyPass(*PR);
+  initializeSIFoldPackedMovesLegacyPass(*PR);
   initializeSIPeepholeSDWALegacyPass(*PR);
   initializeSIShrinkInstructionsLegacyPass(*PR);
   initializeSIOptimizeExecMaskingPreRALegacyPass(*PR);
@@ -1654,6 +1657,9 @@ void GCNPassConfig::addPreRegAlloc() {
 }
 
 void GCNPassConfig::addOptimizedRegAlloc() {
+  if (getOptLevel() != CodeGenOptLevel::None)
+    insertPass(&RegisterCoalescerID, &SIFoldPackedMovesLegacyID);
+
   if (CLOpts.dce_in_ra)
     insertPass(&DetectDeadLanesID, &DeadMachineInstructionElimID);
 
@@ -2470,6 +2476,9 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteFast(
 }
 
 Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
+  if (getOptLevel() != CodeGenOptLevel::None)
+    insertPass<RegisterCoalescerPass>(SIFoldPackedMovesPass());
+
   if (CLOpts.dce_in_ra)
     insertPass<DetectDeadLanesPass>(DeadMachineInstructionElimPass());
 

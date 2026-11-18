@@ -234,6 +234,9 @@ extern char &GCNDPPCombineLegacyID;
 void initializeSIFoldOperandsLegacyPass(PassRegistry &);
 extern char &SIFoldOperandsLegacyID;
 
+void initializeSIFoldPackedMovesLegacyPass(PassRegistry &);
+extern char &SIFoldPackedMovesLegacyID;
+
 void initializeSIPeepholeSDWALegacyPass(PassRegistry &);
 extern char &SIPeepholeSDWALegacyID;
 

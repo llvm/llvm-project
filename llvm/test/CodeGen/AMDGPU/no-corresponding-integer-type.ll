@@ -6,8 +6,7 @@ define void @no_corresponding_integer_type(i8 %arg, ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: no_corresponding_integer_type:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v3, v2
-; CHECK-NEXT:    v_mov_b32_e32 v2, v1
+; CHECK-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
 ; CHECK-NEXT:    global_load_ushort v1, v[2:3], off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mul_lo_u16_e32 v1, v1, v0

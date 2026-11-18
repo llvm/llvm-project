@@ -226,9 +226,8 @@ define void @local_atomic_fadd_noret_v2f16_offset(ptr addrspace(3) %ptr, <2 x ha
 define amdgpu_ps void @local_atomic_fadd_f64_no_rtn_atomicrmw(ptr addrspace(3) %ptr, double %data) {
 ; GFX942-LABEL: local_atomic_fadd_f64_no_rtn_atomicrmw:
 ; GFX942:       ; %bb.0:
-; GFX942-NEXT:    v_mov_b32_e32 v4, v1
-; GFX942-NEXT:    v_mov_b32_e32 v5, v2
-; GFX942-NEXT:    ds_add_f64 v0, v[4:5]
+; GFX942-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
+; GFX942-NEXT:    ds_add_f64 v0, v[2:3]
 ; GFX942-NEXT:    s_endpgm
   %ret = atomicrmw fadd ptr addrspace(3) %ptr, double %data syncscope("wavefront") monotonic, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -237,9 +236,8 @@ define amdgpu_ps void @local_atomic_fadd_f64_no_rtn_atomicrmw(ptr addrspace(3) %
 define amdgpu_ps double @local_atomic_fadd_f64_rtn_atomicrmw(ptr addrspace(3) %ptr, double %data) {
 ; GFX942-LABEL: local_atomic_fadd_f64_rtn_atomicrmw:
 ; GFX942:       ; %bb.0:
-; GFX942-NEXT:    v_mov_b32_e32 v4, v1
-; GFX942-NEXT:    v_mov_b32_e32 v5, v2
-; GFX942-NEXT:    ds_add_rtn_f64 v[0:1], v0, v[4:5]
+; GFX942-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
+; GFX942-NEXT:    ds_add_rtn_f64 v[0:1], v0, v[2:3]
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    ; return to shader part epilog
   %ret = atomicrmw fadd ptr addrspace(3) %ptr, double %data syncscope("wavefront") monotonic, !amdgpu.no.fine.grained.memory !0

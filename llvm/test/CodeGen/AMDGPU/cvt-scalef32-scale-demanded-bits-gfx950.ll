@@ -147,8 +147,7 @@ define i32 @sr_pk_fp4_f32(i32 %old, <2 x float> %src, i32 %y, i32 %bits) {
 ; GFX950-LABEL: sr_pk_fp4_f32:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_mov_b32_e32 v7, v2
-; GFX950-NEXT:    v_mov_b32_e32 v6, v1
+; GFX950-NEXT:    v_pk_mov_b32 v[6:7], v[0:1], v[2:3] op_sel:[1,0]
 ; GFX950-NEXT:    v_and_b32_e32 v2, 0x7f800000, v3
 ; GFX950-NEXT:    v_cvt_scalef32_sr_pk_fp4_f32 v1, v[6:7], v2, v4
 ; GFX950-NEXT:    s_nop 0

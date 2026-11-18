@@ -98,13 +98,13 @@ define amdgpu_kernel void @gep_as0_uniform(ptr %p, i64 %offset, ptr %ret) {
 ;
 ; GFX942-LABEL: gep_as0_uniform:
 ; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX942-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
+; GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[6:7]
 ; GFX942-NEXT:    s_lshl_b64 s[2:3], s[2:3], 2
 ; GFX942-NEXT:    s_add_u32 s0, s0, s2
 ; GFX942-NEXT:    s_addc_u32 s1, s1, s3
-; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[6:7]
 ; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX942-NEXT:    s_endpgm
@@ -255,15 +255,15 @@ define amdgpu_kernel void @multi_gep_as0_uniform(ptr %p, i64 %offset, ptr %ret) 
 ;
 ; GFX942-LABEL: multi_gep_as0_uniform:
 ; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX942-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
+; GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[6:7]
 ; GFX942-NEXT:    s_lshl_b64 s[2:3], s[2:3], 2
 ; GFX942-NEXT:    s_add_u32 s0, s0, s2
 ; GFX942-NEXT:    s_addc_u32 s1, s1, s3
 ; GFX942-NEXT:    s_add_u32 s0, s0, 5
 ; GFX942-NEXT:    s_addc_u32 s1, s1, 0
-; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[6:7]
 ; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX942-NEXT:    s_endpgm

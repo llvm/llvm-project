@@ -19,6 +19,7 @@
 #include "R600RegisterInfo.h"
 #include "SIISelLowering.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -547,77 +548,76 @@ SDNode *AMDGPUDAGToDAGISel::packConstantV2I16(const SDNode *N,
   return nullptr;
 }
 
-/// Match \p Op as a 32-bit element that V_PK_MOV_B32 can read as one half of a
-/// 64-bit operand. \p HighHalf is set to the half of the aligned pair that the
-/// element occupies in the register it comes from, which is the half op_sel has
-/// to select for the REG_SEQUENCE built around it to fold away again.
-static bool matchPkMovHalf(SDValue Op, bool &HighHalf) {
-  if (Op.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
-      !Op.getValueType().bitsEq(MVT::i32))
-    return false;
+void AMDGPUDAGToDAGISel::orderRegSequenceOperands(
+    SDNode *N, SmallVectorImpl<SDValue> &Ops) {
+  struct SourceLane {
+    SDValue Value;
+    unsigned Channel = 0;
+  };
+  unsigned NumLanes = N->getNumOperands();
+  SmallVector<SourceLane, 16> Sources(NumLanes);
+  bool HasVectorExtract = false;
+  for (unsigned I = 0; I != NumLanes; ++I) {
+    SDValue Elt = stripBitcast(N->getOperand(I));
+    Sources[I] = {Elt, 0};
+    if (Elt.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+        Elt.getValueSizeInBits() != 32)
+      continue;
+    auto *Index = dyn_cast<ConstantSDNode>(Elt.getOperand(1));
+    SDValue Src = Elt.getOperand(0);
+    if (!Index || !Src->isDivergent() ||
+        Src.getValueType().getScalarSizeInBits() != 32 ||
+        Index->getZExtValue() >= Src.getValueType().getVectorNumElements())
+      continue;
+    while (Src.getOpcode() == ISD::BITCAST)
+      Src = Src.getOperand(0);
+    Sources[I] = {Src, unsigned(Index->getZExtValue())};
+    HasVectorExtract = true;
+  }
+  if (!HasVectorExtract)
+    return;
 
-  auto *IdxC = dyn_cast<ConstantSDNode>(Op.getOperand(1));
-  if (!IdxC)
-    return false;
+  // Emit a source's last remaining use before repeated-source copies. This
+  // orders COPYs without assuming how input and result tuples will overlap.
+  SmallBitVector Emitted(NumLanes);
+  SmallVector<unsigned, 16> Order;
+  while (Order.size() != NumLanes) {
+    unsigned Next = NumLanes;
+    for (unsigned I = 0; I != NumLanes; ++I) {
+      if (Emitted[I])
+        continue;
+      bool HasOtherUse = false;
+      for (unsigned J = 0; J != NumLanes; ++J) {
+        if (!Emitted[J] && J != I && Sources[J].Value == Sources[I].Value &&
+            Sources[J].Channel == Sources[I].Channel) {
+          HasOtherUse = true;
+          break;
+        }
+      }
+      if (!HasOtherUse) {
+        Next = I;
+        break;
+      }
+    }
+    // All remaining sources are shared. Preserve their original order.
+    if (Next == NumLanes) {
+      for (unsigned I = 0; I != NumLanes; ++I) {
+        if (!Emitted[I])
+          Order.push_back(I);
+      }
+      break;
+    }
+    Emitted.set(Next);
+    Order.push_back(Next);
+  }
 
-  SDValue Src = Op.getOperand(0);
-  EVT SrcVT = Src.getValueType();
-  if (!SrcVT.isVector() || !SrcVT.getVectorElementType().bitsEq(MVT::i32) ||
-      !Src->isDivergent())
-    return false;
-
-  HighHalf = IdxC->getZExtValue() & 1;
-  return true;
-}
-
-SDValue AMDGPUDAGToDAGISel::buildPkMovOperand(SDValue Elt, bool HighHalf,
-                                              const SDLoc &DL) {
-  // Build the pair rather than extracting it out of whatever register the
-  // element lives in. The containing aligned pair need not exist there at all,
-  // as it does not for the last element of a 3-element vector. When it does
-  // exist this REG_SEQUENCE coalesces back into a plain subregister reference.
-  const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
-  SDValue Undef = SDValue(
-      CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::i32), 0);
-  const SDValue Ops[] = {
-      CurDAG->getTargetConstant(
-          TRI->getDefaultVectorSuperClassForBitWidth(64)->getID(), DL,
-          MVT::i32),
-      HighHalf ? Undef : Elt,
-      CurDAG->getTargetConstant(AMDGPU::sub0, DL, MVT::i32),
-      HighHalf ? Elt : Undef,
-      CurDAG->getTargetConstant(AMDGPU::sub1, DL, MVT::i32)};
-  return SDValue(
-      CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL, MVT::v2i32, Ops),
-      0);
-}
-
-bool AMDGPUDAGToDAGISel::matchPkMovPair(SDValue Lo, SDValue Hi, const SDLoc &DL,
-                                        SmallVectorImpl<SDValue> &Ops) {
-  bool LoHigh, HiHigh;
-  if (!matchPkMovHalf(Lo, LoHigh) || !matchPkMovHalf(Hi, HiHigh))
-    return false;
-
-  // The low result lane always comes from src0 and the high one from src1, so a
-  // packed move only saves anything when both elements sit in the wrong half.
-  // Otherwise a plain subregister copy is at least as cheap.
-  if (!LoHigh || HiHigh)
-    return false;
-
-  SDValue ZeroMods = CurDAG->getTargetConstant(0, DL, MVT::i32);
-  // op_sel picks the high half of src0. op_sel_hi is set on both sources purely
-  // to keep it from being printed.
-  Ops.append({CurDAG->getTargetConstant(
-                  SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1, DL, MVT::i32),
-              buildPkMovOperand(Lo, LoHigh, DL),
-              CurDAG->getTargetConstant(SISrcMods::OP_SEL_1, DL, MVT::i32),
-              buildPkMovOperand(Hi, HiHigh, DL),
-              ZeroMods,   // clamp
-              ZeroMods,   // op_sel
-              ZeroMods,   // op_sel_hi
-              ZeroMods,   // neg_lo
-              ZeroMods}); // neg_hi
-  return true;
+  SmallVector<SDValue, 33> OrderedOps;
+  OrderedOps.push_back(Ops[0]);
+  for (unsigned I : Order) {
+    OrderedOps.push_back(Ops[1 + 2 * I]);
+    OrderedOps.push_back(Ops[2 + 2 * I]);
+  }
+  Ops.assign(OrderedOps.begin(), OrderedOps.end());
 }
 
 void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
@@ -658,49 +658,6 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
           CurDAG->getMachineNode(AMDGPU::S_MOV_B64_IMM_PSEUDO, DL, VT, CV);
       CurDAG->SelectNodeTo(N, AMDGPU::COPY_TO_REGCLASS, VT, SDValue(Copy, 0),
                            RegClass);
-      return;
-    }
-  }
-
-  // Two adjacent result lanes whose elements both have to cross halves can be
-  // produced by a single packed move rather than two copies. The lanes have to
-  // be an aligned pair, since that is the REG_SEQUENCE slot the move fills, and
-  // they have to be the only defined elements: packing every pair of a fully
-  // defined vector can drag values out of AGPRs, where the per-lane copies this
-  // otherwise expands to are cheaper.
-  if (IsGCN && Subtarget->hasPkMovB32() && N->isDivergent() &&
-      EltVT.getSizeInBits() == 32 && N->getNumOperands() == NumVectorElts) {
-    SmallVector<SmallVector<SDValue, 9>, 2> PairOps(NumVectorElts / 2);
-    bool AnyPacked = false;
-    if (NumVectorElts <= 4) {
-      for (unsigned I = 0, E = NumVectorElts / 2; I != E; ++I)
-        AnyPacked |= matchPkMovPair(N->getOperand(2 * I),
-                                    N->getOperand(2 * I + 1), DL, PairOps[I]);
-    }
-
-    if (AnyPacked) {
-      // A single pair covering the whole result needs no REG_SEQUENCE.
-      if (NumVectorElts == 2) {
-        CurDAG->SelectNodeTo(N, AMDGPU::V_PK_MOV_B32, N->getVTList(),
-                             PairOps[0]);
-        return;
-      }
-
-      SmallVector<SDValue, 32 * 2 + 1> Args = {RegClass};
-      for (unsigned I = 0; I != NumVectorElts;) {
-        bool UsePacked =
-            I % 2 == 0 && I / 2 < PairOps.size() && !PairOps[I / 2].empty();
-        unsigned NumRegs = UsePacked ? 2 : 1;
-        Args.push_back(UsePacked ? SDValue(CurDAG->getMachineNode(
-                                               AMDGPU::V_PK_MOV_B32, DL,
-                                               MVT::v2i32, PairOps[I / 2]),
-                                           0)
-                                 : N->getOperand(I));
-        Args.push_back(CurDAG->getTargetConstant(
-            SIRegisterInfo::getSubRegFromChannel(I, NumRegs), DL, MVT::i32));
-        I += NumRegs;
-      }
-      CurDAG->SelectNodeTo(N, AMDGPU::REG_SEQUENCE, N->getVTList(), Args);
       return;
     }
   }
@@ -746,96 +703,10 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
 
   if (!IsRegSeq)
     SelectCode(N);
+  if (IsRegSeq && IsGCN && Subtarget->hasPkMovB32() && N->isDivergent() &&
+      EltVT.getSizeInBits() == 32 && NOps == NumVectorElts)
+    orderRegSequenceOperands(N, RegSeqArgs);
   CurDAG->SelectNodeTo(N, AMDGPU::REG_SEQUENCE, N->getVTList(), RegSeqArgs);
-}
-
-void AMDGPUDAGToDAGISel::SelectVectorShuffle(SDNode *N) {
-  EVT VT = N->getValueType(0);
-  EVT EltVT = VT.getVectorElementType();
-
-  // TODO: Handle 16-bit element vectors with even aligned masks.
-  if (!Subtarget->hasPkMovB32() || !EltVT.bitsEq(MVT::i32) ||
-      VT.getVectorNumElements() != 2) {
-    SelectCode(N);
-    return;
-  }
-
-  auto *SVN = cast<ShuffleVectorSDNode>(N);
-
-  SDValue Src0 = SVN->getOperand(0);
-  SDValue Src1 = SVN->getOperand(1);
-  ArrayRef<int> Mask = SVN->getMask();
-  SDLoc DL(N);
-
-  assert(Src0.getValueType().getVectorNumElements() == 2 && Mask.size() == 2 &&
-         Mask[0] < 4 && Mask[1] < 4);
-
-  SDValue VSrc0 = Mask[0] < 2 ? Src0 : Src1;
-  SDValue VSrc1 = Mask[1] < 2 ? Src0 : Src1;
-  unsigned Src0SubReg = Mask[0] & 1 ? AMDGPU::sub1 : AMDGPU::sub0;
-  unsigned Src1SubReg = Mask[1] & 1 ? AMDGPU::sub1 : AMDGPU::sub0;
-
-  if (Mask[0] < 0) {
-    Src0SubReg = Src1SubReg;
-    MachineSDNode *ImpDef =
-        CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, VT);
-    VSrc0 = SDValue(ImpDef, 0);
-  }
-
-  if (Mask[1] < 0) {
-    Src1SubReg = Src0SubReg;
-    MachineSDNode *ImpDef =
-        CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, VT);
-    VSrc1 = SDValue(ImpDef, 0);
-  }
-
-  // SGPR case needs to lower to copies.
-  //
-  // Also use subregister extract when we can directly blend the registers with
-  // a simple subregister copy.
-  //
-  // TODO: Maybe we should fold this out earlier
-  if (N->isDivergent() && Src0SubReg == AMDGPU::sub1 &&
-      Src1SubReg == AMDGPU::sub0) {
-    // The low element of the result always comes from src0.
-    // The high element of the result always comes from src1.
-    // op_sel selects the high half of src0.
-    // op_sel_hi selects the high half of src1.
-
-    unsigned Src0OpSel =
-        Src0SubReg == AMDGPU::sub1 ? SISrcMods::OP_SEL_0 : SISrcMods::NONE;
-    unsigned Src1OpSel =
-        Src1SubReg == AMDGPU::sub1 ? SISrcMods::OP_SEL_0 : SISrcMods::NONE;
-
-    // Enable op_sel_hi to avoid printing it. This should have no effect on the
-    // result.
-    Src0OpSel |= SISrcMods::OP_SEL_1;
-    Src1OpSel |= SISrcMods::OP_SEL_1;
-
-    SDValue Src0OpSelVal = CurDAG->getTargetConstant(Src0OpSel, DL, MVT::i32);
-    SDValue Src1OpSelVal = CurDAG->getTargetConstant(Src1OpSel, DL, MVT::i32);
-    SDValue ZeroMods = CurDAG->getTargetConstant(0, DL, MVT::i32);
-
-    CurDAG->SelectNodeTo(N, AMDGPU::V_PK_MOV_B32, N->getVTList(),
-                         {Src0OpSelVal, VSrc0, Src1OpSelVal, VSrc1,
-                          ZeroMods,   // clamp
-                          ZeroMods,   // op_sel
-                          ZeroMods,   // op_sel_hi
-                          ZeroMods,   // neg_lo
-                          ZeroMods}); // neg_hi
-    return;
-  }
-
-  SDValue ResultElt0 =
-      CurDAG->getTargetExtractSubreg(Src0SubReg, DL, EltVT, VSrc0);
-  SDValue ResultElt1 =
-      CurDAG->getTargetExtractSubreg(Src1SubReg, DL, EltVT, VSrc1);
-
-  const SDValue Ops[] = {
-      CurDAG->getTargetConstant(AMDGPU::SReg_64RegClassID, DL, MVT::i32),
-      ResultElt0, CurDAG->getTargetConstant(AMDGPU::sub0, DL, MVT::i32),
-      ResultElt1, CurDAG->getTargetConstant(AMDGPU::sub1, DL, MVT::i32)};
-  CurDAG->SelectNodeTo(N, TargetOpcode::REG_SEQUENCE, VT, Ops);
 }
 
 void AMDGPUDAGToDAGISel::Select(SDNode *N) {
@@ -913,9 +784,6 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     SelectBuildVector(N, RegClass->getID());
     return;
   }
-  case ISD::VECTOR_SHUFFLE:
-    SelectVectorShuffle(N);
-    return;
   case ISD::BUILD_PAIR: {
     SDValue RC, SubReg0, SubReg1;
     SDLoc DL(N);

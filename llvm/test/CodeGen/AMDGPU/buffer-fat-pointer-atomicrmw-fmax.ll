@@ -1595,8 +1595,7 @@ define double @buffer_fat_ptr_agent_atomic_fmax_ret_f64__offset__waterfall__amdg
 ; GFX942-LABEL: buffer_fat_ptr_agent_atomic_fmax_ret_f64__offset__waterfall__amdgpu_no_fine_grained_memory:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v7, v6
-; GFX942-NEXT:    v_mov_b32_e32 v6, v5
+; GFX942-NEXT:    v_pk_mov_b32 v[6:7], v[4:5], v[6:7] op_sel:[1,0]
 ; GFX942-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX942-NEXT:    buffer_wbl2 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -1721,8 +1720,7 @@ define double @buffer_fat_ptr_agent_atomic_fmax_ret_f64__offset__waterfall__amdg
 ; GFX90A-LABEL: buffer_fat_ptr_agent_atomic_fmax_ret_f64__offset__waterfall__amdgpu_no_fine_grained_memory:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v7, v6
-; GFX90A-NEXT:    v_mov_b32_e32 v6, v5
+; GFX90A-NEXT:    v_pk_mov_b32 v[6:7], v[4:5], v[6:7] op_sel:[1,0]
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], exec
 ; GFX90A-NEXT:  .LBB7_1: ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    v_readfirstlane_b32 s8, v0

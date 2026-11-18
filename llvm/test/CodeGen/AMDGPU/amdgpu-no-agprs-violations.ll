@@ -36,11 +36,11 @@ define void @func_illegal_agpr_use_asm() #0 {
 
 ; GFX908: NumVgprs: 30
 ; GFX908: NumAgprs: 32
-; GFX90A: NumVgprs: 35
+; GFX90A: NumVgprs: 34
 ; GFX90A: NumAgprs: 0
 
 ; GFX908: TotalNumVgprs: 32
-; GFX90A: TotalNumVgprs: 35
+; GFX90A: TotalNumVgprs: 34
 define amdgpu_kernel void @kernel_calls_mfma.f32.32x32x1f32(ptr addrspace(1) %out, float %a, float %b, <32 x float> %c) #0 {
   %result = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float %a, float %b, <32 x float> %c, i32 0, i32 0, i32 0)
   store <32 x float> %result, ptr addrspace(1) %out

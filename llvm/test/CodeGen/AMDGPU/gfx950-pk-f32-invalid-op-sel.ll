@@ -725,8 +725,7 @@ define amdgpu_kernel void @fma_swap_src2(ptr addrspace(1) %out, ptr addrspace(1)
 ; GFX950-NEXT:    s_load_dwordx2 s[6:7], s[2:3], 0x8000
 ; GFX950-NEXT:    global_load_dwordx2 v[0:1], v0, s[2:3]
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    v_mov_b32_e32 v2, s5
-; GFX950-NEXT:    v_mov_b32_e32 v3, s4
+; GFX950-NEXT:    v_pk_mov_b32 v[2:3], s[4:5], s[4:5] op_sel:[1,0]
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], s[6:7], v[2:3]
 ; GFX950-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
@@ -795,8 +794,7 @@ define amdgpu_kernel void @fma_swap_src1_src2(ptr addrspace(1) %out, ptr addrspa
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-NEXT:    s_mov_b32 s2, s5
 ; GFX950-NEXT:    s_mov_b32 s3, s4
-; GFX950-NEXT:    v_mov_b32_e32 v2, s7
-; GFX950-NEXT:    v_mov_b32_e32 v3, s6
+; GFX950-NEXT:    v_pk_mov_b32 v[2:3], s[6:7], s[6:7] op_sel:[1,0]
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], s[2:3], v[2:3]
 ; GFX950-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
@@ -868,8 +866,7 @@ define amdgpu_kernel void @fma_swap_all(ptr addrspace(1) %out, ptr addrspace(1) 
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-NEXT:    s_mov_b32 s2, s5
 ; GFX950-NEXT:    s_mov_b32 s3, s4
-; GFX950-NEXT:    v_mov_b32_e32 v2, s7
-; GFX950-NEXT:    v_mov_b32_e32 v3, s6
+; GFX950-NEXT:    v_pk_mov_b32 v[2:3], s[6:7], s[6:7] op_sel:[1,0]
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], s[2:3], v[2:3] op_sel:[1,0,0] op_sel_hi:[0,1,1]
 ; GFX950-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
@@ -1165,10 +1162,10 @@ define amdgpu_kernel void @fma_swap_src1_vgpr(ptr addrspace(1) %out, ptr addrspa
 ; GFX950-GISEL:       ; %bb.0: ; %entry
 ; GFX950-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v8, 3, v0
+; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v10, 3, v0
 ; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v0, v8
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v0, v10
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0x8000, v2
@@ -1177,15 +1174,14 @@ define amdgpu_kernel void @fma_swap_src1_vgpr(ptr addrspace(1) %out, ptr addrspa
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0x10000, v2
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    global_load_dwordx2 v[10:11], v[0:1], off
-; GFX950-GISEL-NEXT:    global_load_dwordx2 v[4:5], v8, s[2:3]
-; GFX950-GISEL-NEXT:    global_load_dwordx2 v[6:7], v[2:3], off
+; GFX950-GISEL-NEXT:    global_load_dwordx2 v[4:5], v10, s[2:3]
+; GFX950-GISEL-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off
+; GFX950-GISEL-NEXT:    global_load_dwordx2 v[8:9], v[2:3], off
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(2)
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, v11
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, v10
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX950-GISEL-NEXT:    v_pk_mov_b32 v[0:1], v[6:7], v[6:7] op_sel:[1,0]
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[4:5], v[0:1], v[6:7]
+; GFX950-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[4:5], v[0:1], v[8:9]
 ; GFX950-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX950-GISEL-NEXT:    s_endpgm
 ;
@@ -1255,31 +1251,29 @@ define amdgpu_kernel void @fma_swap_src1_src2_vgpr(ptr addrspace(1) %out, ptr ad
 ; GFX950-GISEL:       ; %bb.0: ; %entry
 ; GFX950-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v6, 0
+; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v10, 3, v0
 ; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v0, v4
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v0, v10
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0x8000, v2
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    global_load_dwordx2 v[8:9], v[0:1], off
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0x10000, v2
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0x10000, v2
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    global_load_dwordx2 v[10:11], v[0:1], off
-; GFX950-GISEL-NEXT:    global_load_dwordx2 v[2:3], v4, s[2:3]
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off
+; GFX950-GISEL-NEXT:    global_load_dwordx2 v[6:7], v[2:3], off
+; GFX950-GISEL-NEXT:    global_load_dwordx2 v[8:9], v10, s[2:3]
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v10, 0
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(2)
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, v9
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, v8
+; GFX950-GISEL-NEXT:    v_pk_mov_b32 v[0:1], v[4:5], v[4:5] op_sel:[1,0]
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v11
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v10
+; GFX950-GISEL-NEXT:    v_pk_mov_b32 v[2:3], v[6:7], v[6:7] op_sel:[1,0]
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[2:3], v[0:1], v[4:5]
-; GFX950-GISEL-NEXT:    global_store_dwordx2 v6, v[0:1], s[0:1]
+; GFX950-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[8:9], v[0:1], v[2:3]
+; GFX950-GISEL-NEXT:    global_store_dwordx2 v10, v[0:1], s[0:1]
 ; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX90A-LABEL: fma_swap_src1_src2_vgpr:
@@ -1336,9 +1330,10 @@ define amdgpu_kernel void @canon_swap(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX950-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], s4, v[2:3]
-; GFX950-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX950-NEXT:    global_load_dwordx2 v[2:3], v[0:1], off
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-NEXT:    v_pk_mov_b32 v[0:1], v[0:1], v[0:1] op_sel:[1,0]
+; GFX950-NEXT:    v_mov_b32_e32 v0, v3
+; GFX950-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX950-NEXT:    v_max_f32_e64 v1, v1, v1
 ; GFX950-NEXT:    v_max_f32_e64 v0, v0, v0
 ; GFX950-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
@@ -1389,9 +1384,10 @@ define amdgpu_kernel void @canon_swap(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX90A-NEXT:    v_add_co_u32_e64 v0, s[4:5], s2, v0
 ; GFX90A-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX90A-NEXT:    v_addc_co_u32_e64 v1, s[2:3], v3, v1, s[4:5]
-; GFX90A-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX90A-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], v[0:1], v[0:1] op_sel:[1,0]
+; GFX90A-NEXT:    v_mov_b32_e32 v0, v5
+; GFX90A-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX90A-NEXT:    v_max_f32_e64 v1, v1, v1
 ; GFX90A-NEXT:    v_max_f32_e64 v0, v0, v0
 ; GFX90A-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
@@ -1510,9 +1506,10 @@ define amdgpu_kernel void @canon_neg_swap(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX950-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], s4, v[2:3]
-; GFX950-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX950-NEXT:    global_load_dwordx2 v[2:3], v[0:1], off
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-NEXT:    v_pk_mov_b32 v[0:1], v[0:1], v[0:1] op_sel:[1,0]
+; GFX950-NEXT:    v_mov_b32_e32 v0, v3
+; GFX950-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX950-NEXT:    s_mov_b32 s2, 0x80000000
 ; GFX950-NEXT:    v_xor_b32_e64 v1, v1, s2
 ; GFX950-NEXT:    v_xor_b32_e64 v0, v0, s2
@@ -1566,9 +1563,10 @@ define amdgpu_kernel void @canon_neg_swap(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX90A-NEXT:    v_add_co_u32_e64 v0, s[4:5], s2, v0
 ; GFX90A-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX90A-NEXT:    v_addc_co_u32_e64 v1, s[2:3], v3, v1, s[4:5]
-; GFX90A-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX90A-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], v[0:1], v[0:1] op_sel:[1,0]
+; GFX90A-NEXT:    v_mov_b32_e32 v0, v5
+; GFX90A-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX90A-NEXT:    s_mov_b32 s2, 0x80000000
 ; GFX90A-NEXT:    v_xor_b32_e64 v1, v1, s2
 ; GFX90A-NEXT:    v_xor_b32_e64 v0, v0, s2

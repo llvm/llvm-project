@@ -1296,9 +1296,8 @@ define amdgpu_ps float @atomic_add_i32_2d(<8 x i32> inreg %rsrc, i32 %data, i32 
 ; GFX90A-NEXT:    s_mov_b32 s5, s7
 ; GFX90A-NEXT:    s_mov_b32 s6, s8
 ; GFX90A-NEXT:    s_mov_b32 s7, s9
-; GFX90A-NEXT:    v_mov_b32_e32 v4, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v5, v2
-; GFX90A-NEXT:    image_atomic_add v0, v[4:5], s[0:7] dmask:0x1 unorm glc
+; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
+; GFX90A-NEXT:    image_atomic_add v0, v[2:3], s[0:7] dmask:0x1 unorm glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    ; return to shader part epilog
 ;
@@ -1386,10 +1385,9 @@ define amdgpu_ps float @atomic_add_i32_3d(<8 x i32> inreg %rsrc, i32 %data, i32 
 ; GFX90A-NEXT:    s_mov_b32 s5, s7
 ; GFX90A-NEXT:    s_mov_b32 s6, s8
 ; GFX90A-NEXT:    s_mov_b32 s7, s9
-; GFX90A-NEXT:    v_mov_b32_e32 v4, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v5, v2
-; GFX90A-NEXT:    v_mov_b32_e32 v6, v3
-; GFX90A-NEXT:    image_atomic_add v0, v[4:6], s[0:7] dmask:0x1 unorm glc
+; GFX90A-NEXT:    v_mov_b32_e32 v4, v3
+; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
+; GFX90A-NEXT:    image_atomic_add v0, v[2:4], s[0:7] dmask:0x1 unorm glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    ; return to shader part epilog
 ;
@@ -1477,10 +1475,9 @@ define amdgpu_ps float @atomic_add_i32_cube(<8 x i32> inreg %rsrc, i32 %data, i3
 ; GFX90A-NEXT:    s_mov_b32 s5, s7
 ; GFX90A-NEXT:    s_mov_b32 s6, s8
 ; GFX90A-NEXT:    s_mov_b32 s7, s9
-; GFX90A-NEXT:    v_mov_b32_e32 v4, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v5, v2
-; GFX90A-NEXT:    v_mov_b32_e32 v6, v3
-; GFX90A-NEXT:    image_atomic_add v0, v[4:6], s[0:7] dmask:0x1 unorm glc da
+; GFX90A-NEXT:    v_mov_b32_e32 v4, v3
+; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
+; GFX90A-NEXT:    image_atomic_add v0, v[2:4], s[0:7] dmask:0x1 unorm glc da
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    ; return to shader part epilog
 ;
@@ -1568,9 +1565,8 @@ define amdgpu_ps float @atomic_add_i32_1darray(<8 x i32> inreg %rsrc, i32 %data,
 ; GFX90A-NEXT:    s_mov_b32 s5, s7
 ; GFX90A-NEXT:    s_mov_b32 s6, s8
 ; GFX90A-NEXT:    s_mov_b32 s7, s9
-; GFX90A-NEXT:    v_mov_b32_e32 v4, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v5, v2
-; GFX90A-NEXT:    image_atomic_add v0, v[4:5], s[0:7] dmask:0x1 unorm glc da
+; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
+; GFX90A-NEXT:    image_atomic_add v0, v[2:3], s[0:7] dmask:0x1 unorm glc da
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    ; return to shader part epilog
 ;
@@ -1658,10 +1654,9 @@ define amdgpu_ps float @atomic_add_i32_2darray(<8 x i32> inreg %rsrc, i32 %data,
 ; GFX90A-NEXT:    s_mov_b32 s5, s7
 ; GFX90A-NEXT:    s_mov_b32 s6, s8
 ; GFX90A-NEXT:    s_mov_b32 s7, s9
-; GFX90A-NEXT:    v_mov_b32_e32 v4, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v5, v2
-; GFX90A-NEXT:    v_mov_b32_e32 v6, v3
-; GFX90A-NEXT:    image_atomic_add v0, v[4:6], s[0:7] dmask:0x1 unorm glc da
+; GFX90A-NEXT:    v_mov_b32_e32 v4, v3
+; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
+; GFX90A-NEXT:    image_atomic_add v0, v[2:4], s[0:7] dmask:0x1 unorm glc da
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    ; return to shader part epilog
 ;
@@ -1749,10 +1744,9 @@ define amdgpu_ps float @atomic_add_i32_2dmsaa(<8 x i32> inreg %rsrc, i32 %data, 
 ; GFX90A-NEXT:    s_mov_b32 s5, s7
 ; GFX90A-NEXT:    s_mov_b32 s6, s8
 ; GFX90A-NEXT:    s_mov_b32 s7, s9
-; GFX90A-NEXT:    v_mov_b32_e32 v4, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v5, v2
-; GFX90A-NEXT:    v_mov_b32_e32 v6, v3
-; GFX90A-NEXT:    image_atomic_add v0, v[4:6], s[0:7] dmask:0x1 unorm glc
+; GFX90A-NEXT:    v_mov_b32_e32 v4, v3
+; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
+; GFX90A-NEXT:    image_atomic_add v0, v[2:4], s[0:7] dmask:0x1 unorm glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    ; return to shader part epilog
 ;
@@ -1840,10 +1834,8 @@ define amdgpu_ps float @atomic_add_i32_2darraymsaa(<8 x i32> inreg %rsrc, i32 %d
 ; GFX90A-NEXT:    s_mov_b32 s5, s7
 ; GFX90A-NEXT:    s_mov_b32 s6, s8
 ; GFX90A-NEXT:    s_mov_b32 s7, s9
-; GFX90A-NEXT:    v_mov_b32_e32 v6, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v7, v2
-; GFX90A-NEXT:    v_mov_b32_e32 v8, v3
-; GFX90A-NEXT:    v_mov_b32_e32 v9, v4
+; GFX90A-NEXT:    v_pk_mov_b32 v[6:7], v[0:1], v[2:3] op_sel:[1,0]
+; GFX90A-NEXT:    v_pk_mov_b32 v[8:9], v[2:3], v[4:5] op_sel:[1,0]
 ; GFX90A-NEXT:    image_atomic_add v0, v[6:9], s[0:7] dmask:0x1 unorm glc da
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    ; return to shader part epilog

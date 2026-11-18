@@ -36,20 +36,13 @@ define amdgpu_kernel void @eggs(i1 %arg, ptr addrspace(1) %arg1, ptr %arg2, ptr 
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0
 ; CHECK-NEXT:  .LBB0_3: ; %bb41
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x48
-; CHECK-NEXT:    v_mov_b32_e32 v8, s14
-; CHECK-NEXT:    v_mov_b32_e32 v9, s15
-; CHECK-NEXT:    v_mov_b32_e32 v10, s16
-; CHECK-NEXT:    v_mov_b32_e32 v11, s17
-; CHECK-NEXT:    v_mov_b32_e32 v12, s18
-; CHECK-NEXT:    v_mov_b32_e32 v13, s19
-; CHECK-NEXT:    v_mov_b32_e32 v14, s20
-; CHECK-NEXT:    v_mov_b32_e32 v15, s21
-; CHECK-NEXT:    v_mov_b32_e32 v16, s22
-; CHECK-NEXT:    v_mov_b32_e32 v17, s23
-; CHECK-NEXT:    v_mov_b32_e32 v18, s24
-; CHECK-NEXT:    v_mov_b32_e32 v19, s25
-; CHECK-NEXT:    v_mov_b32_e32 v20, s26
-; CHECK-NEXT:    v_mov_b32_e32 v21, s27
+; CHECK-NEXT:    v_pk_mov_b32 v[8:9], s[14:15], s[14:15] op_sel:[0,1]
+; CHECK-NEXT:    v_pk_mov_b32 v[10:11], s[16:17], s[16:17] op_sel:[0,1]
+; CHECK-NEXT:    v_pk_mov_b32 v[12:13], s[18:19], s[18:19] op_sel:[0,1]
+; CHECK-NEXT:    v_pk_mov_b32 v[14:15], s[20:21], s[20:21] op_sel:[0,1]
+; CHECK-NEXT:    v_pk_mov_b32 v[16:17], s[22:23], s[22:23] op_sel:[0,1]
+; CHECK-NEXT:    v_pk_mov_b32 v[18:19], s[24:25], s[24:25] op_sel:[0,1]
+; CHECK-NEXT:    v_pk_mov_b32 v[20:21], s[26:27], s[26:27] op_sel:[0,1]
 ; CHECK-NEXT:    flat_store_byte v[8:9], v0
 ; CHECK-NEXT:    flat_store_byte v[10:11], v1
 ; CHECK-NEXT:    flat_store_byte v[12:13], v2

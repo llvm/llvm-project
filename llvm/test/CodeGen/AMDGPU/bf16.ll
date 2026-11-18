@@ -825,8 +825,7 @@ define void @v_store_global_v2bf16(<2 x bfloat> %val, ptr addrspace(1) %ptr) #0 
 ; GFX950-LABEL: v_store_global_v2bf16:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_mov_b32_e32 v3, v2
-; GFX950-NEXT:    v_mov_b32_e32 v2, v1
+; GFX950-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
 ; GFX950-NEXT:    global_store_dword v[2:3], v0, off
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
@@ -2309,8 +2308,7 @@ define void @test_arg_store(bfloat %in, ptr addrspace(1) %out) #0 {
 ; GFX950-LABEL: test_arg_store:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_mov_b32_e32 v3, v2
-; GFX950-NEXT:    v_mov_b32_e32 v2, v1
+; GFX950-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
 ; GFX950-NEXT:    global_store_short v[2:3], v0, off
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
@@ -2378,8 +2376,7 @@ define void @test_arg_store_v2bf16(<2 x bfloat> %in, ptr addrspace(1) %out) #0 {
 ; GFX950-LABEL: test_arg_store_v2bf16:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_mov_b32_e32 v3, v2
-; GFX950-NEXT:    v_mov_b32_e32 v2, v1
+; GFX950-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
 ; GFX950-NEXT:    global_store_dword v[2:3], v0, off
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
@@ -8535,9 +8532,7 @@ define <32 x double> @global_extload_v32bf16_to_v32f64(ptr addrspace(1) %ptr) #0
 ; GFX950-NEXT:    v_accvgpr_write_b32 a9, v57 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_write_b32 a10, v58 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_write_b32 a11, v59 ; Reload Reuse
-; GFX950-NEXT:    v_accvgpr_write_b32 a12, v60 ; Reload Reuse
-; GFX950-NEXT:    v_mov_b32_e32 v3, v2
-; GFX950-NEXT:    v_mov_b32_e32 v2, v1
+; GFX950-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
 ; GFX950-NEXT:    global_load_ushort v1, v[2:3], off offset:2
 ; GFX950-NEXT:    global_load_ushort v4, v[2:3], off offset:12
 ; GFX950-NEXT:    global_load_ushort v5, v[2:3], off offset:8
@@ -8562,96 +8557,93 @@ define <32 x double> @global_extload_v32bf16_to_v32f64(ptr addrspace(1) %ptr) #0
 ; GFX950-NEXT:    global_load_ushort v24, v[2:3], off offset:38
 ; GFX950-NEXT:    global_load_ushort v25, v[2:3], off offset:42
 ; GFX950-NEXT:    global_load_ushort v26, v[2:3], off offset:46
-; GFX950-NEXT:    global_load_ushort v42, v[2:3], off offset:50
-; GFX950-NEXT:    global_load_ushort v43, v[2:3], off offset:62
-; GFX950-NEXT:    global_load_ushort v46, v[2:3], off offset:60
-; GFX950-NEXT:    global_load_ushort v47, v[2:3], off offset:56
-; GFX950-NEXT:    global_load_ushort v60, v[2:3], off offset:52
+; GFX950-NEXT:    global_load_ushort v27, v[2:3], off offset:50
+; GFX950-NEXT:    global_load_ushort v42, v[2:3], off offset:62
+; GFX950-NEXT:    global_load_ushort v43, v[2:3], off offset:60
+; GFX950-NEXT:    global_load_ushort v46, v[2:3], off offset:56
+; GFX950-NEXT:    global_load_ushort v47, v[2:3], off offset:52
 ; GFX950-NEXT:    global_load_ushort v56, v[2:3], off offset:48
 ; GFX950-NEXT:    global_load_ushort v57, v[2:3], off offset:54
 ; GFX950-NEXT:    global_load_ushort v58, v[2:3], off offset:58
 ; GFX950-NEXT:    s_waitcnt vmcnt(31)
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX950-NEXT:    s_waitcnt vmcnt(30)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v30, 16, v4
+; GFX950-NEXT:    v_lshlrev_b32_e32 v31, 16, v4
 ; GFX950-NEXT:    s_waitcnt vmcnt(29)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v28, 16, v5
+; GFX950-NEXT:    v_lshlrev_b32_e32 v29, 16, v5
 ; GFX950-NEXT:    v_cvt_f64_f32_e32 v[4:5], v1
 ; GFX950-NEXT:    s_waitcnt vmcnt(27)
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v2, 16, v7
 ; GFX950-NEXT:    s_waitcnt vmcnt(26)
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v7, 16, v8
 ; GFX950-NEXT:    s_waitcnt vmcnt(25)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v27, 16, v9
+; GFX950-NEXT:    v_lshlrev_b32_e32 v28, 16, v9
 ; GFX950-NEXT:    s_waitcnt vmcnt(24)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v29, 16, v10
+; GFX950-NEXT:    v_lshlrev_b32_e32 v30, 16, v10
 ; GFX950-NEXT:    s_waitcnt vmcnt(23)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v31, 16, v11
+; GFX950-NEXT:    v_lshlrev_b32_e32 v32, 16, v11
 ; GFX950-NEXT:    s_waitcnt vmcnt(22)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v38, 16, v12
+; GFX950-NEXT:    v_lshlrev_b32_e32 v39, 16, v12
 ; GFX950-NEXT:    s_waitcnt vmcnt(21)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v36, 16, v13
+; GFX950-NEXT:    v_lshlrev_b32_e32 v37, 16, v13
 ; GFX950-NEXT:    s_waitcnt vmcnt(20)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v34, 16, v14
+; GFX950-NEXT:    v_lshlrev_b32_e32 v35, 16, v14
 ; GFX950-NEXT:    s_waitcnt vmcnt(19)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v32, 16, v15
+; GFX950-NEXT:    v_lshlrev_b32_e32 v33, 16, v15
 ; GFX950-NEXT:    s_waitcnt vmcnt(18)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v33, 16, v16
-; GFX950-NEXT:    v_cvt_f64_f32_e32 v[12:13], v27
+; GFX950-NEXT:    v_lshlrev_b32_e32 v34, 16, v16
+; GFX950-NEXT:    s_waitcnt vmcnt(17)
+; GFX950-NEXT:    v_lshlrev_b32_e32 v36, 16, v17
 ; GFX950-NEXT:    s_waitcnt vmcnt(16)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v37, 16, v18
+; GFX950-NEXT:    v_lshlrev_b32_e32 v38, 16, v18
 ; GFX950-NEXT:    s_waitcnt vmcnt(15)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v39, 16, v19
+; GFX950-NEXT:    v_lshlrev_b32_e32 v48, 16, v19
 ; GFX950-NEXT:    s_waitcnt vmcnt(14)
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v44, 16, v20
 ; GFX950-NEXT:    s_waitcnt vmcnt(13)
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v40, 16, v21
-; GFX950-NEXT:    v_cvt_f64_f32_e32 v[14:15], v30
-; GFX950-NEXT:    v_cvt_f64_f32_e32 v[20:21], v31
-; GFX950-NEXT:    s_waitcnt vmcnt(10)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v49, 16, v24
-; GFX950-NEXT:    s_waitcnt vmcnt(9)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v53, 16, v25
-; GFX950-NEXT:    s_waitcnt vmcnt(8)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v41, 16, v26
-; GFX950-NEXT:    s_waitcnt vmcnt(7)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v1, 16, v42
+; GFX950-NEXT:    v_cvt_f64_f32_e32 v[16:17], v30
+; GFX950-NEXT:    v_cvt_f64_f32_e32 v[14:15], v31
+; GFX950-NEXT:    v_cvt_f64_f32_e32 v[20:21], v32
+; GFX950-NEXT:    v_cvt_f64_f32_e32 v[18:19], v33
+; GFX950-NEXT:    v_cvt_f64_f32_e32 v[32:33], v38
+; GFX950-NEXT:    v_cvt_f64_f32_e32 v[30:31], v39
 ; GFX950-NEXT:    s_waitcnt vmcnt(6)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v42, 16, v43
-; GFX950-NEXT:    v_cvt_f64_f32_e32 v[18:19], v32
-; GFX950-NEXT:    v_cvt_f64_f32_e32 v[24:25], v33
-; GFX950-NEXT:    v_cvt_f64_f32_e32 v[26:27], v36
-; GFX950-NEXT:    v_cvt_f64_f32_e32 v[32:33], v37
-; GFX950-NEXT:    v_cvt_f64_f32_e32 v[30:31], v38
-; GFX950-NEXT:    v_cvt_f64_f32_e32 v[36:37], v39
+; GFX950-NEXT:    v_lshlrev_b32_e32 v1, 16, v42
 ; GFX950-NEXT:    v_cvt_f64_f32_e32 v[38:39], v44
-; GFX950-NEXT:    v_cvt_f64_f32_e32 v[44:45], v42
-; GFX950-NEXT:    s_waitcnt vmcnt(5)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v42, 16, v46
-; GFX950-NEXT:    v_cvt_f64_f32_e32 v[42:43], v42
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v46, 16, v58
-; GFX950-NEXT:    scratch_store_dwordx4 v0, v[42:45], off offset:240
-; GFX950-NEXT:    v_cvt_f64_f32_e32 v[58:59], v46
-; GFX950-NEXT:    v_lshlrev_b32_e32 v46, 16, v47
 ; GFX950-NEXT:    v_cvt_f64_f32_e32 v[44:45], v1
+; GFX950-NEXT:    s_waitcnt vmcnt(5)
+; GFX950-NEXT:    v_lshlrev_b32_e32 v1, 16, v43
+; GFX950-NEXT:    v_lshlrev_b32_e32 v59, 16, v27
+; GFX950-NEXT:    v_cvt_f64_f32_e32 v[42:43], v1
+; GFX950-NEXT:    s_waitcnt vmcnt(2)
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v1, 16, v56
+; GFX950-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-NEXT:    v_lshlrev_b32_e32 v56, 16, v58
+; GFX950-NEXT:    v_lshlrev_b32_e32 v46, 16, v46
+; GFX950-NEXT:    scratch_store_dwordx4 v0, v[42:45], off offset:240
+; GFX950-NEXT:    v_lshlrev_b32_e32 v49, 16, v23
+; GFX950-NEXT:    v_lshlrev_b32_e32 v52, 16, v22
+; GFX950-NEXT:    v_cvt_f64_f32_e32 v[44:45], v59
 ; GFX950-NEXT:    v_cvt_f64_f32_e32 v[42:43], v1
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v1, 16, v57
+; GFX950-NEXT:    v_cvt_f64_f32_e32 v[58:59], v56
 ; GFX950-NEXT:    v_cvt_f64_f32_e32 v[56:57], v46
-; GFX950-NEXT:    v_lshlrev_b32_e32 v35, 16, v17
-; GFX950-NEXT:    v_lshlrev_b32_e32 v48, 16, v23
-; GFX950-NEXT:    v_lshlrev_b32_e32 v52, 16, v22
+; GFX950-NEXT:    v_lshlrev_b32_e32 v53, 16, v25
+; GFX950-NEXT:    v_lshlrev_b32_e32 v41, 16, v26
 ; GFX950-NEXT:    scratch_store_dwordx4 v0, v[56:59], off offset:224
 ; GFX950-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX950-NEXT:    v_cvt_f64_f32_e32 v[10:11], v28
+; GFX950-NEXT:    v_lshlrev_b32_e32 v50, 16, v24
 ; GFX950-NEXT:    v_cvt_f64_f32_e32 v[58:59], v1
-; GFX950-NEXT:    v_lshlrev_b32_e32 v1, 16, v60
-; GFX950-NEXT:    v_cvt_f64_f32_e32 v[16:17], v29
-; GFX950-NEXT:    v_cvt_f64_f32_e32 v[22:23], v34
-; GFX950-NEXT:    v_cvt_f64_f32_e32 v[28:29], v35
-; GFX950-NEXT:    v_cvt_f64_f32_e32 v[34:35], v48
-; GFX950-NEXT:    v_cvt_f64_f32_e32 v[50:51], v49
+; GFX950-NEXT:    v_lshlrev_b32_e32 v1, 16, v47
+; GFX950-NEXT:    v_cvt_f64_f32_e32 v[12:13], v28
+; GFX950-NEXT:    v_cvt_f64_f32_e32 v[10:11], v29
+; GFX950-NEXT:    v_cvt_f64_f32_e32 v[24:25], v34
+; GFX950-NEXT:    v_cvt_f64_f32_e32 v[22:23], v35
+; GFX950-NEXT:    v_cvt_f64_f32_e32 v[28:29], v36
+; GFX950-NEXT:    v_cvt_f64_f32_e32 v[26:27], v37
+; GFX950-NEXT:    v_cvt_f64_f32_e32 v[36:37], v48
+; GFX950-NEXT:    v_cvt_f64_f32_e32 v[34:35], v49
 ; GFX950-NEXT:    v_cvt_f64_f32_e32 v[48:49], v52
 ; GFX950-NEXT:    v_cvt_f64_f32_e32 v[54:55], v53
 ; GFX950-NEXT:    v_cvt_f64_f32_e32 v[52:53], v40
@@ -8660,6 +8652,7 @@ define <32 x double> @global_extload_v32bf16_to_v32f64(ptr addrspace(1) %ptr) #0
 ; GFX950-NEXT:    v_cvt_f64_f32_e32 v[2:3], v2
 ; GFX950-NEXT:    v_cvt_f64_f32_e32 v[8:9], v7
 ; GFX950-NEXT:    v_cvt_f64_f32_e32 v[6:7], v6
+; GFX950-NEXT:    v_cvt_f64_f32_e32 v[50:51], v50
 ; GFX950-NEXT:    scratch_store_dwordx4 v0, v[56:59], off offset:208
 ; GFX950-NEXT:    scratch_store_dwordx4 v0, v[42:45], off offset:192
 ; GFX950-NEXT:    scratch_store_dwordx4 v0, v[38:41], off offset:176
@@ -8674,7 +8667,6 @@ define <32 x double> @global_extload_v32bf16_to_v32f64(ptr addrspace(1) %ptr) #0
 ; GFX950-NEXT:    scratch_store_dwordx4 v0, v[10:13], off offset:32
 ; GFX950-NEXT:    scratch_store_dwordx4 v0, v[6:9], off offset:16
 ; GFX950-NEXT:    scratch_store_dwordx4 v0, v[2:5], off
-; GFX950-NEXT:    v_accvgpr_read_b32 v60, a12 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_read_b32 v59, a11 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_read_b32 v58, a10 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_read_b32 v57, a9 ; Reload Reuse

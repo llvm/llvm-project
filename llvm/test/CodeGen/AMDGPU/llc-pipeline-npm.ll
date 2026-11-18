@@ -228,6 +228,7 @@
 ; GCN-O2-NEXT:       si-lower-control-flow
 ; GCN-O2-NEXT:       two-address-instruction
 ; GCN-O2-NEXT:       register-coalescer
+; GCN-O2-NEXT:       si-fold-packed-moves
 ; GCN-O2-NEXT:       rename-independent-subregs
 ; GCN-O2-NEXT:       amdgpu-rewrite-partial-reg-uses
 ; GCN-O2-NEXT:       machine-scheduler
@@ -416,6 +417,7 @@
 ; GCN-O3-NEXT:       si-lower-control-flow
 ; GCN-O3-NEXT:       two-address-instruction
 ; GCN-O3-NEXT:       register-coalescer
+; GCN-O3-NEXT:       si-fold-packed-moves
 ; GCN-O3-NEXT:       rename-independent-subregs
 ; GCN-O3-NEXT:       amdgpu-rewrite-partial-reg-uses
 ; GCN-O3-NEXT:       machine-scheduler

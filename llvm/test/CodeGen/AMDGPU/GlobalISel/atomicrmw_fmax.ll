@@ -171,9 +171,8 @@ define double @local_atomic_fmax_ret_f64(ptr addrspace(3) %ptr, double %val) {
 ; GFX942-LABEL: local_atomic_fmax_ret_f64:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v4, v1
-; GFX942-NEXT:    v_mov_b32_e32 v5, v2
-; GFX942-NEXT:    ds_max_rtn_f64 v[0:1], v0, v[4:5]
+; GFX942-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
+; GFX942-NEXT:    ds_max_rtn_f64 v[0:1], v0, v[2:3]
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -198,9 +197,8 @@ define double @local_atomic_fmax_ret_f64(ptr addrspace(3) %ptr, double %val) {
 ; GFX90A-LABEL: local_atomic_fmax_ret_f64:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v4, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v5, v2
-; GFX90A-NEXT:    ds_max_rtn_f64 v[0:1], v0, v[4:5]
+; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
+; GFX90A-NEXT:    ds_max_rtn_f64 v[0:1], v0, v[2:3]
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -247,9 +245,8 @@ define void @local_atomic_fmax_noret_f64(ptr addrspace(3) %ptr, double %val) {
 ; GFX942-LABEL: local_atomic_fmax_noret_f64:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v4, v1
-; GFX942-NEXT:    v_mov_b32_e32 v5, v2
-; GFX942-NEXT:    ds_max_f64 v0, v[4:5]
+; GFX942-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
+; GFX942-NEXT:    ds_max_f64 v0, v[2:3]
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -274,9 +271,8 @@ define void @local_atomic_fmax_noret_f64(ptr addrspace(3) %ptr, double %val) {
 ; GFX90A-LABEL: local_atomic_fmax_noret_f64:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v4, v1
-; GFX90A-NEXT:    v_mov_b32_e32 v5, v2
-; GFX90A-NEXT:    ds_max_f64 v0, v[4:5]
+; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
+; GFX90A-NEXT:    ds_max_f64 v0, v[2:3]
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;

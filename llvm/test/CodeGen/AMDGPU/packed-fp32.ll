@@ -4251,8 +4251,7 @@ define amdgpu_kernel void @fadd_shuffle_v4(ptr addrspace(1) %arg) {
 ; PACKED-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; PACKED-GISEL-NEXT:    global_load_dwordx4 v[0:3], v6, s[0:1]
 ; PACKED-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; PACKED-GISEL-NEXT:    v_mov_b32_e32 v4, v0
-; PACKED-GISEL-NEXT:    v_mov_b32_e32 v5, v0
+; PACKED-GISEL-NEXT:    v_pk_mov_b32 v[4:5], v[0:1], v[0:1]
 ; PACKED-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[4:5]
 ; PACKED-GISEL-NEXT:    v_pk_add_f32 v[2:3], v[2:3], v[4:5]
 ; PACKED-GISEL-NEXT:    global_store_dwordx4 v6, v[0:3], s[0:1]
