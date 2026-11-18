@@ -238,6 +238,9 @@ Expected<uint32_t> BTFBuilder::merge(StringRef RawBTFSection,
   uint32_t FirstNewId = IdDelta + 1;
 
   StringRef InputStrings = Parser.getStringTable();
+  if (!InputStrings.empty() && InputStrings.back() != '\0')
+    return createStringError(inconvertibleErrorCode(),
+                             "unterminated .BTF string table");
   Strings.append(InputStrings.begin(), InputStrings.end());
   for (uint32_t Id = 1, N = Parser.typesCount(); Id < N; ++Id) {
     uint32_t Offset = TypeData.size();

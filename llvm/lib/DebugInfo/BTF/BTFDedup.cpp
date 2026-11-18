@@ -46,6 +46,7 @@ constexpr uint32_t BTF_IN_PROGRESS = UINT32_MAX - 1;
 /// State for the BTF deduplication algorithm.
 class BTFDedupState {
   BTFBuilder &Builder;
+  BTF::DedupOptions Options;
 
   // Equivalence map: Map[i] = canonical type ID for type i.
   // Unprocessed types do not yet have a canonical representative.
@@ -165,7 +166,7 @@ class BTFDedupState {
   Error compact();
 
 public:
-  BTFDedupState(BTFBuilder &B) : Builder(B) {}
+  BTFDedupState(BTFBuilder &B, BTF::DedupOptions O) : Builder(B), Options(O) {}
   Error run();
 };
 
@@ -691,7 +692,7 @@ Error BTFDedupState::compact() {
       continue;
 
     const BTF::CommonType *T = Builder.findType(Id);
-    if (!T)
+    if (!T || (Options.DropDataSecs && T->getKind() == BTF::BTF_KIND_DATASEC))
       continue;
 
     BTF::CommonType NewHeader = *T;
@@ -797,6 +798,8 @@ Error BTFDedupState::compact() {
   }
 
   Builder = std::move(NewBuilder);
+  if (Options.TypeIdMap)
+    Options.TypeIdMap->assign(OldToNew.begin(), OldToNew.end());
   return Error::success();
 }
 
@@ -835,7 +838,7 @@ Error BTFDedupState::run() {
 
 } // anonymous namespace
 
-Error llvm::BTF::dedup(BTFBuilder &Builder) {
-  BTFDedupState State(Builder);
+Error llvm::BTF::dedup(BTFBuilder &Builder, DedupOptions Options) {
+  BTFDedupState State(Builder, Options);
   return State.run();
 }

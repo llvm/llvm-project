@@ -1007,11 +1007,26 @@ private:
 template <class ELFT> class BtfSection final : public SyntheticSection {
 public:
   BtfSection(Ctx &);
+  void finalizeContents() override;
   void writeTo(uint8_t *buf) override;
   size_t getSize() const override { return outputData.size(); }
   bool isNeeded() const override { return !outputData.empty(); }
 
 private:
+  struct Var {
+    const SectionBase *section;
+    const Defined *sym;
+    int64_t addend;
+    uint32_t type;
+    uint32_t size;
+  };
+  struct DataSec {
+    const OutputSection *osec;
+    size_t offset;
+    SmallVector<Var, 0> vars;
+  };
+  SmallVector<InputSectionBase *, 0> inputs;
+  SmallVector<DataSec, 0> dataSecs;
   SmallVector<uint8_t, 0> outputData;
 };
 

@@ -32,8 +32,16 @@
 namespace llvm {
 
 class BTFBuilder;
+template <typename T> class SmallVectorImpl;
 
 namespace BTF {
+
+struct DedupOptions {
+  /// Omit input DATASECs so the linker can rebuild them for output sections.
+  bool DropDataSecs = false;
+  /// If set, receive the old-to-new type ID map (0 for omitted types).
+  SmallVectorImpl<uint32_t> *TypeIdMap = nullptr;
+};
 
 /// Deduplicate types in a BTFBuilder in-place.
 ///
@@ -41,7 +49,7 @@ namespace BTF {
 /// all type IDs are remapped to point to canonical representatives.
 /// The resulting BTFBuilder can be serialized to produce a compact
 /// .BTF section.
-LLVM_ABI Error dedup(BTFBuilder &Builder);
+LLVM_ABI Error dedup(BTFBuilder &Builder, DedupOptions Options = {});
 
 } // namespace BTF
 } // namespace llvm

@@ -2040,6 +2040,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   if (ctx.in.mipsGot)
     ctx.in.mipsGot->build();
 
+  // BTF needs the output-section assignments, but its size must be known
+  // before pruning empty synthetic sections and assigning addresses.
+  if (ctx.in.btfSection && ctx.in.btfSection->getParent())
+    ctx.in.btfSection->finalizeContents();
   removeUnusedSyntheticSections(ctx);
   ctx.script->diagnoseOrphanHandling();
   ctx.script->diagnoseMissingSGSectionAddress();

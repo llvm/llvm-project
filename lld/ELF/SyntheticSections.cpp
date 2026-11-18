@@ -3539,56 +3539,203 @@ bool GdbIndexSection::isNeeded() const { return !chunks.empty(); }
 template <class ELFT>
 BtfSection<ELFT>::BtfSection(Ctx &ctx)
     : SyntheticSection(ctx, ".BTF", SHT_PROGBITS, 0, 1) {
-  llvm::TimeTraceScope timeScope("Merge BTF");
-  const bool isLE = ELFT::Endianness == llvm::endianness::little;
-  llvm::BTFBuilder builder;
-
-  // Collect all .BTF input sections and merge them.
-  // Mark originals dead so they don't appear in the output.
+  // Replace the original .BTF sections and their relocations.
   // Also discard .BTF.ext sections: they reference per-object type IDs
   // that are invalidated by the merge and dedup.
   for (InputSectionBase *s : ctx.inputSections) {
     if (!s->isLive() || (s->name != ".BTF" && s->name != ".BTF.ext"))
       continue;
     s->markDead();
-    if (s->relSecIdx) {
+    if (s->relSecIdx)
       // Under --emit-relocs the input relocation section is also live.
       if (auto *rel = s->file->getSections()[s->relSecIdx])
         rel->markDead();
-      if (s->name == ".BTF")
-        ErrAlways(ctx) << s
-                       << ": --btf-merge does not support .BTF sections "
-                          "with relocations";
-      continue;
-    }
-    if (s->name == ".BTF.ext")
-      continue;
+    if (s->name == ".BTF")
+      inputs.push_back(s);
+  }
+}
+
+template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
+  if (inputs.empty())
+    return;
+  llvm::TimeTraceScope timeScope("Merge BTF");
+  const bool isLE = ELFT::Endianness == llvm::endianness::little;
+  BTFBuilder builder;
+  MapVector<const OutputSection *, SmallVector<Var, 0>> groups;
+  bool hasDataSecs = false;
+
+  for (InputSectionBase *s : inputs) {
     ArrayRef<uint8_t> data = s->content();
-    StringRef raw(reinterpret_cast<const char *>(data.data()), data.size());
-    Expected<uint32_t> idBase = builder.merge(raw, isLE);
+    Expected<uint32_t> idBase = builder.merge(toStringRef(data), isLE);
     if (!idBase) {
-      Warn(ctx) << s << ": failed to parse .BTF section: "
-                << toString(idBase.takeError());
+      std::string reason = toString(idBase.takeError());
+      if (s->relSecIdx)
+        ErrAlways(ctx) << s << ": cannot validate .BTF relocations: " << reason;
+      else
+        Warn(ctx) << s << ": failed to parse .BTF section: " << reason;
       continue;
     }
+
+    auto *file = dyn_cast<ObjFile<ELFT>>(s->file);
+    // DATASEC offsets without relocations are relative to the named input
+    // section. Do not guess if that name is ambiguous.
+    StringMap<InputSectionBase *> sectionsByName;
+    if (file)
+      for (InputSectionBase *sec : file->getSections())
+        if (sec && sec != &InputSection::discarded &&
+            !sectionsByName.try_emplace(sec->name, sec).second)
+          sectionsByName[sec->name] = nullptr;
+
+    DenseMap<uint64_t, size_t> offsetToVar;
+    SmallVector<Var, 0> vars;
+    uint64_t offset =
+        uint64_t(read32(ctx, data.data() + offsetof(BTF::Header, HdrLen))) +
+        read32(ctx, data.data() + offsetof(BTF::Header, TypeOff));
+    for (uint32_t id = *idBase; id <= builder.typesCount(); ++id) {
+      const auto *type = builder.findType(id);
+      if (type->getKind() == BTF::BTF_KIND_DATASEC) {
+        hasDataSecs = true;
+        auto *sec = sectionsByName.lookup(builder.findString(type->NameOff));
+        auto *entries = reinterpret_cast<const BTF::BTFDataSec *>(type + 1);
+        for (uint32_t i = 0; i != type->getVlen(); ++i) {
+          if (s->relSecIdx)
+            offsetToVar.try_emplace(offset + sizeof(*type) +
+                                        i * sizeof(*entries) +
+                                        offsetof(BTF::BTFDataSec, Offset),
+                                    vars.size());
+          const auto &entry = entries[i];
+          vars.push_back({sec, nullptr, entry.Offset, entry.Type, entry.Size});
+        }
+      }
+      offset += builder.getTypeBytes(id).size();
+    }
+
+    if (s->relSecIdx) {
+      auto readRelocs = [&](ArrayRef<uint8_t> data, auto rels) {
+        for (const auto &rel : rels) {
+          uint64_t loc = rel.r_offset;
+          auto it = offsetToVar.find(loc);
+          if (it == offsetToVar.end()) {
+            ErrAlways(ctx) << s << ": relocation at offset 0x"
+                           << Twine::utohexstr(loc)
+                           << " does not target a DATASEC VarSecinfo offset";
+            continue;
+          }
+          Var &var = vars[it->second];
+          offsetToVar.erase(it);
+          var.section = nullptr;
+          Symbol &sym = file->getRelocTargetSym(rel);
+          RelType type = rel.getType(ctx.arg.isMips64EL);
+          const uint8_t *bufLoc = data.data() + loc;
+          if (ctx.target->getRelExpr(type, sym, bufLoc) != R_ABS) {
+            ErrAlways(ctx) << s << ": unsupported DATASEC relocation " << type;
+            continue;
+          }
+
+          // Check the original definition as well as the resolved symbol:
+          // a relocation in a COMDAT loser can resolve to the winning symbol.
+          uint32_t symIndex = rel.getSymbol(ctx.arg.isMips64EL);
+          uint32_t secIndex = file->getSectionIndex(
+              file->template getELFSyms<ELFT>()[symIndex]);
+          if (secIndex) {
+            auto *original = file->getSections()[secIndex];
+            if (!original || original == &InputSection::discarded ||
+                !original->isLive())
+              continue;
+          }
+          auto *ds = dyn_cast<Defined>(&sym);
+          if (!ds || !ds->section)
+            continue;
+          var.section = ds->section;
+          var.sym = ds;
+          var.addend = getAddend<ELFT>(rel);
+          if constexpr (!std::decay_t<decltype(rel)>::HasAddend)
+            var.addend += ctx.target->getImplicitAddend(bufLoc, type);
+        }
+      };
+      invokeOnRelocs(*s, readRelocs, data);
+    }
+
+    for (const Var &var : vars)
+      if (var.type && var.section && var.section->isLive())
+        if (const OutputSection *osec = var.section->getOutputSection())
+          groups[osec].push_back(var);
   }
 
   if (builder.typesCount() == 0)
     return;
 
-  // Deduplicate merged types.
-  if (Error e = llvm::BTF::dedup(builder)) {
-    Warn(ctx) << "BTF deduplication failed: " << toString(std::move(e));
-    // Fall through and emit un-deduped BTF.
-    builder.write(outputData, isLE);
-    return;
+  // VARs stay distinct during dedup. Remap the entries to their new IDs
+  // and append one DATASEC per output section, with placeholders for layout.
+  SmallVector<uint32_t, 0> typeIdMap;
+  if (Error e = BTF::dedup(builder, {hasDataSecs, &typeIdMap})) {
+    std::string reason = toString(std::move(e));
+    if (hasDataSecs) {
+      ErrAlways(ctx) << "cannot rebuild BTF DATASECs: " << reason;
+      return;
+    }
+    Warn(ctx) << "BTF deduplication failed: " << reason;
   }
 
-  builder.write(outputData, isLE);
+  size_t offset = sizeof(BTF::Header);
+  for (uint32_t id = 1; id <= builder.typesCount(); ++id)
+    offset += builder.getTypeBytes(id).size();
+  for (auto &[osec, vars] : groups) {
+    if (vars.size() > UINT16_MAX) {
+      ErrAlways(ctx) << osec->name << ": too many BTF DATASEC entries";
+      continue;
+    }
+    builder.addType({builder.addString(osec->name),
+                     (BTF::BTF_KIND_DATASEC << 24) | uint32_t(vars.size()),
+                     {0}});
+    for (Var &var : vars) {
+      var.type = typeIdMap[var.type];
+      builder.addTail(BTF::BTFDataSec{});
+    }
+    size_t count = vars.size();
+    dataSecs.push_back({osec, offset, std::move(vars)});
+    offset += sizeof(BTF::CommonType) + count * sizeof(BTF::BTFDataSec);
+  }
+  if (builder.typesCount())
+    builder.write(outputData, isLE);
 }
 
 template <class ELFT> void BtfSection<ELFT>::writeTo(uint8_t *buf) {
   memcpy(buf, outputData.data(), outputData.size());
+  for (const DataSec &ds : dataSecs) {
+    if (ds.osec->size > UINT32_MAX) {
+      ErrAlways(ctx) << ds.osec->name << ": section too large for BTF DATASEC";
+      continue;
+    }
+    uint8_t *record = buf + ds.offset;
+    write32(ctx, record + offsetof(BTF::CommonType, Size), ds.osec->size);
+    record += sizeof(BTF::CommonType);
+
+    SmallVector<BTF::BTFDataSec, 0> entries;
+    for (const Var &var : ds.vars) {
+      uint64_t va = var.sym ? var.sym->getVA(ctx, var.addend)
+                            : var.section->getVA(var.addend);
+      // getVA returns a TLS-block offset for STT_TLS symbols.
+      if (var.sym && var.sym->isTls() && ctx.tlsPhdr)
+        va += ctx.tlsPhdr->firstSec->addr;
+      uint64_t offset = va - ds.osec->addr;
+      if (offset > ds.osec->size || var.size > ds.osec->size - offset) {
+        ErrAlways(ctx) << ds.osec->name
+                       << ": BTF DATASEC entry outside section";
+        continue;
+      }
+      entries.push_back({var.type, uint32_t(offset), var.size});
+    }
+    llvm::stable_sort(entries, [](const auto &a, const auto &b) {
+      return a.Offset < b.Offset;
+    });
+    for (const auto &entry : entries) {
+      write32(ctx, record + offsetof(BTF::BTFDataSec, Type), entry.Type);
+      write32(ctx, record + offsetof(BTF::BTFDataSec, Offset), entry.Offset);
+      write32(ctx, record + offsetof(BTF::BTFDataSec, Size), entry.Size);
+      record += sizeof(entry);
+    }
+  }
 }
 
 VersionDefinitionSection::VersionDefinitionSection(Ctx &ctx)

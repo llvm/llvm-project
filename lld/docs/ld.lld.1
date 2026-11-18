@@ -103,6 +103,8 @@ with the function body where possible (X86_64 only). Enabled by default at
 Merge and deduplicate
 .Li .BTF
 sections from input object files into a single output section.
+Rebuild DATASEC records for output sections with live variables, using
+section-relative variable offsets and omitting entries for discarded variables.
 Disabled by default.
 Ignored for relocatable links
 .Fl ( r Ns ).

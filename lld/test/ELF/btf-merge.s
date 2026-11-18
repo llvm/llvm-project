@@ -57,11 +57,11 @@
 # NO-BTFEXT-NOT: .BTF.ext
 # HAS-BTFEXT:    .BTF.ext
 
-## A DATASEC entry with a relocated variable offset must not be merged as-is.
+## Relocations outside DATASEC variable offsets are not supported.
 # RUN: llvm-mc -filetype=obj -triple=x86_64 btfrel.s -o btfrel.o
 # RUN: not ld.lld --btf-merge a.o btfrel.o -o btfrel 2>&1 | FileCheck %s --check-prefix=BTFREL
 # RUN: not ld.lld --btf-merge --emit-relocs a.o btfrel.o -o btfrel 2>&1 | FileCheck %s --check-prefix=BTFREL
-# BTFREL: error: btfrel.o:(.BTF): --btf-merge does not support .BTF sections with relocations
+# BTFREL: error: btfrel.o:(.BTF): relocation at offset 0x4c does not target a DATASEC VarSecinfo offset
 
 ## isLive: a .BTF section in a discarded COMDAT group should be skipped.
 ## Both comdat files define the same group "grp". The second is discarded,
@@ -222,7 +222,7 @@ count:
 .long 1, 0x01000000, 4, 32  # INT
 .long 5, 0x0e000000, 1, 0   # VAR
 .long 11, 0x0f000001, 8     # DATASEC
-.long 2, count, 4           # Type, relocated offset, size
+.long 2, 4, count           # Relocation in the wrong field (size).
 .Ltypes_end:
 .Lstr:
 .asciz "", "int", "count", ".data"
