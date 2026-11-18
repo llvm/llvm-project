@@ -1307,7 +1307,6 @@ exit:
 }
 
 ; Expanding the conditional urem for the SCEV check must not add UB.
-; FIXME: The urem in vector.scevcheck does not guard the divisor.
 define void @multi_exit_count_with_urem_by_value_in_latch_scev_check(ptr %dst, i64 %N, i64 %X, i64 %M) {
 ; CHECK-LABEL: define void @multi_exit_count_with_urem_by_value_in_latch_scev_check(
 ; CHECK-SAME: ptr [[DST:%.*]], i64 [[N:%.*]], i64 [[X:%.*]], i64 [[M:%.*]]) {
@@ -1323,7 +1322,9 @@ define void @multi_exit_count_with_urem_by_value_in_latch_scev_check(ptr %dst, i
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP7]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    [[TMP8:%.*]] = urem i64 [[X]], [[M]]
+; CHECK-NEXT:    [[TMP19:%.*]] = freeze i64 [[M]]
+; CHECK-NEXT:    [[TMP20:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP19]], i64 1)
+; CHECK-NEXT:    [[TMP8:%.*]] = urem i64 [[X]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = freeze i64 [[TMP8]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP9]], i64 [[N]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i64 [[UMIN]], 4294967295

@@ -46,11 +46,12 @@ exit2:
 }
 
 ; The urem in the exit count may not execute; expanding it must not add UB.
-; FIXME: The urem is expanded in the preheader without guarding the divisor.
 define void @latch_exit_count_umin_seq_with_urem(ptr %a, i64 %n, i64 %m, i64 %y, i64 %z) {
 ; CHECK-LABEL: @latch_exit_count_umin_seq_with_urem(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = urem i64 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP6:%.*]] = freeze i64 [[Z1:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP6]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = urem i64 [[Y:%.*]], [[Z]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[TMP0]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 [[M:%.*]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i64 [[UMIN]], 1
