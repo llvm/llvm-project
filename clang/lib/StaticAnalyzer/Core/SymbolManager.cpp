@@ -77,10 +77,11 @@ void UnarySymExpr::dumpToStream(raw_ostream &os) const {
 }
 
 const Stmt *SymbolConjured::getStmt() const {
-  // Sometimes the CFG element is invalid, avoid dereferencing it.
-  if (Elem.getParent() == nullptr ||
-      Elem.getIndexInBlock() >= Elem.getParent()->size())
+  // getCFGElementRef() returns either the member 'Elem' (if it's valid) or
+  // std::nullopt; call it to check the validity of 'Elem'.
+  if (!getCFGElementRef())
     return nullptr;
+
   switch (Elem->getKind()) {
   case CFGElement::Initializer:
     if (const auto *Init = Elem->castAs<CFGInitializer>().getInitializer()) {

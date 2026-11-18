@@ -154,9 +154,9 @@ private:
   /// svalBuilder - SValBuilder object that creates SVals from expressions.
   SValBuilder &svalBuilder;
 
-  unsigned int currStmtIdx = 0;
   const StackFrame *CurrStackFrame = nullptr;
   const CFGBlock *CurrBlock = nullptr;
+  std::optional<unsigned> CurrStmtIdx = std::nullopt;
 
   /// Helper object to determine if an Objective-C message expression
   /// implicitly never returns.
@@ -251,8 +251,13 @@ public:
   /// (elementary analysis step handled by `dispatchWorkItem`).
   const CFGBlock *getCurrBlock() const { return CurrBlock; }
 
+  /// Get the 'current' CFGBlock and the index of the currently analyzed
+  /// statement within that block. When the current work item is not the
+  /// analysis of a `CFGElement` (e.g. a block terminator is being analyzed),
+  /// the returned `ConstCFGElementRef` is invalid (cannot be dereferenced) is
+  /// still useful for e.g. distinguishing conjured symbols.
   ConstCFGElementRef getCFGElementRef() const {
-    return {getCurrBlock(), currStmtIdx};
+    return {getCurrBlock(), CurrStmtIdx.value_or(UINT_MAX)};
   }
 
   unsigned getNumVisited(const StackFrame *SF, const CFGBlock *Block) const {
@@ -262,6 +267,12 @@ public:
 
   unsigned getNumVisitedCurrent() const {
     return getNumVisited(getCurrStackFrame(), getCurrBlock());
+  }
+
+  void enqueueStmtNodes(ExplodedNodeSet Nodes) {
+    assert(CurrStmtIdx && "enqueueing stmt nodes is only valid in a statement");
+    for (ExplodedNode *N : Nodes)
+      Engine.enqueueStmtNode(N, getCurrBlock(), *CurrStmtIdx);
   }
 
   /// Dump graph to the specified filename.
@@ -744,7 +755,7 @@ public:
 
   /// Return the CFG element corresponding to the worklist element
   /// that is currently being processed by ExprEngine.
-  CFGElement getCurrentCFGElement() { return (*getCurrBlock())[currStmtIdx]; }
+  CFGElement getCurrentCFGElement() { return (*getCurrBlock())[*CurrStmtIdx]; }
 
   /// Create a new state in which the call return value is binded to the
   /// call origin expression.

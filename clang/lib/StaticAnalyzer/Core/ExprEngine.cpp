@@ -73,6 +73,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/IOSandbox.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -951,7 +952,7 @@ void ExprEngine::processEndWorklist() {
 
 void ExprEngine::processCFGElement(const CFGElement E, ExplodedNode *Pred,
                                    unsigned StmtIdx) {
-  currStmtIdx = StmtIdx;
+  SaveAndRestore CurrSISave(CurrStmtIdx, std::optional(StmtIdx));
 
   switch (E.getKind()) {
     case CFGElement::Statement:
@@ -1282,7 +1283,7 @@ void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
     PostVisited.insert(Visited);
 
   // Enqueue the new nodes onto the work list.
-  Engine.enqueueStmtNodes(PostVisited, getCurrBlock(), currStmtIdx);
+  enqueueStmtNodes(PostVisited);
 }
 
 void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
@@ -1296,7 +1297,7 @@ void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
 
   LoopExit PP(S, Pred->getStackFrame());
   if (ExplodedNode *N = Engine.makeNode(PP, NewState, Pred))
-    Engine.enqueueStmtNode(N, getCurrBlock(), currStmtIdx);
+    enqueueStmtNodes(N);
 }
 
 void ExprEngine::ProcessLifetimeEnd(const Stmt *S, const VarDecl *D,
@@ -1309,7 +1310,7 @@ void ExprEngine::ProcessLifetimeEnd(const Stmt *S, const VarDecl *D,
 
   ExplodedNodeSet Dst;
   getCheckerManager().runCheckersForLifetimeEnd(Dst, Src, D, *this);
-  Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
+  enqueueStmtNodes(Dst);
 }
 
 void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
@@ -1396,7 +1397,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
   for (ExplodedNode *Pred : Tmp)
     Dst.insert(Engine.makeNode(PP, Pred->getState(), Pred));
   // Enqueue the new nodes onto the work list.
-  Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
+  enqueueStmtNodes(Dst);
 }
 
 std::pair<ProgramStateRef, uint64_t>
@@ -1460,7 +1461,7 @@ void ExprEngine::ProcessImplicitDtor(const CFGImplicitDtor D,
   }
 
   // Enqueue the new nodes onto the work list.
-  Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
+  enqueueStmtNodes(Dst);
 }
 
 void ExprEngine::ProcessNewAllocator(const CXXNewExpr *NE,
@@ -1479,7 +1480,7 @@ void ExprEngine::ProcessNewAllocator(const CXXNewExpr *NE,
                         getCFGElementRef());
     Dst.insert(Engine.makeNode(PP, Pred->getState(), Pred));
   }
-  Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
+  enqueueStmtNodes(Dst);
 }
 
 void ExprEngine::ProcessAutomaticObjDtor(const CFGAutomaticObjDtor Dtor,
@@ -2467,14 +2468,8 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
     if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
       return Engine.makeNode(BE, State, Pred);
 
-    // FIXME:
-    // We cannot use the CFG element from the via `ExprEngine::getCFGElementRef`
-    // since we are currently at the block entrance and the current reference
-    // would be stale.  Ideally, we should pass on the terminator of the CFG
-    // block, but the terminator cannot be referred as a CFG element.
-    // Here we just pass the the first CFG element in the block.
-    ProgramStateRef WidenedState = getWidenedLoopState(
-        State, SF, BlockCount, *getCurrBlock()->ref_begin());
+    ProgramStateRef WidenedState =
+        getWidenedLoopState(State, SF, BlockCount, getCFGElementRef());
     return Engine.makeNode(BE, WidenedState, Pred);
   }
 
