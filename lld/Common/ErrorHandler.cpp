@@ -9,6 +9,8 @@
 #include "lld/Common/ErrorHandler.h"
 
 #include "lld/Common/CommonLinkerContext.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
@@ -17,7 +19,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
-#include <regex>
+#include <optional>
 
 using namespace llvm;
 using namespace lld;
@@ -27,6 +29,116 @@ static StringRef getSeparator(const Twine &msg) {
     return "\n";
   return "";
 }
+
+namespace {
+
+struct SourceLocation {
+  StringRef file;
+  StringRef line;
+};
+
+static std::optional<SourceLocation>
+parseFileLine(StringRef text, bool requireClosingParen = false) {
+  StringRef token = text.take_while([](char c) { return !isSpace(c); });
+  for (size_t colon = token.rfind(':'); colon != StringRef::npos;) {
+    size_t lineBegin = colon + 1;
+    size_t lineEnd = lineBegin;
+    while (lineEnd != token.size() && isDigit(token[lineEnd]))
+      ++lineEnd;
+
+    if (colon != 0 && lineEnd != lineBegin &&
+        (!requireClosingParen ||
+         (lineEnd != token.size() && token[lineEnd] == ')')))
+      return SourceLocation{token.take_front(colon),
+                            token.slice(lineBegin, lineEnd)};
+
+    if (colon == 0)
+      break;
+    colon = token.rfind(':', colon - 1);
+  }
+  return std::nullopt;
+}
+
+static std::optional<SourceLocation>
+parseParenthesizedFileLine(StringRef text) {
+  for (size_t open = text.rfind('('); open != StringRef::npos;) {
+    // The regexp required at least one character before the opening
+    // parenthesis. Its '.' did not match carriage returns.
+    if (open != 0 && !text.take_front(open).contains('\r'))
+      if (std::optional<SourceLocation> location =
+              parseFileLine(text.drop_front(open + 1),
+                            /*requireClosingParen=*/true))
+        return location;
+
+    if (open == 0)
+      break;
+    open = text.rfind('(', open - 1);
+  }
+  return std::nullopt;
+}
+
+static std::string formatLocation(SourceLocation location) {
+  return (Twine(location.file) + "(" + location.line + ")").str();
+}
+
+static bool isUndefinedSymbol(StringRef line) {
+  if (line.contains('\r'))
+    return false;
+  if (!line.consume_front("undefined "))
+    return false;
+  if (line.starts_with("symbol:"))
+    return true;
+
+  auto [kind, rest] = line.split(' ');
+  return !kind.empty() && none_of(kind, [](char c) { return isSpace(c); }) &&
+         rest.starts_with("symbol:");
+}
+
+static std::optional<SourceLocation>
+findReferencedLocation(ArrayRef<StringRef> lines, bool parenthesized) {
+  for (size_t i = 0; i + 2 < lines.size(); ++i) {
+    if (lines[i + 1].contains('\r') ||
+        !lines[i + 1].starts_with(">>> defined in "))
+      continue;
+    StringRef referenced = lines[i + 2];
+    if (!referenced.consume_front(">>> referenced by "))
+      continue;
+    if (std::optional<SourceLocation> location =
+            parenthesized ? parseParenthesizedFileLine(referenced)
+                          : parseFileLine(referenced))
+      return location;
+  }
+  return std::nullopt;
+}
+
+static std::optional<SourceLocation> findUnclosedQuoteLocation(StringRef text) {
+  constexpr StringLiteral suffix = ": unclosed quote";
+  for (size_t suffixPos = text.find(suffix); suffixPos != StringRef::npos;
+       suffixPos = text.find(suffix, suffixPos + 1)) {
+    size_t lineEnd = suffixPos;
+    size_t lineBegin = lineEnd;
+    while (lineBegin != 0 && isDigit(text[lineBegin - 1]))
+      --lineBegin;
+    if (lineBegin == lineEnd || lineBegin == 0 || text[lineBegin - 1] != ':')
+      continue;
+
+    size_t fileEnd = lineBegin - 1;
+    size_t fileBegin = fileEnd;
+    while (fileBegin != 0 && !isSpace(text[fileBegin - 1]))
+      --fileBegin;
+    if (fileBegin != fileEnd)
+      return SourceLocation{text.slice(fileBegin, fileEnd),
+                            text.slice(lineBegin, lineEnd)};
+  }
+  return std::nullopt;
+}
+
+static bool isDefinedAtLine(StringRef line) {
+  return line.consume_front(">>> defined at ") &&
+         parseFileLine(line).has_value();
+}
+
+} // namespace
 
 ErrorHandler::~ErrorHandler() {
   if (cleanupCallback)
@@ -164,40 +276,61 @@ void lld::checkError(ErrorHandler &eh, Error e) {
 //   src/foo.c(35): error: ...
 //
 // This function returns an error location string. An error location is
-// extracted from an error message using regexps.
+// extracted from one of lld's fixed diagnostic formats.
 std::string ErrorHandler::getLocation(const Twine &msg) {
   if (!vsDiagnostics)
     return std::string(logName);
 
-  static std::regex regexes[] = {
-      std::regex(
-          R"(^undefined (?:\S+ )?symbol:.*\n)"
-          R"(>>> referenced by .+\((\S+):(\d+)\))"),
-      std::regex(
-          R"(^undefined (?:\S+ )?symbol:.*\n>>> referenced by (\S+):(\d+))"),
-      std::regex(R"(^undefined symbol:.*\n>>> referenced by (.*):)"),
-      std::regex(
-          R"(^duplicate symbol: .*\n>>> defined in (\S+)\n>>> defined in.*)"),
-      std::regex(
-          R"(^duplicate symbol: .*\n>>> defined at .+\((\S+):(\d+)\))"),
-      std::regex(R"(^duplicate symbol: .*\n>>> defined at (\S+):(\d+))"),
-      std::regex(
-          R"(.*\n>>> defined in .*\n>>> referenced by .+\((\S+):(\d+)\))"),
-      std::regex(R"(.*\n>>> defined in .*\n>>> referenced by (\S+):(\d+))"),
-      std::regex(R"((\S+):(\d+): unclosed quote)"),
-  };
-
   std::string str = msg.str();
-  for (std::regex &re : regexes) {
-    std::smatch m;
-    if (!std::regex_search(str, m, re))
-      continue;
+  SmallVector<StringRef, 8> lines;
+  StringRef(str).split(lines, '\n');
 
-    assert(m.size() == 2 || m.size() == 3);
-    if (m.size() == 2)
-      return m.str(1);
-    return m.str(1) + "(" + m.str(2) + ")";
+  if (lines.size() >= 2 && isUndefinedSymbol(lines[0])) {
+    StringRef referenced = lines[1];
+    if (referenced.consume_front(">>> referenced by ")) {
+      if (std::optional<SourceLocation> location =
+              parseParenthesizedFileLine(referenced))
+        return formatLocation(*location);
+      if (std::optional<SourceLocation> location = parseFileLine(referenced))
+        return formatLocation(*location);
+
+      // This format is used when only an object-file location is available.
+      if (lines[0].starts_with("undefined symbol:")) {
+        StringRef beforeCarriageReturn = referenced.take_front(
+            std::min(referenced.find('\r'), referenced.size()));
+        if (size_t colon = beforeCarriageReturn.rfind(':');
+            colon != StringRef::npos)
+          return beforeCarriageReturn.take_front(colon).str();
+      }
+    }
   }
+
+  if (lines.size() >= 3 && !lines[0].contains('\r') &&
+      lines[0].starts_with("duplicate symbol: ")) {
+    StringRef definedIn = lines[1];
+    if (definedIn.consume_front(">>> defined in ") && !definedIn.empty() &&
+        none_of(definedIn, [](char c) { return isSpace(c); }) &&
+        lines[2].starts_with(">>> defined in"))
+      return definedIn.str();
+
+    StringRef definedAt = lines[1];
+    if (definedAt.consume_front(">>> defined at ")) {
+      if (std::optional<SourceLocation> location =
+              parseParenthesizedFileLine(definedAt))
+        return formatLocation(*location);
+      if (std::optional<SourceLocation> location = parseFileLine(definedAt))
+        return formatLocation(*location);
+    }
+  }
+
+  if (std::optional<SourceLocation> location =
+          findReferencedLocation(lines, /*parenthesized=*/true))
+    return formatLocation(*location);
+  if (std::optional<SourceLocation> location =
+          findReferencedLocation(lines, /*parenthesized=*/false))
+    return formatLocation(*location);
+  if (std::optional<SourceLocation> location = findUnclosedQuoteLocation(str))
+    return formatLocation(*location);
 
   return std::string(logName);
 }
@@ -254,15 +387,15 @@ void ErrorHandler::error(const Twine &msg) {
   // If Visual Studio-style error message mode is enabled,
   // this particular error is printed out as two errors.
   if (vsDiagnostics) {
-    static std::regex re(R"(^(duplicate symbol: .*))"
-                         R"((\n>>> defined at \S+:\d+.*\n>>>.*))"
-                         R"((\n>>> defined at \S+:\d+.*\n>>>.*))");
     std::string str = msg.str();
-    std::smatch m;
-
-    if (std::regex_match(str, m, re)) {
-      error(m.str(1) + m.str(2));
-      error(m.str(1) + m.str(3));
+    SmallVector<StringRef, 5> lines;
+    StringRef(str).split(lines, '\n');
+    if (lines.size() == 5 && lines[0].starts_with("duplicate symbol: ") &&
+        none_of(lines, [](StringRef line) { return line.contains('\r'); }) &&
+        isDefinedAtLine(lines[1]) && lines[2].starts_with(">>>") &&
+        isDefinedAtLine(lines[3]) && lines[4].starts_with(">>>")) {
+      error(Twine(lines[0]) + "\n" + lines[1] + "\n" + lines[2]);
+      error(Twine(lines[0]) + "\n" + lines[3] + "\n" + lines[4]);
       return;
     }
   }
