@@ -616,7 +616,7 @@ static void addLaneToStartIndex(VPScalarIVStepsRecipe *Steps, unsigned Lane,
 /// Def2LaneDefs to look up scalar definitions for operands of \DefR.
 static VPValue *
 cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
-             VPSingleDefRecipe *DefR, VPLane Lane,
+             VPSingleDefRecipe *DefR, unsigned Lane,
              const DenseMap<VPValue *, SmallVector<VPValue *>> &Def2LaneDefs) {
   assert((isa<VPInstruction, VPReplicateRecipe, VPScalarIVStepsRecipe>(DefR)) &&
          "DefR must be a VPReplicateRecipe, VPInstruction or "
@@ -625,9 +625,9 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
   if (match(DefR, m_VPInstruction<VPInstruction::Unpack>(m_VPValue(Op)))) {
     auto LaneDefs = Def2LaneDefs.find(Op);
     if (LaneDefs != Def2LaneDefs.end())
-      return LaneDefs->second[Lane.getKnownLane()];
+      return LaneDefs->second[Lane];
 
-    VPValue *Idx = Plan.getConstantInt(IdxTy, Lane.getKnownLane());
+    VPValue *Idx = Plan.getConstantInt(IdxTy, Lane);
     return Builder.createNaryOp(Instruction::ExtractElement, {Op, Idx});
   }
 
@@ -638,7 +638,7 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
     // the corresponding lane.
     auto LaneDefs = Def2LaneDefs.find(Op);
     if (LaneDefs != Def2LaneDefs.end()) {
-      NewOps.push_back(LaneDefs->second[Lane.getKnownLane()]);
+      NewOps.push_back(LaneDefs->second[Lane]);
       continue;
     }
     if (vputils::isSingleScalar(Op)) {
@@ -646,7 +646,7 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
       continue;
     }
 
-    VPValue *Idx = Plan.getConstantInt(IdxTy, Lane.getKnownLane());
+    VPValue *Idx = Plan.getConstantInt(IdxTy, Lane);
     VPValue *Ext = Builder.createNaryOp(Instruction::ExtractElement, {Op, Idx});
     NewOps.push_back(Ext);
   }
@@ -666,9 +666,8 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
     }
     if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(New)) {
       // Skip lane 0: an absent start index is implicitly zero.
-      unsigned KnownLane = Lane.getKnownLane();
-      if (KnownLane != 0)
-        addLaneToStartIndex(Steps, KnownLane, Plan, DefR);
+      if (Lane != 0)
+        addLaneToStartIndex(Steps, Lane, Plan, DefR);
     }
   }
   New->insertBefore(DefR);
@@ -978,7 +977,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       if (DefR->user_empty()) {
         // Create single-scalar version of DefR for all lanes.
         for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
-          cloneForLane(Plan, Builder, IdxTy, DefR, VPLane(I), Def2LaneDefs);
+          cloneForLane(Plan, Builder, IdxTy, DefR, I, Def2LaneDefs);
         DefR->eraseFromParent();
         continue;
       }
@@ -986,7 +985,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       SmallVector<VPValue *> LaneDefs;
       for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
         LaneDefs.push_back(
-            cloneForLane(Plan, Builder, IdxTy, DefR, VPLane(I), Def2LaneDefs));
+            cloneForLane(Plan, Builder, IdxTy, DefR, I, Def2LaneDefs));
 
       Def2LaneDefs[DefR] = LaneDefs;
       // Pack the lanes for vector users.
