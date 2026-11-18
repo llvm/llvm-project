@@ -226,7 +226,8 @@ mlir::Attribute rewriteAttribute(const mlir::TypeConverter &tc,
         return cir::VTableAttr::get(
             tc.convertType(vta.getType()),
             mlir::cast<mlir::ArrayAttr>(
-                rewriteAttribute(tc, ctx, vta.getData())));
+                rewriteAttribute(tc, ctx, vta.getData())),
+            vta.getAddressPoints());
       })
       .Case<cir::TypeInfoAttr>([&tc, ctx](cir::TypeInfoAttr tia) {
         return cir::TypeInfoAttr::get(
@@ -362,7 +363,6 @@ mlir::LogicalResult CIRAllocaOpABILowering::matchAndRewrite(
       op.getAlignmentAttr(), /*dynAllocSize=*/adaptor.getDynAllocSize());
   loweredOp.setInit(op.getInit());
   loweredOp.setConstant(op.getConstant());
-  loweredOp.setAnnotationsAttr(op.getAnnotationsAttr());
 
   rewriter.replaceOp(op, loweredOp);
   return mlir::success();
@@ -947,11 +947,11 @@ void CXXABILoweringPass::runOnOperation() {
   mlir::MLIRContext *ctx = mod.getContext();
 
   std::unique_ptr<cir::LowerModule> lowerModule = cir::createLowerModule(mod);
-  // If lower module is not available, skip the ABI lowering pass.
-  if (!lowerModule) {
-    mod.emitWarning("Cannot create a CIR lower module, skipping the ")
-        << getName() << " pass";
-    return;
+  assert(lowerModule && "LowerModule shouldn't be null");
+  if (!lowerModule->hasTarget()) {
+    mod.emitError() << getArgument() << " requires a module with a supported '"
+                    << cir::CIRDialect::getTripleAttrName() << "' attribute";
+    return signalPassFailure();
   }
 
   if (!lowerModule->hasCXXABI()) {

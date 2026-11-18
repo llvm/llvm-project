@@ -1141,17 +1141,12 @@ define float @v_copysign_f32_0_f32(float %sign) {
 define amdgpu_ps i32 @s_copysign_f32_0_f64(double inreg %sign) {
 ; SIVI-LABEL: s_copysign_f32_0_f64:
 ; SIVI:       ; %bb.0:
-; SIVI-NEXT:    v_cvt_f32_f64_e32 v0, s[0:1]
-; SIVI-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
-; SIVI-NEXT:    v_readfirstlane_b32 s0, v0
+; SIVI-NEXT:    s_and_b32 s0, s1, 0x80000000
 ; SIVI-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: s_copysign_f32_0_f64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_cvt_f32_f64_e32 v0, s[0:1]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    s_and_b32 s0, s1, 0x80000000
 ; GFX11-NEXT:    ; return to shader part epilog
   %sign.trunc = fptrunc double %sign to float
   %result = call float @llvm.copysign.f32(float 0.0, float %sign.trunc)
@@ -1179,17 +1174,15 @@ define float @v_copysign_f32_0_f64(double %sign) {
 define amdgpu_ps i32 @s_copysign_f32_0_f16(half inreg %sign) {
 ; SIVI-LABEL: s_copysign_f32_0_f16:
 ; SIVI:       ; %bb.0:
-; SIVI-NEXT:    v_cvt_f32_f16_e32 v0, s0
-; SIVI-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
-; SIVI-NEXT:    v_readfirstlane_b32 s0, v0
+; SIVI-NEXT:    s_lshl_b32 s0, s0, 16
+; SIVI-NEXT:    s_and_b32 s0, s0, 0x80000000
 ; SIVI-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: s_copysign_f32_0_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v0, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    s_lshl_b32 s0, s0, 16
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_and_b32 s0, s0, 0x80000000
 ; GFX11-NEXT:    ; return to shader part epilog
   %sign.ext = fpext half %sign to float
   %result = call float @llvm.copysign.f32(float 0.0, float %sign.ext)

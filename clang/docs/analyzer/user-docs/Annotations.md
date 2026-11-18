@@ -597,7 +597,7 @@ By default, the following summaries are assumed:
 - Functions are assumed not to change the reference count of their parameters,
   including the implicit `this` parameter.
 
-These summaries can be overriden with the following
+These summaries can be overridden with the following
 {ref}`attributes <os-retained-attr-family>`:
 
 #### Attribute 'os_returns_retained'

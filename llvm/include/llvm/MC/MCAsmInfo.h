@@ -451,6 +451,8 @@ public:
 
   const MCTargetOptions &getTargetOptions() const { return TargetOptions; }
 
+  unsigned getAsmMacroMaxNestingDepth() const;
+
   /// Get the code pointer size in bytes.
   unsigned getCodePointerSize() const { return CodePointerSize; }
 
@@ -489,6 +491,12 @@ public:
 
   const MCExpr *getExprForFDESymbol(const MCSymbol *Sym, unsigned Encoding,
                                     MCStreamer &Streamer) const;
+
+  /// Return the expression used to emit the offset of \p Sym + \p Offset from
+  /// the start of its DWARF section. The default is Sym + Offset.
+  virtual const MCExpr *getDwarfSectionOffsetExpr(const MCSymbol *Sym,
+                                                  uint64_t Offset,
+                                                  MCContext &Ctx) const;
 
   /// Return true if C is an acceptable character inside a symbol name.
   bool isAcceptableChar(char C) const;

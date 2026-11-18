@@ -48,9 +48,7 @@ template <class... _Backends>
 struct __backend_configuration;
 
 struct __default_backend_tag;
-struct __libdispatch_backend_tag;
 struct __serial_backend_tag;
-struct __std_thread_backend_tag;
 struct __statpart_backend_tag;
 
 #  if _LIBCPP_HAS_THREADS
@@ -92,6 +90,13 @@ struct __copy;
 // optional<_ForwardOutIterator>
 // operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last,
 //                       _ForwardOutIterator __out_it) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __copy_if;
+// template <class _Policy, class _ForwardIterator, class _ForwardOutIterator, class _Predicate>
+// optional<_ForwardOutIterator>
+// operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last,
+//                       _ForwardOutIterator __out_it, _Predicate __pred) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
 struct __copy_n;

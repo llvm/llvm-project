@@ -22,6 +22,7 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -61,7 +62,7 @@ template <> struct DenseMapInfo<CachedHashStringRef> {
 /// A container which contains a string, which it owns, plus a precomputed hash.
 ///
 /// We do not null-terminate the string.
-class CachedHashString {
+class LLVM_ATTRIBUTE_WARN_UNUSED CachedHashString {
   friend struct DenseMapInfo<CachedHashString>;
 
   char *P;

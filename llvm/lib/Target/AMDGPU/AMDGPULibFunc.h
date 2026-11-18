@@ -14,6 +14,7 @@
 
 namespace llvm {
 
+struct AMDGPUOptions;
 class FunctionCallee;
 class FunctionType;
 class Function;
@@ -348,7 +349,7 @@ public:
 
   /// \return The mangled function name for mangled library functions
   /// and unmangled function name for unmangled library functions.
-  virtual std::string mangle() const = 0;
+  virtual std::string mangle(const AMDGPUOptions &CLOpts) const = 0;
 
   void setName(StringRef N) { Name = std::string(N); }
   void setPrefix(ENamePrefix pfx) { FKind = pfx; }
@@ -411,7 +412,9 @@ public:
 
   /// \return The mangled function name for mangled library functions
   /// and unmangled function name for unmangled library functions.
-  std::string mangle() const { return Impl->mangle(); }
+  std::string mangle(const AMDGPUOptions &CLOpts) const {
+    return Impl->mangle(CLOpts);
+  }
 
   void setName(StringRef N) { Impl->setName(N); }
   void setPrefix(ENamePrefix PFX) { Impl->setPrefix(PFX); }
@@ -450,10 +453,10 @@ public:
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const AMDGPULibFuncImpl *F) { return F->isMangled(); }
 
-  std::string mangle() const override;
+  std::string mangle(const AMDGPUOptions &CLOpts) const override;
 
 private:
-  std::string mangleNameItanium() const;
+  std::string mangleNameItanium(const AMDGPUOptions &CLOpts) const;
 
   bool parseUnmangledName(StringRef MangledName);
 
@@ -480,7 +483,7 @@ public:
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const AMDGPULibFuncImpl *F) { return !F->isMangled(); }
 
-  std::string mangle() const override { return Name; }
+  std::string mangle(const AMDGPUOptions &) const override { return Name; }
 
   void setFunctionType(FunctionType *FT) { FuncTy = FT; }
 };
