@@ -84,9 +84,13 @@ TEST_CONSTEXPR_CXX20 bool test() {
     // https://llvm.org/PR31454
     std::basic_string<VeryLarge> s;
     VeryLarge vl = {};
+    LIBCPP_ASSERT(s.size() == 0);
     s.push_back(vl);
+    LIBCPP_ASSERT(s.size() == 1);
     s.push_back(vl);
+    LIBCPP_ASSERT(s.size() == 2);
     s.push_back(vl);
+    LIBCPP_ASSERT(s.size() == 3);
   }
 
   return true;
