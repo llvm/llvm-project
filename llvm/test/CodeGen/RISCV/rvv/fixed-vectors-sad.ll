@@ -470,10 +470,10 @@ define i32 @add_zext_mismatch_type(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) {
 entry:
   %1 = zext <4 x i8> %a to <4 x i16>
   %2 = zext <4 x i8> %b to <4 x i16>
-  %3 = add nsw <4 x i16> %1, %2
+  %3 = add <4 x i16> %1, %2
   %4 = zext <4 x i16> %3 to <4 x i32>
   %5 = zext <4 x i8> %c to <4 x i32>
-  %6 = add nsw <4 x i32> %4, %5
+  %6 = add <4 x i32> %4, %5
   %7 = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %6)
   ret i32 %7
 }
@@ -507,10 +507,10 @@ define i32 @add_sext_mismatch_type(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) {
 entry:
   %1 = sext <4 x i8> %a to <4 x i16>
   %2 = sext <4 x i8> %b to <4 x i16>
-  %3 = add nsw <4 x i16> %1, %2
+  %3 = add <4 x i16> %1, %2
   %4 = sext <4 x i16> %3 to <4 x i32>
   %5 = sext <4 x i8> %c to <4 x i32>
-  %6 = add nsw <4 x i32> %4, %5
+  %6 = add <4 x i32> %4, %5
   %7 = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %6)
   ret i32 %7
 }
