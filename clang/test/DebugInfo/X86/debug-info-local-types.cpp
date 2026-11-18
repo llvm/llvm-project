@@ -97,24 +97,24 @@ void test() {
 // CHECK: ![[S_WITH_FWD]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "SWithForwardDecl", scope: ![[LBSCOPE_6]]
 
 // CHECK: !DILocalVariable(name: "s", scope: ![[LBSCOPE_1]]
-// CHECK-SAME:                        type: ![[STRUCT:]]
+// CHECK-SAME:                        type: ![[STRUCT]]
 // CHECK: !DILocalVariable(name: "c", scope: ![[LBSCOPE_11:[0-9]+]]
 // CHECK-SAME:                        type: ![[CLASS]]
 // CHECK: ![[LBSCOPE_11]] = distinct !DILexicalBlock(scope: ![[LBSCOPE_1]], {{.*}}, line: 20,
 // CHECK: !DILocalVariable(name: "c", scope: ![[LBSCOPE_2]]
-// CHECK-SAME:                        type: ![[TYPEDEF:[0-9]+]]
+// CHECK-SAME:                        type: ![[TYPEDEF]]
 // CHECK: !DILocalVariable(name: "i", scope: ![[LBSCOPE_21:[0-9]+]]
 // CHECK-SAME:                        type: ![[USING]]
 // CHECK: ![[LBSCOPE_21]] = distinct !DILexicalBlock(scope: ![[LBSCOPE_2]], {{.*}}, line: 40,
 //
 // CHECK: !DILocalVariable(name: "e", scope: ![[LBSCOPE_3]]
-// CHECK-SAME:                        type: ![[ENUM:[0-9]+]]
+// CHECK-SAME:                        type: ![[ENUM]]
 // CHECK: !DILocalVariable(name: "t", scope: ![[LBSCOPE_31:[0-9]+]]
 // CHECK-SAME:                        type: ![[ENUM_CLASS]]
 // CHECK: ![[LBSCOPE_31]] = distinct !DILexicalBlock(scope: ![[LBSCOPE_3]], {{.*}}, line: 60,
 //
 // CHECK: !DILocalVariable(name: "u", scope: ![[LBSCOPE_4]]
-// CHECK-SAME:                        type: ![[UNION:[0-9]+]]
+// CHECK-SAME:                        type: ![[UNION]]
 
 void test_unused() {
 #line 80
