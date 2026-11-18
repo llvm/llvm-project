@@ -526,6 +526,7 @@ class LDril_template<RegisterClass RC, InstHexagon rootInst>
     "", [], "", rootInst.Itinerary, rootInst.Type>;
 
 def PS_loadrl : LDril_template<HlxLR, LX_L16b_pseudo>;
+def PS_loadrll : LDril_template<HlxLLR, LX_L16b_pseudo>;
 
 let Predicates = [UseHLX], isPseudo = 1, isCodeGenOnly = 1,
     mayStore = 1, accessSize = HLXVectorAccess, hasSideEffects = 0 in
@@ -534,6 +535,7 @@ class STril_template<RegisterClass RC, InstHexagon rootInst>
     "", [], "", rootInst.Itinerary, rootInst.Type>;
 
 def PS_storerl : STril_template<HlxLR, LX_S16b_pseudo>;
+def PS_storerll : STril_template<HlxLLR, LX_S16b_pseudo>;
 
 
 let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in

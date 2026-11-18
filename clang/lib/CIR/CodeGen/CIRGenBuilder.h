@@ -462,17 +462,16 @@ public:
                             cir::DynamicCastInfoAttr info) {
     auto castKind =
         isRefCast ? cir::DynamicCastKind::Ref : cir::DynamicCastKind::Ptr;
-    return cir::DynamicCastOp::create(*this, loc, destType, castKind, src, info,
-                                      /*relative_layout=*/false);
+    return cir::DynamicCastOp::create(*this, loc, destType, castKind, src,
+                                      info);
   }
 
-  mlir::Value createDynCastToVoid(mlir::Location loc, mlir::Value src,
-                                  bool vtableUseRelativeLayout) {
+  mlir::Value createDynCastToVoid(mlir::Location loc, mlir::Value src) {
     auto srcPtrTy = mlir::cast<cir::PointerType>(src.getType());
     cir::PointerType destTy = getVoidPtrTy(srcPtrTy.getAddrSpace());
-    return cir::DynamicCastOp::create(
-        *this, loc, destTy, cir::DynamicCastKind::Ptr, src,
-        cir::DynamicCastInfoAttr{}, vtableUseRelativeLayout);
+    return cir::DynamicCastOp::create(*this, loc, destTy,
+                                      cir::DynamicCastKind::Ptr, src,
+                                      cir::DynamicCastInfoAttr{});
   }
 
   //===--------------------------------------------------------------------===//
@@ -809,6 +808,19 @@ public:
     auto resultTy =
         cir::VectorType::getFixed(vecType.getElementType(), maskAttrs.size());
     return cir::VecShuffleOp::create(*this, loc, resultTy, vec1, vec2,
+                                     getArrayAttr(maskAttrs));
+  }
+
+  cir::VecShuffleOp createVecShuffle(mlir::Location loc, mlir::Value vec1,
+                                     mlir::Type resultTy,
+                                     llvm::ArrayRef<int64_t> mask) {
+    cir::ConstantOp poison =
+        getConstant(loc, cir::PoisonAttr::get(vec1.getType()));
+    auto maskAttrs = llvm::to_vector_of<mlir::Attribute>(
+        llvm::map_range(mask, [&](int32_t idx) {
+          return cir::IntAttr::get(getSInt32Ty(), idx);
+        }));
+    return cir::VecShuffleOp::create(*this, loc, resultTy, vec1, poison,
                                      getArrayAttr(maskAttrs));
   }
 

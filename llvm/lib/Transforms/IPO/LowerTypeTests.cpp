@@ -2432,8 +2432,11 @@ bool lowertypetests::cleanUpTypeCheckedLoad(Module &M, Function &CheckedLoadFn,
     I->eraseFromParent();
     Changed = true;
   }
-  if (Changed)
+  if (Changed) {
     CheckedLoadFn.eraseFromParent();
+    for (GlobalVariable &GV : M.globals())
+      GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
+  }
   return Changed;
 }
 
@@ -2487,15 +2490,15 @@ static bool dropTypeTests(Module &M, bool ShouldDropAll) {
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   if (PublicTypeTestFunc)
     dropTypeTests(M, *PublicTypeTestFunc, ShouldDropAll);
-  if (TypeTestFunc || PublicTypeTestFunc || DroppedCheckedLoads) {
+  bool Changed = TypeTestFunc || PublicTypeTestFunc || DroppedCheckedLoads;
+  if (Changed || ShouldDropAll) {
     // We have deleted the type intrinsics, so we no longer have enough
     // information to reason about the liveness of virtual function pointers
     // in GlobalDCE.
     for (GlobalVariable &GV : M.globals())
-      GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
-    return true;
+      Changed |= GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
   }
-  return false;
+  return Changed;
 }
 
 bool LowerTypeTestsModule::lower() {

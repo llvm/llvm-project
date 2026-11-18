@@ -244,7 +244,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.srand
     libc.src.stdlib.strfromd
     libc.src.stdlib.strfromf
-    libc.src.stdlib.strfromf128
     # TODO: long double support is buggy with clang-11. Re-enable when buildbots are upgraded.
     # libc.src.stdlib.strfroml
     libc.src.stdlib.strtod
@@ -390,6 +389,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.mknod
     libc.src.sys.stat.mknodat
     libc.src.sys.stat.stat
+    libc.src.sys.stat.statx
     libc.src.sys.stat.umask
     libc.src.sys.stat.utimensat
 
@@ -403,6 +403,9 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/sysinfo.h entrypoints
     libc.src.sys.sysinfo.sysinfo
+
+    # sys/timerfd.h entrypoints
+    libc.src.sys.timerfd.timerfd_create
 
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
@@ -533,6 +536,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.write
 
     # wchar.h entrypoints
+    libc.src.wchar.swprintf
     libc.src.wchar.wcscasecmp
     libc.src.wchar.wcsncasecmp
     libc.src.wchar.wcslen
@@ -567,6 +571,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.time.getitimer
     libc.src.sys.time.gettimeofday
 )
+
+if (LIBC_TYPES_HAS_NATIVE_FLOAT128)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # stdlib.h _Float128 entrypoints
+    libc.src.stdlib.strfromf128
+  )
+endif()
 
 if(LLVM_LIBC_INCLUDE_SCUDO)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
@@ -652,10 +663,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cospif
     libc.src.math.daddf128
     libc.src.math.daddl
+    libc.src.math.ddivf128
     libc.src.math.ddivl
     libc.src.math.dfmal
+    libc.src.math.dmulf128
     libc.src.math.dmull
     libc.src.math.dsqrtl
+    libc.src.math.dsubf128
     libc.src.math.dsubl
     libc.src.math.erff
     libc.src.math.exp
@@ -1054,11 +1068,8 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
     libc.src.math.canonicalizef80
-    libc.src.math.ddivf128
     libc.src.math.dfmaf128
-    libc.src.math.dmulf128
     libc.src.math.dsqrtf128
-    libc.src.math.dsubf128
     libc.src.math.faddf128
     libc.src.math.fdivf128
     libc.src.math.ffmaf128
@@ -1101,6 +1112,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.canonicalizebf16
   libc.src.math.ceilbf16
   libc.src.math.copysignbf16
+  libc.src.math.coshbf16
   libc.src.math.exp2bf16
   libc.src.math.expbf16
   libc.src.math.fabsbf16
@@ -1205,7 +1217,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.arpa.inet.ntohs
 
     # net/if.h entrypoints
+    libc.src.net.if.if_freenameindex
     libc.src.net.if.if_indextoname
+    libc.src.net.if.if_nameindex
     libc.src.net.if.if_nametoindex
 
     # netinet/ether.h entrypoints
@@ -1382,11 +1396,15 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.getc_unlocked
     libc.src.stdio.getchar
     libc.src.stdio.getchar_unlocked
+    libc.src.stdio.getdelim
+    libc.src.stdio.getline
     libc.src.stdio.pclose
     libc.src.stdio.perror
     libc.src.stdio.popen
     libc.src.stdio.putc
+    libc.src.stdio.putc_unlocked
     libc.src.stdio.putchar
+    libc.src.stdio.putchar_unlocked
     libc.src.stdio.puts
     libc.src.stdio.rewind
     libc.src.stdio.setbuf
@@ -1586,10 +1604,6 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.libintl.ngettext_l
       libc.src.libintl.textdomain
 
-      # net/if.h entrypoints
-      libc.src.net.if.if_freenameindex
-      libc.src.net.if.if_nameindex
-
       # netdb.h entrypoints
       libc.src.netdb.freeaddrinfo
       libc.src.netdb.gai_strerror
@@ -1618,9 +1632,6 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.unistd.setresuid
       libc.src.unistd.setreuid
       libc.src.unistd.setuid
-
-      # wchar.h entrypoints
-      libc.src.wchar.swprintf
     )
   endif()
 endif()

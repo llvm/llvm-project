@@ -669,8 +669,13 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
         }
       }
       for (auto *fd : md->getParent()->fields()) {
-        if (fd->hasCapturedVLAType())
-          cgm.errorNYI(loc, "lambda captured VLA type");
+        if (fd->hasCapturedVLAType()) {
+          mlir::Value exprArg =
+              emitLoadOfLValue(emitLValueForLambdaField(fd), SourceLocation())
+                  .getValue();
+          const VariableArrayType *vat = fd->getCapturedVLAType();
+          vlaSizeMap[vat->getSizeExpr()] = exprArg;
+        }
       }
     } else if (md->isImplicitObjectMemberFunction()) {
       // Not in a lambda; just use 'this' from the method.
@@ -1104,7 +1109,7 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
   const auto *md = dyn_cast<CXXMethodDecl>(fd);
   if (md && md->isImplicitObjectMemberFunction()) {
     if (cgm.getCXXABI().hasThisReturn(gd))
-      cgm.errorNYI(fd->getSourceRange(), "this return");
+      retTy = md->getThisType();
     else if (cgm.getCXXABI().hasMostDerivedReturn(gd))
       cgm.errorNYI(fd->getSourceRange(), "most derived return");
     cgm.getCXXABI().buildThisParam(*this, args);

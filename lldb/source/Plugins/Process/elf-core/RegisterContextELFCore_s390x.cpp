@@ -50,7 +50,7 @@ bool RegisterContextELFCore_s390x::WriteFPR() {
 }
 
 bool RegisterContextELFCore_s390x::ReadRegister(const RegisterInfo *reg_info,
-                                                  RegisterValue &value) {
+                                                RegisterValue &value) {
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
   if (reg == LLDB_INVALID_REGNUM)
     return false;
@@ -82,7 +82,7 @@ bool RegisterContextELFCore_s390x::ReadAllRegisterValues(
 }
 
 bool RegisterContextELFCore_s390x::WriteRegister(const RegisterInfo *reg_info,
-                                                   const RegisterValue &value) {
+                                                 const RegisterValue &value) {
   return false;
 }
 

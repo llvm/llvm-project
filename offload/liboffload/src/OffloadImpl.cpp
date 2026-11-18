@@ -77,6 +77,9 @@ struct ol_device_impl_t {
       : DeviceNum(DeviceNum), Device(Device), Platform(Platform),
         Info(std::forward<InfoTreeNode>(DevInfo)) {}
 
+  ol_device_impl_t(const ol_device_impl_t &) = delete;
+  ol_device_impl_t &operator=(const ol_device_impl_t &) = delete;
+
   int DeviceNum;
   GenericDeviceTy *Device;
   ol_platform_impl_t &Platform;
@@ -372,7 +375,7 @@ ol_platform_backend_t pluginNameToBackend(StringRef Name) {
 
 // Every plugin exports this method to create an instance of the plugin type.
 #define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
-#include "Shared/Targets.def"
+#include "Targets.def"
 
 Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
   SmallSet<ol_platform_backend_t, 0> Requested;
@@ -391,7 +394,7 @@ Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
           std::unique_ptr<GenericPluginTy>(createPlugin_##Name()), Backend));  \
     }                                                                          \
   } while (false);
-#include "Shared/Targets.def"
+#include "Targets.def"
 
   Context.TracingEnabled = std::getenv("OFFLOAD_TRACE");
   Context.ValidationEnabled = !std::getenv("OFFLOAD_DISABLE_VALIDATION");
@@ -1297,14 +1300,19 @@ Error olIsValidBinary_impl(ol_device_handle_t Device, const void *ProgData,
 
 Error olDestroyProgram_impl(ol_program_handle_t Program) {
   auto &Device = Program->Image->getDevice();
-  if (auto Err = Device.unloadBinary(Program->Image))
-    return Err;
+  auto *Image = Program->Image;
 
+  // Unregister the image first: unloading frees it, and deinit must not run
+  // its destructors a second time if something below fails. A failed unload
+  // therefore leaks the image instead of retrying it at deinit.
   auto &LoadedImages = Device.LoadedImages;
-  LoadedImages.erase(
-      std::find(LoadedImages.begin(), LoadedImages.end(), Program->Image));
+  auto It = std::find(LoadedImages.begin(), LoadedImages.end(), Image);
+  if (It != LoadedImages.end())
+    LoadedImages.erase(It);
 
-  return olDestroy(Program);
+  Error Result = Device.callGlobalDestructors(Device.Plugin, *Image);
+  Result = joinErrors(std::move(Result), Device.unloadBinary(Image));
+  return joinErrors(std::move(Result), olDestroy(Program));
 }
 
 Error olCalculateOptimalOccupancy_impl(ol_device_handle_t Device,
@@ -1707,11 +1715,8 @@ Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
 }
 
 namespace tmp {
-// Temporary helpers to help transition of libomptarget to liboffload
-DeviceImageTy *__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program) {
-  return Program->Image;
-}
-
+// Helpers for virtual address management that are only used RecordReplay until
+// it transitions to a new code.
 void *__ol_tgt_GetSuggestedVirtualAddress(ol_device_handle_t Device) {
   return Device->Device->getSuggestedVirtualAddress();
 }

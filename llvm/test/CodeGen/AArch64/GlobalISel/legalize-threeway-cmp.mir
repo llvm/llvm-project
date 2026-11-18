@@ -2,11 +2,13 @@
 # RUN: llc -O0 -mtriple=aarch64 -run-pass=legalizer -global-isel-abort=1 %s -o - | FileCheck %s
 ---
 name:            test_scmp
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: test_scmp
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(sgt), [[COPY]](i64), [[COPY1]]
     ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i32) = G_ICMP intpred(slt), [[COPY]](i64), [[COPY1]]
@@ -26,11 +28,13 @@ body:             |
 ...
 ---
 name:            test_ucmp
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: test_ucmp
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(ugt), [[COPY]](i64), [[COPY1]]
     ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i32) = G_ICMP intpred(ult), [[COPY]](i64), [[COPY1]]
@@ -50,11 +54,13 @@ body:             |
 ...
 ---
 name:            test_ucmp_vector
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $w0, $w1, $w2, $w3
     ; CHECK-LABEL: name: test_ucmp_vector
-    ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK: liveins: $w0, $w1, $w2, $w3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $w2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(i32) = COPY $w3
@@ -89,11 +95,13 @@ body:             |
 ...
 ---
 name:            test_ucmp_i128
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: test_ucmp_i128
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(i64) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(ugt), [[COPY]](i64), [[COPY1]]

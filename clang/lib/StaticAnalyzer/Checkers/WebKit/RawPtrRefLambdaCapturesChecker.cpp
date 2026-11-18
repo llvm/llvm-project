@@ -379,14 +379,15 @@ public:
       LambdaExpr *findLambdaInArg(Expr *E) {
         if (auto *Lambda = dyn_cast_or_null<LambdaExpr>(E))
           return Lambda;
-        auto *TempExpr = dyn_cast_or_null<CXXBindTemporaryExpr>(E);
-        if (!TempExpr)
-          return nullptr;
-        E = TempExpr->getSubExpr()->IgnoreParenCasts();
-        if (!E)
-          return nullptr;
-        if (auto *Lambda = dyn_cast<LambdaExpr>(E))
-          return Lambda;
+        // A temporary of a type with a trivial destructor, such as
+        // WTF::ScopedLambda, isn't wrapped in a CXXBindTemporaryExpr.
+        if (auto *TempExpr = dyn_cast_or_null<CXXBindTemporaryExpr>(E)) {
+          E = TempExpr->getSubExpr()->IgnoreParenCasts();
+          if (!E)
+            return nullptr;
+          if (auto *Lambda = dyn_cast<LambdaExpr>(E))
+            return Lambda;
+        }
         auto *CE = dyn_cast_or_null<CXXConstructExpr>(E);
         if (!CE || !CE->getNumArgs())
           return nullptr;

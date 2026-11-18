@@ -15,8 +15,8 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXP2F_FLOAT_UTILS_H
 
 #include "src/__support/CPP/bit.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 

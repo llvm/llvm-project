@@ -14300,11 +14300,27 @@ tc_40d64c94, TypeMAPPING>, Requires<[HasV65]> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
+def LX_L16b_p_tmp : HInst<
+(outs HlxLR:$Ld16),
+(ins PredRegs:$Pv4, IntRegs:$Rs32),
+"if ($Pv4) $Ld16.tmp = mem($Rs32)",
+tc_aa3b0698, TypeLD>, Enc_88ba65, Requires<[HasV85,UseHLX]> {
+let Inst{8-4} = 0b00100;
+let Inst{13-11} = 0b010;
+let Inst{31-21} = 0b10011000000;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let accessSize = HLXVectorAccess;
+let isHLX = 1;
+let isTmpWrite = 1;
+let mayLoad = 1;
+}
 def LX_L16b_tmp : HInst<
 (outs HlxLR:$Ld16),
 (ins IntRegs:$Rs32),
 "$Ld16.tmp = mem($Rs32)",
-tc_4222e6bf, TypeLD>, Enc_c31661, Requires<[HasV85,UseHLX]> {
+tc_0288f987, TypeLD>, Enc_c31661, Requires<[HasV85,UseHLX]> {
 let Inst{13-4} = 0b0100000000;
 let Inst{31-21} = 0b10011000000;
 let hasNewValue = 1;
@@ -14318,7 +14334,7 @@ def LX_S16b_new : HInst<
 (outs),
 (ins IntRegs:$Rs32, HlxLR:$Ku16),
 "mem($Rs32) = $Ku16.new",
-tc_5deb5e47, TypeST>, Enc_f4847b, Requires<[HasV85,UseHLX]> {
+tc_2662ce86, TypeST>, Enc_f4847b, Requires<[HasV85,UseHLX]> {
 let Inst{13-4} = 0b0000000000;
 let Inst{31-21} = 0b10100100100;
 let accessSize = HLXVectorAccess;
@@ -14332,7 +14348,7 @@ def LX_S16b_p_new : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, HlxLR:$Ku16),
 "if ($Pv4) mem($Rs32) = $Ku16.new",
-tc_5deb5e47, TypeST>, Enc_1d91c3, Requires<[HasV85,UseHLX]> {
+tc_803fd1d6, TypeST>, Enc_1d91c3, Requires<[HasV85,UseHLX]> {
 let Inst{8-4} = 0b00100;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b10100100100;
@@ -14426,7 +14442,7 @@ def LX_absdiff_h : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLR:$Lu16, HlxLR:$Lv16),
 "$Ld16.uh = absdiff($Lu16.h,$Lv16.h)",
-tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1001;
@@ -14440,7 +14456,7 @@ def LX_absdiff_uh : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLR:$Lu16, HlxLR:$Lv16),
 "$Ld16.uh = absdiff($Lu16.uh,$Lv16.uh)",
-tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1001;
@@ -14454,7 +14470,7 @@ def LX_absdiff_uw : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.uw = absdiff($Luu16.uw,$Lvv16.uw)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1001;
@@ -14468,7 +14484,7 @@ def LX_absdiff_w : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.uw = absdiff($Luu16.w,$Lvv16.w)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1001;
@@ -14510,7 +14526,7 @@ def LX_add_hp : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.h = add($Luu16.h,$Lvv16.h)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1010;
@@ -14524,7 +14540,7 @@ def LX_add_hp_sat : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.h = add($Luu16.h,$Lvv16.h):sat",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1010;
@@ -14566,7 +14582,7 @@ def LX_add_uhp_h_sat : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.uh = add($Luu16.h,$Lvv16.h):sat",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1010;
@@ -14580,7 +14596,7 @@ def LX_add_uhp_sat : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.uh = add($Luu16.uh,$Lvv16.uh):sat",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1010;
@@ -14594,7 +14610,7 @@ def LX_add_uw_sat : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.uw = add($Luu16.uw,$Lvv16.uw):sat",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1000;
@@ -14608,7 +14624,7 @@ def LX_add_uw_w_sat : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.uw = add($Luu16.w,$Lvv16.w):sat",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1000;
@@ -14622,7 +14638,7 @@ def LX_add_w : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.w = add($Luu16.w,$Lvv16.w)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1000;
@@ -14636,7 +14652,7 @@ def LX_add_w_sat : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.w = add($Luu16.w,$Lvv16.w):sat",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1000;
@@ -14706,7 +14722,7 @@ def LX_and_w : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16 = and($Luu16,$Lvv16)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1000;
@@ -14734,7 +14750,7 @@ def LX_andn_w : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16 = andn($Luu16,$Lvv16)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1001;
@@ -14844,7 +14860,7 @@ def LX_avg_h : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLR:$Lu16, HlxLR:$Lv16),
 "$Ld16.h = avg($Lu16.h,$Lv16.h)",
-tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1010;
@@ -14858,7 +14874,7 @@ def LX_avg_h_rnd : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLR:$Lu16, HlxLR:$Lv16),
 "$Ld16.h = avg($Lu16.h,$Lv16.h):rnd",
-tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1011;
@@ -14872,7 +14888,7 @@ def LX_avg_uh : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLR:$Lu16, HlxLR:$Lv16),
 "$Ld16.uh = avg($Lu16.uh,$Lv16.uh)",
-tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1010;
@@ -14886,7 +14902,7 @@ def LX_avg_uh_rnd : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLR:$Lu16, HlxLR:$Lv16),
 "$Ld16.uh = avg($Lu16.uh,$Lv16.uh):rnd",
-tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1011;
@@ -14900,7 +14916,7 @@ def LX_avg_uw : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.uw = avg($Luu16.uw,$Lvv16.uw)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1010;
@@ -14914,7 +14930,7 @@ def LX_avg_uw_rnd : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.uw = avg($Luu16.uw,$Lvv16.uw):rnd",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1011;
@@ -14928,7 +14944,7 @@ def LX_avg_w : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.w = avg($Luu16.w,$Lvv16.w)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1010;
@@ -14942,7 +14958,7 @@ def LX_avg_w_rnd : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.w = avg($Luu16.w,$Lvv16.w):rnd",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1011;
@@ -14970,7 +14986,7 @@ def LX_cmp_gt_hp : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.h = cmp.gt($Luu16.h,$Lvv16.h)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1101;
@@ -14998,7 +15014,7 @@ def LX_cmp_gt_uhp : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.h = cmp.gt($Luu16.uh,$Lvv16.uh)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1101;
@@ -15012,7 +15028,7 @@ def LX_cmp_gt_uw : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.w = cmp.gt($Luu16.uw,$Lvv16.uw)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1101;
@@ -15026,7 +15042,7 @@ def LX_cmp_gt_w : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.w = cmp.gt($Luu16.w,$Lvv16.w)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1101;
@@ -15040,7 +15056,7 @@ def LX_combine_w : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLR:$Lu16, HlxLR:$Lv16),
 "$Ldd16 = combine($Lu16,$Lv16)",
-tc_c21d7447, TypeM>, Enc_d9dd88, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_d9dd88, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1000;
@@ -15055,7 +15071,7 @@ def LX_conv_b_h_hi : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLR:$Lu16, HlxLR:$Lv16),
 "$Ld16.b = packhi($Lu16.h,$Lv16.h)",
-tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1101;
@@ -15069,7 +15085,7 @@ def LX_conv_b_h_lo : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLR:$Lu16, HlxLR:$Lv16),
 "$Ld16.b = packlo($Lu16.h,$Lv16.h)",
-tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1101;
@@ -15155,7 +15171,7 @@ def LX_lut4 : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLR:$Lu16, DoubleRegs:$Rtt32),
 "$Ld16.h = lut4($Lu16.uh,$Rtt32.h)",
-tc_c21d7447, TypeM>, Enc_b8c282, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_b8c282, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1000;
@@ -15168,7 +15184,7 @@ def LX_lut4_mask : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLR:$Lu16, DoubleRegs:$Rtt32),
 "$Ld16.h = lut4($Lu16.uh,$Rtt32.h):mask",
-tc_c21d7447, TypeM>, Enc_b8c282, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_b8c282, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1000;
@@ -15181,7 +15197,7 @@ def LX_lut4_sh : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLR:$Lu16, DoubleRegs:$Rtt32),
 "$Ldd16.w = lut4($Lu16.uh,$Rtt32.uh):>>1",
-tc_c21d7447, TypeM>, Enc_9f9d78, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_9f9d78, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1000;
@@ -15194,7 +15210,7 @@ def LX_lut4_sh_neg : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLR:$Lu16, DoubleRegs:$Rtt32),
 "$Ldd16.w = lut4($Lu16.uh,$Rtt32.uh):>>1:neg",
-tc_c21d7447, TypeM>, Enc_9f9d78, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_9f9d78, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1000;
@@ -15221,7 +15237,7 @@ def LX_max_hp : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.h = max($Luu16.h,$Lvv16.h)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1110;
@@ -15249,7 +15265,7 @@ def LX_max_uhp : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.uh = max($Luu16.uh,$Lvv16.uh)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1110;
@@ -15263,7 +15279,7 @@ def LX_max_uw : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.uw = max($Luu16.uw,$Lvv16.uw)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1111;
@@ -15277,7 +15293,7 @@ def LX_max_w : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.w = max($Luu16.w,$Lvv16.w)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1111;
@@ -15305,7 +15321,7 @@ def LX_min_hp : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.h = min($Luu16.h,$Lvv16.h)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1110;
@@ -15333,7 +15349,7 @@ def LX_min_uhp : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.uh = min($Luu16.uh,$Lvv16.uh)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1110;
@@ -15347,7 +15363,7 @@ def LX_min_uw : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.uw = min($Luu16.uw,$Lvv16.uw)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1111;
@@ -15361,7 +15377,7 @@ def LX_min_w : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.w = min($Luu16.w,$Lvv16.w)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1111;
@@ -15375,7 +15391,7 @@ def LX_mpa_uwuhuw_si : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLR:$Lu16, HlxLLR:$Lxx16in, HlxLLR:$Lvv16),
 "$Lxx16.uw = add(mpy($Lu16.uh,hi($Lxx16in).uh),$Lvv16.w)",
-tc_c21d7447, TypeM>, Enc_c0f4b3, Requires<[HasV85,UseHLX]> {
+tc_c39e5579, TypeM>, Enc_c0f4b3, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1101;
@@ -15390,7 +15406,7 @@ def LX_mpa_wh : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLLR:$Lxx16in, HlxLR:$Lu16, HlxLR:$Lv16),
 "$Lxx16.w += mpy($Lu16.h,$Lv16.h)",
-tc_c21d7447, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
+tc_c39e5579, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1010;
@@ -15405,7 +15421,7 @@ def LX_mpa_wh_hi : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLR:$Lu16, HlxLR:$Lv16, HlxLLR:$Lxx16in),
 "$Lxx16.uw = add(mpy($Lu16.h,$Lv16.uh),hi($Lxx16in).uh)",
-tc_c21d7447, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
+tc_c39e5579, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1100;
@@ -15420,7 +15436,7 @@ def LX_mpa_whuh : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLLR:$Lxx16in, HlxLR:$Lu16, HlxLR:$Lv16),
 "$Lxx16.w += mpy($Lu16.h,$Lv16.uh)",
-tc_c21d7447, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
+tc_c39e5579, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1010;
@@ -15435,7 +15451,7 @@ def LX_mpa_whuh_lo : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLR:$Lu16, HlxLR:$Lv16, HlxLLR:$Lxx16in),
 "$Lxx16.w = add(mpy($Lu16.h,$Lv16.uh),lo($Lxx16in).uh)",
-tc_c21d7447, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
+tc_c39e5579, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1011;
@@ -15450,7 +15466,7 @@ def LX_mpa_wuh : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLLR:$Lxx16in, HlxLR:$Lu16, HlxLR:$Lv16),
 "$Lxx16.w += mpy($Lu16.uh,$Lv16.uh)",
-tc_c21d7447, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
+tc_c39e5579, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1001;
@@ -15465,7 +15481,7 @@ def LX_mpa_wuh_hi : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLR:$Lu16, HlxLR:$Lv16, HlxLLR:$Lxx16in),
 "$Lxx16.uw = add(mpy($Lu16.uh,$Lv16.uh),hi($Lxx16in).uh)",
-tc_c21d7447, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
+tc_c39e5579, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1100;
@@ -15480,7 +15496,7 @@ def LX_mpa_wuh_lo : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLR:$Lu16, HlxLR:$Lv16, HlxLLR:$Lxx16in),
 "$Lxx16.uw = add(mpy($Lu16.uh,$Lv16.uh),lo($Lxx16in).uh)",
-tc_c21d7447, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
+tc_c39e5579, TypeM>, Enc_80f47e, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1011;
@@ -15495,7 +15511,7 @@ def LX_mpa_wuhw_si : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLR:$Lu16, HlxLLR:$Lxx16in, HlxLLR:$Lvv16),
 "$Lxx16.w = add(mpy($Lu16.uh,hi($Lxx16in).h),$Lvv16.w)",
-tc_c21d7447, TypeM>, Enc_c0f4b3, Requires<[HasV85,UseHLX]> {
+tc_c39e5579, TypeM>, Enc_c0f4b3, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1101;
@@ -15510,7 +15526,7 @@ def LX_mpar_uwuhuw_si : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLR:$Lu16, HlxLLR:$Lxx16in, IntRegs:$Rt32),
 "$Lxx16.uw = add(mpy($Lu16.uh,hi($Lxx16in).uh),$Rt32.w)",
-tc_c21d7447, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
+tc_c39e5579, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1101;
@@ -15524,7 +15540,7 @@ def LX_mpar_wh : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLLR:$Lxx16in, HlxLR:$Lu16, IntRegs:$Rt32),
 "$Lxx16.w += mpy($Lu16.h,$Rt32.h)",
-tc_c21d7447, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
+tc_c39e5579, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1010;
@@ -15538,7 +15554,7 @@ def LX_mpar_wh_hi : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLR:$Lu16, IntRegs:$Rt32, HlxLLR:$Lxx16in),
 "$Lxx16.uw = add(mpy($Lu16.h,$Rt32.uh),hi($Lxx16in).uh)",
-tc_c21d7447, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
+tc_c39e5579, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1100;
@@ -15552,7 +15568,7 @@ def LX_mpar_whuh : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLLR:$Lxx16in, HlxLR:$Lu16, IntRegs:$Rt32),
 "$Lxx16.w += mpy($Lu16.h,$Rt32.uh)",
-tc_c21d7447, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
+tc_c39e5579, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1010;
@@ -15566,7 +15582,7 @@ def LX_mpar_whuh_lo : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLR:$Lu16, IntRegs:$Rt32, HlxLLR:$Lxx16in),
 "$Lxx16.w = add(mpy($Lu16.h,$Rt32.uh),lo($Lxx16in).uh)",
-tc_c21d7447, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
+tc_c39e5579, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1011;
@@ -15580,7 +15596,7 @@ def LX_mpar_wuh : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLLR:$Lxx16in, HlxLR:$Lu16, IntRegs:$Rt32),
 "$Lxx16.w += mpy($Lu16.uh,$Rt32.uh)",
-tc_c21d7447, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
+tc_c39e5579, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1001;
@@ -15594,7 +15610,7 @@ def LX_mpar_wuh_hi : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLR:$Lu16, IntRegs:$Rt32, HlxLLR:$Lxx16in),
 "$Lxx16.uw = add(mpy($Lu16.uh,$Rt32.uh),hi($Lxx16in).uh)",
-tc_c21d7447, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
+tc_c39e5579, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1100;
@@ -15608,7 +15624,7 @@ def LX_mpar_wuh_lo : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLR:$Lu16, IntRegs:$Rt32, HlxLLR:$Lxx16in),
 "$Lxx16.uw = add(mpy($Lu16.uh,$Rt32.uh),lo($Lxx16in).uh)",
-tc_c21d7447, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
+tc_c39e5579, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1011;
@@ -15622,7 +15638,7 @@ def LX_mpar_wuhw_si : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLR:$Lu16, HlxLLR:$Lxx16in, IntRegs:$Rt32),
 "$Lxx16.w = add(mpy($Lu16.uh,hi($Lxx16in).h),$Rt32.w)",
-tc_c21d7447, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
+tc_c39e5579, TypeM>, Enc_e1d26b, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1101;
@@ -15636,7 +15652,7 @@ def LX_mpy_uw_uh : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLR:$Lu16, HlxLR:$Lv16),
 "$Ldd16.uw = mpy($Lu16.uh,$Lv16.uh)",
-tc_c21d7447, TypeM>, Enc_d9dd88, Requires<[HasV85,UseHLX]> {
+tc_206d49bb, TypeM>, Enc_d9dd88, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1000;
@@ -15650,7 +15666,7 @@ def LX_mpy_w_h : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLR:$Lu16, HlxLR:$Lv16),
 "$Ldd16.w = mpy($Lu16.h,$Lv16.h)",
-tc_c21d7447, TypeM>, Enc_d9dd88, Requires<[HasV85,UseHLX]> {
+tc_206d49bb, TypeM>, Enc_d9dd88, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1001;
@@ -15664,7 +15680,7 @@ def LX_mpy_w_huh : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLR:$Lu16, HlxLR:$Lv16),
 "$Ldd16.w = mpy($Lu16.h,$Lv16.uh)",
-tc_c21d7447, TypeM>, Enc_d9dd88, Requires<[HasV85,UseHLX]> {
+tc_206d49bb, TypeM>, Enc_d9dd88, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1000;
@@ -15678,7 +15694,7 @@ def LX_mpyr_uw_uh : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLR:$Lu16, IntRegs:$Rt32),
 "$Ldd16.uw = mpy($Lu16.uh,$Rt32.uh)",
-tc_c21d7447, TypeM>, Enc_5fe423, Requires<[HasV85,UseHLX]> {
+tc_206d49bb, TypeM>, Enc_5fe423, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1000;
@@ -15691,7 +15707,7 @@ def LX_mpyr_w_h : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLR:$Lu16, IntRegs:$Rt32),
 "$Ldd16.w = mpy($Lu16.h,$Rt32.h)",
-tc_c21d7447, TypeM>, Enc_5fe423, Requires<[HasV85,UseHLX]> {
+tc_206d49bb, TypeM>, Enc_5fe423, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1001;
@@ -15704,7 +15720,7 @@ def LX_mpyr_w_huh : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLR:$Lu16, IntRegs:$Rt32),
 "$Ldd16.w = mpy($Lu16.h,$Rt32.uh)",
-tc_c21d7447, TypeM>, Enc_5fe423, Requires<[HasV85,UseHLX]> {
+tc_206d49bb, TypeM>, Enc_5fe423, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1000;
@@ -15744,7 +15760,7 @@ def LX_navg_h : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLR:$Lu16, HlxLR:$Lv16),
 "$Ld16.h = navg($Lu16.h,$Lv16.h)",
-tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1100;
@@ -15758,7 +15774,7 @@ def LX_navg_uh : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLR:$Lu16, HlxLR:$Lv16),
 "$Ld16.h = navg($Lu16.uh,$Lv16.uh)",
-tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1100;
@@ -15772,7 +15788,7 @@ def LX_navg_uw : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.w = navg($Luu16.uw,$Lvv16.uw)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1100;
@@ -15786,7 +15802,7 @@ def LX_navg_w : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.w = navg($Luu16.w,$Lvv16.w)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1100;
@@ -15840,7 +15856,7 @@ def LX_or_w : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16 = or($Luu16,$Lvv16)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1000;
@@ -15868,7 +15884,7 @@ def LX_orn_w : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16 = orn($Luu16,$Lvv16)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1001;
@@ -15882,7 +15898,7 @@ def LX_shr_h : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLR:$Lu16, HlxLR:$Lv16),
 "$Ld16.h = shr($Lu16.h,$Lv16.h)",
-tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1010;
@@ -15896,7 +15912,7 @@ def LX_shr_h_w_rnd_sat : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLLR:$Luu16, HlxLR:$Lv16),
 "$Ld16.h = shr($Luu16.w,$Lv16.h):rnd:sat",
-tc_c21d7447, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1101;
@@ -15910,7 +15926,7 @@ def LX_shr_h_w_sat : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLLR:$Luu16, HlxLR:$Lv16),
 "$Ld16.h = shr($Luu16.w,$Lv16.h):sat",
-tc_c21d7447, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1100;
@@ -15924,7 +15940,7 @@ def LX_shr_h_w_uh : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLLR:$Luu16, HlxLR:$Lv16),
 "$Ld16.h = shr($Luu16.w,$Lv16.uh)",
-tc_c21d7447, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1100;
@@ -15938,7 +15954,7 @@ def LX_shr_uh_uh : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLR:$Lu16, HlxLR:$Lv16),
 "$Ld16.uh = shr($Lu16.uh,$Lv16.h)",
-tc_c21d7447, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_449311, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1010;
@@ -15952,7 +15968,7 @@ def LX_shr_uh_uw_rnd_sat : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLLR:$Luu16, HlxLR:$Lv16),
 "$Ld16.uh = shr($Luu16.uw,$Lv16.h):rnd:sat",
-tc_c21d7447, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1110;
@@ -15966,7 +15982,7 @@ def LX_shr_uh_uw_sat : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLLR:$Luu16, HlxLR:$Lv16),
 "$Ld16.uh = shr($Luu16.uw,$Lv16.h):sat",
-tc_c21d7447, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1111;
@@ -15980,7 +15996,7 @@ def LX_shr_uh_w_rnd_sat : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLLR:$Luu16, HlxLR:$Lv16),
 "$Ld16.uh = shr($Luu16.w,$Lv16.h):rnd:sat",
-tc_c21d7447, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1110;
@@ -15994,7 +16010,7 @@ def LX_shr_uh_w_sat : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLLR:$Luu16, HlxLR:$Lv16),
 "$Ld16.uh = shr($Luu16.w,$Lv16.h):sat",
-tc_c21d7447, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_bc47d4, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1101;
@@ -16008,7 +16024,7 @@ def LX_shr_uw_uw : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLR:$Lv16),
 "$Ldd16.uw = shr($Luu16.uw,$Lv16.h)",
-tc_c21d7447, TypeM>, Enc_ffaf7c, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_ffaf7c, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1011;
@@ -16022,7 +16038,7 @@ def LX_shr_w_w : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLR:$Lv16),
 "$Ldd16.w = shr($Luu16.w,$Lv16.h)",
-tc_c21d7447, TypeM>, Enc_ffaf7c, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_ffaf7c, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1011;
@@ -16036,7 +16052,7 @@ def LX_shra_h_h : HInst<
 (outs HlxLR:$Lx16),
 (ins HlxLR:$Lx16in, HlxLR:$Lu16, HlxLR:$Lv16),
 "$Lx16.h += shr($Lu16.h,$Lv16.h)",
-tc_c21d7447, TypeM>, Enc_649e79, Requires<[HasV85,UseHLX]> {
+tc_434ba433, TypeM>, Enc_649e79, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1110;
@@ -16051,7 +16067,7 @@ def LX_shra_h_uh : HInst<
 (outs HlxLR:$Lx16),
 (ins HlxLR:$Lx16in, HlxLR:$Lu16, HlxLR:$Lv16),
 "$Lx16.h += shr($Lu16.uh,$Lv16.h)",
-tc_c21d7447, TypeM>, Enc_649e79, Requires<[HasV85,UseHLX]> {
+tc_434ba433, TypeM>, Enc_649e79, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1110;
@@ -16066,7 +16082,7 @@ def LX_shra_w_uw : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLLR:$Lxx16in, HlxLLR:$Luu16, HlxLR:$Lv16),
 "$Lxx16.w += shr($Luu16.uw,$Lv16.h)",
-tc_c21d7447, TypeM>, Enc_4dcf21, Requires<[HasV85,UseHLX]> {
+tc_434ba433, TypeM>, Enc_4dcf21, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1111;
@@ -16081,7 +16097,7 @@ def LX_shra_w_w : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLLR:$Lxx16in, HlxLLR:$Luu16, HlxLR:$Lv16),
 "$Lxx16.w += shr($Luu16.w,$Lv16.h)",
-tc_c21d7447, TypeM>, Enc_4dcf21, Requires<[HasV85,UseHLX]> {
+tc_434ba433, TypeM>, Enc_4dcf21, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1111;
@@ -16096,7 +16112,7 @@ def LX_shrar_h_h : HInst<
 (outs HlxLR:$Lx16),
 (ins HlxLR:$Lx16in, HlxLR:$Lu16, IntRegs:$Rt32),
 "$Lx16.h += shr($Lu16.h,$Rt32.h)",
-tc_c21d7447, TypeM>, Enc_692b4c, Requires<[HasV85,UseHLX]> {
+tc_434ba433, TypeM>, Enc_692b4c, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1110;
@@ -16110,7 +16126,7 @@ def LX_shrar_h_uh : HInst<
 (outs HlxLR:$Lx16),
 (ins HlxLR:$Lx16in, HlxLR:$Lu16, IntRegs:$Rt32),
 "$Lx16.h += shr($Lu16.uh,$Rt32.h)",
-tc_c21d7447, TypeM>, Enc_692b4c, Requires<[HasV85,UseHLX]> {
+tc_434ba433, TypeM>, Enc_692b4c, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1110;
@@ -16124,7 +16140,7 @@ def LX_shrar_w_uw : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLLR:$Lxx16in, HlxLLR:$Luu16, IntRegs:$Rt32),
 "$Lxx16.w += shr($Luu16.uw,$Rt32.h)",
-tc_c21d7447, TypeM>, Enc_569cd5, Requires<[HasV85,UseHLX]> {
+tc_434ba433, TypeM>, Enc_569cd5, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1111;
@@ -16138,7 +16154,7 @@ def LX_shrar_w_w : HInst<
 (outs HlxLLR:$Lxx16),
 (ins HlxLLR:$Lxx16in, HlxLLR:$Luu16, IntRegs:$Rt32),
 "$Lxx16.w += shr($Luu16.w,$Rt32.h)",
-tc_c21d7447, TypeM>, Enc_569cd5, Requires<[HasV85,UseHLX]> {
+tc_434ba433, TypeM>, Enc_569cd5, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1111;
@@ -16152,7 +16168,7 @@ def LX_shrr_h : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLR:$Lu16, IntRegs:$Rt32),
 "$Ld16.h = shr($Lu16.h,$Rt32.h)",
-tc_c21d7447, TypeM>, Enc_62f19e, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_62f19e, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1010;
@@ -16165,7 +16181,7 @@ def LX_shrr_h_w_rnd_sat : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLLR:$Luu16, IntRegs:$Rt32),
 "$Ld16.h = shr($Luu16.w,$Rt32.h):rnd:sat",
-tc_c21d7447, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1101;
@@ -16178,7 +16194,7 @@ def LX_shrr_h_w_sat : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLLR:$Luu16, IntRegs:$Rt32),
 "$Ld16.h = shr($Luu16.w,$Rt32.h):sat",
-tc_c21d7447, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1100;
@@ -16191,7 +16207,7 @@ def LX_shrr_h_w_uh : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLLR:$Luu16, IntRegs:$Rt32),
 "$Ld16.h = shr($Luu16.w,$Rt32.uh)",
-tc_c21d7447, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1100;
@@ -16204,7 +16220,7 @@ def LX_shrr_uh_uh : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLR:$Lu16, IntRegs:$Rt32),
 "$Ld16.uh = shr($Lu16.uh,$Rt32.h)",
-tc_c21d7447, TypeM>, Enc_62f19e, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_62f19e, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1010;
@@ -16217,7 +16233,7 @@ def LX_shrr_uh_uw_rnd_sat : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLLR:$Luu16, IntRegs:$Rt32),
 "$Ld16.uh = shr($Luu16.uw,$Rt32.h):rnd:sat",
-tc_c21d7447, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1110;
@@ -16230,7 +16246,7 @@ def LX_shrr_uh_uw_sat : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLLR:$Luu16, IntRegs:$Rt32),
 "$Ld16.uh = shr($Luu16.uw,$Rt32.h):sat",
-tc_c21d7447, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1111;
@@ -16243,7 +16259,7 @@ def LX_shrr_uh_w_rnd_sat : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLLR:$Luu16, IntRegs:$Rt32),
 "$Ld16.uh = shr($Luu16.w,$Rt32.h):rnd:sat",
-tc_c21d7447, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1110;
@@ -16256,7 +16272,7 @@ def LX_shrr_uh_w_sat : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLLR:$Luu16, IntRegs:$Rt32),
 "$Ld16.uh = shr($Luu16.w,$Rt32.h):sat",
-tc_c21d7447, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_1e93b1, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1101;
@@ -16269,7 +16285,7 @@ def LX_shrr_uw_uw : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, IntRegs:$Rt32),
 "$Ldd16.uw = shr($Luu16.uw,$Rt32.h)",
-tc_c21d7447, TypeM>, Enc_f58d1d, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_f58d1d, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1011;
@@ -16282,7 +16298,7 @@ def LX_shrr_w_w : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, IntRegs:$Rt32),
 "$Ldd16.w = shr($Luu16.w,$Rt32.h)",
-tc_c21d7447, TypeM>, Enc_f58d1d, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_f58d1d, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1011;
@@ -16323,7 +16339,7 @@ def LX_sub_hp : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.h = sub($Luu16.h,$Lvv16.h)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1011;
@@ -16337,7 +16353,7 @@ def LX_sub_hp_sat : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.h = sub($Luu16.h,$Lvv16.h):sat",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1011;
@@ -16351,7 +16367,7 @@ def LX_sub_ilog2_h : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLR:$Lu16, u4_0Imm:$Ii),
 "$Ld16.h = sub(ilog2($Lu16.h),#$Ii)",
-tc_c21d7447, TypeM>, Enc_3286a7, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_3286a7, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1001;
@@ -16365,7 +16381,7 @@ def LX_sub_ilog2_uh : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLR:$Lu16, u4_0Imm:$Ii),
 "$Ld16.h = sub(ilog2($Lu16.uh),#$Ii)",
-tc_c21d7447, TypeM>, Enc_3286a7, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_3286a7, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1001;
@@ -16379,7 +16395,7 @@ def LX_sub_ilog2_uw : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLLR:$Luu16, u5_0Imm:$Ii),
 "$Ld16.h = sub(ilog2($Luu16.uw),#$Ii)",
-tc_c21d7447, TypeM>, Enc_5734a8, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_5734a8, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1001;
@@ -16392,7 +16408,7 @@ def LX_sub_ilog2_w : HInst<
 (outs HlxLR:$Ld16),
 (ins HlxLLR:$Luu16, u5_0Imm:$Ii),
 "$Ld16.h = sub(ilog2($Luu16.w),#$Ii)",
-tc_c21d7447, TypeM>, Enc_5734a8, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_5734a8, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1001;
@@ -16433,7 +16449,7 @@ def LX_sub_uhp_h_sat : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.uh = sub($Luu16.h,$Lvv16.h):sat",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1011;
@@ -16447,7 +16463,7 @@ def LX_sub_uhp_sat : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.uh = sub($Luu16.uh,$Lvv16.uh):sat",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1011;
@@ -16461,7 +16477,7 @@ def LX_sub_uw_sat : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.uw = sub($Luu16.uw,$Lvv16.uw):sat",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1001;
@@ -16475,7 +16491,7 @@ def LX_sub_uw_w_sat : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.uw = sub($Luu16.w,$Lvv16.w):sat",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1001;
@@ -16489,7 +16505,7 @@ def LX_sub_w : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.w = sub($Luu16.w,$Lvv16.w)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1001;
@@ -16503,7 +16519,7 @@ def LX_sub_w_sat : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16.w = sub($Luu16.w,$Lvv16.w):sat",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b1;
 let Inst{5-5} = 0b0;
 let Inst{13-10} = 0b1001;
@@ -16573,7 +16589,7 @@ def LX_xor_w : HInst<
 (outs HlxLLR:$Ldd16),
 (ins HlxLLR:$Luu16, HlxLLR:$Lvv16),
 "$Ldd16 = xor($Luu16,$Lvv16)",
-tc_c21d7447, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeM>, Enc_4a9228, Requires<[HasV85,UseHLX]> {
 let Inst{0-0} = 0b0;
 let Inst{5-5} = 0b1;
 let Inst{13-10} = 0b1000;
@@ -16598,7 +16614,7 @@ def LX_zero_w : HInst<
 (outs HlxLLR:$Ldd16),
 (ins),
 "$Ldd16 = #0",
-tc_c21d7447, TypeMAPPING>, Requires<[HasV85,UseHLX]> {
+tc_0ab1c240, TypeMAPPING>, Requires<[HasV85,UseHLX]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isHLX = 1;
