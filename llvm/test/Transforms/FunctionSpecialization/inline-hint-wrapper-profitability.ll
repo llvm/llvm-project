@@ -86,13 +86,13 @@ declare void @consume_a(i32)
 declare void @consume_b(i32)
 ; CHECK-LABEL: define i32 @hinted_true(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @hinted(i1 true, i32 [[X]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @hinted.specialized.1(i1 true, i32 [[X]])
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
 ;
 ; CHECK-LABEL: define i32 @hinted_false(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @hinted(i1 false, i32 [[X]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @hinted.specialized.2(i1 false, i32 [[X]])
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
 ;
@@ -105,20 +105,6 @@ declare void @consume_b(i32)
 ; CHECK-LABEL: define i32 @plain_false(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @plain(i1 false, i32 [[X]])
-; CHECK-NEXT:    ret i32 [[RESULT]]
-;
-;
-; CHECK-LABEL: define internal i32 @hinted(
-; CHECK-SAME: i1 [[FLAG:%.*]], i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    br i1 [[FLAG]], label %[[THEN:.*]], label %[[ELSE:.*]]
-; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[A:%.*]] = call i32 @use_a(i32 [[X]])
-; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[ELSE]]:
-; CHECK-NEXT:    [[B:%.*]] = call i32 @use_b(i32 [[X]])
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RESULT:%.*]] = phi i32 [ [[A]], %[[THEN]] ], [ [[B]], %[[ELSE]] ]
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
 ;
@@ -138,26 +124,54 @@ declare void @consume_b(i32)
 ;
 ; CHECK-LABEL: define void @void_true(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    call void @void_target(i1 true, i32 [[X]])
+; CHECK-NEXT:    call void @void_target.specialized.3(i1 true, i32 [[X]])
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define void @void_false(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    call void @void_target(i1 false, i32 [[X]])
+; CHECK-NEXT:    call void @void_target.specialized.4(i1 false, i32 [[X]])
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal void @void_target(
+; CHECK-LABEL: define internal i32 @hinted.specialized.1(
+; CHECK-SAME: i1 [[FLAG:%.*]], i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    br label %[[THEN:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[A:%.*]] = call i32 @use_a(i32 [[X]])
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[A]]
+;
+;
+; CHECK-LABEL: define internal i32 @hinted.specialized.2(
+; CHECK-SAME: i1 [[FLAG:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    br label %[[ELSE:.*]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    [[B:%.*]] = call i32 @use_b(i32 [[X]])
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[B]]
+;
+;
+; CHECK-LABEL: define internal void @void_target.specialized.3(
 ; CHECK-SAME: i1 [[FLAG:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[VALUE:%.*]] = add i32 [[X]], 1
-; CHECK-NEXT:    br i1 [[FLAG]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK-NEXT:    br label %[[THEN:.*]]
 ; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    call void @consume_a(i32 [[VALUE]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+;
+; CHECK-LABEL: define internal void @void_target.specialized.4(
+; CHECK-SAME: i1 [[FLAG:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[VALUE:%.*]] = add i32 [[X]], 1
+; CHECK-NEXT:    br label %[[ELSE:.*]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    call void @consume_b(i32 [[VALUE]])
-; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

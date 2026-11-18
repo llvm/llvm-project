@@ -55,28 +55,34 @@ declare i32 @use_a(i32)
 declare i32 @use_b(i32)
 ; RESIDUAL-LABEL: define i32 @true_wrapper(
 ; RESIDUAL-SAME: i32 [[X:%.*]]) {
-; RESIDUAL-NEXT:    [[RESULT:%.*]] = call i32 @target(i1 true, i32 [[X]])
+; RESIDUAL-NEXT:    [[RESULT:%.*]] = call i32 @target.specialized.1(i1 true, i32 [[X]])
 ; RESIDUAL-NEXT:    ret i32 [[RESULT]]
 ;
 ;
 ; RESIDUAL-LABEL: define i32 @false_wrapper(
 ; RESIDUAL-SAME: i32 [[X:%.*]]) {
-; RESIDUAL-NEXT:    [[RESULT:%.*]] = call i32 @target(i1 false, i32 [[X]])
+; RESIDUAL-NEXT:    [[RESULT:%.*]] = call i32 @target.specialized.2(i1 false, i32 [[X]])
 ; RESIDUAL-NEXT:    ret i32 [[RESULT]]
 ;
 ;
-; RESIDUAL-LABEL: define internal i32 @target(
+; RESIDUAL-LABEL: define internal i32 @target.specialized.1(
 ; RESIDUAL-SAME: i1 [[FLAG:%.*]], i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; RESIDUAL-NEXT:    br i1 [[FLAG]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; RESIDUAL-NEXT:    br label %[[THEN:.*]]
 ; RESIDUAL:       [[THEN]]:
 ; RESIDUAL-NEXT:    [[A:%.*]] = call i32 @use_a(i32 [[X]])
 ; RESIDUAL-NEXT:    br label %[[EXIT:.*]]
+; RESIDUAL:       [[EXIT]]:
+; RESIDUAL-NEXT:    ret i32 [[A]]
+;
+;
+; RESIDUAL-LABEL: define internal i32 @target.specialized.2(
+; RESIDUAL-SAME: i1 [[FLAG:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
+; RESIDUAL-NEXT:    br label %[[ELSE:.*]]
 ; RESIDUAL:       [[ELSE]]:
 ; RESIDUAL-NEXT:    [[B:%.*]] = call i32 @use_b(i32 [[X]])
-; RESIDUAL-NEXT:    br label %[[EXIT]]
+; RESIDUAL-NEXT:    br label %[[EXIT:.*]]
 ; RESIDUAL:       [[EXIT]]:
-; RESIDUAL-NEXT:    [[RESULT:%.*]] = phi i32 [ [[A]], %[[THEN]] ], [ [[B]], %[[ELSE]] ]
-; RESIDUAL-NEXT:    ret i32 [[RESULT]]
+; RESIDUAL-NEXT:    ret i32 [[B]]
 ;
 ;
 ; BOUNDARY-LABEL: define i32 @true_wrapper(

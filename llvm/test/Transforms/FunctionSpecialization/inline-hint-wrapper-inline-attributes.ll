@@ -190,28 +190,34 @@ declare i32 @use_b(i32)
 ;
 ; INLINE-LABEL: define i32 @noinline_wrapper_true(
 ; INLINE-SAME: i32 [[X:%.*]]) #[[ATTR3]] {
-; INLINE-NEXT:    [[RESULT:%.*]] = call i32 @noinline_wrapper_target(i1 true, i32 [[X]])
+; INLINE-NEXT:    [[RESULT:%.*]] = call i32 @noinline_wrapper_target.specialized.1(i1 true, i32 [[X]])
 ; INLINE-NEXT:    ret i32 [[RESULT]]
 ;
 ;
 ; INLINE-LABEL: define i32 @noinline_wrapper_false(
 ; INLINE-SAME: i32 [[X:%.*]]) #[[ATTR3]] {
-; INLINE-NEXT:    [[RESULT:%.*]] = call i32 @noinline_wrapper_target(i1 false, i32 [[X]])
+; INLINE-NEXT:    [[RESULT:%.*]] = call i32 @noinline_wrapper_target.specialized.2(i1 false, i32 [[X]])
 ; INLINE-NEXT:    ret i32 [[RESULT]]
 ;
 ;
-; INLINE-LABEL: define internal i32 @noinline_wrapper_target(
+; INLINE-LABEL: define internal i32 @noinline_wrapper_target.specialized.1(
 ; INLINE-SAME: i1 [[FLAG:%.*]], i32 [[X:%.*]]) #[[ATTR1]] {
-; INLINE-NEXT:    br i1 [[FLAG]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; INLINE-NEXT:    br label %[[THEN:.*]]
 ; INLINE:       [[THEN]]:
 ; INLINE-NEXT:    [[A:%.*]] = call i32 @use_a(i32 [[X]])
 ; INLINE-NEXT:    br label %[[EXIT:.*]]
+; INLINE:       [[EXIT]]:
+; INLINE-NEXT:    ret i32 [[A]]
+;
+;
+; INLINE-LABEL: define internal i32 @noinline_wrapper_target.specialized.2(
+; INLINE-SAME: i1 [[FLAG:%.*]], i32 [[X:%.*]]) #[[ATTR1]] {
+; INLINE-NEXT:    br label %[[ELSE:.*]]
 ; INLINE:       [[ELSE]]:
 ; INLINE-NEXT:    [[B:%.*]] = call i32 @use_b(i32 [[X]])
-; INLINE-NEXT:    br label %[[EXIT]]
+; INLINE-NEXT:    br label %[[EXIT:.*]]
 ; INLINE:       [[EXIT]]:
-; INLINE-NEXT:    [[RESULT:%.*]] = phi i32 [ [[A]], %[[THEN]] ], [ [[B]], %[[ELSE]] ]
-; INLINE-NEXT:    ret i32 [[RESULT]]
+; INLINE-NEXT:    ret i32 [[B]]
 ;
 ;
 ; LATENCY-LABEL: define i32 @callee_noinline_true(

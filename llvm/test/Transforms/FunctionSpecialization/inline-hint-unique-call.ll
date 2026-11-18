@@ -232,7 +232,7 @@ declare i32 @use_ptr_b(ptr, i32)
 ;
 ; CHECK-LABEL: define i32 @shared_different(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @shared(i1 false, i32 [[X]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @shared.specialized.1(i1 false, i32 [[X]])
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
 ;
@@ -274,7 +274,7 @@ declare i32 @use_ptr_b(ptr, i32)
 ;
 ; CHECK-LABEL: define i32 @skipped_different(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @skipped(i1 false, i32 [[X]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @skipped.specialized.2(i1 false, i32 [[X]])
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
 ;
@@ -310,13 +310,13 @@ declare i32 @use_ptr_b(ptr, i32)
 ;
 ; CHECK-LABEL: define i32 @recursive_false(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @recursive_target(i1 false, i32 [[X]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @recursive_target.specialized.3(i1 false, i32 [[X]])
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
 ;
 ; CHECK-LABEL: define i32 @joint_true(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @joint(i1 true, i1 true, i32 [[X]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @joint.specialized.4(i1 true, i1 true, i32 [[X]])
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
 ;
@@ -433,4 +433,46 @@ declare i32 @use_ptr_b(ptr, i32)
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RESULT:%.*]] = phi i32 [ [[A]], %[[THEN]] ], [ [[B]], %[[ELSE]] ], [ [[C]], %[[OTHER]] ]
 ; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+;
+; CHECK-LABEL: define internal i32 @shared.specialized.1(
+; CHECK-SAME: i1 [[FLAG:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    br label %[[ELSE:.*]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    [[B:%.*]] = call i32 @use_b(i32 [[X]])
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[B]]
+;
+;
+; CHECK-LABEL: define internal i32 @skipped.specialized.2(
+; CHECK-SAME: i1 [[FLAG:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    br label %[[ELSE:.*]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    [[B:%.*]] = call i32 @use_b(i32 [[X]])
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[B]]
+;
+;
+; CHECK-LABEL: define internal i32 @recursive_target.specialized.3(
+; CHECK-SAME: i1 [[FLAG:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    br label %[[ELSE:.*]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    [[B:%.*]] = call i32 @use_b(i32 [[X]])
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[B]]
+;
+;
+; CHECK-LABEL: define internal i32 @joint.specialized.4(
+; CHECK-SAME: i1 [[FLAG:%.*]], i1 [[MODE:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    br label %[[DISPATCH:.*]]
+; CHECK:       [[DISPATCH]]:
+; CHECK-NEXT:    br label %[[THEN:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[A:%.*]] = call i32 @use_a(i32 [[X]])
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[A]]
 ;
