@@ -154,5 +154,8 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/PollyConfig.cmake"
     "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/PollyConfigVersion.cmake"
     "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${POLLY_EXPORTS_FILE_NAME}"
-    DESTINATION "${POLLY_INSTALL_PACKAGE_DIR}")
+    DESTINATION "${POLLY_INSTALL_PACKAGE_DIR}"
+    COMPONENT polly-cmake-exports)
+  add_llvm_install_targets(install-polly-cmake-exports
+    COMPONENT polly-cmake-exports)
 endif ()
