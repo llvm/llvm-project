@@ -12,3 +12,11 @@ subroutine s2()
   allocate(b(10))
   c = 1.0
 end subroutine
+
+! blanket SAVE statement
+subroutine s3()
+  !ERROR: Saved object 'a' in host code may not have ATTRIBUTES(MANAGED) unless allocatable
+  real, managed :: a(10)
+  save
+  a = 1.0
+end subroutine
