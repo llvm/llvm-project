@@ -3,14 +3,14 @@
 ; RUN: opt -S -mtriple=amdgpu9.50-amd-amdhsa -passes=slp-vectorizer < %s | FileCheck -check-prefixes=GFX950 %s
 ; RUN: opt -S -mtriple=amdgpu12.50-amd-amdhsa -passes=slp-vectorizer < %s | FileCheck -check-prefixes=GFX1250 %s
 
-; Reduced from an MXFP softmax kernel on gfx1250. Packed-f32 pair formation
-; is priced too high for these shapes, so both stay scalar. gfx900 has no
-; packed f32 ops; gfx950 does. The three targets produce the same IR, and
-; each has its own checks.
+; Reduced from an MXFP softmax kernel on gfx1250. Packed-f32 pair formation is
+; priced by scalar users, so gfx1250 forms the pairs in both shapes. gfx900 and
+; gfx950 keep both shapes scalar. The three targets each have their own checks.
 
 ; The softmax scale is multiplied into two lanes of a loaded pair, and each
-; product is then broadcast over a <4 x float> operand. The two fmuls stay
-; scalar, and each product is splatted with its own insertelement.
+; product is then broadcast over a <4 x float> operand. On gfx1250 the two
+; scalar fmuls become one <2 x float> fmul whose lanes are splatted; gfx900 and
+; gfx950 keep them scalar.
 define amdgpu_kernel void @softmax_scale_splat(ptr addrspace(3) %in, ptr addrspace(3) %out, float %scale, <4 x float> %x0, <4 x float> %x1) {
 ; GFX900-LABEL: define amdgpu_kernel void @softmax_scale_splat(
 ; GFX900-SAME: ptr addrspace(3) [[IN:%.*]], ptr addrspace(3) [[OUT:%.*]], float [[SCALE:%.*]], <4 x float> [[X0:%.*]], <4 x float> [[X1:%.*]]) {
@@ -51,14 +51,13 @@ define amdgpu_kernel void @softmax_scale_splat(ptr addrspace(3) %in, ptr addrspa
 ; GFX1250-LABEL: define amdgpu_kernel void @softmax_scale_splat(
 ; GFX1250-SAME: ptr addrspace(3) [[IN:%.*]], ptr addrspace(3) [[OUT:%.*]], float [[SCALE:%.*]], <4 x float> [[X0:%.*]], <4 x float> [[X1:%.*]]) {
 ; GFX1250-NEXT:    [[M:%.*]] = load <2 x float>, ptr addrspace(3) [[IN]], align 16
-; GFX1250-NEXT:    [[M0:%.*]] = extractelement <2 x float> [[M]], i64 0
-; GFX1250-NEXT:    [[M1:%.*]] = extractelement <2 x float> [[M]], i64 1
-; GFX1250-NEXT:    [[B0:%.*]] = fmul float [[SCALE]], [[M0]]
-; GFX1250-NEXT:    [[B1:%.*]] = fmul float [[SCALE]], [[M1]]
-; GFX1250-NEXT:    [[I0:%.*]] = insertelement <4 x float> poison, float [[B0]], i64 0
-; GFX1250-NEXT:    [[S0:%.*]] = shufflevector <4 x float> [[I0]], <4 x float> poison, <4 x i32> zeroinitializer
-; GFX1250-NEXT:    [[I1:%.*]] = insertelement <4 x float> poison, float [[B1]], i64 0
-; GFX1250-NEXT:    [[S1:%.*]] = shufflevector <4 x float> [[I1]], <4 x float> poison, <4 x i32> zeroinitializer
+; GFX1250-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[SCALE]], i64 0
+; GFX1250-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
+; GFX1250-NEXT:    [[TMP3:%.*]] = fmul <2 x float> [[TMP2]], [[M]]
+; GFX1250-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
+; GFX1250-NEXT:    [[S0:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> poison, <4 x i32> zeroinitializer
+; GFX1250-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; GFX1250-NEXT:    [[S1:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> poison, <4 x i32> zeroinitializer
 ; GFX1250-NEXT:    [[R0:%.*]] = fsub <4 x float> [[X0]], [[S0]]
 ; GFX1250-NEXT:    [[R1:%.*]] = fsub <4 x float> [[X1]], [[S1]]
 ; GFX1250-NEXT:    store <4 x float> [[R0]], ptr addrspace(3) [[OUT]], align 16
@@ -84,8 +83,9 @@ define amdgpu_kernel void @softmax_scale_splat(ptr addrspace(3) %in, ptr addrspa
 }
 
 ; The row sums of two <4 x float> accumulators are reduced lane by lane and
-; the two sums are stored as a pair. The reduction stays six scalar fadds, and
-; the stored pair is built with insertelement.
+; the two sums are stored as a pair. On gfx1250 the three fadd pairs are formed
+; from shuffles of the two accumulators instead of six scalar fadds; gfx900 and
+; gfx950 keep the six scalar fadds.
 define amdgpu_kernel void @softmax_row_sum(ptr addrspace(3) %out, <4 x float> %p, <4 x float> %q) {
 ; GFX900-LABEL: define amdgpu_kernel void @softmax_row_sum(
 ; GFX900-SAME: ptr addrspace(3) [[OUT:%.*]], <4 x float> [[P:%.*]], <4 x float> [[Q:%.*]]) {
@@ -131,23 +131,14 @@ define amdgpu_kernel void @softmax_row_sum(ptr addrspace(3) %out, <4 x float> %p
 ;
 ; GFX1250-LABEL: define amdgpu_kernel void @softmax_row_sum(
 ; GFX1250-SAME: ptr addrspace(3) [[OUT:%.*]], <4 x float> [[P:%.*]], <4 x float> [[Q:%.*]]) {
-; GFX1250-NEXT:    [[P0:%.*]] = extractelement <4 x float> [[P]], i64 0
-; GFX1250-NEXT:    [[P1:%.*]] = extractelement <4 x float> [[P]], i64 1
-; GFX1250-NEXT:    [[P2:%.*]] = extractelement <4 x float> [[P]], i64 2
-; GFX1250-NEXT:    [[P3:%.*]] = extractelement <4 x float> [[P]], i64 3
-; GFX1250-NEXT:    [[Q0:%.*]] = extractelement <4 x float> [[Q]], i64 0
-; GFX1250-NEXT:    [[Q1:%.*]] = extractelement <4 x float> [[Q]], i64 1
-; GFX1250-NEXT:    [[Q2:%.*]] = extractelement <4 x float> [[Q]], i64 2
-; GFX1250-NEXT:    [[Q3:%.*]] = extractelement <4 x float> [[Q]], i64 3
-; GFX1250-NEXT:    [[PA:%.*]] = fadd float [[P0]], [[P1]]
-; GFX1250-NEXT:    [[PB:%.*]] = fadd float [[P2]], [[P3]]
-; GFX1250-NEXT:    [[PS:%.*]] = fadd float [[PA]], [[PB]]
-; GFX1250-NEXT:    [[QA:%.*]] = fadd float [[Q0]], [[Q1]]
-; GFX1250-NEXT:    [[QB:%.*]] = fadd float [[Q2]], [[Q3]]
-; GFX1250-NEXT:    [[QS:%.*]] = fadd float [[QA]], [[QB]]
-; GFX1250-NEXT:    [[V0:%.*]] = insertelement <2 x float> poison, float [[PS]], i64 0
-; GFX1250-NEXT:    [[V1:%.*]] = insertelement <2 x float> [[V0]], float [[QS]], i64 1
-; GFX1250-NEXT:    store <2 x float> [[V1]], ptr addrspace(3) [[OUT]], align 8
+; GFX1250-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[P]], <4 x float> [[Q]], <2 x i32> <i32 0, i32 4>
+; GFX1250-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[P]], <4 x float> [[Q]], <2 x i32> <i32 1, i32 5>
+; GFX1250-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[TMP1]], [[TMP2]]
+; GFX1250-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[P]], <4 x float> [[Q]], <2 x i32> <i32 2, i32 6>
+; GFX1250-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[P]], <4 x float> [[Q]], <2 x i32> <i32 3, i32 7>
+; GFX1250-NEXT:    [[TMP6:%.*]] = fadd <2 x float> [[TMP4]], [[TMP5]]
+; GFX1250-NEXT:    [[TMP7:%.*]] = fadd <2 x float> [[TMP3]], [[TMP6]]
+; GFX1250-NEXT:    store <2 x float> [[TMP7]], ptr addrspace(3) [[OUT]], align 8
 ; GFX1250-NEXT:    ret void
 ;
   %p0 = extractelement <4 x float> %p, i64 0

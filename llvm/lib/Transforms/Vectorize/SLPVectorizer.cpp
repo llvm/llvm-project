@@ -2579,6 +2579,14 @@ private:
   InstructionCost getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                 Type *ScalarTy) const;
 
+  /// \returns HasScalarUser if every non-constant value in \p VL is a computed
+  /// value that has a user, other than an insertelement, that is not
+  /// vectorized in the tree, so it stays scalar and the value must be
+  /// available in a scalar register. Users inside the tree are folded into the
+  /// vector code and do not count, however many there are.
+  TargetTransformInfo::VectorInstrContext
+  getScalarUserContext(ArrayRef<Value *> VL) const;
+
   /// Set the Builder insert point to one after the last instruction in
   /// the bundle
   void setInsertPointAfterBundle(const TreeEntry *E);
@@ -15513,6 +15521,18 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       // the broadcast.
       const auto *It = find_if_not(VL, IsaPred<UndefValue>);
       assert(It != VL.end() && "Expected at least one non-undef value.");
+      // The value is defined into one lane and the other lanes broadcast it.
+      // SplatDefined tells the target not to charge a move for that computed
+      // value. A scalar user that stays scalar is still HasScalarUser.
+      auto SplatInsertContext = [&](Value *V) {
+        TTI::VectorInstrContext Ctx =
+            ContextHint == TTI::VectorInstrContext::None
+                ? R.getScalarUserContext(V)
+                : ContextHint;
+        return Ctx == TTI::VectorInstrContext::None
+                   ? TTI::VectorInstrContext::SplatDefined
+                   : Ctx;
+      };
       // Add broadcast for non-identity shuffle only.
       bool NeedShuffle =
           count(VL, *It) > 1 &&
@@ -15528,16 +15548,16 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         return TTI.getVectorInstrCost(Instruction::InsertElement, VecTy,
                                       CostKind, std::distance(VL.begin(), It),
                                       PoisonValue::get(VecTy), *It,
-                                      ContextHint);
+                                      SplatInsertContext(*It));
       }
 
       SmallVector<int> ShuffleMask(VL.size(), PoisonMaskElem);
       transform(VL, ShuffleMask.begin(), [](Value *V) {
         return isa<PoisonValue>(V) ? PoisonMaskElem : 0;
       });
-      InstructionCost InsertCost =
-          TTI.getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0,
-                                 PoisonValue::get(VecTy), *It, ContextHint);
+      InstructionCost InsertCost = TTI.getVectorInstrCost(
+          Instruction::InsertElement, VecTy, CostKind, 0,
+          PoisonValue::get(VecTy), *It, SplatInsertContext(*It));
       return InsertCost + getShuffleCost(TTI, TargetTransformInfo::SK_Broadcast,
                                          VecTy, CostKind, ShuffleMask,
                                          /*Index=*/0, /*SubTp=*/nullptr,
@@ -22365,6 +22385,24 @@ BoUpSLP::isGatherShuffledEntry(
   return Res;
 }
 
+TTI::VectorInstrContext
+BoUpSLP::getScalarUserContext(ArrayRef<Value *> VL) const {
+  bool Found = false;
+  for (Value *V : VL) {
+    if (isa<UndefValue>(V) || isConstant(V))
+      continue;
+    const auto *I = dyn_cast<Instruction>(V);
+    if (!I || isa<LoadInst, InsertElementInst>(I) ||
+        none_of(I->users(), [&](const User *U) {
+          return !isa<InsertElementInst>(U) && !isVectorized(U);
+        }))
+      return TTI::VectorInstrContext::None;
+    Found = true;
+  }
+  return Found ? TTI::VectorInstrContext::HasScalarUser
+               : TTI::VectorInstrContext::None;
+}
+
 InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                        Type *ScalarTy) const {
   const unsigned VF = VL.size();
@@ -22409,7 +22447,8 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                      cast<VectorType>(VecTy), DemandedElements,
                                      /*Insert=*/true,
                                      /*Extract=*/false, CostKind,
-                                     ForPoisonSrc && !IsAnyNonUndefConst, VL);
+                                     ForPoisonSrc && !IsAnyNonUndefConst, VL,
+                                     getScalarUserContext(VL));
   return Cost;
 }
 

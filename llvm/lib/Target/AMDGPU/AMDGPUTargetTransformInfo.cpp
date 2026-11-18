@@ -1318,18 +1318,29 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
     }
 
     // Packed f32 pair formation for v_pk_*_f32. A constant-index insert writes
-    // one subregister, so a lane holding a computed value costs at most one
-    // v_mov_b32 at any width. A loaded lane lands in place, and arguments and
-    // constants are already in a register, so both are free. SLP prices a
-    // buildvector root with the insertelements themselves as Op1, and those
-    // lanes need no packing either. Only throughput sees the move; size-based
-    // users such as the inliner and the unroller keep inserts free.
+    // one subregister. A loaded lane lands in place, and arguments and
+    // constants are already in a register, so both are free. A computed value
+    // with one user is defined straight into its lane. A second user needs it
+    // in another lane or in a scalar register, which costs a v_mov_b32. A splat
+    // defines the value into one lane and broadcasts it, so SplatDefined stays
+    // free even when several lanes read it. A scalar user that stays scalar
+    // splits the value between packed and scalar code, so HasScalarUser charges
+    // the move for a splat as well, and the producer cannot contract into an
+    // FMA on either side. Only throughput sees the move; size-based users such
+    // as the inliner and the unroller keep inserts free.
     auto *VecTy = dyn_cast<FixedVectorType>(ValTy);
     const auto *InsertedInst = dyn_cast_or_null<Instruction>(Op1);
+    // One user is the operation the value is defined into. Another user needs
+    // the value in a different lane or a scalar register.
+    const bool ComputedLane =
+        VIC != TTI::VectorInstrContext::SplatDefined && InsertedInst &&
+        !isa<LoadInst, InsertElementInst>(InsertedInst) &&
+        count_if(InsertedInst->users(),
+                 [](const User *U) { return !isa<InsertElementInst>(U); }) > 1;
     if (Opcode == Instruction::InsertElement && EltSize == 32 &&
         CostKind == TTI::TCK_RecipThroughput && ST->hasAnyPackedFP32Ops() &&
-        InsertedInst && VecTy && VecTy->getElementType()->isFloatTy() &&
-        !isa<LoadInst, InsertElementInst>(InsertedInst))
+        VecTy && VecTy->getElementType()->isFloatTy() &&
+        (VIC == TTI::VectorInstrContext::HasScalarUser || ComputedLane))
       return getFullRateInstrCost();
 
     // Extracts are just reads of a subregister, so are free. Inserts are
@@ -1646,7 +1657,9 @@ InstructionCost GCNTTIImpl::getShuffleCost(
 
   // A v_pk_*_f32 operand is an aligned register pair. A lane already in its
   // half of a source pair is read in place, and a splat of the low half is an
-  // op_sel_hi. Every other lane costs a v_mov_b32 to move it into place.
+  // op_sel_hi. Every other lane costs a v_mov_b32 to move it into place. With
+  // wave32 VOPD those moves co-issue as v_dual_mov_b32 alongside other VALU
+  // work, so they are not charged.
   if (ScalarSize == 32 && CostKind == TTI::TCK_RecipThroughput &&
       ST->hasAnyPackedFP32Ops() && SrcTy->getElementType()->isFloatTy() &&
       !Mask.empty()) {
@@ -1673,7 +1686,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(
         Cost += (Lo != PoisonMaskElem && !LoInPlace) +
                 (Hi != PoisonMaskElem && !HiInPlace);
     }
-    return Cost;
+    return ST->hasVOPDInsts() && ST->isWave32() ? 0 : Cost;
   }
 
   if (ST->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&

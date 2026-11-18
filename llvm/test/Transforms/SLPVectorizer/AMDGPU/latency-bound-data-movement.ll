@@ -3,15 +3,17 @@
 
 ; Two chained complex multiplies, (x * w) * v: a chain of four dependent FP
 ; operations in a short block outside loops. For throughput, the moves that
-; form the pairs outweigh the packed arithmetic.
+; form the pairs outweigh the packed arithmetic, so the chain stays scalar.
+; Each result has one user and is defined into a lane of the store, so the
+; two results are stored as one pair.
 define void @chained_complex_muls(ptr addrspace(1) %out, float %xr, float %xi, float %wr, float %wi, float %vr, float %vi) {
 ; CHECK-LABEL: define void @chained_complex_muls(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], float [[XR:%.*]], float [[XI:%.*]], float [[WR:%.*]], float [[WI:%.*]], float [[VR:%.*]], float [[VI:%.*]]) {
 ; CHECK-NEXT:    [[XR_WR:%.*]] = fmul float [[XR]], [[WR]]
 ; CHECK-NEXT:    [[XI_WI:%.*]] = fmul float [[XI]], [[WI]]
-; CHECK-NEXT:    [[AR:%.*]] = fsub float [[XR_WR]], [[XI_WI]]
 ; CHECK-NEXT:    [[XI_WR:%.*]] = fmul float [[XI]], [[WR]]
 ; CHECK-NEXT:    [[XR_WI:%.*]] = fmul float [[XR]], [[WI]]
+; CHECK-NEXT:    [[AR:%.*]] = fsub float [[XR_WR]], [[XI_WI]]
 ; CHECK-NEXT:    [[AI:%.*]] = fadd float [[XI_WR]], [[XR_WI]]
 ; CHECK-NEXT:    [[AR_VR:%.*]] = fmul float [[AR]], [[VR]]
 ; CHECK-NEXT:    [[AI_VI:%.*]] = fmul float [[AI]], [[VI]]
@@ -19,9 +21,9 @@ define void @chained_complex_muls(ptr addrspace(1) %out, float %xr, float %xi, f
 ; CHECK-NEXT:    [[AI_VR:%.*]] = fmul float [[AI]], [[VR]]
 ; CHECK-NEXT:    [[AR_VI:%.*]] = fmul float [[AR]], [[VI]]
 ; CHECK-NEXT:    [[IM:%.*]] = fadd float [[AI_VR]], [[AR_VI]]
-; CHECK-NEXT:    store float [[RE]], ptr addrspace(1) [[OUT]], align 8
-; CHECK-NEXT:    [[OUT_IM:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[OUT]], i64 1
-; CHECK-NEXT:    store float [[IM]], ptr addrspace(1) [[OUT_IM]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[RE]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[IM]], i64 1
+; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr addrspace(1) [[OUT]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %xr.wr = fmul float %xr, %wr
@@ -42,7 +44,8 @@ define void @chained_complex_muls(ptr addrspace(1) %out, float %xr, float %xi, f
   ret void
 }
 
-; The same chain inside a loop is priced for throughput.
+; The same chain inside a loop stays scalar. The two results are stored as
+; one pair.
 define void @chained_complex_muls_in_loop(ptr addrspace(1) %out, float %xr, float %xi, float %wr, float %wi, float %vr, float %vi, i32 %n) {
 ; CHECK-LABEL: define void @chained_complex_muls_in_loop(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], float [[XR:%.*]], float [[XI:%.*]], float [[WR:%.*]], float [[WI:%.*]], float [[VR:%.*]], float [[VI:%.*]], i32 [[N:%.*]]) {
@@ -52,9 +55,11 @@ define void @chained_complex_muls_in_loop(ptr addrspace(1) %out, float %xr, floa
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[XR_WR:%.*]] = fmul float [[XR]], [[WR]]
 ; CHECK-NEXT:    [[XI_WI:%.*]] = fmul float [[XI]], [[WI]]
-; CHECK-NEXT:    [[AR:%.*]] = fsub float [[XR_WR]], [[XI_WI]]
 ; CHECK-NEXT:    [[XI_WR:%.*]] = fmul float [[XI]], [[WR]]
 ; CHECK-NEXT:    [[XR_WI:%.*]] = fmul float [[XR]], [[WI]]
+; CHECK-NEXT:    [[IDX:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds <2 x float>, ptr addrspace(1) [[OUT]], i64 [[IDX]]
+; CHECK-NEXT:    [[AR:%.*]] = fsub float [[XR_WR]], [[XI_WI]]
 ; CHECK-NEXT:    [[AI:%.*]] = fadd float [[XI_WR]], [[XR_WI]]
 ; CHECK-NEXT:    [[AR_VR:%.*]] = fmul float [[AR]], [[VR]]
 ; CHECK-NEXT:    [[AI_VI:%.*]] = fmul float [[AI]], [[VI]]
@@ -62,11 +67,9 @@ define void @chained_complex_muls_in_loop(ptr addrspace(1) %out, float %xr, floa
 ; CHECK-NEXT:    [[AI_VR:%.*]] = fmul float [[AI]], [[VR]]
 ; CHECK-NEXT:    [[AR_VI:%.*]] = fmul float [[AR]], [[VI]]
 ; CHECK-NEXT:    [[IM:%.*]] = fadd float [[AI_VR]], [[AR_VI]]
-; CHECK-NEXT:    [[IDX:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds <2 x float>, ptr addrspace(1) [[OUT]], i64 [[IDX]]
-; CHECK-NEXT:    store float [[RE]], ptr addrspace(1) [[P]], align 8
-; CHECK-NEXT:    [[P_IM:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[P]], i64 1
-; CHECK-NEXT:    store float [[IM]], ptr addrspace(1) [[P_IM]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[RE]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[IM]], i64 1
+; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr addrspace(1) [[P]], align 8
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
@@ -104,7 +107,8 @@ exit:
 }
 
 ; A chain from a loop does not run on into the block after it: the complex
-; multiply after the loop is a chain of two.
+; multiply after the loop is a chain of two and stays scalar. Its two results
+; are stored as one pair.
 define void @complex_mul_after_loop(ptr addrspace(1) %out, float %xr, float %xi, float %wr, float %wi, float %vr, float %vi, i32 %n) {
 ; CHECK-LABEL: define void @complex_mul_after_loop(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], float [[XR:%.*]], float [[XI:%.*]], float [[WR:%.*]], float [[WI:%.*]], float [[VR:%.*]], float [[VI:%.*]], i32 [[N:%.*]]) {
@@ -126,13 +130,13 @@ define void @complex_mul_after_loop(ptr addrspace(1) %out, float %xr, float %xi,
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[BR_VR:%.*]] = fmul float [[BR]], [[VR]]
 ; CHECK-NEXT:    [[BI_VI:%.*]] = fmul float [[BI]], [[VI]]
-; CHECK-NEXT:    [[RE:%.*]] = fsub float [[BR_VR]], [[BI_VI]]
 ; CHECK-NEXT:    [[BI_VR:%.*]] = fmul float [[BI]], [[VR]]
 ; CHECK-NEXT:    [[BR_VI:%.*]] = fmul float [[BR]], [[VI]]
+; CHECK-NEXT:    [[RE:%.*]] = fsub float [[BR_VR]], [[BI_VI]]
 ; CHECK-NEXT:    [[IM:%.*]] = fadd float [[BI_VR]], [[BR_VI]]
-; CHECK-NEXT:    store float [[RE]], ptr addrspace(1) [[OUT]], align 8
-; CHECK-NEXT:    [[OUT_IM:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[OUT]], i64 1
-; CHECK-NEXT:    store float [[IM]], ptr addrspace(1) [[OUT_IM]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[RE]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[IM]], i64 1
+; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr addrspace(1) [[OUT]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -166,7 +170,8 @@ exit:
 }
 
 ; The second complex multiply is on one side of a branch. Phis in the block
-; of the stores merge its result with the first; the chain of four ends there.
+; of the stores merge its result with the first; the chain of four ends there
+; and stays scalar. The two results are stored as one pair.
 define void @chained_complex_muls_across_branch(ptr addrspace(1) %out, float %xr, float %xi, float %wr, float %wi, float %vr, float %vi, i1 %c) {
 ; CHECK-LABEL: define void @chained_complex_muls_across_branch(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], float [[XR:%.*]], float [[XI:%.*]], float [[WR:%.*]], float [[WI:%.*]], float [[VR:%.*]], float [[VI:%.*]], i1 [[C:%.*]]) {
@@ -189,9 +194,9 @@ define void @chained_complex_muls_across_branch(ptr addrspace(1) %out, float %xr
 ; CHECK:       [[JOIN]]:
 ; CHECK-NEXT:    [[RE:%.*]] = phi float [ [[AR]], %[[ENTRY]] ], [ [[BR]], %[[THEN]] ]
 ; CHECK-NEXT:    [[IM:%.*]] = phi float [ [[AI]], %[[ENTRY]] ], [ [[BI]], %[[THEN]] ]
-; CHECK-NEXT:    store float [[RE]], ptr addrspace(1) [[OUT]], align 8
-; CHECK-NEXT:    [[OUT_IM:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[OUT]], i64 1
-; CHECK-NEXT:    store float [[IM]], ptr addrspace(1) [[OUT_IM]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[RE]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[IM]], i64 1
+; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr addrspace(1) [[OUT]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

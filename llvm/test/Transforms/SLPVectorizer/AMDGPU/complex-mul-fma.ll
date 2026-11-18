@@ -3,19 +3,21 @@
 
 ; Print the IR instead of an SLP remark: the remark is emitted only when the tree is vectorized.
 ; The second fmul of each fsub/fadd does not fuse. Packing them needs a
-; cross-half move the scalar form avoids, so the tree stays scalar.
+; cross-half move the scalar form avoids, so the arithmetic stays scalar. Only
+; the stores pair up: each result is written straight into its lane of the
+; pair.
 define void @cmul_store(ptr addrspace(1) %out, float %xr, float %xi, float %wr, float %wi) {
 ; CHECK-LABEL: define void @cmul_store(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], float [[XR:%.*]], float [[XI:%.*]], float [[WR:%.*]], float [[WI:%.*]]) {
 ; CHECK-NEXT:    [[XR_WR:%.*]] = fmul contract float [[XR]], [[WR]]
 ; CHECK-NEXT:    [[XI_WI:%.*]] = fmul contract float [[XI]], [[WI]]
-; CHECK-NEXT:    [[RE:%.*]] = fsub contract float [[XR_WR]], [[XI_WI]]
 ; CHECK-NEXT:    [[XI_WR:%.*]] = fmul contract float [[XI]], [[WR]]
 ; CHECK-NEXT:    [[XR_WI:%.*]] = fmul contract float [[XR]], [[WI]]
+; CHECK-NEXT:    [[RE:%.*]] = fsub contract float [[XR_WR]], [[XI_WI]]
 ; CHECK-NEXT:    [[IM:%.*]] = fadd contract float [[XI_WR]], [[XR_WI]]
-; CHECK-NEXT:    store float [[RE]], ptr addrspace(1) [[OUT]], align 8
-; CHECK-NEXT:    [[OUT_IM:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[OUT]], i64 1
-; CHECK-NEXT:    store float [[IM]], ptr addrspace(1) [[OUT_IM]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[RE]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[IM]], i64 1
+; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr addrspace(1) [[OUT]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %xr.wr = fmul contract float %xr, %wr
