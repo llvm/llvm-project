@@ -592,7 +592,6 @@ def PAD_WAITCNT : SPseudoInstSI<(outs),
   let hasSideEffects = 1;
   let mayLoad = 0;
   let mayStore = 0;
-  let isConvergent = 1;
   let FixedSize = 1;
   let Size = 0;
   let isMeta = 1;

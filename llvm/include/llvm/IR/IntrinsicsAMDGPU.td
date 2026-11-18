@@ -415,7 +415,7 @@ def int_amdgcn_iglp_opt : ClangBuiltin<"__builtin_amdgcn_iglp_opt">,
 def int_amdgcn_pad_waitcnt : ClangBuiltin<"__builtin_amdgcn_pad_waitcnt">,
   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty],
     [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, IntrNoMem, IntrHasSideEffects,
-     IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+     IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 def int_amdgcn_s_waitcnt : ClangBuiltin<"__builtin_amdgcn_s_waitcnt">,
   Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
