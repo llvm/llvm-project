@@ -430,3 +430,181 @@ no.ov:
 exit:
   ret void
 }
+
+define void @ssub_replaced_before_eq_fact(i32 %y) {
+; CHECK-LABEL: @ssub_replaced_before_eq_fact(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[Y_NONNEG:%.*]] = icmp sge i32 [[Y:%.*]], 0
+; CHECK-NEXT:    br i1 [[Y_NONNEG]], label [[LOOP:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 false, label [[TRAP:%.*]], label [[LOOP_1:%.*]]
+; CHECK:       loop.1:
+; CHECK-NEXT:    [[CY:%.*]] = icmp sgt i32 [[Y]], 1
+; CHECK-NEXT:    br i1 [[CY]], label [[EXIT]], label [[BODY:%.*]]
+; CHECK:       body:
+; CHECK-NEXT:    [[YM:%.*]] = add nuw nsw i32 [[Y]], -1
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       trap:
+; CHECK-NEXT:    unreachable
+;
+entry:
+  %y.nonneg = icmp sge i32 %y, 0
+  br i1 %y.nonneg, label %loop, label %exit
+
+loop:
+  %lim.s = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 1, i32 0)
+  %lim.ov = extractvalue { i32, i1 } %lim.s, 1
+  br i1 %lim.ov, label %trap, label %loop.1
+
+loop.1:
+  %lim = extractvalue { i32, i1 } %lim.s, 0
+  %cy = icmp sgt i32 %y, %lim
+  br i1 %cy, label %exit, label %body
+
+body:
+  %ym = add nsw i32 %y, -1
+  %neg = icmp slt i32 %ym, 0
+  call void @use(i1 %neg)
+  ret void
+
+exit:
+  ret void
+
+trap:
+  unreachable
+}
+
+define void @ssub_replaced_before_eq_fact_loop() {
+; CHECK-LABEL: @ssub_replaced_before_eq_fact_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[Y:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[Y_NEXT:%.*]], [[BODY:%.*]] ]
+; CHECK-NEXT:    br i1 false, label [[TRAP:%.*]], label [[LOOP_1:%.*]]
+; CHECK:       loop.1:
+; CHECK-NEXT:    [[CY:%.*]] = icmp sgt i32 [[Y]], 1
+; CHECK-NEXT:    br i1 [[CY]], label [[EXIT:%.*]], label [[BODY]]
+; CHECK:       body:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[Y]], -1
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[Y_NEXT]] = add nuw nsw i32 [[Y]], 1
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       trap:
+; CHECK-NEXT:    unreachable
+;
+entry:
+  br label %loop
+
+loop:
+  %y = phi i32 [ 0, %entry ], [ %y.next, %body ]
+  %lim.s = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 1, i32 0)
+  %lim.ov = extractvalue { i32, i1 } %lim.s, 1
+  br i1 %lim.ov, label %trap, label %loop.1
+
+loop.1:
+  %lim = extractvalue { i32, i1 } %lim.s, 0
+  %cy = icmp sgt i32 %y, %lim
+  br i1 %cy, label %exit, label %body
+
+body:
+  %ym.s = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %y, i32 -1)
+  %ym = extractvalue { i32, i1 } %ym.s, 0
+  %neg = icmp slt i32 %ym, 0
+  call void @use(i1 %neg)
+  %y.next = add i32 %y, 1
+  br label %loop
+
+exit:
+  ret void
+
+trap:
+  unreachable
+}
+
+define void @ssub_undef_operands_eq_fact(i32 %y) {
+; CHECK-LABEL: @ssub_undef_operands_eq_fact(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LIM_S:%.*]] = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 undef, i32 undef)
+; CHECK-NEXT:    [[LIM_OV:%.*]] = extractvalue { i32, i1 } [[LIM_S]], 1
+; CHECK-NEXT:    br i1 [[LIM_OV]], label [[EXIT:%.*]], label [[NEXT:%.*]]
+; CHECK:       next:
+; CHECK-NEXT:    [[LIM:%.*]] = extractvalue { i32, i1 } [[LIM_S]], 0
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %lim.s = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 undef, i32 undef)
+  %lim.ov = extractvalue { i32, i1 } %lim.s, 1
+  br i1 %lim.ov, label %exit, label %next
+
+next:
+  %lim = extractvalue { i32, i1 } %lim.s, 0
+  %lim.zero = icmp eq i32 %lim, 0
+  call void @use(i1 %lim.zero)
+  ret void
+
+exit:
+  ret void
+}
+
+define void @ssub_replaced_extra_struct_user(i32 %a, i32 %y) {
+; CHECK-LABEL: @ssub_replaced_extra_struct_user(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_NONNEG:%.*]] = icmp sge i32 [[A:%.*]], 0
+; CHECK-NEXT:    br i1 [[A_NONNEG]], label [[WO_BLOCK:%.*]], label [[EXIT:%.*]]
+; CHECK:       wo.block:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i32 [[A]], [[A]]
+; CHECK-NEXT:    [[LIM_S:%.*]] = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 [[A]], i32 [[A]])
+; CHECK-NEXT:    call void @use_res32({ i32, i1 } [[LIM_S]])
+; CHECK-NEXT:    br i1 false, label [[EXIT]], label [[NO_OV:%.*]]
+; CHECK:       no.ov:
+; CHECK-NEXT:    [[Y_NONNEG:%.*]] = icmp sge i32 [[Y:%.*]], 0
+; CHECK-NEXT:    br i1 [[Y_NONNEG]], label [[Y_OK:%.*]], label [[EXIT]]
+; CHECK:       y.ok:
+; CHECK-NEXT:    [[CY:%.*]] = icmp sle i32 [[Y]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[CY]], label [[BODY:%.*]], label [[EXIT]]
+; CHECK:       body:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a.nonneg = icmp sge i32 %a, 0
+  br i1 %a.nonneg, label %wo.block, label %exit
+
+wo.block:
+  %lim.s = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %a, i32 %a)
+  call void @use_res32({ i32, i1 } %lim.s)
+  %lim.ov = extractvalue { i32, i1 } %lim.s, 1
+  br i1 %lim.ov, label %exit, label %no.ov
+
+no.ov:
+  %lim = extractvalue { i32, i1 } %lim.s, 0
+  %y.nonneg = icmp sge i32 %y, 0
+  br i1 %y.nonneg, label %y.ok, label %exit
+
+y.ok:
+  %cy = icmp sle i32 %y, %lim
+  br i1 %cy, label %body, label %exit
+
+body:
+  %c = icmp eq i32 %y, 0
+  call void @use(i1 %c)
+  ret void
+
+exit:
+  ret void
+}
+
+
+declare { i32, i1 } @llvm.ssub.with.overflow.i32(i32, i32)
+declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32)
+declare void @use_res32({ i32, i1 })

@@ -567,3 +567,90 @@ noov:
 exit:
   ret void
 }
+
+define void @sadd_branch_on_not_overflow(i32 %x) {
+; CHECK-LABEL: define void @sadd_branch_on_not_overflow(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[WO:%.*]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X]], i32 1)
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i32, i1 } [[WO]], 1
+; CHECK-NEXT:    [[NO_OV:%.*]] = xor i1 [[OV]], true
+; CHECK-NEXT:    br i1 [[NO_OV]], label %[[THEN:.*]], label %[[EXIT:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[U:%.*]] = extractvalue { i32, i1 } [[WO]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[U]], [[X]]
+; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    ret void
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %wo = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %x, i32 1)
+  %ov = extractvalue { i32, i1 } %wo, 1
+  %no.ov = xor i1 %ov, true
+  br i1 %no.ov, label %then, label %exit
+
+then:
+  %u = extractvalue { i32, i1 } %wo, 0
+  %c = icmp sgt i32 %u, %x
+  call void @use(i1 %c)
+  ret void
+
+exit:
+  ret void
+}
+
+define void @sadd_branch_same_successors(i32 %x) {
+; CHECK-LABEL: define void @sadd_branch_same_successors(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[WO:%.*]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X]], i32 1)
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i32, i1 } [[WO]], 1
+; CHECK-NEXT:    br i1 [[OV]], label %[[THEN:.*]], label %[[THEN]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[U:%.*]] = extractvalue { i32, i1 } [[WO]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[U]], [[X]]
+; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %wo = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %x, i32 1)
+  %ov = extractvalue { i32, i1 } %wo, 1
+  br i1 %ov, label %then, label %then
+
+then:
+  %u = extractvalue { i32, i1 } %wo, 0
+  %c = icmp sgt i32 %u, %x
+  call void @use(i1 %c)
+  ret void
+}
+
+define void @sadd_i1_result_guarded(i1 %a, i1 %b) {
+; CHECK-LABEL: define void @sadd_i1_result_guarded(
+; CHECK-SAME: i1 [[A:%.*]], i1 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[WO:%.*]] = call { i1, i1 } @llvm.sadd.with.overflow.i1(i1 [[A]], i1 [[B]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i1, i1 } [[WO]], 1
+; CHECK-NEXT:    br i1 [[OV]], label %[[EXIT:.*]], label %[[NO_OV:.*]]
+; CHECK:       [[NO_OV]]:
+; CHECK-NEXT:    [[U:%.*]] = extractvalue { i1, i1 } [[WO]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp sle i1 [[U]], [[A]]
+; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    ret void
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %wo = call { i1, i1 } @llvm.sadd.with.overflow.i1(i1 %a, i1 %b)
+  %ov = extractvalue { i1, i1 } %wo, 1
+  br i1 %ov, label %exit, label %no.ov
+
+no.ov:
+  %u = extractvalue { i1, i1 } %wo, 0
+  %c = icmp sle i1 %u, %a
+  call void @use(i1 %c)
+  ret void
+
+exit:
+  ret void
+}
