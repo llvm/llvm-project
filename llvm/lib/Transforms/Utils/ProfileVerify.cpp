@@ -136,18 +136,6 @@ bool ProfileInjector::inject() {
   // and numerically that may make for a poor unit test.
   uint32_t WeightsForTestOffset = 0;
   for (auto &BB : F) {
-    if (AnnotateSelect) {
-      for (auto &I : BB) {
-        if (auto *SI = dyn_cast<SelectInst>(&I)) {
-          if (SI->getCondition()->getType()->isVectorTy())
-            continue;
-          if (I.getMetadata(LLVMContext::MD_prof))
-            continue;
-          setBranchWeights(I, {SelectTrueWeight, SelectFalseWeight},
-                           /*IsExpected=*/false);
-        }
-      }
-    }
     for (Instruction &I : BB) {
       if (I.getMetadata(LLVMContext::MD_prof))
         continue;
@@ -157,6 +145,7 @@ bool ProfileInjector::inject() {
             continue;
           setBranchWeights(I, {SelectTrueWeight, SelectFalseWeight},
                            /*IsExpected=*/false);
+          Changed = true;
         }
       }
       if (AnnotateMemoryOperations) {
@@ -165,6 +154,7 @@ bool ProfileInjector::inject() {
             continue;
           annotateValueSite(*F.getParent(), *MI, {{19797, 2}, {18770, 3}}, 10,
                             InstrProfValueKind::IPVK_MemOPSize, 30);
+          Changed = true;
         }
       }
       if (AnnotateIndirectCalls) {
@@ -173,6 +163,7 @@ bool ProfileInjector::inject() {
             continue;
           annotateValueSite(*F.getParent(), *CB, {{19797, 2}, {18770, 3}}, 10,
                             InstrProfValueKind::IPVK_IndirectCallTarget, 30);
+          Changed = true;
         }
       }
     }
