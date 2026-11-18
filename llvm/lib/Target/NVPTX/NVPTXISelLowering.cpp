@@ -264,12 +264,13 @@ getVectorLoweringShape(EVT VectorEVT, const NVPTXSubtarget &STI,
   return std::pair(NumElts / NPerReg, MVT::getVectorVT(EltVT, NPerReg));
 }
 
-static bool isBooleanVector(EVT VT) {
-  return VT.isVector() && VT.getVectorElementType() == MVT::i1;
-}
-
-/// Split \p Ty into the types and byte offsets used for arguments and returns.
-/// The number of entries must match the Ins/Outs arrays used during lowering.
+/// ComputePTXValueVTs - For the given Type \p Ty, returns the set of primitive
+/// legal-ish MVTs that compose it. Unlike ComputeValueVTs, this will legalize
+/// the types as required by the calling convention (with special handling for
+/// i8s).
+/// NOTE: This is a band-aid for code that expects ComputeValueVTs to return the
+/// same number of types as the Ins/Outs arrays in LowerFormalArguments,
+/// LowerCall, and LowerReturn.
 static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                                LLVMContext &Ctx, CallingConv::ID CallConv,
                                Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
@@ -284,11 +285,8 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
     MVT RegisterVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, VT);
     unsigned NumRegs = TLI.getNumRegistersForCallingConv(Ctx, CallConv, VT);
 
-    if (isBooleanVector(VT))
-      assert(RegisterVT == MVT::i1 && NumRegs == VT.getVectorNumElements() &&
-             "Expected one predicate register per Boolean vector element");
-
-    // Keep i8 loads and stores byte-sized, even when registers are wider.
+    // Since we actually can load/store b8, we need to ensure that we'll use
+    // the original sized type for any i8s or i8 vectors.
     if (VT.getScalarType() == MVT::i8) {
       if (RegisterVT == MVT::i16)
         RegisterVT = MVT::i8;
@@ -299,8 +297,10 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                "Expected v4i8, v2i16, or i16 for i8 RegisterVT");
     }
 
-    // Packed Boolean vectors use only the first offset of each group.
-    // TODO: Also handle vectors with other sub-byte element types.
+    // TODO: This is horribly incorrect for cases where the vector elements are
+    // not a multiple of bytes (ex i1) and legal or i8. However, this problem
+    // has existed for as long as NVPTX has and no one has complained, so we'll
+    // leave it for now.
     for (unsigned I : seq(NumRegs)) {
       ValueVTs.push_back(RegisterVT);
       Offsets.push_back(Off + I * RegisterVT.getStoreSize());
@@ -454,12 +454,15 @@ VectorizePTXValueVTs(const SmallVectorImpl<EVT> &ValueVTs,
     if (!GetArgVT)
       return 0;
     EVT VT = GetArgVT(I);
-    return isBooleanVector(VT) ? VT.getVectorNumElements() : 0;
+    return VT.isFixedLengthVectorOf(MVT::i1) ? VT.getVectorNumElements() : 0;
   };
 
   const auto GetNumElts = [&](unsigned I) -> unsigned {
-    if (unsigned Width = GetPackedWidth(I))
+    if (unsigned Width = GetPackedWidth(I)) {
+      assert(Width <= ValueVTs.size() - I &&
+             "Too few argument parts for packed Boolean vector");
       return Width;
+    }
     if (IsVAArg)
       return 1;
     for (const unsigned AccessSize : {16, 8, 4, 2}) {
@@ -1491,7 +1494,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                [&](unsigned I) { return ArgOuts[I].ArgVT; });
       for (const unsigned NumElts : VI) {
         const EVT ArgVT = ArgOuts[J].ArgVT;
-        const bool IsPacked = isBooleanVector(ArgVT);
+        const bool IsPacked = ArgVT.isFixedLengthVectorOf(MVT::i1);
         const EVT EltVT = IsPacked ? ArgVT : promoteScalarIntegerPTX(VTs[J]);
 
         unsigned Offset;
@@ -1647,7 +1650,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         VectorizePTXValueVTs(VTs, Offsets, RetAlign, false, GetResultVT);
     for (const unsigned NumElts : VI) {
       const EVT ResultVT = GetResultVT(I);
-      const bool IsPacked = isBooleanVector(ResultVT);
+      const bool IsPacked = ResultVT.isFixedLengthVectorOf(MVT::i1);
       const MaybeAlign CurrentAlign =
           ExtendIntegerRetVal ? MaybeAlign(std::nullopt)
                               : commonAlignment(RetAlign, Offsets[I]);
@@ -4418,7 +4421,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
                                [&](unsigned I) { return ArgIns[I].ArgVT; });
       for (const unsigned NumElts : VI) {
         const EVT ArgVT = ArgIns[I].ArgVT;
-        const bool IsPacked = isBooleanVector(ArgVT);
+        const bool IsPacked = ArgVT.isFixedLengthVectorOf(MVT::i1);
         // Scalar i1 values use byte loads. Boolean vectors keep their own type.
         const EVT LoadVT = VTs[I] == MVT::i1 && !IsPacked ? MVT::i8 : VTs[I];
         const EVT VecVT =
@@ -4508,7 +4511,7 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                         : commonAlignment(RetAlign, Offsets[I]);
 
     SDValue Val =
-        isBooleanVector(ResultVT)
+        ResultVT.isFixedLengthVectorOf(MVT::i1)
             ? DAG.getBuildVector(ResultVT, dl,
                                  ArrayRef(OutVals).slice(I, NumElts))
             : getBuildVectorizedValue(NumElts, dl, DAG, [&](unsigned K) {
