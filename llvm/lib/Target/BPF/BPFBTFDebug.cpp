@@ -260,8 +260,7 @@ void BPFBTFDebug::visitMapDefType(const DIType *Ty, uint32_t &TypeId) {
     const DINodeArray Elements = CTy->getElements();
     for (const auto *Element : Elements) {
       const auto *MemberType = cast<DIDerivedType>(Element);
-      const DIType *MemberBaseType =
-          tryRemoveAtomicType(MemberType->getBaseType());
+      const DIType *MemberBaseType = MemberType->getBaseType();
 
       // Check if the visited composite type is a wrapper, and the member
       // represents the actual map definition.

@@ -4782,11 +4782,7 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
       SplitDWARFInlining = false;
     }
   }
-  const Arg *LastDebugArg = nullptr;
-  for (const Arg *A : Args.filtered(options::OPT_g_Group))
-    if (!A->getOption().matches(options::OPT_gbtf))
-      LastDebugArg = A;
-  if (const Arg *A = LastDebugArg) {
+  if (const Arg *A = Args.getLastArg(options::OPT_g_Group)) {
     DebugInfoKind = llvm::codegenoptions::DebugInfoConstructor;
 
     // If the last option explicitly specified a debug-info level, use it.

@@ -5346,7 +5346,7 @@ def gcodeview : Flag<["-"], "gcodeview">, Group<g_Group>,
   HelpText<"Generate CodeView debug information">,
   Visibility<[ClangOption, CC1Option, CC1AsOption, CLOption, DXCOption]>,
   MarshallingInfoFlag<CodeGenOpts<"EmitCodeView">>;
-def gbtf : Flag<["-"], "gbtf">, Group<g_Group>,
+def gbtf : Flag<["-"], "gbtf">,
   HelpText<"Generate BTF debug information">,
   Visibility<[ClangOption, CC1Option, CC1AsOption]>,
   MarshallingInfoFlag<CodeGenOpts<"EmitBTF">>;

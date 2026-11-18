@@ -21,6 +21,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
 #include "llvm/DebugInfo/BTF/BTF.h"
@@ -317,6 +318,7 @@ protected:
   BTFStringTable StringTable;
   std::vector<std::unique_ptr<BTFTypeBase>> TypeEntries;
   DenseMap<const DIType *, uint32_t> DIToIdMap;
+  DenseSet<const DIType *> UnrepresentableTypes;
   std::map<uint32_t, std::vector<BTFFuncInfo>> FuncInfoTable;
   std::map<uint32_t, std::vector<BTFLineInfo>> LineInfoTable;
   std::map<uint32_t, std::vector<BTFFieldReloc>> FieldRelocTable;
@@ -430,7 +432,12 @@ public:
   size_t addString(StringRef S) { return StringTable.addString(S); }
 
   /// Get the type id for a particular DIType.
-  uint32_t getTypeId(const DIType *Ty) { return DIToIdMap.lookup(Ty); }
+  uint32_t getTypeId(const DIType *Ty) {
+    auto It = DIToIdMap.find(Ty);
+    assert((It != DIToIdMap.end() || UnrepresentableTypes.contains(Ty)) &&
+           "DIType not added");
+    return It == DIToIdMap.end() ? 0 : It->second;
+  }
 
   /// Called at the beginning of instruction processing, before line info.
   /// Subclasses can override to handle target-specific instruction processing

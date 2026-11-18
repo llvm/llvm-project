@@ -627,6 +627,7 @@ void BTFDebug::visitBasicType(const DIBasicType *BTy, uint32_t &TypeId) {
         std::make_unique<BTFTypeFloat>(BTy->getSizeInBits(), BTy->getName());
     break;
   default:
+    UnrepresentableTypes.insert(BTy);
     return;
   }
 
@@ -641,8 +642,11 @@ void BTFDebug::visitSubroutineType(
   TypeId = 0;
   DITypeArray Elements = STy->getTypeArray();
   uint32_t VLen = Elements.size() - 1;
-  if (VLen > BTF::MAX_VLEN)
+  if (VLen > BTF::MAX_VLEN) {
+    if (!ForSubprog)
+      UnrepresentableTypes.insert(STy);
     return;
+  }
 
   // Subprogram has a valid non-zero-length name, and the pointee of
   // a function pointer has an empty name. The subprogram type will
@@ -749,7 +753,8 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
                                uint32_t &TypeId) {
   DINodeArray DIElements = CTy->getElements();
   SmallVector<const DINode *, 8> Elements(DIElements.begin(), DIElements.end());
-  if (CTy->getTag() == dwarf::DW_TAG_class_type)
+  if (!Asm->TM.getTargetTriple().isBPF() ||
+      CTy->getTag() == dwarf::DW_TAG_class_type)
     llvm::erase_if(Elements, [](const DINode *Element) {
       return Element->getTag() != dwarf::DW_TAG_member &&
              Element->getTag() != dwarf::DW_TAG_variant_part;
@@ -768,8 +773,10 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
       VLen++;
     }
   }
-  if (VLen > BTF::MAX_VLEN)
+  if (VLen > BTF::MAX_VLEN) {
+    UnrepresentableTypes.insert(CTy);
     return;
+  }
 
   // Check whether we have any bitfield members or not
   bool HasBitField = false;
@@ -841,8 +848,10 @@ void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
   const DIType *ElemType = tryRemoveAtomicType(CTy->getBaseType());
   visitTypeEntry(ElemType, ElemTypeId, false, false);
   if (!ElemTypeId) {
-    if (!Asm->TM.getTargetTriple().isBPF())
+    if (!Asm->TM.getTargetTriple().isBPF()) {
+      UnrepresentableTypes.insert(CTy);
       return;
+    }
     SmallString<128> Message;
     raw_svector_ostream Err(Message);
     Err << "unsupported BTF array element type";
@@ -876,8 +885,10 @@ void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
 void BTFDebug::visitEnumType(const DICompositeType *CTy, uint32_t &TypeId) {
   DINodeArray Elements = CTy->getElements();
   uint32_t VLen = Elements.size();
-  if (VLen > BTF::MAX_VLEN)
+  if (VLen > BTF::MAX_VLEN) {
+    UnrepresentableTypes.insert(CTy);
     return;
+  }
 
   bool IsSigned = false;
   unsigned NumBits = 32;
@@ -929,6 +940,7 @@ void BTFDebug::visitCompositeType(const DICompositeType *CTy,
     visitEnumType(CTy, TypeId);
     break;
   default:
+    UnrepresentableTypes.insert(CTy);
     break;
   }
 }
@@ -989,6 +1001,7 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
     auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, false);
     TypeId = addType(std::move(TypeEntry), DTy);
   } else if (Tag != dwarf::DW_TAG_member) {
+    UnrepresentableTypes.insert(DTy);
     return;
   }
 
@@ -1043,6 +1056,8 @@ void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
     visitCompositeType(CTy, TypeId);
   else if (const auto *DTy = dyn_cast<DIDerivedType>(Ty))
     visitDerivedType(DTy, TypeId, CheckPointer, SeenPointer);
+  else
+    UnrepresentableTypes.insert(Ty);
 }
 
 void BTFDebug::visitTypeEntry(const DIType *Ty) {
@@ -1422,6 +1437,8 @@ void BTFDebug::processGlobals() {
       visitTypeEntry(Ty, GVTypeId, false, false);
       break;
     }
+    if (!Asm->TM.getTargetTriple().isBPF() && !GVTypeId)
+      continue;
 
     // Only support the following globals:
     auto Linkage = Global.getLinkage();
