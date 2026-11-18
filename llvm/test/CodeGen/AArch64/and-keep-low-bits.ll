@@ -109,7 +109,7 @@ define <16 x i8> @and_v16i8_keep_low_32(<16 x i8> %a) {
   ret <16 x i8> %r
 }
 
-; Two-element vectors are not handled: the half would be a single element.
+; <2 x i64> is also viewed as <4 x i32>.
 define <2 x i64> @and_v2i64_keep_low_64(<2 x i64> %a) {
 ; CHECK-SD-LABEL: and_v2i64_keep_low_64:
 ; CHECK-SD:       // %bb.0:
@@ -118,9 +118,7 @@ define <2 x i64> @and_v2i64_keep_low_64(<2 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: and_v2i64_keep_low_64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI7_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI7_0]
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    fmov d0, d0
 ; CHECK-GI-NEXT:    ret
   %r = and <2 x i64> %a, <i64 -1, i64 0>
   ret <2 x i64> %r
@@ -171,5 +169,41 @@ define <4 x i32> @and_v4i32_keep_high_half(<4 x i32> %a) {
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
   %r = and <4 x i32> %a, <i32 0, i32 0, i32 -1, i32 -1>
+  ret <4 x i32> %r
+}
+
+; A blend of two halves is matched as a bitwise select first.
+define <4 x i32> @blend_halves(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-SD-LABEL: blend_halves:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov v0.d[1], v1.d[1]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: blend_halves:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI11_0
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI11_0]
+; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    ret
+  %lo = and <4 x i32> %a, <i32 -1, i32 -1, i32 0, i32 0>
+  %hi = and <4 x i32> %b, <i32 0, i32 0, i32 -1, i32 -1>
+  %r = or <4 x i32> %lo, %hi
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @keep_low_64_or(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-SD-LABEL: keep_low_64_or:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov v0.d[1], xzr
+; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: keep_low_64_or:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov d0, d0
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    ret
+  %lo = and <4 x i32> %a, <i32 -1, i32 -1, i32 0, i32 0>
+  %r = or <4 x i32> %lo, %b
   ret <4 x i32> %r
 }
