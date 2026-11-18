@@ -13,8 +13,9 @@ define amdgpu_kernel void @s_pack_v2i16(ptr addrspace(4) %in0, ptr addrspace(4) 
 ; GFX9-NEXT:    s_load_dword s5, s[2:3], 0x0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_pack_ll_b32_b16 s0, s4, s5
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; use s0
+; GFX9-NEXT:    ; use v0
 ; GFX9-NEXT:    ;;#ASMEND
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -43,8 +44,9 @@ define amdgpu_kernel void @s_pack_v2i16(ptr addrspace(4) %in0, ptr addrspace(4) 
 ; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX7-NEXT:    s_lshl_b32 s1, s1, 16
 ; GFX7-NEXT:    s_or_b32 s0, s0, s1
+; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    ;;#ASMSTART
-; GFX7-NEXT:    ; use s0
+; GFX7-NEXT:    ; use v0
 ; GFX7-NEXT:    ;;#ASMEND
 ; GFX7-NEXT:    s_endpgm
   %val0 = load volatile i32, ptr addrspace(4) %in0
@@ -55,7 +57,7 @@ define amdgpu_kernel void @s_pack_v2i16(ptr addrspace(4) %in0, ptr addrspace(4) 
   %vec.1 = insertelement <2 x i16> %vec.0, i16 %hi, i32 1
   %vec.i32 = bitcast <2 x i16> %vec.1 to i32
 
-  call void asm sideeffect "; use $0", "s"(i32 %vec.i32) #0
+  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
   ret void
 }
 
@@ -67,8 +69,9 @@ define amdgpu_kernel void @s_pack_v2i16_imm_lo(ptr addrspace(4) %in1) #0 {
 ; GFX9-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_pack_ll_b32_b16 s0, 0x1c8, s0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; use s0
+; GFX9-NEXT:    ; use v0
 ; GFX9-NEXT:    ;;#ASMEND
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -80,8 +83,9 @@ define amdgpu_kernel void @s_pack_v2i16_imm_lo(ptr addrspace(4) %in1) #0 {
 ; GFX803-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX803-NEXT:    s_lshl_b32 s0, s0, 16
 ; GFX803-NEXT:    s_or_b32 s0, s0, 0x1c8
+; GFX803-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX803-NEXT:    ;;#ASMSTART
-; GFX803-NEXT:    ; use s0
+; GFX803-NEXT:    ; use v0
 ; GFX803-NEXT:    ;;#ASMEND
 ; GFX803-NEXT:    s_endpgm
 ;
@@ -93,8 +97,9 @@ define amdgpu_kernel void @s_pack_v2i16_imm_lo(ptr addrspace(4) %in1) #0 {
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_lshl_b32 s0, s0, 16
 ; GFX7-NEXT:    s_or_b32 s0, s0, 0x1c8
+; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    ;;#ASMSTART
-; GFX7-NEXT:    ; use s0
+; GFX7-NEXT:    ; use v0
 ; GFX7-NEXT:    ;;#ASMEND
 ; GFX7-NEXT:    s_endpgm
   %val1 = load i32, ptr addrspace(4) %in1
@@ -103,7 +108,7 @@ define amdgpu_kernel void @s_pack_v2i16_imm_lo(ptr addrspace(4) %in1) #0 {
   %vec.1 = insertelement <2 x i16> %vec.0, i16 %hi, i32 1
   %vec.i32 = bitcast <2 x i16> %vec.1 to i32
 
-  call void asm sideeffect "; use $0", "s"(i32 %vec.i32) #0
+  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
   ret void
 }
 
@@ -115,8 +120,9 @@ define amdgpu_kernel void @s_pack_v2i16_imm_hi(ptr addrspace(4) %in0) #0 {
 ; GFX9-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_pack_ll_b32_b16 s0, s0, 0x1c8
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; use s0
+; GFX9-NEXT:    ; use v0
 ; GFX9-NEXT:    ;;#ASMEND
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -128,8 +134,9 @@ define amdgpu_kernel void @s_pack_v2i16_imm_hi(ptr addrspace(4) %in0) #0 {
 ; GFX803-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX803-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX803-NEXT:    s_or_b32 s0, s0, 0x1c80000
+; GFX803-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX803-NEXT:    ;;#ASMSTART
-; GFX803-NEXT:    ; use s0
+; GFX803-NEXT:    ; use v0
 ; GFX803-NEXT:    ;;#ASMEND
 ; GFX803-NEXT:    s_endpgm
 ;
@@ -141,8 +148,9 @@ define amdgpu_kernel void @s_pack_v2i16_imm_hi(ptr addrspace(4) %in0) #0 {
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX7-NEXT:    s_or_b32 s0, s0, 0x1c80000
+; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    ;;#ASMSTART
-; GFX7-NEXT:    ; use s0
+; GFX7-NEXT:    ; use v0
 ; GFX7-NEXT:    ;;#ASMEND
 ; GFX7-NEXT:    s_endpgm
   %val0 = load i32, ptr addrspace(4) %in0
@@ -151,7 +159,7 @@ define amdgpu_kernel void @s_pack_v2i16_imm_hi(ptr addrspace(4) %in0) #0 {
   %vec.1 = insertelement <2 x i16> %vec.0, i16 456, i32 1
   %vec.i32 = bitcast <2 x i16> %vec.1 to i32
 
-  call void asm sideeffect "; use $0", "s"(i32 %vec.i32) #0
+  call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
   ret void
 }
 

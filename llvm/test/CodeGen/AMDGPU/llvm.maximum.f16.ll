@@ -1236,7 +1236,7 @@ define void @s_maximum_v2f16(<2 x half> inreg %src0, <2 x half> inreg %src1) {
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <2 x half> @llvm.maximum.v2f16(<2 x half> %src0, <2 x half> %src1)
   %cast = bitcast <2 x half> %op to i32
-  call void asm sideeffect "; use $0", "s"(i32 %cast)
+  call void asm sideeffect "; use $0", "v"(i32 %cast)
   ret void
 }
 

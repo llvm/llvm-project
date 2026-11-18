@@ -53,7 +53,7 @@ define amdgpu_ps void @uniform_pack_not_wmma_scale(i32 inreg %scale0, i32 inreg 
   %pack01 = or i32 %byte0, %byte1.shift8
   %pack23 = or i32 %byte1.shift16, %byte1.shift24
   %pack = or i32 %pack01, %pack23
-  call void asm sideeffect "; use $0", "s"(i32 %pack)
+  call void asm sideeffect "; use $0", "v"(i32 %pack)
   ret void
 }
 
@@ -88,7 +88,7 @@ define amdgpu_ps <8 x float> @wmma_scale_src_extra_use(<16 x i32> %a, <16 x i32>
   %pack01 = or i32 %byte0, %byte1.shift8
   %pack23 = or i32 %byte1.shift16, %byte1.shift24
   %pack = or i32 %pack01, %pack23
-  call void asm sideeffect "; use $0", "s"(i32 %pack)
+  call void asm sideeffect "; use $0", "v"(i32 %pack)
   %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32.v16i32(i32 1, <16 x i32> %a, i32 1, <16 x i32> %b, i16 0, <8 x float> %c, i32 0, i32 0, i32 %pack, i32 0, i32 0, i32 %pack, i1 false, i1 false)
   ret <8 x float> %res
 }
