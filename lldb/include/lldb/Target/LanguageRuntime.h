@@ -144,6 +144,16 @@ public:
   virtual TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
                                          ValueObject &static_value) = 0;
 
+  /// Returns the address of the instance that \p pointer refers to, where
+  /// \p pointer is the value of an object of \p type, whose instances are
+  /// pointers (see eTypeInstanceIsPointer). A runtime can remove information
+  /// that it stores in the spare bits of such pointers, or follow a reference
+  /// that refers to the instance indirectly.
+  virtual llvm::Expected<lldb::addr_t> FixupPointerValue(lldb::addr_t pointer,
+                                                         CompilerType type) {
+    return pointer;
+  }
+
   /// This allows a language runtime to adjust the location of \p variable
   /// computed from its debug info, for storage whose indirection is only
   /// known at runtime.
