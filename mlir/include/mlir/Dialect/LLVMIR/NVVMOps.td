@@ -50,27 +50,23 @@ class NVVM_PTXBuilder_Op<string mnemonic, list<Trait> extraTraits = []> :
                           extraTraits)> {
 }
 
-// Op partitions of the NVVM dialect ops. They follow the instruction categories
-// of the PTX ISA (section numbers as of PTX ISA 9.5):
-//  - `Arith`: integer, floating-point, comparison and logic instructions
-//    (9.7.1-9.7.9).
-//  - `Convert`: the `cvt` data conversion instructions (9.7.10.24).
-//  - `AsyncCopy`: the asynchronous copy instructions and `tensormap.replace`
-//    (9.7.10.28 and 9.7.10.29).
-//  - `DataMovement`: the other data movement and conversion instructions
-//    (9.7.10).
-//  - `MBarrier`: the mbarrier instructions (9.7.15.16).
-//  - `Sync`: the other parallel synchronization and communication instructions
-//    (9.7.15).
-//  - `Mma`: warp-level matrix multiply-accumulate instructions (9.7.16).
+// Op partitions of the NVVM dialect ops, grouped by instruction category:
+//  - `Arith`: integer, floating-point, comparison and logic instructions.
+//  - `Convert`: the `cvt` data conversion instructions.
+//  - `AsyncCopy`: the asynchronous copy instructions and `tensormap.replace`.
+//  - `DataMovement`: the other data movement and conversion instructions.
+//  - `MBarrier`: the mbarrier instructions.
+//  - `Sync`: the other parallel synchronization and communication
+//    instructions.
+//  - `Mma`: warp-level matrix multiply-accumulate instructions.
 //  - `Wgmma`: asynchronous warpgroup-level matrix multiply-accumulate
-//    instructions (9.7.17).
-//  - `Tcgen05`: TensorCore 5th generation family instructions (9.7.18).
+//    instructions.
+//  - `Tcgen05`: TensorCore 5th generation family instructions.
 //  - `IndexSReg` and `MiscSReg`: special registers that identify a thread in
-//    the thread hierarchy (10.1-10.17) and all others (10.18-10.37). Their ops
-//    set the partition in their base classes.
-//  - `Misc`: control flow and miscellaneous instructions (9.7.14 and 9.7.21),
-//    and ops without a PTX instruction.
+//    the thread hierarchy and all others. Their ops set the partition in their
+//    base classes.
+//  - `Misc`: control flow and miscellaneous instructions, and ops without a
+//    PTX instruction.
 def NVVM_ArithPartition : Partition<"Arith">;
 def NVVM_AsyncCopyPartition : Partition<"AsyncCopy">;
 def NVVM_ConvertPartition : Partition<"Convert">;
