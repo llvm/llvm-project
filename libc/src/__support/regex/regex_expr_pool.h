@@ -168,9 +168,6 @@ public:
     return (get(id).nullable_mask & 1u) != 0;
   }
 
-  /// O(1) query indicating whether the subtree at id contains an Anchor node.
-  bool has_anchors(ExprId id) const { return get(id).has_anchors; }
-
   /// Returns the number of unique AST nodes currently interned in this pool.
   size_t size() const { return node_count; }
 

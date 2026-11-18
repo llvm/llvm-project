@@ -313,8 +313,7 @@ ErrorOr<ExprId> ExprPool::make_star(ExprId body) {
     return body;
   if (be.kind == ExprKind::Repeat && be.rep.min <= 1)
     return make_star(be.rep.body);
-  return intern(
-      Expr::make_star(body, be.has_anchors, be.has_repeat, be.rep_expansion));
+  return intern(Expr::make_star(body, be.has_repeat, be.rep_expansion));
 }
 
 ErrorOr<ExprId> ExprPool::make_repeat(ExprId body, uint16_t min, uint16_t max) {
@@ -338,7 +337,6 @@ ErrorOr<ExprId> ExprPool::make_repeat(ExprId body, uint16_t min, uint16_t max) {
     return make_repeat(be.rep.body, min, REPEAT_INF);
   uint16_t factor = (max == REPEAT_INF) ? min : max;
   return intern(Expr::make_repeat(body, min, max, be.nullable_mask,
-                                  be.has_anchors,
                                   scale_exp(be.rep_expansion, factor)));
 }
 
@@ -366,7 +364,7 @@ ErrorOr<ExprId> ExprPool::make_concat(ExprId l, ExprId r) {
   const Expr re = get(r);
   return intern(Expr::make_concat(
       l, r, static_cast<uint8_t>(le.nullable_mask & re.nullable_mask),
-      le.has_anchors || re.has_anchors, le.has_repeat || re.has_repeat,
+      le.has_repeat || re.has_repeat,
       cpp::max(le.rep_expansion, re.rep_expansion)));
 }
 
@@ -513,7 +511,7 @@ ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
       cpp::swap(l, r);
     return intern(Expr::make_alt(
         l, r, static_cast<uint8_t>(le.nullable_mask | re.nullable_mask),
-        le.has_anchors || re.has_anchors, le.has_repeat || re.has_repeat,
+        le.has_repeat || re.has_repeat,
         cpp::max(le.rep_expansion, re.rep_expansion)));
   }
 
@@ -564,7 +562,6 @@ ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
   return intern(Expr::make_alt(
       head, *rest,
       static_cast<uint8_t>(he.nullable_mask | re_rest.nullable_mask),
-      he.has_anchors || re_rest.has_anchors,
       he.has_repeat || re_rest.has_repeat,
       cpp::max(he.rep_expansion, re_rest.rep_expansion)));
 }

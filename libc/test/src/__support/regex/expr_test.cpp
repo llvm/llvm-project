@@ -37,7 +37,6 @@ TEST(LlvmLibcRegexExprTest, Interning) {
   ASSERT_TRUE(lit_a_2.has_value());
   // Hash-consing: same literal should return the same ExprId.
   EXPECT_EQ(*lit_a, *lit_a_2);
-  EXPECT_FALSE(pool.has_anchors(*lit_a));
 
   auto lit_b = pool.make_lit('b');
   ASSERT_TRUE(lit_b.has_value());
@@ -56,10 +55,6 @@ TEST(LlvmLibcRegexExprTest, Interning) {
   EXPECT_EQ(*bol_1, *bol_2);
   EXPECT_NE(*bol_1, *eol);
   EXPECT_FALSE(pool.is_nullable(*bol_1));
-  EXPECT_TRUE(pool.has_anchors(*bol_1));
-  EXPECT_TRUE(pool.has_anchors(*pool.make_concat(*bol_1, *lit_a)));
-  EXPECT_TRUE(pool.has_anchors(*pool.make_alt(*lit_a, *eol)));
-  EXPECT_FALSE(pool.has_anchors(*pool.make_concat(*lit_a, *lit_b)));
 
   auto empty_set_1 = pool.empty_set();
   auto empty_set_2 = pool.empty_set();
@@ -253,8 +248,6 @@ TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesAltAndStar) {
   const ExprId star_a = *pool.make_star(lit_a);
   EXPECT_EQ(*pool.make_star(star_a), star_a);
   EXPECT_TRUE(pool.is_nullable(star_a));
-  EXPECT_FALSE(pool.has_anchors(star_a));
-  EXPECT_TRUE(pool.has_anchors(*pool.make_star(*pool.make_anchor(ANCHOR_BOL))));
   EXPECT_TRUE(Expr::make_star(lit_a) == Expr::make_star(lit_a));
   EXPECT_FALSE(Expr::make_star(lit_a) == Expr::make_star(lit_b));
 
@@ -336,8 +329,6 @@ TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesAltAndStar) {
   EXPECT_LT(pool.get(merged).bin.left, pool.get(merged).bin.right);
   EXPECT_TRUE(pool.is_nullable(*pool.make_repeat(lit_a, 0, 2)));
   EXPECT_FALSE(pool.is_nullable(rep_2_3));
-  EXPECT_TRUE(
-      pool.has_anchors(*pool.make_repeat(*pool.make_anchor(ANCHOR_BOL), 2, 3)));
   EXPECT_TRUE(Expr::make_repeat(lit_a, 2, 3) == Expr::make_repeat(lit_a, 2, 3));
   EXPECT_FALSE(Expr::make_repeat(lit_a, 2, 3) ==
                Expr::make_repeat(lit_a, 2, 4));
