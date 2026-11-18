@@ -8916,6 +8916,12 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
           continue;
       }
 
+    // If the only exit-case successors of the block for a switch are
+    // unreachable, we can ignore this exit.
+    if (isa<SwitchInst>(ExitBB->getTerminator()) &&
+        onlyUnreachableSuccessors(ExitBB, L))
+      continue;
+
     ExitLimit EL = computeExitLimit(L, ExitBB, IsOnlyExit, AllowPredicates);
 
     assert((AllowPredicates || EL.Predicates.empty()) &&
