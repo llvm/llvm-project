@@ -446,17 +446,28 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
     BF.duplicateConstantIslands();
   }
 
+  auto BundleState = BC.MIB->createBundleEmissionState(Streamer.getContext());
+  auto EmitViaStreamer = [&](const MCInst &I) {
+    Streamer.emitInstruction(I, *BC.STI);
+  };
+
   // Track the first emitted instruction with debug info.
   bool FirstInstr = true;
+  BinaryBasicBlock *PrevBB = nullptr;
   for (BinaryBasicBlock *const BB : FF) {
     if (BC.shouldEmitBlockAlignment(*BB))
       Streamer.emitCodeAlignment(BB->getAlign(), *BC.STI,
                                  BB->getAlignmentMaxBytes());
+
+    if (BundleState)
+      BundleState->onBeginBasicBlock(*BB, PrevBB, EmitViaStreamer);
+
     Streamer.emitLabel(BB->getLabel());
     if (!EmitCodeOnly) {
       if (MCSymbol *EntrySymbol = BF.getSecondaryEntryPointSymbol(*BB))
         Streamer.emitLabel(EntrySymbol);
     }
+    PrevBB = BB;
 
     SMLoc LastLocSeen;
     for (auto I = BB->begin(), E = BB->end(); I != E; ++I) {
@@ -492,8 +503,17 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
           BB->getLocSyms().emplace_back(Offset, InstrLabel);
         }
 
-        if (InstrLabel)
-          Streamer.emitLabel(InstrLabel);
+        if (InstrLabel) {
+          if (BundleState && !BundleState->canEmitInstructionLabel()) {
+            // Mid-bundle labels are dropped because VLIW packets execute
+            // atomically. Addresses within a bundle are not meaningful.
+            LLVM_DEBUG(dbgs() << "BOLT-DEBUG: dropping mid-packet label "
+                              << InstrLabel->getName() << " in "
+                              << BF.getPrintName() << '\n');
+          } else {
+            Streamer.emitLabel(InstrLabel);
+          }
+        }
       }
 
       // RISC-V PCREL_LO12 fixups refer to labels on their AUIPC instructions.
@@ -514,9 +534,16 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         }
       }
 
+      if (BundleState &&
+          BundleState->processInstruction(Instr, EmitViaStreamer))
+        continue;
+
       Streamer.emitInstruction(Instr, *BC.STI);
     }
   }
+
+  if (BundleState)
+    BundleState->flush(EmitViaStreamer);
 
   if (!EmitCodeOnly)
     emitConstantIslands(BF, FF.isSplitFragment());
