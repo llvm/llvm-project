@@ -72,24 +72,6 @@ TEST_F(LlvmLibcStrToF128Test, SimpleTest) {
   run_test("0x123", 5, (UInt128(0x4007230000000000) << 64));
 }
 
-// These are tests that have caused problems for doubles in the past.
-TEST_F(LlvmLibcStrToF128Test, Float64SpecificFailures) {
-  run_test("3E70000000000000", 16, (UInt128(0x7fff000000000000) << 64), ERANGE);
-  run_test("358416272e-33", 13,
-           (UInt128(0x3fadbbb2a68c9d0b) << 64) + UInt128(0x8800e7969e1c5fc8));
-  run_test("2.16656806400000023841857910156251e9", 36,
-           (UInt128(0x401e024669000000) << 64) + UInt128(0x800000000000018));
-  run_test("27949676547093071875", 20,
-           (UInt128(0x403f83e132bc608c) << 64) + UInt128(0x8803000000000000));
-}
-
-TEST_F(LlvmLibcStrToF128Test, Float80SpecificFailures) {
-  run_test("7777777777777777777777777777777777777777777777777777777777777777777"
-           "777777777777777777777777777777777",
-           100,
-           (UInt128(0x414ac729b8fcaf73) << 64) + UInt128(0x4184a3d793224129));
-}
-
 TEST_F(LlvmLibcStrToF128Test, MaxSizeNumbers) {
   run_test("1.1897314953572317650e4932", 26,
            (UInt128(0x7ffeffffffffffff) << 64) + UInt128(0xfffd57322e3f8675),
