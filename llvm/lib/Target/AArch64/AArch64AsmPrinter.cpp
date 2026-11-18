@@ -65,6 +65,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
@@ -96,6 +97,8 @@ class AArch64AsmPrinter : public AsmPrinter {
   bool PtrauthInitFiniAddressDisc = false;
 #ifndef NDEBUG
   unsigned InstsEmitted;
+  bool ExplicitWinCFIRangeOpen = false;
+  bool EmittedExplicitWinCFIRange = false;
 #endif
   bool EnableImportCallOptimization = false;
   MapVector<MCSection *, std::vector<std::pair<MCSymbol *, MCSymbol *>>>
@@ -110,6 +113,10 @@ public:
         MCInstLowering(OutContext, *this), FM(*this) {}
 
   StringRef getPassName() const override { return "AArch64 Assembly Printer"; }
+
+  bool hasExplicitWinCFIRanges() const override {
+    return AArch64FI->hasExplicitWinCFIRanges();
+  }
 
   /// Wrapper for MCInstLowering.lowerOperand() for the
   /// tblgen'erated pseudo lowering.
@@ -314,6 +321,10 @@ public:
     AArch64FI = MF.getInfo<AArch64FunctionInfo>();
     STI = &MF.getSubtarget<AArch64Subtarget>();
 
+#ifndef NDEBUG
+    ExplicitWinCFIRangeOpen = false;
+    EmittedExplicitWinCFIRange = false;
+#endif
     SetupMachineFunction(MF);
 
     if (STI->isTargetCOFF()) {
@@ -344,6 +355,7 @@ public:
                               uint64_t Offset = 0) override;
 
 private:
+  void emitInstructionImpl(const MachineInstr *MI);
   void printOperand(const MachineInstr *MI, unsigned OpNum, raw_ostream &O);
   bool printAsmMRegister(const MachineOperand &MO, char Mode, raw_ostream &O);
   bool printAsmRegInClass(const MachineOperand &MO,
@@ -358,6 +370,7 @@ private:
   void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
 
   void emitFunctionBodyEnd() override;
+  void emitBasicBlockEnd(const MachineBasicBlock &MBB) override;
   void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
 
   MCSymbol *GetCPISymbol(unsigned CPID) const override;
@@ -1155,7 +1168,38 @@ void AArch64AsmPrinter::emitLOHs() {
   }
 }
 
+// Unwinding can get confused if the last instruction in an exception-handling
+// region (function, funclet, try block, etc.) is a call, because the return
+// address then points to the *next* region (see
+// X86AsmPrinter::maybeEmitNopAfterCallForWindowsEH for the X86 equivalent).
+// Trap after a noreturn call that would end a function or funclet, and elide
+// the trap when the next instruction is in the same function.
+void AArch64AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
+  if (MBB.succ_empty() && MF->usesWindowsUnwindInfo()) {
+    auto Next = std::next(MBB.getIterator());
+    if (Next == MF->end() || Next->isEHFuncletEntry()) {
+      for (const MachineInstr &MI : reverse(MBB)) {
+        if (MI.isMetaInstruction() || AArch64InstrInfo::isSEHInstruction(MI))
+          continue;
+        if (MI.isCall() && !MI.isReturn())
+          EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::BRK).addImm(1));
+        break;
+      }
+    }
+  }
+
+  AsmPrinter::emitBasicBlockEnd(MBB);
+}
+
 void AArch64AsmPrinter::emitFunctionBodyEnd() {
+#ifndef NDEBUG
+  assert(!ExplicitWinCFIRangeOpen &&
+         "Explicit Windows CFI range is still open at function end");
+  assert(EmittedExplicitWinCFIRange == AArch64FI->hasExplicitWinCFIRanges() &&
+         "Explicit Windows CFI ranges should only be used for flagged "
+         "functions. If a function is flagged then it must have explicit "
+         "Windows CFI ranges.");
+#endif
   if (!AArch64FI->getLOHRelated().empty())
     emitLOHs();
 }
@@ -1784,8 +1828,11 @@ void AArch64AsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
   MachineBasicBlock::const_iterator MII(MI);
   ++MII;
   while (NumNOPBytes > 0) {
+    if (MII != MBB.end() && MII->isDebugInstr()) {
+      ++MII;
+      continue;
+    }
     if (MII == MBB.end() || MII->isCall() ||
-        MII->getOpcode() == AArch64::DBG_VALUE ||
         MII->getOpcode() == TargetOpcode::PATCHPOINT ||
         MII->getOpcode() == TargetOpcode::STACKMAP)
       break;
@@ -2721,7 +2768,8 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
   auto STI = std::make_unique<AArch64Subtarget>(
       TT, TM.getTargetCPU(), TM.getTargetCPU(), TM.getTargetFeatureString(), TM,
       true);
-  this->STI = STI.get();
+  // This may be called while emitting a function, whose subtarget is restored.
+  SaveAndRestore<const AArch64Subtarget *> SavedSTI(this->STI, STI.get());
 
   MCSymbol *Place = OutStreamer->getContext().createTempSymbol();
   OutStreamer->emitLabel(Place);
@@ -3431,6 +3479,19 @@ void AArch64AsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
 }
 
 void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
+  emitInstructionImpl(MI);
+  if (!MI->isBundledWithSucc())
+    return;
+
+  const MachineInstr *EndProc = MI->getNextNode();
+  assert(MI->isTerminator() && "Unexpected late AArch64 bundle head");
+  assert(EndProc->getOpcode() == AArch64::SEH_EndProc &&
+         !EndProc->isBundledWithSucc() &&
+         "Unexpected late AArch64 bundle member");
+  emitInstructionImpl(EndProc);
+}
+
+void AArch64AsmPrinter::emitInstructionImpl(const MachineInstr *MI) {
   AArch64_MC::verifyInstructionPredicates(MI->getOpcode(), STI->getFeatureBits());
 
 #ifndef NDEBUG
@@ -3564,8 +3625,9 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
     return;
 
-  case AArch64::EMITBKEY: {
-    ExceptionHandling ExceptionHandlingType = MAI.getExceptionHandlingType();
+  case AArch64::EMITBKEY:
+  case AArch64::EMITNONHINTED: {
+    ExceptionHandling ExceptionHandlingType = getModuleExceptionModel();
     if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
         ExceptionHandlingType != ExceptionHandling::ARM)
       return;
@@ -3573,12 +3635,16 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (getFunctionCFISectionType(*MF) == CFISection::None)
       return;
 
-    OutStreamer->emitCFIBKeyFrame();
+    if (MI->getOpcode() == AArch64::EMITBKEY)
+      OutStreamer->emitCFIBKeyFrame();
+    else
+      OutStreamer->emitCFINonHintPAuthFrame();
+
     return;
   }
 
   case AArch64::EMITMTETAGGED: {
-    ExceptionHandling ExceptionHandlingType = MAI.getExceptionHandlingType();
+    ExceptionHandling ExceptionHandlingType = getModuleExceptionModel();
     if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
         ExceptionHandlingType != ExceptionHandling::ARM)
       return;
@@ -3950,6 +4016,30 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     LowerHWASAN_CHECK_MEMACCESS(*MI);
     return;
 
+  case AArch64::SEH_StartProc:
+#ifndef NDEBUG
+    assert(!ExplicitWinCFIRangeOpen && "Starting an explicit Windows CFI range "
+                                       "before ending the previous one");
+    ExplicitWinCFIRangeOpen = true;
+    EmittedExplicitWinCFIRange = true;
+#endif
+    OutStreamer->emitWinCFIStartProc(CurrentFnSym);
+    return;
+
+  case AArch64::SEH_EndProc:
+#ifndef NDEBUG
+    assert(ExplicitWinCFIRangeOpen &&
+           "Ending an explicit Windows CFI range without a matching start");
+    ExplicitWinCFIRangeOpen = false;
+#endif
+    OutStreamer->emitWinCFIFuncletOrFuncEnd();
+    OutStreamer->emitWinCFIEndProc();
+    return;
+
+  case AArch64::SEH_EndC:
+    TS->emitARM64WinCFIEndC();
+    return;
+
   case AArch64::SEH_StackAlloc:
     TS->emitARM64WinCFIAllocStack(MI->getOperand(0).getImm());
     return;
@@ -4057,8 +4147,8 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
 
   case AArch64::SEH_SaveAnyRegI:
-    assert(MI->getOperand(1).getImm() <= 1008 &&
-           "SaveAnyRegQP SEH opcode offset must fit into 6 bits");
+    assert((isShiftedUInt<6, 3>((uint64_t)MI->getOperand(1).getImm())) &&
+           "SaveAnyRegI SEH opcode offset must fit into 6 bits");
     TS->emitARM64WinCFISaveAnyRegI(MI->getOperand(0).getImm(),
                                    MI->getOperand(1).getImm());
     return;
@@ -4066,18 +4156,30 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::SEH_SaveAnyRegIP:
     assert(MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1 &&
            "Non-consecutive registers not allowed for save_any_reg");
-    assert(MI->getOperand(2).getImm() <= 1008 &&
-           "SaveAnyRegQP SEH opcode offset must fit into 6 bits");
+    assert((isShiftedUInt<6, 4>((uint64_t)MI->getOperand(2).getImm())) &&
+           "SaveAnyRegIP SEH opcode offset must fit into 6 bits");
     TS->emitARM64WinCFISaveAnyRegIP(MI->getOperand(0).getImm(),
                                     MI->getOperand(2).getImm());
+    return;
+
+  case AArch64::SEH_SaveAnyRegQ:
+    assert((isShiftedUInt<6, 4>((uint64_t)MI->getOperand(1).getImm())) &&
+           "SaveAnyRegQ SEH opcode offset must fit into 6 bits");
+    TS->emitARM64WinCFISaveAnyRegQ(MI->getOperand(0).getImm(),
+                                   MI->getOperand(1).getImm());
+    return;
+
+  case AArch64::SEH_SaveAnyRegQX:
+    assert((isShiftedUInt<6, 4>(-(uint64_t)MI->getOperand(1).getImm())) &&
+           "SaveAnyRegQX SEH opcode offset must fit into 6 bits");
+    TS->emitARM64WinCFISaveAnyRegQX(MI->getOperand(0).getImm(),
+                                    -MI->getOperand(1).getImm());
     return;
 
   case AArch64::SEH_SaveAnyRegQP:
     assert(MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1 &&
            "Non-consecutive registers not allowed for save_any_reg");
-    assert(MI->getOperand(2).getImm() >= 0 &&
-           "SaveAnyRegQP SEH opcode offset must be non-negative");
-    assert(MI->getOperand(2).getImm() <= 1008 &&
+    assert((isShiftedUInt<6, 4>((uint64_t)MI->getOperand(2).getImm())) &&
            "SaveAnyRegQP SEH opcode offset must fit into 6 bits");
     TS->emitARM64WinCFISaveAnyRegQP(MI->getOperand(0).getImm(),
                                     MI->getOperand(2).getImm());
@@ -4086,9 +4188,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::SEH_SaveAnyRegQPX:
     assert(MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1 &&
            "Non-consecutive registers not allowed for save_any_reg");
-    assert(MI->getOperand(2).getImm() < 0 &&
-           "SaveAnyRegQPX SEH opcode offset must be negative");
-    assert(MI->getOperand(2).getImm() >= -1008 &&
+    assert((isShiftedUInt<6, 4>(-(uint64_t)MI->getOperand(2).getImm())) &&
            "SaveAnyRegQPX SEH opcode offset must fit into 6 bits");
     TS->emitARM64WinCFISaveAnyRegQPX(MI->getOperand(0).getImm(),
                                      -MI->getOperand(2).getImm());

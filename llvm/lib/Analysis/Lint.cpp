@@ -273,6 +273,16 @@ void Lint::visitCallBase(CallBase &I) {
 
           Attribute CallAttr = CallAttrs.getParamAttr(ArgNo, Attr);
           Attribute FnAttr = F->getParamAttribute(ArgNo, Attr);
+
+          if ((Attr == Attribute::ZExt || Attr == Attribute::SExt) &&
+              CallAttr.isValid() && !FnAttr.isValid()) {
+            // As an exception, allow zeroext/signext at the call-site, while
+            // missing on the function. This means that the caller extends,
+            // while the callee does not assume extension. The call-site
+            // extension is redundant in that case, but perfectly well-defined.
+            continue;
+          }
+
           Check(CallAttr.isValid() == FnAttr.isValid(),
                 Twine("Undefined behavior: ABI attribute ") +
                     Attribute::getNameFromAttrKind(Attr) +

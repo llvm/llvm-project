@@ -698,6 +698,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasLSE)
     Builder.defineMacro("__ARM_FEATURE_ATOMICS", "1");
 
+  if (HasLSCP)
+    Builder.defineMacro("__ARM_FEATURE_LSCP", "1");
+
   if (HasBFloat16) {
     Builder.defineMacro("__ARM_FEATURE_BF16", "1");
     Builder.defineMacro("__ARM_FEATURE_BF16_VECTOR_ARITHMETIC", "1");
@@ -934,6 +937,7 @@ void AArch64TargetInfo::computeFeatureLookup() {
       .Case("sm4", HasSM4)
       .Case("rdm", HasRDM)
       .Case("lse", HasLSE)
+      .Case("lscp", HasLSCP)
       .Case("crc", HasCRC)
       .Case("cssc", HasCSSC)
       .Case("sha2", HasSHA2)
@@ -1341,6 +1345,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasBFloat16 = true;
     if (Feature == "+lse")
       HasLSE = true;
+    if (Feature == "+lscp")
+      HasLSCP = true;
     if (Feature == "+ls64")
       HasLS64 = true;
     if (Feature == "+rand")
@@ -1898,6 +1904,56 @@ MinGWARM64TargetInfo::MinGWARM64TargetInfo(const llvm::Triple &Triple,
                                            const TargetOptions &Opts)
     : WindowsARM64TargetInfo(Triple, Opts) {
   TheCXXABI.set(TargetCXXABI::GenericAArch64);
+}
+
+UEFIAArch64TargetInfo::UEFIAArch64TargetInfo(const llvm::Triple &Triple,
+                                             const TargetOptions &Opts)
+    : UEFITargetInfo<AArch64leTargetInfo>(Triple, Opts) {
+  // The UEFI spec does not mandate specific C++ ABI, integer widths, or
+  // alignment. We are setting these defaults to match the Windows ARM64 target
+  // as it is the only way to build EFI applications with Clang/LLVM today.
+  // This is an LLP64 platform.
+  // int:4, long:4, long long:8, long double:8.
+  TheCXXABI.set(TargetCXXABI::Microsoft);
+  IntWidth = IntAlign = 32;
+  LongWidth = LongAlign = 32;
+  DoubleAlign = LongLongAlign = 64;
+  LongDoubleWidth = LongDoubleAlign = 64;
+  LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+  IntMaxType = SignedLongLong;
+  Int64Type = SignedLongLong;
+  SizeType = UnsignedLongLong;
+  PtrDiffType = SignedLongLong;
+  IntPtrType = SignedLongLong;
+}
+
+TargetInfo::BuiltinVaListKind
+UEFIAArch64TargetInfo::getBuiltinVaListKind() const {
+  return TargetInfo::CharPtrBuiltinVaList;
+}
+
+TargetInfo::CallingConvCheckResult
+UEFIAArch64TargetInfo::checkCallingConvention(CallingConv CC) const {
+  switch (CC) {
+  case CC_X86StdCall:
+  case CC_X86ThisCall:
+  case CC_X86FastCall:
+  case CC_X86VectorCall:
+    return CCCR_Ignore;
+  case CC_C:
+  case CC_PreserveMost:
+  case CC_PreserveAll:
+  case CC_PreserveNone:
+  case CC_Win64:
+    return CCCR_OK;
+  default:
+    return CCCR_Warning;
+  }
+}
+
+TargetInfo::CallingConvKind
+UEFIAArch64TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
+  return CCK_MicrosoftWin64;
 }
 
 AppleMachOAArch64TargetInfo::AppleMachOAArch64TargetInfo(

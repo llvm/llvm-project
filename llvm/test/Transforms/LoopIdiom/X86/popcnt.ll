@@ -18,19 +18,19 @@ define i32 @popcount(i64 %a) nounwind uwtable readnone ssp {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctpop.i64(i64 [[A]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[WHILE_END:.*]], label %[[WHILE_BODY_PREHEADER:.*]]
 ; CHECK:       [[WHILE_BODY_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[WHILE_BODY:.*]]
 ; CHECK:       [[WHILE_BODY]]:
-; CHECK-NEXT:    [[TCPHI:%.*]] = phi i32 [ [[TMP1]], %[[WHILE_BODY_PREHEADER]] ], [ [[TCDEC:%.*]], %[[WHILE_BODY]] ]
+; CHECK-NEXT:    [[TCPHI:%.*]] = phi i64 [ [[TMP0]], %[[WHILE_BODY_PREHEADER]] ], [ [[TCDEC:%.*]], %[[WHILE_BODY]] ]
 ; CHECK-NEXT:    [[C_05:%.*]] = phi i32 [ [[INC:%.*]], %[[WHILE_BODY]] ], [ 0, %[[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[A_ADDR_04:%.*]] = phi i64 [ [[AND:%.*]], %[[WHILE_BODY]] ], [ [[A]], %[[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[C_05]], 1
 ; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[A_ADDR_04]], -1
 ; CHECK-NEXT:    [[AND]] = and i64 [[SUB]], [[A_ADDR_04]]
-; CHECK-NEXT:    [[TCDEC]] = sub nsw i32 [[TCPHI]], 1
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp sle i32 [[TCDEC]], 0
+; CHECK-NEXT:    [[TCDEC]] = sub nuw i64 [[TCPHI]], 1
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[TCDEC]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[WHILE_END_LOOPEXIT:.*]], label %[[WHILE_BODY]]
 ; CHECK:       [[WHILE_END_LOOPEXIT]]:
 ; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[TMP1]], %[[WHILE_BODY]] ]
@@ -74,12 +74,12 @@ define i32 @popcount2(i64 %a, i32 %mydata1, i32 %mydata2) nounwind uwtable readn
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctpop.i64(i64 [[A]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[WHILE_END:.*]], label %[[WHILE_BODY_PREHEADER:.*]]
 ; CHECK:       [[WHILE_BODY_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[WHILE_BODY:.*]]
 ; CHECK:       [[WHILE_BODY]]:
-; CHECK-NEXT:    [[TCPHI:%.*]] = phi i32 [ [[TMP1]], %[[WHILE_BODY_PREHEADER]] ], [ [[TCDEC:%.*]], %[[WHILE_BODY]] ]
+; CHECK-NEXT:    [[TCPHI:%.*]] = phi i64 [ [[TMP0]], %[[WHILE_BODY_PREHEADER]] ], [ [[TCDEC:%.*]], %[[WHILE_BODY]] ]
 ; CHECK-NEXT:    [[C_013:%.*]] = phi i32 [ [[INC:%.*]], %[[WHILE_BODY]] ], [ 0, %[[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[MYDATA2_ADDR_012:%.*]] = phi i32 [ [[MUL1:%.*]], %[[WHILE_BODY]] ], [ [[MYDATA2]], %[[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[MYDATA1_ADDR_011:%.*]] = phi i32 [ [[MUL:%.*]], %[[WHILE_BODY]] ], [ [[MYDATA1]], %[[WHILE_BODY_PREHEADER]] ]
@@ -90,8 +90,8 @@ define i32 @popcount2(i64 %a, i32 %mydata1, i32 %mydata2) nounwind uwtable readn
 ; CHECK-NEXT:    [[MUL]] = mul nsw i32 [[INC]], [[MYDATA1_ADDR_011]]
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[AND]] to i32
 ; CHECK-NEXT:    [[MUL1]] = mul nsw i32 [[CONV]], [[MYDATA2_ADDR_012]]
-; CHECK-NEXT:    [[TCDEC]] = sub nsw i32 [[TCPHI]], 1
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp sle i32 [[TCDEC]], 0
+; CHECK-NEXT:    [[TCDEC]] = sub nuw i64 [[TCPHI]], 1
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[TCDEC]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[WHILE_END_LOOPEXIT:.*]], label %[[WHILE_BODY]]
 ; CHECK:       [[WHILE_END_LOOPEXIT]]:
 ; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[TMP1]], %[[WHILE_BODY]] ]
@@ -186,19 +186,19 @@ define i32 @PopCntCrash2(i64 %a, i32 %b) nounwind uwtable readnone ssp {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctpop.i64(i64 [[A]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], [[B]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[WHILE_END:.*]], label %[[WHILE_BODY_PREHEADER:.*]]
 ; CHECK:       [[WHILE_BODY_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[WHILE_BODY:.*]]
 ; CHECK:       [[WHILE_BODY]]:
-; CHECK-NEXT:    [[TCPHI:%.*]] = phi i32 [ [[TMP1]], %[[WHILE_BODY_PREHEADER]] ], [ [[TCDEC:%.*]], %[[WHILE_BODY]] ]
+; CHECK-NEXT:    [[TCPHI:%.*]] = phi i64 [ [[TMP0]], %[[WHILE_BODY_PREHEADER]] ], [ [[TCDEC:%.*]], %[[WHILE_BODY]] ]
 ; CHECK-NEXT:    [[C_05:%.*]] = phi i32 [ [[INC:%.*]], %[[WHILE_BODY]] ], [ [[B]], %[[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[A_ADDR_04:%.*]] = phi i64 [ [[AND:%.*]], %[[WHILE_BODY]] ], [ [[A]], %[[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[C_05]], 1
 ; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[A_ADDR_04]], -1
 ; CHECK-NEXT:    [[AND]] = and i64 [[SUB]], [[A_ADDR_04]]
-; CHECK-NEXT:    [[TCDEC]] = sub nsw i32 [[TCPHI]], 1
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp sle i32 [[TCDEC]], 0
+; CHECK-NEXT:    [[TCDEC]] = sub nuw i64 [[TCPHI]], 1
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[TCDEC]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[WHILE_END_LOOPEXIT:.*]], label %[[WHILE_BODY]]
 ; CHECK:       [[WHILE_END_LOOPEXIT]]:
 ; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[TMP2]], %[[WHILE_BODY]] ]
@@ -315,34 +315,26 @@ while.end:                                        ; preds = %while.body, %entry
 ; narrower bitwidth than required to represent the maximum population count of
 ; the input. Make sure that the new trip-count induction variable we introduce
 ; is wide enough so that the preheader and / or decrement don't underflow.
-;
-; FIXME: This test is currently broken (see GH issue #230595). In particular,
-; [[TCPHI]] is an i4 when it needs to be at least an i7 to represent the
-; maximum population count as a signed value or i6 to represent it unsigned.
-; The effect is that, for a popcount of N:
-; - If icmp eq (trunc i4, N), 0, we skip the loop entirely;
-; - If icmp slt (trunc i4, N), 0, we run the loop exactly once;
-; - Otherwise, we run the loop trunc i4, N times.
 define i4 @popcount_truncated(i32 %x) {
 ; CHECK-LABEL: define i4 @popcount_truncated(
 ; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i4 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[EXIT:.*]], label %[[LOOP_PREHEADER:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[TCPHI:%.*]] = phi i4 [ [[TMP1]], %[[LOOP_PREHEADER]] ], [ [[TCDEC:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TCPHI:%.*]] = phi i32 [ [[TMP0]], %[[LOOP_PREHEADER]] ], [ [[TCDEC:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[X_NEXT:%.*]], %[[LOOP]] ], [ [[X]], %[[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[COUNT:%.*]] = phi i4 [ [[COUNT_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[X_DEC:%.*]] = sub i32 [[IV]], 1
 ; CHECK-NEXT:    [[X_NEXT]] = and i32 [[IV]], [[X_DEC]]
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    [[COUNT_NEXT]] = add i4 [[COUNT]], 1
-; CHECK-NEXT:    [[TCDEC]] = sub nsw i4 [[TCPHI]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp sle i4 [[TCDEC]], 0
+; CHECK-NEXT:    [[TCDEC]] = sub nuw i32 [[TCPHI]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[TCDEC]], 0
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    [[COUNT_NEXT_LCSSA:%.*]] = phi i4 [ [[TMP1]], %[[LOOP]] ]

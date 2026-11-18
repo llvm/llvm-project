@@ -1170,13 +1170,13 @@ define i32 @abd_minmax_i32(i32 %a, i32 %b) nounwind {
 ;
 ; RV64I-LABEL: abd_minmax_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a1, a1, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    srai a1, a0, 63
-; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    sext.w a1, a1
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    bltu a1, a0, .LBB15_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB15_2:
 ; RV64I-NEXT:    subw a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
@@ -1189,10 +1189,8 @@ define i32 @abd_minmax_i32(i32 %a, i32 %b) nounwind {
 ;
 ; RV64ZBB-LABEL: abd_minmax_i32:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    slli a1, a1, 32
-; RV64ZBB-NEXT:    slli a0, a0, 32
-; RV64ZBB-NEXT:    srli a1, a1, 32
-; RV64ZBB-NEXT:    srli a0, a0, 32
+; RV64ZBB-NEXT:    sext.w a1, a1
+; RV64ZBB-NEXT:    sext.w a0, a0
 ; RV64ZBB-NEXT:    maxu a2, a0, a1
 ; RV64ZBB-NEXT:    minu a0, a0, a1
 ; RV64ZBB-NEXT:    subw a0, a0, a2
@@ -1603,13 +1601,13 @@ define i32 @abd_cmp_i32(i32 %a, i32 %b) nounwind {
 ;
 ; RV64I-LABEL: abd_cmp_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a1, a1, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    srai a1, a0, 63
-; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    sext.w a1, a1
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    bltu a1, a0, .LBB20_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB20_2:
 ; RV64I-NEXT:    subw a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
@@ -1622,10 +1620,8 @@ define i32 @abd_cmp_i32(i32 %a, i32 %b) nounwind {
 ;
 ; RV64ZBB-LABEL: abd_cmp_i32:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    slli a1, a1, 32
-; RV64ZBB-NEXT:    slli a0, a0, 32
-; RV64ZBB-NEXT:    srli a1, a1, 32
-; RV64ZBB-NEXT:    srli a0, a0, 32
+; RV64ZBB-NEXT:    sext.w a1, a1
+; RV64ZBB-NEXT:    sext.w a0, a0
 ; RV64ZBB-NEXT:    maxu a2, a0, a1
 ; RV64ZBB-NEXT:    minu a0, a0, a1
 ; RV64ZBB-NEXT:    subw a0, a0, a2

@@ -285,12 +285,12 @@ let DecoderNamespace = "MicroMips" in {
   }
 }
 
-let DecoderNamespace = "MicroMips",  DecoderMethod = "DecodeFMemMMR2" in {
-  def LDC1_MM_D32 : MMRel, LW_FT<"ldc1", AFGR64Opnd, mem_mm_16, load>,
+let DecoderNamespace = "MicroMips" in {
+  def LDC1_MM_D32 : MMRel, LW_FT<"ldc1", AFGR64MemOpnd, mem_mm_16, load>,
                     LW_FM_MM<0x2f>, ISA_MICROMIPS, FGR_32 {
     let BaseOpcode = "LDC132";
   }
-  def SDC1_MM_D32 : MMRel, SW_FT<"sdc1", AFGR64Opnd, mem_mm_16, store>,
+  def SDC1_MM_D32 : MMRel, SW_FT<"sdc1", AFGR64MemOpnd, mem_mm_16, store>,
                     LW_FM_MM<0x2e>, ISA_MICROMIPS, FGR_32 {
     let BaseOpcode = "SDC164";
   }
@@ -300,7 +300,7 @@ let DecoderNamespace = "MicroMips",  DecoderMethod = "DecodeFMemMMR2" in {
                 LW_FM_MM<0x26>, ISA_MICROMIPS;
 }
 
-let DecoderNamespace = "Mips64", DecoderMethod = "DecodeFMemMMR2" in {
+let DecoderNamespace = "Mips64" in {
   def LDC1_MM_D64 : MMRel, LW_FT<"ldc1", FGR64Opnd, mem_mm_16, load>,
                     LW_FM_MM<0x2f>, ISA_MICROMIPS, FGR_64 {
     let BaseOpcode = "LDC164";

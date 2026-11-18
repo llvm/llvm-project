@@ -284,3 +284,167 @@ outer:                                            ; preds = %loopexit, %entry
   %0 = load i32, ptr %loaded.ptr, align 4
   ret void
 }
+
+; %ptr.outer has an argument and a non-recursive LCSSA phi as incoming values,
+; so BasicAA gives up.
+; CHECK-LABEL: nested_loop_arg
+; CHECK: MayAlias: i8* %buf, i8* %ptr.inner
+define void @nested_loop_arg(ptr %start, i1 %c) {
+entry:
+  %buf = alloca [16 x i8]
+  br label %outer
+
+outer:
+  %ptr.outer = phi ptr [ %start, %entry ], [ %ptr.next.lcssa, %outer.latch ]
+  br label %inner
+
+inner:
+  %ptr.inner = phi ptr [ %ptr.outer, %outer ], [ %ptr.next, %inner ]
+  %l = load i8, ptr %buf
+  store i8 %l, ptr %ptr.inner
+  %ptr.next = getelementptr inbounds i8, ptr %ptr.inner, i64 1
+  br i1 %c, label %outer.latch, label %inner
+
+outer.latch:
+  %ptr.next.lcssa = phi ptr [ %ptr.next, %inner ]
+  br i1 %c, label %exit, label %outer
+
+exit:
+  ret void
+}
+
+; %ptr.outer has two arguments and a recursive LCSSA phi as incoming values.
+; CHECK-LABEL: recursive_lcssa_phi_and_two_args
+; CHECK: NoAlias: i8* %buf, i8* %ptr.outer
+define void @recursive_lcssa_phi_and_two_args(ptr %a, ptr %b, i1 %c) {
+entry:
+  %buf = alloca [16 x i8]
+  br i1 %c, label %then, label %outer
+
+then:
+  br label %outer
+
+outer:
+  %ptr.outer = phi ptr [ %a, %entry ], [ %b, %then ], [ %ptr.next.lcssa, %outer.latch ]
+  br label %inner
+
+inner:
+  %iv = phi i64 [ 0, %outer ], [ %iv.next, %inner ]
+  %ptr.next = getelementptr inbounds i8, ptr %ptr.outer, i64 %iv
+  %l = load i8, ptr %buf
+  store i8 %l, ptr %ptr.outer
+  %iv.next = add i64 %iv, 1
+  br i1 %c, label %outer.latch, label %inner
+
+outer.latch:
+  %ptr.next.lcssa = phi ptr [ %ptr.next, %inner ]
+  br i1 %c, label %exit, label %outer
+
+exit:
+  ret void
+}
+
+; %ptr.outer has a recursive LCSSA phi and another loop's LCSSA phi as inputs.
+; CHECK-LABEL: recursive_lcssa_phi_and_phi
+; CHECK: NoAlias: i8* %buf, i8* %ptr.outer
+define void @recursive_lcssa_phi_and_phi(ptr %a, i1 %c) {
+entry:
+  %buf = alloca [16 x i8]
+  br label %pre
+
+pre:
+  %ptr.pre = phi ptr [ %a, %entry ], [ %ptr.pre.next, %pre ]
+  %ptr.pre.next = getelementptr inbounds i8, ptr %ptr.pre, i64 1
+  br i1 %c, label %pre.exit, label %pre
+
+pre.exit:
+  %ptr.pre.lcssa = phi ptr [ %ptr.pre.next, %pre ]
+  br label %outer
+
+outer:
+  %ptr.outer = phi ptr [ %ptr.pre.lcssa, %pre.exit ], [ %ptr.next.lcssa, %outer.latch ]
+  br label %inner
+
+inner:
+  %iv = phi i64 [ 0, %outer ], [ %iv.next, %inner ]
+  %ptr.next = getelementptr inbounds i8, ptr %ptr.outer, i64 %iv
+  %l = load i8, ptr %buf
+  store i8 %l, ptr %ptr.outer
+  %iv.next = add i64 %iv, 1
+  br i1 %c, label %outer.latch, label %inner
+
+outer.latch:
+  %ptr.next.lcssa = phi ptr [ %ptr.next, %inner ]
+  br i1 %c, label %exit, label %outer
+
+exit:
+  ret void
+}
+
+; %ptr.outer may be based on %buf.
+; CHECK-LABEL: recursive_lcssa_phi_and_alloca
+; CHECK: MayAlias: i8* %buf, i8* %ptr.outer
+define void @recursive_lcssa_phi_and_alloca(ptr %a, i1 %c) {
+entry:
+  %buf = alloca [16 x i8]
+  br i1 %c, label %then, label %outer
+
+then:
+  br label %outer
+
+outer:
+  %ptr.outer = phi ptr [ %a, %entry ], [ %buf, %then ], [ %ptr.next.lcssa, %outer.latch ]
+  br label %inner
+
+inner:
+  %iv = phi i64 [ 0, %outer ], [ %iv.next, %inner ]
+  %ptr.next = getelementptr inbounds i8, ptr %ptr.outer, i64 %iv
+  %l = load i8, ptr %buf
+  store i8 %l, ptr %ptr.outer
+  %iv.next = add i64 %iv, 1
+  br i1 %c, label %outer.latch, label %inner
+
+outer.latch:
+  %ptr.next.lcssa = phi ptr [ %ptr.next, %inner ]
+  br i1 %c, label %exit, label %outer
+
+exit:
+  ret void
+}
+
+; %ptr.outer has two recursive LCSSA phis and %small as incoming values.
+; CHECK-LABEL: recursive_lcssa_phis_and_small_alloca
+; CHECK: NoAlias: i8* %ptr.outer, i32* %q
+define void @recursive_lcssa_phis_and_small_alloca(ptr %pp, i1 %c) {
+entry:
+  %small = alloca i8
+  call void @inc(ptr %small)
+  %q = load ptr, ptr %pp
+  %l = load i32, ptr %q
+  br label %outer
+
+outer:
+  %ptr.outer = phi ptr [ %small, %entry ], [ %ptr.next.lcssa.1, %outer.latch.1 ], [ %ptr.next.lcssa.2, %outer.latch.2 ]
+  store i8 0, ptr %ptr.outer
+  br label %inner
+
+inner:
+  %iv = phi i64 [ 0, %outer ], [ %iv.next, %inner ]
+  %ptr.next = getelementptr inbounds i8, ptr %ptr.outer, i64 %iv
+  %iv.next = add i64 %iv, 1
+  br i1 %c, label %inner.exit, label %inner
+
+inner.exit:
+  br i1 %c, label %outer.latch.1, label %outer.latch.2
+
+outer.latch.1:
+  %ptr.next.lcssa.1 = phi ptr [ %ptr.next, %inner.exit ]
+  br i1 %c, label %exit, label %outer
+
+outer.latch.2:
+  %ptr.next.lcssa.2 = phi ptr [ %ptr.next, %inner.exit ]
+  br i1 %c, label %exit, label %outer
+
+exit:
+  ret void
+}

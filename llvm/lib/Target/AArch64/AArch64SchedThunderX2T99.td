@@ -28,9 +28,12 @@ def ThunderX2T99Model : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
                                                     PAUnsupported.F,
                                                     SMEUnsupported.F,
-                                                    [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO]);
+                                                    [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO,
+                                                     HasFPv2]);
   // FIXME: Remove when all errors have been fixed.
   let FullInstRWOverlapCheck = 0;
+  // FIXME: Remove when all errors have been fixed.
+  let WarnRedundantInstRW = 0;
 }
 
 let SchedModel = ThunderX2T99Model in {

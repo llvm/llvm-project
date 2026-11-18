@@ -21,42 +21,11 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/InstructionCost.h"
-#include <optional>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "loongarchtti"
 
-namespace {
-struct CostKindCosts {
-  unsigned LatencyCost = ~0U;
-  unsigned RecipThroughputCost = ~0U;
-  unsigned CodeSizeCost = ~0U;
-  unsigned SizeAndLatencyCost = ~0U;
-
-  std::optional<unsigned>
-  operator[](TargetTransformInfo::TargetCostKind Kind) const {
-    unsigned Cost = ~0U;
-    switch (Kind) {
-    case llvm::TargetTransformInfo::TCK_Latency:
-      Cost = LatencyCost;
-      break;
-    case TargetTransformInfo::TCK_RecipThroughput:
-      Cost = RecipThroughputCost;
-      break;
-    case TargetTransformInfo::TCK_CodeSize:
-      Cost = CodeSizeCost;
-      break;
-    case TargetTransformInfo::TCK_SizeAndLatency:
-      Cost = SizeAndLatencyCost;
-      break;
-    }
-    if (Cost == ~0U)
-      return std::nullopt;
-    return Cost;
-  }
-};
-} // namespace
 using CostKindTblEntry = CostTblEntryT<CostKindCosts>;
 
 TypeSize LoongArchTTIImpl::getRegisterBitWidth(
@@ -133,10 +102,6 @@ LoongArchTTIImpl::getPopcntSupport(unsigned TyWidth) const {
 
 unsigned LoongArchTTIImpl::getCacheLineSize() const { return 64; }
 
-unsigned LoongArchTTIImpl::getPrefetchDistance() const { return 200; }
-
-bool LoongArchTTIImpl::enableWritePrefetching() const { return true; }
-
 bool LoongArchTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   switch (II->getIntrinsicID()) {
   default:
@@ -151,6 +116,33 @@ bool LoongArchTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   case Intrinsic::vector_reduce_xor:
     return false;
   }
+}
+
+InstructionCost LoongArchTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
+                                                  Align Alignment,
+                                                  unsigned AddressSpace,
+                                                  TTI::TargetCostKind CostKind,
+                                                  TTI::OperandValueInfo OpInfo,
+                                                  const Instruction *I) const {
+  // Vectors narrower than 128 bits are widened, and on LA64 loading or storing
+  // one takes a single instruction: FLD.{S/D} or VLDREPL.{B/H} for loads, and
+  // VSTELM.{B/H/W/D} for stores. The generic model costs them as scalarized.
+  // TODO: LA32 splits 64-bit loads and doesn't use VSTELM.{W/D} for stores.
+  auto *VTy = dyn_cast<FixedVectorType>(Src);
+  if (CostKind == TTI::TCK_RecipThroughput && ST->is64Bit() &&
+      ST->hasExtLSX() && VTy && isPowerOf2_32(VTy->getNumElements())) {
+    unsigned Size = VTy->getPrimitiveSizeInBits().getFixedValue();
+    EVT VT = getTLI()->getValueType(DL, Src);
+    if (Size >= 16 && Size < 128 &&
+        getTLI()->getTypeAction(Src->getContext(), VT) ==
+            TargetLowering::TypeWidenVector &&
+        getTLI()->allowsMemoryAccessForAlignment(Src->getContext(), DL, VT,
+                                                 AddressSpace, Alignment))
+      return 1;
+  }
+
+  return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind,
+                                OpInfo, I);
 }
 
 LoongArchTTIImpl::TTI::MemCmpExpansionOptions
@@ -244,30 +236,30 @@ InstructionCost LoongArchTTIImpl::getArithmeticInstrCost(
       {ISD::SUB, MVT::v4i32, {1, 1}}, // vsubi.w/vsub.w
       {ISD::SUB, MVT::v2i64, {1, 1}}, // vsubi.d/vsub.d
 
-      {ISD::MUL, MVT::v16i8, {4, 2}}, // vmul.b
-      {ISD::MUL, MVT::v8i16, {4, 2}}, // vmul.h
-      {ISD::MUL, MVT::v4i32, {4, 2}}, // vmul.w
-      {ISD::MUL, MVT::v2i64, {4, 2}}, // vmul.d
+      {ISD::MUL, MVT::v16i8, {2, 4}}, // vmul.b
+      {ISD::MUL, MVT::v8i16, {2, 4}}, // vmul.h
+      {ISD::MUL, MVT::v4i32, {2, 4}}, // vmul.w
+      {ISD::MUL, MVT::v2i64, {2, 4}}, // vmul.d
 
-      {ISD::SDIV, MVT::v16i8, {29, 62}}, // vdiv.b
-      {ISD::SDIV, MVT::v8i16, {17, 34}}, // vdiv.h
-      {ISD::SDIV, MVT::v4i32, {11, 22}}, // vdiv.w
-      {ISD::SDIV, MVT::v2i64, {8, 16}},  // vdiv.d
+      {ISD::SDIV, MVT::v16i8, {62, 29}}, // vdiv.b
+      {ISD::SDIV, MVT::v8i16, {34, 17}}, // vdiv.h
+      {ISD::SDIV, MVT::v4i32, {22, 11}}, // vdiv.w
+      {ISD::SDIV, MVT::v2i64, {16, 8}},  // vdiv.d
 
-      {ISD::UDIV, MVT::v16i8, {29, 66}}, // vdiv.bu
-      {ISD::UDIV, MVT::v8i16, {17, 36}}, // vdiv.hu
-      {ISD::UDIV, MVT::v4i32, {11, 22}}, // vdiv.wu
-      {ISD::UDIV, MVT::v2i64, {8, 16}},  // vdiv.du
+      {ISD::UDIV, MVT::v16i8, {66, 29}}, // vdiv.bu
+      {ISD::UDIV, MVT::v8i16, {36, 17}}, // vdiv.hu
+      {ISD::UDIV, MVT::v4i32, {22, 11}}, // vdiv.wu
+      {ISD::UDIV, MVT::v2i64, {16, 8}},  // vdiv.du
 
-      {ISD::SREM, MVT::v16i8, {38, 76}}, // vmod.b
-      {ISD::SREM, MVT::v8i16, {24, 44}}, // vmod.h
-      {ISD::SREM, MVT::v4i32, {17, 27}}, // vmod.w
-      {ISD::SREM, MVT::v2i64, {14, 19}}, // vmod.d
+      {ISD::SREM, MVT::v16i8, {76, 38}}, // vmod.b
+      {ISD::SREM, MVT::v8i16, {44, 24}}, // vmod.h
+      {ISD::SREM, MVT::v4i32, {27, 17}}, // vmod.w
+      {ISD::SREM, MVT::v2i64, {19, 14}}, // vmod.d
 
-      {ISD::UREM, MVT::v16i8, {38, 80}}, // vmod.bu
-      {ISD::UREM, MVT::v8i16, {24, 44}}, // vmod.hu
-      {ISD::UREM, MVT::v4i32, {17, 28}}, // vmod.wu
-      {ISD::UREM, MVT::v2i64, {14, 19}}, // vmod.du
+      {ISD::UREM, MVT::v16i8, {80, 38}}, // vmod.bu
+      {ISD::UREM, MVT::v8i16, {44, 24}}, // vmod.hu
+      {ISD::UREM, MVT::v4i32, {28, 17}}, // vmod.wu
+      {ISD::UREM, MVT::v2i64, {19, 14}}, // vmod.du
 
       {ISD::SHL, MVT::v16i8, {1, 1}}, // vslli.b/vsll.b
       {ISD::SHL, MVT::v8i16, {1, 1}}, // vslli.h/vsll.h
@@ -299,17 +291,17 @@ InstructionCost LoongArchTTIImpl::getArithmeticInstrCost(
       {ISD::XOR, MVT::v4i32, {1, 1}}, // vxor.v
       {ISD::XOR, MVT::v2i64, {1, 1}}, // vxor.v
 
-      {ISD::FADD, MVT::v4f32, {3, 1}}, // vfadd.s
-      {ISD::FADD, MVT::v2f64, {3, 1}}, // vfadd.d
+      {ISD::FADD, MVT::v4f32, {1, 3}}, // vfadd.s
+      {ISD::FADD, MVT::v2f64, {1, 3}}, // vfadd.d
 
-      {ISD::FSUB, MVT::v4f32, {3, 1}}, // vfsub.s
-      {ISD::FSUB, MVT::v2f64, {3, 1}}, // vfsub.d
+      {ISD::FSUB, MVT::v4f32, {1, 3}}, // vfsub.s
+      {ISD::FSUB, MVT::v2f64, {1, 3}}, // vfsub.d
 
-      {ISD::FMUL, MVT::v4f32, {5, 2}}, // vfmul.s
-      {ISD::FMUL, MVT::v2f64, {5, 2}}, // vfmul.d
+      {ISD::FMUL, MVT::v4f32, {2, 5}}, // vfmul.s
+      {ISD::FMUL, MVT::v2f64, {2, 5}}, // vfmul.d
 
-      {ISD::FDIV, MVT::v4f32, {11, 22}}, // vfdiv.s
-      {ISD::FDIV, MVT::v2f64, {8, 16}},  // vfdiv.d
+      {ISD::FDIV, MVT::v4f32, {22, 11}}, // vfdiv.s
+      {ISD::FDIV, MVT::v2f64, {16, 8}},  // vfdiv.d
   };
 
   if (ST->hasExtLSX()) {
@@ -329,30 +321,30 @@ InstructionCost LoongArchTTIImpl::getArithmeticInstrCost(
       {ISD::SUB, MVT::v8i32, {1, 1}},  // xvsubi.w/xvsub.w
       {ISD::SUB, MVT::v4i64, {1, 1}},  // xvsubi.d/xvsub.d
 
-      {ISD::MUL, MVT::v32i8, {4, 2}},  // xvmul.b
-      {ISD::MUL, MVT::v16i16, {4, 2}}, // xvmul.h
-      {ISD::MUL, MVT::v8i32, {4, 2}},  // xvmul.w
-      {ISD::MUL, MVT::v4i64, {4, 2}},  // xvmul.d
+      {ISD::MUL, MVT::v32i8, {2, 4}},  // xvmul.b
+      {ISD::MUL, MVT::v16i16, {2, 4}}, // xvmul.h
+      {ISD::MUL, MVT::v8i32, {2, 4}},  // xvmul.w
+      {ISD::MUL, MVT::v4i64, {2, 4}},  // xvmul.d
 
-      {ISD::SDIV, MVT::v32i8, {29, 62}},  // xvdiv.b
-      {ISD::SDIV, MVT::v16i16, {17, 34}}, // xvdiv.h
-      {ISD::SDIV, MVT::v8i32, {11, 22}},  // xvdiv.w
-      {ISD::SDIV, MVT::v4i64, {8, 16}},   // xvdiv.d
+      {ISD::SDIV, MVT::v32i8, {62, 29}},  // xvdiv.b
+      {ISD::SDIV, MVT::v16i16, {34, 17}}, // xvdiv.h
+      {ISD::SDIV, MVT::v8i32, {22, 11}},  // xvdiv.w
+      {ISD::SDIV, MVT::v4i64, {16, 8}},   // xvdiv.d
 
-      {ISD::UDIV, MVT::v32i8, {29, 66}},  // xvdiv.bu
-      {ISD::UDIV, MVT::v16i16, {17, 36}}, // xvdiv.hu
-      {ISD::UDIV, MVT::v8i32, {11, 22}},  // xvdiv.wu
-      {ISD::UDIV, MVT::v4i64, {8, 16}},   // xvdiv.du
+      {ISD::UDIV, MVT::v32i8, {66, 29}},  // xvdiv.bu
+      {ISD::UDIV, MVT::v16i16, {36, 17}}, // xvdiv.hu
+      {ISD::UDIV, MVT::v8i32, {22, 11}},  // xvdiv.wu
+      {ISD::UDIV, MVT::v4i64, {16, 8}},   // xvdiv.du
 
-      {ISD::SREM, MVT::v32i8, {38, 76}},  // xvmod.b
-      {ISD::SREM, MVT::v16i16, {24, 44}}, // xvmod.h
-      {ISD::SREM, MVT::v8i32, {17, 28}},  // xvmod.w
-      {ISD::SREM, MVT::v4i64, {14, 19}},  // xvmod.d
+      {ISD::SREM, MVT::v32i8, {76, 38}},  // xvmod.b
+      {ISD::SREM, MVT::v16i16, {44, 24}}, // xvmod.h
+      {ISD::SREM, MVT::v8i32, {28, 17}},  // xvmod.w
+      {ISD::SREM, MVT::v4i64, {19, 14}},  // xvmod.d
 
-      {ISD::UREM, MVT::v32i8, {38, 76}},  // xvmod.bu
-      {ISD::UREM, MVT::v16i16, {24, 43}}, // xvmod.hu
-      {ISD::UREM, MVT::v8i32, {17, 28}},  // xvmod.wu
-      {ISD::UREM, MVT::v4i64, {14, 19}},  // xvmod.du
+      {ISD::UREM, MVT::v32i8, {76, 38}},  // xvmod.bu
+      {ISD::UREM, MVT::v16i16, {43, 24}}, // xvmod.hu
+      {ISD::UREM, MVT::v8i32, {28, 17}},  // xvmod.wu
+      {ISD::UREM, MVT::v4i64, {19, 14}},  // xvmod.du
 
       {ISD::SHL, MVT::v32i8, {1, 1}},  // xvslli.b/xvsll.b
       {ISD::SHL, MVT::v16i16, {1, 1}}, // xvslli.h/xvsll.h
@@ -384,17 +376,17 @@ InstructionCost LoongArchTTIImpl::getArithmeticInstrCost(
       {ISD::XOR, MVT::v8i32, {1, 1}},  // xvxor.v
       {ISD::XOR, MVT::v4i64, {1, 1}},  // xvxor.v
 
-      {ISD::FADD, MVT::v8f32, {3, 1}}, // xvfadd.s
-      {ISD::FADD, MVT::v4f64, {3, 1}}, // xvfadd.d
+      {ISD::FADD, MVT::v8f32, {1, 3}}, // xvfadd.s
+      {ISD::FADD, MVT::v4f64, {1, 3}}, // xvfadd.d
 
-      {ISD::FSUB, MVT::v8f32, {3, 1}}, // xvfsub.s
-      {ISD::FSUB, MVT::v4f64, {3, 1}}, // xvfsub.d
+      {ISD::FSUB, MVT::v8f32, {1, 3}}, // xvfsub.s
+      {ISD::FSUB, MVT::v4f64, {1, 3}}, // xvfsub.d
 
-      {ISD::FMUL, MVT::v8f32, {5, 2}}, // xvfmul.s
-      {ISD::FMUL, MVT::v4f64, {5, 2}}, // xvfmul.d
+      {ISD::FMUL, MVT::v8f32, {2, 5}}, // xvfmul.s
+      {ISD::FMUL, MVT::v4f64, {2, 5}}, // xvfmul.d
 
-      {ISD::FDIV, MVT::v8f32, {11, 22}}, // xvfdiv.s
-      {ISD::FDIV, MVT::v4f64, {8, 16}},  // xvfdiv.d
+      {ISD::FDIV, MVT::v8f32, {22, 11}}, // xvfdiv.s
+      {ISD::FDIV, MVT::v4f64, {16, 8}},  // xvfdiv.d
   };
 
   if (ST->hasExtLASX()) {
@@ -407,12 +399,12 @@ InstructionCost LoongArchTTIImpl::getArithmeticInstrCost(
   static const CostKindTblEntry LA64CostTable[]{
       {ISD::ADD, MVT::i64, {1, 1}}, // addi.d/add.d
       {ISD::SUB, MVT::i64, {1, 1}}, // subi.d/sub.d
-      {ISD::MUL, MVT::i64, {4, 2}}, // mul.d
+      {ISD::MUL, MVT::i64, {2, 4}}, // mul.d
 
-      {ISD::SDIV, MVT::i64, {18, 26}}, // div.d
-      {ISD::UDIV, MVT::i64, {18, 26}}, // div.du
-      {ISD::SREM, MVT::i64, {18, 26}}, // mod.d
-      {ISD::UREM, MVT::i64, {18, 26}}, // mod.du
+      {ISD::SDIV, MVT::i64, {26, 18}}, // div.d
+      {ISD::UDIV, MVT::i64, {26, 18}}, // div.du
+      {ISD::SREM, MVT::i64, {26, 18}}, // mod.d
+      {ISD::UREM, MVT::i64, {26, 18}}, // mod.du
 
       {ISD::SHL, MVT::i64, {1, 1}}, // slli.d/sll.d
       {ISD::SRL, MVT::i64, {1, 1}}, // srli.d/srl.d
@@ -422,10 +414,10 @@ InstructionCost LoongArchTTIImpl::getArithmeticInstrCost(
       {ISD::OR, MVT::i64, {1, 1}},  // ori.d/or.d
       {ISD::XOR, MVT::i64, {1, 1}}, // xori.d/xor.d
 
-      {ISD::FADD, MVT::f64, {3, 1}},  // fadd.d
-      {ISD::FSUB, MVT::f64, {3, 1}},  // fsub.d
-      {ISD::FMUL, MVT::f64, {5, 2}},  // fmul.d
-      {ISD::FDIV, MVT::f64, {12, 9}}, // fdiv.d
+      {ISD::FADD, MVT::f64, {1, 3}},  // fadd.d
+      {ISD::FSUB, MVT::f64, {1, 3}},  // fsub.d
+      {ISD::FMUL, MVT::f64, {2, 5}},  // fmul.d
+      {ISD::FDIV, MVT::f64, {9, 12}}, // fdiv.d
   };
 
   if (ST->is64Bit()) {
@@ -437,12 +429,12 @@ InstructionCost LoongArchTTIImpl::getArithmeticInstrCost(
   static const CostKindTblEntry LA32CostTable[]{
       {ISD::ADD, MVT::i32, {1, 1}}, // addi.w/add.w
       {ISD::SUB, MVT::i32, {1, 1}}, // subi.w/sub.w
-      {ISD::MUL, MVT::i32, {4, 2}}, // mul.w
+      {ISD::MUL, MVT::i32, {2, 4}}, // mul.w
 
-      {ISD::SDIV, MVT::i32, {11, 24}}, // div.w
-      {ISD::UDIV, MVT::i32, {12, 24}}, // div.wu
-      {ISD::SREM, MVT::i32, {11, 24}}, // mod.w
-      {ISD::UREM, MVT::i32, {12, 24}}, // mod.wu
+      {ISD::SDIV, MVT::i32, {24, 11}}, // div.w
+      {ISD::UDIV, MVT::i32, {24, 12}}, // div.wu
+      {ISD::SREM, MVT::i32, {24, 11}}, // mod.w
+      {ISD::UREM, MVT::i32, {24, 12}}, // mod.wu
 
       {ISD::SHL, MVT::i32, {1, 1}}, // slli.w/sll.w
       {ISD::SRL, MVT::i32, {1, 1}}, // srli.w/srl.w
@@ -452,10 +444,10 @@ InstructionCost LoongArchTTIImpl::getArithmeticInstrCost(
       {ISD::OR, MVT::i32, {1, 1}},  // ori.w/or.w
       {ISD::XOR, MVT::i32, {1, 1}}, // xori.w/xor.w
 
-      {ISD::FADD, MVT::f32, {3, 1}}, // fadd.s
-      {ISD::FSUB, MVT::f32, {3, 1}}, // fsub.s
-      {ISD::FMUL, MVT::f32, {5, 2}}, // fmul.s
-      {ISD::FDIV, MVT::f32, {9, 8}}, // fdiv.s
+      {ISD::FADD, MVT::f32, {1, 3}}, // fadd.s
+      {ISD::FSUB, MVT::f32, {1, 3}}, // fsub.s
+      {ISD::FMUL, MVT::f32, {2, 5}}, // fmul.s
+      {ISD::FDIV, MVT::f32, {8, 9}}, // fdiv.s
   };
 
   if (const auto *Entry = CostTableLookup(LA32CostTable, ISD, LT.second))
@@ -465,4 +457,52 @@ InstructionCost LoongArchTTIImpl::getArithmeticInstrCost(
   // Fallback to the default implementation.
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                        Args, CxtI);
+}
+
+// Returns true if Ty is a fixed vector type held in a single LSX/LASX register.
+static bool isSingleVRegType(const LoongArchSubtarget *ST, Type *Ty) {
+  auto *VTy = dyn_cast<FixedVectorType>(Ty);
+  if (!VTy)
+    return false;
+  unsigned Bits = VTy->getPrimitiveSizeInBits().getFixedValue();
+  return (Bits == 128 && ST->hasExtLSX()) || (Bits == 256 && ST->hasExtLASX());
+}
+
+InstructionCost LoongArchTTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
+  // Element 0 of a floating-point vector is the aliased FPR, so extracting it
+  // is free.
+  if (Opcode == Instruction::ExtractElement && Index == 0 &&
+      Val->getScalarType()->isFloatingPointTy() && isSingleVRegType(ST, Val))
+    return 0;
+  return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1, VIC);
+}
+
+InstructionCost LoongArchTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    TTI::VectorInstrContext VIC) const {
+  if (isSingleVRegType(ST, SrcTy) && DstTy == SrcTy) {
+    Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
+    unsigned EltBits = SrcTy->getScalarSizeInBits();
+    bool Is128 = SrcTy->getPrimitiveSizeInBits().getFixedValue() == 128;
+    switch (Kind) {
+    case TTI::SK_Broadcast:
+      // [x]vreplvei.{b/h/w/d}, xvreplve0.{b/h/w/d}, [x]vreplgr2vr.{b/h/w/d}.
+      return 1;
+    case TTI::SK_Reverse:
+    case TTI::SK_PermuteSingleSrc:
+      // vshuf4i.{w/d} handles any single-source permutation of 32/64-bit
+      // elements within a 128-bit register.
+      if (Is128 && EltBits >= 32)
+        return 1;
+      break;
+    default:
+      break;
+    }
+  }
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp,
+                               Args, CxtI, VIC);
 }

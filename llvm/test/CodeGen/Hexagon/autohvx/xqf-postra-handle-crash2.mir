@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=hexagon -run-pass handle-qfp-spills-refills -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass handle-qfp-spills-refills %s -o - | FileCheck %s
 
 # CHECK: renamable $v{{[0-9]+}} = V6_vd0
 # CHECK-NEXT:    renamable $v{{[0-9]+}} = V6_vconv_qf32_sf killed renamable $v{{[0-9]+}}

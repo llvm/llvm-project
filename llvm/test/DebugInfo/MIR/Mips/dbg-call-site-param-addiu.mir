@@ -88,6 +88,7 @@
 ---
 name:            fn2
 alignment:       4
+tracksRegLiveness: false
 liveins:
   - { reg: '$r4', virtual-reg: '' }
 stack:
@@ -98,8 +99,8 @@ stack:
       stack-id: default, callee-saved-register: '$r16', callee-saved-restored: true, 
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 callSites:
-  - { bb: 0, offset: 8, fwdArgRegs: [] }
-  - { bb: 0, offset: 12, fwdArgRegs: 
+  - { bb: '%bb.0', offset: 8, fwdArgRegs: [] }
+  - { bb: '%bb.0', offset: 12, fwdArgRegs:
       - { arg: 0, reg: '$r4' }
       - { arg: 1, reg: '$r5' }
       - { arg: 2, reg: '$r6' } }
@@ -130,3 +131,4 @@ body:             |
     PseudoReturn undef $r31, implicit $r2, debug-location !18 {
       $r29 = ADDiu $r29, 24
     }
+...

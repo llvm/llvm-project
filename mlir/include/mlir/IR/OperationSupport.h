@@ -541,7 +541,9 @@ public:
   StringAttr getIdentifier() const { return getImpl()->getName(); }
 
   void print(raw_ostream &os) const;
-  void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   /// Represent the operation name as an opaque pointer. (Used to support
   /// PointerLikeTypeTraits).
@@ -830,8 +832,8 @@ std::pair<IteratorT, bool> findAttrSorted(IteratorT first, IteratorT last,
 template <typename IteratorT>
 std::pair<IteratorT, bool> findAttrSorted(IteratorT first, IteratorT last,
                                           StringAttr name) {
-  constexpr unsigned kSmallAttributeList = 16;
-  if (std::distance(first, last) > kSmallAttributeList)
+  constexpr size_t kSmallAttributeList = 16;
+  if (static_cast<size_t>(std::distance(first, last)) > kSmallAttributeList)
     return findAttrSorted(first, last, name.strref());
   return findAttrUnsorted(first, last, name);
 }

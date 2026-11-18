@@ -57,12 +57,18 @@ public:
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setIsSSA();
+  }
 };
 } // namespace
 
 PreservedAnalyses
 DeadMachineInstructionElimPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &) {
+  MFPropsModifier _(*this, MF);
+
   if (!DeadMachineInstructionElimImpl().runImpl(MF))
     return PreservedAnalyses::all();
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();

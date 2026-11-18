@@ -507,13 +507,16 @@ bool AllocToken::replaceAllocationCall(CallBase *CB, LibFunc Func,
   NewArgs.push_back(ConstantInt::get(IntPtrTy, TokenID));
   assert(TokenAlloc.getFunctionType()->getNumParams() == NewArgs.size());
 
+  SmallVector<OperandBundleDef, 2> Bundles;
+  CB->getOperandBundlesAsDefs(Bundles);
+
   // Preserve invoke vs call semantics for exception handling.
   CallBase *NewCall;
   if (auto *II = dyn_cast<InvokeInst>(CB)) {
     NewCall = IRB.CreateInvoke(TokenAlloc, II->getNormalDest(),
-                               II->getUnwindDest(), NewArgs);
+                               II->getUnwindDest(), NewArgs, Bundles);
   } else {
-    NewCall = IRB.CreateCall(TokenAlloc, NewArgs);
+    NewCall = IRB.CreateCall(TokenAlloc, NewArgs, Bundles);
     cast<CallInst>(NewCall)->setTailCall(CB->isTailCall());
   }
   NewCall->setCallingConv(CB->getCallingConv());
@@ -578,7 +581,8 @@ AllocTokenPass::AllocTokenPass(AllocTokenOptions Opts)
     : Options(std::move(Opts)) {}
 
 PreservedAnalyses AllocTokenPass::run(Module &M, ModuleAnalysisManager &MAM) {
-  AllocToken Pass(InstrumentationOptions::Global, Options, M, MAM);
+  const InstrumentationOptions &CLOpts = getInstrumentationOptions(M);
+  AllocToken Pass(CLOpts, Options, M, MAM);
   bool Modified = false;
 
   for (Function &F : M) {

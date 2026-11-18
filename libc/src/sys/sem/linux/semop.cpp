@@ -8,20 +8,20 @@
 
 #include "src/sys/sem/semop.h"
 
-#include "src/__support/OSUtil/syscall.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/semop.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
-#include <sys/syscall.h>
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, semop, (int semid, struct sembuf *sops, size_t nsops)) {
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_semop, semid, sops, nsops);
-  if (ret < 0) {
-    libc_errno = -ret;
+  auto result = linux_syscalls::semop(semid, sops, nsops);
+  if (!result) {
+    libc_errno = result.error();
     return -1;
   }
-  return ret;
+  return result.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

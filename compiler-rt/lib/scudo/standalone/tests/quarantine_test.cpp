@@ -154,7 +154,7 @@ TEST(ScudoQuarantineDeathTest, GlobalQuarantineRecycleInvalidCount) {
   Cache.enqueueBatch(B);
   B->Count = scudo::QuarantineBatch::MaxCount + 1;
   SCUDO_EXPECT_DEATH(Quarantine.drainAndRecycle(&Cache, Cb), "Count");
-  deallocateCache(&Cache);
+  Cb.deallocate(B);
 }
 
 TEST(ScudoQuarantineTest, QuarantineCacheMergeBatchesEmpty) {

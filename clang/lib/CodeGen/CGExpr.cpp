@@ -56,6 +56,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/xxhash.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 
@@ -1406,8 +1407,16 @@ void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
 }
 
 llvm::MDNode *CodeGenFunction::buildAllocToken(const CallExpr *E) {
-  return buildAllocToken(
-      infer_alloc::inferPossibleType(E, getContext(), CurCast));
+  // The placement news of the enclosing function body are collected once, on
+  // the first allocation call that is not already typed by a sizeof.
+  auto PlacementNewType = [this](const CallExpr *E) -> QualType {
+    if (!AllocTokenPlacementTypes)
+      AllocTokenPlacementTypes = infer_alloc::collectPlacementNewTypes(
+          CurCodeDecl ? CurCodeDecl->getBody() : nullptr);
+    return AllocTokenPlacementTypes->lookup(E);
+  };
+  return buildAllocToken(infer_alloc::inferPossibleType(
+      E, getContext(), CurCast, PlacementNewType));
 }
 
 void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, const CallExpr *E) {
@@ -4056,18 +4065,27 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
   uint16_t TypeInfo = 0;
   bool IsBitInt = false;
 
-  if (T->isIntegerType()) {
+  // isIntegerType() never holds for scoped enums, and getAs<BitIntType> can't
+  // see through the EnumType node to a __BitInt underlying type even for
+  // unscoped enums.
+  QualType UnderlyingT = T;
+  if (const EnumType *ET = T->getAs<EnumType>())
+    if (ET->getDecl()->isComplete())
+      UnderlyingT = ET->getDecl()->getIntegerType();
+
+  if (UnderlyingT->isIntegerType()) {
     TypeKind = TK_Integer;
-    TypeInfo = (llvm::Log2_32(getContext().getTypeSize(T)) << 1) |
-               (T->isSignedIntegerType() ? 1 : 0);
+    TypeInfo = (llvm::Log2_32(getContext().getTypeSize(UnderlyingT)) << 1) |
+               (UnderlyingT->isSignedIntegerType() ? 1 : 0);
     // Follow suggestion from discussion of issue 64100.
     // So we can write the exact amount of bits in TypeName after '\0'
     // making it <diagnostic-like type name>.'\0'.<32-bit width>.
-    if (T->isSignedIntegerType() && T->getAs<BitIntType>()) {
+    if (UnderlyingT->isSignedIntegerType() &&
+        UnderlyingT->getAs<BitIntType>()) {
       // Do a sanity checks as we are using 32-bit type to store bit length.
-      assert(getContext().getTypeSize(T) > 0 &&
+      assert(getContext().getTypeSize(UnderlyingT) > 0 &&
              " non positive amount of bits in __BitInt type");
-      assert(getContext().getTypeSize(T) <= 0xFFFFFFFF &&
+      assert(getContext().getTypeSize(UnderlyingT) <= 0xFFFFFFFF &&
              " too many bits in __BitInt type");
 
       // Redefine TypeKind with the actual __BitInt type if we have signed
@@ -4075,9 +4093,9 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
       TypeKind = TK_BitInt;
       IsBitInt = true;
     }
-  } else if (T->isFloatingType()) {
+  } else if (UnderlyingT->isFloatingType()) {
     TypeKind = TK_Float;
-    TypeInfo = getContext().getTypeSize(T);
+    TypeInfo = getContext().getTypeSize(UnderlyingT);
   }
 
   // Format the type name as if for a diagnostic, including quotes and
@@ -4091,7 +4109,7 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
     // The Structure is: 0 to end the string, 32 bit unsigned integer in target
     // endianness, zero.
     char S[6] = {'\0', '\0', '\0', '\0', '\0', '\0'};
-    const auto *EIT = T->castAs<BitIntType>();
+    const auto *EIT = UnderlyingT->castAs<BitIntType>();
     uint32_t Bits = EIT->getNumBits();
     llvm::support::endian::write32(S + 1, Bits,
                                    getTarget().isBigEndian()
@@ -4714,8 +4732,6 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     }
     if (NoMerge)
       TrapCall->addFnAttr(llvm::Attribute::NoMerge);
-    TrapCall->setDoesNotReturn();
-    TrapCall->setDoesNotThrow();
     Builder.CreateUnreachable();
   }
 
@@ -4735,10 +4751,7 @@ llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID,
 
   if (InNoMergeAttributedStmt)
     TrapCall->addFnAttr(llvm::Attribute::NoMerge);
-  if (TrapIntrinsic->doesNotThrow())
-    TrapCall->setDoesNotThrow();
   if (TrapIntrinsic->doesNotReturn()) {
-    TrapCall->setDoesNotReturn();
     Builder.CreateUnreachable();
     if (EnsureInsertPoint)
       EmitBlock(createBasicBlock());
@@ -4749,10 +4762,7 @@ llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID,
 }
 
 void CodeGenFunction::EmitTrapCallAndMakeUnreachable() {
-  llvm::CallInst *TrapCall =
-      EmitTrapCall(llvm::Intrinsic::trap, /*EnsureInsertPoint=*/false);
-  TrapCall->setDoesNotReturn();
-  TrapCall->setDoesNotThrow();
+  EmitTrapCall(llvm::Intrinsic::trap, /*EnsureInsertPoint=*/false);
   if (HaveInsertPoint()) {
     Builder.CreateUnreachable();
     Builder.ClearInsertionPoint();
@@ -4879,7 +4889,7 @@ static bool hasBPFPreserveStaticOffset(const Expr *E) {
 // Wraps Addr with a call to llvm.preserve.static.offset intrinsic.
 static Address wrapWithBPFPreserveStaticOffset(CodeGenFunction &CGF,
                                                Address &Addr) {
-  if (!CGF.getTarget().getTriple().isBPF())
+  if (!CGF.getTarget().getTriple().isBPF() || CGF.IsInPreserveFieldInfo)
     return Addr;
 
   llvm::Function *Fn =
@@ -4901,7 +4911,11 @@ static bool IsPreserveAIArrayBase(CodeGenFunction &CGF, const Expr *ArrayBase) {
   //    p[1].a
   // p[1] will generate a DeclRefExpr and p[1].a is a MemberExpr.
   // p->b[5] is a MemberExpr example.
-  const Expr *E = ArrayBase->IgnoreImpCasts();
+  const Expr *E = ArrayBase->IgnoreParenImpCasts();
+  // In p->b[1][2], the base of [2] is the subscript p->b[1]. Step through
+  // subscripts to the member p->b.
+  while (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
+    E = ASE->getBase()->IgnoreParenImpCasts();
   if (const auto *ME = dyn_cast<MemberExpr>(E))
     return ME->getMemberDecl()->hasAttr<BPFPreserveAccessIndexAttr>();
 
@@ -5333,9 +5347,43 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
           getContext().getTypeSizeInChars(E->getType()).getQuantity();
     }
   } else {
-    // The base must be a pointer; emit it with an estimate of its alignment.
-    Address BaseAddr =
-        EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
+    // Find the load of a 'counted_by' pointer field (e.g. 'p->buf' in
+    // 'p->buf[i]') whose count bounds this access.
+    const CastExpr *CountedByLoad = nullptr;
+    const MemberExpr *CountedByME = nullptr;
+    if (SanOpts.has(SanitizerKind::ArrayBounds)) {
+      StructFieldAccess Visitor;
+      if (const auto *CE =
+              dyn_cast_if_present<CastExpr>(Visitor.Visit(E->getBase()));
+          CE && CE->getCastKind() == CK_LValueToRValue) {
+        const auto *ME = dyn_cast<MemberExpr>(CE->getSubExpr());
+        if (ME && ME->getMemberDecl()->getType()->isCountAttributedType()) {
+          CountedByLoad = CE;
+          CountedByME = ME;
+        }
+      }
+    }
+
+    // The bounds check locates the count relative to the pointer field's
+    // address. Record the field's l-value while the base is emitted, so that
+    // the struct base (which may have side-effects, e.g. 'get()->buf[i]' or
+    // 'p++->buf[i]') isn't evaluated a second time for the check. The base
+    // itself is emitted exactly as it is without the sanitizer, so the load
+    // keeps its debug location, '__ptrauth' authentication, 'align_value'
+    // assumption, and so on.
+    LoadedLValueCapture FieldCapture{CountedByME, std::nullopt};
+    Address BaseAddr = Address::invalid();
+    {
+      llvm::SaveAndRestore SavedCapture(CurLoadedLValueCapture,
+                                        CountedByME ? &FieldCapture : nullptr);
+      // The base must be a pointer; emit it with an estimate of its alignment.
+      BaseAddr =
+          EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
+    }
+
+    Address CountedByFieldAddr =
+        FieldCapture.LV ? FieldCapture.LV->getAddress() : Address::invalid();
+
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
     QualType ptrType = E->getBase()->getType();
     Addr = emitArraySubscriptGEP(*this, BaseAddr, Idx, E->getType(),
@@ -5343,16 +5391,16 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                  SignedIndices, E->getExprLoc(), &ptrType,
                                  E->getBase());
 
-    if (SanOpts.has(SanitizerKind::ArrayBounds)) {
-      StructFieldAccess Visitor;
-      const Expr *Base = Visitor.Visit(E->getBase());
-
-      if (const auto *CE = dyn_cast_if_present<CastExpr>(Base);
-          CE && CE->getCastKind() == CK_LValueToRValue)
-        EmitCountedByBoundsChecking(CE, ptrType, Address::invalid(),
-                                    E->getIdx()->getType(), Idx, Accessed,
-                                    /*FlexibleArray=*/false);
-    }
+    // If the field wasn't loaded through ScalarExprEmitter (e.g. it was
+    // constant folded), EmitCountedByBoundsChecking re-emits the field's
+    // l-value. That only recomputes the field's address, so it's safe unless
+    // the struct base has side-effects. In that case skip the check rather
+    // than evaluating the base twice.
+    if (CountedByME && (CountedByFieldAddr.isValid() ||
+                        !CountedByME->getBase()->HasSideEffects(getContext())))
+      EmitCountedByBoundsChecking(CountedByLoad, ptrType, CountedByFieldAddr,
+                                  E->getIdx()->getType(), Idx, Accessed,
+                                  /*FlexibleArray=*/false);
   }
 
   LValue LV = MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
@@ -5833,23 +5881,6 @@ LValue CodeGenFunction::EmitLValueForLambdaField(const FieldDecl *Field) {
   return EmitLValueForLambdaField(Field, CXXABIThisValue);
 }
 
-/// Get the field index in the debug info. The debug info structure/union
-/// will ignore the unnamed bitfields.
-unsigned CodeGenFunction::getDebugInfoFIndex(const RecordDecl *Rec,
-                                             unsigned FieldIndex) {
-  unsigned I = 0, Skipped = 0;
-
-  for (auto *F : Rec->getDefinition()->fields()) {
-    if (I == FieldIndex)
-      break;
-    if (F->isUnnamedBitField())
-      Skipped++;
-    I++;
-  }
-
-  return FieldIndex - Skipped;
-}
-
 /// Get the address of a zero-sized field within a record. The resulting
 /// address doesn't necessarily have the right type.
 static Address emitAddrOfZeroSizeField(CodeGenFunction &CGF, Address Base,
@@ -5912,14 +5943,14 @@ static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
 static Address emitPreserveStructAccess(CodeGenFunction &CGF, LValue base,
                                         Address addr, const FieldDecl *field) {
   const RecordDecl *rec = field->getParent();
-  llvm::DIType *DbgInfo = CGF.getDebugInfo()->getOrCreateStandaloneType(
-      base.getType(), rec->getLocation());
+  auto [DbgInfo, DIIndex] =
+      CGF.getDebugInfo()->getOrCreatePreserveAccessInfo(base.getType(), field);
 
   unsigned idx =
       CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMFieldNo(field);
 
-  return CGF.Builder.CreatePreserveStructAccessIndex(
-      addr, idx, CGF.getDebugInfoFIndex(rec, field->getFieldIndex()), DbgInfo);
+  return CGF.Builder.CreatePreserveStructAccessIndex(addr, idx, DIIndex,
+                                                     DbgInfo);
 }
 
 static bool hasAnyVptr(const QualType Type, const ASTContext &Context) {
@@ -5971,11 +6002,10 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
             Addr = Builder.CreateStructGEP(Addr, Idx, field->getName());
         }
       } else {
-        llvm::DIType *DbgInfo = getDebugInfo()->getOrCreateRecordType(
-            getContext().getCanonicalTagType(rec), rec->getLocation());
-        Addr = Builder.CreatePreserveStructAccessIndex(
-            Addr, Idx, getDebugInfoFIndex(rec, field->getFieldIndex()),
-            DbgInfo);
+        auto [DbgInfo, DIIndex] = getDebugInfo()->getOrCreatePreserveAccessInfo(
+            getContext().getCanonicalTagType(rec), field);
+        Addr = Builder.CreatePreserveStructAccessIndex(Addr, Idx, DIIndex,
+                                                       DbgInfo);
       }
     }
     const unsigned SS =
@@ -6051,13 +6081,11 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
     if (IsInPreservedAIRegion ||
         (getDebugInfo() && rec->hasAttr<BPFPreserveAccessIndexAttr>())) {
       // Remember the original union field index
-      llvm::DIType *DbgInfo = getDebugInfo()->getOrCreateStandaloneType(base.getType(),
-          rec->getLocation());
-      addr =
-          Address(Builder.CreatePreserveUnionAccessIndex(
-                      addr.emitRawPointer(*this),
-                      getDebugInfoFIndex(rec, field->getFieldIndex()), DbgInfo),
-                  addr.getElementType(), addr.getAlignment());
+      auto [DbgInfo, DIIndex] =
+          getDebugInfo()->getOrCreatePreserveAccessInfo(base.getType(), field);
+      addr = Address(Builder.CreatePreserveUnionAccessIndex(
+                         addr.emitRawPointer(*this), DIIndex, DbgInfo),
+                     addr.getElementType(), addr.getAlignment());
     }
 
     if (FieldType->isReferenceType())
@@ -6545,7 +6573,8 @@ CodeGenFunction::EmitHLSLOutArgLValues(const HLSLOutArgExpr *E, QualType Ty) {
 }
 
 LValue CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
-                                           CallArgList &Args, QualType Ty) {
+                                           CallArgList &Args, QualType Ty,
+                                           bool IsImplicit) {
 
   auto [BaseLV, TempLV] = EmitHLSLOutArgLValues(E, Ty);
 
@@ -6554,7 +6583,8 @@ LValue CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
 
   Address TmpAddr(Addr, ElTy, TempLV.getAlignment());
   Args.addWriteback(BaseLV, TmpAddr, nullptr, E->getWritebackCast());
-  Args.add(RValue::get(TmpAddr, *this), Ty);
+  if (!IsImplicit)
+    Args.add(RValue::get(TmpAddr, *this), Ty);
   return TempLV;
 }
 
@@ -6706,6 +6736,8 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
         Clone = llvm::Function::Create(Fn->getFunctionType(),
                                        llvm::GlobalValue::InternalLinkage,
                                        Fn->getAddressSpace(), FDInlineName, M);
+        Clone->setCallingConv(Fn->getCallingConv());
+        Clone->setAttributes(Fn->getAttributes());
         Clone->addFnAttr(llvm::Attribute::AlwaysInline);
       }
       return CGCallee::forDirect(Clone, GD);
@@ -7203,7 +7235,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
     EmitSanitizerStatReport(llvm::SanStat_CFI_ICall);
 
     llvm::Metadata *MD =
-        CGM.CreateMetadataIdentifierForFnType(QualType(FnType, 0));
+        CGM.CreateMetadataIdentifierForCFIFnType(QualType(FnType, 0));
 
     llvm::Value *TypeId = llvm::MetadataAsValue::get(getLLVMContext(), MD);
 
@@ -7230,32 +7262,9 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   if (Chain)
     Args.add(RValue::get(Chain), CGM.getContext().VoidPtrTy);
 
-  // C++17 requires that we evaluate arguments to a call using assignment syntax
-  // right-to-left, and that we evaluate arguments to certain other operators
-  // left-to-right. Note that we allow this to override the order dictated by
-  // the calling convention on the MS ABI, which means that parameter
-  // destruction order is not necessarily reverse construction order.
-  // FIXME: Revisit this based on C++ committee response to unimplementability.
-  EvaluationOrder Order = EvaluationOrder::Default;
+  EvaluationOrder Order = CodeGenUtils::getCallArgEvaluationOrder(E);
   bool StaticOperator = false;
   if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(E)) {
-    if (OCE->isAssignmentOp())
-      Order = EvaluationOrder::ForceRightToLeft;
-    else {
-      switch (OCE->getOperator()) {
-      case OO_LessLess:
-      case OO_GreaterGreater:
-      case OO_AmpAmp:
-      case OO_PipePipe:
-      case OO_Comma:
-      case OO_ArrowStar:
-        Order = EvaluationOrder::ForceLeftToRight;
-        break;
-      default:
-        break;
-      }
-    }
-
     if (const auto *MD =
             dyn_cast_if_present<CXXMethodDecl>(OCE->getCalleeDecl());
         MD && MD->isStatic())
@@ -7457,6 +7466,16 @@ static LValueOrRValue emitPseudoObjectExpr(CodeGenFunction &CGF,
   // Find the result expression, if any.
   const Expr *resultExpr = E->getResultExpr();
   LValueOrRValue result;
+
+  // Without debug info, e.g., in a nodebug function, an enumerator of a BPF
+  // preserve_access_index enum cannot be relocated, so use its value.
+  if (!forLValue && CGF.getTarget().getTriple().isBPF() &&
+      (!CGF.CGM.getCodeGenOpts().hasReducedDebugInfo() || !CGF.getDebugInfo()))
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(E->getSyntacticForm());
+        DRE && isa<EnumConstantDecl>(DRE->getDecl())) {
+      result.RV = RValue::get(CGF.EmitScalarExpr(DRE));
+      return result;
+    }
 
   for (PseudoObjectExpr::const_semantics_iterator
          i = E->semantics_begin(), e = E->semantics_end(); i != e; ++i) {

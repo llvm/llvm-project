@@ -75,6 +75,8 @@ private:
                                unsigned &NeededInt, unsigned &NeededSse,
                                bool IsNamedArg, bool IsRegCall = false) const;
 
+  bool shouldExtendReturnType(const IntegerType *RetTy) const;
+
 public:
   X86_64TargetInfo(TypeBuilder &TypeBuilder, X86AVXABILevel AVXABILevel,
                    bool Has64BitPtrs, const X86ABICompatInfo &Compat)
@@ -136,6 +138,19 @@ static const Type *reduceUnionForX8664(const RecordType *UnionType,
     }
   }
   return StorageType;
+}
+
+bool X86_64TargetInfo::shouldExtendReturnType(const IntegerType *RetTy) const {
+  // Bools need to be zero-extended to 8 bits for all ABIs.
+  if (RetTy->isBool())
+    return true;
+
+  // Promotable integer types get extended only for Darwin.
+  bool IsDarwin = false; // TODO: Currently not supported by ABI library.
+  if (!IsDarwin)
+    return false;
+
+  return isPromotableInteger(RetTy);
 }
 
 void X86_64TargetInfo::postMerge(unsigned AggregateSize, Class &Lo,
@@ -635,8 +650,21 @@ X86_64TargetInfo::classifyArgumentType(const Type *Ty, unsigned FreeIntRegs,
     // If we have a sign or zero extended integer, make sure to return Extend
     // so that the parameter gets the right LLVM IR attributes.
     if (Hi == NoClass && ResType->isInteger()) {
-      if (Ty->isInteger() && isPromotableInteger(cast<IntegerType>(Ty)))
-        return ArgInfo::getExtend(Ty);
+      if (Ty->isInteger() && isPromotableInteger(cast<IntegerType>(Ty))) {
+        switch (getX86ABICompatInfo().SmallIntABICompat) {
+        case SmallIntABICompatKind::Platform:
+          if (cast<IntegerType>(Ty)->isBool()) {
+            // Bool should be extended to 8-bits. We can't express this right
+            // now, so use conservative extension.
+            return ArgInfo::getConservativeExtend(Ty);
+          }
+          break;
+        case SmallIntABICompatKind::Clang:
+          return ArgInfo::getExtend(Ty);
+        case SmallIntABICompatKind::Both:
+          return ArgInfo::getConservativeExtend(Ty);
+        }
+      }
     }
 
     if (ResType->isInteger() && ResType->getSizeInBits() == 128) {
@@ -740,14 +768,14 @@ ArgInfo X86_64TargetInfo::classifyReturnType(const Type *RetTy) const {
     // available register of the sequence %rax, %rdx is used.
   case Integer:
     ResType = getIntegerTypeAtOffset(RetTy, 0, RetTy, 0);
-    // If we have a sign or zero extended integer, make sure to return Extend
-    // so that the parameter gets the right LLVM IR attributes.
-    if (Hi == NoClass && ResType->isInteger()) {
-      if (const IntegerType *IntTy = dyn_cast<IntegerType>(RetTy)) {
-        if (isPromotableInteger(IntTy))
-          return ArgInfo::getExtend(RetTy);
-      }
-    }
+
+    // Always returns integral types as plain integers, without padding to a
+    // larger type or splitting into a struct. For some targets, small integers
+    // are additionally sign/zero extended.
+    if (const IntegerType *IntTy = dyn_cast<IntegerType>(RetTy))
+      return shouldExtendReturnType(IntTy) ? ArgInfo::getExtend(RetTy)
+                                           : ArgInfo::getDirect(RetTy);
+
     if (ResType->isInteger() && ResType->getSizeInBits() == 128) {
       assert(Hi == Integer);
       return ArgInfo::getDirect(ResType);
@@ -1315,7 +1343,7 @@ ArgInfo X86_64TargetInfo::getIndirectReturnResult(const Type *Ty) const {
     if (const auto *IntTy = dyn_cast<IntegerType>(Ty)) {
       if (IntTy->isBitInt())
         return getNaturalAlignIndirect(IntTy, getAllocaAddrSpace());
-      if (isPromotableInteger(IntTy))
+      if (shouldExtendReturnType(IntTy))
         return ArgInfo::getExtend(Ty);
     }
     return ArgInfo::getDirect();

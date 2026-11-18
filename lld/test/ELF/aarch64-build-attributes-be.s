@@ -17,7 +17,7 @@
 // NOTE-NEXT: Owner Data size Description
 // NOTE-NEXT: GNU 0x00000028 NT_GNU_PROPERTY_TYPE_0 (property note)
 // NOTE-NEXT: Properties: aarch64 feature: BTI, PAC, GCS
-// NOTE-NEXT: AArch64 PAuth ABI core info: platform 0x89abcdef (unknown), version 0x89abcdef
+// NOTE-NEXT: AArch64 PAuth ABI core info: platform 0x123456789abcdef (unknown), version 0x123456789abcdef
 
 
 .aeabi_subsection aeabi_pauthabi, required, uleb128

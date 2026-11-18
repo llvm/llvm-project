@@ -397,6 +397,7 @@ ErrorOr<int> init_groups(cpp::string_view user, gid_t group, const char *path) {
   if (!res.has_value())
     return Error(res.error());
 
+  // TODO: Implement setxid propagation across threads.
   return linux_syscalls::setgroups(gid_list.size(), gid_list.data());
 }
 

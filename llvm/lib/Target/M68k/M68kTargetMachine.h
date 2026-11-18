@@ -29,6 +29,7 @@ class formatted_raw_ostream;
 class M68kRegisterInfo;
 
 class M68kTargetMachine : public CodeGenTargetMachineImpl {
+  const M68kOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   M68kSubtarget Subtarget;
 
@@ -42,6 +43,8 @@ public:
                     bool JIT);
 
   ~M68kTargetMachine() override;
+
+  const M68kOptions &getCLOpts() const { return CLOpts; }
 
   const M68kSubtarget *getSubtargetImpl() const { return &Subtarget; }
 

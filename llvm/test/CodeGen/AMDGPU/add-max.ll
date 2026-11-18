@@ -57,7 +57,7 @@ define amdgpu_ps float @add_max_u32_sss(i32 inreg %a, i32 inreg %b, i32 inreg %c
 ; SDAG-NEXT:    s_not_b32 s3, s1
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; SDAG-NEXT:    s_min_u32 s0, s0, s3
-; SDAG-NEXT:    s_add_co_u32 s0, s0, s1
+; SDAG-NEXT:    s_add_co_i32 s0, s0, s1
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; SDAG-NEXT:    s_max_u32 s0, s0, s2
 ; SDAG-NEXT:    v_mov_b32_e32 v0, s0

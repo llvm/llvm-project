@@ -499,8 +499,8 @@ define void @multi_exit(ptr %dst, ptr %src.1, ptr %src.2, i64 %A, i64 %B) #0 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP24:%.*]] = trunc i64 [[INDEX]] to i32
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i64, ptr [[SRC_1]], i32 [[TMP24]]
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i64, ptr [[TMP25]], i64 2
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP26]], align 8, !alias.scope [[META9:![0-9]+]]
+; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i8, ptr [[TMP25]], i64 16
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP32]], align 8, !alias.scope [[META9:![0-9]+]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP31]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
@@ -1026,6 +1026,8 @@ exit:
 @dst.arr.a = external global [10 x double]
 @dst.arr.b = external global [15 x double]
 
+; Force VF 4, as extracting the mask for the replicated store makes
+; vectorization unprofitable otherwise.
 define void @known_deref_load_tail_folding() #4 {
 ; CHECK-LABEL: define void @known_deref_load_tail_folding(
 ; CHECK-SAME: ) #[[ATTR5:[0-9]+]] {
@@ -1097,7 +1099,7 @@ loop:
   store double 0.000000e+00, ptr %dst.select, align 8
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 12
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !4
 
 exit:
   ret void
@@ -1114,3 +1116,5 @@ attributes #4 = { "target-cpu"="haswell" }
 !1 = !{!"llvm.loop.vectorize.width", i32 2}
 !2 = !{!"llvm.loop.vectorize.scalable.disable"}
 !3 = !{!"llvm.loop.vectorize.enable"}
+!4 = distinct !{!4, !5}
+!5 = !{!"llvm.loop.vectorize.width", i32 4}

@@ -1,15 +1,25 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("BitReaderOptions") {
+  visibility = [ ":Reader" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 static_library("Reader") {
   output_name = "LLVMBitReader"
   deps = [
+    ":BitReaderOptions",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/Bitstream/Reader",
     "//llvm/lib/IR",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
   ]
 
   sources = [
     "BitReader.cpp",
+    "BitReaderOptions.cpp",
     "BitcodeAnalyzer.cpp",
     "BitcodeReader.cpp",
     "MetadataLoader.cpp",

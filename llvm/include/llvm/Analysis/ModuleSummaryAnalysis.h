@@ -24,9 +24,13 @@ namespace llvm {
 
 class BlockFrequencyInfo;
 class Function;
+class LLVMContext;
 class Module;
 class ProfileSummaryInfo;
 class StackSafetyInfo;
+
+/// Return -module-summary-max-indirect-edges.
+LLVM_ABI unsigned getMaxSummaryIndirectEdges(const LLVMContext &C);
 
 /// Direct function to compute a \c ModuleSummaryIndex from a given module.
 ///

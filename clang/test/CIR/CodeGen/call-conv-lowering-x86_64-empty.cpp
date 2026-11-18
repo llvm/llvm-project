@@ -479,7 +479,7 @@ int takeUNuaEmptyAlignedBits(UNuaEmptyAlignedBits v) { return v.b; }
 short takeUNuaEmptyNarrow(UNuaEmptyNarrow v) { return v.s; }
 
 // CIR: cir.func {{.*}}@_Z19takeUNuaEmptyNarrow15UNuaEmptyNarrow(%arg0: !s16i {{.*}}) -> (!s16i
-// LLVM: define dso_local noundef signext i16 @_Z19takeUNuaEmptyNarrow15UNuaEmptyNarrow(i16 %{{[^,]+}})
+// LLVM: define dso_local noundef i16 @_Z19takeUNuaEmptyNarrow15UNuaEmptyNarrow(i16 %{{[^,]+}})
 
 // A pair of floats in one eightbyte still coerces to a vector, not an integer.
 float takeUNuaEmptyFloats(UNuaEmptyFloats v) { return v.f.a; }
@@ -491,14 +491,14 @@ float takeUNuaEmptyFloats(UNuaEmptyFloats v) { return v.f.a; }
 char takeUNuaEmptyBytes16(UNuaEmptyBytes16 v) { return v.c[0]; }
 
 // CIR: cir.func {{.*}}@_Z20takeUNuaEmptyBytes1616UNuaEmptyBytes16(%arg0: !u64i {{.*}}, %arg1: !u64i {{.*}}) -> (!s8i
-// LLVM: define dso_local noundef signext i8 @_Z20takeUNuaEmptyBytes1616UNuaEmptyBytes16(i64 %{{[^,]+}}, i64 %{{[^,]+}})
+// LLVM: define dso_local noundef i8 @_Z20takeUNuaEmptyBytes1616UNuaEmptyBytes16(i64 %{{[^,]+}}, i64 %{{[^,]+}})
 
 // Here the empty variant is what reaches the second eightbyte, which the
 // data variant covers only one byte of, so the high half narrows to i8.
 char takeUNuaEmptyNarrowHi(UNuaEmptyNarrowHi v) { return v.c[0]; }
 
 // CIR: cir.func {{.*}}@_Z21takeUNuaEmptyNarrowHi17UNuaEmptyNarrowHi(%arg0: !u64i {{.*}}, %arg1: !s8i {{.*}}) -> (!s8i
-// LLVM: define dso_local noundef signext i8 @_Z21takeUNuaEmptyNarrowHi17UNuaEmptyNarrowHi(i64 %{{[^,]+}}, i8 %{{[^,]+}})
+// LLVM: define dso_local noundef i8 @_Z21takeUNuaEmptyNarrowHi17UNuaEmptyNarrowHi(i64 %{{[^,]+}}, i8 %{{[^,]+}})
 
 // An all-empty union owns eightbyte 0, so as with takeHiWord the coercion has
 // to start at byte 8 rather than dropping the NoClass half.

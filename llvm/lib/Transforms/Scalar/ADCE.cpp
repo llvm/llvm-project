@@ -163,9 +163,9 @@ class AggressiveDeadCodeElimination {
   void makeUnconditional(BasicBlock *BB, BasicBlock *Target);
 
 public:
-  AggressiveDeadCodeElimination(Function &F, DominatorTree *DT,
-                                PostDominatorTree &PDT)
-      : Opts(ScalarOptions::Global), F(F), DT(DT), PDT(PDT) {}
+  AggressiveDeadCodeElimination(const ScalarOptions &Opts, Function &F,
+                                DominatorTree *DT, PostDominatorTree &PDT)
+      : Opts(Opts), F(F), DT(DT), PDT(PDT) {}
 
   ADCEChanged performDeadCodeElimination();
 };
@@ -588,8 +588,9 @@ PreservedAnalyses ADCEPass::run(Function &F, FunctionAnalysisManager &FAM) {
   // to update analysis if it is already available.
   auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
   auto &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
-  ADCEChanged Changed =
-      AggressiveDeadCodeElimination(F, DT, PDT).performDeadCodeElimination();
+  const ScalarOptions &Opts = getScalarOptions(F);
+  ADCEChanged Changed = AggressiveDeadCodeElimination(Opts, F, DT, PDT)
+                            .performDeadCodeElimination();
   if (!Changed.ChangedAnything)
     return PreservedAnalyses::all();
 

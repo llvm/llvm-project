@@ -21,4 +21,4 @@ def Libc : LibcallLibrary<"libc",
   (add LibcallImpls<(add func0, LibcallImpls<(add func1), isBar>), isFoo>)
 >;
 
-def TheSystemLibrary : SystemRuntimeLibrary<isTargetArch, (add Libc)>;
+def TheSystemLibrary : SystemRuntimeLibrary<isTargetArch, ["libc"]>;

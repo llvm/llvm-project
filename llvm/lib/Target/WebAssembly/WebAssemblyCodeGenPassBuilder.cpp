@@ -27,8 +27,6 @@
 #include "llvm/CodeGen/RemoveLoadsIntoFakeUses.h"
 #include "llvm/CodeGen/ShrinkWrap.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
-#include "llvm/CodeGen/WasmEHPrepare.h"
-#include "llvm/CodeGen/WinEHPrepare.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
@@ -78,7 +76,6 @@ public:
   }
 
   void addIRPasses(PassManagerWrapper &PMW) override;
-  void addPassesToHandleExceptions(PassManagerWrapper &PMW) override;
   void addISelPrepare(PassManagerWrapper &PMW) override;
 
   Error addInstSelector(PassManagerWrapper &PMW) override;
@@ -127,14 +124,6 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(WebAssemblyReduceToAnyAllTruePass(getTM()), PMW);
 
   Base::addIRPasses(PMW);
-}
-
-void WebAssemblyCodeGenPassBuilder::addPassesToHandleExceptions(
-    PassManagerWrapper &PMW) {
-  // Wasm EH needs WinEHPrepare to remove the catchswitch PHIs SelectionDAG
-  // cannot lower.
-  addFunctionPass(WinEHPreparePass(), PMW);
-  addFunctionPass(WasmEHPreparePass(), PMW);
 }
 
 void WebAssemblyCodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
