@@ -528,10 +528,10 @@ trap:
   unreachable
 }
 
-define void @ssub_undef_operands_eq_fact(i32 %y) {
-; CHECK-LABEL: @ssub_undef_operands_eq_fact(
+define void @ssub_poison_operands_eq_fact(i32 %y) {
+; CHECK-LABEL: @ssub_poison_operands_eq_fact(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LIM_S:%.*]] = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 undef, i32 undef)
+; CHECK-NEXT:    [[LIM_S:%.*]] = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 poison, i32 poison)
 ; CHECK-NEXT:    [[LIM_OV:%.*]] = extractvalue { i32, i1 } [[LIM_S]], 1
 ; CHECK-NEXT:    br i1 [[LIM_OV]], label [[EXIT:%.*]], label [[NEXT:%.*]]
 ; CHECK:       next:
@@ -543,7 +543,7 @@ define void @ssub_undef_operands_eq_fact(i32 %y) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %lim.s = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 undef, i32 undef)
+  %lim.s = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 poison, i32 poison)
   %lim.ov = extractvalue { i32, i1 } %lim.s, 1
   br i1 %lim.ov, label %exit, label %next
 
