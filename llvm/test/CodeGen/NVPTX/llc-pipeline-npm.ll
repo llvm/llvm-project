@@ -12,6 +12,7 @@
 ; O0-NEXT: function
 ; O0-NEXT:   expand-ir-insts<O0>
 ; O0-NEXT: nvvm-reflect
+; O0-NEXT: nvptx-canonicalize-dynamic-shared
 ; O0-NEXT: nvptx-assign-valid-global-names
 ; O0-NEXT: generic-to-nvvm
 ; O0-NEXT: expand-variadics
@@ -76,6 +77,7 @@
 ; O2-NEXT: function
 ; O2-NEXT:   expand-ir-insts<O2>
 ; O2-NEXT: nvvm-reflect
+; O2-NEXT: nvptx-canonicalize-dynamic-shared
 ; O2-NEXT: function
 ; O2-NEXT:   nvptx-image-optimizer
 ; O2-NEXT: nvptx-assign-valid-global-names
@@ -147,9 +149,7 @@
 ; O2-NEXT:     nvptx-forward-params
 ; O2-NEXT:     nvptx-address-folder
 ; O2-NEXT:     nvptx-proxyreg-erasure
-; O2-NEXT:     process-imp-defs
-; O2-NEXT:     unreachable-mbb-elimination
-; O2-NEXT:     require<live-vars>
+; O2-NEXT:     process-implicit-defs
 ; O2-NEXT:     require<machine-loops>
 ; O2-NEXT:     phi-node-elimination
 ; O2-NEXT:     two-address-instruction
@@ -162,7 +162,6 @@
 ; O2-NEXT:     fixup-statepoint-caller-saved
 ; O2-NEXT:     branch-folder
 ; O2-NEXT:     post-ra-pseudos
-; O2-NEXT:     block-placement
 ; O2-NEXT:     fentry-insert
 ; O2-NEXT:     xray-instrumentation
 ; O2-NEXT:     live-debug-values

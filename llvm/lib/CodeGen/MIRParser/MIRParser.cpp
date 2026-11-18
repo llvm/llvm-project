@@ -193,7 +193,8 @@ private:
   void setupDebugValueTracking(MachineFunction &MF,
     PerFunctionMIParsingState &PFS, const yaml::MachineFunction &YamlMF);
 
-  bool parseMachineInst(MachineFunction &MF, yaml::MachineInstrLoc MILoc,
+  bool parseMachineInst(PerFunctionMIParsingState &PFS,
+                        const yaml::MachineInstrLoc &MILoc,
                         MachineInstr const *&MI);
 };
 
@@ -482,20 +483,18 @@ bool MIRParserImpl::computeFunctionProperties(
   return false;
 }
 
-bool MIRParserImpl::parseMachineInst(MachineFunction &MF,
-                                     yaml::MachineInstrLoc MILoc,
+bool MIRParserImpl::parseMachineInst(PerFunctionMIParsingState &PFS,
+                                     const yaml::MachineInstrLoc &MILoc,
                                      MachineInstr const *&MI) {
-  if (MILoc.BlockNum >= MF.size()) {
-    return error(Twine(MF.getName()) +
-                 Twine(" instruction block out of range.") +
-                 " Unable to reference bb:" + Twine(MILoc.BlockNum));
-  }
-  auto BB = std::next(MF.begin(), MILoc.BlockNum);
+  MachineFunction &MF = PFS.MF;
+  MachineBasicBlock *BB;
+  if (parseMBBReference(PFS, BB, MILoc.Block))
+    return true;
   if (MILoc.Offset >= BB->size())
-    return error(
-        Twine(MF.getName()) + Twine(" instruction offset out of range.") +
-        " Unable to reference instruction at bb: " + Twine(MILoc.BlockNum) +
-        " at offset:" + Twine(MILoc.Offset));
+    return error(Twine(MF.getName()) +
+                 Twine(" instruction offset out of range.") +
+                 " Unable to reference instruction at " + MILoc.Block.Value +
+                 " at offset:" + Twine(MILoc.Offset));
   MI = &*std::next(BB->instr_begin(), MILoc.Offset);
   return false;
 }
@@ -506,15 +505,15 @@ bool MIRParserImpl::initializeCallSiteInfo(
   SMDiagnostic Error;
   const TargetMachine &TM = MF.getTarget();
   for (auto &YamlCSInfo : YamlMF.CallSitesInfo) {
-    yaml::MachineInstrLoc MILoc = YamlCSInfo.CallLocation;
+    const yaml::MachineInstrLoc &MILoc = YamlCSInfo.CallLocation;
     const MachineInstr *CallI;
-    if (parseMachineInst(MF, MILoc, CallI))
+    if (parseMachineInst(PFS, MILoc, CallI))
       return true;
     if (!CallI->isCall(MachineInstr::IgnoreBundle))
       return error(Twine(MF.getName()) +
                    Twine(" call site info should reference call "
-                         "instruction. Instruction at bb:") +
-                   Twine(MILoc.BlockNum) + " at offset:" + Twine(MILoc.Offset) +
+                         "instruction. Instruction at ") +
+                   MILoc.Block.Value + " at offset:" + Twine(MILoc.Offset) +
                    " is not a call instruction");
     MachineFunction::CallSiteInfo CSInfo;
     for (auto ArgRegPair : YamlCSInfo.ArgForwardingRegs) {
@@ -1275,15 +1274,15 @@ bool MIRParserImpl::parseCalledGlobals(PerFunctionMIParsingState &PFS,
                                        const yaml::MachineFunction &YMF) {
   Function &F = MF.getFunction();
   for (const auto &YamlCG : YMF.CalledGlobals) {
-    yaml::MachineInstrLoc MILoc = YamlCG.CallSite;
+    const yaml::MachineInstrLoc &MILoc = YamlCG.CallSite;
     const MachineInstr *CallI;
-    if (parseMachineInst(MF, MILoc, CallI))
+    if (parseMachineInst(PFS, MILoc, CallI))
       return true;
     if (!CallI->isCall(MachineInstr::IgnoreBundle))
       return error(Twine(MF.getName()) +
                    Twine(" called global should reference call "
-                         "instruction. Instruction at bb:") +
-                   Twine(MILoc.BlockNum) + " at offset:" + Twine(MILoc.Offset) +
+                         "instruction. Instruction at ") +
+                   MILoc.Block.Value + " at offset:" + Twine(MILoc.Offset) +
                    " is not a call instruction");
 
     auto Callee =

@@ -53,14 +53,7 @@ cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions(
                           "reorder functions randomly"),
                clEnumValN(bolt::ReorderFunctions::RT_USER, "user",
                           "use function order specified by -function-order")),
-    cl::cat(BoltOptCategory),
-    cl::callback([](const bolt::ReorderFunctions::ReorderType &option) {
-      if (option == bolt::ReorderFunctions::RT_HFSORT_PLUS) {
-        errs() << "BOLT-WARNING: '-reorder-functions=hfsort+' is deprecated,"
-               << " please use '-reorder-functions=cdsort' instead\n";
-        ReorderFunctions = bolt::ReorderFunctions::RT_CDSORT;
-      }
-    }));
+    cl::cat(BoltOptCategory));
 
 static cl::opt<bool> ReorderFunctionsUseHotSize(
     "reorder-functions-use-hot-size",
@@ -350,6 +343,12 @@ Expected<uint32_t> ReorderFunctions::assignFunctionOrder(
 
 Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
   auto &BFs = BC.getBinaryFunctions();
+
+  if (opts::ReorderFunctions == RT_HFSORT_PLUS) {
+    BC.errs() << "BOLT-WARNING: '-reorder-functions=hfsort+' is deprecated,"
+              << " please use '-reorder-functions=cdsort' instead\n";
+    opts::ReorderFunctions = RT_CDSORT;
+  }
 
   // If a function order file is provided but no reorder algorithm was
   // explicitly specified, default to RT_USER.

@@ -33,6 +33,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
     RelaxedSIMD,
   } SIMDLevel = NoSIMD;
 
+  bool HasAcquireReleaseAtomics = false;
   bool HasAtomics = false;
   bool HasBulkMemory = false;
   bool HasBulkMemoryOpt = false;
@@ -49,7 +50,6 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasMutableGlobals = false;
   bool HasNontrappingFPToInt = false;
   bool HasReferenceTypes = false;
-  bool HasRelaxedAtomics = false;
   bool HasSignExt = false;
   bool HasTailCall = false;
   bool HasWideArithmetic = false;
@@ -171,9 +171,6 @@ private:
   bool hasBitIntType() const override { return true; }
 
   bool hasProtectedVisibility() const override { return false; }
-
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
-              const TargetInfo *Aux) override;
 };
 
 class LLVM_LIBRARY_VISIBILITY WebAssembly32TargetInfo

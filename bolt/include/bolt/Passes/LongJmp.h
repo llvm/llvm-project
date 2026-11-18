@@ -61,6 +61,10 @@ class LongJmpPass : public BinaryFunctionPass {
   /// Used to identify the stub size
   DenseMap<const BinaryBasicBlock *, int> StubBits;
 
+  /// Stats about the number of users of the stubs that are non-call
+  /// instructions targeting this stub.
+  DenseMap<const BinaryBasicBlock *, uint32_t> NumStubUsers;
+
   /// Stats about number of stubs inserted
   uint32_t NumHotStubs{0};
   uint32_t NumColdStubs{0};
@@ -69,10 +73,6 @@ class LongJmpPass : public BinaryFunctionPass {
   /// The shortest distance for any branch instruction on AArch64.
   static constexpr size_t ShortestJumpBits = 11;
   static constexpr size_t ShortestJumpSpan = 1ULL << (ShortestJumpBits - 1);
-
-  /// The longest single-instruction branch.
-  static constexpr size_t LongestJumpBits = 28;
-  static constexpr size_t LongestJumpSpan = 1ULL << (LongestJumpBits - 1);
 
   /// Relax all internal function branches including those between fragments.
   /// Assume that fragments are placed in different sections but are within

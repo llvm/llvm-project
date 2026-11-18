@@ -9,7 +9,6 @@ def TestDialect : Dialect {
 }
 def TestStrictPropertiesDialect : Dialect {
   let name = "test_strict_properties";
-  let useStrictPropertiesInAssemblyFormat = 1;
 }
 class TestFormat_Op<string fmt, list<Trait> traits = []>
     : Op<TestDialect, "format_op", traits> {
@@ -32,31 +31,10 @@ class TestStrictPropertiesFormat_Op<string fmt, list<Trait> traits = []>
 // CHECK: // coverity[ARRAY_VS_SINGLETON]
 // CHECK-NEXT: if (parser.resolveOperands(
 // CHECK-LABEL: AttrDictContextOperand::print
-// CHECK: ::llvm::ArrayRef<::llvm::StringRef> elidedAttrs;
-// CHECK: _odsPrinter.printOptionalAttrDict(_odsAttrs.getDictionary((*this)->getContext()).getValue(), elidedAttrs);
+// CHECK: _odsPrinter.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 def AttrDictContextOperand : TestFormat_Op<[{
   $context `:` type($context) attr-dict
 }]>, Arguments<(ins AnyType:$context)>;
-
-// CHECK-LABEL: AttrDictDefaultInherentAttr::parse
-// CHECK: verifyInherentAttrs
-def AttrDictDefaultInherentAttr : TestFormat_Op<[{
-  $attr attr-dict
-}]>, Arguments<(ins I64Attr:$attr)>;
-
-// CHECK-LABEL: AttrDictElideDefaultAndFixedAttr::print
-// CHECK: ::llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs = {"used"};
-// CHECK: elidedAttrs.push_back("attr");
-def AttrDictElideDefaultAndFixedAttr : TestFormat_Op<"$used attr-dict">,
-    Arguments<(ins I64Attr:$used,
-                   DefaultValuedStrAttr<StrAttr, "default">:$attr)>;
-
-// CHECK-LABEL: AttrDictElideDefaultAttr::print
-// CHECK: ::llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs = {};
-// CHECK: if(attr && (attr ==
-// CHECK: elidedAttrs.push_back("attr");
-def AttrDictElideDefaultAttr : TestFormat_Op<"attr-dict">,
-    Arguments<(ins DefaultValuedStrAttr<StrAttr, "default">:$attr)>;
 
 // CHECK-LABEL: AttrDictStrictDefaultAttr::print
 // CHECK-NOT: elidedAttrs
@@ -108,7 +86,7 @@ def AttrDictStrictPropDictInherentAttr : TestStrictPropertiesFormat_Op<[{
 // CHECK: parseFoo({{.*}}, parser.getBuilder().getI1Type())
 // CHECK-LABEL: CustomStringLiteralA::print
 // CHECK: printFoo({{.*}}, ::mlir::Builder(getContext()).getI1Type())
-// CHECK: ::llvm::ArrayRef<::llvm::StringRef> elidedAttrs;
+// CHECK: _odsPrinter.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 def CustomStringLiteralA : TestFormat_Op<[{
   custom<Foo>("$_builder.getI1Type()") attr-dict
 }]>;
@@ -381,8 +359,7 @@ def OptionalGroupB : TestFormat_Op<[{
 //  CHECK-NEXT:   odsPrinter << ' ';
 //  CHECK-NEXT:   odsPrinter.printAttributeWithoutType(getAAttr());
 //  CHECK-NEXT: }
-//       CHECK: static constexpr ::llvm::StringRef elidedAttrs[] = {"a"};
-//       CHECK: _odsPrinter.printOptionalAttrDict
+//       CHECK: _odsPrinter.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 def OptionalGroupC : TestFormat_Op<[{
   ($a^)? attr-dict
 }]>, Arguments<(ins DefaultValuedStrAttr<StrAttr, "default">:$a)>;
@@ -391,8 +368,7 @@ def OptionalGroupC : TestFormat_Op<[{
 //       CHECK: elidedProps.push_back("a");
 //   CHECK-NOT: elidedProps.push_back("a");
 //       CHECK: printProperties
-//       CHECK: static constexpr ::llvm::StringRef elidedAttrs[] = {"a"};
-//       CHECK: _odsPrinter.printOptionalAttrDict
+//       CHECK: _odsPrinter.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 def OptionalGroupCPropDict : TestFormat_Op<[{
   ($a^)? prop-dict attr-dict
 }]>, Arguments<(ins DefaultValuedStrAttr<StrAttr, "default">:$a)>;

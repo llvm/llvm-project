@@ -59,6 +59,7 @@ static_library("CPlusPlus") {
     "LibCxxVariant.cpp",
     "LibCxxVector.cpp",
     "LibStdcpp.cpp",
+    "LibStdcppAtomic.cpp",
     "LibStdcppSpan.cpp",
     "LibStdcppTuple.cpp",
     "LibStdcppUniquePointer.cpp",

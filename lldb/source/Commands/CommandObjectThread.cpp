@@ -1090,8 +1090,6 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     bool synchronous_execution = m_interpreter.GetSynchronous();
 
-    Target *target = GetTarget();
-
     Process *process = m_exe_ctx.GetProcessPtr();
     if (process == nullptr) {
       result.AppendError("need a valid process to step");
@@ -1161,9 +1159,6 @@ protected:
           return;
         }
 
-        LineEntry function_start;
-        std::vector<addr_t> address_list;
-
         // Find the beginning & end index of the function, but first make
         // sure it is valid:
         if (!sc.function) {
@@ -1172,65 +1167,16 @@ protected:
           return;
         }
 
-        RangeVector<uint32_t, uint32_t> line_idx_ranges;
-        for (const AddressRange &range : sc.function->GetAddressRanges()) {
-          auto [begin, end] = line_table->GetLineEntryIndexRange(range);
-          line_idx_ranges.Append(begin, end - begin);
-        }
-        line_idx_ranges.Sort();
-
-        bool found_something = false;
-
-        // Since not all source lines will contribute code, check if we are
-        // setting the breakpoint on the exact line number or the nearest
-        // subsequent line number and set breakpoints at all the line table
-        // entries of the chosen line number (exact or nearest subsequent).
-        for (uint32_t line_number : line_numbers) {
-          LineEntry line_entry;
-          bool exact = false;
-          if (sc.comp_unit->FindLineEntry(0, line_number, nullptr, exact,
-                                          &line_entry) == UINT32_MAX)
-            continue;
-
-          found_something = true;
-          line_number = line_entry.line;
-          exact = true;
-          uint32_t end_func_idx = line_idx_ranges.GetMaxRangeEnd(0);
-          uint32_t idx = sc.comp_unit->FindLineEntry(
-              line_idx_ranges.GetMinRangeBase(UINT32_MAX), line_number, nullptr,
-              exact, &line_entry);
-          while (idx < end_func_idx) {
-            if (line_idx_ranges.FindEntryIndexThatContains(idx) != UINT32_MAX) {
-              addr_t address =
-                  line_entry.range.GetBaseAddress().GetLoadAddress(target);
-              if (address != LLDB_INVALID_ADDRESS)
-                address_list.push_back(address);
-            }
-            idx = sc.comp_unit->FindLineEntry(idx + 1, line_number, nullptr,
-                                              exact, &line_entry);
-          }
-        }
-
-        for (lldb::addr_t address : m_options.m_until_addrs) {
-          AddressRange unused;
-          if (sc.function->GetRangeContainingLoadAddress(address, *target,
-                                                         unused))
-            address_list.push_back(address);
-        }
-
-        if (address_list.empty()) {
-          if (found_something)
-            result.AppendErrorWithFormat(
-                "Until target outside of the current function");
-          else
-            result.AppendErrorWithFormat(
-                "No line entries matching until target");
-
+        llvm::Expected<std::vector<addr_t>> address_list =
+            GetStepUntilAddresses(*frame, sc.comp_unit->GetPrimaryFile(),
+                                  line_numbers, m_options.m_until_addrs);
+        if (!address_list) {
+          result.AppendError(llvm::toString(address_list.takeError()));
           return;
         }
 
         new_plan_sp = thread->QueueThreadPlanForStepUntil(
-            abort_other_plans, address_list, m_options.m_stop_others,
+            abort_other_plans, *address_list, m_options.m_stop_others,
             m_options.m_frame_idx, new_plan_status);
         if (new_plan_sp) {
           // User level plans should be controlling plans so they can be

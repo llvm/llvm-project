@@ -78,38 +78,38 @@ end program
 ! CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QFEnonvolatile_array) : !fir.ref<!fir.array<10xi32>>
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_2]] : (index) -> !fir.shape<1>
-! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[ADDRESS_OF_0]](%[[SHAPE_0]]) {uniq_name = "_QFEnonvolatile_array"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[ADDRESS_OF_0]](%[[SHAPE_0]]) uniq_name("_QFEnonvolatile_array") : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK:           %[[ADDRESS_OF_1:.*]] = fir.address_of(@_QFEnonvolatile_array_pointer) : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-! CHECK:           %[[DECLARE_1:.*]]:2 = hlfir.declare %[[ADDRESS_OF_1]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEnonvolatile_array_pointer"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+! CHECK:           %[[DECLARE_1:.*]]:2 = hlfir.declare %[[ADDRESS_OF_1]] uniq_name("_QFEnonvolatile_array_pointer") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 ! CHECK:           %[[ADDRESS_OF_2:.*]] = fir.address_of(@_QFEnonvolatile_array_target) : !fir.ref<!fir.array<10xi32>>
-! CHECK:           %[[DECLARE_2:.*]]:2 = hlfir.declare %[[ADDRESS_OF_2]](%[[SHAPE_0]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFEnonvolatile_array_target"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+! CHECK:           %[[DECLARE_2:.*]]:2 = hlfir.declare %[[ADDRESS_OF_2]](%[[SHAPE_0]]) uniq_name("_QFEnonvolatile_array_target") fortran_attrs<target> : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK:           %[[ADDRESS_OF_3:.*]] = fir.address_of(@_QFEnonvolatile_integer_target) : !fir.ref<i32>
-! CHECK:           %[[DECLARE_3:.*]]:2 = hlfir.declare %[[ADDRESS_OF_3]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFEnonvolatile_integer_target"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[DECLARE_3:.*]]:2 = hlfir.declare %[[ADDRESS_OF_3]] uniq_name("_QFEnonvolatile_integer_target") fortran_attrs<target> : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[ADDRESS_OF_4:.*]] = fir.address_of(@_QFEvolatile_array) : !fir.ref<!fir.array<10xi32>>
 ! CHECK:           %[[VOLATILE_CAST_0:.*]] = fir.volatile_cast %[[ADDRESS_OF_4]] : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>, volatile>
-! CHECK:           %[[DECLARE_4:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]](%[[SHAPE_0]]) {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEvolatile_array"} : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>, volatile>, !fir.ref<!fir.array<10xi32>, volatile>)
+! CHECK:           %[[DECLARE_4:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]](%[[SHAPE_0]]) uniq_name("_QFEvolatile_array") fortran_attrs<volatile> : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>, volatile>, !fir.ref<!fir.array<10xi32>, volatile>)
 ! CHECK:           %[[ADDRESS_OF_5:.*]] = fir.address_of(@_QFEvolatile_array_2d) : !fir.ref<!fir.array<10x10xi32>>
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[CONSTANT_2]], %[[CONSTANT_2]] : (index, index) -> !fir.shape<2>
 ! CHECK:           %[[VOLATILE_CAST_1:.*]] = fir.volatile_cast %[[ADDRESS_OF_5]] : (!fir.ref<!fir.array<10x10xi32>>) -> !fir.ref<!fir.array<10x10xi32>, volatile>
-! CHECK:           %[[DECLARE_5:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_1]](%[[SHAPE_1]]) {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEvolatile_array_2d"} : (!fir.ref<!fir.array<10x10xi32>, volatile>, !fir.shape<2>) -> (!fir.ref<!fir.array<10x10xi32>, volatile>, !fir.ref<!fir.array<10x10xi32>, volatile>)
+! CHECK:           %[[DECLARE_5:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_1]](%[[SHAPE_1]]) uniq_name("_QFEvolatile_array_2d") fortran_attrs<volatile> : (!fir.ref<!fir.array<10x10xi32>, volatile>, !fir.shape<2>) -> (!fir.ref<!fir.array<10x10xi32>, volatile>, !fir.ref<!fir.array<10x10xi32>, volatile>)
 ! CHECK:           %[[ADDRESS_OF_6:.*]] = fir.address_of(@_QFEvolatile_array_pointer) : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:           %[[VOLATILE_CAST_2:.*]] = fir.volatile_cast %[[ADDRESS_OF_6]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>
-! CHECK:           %[[DECLARE_6:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_2]] {fortran_attrs = #fir.var_attrs<pointer, volatile>, uniq_name = "_QFEvolatile_array_pointer"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>)
+! CHECK:           %[[DECLARE_6:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_2]] uniq_name("_QFEvolatile_array_pointer") fortran_attrs<pointer, volatile> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>)
 ! CHECK:           %[[ADDRESS_OF_7:.*]] = fir.address_of(@_QFEvolatile_array_target) : !fir.ref<!fir.array<10xi32>>
 ! CHECK:           %[[VOLATILE_CAST_3:.*]] = fir.volatile_cast %[[ADDRESS_OF_7]] : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>, volatile>
-! CHECK:           %[[DECLARE_7:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_3]](%[[SHAPE_0]]) {fortran_attrs = #fir.var_attrs<target, volatile>, uniq_name = "_QFEvolatile_array_target"} : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>, volatile>, !fir.ref<!fir.array<10xi32>, volatile>)
+! CHECK:           %[[DECLARE_7:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_3]](%[[SHAPE_0]]) uniq_name("_QFEvolatile_array_target") fortran_attrs<target, volatile> : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>, volatile>, !fir.ref<!fir.array<10xi32>, volatile>)
 ! CHECK:           %[[ALLOCA_2:.*]] = fir.alloca i32 <{bindc_name = "volatile_integer", uniq_name = "_QFEvolatile_integer"}>
 ! CHECK:           %[[VOLATILE_CAST_4:.*]] = fir.volatile_cast %[[ALLOCA_2]] : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
-! CHECK:           %[[DECLARE_8:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_4]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEvolatile_integer"} : (!fir.ref<i32, volatile>) -> (!fir.ref<i32, volatile>, !fir.ref<i32, volatile>)
+! CHECK:           %[[DECLARE_8:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_4]] uniq_name("_QFEvolatile_integer") fortran_attrs<volatile> : (!fir.ref<i32, volatile>) -> (!fir.ref<i32, volatile>, !fir.ref<i32, volatile>)
 ! CHECK:           %[[ALLOCA_3:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "volatile_integer_pointer", uniq_name = "_QFEvolatile_integer_pointer"}>
 ! CHECK:           %[[ZERO_BITS_0:.*]] = fir.zero_bits !fir.ptr<i32>
 ! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[ZERO_BITS_0]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
 ! CHECK:           fir.store %[[EMBOX_0]] to %[[ALLOCA_3]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:           %[[VOLATILE_CAST_5:.*]] = fir.volatile_cast %[[ALLOCA_3]] : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<!fir.ptr<i32>, volatile>, volatile>
-! CHECK:           %[[DECLARE_9:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_5]] {fortran_attrs = #fir.var_attrs<pointer, volatile>, uniq_name = "_QFEvolatile_integer_pointer"} : (!fir.ref<!fir.box<!fir.ptr<i32>, volatile>, volatile>) -> (!fir.ref<!fir.box<!fir.ptr<i32>, volatile>, volatile>, !fir.ref<!fir.box<!fir.ptr<i32>, volatile>, volatile>)
+! CHECK:           %[[DECLARE_9:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_5]] uniq_name("_QFEvolatile_integer_pointer") fortran_attrs<pointer, volatile> : (!fir.ref<!fir.box<!fir.ptr<i32>, volatile>, volatile>) -> (!fir.ref<!fir.box<!fir.ptr<i32>, volatile>, volatile>, !fir.ref<!fir.box<!fir.ptr<i32>, volatile>, volatile>)
 ! CHECK:           %[[ADDRESS_OF_8:.*]] = fir.address_of(@_QFEvolatile_integer_target) : !fir.ref<i32>
 ! CHECK:           %[[VOLATILE_CAST_6:.*]] = fir.volatile_cast %[[ADDRESS_OF_8]] : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
-! CHECK:           %[[DECLARE_10:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_6]] {fortran_attrs = #fir.var_attrs<target, volatile>, uniq_name = "_QFEvolatile_integer_target"} : (!fir.ref<i32, volatile>) -> (!fir.ref<i32, volatile>, !fir.ref<i32, volatile>)
+! CHECK:           %[[DECLARE_10:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_6]] uniq_name("_QFEvolatile_integer_target") fortran_attrs<target, volatile> : (!fir.ref<i32, volatile>) -> (!fir.ref<i32, volatile>, !fir.ref<i32, volatile>)
 ! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[DECLARE_7]]#0 : (!fir.ref<!fir.array<10xi32>, volatile>) -> !fir.ref<!fir.array<?xi32>, volatile>
 ! CHECK:           %[[EMBOX_1:.*]] = fir.embox %[[CONVERT_0]](%[[SHAPE_0]]) : (!fir.ref<!fir.array<?xi32>, volatile>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>
 ! CHECK:           fir.store %[[EMBOX_1]] to %[[DECLARE_6]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>
@@ -121,7 +121,7 @@ end program
 ! CHECK:           %[[SHAPE_2:.*]] = fir.shape %[[CONSTANT_1]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[EMBOX_3:.*]] = fir.embox %[[ZERO_BITS_1]](%[[SHAPE_2]]) : (!fir.ptr<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>
 ! CHECK:           fir.store %[[EMBOX_3]] to %[[ALLOCA_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>>
-! CHECK:           %[[DECLARE_11:.*]]:2 = hlfir.declare %[[ALLOCA_1]] {uniq_name = ".tmp.intrinsic_result"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>>)
+! CHECK:           %[[DECLARE_11:.*]]:2 = hlfir.declare %[[ALLOCA_1]] uniq_name(".tmp.intrinsic_result") : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>>)
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[DECLARE_11]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>>
 ! CHECK:           fir.store %[[LOAD_0]] to %[[DECLARE_6]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>
 ! CHECK:           %[[VOLATILE_CAST_8:.*]] = fir.volatile_cast %[[DECLARE_7]]#0 : (!fir.ref<!fir.array<10xi32>, volatile>) -> !fir.ref<!fir.array<10xi32>>
@@ -135,7 +135,7 @@ end program
 ! CHECK:           fir.store %[[EMBOX_6]] to %[[DECLARE_9]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>, volatile>, volatile>
 ! CHECK:           %[[EMBOX_7:.*]] = fir.embox %[[ZERO_BITS_0]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>, volatile>
 ! CHECK:           fir.store %[[EMBOX_7]] to %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.ptr<i32>, volatile>>
-! CHECK:           %[[DECLARE_12:.*]]:2 = hlfir.declare %[[ALLOCA_0]] {uniq_name = ".tmp.intrinsic_result"} : (!fir.ref<!fir.box<!fir.ptr<i32>, volatile>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>, volatile>>, !fir.ref<!fir.box<!fir.ptr<i32>, volatile>>)
+! CHECK:           %[[DECLARE_12:.*]]:2 = hlfir.declare %[[ALLOCA_0]] uniq_name(".tmp.intrinsic_result") : (!fir.ref<!fir.box<!fir.ptr<i32>, volatile>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>, volatile>>, !fir.ref<!fir.box<!fir.ptr<i32>, volatile>>)
 ! CHECK:           %[[LOAD_1:.*]] = fir.load %[[DECLARE_12]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>, volatile>>
 ! CHECK:           fir.store %[[LOAD_1]] to %[[DECLARE_9]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>, volatile>, volatile>
 ! CHECK:           %[[VOLATILE_CAST_9:.*]] = fir.volatile_cast %[[DECLARE_4]]#0 : (!fir.ref<!fir.array<10xi32>, volatile>) -> !fir.ref<!fir.array<10xi32>>
@@ -178,7 +178,7 @@ end program
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 10 : index
 ! CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_2]] : (index) -> !fir.shape<1>
-! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[ARG0]](%[[SHAPE_0]]) dummy_scope %[[DUMMY_SCOPE_0]] arg 1 {uniq_name = "_QFFsub_nonvolatile_arrayEarr"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[ARG0]](%[[SHAPE_0]]) dummy_scope %[[DUMMY_SCOPE_0]] arg 1 uniq_name("_QFFsub_nonvolatile_arrayEarr") : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK:           %[[DESIGNATE_0:.*]] = hlfir.designate %[[DECLARE_0]]#0 (%[[CONSTANT_0]])  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 ! CHECK:           hlfir.assign %[[CONSTANT_1]] to %[[DESIGNATE_0]] : i32, !fir.ref<i32>
 ! CHECK:           return
@@ -190,7 +190,7 @@ end program
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 5 : i32
 ! CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VOLATILE_CAST_0:.*]] = fir.volatile_cast %[[ARG0]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>, volatile>
-! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]] dummy_scope %[[DUMMY_SCOPE_0]] arg 1 {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFFsub_volatile_array_assumed_shapeEarr"} : (!fir.box<!fir.array<?xi32>, volatile>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>, volatile>, !fir.box<!fir.array<?xi32>, volatile>)
+! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]] dummy_scope %[[DUMMY_SCOPE_0]] arg 1 uniq_name("_QFFsub_volatile_array_assumed_shapeEarr") fortran_attrs<volatile> : (!fir.box<!fir.array<?xi32>, volatile>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>, volatile>, !fir.box<!fir.array<?xi32>, volatile>)
 ! CHECK:           %[[DESIGNATE_0:.*]] = hlfir.designate %[[DECLARE_0]]#0 (%[[CONSTANT_0]])  : (!fir.box<!fir.array<?xi32>, volatile>, index) -> !fir.ref<i32, volatile>
 ! CHECK:           hlfir.assign %[[CONSTANT_1]] to %[[DESIGNATE_0]] : i32, !fir.ref<i32, volatile>
 ! CHECK:           return
@@ -202,7 +202,7 @@ end program
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 5 : i32
 ! CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VOLATILE_CAST_0:.*]] = fir.volatile_cast %[[ARG0]] : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>, volatile>
-! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]] dummy_scope %[[DUMMY_SCOPE_0]] arg 1 {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFFsub_volatile_array_assumed_shape_2dEarr"} : (!fir.box<!fir.array<?x?xi32>, volatile>, !fir.dscope) -> (!fir.box<!fir.array<?x?xi32>, volatile>, !fir.box<!fir.array<?x?xi32>, volatile>)
+! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]] dummy_scope %[[DUMMY_SCOPE_0]] arg 1 uniq_name("_QFFsub_volatile_array_assumed_shape_2dEarr") fortran_attrs<volatile> : (!fir.box<!fir.array<?x?xi32>, volatile>, !fir.dscope) -> (!fir.box<!fir.array<?x?xi32>, volatile>, !fir.box<!fir.array<?x?xi32>, volatile>)
 ! CHECK:           %[[DESIGNATE_0:.*]] = hlfir.designate %[[DECLARE_0]]#0 (%[[CONSTANT_0]], %[[CONSTANT_0]])  : (!fir.box<!fir.array<?x?xi32>, volatile>, index, index) -> !fir.ref<i32, volatile>
 ! CHECK:           hlfir.assign %[[CONSTANT_1]] to %[[DESIGNATE_0]] : i32, !fir.ref<i32, volatile>
 ! CHECK:           return
@@ -216,7 +216,7 @@ end program
 ! CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_2]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VOLATILE_CAST_0:.*]] = fir.volatile_cast %[[ARG0]] : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>, volatile>
-! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]](%[[SHAPE_0]]) dummy_scope %[[DUMMY_SCOPE_0]] arg 1 {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFFsub_volatile_arrayEarr"} : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xi32>, volatile>, !fir.ref<!fir.array<10xi32>, volatile>)
+! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]](%[[SHAPE_0]]) dummy_scope %[[DUMMY_SCOPE_0]] arg 1 uniq_name("_QFFsub_volatile_arrayEarr") fortran_attrs<volatile> : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xi32>, volatile>, !fir.ref<!fir.array<10xi32>, volatile>)
 ! CHECK:           %[[DESIGNATE_0:.*]] = hlfir.designate %[[DECLARE_0]]#0 (%[[CONSTANT_0]])  : (!fir.ref<!fir.array<10xi32>, volatile>, index) -> !fir.ref<i32, volatile>
 ! CHECK:           hlfir.assign %[[CONSTANT_1]] to %[[DESIGNATE_0]] : i32, !fir.ref<i32, volatile>
 ! CHECK:           return
@@ -228,7 +228,7 @@ end program
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 5 : i32
 ! CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VOLATILE_CAST_0:.*]] = fir.volatile_cast %[[ARG0]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>, volatile>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>
-! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]] dummy_scope %[[DUMMY_SCOPE_0]] arg 1 {fortran_attrs = #fir.var_attrs<pointer, volatile>, uniq_name = "_QFFsub_volatile_array_pointerEarr"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>)
+! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]] dummy_scope %[[DUMMY_SCOPE_0]] arg 1 uniq_name("_QFFsub_volatile_array_pointerEarr") fortran_attrs<pointer, volatile> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>)
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[DECLARE_0]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>
 ! CHECK:           %[[DESIGNATE_0:.*]] = hlfir.designate %[[LOAD_0]] (%[[CONSTANT_0]])  : (!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, index) -> !fir.ref<i32, volatile>
 ! CHECK:           hlfir.assign %[[CONSTANT_1]] to %[[DESIGNATE_0]] : i32, !fir.ref<i32, volatile>
@@ -243,7 +243,7 @@ end program
 ! CHECK-DAG:       %[[CONSTANT_3:.*]] = arith.constant 1 : i8
 ! CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VOLATILE_CAST_0:.*]] = fir.volatile_cast %[[ARG0]] : (!fir.box<!fir.array<*:i32>>) -> !fir.box<!fir.array<*:i32>, volatile>
-! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]] dummy_scope %[[DUMMY_SCOPE_0]] arg 1 {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFFsub_select_rankEarr"} : (!fir.box<!fir.array<*:i32>, volatile>, !fir.dscope) -> (!fir.box<!fir.array<*:i32>, volatile>, !fir.box<!fir.array<*:i32>, volatile>)
+! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]] dummy_scope %[[DUMMY_SCOPE_0]] arg 1 uniq_name("_QFFsub_select_rankEarr") fortran_attrs<volatile> : (!fir.box<!fir.array<*:i32>, volatile>, !fir.dscope) -> (!fir.box<!fir.array<*:i32>, volatile>, !fir.box<!fir.array<*:i32>, volatile>)
 ! CHECK:           %[[VOLATILE_CAST_1:.*]] = fir.volatile_cast %[[DECLARE_0]]#0 : (!fir.box<!fir.array<*:i32>, volatile>) -> !fir.box<!fir.array<*:i32>>
 ! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[VOLATILE_CAST_1]] : (!fir.box<!fir.array<*:i32>>) -> !fir.box<none>
 ! CHECK:           %[[CALL_0:.*]] = fir.call @_FortranAIsAssumedSize(%[[CONVERT_0]]) : (!fir.box<none>) -> i1
@@ -259,13 +259,13 @@ end program
 ! CHECK:           cf.cond_br %[[CMP_R4]], ^bb4, ^bb5
 ! CHECK:         ^bb3:
 ! CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[DECLARE_0]]#0 : (!fir.box<!fir.array<*:i32>, volatile>) -> !fir.box<!fir.array<?xi32>, volatile>
-! CHECK:           %[[DECLARE_1:.*]]:2 = hlfir.declare %[[CONVERT_1]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFFsub_select_rankEarr"} : (!fir.box<!fir.array<?xi32>, volatile>) -> (!fir.box<!fir.array<?xi32>, volatile>, !fir.box<!fir.array<?xi32>, volatile>)
+! CHECK:           %[[DECLARE_1:.*]]:2 = hlfir.declare %[[CONVERT_1]] uniq_name("_QFFsub_select_rankEarr") fortran_attrs<volatile> : (!fir.box<!fir.array<?xi32>, volatile>) -> (!fir.box<!fir.array<?xi32>, volatile>, !fir.box<!fir.array<?xi32>, volatile>)
 ! CHECK:           %[[DESIGNATE_0:.*]] = hlfir.designate %[[DECLARE_1]]#0 (%[[CONSTANT_0]])  : (!fir.box<!fir.array<?xi32>, volatile>, index) -> !fir.ref<i32, volatile>
 ! CHECK:           hlfir.assign %[[CONSTANT_1]] to %[[DESIGNATE_0]] : i32, !fir.ref<i32, volatile>
 ! CHECK:           cf.br ^bb5
 ! CHECK:         ^bb4:
 ! CHECK:           %[[CONVERT_2:.*]] = fir.convert %[[DECLARE_0]]#0 : (!fir.box<!fir.array<*:i32>, volatile>) -> !fir.box<!fir.array<?x?x?x?xi32>, volatile>
-! CHECK:           %[[DECLARE_2:.*]]:2 = hlfir.declare %[[CONVERT_2]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFFsub_select_rankEarr"} : (!fir.box<!fir.array<?x?x?x?xi32>, volatile>) -> (!fir.box<!fir.array<?x?x?x?xi32>, volatile>, !fir.box<!fir.array<?x?x?x?xi32>, volatile>)
+! CHECK:           %[[DECLARE_2:.*]]:2 = hlfir.declare %[[CONVERT_2]] uniq_name("_QFFsub_select_rankEarr") fortran_attrs<volatile> : (!fir.box<!fir.array<?x?x?x?xi32>, volatile>) -> (!fir.box<!fir.array<?x?x?x?xi32>, volatile>, !fir.box<!fir.array<?x?x?x?xi32>, volatile>)
 ! CHECK:           %[[DESIGNATE_1:.*]] = hlfir.designate %[[DECLARE_2]]#0 (%[[CONSTANT_0]], %[[CONSTANT_0]], %[[CONSTANT_0]], %[[CONSTANT_0]])  : (!fir.box<!fir.array<?x?x?x?xi32>, volatile>, index, index, index, index) -> !fir.ref<i32, volatile>
 ! CHECK:           hlfir.assign %[[CONSTANT_1]] to %[[DESIGNATE_1]] : i32, !fir.ref<i32, volatile>
 ! CHECK:           cf.br ^bb5

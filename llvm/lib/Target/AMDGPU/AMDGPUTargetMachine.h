@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include <optional>
 #include <utility>
 
@@ -28,11 +29,12 @@ namespace llvm {
 //===----------------------------------------------------------------------===//
 
 namespace AMDGPU {
-StringRef getSchedStrategy(const Function &F);
+StringRef getSchedStrategy(const AMDGPUOptions &CLOpts, const Function &F);
 }
 
 class AMDGPUTargetMachine : public CodeGenTargetMachineImpl {
 protected:
+  const AMDGPUOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
 
   StringRef getGPUName(const Function &F) const;
@@ -49,6 +51,8 @@ public:
                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL);
   ~AMDGPUTargetMachine() override;
 
+  const AMDGPUOptions &getCLOpts() const { return CLOpts; }
+
   const TargetSubtargetInfo *
   getSubtargetImpl(const Function &) const override = 0;
 
@@ -59,7 +63,8 @@ public:
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
   void registerDefaultAliasAnalyses(AAManager &) override;
 
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
+  bool isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                           unsigned DestAS) const override;
 
   unsigned getAssumedAddrSpace(const Value *V) const override;
 
@@ -82,6 +87,24 @@ public:
 class GCNTargetMachine final : public AMDGPUTargetMachine {
 private:
   mutable StringMap<std::unique_ptr<GCNSubtarget>> SubtargetMap;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute GPU, FS;
+    bool BufRelaxed = false;
+    bool TBufRelaxed = false;
+    AMDGPU::TargetIDSetting Xnack = AMDGPU::TargetIDSetting::Any;
+    AMDGPU::TargetIDSetting SramEcc = AMDGPU::TargetIDSetting::Any;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return GPU == RHS.GPU && FS == RHS.FS && BufRelaxed == RHS.BufRelaxed &&
+             TBufRelaxed == RHS.TBufRelaxed && Xnack == RHS.Xnack &&
+             SramEcc == RHS.SramEcc;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<GCNSubtarget, SubtargetAttrs> LastSubtarget;
 
 public:
   GCNTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -106,10 +129,11 @@ public:
 
   void registerMachineRegisterInfoCallback(MachineFunction &MF) const override;
 
-  /// Get xnack/sramecc setting from module flag or cl::opt (for testing).
+  /// Get xnack/sramecc setting from module flag or command line option (for
+  /// testing).
   /// Returns Any if not specified.
-  static AMDGPU::TargetIDSetting
-  getTargetIDSettingFromModuleFlag(const Module &M, StringRef FlagName);
+  AMDGPU::TargetIDSetting
+  getTargetIDSettingFromModuleFlag(const Module &M, StringRef FlagName) const;
 
   MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
@@ -133,6 +157,9 @@ public:
 //===----------------------------------------------------------------------===//
 
 class AMDGPUPassConfig : public TargetPassConfig {
+protected:
+  const AMDGPUOptions &CLOpts;
+
 public:
   AMDGPUPassConfig(TargetMachine &TM, PassManagerBase &PM);
 
@@ -150,16 +177,11 @@ public:
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 
   /// Check if a pass is enabled given \p Opt option. The option always
-  /// overrides defaults if explicitly used. Otherwise its default will
-  /// be used given that a pass shall work at an optimization \p Level
-  /// minimum.
-  bool isPassEnabled(const cl::opt<bool> &Opt,
+  /// overrides defaults if explicitly used. Otherwise the pass is enabled at an
+  /// optimization \p Level minimum.
+  bool isPassEnabled(BoolOrDefault Opt,
                      CodeGenOptLevel Level = CodeGenOptLevel::Default) const {
-    if (Opt.getNumOccurrences())
-      return Opt;
-    if (TM->getOptLevel() < Level)
-      return false;
-    return Opt;
+    return valueOr(Opt, TM->getOptLevel() >= Level);
   }
 };
 

@@ -23,8 +23,7 @@
 // Verify the validation performed by the -gen-amdgpu-target-def backend.
 
 //--- bad-alias.td
-include "llvm/Target/Target.td"
-def MyTarget : Target;
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
@@ -37,8 +36,7 @@ def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]>;
 def : ProcessorAlias<"foo", "gfx-missing">;
 
 //--- dup-processor.td
-include "llvm/Target/Target.td"
-def MyTarget : Target;
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
@@ -51,8 +49,7 @@ def DupA : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]>;
 def DupB : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]>;
 
 //--- alias-shadows-processor.td
-include "llvm/Target/Target.td"
-def MyTarget : Target;
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
@@ -65,8 +62,7 @@ def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]>;
 def : ProcessorAlias<"gfx900", "gfx900">;
 
 //--- bad-isa-version.td
-include "llvm/Target/Target.td"
-def MyTarget : Target;
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
@@ -78,8 +74,7 @@ class AMDGPUGPUInfo<list<int> isa = []> {
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0]>;
 
 //--- oversized-major.td
-include "llvm/Target/Target.td"
-def MyTarget : Target;
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
@@ -91,8 +86,7 @@ class AMDGPUGPUInfo<list<int> isa = []> {
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[256, 0, 0]>;
 
 //--- oversized-minor.td
-include "llvm/Target/Target.td"
-def MyTarget : Target;
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
@@ -103,8 +97,7 @@ class AMDGPUGPUInfo<list<int> isa = []> {
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 256, 0]>;
 
 //--- oversized-stepping.td
-include "llvm/Target/Target.td"
-def MyTarget : Target;
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
@@ -116,8 +109,7 @@ class AMDGPUGPUInfo<list<int> isa = []> {
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 256]>;
 
 //--- negative-component.td
-include "llvm/Target/Target.td"
-def MyTarget : Target;
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
@@ -128,8 +120,7 @@ class AMDGPUGPUInfo<list<int> isa = []> {
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, -1]>;
 
 //--- bad-stepping.td
-include "llvm/Target/Target.td"
-def MyTarget : Target;
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
@@ -141,8 +132,7 @@ class AMDGPUGPUInfo<list<int> isa = []> {
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 16]>;
 
 //--- generic-feature-superset.td
-include "llvm/Target/Target.td"
-def MyTarget : Target;
+include "llvm/Target/TargetSubtarget.td"
 class AMDGPUGPUInfo<list<int> isa = []> {
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];

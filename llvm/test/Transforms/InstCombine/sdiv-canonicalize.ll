@@ -147,6 +147,86 @@ define i32 @sdiv_abs_extra_use(i32 %x) {
   ret i32 %r
 }
 
+define i32 @sdiv_neg_neg_unknown(i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_neg_neg_unknown(
+; CHECK-NEXT:    [[NEG_Y:%.*]] = sub nsw i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[SDIV1:%.*]] = sdiv i32 [[X:%.*]], [[NEG_Y]]
+; CHECK-NEXT:    [[SDIV:%.*]] = sub nsw i32 0, [[SDIV1]]
+; CHECK-NEXT:    ret i32 [[SDIV]]
+;
+  %neg.x = sub nsw i32 0, %x
+  %neg.y = sub nsw i32 0, %y
+  %sdiv = sdiv i32 %neg.x, %neg.y
+  ret i32 %sdiv
+}
+
+define i32 @sdiv_neg_neg_x_not_signmask(i32 %a, i32 %y) {
+; CHECK-LABEL: @sdiv_neg_neg_x_not_signmask(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[A:%.*]], 2147483647
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[SDIV]]
+;
+  %x = and i32 %a, 2147483647
+  %neg.x = sub nsw i32 0, %x
+  %neg.y = sub nsw i32 0, %y
+  %sdiv = sdiv i32 %neg.x, %neg.y
+  ret i32 %sdiv
+}
+
+define i32 @sdiv_neg_neg_y_not_allones(i32 %x, i32 %b) {
+; CHECK-LABEL: @sdiv_neg_neg_y_not_allones(
+; CHECK-NEXT:    [[Y:%.*]] = and i32 [[B:%.*]], -2
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i32 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    ret i32 [[SDIV]]
+;
+  %y = and i32 %b, -2
+  %neg.x = sub nsw i32 0, %x
+  %neg.y = sub nsw i32 0, %y
+  %sdiv = sdiv i32 %neg.x, %neg.y
+  ret i32 %sdiv
+}
+
+define i32 @sdiv_neg_neg_exact(i32 %x, i32 %b) {
+; CHECK-LABEL: @sdiv_neg_neg_exact(
+; CHECK-NEXT:    [[Y:%.*]] = and i32 [[B:%.*]], -2
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv exact i32 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    ret i32 [[SDIV]]
+;
+  %y = and i32 %b, -2
+  %neg.x = sub nsw i32 0, %x
+  %neg.y = sub nsw i32 0, %y
+  %sdiv = sdiv exact i32 %neg.x, %neg.y
+  ret i32 %sdiv
+}
+
+define <2 x i32> @sdiv_neg_neg_vec(<2 x i32> %x, <2 x i32> %b) {
+; CHECK-LABEL: @sdiv_neg_neg_vec(
+; CHECK-NEXT:    [[Y:%.*]] = and <2 x i32> [[B:%.*]], splat (i32 -2)
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv <2 x i32> [[X:%.*]], [[Y]]
+; CHECK-NEXT:    ret <2 x i32> [[SDIV]]
+;
+  %y = and <2 x i32> %b, splat (i32 -2)
+  %neg.x = sub nsw <2 x i32> zeroinitializer, %x
+  %neg.y = sub nsw <2 x i32> zeroinitializer, %y
+  %sdiv = sdiv <2 x i32> %neg.x, %neg.y
+  ret <2 x i32> %sdiv
+}
+
+define i32 @sdiv_neg_neg_missing_nsw(i32 %x, i32 %b) {
+; CHECK-LABEL: @sdiv_neg_neg_missing_nsw(
+; CHECK-NEXT:    [[Y:%.*]] = and i32 [[B:%.*]], -2
+; CHECK-NEXT:    [[NEG_X:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[NEG_Y:%.*]] = sub i32 0, [[Y]]
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i32 [[NEG_X]], [[NEG_Y]]
+; CHECK-NEXT:    ret i32 [[SDIV]]
+;
+  %y = and i32 %b, -2
+  %neg.x = sub i32 0, %x
+  %neg.y = sub i32 0, %y
+  %sdiv = sdiv i32 %neg.x, %neg.y
+  ret i32 %sdiv
+}
+
 !0 = !{!"function_entry_count", i64 1000}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

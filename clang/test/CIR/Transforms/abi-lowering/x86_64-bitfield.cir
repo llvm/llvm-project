@@ -44,7 +44,7 @@ module attributes {
   // `struct BitPad { int a : 8; } __attribute__((aligned(16)));`  The unit is
   // one byte, but the declaration reaches three bytes past it, so the coercion
   // cannot narrow to the unit and takes the whole eightbyte.
-  cir.func @take_bit_pad(%arg0: !rec_BitPad) {
+  cir.func @take_bit_pad(%arg0: !rec_BitPad) requires_call_conv_lowering {
     cir.return
   }
 
@@ -52,14 +52,14 @@ module attributes {
 
   // The same record with a unit as wide as the declaration does narrow, and
   // the answer holds through a member record.
-  cir.func @take_outer_bit_pad(%arg0: !rec_OuterBitPad) {
+  cir.func @take_outer_bit_pad(%arg0: !rec_OuterBitPad) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK: cir.func{{.*}} @take_outer_bit_pad(%arg0: !u32i)
 
   // Two of those units fill the eightbyte, so there is nothing to narrow to.
-  cir.func @take_arr_bit_pad(%arg0: !rec_ArrBitPad) {
+  cir.func @take_arr_bit_pad(%arg0: !rec_ArrBitPad) requires_call_conv_lowering {
     cir.return
   }
 
@@ -67,7 +67,7 @@ module attributes {
 
   // Packing puts the int at offset 1, off its own alignment, which sends the
   // record to memory before any coercion is chosen.
-  cir.func @take_bf_pad(%arg0: !rec_BFPad) {
+  cir.func @take_bf_pad(%arg0: !rec_BFPad) requires_call_conv_lowering {
     cir.return
   }
 
@@ -76,7 +76,7 @@ module attributes {
   // A zero-width bit-field takes no part in assigning eightbyte classes, but
   // the type it was declared with still marks the bits it sits in as read, so
   // the coercion does not narrow to the int ahead of it.
-  cir.func @take_named_plus_zero_width(%arg0: !rec_NamedPlusZeroWidth) {
+  cir.func @take_named_plus_zero_width(%arg0: !rec_NamedPlusZeroWidth) requires_call_conv_lowering {
     cir.return
   }
 
@@ -85,7 +85,7 @@ module attributes {
   // `struct Run { int a : 4; long long b : 27; int : 3; };`  One unit holds
   // all three fields, and each is classified from its own width and declared
   // type rather than from the unit they share.
-  cir.func @take_run(%arg0: !rec_Run) {
+  cir.func @take_run(%arg0: !rec_Run) requires_call_conv_lowering {
     cir.return
   }
 

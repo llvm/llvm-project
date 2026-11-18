@@ -134,3 +134,17 @@ RUN <<EOF
   sudo rm -rf /tmp/ce-infra
 EOF
 
+RUN <<EOF
+    # Install a recent CMake
+    set -e
+    wget https://github.com/Kitware/CMake/releases/download/v3.31.0/cmake-3.31.0-linux-x86_64.sh -O /tmp/install-cmake.sh
+    sudo bash /tmp/install-cmake.sh --prefix=/usr --exclude-subdir --skip-license
+    rm /tmp/install-cmake.sh
+EOF
+
+# Setup the user
+RUN useradd gha -u 1001 -m -s /bin/bash
+RUN adduser gha sudo
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+WORKDIR /home/gha
+USER gha

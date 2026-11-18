@@ -10,11 +10,11 @@
 !CHECK:    %[[INDEX:.*]] = arith.constant 0 : index
 !CHECK:    %[[COORD:.*]] = fir.coordinate_of %[[MAP_ARG]], %[[INDEX]] : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
 !CHECK:    %[[CONV2:.*]] = fir.convert %[[COORD]] : (!fir.ref<i8>) -> !fir.ref<i32>
-!CHECK:    %[[CB_MEMBER_1:.*]]:2 = hlfir.declare %[[CONV2]] storage(%[[MAP_ARG]][0]) {uniq_name = "_QFmap_full_blockEvar1"} : (!fir.ref<i32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:    %[[CB_MEMBER_1:.*]]:2 = hlfir.declare %[[CONV2]] storage(%[[MAP_ARG]][0]) uniq_name("_QFmap_full_blockEvar1") : (!fir.ref<i32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    %[[INDEX2:.*]] = arith.constant 4 : index
 !CHECK:    %[[COORD2:.*]] = fir.coordinate_of %[[MAP_ARG]], %[[INDEX2]] : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
 !CHECK:    %[[CONV4:.*]] = fir.convert %[[COORD2]] : (!fir.ref<i8>) -> !fir.ref<i32>
-!CHECK:    %[[CB_MEMBER_2:.*]]:2 = hlfir.declare %[[CONV4]] storage(%[[MAP_ARG]][4]) {uniq_name = "_QFmap_full_blockEvar2"} : (!fir.ref<i32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:    %[[CB_MEMBER_2:.*]]:2 = hlfir.declare %[[CONV4]] storage(%[[MAP_ARG]][4]) uniq_name("_QFmap_full_blockEvar2") : (!fir.ref<i32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 subroutine map_full_block
     implicit none
     common /var_common/ var1, var2
@@ -30,16 +30,16 @@ end
 !CHECK: %[[INDEX:.*]] = arith.constant 0 : index
 !CHECK: %[[COORD:.*]] = fir.coordinate_of %[[COMMON_BLOCK]], %[[INDEX]] : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
 !CHECK: %[[CONV:.*]] = fir.convert %[[COORD]] : (!fir.ref<i8>) -> !fir.ref<i32>
-!CHECK: %[[CB_MEMBER_1:.*]]:2 = hlfir.declare %[[CONV]] storage(%[[COMMON_BLOCK]][0]) {uniq_name = "_QFmap_mix_of_membersEvar1"} : (!fir.ref<i32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[CB_MEMBER_1:.*]]:2 = hlfir.declare %[[CONV]] storage(%[[COMMON_BLOCK]][0]) uniq_name("_QFmap_mix_of_membersEvar1") : (!fir.ref<i32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[INDEX:.*]] = arith.constant 4 : index
 !CHECK: %[[COORD:.*]] = fir.coordinate_of %[[COMMON_BLOCK]], %[[INDEX]] : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
 !CHECK: %[[CONV:.*]] = fir.convert %[[COORD]] : (!fir.ref<i8>) -> !fir.ref<i32>
-!CHECK: %[[CB_MEMBER_2:.*]]:2 = hlfir.declare %[[CONV]] storage(%[[COMMON_BLOCK]][4]) {uniq_name = "_QFmap_mix_of_membersEvar2"} : (!fir.ref<i32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[CB_MEMBER_2:.*]]:2 = hlfir.declare %[[CONV]] storage(%[[COMMON_BLOCK]][4]) uniq_name("_QFmap_mix_of_membersEvar2") : (!fir.ref<i32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[MAP_EXP:.*]] = omp.map.info var_ptr(%[[CB_MEMBER_2]]#1 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) name("var2") -> !fir.ref<i32>
 !CHECK: %[[MAP_IMP:.*]] = omp.map.info var_ptr(%[[CB_MEMBER_1]]#1 : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) name("var1") -> !fir.ref<i32>
 !CHECK: omp.target kernel_type(generic) map_entries(%[[MAP_EXP]] -> %[[ARG_EXP:.*]], %[[MAP_IMP]] -> %[[ARG_IMP:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
-!CHECK:  %[[EXP_MEMBER:.*]]:2 = hlfir.declare %[[ARG_EXP]] {uniq_name = "_QFmap_mix_of_membersEvar2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:  %[[IMP_MEMBER:.*]]:2 = hlfir.declare %[[ARG_IMP]] {uniq_name = "_QFmap_mix_of_membersEvar1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:  %[[EXP_MEMBER:.*]]:2 = hlfir.declare %[[ARG_EXP]] uniq_name("_QFmap_mix_of_membersEvar2") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:  %[[IMP_MEMBER:.*]]:2 = hlfir.declare %[[ARG_IMP]] uniq_name("_QFmap_mix_of_membersEvar1") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 subroutine map_mix_of_members
     implicit none
     common /var_common/ var1, var2
@@ -57,11 +57,11 @@ end
 !CHECK:  %[[INDEX:.*]] = arith.constant 0 : index
 !CHECK:  %[[COORD:.*]] = fir.coordinate_of %[[MAP_DECL_TAR_ARG]], %[[INDEX]] : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
 !CHECK:  %[[CONV:.*]] = fir.convert %[[COORD]] : (!fir.ref<i8>) -> !fir.ref<i32>
-!CHECK:  %[[MEMBER_ONE:.*]]:2 = hlfir.declare %[[CONV]] storage(%[[MAP_DECL_TAR_ARG]][0]) {uniq_name = "_QFElink1"} : (!fir.ref<i32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:  %[[MEMBER_ONE:.*]]:2 = hlfir.declare %[[CONV]] storage(%[[MAP_DECL_TAR_ARG]][0]) uniq_name("_QFElink1") : (!fir.ref<i32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:  %[[INDEX:.*]] = arith.constant 4 : index
 !CHECK:  %[[COORD:.*]] = fir.coordinate_of %[[MAP_DECL_TAR_ARG]], %[[INDEX]] : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
 !CHECK:  %[[CONV:.*]] = fir.convert %[[COORD]] : (!fir.ref<i8>) -> !fir.ref<i32>
-!CHECK:  %[[MEMBER_TWO:.*]]:2 = hlfir.declare %[[CONV]] storage(%[[MAP_DECL_TAR_ARG]][4]) {uniq_name = "_QFElink2"} : (!fir.ref<i32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:  %[[MEMBER_TWO:.*]]:2 = hlfir.declare %[[CONV]] storage(%[[MAP_DECL_TAR_ARG]][4]) uniq_name("_QFElink2") : (!fir.ref<i32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 program main
     implicit none
     common /var_common_link/ link1, link2

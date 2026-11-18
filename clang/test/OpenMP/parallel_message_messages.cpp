@@ -62,7 +62,7 @@ T tmain(T argc, S **argv) {
   #pragma omp parallel message("hello" " world")
 
   // Message clause with wide string literal
-  #pragma omp parallel message(L"wide string") // expected-warning {{expected string in 'clause message' - ignoring}}
+  #pragma omp parallel message(L"wide string")
 
   // Message clause with UTF-8 string literal
   #pragma omp parallel message(u8"utf8 string")

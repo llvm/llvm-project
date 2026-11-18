@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +vaes -emit-llvm -o - | FileCheck %s --check-prefix AVX
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +vaes -emit-llvm -o - | FileCheck %s --check-prefix AVX %}
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +vaes -target-feature +avx512f -emit-llvm -o - | FileCheck %s --check-prefixes AVX,AVX512
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +vaes -target-feature +avx512f -emit-llvm -o - | FileCheck %s --check-prefixes AVX,AVX512 %}
 
 #include <immintrin.h>
 

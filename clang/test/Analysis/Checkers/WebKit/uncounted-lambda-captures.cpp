@@ -387,6 +387,7 @@ public:
   bool isMatch(int);
 
   void call() const;
+  void callOnce() const;
   void callLambda([[clang::noescape]] const WTF::Function<void ()>& callback) const;
   void doSomeWork() const;
 };
@@ -408,6 +409,14 @@ void RefCountedObj::call() const
         doSomeWork();
     };
     callLambda(lambda);
+}
+
+void RefCountedObj::callOnce() const
+{
+  static std::once_flag flag;
+  std::call_once(flag, [&]() {
+    call();
+  });
 }
 
 void scope_exit(RefCountable* obj) {
@@ -724,4 +733,74 @@ void instantiate_dependent_callables(NoEscapeCallable& noEscape,
 
 void lambda_in_system_header(RefCountable* ref_countable) {
   lambdaInSystemHeader(ref_countable);
+}
+
+void lambda_discarded_with_void_cast(RefCountable* obj) {
+  auto lambda = [&]() {
+    obj->method();
+  };
+  (void)lambda;
+  static_cast<void>(lambda);
+  (void(lambda));
+  (void)(lambda);
+  auto scope = WTF::makeScopeExit([&] {
+    obj->method();
+  });
+  (void)scope;
+}
+
+void lambda_escapes_after_void_cast(RefCountable* obj) {
+  auto lambda = [&]() {
+    obj->method();
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+  };
+  (void)lambda;
+  callFunctionOpaque(lambda);
+}
+
+namespace WTF {
+
+// ScopedLambda has a trivial destructor, so its temporary isn't wrapped in a
+// CXXBindTemporaryExpr.
+template <typename> class ScopedLambda;
+template <typename Result, typename... Arguments>
+class ScopedLambda<Result(Arguments...)> {
+public:
+  ScopedLambda(Result (*impl)(void*, Arguments...) = nullptr, void* arg = nullptr)
+    : m_impl(impl), m_arg(arg) { }
+  template <typename Functor>
+  ScopedLambda(Functor&& functor)
+    : m_impl([](void* arg, Arguments... arguments) -> Result {
+        return (*static_cast<typename std::remove_reference<Functor>::type*>(arg))(arguments...);
+      })
+    , m_arg(const_cast<void*>(static_cast<const void*>(&functor))) { }
+  ScopedLambda(const ScopedLambda&) = delete;
+  Result operator()(Arguments... arguments) const { return m_impl(m_arg, arguments...); }
+
+private:
+  Result (*m_impl)(void*, Arguments...);
+  void* m_arg;
+};
+
+} // namespace WTF
+
+int computeWithObj(int, RefCountable*);
+bool callScopedLambdaNoEscape(int, [[clang::noescape]] const WTF::ScopedLambda<int(int)>&);
+bool callScopedLambda(int, const WTF::ScopedLambda<int(int)>&);
+
+void scoped_lambda_noescape(RefCountable* obj) {
+  callScopedLambdaNoEscape(1, [&](auto value) {
+    return computeWithObj(value, obj);
+  });
+  callScopedLambdaNoEscape(1, [&](int value) {
+    return computeWithObj(value, obj);
+  });
+  auto lambda = [&](int value) {
+    return computeWithObj(value, obj);
+  };
+  callScopedLambdaNoEscape(1, lambda);
+  callScopedLambda(1, [&](int value) {
+    return computeWithObj(value, obj);
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+  });
 }

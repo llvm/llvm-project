@@ -762,7 +762,7 @@ bool BCECmpChain::isDereferenceable() {
   // exception to this is if the entry block performs "other work" and will
   // get split. In that case, we need to consider frees prior to the splitting
   // point.
-  Instruction *CxtI = SplitAt ? SplitAt : &EntryBlock_->front();
+  Instruction *CtxI = SplitAt ? SplitAt : &EntryBlock_->front();
 
   for (const auto &Blocks : MergedBlocks_) {
     const BCECmpBlock &LowestBlock = Blocks.front();
@@ -775,7 +775,7 @@ bool BCECmpChain::isDereferenceable() {
       SizeInBits += Block.SizeBits();
 
     APInt Size(64, SizeInBits / 8);
-    SimplifyQuery SQ(DL, CxtI);
+    SimplifyQuery SQ(DL, CtxI);
     if (!isDereferenceablePointer(Lhs, Size, SQ) ||
         !isDereferenceablePointer(Rhs, Size, SQ))
       return false;

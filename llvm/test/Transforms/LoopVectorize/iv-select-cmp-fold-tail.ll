@@ -28,7 +28,7 @@ define i32 @find_last_trunc_iv(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP28:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[TMP27]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP29:%.*]] = freeze <4 x i1> [[TMP28]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP29]])
-; CHECK-NEXT:    [[TMP31]] = select i1 [[TMP30]], <4 x i1> [[TMP28]], <4 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP31]] = select i1 [[TMP30]], <4 x i1> [[TMP29]], <4 x i1> [[TMP1]]
 ; CHECK-NEXT:    [[TMP32]] = select i1 [[TMP30]], <4 x i32> [[VEC_IND1]], <4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[TMP22]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT8]] = add <4 x i32> [[VEC_IND1]], splat (i32 4)
@@ -89,12 +89,12 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[N]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP38]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[TMP39]], i64 -3
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP39]], i64 -24
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 [[TMP5]], <4 x i1> [[REVERSE]], <4 x i64> poison)
 ; CHECK-NEXT:    [[TMP46:%.*]] = shufflevector <4 x i64> [[WIDE_MASKED_LOAD]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP38]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[TMP6]], i64 -3
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i64 -24
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD8:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 [[TMP7]], <4 x i1> [[REVERSE]], <4 x i64> poison)
 ; CHECK-NEXT:    [[TMP47:%.*]] = shufflevector <4 x i64> [[WIDE_MASKED_LOAD8]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP48:%.*]] = icmp sgt <4 x i64> [[TMP46]], [[TMP47]]

@@ -14,7 +14,6 @@
 
 #include "AMDGPUMachineModuleInfo.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/AtomicScope.h"
 
 using namespace llvm;
@@ -22,7 +21,7 @@ using namespace llvm;
 AMDGPUMachineModuleInfo::AMDGPUMachineModuleInfo(const MachineModuleInfo &MMI)
     : MachineModuleInfoELF(MMI) {
   LLVMContext &CTX = MMI.getModule()->getContext();
-  const Triple &TT = MMI.getTarget().getTargetTriple();
+  const Triple &TT = MMI.getModule()->getTargetTriple();
 
   auto InsertScope = [&](AtomicScope Scope, bool OneAS) {
     return CTX.getOrInsertSyncScopeID(

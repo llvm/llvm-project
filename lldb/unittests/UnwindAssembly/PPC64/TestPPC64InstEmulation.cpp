@@ -20,7 +20,7 @@
 
 #include "Plugins/Disassembler/LLVMC/DisassemblerLLVMC.h"
 #include "Plugins/Instruction/PPC64/EmulateInstructionPPC64.h"
-#include "Plugins/Process/Utility/lldb-ppc64le-register-enums.h"
+#include "Register/Arch/lldb-ppc64le-register-enums.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace lldb;

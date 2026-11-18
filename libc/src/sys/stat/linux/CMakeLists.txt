@@ -6,9 +6,10 @@ add_entrypoint_object(
     ../chmod.h
   DEPENDS
     libc.hdr.types.mode_t
-    libc.hdr.fcntl_macros
     libc.src.__support.OSUtil.linux.syscall_wrappers.chmod
-    libc.src.errno.errno
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
@@ -201,6 +202,20 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.linux.syscall_wrappers.utimensat
     libc.src.__support.common
     libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  statx
+  SRCS
+    statx.cpp
+  HDRS
+    ../statx.h
+  DEPENDS
+    libc.hdr.types.struct_statx
+    libc.src.__support.OSUtil.linux.syscall_wrappers.statx
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(

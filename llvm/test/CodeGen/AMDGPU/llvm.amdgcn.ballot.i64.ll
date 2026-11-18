@@ -159,9 +159,7 @@ define amdgpu_cs i32 @branch_uniform_ballot_eq_zero_non_compare(i32 inreg %v) {
 ; CHECK-LABEL: branch_uniform_ballot_eq_zero_non_compare:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_bitcmp1_b32 s0, 0
-; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    s_and_b64 vcc, exec, s[0:1]
-; CHECK-NEXT:    s_cbranch_vccnz .LBB10_2
+; CHECK-NEXT:    s_cbranch_scc1 .LBB10_2
 ; CHECK-NEXT:  ; %bb.1: ; %true
 ; CHECK-NEXT:    s_mov_b32 s0, 42
 ; CHECK-NEXT:    s_branch .LBB10_3
@@ -417,8 +415,7 @@ define amdgpu_ps void @non_cst_non_compare_input(ptr addrspace(1) %out, i32 %tid
 ; CHECK-NEXT:  ; %bb.3: ; %A
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
 ; CHECK-NEXT:    s_andn2_b64 s[0:1], s[0:1], exec
-; CHECK-NEXT:    s_and_b64 s[4:5], vcc, exec
-; CHECK-NEXT:    s_or_b64 s[0:1], s[0:1], s[4:5]
+; CHECK-NEXT:    s_or_b64 s[0:1], s[0:1], vcc
 ; CHECK-NEXT:  ; %bb.4: ; %exit
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[0:1]

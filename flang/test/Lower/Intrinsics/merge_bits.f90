@@ -6,10 +6,10 @@ subroutine merge_bits1_test(i, j, m, r)
   integer(1) :: i, j, m
   integer(1) :: r
 
-  ! CHECK-DAG: %[[I_DECL:.*]]:2 = hlfir.declare %[[IREF]] {{.*}} {uniq_name = "_QFmerge_bits1_testEi"}
-  ! CHECK-DAG: %[[J_DECL:.*]]:2 = hlfir.declare %[[JREF]] {{.*}} {uniq_name = "_QFmerge_bits1_testEj"}
-  ! CHECK-DAG: %[[M_DECL:.*]]:2 = hlfir.declare %[[MREF]] {{.*}} {uniq_name = "_QFmerge_bits1_testEm"}
-  ! CHECK-DAG: %[[R_DECL:.*]]:2 = hlfir.declare %[[RREF]] {{.*}} {uniq_name = "_QFmerge_bits1_testEr"}
+  ! CHECK-DAG: %[[I_DECL:.*]]:2 = hlfir.declare %[[IREF]] {{.*}} uniq_name("_QFmerge_bits1_testEi")
+  ! CHECK-DAG: %[[J_DECL:.*]]:2 = hlfir.declare %[[JREF]] {{.*}} uniq_name("_QFmerge_bits1_testEj")
+  ! CHECK-DAG: %[[M_DECL:.*]]:2 = hlfir.declare %[[MREF]] {{.*}} uniq_name("_QFmerge_bits1_testEm")
+  ! CHECK-DAG: %[[R_DECL:.*]]:2 = hlfir.declare %[[RREF]] {{.*}} uniq_name("_QFmerge_bits1_testEr")
   ! CHECK: %[[I:.*]] = fir.load %[[I_DECL]]#0 : !fir.ref<i8>
   ! CHECK: %[[J:.*]] = fir.load %[[J_DECL]]#0 : !fir.ref<i8>
   ! CHECK: %[[M:.*]] = fir.load %[[M_DECL]]#0 : !fir.ref<i8>
@@ -28,10 +28,10 @@ subroutine merge_bits2_test(i, j, m, r)
   integer(2) :: i, j, m
   integer(2) :: r
 
-  ! CHECK-DAG: %[[I_DECL:.*]]:2 = hlfir.declare %[[IREF]] {{.*}} {uniq_name = "_QFmerge_bits2_testEi"}
-  ! CHECK-DAG: %[[J_DECL:.*]]:2 = hlfir.declare %[[JREF]] {{.*}} {uniq_name = "_QFmerge_bits2_testEj"}
-  ! CHECK-DAG: %[[M_DECL:.*]]:2 = hlfir.declare %[[MREF]] {{.*}} {uniq_name = "_QFmerge_bits2_testEm"}
-  ! CHECK-DAG: %[[R_DECL:.*]]:2 = hlfir.declare %[[RREF]] {{.*}} {uniq_name = "_QFmerge_bits2_testEr"}
+  ! CHECK-DAG: %[[I_DECL:.*]]:2 = hlfir.declare %[[IREF]] {{.*}} uniq_name("_QFmerge_bits2_testEi")
+  ! CHECK-DAG: %[[J_DECL:.*]]:2 = hlfir.declare %[[JREF]] {{.*}} uniq_name("_QFmerge_bits2_testEj")
+  ! CHECK-DAG: %[[M_DECL:.*]]:2 = hlfir.declare %[[MREF]] {{.*}} uniq_name("_QFmerge_bits2_testEm")
+  ! CHECK-DAG: %[[R_DECL:.*]]:2 = hlfir.declare %[[RREF]] {{.*}} uniq_name("_QFmerge_bits2_testEr")
   ! CHECK: %[[I:.*]] = fir.load %[[I_DECL]]#0 : !fir.ref<i16>
   ! CHECK: %[[J:.*]] = fir.load %[[J_DECL]]#0 : !fir.ref<i16>
   ! CHECK: %[[M:.*]] = fir.load %[[M_DECL]]#0 : !fir.ref<i16>
@@ -50,10 +50,10 @@ subroutine merge_bits4_test(i, j, m, r)
   integer(4) :: i, j, m
   integer(4) :: r
 
-  ! CHECK-DAG: %[[I_DECL:.*]]:2 = hlfir.declare %[[IREF]] {{.*}} {uniq_name = "_QFmerge_bits4_testEi"}
-  ! CHECK-DAG: %[[J_DECL:.*]]:2 = hlfir.declare %[[JREF]] {{.*}} {uniq_name = "_QFmerge_bits4_testEj"}
-  ! CHECK-DAG: %[[M_DECL:.*]]:2 = hlfir.declare %[[MREF]] {{.*}} {uniq_name = "_QFmerge_bits4_testEm"}
-  ! CHECK-DAG: %[[R_DECL:.*]]:2 = hlfir.declare %[[RREF]] {{.*}} {uniq_name = "_QFmerge_bits4_testEr"}
+  ! CHECK-DAG: %[[I_DECL:.*]]:2 = hlfir.declare %[[IREF]] {{.*}} uniq_name("_QFmerge_bits4_testEi")
+  ! CHECK-DAG: %[[J_DECL:.*]]:2 = hlfir.declare %[[JREF]] {{.*}} uniq_name("_QFmerge_bits4_testEj")
+  ! CHECK-DAG: %[[M_DECL:.*]]:2 = hlfir.declare %[[MREF]] {{.*}} uniq_name("_QFmerge_bits4_testEm")
+  ! CHECK-DAG: %[[R_DECL:.*]]:2 = hlfir.declare %[[RREF]] {{.*}} uniq_name("_QFmerge_bits4_testEr")
   ! CHECK: %[[I:.*]] = fir.load %[[I_DECL]]#0 : !fir.ref<i32>
   ! CHECK: %[[J:.*]] = fir.load %[[J_DECL]]#0 : !fir.ref<i32>
   ! CHECK: %[[M:.*]] = fir.load %[[M_DECL]]#0 : !fir.ref<i32>
@@ -72,10 +72,10 @@ subroutine merge_bits8_test(i, j, m, r)
   integer(8) :: i, j, m
   integer(8) :: r
 
-  ! CHECK-DAG: %[[I_DECL:.*]]:2 = hlfir.declare %[[IREF]] {{.*}} {uniq_name = "_QFmerge_bits8_testEi"}
-  ! CHECK-DAG: %[[J_DECL:.*]]:2 = hlfir.declare %[[JREF]] {{.*}} {uniq_name = "_QFmerge_bits8_testEj"}
-  ! CHECK-DAG: %[[M_DECL:.*]]:2 = hlfir.declare %[[MREF]] {{.*}} {uniq_name = "_QFmerge_bits8_testEm"}
-  ! CHECK-DAG: %[[R_DECL:.*]]:2 = hlfir.declare %[[RREF]] {{.*}} {uniq_name = "_QFmerge_bits8_testEr"}
+  ! CHECK-DAG: %[[I_DECL:.*]]:2 = hlfir.declare %[[IREF]] {{.*}} uniq_name("_QFmerge_bits8_testEi")
+  ! CHECK-DAG: %[[J_DECL:.*]]:2 = hlfir.declare %[[JREF]] {{.*}} uniq_name("_QFmerge_bits8_testEj")
+  ! CHECK-DAG: %[[M_DECL:.*]]:2 = hlfir.declare %[[MREF]] {{.*}} uniq_name("_QFmerge_bits8_testEm")
+  ! CHECK-DAG: %[[R_DECL:.*]]:2 = hlfir.declare %[[RREF]] {{.*}} uniq_name("_QFmerge_bits8_testEr")
   ! CHECK: %[[I:.*]] = fir.load %[[I_DECL]]#0 : !fir.ref<i64>
   ! CHECK: %[[J:.*]] = fir.load %[[J_DECL]]#0 : !fir.ref<i64>
   ! CHECK: %[[M:.*]] = fir.load %[[M_DECL]]#0 : !fir.ref<i64>
@@ -94,9 +94,9 @@ subroutine merge_bitsz0_test(j, m, r)
   integer :: j, m
   integer :: r
 
-  ! CHECK-DAG: %[[J_DECL:.*]]:2 = hlfir.declare %[[JREF]] {{.*}} {uniq_name = "_QFmerge_bitsz0_testEj"}
-  ! CHECK-DAG: %[[M_DECL:.*]]:2 = hlfir.declare %[[MREF]] {{.*}} {uniq_name = "_QFmerge_bitsz0_testEm"}
-  ! CHECK-DAG: %[[R_DECL:.*]]:2 = hlfir.declare %[[RREF]] {{.*}} {uniq_name = "_QFmerge_bitsz0_testEr"}
+  ! CHECK-DAG: %[[J_DECL:.*]]:2 = hlfir.declare %[[JREF]] {{.*}} uniq_name("_QFmerge_bitsz0_testEj")
+  ! CHECK-DAG: %[[M_DECL:.*]]:2 = hlfir.declare %[[MREF]] {{.*}} uniq_name("_QFmerge_bitsz0_testEm")
+  ! CHECK-DAG: %[[R_DECL:.*]]:2 = hlfir.declare %[[RREF]] {{.*}} uniq_name("_QFmerge_bitsz0_testEr")
   ! CHECK: %[[I:.*]] = arith.constant 13 : i32
   ! CHECK: %[[J:.*]] = fir.load %[[J_DECL]]#0 : !fir.ref<i32>
   ! CHECK: %[[M:.*]] = fir.load %[[M_DECL]]#0 : !fir.ref<i32>
@@ -115,9 +115,9 @@ subroutine merge_bitsz1_test(i, m, r)
   integer :: i, m
   integer :: r
 
-  ! CHECK-DAG: %[[I_DECL:.*]]:2 = hlfir.declare %[[IREF]] {{.*}} {uniq_name = "_QFmerge_bitsz1_testEi"}
-  ! CHECK-DAG: %[[M_DECL:.*]]:2 = hlfir.declare %[[MREF]] {{.*}} {uniq_name = "_QFmerge_bitsz1_testEm"}
-  ! CHECK-DAG: %[[R_DECL:.*]]:2 = hlfir.declare %[[RREF]] {{.*}} {uniq_name = "_QFmerge_bitsz1_testEr"}
+  ! CHECK-DAG: %[[I_DECL:.*]]:2 = hlfir.declare %[[IREF]] {{.*}} uniq_name("_QFmerge_bitsz1_testEi")
+  ! CHECK-DAG: %[[M_DECL:.*]]:2 = hlfir.declare %[[MREF]] {{.*}} uniq_name("_QFmerge_bitsz1_testEm")
+  ! CHECK-DAG: %[[R_DECL:.*]]:2 = hlfir.declare %[[RREF]] {{.*}} uniq_name("_QFmerge_bitsz1_testEr")
   ! CHECK: %[[J:.*]] = arith.constant 13 : i32
   ! CHECK: %[[I:.*]] = fir.load %[[I_DECL]]#0 : !fir.ref<i32>
   ! CHECK: %[[M:.*]] = fir.load %[[M_DECL]]#0 : !fir.ref<i32>

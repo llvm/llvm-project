@@ -197,7 +197,7 @@ void test() {
 Null pointer dereferences of pointers with address spaces are not always defined
 as error. Specifically on x86/x86-64 target if the pointer address space is
 256 (x86 GS Segment), 257 (x86 FS Segment), or 258 (x86 SS Segment), a null
-dereference is not defined as error. See [X86/X86-64 Language Extensions](https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments)
+dereference is not defined as error. See [X86/X86-64 Language Extensions](../LanguageExtensions.md#memory-references-to-specified-segments)
 for reference.
 
 If the analyzer option `suppress-dereferences-from-any-address-space` is set
@@ -528,7 +528,7 @@ checked:
   (but excluding move-safe ones) and smart pointers.
 - With option value `KnownsAndLocals` local variables (of any type) are
   additionally checked. The idea behind this is that local variables are
-  usually not tempting to be re-used so an use after move is more likely a bug
+  usually not tempting to be re-used so a use after move is more likely a bug
   than with member variables.
 - With option value `All` any use-after move condition is checked on all
   kinds of variables, excluding global variables and known move-safe cases.
@@ -808,7 +808,7 @@ This checker does not accept the coding pattern where an enum type is used to
 store combinations of flag values.
 Such enums should be annotated with the `__attribute__((flag_enum))` or by the
 `[[clang::flag_enum]]` attribute to signal this intent. Refer to the
-[documentation](https://clang.llvm.org/docs/AttributeReference.html#flag-enum)
+[documentation](../AttributeReference.md#flag-enum)
 of this Clang attribute.
 
 ```cpp
@@ -854,7 +854,7 @@ void test2(int *p) {
 void test3() {
   int (*p_function)(char, char);
   p_function = (int (*)(char, char))0x04080;
-  int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
+  int x = (*p_function)('x', 'y'); // NO warning yet at function pointer calls
 }
 ```
 
@@ -901,7 +901,7 @@ arguments -- even if there is no such call in the codebase.
 This design rule is dictated by the SEI CERT rule [EXP47-C](https://wiki.sei.cmu.edu/confluence/display/c/EXP47-C.+Do+not+call+va_arg+with+an+argument+of+the+incorrect+type),
 which describes several issues related to the use of `va_arg()`. (The problem
 reported by this checker is shown in the second code example; the first,
-unrelated code example is covered by the clang diagnostic [-Wvarargs](https://clang.llvm.org/docs/DiagnosticsReference.html#wvarargs).)
+unrelated code example is covered by the clang diagnostic [-Wvarargs](../DiagnosticsReference.md#wvarargs).)
 
 ```cpp
 // This function expects a list of variadic arguments terminated by a NULL pointer.
@@ -1506,7 +1506,7 @@ void not_vulnerable(void) {
   scanf("%zu", &size);
   if (1024 < size)
     return;
-  int *p = malloc(size); // No warning expected as the the user input is bound
+  int *p = malloc(size); // No warning expected as the user input is bound
   free(p);
 }
 
@@ -1589,8 +1589,8 @@ int *test_dynamic() {
 ```
 
 In uncertain situations (when the checker can neither prove nor disprove that
-overflow occurs), the checker assumes that the the index (more precisely, the
-memory offeset) is within bounds.
+overflow occurs), the checker assumes that the index (more precisely, the
+memory offset) is within bounds.
 
 However, if {ref}`optin-taint-GenericTaint` is enabled and the index/offset is
 tainted (i.e. it is influenced by an untrusted source), then this checker
@@ -3357,7 +3357,7 @@ int *direct_return() {
 
 The attribute states that the returned value is dangling after the lifetime
 of the annotated parameter, or of the implicit object argument, has ended.
-Refer to the [documentation](https://clang.llvm.org/docs/AttributeReference.html#lifetimebound)
+Refer to the [documentation](../AttributeReference.md#lifetimebound)
 of this Clang attribute.
 
 ```cpp
@@ -3771,30 +3771,6 @@ void test() {
   lck_mtx_lock(&lck2);
   lck_mtx_unlock(&lck1);
     // warn: this was not the most recently acquired lock
-}
-```
-
-(alpha-unix-simplestream)=
-
-#### alpha.unix.SimpleStream (C)
-
-Check for misuses of stream APIs. Check for misuses of stream APIs: `fopen, fclose`
-(demo checker, the subject of the demo ([Slides](https://llvm.org/devmtg/2012-11/Zaks-Rose-Checker24Hours.pdf) ,
-[Video](https://youtu.be/kdxlsP5QVPw)) by Anna Zaks and Jordan Rose presented at the
-[2012 LLVM Developers' Meeting](https://llvm.org/devmtg/2012-11/)).
-
-```c
-void test() {
-  FILE *F = fopen("myfile.txt", "w");
-} // warn: opened file is never closed
-
-void test() {
-  FILE *F = fopen("myfile.txt", "w");
-
-  if (F)
-    fclose(F);
-
-  fclose(F); // warn: closing a previously closed file stream
 }
 ```
 
@@ -4280,6 +4256,26 @@ The cost is that an identity function is reported even though its result really 
 >
 > void foo7(Vector<char>& buffer) {
 >   Vector<char>& alias = identity(buffer); // warn, although this is an alias
+>   someFunction();
+> }
+> ```
+
+Includes built-in recognition for std view types. For example:
+
+> ```cpp
+> void foo8(Vector<char>& buffer) {
+>   for (char& c : buffer | std::views::reverse) // warn
+>     someFunction();
+> }
+>
+> void foo9(Vector<char>& buffer) {
+>   // ok, C++23 extends the borrow() temporary across the loop
+>   for (char& c : borrow(buffer).get() | std::views::reverse)
+>     someFunction();
+> }
+>
+> void foo10(Vector<char>& buffer) {
+>   char* p = std::data(buffer); // warn
 >   someFunction();
 > }
 > ```

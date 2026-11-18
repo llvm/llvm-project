@@ -152,6 +152,7 @@ class LLVM_UnaryFloatArithmeticOp<Type type, string mnemonic,
 }
 
 // Integer binary operations.
+let partition = LLVM_ArithPartition in {
 def LLVM_AddOp : LLVM_IntArithmeticOpWithOverflowFlag<"add", "Add",
     [Commutative, Pure]>;
 def LLVM_SubOp : LLVM_IntArithmeticOpWithOverflowFlag<"sub", "Sub", [Pure]>;
@@ -161,8 +162,12 @@ def LLVM_UDivOp : LLVM_IntArithmeticOpWithExactFlag<"udiv", "UDiv",
     [DeclareOpInterfaceMethods<ConditionallySpeculatable>]>;
 def LLVM_SDivOp : LLVM_IntArithmeticOpWithExactFlag<"sdiv", "SDiv",
     [DeclareOpInterfaceMethods<ConditionallySpeculatable>]>;
-def LLVM_URemOp : LLVM_IntArithmeticOp<"urem", "URem", [Pure]>;
-def LLVM_SRemOp : LLVM_IntArithmeticOp<"srem", "SRem", [Pure]>;
+def LLVM_URemOp : LLVM_IntArithmeticOp<
+    "urem", "URem",
+    [DeclareOpInterfaceMethods<ConditionallySpeculatable>]>;
+def LLVM_SRemOp : LLVM_IntArithmeticOp<
+    "srem", "SRem",
+    [DeclareOpInterfaceMethods<ConditionallySpeculatable>]>;
 def LLVM_AndOp : LLVM_IntArithmeticOp<"and", "And", [Pure]>;
 def LLVM_OrOp : LLVM_IntArithmeticOpWithDisjointFlag<"or", "Or", [Pure]> {
   let hasFolder = 1;
@@ -244,8 +249,10 @@ def LLVM_FDivOp : LLVM_FloatArithmeticOp<"fdiv", "FDiv">;
 def LLVM_FRemOp : LLVM_FloatArithmeticOp<"frem", "FRem">;
 def LLVM_FNegOp : LLVM_UnaryFloatArithmeticOp<
   LLVM_ScalarOrVectorOf<LLVM_AnyFloat>, "fneg", "FNeg">;
+} // let partition = LLVM_ArithPartition
 
 // Memory-related operations.
+let partition = LLVM_MemoryPartition in {
 def LLVM_AllocaOp : LLVM_Op<"alloca",
     [DeclareOpInterfaceMethods<PromotableAllocationOpInterface>,
      DeclareOpInterfaceMethods<DestructurableAllocationOpInterface>]>,
@@ -383,7 +390,8 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>,
-     DeclareOpInterfaceMethods<DereferenceableOpInterface>]> {
+     DeclareOpInterfaceMethods<DereferenceableOpInterface>,
+     DeclareOpInterfaceMethods<RangeOpInterface>]> {
   dag args = (ins LLVM_AnyPointer:$addr,
               OptionalAttr<I64Attr>:$alignment,
               UnitAttr:$volatile_,
@@ -393,7 +401,9 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
               DefaultValuedAttr<
                 AtomicOrdering, "AtomicOrdering::not_atomic">:$ordering,
               OptionalAttr<StrAttr>:$syncscope,
-              OptionalAttr<LLVM_DereferenceableAttr>:$dereferenceable);
+              OptionalAttr<LLVM_DereferenceableAttr>:$dereferenceable,
+              UnitAttr:$noundef,
+              OptionalAttr<LLVM_ConstantRangeAttr>:$range);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs LLVM_LoadableType:$res);
@@ -414,6 +424,12 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     // A nontemporal load of a float variable.
     %0 = llvm.load %ptr <nontemporal> : !llvm.ptr -> f32
 
+    // A load of a value that is neither undef nor poison.
+    %0 = llvm.load %ptr noundef : !llvm.ptr -> i32
+
+    // A load of an integer known to lie in [0, 10).
+    %0 = llvm.load %ptr range<i32, 0, 10> : !llvm.ptr -> i32
+
     // An atomic load of an integer variable.
     %0 = llvm.load %ptr atomic monotonic <alignment = 8>
         : !llvm.ptr -> i64
@@ -425,9 +441,13 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
   let assemblyFormat = [{
     (`volatile` $volatile_^)? $addr
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
-    (`invariant` $invariant^)?
-    (`invariant_group` $invariantGroup^)?
-    (`dereferenceable` `` $dereferenceable^)?
+    oilist(
+      `invariant` $invariant |
+      `invariant_group` $invariantGroup |
+      `dereferenceable` `` $dereferenceable |
+      `noundef` $noundef |
+      `range` `` $range
+    )
     prop-dict
     attr-dict `:` qualified(type($addr)) `->` type($res)
   }];
@@ -440,11 +460,16 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     }
     if ($dereferenceable)
       moduleTranslation.setDereferenceableMetadata(op, inst);
+    if ($noundef) {
+      llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), {});
+      inst->setMetadata(llvm::LLVMContext::MD_noundef, metadata);
+    }
   }] # setOrderingCode
      # setSyncScopeCode
      # setAlignmentCode
      # setNonTemporalMetadataCode
      # setInvariantGroupCode
+     # setRangeCode
      # setAccessGroupsMetadataCode
      # setAliasAnalysisMetadataCode;
   string mlirBuilder = [{
@@ -455,6 +480,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
         loadInst->hasMetadata(llvm::LLVMContext::MD_nontemporal),
         loadInst->hasMetadata(llvm::LLVMContext::MD_invariant_load),
         loadInst->hasMetadata(llvm::LLVMContext::MD_invariant_group),
+        loadInst->hasMetadata(llvm::LLVMContext::MD_noundef),
         convertAtomicOrderingFromLLVM(loadInst->getOrdering()),
         getLLVMSyncScope(loadInst));
   }];
@@ -462,7 +488,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     OpBuilder<(ins "Type":$type, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
       CArg<"bool", "false">:$isNonTemporal, CArg<"bool", "false">:$isInvariant,
-      CArg<"bool", "false">:$isInvariantGroup,
+      CArg<"bool", "false">:$isInvariantGroup, CArg<"bool", "false">:$isNoundef,
       CArg<"AtomicOrdering", "AtomicOrdering::not_atomic">:$ordering,
       CArg<"StringRef", "StringRef()">:$syncscope)>
   ];
@@ -513,7 +539,7 @@ def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
   let assemblyFormat = [{
     (`volatile` $volatile_^)? $value `,` $addr
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
-    (`invariant_group` $invariantGroup^)?
+    oilist(`invariant_group` $invariantGroup)
     prop-dict
     attr-dict `:` type($value) `,` qualified(type($addr))
   }];
@@ -546,8 +572,10 @@ def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
   ];
   let hasVerifier = 1;
 }
+} // let partition = LLVM_MemoryPartition
 
 // Casts.
+let partition = LLVM_ConversionPartition in {
 class LLVM_CastOp<string mnemonic, string instName, Type type,
                   Type resultType, list<Trait> traits = []> :
     LLVM_Op<mnemonic, !listconcat([Pure], traits)>,
@@ -733,12 +761,15 @@ def LLVM_FPExtOp : LLVM_CastOpWithFastMathFlag<"fpext", "FPExt",
 def LLVM_FPTruncOp : LLVM_CastOpWithFastMathFlag<"fptrunc", "FPTrunc",
                                  LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
                                  LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
+} // let partition = LLVM_ConversionPartition
 
 // Call-related operations.
+let partition = LLVM_CallPartition in {
 def LLVM_InvokeOp
     : LLVM_Op<"invoke", [AttrSizedOperandSegments,
                          DeclareOpInterfaceMethods<BranchOpInterface>,
                          DeclareOpInterfaceMethods<CallOpInterface>,
+                         DeclareOpInterfaceMethods<SymbolUserOpInterface>,
                          DeclareOpInterfaceMethods<WeightedBranchOpInterface>,
                          Terminator]> {
   let arguments = (ins
@@ -791,12 +822,15 @@ def LLVM_LandingpadOp : LLVM_Op<"landingpad"> {
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
+} // let partition = LLVM_CallPartition
 
 //===----------------------------------------------------------------------===//
 // VAArgOp
 //===----------------------------------------------------------------------===//
 
 def LLVM_VaArgOp : LLVM_Op<"va_arg"> {
+  let partition = LLVM_VarArgPartition;
+
   let arguments = (ins LLVM_AnyPointer:$arg);
   let results = (outs LLVM_Type:$res);
 
@@ -866,6 +900,8 @@ def LLVM_CallOp
     ```
   }];
 
+  let partition = LLVM_CallPartition;
+
   dag args = (ins OptionalAttr<TypeAttrOf<LLVM_FunctionType>>:$var_callee_type,
       OptionalAttr<FlatSymbolRefAttr>:$callee,
       Variadic<LLVM_Type>:$callee_operands,
@@ -924,6 +960,7 @@ def LLVM_CallOp
 // ExtractElementOp
 //===----------------------------------------------------------------------===//
 
+let partition = LLVM_VectorPartition in {
 def LLVM_ExtractElementOp : LLVM_Op<"extractelement", [Pure,
     TypesMatchWith<
         "result type matches vector element type", "vector", "res",
@@ -944,40 +981,6 @@ def LLVM_ExtractElementOp : LLVM_Op<"extractelement", [Pure,
   string mlirBuilder = [{
     $res = LLVM::ExtractElementOp::create($_builder,
       $_location, $vector, $position);
-  }];
-}
-
-//===----------------------------------------------------------------------===//
-// ExtractValueOp
-//===----------------------------------------------------------------------===//
-
-def LLVM_ExtractValueOp : LLVM_Op<"extractvalue", [Pure]> {
-  let summary = "Extract a value from an LLVM struct.";
-
-  let arguments = (ins LLVM_AnyAggregate:$container, DenseI64ArrayAttr:$position);
-  let results = (outs LLVM_Type:$res);
-
-  let builders = [
-    OpBuilder<(ins "Value":$container, "ArrayRef<int64_t>":$position)>
-  ];
-
-  let assemblyFormat = [{
-    $container `` $position attr-dict `:` type($container)
-    custom<InsertExtractValueElementType>(type($res), ref(type($container)),
-                                          ref($position))
-  }];
-
-  let hasFolder = 1;
-  let hasVerifier = 1;
-
-  string llvmInstName = "ExtractValue";
-  string llvmBuilder = [{
-    $res = builder.CreateExtractValue($container, extractPosition($position));
-  }];
-  string mlirBuilder = [{
-    auto *evInst = cast<llvm::ExtractValueInst>(inst);
-    $res = LLVM::ExtractValueOp::create($_builder, $_location,
-      $container, getPositionFromIndices(evInst->getIndices()));
   }];
 }
 
@@ -1010,39 +1013,6 @@ def LLVM_InsertElementOp : LLVM_Op<"insertelement", [Pure,
   string mlirBuilder = [{
     $res = LLVM::InsertElementOp::create($_builder,
       $_location, $vector, $value, $position);
-  }];
-}
-
-//===----------------------------------------------------------------------===//
-// InsertValueOp
-//===----------------------------------------------------------------------===//
-
-def LLVM_InsertValueOp : LLVM_Op<
-    "insertvalue", [Pure, AllTypesMatch<["container", "res"]>]> {
-  let summary = "Insert a value into an LLVM struct.";
-
-  let arguments = (ins LLVM_AnyAggregate:$container, LLVM_PrimitiveType:$value,
-                       DenseI64ArrayAttr:$position);
-  let results = (outs LLVM_AnyAggregate:$res);
-
-  let assemblyFormat = [{
-    $value `,` $container `` $position attr-dict `:` type($container)
-    custom<InsertExtractValueElementType>(type($value), ref(type($container)),
-                                          ref($position))
-  }];
-
-  let hasVerifier = 1;
-  let hasCanonicalizer = 1;
-
-  string llvmInstName = "InsertValue";
-  string llvmBuilder = [{
-    $res = builder.CreateInsertValue($container, $value,
-                                     extractPosition($position));
-  }];
-  string mlirBuilder = [{
-    auto *ivInst = cast<llvm::InsertValueInst>(inst);
-    $res = LLVM::InsertValueOp::create($_builder, $_location,
-      $container, $value, getPositionFromIndices(ivInst->getIndices()));
   }];
 }
 
@@ -1083,8 +1053,79 @@ def LLVM_ShuffleVectorOp : LLVM_Op<"shufflevector",
       $_location, $v1, $v2, mask);
   }];
 }
+} // let partition = LLVM_VectorPartition
+
+let partition = LLVM_AggregatePartition in {
+//===----------------------------------------------------------------------===//
+// ExtractValueOp
+//===----------------------------------------------------------------------===//
+
+def LLVM_ExtractValueOp : LLVM_Op<"extractvalue", [Pure]> {
+  let summary = "Extract a value from an LLVM struct.";
+
+  let arguments = (ins LLVM_AnyAggregate:$container, DenseI64ArrayAttr:$position);
+  let results = (outs LLVM_Type:$res);
+
+  let builders = [
+    OpBuilder<(ins "Value":$container, "ArrayRef<int64_t>":$position)>
+  ];
+
+  let assemblyFormat = [{
+    $container `` $position attr-dict `:` type($container)
+    custom<InsertExtractValueElementType>(type($res), ref(type($container)),
+                                          ref($position))
+  }];
+
+  let hasFolder = 1;
+  let hasVerifier = 1;
+
+  string llvmInstName = "ExtractValue";
+  string llvmBuilder = [{
+    $res = builder.CreateExtractValue($container, extractPosition($position));
+  }];
+  string mlirBuilder = [{
+    auto *evInst = cast<llvm::ExtractValueInst>(inst);
+    $res = LLVM::ExtractValueOp::create($_builder, $_location,
+      $container, getPositionFromIndices(evInst->getIndices()));
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// InsertValueOp
+//===----------------------------------------------------------------------===//
+
+def LLVM_InsertValueOp : LLVM_Op<
+    "insertvalue", [Pure, AllTypesMatch<["container", "res"]>]> {
+  let summary = "Insert a value into an LLVM struct.";
+
+  let arguments = (ins LLVM_AnyAggregate:$container, LLVM_PrimitiveType:$value,
+                       DenseI64ArrayAttr:$position);
+  let results = (outs LLVM_AnyAggregate:$res);
+
+  let assemblyFormat = [{
+    $value `,` $container `` $position attr-dict `:` type($container)
+    custom<InsertExtractValueElementType>(type($value), ref(type($container)),
+                                          ref($position))
+  }];
+
+  let hasVerifier = 1;
+  let hasCanonicalizer = 1;
+
+  string llvmInstName = "InsertValue";
+  string llvmBuilder = [{
+    $res = builder.CreateInsertValue($container, $value,
+                                     extractPosition($position));
+  }];
+  string mlirBuilder = [{
+    auto *ivInst = cast<llvm::InsertValueInst>(inst);
+    $res = LLVM::InsertValueOp::create($_builder, $_location,
+      $container, $value, getPositionFromIndices(ivInst->getIndices()));
+  }];
+}
+} // let partition = LLVM_AggregatePartition
 
 // Misc operations.
+let partition = LLVM_ArithPartition in {
 def LLVM_SelectOp
     : LLVM_Op<"select",
           [Pure, AllTypesMatch<["trueValue", "falseValue", "res"]>,
@@ -1118,10 +1159,13 @@ def LLVM_FreezeOp : LLVM_Op<"freeze", [Pure, SameOperandsAndResultType]> {
     $res = LLVM::FreezeOp::create($_builder, $_location, $val);
   }];
 }
+} // let partition = LLVM_ArithPartition
 
 // Terminators.
+let partition = LLVM_TerminatorPartition in {
 def LLVM_BrOp : LLVM_TerminatorOp<"br",
     [DeclareOpInterfaceMethods<BranchOpInterface>, Pure]> {
+  let hasCanonicalizeMethod = 1;
   let arguments = (ins
     Variadic<LLVM_Type>:$destOperands,
     OptionalAttr<LoopAnnotationAttr>:$loop_annotation
@@ -1316,6 +1360,7 @@ def LLVM_SwitchOp
     }
   }];
 }
+} // let partition = LLVM_TerminatorPartition
 
 ////////////////////////////////////////////////////////////////////////////////
 // Auxiliary operations (do not appear in LLVM IR but necessary for the dialect
@@ -1366,6 +1411,8 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
     ```
   }];
 
+  let partition = LLVM_ConstantPartition;
+
   let builders = [
     OpBuilder<(ins "GlobalOp":$global,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
@@ -1414,9 +1461,11 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
   let hasFolder = 1;
 }
 
+let partition = LLVM_ModulePartition in {
 def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, SymbolName,
-     SymbolVisibility, Symbol]> {
+     SymbolVisibility, Symbol,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let arguments = (ins
     TypeAttr:$global_type,
     UnitAttr:$constant,
@@ -1828,8 +1877,10 @@ def LLVM_IFuncOp : LLVM_Op<"mlir.ifunc",
   }];
   let hasVerifier = 1;
 }
+} // let partition = LLVM_ModulePartition
 
 
+let partition = LLVM_ConstantPartition in {
 def LLVM_DSOLocalEquivalentOp : LLVM_Op<"dso_local_equivalent",
     [Pure, ConstantLike, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let arguments = (ins FlatSymbolRefAttr:$function_name);
@@ -1944,6 +1995,7 @@ def LLVM_BlockTagOp : LLVM_Op<"blocktag"> {
   // Covered as part of LLVMFuncOp verifier.
   let hasVerifier = 0;
 }
+} // let partition = LLVM_ConstantPartition
 
 //===----------------------------------------------------------------------===//
 // IndirectBrOp
@@ -1982,6 +2034,7 @@ def LLVM_IndirectBrOp : LLVM_TerminatorOp<"indirectbr",
       ...
     ```
   }];
+  let partition = LLVM_TerminatorPartition;
   let arguments = (ins LLVM_AnyPointer:$addr,
     VariadicOfVariadic<AnyType, "indbr_operand_segments">:$succOperands,
     DenseI32ArrayAttr:$indbr_operand_segments
@@ -2011,6 +2064,7 @@ def LLVM_IndirectBrOp : LLVM_TerminatorOp<"indirectbr",
   }];
 }
 
+let partition = LLVM_ModulePartition in {
 def LLVM_ComdatSelectorOp
     : LLVM_Op<"comdat_selector", [SymbolName, SymbolVisibility, Symbol]> {
   let arguments = (ins
@@ -2067,7 +2121,8 @@ def LLVM_ComdatOp
 
 def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     AffineScope, AutomaticAllocationScope, IsolatedFromAbove, SymbolName,
-    SymbolVisibility, FunctionOpInterface
+    SymbolVisibility, FunctionOpInterface,
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>
   ]> {
   let summary = "LLVM dialect function.";
 
@@ -2099,9 +2154,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     ```
 
     The `function_entry_count` attribute models function-level `!prof`
-    entry-count metadata. It stores the entry count, whether the count is real
-    or synthetic, and any trailing import GUID operands in a single
-    `#llvm.function_entry_count` attribute.
+    entry-count metadata. It stores the entry count and any trailing import
+    GUID operands in a single `#llvm.function_entry_count` attribute.
   }];
 
   let arguments = (ins
@@ -2221,7 +2275,9 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
 }
+} // let partition = LLVM_ModulePartition
 
+let partition = LLVM_ConstantPartition in {
 def LLVM_NoneTokenOp
     : LLVM_Op<"mlir.none", [Pure]> {
   let summary = "Defines a value containing an empty token to LLVM type.";
@@ -2416,6 +2472,7 @@ def LLVM_ConstantOp
   let hasFolder = 1;
   let hasVerifier = 1;
 }
+} // let partition = LLVM_ConstantPartition
 
 // Atomic operations.
 //
@@ -2423,6 +2480,9 @@ def LLVM_ConstantOp
 def LLVM_AtomicRMWType
     : AnyTypeOf<[LLVM_AnyFloat, LLVM_AnyPointer, AnySignlessInteger, LLVM_AnyFixedVector]>;
 
+def LLVM_AtomicCmpXchgType : AnyTypeOf<[AnySignlessInteger, LLVM_AnyPointer]>;
+
+let partition = LLVM_MemoryPartition in {
 def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
       TypesMatchWith<"result #0 and operand #1 have the same type",
                      "val", "res", "$_self">]> {
@@ -2431,12 +2491,14 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
               LLVM_AtomicRMWType:$val, AtomicOrdering:$ordering,
               OptionalAttr<StrAttr>:$syncscope,
               OptionalAttr<I64Attr>:$alignment,
-              UnitAttr:$volatile_);
+              UnitAttr:$volatile_,
+              UnitAttr:$ignore_denormal_mode);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs LLVM_AtomicRMWType:$res);
   let assemblyFormat = [{
-    (`volatile` $volatile_^)? $bin_op $ptr `,` $val
+    (`volatile` $volatile_^)? (`ignore_denormal_mode` $ignore_denormal_mode^)?
+    $bin_op $ptr `,` $val
     (`syncscope` `(` $syncscope^ `)`)? $ordering
     prop-dict
     attr-dict `:`
@@ -2449,6 +2511,7 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
         convertAtomicOrderingToLLVM($ordering));
     $res = inst;
   }] # setVolatileCode
+     # setIgnoreDenormalModeCode
      # setSyncScopeCode
      # setAlignmentCode
      # setAccessGroupsMetadataCode
@@ -2459,20 +2522,32 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
     $res = LLVM::AtomicRMWOp::create($_builder, $_location,
         convertAtomicBinOpFromLLVM(atomicInst->getOperation()), $ptr, $val,
         convertAtomicOrderingFromLLVM(atomicInst->getOrdering()),
-        getLLVMSyncScope(atomicInst), alignment, atomicInst->isVolatile());
+        getLLVMSyncScope(atomicInst), alignment, atomicInst->isVolatile(),
+        atomicInst->hasMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode));
   }];
-  list<int> llvmArgIndices = [-1, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1];
+  list<int> llvmArgIndices = [-1, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1];
   let builders = [
     OpBuilder<(ins "LLVM::AtomicBinOp":$binOp, "Value":$ptr, "Value":$val,
       "LLVM::AtomicOrdering":$ordering,
       CArg<"StringRef", "StringRef()">:$syncscope,
-      CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile
+      CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
+      CArg<"bool", "false">:$ignoreDenormalMode
     )>
   ];
+  let extraClassDeclaration = [{
+    bool isFloatingPointOperation() {
+      return getBinOp() == AtomicBinOp::fadd ||
+             getBinOp() == AtomicBinOp::fsub ||
+             getBinOp() == AtomicBinOp::fmin ||
+             getBinOp() == AtomicBinOp::fmax ||
+             getBinOp() == AtomicBinOp::fminimum ||
+             getBinOp() == AtomicBinOp::fmaximum ||
+             getBinOp() == AtomicBinOp::fminimumnum ||
+             getBinOp() == AtomicBinOp::fmaximumnum;
+    }
+  }];
   let hasVerifier = 1;
 }
-
-def LLVM_AtomicCmpXchgType : AnyTypeOf<[AnySignlessInteger, LLVM_AnyPointer]>;
 
 def LLVM_AtomicCmpXchgOp : LLVM_MemAccessOpBase<"cmpxchg", [
       TypesMatchWith<"operand #1 and operand #2 have the same type",
@@ -2555,6 +2630,7 @@ def LLVM_FenceOp : LLVM_Op<"fence">, LLVM_MemOpPatterns {
   ];
   let hasVerifier = 1;
 }
+} // let partition = LLVM_MemoryPartition
 
 def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let description = [{
@@ -2568,6 +2644,7 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
     tail call kind. The `musttail` kind it's not available for this operation,
     since it isn't supported by LLVM's inline asm.
   }];
+  let partition = LLVM_CallPartition;
   let arguments = (
     ins Variadic<LLVM_Type>:$operands,
         StrAttr:$asm_string,
@@ -2644,6 +2721,8 @@ def LLVM_MetadataAsValueOp
     ```
   }];
 
+  let partition = LLVM_ConstantPartition;
+
   let arguments = (ins LLVM_AnyMDAttr:$metadata);
   let results = (outs LLVM_MetadataType:$res);
 
@@ -2685,6 +2764,7 @@ def LLVM_CallIntrinsicOp
     Call the specified llvm intrinsic. If the intrinsic is overloaded, use
     the MLIR function type of this op to determine which intrinsic to call.
   }];
+  let partition = LLVM_CallPartition;
   let arguments = (ins StrAttr:$intrin, Variadic<LLVM_Type>:$args,
                        DefaultValuedAttr<LLVM_FastmathFlagsAttr,
                                          "{}">:$fastmathFlags,
@@ -2710,6 +2790,7 @@ def LLVM_CallIntrinsicOp
   let hasVerifier = 1;
 }
 
+let partition = LLVM_ModulePartition in {
 def LLVM_LinkerOptionsOp
     : LLVM_Op<"linker_options"> {
   let summary = "Options to pass to the linker when the object file is linked";
@@ -2821,5 +2902,6 @@ def LLVM_NamedMetadataOp
     return convertNamedMetadataOp(op, moduleTranslation);
   }];
 }
+} // let partition = LLVM_ModulePartition
 
 #endif // LLVMIR_OPS

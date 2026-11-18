@@ -1,12 +1,20 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=UNCONSTRAINED --check-prefix=COMMON
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=UNCONSTRAINED --check-prefix=COMMON %}
 // RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx -ffp-exception-behavior=maytrap -DSTRICT=1 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=CONSTRAINED --check-prefix=COMMON
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx -ffp-exception-behavior=maytrap -DSTRICT=1 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=CONSTRAINED --check-prefix=COMMON %}
 // RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx -S -o - -Wall -Werror | FileCheck %s --check-prefix=CHECK-ASM --check-prefix=COMMON
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx -S -o - -Wall -Werror | FileCheck %s --check-prefix=CHECK-ASM --check-prefix=COMMON %}
 // RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx -ffp-exception-behavior=maytrap -DSTRICT=1 -S -o - -Wall -Werror | FileCheck %s --check-prefix=CHECK-ASM --check-prefix=COMMON
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx -ffp-exception-behavior=maytrap -DSTRICT=1 -S -o - -Wall -Werror | FileCheck %s --check-prefix=CHECK-ASM --check-prefix=COMMON %}
 // RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=UNCONSTRAINED --check-prefix=COMMON
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=UNCONSTRAINED --check-prefix=COMMON %}
 // RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx -ffp-exception-behavior=maytrap -DSTRICT=1 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=CONSTRAINED --check-prefix=COMMON
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx -ffp-exception-behavior=maytrap -DSTRICT=1 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=CONSTRAINED --check-prefix=COMMON %}
 // RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx -S -o - -Wall -Werror | FileCheck %s --check-prefix=CHECK-ASM --check-prefix=COMMON
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx -S -o - -Wall -Werror | FileCheck %s --check-prefix=CHECK-ASM --check-prefix=COMMON %}
 // RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx -ffp-exception-behavior=maytrap -DSTRICT=1 -S -o - -Wall -Werror | FileCheck %s --check-prefix=CHECK-ASM --check-prefix=COMMON
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -ffreestanding %s -triple=x86_64-unknown-linux-gnu -target-feature +avx -ffp-exception-behavior=maytrap -DSTRICT=1 -S -o - -Wall -Werror | FileCheck %s --check-prefix=CHECK-ASM --check-prefix=COMMON %}
 
 #ifdef STRICT
 // Test that the constrained intrinsics are picking up the exception

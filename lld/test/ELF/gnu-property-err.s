@@ -20,6 +20,10 @@
 
 # ERR3: error: {{.*}}.o:(.note.gnu.property+0x10): FEATURE_1_AND entry is too short
 
+## pr_data must be padded to 8 bytes.
+# RUN: llvm-mc -filetype=obj -triple=aarch64 %t/4.s -o %t4.o
+# RUN: not ld.lld %t4.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR2
+
 #--- 1.s
 .section ".note.gnu.property", "a"
 .long 4
@@ -53,3 +57,14 @@
 
 .long 0xc0000000 // GNU_PROPERTY_AARCH64_FEATURE_1_AND
 .long 0          // pr_datasz too short
+
+#--- 4.s
+.section ".note.gnu.property", "a"
+.long 4
+.long 12         // n_descsz
+.long 5          // NT_GNU_PROPERTY_TYPE_0
+.asciz "GNU"
+
+.long 0xc0000000 // GNU_PROPERTY_AARCH64_FEATURE_1_AND
+.long 4          // pr_datasz
+.long 1          // GNU_PROPERTY_AARCH64_FEATURE_1_BTI

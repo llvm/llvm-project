@@ -24,7 +24,7 @@ func.func @load_store_complex_as_real(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>
   %shape = fir.shape %c4 : (index) -> !fir.shape<1>
   %elem = fir.array_coor %arg0(%shape) %c1 : (!fir.ref<!fir.array<4xcomplex<f32>>>, !fir.shape<1>, index) -> !fir.ref<complex<f32>>
   %cvt = fir.convert %elem : (!fir.ref<complex<f32>>) -> !fir.ref<f32>
-  %decl = fir.declare %cvt {uniq_name = "rr"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %decl = fir.declare %cvt uniq_name("rr") : (!fir.ref<f32>) -> !fir.ref<f32>
   %load = fir.load %decl : !fir.ref<f32>
   fir.store %v to %decl : !fir.ref<f32>
   return %load : f32
@@ -191,7 +191,7 @@ func.func @seq_assoc_complex_elem_as_real_array(%arg0: !fir.ref<!fir.array<1xcom
   %shape2 = fir.shape %c2 : (index) -> !fir.shape<1>
   %elem = fir.array_coor %arg0(%shape1) %c1 : (!fir.ref<!fir.array<1xcomplex<f32>>>, !fir.shape<1>, index) -> !fir.ref<complex<f32>>
   %cvt = fir.convert %elem : (!fir.ref<complex<f32>>) -> !fir.ref<!fir.array<2xf32>>
-  %decl = fir.declare %cvt(%shape2) {uniq_name = "rr"} : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<2xf32>>
+  %decl = fir.declare %cvt(%shape2) uniq_name("rr") : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<2xf32>>
   %e1 = fir.array_coor %decl(%shape2) %c1 : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
   fir.store %v to %e1 : !fir.ref<f32>
   return

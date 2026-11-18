@@ -45,16 +45,16 @@ subroutine s(i,j,k,ii,jj,kk,a1,a2,a3,a4,a5,a6,a7)
   real a7(i:70,7:j,k:80)
 
   ! CHECK-LABEL: @_QPs
-  ! CHECK: %[[a1:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEa1"}
-  ! CHECK: %[[a2:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEa2"}
-  ! CHECK: %[[a3:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEa3"}
-  ! CHECK: %[[a4:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEa4"}
-  ! CHECK: %[[ii:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEii"}
-  ! CHECK: %[[jj:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEjj"}
-  ! CHECK: %[[kk:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEkk"}
-  ! CHECK: %[[a5:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEa5"}
-  ! CHECK: %[[a6:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEa6"}
-  ! CHECK: %[[a7:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEa7"}
+  ! CHECK: %[[a1:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFsEa1")
+  ! CHECK: %[[a2:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFsEa2")
+  ! CHECK: %[[a3:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFsEa3")
+  ! CHECK: %[[a4:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFsEa4")
+  ! CHECK: %[[ii:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFsEii")
+  ! CHECK: %[[jj:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFsEjj")
+  ! CHECK: %[[kk:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFsEkk")
+  ! CHECK: %[[a5:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFsEa5")
+  ! CHECK: %[[a6:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFsEa6")
+  ! CHECK: %[[a7:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFsEa7")
 
   ! CHECK: fir.call @_FortranAioBeginExternalListOutput
   ! CHECK: %[[ii_val:.*]] = fir.load %[[ii]]#0

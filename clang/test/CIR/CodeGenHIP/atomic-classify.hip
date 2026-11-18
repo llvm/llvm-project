@@ -1,7 +1,7 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fclangir -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -fclangir -fcuda-is-device \
 // RUN: -emit-cir %s -o - | FileCheck --check-prefix=CIR %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fclangir -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -fclangir -fcuda-is-device \
 // RUN: -emit-llvm %s -o - | FileCheck --check-prefix=LLVM %s
 
 #define __device__ __attribute__((device))

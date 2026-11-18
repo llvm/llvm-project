@@ -14,7 +14,6 @@
 #include "M68kTargetObjectFile.h"
 
 #include "M68kSubtarget.h"
-#include "M68kTargetMachine.h"
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/DataLayout.h"
@@ -22,22 +21,15 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
-static cl::opt<unsigned> SSThreshold(
-    "m68k-ssection-threshold", cl::Hidden,
-    cl::desc("Small data and bss section threshold size (default=8)"),
-    cl::init(8));
-
-void M68kELFTargetObjectFile::Initialize(MCContext &Ctx,
-                                         const TargetMachine &TM) {
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+void M68kELFTargetObjectFile::initialize(MCContext &Ctx,
+                                         const TargetMachine &TM,
+                                         const Module &M) {
+  TargetLoweringObjectFileELF::initialize(Ctx, TM, M);
   InitializeELF(TM.Options.UseInitArray);
-
-  this->TM = &static_cast<const M68kTargetMachine &>(TM);
 
   // FIXME do we need `.sdata` and `.sbss` explicitly?
   SmallDataSection = getContext().getELFSection(

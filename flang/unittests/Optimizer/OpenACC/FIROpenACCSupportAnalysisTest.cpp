@@ -1,4 +1,4 @@
-//===- FIROpenACCSupportAnalysisTest.cpp --------------------------------===//
+//===- FIROpenACCSupportAnalysisTest.cpp ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,7 @@
 #include "flang/Optimizer/OpenACC/Analysis/FIROpenACCSupportAnalysis.h"
 #include "gtest/gtest.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsCG.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsType.h"

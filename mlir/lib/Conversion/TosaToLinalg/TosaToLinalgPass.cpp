@@ -38,6 +38,9 @@ using namespace mlir;
 namespace {
 struct TosaToLinalg : public impl::TosaToLinalgBase<TosaToLinalg> {
 public:
+  TosaToLinalg(const TosaToLinalgOptions &options)
+      : impl::TosaToLinalgBase<TosaToLinalg>(options) {}
+
   void getDependentDialects(DialectRegistry &registry) const override {
     registry
         .insert<arith::ArithDialect, linalg::LinalgDialect, math::MathDialect,
@@ -68,15 +71,19 @@ public:
     tosa::populateTosaTypeConversion(converter);
 
     FunctionOpInterface func = getOperation();
-    mlir::tosa::populateTosaToLinalgConversionPatterns(converter, &patterns);
+    TosaToLinalgOptions options;
+    options.allowNonFinites = allowNonFinites;
+    mlir::tosa::populateTosaToLinalgConversionPatterns(converter, &patterns,
+                                                       options);
     if (failed(applyFullConversion(func, target, std::move(patterns))))
       signalPassFailure();
   }
 };
 } // namespace
 
-std::unique_ptr<Pass> mlir::tosa::createTosaToLinalg() {
-  return std::make_unique<TosaToLinalg>();
+std::unique_ptr<Pass>
+mlir::tosa::createTosaToLinalg(const TosaToLinalgOptions &options) {
+  return std::make_unique<TosaToLinalg>(options);
 }
 
 void mlir::tosa::addTosaToLinalgPasses(
@@ -114,7 +121,7 @@ void mlir::tosa::addTosaToLinalgPasses(
   }
   if (validationOptions)
     pm.addPass(tosa::createTosaValidation(*validationOptions));
-  pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg(options));
 }
 
 //===----------------------------------------------------------------------===//

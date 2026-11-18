@@ -32,7 +32,6 @@
 #include <cstdint>
 
 namespace lldb_private {
-class ConstString;
 class FileSpecList;
 class Function;
 class Log;
@@ -107,12 +106,15 @@ public:
   lldb::SymbolSharedCacheUse GetSharedCacheBinaryLoading() const;
   bool GetEnableLLDBIndexCache() const;
   bool SetEnableLLDBIndexCache(bool new_value);
+  bool GetEnableLLDBIndexCacheMemoryModules() const;
+  bool SetEnableLLDBIndexCacheMemoryModules(bool new_value);
   uint64_t GetLLDBIndexCacheMaxByteSize();
   uint64_t GetLLDBIndexCacheMaxPercent();
   uint64_t GetLLDBIndexCacheExpirationDays();
   FileSpec GetLLDBIndexCachePath() const;
   bool SetLLDBIndexCachePath(const FileSpec &path);
   bool GetLoadSymbolOnDemand() const;
+  uint64_t GetDemangledNameInfoCacheSize() const;
   lldb::SymbolDownload GetSymbolAutoDownload() const;
   PathMappingList GetSymlinkMappings() const;
 };

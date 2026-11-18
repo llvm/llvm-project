@@ -11,7 +11,7 @@ subroutine sub1()
 ! CHECK-DAG:    %[[C1:.*]] = arith.constant 1 : i32
 ! CHECK:    %[[TRIP:.*]] = fir.alloca i32
 ! CHECK:    %[[I_REF:.*]] = fir.alloca i32 <{bindc_name = "i", {{.*}}}>
-! CHECK:    %[[I:.*]]:2 = hlfir.declare %[[I_REF]] {uniq_name = "_QFsub1Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:    %[[I:.*]]:2 = hlfir.declare %[[I_REF]] uniq_name("_QFsub1Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
   do i = 1, 3
     if (i .eq. 2) goto 70
@@ -63,9 +63,9 @@ subroutine sub2()
 ! CHECK-DAG:    %[[C1:.*]] = arith.constant 1 : i32
 ! CHECK:    %[[TRIP:.*]] = fir.alloca i32
 ! CHECK:    %[[I_REF:.*]] = fir.alloca i32 <{bindc_name = "i", {{.*}}}>
-! CHECK:    %[[I:.*]]:2 = hlfir.declare %[[I_REF]] {uniq_name = "_QFsub2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:    %[[I:.*]]:2 = hlfir.declare %[[I_REF]] uniq_name("_QFsub2Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:    %[[J_REF:.*]] = fir.alloca i32 <{bindc_name = "j", {{.*}}}>
-! CHECK:    %[[J:.*]]:2 = hlfir.declare %[[J_REF]] {uniq_name = "_QFsub2Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:    %[[J:.*]]:2 = hlfir.declare %[[J_REF]] uniq_name("_QFsub2Ej") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
   do i = 1, 3
     if (i .eq. 2) goto 70

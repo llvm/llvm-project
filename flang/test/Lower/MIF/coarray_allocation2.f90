@@ -18,7 +18,7 @@ end subroutine test_coarray_cleanup
 !CHECK:  %[[VAL_5:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
 !CHECK:  %[[VAL_6:.*]] = fir.embox %[[VAL_4]](%[[VAL_5]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>, corank:1>
 !CHECK:  fir.store %[[VAL_6]] to %[[VAL_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>, corank:1>>
-!CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_3]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_coarray_cleanupEn"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>, corank:1>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>, corank:1>>)
+!CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_3]] uniq_name("_QFtest_coarray_cleanupEn") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>, corank:1>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>, corank:1>>)
 !CHECK:  %[[VAL_8:.*]] = fir.absent !fir.box<none>
 !CHECK:  %[[C1:.*]] = arith.constant 1 : index
 !CHECK:  %[[C10_i32:.*]] = arith.constant 10 : i32
@@ -33,7 +33,7 @@ end subroutine test_coarray_cleanup
 !CHECK:  fir.store %[[C1_i64]] to %[[VAL_12]] : !fir.ref<i64>
 !CHECK:  %[[VAL_13:.*]] = fir.embox %[[VAL_1]] : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
 !CHECK:  %[[VAL_14:.*]] = fir.embox %[[VAL_0]] : (!fir.ref<!fir.array<0xi64>>) -> !fir.box<!fir.array<0xi64>>
-!CHECK:  mif.alloc_coarray %[[VAL_7]]#0 lcobounds %[[VAL_13]] ucobounds %[[VAL_14]] errmsg %[[VAL_8]] {uniq_name = "_QFtest_coarray_cleanupEn"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>, !fir.box<none>) -> ()
+!CHECK:  mif.alloc_coarray %[[VAL_7]]#0 lcobounds %[[VAL_13]] ucobounds %[[VAL_14]] errmsg %[[VAL_8]] uniq_name("_QFtest_coarray_cleanupEn") : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>, !fir.box<none>) -> ()
 !CHECK:  mif.sync_all : () -> ()
 !CHECK:  %[[VAL_15:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>, corank:1>>
 !CHECK:  %[[VAL_16:.*]] = fir.box_addr %[[VAL_15]] : (!fir.box<!fir.heap<!fir.array<?xf32>>, corank:1>) -> !fir.heap<!fir.array<?xf32>>
