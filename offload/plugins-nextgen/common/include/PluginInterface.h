@@ -97,7 +97,7 @@ inline Error error(error::ErrorCode Code, const char *S) {
 }
 
 inline Error error(error::ErrorCode Code, Error &&OtherError,
-                   const char *Context) {
+                   StringRef Context) {
   return error::createOffloadError(Code, std::move(OtherError), Context);
 }
 
