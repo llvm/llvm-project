@@ -1202,14 +1202,12 @@ bool AArch64DAGToDAGISel::SelectShiftedRegister(SDValue N, bool AllowROR,
   // SBFM/UBFM.
   if (N.getOpcode() == ISD::SRA || N.getOpcode() == ISD::SRL) {
     SDValue Inner = N.getOperand(0);
-    uint64_t ShrImm = 0;
     unsigned Opc, Immr, Imms;
     SDValue Opd0;
     if ((Inner.getOpcode() == ISD::SHL ||
          (Inner.getOpcode() == ISD::AND &&
           !isBitwiseNot(Inner.getOperand(0)))) &&
-        Inner.hasOneUse() && isIntImmediate(N.getOperand(1), ShrImm) &&
-        ShrImm > 0 && ShrImm < N.getValueSizeInBits() &&
+        Inner.hasOneUse() &&
         isBitfieldExtractOpFromShr(N.getNode(), Opc, Opd0, Immr, Imms, false))
       return false;
   }
