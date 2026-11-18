@@ -3675,7 +3675,9 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
             if (!ds || ds->file != file || !ds->section ||
                 ds->section != file->getSections()[secIndex] ||
                 ds->section == &InputSection::discarded ||
-                ctx.arg.btfWrappedSymbols.contains(name))
+                ctx.arg.btfWrappedSymbols.contains(name) ||
+                (name.starts_with("__real_") &&
+                 ctx.arg.btfWrappedSymbols.contains(name.drop_front(7))))
               ds = nullptr;
             auto [it, inserted] =
                 definitions->try_emplace(std::pair{section, name}, ds);
