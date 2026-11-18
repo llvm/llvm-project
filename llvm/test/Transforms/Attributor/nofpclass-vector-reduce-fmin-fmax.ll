@@ -2,9 +2,9 @@
 ; RUN: opt -S -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal < %s | FileCheck %s
 
 define float @ret_vector_reduce_fmax__no_snan_zero_psub(<4 x float> nofpclass(snan zero psub) %arg) {
-; CHECK-LABEL: define nofpclass(snan zero) float @ret_vector_reduce_fmax__no_snan_zero_psub(
+; CHECK-LABEL: define nofpclass(snan zero psub) float @ret_vector_reduce_fmax__no_snan_zero_psub(
 ; CHECK-SAME: <4 x float> nofpclass(snan zero psub) [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan zero) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(snan zero psub) [[ARG]]) #[[ATTR9:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan zero psub) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(snan zero psub) [[ARG]]) #[[ATTR9:[0-9]+]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %arg)
@@ -12,9 +12,9 @@ define float @ret_vector_reduce_fmax__no_snan_zero_psub(<4 x float> nofpclass(sn
 }
 
 define float @ret_vector_reduce_fmin__no_snan_zero_psub(<4 x float> nofpclass(snan zero psub) %arg) {
-; CHECK-LABEL: define nofpclass(snan zero) float @ret_vector_reduce_fmin__no_snan_zero_psub(
+; CHECK-LABEL: define nofpclass(snan zero psub) float @ret_vector_reduce_fmin__no_snan_zero_psub(
 ; CHECK-SAME: <4 x float> nofpclass(snan zero psub) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan zero) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(snan zero psub) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan zero psub) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(snan zero psub) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %arg)
@@ -22,9 +22,9 @@ define float @ret_vector_reduce_fmin__no_snan_zero_psub(<4 x float> nofpclass(sn
 }
 
 define float @ret_vector_reduce_fmax__no_nan_inf_zero_psub__dynamic_dynamic(<4 x float> nofpclass(nan inf zero psub) %arg) #0 {
-; CHECK-LABEL: define nofpclass(nan inf zero psub) float @ret_vector_reduce_fmax__no_nan_inf_zero_psub__dynamic_dynamic(
+; CHECK-LABEL: define nofpclass(nan inf psub) float @ret_vector_reduce_fmax__no_nan_inf_zero_psub__dynamic_dynamic(
 ; CHECK-SAME: <4 x float> nofpclass(nan inf zero psub) [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero psub) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(nan inf zero psub) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf psub) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(nan inf zero psub) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %arg)
@@ -32,9 +32,9 @@ define float @ret_vector_reduce_fmax__no_nan_inf_zero_psub__dynamic_dynamic(<4 x
 }
 
 define float @ret_vector_reduce_fmin__no_nan_inf_zero_psub__dynamic_dynamic(<4 x float> nofpclass(nan inf zero psub) %arg) #0 {
-; CHECK-LABEL: define nofpclass(nan inf zero psub) float @ret_vector_reduce_fmin__no_nan_inf_zero_psub__dynamic_dynamic(
+; CHECK-LABEL: define nofpclass(nan inf psub) float @ret_vector_reduce_fmin__no_nan_inf_zero_psub__dynamic_dynamic(
 ; CHECK-SAME: <4 x float> nofpclass(nan inf zero psub) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero psub) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(nan inf zero psub) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf psub) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(nan inf zero psub) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %arg)
@@ -62,9 +62,9 @@ define float @ret_vector_reduce_fmin__no_nan_inf_zero_sub__dynamic_dynamic(<4 x 
 }
 
 define float @ret_vector_reduce_fmax__no_snan_zero_psub__ieee_dynamic(<4 x float> nofpclass(snan zero psub) %arg) #1 {
-; CHECK-LABEL: define nofpclass(snan zero) float @ret_vector_reduce_fmax__no_snan_zero_psub__ieee_dynamic(
+; CHECK-LABEL: define nofpclass(snan psub) float @ret_vector_reduce_fmax__no_snan_zero_psub__ieee_dynamic(
 ; CHECK-SAME: <4 x float> nofpclass(snan zero psub) [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan zero) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(snan zero psub) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan psub) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(snan zero psub) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %arg)
@@ -72,9 +72,9 @@ define float @ret_vector_reduce_fmax__no_snan_zero_psub__ieee_dynamic(<4 x float
 }
 
 define float @ret_vector_reduce_fmin__no_snan_zero_psub__ieee_dynamic(<4 x float> nofpclass(snan zero psub) %arg) #1 {
-; CHECK-LABEL: define nofpclass(snan zero) float @ret_vector_reduce_fmin__no_snan_zero_psub__ieee_dynamic(
+; CHECK-LABEL: define nofpclass(snan psub) float @ret_vector_reduce_fmin__no_snan_zero_psub__ieee_dynamic(
 ; CHECK-SAME: <4 x float> nofpclass(snan zero psub) [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan zero) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(snan zero psub) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan psub) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(snan zero psub) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %arg)
@@ -82,9 +82,9 @@ define float @ret_vector_reduce_fmin__no_snan_zero_psub__ieee_dynamic(<4 x float
 }
 
 define float @ret_vector_reduce_fmax__no_snan_zero_psub__ieee_dapz(<4 x float> nofpclass(snan zero psub) %arg) #2 {
-; CHECK-LABEL: define nofpclass(snan zero) float @ret_vector_reduce_fmax__no_snan_zero_psub__ieee_dapz(
+; CHECK-LABEL: define nofpclass(snan nzero psub) float @ret_vector_reduce_fmax__no_snan_zero_psub__ieee_dapz(
 ; CHECK-SAME: <4 x float> nofpclass(snan zero psub) [[ARG:%.*]]) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan zero) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(snan zero psub) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan nzero psub) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(snan zero psub) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %arg)
@@ -92,9 +92,9 @@ define float @ret_vector_reduce_fmax__no_snan_zero_psub__ieee_dapz(<4 x float> n
 }
 
 define float @ret_vector_reduce_fmin__no_snan_zero_psub__ieee_dapz(<4 x float> nofpclass(snan zero psub) %arg) #2 {
-; CHECK-LABEL: define nofpclass(snan zero) float @ret_vector_reduce_fmin__no_snan_zero_psub__ieee_dapz(
+; CHECK-LABEL: define nofpclass(snan nzero psub) float @ret_vector_reduce_fmin__no_snan_zero_psub__ieee_dapz(
 ; CHECK-SAME: <4 x float> nofpclass(snan zero psub) [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan zero) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(snan zero psub) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan nzero psub) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(snan zero psub) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %arg)
@@ -102,9 +102,9 @@ define float @ret_vector_reduce_fmin__no_snan_zero_psub__ieee_dapz(<4 x float> n
 }
 
 define float @ret_vector_reduce_fmax__no_snan_zero_psub__dynamic_ieee(<4 x float> nofpclass(snan zero psub) %arg) #3 {
-; CHECK-LABEL: define nofpclass(snan zero) float @ret_vector_reduce_fmax__no_snan_zero_psub__dynamic_ieee(
+; CHECK-LABEL: define nofpclass(snan psub) float @ret_vector_reduce_fmax__no_snan_zero_psub__dynamic_ieee(
 ; CHECK-SAME: <4 x float> nofpclass(snan zero psub) [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan zero) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(snan zero psub) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan psub) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(snan zero psub) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %arg)
@@ -112,9 +112,9 @@ define float @ret_vector_reduce_fmax__no_snan_zero_psub__dynamic_ieee(<4 x float
 }
 
 define float @ret_vector_reduce_fmin__no_snan_zero_psub__dynamic_ieee(<4 x float> nofpclass(snan zero psub) %arg) #3 {
-; CHECK-LABEL: define nofpclass(snan zero) float @ret_vector_reduce_fmin__no_snan_zero_psub__dynamic_ieee(
+; CHECK-LABEL: define nofpclass(snan psub) float @ret_vector_reduce_fmin__no_snan_zero_psub__dynamic_ieee(
 ; CHECK-SAME: <4 x float> nofpclass(snan zero psub) [[ARG:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan zero) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(snan zero psub) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan psub) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(snan zero psub) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %arg)
@@ -122,9 +122,9 @@ define float @ret_vector_reduce_fmin__no_snan_zero_psub__dynamic_ieee(<4 x float
 }
 
 define float @ret_vector_reduce_fmax__no_snan_zero_psub__ftpz_ieee(<4 x float> nofpclass(snan zero psub) %arg) #4 {
-; CHECK-LABEL: define nofpclass(snan zero) float @ret_vector_reduce_fmax__no_snan_zero_psub__ftpz_ieee(
+; CHECK-LABEL: define nofpclass(snan nzero psub) float @ret_vector_reduce_fmax__no_snan_zero_psub__ftpz_ieee(
 ; CHECK-SAME: <4 x float> nofpclass(snan zero psub) [[ARG:%.*]]) #[[ATTR5:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan zero) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(snan zero psub) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan nzero psub) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(snan zero psub) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %arg)
@@ -132,9 +132,9 @@ define float @ret_vector_reduce_fmax__no_snan_zero_psub__ftpz_ieee(<4 x float> n
 }
 
 define float @ret_vector_reduce_fmin__no_snan_zero_psub__ftpz_ieee(<4 x float> nofpclass(snan zero psub) %arg) #4 {
-; CHECK-LABEL: define nofpclass(snan zero) float @ret_vector_reduce_fmin__no_snan_zero_psub__ftpz_ieee(
+; CHECK-LABEL: define nofpclass(snan nzero psub) float @ret_vector_reduce_fmin__no_snan_zero_psub__ftpz_ieee(
 ; CHECK-SAME: <4 x float> nofpclass(snan zero psub) [[ARG:%.*]]) #[[ATTR5]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan zero) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(snan zero psub) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan nzero psub) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(snan zero psub) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %arg)
@@ -142,9 +142,9 @@ define float @ret_vector_reduce_fmin__no_snan_zero_psub__ftpz_ieee(<4 x float> n
 }
 
 define float @ret_vector_reduce_fmax__no_nan_inf_zero_nsub__ieee_daz(<4 x float> nofpclass(nan inf zero nsub) %arg) #5 {
-; CHECK-LABEL: define nofpclass(nan inf zero nsub) float @ret_vector_reduce_fmax__no_nan_inf_zero_nsub__ieee_daz(
+; CHECK-LABEL: define nofpclass(nan inf nzero nsub) float @ret_vector_reduce_fmax__no_nan_inf_zero_nsub__ieee_daz(
 ; CHECK-SAME: <4 x float> nofpclass(nan inf zero nsub) [[ARG:%.*]]) #[[ATTR6:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero nsub) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(nan inf zero nsub) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf nzero nsub) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(nan inf zero nsub) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %arg)
@@ -152,9 +152,9 @@ define float @ret_vector_reduce_fmax__no_nan_inf_zero_nsub__ieee_daz(<4 x float>
 }
 
 define float @ret_vector_reduce_fmin__no_nan_inf_zero_nsub__ieee_daz(<4 x float> nofpclass(nan inf zero nsub) %arg) #5 {
-; CHECK-LABEL: define nofpclass(nan inf zero nsub) float @ret_vector_reduce_fmin__no_nan_inf_zero_nsub__ieee_daz(
+; CHECK-LABEL: define nofpclass(nan inf nzero nsub) float @ret_vector_reduce_fmin__no_nan_inf_zero_nsub__ieee_daz(
 ; CHECK-SAME: <4 x float> nofpclass(nan inf zero nsub) [[ARG:%.*]]) #[[ATTR6]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero nsub) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(nan inf zero nsub) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf nzero nsub) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(nan inf zero nsub) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %arg)
@@ -162,9 +162,9 @@ define float @ret_vector_reduce_fmin__no_nan_inf_zero_nsub__ieee_daz(<4 x float>
 }
 
 define float @ret_vector_reduce_fmax__no_nan_inf_zero_nsub__ftz_ieee(<4 x float> nofpclass(nan inf zero nsub) %arg) #6 {
-; CHECK-LABEL: define nofpclass(nan inf zero nsub) float @ret_vector_reduce_fmax__no_nan_inf_zero_nsub__ftz_ieee(
+; CHECK-LABEL: define nofpclass(nan inf nzero nsub) float @ret_vector_reduce_fmax__no_nan_inf_zero_nsub__ftz_ieee(
 ; CHECK-SAME: <4 x float> nofpclass(nan inf zero nsub) [[ARG:%.*]]) #[[ATTR7:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero nsub) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(nan inf zero nsub) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf nzero nsub) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(nan inf zero nsub) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %arg)
@@ -172,9 +172,9 @@ define float @ret_vector_reduce_fmax__no_nan_inf_zero_nsub__ftz_ieee(<4 x float>
 }
 
 define float @ret_vector_reduce_fmin__no_nan_inf_zero_nsub__ftz_ieee(<4 x float> nofpclass(nan inf zero nsub) %arg) #6 {
-; CHECK-LABEL: define nofpclass(nan inf zero nsub) float @ret_vector_reduce_fmin__no_nan_inf_zero_nsub__ftz_ieee(
+; CHECK-LABEL: define nofpclass(nan inf nzero nsub) float @ret_vector_reduce_fmin__no_nan_inf_zero_nsub__ftz_ieee(
 ; CHECK-SAME: <4 x float> nofpclass(nan inf zero nsub) [[ARG:%.*]]) #[[ATTR7]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero nsub) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(nan inf zero nsub) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf nzero nsub) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(nan inf zero nsub) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %arg)
@@ -182,9 +182,9 @@ define float @ret_vector_reduce_fmin__no_nan_inf_zero_nsub__ftz_ieee(<4 x float>
 }
 
 define float @ret_vector_reduce_fmax__no_nan_inf_zero_psub__ieee_daz(<4 x float> nofpclass(nan inf zero psub) %arg) #5 {
-; CHECK-LABEL: define nofpclass(nan inf zero psub) float @ret_vector_reduce_fmax__no_nan_inf_zero_psub__ieee_daz(
+; CHECK-LABEL: define nofpclass(nan inf pzero psub) float @ret_vector_reduce_fmax__no_nan_inf_zero_psub__ieee_daz(
 ; CHECK-SAME: <4 x float> nofpclass(nan inf zero psub) [[ARG:%.*]]) #[[ATTR6]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero psub) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(nan inf zero psub) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf pzero psub) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(nan inf zero psub) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %arg)
@@ -192,9 +192,9 @@ define float @ret_vector_reduce_fmax__no_nan_inf_zero_psub__ieee_daz(<4 x float>
 }
 
 define float @ret_vector_reduce_fmin__no_nan_inf_zero_psub__ieee_daz(<4 x float> nofpclass(nan inf zero psub) %arg) #5 {
-; CHECK-LABEL: define nofpclass(nan inf zero psub) float @ret_vector_reduce_fmin__no_nan_inf_zero_psub__ieee_daz(
+; CHECK-LABEL: define nofpclass(nan inf pzero psub) float @ret_vector_reduce_fmin__no_nan_inf_zero_psub__ieee_daz(
 ; CHECK-SAME: <4 x float> nofpclass(nan inf zero psub) [[ARG:%.*]]) #[[ATTR6]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero psub) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(nan inf zero psub) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf pzero psub) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(nan inf zero psub) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %arg)
@@ -202,9 +202,9 @@ define float @ret_vector_reduce_fmin__no_nan_inf_zero_psub__ieee_daz(<4 x float>
 }
 
 define float @ret_vector_reduce_fmax__no_nan_inf_zero_psub__ftz_ieee(<4 x float> nofpclass(nan inf zero psub) %arg) #6 {
-; CHECK-LABEL: define nofpclass(nan inf zero psub) float @ret_vector_reduce_fmax__no_nan_inf_zero_psub__ftz_ieee(
+; CHECK-LABEL: define nofpclass(nan inf pzero psub) float @ret_vector_reduce_fmax__no_nan_inf_zero_psub__ftz_ieee(
 ; CHECK-SAME: <4 x float> nofpclass(nan inf zero psub) [[ARG:%.*]]) #[[ATTR7]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero psub) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(nan inf zero psub) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf pzero psub) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(nan inf zero psub) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %arg)
@@ -212,9 +212,9 @@ define float @ret_vector_reduce_fmax__no_nan_inf_zero_psub__ftz_ieee(<4 x float>
 }
 
 define float @ret_vector_reduce_fmin__no_nan_inf_zero_psub__ftz_ieee(<4 x float> nofpclass(nan inf zero psub) %arg) #6 {
-; CHECK-LABEL: define nofpclass(nan inf zero psub) float @ret_vector_reduce_fmin__no_nan_inf_zero_psub__ftz_ieee(
+; CHECK-LABEL: define nofpclass(nan inf pzero psub) float @ret_vector_reduce_fmin__no_nan_inf_zero_psub__ftz_ieee(
 ; CHECK-SAME: <4 x float> nofpclass(nan inf zero psub) [[ARG:%.*]]) #[[ATTR7]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero psub) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(nan inf zero psub) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf pzero psub) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(nan inf zero psub) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %arg)
@@ -222,9 +222,9 @@ define float @ret_vector_reduce_fmin__no_nan_inf_zero_psub__ftz_ieee(<4 x float>
 }
 
 define float @ret_vector_reduce_fmax__no_qnan_inf(<4 x float> nofpclass(qnan inf) %arg) {
-; CHECK-LABEL: define nofpclass(qnan inf) float @ret_vector_reduce_fmax__no_qnan_inf(
+; CHECK-LABEL: define nofpclass(inf) float @ret_vector_reduce_fmax__no_qnan_inf(
 ; CHECK-SAME: <4 x float> nofpclass(qnan inf) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(qnan inf) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(qnan inf) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.vector.reduce.fmax.v4f32(<4 x float> nofpclass(qnan inf) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %arg)
@@ -232,9 +232,9 @@ define float @ret_vector_reduce_fmax__no_qnan_inf(<4 x float> nofpclass(qnan inf
 }
 
 define float @ret_vector_reduce_fmin__no_qnan_inf(<4 x float> nofpclass(qnan inf) %arg) {
-; CHECK-LABEL: define nofpclass(qnan inf) float @ret_vector_reduce_fmin__no_qnan_inf(
+; CHECK-LABEL: define nofpclass(inf) float @ret_vector_reduce_fmin__no_qnan_inf(
 ; CHECK-SAME: <4 x float> nofpclass(qnan inf) [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(qnan inf) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(qnan inf) [[ARG]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.vector.reduce.fmin.v4f32(<4 x float> nofpclass(qnan inf) [[ARG]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %arg)
