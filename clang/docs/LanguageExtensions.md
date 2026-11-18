@@ -1131,13 +1131,13 @@ int func(double) { return 0; } // warning: failed to resolve '#pragma export' to
 ### #pragma map
 
 Clang supports the map pragma as a way to change the name of a declaration
-within the source to to another name for external symbols.  This pragma is provided
+within the source to another name for external symbols.  This pragma is provided
 mainly for compatibility with the z/OS system headers.  This pragma behaves
 as if the declaration had an asm label.  The syntax for the pragma is:
 
-.. code-block:: c++
-
-  #pragma map ( name , string-literal )
+```c++
+#pragma map ( name , string-literal )
+```
 
 where `name` is the name used in the source code.  This can be an external function or
 variable declared or defined within the translation unit and `string-literal` is a
@@ -1146,7 +1146,7 @@ encoded in IBM-1047.
 
 The pragma is only applied to declarations with external linkage and the declaration needs
 to have "C" linkage in C++.  A warning will be generated if the pragma is applied to a
-declaration that  does not have external linkage or no declaration was found for the
+declaration that does not have external linkage or no declaration was found for the
 name by the end of the translation unit.
 
 The pragma must appear before the first use of the declaration in the pragma.
