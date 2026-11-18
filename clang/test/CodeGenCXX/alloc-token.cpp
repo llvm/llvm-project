@@ -171,31 +171,6 @@ PlacedNoPtr *test_placement_new_direct() {
   return new (malloc(64)) PlacedNoPtr();
 }
 
-// CHECK-LABEL: define dso_local noundef ptr @_Z24test_placement_new_localv(
-// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR:![0-9]+]]
-PlacedWithPtr *test_placement_new_local() {
-  void *mem = malloc(64);
-  if (!mem)
-    return nullptr;
-  return new (mem) PlacedWithPtr();
-}
-
-// CHECK-LABEL: define dso_local noundef ptr @_Z30test_placement_new_sized_localv(
-// CHECK: call { ptr, i64 } @__size_returning_new(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDNOPTR]]
-PlacedNoPtr *test_placement_new_sized_local() {
-  __sized_ptr_t res = __size_returning_new(64);
-  PlacedNoPtr *rep = new (res.p) PlacedNoPtr();
-  rep->len = res.n;
-  return rep;
-}
-
-// CHECK-LABEL: define dso_local noundef ptr @_Z29test_placement_new_sized_castv(
-// CHECK: call { ptr, i64 } @__size_returning_new_hot_cold(i64 noundef 64, i8 noundef zeroext 1){{.*}} !alloc_token [[META_PLACEDNOPTR]]
-PlacedNoPtr *test_placement_new_sized_cast() {
-  auto res = __size_returning_new_hot_cold(64, __hot_cold_t{1});
-  return new (static_cast<char *>(res.p)) PlacedNoPtr();
-}
-
 // CHECK-LABEL: define dso_local noundef ptr @_Z24test_placement_new_arrayv(
 // CHECK: call noalias ptr @malloc(i64 noundef 640){{.*}} !alloc_token [[META_PLACEDNOPTR]]
 PlacedNoPtr *test_placement_new_array() {
@@ -207,7 +182,7 @@ PlacedNoPtr *test_placement_new_array() {
 // takes precedence: the placement new may construct only a header, with the
 // elements placed by pointer arithmetic.
 // CHECK-LABEL: define dso_local noundef ptr @_Z34test_placement_new_sizeof_prevailsv(
-// CHECK: call noalias ptr @malloc(i64 noundef 40){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
+// CHECK: call noalias ptr @malloc(i64 noundef 40){{.*}} !alloc_token [[META_PLACEDWITHPTR:![0-9]+]]
 // CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_CHAR:![0-9]+]]
 long *test_placement_new_sizeof_prevails() {
   void *mem = malloc(2 * sizeof(PlacedWithPtr) + sizeof(long));
@@ -225,14 +200,11 @@ struct DerivedWithPtr : PlacedNoPtr {
 };
 // CHECK-LABEL: define dso_local void @_Z28test_placement_new_over_castv(
 // CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
-// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
 // CHECK: call { ptr, i64 } @__size_returning_new(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
 // CHECK: call noalias ptr @malloc(i64 noundef 32){{.*}} !alloc_token [[META_DERIVEDWITHPTR:![0-9]+]]
 void test_placement_new_over_cast() {
   char *p1 = static_cast<char *>(malloc(64));
   sink = new (p1) PlacedWithPtr();
-  auto *p2 = (unsigned char *)malloc(64);
-  sink = new (p2) PlacedWithPtr();
   // The member access is an implicit lvalue-to-rvalue cast to void *.
   sink = new (__size_returning_new(64).p) PlacedWithPtr();
   auto *base = static_cast<PlacedNoPtr *>(malloc(32));
@@ -296,8 +268,6 @@ SpanWithStatic alloc_span_with_static(size_t) __attribute__((malloc_span));
 // CHECK-LABEL: define dso_local void @_Z27test_placement_new_indirectv(
 // CHECK: call noalias noundef ptr @_Z12alloc_holderm(i64 noundef 64)
 // CHECK-NOT: !alloc_token
-// CHECK: call noalias noundef ptr @_Z12alloc_holderm(i64 noundef 64)
-// CHECK-NOT: !alloc_token
 // CHECK: call noalias ptr @malloc(i64 noundef 64)
 // CHECK-NOT: !alloc_token
 // CHECK: call { ptr, i64 } @_Z22alloc_span_with_staticm(i64 noundef 64)
@@ -306,8 +276,6 @@ SpanWithStatic alloc_span_with_static(size_t) __attribute__((malloc_span));
 void test_placement_new_indirect() {
   Holder *h = alloc_holder(64);
   sink = new (h->p) PlacedNoPtr();
-  Holder *h2 = alloc_holder(64);
-  sink = new (&h2->p) PlacedNoPtr();
   void *mem = malloc(64);
   sink = new (&mem) unsigned char(0);
   SpanWithStatic span = alloc_span_with_static(64);

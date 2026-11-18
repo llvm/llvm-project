@@ -34,21 +34,9 @@ QualType inferPossibleType(
     llvm::function_ref<QualType(const CallExpr *)> PlacementNewType = nullptr);
 
 /// Maps the allocation calls in \p Body whose result is used as placement-new
-/// storage, directly or via a local variable holding it, to the type
-/// constructed (null if different types are constructed into the same
-/// storage). This covers the "allocate raw storage, then construct in place"
-/// idiom:
-///
-///   void *mem = alloc(size);
-///   MyType *obj = new (mem) MyType();  // infers 'MyType' for alloc(size)
-///
-///   auto res = size_returning_alloc(size);
-///   new (res.p) MyType();              // infers 'MyType' (via member .p)
-///
-/// A variable is only used if it is initialized by the allocation call and is
-/// otherwise only ever read, so that its value is known regardless of control
-/// flow; variables that are assigned to, or whose address or reference is
-/// taken, are not used for inference.
+/// storage to the constructed type (null if different types are constructed
+/// into it), e.g. `void *mem = alloc(n); new (mem) T();`. A local variable is
+/// only used if it is initialized by the call and otherwise only read.
 llvm::DenseMap<const CallExpr *, QualType>
 collectPlacementNewTypes(const Stmt *Body);
 

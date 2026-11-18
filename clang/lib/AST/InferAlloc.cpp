@@ -19,7 +19,6 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/IdentifierTable.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -208,15 +207,6 @@ static const Expr *stripFields(const Expr *E) {
   return E;
 }
 
-/// Strips the wrappers a placement argument may have around the expression
-/// that produced the storage: parentheses, casts, and non-static member
-/// accesses of a by-value result. Anything that follows a pointer into
-/// different storage (`->`, `*`) or names a different object (`&`) stops the
-/// walk.
-static const Expr *stripToStorageSource(const Expr *E) {
-  return stripFields(E->IgnoreParenCasts());
-}
-
 /// Finds the allocation call an initializer consists of, looking through
 /// parentheses, casts, temporaries, and the trivial copy or move a class-typed
 /// value may carry.
@@ -236,29 +226,17 @@ static const CallExpr *initializingCall(const Expr *Init) {
 }
 
 namespace {
-/// Records, per allocation call, the type placement-constructed into its
-/// result.
-///
-/// A placement argument that names a local variable is resolved only if the
-/// variable is initialized by the allocation call and is otherwise only ever
-/// read: every other reference to it (or to one of its fields) is consumed by
-/// an lvalue-to-rvalue conversion. Any other use (assignment, compound
-/// assignment, increment, address-of, binding to a reference, a member or
-/// operator call, a by-reference capture) may change its value and
-/// disqualifies it, so the value is known regardless of control flow.
-/// Parameters are not used, as their incoming value is unknown.
+/// Implements collectPlacementNewTypes(). A variable qualifies if every
+/// reference to it other than its initializer is an lvalue-to-rvalue read.
 class PlacementNewCollector : public ConstDynamicRecursiveASTVisitor {
 public:
-  explicit PlacementNewCollector(
-      llvm::DenseMap<const CallExpr *, QualType> &CallTypes)
-      : CallTypes(CallTypes) {}
-
   // Resolved after the traversal: a use that is not a read may follow the
   // placement new and still disqualify the variable.
-  void finish() {
+  llvm::DenseMap<const CallExpr *, QualType> finish() && {
     for (const auto &[VD, T] : Uses)
       if (const CallExpr *CE = Defs.lookup(VD))
         record(CE, T);
+    return std::move(CallTypes);
   }
 
   bool VisitVarDecl(const VarDecl *VD) override {
@@ -287,17 +265,14 @@ public:
   }
 
   bool VisitCXXNewExpr(const CXXNewExpr *NE) override {
-    // Only the reserved non-allocating placement form, new (storage) T, is
-    // guaranteed to construct into its single placement argument. A
-    // class-specific or otherwise user-provided operator new(size_t, void *)
-    // may treat the argument as allocator state and return other storage.
-    // Dependent new-expressions (e.g. in a generic lambda) have no resolved
-    // operator and are skipped.
+    // Only the reserved placement form is known to construct into its
+    // argument; dependent new-expressions have no operator new yet.
     const FunctionDecl *OperatorNew = NE->getOperatorNew();
     if (NE->getNumPlacementArgs() != 1 || !OperatorNew ||
         !OperatorNew->isReservedGlobalPlacementOperator())
       return true;
-    const Expr *Source = stripToStorageSource(NE->getPlacementArg(0));
+    const Expr *Source =
+        stripFields(NE->getPlacementArg(0)->IgnoreParenCasts());
     QualType T = NE->getAllocatedType();
     if (const auto *CE = dyn_cast<CallExpr>(Source))
       record(CE, T);
@@ -316,7 +291,7 @@ private:
       It->second = QualType();
   }
 
-  llvm::DenseMap<const CallExpr *, QualType> &CallTypes;
+  llvm::DenseMap<const CallExpr *, QualType> CallTypes;
   // Variable -> the allocation call initializing it; erased on any use that
   // is not a read.
   llvm::DenseMap<const VarDecl *, const CallExpr *> Defs;
@@ -327,13 +302,10 @@ private:
 
 llvm::DenseMap<const CallExpr *, QualType>
 infer_alloc::collectPlacementNewTypes(const Stmt *Body) {
-  llvm::DenseMap<const CallExpr *, QualType> CallTypes;
-  if (Body) {
-    PlacementNewCollector Collector(CallTypes);
+  PlacementNewCollector Collector;
+  if (Body)
     Collector.TraverseStmt(Body);
-    Collector.finish();
-  }
-  return CallTypes;
+  return std::move(Collector).finish();
 }
 
 std::optional<llvm::AllocTokenMetadata>
