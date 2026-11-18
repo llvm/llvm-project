@@ -736,6 +736,39 @@ add_libc_test(
 )
 
 add_libc_test(
+  getdelim_test
+  SUITE
+    libc-stdio-tests
+  SRCS
+    getdelim_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.func.free
+    libc.hdr.func.malloc
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
+    libc.src.__support.CPP.scope
+    libc.src.__support.CPP.string_view
+    libc.src.__support.libc_errno
+    libc.src.stdio.clearerr
+    libc.src.stdio.fclose
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.fmemopen
+    libc.src.stdio.fopen
+    libc.src.stdio.fseek
+    libc.src.stdio.fwrite
+    libc.src.stdio.getdelim
+    libc.src.stdio.remove
+    libc.src.stdio.ungetc
+    libc.src.wchar.fwide
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   getline_test
   SUITE
     libc-stdio-tests

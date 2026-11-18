@@ -646,6 +646,25 @@ if(TARGET libc.src.__support.File.file)
 endif()
 
 add_generic_entrypoint_object(
+  getdelim
+  SRCS
+    getdelim.cpp
+  HDRS
+    ../getdelim.h
+  DEPENDS
+    .getdelim_impl
+    libc.hdr.types.FILE
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_generic_entrypoint_object(
   getline
   SRCS
     getline.cpp
