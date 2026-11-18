@@ -35,6 +35,18 @@ public:
 
 ModulePass *createSPIRVPrepareFunctionsPass(const SPIRVTargetMachine &TM);
 
+class SPIRVRemoveAggregateTypesPass
+    : public RequiredPassInfoMixin<SPIRVRemoveAggregateTypesPass> {
+  const SPIRVTargetMachine &TM;
+
+public:
+  explicit SPIRVRemoveAggregateTypesPass(const SPIRVTargetMachine &TM)
+      : TM(TM) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+ModulePass *createSPIRVRemoveAggregateTypesPass(const SPIRVTargetMachine &TM);
+
 class SPIRVStructurizerPass
     : public RequiredPassInfoMixin<SPIRVStructurizerPass> {
 public:
@@ -217,6 +229,7 @@ void initializeSPIRVLegalizePointerCastLegacyPass(PassRegistry &);
 void initializeSPIRVRegularizerLegacyPass(PassRegistry &);
 void initializeSPIRVMergeRegionExitTargetsLegacyPass(PassRegistry &);
 void initializeSPIRVPrepareFunctionsLegacyPass(PassRegistry &);
+void initializeSPIRVRemoveAggregateTypesLegacyPass(PassRegistry &);
 void initializeSPIRVPrepareGlobalsLegacyPass(PassRegistry &);
 void initializeSPIRVLegalizeResourceBindingLegacyPass(PassRegistry &);
 void initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PassRegistry &);
