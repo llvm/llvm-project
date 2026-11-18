@@ -912,7 +912,9 @@ static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
     // Follow through FOR phi chains to find the actual Previous recipe.
     // Fixed-order recurrences do not contain cycles, so this loop is
     // guaranteed to terminate.
+#ifndef NDEBUG
     SmallPtrSet<VPFirstOrderRecurrencePHIRecipe *, 4> SeenPhis;
+#endif
     VPRecipeBase *Previous = FOR->getBackedgeValue()->getDefiningRecipe();
     while (auto *PrevPhi =
                dyn_cast_or_null<VPFirstOrderRecurrencePHIRecipe>(Previous)) {
@@ -1245,6 +1247,13 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
         UserR->moveAfter(RedRecipe);
       }
       ToDelete.push_back(CurrentLink);
+      // The compare of a min/max select is dead once the select is replaced,
+      // and may use RedRecipe before its definition.
+      if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
+        VPValue *Cmp = CurrentLink->getOperand(0);
+        assert(Cmp->hasOneUse() && "compare must only be used by the select");
+        ToDelete.push_back(Cmp->getDefiningRecipe());
+      }
       PreviousLink = RedRecipe;
     }
   }
@@ -1622,6 +1631,14 @@ static VPValue *createRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
   for (const auto &[A, B] : Checks) {
     auto [AStart, AEnd, AStride] = GroupToBounds[A];
     auto [BStart, BEnd, BStride] = GroupToBounds[B];
+    // Compare B's bounds in A's address space, see addRuntimeChecks.
+    Type *PtrTy = AStart->getScalarType();
+    if (BStart->getScalarType() != PtrTy) {
+      BStart = Builder.createScalarCast(Instruction::AddrSpaceCast, BStart,
+                                        PtrTy, DL);
+      BEnd =
+          Builder.createScalarCast(Instruction::AddrSpaceCast, BEnd, PtrTy, DL);
+    }
     VPValue *Bound0 =
         Builder.createICmp(CmpInst::ICMP_ULT, AStart, BEnd, DL, "bound0");
     VPValue *Bound1 =
@@ -2019,9 +2036,6 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
 }
 
 bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
-  if (Plan.hasScalarVFOnly())
-    return false;
-
   // We want to create the following nodes:
   // vector.body:
   //   ...new WidenPHI recipe introduced to keep the mask value for the latest

@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestDialect.h"
-#include "TestOps.h"
+#include "TestOpsCore.h"
 #include "TestOpsSyntax.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

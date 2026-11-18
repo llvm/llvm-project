@@ -42,7 +42,11 @@ void deleteFunction(Function &F) {
 }
 
 static std::string getNewName(Module &M, const GlobalValue &GV) {
-  return GV.getName().str() + ".__uniq" + getUniqueModuleId(&M);
+  std::string Name = GV.getName().str() + ".__uniq";
+  std::string ModuleId = getUniqueModuleId(&M);
+  if (!ModuleId.empty())
+    Name += "." + ModuleId;
+  return Name;
 }
 
 /// Create a copy of the thinlto import, mark it local, and redirect direct

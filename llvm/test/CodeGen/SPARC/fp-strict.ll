@@ -574,17 +574,10 @@ define double @uitofp_i32_f64(i32 %a) nounwind strictfp {
 ; V9-LABEL: uitofp_i32_f64:
 ; V9:       ! %bb.0:
 ; V9-NEXT:    add %sp, -144, %sp
-; V9-NEXT:    add %sp, 2183, %o1
-; V9-NEXT:    or %o1, 4, %o1
-; V9-NEXT:    st %o0, [%o1]
-; V9-NEXT:    sethi 1100800, %o0
-; V9-NEXT:    st %o0, [%sp+2183]
+; V9-NEXT:    srl %o0, 0, %o0
+; V9-NEXT:    stx %o0, [%sp+2183]
 ; V9-NEXT:    ldd [%sp+2183], %f0
-; V9-NEXT:    sethi %h44(.LCPI21_0), %o0
-; V9-NEXT:    add %o0, %m44(.LCPI21_0), %o0
-; V9-NEXT:    sllx %o0, 12, %o0
-; V9-NEXT:    ldd [%o0+%l44(.LCPI21_0)], %f2
-; V9-NEXT:    fsubd %f0, %f2, %f0
+; V9-NEXT:    fxtod %f0, %f0
 ; V9-NEXT:    retl
 ; V9-NEXT:    add %sp, 144, %sp
   %r = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
@@ -777,33 +770,18 @@ define void @fcmps_branch(double %a, double %b) nounwind strictfp {
 ; V8-NEXT:    nop
 ; V8-NEXT:    fbule .LBB27_2
 ; V8-NEXT:    nop
-; V8-NEXT:  ! %bb.1: ! %entry
-; V8-NEXT:    mov %g0, %i0
-; V8-NEXT:    cmp %i0, 0
-; V8-NEXT:    be .LBB27_3
-; V8-NEXT:    nop
-; V8-NEXT:    ba .LBB27_4
-; V8-NEXT:    nop
-; V8-NEXT:  .LBB27_2:
-; V8-NEXT:    mov 1, %i0
-; V8-NEXT:    cmp %i0, 0
-; V8-NEXT:    bne .LBB27_4
-; V8-NEXT:    nop
-; V8-NEXT:  .LBB27_3: ! %if.then
+; V8-NEXT:  ! %bb.1: ! %if.then
 ; V8-NEXT:    call foo
 ; V8-NEXT:    nop
-; V8-NEXT:  .LBB27_4: ! %if.end
+; V8-NEXT:  .LBB27_2: ! %if.end
 ; V8-NEXT:    ret
 ; V8-NEXT:    restore
 ;
 ; V9-LABEL: fcmps_branch:
 ; V9:       ! %bb.0: ! %entry
 ; V9-NEXT:    save %sp, -176, %sp
-; V9-NEXT:    mov %g0, %i0
 ; V9-NEXT:    fcmped %fcc0, %f0, %f2
-; V9-NEXT:    movule %fcc0, 1, %i0
-; V9-NEXT:    cmp %i0, 0
-; V9-NEXT:    bne %icc, .LBB27_2
+; V9-NEXT:    fbule %fcc0, .LBB27_2
 ; V9-NEXT:    nop
 ; V9-NEXT:  ! %bb.1: ! %if.then
 ; V9-NEXT:    call foo
@@ -813,6 +791,114 @@ define void @fcmps_branch(double %a, double %b) nounwind strictfp {
 ; V9-NEXT:    restore
 entry:
   %c = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"ogt", metadata !"fpexcept.strict") strictfp
+  br i1 %c, label %if.then, label %if.end
+
+if.then:
+  call void @foo() strictfp
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+define void @fcmp_branch_f32(float %a, float %b) nounwind strictfp {
+; V8-LABEL: fcmp_branch_f32:
+; V8:       ! %bb.0: ! %entry
+; V8-NEXT:    save %sp, -104, %sp
+; V8-NEXT:    st %i1, [%fp+-4]
+; V8-NEXT:    st %i0, [%fp+-8]
+; V8-NEXT:    ld [%fp+-4], %f0
+; V8-NEXT:    ld [%fp+-8], %f1
+; V8-NEXT:    fcmps %f1, %f0
+; V8-NEXT:    nop
+; V8-NEXT:    fbne .LBB28_2
+; V8-NEXT:    nop
+; V8-NEXT:  ! %bb.1: ! %if.then
+; V8-NEXT:    call foo
+; V8-NEXT:    nop
+; V8-NEXT:  .LBB28_2: ! %if.end
+; V8-NEXT:    ret
+; V8-NEXT:    restore
+;
+; V9-LABEL: fcmp_branch_f32:
+; V9:       ! %bb.0: ! %entry
+; V9-NEXT:    save %sp, -176, %sp
+; V9-NEXT:    fcmps %fcc0, %f1, %f3
+; V9-NEXT:    fbne %fcc0, .LBB28_2
+; V9-NEXT:    nop
+; V9-NEXT:  ! %bb.1: ! %if.then
+; V9-NEXT:    call foo
+; V9-NEXT:    nop
+; V9-NEXT:  .LBB28_2: ! %if.end
+; V9-NEXT:    ret
+; V9-NEXT:    restore
+entry:
+  %c = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"oeq", metadata !"fpexcept.strict") strictfp
+  br i1 %c, label %if.then, label %if.end
+
+if.then:
+  call void @foo() strictfp
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+;; The call is ordered after the compare, so the compare cannot be glued to
+;; the branch and its result has to be materialized.
+define void @fcmps_call_branch(double %a, double %b) nounwind strictfp {
+; V8-LABEL: fcmps_call_branch:
+; V8:       ! %bb.0: ! %entry
+; V8-NEXT:    save %sp, -112, %sp
+; V8-NEXT:    ! kill: def $i3 killed $i3 killed $i2_i3 def $i2_i3
+; V8-NEXT:    ! kill: def $i1 killed $i1 killed $i0_i1 def $i0_i1
+; V8-NEXT:    ! kill: def $i2 killed $i2 killed $i2_i3 def $i2_i3
+; V8-NEXT:    std %i2, [%fp+-16]
+; V8-NEXT:    ! kill: def $i0 killed $i0 killed $i0_i1 def $i0_i1
+; V8-NEXT:    std %i0, [%fp+-8]
+; V8-NEXT:    ldd [%fp+-16], %f0
+; V8-NEXT:    ldd [%fp+-8], %f2
+; V8-NEXT:    fcmped %f2, %f0
+; V8-NEXT:    nop
+; V8-NEXT:    fbuge .LBB29_2
+; V8-NEXT:    nop
+; V8-NEXT:  ! %bb.1: ! %entry
+; V8-NEXT:    ba .LBB29_3
+; V8-NEXT:    mov %g0, %i0
+; V8-NEXT:  .LBB29_2:
+; V8-NEXT:    mov 1, %i0
+; V8-NEXT:  .LBB29_3: ! %entry
+; V8-NEXT:    call foo
+; V8-NEXT:    nop
+; V8-NEXT:    cmp %i0, 0
+; V8-NEXT:    bne .LBB29_5
+; V8-NEXT:    nop
+; V8-NEXT:  ! %bb.4: ! %if.then
+; V8-NEXT:    call foo
+; V8-NEXT:    nop
+; V8-NEXT:  .LBB29_5: ! %if.end
+; V8-NEXT:    ret
+; V8-NEXT:    restore
+;
+; V9-LABEL: fcmps_call_branch:
+; V9:       ! %bb.0: ! %entry
+; V9-NEXT:    save %sp, -176, %sp
+; V9-NEXT:    mov %g0, %i0
+; V9-NEXT:    fcmped %fcc0, %f0, %f2
+; V9-NEXT:    call foo
+; V9-NEXT:    movuge %fcc0, 1, %i0
+; V9-NEXT:    cmp %i0, 0
+; V9-NEXT:    bne %icc, .LBB29_2
+; V9-NEXT:    nop
+; V9-NEXT:  ! %bb.1: ! %if.then
+; V9-NEXT:    call foo
+; V9-NEXT:    nop
+; V9-NEXT:  .LBB29_2: ! %if.end
+; V9-NEXT:    ret
+; V9-NEXT:    restore
+entry:
+  %c = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"olt", metadata !"fpexcept.strict") strictfp
+  call void @foo() strictfp
   br i1 %c, label %if.then, label %if.end
 
 if.then:
@@ -893,6 +979,38 @@ define double @fdiv_between_calls(double %a, double %b) nounwind strictfp {
   %r = call double @llvm.experimental.constrained.fdiv.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   call void @foo() strictfp
   ret double %r
+}
+
+;; uitofp i32 must not be expanded with the 2^52 bias subtraction on 64-bit,
+;; since it gives -0.0 for an input of 0 when rounding toward negative infinity.
+define float @uitofp_i32_f32(i32 %a) nounwind strictfp {
+; V8-LABEL: uitofp_i32_f32:
+; V8:       ! %bb.0:
+; V8-NEXT:    add %sp, -104, %sp
+; V8-NEXT:    add %sp, 96, %o1
+; V8-NEXT:    or %o1, 4, %o1
+; V8-NEXT:    st %o0, [%o1]
+; V8-NEXT:    sethi 1100800, %o0
+; V8-NEXT:    st %o0, [%sp+96]
+; V8-NEXT:    ldd [%sp+96], %f0
+; V8-NEXT:    sethi %hi(.LCPI32_0), %o0
+; V8-NEXT:    ldd [%o0+%lo(.LCPI32_0)], %f2
+; V8-NEXT:    fsubd %f0, %f2, %f0
+; V8-NEXT:    fdtos %f0, %f0
+; V8-NEXT:    retl
+; V8-NEXT:    add %sp, 104, %sp
+;
+; V9-LABEL: uitofp_i32_f32:
+; V9:       ! %bb.0:
+; V9-NEXT:    add %sp, -144, %sp
+; V9-NEXT:    srl %o0, 0, %o0
+; V9-NEXT:    stx %o0, [%sp+2183]
+; V9-NEXT:    ldd [%sp+2183], %f0
+; V9-NEXT:    fxtos %f0, %f0
+; V9-NEXT:    retl
+; V9-NEXT:    add %sp, 144, %sp
+  %r = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  ret float %r
 }
 
 declare void @foo()

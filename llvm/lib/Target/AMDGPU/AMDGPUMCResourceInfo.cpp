@@ -371,7 +371,10 @@ void MCResourceInfo::gatherResourceInfo(
     for (const Function *Callee : FRI.Callees) {
       if (!Seen.insert(Callee).second)
         continue;
-      if (!Callee->isDeclaration()) {
+
+      // Chain callees use the same stack space. Exclude them.
+      if (!Callee->isDeclaration() &&
+          !AMDGPU::isChainCC(Callee->getCallingConv())) {
         MCSymbol *CalleeFnSym = TM.getSymbol(&Callee->getFunction());
         MCSymbol *CalleeValSym =
             getSymbol(CalleeFnSym->getName(), RIK_PrivateSegSize, OutContext);

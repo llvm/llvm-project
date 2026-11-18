@@ -38,6 +38,9 @@ llvm_tablegen(R600GenMCCodeEmitter.inc -gen-emitter)
 llvm_tablegen(R600GenRegisterInfo.inc -gen-register-info)
 llvm_tablegen(R600GenSubtargetInfo.inc -gen-subtarget)
 
+set(LLVM_TARGET_DEFINITIONS AMDGPUOptions.td)
+llvm_tablegen(AMDGPUOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(AMDGPUCommonTableGen)
 
 add_llvm_target(AMDGPUCodeGen
@@ -83,6 +86,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPULowerExecSync.cpp
   AMDGPUSwLowerLDS.cpp
   AMDGPUMachineFunctionInfo.cpp
+  AMDGPUMachineInstrs.cpp
   AMDGPUMachineModuleInfo.cpp
   AMDGPUMacroFusion.cpp
   AMDGPUMCInstLower.cpp
@@ -213,6 +217,7 @@ add_llvm_target(AMDGPUCodeGen
   MC
   MIRParser
   ObjCARC
+  Option
   Passes
   Scalar
   SelectionDAG
