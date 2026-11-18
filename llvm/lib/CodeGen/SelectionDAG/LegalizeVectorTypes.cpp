@@ -22,6 +22,7 @@
 #include "LegalizeTypes.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/IR/DataLayout.h"
@@ -4279,8 +4280,26 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_SHUFFLE_VAR(SDNode *N,
   // The only possibility for an illegal operand is the mask, since result type
   // legalization would have handled this node already otherwise.
   assert(OpNo == 1 && "Illegal operand must be mask");
-  // TODO: Legalize the mask type instead once a target lowers the node.
-  return TLI.expandVECTOR_SHUFFLE_VAR(N, DAG);
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue Mask = N->getOperand(1);
+  EVT MaskVT = Mask.getValueType();
+
+  // Truncate the mask to the narrowest width that holds every in-range index.
+  ConstantRange VScaleRange =
+      getVScaleRange(&DAG.getMachineFunction().getFunction(), 64);
+  unsigned IdxBits = std::max<unsigned>(
+      VT.getScalarSizeInBits(),
+      TLI.getBitWidthForCttzElements(MaskVT, VT.getVectorElementCount(),
+                                     /*ZeroIsPoison=*/true, &VScaleRange));
+  if (IdxBits >= MaskVT.getScalarSizeInBits() ||
+      !TLI.isOperationLegalOrCustom(ISD::VECTOR_SHUFFLE_VAR, VT))
+    return TLI.expandVECTOR_SHUFFLE_VAR(N, DAG);
+
+  EVT NewMaskVT = MaskVT.changeVectorElementType(
+      *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), IdxBits));
+  return DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, DL, VT, N->getOperand(0),
+                     DAG.getNode(ISD::TRUNCATE, DL, NewMaskVT, Mask));
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VECREDUCE(SDNode *N, unsigned OpNo) {
