@@ -1118,3 +1118,46 @@ func.func @index_switch_load_into_store(%idx: index) -> i32 {
   %load = memref.load %alloca[] : memref<i32>
   return %load : i32
 }
+
+// -----
+
+// Check promotion through an if whose block has no other slot access, with
+// the reaching definition also forwarded by a block that never touches it.
+
+func.func private @use(i32)
+
+// CHECK-LABEL: func.func @if_store_in_cfg_block
+// CHECK-SAME: (%[[COND:.*]]: i1, %[[COND2:.*]]: i1)
+// CHECK-DAG: %[[C5:.*]] = arith.constant 5 : i32
+// CHECK-DAG: %[[C7:.*]] = arith.constant 7 : i32
+// CHECK: cf.cond_br %[[COND2]], ^[[BB1:.*]], ^[[BB2:.*]]
+// CHECK: ^[[BB1]]:
+// CHECK: %[[IF:.*]] = scf.if %[[COND]] -> (i32)
+// CHECK:   scf.yield %[[C7]] : i32
+// CHECK: } else {
+// CHECK:   scf.yield %[[C5]] : i32
+// CHECK: }
+// CHECK: cf.br ^[[BB3:.*]](%[[IF]] : i32)
+// CHECK: ^[[BB2]]:
+// CHECK: cf.br ^[[BB3]](%[[C5]] : i32)
+// CHECK: ^[[BB3]](%[[MERGED:.*]]: i32):
+// CHECK: call @use(%[[MERGED]])
+func.func @if_store_in_cfg_block(%cond: i1, %cond2: i1) {
+  %c5 = arith.constant 5 : i32
+  %c7 = arith.constant 7 : i32
+  %alloca = memref.alloca() : memref<i32>
+  memref.store %c5, %alloca[] : memref<i32>
+  cf.cond_br %cond2, ^bb1, ^bb2
+^bb1:
+  scf.if %cond {
+    memref.store %c7, %alloca[] : memref<i32>
+    scf.yield
+  }
+  cf.br ^bb3
+^bb2:
+  cf.br ^bb3
+^bb3:
+  %load = memref.load %alloca[] : memref<i32>
+  func.call @use(%load) : (i32) -> ()
+  return
+}

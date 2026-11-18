@@ -110,7 +110,9 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
       (ins "const ::mlir::MemorySlot &":$slot)
     >,
     InterfaceMethod<[{
-        Gets whether this operation stores to the specified slot.
+        Gets whether this operation stores to the specified slot. Must only
+        return true if this operation or an operation nested in it holds a
+        blocking use of the slot.
 
         No IR mutation is allowed in this method.
       }],
@@ -410,8 +412,8 @@ def PromotableRegionOpInterface
 
         `setupPromotion` is allowed to mutate
         the operation in place, including its nested regions, but cannot
-        delete existing operations or modify successor-bearing terminators.
-        Other mutations are not allowed.
+        delete existing operations, move them to other blocks, or modify
+        successor-bearing terminators. Other mutations are not allowed.
 
         The `hasValueStores` flag indicates whether the regions contain
         `store`-like operations that write to the memory slot. This field can be

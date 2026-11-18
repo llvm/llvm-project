@@ -254,7 +254,8 @@ private:
   /// The `reachingDef` may be a null value. In that case, a lazily-created
   /// default value will be used.
   ///
-  /// This member function must only be called at most once per block.
+  /// This member function must only be called at most once per block. Blocks
+  /// outside `blocksToScan` only forward `reachingDef`.
   Value promoteInBlock(Block *block, Value reachingDef);
 
   /// Computes the reaching definition for all the operations that require
@@ -302,6 +303,10 @@ private:
 
   /// Contains the reaching definition at the end of the blocks visited so far.
   DenseMap<Block *, Value> reachingAtBlockEnd;
+
+  /// Blocks that may access the slot or hold a region to promote. Other blocks
+  /// only forward the reaching definition.
+  SmallPtrSet<Block *, 16> blocksToScan;
 
   /// Regions visited by `promoteInRegion`, recorded in DFS post-order.
   /// Inner regions appear before their enclosing regions.
@@ -602,6 +607,11 @@ MemorySlotPromotionAnalyzer::computeInfo() {
 }
 
 Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
+  if (!blocksToScan.contains(block)) {
+    reachingAtBlockEnd[block] = reachingDef;
+    return reachingDef;
+  }
+
   SmallVector<Operation *> blockOps;
   for (Operation &op : block->getOperations())
     blockOps.push_back(&op);
@@ -1021,6 +1031,14 @@ void MemorySlotPromoter::removeUnusedItems() {
 
 std::optional<PromotableAllocationOpInterface>
 MemorySlotPromoter::promoteSlot() {
+  // Collect the blocks `promoteInBlock` must scan.
+  for (BlockingUsesMap &blockingUses :
+       llvm::make_second_range(info.userToBlockingUses))
+    for (Operation *user : llvm::make_first_range(blockingUses))
+      blocksToScan.insert(user->getBlock());
+  for (Region *region : llvm::make_first_range(info.regionsToPromote))
+    blocksToScan.insert(region->getParentOp()->getBlock());
+
   // Step 1: perform the promotion recursively through nested regions. The
   // reaching definition starts with a null value that will be replaced by a
   // lazily-created default value if the value must be passed to a promotion
