@@ -61272,6 +61272,8 @@ static SDValue combineX86CloadCstore(SDNode *N, SelectionDAG &DAG) {
 static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
+
   EVT VT = N->getValueType(0);
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
@@ -61283,20 +61285,14 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   };
 
   // sub(0, and(X, 1)) -> ashr(shl(X, SizeInBits - 1), SizeInBits - 1)
-  if (VT.isVector()) {
-    if (VT.getVectorElementType() == MVT::i16 ||
-        VT.getVectorElementType() == MVT::i32 ||
-        (VT.getVectorElementType() == MVT::i64 && Subtarget.hasAVX512())) {
-      APInt C;
-      if (Op1.getOpcode() == ISD::AND && Op1->hasOneUse() &&
-          ISD::isBuildVectorAllZeros(Op0) &&
-          ISD::isConstantSplatVector(Op1.getOperand(1), C) && C.isOne()) {
-        SDValue VecConst = DAG.getConstant(
-            VT.getVectorElementType().getSizeInBits() - 1, DL, VT);
-        SDValue Shl =
-            DAG.getNode(ISD::SHL, DL, VT, Op1.getOperand(0), VecConst);
-        return DAG.getNode(ISD::SRA, DL, VT, Shl, VecConst);
-      }
+  if (VT.isVectorOf(MVT::i16) || VT.isVectorOf(MVT::i32) ||
+      (VT.isVectorOf(MVT::i64))) {
+    SDValue X;
+    if (sd_match(N, m_Sub(m_Zero(), m_OneUse(m_And(m_Value(X), m_One()))))) {
+      SDValue VecConst =
+          DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
+      SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, X, VecConst);
+      return DAG.getNode(ISD::SRA, DL, VT, Shl, VecConst);
     }
   }
 
