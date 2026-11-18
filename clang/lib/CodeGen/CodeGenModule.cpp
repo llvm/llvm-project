@@ -415,14 +415,14 @@ static void initializeX86ABICompatInfo(llvm::abi::X86ABICompatInfo &CompatInfo,
   CompatInfo.ClassifyUnnamedBitFields =
       Compat > LangOptions::ClangABI::Ver23 && !T.isPS();
   if (T.isOSDarwin() || T.isPS()) {
-    CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang;
+    CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang23;
   } else {
     switch (CGOpts.getSmallIntABICompat()) {
     case CodeGenOptions::SmallIntABICompatKind::Platform:
       CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Platform;
       break;
-    case CodeGenOptions::SmallIntABICompatKind::Clang:
-      CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang;
+    case CodeGenOptions::SmallIntABICompatKind::Clang23:
+      CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang23;
       break;
     case CodeGenOptions::SmallIntABICompatKind::Both:
       CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Both;

@@ -184,7 +184,7 @@ features cannot lower the translation-unit ABI level;
   * `-msmall-int-abi-compat=platform`: Compatible with platform ABI (and thus
     other compilers such as GCC), but not with old Clang-built objects. Does
     not extend in the caller and does not assume extension in the callee.
-  * `-msmall-int-abi-compat=clang`: Compatible with old Clang objects, but
+  * `-msmall-int-abi-compat=clang-23`: Compatible with old Clang objects, but
     potentially not the platform ABI. Extends in the caller and assumes
     extension in the callee.
   * `-msmall-int-abi-compat=both` (default): Compatible with both the platform
