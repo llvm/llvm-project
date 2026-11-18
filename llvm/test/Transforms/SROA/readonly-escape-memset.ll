@@ -433,10 +433,15 @@ define i32 @memset_variable_value_two_fields(i8 %v) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[V]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = shl i32 [[TMP6]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = or i32 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shl i32 [[TMP8]], 16
+; CHECK-NEXT:    [[TMP10:%.*]] = or i32 [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[A]], i8 [[V]], i64 8, i1 false)
 ; CHECK-NEXT:    call void @callee(ptr [[A]])
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[A]], i64 4
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP5]], [[TMP5]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP5]], [[TMP10]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = alloca { i32, i32 }, align 4
@@ -449,8 +454,8 @@ define i32 @memset_variable_value_two_fields(i8 %v) {
   ret i32 %r
 }
 
-; The splat built for the first field, which a store overwrites, is still used
-; by the second field.
+; A store overwrites the first field before it is read, so only the second
+; field uses the memset's value.
 define i32 @memset_variable_value_first_field_overwritten(i8 %v, i32 %x) {
 ; CHECK-LABEL: define i32 @memset_variable_value_first_field_overwritten(
 ; CHECK-SAME: i8 [[V:%.*]], i32 [[X:%.*]]) {

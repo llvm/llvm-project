@@ -6337,32 +6337,22 @@ static bool addMemSetsDefiningRange(ArrayRef<const Slice *> MemSets,
   return true;
 }
 
-/// The value of a memset for each type it is loaded as. A byte-sized value can
-/// be the memset's own operand, which may be a load that gets promoted, so the
-/// values are held by handles that follow its replacement.
-using MemSetValueMap =
-    SmallMapVector<std::pair<MemSetInst *, Type *>, WeakTrackingVH, 4>;
-
-/// A basic LoadAndStorePromoter that only removes the loads. Besides loads and
-/// stores, the promoted instructions can include the alloca and memsets that
-/// fully define the promoted range.
+/// A basic LoadAndStorePromoter that does not remove store nodes.
 class BasicLoadAndStorePromoter : public LoadAndStorePromoter {
 public:
   BasicLoadAndStorePromoter(ArrayRef<const Instruction *> Insts, SSAUpdater &S,
-                            Type *ValueTy, const MemSetValueMap &MemSetValues)
-      : LoadAndStorePromoter(Insts, S), ValueTy(ValueTy),
-        MemSetValues(MemSetValues) {}
-  bool shouldDelete(Instruction *I) const override { return isa<LoadInst>(I); }
+                            Type *ZeroType)
+      : LoadAndStorePromoter(Insts, S), ZeroType(ZeroType) {}
+  bool shouldDelete(Instruction *I) const override {
+    return !isa<StoreInst>(I) && !isa<AllocaInst>(I);
+  }
 
-  Value *getValueToUseForDef(Instruction *I) const override {
-    if (auto *MSI = dyn_cast<MemSetInst>(I))
-      return MemSetValues.lookup({MSI, ValueTy});
-    return UndefValue::get(ValueTy);
+  Value *getValueToUseForAlloca(Instruction *I) const override {
+    return UndefValue::get(ZeroType);
   }
 
 private:
-  Type *ValueTy;
-  const MemSetValueMap &MemSetValues;
+  Type *ZeroType;
 };
 
 bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
@@ -6376,8 +6366,6 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
   LLVM_DEBUG(dbgs() << "Attempting to propagate values on " << AI << "\n");
   const DataLayout &DL = AI.getDataLayout();
   SmallVector<const Slice *, 4> MemSets;
-  // The instructions of each range to promote, and the range's type.
-  SmallVector<std::pair<SmallVector<Instruction *>, Type *>> Ranges;
   bool AllSameAndValid = true;
   Type *PartitionType = nullptr;
   SmallVector<Instruction *> Insts;
@@ -6398,8 +6386,11 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
     if (AllSameAndValid && !Insts.empty()) {
       LLVM_DEBUG(dbgs() << "Propagate values on slice [" << BeginOffset << ", "
                         << EndOffset << ")\n");
+      SmallVector<PHINode *, 4> NewPHIs;
+      SSAUpdater SSA(&NewPHIs);
       Insts.push_back(&AI);
-      Ranges.emplace_back(std::move(Insts), PartitionType);
+      BasicLoadAndStorePromoter Promoter(Insts, SSA, PartitionType);
+      Promoter.run(Insts);
     }
     AllSameAndValid = true;
     PartitionType = nullptr;
@@ -6455,34 +6446,6 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
   }
 
   Flush();
-
-  // Build the memset values before promoting any range: inserting a splat
-  // invalidates the instruction order of its block, which each promotion sorts
-  // by.
-  MemSetValueMap MemSetValues;
-  for (auto &[RangeInsts, Ty] : Ranges) {
-    for (Instruction *I : RangeInsts) {
-      auto *MSI = dyn_cast<MemSetInst>(I);
-      if (!MSI)
-        continue;
-      WeakTrackingVH &V = MemSetValues[{MSI, Ty}];
-      if (!V)
-        V = VNCoercion::getMemInstValueForLoad(MSI, 0, Ty, MSI, DL);
-    }
-  }
-  for (auto &[RangeInsts, Ty] : Ranges) {
-    SmallVector<PHINode *, 4> NewPHIs;
-    SSAUpdater SSA(&NewPHIs);
-    BasicLoadAndStorePromoter Promoter(RangeInsts, SSA, Ty, MemSetValues);
-    Promoter.run(RangeInsts);
-  }
-  // A memset value can serve several ranges, so only delete the unused ones
-  // once all ranges are done.
-  for (auto &[Key, V] : MemSetValues) {
-    auto *I = dyn_cast_or_null<Instruction>(V);
-    if (I && isInstructionTriviallyDead(I))
-      DeadInsts.push_back(I);
-  }
   return true;
 }
 
