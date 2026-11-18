@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ToolInterface.h"
 #include <functional>
 #include <memory>
 #include <optional>
@@ -86,9 +87,13 @@ public:
 /// \param Context - Context which will be used for the parsed LLVM IR module.
 /// \param ProcessIRFunction - function to run on every IR function or stub
 /// loaded from the MIR file.
+/// \param StdinSource - Read from a different source instead of STDIN, for
+/// in-process tool execution. This is provided to the tool's run function, for
+/// example by the daemon driver.
 LLVM_ABI std::unique_ptr<MIRParser> createMIRParserFromFile(
     StringRef Filename, SMDiagnostic &Error, LLVMContext &Context,
-    std::function<void(Function &)> ProcessIRFunction = nullptr);
+    std::function<void(Function &)> ProcessIRFunction = nullptr,
+    const StandardInputSource &StdinSource = StandardInputSource::fromStdin());
 
 /// This function is another interface to the MIR serialization format parser.
 ///
