@@ -3440,6 +3440,8 @@ struct StmtFunctionStmt {
 // !DIR$ INLINEALWAYS
 // !DIR$ IVDEP
 // !DIR$ SIMD
+// !DIR$ ALIGN(n) [::] name-list
+// !DIR$ ATTRIBUTES ALIGN : n [::] name-list
 // !DIR$ <anything else>
 struct CompilerDirective {
   UNION_CLASS_BOILERPLATE(CompilerDirective);
@@ -3453,6 +3455,12 @@ struct CompilerDirective {
   struct AssumeAligned {
     TUPLE_CLASS_BOILERPLATE(AssumeAligned);
     std::tuple<common::Indirection<Designator>, uint64_t> t;
+  };
+  // !DIR$ ALIGN(n) [::] name-list, also spelled
+  // !DIR$ ATTRIBUTES ALIGN : n [::] name-list
+  struct Align {
+    TUPLE_CLASS_BOILERPLATE(Align);
+    std::tuple<std::uint64_t, std::list<Name>> t;
   };
   EMPTY_CLASS(VectorAlways);
   struct VectorLength {
@@ -3491,7 +3499,7 @@ struct CompilerDirective {
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
       VectorAlways, VectorLength, std::list<NameValue>, Unroll, UnrollAndJam,
       Unrecognized, NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline,
-      NoInline, InlineAlways, Prefetch, IVDep, Simd>
+      NoInline, InlineAlways, Prefetch, IVDep, Simd, Align>
       u;
 };
 

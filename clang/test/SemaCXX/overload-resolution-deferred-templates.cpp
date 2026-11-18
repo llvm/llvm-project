@@ -391,3 +391,87 @@ static_assert(
     std::is_constructible<LayoutUnit, base::Optional<LayoutUnit> &>::value, "");
 
 }
+
+namespace GH49197 {
+
+template<typename>
+struct indirect_int {
+	using type = int;
+};
+
+struct s {};
+
+void operator+(s, int);
+
+template<typename T>
+void operator+(typename indirect_int<T>::type, T);
+
+void test() {
+	s() + 1;
+}
+
+}
+
+#if __cplusplus >= 202002L
+
+namespace GH126855 {
+
+enum { shift = 1 };
+
+template<typename T>
+concept AnyConcept = requires
+{
+    { T::Function() };
+};
+
+template<AnyConcept T>
+inline T& operator<<(T& t, char value)
+{
+    return t;
+}
+
+int main()
+{
+    return 1 << shift;
+}
+
+}
+
+namespace GH128902 {
+
+struct FloatWrapper
+{
+  double Data;
+
+  constexpr FloatWrapper() = default;
+
+  constexpr FloatWrapper(double const Data_) :
+    Data{Data_} {}
+
+  constexpr operator double const &() const
+    { return Data; }
+
+  constexpr operator double &()
+    { return Data; }
+};
+
+
+template<typename T>
+concept CExpr = false;
+
+template<CExpr T>
+int operator +(T const &lhs, int const rhs)
+  { return 6; }
+
+int main()
+{
+  FloatWrapper u;
+
+  u = 2.0 + u;
+
+  return 0;
+}
+
+}
+
+#endif

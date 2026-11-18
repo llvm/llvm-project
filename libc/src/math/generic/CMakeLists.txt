@@ -235,6 +235,7 @@ add_entrypoint_object(
   HDRS
     ../ddivf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.ddivf128
 )
 
@@ -5111,6 +5112,7 @@ add_entrypoint_object(
   HDRS
     ../dmulf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.dmulf128
 )
 

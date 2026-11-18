@@ -2621,12 +2621,14 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
 std::optional<Pointer> addSubOffsetOpaque(InterpState &S, CodePtr OpPC,
                                           const Pointer &Ptr, APSInt &&Offset,
                                           ArithOp Op);
+
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool AddOffset(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>().expand();
 
-  if (Offset.isZero()) {
+  // Adding zero to a non-array doesn't change anything.
+  if (Offset.isZero() && !Ptr.inArray()) {
     S.Stk.push<Pointer>(Ptr);
     return true;
   }
@@ -2656,6 +2658,12 @@ bool SubOffset(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>().expand();
 
+  // Subtracting zero from a non-array doesn't change anything.
+  if (Offset.isZero() && !Ptr.inArray()) {
+    S.Stk.push<Pointer>(Ptr);
+    return true;
+  }
+
   if (Ptr.isOpaquePointer()) {
     if (std::optional<Pointer> Result =
             addSubOffsetOpaque(S, OpPC, Ptr, Offset.toAPSInt(), ArithOp::Sub)) {
@@ -2663,11 +2671,6 @@ bool SubOffset(InterpState &S, CodePtr OpPC) {
       return true;
     }
     return false;
-  }
-
-  if (Offset.isZero()) {
-    S.Stk.push<Pointer>(Ptr);
-    return true;
   }
 
   if (!CheckNull(S, OpPC, Ptr, CSK_ArrayIndex) && S.getLangOpts().CPlusPlus)
@@ -4076,6 +4079,12 @@ inline bool BitCastPrim(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
     bool HasIndeterminateBits = false;
 
     Bits FullBitWidth(ResultBitWidth);
+
+    // FIXME: Since we support bitcasts of bitfields, we should also support
+    // this.
+    if (!FullBitWidth.isFullByte())
+      return false;
+
     Bits BitWidth = FullBitWidth;
 
     if constexpr (std::is_same_v<T, Floating>) {

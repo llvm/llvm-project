@@ -913,9 +913,6 @@ CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl gd) {
                                ? astContext.VoidPtrTy
                                : astContext.VoidTy;
 
-  assert(!theCXXABI.hasThisReturn(gd) &&
-         "Please send PR with a test and remove this");
-
   assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
 
@@ -1051,13 +1048,18 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXConstructorCall(
                               : RequiredArgs::All;
 
   GlobalDecl gd(d, ctorKind);
-  if (theCXXABI.hasThisReturn(gd))
-    cgm.errorNYI(d->getSourceRange(),
-                 "arrangeCXXConstructorCall: hasThisReturn");
+
+  // TODO: hasMostDerivedReturn isn't implemented or tested yet, but the below
+  // init of 'resultType' should be enough once it is thoroughly
+  // tested/implemented everywhere else.
   if (theCXXABI.hasMostDerivedReturn(gd))
     cgm.errorNYI(d->getSourceRange(),
                  "arrangeCXXConstructorCall: hasMostDerivedReturn");
-  CanQualType resultType = astContext.VoidTy;
+
+  CanQualType resultType = theCXXABI.hasThisReturn(gd) ? argTypes.front()
+                           : theCXXABI.hasMostDerivedReturn(gd)
+                               ? astContext.VoidPtrTy
+                               : astContext.VoidTy;
 
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
   assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
@@ -1372,6 +1374,11 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
       assert(!cir::MissingFeatures::lowerAggregateLoadStore());
       cirCallArgs[argNo] = builder.createLoad(argLoc, src);
     }
+
+    if (CodeGenUtils::isArgumentMaybeUndef(
+            targetDecl, funcInfo.getNumRequiredArgs(), argNo))
+      cirCallArgs[argNo] =
+          cir::FreezeOp::create(builder, loc, cirCallArgs[argNo]);
   }
 
   const CIRGenCallee &concreteCallee = callee.prepareConcreteCallee(*this);

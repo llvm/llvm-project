@@ -686,7 +686,7 @@ void foo24() {
 
 // LLVM: %[[ARR:.*]] = alloca [2 x { i32, i32 }], align 16
 // LLVM: %[[RESULT:.*]] = alloca { i32, i32 }, align 4
-// LLVM: %[[RESULT_VAL:.*]] = getelementptr inbounds [2 x { i32, i32 }], ptr %[[ARR]], i32 0, i64 1
+// LLVM: %[[RESULT_VAL:.*]] = getelementptr inbounds [2 x { i32, i32 }], ptr %[[ARR]], i64 0, i64 1
 // LLVM: %[[TMP:.*]] = load { i32, i32 }, ptr %[[RESULT_VAL]], align 8
 // LLVM: store { i32, i32 } %[[TMP]], ptr %[[RESULT]], align 4
 

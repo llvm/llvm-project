@@ -12,8 +12,8 @@
 
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"
-#include "Register/Common/RegisterInfo_riscv64.h"
 #include "Register/Arch/lldb-riscv-register-enums.h"
+#include "Register/Common/RegisterInfo_riscv64.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"

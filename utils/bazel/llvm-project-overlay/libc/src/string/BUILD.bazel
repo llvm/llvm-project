@@ -33,10 +33,10 @@ libc_support_library(
         "string_utils.h",
     ],
     deps = [
-        "//libc:llvm_libc_types_size_t",
         "//libc/hdr:limits_macros",
         "//libc/hdr:stdint_proxy",
         "//libc/hdr/types:size_t",
+        "//libc/include:llvm_libc_types_size_t",
         "//libc/src/__support:common",
         "//libc/src/__support/CPP:bitset",
         "//libc/src/__support/CPP:type_traits",
@@ -199,7 +199,7 @@ libc_function(
     hdrs = ["strlen.h"],
     deps = [
         ":utils",
-        "//libc:llvm_libc_types_size_t",
+        "//libc/include:llvm_libc_types_size_t",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:null_check",
@@ -223,7 +223,7 @@ libc_function(
     hdrs = ["strcpy.h"],
     deps = [
         ":utils",
-        "//libc:llvm_libc_types_size_t",
+        "//libc/include:llvm_libc_types_size_t",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:null_check",
@@ -237,7 +237,7 @@ libc_function(
     hdrs = ["strlcpy.h"],
     deps = [
         ":utils",
-        "//libc:llvm_libc_types_size_t",
+        "//libc/include:llvm_libc_types_size_t",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
     ],
@@ -359,7 +359,7 @@ libc_function(
     hdrs = ["strcat.h"],
     deps = [
         ":utils",
-        "//libc:llvm_libc_types_size_t",
+        "//libc/include:llvm_libc_types_size_t",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:null_check",
@@ -372,7 +372,7 @@ libc_function(
     hdrs = ["strlcat.h"],
     deps = [
         ":utils",
-        "//libc:llvm_libc_types_size_t",
+        "//libc/include:llvm_libc_types_size_t",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
     ],
@@ -384,7 +384,7 @@ libc_function(
     hdrs = ["strncat.h"],
     deps = [
         ":utils",
-        "//libc:llvm_libc_types_size_t",
+        "//libc/include:llvm_libc_types_size_t",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:null_check",
@@ -419,8 +419,8 @@ libc_function(
     hdrs = ["strdup.h"],
     deps = [
         ":allocating_string_utils",
-        "//libc:llvm_libc_types_size_t",
         "//libc/hdr:stdlib_macros",
+        "//libc/include:llvm_libc_types_size_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/macros:config",
