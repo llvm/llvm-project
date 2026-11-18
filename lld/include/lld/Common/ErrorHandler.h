@@ -168,6 +168,7 @@ public:
   ~SyncStream();
   StringRef str() { return os.str(); }
   uint64_t tell() { return os.tell(); }
+  DiagLevel getDiagLevel() { return level; }
 };
 
 [[noreturn]] void exitLld(int val);
