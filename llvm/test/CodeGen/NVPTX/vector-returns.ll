@@ -296,11 +296,8 @@ define <17 x i1> @bit17() {
 ; CHECK:       {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    st.param.b8 [func_retval0+16], 0;
-; CHECK-NEXT:    st.param.b32 [func_retval0+12], 0;
-; CHECK-NEXT:    st.param.b32 [func_retval0+8], 0;
-; CHECK-NEXT:    st.param.b32 [func_retval0+4], 0;
-; CHECK-NEXT:    st.param.b32 [func_retval0], 0;
+; CHECK-NEXT:    st.param.b8 [func_retval0+2], 0;
+; CHECK-NEXT:    st.param.b16 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
   ret <17 x i1> zeroinitializer
 }
@@ -310,14 +307,7 @@ define <16 x i1> @bit16() {
 ; CHECK:       {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    st.param.v2.b8 [func_retval0+14], {0, 0};
-; CHECK-NEXT:    st.param.v2.b8 [func_retval0+12], {0, 0};
-; CHECK-NEXT:    st.param.v2.b8 [func_retval0+10], {0, 0};
-; CHECK-NEXT:    st.param.v2.b8 [func_retval0+8], {0, 0};
-; CHECK-NEXT:    st.param.v2.b8 [func_retval0+6], {0, 0};
-; CHECK-NEXT:    st.param.v2.b8 [func_retval0+4], {0, 0};
-; CHECK-NEXT:    st.param.v2.b8 [func_retval0+2], {0, 0};
-; CHECK-NEXT:    st.param.v2.b8 [func_retval0], {0, 0};
+; CHECK-NEXT:    st.param.b16 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
   ret <16 x i1> zeroinitializer
 }
@@ -327,14 +317,7 @@ define <15 x i1> @bit15() {
 ; CHECK:       {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    st.param.b8 [func_retval0+14], 0;
-; CHECK-NEXT:    st.param.v2.b8 [func_retval0+12], {0, 0};
-; CHECK-NEXT:    st.param.v2.b8 [func_retval0+10], {0, 0};
-; CHECK-NEXT:    st.param.v2.b8 [func_retval0+8], {0, 0};
-; CHECK-NEXT:    st.param.v2.b8 [func_retval0+6], {0, 0};
-; CHECK-NEXT:    st.param.v2.b8 [func_retval0+4], {0, 0};
-; CHECK-NEXT:    st.param.v2.b8 [func_retval0+2], {0, 0};
-; CHECK-NEXT:    st.param.v2.b8 [func_retval0], {0, 0};
+; CHECK-NEXT:    st.param.b16 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
   ret <15 x i1> zeroinitializer
 }
@@ -344,11 +327,7 @@ define <9 x i1> @bit9() {
 ; CHECK:       {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    st.param.b8 [func_retval0+8], 0;
-; CHECK-NEXT:    st.param.v2.b8 [func_retval0+6], {0, 0};
-; CHECK-NEXT:    st.param.v2.b8 [func_retval0+4], {0, 0};
-; CHECK-NEXT:    st.param.v2.b8 [func_retval0+2], {0, 0};
-; CHECK-NEXT:    st.param.v2.b8 [func_retval0], {0, 0};
+; CHECK-NEXT:    st.param.b16 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
   ret <9 x i1> zeroinitializer
 }
@@ -358,13 +337,6 @@ define <8 x i1> @bit8() {
 ; CHECK:       {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    st.param.b8 [func_retval0+7], 0;
-; CHECK-NEXT:    st.param.b8 [func_retval0+6], 0;
-; CHECK-NEXT:    st.param.b8 [func_retval0+5], 0;
-; CHECK-NEXT:    st.param.b8 [func_retval0+4], 0;
-; CHECK-NEXT:    st.param.b8 [func_retval0+3], 0;
-; CHECK-NEXT:    st.param.b8 [func_retval0+2], 0;
-; CHECK-NEXT:    st.param.b8 [func_retval0+1], 0;
 ; CHECK-NEXT:    st.param.b8 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
   ret <8 x i1> zeroinitializer
@@ -375,12 +347,6 @@ define <7 x i1> @bit7() {
 ; CHECK:       {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    st.param.b8 [func_retval0+6], 0;
-; CHECK-NEXT:    st.param.b8 [func_retval0+5], 0;
-; CHECK-NEXT:    st.param.b8 [func_retval0+4], 0;
-; CHECK-NEXT:    st.param.b8 [func_retval0+3], 0;
-; CHECK-NEXT:    st.param.b8 [func_retval0+2], 0;
-; CHECK-NEXT:    st.param.b8 [func_retval0+1], 0;
 ; CHECK-NEXT:    st.param.b8 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
   ret <7 x i1> zeroinitializer
@@ -391,10 +357,6 @@ define <5 x i1> @bit5() {
 ; CHECK:       {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    st.param.b8 [func_retval0+4], 0;
-; CHECK-NEXT:    st.param.b8 [func_retval0+3], 0;
-; CHECK-NEXT:    st.param.b8 [func_retval0+2], 0;
-; CHECK-NEXT:    st.param.b8 [func_retval0+1], 0;
 ; CHECK-NEXT:    st.param.b8 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
   ret <5 x i1> zeroinitializer
@@ -405,9 +367,6 @@ define <4 x i1> @bit4() {
 ; CHECK:       {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    st.param.b8 [func_retval0+3], 0;
-; CHECK-NEXT:    st.param.b8 [func_retval0+2], 0;
-; CHECK-NEXT:    st.param.b8 [func_retval0+1], 0;
 ; CHECK-NEXT:    st.param.b8 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
   ret <4 x i1> zeroinitializer
@@ -418,8 +377,6 @@ define <3 x i1> @bit3() {
 ; CHECK:       {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    st.param.b8 [func_retval0+2], 0;
-; CHECK-NEXT:    st.param.b8 [func_retval0+1], 0;
 ; CHECK-NEXT:    st.param.b8 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
   ret <3 x i1> zeroinitializer
@@ -430,7 +387,6 @@ define <2 x i1> @bit2() {
 ; CHECK:       {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    st.param.b8 [func_retval0+1], 0;
 ; CHECK-NEXT:    st.param.b8 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
   ret <2 x i1> zeroinitializer

@@ -1,7 +1,7 @@
 ; NOTE: Do not autogenerate. The NVPTX check generator skips parameter
 ; declarations. We need to check their sizes as well as the memory accesses.
 ; Related: https://github.com/modular/modular/issues/7480
-; Check the packed memory layout of Boolean vector arguments.
+; Check the packed memory layout of Boolean vector arguments and returns.
 ; Reject extra offset loads in the lane extraction and full-byte tests.
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_50 -O0 -verify-machineinstrs | FileCheck %s \
 ; RUN:   --implicit-check-not='ld.param{{.*}}[{{(lane[0-9]+_v[0-9]+i1|all_lanes_v8i1)}}_param_0+'
@@ -134,7 +134,6 @@ define ptx_kernel void @mixed_scalar_vector({ i1, <8 x i1>, i32 } %value, ptr ad
 }
 
 ; Pass and return nine Boolean lanes using two bytes.
-; FIXME: Keep return loads and stores within their two-byte storage.
 ; CHECK-LABEL: roundtrip_v9i1(
 ; CHECK: .b8 roundtrip_v9i1_param_0[2]
 ; CHECK: ld.param.b16 [[ARG:%rs[0-9]+]], [roundtrip_v9i1_param_0];
@@ -142,8 +141,9 @@ define ptx_kernel void @mixed_scalar_vector({ i1, <8 x i1>, i32 } %value, ptr ad
 ; CHECK: .b8 retval0[2];
 ; CHECK: st.param.b16 [param0], [[ARG]];
 ; CHECK: call.uni (retval0), callee_v9i1,
-; CHECK: ld.param.b8 {{.*}}, [retval0+8];
-; CHECK: st.param.b8 [func_retval0+8], {{.*}};
+; CHECK: ld.param.b16 [[RET:%rs[0-9]+]], [retval0];
+; CHECK: and.b16 [[BITS:%rs[0-9]+]], [[RET]], 511;
+; CHECK: st.param.b16 [func_retval0], [[BITS]];
 ; CHECK: ret;
 define <9 x i1> @roundtrip_v9i1(<9 x i1> %value) {
   %result = call <9 x i1> @callee_v9i1(<9 x i1> %value)
@@ -193,7 +193,6 @@ define ptx_kernel void @nested_vector_array({ i8, [2 x <16 x i1>], i32 } %value,
 }
 
 ; Use a returned Boolean vector as an integer without crashing the compiler.
-; FIXME: Keep return loads within their two-byte storage.
 ; CHECK-LABEL: .entry returned_bits_v16i1(
 ; CHECK: .b8 returned_bits_v16i1_param_0[2]
 ; CHECK: .b8 param0[2];
@@ -201,7 +200,8 @@ define ptx_kernel void @nested_vector_array({ i8, [2 x <16 x i1>], i32 } %value,
 ; CHECK-DAG: st.param.b8 [param0], {{%rs[0-9]+}};
 ; CHECK-DAG: st.param.b8 [param0+1], {{%rs[0-9]+}};
 ; CHECK: call.uni (retval0), callee_v16i1,
-; CHECK: ld.param.v2.b8 {{.*}}, [retval0+14];
+; CHECK-DAG: ld.param.b8 {{%rs[0-9]+}}, [retval0];
+; CHECK-DAG: ld.param.b8 {{%rs[0-9]+}}, [retval0+1];
 ; CHECK: st.global.b64
 ; CHECK: st.global.b64
 ; CHECK: ret;

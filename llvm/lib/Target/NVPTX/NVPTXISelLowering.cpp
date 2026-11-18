@@ -265,14 +265,14 @@ getVectorLoweringShape(EVT VectorEVT, const NVPTXSubtarget &STI,
 
 /// Split \p Ty into the types and byte offsets used for arguments and returns.
 /// The number of entries must match the Ins/Outs arrays used during lowering.
-/// Keep i8 memory accesses byte-sized. When lowering arguments, record each
-/// Boolean vector's memory type at its first register index in OriginalMemVTs.
-/// Use MVT::Other for the remaining entries.
+/// Keep i8 memory accesses byte-sized. For each Boolean vector, store its
+/// memory type in OriginalMemVTs at the first register's index. Use MVT::Other
+/// for all other entries.
 static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                                LLVMContext &Ctx, CallingConv::ID CallConv,
                                Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
                                SmallVectorImpl<uint64_t> &Offsets,
-                               SmallVectorImpl<EVT> *OriginalMemVTs = nullptr,
+                               SmallVectorImpl<EVT> &OriginalMemVTs,
                                uint64_t StartingOffset = 0) {
   SmallVector<EVT, 16> TempVTs, TempMemVTs;
   SmallVector<uint64_t, 16> TempOffsets;
@@ -286,14 +286,13 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
     // Boolean lanes use one bit each in memory, but have separate registers.
     // Keep the vector's memory type so the legalizer can choose its loads and
     // stores without treating each lane as a byte.
-    if (OriginalMemVTs && VT.isVector() &&
-        VT.getVectorElementType() == MVT::i1) {
+    if (VT.isVector() && VT.getVectorElementType() == MVT::i1) {
       assert(RegisterVT == MVT::i1 && NumRegs == VT.getVectorNumElements() &&
              "Expected one predicate register per Boolean vector element");
       ValueVTs.append(NumRegs, RegisterVT);
       Offsets.append(NumRegs, Off);
-      OriginalMemVTs->push_back(MemVT);
-      OriginalMemVTs->append(NumRegs - 1, MVT::Other);
+      OriginalMemVTs.push_back(MemVT);
+      OriginalMemVTs.append(NumRegs - 1, MVT::Other);
       continue;
     }
 
@@ -308,12 +307,11 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                "Expected v4i8, v2i16, or i16 for i8 RegisterVT");
     }
 
-    // TODO: Also handle Boolean vector returns and other sub-byte elements.
+    // TODO: Also handle vectors with other element types smaller than a byte.
     for (unsigned I : seq(NumRegs)) {
       ValueVTs.push_back(RegisterVT);
       Offsets.push_back(Off + I * RegisterVT.getStoreSize());
-      if (OriginalMemVTs)
-        OriginalMemVTs->push_back(MVT::Other);
+      OriginalMemVTs.push_back(MVT::Other);
     }
   }
 }
@@ -1467,7 +1465,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       SmallVector<uint64_t, 16> Offsets;
       SmallVector<EVT, 16> OriginalMemVTs;
       ComputePTXValueVTs(*this, DL, Ctx, CLI.CallConv, Arg.Ty, VTs, Offsets,
-                         &OriginalMemVTs, VAOffset);
+                         OriginalMemVTs, VAOffset);
       assert(VTs.size() == Offsets.size() && "Size mismatch");
       assert(VTs.size() == ArgOuts.size() && "Size mismatch");
 
@@ -1630,7 +1628,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (!Ins.empty()) {
     SmallVector<EVT, 16> VTs;
     SmallVector<uint64_t, 16> Offsets;
-    ComputePTXValueVTs(*this, DL, Ctx, CLI.CallConv, RetTy, VTs, Offsets);
+    SmallVector<EVT, 16> OriginalMemVTs;
+    ComputePTXValueVTs(*this, DL, Ctx, CLI.CallConv, RetTy, VTs, Offsets,
+                       OriginalMemVTs);
     assert(VTs.size() == Ins.size() && "Bad value decomposition");
 
     const Align RetAlign =
@@ -1644,8 +1644,10 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         RetTy->isIntegerTy() && DL.getTypeAllocSizeInBits(RetTy) < 32;
 
     unsigned I = 0;
-    const auto VI = VectorizePTXValueVTs(VTs, Offsets, RetAlign);
+    const auto VI =
+        VectorizePTXValueVTs(VTs, Offsets, RetAlign, false, OriginalMemVTs);
     for (const unsigned NumElts : VI) {
+      const bool HasOriginalMemVT = OriginalMemVTs[I].isVector();
       const MaybeAlign CurrentAlign =
           ExtendIntegerRetVal ? MaybeAlign(std::nullopt)
                               : commonAlignment(RetAlign, Offsets[I]);
@@ -1653,7 +1655,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       const EVT VTI = promoteScalarIntegerPTX(VTs[I]);
       const EVT LoadVT =
           ExtendIntegerRetVal ? MVT::i32 : (VTI == MVT::i1 ? MVT::i8 : VTI);
-      const EVT VecVT = getVectorizedVT(LoadVT, NumElts, Ctx);
+      const EVT VecVT = HasOriginalMemVT
+                            ? OriginalMemVTs[I]
+                            : getVectorizedVT(LoadVT, NumElts, Ctx);
       SDValue Ptr =
           DAG.getObjectPtrOffset(dl, RetSymbol, TypeSize::getFixed(Offsets[I]));
 
@@ -1663,7 +1667,8 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
       LoadChains.push_back(R.getValue(1));
       for (const unsigned J : llvm::seq(NumElts))
-        ProxyRegOps.push_back(getExtractVectorizedValue(R, J, LoadVT, dl, DAG));
+        ProxyRegOps.push_back(getExtractVectorizedValue(
+            R, J, HasOriginalMemVT ? VTs[I] : LoadVT, dl, DAG));
       I += NumElts;
     }
   }
@@ -4403,7 +4408,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       SmallVector<uint64_t, 16> Offsets;
       SmallVector<EVT, 16> OriginalMemVTs;
       ComputePTXValueVTs(*this, DL, Ctx, CallConv, Ty, VTs, Offsets,
-                         &OriginalMemVTs);
+                         OriginalMemVTs);
       assert(VTs.size() == ArgIns.size() && "Size mismatch");
       assert(VTs.size() == Offsets.size() && "Size mismatch");
 
@@ -4480,7 +4485,9 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   SmallVector<EVT, 16> VTs;
   SmallVector<uint64_t, 16> Offsets;
-  ComputePTXValueVTs(*this, DL, Ctx, CallConv, RetTy, VTs, Offsets);
+  SmallVector<EVT, 16> OriginalMemVTs;
+  ComputePTXValueVTs(*this, DL, Ctx, CallConv, RetTy, VTs, Offsets,
+                     OriginalMemVTs);
   assert(VTs.size() == OutVals.size() && "Bad return value decomposition");
 
   const auto GetRetVal = [&](unsigned I) -> SDValue {
@@ -4496,14 +4503,20 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   };
 
   unsigned I = 0;
-  const auto VI = VectorizePTXValueVTs(VTs, Offsets, RetAlign);
+  const auto VI =
+      VectorizePTXValueVTs(VTs, Offsets, RetAlign, false, OriginalMemVTs);
   for (const unsigned NumElts : VI) {
     const MaybeAlign CurrentAlign = ExtendIntegerRetVal
                                         ? MaybeAlign(std::nullopt)
                                         : commonAlignment(RetAlign, Offsets[I]);
 
-    SDValue Val = getBuildVectorizedValue(
-        NumElts, dl, DAG, [&](unsigned K) { return GetRetVal(I + K); });
+    SDValue Val =
+        OriginalMemVTs[I].isVector()
+            ? DAG.getBuildVector(OriginalMemVTs[I], dl,
+                                 ArrayRef(OutVals).slice(I, NumElts))
+            : getBuildVectorizedValue(NumElts, dl, DAG, [&](unsigned K) {
+                return GetRetVal(I + K);
+              });
 
     SDValue Ptr =
         DAG.getObjectPtrOffset(dl, RetSymbol, TypeSize::getFixed(Offsets[I]));
@@ -7412,6 +7425,11 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
   case ISD::LOAD:
   case NVPTXISD::LoadV2:
   case NVPTXISD::LoadV4: {
+    // Do not move ProxyReg onto a vector load the target cannot yet handle.
+    // replaceProxyReg can convert scalar types, but cannot split a vector.
+    if (R.getValueType().isVector() &&
+        !DCI.DAG.getTargetLoweringInfo().isTypeLegal(R.getValueType()))
+      return SDValue();
     return DCI.DAG.getNode(NVPTXISD::ProxyReg, SDLoc(R), R.getValueType(),
                            {Chain, R});
   }

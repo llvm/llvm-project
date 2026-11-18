@@ -59,7 +59,7 @@ define signext i1 @test_i1s(i1 signext %a) {
        ret i1 %r;
 }
 
-; Pack Boolean vector arguments into bytes, even when the last
+; Pack Boolean vector arguments and returns into bytes, even when the last
 ; byte is only partly used.
 ; CHECK: .func  (.param .align 1 .b8 func_retval0[1])
 ; CHECK-LABEL: test_v3i1(
@@ -69,10 +69,9 @@ define signext i1 @test_i1s(i1 signext %a) {
 ; CHECK:      .param .align 1 .b8 retval0[1];
 ; CHECK:      st.param.b8 [param0], [[IN]];
 ; CHECK:      call.uni (retval0), test_v3i1,
-; CHECK-DAG:  ld.param.b8     [[RE0:%rs[0-9]+]], [retval0];
-; CHECK-DAG:  ld.param.b8     [[RE2:%rs[0-9]+]], [retval0+2];
-; CHECK-DAG:  st.param.b8     [func_retval0], [[RE0]]
-; CHECK-DAG:  st.param.b8     [func_retval0+2], [[RE2]];
+; CHECK:      ld.param.b8 [[RET:%rs[0-9]+]], [retval0];
+; CHECK:      and.b16 [[OUT:%rs[0-9]+]], [[RET]], 7;
+; CHECK:      st.param.b8 [func_retval0], [[OUT]];
 ; CHECK-NEXT: ret;
 define <3 x i1> @test_v3i1(<3 x i1> %a) {
        %r = tail call <3 x i1> @test_v3i1(<3 x i1> %a);
@@ -87,14 +86,9 @@ define <3 x i1> @test_v3i1(<3 x i1> %a) {
 ; CHECK:      .param .align 1 .b8 retval0[1];
 ; CHECK:      st.param.b8 [param0], [[IN]];
 ; CHECK:      call.uni (retval0), test_v4i1,
-; CHECK:      ld.param.b8  [[RE0:%rs[0-9]+]], [retval0];
-; CHECK:      ld.param.b8  [[RE1:%rs[0-9]+]], [retval0+1];
-; CHECK:      ld.param.b8  [[RE2:%rs[0-9]+]], [retval0+2];
-; CHECK:      ld.param.b8  [[RE3:%rs[0-9]+]], [retval0+3];
-; CHECK:      st.param.b8  [func_retval0], [[RE0]];
-; CHECK:      st.param.b8  [func_retval0+1], [[RE1]];
-; CHECK:      st.param.b8  [func_retval0+2], [[RE2]];
-; CHECK:      st.param.b8  [func_retval0+3], [[RE3]];
+; CHECK:      ld.param.b8 [[RET:%rs[0-9]+]], [retval0];
+; CHECK:      and.b16 [[OUT:%rs[0-9]+]], [[RET]], 15;
+; CHECK:      st.param.b8 [func_retval0], [[OUT]];
 ; CHECK-NEXT: ret;
 define <4 x i1> @test_v4i1(<4 x i1> %a) {
        %r = tail call <4 x i1> @test_v4i1(<4 x i1> %a);
@@ -109,10 +103,9 @@ define <4 x i1> @test_v4i1(<4 x i1> %a) {
 ; CHECK:      .param .align 1 .b8 retval0[1];
 ; CHECK:      st.param.b8 [param0], [[IN]];
 ; CHECK:      call.uni (retval0), test_v5i1,
-; CHECK-DAG:  ld.param.b8  [[RE0:%rs[0-9]+]], [retval0];
-; CHECK-DAG:  ld.param.b8     [[RE4:%rs[0-9]+]], [retval0+4];
-; CHECK-DAG:  st.param.b8  [func_retval0], [[RE0]]
-; CHECK-DAG:  st.param.b8     [func_retval0+4], [[RE4]];
+; CHECK:      ld.param.b8 [[RET:%rs[0-9]+]], [retval0];
+; CHECK:      and.b16 [[OUT:%rs[0-9]+]], [[RET]], 31;
+; CHECK:      st.param.b8 [func_retval0], [[OUT]];
 ; CHECK-NEXT: ret;
 define <5 x i1> @test_v5i1(<5 x i1> %a) {
        %r = tail call <5 x i1> @test_v5i1(<5 x i1> %a);
