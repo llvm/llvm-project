@@ -49,8 +49,7 @@ constexpr _Result invoke_r(_Fn&& __f, _Args&&... __args) noexcept(is_nothrow_inv
   if constexpr (is_void_v<_Result>) {
     static_cast<void>(std::invoke(std::forward<_Fn>(__f), std::forward<_Args>(__args)...));
   } else {
-    using _ImplicitInvokeResult = invoke_result_t<_Fn, _Args...>;
-    static_assert(!std::reference_converts_from_temporary_v<_Result, _ImplicitInvokeResult>,
+    static_assert(!std::reference_converts_from_temporary_v<_Result, invoke_result_t<_Fn, _Args...>>,
                   "Returning from invoke_r would bind a temporary object to the reference return type, "
                   "which would result in a dangling reference.");
     return std::invoke(std::forward<_Fn>(__f), std::forward<_Args>(__args)...);
