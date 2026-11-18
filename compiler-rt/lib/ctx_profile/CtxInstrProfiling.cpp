@@ -45,6 +45,9 @@ __sanitizer::atomic_uint64_t FlatProfileLockMisses = {};
 // Depth of active root entries on this thread, regardless of whether this
 // thread collects a contextual profile for those roots.
 __thread uint32_t UnderContextDepth = 0;
+// Depth of active entries into __llvm_ctx_profile_current_context_root on this
+// thread, so Taken is unlocked only when the outermost entry exits.
+__thread uint32_t CurrentRootDepth = 0;
 __sanitizer::atomic_uint8_t ProfilingStarted = {};
 
 __sanitizer::atomic_uintptr_t RootDetector = {};
@@ -316,13 +319,18 @@ ContextNode *tryStartContextGivenRoot(ContextRoot *Root, GUID Guid,
   if (!Root->FirstMemBlock) {
     setupContext(Root, Guid, Counters, Callsites);
   }
+  if (auto *CurrentRoot = __llvm_ctx_profile_current_context_root) {
+    if (CurrentRoot == Root && CurrentRootDepth < UINT32_MAX)
+      ++CurrentRootDepth;
+    return TheScratchContext;
+  }
   if (Root->Taken.TryLock()) {
     __llvm_ctx_profile_current_context_root = Root;
+    CurrentRootDepth = 1;
     onContextEnter(*Root->FirstNode);
     return Root->FirstNode;
   }
   // If this thread couldn't take the lock, return scratch context.
-  __llvm_ctx_profile_current_context_root = nullptr;
   return TheScratchContext;
 }
 
@@ -380,6 +388,8 @@ ContextNode *__llvm_ctx_profile_get_context(FunctionData *Data, void *Callee,
   if (auto *CR = Data->CtxRoot; CR && canBeRoot(CR)) {
     if (UnderContextDepth < UINT32_MAX)
       ++UnderContextDepth;
+    if (CR == CtxRoot && CurrentRootDepth < UINT32_MAX)
+      ++CurrentRootDepth;
   }
 
   // also fast "out" if the caller is scratch. We can see if it's scratch by
@@ -452,6 +462,11 @@ void __llvm_ctx_profile_release_context(FunctionData *FData)
   if (!CurrentRoot || CR != CurrentRoot)
     return;
   assert(CR && canBeRoot(CR));
+  if (CurrentRootDepth > 1) {
+    --CurrentRootDepth;
+    return;
+  }
+  CurrentRootDepth = 0;
   __llvm_ctx_profile_current_context_root = nullptr;
   CR->Taken.Unlock();
 }
@@ -542,6 +557,7 @@ void __llvm_ctx_profile_free() {
   // Reset TLS state for the calling thread (other threads are expected to have
   // exited their active contexts before freeing).
   __llvm_ctx_profile_current_context_root = nullptr;
+  CurrentRootDepth = 0;
   UnderContextDepth = 0;
   {
     __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> Lock(
