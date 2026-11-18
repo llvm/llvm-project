@@ -1032,7 +1032,6 @@
             integer, intent(in) :: num_resources
             integer, intent(in) :: resources(*)
           end function omp_get_submemspace
-        end interface
 
           function omp_get_dyn_gprivate_ptr(offset, access_group)
             use omp_lib_kinds
@@ -1071,6 +1070,7 @@
             integer (kind=c_int), value :: device_num
             integer (kind=omp_access_kind), value, optional :: access_group
           end function omp_get_gprivate_limit
+        end interface
 
 !         ***
 !         *** kmp_* entry points
