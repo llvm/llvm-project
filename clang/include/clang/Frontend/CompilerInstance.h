@@ -64,6 +64,10 @@ class SourceManager;
 class TargetInfo;
 enum class DisableValidationForModuleKind;
 
+namespace Builtin {
+class TargetBuiltins;
+} // namespace Builtin
+
 /// CompilerInstance - Helper class for managing a single instance of the Clang
 /// compiler.
 ///
@@ -112,6 +116,10 @@ class CompilerInstance : public ModuleLoader {
 
   /// The cache of PCM files.
   std::shared_ptr<ModuleCache> ModCache;
+
+  /// The builtins of the instance's target and aux target, shared with the
+  /// module builds it requests, which have the same targets.
+  std::shared_ptr<const Builtin::TargetBuiltins> SharedBuiltins;
 
   /// Directory dependencies from the instance that requested this module build.
   /// An inferred framework is built from printed module map text rather than by

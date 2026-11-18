@@ -196,6 +196,25 @@ TEST_F(BuiltinsTest, ConcurrentContexts) {
     EXPECT_EQ(ID, Builtin::BI__builtin_abs);
 }
 
+TEST_F(BuiltinsTest, SharedTargetBuiltins) {
+  initializeTarget("arm64-apple-macosx");
+  // Contexts with different language options can share the builtins, which
+  // stay valid as long as any context uses them.
+  auto Shared =
+      std::make_shared<const Builtin::TargetBuiltins>(*Target, nullptr);
+  auto MSContext = std::make_unique<Builtin::Context>(Shared);
+  Builtin::Context Ctx(std::move(Shared));
+  LangOptions MS;
+  MS.MicrosoftExt = true;
+  EXPECT_EQ(MSContext->lookupBuiltinID("__noop", MS), Builtin::BI__noop);
+  MSContext.reset();
+  EXPECT_EQ(Ctx.lookupBuiltinID("__noop", LangOpts), Builtin::NotBuiltin);
+  EXPECT_EQ(Ctx.lookupBuiltinID("__builtin_abs", LangOpts),
+            Builtin::BI__builtin_abs);
+  EXPECT_TRUE(
+      Ctx.isTSBuiltin(Ctx.lookupBuiltinID("__builtin_neon_vaddq_v", LangOpts)));
+}
+
 TEST_F(BuiltinsTest, ContextWithoutTarget) {
   Builtin::Context Ctx;
   EXPECT_EQ(Ctx.lookupBuiltinID("__builtin_abs", LangOpts),

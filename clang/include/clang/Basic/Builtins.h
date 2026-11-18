@@ -234,7 +234,9 @@ struct InfosShard {
 /// hash table from their names to their builtin IDs.
 ///
 /// It contains every builtin of the targets, whether or not it's supported by
-/// some language options; \c Context checks that when looking a name up.
+/// some language options; \c Context checks that when looking a name up. It's
+/// immutable, so any number of contexts for the same targets can use it, also
+/// concurrently.
 class TargetBuiltins {
   /// Open addressing with linear probing. A slot holds the hash of the name in
   /// the upper 32 bits and the builtin ID in the lower 32 bits, or zero if
@@ -286,7 +288,7 @@ public:
 class Context {
   /// The builtins of the target and the aux target. Null for a context without
   /// a target, which only has the target-independent builtins.
-  std::unique_ptr<const TargetBuiltins> Builtins;
+  std::shared_ptr<const TargetBuiltins> Builtins;
 
   /// A copy of the number of target builtins in Builtins, so that the inline
   /// isAuxBuiltinID() and getAuxBuiltinID() don't need to go through it.
@@ -301,6 +303,10 @@ public:
   /// Create a context with the builtins of \p Target and \p AuxTarget, which
   /// may be null.
   Context(const TargetInfo &Target, const TargetInfo *AuxTarget);
+
+  /// Create a context with \p Builtins, which can be shared with other
+  /// contexts for the same targets.
+  explicit Context(std::shared_ptr<const TargetBuiltins> Builtins);
 
   /// Return the ID of the builtin named \p Name, or \c NotBuiltin if there's
   /// none, \p LangOpts doesn't support it, or -fno-builtin-* disables it.

@@ -110,8 +110,11 @@ const char *Builtin::Context::getRequiredFeatures(unsigned ID) const {
 Builtin::Context::Context() = default;
 
 Builtin::Context::Context(const TargetInfo &Target, const TargetInfo *AuxTarget)
-    : Builtins(std::make_unique<const TargetBuiltins>(Target, AuxTarget)),
-      NumTargetBuiltins(Builtins->getNumTargetBuiltins()) {}
+    : Context(std::make_shared<const TargetBuiltins>(Target, AuxTarget)) {}
+
+Builtin::Context::Context(std::shared_ptr<const TargetBuiltins> Builtins)
+    : Builtins(std::move(Builtins)),
+      NumTargetBuiltins(this->Builtins->getNumTargetBuiltins()) {}
 
 bool Builtin::Context::isBuiltinFunc(llvm::StringRef FuncName) {
   bool InStdNamespace = FuncName.consume_front("std-");
