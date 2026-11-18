@@ -101,13 +101,15 @@ static mlir::InFlightDiagnostic emitTypeConversionError(mlir::Location loc,
 
 /// Alignment to use for a memory access whose op carries no explicit alignment.
 /// For _BitInt the storage integer iM's ABI alignment (e.g. i128's 16)
-/// over-aligns the value, so use the CIR _BitInt ABI alignment (e.g. 8).
-static uint64_t getMemoryFallbackAlignment(mlir::Type cirType,
+/// over-aligns the value, so use the _BitInt language alignment (e.g. 8).
+static uint64_t getMemoryFallbackAlignment(mlir::Operation *op,
+                                           mlir::Type cirType,
                                            mlir::Type llvmMemType,
                                            const mlir::DataLayout &dataLayout) {
   if (auto intTy = mlir::dyn_cast<cir::IntType>(cirType);
       intTy && intTy.isBitInt())
-    return dataLayout.getTypeABIAlignment(intTy);
+    return cir::CIRDataLayout(op->getParentOfType<mlir::ModuleOp>())
+        .getTypeLanguageAlignment(intTy);
   return dataLayout.getTypeABIAlignment(llvmMemType);
 }
 
@@ -380,16 +382,16 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
   if (!convertTypeForMemory(*getTypeConverter(), dataLayout, pointeeType))
     return emitTypeConversionError(op, pointeeType);
 
-  mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
+  cir::CIRDataLayout cirDataLayout(op->getParentOfType<mlir::ModuleOp>());
   const mlir::Value length = mlir::LLVM::ConstantOp::create(
       rewriter, op.getLoc(), rewriter.getI64Type(),
-      op.getCopySizeInBytes(layout));
+      op.getCopySizeInBytes(cirDataLayout.layout));
   assert(!cir::MissingFeatures::aggValueSlotVolatile());
 
-  uint64_t dstTypeAlign =
-      dataLayout.getTypeABIAlignment(op.getDst().getType().getPointee());
-  uint64_t srcTypeAlign =
-      dataLayout.getTypeABIAlignment(op.getSrc().getType().getPointee());
+  uint64_t dstTypeAlign = cirDataLayout.getTypeLanguageAlignment(
+      op.getDst().getType().getPointee());
+  uint64_t srcTypeAlign = cirDataLayout.getTypeLanguageAlignment(
+      op.getSrc().getType().getPointee());
 
   mlir::NamedAttribute dstAlignAttr = rewriter.getNamedAttr(
       mlir::LLVM::LLVMDialect::getAlignAttrName(),
@@ -2312,10 +2314,13 @@ mlir::LogicalResult CIRToLLVMGetElementOpLowering::matchAndRewrite(
                          adaptor.getBase().getType(),
                          dyn_cast<cir::IntType>(op.getOperand(1).getType()));
 
-    // Since the base address is a pointer to an aggregate, the first
-    // offset is always zero. The second offset tell us which member it
-    // will access.
-    std::array<mlir::LLVM::GEPArg, 2> offset{0, index};
+    // Since the base address is a pointer to an array, the first index is
+    // always zero, and the second one selects the element.  The zero takes the
+    // element index's type, because a raw constant GEP index is always
+    // translated as i32.
+    mlir::Value zero = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                                      index.getType(), 0);
+    std::array<mlir::LLVM::GEPArg, 2> offset = {zero, index};
     mlir::LLVM::GEPNoWrapFlags flags = mlir::LLVM::GEPNoWrapFlags::none;
     if (op.getInBounds())
       flags |= mlir::LLVM::GEPNoWrapFlags::inbounds;
@@ -2782,7 +2787,7 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
   mlir::LLVM::AtomicOrdering ordering = getLLVMMemOrder(op.getMemOrder());
   std::optional<size_t> opAlign = op.getAlignment();
   unsigned alignment = (unsigned)opAlign.value_or(
-      getMemoryFallbackAlignment(op.getType(), llvmTy, dataLayout));
+      getMemoryFallbackAlignment(op, op.getType(), llvmTy, dataLayout));
 
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 
@@ -2840,7 +2845,7 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
            << "NYI: lowering store of a type with no memory representation";
   std::optional<size_t> opAlign = op.getAlignment();
   unsigned alignment = (unsigned)opAlign.value_or(
-      getMemoryFallbackAlignment(valueType, llvmTy, dataLayout));
+      getMemoryFallbackAlignment(op, valueType, llvmTy, dataLayout));
 
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 
@@ -5259,7 +5264,15 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   ops.push_back(module);
   cir::collectUnreachable(module, ops);
 
-  if (failed(applyPartialConversion(ops, target, std::move(patterns)))) {
+  // One-shot conversion (no pattern rollback): rewrites materialize
+  // immediately, skipping the IRRewrite/value-mapping bookkeeping. The
+  // CIR patterns here are compatible: nothing dereferences the root op
+  // after replacement, and the cached symbol table is maintained
+  // explicitly at every module-symbol replacement.
+  mlir::ConversionConfig config;
+  config.allowPatternRollback = false;
+  if (failed(
+          applyPartialConversion(ops, target, std::move(patterns), config))) {
     signalPassFailure();
     return;
   }

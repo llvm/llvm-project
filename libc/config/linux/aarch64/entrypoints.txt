@@ -404,6 +404,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/sysinfo.h entrypoints
     libc.src.sys.sysinfo.sysinfo
 
+    # sys/timerfd.h entrypoints
+    libc.src.sys.timerfd.timerfd_create
+
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
 
@@ -1393,12 +1396,15 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.getc_unlocked
     libc.src.stdio.getchar
     libc.src.stdio.getchar_unlocked
+    libc.src.stdio.getdelim
     libc.src.stdio.getline
     libc.src.stdio.pclose
     libc.src.stdio.perror
     libc.src.stdio.popen
     libc.src.stdio.putc
+    libc.src.stdio.putc_unlocked
     libc.src.stdio.putchar
+    libc.src.stdio.putchar_unlocked
     libc.src.stdio.puts
     libc.src.stdio.rewind
     libc.src.stdio.setbuf

@@ -637,12 +637,9 @@ static Address applyNonVirtualAndVirtualOffset(
   mlir::Value baseOffset;
   if (!nonVirtualOffset.isZero()) {
     if (virtualOffset) {
-      mlir::Type offsetType =
-          (cgf.cgm.getTarget().getCXXABI().isItaniumFamily() &&
-           cgf.cgm.getLangOpts().RelativeCXXABIVTables)
-              ? cgf.sInt32Ty
-              : cgf.ptrDiffTy;
-      baseOffset = cgf.getBuilder().getConstInt(loc, offsetType,
+      // The virtual offset is always a ptrdiff_t: how it is stored in the
+      // vtable is up to the lowering of cir.vtable.get_offset.
+      baseOffset = cgf.getBuilder().getConstInt(loc, cgf.ptrDiffTy,
                                                 nonVirtualOffset.getQuantity());
       baseOffset = cgf.getBuilder().createAdd(loc, virtualOffset, baseOffset);
     } else {
@@ -1727,6 +1724,7 @@ void CIRGenFunction::emitInlinedInheritingCXXConstructorCall(
     bool forVirtualBase, bool delegating, CallArgList &args) {
   GlobalDecl gd(d, ctorType);
   assert(!cir::MissingFeatures::generateDebugInfo());
+  SymTableScopeTy varScope(symbolTable);
   InlinedInheritingConstructorScope scope(*this, gd);
   RunCleanupsScope RunCleanups(*this);
 
