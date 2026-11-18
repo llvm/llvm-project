@@ -14,7 +14,7 @@
 #ifndef MLIR_LIB_TARGET_LLVMIR_DEBUGTRANSLATION_H_
 #define MLIR_LIB_TARGET_LLVMIR_DEBUGTRANSLATION_H_
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/IR/Location.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"

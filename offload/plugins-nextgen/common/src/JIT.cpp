@@ -80,7 +80,7 @@ OptimizationLevel getOptLevel(unsigned OptLevel) {
 }
 
 Expected<std::unique_ptr<TargetMachine>>
-createTargetMachine(Module &M, std::string CPU, unsigned OptLevel) {
+createTargetMachine(Module &M, StringRef CPU, unsigned OptLevel) {
   Triple TT(M.getTargetTriple());
   std::optional<CodeGenOptLevel> CGOptLevelOrNone =
       CodeGenOpt::getLevel(OptLevel);

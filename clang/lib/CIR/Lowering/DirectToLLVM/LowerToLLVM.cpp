@@ -101,13 +101,15 @@ static mlir::InFlightDiagnostic emitTypeConversionError(mlir::Location loc,
 
 /// Alignment to use for a memory access whose op carries no explicit alignment.
 /// For _BitInt the storage integer iM's ABI alignment (e.g. i128's 16)
-/// over-aligns the value, so use the CIR _BitInt ABI alignment (e.g. 8).
-static uint64_t getMemoryFallbackAlignment(mlir::Type cirType,
+/// over-aligns the value, so use the _BitInt language alignment (e.g. 8).
+static uint64_t getMemoryFallbackAlignment(mlir::Operation *op,
+                                           mlir::Type cirType,
                                            mlir::Type llvmMemType,
                                            const mlir::DataLayout &dataLayout) {
   if (auto intTy = mlir::dyn_cast<cir::IntType>(cirType);
       intTy && intTy.isBitInt())
-    return dataLayout.getTypeABIAlignment(intTy);
+    return cir::CIRDataLayout(op->getParentOfType<mlir::ModuleOp>())
+        .getTypeLanguageAlignment(intTy);
   return dataLayout.getTypeABIAlignment(llvmMemType);
 }
 
@@ -380,16 +382,16 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
   if (!convertTypeForMemory(*getTypeConverter(), dataLayout, pointeeType))
     return emitTypeConversionError(op, pointeeType);
 
-  mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
+  cir::CIRDataLayout cirDataLayout(op->getParentOfType<mlir::ModuleOp>());
   const mlir::Value length = mlir::LLVM::ConstantOp::create(
       rewriter, op.getLoc(), rewriter.getI64Type(),
-      op.getCopySizeInBytes(layout));
+      op.getCopySizeInBytes(cirDataLayout.layout));
   assert(!cir::MissingFeatures::aggValueSlotVolatile());
 
-  uint64_t dstTypeAlign =
-      dataLayout.getTypeABIAlignment(op.getDst().getType().getPointee());
-  uint64_t srcTypeAlign =
-      dataLayout.getTypeABIAlignment(op.getSrc().getType().getPointee());
+  uint64_t dstTypeAlign = cirDataLayout.getTypeLanguageAlignment(
+      op.getDst().getType().getPointee());
+  uint64_t srcTypeAlign = cirDataLayout.getTypeLanguageAlignment(
+      op.getSrc().getType().getPointee());
 
   mlir::NamedAttribute dstAlignAttr = rewriter.getNamedAttr(
       mlir::LLVM::LLVMDialect::getAlignAttrName(),
@@ -968,10 +970,13 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::BlockAddrDiffAttr blockAddrDiff) {
 mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
   mlir::Type convertedTy = converter->convertType(attr.getType());
   mlir::DataLayout dataLayout(parentModule);
-  mlir::Type llvmTy =
-      adjustGlobalTypeForInit(convertedTy, attr, *converter, dataLayout);
-  if (!llvmTy)
+  mlir::Type failedType = attr.getType();
+  mlir::Type llvmTy = adjustGlobalTypeForInit(convertedTy, attr, *converter,
+                                              dataLayout, &failedType);
+  if (!llvmTy) {
+    emitTypeConversionError(parentLoc, failedType);
     return {};
+  }
   mlir::Value result;
 
   // When the array can be represented as a single constant attribute, emit one
@@ -1044,10 +1049,13 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstRecordAttr constRecord) {
   mlir::Type llvmTy = converter->convertType(constRecord.getType());
   mlir::DataLayout dataLayout(parentModule);
   llvm::SmallVector<unsigned> paddingAddedIndexes;
+  mlir::Type failedType = constRecord.getType();
   llvmTy = adjustGlobalTypeForInit(llvmTy, constRecord, *converter, dataLayout,
-                                   paddingAddedIndexes);
-  if (!llvmTy)
+                                   paddingAddedIndexes, &failedType);
+  if (!llvmTy) {
+    emitTypeConversionError(parentLoc, failedType);
     return {};
+  }
   mlir::Value result = mlir::LLVM::UndefOp::create(rewriter, parentLoc, llvmTy);
 
   uint64_t insertIdx = 0;
@@ -2785,7 +2793,7 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
   mlir::LLVM::AtomicOrdering ordering = getLLVMMemOrder(op.getMemOrder());
   std::optional<size_t> opAlign = op.getAlignment();
   unsigned alignment = (unsigned)opAlign.value_or(
-      getMemoryFallbackAlignment(op.getType(), llvmTy, dataLayout));
+      getMemoryFallbackAlignment(op, op.getType(), llvmTy, dataLayout));
 
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 
@@ -2843,7 +2851,7 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
            << "NYI: lowering store of a type with no memory representation";
   std::optional<size_t> opAlign = op.getAlignment();
   unsigned alignment = (unsigned)opAlign.value_or(
-      getMemoryFallbackAlignment(valueType, llvmTy, dataLayout));
+      getMemoryFallbackAlignment(op, valueType, llvmTy, dataLayout));
 
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 
@@ -3468,11 +3476,14 @@ CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
 
   // Keep the global's type in sync with the value built by CIRAttrToValue: a
   // flexible array member initializer requires an oversized anonymous struct.
+  mlir::Type failedType = op.getSymType();
   if (std::optional<mlir::Attribute> init = op.getInitialValue())
     llvmType = adjustGlobalTypeForInit(llvmType, *init, *getTypeConverter(),
-                                       dataLayout);
-  if (!llvmType)
+                                       dataLayout, &failedType);
+  if (!llvmType) {
+    emitTypeConversionError(op, failedType);
     return {};
+  }
 
   // FIXME: These default values are placeholders until the the equivalent
   //        attributes are available on cir.global ops. This duplicates code
@@ -3606,11 +3617,12 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   // A flexible array member initializer makes the constant larger than the
   // record's declared type, so the global must use an oversized anonymous
   // struct instead.
+  mlir::Type failedType = cirSymType;
   if (init.has_value())
     llvmType = adjustGlobalTypeForInit(llvmType, *init, *getTypeConverter(),
-                                       dataLayout);
+                                       dataLayout, &failedType);
   if (!llvmType)
-    return mlir::failure();
+    return emitTypeConversionError(op, failedType);
 
   // FIXME: These default values are placeholders until the the equivalent
   //        attributes are available on cir.global ops.
@@ -5765,6 +5777,30 @@ mlir::LogicalResult CIRToLLVMVTableGetVirtualFnOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult
+CIRToLLVMVTableGetVirtualFnByOffsetOpLowering::matchAndRewrite(
+    cir::VTableGetVirtualFnByOffsetOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(!cir::MissingFeatures::vtableRelativeLayout());
+  if (usesRelativeVTables(op->getParentOfType<mlir::ModuleOp>()))
+    return op.emitError(
+        "NYI: virtual function lookup by offset in a relative layout vtable");
+
+  mlir::Type resultType = getTypeConverter()->convertType(op.getType());
+  if (!resultType)
+    return emitTypeConversionError(op, op.getType());
+
+  // The entry is the function pointer itself: load it from its slot, addressed
+  // by its byte offset.
+  auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  mlir::Value slot = mlir::LLVM::GEPOp::create(
+      rewriter, op.getLoc(), ptrTy, rewriter.getI8Type(), adaptor.getVptr(),
+      llvm::ArrayRef<mlir::LLVM::GEPArg>{adaptor.getOffset()});
+  rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(
+      op, resultType, slot, dataLayout.getTypeABIAlignment(ptrTy));
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMVTableGetOffsetOpLowering::matchAndRewrite(
     cir::VTableGetOffsetOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -5892,21 +5928,6 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
         rewriter, op.getLoc(),
         convertCmpKindToICmpPredicate(op.getKind(), /*isSigned=*/false),
         adaptor.getLhs(), adaptor.getRhs());
-  } else if (mlir::isa<cir::FPTypeInterface>(elementType)) {
-    if (cir::FenvAttr fenv = op.getFenvAttr()) {
-      llvm::ElementCount size = op.getLhs().getType().getSize();
-      auto i1VecTy = mlir::VectorType::get(
-          size.getKnownMinValue(), rewriter.getI1Type(), {size.isScalable()});
-      bitResult = createConstrainedFCmpCall(
-                      rewriter, op.getLoc(), adaptor.getLhs(), adaptor.getRhs(),
-                      op.getKind(), isSignalingConstrainedFCmp(op.getKind()),
-                      fenv, i1VecTy)
-                      .getResult(0);
-    } else {
-      bitResult = mlir::LLVM::FCmpOp::create(
-          rewriter, op.getLoc(), convertCmpKindToFCmpPredicate(op.getKind()),
-          adaptor.getLhs(), adaptor.getRhs());
-    }
   } else {
     return op.emitError() << "unsupported type for VecCmpOp: " << elementType;
   }
