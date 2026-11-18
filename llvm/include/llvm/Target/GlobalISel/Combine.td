@@ -1156,6 +1156,24 @@ def redundant_or: GICombineRule <
   (apply [{ Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
+// Extracting the top W bits and sign-extending is an arithmetic shift.
+def sext_inreg_of_lshr_to_ashr : GICombineRule<
+  (defs root:$root),
+  (match (G_CONSTANT $amt, $shift),
+         (G_LSHR $tmp, $src, $amt),
+         (G_SEXT_INREG $dst, $tmp, $width):$root,
+         [{ LLT Ty = MRI.getType(${dst}.getReg());
+            int64_t Width = ${width}.getImm();
+            const APInt &Shift = ${shift}.getCImm()->getValue();
+            return Ty.isScalar() && Width > 0 &&
+                   Width < Ty.getScalarSizeInBits() &&
+                   Shift == Ty.getScalarSizeInBits() - Width &&
+                   MRI.hasOneNonDBGUse(${tmp}.getReg()) &&
+                   Helper.isLegalOrBeforeLegalizer(
+                       {TargetOpcode::G_ASHR,
+                        {Ty, MRI.getType(${amt}.getReg())}}); }]),
+  (apply (G_ASHR $dst, $src, $amt))>;
+
 // If the input is already sign extended, just drop the extension.
 // sext_inreg x, K ->
 //   if computeNumSignBits(x) >= (x.getScalarSizeInBits() - K + 1)
