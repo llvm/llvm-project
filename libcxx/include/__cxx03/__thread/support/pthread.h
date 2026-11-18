@@ -19,7 +19,7 @@
 #include <sched.h>
 
 #ifdef __MVS__
-#  include <__cxx03/__support/ibm/nanosleep.h>
+#  include <__support/ibm/nanosleep.h>
 #endif
 
 // Some platforms require <bits/atomic_wide_counter.h> in order for
