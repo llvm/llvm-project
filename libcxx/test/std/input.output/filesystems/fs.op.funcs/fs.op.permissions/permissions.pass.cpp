@@ -10,10 +10,8 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
 
-// Bionic's fchmodat(..., AT_SYMLINK_NOFOLLOW) emulates nofollow via O_PATH +
-// /proc/self/fd, which fails on symlinks on older/emulator kernels (see D140183).
-// Resolve once CI emulators run a kernel/Bionic supporting fchmodat2 (Linux 6.6+)
-// or adjust libc++'s Posix permissions(nofollow) handling on Android.
+// Android's fchmodat seems broken on various OS versions -- see D140183. This
+// test probably passes on new-enough phones (not the emulator).
 // XFAIL: LIBCXX-ANDROID-FIXME && target={{i686|x86_64}}-{{.+}}-android{{.*}}
 
 // <filesystem>

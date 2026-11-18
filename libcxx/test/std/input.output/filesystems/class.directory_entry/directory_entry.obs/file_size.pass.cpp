@@ -14,8 +14,7 @@
 // XFAIL: using-built-library-before-llvm-13
 
 // Starting in Android N (API 24), SELinux policy prevents the shell user from
-// creating a FIFO file in /data/local/tmp. Resolve by guarding FIFO subtests
-// behind a Lit/helper feature check (similar to can-create-symlinks).
+// creating a FIFO file.
 // XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api=23
 
 // <filesystem>

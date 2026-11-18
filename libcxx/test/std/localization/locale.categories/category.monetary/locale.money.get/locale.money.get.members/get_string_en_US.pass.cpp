@@ -13,10 +13,8 @@
 // iter_type get(iter_type b, iter_type e, bool intl, ios_base& iob,
 //               ios_base::iostate& err, string_type& v) const;
 
-// Bionic maps named locales like "en_US.UTF-8" to "C.UTF-8" without localized
-// collation, monetary, or non-ASCII ctype tables, even though setlocale() succeeds.
-// Resolve by teaching Lit's locale detection in localization.py that Bionic lacks
-// localized named-locale data (or implementing ICU-backed locale facets on Android).
+// Bionic aliases named locales like "en_US.UTF-8" to "C.UTF-8" without localized
+// tables; teach localization.py to detect this or add ICU-backed facets.
 // XFAIL: LIBCXX-ANDROID-FIXME
 
 // REQUIRES: locale.en_US.UTF-8

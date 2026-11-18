@@ -21,10 +21,7 @@
 # UNSUPPORTED: windows
 # UNSUPPORTED: buildhost=windows
 
-# Building the `std` Clang module against the Android NDK sysroot fails with
-# unresolved `using_if_exists` declarations (e.g. `::time_t` in `<ctime>`) because
-# the Bionic headers are not modularized yet. Re-enable once the NDK sysroot ships
-# a `module.modulemap` or libc++'s modulemap accommodates non-modular Bionic headers.
+# The Android headers don't appear to be compatible with modules yet
 # UNSUPPORTED: LIBCXX-ANDROID-FIXME
 
 # TODO: Investigate this failure

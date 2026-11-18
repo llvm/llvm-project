@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test pipes stdin via adb_run.py and hangs on Android M (API 23) because
-// adbd before Android N (API 24) lacks shell_v2 stdin EOF propagation. Resolve
-// by redirecting stdin from a pushed file in adb_run.py on pre-N devices, or
-// remove once API 23 testing is dropped.
+// This test hangs on Android devices that lack shell_v2, which was added in
+// Android N (API 24).
 // UNSUPPORTED: LIBCXX-ANDROID-FIXME && android-device-api=23
 
 // <iostream>

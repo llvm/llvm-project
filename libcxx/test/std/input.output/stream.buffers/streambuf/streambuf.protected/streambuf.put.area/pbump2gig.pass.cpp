@@ -21,10 +21,8 @@
 // allocation failure when attempting to allocate the 2GiB string.
 // UNSUPPORTED: no-exceptions
 
-// Android devices/emulators frequently lack enough RAM for a 2 GiB allocation, and
-// memory overcommit triggers the kernel OOM killer rather than throwing std::bad_alloc.
-// Resolve by setting RLIMIT_AS in adb_run.py (or the test) so mmap/malloc fails
-// with ENOMEM and throws std::bad_alloc before invoking the OOM killer.
+// Android devices frequently don't have enough memory to run this test. Rather
+// than throw std::bad_alloc, exhausting memory triggers the OOM Killer.
 // UNSUPPORTED: LIBCXX-ANDROID-FIXME
 
 #include <sstream>

@@ -8,10 +8,8 @@
 //
 // UNSUPPORTED: no-threads
 
-// This test assumes notify_one() wakes at most one waiter when both test1 and
-// test2 are non-zero, which occasionally fails under Android emulator scheduling
-// because POSIX allows pthread_cond_signal() to wake multiple threads. Resolve by
-// rewriting the test to tolerate spurious/multiple wakeups per POSIX.
+// Flakes on Android when pthread_cond_signal() wakes both waiters (allowed by
+// POSIX), which this test does not tolerate.
 // UNSUPPORTED: LIBCXX-ANDROID-FIXME
 
 // <condition_variable>
