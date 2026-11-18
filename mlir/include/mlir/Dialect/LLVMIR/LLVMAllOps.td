@@ -9,9 +9,8 @@
 #ifndef LLVMIR_ALL_OPS
 #define LLVMIR_ALL_OPS
 
-// Keep core and intrinsic operations in one sharded definition set so they
-// share a single dialect registration hook. Their original files are still
-// generated separately for existing declarations and consumers.
+// Generate the core and intrinsic operations by op partition from one file, so
+// that they share a single dialect registration hook.
 include "mlir/Dialect/LLVMIR/LLVMOps.td"
 include "mlir/Dialect/LLVMIR/LLVMIntrinsicOps.td"
 

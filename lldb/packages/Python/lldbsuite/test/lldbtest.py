@@ -300,6 +300,17 @@ def dump_value_obj(val: lldb.SBValue, max_children: int = 10000) -> str:
     return str(val)
 
 
+class _LazyValueErrorMsg:
+    """Lazily error message that only formats the SBValue when needed."""
+
+    def __init__(self, prefix: str, val: lldb.SBValue):
+        self.prefix = prefix
+        self.val = val
+
+    def __str__(self):
+        return self.prefix + "\nChecking SBValue: " + dump_value_obj(self.val)
+
+
 class ValueCheck:
     def __init__(
         self,
@@ -364,8 +375,7 @@ class ValueCheck:
         not errors in the child values).
         """
 
-        this_error_msg = error_msg if error_msg else ""
-        this_error_msg += "\nChecking SBValue: " + dump_value_obj(val)
+        this_error_msg = _LazyValueErrorMsg(error_msg, val)
 
         test_base.assertSuccess(val.GetError())
 
@@ -404,8 +414,7 @@ class ValueCheck:
         :param val: The SBValue to check.
         """
 
-        this_error_msg = error_msg if error_msg else ""
-        this_error_msg += "\nChecking SBValue: " + dump_value_obj(val)
+        this_error_msg = _LazyValueErrorMsg(error_msg, val)
 
         test_base.assertEqual(len(self.children), val.GetNumChildren(), this_error_msg)
 

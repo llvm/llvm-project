@@ -16,14 +16,16 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <cstddef>
 
 namespace llvm {
 
 /// SmallString - A SmallString is just a SmallVector with methods and accessors
 /// that make it work better as a string (e.g. operator+ etc).
-template<unsigned InternalLen>
-class SmallString : public SmallVector<char, InternalLen> {
+template <unsigned InternalLen>
+class LLVM_ATTRIBUTE_WARN_UNUSED SmallString
+    : public SmallVector<char, InternalLen> {
 public:
   /// Default ctor - Initialize to empty.
   SmallString() = default;

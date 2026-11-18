@@ -87,8 +87,11 @@
 #define LLVM_LIBC_FUNCTION_IMPL_4(type, name, arglist, c_alias)                \
   type name arglist
 
+// Add an extra C alias `c_alias` for `LIBC_NAMESPACE::name` at file scope when
+// a function needs multiple exported names (omitted in non-packaging builds).
 #define LLVM_LIBC_ADD_FUNCTION_C_ALIAS(name, c_alias)                          \
-  static_assert(true, "Require semicolon.")
+  extern "C" using __llvm_libc_unused_alias_##c_alias =                        \
+      decltype(LIBC_NAMESPACE::name)
 
 #endif // LIBC_COPT_PUBLIC_PACKAGING
 

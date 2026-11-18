@@ -86,7 +86,6 @@ define i32 @fcmp_f16_lt_abs(half %a, half %b) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_cmp_lt_f16_e64 s0, |v0.l|, |v1.l|
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -94,7 +93,6 @@ define i32 @fcmp_f16_lt_abs(half %a, half %b) {
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    v_cmp_lt_f16_e64 s0, |v0|, |v1|
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -107,7 +105,6 @@ define i32 @fcmp_f16_lt_abs(half %a, half %b) {
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_cmp_lt_f16_e64 s0, |v0.l|, |v1.l|
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -120,7 +117,6 @@ define i32 @fcmp_f16_lt_abs(half %a, half %b) {
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-NEXT:    v_cmp_lt_f16_e64 s0, |v0|, |v1|
 ; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %a.abs = call half @llvm.fabs.f16(half %a)

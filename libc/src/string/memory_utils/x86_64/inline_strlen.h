@@ -50,7 +50,7 @@ LIBC_INLINE static void *
 calculate_find_first_character_return(const unsigned char *src, Mask c_mask,
                                       size_t n_left) {
   size_t c_offset = cpp::countr_zero(c_mask);
-  if (n_left < c_offset)
+  if (n_left <= c_offset)
     return nullptr;
   return const_cast<unsigned char *>(src) + c_offset;
 }
@@ -59,6 +59,10 @@ template <typename Vector, typename Mask,
           Mask (*CompareAndMask)(const Vector *, char)>
 LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE static void *
 find_first_character_vector(const unsigned char *s, unsigned char c, size_t n) {
+  // s doesn't have to be dereferenceable if there is nothing to search.
+  if (n == 0)
+    return nullptr;
+
   uintptr_t misalign_bytes = reinterpret_cast<uintptr_t>(s) % sizeof(Vector);
 
   const Vector *block_ptr =

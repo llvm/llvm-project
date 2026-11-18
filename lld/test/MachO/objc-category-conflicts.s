@@ -10,39 +10,39 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/cat2.s --defsym MAKE_LOAD_METHOD=1 -o %t/cat2-with-load.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/klass.s --defsym MAKE_LOAD_METHOD=1 -o %t/klass-with-load.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -I %t %t/klass-with-no-rodata.s -o %t/klass-with-no-rodata.o
-# RUN: %lld -no_objc_relative_method_lists -dylib -lobjc %t/klass.o -o %t/libklass.dylib
+# RUN: %lld -dylib -lobjc %t/klass.o -o %t/libklass.dylib
 
-# RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists --check-category-conflicts -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
+# RUN: %no-fatal-warnings-lld --check-category-conflicts -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
 # RUN:   /dev/null 2>&1 | FileCheck %s --check-prefixes=CATCLS,CATCAT
-# RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists --check-category-conflicts -dylib -lobjc %t/libklass.dylib %t/cat1.o \
+# RUN: %no-fatal-warnings-lld --check-category-conflicts -dylib -lobjc %t/libklass.dylib %t/cat1.o \
 # RUN:   %t/cat2.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=CATCAT
 
 ## Category merging implies conflict checks for object and dylib inputs.
-# RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists -objc_category_merging -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
+# RUN: %no-fatal-warnings-lld -objc_category_merging -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
 # RUN:   /dev/null 2>&1 | FileCheck %s --check-prefixes=CATCLS,CATCAT
-# RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists -objc_category_merging -dylib -lobjc %t/libklass.dylib %t/cat1.o \
+# RUN: %no-fatal-warnings-lld -objc_category_merging -dylib -lobjc %t/libklass.dylib %t/cat1.o \
 # RUN:   %t/cat2.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=CATCAT
 
-# RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists --check-category-conflicts -dylib -lobjc %t/klass_w_sym.o %t/cat1_w_sym.o %t/cat2_w_sym.o -o \
+# RUN: %no-fatal-warnings-lld --check-category-conflicts -dylib -lobjc %t/klass_w_sym.o %t/cat1_w_sym.o %t/cat2_w_sym.o -o \
 # RUN:   /dev/null 2>&1 | FileCheck %s --check-prefixes=CATCLS_W_SYM,CATCAT_W_SYM
-# RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists --check-category-conflicts -dylib -lobjc %t/libklass.dylib %t/cat1_w_sym.o \
+# RUN: %no-fatal-warnings-lld --check-category-conflicts -dylib -lobjc %t/libklass.dylib %t/cat1_w_sym.o \
 # RUN:   %t/cat2_w_sym.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=CATCAT_W_SYM
 
 ## Check that we don't emit spurious warnings around the +load method while
 ## still emitting the other warnings. Note that we have made separate
 ## `*-with-load.s` files for ease of comparison with ld64; ld64 will not warn
 ## at all if multiple +load methods are present.
-# RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists --check-category-conflicts -dylib -lobjc %t/klass-with-load.o \
+# RUN: %no-fatal-warnings-lld --check-category-conflicts -dylib -lobjc %t/klass-with-load.o \
 # RUN:   %t/cat1-with-load.o %t/cat2-with-load.o -o /dev/null 2>&1 | \
 # RUN:   FileCheck %s --check-prefixes=CATCLS,CATCAT --implicit-check-not '+load'
 
-## Regression test: Check that we don't crash.
-# RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists --check-category-conflicts -dylib -lobjc %t/klass-with-no-rodata.o -o /dev/null
+## Regression test: Check that we don't crash or report conflicts across classes.
+# RUN: %lld --check-category-conflicts -dylib -lobjc %t/klass-with-no-rodata.o -o /dev/null
 
 ## Check that we don't emit any warnings without --check-category-conflicts.
-# RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
+# RUN: %no-fatal-warnings-lld -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
 # RUN:   /dev/null 2>&1 | FileCheck %s --implicit-check-not 'warning' --allow-empty
-# RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists -objc_category_merging --no-check-category-conflicts -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
+# RUN: %no-fatal-warnings-lld -objc_category_merging --no-check-category-conflicts -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
 # RUN:   /dev/null 2>&1 | FileCheck %s --implicit-check-not 'warning' --allow-empty
 
 # CATCLS:      warning: method '+s1' has conflicting definitions:
@@ -303,6 +303,8 @@ _$s11FooAACfD:
   .quad __objc_empty_cache
   .quad 0
   .quad __objc_empty_cache
+## A second class at offset 40 shares the symbol but has a different addend.
+  .quad 0, 0, 0, 0, __objc_empty_cache
 
 _Bar:
   .space 24
@@ -311,12 +313,13 @@ _Bar:
 .section __DATA,__objc_catlist,regular,no_dead_strip
   .quad __CATEGORY_METAFoo_$_Foo20
   .quad __CATEGORY_METABar_$_Bar20
+  .quad __CATEGORY_METAFoo_$_Foo0
 
 .section __DATA,__objc_const
 __CATEGORY_METAFoo_$_Foo20:
   .objc_classname "Foo20"
-  .quad _$s11FooAACfD
-  .quad 0
+  .quad _$s11FooAACfD + 40
+  .quad _SharedMethods
   .quad 0
   .quad 0
   .quad 0
@@ -329,6 +332,15 @@ __CATEGORY_METABar_$_Bar20:
   .quad _Bar + 24
   .quad 0, 0, 0, 0, 0
   .long 64, 0
+
+__CATEGORY_METAFoo_$_Foo0:
+  .objc_classname "Foo0"
+  .quad _$s11FooAACfD, _SharedMethods, 0, 0, 0, 0
+  .long 64, 0
+
+_SharedMethods:
+  .long 24, 1
+  .empty_objc_method "shared", "v16@0:8", "shared"
 
 .subsections_via_symbols
 

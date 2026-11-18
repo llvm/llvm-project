@@ -566,7 +566,9 @@ def SCHED_GROUP_BARRIER : SPseudoInstSI<
   let isMeta = 1;
 }
 
-def IGLP_OPT : SPseudoInstSI<(outs), (ins i32imm:$mask),
+// The scheduler may append immediate operands after $mask to keep results of
+// the pre-RA IGLP analysis for later scheduling phases.
+def IGLP_OPT : SPseudoInstSI<(outs), (ins i32imm:$mask, variable_ops),
   [(int_amdgcn_iglp_opt (i32 timm:$mask))]> {
   let SchedRW = [];
   let hasNoSchedulingInfo = 1;
@@ -3390,64 +3392,6 @@ def : GCNPat <
     )
 >;
 
-let SubtargetPredicate = NotHasTrue16BitInsts in
-def : GCNPat <
-  (f16 (sint_to_fp i1:$src)),
-  (V_CVT_F16_F32_e32 (
-      V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
-                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_NEG_ONE),
-                        SSrc_i1:$src))
->;
-
-let True16Predicate = UseRealTrue16Insts in
-def : GCNPat <
-  (f16 (sint_to_fp i1:$src)),
-  (V_CVT_F16_F32_t16_e64 /*src0_modifiers*/ 0,
-      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
-                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_NEG_ONE),
-                        SSrc_i1:$src),
-      /*clamp*/ 0, /*omod*/ 0, /*op_sel*/ 0)
->;
-
-let True16Predicate = UseFakeTrue16Insts in
-def : GCNPat <
-  (f16 (sint_to_fp i1:$src)),
-  (V_CVT_F16_F32_fake16_e64 /*src0_modifiers*/ 0,
-      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
-                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_NEG_ONE),
-                        SSrc_i1:$src),
-      /*clamp*/ 0, /*omod*/ 0)
->;
-
-let True16Predicate = NotHasTrue16BitInsts in
-def : GCNPat <
-  (f16 (uint_to_fp i1:$src)),
-  (V_CVT_F16_F32_e32 (
-      V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
-                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
-                        SSrc_i1:$src))
->;
-
-let True16Predicate = UseRealTrue16Insts in
-def : GCNPat <
-  (f16 (uint_to_fp i1:$src)),
-  (V_CVT_F16_F32_t16_e64 /*src0_modifiers*/ 0,
-      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
-                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
-                        SSrc_i1:$src),
-      /*clamp*/ 0, /*omod*/ 0, /*op_sel*/ 0)
->;
-
-let True16Predicate = UseFakeTrue16Insts in
-def : GCNPat <
-  (f16 (uint_to_fp i1:$src)),
-  (V_CVT_F16_F32_fake16_e64 /*src0_modifiers*/ 0,
-      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
-                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
-                        SSrc_i1:$src),
-      /*clamp*/ 0, /*omod*/ 0)
->;
-
 def : GCNPat <
   (f32 (sint_to_fp i1:$src)),
   (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
@@ -3943,9 +3887,9 @@ let SubtargetPredicate = isGFX10Plus in {
 // better to select fma instead of fmac.
 let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <
-  (fma (f16 (VOP3NoMods f32:$src0)),
-       (f16 (VOP3NoMods f32:$src1)),
-       (f16 (VOP3NoMods f32:$src2))),
+  (fma (f16 (VOP3NoOpSelMods f32:$src0)),
+       (f16 (VOP3NoOpSelMods f32:$src1)),
+       (f16 (VOP3NoOpSelMods f32:$src2))),
   (V_FMAC_F16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;
@@ -3959,9 +3903,9 @@ def : GCNPat <
 >;
 let True16Predicate = UseFakeTrue16Insts in
 def : GCNPat <
-  (fma (f16 (VOP3NoMods f16:$src0)),
-       (f16 (VOP3NoMods f16:$src1)),
-       (f16 (VOP3NoMods f16:$src2))),
+  (fma (f16 (VOP3NoOpSelMods f16:$src0)),
+       (f16 (VOP3NoOpSelMods f16:$src1)),
+       (f16 (VOP3NoOpSelMods f16:$src2))),
   (V_FMAC_F16_fake16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;
@@ -4273,25 +4217,36 @@ def : GCNPat <
 }
 
 let True16Predicate = UseRealTrue16Insts in {
+foreach vecTy = [v2i16, v2f16] in {
+defvar Ty = vecTy.ElementType;
+
 def : GCNPat <
-  (v2f16 (scalar_to_vector f16:$src0)),
-  (lo16_to_vgpr32 $src0)
+  (vecTy (DivergentUnaryFrag<scalar_to_vector> (Ty VGPR_16:$src0))),
+  (lo16_to_vgpr32 VGPR_16:$src0)
+>;
+
+// A uniform 16-bit value lives in the low 16 bits of a 32-bit SGPR, so it
+// cannot be used as the lo16 operand of a VGPR_32 REG_SEQUENCE.
+def : GCNPat <
+  (vecTy (UniformUnaryFrag<scalar_to_vector> (Ty SReg_32:$src0))),
+  (COPY SReg_32:$src0)
+>;
+}
+
+foreach vecTy = [v4i16, v4f16] in {
+defvar Ty = vecTy.ElementType;
+
+def : GCNPat <
+  (vecTy (DivergentUnaryFrag<scalar_to_vector> (Ty VGPR_16:$src0))),
+  (REG_SEQUENCE VReg_64, VGPR_16:$src0, lo16, (Ty (IMPLICIT_DEF)), hi16,
+                         (i32 (IMPLICIT_DEF)), sub1)
 >;
 
 def : GCNPat <
-  (v2i16 (scalar_to_vector i16:$src0)),
-  (lo16_to_vgpr32 $src0)
+  (vecTy (UniformUnaryFrag<scalar_to_vector> (Ty SReg_32:$src0))),
+  (REG_SEQUENCE SReg_64, SReg_32:$src0, sub0, (i32 (IMPLICIT_DEF)), sub1)
 >;
-
-def : GCNPat <
-  (v4i16 (scalar_to_vector i16:$src0)),
-  (REG_SEQUENCE VReg_64, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
->;
-
-def : GCNPat <
-  (v4f16 (scalar_to_vector f16:$src0)),
-  (REG_SEQUENCE VReg_64, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
->;
+}
 
 def : GCNPat <
   (v2bf16 (DivergentUnaryFrag<scalar_to_vector> (bf16 VGPR_16:$src0))),
