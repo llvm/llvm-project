@@ -1198,9 +1198,9 @@ private:
       return markAsDead(SI);
     }
 
-    assert((AllowFCA || !SI.isSimple() ||
-            ValOp->getType()->isSingleValueType()) &&
-           "All simple FCA stores should have been pre-split");
+    assert(
+        (AllowFCA || !SI.isSimple() || ValOp->getType()->isSingleValueType()) &&
+        "All simple FCA stores should have been pre-split");
     handleLoadOrStore(ValOp->getType(), SI, Offset, Size, SI.isVolatile());
   }
 
@@ -6453,12 +6453,12 @@ SROA::runOnAlloca(AllocaInst &AI) {
   // better splitting and promotion opportunities.
   IRBuilderTy IRB(&AI);
   IRB.disableGEPCanonicalization();
-  Changed |= AggLoadStoreRewriter(DL, IRB, /*SplitAggregateOps=*/false)
-                 .rewrite(AI);
+  Changed |=
+      AggLoadStoreRewriter(DL, IRB, /*SplitAggregateOps=*/false).rewrite(AI);
   if (!shouldSplitAggregateOps(AI, DL))
     return {Changed, CFGChanged};
-  Changed |= AggLoadStoreRewriter(DL, IRB, /*SplitAggregateOps=*/true)
-                 .rewrite(AI);
+  Changed |=
+      AggLoadStoreRewriter(DL, IRB, /*SplitAggregateOps=*/true).rewrite(AI);
 
   // Build the slices using a recursive instruction-visiting builder.
   AllocaSlices AS(DL, AI);
