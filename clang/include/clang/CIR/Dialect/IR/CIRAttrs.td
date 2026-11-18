@@ -733,12 +733,12 @@ def CIR_MethodAttr : CIR_ValueLikeAttr<"Method", "method"> {
     If the member function is a non-virtual function, the `symbol` parameter
     gives the global symbol for the non-virtual member function.
 
-    If the member function is a virtual function, the `vtable_offset` parameter
-    gives the offset of the vtable entry corresponding to the virtual member
-    function.
+    If the member function is a virtual function, the `vtable_index` parameter
+    gives the index of the vtable entry corresponding to the virtual member
+    function, counted from the address point.
 
-    `symbol` and `vtable_offset` cannot be present at the same time. If both of
-    `symbol` and `vtable_offset` are not present, the attribute represents a
+    `symbol` and `vtable_index` cannot be present at the same time. If both of
+    `symbol` and `vtable_index` are not present, the attribute represents a
     null pointer constant.
 
     Examples:
@@ -748,7 +748,7 @@ def CIR_MethodAttr : CIR_ValueLikeAttr<"Method", "method"> {
              !cir.method<!cir.func<(!s32i)> in !rec_S>
 
     // Virtual method
-    %1 = cir.const #cir.method<vtable_offset = 8> :
+    %1 = cir.const #cir.method<vtable_index = 1> :
              !cir.method<!cir.func<(!s32i)> in !rec_S>
 
     // Null method pointer
@@ -762,7 +762,7 @@ def CIR_MethodAttr : CIR_ValueLikeAttr<"Method", "method"> {
                         OptionalParameter<
                             "std::optional<mlir::FlatSymbolRefAttr>">:$symbol,
                         OptionalParameter<
-                            "std::optional<uint64_t>">:$vtable_offset);
+                            "std::optional<uint64_t>">:$vtable_index);
 
   let builders = [
     AttrBuilderWithInferredContext<(ins "cir::MethodType":$type), [{
@@ -773,8 +773,8 @@ def CIR_MethodAttr : CIR_ValueLikeAttr<"Method", "method"> {
       return $_get(type.getContext(), type, symbol, std::nullopt);
     }]>,
     AttrBuilderWithInferredContext<(ins "cir::MethodType":$type,
-                                        "uint64_t":$vtable_offset), [{
-      return $_get(type.getContext(), type, std::nullopt, vtable_offset);
+                                        "uint64_t":$vtable_index), [{
+      return $_get(type.getContext(), type, std::nullopt, vtable_index);
     }]>,
   ];
 
@@ -787,11 +787,11 @@ def CIR_MethodAttr : CIR_ValueLikeAttr<"Method", "method"> {
 
   let extraClassDeclaration = [{
     bool isNull() const {
-      return !getSymbol().has_value() && !getVtableOffset().has_value();
+      return !getSymbol().has_value() && !getVtableIndex().has_value();
     }
 
     bool isVirtual() const {
-      return getVtableOffset().has_value();
+      return getVtableIndex().has_value();
     }
   }];
 }
@@ -1573,9 +1573,11 @@ def CIR_PtrSpecAttr : CIR_Attr<"PtrSpec", "ptr_spec"> {
 def CIR_BitIntSpecAttr : CIR_Attr<"BitIntSpec", "bitint_spec"> {
   let summary = "!cir.int _BitInt data layout spec";
   let description = [{
-    Upper bound, in bits, on the ABI alignment of a `_BitInt`. This is
-    `TargetInfo::getBitIntMaxAlign()`. `_BitInt(N)` is aligned to
-    `min(PowerOf2Ceil(N), max_align)` bits, and at least one byte.
+    Upper bound, in bits, on the language alignment of a `_BitInt`. This is
+    `TargetInfo::getBitIntMaxAlign()`. The language alignment of `_BitInt(N)`
+    is `min(PowerOf2Ceil(N), max_align)` bits, and at least one byte. The cap
+    does not apply to the `_BitInt`'s ABI alignment, which is the alignment
+    of the integer that holds it, or 1 when it is held as bytes.
 
     Used as the value of the `!cir.int<u, 1, bitint>`-keyed data-layout
     entry. The key names the `_BitInt` class. Its width is not a layout

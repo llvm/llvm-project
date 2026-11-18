@@ -3869,6 +3869,45 @@ def CIR_VTableGetVirtualFnOp : CIR_Op<"vtable.get_virtual_fn", [
 }
 
 //===----------------------------------------------------------------------===//
+// VTableGetVirtualFnByOffsetOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableGetVirtualFnByOffsetOp : CIR_Op<"vtable.get_virtual_fn_by_offset", [
+  MemoryEffects<[MemRead]>
+]> {
+  let summary = "Get a virtual function pointer from a vtable by its offset";
+  let description = [{
+    The `vtable.get_virtual_fn_by_offset` operation is the counterpart of
+    `cir.vtable.get_virtual_fn` for when the entry is only known at run time,
+    such as when calling through a pointer to member function. The entry is
+    identified by its `offset` operand, which is the distance in bytes of the
+    entry from the address point of the vtable, as it is stored in the
+    pointer to member function. How the entry is stored and read is decided
+    when the operation is lowered.
+
+    The `vptr` operand must be a `!cir.vptr` value, which would have been
+    returned by a previous call to `cir.vtable.get_vptr`.
+
+    The result is the pointer to the function.
+
+    Example:
+    ```
+    %4 = cir.load %3 : !cir.ptr<!cir.vptr>, !cir.vptr
+    %5 = cir.vtable.get_virtual_fn_by_offset %4[%offset : !s64i] : !cir.vptr
+                  -> !cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>
+    ```
+  }];
+
+  let arguments = (ins CIR_VPtrType:$vptr, CIR_IntType:$offset);
+  let results = (outs CIR_PtrToFunc:$result);
+
+  let assemblyFormat = [{
+    $vptr `[` $offset `:` qualified(type($offset)) `]` attr-dict
+    `:` qualified(type($vptr)) `->` qualified(type($result))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // VTableGetOffsetOp
 //===----------------------------------------------------------------------===//
 
@@ -6813,48 +6852,33 @@ def CIR_VecReduceFMulOp : CIR_VecReduceAccFPOp<"fmul", "vector_reduce_fmul">;
 // VecCmpOp
 //===----------------------------------------------------------------------===//
 
-def CIR_VecCmpOp : CIR_Op<"vec.cmp",
-    !listconcat([SameTypeOperands], CIR_FenvOpTraits)> {
+def CIR_VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
   let summary = "Compare two vectors";
   let description = [{
     The `cir.vec.cmp` operation does an element-wise comparison of two vectors
-    of the same type. The result is a vector of the same size as the operands
+    of the same non-fp type. The result is a vector of the same size as the operands
     whose element type is the signed integral type that is the same size as the
     element type of the operands. The values in the result are 0 or -1.
-
-    The optional `fenv` attribute describes constraints on the floating-point
-    handling of the operation. It is only valid for floating-point vector
-    comparisons.
 
     ```
     %eq = cir.vec.cmp(eq, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
     %lt = cir.vec.cmp(lt, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
-    %gt = cir.vec.cmp(gt, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<>
     ```
   }];
 
   let arguments = (ins
     CIR_CmpOpKindAttr:$kind,
-    CIR_VectorType:$lhs,
-    CIR_VectorType:$rhs,
-    OptionalAttr<CIR_FenvAttr>:$fenv
+    CIR_VectorOfIntOrBoolType:$lhs,
+    CIR_VectorOfIntOrBoolType:$rhs
   );
 
   let results = (outs CIR_VectorType:$result);
 
   let assemblyFormat = [{
     `(` enum($kind) `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
-    qualified(type($result)) (`fenv` `` $fenv^)? attr-dict
+    qualified(type($result)) attr-dict
   }];
 
-  let builders = [
-    OpBuilder<(ins "mlir::Type":$result, "cir::CmpOpKind":$kind,
-                   "mlir::Value":$lhs, "mlir::Value":$rhs), [{
-      build($_builder, $_state, result, kind, lhs, rhs, cir::FenvAttr{});
-    }]>
-  ];
-
-  let hasVerifier = 1;
   let hasFolder = 1;
 }
 
