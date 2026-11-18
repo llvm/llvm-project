@@ -5663,6 +5663,17 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   if (Depth == MaxAnalysisRecursionDepth)
     return;
 
+  // Experiment: Query all classes to see if we are missing any
+  // deductions in real world code patterns.
+  // At worst, this may increase compile times due to more calls to
+  // computeKnownFPClass. However, no miscompilations shall occur since
+  // InterestedClasses is only a trick to reduce compile times, and it is safe
+  // to call computeKnownFPClass with any mask, from fcNone to fcAllFlags.
+  // For example, the operands of an fadd may only be queried for the classes
+  // needed to rule out negatives, but querying all classes could provide the
+  // information needed to rule out positives as well.
+  InterestedClasses |= fcAllFlags;
+
   const unsigned Opc = Op->getOpcode();
   switch (Opc) {
   case Instruction::FNeg: {
