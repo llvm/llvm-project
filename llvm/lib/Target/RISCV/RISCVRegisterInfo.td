@@ -920,12 +920,12 @@ def VR : VReg<!listconcat(VM1VTs, VMaskVTs),
                    (sequence "V%u", 7, 0)), 1> {
   let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::V0, 32>";
   let DiagnosticType = "InvalidRegClassVR";
-  let DiagnosticString = "register must be a vector register";
+  let DiagnosticString = "operand must be a vector register";
 }
 
 def VRNoV0 : VReg<!listconcat(VM1VTs, VMaskVTs), (sub VR, V0), 1> {
   let DiagnosticType = "InvalidRegClassVRNoV0";
-  let DiagnosticString = "register must be a vector register excluding zero (v0)";
+  let DiagnosticString = "operand must be a vector register excluding v0";
 }
 
 def VRM2 : VReg<VM2VTs, (add (sequence "V%uM2", 8, 31, 2),
@@ -933,13 +933,13 @@ def VRM2 : VReg<VM2VTs, (add (sequence "V%uM2", 8, 31, 2),
   let CoerceFromRegClass = VR;
   let DecoderMethod = "DecodeVectorRegisterClass<RISCV::VRM2RegClassID, 32, 2>";
   let DiagnosticType = "InvalidRegClassVRM2";
-  let DiagnosticString = "register must be a vector register with an even-numbered index";
+  let DiagnosticString = "operand must be the start of a valid M2 vector register group";
 }
 
 def VRM2NoV0 : VReg<VM2VTs, (sub VRM2, V0M2), 2> {
   let CoerceFromRegClass = VR;
   let DiagnosticType = "InvalidRegClassVRM2NoV0";
-  let DiagnosticString = "register must be a vector register with an even-numbered index excluding zero (v0)";
+  let DiagnosticString = "operand must be the start of a valid M2 vector register group excluding v0";
 }
 
 def VRM4 : VReg<VM4VTs, (add V8M4, V12M4, V16M4, V20M4,
@@ -947,26 +947,26 @@ def VRM4 : VReg<VM4VTs, (add V8M4, V12M4, V16M4, V20M4,
   let CoerceFromRegClass = VR;
   let DecoderMethod = "DecodeVectorRegisterClass<RISCV::VRM4RegClassID, 32, 4>";
   let DiagnosticType = "InvalidRegClassVRM4";
-  let DiagnosticString = "register must be a vector register with an index divisible by 4";
+  let DiagnosticString = "operand must be the start of a valid M4 vector register group";
 }
 
 def VRM4NoV0 : VReg<VM4VTs, (sub VRM4, V0M4), 4> {
   let CoerceFromRegClass = VR;
   let DiagnosticType = "InvalidRegClassVRM4NoV0";
-  let DiagnosticString = "register must be a vector register with an index divisible by 4 excluding zero (v0)";
+  let DiagnosticString = "operand must be the start of a valid M4 vector register group excluding v0";
 }
 
 def VRM8 : VReg<VM8VTs, (add V8M8, V16M8, V24M8, V0M8), 8> {
   let CoerceFromRegClass = VR;
   let DecoderMethod = "DecodeVectorRegisterClass<RISCV::VRM8RegClassID, 32, 8>";
   let DiagnosticType = "InvalidRegClassVRM8";
-  let DiagnosticString = "register must be a vector register with an index divisible by 8";
+  let DiagnosticString = "operand must be the start of a valid M8 vector register group";
 }
 
 def VRM8NoV0 : VReg<VM8VTs, (sub VRM8, V0M8), 8> {
   let CoerceFromRegClass = VR;
   let DiagnosticType = "InvalidRegClassVRM8NoV0";
-  let DiagnosticString = "register must be a vector register with an index divisible by 8 excluding zero (v0)";
+  let DiagnosticString = "operand must be the start of a valid M8 vector register group excluding v0";
 }
 
 // Fractional LMUL register classes for inline assembly.

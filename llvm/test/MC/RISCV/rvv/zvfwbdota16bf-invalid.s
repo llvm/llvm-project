@@ -13,9 +13,9 @@ vfwbdota.vv v8, v16, v12, 4
 vfwbdota.vv v8, v16, v12, 64
 
 # Invalid vs2
-# CHECK-ERROR: register must be a vector register with an index divisible by 8{{$}}
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group{{$}}
 vfwbdota.vv v8, v17, v12, 8
 
 # Invalid vs2 and ci
-# CHECK-ERROR: :[[@LINE+1]]:17: error: register must be a vector register with an index divisible by 8{{$}}
+# CHECK-ERROR: :[[@LINE+1]]:17: error: operand must be the start of a valid M8 vector register group{{$}}
 vfwbdota.vv v8, v17, v12, 4
