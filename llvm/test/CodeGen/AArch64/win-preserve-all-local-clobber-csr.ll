@@ -4,6 +4,9 @@
 
 target triple = "aarch64-w64-windows-gnu"
 
+; Reduced from https://github.com/llvm/llvm-project/issues/242966. Check the CSR
+; area is not clobbered by locals.
+
 ; CHECK-FRAMELAYOUT-LABEL: Function: _Z6handletdPc
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-16], Type: Spill, Align: 16, Size: 16
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-32], Type: Spill, Align: 16, Size: 16
@@ -29,7 +32,6 @@ target triple = "aarch64-w64-windows-gnu"
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-352], Type: Spill, Align: 16, Size: 16
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-368], Type: Spill, Align: 16, Size: 16
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-384], Type: Spill, Align: 16, Size: 16
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-392], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-400], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-408], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-416], Type: Spill, Align: 8, Size: 8
@@ -38,7 +40,8 @@ target triple = "aarch64-w64-windows-gnu"
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-440], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-448], Type: Spill, Align: 8, Size: 8
 ; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-456], Type: Spill, Align: 8, Size: 8
-; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-472], Type: Variable, Align: 8, Size: 16
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-464], Type: Spill, Align: 8, Size: 8
+; CHECK-FRAMELAYOUT-NEXT: Offset: [SP-480], Type: Variable, Align: 8, Size: 16
 
 %struct.State = type { i32, ptr }
 
@@ -86,15 +89,15 @@ define preserve_allcc double @_Z6handletdPc(i16 %fcw, double %x, ptr %frame) #0 
 ; CHECK-NEXT:    .seh_save_any_reg_p q30, 448
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    and w8, w0, #0xffff
-; CHECK-NEXT:    add x0, sp, #8
+; CHECK-NEXT:    mov x0, sp
 ; CHECK-NEXT:    fmov d8, d0
-; CHECK-NEXT:    str w8, [sp, #8]
-; CHECK-NEXT:    str x1, [sp, #16]
+; CHECK-NEXT:    str w8, [sp]
+; CHECK-NEXT:    str x1, [sp, #8]
 ; CHECK-NEXT:    bl consume
-; CHECK-NEXT:    ldrb w8, [sp, #8]
+; CHECK-NEXT:    ldrb w8, [sp]
 ; CHECK-NEXT:    tbz w8, #4, .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %if.then
-; CHECK-NEXT:    ldr x8, [sp, #16]
+; CHECK-NEXT:    ldr x8, [sp, #8]
 ; CHECK-NEXT:    mov w16, #1 // =0x1
 ; CHECK-NEXT:    strb w16, [x8, #1040]
 ; CHECK-NEXT:  .LBB0_2: // %if.end

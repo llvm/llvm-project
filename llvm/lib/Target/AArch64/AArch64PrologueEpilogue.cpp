@@ -723,8 +723,7 @@ void AArch64PrologueEmitter::emitPrologue() {
   if (!AFI->hasStackFrame() && !AFL.windowsRequiresStackProbe(MF, NumBytes))
     return emitEmptyStackFramePrologue(NumBytes, PrologueBeginI, DL);
 
-  bool IsWin64 = Subtarget.isCallingConvWin64(F.getCallingConv(), F.isVarArg());
-  unsigned FixedObject = AFL.getFixedObjectSize(MF, AFI, IsWin64, IsFunclet);
+  unsigned FixedObject = AFL.getFixedObjectSize(MF, AFI, IsFunclet);
 
   auto PrologueSaveSize = AFI->getCalleeSavedStackSize() + FixedObject;
   // All of the remaining stack allocations are for locals.
@@ -1388,9 +1387,7 @@ void AArch64EpilogueEmitter::emitEpilogue() {
   // How much of the stack used by incoming arguments this function is expected
   // to restore in this particular epilogue.
   int64_t ArgumentStackToRestore = AFL.getArgumentStackToRestore(MF, MBB);
-  bool IsWin64 = Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv(),
-                                              MF.getFunction().isVarArg());
-  unsigned FixedObject = AFL.getFixedObjectSize(MF, AFI, IsWin64, IsFunclet);
+  unsigned FixedObject = AFL.getFixedObjectSize(MF, AFI, IsFunclet);
 
   const bool AuthenticateReturnAddressEarly =
       !IsFunclet && AFL.authenticatesReturnAddressEarly(MF, MBB);
