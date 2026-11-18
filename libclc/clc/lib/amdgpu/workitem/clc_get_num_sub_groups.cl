@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clc/amdgpu/amdgpu_utils.h"
-#include "clc/subgroup/clc_subgroup.h"
+#include "clc/workitem/clc_get_num_sub_groups.h"
 
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST uint __clc_get_num_sub_groups(void) {
   uint group_size = __clc_amdgpu_workgroup_size();

@@ -10,9 +10,9 @@
 #include "clc/atomic/clc_atomic_store.h"
 #include "clc/collective/clc_work_group_broadcast.h"
 #include "clc/subgroup/clc_sub_group_broadcast.h"
-#include "clc/subgroup/clc_subgroup.h"
 #include "clc/synchronization/clc_work_group_barrier.h"
 #include "clc/workitem/clc_get_local_id.h"
+#include "clc/workitem/clc_get_num_sub_groups.h"
 
 #pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : enable
 
