@@ -318,15 +318,23 @@ func.func @test_memref_ptradd_indexing(%arg0: memref<10x?x30xf32, #ptr.generic_s
 }
 
 // CHECK-LABEL: func @test_constant_address_ops
-//       CHECK:   %[[C_0:.*]] = llvm.mlir.constant(0 : i64) : i64
-//       CHECK:   %[[PTR_0:.*]] = llvm.inttoptr %[[C_0]] : i64 to !llvm.ptr
-//       CHECK:   %[[PTR_ZERO:.*]] = llvm.mlir.zero : !llvm.ptr
-//       CHECK:   %[[RET_0:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr)>
-//       CHECK:   %[[RET_1:.*]] = llvm.insertvalue %[[PTR_0]], %[[RET_0]][0] : !llvm.struct<(ptr, ptr)>
-//       CHECK:   %[[RET_2:.*]] = llvm.insertvalue %[[PTR_ZERO]], %[[RET_1]][1] : !llvm.struct<(ptr, ptr)>
-//       CHECK:   llvm.return %[[RET_2]] : !llvm.struct<(ptr, ptr)>
-func.func @test_constant_address_ops() -> (!ptr.ptr<#ptr.generic_space>, !ptr.ptr<#ptr.generic_space>) {
+//       CHECK:           %[[C_0:.*]] = llvm.mlir.constant(0 : i64) : i64
+//       CHECK:           %[[PTR_0:.*]] = llvm.inttoptr %[[C_0]] : i64 to !llvm.ptr
+//       CHECK:           %[[ZERO:.*]] = llvm.mlir.zero : !llvm.ptr
+//       CHECK:           %[[C_1:.*]] = llvm.mlir.constant(1 : i4) : i4
+//       CHECK:           %[[PTR_1:.*]] = llvm.inttoptr %[[C_1]] : i4 to !llvm.ptr<1>
+//       CHECK:           %[[C_2:.*]] = llvm.mlir.constant(2 : i4) : i4
+//       CHECK:           %[[PTR_2:.*]] = llvm.inttoptr %[[C_2]] : i4 to !llvm.ptr<2>
+//       CHECK:           %[[RET_0:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, ptr<1>, ptr<2>)>
+//       CHECK:           %[[RET_1:.*]] = llvm.insertvalue %[[PTR_0]], %[[RET_0]][0] : !llvm.struct<(ptr, ptr, ptr<1>, ptr<2>)>
+//       CHECK:           %[[RET_2:.*]] = llvm.insertvalue %[[ZERO]], %[[RET_1]][1] : !llvm.struct<(ptr, ptr, ptr<1>, ptr<2>)>
+//       CHECK:           %[[RET_3:.*]] = llvm.insertvalue %[[PTR_1]], %[[RET_2]][2] : !llvm.struct<(ptr, ptr, ptr<1>, ptr<2>)>
+//       CHECK:           %[[RET_4:.*]] = llvm.insertvalue %[[PTR_2]], %[[RET_3]][3] : !llvm.struct<(ptr, ptr, ptr<1>, ptr<2>)>
+//       CHECK:           llvm.return %[[RET_4]] : !llvm.struct<(ptr, ptr, ptr<1>, ptr<2>)>
+func.func @test_constant_address_ops() -> (!ptr.ptr<#ptr.generic_space>, !ptr.ptr<#ptr.generic_space>, !ptr.ptr<#llvm.address_space<1>>, !ptr.ptr<#llvm.address_space<2>>) {
   %addr_0 = ptr.constant #ptr.address<0> : !ptr.ptr<#ptr.generic_space>
-  %null = ptr.constant #ptr.null : !ptr.ptr<#ptr.generic_space> 
-  return %addr_0, %null : !ptr.ptr<#ptr.generic_space>, !ptr.ptr<#ptr.generic_space>
+  %null = ptr.constant #ptr.null : !ptr.ptr<#ptr.generic_space>
+  %space_1 = ptr.constant #ptr.address<1> : !ptr.ptr<#llvm.address_space<1>>
+  %space_2 = ptr.constant #ptr.address<2> : !ptr.ptr<#llvm.address_space<2>> 
+  return %addr_0, %null, %space_1, %space_2 : !ptr.ptr<#ptr.generic_space>, !ptr.ptr<#ptr.generic_space>, !ptr.ptr<#llvm.address_space<1>>, !ptr.ptr<#llvm.address_space<2>>
 }
