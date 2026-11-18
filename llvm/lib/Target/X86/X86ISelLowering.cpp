@@ -61286,7 +61286,7 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
 
   // sub(0, and(X, 1)) -> ashr(shl(X, SizeInBits - 1), SizeInBits - 1)
   if (VT.isVectorOf(MVT::i16) || VT.isVectorOf(MVT::i32) ||
-      (VT.isVectorOf(MVT::i64))) {
+      VT.isVectorOf(MVT::i64)) {
     SDValue X;
     if (sd_match(N, m_Neg(m_OneUse(m_And(m_Value(X), m_One()))))) {
       SDValue VecConst =
