@@ -417,7 +417,9 @@ static int run(int argc, char **argv) {
   }
 #define HANDLE_EXTENSION(Ext) Extensions.push_back(get##Ext##PluginInfo());
 #include "llvm/Support/Extension.def"
-  check(passPluginArguments(Extensions, PluginArgs), "-plugin-arg");
+  // LTO copies the library options into the context of each backend
+  check(passPluginArguments(Extensions, PluginArgs, LibraryOptions),
+        "-plugin-arg");
   if (auto Level = CodeGenOpt::parseLevel(CGOptLevel)) {
     Conf.CGOptLevel = *Level;
   } else {

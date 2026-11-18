@@ -20,15 +20,8 @@ LLVM_REGISTER_LIBRARY_OPTIONS(llvm::ByeOptions)
 
 namespace {
 
-// Options from ParseArguments. The plugin is loaded once per process and has
-// no instances, so they are global.
-cl::LibraryOptionsContext PluginArgs;
-
-// Arguments for the plugin take precedence over the options that the host set
-// in the LLVMContext, e.g. from -mllvm.
+// The host copies the options into the context of each compilation
 const ByeOptions &getOptions(const LLVMContext &Ctx) {
-  if (!PluginArgs.args().empty())
-    return PluginArgs.get<ByeOptions>();
   return Ctx.getLibraryOptions().get<ByeOptions>();
 }
 
@@ -102,14 +95,16 @@ static RegisterPass<LegacyBye> X("goodbye", "Good Bye World Pass",
                                  false /* Only looks at CFG */,
                                  false /* Analysis Pass */);
 
-static Error parseArguments(ArrayRef<const char *> Args) {
-  // Parse into the plugin's own context. Unlike cl::ParseCommandLineOptions,
-  // this doesn't involve the option registry of the host, so the host's own
-  // options and positional arguments can't interfere.
+static Error parseArguments(cl::LibraryOptionsContext &LibraryOptions,
+                            ArrayRef<const char *> Args) {
+  // Parse into the host's options, where -mllvm options end up as well.
+  // Unlike cl::ParseCommandLineOptions, this doesn't involve the option
+  // registry of the host, so the host's own options and positional arguments
+  // can't interfere.
   static constexpr opt::LibraryOptionsParser Parser{
       std::in_place_type<ByeOptions>};
   for (unsigned I = 0, Consumed = 0; I < Args.size(); I += Consumed)
-    if (Error E = PluginArgs.parse(Parser, Args.drop_front(I), Consumed))
+    if (Error E = LibraryOptions.parse(Parser, Args.drop_front(I), Consumed))
       return E;
   return Error::success();
 }

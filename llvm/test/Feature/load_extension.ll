@@ -3,14 +3,18 @@
 ;; A plugin receives all of its -plugin-arg arguments. -plugin-arg splits at
 ;; the first comma only, so the value may contain commas.
 ; RUN: opt %s %loadnewpmbye -passes="goodbye" -plugin-arg=Bye,-wave-goodbye -plugin-arg=Bye,-bye-greeting=See,you -disable-output 2>&1 | FileCheck %s --check-prefix=BOTH
+;; Options from the command line of the host and from -plugin-arg end up in
+;; the same context.
+; RUN: opt %s %loadnewpmbye %loadbye -passes="goodbye" -wave-goodbye -plugin-arg=Bye,-bye-greeting=See,you -disable-output 2>&1 | FileCheck %s --check-prefix=BOTH
 ; RUN: not opt %s %loadnewpmbye -plugin-arg=Bye -disable-output 2>&1 | FileCheck %s --check-prefix=NOCOMMA
 ; RUN: not opt %s %loadnewpmbye -plugin-arg=Nope,-x -disable-output 2>&1 | FileCheck %s --check-prefix=UNKNOWN
 ;; Two plugins with the same name are an error.
 ; RUN: %if !linked-bye %{ not opt %s %loadnewpmbye %loadnewpmbye -disable-output 2>&1 | FileCheck %s --check-prefix=DUP %}
 ; RUN: opt -module-summary %s -o %t.o
 ;; llvm-lto2 has required positional arguments. Bye parses its arguments into
-;; its own LibraryOptionsContext and not with cl::ParseCommandLineOptions, so
-;; the option registry of the host doesn't interfere.
+;; the LibraryOptionsContext of the host and not with
+;; cl::ParseCommandLineOptions, so the option registry of the host doesn't
+;; interfere.
 ; RUN: llvm-lto2 run %t.o %loadnewpmbye -plugin-arg=Bye,-wave-goodbye -o %t -r %t.o,somefunk,plx -r %t.o,junk,plx 2>&1 | FileCheck %s
 ; RUN: llvm-lto2 run %t.o %loadnewpmbye -opt-pipeline="goodbye" -plugin-arg=Bye,-wave-goodbye -o %t -r %t.o,somefunk,plx -r %t.o,junk,plx 2>&1 | FileCheck %s
 ; REQUIRES: plugins, examples

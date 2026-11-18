@@ -694,7 +694,8 @@ void registerPollyPasses(PassBuilder &PB) {
 }
 } // namespace polly
 
-static Error parseArguments(ArrayRef<const char *> Args) {
+static Error parseArguments(cl::LibraryOptionsContext &,
+                            ArrayRef<const char *> Args) {
   SmallVector<const char *> Argv = {"Polly"};
   append_range(Argv, Args);
   std::string Msg;

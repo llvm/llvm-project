@@ -28,6 +28,9 @@ class Module;
 class ModuleSummaryIndex;
 class PassBuilder;
 class TargetMachine;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
 namespace vfs {
 class FileSystem;
 } // namespace vfs
@@ -85,8 +88,14 @@ struct PassPluginLibraryInfo {
                              IntrusiveRefCntPtr<vfs::FileSystem> VFS) = nullptr;
 
   /// Callback receiving the arguments given to the plugin, e.g. by
-  /// -plugin-arg=<PluginName>,<arg>, in order.
-  Error (*ParseArguments)(ArrayRef<const char *> Args) = nullptr;
+  /// -plugin-arg=<PluginName>,<arg>, in order. \p LibraryOptions are the
+  /// library options of the host's compilation. The host copies them into each
+  /// LLVMContext that it compiles in, so a plugin that parses its options into
+  /// them reads the values back from the context of the IR it works on. For
+  /// options declared in TableGen, a few lines with a
+  /// \c opt::LibraryOptionsParser do the parsing (see llvm/examples/Bye).
+  Error (*ParseArguments)(cl::LibraryOptionsContext &LibraryOptions,
+                          ArrayRef<const char *> Args) = nullptr;
 };
 }
 
@@ -142,10 +151,11 @@ private:
 };
 
 /// Passes each "<PluginName>,<arg>" in \p Args to the \c ParseArguments
-/// callback of the extension in \p Infos with that name. Two extensions with
-/// the same name are an error.
+/// callback of the extension in \p Infos with that name, together with
+/// \p LibraryOptions. Two extensions with the same name are an error.
 LLVM_ABI Error passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,
-                                   ArrayRef<std::string> Args);
+                                   ArrayRef<std::string> Args,
+                                   cl::LibraryOptionsContext &LibraryOptions);
 } // namespace llvm
 
 // The function returns a struct with default initializers.

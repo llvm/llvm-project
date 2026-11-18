@@ -386,7 +386,8 @@ struct SimplifyCFGPass : public OptionalPassInfoMixin<SimplifyCFGPass> {
 } // namespace
 
 // Selects the tutorial version with -plugin-arg=SimplifyCFG,v1 (or v2, v3).
-static Error parseArguments(ArrayRef<const char *> Args) {
+static Error parseArguments(cl::LibraryOptionsContext &,
+                            ArrayRef<const char *> Args) {
   std::optional<TutorialVersion> V;
   if (Args.size() == 1)
     V = StringSwitch<std::optional<TutorialVersion>>(Args[0])
