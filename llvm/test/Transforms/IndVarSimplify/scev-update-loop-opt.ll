@@ -10,15 +10,15 @@ define void @loop_limit_test(i32 %conv5, i1 %cmp13, i1 %cmp20, i1 %cmp27, i1 %cm
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[CONV5]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[CONV5]] to i64
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND]]
 ; CHECK:       [[FOR_COND]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[CONV5]] to i64
 ; CHECK-NEXT:    br label %[[FOR_COND2:.*]]
 ; CHECK:       [[FOR_COND2]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_COND_CLEANUP14:.*]] ], [ 0, %[[FOR_COND]] ]
-; CHECK-NEXT:    [[CMP6:%.*]] = icmp samesign ult i64 [[INDVARS_IV]], [[TMP2]]
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp ne i64 [[INDVARS_IV]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[CMP6]], label %[[FOR_COND9_PREHEADER:.*]], label %[[FOR_COND_LOOPEXIT]]
 ; CHECK:       [[FOR_COND9_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_COND9:.*]]
@@ -147,3 +147,7 @@ for.body43:                                       ; preds = %for.cond37
 }
 
 declare void @llvm.assume(i1 noundef)
+;.
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.peeled.count", i32 1}
+;.
