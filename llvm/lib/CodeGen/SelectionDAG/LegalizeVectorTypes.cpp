@@ -3094,9 +3094,43 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_COMPRESS(SDNode *N, SDValue &Lo,
 
 void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE_VAR(SDNode *N, SDValue &Lo,
                                                       SDValue &Hi) {
-  // TODO: Split into half-width shuffles when the target lowers them natively.
-  SDValue Res = TLI.expandVECTOR_SHUFFLE_VAR(N, DAG);
-  std::tie(Lo, Hi) = DAG.SplitVector(Res, SDLoc(N));
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  EVT IdxVT = VT.changeVectorElementTypeToInteger();
+  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VT);
+  EVT PartVT = TLI.getLegalTypeToTransformTo(*DAG.getContext(), LoVT);
+  // Splitting into K parts makes K^2 part shuffles, so only do so when that is
+  // small next to the element count and the target shuffles the parts.
+  unsigned NumElts = VT.getVectorMinNumElements();
+  uint64_t K =
+      PartVT.isVector() ? NumElts / PartVT.getVectorMinNumElements() : NumElts;
+  if (VT.isScalableVector() || 2 * K * K > NumElts ||
+      !TLI.isOperationLegalOrCustom(ISD::VECTOR_SHUFFLE_VAR, PartVT) ||
+      !isUIntN(IdxVT.getScalarSizeInBits(), NumElts - 1)) {
+    std::tie(Lo, Hi) =
+        DAG.SplitVector(TLI.expandVECTOR_SHUFFLE_VAR(N, DAG), DL);
+    return;
+  }
+
+  // Res[i] = Idx[i] < NumLo ? SrcLo[Idx[i]] : SrcHi[Idx[i] - NumLo]
+  SDValue SrcLo, SrcHi, IdxLo, IdxHi;
+  GetSplitVector(N->getOperand(0), SrcLo, SrcHi);
+  std::tie(IdxLo, IdxHi) =
+      DAG.SplitVector(DAG.getZExtOrTrunc(N->getOperand(1), DL, IdxVT), DL);
+  EVT HalfIdxVT = IdxLo.getValueType();
+  SDValue NumLo = DAG.getConstant(LoVT.getVectorNumElements(), DL, HalfIdxVT);
+  EVT CCVT =
+      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), HalfIdxVT);
+  auto ShuffleHalf = [&](SDValue Idx) {
+    SDValue FromLo = DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, DL, LoVT, SrcLo, Idx);
+    SDValue FromHi =
+        DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, DL, LoVT, SrcHi,
+                    DAG.getNode(ISD::SUB, DL, HalfIdxVT, Idx, NumLo));
+    SDValue InLo = DAG.getSetCC(DL, CCVT, Idx, NumLo, ISD::SETULT);
+    return DAG.getSelect(DL, LoVT, InLo, FromLo, FromHi);
+  };
+  Lo = ShuffleHalf(IdxLo);
+  Hi = ShuffleHalf(IdxHi);
 }
 
 void DAGTypeLegalizer::SplitVecRes_SETCC(SDNode *N, SDValue &Lo, SDValue &Hi) {

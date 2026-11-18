@@ -307,100 +307,50 @@ define <8 x i32> @shuffle_v8i32_i2_mask(<8 x i32> %v, <8 x i2> %mask) nounwind {
 ;
 ; SSSE3-LABEL: shuffle_v8i32_i2_mask:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    subq $136, %rsp
-; SSSE3-NEXT:    pextrw $4, %xmm2, %eax
-; SSSE3-NEXT:    pextrw $5, %xmm2, %ecx
-; SSSE3-NEXT:    pextrw $6, %xmm2, %edx
-; SSSE3-NEXT:    pextrw $7, %xmm2, %esi
-; SSSE3-NEXT:    movd %xmm2, %edi
-; SSSE3-NEXT:    pextrw $1, %xmm2, %r8d
-; SSSE3-NEXT:    pextrw $2, %xmm2, %r9d
-; SSSE3-NEXT:    pextrw $3, %xmm2, %r10d
-; SSSE3-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movaps %xmm0, (%rsp)
-; SSSE3-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    andl $3, %r10d
-; SSSE3-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSSE3-NEXT:    andl $3, %r9d
-; SSSE3-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSSE3-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSSE3-NEXT:    andl $3, %r8d
-; SSSE3-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSSE3-NEXT:    andl $3, %edi
-; SSSE3-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSSE3-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; SSSE3-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSSE3-NEXT:    andl $3, %esi
-; SSSE3-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSSE3-NEXT:    andl $3, %edx
-; SSSE3-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSSE3-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; SSSE3-NEXT:    andl $3, %ecx
-; SSSE3-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; SSSE3-NEXT:    andl $3, %eax
-; SSSE3-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSSE3-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
-; SSSE3-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; SSSE3-NEXT:    addq $136, %rsp
+; SSSE3-NEXT:    movdqa %xmm0, %xmm1
+; SSSE3-NEXT:    movdqa %xmm2, %xmm0
+; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [3,3,3,3]
+; SSSE3-NEXT:    pand %xmm3, %xmm0
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [67372036,67372036,67372036,67372036]
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm5 = xmm0[1,1,3,3]
+; SSSE3-NEXT:    pmuludq %xmm4, %xmm0
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm6 = xmm0[0,2,2,3]
+; SSSE3-NEXT:    pmuludq %xmm4, %xmm5
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[0,2,2,3]
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm6 = xmm6[0],xmm0[0],xmm6[1],xmm0[1]
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm5 = [50462976,50462976,50462976,50462976]
+; SSSE3-NEXT:    paddd %xmm5, %xmm6
+; SSSE3-NEXT:    movdqa %xmm1, %xmm0
+; SSSE3-NEXT:    pshufb %xmm6, %xmm0
+; SSSE3-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4,4,5,5,6,6,7,7]
+; SSSE3-NEXT:    pand %xmm3, %xmm2
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
+; SSSE3-NEXT:    pmuludq %xmm4, %xmm2
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; SSSE3-NEXT:    pmuludq %xmm4, %xmm3
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,2,2,3]
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; SSSE3-NEXT:    paddd %xmm5, %xmm2
+; SSSE3-NEXT:    pshufb %xmm2, %xmm1
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: shuffle_v8i32_i2_mask:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    subq $136, %rsp
-; SSE41-NEXT:    pextrw $7, %xmm2, %eax
-; SSE41-NEXT:    pextrw $6, %xmm2, %ecx
-; SSE41-NEXT:    pextrw $4, %xmm2, %esi
-; SSE41-NEXT:    pextrw $5, %xmm2, %edx
-; SSE41-NEXT:    pextrw $3, %xmm2, %edi
-; SSE41-NEXT:    pextrw $2, %xmm2, %r8d
-; SSE41-NEXT:    movd %xmm2, %r9d
-; SSE41-NEXT:    pextrw $1, %xmm2, %r10d
-; SSE41-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movaps %xmm0, (%rsp)
-; SSE41-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; SSE41-NEXT:    andl $3, %r10d
-; SSE41-NEXT:    andl $3, %r9d
-; SSE41-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE41-NEXT:    pinsrd $1, -96(%rsp,%r10,4), %xmm0
-; SSE41-NEXT:    andl $3, %r8d
-; SSE41-NEXT:    pinsrd $2, -64(%rsp,%r8,4), %xmm0
-; SSE41-NEXT:    andl $3, %edi
-; SSE41-NEXT:    pinsrd $3, 96(%rsp,%rdi,4), %xmm0
-; SSE41-NEXT:    andl $3, %edx
-; SSE41-NEXT:    andl $3, %esi
-; SSE41-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE41-NEXT:    pinsrd $1, (%rsp,%rdx,4), %xmm1
-; SSE41-NEXT:    andl $3, %ecx
-; SSE41-NEXT:    pinsrd $2, 32(%rsp,%rcx,4), %xmm1
-; SSE41-NEXT:    andl $3, %eax
-; SSE41-NEXT:    pinsrd $3, 64(%rsp,%rax,4), %xmm1
-; SSE41-NEXT:    addq $136, %rsp
+; SSE41-NEXT:    movdqa %xmm0, %xmm1
+; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm3 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
+; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm4 = [3,3,3,3]
+; SSE41-NEXT:    pand %xmm4, %xmm3
+; SSE41-NEXT:    movdqa {{.*#+}} xmm5 = [67372036,67372036,67372036,67372036]
+; SSE41-NEXT:    pmulld %xmm5, %xmm3
+; SSE41-NEXT:    movdqa {{.*#+}} xmm6 = [50462976,50462976,50462976,50462976]
+; SSE41-NEXT:    paddd %xmm6, %xmm3
+; SSE41-NEXT:    pshufb %xmm3, %xmm0
+; SSE41-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4,4,5,5,6,6,7,7]
+; SSE41-NEXT:    pand %xmm4, %xmm2
+; SSE41-NEXT:    pmulld %xmm5, %xmm2
+; SSE41-NEXT:    paddd %xmm6, %xmm2
+; SSE41-NEXT:    pshufb %xmm2, %xmm1
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: shuffle_v8i32_i2_mask:
