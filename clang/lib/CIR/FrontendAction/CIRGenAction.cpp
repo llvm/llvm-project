@@ -456,8 +456,8 @@ void CIRGenAction::ExecuteAction() {
     return;
   }
 
-  // The CIR-to-CIR passes are safe to rerun, so the whole pipeline runs
-  // whether or not the input has already been through it.
+  // ClangIR input may already have been through the pipeline in an earlier
+  // invocation (e.g. -emit-cir). Its passes are safe to rerun, so run it whole.
   if (runCIRPipeline(CI.getFrontendOpts(), CI.getCodeGenOpts(), *Module,
                      MLIRContext)
           .failed()) {
