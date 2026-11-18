@@ -1512,20 +1512,6 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   // SYCL device compiler which doesn't produce host binary.
   if (LangOpts.SYCLIsDevice) {
     Builder.defineMacro("__SYCL_DEVICE_ONLY__", "1");
-    if (OffloadArch Arch = TI.getOffloadArch(); Arch.isIntelIGCA()) {
-      llvm::IntelGPU::IGCATarget IGCA = Arch.igcaTarget();
-
-      Builder.defineMacro("__OFFLOAD_ARCH_IGCA__", Twine(IGCA.getTarget()));
-      if (IGCA.isAnyCompute())
-        Builder.defineMacro("__OFFLOAD_ARCH_IGCA_COMPUTE__");
-      if (IGCA.isAnyRender())
-        Builder.defineMacro("__OFFLOAD_ARCH_IGCA_RENDER__");
-
-      if (IGCA.isComputeExact())
-        Builder.defineMacro("__OFFLOAD_ARCH_IGCA_COMPUTE_EXACT__");
-      if (IGCA.isRenderExact())
-        Builder.defineMacro("__OFFLOAD_ARCH_IGCA_RENDER_EXACT__");
-    }
   }
 
   // OpenCL definitions.
@@ -1534,6 +1520,24 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 
     if (TI.getTriple().isSPIR() || TI.getTriple().isSPIRV())
       Builder.defineMacro("__IMAGE_SUPPORT__");
+  }
+
+  // Define IGCA macros when compiling device code for an Intel IGCA target.
+  // Only SYCL has been tested with IGCA targets so far.
+  if (OffloadArch Arch = TI.getOffloadArch();
+      Arch.isIntelIGCA() && LangOpts.SYCLIsDevice) {
+    llvm::IntelGPU::IGCATarget IGCA = Arch.igcaTarget();
+
+    Builder.defineMacro("__OFFLOAD_ARCH_IGCA__", Twine(IGCA.getTarget()));
+    if (IGCA.isAnyCompute())
+      Builder.defineMacro("__OFFLOAD_ARCH_IGCA_COMPUTE__");
+    if (IGCA.isAnyRender())
+      Builder.defineMacro("__OFFLOAD_ARCH_IGCA_RENDER__");
+
+    if (IGCA.isComputeExact())
+      Builder.defineMacro("__OFFLOAD_ARCH_IGCA_COMPUTE_EXACT__");
+    if (IGCA.isRenderExact())
+      Builder.defineMacro("__OFFLOAD_ARCH_IGCA_RENDER_EXACT__");
   }
 
   if (TI.hasInt128Type() && LangOpts.CPlusPlus && LangOpts.GNUMode) {

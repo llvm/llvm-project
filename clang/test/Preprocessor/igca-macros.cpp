@@ -1,4 +1,4 @@
-/// Check that IGCA target macros are predefined correctly during SYCL device
+/// Check that IGCA target macros are predefined correctly during device
 /// compilation if an IGCA target was provided through -target-cpu.
 
 /// Core feature set:
