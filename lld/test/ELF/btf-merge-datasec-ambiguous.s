@@ -12,6 +12,14 @@
 # RUN: llvm-readelf -x .BTF %t/partial-out | FileCheck %s --check-prefix=NO-DATASEC
 # NO-DATASEC: 0x00000000 9feb0100 18000000 00000000 40000000
 
+## A relocated (Clang-style) entry for the same key still makes the dead
+## placeholder ambiguous; only the placeholder is dropped.
+# RUN: llvm-mc -filetype=obj -triple=x86_64 --defsym=KEEP=1 --defsym=RELOC=1 %t/blobs.s -o %t/live-reloc.o
+# RUN: ld.lld -r --gc-sections -e _start %t/live-reloc.o %t/dead.o -o %t/mixed.o
+# RUN: ld.lld --btf-merge %t/mixed.o -o %t/mixed-out 2>&1 | FileCheck %s --check-prefix=MIXED
+# MIXED-COUNT-1: warning: {{.*}}:(.BTF): --btf-merge: cannot resolve DATASEC .bss.vars variable 's'; entry dropped
+# MIXED-NOT: warning:
+
 #--- input.s
 .globl _start
 .text
@@ -62,7 +70,13 @@ s: .zero 4
 .long 1, 0x01000000, 4, 0x01000020
 .endif
 .long 5, 0x0e000000, 1, 0
-.long 7, 0x0f000001, 0, 2, 0, 4
+.long 7, 0x0f000001, 0, 2
+.ifdef RELOC
+.long s
+.else
+.long 0
+.endif
+.long 4
 .Lstr:
 .asciz "", "int", "s", ".bss.vars"
 .Lend:

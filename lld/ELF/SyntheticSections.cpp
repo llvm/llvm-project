@@ -3641,6 +3641,10 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
       Warn(ctx) << s << ": failed to parse .BTF section: " << reason;
     }
 
+    // Locations already claimed by relocated entries. After a relocatable link
+    // with --gc-sections, a placeholder's only remaining same-name definition
+    // can belong to another blob's relocated variable.
+    DenseSet<std::pair<const SectionBase *, uint64_t>> relocatedTargets;
     if (s->relSecIdx) {
       auto readRelocs = [&](ArrayRef<uint8_t> data, auto rels) {
         for (const auto &rel : rels) {
@@ -3677,6 +3681,7 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
           var.addend = getAddend<ELFT>(rel);
           if constexpr (!std::decay_t<decltype(rel)>::HasAddend)
             var.addend += ctx.target->getImplicitAddend(bufLoc, type);
+          relocatedTargets.insert({ds->section, ds->value + var.addend});
         }
       };
       invokeOnRelocs(*s, readRelocs, data);
@@ -3735,7 +3740,8 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
         }
         StringRef name = builder.findString(type->NameOff);
         const Defined *ds = definitions->lookup({sectionName, name});
-        if (ds && !ambiguousPlaceholders.contains({sectionName, name})) {
+        if (ds && !ambiguousPlaceholders.contains({sectionName, name}) &&
+            !relocatedTargets.contains({ds->section, ds->value})) {
           var.section = ds->section;
           var.addend = ds->value;
         } else
