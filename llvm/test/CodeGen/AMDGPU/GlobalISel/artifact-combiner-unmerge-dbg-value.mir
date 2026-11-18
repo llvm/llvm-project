@@ -1,0 +1,44 @@
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -run-pass=mir-debugify,legalizer %s -o - | FileCheck %s
+
+# Folding the unmerge into the nested merges renames %7-%10 to %0-%3 with
+# replaceRegWith, including in the dead unmerges. Erasing those must not make
+# the debug uses of %0-%3 undef.
+# FIXME: They are made undef.
+
+---
+name: unmerge_of_nested_merge
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; CHECK-LABEL: name: unmerge_of_nested_merge
+    ; CHECK:      %0:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: DBG_VALUE $noreg
+    ; CHECK-NEXT: %1:_(i32) = COPY $vgpr1
+    ; CHECK-NEXT: DBG_VALUE $noreg
+    ; CHECK-NEXT: %2:_(i32) = COPY $vgpr2
+    ; CHECK-NEXT: DBG_VALUE $noreg
+    ; CHECK-NEXT: %3:_(i32) = COPY $vgpr3
+    ; CHECK-NEXT: DBG_VALUE $noreg
+    ; CHECK-NEXT: DBG_VALUE $noreg
+    ; CHECK-NEXT: DBG_VALUE $noreg
+    ; CHECK-NEXT: DBG_VALUE $noreg
+    ; CHECK-NEXT: DBG_VALUE $noreg
+    ; CHECK-NEXT: DBG_VALUE $noreg
+    ; CHECK-NEXT: DBG_VALUE $noreg
+    ; CHECK-NEXT: DBG_VALUE $noreg
+    ; CHECK-NEXT: $vgpr0 = COPY %0(i32)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(i32) = COPY $vgpr2
+    %3:_(i32) = COPY $vgpr3
+    %4:_(f64) = G_MERGE_VALUES %0(i32), %1(i32)
+    %5:_(f64) = G_MERGE_VALUES %2(i32), %3(i32)
+    %6:_(<2 x f64>) = G_BUILD_VECTOR %4(f64), %5(f64)
+    %7:_(i32), %8:_(i32), %9:_(i32), %10:_(i32) = G_UNMERGE_VALUES %6(<2 x f64>)
+    $vgpr0 = COPY %7(i32)
+    $vgpr1 = COPY %8(i32)
+    $vgpr2 = COPY %9(i32)
+    $vgpr3 = COPY %10(i32)
+    SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+...
