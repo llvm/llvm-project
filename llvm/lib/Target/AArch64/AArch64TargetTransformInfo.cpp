@@ -4998,7 +4998,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     // Check if the extractelement user is scalar fmul.
     auto IsUserFMulScalarTy = [](const Value *EEUser) {
       // Check if the user is scalar fmul.
-      const auto *BO = dyn_cast<BinaryOperator>(EEUser);
+      const auto *BO = dyn_cast_or_null<BinaryOperator>(EEUser);
       return BO && BO->getOpcode() == BinaryOperator::FMul &&
              !BO->getType()->isVectorTy();
     };
@@ -5041,11 +5041,14 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
         auto *FMul = cast<BinaryOperator>(U);
         auto *Op0 = FMul->getOperand(0);
         auto *Op1 = FMul->getOperand(1);
+        // Instructions that don't have Scalar as an operand aren't relevant.
+        if (Op0 != Scalar && Op1 != Scalar)
+          continue;
         // If there's a different value used in an FMul that Scalar is used
         // in, then if that also has nonzero lane then we need an extract.
-        if (S != Scalar && L != 0 && (Op0 == Scalar || Op1 == Scalar))
+        if (S != Scalar &&
+            !IsExtractLaneEquivalentToZero(L, Ty->getScalarSizeInBits()))
           return false;
-
         // We need an extract if both operands are the Scalar
         if (Op0 == Scalar && Op1 == Scalar)
           return false;
