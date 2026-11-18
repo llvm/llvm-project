@@ -2979,31 +2979,44 @@ void CodeGenFunction::EmitVTableCheck(CFITypeCheckKind TCK, CanQualType T,
             StaticData, {VTable, ValidVtable});
 }
 
+static std::pair<const CXXRecordDecl *, bool>
+getCFIVCallTarget(const CodeGenFunction &CGF, const CXXRecordDecl *RD) {
+  if (!CGF.SanOpts.has(SanitizerKind::CFIVCall))
+    return {RD, false};
+  if (!CGF.SanOpts.has(SanitizerKind::CFICastStrict))
+    RD = LeastDerivedClassWithSameLayout(RD);
+  bool ShouldEmitCFICheck = !CGF.getContext().getNoSanitizeList().containsType(
+      SanitizerKind::CFIVCall, RD->getQualifiedNameAsString());
+  return {RD, ShouldEmitCFICheck};
+}
+
 bool CodeGenFunction::ShouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *RD) {
-  if (!CGM.getCodeGenOpts().WholeProgramVTables ||
-      !CGM.HasHiddenLTOVisibility(RD))
+  if (!CGM.getCodeGenOpts().WholeProgramVTables)
     return false;
 
+  auto [TargetRD, ShouldEmitCFICheck] = getCFIVCallTarget(*this, RD);
+  if (!CGM.HasHiddenLTOVisibility(TargetRD))
+    return false;
+
+  // GlobalDCE's virtual function elimination only treats vtable slots as live
+  // if they are loaded via llvm.type.checked.load, so it must always be used.
   if (CGM.getCodeGenOpts().VirtualFunctionElimination)
     return true;
 
-  if (!SanOpts.has(SanitizerKind::CFIVCall) ||
-      !CGM.getCodeGenOpts().SanitizeTrap.has(SanitizerKind::CFIVCall))
-    return false;
-
-  std::string TypeName = RD->getQualifiedNameAsString();
-  return !getContext().getNoSanitizeList().containsType(SanitizerKind::CFIVCall,
-                                                        TypeName);
+  return ShouldEmitCFICheck &&
+         CGM.getCodeGenOpts().SanitizeTrap.has(SanitizerKind::CFIVCall);
 }
 
 llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
     const CXXRecordDecl *RD, llvm::Value *VTable, llvm::Type *VTableTy,
     uint64_t VTableByteOffset, SourceLocation /*Loc*/) {
+  auto [TargetRD, ShouldEmitCFICheck] = getCFIVCallTarget(*this, RD);
+
   auto CheckOrdinal = SanitizerKind::SO_CFIVCall;
   auto CheckHandler = SanitizerHandler::CFICheckFail;
   SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
 
-  CanQualType T = CGM.getContext().getCanonicalTagType(RD);
+  CanQualType T = CGM.getContext().getCanonicalTagType(TargetRD);
   llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(T);
   llvm::Value *TypeId = llvm::MetadataAsValue::get(CGM.getLLVMContext(), MD);
 
@@ -3016,10 +3029,7 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
 
   llvm::Value *CheckResult = Builder.CreateExtractValue(CheckedLoad, 1);
 
-  std::string TypeName = RD->getQualifiedNameAsString();
-  if (SanOpts.has(SanitizerKind::CFIVCall) &&
-      !getContext().getNoSanitizeList().containsType(SanitizerKind::CFIVCall,
-                                                     TypeName)) {
+  if (ShouldEmitCFICheck) {
     EmitSanitizerStatReport(llvm::SanStat_CFI_VCall);
     EmitCheck(std::make_pair(CheckResult, CheckOrdinal), CheckHandler, {}, {});
   }

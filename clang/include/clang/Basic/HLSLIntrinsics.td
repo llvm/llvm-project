@@ -1403,7 +1403,7 @@ def hlsl_quad_all : HLSLBuiltin<"QuadAll", "__builtin_hlsl_quad_all"> {
   let Args = [BoolTy];
   let ReturnType = BoolTy;
   let IsConvergent = 1;
-  let Availability = SM6_7;
+  let Availability = SM6_0;
 }
 
 // Reads the value from the lane across the X axis of the quad.

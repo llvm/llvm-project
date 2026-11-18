@@ -205,7 +205,8 @@ def CXXAssignAttr : DialectAttribute<(attr
 
 def VTableAttr : DialectAttribute<(attr
   Type:$type,
-  Attr<"mlir::ArrayAttr">:$data
+  Attr<"mlir::ArrayAttr">:$data,
+  Attr<"mlir::ArrayAttr">:$address_points
 )>;
 
 def BlockAddrDiffAttr : DialectAttribute<(attr

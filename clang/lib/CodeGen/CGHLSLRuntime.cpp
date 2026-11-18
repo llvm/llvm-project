@@ -35,6 +35,7 @@
 #include "llvm/ADT/Enum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -67,6 +68,11 @@ using namespace llvm;
 using llvm::hlsl::CBufferRowSizeInBytes;
 
 namespace {
+
+enum class SPIRVExecutionMode : uint32_t {
+  DerivativeGroupQuadsKHR = 5289,
+  DerivativeGroupLinearKHR = 5290
+};
 
 void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   // The validation of ValVersionStr is done at HLSLToolChain::TranslateArgs.
@@ -1001,6 +1007,72 @@ void CGHLSLRuntime::addHLSLBufferLayoutType(const RecordType *StructType,
   LayoutTypes[StructType] = LayoutTy;
 }
 
+static std::array<uint32_t, 3> parseNumThreads(StringRef NumThreads) {
+  SmallVector<StringRef, 3> Dimensions;
+  NumThreads.split(Dimensions, ',');
+  assert(Dimensions.size() == 3 && "expected three numthreads dimensions");
+  std::array<uint32_t, 3> Threads;
+  for (auto [Dimension, Thread] : llvm::zip(Dimensions, Threads)) {
+    [[maybe_unused]] bool Invalid = Dimension.getAsInteger(10, Thread);
+    assert(!Invalid && "expected an integer numthreads dimension");
+  }
+  return Threads;
+}
+
+static void addSPIRVQuadAllExecutionModes(CodeGenModule &CGM) {
+  llvm::Module &M = CGM.getModule();
+  Function *QuadAll =
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::spv_quad_all);
+  if (!QuadAll)
+    return;
+
+  SmallVector<Function *, 8> Worklist{QuadAll};
+  SmallPtrSet<Function *, 16> Visited;
+  IRBuilder<> B(M);
+  while (!Worklist.empty()) {
+    Function *F = Worklist.pop_back_val();
+    if (!Visited.insert(F).second)
+      continue;
+
+    Attribute NumThreadsAttr = F->getFnAttribute("hlsl.numthreads");
+    if (NumThreadsAttr.isValid()) {
+      std::array<uint32_t, 3> Threads =
+          parseNumThreads(NumThreadsAttr.getValueAsString());
+      bool IsLinear = Threads[1] == 1 && Threads[2] == 1;
+      // QuadAll needs derivative groups for SPIR-V compute entry points.
+      // Linear groups need complete sets of four threads. Quad groups need
+      // complete 2-by-2 quads in the X and Y dimensions.
+      bool InvalidThreads;
+      SPIRVExecutionMode Mode;
+      if (IsLinear) {
+        InvalidThreads =
+            (uint64_t(Threads[0]) * Threads[1] * Threads[2]) % 4 != 0;
+        Mode = SPIRVExecutionMode::DerivativeGroupLinearKHR;
+      } else {
+        InvalidThreads = Threads[0] % 2 != 0 || Threads[1] % 2 != 0;
+        Mode = SPIRVExecutionMode::DerivativeGroupQuadsKHR;
+      }
+      if (InvalidThreads) {
+        CGM.getDiags().Report(diag::err_hlsl_spirv_derivative_group_numthreads)
+            << F->getName() << IsLinear;
+        CGM.getDiags().Report(
+            diag::note_hlsl_spirv_derivative_group_requirement)
+            << "QuadAll" << F->getName();
+        continue;
+      }
+      MDNode *MD = MDNode::get(
+          M.getContext(),
+          {ValueAsMetadata::get(F),
+           ConstantAsMetadata::get(B.getInt32(llvm::to_underlying(Mode)))});
+      M.getOrInsertNamedMetadata("spirv.ExecutionMode")->addOperand(MD);
+    }
+
+    for (User *U : F->users())
+      if (auto *Call = dyn_cast<CallBase>(U))
+        Worklist.push_back(Call->getFunction());
+  }
+}
+
 void CGHLSLRuntime::finishCodeGen() {
   auto &TargetOpts = CGM.getTarget().getTargetOpts();
   auto &CodeGenOpts = CGM.getCodeGenOpts();
@@ -1045,6 +1117,8 @@ void CGHLSLRuntime::finishCodeGen() {
   }
 
   generateGlobalCtorDtorCalls();
+  if (T.isSPIRV())
+    addSPIRVQuadAllExecutionModes(CGM);
 }
 
 void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
@@ -1186,8 +1260,10 @@ static llvm::Value *createSPIRVInputLoad(
     llvm::hlsl::InterpolationMode InterpMode) {
   // SPIR-V integer built-ins are 32-bit, so a narrower integer declaration
   // loads the 32-bit built-in and truncates it. Other types are loaded as is.
+  // i1 is excluded: bool built-ins such as FrontFacing are OpTypeBool.
   bool Truncate = Decoration == llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn &&
-                  Ty->isIntegerTy() && Ty->getIntegerBitWidth() < 32;
+                  Ty->isIntegerTy() && Ty->getIntegerBitWidth() > 1 &&
+                  Ty->getIntegerBitWidth() < 32;
   llvm::Type *LoadTy = Truncate ? B.getInt32Ty() : Ty;
   auto *GV = new llvm::GlobalVariable(
       M, LoadTy, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
@@ -1695,6 +1771,26 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
                                   Semantic->getAttrName()->getName(),
                                   llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
                                   /* InstanceIndex */ 43, InterpMode);
+    }
+    if (CGM.getTarget().getTriple().isDXIL())
+      return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                      Signature);
+    break;
+  case llvm::dxbc::PSV::SemanticKind::IsFrontFace:
+    assert(Stage == llvm::Triple::Pixel &&
+           "SV_IsFrontFace is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    if (CGM.getTarget().getTriple().isSPIRV()) {
+      // The FrontFacing BuiltIn is always a bool in SPIR-V, whatever type the
+      // entry point declares. Load it as bool, then convert below.
+      llvm::Type *BoolTy = B.getInt1Ty();
+      // Integer pixel inputs cannot be interpolated and must be Flat.
+      llvm::Value *FF = createSPIRVInputLoad(
+          B, CGM.getModule(), BoolTy, Semantic->getAttrName()->getName(),
+          llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+          /* FrontFacing */ 17, llvm::hlsl::InterpolationMode::Constant);
+      // Convert to the declared parameter type (eg uint).
+      return Type == BoolTy ? FF : B.CreateZExt(FF, Type);
     }
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,

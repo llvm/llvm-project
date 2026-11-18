@@ -750,58 +750,39 @@ void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
 FunctionCallee
 OpenMPIRBuilder::getOrCreateRuntimeFunction(Module &M, RuntimeFunction FnID) {
   FunctionType *FnTy = nullptr;
-  Function *Fn = nullptr;
+  StringRef Name;
 
-  // Try to find the declation in the module first.
   switch (FnID) {
 #define OMP_RTL(Enum, Str, IsVarArg, ReturnType, ...)                          \
   case Enum:                                                                   \
     FnTy = FunctionType::get(ReturnType, ArrayRef<Type *>{__VA_ARGS__},        \
                              IsVarArg);                                        \
-    Fn = M.getFunction(Str);                                                   \
+    Name = Str;                                                                \
     break;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
   }
 
-  if (!Fn) {
-    // Create a new declaration if we need one.
-    switch (FnID) {
-#define OMP_RTL(Enum, Str, ...)                                                \
-  case Enum:                                                                   \
-    Fn = Function::Create(FnTy, GlobalValue::ExternalLinkage, Str, M);         \
-    break;
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
-    }
-    Fn->setCallingConv(Config.getRuntimeCC());
+  return M.getOrInsertFunction(Name, FnTy, [&](Function &Fn) {
+    Fn.setCallingConv(Config.getRuntimeCC());
     // Add information if the runtime function takes a callback function
     if (FnID == OMPRTL___kmpc_fork_call || FnID == OMPRTL___kmpc_fork_teams) {
-      if (!Fn->hasMetadata(LLVMContext::MD_callback)) {
-        LLVMContext &Ctx = Fn->getContext();
-        MDBuilder MDB(Ctx);
-        // Annotate the callback behavior of the runtime function:
-        //  - The callback callee is argument number 2 (microtask).
-        //  - The first two arguments of the callback callee are unknown (-1).
-        //  - All variadic arguments to the runtime function are passed to the
-        //    callback callee.
-        Fn->addMetadata(
-            LLVMContext::MD_callback,
-            *MDNode::get(Ctx, {MDB.createCallbackEncoding(
-                                  2, {-1, -1}, /* VarArgsArePassed */ true)}));
-      }
+      LLVMContext &Ctx = Fn.getContext();
+      MDBuilder MDB(Ctx);
+      // Annotate the callback behavior of the runtime function:
+      //  - The callback callee is argument number 2 (microtask).
+      //  - The first two arguments of the callback callee are unknown (-1).
+      //  - All variadic arguments to the runtime function are passed to the
+      //    callback callee.
+      Fn.addMetadata(
+          LLVMContext::MD_callback,
+          *MDNode::get(Ctx, {MDB.createCallbackEncoding(
+                                2, {-1, -1}, /* VarArgsArePassed */ true)}));
     }
 
-    LLVM_DEBUG(dbgs() << "Created OpenMP runtime function " << Fn->getName()
-                      << " with type " << *Fn->getFunctionType() << "\n");
-    addAttributes(FnID, *Fn);
-
-  } else {
-    LLVM_DEBUG(dbgs() << "Found OpenMP runtime function " << Fn->getName()
-                      << " with type " << *Fn->getFunctionType() << "\n");
-  }
-
-  assert(Fn && "Failed to create OpenMP runtime function");
-
-  return {FnTy, Fn};
+    LLVM_DEBUG(dbgs() << "Created OpenMP runtime function " << Fn.getName()
+                      << " with type " << *Fn.getFunctionType() << "\n");
+    addAttributes(FnID, Fn);
+  });
 }
 
 Expected<BasicBlock *>
