@@ -13,7 +13,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; SUMMARY: TypeTests: [ 7004155349499253778 ]
 
-; CHECK: remark: <unknown>:0:0: single-impl: devirtualized a call to _ZN1A1fEv
+; CHECK: remark: <unknown>:0:0: speculative: devirtualized a call to _ZN1A1fEv
 
 %struct.A = type { ptr }
 
