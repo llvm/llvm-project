@@ -21,6 +21,7 @@ add_object_library(
     libc.src.__support.hash
     libc.src.__support.libc_assert
     libc.src.__support.macros.config
+    libc.src.__support.vector
 )
 
 add_header_library(

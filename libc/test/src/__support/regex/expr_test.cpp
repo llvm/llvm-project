@@ -114,7 +114,7 @@ TEST(LlvmLibcRegexExprTest, ByteSetNormalizationAndDeduplication) {
   EXPECT_TRUE(pool.get_byte_set(0) == bs);
   EXPECT_LE(pool.allocated_bytes(), size_t(1024));
 
-  // Grow past INITIAL_BYTE_SETS_CAPACITY (4).
+  // Add enough byte sets to make the array grow.
   for (uint8_t i = 0; i < 5; ++i) {
     ByteSet multi;
     multi.set(i);
@@ -372,7 +372,7 @@ TEST(LlvmLibcRegexExprTest, MemoryLimits) {
   EXPECT_EQ(fail.error(), REG_ESPACE);
 
   // A new multi-bit ByteSet at MAX_NODE_LIMIT fails without incrementing
-  // byte_set_count.
+  // num_byte_sets().
   ByteSet bs;
   bs.flip();
   auto bs_fail = pool.make_byte_set(bs);

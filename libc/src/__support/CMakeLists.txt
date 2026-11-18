@@ -179,12 +179,22 @@ add_header_library(
 )
 
 add_header_library(
+  checked
+  HDRS
+    checked.h
+  DEPENDS
+    .libc_assert
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   checked_ptr
   HDRS
     checked_ptr.h
   DEPENDS
     .alloc_checker
-    .libc_assert
+    .checked
     libc.hdr.types.size_t
     libc.src.__support.CPP.nullptr_t
     libc.src.__support.CPP.type_traits
@@ -388,6 +398,26 @@ add_header_library(
     libc.hdr.func.malloc
     libc.hdr.func.realloc
     libc.src.__support.common
+)
+
+add_header_library(
+  vector
+  HDRS
+    vector.h
+  DEPENDS
+    .checked
+    .libc_assert
+    libc.hdr.func.free
+    libc.hdr.func.realloc
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.new
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.utility
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
 
 add_header_library(
