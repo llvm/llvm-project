@@ -25,19 +25,29 @@ cond.false:                                         ; preds = %entry
 ; CHECK-NEXT:   .byte	1                               # Call site Encoding = uleb128
 ; CHECK-NEXT:   .uleb128 .Laction_table_base0-.Lcst_begin0
 ; CHECK-NEXT: .Lcst_begin0:
+; CHECK-NEXT:   .uleb128 .Lfunc_end0-.Lfunc_begin0 # >> Call Site 1 <<
+; CHECK-NEXT:   .uleb128 .Lfunc_end0-.Lfunc_end0   # Call between .Lfunc_end0 and .Lfunc_end0
+; CHECK-NEXT:   .byte 0                            # has no landing pad
+; CHECK-NEXT:   .byte 0                            # On action: cleanup
+; CHECK-NEXT:   .p2align 2, 0x0
 ; CHECK-NEXT: .Lexception1:
 ; CHECK-NEXT:   .byte	255                             # @LPStart Encoding = omit
 ; CHECK-NEXT:   .byte	255                             # @TType Encoding = omit
 ; CHECK-NEXT:   .byte	1                               # Call site Encoding = uleb128
 ; CHECK-NEXT:   .uleb128 .Laction_table_base0-.Lcst_begin1
 ; CHECK-NEXT: .Lcst_begin1:
+; CHECK-NEXT:   .uleb128 .LBB_END0_1-foo.__part.1  # >> Call Site 2 <<
+; CHECK-NEXT:   .uleb128 .LBB_END0_1-.LBB_END0_1   # Call between .LBB_END0_1 and .LBB_END0_1
+; CHECK-NEXT:   .byte 0                            # has no landing pad
+; CHECK-NEXT:   .byte 0                            # On action: cleanup
+; CHECK-NEXT:   .p2align 2, 0x0
 ; CHECK-NEXT: .Lexception2:
 ; CHECK-NEXT:   .byte	255                             # @LPStart Encoding = omit
 ; CHECK-NEXT:   .byte	255                             # @TType Encoding = omit
 ; CHECK-NEXT:   .byte	1                               # Call site Encoding = uleb128
 ; CHECK-NEXT:   .uleb128 .Laction_table_base0-.Lcst_begin2
 ; CHECK-NEXT: .Lcst_begin2:
-; CHECK-NEXT:   .uleb128 foo.__part.2-foo.__part.2      # >> Call Site 1 <<
+; CHECK-NEXT:   .uleb128 foo.__part.2-foo.__part.2      # >> Call Site 3 <<
 ; CHECK-NEXT:   .uleb128 .LBB_END0_2-foo.__part.2       #   Call between foo.__part.2 and .LBB_END0_2
 ; CHECK-NEXT:   .byte	0                               #     has no landing pad
 ; CHECK-NEXT:   .byte	0                               #   On action: cleanup
