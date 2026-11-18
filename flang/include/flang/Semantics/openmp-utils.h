@@ -448,12 +448,12 @@ WithReason<int64_t> GetHeightWithReason(
     SemanticsContext *semaCtx = nullptr);
 
 std::vector<std::pair<int64_t, const parser::OmpDirectiveSpecification *>>
-getApplyDirectives(const parser::OmpDirectiveSpecification &spec,
+GetApplyDirectives(const parser::OmpDirectiveSpecification &spec,
     llvm::omp::Version version, SemanticsContext *semaCtx = nullptr);
-WithReason<llvm::omp::LoopModifier> getLoopModifierWithReason(
+WithReason<llvm::omp::LoopModifier> GetLoopModifierWithReason(
     const parser::OmpDirectiveSpecification &spec,
     const parser::OmpClause &clause, llvm::omp::Version version);
-WithReason<llvm::SmallVector<int64_t>> getSelectedIndexesWithReason(
+WithReason<llvm::SmallVector<int64_t>> GetSelectedIndexesWithReason(
     const parser::OmpClause &clause, int64_t numIndexes,
     SemanticsContext *semaCtx = nullptr);
 bool IsInnerLoopModifier(const parser::OmpApplyClause &clause);
@@ -610,13 +610,13 @@ private:
 };
 
 /// Calculate the depth resulting of the application of spec at height index
-LoopSequence::Depth calculateDepthsWith(LoopSequence::Depth depth,
+LoopSequence::Depth CalculateDepthsWith(LoopSequence::Depth depth,
     WithReason<int64_t> &length, int64_t index,
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx = nullptr);
 
 /// Calculate the length resulting of the application of spec
-WithReason<int64_t> calculateLengthWith(WithReason<int64_t> length,
+WithReason<int64_t> CalculateLengthWith(WithReason<int64_t> length,
     int64_t index, const parser::OmpDirectiveSpecification &spec,
     llvm::omp::Version version, SemanticsContext *semaCtx = nullptr);
 

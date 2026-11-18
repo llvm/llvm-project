@@ -270,22 +270,21 @@ OmpStructureChecker::GetOrderedApplyDirectives(
   std::vector<std::pair<int64_t, const parser::OmpDirectiveSpecification *>>
       orderedDirectives;
   const auto &height{GetHeightWithReason(spec, version)};
-  auto [generatedLoops, _isPerfect]{
-      GetGeneratedNestDepthWithReason(spec, version)};
+  auto [generatedLoops, _]{GetGeneratedNestDepthWithReason(spec, version)};
   if (!generatedLoops)
     return orderedDirectives; // empty
 
-  int64_t maxLoops = spec.DirId() == llvm::omp::Directive::OMPD_tile ||
-          spec.DirId() == llvm::omp::Directive::OMPD_stripe
-      ? generatedLoops.value.value() / 2
-      : generatedLoops.value.value();
+  int64_t maxLoops{spec.DirId() == llvm::omp::Directive::OMPD_tile ||
+              spec.DirId() == llvm::omp::Directive::OMPD_stripe
+          ? generatedLoops.value.value() / 2
+          : generatedLoops.value.value()};
 
   for (auto &clause : spec.Clauses().v) {
     if (clause.Id() == llvm::omp::Clause::OMPC_apply) {
       auto &applyClause{
           DEREF(parser::Unwrap<parser::OmpApplyClause>(clause.u))};
 
-      auto indexList{getSelectedIndexesWithReason(clause, maxLoops)};
+      auto indexList{GetSelectedIndexesWithReason(clause, maxLoops)};
       const auto &directiveList{
           std::get<std::list<parser::OmpDirectiveSpecification>>(
               applyClause.t)};
@@ -298,13 +297,15 @@ OmpStructureChecker::GetOrderedApplyDirectives(
         return orderedDirectives; // empty
       }
 
-      int64_t addedHeight =
-          IsInnerLoopModifier(applyClause) && height ? height.value.value() : 0;
-      auto loopModifier{getLoopModifierWithReason(spec, clause, version)};
-      if (!loopModifier)
+      int64_t addedHeight{IsInnerLoopModifier(applyClause) && height
+              ? height.value.value()
+              : 0} auto loopModifier{
+          GetLoopModifierWithReason(spec, clause, version)};
+      if (!loopModifier) {
         return orderedDirectives; // empty
-      llvm::StringRef modifierName =
-          llvm::omp::getLoopModifierName(loopModifier.value.value());
+      }
+      llvm::StringRef modifierName{
+          llvm::omp::getLoopModifierName(loopModifier.value.value())};
 
       auto itV = orderedDirectives.begin();
       for (const auto [index, dir] :
@@ -492,8 +493,8 @@ void OmpStructureChecker::CheckApplyConstruct(
     auto [affectedDepth, affectedPerfect]{
         GetAffectedNestDepthWithReason(*sp, version)};
     needPerfect = needPerfect || affectedPerfect;
-    auto haveDepth =
-        needPerfect ? sequence.depth().perfect : sequence.depth().semantic;
+    auto haveDepth{
+        needPerfect ? sequence.depth().perfect : sequence.depth().semantic};
     if (affectedDepth && haveDepth) {
       if (*affectedDepth.value > (*haveDepth.value - (index - 1))) {
         auto indexValue = ((index - 1) % *max.value) + 1;
@@ -508,8 +509,8 @@ void OmpStructureChecker::CheckApplyConstruct(
       }
     }
     sequence.updateLoopSequenceWith(index, *sp);
-    auto depth =
-        needPerfect ? sequence.depth().perfect : sequence.depth().semantic;
+    auto depth{
+        needPerfect ? sequence.depth().perfect : sequence.depth().semantic};
     if (!depth) {
       auto &msg{context_.Say(sp->source,
           "Cannot apply the transformation at index %" PRId64 ""_err_en_US,

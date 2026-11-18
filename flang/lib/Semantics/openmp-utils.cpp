@@ -954,29 +954,32 @@ bool IsInnerLoopModifier(const parser::OmpApplyClause &clause) {
           OmpGetUniqueModifier<parser::OmpLoopModifier>(modifiers)}) {
     auto &m{std::get<llvm::omp::LoopModifier>(loopModifier->t)};
     if (m == llvm::omp::LoopModifier::OMPLM_intratile ||
-        m == llvm::omp::LoopModifier::OMPLM_offsets)
+        m == llvm::omp::LoopModifier::OMPLM_offsets) {
       return true;
+    }
   }
   // tile and stripe directives do not have a default modifier
   return false;
 }
 
-const parser::OmpDirectiveSpecification *getOutermostApplyFullUnroll(
+const parser::OmpDirectiveSpecification *GetOutermostApplyFullUnroll(
     const parser::OmpDirectiveSpecification &spec) {
   for (auto &clause : spec.Clauses().v) {
     if (clause.Id() == llvm::omp::Clause::OMPC_apply) {
       auto &applyClause{
           DEREF(parser::Unwrap<parser::OmpApplyClause>(clause.u))};
-      if (IsInnerLoopModifier(applyClause))
+      if (IsInnerLoopModifier(applyClause)) {
         continue;
+      }
       auto &directiveList{
           std::get<std::list<parser::OmpDirectiveSpecification>>(
               applyClause.t)};
       auto indexList{
-          getSelectedIndexesWithReason(clause, directiveList.size())};
+          GetSelectedIndexesWithReason(clause, directiveList.size())};
       if (indexList && indexList.value.value().front() == 1 &&
-          IsFullUnroll(directiveList.front()))
+          IsFullUnroll(directiveList.front())) {
         return &directiveList.front();
+      }
     }
   }
   return nullptr;
@@ -1210,7 +1213,7 @@ WithReason<int64_t> GetHeightWithReason(
   }
 }
 
-WithReason<llvm::omp::LoopModifier> getLoopModifierWithReason(
+WithReason<llvm::omp::LoopModifier> GetLoopModifierWithReason(
     const parser::OmpDirectiveSpecification &spec,
     const parser::OmpClause &clause, llvm::omp::Version version) {
   auto &applyClause{DEREF(parser::Unwrap<parser::OmpApplyClause>(clause.u))};
@@ -1244,7 +1247,7 @@ WithReason<llvm::omp::LoopModifier> getLoopModifierWithReason(
   }
 }
 
-WithReason<llvm::SmallVector<int64_t>> getSelectedIndexesWithReason(
+WithReason<llvm::SmallVector<int64_t>> GetSelectedIndexesWithReason(
     const parser::OmpClause &clause, int64_t numIndexes,
     SemanticsContext *semaCtx) {
   auto &applyClause{DEREF(parser::Unwrap<parser::OmpApplyClause>(clause.u))};
@@ -1271,13 +1274,14 @@ WithReason<llvm::SmallVector<int64_t>> getSelectedIndexesWithReason(
         "All generated loops (%d) are selected because no loop modifier was specified"_because_en_US,
         numIndexes);
   }
-  for (int i = 0; i < numIndexes; i++)
+  for (int i = 0; i < numIndexes; i++) {
     indexes.push_back(i + 1);
+  }
   return {indexes, reason};
 }
 
 std::vector<std::pair<int64_t, const parser::OmpDirectiveSpecification *>>
-getApplyDirectives(const parser::OmpDirectiveSpecification &spec,
+GetApplyDirectives(const parser::OmpDirectiveSpecification &spec,
     llvm::omp::Version version, SemanticsContext *semaCtx) {
   const auto &height{GetHeightWithReason(spec, version, semaCtx)};
   std::vector<std::pair<int64_t, const parser::OmpDirectiveSpecification *>>
@@ -1290,12 +1294,13 @@ getApplyDirectives(const parser::OmpDirectiveSpecification &spec,
           std::get<std::list<parser::OmpDirectiveSpecification>>(
               applyClause.t)};
       auto indexList{
-          getSelectedIndexesWithReason(clause, directiveList.size(), semaCtx)};
-      int64_t addedHeight =
-          IsInnerLoopModifier(applyClause) && height ? height.value.value() : 0;
+          GetSelectedIndexesWithReason(clause, directiveList.size(), semaCtx)};
+      int64_t addedHeight{IsInnerLoopModifier(applyClause) && height
+              ? height.value.value()
+              : 0};
 
       if (indexList && indexList.value.value().size() == directiveList.size()) {
-        auto itV = orderedDirectives.begin();
+        auto itV { orderedDirectives.begin() }
         for (const auto [index, dir] :
             llvm::zip_equal(indexList.value.value(), directiveList)) {
           while (itV != orderedDirectives.end() &&
@@ -2089,10 +2094,10 @@ WithReason<int64_t> LoopSequence::calculateLength() const {
   auto &omp{DEREF(parser::Unwrap<parser::OpenMPLoopConstruct>(*entry_->owner))};
   const parser::OmpDirectiveSpecification &beginSpec{omp.BeginDir()};
 
-  return calculateLengthWith(nestedLength, 1, beginSpec, version_, semaCtx_);
+  return CalculateLengthWith(nestedLength, 1, beginSpec, version_, semaCtx_);
 }
 
-WithReason<int64_t> calculateLengthWith(WithReason<int64_t> length,
+WithReason<int64_t> CalculateLengthWith(WithReason<int64_t> length,
     int64_t index, const parser::OmpDirectiveSpecification &spec,
     llvm::omp::Version version, SemanticsContext *semaCtx) {
 
@@ -2228,11 +2233,11 @@ LoopSequence::Depth LoopSequence::calculateDepths() const {
   auto &omp{DEREF(parser::Unwrap<parser::OpenMPLoopConstruct>(*entry_->owner))};
   const parser::OmpDirectiveSpecification &beginSpec{omp.BeginDir()};
 
-  return calculateDepthsWith(Depth{semaDepth, perfDepth}, nestedLength, 1,
+  return CalculateDepthsWith(Depth{semaDepth, perfDepth}, nestedLength, 1,
       beginSpec, version_, semaCtx_);
 }
 
-LoopSequence::Depth calculateDepthsWith(LoopSequence::Depth depth,
+LoopSequence::Depth CalculateDepthsWith(LoopSequence::Depth depth,
     WithReason<int64_t> &length, int64_t height,
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx) {
@@ -2261,8 +2266,8 @@ LoopSequence::Depth calculateDepthsWith(LoopSequence::Depth depth,
         auto range{GetAffectedLoopRangeWithReason(spec, version, semaCtx)};
         if (auto required{GetMinimumSequenceCount(range.value)}) {
           if (*required == -1 || *required == *length.value) {
-            return LoopSequence::Depth{height + WithReason<int64_t>(value),
-                height + WithReason<int64_t>(value)};
+            return LoopSequence::Depth{height - 1 + WithReason<int64_t>(value),
+                height - 1 + WithReason<int64_t>(value)};
           }
           std::string name{
               GetUpperName(llvm::omp::Directive::OMPD_fuse, version)};
@@ -2365,14 +2370,22 @@ WithReason<int64_t> LoopSequence::calculateHeight() const {
 
 void LoopSequence::updateLoopSequenceWith(
     int64_t index, const parser::OmpDirectiveSpecification &spec) {
-  length_ = calculateLengthWith(length_, index, spec, version_, semaCtx_);
+  length_ = CalculateLengthWith(length_, index, spec, version_, semaCtx_);
   depth_ =
-      calculateDepthsWith(depth_, length_, index, spec, version_, semaCtx_);
+      CalculateDepthsWith(depth_, length_, index, spec, version_, semaCtx_);
 }
 
+// All the pairs [ index - directive ] from all the apply clauses are grouped
+// and ordered.
+// The "inner" loop modifiers are put at the end of the list because the
+// directives are applyed from innermost to outermost loop.
+//
+// When calculating the resulting loop sequence any malformed construct or
+// directive is ignored. The diagnostic will be given when checking that
+// specific construct.
 void LoopSequence::calculateApplyClauses(
     const parser::OmpDirectiveSpecification &spec) {
-  const auto &orderedDirectives{getApplyDirectives(spec, version_, semaCtx_)};
+  const auto &orderedDirectives{GetApplyDirectives(spec, version_, semaCtx_)};
   auto assoc{llvm::omp::getDirectiveAssociation(spec.DirId())};
   // the apply directives are applied from innermost to outermost index
   for (int64_t i = orderedDirectives.size() - 1; i >= 0; i--) {
