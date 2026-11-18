@@ -353,3 +353,37 @@ define <32 x i8>@test_int_x86_avx512_maskz_vpermt2var_qi_256(<32 x i8> %x0, <32 
   %3 = select <32 x i1> %2, <32 x i8> %1, <32 x i8> zeroinitializer
   ret <32 x i8> %3
 }
+
+
+; With VBMI+VL this should use a (more efficient) byte permute, not a word permute.
+define <32 x i8> @vbmi_prefer_byte_permute_256(<32 x i8> %a, <32 x i8> %b) {
+; X86-LABEL: vbmi_prefer_byte_permute_256:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,1,32,33,2,3,34,35,4,5,36,37,6,7,38,39,8,9,40,41,10,11,42,43,12,13,44,45,14,15,46,47]
+; X86-NEXT:    # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0x15,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
+; X86-NEXT:    vpermt2b %ymm1, %ymm2, %ymm0 # encoding: [0x62,0xf2,0x6d,0x28,0x7d,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: vbmi_prefer_byte_permute_256:
+; X64:       # %bb.0:
+; X64-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,1,32,33,2,3,34,35,4,5,36,37,6,7,38,39,8,9,40,41,10,11,42,43,12,13,44,45,14,15,46,47]
+; X64-NEXT:    # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0x15,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
+; X64-NEXT:    vpermt2b %ymm1, %ymm2, %ymm0 # encoding: [0x62,0xf2,0x6d,0x28,0x7d,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = shufflevector <32 x i8> %a, <32 x i8> %b, <32 x i32> <i32 0, i32 1, i32 32, i32 33, i32 2, i32 3, i32 34, i32 35, i32 4, i32 5, i32 36, i32 37, i32 6, i32 7, i32 38, i32 39, i32 8, i32 9, i32 40, i32 41, i32 10, i32 11, i32 42, i32 43, i32 12, i32 13, i32 44, i32 45, i32 14, i32 15, i32 46, i32 47>
+  ret <32 x i8> %res
+}
+
+; For 128-bit vectors with VBMI+VL a byte permute is more efficient than a word permute,
+; but vpunpcklwd is an instruction for this exact pattern.
+define <16 x i8> @vbmi_prefer_byte_permute_128(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: vbmi_prefer_byte_permute_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpunpcklwd %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x61,0xc1]
+; CHECK-NEXT:    # xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %res = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0,  i32 1, i32 16, i32 17, i32 2, i32 3, i32 18, i32 19, i32 4, i32 5, i32 20, i32 21, i32 6, i32 7, i32 22, i32 23>
+  ret <16 x i8> %res
+}
