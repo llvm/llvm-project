@@ -225,7 +225,7 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
       return Plugin::error(
           ErrorCode::INVALID_ARGUMENT,
           "number of arguments (%u) does not match the number of arguments "
-          "expected by the kernel (%u).",
+          "expected by the kernel (%u)",
           LaunchArgs.NumArgs, KernelPR.NumKernelArgs);
   }
 
