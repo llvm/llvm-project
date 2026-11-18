@@ -15,6 +15,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/AsmParser/Formatters.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -538,6 +539,32 @@ lltok::Kind LLLexer::LexIdentifier() {
       TyVal = ByteType::get(Context, NumBits);
 
     return lltok::Type;
+  }
+
+  // If the identifier is immediately followed by a string, this is a formatted
+  // constant.
+  if (*CurPtr == '\"') {
+    StringRef Formatter(StartChar - 1, CurPtr - StartChar + 1);
+    if (Formatter != "c") {
+      lltok::Kind kind = LexToken();
+      if (kind == lltok::Error || kind == lltok::Eof)
+        return kind;
+      if (kind != lltok::StringConstant)
+        return lltok::Error;
+
+      ParsedValue Val;
+      std::string ErrorMsg;
+      if (!parseFormattedValue(Formatter, StrVal, Val, ErrorMsg)) {
+        if (ErrorMsg.empty())
+          LexError("failed to parse formatted constant");
+        else
+          LexError(ErrorMsg);
+        return lltok::Error;
+      }
+      assert(Val.isInt());
+      APSIntVal = Val.getInt();
+      return lltok::APSInt;
+    }
   }
 
   // Otherwise, this was a letter sequence.  See which keyword this is.
