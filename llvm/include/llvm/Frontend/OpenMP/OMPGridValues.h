@@ -81,6 +81,14 @@ struct GV {
   constexpr unsigned maxWarpNumber() const {
     return GV_Max_WG_Size / GV_Warp_Size;
   }
+
+  /// Whether the threads of a warp may execute in lockstep, as one instruction
+  /// stream, rather than each making progress independently. A thread then
+  /// cannot wait for another thread of its own warp: while it spins on a lock
+  /// that the other holds, the other cannot run on to release it. Code in which
+  /// one thread may wait for another, such as a critical region, has to be run
+  /// by the threads of each warp one at a time. This is assumed of every GPU.
+  bool GV_Lockstep_Lanes;
 };
 
 /// For AMDGPU GPUs
@@ -92,6 +100,7 @@ static constexpr GV AMDGPUGridValues64 = {
     896,       // GV_SimpleBufferSize
     1024,      // GV_Max_WG_Size,
     256,       // GV_Default_WG_Size
+    true,      // GV_Lockstep_Lanes
 };
 
 static constexpr GV AMDGPUGridValues32 = {
@@ -102,6 +111,7 @@ static constexpr GV AMDGPUGridValues32 = {
     896,       // GV_SimpleBufferSize
     1024,      // GV_Max_WG_Size,
     256,       // GV_Default_WG_Size
+    true,      // GV_Lockstep_Lanes
 };
 
 template <unsigned wavesize> constexpr const GV &getAMDGPUGridValues() {
@@ -118,6 +128,7 @@ static constexpr GV NVPTXGridValues = {
     896,       // GV_SimpleBufferSize
     1024,      // GV_Max_WG_Size
     128,       // GV_Default_WG_Size
+    true,      // GV_Lockstep_Lanes
 };
 
 /// For generic SPIR-V GPUs
@@ -129,6 +140,7 @@ static constexpr GV SPIRVGridValues = {
     896,       // GV_SimpleBufferSize
     1024,      // GV_Max_WG_Size,
     256,       // GV_Default_WG_Size
+    true,      // GV_Lockstep_Lanes
 };
 
 } // namespace omp
