@@ -7,8 +7,8 @@
 ; iteration, and each MFMA holds the XDL pipe for 16 cycles (res=32). That
 ; exceeds the generic default cap of 27. At default, pipeliner aborts and
 ; only a raised cap lets it schedule. The raised run turns the register
-; pressure limit off: the pipelined loop keeps about 67 VGPRs live, over the
-; limit of 64 here, and this test is about the MII cap.
+; pressure limit off: the pipelined loop keeps about 67 VGPRs and AV registers
+; live, over the limit of 64 here, and this test is about the MII cap.
 ; DEFAULT: Minimal Initiation Interval too large: 32 > 27
 ; RAISED: Schedule found with Initiation Interval
 

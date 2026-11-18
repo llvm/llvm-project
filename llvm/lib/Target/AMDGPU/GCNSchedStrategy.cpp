@@ -211,8 +211,10 @@ GCNSchedStrategy::getBankedPressure(const GCNRegPressure &RP) const {
 }
 
 unsigned GCNSchedStrategy::getArchVGPRPressure(ArrayRef<unsigned> Pressure) {
-  return Pressure[AMDGPU::RegisterPressureSets::AV_32] -
-         Pressure[AMDGPU::RegisterPressureSets::AGPR_32];
+  unsigned AVNum = Pressure[AMDGPU::RegisterPressureSets::AV_32];
+  unsigned AGPRNum = Pressure[AMDGPU::RegisterPressureSets::AGPR_32];
+  assert(AVNum >= AGPRNum && "AV_32 set must include every AGPR");
+  return AVNum - AGPRNum;
 }
 
 void GCNSchedStrategy::getRegisterPressures(
@@ -245,8 +247,8 @@ void GCNSchedStrategy::getRegisterPressures(
   }
   auto [ArchNum, AccNum] = getBankedPressure(NewPressure);
   Pressure[AMDGPU::RegisterPressureSets::SReg_32] = NewPressure.getSGPRNum();
-  Pressure[AMDGPU::RegisterPressureSets::VGPR_32] = ArchNum;
   Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = AccNum;
+  // getArchVGPRPressure() reads ArchVGPRs as AV_32 - AGPR_32.
   Pressure[AMDGPU::RegisterPressureSets::AV_32] = ArchNum + AccNum;
   CandUnifiedVGPRPressure =
       GCNRegPressure::getBankedUnifiedVGPRNum(ArchNum, AccNum);
@@ -283,8 +285,8 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
     getRegisterPressures(AtTop, RPTracker, SU, Pressure, MaxPressure,
                          DownwardTracker, UpwardTracker, DAG, SRI);
   } else {
-    // Start from the tracker's pressure in every set: VGPRPressure is not the
-    // VGPR_32 set, it also counts AV registers.
+    // Start from the tracker's pressure in every set. VGPRPressure cannot
+    // seed the VGPR_32 set: it also counts AV registers.
     ArrayRef<unsigned> CurPressure = RPTracker.getRegSetPressureAtPos();
     Pressure.assign(CurPressure.begin(), CurPressure.end());
 
