@@ -931,13 +931,16 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     case MCOI::OPERAND_PCREL:
       O << formatDec(Op.getImm());
       break;
-    case MCOI::OPERAND_REGISTER:
-      // Disassembler does not fail when operand should not allow immediate
-      // operands but decodes them into 32bit immediate operand.
-      printImmediate32(Op.getImm(), STI, O);
-      O << "/*Invalid immediate*/";
-      break;
     default:
+      if (OpTy == MCOI::OPERAND_REGISTER ||
+          (OpTy >= AMDGPU::OPERAND_REG_FIRST &&
+           OpTy <= AMDGPU::OPERAND_REG_LAST)) {
+        // Disassembler does not fail when operand should not allow immediate
+        // operands but decodes them into 32bit immediate operand.
+        printImmediate32(Op.getImm(), STI, O);
+        O << "/*Invalid immediate*/";
+        break;
+      }
       // We hit this for the immediate instruction bits that don't yet have a
       // custom printer.
       llvm_unreachable("unexpected immediate operand type");

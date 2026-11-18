@@ -562,7 +562,7 @@ def VOP_MAC_F16_t16 : VOP_MAC <f16> {
   let IsTrue16 = 1;
   let IsRealTrue16 = 1;
   let HasOpSel = 1;
-  let DstRC = VOPDstOperand_t16Lo128;
+  let DstRC = VOPDstOperand_t16Lo128<f16>;
   let Src0RC32 = getVOPSrc0ForVT<Src0VT, 1/*IsTrue16*/, 0/*IsFake16*/>.ret;
   let Src1RC32 = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 0/*IsFake16*/>.ret;
   let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1, getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 0/*IsFake16*/>.ret:$src2);
