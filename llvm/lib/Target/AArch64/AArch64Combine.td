@@ -410,15 +410,47 @@ def split_store_zero_128 : GICombineRule<
   (apply [{ applySplitStoreZero128(*${d}, MRI, B, Observer); }])
 >;
 
-def and_keep_low_bits_matchdata : GIDefMatchData<"unsigned">;
 // Keeping the low 64 or 32 bits of a 128-bit vector selects to a single fmov d
-// or s, which clears the upper bits.
-def and_keep_low_bits : GICombineRule<
-  (defs root:$root, and_keep_low_bits_matchdata:$matchinfo),
-  (match (G_AND $dst, $src, $mask):$root,
-         [{ return matchAndKeepLowBits(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyAndKeepLowBits(*${root}, MRI, B, ${matchinfo}); }])
->;
+// or s, which clears the upper bits. Other vectors are viewed as v4i32, so that
+// their low half is a v2i32 and their low 32 bits are lane 0.
+def and_keep_low_64_v4i32 : GICombineRule<
+  (defs root:$dst),
+  (match (G_AND v4i32:$dst, $src, $mask),
+         [{ return isLowBitsMask(${mask}.getReg(), 64, MRI); }]),
+  (apply (G_EXTRACT_SUBVECTOR v2i32:$lo, $src, 0),
+         (G_CONCAT_VECTORS $dst, $lo, (v2i32 0)))>;
+
+def and_keep_low_64 : GICombineRule<
+  (defs root:$dst),
+  (match (G_AND $dst, $src, $mask),
+         [{ return MRI.getType(${dst}.getReg()).getScalarSizeInBits() != 32 &&
+                   isLowBitsMask(${mask}.getReg(), 64, MRI); }]),
+  (apply (G_BITCAST v4i32:$view, $src),
+         (G_EXTRACT_SUBVECTOR v2i32:$lo, $view, 0),
+         (G_CONCAT_VECTORS v4i32:$cat, $lo, (v2i32 0)),
+         (G_BITCAST $dst, $cat))>;
+
+def and_keep_low_32_v4i32 : GICombineRule<
+  (defs root:$dst),
+  (match (G_AND v4i32:$dst, $src, $mask),
+         [{ return isLowBitsMask(${mask}.getReg(), 32, MRI); }]),
+  (apply (G_EXTRACT_VECTOR_ELT i32:$elt, $src, (i64 0)),
+         (G_INSERT_VECTOR_ELT $dst, (v4i32 0), $elt, (i64 0)))>;
+
+def and_keep_low_32 : GICombineRule<
+  (defs root:$dst),
+  (match (G_AND $dst, $src, $mask),
+         [{ return MRI.getType(${dst}.getReg()).getScalarSizeInBits() != 32 &&
+                   isLowBitsMask(${mask}.getReg(), 32, MRI); }]),
+  (apply (G_BITCAST v4i32:$view, $src),
+         (G_EXTRACT_VECTOR_ELT i32:$elt, $view, (i64 0)),
+         (G_INSERT_VECTOR_ELT v4i32:$ins, (v4i32 0), $elt, (i64 0)),
+         (G_BITCAST $dst, $ins))>;
+
+def and_keep_low_bits : GICombineGroup<[
+  and_keep_low_64_v4i32, and_keep_low_64,
+  and_keep_low_32_v4i32, and_keep_low_32
+]>;
 
 def vector_sext_inreg_to_shift : GICombineRule<
   (defs root:$d),
@@ -471,7 +503,7 @@ def AArch64PostLegalizerLowering
                         vector_sext_inreg_to_shift,
                         unmerge_ext_to_unmerge, lower_mulv2s64,
                         vector_unmerge_lowering, insertelt_nonconst,
-                        unmerge_duplanes]> {
+                        unmerge_duplanes, and_keep_low_bits]> {
 }
 
 // Post-legalization combines which are primarily optimizations.
@@ -486,7 +518,7 @@ def AArch64PostLegalizerCombiner
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
                         extractvecelt_pairwise_add, redundant_or,
-                        mul_by_zero_one_vector, and_keep_low_bits,
+                        mul_by_zero_one_vector,
                         mul_const, redundant_sext_inreg,
                         redundant_zext_sext_inreg, redundant_aext_sext_inreg,
                         redundant_aext_unmerge_sext_inreg, redundant_zext_unmerge_sext_inreg,
