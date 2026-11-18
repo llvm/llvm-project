@@ -159,12 +159,7 @@ defm : BoolField<"ifcvt-triangle-false", "true", "">;
 defm : BoolField<"ifcvt-triangle-rev", "true", "">;
 // TODO: Remove the old spellings after 2027-05.
 def : AliasOf<"disable-ifcvt-diamond", "ifcvt-diamond=false">;
-def : AliasOf<"disable-ifcvt-forked-diamond", "ifcvt-forked-diamond=false">;
-def : AliasOf<"disable-ifcvt-simple", "ifcvt-simple=false">;
-def : AliasOf<"disable-ifcvt-simple-false", "ifcvt-simple-false=false">;
-def : AliasOf<"disable-ifcvt-triangle", "ifcvt-triangle=false">;
 def : AliasOf<"disable-ifcvt-triangle-false", "ifcvt-triangle-false=false">;
-def : AliasOf<"disable-ifcvt-triangle-rev", "ifcvt-triangle-rev=false">;
 
 // MachineCSE.cpp
 defm : BoolField<"machine-cse-aggressive", "false",
@@ -266,9 +261,7 @@ defm : ValueField<"recurrence-chain-limit", "unsigned", "3",
   "Maximum length of recurrence chain when evaluating the benefit of commuting operands">;
 defm : ValueField<"rewrite-phi-limit", "unsigned", "10",
   "Limit the length of PHI chains to lookup">;
-// TODO: Remove the old spellings after 2027-05.
-def : AliasOf<"disable-adv-copy-opt", "adv-copy-opt=false">;
-def : AliasOf<"disable-non-allocatable-phys-copy-opt", "non-allocatable-phys-copy-opt=false">;
+// TODO: Remove the old spelling after 2027-05.
 def : AliasOf<"disable-peephole", "peephole=false">;
 
 // RegisterCoalescer.cpp
