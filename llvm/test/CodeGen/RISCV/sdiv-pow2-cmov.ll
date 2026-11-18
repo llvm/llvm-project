@@ -9,7 +9,7 @@ define signext i32 @sdiv2_32(i32 signext %0) {
 ; NOSFB:       # %bb.0:
 ; NOSFB-NEXT:    srliw a1, a0, 31
 ; NOSFB-NEXT:    add a0, a0, a1
-; NOSFB-NEXT:    sraiw a0, a0, 1
+; NOSFB-NEXT:    srai a0, a0, 1
 ; NOSFB-NEXT:    ret
 ;
 ; SFB-LABEL: sdiv2_32:
@@ -29,7 +29,7 @@ define signext i32 @sdivneg2_32(i32 signext %0) {
 ; NOSFB:       # %bb.0:
 ; NOSFB-NEXT:    srliw a1, a0, 31
 ; NOSFB-NEXT:    add a0, a0, a1
-; NOSFB-NEXT:    sraiw a0, a0, 1
+; NOSFB-NEXT:    srai a0, a0, 1
 ; NOSFB-NEXT:    neg a0, a0
 ; NOSFB-NEXT:    ret
 ;
