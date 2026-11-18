@@ -375,6 +375,12 @@ public:
   /// expression.
   const CastExpr *CurCast = nullptr;
 
+  /// Allocation calls of the current function body whose result is used as
+  /// placement-new storage, mapped to the constructed type; collected lazily
+  /// for -fsanitize=alloc-token type inference.
+  std::optional<llvm::DenseMap<const CallExpr *, QualType>>
+      AllocTokenPlacementTypes;
+
   /// Save Parameter Decl for coroutine.
   llvm::SmallVector<const ParmVarDecl *, 4> FnArgs;
 

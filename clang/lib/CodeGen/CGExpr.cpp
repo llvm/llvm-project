@@ -1407,8 +1407,16 @@ void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
 }
 
 llvm::MDNode *CodeGenFunction::buildAllocToken(const CallExpr *E) {
-  return buildAllocToken(
-      infer_alloc::inferPossibleType(E, getContext(), CurCast));
+  // The placement news of the enclosing function body are collected once, on
+  // the first allocation call that is not already typed by a sizeof.
+  auto PlacementNewType = [this](const CallExpr *E) -> QualType {
+    if (!AllocTokenPlacementTypes)
+      AllocTokenPlacementTypes = infer_alloc::collectPlacementNewTypes(
+          CurCodeDecl ? CurCodeDecl->getBody() : nullptr);
+    return AllocTokenPlacementTypes->lookup(E);
+  };
+  return buildAllocToken(infer_alloc::inferPossibleType(
+      E, getContext(), CurCast, PlacementNewType));
 }
 
 void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, const CallExpr *E) {
