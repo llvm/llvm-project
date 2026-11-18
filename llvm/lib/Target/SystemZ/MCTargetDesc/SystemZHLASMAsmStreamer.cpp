@@ -420,10 +420,12 @@ void SystemZHLASMAsmStreamer::emitBinaryData(StringRef Data) {
 }
 
 void SystemZHLASMAsmStreamer::emitIntValue(uint64_t Value, unsigned Size) {
-  // Integers are not character data, so they are emitted as XL constants
-  // rather than going through the text check in emitBytes.
-  uint64_t Masked = Value & maskTrailingOnes<uint64_t>(8 * Size);
-  emitValue(MCConstantExpr::create(Masked, getContext()), Size);
+  assert(1 <= Size && Size <= 8 && "Invalid size");
+  assert((isUIntN(8 * Size, Value) || isIntN(8 * Size, Value)) &&
+         "Invalid size");
+  OS << " DC XL" << Size << '\''
+     << format_hex_no_prefix(Value, Size * 2, /*Upper=*/true) << '\'';
+  EmitEOL();
 }
 
 void SystemZHLASMAsmStreamer::emitFill(const MCExpr &NumBytes,
