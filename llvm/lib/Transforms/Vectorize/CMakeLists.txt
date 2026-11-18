@@ -6,6 +6,7 @@ add_public_tablegen_target(VectorizeOptionsTableGen)
 add_llvm_component_library(LLVMVectorize
   LoadStoreVectorizer.cpp
   LoopIdiomVectorize.cpp
+  LoopReduceMotion.cpp
   LoopVectorizationLegality.cpp
   LoopVectorizationPlanner.cpp
   LoopVectorize.cpp
