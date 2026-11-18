@@ -1373,18 +1373,38 @@ std::optional<bool> IsContiguous(const A &x, FoldingContext &context,
 std::optional<bool> IsContiguous(const ActualArgument &actual,
     FoldingContext &fc, bool namedConstantSectionsAreContiguous,
     bool firstDimensionStride1) {
-  if (auto *expr{actual.UnwrapExpr()}) {
-    return IsContiguous(
+  std::optional<bool> result;
+  if (const auto *expr{actual.UnwrapExpr()}) {
+    result = IsContiguous(
         *expr, fc, namedConstantSectionsAreContiguous, firstDimensionStride1);
-  } else {
-    return std::nullopt;
+  } else if (const Symbol *assumedType{actual.GetAssumedTypeDummy()}) {
+    result = IsContiguous(*assumedType, fc, namedConstantSectionsAreContiguous,
+        firstDimensionStride1);
+  } else if (const auto *condArg{actual.GetConditionalArg()}) {
+    // Simply contiguous if and only if every consequent-arg is (F2023
+    // 15.5.2.3 p4). Any consequent-arg can be the one chosen at run time, so
+    // the argument is known to be discontiguous only if all of them are.
+    bool allContiguous{true};
+    bool allDiscontiguous{true};
+    condArg->ForEachConsequent(
+        [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+          if (cons) { // .NIL. designates no object
+            auto contiguous{IsContiguous(cons->value(), fc,
+                namedConstantSectionsAreContiguous, firstDimensionStride1)};
+            allContiguous &= contiguous.value_or(false);
+            allDiscontiguous &= !contiguous.value_or(true);
+          }
+        });
+    if (allContiguous) {
+      result = true;
+    } else if (allDiscontiguous) {
+      result = false;
+    }
   }
+  return result;
 }
 
 template std::optional<bool> IsContiguous(const Expr<SomeType> &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous,
-    bool firstDimensionStride1);
-template std::optional<bool> IsContiguous(const ActualArgument &,
     FoldingContext &, bool namedConstantSectionsAreContiguous,
     bool firstDimensionStride1);
 template std::optional<bool> IsContiguous(const ArrayRef &, FoldingContext &,
@@ -1575,7 +1595,10 @@ public:
     }
     if (auto actualType{
             characteristics::TypeAndShape::Characterize(actual_, fc_)}) {
-      bool actualIsPolymorphic{actualType->type().IsPolymorphic()};
+      // Characterize() sees only the first consequent-arg.
+      const auto *condArg{actual_.GetConditionalArg()};
+      bool actualIsPolymorphic{condArg ? condArg->IsPolymorphic()
+                                       : actualType->type().IsPolymorphic()};
       bool dummyIsPolymorphic{dummyObj_.type.type().IsPolymorphic()};
       if (actualIsPolymorphic && !dummyIsPolymorphic) {
         return true;
@@ -1595,7 +1618,17 @@ public:
   }
 
   bool HaveCoarrayDifferences() const {
-    return ExtractCoarrayRef(actual_) && dummyObj_.type.corank() == 0;
+    bool isCoindexed{false};
+    if (const auto *condArg{actual_.GetConditionalArg()}) {
+      // ExtractCoarrayRef() finds no data-ref in a conditional argument.
+      condArg->ForEachConsequent(
+          [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+            isCoindexed |= cons && ExtractCoarrayRef(cons->value());
+          });
+    } else {
+      isCoindexed = ExtractCoarrayRef(actual_).has_value();
+    }
+    return isCoindexed && dummyObj_.type.corank() == 0;
   }
 
   bool HasIntentOut() const { return dummyObj_.intent == common::Intent::Out; }
@@ -1680,7 +1713,33 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
           ? std::get_if<characteristics::DummyDataObject>(&dummy->u)
           : nullptr};
   const bool forCopyIn{!forCopyOut};
-  if (!evaluate::IsVariable(*actual)) {
+  if (const auto *condArg{actual->GetConditionalArg()}) {
+    // The actual argument is the consequent-arg chosen at run time (F2023
+    // 15.5.2.3 p2), so apply the rules for a plain actual argument to each
+    // one. IsVariable() of the whole argument would look at the condition.
+    // Keep the answer for the whole argument at least as conservative as the
+    // answer for each consequent-arg: CheckExplicitDataArg() asks about a
+    // consequent-arg only when the whole argument needs copy-out.
+    bool anyVariable{false};
+    bool anyOtherExpr{false};
+    condArg->ForEachConsequent(
+        [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+          if (cons) {
+            const Expr<SomeType> &expr{cons->value()};
+            if (evaluate::IsVariable(expr)) {
+              anyVariable = true;
+            } else if (!IsNamedConstantDesignator(expr)) {
+              anyOtherExpr = true;
+            }
+          }
+        });
+    if (forCopyIn && anyOtherExpr) {
+      return true;
+    }
+    if (forCopyOut && !anyVariable) {
+      return false;
+    }
+  } else if (!evaluate::IsVariable(*actual)) {
     // A designator whose base object is a named constant is not a variable,
     // but it still designates an object with storage.  It never needs
     // copy-out, since a named constant is not definable; whether it needs
@@ -1702,6 +1761,8 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     // Exception: a data-ref that goes through a pointer component defines the
     // pointer's target, which is not a subobject of the dummy (F2023 9.4.2
     // p5), so copy-out is still needed in that case.
+    // TODO: Check each consequent-arg of a conditional argument the same way.
+    // It affects only lowering, which can't handle conditional arguments yet.
     if (const auto dataRef{ExtractDataRef(*actual)}) {
       const Symbol &firstSym{dataRef->GetFirstSymbol()};
       if (semantics::IsIntentIn(firstSym) && !IsPointer(firstSym) &&

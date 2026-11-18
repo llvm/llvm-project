@@ -2444,6 +2444,14 @@ void Clang::AddHexagonTargetArgs(const ArgList &Args,
   CmdArgs.push_back("-mllvm");
   CmdArgs.push_back("-machine-sink-split=0");
 
+  // Let debuggers find the caller's HLX vector stack pointer.
+  if (const Arg *A = Args.getLastArg(options::OPT_g_Group);
+      A && !A->getOption().matches(options::OPT_g0) &&
+      !A->getOption().matches(options::OPT_ggdb0)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-hexagon-save-parent-vsp");
+  }
+
   addQFloatBackendArg(getToolChain().getDriver(), Args, CmdArgs);
 }
 
@@ -6958,6 +6966,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_relocatable_pch))
     CmdArgs.push_back("-relocatable-pch");
+  Args.AddLastArg(CmdArgs, options::OPT_fpch_base_dir_is_cwd);
 
   if (const Arg *A = Args.getLastArg(options::OPT_fcf_runtime_abi_EQ)) {
     static const char *kCFABIs[] = {
@@ -7466,6 +7475,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.addOptOutFlag(CmdArgs, options::OPT_mstack_arg_probe,
                      options::OPT_mno_stack_arg_probe);
+
+  if (Arg *A = Args.getLastArg(options::OPT_msmall_int_abi_compat_EQ))
+    A->render(Args, CmdArgs);
 
   if (Arg *A = Args.getLastArg(options::OPT_mrestrict_it,
                                options::OPT_mno_restrict_it)) {

@@ -2894,6 +2894,15 @@ public:
     /// runtime library for debugging
     Value *MapNamesArray = nullptr;
 
+    struct NonContiguousDescriptor {
+      /// The entry in PointersArray that refers to this descriptor.
+      unsigned MapIndex;
+      AllocaInst *Storage;
+    };
+    /// Descriptors referenced by PointersArray need their own task-private
+    /// copies when the runtime call is deferred.
+    SmallVector<NonContiguousDescriptor, 2> NonContiguousDescriptors;
+
     explicit TargetDataRTArgs() = default;
     explicit TargetDataRTArgs(Value *BasePointersArray, Value *PointersArray,
                               Value *SizesArray, Value *MapTypesArray,
@@ -3791,11 +3800,12 @@ public:
   ///       // Map-type-modifying bits (ALWAYS, DELETE, CLOSE) from the outer
   ///       // map clause are propagated to each component, except ATTACH
   ///       // entries (ATTACH|ALWAYS is reserved for attach(always), and other
-  ///       // modifier bits have no meaning for ATTACH). PRESENT is
-  ///       // additionally propagated to components with HasAttachPtr (the
-  ///       // pointee data) when PropagatePresentToPointee is set
-  ///       // (OpenMP >= 6.0).
-  ///       present_bit = (PropagatePresentToPointee && c.hasAttachPtr())
+  ///       // modifier bits have no meaning for ATTACH). PRESENT propagation is
+  ///       // controlled independently for pointee and non-pointee storage.
+  ///       present_bit = (!(c.isAttach() || c.isPtrAndObj()) &&
+  ///                      (c.hasAttachPtr() ? PropagatePresentToPointeeStorage
+  ///                                        :
+  ///                                        PropagatePresentToNonPointeeStorage))
   ///                         ? PRESENT : 0;
   ///       imported_modifier_bits = type & (ALWAYS | DELETE | CLOSE |
   ///                                        present_bit);
@@ -3823,18 +3833,23 @@ public:
   /// \param FuncName Optional param to specify mapper function name.
   /// \param CustomMapperCB Optional callback to generate code related to
   /// custom mappers.
-  /// \param PropagatePresentToPointee If true, the PRESENT map-type modifier
-  /// from the outer clause is propagated to the pointee entries the mapper
-  /// inserts, i.e. those with HasAttachPtr. Callers set this only for
+  /// \param PropagatePresentToPointeeStorage If true, the PRESENT map-type
+  /// modifier from the outer clause is propagated to the pointee entries the
+  /// mapper inserts, i.e. those with HasAttachPtr. Callers set this only for
   /// OpenMP >= 6.0; at earlier versions the present modifier is treated as not
   /// applying to the pointee.
+  /// \param PropagatePresentToNonPointeeStorage If true, the PRESENT map-type
+  /// modifier from the outer clause is propagated to eligible mapper entries
+  /// describing non-pointee storage, i.e. those without HasAttachPtr.
+  /// ATTACH and PTR_AND_OBJ entries are not eligible for PRESENT propagation.
   LLVM_ABI Expected<Function *> emitUserDefinedMapper(
       function_ref<MapInfosOrErrorTy(
           InsertPointTy CodeGenIP, llvm::Value *PtrPHI, llvm::Value *BeginArg)>
           PrivAndGenMapInfoCB,
       llvm::Type *ElemTy, StringRef FuncName,
       CustomMapperCallbackTy CustomMapperCB, bool PreserveMemberOfFlags = false,
-      bool PropagatePresentToPointee = false);
+      bool PropagatePresentToPointeeStorage = false,
+      bool PropagatePresentToNonPointeeStorage = false);
 
   /// Generator for '#omp target data'
   ///

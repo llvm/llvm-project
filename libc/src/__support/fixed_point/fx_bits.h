@@ -215,6 +215,14 @@ idiv(T x, T y) {
   // behavior is undefined. Ref: ISO/IEC TR 18037:2008(E) p.g. 16
   LIBC_CRASH_ON_VALUE(y, FXRep::ZERO());
 
+  // MIN / -EPS == 2^VALUE_LEN does not fit in CompType (the division would
+  // truncate, or trap with SIGFPE), but it fits in XType if XType is wider
+  // than CompType. This is the only input pair that overflows CompType.
+  if constexpr (FXRep::SIGN_LEN > 0 && sizeof(XType) > sizeof(CompType)) {
+    if (LIBC_UNLIKELY(x == FXRep::MIN() && y == -FXRep::EPS()))
+      return static_cast<XType>(1) << FXRep::VALUE_LEN;
+  }
+
   CompType x_comp = static_cast<CompType>(FXBits(x).get_bits());
   CompType y_comp = static_cast<CompType>(FXBits(y).get_bits());
 
@@ -273,14 +281,11 @@ fxdivi(IntType n, IntType d) {
     d_mag = d;
   }
 
-  if constexpr (OutRep::INTEGRAL_LEN > 0) {
-    constexpr UInt128 MAX_UNITS = static_cast<UInt128>(1)
-                                  << OutRep::INTEGRAL_LEN;
+  constexpr UInt128 MAX_UNITS = static_cast<UInt128>(1) << OutRep::INTEGRAL_LEN;
 
-    if (LIBC_UNLIKELY(static_cast<UInt128>(n_mag) >=
-                      MAX_UNITS * static_cast<UInt128>(d_mag)))
-      return result_is_negative ? OutRep::MIN() : OutRep::MAX();
-  }
+  if (LIBC_UNLIKELY(static_cast<UInt128>(n_mag) >=
+                    MAX_UNITS * static_cast<UInt128>(d_mag)))
+    return result_is_negative ? OutRep::MIN() : OutRep::MAX();
 
   WideFXType res;
 

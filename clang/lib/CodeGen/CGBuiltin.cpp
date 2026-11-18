@@ -737,10 +737,7 @@ static llvm::Value *emitModfBuiltin(CodeGenFunction &CGF, const CallExpr *E,
 
 /// EmitFAbs - Emit a call to @llvm.fabs().
 static Value *EmitFAbs(CodeGenFunction &CGF, Value *V) {
-  llvm::Value *Call = CGF.Builder.CreateFAbs(V);
-  if (auto *CallI = dyn_cast<llvm::CallInst>(Call))
-    CallI->setDoesNotAccessMemory();
-  return Call;
+  return CGF.Builder.CreateFAbs(V);
 }
 
 /// Emit the computation of the sign bit for a floating point value. Returns

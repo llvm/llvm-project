@@ -577,6 +577,11 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
         ${SCUDO_DEPS}
     )
     add_entrypoint_external(
+      mallinfo2
+      DEPENDS
+        ${SCUDO_DEPS}
+    )
+    add_entrypoint_external(
       mallopt
       DEPENDS
         ${SCUDO_DEPS}
@@ -604,6 +609,9 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
     )
     add_entrypoint_external(
       free
+    )
+    add_entrypoint_external(
+      mallinfo2
     )
     add_entrypoint_external(
       mallopt

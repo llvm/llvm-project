@@ -44,7 +44,7 @@ HazardClassMask getInstHazardClass(const MachineInstr &MI,
     Mask = HC::MFMA;
   else if (SIInstrInfo::isTRANS(MI))
     Mask = HC::TRANS;
-  else if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true))
+  else if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false))
     Mask = HC::VALU;
   else if (TII.isDS(MI))
     Mask = HC::DS;

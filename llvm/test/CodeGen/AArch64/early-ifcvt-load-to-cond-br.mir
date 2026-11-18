@@ -1358,14 +1358,6 @@ body:             |
 ---
 name:            load_to_cond_in_backedge
 alignment:       4
-registers:
-  - { id: 0, class: gpr64sp }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr64 }
-  - { id: 4, class: gpr32 }
-  - { id: 5, class: gpr32all }
-  - { id: 6, class: gpr32 }
 body:             |
   ; CHECK-COMMON-LABEL: name: load_to_cond_in_backedge
   ; CHECK-COMMON: bb.0:
@@ -1379,7 +1371,7 @@ body:             |
   ; CHECK-COMMON-NEXT: bb.1:
   ; CHECK-COMMON-NEXT:   successors: %bb.5(0x04000000), %bb.1(0x7c000000)
   ; CHECK-COMMON-NEXT: {{  $}}
-  ; CHECK-COMMON-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI undef [[DEF]], %bb.0, %5, %bb.1
+  ; CHECK-COMMON-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI undef [[DEF]], %bb.0, %3, %bb.1
   ; CHECK-COMMON-NEXT:   [[LDRHHroW:%[0-9]+]]:gpr32 = LDRHHroW undef [[COPY]], undef [[PHI]], 0, 1 :: (load (s16))
   ; CHECK-COMMON-NEXT:   [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRHHroW]]
   ; CHECK-COMMON-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]]
