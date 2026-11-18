@@ -36,9 +36,24 @@ void AbstractSparseLattice::onUpdate(DataFlowSolver *solver) const {
   AnalysisState::onUpdate(solver);
 
   // Push all users of the value to the queue.
-  for (Operation *user : cast<Value>(anchor).getUsers())
-    for (DataFlowAnalysis *analysis : useDefSubscribers)
+  for (Operation *user : cast<Value>(anchor).getUsers()) {
+    for (DataFlowAnalysis *analysis : useDefSubscribers) {
+      LDBG() << debugName << " of " << anchor << "\n"
+             << "Value: " << *this << "\nenqueuing user dependent work item: "
+             << *solver->getProgramPointAfter(user) << "\nwith "
+             << AnalysisState::getAnalysisDebugName(analysis);
       solver->enqueue({solver->getProgramPointAfter(user), analysis});
+    }
+  }
+}
+
+void AbstractSparseLattice::useDefSubscribe(DataFlowAnalysis *analysis) {
+  bool inserted = useDefSubscribers.insert(analysis);
+  if (inserted) {
+    LDBG() << debugName << " of " << anchor << "\n"
+           << "Value: " << *this << "\nsubscribing analysis: "
+           << AnalysisState::getAnalysisDebugName(analysis);
+  }
 }
 
 //===----------------------------------------------------------------------===//
