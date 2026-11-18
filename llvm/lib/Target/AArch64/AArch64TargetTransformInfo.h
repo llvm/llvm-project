@@ -458,7 +458,10 @@ public:
   bool preferReductionStartAfterLoop() const override {
     // In-order cores cannot issue past the reduction's dependency chain, so
     // applying the start value after the loop only adds an instruction.
-    return ST->getSchedModel().isOutOfOrder();
+    // -mcpu=generic uses an in-order scheduling model but does not target
+    // in-order cores only.
+    return ST->getProcFamily() == AArch64Subtarget::Generic ||
+           ST->getSchedModel().isOutOfOrder();
   }
 
   InstructionCost getInterleavedMemoryOpCost(
