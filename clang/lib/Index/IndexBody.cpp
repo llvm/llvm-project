@@ -161,10 +161,27 @@ public:
   }
 
   bool VisitCXXDeleteExpr(CXXDeleteExpr *E) {
+    QualType DT = E->getDestroyedType();
+    if (!DT.isNull()) {
+      if (const auto *RecordTy = DT->getAsCXXRecordDecl()) {
+        if (const auto *Dtor = RecordTy->getDestructor()) {
+          IndexCtx.handleReference(Dtor, E->getExprLoc(), Parent, ParentDC);
+        }
+      }
+    }
+
     if (E->isGlobalDelete() || !E->getOperatorDelete())
       return true;
     return IndexCtx.handleReference(E->getOperatorDelete(), E->getBeginLoc(),
                                     Parent, ParentDC);
+  }
+
+  bool VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {
+    const CXXDestructorDecl *Dtor = E->getTemporary()->getDestructor();
+    if (Dtor) {
+      IndexCtx.handleReference(Dtor, E->getExprLoc(), Parent, ParentDC);
+    }
+    return true;
   }
 
   bool VisitLabelStmt(LabelStmt *S) {
