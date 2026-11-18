@@ -2885,6 +2885,7 @@ static std::vector<WrappedSymbol> addWrappedSymbols(Ctx &ctx,
   auto &ss = ctx.saver;
   for (auto *arg : args.filtered(OPT_wrap)) {
     StringRef name = arg->getValue();
+    ctx.arg.btfWrappedSymbols.insert(name);
     if (!seen.insert(name).second)
       continue;
 

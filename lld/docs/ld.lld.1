@@ -105,6 +105,7 @@ Merge and deduplicate
 sections from input object files into a single output section.
 Rebuild DATASEC records for output sections with live variables, using
 section-relative variable offsets and omitting entries for discarded variables.
+Unrelocated placeholders that cannot be resolved exactly are dropped with a warning.
 Disabled by default.
 Ignored for relocatable links
 .Fl ( r Ns ).

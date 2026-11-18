@@ -3647,8 +3647,8 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
       invokeOnRelocs(*s, readRelocs, data);
     }
 
-    // GCC can leave placeholder offsets without relocations. Use this file's
-    // prevailing definitions, indexed by input section name and ELF name.
+    // Count original ELF definitions before considering liveness or prevailing
+    // symbols: either can hide an ambiguous placeholder.
     std::optional<DenseMap<std::pair<StringRef, StringRef>, const Defined *>>
         definitions;
     for (auto &[var, sectionName] : vars) {
@@ -3659,24 +3659,38 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
         if (!definitions) {
           definitions.emplace();
           auto elfSyms = file->template getELFSyms<ELFT>();
-          for (auto [i, sym] : llvm::enumerate(file->getSymbols())) {
-            auto *ds = dyn_cast_or_null<Defined>(sym);
-            if (!ds || ds->file != file || !ds->section ||
-                ds->section == &InputSection::discarded ||
-                !ds->section->isLive())
+          auto sections = file->template getELFShdrs<ELFT>();
+          for (auto [i, elfSym] : llvm::enumerate(elfSyms)) {
+            if (elfSym.st_shndx == SHN_UNDEF ||
+                (elfSym.st_shndx >= SHN_LORESERVE &&
+                 elfSym.st_shndx != SHN_XINDEX))
               continue;
-            StringRef name = check(elfSyms[i].getName(file->getStringTable()));
-            auto [it, inserted] = definitions->try_emplace(
-                std::pair{ds->section->name, name}, ds);
-            if (!inserted && it->second != ds)
+            uint32_t secIndex = file->getSectionIndex(elfSym);
+            if (secIndex >= sections.size())
+              continue;
+            StringRef section =
+                CHECK2(file->getObj().getSectionName(sections[secIndex]), file);
+            StringRef name = check(elfSym.getName(file->getStringTable()));
+            auto *ds = dyn_cast_or_null<Defined>(file->getSymbols()[i]);
+            if (!ds || ds->file != file || !ds->section ||
+                ds->section != file->getSections()[secIndex] ||
+                ds->section == &InputSection::discarded ||
+                ctx.arg.btfWrappedSymbols.contains(name))
+              ds = nullptr;
+            auto [it, inserted] =
+                definitions->try_emplace(std::pair{section, name}, ds);
+            if (!inserted)
               it->second = nullptr;
           }
         }
-        if (const Defined *ds = definitions->lookup(
-                {sectionName, builder.findString(type->NameOff)})) {
+        StringRef name = builder.findString(type->NameOff);
+        if (const Defined *ds = definitions->lookup({sectionName, name})) {
           var.section = ds->section;
           var.addend = ds->value;
-        }
+        } else
+          Warn(ctx) << s << ": --btf-merge: cannot resolve DATASEC "
+                    << sectionName << " variable '" << name
+                    << "'; entry dropped";
       }
       if (var.type && var.section && var.section->isLive())
         if (const OutputSection *osec = var.section->getOutputSection())

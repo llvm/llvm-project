@@ -1,16 +1,21 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+# RUN: split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %t/input.s -o %t.o
 # RUN: llvm-readelf -r %t.o | FileCheck %s --check-prefix=NOREL
-# RUN: ld.lld --btf-merge --entry=0 %t.o -o %t
-# RUN: llvm-readelf -x .BTF %t | FileCheck %s
+# RUN: ld.lld --btf-merge --entry=0 %t.o -o %t/out 2>&1 | FileCheck %s --check-prefix=WARN
+# RUN: ld.lld --btf-merge --entry=0 --wrap=g %t.o -o %t/wrap 2>&1 | FileCheck %s --check-prefix=WRAP
+# RUN: llvm-readelf -x .BTF %t/out | FileCheck %s
 
 ## Model GCC's zero offsets with no .BTF relocations. Recover both a global
 ## and a local offset from .bss, but drop the entry whose symbol is in .data.
 # NOREL: There are no relocations in this file.
+# WARN: warning: {{.*}}:(.BTF): --btf-merge: cannot resolve DATASEC .bss variable 'other'; entry dropped
+# WRAP: warning: {{.*}}:(.BTF): --btf-merge: cannot resolve DATASEC .bss variable 'g'; entry dropped
 # CHECK:      0x00000050 01000000 01000000 0f000000 0200000f
 # CHECK-NEXT: 0x00000060 0c000000 02000000 04000000 04000000
 # CHECK-NEXT: 0x00000070 03000000 08000000 04000000
 
+#--- input.s
 .bss
   .zero 4
 .globl g
