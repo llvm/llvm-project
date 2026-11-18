@@ -21,8 +21,8 @@ define void @foo(ptr %a, ptr %b, ptr %c, ptr %len1, ptr %len2) {
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[ADD10]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label %[[LOOP_LVER_CHECK:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_LVER_CHECK]]:
-; CHECK-NEXT:    [[DOTHOISTED:%.*]] = load i32, ptr [[LEN2]], align 4
 ; CHECK-NEXT:    [[DOTHOISTED2:%.*]] = load i32, ptr [[LEN1]], align 4
+; CHECK-NEXT:    [[DOTHOISTED:%.*]] = load i32, ptr [[LEN2]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[DOTHOISTED]], [[DOTHOISTED2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[ADD]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[TMP2]], 2

@@ -68,6 +68,7 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -278,6 +279,7 @@ bool LoopVersioningLICM::legalLoopStructure() {
     }
     
     SmallPtrSet<Instruction *, 16> Visited;
+    SmallPtrSet<Instruction *, 16> ToHoist;
 
     while(!Worklist.empty()) {
       Instruction *I = Worklist.pop_back_val();
@@ -298,8 +300,15 @@ bool LoopVersioningLICM::legalLoopStructure() {
         }
       }
 
-      HoistedDependencies.push_back(I);
+      ToHoist.insert(I);
     }
+
+    LoopBlocksRPO RPOT(CurLoop);
+    RPOT.perform(&LI);
+    for (BasicBlock *BB : RPOT)
+      for (Instruction &I : *BB)
+        if (ToHoist.contains(&I))
+          HoistedDependencies.push_back(&I);
   }
   return true;
 }
@@ -670,20 +679,23 @@ void LoopVersioningLICM::generateAndAddRuntimeChecks(DominatorTree *DT) {
       InstSimplifyFolder(RuntimeCheckBB->getDataLayout()));
   
   Value *RuntimeCheck = nullptr;
-  if (MemRuntimeChecks && SCEVRuntimeChecks) {
+  if (!MemRuntimeChecks) {
+    // For now this only happens if the loop has a pointer whose accesses range
+    // is unknown in which case take the original loop everytime.
+    LLVM_DEBUG(dbgs() << "    No memory runtime checks after hoisting, "
+                         "always taking the original loop\n");
+    RuntimeCheck = ConstantInt::getTrue(RuntimeCheckBB->getContext());
+  } else if (SCEVRuntimeChecks) {
     Builder.SetInsertPoint(PlaceholderForRuntimeChecks);
     RuntimeCheck = Builder.CreateOr(MemRuntimeChecks, SCEVRuntimeChecks, "lver.safe");
   } else {
-    RuntimeCheck = MemRuntimeChecks ? MemRuntimeChecks : SCEVRuntimeChecks;
+    RuntimeCheck = MemRuntimeChecks;
   }
 
   RuntimeCheckBB->setName(CurLoop->getHeader()->getName() + ".lver.check");
 
-  CondBrInst *BI = dyn_cast<CondBrInst>(RuntimeCheckBB->getTerminator());
-  assert(BI && "Expected conditional branch in runtime check block");
-
-  assert(RuntimeCheck && "called even though we don't need "
-    "any runtime checks");
+  assert(isa<CondBrInst>(RuntimeCheckBB->getTerminator()) &&
+         "Expected conditional branch in runtime check block");
 
   PlaceholderForRuntimeChecks->replaceAllUsesWith(RuntimeCheck);
   PlaceholderForRuntimeChecks->eraseFromParent();
@@ -717,8 +729,7 @@ bool LoopVersioningLICM::run(DominatorTree *DT) {
     
     // Add the extra checks for dynamic bounds
     if (IsDynamicBound) {
-      for (auto p = HoistedDependencies.rbegin(); p != HoistedDependencies.rend(); ++p) {
-        Instruction *I = *p;
+      for (Instruction *I : HoistedDependencies) {
         if (isa<LoadInst>(I)) {
           // Clone the load to the preheader instead of moving it. The original
           // dead load is intentionally kept in the loop body so that the subsequent LAA recomputation sees 
@@ -740,7 +751,7 @@ bool LoopVersioningLICM::run(DominatorTree *DT) {
       SE->forgetLoop(CurLoop);
       // Recompute LoopAccessInfo after hoisting the dynamic bound
       LoopAccessInfoManager FreshLAIs(*SE, *AA, *DT, LI, nullptr, nullptr, AC);
-      LAI = &FreshLAIs.getInfo(*CurLoop);
+      LAI = &FreshLAIs.getInfo(*CurLoop, /*AllowPartial=*/false);
 
       generateAndAddRuntimeChecks(DT);
 
