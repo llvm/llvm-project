@@ -499,6 +499,24 @@ static bool isStride64(unsigned Opc) {
   }
 }
 
+// Only ordinary predicated-load RA pseudos participate in load clustering.
+// ISEL pseudos have already been expanded before machine scheduling.
+static const MachineOperand *
+getPredicatedGlobalLoadPredicate(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORD_RA:
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORDX2_RA:
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_RA:
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORD_RA_SADDR:
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORDX2_RA_SADDR:
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_RA_SADDR:
+    return &MI.getOperand(
+        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::pred));
+  default:
+    return nullptr;
+  }
+}
+
 bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
     int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width) const {
@@ -509,6 +527,22 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
   OffsetIsScalable = false;
   const MachineOperand *BaseOp, *OffsetOp;
   int DataOpIdx;
+
+  if (getPredicatedGlobalLoadPredicate(LdSt)) {
+    if (const MachineOperand *SAddr =
+            getNamedOperand(LdSt, AMDGPU::OpName::saddr)) {
+      BaseOps.push_back(SAddr);
+      BaseOps.push_back(getNamedOperand(LdSt, AMDGPU::OpName::voffset));
+    } else {
+      BaseOps.push_back(getNamedOperand(LdSt, AMDGPU::OpName::vaddr));
+    }
+    // The predicate controls which lanes access memory; it is not part of
+    // the address. Check it separately in shouldClusterMemOps.
+    Offset = getNamedOperand(LdSt, AMDGPU::OpName::offset)->getImm();
+    DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst);
+    Width = LocationSize::precise(getOpSize(LdSt, DataOpIdx));
+    return true;
+  }
 
   if (isDS(LdSt)) {
     BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::addr);
@@ -716,6 +750,28 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
   // should not be clustered
   if (!memOpsHaveSameBase(BaseOps1, BaseOps2))
     return false;
+
+  if (!BaseOps1.empty() && !BaseOps2.empty()) {
+    const MachineInstr &FirstLdSt = *BaseOps1.front()->getParent();
+    const MachineInstr &SecondLdSt = *BaseOps2.front()->getParent();
+    const MachineOperand *Pred1 = getPredicatedGlobalLoadPredicate(FirstLdSt);
+    const MachineOperand *Pred2 = getPredicatedGlobalLoadPredicate(SecondLdSt);
+    if (Pred1 && Pred2) {
+      // Register identity proves predicate identity only for a
+      // single-definition virtual register; machine scheduling may run
+      // after two-address conversion.
+      if (Pred1->isUndef() || Pred2->isUndef() ||
+          !Pred1->getReg().isVirtual() ||
+          Pred1->getReg() != Pred2->getReg() ||
+          Pred1->getSubReg() != Pred2->getSubReg() ||
+          FirstLdSt.getMF() != SecondLdSt.getMF() ||
+          !FirstLdSt.getMF()->getRegInfo().hasOneDef(Pred1->getReg()))
+        return false;
+    } else if (Pred1 || Pred2) {
+      // Do not mix ordinary and predicated loads.
+      return false;
+    }
+  }
 
   // Both lists are empty or neither is, so BaseOps1 alone decides whether
   // there is an instruction to read the budget from.

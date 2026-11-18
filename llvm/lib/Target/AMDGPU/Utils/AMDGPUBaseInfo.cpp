@@ -3591,6 +3591,17 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
 }
 
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
+  // These pseudos forward cpol to GLOBAL_LOAD_*_SADDR during post-RA
+  // expansion, including the scale_offset bit selected by GlobalSAddr.
+  switch (Opcode) {
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORD_RA_SADDR:
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORDX2_RA_SADDR:
+  case AMDGPU::PRED_GLOBAL_LOAD_DWORDX4_RA_SADDR:
+    return true;
+  default:
+    break;
+  }
+
   const MCInstrDesc &Desc = MII.get(Opcode);
   if (SIInstrFlags::isSMRD(Desc))
     return Desc.mayLoad() && !Desc.mayStore() && !getSMEMIsBuffer(Opcode);

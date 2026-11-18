@@ -257,7 +257,7 @@ def EXIT_STRICT_WQM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
 
 multiclass PredGlobalLoadPseudoISEL<RegisterOperand vdata_op> {
   let WaveSizePredicate = isWave32, usesCustomInserter = 1,
-      Uses = [EXEC], Defs = [EXEC, SCC],
+      Uses = [EXEC], Defs = [SCC],
       mayLoad = 1, mayStore = 0, hasSideEffects = 0 in {
     def _ISEL : PseudoInstSI<
       (outs vdata_op:$vdst),
@@ -302,7 +302,8 @@ defm PRED_GLOBAL_STORE_DWORDX4 : PredGlobalStorePseudoISEL<VGPROp_128>;
 // s_and_saveexec reads $pred before writing $saved_exec, so aliasing is safe.
 // Consider using conditional constraints per-def to give RA more freedom on GV.
 multiclass PredGlobalLoadPseudoRA<RegisterOperand vdata_op> {
-  let WaveSizePredicate = isWave32, Uses = [EXEC], Defs = [EXEC, SCC],
+  let UseNamedOperandTable = 1,
+      WaveSizePredicate = isWave32, Uses = [EXEC], Defs = [SCC],
       mayLoad = 1, mayStore = 0, hasSideEffects = 0 in {
     def "" : PseudoInstSI<
       (outs vdata_op:$vdst, SReg_32:$saved_exec),
