@@ -1048,18 +1048,20 @@ bool Attributor::getAttrsFromAssumes(const IRPosition &IRP,
   const Assume2KnowledgeMap &A2K =
       getInfoCache().getKnowledgeMap().lookup({&AssociatedValue, AK});
 
-  // Check if we found any potential assume use, if not we don't need to create
-  // explorer iterators.
+  // Check if we found any potential assume use, if not we don't need to look
+  // at the context.
   if (A2K.empty())
     return false;
 
   LLVMContext &Ctx = AssociatedValue.getContext();
   unsigned AttrsSize = Attrs.size();
-  auto EIt = Explorer->begin(IRP.getCtxI()),
-       EEnd = Explorer->end(IRP.getCtxI());
-  for (const auto &It : A2K)
-    if (Explorer->findInContextOf(It.first, EIt, EEnd))
+  const Instruction *CtxI = IRP.getCtxI();
+  if (!CtxI)
+    return false;
+  for (const auto &It : A2K) {
+    if (Explorer->isInContextOf(It.first, CtxI))
       Attrs.push_back(Attribute::get(Ctx, AK, It.second.Max));
+  }
   return AttrsSize != Attrs.size();
 }
 

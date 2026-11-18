@@ -602,11 +602,10 @@ static void followUsesInContext(AAType &AA, Attributor &A,
                                 const Instruction *CtxI,
                                 SetVector<const Use *> &Uses,
                                 StateType &State) {
-  auto EIt = Explorer.begin(CtxI), EEnd = Explorer.end(CtxI);
   for (unsigned u = 0; u < Uses.size(); ++u) {
     const Use *U = Uses[u];
     if (const Instruction *UserI = dyn_cast<Instruction>(U->getUser())) {
-      bool Found = Explorer.findInContextOf(UserI, EIt, EEnd);
+      bool Found = Explorer.isInContextOf(UserI, CtxI);
       if (Found && AA.followUseInMBEC(A, U, UserI, State))
         Uses.insert_range(llvm::make_pointer_range(UserI->uses()));
     }
@@ -683,7 +682,7 @@ static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
   //    }
   // }
 
-  Explorer->checkForAllContext(&CtxI, Pred);
+  Explorer->checkForAllTerminatorsInContext(&CtxI, Pred);
   for (const CondBrInst *Br : BrInsts) {
     StateType ParentState;
 
@@ -7005,7 +7004,7 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
     // __kmpc_alloc_shared and __kmpc_free_shared are by construction matched.
     if (!AI.IsGlobalizedLocal) {
       Instruction *CtxI = isa<InvokeInst>(AI.CB) ? AI.CB : AI.CB->getNextNode();
-      if (!Explorer || !Explorer->findInContextOf(UniqueFree, CtxI)) {
+      if (!Explorer || !Explorer->isInContextOf(UniqueFree, CtxI)) {
         LLVM_DEBUG(dbgs() << "[H2S] unique free call might not be executed "
                              "with the allocation "
                           << *UniqueFree << "\n");
