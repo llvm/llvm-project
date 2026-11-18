@@ -99,13 +99,15 @@ struct CachedBlock {
   u64 Time = 0;
   u16 Next = 0;
   u16 Prev = 0;
-  bool Zero = false;
 
   enum CacheFlags : u16 {
     None = 0,
     NoAccess = 0x1,
+    Zeroed = 0x2,
   };
-  CacheFlags Flags = CachedBlock::None;
+  u16 Flags = CachedBlock::None;
+
+  bool isZero() { return (Flags & CacheFlags::Zeroed) != 0; }
 
   bool isValid() { return CommitBase != 0; }
 
@@ -308,21 +310,20 @@ public:
     Entry.BlockBegin = BlockBegin;
     Entry.MemMap = MemMap;
     Entry.Time = UINT64_MAX;
-    Entry.Zero = Zero;
     Entry.Flags = CachedBlock::None;
 
     bool MemoryTaggingEnabled = useMemoryTagging<Config>(Options);
     if (MemoryTaggingEnabled) {
       if ((Interval == 0 || Zero) && !SCUDO_FUCHSIA) {
-        Entry.Time = 0;
-        Entry.Zero = true;
         Entry.MemMap.releaseAndZeroPagesToOS(Entry.CommitBase,
                                              Entry.CommitSize);
+        Entry.Time = 0;
+        Entry.Flags |= CachedBlock::Zeroed;
       }
       // MAP_NOACCESS or PROT_NONE does not strip PROT_MTE.
       Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize,
                                        MAP_NOACCESS);
-      Entry.Flags = CachedBlock::NoAccess;
+      Entry.Flags |= CachedBlock::NoAccess;
     }
 
     // Usually only one entry will be evicted from the cache.
@@ -352,6 +353,11 @@ public:
         break;
       }
 
+      if (Zero && !Entry.isZero()) {
+        memset(reinterpret_cast<void *>(Entry.CommitBase), 0, Entry.CommitSize);
+        Entry.Flags |= CachedBlock::Zeroed;
+      }
+
       if (!Config::getQuarantineDisabled() && Config::getQuarantineSize()) {
         QuarantinePos =
             (QuarantinePos + 1) % Max(Config::getQuarantineSize(), 1u);
@@ -376,8 +382,6 @@ public:
         remove(Entry);
       }
 
-      if (Zero && !useMemoryTagging<Config>(Options))
-        memset(reinterpret_cast<void *>(Entry.CommitBase), 0, Entry.CommitSize);
       insert(Entry);
       trimResidentBytes(atomic_load_relaxed(&MaxCacheResidentBytes));
     } while (0);
@@ -655,6 +659,7 @@ private:
                                             Entry->CommitSize);
       CurrentResidentBytes -= Entry->CommitSize;
       Entry->Time = 0;
+      Entry->Flags |= CachedBlock::Zeroed;
     }
   }
 
@@ -687,7 +692,7 @@ private:
         Entry.MemMap.releaseAndZeroPagesToOS(Entry.CommitBase,
                                              Entry.CommitSize);
         Entry.Time = 0;
-        Entry.Zero = false;
+        Entry.Flags |= CachedBlock::Zeroed;
       }
     }
 
@@ -706,7 +711,7 @@ private:
                                             Entry->CommitSize);
       CurrentResidentBytes -= Entry->CommitSize;
       Entry->Time = 0;
-      Entry->Zero = false;
+      Entry->Flags |= CachedBlock::Zeroed;
     }
     OldestPresentEntry = nullptr;
   }
@@ -924,9 +929,11 @@ MapAllocator<Config>::tryAllocateFromCache(const Options &Options, uptr Size,
     HInt = untagPointer(HInt);
   const uptr PtrInt = HInt + LargeBlock::getHeaderSize();
   void *Ptr = reinterpret_cast<void *>(PtrInt);
-  if (FillContents && !Entry.Zero)
+  if (FillContents != NoFill && !Entry.isZero()) {
     memset(Ptr, FillContents == ZeroFill ? 0 : PatternFillByte,
            BlockEnd - PtrInt);
+  }
+
   {
     ScopedLock L(Mutex);
     InUseBlocks.push_back(H);
