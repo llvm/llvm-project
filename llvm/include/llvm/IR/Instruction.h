@@ -747,12 +747,10 @@ public:
   /// merged DebugLoc.
   LLVM_ABI void applyMergedLocation(DebugLoc LocA, DebugLoc LocB);
 
-  /// Drop the instruction's source position but keep its intermediate-IR
-  /// layers: if it has any (see DILocation::getInnermostIRLayers()), it gets a
-  /// line 0 location in the function's scope that carries them, and otherwise
-  /// this is the same as \ref dropLocation(). Use it instead of dropLocation()
-  /// when the instruction has been moved or copied to another block, for
-  /// example hoisted into a predecessor or sunk out of a loop.
+  /// Drop the instruction's source location but preserve its irlayers. Use
+  /// instead of \ref dropLocation() when the instruction has been moved or
+  /// copied to another block. See "When to drop an instruction location" in
+  /// https://llvm.org/docs/HowToUpdateDebugInfo.html.
   /// Note: it is undefined behavior to call this on an instruction not
   /// currently inserted into a function.
   LLVM_ABI void dropSourcePositionKeepIRLayers();

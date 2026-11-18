@@ -1,8 +1,8 @@
 ; RUN: opt -S -passes=gvn < %s | FileCheck %s
 
-;; Load PRE materializes the load's address in the predecessor where the load
-;; is unavailable, here by phi-translating %gep into %left. The new GEP gets a
-;; line 0 location in the function's scope that keeps the original's layers.
+;; Check that GVN load PRE keeps irlayers on the address it recreates in the
+;; predecessor (%gep phi-translated into %left). Its source location is
+;; dropped, but profilers can still attribute the new GEP.
 
 define i32 @f(ptr %p, ptr %q, i1 %c) !dbg !4 {
 ; CHECK-LABEL: define i32 @f(

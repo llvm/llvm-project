@@ -1,7 +1,7 @@
 ; RUN: opt -S -passes=licm < %s | FileCheck %s
 
-;; An instruction hoisted to the preheader gets a line 0 location in the
-;; function's scope that keeps its layers.
+;; Check that LICM keeps an instruction's irlayers when hoisting drops its
+;; source location, so profilers can still attribute the hoisted code.
 
 define void @f(i32 %x, i32 %n, ptr %p) !dbg !4 {
 ; CHECK-LABEL: define void @f(

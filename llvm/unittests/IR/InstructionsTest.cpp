@@ -1931,10 +1931,11 @@ TEST(InstructionsTest, DropSourcePositionKeepIRLayers) {
     None->dropSourcePositionKeepIRLayers();
     EXPECT_EQ(None->getDebugLoc(), DebugLoc());
 
-    // The layers come from the innermost location in the chain that has any.
+    // An instruction with no irlayers of its own keeps its call site's.
     Outer->dropSourcePositionKeepIRLayers();
     ExpectLine0WithLayers(Outer, OuterLayers);
 
+    // An instruction's own irlayers take precedence over its call site's.
     Both->dropSourcePositionKeepIRLayers();
     ExpectLine0WithLayers(Both, OwnLayers);
 
