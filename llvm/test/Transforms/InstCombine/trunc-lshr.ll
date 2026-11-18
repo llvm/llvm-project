@@ -61,7 +61,7 @@ define i1 @test4(i32 %i, ptr %p) {
 ; CHECK-NEXT:    [[T:%.*]] = trunc nuw i32 [[DOTLOBIT]] to i1
 ; CHECK-NEXT:    [[B:%.*]] = icmp slt i32 [[I]], 0
 ; CHECK-NEXT:    [[NOT_:%.*]] = xor i1 [[T]], true
-; CHECK-NEXT:    [[COMMON_RET1_OP:%.*]] = select i1 [[NOT_]], i1 [[B]], i1 false
+; CHECK-NEXT:    [[COMMON_RET1_OP:%.*]] = and i1 [[B]], [[NOT_]]
 ; CHECK-NEXT:    store i32 [[DOTLOBIT]], ptr [[P]], align 1
 ; CHECK-NEXT:    ret i1 [[COMMON_RET1_OP]]
 ;
@@ -82,7 +82,7 @@ define i1 @test5(i32 %i, ptr %p) {
 ; CHECK-NEXT:    [[T:%.*]] = trunc nuw i32 [[DOTLOBIT]] to i1
 ; CHECK-NEXT:    [[B:%.*]] = icmp slt i32 [[I]], 0
 ; CHECK-NEXT:    [[NOT_:%.*]] = xor i1 [[T]], true
-; CHECK-NEXT:    [[COMMON_RET1_OP:%.*]] = select i1 [[NOT_]], i1 [[B]], i1 false
+; CHECK-NEXT:    [[COMMON_RET1_OP:%.*]] = and i1 [[B]], [[NOT_]]
 ; CHECK-NEXT:    store i32 [[DOTLOBIT]], ptr [[P]], align 1
 ; CHECK-NEXT:    ret i1 [[COMMON_RET1_OP]]
 ;
