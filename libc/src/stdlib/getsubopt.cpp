@@ -15,14 +15,17 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, getsubopt,
-                   (char **optionp, char *const *tokens, char **valuep)) {
-  if (optionp == nullptr || *optionp == nullptr || tokens == nullptr ||
-      valuep == nullptr)
-    return -1;
+                   (char **__restrict optionp, char *const *__restrict tokens,
+                    char **__restrict valuep)) {
+  LIBC_CRASH_ON_NULLPTR(optionp);
+  LIBC_CRASH_ON_NULLPTR(*optionp);
+  LIBC_CRASH_ON_NULLPTR(tokens);
+  LIBC_CRASH_ON_NULLPTR(valuep);
 
   char *cur = *optionp;
   // If the option string is empty, we are done.
@@ -31,15 +34,21 @@ LLVM_LIBC_FUNCTION(int, getsubopt,
 
   char *token_start = cur;
   char *val = nullptr;
+  size_t key_len = 0;
+  bool found_equal = false;
 
   // Scan until comma or end of string.
   while (*cur != '\0' && *cur != ',') {
-    if (*cur == '=' && val == nullptr) {
-      *cur = '\0';
+    if (*cur == '=' && !found_equal) {
+      found_equal = true;
+      key_len = static_cast<size_t>(cur - token_start);
       val = cur + 1;
     }
     ++cur;
   }
+
+  if (!found_equal)
+    key_len = static_cast<size_t>(cur - token_start);
 
   if (*cur == ',') {
     *cur = '\0';
@@ -48,16 +57,16 @@ LLVM_LIBC_FUNCTION(int, getsubopt,
     *optionp = cur;
   }
 
-  *valuep = val;
-
-  cpp::string_view key(token_start);
+  cpp::string_view key(token_start, key_len);
   for (int idx = 0; tokens[idx] != nullptr; ++idx) {
-    if (key == tokens[idx])
+    if (key == tokens[idx]) {
+      *valuep = val;
       return idx;
+    }
   }
 
   // Token was not found in the tokens array; valuep points to the unmatched
-  // token.
+  // suboption string.
   *valuep = token_start;
   return -1;
 }

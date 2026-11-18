@@ -18,7 +18,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-int getsubopt(char **optionp, char *const *tokens, char **valuep);
+int getsubopt(char **__restrict optionp, char *const *__restrict tokens,
+              char **__restrict valuep);
 
 } // namespace LIBC_NAMESPACE_DECL
 

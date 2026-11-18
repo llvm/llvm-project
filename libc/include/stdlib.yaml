@@ -127,9 +127,9 @@ functions:
       - posix
     return_type: int
     arguments:
-      - type: char **
-      - type: char *const *
-      - type: char **
+      - type: char **__restrict
+      - type: char *const *__restrict
+      - type: char **__restrict
   - name: getloadavg
     standards:
       - bsd

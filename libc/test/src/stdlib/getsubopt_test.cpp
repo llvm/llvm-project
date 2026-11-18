@@ -47,20 +47,56 @@ TEST(LlvmLibcGetsuboptTest, UnmatchedSuboption) {
   int idx = LIBC_NAMESPACE::getsubopt(&opt_ptr, tokens, &val);
   EXPECT_EQ(idx, -1);
   ASSERT_NE(val, static_cast<char *>(nullptr));
-  EXPECT_STREQ(val, "unknown");
+  EXPECT_STREQ(val, "unknown=val");
 
   idx = LIBC_NAMESPACE::getsubopt(&opt_ptr, tokens, &val);
   EXPECT_EQ(idx, 0);
   EXPECT_EQ(val, static_cast<char *>(nullptr));
 }
 
-TEST(LlvmLibcGetsuboptTest, EmptyOrNullOptions) {
+TEST(LlvmLibcGetsuboptTest, TrailingEquals) {
+  char *const tokens[] = {const_cast<char *>("key"),
+                          const_cast<char *>("other"), nullptr};
+  char options[] = "key=,other";
+  char *opt_ptr = options;
+  char *val = nullptr;
+
+  int idx = LIBC_NAMESPACE::getsubopt(&opt_ptr, tokens, &val);
+  EXPECT_EQ(idx, 0);
+  ASSERT_NE(val, static_cast<char *>(nullptr));
+  EXPECT_STREQ(val, "");
+
+  idx = LIBC_NAMESPACE::getsubopt(&opt_ptr, tokens, &val);
+  EXPECT_EQ(idx, 1);
+  EXPECT_EQ(val, static_cast<char *>(nullptr));
+
+  // Trailing equals at the end of the option string without subsequent tokens.
+  char options2[] = "key=";
+  opt_ptr = options2;
+  val = nullptr;
+  idx = LIBC_NAMESPACE::getsubopt(&opt_ptr, tokens, &val);
+  EXPECT_EQ(idx, 0);
+  ASSERT_NE(val, static_cast<char *>(nullptr));
+  EXPECT_STREQ(val, "");
+}
+
+TEST(LlvmLibcGetsuboptTest, MultipleEquals) {
+  char *const tokens[] = {const_cast<char *>("param"), nullptr};
+  char options[] = "param=a=b=c";
+  char *opt_ptr = options;
+  char *val = nullptr;
+
+  int idx = LIBC_NAMESPACE::getsubopt(&opt_ptr, tokens, &val);
+  EXPECT_EQ(idx, 0);
+  ASSERT_NE(val, static_cast<char *>(nullptr));
+  EXPECT_STREQ(val, "a=b=c");
+}
+
+TEST(LlvmLibcGetsuboptTest, EmptyOptions) {
   char *const tokens[] = {const_cast<char *>("opt"), nullptr};
   char empty[] = "";
   char *opt_ptr = empty;
   char *val = nullptr;
 
   EXPECT_EQ(LIBC_NAMESPACE::getsubopt(&opt_ptr, tokens, &val), -1);
-  EXPECT_EQ(LIBC_NAMESPACE::getsubopt(nullptr, tokens, &val), -1);
-  EXPECT_EQ(LIBC_NAMESPACE::getsubopt(&opt_ptr, nullptr, &val), -1);
 }
