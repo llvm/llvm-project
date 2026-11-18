@@ -271,30 +271,30 @@ define i32 @accumulate_fit(ptr %flr, ptr %mdct, i32 %x0, i32 %x1, ptr %a, float 
 ; CHECK:  LV(REG): VF = vscale x 1
 ; CHECK:  LV(REG): Found max usage: 2 item
 ; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
-; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 17 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 20 registers
 ; CHECK:  LV(REG): Found invariant usage: 1 item
 ; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
 ; CHECK:  LV(REG): VF = vscale x 2
 ; CHECK:  LV(REG): Found max usage: 2 item
 ; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
-; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 34 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 37 registers
 ; CHECK:  LV(REG): Found invariant usage: 1 item
 ; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
 ; CHECK:  LV(REG): VF = vscale x 4
 ; CHECK:  LV(REG): Found max usage: 2 item
 ; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
-; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 68 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 71 registers
 ; CHECK:  LV(REG): Found invariant usage: 1 item
 ; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
 ; CHECK:  LV(REG): VF = vscale x 8
 ; CHECK:  LV(REG): Found max usage: 2 item
 ; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
-; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 136 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 139 registers
 ; CHECK:  LV(REG): Found invariant usage: 1 item
 ; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
-; CHECK:  LV(REG): Cost of 4 from 2 spills of RISCV::VRRC
-; CHECK:  LV(REG): Cost of 72 from 36 spills of RISCV::VRRC
-; CHECK:  LV(REG): Cost of 208 from 104 spills of RISCV::VRRC
+; CHECK:  LV(REG): Cost of 20 from 5 spills of RISCV::VRRC
+; CHECK:  LV(REG): Cost of 156 from 39 spills of RISCV::VRRC
+; CHECK:  LV(REG): Cost of 428 from 107 spills of RISCV::VRRC
 ;
 entry:
   %cmp.not123 = icmp sgt i32 %x0, %x1
@@ -441,7 +441,3 @@ if.end29:
   %exitcond.not = icmp eq i64 %i.0135, %conv1
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
 }
-
-declare float @llvm.fmuladd.f32(float, float, float)
-
-declare i32 @llvm.umin.i32(i32, i32)
