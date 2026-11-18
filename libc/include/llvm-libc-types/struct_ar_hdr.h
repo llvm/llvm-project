@@ -15,6 +15,7 @@
 #define LLVM_LIBC_TYPES_STRUCT_AR_HDR_H
 
 // Archive member header. Every field is ASCII text padded with spaces.
+// Format reference: https://man.freebsd.org/cgi/man.cgi?query=ar&sektion=5
 struct ar_hdr {
   char ar_name[16]; // Member name, terminated by '/' in the System V format.
   char ar_date[12]; // Modification time, decimal seconds since the Epoch.
