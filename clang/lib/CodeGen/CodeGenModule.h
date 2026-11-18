@@ -366,10 +366,6 @@ private:
   /// An invalid attribute means that the defaults were computed but no
   /// target-features attribute needs to be emitted.
   std::optional<llvm::Attribute> DefaultTargetFeatures;
-  /// Lazily cached vscale ranges for feature maps and streaming modes.
-  using VScaleRangeKey =
-      std::pair<const llvm::StringMap<bool> *, TargetInfo::ArmStreamingKind>;
-  llvm::DenseMap<VScaleRangeKey, llvm::Attribute> VScaleRangeAttrs;
   std::unique_ptr<CGCXXABI> ABI;
   llvm::LLVMContext &VMContext;
   std::string ModuleNameHash;
@@ -920,8 +916,6 @@ public:
   }
   const TargetInfo &getTarget() const { return Target; }
   const llvm::Triple &getTriple() const { return Target.getTriple(); }
-  llvm::Attribute getVScaleRangeAttribute(const FunctionDecl *FD,
-                                          TargetInfo::ArmStreamingKind Mode);
   bool supportsCOMDAT() const;
   void maybeSetTrivialComdat(const Decl &D, llvm::GlobalObject &GO);
 

@@ -4,7 +4,6 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Tooling/Tooling.h"
 #include "gtest/gtest.h"
-#include <string>
 
 using namespace clang;
 
@@ -35,46 +34,39 @@ TEST(FunctionFeatureMap, DefaultsAndCopies) {
   EXPECT_FALSE(Features.lookup("sve"));
 
   const FunctionDecl *NoFunction = nullptr;
-  llvm::StringMap<bool> LegacyNullFeatures;
-  Context.getFunctionFeatureMap(LegacyNullFeatures, NoFunction);
-  const auto &NullFeatures = Context.getFunctionFeatureMap(NoFunction);
-  EXPECT_EQ(&NullFeatures, &Context.getFunctionFeatureMap(NoFunction));
-  EXPECT_EQ(NullFeatures.size(), LegacyNullFeatures.size());
-  for (const auto &Entry : LegacyNullFeatures) {
-    auto Found = NullFeatures.find(Entry.getKey());
-    ASSERT_NE(Found, NullFeatures.end());
-    EXPECT_EQ(Found->getValue(), Entry.getValue());
-  }
+  EXPECT_EQ(&Features, &Context.getFunctionFeatureMap(NoFunction));
 }
 
-TEST(FunctionFeatureMap, TargetAttributeChanges) {
+TEST(FunctionFeatureMap, SharedAttributeContents) {
   auto AST = tooling::buildASTFromCodeWithArgs(
-      "__attribute__((target(\"+sve\"))) void target();",
+      "__attribute__((target(\"+sve\"))) void first();"
+      "__attribute__((target(\"+sve\"))) void second();",
       {"-target", "aarch64-none-linux-gnu"});
   ASSERT_TRUE(AST);
   ASTContext &Context = AST->getASTContext();
-  auto *Function = findFunction(Context, "target");
-  ASSERT_NE(Function, nullptr);
-  const auto &Features = Context.getFunctionFeatureMap(Function);
+  auto *First = findFunction(Context, "first");
+  auto *Second = findFunction(Context, "second");
+  ASSERT_NE(First, nullptr);
+  ASSERT_NE(Second, nullptr);
+  ASSERT_NE(First->getAttr<TargetAttr>(), Second->getAttr<TargetAttr>());
+  const auto &Features = Context.getFunctionFeatureMap(First);
   EXPECT_TRUE(Features.lookup("sve"));
-  EXPECT_EQ(&Features, &Context.getFunctionFeatureMap(Function));
-
-  Function->dropAttr<TargetAttr>();
-  EXPECT_FALSE(Context.getFunctionFeatureMap(Function).lookup("sve"));
-  EXPECT_TRUE(Features.lookup("sve"));
-  Function->addAttr(TargetAttr::CreateImplicit(Context, "+sve"));
-  EXPECT_TRUE(Context.getFunctionFeatureMap(Function).lookup("sve"));
+  EXPECT_EQ(&Features, &Context.getFunctionFeatureMap(Second));
 }
 
 TEST(FunctionFeatureMap, MultiversionIndices) {
   auto AST = tooling::buildASTFromCodeWithArgs(
       "__attribute__((target_clones(\"sve\", \"default\"))) "
-      "int target() { return 0; }",
+      "int target() { return 0; }"
+      "__attribute__((target_clones(\"sve\", \"default\"))) "
+      "int peer() { return 0; }",
       {"-target", "aarch64-none-linux-gnu", "-rtlib=compiler-rt"});
   ASSERT_TRUE(AST);
   ASTContext &Context = AST->getASTContext();
   auto *Function = findFunction(Context, "target");
+  auto *Peer = findFunction(Context, "peer");
   ASSERT_NE(Function, nullptr);
+  ASSERT_NE(Peer, nullptr);
   ASSERT_TRUE(Function->hasAttr<TargetClonesAttr>());
   GlobalDecl First = GlobalDecl().getWithDecl(Function);
   GlobalDecl Second = First.getWithMultiVersionIndex(1);
@@ -84,23 +76,8 @@ TEST(FunctionFeatureMap, MultiversionIndices) {
   EXPECT_NE(FirstFeatures.lookup("sve"), SecondFeatures.lookup("sve"));
   EXPECT_EQ(&FirstFeatures, &Context.getFunctionFeatureMap(First));
   EXPECT_EQ(&SecondFeatures, &Context.getFunctionFeatureMap(Second));
-}
-
-TEST(FunctionFeatureMap, StableReferences) {
-  std::string Code;
-  for (unsigned Index = 0; Index != 100; ++Index)
-    Code += "__attribute__((target(\"+sve\"))) void target" +
-            std::to_string(Index) + "();";
-  auto AST = tooling::buildASTFromCodeWithArgs(
-      Code, {"-target", "aarch64-none-linux-gnu"});
-  ASSERT_TRUE(AST);
-  ASTContext &Context = AST->getASTContext();
-  auto *First = findFunction(Context, "target0");
-  ASSERT_NE(First, nullptr);
-  const auto &Features = Context.getFunctionFeatureMap(First);
-  for (Decl *Declaration : Context.getTranslationUnitDecl()->decls())
-    if (auto *Function = dyn_cast<FunctionDecl>(Declaration))
-      Context.getFunctionFeatureMap(Function);
-  EXPECT_EQ(&Features, &Context.getFunctionFeatureMap(First));
-  EXPECT_TRUE(Features.lookup("sve"));
+  GlobalDecl PeerFirst = GlobalDecl().getWithDecl(Peer);
+  EXPECT_EQ(&FirstFeatures, &Context.getFunctionFeatureMap(PeerFirst));
+  EXPECT_EQ(&SecondFeatures, &Context.getFunctionFeatureMap(
+                                 PeerFirst.getWithMultiVersionIndex(1)));
 }

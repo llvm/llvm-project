@@ -722,19 +722,6 @@ CodeGenModule::CodeGenModule(ASTContext &C,
 
 CodeGenModule::~CodeGenModule() {}
 
-llvm::Attribute
-CodeGenModule::getVScaleRangeAttribute(const FunctionDecl *FD,
-                                       TargetInfo::ArmStreamingKind Mode) {
-  const auto *FeatureMap =
-      FD ? &getContext().getFunctionFeatureMap(FD) : nullptr;
-  auto [It, Inserted] = VScaleRangeAttrs.try_emplace({FeatureMap, Mode});
-  if (Inserted)
-    if (auto Range = Target.getVScaleRange(LangOpts, Mode, FeatureMap))
-      It->second = llvm::Attribute::getWithVScaleRangeArgs(
-          getLLVMContext(), Range->first, Range->second);
-  return It->second;
-}
-
 void CodeGenModule::createObjCRuntime() {
   // This is just isGNUFamily(), but we want to force implementors of
   // new ABIs to decide how best to do this.

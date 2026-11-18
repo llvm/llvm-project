@@ -15417,33 +15417,34 @@ ASTContext::getFunctionFeatureMap(const FunctionDecl *FD) const {
 const llvm::StringMap<bool> &
 ASTContext::getFunctionFeatureMap(GlobalDecl GD) const {
   const auto *FD = GD.getDecl() ? GD.getDecl()->getAsFunction() : nullptr;
-  if (FD && !FD->hasAttrs())
+  if (!FD || !FD->hasAttrs())
     return Target->getTargetOpts().FeatureMap;
 
-  const Attr *FeatureAttr = FD ? FD->getAttr<TargetAttr>() : nullptr;
-  unsigned MultiVersionIndex = 0;
-  if (FD && !FeatureAttr) {
-    FeatureAttr = FD->getAttr<CPUSpecificAttr>();
-    if (!FeatureAttr)
-      FeatureAttr = FD->getAttr<TargetClonesAttr>();
-    if (FeatureAttr)
-      MultiVersionIndex = GD.getMultiVersionIndex();
-    else
-      FeatureAttr = FD->getAttr<TargetVersionAttr>();
+  const Attr *FeatureAttr;
+  StringRef FeatureText;
+  if (const auto *TargetAttribute = FD->getAttr<TargetAttr>()) {
+    FeatureAttr = TargetAttribute;
+    FeatureText = TargetAttribute->getFeaturesStr();
+  } else if (const auto *Specific = FD->getAttr<CPUSpecificAttr>()) {
+    FeatureAttr = Specific;
+    FeatureText = Specific->getCPUName(GD.getMultiVersionIndex())->getName();
+  } else if (const auto *Clones = FD->getAttr<TargetClonesAttr>()) {
+    FeatureAttr = Clones;
+    FeatureText = Clones->getFeatureStr(GD.getMultiVersionIndex());
+  } else if (const auto *Version = FD->getAttr<TargetVersionAttr>()) {
+    FeatureAttr = Version;
+    FeatureText = Version->getName();
+  } else {
+    return Target->getTargetOpts().FeatureMap;
   }
-  if (FD && !FeatureAttr)
-    return Target->getTargetOpts().FeatureMap;
 
-  auto Key = std::make_pair(FeatureAttr, MultiVersionIndex);
+  auto Key = std::make_pair(FeatureText, unsigned(FeatureAttr->getKind()));
   auto It = FunctionFeatureMaps.find(Key);
   if (It != FunctionFeatureMaps.end())
     return *It->second;
 
   auto FeatureMap = std::make_unique<llvm::StringMap<bool>>();
-  if (FD)
-    getFunctionFeatureMap(*FeatureMap, GD);
-  else
-    getFunctionFeatureMap(*FeatureMap, FD);
+  getFunctionFeatureMap(*FeatureMap, GD);
   return *FunctionFeatureMaps.try_emplace(Key, std::move(FeatureMap))
               .first->second;
 }

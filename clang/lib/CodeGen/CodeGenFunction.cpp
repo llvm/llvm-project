@@ -1140,10 +1140,12 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     if (IsArmStreamingFunction(FD, true))
       IsArmStreaming = TargetInfo::ArmStreamingKind::Streaming;
   }
-  llvm::Attribute VScaleRangeAttr =
-      CGM.getVScaleRangeAttribute(FD, IsArmStreaming);
-  if (VScaleRangeAttr.isValid())
-    CurFn->addFnAttr(VScaleRangeAttr);
+  const auto *FeatureMap =
+      FD ? &getContext().getFunctionFeatureMap(FD) : nullptr;
+  if (auto VScaleRange = getContext().getTargetInfo().getVScaleRange(
+          getLangOpts(), IsArmStreaming, FeatureMap))
+    CurFn->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
+        getLLVMContext(), VScaleRange->first, VScaleRange->second));
 
   llvm::BasicBlock *EntryBB = createBasicBlock("entry", CurFn);
 

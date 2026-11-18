@@ -88,7 +88,6 @@ class APValue;
 class ASTMutationListener;
 class ASTRecordLayout;
 class AtomicExpr;
-class Attr;
 class BlockExpr;
 struct BlockVarCopyInit;
 class BuiltinTemplateDecl;
@@ -842,7 +841,7 @@ private:
 
   const TargetInfo *Target = nullptr;
   const TargetInfo *AuxTarget = nullptr;
-  mutable llvm::DenseMap<std::pair<const Attr *, unsigned>,
+  mutable llvm::DenseMap<std::pair<llvm::StringRef, unsigned>,
                          std::unique_ptr<llvm::StringMap<bool>>>
       FunctionFeatureMaps;
   clang::PrintingPolicy PrintingPolicy;
