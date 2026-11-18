@@ -97,8 +97,11 @@ bool Watchpoint::SetupVariableWatchpointDisabler(StackFrameSP frame_sp) const {
   if (!thread_sp)
     return false;
 
-  uint32_t return_frame_index =
-      thread_sp->GetSelectedFrameIndex(DoNoSelectMostRelevantFrame) + 1;
+  const uint32_t frame_index = frame_sp->GetFrameIndex();
+  if (frame_index >= LLDB_INVALID_FRAME_ID)
+    return false;
+
+  uint32_t return_frame_index = frame_index + 1;
   if (return_frame_index >= LLDB_INVALID_FRAME_ID)
     return false;
 

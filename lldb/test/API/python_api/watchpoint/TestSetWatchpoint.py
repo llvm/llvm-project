@@ -62,6 +62,35 @@ class SetWatchpointAPITestCase(TestBase):
         self.assertTrue(error)
         self.assertState(process.state, lldb.eStateExited)
 
+    @expectedFailureAll(archs=["s390x"])
+    def test_local_variable_watchpoint_of_caller_frame(self):
+        """Test watchpoint on a local variable of a frame other than the selected
+        one is disabled when that frame returns, not when the selected one does."""
+        target, process, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "// local_value_breakpoint", lldb.SBFileSpec(self.source, False)
+        )
+        self.assertEqual(thread.GetSelectedFrame().GetFrameID(), 0)
+
+        # Watch main's 'local' for writes while watch_local is selected.
+        value: lldb.SBValue = thread.GetFrameAtIndex(1).FindVariable("local")
+        self.assertTrue(value.IsValid(), "Found main's 'local'")
+
+        error = lldb.SBError()
+        watchpoint = value.Watch(True, False, True, error)
+        self.assertSuccess(error)
+        self.assertTrue(watchpoint.IsValid(), "Set watchpoint on 'local'")
+
+        # watch_local returning doesn't disable the watchpoint, so the process
+        # stops at the write to 'local' in main.
+        error = process.Continue()
+        self.assertSuccess(error)
+        self.assertState(process.state, lldb.eStateStopped)
+
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonWatchpoint)
+        self.assertTrue(thread, "stopped at the write to main's 'local'")
+        self.assertEqual(thread.selected_frame.name, "main")
+        self.assertTrue(watchpoint.IsEnabled())
+
     def _test_watch_val(self, variable_watchpoint):
         target, process, thread, _ = lldbutil.run_to_line_breakpoint(
             self, lldb.SBFileSpec(self.source), self.line
