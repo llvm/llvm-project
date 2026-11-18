@@ -747,7 +747,8 @@ static __inline__ void __tile_ace_top2bf16ps(__acetile *dst, __m512bh src1,
 __DEFAULT_FN_ATTRS_ACE
 static __inline__ void __tile_ace_setcol(__acetile *dst, __m512i src,
                                          unsigned int idx) {
-  *dst = __builtin_ia32_tilemovcolinsert_internal(16, 64, (__v16si)src, idx);
+  *dst = __builtin_ia32_tilemovcolinsert_internal(16, 64, *dst, (__v16si)src,
+                                                  idx);
 }
 
 /// Write a ZMM vector as a row in an ACE tile.
@@ -766,7 +767,8 @@ static __inline__ void __tile_ace_setcol(__acetile *dst, __m512i src,
 __DEFAULT_FN_ATTRS_ACE
 static __inline__ void __tile_ace_setrow(__acetile *dst, __m512i src,
                                          unsigned int idx) {
-  *dst = __builtin_ia32_tilemovrowinsert_internal(16, 64, (__v16si)src, idx);
+  *dst = __builtin_ia32_tilemovrowinsert_internal(16, 64, *dst, (__v16si)src,
+                                                  idx);
 }
 
 /// Read a row from an ACE tile to a ZMM vector.

@@ -425,9 +425,11 @@ let Features = "acev1", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
 
 // Tile movement internal (for IR-level operations).
 let Features = "acev1", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def tilemovcolinsert_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, _Vector<16, int>, unsigned int)">;
+  // The tile being written is an argument too, since only one column or row of
+  // it changes.
+  def tilemovcolinsert_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, _Vector<256, int>, _Vector<16, int>, unsigned int)">;
   // ACE tilemovrow writes to the tile, whereas AMX tilemovrow reads from it.
-  def tilemovrowinsert_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, _Vector<16, int>, unsigned int)">;
+  def tilemovrowinsert_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, _Vector<256, int>, _Vector<16, int>, unsigned int)">;
 }
 
 // BSR management.

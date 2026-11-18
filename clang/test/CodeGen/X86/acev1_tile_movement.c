@@ -9,16 +9,27 @@
 #include <immintrin.h>
 
 // Test tile setrow - write ZMM to tile row (ACE-specific)
+// Only one row changes, so the tile being written has to be read in and the
+// result stored back; checking the call on its own would not notice if the
+// incoming tile were dropped.
 void test_tile_ace_setrow(__acetile *dst, __m512i src) {
   // CHECK-LABEL: @test_tile_ace_setrow
-  // CHECK: call x86_amx @llvm.x86.acev1.tilemovrowinsert.internal
+  // CHECK: %[[OLDV:[^ ]+]] = load <256 x i32>, ptr %[[DST:[^ ]+]]
+  // CHECK: %[[OLD:[^ ]+]] = call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> %[[OLDV]])
+  // CHECK: %[[NEW:[^ ]+]] = call x86_amx @llvm.x86.acev1.tilemovrowinsert.internal(i16 16, i16 64, x86_amx %[[OLD]], <16 x i32> %{{[^ ]+}}, i32 %{{[^ ]+}})
+  // CHECK: %[[NEWV:[^ ]+]] = call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx %[[NEW]])
+  // CHECK: store <256 x i32> %[[NEWV]], ptr %{{[^ ]+}}
   __tile_ace_setrow(dst, src, 0);
 }
 
 // Test tile setcol - write ZMM to tile column (ACE-specific)
 void test_tile_ace_setcol(__acetile *dst, __m512i src) {
   // CHECK-LABEL: @test_tile_ace_setcol
-  // CHECK: call x86_amx @llvm.x86.acev1.tilemovcolinsert.internal
+  // CHECK: %[[OLDV:[^ ]+]] = load <256 x i32>, ptr %[[DST:[^ ]+]]
+  // CHECK: %[[OLD:[^ ]+]] = call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> %[[OLDV]])
+  // CHECK: %[[NEW:[^ ]+]] = call x86_amx @llvm.x86.acev1.tilemovcolinsert.internal(i16 16, i16 64, x86_amx %[[OLD]], <16 x i32> %{{[^ ]+}}, i32 %{{[^ ]+}})
+  // CHECK: %[[NEWV:[^ ]+]] = call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx %[[NEW]])
+  // CHECK: store <256 x i32> %[[NEWV]], ptr %{{[^ ]+}}
   __tile_ace_setcol(dst, src, 0);
 }
 
