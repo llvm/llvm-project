@@ -1515,6 +1515,12 @@ void Sema::ActOnEndOfTranslationUnit() {
     if (!VD || VD->isInvalidDecl() || !Seen.insert(VD).second)
       continue;
 
+    // If a later redeclaration (e.g. extern int b[3]) completed the type,
+    // update the tentative definition to use that completed type.
+    VarDecl *MostRecent = VD->getMostRecentDecl();
+    if (MostRecent != VD && !MostRecent->getType()->isIncompleteArrayType())
+      VD->setType(MostRecent->getType());
+
     if (const IncompleteArrayType *ArrayT
         = Context.getAsIncompleteArrayType(VD->getType())) {
       // Set the length of the array to 1 (C99 6.9.2p5).
