@@ -635,6 +635,12 @@ getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo &TTI,
     if (IntrinsicCost > ScalarLimit)
       IntrinsicCost = InstructionCost::getInvalid();
   }
+  if (ID == Intrinsic::sincos &&
+      shouldSplitVectorSinCos(TLI,
+                              CI->getArgOperand(0)->getType()->getScalarType(),
+                              Shape.VF, CI->getModule()))
+    IntrinsicCost =
+        2 * TTI.getCallInstrCost(nullptr, ArgTys.front(), ArgTys, CostKind);
 
   return {IntrinsicCost, LibCost};
 }

@@ -118,6 +118,17 @@ def TosaReduceTransposes : Pass<"tosa-reduce-transposes", "func::FuncOp"> {
   }];
 }
 
+def TosaReduceReshapes
+    : Pass<"tosa-reduce-reshapes", "func::FuncOp"> {
+  let summary = "Reduce reshapes through elementwise operators and casts";
+  let description = [{
+    Propagates statically shaped, rank-expanding TOSA reshapes backward through
+    single-use chains of elementwise operators and casts. This allows
+    consecutive reshapes to be composed and reshapes of constants to be folded
+    into their constant attributes.
+  }];
+}
+
 def TosaArithConstantToTosaConstPass
     : Pass<"tosa-arith-const-to-tosa-const", "func::FuncOp"> {
   let summary = "Convert tensor arith.constant operations into tosa.const";
