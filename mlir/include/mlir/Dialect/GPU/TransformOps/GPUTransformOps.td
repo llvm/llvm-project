@@ -98,8 +98,7 @@ def ApplyUnrollVectorsSubgroupMmaOp : Op<Transform_Dialect,
     Unrolls contractions to the target `m`, `n`, and `k` native vector size,
     along with other vector operations based on expected usage. `transfer_read`
     ops unroll based on the extract slice shape introduced by unrolling the
-    contractions, while elementwise and `transfer_write` ops unroll to the shape of
-    the C matrix (`m x n`).
+    contractions, `transfer_write` ops unroll to the shape of the C matrix (`m x n`).
 
     This operation applies to pure vector operations and should be applied before
     lowering to subgroup_mma ops.
