@@ -24,7 +24,6 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/Analysis.h"
@@ -439,21 +438,18 @@ static unsigned canMergeParamLoadStoresStartingAt(
   return NumElts;
 }
 
-// Group the registers of a parameter or return value for loading or storing.
-// ValueVTs and Offsets describe their types and byte offsets. ParamAlignment
-// gives the alignment in bytes. Return the number of registers in each group.
-// Keep each packed Boolean argument in its own group.
-template <typename T>
+// Return the number of registers in each load or store. When argument parts
+// are available, keep the registers of each packed Boolean vector together.
+template <typename T, typename Part = ISD::InputArg>
 static SmallVector<unsigned, 16>
 VectorizePTXValueVTs(const SmallVectorImpl<EVT> &ValueVTs,
                      const SmallVectorImpl<T> &Offsets, Align ParamAlignment,
-                     bool IsVAArg = false,
-                     function_ref<EVT(unsigned)> GetArgVT = nullptr) {
+                     bool IsVAArg = false, ArrayRef<Part> Parts = {}) {
   SmallVector<unsigned, 16> VectorInfo;
   const auto GetPackedWidth = [&](unsigned I) -> unsigned {
-    if (!GetArgVT)
+    if (Parts.empty())
       return 0;
-    EVT VT = GetArgVT(I);
+    EVT VT = Parts[I].ArgVT;
     return VT.isFixedLengthVectorOf(MVT::i1) ? VT.getVectorNumElements() : 0;
   };
 
@@ -1490,8 +1486,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
       unsigned J = 0;
       const auto VI =
-          VectorizePTXValueVTs(VTs, Offsets, ArgAlign, IsVAArg,
-                               [&](unsigned I) { return ArgOuts[I].ArgVT; });
+          VectorizePTXValueVTs(VTs, Offsets, ArgAlign, IsVAArg, ArgOuts);
       for (const unsigned NumElts : VI) {
         const EVT ArgVT = ArgOuts[J].ArgVT;
         const bool IsPacked = ArgVT.isFixedLengthVectorOf(MVT::i1);
@@ -4406,9 +4401,8 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
           &F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
 
       unsigned I = 0;
-      const auto VI =
-          VectorizePTXValueVTs(VTs, Offsets, ArgAlign, /*IsVAArg=*/false,
-                               [&](unsigned I) { return ArgIns[I].ArgVT; });
+      const auto VI = VectorizePTXValueVTs(VTs, Offsets, ArgAlign,
+                                           /*IsVAArg=*/false, ArgIns);
       for (const unsigned NumElts : VI) {
         const EVT ArgVT = ArgIns[I].ArgVT;
         const bool IsPacked = ArgVT.isFixedLengthVectorOf(MVT::i1);
