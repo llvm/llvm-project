@@ -58,7 +58,7 @@ The following table shows which algorithms are implemented in the backends.
 The values in the `default` backend show which algorithms are used to reframe as.
 
 | Algorithm                              | default | serial | statpart |
-| -------------------------------------- | ------- | ------ | -------- |
+| -------------------------------------- | ------- | :----: | :------: |
 | adjacent_difference | → transform |  |  |
 | adjacent_find | → mismatch |  |  |
 | all_of | → any_of |  |  |
