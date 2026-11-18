@@ -41,6 +41,8 @@ struct DedupOptions {
   bool DropDataSecs = false;
   /// If set, receive the old-to-new type ID map (0 for omitted types).
   SmallVectorImpl<uint32_t> *TypeIdMap = nullptr;
+  /// Omit extern functions and declaration tags targeting them.
+  bool DropExternFuncs = false;
 };
 
 /// Deduplicate types in a BTFBuilder in-place.

@@ -42,6 +42,19 @@
 # RUN: ld.lld --btf-merge --gc-sections a.o b.o -o gc
 # RUN: llvm-readelf -x .BTF gc | FileCheck %s --check-prefix=BTF-HEX
 
+## Final links omit extern functions and their declaration tags, even when
+## the definition has a different prototype.
+# RUN: llvm-mc -filetype=obj -triple=x86_64 func-def.s -o func-def.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 func-use.s -o func-use.o
+# RUN: ld.lld --btf-merge func-def.o func-use.o -o func
+# RUN: llvm-readelf -x .BTF func | FileCheck %s --check-prefix=FUNC
+# FUNC:      0x00000000 9feb0100 18000000 00000000 34000000
+# FUNC-NEXT: 0x00000010 34000000 07000000 00000000 0000000d
+# FUNC-NEXT: 0x00000020 00000000 01000000 0100000c 01000000
+# FUNC-NEXT: 0x00000030 03000000 00000001 04000000 20000000
+# FUNC-NEXT: 0x00000040 00000000 0000000d 03000000 00660069
+# FUNC-NEXT: 0x00000050 6e7400
+
 ## .BTF.ext sections are discarded when --btf-merge is active because
 ## their type ID references are invalidated by the merge and dedup.
 # RUN: llvm-mc -filetype=obj -triple=x86_64 btfext.s -o btfext.o
@@ -111,6 +124,32 @@ _start:
 .byte 0
 .ascii "int"
 .byte 0
+
+#--- func-def.s
+.text
+.globl f
+f: ret
+.section .BTF,"",@progbits
+.short 0xeb9f
+.byte 1, 0
+.long 24, 0, 24, 24, 3
+.long 0, 0x0d000000, 0       # FUNC_PROTO
+.long 1, 0x0c000001, 1       # FUNC global
+.asciz "", "f"
+
+#--- func-use.s
+.text
+.globl _start
+_start: call f
+.section .BTF,"",@progbits
+.short 0xeb9f
+.byte 1, 0
+.long 24, 0, 56, 56, 11
+.long 1, 0x01000000, 4, 32   # INT
+.long 0, 0x0d000000, 1       # FUNC_PROTO
+.long 5, 0x0c000002, 2       # FUNC extern
+.long 7, 0x11000000, 3, -1   # DECL_TAG on extern
+.asciz "", "int", "f", "tag"
 
 #--- b.s
 .text

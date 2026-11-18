@@ -710,12 +710,21 @@ Error BTFDedupState::compact() {
 
   StrMap[0] = 0;
   OldToNew.assign(N + 1, 0);
+  auto IsExternFunc = [&](uint32_t Id) {
+    const BTF::CommonType *T = Builder.findType(Id);
+    return T && T->getKind() == BTF::BTF_KIND_FUNC &&
+           T->getVlen() == BTF::FUNC_EXTERN;
+  };
   for (uint32_t Id = 1; Id <= N; ++Id) {
     if (Map[Id] != Id)
       continue;
 
     const BTF::CommonType *T = Builder.findType(Id);
     if (!T || (Options.DropDataSecs && T->getKind() == BTF::BTF_KIND_DATASEC))
+      continue;
+    if (Options.DropExternFuncs &&
+        (IsExternFunc(Id) || (T->getKind() == BTF::BTF_KIND_DECL_TAG &&
+                              T->Type && IsExternFunc(resolve(T->Type)))))
       continue;
 
     BTF::CommonType NewHeader = *T;

@@ -886,6 +886,26 @@ TEST(BTFDedupTest, duplicateFuncAndFuncProto) {
   EXPECT_EQ(B.typesCount(), 3u);
 }
 
+TEST(BTFDedupTest, dropExternFuncsAndTags) {
+  BTFBuilder B;
+  uint32_t Name = B.addString("f"), Tag = B.addString("tag");
+  B.addType({0, mkInfo(BTF::BTF_KIND_FUNC_PROTO), {0}});                 // 1
+  B.addType({Name, mkInfo(BTF::BTF_KIND_FUNC) | BTF::FUNC_EXTERN, {1}}); // 2
+  B.addType({Tag, mkInfo(BTF::BTF_KIND_DECL_TAG), {2}});                 // 3
+  B.addTail(uint32_t(-1));
+  B.addType({Name, mkInfo(BTF::BTF_KIND_FUNC) | BTF::FUNC_GLOBAL, {1}}); // 4
+  B.addType({Tag, mkInfo(BTF::BTF_KIND_DECL_TAG), {4}});                 // 5
+  B.addTail(uint32_t(-1));
+  SmallVector<uint32_t, 8> Map;
+  ASSERT_SUCCEEDED(BTF::dedup(B, {false, &Map, true}));
+  ASSERT_EQ(B.typesCount(), 3u);
+  EXPECT_EQ(Map[2], 0u);
+  EXPECT_EQ(Map[3], 0u);
+  EXPECT_EQ(Map[4], 2u);
+  EXPECT_EQ(B.findType(2)->getVlen(), BTF::FUNC_GLOBAL);
+  EXPECT_EQ(B.findType(3)->Type, 2u);
+}
+
 TEST(BTFDedupTest, funcsWithDifferentCanonicalTargets) {
   BTFBuilder B;
   uint32_t Node = B.addString("node"), Member = B.addString("p");

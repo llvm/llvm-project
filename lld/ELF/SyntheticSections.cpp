@@ -3755,13 +3755,14 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
   // VARs stay distinct during dedup. Remap the entries to their new IDs
   // and append one DATASEC per output section, with placeholders for layout.
   SmallVector<uint32_t, 0> typeIdMap;
-  if (Error e = BTF::dedup(builder, {hasDataSecs, &typeIdMap})) {
+  if (Error e = BTF::dedup(builder, {hasDataSecs, &typeIdMap, true})) {
     std::string reason = toString(std::move(e));
     if (hasDataSecs) {
       ErrAlways(ctx) << "cannot rebuild BTF DATASECs: " << reason;
       return;
     }
-    Warn(ctx) << "BTF deduplication failed: " << reason;
+    ErrAlways(ctx) << "BTF deduplication failed: " << reason;
+    return;
   }
 
   size_t offset = sizeof(BTF::Header);
