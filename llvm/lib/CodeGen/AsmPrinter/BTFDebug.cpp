@@ -33,6 +33,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LineIterator.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -574,14 +575,18 @@ void BTFTypeTypeTag::completeType(BTFDebug &BDebug) {
 }
 
 uint32_t BTFStringTable::addString(StringRef S) {
-  // Check whether the string already exists.
-  for (auto &OffsetM : OffsetToIdMap) {
-    if (Table[OffsetM.second] == S)
-      return OffsetM.first;
+  if (UseStringOffsets) {
+    auto [It, Inserted] = StringOffsets.try_emplace(S, Size);
+    if (!Inserted)
+      return It->second;
+  } else {
+    for (auto &OffsetM : OffsetToIdMap)
+      if (Table[OffsetM.second] == S)
+        return OffsetM.first;
+    OffsetToIdMap[Size] = Table.size();
   }
   // Not find, add to the string table.
   uint32_t Offset = Size;
-  OffsetToIdMap[Offset] = Table.size();
   Table.push_back(std::string(S));
   Size += S.size() + 1;
   return Offset;
@@ -589,7 +594,8 @@ uint32_t BTFStringTable::addString(StringRef S) {
 
 BTFDebug::BTFDebug(AsmPrinter *AP)
     : DebugHandlerBase(AP), OS(*Asm->OutStreamer), SkipInstruction(false),
-      LineInfoGenerated(false), SecNameOff(0), ArrayIndexTypeId(0) {
+      LineInfoGenerated(false), SecNameOff(0), ArrayIndexTypeId(0),
+      StringTable(!Asm->TM.getTargetTriple().isBPF()) {
   addString("\0");
 }
 
@@ -609,6 +615,19 @@ uint32_t BTFDebug::addType(std::unique_ptr<BTFTypeBase> TypeEntry) {
   return Id;
 }
 
+static bool isSupportedComplexSize(const DIBasicType *Ty) {
+  switch (divideCeil(Ty->getSizeInBits(), 8)) {
+  case 2:
+  case 4:
+  case 8:
+  case 12:
+  case 16:
+    return true;
+  default:
+    return false;
+  }
+}
+
 void BTFDebug::visitBasicType(const DIBasicType *BTy, uint32_t &TypeId) {
   // Only int and binary floating point types are supported in BTF.
   uint32_t Encoding = BTy->getEncoding();
@@ -626,7 +645,7 @@ void BTFDebug::visitBasicType(const DIBasicType *BTy, uint32_t &TypeId) {
         Encoding, BTy->getSizeInBits(), BTy->getOffsetInBits(), BTy->getName());
     break;
   case dwarf::DW_ATE_complex_float:
-    if (Asm->TM.getTargetTriple().isBPF()) {
+    if (Asm->TM.getTargetTriple().isBPF() || !isSupportedComplexSize(BTy)) {
       UnrepresentableTypes.insert(BTy);
       return;
     }
@@ -788,33 +807,106 @@ int BTFDebug::genBTFTypeTags(const DIDerivedType *DTy, int BaseTypeId) {
   return TmpTypeId;
 }
 
-// A record with a virtual base, directly or through a base, has no fixed
-// layout that BTF can describe.
-static bool hasVirtualBase(const DICompositeType *CTy) {
-  for (const DINode *Element : CTy->getElements()) {
-    if (Element->getTag() != dwarf::DW_TAG_inheritance)
-      continue;
-    const auto *Base = cast<DIDerivedType>(Element);
-    if (Base->isVirtual())
+static const ConstantInt *getBTFArrayCount(const DINode *Dimension) {
+  const auto *Range = dyn_cast<DISubrange>(Dimension);
+  return Range ? dyn_cast_if_present<ConstantInt *>(Range->getCount())
+               : nullptr;
+}
+
+static bool isSupportedEnumBase(const DIBasicType *Base) {
+  return Base && (Base->getSizeInBits() <= 32 || Base->getSizeInBits() == 64);
+}
+
+// Check by-value subobjects before registering a record. Do not follow
+// pointers: they may refer back to the record and can point to void in BTF.
+bool BTFDebug::isRepresentableValueType(const DIType *Ty) {
+  Ty = getBTFValueType(Ty);
+  if (!Ty || UnrepresentableTypes.contains(Ty))
+    return false;
+  if (const auto *BTy = dyn_cast<DIBasicType>(Ty)) {
+    switch (BTy->getEncoding()) {
+    case dwarf::DW_ATE_boolean:
+    case dwarf::DW_ATE_signed:
+    case dwarf::DW_ATE_signed_char:
+    case dwarf::DW_ATE_unsigned:
+    case dwarf::DW_ATE_unsigned_char:
+    case dwarf::DW_ATE_UTF:
+    case dwarf::DW_ATE_float:
       return true;
-    if (const auto *BaseTy = dyn_cast_or_null<DICompositeType>(
-            getBTFValueType(Base->getBaseType())))
-      if (hasVirtualBase(BaseTy))
-        return true;
+    case dwarf::DW_ATE_complex_float:
+      return isSupportedComplexSize(BTy);
+    default:
+      return false;
+    }
   }
-  return false;
+  const auto *CTy = dyn_cast<DICompositeType>(Ty);
+  if (!CTy)
+    return Ty->getTag() == dwarf::DW_TAG_pointer_type;
+
+  DINodeArray Elements = CTy->getElements();
+  switch (CTy->getTag()) {
+  case dwarf::DW_TAG_array_type:
+    return llvm::all_of(Elements, getBTFArrayCount) &&
+           isRepresentableValueType(CTy->getBaseType());
+  case dwarf::DW_TAG_enumeration_type:
+    return Elements.size() <= BTF::MAX_VLEN &&
+           (!CTy->getBaseType() ||
+            isSupportedEnumBase(dyn_cast_or_null<DIBasicType>(
+                getBTFValueType(CTy->getBaseType()))));
+  case dwarf::DW_TAG_class_type:
+  case dwarf::DW_TAG_structure_type:
+  case dwarf::DW_TAG_union_type:
+  case dwarf::DW_TAG_variant_part:
+    break;
+  default:
+    return false;
+  }
+
+  if (CTy->isForwardDecl() || RepresentableRecords.contains(CTy))
+    return true;
+  unsigned VLen = 0;
+  if (const auto *D = CTy->getDiscriminator()) {
+    if (!isRepresentableValueType(D->getBaseType()))
+      return false;
+    ++VLen;
+  }
+  for (const DINode *Element : Elements) {
+    const DIType *Member;
+    switch (Element->getTag()) {
+    case dwarf::DW_TAG_inheritance:
+      if (cast<DIDerivedType>(Element)->isVirtual()) {
+        UnrepresentableTypes.insert(CTy);
+        return false;
+      }
+      [[fallthrough]];
+    case dwarf::DW_TAG_member:
+      Member = cast<DIDerivedType>(Element)->getBaseType();
+      break;
+    case dwarf::DW_TAG_variant_part:
+      Member = cast<DICompositeType>(Element);
+      break;
+    default:
+      continue;
+    }
+    if (++VLen > BTF::MAX_VLEN || !isRepresentableValueType(Member)) {
+      UnrepresentableTypes.insert(CTy);
+      return false;
+    }
+  }
+  RepresentableRecords.insert(CTy);
+  return true;
 }
 
 /// Handle structure/union types.
 void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
                                uint32_t &TypeId) {
-  DINodeArray DIElements = CTy->getElements();
-  SmallVector<const DINode *, 8> Elements(DIElements.begin(), DIElements.end());
   bool IsBPF = Asm->TM.getTargetTriple().isBPF();
-  if (!IsBPF && hasVirtualBase(CTy)) {
+  if (!IsBPF && !isRepresentableValueType(CTy)) {
     UnrepresentableTypes.insert(CTy);
     return;
   }
+  DINodeArray DIElements = CTy->getElements();
+  SmallVector<const DINode *, 8> Elements(DIElements.begin(), DIElements.end());
   if (!IsBPF || CTy->getTag() == dwarf::DW_TAG_class_type)
     llvm::erase_if(Elements, [IsBPF](const DINode *Element) {
       return Element->getTag() != dwarf::DW_TAG_member &&
@@ -859,8 +951,12 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
 
   auto TypeEntry = std::make_unique<BTFTypeStruct>(CTy, Elements, IsStruct,
                                                    HasBitField, VLen);
-  StructTypes.push_back(TypeEntry.get());
+  if (IsBPF)
+    StructTypes.push_back(TypeEntry.get());
   TypeId = addType(std::move(TypeEntry), CTy);
+  if (!IsBPF)
+    if (const auto *Identifier = CTy->getRawIdentifier())
+      ODRRecordIds.try_emplace(Identifier, TypeId);
 
   // Check struct/union annotations
   processDeclAnnotations(CTy->getAnnotations(), TypeId, -1);
@@ -896,9 +992,7 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
 // After a diagnostic, use a placeholder length so enclosing types can still
 // refer to the array during error recovery.
 static uint32_t getBTFArrayLength(const DINode *Dimension, MCContext &Ctx) {
-  const auto *Range = dyn_cast<DISubrange>(Dimension);
-  const auto *Count =
-      Range ? dyn_cast_if_present<ConstantInt *>(Range->getCount()) : nullptr;
+  const auto *Count = getBTFArrayCount(Dimension);
   if (!Count) {
     Ctx.reportError({},
                     "BTF array dimension requires a constant element count");
@@ -915,12 +1009,19 @@ static uint32_t getBTFArrayLength(const DINode *Dimension, MCContext &Ctx) {
 }
 
 void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
+  DINodeArray Elements = CTy->getElements();
+  bool IsBPF = Asm->TM.getTargetTriple().isBPF();
+  if (!IsBPF && !isRepresentableValueType(CTy)) {
+    UnrepresentableTypes.insert(CTy);
+    return;
+  }
+
   // Visit array element type.
   uint32_t ElemTypeId = 0;
   const DIType *ElemType = tryRemoveAtomicType(CTy->getBaseType());
   visitTypeEntry(ElemType, ElemTypeId, false, false);
   if (!ElemTypeId) {
-    if (!Asm->TM.getTargetTriple().isBPF()) {
+    if (!IsBPF) {
       UnrepresentableTypes.insert(CTy);
       return;
     }
@@ -934,7 +1035,6 @@ void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
   }
 
   // Visit array dimensions.
-  DINodeArray Elements = CTy->getElements();
   // Build the inner arrays first. Only the outermost is registered for CTy.
   for (unsigned I = Elements.size(); I > 1; --I) {
     const uint32_t Count = getBTFArrayLength(Elements[I - 1], OS.getContext());
@@ -964,8 +1064,17 @@ void BTFDebug::visitEnumType(const DICompositeType *CTy, uint32_t &TypeId) {
 
   bool IsSigned = false;
   unsigned NumBits = 32;
-  if (CTy->getBaseType() != nullptr) {
-    const auto *BTy = cast<DIBasicType>(CTy->getBaseType());
+  if (const DIType *Base = CTy->getBaseType()) {
+    const DIBasicType *BTy;
+    if (Asm->TM.getTargetTriple().isBPF()) {
+      BTy = cast<DIBasicType>(Base);
+    } else {
+      BTy = dyn_cast_or_null<DIBasicType>(getBTFValueType(Base));
+      if (!isSupportedEnumBase(BTy)) {
+        UnrepresentableTypes.insert(CTy);
+        return;
+      }
+    }
     IsSigned = BTy->getEncoding() == dwarf::DW_ATE_signed ||
                BTy->getEncoding() == dwarf::DW_ATE_signed_char;
     NumBits = BTy->getSizeInBits();
@@ -1047,7 +1156,9 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
     if (Base) {
       if (IsForwardDeclCandidate(Base)) {
         auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, true);
-        auto &Fixup = FixupDerivedTypes[cast<DICompositeType>(Base)];
+        auto *CTy = cast<DICompositeType>(Base);
+        auto &Fixup = Asm->TM.getTargetTriple().isBPF() ? FixupDerivedTypes[CTy]
+                                                        : GenericFixups[CTy];
         Fixup.push_back(std::make_pair(DTy, TypeEntry.get()));
         TypeId = addType(std::move(TypeEntry), DTy);
         return;
@@ -1338,20 +1449,24 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   }
   SkipInstruction = false;
 
-  if (!Asm->TM.getTargetTriple().isBPF()) {
+  bool IsBPF = Asm->TM.getTargetTriple().isBPF();
+  if (!IsBPF) {
     processCompileUnitTypes(Unit);
-    for (const MDNode *DN : SP->getRetainedNodes())
-      if (const auto *DV = dyn_cast<DILocalVariable>(DN))
-        visitTypeEntry(DV->getType());
-      else if (const auto *Ty = dyn_cast<DIType>(DN))
-        visitTypeEntry(Ty);
+    processRetainedNodes(SP);
+    auto ProcessLocation = [this](const DILocation *Loc) {
+      for (; Loc; Loc = Loc->getInlinedAt())
+        processRetainedNodes(Loc->getScope()->getSubprogram());
+    };
     for (const BasicBlock &BB : MF->getFunction())
       for (const Instruction &I : BB) {
+        ProcessLocation(I.getDebugLoc().get());
         if (const auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
           visitTypeEntry(DVI->getVariable()->getType());
-        for (const DbgRecord &DR : I.getDbgRecordRange())
+        for (const DbgRecord &DR : I.getDbgRecordRange()) {
+          ProcessLocation(DR.getDebugLoc().get());
           if (const auto *DVR = dyn_cast<DbgVariableRecord>(&DR))
             visitTypeEntry(DVR->getVariable()->getType());
+        }
       }
   }
 
@@ -1372,8 +1487,13 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
 
   uint32_t FuncTypeId = processFunctionType(MF, SP, FuncArgNames);
 
-  for (const auto &TypeEntry : TypeEntries)
-    TypeEntry->completeType(*this);
+  if (IsBPF) {
+    for (const auto &TypeEntry : TypeEntries)
+      TypeEntry->completeType(*this);
+  } else {
+    for (; NumCompletedTypes < TypeEntries.size(); ++NumCompletedTypes)
+      TypeEntries[NumCompletedTypes]->completeType(*this);
+  }
 
   // Construct funcinfo and the first lineinfo for the function.
   MCSymbol *FuncLabel = Asm->getFunctionBegin();
@@ -1626,8 +1746,19 @@ void BTFDebug::processCompileUnitTypes(const DICompileUnit *Unit) {
       visitTypeEntry(Ty);
 }
 
+void BTFDebug::processRetainedNodes(const DISubprogram *SP) {
+  if (!SP || !ProcessedSubprograms.insert(SP).second)
+    return;
+  for (const MDNode *DN : SP->getRetainedNodes())
+    if (const auto *DV = dyn_cast<DILocalVariable>(DN))
+      visitTypeEntry(DV->getType());
+    else if (const auto *Ty = dyn_cast<DIType>(DN))
+      visitTypeEntry(Ty);
+}
+
 void BTFDebug::endModule() {
-  if (!Asm->TM.getTargetTriple().isBPF())
+  bool IsBPF = Asm->TM.getTargetTriple().isBPF();
+  if (!IsBPF)
     for (const DICompileUnit *Unit : MMI->getModule()->debug_compile_units())
       processCompileUnitTypes(Unit);
   processGlobals();
@@ -1635,26 +1766,30 @@ void BTFDebug::endModule() {
   for (auto &DataSec : DataSecEntries)
     addType(std::move(DataSec.second));
 
-  for (auto &Fixup : FixupDerivedTypes) {
-    const DICompositeType *CTy = Fixup.first;
+  auto ResolveFixup = [&](const DICompositeType *CTy,
+                          const DerivedTypeFixups &Fixups) {
     StringRef TypeName = CTy->getName();
     bool IsUnion = CTy->getTag() == dwarf::DW_TAG_union_type;
 
-    // Search through struct types
     uint32_t StructTypeId = 0;
-    for (const auto &StructType : StructTypes) {
-      if (StructType->getName() == TypeName) {
-        StructTypeId = StructType->getId();
-        break;
-      }
+    if (IsBPF) {
+      for (const auto &StructType : StructTypes)
+        if (StructType->getName() == TypeName) {
+          StructTypeId = StructType->getId();
+          break;
+        }
+    } else {
+      StructTypeId = DIToIdMap.lookup(CTy);
+      if (!StructTypeId && CTy->getRawIdentifier())
+        StructTypeId = ODRRecordIds.lookup(CTy->getRawIdentifier());
     }
 
-    if (StructTypeId == 0) {
+    if (!StructTypeId && (IsBPF || isRepresentableValueType(CTy))) {
       auto FwdTypeEntry = std::make_unique<BTFTypeFwd>(TypeName, IsUnion);
       StructTypeId = addType(std::move(FwdTypeEntry));
     }
 
-    for (auto &TypeInfo : Fixup.second) {
+    for (const auto &TypeInfo : Fixups) {
       const DIDerivedType *DTy = TypeInfo.first;
       BTFTypeDerived *BDType = TypeInfo.second;
 
@@ -1664,11 +1799,18 @@ void BTFDebug::endModule() {
       else
         BDType->setPointeeType(StructTypeId);
     }
+  };
+  if (IsBPF) {
+    for (const auto &[CTy, Fixups] : FixupDerivedTypes)
+      ResolveFixup(CTy, Fixups);
+  } else {
+    for (const auto &[CTy, Fixups] : GenericFixups)
+      ResolveFixup(CTy, Fixups);
   }
 
   // Complete BTF type cross references.
-  for (const auto &TypeEntry : TypeEntries)
-    TypeEntry->completeType(*this);
+  for (size_t I = NumCompletedTypes; I < TypeEntries.size(); ++I)
+    TypeEntries[I]->completeType(*this);
 
   // Emit BTF sections.
   emitBTFSection();

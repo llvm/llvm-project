@@ -22,6 +22,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
 #include "llvm/DebugInfo/BTF/BTF.h"
@@ -268,11 +269,14 @@ class BTFStringTable {
   /// of the Table. It is used to avoid putting
   /// duplicated strings in the table.
   std::map<uint32_t, uint32_t> OffsetToIdMap;
+  StringMap<uint32_t> StringOffsets;
+  bool UseStringOffsets;
   /// A vector of strings to represent the string table.
   std::vector<std::string> Table;
 
 public:
-  BTFStringTable() : Size(0) {}
+  explicit BTFStringTable(bool UseStringOffsets)
+      : Size(0), UseStringOffsets(UseStringOffsets) {}
   uint32_t getSize() { return Size; }
   std::vector<std::string> &getTable() { return Table; }
   /// Add a string to the string table and returns its offset
@@ -317,6 +321,7 @@ protected:
   uint32_t ArrayIndexTypeId;
   BTFStringTable StringTable;
   std::vector<std::unique_ptr<BTFTypeBase>> TypeEntries;
+  size_t NumCompletedTypes = 0;
   DenseMap<const DIType *, uint32_t> DIToIdMap;
   DenseSet<const DIType *> UnrepresentableTypes;
   std::map<uint32_t, std::vector<BTFFuncInfo>> FuncInfoTable;
@@ -328,9 +333,13 @@ protected:
   std::vector<BTFTypeStruct *> StructTypes;
   std::set<const Function *> ProtoFunctions;
   DenseSet<const DICompileUnit *> ProcessedCUs;
-  std::map<const DICompositeType *,
-           std::vector<std::pair<const DIDerivedType *, BTFTypeDerived *>>>
-      FixupDerivedTypes;
+  DenseSet<const DISubprogram *> ProcessedSubprograms;
+  DenseSet<const DICompositeType *> RepresentableRecords;
+  DenseMap<const MDString *, uint32_t> ODRRecordIds;
+  using DerivedTypeFixups =
+      std::vector<std::pair<const DIDerivedType *, BTFTypeDerived *>>;
+  std::map<const DICompositeType *, DerivedTypeFixups> FixupDerivedTypes;
+  MapVector<const DICompositeType *, DerivedTypeFixups> GenericFixups;
 
   /// Add types to TypeEntries.
   /// @{
@@ -359,6 +368,7 @@ protected:
   void visitEnumType(const DICompositeType *ETy, uint32_t &TypeId);
   void visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
                         bool CheckPointer, bool SeenPointer);
+  bool isRepresentableValueType(const DIType *Ty);
   /// @}
 
   /// Check whether the type is a forward declaration candidate or not.
@@ -382,6 +392,7 @@ protected:
   void processFuncPrototypes(const Function *F);
 
   void processCompileUnitTypes(const DICompileUnit *Unit);
+  void processRetainedNodes(const DISubprogram *SP);
 
   /// Generate types for decl annotations.
   void processDeclAnnotations(DINodeArray Annotations, uint32_t BaseTypeId,

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-linux-gnu %s -o - | FileCheck %s
-; A class is a struct; complex types use FLOAT with their full size.
+; RUN: llc -mtriple=x86_64-linux-gnu %s -o - | FileCheck %s --implicit-check-not='.ascii "complex long double"'
+; A class is a struct; complex types use FLOAT only for supported sizes.
 ; CHECK: BTF_KIND_FLOAT(id = 1)
 ; CHECK-NEXT: .long 268435456
 ; CHECK-NEXT: .long 16
@@ -19,19 +19,16 @@
 ; CHECK: BTF_KIND_FLOAT
 ; CHECK-NEXT: .long 268435456
 ; CHECK-NEXT: .long 8
-; CHECK: BTF_KIND_FLOAT
-; CHECK-NEXT: .long 268435456
-; CHECK-NEXT: .long 32
 ; CHECK: .ascii "complex double"
 ; CHECK: .byte 67
 ; CHECK: .ascii "complex float"
-; CHECK: .ascii "complex long double"
 
 @c = global [2 x double] zeroinitializer, !dbg !0
 @complex = global [2 x double] zeroinitializer, !dbg !17
 @cf = global [2 x float] zeroinitializer, !dbg !21
-@cl = global [2 x x86_fp80] zeroinitializer, !dbg !24
 define void @f(double %x) !dbg !8 {
+  %cl = alloca [2 x x86_fp80], align 16
+  #dbg_declare(ptr %cl, !25, !DIExpression(), !13)
   ret void, !dbg !13
 }
 !llvm.dbg.cu = !{!2}
@@ -41,7 +38,7 @@ define void @f(double %x) !dbg !8 {
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, emissionKind: FullDebug, globals: !5)
 !3 = !DIFile(filename: "test.cc", directory: "/")
 !4 = !DICompositeType(tag: DW_TAG_class_type, name: "C", file: !3, line: 1, size: 128, elements: !15)
-!5 = !{!0, !17, !21, !24}
+!5 = !{!0, !17, !21}
 !6 = !{i32 7, !"Dwarf Version", i32 5}
 !7 = !{i32 2, !"Debug Info Version", i32 3}
 !8 = distinct !DISubprogram(name: "f", scope: !3, file: !3, line: 2, type: !9, unit: !2, spFlags: DISPFlagDefinition)
@@ -58,6 +55,5 @@ define void @f(double %x) !dbg !8 {
 !21 = !DIGlobalVariableExpression(var: !22, expr: !DIExpression())
 !22 = distinct !DIGlobalVariable(name: "cf", scope: !2, file: !3, type: !23, isLocal: false, isDefinition: true)
 !23 = !DIBasicType(name: "complex float", size: 64, encoding: DW_ATE_complex_float)
-!24 = !DIGlobalVariableExpression(var: !25, expr: !DIExpression())
-!25 = distinct !DIGlobalVariable(name: "cl", scope: !2, file: !3, type: !26, isLocal: false, isDefinition: true)
+!25 = !DILocalVariable(name: "cl", scope: !8, file: !3, type: !26)
 !26 = !DIBasicType(name: "complex long double", size: 256, encoding: DW_ATE_complex_float)
