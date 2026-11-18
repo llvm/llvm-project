@@ -1398,8 +1398,8 @@ static SDValue combineShiftToAVGSUB(SDValue Op,
   return DAG.getExtOrTrunc(/*IsSigned=*/true, ResultAVG, DL, VT);
 }
 
-// Bypassing a shared operand does not remove it. Avoid giving its single-use
-// input another use when the bitwise operation also remains: this extends the
+// Bypassing a shared operand does not remove it. Avoid giving its single-user
+// input another user when the bitwise operation also remains: this extends the
 // input's live range and can require an extra copy for a two-address
 // operation. Still bypass bitwise operands, which can enable reassociation
 // and folding.
@@ -1408,9 +1408,9 @@ static SDValue simplifyBitwiseOperand(const TargetLowering &TLI, SDValue V,
                                       const APInt &DemandedElts,
                                       SelectionDAG &DAG, unsigned Depth) {
   bool PreserveSharing =
-      !ISD::isBitwiseLogicOp(V.getOpcode()) && !V.hasOneUse();
+      !ISD::isBitwiseLogicOp(V.getOpcode()) && !V.hasOneUser();
   if (PreserveSharing) {
-    // Skip the analysis if every possible replacement is a single-use input.
+    // Skip the analysis if every possible replacement is a single-user input.
     switch (V.getOpcode()) {
     case ISD::ADD:
     case ISD::MUL:
@@ -1418,8 +1418,8 @@ static SDValue simplifyBitwiseOperand(const TargetLowering &TLI, SDValue V,
     case ISD::SMAX:
     case ISD::UMIN:
     case ISD::UMAX:
-      // Either input may be returned, so both must be single-use to skip.
-      if (V.getOperand(0).hasOneUse() && V.getOperand(1).hasOneUse())
+      // Either input may be returned, so both must be single-user to skip.
+      if (V.getOperand(0).hasOneUser() && V.getOperand(1).hasOneUser())
         return SDValue();
       break;
     case ISD::SHL:
@@ -1429,7 +1429,7 @@ static SDValue simplifyBitwiseOperand(const TargetLowering &TLI, SDValue V,
     case ISD::INSERT_VECTOR_ELT:
     case ISD::INSERT_SUBVECTOR:
       // Only the source value or base vector (operand 0) can be returned.
-      if (V.getOperand(0).hasOneUse())
+      if (V.getOperand(0).hasOneUser())
         return SDValue();
       break;
     default:
@@ -1438,8 +1438,8 @@ static SDValue simplifyBitwiseOperand(const TargetLowering &TLI, SDValue V,
   }
   SDValue NewV = TLI.SimplifyMultipleUseDemandedBits(V, DemandedBits,
                                                      DemandedElts, DAG, Depth);
-  // Only reject a direct input whose sole use is V.
-  if (PreserveSharing && NewV && NewV.hasOneUse() &&
+  // Only reject a direct input whose sole user is V.
+  if (PreserveSharing && NewV && NewV.hasOneUser() &&
       llvm::is_contained(V->op_values(), NewV))
     return SDValue();
   return NewV;
