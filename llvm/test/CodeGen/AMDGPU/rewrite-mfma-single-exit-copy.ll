@@ -304,17 +304,21 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    s_nop 1
 ; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], a[4:7], a[8:11], a[0:3]
 ; CHECK-NEXT:    s_add_i32 s1, s1, 1
-; CHECK-NEXT:    v_pk_add_f32 v[226:227], v[226:227], v[226:227]
-; CHECK-NEXT:    v_pk_add_f32 v[224:225], v[224:225], v[224:225]
+; CHECK-NEXT:    v_add_f32_e64 v226, v226, v226
+; CHECK-NEXT:    v_add_f32_e64 v227, v227, v227
+; CHECK-NEXT:    v_add_f32_e64 v224, v224, v224
+; CHECK-NEXT:    v_add_f32_e64 v225, v225, v225
 ; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], a[4:7], a[8:11], a[0:3]
 ; CHECK-NEXT:    v_add_f32_e64 v230, v230, v230
 ; CHECK-NEXT:    v_add_f32_e64 v231, v231, v231
-; CHECK-NEXT:    v_pk_add_f32 v[228:229], v[228:229], v[228:229]
+; CHECK-NEXT:    v_add_f32_e64 v228, v228, v228
+; CHECK-NEXT:    v_add_f32_e64 v229, v229, v229
 ; CHECK-NEXT:    v_pk_add_f32 v[234:235], v[234:235], v[234:235]
 ; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], a[4:7], a[8:11], a[0:3]
 ; CHECK-NEXT:    v_add_f32_e64 v232, v232, v232
 ; CHECK-NEXT:    v_add_f32_e64 v233, v233, v233
-; CHECK-NEXT:    v_pk_add_f32 v[238:239], v[238:239], v[238:239]
+; CHECK-NEXT:    v_add_f32_e64 v238, v238, v238
+; CHECK-NEXT:    v_add_f32_e64 v239, v239, v239
 ; CHECK-NEXT:    v_pk_add_f32 v[236:237], v[236:237], v[236:237]
 ; CHECK-NEXT:    v_pk_add_f32 v[246:247], v[246:247], v[246:247]
 ; CHECK-NEXT:    v_pk_add_f32 v[244:245], v[244:245], v[244:245]
