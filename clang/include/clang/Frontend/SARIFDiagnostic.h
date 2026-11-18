@@ -22,9 +22,8 @@ namespace clang {
 
 class SARIFDiagnostic : public DiagnosticRenderer {
 public:
-  SARIFDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
-                  DiagnosticOptions &DiagOpts, SarifDocumentWriter *Writer);
-
+  SARIFDiagnostic(const LangOptions &LangOpts, DiagnosticOptions &DiagOpts,
+                  SarifDocumentWriter *Writer);
   ~SARIFDiagnostic() = default;
 
   SARIFDiagnostic &operator=(const SARIFDiagnostic &&) = delete;

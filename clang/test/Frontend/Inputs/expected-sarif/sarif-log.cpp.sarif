@@ -1,0 +1,105 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/sarif-schema-2.1.0.json",
+  "runs": [
+    {
+      "artifacts": [
+        {
+          "length": -1,
+          "location": {
+            "index": 0,
+            "uri": "file:///[...]/sarif-log.cpp"
+          },
+          "mimeType": "text/plain",
+          "roles": [
+            "resultFile"
+          ]
+        }
+      ],
+      "columnKind": "unicodeCodePoints",
+      "results": [
+        {
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "index": 0,
+                  "uri": "file:///[...]/sarif-log.cpp"
+                },
+                "region": {
+                  "endColumn": 3,
+                  "startColumn": 3,
+                  "startLine": 11
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "'depfunc' is deprecated"
+          },
+          "ruleId": "warn_deprecated",
+          "ruleIndex": 0
+        },
+        {
+          "level": "note",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "index": 0,
+                  "uri": "file:///[...]/sarif-log.cpp"
+                },
+                "region": {
+                  "endColumn": 3,
+                  "startColumn": 3,
+                  "startLine": 7
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "'depfunc' has been explicitly marked deprecated here"
+          },
+          "ruleId": "note_availability_specified_here",
+          "ruleIndex": 1
+        }
+      ],
+      "tool": {
+        "driver": {
+          "fullName": "",
+          "informationUri": "https://clang.llvm.org/docs/UsersManual.html",
+          "language": "en-US",
+          "name": "clang",
+          "rules": [
+            {
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning",
+                "rank": -1
+              },
+              "fullDescription": {
+                "text": ""
+              },
+              "id": "warn_deprecated",
+              "name": ""
+            },
+            {
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "note",
+                "rank": -1
+              },
+              "fullDescription": {
+                "text": ""
+              },
+              "id": "note_availability_specified_here",
+              "name": ""
+            }
+          ],
+          "version": "[clang version]"
+        }
+      }
+    }
+  ],
+  "version": "[SARIF version]"
+}
