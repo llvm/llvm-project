@@ -1,0 +1,28 @@
+# RUN: llc -mtriple=wasm32-unknown-unknown -mattr=+reference-types,+exception-handling -start-after=finalize-isel -verify-machineinstrs %s -o - | FileCheck %s
+
+# IR has no exnref type, so test the select of exnref values from MIR.
+
+--- |
+  target triple = "wasm32-unknown-unknown"
+  define void @select_exnref(i32 %c) {
+    unreachable
+  }
+...
+---
+name: select_exnref
+tracksRegLiveness: true
+machineFunctionInfo:
+  params: [ i32 ]
+body: |
+  bb.0:
+    liveins: $arguments
+    %0:i32 = ARGUMENT_i32 0, implicit $arguments
+    %1:exnref = REF_NULL_EXNREF implicit-def dead $arguments
+    %2:exnref = SELECT_EXNREF %1, %1, %0, implicit-def dead $arguments
+    THROW_REF %2, implicit-def dead $arguments
+...
+
+# CHECK-LABEL: select_exnref:
+# CHECK:         local.get 0
+# CHECK-NEXT:    select exnref
+# CHECK-NEXT:    throw_ref
