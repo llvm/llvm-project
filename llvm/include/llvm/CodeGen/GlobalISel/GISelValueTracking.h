@@ -31,9 +31,6 @@ namespace llvm {
 class TargetLowering;
 class DataLayout;
 
-/// Three-state knowledge for a value's range.
-enum class KnownSign { Unknown, NonNeg, Neg };
-
 class LLVM_ABI GISelValueTracking : public GISelChangeObserver {
   MachineFunction &MF;
   MachineRegisterInfo &MRI;
@@ -51,12 +48,8 @@ class LLVM_ABI GISelValueTracking : public GISelChangeObserver {
   void computeKnownBitsMin(Register Src0, Register Src1, KnownBits &Known,
                            const APInt &DemandedElts, unsigned Depth = 0);
 
-  /// Compute the minimum number of sign bits for \p Src0 and \p Src1.
-  /// If \p Sign is provided, it is set to Neg if both are known negative,
-  /// NonNeg if both are known non-negative, or Unknown otherwise.
   unsigned computeNumSignBitsMin(Register Src0, Register Src1,
-                                 const APInt &DemandedElts, unsigned Depth = 0,
-                                 KnownSign *Sign = nullptr);
+                                 const APInt &DemandedElts, unsigned Depth = 0);
 
   void computeKnownFPClass(Register R, KnownFPClass &Known,
                            FPClassTest InterestedClasses, unsigned Depth);
@@ -98,13 +91,9 @@ public:
   void computeKnownBitsImpl(Register R, KnownBits &Known,
                             const APInt &DemandedElts, unsigned Depth = 0);
 
-  /// Compute the number of sign bits. If \p Sign is provided, it is set to
-  /// Neg if the value is known negative, NonNeg if known
-  /// non-negative, or Unknown otherwise.
   unsigned computeNumSignBits(Register R, const APInt &DemandedElts,
-                              unsigned Depth = 0, KnownSign *Sign = nullptr);
-  unsigned computeNumSignBits(Register R, unsigned Depth = 0,
-                              KnownSign *Sign = nullptr);
+                              unsigned Depth = 0);
+  unsigned computeNumSignBits(Register R, unsigned Depth = 0);
 
   // KnownBitsAPI
   KnownBits getKnownBits(Register R);
