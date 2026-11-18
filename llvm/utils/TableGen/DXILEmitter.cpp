@@ -626,3 +626,28 @@ static void emitDxilOperation(const RecordKeeper &Records, raw_ostream &OS) {
 
 static TableGen::Emitter::Opt X("gen-dxil-operation", emitDxilOperation,
                                 "Generate DXIL operation information");
+
+static void emitDXILIntrinsicStages(const RecordKeeper &Records,
+                                    raw_ostream &OS) {
+  OS << "// Generated code, do not edit.\n\n";
+  auto Rules = Records.getAllDerivedDefinitions("DXILIntrinsicStages");
+  for (const Record *R : Rules) {
+    auto Stages = R->getValueAsListOfDefs("Stages");
+    if (Stages.empty())
+      PrintFatalError(R, "expected at least one shader stage");
+    OS << "static constexpr StringRef " << R->getName() << "[] = {\n";
+    for (const Record *Stage : Stages)
+      OS << "  \"" << Stage->getName() << "\",\n";
+    OS << "};\n\n";
+  }
+  OS << "static const IntrinsicStageInfo DXILIntrinsicStages[] = {\n";
+  for (const Record *R : Rules)
+    OS << "  {Intrinsic::" << GetIntrinsicName(R->getValue("Intrin")) << ", \""
+       << R->getValueAsString("BuiltinName") << "\", \""
+       << R->getValueAsString("Name") << "\", " << R->getName() << "},\n";
+  OS << "};\n";
+}
+
+static TableGen::Emitter::Opt Y("gen-dxil-intrinsic-stages",
+                                emitDXILIntrinsicStages,
+                                "Generate DXIL intrinsic stage availability");

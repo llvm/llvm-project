@@ -13861,6 +13861,8 @@ def err_hlsl_mult_inheritance : Error<"HLSL does not support multiple inheritanc
 def err_hlsl_cstor_dstor : Error<"HLSL does not support constructors or destructors">;
 def err_hlsl_langstd_unimplemented : Error<"support for HLSL language version %0 is incomplete">;
 def err_hlsl_attr_unsupported_in_stage : Error<"attribute %0 is unsupported in '%1' shaders, requires %select{|one of the following: }2%3">;
+def err_hlsl_intrinsic_unsupported_in_stage : Error<
+  "'%0' is not supported in '%1' shaders for DirectX; supported stages: %2">;
 def err_hlsl_attr_invalid_type : Error<
    "attribute %0 only applies to a field or parameter of type '%1'">;
 def err_hlsl_attr_invalid_ast_node : Error<

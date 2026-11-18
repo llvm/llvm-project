@@ -280,6 +280,14 @@ def all_stages : DXILShaderStage;
 // Denote support for DXIL Op to have been removed
 def removed : DXILShaderStage;
 
+class DXILIntrinsicStages<Intrinsic intrinsic, string builtinName, string name,
+                          list<DXILShaderStage> stages> {
+  Intrinsic Intrin = intrinsic;
+  string BuiltinName = builtinName;
+  string Name = name;
+  list<DXILShaderStage> Stages = stages;
+}
+
 // DXIL Op attributes
 
 // A function attribute denotes that there is a corresponding LLVM function
@@ -1665,6 +1673,11 @@ def CreateHandleFromHeap : DXILOp<218, createHandleFromHeap> {
   let attributes = [Attributes<DXIL1_0, [DXILReadNone]>];
 }
 
+defvar QuadVoteStages = [compute, amplification, mesh, pixel, node];
+
+def QuadAllStages : DXILIntrinsicStages<
+    int_dx_quad_all, "__builtin_hlsl_quad_all", "QuadAll", QuadVoteStages>;
+
 def QuadVote : DXILOp<222, quadVote> {
   let Doc = "compares a boolean condition across a quad";
   let intrinsics = [
@@ -1675,7 +1688,7 @@ def QuadVote : DXILOp<222, quadVote> {
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_7, [Int1Ty]>];
   let stages = [
-    Stages<DXIL1_7, [library, compute, amplification, mesh, pixel, node]>
+    Stages<DXIL1_7, !listconcat([library], QuadVoteStages)>
   ];
 }
 

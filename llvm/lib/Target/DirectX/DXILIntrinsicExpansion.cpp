@@ -13,8 +13,10 @@
 #include "DirectX.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/Frontend/HLSL/IntrinsicStageInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
@@ -1401,7 +1403,52 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   return false;
 }
 
+static bool validateIntrinsicStages(Module &M) {
+  if (!M.getTargetTriple().isDXIL())
+    return true;
+
+  bool HasEntryPoints = llvm::any_of(
+      M, [](const Function &F) { return F.hasFnAttribute("hlsl.shader"); });
+  for (const auto &Info : hlsl::getDXILIntrinsicStageInfos()) {
+    Function *IntrinsicFn = Intrinsic::getDeclarationIfExists(&M, Info.ID);
+    if (!IntrinsicFn)
+      continue;
+
+    SmallVector<Function *, 8> Worklist{IntrinsicFn};
+    SmallPtrSet<Function *, 16> Visited;
+    while (!Worklist.empty()) {
+      Function *F = Worklist.pop_back_val();
+      if (!Visited.insert(F).second)
+        continue;
+
+      if (!F->isDeclaration() &&
+          (F->hasFnAttribute("hlsl.shader") || !HasEntryPoints)) {
+        StringRef Stage = Triple::getEnvironmentTypeName(
+            M.getTargetTriple().getEnvironment());
+        Attribute ShaderAttr = F->getFnAttribute("hlsl.shader");
+        if (ShaderAttr.isValid())
+          Stage = ShaderAttr.getValueAsString();
+        if (!Info.isSupportedIn(Stage)) {
+          M.getContext().emitError(
+              "'" + Info.Name + "' is not supported in '" + Stage +
+              "' shaders for DirectX; supported stages: " +
+              Info.getStageNames() + " (function '" + F->getName() + "')");
+          return false;
+        }
+      }
+
+      for (User *U : F->users())
+        if (auto *Call = dyn_cast<CallBase>(U))
+          Worklist.push_back(Call->getFunction());
+    }
+  }
+  return true;
+}
+
 static bool expansionIntrinsics(Module &M) {
+  if (!validateIntrinsicStages(M))
+    return false;
+
   for (auto &F : make_early_inc_range(M.functions())) {
     if (!isIntrinsicExpansion(F))
       continue;
