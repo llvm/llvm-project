@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "src/math/atanpif16.h"
 #include "test/UnitTest/FPMatcher.h"
 
@@ -60,4 +61,10 @@ TEST_F(LlvmLibcAtanpif16Test, MonotonicityProperty) {
 
     EXPECT_TRUE(result1 < result2);
   }
+}
+
+TEST_F(LlvmLibcAtanpif16Test, Underflow) {
+  EXPECT_FP_EQ_WITH_EXCEPTION(0x1p-24f16, LIBC_NAMESPACE::atanpif16(0x1p-23f16),
+                              FE_UNDERFLOW | FE_INEXACT);
+  EXPECT_MATH_ERRNO(ERANGE);
 }
