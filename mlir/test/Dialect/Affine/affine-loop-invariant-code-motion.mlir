@@ -1020,12 +1020,10 @@ func.func @unknown_trip_count_store_not_hoisted(%x: i32, %n: index) -> i32 {
 
 // CHECK-LABEL: func @hoist_invariant_op_from_affine_if
 func.func @hoist_invariant_op_from_affine_if(%arg0: i32, %arg1: i32, %m: memref<16xi32>) {
-  // CHECK:      %[[MUL:.*]] = arith.muli %arg0, %arg1 : i32
-  // CHECK-NEXT: affine.for %[[IV:.*]] = 0 to 16 {
-  // CHECK-NEXT:   affine.if
-  // CHECK-NEXT:     affine.store %[[MUL]], %{{.*}}[%[[IV]]]
-  // CHECK-NEXT:   }
-  // CHECK-NEXT: }
+  // CHECK: %[[MUL:.*]] = arith.muli %arg0, %arg1
+  // CHECK: affine.for
+  // CHECK:   affine.if
+  // CHECK:     affine.store %[[MUL]]
   affine.for %i = 0 to 16 {
     affine.if #set(%i) {
       %0 = arith.muli %arg0, %arg1 : i32
@@ -1044,22 +1042,16 @@ func.func @hoist_invariant_op_from_affine_if(%arg0: i32, %arg1: i32, %m: memref<
 
 // CHECK-LABEL: func @hoist_invariant_chain_from_nested_affine_if
 func.func @hoist_invariant_chain_from_nested_affine_if(%arg0: i32, %arg1: i32, %m: memref<16xi32>) {
-  // CHECK:      %[[MUL:.*]] = arith.muli %arg0, %arg1 : i32
-  // CHECK-NEXT: %[[ADD:.*]] = arith.addi %[[MUL]], %arg0 : i32
-  // CHECK-NEXT: %[[SUB:.*]] = arith.subi %[[ADD]], %arg1 : i32
-  // CHECK-NEXT: %[[XOR:.*]] = arith.xori %arg0, %arg1 : i32
-  // CHECK-NEXT: affine.for %[[IV:.*]] = 0 to 16 {
-  // CHECK-NEXT:   affine.if
-  // CHECK-NEXT:     affine.if
-  // CHECK-NEXT:       affine.store %[[SUB]]
-  // CHECK-NEXT:     }
-  // CHECK-NEXT:     %[[CAST:.*]] = arith.index_cast %[[IV]] : index to i32
-  // CHECK-NEXT:     %[[VAR:.*]] = arith.addi %[[ADD]], %[[CAST]] : i32
-  // CHECK-NEXT:     affine.store %[[VAR]]
-  // CHECK-NEXT:   } else {
-  // CHECK-NEXT:     affine.store %[[XOR]]
-  // CHECK-NEXT:   }
-  // CHECK-NEXT: }
+  // CHECK: %[[MUL:.*]] = arith.muli %arg0, %arg1
+  // CHECK: %[[ADD:.*]] = arith.addi %[[MUL]], %arg0
+  // CHECK: %[[SUB:.*]] = arith.subi %[[ADD]], %arg1
+  // CHECK: %[[XOR:.*]] = arith.xori %arg0, %arg1
+  // CHECK: affine.for %[[IV:.*]] = 0 to 16
+  // CHECK:   affine.store %[[SUB]]
+  // CHECK:   %[[CAST:.*]] = arith.index_cast %[[IV]]
+  // CHECK:   %[[VAR:.*]] = arith.addi %[[ADD]], %[[CAST]]
+  // CHECK:   affine.store %[[VAR]]
+  // CHECK:   affine.store %[[XOR]]
   affine.for %i = 0 to 16 {
     affine.if #set(%i) {
       %0 = arith.muli %arg0, %arg1 : i32
@@ -1088,10 +1080,9 @@ func.func @hoist_invariant_chain_from_nested_affine_if(%arg0: i32, %arg1: i32, %
 
 // CHECK-LABEL: func @no_hoist_non_speculatable_op_from_affine_if
 func.func @no_hoist_non_speculatable_op_from_affine_if(%arg0: i32, %arg1: i32, %m: memref<16xi32>) {
-  // CHECK:      affine.for
-  // CHECK-NEXT:   affine.if
-  // CHECK-NEXT:     arith.divsi
-  // CHECK-NEXT:     affine.store
+  // CHECK: affine.for
+  // CHECK:   affine.if
+  // CHECK:     arith.divsi
   affine.for %i = 0 to 16 {
     affine.if #set(%i) {
       %0 = arith.divsi %arg0, %arg1 : i32
@@ -1136,3 +1127,52 @@ func.func @store_not_hoisted_past_unknown_effect_call(%A: memref<1xi32>, %c: i32
 // CHECK:      affine.for
 // CHECK-NEXT:   affine.store
 // CHECK-NEXT:   func.call @use
+
+// -----
+
+// The yields of a hoisted value stay in place.
+
+#set = affine_set<(d0) : (d0 - 4 >= 0)>
+
+// CHECK-LABEL: func @hoist_yielded_invariant_op_from_affine_if
+func.func @hoist_yielded_invariant_op_from_affine_if(%arg0: i32, %arg1: i32, %arg2: memref<16xi32>) -> i32 {
+  // CHECK: %[[INIT:.*]] = arith.muli %arg0, %arg1
+  // CHECK: %[[MUL:.*]] = arith.muli %arg0, %[[INIT]]
+  // CHECK: affine.for
+  // CHECK:   affine.if
+  // CHECK:     affine.yield %[[MUL]]
+  %0 = arith.muli %arg0, %arg1 : i32
+  %res = affine.for %i = 0 to 16 iter_args(%acc = %0) -> (i32) {
+    %next = affine.if #set(%i) -> i32 {
+      %1 = arith.muli %arg0, %0 : i32
+      affine.store %1, %arg2[%i] : memref<16xi32>
+      affine.yield %1 : i32
+    } else {
+      affine.yield %acc : i32
+    }
+    affine.yield %next : i32
+  }
+  return %res : i32
+}
+
+// -----
+
+// Pure loop-invariant ops are hoisted out of any control-flow region nested in
+// the loop, not only out of affine.if.
+
+// CHECK-LABEL: func @hoist_invariant_op_from_scf_if
+func.func @hoist_invariant_op_from_scf_if(%arg0: i32, %arg1: i32, %m: memref<16xi32>) {
+  // CHECK: %[[MUL:.*]] = arith.muli %arg0, %arg1
+  // CHECK: affine.for
+  // CHECK:   scf.if
+  // CHECK:     affine.store %[[MUL]]
+  affine.for %i = 0 to 16 {
+    %t = arith.index_cast %i : index to i32
+    %c = arith.cmpi sgt, %t, %arg0 : i32
+    scf.if %c {
+      %0 = arith.muli %arg0, %arg1 : i32
+      affine.store %0, %m[%i] : memref<16xi32>
+    }
+  }
+  return
+}
