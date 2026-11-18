@@ -3869,6 +3869,45 @@ def CIR_VTableGetVirtualFnOp : CIR_Op<"vtable.get_virtual_fn", [
 }
 
 //===----------------------------------------------------------------------===//
+// VTableGetVirtualFnByOffsetOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableGetVirtualFnByOffsetOp : CIR_Op<"vtable.get_virtual_fn_by_offset", [
+  MemoryEffects<[MemRead]>
+]> {
+  let summary = "Get a virtual function pointer from a vtable by its offset";
+  let description = [{
+    The `vtable.get_virtual_fn_by_offset` operation is the counterpart of
+    `cir.vtable.get_virtual_fn` for when the entry is only known at run time,
+    such as when calling through a pointer to member function. The entry is
+    identified by its `offset` operand, which is the distance in bytes of the
+    entry from the address point of the vtable, as it is stored in the
+    pointer to member function. How the entry is stored and read is decided
+    when the operation is lowered.
+
+    The `vptr` operand must be a `!cir.vptr` value, which would have been
+    returned by a previous call to `cir.vtable.get_vptr`.
+
+    The result is the pointer to the function.
+
+    Example:
+    ```
+    %4 = cir.load %3 : !cir.ptr<!cir.vptr>, !cir.vptr
+    %5 = cir.vtable.get_virtual_fn_by_offset %4[%offset : !s64i] : !cir.vptr
+                  -> !cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>
+    ```
+  }];
+
+  let arguments = (ins CIR_VPtrType:$vptr, CIR_IntType:$offset);
+  let results = (outs CIR_PtrToFunc:$result);
+
+  let assemblyFormat = [{
+    $vptr `[` $offset `:` qualified(type($offset)) `]` attr-dict
+    `:` qualified(type($vptr)) `->` qualified(type($result))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // VTableGetOffsetOp
 //===----------------------------------------------------------------------===//
 
