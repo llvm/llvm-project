@@ -4,8 +4,8 @@
 define <2 x i8> @sext_nsw_user(<2 x i16> %a, <2 x i32> %y) {
 ; CHECK-LABEL: define <2 x i8> @sext_nsw_user(
 ; CHECK-SAME: <2 x i16> [[A:%.*]], <2 x i32> [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i16> [[A]] to <2 x i8>
-; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i8> [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i16> [[A]] to <2 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i32> [[TMP1]] to <2 x i8>
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i32> [[TMP1]], [[Y]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i32> [[TMP3]] to <2 x i8>
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i8> [[TMP2]], [[TMP4]]
@@ -33,8 +33,8 @@ define <2 x i8> @sext_nsw_user(<2 x i16> %a, <2 x i32> %y) {
 define <2 x i8> @sext_user(<2 x i16> %a, <2 x i32> %y) {
 ; CHECK-LABEL: define <2 x i8> @sext_user(
 ; CHECK-SAME: <2 x i16> [[A:%.*]], <2 x i32> [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i16> [[A]] to <2 x i8>
-; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i8> [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i16> [[A]] to <2 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i32> [[TMP1]] to <2 x i8>
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP1]], [[Y]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i32> [[TMP3]] to <2 x i8>
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i8> [[TMP2]], [[TMP4]]
@@ -62,10 +62,10 @@ define <2 x i8> @sext_user(<2 x i16> %a, <2 x i32> %y) {
 define <2 x i8> @add_nsw_user(<2 x i16> %a, <2 x i16> %b, <2 x i32> %y) {
 ; CHECK-LABEL: define <2 x i8> @add_nsw_user(
 ; CHECK-SAME: <2 x i16> [[A:%.*]], <2 x i16> [[B:%.*]], <2 x i32> [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i16> [[A]] to <2 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i16> [[B]] to <2 x i8>
-; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i8> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i8> [[TMP4]] to <2 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i16> [[A]] to <2 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <2 x i16> [[B]] to <2 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i32> [[TMP3]] to <2 x i8>
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i32> [[TMP3]], [[Y]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc <2 x i32> [[TMP5]] to <2 x i8>
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i8> [[TMP4]], [[TMP6]]

@@ -52,7 +52,7 @@ int test(const char *p) {
 // rewritten to an indirect call through a function-pointer bitcast.
 // CIR:         %[[GLOBAL:.+]] = cir.get_global @real_impl : !cir.ptr<!cir.func<(!cir.ptr<!s8i>, !cir.ptr<!rec_my_stat64>) -> !s32i>>
 // CIR-NEXT:    %[[PTR:.+]] = cir.cast bitcast %[[GLOBAL]] : !cir.ptr<!cir.func<(!cir.ptr<!s8i>, !cir.ptr<!rec_my_stat64>) -> !s32i>> -> !cir.ptr<!cir.func<(!cir.ptr<!s8i>, !cir.ptr<!rec_my_stat>) -> !s32i>>
-// CIR-NEXT:    cir.call %[[PTR]](%{{.+}}, %{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, !cir.ptr<!rec_my_stat>) -> !s32i>>, !cir.ptr<!s8i>, !cir.ptr<!rec_my_stat>) -> !s32i
+// CIR-NEXT:    cir.call %[[PTR]](%{{.+}}, %{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, !cir.ptr<!rec_my_stat>) -> !s32i>>, !cir.ptr<!s8i> {llvm.noundef}, !cir.ptr<!rec_my_stat> {llvm.noundef}) -> !s32i
 
 // The inline definition of `real_impl` is emitted with `available_externally`
 // linkage, taking `struct my_stat64 *`.

@@ -2266,8 +2266,8 @@ Sema::ExpandFunctionLocalPredefinedMacros(ArrayRef<Token> Toks) {
   return ExpandedToks;
 }
 
-ExprResult
-Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
+ExprResult Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope,
+                                    ConversionAction Action) {
   assert(!StringToks.empty() && "Must have at least one string!");
 
   // StringToks needs backing storage as it doesn't hold array elements itself
@@ -2275,8 +2275,8 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
   if (getLangOpts().MicrosoftExt)
     StringToks = ExpandedToks = ExpandFunctionLocalPredefinedMacros(StringToks);
 
-  StringLiteralParser Literal(
-      StringToks, PP, StringLiteralEvalMethod::Evaluated, CA_ToLiteralEncoding);
+  StringLiteralParser Literal(StringToks, PP,
+                              StringLiteralEvalMethod::Evaluated, Action);
   if (Literal.hadError)
     return ExprError();
 
@@ -11502,6 +11502,10 @@ QualType Sema::CheckMultiplyDivideOperands(ExprResult &LHS, ExprResult &RHS,
   if (LHSTy->isSveVLSBuiltinType() || RHSTy->isSveVLSBuiltinType())
     return CheckSizelessVectorOperands(LHS, RHS, Loc, IsCompAssign,
                                        ArithConvKind::Arithmetic);
+  // In HLSL, multiplying or dividing two matrices is element-wise.
+  if (getLangOpts().HLSL && LHSTy->isConstantMatrixType() &&
+      RHSTy->isConstantMatrixType())
+    return CheckMatrixElementwiseOperands(LHS, RHS, Loc, IsCompAssign);
   if (!IsDiv &&
       (LHSTy->isConstantMatrixType() || RHSTy->isConstantMatrixType()))
     return CheckMatrixMultiplyOperands(LHS, RHS, Loc, IsCompAssign);
@@ -16652,6 +16656,8 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
                     VectorKind::AltiVecBool))
         break;
       else if (resultType->isSveVLSBuiltinType()) // SVE vectors allow + and -
+        break;
+      else if (getLangOpts().HLSL && resultType->isConstantMatrixType())
         break;
       else if (getLangOpts().CPlusPlus && // C++ [expr.unary.op]p6
                Opc == UO_Plus && resultType->isPointerType())
