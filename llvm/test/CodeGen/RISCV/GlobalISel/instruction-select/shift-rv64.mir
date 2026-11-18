@@ -17,10 +17,10 @@ body:             |
     ; CHECK-NEXT: [[SLL:%[0-9]+]]:gpr = SLL [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[SLL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %3:gprb(s64) = G_SHL %0, %1
-    $x10 = COPY %3(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %3:gprb(i64) = G_SHL %0, %1
+    $x10 = COPY %3(i64)
     PseudoRET implicit $x10
 ...
 
@@ -40,12 +40,12 @@ body:             |
     ; CHECK-NEXT: [[SLL:%[0-9]+]]:gpr = SLL [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[SLL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_CONSTANT i64 63
-    %3:gprb(s64) = G_AND %1, %2
-    %4:gprb(s64) = G_SHL %0, %3(s64)
-    $x10 = COPY %4(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_CONSTANT i64 63
+    %3:gprb(i64) = G_AND %1, %2
+    %4:gprb(i64) = G_SHL %0, %3(i64)
+    $x10 = COPY %4(i64)
     PseudoRET implicit $x10
 ...
 
@@ -66,14 +66,14 @@ body:             |
     ; CHECK-NEXT: [[SLL:%[0-9]+]]:gpr = SLL [[COPY]], [[ANDI]]
     ; CHECK-NEXT: $x10 = COPY [[SLL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_CONSTANT i64 62
-    %3:gprb(s64) = G_AND %1, %2
-    %4:gprb(s64) = G_CONSTANT i64 62
-    %5:gprb(s64) = G_AND %3, %4
-    %6:gprb(s64) = G_SHL %0, %5(s64)
-    $x10 = COPY %6(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_CONSTANT i64 62
+    %3:gprb(i64) = G_AND %1, %2
+    %4:gprb(i64) = G_CONSTANT i64 62
+    %5:gprb(i64) = G_AND %3, %4
+    %6:gprb(i64) = G_SHL %0, %5(i64)
+    $x10 = COPY %6(i64)
     PseudoRET implicit $x10
 ...
 
@@ -93,12 +93,12 @@ body:             |
     ; CHECK-NEXT: [[SLL:%[0-9]+]]:gpr = SLL [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[SLL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_CONSTANT i64 64
-    %3:gprb(s64) = G_ADD %1, %2
-    %4:gprb(s64) = G_SHL %0, %3(s64)
-    $x10 = COPY %4(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_CONSTANT i64 64
+    %3:gprb(i64) = G_ADD %1, %2
+    %4:gprb(i64) = G_SHL %0, %3(i64)
+    $x10 = COPY %4(i64)
     PseudoRET implicit $x10
 ...
 
@@ -119,12 +119,12 @@ body:             |
     ; CHECK-NEXT: [[SLL:%[0-9]+]]:gpr = SLL [[COPY]], [[SUBW]]
     ; CHECK-NEXT: $x10 = COPY [[SLL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_CONSTANT i64 64
-    %3:gprb(s64) = G_SUB %2, %1
-    %4:gprb(s64) = G_SHL %0, %3(s64)
-    $x10 = COPY %4(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_CONSTANT i64 64
+    %3:gprb(i64) = G_SUB %2, %1
+    %4:gprb(i64) = G_SHL %0, %3(i64)
+    $x10 = COPY %4(i64)
     PseudoRET implicit $x10
 ...
 
@@ -145,12 +145,12 @@ body:             |
     ; CHECK-NEXT: [[SLL:%[0-9]+]]:gpr = SLL [[COPY]], [[XORI]]
     ; CHECK-NEXT: $x10 = COPY [[SLL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_CONSTANT i64 -1
-    %3:gprb(s64) = G_SUB %2, %1
-    %4:gprb(s64) = G_SHL %0, %3(s64)
-    $x10 = COPY %4(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_CONSTANT i64 -1
+    %3:gprb(i64) = G_SUB %2, %1
+    %4:gprb(i64) = G_SHL %0, %3(i64)
+    $x10 = COPY %4(i64)
     PseudoRET implicit $x10
 ...
 
@@ -171,12 +171,12 @@ body:             |
     ; CHECK-NEXT: [[SLL:%[0-9]+]]:gpr = SLL [[COPY]], [[XORI]]
     ; CHECK-NEXT: $x10 = COPY [[SLL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_CONSTANT i64 63
-    %3:gprb(s64) = G_SUB %2, %1
-    %4:gprb(s64) = G_SHL %0, %3(s64)
-    $x10 = COPY %4(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_CONSTANT i64 63
+    %3:gprb(i64) = G_SUB %2, %1
+    %4:gprb(i64) = G_SHL %0, %3(i64)
+    $x10 = COPY %4(i64)
     PseudoRET implicit $x10
 ...
 
@@ -197,13 +197,13 @@ body:             |
     ; CHECK-NEXT: [[SLL:%[0-9]+]]:gpr = SLL [[COPY]], [[LW]]
     ; CHECK-NEXT: $x10 = COPY [[SLL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
+    %0:gprb(i64) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s64) = G_LOAD %1(p0) :: (load (s32))
-    %3:gprb(s64) = G_CONSTANT i64 63
-    %4:gprb(s64) = G_AND %2, %3
-    %5:gprb(s64) = G_SHL %0, %4(s64)
-    $x10 = COPY %5(s64)
+    %2:gprb(i64) = G_LOAD %1(p0) :: (load (s32))
+    %3:gprb(i64) = G_CONSTANT i64 63
+    %4:gprb(i64) = G_AND %2, %3
+    %5:gprb(i64) = G_SHL %0, %4(i64)
+    $x10 = COPY %5(i64)
     PseudoRET implicit $x10
 ...
 
@@ -224,12 +224,12 @@ body:             |
     ; CHECK-NEXT: [[SRL:%[0-9]+]]:gpr = SRL [[COPY1]], [[ANDI]]
     ; CHECK-NEXT: $x10 = COPY [[SRL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_CONSTANT i64 15
-    %3:gprb(s64) = G_AND %0, %2
-    %4:gprb(s64) = G_LSHR %1, %3(s64)
-    $x10 = COPY %4(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_CONSTANT i64 15
+    %3:gprb(i64) = G_AND %0, %2
+    %4:gprb(i64) = G_LSHR %1, %3(i64)
+    $x10 = COPY %4(i64)
     PseudoRET implicit $x10
 ...
 
@@ -250,13 +250,13 @@ body:             |
     ; CHECK-NEXT: [[SRL:%[0-9]+]]:gpr = SRL [[COPY1]], [[ANDI]]
     ; CHECK-NEXT: $x10 = COPY [[SRL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_CONSTANT i64 15
-    %6:gprb(s64) = G_CONSTANT i64 79
-    %7:gprb(s64) = G_AND %0, %6
-    %3:gprb(s64) = G_AND %7, %2
-    %5:gprb(s64) = G_LSHR %1, %3(s64)
-    $x10 = COPY %5(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_CONSTANT i64 15
+    %6:gprb(i64) = G_CONSTANT i64 79
+    %7:gprb(i64) = G_AND %0, %6
+    %3:gprb(i64) = G_AND %7, %2
+    %5:gprb(i64) = G_LSHR %1, %3(i64)
+    $x10 = COPY %5(i64)
     PseudoRET implicit $x10
 ...

@@ -554,6 +554,18 @@ __packed_pabs(abs_u64, int64_t, uint64_t)
 #define __riscv_usati_u64(rs1, width) __builtin_riscv_usati_u64(rs1, width)
 #endif
 
+/* Scalar Saturating and Rounding Shift */
+__packed_binary_builtin_mixed(ssha_i32, int32_t, int32_t, int, __builtin_riscv_ssha_i32)
+__packed_binary_builtin_mixed(sshar_i32, int32_t, int32_t, int, __builtin_riscv_sshar_i32)
+__packed_binary_builtin_mixed(sshl_u32, uint32_t, uint32_t, int, __builtin_riscv_sshl_u32)
+__packed_binary_builtin_mixed(sshlr_u32, uint32_t, uint32_t, int, __builtin_riscv_sshlr_u32)
+#if __riscv_xlen == 64
+__packed_binary_builtin_mixed(sha_i64, int64_t, int64_t, int, __builtin_riscv_sha_i64)
+__packed_binary_builtin_mixed(shar_i64, int64_t, int64_t, int, __builtin_riscv_shar_i64)
+__packed_binary_builtin_mixed(shl_u64, uint64_t, uint64_t, int, __builtin_riscv_shl_u64)
+__packed_binary_builtin_mixed(shlr_u64, uint64_t, uint64_t, int, __builtin_riscv_shlr_u64)
+#endif
+
 /* Scalar Narrowing Clip */
 __packed_binary_builtin_mixed(nclipu_u32, uint32_t, uint64_t, unsigned,
                               __builtin_riscv_nclipu_u32)
@@ -587,6 +599,10 @@ __packed_ternary_builtin(mhaccu_u32, uint32_t, __builtin_riscv_mhaccu_u32)
 __packed_ternary_builtin(mhraccu_u32, uint32_t, __builtin_riscv_mhraccu_u32)
 __packed_ternary_builtin_mixed(mhaccsu_i32, int32_t, int32_t, uint32_t, __builtin_riscv_mhaccsu_i32)
 __packed_ternary_builtin_mixed(mhraccsu_i32, int32_t, int32_t, uint32_t, __builtin_riscv_mhraccsu_i32)
+__packed_ternary_builtin_mixed(mhacc_h0_i32, int32_t, int32_t, int16x2_t, __builtin_riscv_mhacc_h0_i32)
+__packed_ternary_builtin_mixed(mhacc_h1_i32, int32_t, int32_t, int16x2_t, __builtin_riscv_mhacc_h1_i32)
+__packed_ternary_builtin_mixed(mhaccsu_h0_i32, int32_t, int32_t, uint16x2_t, __builtin_riscv_mhaccsu_h0_i32)
+__packed_ternary_builtin_mixed(mhaccsu_h1_i32, int32_t, int32_t, uint16x2_t, __builtin_riscv_mhaccsu_h1_i32)
 
 /* Scalar "Q-format" Multiplication */
 __packed_binary_builtin(mulq_i32, int32_t, __builtin_riscv_mulq_i32)

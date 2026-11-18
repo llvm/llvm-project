@@ -4283,7 +4283,7 @@ struct AAAlign
   AAAlign(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
@@ -4970,10 +4970,6 @@ template <typename MemberTy> struct PotentialValuesState : AbstractState {
   }
 
   /// Return empty set as the best state of potential values.
-  static PotentialValuesState getBestState() {
-    return PotentialValuesState(true);
-  }
-
   static PotentialValuesState getBestState(const PotentialValuesState &PVS) {
     return PotentialValuesState(true, PVS.MaxPotentialValues);
   }
