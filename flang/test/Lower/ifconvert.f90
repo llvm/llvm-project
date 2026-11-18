@@ -94,3 +94,62 @@
      print*, i
 4 end do
 end
+
+! Multi-statement IF body whose last stmt is a CYCLE: the rewrite turns
+! `if (cond) then; <stmts>; cycle; end if; <after>` into a structured
+! `if (cond) then; <stmts>; else; <after>; end if`. The IfStmt is NOT
+! negated (no `[negate]` annotation), and a synthetic ElseStmt appears
+! between the THEN body and the moved <after> stmts.
+subroutine block_if_cycle_multi_stmt(a)
+  integer :: i, jdiag
+  real :: a(:)
+  jdiag = 4
+  ! CHECK-LABEL: Subroutine block_if_cycle_multi_stmt
+  ! CHECK: <<DoConstruct>>
+  ! CHECK:   NonLabelDoStmt {{.*}}: do i = 1, 8
+  ! CHECK:   <<IfConstruct>>
+  ! CHECK:     {{[0-9]+}} ^IfThenStmt {{.*}}: if(i == jdiag) then
+  ! CHECK-NOT:                       [negate]
+  ! CHECK:     {{[0-9]+}} ^AssignmentStmt: a(i) = 0.0
+  ! CHECK:     ^ElseStmt
+  ! CHECK:     {{[0-9]+}} AssignmentStmt: a(i) = real(i)
+  ! CHECK:     {{[0-9]+}} EndIfStmt
+  ! CHECK:   <<End IfConstruct>>
+  ! CHECK:   {{[0-9]+}} EndDoStmt {{.*}}: end do
+  ! CHECK: <<End DoConstruct>>
+  do i = 1, 8
+    if (i == jdiag) then
+      a(i) = 0.0
+      cycle
+    end if
+    a(i) = real(i)
+  end do
+end subroutine
+
+! IF body whose last stmt is CYCLE but contains an existing ELSE branch:
+! the rewrite must NOT apply (we cannot safely splice the after-stmts past
+! the existing else). The loop stays unstructured.
+subroutine block_if_cycle_with_existing_else(a)
+  integer :: i, jdiag
+  real :: a(:)
+  jdiag = 4
+  ! CHECK-LABEL: Subroutine block_if_cycle_with_existing_else
+  ! CHECK: <<DoConstruct!>>
+  ! CHECK:   <<IfConstruct!>>
+  ! CHECK:     ^IfThenStmt {{.*}}: if(i == jdiag) then
+  ! CHECK:     ^AssignmentStmt: a(i) = 0.0
+  ! CHECK:     ^ElseStmt: else
+  ! CHECK:     AssignmentStmt: a(i) = -1.0
+  ! CHECK:     CycleStmt! {{.*}}: cycle
+  ! CHECK:     EndIfStmt: end if
+  ! CHECK:   <<End IfConstruct!>>
+  do i = 1, 8
+    if (i == jdiag) then
+      a(i) = 0.0
+    else
+      a(i) = -1.0
+      cycle
+    end if
+    a(i) = real(i)
+  end do
+end subroutine
