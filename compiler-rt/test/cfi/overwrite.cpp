@@ -16,8 +16,11 @@
 // RUN: %clangxx_cfi_diag -o %t6 %s
 // RUN: %run %t6 2>&1 | FileCheck --check-prefix=%if devirt %{CFI-DEVIRT-DIAG%} %else %{CFI-DIAG%} %s
 
-// RUN: %clangxx_cfi_diag -DB32 -o %t7 %s
+// RUN: %clangxx_cfi_diag -fno-whole-program-vtables -o %t7 %s
 // RUN: %run %t7 2>&1 | FileCheck --check-prefix=CFI-DIAG %s
+
+// RUN: %clangxx_cfi_diag -DB32 -o %t8 %s
+// RUN: %run %t8 2>&1 | FileCheck --check-prefix=CFI-DIAG %s
 
 // Tests that the CFI mechanism crashes the program when a virtual table is
 // replaced with a compatible table of function pointers that does not belong to
