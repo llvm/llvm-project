@@ -152,8 +152,9 @@ def LLVM_AggregatePartition : Partition<"Aggregate">;
 // "Unary Operations", "Binary Operations", "Bitwise Binary Operations", and
 // icmp, fcmp, select and freeze of "Other Operations".
 def LLVM_ArithPartition : Partition<"Arith">;
-// call and landingpad of "Other Operations", and invoke of "Terminator
-// Instructions".
+// call and landingpad of "Other Operations", invoke of "Terminator
+// Instructions", "Inline Assembler Expressions", and the MLIR-specific
+// call_intrinsic op.
 def LLVM_CallPartition : Partition<"Call">;
 // "Constants".
 def LLVM_ConstantPartition : Partition<"Constant">;
