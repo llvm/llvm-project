@@ -547,7 +547,7 @@ public:
   static constexpr int32_t DIGITS_IN_MANTISSA = 15;
   static constexpr double MAX_EXACT_INT = 9007199254740991.0;
 };
-#elif !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
+#else
 #error "Unknown long double type"
 #endif
 
