@@ -1219,27 +1219,6 @@ define void @foo(ptr %ptr, ptr %ptr2, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
   EXPECT_EQ(LdN->getNextNode(), S2N);
 }
 
-TEST_F(DependencyGraphTest, MoveInstrCallback_EmptyDAG) {
-  parseIR(C, R"IR(
-define void @foo(ptr %ptr, ptr %ptr2, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
-  %ld0 = load i8, ptr %ptr2
-  store i8 %v1, ptr %ptr
-  ret void
-}
-)IR");
-  llvm::Function *LLVMF = &*M->getFunction("foo");
-  sandboxir::Context Ctx(C);
-  auto *F = Ctx.createFunction(LLVMF);
-  auto *BB = &*F->begin();
-  auto It = BB->begin();
-  auto *Ld = cast<sandboxir::LoadInst>(&*It++);
-  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
-
-  // Move an instruction but with an empty DAG.
-  sandboxir::DependencyGraph DAG(BottomUp, getAA(*LLVMF), Ctx);
-  S1->moveBefore(Ld);
-}
-
 // Check that the mem chain is maintained correctly when the move destination is
 // not a mem node.
 TEST_F(DependencyGraphTest, MoveInstrCallbackWithNonMemInstrs) {

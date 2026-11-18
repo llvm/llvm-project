@@ -598,9 +598,6 @@ void DependencyGraph::notifyMoveInstr(Instruction *I, const BBIterator &To) {
   if (Ctx->getTracker().getState() == Tracker::TrackerState::Reverting)
     // We don't maintain the DAG while reverting.
     return;
-  if (empty())
-    // Nothing to do if already empty.
-    return;
   // NOTE: This function runs before `I` moves to its new destination.
   BasicBlock *BB = To.getNodeParent();
   assert(!(To != BB->end() && &*To == I->getNextNode()) &&
