@@ -234,7 +234,7 @@ bool UnreachableMachineBlockElim::run(MachineFunction &F) {
     }
   }
 
-  F.RenumberBlocks();
+  bool Renumbered = F.RenumberBlocks();
 
-  return (!DeadBlocks.empty() || ModifiedPHI);
+  return (!DeadBlocks.empty() || ModifiedPHI || Renumbered);
 }
