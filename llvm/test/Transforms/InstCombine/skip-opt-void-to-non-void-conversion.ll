@@ -24,7 +24,7 @@ entry:
 define void @goo() {
 ; CHECK-LABEL: define void @goo() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @foo()
+; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    ret void
 ;
 entry:

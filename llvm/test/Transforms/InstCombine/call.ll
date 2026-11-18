@@ -127,7 +127,7 @@ define void @test7a() {
 
 define void @test7() {
 ; CHECK-LABEL: define void @test7() {
-; CHECK-NEXT:    call void @test7a(i32 5)
+; CHECK-NEXT:    call void @test7a()
 ; CHECK-NEXT:    ret void
 ;
   call void @test7a( i32 5 )
@@ -316,7 +316,8 @@ define <2 x i16> @test15a() {
 
 define i32 @test15() {
 ; CHECK-LABEL: define i32 @test15() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @test15a()
+; CHECK-NEXT:    [[X:%.*]] = call <2 x i16> @test15a()
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i16> [[X]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %X = call i32 @test15a( )
@@ -332,7 +333,8 @@ define i32 @test16a() {
 
 define <2 x i16> @test16() {
 ; CHECK-LABEL: define <2 x i16> @test16() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i16> @test16a()
+; CHECK-NEXT:    [[X:%.*]] = call i32 @test16a()
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[X]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[TMP1]]
 ;
   %X = call <2 x i16> @test16a( )
@@ -363,7 +365,7 @@ define void @non_vararg(ptr, i32) {
 define void @test_cast_to_vararg(ptr %this) {
 ; CHECK-LABEL: define void @test_cast_to_vararg
 ; CHECK-SAME: (ptr [[THIS:%.*]]) {
-; CHECK-NEXT:    call void (ptr, ...) @non_vararg(ptr [[THIS]], i32 42)
+; CHECK-NEXT:    call void @non_vararg(ptr [[THIS]], i32 42)
 ; CHECK-NEXT:    ret void
 ;
   call void (ptr, ...) @non_vararg(ptr %this, i32 42)

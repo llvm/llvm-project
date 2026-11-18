@@ -329,7 +329,7 @@ define i1 @lambda(ptr %lam, ptr %cmp) {
 }
 
 define ptr @gep_base_cancel(ptr %p, ptr %end, ptr noalias %a) {
-; CHECK-LABEL: define ptr @gep_base_cancel(
+; CHECK-LABEL: define noundef ptr @gep_base_cancel(
 ; CHECK-SAME: ptr nofree readonly captures(address) [[P:%.*]], ptr nofree readnone captures(address) [[END:%.*]], ptr noalias nofree captures(address, ret: address, provenance) [[A:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[IN_BOUNDS6:%.*]] = icmp ult ptr [[P]], [[END]]
@@ -349,7 +349,7 @@ define ptr @gep_base_cancel(ptr %p, ptr %end, ptr noalias %a) {
 ; CHECK-NEXT:    [[EXITCOND_PEEL_NOT:%.*]] = icmp eq i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[EXITCOND_PEEL_NOT]], label %[[COMMON_RET]], label %[[BODY:.*]]
 ; CHECK:       [[COMMON_RET]]:
-; CHECK-NEXT:    [[RET_KNOWN_TR3:%.*]] = phi ptr [ [[RET_KNOWN_TR9_LCSSA:%.*]], %[[TRAP]] ], [ null, %[[ENTRY]] ], [ null, %[[ADVANCE_PEEL]] ], [ null, %[[ADVANCE:.*]] ]
+; CHECK-NEXT:    [[RET_KNOWN_TR3:%.*]] = phi ptr [ [[A_TR9_LCSSA:%.*]], %[[TRAP]] ], [ null, %[[ENTRY]] ], [ null, %[[ADVANCE_PEEL]] ], [ null, %[[ADVANCE:.*]] ]
 ; CHECK-NEXT:    ret ptr [[RET_KNOWN_TR3]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[P_TR7_PN:%.*]] = phi ptr [ [[P_TR7:%.*]], %[[ADVANCE]] ], [ [[P]], %[[ADVANCE_PEEL]] ]
@@ -363,8 +363,8 @@ define ptr @gep_base_cancel(ptr %p, ptr %end, ptr noalias %a) {
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq ptr [[P_TR7]], [[SCEVGEP]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[COMMON_RET]], label %[[BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[TRAP]]:
-; CHECK-NEXT:    [[RET_KNOWN_TR9_LCSSA]] = phi ptr [ [[A]], %[[BODY_PREHEADER]] ], [ null, %[[BODY]] ]
-; CHECK-NEXT:    store volatile i32 0, ptr [[A]], align 4
+; CHECK-NEXT:    [[A_TR9_LCSSA]] = phi ptr [ [[A]], %[[BODY_PREHEADER]] ], [ null, %[[BODY]] ]
+; CHECK-NEXT:    store volatile i32 0, ptr [[A_TR9_LCSSA]], align 4
 ; CHECK-NEXT:    br label %[[COMMON_RET]]
 ;
 entry:
@@ -388,7 +388,7 @@ advance:
   br i1 %next.in.bounds, label %recurse, label %common.ret
 
 recurse:
-  %rec = call ptr @gep_base_cancel(ptr %p.next, ptr %end, ptr %a)
+  %rec = call ptr @gep_base_cancel(ptr %p.next, ptr %end)
   br label %common.ret
 
 trap:

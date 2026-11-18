@@ -21,7 +21,8 @@ define ptr @ctime2(ptr %p) {
 define ptr @ctime(ptr) {
 ; CHECK-LABEL: @ctime(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @main2()
+; CHECK-NEXT:    [[I0:%.*]] = call i32 @main2()
+; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i32 [[I0]] to ptr
 ; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
 entry:
@@ -32,7 +33,8 @@ entry:
 define i32 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @ctime2(ptr null)
+; CHECK-NEXT:    [[I1:%.*]] = call ptr @ctime2(ptr null)
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[I1]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:

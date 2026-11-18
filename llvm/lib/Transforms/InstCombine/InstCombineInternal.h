@@ -262,6 +262,7 @@ private:
 
   Instruction *visitCallBase(CallBase &Call);
   Instruction *tryOptimizeCall(CallInst *CI);
+  bool transformConstExprCastCall(CallBase &Call);
   Instruction *transformCallThroughTrampoline(CallBase &Call,
                                               IntrinsicInst &Tramp);
 

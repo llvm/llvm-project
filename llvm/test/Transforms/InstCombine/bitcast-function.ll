@@ -80,9 +80,9 @@ define void @bitcast_scalar(ptr noalias %source, ptr noalias %dest) nounwind {
 ; CHECK-LABEL: define void @bitcast_scalar
 ; CHECK-SAME: (ptr noalias [[SOURCE:%.*]], ptr noalias [[DEST:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = load float, ptr [[SOURCE]], align 8
-; CHECK-NEXT:    [[CALL:%.*]] = call float @func_i32(float [[TMP]]) #[[ATTR1]]
-; CHECK-NEXT:    store float [[CALL]], ptr [[DEST]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SOURCE]], align 8
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @func_i32(i32 [[TMP1]]) #[[ATTR1]]
+; CHECK-NEXT:    store i32 [[CALL]], ptr [[DEST]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -98,9 +98,9 @@ define void @bitcast_vector(ptr noalias %source, ptr noalias %dest) nounwind {
 ; CHECK-LABEL: define void @bitcast_vector
 ; CHECK-SAME: (ptr noalias [[SOURCE:%.*]], ptr noalias [[DEST:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = load <2 x float>, ptr [[SOURCE]], align 8
-; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @func_v2i32(<2 x float> [[TMP]]) #[[ATTR1]]
-; CHECK-NEXT:    store <2 x float> [[CALL]], ptr [[DEST]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[SOURCE]], align 8
+; CHECK-NEXT:    [[CALL:%.*]] = call <2 x i32> @func_v2i32(<2 x i32> [[TMP1]]) #[[ATTR1]]
+; CHECK-NEXT:    store <2 x i32> [[CALL]], ptr [[DEST]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -116,9 +116,9 @@ define void @bitcast_vector_scalar_same_size(ptr noalias %source, ptr noalias %d
 ; CHECK-LABEL: define void @bitcast_vector_scalar_same_size
 ; CHECK-SAME: (ptr noalias [[SOURCE:%.*]], ptr noalias [[DEST:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = load <2 x float>, ptr [[SOURCE]], align 8
-; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @func_i64(<2 x float> [[TMP]]) #[[ATTR1]]
-; CHECK-NEXT:    store <2 x float> [[CALL]], ptr [[DEST]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[SOURCE]], align 8
+; CHECK-NEXT:    [[CALL:%.*]] = call i64 @func_i64(i64 [[TMP1]]) #[[ATTR1]]
+; CHECK-NEXT:    store i64 [[CALL]], ptr [[DEST]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -133,9 +133,9 @@ define void @bitcast_scalar_vector_same_size(ptr noalias %source, ptr noalias %d
 ; CHECK-LABEL: define void @bitcast_scalar_vector_same_size
 ; CHECK-SAME: (ptr noalias [[SOURCE:%.*]], ptr noalias [[DEST:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = load i64, ptr [[SOURCE]], align 8
-; CHECK-NEXT:    [[CALL:%.*]] = call i64 @func_v2f32(i64 [[TMP]]) #[[ATTR1]]
-; CHECK-NEXT:    store i64 [[CALL]], ptr [[DEST]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[SOURCE]], align 8
+; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @func_v2f32(<2 x float> [[TMP1]]) #[[ATTR1]]
+; CHECK-NEXT:    store <2 x float> [[CALL]], ptr [[DEST]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
