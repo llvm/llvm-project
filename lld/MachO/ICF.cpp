@@ -313,48 +313,69 @@ bool ICF::equalsVariable(const ConcatInputSection *ia,
          db->unwindEntry()->icfEqClass[icfPass % 2];
 }
 
-// Hash what equalsConstant() compares, plus the class of a non-candidate
-// target, which never changes. Candidate targets are recorded as edges instead.
+// Hash the relocations and the unwind entry of isec.
+//
+// A reference to a foldable section is recorded as an edge: that section's
+// hash is not final yet, and run() propagates it over the edges. A reference
+// to any other ConcatInputSection contributes its icfEqClass[0], which never
+// changes.
+//
+// Sections that fold must get the same hash, but sections with the same hash
+// are still compared by equalsConstant(), so this need not hash everything
+// that it compares. `parent` is left out: sections with the same contents and
+// relocations are rarely in different output sections. The hash decides the
+// order of the safe_thunks thunks, so it must not depend on pointer values.
 void ICF::hashRelocs(const ConcatInputSection &isec, uint64_t &h,
                      SmallVectorImpl<uint32_t> &edges) {
   auto hashSec = [&](const ConcatInputSection *sec) {
-    if (sec->icfEqClass[0] & (1ull << 31))
-      edges.push_back(uint32_t(sec->icfEqClass[0]) & ~(1u << 31));
+    if (sec->icfEqClass[0] & (1u << 31))
+      edges.push_back(sec->icfEqClass[0] & ~(1u << 31));
     else
       h = mix(h, sec->icfEqClass[0]);
   };
   for (const Relocation &r : isec.relocs) {
     h = mix(h, r.type | (r.pcrel << 8) | (r.length << 9));
     h = mix(h, r.offset);
-    if (auto *sym = dyn_cast_if_present<Symbol *>(r.referent)) {
+    if (const AuthInfo *auth = r.getAuthInfo())
+      h = mix(h, auth->diversity | (auth->key << 16) | (auth->addrDiv << 18));
+    uint64_t addend = r.getAddend();
+
+    // Like equalsConstant(), find the section that the relocation refers to
+    // and the offset within it.
+    auto *sym = dyn_cast_if_present<Symbol *>(r.referent);
+    auto *referent = dyn_cast_if_present<InputSection *>(r.referent);
+    uint64_t value = 0;
+    if (sym) {
       h = mix(h, sym->kind());
-      if (auto *d = dyn_cast<Defined>(sym)) {
-        if (InputSection *referentIsec = d->isec()) {
-          if (auto *cisec = dyn_cast<ConcatInputSection>(referentIsec)) {
-            h = mix(h, d->value + r.getAddend());
-            hashSec(cisec);
-          } else {
-            h = mix(h, referentIsec->kind());
-            h = mix(h, r.getAddend());
-            h = mix(h, referentIsec->getOffset(d->value));
-          }
-        } else {
-          h = mix(h, d->value + r.getAddend());
-        }
-      } else {
+      auto *d = dyn_cast<Defined>(sym);
+      if (!d) {
         // ICF runs before Undefined diags
         assert(isa<Undefined>(sym) || isa<DylibSymbol>(sym));
         h = mix(h, xxh3_64bits(sym->getName()));
-        h = mix(h, r.getAddend());
+        h = mix(h, addend);
+        continue;
       }
-    } else if (auto *referentIsec =
-                   dyn_cast_if_present<InputSection *>(r.referent)) {
-      if (auto *cisec = dyn_cast<ConcatInputSection>(referentIsec)) {
-        h = mix(h, r.getAddend());
-        hashSec(cisec);
+      if (d->isAbsolute()) {
+        h = mix(h, d->value + addend);
+        continue;
+      }
+      referent = d->isec();
+      value = d->value;
+    }
+
+    if (auto *cisec = dyn_cast_if_present<ConcatInputSection>(referent)) {
+      h = mix(h, value + addend);
+      hashSec(cisec);
+    } else if (referent) {
+      // A literal section: hash the offset in the output section. For a
+      // symbol, value + addend may not be a valid offset in the section, so
+      // the addend is hashed separately.
+      h = mix(h, referent->kind());
+      if (sym) {
+        h = mix(h, addend);
+        h = mix(h, referent->getOffset(value));
       } else {
-        h = mix(h, referentIsec->kind());
-        h = mix(h, referentIsec->getOffset(r.getAddend()));
+        h = mix(h, referent->getOffset(addend));
       }
     }
   }
@@ -497,12 +518,22 @@ void ICF::forEachClass(llvm::function_ref<void(size_t, size_t)> func) {
 }
 
 void ICF::run() {
+  // Until its hash is known, a foldable section's icfEqClass[0] holds its index
+  // in icfInputs with the MSB set. hashRelocs() uses this to tell a reference
+  // to a foldable section, which becomes an edge to that index, from a
+  // reference to any other section.
+  size_t numInputs = icfInputs.size();
+  assert(numInputs <= (1u << 31));
+  parallelFor(0, numInputs, [&](size_t i) {
+    assert(icfInputs[i]->icfEqClass[0] == 0); // don't overwrite a unique ID!
+    icfInputs[i]->icfEqClass[0] = i | (1u << 31);
+  });
+
   // Hash sections in blocks. An edge is a relocation or unwind entry
-  // referencing a candidate, recorded as the target's index. Each block
+  // referencing a foldable section, recorded as the target's index. Each block
   // appends its sections' edges to its own buffer; edgeEnd[i] is where
   // section i's edges end within that buffer.
   constexpr size_t blockSize = 1024;
-  size_t numInputs = icfInputs.size();
   size_t numBlocks = divideCeil(numInputs, blockSize);
   SmallVector<uint64_t, 0> hashes(numInputs, llvm::for_overwrite);
   SmallVector<uint32_t, 0> edgeEnd(numInputs, llvm::for_overwrite);
@@ -527,7 +558,8 @@ void ICF::run() {
   });
 
   // Propagate hashes over edges for 7 rounds. Each round saves up to one
-  // segregate() pass. 7 is empirical: even Chromium then needs just two passes.
+  // segregate() pass. 7 is what ELF and COFF use; Chromium then needs three
+  // passes here.
   SmallVector<uint64_t, 0> nextHashes(numInputs, llvm::for_overwrite);
   for (int round = 7; round--;) {
     parallelFor(0, numBlocks, [&](size_t b) {
@@ -712,8 +744,9 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
   // hashes of InputSection::data for the ConcatOutputSection::inputs and all
   // sections referenced by their relocs. We could recursively traverse the
   // relocs to find every referenced InputSection, but that precludes easy
-  // parallelization. Therefore, we hash every InputSection here where we have
-  // them all accessible as simple vectors.
+  // parallelization. Therefore, we collect every foldable InputSection here
+  // where we have them all accessible as simple vectors, and ICF::run() hashes
+  // them.
 
   // If an InputSection is ineligible for ICF, we give it a unique ID to force
   // it into an unfoldable singleton equivalence class.  Begin the unique-ID
@@ -726,13 +759,6 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
   uint64_t icfUniqueID = inputSections.size();
   // Reset the thunk counter for each run of ICF.
   icfThunkCounter = 0;
-  auto addFoldable = [&](ConcatInputSection *s) {
-    assert(s->icfEqClass[0] == 0); // don't overwrite a unique ID!
-    // Candidates hold their index, tagged with the MSB, until hashing
-    // completes.
-    s->icfEqClass[0] = foldable.size() | (1ull << 31);
-    foldable.push_back(s);
-  };
   for (ConcatInputSection *isec : inputSections) {
     bool isUnconditionallyCoalescedData = isCfStringSection(isec) ||
                                           isClassRefsSection(isec) ||
@@ -775,18 +801,22 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
       auto *obj = dyn_cast_or_null<ObjFile>(isec->getFile());
       if (!onlyCfStrings && obj && !obj->fdes.contains(isec) &&
           !isec->shouldOmitFromOutput())
-        addFoldable(isec);
+        foldable.push_back(isec);
     } else if (isFoldable) {
-      addFoldable(isec);
+      foldable.push_back(isec);
       for (Defined *d : isec->symbols)
         if (d->unwindEntry())
-          addFoldable(d->unwindEntry());
+          foldable.push_back(d->unwindEntry());
     } else {
       // Give a unique ID to everything else.
       isec->icfEqClass[0] = ++icfUniqueID;
     }
   }
-  assert(foldable.size() <= (1u << 31) && icfUniqueID < (1u << 31) &&
-         "the MSB marks a candidate and the low bits index foldable");
+  // ICF::run() sets the MSB of a foldable section's icfEqClass[0] to keep it
+  // apart from the unique IDs.
+  assert(icfUniqueID < (1u << 31));
+  // Now that every input section is either in foldable or marked as unique,
+  // hash the foldable ones and run the segregation algorithm to detect foldable
+  // subsections.
   ICF(foldable).run();
 }
