@@ -58,29 +58,6 @@ LogicalResult staticallyNonNegative(DataFlowSolver &solver, Operation *op) {
 }
 } // namespace mlir::dataflow
 
-/// Number of merge-site joins a single integer-range lattice element is
-/// allowed to absorb before `IntegerValueRangeLattice::join` forces it to
-/// its max as a sound over-approximation.
-///
-/// Trade-off: high enough that realistic loops with dynamic bounds (which
-/// typically converge to a tight range in a small number of merge
-/// iterations) are not widened prematurely; low enough that the +1
-/// ratchet pathology this widening exists to cut off (loop-carried ranges
-/// growing by one per worklist visit) terminates after at most this many
-/// extra solver iterations rather than ~2^31.
-static constexpr unsigned kIntegerRangeWideningBudget = 128;
-
-ChangeResult IntegerValueRangeLattice::join(const AbstractSparseLattice &rhs) {
-  ChangeResult changed = Lattice::join(rhs);
-  if (mergeChangeCount >= kIntegerRangeWideningBudget) {
-    return changed | Lattice::join(IntegerValueRange::getMaxRange(
-                         cast<Value>(getAnchor())));
-  }
-  if (changed == ChangeResult::Change)
-    ++mergeChangeCount;
-  return changed;
-}
-
 LogicalResult IntegerRangeAnalysis::visitOperation(
     Operation *op, ArrayRef<const IntegerValueRangeLattice *> operands,
     ArrayRef<IntegerValueRangeLattice *> results) {
