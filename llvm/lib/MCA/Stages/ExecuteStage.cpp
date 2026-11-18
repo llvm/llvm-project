@@ -174,6 +174,7 @@ Error ExecuteStage::handleInstructionEliminated(InstRef &IR) {
 #ifndef NDEBUG
   verifyInstructionEliminated(IR);
 #endif
+  HWS.onInstructionEliminated(IR);
   notifyInstructionPending(IR);
   notifyInstructionReady(IR);
   notifyInstructionIssued(IR, {});
