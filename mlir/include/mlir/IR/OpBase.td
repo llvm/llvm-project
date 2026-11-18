@@ -553,7 +553,8 @@ class AllMatchPred<list<string> values> :
 class AllMatch<list<string> values, string summary> :
     PredOpTrait<summary, AllMatchPred<values>>;
 
-// TODO: Only works for non-variadic.
+// These traits only works for non-variadic. For variadic, see
+// VariadicAllMatchSameOperatorPred and similar.
 class AllMatchSameOperatorPred<list<string> names, string operator> :
     AllMatchPred<!foreach(n, names, !subst("$_self", "$" # n, operator))>;
 
@@ -607,12 +608,8 @@ class AllTypesMatch<list<string> names> :
 class AllTypeIDsMatch<list<string> names> :
     AllMatchSameOperatorTrait<names, "$_self.getType().getTypeID()", "type IDs">;
 
-// The traits above take one value from each name, so they cannot compare the
-// elements of a variadic operand or result with each other. The traits below
-// do, one variadic at a time.
-
 // Checks that `operator` evaluates to the same value for every element of the
-// variadic operand or result `name`. Holds trivially if `name` has fewer than
+// variadic operand or result `name`. Vacuously satisfied if `name` has fewer than
 // two elements.
 class VariadicAllMatchSameOperatorPred<string name, string operator> :
     CPred<"::llvm::all_equal(::llvm::map_range($" # name # ", "
