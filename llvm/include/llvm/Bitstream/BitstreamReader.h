@@ -160,6 +160,44 @@ private:
            (BitNo % 8);
   }
 
+  /// Read a VBR with chunks of \p NumBits bits into a value of type T.
+  template <typename T> Expected<T> readVBR(const unsigned NumBits) {
+    assert(NumBits <= 32 && NumBits >= 1 && "Invalid NumBits value");
+    const uint32_t Mask = 1UL << (NumBits - 1);
+
+    // Most fields are a single chunk.
+    if (NumBits <= BitsInWord - 7 && BitNo < WordLoadEnd) {
+      word_t Piece = loadWordAtBit();
+      if ((Piece & Mask) == 0) {
+        BitNo += NumBits;
+        return T(Piece & (Mask - 1));
+      }
+    }
+
+    return readVBRSlow<T>(NumBits);
+  }
+
+  template <typename T> Expected<T> readVBRSlow(const unsigned NumBits) {
+    const uint32_t Mask = 1UL << (NumBits - 1);
+    T Result = 0;
+    unsigned NextBit = 0;
+    while (true) {
+      Expected<word_t> MaybeRead = Read(NumBits);
+      if (!MaybeRead)
+        return MaybeRead.takeError();
+      word_t Piece = MaybeRead.get();
+      Result |= T(Piece & (Mask - 1)) << NextBit;
+
+      if ((Piece & Mask) == 0)
+        return Result;
+
+      NextBit += NumBits - 1;
+      if (NextBit >= sizeof(T) * 8)
+        return createStringError(std::errc::illegal_byte_sequence,
+                                 "Unterminated VBR");
+    }
+  }
+
 public:
   Expected<word_t> Read(unsigned NumBits) {
     assert(NumBits && NumBits <= BitsInWord &&
@@ -181,70 +219,13 @@ public:
   LLVM_ABI Expected<word_t> readSlow(unsigned NumBits);
 
   Expected<uint32_t> ReadVBR(const unsigned NumBits) {
-    Expected<unsigned> MaybeRead = Read(NumBits);
-    if (!MaybeRead)
-      return MaybeRead;
-    uint32_t Piece = MaybeRead.get();
-
-    assert(NumBits <= 32 && NumBits >= 1 && "Invalid NumBits value");
-    const uint32_t MaskBitOrder = (NumBits - 1);
-    const uint32_t Mask = 1UL << MaskBitOrder;
-
-    if ((Piece & Mask) == 0)
-      return Piece;
-
-    uint32_t Result = 0;
-    unsigned NextBit = 0;
-    while (true) {
-      Result |= (Piece & (Mask - 1)) << NextBit;
-
-      if ((Piece & Mask) == 0)
-        return Result;
-
-      NextBit += NumBits-1;
-      if (NextBit >= 32)
-        return createStringError(std::errc::illegal_byte_sequence,
-                                 "Unterminated VBR");
-
-      MaybeRead = Read(NumBits);
-      if (!MaybeRead)
-        return MaybeRead;
-      Piece = MaybeRead.get();
-    }
+    return readVBR<uint32_t>(NumBits);
   }
 
   // Read a VBR that may have a value up to 64-bits in size. The chunk size of
   // the VBR must still be <= 32 bits though.
   Expected<uint64_t> ReadVBR64(const unsigned NumBits) {
-    Expected<uint64_t> MaybeRead = Read(NumBits);
-    if (!MaybeRead)
-      return MaybeRead;
-    uint32_t Piece = MaybeRead.get();
-    assert(NumBits <= 32 && NumBits >= 1 && "Invalid NumBits value");
-    const uint32_t MaskBitOrder = (NumBits - 1);
-    const uint32_t Mask = 1UL << MaskBitOrder;
-
-    if ((Piece & Mask) == 0)
-      return uint64_t(Piece);
-
-    uint64_t Result = 0;
-    unsigned NextBit = 0;
-    while (true) {
-      Result |= uint64_t(Piece & (Mask - 1)) << NextBit;
-
-      if ((Piece & Mask) == 0)
-        return Result;
-
-      NextBit += NumBits-1;
-      if (NextBit >= 64)
-        return createStringError(std::errc::illegal_byte_sequence,
-                                 "Unterminated VBR");
-
-      MaybeRead = Read(NumBits);
-      if (!MaybeRead)
-        return MaybeRead;
-      Piece = MaybeRead.get();
-    }
+    return readVBR<uint64_t>(NumBits);
   }
 
   void SkipToFourByteBoundary() {
