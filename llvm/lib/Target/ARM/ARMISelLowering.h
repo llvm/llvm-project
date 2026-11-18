@@ -225,6 +225,8 @@ class VectorType;
                                       const APInt &DemandedElts,
                                       TargetLoweringOpt &TLO) const override;
 
+    unsigned combineRepeatedFPDivisors() const override { return 3; }
+
     ConstraintType getConstraintType(StringRef Constraint) const override;
 
     /// Examine constraint string and operand type and determine a weight value.
