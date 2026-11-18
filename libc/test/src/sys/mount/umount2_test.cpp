@@ -27,8 +27,9 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcUmount2Test = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-// mount and umount2 need CAP_SYS_ADMIN, so unprivileged runs see EPERM.
-// Sandboxes that filter these syscalls with seccomp report ENOSYS instead.
+// mount and umount2 need CAP_SYS_ADMIN, so unprivileged runs see EPERM,
+// container LSMs (e.g. AppArmor/SELinux) report EACCES, and seccomp filters may
+// report ENOSYS.
 
 TEST_F(LlvmLibcUmount2Test, Umount2MountedDir) {
   auto TEST_DIR = libc_make_test_file_path("umount2.testdir");
@@ -45,7 +46,7 @@ TEST_F(LlvmLibcUmount2Test, Umount2MountedDir) {
     ASSERT_ERRNO_SUCCESS();
     ASSERT_THAT(LIBC_NAMESPACE::umount2(TEST_DIR, 0), Succeeds(0));
   } else {
-    ASSERT_THAT(ret, Fails(any_of(EPERM, ENOSYS)));
+    ASSERT_THAT(ret, Fails(any_of(EPERM, EACCES, ENOSYS)));
   }
 }
 
@@ -60,5 +61,5 @@ TEST_F(LlvmLibcUmount2Test, Umount2NotAMountPoint) {
   });
 
   ASSERT_THAT(LIBC_NAMESPACE::umount2(TEST_DIR, 0),
-              Fails(any_of(EINVAL, EPERM, ENOSYS)));
+              Fails(any_of(EINVAL, EPERM, EACCES, ENOSYS)));
 }
