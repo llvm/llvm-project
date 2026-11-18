@@ -5663,6 +5663,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   if (Depth == MaxAnalysisRecursionDepth)
     return;
 
+  // DEBUG
+  InterestedClasses |= fcAllFlags;
+
   const unsigned Opc = Op->getOpcode();
   switch (Opc) {
   case Instruction::FNeg: {

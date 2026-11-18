@@ -1404,6 +1404,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
 
   const MachineFunction *MF = MI.getMF();
 
+  // DEBUG
+  InterestedClasses |= fcAllFlags;
+
   switch (Opcode) {
   default:
     TL.computeKnownFPClassForTargetInstr(*this, R, Known, DemandedElts, MRI,
