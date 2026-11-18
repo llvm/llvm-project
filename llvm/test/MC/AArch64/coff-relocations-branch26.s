@@ -1,5 +1,4 @@
 // RUN: llvm-mc -triple aarch64-unknown-windows-msvc -filetype obj %s -o - | llvm-objdump -D -r - | FileCheck %s
-// RUN: not llvm-mc -triple aarch64-unknown-windows-msvc -filetype obj --defsym ERR=1 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
 
     .text
 main:
@@ -56,20 +55,21 @@ main:
 // CHECK: 0000000000000020 <.Lother_target>:
 // CHECK:       20: d65f03c0      ret
 
-.ifdef ERR
-    .section "err"
-err:
-    nop
-    b .Lerr_target+4
-// ERR: [[#@LINE-1]]:19: error: cannot perform a PC-relative fixup with a non-zero symbol offset
+// CHECK: 0000000000000000 <foo>:
+// CHECK:        0: d503201f      nop
+// CHECK:        4: 14000001      b       0x8 <.Lpcrel_target>
+// CHECK:                 0000000000000004:  IMAGE_REL_ARM64_BRANCH26     .Lpcrel_target
 
-    .def .Lerr_target
+    .section "foo"
+    nop
+    b .Lpcrel_target+4
+
+    .def .Lpcrel_target
     .scl 3
     .type 32
     .p2align 2
     .endef
-.Lerr_target:
+.Lpcrel_target:
     nop
     nop
     ret
-.endif
