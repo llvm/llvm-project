@@ -697,12 +697,12 @@ define <2 x half> @fptrunc_fma_to_v2f16_clamp(<2 x float> %a, <2 x float> %b, <2
 ; SDAG-GFX900-NEXT:    v_pk_max_f16 v0, v0, v0 clamp
 ; SDAG-GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX906-LABEL: fptrunc_fma_to_v2f16_clamp:
-; GFX906:       ; %bb.0: ; %.entry
-; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_fma_mixlo_f16 v0, v0, v2, v4 clamp
-; GFX906-NEXT:    v_fma_mixhi_f16 v0, v1, v3, v5 clamp
-; GFX906-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-GFX906-LABEL: fptrunc_fma_to_v2f16_clamp:
+; SDAG-GFX906:       ; %bb.0: ; %.entry
+; SDAG-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX906-NEXT:    v_fma_mixlo_f16 v0, v0, v2, v4 clamp
+; SDAG-GFX906-NEXT:    v_fma_mixhi_f16 v0, v1, v3, v5 clamp
+; SDAG-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: fptrunc_fma_to_v2f16_clamp:
 ; GFX90A:       ; %bb.0: ; %.entry
@@ -731,9 +731,123 @@ define <2 x half> @fptrunc_fma_to_v2f16_clamp(<2 x float> %a, <2 x float> %b, <2
 ; GISEL-GFX900-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GISEL-GFX900-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GISEL-GFX900-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v0, v0, 0
+; GISEL-GFX900-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX906-LABEL: fptrunc_fma_to_v2f16_clamp:
+; GISEL-GFX906:       ; %bb.0: ; %.entry
+; GISEL-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX906-NEXT:    v_fma_mixlo_f16 v0, v0, v2, v4
+; GISEL-GFX906-NEXT:    v_fma_mixhi_f16 v0, v1, v3, v5
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v0, v0, 0
+; GISEL-GFX906-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX906-NEXT:    s_setpc_b64 s[30:31]
+.entry:
+  %fma = call <2 x float> @llvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c)
+  %cvt = fptrunc <2 x float> %fma to <2 x half>
+  %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %cvt, <2 x half> zeroinitializer)
+  %clamp = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
+  ret <2 x half> %clamp
+}
+
+; nofpclass(snan) on an argument does not reach codegen, so canonicalize
+; the operands instead to make them known to never be a signaling NaN.
+define <2 x half> @fptrunc_fma_to_v2f16_clamp_nosnan(<2 x float> %a.arg, <2 x float> %b.arg, <2 x float> %c.arg) #0 {
+; GFX803-LABEL: fptrunc_fma_to_v2f16_clamp_nosnan:
+; GFX803:       ; %bb.0: ; %.entry
+; GFX803-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GFX803-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; GFX803-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; GFX803-NEXT:    v_mul_f32_e32 v3, 1.0, v3
+; GFX803-NEXT:    v_mul_f32_e32 v4, 1.0, v4
+; GFX803-NEXT:    v_mul_f32_e32 v5, 1.0, v5
+; GFX803-NEXT:    v_fma_f32 v1, v1, v3, v5
+; GFX803-NEXT:    v_fma_f32 v0, v0, v2, v4
+; GFX803-NEXT:    v_cvt_f16_f32_e64 v0, v0 clamp
+; GFX803-NEXT:    v_cvt_f16_f32_sdwa v1, v1 clamp dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
+; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX803-NEXT:    s_setpc_b64 s[30:31]
+;
+; SDAG-GFX900-LABEL: fptrunc_fma_to_v2f16_clamp_nosnan:
+; SDAG-GFX900:       ; %bb.0: ; %.entry
+; SDAG-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX900-NEXT:    v_max_f32_e32 v1, v1, v1
+; SDAG-GFX900-NEXT:    v_max_f32_e32 v0, v0, v0
+; SDAG-GFX900-NEXT:    v_max_f32_e32 v3, v3, v3
+; SDAG-GFX900-NEXT:    v_max_f32_e32 v2, v2, v2
+; SDAG-GFX900-NEXT:    v_max_f32_e32 v5, v5, v5
+; SDAG-GFX900-NEXT:    v_max_f32_e32 v4, v4, v4
+; SDAG-GFX900-NEXT:    v_fma_f32 v0, v0, v2, v4
+; SDAG-GFX900-NEXT:    v_fma_f32 v1, v1, v3, v5
+; SDAG-GFX900-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SDAG-GFX900-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SDAG-GFX900-NEXT:    v_pack_b32_f16 v0, v0, v1
+; SDAG-GFX900-NEXT:    v_pk_max_f16 v0, v0, v0 clamp
+; SDAG-GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX906-LABEL: fptrunc_fma_to_v2f16_clamp_nosnan:
+; GFX906:       ; %bb.0: ; %.entry
+; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX906-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX906-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX906-NEXT:    v_max_f32_e32 v4, v4, v4
+; GFX906-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX906-NEXT:    v_max_f32_e32 v3, v3, v3
+; GFX906-NEXT:    v_max_f32_e32 v5, v5, v5
+; GFX906-NEXT:    v_fma_mixlo_f16 v0, v0, v2, v4 clamp
+; GFX906-NEXT:    v_fma_mixhi_f16 v0, v1, v3, v5 clamp
+; GFX906-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90A-LABEL: fptrunc_fma_to_v2f16_clamp_nosnan:
+; GFX90A:       ; %bb.0: ; %.entry
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX90A-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX90A-NEXT:    v_max_f32_e32 v3, v3, v3
+; GFX90A-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX90A-NEXT:    v_max_f32_e32 v5, v5, v5
+; GFX90A-NEXT:    v_max_f32_e32 v4, v4, v4
+; GFX90A-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5]
+; GFX90A-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX90A-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX90A-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GFX90A-NEXT:    v_pk_max_f16 v0, v0, v0 clamp
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-LABEL: fptrunc_fma_to_v2f16_clamp_nosnan:
+; GFX1100:       ; %bb.0: ; %.entry
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-NEXT:    v_max_f32_e32 v6, v0, v0
+; GFX1100-NEXT:    v_dual_max_f32 v0, v1, v1 :: v_dual_max_f32 v1, v2, v2
+; GFX1100-NEXT:    v_max_f32_e32 v2, v3, v3
+; GFX1100-NEXT:    v_dual_max_f32 v3, v5, v5 :: v_dual_max_f32 v4, v4, v4
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1100-NEXT:    v_fma_mixhi_f16 v0, v0, v2, v3 clamp
+; GFX1100-NEXT:    v_fma_mixlo_f16 v0, v6, v1, v4 clamp
+; GFX1100-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX900-LABEL: fptrunc_fma_to_v2f16_clamp_nosnan:
+; GISEL-GFX900:       ; %bb.0: ; %.entry
+; GISEL-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX900-NEXT:    v_max_f32_e32 v0, v0, v0
+; GISEL-GFX900-NEXT:    v_max_f32_e32 v1, v1, v1
+; GISEL-GFX900-NEXT:    v_max_f32_e32 v2, v2, v2
+; GISEL-GFX900-NEXT:    v_max_f32_e32 v3, v3, v3
+; GISEL-GFX900-NEXT:    v_max_f32_e32 v4, v4, v4
+; GISEL-GFX900-NEXT:    v_max_f32_e32 v5, v5, v5
+; GISEL-GFX900-NEXT:    v_fma_f32 v0, v0, v2, v4
+; GISEL-GFX900-NEXT:    v_fma_f32 v1, v1, v3, v5
+; GISEL-GFX900-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GISEL-GFX900-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GISEL-GFX900-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GISEL-GFX900-NEXT:    v_pk_max_f16 v0, v0, v0 clamp
 ; GISEL-GFX900-NEXT:    s_setpc_b64 s[30:31]
 .entry:
+  %a = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %a.arg)
+  %b = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %b.arg)
+  %c = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %c.arg)
   %fma = call <2 x float> @llvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c)
   %cvt = fptrunc <2 x float> %fma to <2 x half>
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %cvt, <2 x half> zeroinitializer)
@@ -763,12 +877,12 @@ define <2 x half> @fptrunc_fma_to_v2f16_clamp_contract(<2 x float> %a, <2 x floa
 ; SDAG-GFX900-NEXT:    v_pk_max_f16 v0, v0, v0 clamp
 ; SDAG-GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX906-LABEL: fptrunc_fma_to_v2f16_clamp_contract:
-; GFX906:       ; %bb.0: ; %.entry
-; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_fma_mixlo_f16 v0, v0, v2, v4 clamp
-; GFX906-NEXT:    v_fma_mixhi_f16 v0, v1, v3, v5 clamp
-; GFX906-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-GFX906-LABEL: fptrunc_fma_to_v2f16_clamp_contract:
+; SDAG-GFX906:       ; %bb.0: ; %.entry
+; SDAG-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX906-NEXT:    v_fma_mixlo_f16 v0, v0, v2, v4 clamp
+; SDAG-GFX906-NEXT:    v_fma_mixhi_f16 v0, v1, v3, v5 clamp
+; SDAG-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-LABEL: fptrunc_fma_to_v2f16_clamp_contract:
 ; GFX90A:       ; %bb.0: ; %.entry
@@ -797,9 +911,123 @@ define <2 x half> @fptrunc_fma_to_v2f16_clamp_contract(<2 x float> %a, <2 x floa
 ; GISEL-GFX900-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GISEL-GFX900-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GISEL-GFX900-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GISEL-GFX900-NEXT:    v_pk_max_f16 v0, v0, 0
+; GISEL-GFX900-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX906-LABEL: fptrunc_fma_to_v2f16_clamp_contract:
+; GISEL-GFX906:       ; %bb.0: ; %.entry
+; GISEL-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX906-NEXT:    v_fma_mixlo_f16 v0, v0, v2, v4
+; GISEL-GFX906-NEXT:    v_fma_mixhi_f16 v0, v1, v3, v5
+; GISEL-GFX906-NEXT:    v_pk_max_f16 v0, v0, 0
+; GISEL-GFX906-NEXT:    v_pk_min_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GISEL-GFX906-NEXT:    s_setpc_b64 s[30:31]
+.entry:
+  %fma = call contract <2 x float> @llvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c)
+  %cvt = fptrunc contract <2 x float> %fma to <2 x half>
+  %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %cvt, <2 x half> zeroinitializer)
+  %clamp = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
+  ret <2 x half> %clamp
+}
+
+; nofpclass(snan) on an argument does not reach codegen, so canonicalize
+; the operands instead to make them known to never be a signaling NaN.
+define <2 x half> @fptrunc_fma_to_v2f16_clamp_contract_nosnan(<2 x float> %a.arg, <2 x float> %b.arg, <2 x float> %c.arg) #0 {
+; GFX803-LABEL: fptrunc_fma_to_v2f16_clamp_contract_nosnan:
+; GFX803:       ; %bb.0: ; %.entry
+; GFX803-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GFX803-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; GFX803-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; GFX803-NEXT:    v_mul_f32_e32 v3, 1.0, v3
+; GFX803-NEXT:    v_mul_f32_e32 v4, 1.0, v4
+; GFX803-NEXT:    v_mul_f32_e32 v5, 1.0, v5
+; GFX803-NEXT:    v_fma_f32 v1, v1, v3, v5
+; GFX803-NEXT:    v_fma_f32 v0, v0, v2, v4
+; GFX803-NEXT:    v_cvt_f16_f32_e64 v0, v0 clamp
+; GFX803-NEXT:    v_cvt_f16_f32_sdwa v1, v1 clamp dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
+; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX803-NEXT:    s_setpc_b64 s[30:31]
+;
+; SDAG-GFX900-LABEL: fptrunc_fma_to_v2f16_clamp_contract_nosnan:
+; SDAG-GFX900:       ; %bb.0: ; %.entry
+; SDAG-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX900-NEXT:    v_max_f32_e32 v1, v1, v1
+; SDAG-GFX900-NEXT:    v_max_f32_e32 v0, v0, v0
+; SDAG-GFX900-NEXT:    v_max_f32_e32 v3, v3, v3
+; SDAG-GFX900-NEXT:    v_max_f32_e32 v2, v2, v2
+; SDAG-GFX900-NEXT:    v_max_f32_e32 v5, v5, v5
+; SDAG-GFX900-NEXT:    v_max_f32_e32 v4, v4, v4
+; SDAG-GFX900-NEXT:    v_fma_f32 v0, v0, v2, v4
+; SDAG-GFX900-NEXT:    v_fma_f32 v1, v1, v3, v5
+; SDAG-GFX900-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SDAG-GFX900-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SDAG-GFX900-NEXT:    v_pack_b32_f16 v0, v0, v1
+; SDAG-GFX900-NEXT:    v_pk_max_f16 v0, v0, v0 clamp
+; SDAG-GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX906-LABEL: fptrunc_fma_to_v2f16_clamp_contract_nosnan:
+; GFX906:       ; %bb.0: ; %.entry
+; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX906-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX906-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX906-NEXT:    v_max_f32_e32 v4, v4, v4
+; GFX906-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX906-NEXT:    v_max_f32_e32 v3, v3, v3
+; GFX906-NEXT:    v_max_f32_e32 v5, v5, v5
+; GFX906-NEXT:    v_fma_mixlo_f16 v0, v0, v2, v4 clamp
+; GFX906-NEXT:    v_fma_mixhi_f16 v0, v1, v3, v5 clamp
+; GFX906-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90A-LABEL: fptrunc_fma_to_v2f16_clamp_contract_nosnan:
+; GFX90A:       ; %bb.0: ; %.entry
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX90A-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX90A-NEXT:    v_max_f32_e32 v3, v3, v3
+; GFX90A-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX90A-NEXT:    v_max_f32_e32 v5, v5, v5
+; GFX90A-NEXT:    v_max_f32_e32 v4, v4, v4
+; GFX90A-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5]
+; GFX90A-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX90A-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX90A-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GFX90A-NEXT:    v_pk_max_f16 v0, v0, v0 clamp
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-LABEL: fptrunc_fma_to_v2f16_clamp_contract_nosnan:
+; GFX1100:       ; %bb.0: ; %.entry
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-NEXT:    v_max_f32_e32 v6, v0, v0
+; GFX1100-NEXT:    v_dual_max_f32 v0, v1, v1 :: v_dual_max_f32 v1, v2, v2
+; GFX1100-NEXT:    v_max_f32_e32 v2, v3, v3
+; GFX1100-NEXT:    v_dual_max_f32 v3, v5, v5 :: v_dual_max_f32 v4, v4, v4
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1100-NEXT:    v_fma_mixhi_f16 v0, v0, v2, v3 clamp
+; GFX1100-NEXT:    v_fma_mixlo_f16 v0, v6, v1, v4 clamp
+; GFX1100-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX900-LABEL: fptrunc_fma_to_v2f16_clamp_contract_nosnan:
+; GISEL-GFX900:       ; %bb.0: ; %.entry
+; GISEL-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX900-NEXT:    v_max_f32_e32 v0, v0, v0
+; GISEL-GFX900-NEXT:    v_max_f32_e32 v1, v1, v1
+; GISEL-GFX900-NEXT:    v_max_f32_e32 v2, v2, v2
+; GISEL-GFX900-NEXT:    v_max_f32_e32 v3, v3, v3
+; GISEL-GFX900-NEXT:    v_max_f32_e32 v4, v4, v4
+; GISEL-GFX900-NEXT:    v_max_f32_e32 v5, v5, v5
+; GISEL-GFX900-NEXT:    v_fma_f32 v0, v0, v2, v4
+; GISEL-GFX900-NEXT:    v_fma_f32 v1, v1, v3, v5
+; GISEL-GFX900-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GISEL-GFX900-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GISEL-GFX900-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GISEL-GFX900-NEXT:    v_pk_max_f16 v0, v0, v0 clamp
 ; GISEL-GFX900-NEXT:    s_setpc_b64 s[30:31]
 .entry:
+  %a = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %a.arg)
+  %b = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %b.arg)
+  %c = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %c.arg)
   %fma = call contract <2 x float> @llvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c)
   %cvt = fptrunc contract <2 x float> %fma to <2 x half>
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %cvt, <2 x half> zeroinitializer)
@@ -835,6 +1063,3 @@ define float @fmul_to_f32_neg_zero_addend(half %a, float %b) #0 {
 }
 
 attributes #0 = { nounwind denormal_fpenv(preservesign) }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GISEL-GFX906: {{.*}}
-; SDAG-GFX906: {{.*}}
