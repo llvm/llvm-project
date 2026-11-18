@@ -19,7 +19,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
+#include <chrono>
+#include <cstdint>
+#include <mutex>
 #include <optional>
+#include <random>
 #include <stdlib.h> // for _Exit
 
 using namespace llvm;
@@ -115,6 +119,45 @@ bool Process::AreCoreFilesPrevented() { return coreFilesPrevented; }
     ExitNoCleanup(RetCode);
   else
     ::exit(RetCode);
+}
+
+/// Return a number from a pseudo-random generator private to LLVM. This is
+/// what GetRandomNumber falls back to when the operating system cannot give
+/// it a random number. \p GetSeed returns a seed from the platform.
+///
+/// It does not use ::srand and ::rand: they would reseed and advance the C
+/// library's random state, which belongs to the program.
+[[maybe_unused]] static unsigned
+getPrivatePseudoRandomNumber(unsigned (*GetSeed)()) {
+  struct GeneratorState {
+    std::mutex Mutex;
+    std::mt19937 Generator;
+    Process::Pid SeededBy = 0;
+    bool Seeded = false;
+  };
+  // Never destroyed, so that it remains usable from static destructors and
+  // atexit handlers.
+  static GeneratorState &State = *new GeneratorState;
+
+  std::lock_guard<std::mutex> Lock(State.Mutex);
+  // Seed on first use, and seed again in the child after a fork(), so that
+  // parent and child do not draw the same numbers.
+  const Process::Pid Pid = Process::getProcessId();
+  if (!State.Seeded || State.SeededBy != Pid) {
+    const uint64_t Now =
+        std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    const uintptr_t Address = reinterpret_cast<uintptr_t>(&State);
+    std::seed_seq Seed{GetSeed(),
+                       static_cast<unsigned>(Now),
+                       static_cast<unsigned>(Now >> 32),
+                       static_cast<unsigned>(Pid),
+                       static_cast<unsigned>(Address),
+                       static_cast<unsigned>(uint64_t(Address) >> 32)};
+    State.Generator.seed(Seed);
+    State.SeededBy = Pid;
+    State.Seeded = true;
+  }
+  return State.Generator();
 }
 
 // Include the platform-specific parts of this class.

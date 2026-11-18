@@ -399,8 +399,6 @@ const char *Process::OutputReverse() { return "\033[7m"; }
 const char *Process::ResetColor() { return "\033[0m"; }
 
 #if !HAVE_DECL_ARC4RANDOM
-#include <random>
-
 static unsigned GetRandomNumberSeed() {
   // Attempt to get the initial seed from /dev/urandom, if possible.
   int urandomFD = open("/dev/urandom", O_RDONLY);
@@ -429,12 +427,7 @@ unsigned llvm::sys::Process::GetRandomNumber() {
 #if HAVE_DECL_ARC4RANDOM
   return arc4random();
 #else
-  // Use a private generator instead of ::srand and ::rand, which would reseed
-  // and advance the C library's global random state that the program owns.
-  static std::mutex GeneratorMutex;
-  static std::mt19937 Generator(GetRandomNumberSeed());
-  std::lock_guard<std::mutex> Lock(GeneratorMutex);
-  return Generator();
+  return getPrivatePseudoRandomNumber(GetRandomNumberSeed);
 #endif
 }
 
