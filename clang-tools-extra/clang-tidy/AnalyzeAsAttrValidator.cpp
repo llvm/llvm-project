@@ -26,7 +26,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -297,16 +296,33 @@ private:
   unsigned Pending = 0;
 };
 
-/// The standard library header that declares each supported target class.
-/// Sema only accepts `std::optional` for now.
+/// A class that `analyze_as_class` may name, the standard library header that
+/// declares it, and the check that gives the annotation a meaning.
+struct AnalyzeAsTarget {
+  llvm::StringRef Name;
+  llvm::StringRef Header;
+  llvm::StringRef Check;
+};
+
+/// Every supported `analyze_as_class` argument. To support another class, add
+/// a row here once a check models it.
+constexpr AnalyzeAsTarget KnownTargets[] = {
+    {"std::optional", "<optional>", "bugprone-unchecked-optional-access"},
+    // Example (not supported yet):
+    // {"std::vector", "<vector>", "<check-that-models-std-vector>"},
+};
+
+const AnalyzeAsTarget *findTarget(llvm::StringRef Name) {
+  for (const AnalyzeAsTarget &T : KnownTargets)
+    if (T.Name == Name)
+      return &T;
+  return nullptr;
+}
+
 std::optional<llvm::StringRef> headerForTarget(llvm::StringRef Target) {
-  static const llvm::StringMap<llvm::StringRef> Headers = {
-      {"std::optional", "<optional>"},
-  };
-  auto It = Headers.find(Target);
-  if (It == Headers.end())
-    return std::nullopt;
-  return It->second;
+  if (const AnalyzeAsTarget *T = findTarget(Target))
+    return T->Header;
+  return std::nullopt;
 }
 
 /// Derives the invocation for the header AST from the analysed TU's one:
@@ -513,9 +529,28 @@ public:
     if (Collector.Results.empty())
       return; // Nothing annotated: never pay for the header AST.
 
+    // Decide what to do with each attribute based on its target class:
+    // - unknown class: report the class attribute (under an enabled check that
+    //   uses analyze_as, if any) and stay silent on its methods;
+    // - known class whose check is disabled: nothing uses it, stay silent;
+    // - known class whose check is enabled: validate against the header AST.
+    std::vector<const AnalyzeAsAttrCollector::Found *> ToValidate;
+    for (const auto &F : Collector.Results) {
+      const AnalyzeAsTarget *T = findTarget(F.Query.Target);
+      if (!T) {
+        if (F.Query.IsClass)
+          reportUnknownClass(F);
+        continue;
+      }
+      if (Context.isCheckEnabled(T->Check))
+        ToValidate.push_back(&F);
+    }
+    if (ToValidate.empty())
+      return;
+
     llvm::SmallVector<AttrQuery> Queries;
-    for (const auto &F : Collector.Results)
-      Queries.push_back(F.Query);
+    for (const auto *F : ToValidate)
+      Queries.push_back(F->Query);
 
     // Fails open: no header AST means no diagnostics.
     std::optional<std::vector<bool>> Matched =
@@ -525,17 +560,39 @@ public:
 
     for (size_t I = 0; I != Matched->size(); ++I)
       if (!(*Matched)[I])
-        report(Collector.Results[I].Loc,
+        report("clang-tidy-config", ToValidate[I]->Loc,
                llvm::formatv("'{0}' argument \"{1}\" does not match anything "
                              "in {2}; the attribute is likely malformed",
-                             Collector.Results[I].Spelling, Queries[I].Text,
+                             ToValidate[I]->Spelling, Queries[I].Text,
                              Queries[I].Target)
                    .str());
   }
 
 private:
-  void report(SourceLocation Loc, const std::string &Message) {
-    Context.diag("clang-tidy-config", Loc, "%0") << Message;
+  /// An `analyze_as_class` naming a class no check supports. Reported under
+  /// the first enabled check that uses analyze_as attributes, so it shows up
+  /// (and can be suppressed) like that check's own warnings; if none is
+  /// enabled, the annotation is irrelevant to this run and nothing is said.
+  void reportUnknownClass(const AnalyzeAsAttrCollector::Found &F) {
+    const AnalyzeAsTarget *Enabled = nullptr;
+    std::string Supported;
+    for (const AnalyzeAsTarget &T : KnownTargets) {
+      if (!Enabled && Context.isCheckEnabled(T.Check))
+        Enabled = &T;
+      Supported += (Supported.empty() ? "" : ", ") + T.Name.str();
+    }
+    if (!Enabled)
+      return;
+    report(Enabled->Check, F.Loc,
+           llvm::formatv("'analyze_as_class' argument \"{0}\" is not a "
+                         "supported class; supported: {1}",
+                         F.Query.Text, Supported)
+               .str());
+  }
+
+  void report(llvm::StringRef CheckName, SourceLocation Loc,
+              const std::string &Message) {
+    Context.diag(CheckName, Loc, "%0") << Message;
   }
 
   ClangTidyContext &Context;

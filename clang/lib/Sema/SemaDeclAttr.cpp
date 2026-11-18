@@ -6540,10 +6540,11 @@ static void handleAbiTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 // for now this only handles std::optional (POC)
+// Any non-empty class name is kept. Which names are supported is up to the
+// analysis tools (clang-tidy reports unsupported ones under the check that
+// uses the attribute), so a plain compile does not second-guess it.
 static bool isValidAnalyzeAsClassAttr(Decl *D, StringRef Tag) {
-  if (Tag == "std::optional")
-    return true;
-  return false;
+  return !Tag.empty();
 }
 
 static void handleAnalyzeAsClass(Sema &S, Decl *D, const ParsedAttr &AL) {

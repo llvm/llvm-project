@@ -453,3 +453,16 @@ void std_named_reset_then_access(StdNamedOptional<int> opt) {
   opt.value();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
 }
+
+// A class naming an unsupported analyze_as_class target is reported, and is
+// not treated as an optional.
+template <typename T>
+class [[clang::analyze_as_class("std::optinal")]] MisspelledOptional {
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: 'analyze_as_class' argument "std::optinal" is not a supported class; supported: std::optional [bugprone-unchecked-optional-access]
+public:
+  T &value();
+};
+
+void misspelled_is_not_an_optional(MisspelledOptional<int> opt) {
+  opt.value();
+}

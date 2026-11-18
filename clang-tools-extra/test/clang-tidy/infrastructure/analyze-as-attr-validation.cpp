@@ -1,12 +1,15 @@
 // The validator parses <optional> with this file's own compile flags, so the
 // test supplies its own <optional> through -isystem; no path is hardcoded.
-// RUN: clang-tidy %s -checks='-*,llvm-namespace-comment' -- -std=c++17 -nostdinc++ -isystem %S/Inputs/analyze-as | FileCheck %s --implicit-check-not=warning:
+// RUN: clang-tidy %s -checks='-*,bugprone-unchecked-optional-access' -- -std=c++17 -nostdinc++ -isystem %S/Inputs/analyze-as | FileCheck %s --implicit-check-not=warning:
 //
 // The header AST is raised to C++17 even if this file is compiled as C++14.
-// RUN: clang-tidy %s -checks='-*,llvm-namespace-comment' -- -std=c++14 -nostdinc++ -isystem %S/Inputs/analyze-as | FileCheck %s --implicit-check-not=warning:
+// RUN: clang-tidy %s -checks='-*,bugprone-unchecked-optional-access' -- -std=c++14 -nostdinc++ -isystem %S/Inputs/analyze-as | FileCheck %s --implicit-check-not=warning:
 //
 // If <optional> cannot be found, nothing is validated (and nothing reported).
-// RUN: clang-tidy %s -checks='-*,llvm-namespace-comment' -- -std=c++17 -nostdinc++ | count 0
+// RUN: clang-tidy %s -checks='-*,bugprone-unchecked-optional-access' -- -std=c++17 -nostdinc++ | count 0
+//
+// Which warnings depend on which checks are enabled is tested in
+// analyze-as-attr-check-gating.cpp.
 
 struct nothing_t {};
 

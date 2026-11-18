@@ -96,8 +96,9 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
            isFullyQualifiedNamespaceEqualTo(*N, "bdlb", "BloombergLP");
   }
 
-  if (RD.hasAttr<AnalyzeAsClassAttr>())
-    return true;
+  // Sema keeps any class name; only std::optional means "an optional" here.
+  if (const auto *A = RD.getAttr<AnalyzeAsClassAttr>())
+    return A->getClassName() == "std::optional";
 
   return false;
 }
