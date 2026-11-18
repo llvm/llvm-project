@@ -277,6 +277,24 @@ constexpr bool test() {
     assert(ret == a + 1);
   }
 
+  { // check that we don't overconstrain the algorithm (see https://github.com/llvm/llvm-project/issues/100726)
+    struct S {
+      int value;
+      constexpr operator int() { return value; } // non-const
+    };
+    std::array<int, 5> a{0, 1, 2, 3, 4};
+    auto cmp  = [](int a, int b) { return a < b; };
+    auto proj = [](int x) { return S{x}; };
+    {
+      auto ret = std::ranges::upper_bound(a.begin(), a.end(), 2, cmp, proj);
+      assert(ret == a.begin() + 3);
+    }
+    {
+      auto ret = std::ranges::upper_bound(a, 2, cmp, proj);
+      assert(ret == a.begin() + 3);
+    }
+  }
+
   return true;
 }
 
