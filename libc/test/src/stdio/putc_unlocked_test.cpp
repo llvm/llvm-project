@@ -84,6 +84,11 @@ TEST_F(LlvmLibcPutcUnlockedTest, WriteUnderLock) {
   const auto FILENAME = libc_make_test_file_path("putc_unlocked_lock.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
+
+  constexpr int INPUT_CHARS[] = {'L', 'O', 'C', 'K', 0, 128, 255};
+  constexpr size_t NUM_CHARS = sizeof(INPUT_CHARS) / sizeof(INPUT_CHARS[0]);
+  unsigned char expected[NUM_CHARS];
+
   {
     scope_exit close_file(
         [&] { ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds()); });
@@ -91,10 +96,11 @@ TEST_F(LlvmLibcPutcUnlockedTest, WriteUnderLock) {
     LIBC_NAMESPACE::flockfile(file);
     scope_exit unlock_file([&] { LIBC_NAMESPACE::funlockfile(file); });
 
-    constexpr int chars[] = {'L', 'O', 'C', 'K', 0, 128, 255};
-    for (int c : chars) {
-      ASSERT_THAT(LIBC_NAMESPACE::putc_unlocked(c, file),
-                  Succeeds(static_cast<int>(static_cast<unsigned char>(c))));
+    for (size_t i = 0; i < NUM_CHARS; ++i) {
+      expected[i] = static_cast<unsigned char>(INPUT_CHARS[i]);
+      int expected_ret = static_cast<int>(expected[i]);
+      ASSERT_THAT(LIBC_NAMESPACE::putc_unlocked(INPUT_CHARS[i], file),
+                  Succeeds(expected_ret));
     }
   }
 
@@ -103,9 +109,8 @@ TEST_F(LlvmLibcPutcUnlockedTest, WriteUnderLock) {
   scope_exit close_file(
       [&] { ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds()); });
 
-  unsigned char read_buf[7];
-  ASSERT_THAT(LIBC_NAMESPACE::fread(read_buf, 1, sizeof(read_buf), file),
-              Succeeds(sizeof(read_buf)));
-  unsigned char expected[] = {'L', 'O', 'C', 'K', 0, 128, 255};
-  EXPECT_EQ(LIBC_NAMESPACE::memcmp(read_buf, expected, sizeof(expected)), 0);
+  unsigned char read_buf[NUM_CHARS];
+  ASSERT_THAT(LIBC_NAMESPACE::fread(read_buf, 1, NUM_CHARS, file),
+              Succeeds(NUM_CHARS));
+  EXPECT_EQ(LIBC_NAMESPACE::memcmp(read_buf, expected, NUM_CHARS), 0);
 }
