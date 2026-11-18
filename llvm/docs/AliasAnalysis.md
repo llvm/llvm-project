@@ -177,7 +177,7 @@ analysis can prove that the function never reads or writes to memory, or if the
 function only reads from constant memory.  Functions with this property are
 side-effect free and only depend on their input arguments, allowing them to be
 eliminated if they form common subexpressions or be hoisted out of loops.  Many
-common functions behave this way (e.g., `sin` and `cos`) but many others do
+common functions behave this way (e.g., `fabs` and `copysign`) but many others do
 not (e.g., `acos`, which modifies the `errno` variable).
 
 The `onlyReadsMemory` method returns true for a function if analysis can prove
