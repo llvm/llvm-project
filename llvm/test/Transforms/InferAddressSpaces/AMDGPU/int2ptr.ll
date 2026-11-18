@@ -47,7 +47,7 @@ define void @test_xor_local_max32bit(ptr addrspace(3) %sp) {
   ret void
 }
 
-; 0x100000000 tests bit 32 (0-indexed), not bit 33
+; 0x100000000 tests bit 32 (0-indexed)
 define void @test_xor_local_fail_bit32(ptr addrspace(3) %sp) {
 ; CHECK-LABEL: define void @test_xor_local_fail_bit32(
 ; CHECK-SAME: ptr addrspace(3) [[SP:%.*]]) {
@@ -166,7 +166,7 @@ define void @test_xor_global_max32bit(ptr addrspace(1) %sp) {
 ; are bit-identical in both global and flat address spaces. Global memory regions
 ; are architecturally separate from the private/local aperture regions, which use
 ; specific high-address ranges that don't overlap with valid global addresses.
-; 0x100000000 tests bit 32 (0-indexed), not bit 33
+; 0x100000000 tests bit 32 (0-indexed)
 define void @test_xor_global_bit32(ptr addrspace(1) %sp) {
 ; CHECK-LABEL: define void @test_xor_global_bit32(
 ; CHECK-SAME: ptr addrspace(1) [[SP:%.*]]) {
