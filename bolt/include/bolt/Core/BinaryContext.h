@@ -42,7 +42,6 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/RWMutex.h"
@@ -425,6 +424,9 @@ public:
   using binary_data_iterator = BinaryDataMapType::iterator;
   using binary_data_const_iterator = BinaryDataMapType::const_iterator;
   BinaryDataMapType BinaryDataMap;
+
+  /// Subset of BinaryDataMap holding vtables, see BinaryData::isVTable().
+  BinaryDataMapType VTableMap;
 
   using FilteredBinaryDataConstIterator =
       FilterIterator<binary_data_const_iterator>;
@@ -1065,6 +1067,7 @@ public:
     for (auto &Entry : BinaryDataMap)
       delete Entry.second;
     BinaryDataMap.clear();
+    VTableMap.clear();
   }
 
   /// Process \p Address reference from code in function \BF.
@@ -1139,6 +1142,11 @@ public:
     return const_cast<BinaryData *>(
         getBinaryDataContainingAddressImpl(Address));
   }
+
+  /// Return the vtable containing \p Address or nullptr. Unlike
+  /// getBinaryDataContainingAddress(), symbols that start inside the vtable,
+  /// such as WPD __typeid_* aliases, do not hide it.
+  const BinaryData *getVTableContainingAddress(uint64_t Address) const;
 
   /// Return BinaryData for the given \p Name or nullptr if no
   /// global symbol with that name exists.
@@ -1678,7 +1686,7 @@ public:
   createStreamer(llvm::raw_pwrite_stream &OS) const {
     MCCodeEmitter *MCE = TheTarget->createMCCodeEmitter(*MII, *Ctx);
     MCAsmBackend *MAB =
-        TheTarget->createMCAsmBackend(*STI, *MRI, MCTargetOptions());
+        TheTarget->createMCAsmBackend(*STI, *MRI, Ctx->getTargetOptions());
     std::unique_ptr<MCObjectWriter> OW = MAB->createObjectWriter(OS);
     std::unique_ptr<MCStreamer> Streamer(TheTarget->createMCObjectStreamer(
         *TheTriple, *Ctx, std::unique_ptr<MCAsmBackend>(MAB), std::move(OW),

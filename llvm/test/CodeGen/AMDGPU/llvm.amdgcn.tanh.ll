@@ -26,7 +26,6 @@ define float @tanh_f32(float %src) {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_tanh_f32_e32 v0, v0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
@@ -47,7 +46,6 @@ define float @tanh_f32_neg(float %src)  {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_tanh_f32_e64 v0, -v0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
@@ -69,7 +67,6 @@ define float @tanh_f32_abs(float %src)  {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_tanh_f32_e64 v0, |v0|
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
@@ -91,7 +88,6 @@ define float @tanh_f32_neg_abs(float %src)  {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_tanh_f32_e64 v0, -|v0|
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
@@ -246,7 +242,6 @@ define half @tanh_f16(half %src) {
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-REAL16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    v_tanh_f16_e32 v0.l, v0.l
 ; GFX13-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
@@ -256,7 +251,6 @@ define half @tanh_f16(half %src) {
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e32 v0, v0
 ; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
@@ -266,7 +260,6 @@ define half @tanh_f16(half %src) {
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-REAL16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    v_tanh_f16_e32 v0.l, v0.l
 ; GFX13-GISEL-REAL16-NEXT:    s_set_pc_i64 s[30:31]
@@ -276,7 +269,6 @@ define half @tanh_f16(half %src) {
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    v_tanh_f16_e32 v0, v0
 ; GFX13-GISEL-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
@@ -318,7 +310,6 @@ define half @tanh_f16_neg(half %src)  {
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-REAL16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    v_tanh_f16_e64 v0.l, -v0.l
 ; GFX13-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
@@ -328,7 +319,6 @@ define half @tanh_f16_neg(half %src)  {
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e64 v0, -v0
 ; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
@@ -338,7 +328,6 @@ define half @tanh_f16_neg(half %src)  {
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-REAL16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    v_tanh_f16_e64 v0.l, -v0.l
 ; GFX13-GISEL-REAL16-NEXT:    s_set_pc_i64 s[30:31]
@@ -348,7 +337,6 @@ define half @tanh_f16_neg(half %src)  {
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    v_tanh_f16_e64 v0, -v0
 ; GFX13-GISEL-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
@@ -391,7 +379,6 @@ define half @tanh_f16_abs(half %src)  {
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-REAL16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    v_tanh_f16_e64 v0.l, |v0.l|
 ; GFX13-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
@@ -401,7 +388,6 @@ define half @tanh_f16_abs(half %src)  {
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e64 v0, |v0|
 ; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
@@ -411,7 +397,6 @@ define half @tanh_f16_abs(half %src)  {
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-REAL16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    v_tanh_f16_e64 v0.l, |v0.l|
 ; GFX13-GISEL-REAL16-NEXT:    s_set_pc_i64 s[30:31]
@@ -421,7 +406,6 @@ define half @tanh_f16_abs(half %src)  {
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    v_tanh_f16_e64 v0, |v0|
 ; GFX13-GISEL-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
@@ -464,7 +448,6 @@ define half @tanh_f16_neg_abs(half %src)  {
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-REAL16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    v_tanh_f16_e64 v0.l, -|v0.l|
 ; GFX13-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
@@ -474,7 +457,6 @@ define half @tanh_f16_neg_abs(half %src)  {
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e64 v0, -|v0|
 ; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
@@ -484,7 +466,6 @@ define half @tanh_f16_neg_abs(half %src)  {
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-REAL16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    v_tanh_f16_e64 v0.l, -|v0.l|
 ; GFX13-GISEL-REAL16-NEXT:    s_set_pc_i64 s[30:31]
@@ -494,7 +475,6 @@ define half @tanh_f16_neg_abs(half %src)  {
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    v_tanh_f16_e64 v0, -|v0|
 ; GFX13-GISEL-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
@@ -774,7 +754,6 @@ define bfloat @tanh_bf16(bfloat %src) {
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-REAL16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    v_tanh_bf16_e32 v0.l, v0.l
 ; GFX13-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
@@ -784,7 +763,6 @@ define bfloat @tanh_bf16(bfloat %src) {
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e32 v0, v0
 ; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
@@ -794,7 +772,6 @@ define bfloat @tanh_bf16(bfloat %src) {
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-REAL16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    v_tanh_bf16_e32 v0.l, v0.l
 ; GFX13-GISEL-REAL16-NEXT:    s_set_pc_i64 s[30:31]
@@ -804,7 +781,6 @@ define bfloat @tanh_bf16(bfloat %src) {
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    v_tanh_bf16_e32 v0, v0
 ; GFX13-GISEL-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
@@ -846,7 +822,6 @@ define bfloat @tanh_bf16_neg(bfloat %src)  {
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-REAL16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    v_tanh_bf16_e64 v0.l, -v0.l
 ; GFX13-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
@@ -856,7 +831,6 @@ define bfloat @tanh_bf16_neg(bfloat %src)  {
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v0, -v0
 ; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
@@ -866,7 +840,6 @@ define bfloat @tanh_bf16_neg(bfloat %src)  {
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-REAL16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    v_tanh_bf16_e64 v0.l, -v0.l
 ; GFX13-GISEL-REAL16-NEXT:    s_set_pc_i64 s[30:31]
@@ -876,7 +849,6 @@ define bfloat @tanh_bf16_neg(bfloat %src)  {
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    v_tanh_bf16_e64 v0, -v0
 ; GFX13-GISEL-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
@@ -919,7 +891,6 @@ define bfloat @tanh_bf16_abs(bfloat %src)  {
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-REAL16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    v_tanh_bf16_e64 v0.l, |v0.l|
 ; GFX13-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
@@ -929,7 +900,6 @@ define bfloat @tanh_bf16_abs(bfloat %src)  {
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v0, |v0|
 ; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
@@ -939,7 +909,6 @@ define bfloat @tanh_bf16_abs(bfloat %src)  {
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-REAL16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    v_tanh_bf16_e64 v0.l, |v0.l|
 ; GFX13-GISEL-REAL16-NEXT:    s_set_pc_i64 s[30:31]
@@ -949,7 +918,6 @@ define bfloat @tanh_bf16_abs(bfloat %src)  {
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    v_tanh_bf16_e64 v0, |v0|
 ; GFX13-GISEL-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
@@ -992,7 +960,6 @@ define bfloat @tanh_bf16_neg_abs(bfloat %src)  {
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-REAL16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    v_tanh_bf16_e64 v0.l, -|v0.l|
 ; GFX13-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
@@ -1002,7 +969,6 @@ define bfloat @tanh_bf16_neg_abs(bfloat %src)  {
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v0, -|v0|
 ; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
@@ -1012,7 +978,6 @@ define bfloat @tanh_bf16_neg_abs(bfloat %src)  {
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-REAL16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-REAL16-NEXT:    v_tanh_bf16_e64 v0.l, -|v0.l|
 ; GFX13-GISEL-REAL16-NEXT:    s_set_pc_i64 s[30:31]
@@ -1022,7 +987,6 @@ define bfloat @tanh_bf16_neg_abs(bfloat %src)  {
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-FAKE16-NEXT:    v_tanh_bf16_e64 v0, -|v0|
 ; GFX13-GISEL-FAKE16-NEXT:    s_set_pc_i64 s[30:31]

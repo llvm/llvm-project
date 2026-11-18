@@ -18,6 +18,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
+#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
@@ -146,13 +147,13 @@ LIBC_INLINE float powf(float x, float y) {
   // The computation is exact: m_x = (1 + dx) / r.
   float r = powf_internal::R_16[idx_x];
 #if defined(LIBC_TARGET_CPU_HAS_FMA_FLOAT)
-  float dx = fputil::multiply_add(r, m_x.get_val(), -1.0f); // Exact
+  float dx = fputil::multiply_sub(r, m_x.get_val(), 1.0f); // Exact
 #else  // !LIBC_TARGET_CPU_HAS_FMA_FLOAT
   // Without FMA, split m_x = c + cd where c retains the high 14 bits
   // to perform exact multiplication: r * c - 1.0f and r * cd.
   float c = FPBits(m_x.uintval() & 0x3fff'e000U).get_val();
   float cd = m_x.get_val() - c;
-  float dx_hi = fputil::multiply_add(r, c, -1.0f);
+  float dx_hi = fputil::multiply_sub(r, c, 1.0f);
   float dx = fputil::multiply_add(r, cd, dx_hi); // Exact
 #endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
 
@@ -171,10 +172,10 @@ LIBC_INLINE float powf(float x, float y) {
   float z = y * fputil::multiply_add(dx, LOG2_E.hi, e_x_hi);
 
   if (LIBC_UNLIKELY(z > 132.0f))
-    return set_overflow(out_sign);
+    return fputil::set_overflow<float>(out_sign);
 
   if (LIBC_UNLIKELY(z < -155.0f))
-    return set_underflow(out_sign);
+    return fputil::set_underflow<float>(out_sign);
 
   // Approximate the tail Q(dx) using Estrin's scheme:
   float dx2 = dx * dx;
@@ -212,14 +213,14 @@ LIBC_INLINE float powf(float x, float y) {
   float rem = rem_hi + total_lo;
 
   if (LIBC_UNLIKELY(k > 128))
-    return set_overflow(out_sign);
+    return fputil::set_overflow<float>(out_sign);
 
   if (LIBC_UNLIKELY(k < -150))
-    return set_underflow(out_sign);
+    return fputil::set_underflow<float>(out_sign);
 
   float result = exp2f_eval(rem, k);
   if (LIBC_UNLIKELY(k == 128 && FPBits(result).is_inf()))
-    return set_overflow(out_sign);
+    return fputil::set_overflow<float>(out_sign);
 
   if (LIBC_UNLIKELY(k <= -126 && !FPBits(result).is_normal())) {
     fputil::set_errno_if_required(ERANGE);

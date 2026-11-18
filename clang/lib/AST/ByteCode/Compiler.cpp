@@ -524,7 +524,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
                                        ->castAs<MemberPointerType>()
                                        ->getMostRecentCXXRecordDecl();
     for (const CXXBaseSpecifier *B : E->path()) {
-      const CXXRecordDecl *ToDecl = B->getType()->getAsCXXRecordDecl();
+      const CXXRecordDecl *ToDecl = B->getType()->castAsCXXRecordDecl();
       unsigned DerivedOffset = Ctx.collectBaseOffset(ToDecl, CurDecl);
 
       if (!this->emitCastMemberPtrBasePop(DerivedOffset, ToDecl, E))
@@ -553,7 +553,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     typedef std::reverse_iterator<CastExpr::path_const_iterator> ReverseIter;
     for (ReverseIter PathI(E->path_end() - 1), PathE(E->path_begin());
          PathI != PathE; ++PathI) {
-      const CXXRecordDecl *ToDecl = (*PathI)->getType()->getAsCXXRecordDecl();
+      const CXXRecordDecl *ToDecl = (*PathI)->getType()->castAsCXXRecordDecl();
       unsigned DerivedOffset = Ctx.collectBaseOffset(CurDecl, ToDecl);
 
       if (!this->emitCastMemberPtrDerivedPop(-DerivedOffset, ToDecl, E))
@@ -579,8 +579,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
     const auto extractRecordDecl = [](QualType Ty) -> const CXXRecordDecl * {
       if (const auto *PT = dyn_cast<PointerType>(Ty))
-        return PT->getPointeeType()->getAsCXXRecordDecl();
-      return Ty->getAsCXXRecordDecl();
+        return PT->getPointeeType()->castAsCXXRecordDecl();
+      return Ty->castAsCXXRecordDecl();
     };
 
     // FIXME: We can express a series of non-virtual casts as a single
@@ -3946,7 +3946,7 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
     if (Ctor->isDefaulted() && Ctor->isCopyOrMoveConstructor() &&
         Ctor->isTrivial() &&
         E->getArg(0)->isTemporaryObject(Ctx.getASTContext(),
-                                        T->getAsCXXRecordDecl()))
+                                        T->castAsCXXRecordDecl()))
       return this->visitInitializer(E->getArg(0));
 
     // Zero initialization.
@@ -4583,6 +4583,9 @@ bool Compiler<Emitter>::VisitBlockExpr(const BlockExpr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
+  if (E->containsErrors())
+    return false;
+
   const Type *TypeInfoType = E->getType().getTypePtr();
 
   auto canonType = [](const Type *T) {
@@ -4722,6 +4725,35 @@ bool Compiler<Emitter>::VisitCXXRewrittenBinaryOperator(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitPseudoObjectExpr(const PseudoObjectExpr *E) {
+  // Diagnose a relocated BPF enumerator, i.e., of an enum with the
+  // preserve_access_index attribute, which is not a constant expression. Return
+  // true if diagnosed.
+  auto getAccessIndexConstantDecl = [&]() -> const EnumConstantDecl * {
+    const auto *DRE = dyn_cast<DeclRefExpr>(E->getSyntacticForm());
+    if (!DRE)
+      return nullptr;
+    const auto *ECD = dyn_cast<EnumConstantDecl>(DRE->getDecl());
+    if (!ECD)
+      return nullptr;
+    const auto *ED = dyn_cast<EnumDecl>(ECD->getDeclContext());
+    if (ED && ED->hasAttr<BPFPreserveAccessIndexAttr>())
+      return ECD;
+    return nullptr;
+  };
+
+  if (const EnumConstantDecl *ECD = getAccessIndexConstantDecl()) {
+    const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
+    // An anonymous enum is only relocated through its typedef name.
+    QualType EnumTy;
+    if (ED->getDeclName())
+      EnumTy = Ctx.getASTContext().getCanonicalTagType(ED);
+    else if (const TypedefNameDecl *TD = ED->getTypedefNameForAnonDecl())
+      EnumTy = Ctx.getASTContext().getTypeDeclType(TD);
+    else
+      return false;
+
+    return this->emitInvalidAccessIndexAttr(ECD, EnumTy.getTypePtr(), E);
+  }
 
   for (const Expr *SemE : E->semantics()) {
     if (auto *OVE = dyn_cast<OpaqueValueExpr>(SemE)) {
@@ -5474,8 +5506,7 @@ unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclOrExpr Src, PrimType Ty,
   //   or isa<MaterializeTemporaryExpr>().
   Descriptor *D = P.createDescriptor(Src, Ty, nullptr, IsConst, Src.isExpr(),
                                      /*IsMutable=*/false, IsVolatile);
-  D->IsConstexprUnknown = this->VariablesAreConstexprUnknown;
-  Scope::Local Local = this->createLocal(D);
+  Scope::Local Local = this->createLocal(D, this->VariablesAreConstexprUnknown);
   if (auto *VD = Src.asValueDecl())
     Locals.insert({VD, Local});
   VarScope->addForScopeKind(Local, SC);
@@ -5505,9 +5536,8 @@ UnsignedOrNone Compiler<Emitter>::allocateLocal(DeclOrExpr Src, QualType Ty,
       /*IsMutable=*/false, /*IsVolatile=*/Ty.isVolatileQualified(), Init);
   if (!D)
     return std::nullopt;
-  D->IsConstexprUnknown = this->VariablesAreConstexprUnknown;
 
-  Scope::Local Local = this->createLocal(D);
+  Scope::Local Local = this->createLocal(D, this->VariablesAreConstexprUnknown);
   if (Key)
     Locals.insert({Key, Local});
   VarScope->addForScopeKind(Local, SC);
@@ -6278,7 +6308,9 @@ bool Compiler<Emitter>::registerRedecl(const VarDecl *VD, const APValue &Val) {
   if (P.getGlobal(VD))
     return true;
 
-  UnsignedOrNone GlobalIndex = P.createGlobal(VD, /*Init=*/nullptr);
+  UnsignedOrNone GlobalIndex =
+      P.createGlobal(VD, /*Init=*/nullptr, /*IsConstexprUnknown=*/false,
+                     /*CanBeExtern=*/false);
   if (!GlobalIndex) {
     llvm_unreachable("Why didn't that work?");
   }
@@ -6564,7 +6596,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
         if (isa<CXXThisExpr>(Stripped)) {
           FuncDecl =
               cast<CXXMethodDecl>(FuncDecl)->getCorrespondingMethodInClass(
-                  Stripped->getType()->getPointeeType()->getAsCXXRecordDecl());
+                  Stripped->getType()->getPointeeType()->castAsCXXRecordDecl());
           Devirtualized = true;
           if (!this->visit(Stripped))
             return false;
@@ -7759,10 +7791,10 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       return false;
 
     for (const auto *Init : Ctor->inits()) {
+      LocalScope<Emitter> VirtLocalScope(this);
       if (const Type *Base = Init->getBaseClass();
           Base && Init->isBaseVirtual()) {
-        const auto *BaseDecl = Base->getAsCXXRecordDecl();
-        assert(BaseDecl);
+        const auto *BaseDecl = Base->castAsCXXRecordDecl();
         assert(R->findVirtualBase(BaseDecl));
         if (!this->emitGetPtrThisVirtBase(BaseDecl, Ctor))
           return false;
@@ -7792,8 +7824,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
         return false;
       ++FieldInits;
     } else if (const Type *Base = Init->getBaseClass()) {
-      const auto *BaseDecl = Base->getAsCXXRecordDecl();
-      assert(BaseDecl);
+      const auto *BaseDecl = Base->castAsCXXRecordDecl();
 
       if (Init->isBaseVirtual()) {
         // See above.
@@ -8762,7 +8793,7 @@ unsigned Compiler<Emitter>::collectBaseOffset(const QualType BaseType,
   const auto extractRecordDecl = [](QualType Ty) -> const CXXRecordDecl * {
     if (const auto *R = Ty->getPointeeCXXRecordDecl())
       return R;
-    return Ty->getAsCXXRecordDecl();
+    return Ty->castAsCXXRecordDecl();
   };
   const CXXRecordDecl *BaseDecl = extractRecordDecl(BaseType);
   const CXXRecordDecl *DerivedDecl = extractRecordDecl(DerivedType);

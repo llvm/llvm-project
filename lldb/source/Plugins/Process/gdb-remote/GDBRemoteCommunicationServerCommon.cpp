@@ -58,8 +58,9 @@ const static uint32_t g_default_packet_timeout_sec = 0; // not specified
 #endif
 
 // GDBRemoteCommunicationServerCommon constructor
-GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon()
-    : GDBRemoteCommunicationServer(), m_process_launch_info(),
+GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon(
+    llvm::StringRef name)
+    : GDBRemoteCommunicationServer(name), m_process_launch_info(),
       m_process_launch_error(), m_proc_infos(), m_proc_infos_index(0) {
   RegisterMemberFunctionHandler(StringExtractorGDBRemote::eServerPacketType_A,
                                 &GDBRemoteCommunicationServerCommon::Handle_A);

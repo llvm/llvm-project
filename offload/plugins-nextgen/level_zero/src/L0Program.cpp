@@ -13,6 +13,8 @@
 #include "L0Plugin.h"
 #include "L0Program.h"
 
+#include "llvm/Object/OffloadBinary.h"
+
 namespace llvm::omp::target::plugin {
 
 Error L0GlobalHandlerTy::getGlobalMetadataFromDevice(GenericDeviceTy &Device,
@@ -416,7 +418,7 @@ Error L0ProgramTy::loadModuleKernels() {
     CALL_ZE_RET_ERROR(zeModuleGetKernelNames, Module, &Count, Names.data());
 
     for (auto *Name : Names) {
-      KernelsToModuleMap.emplace(Name, Module);
+      KernelsToModuleMap.try_emplace(Name, Module);
     }
   }
 

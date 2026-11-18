@@ -61,8 +61,10 @@ add_orc_rt_unittest(SupportTests
   support/ProxyTest.cpp
   support/RTTICrossDylibTest.cpp
   support/RTTITest.cpp
+  support/RemoteSymbolLookupSetTest.cpp
   support/StringExtrasTest.cpp
   support/StringPoolTest.cpp
+  support/SymbolLookupResultTest.cpp
   support/SymbolLookupSetTest.cpp
   support/WrapperFunctionBufferTest.cpp
   support/bind-test.cpp
@@ -73,7 +75,9 @@ add_orc_rt_unittest(SupportTests
   support/span-test.cpp
 
   support/sps/SPSAllocActionTest.cpp
+  support/sps/SPSJITDylibLookupFlagsTest.cpp
   support/sps/SPSMemoryFlagsTest.cpp
+  support/sps/SPSSymbolLookupResultTest.cpp
   support/sps/SPSSymbolLookupSetTest.cpp
   support/sps/SPSWrapperFunctionBufferTest.cpp
   support/sps/SPSWrapperFunctionTest.cpp
@@ -105,6 +109,8 @@ endif()
 # going unnoticed.
 add_orc_rt_unittest(BedrockTests
   bedrock/BootstrapInfoTest.cpp
+  bedrock/ControllerHandlerTagCTest.c
+  bedrock/ControllerHandlerTagTest.cpp
   bedrock/ExecutorProcessInfoTest.cpp
   bedrock/InProcessControllerAccessTest.cpp
   bedrock/NativeDylibManagerTest.cpp
@@ -116,6 +122,7 @@ add_orc_rt_unittest(BedrockTests
   bedrock/ThreadPoolRunnerTest.cpp
 
   bedrock/sps/CallSPSCITest.cpp
+  bedrock/sps/LookupInJITDylibSPSTest.cpp
   bedrock/sps/MemoryAccessSPSCITest.cpp
   bedrock/sps/NativeDylibManagerSPSCITest.cpp
   bedrock/sps/SessionSPSCITest.cpp
