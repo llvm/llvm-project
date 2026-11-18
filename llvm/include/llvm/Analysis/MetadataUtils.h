@@ -38,6 +38,14 @@ LLVM_ABI void
 copyMetadataForMemoryAccess(Instruction &Dest, const Instruction &Source,
                             std::optional<int64_t> DestByteOffset = 0);
 
+/// Copy metadata valid after splitting a vector instruction into scalar or
+/// smaller vector parts.
+/// For memory accesses, DestByteOffset is the destination's byte offset within
+/// the source access.
+LLVM_ABI void copyMetadataForScalarizedInstruction(
+    Instruction &Dest, const Instruction &Source,
+    std::optional<int64_t> DestByteOffset = std::nullopt);
+
 /// Copy the metadata from the source instruction to the destination (the
 /// replacement for the source instruction).
 LLVM_ABI void copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source);
