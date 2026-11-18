@@ -36,8 +36,7 @@ public:
   llvm::StringRef GetPluginName() override;
   std::optional<LLDBSettings> GetLLDBSettings() override;
   std::optional<AcceleratorActions> GetInitializeActions() override;
-  std::optional<AcceleratorActions>
-  NativeProcessIsStopping(lldb::pid_t pid) override;
+  std::optional<AcceleratorActions> NativeProcessIsStopping() override;
   llvm::Expected<AcceleratorBreakpointHitResponse>
   BreakpointWasHit(AcceleratorBreakpointHitArgs &args) override;
   void NativeProcessDidExit(const WaitStatus &exit_status) override;

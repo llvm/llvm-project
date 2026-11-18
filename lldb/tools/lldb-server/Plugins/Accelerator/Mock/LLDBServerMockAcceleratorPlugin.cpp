@@ -95,7 +95,7 @@ LLDBServerMockAcceleratorPlugin::GetInitializeActions() {
 }
 
 std::optional<AcceleratorActions>
-LLDBServerMockAcceleratorPlugin::NativeProcessIsStopping(lldb::pid_t) {
+LLDBServerMockAcceleratorPlugin::NativeProcessIsStopping() {
   if (!::getenv("LLDB_MOCK_ACCELERATOR_NATIVE_STOP_ACTIONS") ||
       m_sent_native_stop_actions.exchange(true))
     return std::nullopt;

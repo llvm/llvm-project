@@ -1127,7 +1127,7 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
     for (const std::unique_ptr<LLDBServerAcceleratorPlugin> &plugin_up :
          m_accelerator_plugins) {
       if (std::optional<AcceleratorActions> actions =
-              plugin_up->NativeProcessIsStopping(process.GetID()))
+              plugin_up->NativeProcessIsStopping())
         append_actions(*actions);
     }
 
