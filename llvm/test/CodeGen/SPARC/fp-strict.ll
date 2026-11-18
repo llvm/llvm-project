@@ -383,33 +383,34 @@ define i32 @fptoui_f64_i32(double %a) nounwind strictfp {
 ; V8-NEXT:    fcmped %f0, %f2
 ; V8-NEXT:    nop
 ; V8-NEXT:    fbl .LBB16_2
-; V8-NEXT:    mov %g0, %o0
+; V8-NEXT:    nop
 ; V8-NEXT:  ! %bb.1:
-; V8-NEXT:    mov %o0, %o1
-; V8-NEXT:    cmp %o1, 0
+; V8-NEXT:    mov %g0, %o0
+; V8-NEXT:    cmp %o0, 0
 ; V8-NEXT:    bne .LBB16_3
 ; V8-NEXT:    nop
 ; V8-NEXT:    ba .LBB16_4
 ; V8-NEXT:    nop
 ; V8-NEXT:  .LBB16_2:
-; V8-NEXT:    mov 1, %o1
-; V8-NEXT:    cmp %o1, 0
+; V8-NEXT:    mov 1, %o0
+; V8-NEXT:    cmp %o0, 0
 ; V8-NEXT:    be .LBB16_4
 ; V8-NEXT:    nop
 ; V8-NEXT:  .LBB16_3:
-; V8-NEXT:    sethi %hi(.LCPI16_1), %o2
-; V8-NEXT:    ldd [%o2+%lo(.LCPI16_1)], %f2
+; V8-NEXT:    sethi %hi(.LCPI16_1), %o1
+; V8-NEXT:    ldd [%o1+%lo(.LCPI16_1)], %f2
 ; V8-NEXT:  .LBB16_4:
+; V8-NEXT:    mov %g0, %o1
 ; V8-NEXT:    fsubd %f0, %f2, %f0
 ; V8-NEXT:    fdtoi %f0, %f0
-; V8-NEXT:    cmp %o1, 0
+; V8-NEXT:    cmp %o0, 0
 ; V8-NEXT:    bne .LBB16_6
 ; V8-NEXT:    st %f0, [%sp+92]
 ; V8-NEXT:  ! %bb.5:
-; V8-NEXT:    sethi 2097152, %o0
+; V8-NEXT:    sethi 2097152, %o1
 ; V8-NEXT:  .LBB16_6:
-; V8-NEXT:    ld [%sp+92], %o1
-; V8-NEXT:    xor %o1, %o0, %o0
+; V8-NEXT:    ld [%sp+92], %o0
+; V8-NEXT:    xor %o0, %o1, %o0
 ; V8-NEXT:    retl
 ; V8-NEXT:    add %sp, 104, %sp
 ;
