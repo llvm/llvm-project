@@ -6,6 +6,8 @@
 // RUN:   spirv-pc-vulkan1.3-library %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,SPVCHECK
 
+using namespace hlsl;
+
 // Test that the RWByteAddressBuffer::InterlockedCompareExchange and
 // InterlockedCompareExchange64 member methods lower to `resource_getpointer ->
 // cmpxchg`, for both DXIL and SPIR-V targets. The value that was in the

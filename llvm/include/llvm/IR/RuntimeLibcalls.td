@@ -129,7 +129,6 @@ def isX86 : RuntimeLibcallAvailability<(all_of IsX86)>;
 
 def isAArch64 : RuntimeLibcallAvailability<(all_of IsAArch64)>;
 
-def isLongDoubleX87 : RuntimeLibcallAvailability<(all_of IsLongDoubleX87)>;
 def isLongDoubleF128 : RuntimeLibcallAvailability<(all_of IsLongDoubleF128)>;
 def isLongDoublePPCF128 : RuntimeLibcallAvailability<(all_of IsLongDoublePPCF128)>;
 def isLongDoubleWide : RuntimeLibcallAvailability<
@@ -137,8 +136,6 @@ def isLongDoubleWide : RuntimeLibcallAvailability<
 
 // The l-suffixed sincos exists only when hasSinCos and the long double type
 // matches the width.
-def isLongDoubleX87AndHasSinCos : RuntimeLibcallAvailability<
-  (all_of IsLongDoubleX87, (any_of IsGNUEnv, IsOSFuchsia, IsAndroid))>;
 def isLongDoubleF128AndHasSinCos : RuntimeLibcallAvailability<
   (all_of IsLongDoubleF128, (any_of IsGNUEnv, IsOSFuchsia, IsAndroid))>;
 def isLongDoubleWideAndHasSinCos : RuntimeLibcallAvailability<
@@ -1155,9 +1152,13 @@ def MEMCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
 def MEMPCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
 def MEMPCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
 def MEMRCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
-def MEMSET_PATTERN16 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
-def MEMSET_PATTERN4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
-def MEMSET_PATTERN8 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+foreach Size = [4, 8, 16] in {
+  def MEMSET_PATTERN#Size : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
+    let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+    let Memory = ArgMemOnly;
+    let ParamAttrs = [[CapturesNone, WriteOnly], [CapturesNone, ReadOnly]];
+  }
+}
 def MKDIR : RuntimeLibcall<Int, [Ptr, IntX]>;
 def MKTIME : RuntimeLibcall<IntPlus, [Ptr]>;
 def MSVC_DELETE_ARRAY_PTR32 : RuntimeLibcall<Void, [Ptr]>;
@@ -3870,8 +3871,7 @@ def X86Libm : LibcallLibrary<"libm",
   (add X86_F128_Libcalls,
        LibcallImpls<(add sincosf, sincos), hasSinCos_f32_f64>,
        // frexpl/ldexpl are available on Windows too.
-       LibcallImpls<(add frexpl, ldexpl), isLongDoubleWide>,
-       LibcallImpls<(add sincosl), isLongDoubleX87AndHasSinCos>), isX86>;
+       LibcallImpls<(add frexpl, ldexpl), isLongDoubleWide>), isX86>;
 
 def X86SystemLibrary
     : SystemRuntimeLibrary<isX86,
@@ -3880,8 +3880,6 @@ def X86SystemLibrary
 
 def : LibraryExclusion<"compiler-rt", isX86,
   !listconcat(WindowsDivRemMulLibcallOverrides, [__powitf2_f128])>;
-// x86 has no fp128 sincosl, only the x87 one.
-def : LibraryExclusion<"libm", isX86, [sincosl]>;
 def : LibraryExclusion<"libc", isX86, !listconcat(MemChkLibcalls, [bzero])>;
 
 //===----------------------------------------------------------------------===//

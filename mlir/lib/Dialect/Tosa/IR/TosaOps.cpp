@@ -327,7 +327,7 @@ Value mlir::tosa::createPadConstTensor(OpBuilder &builder, Location loc,
 unsigned mlir::tosa::getBitWidth(Type type) {
   if (auto blockScaledTy = dyn_cast<tosa::BlockScaledType>(type))
     return getBitWidth(blockScaledTy.getValueType());
-  if (dyn_cast<tosa::mxint8Type>(type))
+  if (isa<MXI8Type, tosa::mxint8Type>(type))
     return 8;
   return type.getIntOrFloatBitWidth();
 }
@@ -549,7 +549,7 @@ static void printScaleValues(AsmPrinter &printer,
 
 size_t mlir::tosa::BlockScaledType::getDenseElementBitSize() const {
   const Type valueType = getValueType();
-  if (isa<tosa::mxint8Type>(valueType))
+  if (isa<MXI8Type, tosa::mxint8Type>(valueType))
     return 8;
   return valueType.getIntOrFloatBitWidth();
 }
@@ -561,6 +561,8 @@ mlir::tosa::BlockScaledType::convertToAttribute(ArrayRef<char> rawData) const {
   // to 8-bits.
   assert(rawData.size() == 1 && "expected 1 byte for block_scaled element");
   const Type valueType = getValueType();
+  if (const auto mxi8Value = dyn_cast<MXI8Type>(valueType))
+    return mxi8Value.convertToAttribute(rawData);
   if (const auto mxint8Value = dyn_cast<tosa::mxint8Type>(valueType))
     return mxint8Value.convertToAttribute(rawData);
   if (!isa<FloatType>(valueType))
@@ -571,6 +573,8 @@ mlir::tosa::BlockScaledType::convertToAttribute(ArrayRef<char> rawData) const {
 LogicalResult mlir::tosa::BlockScaledType::convertFromAttribute(
     Attribute attr, SmallVectorImpl<char> &result) const {
   const Type valueType = getValueType();
+  if (const auto mxi8Value = dyn_cast<MXI8Type>(valueType))
+    return mxi8Value.convertFromAttribute(attr, result);
   if (const auto mxint8Value = dyn_cast<tosa::mxint8Type>(valueType))
     return mxint8Value.convertFromAttribute(attr, result);
 
@@ -2691,13 +2695,22 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
   ShapeAdaptor inputShape(adaptor.getInput1().getType());
   Type inputType = getElementTypeOrSelf(adaptor.getInput1().getType());
   llvm::SmallVector<int64_t> newShapeValue;
+  // A shape that is not a compile-time constant, or that contains a dimension
+  // which cannot describe a TOSA tensor (a negative value other than the
+  // inferable -1, or zero), cannot be used to infer the result type. Fall back
+  // to dynamic dimensions and let tosa-validate diagnose the shape. Such a
+  // dimension must not reach RankedTensorType::get().
   if (!tosa::getConstShapeValues(adaptor.getShape().getDefiningOp(),
-                                 newShapeValue)) {
+                                 newShapeValue) ||
+      llvm::any_of(newShapeValue, [](int64_t dim) {
+        return dim == 0 || dim < kInferableDimSize;
+      })) {
     auto rank = cast<tosa::shapeType>(adaptor.getShape().getType()).getRank();
     SmallVector<int64_t> fallback(rank, ShapedType::kDynamic);
     inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
     return success();
   }
+
   newShapeValue = convertToMlirShape(newShapeValue);
 
   // We cannot infer from the total number of elements so we must take the
@@ -2731,64 +2744,19 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
 }
 
 llvm::LogicalResult tosa::ReshapeOp::verify() {
+  TensorType outputType = getOutput().getType();
   if (verifySameElementTypes(*this, /* inType = */ getInput1().getType(),
-                             /* outType = */ getOutput().getType())
+                             outputType)
           .failed()) {
     return failure();
   }
-  TensorType inputType = getInput1().getType();
 
-  SmallVector<int64_t> shapeValues;
-  if (!tosa::getConstShapeValues(getShape().getDefiningOp(), shapeValues)) {
-    // skip following checks if shape is not constant
-    return mlir::success();
-  }
-
-  int missingDims = llvm::count(shapeValues, kInferableDimSize);
-  if (missingDims > 1)
-    return emitOpError() << "expected at most one target dimension to be "
-                         << kInferableDimSize;
-
-  const auto outputType = dyn_cast<RankedTensorType>(getType());
-  if (!outputType)
-    return success();
-
-  if ((int64_t)shapeValues.size() != outputType.getRank())
-    return emitOpError() << "new shape does not match result rank";
-
-  for (auto [newShapeDim, outputShapeDim] :
-       zip(shapeValues, outputType.getShape())) {
-    if (newShapeDim != kInferableDimSize &&
-        newShapeDim != ShapedType::kDynamic &&
-        outputShapeDim != ShapedType::kDynamic && newShapeDim != outputShapeDim)
-      return emitOpError() << "new shape is inconsistent with result shape";
-
-    if (newShapeDim != ShapedType::kDynamic && newShapeDim < kInferableDimSize)
-      return emitOpError() << "new shape has invalid tensor dimension size "
-                           << newShapeDim;
-  }
-
-  if (inputType.hasStaticShape()) {
-    int64_t inputElementsNum = inputType.getNumElements();
-    if (outputType.hasStaticShape()) {
-      int64_t outputElementsNum = outputType.getNumElements();
-      if (inputElementsNum != outputElementsNum) {
-        return emitOpError() << "cannot reshape " << inputElementsNum
-                             << " elements into " << outputElementsNum;
-      }
-    }
-
-    int64_t newShapeElementsNum =
-        llvm::accumulate(shapeValues, int64_t(1), [](int64_t acc, int64_t dim) {
-          return (dim > 0) ? acc * dim : acc;
-        });
-    bool isStaticNewShape =
-        llvm::all_of(shapeValues, [](int64_t s) { return s > 0; });
-    if ((isStaticNewShape && inputElementsNum != newShapeElementsNum) ||
-        (!isStaticNewShape && newShapeElementsNum > inputElementsNum)) {
-      return emitOpError() << "cannot reshape " << inputElementsNum
-                           << " elements into " << newShapeElementsNum;
-    }
+  // The rank of the shape operand is encoded in its type (`!tosa.shape<N>`),
+  // so it can be compared without inspecting the constant values.
+  if (auto rankedOutputType = dyn_cast<RankedTensorType>(outputType)) {
+    if (cast<tosa::shapeType>(getShape().getType()).getRank() !=
+        rankedOutputType.getRank())
+      return emitOpError() << "new shape does not match result rank";
   }
 
   return mlir::success();

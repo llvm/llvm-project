@@ -209,8 +209,10 @@ bool isCombinedConstruct(Directive D) {
 }
 
 ArrayRef<Version> getOpenMPVersions() {
-  static Version Versions[]{Version(31), Version(40), Version(45), Version(50),
-                            Version(51), Version(52), Version(60), Version(61)};
+  static Version Versions[]{
+      Version(31), Version(40), Version(45), Version(50), Version(51),
+      Version(52), Version(60), Version(61), Version(70),
+  };
   return Versions;
 }
 

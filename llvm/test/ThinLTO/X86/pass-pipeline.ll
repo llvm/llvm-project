@@ -32,9 +32,9 @@
 
 ; O0: pipeline-passes: {{.*}}wholeprogramdevirt,lowertypetests,drop-type-tests<assume>,
 
-; OPT: pipeline-passes: {{.*}}wholeprogramdevirt,lowertypetests,pgo-icall-prom,openmp-opt,drop-type-tests<assume>,ipsccp,
+; OPT: pipeline-passes: {{.*}}wholeprogramdevirt,pgo-icall-prom,openmp-opt,lowertypetests,drop-type-tests<assume>,ipsccp,
 
-; SAMPLEPGO: pipeline-passes: {{.*}}wholeprogramdevirt,lowertypetests,sample-profile,require<profile-summary>,pgo-icall-prom,openmp-opt,drop-type-tests<assume>,ipsccp,
+; SAMPLEPGO: pipeline-passes: {{.*}}wholeprogramdevirt,sample-profile,require<profile-summary>,pgo-icall-prom,openmp-opt,lowertypetests,drop-type-tests<assume>,ipsccp,
 
 ; CTXPROF: pipeline-passes: {{.*}}wholeprogramdevirt,lowertypetests,module-inline,
 
