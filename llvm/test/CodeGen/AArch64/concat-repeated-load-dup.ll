@@ -106,11 +106,11 @@ define void @load_v4i8_v16i8_concat_two(ptr %q0, ptr %q1, ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    ldr s1, [x1]
-; CHECK-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-NEXT:    zip1 v1.8b, v1.8b, v1.8b
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v0.16b
-; CHECK-NEXT:    str q0, [x2]
+; CHECK-NEXT:    mov v2.16b, v0.16b
+; CHECK-NEXT:    mov v2.s[1], v1.s[0]
+; CHECK-NEXT:    mov v2.s[2], v0.s[0]
+; CHECK-NEXT:    mov v2.s[3], v1.s[0]
+; CHECK-NEXT:    str q2, [x2]
 ; CHECK-NEXT:    ret
   %x = load <4 x i8>, ptr %q0
   %y = load <4 x i8>, ptr %q1
