@@ -173,7 +173,9 @@ class ReadElfExtractor(object):
             if new_sym["type"] == "NOTYPE":
                 continue
             if new_sym["type"] == "IFUNC":
-                # Callers see an IFUNC as a normal function, so record it as FUNC.
+                # Switching between IFUNC and FUNC is not an ABI break since
+                # callers cannot tell the difference, so record IFUNC as FUNC
+                # to avoid false positives when diffing symbol lists.
                 new_sym["type"] = "FUNC"
             if new_sym["type"] == "FUNC":
                 del new_sym["size"]
