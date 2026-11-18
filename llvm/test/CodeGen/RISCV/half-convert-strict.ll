@@ -282,7 +282,7 @@ define signext i32 @fcvt_w_h_signext(half %a) nounwind strictfp {
 ; CHECK64-D-NEXT:    srli a0, a0, 48
 ; CHECK64-D-NEXT:    fmv.w.x fa0, a0
 ; CHECK64-D-NEXT:    call __extendhfsf2
-; CHECK64-D-NEXT:    fcvt.l.s a0, fa0, rtz
+; CHECK64-D-NEXT:    fcvt.w.s a0, fa0, rtz
 ; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK64-D-NEXT:    addi sp, sp, 16
 ; CHECK64-D-NEXT:    ret
@@ -358,7 +358,7 @@ define i32 @fcvt_w_h(half %a) nounwind strictfp {
 ; CHECK64-D-NEXT:    srli a0, a0, 48
 ; CHECK64-D-NEXT:    fmv.w.x fa0, a0
 ; CHECK64-D-NEXT:    call __extendhfsf2
-; CHECK64-D-NEXT:    fcvt.l.s a0, fa0, rtz
+; CHECK64-D-NEXT:    fcvt.w.s a0, fa0, rtz
 ; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK64-D-NEXT:    addi sp, sp, 16
 ; CHECK64-D-NEXT:    ret
@@ -434,8 +434,7 @@ define signext i32 @fcvt_wu_h_signext(half %a) nounwind strictfp {
 ; CHECK64-D-NEXT:    srli a0, a0, 48
 ; CHECK64-D-NEXT:    fmv.w.x fa0, a0
 ; CHECK64-D-NEXT:    call __extendhfsf2
-; CHECK64-D-NEXT:    fcvt.l.s a0, fa0, rtz
-; CHECK64-D-NEXT:    sext.w a0, a0
+; CHECK64-D-NEXT:    fcvt.wu.s a0, fa0, rtz
 ; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK64-D-NEXT:    addi sp, sp, 16
 ; CHECK64-D-NEXT:    ret
@@ -511,7 +510,7 @@ define i32 @fcvt_wu_h(half %a) nounwind strictfp {
 ; CHECK64-D-NEXT:    srli a0, a0, 48
 ; CHECK64-D-NEXT:    fmv.w.x fa0, a0
 ; CHECK64-D-NEXT:    call __extendhfsf2
-; CHECK64-D-NEXT:    fcvt.l.s a0, fa0, rtz
+; CHECK64-D-NEXT:    fcvt.wu.s a0, fa0, rtz
 ; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK64-D-NEXT:    addi sp, sp, 16
 ; CHECK64-D-NEXT:    ret
@@ -614,7 +613,7 @@ define i32 @fcvt_wu_h_multiple_use(half %x, ptr %y) strictfp {
 ; CHECK64-D-NEXT:    srli a0, a0, 48
 ; CHECK64-D-NEXT:    fmv.w.x fa0, a0
 ; CHECK64-D-NEXT:    call __extendhfsf2
-; CHECK64-D-NEXT:    fcvt.l.s a0, fa0, rtz
+; CHECK64-D-NEXT:    fcvt.wu.s a0, fa0, rtz
 ; CHECK64-D-NEXT:    seqz a1, a0
 ; CHECK64-D-NEXT:    add a0, a0, a1
 ; CHECK64-D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload

@@ -235,7 +235,7 @@ define i32 @fcvt_w_bf16(bfloat %a) nounwind {
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
-; RV64ID-NEXT:    fcvt.l.s a0, fa5, rtz
+; RV64ID-NEXT:    fcvt.w.s a0, fa5, rtz
 ; RV64ID-NEXT:    ret
   %1 = fptosi bfloat %a to i32
   ret i32 %1
@@ -267,7 +267,7 @@ define signext i32 @fcvt_w_bf16_signext(bfloat %a) nounwind {
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
-; RV64ID-NEXT:    fcvt.l.s a0, fa5, rtz
+; RV64ID-NEXT:    fcvt.w.s a0, fa5, rtz
 ; RV64ID-NEXT:    ret
   %1 = fptosi bfloat %a to i32
   ret i32 %1
@@ -348,7 +348,7 @@ define i32 @fcvt_wu_bf16(bfloat %a) nounwind {
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
-; RV64ID-NEXT:    fcvt.lu.s a0, fa5, rtz
+; RV64ID-NEXT:    fcvt.wu.s a0, fa5, rtz
 ; RV64ID-NEXT:    ret
   %1 = fptoui bfloat %a to i32
   ret i32 %1
@@ -380,8 +380,7 @@ define signext i32 @fcvt_wu_bf16_signext(bfloat %a) nounwind {
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
-; RV64ID-NEXT:    fcvt.lu.s a0, fa5, rtz
-; RV64ID-NEXT:    sext.w a0, a0
+; RV64ID-NEXT:    fcvt.wu.s a0, fa5, rtz
 ; RV64ID-NEXT:    ret
   %1 = fptoui bfloat %a to i32
   ret i32 %1
@@ -419,7 +418,7 @@ define i32 @fcvt_wu_bf16_multiple_use(bfloat %x, ptr %y) nounwind {
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
 ; RV64ID-NEXT:    slli a0, a0, 16
 ; RV64ID-NEXT:    fmv.w.x fa5, a0
-; RV64ID-NEXT:    fcvt.lu.s a0, fa5, rtz
+; RV64ID-NEXT:    fcvt.wu.s a0, fa5, rtz
 ; RV64ID-NEXT:    seqz a1, a0
 ; RV64ID-NEXT:    add a0, a0, a1
 ; RV64ID-NEXT:    ret
