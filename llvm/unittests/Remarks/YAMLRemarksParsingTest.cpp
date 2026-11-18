@@ -97,7 +97,7 @@ TEST(YAMLRemarks, ParsingEmpty) {
 }
 
 TEST(YAMLRemarks, Parsing64BitHotness) {
-  for (uint64_t Hotness : {uint64_t(4294967296), UINT64_MAX}) {
+  for (uint64_t Hotness : {uint64_t(1) << 32, UINT64_MAX}) {
     std::string Buf = "--- !Passed\nPass: inline\nName: Inlined\n"
                       "Function: caller\nHotness: " +
                       std::to_string(Hotness) + "\n";

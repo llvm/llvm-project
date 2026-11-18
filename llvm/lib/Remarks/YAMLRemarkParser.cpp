@@ -289,18 +289,6 @@ Expected<StringRef> YAMLRemarkParser::parseStr(yaml::KeyValueNode &Node) {
   return error("expected a value of scalar type.", Node);
 }
 
-template <typename T>
-Expected<T> YAMLRemarkParser::parseUnsigned(yaml::KeyValueNode &Node) {
-  SmallVector<char, 4> Tmp;
-  auto *Value = dyn_cast_if_present<yaml::ScalarNode>(Node.getValue());
-  if (!Value)
-    return error("expected a value of scalar type.", Node);
-  T UnsignedValue = 0;
-  if (Value->getValue(Tmp).getAsInteger(10, UnsignedValue))
-    return error("expected a value of integer type.", *Value);
-  return UnsignedValue;
-}
-
 Expected<RemarkLocation>
 YAMLRemarkParser::parseDebugLoc(yaml::KeyValueNode &Node) {
   auto *DebugLoc = dyn_cast_if_present<yaml::MappingNode>(Node.getValue());
