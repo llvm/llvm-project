@@ -173,6 +173,19 @@ define i32 @sdiv_neg_neg_x_not_signmask(i32 %a, i32 %y) {
   ret i32 %sdiv
 }
 
+define i32 @sdiv_neg_neg_x_not_signmask_noundef(i32 noundef %a, i32 %y) {
+; CHECK-LABEL: @sdiv_neg_neg_x_not_signmask_noundef(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[A:%.*]], 2147483647
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[SDIV]]
+;
+  %x = and i32 %a, 2147483647
+  %neg.x = sub nsw i32 0, %x
+  %neg.y = sub nsw i32 0, %y
+  %sdiv = sdiv i32 %neg.x, %neg.y
+  ret i32 %sdiv
+}
+
 define i32 @sdiv_neg_neg_y_not_allones(i32 %x, i32 %b) {
 ; CHECK-LABEL: @sdiv_neg_neg_y_not_allones(
 ; CHECK-NEXT:    [[Y:%.*]] = and i32 [[B:%.*]], -2
