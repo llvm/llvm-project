@@ -3577,17 +3577,12 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
     }
 
     auto *file = dyn_cast<ObjFile<ELFT>>(s->file);
-    // DATASEC offsets without relocations are relative to the named input
-    // section. Do not guess if that name is ambiguous.
-    StringMap<InputSectionBase *> sectionsByName;
-    if (file)
-      for (InputSectionBase *sec : file->getSections())
-        if (sec && sec != &InputSection::discarded &&
-            !sectionsByName.try_emplace(sec->name, sec).second)
-          sectionsByName[sec->name] = nullptr;
-
     DenseMap<uint64_t, size_t> offsetToVar;
-    SmallVector<Var, 0> vars;
+    struct Entry {
+      Var var;
+      StringRef sectionName;
+    };
+    SmallVector<Entry, 0> vars;
     uint64_t offset =
         uint64_t(read32(ctx, data.data() + offsetof(BTF::Header, HdrLen))) +
         read32(ctx, data.data() + offsetof(BTF::Header, TypeOff));
@@ -3595,7 +3590,7 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
       const auto *type = builder.findType(id);
       if (type->getKind() == BTF::BTF_KIND_DATASEC) {
         hasDataSecs = true;
-        auto *sec = sectionsByName.lookup(builder.findString(type->NameOff));
+        StringRef sectionName = builder.findString(type->NameOff);
         auto *entries = reinterpret_cast<const BTF::BTFDataSec *>(type + 1);
         for (uint32_t i = 0; i != type->getVlen(); ++i) {
           if (s->relSecIdx)
@@ -3604,7 +3599,8 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
                                         offsetof(BTF::BTFDataSec, Offset),
                                     vars.size());
           const auto &entry = entries[i];
-          vars.push_back({sec, nullptr, entry.Offset, entry.Type, entry.Size});
+          vars.push_back(
+              {{nullptr, nullptr, 0, entry.Type, entry.Size}, sectionName});
         }
       }
       offset += builder.getTypeBytes(id).size();
@@ -3621,9 +3617,9 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
                            << " does not target a DATASEC VarSecinfo offset";
             continue;
           }
-          Var &var = vars[it->second];
+          auto &[var, sectionName] = vars[it->second];
           offsetToVar.erase(it);
-          var.section = nullptr;
+          sectionName = {};
           Symbol &sym = file->getRelocTargetSym(rel);
           RelType type = rel.getType(ctx.arg.isMips64EL);
           const uint8_t *bufLoc = data.data() + loc;
@@ -3632,19 +3628,14 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
             continue;
           }
 
-          // Check the original definition as well as the resolved symbol:
-          // a relocation in a COMDAT loser can resolve to the winning symbol.
+          auto *ds = dyn_cast<Defined>(&sym);
+          if (!ds || !ds->section || ds->file != file)
+            continue;
+          // A discarded or overridden definition can resolve to the winner.
           uint32_t symIndex = rel.getSymbol(ctx.arg.isMips64EL);
           uint32_t secIndex = file->getSectionIndex(
               file->template getELFSyms<ELFT>()[symIndex]);
-          if (secIndex) {
-            auto *original = file->getSections()[secIndex];
-            if (!original || original == &InputSection::discarded ||
-                !original->isLive())
-              continue;
-          }
-          auto *ds = dyn_cast<Defined>(&sym);
-          if (!ds || !ds->section)
+          if (secIndex && ds->section != file->getSections()[secIndex])
             continue;
           var.section = ds->section;
           var.sym = ds;
@@ -3656,10 +3647,41 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
       invokeOnRelocs(*s, readRelocs, data);
     }
 
-    for (const Var &var : vars)
+    // GCC can leave placeholder offsets without relocations. Use this file's
+    // prevailing definitions, indexed by input section name and ELF name.
+    std::optional<DenseMap<std::pair<StringRef, StringRef>, const Defined *>>
+        definitions;
+    for (auto &[var, sectionName] : vars) {
+      if (file && !sectionName.empty()) {
+        const auto *type = builder.findType(var.type);
+        if (!type || type->getKind() != BTF::BTF_KIND_VAR)
+          continue;
+        if (!definitions) {
+          definitions.emplace();
+          auto elfSyms = file->template getELFSyms<ELFT>();
+          for (auto [i, sym] : llvm::enumerate(file->getSymbols())) {
+            auto *ds = dyn_cast_or_null<Defined>(sym);
+            if (!ds || ds->file != file || !ds->section ||
+                ds->section == &InputSection::discarded ||
+                !ds->section->isLive())
+              continue;
+            StringRef name = check(elfSyms[i].getName(file->getStringTable()));
+            auto [it, inserted] = definitions->try_emplace(
+                std::pair{ds->section->name, name}, ds);
+            if (!inserted && it->second != ds)
+              it->second = nullptr;
+          }
+        }
+        if (const Defined *ds = definitions->lookup(
+                {sectionName, builder.findString(type->NameOff)})) {
+          var.section = ds->section;
+          var.addend = ds->value;
+        }
+      }
       if (var.type && var.section && var.section->isLive())
         if (const OutputSection *osec = var.section->getOutputSection())
           groups[osec].push_back(var);
+    }
   }
 
   if (builder.typesCount() == 0)
