@@ -667,7 +667,7 @@ static std::optional<APInt> DecodeNEONSplat(SDValue N,
     if (auto *Const = dyn_cast<ConstantSDNode>(N->getOperand(0)))
       return Const->getAPIntValue().trunc(SplatWidth);
   APInt SplatVal;
-  if (ISD::isConstantSplatVector(N.getNode(), SplatVal))
+  if (ISD::isConstantSplatVector(N, SplatVal))
     return SplatVal.trunc(SplatWidth);
   // TODO: Recognize more splat-like NEON operations. See ConstantBuildVector
   // in AArch64ISelLowering.
@@ -2836,6 +2836,10 @@ void AArch64DAGToDAGISel::SelectLoadLane(SDNode *N, unsigned NumVecs,
     ReplaceUses(SDValue(N, i), NV);
   }
 
+  // Transfer memoperands.
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ld), {MemOp});
+
   ReplaceUses(SDValue(N, NumVecs), SDValue(Ld, 1));
   CurDAG->RemoveDeadNode(N);
 }
@@ -2888,6 +2892,10 @@ void AArch64DAGToDAGISel::SelectPostLoadLane(SDNode *N, unsigned NumVecs,
       ReplaceUses(SDValue(N, i), NV);
     }
   }
+
+  // Transfer memoperands.
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ld), {MemOp});
 
   // Update the Chain
   ReplaceUses(SDValue(N, NumVecs + 1), SDValue(Ld, 2));
@@ -4965,8 +4973,8 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
     }
 
     APInt ShlAmt, ShrAmt;
-    if (!ISD::isConstantSplatVector(N0.getOperand(2).getNode(), ShlAmt) ||
-        !ISD::isConstantSplatVector(N1.getOperand(2).getNode(), ShrAmt))
+    if (!ISD::isConstantSplatVector(N0.getOperand(2), ShlAmt) ||
+        !ISD::isConstantSplatVector(N1.getOperand(2), ShrAmt))
       return false;
 
     if (ShlAmt + ShrAmt != VT.getScalarSizeInBits())

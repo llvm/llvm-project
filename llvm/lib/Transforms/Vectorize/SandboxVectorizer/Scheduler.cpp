@@ -509,14 +509,27 @@ bool Scheduler::trySchedule(BndlRef<Instruction *> Instrs) {
 #endif
     }
     // Extend the DAG to include Instrs.
-    Interval<Instruction> Extension = DAG.extend(Instrs);
-    // Add nodes from the new interval to ready list if they are ready.
-    for (auto &I : Extension) {
-      auto *N = DAG.getNode(&I);
-      if (N->scheduled())
-        continue;
-      if (N->ready() && !ReadyList.contains(N))
-        ReadyList.insert(N);
+    Interval<Instruction> DAGExtension = DAG.extend(Instrs);
+    if (!DAGExtension.empty()) {
+      // DAG.extend() does not always give us the full range of instrs between
+      // the scheduling frontier and the furthest instr in the DAG, because the
+      // DAG may already include newly created instrs that have not been
+      // scheduled. So we need to include all instructions between the frontier
+      // and the furthest instr in the DAG.
+      Interval<Instruction> Extension = DAGExtension;
+      SchedulingPoint Frontier = *ScheduleFrontierOpt;
+      if (Dir == SchedDirection::BottomUp)
+        Extension = {DAGExtension.top(), &*Frontier.getPrev().getIterator()};
+      else
+        Extension = {&*Frontier.getNext().getIterator(), DAGExtension.bottom()};
+      // Add nodes from the new interval to ready list if they are ready.
+      for (auto &I : Extension) {
+        auto *N = DAG.getNode(&I);
+        if (N->scheduled())
+          continue;
+        if (N->ready() && !ReadyList.contains(N))
+          ReadyList.insert(N);
+      }
     }
     // Try schedule all nodes until we can schedule Instrs back-to-back.
     return tryScheduleUntil(Instrs);
