@@ -501,3 +501,92 @@ entry:
   %land.ext = zext i1 %0 to i32
   ret i32 %land.ext
 }
+
+; Boundary immediates (±32) in the second conjunct of select-with-and chains.
+define i32 @compare_with_neg_32(i32 %a, i32 %b, i32 %c) {
+; CHECK-SD-LABEL: compare_with_neg_32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmp w0, w2
+; CHECK-SD-NEXT:    ccmn w1, #31, #8, lt
+; CHECK-SD-NEXT:    csel w0, w1, w0, ge
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: compare_with_neg_32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #-32 // =0xffffffe0
+; CHECK-GI-NEXT:    cmp w0, w2
+; CHECK-GI-NEXT:    ccmp w1, w8, #4, lt
+; CHECK-GI-NEXT:    csel w0, w1, w0, gt
+; CHECK-GI-NEXT:    ret
+  %cmp = icmp sgt i32 %b, -32
+  %cmp1 = icmp slt i32 %a, %c
+  %or.cond = and i1 %cmp, %cmp1
+  %cond = select i1 %or.cond, i32 %b, i32 %a
+  ret i32 %cond
+}
+
+define i32 @compare_with_32(i32 %a, i32 %b, i32 %c) {
+; CHECK-SD-LABEL: compare_with_32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmp w0, w2
+; CHECK-SD-NEXT:    ccmp w1, #31, #0, lt
+; CHECK-SD-NEXT:    csel w0, w1, w0, le
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: compare_with_32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #32 // =0x20
+; CHECK-GI-NEXT:    cmp w0, w2
+; CHECK-GI-NEXT:    ccmp w1, w8, #0, lt
+; CHECK-GI-NEXT:    csel w0, w1, w0, lt
+; CHECK-GI-NEXT:    ret
+  %cmp = icmp slt i32 %b, 32
+  %cmp1 = icmp slt i32 %a, %c
+  %or.cond = and i1 %cmp, %cmp1
+  %cond = select i1 %or.cond, i32 %b, i32 %a
+  ret i32 %cond
+}
+
+define i32 @compare_with_neg_32_unsigned(i32 %a, i32 %b, i32 %c) {
+; CHECK-SD-LABEL: compare_with_neg_32_unsigned:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmp w0, w2
+; CHECK-SD-NEXT:    ccmn w1, #31, #0, lo
+; CHECK-SD-NEXT:    csel w0, w1, w0, hs
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: compare_with_neg_32_unsigned:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #-32 // =0xffffffe0
+; CHECK-GI-NEXT:    cmp w0, w2
+; CHECK-GI-NEXT:    ccmp w1, w8, #0, lo
+; CHECK-GI-NEXT:    csel w0, w1, w0, hi
+; CHECK-GI-NEXT:    ret
+  %cmp = icmp ugt i32 %b, -32
+  %cmp1 = icmp ult i32 %a, %c
+  %or.cond = and i1 %cmp, %cmp1
+  %cond = select i1 %or.cond, i32 %b, i32 %a
+  ret i32 %cond
+}
+
+define i32 @compare_with_32_unsigned(i32 %a, i32 %b, i32 %c) {
+; CHECK-SD-LABEL: compare_with_32_unsigned:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmp w0, w2
+; CHECK-SD-NEXT:    ccmp w1, #31, #2, lo
+; CHECK-SD-NEXT:    csel w0, w1, w0, ls
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: compare_with_32_unsigned:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #32 // =0x20
+; CHECK-GI-NEXT:    cmp w0, w2
+; CHECK-GI-NEXT:    ccmp w1, w8, #2, lo
+; CHECK-GI-NEXT:    csel w0, w1, w0, lo
+; CHECK-GI-NEXT:    ret
+  %cmp = icmp ult i32 %b, 32
+  %cmp1 = icmp ult i32 %a, %c
+  %or.cond = and i1 %cmp, %cmp1
+  %cond = select i1 %or.cond, i32 %b, i32 %a
+  ret i32 %cond
+}
