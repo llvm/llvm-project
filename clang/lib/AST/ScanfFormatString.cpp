@@ -60,7 +60,7 @@ bool ScanfFormatStringParser::parseScanList(ScanfConversionSpecifier &CS,
   }
 
   // Special case: ']' is the first character.
-  if (*I == ']') {
+  if (FormatStrConverter.convertBasicChar(*I) == u8']') {
     if (++I == E) {
       H.HandleIncompleteScanList(start, I - 1);
       return true;
@@ -68,7 +68,8 @@ bool ScanfFormatStringParser::parseScanList(ScanfConversionSpecifier &CS,
   }
 
   // Special case: "^]" are the first characters.
-  if (I + 1 != E && I[0] == '^' && I[1] == ']') {
+  if (I + 1 != E && FormatStrConverter.convertBasicChar(I[0]) == u8'^' &&
+      FormatStrConverter.convertBasicChar(I[1]) == u8']') {
     I += 2;
     if (I == E) {
       H.HandleIncompleteScanList(start, I - 1);
@@ -77,7 +78,7 @@ bool ScanfFormatStringParser::parseScanList(ScanfConversionSpecifier &CS,
   }
 
   // Look for a ']' character which denotes the end of the scan list.
-  while (*I != ']') {
+  while (FormatStrConverter.convertBasicChar(*I) != u8']') {
     if (++I == E) {
       H.HandleIncompleteScanList(start, I - 1);
       return true;

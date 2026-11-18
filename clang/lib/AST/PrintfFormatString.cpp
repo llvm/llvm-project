@@ -86,7 +86,7 @@ bool PrintfFormatStringParser::parseObjCFlags(PrintfSpecifier &FS,
   }
   // Handle either the case of no flag or an invalid flag.
   if (Warn) {
-    if (Flag == "")
+    if (Flag.empty())
       H.HandleEmptyObjCModifierFlag(FlagBeg, E - FlagBeg);
     else
       H.HandleInvalidObjCModifierFlag(FlagBeg, E - FlagBeg);
@@ -146,9 +146,8 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
     StringRef MatchedStr;
 
     do {
-      const char *II;
       std::string S(I, E - I);
-      for (unsigned long i = 0; i < S.length(); ++i)
+      for (size_t i = 0; i < S.length(); ++i)
         S[i] = FormatStrConverter.convertBasicChar(S[i]);
       StringRef Str(S);
       std::string Match = "^[[:space:]]*"
@@ -158,37 +157,28 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
       SmallVector<StringRef, 2> Matches;
 
       if (R.match(Str, &Matches)) {
-        MatchedStr = Matches[1];
-        II = I;
+        StringRef MatchedStrUTF8 = Matches[1];
+        MatchedStr =
+            StringRef(I + (Matches[1].data() - Str.data()), Matches[1].size());
         I += Matches[0].size();
-
-        while (FormatStrConverter.convertBasicChar(*II) == u8' ')
-          ++II;
 
         // Set the privacy flag if the privacy annotation in the
         // comma-delimited segment is at least as strict as the privacy
         // annotations in previous comma-delimited segments.
-        if (MatchedStr.starts_with("mask")) {
-          StringRef MaskType(II + sizeof("mask.") - 1,
-                             MatchedStr.size() - sizeof("mask.") + 1);
+        if (MatchedStrUTF8.starts_with("mask")) {
+          StringRef MaskType = MatchedStr.substr(sizeof("mask.") - 1);
           unsigned Size = MaskType.size();
 
           if (Warn && (Size == 0 || Size > 8))
             H.handleInvalidMaskType(MaskType);
           FS.setMaskType(MaskType);
-        } else if (MatchedStr == "sensitive") {
-          StringRef ProxyMatchedStr(II, sizeof("sensitive") - 1);
-          MatchedStr = ProxyMatchedStr;
+        } else if (MatchedStrUTF8 == "sensitive") {
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsSensitive;
         } else if (PrivacyFlags !=
                        clang::analyze_os_log::OSLogBufferItem::IsSensitive &&
-                   MatchedStr == "private") {
-          StringRef ProxyMatchedStr(II, sizeof("private") - 1);
-          MatchedStr = ProxyMatchedStr;
+                   MatchedStrUTF8 == "private") {
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsPrivate;
-        } else if (PrivacyFlags == 0 && MatchedStr == "public") {
-          StringRef ProxyMatchedStr(II, sizeof("public") - 1);
-          MatchedStr = ProxyMatchedStr;
+        } else if (PrivacyFlags == 0 && MatchedStrUTF8 == "public") {
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsPublic;
         }
       } else {
@@ -232,23 +222,23 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
     default:
       hasMore = false;
       break;
-    case '\'':
+    case u8'\'':
       // FIXME: POSIX specific.  Always accept?
       FS.setHasThousandsGrouping(I);
       break;
-    case '-':
+    case u8'-':
       FS.setIsLeftJustified(I);
       break;
-    case '+':
+    case u8'+':
       FS.setHasPlusPrefix(I);
       break;
-    case ' ':
+    case u8' ':
       FS.setHasSpacePrefix(I);
       break;
-    case '#':
+    case u8'#':
       FS.setHasAlternativeForm(I);
       break;
-    case '0':
+    case u8'0':
       FS.setHasLeadingZeros(I);
       break;
     }
