@@ -4,7 +4,7 @@
 
 Libc++ provides an implementation of C++17 parallel algorithms
 ([P0024R2](https://wg21.link/p0024r2)). No build flags are required to enable
-parallelism, however not every standard algorithm has a parallel implementation
+parallelism; however, not every standard algorithm has a parallel implementation
 at the moment.
 
 The underlying parallel executor varies between platforms, as libc++ tries to
@@ -14,16 +14,16 @@ Currently these executors are employed:
 - Thread Pool API on Windows platforms ([doc](https://learn.microsoft.com/en-us/windows/win32/procthread/thread-pool-api))
 - A custom thread pool on platforms that support `std::thread`
 
-The implementation of PSTL in libc++ aims to perform correctly in any usage scenarios, e.g.:
+The implementation of PSTL in libc++ aims to perform correctly in all usage scenarios, e.g.:
 - Calling parallel algorithms concurrently.
 - Nested (recursive) calls to parallel algorithms (however parallelism can be limited in this case).
 - Invoking PSTL before or after the `main` function.
-- Targetting a platform with no support for threads.
-- Running on a system has only a single CPU core.
+- Targeting a platform with no support for threads.
+- Running on a system that has only a single CPU core.
 
 Generally, random-access iterators are required to enable parallel
 implementations of the algorithms. The exception is `std::for_each` and the
-family of algorithms based on it (e.g. `fill`, `replace`, `generate` etc). They
+family of algorithms based on it (e.g. `replace`, `generate` etc). They
 will run in parallel even with forward iterators.
 
 ## Implementation details
@@ -35,15 +35,15 @@ current configuration.
 
 There are currently 3 different backends:
 - `default` ("one-liners") backend (`__pstl/backends/default.h`).  
-  It only reframes the calls in terms of other more general functions, e.g. 
+  It only reframes the calls in terms of other more general functions, e.g.
   `generate(execution::par, ...)` is reframed in terms of `for_each(execution::par, ...)`.
 - `serial` backend (`__pstl/backends/serial.h`).  
   This backend only delegates the calls to the serial implementations of the algorithms.  
-  For example `set_symmetric_difference(execution::par, ...)` will be forwared to `set_symmetric_difference(...)`.
+  For example `set_symmetric_difference(execution::par, ...)` will be forwarded to `set_symmetric_difference(...)`.
 - `statpart` backend (`__pstl/backends/statpart.h`).  
   This backend provides real parallel implementations of the algorithms and uses
   an underlying parallel executor to run them. While implementations in this
-  backend vary a lot depenending on the algorithm nature, they share a common
+  backend vary a lot depending on the algorithm nature, they share a common
   approach of statically partitioning the input range upfront.
 
 There are 2 configurations of composing the PSTL backends (`__pstl/backend_fwd.h`):
@@ -63,7 +63,7 @@ The following table shows which algorithms are implemented in the backends:
 | std::all_of | ✅ |  |  |
 | std::any_of | ✅ |  | ✅ |
 | std::copy | ✅ |  |  |
-| std::copy_if |  |  |  |
+| std::copy_if |  | ✅ |  |
 | std::copy_n | ✅ |  |  |
 | std::count | ✅ |  |  |
 | std::count_if | ✅ |  |  |
@@ -142,10 +142,3 @@ The following table shows which algorithms are implemented in the backends:
 | std::uninitialized_value_construct_n | ✅ |  |  |
 | std::unique |  |  |  |
 | std::unique_copy |  |  |  |
-
-## TODO
-unseq?
-
-par_unseq?
-
-exceptions?
