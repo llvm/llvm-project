@@ -18,10 +18,12 @@
 # CHECK-NEXT: </testcase>
 # CHECK-NEXT: <testcase classname="test-data.test-data" name="missing_feature.ini" time="{{[0-9]+\.[0-9]+}}">
 # CHECK-NEXT:   <skipped message="Missing required feature(s): dummy_feature"/>
+# CHECK-NEXT:   <system-out>not shown</system-out>
 # CHECK-NEXT: </testcase>
 # CHECK-NEXT: <testcase classname="test-data.test-data" name="pass.ini" time="{{[0-9]+\.[0-9]+}}"/>
 # CHECK-NEXT: <testcase classname="test-data.test-data" name="unsupported.ini" time="{{[0-9]+\.[0-9]+}}">
 # CHECK-NEXT:   <skipped message="Unsupported configuration"/>
+# CHECK-NEXT:   <system-out>Python module disabled</system-out>
 # CHECK-NEXT: </testcase>
 # CHECK-NEXT: </testsuite>
 # CHECK-NEXT: </testsuites>
