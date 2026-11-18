@@ -14,6 +14,7 @@
 #include "gtest/gtest.h"
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/environment.h"
+#include "flang-rt/runtime/unit.h"
 #include "flang/Runtime/extensions.h"
 #include "flang/Runtime/io-api.h"
 #include "flang/Runtime/main.h"
@@ -22,8 +23,8 @@
 #include <cstring>
 #include <string_view>
 #if defined(__unix__) || defined(__APPLE__)
+#include <fcntl.h>
 #include <sys/stat.h>
-#include <sys/wait.h>
 #include <unistd.h>
 #endif
 
@@ -354,9 +355,8 @@ private:
   std::size_t saved_;
 };
 
-// Removes the file at the end of the test, including on an early return from
-// a failed assertion.  Each test uses its own name, so the names stay unique
-// across the shards that llvm-lit runs concurrently.
+// Removes the file at scope exit, including after a failed assertion.  Each
+// test uses its own name so concurrent llvm-lit shards don't collide.
 struct ScopedTempFile {
   explicit ScopedTempFile(const char *name) : name_{name} { std::remove(name); }
   ~ScopedTempFile() { std::remove(name_); }
@@ -706,6 +706,25 @@ TEST(ExternalIOTests, TestSequentialUnformattedBadRecordRecovery) {
 }
 
 #if defined(__unix__) || defined(__APPLE__)
+namespace {
+// Closes a file descriptor at scope exit, including after a failed assertion.
+class ScopedFd {
+public:
+  explicit ScopedFd(int fd) : fd_{fd} {}
+  ~ScopedFd() { reset(); }
+  int get() const { return fd_; }
+  void reset() {
+    if (fd_ >= 0) {
+      close(fd_);
+      fd_ = -1;
+    }
+  }
+
+private:
+  int fd_;
+};
+} // namespace
+
 TEST(ExternalIOTests, TestSequentialUnformattedFromPipe) {
   // Sequential unformatted input must not depend on being able to seek.
   ScopedTempFile tempFifo{"sequential_unformatted_fifo.tmp"};
@@ -713,19 +732,21 @@ TEST(ExternalIOTests, TestSequentialUnformattedFromPipe) {
   ASSERT_EQ(mkfifo(fifoName, 0600), 0) << "mkfifo";
 
   static constexpr std::int64_t values[]{100, 101, 102};
-  pid_t pid{fork()};
-  ASSERT_NE(pid, -1) << "fork";
-  if (pid == 0) {
-    std::FILE *fp{std::fopen(fifoName, "wb")};
-    if (!fp) {
-      _exit(1);
-    }
-    std::int32_t marker(sizeof values);
-    bool ok{std::fwrite(&marker, sizeof marker, 1, fp) == 1 &&
-        std::fwrite(values, sizeof values, 1, fp) == 1 &&
-        std::fwrite(&marker, sizeof marker, 1, fp) == 1};
-    _exit(std::fclose(fp) == 0 && ok ? 0 : 1);
-  }
+
+  // Open both ends without blocking and fill the FIFO before the runtime's
+  // OPEN, which then finds a writer.  No second process is needed.
+  ScopedFd readEnd{open(fifoName, O_RDONLY | O_NONBLOCK)};
+  ASSERT_GE(readEnd.get(), 0) << "open read end";
+  ScopedFd writeEnd{open(fifoName, O_WRONLY | O_NONBLOCK)};
+  ASSERT_GE(writeEnd.get(), 0) << "open write end";
+  std::int32_t marker(sizeof values);
+  char data[sizeof marker + sizeof values + sizeof marker];
+  std::memcpy(data, &marker, sizeof marker);
+  std::memcpy(data + sizeof marker, values, sizeof values);
+  std::memcpy(data + sizeof marker + sizeof values, &marker, sizeof marker);
+  ASSERT_EQ(write(writeEnd.get(), data, sizeof data),
+      static_cast<ssize_t>(sizeof data))
+      << "write";
 
   static constexpr int unit{25};
   Cookie io{IONAME(BeginOpenUnit)(unit, __FILE__, __LINE__)};
@@ -738,6 +759,7 @@ TEST(ExternalIOTests, TestSequentialUnformattedFromPipe) {
   ASSERT_TRUE(IONAME(SetStatus)(io, "OLD", 3)) << "SetStatus(OLD)";
   ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
       << "EndIoStatement() for OPEN";
+  writeEnd.reset();
 
   StaticDescriptor<0> staticDescriptor;
   Descriptor &desc{staticDescriptor.descriptor()};
@@ -755,12 +777,67 @@ TEST(ExternalIOTests, TestSequentialUnformattedFromPipe) {
   io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
   EXPECT_EQ(IONAME(EndIoStatement)(io), IostatOk)
       << "EndIoStatement() for Close";
-
-  int status{0};
-  EXPECT_EQ(waitpid(pid, &status, 0), pid) << "waitpid";
-  EXPECT_TRUE(WIFEXITED(status) && WEXITSTATUS(status) == 0) << "writer";
 }
 #endif
+
+namespace {
+struct KnownMarker {
+  std::int64_t offset;
+  std::int32_t value;
+};
+
+// Finds the start of the record at the end of a file image whose only known
+// contents are the given markers; the rest reads as payload bytes.
+std::int64_t RecordStart(
+    std::initializer_list<KnownMarker> markers, std::int64_t size) {
+  struct Image {
+    std::initializer_list<KnownMarker> markers;
+    std::int64_t size;
+  } image{markers, size};
+  return FindUnformattedRecordStart(
+      size,
+      [](void *context, std::int64_t offset, std::int32_t &marker) {
+        auto &image{*static_cast<Image *>(context)};
+        if (offset < 0 || offset + 4 > image.size) {
+          return false;
+        }
+        marker = 0x01010101;
+        for (const KnownMarker &m : image.markers) {
+          if (m.offset == offset) {
+            marker = m.value;
+          }
+        }
+        return true;
+      },
+      &image);
+}
+} // namespace
+
+TEST(ExternalIOTests, TestUnformattedRecordStart) {
+  // A single header and footer, including the 2 GiB to 4 GiB lengths that
+  // earlier versions wrote as an unsigned marker.
+  for (std::int64_t n : {16LL, 2147483640LL, 2147483647LL, 2147483648LL,
+           2147483664LL, 4294967295LL}) {
+    std::int32_t m{static_cast<std::int32_t>(static_cast<std::uint32_t>(n))};
+    EXPECT_EQ(RecordStart({{0, m}, {n + 4, m}}, n + 8), 0)
+        << "single marker, length " << n;
+  }
+
+  // Four subrecords of 1073741820 bytes.  Stepping back from the end by the
+  // unsigned footer would land on the second header, which has the footer's
+  // bits but does not start the record.
+  static constexpr std::int64_t m{1073741820};
+  static constexpr std::int64_t step{m + 8};
+  EXPECT_EQ(RecordStart({{0, -m}, {4 + m, m}, {step, -m}, {step + 4 + m, -m},
+                            {2 * step, -m}, {2 * step + 4 + m, -m},
+                            {3 * step, m}, {3 * step + 4 + m, -m}},
+                4 * step),
+      0)
+      << "subrecord chain larger than 4 GiB";
+
+  EXPECT_EQ(RecordStart({{20, 16}}, 24), -1) << "footer without a header";
+  EXPECT_EQ(RecordStart({{20, -16}}, 24), -1) << "negative footer, no chain";
+}
 
 TEST(ExternalIOTests, TestDirectFormatted) {
   // OPEN(NEWUNIT=unit,ACCESS='DIRECT',ACTION='READWRITE',&
