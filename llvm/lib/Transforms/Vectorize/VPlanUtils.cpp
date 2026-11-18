@@ -392,6 +392,17 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
             Index = SE.getTruncateOrZeroExtend(Index, Step->getType());
             return SE.getAddExpr(Start, SE.getMulExpr(Index, Step));
           })
+          .Case([&SE](const VPReplicateRecipe *R) -> const SCEV * {
+            // Represent a load by an opaque SCEVUnknown for its IR load, like
+            // a live-in. Unrolling and replication create copies of a recipe
+            // that share its IR load, so only do this if all copies compute
+            // the same value.
+            auto *LI = dyn_cast<LoadInst>(R->getUnderlyingValue());
+            if (!LI || R->isPredicated() || !SE.isSCEVable(LI->getType()) ||
+                !isUniformAcrossVFsAndUFs(R))
+              return SE.getCouldNotCompute();
+            return SE.getUnknown(LI);
+          })
           .Case([&SE, &PSE, L](const VPScalarIVStepsRecipe *R) {
             // A start index, set for parts and lanes other than the first,
             // adds StartIndex * Step, which is not modeled.
