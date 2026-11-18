@@ -399,14 +399,37 @@ bool BTFDedupState::compareTypes(uint32_t CandId, uint32_t CanonId,
 }
 
 bool BTFDedupState::isIdentical(uint32_t LHS, uint32_t RHS, unsigned Depth) {
-  if (LHS == RHS)
-    return true;
-  return Depth && compareTypes(
-                      LHS, RHS,
-                      [&](uint32_t A, uint32_t B) {
-                        return isIdentical(A, B, Depth - 1);
-                      },
-                      /*MatchEnumFwds=*/true);
+  // Like libbpf, follow simple reference chains without spending depth.
+  // A chain longer than the number of types must contain a cycle.
+  uint32_t RemainingRefs = Builder.typesCount();
+  while (LHS != RHS) {
+    const auto *L = Builder.findType(LHS);
+    if (!Depth || !L)
+      return false;
+    switch (L->getKind()) {
+    case BTF::BTF_KIND_PTR:
+    case BTF::BTF_KIND_TYPEDEF:
+    case BTF::BTF_KIND_VOLATILE:
+    case BTF::BTF_KIND_CONST:
+    case BTF::BTF_KIND_RESTRICT:
+    case BTF::BTF_KIND_TYPE_TAG:
+    case BTF::BTF_KIND_FUNC: {
+      const auto *R = Builder.findType(RHS);
+      if (!RemainingRefs-- || !R || L->Info != R->Info ||
+          dedupStrOff(L->NameOff) != dedupStrOff(R->NameOff))
+        return false;
+      LHS = L->Type;
+      RHS = R->Type;
+      break;
+    }
+    default:
+      return compareTypes(
+          LHS, RHS,
+          [&](uint32_t A, uint32_t B) { return isIdentical(A, B, Depth - 1); },
+          /*MatchEnumFwds=*/true);
+    }
+  }
+  return true;
 }
 
 bool BTFDedupState::isEquiv(uint32_t CandId, uint32_t CanonId) {

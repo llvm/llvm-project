@@ -496,6 +496,32 @@ TEST(BTFDedupTest, sharedPointerInTypeGraph) {
   EXPECT_EQ(Members[1].Type, 2u);
 }
 
+TEST(BTFDedupTest, deepSharedPointerInTypeGraph) {
+  BTFBuilder B;
+  uint32_t Outer = B.addString("outer");
+  uint32_t A = B.addString("a"), C = B.addString("b");
+  uint32_t Leaf =
+      B.addType({B.addString("int"), mkInfo(BTF::BTF_KIND_INT), {4}});
+  B.addTail(uint32_t(32));
+  auto AddChain = [&] {
+    uint32_t Ref = Leaf;
+    for (unsigned I = 0; I < 18; ++I)
+      Ref = B.addType({0, mkInfo(BTF::BTF_KIND_PTR), {Ref}});
+    return Ref;
+  };
+  uint32_t Shared = AddChain(), First = AddChain(), Second = AddChain();
+  // Comparing the second member requires recognizing two distinct chains in
+  // the candidate as identical without consuming the aggregate depth budget.
+  for (auto [LHS, RHS] :
+       {std::pair{Shared, Shared}, std::pair{First, Second}}) {
+    B.addType({Outer, mkInfo(BTF::BTF_KIND_STRUCT) | 2, {16}});
+    B.addTail(BTF::BTFMember({A, LHS, 0}));
+    B.addTail(BTF::BTFMember({C, RHS, 64}));
+  }
+  ASSERT_SUCCEEDED(BTF::dedup(B));
+  EXPECT_EQ(B.typesCount(), 20u); // int, 18 pointers, and one struct
+}
+
 TEST(BTFDedupTest, funcProtoDedup) {
   BTFBuilder B;
   uint32_t IntS = B.addString("int");
