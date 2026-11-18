@@ -13,3 +13,8 @@ void test_clobber_conflict(void) {
   asm volatile("nop" :: "r"(x) : "%x1"); // expected-error {{conflicts with asm clobber list}}
   asm volatile("nop" : "=r"(x) :: "%x1"); // expected-error {{conflicts with asm clobber list}}
 }
+
+// A 128-bit value takes two 64-bit registers, and %H names the second.
+void test_int128(unsigned __int128 *p, unsigned __int128 x) {
+  asm volatile("stp %1, %H1, [%0]" :: "r"(p), "r"(x) : "memory");
+}

@@ -1770,6 +1770,10 @@ bool AArch64TargetInfo::validateConstraintModifier(
       if (Size == 64)
         return true;
 
+      // A 128-bit value takes two 'x' registers, and %H names the second.
+      if (Size == 128)
+        return true;
+
       if (Size == 512)
         return HasLS64;
 
