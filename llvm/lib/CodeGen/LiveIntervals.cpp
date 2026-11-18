@@ -1602,9 +1602,12 @@ private:
         // the same value number, so merge as we go. Stop at the original end
         // slot instead of using a segment count because merging may erase
         // segments.
+        // A segment that starts at its own def belongs to another def of LR
+        // that the dead def moved across, so stop there.
         const SlotIndex RetagEnd = OldIdxOut->end;
         for (LiveRange::iterator Idx = NewIdxOut + 2;
-             Idx != LR.end() && Idx->start < RetagEnd;) {
+             Idx != LR.end() && Idx->start < RetagEnd &&
+             Idx->valno->def != Idx->start;) {
           Idx->valno = OldIdxVNI;
           Idx = std::next(LR.mergeAdjacentSegments(Idx));
         }
