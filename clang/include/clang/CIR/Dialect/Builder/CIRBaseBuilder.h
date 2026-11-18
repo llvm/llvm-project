@@ -721,6 +721,13 @@ public:
     return createBuiltinIntCast(src.getLoc(), src, newTy);
   }
 
+  /// Casts \p src to the builtin MLIR integer type with the same width as
+  /// its own CIR integer type.
+  mlir::Value createBuiltinIntCast(mlir::Location loc, mlir::Value src) {
+    auto cirIntTy = mlir::cast<cir::IntType>(src.getType());
+    return createBuiltinIntCast(loc, src, getIntegerType(cirIntTy.getWidth()));
+  }
+
   mlir::Value createIntToPtr(mlir::Value src, mlir::Type newTy) {
     return createCast(cir::CastKind::int_to_ptr, src, newTy);
   }
@@ -925,10 +932,9 @@ public:
     assert(cir::isFPOrVectorOfFPType(operand.getType()) &&
            "expected floating-point or vector-of-float type");
     assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fastMathFlags());
     // fneg does not raise FP exceptions or depend on the rounding mode, so it
     // never carries an fenv attribute.
-    return cir::FNegOp::create(*this, loc, operand);
+    return cir::FNegOp::create(*this, loc, operand, getFastMathFlagsAttr());
   }
 
   mlir::Value createXor(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {

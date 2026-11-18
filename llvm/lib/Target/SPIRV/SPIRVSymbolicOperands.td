@@ -577,7 +577,11 @@ defm ComputeDerivativeGroupQuadsKHR
 def ComputeDerivativeGroupQuadsNV
     : Capability<"ComputeDerivativeGroupQuadsNV", 5288>;
 defm DemoteToHelperInvocation : CapabilityOperand<5379, 0x10600, 0, [SPV_EXT_demote_to_helper_invocation], []>;
-defm ComputeDerivativeGroupLinearNV : CapabilityOperand<5350, 0, 0, [], []>;
+defm ComputeDerivativeGroupLinearKHR
+    : CapabilityOperand<5350, 0, 0, [SPV_KHR_compute_shader_derivatives],
+                        [Shader]>;
+def ComputeDerivativeGroupLinearNV
+    : Capability<"ComputeDerivativeGroupLinearNV", 5350>;
 defm FragmentDensityEXT : CapabilityOperand<5291, 0, 0, [], [Shader]>;
 defm PhysicalStorageBufferAddressesEXT : CapabilityOperand<5347, 0, 0, [], [Shader]>;
 defm CooperativeMatrixNV : CapabilityOperand<5357, 0, 0, [], [Shader]>;
@@ -864,7 +868,9 @@ defm OutputLinesNV : ExecutionModeOperand<5269, [MeshShadingNV]>;
 defm DerivativeGroupQuadsKHR
     : ExecutionModeOperand<5289, [ComputeDerivativeGroupQuadsKHR]>;
 def DerivativeGroupQuadsNV : ExecutionMode<"DerivativeGroupQuadsNV", 5289>;
-defm DerivativeGroupLinearNV : ExecutionModeOperand<5290, [ComputeDerivativeGroupLinearNV]>;
+defm DerivativeGroupLinearKHR
+    : ExecutionModeOperand<5290, [ComputeDerivativeGroupLinearKHR]>;
+def DerivativeGroupLinearNV : ExecutionMode<"DerivativeGroupLinearNV", 5290>;
 defm OutputTrianglesNV : ExecutionModeOperand<5298, [MeshShadingNV]>;
 defm RoundingModeRTPINTEL : ExecutionModeOperand<5620, [RoundToInfinityINTEL]>;
 defm RoundingModeRTNINTEL : ExecutionModeOperand<5621, [RoundToInfinityINTEL]>;

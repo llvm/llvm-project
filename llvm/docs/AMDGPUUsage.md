@@ -2573,9 +2573,9 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
     - 0x0010: All VMEM instructions may be scheduled across sched_barrier.
       This includes LDSDMA instructions.
     - 0x0020: VMEM read instructions may be scheduled across sched_barrier.
-      This does not include LDSDMA loads, even though they also read from global memory; only loads targeting VGPRs are classified as VMEM read.
+      This does not include global or buffer loads to LDS, even though they also read from global memory; only loads targeting VGPRs are classified as VMEM read.
     - 0x0040: VMEM write instructions may be scheduled across sched_barrier.
-      This does not include LDSDMA stores, even though they also write to global memory; only stores sourcing from VGPRs are classified as VMEM write.
+      This does not include global stores from LDS, even though they also write to global memory; only stores sourcing from VGPRs are classified as VMEM write.
     - 0x0080: All DS instructions may be scheduled across sched_barrier.
       This includes LDSDMA instructions.
     - 0x0100: All DS read instructions may be scheduled across sched_barrier.
@@ -3540,7 +3540,8 @@ The AMDGPU backend supports the following calling conventions:
     Values in scalar registers as well as v0-v7 are not preserved.
     Values in VGPRs starting at v8 are not preserved for the active lanes, but must be saved by the callee for inactive lanes when using WWM (a notable exception is when the llvm.amdgcn.init.whole.wave intrinsic is used in the function - in this case the backend assumes that there are no inactive lanes upon entry; any inactive lanes that need to be preserved must be explicitly present in the IR).
 
-    Chain functions receive a stack pointer from their caller (in s32), similar to `amdgpu_gfx` functions.
+    Chain functions receive a stack pointer from their caller (in s32), similar to `amdgpu_gfx` functions. This points to the bottom of the stack.
+    Referencing values on the caller's stack is undefined behaviour.
     If needed, the frame pointer is s33 and the base pointer is s34.
     Calls to `amdgpu_gfx` functions are allowed and behave like they do in `amdgpu_cs` functions.
 
