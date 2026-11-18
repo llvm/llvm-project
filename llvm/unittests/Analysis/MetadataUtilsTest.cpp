@@ -22,7 +22,7 @@ class MetadataUtilsTest : public testing::Test {
 protected:
   LLVMContext C;
   Module M{"test", C};
-  IRBuilder<> B{C};
+  IRBuilder<> B{M};
   Value *P;
   Value *Q;
 
