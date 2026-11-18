@@ -2825,7 +2825,9 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
 }
 
 bool RISCVFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
-  if (MF.getInfo<RISCVMachineFunctionInfo>()->isACLICPreemptibleInterrupt(MF))
+  const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  if (RVFI->isACLICPreemptibleInterrupt(MF) ||
+      RVFI->isACLICPushPopInterrupt(MF))
     return false;
 
   // Keep the conventional code flow when not optimizing.
@@ -2834,7 +2836,6 @@ bool RISCVFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
 
   // QCI and SiFive CLIC interrupt entry sequences must precede all handler
   // code.
-  const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
   if (RVFI->useQCIInterrupt(MF) || RVFI->useSiFiveInterrupt(MF))
     return false;
 
