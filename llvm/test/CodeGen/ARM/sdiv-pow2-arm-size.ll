@@ -4,13 +4,20 @@
 
 ; Check SREM
 define dso_local i32 @test_rem(i32 %F) local_unnamed_addr #0 {
-; CHECK-LABEL: test_rem:
-; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    asr r1, r0, #31
-; CHECK-NEXT:    add r1, r0, r1, lsr #30
-; CHECK-NEXT:    bic r1, r1, #3
-; CHECK-NEXT:    sub r0, r0, r1
-; CHECK-NEXT:    bx lr
+; DIV-LABEL: test_rem:
+; DIV:       @ %bb.0: @ %entry
+; DIV-NEXT:    mov r1, #4
+; DIV-NEXT:    sdiv r1, r0, r1
+; DIV-NEXT:    sub r0, r0, r1, lsl #2
+; DIV-NEXT:    bx lr
+;
+; NODIV-LABEL: test_rem:
+; NODIV:       @ %bb.0: @ %entry
+; NODIV-NEXT:    and r1, r0, #3
+; NODIV-NEXT:    rsbs r0, r0, #0
+; NODIV-NEXT:    andpl r1, r0, #3
+; NODIV-NEXT:    mov r0, r1
+; NODIV-NEXT:    bx lr
 
 entry:
   %div = srem i32 %F, 4
@@ -51,8 +58,8 @@ define dso_local i32 @f1(i32 %F) local_unnamed_addr #0 {
 ;
 ; NODIV-LABEL: f1:
 ; NODIV:       @ %bb.0: @ %entry
-; NODIV-NEXT:    asr r1, r0, #31
-; NODIV-NEXT:    add r0, r0, r1, lsr #30
+; NODIV-NEXT:    cmp r0, #0
+; NODIV-NEXT:    addmi r0, r0, #3
 ; NODIV-NEXT:    asr r0, r0, #2
 ; NODIV-NEXT:    bx lr
 
@@ -87,8 +94,8 @@ entry:
 define dso_local i32 @f3(i32 %F) {
 ; CHECK-LABEL: f3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    asr r1, r0, #31
-; CHECK-NEXT:    add r0, r0, r1, lsr #30
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    addmi r0, r0, #3
 ; CHECK-NEXT:    asr r0, r0, #2
 ; CHECK-NEXT:    bx lr
 entry:
