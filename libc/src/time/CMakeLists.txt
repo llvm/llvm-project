@@ -204,6 +204,24 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  timegm
+  SRCS
+    timegm.cpp
+  HDRS
+    timegm.h
+  DEPENDS
+    .time_utils
+    .time_constants
+    libc.include.time
+    libc.src.errno.errno
+    libc.hdr.types.time_t
+    libc.hdr.types.struct_tm
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
   strftime
   SRCS
     strftime.cpp

@@ -1371,6 +1371,7 @@ struct WholeProgramDevirtResolution {
     BranchFunnel, ///< When retpoline mitigation is enabled, use a branch funnel
                   ///< that is defined in the merged module. Otherwise same as
                   ///< Indir.
+    Speculative,  ///< Speculative devirtualization
   } TheKind = Indir;
 
   std::string SingleImplName;
@@ -1581,9 +1582,6 @@ private:
 
   /// Indicates that we have whole program visibility.
   bool WithWholeProgramVisibility = false;
-
-  /// Indicates that summary-based synthetic entry count propagation has run
-  bool HasSyntheticEntryCounts = false;
 
   /// Indicates that we linked with allocator supporting hot/cold new operators.
   bool WithSupportsHotColdNew = false;

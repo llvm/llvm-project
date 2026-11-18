@@ -26,24 +26,6 @@ name:            check_sext_not_lost
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gpr }
-  - { id: 4, class: gpr }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
-  - { id: 7, class: _ }
-  - { id: 8, class: gpr }
-  - { id: 9, class: _ }
-  - { id: 10, class: gpr }
-  - { id: 11, class: gpr }
-  - { id: 12, class: _ }
-  - { id: 13, class: gpr }
-  - { id: 14, class: gpr }
-  - { id: 15, class: gpr64 }
-  - { id: 16, class: gpr }
 liveins:
   - { reg: '$x0' }
 frameInfo:

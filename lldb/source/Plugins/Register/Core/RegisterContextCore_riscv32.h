@@ -9,9 +9,9 @@
 #ifndef LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_RISCV32_H
 #define LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_RISCV32_H
 
-#include "Register/RegisterInfoInterface.h"
-#include "Register/Common/RegisterInfo_riscv32.h"
 #include "Register/Arch/lldb-riscv-register-enums.h"
+#include "Register/Common/RegisterInfo_riscv32.h"
+#include "Register/RegisterInfoInterface.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 

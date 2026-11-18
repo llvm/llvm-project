@@ -240,6 +240,8 @@ public:
 
   FormatEntity::Entry GetFunctionNameFormat() const override;
 
+  std::string GetVersionInfo() const override;
+
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 

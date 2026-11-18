@@ -1199,6 +1199,11 @@ public:
     Value insert = LLVM::PoisonOp::create(rewriter, loc, llvmType);
     int64_t insPos = 0;
     for (int64_t extPos : mask) {
+      // The result starts as poison, so a poison index needs no insertion.
+      if (extPos == vector::ShuffleOp::kPoisonIndex) {
+        ++insPos;
+        continue;
+      }
       Value value = adaptor.getV1();
       if (extPos >= v1Dim) {
         extPos -= v1Dim;

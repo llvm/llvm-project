@@ -34,6 +34,58 @@ class TestStopHooks(TestBase):
         they aren't overridden by the ones set directly in the target."""
         self.before_and_after_target()
 
+    def test_stop_hooks_one_shot(self):
+        """Test that a one-shot stop hook runs at the next stop, and that LLDB
+        then deletes it."""
+        (target, process, thread, _) = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", self.main_source_file
+        )
+
+        interp = self.dbg.GetCommandInterpreter()
+        result = lldb.SBCommandReturnObject()
+        interp.HandleCommand(
+            "target stop-hook add --one-shot true -o 'expr g_var++'", result
+        )
+        self.assertTrue(result.Succeeded(), "Set the one-shot stop hook")
+        self.expect("target stop-hook list", substrs=["One-shot"])
+
+        bkpt = target.BreakpointCreateBySourceRegex(
+            "Continue to here", self.main_source_file
+        )
+        threads = lldbutil.continue_to_breakpoint(process, bkpt)
+        self.assertEqual(len(threads), 1, "Hit the second breakpoint")
+        var = target.FindFirstGlobalVariable("g_var")
+        self.assertEqual(var.GetValueAsUnsigned(), 1, "The stop hook ran")
+        self.expect("target stop-hook list", substrs=["No stop hooks."])
+
+        # Stepping over increment_gvar() adds one, and the deleted stop hook
+        # doesn't add another.
+        threads[0].StepOver()
+        self.assertEqual(var.GetValueAsUnsigned(), 2, "The stop hook didn't run")
+
+    def test_stop_hooks_one_shot_votes_to_continue(self):
+        """Test that a one-shot stop hook still votes on continuing at the stop
+        where it runs."""
+        (target, process, thread, _) = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", self.main_source_file
+        )
+
+        interp = self.dbg.GetCommandInterpreter()
+        result = lldb.SBCommandReturnObject()
+        interp.HandleCommand(
+            "target stop-hook add --one-shot true -G true -o 'expr g_var++'", result
+        )
+        self.assertTrue(result.Succeeded(), "Set the one-shot stop hook")
+
+        # The hook runs at the first breakpoint and continues to the second.
+        target.BreakpointCreateBySourceRegex("Continue to here", self.main_source_file)
+        bkpt = target.BreakpointCreateByName("increment_gvar")
+        threads = lldbutil.continue_to_breakpoint(process, bkpt)
+        self.assertEqual(len(threads), 1, "The stop hook continued the process")
+        var = target.FindFirstGlobalVariable("g_var")
+        self.assertEqual(var.GetValueAsUnsigned(), 1, "The stop hook ran once")
+        self.expect("target stop-hook list", substrs=["No stop hooks."])
+
     def step_out_test(self):
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Set a breakpoint here", self.main_source_file

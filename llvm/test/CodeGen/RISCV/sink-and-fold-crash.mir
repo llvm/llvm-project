@@ -3,11 +3,6 @@
 
 ---
 name:            main
-registers:
-  - { id: 0, class: fpr32 }
-  - { id: 1, class: fpr32 }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gpr }
 liveins:
   - { reg: '$f10_f', virtual-reg: '%0' }
   - { reg: '$f11_f', virtual-reg: '%1' }

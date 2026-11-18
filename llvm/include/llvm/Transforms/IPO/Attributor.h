@@ -150,6 +150,7 @@ class DataLayout;
 class LLVMContext;
 class Pass;
 template <typename Fn> class function_ref;
+struct IPOOptions;
 struct AADepGraphNode;
 struct AADepGraph;
 struct Attributor;
@@ -469,10 +470,6 @@ struct DenseMapInfo<const AA::InstExclusionSetTy *>
   }
 };
 
-/// The value passed to the line option that defines the maximal initialization
-/// chain length.
-LLVM_ABI extern unsigned MaxInitializationChainLength;
-
 ///{
 enum class ChangeStatus {
   CHANGED,
@@ -555,7 +552,7 @@ struct AADepGraph {
   LLVM_ABI void viewGraph();
 
   /// Dump graph to file
-  LLVM_ABI void dumpGraph();
+  LLVM_ABI void dumpGraph(StringRef DotFileNamePrefix);
 
   /// Print dependency graph
   LLVM_ABI void print();
@@ -1257,7 +1254,11 @@ struct InformationCache {
     return FI.CalledViaMustTail || FI.ContainsMustTailCall;
   }
 
-  bool isOnlyUsedByAssume(const Instruction &I) const {
+  bool isOnlyUsedByAssume(const Instruction &I) {
+    const Function &F = *I.getFunction();
+    FunctionInfo &FI = getFunctionInfo(F);
+    if (!FI.AssumeOnlyValuesCollected)
+      collectAssumeOnlyValues(FI);
     return AssumeOnlyValues.contains(&I);
   }
 
@@ -1304,6 +1305,17 @@ struct InformationCache {
   LLVM_ABI ArrayRef<Function *>
   getIndirectlyCallableFunctions(Attributor &A) const;
 
+  /// Return true if \p F has an exact definition or is inlineable.
+  ///
+  /// This is computed once when the information of \p F is initialized. For
+  /// functions that are not initialized yet, only the definition is checked,
+  /// as InlineableFunctions is also only filled on initialization.
+  bool isExactOrInlineable(const Function &F) const {
+    if (const FunctionInfo *FI = FuncInfoMap.lookup(&F))
+      return FI->IsExactOrInlineable;
+    return F.hasExactDefinition();
+  }
+
   /// Return the flat address space if the associated target has.
   LLVM_ABI std::optional<unsigned> getFlatAddressSpace() const;
 
@@ -1312,6 +1324,9 @@ struct InformationCache {
 private:
   struct FunctionInfo {
     LLVM_ABI ~FunctionInfo();
+
+    /// Whether the function has an exact definition or is inlineable.
+    bool IsExactOrInlineable = false;
 
     /// A nested map that remembers all instructions in a function with a
     /// certain instruction opcode (Instruction::getOpcode()).
@@ -1329,6 +1344,10 @@ private:
 
     /// Function has the `"kernel"` attribute
     bool IsKernel;
+
+    /// The values only used by `llvm.assume`s in the function have been added
+    /// to AssumeOnlyValues.
+    bool AssumeOnlyValuesCollected = false;
   };
 
   /// A map type from functions to informatio about it.
@@ -1350,6 +1369,10 @@ private:
   /// Vector of functions that might be callable indirectly, i.a., via a
   /// function pointer.
   SmallVector<Function *> IndirectlyCallableFunctions;
+
+  /// Add the values only used by `llvm.assume`s in the function of \p FI to
+  /// AssumeOnlyValues. This is done on demand, as few users need them.
+  LLVM_ABI void collectAssumeOnlyValues(FunctionInfo &FI);
 
   /// Initialize the function information cache \p FI for the function \p F.
   ///
@@ -1513,6 +1536,8 @@ struct Attributor {
                       AttributorConfig Configuration);
 
   LLVM_ABI ~Attributor();
+
+  const IPOOptions &Opts;
 
   /// Run the analyses until a fixpoint is reached or enforced (timeout).
   ///
@@ -1814,7 +1839,7 @@ struct Attributor {
   /// If a function is exactly defined or it has alwaysinline attribute
   /// and is viable to be inlined, we say it is IPO amendable
   bool isFunctionIPOAmendable(const Function &F) {
-    return F.hasExactDefinition() || InfoCache.InlineableFunctions.count(&F) ||
+    return InfoCache.isExactOrInlineable(F) ||
            (Configuration.IPOAmendableCB && Configuration.IPOAmendableCB(F));
   }
 
@@ -2605,6 +2630,7 @@ private:
 
   /// The current initialization chain length. Tracked to avoid stack overflows.
   unsigned InitializationChainLength = 0;
+  const unsigned MaxInitializationChainLength;
 
   /// Whether time trace scopes are recorded for every initialization and
   /// update.
@@ -3211,6 +3237,10 @@ struct StateWrapper : public BaseType, public StateTy {
   StateType &getState() override { return *this; }
 
   const StateType &getState() const override { return *this; }
+
+  bool isAtFixpoint() const final { return StateTy::isAtFixpoint(); }
+
+  bool isStateAtFixpoint() const final { return StateTy::isAtFixpoint(); }
 };
 
 /// Helper class that provides common functionality to manifest IR attributes.
@@ -3386,6 +3416,10 @@ struct LLVM_ABI AbstractAttribute : public IRPosition, public AADepGraphNode {
   /// Return the internal abstract state for inspection.
   virtual StateType &getState() = 0;
   virtual const StateType &getState() const = 0;
+
+  /// Return true if the state is at a fixpoint, like
+  /// getState().isAtFixpoint() but with a single virtual call.
+  virtual bool isStateAtFixpoint() const { return getState().isAtFixpoint(); }
 
   /// Return an IR position, see struct IRPosition.
   const IRPosition &getIRPosition() const { return *this; };
@@ -4249,7 +4283,7 @@ struct AAAlign
   AAAlign(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
@@ -4892,6 +4926,10 @@ template <typename MemberTy> struct PotentialValuesState : AbstractState {
   PotentialValuesState(bool IsValid)
       : IsValidState(IsValid), UndefIsContained(false) {}
 
+  PotentialValuesState(bool IsValid, unsigned MaxPotentialValues)
+      : IsValidState(IsValid), UndefIsContained(false),
+        MaxPotentialValues(MaxPotentialValues) {}
+
   bool isValidState() const override { return IsValidState.isValidState(); }
 
   bool isAtFixpoint() const override { return IsValidState.isAtFixpoint(); }
@@ -4931,17 +4969,9 @@ template <typename MemberTy> struct PotentialValuesState : AbstractState {
     return Set == RHS.getAssumedSet();
   }
 
-  /// Maximum number of potential values to be tracked.
-  /// This is set by -attributor-max-potential-values command line option
-  static unsigned MaxPotentialValues;
-
   /// Return empty set as the best state of potential values.
-  static PotentialValuesState getBestState() {
-    return PotentialValuesState(true);
-  }
-
   static PotentialValuesState getBestState(const PotentialValuesState &PVS) {
-    return getBestState();
+    return PotentialValuesState(true, PVS.MaxPotentialValues);
   }
 
   /// Return full set as the worst state of potential values.
@@ -5028,6 +5058,9 @@ private:
 
   /// Flag for undef value
   bool UndefIsContained;
+
+  /// Maximum number of potential values to be tracked.
+  unsigned MaxPotentialValues = std::numeric_limits<unsigned>::max();
 };
 
 struct DenormalFPMathState : public AbstractState {
@@ -5141,9 +5174,11 @@ LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
 ///
 /// For non constant integers see AAPotentialValues.
 struct AAPotentialConstantValues
-    : public StateWrapper<PotentialConstantIntValuesState, AbstractAttribute> {
-  using Base = StateWrapper<PotentialConstantIntValuesState, AbstractAttribute>;
-  AAPotentialConstantValues(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+    : public StateWrapper<PotentialConstantIntValuesState, AbstractAttribute,
+                          bool, unsigned> {
+  using Base = StateWrapper<PotentialConstantIntValuesState, AbstractAttribute,
+                            bool, unsigned>;
+  LLVM_ABI AAPotentialConstantValues(const IRPosition &IRP, Attributor &A);
 
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
     if (!IRP.getAssociatedType()->isIntegerTy())

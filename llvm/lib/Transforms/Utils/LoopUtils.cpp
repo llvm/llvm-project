@@ -32,7 +32,6 @@
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
-#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -693,7 +692,6 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // be be replaced with undef. Loop invariant values will still be available.
     // Move dbg.values out the loop so that earlier location ranges are still
     // terminated and loop invariant assignments are preserved.
-    DIBuilder DIB(*ExitBlock->getModule());
     BasicBlock::iterator InsertDbgValueBefore =
         ExitBlock->getFirstInsertionPt();
     assert(InsertDbgValueBefore != ExitBlock->end() &&
@@ -2193,7 +2191,7 @@ llvm::getRuntimeCheckBounds(const RuntimeCheckingPtrGroup *CG,
     auto *LowAR = cast<SCEVAddRecExpr>(Low);
     const Loop *OuterLoop = TheLoop->getParentLoop();
     const SCEV *Recur = LowAR->getStepRecurrence(SE);
-    if (Recur == HighAR->getStepRecurrence(SE) &&
+    if (LowAR->isAffine() && Recur == HighAR->getStepRecurrence(SE) &&
         HighAR->getLoop() == OuterLoop && LowAR->getLoop() == OuterLoop) {
       BasicBlock *OuterLoopLatch = OuterLoop->getLoopLatch();
       const SCEV *OuterExitCount = SE.getExitCount(OuterLoop, OuterLoopLatch);

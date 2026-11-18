@@ -1979,7 +1979,10 @@ module std {
       header "__ranges/drop_while_view.h"
       export std.functional.bind_back
     }
-    module elements_of                    { header "__ranges/elements_of.h" }
+    module elements_of {
+      header "__ranges/elements_of.h"
+      export std.memory.allocator
+    }
     module elements_view                  { header "__ranges/elements_view.h" }
     module empty                          { header "__ranges/empty.h" }
     module empty_view                     { header "__ranges/empty_view.h" }
@@ -2265,6 +2268,7 @@ module std {
       export std_core.type_traits.decay // the macro expansion uses that trait
     }
     module cmp                             { header "__utility/cmp.h" }
+    module checked_int                     { header "__utility/checked_int.h" }
     module constant_wrapper                { header "__utility/constant_wrapper.h" }
     module convert_to_integral             { header "__utility/convert_to_integral.h" }
     module default_three_way_comparator    { header "__utility/default_three_way_comparator.h" }

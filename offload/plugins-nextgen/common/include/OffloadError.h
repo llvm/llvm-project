@@ -11,6 +11,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_OFFLOAD_ERROR_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_OFFLOAD_ERROR_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -65,8 +66,8 @@ inline llvm::Error createOffloadError(error::ErrorCode Code, const char *S) {
 // * "{Context}" otherwise
 inline llvm::Error createOffloadError(error::ErrorCode Code,
                                       llvm::Error &&OtherError,
-                                      const char *Context) {
-  std::string Buffer{Context};
+                                      llvm::StringRef Context) {
+  std::string Buffer = Context.str();
   llvm::raw_string_ostream buffer(Buffer);
 
   handleAllErrors(

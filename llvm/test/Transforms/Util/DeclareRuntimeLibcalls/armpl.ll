@@ -369,5 +369,5 @@
 
 ; CHECK: declare aarch64_vector_pcs <2 x double> @armpl_vtgammaq_f64(<2 x double>) [[ATTRS]]
 
-; CHECK: attributes [[ATTRS]] = { nocallback nofree nosync nounwind willreturn }
-; CHECK: attributes [[ATTRS_PTR_ARG]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; CHECK-DAG: attributes [[ATTRS]] = { nocallback nofree nosync nounwind willreturn }
+; CHECK-DAG: attributes [[ATTRS_PTR_ARG]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
