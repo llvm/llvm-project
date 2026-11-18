@@ -136,8 +136,6 @@ def isLongDoubleWide : RuntimeLibcallAvailability<
 
 // The l-suffixed sincos exists only when hasSinCos and the long double type
 // matches the width.
-def isLongDoubleX87AndHasSinCos : RuntimeLibcallAvailability<
-  (all_of IsLongDoubleX87, (any_of IsGNUEnv, IsOSFuchsia, IsAndroid))>;
 def isLongDoubleF128AndHasSinCos : RuntimeLibcallAvailability<
   (all_of IsLongDoubleF128, (any_of IsGNUEnv, IsOSFuchsia, IsAndroid))>;
 def isLongDoubleWideAndHasSinCos : RuntimeLibcallAvailability<
@@ -396,9 +394,8 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def CABS_#FPTy.Suffix : RuntimeLibcall<NoneType, []>;
 }
 
-foreach FPTy = [ "F32", "F64" ] in {
-  def SINCOS_STRET_#FPTy : RuntimeLibcall;
-}
+def SINCOS_STRET_F32 : RuntimeLibcall<CFltPair, [Flt]>;
+def SINCOS_STRET_F64 : RuntimeLibcall<CDblPair, [Dbl]>;
 
 foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def POW_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
@@ -2131,6 +2128,7 @@ def __exp10 : RuntimeLibcallImpl<EXP10_F64>;
 def __exp10f : RuntimeLibcallImpl<EXP10_F32>;
 def __sincos_stret : RuntimeLibcallImpl<SINCOS_STRET_F64>;
 def __sincosf_stret : RuntimeLibcallImpl<SINCOS_STRET_F32>;
+
 def __sincospi : RuntimeLibcallImpl<SINCOSPI_F64>;
 def __sincospif : RuntimeLibcallImpl<SINCOSPI_F32>;
 
@@ -3873,8 +3871,7 @@ def X86Libm : LibcallLibrary<"libm",
   (add X86_F128_Libcalls,
        LibcallImpls<(add sincosf, sincos), hasSinCos_f32_f64>,
        // frexpl/ldexpl are available on Windows too.
-       LibcallImpls<(add frexpl, ldexpl), isLongDoubleWide>,
-       LibcallImpls<(add sincosl), isLongDoubleX87AndHasSinCos>), isX86>;
+       LibcallImpls<(add frexpl, ldexpl), isLongDoubleWide>), isX86>;
 
 def X86SystemLibrary
     : SystemRuntimeLibrary<isX86,
@@ -3883,8 +3880,6 @@ def X86SystemLibrary
 
 def : LibraryExclusion<"compiler-rt", isX86,
   !listconcat(WindowsDivRemMulLibcallOverrides, [__powitf2_f128])>;
-// x86 has no fp128 sincosl, only the x87 one.
-def : LibraryExclusion<"libm", isX86, [sincosl]>;
 def : LibraryExclusion<"libc", isX86, !listconcat(MemChkLibcalls, [bzero])>;
 
 //===----------------------------------------------------------------------===//

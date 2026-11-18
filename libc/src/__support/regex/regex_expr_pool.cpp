@@ -26,7 +26,7 @@ namespace regex {
 namespace {
 
 // Hash an Expr node for hash-consing.
-uint32_t hash_expr(const Expr &e) {
+uint32_t hash_expr(const Expr e) {
   // Initialise HashState with a constant seed. The specific value (0x12345678)
   // is an arbitrary placeholder; HashState immediately mixes this seed with
   // high-entropy constants (derived from aHash) to produce a strong hash, while
@@ -38,6 +38,9 @@ uint32_t hash_expr(const Expr &e) {
   } key = {static_cast<uint64_t>(e.kind), 0};
   static_assert(sizeof(HashKey) == 2 * sizeof(uint64_t));
   switch (e.kind) {
+  case ExprKind::EmptySet:
+  case ExprKind::EmptyStr:
+    break;
   case ExprKind::Literal:
     key.payload = static_cast<uint8_t>(e.ch);
     break;
@@ -57,8 +60,6 @@ uint32_t hash_expr(const Expr &e) {
   case ExprKind::Concat:
   case ExprKind::Alt:
     key.payload = (static_cast<uint64_t>(e.bin.left) << 32) | e.bin.right;
-    break;
-  default:
     break;
   }
   hasher.update(&key, sizeof(key));
@@ -121,7 +122,7 @@ bool ExprPool::ensure_initialized() {
   return true;
 }
 
-ExprId &ExprPool::find_bucket(cpp::span<ExprId> table, const Expr &e) const {
+ExprId &ExprPool::find_bucket(cpp::span<ExprId> table, const Expr e) const {
   for (ExprId &slot : BucketProber(table, e.hash)) {
     if (slot == INVALID_EXPR_ID)
       return slot;
@@ -129,6 +130,7 @@ ExprId &ExprPool::find_bucket(cpp::span<ExprId> table, const Expr &e) const {
     if (cand.hash == e.hash && cand == e)
       return slot;
   }
+  LIBC_ASSERT(false);
   __builtin_unreachable();
 }
 
@@ -216,6 +218,8 @@ ErrorOr<ExprId> ExprPool::make_lit(char c) {
   return intern(Expr::make_literal(c));
 }
 ErrorOr<ExprId> ExprPool::make_anchor(uint8_t mask) {
+  if (mask == 0)
+    return Error(REG_BADPAT);
   return intern(Expr::make_anchor(mask));
 }
 
@@ -226,6 +230,8 @@ ErrorOr<ExprId> ExprPool::make_byte_set(const ByteSet &bs) {
     if (bs.test(b)) {
       ++count;
       last_bit = b;
+      if (count > 1)
+        break;
     }
   }
   if (count == 0)
@@ -324,10 +330,11 @@ ErrorOr<ExprId> ExprPool::make_concat(ExprId l, ExprId r) {
   if (l == EMPTY_SET_ID || r == EMPTY_SET_ID)
     return empty_set();
   // ε · R = R · ε = R (Identity: empty string)
-  if (l == EMPTY_STR_ID)
-    return r;
-  if (r == EMPTY_STR_ID)
-    return l;
+  if (l == EMPTY_STR_ID || r == EMPTY_STR_ID) {
+    if (!ensure_initialized())
+      return Error(REG_ESPACE);
+    return (l == EMPTY_STR_ID) ? r : l;
+  }
   // (A · B) · C = A · (B · C) (Right-associative canonical form)
   const Expr le = get(l);
   if (le.kind == ExprKind::Concat) {
@@ -415,7 +422,7 @@ ErrorOr<ExprId> coalesce_repeat_pair(ExprId a, ExprId b, ExprPool &pool) {
   // Undo make_repeat normalizations: R -> [1,1], EmptyStr -> [0,0], and
   // Star(R) -> [0,REPEAT_INF].
   auto get_interval = [&](ExprId id,
-                          const Expr &e) -> cpp::optional<RepeatInterval> {
+                          const Expr e) -> cpp::optional<RepeatInterval> {
     if (e.kind == ExprKind::Repeat && e.rep.body == body)
       return RepeatInterval{e.rep.min, e.rep.max};
     if (e.kind == ExprKind::Star && e.body == body)
@@ -469,14 +476,12 @@ ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
   if (l == INVALID_EXPR_ID || r == INVALID_EXPR_ID)
     return Error(REG_BADPAT);
   // Apply basic algebraic identities for alternation:
-  // Ø | R = R | Ø = R (Identity: null set)
-  if (l == EMPTY_SET_ID)
-    return r;
-  if (r == EMPTY_SET_ID)
-    return l;
-  // R | R = R (Idempotency)
-  if (l == r)
-    return l;
+  // Ø | R = R | Ø = R (Identity: null set) and R | R = R (Idempotency)
+  if (l == EMPTY_SET_ID || r == EMPTY_SET_ID || l == r) {
+    if (!ensure_initialized())
+      return Error(REG_ESPACE);
+    return (l == EMPTY_SET_ID) ? r : l;
+  }
 
   const Expr le = get(l);
   const Expr re = get(r);

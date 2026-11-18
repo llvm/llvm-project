@@ -19,6 +19,7 @@ using LIBC_NAMESPACE::regex::ANCHOR_BOL;
 using LIBC_NAMESPACE::regex::ANCHOR_EOL;
 using LIBC_NAMESPACE::regex::ByteSet;
 using LIBC_NAMESPACE::regex::EMPTY_SET_ID;
+using LIBC_NAMESPACE::regex::EMPTY_STR_ID;
 using LIBC_NAMESPACE::regex::Expr;
 using LIBC_NAMESPACE::regex::ExprId;
 using LIBC_NAMESPACE::regex::ExprKind;
@@ -41,6 +42,10 @@ TEST(LlvmLibcRegexExprTest, Interning) {
   auto lit_b = pool.make_lit('b');
   ASSERT_TRUE(lit_b.has_value());
   EXPECT_NE(*lit_a, *lit_b);
+
+  auto bad_anchor = pool.make_anchor(0);
+  ASSERT_FALSE(bad_anchor.has_value());
+  EXPECT_EQ(bad_anchor.error(), REG_BADPAT);
 
   auto bol_1 = pool.make_anchor(ANCHOR_BOL);
   auto bol_2 = pool.make_anchor(ANCHOR_BOL);
@@ -136,6 +141,14 @@ TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesConcat) {
   ASSERT_FALSE(bad_right.has_value());
   EXPECT_EQ(bad_right.error(), REG_BADPAT);
 
+  // Identity shortcuts on a freshly constructed pool still initialize storage
+  // so the returned ExprId is safely dereferenceable via get().
+  ExprPool fresh_concat;
+  auto fresh_concat_id = fresh_concat.make_concat(EMPTY_STR_ID, EMPTY_STR_ID);
+  ASSERT_TRUE(fresh_concat_id.has_value());
+  EXPECT_EQ(*fresh_concat_id, EMPTY_STR_ID);
+  EXPECT_EQ(fresh_concat.get(*fresh_concat_id).kind, ExprKind::EmptyStr);
+
   // (Ø · R) or (R · Ø) => Ø
   EXPECT_EQ(*pool.make_concat(empty_set, lit_a), empty_set);
   EXPECT_EQ(*pool.make_concat(lit_a, empty_set), empty_set);
@@ -182,6 +195,26 @@ TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesAltAndStar) {
   auto bad_right = pool.make_alt(lit_a, INVALID_EXPR_ID);
   ASSERT_FALSE(bad_right.has_value());
   EXPECT_EQ(bad_right.error(), REG_BADPAT);
+
+  // Identity and idempotency shortcuts on a freshly constructed pool still
+  // initialize storage so the returned ExprId is safely dereferenceable.
+  ExprPool fresh_alt;
+  auto fresh_alt_id = fresh_alt.make_alt(EMPTY_STR_ID, EMPTY_SET_ID);
+  ASSERT_TRUE(fresh_alt_id.has_value());
+  EXPECT_EQ(*fresh_alt_id, EMPTY_STR_ID);
+  EXPECT_EQ(fresh_alt.get(*fresh_alt_id).kind, ExprKind::EmptyStr);
+
+  ExprPool fresh_alt_lhs;
+  auto fresh_alt_lhs_id = fresh_alt_lhs.make_alt(EMPTY_SET_ID, EMPTY_STR_ID);
+  ASSERT_TRUE(fresh_alt_lhs_id.has_value());
+  EXPECT_EQ(*fresh_alt_lhs_id, EMPTY_STR_ID);
+  EXPECT_EQ(fresh_alt_lhs.get(*fresh_alt_lhs_id).kind, ExprKind::EmptyStr);
+
+  ExprPool fresh_idem;
+  auto fresh_idem_id = fresh_idem.make_alt(EMPTY_STR_ID, EMPTY_STR_ID);
+  ASSERT_TRUE(fresh_idem_id.has_value());
+  EXPECT_EQ(*fresh_idem_id, EMPTY_STR_ID);
+  EXPECT_EQ(fresh_idem.get(*fresh_idem_id).kind, ExprKind::EmptyStr);
 
   // (Ø | R) or (R | Ø) => R
   EXPECT_EQ(*pool.make_alt(empty_set, lit_a), lit_a);

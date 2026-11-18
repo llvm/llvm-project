@@ -45,6 +45,8 @@ public:
   bool CanDebug(lldb::TargetSP target_sp,
                 bool plugin_specified_by_name) override;
 
+  CFAComparison CompareCFAs(const StackID &lhs, const StackID &rhs) override;
+
   /// Retrieve the current call stack from the WebAssembly remote process.
   llvm::Expected<std::vector<lldb::addr_t>> GetWasmCallStack(lldb::tid_t tid);
 

@@ -275,7 +275,7 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
 
   /// Fix up the subranges of \p LI after values were pruned by the join:
   /// re-extend the pruned PHI inputs in PHIKills to their remaining defs, and
-  /// shrink the subranges in ShrinkMask.
+  /// request a shrink of LI if any subrange is in ShrinkMask.
   void updatePrunedSubRanges(LiveInterval &LI);
 
   /// If the given machine operand reads only undefined lanes add an undef
@@ -312,9 +312,10 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   /// This method does the proper fixing of the live-ranges when the afore
   /// mentioned method returns true.
   void shrinkToUses(LiveInterval *LI,
-                    SmallVectorImpl<MachineInstr *> *Dead = nullptr) {
+                    SmallVectorImpl<MachineInstr *> *Dead = nullptr,
+                    LaneBitmask SubRangeMask = LaneBitmask::getAll()) {
     NumShrinkToUses++;
-    if (LIS->shrinkToUses(LI, Dead)) {
+    if (LIS->shrinkToUses(LI, Dead, SubRangeMask)) {
       /// Check whether or not \p LI is composed by multiple connected
       /// components and if that is the case, fix that.
       SmallVector<LiveInterval *, 8> SplitLIs;
@@ -1980,13 +1981,8 @@ void RegisterCoalescer::updatePrunedSubRanges(LiveInterval &LI) {
       LIS->extendToIndices(S, EndPoints, Undefs);
     }
 
-    if ((S.LaneMask & ShrinkMask).none())
-      continue;
-
-    LLVM_DEBUG(dbgs() << "Shrink LaneUses (Lane " << PrintLaneMask(S.LaneMask)
-                      << ")\n");
-    LIS->shrinkToUses(S, LI.reg());
-    ShrinkMainRange = true;
+    if ((S.LaneMask & ShrinkMask).any())
+      ShrinkMainRange = true;
   }
 
   LI.removeEmptySubRanges();
@@ -2212,8 +2208,10 @@ RegisterCoalescer::JoinResult RegisterCoalescer::joinCopy(
   // CP.getSrcReg()'s live interval has been merged into CP.getDstReg's live
   // interval. Since CP.getSrcReg() is in ToBeUpdated set and its live interval
   // is not up-to-date, need to update the merged live interval here.
-  if (ShrinkMainRange || ToBeUpdated.count(CP.getSrcReg()))
+  if (ToBeUpdated.count(CP.getSrcReg()))
     shrinkToUses(&LIS->getInterval(CP.getDstReg()));
+  else if (ShrinkMainRange)
+    shrinkToUses(&LIS->getInterval(CP.getDstReg()), nullptr, ShrinkMask);
 
   // SrcReg is guaranteed to be the register whose live interval that is
   // being merged.
