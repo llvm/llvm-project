@@ -743,8 +743,8 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
   case X86::PTOP4BUSDtrrV:
   case X86::PTOP4BSSDtrrV:
   case X86::PTOP4BSUDtrrV: {
-    MI.untieRegOperand(4);
-    for (unsigned i = 3; i > 0; --i)
+    MI.untieRegOperand(3);
+    for (unsigned i = 2; i > 0; --i)
       MI.removeOperand(i);
     unsigned Opc = 0;
     switch (Opcode) {
@@ -775,8 +775,8 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
   case X86::PTOP4MXHBF8PStrriV:
   case X86::PTOP4MXBF8PStrriV:
   case X86::PTOP4MXBSSPStrriV: {
-    MI.untieRegOperand(5);
-    for (unsigned i = 3; i > 0; --i)
+    MI.untieRegOperand(4);
+    for (unsigned i = 2; i > 0; --i)
       MI.removeOperand(i);
     unsigned ImmVal = MI.getOperand(1).getImm();
     MI.removeOperand(1);

@@ -33,15 +33,15 @@ entry:
   %t7 = call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
   %t8 = call x86_amx @llvm.x86.acev1.tilezero.internal(i16 16, i16 64)
 
-  %d0 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t0, <32 x bfloat> %a, <32 x bfloat> %b)
-  %d1 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t1, <32 x bfloat> %a, <32 x bfloat> %b)
-  %d2 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t2, <32 x bfloat> %a, <32 x bfloat> %b)
-  %d3 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t3, <32 x bfloat> %a, <32 x bfloat> %b)
-  %d4 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t4, <32 x bfloat> %a, <32 x bfloat> %b)
-  %d5 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t5, <32 x bfloat> %a, <32 x bfloat> %b)
-  %d6 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t6, <32 x bfloat> %a, <32 x bfloat> %b)
-  %d7 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t7, <32 x bfloat> %a, <32 x bfloat> %b)
-  %d8 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %t8, <32 x bfloat> %a, <32 x bfloat> %b)
+  %d0 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, x86_amx %t0, <32 x bfloat> %a, <32 x bfloat> %b)
+  %d1 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, x86_amx %t1, <32 x bfloat> %a, <32 x bfloat> %b)
+  %d2 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, x86_amx %t2, <32 x bfloat> %a, <32 x bfloat> %b)
+  %d3 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, x86_amx %t3, <32 x bfloat> %a, <32 x bfloat> %b)
+  %d4 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, x86_amx %t4, <32 x bfloat> %a, <32 x bfloat> %b)
+  %d5 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, x86_amx %t5, <32 x bfloat> %a, <32 x bfloat> %b)
+  %d6 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, x86_amx %t6, <32 x bfloat> %a, <32 x bfloat> %b)
+  %d7 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, x86_amx %t7, <32 x bfloat> %a, <32 x bfloat> %b)
+  %d8 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, x86_amx %t8, <32 x bfloat> %a, <32 x bfloat> %b)
 
   ; Read a row back out of every tile to keep them all live across the region.
   %r0 = call <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16 16, i16 64, x86_amx %d0, i32 0)
@@ -113,7 +113,7 @@ entry:
 }
 
 declare x86_amx @llvm.x86.acev1.tilezero.internal(i16, i16)
-declare x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16, i16, i16, x86_amx, <32 x bfloat>, <32 x bfloat>)
+declare x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16, i16, x86_amx, <32 x bfloat>, <32 x bfloat>)
 declare <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16, i16, x86_amx, i32)
 declare x86_amx @llvm.x86.acev1.tilemovrowinsert.internal(i16, i16, x86_amx, <16 x i32>, i32)
 declare x86_amx @llvm.x86.acev1.tilemovcolinsert.internal(i16, i16, x86_amx, <16 x i32>, i32)

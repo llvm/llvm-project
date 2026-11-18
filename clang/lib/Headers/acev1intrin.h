@@ -542,7 +542,7 @@ static __inline__ void __tile_ace_zero(__acetile *dst) {
 __DEFAULT_FN_ATTRS_ACE
 static __inline__ void __tile_ace_top4buud(__acetile *dst, __m512i src1,
                                            __m512i src2) {
-  *dst = __builtin_ia32_top4buud_internal(16, 64, 64, *dst, (__v64qi)src1,
+  *dst = __builtin_ia32_top4buud_internal(16, 64, *dst, (__v64qi)src1,
                                           (__v64qi)src2);
 }
 
@@ -563,7 +563,7 @@ static __inline__ void __tile_ace_top4buud(__acetile *dst, __m512i src1,
 __DEFAULT_FN_ATTRS_ACE
 static __inline__ void __tile_ace_top4busd(__acetile *dst, __m512i src1,
                                            __m512i src2) {
-  *dst = __builtin_ia32_top4busd_internal(16, 64, 64, *dst, (__v64qi)src1,
+  *dst = __builtin_ia32_top4busd_internal(16, 64, *dst, (__v64qi)src1,
                                           (__v64qi)src2);
 }
 
@@ -584,7 +584,7 @@ static __inline__ void __tile_ace_top4busd(__acetile *dst, __m512i src1,
 __DEFAULT_FN_ATTRS_ACE
 static __inline__ void __tile_ace_top4bssd(__acetile *dst, __m512i src1,
                                            __m512i src2) {
-  *dst = __builtin_ia32_top4bssd_internal(16, 64, 64, *dst, (__v64qi)src1,
+  *dst = __builtin_ia32_top4bssd_internal(16, 64, *dst, (__v64qi)src1,
                                           (__v64qi)src2);
 }
 
@@ -605,7 +605,7 @@ static __inline__ void __tile_ace_top4bssd(__acetile *dst, __m512i src1,
 __DEFAULT_FN_ATTRS_ACE
 static __inline__ void __tile_ace_top4bsud(__acetile *dst, __m512i src1,
                                            __m512i src2) {
-  *dst = __builtin_ia32_top4bsud_internal(16, 64, 64, *dst, (__v64qi)src1,
+  *dst = __builtin_ia32_top4bsud_internal(16, 64, *dst, (__v64qi)src1,
                                           (__v64qi)src2);
 }
 
@@ -626,7 +626,7 @@ static __inline__ void __tile_ace_top4bsud(__acetile *dst, __m512i src1,
 __DEFAULT_FN_ATTRS_ACE
 static __inline__ void __tile_ace_top2bf16ps(__acetile *dst, __m512bh src1,
                                              __m512bh src2) {
-  *dst = __builtin_ia32_top2bf16ps_internal(16, 64, 64, *dst, (__v32bf)src1,
+  *dst = __builtin_ia32_top2bf16ps_internal(16, 64, *dst, (__v32bf)src1,
                                             (__v32bf)src2);
 }
 
@@ -648,7 +648,7 @@ static __inline__ void __tile_ace_top2bf16ps(__acetile *dst, __m512bh src1,
 ///    \c _MM_ACE_SCALE_B; all other bits are reserved and must be zero.
 #define __tile_ace_top4mxhf8ps(dst, src1, src2, imm)                           \
   (*(dst) = __builtin_ia32_top4mxhf8ps_internal(                               \
-       16, 64, 64, (imm), *(dst), (__v64qi)(src1), (__v64qi)(src2)))
+       16, 64, (imm), *(dst), (__v64qi)(src1), (__v64qi)(src2)))
 
 /// Rank-4 MX FP8 outer product. A = FP8 E5M2, B = FP8 E4M3. OCP MX block
 /// scaling via the BSR, with FP32 accumulation into the destination tile.
@@ -668,7 +668,7 @@ static __inline__ void __tile_ace_top2bf16ps(__acetile *dst, __m512bh src1,
 ///    \c _MM_ACE_SCALE_B; all other bits are reserved and must be zero.
 #define __tile_ace_top4mxbhf8ps(dst, src1, src2, imm)                          \
   (*(dst) = __builtin_ia32_top4mxbhf8ps_internal(                              \
-       16, 64, 64, (imm), *(dst), (__v64qi)(src1), (__v64qi)(src2)))
+       16, 64, (imm), *(dst), (__v64qi)(src1), (__v64qi)(src2)))
 
 /// Rank-4 MX FP8 outer product. A = FP8 E4M3, B = FP8 E5M2. OCP MX block
 /// scaling via the BSR, with FP32 accumulation into the destination tile.
@@ -688,7 +688,7 @@ static __inline__ void __tile_ace_top2bf16ps(__acetile *dst, __m512bh src1,
 ///    \c _MM_ACE_SCALE_B; all other bits are reserved and must be zero.
 #define __tile_ace_top4mxhbf8ps(dst, src1, src2, imm)                          \
   (*(dst) = __builtin_ia32_top4mxhbf8ps_internal(                              \
-       16, 64, 64, (imm), *(dst), (__v64qi)(src1), (__v64qi)(src2)))
+       16, 64, (imm), *(dst), (__v64qi)(src1), (__v64qi)(src2)))
 
 /// Rank-4 MX FP8 outer product. A = FP8 E5M2, B = FP8 E5M2. OCP MX block
 /// scaling via the BSR, with FP32 accumulation into the destination tile.
@@ -708,7 +708,7 @@ static __inline__ void __tile_ace_top2bf16ps(__acetile *dst, __m512bh src1,
 ///    \c _MM_ACE_SCALE_B; all other bits are reserved and must be zero.
 #define __tile_ace_top4mxbf8ps(dst, src1, src2, imm)                           \
   (*(dst) = __builtin_ia32_top4mxbf8ps_internal(                               \
-       16, 64, 64, (imm), *(dst), (__v64qi)(src1), (__v64qi)(src2)))
+       16, 64, (imm), *(dst), (__v64qi)(src1), (__v64qi)(src2)))
 
 /// Rank-4 MX INT8 outer product. A = MX INT8 signed, B = MX INT8 signed.
 /// OCP MX block scaling via the BSR, with FP32 accumulation into the
@@ -729,7 +729,7 @@ static __inline__ void __tile_ace_top2bf16ps(__acetile *dst, __m512bh src1,
 ///    \c _MM_ACE_SCALE_B; all other bits are reserved and must be zero.
 #define __tile_ace_top4mxbssps(dst, src1, src2, imm)                           \
   (*(dst) = __builtin_ia32_top4mxbssps_internal(                               \
-       16, 64, 64, (imm), *(dst), (__v64qi)(src1), (__v64qi)(src2)))
+       16, 64, (imm), *(dst), (__v64qi)(src1), (__v64qi)(src2)))
 
 /// Write a ZMM vector as a column in an ACE tile.
 /// The 16 doublewords from src are written vertically at column idx.

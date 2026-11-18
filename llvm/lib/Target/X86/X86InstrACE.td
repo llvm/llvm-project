@@ -80,8 +80,11 @@ multiclass ACE_TILEMOVE<bits<8> OpcImm, bits<8> OpcReg, string Opstr,
   }
 
   let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
+    // The index is i32 so that an out-of-range one truncates, as it does for
+    // AMX; only its low four bits name the row, so truncating keeps those.
     def "P"#NAME#"tri" : PseudoI<(outs),
-                                 (ins u8imm:$dst, VR512:$src, u8imm:$idx), []>;
+                                 (ins u8imm:$dst, VR512:$src, i32u8imm:$idx),
+                                 []>;
 
     def "P"#NAME#"tre" : PseudoI<(outs),
                                  (ins u8imm:$dst, VR512:$src, GR32:$idx), []>;
@@ -116,11 +119,11 @@ multiclass ACE_TOP<bits<8> Opc, string Opstr, Prefix P> {
       Constraints = "$src1 = $dst" in
   def "P"#NAME#"trrV"
       : PseudoI<(outs TILE:$dst),
-                (ins GR16:$row, GR16:$col, GR16:$k,
+                (ins GR16:$row, GR16:$col,
                      TILE:$src1, VR512:$src2, VR512:$src3),
                 [(set TILE:$dst,
                   (!cast<Intrinsic>("int_x86_acev1_"#Opstr#"_internal")
-                   GR16:$row, GR16:$col, GR16:$k,
+                   GR16:$row, GR16:$col,
                    TILE:$src1, VR512:$src2, VR512:$src3))]>;
 }
 
@@ -136,22 +139,24 @@ multiclass ACE_TOP4MX<bits<8> Opc, string Opstr, Prefix P> {
                  []>,
                  EVEX, VVVV, TA, EVEX_V512;
 
+  // The pseudos take their sources in the order the instruction above does,
+  // because expanding them only drops operands and leaves the rest in place.
   let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in
   def "P"#NAME#"trri"
       : PseudoI<(outs),
-                (ins u8imm:$dst, VR512:$src1, VR512:$src2, u8imm:$imm),
+                (ins u8imm:$dst, VR512:$src3, VR512:$src2, u8imm:$imm),
                 [(!cast<Intrinsic>("int_x86_acev1_"#Opstr)
-                  timm:$dst, VR512:$src1, VR512:$src2, timm:$imm)]>;
+                  timm:$dst, VR512:$src2, VR512:$src3, timm:$imm)]>;
 
   let isPseudo = true, hasNoSchedulingInfo = 1, usesCustomInserter = 1,
       Constraints = "$src1 = $dst", Uses = [BSR0] in
   def "P"#NAME#"trriV"
       : PseudoI<(outs TILE:$dst),
-                (ins GR16:$row, GR16:$col, GR16:$k, u8imm:$imm,
-                     TILE:$src1, VR512:$src2, VR512:$src3),
+                (ins GR16:$row, GR16:$col, u8imm:$imm,
+                     TILE:$src1, VR512:$src3, VR512:$src2),
                 [(set TILE:$dst,
                   (!cast<Intrinsic>("int_x86_acev1_"#Opstr#"_internal")
-                   GR16:$row, GR16:$col, GR16:$k, timm:$imm,
+                   GR16:$row, GR16:$col, timm:$imm,
                    TILE:$src1, VR512:$src2, VR512:$src3))]>;
 }
 
