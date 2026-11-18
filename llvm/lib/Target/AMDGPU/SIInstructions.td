@@ -20,7 +20,9 @@ class UniformSextInreg<ValueType VT> : PatFrag<
 class DivergentSextInreg<ValueType VT> : PatFrag<
   (ops node:$src),
   (sext_inreg $src, VT),
-  [{ return N->isDivergent(); }]>;
+  [{ return N->isDivergent(); }]> {
+  let GISelPredicateCode = [{ return true; }];
+}
 
 include "SOPInstructions.td"
 include "VOPInstructions.td"
