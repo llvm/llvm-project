@@ -180,8 +180,13 @@ KnownFPClass KnownFPClass::minMaxLike(const KnownFPClass &KnownLHS_,
 }
 
 KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
-                                        DenormalMode DenormMode) {
+                                        const fltSemantics &Flt,
+                                        DenormalMode Mode) {
   KnownFPClass Known;
+
+  // TODO: implement for x86_fp80
+  if (!APFloat::isIEEELikeFP(Flt))
+    return Known;
 
   // Canonicalize may flush denormals to zero, so we have to consider the
   // denormal mode to preserve known-not-0 knowledge.
@@ -194,11 +199,9 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
   else
     Known.knownNot(fcSNan);
 
-  // FIXME: Missing check of IEEE like types.
-
   // If the parent function flushes denormals, the canonical output cannot be a
   // denormal.
-  if (DenormMode == DenormalMode::getIEEE()) {
+  if (Mode == DenormalMode::getIEEE()) {
     if (KnownSrc.isKnownNever(fcPosZero))
       Known.knownNot(fcPosZero);
     if (KnownSrc.isKnownNever(fcNegZero))
@@ -206,10 +209,10 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
     return Known;
   }
 
-  if (DenormMode.inputsAreZero() || DenormMode.outputsAreZero())
+  if (Mode.inputsAreZero() || Mode.outputsAreZero())
     Known.knownNot(fcSubnormal);
 
-  if (DenormMode == DenormalMode::getPreserveSign()) {
+  if (Mode == DenormalMode::getPreserveSign()) {
     if (KnownSrc.isKnownNever(fcPosZero | fcPosSubnormal))
       Known.knownNot(fcPosZero);
     if (KnownSrc.isKnownNever(fcNegZero | fcNegSubnormal))
@@ -217,9 +220,9 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
     return Known;
   }
 
-  if (DenormMode.Input == DenormalMode::PositiveZero ||
-      (DenormMode.Output == DenormalMode::PositiveZero &&
-       DenormMode.Input == DenormalMode::IEEE)) {
+  if (Mode.Input == DenormalMode::PositiveZero ||
+      (Mode.Output == DenormalMode::PositiveZero &&
+       Mode.Input == DenormalMode::IEEE)) {
     // -0.0 is not a subnormal and should not be flushed.
     if (KnownSrc.isKnownNever(fcNegZero))
       Known.knownNot(fcNegZero);
@@ -316,6 +319,7 @@ KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
 
     break;
   }
+  // Invalid for Motorola's 80-bit floating-point format.
   case APFloatBase::S_x87DoubleExtended: {
     // Layout of the x87 floating point type:
     // [0:62] fraction
@@ -342,7 +346,7 @@ KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
     const bool IntegerBitKnownSet = Bits.One[IntegerBitIndex];
     const bool IntegerBitKnownClear = Bits.Zero[IntegerBitIndex];
 
-    // zero and subnormal require an exponent with all zero bits and a cleared
+    // Zero and subnormal require an exponent with all zero bits and a cleared
     // integer bit.
     if (ExponentKnownNotAllZeros || IntegerBitKnownSet)
       Known.knownNot(fcZero | fcSubnormal);
@@ -375,13 +379,20 @@ KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
          (ExponentKnownNotAllOnes || FractionKnownAllZeros)))
       Known.knownNot(fcNan);
 
-    const bool QuietBitKnownSet = Bits.One[FractionBits - 1];
-    const bool QuietBitKnownClear = Bits.Zero[FractionBits - 1];
+    // Non-canonical NaN has a non-zero exponent with the integer bit cleared.
+    const bool NeverNonCanonicalNaN =
+        ExponentKnownAllZeros || IntegerBitKnownSet;
 
-    if (QuietBitKnownSet)
-      Known.knownNot(fcSNan);
-    else if (QuietBitKnownClear)
-      Known.knownNot(fcQNan);
+    // Be conservative when handling non-canonical NaN.
+    if (NeverNonCanonicalNaN) {
+      const bool QuietBitKnownSet = Bits.One[FractionBits - 1];
+      const bool QuietBitKnownClear = Bits.Zero[FractionBits - 1];
+
+      if (QuietBitKnownSet)
+        Known.knownNot(fcSNan);
+      else if (QuietBitKnownClear)
+        Known.knownNot(fcQNan);
+    }
 
     break;
   }

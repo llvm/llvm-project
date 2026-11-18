@@ -2381,6 +2381,9 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setVectorInterleaveAction({ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
                             {3}, VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+  // NEON has no 64-bit multiply to form the byte indices.
+  if (VT.getScalarSizeInBits() < 64)
+    setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
   setOperationAction(ISD::SRA, VT, Custom);
   setOperationAction(ISD::SRL, VT, Custom);
@@ -8886,6 +8889,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::VECTOR_REVERSE:
     return LowerVECTOR_REVERSE(Op, DAG);
+  case ISD::VECTOR_SHUFFLE_VAR:
+    return LowerVECTOR_SHUFFLE_VAR(Op, DAG);
   case ISD::SPLAT_VECTOR:
     return LowerSPLAT_VECTOR(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR:
@@ -16331,6 +16336,47 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   // Fall back to generating a TBL
   return GenerateTBL(Op, ShuffleMask, DAG);
+}
+
+SDValue
+AArch64TargetLowering::LowerVECTOR_SHUFFLE_VAR(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  SDValue V = Op.getOperand(0);
+  SDValue Mask = Op.getOperand(1);
+  SDLoc DL(Op);
+
+  assert((VT.is64BitVector() || VT.is128BitVector()) &&
+         "Unexpected VECTOR_SHUFFLE_VAR");
+
+  EVT IdxVT = VT.changeVectorElementTypeToInteger();
+  SDValue Idx = DAG.getZExtOrTrunc(Mask, DL, IdxVT);
+
+  // TBL indexes bytes. Multiplying by EltBytes splatted into each byte puts
+  // Idx * EltBytes in every byte of the lane; adding <0, 1, ...> gives the
+  // byte indices. In-range indices never carry between bytes.
+  unsigned EltBits = VT.getScalarSizeInBits();
+  if (EltBits > 8) {
+    APInt RepEltBytes = APInt::getSplat(EltBits, APInt(8, EltBits / 8));
+    APInt ByteOffsets = APInt(32, 0x03020100).trunc(EltBits);
+    Idx = DAG.getNode(ISD::MUL, DL, IdxVT, Idx,
+                      DAG.getConstant(RepEltBytes, DL, IdxVT));
+    Idx = DAG.getNode(ISD::ADD, DL, IdxVT, Idx,
+                      DAG.getConstant(ByteOffsets, DL, IdxVT));
+  }
+
+  // NVCAST keeps the byte indices valid for big-endian.
+  MVT ByteVT = VT.getSizeInBits() == 128 ? MVT::v16i8 : MVT::v8i8;
+  SDValue Table = DAG.getNode(AArch64ISD::NVCAST, DL, ByteVT, V);
+  // TBL tables are 128 bits; only out-of-range indices read the upper half.
+  if (ByteVT == MVT::v8i8)
+    Table = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i8, Table,
+                        DAG.getPOISON(MVT::v8i8));
+  SDValue Tbl = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, ByteVT,
+      DAG.getTargetConstant(Intrinsic::aarch64_neon_tbl1, DL, MVT::i32), Table,
+      DAG.getNode(AArch64ISD::NVCAST, DL, ByteVT, Idx));
+  return DAG.getNode(AArch64ISD::NVCAST, DL, VT, Tbl);
 }
 
 SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
@@ -28024,85 +28070,6 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 static SDValue performLegalizedInterleavedStoreCombine(
     StoreSDNode *ST, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG);
 
-// At each Index look for insert_vector_elt(vec, elt, Index) and recurse into
-// vec. At Index 0 look for a scalar_to_vector. Generate a store for each elt if
-// all items match.
-static SDValue replaceStoreOfVectorInsertAt(StoreSDNode *ST, SDValue Val,
-                                            unsigned Index, SelectionDAG &DAG) {
-  SDValue Elt;
-  SDValue Chain;
-
-  if (!Val.hasOneUse())
-    return SDValue();
-
-  if (Index == 0) {
-    if (Val.getOpcode() != ISD::SCALAR_TO_VECTOR)
-      return SDValue();
-    Elt = Val.getOperand(0);
-    Chain = ST->getChain();
-  } else {
-    if (Val.getOpcode() != ISD::INSERT_VECTOR_ELT ||
-        !isa<ConstantSDNode>(Val.getOperand(2)) ||
-        Val.getConstantOperandVal(2) != Index)
-      return SDValue();
-
-    Elt = Val.getOperand(1);
-    Chain = replaceStoreOfVectorInsertAt(ST, Val.getOperand(0), Index - 1, DAG);
-    if (!Chain)
-      return SDValue();
-  }
-
-  if (!Elt.getValueType().isInteger() ||
-      Elt.getOpcode() == ISD::EXTRACT_VECTOR_ELT)
-    return SDValue();
-
-  // Generate the new store of the element
-  SDLoc DL(ST);
-  EVT EltVT = ST->getValue().getValueType().getScalarType();
-  SDValue Base = ST->getBasePtr();
-  if (ST->getAddressingMode() == ISD::PRE_INC)
-    Base =
-        DAG.getNode(ISD::ADD, ST, Base.getValueType(), Base, ST->getOffset());
-  else if (ST->getAddressingMode() == ISD::PRE_DEC)
-    Base =
-        DAG.getNode(ISD::SUB, ST, Base.getValueType(), Base, ST->getOffset());
-
-  uint64_t Offset = Index * EltVT.getStoreSize().getFixedValue();
-  SDValue NewPtr =
-      DAG.getMemBasePlusOffset(Base, TypeSize::getFixed(Offset), DL);
-  MachinePointerInfo PointerInfo = ST->getPointerInfo().getWithOffset(Offset);
-  Align NewAlign = commonAlignment(ST->getAlign(), Offset);
-  return DAG.getTruncStore(Chain, DL, Elt, NewPtr, PointerInfo, EltVT, NewAlign,
-                           ST->getMemOperand()->getFlags(),
-                           ST->getMMOMetadataForSubAccess());
-}
-
-// Replace store (insert(insert(insert(...))) with separate stores per element.
-static SDValue replaceStoreOfVectorInsert(StoreSDNode *ST, SelectionDAG &DAG) {
-  SDValue Val = ST->getValue();
-  EVT VT = Val.getValueType();
-
-  if (ST->isTruncatingStore() || !ST->isSimple() || !VT.isFixedLengthVector())
-    return SDValue();
-
-  SDValue NewChain =
-      replaceStoreOfVectorInsertAt(ST, Val, VT.getVectorNumElements() - 1, DAG);
-  if (!NewChain)
-    return SDValue();
-
-  SDLoc DL(ST);
-  if (ST->isIndexed()) {
-    unsigned Opc = (ST->getAddressingMode() == ISD::PRE_INC ||
-                    ST->getAddressingMode() == ISD::POST_INC)
-                       ? ISD::ADD
-                       : ISD::SUB;
-    SDValue Add = DAG.getNode(Opc, DL, ST->getBasePtr().getValueType(),
-                              ST->getBasePtr(), ST->getOffset());
-    return DAG.getMergeValues({Add, NewChain}, DL);
-  }
-  return NewChain;
-}
-
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
@@ -28268,10 +28235,6 @@ static SDValue performSTORECombine(SDNode *N,
     return DAG.getStore(ST->getChain(), DL, FPSubreg, ST->getBasePtr(),
                         ST->getMemOperand());
   }
-
-  if (DCI.isAfterLegalizeDAG())
-    if (SDValue R = replaceStoreOfVectorInsert(ST, DAG))
-      return R;
 
   return SDValue();
 }

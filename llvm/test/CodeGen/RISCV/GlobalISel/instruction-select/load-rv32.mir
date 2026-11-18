@@ -18,8 +18,8 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LBU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s32) = G_LOAD %0(p0) :: (load (s8))
-    $x10 = COPY %1(s32)
+    %1:gprb(i32) = G_LOAD %0(p0) :: (load (s8))
+    $x10 = COPY %1(i32)
     PseudoRET implicit $x10
 
 ...
@@ -39,8 +39,8 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LH]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s32) = G_LOAD %0(p0) :: (load (s16))
-    $x10 = COPY %1(s32)
+    %1:gprb(i32) = G_LOAD %0(p0) :: (load (s16))
+    $x10 = COPY %1(i32)
     PseudoRET implicit $x10
 
 ...
@@ -60,9 +60,9 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LBU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s16) = G_LOAD %0(p0) :: (load (s8))
-    %2:gprb(s32) = G_ANYEXT %1
-    $x10 = COPY %2(s32)
+    %1:gprb(i16) = G_LOAD %0(p0) :: (load (s8))
+    %2:gprb(i32) = G_ANYEXT %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -82,9 +82,9 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LH]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s16) = G_LOAD %0(p0) :: (load (s16))
-    %2:gprb(s32) = G_ANYEXT %1
-    $x10 = COPY %2(s32)
+    %1:gprb(i16) = G_LOAD %0(p0) :: (load (s16))
+    %2:gprb(i32) = G_ANYEXT %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -104,8 +104,8 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LW]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s32) = G_LOAD %0(p0) :: (load (s32))
-    $x10 = COPY %1(s32)
+    %1:gprb(i32) = G_LOAD %0(p0) :: (load (s32))
+    $x10 = COPY %1(i32)
     PseudoRET implicit $x10
 
 ...
@@ -125,8 +125,8 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LBU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s32) = G_ZEXTLOAD %0(p0) :: (load (s8))
-    $x10 = COPY %1(s32)
+    %1:gprb(i32) = G_ZEXTLOAD %0(p0) :: (load (s8))
+    $x10 = COPY %1(i32)
     PseudoRET implicit $x10
 
 ...
@@ -146,8 +146,8 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LHU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s32) = G_ZEXTLOAD %0(p0) :: (load (s16))
-    $x10 = COPY %1(s32)
+    %1:gprb(i32) = G_ZEXTLOAD %0(p0) :: (load (s16))
+    $x10 = COPY %1(i32)
     PseudoRET implicit $x10
 
 ...
@@ -167,8 +167,8 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LB]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s32) = G_SEXTLOAD %0(p0) :: (load (s8))
-    $x10 = COPY %1(s32)
+    %1:gprb(i32) = G_SEXTLOAD %0(p0) :: (load (s8))
+    $x10 = COPY %1(i32)
     PseudoRET implicit $x10
 
 ...
@@ -188,8 +188,8 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LH]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s32) = G_SEXTLOAD %0(p0) :: (load (s16))
-    $x10 = COPY %1(s32)
+    %1:gprb(i32) = G_SEXTLOAD %0(p0) :: (load (s16))
+    $x10 = COPY %1(i32)
     PseudoRET implicit $x10
 
 ...
@@ -229,8 +229,8 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LW]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = G_FRAME_INDEX %stack.0
-    %1:gprb(s32) = G_LOAD %0(p0) :: (load (s32))
-    $x10 = COPY %1(s32)
+    %1:gprb(i32) = G_LOAD %0(p0) :: (load (s32))
+    $x10 = COPY %1(i32)
     PseudoRET implicit $x10
 
 ...
@@ -249,10 +249,10 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LW]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = G_FRAME_INDEX %stack.0
-    %1:gprb(s32) = G_CONSTANT i32 4
-    %2:gprb(p0) = G_PTR_ADD %0(p0), %1(s32)
-    %3:gprb(s32) = G_LOAD %2(p0) :: (load (s32))
-    $x10 = COPY %3(s32)
+    %1:gprb(i32) = G_CONSTANT i32 4
+    %2:gprb(p0) = G_PTR_ADD %0(p0), %1(i32)
+    %3:gprb(i32) = G_LOAD %2(p0) :: (load (s32))
+    $x10 = COPY %3(i32)
     PseudoRET implicit $x10
 
 ...
@@ -272,10 +272,10 @@ body:            |
     ; CHECK-NEXT: $x10 = COPY [[LW]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
-    %1:gprb(s32) = G_CONSTANT i32 4
-    %2:gprb(p0) = G_PTR_ADD %0(p0), %1(s32)
-    %3:gprb(s32) = G_LOAD %2(p0) :: (load (s32))
-    $x10 = COPY %3(s32)
+    %1:gprb(i32) = G_CONSTANT i32 4
+    %2:gprb(p0) = G_PTR_ADD %0(p0), %1(i32)
+    %3:gprb(i32) = G_LOAD %2(p0) :: (load (s32))
+    $x10 = COPY %3(i32)
     PseudoRET implicit $x10
 
 ...
