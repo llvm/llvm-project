@@ -11,6 +11,7 @@
 #include "PluginInterface.h"
 
 #include "Shared/Debug.h"
+#include "Shared/Environment.h"
 
 #include "ErrorReporting.h"
 #include "GenericProfiler.h"
@@ -653,7 +654,7 @@ void GenericDeviceTy::recordDeallocation(void *DevicePtr,
     ErrorReporter::reportDeallocationOfWrongPtrKind(DevicePtr, Kind, ATI,
                                                     StackTrace);
 
-  ATI->DeallocationTrace = StackTrace;
+  ATI->DeallocationTrace = std::move(StackTrace);
 }
 
 Error GenericDeviceTy::dataDelete(void *TgtPtr, ol_alloc_type_t Kind,

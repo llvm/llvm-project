@@ -6,7 +6,7 @@ define <2 x i64> @shl1(<4 x i32> %r, <4 x i32> %a) nounwind readnone ssp {
 ; X86-LABEL: shl1:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pslld $23, %xmm1
-; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1 # [1065353216,1065353216,1065353216,1065353216]
 ; X86-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X86-NEXT:    pmulld %xmm1, %xmm0
 ; X86-NEXT:    retl
@@ -14,7 +14,7 @@ define <2 x i64> @shl1(<4 x i32> %r, <4 x i32> %a) nounwind readnone ssp {
 ; X64-LABEL: shl1:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pslld $23, %xmm1
-; X64-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1065353216,1065353216,1065353216,1065353216]
 ; X64-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X64-NEXT:    pmulld %xmm1, %xmm0
 ; X64-NEXT:    retq

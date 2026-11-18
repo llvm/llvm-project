@@ -7,7 +7,7 @@
 define <32 x i8> @load_to_32xi8(ptr %p) {
 ; CHECK-LABEL: load_to_32xi8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vldrepl.b $vr0, $a0, 0
+; CHECK-NEXT:    xvldrepl.b $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v = load i8, ptr %p
   %ret = insertelement <32 x i8> poison, i8 %v, i32 0
@@ -17,7 +17,7 @@ define <32 x i8> @load_to_32xi8(ptr %p) {
 define <16 x i16> @load_to_16xi16(ptr %p) {
 ; CHECK-LABEL: load_to_16xi16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vldrepl.h $vr0, $a0, 0
+; CHECK-NEXT:    xvldrepl.h $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v = load i16, ptr %p
   %ret = insertelement <16 x i16> poison, i16 %v, i32 0
@@ -27,7 +27,7 @@ define <16 x i16> @load_to_16xi16(ptr %p) {
 define <8 x i32> @load_to_8xi32(ptr %p) {
 ; CHECK-LABEL: load_to_8xi32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fld.s $fa0, $a0, 0
+; CHECK-NEXT:    xvldrepl.w $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v = load i32, ptr %p
   %ret = insertelement <8 x i32> poison, i32 %v, i32 0
@@ -44,7 +44,7 @@ define <4 x i64> @load_to_4xi64(ptr %p) {
 ;
 ; LA64-LABEL: load_to_4xi64:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    fld.d $fa0, $a0, 0
+; LA64-NEXT:    xvldrepl.d $xr0, $a0, 0
 ; LA64-NEXT:    ret
   %v = load i64, ptr %p
   %ret = insertelement <4 x i64> poison, i64 %v, i32 0
@@ -93,7 +93,7 @@ define <8 x i32> @load_to_8xi32_volatile(ptr %p) {
 ; CHECK-LABEL: load_to_8xi32_volatile:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; CHECK-NEXT:    xvreplgr2vr.w $xr0, $a0
 ; CHECK-NEXT:    ret
   %v = load volatile i32, ptr %p
   %ret = insertelement <8 x i32> poison, i32 %v, i32 0
@@ -104,7 +104,7 @@ define <8 x i32> @load_to_8xi32_multi_use(ptr %p, ptr %dst) {
 ; CHECK-LABEL: load_to_8xi32_multi_use:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; CHECK-NEXT:    xvreplgr2vr.w $xr0, $a0
 ; CHECK-NEXT:    st.w $a0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load i32, ptr %p
@@ -116,8 +116,7 @@ define <8 x i32> @load_to_8xi32_multi_use(ptr %p, ptr %dst) {
 define <8 x i32> @load_to_8xi32_lane1(ptr %p) {
 ; CHECK-LABEL: load_to_8xi32_lane1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.w $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; CHECK-NEXT:    xvldrepl.w $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v = load i32, ptr %p
   %ret = insertelement <8 x i32> poison, i32 %v, i32 1

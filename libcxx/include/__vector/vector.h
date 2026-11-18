@@ -772,7 +772,7 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __destruct_at_end(pointer __new_last) _NOEXCEPT {
     size_type __old_size = size();
-    std::__allocator_destroy(__layout_.__alloc(), __new_last, __layout_.__end_ptr());
+    std::__allocator_destroy_backward(__layout_.__alloc(), __new_last, __layout_.__end_ptr());
     __layout_.__set_bound_using_pointer(__new_last);
     __annotate_shrink(__old_size);
   }
