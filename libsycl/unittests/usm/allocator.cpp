@@ -236,7 +236,7 @@ TEST_F(USMAllocatorTest, Equality) {
   EXPECT_TRUE(Host != Shared);
 
   usm_allocator<int, usm::alloc::host, 64> Aligned(Q);
-  EXPECT_TRUE(Host != Aligned);
+  EXPECT_TRUE(Host == Aligned);
 
   context OtherContext(Q.get_device());
   ASSERT_NE(OtherContext, Q.get_context());

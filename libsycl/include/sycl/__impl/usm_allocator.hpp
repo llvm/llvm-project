@@ -66,7 +66,7 @@ public:
   ~usm_allocator() = default;
 
   usm_allocator &operator=(const usm_allocator &other) = default;
-  usm_allocator &operator=(usm_allocator &&other) = default;
+  usm_allocator &operator=(usm_allocator &&other) noexcept = default;
 
   /// Allocate \p count elements
   /// \p count number of elements to allocate memory for
