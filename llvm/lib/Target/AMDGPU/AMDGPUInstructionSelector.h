@@ -94,7 +94,6 @@ private:
   bool selectPHI(MachineInstr &I) const;
   bool selectG_TRUNC(MachineInstr &I) const;
   bool selectG_SZA_EXT(MachineInstr &I) const;
-  bool selectI16SignExtend(MachineInstr &I, Register SrcReg) const;
   bool selectG_FPEXT(MachineInstr &I) const;
   bool selectG_FNEG(MachineInstr &I) const;
   bool selectG_FABS(MachineInstr &I) const;
