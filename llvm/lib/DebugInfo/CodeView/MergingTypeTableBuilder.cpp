@@ -109,12 +109,10 @@ MergingTypeTableBuilder::insertRecordBytes(ArrayRef<uint8_t> &Record) {
 
 TypeIndex
 MergingTypeTableBuilder::insertRecord(ContinuationRecordBuilder &Builder) {
-  TypeIndex TI;
-  auto Fragments = Builder.end(nextTypeIndex());
-  assert(!Fragments.empty());
-  for (auto C : Fragments)
-    TI = insertRecordBytes(C.RecordData);
-  return TI;
+  // Segments may be deduplicated against existing records, so let the builder
+  // chain each segment to the index the previous one was actually assigned.
+  return Builder.end(
+      [this](ArrayRef<uint8_t> Segment) { return insertRecordBytes(Segment); });
 }
 
 bool MergingTypeTableBuilder::replaceType(TypeIndex &Index, CVType Data,

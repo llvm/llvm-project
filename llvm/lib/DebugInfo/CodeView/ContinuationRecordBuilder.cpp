@@ -171,9 +171,7 @@ CVType ContinuationRecordBuilder::createSegmentRecord(
 }
 
 std::vector<CVType> ContinuationRecordBuilder::end(TypeIndex Index) {
-  RecordPrefix Prefix(getTypeLeafKind(*Kind));
-  CVType Type(&Prefix, sizeof(Prefix));
-  cantFail(Mapping.visitTypeEnd(Type));
+  finishRecord();
 
   // We're now done, and we have a series of segments each beginning at an
   // offset specified in the SegmentOffsets array.  We now need to iterate
@@ -238,6 +236,36 @@ std::vector<CVType> ContinuationRecordBuilder::end(TypeIndex Index) {
 
   Kind.reset();
   return Types;
+}
+
+TypeIndex ContinuationRecordBuilder::end(
+    function_ref<TypeIndex(ArrayRef<uint8_t>)> InsertSegment) {
+  finishRecord();
+
+  // The segments are laid out and committed in the same order as in
+  // end(TypeIndex) above. The difference is that rather than assuming which
+  // index each segment will be assigned, we insert each segment before
+  // creating the next one, and point the next segment's continuation at the
+  // index the previous segment actually received. A type table that
+  // deduplicates records may return the index of an identical, previously
+  // inserted segment rather than the next index.
+  uint32_t End = SegmentWriter.getOffset();
+
+  std::optional<TypeIndex> RefersTo;
+  for (uint32_t Offset : reverse(ArrayRef(SegmentOffsets))) {
+    CVType Segment = createSegmentRecord(Offset, End, RefersTo);
+    RefersTo = InsertSegment(Segment.RecordData);
+    End = Offset;
+  }
+
+  Kind.reset();
+  return *RefersTo;
+}
+
+void ContinuationRecordBuilder::finishRecord() {
+  RecordPrefix Prefix(getTypeLeafKind(*Kind));
+  CVType Type(&Prefix, sizeof(Prefix));
+  cantFail(Mapping.visitTypeEnd(Type));
 }
 
 // Explicitly instantiate the member function for each known type so that we can
