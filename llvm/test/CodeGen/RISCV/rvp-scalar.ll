@@ -4234,6 +4234,70 @@ define i32 @test_sshlr_u32_negimm(i32 %a) {
   ret i32 %res
 }
 
+define i32 @test_ssha_i32_negimm_too_large(i32 %a) {
+; RV32-LABEL: test_ssha_i32_negimm_too_large:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, -32
+; RV32-NEXT:    ssha a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ssha_i32_negimm_too_large:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, -32
+; RV64-NEXT:    pssha.ws a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.ssha.i32(i32 %a, i32 -32)
+  ret i32 %res
+}
+
+define i32 @test_sshar_i32_negimm_too_large(i32 %a) {
+; RV32-LABEL: test_sshar_i32_negimm_too_large:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, -32
+; RV32-NEXT:    sshar a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_sshar_i32_negimm_too_large:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, -32
+; RV64-NEXT:    psshar.ws a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.sshar.i32(i32 %a, i32 -32)
+  ret i32 %res
+}
+
+define i32 @test_sshl_u32_negimm_too_large(i32 %a) {
+; RV32-LABEL: test_sshl_u32_negimm_too_large:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, -32
+; RV32-NEXT:    sshl a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_sshl_u32_negimm_too_large:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, -32
+; RV64-NEXT:    psshl.ws a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.sshl.u32(i32 %a, i32 -32)
+  ret i32 %res
+}
+
+define i32 @test_sshlr_u32_negimm_too_large(i32 %a) {
+; RV32-LABEL: test_sshlr_u32_negimm_too_large:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, -32
+; RV32-NEXT:    sshlr a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_sshlr_u32_negimm_too_large:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, -32
+; RV64-NEXT:    psshlr.ws a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.sshlr.u32(i32 %a, i32 -32)
+  ret i32 %res
+}
+
 define i32 @nclipu_u32(i64 %a, i32 %shamt) {
 ; RV32-LABEL: nclipu_u32:
 ; RV32:       # %bb.0:
