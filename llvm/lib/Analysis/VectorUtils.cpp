@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/MetadataUtils.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "AnalysisOptions.h"
 #include "llvm/ADT/EquivalenceClasses.h"
@@ -19,6 +18,7 @@
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
+#include "llvm/Analysis/MetadataUtils.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"

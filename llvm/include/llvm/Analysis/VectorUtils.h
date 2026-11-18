@@ -18,6 +18,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/Analysis/MetadataUtils.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/VFABIDemangler.h"
 #include "llvm/IR/VectorTypeUtils.h"
