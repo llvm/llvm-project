@@ -54,13 +54,6 @@ isOutlined:      false
 debugInstrRef:   true
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: gr32, preferred-register: '', flags: [  ] }
-  - { id: 1, class: gr32, preferred-register: '', flags: [  ] }
-  - { id: 2, class: gr32, preferred-register: '', flags: [  ] }
-  - { id: 3, class: gr32, preferred-register: '', flags: [  ] }
-  - { id: 4, class: gr32, preferred-register: '', flags: [  ] }
-  - { id: 5, class: gr32, preferred-register: '', flags: [  ] }
 liveins:
   - { reg: '$edi', virtual-reg: '%0' }
   - { reg: '$esi', virtual-reg: '%1' }

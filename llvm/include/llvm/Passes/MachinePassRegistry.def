@@ -45,6 +45,7 @@ MACHINE_FUNCTION_ANALYSIS("machine-register-class-info",
 MACHINE_FUNCTION_ANALYSIS("machine-regions", MachineRegionInfoAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-trace-metrics", MachineTraceMetricsAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-uniformity", MachineUniformityAnalysis())
+MACHINE_FUNCTION_ANALYSIS("mir2vec-vocab", MIR2VecVocabAnalysis())
 MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 MACHINE_FUNCTION_ANALYSIS("reaching-def", ReachingDefAnalysis())
 MACHINE_FUNCTION_ANALYSIS("regalloc-evict", RegAllocEvictionAdvisorAnalysis())
@@ -132,6 +133,7 @@ MACHINE_FUNCTION_PASS("print<machine-regions>",
                       MachineRegionInfoPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-uniformity>",
                       MachineUniformityPrinterPass(errs()))
+MACHINE_FUNCTION_PASS("print<mir2vec>", MIR2VecPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<reaching-def>", ReachingDefPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<slot-indexes>", SlotIndexesPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<virtregmap>", VirtRegMapPrinterPass(errs()))

@@ -665,6 +665,30 @@ public:
   }
 };
 
+class SwitchConversionPattern : public SPIRVToLLVMConversion<spirv::SwitchOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::SwitchOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::SwitchOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Literals have the selector type, which may be signed or unsigned. Retype
+    // them to the signless converted selector type.
+    DenseIntElementsAttr caseValues;
+    if (std::optional<DenseIntElementsAttr> literals = op.getLiterals())
+      caseValues = cast<DenseIntElementsAttr>(
+          literals->bitcast(adaptor.getSelector().getType()));
+    if (!caseValues && !op.getTargets().empty())
+      return rewriter.notifyMatchFailure(op, "targets without literals");
+
+    rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(
+        op, adaptor.getSelector(), op.getDefaultTarget(),
+        adaptor.getDefaultOperands(), caseValues, op.getTargets(),
+        adaptor.getTargetOperands());
+    return success();
+  }
+};
+
 /// Converts `spirv.getCompositeExtract` to `llvm.extractvalue` if the container
 /// type is an aggregate type (struct or array). Otherwise, converts to
 /// `llvm.extractelement` that operates on vectors.
@@ -725,6 +749,19 @@ public:
     rewriter.replaceOpWithNewOp<LLVM::InsertValueOp>(
         op, adaptor.getComposite(), adaptor.getObject(),
         LLVM::convertArrayToIndices(op.getIndices()));
+    return success();
+  }
+};
+
+/// Converts `spirv.CopyObject` by forwarding its operand.
+class CopyObjectPattern : public SPIRVToLLVMConversion<spirv::CopyObjectOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::CopyObjectOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::CopyObjectOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOp(op, adaptor.getOperand());
     return success();
   }
 };
@@ -2567,8 +2604,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
 
       // Control Flow ops
       BranchConversionPattern, BranchConditionalConversionPattern,
-      FunctionCallPattern, LoopPattern, SelectionPattern,
-      ErasePattern<spirv::MergeOp>,
+      SwitchConversionPattern, FunctionCallPattern, LoopPattern,
+      SelectionPattern, ErasePattern<spirv::MergeOp>,
 
       // Entry points and execution mode are handled separately.
       ErasePattern<spirv::EntryPointOp>, ExecutionModePattern,
@@ -2679,7 +2716,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       LoadStorePattern<spirv::StoreOp>, VariablePattern,
 
       // Miscellaneous ops
-      CompositeExtractPattern, CompositeInsertPattern,
+      CompositeExtractPattern, CompositeInsertPattern, CopyObjectPattern,
       DirectConversionPattern<spirv::SelectOp, LLVM::SelectOp>,
       DirectConversionPattern<spirv::UndefOp, LLVM::UndefOp>,
       VectorShufflePattern,

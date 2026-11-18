@@ -5041,12 +5041,24 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_tensormap_replace_interleave_layout:
   case Intrinsic::nvvm_tensormap_replace_swizzle_mode:
   case Intrinsic::nvvm_tensormap_replace_swizzle_atomicity:
-  case Intrinsic::nvvm_tensormap_replace_fill_mode: {
+  case Intrinsic::nvvm_tensormap_replace_fill_mode:
+  case Intrinsic::nvvm_tensormap_replace_alloc_class: {
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = MVT::i32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_tensormap_query_alloc_class_large: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
     Infos.push_back(Info);
     return;
@@ -7078,7 +7090,7 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
     return SDValue();
 
   // Don't mess with undef values as sra may be simplified to 0, not undef.
-  if (Vector->isUndef() || ISD::allOperandsUndef(Vector.getNode()))
+  if (Vector->isUndef() || ISD::allOperandsUndef(Vector))
     return SDValue();
 
   uint64_t VectorBits = VectorVT.getSizeInBits();
@@ -8477,6 +8489,16 @@ void NVPTXTargetLowering::computeKnownBitsForTargetNode(
     // unused parts of its operands, such as the high bytes of narrow loads.
     Known = KnownBits::mul(IsSigned ? LHS.sext(BitWidth) : LHS.zext(BitWidth),
                            IsSigned ? RHS.sext(BitWidth) : RHS.zext(BitWidth));
+    break;
+  }
+  case NVPTXISD::CLZ_B64:
+  case NVPTXISD::POPC_B64: {
+    KnownBits Input =
+        DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    unsigned MaxCount = Op.getOpcode() == NVPTXISD::CLZ_B64
+                            ? Input.countMaxLeadingZeros()
+                            : Input.countMaxPopulation();
+    Known.Zero.setBitsFrom(llvm::bit_width(MaxCount));
     break;
   }
   case NVPTXISD::PRMT:
