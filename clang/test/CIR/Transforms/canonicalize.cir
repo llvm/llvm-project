@@ -185,6 +185,15 @@ module {
   // CHECK-NEXT:   %[[P:.*]] = cir.const #cir.poison : !s8i
   // CHECK-NEXT:   cir.return %[[P]] : !s8i
 
+  cir.func @unary_minus_uint_nsw_poison() -> !u8i {
+    %0 = cir.const #cir.int<128> : !u8i
+    %1 = cir.minus nsw %0 : !u8i
+    cir.return %1 : !u8i
+  }
+  // CHECK:      cir.func{{.*}} @unary_minus_uint_nsw_poison() -> !u8i
+  // CHECK-NEXT:   %[[P:.*]] = cir.const #cir.poison : !u8i
+  // CHECK-NEXT:   cir.return %[[P]] : !u8i
+
   cir.func @unary_fneg_float() -> !cir.float {
     %0 = cir.const #cir.fp<1.100000e+00> : !cir.float
     %1 = cir.fneg %0 : !cir.float
