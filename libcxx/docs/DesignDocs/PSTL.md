@@ -54,91 +54,92 @@ There are 2 configurations of composing the PSTL backends (`__pstl/backend_fwd.h
 
 ## Algorithms
 
-The following table shows which algorithms are implemented in the backends:
+The following table shows which algorithms are implemented in the backends.
+The values in the `default` backend show which algorithms are used to reframe as.
 
 | Algorithm                              | default | serial | statpart |
 | -------------------------------------- | ------- | ------ | -------- |
-| std::adjacent_difference | ✅ |  |  |
-| std::adjacent_find | ✅ |  |  |
-| std::all_of | ✅ |  |  |
-| std::any_of | ✅ |  | ✅ |
-| std::copy | ✅ |  |  |
-| std::copy_if |  | ✅ |  |
-| std::copy_n | ✅ |  |  |
-| std::count | ✅ |  |  |
-| std::count_if | ✅ |  |  |
-| std::destroy | ✅ |  |  |
-| std::destroy_n | ✅ |  |  |
-| std::equal | ✅ |  |  |
-| std::exclusive_scan |  |  |  |
-| std::fill | ✅ |  | ✅ |
-| std::fill_n | ✅ |  |  |
-| std::find | ✅ |  |  |
-| std::find_end |  | ✅ | ✅ |
-| std::find_first_of | ✅ |  |  |
-| std::find_if |  | ✅ | ✅ |
-| std::find_if_not | ✅ |  |  |
-| std::for_each |  | ✅ | ✅ |
-| std::for_each_n | ✅ |  |  |
-| std::generate | ✅ |  |  |
-| std::generate_n | ✅ |  |  |
-| std::includes |  | ✅ |  |
-| std::inclusive_scan | ✅ |  |  |
-| std::inplace_merge |  |  |  |
-| std::is_heap | ✅ |  |  |
-| std::is_heap_until |  | ✅ | ✅ |
-| std::is_partitioned | ✅ |  |  |
-| std::is_sorted | ✅ |  |  |
-| std::is_sorted_until | ✅ |  |  |
-| std::lexicographical_compare | ✅ |  |  |
-| std::max_element | ✅ |  |  |
-| std::merge |  | ✅ | ✅ |
-| std::min_element |  | ✅ | ✅ |
-| std::minmax_element |  | ✅ | ✅ |
-| std::mismatch | ✅ | ✅ | ✅ |
-| std::move | ✅ |  |  |
-| std::none_of | ✅ |  |  |
-| std::nth_element |  |  |  |
-| std::partial_sort |  |  |  |
-| std::partial_sort_copy |  |  |  |
-| std::partition |  | ✅ |  |
-| std::partition_copy |  | ✅ |  |
-| std::reduce | ✅ |  |  |
-| std::remove |  |  |  |
-| std::remove_copy |  |  |  |
-| std::remove_copy_if |  |  |  |
-| std::remove_if |  |  |  |
-| std::replace | ✅ |  |  |
-| std::replace_copy | ✅ |  |  |
-| std::replace_copy_if | ✅ |  |  |
-| std::replace_if | ✅ |  |  |
-| std::reverse |  | ✅ | ✅ |
-| std::reverse_copy | ✅ |  |  |
-| std::rotate |  |  |  |
-| std::rotate_copy | ✅ |  |  |
-| std::search |  | ✅ | ✅ |
-| std::search_n |  | ✅ | ✅ |
-| std::set_difference |  | ✅ |  |
-| std::set_intersection |  | ✅ |  |
-| std::set_symmetric_difference |  | ✅ |  |
-| std::set_union |  | ✅ |  |
-| std::sort | ✅ |  |  |
-| std::stable_partition |  | ✅ |  |
-| std::stable_sort |  | ✅ | ✅ |
-| std::swap_ranges |  | ✅ | ✅ |
-| std::transform |  | ✅ | ✅ |
-| std::transform_exclusive_scan |  |  |  |
-| std::transform_inclusive_scan | ✅ | ✅ | ✅ |
-| std::transform_reduce |  | ✅ | ✅ |
-| std::uninitialized_copy |  | ✅ | ✅ |
-| std::uninitialized_copy_n | ✅ |  |  |
-| std::uninitialized_default_construct | ✅ |  |  |
-| std::uninitialized_default_construct_n | ✅ |  |  |
-| std::uninitialized_fill | ✅ |  |  |
-| std::uninitialized_fill_n | ✅ |  |  |
-| std::uninitialized_move |  | ✅ | ✅ |
-| std::uninitialized_move_n | ✅ |  |  |
-| std::uninitialized_value_construct | ✅ |  |  |
-| std::uninitialized_value_construct_n | ✅ |  |  |
-| std::unique |  |  |  |
-| std::unique_copy |  |  |  |
+| adjacent_difference | → transform |  |  |
+| adjacent_find | → mismatch |  |  |
+| all_of | → any_of |  |  |
+| any_of | → find_if |  | ● |
+| copy | → transform |  |  |
+| copy_if |  | ● |  |
+| copy_n | → copy |  |  |
+| count | → count_if |  |  |
+| count_if | → transform_reduce |  |  |
+| destroy | → for_each |  |  |
+| destroy_n | → for_each_n |  |  |
+| equal | → transform_reduce |  |  |
+| exclusive_scan |  |  |  |
+| fill | → for_each |  | ● |
+| fill_n | → for_each_n |  |  |
+| find | → find_if |  |  |
+| find_end |  | ● | ● |
+| find_first_of | → find_if |  |  |
+| find_if |  | ● | ● |
+| find_if_not | → find_if |  |  |
+| for_each |  | ● | ● |
+| for_each_n | → for_each |  |  |
+| generate | → for_each |  |  |
+| generate_n | → for_each_n |  |  |
+| includes |  | ● |  |
+| inclusive_scan | → transform_inclusive_scan |  |  |
+| inplace_merge |  |  |  |
+| is_heap | → is_heap_until |  |  |
+| is_heap_until |  | ● | ● |
+| is_partitioned | → find_if_not, none_of |  |  |
+| is_sorted | → is_sorted_until |  |  |
+| is_sorted_until | → adjacent_find |  |  |
+| lexicographical_compare | → mismatch |  |  |
+| max_element | → min_element |  |  |
+| merge |  | ● | ● |
+| min_element |  | ● | ● |
+| minmax_element |  | ● | ● |
+| mismatch | → mismatch | ● | ● |
+| move | → transform |  |  |
+| none_of | → any_of |  |  |
+| nth_element |  |  |  |
+| partial_sort |  |  |  |
+| partial_sort_copy |  |  |  |
+| partition |  | ● |  |
+| partition_copy |  | ● |  |
+| reduce | → transform_reduce |  |  |
+| remove |  |  |  |
+| remove_copy |  |  |  |
+| remove_copy_if |  |  |  |
+| remove_if |  |  |  |
+| replace | → replace_if |  |  |
+| replace_copy | → replace_copy_if |  |  |
+| replace_copy_if | → transform |  |  |
+| replace_if | → for_each |  |  |
+| reverse |  | ● | ● |
+| reverse_copy | → copy |  |  |
+| rotate |  |  |  |
+| rotate_copy | → copy |  |  |
+| search |  | ● | ● |
+| search_n |  | ● | ● |
+| set_difference |  | ● |  |
+| set_intersection |  | ● |  |
+| set_symmetric_difference |  | ● |  |
+| set_union |  | ● |  |
+| sort | → stable_sort |  |  |
+| stable_partition |  | ● |  |
+| stable_sort |  | ● | ● |
+| swap_ranges |  | ● | ● |
+| transform |  | ● | ● |
+| transform_exclusive_scan |  |  |  |
+| transform_inclusive_scan | → transform_inclusive_scan | ● | ● |
+| transform_reduce |  | ● | ● |
+| uninitialized_copy |  | ● | ● |
+| uninitialized_copy_n | → uninitialized_copy |  |  |
+| uninitialized_default_construct | → for_each |  |  |
+| uninitialized_default_construct_n | → for_each_n |  |  |
+| uninitialized_fill | → for_each |  |  |
+| uninitialized_fill_n | → for_each_n |  |  |
+| uninitialized_move |  | ● | ● |
+| uninitialized_move_n | → uninitialized_move |  |  |
+| uninitialized_value_construct | → for_each |  |  |
+| uninitialized_value_construct_n | → for_each_n |  |  |
+| unique |  |  |  |
+| unique_copy |  |  |  |
