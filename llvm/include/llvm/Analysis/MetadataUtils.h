@@ -37,6 +37,21 @@ LLVM_ABI void combineMetadataForCSE(Instruction *K, const Instruction *J,
 /// metadata, while preserving other known metadata.
 LLVM_ABI void combineAAMetadata(Instruction *K, const Instruction *J);
 
+/// Copy metadata valid for a replacement memory access.
+///
+/// The destination must access the same bytes, a subset, or a wider byte range
+/// in the same object as the source. The destination must be a typed memory
+/// access. Memory-transfer and memory-set intrinsics are supported only as
+/// sources and must have a constant length.
+///
+/// DestByteOffset is the destination's offset within the source access. If the
+/// destination is no larger than the source, a missing offset means the offset
+/// is dynamic, but the caller guarentees it accesses a subset of the source
+/// access.
+LLVM_ABI void
+copyMetadataForMemoryAccess(Instruction &Dest, const Instruction &Source,
+                            std::optional<int64_t> DestByteOffset = 0);
+
 /// Copy the metadata from the source instruction to the destination (the
 /// replacement for the source instruction).
 LLVM_ABI void copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source);
@@ -70,10 +85,7 @@ LLVM_ABI MDNode *uniteAccessGroups(MDNode *AccGroups1, MDNode *AccGroups2);
 LLVM_ABI MDNode *intersectAccessGroups(const Instruction *Inst1,
                                        const Instruction *Inst2);
 
-/// Add metadata from \p Inst to \p Metadata, if it can be preserved after
-/// vectorization. It can be preserved after vectorization if the kind is one of
-/// [MD_tbaa, MD_alias_scope, MD_noalias, MD_fpmath, MD_nontemporal,
-/// MD_access_group, MD_mmra].
+/// Collect metadata that can be preserved when vectorizing an instruction.
 LLVM_ABI void getMetadataToPropagate(
     Instruction *Inst,
     SmallVectorImpl<std::pair<unsigned, MDNode *>> &Metadata);
