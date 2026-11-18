@@ -1,5 +1,5 @@
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=+vsx | FileCheck %s
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr9 -mattr=+vsx | FileCheck --check-prefix=CHECK-P9 %s
+; RUN: opt < %s -passes="print<cost-model>" -disable-output -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=+vsx 2>&1 | FileCheck %s
+; RUN: opt < %s -passes="print<cost-model>" -disable-output -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr9 -mattr=+vsx 2>&1 | FileCheck --check-prefix=CHECK-P9 %s
 
 define void @testi16(i16 %arg1, i16 %arg2, ptr %arg3) {
 

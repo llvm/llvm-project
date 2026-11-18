@@ -1967,6 +1967,11 @@ Decl *TemplateDeclInstantiator::VisitFieldDecl(FieldDecl *D) {
   Field->setAccess(D->getAccess());
   Owner->addDecl(Field);
 
+  if (!SemaRef.Diags.isIgnored(diag::warn_unused_private_field,
+                               Field->getLocation()) &&
+      Field->isUnusedPrivateField())
+    SemaRef.UnusedPrivateFields.insert(Field);
+
   return Field;
 }
 
@@ -4600,10 +4605,12 @@ Decl *TemplateDeclInstantiator::VisitOMPDeclareReductionDecl(
       D->getType()->containsUnexpandedParameterPack();
   QualType SubstReductionType;
   if (RequiresInstantiation) {
+    QualType T = SemaRef.SubstType(D->getType(), TemplateArgs, D->getLocation(),
+                                   DeclarationName());
+    if (T.isNull())
+      return nullptr;
     SubstReductionType = SemaRef.OpenMP().ActOnOpenMPDeclareReductionType(
-        D->getLocation(),
-        ParsedType::make(SemaRef.SubstType(
-            D->getType(), TemplateArgs, D->getLocation(), DeclarationName())));
+        D->getLocation(), ParsedType::make(T));
   } else {
     SubstReductionType = D->getType();
   }
@@ -4692,10 +4699,12 @@ TemplateDeclInstantiator::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
   QualType SubstMapperTy;
   DeclarationName VN = D->getVarName();
   if (RequiresInstantiation) {
+    QualType T =
+        SemaRef.SubstType(D->getType(), TemplateArgs, D->getLocation(), VN);
+    if (T.isNull())
+      return nullptr;
     SubstMapperTy = SemaRef.OpenMP().ActOnOpenMPDeclareMapperType(
-        D->getLocation(),
-        ParsedType::make(SemaRef.SubstType(D->getType(), TemplateArgs,
-                                           D->getLocation(), VN)));
+        D->getLocation(), ParsedType::make(T));
   } else {
     SubstMapperTy = D->getType();
   }
@@ -6260,6 +6269,14 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
 
   if (PatternDecl->isDefaulted()) {
     RebuildTypeSourceInfoForDefaultSpecialMembers();
+    // A function defaulted outside its class was not defaulted when its
+    // declaration was instantiated, so transfer the info recorded at its
+    // definition now: the floating-point features in effect there, and any
+    // unqualified lookups, which were performed from namespace scope and so
+    // don't need to be instantiated.
+    if (!Function->getDefaultedOrDeletedInfo())
+      if (auto *DFI = PatternDecl->getDefaultedOrDeletedInfo())
+        Function->setDefaultedOrDeletedInfo(DFI);
     SetDeclDefaulted(Function, PatternDecl->getLocation());
   } else {
     DeclContext *DC = Function->getLexicalDeclContext();
@@ -7039,21 +7056,8 @@ Sema::InstantiateMemInitializers(CXXConstructorDecl *New,
 
 // TODO: this could be templated if the various decl types used the
 // same method name.
-static bool isInstantiationOf(ClassTemplateDecl *Pattern,
-                              ClassTemplateDecl *Instance) {
-  Pattern = Pattern->getCanonicalDecl();
-
-  do {
-    Instance = Instance->getCanonicalDecl();
-    if (Pattern == Instance) return true;
-    Instance = Instance->getInstantiatedFromMemberTemplate();
-  } while (Instance);
-
-  return false;
-}
-
-static bool isInstantiationOf(FunctionTemplateDecl *Pattern,
-                              FunctionTemplateDecl *Instance) {
+static bool isInstantiationOf(RedeclarableTemplateDecl *Pattern,
+                              RedeclarableTemplateDecl *Instance) {
   Pattern = Pattern->getCanonicalDecl();
 
   do {

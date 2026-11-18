@@ -1,4 +1,4 @@
-//===-- NativeRegisterContextFreeBSD_x86_64.h -------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,8 +8,8 @@
 
 #if defined(__i386__) || defined(__x86_64__)
 
-#ifndef lldb_NativeRegisterContextFreeBSD_x86_64_h
-#define lldb_NativeRegisterContextFreeBSD_x86_64_h
+#ifndef lldb_NativeRegisterContextFreeBSD_x86_h
+#define lldb_NativeRegisterContextFreeBSD_x86_h
 
 // clang-format off
 #include <sys/param.h>
@@ -91,6 +91,6 @@ private:
 } // namespace process_freebsd
 } // namespace lldb_private
 
-#endif // #ifndef lldb_NativeRegisterContextFreeBSD_x86_64_h
+#endif // #ifndef lldb_NativeRegisterContextFreeBSD_x86_h
 
 #endif // defined(__i386__) || defined(__x86_64__)

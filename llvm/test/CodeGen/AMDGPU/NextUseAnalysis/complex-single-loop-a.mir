@@ -175,7 +175,6 @@ body:             |
     $sgpr0 = COPY %76
     SI_RETURN_TO_EPILOG killed $sgpr0
 ...
----
 
 
 # CHECK-GX-JSON:      {

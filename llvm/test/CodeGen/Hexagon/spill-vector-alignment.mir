@@ -16,7 +16,6 @@
 
 ---
 name:            test
-tracksRegLiveness: true
 machineFunctionInfo:
   stackAlignBaseReg: '$r16'
 stack:

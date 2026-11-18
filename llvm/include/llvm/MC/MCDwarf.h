@@ -905,6 +905,7 @@ struct MCDwarfFrameInfo {
   const MCSymbol *Lsda = nullptr;
   std::vector<MCCFIInstruction> Instructions;
   unsigned CurrentCfaRegister = 0;
+  unsigned RememberStateDepth = 0;
   unsigned PersonalityEncoding = 0;
   unsigned LsdaEncoding = 0;
   uint64_t CompactUnwindEncoding = 0;
