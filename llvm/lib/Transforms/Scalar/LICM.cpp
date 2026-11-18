@@ -210,7 +210,8 @@ struct LegacyLICMPass : public LoopPass {
     auto *SE = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
     MemorySSA *MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
     MemorySSAUpdater MSSAU(MSSA);
-    EarliestEscapeAnalysis EEA(MSSA->getDomTree());
+    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    EarliestEscapeAnalysis EEA(MSSA->getDomTree(), &LI);
     // For the old PM, we can't use OptimizationRemarkEmitter as an analysis
     // pass. Function analyses need to be preserved across loop transformations
     // but ORE cannot be preserved (see comment before the pass definition).
@@ -224,7 +225,7 @@ struct LegacyLICMPass : public LoopPass {
             getAnalysis<DominatorTreeWrapperPass>().getDomTree(), MSSAU, EEA,
             &ORE},
         getAnalysis<AssumptionCacheTracker>().getAssumptionCache(*F),
-        getAnalysis<LoopInfoWrapperPass>().getLoopInfo(),
+        LI,
         getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(*F),
         getAnalysis<TargetTransformInfoWrapperPass>().getTTI(*F),
         SE ? &SE->getSE() : nullptr,
@@ -263,7 +264,7 @@ PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
 
   MemorySSAUpdater MSSAU(AR.MSSA);
   ICFLoopSafetyInfo SafetyInfo(&L);
-  EarliestEscapeAnalysis EEA(AR.DT);
+  EarliestEscapeAnalysis EEA(AR.DT, &AR.LI);
   SinkAndHoistDependencies SHDeps{AR.AA, AR.DT, MSSAU, EEA, &ORE};
   LICMDependencies Deps{SHDeps, AR.AC,  AR.LI,     AR.TLI,
                         AR.TTI, &AR.SE, SafetyInfo};
@@ -301,7 +302,7 @@ PreservedAnalyses LNICMPass::run(LoopNest &LN, LoopAnalysisManager &AM,
   MemorySSAUpdater MSSAU(AR.MSSA);
   Loop &OutermostLoop = LN.getOutermostLoop();
   ICFLoopSafetyInfo SafetyInfo(&OutermostLoop);
-  EarliestEscapeAnalysis EEA(AR.DT);
+  EarliestEscapeAnalysis EEA(AR.DT, &AR.LI);
   SinkAndHoistDependencies SHDeps{AR.AA, AR.DT, MSSAU, EEA, &ORE};
   LICMDependencies Deps{SHDeps, AR.AC,  AR.LI,     AR.TLI,
                         AR.TTI, &AR.SE, SafetyInfo};

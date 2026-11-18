@@ -55,11 +55,11 @@ define void @captured_after_loop_before_large_loop(ptr %pp, i64 %n, i64 %m) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 3, ptr [[A]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[Q:%.*]] = load ptr, ptr [[PP]], align 8
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 [[I]]
 ; CHECK-NEXT:    store i32 [[V]], ptr [[G]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
