@@ -80,6 +80,12 @@ cc_library(
         "-fno-exceptions",
         "-fno-rtti",
     ],
+    # Match AddFlangRT.cmake: configure the C++ standard library before any
+    # runtime source or standard header can include it.
+    cxxopts = [
+        "-include",
+        "$(location :stl-overrides.h)",
+    ],
     deps = [
         ":runtime_config",
         "//flang:CommonHeaders",
