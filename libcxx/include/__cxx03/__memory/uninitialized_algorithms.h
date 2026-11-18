@@ -211,21 +211,19 @@ __uninitialized_allocator_copy_impl(_Alloc& __alloc, _Iter1 __first1, _Sent1 __l
   return __first2;
 }
 
-template <class _Alloc, class _Type>
-struct __allocator_has_trivial_copy_construct : _Not<__has_construct<_Alloc, _Type*, const _Type&> > {};
+template <class _Alloc, class _In, class _Out>
+struct __allocator_has_trivial_copy_construct_from : _Not<__has_construct<_Alloc, _Out*, _In&> > {};
 
-template <class _Type>
-struct __allocator_has_trivial_copy_construct<allocator<_Type>, _Type> : true_type {};
+template <class _In, class _Out>
+struct __allocator_has_trivial_copy_construct_from<allocator<_Out>, _In, _Out> : true_type {};
 
 template <class _Alloc,
           class _In,
           class _RawTypeIn = __remove_const_t<_In>,
           class _Out,
-          __enable_if_t<
-              // using _RawTypeIn because of the allocator<T const> extension
-              is_trivially_copy_constructible<_RawTypeIn>::value && is_trivially_assignable<_Out&, _In&>::value &&
+          __enable_if_t< is_trivially_constructible<_Out, _In&>::value && is_trivially_assignable<_Out&, _In&>::value &&
                   is_same<__remove_const_t<_In>, __remove_const_t<_Out> >::value &&
-                  __allocator_has_trivial_copy_construct<_Alloc, _RawTypeIn>::value,
+                  __allocator_has_trivial_copy_construct_from<_Alloc, _In, _Out>::value,
               int> = 0>
 _LIBCPP_HIDE_FROM_ABI _Out* __uninitialized_allocator_copy_impl(_Alloc&, _In* __first1, _In* __last1, _Out* __first2) {
   // TODO: Remove the const_cast once we drop support for std::allocator<T const>
