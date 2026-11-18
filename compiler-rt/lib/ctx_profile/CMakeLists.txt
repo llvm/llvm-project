@@ -20,6 +20,9 @@ append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ EXTRA_FLAGS)
 # __sanitizer_siginfo
 append_list_if(COMPILER_RT_HAS_WGNU_ANONYMOUS_STRUCT_FLAG -Wno-gnu-anonymous-struct EXTRA_FLAGS)
 
+# Check the locking annotations, like sanitizer_common does.
+list(APPEND EXTRA_FLAGS ${THREAD_SAFETY_FLAGS})
+
 if(COMPILER_RT_INCLUDE_TESTS)
   add_subdirectory(tests)
 endif()
