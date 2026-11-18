@@ -1,0 +1,42 @@
+// RUN: cir-opt %s -cir-canonicalize -o - | FileCheck %s
+// RUN: cir-opt %s --pass-pipeline='builtin.module(any(cir-canonicalize))' -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+// Nested under the module, the pass rewrites each region of the operation it
+// runs on, so it gives the same result as on the module.
+module {
+  // CHECK-LABEL: cir.func @routine
+  // CHECK-NEXT:    cir.return
+  cir.func @routine() attributes {acc.routine_info = #acc.routine_info<[@r]>} {
+    cir.scope {
+    }
+    cir.return
+  }
+
+  // An operation without regions has nothing to rewrite.
+  // CHECK: acc.routine @r func(@routine) seq
+  acc.routine @r func(@routine) seq
+
+  // CHECK-LABEL: acc.private.recipe @priv
+  // CHECK-SAME:    init {
+  // CHECK-NEXT:  ^bb0(%{{.*}}: !cir.ptr<!s32i>):
+  // CHECK-NEXT:    %[[ALLOCA:.*]] = cir.alloca
+  // CHECK-NEXT:    acc.yield %[[ALLOCA]]
+  // CHECK-NEXT:  } destroy {
+  // CHECK-NEXT:  ^bb0(%{{.*}}: !cir.ptr<!s32i>, %{{.*}}: !cir.ptr<!s32i>):
+  // CHECK-NEXT:    acc.yield
+  // CHECK-NEXT:  }
+  acc.private.recipe @priv : !cir.ptr<!s32i> init {
+  ^bb0(%arg0: !cir.ptr<!s32i>):
+    cir.scope {
+    }
+    %0 = cir.alloca "p" align(4) : !cir.ptr<!s32i>
+    acc.yield %0 : !cir.ptr<!s32i>
+  } destroy {
+  ^bb0(%arg0: !cir.ptr<!s32i>, %arg1: !cir.ptr<!s32i>):
+    cir.scope {
+    }
+    acc.yield
+  }
+}

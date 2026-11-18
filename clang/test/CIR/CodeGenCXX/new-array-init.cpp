@@ -388,6 +388,7 @@ void string_nonconst_paren_extra_paren(int n) {
 // CIR-LABEL: cir.func {{.*}}@_Z12string_exactv()
 // LLVM-LABEL: define{{.*}} void @_Z12string_exactv
 void string_exact() {
+  // CIR: %{{.+}} = cir.const #cir.int<4> : !u64i
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<4> : !u64i
   // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noalias, llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
@@ -404,6 +405,7 @@ void string_exact() {
 // CIR-LABEL: cir.func {{.*}}@_Z18string_exact_parenv()
 // LLVM-LABEL: define{{.*}} void @_Z18string_exact_parenv
 void string_exact_paren() {
+  // CIR: %{{.+}} = cir.const #cir.int<4> : !u64i
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<4> : !u64i
   // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noalias, llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
@@ -420,6 +422,7 @@ void string_exact_paren() {
 // CIR-LABEL: cir.func {{.*}}@_Z28string_exact_paren_extensionv()
 // LLVM-LABEL: define{{.*}} void @_Z28string_exact_paren_extensionv
 void string_exact_paren_extension() {
+  // CIR: %{{.+}} = cir.const #cir.int<4> : !u64i
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<4> : !u64i
   // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noalias, llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
@@ -436,6 +439,7 @@ void string_exact_paren_extension() {
 // CIR-LABEL: cir.func {{.*}}@_Z17string_sufficientv()
 // LLVM-LABEL: define{{.*}} void @_Z17string_sufficientv
 void string_sufficient() {
+  // CIR: %{{.+}} = cir.const #cir.int<15> : !u64i
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<15> : !u64i
   // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noalias, llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
@@ -452,6 +456,7 @@ void string_sufficient() {
 // CIR-LABEL: cir.func {{.*}}@_Z23string_sufficient_parenv()
 // LLVM-LABEL: define{{.*}} void @_Z23string_sufficient_parenv
 void string_sufficient_paren() {
+  // CIR: %{{.+}} = cir.const #cir.int<15> : !u64i
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<15> : !u64i
   // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noalias, llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
@@ -637,6 +642,7 @@ void unknown_bound() {
 // CIR-LABEL: cir.func {{.*}}@_Z20unknown_bound_stringv()
 // LLVM-LABEL: define{{.*}} void @_Z20unknown_bound_stringv
 void unknown_bound_string() {
+  // CIR: %{{.+}} = cir.const #cir.int<6> : !u64i
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<6> : !u64i
   // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noalias, llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_CHAR:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>

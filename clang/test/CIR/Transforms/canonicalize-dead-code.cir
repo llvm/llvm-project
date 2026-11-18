@@ -1,0 +1,103 @@
+// RUN: cir-opt %s -cir-canonicalize=test-convergence -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // Operations that are unused before rewriting are kept, while folding still
+  // replaces the uses of a foldable operation. The constant keeps a use in the
+  // dead addition, so it stays.
+  // CHECK-LABEL: cir.func @dead_ops
+  cir.func @dead_ops(%arg0: !cir.ptr<!s32i>) -> !s32i {
+    // CHECK-NEXT: cir.alloca "unused"
+    %0 = cir.alloca "unused" align(4) : !cir.ptr<!s32i>
+    // CHECK-NEXT: %[[LOAD:.*]] = cir.load %arg0
+    %1 = cir.load %arg0 : !cir.ptr<!s32i>, !s32i
+    // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+    %2 = cir.const #cir.int<1> : !s32i
+    // CHECK-NEXT: cir.add %[[LOAD]], %[[ONE]] : !s32i
+    %3 = cir.add %1, %2 : !s32i
+    // CHECK-NEXT: %[[NEG:.*]] = cir.const #cir.int<-1> : !s32i
+    %4 = cir.minus %2 : !s32i
+    // CHECK-NEXT: cir.return %[[NEG]] : !s32i
+    cir.return %4 : !s32i
+  }
+
+  // An operation that a fold leaves unused is erased.
+  // CHECK-LABEL: cir.func @fold_leftover
+  cir.func @fold_leftover() -> !s32i {
+    %0 = cir.const #cir.int<1> : !s32i
+    // CHECK-NEXT: %[[NEG:.*]] = cir.const #cir.int<-1> : !s32i
+    %1 = cir.minus %0 : !s32i
+    // CHECK-NEXT: cir.return %[[NEG]] : !s32i
+    cir.return %1 : !s32i
+  }
+
+  // A load that only a folded operation used is erased too.
+  // CHECK-LABEL: cir.func @load_left_dead
+  cir.func @load_left_dead(%arg0: !cir.ptr<!s32i>) -> !s32i {
+    // CHECK-NEXT: %[[SEVEN:.*]] = cir.const #cir.int<7> : !s32i
+    %0 = cir.const #cir.int<7> : !s32i
+    %1 = cir.const #cir.bool<true> : !cir.bool
+    %2 = cir.load %arg0 : !cir.ptr<!s32i>, !s32i
+    %3 = cir.select if %1 then %0 else %2 : (!cir.bool, !s32i, !s32i) -> !s32i
+    // CHECK-NEXT: cir.return %[[SEVEN]] : !s32i
+    cir.return %3 : !s32i
+  }
+
+  // A fold replaces the operands of the unused addition, which still stays.
+  // The driver does not visit it although the fold modifies it.
+  // CHECK-LABEL: cir.func @unused_user_of_fold
+  // CHECK-SAME:    (%[[ARG0:.*]]: !s32i)
+  cir.func @unused_user_of_fold(%arg0: !s32i) -> !s32i {
+    %0 = cir.cast integral %arg0 : !s32i -> !s32i
+    // CHECK-NEXT: cir.add %[[ARG0]], %[[ARG0]] : !s32i
+    %1 = cir.add %0, %0 : !s32i
+    // CHECK-NEXT: cir.return %[[ARG0]] : !s32i
+    cir.return %0 : !s32i
+  }
+
+  // A fold in an unused scope does not make the driver visit the scope.
+  // CHECK-LABEL: cir.func @fold_in_unused_scope
+  // CHECK-SAME:    (%[[ARG0:.*]]: !s32i)
+  cir.func @fold_in_unused_scope(%arg0: !s32i) {
+    // CHECK-NEXT: cir.scope {
+    // CHECK-NEXT:   cir.add %[[ARG0]], %[[ARG0]] : !s32i
+    // CHECK-NEXT: }
+    cir.scope {
+      %0 = cir.cast integral %arg0 : !s32i -> !s32i
+      %1 = cir.add %0, %0 : !s32i
+    }
+    // CHECK-NEXT: cir.return
+    cir.return
+  }
+
+  // The driver does not visit an operation that is unused before rewriting
+  // unless a rewrite moves it, so the unused cir.minus does not fold.
+  // CHECK-LABEL: cir.func @unused_fold
+  cir.func @unused_fold() {
+    // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+    %0 = cir.const #cir.int<1> : !s32i
+    // CHECK-NEXT: cir.minus %[[ONE]] : !s32i
+    %1 = cir.minus %0 : !s32i
+    // CHECK-NEXT: cir.return
+    cir.return
+  }
+
+  // A scope that holds no code is erased, together with the empty scopes in
+  // it. A scope that holds an unused local stays.
+  // CHECK-LABEL: cir.func @empty_scopes
+  cir.func @empty_scopes() {
+    cir.scope {
+      cir.scope {
+      }
+    }
+    // CHECK-NEXT: cir.scope {
+    // CHECK-NEXT:   cir.alloca "unused"
+    // CHECK-NEXT: }
+    cir.scope {
+      %0 = cir.alloca "unused" align(4) : !cir.ptr<!s32i>
+    }
+    // CHECK-NEXT: cir.return
+    cir.return
+  }
+}

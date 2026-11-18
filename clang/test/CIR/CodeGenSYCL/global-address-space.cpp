@@ -55,6 +55,7 @@ int i;
 // CIR:         cir.return
 
 // LLVM-LABEL: define {{.*}} ptr addrspace(2) @_Z15addr_explicit_cv()
+// LLVM-CIR:     %{{.+}} = addrspacecast ptr %{{.+}} to ptr addrspace(4)
 // LLVM-NOT:     addrspacecast
 // LLVM:         ret ptr addrspace(2)
 

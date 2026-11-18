@@ -371,10 +371,9 @@ module {
   // CHECK-NEXT:   cir.return %[[P]] : !s32i
   // CHECK-NEXT: }
 
-  // The driver visits a user before the operations it uses. The outer cir.not
-  // folds to the constant, and the inner one then dies unused. Visited the
-  // other way round, each would fold to a new constant, and the store would
-  // keep the original one too.
+  // The driver visits the operations top-down. The inner cir.not folds to a
+  // new constant first and the outer one then folds to another, while the
+  // store keeps the original constant.
   cir.func @not_not_order(%arg0: !cir.ptr<!cir.bool>) -> !cir.bool {
     %0 = cir.const #true
     %1 = cir.not %0 : !cir.bool
@@ -385,7 +384,8 @@ module {
   // CHECK:      cir.func{{.*}} @not_not_order(%[[ARG0:.*]]: !cir.ptr<!cir.bool>) -> !cir.bool
   // CHECK-NEXT:   %[[TRUE:.*]] = cir.const #true
   // CHECK-NEXT:   cir.store %[[TRUE]], %[[ARG0]] : !cir.bool, !cir.ptr<!cir.bool>
-  // CHECK-NEXT:   cir.return %[[TRUE]] : !cir.bool
+  // CHECK-NEXT:   %[[FOLDED:.*]] = cir.const #true
+  // CHECK-NEXT:   cir.return %[[FOLDED]] : !cir.bool
   // CHECK-NEXT: }
 
   // Folding the cast in the scope revisits the scope, which then folds away.
@@ -412,15 +412,30 @@ module {
   // CHECK-NEXT:   cir.return
   // CHECK-NEXT: }
 
-  // Erasing the unused cast revisits the load that defines its operand, which
-  // is then dead too.
+  // The cast is unused before rewriting, so it stays, and so does the load
+  // that defines its operand.
   cir.func @dead_operand_definer(%arg0: !cir.ptr<!s32i>) {
     %0 = cir.load %arg0 : !cir.ptr<!s32i>, !s32i
     %1 = cir.cast int_to_bool %0 : !s32i -> !cir.bool
     cir.return
   }
-  // CHECK:      cir.func{{.*}} @dead_operand_definer(%{{.*}}: !cir.ptr<!s32i>)
+  // CHECK:      cir.func{{.*}} @dead_operand_definer(%[[ARG0:.*]]: !cir.ptr<!s32i>)
+  // CHECK-NEXT:   %[[LOAD:.*]] = cir.load %[[ARG0]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT:   cir.cast int_to_bool %[[LOAD]] : !s32i -> !cir.bool
   // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // The pass applies the folds of every operation, such as the commutative
+  // trait of cir.add.overflow, which moves the constant to the right.
+  cir.func @add_overflow_const_lhs(%arg0: !s32i) -> !cir.bool {
+    %0 = cir.const #cir.int<1> : !s32i
+    %1, %2 = cir.add.overflow %0, %arg0 : !s32i -> !s32i
+    cir.return %2 : !cir.bool
+  }
+  // CHECK:      cir.func{{.*}} @add_overflow_const_lhs(%[[ARG0:.*]]: !s32i) -> !cir.bool
+  // CHECK-NEXT:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT:   %{{.*}}, %[[OVF:.*]] = cir.add.overflow %[[ARG0]], %[[ONE]] : !s32i -> !s32i
+  // CHECK-NEXT:   cir.return %[[OVF]] : !cir.bool
   // CHECK-NEXT: }
 
 }
