@@ -198,6 +198,29 @@ class LargeChunkHeader {
   }
 };
 
+// Returns the start of the allocator block that holds `m`, a chunk that is
+// allocated or in quarantine. The result is that of
+// get_allocator().GetBlockBegin(m), but GetBlockBegin() finds a block of the
+// secondary allocator by scanning the list of all such blocks under a lock.
+static void* GetBlockBeginOfChunk(AsanChunk* m) {
+  AsanAllocator& a = get_allocator();
+  if (LIKELY(a.FromPrimary(m)))
+    return a.GetBlockBegin(m);
+  // A block of the secondary allocator starts at a page boundary. Unless the
+  // alignment is above a page, the chunk header is in the block's first page,
+  // and the block starts with a LargeChunkHeader that points at it. The
+  // exception is a 16-byte redzone with an alignment of at most 16, where the
+  // chunk header itself starts the block. Whatever fails the check below takes
+  // the search. `page` holds `m`, so it is mapped, and this thread owns the
+  // chunk.
+  uptr page = RoundDownTo(reinterpret_cast<uptr>(m), GetPageSizeCached());
+  if (LIKELY(reinterpret_cast<LargeChunkHeader*>(page)->Get() == m)) {
+    DCHECK_EQ(reinterpret_cast<void*>(page), a.GetBlockBegin(m));
+    return reinterpret_cast<void*>(page);
+  }
+  return a.GetBlockBegin(m);
+}
+
 static void FillChunk(AsanChunk* m) {
   // FIXME: Use ReleaseMemoryPagesToOS.
   Flags& fl = *flags();
@@ -225,7 +248,7 @@ struct QuarantineCallback {
   }
 
   void Recycle(AsanChunk* m) const {
-    void* p = get_allocator().GetBlockBegin(m);
+    void* p = GetBlockBeginOfChunk(m);
 
     // The secondary will immediately unpoison and unmap the memory, so this
     // branch is unnecessary.
