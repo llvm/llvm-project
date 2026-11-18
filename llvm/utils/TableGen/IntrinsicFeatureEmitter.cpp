@@ -255,7 +255,8 @@ static void emitIntrinsicFeatureChecks(const RecordKeeper &Records,
      << "IntrinsicGuardIndices[Variant.FirstGuard + Index]];\n"
         "}\n\n";
 
-  OS << "[[maybe_unused]] static ArrayRef<IntrinsicFeatureVariant> get" << Namespace
+  OS << "[[maybe_unused]] static ArrayRef<IntrinsicFeatureVariant> get"
+     << Namespace
      << "IntrinsicVariants(Intrinsic::ID ID) {\n"
         "  static constexpr IntrinsicFeatureVariant "
      << Namespace << "IntrinsicVariants[] = {\n";
