@@ -19,7 +19,7 @@
 # CHECK-NEXT:  BL @OUTLINED_FUNCTION_{{[0-9]+}}{{.*}}debug-location !DILocation(line: 40,
 # CHECK:       BL @callee4
 # CHECK-NEXT:  BL @OUTLINED_FUNCTION_{{[0-9]+}}
-# CHECK-SAME:  implicit $wzr{{$}}
+# CHECK-SAME:  implicit $sp{{$}}
 
 # The link register is live, but a callee-saved register is free, so it is
 # saved to that register around the call.

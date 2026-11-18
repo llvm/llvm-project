@@ -71,7 +71,7 @@ name:            test2
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test2
-    ; CHECK: tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_0, implicit-def $lr, implicit $sp, implicit-def $lr, implicit-def $r1, implicit $sp
+    ; CHECK: tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_0, implicit-def $lr, implicit $sp, implicit-def $r1, implicit-def $lr, implicit $sp
     $r1 = t2MOVi16 target-flags(arm-lo16) @__stack_chk_guard, 14 /* CC::al */, $noreg
     $r1 = t2MOVTi16 killed $r1, target-flags(arm-hi16) @__stack_chk_guard, 14 /* CC::al */, $noreg
 ...
@@ -80,7 +80,7 @@ name:            test3
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test3
-    ; CHECK: tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_0, implicit-def $lr, implicit $sp, implicit-def $lr, implicit-def $r1, implicit $sp
+    ; CHECK: tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_0, implicit-def $lr, implicit $sp, implicit-def $r1, implicit-def $lr, implicit $sp
     $r1 = t2MOVi16 target-flags(arm-lo16) @__stack_chk_guard, 14 /* CC::al */, $noreg
     $r1 = t2MOVTi16 killed $r1, target-flags(arm-hi16) @__stack_chk_guard, 14 /* CC::al */, $noreg
 ...
@@ -89,7 +89,7 @@ name:            test4
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test4
-    ; CHECK: tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_0, implicit-def $lr, implicit $sp, implicit-def $lr, implicit-def $r1, implicit $sp
+    ; CHECK: tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_0, implicit-def $lr, implicit $sp, implicit-def $r1, implicit-def $lr, implicit $sp
     $r1 = t2MOVi16 target-flags(arm-lo16) @__stack_chk_guard, 14 /* CC::al */, $noreg
     $r1 = t2MOVTi16 killed $r1, target-flags(arm-hi16) @__stack_chk_guard, 14 /* CC::al */, $noreg
 ...

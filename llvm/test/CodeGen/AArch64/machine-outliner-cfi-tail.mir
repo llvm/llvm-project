@@ -18,7 +18,7 @@ body:             |
   liveins: $lr
     ; CHECK-LABEL: name: foo
     ; CHECK: liveins: $lr
-    ; CHECK: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w9, implicit-def $w10, implicit-def $w11, implicit-def $w12, implicit-def $w13, implicit-def $w14, implicit-def $w15, implicit $sp, implicit $wzr
+    ; CHECK: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w9, implicit-def $w10, implicit-def $w11, implicit-def $w12, implicit-def $w13, implicit-def $w14, implicit-def $w15, implicit $wzr, implicit $sp
     $w9 = ORRWri $wzr, 1
     $w10 = ORRWri $wzr, 2
     $w11 = ORRWri $wzr, 3
@@ -36,7 +36,7 @@ body:             |
   liveins: $lr
     ; CHECK-LABEL: name: bar
     ; CHECK: liveins: $lr
-    ; CHECK: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w9, implicit-def $w10, implicit-def $w11, implicit-def $w12, implicit-def $w13, implicit-def $w14, implicit-def $w15, implicit $sp, implicit $wzr
+    ; CHECK: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w9, implicit-def $w10, implicit-def $w11, implicit-def $w12, implicit-def $w13, implicit-def $w14, implicit-def $w15, implicit $wzr, implicit $sp
     $w9 = ORRWri $wzr, 1
     $w10 = ORRWri $wzr, 2
     $w11 = ORRWri $wzr, 3
@@ -54,7 +54,7 @@ body:             |
   liveins: $lr
     ; CHECK-LABEL: name: baz
     ; CHECK: liveins: $lr
-    ; CHECK: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w9, implicit-def $w10, implicit-def $w11, implicit-def $w12, implicit-def $w13, implicit-def $w14, implicit-def $w15, implicit $sp, implicit $wzr
+    ; CHECK: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp, implicit-def $w9, implicit-def $w10, implicit-def $w11, implicit-def $w12, implicit-def $w13, implicit-def $w14, implicit-def $w15, implicit $wzr, implicit $sp
     $w9 = ORRWri $wzr, 1
     $w10 = ORRWri $wzr, 2
     $w11 = ORRWri $wzr, 3

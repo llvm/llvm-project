@@ -56,7 +56,6 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/MachineOutliner.h"
 #include "CodeGenOptions.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -67,6 +66,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CGData/CodeGenDataReader.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
@@ -1220,58 +1220,51 @@ bool MachineOutliner::outline(
       // functions themselves currently don't track liveness, but we should
       // make sure that the ranges we yank things out of aren't wrong.
       if (MBB.getParent()->getProperties().hasTracksLiveness()) {
-        // The following code is to add implicit def operands to the call
-        // instruction. It also updates call site information for moved
+        // The following code is to add implicit def and use operands to the
+        // call instruction. It also updates call site information for moved
         // code.
         SmallSet<Register, 2> UseRegs, DefRegs;
-        const TargetRegisterInfo &TRI =
-            *MBB.getParent()->getSubtarget().getRegisterInfo();
-        BitVector DefUnits(TRI.getNumRegUnits());
+        LiveRegUnits LiveUnits(
+            *MBB.getParent()->getSubtarget().getRegisterInfo());
         // Copy over the defs in the outlined range.
         // First inst in outlined range <-- Anything that's defined in this
         // ...                           .. range has to be added as an
         // implicit Last inst in outlined range  <-- def to the call
         // instruction. Also remove call site information for outlined block
         // of code. The exposed uses need to be copied in the outlined range.
-        for (MachineInstr &MI : make_range(CallInst, std::next(EndIt))) {
-          if (MI.isDebugInstr())
+        for (MachineBasicBlock::reverse_iterator
+                 Iter = EndIt.getReverse(),
+                 Last = std::next(CallInst.getReverse());
+             Iter != Last; Iter++) {
+          MachineInstr *MI = &*Iter;
+          if (MI->isDebugInstr())
             continue;
-          // A read is an exposed use unless the range wrote all of it first.
-          for (const MachineOperand &MOP : MI.all_uses()) {
-            Register Reg = MOP.getReg();
-            if (!Reg || MOP.isUndef())
+          LiveUnits.stepBackward(*MI);
+          for (MachineOperand &MOP : MI->operands()) {
+            if (!MOP.isReg() || !MOP.getReg())
               continue;
-            if (Reg.isPhysical() &&
-                all_of(TRI.regunits(Reg.asMCReg()), [&](MCRegUnit Unit) {
-                  return DefUnits.test(static_cast<unsigned>(Unit));
-                }))
-              continue;
-            UseRegs.insert(Reg);
+
+            if (MOP.isDef())
+              DefRegs.insert(MOP.getReg());
+            else if (MOP.readsReg() && MOP.getReg().isPhysical())
+              UseRegs.insert(MOP.getReg());
           }
-          for (const MachineOperand &MOP : MI.all_defs()) {
-            Register Reg = MOP.getReg();
-            if (!Reg)
-              continue;
-            DefRegs.insert(Reg);
-            if (Reg.isPhysical())
-              for (MCRegUnit Unit : TRI.regunits(Reg.asMCReg()))
-                DefUnits.set(static_cast<unsigned>(Unit));
-          }
-          if (MI.isCandidateForAdditionalCallInfo())
-            MI.getMF()->eraseAdditionalCallInfo(&MI);
+          if (MI->isCandidateForAdditionalCallInfo())
+            MI->getMF()->eraseAdditionalCallInfo(MI);
         }
 
+        // If it's a def, add it to the call instruction.
         for (const Register &I : DefRegs)
-          // If it's a def, add it to the call instruction.
           CallInst->addOperand(
               MachineOperand::CreateReg(I, true, /* isDef = true */
                                         true /* isImp = true */));
 
+        // If it's live into the range, add it to the call instruction.
         for (const Register &I : UseRegs)
-          // If it's a exposed use, add it to the call instruction.
-          CallInst->addOperand(
-              MachineOperand::CreateReg(I, false, /* isDef = false */
-                                        true /* isImp = true */));
+          if (!LiveUnits.available(I.asMCReg()))
+            CallInst->addOperand(
+                MachineOperand::CreateReg(I, false, /* isDef = false */
+                                          true /* isImp = true */));
       }
 
       // Erase from the point after where the call was inserted up to, and
