@@ -161,7 +161,7 @@ bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
   // Marker detected by liboffload to add SLM argument
   auto *MarkerTy = Type::getInt8Ty(M.getContext());
   new GlobalVariable(
-      M, MarkerTy, /*isConstant=*/false, GlobalValue::ExternalLinkage,
+      M, MarkerTy, /*isConstant=*/true, GlobalValue::ExternalLinkage,
       ConstantInt::get(MarkerTy, 1), "__spirv_dynamic_local_memory_present",
       /*InsertBefore=*/nullptr, GlobalValue::NotThreadLocal,
       storageClassToAddressSpace(SPIRV::StorageClass::CrossWorkgroup));
