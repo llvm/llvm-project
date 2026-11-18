@@ -53,6 +53,7 @@
 #  if !SANITIZER_ANDROID
 #    include <sys/statfs.h>
 #    include <linux/perf_event.h>
+#    include <linux/time.h>
 #  endif
 
 using namespace __sanitizer;
@@ -81,6 +82,8 @@ COMPILER_CHECK(sizeof(struct __sanitizer_perf_event_attr) <=
                sizeof(struct perf_event_attr));
 CHECK_SIZE_AND_OFFSET(perf_event_attr, type);
 CHECK_SIZE_AND_OFFSET(perf_event_attr, size);
+COMPILER_CHECK(sizeof(struct __sanitizer_itimerspec) ==
+               sizeof(struct itimerspec));
 #endif
 
 COMPILER_CHECK(iocb_cmd_pread == IOCB_CMD_PREAD);
