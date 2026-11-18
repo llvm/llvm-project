@@ -1457,9 +1457,7 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
           ModuleToDefinedGVSummaries[M->getModuleIdentifier()],
           /*ModuleMap=*/nullptr, Conf.CodeGenOnly, /*BitcodeLibFuncs=*/{},
           /*IRAddStream=*/nullptr, CGOpts.CmdArgs)) {
-    handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
-      errs() << "Error running ThinLTO backend: " << EIB.message() << '\n';
-    });
+    Diags.Report(diag::err_fe_error_backend) << toString(std::move(E));
   }
 }
 
@@ -1568,9 +1566,8 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
                       CGOpts.ThinLTOIndexFile,
                       /*IgnoreEmptyThinLTOIndexFile*/ true)
                       .moveInto(CombinedIndex)) {
-      logAllUnhandledErrors(std::move(E), errs(),
-                            "Error loading index file '" +
-                                CGOpts.ThinLTOIndexFile + "': ");
+      Diags.Report(diag::err_fe_error_reading)
+          << CGOpts.ThinLTOIndexFile << toString(std::move(E));
       return;
     }
 
