@@ -26,6 +26,7 @@ static_library("Utility") {
     "ErrorMessages.cpp",
     "Event.cpp",
     "FileSpec.cpp",
+    "Format.cpp",
     "FileSpecList.cpp",
     "GDBRemote.cpp",
     "IOObject.cpp",

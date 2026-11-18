@@ -1,6 +1,7 @@
 add_lldb_unittest(RegisterTests
   Descriptions/RegisterDescriptionTest.cpp
   RegisterContextTest.cpp
+  RegisterDefinitionTest.cpp
   RegisterLayoutBankTest.cpp
   RegisterLayoutTest.cpp
   RegisterTypeTest.cpp

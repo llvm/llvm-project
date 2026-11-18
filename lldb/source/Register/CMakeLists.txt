@@ -21,6 +21,7 @@ add_lldb_library(lldbRegister NO_PLUGIN_DEPENDENCIES
   OpenBSD/RegisterInfoOpenBSD_i386.cpp
   OpenBSD/RegisterInfoOpenBSD_x86_64.cpp
   RegisterContext.cpp
+  RegisterDefinition.cpp
   RegisterDescription.cpp
   RegisterLayout.cpp
   RegisterType.cpp
