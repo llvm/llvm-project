@@ -121,7 +121,7 @@ TEST_F(AMDGPUMFMACoExecRules, GFX950IssueStages) {
     // Opcode names without the _e64, _vgprcd_e64 or _mac*_e64 suffix.
     std::vector<StringRef> MFMAs;
     struct {
-      unsigned VALU, PackedF32;
+      unsigned VALU, PackedF32, DS, VMEM, SALU;
     } Expected;
   } Groups[] = {
       {{"V_MFMA_F32_16X16X32_BF16", "V_MFMA_F32_16X16X32_F16",
@@ -133,7 +133,7 @@ TEST_F(AMDGPUMFMACoExecRules, GFX950IssueStages) {
         "V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f6",
         "V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f4",
         "V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f6"},
-       {2, 7}},
+       {2, 7, 2, 2, 1}},
       {{"V_MFMA_F32_16X16X128_F8F6F4_f4_f8",
         "V_MFMA_F32_16X16X128_F8F6F4_f6_f8",
         "V_MFMA_F32_16X16X128_F8F6F4_f8_f4",
@@ -144,7 +144,7 @@ TEST_F(AMDGPUMFMACoExecRules, GFX950IssueStages) {
         "V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f4",
         "V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f6",
         "V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f8"},
-       {3, 11}},
+       {3, 11, 2, 2, 1}},
       {{"V_MFMA_F32_32X32X16_BF16", "V_MFMA_F32_32X32X16_F16",
         "V_MFMA_I32_32X32X32_I8", "V_MFMA_F32_32X32X64_F8F6F4_f4_f4",
         "V_MFMA_F32_32X32X64_F8F6F4_f4_f6", "V_MFMA_F32_32X32X64_F8F6F4_f6_f4",
@@ -153,7 +153,7 @@ TEST_F(AMDGPUMFMACoExecRules, GFX950IssueStages) {
         "V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f6",
         "V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f4",
         "V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f6"},
-       {2, 11}},
+       {2, 11, 2, 2, 1}},
       {{"V_MFMA_F32_32X32X64_F8F6F4_f4_f8", "V_MFMA_F32_32X32X64_F8F6F4_f6_f8",
         "V_MFMA_F32_32X32X64_F8F6F4_f8_f4", "V_MFMA_F32_32X32X64_F8F6F4_f8_f6",
         "V_MFMA_F32_32X32X64_F8F6F4_f8_f8",
@@ -162,20 +162,18 @@ TEST_F(AMDGPUMFMACoExecRules, GFX950IssueStages) {
         "V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f4",
         "V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f6",
         "V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f8"},
-       {3, 19}},
-      // The table holds VALU until 2 (16x16) or 4 (32x32); MI350X issues it
-      // at 3.
+       {3, 19, 2, 2, 1}},
       {{"V_SMFMAC_F32_16X16X64_BF16", "V_SMFMAC_F32_16X16X64_F16",
         "V_SMFMAC_I32_16X16X128_I8", "V_SMFMAC_F32_16X16X128_BF8_BF8",
         "V_SMFMAC_F32_16X16X128_BF8_FP8", "V_SMFMAC_F32_16X16X128_FP8_BF8",
         "V_SMFMAC_F32_16X16X128_FP8_FP8"},
-       {2, 7}},
+       {3, 7, 2, 2, 1}},
       {{"V_SMFMAC_F32_32X32X32_BF16", "V_SMFMAC_F32_32X32X32_F16",
         "V_SMFMAC_I32_32X32X64_I8", "V_SMFMAC_F32_32X32X64_BF8_BF8",
         "V_SMFMAC_F32_32X32X64_BF8_FP8", "V_SMFMAC_F32_32X32X64_FP8_BF8",
         "V_SMFMAC_F32_32X32X64_FP8_FP8"},
-       {4, 11}},
-      {{"V_MFMA_F64_16X16X4F64"}, {18, 18}},
+       {3, 11, 3, 3, 1}},
+      {{"V_MFMA_F64_16X16X4F64"}, {18, 18, 1, 1, 1}},
   };
   for (const auto &G : Groups) {
     for (StringRef Base : G.MFMAs) {
@@ -194,6 +192,13 @@ TEST_F(AMDGPUMFMACoExecRules, GFX950IssueStages) {
             << Name;
         EXPECT_EQ(Test.getIssueStage(MFMAOpc, V_PK_FMA_F32),
                   G.Expected.PackedF32)
+            << Name;
+        CoExecInfo Info = getMFMACoExecInfo(MFMAOpc);
+        EXPECT_EQ(Info.getFirstAllowedStage(CoExecMask::DS), G.Expected.DS)
+            << Name;
+        EXPECT_EQ(Info.getFirstAllowedStage(CoExecMask::VMEM), G.Expected.VMEM)
+            << Name;
+        EXPECT_EQ(Info.getFirstAllowedStage(CoExecMask::SALU), G.Expected.SALU)
             << Name;
       }
       EXPECT_GT(NumForms, 0u) << Base;
