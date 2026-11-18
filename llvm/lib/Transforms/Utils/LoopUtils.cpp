@@ -1157,7 +1157,7 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
 Intrinsic::ID llvm::getMinMaxReductionIntrinsicID(Intrinsic::ID IID) {
   switch (IID) {
   default:
-    llvm_unreachable("Unexpected intrinsic id");
+    break;
   case Intrinsic::umin:
     return Intrinsic::vector_reduce_umin;
   case Intrinsic::umax:
@@ -1166,7 +1166,12 @@ Intrinsic::ID llvm::getMinMaxReductionIntrinsicID(Intrinsic::ID IID) {
     return Intrinsic::vector_reduce_smin;
   case Intrinsic::smax:
     return Intrinsic::vector_reduce_smax;
+  case Intrinsic::minimum:
+    return Intrinsic::vector_reduce_fminimum;
+  case Intrinsic::maximum:
+    return Intrinsic::vector_reduce_fmaximum;
   }
+  return Intrinsic::not_intrinsic;
 }
 
 // This is the inverse to getReductionForBinop
