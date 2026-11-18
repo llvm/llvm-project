@@ -11,6 +11,8 @@
 #define _LIBCPP_ALGORITHM
 
 /*
+    WHITESPACE FOR THE WIN
+
     algorithm synopsis
 
 #include <initializer_list>
