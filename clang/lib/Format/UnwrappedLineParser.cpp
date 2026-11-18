@@ -2169,7 +2169,8 @@ void UnwrappedLineParser::parseStructuralElement(
         if (FollowedByNewline &&
             (Text.size() >= 5 ||
              (FunctionLike && FormatTok->isNot(tok::l_paren))) &&
-            tokenCanStartNewLine(*FormatTok) && Text == Text.upper()) {
+            tokenCanStartNewLine(*FormatTok) && Text == Text.upper() &&
+            FormatTok->Previous->isNot(TT_TrailingCommaVaOptRParen)) {
           if (PreviousToken->isNot(TT_UntouchableMacroFunc))
             PreviousToken->setFinalizedType(TT_FunctionLikeOrFreestandingMacro);
           addUnwrappedLine();
@@ -2653,7 +2654,6 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
         break;
       }
       if (IsEnum && !Style.AllowShortEnumsOnASingleLine &&
-          FormatTok->Previous &&
           FormatTok->Previous->is(TT_TrailingCommaVaOptRParen)) {
         addUnwrappedLine();
       }
@@ -2738,10 +2738,6 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
       break;
     case tok::r_paren: {
       auto *RParen = FormatTok;
-      const bool EndsInComma =
-          RParen->Previous && RParen->Previous->is(tok::comma) &&
-          (!RParen->Previous->Previous ||
-           RParen->Previous->Previous->isNot(tok::kw_operator));
       nextToken();
       if (Prev) {
         auto OptionalParens = [&] {
@@ -2791,8 +2787,8 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
         } else if (Prev->is(TT_TypenameMacro)) {
           LParen->setFinalizedType(TT_TypeDeclarationParen);
           RParen->setFinalizedType(TT_TypeDeclarationParen);
-        } else if (Prev->is(Keywords.kw___va_opt__) && EndsInComma &&
-                   Style.isCpp()) {
+        } else if (IsCpp && Prev->is(Keywords.kw___VA_OPT__) &&
+                   Prev->is(TT_Unknown) && RParen->Previous->is(tok::comma)) {
           RParen->setFinalizedType(TT_TrailingCommaVaOptRParen);
         } else if (Prev->is(tok::greater) && RParen->Previous == LParen) {
           Prev->setFinalizedType(TT_TemplateCloser);

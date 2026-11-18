@@ -4266,135 +4266,6 @@ TEST_F(FormatTest, FormatsTypedefEnum) {
                Style);
 }
 
-TEST_F(FormatTest, FormatsVaOptWithTrailingComma) {
-  verifyFormat("#define DEFINE_DESCRIPTOR(Name, ...) \\\n"
-               "  enum ParameterIndices {            \\\n"
-               "    kJSTarget = -1,                  \\\n"
-               "    __VA_OPT__(__VA_ARGS__, )        \\\n"
-               "    kNewTarget,                      \\\n"
-               "    kActualArgumentsCount,           \\\n"
-               "    kContext,                        \\\n"
-               "    kParameterCount,                 \\\n"
-               "  };",
-               getChromiumStyle(FormatStyle::LK_Cpp));
-
-  FormatStyle Style = getLLVMStyle();
-  Style.AlignEscapedNewlines = FormatStyle::ENAS_Left;
-
-  verifyFormat("#define M(...) enum E { __VA_OPT__(__VA_ARGS__, ) kOnly };",
-               Style);
-  FormatStyle NoShortEnums = Style;
-  NoShortEnums.AllowShortEnumsOnASingleLine = false;
-  verifyFormat("#define M(...)                \\\n"
-               "  enum E {                    \\\n"
-               "    __VA_OPT__(__VA_ARGS__, ) \\\n"
-               "    kOnly                     \\\n"
-               "  };",
-               NoShortEnums);
-
-  FormatStyle InsertComma = NoShortEnums;
-  InsertComma.EnumTrailingComma = FormatStyle::ETC_Insert;
-  verifyFormat("#define M(...)                \\\n"
-               "  enum E {                    \\\n"
-               "    kFirst,                   \\\n"
-               "    __VA_OPT__(__VA_ARGS__, ) \\\n"
-               "  };",
-               InsertComma);
-
-  verifyFormat("#define M(...)                  \\\n"
-               "  int x[] = {                   \\\n"
-               "      1,                        \\\n"
-               "      __VA_OPT__(__VA_ARGS__, ) \\\n"
-               "      2,                        \\\n"
-               "  };",
-               Style);
-  verifyFormat("#define M(...)                                          \\\n"
-               "  int x[] = {__VA_OPT__(a, ) 1, 1000000000, 2000000000, \\\n"
-               "             3000000000,     4, 5000000000, 6000000000};",
-               Style);
-
-  FormatStyle Style40 = Style;
-  Style40.ColumnLimit = 40;
-  FormatStyle Style50 = Style;
-  Style50.ColumnLimit = 50;
-
-  verifyFormat("#define M(...)                       \\\n"
-               "  void f(__VA_OPT__(int first_arg, ) \\\n"
-               "         int a, int b, int c);",
-               Style40);
-  FormatStyle OnePerLine = Style;
-  OnePerLine.PackParameters.BinPack = FormatStyle::BPPS_AlwaysOnePerLine;
-  verifyFormat("#define M(...)                 \\\n"
-               "  struct S {                   \\\n"
-               "    void f(__VA_OPT__(int a, ) \\\n"
-               "           int b,              \\\n"
-               "           int c);             \\\n"
-               "  };",
-               OnePerLine);
-  FormatStyle AutoBinPack = Style50;
-  AutoBinPack.ExperimentalAutoDetectBinPacking = true;
-  verifyNoChange("#define M(...)                             \\\n"
-                 "  void f() {                               \\\n"
-                 "    foo(__VA_OPT__(aaaaaaaaa, ) bbbbbbbbb, \\\n"
-                 "        ccccccccc);                        \\\n"
-                 "  }",
-                 AutoBinPack);
-  FormatStyle BreakDeclParams = Style;
-  BreakDeclParams.BreakFunctionDeclarationParameters = true;
-  verifyFormat("#define M(...)             \\\n"
-               "  struct S {               \\\n"
-               "    int __VA_OPT__(a, ) b; \\\n"
-               "  };",
-               BreakDeclParams);
-
-  verifyFormat("#define M(...)                       \\\n"
-               "  class C {                          \\\n"
-               "    C()                              \\\n"
-               "        : a_(0), __VA_OPT__(b_(1), ) \\\n"
-               "          c_(2), d_(3) {}            \\\n"
-               "  };",
-               Style40);
-
-  verifyFormat("#define M(...)                         \\\n"
-               "  SomeFunction(x, a + b __VA_OPT__(, ) \\\n"
-               "               ccccccccccc + ddddddddddd, y);",
-               Style50);
-  verifyFormat("#define M(...)                                  \\\n"
-               "  int x = foo(cond ? a : __VA_OPT__(bbbbbbbb, ) \\\n"
-               "              ccccccccc, ddddddddd);",
-               Style50);
-  // Malformed ternary with trailing-comma __VA_OPT__.
-  verifyNoCrash("#define M(...) int x = foo(cond ? __VA_OPT__(a, ) b : c, d);");
-  verifyNoCrash("#define M(...) int x = foo(__VA_OPT__(a, ) ? b : c + d, e);");
-
-  FormatStyle DontAlign = Style50;
-  DontAlign.AlignAfterOpenBracket = false;
-  verifyFormat("#define M(...)                                   \\\n"
-               "  void g() {                                     \\\n"
-               "    foo(__VA_OPT__(a, ) bar(bbbbbbbbbbbbbbbbb,   \\\n"
-               "                            ccccccccccccccccc)); \\\n"
-               "  }",
-               DontAlign);
-
-  verifyFormat("#define M(...)                       \\\n"
-               "  template <__VA_OPT__(typename T, ) \\\n"
-               "            typename U, typename V>  \\\n"
-               "  struct S;",
-               Style40);
-
-  verifyFormat(
-      "#define M(...) foo(__VA_OPT__(a, ) (b + c), __VA_OPT__(d, ) {1, 2})",
-      Style);
-  verifyFormat("#define M(...) S s = {.a = 1, __VA_OPT__(.b = 2, ) .c = 3};",
-               Style);
-  FormatStyle Google40 = getGoogleStyle();
-  Google40.ColumnLimit = 40;
-  verifyFormat("#define M(...)                     \\\n"
-               "  long int aaaa = 1 __VA_OPT__(, ) \\\n"
-               "           *bbbb = nullptr;",
-               Google40);
-}
-
 TEST_F(FormatTest, FormatsNSEnums) {
   verifyGoogleFormat("typedef NS_ENUM(NSInteger, SomeName) { AAA, BBB }");
   verifyGoogleFormat(
@@ -27274,6 +27145,86 @@ TEST_F(FormatTest, UnbalancedAngleBrackets) {
 
 TEST_F(FormatTest, LambdaArrowAsTrailingReturnArrow) {
   verifyNoCrash("void foo()([] consteval -> int {}())");
+}
+
+TEST_F(FormatTest, FormatsVaOptWithTrailingComma) {
+  FormatStyle Style = getLLVMStyle();
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_Left;
+  FormatStyle Style40 = getStyleWithColumns(Style, 40);
+  FormatStyle Style50 = getStyleWithColumns(Style, 50);
+
+  verifyFormat("#define M(...)                \\\n"
+               "  enum E {                    \\\n"
+               "    kA = -1,                  \\\n"
+               "    __VA_OPT__(__VA_ARGS__, ) \\\n"
+               "    kB,                       \\\n"
+               "    kCount,                   \\\n"
+               "  };",
+               Style);
+
+  FormatStyle NoShortEnums = Style;
+  NoShortEnums.AllowShortEnumsOnASingleLine = false;
+  verifyFormat("#define M(...)                \\\n"
+               "  enum E {                    \\\n"
+               "    __VA_OPT__(__VA_ARGS__, ) \\\n"
+               "    kOnly                     \\\n"
+               "  };",
+               NoShortEnums);
+
+  FormatStyle InsertComma = Style;
+  InsertComma.EnumTrailingComma = FormatStyle::ETC_Insert;
+  verifyFormat("#define M(...)                \\\n"
+               "  enum E {                    \\\n"
+               "    kFirst,                   \\\n"
+               "    __VA_OPT__(__VA_ARGS__, ) \\\n"
+               "  };",
+               InsertComma);
+
+  verifyFormat("#define M(...)                  \\\n"
+               "  int x[] = {                   \\\n"
+               "      1,                        \\\n"
+               "      2,                        \\\n"
+               "      __VA_OPT__(__VA_ARGS__, ) \\\n"
+               "  };",
+               Style);
+  verifyFormat("#define M(...)                                          \\\n"
+               "  int x[] = {__VA_OPT__(a, ) 1, 1000000000, 2000000000, \\\n"
+               "             3000000000,     4, 5000000000, 6000000000};",
+               Style);
+
+  FormatStyle OnePerLine = Style;
+  OnePerLine.PackParameters.BinPack = FormatStyle::BPPS_AlwaysOnePerLine;
+  verifyFormat("#define M(...)                   \\\n"
+               "  struct S {                     \\\n"
+               "    void f(__VA_OPT__(int a, )   \\\n"
+               "           int b,                \\\n"
+               "           __VA_OPT__(int c, )); \\\n"
+               "  };",
+               OnePerLine);
+
+  verifyFormat("#define M(...)                         \\\n"
+               "  SomeFunction(x, a + b __VA_OPT__(, ) \\\n"
+               "               ccc + ddddddddddddddd, y);",
+               Style50);
+
+  FormatStyle DontAlign = Style50;
+  DontAlign.AlignAfterOpenBracket = false;
+  verifyFormat("#define M(...)                                   \\\n"
+               "  void g() {                                     \\\n"
+               "    foo(__VA_OPT__(a, ) callee(bbbbbbbbbbbbbbbb, \\\n"
+               "                            cccccccccccccccc));  \\\n"
+               "  }",
+               DontAlign);
+
+  verifyFormat("#define M(...) foo(__VA_OPT__(a, ) (b + c), __VA_OPT__(d, ))",
+               Style);
+
+  verifyFormat("#define M(...)                 \\\n"
+               "  void g() {                   \\\n"
+               "    __VA_OPT__(aaaaaaaaaaaa, ) \\\n"
+               "        bbbbbbbbbbbbbbbbbb();  \\\n"
+               "  }",
+               Style40);
 }
 
 } // namespace
