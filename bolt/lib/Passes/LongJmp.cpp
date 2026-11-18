@@ -1313,6 +1313,8 @@ void ClusteredRelaxation::buildLayout() {
         SymLayout[Symbol] = {ClusterNum, FragmentOffset};
         // Function symbols are emitted before the first block's alignment,
         // so they may point to padding instead of the block's BTI landing.
+        // Not a concern for block labels or secondary entry symbols,
+        // since they are emitted after alignment.
         if (BC.usesBTI() && BB && !BC.shouldEmitBlockAlignment(*BB))
           SymbolToBB[Symbol] = BB;
       }
