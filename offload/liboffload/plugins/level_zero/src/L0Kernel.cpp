@@ -76,9 +76,7 @@ Error L0KernelTy::buildKernel(L0ProgramTy &Program) {
   if (auto Err = readKernelProperties(Program))
     return Err;
 
-  if (requiresSharedLocalMemory(Module)) {
-    Properties.UsesDynamicSharedMem = true;
-  }
+  Properties.UsesDynamicSharedMem = requiresSharedLocalMemory(Module);
 
   // The driver rounds the SLM size up to 1 KiB when checking the limit,
   // see KernelImp::setArgSlm in
@@ -218,11 +216,9 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     else
       return Plugin::error(
           ErrorCode::INVALID_ARGUMENT,
-          "number of arguments (%u) does not match the number of arguments "
-          "runtime expects for the kernel (%u). Last argument of this kernel "
-          "is "
-          "`__local` pointer to shared local memory added by SPIR-V backend, "
-          "which should be omitted in olLaunchKernel.",
+          "number of arguments (%u) does not match the %u expected by the "
+          "kernel, excluding the trailing dynamic local memory argument added "
+          "by the SPIR-V backend",
           LaunchArgs.NumArgs, KernelPR.NumKernelArgs - 1);
   } else {
     if (KernelPR.NumKernelArgs != LaunchArgs.NumArgs)
