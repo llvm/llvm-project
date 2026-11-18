@@ -205,7 +205,7 @@ DesignDocs/FeatureTestMacros
 DesignDocs/FileTimeType
 DesignDocs/HeaderRemovalPolicy
 DesignDocs/NoexceptPolicy
-DesignDocs/PSTLIntegration
+DesignDocs/PSTL
 DesignDocs/ThreadingSupportAPI
 DesignDocs/UniquePtrTrivialAbi
 DesignDocs/UnspecifiedBehaviorRandomization

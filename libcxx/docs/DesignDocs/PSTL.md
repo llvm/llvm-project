@@ -3,9 +3,9 @@
 ## Overview
 
 Libc++ provides an implementation of C++17 parallel algorithms
-([P0024R2](https://wg21.link/p0024r2)). No build flags are required to enable
-parallelism; however, not every standard algorithm has a parallel implementation
-at the moment.
+([P0024R2](https://wg21.link/p0024r2)) under `-fexperimental-library`. No other
+build flags are required to enable parallelism; however, not every standard
+algorithm has a parallel implementation at the moment.
 
 The underlying parallel executor varies between platforms, as libc++ tries to
 integrate well with the OS and other components of the program.
