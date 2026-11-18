@@ -46598,6 +46598,10 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   case X86ISD::SHUFP:
   case X86ISD::UNPCKL:
   case X86ISD::UNPCKH:
+  case X86ISD::PALIGNR:
+  case X86ISD::VSHLDQ:
+  case X86ISD::VSRLDQ:
+  case X86ISD::VPERM2X128:
   case X86ISD::VPERMILPV:
   case X86ISD::VPERMILPI:
   case X86ISD::VPERMI:
@@ -46687,6 +46691,10 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case X86ISD::SHUFP:
   case X86ISD::UNPCKL:
   case X86ISD::UNPCKH:
+  case X86ISD::PALIGNR:
+  case X86ISD::VSHLDQ:
+  case X86ISD::VSRLDQ:
+  case X86ISD::VPERM2X128:
   case X86ISD::VPERMILPV:
   case X86ISD::VPERMILPI:
   case X86ISD::VPERMI:

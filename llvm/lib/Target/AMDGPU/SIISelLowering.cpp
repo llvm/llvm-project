@@ -13400,11 +13400,12 @@ static bool addressMayBeAccessedAsPrivate(const MachineMemOperand *MMO,
 SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   LoadSDNode *Load = cast<LoadSDNode>(Op);
-  ISD::LoadExtType ExtType = Load->getExtensionType();
+  assert(Load->getExtensionType() == ISD::NON_EXTLOAD &&
+         "Unexpected custom extending load!");
   EVT MemVT = Load->getMemoryVT();
   MachineMemOperand *MMO = Load->getMemOperand();
 
-  if (ExtType == ISD::NON_EXTLOAD && MemVT.getSizeInBits() < 32) {
+  if (MemVT.getSizeInBits() < 32) {
     // Legalize uniform 16-bit loads to i16 = trunc (zextload i16->i32)
     // to match subword load patterns.
     // Only do this for loads that can use scalar subword load instructions.
@@ -13464,10 +13465,8 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getMergeValues(Ops, DL);
   }
 
-  if (!MemVT.isVector())
-    return SDValue();
-
-  assert(Op.getValueType().getVectorElementType() == MVT::i32 &&
+  assert(MemVT.isVector() &&
+         Op.getValueType().getVectorElementType() == MVT::i32 &&
          "Custom lowering for non-i32 vectors hasn't been implemented.");
 
   Align Alignment = Load->getAlign();
@@ -13551,8 +13550,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
         Fast > 1)
       return SDValue();
 
-    if (MemVT.isVector())
-      return SplitVectorLoad(Op, DAG);
+    return SplitVectorLoad(Op, DAG);
   }
 
   if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
@@ -14098,6 +14096,7 @@ SDValue SITargetLowering::LowerFFREXP(SDValue Op, SelectionDAG &DAG) const {
 SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   StoreSDNode *Store = cast<StoreSDNode>(Op);
+  assert(!Store->isTruncatingStore() && "Unexpected custom truncating store!");
   EVT VT = Store->getMemoryVT();
 
   if (VT == MVT::i1) {
@@ -14166,10 +14165,7 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
         Fast > 1)
       return SDValue();
 
-    if (VT.isVector())
-      return SplitVectorStore(Op, DAG);
-
-    return expandUnalignedStore(Store, DAG);
+    return SplitVectorStore(Op, DAG);
   }
 
   // Probably an invalid store. If so we'll end up emitting a selection error.
