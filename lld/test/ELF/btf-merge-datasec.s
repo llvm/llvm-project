@@ -32,6 +32,16 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 overlap.s -o overlap.o
 # RUN: ld.lld --btf-merge overlap.o -o overlap
 # RUN: llvm-readelf -x .BTF overlap | FileCheck %s --check-prefix=OVERLAP
+# RUN: llvm-mc -filetype=obj -triple=x86_64 --defsym=UNALIGNED=1 b.s -o unaligned.o
+# RUN: ld.lld -r a-nogroup.o unaligned.o -o mixed.o
+# RUN: ld.lld --btf-merge mixed.o -o mixed
+# RUN: llvm-mc -filetype=obj -triple=x86_64 empty.s -o empty.o
+# RUN: ld.lld --btf-merge -T empty.lds empty.o -o empty
+# RUN: llvm-readelf -x .BTF empty | FileCheck %s --check-prefix=EMPTY
+
+## The empty DATASEC header and its entry are both removed.
+# EMPTY: 0x00000000 9feb0100 18000000 00000000 38000000
+# EMPTY-NEXT: 0x00000010 38000000
 
 ## Keep the first of two aliases and the adjacent variable, but omit the empty.
 # OVERLAP:      0x00000000 9feb0100 18000000 00000000 74000000
@@ -42,7 +52,7 @@
 
 # SECTIONS: .BTF PROGBITS
 # SECTIONS-NOT: .rela.BTF
-# BAD-PADDING: error: bad-partial.o:(.BTF): cannot validate .BTF relocations: non-zero .BTF padding
+# BAD-PADDING: error: bad-partial.o:(.BTF): cannot validate .BTF relocations: invalid .BTF magic
 # RENAMED:      .xdat
 # RENAMED-NEXT: .bss
 # REL: Relocation section '.rel.BTF'
@@ -108,6 +118,28 @@ group: .long 4
 .byte 1
 .endif
 
+#--- empty.lds
+SECTIONS { .bss.empty : { *(.bss.empty) } }
+
+#--- empty.s
+.globl _start, empty
+.text
+_start: ret
+.section .bss.empty,"aw",@nobits
+empty:
+.section .BTF,"",@progbits
+.short 0xeb9f
+.byte 1, 0
+.long 24, 0, .Lstr-.Ltypes, .Lstr-.Ltypes, .Lend-.Lstr
+.Ltypes:
+.long 1, 0x01000000, 4, 32
+.long 0, 0x03000000, 0, 1, 1, 0
+.long 5, 0x0e000000, 2, 1
+.long 11, 0x0f000001, 0, 3, empty, 0
+.Lstr:
+.asciz "", "int", "empty", ".bss.empty"
+.Lend:
+
 #--- b.s
 .globl second, group
 .data
@@ -117,7 +149,9 @@ second: .long 5
 group: .long 6
 
 .section .BTF,"",@progbits
+.ifndef UNALIGNED
 .p2align 2
+.endif
 .short 0xeb9f
 .byte 1, 0
 .long 24, 0, .Lstr - .Ltypes, .Lstr - .Ltypes, .Lend - .Lstr

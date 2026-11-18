@@ -3572,6 +3572,7 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
       Var var;
       // Later blobs can grow the builder's string table and invalidate views.
       uint32_t sectionNameOff;
+      uint64_t blobOffset;
     };
     SmallVector<Entry, 0> vars;
     // A relocatable link concatenates BTF blobs and combines their
@@ -3597,11 +3598,9 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
           return createStringError("invalid .BTF blob size");
 
         uint64_t end = blobOffset + size;
-        uint64_t next =
-            std::min<uint64_t>(alignTo(end, s->addralign), data.size());
-        if (llvm::any_of(data.slice(end, next - end),
-                         [](uint8_t byte) { return byte != 0; }))
-          return createStringError("non-zero .BTF padding");
+        uint64_t next = end;
+        while (next < data.size() && data[next] == 0)
+          ++next;
 
         Expected<uint32_t> idBase =
             builder.merge(toStringRef(remaining.take_front(size)), isLE);
@@ -3622,7 +3621,8 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
                                         vars.size());
               const auto &entry = entries[i];
               vars.push_back({{nullptr, nullptr, 0, entry.Type, entry.Size},
-                              type->NameOff});
+                              type->NameOff,
+                              blobOffset});
             }
           }
           offset += builder.getTypeBytes(id).size();
@@ -3652,7 +3652,7 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
                            << " does not target a DATASEC VarSecinfo offset";
             continue;
           }
-          auto &[var, sectionNameOff] = vars[it->second];
+          auto &[var, sectionNameOff, blobOffset] = vars[it->second];
           offsetToVar.erase(it);
           sectionNameOff = 0;
           Symbol &sym = file->getRelocTargetSym(rel);
@@ -3686,7 +3686,19 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
     // symbols: either can hide an ambiguous placeholder.
     std::optional<DenseMap<std::pair<StringRef, StringRef>, const Defined *>>
         definitions;
-    for (auto &[var, sectionNameOff] : vars) {
+    DenseMap<std::pair<StringRef, StringRef>, uint64_t> placeholderBlobs;
+    DenseSet<std::pair<StringRef, StringRef>> ambiguousPlaceholders;
+    for (auto &[var, sectionNameOff, blobOffset] : vars) {
+      StringRef sectionName = builder.findString(sectionNameOff);
+      const auto *type = builder.findType(var.type);
+      if (sectionName.empty() || !type || type->getKind() != BTF::BTF_KIND_VAR)
+        continue;
+      auto key = std::pair{sectionName, builder.findString(type->NameOff)};
+      auto [it, inserted] = placeholderBlobs.try_emplace(key, blobOffset);
+      if (!inserted && it->second != blobOffset)
+        ambiguousPlaceholders.insert(key);
+    }
+    for (auto &[var, sectionNameOff, blobOffset] : vars) {
       StringRef sectionName = builder.findString(sectionNameOff);
       if (file && !sectionName.empty()) {
         const auto *type = builder.findType(var.type);
@@ -3722,7 +3734,8 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
           }
         }
         StringRef name = builder.findString(type->NameOff);
-        if (const Defined *ds = definitions->lookup({sectionName, name})) {
+        const Defined *ds = definitions->lookup({sectionName, name});
+        if (ds && !ambiguousPlaceholders.contains({sectionName, name})) {
           var.section = ds->section;
           var.addend = ds->value;
         } else
@@ -3821,8 +3834,11 @@ template <class ELFT> void BtfSection<ELFT>::writeTo(uint8_t *buf) {
       write32(ctx, record + offsetof(BTF::BTFDataSec, Size), entry.Size);
       record += sizeof(entry);
     }
-    write32(ctx, header + offsetof(BTF::CommonType, Info),
-            (BTF::BTF_KIND_DATASEC << 24) | count);
+    if (count)
+      write32(ctx, header + offsetof(BTF::CommonType, Info),
+              (BTF::BTF_KIND_DATASEC << 24) | count);
+    else
+      removed += sizeof(BTF::CommonType);
   }
   if (removed) {
     uint32_t hdrLen = read32(ctx, buf + offsetof(BTF::Header, HdrLen));
