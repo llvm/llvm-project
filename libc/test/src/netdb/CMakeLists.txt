@@ -46,6 +46,7 @@ add_libc_test(
     libc.src.__support.CPP.string_view
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
+    libc.src.netdb.getproto_internal
     libc.src.netdb.getprotobyname_r
     libc.src.stdio.remove
     libc.src.string.string_utils

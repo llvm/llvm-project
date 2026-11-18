@@ -17,6 +17,7 @@
 #include "hdr/types/struct_protoent.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/File/file.h"
+#include "src/netdb/getproto_internal.h"
 #include "src/netdb/getprotobyname_r.h"
 #include "src/stdio/remove.h"
 #include "src/string/string_utils.h"
