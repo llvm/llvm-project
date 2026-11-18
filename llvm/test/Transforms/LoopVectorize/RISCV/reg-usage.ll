@@ -161,7 +161,7 @@ define void @red_smax_smin(ptr %base.0, ptr %base.1, ptr %base.2, ptr %base.3, i
 ; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 48 registers
 ; CHECK:  LV(REG): Found invariant usage: 1 item
 ; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
-; CHECK:  LV(REG): Cost of 32 from 16 spills of RISCV::VRRC
+; CHECK:  LV(REG): Cost of 64 from 16 spills of RISCV::VRRC
 ;
 entry:
   br label %loop.body
@@ -225,7 +225,7 @@ define void @red_umax_umin(ptr %base.0, ptr %base.1, ptr %base.2, ptr %base.3, i
 ; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 48 registers
 ; CHECK:  LV(REG): Found invariant usage: 1 item
 ; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
-; CHECK:  LV(REG): Cost of 32 from 16 spills of RISCV::VRRC
+; CHECK:  LV(REG): Cost of 64 from 16 spills of RISCV::VRRC
 ;
 entry:
   br label %loop.body
