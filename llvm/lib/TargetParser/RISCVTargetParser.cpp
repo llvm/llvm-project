@@ -118,9 +118,8 @@ void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64) {
       Values.emplace_back(C.Name);
   }
 
-  llvm::sort(Values, [](StringRef A, StringRef B) {
-    return A.compare_numeric(B) < 0;
-  });
+  llvm::sort(Values,
+             [](StringRef A, StringRef B) { return A.compare_numeric(B) < 0; });
 }
 
 void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64) {
@@ -131,9 +130,8 @@ void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64) {
 #define TUNE_PROC(ENUM, NAME) Values.emplace_back(StringRef(NAME));
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 
-  llvm::sort(Values, [](StringRef A, StringRef B) {
-    return A.compare_numeric(B) < 0;
-  });
+  llvm::sort(Values,
+             [](StringRef A, StringRef B) { return A.compare_numeric(B) < 0; });
 }
 
 // This function is currently used by IREE, so it's not dead code.
