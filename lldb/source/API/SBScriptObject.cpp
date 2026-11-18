@@ -41,7 +41,7 @@ const SBScriptObject &SBScriptObject::operator=(const SBScriptObject &rhs) {
 bool SBScriptObject::operator!=(const SBScriptObject &rhs) const {
   LLDB_INSTRUMENT_VA(this, rhs);
 
-  return !(m_opaque_up == rhs.m_opaque_up);
+  return GetPointer() != rhs.GetPointer() || GetLanguage() != rhs.GetLanguage();
 }
 
 bool SBScriptObject::IsValid() const {
