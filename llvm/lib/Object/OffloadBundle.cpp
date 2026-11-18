@@ -19,6 +19,7 @@
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/Timer.h"
@@ -158,8 +159,13 @@ Error OffloadBundleFatBin::readEntries(StringRef Buffer,
     if (Error Err = Reader.readFixedString(EntryID, EntryIDSize))
       return Err;
 
+    std::optional<uint64_t> AbsoluteOffset =
+        checkedAddUnsigned(EntryOffset, SectionOffset);
+    if (!AbsoluteOffset)
+      return errorCodeToError(object_error::parse_failed);
+
     auto Entry = std::make_unique<OffloadBundleEntry>(
-        EntryOffset + SectionOffset, EntrySize, EntryIDSize, EntryID);
+        *AbsoluteOffset, EntrySize, EntryIDSize, EntryID);
 
     Entries.push_back(*Entry);
   }
