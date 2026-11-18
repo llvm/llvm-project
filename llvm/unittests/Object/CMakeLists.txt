@@ -23,6 +23,7 @@ add_llvm_unittest(ObjectTests
   SymbolicFileTest.cpp
   WindowsMachineFlagTest.cpp
   XCOFFObjectFileTest.cpp
+  ObjectFuzzRegressions.cpp
   )
 
 target_link_libraries(ObjectTests PRIVATE LLVMTestingSupport)
