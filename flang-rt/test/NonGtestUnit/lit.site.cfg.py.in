@@ -6,6 +6,7 @@ config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
 config.flang_rt_source_dir = "@FLANG_RT_SOURCE_DIR@"
 config.flangrt_binary_dir = "@FLANG_RT_BINARY_DIR@"
 config.flang_rt_binary_test_dir = os.path.dirname(__file__)
+config.flang_rt_output_resource_lib_dir = "@FLANG_RT_OUTPUT_RESOURCE_LIB_DIR@"
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)
