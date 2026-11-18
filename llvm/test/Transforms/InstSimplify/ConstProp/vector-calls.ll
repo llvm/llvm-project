@@ -27,6 +27,33 @@ define <8 x i32> @fold_vector_extract_nop() {
   ret <8 x i32> %1
 }
 
+define <vscale x 3 x i32> @fold_scalable_vector_extract() {
+; CHECK-LABEL: define <vscale x 3 x i32> @fold_scalable_vector_extract() {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 3 x i32> @llvm.vector.extract.nxv3i32.nxv8i32(<vscale x 8 x i32> zeroinitializer, i64 3)
+; CHECK-NEXT:    ret <vscale x 3 x i32> [[TMP1]]
+;
+  %1 = call <vscale x 3 x i32> @llvm.vector.extract.nxv3i32.nxv8i32(<vscale x 8 x i32> zeroinitializer, i64 3)
+  ret <vscale x 3 x i32> %1
+}
+
+define <3 x i32> @fold_vector_extract_from_scalable() {
+; CHECK-LABEL: define <3 x i32> @fold_vector_extract_from_scalable() {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i32> @llvm.vector.extract.v3i32.nxv8i32(<vscale x 8 x i32> zeroinitializer, i64 3)
+; CHECK-NEXT:    ret <3 x i32> [[TMP1]]
+;
+  %1 = call <3 x i32> @llvm.vector.extract.v3i32.nxv8i32(<vscale x 8 x i32> zeroinitializer, i64 3)
+  ret <3 x i32> %1
+}
+
+define <vscale x 3 x i32> @fold_scalable_vector_extract_from_fixed() {
+; CHECK-LABEL: define <vscale x 3 x i32> @fold_scalable_vector_extract_from_fixed() {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 3 x i32> @llvm.vector.extract.nxv3i32.v8i32(<8 x i32> zeroinitializer, i64 3)
+; CHECK-NEXT:    ret <vscale x 3 x i32> [[TMP1]]
+;
+  %1 = call <vscale x 3 x i32> @llvm.vector.extract.nxv3i32.v8i32(<8 x i32> zeroinitializer, i64 3)
+  ret <vscale x 3 x i32> %1
+}
+
 define <8 x i32> @fold_vector_insert() {
 ; CHECK-LABEL: define <8 x i32> @fold_vector_insert() {
 ; CHECK-NEXT:    ret <8 x i32> <i32 9, i32 10, i32 11, i32 12, i32 5, i32 6, i32 7, i32 8>
@@ -40,6 +67,33 @@ define <8 x i32> @fold_vector_insert_nop() {
 ; CHECK-NEXT:    ret <8 x i32> <i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18>
 ;
   %1 = call <8 x i32> @llvm.vector.insert.v8i32(<8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>, <8 x i32> <i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18>, i64 0)
+  ret <8 x i32> %1
+}
+
+define <vscale x 8 x i32> @fold_scalable_vector_insert() {
+; CHECK-LABEL: define <vscale x 8 x i32> @fold_scalable_vector_insert() {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i64 0)
+; CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
+;
+  %1 = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i64 0)
+  ret <vscale x 8 x i32> %1
+}
+
+define <vscale x 8 x i32> @fold_vector_insert_into_scalable() {
+; CHECK-LABEL: define <vscale x 8 x i32> @fold_vector_insert_into_scalable() {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.v4i32(<vscale x 8 x i32> zeroinitializer, <4 x i32> zeroinitializer, i64 0)
+; CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
+;
+  %1 = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.v4i32(<vscale x 8 x i32> zeroinitializer, <4 x i32> zeroinitializer, i64 0)
+  ret <vscale x 8 x i32> %1
+}
+
+define <8 x i32> @fold_scalable_vector_insert_into_fixed() {
+; CHECK-LABEL: define <8 x i32> @fold_scalable_vector_insert_into_fixed() {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.nxv4i32(<8 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i64 0)
+; CHECK-NEXT:    ret <8 x i32> [[TMP1]]
+;
+  %1 = call <8 x i32> @llvm.vector.insert.v8i32.nxv4i32(<8 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer, i64 0)
   ret <8 x i32> %1
 }
 
