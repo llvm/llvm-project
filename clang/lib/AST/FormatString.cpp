@@ -64,16 +64,15 @@ OptionalAmount FormatStringParser::parseAmount(const char *&Beg,
 bool FormatStringParser::parseWidthModifier(const char *&I, const char *E,
                                             unsigned &BitWidth,
                                             unsigned &ModifierLength) const {
-  StringRef W = StringRef(I, E - I).take_while(llvm::isDigit);
-  if (W.empty() || W.front() == '0')
+  if (I == E || FormatStrConverter.convertBasicChar(*I) == u8'0')
     return false;
 
-  if (W.getAsInteger(10, BitWidth))
+  OptionalAmount Amt = parseAmount(I, E);
+  if (Amt.getHowSpecified() != OptionalAmount::Constant)
     return false;
 
-  I = W.end();
-  ModifierLength += W.size();
-
+  BitWidth = Amt.getConstantAmount();
+  ModifierLength += Amt.getConstantLength();
   return true;
 }
 
@@ -306,17 +305,17 @@ bool FormatStringParser::parseLengthModifier(FormatSpecifier &FS,
     ++I;
     lmKind = LengthModifier::AsInt3264;
     break;
-  case 'H':
+  case u8'H':
     if (LO.C23) {
       lmKind = LengthModifier::AsDecimal32;
       ++I;
       break;
     }
     return false;
-  case 'D':
+  case u8'D':
     if (LO.C23) {
       ++I;
-      if (I != E && *I == 'D') {
+      if (I != E && FormatStrConverter.convertBasicChar(*I) == u8'D') {
         ++I;
         lmKind = LengthModifier::AsDecimal128;
       } else {
@@ -325,14 +324,15 @@ bool FormatStringParser::parseLengthModifier(FormatSpecifier &FS,
       break;
     }
     return false;
-  case 'w':
+  case u8'w':
     if (LO.C23) {
       const char *WidthModifier = I + 1;
       unsigned BitWidth = 0;
       unsigned ModifierLength = 1;
 
       LengthModifier::Kind WidthKind = LengthModifier::AsIntN;
-      if (WidthModifier != E && *WidthModifier == 'f') {
+      if (WidthModifier != E &&
+          FormatStrConverter.convertBasicChar(*WidthModifier) == u8'f') {
         WidthModifier = I + 2;
         ModifierLength = 2;
         WidthKind = LengthModifier::AsFastIntN;

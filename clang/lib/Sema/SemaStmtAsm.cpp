@@ -267,7 +267,6 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel,
     }
     return SL;
   }
-
   if (DiagnoseUnexpandedParameterPack(Expr))
     return ExprError();
   if (Expr->getDependence() != ExprDependence::None)
