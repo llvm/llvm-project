@@ -646,7 +646,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   ```
 
 - Added `-Wlifetime-safety-capture-by-violation` to detect a parameter that the
-  body captures by the enclosing object or by global storage, while none of its
+  body captures by the enclosing object, by global storage, or by another
+  reference parameter, while none of its
   `[[clang::lifetime_capture_by]]` attributes names that entity or `unknown`.
   For example:
 
@@ -660,6 +661,13 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
       field = &x;
     }
   };
+
+  // warning: 's' is captured by 'v' but is not marked
+  // [[clang::lifetime_capture_by(v)]]
+  void add(std::vector<std::string_view> &v, std::vector<std::string_view> &w,
+           std::string_view s [[clang::lifetime_capture_by(w)]]) {
+    v.push_back(s);
+  }
   ```
 
 - Added `-Wlifetime-safety-dangling-field` to detect dangling field references
