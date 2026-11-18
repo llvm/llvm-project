@@ -21,6 +21,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <utility>
 #include <vector>
 
@@ -36,16 +37,11 @@ static const uint32_t kNumReservedPages = 3;
 static const uint32_t kDefaultFreePageMap = kFreePageMap1Block;
 static const uint32_t kDefaultBlockMapAddr = kNumReservedPages;
 
-MSFBuilder::MSFBuilder(uint32_t BlockSize, uint32_t MinBlockCount, bool CanGrow,
+MSFBuilder::MSFBuilder(uint32_t BlockSize, bool CanGrow,
                        BumpPtrAllocator &Allocator)
     : Allocator(Allocator), IsGrowable(CanGrow),
       FreePageMap(kDefaultFreePageMap), BlockSize(BlockSize),
-      BlockMapAddr(kDefaultBlockMapAddr), FreeBlocks(MinBlockCount, true) {
-  FreeBlocks[kSuperBlockBlock] = false;
-  FreeBlocks[kFreePageMap0Block] = false;
-  FreeBlocks[kFreePageMap1Block] = false;
-  FreeBlocks[BlockMapAddr] = false;
-}
+      BlockMapAddr(kDefaultBlockMapAddr) {}
 
 Expected<MSFBuilder> MSFBuilder::create(BumpPtrAllocator &Allocator,
                                         uint32_t BlockSize,
@@ -54,9 +50,13 @@ Expected<MSFBuilder> MSFBuilder::create(BumpPtrAllocator &Allocator,
     return make_error<MSFError>(msf_error_code::invalid_format,
                                 "The requested block size is unsupported");
 
-  return MSFBuilder(BlockSize,
-                    std::max(MinBlockCount, msf::getMinimumBlockCount()),
-                    CanGrow, Allocator);
+  MSFBuilder Builder(BlockSize, CanGrow, Allocator);
+  if (auto EC = Builder.growFreeBlocks(
+          std::max(MinBlockCount, msf::getMinimumBlockCount())))
+    return std::move(EC);
+  Builder.FreeBlocks.reset(kSuperBlockBlock);
+  Builder.FreeBlocks.reset(Builder.BlockMapAddr);
+  return Builder;
 }
 
 Error MSFBuilder::setBlockMapAddr(uint32_t Addr) {
@@ -67,7 +67,8 @@ Error MSFBuilder::setBlockMapAddr(uint32_t Addr) {
     if (!IsGrowable)
       return make_error<MSFError>(msf_error_code::insufficient_buffer,
                                   "Cannot grow the number of blocks");
-    FreeBlocks.resize(Addr + 1, true);
+    if (auto EC = growFreeBlocks(uint64_t(Addr) + 1))
+      return EC;
   }
 
   if (!isBlockFree(Addr))
@@ -99,6 +100,38 @@ Error MSFBuilder::setDirectoryBlocksHint(ArrayRef<uint32_t> DirBlocks) {
   return Error::success();
 }
 
+Error MSFBuilder::growFreeBlocks(uint64_t MinBlockCount,
+                                 uint32_t MinNewFreeBlocks) {
+  const uint64_t OldBlockCount = FreeBlocks.size();
+  uint64_t EndForFreeBlocks = OldBlockCount + MinNewFreeBlocks;
+  uint64_t NewBlockCount = std::max(MinBlockCount, EndForFreeBlocks);
+  if (NewBlockCount == OldBlockCount)
+    return Error::success();
+
+  const uint64_t FirstFpm = OldBlockCount == 0
+                                ? kFreePageMap0Block
+                                : alignTo(OldBlockCount, BlockSize, 1);
+  // BitVector's find_first and find_next return signed block indices.
+  constexpr uint64_t MaxBlockCount = std::numeric_limits<int>::max();
+  // Include both blocks of every FPM pair we reach, even unused FPM pages.
+  // Neither block contributes to the requested number of new free blocks.
+  for (uint64_t Fpm = FirstFpm;
+       Fpm < NewBlockCount && NewBlockCount <= MaxBlockCount;
+       Fpm += BlockSize) {
+    EndForFreeBlocks += 2;
+    NewBlockCount = std::max({NewBlockCount, Fpm + 2, EndForFreeBlocks});
+  }
+  if (NewBlockCount > MaxBlockCount)
+    return make_error<MSFError>(msf_error_code::insufficient_buffer,
+                                "The requested number of blocks is too large");
+
+  FreeBlocks.resize(static_cast<uint32_t>(NewBlockCount), true);
+  for (uint32_t Fpm = static_cast<uint32_t>(FirstFpm); Fpm < NewBlockCount;
+       Fpm += BlockSize)
+    FreeBlocks.reset(Fpm, Fpm + 2);
+  return Error::success();
+}
+
 Error MSFBuilder::allocateBlocks(uint32_t NumBlocks,
                                  MutableArrayRef<uint32_t> Blocks) {
   if (NumBlocks == 0)
@@ -109,24 +142,8 @@ Error MSFBuilder::allocateBlocks(uint32_t NumBlocks,
     if (!IsGrowable)
       return make_error<MSFError>(msf_error_code::insufficient_buffer,
                                   "There are no free Blocks in the file");
-    uint32_t AllocBlocks = NumBlocks - NumFreeBlocks;
-    uint32_t OldBlockCount = FreeBlocks.size();
-    uint32_t NewBlockCount = AllocBlocks + OldBlockCount;
-    uint32_t NextFpmBlock = alignTo(OldBlockCount, BlockSize, 1);
-    FreeBlocks.resize(NewBlockCount, true);
-    // If we crossed over an fpm page, we actually need to allocate 2 extra
-    // blocks for each FPM group crossed and mark both blocks from the group as
-    // used.  FPM blocks are marked as allocated regardless of whether or not
-    // they ultimately describe the status of blocks in the file.  This means
-    // that not only are extraneous blocks at the end of the main FPM marked as
-    // allocated, but also blocks from the alternate FPM are always marked as
-    // allocated.
-    while (NextFpmBlock < NewBlockCount) {
-      NewBlockCount += 2;
-      FreeBlocks.resize(NewBlockCount, true);
-      FreeBlocks.reset(NextFpmBlock, NextFpmBlock + 2);
-      NextFpmBlock += BlockSize;
-    }
+    if (auto EC = growFreeBlocks(FreeBlocks.size(), NumBlocks - NumFreeBlocks))
+      return EC;
   }
 
   int I = 0;
@@ -163,8 +180,10 @@ Expected<uint32_t> MSFBuilder::addStream(uint32_t Size,
         msf_error_code::invalid_format,
         "Incorrect number of blocks for requested stream size");
   for (auto Block : Blocks) {
-    if (Block >= FreeBlocks.size())
-      FreeBlocks.resize(Block + 1, true);
+    if (Block >= FreeBlocks.size()) {
+      if (auto EC = growFreeBlocks(uint64_t(Block) + 1))
+        return std::move(EC);
+    }
 
     if (!FreeBlocks.test(Block))
       return make_error<MSFError>(

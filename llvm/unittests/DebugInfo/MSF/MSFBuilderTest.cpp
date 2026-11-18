@@ -394,6 +394,63 @@ TEST_F(MSFBuilderTest, StreamDoesntUseFpmBlocks) {
   }
 }
 
+TEST_F(MSFBuilderTest, PreallocationReservesFpmPairs) {
+  constexpr uint32_t BlockSize = 512;
+  // The requested minimum ends halfway through the third FPM pair. Even with
+  // later growth disabled, preallocation must include the complete pair.
+  auto ExpectedMsf = MSFBuilder::create(Allocator, BlockSize, 2 * BlockSize + 2,
+                                        /*CanGrow=*/false);
+  ASSERT_THAT_EXPECTED(ExpectedMsf, Succeeded());
+  auto &Msf = *ExpectedMsf;
+
+  ASSERT_EQ(2 * BlockSize + 3, Msf.getTotalBlockCount());
+  // Preallocation must reserve both FPM blocks without reserving the ordinary
+  // block immediately before each pair.
+  for (uint32_t Offset : {BlockSize, 2 * BlockSize}) {
+    EXPECT_TRUE(Msf.isBlockFree(Offset));
+    EXPECT_FALSE(Msf.isBlockFree(Offset + 1));
+    EXPECT_FALSE(Msf.isBlockFree(Offset + 2));
+  }
+}
+
+TEST_F(MSFBuilderTest, BlockMapGrowthReservesFpmPairs) {
+  constexpr uint32_t BlockSize = 512;
+  auto ExpectedMsf = MSFBuilder::create(Allocator, BlockSize);
+  ASSERT_THAT_EXPECTED(ExpectedMsf, Succeeded());
+  auto &Msf = *ExpectedMsf;
+
+  // Placing the block map immediately after an FPM pair must reserve both
+  // intervening FPM blocks.
+  ASSERT_THAT_ERROR(Msf.setBlockMapAddr(BlockSize + 3), Succeeded());
+  EXPECT_FALSE(Msf.isBlockFree(BlockSize + 1));
+  EXPECT_FALSE(Msf.isBlockFree(BlockSize + 2));
+
+  // Neither member of a pair may hold the block map, even if the requested
+  // address is beyond the current end of the file.
+  EXPECT_THAT_ERROR(Msf.setBlockMapAddr(2 * BlockSize + 1), Failed());
+  EXPECT_THAT_ERROR(Msf.setBlockMapAddr(3 * BlockSize + 2), Failed());
+}
+
+TEST_F(MSFBuilderTest, ExplicitStreamGrowthReservesFpmPairs) {
+  constexpr uint32_t BlockSize = 512;
+  auto ExpectedMsf = MSFBuilder::create(Allocator, BlockSize);
+  ASSERT_THAT_EXPECTED(ExpectedMsf, Succeeded());
+  auto &Msf = *ExpectedMsf;
+
+  // An explicitly mapped stream must keep its requested data block while
+  // reserving the FPM pair crossed to reach it.
+  auto SN = Msf.addStream(BlockSize, {BlockSize + 3});
+  ASSERT_THAT_EXPECTED(SN, Succeeded());
+  EXPECT_THAT(Msf.getStreamBlocks(*SN), ElementsAre(BlockSize + 3));
+  EXPECT_FALSE(Msf.isBlockFree(BlockSize + 1));
+  EXPECT_FALSE(Msf.isBlockFree(BlockSize + 2));
+
+  // Explicit placement must reject either member of a pair in newly covered
+  // space rather than treating it as a free data block.
+  EXPECT_THAT_EXPECTED(Msf.addStream(BlockSize, {2 * BlockSize + 1}), Failed());
+  EXPECT_THAT_EXPECTED(Msf.addStream(BlockSize, {3 * BlockSize + 2}), Failed());
+}
+
 TEST_F(MSFBuilderTest, StreamDoesntUseFpmBlocksAfterGrowth) {
   // FPM blocks must remain marked as used and excluded from streams and the
   // directory, even when adding or growing a stream extends the file starting
@@ -422,6 +479,8 @@ TEST_F(MSFBuilderTest, StreamDoesntUseFpmBlocksAfterGrowth) {
         ASSERT_THAT_EXPECTED(SN, Succeeded());
       }
 
+      // The FPM pair does not count toward the two requested data blocks, so
+      // growth must add four blocks in total.
       EXPECT_THAT(Msf.getStreamBlocks(*SN).take_back(2),
                   ElementsAre(BlockSize + 3, BlockSize + 4));
       EXPECT_EQ(BlockSize + 5, Msf.getTotalBlockCount());
@@ -429,6 +488,8 @@ TEST_F(MSFBuilderTest, StreamDoesntUseFpmBlocksAfterGrowth) {
       auto ExpectedLayout = Msf.generateLayout();
       ASSERT_THAT_EXPECTED(ExpectedLayout, Succeeded());
       auto &L = *ExpectedLayout;
+      // The bitmap alone cannot distinguish reserved blocks from blocks used
+      // by the directory or a stream, so check both the bitmap and the maps.
       EXPECT_FALSE(L.FreePageMap.test(BlockSize + 1));
       EXPECT_FALSE(L.FreePageMap.test(BlockSize + 2));
       for (auto Blocks : L.StreamMap) {
