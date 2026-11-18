@@ -1595,8 +1595,8 @@ body:             |
   ; CHECK-NEXT: %load:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %canon:_ FPClasses:(qnan inf zero sub norm) SignBitKnown:?
   ; CHECK-NEXT: %vec:_ FPClasses:(qnan pzero psub pnorm) SignBitKnown:0
-  ; CHECK-NEXT: %reduce:_ FPClasses:(qnan zero sub norm) SignBitKnown:?
-  ; CHECK-NEXT: %copy:_ FPClasses:(qnan zero sub norm) SignBitKnown:?
+  ; CHECK-NEXT: %reduce:_ FPClasses:(qnan pzero psub pnorm) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(qnan pzero psub pnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
     %load:_(<4 x f32>) = G_LOAD %ptr(p0) :: (load (<4 x f32>))
     %canon:_(<4 x f32>) = G_FCANONICALIZE %load
@@ -1617,8 +1617,8 @@ body:             |
   ; CHECK-NEXT: %load:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %pos_vec:_ FPClasses:(pinf pzero psub pnorm) SignBitKnown:0
   ; CHECK-NEXT: %vec:_ FPClasses:(snan pinf pzero psub pnorm) SignBitKnown:?
-  ; CHECK-NEXT: %reduce:_ FPClasses:(snan inf zero sub norm) SignBitKnown:?
-  ; CHECK-NEXT: %copy:_ FPClasses:(snan inf zero sub norm) SignBitKnown:?
+  ; CHECK-NEXT: %reduce:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
     %cond:_(<4 x s32>) = G_LOAD %ptr(p0) :: (load (<4 x s32>))
     %mask:_(<4 x s1>) = G_TRUNC %cond
