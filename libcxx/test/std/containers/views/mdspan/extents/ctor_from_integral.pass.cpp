@@ -38,12 +38,6 @@
 #include "CtorTestCombinations.h"
 #include "test_macros.h"
 
-struct RValueInt {
-  int val;
-  constexpr RValueInt(int v) : val(v) {}
-  constexpr operator int() && noexcept { return val; }
-};
-
 struct IntegralCtorTest {
   template <class E, class AllExtents, class Extents, size_t... Indices>
   static constexpr void test_construction(AllExtents all_ext, Extents ext, std::index_sequence<Indices...>) {
