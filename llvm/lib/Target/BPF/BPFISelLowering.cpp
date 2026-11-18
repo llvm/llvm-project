@@ -1113,7 +1113,15 @@ MachineBasicBlock *BPFTargetLowering::EmitInstrWithCustomInserterLDimm64(
 
   if (MO.isBlockAddress()) {
     auto *BA = MO.getBlockAddress();
-    MachineBasicBlock *TgtMBB = AddressTakenBBs[BA->getBasicBlock()];
+    // Jumping to a block of another function is undefined, so no jump table.
+    if (BA->getFunction() != &MF->getFunction()) {
+      BuildMI(*BB, MI, DL, TII->get(BPF::LD_imm64), ResultReg)
+          .addBlockAddress(BA);
+      MI.eraseFromParent();
+      return BB;
+    }
+
+    MachineBasicBlock *TgtMBB = AddressTakenBBs.lookup(BA->getBasicBlock());
     assert(TgtMBB);
 
     Targets.push_back(TgtMBB);
@@ -1153,10 +1161,11 @@ MachineBasicBlock *BPFTargetLowering::EmitInstrWithCustomInserterLDimm64(
     return emitLDImm64(GVal);
 
   for (const Use &Op : CA->operands()) {
-    if (!isa<BlockAddress>(Op))
+    // A table with blocks of another function is only data.
+    auto *BA = dyn_cast<BlockAddress>(Op);
+    if (!BA || BA->getFunction() != &MF->getFunction())
       return emitLDImm64(GVal);
-    auto *BA = cast<BlockAddress>(Op);
-    MachineBasicBlock *TgtMBB = AddressTakenBBs[BA->getBasicBlock()];
+    MachineBasicBlock *TgtMBB = AddressTakenBBs.lookup(BA->getBasicBlock());
     assert(TgtMBB);
     Targets.push_back(TgtMBB);
   }
