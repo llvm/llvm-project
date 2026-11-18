@@ -73,6 +73,14 @@ public:
     return nullptr;
   }
 
+  /// Returns whether this runtime is the preferred runtime for \p in_value, an
+  /// object of another language, for example because code in this runtime's
+  /// language uses it. The runtime of the object's language can then return
+  /// this runtime from GetPreferredLanguageRuntime().
+  virtual bool IsPreferredLanguageRuntimeFor(ValueObject &in_value) {
+    return false;
+  }
+
   virtual llvm::Error GetObjectDescription(Stream &str,
                                            ValueObject &object) = 0;
 
@@ -136,6 +144,16 @@ public:
   virtual TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
                                          ValueObject &static_value) = 0;
 
+  /// Returns the address of the instance that \p pointer refers to, where
+  /// \p pointer is the value of an object of \p type, whose instances are
+  /// pointers (see eTypeInstanceIsPointer). A runtime can remove information
+  /// that it stores in the spare bits of such pointers, or follow a reference
+  /// that refers to the instance indirectly.
+  virtual llvm::Expected<lldb::addr_t> FixupPointerValue(lldb::addr_t pointer,
+                                                         CompilerType type) {
+    return pointer;
+  }
+
   /// This allows a language runtime to adjust the location of \p variable
   /// computed from its debug info, for storage whose indirection is only
   /// known at runtime.
@@ -184,6 +202,44 @@ public:
   virtual lldb::ValueObjectSP GetErrorValueAtBackstop(StackFrame &frame) {
     return {};
   }
+
+  /// Given a frame, compute the location where its function would place an
+  /// error, if one is thrown by the function.
+  ///
+  /// \return
+  ///     std::nullopt if the function cannot throw. A register location is
+  ///     read in the frame the function returns to.
+  virtual std::optional<Value> GetThrownErrorLocation(StackFrame &frame) {
+    return std::nullopt;
+  }
+
+  /// Given \p frame, the frame a callee returned to, and \p location,
+  /// computed by GetThrownErrorLocation from the callee's frame, get the
+  /// error the callee threw.
+  ///
+  /// \return
+  ///     std::nullopt if the callee did not throw. Otherwise the thrown
+  ///     error, which is null if the error could not be read.
+  virtual std::optional<lldb::ValueObjectSP>
+  GetThrownError(StackFrame &frame, const Value &location) {
+    return std::nullopt;
+  }
+
+  /// A description of how to find an error thrown by a function. It is
+  /// computed from the callee's frame, and is only meaningful in the frame the
+  /// callee returns to.
+  class ThrownErrorLocation {
+  public:
+    explicit ThrownErrorLocation(lldb::StackFrameSP callee_frame_sp = nullptr);
+
+    /// See LanguageRuntime::GetThrownError.
+    std::optional<lldb::ValueObjectSP>
+    GetThrownError(lldb::StackFrameSP caller_frame_sp) const;
+
+  private:
+    LanguageRuntime *m_runtime = nullptr;
+    std::optional<Value> m_location;
+  };
 
   static lldb::BreakpointSP
   CreateExceptionBreakpoint(Target &target, lldb::LanguageType language,

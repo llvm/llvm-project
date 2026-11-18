@@ -57,8 +57,10 @@ add_header_library(
     libc.src.__support.CPP.new
     libc.src.__support.CPP.scope
     libc.src.__support.CPP.span
+    libc.src.__support.CPP.unique_ptr
     libc.src.__support.alloc_checker
     libc.src.__support.blockstore
+    libc.src.__support.checked_ptr
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.string.memory_utils.inline_memcpy
