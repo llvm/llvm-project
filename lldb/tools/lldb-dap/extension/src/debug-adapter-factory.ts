@@ -6,7 +6,7 @@ import * as vscode from "vscode";
 import { LogFilePathProvider, LogType } from "./logging";
 import { ErrorWithNotification } from "./ui/error-with-notification";
 import { ConfigureButton, OpenSettingsButton } from "./ui/show-error-message";
-import { expandUser } from "./utils";
+import { expandUser, substitute } from "./utils";
 
 const exec = util.promisify(child_process.execFile);
 
@@ -130,7 +130,7 @@ async function getDAPExecutable(
 
   // Check if the executable was provided in the extension's configuration.
   const config = vscode.workspace.getConfiguration("lldb-dap", workspaceFolder);
-  const configPath = expandUser(config.get<string>("executable-path") ?? "");
+  const configPath = expandUser(await substitute(config.get<string>("executable-path") ?? ""));
   if (configPath && configPath.length !== 0) {
     if (!(await isExecutable(configPath))) {
       throw new ErrorWithNotification(
@@ -187,9 +187,10 @@ async function getDAPArguments(
     return debugConfigArgs;
   }
   // Fall back on the workspace configuration.
-  return vscode.workspace
+  return await substitute(
+    vscode.workspace
     .getConfiguration("lldb-dap", workspaceFolder)
-    .get<string[]>("arguments", []);
+    .get<string[]>("arguments", []));
 }
 
 /**
@@ -234,7 +235,7 @@ async function getDAPEnvironment(
   const config = vscode.workspace.workspaceFile
     ? vscode.workspace.getConfiguration("lldb-dap")
     : vscode.workspace.getConfiguration("lldb-dap", workspaceFolder);
-  return config.get<{ [key: string]: string }>("environment") || {};
+  return await substitute(config.get<{ [key: string]: string }>("environment") || {});
 }
 
 /**
