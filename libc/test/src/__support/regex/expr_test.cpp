@@ -380,3 +380,64 @@ TEST(LlvmLibcRegexExprTest, MemoryLimits) {
   EXPECT_EQ(bs_fail.error(), REG_ESPACE);
   EXPECT_EQ(pool.num_byte_sets(), size_t(0));
 }
+
+TEST(LlvmLibcRegexExprTest, BoundsGuardsAndNullableMask) {
+  // Uninitialised pool safely resolves constant sentinels and rejects invalid
+  // or out-of-range ExprIds.
+  {
+    ExprPool fresh;
+    EXPECT_FALSE(fresh.is_valid(EMPTY_SET_ID));
+    EXPECT_TRUE(fresh.is_valid_input(EMPTY_SET_ID));
+    EXPECT_TRUE(fresh.is_valid_input(EMPTY_STR_ID));
+    EXPECT_FALSE(fresh.is_valid_input(INVALID_EXPR_ID));
+    EXPECT_EQ(fresh.get(EMPTY_SET_ID).kind, ExprKind::EmptySet);
+    EXPECT_EQ(fresh.get(EMPTY_STR_ID).kind, ExprKind::EmptyStr);
+    EXPECT_FALSE(fresh.is_nullable(EMPTY_SET_ID));
+    EXPECT_TRUE(fresh.is_nullable(EMPTY_STR_ID));
+    EXPECT_EQ(fresh.allocated_bytes(), size_t(0));
+    auto expect_badpat = [](const auto &res) {
+      ASSERT_FALSE(res.has_value());
+      EXPECT_EQ(res.error(), REG_BADPAT);
+    };
+    expect_badpat(fresh.make_star(999));
+    expect_badpat(fresh.make_repeat(999, 1, 2));
+    expect_badpat(fresh.make_concat(999, EMPTY_STR_ID));
+    expect_badpat(fresh.make_alt(EMPTY_SET_ID, 999));
+    expect_badpat(fresh.make_anchor(0x04));
+    expect_badpat(fresh.make_anchor(ANCHOR_BOL | 0x04));
+    expect_badpat(fresh.make_anchor(0xFF));
+  }
+
+  ExprPool pool;
+  auto bol = pool.make_anchor(ANCHOR_BOL);
+  auto eol = pool.make_anchor(ANCHOR_EOL);
+  auto both = pool.make_anchor(ANCHOR_BOL | ANCHOR_EOL);
+  auto lit_a = pool.make_lit('a');
+  ASSERT_TRUE(bol.has_value());
+  ASSERT_TRUE(eol.has_value());
+  ASSERT_TRUE(both.has_value());
+  ASSERT_TRUE(lit_a.has_value());
+  auto bol_eol = pool.make_concat(*bol, *eol);
+  auto bol_or_eol = pool.make_alt(*bol, *eol);
+  auto bol_or_a = pool.make_alt(*bol, *lit_a);
+  ASSERT_TRUE(bol_eol.has_value());
+  ASSERT_TRUE(bol_or_eol.has_value());
+  ASSERT_TRUE(bol_or_a.has_value());
+  auto rep_bol = pool.make_repeat(*bol, 2, 3);
+  auto rep_bol_0 = pool.make_repeat(*bol, 0, 3);
+  auto star_bol = pool.make_star(*bol);
+  auto rep_bol_or_a = pool.make_repeat(*bol_or_a, 2, 3);
+  ASSERT_TRUE(rep_bol.has_value());
+  ASSERT_TRUE(rep_bol_0.has_value());
+  ASSERT_TRUE(star_bol.has_value());
+  ASSERT_TRUE(rep_bol_or_a.has_value());
+  EXPECT_EQ(pool.get(*bol).nullable_mask, uint8_t(0b1010));
+  EXPECT_EQ(pool.get(*eol).nullable_mask, uint8_t(0b1100));
+  EXPECT_EQ(pool.get(*both).nullable_mask, uint8_t(0b1000));
+  EXPECT_EQ(pool.get(*bol_eol).nullable_mask, uint8_t(0b1000));
+  EXPECT_EQ(pool.get(*bol_or_eol).nullable_mask, uint8_t(0b1110));
+  EXPECT_EQ(pool.get(*rep_bol).nullable_mask, uint8_t(0b1010));
+  EXPECT_EQ(pool.get(*rep_bol_0).nullable_mask, uint8_t(0b1111));
+  EXPECT_EQ(pool.get(*star_bol).nullable_mask, uint8_t(0b1111));
+  EXPECT_EQ(pool.get(*rep_bol_or_a).nullable_mask, uint8_t(0b1010));
+}
