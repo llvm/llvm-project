@@ -7103,7 +7103,9 @@ ConstantRange ScalarEvolution::getRangeForAffineNoSelfWrappingAR(
   // outside and inside the range [Min(Start, End), Max(Start, End)]. Using that
   // knowledge, let's try to prove that we are dealing with Case 1. It is so if
   // Start <= End and step is positive, or Start >= End and step is negative.
-  const SCEV *Start = applyLoopGuards(AddRec->getStart(), AddRec->getLoop());
+  LoopGuards Guards = LoopGuards::collectOnDemand(AddRec->getLoop(), *this);
+  Guards.SkipPhiBackedges = true;
+  const SCEV *Start = applyLoopGuards(AddRec->getStart(), Guards);
   ConstantRange StartRange = getRangeRef(Start, SignHint);
   ConstantRange EndRange = getRangeRef(End, SignHint);
   ConstantRange RangeBetween = StartRange.unionWith(EndRange);
@@ -15637,15 +15639,15 @@ void ScalarEvolution::LoopGuards::collectFromPHI(
     if (!SE.DT.isReachableFromEntry(InBlock))
       return {nullptr, scCouldNotCompute};
 
-    // Skip backedges into the phi's block. Evaluating them may query the range
-    // of that loop's own AddRecs.
-    if (SE.DT.dominates(Phi.getParent(), InBlock))
+    if (Guards.SkipPhiBackedges && SE.DT.dominates(Phi.getParent(), InBlock))
       return {nullptr, scCouldNotCompute};
 
     auto [G, Inserted] = IncomingGuards.try_emplace(InBlock, LoopGuards(SE));
-    if (Inserted)
+    if (Inserted) {
+      G->second.SkipPhiBackedges = Guards.SkipPhiBackedges;
       collectFromBlock(SE, G->second, Phi.getParent(), InBlock, VisitedBlocks,
                        Depth + 1);
+    }
     auto &RewriteMap = G->second.RewriteMap;
     if (RewriteMap.empty())
       return {nullptr, scCouldNotCompute};
