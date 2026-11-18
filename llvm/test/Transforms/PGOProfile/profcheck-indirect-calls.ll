@@ -3,6 +3,9 @@
 ; RUN: opt -passes=prof-verify -profcheck-annotate-indirect-calls -S < %t/verify-ok.ll
 ; RUN: not opt -passes=prof-verify -profcheck-annotate-indirect-calls -S < %t/verify-bad.ll 2>&1 | FileCheck %t/verify-bad.ll
 
+; This test fails under profcheck due to profcheck adding profile metadata.
+; UNSUPPORTED: profcheck
+
 ;--- inject.ll
 define void @foo(ptr %f) {
   call void %f()
