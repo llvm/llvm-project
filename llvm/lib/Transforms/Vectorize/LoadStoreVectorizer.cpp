@@ -209,6 +209,41 @@ Type *getChainElemTy(ArrayRef<ChainElem> C, LLVMContext &Ctx,
   return Type::getByteNTy(Ctx, GCDSize);
 }
 
+/// Returns the number of bytes spanned by \p C, measured from the offset of
+/// its first element, i.e. `max(Off_i + storeSize_i) - Off_front`.  \p C must
+/// be sorted in offset order, so that the first element has the lowest offset.
+///
+/// The arithmetic is deliberately performed in a widened APInt.  Element
+/// offsets come from user-controlled GEP constants and can sit arbitrarily
+/// close to the limits of the index type (e.g.
+/// `getelementptr i1, ptr %x, i64 9223372036854775807`), so evaluating
+/// `Off + storeSize` in the index width can wrap around.  A wrapped read-end
+/// compares as *less* than its predecessor, which silently drops the element
+/// from the running extent and yields a chain extent far smaller than the
+/// elements it covers -- e.g. 1 byte for a chain holding an i64.
+///
+/// The extent is relative, so it stays small for any chain we would actually
+/// vectorize.  std::nullopt means the chain spans an implausible range and the
+/// caller should leave it alone.
+std::optional<uint64_t> getChainExtentBytes(ArrayRef<ChainElem> C,
+                                            const DataLayout &DL) {
+  assert(!C.empty());
+  // +8 so that adding any uint64_t store size cannot overflow.
+  unsigned ExtBits = C.front().OffsetFromLeader.getBitWidth() + 8;
+  auto ReadEndOf = [&](const ChainElem &E) {
+    return E.OffsetFromLeader.sext(ExtBits) +
+           DL.getTypeStoreSize(getLoadStoreType(E.Inst));
+  };
+  APInt Base = C.front().OffsetFromLeader.sext(ExtBits);
+  APInt End = ReadEndOf(C.front());
+  for (const ChainElem &E : C.drop_front())
+    End = APIntOps::smax(End, ReadEndOf(E));
+  APInt Extent = End - Base;
+  if (Extent.isNegative() || Extent.getActiveBits() > 32)
+    return std::nullopt;
+  return Extent.getZExtValue();
+}
+
 void sortChainInBBOrder(Chain &C) {
   sort(C, [](auto &A, auto &B) { return A.Inst->comesBefore(B.Inst); });
 }
@@ -893,14 +928,21 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
         CandidateChains;
     // Need to compute the size of every candidate chain from its beginning
     // because of possible overlapping among chain elements.
+    // Widened for the same reason as getChainExtentBytes: a raw
+    // `Off + storeSize` can wrap and understate the candidate chain's size.
+    unsigned ExtBits = C[CBegin].OffsetFromLeader.getBitWidth() + 8;
     unsigned Sz = DL.getTypeStoreSize(getLoadStoreType(C[CBegin].Inst));
-    APInt PrevReadEnd = C[CBegin].OffsetFromLeader + Sz;
+    APInt PrevReadEnd = C[CBegin].OffsetFromLeader.sext(ExtBits) + Sz;
     for (unsigned CEnd = CBegin + 1, Size = C.size(); CEnd < Size; ++CEnd) {
-      APInt ReadEnd = C[CEnd].OffsetFromLeader +
+      APInt ReadEnd = C[CEnd].OffsetFromLeader.sext(ExtBits) +
                       DL.getTypeStoreSize(getLoadStoreType(C[CEnd].Inst));
-      unsigned BytesAdded =
-          PrevReadEnd.sle(ReadEnd) ? (ReadEnd - PrevReadEnd).getSExtValue() : 0;
-      Sz += BytesAdded;
+      if (PrevReadEnd.slt(ReadEnd)) {
+        APInt Diff = ReadEnd - PrevReadEnd;
+        // Too large to be a chain we would ever vectorize; stop extending.
+        if (Diff.getActiveBits() > 32)
+          break;
+        Sz += Diff.getZExtValue();
+      }
       if (Sz > VecRegBytes)
         break;
       CandidateChains.emplace_back(CEnd, Sz);
@@ -1124,18 +1166,15 @@ bool Vectorizer::vectorizeChain(Chain &C) {
   unsigned VecElemSize = DL.getTypeSizeInBits(VecElemTy);
   bool IsLoadChain = isa<LoadInst>(C[0].Inst);
   unsigned AS = getLoadStoreAddressSpace(C[0].Inst);
-  unsigned BytesAdded = DL.getTypeStoreSize(getLoadStoreType(&*C[0].Inst));
-  APInt PrevReadEnd = C[0].OffsetFromLeader + BytesAdded;
-  unsigned ChainBytes = BytesAdded;
-  for (auto It = std::next(C.begin()), End = C.end(); It != End; ++It) {
-    unsigned SzBytes = DL.getTypeStoreSize(getLoadStoreType(&*It->Inst));
-    APInt ReadEnd = It->OffsetFromLeader + SzBytes;
-    // Update ChainBytes considering possible overlap.
-    BytesAdded =
-        PrevReadEnd.sle(ReadEnd) ? (ReadEnd - PrevReadEnd).getSExtValue() : 0;
-    ChainBytes += BytesAdded;
-    PrevReadEnd = APIntOps::smax(PrevReadEnd, ReadEnd);
+  // Overflow-safe; see getChainExtentBytes.  Bailing here is fine: the chain is
+  // simply left unvectorized.
+  std::optional<uint64_t> MaybeChainBytes = getChainExtentBytes(C, DL);
+  if (!MaybeChainBytes) {
+    LLVM_DEBUG(dbgs() << "LSV: chain spans an implausible byte range; "
+                         "not vectorizing\n");
+    return false;
   }
+  unsigned ChainBytes = *MaybeChainBytes;
 
   assert(8 * ChainBytes % VecElemSize == 0 &&
          "ChainBytes must be a multiple of VecElemTy size");
