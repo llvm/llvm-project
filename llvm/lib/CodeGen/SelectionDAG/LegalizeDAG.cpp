@@ -895,6 +895,39 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
                            ISD::EXTLOAD, false)) {
         // If the source type is not legal, see if there is a legal extload to
         // an intermediate type that we can then extend further.
+
+        // For scalar integer loads, try intermediate integer types.
+        if (SrcVT.isInteger() && !SrcVT.isVector()) {
+          unsigned SrcBits = SrcVT.getSizeInBits();
+          unsigned DestBits = DestVT.getSizeInBits();
+
+          // Try larger integer types in descending order (prefer larger
+          // intermediates to minimize the number of extensions).
+          for (MVT IntVT : reverse(MVT::integer_valuetypes())) {
+            unsigned IntBits = IntVT.getSizeInBits();
+            // Try types between source and destination size.
+            if (IntBits < SrcBits || IntBits >= DestBits)
+              continue;
+
+            ISD::LoadExtType MidExtType =
+                IntBits == SrcBits ? ISD::NON_EXTLOAD : ExtType;
+
+            if (TLI.isLoadLegal(IntVT, SrcVT, LD->getAlign(),
+                                LD->getAddressSpace(), MidExtType, false)) {
+              SDValue Load = DAG.getExtLoad(MidExtType, dl, IntVT, Chain, Ptr,
+                                            SrcVT, LD->getMemOperand());
+              unsigned ExtendOp =
+                  ISD::getExtForLoadExtType(SrcVT.isFloatingPoint(), ExtType);
+              Value = DAG.getNode(ExtendOp, dl, DestVT, Load);
+              Chain = Load.getValue(1);
+              break;
+            }
+          }
+
+          if (Value.getNode())
+            break;
+        }
+
         EVT LoadVT =
             TLI.getRegisterType(*DAG.getContext(), SrcVT.getSimpleVT());
         if ((LoadVT.isFloatingPoint() == SrcVT.isFloatingPoint()) &&
