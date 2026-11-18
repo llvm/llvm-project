@@ -16,6 +16,15 @@ package(
 licenses(["notice"])
 
 libc_support_library(
+    name = "byte_order",
+    hdrs = ["byte_order.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
     name = "hex",
     hdrs = ["hex.h"],
     deps = [
@@ -34,6 +43,7 @@ libc_support_library(
     srcs = ["address.cpp"],
     hdrs = ["address.h"],
     deps = [
+        ":byte_order",
         ":hex",
         "//libc/hdr:inet_address_macros",
         "//libc/hdr:stdint_proxy",

@@ -379,9 +379,8 @@ define i8 @fptosi_sat_f64_to_i8(double %a) nounwind {
 ; LA64F-NEXT:    addi.w $a1, $zero, -128
 ; LA64F-NEXT:    maskeqz $a1, $a1, $s0
 ; LA64F-NEXT:    or $s0, $a1, $a0
-; LA64F-NEXT:    ori $a0, $zero, 0
-; LA64F-NEXT:    lu32i.d $a0, -16384
-; LA64F-NEXT:    lu52i.d $a1, $a0, 1029
+; LA64F-NEXT:    lu12i.w $a0, 65919
+; LA64F-NEXT:    slli.d $a1, $a0, 34
 ; LA64F-NEXT:    move $a0, $fp
 ; LA64F-NEXT:    pcaddu18i $ra, %call36(__gtdf2)
 ; LA64F-NEXT:    jirl $ra, $ra, 0
@@ -403,12 +402,13 @@ define i8 @fptosi_sat_f64_to_i8(double %a) nounwind {
 ;
 ; LA64D-LABEL: fptosi_sat_f64_to_i8:
 ; LA64D:       # %bb.0: # %entry
-; LA64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI4_0)
-; LA64D-NEXT:    fld.d $fa1, $a0, %pc_lo12(.LCPI4_0)
 ; LA64D-NEXT:    lu52i.d $a0, $zero, -1018
+; LA64D-NEXT:    movgr2fr.d $fa1, $a0
+; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa1
+; LA64D-NEXT:    lu12i.w $a0, 65919
+; LA64D-NEXT:    slli.d $a0, $a0, 34
 ; LA64D-NEXT:    movgr2fr.d $fa2, $a0
-; LA64D-NEXT:    fmax.d $fa2, $fa0, $fa2
-; LA64D-NEXT:    fmin.d $fa1, $fa2, $fa1
+; LA64D-NEXT:    fmin.d $fa1, $fa1, $fa2
 ; LA64D-NEXT:    ftintrz.l.d $fa1, $fa1
 ; LA64D-NEXT:    fcmp.cun.d $fcc0, $fa0, $fa0
 ; LA64D-NEXT:    movfr2gr.d $a0, $fa1

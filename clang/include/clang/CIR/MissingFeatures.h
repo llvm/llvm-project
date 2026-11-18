@@ -31,7 +31,6 @@ struct MissingFeatures {
 
   // Unhandled global/linkage information.
   static bool opGlobalThreadLocal() { return false; }
-  static bool opGlobalUnnamedAddr() { return false; }
   static bool opGlobalVisibility() { return false; }
   static bool opGlobalDLLImportExport() { return false; }
   static bool opGlobalPartition() { return false; }
@@ -179,6 +178,7 @@ struct MissingFeatures {
   static bool aggValueSlotMayOverlap() { return false; }
   static bool aggValueSlotVolatile() { return false; }
   static bool allocToken() { return false; }
+  static bool smallIntABICompatOption() { return false; }
   static bool appleArm64CXXABI() { return false; }
   static bool appleKext() { return false; }
   static bool asmGoto() { return false; }
@@ -187,7 +187,6 @@ struct MissingFeatures {
   static bool asmNoConvergent() { return false; }
   static bool asmUnwindClobber() { return false; }
   static bool asmVectorType() { return false; }
-  static bool assignMemcpyizer() { return false; }
   static bool astVarDeclInterface() { return false; }
   static bool attributeNoBuiltin() { return false; }
   static bool branchProtection() { return false; }
@@ -277,9 +276,11 @@ struct MissingFeatures {
   static bool peepholeProtection() { return false; }
   static bool pgoUse() { return false; }
   static bool pointerAuthentication() { return false; }
+  static bool pointerFieldProtection() { return false; }
   static bool preservedAccessIndexRegion() { return false; }
   static bool returnValueSlotFeatures() { return false; }
   static bool runCleanupsScope() { return false; }
+  static bool s390xVisibleVectorABI() { return false; }
   static bool sanitizers() { return false; }
   static bool setDLLStorageClass() { return false; }
   static bool setNonGC() { return false; }

@@ -7098,8 +7098,8 @@ static void zeroAll(PtrView Dest) {
   if (Desc->isPrimitiveArray()) {
     for (unsigned I = 0, N = Desc->getNumElems(); I != N; ++I) {
       TYPE_SWITCH(Desc->getPrimType(), {
-        Dest.deref<T>().~T();
-        new (&Dest.deref<T>()) T();
+        Dest.elem<T>(I).~T();
+        new (&Dest.elem<T>(I)) T();
       });
     }
     return;

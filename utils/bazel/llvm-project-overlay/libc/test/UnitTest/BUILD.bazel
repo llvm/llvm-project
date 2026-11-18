@@ -57,12 +57,12 @@ libc_test_library(
     deps = [
         ":string_utils",
         ":test_logger",
-        "//libc:llvm_libc_macros_stdfix_macros",
         "//libc/hdr:stdint_proxy",
         "//libc/hdr/func:aligned_alloc",
         "//libc/hdr/func:free",
         "//libc/hdr/func:malloc",
         "//libc/hdr/func:realloc",
+        "//libc/include:llvm_libc_macros_stdfix_macros",
         "//libc/src/__support:c_string",
         "//libc/src/__support:integer_to_string",
         "//libc/src/__support:libc_assert",
@@ -92,11 +92,11 @@ libc_test_library(
         "//libc/src/time:clock",
     ] + select({
         "//libc:full_build": [
-            "//libc:llvm_libc_macros_poll_macros",
-            "//libc:llvm_libc_macros_signal_macros",
-            "//libc:llvm_libc_macros_sys_wait_macros",
-            "//libc:llvm_libc_types_pid_t",
-            "//libc:llvm_libc_types_struct_pollfd",
+            "//libc/include:llvm_libc_macros_poll_macros",
+            "//libc/include:llvm_libc_macros_signal_macros",
+            "//libc/include:llvm_libc_macros_sys_wait_macros",
+            "//libc/include:llvm_libc_types_pid_t",
+            "//libc/include:llvm_libc_types_struct_pollfd",
             "//libc/src/poll",
             "//libc/src/signal",
             "//libc/src/signal:kill",
@@ -153,7 +153,7 @@ libc_test_library(
     hdrs = ["LibcCTest.h"],
     deps = [
         ":LibcUnitTest",
-        "//libc:llvm_libc_common_h",
+        "//libc/include:llvm_libc_common_h",
     ],
 )
 

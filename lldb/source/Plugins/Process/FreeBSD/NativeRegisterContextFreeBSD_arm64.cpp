@@ -53,8 +53,8 @@ NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
 
 NativeRegisterContextFreeBSD_arm64::NativeRegisterContextFreeBSD_arm64(
     const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread)
-    : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfo_arm64(target_arch, 0)),
+    : NativeRegisterContextRegisterInfo(native_thread,
+                                        new RegisterInfo_arm64(target_arch, 0)),
       m_read_dbreg(false) {
   g_register_type_detector.UpdateRegisterInfo(
       GetRegisterInfoInterface().GetRegisterInfo(),
