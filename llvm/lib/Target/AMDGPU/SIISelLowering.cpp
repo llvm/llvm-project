@@ -18953,11 +18953,12 @@ SITargetLowering::performCvtF32UByteNCombine(SDNode *N,
   SDValue Src = N->getOperand(0);
   SDValue Shift = N->getOperand(0);
 
-  // TODO: Extend type shouldn't matter (assuming legal types).
-  if (Shift.getOpcode() == ISD::ZERO_EXTEND)
+  if (Shift.getOpcode() == ISD::ZERO_EXTEND ||
+      Shift.getOpcode() == ISD::ANY_EXTEND)
     Shift = Shift.getOperand(0);
 
-  if (Shift.getOpcode() == ISD::SRL || Shift.getOpcode() == ISD::SHL) {
+  if ((Shift.getOpcode() == ISD::SRL || Shift.getOpcode() == ISD::SHL) &&
+      8 * Offset + 8 <= Shift.getValueSizeInBits()) {
     // cvt_f32_ubyte1 (shl x,  8) -> cvt_f32_ubyte0 x
     // cvt_f32_ubyte3 (shl x, 16) -> cvt_f32_ubyte1 x
     // cvt_f32_ubyte0 (srl x, 16) -> cvt_f32_ubyte2 x
