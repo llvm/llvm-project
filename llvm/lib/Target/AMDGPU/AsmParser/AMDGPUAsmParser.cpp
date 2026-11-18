@@ -1063,8 +1063,9 @@ class KernelScopeInfo {
       if (Ctx) {
         MCSymbol *const Sym =
             Ctx->getOrCreateSymbol(Twine(".kernel.vgpr_count"));
-        int totalVGPR = getTotalNumVGPRs(isGFX90A(*MSTI), AgprIndexUnusedMin,
-                                         VgprIndexUnusedMin);
+        int totalVGPR =
+            getTotalNumVGPRs(isGFX90A(*MSTI), std::max(AgprIndexUnusedMin, 0),
+                             VgprIndexUnusedMin);
         Sym->setVariableValue(MCConstantExpr::create(totalVGPR, *Ctx));
       }
     }
@@ -1085,8 +1086,9 @@ class KernelScopeInfo {
         // Also update vgpr_count (dependent on agpr_count for gfx908/gfx90a)
         MCSymbol *const vSym =
             Ctx->getOrCreateSymbol(Twine(".kernel.vgpr_count"));
-        int totalVGPR = getTotalNumVGPRs(isGFX90A(*MSTI), AgprIndexUnusedMin,
-                                         VgprIndexUnusedMin);
+        int totalVGPR =
+            getTotalNumVGPRs(isGFX90A(*MSTI), std::max(AgprIndexUnusedMin, 0),
+                             VgprIndexUnusedMin);
         vSym->setVariableValue(MCConstantExpr::create(totalVGPR, *Ctx));
       }
     }
@@ -1363,6 +1365,10 @@ public:
 
   bool hasGloballyAddressableScratch() const {
     return getFeatureBits()[AMDGPU::FeatureGloballyAddressableScratch];
+  }
+
+  bool hasScaleOffset() const {
+    return getFeatureBits()[AMDGPU::FeatureScaleOffset];
   }
 
   bool hasCacheFillSize() const {
@@ -2242,7 +2248,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val,
       if (Lit == LitModifier::None && AsmParser->hasInv2PiInlineImm() &&
           Literal == 0x3fc45f306725feed) {
         // This is the 1/(2*pi) which is going to be truncated to bf16 with the
-        // loss of precision. The constant represents ideomatic fp32 value of
+        // loss of precision. The constant represents idiomatic fp32 value of
         // 1/(2*pi) = 0.15915494 since bf16 is in fact fp32 with cleared low 16
         // bits. Prevent rounding below.
         Inst.addOperand(MCOperand::createImm(0x3e22));
@@ -5347,19 +5353,18 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
     }
   }
 
-  if (!isGFX1250Plus()) {
-    if (CPol & CPol::SCAL) {
-      SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
-      StringRef CStr(S.getPointer());
-      S = SMLoc::getFromPointer(&CStr.data()[CStr.find("scale_offset")]);
-      Error(S, "scale_offset is not supported on this GPU");
-    }
-    if (CPol & CPol::NV) {
-      SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
-      StringRef CStr(S.getPointer());
-      S = SMLoc::getFromPointer(&CStr.data()[CStr.find("nv")]);
-      Error(S, "nv is not supported on this GPU");
-    }
+  if (!hasScaleOffset() && (CPol & CPol::SCAL)) {
+    SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
+    StringRef CStr(S.getPointer());
+    S = SMLoc::getFromPointer(&CStr.data()[CStr.find("scale_offset")]);
+    Error(S, "scale_offset is not supported on this GPU");
+  }
+
+  if (!isGFX1250Plus() && (CPol & CPol::NV)) {
+    SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
+    StringRef CStr(S.getPointer());
+    S = SMLoc::getFromPointer(&CStr.data()[CStr.find("nv")]);
+    Error(S, "nv is not supported on this GPU");
   }
 
   if ((CPol & CPol::SCAL) && !supportsScaleOffset(MII, Inst.getOpcode())) {
@@ -5561,7 +5566,7 @@ bool AMDGPUAsmParser::validateMonitorSleep(const MCInst &Inst,
   int ImmIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::simm16);
   if (Inst.getOperand(ImmIdx).getImm() & 0x8000) {
     Error(getOperandLoc(Operands, ImmIdx),
-          "sleep forever is unsuported on the target");
+          "sleep forever is unsupported on the target");
     return false;
   }
 

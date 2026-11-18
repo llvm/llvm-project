@@ -22,7 +22,6 @@
 ---
 name:            test_use_between
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x11', virtual-reg: '' }
   - { reg: '$x12', virtual-reg: '' }
@@ -40,7 +39,6 @@ body:             |
 ---
 name:            test_no_use_between
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x11', virtual-reg: '' }
   - { reg: '$x12', virtual-reg: '' }

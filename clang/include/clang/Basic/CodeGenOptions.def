@@ -129,6 +129,9 @@ CODEGENOPT(EmitCompactUnwindNonCanonical, 1, 0, Benign)
 
 CODEGENOPT(EmitSFrameUnwind, 1, 0, Benign) ///< Set when -sframe is enabled.
 
+/// Set when -grelocatable-dwarf is enabled.
+CODEGENOPT(MachORelocatableDwarf, 1, 0, Benign)
+
 ///< Set when -fxray-always-emit-customevents is enabled.
 CODEGENOPT(XRayAlwaysEmitCustomEvents , 1, 0, Benign)
 
@@ -553,6 +556,11 @@ CODEGENOPT(ZOSPPA1Name, 1, 1, Benign)
 
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"
+
+/// Which ABIs small integer argument passing on X86 platforms should be
+/// compatible with: Platform, Clang, Both.
+ENUM_CODEGENOPT(SmallIntABICompat, SmallIntABICompatKind, 2,
+                SmallIntABICompatKind::Both, Benign)
 
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT

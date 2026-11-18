@@ -4,7 +4,6 @@
 ---
 name:            splatvector_nxv1i1_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv1i1_0
@@ -22,7 +21,6 @@ body:             |
 ---
 name:            splatvector_nxv1i1_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv1i1_1
@@ -40,7 +38,6 @@ body:             |
 ---
 name:            splatvector_nxv1i1_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10
@@ -67,7 +64,6 @@ body:             |
 ---
 name:            splatvector_nxv2i1_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv2i1_0
@@ -85,7 +81,6 @@ body:             |
 ---
 name:            splatvector_nxv2i1_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv2i1_1
@@ -103,7 +98,6 @@ body:             |
 ---
 name:            splatvector_nxv2i1_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10
@@ -130,7 +124,6 @@ body:             |
 ---
 name:            splatvector_nxv4i1_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv4i1_0
@@ -148,7 +141,6 @@ body:             |
 ---
 name:            splatvector_nxv4i1_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv4i1_1
@@ -166,7 +158,6 @@ body:             |
 ---
 name:            splatvector_nxv4i1_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10
@@ -193,7 +184,6 @@ body:             |
 ---
 name:            splatvector_nxv8i1_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv8i1_0
@@ -211,7 +201,6 @@ body:             |
 ---
 name:            splatvector_nxv8i1_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv8i1_1
@@ -229,7 +218,6 @@ body:             |
 ---
 name:            splatvector_nxv8i1_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10
@@ -256,7 +244,6 @@ body:             |
 ---
 name:            splatvector_nxv16i1_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv16i1_0
@@ -274,7 +261,6 @@ body:             |
 ---
 name:            splatvector_nxv16i1_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv16i1_1
@@ -292,7 +278,6 @@ body:             |
 ---
 name:            splatvector_nxv16i1_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10
@@ -319,7 +304,6 @@ body:             |
 ---
 name:            splatvector_nxv32i1_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv32i1_0
@@ -337,7 +321,6 @@ body:             |
 ---
 name:            splatvector_nxv32i1_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv32i1_1
@@ -355,7 +338,6 @@ body:             |
 ---
 name:            splatvector_nxv32i1_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10
@@ -382,7 +364,6 @@ body:             |
 ---
 name:            splatvector_nxv64i1_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv64i1_0
@@ -400,7 +381,6 @@ body:             |
 ---
 name:            splatvector_nxv64i1_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv64i1_1
@@ -418,7 +398,6 @@ body:             |
 ---
 name:            splatvector_nxv64i1_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10
@@ -446,7 +425,6 @@ body:             |
 ---
 name:            splatvector_nxv1i8
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv1i8
@@ -465,7 +443,6 @@ body:             |
 ---
 name:            splatvector_nxv2i8
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv2i8
@@ -483,7 +460,6 @@ body:             |
 ---
 name:            splatvector_nxv4i8
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv4i8
@@ -501,7 +477,6 @@ body:             |
 ---
 name:            splatvector_nxv8i8
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv8i8
@@ -519,7 +494,6 @@ body:             |
 ---
 name:            splatvector_nxv16i8
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv16i8
@@ -537,7 +511,6 @@ body:             |
 ---
 name:            splatvector_nxv1i16
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv1i16
@@ -555,7 +528,6 @@ body:             |
 ---
 name:            splatvector_nxv2i16
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv2i16
@@ -573,7 +545,6 @@ body:             |
 ---
 name:            splatvector_nxv4i16
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv4i16
@@ -591,7 +562,6 @@ body:             |
 ---
 name:            splatvector_nxv8i16
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv8i16
@@ -609,7 +579,6 @@ body:             |
 ---
 name:            splatvector_nxv16i16
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv16i16
@@ -627,7 +596,6 @@ body:             |
 ---
 name:            splatvector_nxv1i32
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv1i32
@@ -645,7 +613,6 @@ body:             |
 ---
 name:            splatvector_nxv2i32
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv2i32
@@ -663,7 +630,6 @@ body:             |
 ---
 name:            splatvector_nxv4i32
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv4i32
@@ -681,7 +647,6 @@ body:             |
 ---
 name:            splatvector_nxv8i32
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv8i32
@@ -699,7 +664,6 @@ body:             |
 ---
 name:            splatvector_nxv16i32
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv16i32
@@ -717,7 +681,6 @@ body:             |
 ---
 name:            splatvector_nxv1i64
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv1i64
@@ -735,7 +698,6 @@ body:             |
 ---
 name:            splatvector_nxv2i64
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv2i64
@@ -753,7 +715,6 @@ body:             |
 ---
 name:            splatvector_nxv4i64
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv4i64
@@ -771,7 +732,6 @@ body:             |
 ---
 name:            splatvector_nxv8i64
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv8i64

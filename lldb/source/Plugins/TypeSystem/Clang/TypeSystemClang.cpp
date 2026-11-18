@@ -4841,20 +4841,19 @@ TypeSystemClang::GetObjCBitSize(QualType qual_type,
         return *bit_size;
     }
   } else {
-    static bool g_printed = false;
-    if (!g_printed) {
+    static std::once_flag g_once_flag;
+    std::call_once(g_once_flag, [&] {
       StreamString s;
       DumpTypeDescription(qual_type.getAsOpaquePtr(), s);
-
-      llvm::outs() << "warning: trying to determine the size of type ";
-      llvm::outs() << s.GetString() << "\n";
-      llvm::outs() << "without a valid ExecutionContext. this is not "
-                      "reliable. please file a bug against LLDB.\n";
-      llvm::outs() << "backtrace:\n";
-      llvm::sys::PrintStackTrace(llvm::outs());
-      llvm::outs() << "\n";
-      g_printed = true;
-    }
+      std::string backtrace;
+      llvm::raw_string_ostream os(backtrace);
+      llvm::sys::PrintStackTrace(os);
+      Debugger::ReportInternalError(
+          llvm::formatv("determining the size of type {0} without a valid "
+                        "ExecutionContext is not reliable\n{1}",
+                        s.GetString(), llvm::StringRef(backtrace).rtrim())
+              .str());
+    });
   }
 
   return getASTContext().getTypeSize(qual_type) +

@@ -242,8 +242,6 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   else
     CodeModel = M.getCodeModel();
 
-  assert(!Conf.Options.MCOptions.LibraryOptions &&
-         "set Config::LibraryOptions instead");
   TargetOptions TargetOpts = Conf.Options;
   if (TargetOpts.MCOptions.ABIName.empty()) {
     TargetOpts.MCOptions.ABIName = M.getTargetABIFromMD();
@@ -471,17 +469,6 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
   TM->Options.ObjectFilenameForDebug = Stream->ObjectPathName;
 
-  // Allow plugins to handle or even take over code generation entirely.
-  for (const PassPlugin *Plugin : getPassPlugins(Conf)) {
-    if (Plugin->invokePreCodeGenCallback(Mod, *TM, Conf.CGFileType,
-                                         *Stream->OS)) {
-      if (Error Err = Stream->commit())
-        report_fatal_error(std::move(Err));
-      return;
-    }
-  }
-
-  // Only create the DWO output once we know the built-in pipeline runs.
   std::unique_ptr<ToolOutputFile> DwoOut;
   if (!DwoFile.empty()) {
     if (!Conf.DwoDir.empty())
@@ -498,6 +485,21 @@ static void codegen(const Config &Conf, TargetMachine *TM,
 
   const ModuleSummaryIndex *MSI =
       !isEmptyModule(Mod) ? &CombinedIndex : nullptr;
+
+  // Allow plugins to handle or even take over code generation entirely.
+  for (const PassPlugin *Plugin : getPassPlugins(Conf)) {
+    if (Plugin->invokePreCodeGenCallback(
+            *TM, Mod, *Stream->OS, DwoOut ? &DwoOut->os() : nullptr,
+            Conf.CGFileType, /*DisableVerify=*/true,
+            /*DisableSimplifyLibCalls=*/false, MSI, vfs::getRealFileSystem())) {
+      if (DwoOut)
+        DwoOut->keep();
+      if (Error Err = Stream->commit())
+        report_fatal_error(std::move(Err));
+      return;
+    }
+  }
+
   if (runCodeGenPipeline(*TM, Mod, *Stream->OS,
                          DwoOut ? &DwoOut->os() : nullptr, Conf.CGFileType,
                          /*DisableVerify=*/true,
