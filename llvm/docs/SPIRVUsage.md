@@ -399,7 +399,7 @@ This will be lowered to:
 
 See [Target Extension Types for Inline SPIR-V and Decorated Types] for further details.
 
-### Shared Local Memory Model
+### Dynamic Workgroup Memory
 
 SPIR-V objects can use the `Workgroup` storage class to be visible to all invocations
 within a workgroup (see [SPIR-V specification, section 3.2.6](https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#Storage_Class)).
@@ -409,7 +409,7 @@ sized objects require an API to specify their size. For example:
 
 `@buf = external addrspace(3) global [0 x i32], align 4`
 
-Not all vendors support the same APIs for this purpose. OpenCL and Level Zero
+Not all runtimes support the same APIs for this purpose. OpenCL and Level Zero
 runtimes only allow the size of such objects to be specified through kernel
 arguments in the `Workgroup` storage class. For this reason, the SPIR-V backend
 implements an additional pass that lowers unsized external arrays to an
