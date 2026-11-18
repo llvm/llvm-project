@@ -17,10 +17,13 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $sgpr0_sgpr1 = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   early-clobber renamable $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM_ec renamable $sgpr0_sgpr1, 0, 0 :: (dereferenceable invariant load (s64), addrspace 4)
-  ; CHECK-NEXT:   SI_SPILL_S128_SAVE renamable $sgpr4_sgpr5_sgpr6_sgpr7, %stack.0, implicit $exec, implicit $sp_reg :: (store (s128) into %stack.0, align 4, addrspace 5)
+  ; CHECK-NEXT:   SI_SPILL_S32_SAVE_PARTIAL renamable $sgpr4, %stack.0, 0, implicit $exec, implicit $sp_reg :: (store (s32) into %stack.0, addrspace 5)
+  ; CHECK-NEXT:   SI_SPILL_S32_SAVE_PARTIAL killed renamable $sgpr5, %stack.0, 1, implicit $exec, implicit $sp_reg :: (store (s32) into %stack.0 + 4, addrspace 5)
   ; CHECK-NEXT:   S_NOP 0, implicit-def $sgpr2_sgpr3, implicit-def $sgpr4_sgpr5_sgpr6_sgpr7
   ; CHECK-NEXT:   renamable $sgpr4_sgpr5_sgpr6_sgpr7 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sp_reg :: (load (s128) from %stack.0, align 4, addrspace 5)
   ; CHECK-NEXT:   early-clobber renamable $sgpr6_sgpr7 = S_LOAD_DWORDX2_IMM_ec renamable $sgpr0_sgpr1, 8, 0 :: (dereferenceable invariant load (s64), addrspace 4)
+  ; CHECK-NEXT:   SI_SPILL_S128_SAVE killed renamable $sgpr4_sgpr5_sgpr6_sgpr7, %stack.0, implicit $exec, implicit $sp_reg :: (store (s128) into %stack.0, align 4, addrspace 5)
+  ; CHECK-NEXT:   renamable $sgpr4_sgpr5_sgpr6_sgpr7 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sp_reg :: (load (s128) from %stack.0, align 4, addrspace 5)
   ; CHECK-NEXT:   SI_SPILL_S128_SAVE killed renamable $sgpr4_sgpr5_sgpr6_sgpr7, %stack.0, implicit $exec, implicit $sp_reg :: (store (s128) into %stack.0, align 4, addrspace 5)
   ; CHECK-NEXT:   S_NOP 0, implicit-def $sgpr2_sgpr3, implicit-def $sgpr4_sgpr5_sgpr6_sgpr7
   ; CHECK-NEXT:   renamable $sgpr4_sgpr5_sgpr6_sgpr7 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sp_reg :: (load (s128) from %stack.0, align 4, addrspace 5)
