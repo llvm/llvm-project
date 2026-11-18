@@ -137,3 +137,42 @@ void test_long_vectors_rejected(long2 value) {
   (void)intel_sub_group_shuffle(value, 0u); // expected-error{{no matching function for call to 'intel_sub_group_shuffle'}}
   // expected-note@-1 0+{{candidate function not viable}}
 }
+
+void test_shuffle_invalid(uint value, __global uint *ptr) {
+  intel_sub_group_shuffle(); // expected-error{{no matching function for call to 'intel_sub_group_shuffle'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_shuffle(value); // expected-error{{no matching function for call to 'intel_sub_group_shuffle'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_shuffle(value, value, value); // expected-error{{no matching function for call to 'intel_sub_group_shuffle'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_shuffle(ptr, 1u); // expected-error{{no matching function for call to 'intel_sub_group_shuffle'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+}
+
+void test_shuffle_down_invalid(uint value) {
+  intel_sub_group_shuffle_down(); // expected-error{{no matching function for call to 'intel_sub_group_shuffle_down'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_shuffle_down(value, value); // expected-error{{no matching function for call to 'intel_sub_group_shuffle_down'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+}
+
+void test_block_read_invalid(const __global uint *in, uint v) {
+  intel_sub_group_block_read(); // expected-error{{no matching function for call to 'intel_sub_group_block_read'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_read(in, in); // expected-error{{no matching function for call to 'intel_sub_group_block_read'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_read(v); // expected-error{{no matching function for call to 'intel_sub_group_block_read'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+}
+
+void test_block_write_invalid(__global uint *out, read_only image2d_t roimg,
+                              int2 coord, uint value) {
+  intel_sub_group_block_write(); // expected-error{{no matching function for call to 'intel_sub_group_block_write'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_write(out); // expected-error{{no matching function for call to 'intel_sub_group_block_write'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_write(out, value, value); // expected-error{{no matching function for call to 'intel_sub_group_block_write'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+  intel_sub_group_block_write(roimg, coord, value); // expected-error{{no matching function for call to 'intel_sub_group_block_write'}}
+  // expected-note@-1 0+{{candidate function not viable}}
+}
