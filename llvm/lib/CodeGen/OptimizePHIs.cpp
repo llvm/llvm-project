@@ -89,7 +89,8 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))
       return false;
-    auto *MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+    auto *MDTWrapper =
+        getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
     OptimizePHIs OP(MDTWrapper ? &MDTWrapper->getDomTree() : nullptr);
     return OP.run(MF);
   }
@@ -309,10 +310,10 @@ bool OptimizePHIs::hoistDuplicateConstantsInPHI(MachineInstr &PHI) {
   for (ConstantInputs &C : Constants) {
     if (C.OperandIdxs.size() < 2)
       continue;
-    llvm::sort(C.DefBlocks, [](const MachineBasicBlock *A,
-                               const MachineBasicBlock *B) {
-      return A->getNumber() < B->getNumber();
-    });
+    llvm::sort(C.DefBlocks,
+               [](const MachineBasicBlock *A, const MachineBasicBlock *B) {
+                 return A->getNumber() < B->getNumber();
+               });
     C.DefBlocks.erase(llvm::unique(C.DefBlocks), C.DefBlocks.end());
     if (C.DefBlocks.size() == 1)
       continue;
@@ -321,9 +322,8 @@ bool OptimizePHIs::hoistDuplicateConstantsInPHI(MachineInstr &PHI) {
     if (!Target)
       continue;
 
-    Register NewReg = cloneMoveImm(*C.Def, *Target,
-                                   Target->getFirstTerminator(),
-                                   PHI.getDebugLoc());
+    Register NewReg = cloneMoveImm(
+        *C.Def, *Target, Target->getFirstTerminator(), PHI.getDebugLoc());
     for (unsigned I : C.OperandIdxs)
       PHI.getOperand(I).setReg(NewReg);
     Changed = true;
