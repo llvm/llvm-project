@@ -1021,14 +1021,6 @@ def VariadicOperandsHaveSameType :
   let arguments = (ins Variadic<AnyType>:$xs);
 }
 
-def VariadicsHaveSameTypeWithin :
-    TEST_Op<"variadics_have_same_type_within",
-            [VariadicAllTypesMatchWithin<["xs", "ys", "res"]>,
-             SameVariadicOperandSize]> {
-  let arguments = (ins Variadic<AnyType>:$xs, Variadic<AnyType>:$ys);
-  let results = (outs Variadic<AnyType>:$res);
-}
-
 def IfFirstOperandIsNoneThenSoIsSecond :
     TEST_Op<"if_first_operand_is_none_then_so_is_second", [PredOpTrait<
     "has either both none type operands or first is not none",

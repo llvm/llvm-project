@@ -557,43 +557,6 @@ func.func @variadic_same_type_failure(%i32: i32, %ti32: tensor<* x i32>) {
 
 // -----
 
-// The operands of `test.variadics_have_same_type_within` are split evenly
-// between `xs` and `ys`.
-
-// CHECK-LABEL: variadic_same_type_within_success
-func.func @variadic_same_type_within_success(%i32: i32, %f32: f32) {
-  "test.variadics_have_same_type_within"() : () -> ()
-  "test.variadics_have_same_type_within"(%i32, %f32) : (i32, f32) -> (i64)
-  "test.variadics_have_same_type_within"(%i32, %i32, %f32, %f32) : (i32, i32, f32, f32) -> (i64, i64)
-  return
-}
-
-// -----
-
-func.func @variadic_same_type_within_first_operand_failure(%i32: i32, %f32: f32) {
-  // expected-error@+1 {{all elements within each of {xs, ys, res} have same type}}
-  "test.variadics_have_same_type_within"(%i32, %f32, %f32, %f32) : (i32, f32, f32, f32) -> (i64, i64)
-  return
-}
-
-// -----
-
-func.func @variadic_same_type_within_second_operand_failure(%i32: i32, %f32: f32) {
-  // expected-error@+1 {{all elements within each of {xs, ys, res} have same type}}
-  "test.variadics_have_same_type_within"(%i32, %i32, %f32, %i32) : (i32, i32, f32, i32) -> (i64, i64)
-  return
-}
-
-// -----
-
-func.func @variadic_same_type_within_result_failure(%i32: i32, %f32: f32) {
-  // expected-error@+1 {{all elements within each of {xs, ys, res} have same type}}
-  "test.variadics_have_same_type_within"(%i32, %i32, %f32, %f32) : (i32, i32, f32, f32) -> (i64, i32)
-  return
-}
-
-// -----
-
 func.func @same_types_element_mismatch(%arg0: tensor<* x i32>, %arg1: tensor<* x f32>) {
   // expected-error@+1 {{op failed to verify that all of {x, res} have same type}}
   "test.operand0_and_result_have_same_type"(%arg0, %arg1) : (tensor<* x i32>, tensor<* x f32>) -> tensor<* x f32>

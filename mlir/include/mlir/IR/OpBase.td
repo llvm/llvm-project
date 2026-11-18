@@ -637,16 +637,6 @@ class VariadicAllShapesMatch<string name> :
 class VariadicAllTypesMatch<string name> :
     VariadicAllMatchSameOperatorTrait<name, "$_self.getType()", "type">;
 
-// Checks, separately for each variadic operand or result in `names`, that all
-// of its elements have the same type. Elements of different variadics are not
-// compared with each other.
-class VariadicAllTypesMatchWithin<list<string> names> :
-    PredOpTrait<"all elements within each of {" # !interleave(names, ", ")
-                  # "} have same type",
-                And<!foreach(n, names,
-                             VariadicAllMatchSameOperatorPred<
-                                 n, "$_self.getType()">)>>;
-
 // A type constraint that verifies that a shaped type matches the size and
 // element type of a container with element types. More specifically, it denotes
 // shapedArg.getType().getNumElements() == elementsArg.size() &&
