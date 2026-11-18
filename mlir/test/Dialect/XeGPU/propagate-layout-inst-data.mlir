@@ -953,3 +953,21 @@ gpu.module @test {
     gpu.return
   }
 }
+// -----
+// A reused parent's wider inst_data is not preserved on a leading
+// non-reduced dim: lane-level distribution of multi_reduction requires the
+// blocked source to be unit there. Dim 0 keeps inst_data 1 instead of the
+// parent's 2, while dim 1 takes the parent's 8.
+gpu.module @test {
+// CHECK-LABEL: func.func @reduction_reused_parent_unit_leading_inst_data(
+// CHECK: vector.multi_reduction <add>, %{{.*}}, %{{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 8, 16], lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [2]>} [2] : vector<4x8x32xf32> to vector<4x8xf32>
+func.func @reduction_reused_parent_unit_leading_inst_data(%arg0: memref<4x8xf32>) {
+  %src = arith.constant dense<1.000000e+00> : vector<4x8x32xf32>
+  %cst = arith.constant dense<0.000000e+00> : vector<4x8xf32>
+  %0 = vector.multi_reduction <add>, %src, %cst [2] : vector<4x8x32xf32> to vector<4x8xf32>
+  %1 = xegpu.convert_layout %0 <{input_layout = #xegpu.slice<#xegpu.layout<inst_data = [2, 8, 16], lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [2]>, target_layout = #xegpu.slice<#xegpu.layout<inst_data = [2, 8, 16], lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [2]>}> : vector<4x8xf32>
+  %c0 = arith.constant 0 : index
+  vector.store %1, %arg0[%c0, %c0] : memref<4x8xf32>, vector<4x8xf32>
+  return
+}
+}
