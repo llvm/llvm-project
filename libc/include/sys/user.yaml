@@ -2,4 +2,5 @@ header: sys/user.h
 standards:
   - linux
 types:
+  - type_name: struct_user_fpregs_struct
   - type_name: struct_user_regs_struct

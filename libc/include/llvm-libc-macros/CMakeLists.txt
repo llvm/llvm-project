@@ -285,6 +285,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_procfs_macros
+  HDR
+    sys-procfs-macros.h
+)
+
+add_macro_header(
   sys_epoll_macros
   HDR
     sys-epoll-macros.h

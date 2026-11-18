@@ -705,6 +705,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  ar
+  ../libc/include/ar.yaml
+  ar.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_ar_hdr
+)
+
+add_header_macro(
   elf
   ../libc/include/elf.yaml
   elf.h
@@ -863,6 +872,28 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.sys_ptrace_macros
+)
+
+add_header_macro(
+  sys_procfs
+  ../libc/include/sys/procfs.yaml
+  sys/procfs.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_procfs_macros
+    .llvm-libc-types.elf_fpregset_t
+    .llvm-libc-types.elf_greg_t
+    .llvm-libc-types.elf_gregset_t
+    .llvm-libc-types.lwpid_t
+    .llvm-libc-types.prfpregset_t
+    .llvm-libc-types.prgregset_t
+    .llvm-libc-types.prpsinfo_t
+    .llvm-libc-types.prstatus_t
+    .llvm-libc-types.psaddr_t
+    .llvm-libc-types.struct_elf_prpsinfo
+    .llvm-libc-types.struct_elf_prstatus
+    .llvm-libc-types.struct_elf_siginfo
+    .llvm-libc-types.struct_user_regs_struct
 )
 
 add_header(
@@ -1157,6 +1188,7 @@ add_header_macro(
   sys/user.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.struct_user_fpregs_struct
     .llvm-libc-types.struct_user_regs_struct
 )
 

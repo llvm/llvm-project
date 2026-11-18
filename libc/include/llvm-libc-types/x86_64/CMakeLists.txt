@@ -19,3 +19,9 @@ add_header(
     libc.include.llvm-libc-types.sigset_t
     libc.include.llvm-libc-types.stack_t
 )
+
+add_header(
+  struct_user_fpregs_struct
+  HDR
+    struct_user_fpregs_struct.h
+)

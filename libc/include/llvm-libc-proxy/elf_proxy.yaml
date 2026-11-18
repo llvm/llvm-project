@@ -375,6 +375,38 @@ macros:
     macro_value: '0x70000000'
   - macro_name: DT_HIPROC
     macro_value: '0x7fffffff'
+  - macro_name: DT_VALRNGLO
+    macro_value: '0x6ffffd00'
+  - macro_name: DT_GNU_PRELINKED
+    macro_value: '0x6ffffdf5'
+    standards:
+      - gnu
+  - macro_name: DT_GNU_CONFLICTSZ
+    macro_value: '0x6ffffdf6'
+    standards:
+      - gnu
+  - macro_name: DT_GNU_LIBLISTSZ
+    macro_value: '0x6ffffdf7'
+    standards:
+      - gnu
+  - macro_name: DT_CHECKSUM
+    macro_value: '0x6ffffdf8'
+  - macro_name: DT_PLTPADSZ
+    macro_value: '0x6ffffdf9'
+  - macro_name: DT_MOVEENT
+    macro_value: '0x6ffffdfa'
+  - macro_name: DT_MOVESZ
+    macro_value: '0x6ffffdfb'
+  - macro_name: DT_FEATURE_1
+    macro_value: '0x6ffffdfc'
+  - macro_name: DT_POSFLAG_1
+    macro_value: '0x6ffffdfd'
+  - macro_name: DT_SYMINSZ
+    macro_value: '0x6ffffdfe'
+  - macro_name: DT_SYMINENT
+    macro_value: '0x6ffffdff'
+  - macro_name: DT_VALRNGHI
+    macro_value: '0x6ffffdff'
   - macro_name: DT_ADDRRNGLO
     macro_value: '0x6ffffe00'
   - macro_name: DT_GNU_HASH
@@ -524,8 +556,95 @@ macros:
     macro_value: 160
   - macro_name: R_RISCV_IRELATIVE
     macro_value: 58
+  # x86-64 relocation types
+  - macro_name: R_X86_64_NONE
+    macro_value: 0
+  - macro_name: R_X86_64_64
+    macro_value: 1
+  - macro_name: R_X86_64_PC32
+    macro_value: 2
+  - macro_name: R_X86_64_GOT32
+    macro_value: 3
+  - macro_name: R_X86_64_PLT32
+    macro_value: 4
+  - macro_name: R_X86_64_COPY
+    macro_value: 5
+  - macro_name: R_X86_64_GLOB_DAT
+    macro_value: 6
+  - macro_name: R_X86_64_JUMP_SLOT
+    macro_value: 7
+  - macro_name: R_X86_64_RELATIVE
+    macro_value: 8
+  - macro_name: R_X86_64_GOTPCREL
+    macro_value: 9
+  - macro_name: R_X86_64_32
+    macro_value: 10
+  - macro_name: R_X86_64_32S
+    macro_value: 11
+  - macro_name: R_X86_64_16
+    macro_value: 12
+  - macro_name: R_X86_64_PC16
+    macro_value: 13
+  - macro_name: R_X86_64_8
+    macro_value: 14
+  - macro_name: R_X86_64_PC8
+    macro_value: 15
+  - macro_name: R_X86_64_DTPMOD64
+    macro_value: 16
+  - macro_name: R_X86_64_DTPOFF64
+    macro_value: 17
+  - macro_name: R_X86_64_TPOFF64
+    macro_value: 18
+  - macro_name: R_X86_64_TLSGD
+    macro_value: 19
+  - macro_name: R_X86_64_TLSLD
+    macro_value: 20
+  - macro_name: R_X86_64_DTPOFF32
+    macro_value: 21
+  - macro_name: R_X86_64_GOTTPOFF
+    macro_value: 22
+  - macro_name: R_X86_64_TPOFF32
+    macro_value: 23
+  - macro_name: R_X86_64_PC64
+    macro_value: 24
+  - macro_name: R_X86_64_GOTOFF64
+    macro_value: 25
+  - macro_name: R_X86_64_GOTPC32
+    macro_value: 26
+  - macro_name: R_X86_64_GOT64
+    macro_value: 27
+  - macro_name: R_X86_64_GOTPCREL64
+    macro_value: 28
+  - macro_name: R_X86_64_GOTPC64
+    macro_value: 29
+  - macro_name: R_X86_64_GOTPLT64
+    macro_value: 30
+  - macro_name: R_X86_64_PLTOFF64
+    macro_value: 31
+  - macro_name: R_X86_64_SIZE32
+    macro_value: 32
+  - macro_name: R_X86_64_SIZE64
+    macro_value: 33
+  - macro_name: R_X86_64_GOTPC32_TLSDESC
+    macro_value: 34
+  - macro_name: R_X86_64_TLSDESC_CALL
+    macro_value: 35
+  - macro_name: R_X86_64_TLSDESC
+    macro_value: 36
   - macro_name: R_X86_64_IRELATIVE
     macro_value: 37
+  - macro_name: R_X86_64_GOTPCRELX
+    macro_value: 41
+  - macro_name: R_X86_64_REX_GOTPCRELX
+    macro_value: 42
+  - macro_name: R_X86_64_CODE_4_GOTPCRELX
+    macro_value: 43
+  - macro_name: R_X86_64_CODE_4_GOTTPOFF
+    macro_value: 44
+  - macro_name: R_X86_64_CODE_4_GOTPC32_TLSDESC
+    macro_value: 45
+  - macro_name: R_X86_64_CODE_6_GOTTPOFF
+    macro_value: 50
   - macro_name: ELF32_ST_BIND
     macro_header: elf-macros.h
   - macro_name: ELF32_ST_TYPE
