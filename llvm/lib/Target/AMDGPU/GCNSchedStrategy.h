@@ -95,6 +95,10 @@ protected:
   std::pair<unsigned, unsigned>
   getBankedPressure(const GCNRegPressure &RP) const;
 
+  /// \returns the ArchVGPR pressure in a RegPressureTracker pressure vector:
+  /// VGPRs and AV registers. The AV_32 set counts both, and AGPRs.
+  static unsigned getArchVGPRPressure(ArrayRef<unsigned> Pressure);
+
   const AMDGPUOptions &CLOpts;
 
   std::vector<unsigned> Pressure;

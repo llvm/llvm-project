@@ -4221,6 +4221,18 @@ unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
   case AMDGPU::RegisterPressureSets::SReg_32:
     return getRegPressureLimit(&AMDGPU::SGPR_32RegClass,
                                const_cast<MachineFunction &>(MF));
+  case AMDGPU::RegisterPressureSets::AV_32: {
+    // Without AGPRs the set holds the same registers as VGPR_32, whose limit
+    // applies to them. Keep TableGen's limit, which stays above it after
+    // RegisterClassInfo subtracts the reserved AGPRs.
+    if (!ST.hasMAIInsts())
+      return AMDGPUGenRegisterInfo::getRegPressureSetLimit(MF, Idx);
+    // A unified register file shares the VGPR budget between the two banks;
+    // otherwise each bank has a budget of its own.
+    unsigned VGPRLimit = getRegPressureLimit(&AMDGPU::VGPR_32RegClass,
+                                             const_cast<MachineFunction &>(MF));
+    return ST.hasGFX90AInsts() ? VGPRLimit : 2 * VGPRLimit;
+  }
   }
 
   llvm_unreachable("Unexpected register pressure set!");
@@ -4233,19 +4245,6 @@ const int *SIRegisterInfo::getRegUnitPressureSets(MCRegUnit RegUnit) const {
     return Empty;
 
   return AMDGPUGenRegisterInfo::getRegUnitPressureSets(RegUnit);
-}
-
-const int *
-SIRegisterInfo::getRegClassPressureSets(const TargetRegisterClass *RC) const {
-  // TableGen gives no pressure set to a class with both VGPRs and AGPRs, so
-  // RegPressureTracker would not count AV virtual registers at all. Count
-  // them as VGPRs: an AV class allocates VGPRs first, and GCNRegPressure
-  // charges AV registers to VGPRs unless it spreads them over both banks
-  // (-amdgpu-avgpr-banking).
-  if (isVectorSuperClass(RC))
-    return AMDGPUGenRegisterInfo::getRegClassPressureSets(
-        &AMDGPU::VGPR_32RegClass);
-  return AMDGPUGenRegisterInfo::getRegClassPressureSets(RC);
 }
 
 bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,

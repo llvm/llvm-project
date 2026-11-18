@@ -4,8 +4,8 @@
 ; chains can be rewritten to the AGPR form when ArchVGPR pressure is excessive.
 ;
 ; This IR is reduced from a Triton-generated GEMM kernel with multiple (30 to be
-; exact) MFMAs in a phi-carried loop. EarlyMachineLICM counts the av_* copies of
-; the MFMA operands as VGPR pressure and keeps most of them in the loop, so the
+; exact) MFMAs in a phi-carried loop. EarlyMachineLICM sees the pressure of the
+; av_* copies of the MFMA operands and keeps most of them in the loop, so the
 ; ArchVGPR pressure stays low and every MFMA keeps the VGPR form.
 ; coexec-rewrite-mfma.mir starts at the scheduler with the copies hoisted out of
 ; the loop, where every MFMA in the loop is rewritten to the AGPR form.

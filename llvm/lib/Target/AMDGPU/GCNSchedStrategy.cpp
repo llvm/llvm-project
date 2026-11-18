@@ -210,6 +210,11 @@ GCNSchedStrategy::getBankedPressure(const GCNRegPressure &RP) const {
   return RP.getBankedVGPRNum(ArchVGPRBankLimit, AGPRBankLimit);
 }
 
+unsigned GCNSchedStrategy::getArchVGPRPressure(ArrayRef<unsigned> Pressure) {
+  return Pressure[AMDGPU::RegisterPressureSets::AV_32] -
+         Pressure[AMDGPU::RegisterPressureSets::AGPR_32];
+}
+
 void GCNSchedStrategy::getRegisterPressures(
     bool AtTop, const RegPressureTracker &RPTracker, SUnit *SU,
     std::vector<unsigned> &Pressure, std::vector<unsigned> &MaxPressure,
@@ -242,6 +247,7 @@ void GCNSchedStrategy::getRegisterPressures(
   Pressure[AMDGPU::RegisterPressureSets::SReg_32] = NewPressure.getSGPRNum();
   Pressure[AMDGPU::RegisterPressureSets::VGPR_32] = ArchNum;
   Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = AccNum;
+  Pressure[AMDGPU::RegisterPressureSets::AV_32] = ArchNum + AccNum;
   CandUnifiedVGPRPressure =
       GCNRegPressure::getBankedUnifiedVGPRNum(ArchNum, AccNum);
 }
@@ -277,11 +283,10 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
     getRegisterPressures(AtTop, RPTracker, SU, Pressure, MaxPressure,
                          DownwardTracker, UpwardTracker, DAG, SRI);
   } else {
-    // Reserve 4 slots.
-    Pressure.resize(4, 0);
-    Pressure[AMDGPU::RegisterPressureSets::SReg_32] = SGPRPressure;
-    Pressure[AMDGPU::RegisterPressureSets::VGPR_32] = VGPRPressure;
-    Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = AGPRPressure;
+    // Start from the tracker's pressure in every set: VGPRPressure is not the
+    // VGPR_32 set, it also counts AV registers.
+    ArrayRef<unsigned> CurPressure = RPTracker.getRegSetPressureAtPos();
+    Pressure.assign(CurPressure.begin(), CurPressure.end());
 
     for (const auto &Diff : DAG->getPressureDiff(SU)) {
       if (!Diff.isValid())
@@ -301,7 +306,9 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
         Pressure[AMDGPU::RegisterPressureSets::VGPR_32] !=
             CheckPressure[AMDGPU::RegisterPressureSets::VGPR_32] ||
         Pressure[AMDGPU::RegisterPressureSets::AGPR_32] !=
-            CheckPressure[AMDGPU::RegisterPressureSets::AGPR_32]) {
+            CheckPressure[AMDGPU::RegisterPressureSets::AGPR_32] ||
+        Pressure[AMDGPU::RegisterPressureSets::AV_32] !=
+            CheckPressure[AMDGPU::RegisterPressureSets::AV_32]) {
       errs() << "Register Pressure is inaccurate when calculated through "
                 "PressureDiff\n"
              << "SGPR got " << Pressure[AMDGPU::RegisterPressureSets::SReg_32]
@@ -312,7 +319,10 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
              << CheckPressure[AMDGPU::RegisterPressureSets::VGPR_32] << "\n"
              << "AGPR got " << Pressure[AMDGPU::RegisterPressureSets::AGPR_32]
              << ", expected "
-             << CheckPressure[AMDGPU::RegisterPressureSets::AGPR_32] << "\n";
+             << CheckPressure[AMDGPU::RegisterPressureSets::AGPR_32] << "\n"
+             << "AV got " << Pressure[AMDGPU::RegisterPressureSets::AV_32]
+             << ", expected "
+             << CheckPressure[AMDGPU::RegisterPressureSets::AV_32] << "\n";
       report_fatal_error("inaccurate register pressure calculation");
     }
 #endif
@@ -320,7 +330,7 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
 
   unsigned NewAGPRPressure = Pressure[AMDGPU::RegisterPressureSets::AGPR_32];
   unsigned NewSGPRPressure = Pressure[AMDGPU::RegisterPressureSets::SReg_32];
-  unsigned NewVGPRPressure = Pressure[AMDGPU::RegisterPressureSets::VGPR_32];
+  unsigned NewVGPRPressure = getArchVGPRPressure(Pressure);
 
   // If two instructions increase the pressure of different register sets
   // by the same amount, the generic scheduler will prefer to schedule the
@@ -472,7 +482,7 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
   if (DAG->isTrackingPressure()) {
     if (!useGCNTrackers()) {
       SGPRPressure = Pressure[AMDGPU::RegisterPressureSets::SReg_32];
-      VGPRPressure = Pressure[AMDGPU::RegisterPressureSets::VGPR_32];
+      VGPRPressure = getArchVGPRPressure(Pressure);
       AGPRPressure = Pressure[AMDGPU::RegisterPressureSets::AGPR_32];
     } else {
       GCNRPTracker *T = IsBottomUp
