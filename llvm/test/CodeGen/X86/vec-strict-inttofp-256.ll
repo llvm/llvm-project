@@ -1194,4 +1194,256 @@ define <4 x float> @uitofp_v4i64_v4f32(<4 x i64> %x) #0 {
   ret <4 x float> %result
 }
 
+define <4 x float> @uitofp_v4i64_v4f32_mask32(<4 x i64> %x) #0 {
+; AVX1-32-LABEL: uitofp_v4i64_v4f32_mask32:
+; AVX1-32:       # %bb.0:
+; AVX1-32-NEXT:    pushl %ebp
+; AVX1-32-NEXT:    .cfi_def_cfa_offset 8
+; AVX1-32-NEXT:    .cfi_offset %ebp, -8
+; AVX1-32-NEXT:    movl %esp, %ebp
+; AVX1-32-NEXT:    .cfi_def_cfa_register %ebp
+; AVX1-32-NEXT:    andl $-8, %esp
+; AVX1-32-NEXT:    subl $48, %esp
+; AVX1-32-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero
+; AVX1-32-NEXT:    vmovq %xmm1, {{[0-9]+}}(%esp)
+; AVX1-32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-32-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX1-32-NEXT:    vmovq %xmm2, {{[0-9]+}}(%esp)
+; AVX1-32-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-32-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero
+; AVX1-32-NEXT:    vmovq %xmm2, {{[0-9]+}}(%esp)
+; AVX1-32-NEXT:    vpunpckhdq {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX1-32-NEXT:    vmovq %xmm0, {{[0-9]+}}(%esp)
+; AVX1-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; AVX1-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; AVX1-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; AVX1-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; AVX1-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; AVX1-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; AVX1-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; AVX1-32-NEXT:    fstps (%esp)
+; AVX1-32-NEXT:    wait
+; AVX1-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX1-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; AVX1-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX1-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; AVX1-32-NEXT:    movl %ebp, %esp
+; AVX1-32-NEXT:    popl %ebp
+; AVX1-32-NEXT:    .cfi_def_cfa %esp, 4
+; AVX1-32-NEXT:    vzeroupper
+; AVX1-32-NEXT:    retl
+;
+; AVX1-64-LABEL: uitofp_v4i64_v4f32_mask32:
+; AVX1-64:       # %bb.0:
+; AVX1-64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1-64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
+; AVX1-64-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-64-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm1
+; AVX1-64-NEXT:    vmovd %xmm0, %eax
+; AVX1-64-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
+; AVX1-64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; AVX1-64-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-64-NEXT:    vmovd %xmm0, %eax
+; AVX1-64-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
+; AVX1-64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
+; AVX1-64-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-64-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
+; AVX1-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; AVX1-64-NEXT:    vzeroupper
+; AVX1-64-NEXT:    retq
+;
+; AVX2-32-LABEL: uitofp_v4i64_v4f32_mask32:
+; AVX2-32:       # %bb.0:
+; AVX2-32-NEXT:    pushl %ebp
+; AVX2-32-NEXT:    .cfi_def_cfa_offset 8
+; AVX2-32-NEXT:    .cfi_offset %ebp, -8
+; AVX2-32-NEXT:    movl %esp, %ebp
+; AVX2-32-NEXT:    .cfi_def_cfa_register %ebp
+; AVX2-32-NEXT:    andl $-8, %esp
+; AVX2-32-NEXT:    subl $48, %esp
+; AVX2-32-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero
+; AVX2-32-NEXT:    vmovq %xmm1, {{[0-9]+}}(%esp)
+; AVX2-32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-32-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX2-32-NEXT:    vmovq %xmm2, {{[0-9]+}}(%esp)
+; AVX2-32-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2-32-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero
+; AVX2-32-NEXT:    vmovq %xmm2, {{[0-9]+}}(%esp)
+; AVX2-32-NEXT:    vpunpckhdq {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX2-32-NEXT:    vmovq %xmm0, {{[0-9]+}}(%esp)
+; AVX2-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; AVX2-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; AVX2-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; AVX2-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; AVX2-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; AVX2-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; AVX2-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; AVX2-32-NEXT:    fstps (%esp)
+; AVX2-32-NEXT:    wait
+; AVX2-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX2-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; AVX2-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX2-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; AVX2-32-NEXT:    movl %ebp, %esp
+; AVX2-32-NEXT:    popl %ebp
+; AVX2-32-NEXT:    .cfi_def_cfa %esp, 4
+; AVX2-32-NEXT:    vzeroupper
+; AVX2-32-NEXT:    retl
+;
+; AVX2-64-LABEL: uitofp_v4i64_v4f32_mask32:
+; AVX2-64:       # %bb.0:
+; AVX2-64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-64-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
+; AVX2-64-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX2-64-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm1
+; AVX2-64-NEXT:    vmovd %xmm0, %eax
+; AVX2-64-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
+; AVX2-64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; AVX2-64-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2-64-NEXT:    vmovd %xmm0, %eax
+; AVX2-64-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
+; AVX2-64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
+; AVX2-64-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX2-64-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
+; AVX2-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; AVX2-64-NEXT:    vzeroupper
+; AVX2-64-NEXT:    retq
+;
+; AVX512F-32-LABEL: uitofp_v4i64_v4f32_mask32:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    pushl %ebp
+; AVX512F-32-NEXT:    .cfi_def_cfa_offset 8
+; AVX512F-32-NEXT:    .cfi_offset %ebp, -8
+; AVX512F-32-NEXT:    movl %esp, %ebp
+; AVX512F-32-NEXT:    .cfi_def_cfa_register %ebp
+; AVX512F-32-NEXT:    andl $-8, %esp
+; AVX512F-32-NEXT:    subl $48, %esp
+; AVX512F-32-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero
+; AVX512F-32-NEXT:    vmovq %xmm1, {{[0-9]+}}(%esp)
+; AVX512F-32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-32-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX512F-32-NEXT:    vmovq %xmm2, {{[0-9]+}}(%esp)
+; AVX512F-32-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512F-32-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero
+; AVX512F-32-NEXT:    vmovq %xmm2, {{[0-9]+}}(%esp)
+; AVX512F-32-NEXT:    vpunpckhdq {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX512F-32-NEXT:    vmovq %xmm0, {{[0-9]+}}(%esp)
+; AVX512F-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; AVX512F-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; AVX512F-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; AVX512F-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; AVX512F-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; AVX512F-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; AVX512F-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; AVX512F-32-NEXT:    fstps (%esp)
+; AVX512F-32-NEXT:    wait
+; AVX512F-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512F-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; AVX512F-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX512F-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; AVX512F-32-NEXT:    movl %ebp, %esp
+; AVX512F-32-NEXT:    popl %ebp
+; AVX512F-32-NEXT:    .cfi_def_cfa %esp, 4
+; AVX512F-32-NEXT:    vzeroupper
+; AVX512F-32-NEXT:    retl
+;
+; AVX512F-64-LABEL: uitofp_v4i64_v4f32_mask32:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-64-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
+; AVX512F-64-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512F-64-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm1
+; AVX512F-64-NEXT:    vmovd %xmm0, %eax
+; AVX512F-64-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
+; AVX512F-64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; AVX512F-64-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512F-64-NEXT:    vmovd %xmm0, %eax
+; AVX512F-64-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
+; AVX512F-64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
+; AVX512F-64-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512F-64-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
+; AVX512F-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; AVX512F-64-NEXT:    vzeroupper
+; AVX512F-64-NEXT:    retq
+;
+; AVX512VL-32-LABEL: uitofp_v4i64_v4f32_mask32:
+; AVX512VL-32:       # %bb.0:
+; AVX512VL-32-NEXT:    pushl %ebp
+; AVX512VL-32-NEXT:    .cfi_def_cfa_offset 8
+; AVX512VL-32-NEXT:    .cfi_offset %ebp, -8
+; AVX512VL-32-NEXT:    movl %esp, %ebp
+; AVX512VL-32-NEXT:    .cfi_def_cfa_register %ebp
+; AVX512VL-32-NEXT:    andl $-8, %esp
+; AVX512VL-32-NEXT:    subl $48, %esp
+; AVX512VL-32-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero
+; AVX512VL-32-NEXT:    vmovq %xmm1, {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VL-32-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX512VL-32-NEXT:    vmovq %xmm2, {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512VL-32-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero
+; AVX512VL-32-NEXT:    vmovq %xmm2, {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    vpunpckhdq {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX512VL-32-NEXT:    vmovq %xmm0, {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    fstps {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    fildll {{[0-9]+}}(%esp)
+; AVX512VL-32-NEXT:    fstps (%esp)
+; AVX512VL-32-NEXT:    wait
+; AVX512VL-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512VL-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; AVX512VL-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX512VL-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; AVX512VL-32-NEXT:    movl %ebp, %esp
+; AVX512VL-32-NEXT:    popl %ebp
+; AVX512VL-32-NEXT:    .cfi_def_cfa %esp, 4
+; AVX512VL-32-NEXT:    vzeroupper
+; AVX512VL-32-NEXT:    retl
+;
+; AVX512VL-64-LABEL: uitofp_v4i64_v4f32_mask32:
+; AVX512VL-64:       # %bb.0:
+; AVX512VL-64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VL-64-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
+; AVX512VL-64-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512VL-64-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm1
+; AVX512VL-64-NEXT:    vmovd %xmm0, %eax
+; AVX512VL-64-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
+; AVX512VL-64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; AVX512VL-64-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512VL-64-NEXT:    vmovd %xmm0, %eax
+; AVX512VL-64-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm2
+; AVX512VL-64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
+; AVX512VL-64-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512VL-64-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
+; AVX512VL-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; AVX512VL-64-NEXT:    vzeroupper
+; AVX512VL-64-NEXT:    retq
+;
+; AVX512DQ-LABEL: uitofp_v4i64_v4f32_mask32:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512DQ-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
+; AVX512DQ-NEXT:    vcvtqq2ps %zmm0, %ymm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    ret{{[l|q]}}
+;
+; AVX512DQVL-LABEL: uitofp_v4i64_v4f32_mask32:
+; AVX512DQVL:       # %bb.0:
+; AVX512DQVL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512DQVL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
+; AVX512DQVL-NEXT:    vcvtqq2ps %ymm0, %xmm0
+; AVX512DQVL-NEXT:    vzeroupper
+; AVX512DQVL-NEXT:    ret{{[l|q]}}
+  %and = and <4 x i64> %x, splat (i64 4294967295)
+  %result = call <4 x float> @llvm.experimental.constrained.uitofp.v4f32.v4i64(<4 x i64> %and,
+                                                              metadata !"round.dynamic",
+                                                              metadata !"fpexcept.strict") #0
+  ret <4 x float> %result
+}
+
 attributes #0 = { strictfp }
