@@ -1039,7 +1039,7 @@ define float @fp_postinc_use_fadd(float %init, ptr noalias nocapture %A, i64 %N,
 ; VEC:       [[VECTOR_PH]]:
 ; VEC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; VEC-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
+; VEC-NEXT:    [[DOTCAST:%.*]] = uitofp i64 [[N_VEC]] to float
 ; VEC-NEXT:    [[TMP0:%.*]] = fmul fast float [[FPINC]], [[DOTCAST]]
 ; VEC-NEXT:    [[TMP1:%.*]] = fadd fast float [[INIT]], [[TMP0]]
 ; VEC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[INIT]], i64 0
@@ -1089,14 +1089,14 @@ define float @fp_postinc_use_fadd(float %init, ptr noalias nocapture %A, i64 %N,
 ; INTERLEAVE:       [[VECTOR_PH]]:
 ; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; INTERLEAVE-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
+; INTERLEAVE-NEXT:    [[DOTCAST:%.*]] = uitofp i64 [[N_VEC]] to float
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = fmul fast float [[FPINC]], [[DOTCAST]]
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = fadd fast float [[INIT]], [[TMP0]]
 ; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; INTERLEAVE:       [[VECTOR_BODY]]:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 1
-; INTERLEAVE-NEXT:    [[DOTCAST1:%.*]] = sitofp i64 [[INDEX]] to float
+; INTERLEAVE-NEXT:    [[DOTCAST1:%.*]] = uitofp i64 [[INDEX]] to float
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = fmul fast float [[FPINC]], [[DOTCAST1]]
 ; INTERLEAVE-NEXT:    [[OFFSET_IDX:%.*]] = fadd fast float [[INIT]], [[TMP4]]
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = fmul fast float 1.000000e+00, [[FPINC]]
@@ -1136,14 +1136,14 @@ define float @fp_postinc_use_fadd(float %init, ptr noalias nocapture %A, i64 %N,
 ; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 1
 ; TAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 1
 ; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; TAILFOLD-NEXT:    [[TMP0:%.*]] = sitofp i64 [[N]] to float
+; TAILFOLD-NEXT:    [[TMP0:%.*]] = uitofp i64 [[N]] to float
 ; TAILFOLD-NEXT:    [[TMP1:%.*]] = fmul fast float [[FPINC]], [[TMP0]]
 ; TAILFOLD-NEXT:    [[TMP2:%.*]] = fadd fast float [[INIT]], [[TMP1]]
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TAILFOLD:       [[VECTOR_BODY]]:
 ; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
 ; TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[INDEX]], i64 [[N]])
-; TAILFOLD-NEXT:    [[TMP3:%.*]] = sitofp i64 [[INDEX]] to float
+; TAILFOLD-NEXT:    [[TMP3:%.*]] = uitofp i64 [[INDEX]] to float
 ; TAILFOLD-NEXT:    [[TMP4:%.*]] = fmul fast float [[FPINC]], [[TMP3]]
 ; TAILFOLD-NEXT:    [[TMP5:%.*]] = fadd fast float [[INIT]], [[TMP4]]
 ; TAILFOLD-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK]], i64 0
@@ -1197,7 +1197,7 @@ define float @fp_postinc_use_fadd_ops_swapped(float %init, ptr noalias nocapture
 ; VEC:       [[VECTOR_PH]]:
 ; VEC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; VEC-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
+; VEC-NEXT:    [[DOTCAST:%.*]] = uitofp i64 [[N_VEC]] to float
 ; VEC-NEXT:    [[TMP0:%.*]] = fmul fast float [[FPINC]], [[DOTCAST]]
 ; VEC-NEXT:    [[TMP1:%.*]] = fadd fast float [[INIT]], [[TMP0]]
 ; VEC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[INIT]], i64 0
@@ -1247,14 +1247,14 @@ define float @fp_postinc_use_fadd_ops_swapped(float %init, ptr noalias nocapture
 ; INTERLEAVE:       [[VECTOR_PH]]:
 ; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; INTERLEAVE-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
+; INTERLEAVE-NEXT:    [[DOTCAST:%.*]] = uitofp i64 [[N_VEC]] to float
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = fmul fast float [[FPINC]], [[DOTCAST]]
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = fadd fast float [[INIT]], [[TMP0]]
 ; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; INTERLEAVE:       [[VECTOR_BODY]]:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 1
-; INTERLEAVE-NEXT:    [[DOTCAST1:%.*]] = sitofp i64 [[INDEX]] to float
+; INTERLEAVE-NEXT:    [[DOTCAST1:%.*]] = uitofp i64 [[INDEX]] to float
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = fmul fast float [[FPINC]], [[DOTCAST1]]
 ; INTERLEAVE-NEXT:    [[OFFSET_IDX:%.*]] = fadd fast float [[INIT]], [[TMP4]]
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = fmul fast float 1.000000e+00, [[FPINC]]
@@ -1294,14 +1294,14 @@ define float @fp_postinc_use_fadd_ops_swapped(float %init, ptr noalias nocapture
 ; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 1
 ; TAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 1
 ; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; TAILFOLD-NEXT:    [[TMP0:%.*]] = sitofp i64 [[N]] to float
+; TAILFOLD-NEXT:    [[TMP0:%.*]] = uitofp i64 [[N]] to float
 ; TAILFOLD-NEXT:    [[TMP1:%.*]] = fmul fast float [[FPINC]], [[TMP0]]
 ; TAILFOLD-NEXT:    [[TMP2:%.*]] = fadd fast float [[INIT]], [[TMP1]]
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TAILFOLD:       [[VECTOR_BODY]]:
 ; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
 ; TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[INDEX]], i64 [[N]])
-; TAILFOLD-NEXT:    [[TMP3:%.*]] = sitofp i64 [[INDEX]] to float
+; TAILFOLD-NEXT:    [[TMP3:%.*]] = uitofp i64 [[INDEX]] to float
 ; TAILFOLD-NEXT:    [[TMP4:%.*]] = fmul fast float [[FPINC]], [[TMP3]]
 ; TAILFOLD-NEXT:    [[TMP5:%.*]] = fadd fast float [[INIT]], [[TMP4]]
 ; TAILFOLD-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK]], i64 0
@@ -1355,7 +1355,7 @@ define float @fp_postinc_use_fsub(float %init, ptr noalias nocapture %A, i64 %N,
 ; VEC:       [[VECTOR_PH]]:
 ; VEC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; VEC-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
+; VEC-NEXT:    [[DOTCAST:%.*]] = uitofp i64 [[N_VEC]] to float
 ; VEC-NEXT:    [[TMP0:%.*]] = fmul fast float [[FPINC]], [[DOTCAST]]
 ; VEC-NEXT:    [[TMP1:%.*]] = fsub fast float [[INIT]], [[TMP0]]
 ; VEC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[INIT]], i64 0
@@ -1405,14 +1405,14 @@ define float @fp_postinc_use_fsub(float %init, ptr noalias nocapture %A, i64 %N,
 ; INTERLEAVE:       [[VECTOR_PH]]:
 ; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; INTERLEAVE-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
+; INTERLEAVE-NEXT:    [[DOTCAST:%.*]] = uitofp i64 [[N_VEC]] to float
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = fmul fast float [[FPINC]], [[DOTCAST]]
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = fsub fast float [[INIT]], [[TMP0]]
 ; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; INTERLEAVE:       [[VECTOR_BODY]]:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 1
-; INTERLEAVE-NEXT:    [[DOTCAST1:%.*]] = sitofp i64 [[INDEX]] to float
+; INTERLEAVE-NEXT:    [[DOTCAST1:%.*]] = uitofp i64 [[INDEX]] to float
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = fmul fast float [[FPINC]], [[DOTCAST1]]
 ; INTERLEAVE-NEXT:    [[OFFSET_IDX:%.*]] = fsub fast float [[INIT]], [[TMP4]]
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = fmul fast float 1.000000e+00, [[FPINC]]
@@ -1452,14 +1452,14 @@ define float @fp_postinc_use_fsub(float %init, ptr noalias nocapture %A, i64 %N,
 ; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 1
 ; TAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 1
 ; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; TAILFOLD-NEXT:    [[TMP0:%.*]] = sitofp i64 [[N]] to float
+; TAILFOLD-NEXT:    [[TMP0:%.*]] = uitofp i64 [[N]] to float
 ; TAILFOLD-NEXT:    [[TMP1:%.*]] = fmul fast float [[FPINC]], [[TMP0]]
 ; TAILFOLD-NEXT:    [[TMP2:%.*]] = fsub fast float [[INIT]], [[TMP1]]
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TAILFOLD:       [[VECTOR_BODY]]:
 ; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
 ; TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[INDEX]], i64 [[N]])
-; TAILFOLD-NEXT:    [[TMP3:%.*]] = sitofp i64 [[INDEX]] to float
+; TAILFOLD-NEXT:    [[TMP3:%.*]] = uitofp i64 [[INDEX]] to float
 ; TAILFOLD-NEXT:    [[TMP4:%.*]] = fmul fast float [[FPINC]], [[TMP3]]
 ; TAILFOLD-NEXT:    [[TMP5:%.*]] = fsub fast float [[INIT]], [[TMP4]]
 ; TAILFOLD-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK]], i64 0

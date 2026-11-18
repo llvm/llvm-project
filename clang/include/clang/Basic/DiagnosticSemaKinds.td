@@ -11162,6 +11162,12 @@ def warn_lifetime_safety_lifetimebound_violation
       InGroup<LifetimeSafetyLifetimeboundViolation>,
       DefaultIgnore;
 
+def warn_lifetime_safety_capture_by_violation
+    : Warning<"%0 is captured by %select{this object|global storage}1 but is "
+              "not marked [[clang::lifetime_capture_by_%select{this|global}1]]">,
+      InGroup<LifetimeSafetyCaptureByViolation>,
+      DefaultIgnore;
+
 def warn_lifetime_safety_intra_tu_misplaced_lifetimebound
     : Warning<"'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead">,
       InGroup<LifetimeSafetyIntraTUMisplacedLifetimebound>,
@@ -13850,6 +13856,8 @@ def err_hlsl_builtin_resource_coordinate_dimension_mismatch : Error<
   "builtin %0 resource coordinate dimension mismatch: expected %1, found %2">;
 
 // HLSL Diagnostics
+def err_hlsl_exceptions : Error<"cannot use '%select{throw|try}0' in HLSL">;
+def err_hlsl_mult_inheritance : Error<"HLSL does not support multiple inheritance">;
 def err_hlsl_cstor_dstor : Error<"HLSL does not support constructors or destructors">;
 def err_hlsl_langstd_unimplemented : Error<"support for HLSL language version %0 is incomplete">;
 def err_hlsl_attr_unsupported_in_stage : Error<"attribute %0 is unsupported in '%1' shaders, requires %select{|one of the following: }2%3">;
