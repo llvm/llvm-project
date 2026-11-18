@@ -451,11 +451,12 @@ static bool frameOffsetMayNeedScratchReg(const MachineFunction &MF,
 
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
-      if (MI.isDebugInstr() || canUseDefAsScratchReg(MI, MRI, TRI))
+      if (MI.isDebugInstr())
         continue;
       for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
         if (MI.getOperand(I).isFI() &&
-            !canEncodeFrameOffset(MI, I, StackSize, FrameSize))
+            !canEncodeFrameOffset(MI, I, StackSize, FrameSize) &&
+            !canUseDefAsScratchReg(MI, MRI, TRI))
           return true;
       }
     }
