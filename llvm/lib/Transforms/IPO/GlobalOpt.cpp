@@ -1548,6 +1548,52 @@ static void RemovePreallocated(Function *F) {
   }
 }
 
+/// zeroext/signext argument attributes that are present at the call-site,
+/// but not at the (exact) definition can be dropped, because the definition
+/// does not assume that the extension has occurred.
+static bool removeUnnecessaryCallSiteExtends(Function &F) {
+  if (!F.hasExactDefinition())
+    return false;
+
+  AttributeList Attrs = F.getAttributes();
+  SmallVector<unsigned, 8> IntArgWithoutExtAttr;
+  for (unsigned ArgNo = 0; ArgNo < F.arg_size(); ++ArgNo) {
+    if (!F.getArg(ArgNo)->getType()->isIntegerTy())
+      continue;
+
+    AttributeSet ArgAttrs = Attrs.getParamAttrs(ArgNo);
+    if (ArgAttrs.hasAttribute(Attribute::ZExt) ||
+        ArgAttrs.hasAttribute(Attribute::SExt))
+      continue;
+
+    IntArgWithoutExtAttr.push_back(ArgNo);
+  }
+
+  if (IntArgWithoutExtAttr.empty())
+    return false;
+
+  bool Changed = false;
+  for (Use &U : F.uses()) {
+    auto *CB = dyn_cast<CallBase>(U.getUser());
+    if (!CB || !CB->isCallee(&U) ||
+        CB->getFunctionType() != F.getFunctionType())
+      continue;
+
+    for (unsigned ArgNo : IntArgWithoutExtAttr) {
+      if (CB->paramHasAttr(ArgNo, Attribute::ZExt)) {
+        CB->removeParamAttr(ArgNo, Attribute::ZExt);
+        Changed = true;
+      }
+      if (CB->paramHasAttr(ArgNo, Attribute::SExt)) {
+        CB->removeParamAttr(ArgNo, Attribute::SExt);
+        Changed = true;
+      }
+    }
+  }
+
+  return Changed;
+}
+
 static bool
 OptimizeFunctions(Module &M,
                   function_ref<TargetLibraryInfo &(Function &)> GetTLI,
@@ -1603,6 +1649,8 @@ OptimizeFunctions(Module &M,
         Changed = true;
         ChangedCFGCallback(F);
       }
+
+      Changed |= removeUnnecessaryCallSiteExtends(F);
     }
 
     Changed |= processGlobal(F, GetTTI, GetTLI, LookupDomTree);

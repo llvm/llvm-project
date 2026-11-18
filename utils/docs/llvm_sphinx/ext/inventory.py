@@ -17,10 +17,7 @@ The write phase is skipped, so this pass never reports unresolved links.
 
 import hashlib
 import os
-import shutil
-import subprocess
 import sys
-import tempfile
 from pathlib import Path
 from typing import Any, Dict, Set
 
@@ -106,60 +103,3 @@ def setup(app: Sphinx) -> Dict[str, Any]:
     app.connect("config-inited", _configure_inventories)
     return {"version": __version__, "parallel_read_safe": True}
 
-
-# -----------------------------------------------------------------------------
-# Test code only below:
-# -----------------------------------------------------------------------------
-def _build(src: Path, tmp: Path, builder: str, inventories: bool = False) -> str:
-    """Build the test project `src` and return the Sphinx warnings.
-
-    This runs `sphinx-build` as a subprocess, as the real build does: several
-    Sphinx applications in one process warn about re-registered directives. The
-    inventory pass is quiet (`-Q`), because MyST warns at read time about every
-    link that it cannot resolve yet.
-    """
-    env = dict(os.environ)
-    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[2])
-    output = tmp / "inventories" / src.name if builder == "inventory" else tmp / "html"
-    command = [sys.executable, "-m", "sphinx", "-Q" if builder == "inventory" else "-q"]
-    if inventories:
-        command += ["-D", f"llvm_inventory_dir={tmp / 'inventories'}"]
-    command += ["-b", builder, "-d", str(tmp / "doctrees" / builder / src.name)]
-    command += [str(src), str(output / src.name if builder == "html" else output)]
-    return subprocess.run(
-        command, env=env, capture_output=True, text=True, check=True
-    ).stderr
-
-
-def run_tests() -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmp = Path(tmpdir)
-        src = tmp / "src"
-        shutil.copytree(Path(__file__).resolve().parent / "inventory_test", src)
-
-        # Pass 1: each project writes its inventory, though the projects link to
-        # each other and neither inventory exists yet.
-        for name in "ab":
-            _build(src / name, tmp, "inventory")
-            if not (tmp / "inventories" / name / "objects.inv").exists():
-                raise AssertionError(f"missing inventory for {name}")
-            if list((tmp / "inventories" / name).glob("*.html")):
-                raise AssertionError(f"the inventory builder rendered {name}")
-
-        # Pass 2: with the sibling inventories, circular links resolve, to the
-        # site and not to the local file.
-        for name, other in ("ab", "ba"):
-            warnings = _build(src / name, tmp, "html", inventories=True)
-            if warnings:
-                raise AssertionError(f"html build of {name} warned:\n{warnings}")
-            html = (tmp / "html" / name / "index.html").read_text()
-            if f'href="https://{other}.test/index.html#{other}-label"' not in html:
-                raise AssertionError(f"link from {name} to {other} not resolved")
-
-        # A changed inventory re-reads the documents that were not edited: the
-        # link must warn again rather than keep its previously resolved target.
-        (src / "b" / "index.md").write_text("# Project b\n\n(renamed)=\n## B\n")
-        _build(src / "b", tmp, "inventory")
-        warnings = _build(src / "a", tmp, "html", inventories=True)
-        if "b:std:label:b-label" not in warnings:
-            raise AssertionError(f"stale link was not reported:\n{warnings}")

@@ -1,17 +1,23 @@
-//===-- Utility class to test idivfx functions ------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Utility class to test idivfx functions.
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_TEST_SRC_STDFIX_IDIVFXTEST_H
+#define LLVM_LIBC_TEST_SRC_STDFIX_IDIVFXTEST_H
 
 #include "test/UnitTest/Test.h"
 
-#include "src/__support/fixed_point/fx_rep.h"
-#include "src/__support/macros/sanitizer.h"
-
 #include "hdr/signal_macros.h"
+#include "src/__support/fixed_point/fx_rep.h"
 
 template <typename T, typename XType>
 class IdivFxTest : public LIBC_NAMESPACE::testing::Test {
@@ -23,6 +29,7 @@ class IdivFxTest : public LIBC_NAMESPACE::testing::Test {
   static constexpr T min = FXRep::MIN();
   static constexpr T one_half = FXRep::ONE_HALF();
   static constexpr T one_fourth = FXRep::ONE_FOURTH();
+  static constexpr T eps = FXRep::EPS();
 
 public:
   typedef XType (*IdivFxFunc)(T, T);
@@ -59,6 +66,18 @@ public:
         EXPECT_EQ(func(2.25, -3.0), static_cast<XType>(0));
       }
     }
+
+    // MIN / -EPS == 2^VALUE_LEN does not fit in the storage type of T, but it
+    // is representable (and thus well defined) if XType is wider than T. The
+    // neighbouring inputs must keep working.
+    if constexpr (is_signed && (sizeof(XType) > sizeof(T))) {
+      constexpr XType two_pow_value_len = static_cast<XType>(1)
+                                          << FXRep::VALUE_LEN;
+      EXPECT_EQ(func(min, -eps), two_pow_value_len);
+      EXPECT_EQ(func(min + eps, -eps), two_pow_value_len - 1);
+      EXPECT_EQ(func(min, -eps - eps), two_pow_value_len / 2);
+      EXPECT_EQ(func(max, -eps), -(two_pow_value_len - 1));
+    }
   }
 
   void testInvalidNumbers([[maybe_unused]] IdivFxFunc func) {
@@ -89,3 +108,5 @@ public:
   }                                                                            \
   static_assert(true, "Require semicolon.")
 #endif // LIBC_ADD_NULL_CHECKS
+
+#endif // LLVM_LIBC_TEST_SRC_STDFIX_IDIVFXTEST_H

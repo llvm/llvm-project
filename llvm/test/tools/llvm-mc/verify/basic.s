@@ -115,17 +115,13 @@ nop
 nop
 
 #--- cfi.s
-## Diagnostics reported through MCContext rather than SourceMgr (e.g. by the
-## CFI checker) are checked too.
-# RUN: llvm-mc --triple=x86_64 --verify --validate-cfi --filetype=null cfi.s
+## Diagnostics reported through MCContext rather than SourceMgr are checked too.
+# RUN: llvm-mc --triple=x86_64 --verify --filetype=null cfi.s
   .text
-  .globl f
-  .type f,@function
 f:
   .cfi_startproc
-  .cfi_same_value %rax
-  movq $10, %rax
-  # expected-error@-1 {{changed register RAX, that register RAX's unwinding rule uses, but there is no CFI directives about it}}
+  .cfi_restore_state
+  # expected-error@-1 {{no matching .cfi_remember_state}}
   .cfi_endproc
 
 #--- disassemble.txt

@@ -584,13 +584,13 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     is passed to invocations of both so that the project is built using libc++
     instead of stdlibc++. Defaults to OFF.
 
-**LLVM_ENABLE_LIBEDIT**:BOOL
+**LLVM_ENABLE_LIBEDIT**:STRING
 
 :   Controls whether to enable libedit support for command-line editing and
-    history in LLVM tools. When `ON`, forces libedit support to be enabled and
-    will cause a CMake configuration error if libedit cannot be found. When
-    `OFF`, disables libedit support entirely. If not specified, LLVM will
-    auto-detect libedit availability. Defaults to auto-detection.
+    history in LLVM tools. When `FORCE_ON`, forces libedit support to be
+    enabled and will cause a CMake configuration error if libedit cannot be
+    found. When `OFF`, disables libedit support entirely. If not specified or
+    set to `ON`, LLVM will auto-detect libedit availability. Defaults to `ON`.
 
 **LLVM_ENABLE_LIBPFM**:BOOL
 

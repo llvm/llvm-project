@@ -13,7 +13,6 @@
 # RUN:     -o - %s | FileCheck %s --check-prefix=APPLE-FAST
 ---
 name:            madd_w_asr
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -60,7 +59,6 @@ body:             |
 ...
 ---
 name:            madd_w_lsr
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -107,7 +105,6 @@ body:             |
 ...
 ---
 name:            madd_x_asr
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -154,7 +151,6 @@ body:             |
 ...
 ---
 name:            no_madd_mul_multi_use
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $x3
@@ -209,7 +205,6 @@ body:             |
 ...
 ---
 name:            madd_w_lsl_small
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -256,7 +251,6 @@ body:             |
 ...
 ---
 name:            madd_w_lsl_large
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -303,7 +297,6 @@ body:             |
 ...
 ---
 name:            madd_x_lsl_large
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -350,7 +343,6 @@ body:             |
 ...
 ---
 name:            madd_w_div_mul
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $w3
@@ -405,7 +397,6 @@ body:             |
 ...
 ---
 name:            no_madd_w_lsl
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $w3

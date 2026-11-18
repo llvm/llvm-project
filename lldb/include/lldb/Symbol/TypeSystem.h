@@ -88,6 +88,10 @@ public:
   /// removing all the TypeSystems from the TypeSystemMap.
   virtual void Finalize() {}
 
+  /// Called on a target's scratch type systems when the target loads the
+  /// modules in \p module_list.
+  virtual void ModulesDidLoad(ModuleList &module_list) {}
+
   virtual plugin::dwarf::DWARFASTParser *GetDWARFParser() { return nullptr; }
 
   virtual PDBASTParser *GetPDBParser() { return nullptr; }
@@ -334,6 +338,12 @@ public:
   virtual llvm::Expected<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) = 0;
+
+  /// Return the distance in bytes between consecutive elements of this type
+  /// when stored in contiguous storage (e.g. array), or std::nullopt if it
+  /// cannot be determined.
+  virtual std::optional<uint64_t>
+  GetByteStride(lldb::opaque_compiler_type_t type) = 0;
 
   virtual lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type) = 0;
 
