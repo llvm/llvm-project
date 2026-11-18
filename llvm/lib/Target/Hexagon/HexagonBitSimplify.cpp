@@ -423,6 +423,7 @@ bool HexagonBitSimplify::getSubregMask(const BitTracker::RegisterRef &RR,
   switch (RC->getID()) {
     case Hexagon::DoubleRegsRegClassID:
     case Hexagon::HvxWRRegClassID:
+    case Hexagon::HlxLLRRegClassID:
       Width = MRI.getTargetRegisterInfo()->getRegSizeInBits(*RC) / 2;
       if (RR.Sub == Hexagon::isub_hi || RR.Sub == Hexagon::vsub_hi)
         Begin = Width;
@@ -922,7 +923,10 @@ const TargetRegisterClass *HexagonBitSimplify::getFinalVRegClass(
     case Hexagon::HvxWRRegClassID:
       VerifySR(RC, RR.Sub);
       return &Hexagon::HvxVRRegClass;
-  }
+    case Hexagon::HlxLLRRegClassID:
+      VerifySR(RC, RR.Sub);
+      return &Hexagon::HlxLRRegClass;
+    }
   return nullptr;
 }
 

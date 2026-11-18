@@ -54,6 +54,7 @@ body:             |
     ; CHECK: t2STRDi8 %12, %13,
 
     tBX_RET 14, $noreg
+...
 ---
 # CHECK-LABEL: name: b
 name:            b

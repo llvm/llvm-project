@@ -1670,8 +1670,8 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
   // will simplify all loops, regardless of whether anything end up being
   // unrolled.
   for (const auto &L : LI) {
-    Changed |=
-        simplifyLoop(L, &DT, &LI, &SE, &AC, nullptr, false /* PreserveLCSSA */);
+    Changed |= simplifyLoop(L, &DT, &LI, &SE, &AC, nullptr,
+                            false /* PreserveLCSSA */, &TTI);
     Changed |= formLCSSARecursively(*L, DT, &LI, &SE);
   }
 

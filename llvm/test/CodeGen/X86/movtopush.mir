@@ -80,7 +80,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32, preferred-register: '' }
   - { id: 1, class: gr32, preferred-register: '' }
@@ -161,7 +160,6 @@ body:             |
 # CHECK-NEXT: RET 0
 name: debug_after_call
 alignment: 1
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32, preferred-register: '' }
 body: |

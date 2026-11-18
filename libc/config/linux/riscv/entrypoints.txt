@@ -275,7 +275,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.srand
     libc.src.stdlib.strfromd
     libc.src.stdlib.strfromf
-    libc.src.stdlib.strfromf128
     libc.src.stdlib.strfroml
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
@@ -433,6 +432,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.mknod
     libc.src.sys.stat.mknodat
     libc.src.sys.stat.stat
+    libc.src.sys.stat.statx
     libc.src.sys.stat.umask
     libc.src.sys.stat.utimensat
 
@@ -446,6 +446,11 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/time.h entrypoints
     libc.src.sys.time.utimes
+
+    # sys/timerfd.h entrypoints
+    libc.src.sys.timerfd.timerfd_create
+    libc.src.sys.timerfd.timerfd_gettime
+    libc.src.sys.timerfd.timerfd_settime
 
     # sys/sysinfo.h entrypoints
     libc.src.sys.sysinfo.sysinfo
@@ -580,6 +585,8 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # wchar.h entrypoints
     libc.src.wchar.btowc
+    libc.src.wchar.swprintf
+    libc.src.wchar.vswprintf
     libc.src.wchar.wcscasecmp
     libc.src.wchar.wcsncasecmp
     libc.src.wchar.wcslen
@@ -652,7 +659,15 @@ set(TARGET_LIBC_ENTRYPOINTS
 if(LLVM_LIBC_INCLUDE_SCUDO)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
     # malloc.h external entrypoints
+    libc.src.stdlib.mallinfo2
     libc.src.stdlib.mallopt
+  )
+endif()
+
+if (LIBC_TYPES_HAS_NATIVE_FLOAT128)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # stdlib.h _Float128 entrypoints
+    libc.src.stdlib.strfromf128
   )
 endif()
 
@@ -730,11 +745,15 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cosh
     libc.src.math.coshf
     libc.src.math.cospif
+    libc.src.math.daddf128
     libc.src.math.daddl
+    libc.src.math.ddivf128
     libc.src.math.ddivl
     libc.src.math.dfmal
+    libc.src.math.dmulf128
     libc.src.math.dmull
     libc.src.math.dsqrtl
+    libc.src.math.dsubf128
     libc.src.math.dsubl
     libc.src.math.erff
     libc.src.math.exp
@@ -1154,12 +1173,8 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     # math.h C23 _Float128 entrypoints
     libc.src.math.atan2l
     libc.src.math.canonicalizef80
-    libc.src.math.daddf128
-    libc.src.math.ddivf128
     libc.src.math.dfmaf128
-    libc.src.math.dmulf128
     libc.src.math.dsqrtf128
-    libc.src.math.dsubf128
     libc.src.math.faddf128
     libc.src.math.fdivf128
     libc.src.math.ffmaf128
@@ -1202,6 +1217,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.canonicalizebf16
   libc.src.math.ceilbf16
   libc.src.math.copysignbf16
+  libc.src.math.coshbf16
   libc.src.math.exp2bf16
   libc.src.math.expbf16
   libc.src.math.fabsbf16
@@ -1284,6 +1300,8 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.absr
     libc.src.stdfix.exphk
     libc.src.stdfix.expk
+    libc.src.stdfix.expuhk
+    libc.src.stdfix.expuk
     libc.src.stdfix.roundhk
     libc.src.stdfix.roundhr
     libc.src.stdfix.roundk
@@ -1429,6 +1447,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.dirent.scandir
     libc.src.dirent.fdopendir
 
+    # net/if.h entrypoints
+    libc.src.net.if.if_freenameindex
+    libc.src.net.if.if_nameindex
+
     # pthread.h entrypoints
     libc.src.pthread.__pthread_cleanup_pop
     libc.src.pthread.__pthread_cleanup_push
@@ -1469,6 +1491,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_equal
     libc.src.pthread.pthread_exit
     libc.src.pthread.pthread_getattr_np
+    libc.src.pthread.pthread_getcpuclockid
     libc.src.pthread.pthread_getname_np
     libc.src.pthread.pthread_getschedparam
     libc.src.pthread.pthread_getspecific
@@ -1592,11 +1615,15 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.getc_unlocked
     libc.src.stdio.getchar
     libc.src.stdio.getchar_unlocked
+    libc.src.stdio.getdelim
+    libc.src.stdio.getline
     libc.src.stdio.pclose
     libc.src.stdio.perror
     libc.src.stdio.popen
     libc.src.stdio.putc
+    libc.src.stdio.putc_unlocked
     libc.src.stdio.putchar
+    libc.src.stdio.putchar_unlocked
     libc.src.stdio.puts
     libc.src.stdio.rewind
     libc.src.stdio.setbuf
@@ -1645,6 +1672,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.signal.sigprocmask
     libc.src.signal.sigsuspend
     libc.src.signal.sigtimedwait
+    libc.src.signal.sigwait
     libc.src.signal.sigwaitinfo
 
     # spawn.h entrypoints
@@ -1716,6 +1744,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.localtime
     libc.src.time.localtime_r
     libc.src.time.mktime
+    libc.src.time.timegm
     libc.src.time.clock_nanosleep
     libc.src.time.nanosleep
     libc.src.time.strftime
@@ -1805,6 +1834,10 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.grp.initgroups
       libc.src.grp.setgroups
 
+      # ifaddrs.h entrypoints
+      libc.src.ifaddrs.freeifaddrs
+      libc.src.ifaddrs.getifaddrs
+
       # libintl.h entrypoints
       libc.src.libintl.bind_textdomain_codeset
       libc.src.libintl.bindtextdomain
@@ -1821,10 +1854,6 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.libintl.ngettext
       libc.src.libintl.ngettext_l
       libc.src.libintl.textdomain
-
-      # net/if.h entrypoints
-      libc.src.net.if.if_freenameindex
-      libc.src.net.if.if_nameindex
 
       # netdb.h entrypoints
       libc.src.netdb.freeaddrinfo
@@ -1854,9 +1883,6 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.unistd.setresuid
       libc.src.unistd.setreuid
       libc.src.unistd.setuid
-
-      # wchar.h entrypoints
-      libc.src.wchar.swprintf
     )
   endif()
 endif()

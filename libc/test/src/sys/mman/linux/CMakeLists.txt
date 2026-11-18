@@ -144,9 +144,13 @@ add_libc_test(
     libc.src.sys.mman.mlockall
     libc.src.sys.mman.munlockall
     libc.hdr.sys_resource_macros
+    libc.hdr.types.struct_rlimit
     libc.src.sys.resource.getrlimit
+    libc.src.sys.resource.setrlimit
     libc.src.unistd.getpagesize
+    libc.src.__support.CPP.scope
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.macros.sanitizer
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

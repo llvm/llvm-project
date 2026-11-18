@@ -33,11 +33,8 @@ Error LevelZeroPluginContextTy::deinit() {
     if (auto Err = KV.second->deinit())
       return Err;
   DeviceAllocators.clear();
-  if (HostAllocator) {
-    if (auto Err = HostAllocator->deinit())
-      return Err;
-    HostAllocator.reset();
-  }
+  if (auto Err = HostAllocator.deinit())
+    return Err;
   if (OwnsZeContext && ZeContext) {
     CALL_ZE_RET_ERROR(zeContextDestroy, ZeContext);
     ZeContext = nullptr;
@@ -55,32 +52,23 @@ Error LevelZeroPluginContextTy::initAllocators() {
       return Err;
     DeviceAllocators.try_emplace(&L0Device, std::move(Alloc));
   }
-  if (Devices.empty())
-    return Plugin::success();
-  auto &First = static_cast<L0DeviceTy &>(*Devices.front());
-  HostAllocator = std::make_unique<MemAllocatorTy>();
-  if (auto Err =
-          HostAllocator->initHostPool(First.getL0Driver(), Options, ZeContext))
+  if (auto Err = HostAllocator.initHostPool(Driver, Options, ZeContext))
     return Err;
-  // Host MaxAllocSize = min over devices, matching L0DriverTy's driver pool.
+  // Host MaxAllocSize = min over devices. The default context has no devices,
+  // so each device lowers it from L0DeviceTy::initImpl instead.
   for (auto *D : Devices)
-    HostAllocator->updateMaxAllocSize(static_cast<L0DeviceTy &>(*D));
+    HostAllocator.updateMaxAllocSize(static_cast<L0DeviceTy &>(*D));
   return Plugin::success();
 }
 
-Expected<void *> LevelZeroPluginContextTy::allocateImpl(
-    GenericDeviceTy &Device, int64_t Size, void * /*HostPtr*/,
-    TargetAllocTy Kind, size_t Alignment, GenericProfilerTy * /*ProfilerPtr*/) {
+Expected<void *>
+LevelZeroPluginContextTy::allocateImpl(GenericDeviceTy &Device, int64_t Size,
+                                       ol_alloc_type_t Kind, size_t Alignment,
+                                       GenericProfilerTy * /*ProfilerPtr*/) {
   MemAllocatorTy *Allocator = nullptr;
-  int32_t ResolvedKind = Kind;
-  if (Kind == TARGET_ALLOC_HOST) {
-    if (!HostAllocator)
-      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "host allocator not initialized");
-    Allocator = HostAllocator.get();
+  if (Kind == OL_ALLOC_TYPE_HOST) {
+    Allocator = &HostAllocator;
   } else {
-    if (ResolvedKind == TARGET_ALLOC_DEFAULT)
-      ResolvedKind = TARGET_ALLOC_DEVICE;
     auto &L0Device = static_cast<L0DeviceTy &>(Device);
     auto It = DeviceAllocators.find(&L0Device);
     if (It == DeviceAllocators.end())
@@ -88,7 +76,7 @@ Expected<void *> LevelZeroPluginContextTy::allocateImpl(
                            "device is not part of this context");
     Allocator = It->second.get();
   }
-  return Allocator->alloc(Size, Alignment, ResolvedKind, /*Offset=*/0,
+  return Allocator->alloc(Size, Alignment, Kind, /*Offset=*/0,
                           /*UserAlloc=*/true, /*DevMalloc=*/false,
                           /*MemAdvice=*/
                           std::numeric_limits<uint32_t>::max(),
@@ -96,14 +84,10 @@ Expected<void *> LevelZeroPluginContextTy::allocateImpl(
 }
 
 Error LevelZeroPluginContextTy::deallocateImpl(
-    GenericDeviceTy &Device, void *Ptr, TargetAllocTy Kind,
+    GenericDeviceTy &Device, void *Ptr, ol_alloc_type_t Kind,
     GenericProfilerTy * /*ProfilerPtr*/) {
-  if (Kind == TARGET_ALLOC_HOST) {
-    if (!HostAllocator)
-      return Plugin::error(ErrorCode::NOT_FOUND,
-                           "no host allocation tracked in this context");
-    return HostAllocator->dealloc(Ptr);
-  }
+  if (Kind == OL_ALLOC_TYPE_HOST)
+    return HostAllocator.dealloc(Ptr);
   auto &L0Device = static_cast<L0DeviceTy &>(Device);
   auto It = DeviceAllocators.find(&L0Device);
   if (It == DeviceAllocators.end())
@@ -117,14 +101,12 @@ LevelZeroPluginContextTy::getAllocInfo(const void *Ptr) {
   void *Raw = const_cast<void *>(Ptr);
   for (const auto &[Device, Allocator] : DeviceAllocators) {
     if (auto *Info = Allocator->getAllocInfo(Raw))
-      return PluginAllocInfoTy{Device, static_cast<TargetAllocTy>(Info->Kind),
+      return PluginAllocInfoTy{Device, static_cast<ol_alloc_type_t>(Info->Kind),
                                Info->Base, Info->ReqSize};
   }
-  if (HostAllocator) {
-    if (auto *Info = HostAllocator->getAllocInfo(Raw))
-      return PluginAllocInfoTy{nullptr, static_cast<TargetAllocTy>(Info->Kind),
-                               Info->Base, Info->ReqSize};
-  }
+  if (auto *Info = HostAllocator.getAllocInfo(Raw))
+    return PluginAllocInfoTy{nullptr, static_cast<ol_alloc_type_t>(Info->Kind),
+                             Info->Base, Info->ReqSize};
 
   return Plugin::error(error::ErrorCode::NOT_FOUND,
                        "pointer is not a known allocation in this context");

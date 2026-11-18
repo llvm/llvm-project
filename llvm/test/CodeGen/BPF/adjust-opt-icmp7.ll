@@ -3,7 +3,7 @@
 
 define i32 @foo(i32 %n) {
 ; CHECK-LABEL: define i32 @foo(
-; CHECK-SAME: i32 [[N:%.*]]) {
+; CHECK-SAME: i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
