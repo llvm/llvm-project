@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=i686-unknown-linux-gnu -verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs %s -o - | \
+; RUN:   FileCheck %s
 
 ; A DBG_VALUE after an LFENCE should not make SESES insert another LFENCE
 ; before the following load.
@@ -8,9 +9,9 @@
 define i32 @read_after_fence(i32 %x) nounwind "target-features"="+sse2,+seses" !dbg !4 {
 ; CHECK-LABEL: read_after_fence:
 ; CHECK:         lfence
-; CHECK:         #DEBUG_VALUE: read_after_fence:x <- undef
+; CHECK:         #DEBUG_VALUE: read_after_fence:x <- $edi
 ; CHECK-NOT:     lfence
-; CHECK:         movl probe, %eax
+; CHECK:         movq probe@GOTPCREL(%rip),
 entry:
   call void @llvm.x86.sse2.lfence(), !dbg !8
     #dbg_value(i32 %x, !7, !DIExpression(), !8)
@@ -19,7 +20,22 @@ entry:
   ret i32 %sum, !dbg !8
 }
 
+; A non-debug meta instruction should preserve the same LFENCE state.
+
+define i32 @read_after_fake_use(i32 %x, ptr %p) nounwind "target-features"="+sse2,+seses" {
+; CHECK-LABEL: read_after_fake_use:
+; CHECK:         lfence
+; CHECK-NEXT:    # fake_use: $edi
+; CHECK-NEXT:    movl (%rsi), %eax
+entry:
+  call void @llvm.x86.sse2.lfence()
+  call void (...) @llvm.fake.use(i32 %x)
+  %value = load volatile i32, ptr %p, align 4
+  ret i32 %value
+}
+
 declare void @llvm.x86.sse2.lfence()
+declare void @llvm.fake.use(...)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2}
