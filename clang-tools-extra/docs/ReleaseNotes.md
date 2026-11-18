@@ -325,6 +325,10 @@ infrastructure are described first, followed by tool-specific sections.
   `std::initializer_list` constructor, as the braced form could select a
   different constructor.
 
+- Improved {doc}`modernize-return-braced-init-list
+  <clang-tidy/checks/modernize/return-braced-init-list>` check by fixing a crash
+  when a returned constructor call passes arguments through an ellipsis.
+
 - Fixed a crash in {doc}`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` when analyzing
   malformed code with nested classes and ambiguous initializer.
