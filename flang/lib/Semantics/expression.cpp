@@ -3330,10 +3330,14 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
   if (ultimate.attrs().test(semantics::Attr::INTRINSIC)) {
     probeIntrinsic(ultimate);
   } else if (genericDetails) {
-    if (const Symbol *sameNameSpecific{genericDetails->specific()}) {
-      const Symbol &specificUltimate{sameNameSpecific->GetUltimate()};
-      if (specificUltimate.attrs().test(semantics::Attr::INTRINSIC)) {
-        probeIntrinsic(specificUltimate);
+    for (const Symbol &use : genericDetails->uses()) {
+      const Symbol &intrinsic{use.GetUltimate()};
+      if (intrinsic.attrs().test(semantics::Attr::INTRINSIC) &&
+          !intrinsic.has<semantics::GenericDetails>()) {
+        probeIntrinsic(intrinsic);
+        if (explicitIntrinsic) {
+          break;
+        }
       }
     }
   }

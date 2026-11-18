@@ -382,6 +382,10 @@ integer, parameter :: a(5) = [1,2,3,4,5]
 print *, is_contiguous(a(::2))                   ! prints T in Flang
 ```
   Other compilers may report `a(::2)` as non-contiguous.
+* A user generic and an intrinsic module procedure (e.g., `COMPILER_VERSION`)
+  with the same local name merge in either `USE` order.  A reference that
+  matches both is ambiguous in the standard; Flang resolves it to the user's
+  specific and, with `-pedantic`, warns about specifics that clash.
 * We support some combinations of specific procedures in generic
   interfaces that a strict reading of the standard would preclude
   when their calls must nonetheless be distinguishable.
