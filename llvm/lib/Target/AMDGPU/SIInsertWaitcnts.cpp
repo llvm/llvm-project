@@ -3606,8 +3606,8 @@ bool SIInsertWaitcnts::run() {
   if (!SkipPadding && ST.hasBufferInvInst()) {
     AMDGPU::CounterPaddingResult Padding =
         AMDGPU::expandCounterPaddingHints(MF, MLI, MDT, PDT, Limits);
-    ChangedCFG = Padding.ChangedCFG;
-    Modified = Padding.Changed;
+    ChangedCFG |= Padding.ChangedCFG;
+    Modified |= Padding.Changed;
   }
 
   MachineBasicBlock &EntryBB = MF.front();
