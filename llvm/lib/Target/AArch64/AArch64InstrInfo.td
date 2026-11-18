@@ -3454,7 +3454,7 @@ def logical_imm32_only64 : IntImmLeaf<i64, [{
          !AArch64_AM::isLogicalImmediate(V, 64);
 }]>;
 
-let AddedComplexity = 6, GISelShouldIgnore = 1 in
+let AddedComplexity = 6 in
 def : Pat<(i64 (and GPR64:$Rn, logical_imm32_only64:$mask)),
           (SUBREG_TO_REG (ANDWri (EXTRACT_SUBREG GPR64:$Rn, sub_32),
                                   (logical_imm32_XFORM imm:$mask)), sub_32)>;
