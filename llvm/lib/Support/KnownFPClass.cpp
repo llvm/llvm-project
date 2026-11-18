@@ -586,17 +586,24 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
        KnownLHS.isKnownNever(fcPosSubnormal | fcPosNormal)))
     Known.knownNot(fcNegSubnormal);
 
-  // x + y is zero if x and y are both zeros, or if x == -y (cancellation).
-  if (KnownLHS.isKnownNever(fcZero) || KnownRHS.isKnownNever(fcZero)) {
-    if ((KnownLHS.isKnownNever(fcPosNormal) ||
-         KnownRHS.isKnownNever(fcNegNormal)) &&
-        (KnownRHS.isKnownNever(fcPosNormal) ||
-         KnownLHS.isKnownNever(fcNegNormal)) &&
-        (KnownLHS.isKnownNever(fcPosSubnormal) ||
-         KnownRHS.isKnownNever(fcNegSubnormal)) &&
-        (KnownRHS.isKnownNever(fcPosSubnormal) ||
-         KnownLHS.isKnownNever(fcNegSubnormal)))
+  // x + y is zero if x == -y (cancellation) or if x and y are both zeros.
+  if ((KnownLHS.isKnownNever(fcPosNormal) ||
+       KnownRHS.isKnownNever(fcNegNormal)) &&
+      (KnownRHS.isKnownNever(fcPosNormal) ||
+       KnownLHS.isKnownNever(fcNegNormal)) &&
+      (KnownLHS.isKnownNever(fcPosSubnormal) ||
+       KnownRHS.isKnownNever(fcNegSubnormal)) &&
+      (KnownRHS.isKnownNever(fcPosSubnormal) ||
+       KnownLHS.isKnownNever(fcNegSubnormal))) {
+    // zero + non-zero == non-zero.
+    if (KnownLHS.isKnownNever(fcZero) || KnownRHS.isKnownNever(fcZero))
       Known.knownNot(fcZero);
+    // -0.0 + -0.0 != +0.0
+    if (KnownLHS.isKnownNever(fcPosZero) && KnownRHS.isKnownNever(fcPosZero))
+      Known.knownNot(fcPosZero);
+    // +0.0 + +0.0 != -0.0
+    if (KnownLHS.isKnownNever(fcNegZero) && KnownRHS.isKnownNever(fcNegZero))
+      Known.knownNot(fcNegZero);
   }
 
   switch (RM) {
