@@ -179,10 +179,16 @@ Makes programs 10x faster by doing Special New Thing.
 * Added the `bitinsert` and `bitextract` instructions for bit-range
   manipulation on byte type values.
 
+* The verifier now rejects a `"wchar_size"` module flag whose value is not
+  positive.
+
 ### Changes to LLVM infrastructure
 
-* Removed `mc::RegisterMCTargetOptionsFlags`.
-  A tool that created it now passes `mc::getToolOptions()`, or `codegen::getToolOptions()` with `codegen::RegisterCodeGenFlags`, to `cl::parseCommandLineOptions`.
+* `cl::ParseCommandLineOptions` no longer recognizes library options declared in TableGen, which include most CodeGen, MC, and target options.
+  A tool that passes them, such as through `-mllvm`, parses them with `cl::parseCommandLineOptions` into a `cl::LibraryOptionsContext`, assigns it to each `LLVMContext` with `getLibraryOptions().assign()`, and sets `MCTargetOptions::LibraryOptions` to it.
+
+* Removed `mc::RegisterMCTargetOptionsFlags` and `codegen::RegisterCodeGenFlags`.
+  A tool that created either now passes `mc::getToolOptions()` or `codegen::getToolOptions()` to `cl::parseCommandLineOptions`.
 
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be
   controlled by setting the `"float-abi"` module flag.
@@ -373,6 +379,9 @@ Makes programs 10x faster by doing Special New Thing.
 * Using the hard-float procedure call standard without floating-point registers
   is now an error. Previously this would fall back to the soft-float PCS while
   still emitting the hard-float ABI attribute tag.
+* The `hlt` instruction is now supported on A/R-profile architectures earlier
+  than Armv8, where it is undefined. This is required by the Arm semihosting
+  specification v2.0 and supported in GNU binutils since v2.33.
 
 ### Changes to the AVR Backend
 
@@ -424,7 +433,7 @@ Makes programs 10x faster by doing Special New Thing.
   throughput.
 * Removed X5 from the preserve_most register list.
 * Added `-mcpu=chipsalliance-veer-eh1` for the CHIPS Alliance VeeR EH1
-  processor.
+  processor, with a scheduling model.
 * The behavior of i128 arguments with the LP64E ABI now matches gcc.
 
 ### Changes to the WebAssembly Backend
@@ -548,12 +557,16 @@ Makes programs 10x faster by doing Special New Thing.
 
 * `llvm-mc` now supports `--verify[=<prefixes>]` to check diagnostics against `<prefix>-<kind> {{...}}` comments in the input instead of printing them.
 
+* `opt` and `llc` load `-load-pass-plugin` plugins after parsing the command line, so a loaded plugin's options are no longer accepted as ordinary options.
+  Pass them with `-plugin-arg=<plugin>,<arg>` (see below).
+
 * `opt` and `llc` accept `-plugin-arg=<plugin>,<arg>`, which passes `<arg>` to the new `PassPluginLibraryInfo::ParseArguments` callback of the pass plugin named `<plugin>`.
   A plugin that defines `cl::opt` has to call `cl::ParseCommandLineOptions` itself inside `ParseArguments`.
   `LLVM_PLUGIN_API_VERSION` is now 3.
 
-* `opt` and `llc` load `-load-pass-plugin` plugins after parsing the command line, so a loaded plugin's options are no longer accepted as ordinary options.
-  Pass them with `-plugin-arg=<plugin>,<arg>`.
+* `PassPluginLibraryInfo::PreCodeGenCallback` now matches the parameters of the
+  new `llvm::runCodeGenPipeline()`.
+  This is also covered by the `LLVM_PLUGIN_API_VERSION` bump to 3.
 
 * llvm-offload-binary can now compress packaged binaries using zstd or zlib.
 

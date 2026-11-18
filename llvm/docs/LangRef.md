@@ -2765,8 +2765,9 @@ fn -> other_fn -> other_fn ; fn is norecurse
 `"oracle-function"`
 :   This attribute indicates that the function is an oracle function of
     '`llvm.speculative.load`'. A function with this attribute must have local
-    linkage, and it may only be used as the oracle argument of
-    '`llvm.speculative.load`' calls.
+    linkage, be non-variadic, return `i64`, be `nounwind`, `nosync`,
+    `willreturn`, and have at most `memory(argmem: read)`. It may only be used
+    as the oracle argument of '`llvm.speculative.load`' calls.
 
 `speculative_load_hardening`
 :   This attribute indicates that
@@ -9410,6 +9411,23 @@ call void @foo(), !inline_history !0
 !0 = !{ptr @bar, null, ptr @baz}
 ```
 
+### '`call_target`' Matadata
+The `call_target` metadata may be attached to a call instruction. It
+identifies expected type information of indirect calls by providing
+a sample function. For virtual calls in object oriented languages, this
+is expected to be the member function in the base class.
+
+This is intended to be used by debuggers to detect when the current
+call matches the frame function.
+
+```llvm
+%0 = load ptr, ptr %virtualfunction, align 8, !dbg !47
+call void %0(ptr noundef nonnull align 8 dereferenceable(8) %obj), !call_target !0
+
+!0 = !DISubprogram(name: "foo", linkageName: "_ZN5CBase2f00Ev", virtualIndex: 0, 
+flags: DIFlagPrototyped, spFlags: DISPFlagVirtual, ...)
+```
+
 #### '`elf_section_properties`' Metadata
 
 The '`elf_section_properties`' metadata is attached to a function or
@@ -9643,40 +9661,38 @@ Some important flag interactions:
 -  A module with `Objective-C Garbage Collection` set to 0 cannot be
    merged with a module with `Objective-C GC Only` set to 6.
 
-### C type width Module Flags Metadata
+### wchar_t Type Size Module Flags Metadata
 
-The ARM backend emits a section into each generated object file describing the
-options that it was compiled with (in a compiler-independent way) to prevent
-linking incompatible objects, and to allow automatic library selection. Some
-of these options are not visible at the IR level, namely wchar_t width and enum
-width.
+The `wchar_size` module flag records the size of `wchar_t` in bytes. Its value
+is a positive integer. The size of `wchar_t` is a property of the target's C
+ABI and is not implied by the widths available in the IR, so it is recorded
+explicitly.
 
-To pass this information to the backend, these options are encoded in module
-flags metadata, using the following key-value pairs:
+When the flag is absent, the target's default `wchar_t` size is used.
 
-```{list-table}
-:header-rows: 1
-:widths: 30 70
-* - Key
-  - Value
+For example, the following metadata section specifies a 4-byte `wchar_t`:
 
-* - short_wchar
-  - * 0 --- sizeof(wchar_t) == 4
-    * 1 --- sizeof(wchar_t) == 2
-
-* - short_enum
-  - * 0 --- Enums are at least as large as an `int`.
-    * 1 --- Enums are stored in the smallest integer type which can
-      represent all of its values.
+```llvm
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"wchar_size", i32 4}
 ```
 
-For example, the following metadata section specifies that the module was
-compiled with a `wchar_t` width of 4 bytes, and the underlying type of an
-enum is the smallest type which can represent all of its values:
-```
-!llvm.module.flags = !{!0, !1}
-!0 = !{i32 1, !"short_wchar", i32 1}
-!1 = !{i32 1, !"short_enum", i32 0}
+### Minimum Enum Size Module Flags Metadata
+
+The `min_enum_size` module flag records the minimum size of an enumeration type
+in bytes. Its value is an integer: a value of 1 indicates that enums are stored
+in the smallest integer type which can represent all of their values, and a
+value of 4 indicates that enums are at least as wide as `int`.
+
+The ARM backend reads this flag to emit the `Tag_ABI_enum_size` build attribute,
+which records the enum size the module was compiled with and prevents linking
+incompatible objects. The attribute is not emitted when the flag is absent.
+
+For example, the following metadata section specifies short enums:
+
+```llvm
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"min_enum_size", i32 1}
 ```
 
 ### Float ABI Module Flags Metadata

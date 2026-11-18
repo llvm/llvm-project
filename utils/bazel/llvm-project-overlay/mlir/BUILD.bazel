@@ -3669,7 +3669,9 @@ cc_library(
         ":GPUToGPURuntimeTransforms",
         ":IR",
         ":LLVMCommonConversion",
+        ":LLVMDialect",
         ":LinalgDialect",
+        ":LoopLikeInterface",
         ":MemRefDialect",
         ":NVGPUDialect",
         ":NVGPUToNVVM",
@@ -3758,6 +3760,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":BuiltinDialectTdFiles",
+        ":ControlFlowInterfacesTdFiles",
         ":OpBaseTdFiles",
     ],
 )
@@ -3811,6 +3814,7 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/WasmSSA/IR/WasmSSAOps.td",
     deps = [
+        ":ControlFlowInterfacesTdFiles",
         ":FunctionInterfacesTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":WasmSSATdFiles",
@@ -3837,6 +3841,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BytecodeOpInterface",
+        ":ControlFlowInterfaces",
         ":DialectUtils",
         ":FunctionInterfaces",
         ":IR",
@@ -5317,6 +5322,7 @@ cc_library(
         ":GPUUtils",
         ":IR",
         ":LinalgDialect",
+        ":LoopLikeInterface",
         ":MemRefDialect",
         ":MemRefTransforms",
         ":MemRefUtils",
@@ -5583,7 +5589,6 @@ cc_library(
             "lib/Dialect/LLVMIR/IR/*.h",
         ],
         exclude = [
-            "lib/Dialect/LLVMIR/IR/LLVMOps.cpp",
             "lib/Dialect/LLVMIR/IR/*AMX*.cpp",
             "lib/Dialect/LLVMIR/IR/*AMX*.h",
             "lib/Dialect/LLVMIR/IR/*ArmSVE*.cpp",
@@ -5600,10 +5605,6 @@ cc_library(
             "lib/Dialect/LLVMIR/IR/XeVM*.cpp",
             "lib/Dialect/LLVMIR/IR/XeVM*.h",
         ],
-    ) + gentbl_sharded_op_defs(
-        name = "LLVMOps_sharded_defs",
-        shard_count = 8,
-        source_file = "lib/Dialect/LLVMIR/IR/LLVMOps.cpp",
     ),
     hdrs = glob(
         ["include/mlir/Dialect/LLVMIR/*.h"],
@@ -5641,6 +5642,7 @@ cc_library(
         ":MemorySlotInterfaces",
         ":MemorySlotInterfacesIncGen",
         ":PtrDialect",
+        ":SCFToControlFlowDialectInterface",
         ":SideEffectInterfaces",
         ":Support",
         ":ViewLikeInterface",
@@ -6267,6 +6269,7 @@ cc_library(
 td_library(
     name = "LLVMOpsTdFiles",
     srcs = [
+        "include/mlir/Dialect/LLVMIR/LLVMAllOps.td",
         "include/mlir/Dialect/LLVMIR/LLVMAttrDefs.td",
         "include/mlir/Dialect/LLVMIR/LLVMDialect.td",
         "include/mlir/Dialect/LLVMIR/LLVMEnums.td",
@@ -6631,8 +6634,6 @@ cc_library(
 gentbl_cc_library(
     name = "LLVMOpsIncGen",
     tbl_outs = {
-        "include/mlir/Dialect/LLVMIR/LLVMOps.h.inc": ["-gen-op-decls"],
-        "include/mlir/Dialect/LLVMIR/LLVMOps.cpp.inc": ["-gen-op-defs"],
         "include/mlir/Dialect/LLVMIR/LLVMOpsDialect.h.inc": ["-gen-dialect-decls"],
         "include/mlir/Dialect/LLVMIR/LLVMOpsDialect.cpp.inc": ["-gen-dialect-defs"],
         "include/mlir/Dialect/LLVMIR/LLVMOpsEnums.h.inc": ["-gen-enum-decls"],
@@ -6654,14 +6655,59 @@ gentbl_cc_library(
 gentbl_cc_library(
     name = "LLVMAllOpsIncGen",
     tbl_outs = {
-        "include/mlir/Dialect/LLVMIR/LLVMAllOps.h.inc": [
+        "include/mlir/Dialect/LLVMIR/LLVM" + partition + "Ops.h.inc": [
             "-gen-op-decls",
-            "-op-shard-count=8",
-        ],
-        "include/mlir/Dialect/LLVMIR/LLVMAllOps.cpp.inc": [
+            "-op-partition=" + partition,
+        ]
+        for partition in [
+            "Aggregate",
+            "Arith",
+            "Call",
+            "Constant",
+            "Conversion",
+            "Memory",
+            "Module",
+            "Terminator",
+            "VarArg",
+            "Vector",
+            "CodeGenIntrinsic",
+            "ConstrainedIntrinsic",
+            "CoroIntrinsic",
+            "DebugIntrinsic",
+            "FloatIntrinsic",
+            "GeneralIntrinsic",
+            "IntegerIntrinsic",
+            "MemoryIntrinsic",
+            "VPIntrinsic",
+            "VectorIntrinsic",
+        ]
+    } | {
+        "include/mlir/Dialect/LLVMIR/LLVM" + partition + "Ops.cpp.inc": [
             "-gen-op-defs",
-            "-op-shard-count=8",
-        ],
+            "-op-partition=" + partition,
+        ]
+        for partition in [
+            "Aggregate",
+            "Arith",
+            "Call",
+            "Constant",
+            "Conversion",
+            "Memory",
+            "Module",
+            "Terminator",
+            "VarArg",
+            "Vector",
+            "CodeGenIntrinsic",
+            "ConstrainedIntrinsic",
+            "CoroIntrinsic",
+            "DebugIntrinsic",
+            "FloatIntrinsic",
+            "GeneralIntrinsic",
+            "IntegerIntrinsic",
+            "MemoryIntrinsic",
+            "VPIntrinsic",
+            "VectorIntrinsic",
+        ]
     },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/LLVMAllOps.td",
@@ -6696,15 +6742,9 @@ gentbl_cc_library(
     deps = [":LLVMOpsTdFiles"],
 )
 
-gentbl_cc_library(
+alias(
     name = "LLVMIntrinsicOpsIncGen",
-    tbl_outs = {
-        "include/mlir/Dialect/LLVMIR/LLVMIntrinsicOps.h.inc": ["-gen-op-decls"],
-        "include/mlir/Dialect/LLVMIR/LLVMIntrinsicOps.cpp.inc": ["-gen-op-defs"],
-    },
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/LLVMIR/LLVMIntrinsicOps.td",
-    deps = [":LLVMOpsTdFiles"],
+    actual = ":LLVMAllOpsIncGen",
 )
 
 gentbl_cc_library(
@@ -7050,6 +7090,7 @@ cc_library(
         ":GPUDialect",
         ":GPUToLLVMIRTranslation",
         ":IR",
+        ":LLVMDialect",
         ":LLVMToLLVMIRTranslation",
         ":ROCDLDialect",
         ":ROCDLToLLVMIRTranslation",
@@ -8228,6 +8269,7 @@ cc_library(
         ":FuncDialect",
         ":IR",
         ":LinalgDialect",
+        ":LoopLikeInterface",
         ":MemRefDialect",
         ":Pass",
         ":RuntimeVerifiableOpInterface",
@@ -8760,6 +8802,26 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "SCFToControlFlowDialectInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Conversion/SCFToControlFlow/SCFToControlFlowDialectInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Conversion/SCFToControlFlow/SCFToControlFlowDialectInterface.td",
+    deps = [":OpBaseTdFiles"],
+)
+
+cc_library(
+    name = "SCFToControlFlowDialectInterface",
+    hdrs = ["include/mlir/Conversion/SCFToControlFlow/SCFToControlFlowDialectInterface.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":SCFToControlFlowDialectInterfaceIncGen",
+    ],
+)
+
 cc_library(
     name = "SCFToControlFlow",
     srcs = ["lib/Conversion/SCFToControlFlow/SCFToControlFlow.cpp"],
@@ -8770,8 +8832,8 @@ cc_library(
         ":ControlFlowDialect",
         ":ConversionPassIncGen",
         ":IR",
-        ":LLVMDialect",
         ":SCFDialect",
+        ":SCFToControlFlowDialectInterface",
         ":SCFTransforms",
         ":TransformUtils",
         ":Transforms",
@@ -9638,6 +9700,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Analysis",
+        ":ControlFlowInterfaces",
         ":DLTIDialect",
         ":IR",
         ":LLVMConversionIncGen",
@@ -9712,6 +9775,7 @@ cc_library(
     deps = [
         ":DialectUtils",
         ":IR",
+        ":LLVMDialect",
         ":NVVMConversionIncGen",
         ":NVVMDialect",
         ":Support",
@@ -12218,6 +12282,7 @@ cc_library(
         ":FuncDialect",
         ":IR",
         ":LinalgDialect",
+        ":LoopLikeInterface",
         ":MemRefDialect",
         ":Pass",
         ":SCFDialect",
@@ -14347,6 +14412,7 @@ cc_library(
         ":TransformUtils",
         ":ValueBoundsOpInterface",
         ":VectorDialect",
+        ":VectorUtils",
         "//llvm:Support",
     ],
 )
@@ -14779,6 +14845,7 @@ cc_library(
         ":FunctionInterfaces",
         ":IR",
         ":LinalgDialect",
+        ":LoopLikeInterface",
         ":MemRefDialect",
         ":TensorDialect",
         ":TransformDialect",

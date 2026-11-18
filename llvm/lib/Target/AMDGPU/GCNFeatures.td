@@ -1331,6 +1331,12 @@ defm VOPD3F64OPYSrcHazard : AMDGPUSubtargetFeature<"vopd3-f64-opy-src-hazard",
   /*GenPredicate=*/0
 >;
 
+defm TransF16ToPartialVGPRWriteHazard : AMDGPUSubtargetFeature<"trans-f16-to-partial-vgpr-write-hazard",
+  "A 16-bit write by TRANS VALU needs 4 VALU instructions or va_vdst(0) wait "
+  "before the other half of the same register can be overwritten",
+  /*GenPredicate=*/0
+>;
+
 defm SALUFloatInsts : AMDGPUSubtargetFeature<"salu-float",
   "Has SALU floating point instructions"
 >;
@@ -1698,6 +1704,11 @@ defm NeedsAligned2addrDS : AMDGPUSubtargetFeature<"needs-aligned-2addr-lds",
 defm NoSleepForever : AMDGPUSubtargetFeature<"no-sleep-forever",
   "s_monitor_sleep should not use sleep_forever",
   /*GenPredicate=*/1
+>;
+
+defm McastFullMaskBug : AMDGPUGenericAnySubtargetFeature<"mcast-full-mask-bug",
+  "Multicast loads with all 16 workgroup mask bits set may never complete",
+  /*GenPredicate=*/0
 >;
 
 defm WaveMatchInsts : AMDGPUSubtargetFeature<"wave-match-insts",
@@ -2621,10 +2632,12 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureNeedsTDMDrain,
    FeatureNeedsAligned2addrDS,
    FeatureNoSleepForever,
+   FeatureMcastFullMaskBug,
    FeatureSlowMaxMinMulI64Insts,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    FeatureUnusableSAddPCI64,
+   FeatureTransF16ToPartialVGPRWriteHazard,
    ])>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2660,10 +2673,12 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureNeedsTDMDrain,
    FeatureNoSleepForever,
    FeatureNoMTypeNC,
+   FeatureMcastFullMaskBug,
    FeatureSlowMaxMinMulI64Insts,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    FeatureUnusableSAddPCI64,
+   FeatureTransF16ToPartialVGPRWriteHazard,
    ])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2704,6 +2719,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureNoMTypeNC,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
+   FeatureTransF16ToPartialVGPRWriteHazard,
    ])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
@@ -2729,6 +2745,8 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
    FeatureUnusableSAddPCI64,
+   FeatureMcastFullMaskBug,
+   FeatureTransF16ToPartialVGPRWriteHazard,
    ])>;
 
 def FeatureISAVersion13 : FeatureSet<
@@ -2861,7 +2879,8 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32,
   FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,
   FeatureSRAMECCOnOffModes,
-  FeatureSGPRInitBug, FeatureApertureRegs, FeatureGetDoorbellID,
+  FeatureSGPRInitBug, FeatureMcastFullMaskBug, FeatureApertureRegs,
+  FeatureGetDoorbellID,
   FeatureAGPRAlloc, Feature1536VGPRs, FeatureVGPRMSBs,
   FeatureHalfAddressablePhysicalLocalMemory, FeatureBackOffBarrier,
   FeatureLDSAllocGranularity256,

@@ -2317,7 +2317,7 @@ static unsigned getWasmSectionFlags(SectionKind K, bool Retain) {
   if (Retain)
     Flags |= wasm::WASM_SEG_FLAG_RETAIN;
 
-  // TODO(sbc): Add suport for K.isMergeableConst()
+  // TODO(sbc): Add support for K.isMergeableConst()
 
   return Flags;
 }

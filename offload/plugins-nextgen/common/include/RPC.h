@@ -138,6 +138,8 @@ private:
           WakeFunction([]() {}) {}
 
     ~ServerThread() { assert(!Running && "Thread not shut down explicitly\n"); }
+    ServerThread(const ServerThread &) = delete;
+    ServerThread &operator=(const ServerThread &) = delete;
 
     /// Notify the worker thread that there is a user that needs it.
     void notify() {

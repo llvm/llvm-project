@@ -18,7 +18,7 @@ class ObjCDataFormatterTestCase(TestBase):
             self.build()
         else:
             disable_constant_classes = {
-                "CFLAGS_EXTRAS": "-fno-constant-nsnumber-literals "
+                "TEST_CFLAGS_EXTRAS": "-fno-constant-nsnumber-literals "
                 + "-fno-constant-nsarray-literals "
                 + "-fno-constant-nsdictionary-literals",
             }

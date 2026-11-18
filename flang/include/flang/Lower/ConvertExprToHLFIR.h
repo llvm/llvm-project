@@ -110,6 +110,12 @@ fir::ExtendedValue convertToValue(mlir::Location loc,
                                   hlfir::Entity entity,
                                   Fortran::lower::StatementContext &);
 
+/// Lower a DataRef to the HLFIR variable that designates it.
+fir::FortranVariableOpInterface convertDataRefToHLFIRVariable(
+    mlir::Location loc, Fortran::lower::AbstractConverter &,
+    const Fortran::evaluate::DataRef &, Fortran::lower::SymMap &,
+    Fortran::lower::StatementContext &);
+
 fir::ExtendedValue convertDataRefToValue(mlir::Location loc,
                                          Fortran::lower::AbstractConverter &,
                                          const Fortran::evaluate::DataRef &,

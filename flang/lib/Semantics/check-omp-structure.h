@@ -145,6 +145,7 @@ public:
 
   void Enter(const parser::OmpDeclareVariantDirective &);
   void Enter(const parser::OmpDeclareSimdDirective &);
+  void Enter(const parser::OmpAssumesDirective &);
   void Enter(const parser::OmpAllocateDirective &);
   void Leave(const parser::OmpAllocateDirective &);
   void Enter(const parser::OmpDeclareMapperDirective &);
@@ -234,6 +235,7 @@ public:
   void Enter(const parser::OmpClause::Looprange &x);
   void Enter(const parser::OmpClause::Map &x);
   void Enter(const parser::OmpClause::Message &x);
+  void Enter(const parser::OmpClause::NoParallelism &clause);
   void Enter(const parser::OmpClause::NumTeams &x);
   void Enter(const parser::OmpClause::NumThreads &x);
   void Enter(const parser::OmpClause::OmpxBare &x);
@@ -318,7 +320,6 @@ private:
   void CheckRectangularNest(const parser::OmpDirectiveSpecification &spec,
       const omp::LoopSequence &nest);
   void CheckNestedConstruct(const parser::OpenMPLoopConstruct &x);
-  const parser::Name GetLoopIndex(const parser::DoConstruct *x);
   void CheckIterationVariables(const parser::OpenMPLoopConstruct &x);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
@@ -415,6 +416,7 @@ private:
       llvm::omp::Directive id, const parser::OmpDirectiveSpecification &spec);
   void AddClauses(llvm::iterator_range<ClauseIterator> beginClauses,
       llvm::iterator_range<ClauseIterator> endClauses);
+  void CheckCoindexedArguments(const parser::OmpDirectiveSpecification &);
   void AnalyzeObject(const parser::OmpObject &object);
   void AnalyzeSubstring(const parser::OmpObject &object);
 
@@ -543,6 +545,7 @@ private:
   void CheckAllowedRequiresClause(llvm::omp::Clause clause);
   void AddEndDirectiveClauses(const parser::OmpClauseList &clauses);
   void CheckTempDescriptorMappings();
+  void ClauseDecompPortabilityWarn(SemanticsContext &context_);
 
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }

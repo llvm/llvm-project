@@ -695,17 +695,19 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
       // Since we eliminated MI, and reused a register imp-def'd by CSMI
       // (here %nzcv), that register, if it was killed before MI, should have
       // that kill flag removed, because it's lifetime was extended.
-      if (CSMI->getParent() == MI.getParent()) {
-        for (MachineBasicBlock::iterator II = CSMI, IE = &MI; II != IE; ++II)
+      auto ClearKills = [&](MachineBasicBlock::iterator II,
+                            MachineBasicBlock::iterator IE) {
+        for (; II != IE; ++II)
           for (auto ImplicitDef : ImplicitDefs)
             if (MachineOperand *MO = II->findRegisterUseOperand(
                     ImplicitDef, TRI, /*isKill=*/true))
               MO->setIsKill(false);
+      };
+      if (CSMI->getParent() == MBB) {
+        ClearKills(CSMI, MI);
       } else {
-        // If the instructions aren't in the same BB, bail out and clear the
-        // kill flag on all uses of the imp-def'd register.
-        for (auto ImplicitDef : ImplicitDefs)
-          MRI->clearKillFlags(ImplicitDef);
+        ClearKills(CSMI, CSMI->getParent()->end());
+        ClearKills(MBB->begin(), MI);
       }
 
       if (CrossMBBPhysDef) {

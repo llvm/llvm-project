@@ -227,6 +227,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_statx
+  HDRS
+    struct_statx.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_statx
+)
+
+add_proxy_header_library(
   struct_statfs
   HDRS
     struct_statfs.h
@@ -736,6 +744,14 @@ add_proxy_header_library(
     struct_sockaddr_in6.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_sockaddr_in6
+)
+
+add_proxy_header_library(
+  struct_iphdr
+  HDRS
+    struct_iphdr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_iphdr
 )
 
 add_proxy_header_library(

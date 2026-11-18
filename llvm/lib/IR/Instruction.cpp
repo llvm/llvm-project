@@ -1257,19 +1257,7 @@ bool Instruction::isVolatile() const {
     return cast<AtomicCmpXchgInst>(this)->isVolatile();
   case Instruction::Call:
   case Instruction::Invoke:
-    // There are a very limited number of intrinsics with volatile flags.
-    if (auto *II = dyn_cast<IntrinsicInst>(this)) {
-      if (auto *MI = dyn_cast<MemIntrinsic>(II))
-        return MI->isVolatile();
-      switch (II->getIntrinsicID()) {
-      default: break;
-      case Intrinsic::matrix_column_major_load:
-        return cast<ConstantInt>(II->getArgOperand(2))->isOne();
-      case Intrinsic::matrix_column_major_store:
-        return cast<ConstantInt>(II->getArgOperand(3))->isOne();
-      }
-    }
-    return false;
+    return cast<CallBase>(this)->isVolatile();
   }
 }
 
@@ -1387,7 +1375,32 @@ bool Instruction::mayThrow(bool IncludePhaseOneUnwind) const {
 }
 
 bool Instruction::mayHaveSideEffects() const {
-  return mayWriteToMemory() || mayThrow() || !willReturn();
+  switch (getOpcode()) {
+  case Instruction::Call:
+  case Instruction::Invoke:
+  case Instruction::CallBr:
+    return mayWriteToMemory() || mayThrow() || !willReturn();
+  case Instruction::Load:
+    // Ordered loads write to memory, and volatile loads may not return.
+    return !cast<LoadInst>(this)->isUnordered();
+  case Instruction::CleanupRet:
+    return cast<CleanupReturnInst>(this)->unwindsToCaller();
+  case Instruction::CatchSwitch:
+    return cast<CatchSwitchInst>(this)->unwindsToCaller();
+  case Instruction::Store:
+  case Instruction::VAArg:
+  case Instruction::Fence:
+  case Instruction::AtomicCmpXchg:
+  case Instruction::AtomicRMW:
+  case Instruction::CatchPad:
+  case Instruction::CatchRet:
+  case Instruction::Resume:
+    return true;
+  default:
+    assert(!mayWriteToMemory() && !mayThrow() && willReturn() &&
+           "missing instruction with side effects");
+    return false;
+  }
 }
 
 bool Instruction::isSafeToRemove() const {

@@ -2516,6 +2516,14 @@ func.func @test_reverse_block_scaled_rank_zero(%arg0: tensor<!tosa.block_scaled<
 
 // -----
 
+func.func @test_reshape_rank_mismatch(%arg0 : tensor<?xf32>) -> () {
+  %s = tosa.const_shape values(dense<[2, 4]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.reshape' op new shape does not match result rank}}
+  %0 = "tosa.reshape"(%arg0, %s) : (tensor<?xf32>, !tosa.shape<2>) -> tensor<?xf32>
+  return
+}
+
+// -----
 
 func.func @test_legacy_const_mxint8_int64(%arg0 : index) -> tensor<2x!tosa.mxint8> {
   // expected-error@+1 {{incompatible attribute for element type}}
@@ -2534,4 +2542,13 @@ func.func @test_legacy_block_scaled_const_invalid_num_scales() -> tensor<2x32x!m
   // expected-error@+1 {{'tosa.const' op attribute block scaled type is invalid: block scaled tensor type with scale values must have scale values for each block, expected 2, got 3}}
   %0 = "tosa.const"() <{values = dense<tensor<2x32x!mxint8_scale> : 0 : i8>}> : () -> tensor<2x32x!mxint8>
   return %0 : tensor<2x32x!mxint8>
+}
+
+// -----
+
+func.func @test_reduce_sum_invalid_scalar_output(%arg0: tensor<5x4xf32>) {
+  // expected-error @+1 {{non tensor type 'f32' is not allowed}}
+  %0 = "tosa.reduce_sum"(%arg0) {axis = 0 : i32}
+      : (tensor<5x4xf32>) -> f32
+  return
 }

@@ -26,6 +26,8 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MemCacheHint.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
@@ -1140,6 +1142,11 @@ void llvm::getMetadataToPropagate(
 Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   if (VL.empty())
     return Inst;
+
+  // Keep cache hints out of getMetadataToPropagate(): VPlan changes operand
+  // layouts without remapping cache-hint indices.
+  propagateMemCacheHint(*Inst, VL);
+
   SmallVector<std::pair<unsigned, MDNode *>> Metadata;
   getMetadataToPropagate(cast<Instruction>(VL[0]), Metadata);
 
