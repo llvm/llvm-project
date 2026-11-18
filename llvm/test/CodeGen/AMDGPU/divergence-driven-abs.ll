@@ -15,8 +15,8 @@ define amdgpu_kernel void @s_abs_i32(ptr addrspace(1) %out, i32 %val) nounwind {
 }
 
 ; GCN-LABEL: name: v_abs_i32
-; SI:  V_SUB_CO_U32_e64
-; GFX900: V_SUB_U32_e64
+; SI:  V_SUB_CO_U32_e32
+; GFX900: V_SUB_U32_e32
 ; GCN: V_MAX_I32_e64
 define amdgpu_kernel void @v_abs_i32(ptr addrspace(1) %out, ptr addrspace(1) %src) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -47,8 +47,8 @@ define amdgpu_kernel void @s_abs_v2i32(ptr addrspace(1) %out, <2 x i32> %val) no
 }
 
 ; GCN-LABEL: name: v_abs_v2i32
-; SI:  V_SUB_CO_U32_e64
-; GFX900: V_SUB_U32_e64
+; SI:  V_SUB_CO_U32_e32
+; GFX900: V_SUB_U32_e32
 ; GCN: V_MAX_I32_e64
 ; GCN: V_MAX_I32_e64
 define amdgpu_kernel void @v_abs_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %src) nounwind {
