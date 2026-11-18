@@ -22,6 +22,7 @@
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/TargetParser/IntelGPUTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
@@ -328,16 +329,27 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override {
+    if (!tripleAcceptsTargetCPU())
+      return;
+    Values.push_back(OffloadArchToString(OffloadArch::getGeneric()));
+    llvm::IntelGPU::fillValidIGCATargetList(Values);
+  }
+
 protected:
   bool isSupportedOffloadArch(OffloadArch Arch) const override {
-    // Chipstar, vulkan, and amdhsa triples shouldn't accept a -target-cpu, but
-    // OpenCL should be able to.
-    llvm::Triple::OSType OS = getTriple().getOS();
-    if (OS != llvm::Triple::UnknownOS && OS != llvm::Triple::OpenCL)
+    if (!tripleAcceptsTargetCPU())
       return false;
-
     // Valid offload archs for SPIRV:
-    return Arch.isGeneric() || Arch.isIntel();
+    return Arch.isGeneric() || Arch.isIntelIGCA();
+  }
+
+private:
+  /// Chipstar, Vulkan, and AMDHSA SPIRV triples shouldn't accept a -target-cpu,
+  /// but a SPIRV triple with an "unknown" OS and OpenCL should be able to.
+  bool tripleAcceptsTargetCPU() const {
+    llvm::Triple::OSType OS = getTriple().getOS();
+    return OS == llvm::Triple::UnknownOS || OS == llvm::Triple::OpenCL;
   }
 };
 
