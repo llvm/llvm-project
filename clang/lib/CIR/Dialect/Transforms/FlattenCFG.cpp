@@ -1167,11 +1167,34 @@ public:
     collectExitsInCleanup(cleanupBodyRegion, /*ignoreBreak=*/false);
   }
 
+  // Whether the slot \p alloca read by \p loadOp may change before the end of
+  // \p cleanupRegion: it has a use after the load in its block or in the
+  // cleanup, or its address escapes through a use other than as the address
+  // of a load, store or lifetime marker.
+  static bool slotMayChangeBeforeCleanupEnd(cir::AllocaOp alloca,
+                                            cir::LoadOp loadOp,
+                                            mlir::Region &cleanupRegion) {
+    mlir::Block *loadBlock = loadOp->getBlock();
+    return llvm::any_of(alloca->getUsers(), [&](mlir::Operation *user) {
+      if (cleanupRegion.isAncestor(user->getParentRegion()))
+        return true;
+      mlir::Operation *userInBlock = loadBlock->findAncestorOpInBlock(*user);
+      if (userInBlock && loadOp->isBeforeInBlock(userInBlock))
+        return true;
+      if (auto storeOp = mlir::dyn_cast<cir::StoreOp>(user))
+        return storeOp.getValue() == alloca.getResult();
+      return !mlir::isa<cir::LoadOp, cir::LifetimeStartOp, cir::LifetimeEndOp>(
+          user);
+    });
+  }
+
   // Check if an operand's defining op should be moved to the destination block.
   // We only sink constants and simple loads. Anything else should be saved
-  // to a temporary alloca and reloaded at the destination block.
+  // to a temporary alloca and reloaded at the destination block. This must be
+  // called before \p cleanupRegion is inlined.
   static bool shouldSinkReturnOperand(mlir::Value operand,
-                                      cir::ReturnOp returnOp) {
+                                      cir::ReturnOp returnOp,
+                                      mlir::Region &cleanupRegion) {
     // Block arguments can't be moved
     mlir::Operation *defOp = operand.getDefiningOp();
     if (!defOp)
@@ -1201,12 +1224,12 @@ public:
       assert(funcOp && "Return op has no function parent?");
       mlir::Block &funcEntryBlock = funcOp.getBody().front();
 
-      // Check if it's an alloca in the function entry block
-      if (auto allocaOp =
-              mlir::dyn_cast_if_present<cir::AllocaOp>(ptr.getDefiningOp()))
-        return allocaOp->getBlock() == &funcEntryBlock;
-
-      return false;
+      // Check if it's an alloca in the function entry block that keeps its
+      // value until the cleanup is done.
+      auto allocaOp =
+          mlir::dyn_cast_if_present<cir::AllocaOp>(ptr.getDefiningOp());
+      return allocaOp && allocaOp->getBlock() == &funcEntryBlock &&
+             !slotMayChangeBeforeCleanupEnd(allocaOp, loadOp, cleanupRegion);
     }
 
     // Make sure we only fall through to here with constants.
@@ -1216,19 +1239,20 @@ public:
 
   // For returns with operands in cleanup dispatch blocks, the operands may not
   // dominate the dispatch block. This function handles that by either sinking
-  // the operand's defining op to the dispatch block (for constants and simple
-  // loads) or by storing to a temporary alloca and reloading it.
-  void
-  getReturnOpOperands(cir::ReturnOp returnOp, mlir::Operation *exitOp,
-                      mlir::Location loc, mlir::PatternRewriter &rewriter,
-                      llvm::SmallVectorImpl<mlir::Value> &returnValues) const {
+  // the operand's defining op to the dispatch block (for the operands in
+  // \p sinkableOperands) or by storing to a temporary alloca and reloading it.
+  void getReturnOpOperands(
+      cir::ReturnOp returnOp, mlir::Operation *exitOp, mlir::Location loc,
+      const llvm::SmallPtrSetImpl<mlir::Operation *> &sinkableOperands,
+      mlir::PatternRewriter &rewriter,
+      llvm::SmallVectorImpl<mlir::Value> &returnValues) const {
     mlir::Block *destBlock = rewriter.getInsertionBlock();
     auto funcOp = exitOp->getParentOfType<cir::FuncOp>();
     assert(funcOp && "Return op has no function parent?");
     mlir::Block &funcEntryBlock = funcOp.getBody().front();
 
     for (mlir::Value operand : returnOp.getOperands()) {
-      if (shouldSinkReturnOperand(operand, returnOp)) {
+      if (sinkableOperands.contains(operand.getDefiningOp())) {
         // Sink the defining op to the dispatch block.
         mlir::Operation *defOp = operand.getDefiningOp();
         rewriter.moveOpBefore(defOp, destBlock, destBlock->end());
@@ -1279,10 +1303,10 @@ public:
   // block. For return ops with operands, this handles the dominance issue by
   // either moving the operand's defining op to the dispatch block (if it's a
   // trivial use) or by storing to a temporary alloca and loading it.
-  mlir::LogicalResult
-  createExitTerminator(mlir::Operation *exitOp, mlir::Location loc,
-                       mlir::Block *continueBlock,
-                       mlir::PatternRewriter &rewriter) const {
+  mlir::LogicalResult createExitTerminator(
+      mlir::Operation *exitOp, mlir::Location loc, mlir::Block *continueBlock,
+      const llvm::SmallPtrSetImpl<mlir::Operation *> &sinkableOperands,
+      mlir::PatternRewriter &rewriter) const {
     return llvm::TypeSwitch<mlir::Operation *, mlir::LogicalResult>(exitOp)
         .Case<cir::YieldOp>([&](auto) {
           // Yield becomes a branch to continue block.
@@ -1318,7 +1342,8 @@ public:
           // branching through the outer cleanup.
           if (returnOp.hasOperand()) {
             llvm::SmallVector<mlir::Value, 2> returnValues;
-            getReturnOpOperands(returnOp, exitOp, loc, rewriter, returnValues);
+            getReturnOpOperands(returnOp, exitOp, loc, sinkableOperands,
+                                rewriter, returnValues);
             cir::ReturnOp::create(rewriter, loc, returnValues);
           } else {
             cir::ReturnOp::create(rewriter, loc);
@@ -1536,6 +1561,21 @@ public:
       destSlot = getOrCreateCleanupDestSlot(funcOp, rewriter, loc);
     }
 
+    // Pick the return operands to sink past the cleanup while the cleanup
+    // region is still intact.
+    llvm::SmallPtrSet<mlir::Operation *, 4> sinkableOperands;
+    if (emitNormalCleanup) {
+      for (const CleanupExit &exit : exits) {
+        auto returnOp = dyn_cast<cir::ReturnOp>(exit.exitOp);
+        if (!returnOp)
+          continue;
+        for (mlir::Value operand : returnOp.getOperands())
+          if (shouldSinkReturnOperand(operand, returnOp,
+                                      cleanupOp.getCleanupRegion()))
+            sinkableOperands.insert(operand.getDefiningOp());
+      }
+    }
+
     // Split the current block to create the insertion point.
     mlir::Block *currentBlock = rewriter.getInsertionBlock();
     mlir::Block *continueBlock =
@@ -1615,8 +1655,8 @@ public:
           // Create a block for this destination.
           mlir::Block *destBlock = rewriter.createBlock(normalInsertPt);
           rewriter.setInsertionPointToEnd(destBlock);
-          result =
-              createExitTerminator(exit.exitOp, loc, continueBlock, rewriter);
+          result = createExitTerminator(exit.exitOp, loc, continueBlock,
+                                        sinkableOperands, rewriter);
 
           // Add to switch cases.
           caseValues.push_back(
@@ -1661,7 +1701,8 @@ public:
         // block.
         rewriter.setInsertionPointToEnd(exitBlock);
         mlir::Operation *exitOp = exits[0].exitOp;
-        result = createExitTerminator(exitOp, loc, continueBlock, rewriter);
+        result = createExitTerminator(exitOp, loc, continueBlock,
+                                      sinkableOperands, rewriter);
 
         // Replace body exit with branch to cleanup entry.
         rewriter.setInsertionPoint(exitOp);
