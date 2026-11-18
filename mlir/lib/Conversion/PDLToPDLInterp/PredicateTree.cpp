@@ -279,14 +279,14 @@ static void getConstraintPredicates(pdl::ApplyNativeConstraintOp op,
   // For each result register a position so it can be used later
   for (auto [i, result] : llvm::enumerate(results)) {
     ConstraintQuestion *q = cast<ConstraintQuestion>(pred.first);
-    ConstraintPosition *pos = builder.getConstraintPosition(q, i);
-    auto [it, inserted] = inputs.try_emplace(result, pos);
+    ConstraintPosition *constraintPos = builder.getConstraintPosition(q, i);
+    auto [it, inserted] = inputs.try_emplace(result, constraintPos);
     // If this is an input value that has been visited in the tree, add a
     // constraint to ensure that both instances refer to the same value.
     if (!inserted) {
-      Position *first = pos;
+      Position *first = constraintPos;
       Position *second = it->second;
-      if (comparePosDepth(second, first))
+      if (comparePosDepth(second, pos))
         std::tie(second, first) = std::make_pair(first, second);
 
       predList.emplace_back(second, builder.getEqualTo(first));
