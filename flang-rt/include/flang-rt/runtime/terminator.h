@@ -132,8 +132,9 @@ void SetErrorCallback(void (*callback)(int));
 // available. heading may be null. Does nothing when backtrace(3) is not
 // available; CALL BACKTRACE() still reports that it is unsupported.
 void PrintFatalBacktrace(const char *heading);
-// Install handlers for deadly signals. Does nothing when backtrace(3) is
-// not available.
+// Install handlers for deadly signals whose action is still the default.
+// An existing handler or SIG_IGN is left in place. Does nothing when
+// backtrace(3) is not available.
 void InstallFatalBacktraceHandlers();
 #endif
 

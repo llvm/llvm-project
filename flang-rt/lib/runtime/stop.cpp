@@ -389,7 +389,15 @@ static void BacktraceSignalHandler(int signum) {
 }
 
 static void InstallOneBacktraceHandler(int signum) {
-  std::signal(signum, BacktraceSignalHandler);
+  // Only replace the default action.
+  struct sigaction current;
+  if (sigaction(signum, nullptr, &current) != 0 ||
+      current.sa_handler != SIG_DFL)
+    return;
+  struct sigaction action{};
+  action.sa_handler = BacktraceSignalHandler;
+  sigemptyset(&action.sa_mask);
+  sigaction(signum, &action, nullptr);
 }
 
 void Fortran::runtime::InstallFatalBacktraceHandlers() {
