@@ -5136,20 +5136,9 @@ define <8 x i8> @test_vselect_v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
 define <2 x i32> @test_vselect_v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
 ; RV32-LABEL: test_vselect_v2i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pmslt.dw a6, a2, a0
-; RV32-NEXT:    mv a0, a4
-; RV32-NEXT:    beqz a7, .LBB275_3
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    beqz a6, .LBB275_4
-; RV32-NEXT:  .LBB275_2:
-; RV32-NEXT:    mv a1, a5
-; RV32-NEXT:    ret
-; RV32-NEXT:  .LBB275_3:
-; RV32-NEXT:    mv a5, a3
-; RV32-NEXT:    bnez a6, .LBB275_2
-; RV32-NEXT:  .LBB275_4:
-; RV32-NEXT:    mv a0, a2
-; RV32-NEXT:    mv a1, a5
+; RV32-NEXT:    pmslt.dw a0, a2, a0
+; RV32-NEXT:    merge a1, a3, a5
+; RV32-NEXT:    merge a0, a2, a4
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_vselect_v2i32:
@@ -10221,8 +10210,8 @@ define <2 x i32> @test_select_cmp_const_v2i32(<2 x i32> %a, <2 x i32> %c) {
 ; RV32-LABEL: test_select_cmp_const_v2i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    pmsltu.dw a0, a2, a0
-; RV32-NEXT:    seqz a0, a0
-; RV32-NEXT:    slli a0, a0, 4
+; RV32-NEXT:    li a1, 16
+; RV32-NEXT:    andn a0, a1, a0
 ; RV32-NEXT:    li a1, 7
 ; RV32-NEXT:    ret
 ;

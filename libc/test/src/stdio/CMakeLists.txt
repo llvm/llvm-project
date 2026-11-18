@@ -524,6 +524,27 @@ add_libc_test(
 )
 
 add_libc_test(
+  putc_unlocked_test
+  SUITE
+    libc-stdio-tests
+  SRCS
+    putc_unlocked_test.cpp
+  DEPENDS
+    libc.hdr.stdio_macros
+    libc.src.__support.CPP.scope
+    libc.src.stdio.fclose
+    libc.src.stdio.ferror
+    libc.src.stdio.flockfile
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.stdio.funlockfile
+    libc.src.stdio.putc_unlocked
+    libc.src.string.memcmp
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   putchar_unlocked_test
   SUITE
     libc-stdio-tests
