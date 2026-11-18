@@ -19,10 +19,13 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include <deque>
 
 using namespace mlir;
+
+#define DEBUG_TYPE "cse"
 
 namespace {
 struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
@@ -77,6 +80,12 @@ private:
   using MemEffectsCache =
       DenseMap<Operation *, std::pair<Operation *, MemoryEffects::Effect *>>;
 
+  /// For each scanned operation without writes or unknown effects, cache the
+  /// last operation of a known write-free range beginning there. Queries with
+  /// different starting reads can share these ranges. Paths through adjacent
+  /// ranges are compressed as queries extend them.
+  using ReadOnlyRanges = DenseMap<Operation *, Operation *>;
+
   /// Represents a single entry in the depth first traversal of a CFG.
   struct CFGStackNode {
     CFGStackNode(ScopedMapTy &knownValues, DominanceInfoNode *node)
@@ -95,7 +104,8 @@ private:
   /// Attempt to eliminate a redundant operation. Returns success if the
   /// operation was marked for removal, failure otherwise.
   LogicalResult simplifyOperation(ScopedMapTy &knownValues, Operation *op,
-                                  bool hasSSADominance);
+                                  bool hasSSADominance,
+                                  ReadOnlyRanges &readOnlyRanges);
   void simplifyBlock(ScopedMapTy &knownValues, Block *bb, bool hasSSADominance);
   void simplifyRegion(ScopedMapTy &knownValues, Region &region);
 
@@ -108,7 +118,8 @@ private:
 
   /// Check if there is side-effecting operations other than the given effect
   /// between the two operations.
-  bool hasOtherSideEffectingOpInBetween(Operation *fromOp, Operation *toOp);
+  bool hasOtherSideEffectingOpInBetween(Operation *fromOp, Operation *toOp,
+                                        ReadOnlyRanges &readOnlyRanges);
 
   /// A rewriter for modifying the IR.
   RewriterBase &rewriter;
@@ -165,8 +176,8 @@ void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
     eraseDeadOp(op);
 }
 
-bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
-                                                 Operation *toOp) {
+bool CSEDriver::hasOtherSideEffectingOpInBetween(
+    Operation *fromOp, Operation *toOp, ReadOnlyRanges &readOnlyRanges) {
   assert(fromOp->getBlock() == toOp->getBlock());
   assert(hasEffect<MemoryEffects::Read>(fromOp) &&
          "expected read effect on fromOp");
@@ -199,10 +210,31 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
       return true;
     }
   }
+  // Only already visited, surviving operations are cached. The query endpoint
+  // may be erased immediately after this function returns. A listener may
+  // perform additional mutations, so do not share ranges when one is present.
+  bool cacheRanges = !rewriter.getListener();
+  SmallVector<Operation *> readOnlyPath;
+  auto cacheReadOnlyPath = [&](Operation *last) {
+    for (Operation *op : readOnlyPath)
+      readOnlyRanges[op] = last;
+    readOnlyPath.clear();
+  };
   while (nextOp && nextOp != toOp) {
+    if (cacheRanges) {
+      auto it = readOnlyRanges.find(nextOp);
+      if (it != readOnlyRanges.end()) {
+        readOnlyPath.push_back(nextOp);
+        nextOp = it->second->getNextNode();
+        continue;
+      }
+    }
+    LLVM_DEBUG(llvm::dbgs()
+               << "CSE checking effects: " << nextOp->getName() << "\n");
     std::optional<SmallVector<MemoryEffects::EffectInstance>> effects =
         getEffectsRecursively(nextOp);
     if (!effects) {
+      cacheReadOnlyPath(nextOp->getPrevNode());
       // TODO: Do we need to handle other effects generically?
       // If the operation does not implement the MemoryEffectOpInterface we
       // conservatively assume it writes.
@@ -211,8 +243,13 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
       return true;
     }
 
+    bool hasWrite = false;
     for (const MemoryEffects::EffectInstance &effect : *effects) {
       if (isa<MemoryEffects::Write>(effect.getEffect())) {
+        // Even a non-conflicting write ends a shared range: its safety depends
+        // on the resources of this particular read.
+        cacheReadOnlyPath(nextOp->getPrevNode());
+        hasWrite = true;
         // A write on a resource disjoint from all read resources cannot
         // conflict with the reads being CSE'd.
         SideEffects::Resource *writeResource = effect.getResource();
@@ -235,8 +272,11 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
         }
       }
     }
+    if (cacheRanges && !hasWrite)
+      readOnlyPath.push_back(nextOp);
     nextOp = nextOp->getNextNode();
   }
+  cacheReadOnlyPath(toOp->getPrevNode());
   // Record the previous op of `toOp` as the insertion point, since `toOp`
   // will be erased immediately after this. Using `toOp` itself would leave
   // a dangling pointer, so its predecessor is sufficient to reconstruct
@@ -247,8 +287,8 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
 
 /// Attempt to eliminate a redundant operation.
 LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
-                                           Operation *op,
-                                           bool hasSSADominance) {
+                                           Operation *op, bool hasSSADominance,
+                                           ReadOnlyRanges &readOnlyRanges) {
   // Don't simplify terminator operations.
   if (op->hasTrait<OpTrait::IsTerminator>())
     return failure();
@@ -271,7 +311,7 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
     // Look for an existing definition for the operation.
     if (auto *existing = knownValues.lookup(op)) {
       if (existing->getBlock() == op->getBlock() &&
-          !hasOtherSideEffectingOpInBetween(existing, op)) {
+          !hasOtherSideEffectingOpInBetween(existing, op, readOnlyRanges)) {
         // The operation that can be deleted has been reach with no
         // side-effecting operations in between the existing operation and
         // this one so we can remove the duplicate.
@@ -296,6 +336,7 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
 
 void CSEDriver::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
                               bool hasSSADominance) {
+  ReadOnlyRanges readOnlyRanges;
   for (auto &op : llvm::make_early_inc_range(*bb)) {
     // If the operation is already trivially dead just add it to the erase list.
     // This also avoids calling `simplifyRegion` on dead region ops
@@ -323,7 +364,8 @@ void CSEDriver::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
     }
 
     // If the operation is simplified, we don't process any held regions.
-    if (succeeded(simplifyOperation(knownValues, &op, hasSSADominance)))
+    if (succeeded(simplifyOperation(knownValues, &op, hasSSADominance,
+                                    readOnlyRanges)))
       continue;
   }
   // Clear the MemoryEffects cache since its usage is by block only.
