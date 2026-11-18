@@ -1,6 +1,19 @@
 add_lldb_library(lldbRegister NO_PLUGIN_DEPENDENCIES
   Arch/RegisterContext_x86.cpp
   Arch/RegisterInfos_x86_64_with_base_shared.cpp
+  Descriptions/RegisterDescription_arm32.cpp
+  Descriptions/RegisterDescription_arm64.cpp
+  Descriptions/RegisterDescription_loongarch64.cpp
+  Descriptions/RegisterDescription_ppc.cpp
+  Descriptions/RegisterDescription_ppc32be.cpp
+  Descriptions/RegisterDescription_ppc64be.cpp
+  Descriptions/RegisterDescription_ppc64le.cpp
+  Descriptions/RegisterDescription_riscv.cpp
+  Descriptions/RegisterDescription_riscv32.cpp
+  Descriptions/RegisterDescription_riscv64.cpp
+  Descriptions/RegisterDescription_s390x.cpp
+  Descriptions/RegisterDescription_x86_32.cpp
+  Descriptions/RegisterDescription_x86_64.cpp
   Common/RegisterInfoDynamic_riscv32.cpp
   Common/RegisterInfo_arm.cpp
   Common/RegisterInfo_arm64.cpp

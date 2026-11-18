@@ -222,6 +222,12 @@ enum : uint32_t {
   k_num_dbr_registers = k_last_dbr - k_first_dbr + 1,
 };
 
+// Optional Segment Base Registers.
+enum : uint32_t {
+  fs_base = k_last_dbr + 1,
+  gs_base,
+};
+
 } // namespace lldb_private::registers::x86_64::id
 namespace lldb_private::registers::x86_64::id::with_base {
 

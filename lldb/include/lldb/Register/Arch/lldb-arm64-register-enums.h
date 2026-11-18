@@ -337,6 +337,20 @@ enum : uint32_t {
   sve_ffr,
 };
 
+// Optional architectural register identities, independent of presentation
+// order.
+enum : uint32_t {
+  tls_tpidr = 0x10020,
+  tls_tpidr2 = 0x10021,
+  sme_svcr = 0x10030,
+  sme_svg = 0x10031,
+  sme_za = 0x10032,
+  sme_zt0 = 0x10033,
+  fpmr_fpmr = 0x10040,
+  gcs_gcspr_el0 = 0x10052,
+  poe_por_el0 = 0x10060,
+};
+
 } // namespace lldb_private::registers::arm64::id
 
 #endif // LLDB_REGISTER_ARCH_LLDB_ARM64_REGISTER_ENUMS_H

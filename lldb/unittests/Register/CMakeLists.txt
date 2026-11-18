@@ -1,5 +1,10 @@
 add_lldb_unittest(RegisterTests
   Descriptions/RegisterDescriptionTest.cpp
+  Descriptions/RegisterDescription_arm32Test.cpp
+  Descriptions/RegisterDescription_arm64Test.cpp
+  Descriptions/RegisterDescription_ppcTest.cpp
+  Descriptions/RegisterDescription_riscvTest.cpp
+  Descriptions/RegisterDescription_x86Test.cpp
   RegisterContextTest.cpp
   RegisterLayoutBankTest.cpp
   RegisterLayoutTest.cpp
