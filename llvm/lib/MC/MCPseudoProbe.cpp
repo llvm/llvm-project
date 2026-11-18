@@ -464,7 +464,7 @@ template <bool IsTopLevelFunc>
 bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
     MCDecodedPseudoProbeInlineTree *Cur, uint64_t &LastAddr,
     const Uint64Set &GuidFilter, const Uint64Map &FuncStartAddrs,
-    const uint32_t CurChildIndex) {
+    const uint32_t CurChildIndex, ProbeCallback Callback) {
   // The pseudo_probe section encodes an inline forest and each tree has a
   // format defined in MCPseudoProbe.h
 
@@ -544,6 +544,10 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
                                   Discriminator, Cur);
       ++CurrentProbeCount;
     }
+    // The probes of skipped functions are read anyway to find the next record,
+    // so the callback can see them at no extra decoding cost.
+    if (Callback && !isSentinelProbe(Attr))
+      Callback(Guid, Index, PseudoProbeType(Kind));
     LastAddr = Addr;
   }
 
@@ -555,7 +559,8 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
         MutableArrayRef(InlineTreeVec).take_back(ChildrenToProcess);
   }
   for (uint32_t I = 0; I < ChildrenToProcess; I++) {
-    buildAddress2ProbeMap<false>(Cur, LastAddr, GuidFilter, FuncStartAddrs, I);
+    buildAddress2ProbeMap<false>(Cur, LastAddr, GuidFilter, FuncStartAddrs, I,
+                                 Callback);
   }
   return Cur;
 }
@@ -641,7 +646,7 @@ bool MCPseudoProbeDecoder::countRecords(bool &Discard, uint32_t &ProbeCount,
 
 bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
     const uint8_t *Start, std::size_t Size, const Uint64Set &GuidFilter,
-    const Uint64Map &FuncStartAddrs) {
+    const Uint64Map &FuncStartAddrs, ProbeCallback Callback) {
   // For function records in the order of their appearance in the encoded data
   // (DFS), count the number of contained probes and inlined function records.
   uint32_t ProbeCount = 0;
@@ -668,8 +673,9 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
   uint64_t LastAddr = 0;
   uint32_t CurChildIndex = 0;
   while (Data < End)
-    CurChildIndex += buildAddress2ProbeMap<true>(
-        &DummyInlineRoot, LastAddr, GuidFilter, FuncStartAddrs, CurChildIndex);
+    CurChildIndex +=
+        buildAddress2ProbeMap<true>(&DummyInlineRoot, LastAddr, GuidFilter,
+                                    FuncStartAddrs, CurChildIndex, Callback);
   assert(Data == End && "Have unprocessed data in pseudo_probe section");
   assert(PseudoProbeVec.size() == ProbeCount &&
          "Mismatching probe count pre- and post-parsing");

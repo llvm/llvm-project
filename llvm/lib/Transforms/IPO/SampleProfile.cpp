@@ -66,6 +66,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
@@ -145,6 +146,21 @@ cl::opt<int> SampleColdCallSiteThreshold(
     "sample-profile-cold-inline-threshold", cl::Hidden, cl::init(45),
     cl::desc("Threshold for inlining cold callsites"));
 } // namespace llvm
+
+unsigned llvm::getSampleProfileICPRelativeHotness(
+    const cl::LibraryOptionsContext &Opts) {
+  return Opts.get<IPOOptions>().sample_profile_icp_relative_hotness;
+}
+
+unsigned llvm::getSampleProfileICPRelativeHotnessSkip(
+    const cl::LibraryOptionsContext &Opts) {
+  return Opts.get<IPOOptions>().sample_profile_icp_relative_hotness_skip;
+}
+
+unsigned
+llvm::getSampleProfileICPMaxProm(const cl::LibraryOptionsContext &Opts) {
+  return Opts.get<IPOOptions>().sample_profile_icp_max_prom;
+}
 
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
