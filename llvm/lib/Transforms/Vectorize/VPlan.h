@@ -3459,6 +3459,13 @@ public:
                                             R.getVFScaleFactor()),
                           DL) {}
 
+  VPReductionEVLRecipe(const RecurKind RdxKind, FastMathFlags FMFs,
+                       VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
+                       VPValue *EVL, ReductionStyle Style,
+                       DebugLoc DL = DebugLoc::getUnknown())
+      : VPReductionRecipe(VPRecipeBase::VPReductionSC, RdxKind, FMFs, nullptr,
+                          {ChainOp, VecOp, EVL}, CondOp, Style, DL) {}
+
   ~VPReductionEVLRecipe() override = default;
 
   VPReductionEVLRecipe *clone() override {
