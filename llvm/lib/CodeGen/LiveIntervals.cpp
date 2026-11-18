@@ -609,29 +609,31 @@ bool LiveIntervals::shrinkToUses(LiveInterval *li,
   // Find all the values used, including PHI kills.
   ShrinkToUsesWorkList WorkList;
 
-  // Visit all instructions reading li->reg().
+  // Visit all operands reading li->reg().
   Register Reg = li->reg();
-  for (MachineInstr &UseMI : MRI->reg_instructions(Reg)) {
-    if (UseMI.isDebugInstr() || !UseMI.readsVirtualRegister(Reg))
+  for (const MachineOperand &MO : MRI->reg_nodbg_operands(Reg)) {
+    if (!MO.readsReg())
       continue;
-    SlotIndex Idx = getInstructionIndex(UseMI).getRegSlot();
+    const MachineInstr &UseMI = *MO.getParent();
+    SlotIndex Idx =
+        getInstructionIndex(UseMI).getRegSlot(MO.isEarlyClobberDefOrUse());
+    // Merge adjacent operands of the same instruction, keeping the latest use.
+    if (!WorkList.empty() &&
+        SlotIndex::isSameInstr(WorkList.back().first, Idx)) {
+      WorkList.back().first = std::max(WorkList.back().first, Idx);
+      continue;
+    }
     LiveQueryResult LRQ = li->Query(Idx);
     VNInfo *VNI = LRQ.valueIn();
     if (!VNI) {
-      // This shouldn't happen: readsVirtualRegister returns true, but there is
-      // no live value. It is likely caused by a target getting <undef> flags
-      // wrong.
+      // This shouldn't happen: the operand reads Reg, but there is no live
+      // value. It is likely caused by a target getting <undef> flags wrong.
       LLVM_DEBUG(
           dbgs() << Idx << '\t' << UseMI
                  << "Warning: Instr claims to read non-existent value in "
                  << *li << '\n');
       continue;
     }
-    // Special case: An early-clobber tied operand reads and writes the
-    // register one slot early.
-    if (VNInfo *DefVNI = LRQ.valueDefined())
-      Idx = DefVNI->def;
-
     WorkList.push_back(std::make_pair(Idx, VNI));
   }
 
