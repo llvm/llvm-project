@@ -80,6 +80,9 @@ STATISTIC(NumImportedFunctionDecls,
 STATISTIC(NumImportedGlobalVars,
           "Number of global variables imported in backend");
 STATISTIC(NumImportedModules, "Number of modules imported from");
+STATISTIC(NumModulesSkippedForProfileSummaryConflict,
+          "Number of modules not imported from because their profile "
+          "summary conflicts with the importing module's");
 STATISTIC(NumDeadSymbols, "Number of dead stripped symbols in index");
 STATISTIC(NumLiveSymbols, "Number of live symbols in index");
 
@@ -2099,6 +2102,19 @@ static void protectImplicitRefGlobals(Module &M) {
     appendToCompilerUsed(M, ToProtect);
 }
 
+/// Returns true if \p Src and \p Dst both have a (context-sensitive) profile
+/// summary and the two differ. Such modules cannot be linked: the summary
+/// module flags use the Error merge behavior.
+static bool hasConflictingProfileSummary(const Module &Src, const Module &Dst) {
+  for (bool IsCS : {false, true}) {
+    Metadata *SrcSummary = Src.getProfileSummary(IsCS);
+    Metadata *DstSummary = Dst.getProfileSummary(IsCS);
+    if (SrcSummary && DstSummary && SrcSummary != DstSummary)
+      return true;
+  }
+  return false;
+}
+
 // Automatically import functions in Module \p DestModule based on the summaries
 // index.
 Expected<bool> FunctionImporter::importFunctions(
@@ -2144,6 +2160,20 @@ Expected<bool> FunctionImporter::importFunctions(
     // now, before linking it (otherwise this will be a noop).
     if (Error Err = SrcModule->materializeMetadata())
       return std::move(Err);
+
+    // A module compiled with a different profile cannot be linked into this
+    // one. Importing is optional (the source module keeps its definitions),
+    // so skip the module unless it provides a symbol that must move here.
+    if (hasConflictingProfileSummary(*SrcModule, DestModule) &&
+        none_of(MoveSymbolGUIDSet,
+                [&, SrcModName = ModName](GlobalValue::GUID GUID) {
+                  return ImportList.getImportType(SrcModName, GUID).has_value();
+                })) {
+      ++NumModulesSkippedForProfileSummaryConflict;
+      LLVM_DEBUG(dbgs() << "Not importing from " << ModName
+                        << ": conflicting profile summary\n");
+      continue;
+    }
 
     // Find the globals to import
     SetVector<GlobalValue *> GlobalsToImport;
