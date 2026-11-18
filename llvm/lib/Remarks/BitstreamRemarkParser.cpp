@@ -75,9 +75,7 @@ Error BitstreamBlockParserHelperBase::expectBlock() {
 }
 
 Error BitstreamBlockParserHelperBase::enterBlock() {
-  if (Stream.EnterSubBlock(BlockID))
-    return error("Error while entering {} block.", BlockName);
-  return Error::success();
+  return Stream.EnterSubBlock(BlockID);
 }
 
 Error BitstreamMetaParserHelper::parseRecord(unsigned Code) {
@@ -428,8 +426,9 @@ Expected<std::unique_ptr<Remark>> BitstreamRemarkParser::processRemark() {
   if (!Helper.Type)
     return Helper.error("Missing remark type.");
 
-  // Always >= Type::First since it's unsigned.
-  if (*Helper.Type > static_cast<uint8_t>(Type::Last))
+  // Type::Unknown marks a remark without a type.
+  if (*Helper.Type == static_cast<uint8_t>(Type::Unknown) ||
+      *Helper.Type > static_cast<uint8_t>(Type::Last))
     return Helper.error("Unknown remark type.");
 
   R.RemarkType = static_cast<Type>(*Helper.Type);

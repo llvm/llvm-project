@@ -53,10 +53,10 @@ thread_local T tls_templ = {get_i()};
 // CIR: cir.global "private" linkonce_odr comdat("_Z9tls_templIiE") tls_model = tls_dyn @_ZGV9tls_templIiE = #cir.int<0> : !s64i
 
 // Global: int
-// CIR: cir.global linkonce_odr comdat tls_model = tls_dyn tls_refs = <"_ZTW9tls_templIiE", "_ZTH9tls_templIiE", "_ZGV9tls_templIiE"> dynamic_init_guard<"_ZGV9tls_templIiE"> @_Z9tls_templIiE = #cir.int<0> : !s32i
+// CIR: cir.global linkonce_odr comdat tls_model = tls_dyn dynamic_init_guard<"_ZGV9tls_templIiE"> @_Z9tls_templIiE = #cir.int<0> : !s32i
 
 // Init Func: int
-// CIR:  cir.func internal private @[[INT_INIT]]() {
+// CIR:  cir.func internal private @[[INT_INIT]](){{.*}} {
 // CIR:    %[[GET_GUARD:.*]] = cir.get_global thread_local @_ZGV9tls_templIiE : !cir.ptr<!s64i>
 // CIR:    %[[GUARD_CAST:.*]] = cir.cast bitcast %[[GET_GUARD]] : !cir.ptr<!s64i> -> !cir.ptr<!s8i>
 // CIR:    %[[LOAD_GUARD:.*]] = cir.load align(8) %[[GUARD_CAST]] : !cir.ptr<!s8i>, !s8i
@@ -74,10 +74,10 @@ thread_local T tls_templ = {get_i()};
 
 
 // Global: Ctor/Dotr:
-// CIR: cir.global linkonce_odr comdat tls_model = tls_dyn tls_refs = <"_ZTW9tls_templI8CtorDtorE", "_ZTH9tls_templI8CtorDtorE", "_ZGV9tls_templI8CtorDtorE"> dynamic_init_guard<"_ZGV9tls_templI8CtorDtorE"> @_Z9tls_templI8CtorDtorE = #cir.zero : !rec_CtorDtor
+// CIR: cir.global linkonce_odr comdat tls_model = tls_dyn dynamic_init_guard<"_ZGV9tls_templI8CtorDtorE"> @_Z9tls_templI8CtorDtorE = #cir.zero : !rec_CtorDtor
 
 // Init Func: Ctor/Dtor:
-// CIR: cir.func internal private @[[CTOR_DTOR_INIT]]() {
+// CIR: cir.func internal private @[[CTOR_DTOR_INIT]](){{.*}} {
 // CIR:   %[[GET_GUARD:.*]] = cir.get_global thread_local @_ZGV9tls_templI8CtorDtorE : !cir.ptr<!s64i>
 // CIR:    %[[GUARD_CAST:.*]] = cir.cast bitcast %[[GET_GUARD]] : !cir.ptr<!s64i> -> !cir.ptr<!s8i>
 // CIR:    %[[LOAD_GUARD:.*]] = cir.load align(8) %[[GUARD_CAST]] : !cir.ptr<!s8i>, !s8i
@@ -118,12 +118,12 @@ thread_local T tls_templ = {get_i()};
 // Wrappers: Just opposite ordering, same check lines as LLVM.
 // FIXME: OGCG has these set as 'comdat'. However, CIR doesn't lower comdat to
 // LLVM, so it doesn't show up in the IR here.
-// LLVM-LABEL: define weak_odr hidden {{.*}}ptr @_ZTW9tls_templI8CtorDtorE() comdat {
+// LLVM-LABEL: define weak_odr hidden {{.*}}ptr @_ZTW9tls_templI8CtorDtorE() #{{[0-9]+}} comdat {
 // LLVM:   call void @_ZTH9tls_templI8CtorDtorE()
 // LLVM:   call {{.*}}ptr @llvm.threadlocal.address.p0(ptr {{.*}}@_Z9tls_templI8CtorDtorE)
 // LLVM: }
 
-// LLVM-LABEL: define weak_odr hidden {{.*}}ptr @_ZTW9tls_templIiE() comdat {
+// LLVM-LABEL: define weak_odr hidden {{.*}}ptr @_ZTW9tls_templIiE() #{{[0-9]+}} comdat {
 // LLVM:   call void @_ZTH9tls_templIiE()
 // LLVM:   call {{.*}}ptr @llvm.threadlocal.address.p0(ptr {{.*}}@_Z9tls_templIiE)
 // LLVM: }

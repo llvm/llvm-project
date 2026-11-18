@@ -320,9 +320,23 @@ void nb19() [[clang::nonblocking]] {
 	__builtin_assume(1);
 	void *ptr = __builtin_malloc(1); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin_malloc'}}
 	__builtin_free(ptr); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin_free'}}
-	
+
 	void *p2 = __builtin_operator_new(1); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin_operator_new'}}
 	__builtin_operator_delete(p2); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin_operator_delete'}}
+}
+
+// Fortified builtins, as used by _FORTIFY_SOURCE wrappers
+void nb19a(char *dst, const char *src, __SIZE_TYPE__ n, __builtin_va_list ap) [[clang::nonblocking]] {
+	__builtin___memcpy_chk(dst, src, n, __builtin_object_size(dst, 0));
+	__builtin___memset_chk(dst, 0, n, __builtin_object_size(dst, 0));
+	__builtin___strlcpy_chk(dst, src, n, __builtin_object_size(dst, 0));
+
+	__builtin___printf_chk(0, "%s", src); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin___printf_chk'}}
+	__builtin___vprintf_chk(0, "%s", ap); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin___vprintf_chk'}}
+	__builtin___snprintf_chk(dst, n, 0, __builtin_object_size(dst, 0), "%s", src); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin___snprintf_chk'}}
+	__builtin___sprintf_chk(dst, 0, __builtin_object_size(dst, 0), "%s", src); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin___sprintf_chk'}}
+	__builtin___vsnprintf_chk(dst, n, 0, __builtin_object_size(dst, 0), "%s", ap); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin___vsnprintf_chk'}}
+	__builtin___vsprintf_chk(dst, 0, __builtin_object_size(dst, 0), "%s", ap); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin___vsprintf_chk'}}
 }
 
 // Function try-block

@@ -179,6 +179,8 @@ bool ToolChain::loadMultilibsFromYAML(const llvm::opt::ArgList &Args,
                           std::string(FilePath));
     ++FileInsertPos;
     if (RuntimeDir) {
+      // The builtin runtime directories include the multilib path, as the
+      // compiler-rt library files come from a runtimes build.
       SmallString<128> LibPath(*RuntimeDir);
       llvm::sys::path::append(LibPath, M.gccSuffix());
       getLibraryPaths().insert(getLibraryPaths().begin() + LibInsertPos,
@@ -877,6 +879,8 @@ StringRef ToolChain::getOSLibName() const {
 std::string ToolChain::getCompilerRTPath() const {
   SmallString<128> Path(getDriver().ResourceDir);
   if (isBareMetal()) {
+    // The builtin compiler-rt directories include the multilib path, as the
+    // compiler-rt library files come from a runtimes build.
     llvm::sys::path::append(Path, "lib", getOSLibName());
     if (!SelectedMultilibs.empty()) {
       Path += SelectedMultilibs.back().gccSuffix();
@@ -1134,6 +1138,15 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
     // Try legacy architecture name.
     AMDGPUTriple.setArchName("amdgcn");
     if (auto Path = getPathForTriple(AMDGPUTriple))
+      return *Path;
+  }
+
+  // Short SPIR-V spellings like "spirv64" are installed under the three-part
+  // name, "spirv64-unknown-unknown".
+  if (T.isSPIRV()) {
+    llvm::Triple SPIRVTriple(
+        T.normalize(llvm::Triple::CanonicalForm::THREE_IDENT));
+    if (auto Path = getPathForTriple(SPIRVTriple))
       return *Path;
   }
 

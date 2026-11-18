@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=x86_64-linux-android < %s -o - | FileCheck --check-prefix=ANDROID-X64 %s
 ; RUN: llc -mtriple=x86_64-fuchsia < %s -o - | FileCheck --check-prefix=FUCHSIA-X64 %s
 
-; RUN: llc -mtriple=i386-linux -safestack-use-pointer-address < %s -o - | FileCheck --check-prefix=LINUX-I386-PA %s
+; RUN: llc -mtriple=i386-linux-android -safestack-use-pointer-address < %s -o - | FileCheck --check-prefix=ANDROID-I386-PA %s
 
 define void @_Z1fv() safestack {
 entry:
@@ -37,8 +37,8 @@ declare void @_Z7CapturePi(ptr)
 ; FUCHSIA-X64: leaq -16(%[[A]]), %[[B:.*]]
 ; FUCHSIA-X64: movq %[[B]], %fs:24
 
-; LINUX-I386-PA: calll __safestack_pointer_address
-; LINUX-I386-PA: movl %eax, %[[A:.*]]
-; LINUX-I386-PA: movl (%eax), %[[B:.*]]
-; LINUX-I386-PA: leal -16(%[[B]]), %[[C:.*]]
-; LINUX-I386-PA: movl %[[C]], (%[[A]])
+; ANDROID-I386-PA: calll __safestack_pointer_address
+; ANDROID-I386-PA: movl %eax, %[[A:.*]]
+; ANDROID-I386-PA: movl (%eax), %[[B:.*]]
+; ANDROID-I386-PA: leal -16(%[[B]]), %[[C:.*]]
+; ANDROID-I386-PA: movl %[[C]], (%[[A]])

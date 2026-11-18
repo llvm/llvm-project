@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - -fcuda-is-device -triple nvptx64-unknown-unknown | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm %s -o - -fcuda-is-device -triple nvptx64-unknown-unknown | FileCheck %s %}
 
 
 // Make sure we emit the proper addrspacecast for llvm.used.  PR22383 exposed an

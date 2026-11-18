@@ -88,7 +88,7 @@ define void @unreachable_exit_with_nounwind_call_pr53800(ptr noalias %ptr, i1 %c
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @exit() #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    tail call void @exit() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
 ; CHECK-NEXT:    store i64 0, ptr [[PTR:%.*]], align 8
@@ -114,7 +114,7 @@ define void @unreachable_exit_and_call_may_read(ptr %ptr, i1 %c.1) {
 ; CHECK-NEXT:    store i64 1, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @exit() #[[ATTR0]]
+; CHECK-NEXT:    tail call void @exit() #[[ATTR2]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
 ; CHECK-NEXT:    store i64 0, ptr [[PTR]], align 8
@@ -167,7 +167,7 @@ define void @unreachable_exit_but_another_exit(ptr noalias %ptr, i1 %c.1, i32 %s
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br i1 [[C_2:%.*]], label [[E_0:%.*]], label [[E_1:%.*]]
 ; CHECK:       e.0:
-; CHECK-NEXT:    tail call void @exit() #[[ATTR0]]
+; CHECK-NEXT:    tail call void @exit() #[[ATTR2]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       e.1:
 ; CHECK-NEXT:    ret void
@@ -192,4 +192,38 @@ e.1:
 if.end:
   store i64 0, ptr %ptr, align 8
   ret void
+}
+
+define void @unreachable_exit_with_coro_end(ptr noalias %ptr, i1 %cond) presplitcoroutine {
+; CHECK-LABEL: @unreachable_exit_with_coro_end(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id.async(i32 16, i32 16, i32 1, ptr null)
+; CHECK-NEXT:    [[HDL:%.*]] = call ptr @llvm.coro.begin(token [[ID]], ptr null)
+; CHECK-NEXT:    store i8 0, ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    store i8 1, ptr [[PTR]], align 1
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    call void (ptr, i1, ...) @llvm.coro.end.async(ptr [[HDL]], i1 false)
+; CHECK-NEXT:    unreachable
+;
+entry:
+  %id = call token @llvm.coro.id.async(i32 16, i32 16, i32 1, ptr null)
+  %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
+  store i8 0, ptr %ptr
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  br label %exit
+
+if.else:
+  store i8 1, ptr %ptr
+  br label %exit
+
+exit:
+  call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 false)
+  unreachable
 }

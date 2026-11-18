@@ -22,7 +22,7 @@ function(clang_tablegen)
 
   set( CLANG_TABLEGEN_ARGUMENTS "" )
   set( LLVM_TARGET_DEFINITIONS ${CTG_SOURCE} )
-  tablegen(CLANG ${CTG_UNPARSED_ARGUMENTS} ${CLANG_TABLEGEN_ARGUMENTS})
+  tablegen_internal(CLANG ${CTG_UNPARSED_ARGUMENTS} ${CLANG_TABLEGEN_ARGUMENTS})
 
   if(CTG_TARGET)
     add_public_tablegen_target(${CTG_TARGET})

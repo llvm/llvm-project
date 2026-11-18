@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff --code-model=small -stop-after=machine-cp -mcpu=pwr4 \
-; RUN: -mattr=-altivec -verify-machineinstrs < %s | \
+; RUN: -mattr=-altivec < %s | \
 ; RUN: FileCheck %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec \

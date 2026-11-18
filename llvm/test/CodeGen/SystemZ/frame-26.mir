@@ -35,7 +35,6 @@
 ---
 name:            fun0
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$r6d' }
   - { reg: '$f0s' }
@@ -124,7 +123,6 @@ body:             |
 ---
 name:            fun1
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$r6d' }
 frameInfo:

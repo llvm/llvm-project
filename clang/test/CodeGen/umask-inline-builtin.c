@@ -16,5 +16,5 @@ int call_umask(int m) {
 //
 //
 // CHECK: Function Attrs: alwaysinline nobuiltin nounwind
-// CHECK-LABEL: define internal i32 @umask.inline(
+// CHECK-LABEL: define internal preserve_mostcc i32 @umask.inline(
 // CHECK-SAME: i32 noundef [[M:%.*]]) #[[ATTR2:[0-9]+]] {

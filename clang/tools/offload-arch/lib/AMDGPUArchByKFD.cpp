@@ -17,7 +17,6 @@
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 
@@ -33,19 +32,9 @@ constexpr static long getMajor(long Ver) { return (Ver / 10000) % 100; }
 constexpr static long getMinor(long Ver) { return (Ver / 100) % 100; }
 constexpr static long getStep(long Ver) { return Ver % 100; }
 
-// A temporary patch in ROCr has ISA defaulting to gfx1250 on A0 and enabling
-// the "-strict" suffix with HSA_DISABLE_GFX12_STRICT=0
-static bool isStrictEnabled() {
-  auto EnableEnvVar = sys::Process::GetEnv("HSA_DISABLE_GFX12_STRICT");
-  return (EnableEnvVar.has_value() && EnableEnvVar.value() == "0");
-}
-
 // For A0, print gfx1250-strict to match rocminfo
 static StringRef getRevisionSuffix(long GFXVersion, long ASICRevision) {
-  return (GFXVersion == GFX1250_VERSION && ASICRevision == 0 &&
-          isStrictEnabled())
-             ? "-strict"
-             : "";
+  return (GFXVersion == GFX1250_VERSION && ASICRevision == 0) ? "-strict" : "";
 }
 
 // Exposed for testing

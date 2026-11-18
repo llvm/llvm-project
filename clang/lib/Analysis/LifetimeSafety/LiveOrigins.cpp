@@ -61,7 +61,7 @@ struct Lattice {
 
 static SourceLocation GetFactLoc(CausingFactType F) {
   if (const auto *UF = dyn_cast<const UseFact *>(F))
-    return UF->getUseExpr()->getExprLoc();
+    return UF->getUseSite().getLoc();
   if (const auto *OEF = dyn_cast<const OriginEscapesFact *>(F)) {
     if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
       return ReturnEsc->getReturnExpr()->getExprLoc();
@@ -69,6 +69,8 @@ static SourceLocation GetFactLoc(CausingFactType F) {
       return FieldEsc->getFieldDecl()->getLocation();
     if (auto *GlobalEsc = dyn_cast<GlobalEscapeFact>(OEF))
       return GlobalEsc->getGlobal()->getLocation();
+    if (auto *ThisEsc = dyn_cast<ThisEscapeFact>(OEF))
+      return ThisEsc->getLoc();
   }
   llvm_unreachable("unhandled causing fact in PointerUnion");
 }
@@ -243,7 +245,7 @@ private:
 } // namespace
 
 // PImpl wrapper implementation
-class LiveOriginsAnalysis::Impl : public AnalysisImpl {
+class LiveOriginsAnalysis::Impl final : public AnalysisImpl {
   using AnalysisImpl::AnalysisImpl;
 };
 

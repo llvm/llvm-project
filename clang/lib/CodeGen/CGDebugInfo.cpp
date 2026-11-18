@@ -626,14 +626,52 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
 
   // Put Checksum at a scope where it will persist past the createFile call.
   SmallString<64> Checksum;
+  // Reuse the checksum CreateCompileUnit already computed for the main file.
+  if (!CSInfo && FID == SM.getMainFileID() && TheCU)
+    CSInfo = TheCU->getFile()->getChecksum();
   if (!CSInfo) {
     std::optional<llvm::DIFile::ChecksumKind> CSKind =
       computeChecksum(FID, Checksum);
     if (CSKind)
       CSInfo.emplace(*CSKind, Checksum);
   }
-  return createFile(FileName, CSInfo,
-                    getSource(SM, SM.getFileID(getMacroDebugLoc(CGM, Loc))));
+  llvm::DIFile *F =
+      createFile(FileName, CSInfo,
+                 getSource(SM, SM.getFileID(getMacroDebugLoc(CGM, Loc))));
+  if (Loc.isValid())
+    recordDIFileSource(F, FID);
+  return F;
+}
+
+void CGDebugInfo::recordDIFileSource(const llvm::DIFile *F, FileID FID) {
+  SourceManager &SM = CGM.getContext().getSourceManager();
+  if (!SM.getFileEntryRefForID(FID))
+    FID = FileID();
+  auto [It, Inserted] = DIFileSources.try_emplace(F, DIFileSource{FID});
+  DIFileSource &Source = It->second;
+  if (Inserted || !Source.FID.isValid() || Source.FID == FID)
+    return;
+  // A DIFile also created for a location outside any file does not describe a
+  // file. Without checksums, distinct files whose remapped names are equal
+  // share a DIFile.
+  if (!FID.isValid())
+    Source.FID = FileID();
+  else if (SM.getFileEntryRefForID(Source.FID) != SM.getFileEntryRefForID(FID))
+    Source.Shared = true;
+}
+
+llvm::DenseMap<const llvm::DIFile *, OptionalFileEntryRef>
+CGDebugInfo::getDIFileSources() const {
+  SourceManager &SM = CGM.getContext().getSourceManager();
+  llvm::DenseMap<const llvm::DIFile *, OptionalFileEntryRef> Sources;
+  for (const auto &[F, Source] : DIFileSources) {
+    if (!Source.FID.isValid() ||
+        SM.getSLocEntry(Source.FID).getFile().hasLineDirectives())
+      continue;
+    Sources[F] = Source.Shared ? OptionalFileEntryRef()
+                               : SM.getFileEntryRefForID(Source.FID);
+  }
+  return Sources;
 }
 
 llvm::DIFile *CGDebugInfo::createFile(
@@ -870,9 +908,14 @@ void CGDebugInfo::CreateCompileUnit() {
   // file was specified with an absolute path.
   if (CSKind)
     CSInfo.emplace(*CSKind, Checksum);
-  llvm::DIFile *CUFile = DBuilder.createFile(
-      remapDIPath(MainFileName), remapDIPath(getCurrentDirname()), CSInfo,
-      getSource(SM, SM.getMainFileID()));
+  const llvm::StringRef cwd =
+      !CGOpts.EmitCodeView ||
+              (CGOpts.EmitCodeView && CGOpts.CodeViewEmitCurrentWorkdir)
+          ? getCurrentDirname()
+          : llvm::StringRef("");
+  llvm::DIFile *CUFile =
+      DBuilder.createFile(remapDIPath(MainFileName), remapDIPath(cwd), CSInfo,
+                          getSource(SM, SM.getMainFileID()));
 
   StringRef Sysroot, SDK;
   if (CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::LLDB) {
@@ -6628,8 +6671,8 @@ void CGDebugInfo::AddStringLiteralDebugInfo(llvm::GlobalVariable *GV,
   llvm::DIFile *File = getOrCreateFile(Loc);
   llvm::DIGlobalVariableExpression *Debug =
       DBuilder.createGlobalVariableExpression(
-          nullptr, StringRef(), StringRef(), getOrCreateFile(Loc),
-          getLineNumber(Loc), getOrCreateType(S->getType(), File), true);
+          nullptr, StringRef(), StringRef(), File, getLineNumber(Loc),
+          getOrCreateType(S->getType(), File), true);
   GV->addDebugInfo(Debug);
 }
 

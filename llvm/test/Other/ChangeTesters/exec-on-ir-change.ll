@@ -1,37 +1,37 @@
 ; Simple checks of -exec-on-ir-change=cat functionality
 ;
 ; Simple functionality check.
-; RUN: opt -S -exec-on-ir-change=cat -passes=instsimplify 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-SIMPLE
+; RUN: opt -S -exec-on-ir-change=cat -passes=instsimplify 2>&1 -disable-output < %s | FileCheck %s --check-prefix=CHECK-SIMPLE
 ;
 ; Check that only the passes that change the IR are printed and that the
 ; others (including g) are filtered out.
-; RUN: opt -S -exec-on-ir-change=cat -passes=instsimplify -filter-print-funcs=f  2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-FUNC-FILTER
+; RUN: opt -S -exec-on-ir-change=cat -passes=instsimplify -filter-print-funcs=f  2>&1 -disable-output < %s | FileCheck %s --check-prefix=CHECK-FUNC-FILTER
 ;
 ; Check that the reporting of IRs respects -print-module-scope
-; RUN: opt -S -exec-on-ir-change=cat -passes=instsimplify -print-module-scope 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-PRINT-MOD-SCOPE
+; RUN: opt -S -exec-on-ir-change=cat -passes=instsimplify -print-module-scope 2>&1 -disable-output < %s | FileCheck %s --check-prefix=CHECK-PRINT-MOD-SCOPE
 ;
 ; Check that the reporting of IRs respects -print-module-scope
-; RUN: opt -S -exec-on-ir-change=cat -passes=instsimplify -filter-print-funcs=f -print-module-scope 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-FUNC-FILTER-MOD-SCOPE
+; RUN: opt -S -exec-on-ir-change=cat -passes=instsimplify -filter-print-funcs=f -print-module-scope 2>&1 -disable-output < %s | FileCheck %s --check-prefix=CHECK-FUNC-FILTER-MOD-SCOPE
 ;
 ; Check that reporting of multiple functions happens
-; RUN: opt -S -exec-on-ir-change=cat -passes=instsimplify -filter-print-funcs="f,g" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-FILTER-MULT-FUNC
+; RUN: opt -S -exec-on-ir-change=cat -passes=instsimplify -filter-print-funcs="f,g" 2>&1 -disable-output < %s | FileCheck %s --check-prefix=CHECK-FILTER-MULT-FUNC
 ;
 ; Check that the reporting of IRs respects -filter-passes
-; RUN: opt -S -exec-on-ir-change=cat -passes="instsimplify,no-op-function" -filter-passes="no-op-function" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-FILTER-PASSES
+; RUN: opt -S -exec-on-ir-change=cat -passes="instsimplify,no-op-function" -filter-passes="no-op-function" 2>&1 -disable-output < %s | FileCheck %s --check-prefix=CHECK-FILTER-PASSES
 ;
 ; Check that the reporting of IRs respects -filter-passes with multiple passes
-; RUN: opt -S -exec-on-ir-change=cat -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-FILTER-MULT-PASSES
+; RUN: opt -S -exec-on-ir-change=cat -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" 2>&1 -disable-output < %s | FileCheck %s --check-prefix=CHECK-FILTER-MULT-PASSES
 ;
 ; Check that the reporting of IRs respects both -filter-passes and -filter-print-funcs
-; RUN: opt -S -exec-on-ir-change=cat -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" -filter-print-funcs=f 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-FILTER-FUNC-PASSES
+; RUN: opt -S -exec-on-ir-change=cat -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" -filter-print-funcs=f 2>&1 -disable-output < %s | FileCheck %s --check-prefix=CHECK-FILTER-FUNC-PASSES
 ;
 ; Check that the reporting of IRs respects -filter-passes, -filter-print-funcs and -print-module-scope
-; RUN: opt -S -exec-on-ir-change=cat -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" -filter-print-funcs=f -print-module-scope 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-FILTER-FUNC-PASSES-MOD-SCOPE
+; RUN: opt -S -exec-on-ir-change=cat -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" -filter-print-funcs=f -print-module-scope 2>&1 -disable-output < %s | FileCheck %s --check-prefix=CHECK-FILTER-FUNC-PASSES-MOD-SCOPE
 ;
 ; Check that repeated passes that change the IR are printed and that the
 ; others (including g) are filtered out.  Note that the second time
 ; instsimplify is run on f, it does not change the IR
-; RUN: opt -S -exec-on-ir-change=cat -passes="instsimplify,instsimplify" -filter-print-funcs=f  2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-MULT-PASSES-FILTER-FUNC
+; RUN: opt -S -exec-on-ir-change=cat -passes="instsimplify,instsimplify" -filter-print-funcs=f  2>&1 -disable-output < %s | FileCheck %s --check-prefix=CHECK-MULT-PASSES-FILTER-FUNC
 ;
 
 define i32 @g() {

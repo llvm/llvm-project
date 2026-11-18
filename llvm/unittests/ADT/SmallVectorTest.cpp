@@ -17,6 +17,7 @@
 #include "gtest/gtest.h"
 #include <list>
 #include <stdarg.h>
+#include <string>
 
 using namespace llvm;
 
@@ -576,6 +577,28 @@ TEST(SmallVectorTest, ResizeForOverwrite) {
     V.pop_back();
     V.resize(V.size() + 1);
     EXPECT_EQ(0U, V.back());
+  }
+}
+
+TEST(SmallVectorTest, ConstructForOverwrite) {
+  {
+    // Heap allocated storage.
+    SmallVector<unsigned, 0> V(3, for_overwrite);
+    EXPECT_EQ(3U, V.size());
+    EXPECT_GE(V.capacity(), 3U);
+  }
+  {
+    // Inline storage.
+    SmallVector<unsigned, 4> V(3, for_overwrite);
+    EXPECT_EQ(3U, V.size());
+    EXPECT_EQ(4U, V.capacity());
+  }
+  {
+    // Class types are default-constructed.
+    SmallVector<std::string, 0> V(2, for_overwrite);
+    EXPECT_EQ(2U, V.size());
+    EXPECT_TRUE(V[0].empty());
+    EXPECT_TRUE(V[1].empty());
   }
 }
 

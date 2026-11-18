@@ -1195,6 +1195,13 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
     if (I.mayHaveSideEffects() || I.mayReadFromMemory())
       continue;
 
+    // Don't sink convergent calls. Not every thread that executes the
+    // preheader necessarily reaches the exit block (e.g. a thread may be
+    // terminated inside the loop), so sinking could change the set of threads
+    // that execute the call together.
+    if (auto *CI = dyn_cast<CallInst>(&I); CI && CI->isConvergent())
+      continue;
+
     // Skip eh pad instructions.
     if (I.isEHPad())
       continue;
@@ -2187,8 +2194,7 @@ PreservedAnalyses IndVarSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
                                           LPMUpdater &) {
   Function *F = L.getHeader()->getParent();
   const DataLayout &DL = F->getDataLayout();
-  const ScalarOptions &Opts =
-      F->getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(*F);
 
   IndVarSimplify IVS(Opts, &AR.LI, &AR.SE, &AR.DT, DL, &AR.TLI, &AR.TTI,
                      AR.MSSA, WidenIndVars && Opts.indvars_widen_indvars);
