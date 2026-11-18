@@ -490,6 +490,68 @@ func.func @_QPexpr_associate(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name 
 
 // -----
 
+// The new buffer reaches the descriptor through the iter_args and the result
+// of a loop.
+
+// CHECK-LABEL: Testing : "_QPloop_carried"
+// CHECK-DAG: n#0 <-> new#0: NoAlias
+// CHECK-DAG: n#0 <-> j.data#0: NoAlias
+// CHECK-DAG: new#0 <-> j.data#0: MayAlias
+
+func.func @_QPloop_carried(%arg0: !fir.ref<!fir.box<!fir.heap<i32>>> {fir.bindc_name = "j"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}) {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFloop_carriedEj") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<i32>>>
+  %2 = fir.declare %arg1 dummy_scope %0 arg 2 uniq_name("_QFloop_carriedEn") {test.ptr = "n"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %3 = fir.allocmem i32 {test.ptr = "new"}
+  %4 = fir.do_loop %arg2 = %c1 to %c2 step %c1 iter_args(%arg3 = %3) -> (!fir.heap<i32>) {
+    %8 = fir.load %2 : !fir.ref<i32>
+    fir.store %8 to %arg3 : !fir.heap<i32>
+    fir.result %arg3 : !fir.heap<i32>
+  }
+  %5 = fir.embox %4 : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
+  fir.store %5 to %1 : !fir.ref<!fir.box<!fir.heap<i32>>>
+  %6 = fir.load %1 : !fir.ref<!fir.box<!fir.heap<i32>>>
+  %7 = fir.box_addr %6 {test.ptr = "j.data"} : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+  return
+}
+
+// -----
+
+// fir.copy accesses the memory of its operands, and does not store their
+// addresses. So the new buffer that is copied into and out of is only the
+// data of j, and the buffer that is only copied into is not the data of any
+// variable.
+
+// CHECK-LABEL: Testing : "_QPcopied"
+// CHECK-DAG: x#0 <-> new#0: NoAlias
+// CHECK-DAG: x#0 <-> j.data#0: NoAlias
+// CHECK-DAG: x#0 <-> tmp#0: NoAlias
+// CHECK-DAG: new#0 <-> j.data#0: MayAlias
+// CHECK-DAG: new#0 <-> tmp#0: NoAlias
+// CHECK-DAG: tmp#0 <-> j.data#0: NoAlias
+
+func.func @_QPcopied(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<2xi32>>>> {fir.bindc_name = "j"}, %arg1: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "x"}) {
+  %c2 = arith.constant 2 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFcopiedEj") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<2xi32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!fir.array<2xi32>>>>
+  %s = fir.shape %c2 : (index) -> !fir.shape<1>
+  %2 = fir.declare %arg1(%s) dummy_scope %0 arg 2 uniq_name("_QFcopiedEx") {test.ptr = "x"} : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<2xi32>>
+  %3 = fir.allocmem !fir.array<2xi32> {test.ptr = "new"}
+  fir.copy %2 to %3 no_overlap : !fir.ref<!fir.array<2xi32>>, !fir.heap<!fir.array<2xi32>>
+  %4 = fir.allocmem !fir.array<2xi32> {test.ptr = "tmp"}
+  fir.copy %3 to %4 no_overlap : !fir.heap<!fir.array<2xi32>>, !fir.heap<!fir.array<2xi32>>
+  %5 = fir.embox %3 : (!fir.heap<!fir.array<2xi32>>) -> !fir.box<!fir.heap<!fir.array<2xi32>>>
+  fir.store %5 to %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<2xi32>>>>
+  %6 = fir.load %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<2xi32>>>>
+  %7 = fir.box_addr %6 {test.ptr = "j.data"} : (!fir.box<!fir.heap<!fir.array<2xi32>>>) -> !fir.heap<!fir.array<2xi32>>
+  fir.freemem %4 : !fir.heap<!fir.array<2xi32>>
+  return
+}
+
+// -----
+
 // The address of the new buffer is stored into a descriptor that is a
 // component of the buffer, so the source of the descriptor depends on the
 // source of the buffer. new.v and self.data.v are the same memory.
