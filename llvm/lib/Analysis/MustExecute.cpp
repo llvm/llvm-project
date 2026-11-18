@@ -22,6 +22,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
+#include <climits>
 
 using namespace llvm;
 
@@ -763,6 +764,38 @@ MustBeExecutedContextExplorer::getBackwardNextBlock(const BasicBlock *BB) {
   if (Inserted)
     It->second = findBackwardJoinPoint(BB);
   return It->second;
+}
+
+bool MustBeExecutedContextExplorer::BlockContext::contains(
+    const BasicBlock *BB) const {
+  if (Contains.empty())
+    return BlockSet.contains(BB);
+  assert(BlockNumberEpoch == BB->getParent()->getBlockNumberEpoch() &&
+         "must-be-executed context used with outdated block numbers");
+  unsigned Number = BB->getNumber();
+  return Number < Contains.size() && Contains.test(Number);
+}
+
+bool MustBeExecutedContextExplorer::BlockContext::insert(const BasicBlock *BB) {
+  if (!Contains.empty()) {
+    if (contains(BB))
+      return false;
+    Contains.set(BB->getNumber());
+    Blocks.push_back(BB);
+    return true;
+  }
+  if (!BlockSet.insert(BB).second)
+    return false;
+  Blocks.push_back(BB);
+  unsigned MaxNumber = BB->getParent()->getMaxBlockNumber();
+  if (Blocks.size() * sizeof(const BasicBlock *) * CHAR_BIT < MaxNumber)
+    return true;
+  BlockNumberEpoch = BB->getParent()->getBlockNumberEpoch();
+  Contains.resize(MaxNumber);
+  for (const BasicBlock *Block : Blocks)
+    Contains.set(Block->getNumber());
+  BlockSet = {};
+  return true;
 }
 
 const MustBeExecutedContextExplorer::BlockContext &

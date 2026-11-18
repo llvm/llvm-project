@@ -32,7 +32,6 @@
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
-#include <climits>
 
 namespace llvm {
 
@@ -549,37 +548,10 @@ private:
     SmallPtrSet<const BasicBlock *, 8> BlockSet;
     const Instruction *LastStop = nullptr;
 
-    bool contains(const BasicBlock *BB) const {
-      if (Contains.empty())
-        return BlockSet.contains(BB);
-      assert(BlockNumberEpoch == BB->getParent()->getBlockNumberEpoch() &&
-             "must-be-executed context used with outdated block numbers");
-      unsigned Number = BB->getNumber();
-      return Number < Contains.size() && Contains.test(Number);
-    }
+    bool contains(const BasicBlock *BB) const;
 
     /// Add \p BB to the context. Return false if it is already in it.
-    bool insert(const BasicBlock *BB) {
-      if (!Contains.empty()) {
-        if (contains(BB))
-          return false;
-        Contains.set(BB->getNumber());
-        Blocks.push_back(BB);
-        return true;
-      }
-      if (!BlockSet.insert(BB).second)
-        return false;
-      Blocks.push_back(BB);
-      unsigned MaxNumber = BB->getParent()->getMaxBlockNumber();
-      if (Blocks.size() * sizeof(const BasicBlock *) * CHAR_BIT < MaxNumber)
-        return true;
-      BlockNumberEpoch = BB->getParent()->getBlockNumberEpoch();
-      Contains.resize(MaxNumber);
-      for (const BasicBlock *Block : Blocks)
-        Contains.set(Block->getNumber());
-      BlockSet = {};
-      return true;
-    }
+    bool insert(const BasicBlock *BB);
   };
 
   /// Map from blocks to the forward context after their terminator.
