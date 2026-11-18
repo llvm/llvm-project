@@ -6404,27 +6404,20 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
 }
 
 namespace {
-/// A load or store of a whole first-class value at [Begin, End) of an alloca.
 struct CopySplitTypedAccess {
   uint64_t Begin;
   uint64_t End;
   Type *Ty;
 };
-/// A piece of a copy that is being split.
 struct CopySplitPiece {
   uint64_t Begin;
   Type *Ty;
 };
 } // end anonymous namespace
 
-/// Upper bound on the number of pieces a copy is split into.
 static constexpr unsigned MaxCopySplitPieces = 8;
-/// Upper bound on the size of a byte-vector piece covering an untyped gap.
 static constexpr uint64_t MaxCopySplitGapBytes = 16;
 
-/// Whether a load or store of \p Ty can be a piece of a split copy: a plain
-/// integer, floating-point or pointer value (or vector of those) that occupies
-/// exactly its store size.
 static bool isCopySplitPieceType(Type *Ty, const DataLayout &DL) {
   Type *ScalarTy = Ty->getScalarType();
   return (ScalarTy->isIntegerTy() || ScalarTy->isFloatingPointTy() ||
@@ -6433,11 +6426,8 @@ static bool isCopySplitPieceType(Type *Ty, const DataLayout &DL) {
          DL.typeSizeEqualsStoreSize(Ty);
 }
 
-/// Collect the accesses of \p AI that are relevant for splitting \p Copy,
-/// whose source is \p Sel. Loads and stores are added to \p Typed, the ranges
-/// of other memory intrinsics to \p Untyped. \p Sel and \p Copy themselves are
-/// skipped. Returns false if \p AI has any use that is not understood, in
-/// particular any use that may let the pointer escape.
+/// Collect the byte ranges accessed through \p AI. Returns false on any use
+/// that is not understood, including escapes.
 static bool collectCopySplitAccesses(
     AllocaInst &AI, const DataLayout &DL, const SelectInst *Sel,
     const MemCpyInst *Copy, SmallVectorImpl<CopySplitTypedAccess> &Typed,
@@ -6462,9 +6452,6 @@ static bool collectCopySplitAccesses(
     for (User *U : V->users()) {
       auto *I = cast<Instruction>(U);
       if (I == Sel || I == Copy) {
-        // The select is only allowed as a direct user of the alloca, and the
-        // copy only as a direct user of its destination; any other route
-        // means an offset the plan does not account for.
         if (V != &AI)
           return false;
         continue;
@@ -6503,32 +6490,12 @@ static bool collectCopySplitAccesses(
   return true;
 }
 
-/// Split `memcpy(Dst, select(C, X, Y), N)`, where X, Y and Dst are allocas
-/// and Dst may be X or Y, into per-piece loads through pointer selects
-/// followed by stores:
-///
-///   %p0 = select i1 %c, ptr %x, ptr %y          ; per piece, at its offset
-///   %v0 = load T0, ptr %p0
-///   ...                                         ; all loads first
-///   store T0 %v0, ptr %dst
-///   ...
-///
-/// The copy itself blocks SROA on X and Y, because a select feeding anything
-/// other than loads and stores is not speculated. When Dst is a separate
-/// alloca, rewriting Dst performs this split as a side effect; when Dst is X
-/// or Y nothing does, and the whole group stays in memory. After this
-/// rewrite, the existing select speculation decides whether X and Y can be
-/// promoted.
-///
-/// Pieces follow the typed accesses of X, Y and Dst, which must not partially
-/// overlap. Bytes covered by no typed access are copied as byte vectors, which
-/// preserve poison per byte. All loads are emitted before any store, so the
-/// rewrite is also correct when the select picks Dst itself.
+/// Split memcpy(Dst, select(C, X, Y), N) over allocas into per-piece loads
+/// through selects followed by stores, so the selects can be speculated.
+/// Nothing else splits the copy when Dst is X or Y.
 bool SROA::splitCopyFromSelect(AllocaInst &AI) {
   const DataLayout &DL = AI.getDataLayout();
 
-  // Collect candidate copies reachable from AI as a select operand or as the
-  // destination.
   SmallSetVector<MemCpyInst *, 4> Candidates;
   auto AddCandidate = [&](User *U) {
     auto *MCI = dyn_cast<MemCpyInst>(U);
@@ -6559,9 +6526,7 @@ bool SROA::splitCopyFromSelect(AllocaInst &AI) {
         Sel->getCondition()->getType() != Type::getInt1Ty(AI.getContext()))
       continue;
 
-    // Each alloca must be fully analyzable and large enough for the copy, so
-    // that every piece pointer is in bounds. Allocas already queued for
-    // promotion must not gain new non-promotable uses.
+    // Promotable allocas must not gain select uses.
     SmallSetVector<AllocaInst *, 3> Allocas;
     Allocas.insert_range(ArrayRef<AllocaInst *>{X, Y, Dst});
     bool Valid = all_of(Allocas, [&](AllocaInst *A) {
@@ -6579,7 +6544,6 @@ bool SROA::splitCopyFromSelect(AllocaInst &AI) {
     if (!Valid)
       continue;
 
-    // Other users of the select read X or Y at offset zero.
     for (User *U : Sel->users()) {
       if (U == Copy)
         continue;
@@ -6594,16 +6558,12 @@ bool SROA::splitCopyFromSelect(AllocaInst &AI) {
     if (!Valid)
       continue;
 
-    // Merge identical typed ranges inside the copy. Accesses with different
-    // types share a range only if none of them is a pointer, in which case an
-    // integer of the same size is used.
     llvm::sort(Typed, [](const CopySplitTypedAccess &A,
                          const CopySplitTypedAccess &B) {
       return std::tie(A.Begin, A.End) < std::tie(B.Begin, B.End);
     });
     SmallVector<CopySplitTypedAccess, 8> Ranges;
     for (const CopySplitTypedAccess &A : Typed) {
-      // A typed access crossing the end of the copy cannot be preserved.
       if (A.Begin < N && A.End > N) {
         Valid = false;
         break;
@@ -6622,7 +6582,6 @@ bool SROA::splitCopyFromSelect(AllocaInst &AI) {
         R.Ty = IntegerType::get(AI.getContext(), (R.End - R.Begin) * 8);
         continue;
       }
-      // Distinct ranges must not overlap.
       if (!Ranges.empty() && A.Begin < Ranges.back().End) {
         Valid = false;
         break;
@@ -6632,7 +6591,6 @@ bool SROA::splitCopyFromSelect(AllocaInst &AI) {
     if (!Valid)
       continue;
 
-    // A memory intrinsic must not write or read part of a typed range.
     auto IsInside = [](uint64_t P, const CopySplitTypedAccess &R) {
       return R.Begin < P && P < R.End;
     };
@@ -6643,7 +6601,7 @@ bool SROA::splitCopyFromSelect(AllocaInst &AI) {
     if (!Valid)
       continue;
 
-    // Build the pieces, covering gaps with byte vectors.
+    // Gaps are copied as byte vectors to keep per-byte poison.
     SmallVector<CopySplitPiece, 8> Pieces;
     Type *I8Ty = Type::getInt8Ty(AI.getContext());
     auto AddGap = [&](uint64_t B, uint64_t E) {
@@ -6686,7 +6644,7 @@ bool SROA::splitCopyFromSelect(AllocaInst &AI) {
         I->setAAMetadata(AATags.adjustForAccess(Off, Ty, DL));
     };
 
-    // Load every piece before storing any, as Dst may be the selected source.
+    // Load all pieces first: Dst may be the selected source.
     SmallVector<Value *, 8> Values;
     for (const CopySplitPiece &P : Pieces) {
       Value *Ptr = IRB.CreateSelect(Sel->getCondition(), PtrAt(X, P.Begin),
@@ -6748,8 +6706,6 @@ SROA::runOnAlloca(AllocaInst &AI) {
   AggLoadStoreRewriter AggRewriter(DL, IRB);
   Changed |= AggRewriter.rewrite(AI);
 
-  // Split copies from a select of allocas so that the select only feeds
-  // loads. The affected allocas are re-queued and analyzed afresh.
   if (splitCopyFromSelect(AI))
     return {true, CFGChanged};
 
