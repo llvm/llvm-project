@@ -265,26 +265,17 @@ std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
     break;
   }
   // ACE internal intrinsics - outer products with ZMM sources
-  // Pattern: (m, n, k, acc_tile, zmm1, zmm2) -> acc_tile += zmm1 * zmm2
+  // Pattern: (m, n, acc_tile, zmm1, zmm2) -> acc_tile += zmm1 * zmm2
+  // The accumulator is the only tile, so it is the only operand a shape can be
+  // asked for; the sources are ZMMs of a fixed size.
   case Intrinsic::x86_acev1_top2bf16ps_internal:
   case Intrinsic::x86_acev1_top4buud_internal:
   case Intrinsic::x86_acev1_top4busd_internal:
   case Intrinsic::x86_acev1_top4bssd_internal:
   case Intrinsic::x86_acev1_top4bsud_internal: {
-    switch (OpNo) {
-    case 3: // Accumulator tile
-      Row = II->getArgOperand(0);
-      Col = II->getArgOperand(1);
-      break;
-    case 4: // ZMM source 1 - doesn't have tile shape, use full dimensions
-      LLVM_FALLTHROUGH;
-    case 5: // ZMM source 2
-      // ZMM sources don't need shape calculation for tile purposes
-      // but if needed: Row = m, Col = k for src1; Row = k/4, Col = n for src2
-      Row = II->getArgOperand(0);
-      Col = II->getArgOperand(2);
-      break;
-    }
+    assert(OpNo == 2 && "Illegal Operand Number.");
+    Row = II->getArgOperand(0);
+    Col = II->getArgOperand(1);
     break;
   }
   // ACE TOP4MX intrinsics - mixed precision with BSR index
@@ -293,18 +284,9 @@ std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
   case Intrinsic::x86_acev1_top4mxhbf8ps_internal:
   case Intrinsic::x86_acev1_top4mxbf8ps_internal:
   case Intrinsic::x86_acev1_top4mxbssps_internal: {
-    switch (OpNo) {
-    case 4: // Accumulator tile
-      Row = II->getArgOperand(0);
-      Col = II->getArgOperand(1);
-      break;
-    case 5: // ZMM source 1
-      LLVM_FALLTHROUGH;
-    case 6: // ZMM source 2
-      Row = II->getArgOperand(0);
-      Col = II->getArgOperand(2);
-      break;
-    }
+    assert(OpNo == 3 && "Illegal Operand Number.");
+    Row = II->getArgOperand(0);
+    Col = II->getArgOperand(1);
     break;
   }
   // ACE TILEMOV intrinsics - move ZMM into one row or column of a tile

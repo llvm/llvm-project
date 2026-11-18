@@ -465,18 +465,18 @@ let Features = "acev1", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
 
 // Outer products - internal (for IR-level operations with tile values).
 let Features = "acev1", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def top2bf16ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Vector<256, int>, _Vector<32, __bf16>, _Vector<32, __bf16>)">;
-  def top4buud_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
-  def top4busd_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
-  def top4bssd_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
-  def top4bsud_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
+  def top2bf16ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, _Vector<256, int>, _Vector<32, __bf16>, _Vector<32, __bf16>)">;
+  def top4buud_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
+  def top4busd_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
+  def top4bssd_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
+  def top4bsud_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
 }
 
 // Mixed precision internal.
 let Features = "acev1", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def top4mxhf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
-  def top4mxbhf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
-  def top4mxhbf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
-  def top4mxbf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
-  def top4mxbssps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
+  def top4mxhf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
+  def top4mxbhf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
+  def top4mxhbf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
+  def top4mxbf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
+  def top4mxbssps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned char, _Vector<256, int>, _Vector<64, char>, _Vector<64, char>)">;
 }

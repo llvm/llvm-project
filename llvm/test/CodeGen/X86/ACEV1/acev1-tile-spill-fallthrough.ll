@@ -19,11 +19,11 @@ entry:
   br i1 %c, label %then, label %else
 
 then:
-  %d1 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %z, <32 x bfloat> %a, <32 x bfloat> %b)
+  %d1 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, x86_amx %z, <32 x bfloat> %a, <32 x bfloat> %b)
   br label %merge
 
 else:
-  %d2 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64, x86_amx %z, <32 x bfloat> %b, <32 x bfloat> %a)
+  %d2 = call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, x86_amx %z, <32 x bfloat> %b, <32 x bfloat> %a)
   br label %merge
 
 merge:
@@ -34,5 +34,5 @@ merge:
 }
 
 declare x86_amx @llvm.x86.acev1.tilezero.internal(i16, i16)
-declare x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16, i16, i16, x86_amx, <32 x bfloat>, <32 x bfloat>)
+declare x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16, i16, x86_amx, <32 x bfloat>, <32 x bfloat>)
 declare <16 x i32> @llvm.x86.acev1.tilemovrowextract.internal(i16, i16, x86_amx, i32)

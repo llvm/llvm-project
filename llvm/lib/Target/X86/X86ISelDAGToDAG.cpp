@@ -5554,6 +5554,60 @@ bool X86DAGToDAGISel::tryMatchBitSelect(SDNode *N) {
                         Ternlog.getNode(), A, B, C, 0xCA);
 }
 
+// Record which programming model the function drives its ACE tiles with, for
+// the tile configuration passes. The AMX intrinsics do the same below.
+static void recordACEProgModel(SelectionDAG *DAG, unsigned IntNo) {
+  ACEProgModelEnum Model;
+  switch (IntNo) {
+  default:
+    return;
+  case Intrinsic::x86_acev1_tilezero:
+  case Intrinsic::x86_acev1_tilemovrowextract:
+  case Intrinsic::x86_acev1_tcvtrowd2ps:
+  case Intrinsic::x86_acev1_tcvtrowps2bf16h:
+  case Intrinsic::x86_acev1_tcvtrowps2bf16l:
+  case Intrinsic::x86_acev1_tcvtrowps2phh:
+  case Intrinsic::x86_acev1_tcvtrowps2phl:
+  // The row and column inserts are custom lowered, so they never get here and
+  // record their model in LowerINTRINSIC_W_CHAIN instead.
+  case Intrinsic::x86_acev1_top2bf16ps:
+  case Intrinsic::x86_acev1_top4buud:
+  case Intrinsic::x86_acev1_top4busd:
+  case Intrinsic::x86_acev1_top4bssd:
+  case Intrinsic::x86_acev1_top4bsud:
+  case Intrinsic::x86_acev1_top4mxhf8ps:
+  case Intrinsic::x86_acev1_top4mxbhf8ps:
+  case Intrinsic::x86_acev1_top4mxhbf8ps:
+  case Intrinsic::x86_acev1_top4mxbf8ps:
+  case Intrinsic::x86_acev1_top4mxbssps:
+    Model = ACEProgModelEnum::ACE_DirectReg;
+    break;
+  case Intrinsic::x86_acev1_tilezero_internal:
+  case Intrinsic::x86_acev1_tilemovrowextract_internal:
+  case Intrinsic::x86_acev1_tcvtrowd2ps_internal:
+  case Intrinsic::x86_acev1_tcvtrowps2bf16h_internal:
+  case Intrinsic::x86_acev1_tcvtrowps2bf16l_internal:
+  case Intrinsic::x86_acev1_tcvtrowps2phh_internal:
+  case Intrinsic::x86_acev1_tcvtrowps2phl_internal:
+  case Intrinsic::x86_acev1_tilemovcolinsert_internal:
+  case Intrinsic::x86_acev1_tilemovrowinsert_internal:
+  case Intrinsic::x86_acev1_top2bf16ps_internal:
+  case Intrinsic::x86_acev1_top4buud_internal:
+  case Intrinsic::x86_acev1_top4busd_internal:
+  case Intrinsic::x86_acev1_top4bssd_internal:
+  case Intrinsic::x86_acev1_top4bsud_internal:
+  case Intrinsic::x86_acev1_top4mxhf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxbhf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxhbf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxbf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxbssps_internal:
+    Model = ACEProgModelEnum::ACE_ManagedRA;
+    break;
+  }
+  MachineFunction &MF = DAG->getMachineFunction();
+  MF.getInfo<X86MachineFunctionInfo>()->setACEProgModel(&MF, Model);
+}
+
 void X86DAGToDAGISel::Select(SDNode *Node) {
   MVT NVT = Node->getSimpleValueType(0);
   unsigned Opcode = Node->getOpcode();
@@ -5569,6 +5623,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   default: break;
   case ISD::INTRINSIC_W_CHAIN: {
     unsigned IntNo = Node->getConstantOperandVal(1);
+    recordACEProgModel(CurDAG, IntNo);
     switch (IntNo) {
     default: break;
     case Intrinsic::x86_encodekey128:
@@ -5654,6 +5709,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::INTRINSIC_VOID: {
     unsigned IntNo = Node->getConstantOperandVal(1);
+    recordACEProgModel(CurDAG, IntNo);
     switch (IntNo) {
     default: break;
     case Intrinsic::x86_sse3_monitor:

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +acev1 \
 // RUN: -target-feature +avx10.1 -fsyntax-only -verify
+// RUN: %clang_cc1 -x c++ %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +acev1 \
+// RUN: -target-feature +avx10.1 -fsyntax-only -verify
 
 // Tests compile-time semantic errors for ACE v1 intrinsics
 
@@ -38,6 +40,31 @@ void test_tile_range_errors(__m512bh bf, __m512i i) {
   _tile_ace_cvtrowh_ps_ph(8, 0);    // expected-error {{argument value 8 is outside the valid range [0, 7]}}
   _tile_ace_cvtrowl_ps_ph(8, 0);    // expected-error {{argument value 8 is outside the valid range [0, 7]}}
   _tile_ace_extractrow(8, 0);       // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+}
+
+void test_row_index_range(__m512i i, unsigned idx) {
+  // Only the low four bits of the index name a row, so one past the last row
+  // is as wrong as a wildly large index.
+  _tile_insertcol(0, i, 16);  // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  _tile_insertrow(0, i, 999); // expected-error {{argument value 999 is outside the valid range [0, 15]}}
+  _tile_ace_extractrow(0, 300);      // expected-error {{argument value 300 is outside the valid range [0, 15]}}
+  // The index parameter is unsigned, so a negative one is reported as the
+  // value it converts to.
+  _tile_ace_cvtrow_epi32_ps(0, -1);  // expected-error {{argument value 4294967295 is outside the valid range [0, 15]}}
+  _tile_ace_cvtrowh_ps_pbh(0, 20);   // expected-error {{argument value 20 is outside the valid range [0, 15]}}
+  _tile_ace_cvtrowl_ps_pbh(0, 256);  // expected-error {{argument value 256 is outside the valid range [0, 15]}}
+  _tile_ace_cvtrowh_ps_ph(0, 256);   // expected-error {{argument value 256 is outside the valid range [0, 15]}}
+  _tile_ace_cvtrowl_ps_ph(0, 256);   // expected-error {{argument value 256 is outside the valid range [0, 15]}}
+
+  // An index is folded before it is checked.
+  _tile_ace_extractrow(0, 8 + 8); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+
+  // An index that is in range, or not known at all, has to stay silent.
+  _tile_insertrow(0, i, 15);
+  _tile_insertrow(0, i, idx);
+  _tile_ace_extractrow(0, 0);
+  _tile_ace_extractrow(0, idx);
+  _tile_ace_extractrow(0, 2 * 7);
 }
 
 void test_tile_id_constness(__m512bh bf, __m512i i) {
@@ -118,3 +145,15 @@ void test_scale_group_helpers(__m512i i) {
   _tile_op4mxbf8_ps(0, i, i, _MM_ACE_SCALE_A(4)); // expected-error {{scale group argument must have bits 2, 5, 6, and 7 clear}}
   _tile_op4mxbf8_ps(0, i, i, _MM_ACE_SCALE_B(4)); // expected-error {{scale group argument must have bits 2, 5, 6, and 7 clear}}
 }
+
+#ifdef __cplusplus
+// A dependent index is only known once the template is instantiated.
+template <int N> void test_dependent_row_index() {
+  _tile_ace_extractrow(0, N); // expected-error {{argument value 999 is outside the valid range [0, 15]}}
+}
+
+void test_dependent_row_index_instantiations() {
+  test_dependent_row_index<999>(); // expected-note {{in instantiation of function template specialization 'test_dependent_row_index<999>' requested here}}
+  test_dependent_row_index<15>();
+}
+#endif

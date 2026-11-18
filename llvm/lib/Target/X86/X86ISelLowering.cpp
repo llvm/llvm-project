@@ -28871,6 +28871,10 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
     // the appropriate instruction form.
     case Intrinsic::x86_acev1_tilemovrowinsert:
     case Intrinsic::x86_acev1_tilemovcolinsert: {
+      // Select() never sees these, so record the program model here.
+      MachineFunction &MF = DAG.getMachineFunction();
+      MF.getInfo<X86MachineFunctionInfo>()->setACEProgModel(
+          &MF, ACEProgModelEnum::ACE_DirectReg);
       SDLoc DL(Op);
       SDValue Chain = Op.getOperand(0);
       unsigned TileID = Op.getConstantOperandVal(2);
@@ -28893,7 +28897,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
         Node = DAG.getMachineNode(
             PseudoImm, DL, MVT::Other,
             {DAG.getTargetConstant(TileID, DL, MVT::i8), Src,
-             DAG.getTargetConstant(CIdx->getZExtValue(), DL, MVT::i8), Chain});
+             DAG.getTargetConstant(CIdx->getZExtValue(), DL, MVT::i32), Chain});
       } else {
         // Use register form
         Node = DAG.getMachineNode(
@@ -39268,135 +39272,12 @@ X86TargetLowering::emitPatchableEventCall(MachineInstr &MI,
   return BB;
 }
 
-// Helper enum and table for centralized tile program model handling
-namespace {
-enum class TileProgModelType {
-  None,          // Not a tile instruction
-  ACE_DirectReg, // ACE-spelled, sets ACEProgModel to DirectReg
-  ACE_ManagedRA, // ACE-spelled, sets ACEProgModel to ManagedRA
-  AMX_DirectReg, // AMX-spelled, sets AMXProgModel to DirectReg
-  AMX_ManagedRA, // AMX-spelled, sets AMXProgModel to ManagedRA
-};
-
-struct TileOpcodeModelEntry {
-  unsigned Opcode;
-  TileProgModelType ModelType;
-};
-
-// Centralized table mapping tile opcodes to their program model type
-static const TileOpcodeModelEntry TileOpcodeModels[] = {
-    // AMX DirectReg (macro API)
-    {X86::PTILEZERO, TileProgModelType::AMX_DirectReg},
-    {X86::PTCVTROWPS2BF16Hrti, TileProgModelType::AMX_DirectReg},
-    {X86::PTCVTROWPS2BF16Lrti, TileProgModelType::AMX_DirectReg},
-    {X86::PTCVTROWPS2PHHrti, TileProgModelType::AMX_DirectReg},
-    {X86::PTCVTROWPS2PHLrti, TileProgModelType::AMX_DirectReg},
-    {X86::PTCVTROWD2PSrti, TileProgModelType::AMX_DirectReg},
-    {X86::PTILEMOVROWrti, TileProgModelType::AMX_DirectReg},
-    {X86::PTCVTROWPS2BF16Hrte, TileProgModelType::AMX_DirectReg},
-    {X86::PTCVTROWPS2BF16Lrte, TileProgModelType::AMX_DirectReg},
-    {X86::PTCVTROWPS2PHHrte, TileProgModelType::AMX_DirectReg},
-    {X86::PTCVTROWPS2PHLrte, TileProgModelType::AMX_DirectReg},
-    {X86::PTCVTROWD2PSrte, TileProgModelType::AMX_DirectReg},
-    {X86::PTILEMOVROWrte, TileProgModelType::AMX_DirectReg},
-
-    // AMX ManagedRA (struct API)
-    {X86::PTILEZEROV, TileProgModelType::AMX_ManagedRA},
-
-    // ACE DirectReg (macro API)
-    {X86::ACE_PTILEZERO, TileProgModelType::ACE_DirectReg},
-    {X86::ACE_PTCVTROWPS2BF16Hrte, TileProgModelType::ACE_DirectReg},
-    {X86::ACE_PTCVTROWPS2BF16Lrte, TileProgModelType::ACE_DirectReg},
-    {X86::ACE_PTCVTROWPS2PHHrte, TileProgModelType::ACE_DirectReg},
-    {X86::ACE_PTCVTROWPS2PHLrte, TileProgModelType::ACE_DirectReg},
-    {X86::ACE_PTCVTROWD2PSrte, TileProgModelType::ACE_DirectReg},
-    {X86::ACE_PTILEMOVROWrte, TileProgModelType::ACE_DirectReg},
-    {X86::ACE_PTCVTROWD2PSrti, TileProgModelType::ACE_DirectReg},
-    {X86::ACE_PTCVTROWPS2BF16Hrti, TileProgModelType::ACE_DirectReg},
-    {X86::ACE_PTCVTROWPS2BF16Lrti, TileProgModelType::ACE_DirectReg},
-    {X86::ACE_PTCVTROWPS2PHHrti, TileProgModelType::ACE_DirectReg},
-    {X86::ACE_PTCVTROWPS2PHLrti, TileProgModelType::ACE_DirectReg},
-    {X86::ACE_PTILEMOVROWrti, TileProgModelType::ACE_DirectReg},
-    {X86::PTILEMOVCOLtri, TileProgModelType::ACE_DirectReg},
-    {X86::PTILEMOVCOLtre, TileProgModelType::ACE_DirectReg},
-    {X86::PTILEMOVROWtri, TileProgModelType::ACE_DirectReg},
-    {X86::PTILEMOVROWtre, TileProgModelType::ACE_DirectReg},
-    {X86::PTOP2BF16PStrr, TileProgModelType::ACE_DirectReg},
-    {X86::PTOP4BUUDtrr, TileProgModelType::ACE_DirectReg},
-    {X86::PTOP4BUSDtrr, TileProgModelType::ACE_DirectReg},
-    {X86::PTOP4BSSDtrr, TileProgModelType::ACE_DirectReg},
-    {X86::PTOP4BSUDtrr, TileProgModelType::ACE_DirectReg},
-    {X86::PTOP4MXHF8PStrri, TileProgModelType::ACE_DirectReg},
-    {X86::PTOP4MXBHF8PStrri, TileProgModelType::ACE_DirectReg},
-    {X86::PTOP4MXHBF8PStrri, TileProgModelType::ACE_DirectReg},
-    {X86::PTOP4MXBF8PStrri, TileProgModelType::ACE_DirectReg},
-    {X86::PTOP4MXBSSPStrri, TileProgModelType::ACE_DirectReg},
-
-    // ACE ManagedRA (struct API)
-    {X86::ACE_PTILEZEROV, TileProgModelType::ACE_ManagedRA},
-    {X86::ACE_PTCVTROWPS2BF16HrtiV, TileProgModelType::ACE_ManagedRA},
-    {X86::ACE_PTCVTROWPS2BF16LrtiV, TileProgModelType::ACE_ManagedRA},
-    {X86::ACE_PTCVTROWPS2PHHrtiV, TileProgModelType::ACE_ManagedRA},
-    {X86::ACE_PTCVTROWPS2PHLrtiV, TileProgModelType::ACE_ManagedRA},
-    {X86::ACE_PTCVTROWD2PSrtiV, TileProgModelType::ACE_ManagedRA},
-    {X86::ACE_PTILEMOVROWrtiV, TileProgModelType::ACE_ManagedRA},
-    {X86::ACE_PTCVTROWPS2BF16HrteV, TileProgModelType::ACE_ManagedRA},
-    {X86::ACE_PTCVTROWPS2BF16LrteV, TileProgModelType::ACE_ManagedRA},
-    {X86::ACE_PTCVTROWPS2PHHrteV, TileProgModelType::ACE_ManagedRA},
-    {X86::ACE_PTCVTROWPS2PHLrteV, TileProgModelType::ACE_ManagedRA},
-    {X86::ACE_PTCVTROWD2PSrteV, TileProgModelType::ACE_ManagedRA},
-    {X86::ACE_PTILEMOVROWrteV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTILEMOVCOLtreV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTILEMOVROWtreV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTOP2BF16PStrrV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTOP4BUUDtrrV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTOP4BUSDtrrV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTOP4BSSDtrrV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTOP4BSUDtrrV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTOP4MXHF8PStrriV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTOP4MXBHF8PStrriV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTOP4MXHBF8PStrriV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTOP4MXBF8PStrriV, TileProgModelType::ACE_ManagedRA},
-    {X86::PTOP4MXBSSPStrriV, TileProgModelType::ACE_ManagedRA},
-};
-
-// Set tile program model based on opcode. Returns true if model was set.
-static bool setTileProgModelForOpcode(unsigned Opcode,
-                                      X86MachineFunctionInfo *MFI) {
-  for (const auto &Entry : TileOpcodeModels) {
-    if (Entry.Opcode == Opcode) {
-      switch (Entry.ModelType) {
-      case TileProgModelType::None:
-        return false;
-      case TileProgModelType::ACE_DirectReg:
-        MFI->setACEProgModel(ACEProgModelEnum::ACE_DirectReg);
-        return true;
-      case TileProgModelType::ACE_ManagedRA:
-        MFI->setACEProgModel(ACEProgModelEnum::ACE_ManagedRA);
-        return true;
-      case TileProgModelType::AMX_DirectReg:
-        MFI->setAMXProgModel(AMXProgModelEnum::DirectReg);
-        return true;
-      case TileProgModelType::AMX_ManagedRA:
-        MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
-        return true;
-      }
-    }
-  }
-  return false;
-}
-} // anonymous namespace
-
 MachineBasicBlock *
 X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *BB) const {
   MachineFunction *MF = BB->getParent();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   const MIMetadata MIMD(MI);
-
-  // Centralized tile program model handling
-  auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
-  setTileProgModelForOpcode(MI.getOpcode(), MFI);
 
   auto TMMImmToTMMReg = [](unsigned Imm) {
     assert (Imm < 8 && "Illegal tmm index");
@@ -39816,14 +39697,19 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent(); // The pseudo is gone now.
     return BB;
   }
-  case X86::PTILEZERO:
-  case X86::ACE_PTILEZERO: {
+  case X86::PTILEZERO: {
     unsigned Imm = MI.getOperand(0).getImm();
     BuildMI(*BB, MI, MIMD, TII->get(X86::TILEZERO), TMMImmToTMMReg(Imm));
-    MI.eraseFromParent();
+    MI.eraseFromParent(); // The pseudo is gone now.
+    auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
+    MFI->setAMXProgModel(AMXProgModelEnum::DirectReg);
     return BB;
   }
-  case X86::PTILEZEROV:
+  case X86::PTILEZEROV: {
+    auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
+    MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
+    return BB;
+  }
   case X86::PTILEMOVCOLtreV:
   case X86::PTILEMOVROWtreV:
   case X86::PTOP2BF16PStrrV:
@@ -39997,6 +39883,13 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return BB;
   }
   // ACE pseudo instruction expansion
+  case X86::ACE_PTILEZERO: {
+    // Like PTILEZERO, but the program model is recorded during selection.
+    unsigned Imm = MI.getOperand(0).getImm();
+    BuildMI(*BB, MI, MIMD, TII->get(X86::TILEZERO), TMMImmToTMMReg(Imm));
+    MI.eraseFromParent(); // The pseudo is gone now.
+    return BB;
+  }
   case X86::PBSRINIT: {
     BuildMI(*BB, MI, MIMD, TII->get(X86::BSRINIT));
     MI.eraseFromParent();
@@ -40106,7 +39999,6 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       Opc = X86::TOP4MXBSSPStrri;
       break;
     }
-    // These instructions: TILE dst (rw), ZMM src1, ZMM src2, imm8
     unsigned DstReg = TMMImmToTMMReg(MI.getOperand(0).getImm());
     unsigned Imm = MI.getOperand(3).getImm();
     BuildMI(*BB, MI, MIMD, TII->get(Opc), DstReg)

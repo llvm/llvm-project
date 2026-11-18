@@ -240,7 +240,7 @@ define void @test_top4bsud(<64 x i8> %a, <64 x i8> %b) {
 define void @test_top4mxhf8ps(<64 x i8> %a, <64 x i8> %b) {
 ; CHECK-LABEL: test_top4mxhf8ps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    top4mxhf8ps $5, %zmm0, %zmm1, %tmm0 # encoding: [0x62,0xf3,0x7d,0x48,0x8d,0xc1,0x05]
+; CHECK-NEXT:    top4mxhf8ps $5, %zmm1, %zmm0, %tmm0 # encoding: [0x62,0xf3,0x75,0x48,0x8d,0xc0,0x05]
 ; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   call void @llvm.x86.acev1.top4mxhf8ps(i8 0, <64 x i8> %a, <64 x i8> %b, i8 5)
@@ -251,7 +251,7 @@ define void @test_top4mxhf8ps(<64 x i8> %a, <64 x i8> %b) {
 define void @test_top4mxbhf8ps(<64 x i8> %a, <64 x i8> %b) {
 ; CHECK-LABEL: test_top4mxbhf8ps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    top4mxbhf8ps $5, %zmm0, %zmm1, %tmm0 # encoding: [0x62,0xf3,0x7f,0x48,0x8d,0xc1,0x05]
+; CHECK-NEXT:    top4mxbhf8ps $5, %zmm1, %zmm0, %tmm0 # encoding: [0x62,0xf3,0x77,0x48,0x8d,0xc0,0x05]
 ; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   call void @llvm.x86.acev1.top4mxbhf8ps(i8 0, <64 x i8> %a, <64 x i8> %b, i8 5)
@@ -262,7 +262,7 @@ define void @test_top4mxbhf8ps(<64 x i8> %a, <64 x i8> %b) {
 define void @test_top4mxhbf8ps(<64 x i8> %a, <64 x i8> %b) {
 ; CHECK-LABEL: test_top4mxhbf8ps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    top4mxhbf8ps $5, %zmm0, %zmm1, %tmm0 # encoding: [0x62,0xf3,0x7e,0x48,0x8d,0xc1,0x05]
+; CHECK-NEXT:    top4mxhbf8ps $5, %zmm1, %zmm0, %tmm0 # encoding: [0x62,0xf3,0x76,0x48,0x8d,0xc0,0x05]
 ; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   call void @llvm.x86.acev1.top4mxhbf8ps(i8 0, <64 x i8> %a, <64 x i8> %b, i8 5)
@@ -273,7 +273,7 @@ define void @test_top4mxhbf8ps(<64 x i8> %a, <64 x i8> %b) {
 define void @test_top4mxbf8ps(<64 x i8> %a, <64 x i8> %b) {
 ; CHECK-LABEL: test_top4mxbf8ps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    top4mxbf8ps $5, %zmm0, %zmm1, %tmm0 # encoding: [0x62,0xf3,0x7c,0x48,0x8d,0xc1,0x05]
+; CHECK-NEXT:    top4mxbf8ps $5, %zmm1, %zmm0, %tmm0 # encoding: [0x62,0xf3,0x74,0x48,0x8d,0xc0,0x05]
 ; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   call void @llvm.x86.acev1.top4mxbf8ps(i8 0, <64 x i8> %a, <64 x i8> %b, i8 5)
@@ -284,7 +284,7 @@ define void @test_top4mxbf8ps(<64 x i8> %a, <64 x i8> %b) {
 define void @test_top4mxbssps(<64 x i8> %a, <64 x i8> %b) {
 ; CHECK-LABEL: test_top4mxbssps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    top4mxbssps $5, %zmm0, %zmm1, %tmm0 # encoding: [0x62,0xf3,0x7f,0x48,0x8f,0xc1,0x05]
+; CHECK-NEXT:    top4mxbssps $5, %zmm1, %zmm0, %tmm0 # encoding: [0x62,0xf3,0x77,0x48,0x8f,0xc0,0x05]
 ; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   call void @llvm.x86.acev1.top4mxbssps(i8 0, <64 x i8> %a, <64 x i8> %b, i8 5)
@@ -354,6 +354,37 @@ define <16 x i32> @test_tilemovrowextract_imm() {
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <16 x i32> @llvm.x86.acev1.tilemovrowextract(i8 2, i32 5)
   ret <16 x i32> %res
+}
+
+; An out-of-range index truncates to the eight bits the immediate encodes, as it
+; does for AMX. Only its low four bits name the row, so 999 still selects row 7.
+define <16 x i32> @test_tilemovrowextract_imm_truncates() {
+; CHECK-LABEL: test_tilemovrowextract_imm_truncates:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    tilemovrow $231, %tmm2, %zmm0 # encoding: [0x62,0xf3,0x7d,0x48,0x07,0xc2,0xe7]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %res = call <16 x i32> @llvm.x86.acev1.tilemovrowextract(i8 2, i32 999)
+  ret <16 x i32> %res
+}
+
+define void @test_tilemovrowinsert_imm_truncates(<16 x i32> %src) {
+; CHECK-LABEL: test_tilemovrowinsert_imm_truncates:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    tilemovrow $231, %zmm0, %tmm1 # encoding: [0x62,0xf3,0xfd,0x48,0x07,0xc8,0xe7]
+; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  call void @llvm.x86.acev1.tilemovrowinsert(i8 1, <16 x i32> %src, i32 999)
+  ret void
+}
+
+define void @test_tilemovcolinsert_imm_truncates(<16 x i32> %src) {
+; CHECK-LABEL: test_tilemovcolinsert_imm_truncates:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    tilemovcol $231, %zmm0, %tmm1 # encoding: [0x62,0xf3,0xfd,0x48,0x2f,0xc8,0xe7]
+; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  call void @llvm.x86.acev1.tilemovcolinsert(i8 1, <16 x i32> %src, i32 999)
+  ret void
 }
 
 ; Test TCVTROWD2PS reading a row and converting int32 to FP32. The ACE spelling

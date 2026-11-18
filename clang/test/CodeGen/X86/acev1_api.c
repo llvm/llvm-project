@@ -19,7 +19,7 @@ void test_tile_ace_zero(__acetile *dst) {
 void test_tile_ace_top4buud(__acetile *dst, __m512i src1, __m512i src2) {
   // CHECK-LABEL: @test_tile_ace_top4buud
   // CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
-  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4buud.internal(i16 16, i16 64, i16 64,
+  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4buud.internal(i16 16, i16 64,
   // CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_ace_top4buud(dst, src1, src2);
 }
@@ -28,7 +28,7 @@ void test_tile_ace_top4buud(__acetile *dst, __m512i src1, __m512i src2) {
 void test_tile_ace_top4busd(__acetile *dst, __m512i src1, __m512i src2) {
   // CHECK-LABEL: @test_tile_ace_top4busd
   // CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
-  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4busd.internal(i16 16, i16 64, i16 64,
+  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4busd.internal(i16 16, i16 64,
   // CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_ace_top4busd(dst, src1, src2);
 }
@@ -37,7 +37,7 @@ void test_tile_ace_top4busd(__acetile *dst, __m512i src1, __m512i src2) {
 void test_tile_ace_top4bssd(__acetile *dst, __m512i src1, __m512i src2) {
   // CHECK-LABEL: @test_tile_ace_top4bssd
   // CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
-  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4bssd.internal(i16 16, i16 64, i16 64,
+  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4bssd.internal(i16 16, i16 64,
   // CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_ace_top4bssd(dst, src1, src2);
 }
@@ -46,7 +46,7 @@ void test_tile_ace_top4bssd(__acetile *dst, __m512i src1, __m512i src2) {
 void test_tile_ace_top4bsud(__acetile *dst, __m512i src1, __m512i src2) {
   // CHECK-LABEL: @test_tile_ace_top4bsud
   // CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
-  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4bsud.internal(i16 16, i16 64, i16 64,
+  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4bsud.internal(i16 16, i16 64,
   // CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_ace_top4bsud(dst, src1, src2);
 }
@@ -55,7 +55,7 @@ void test_tile_ace_top4bsud(__acetile *dst, __m512i src1, __m512i src2) {
 void test_tile_ace_top2bf16ps(__acetile *dst, __m512bh src1, __m512bh src2) {
   // CHECK-LABEL: @test_tile_ace_top2bf16ps
   // CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
-  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64, i16 64,
+  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top2bf16ps.internal(i16 16, i16 64,
   // CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_ace_top2bf16ps(dst, src1, src2);
 }
@@ -64,7 +64,7 @@ void test_tile_ace_top2bf16ps(__acetile *dst, __m512bh src1, __m512bh src2) {
 void test_tile_ace_top4mxhf8ps(__acetile *dst, __m512i src1, __m512i src2) {
   // CHECK-LABEL: @test_tile_ace_top4mxhf8ps
   // CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
-  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4mxhf8ps.internal(i16 16, i16 64, i16 64, i8 5
+  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4mxhf8ps.internal(i16 16, i16 64, i8 5
   // CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_ace_top4mxhf8ps(dst, src1, src2, 5);
 }
@@ -73,7 +73,7 @@ void test_tile_ace_top4mxhf8ps(__acetile *dst, __m512i src1, __m512i src2) {
 void test_tile_ace_top4mxbhf8ps(__acetile *dst, __m512i src1, __m512i src2) {
   // CHECK-LABEL: @test_tile_ace_top4mxbhf8ps
   // CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
-  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4mxbhf8ps.internal(i16 16, i16 64, i16 64, i8 3
+  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4mxbhf8ps.internal(i16 16, i16 64, i8 3
   // CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_ace_top4mxbhf8ps(dst, src1, src2, 3);
 }
@@ -82,7 +82,7 @@ void test_tile_ace_top4mxbhf8ps(__acetile *dst, __m512i src1, __m512i src2) {
 void test_tile_ace_top4mxhbf8ps(__acetile *dst, __m512i src1, __m512i src2) {
   // CHECK-LABEL: @test_tile_ace_top4mxhbf8ps
   // CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
-  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4mxhbf8ps.internal(i16 16, i16 64, i16 64, i8 7
+  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4mxhbf8ps.internal(i16 16, i16 64, i8 7
   // CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_ace_top4mxhbf8ps(dst, src1, src2, 7);
 }
@@ -91,7 +91,7 @@ void test_tile_ace_top4mxhbf8ps(__acetile *dst, __m512i src1, __m512i src2) {
 void test_tile_ace_top4mxbf8ps(__acetile *dst, __m512i src1, __m512i src2) {
   // CHECK-LABEL: @test_tile_ace_top4mxbf8ps
   // CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
-  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4mxbf8ps.internal(i16 16, i16 64, i16 64, i8 1
+  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4mxbf8ps.internal(i16 16, i16 64, i8 1
   // CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_ace_top4mxbf8ps(dst, src1, src2, 1);
 }
@@ -100,7 +100,7 @@ void test_tile_ace_top4mxbf8ps(__acetile *dst, __m512i src1, __m512i src2) {
 void test_tile_ace_top4mxbssps(__acetile *dst, __m512i src1, __m512i src2) {
   // CHECK-LABEL: @test_tile_ace_top4mxbssps
   // CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
-  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4mxbssps.internal(i16 16, i16 64, i16 64, i8 9
+  // CHECK-DAG: call x86_amx @llvm.x86.acev1.top4mxbssps.internal(i16 16, i16 64, i8 9
   // CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_ace_top4mxbssps(dst, src1, src2, 9);
 }

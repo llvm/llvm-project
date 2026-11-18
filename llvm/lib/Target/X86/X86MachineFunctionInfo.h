@@ -275,12 +275,9 @@ public:
   }
 
   ACEProgModelEnum getACEProgModel() const { return ACEProgModel; }
-  void setACEProgModel(ACEProgModelEnum Model) {
-    assert(
-        (ACEProgModel == ACEProgModelEnum::ACE_None || ACEProgModel == Model) &&
-        "mixed ACE model is not supported");
-    ACEProgModel = Model;
-  }
+  /// Record the ACE programming model of \p MF, reporting an error if it
+  /// already uses the other one.
+  void setACEProgModel(const MachineFunction *MF, ACEProgModelEnum Model);
 
   SmallVectorImpl<ForwardedRegister> &getForwardedMustTailRegParms() {
     return ForwardedMustTailRegParms;

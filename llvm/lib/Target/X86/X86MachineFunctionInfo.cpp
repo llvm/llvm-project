@@ -10,6 +10,7 @@
 #include "X86RegisterInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 
 using namespace llvm;
 
@@ -36,6 +37,20 @@ void X86MachineFunctionInfo::initializeBaseYamlFields(
 }
 
 void X86MachineFunctionInfo::anchor() { }
+
+void X86MachineFunctionInfo::setACEProgModel(const MachineFunction *MF,
+                                             ACEProgModelEnum Model) {
+  // The two models need different configurations of the same tiles, so report
+  // a function using both rather than honour whichever model came last.
+  if (ACEProgModel != ACEProgModelEnum::ACE_None && ACEProgModel != Model) {
+    const Function &F = MF->getFunction();
+    F.getContext().diagnose(DiagnosticInfoUnsupported(
+        F, "ACE tile operations mix the macro and the managed programming "
+           "model; a function can use only one of them"));
+    return;
+  }
+  ACEProgModel = Model;
+}
 
 void X86MachineFunctionInfo::setRestoreBasePointer(const MachineFunction *MF) {
   if (!RestoreBasePointerOffset) {
