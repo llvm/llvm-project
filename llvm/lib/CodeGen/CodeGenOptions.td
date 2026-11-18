@@ -28,13 +28,15 @@ defm : OptionalBoolField<"branch-folder-hoist-common-code",
   "Override common-code hoisting in the BranchFolding pass">;
 defm : OptionalBoolField<"branch-folder-reorder-blocks",
   "Override basic-block reordering in the BranchFolding pass">;
-defm : OptionalBoolField<"enable-tail-merge", "">;
+defm : OptionalBoolField<"tail-merge", "">;
 // Heuristic for tail merging (and, inversely, tail duplication).
 defm : OptionalValueField<"tail-merge-size", "unsigned",
   "Min number of instructions to consider tail merging">;
 // Throttle for huge numbers of predecessors (compile speed problems)
 defm : ValueField<"tail-merge-threshold", "unsigned", "150",
   "Max number of predecessors to consider tail merging">;
+// TODO: Remove the old spelling after 2027-05.
+def : AliasOf<"enable-tail-merge", "tail-merge">;
 
 // CodeGenPrepare.cpp
 defm : BoolField<"bbsections-guided-section-prefix", "true",
@@ -183,8 +185,10 @@ defm : BoolField<"machine-combiner-verify-pattern-order", "MachineCombinerVerify
   "Verify that the generated patterns are ordered by increasing latency">;
 
 // MachineCopyPropagation.cpp
-defm : OptionalBoolField<"enable-spill-copy-elim", "">;
+defm : OptionalBoolField<"mcp-spill-copy-elim", "">;
 defm : BoolField<"mcp-use-is-copy-instr", "false", "">;
+// TODO: Remove the old spelling after 2027-05.
+def : AliasOf<"enable-spill-copy-elim", "mcp-spill-copy-elim">;
 
 // MachineLICM.cpp
 defm : BoolField<"machine-licm-avoid-speculation", "true",
@@ -314,10 +318,14 @@ defm : ValueField<"select-opti-loop-relative-gain-threshold", "unsigned", "8",
 def : AliasOf<"disable-loop-level-heuristics", "select-opti-loop-level-heuristics=false">;
 
 // ShrinkWrap.cpp
-defm : OptionalBoolField<"enable-shrink-wrap",
+defm : OptionalBoolField<"shrink-wrap",
   "Enable the shrink-wrapping pass">;
-defm : BoolField<"enable-shrink-wrap-region-split", "true",
+defm : BoolField<"shrink-wrap-region-split", "true",
   "Enable splitting of the restore block if possible">;
+// TODO: Remove the old spelling after 2027-05.
+def : AliasOf<"enable-shrink-wrap", "shrink-wrap">;
+// TODO: Remove the old spelling.
+def : AliasOf<"enable-shrink-wrap-region-split", "shrink-wrap-region-split">;
 
 // StackColoring.cpp
 defm : BoolField<"stack-coloring", "true",

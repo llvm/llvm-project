@@ -221,7 +221,7 @@ bool BranchFolder::OptimizeFunction(MachineFunction &MF,
   // Command-line flags take final precedence over the caller-configured values,
   // letting individual BranchFolding sub-phases be toggled (for tests and for
   // targets that only want a safe subset of the optimization).
-  EnableTailMerge = valueOr(Opts->enable_tail_merge, EnableTailMerge);
+  EnableTailMerge = valueOr(Opts->tail_merge, EnableTailMerge);
   EnableHoistCommonCode =
       valueOr(Opts->branch_folder_hoist_common_code, EnableHoistCommonCode);
   EnableBasicBlockReordering =

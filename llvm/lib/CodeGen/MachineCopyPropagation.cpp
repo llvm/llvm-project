@@ -1615,7 +1615,7 @@ MachineCopyPropagationPass::run(MachineFunction &MF,
 
 bool MachineCopyPropagation::run(MachineFunction &MF) {
   bool IsSpillageCopyElimEnabled =
-      valueOr(Opts.enable_spill_copy_elim,
+      valueOr(Opts.mcp_spill_copy_elim,
               MF.getSubtarget().enableSpillageCopyElimination());
 
   Changed = false;

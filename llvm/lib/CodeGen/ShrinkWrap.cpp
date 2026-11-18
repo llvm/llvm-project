@@ -577,7 +577,7 @@ bool ShrinkWrapImpl::checkIfRestoreSplittable(
 
 bool ShrinkWrapImpl::postShrinkWrapping(bool HasCandidate, MachineFunction &MF,
                                         RegScavenger *RS) {
-  if (!getCodeGenOptions(MF).enable_shrink_wrap_region_split)
+  if (!getCodeGenOptions(MF).shrink_wrap_region_split)
     return false;
 
   MachineBasicBlock *InitSave = nullptr;
@@ -1033,7 +1033,7 @@ PreservedAnalyses ShrinkWrapPass::run(MachineFunction &MF,
 bool ShrinkWrapImpl::isShrinkWrapEnabled(const MachineFunction &MF) {
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
 
-  switch (getCodeGenOptions(MF).enable_shrink_wrap) {
+  switch (getCodeGenOptions(MF).shrink_wrap) {
   case BoolOrDefault::Default:
     return TFI->enableShrinkWrapping(MF) &&
            // Windows with CFI has some limitations that make it impossible
