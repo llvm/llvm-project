@@ -686,21 +686,6 @@ gentbl_cc_library(
     deps = ["//llvm:CommonTargetTdFiles"],
 )
 
-gentbl_cc_library(
-    name = "intrinsic_feature_checks_guards_gen",
-    strip_include_prefix = "TableGen",
-    tbl_outs = {
-        "TableGen/IntrinsicFeatureChecksGuards.inc": [
-            "-gen-intrinsic-feature-checks",
-            "-intrinsic-feature-prefix=test",
-            "-intrinsic-feature-namespace=TestTarget",
-        ],
-    },
-    tblgen = "//llvm:llvm-tblgen",
-    td_file = "//llvm:test/TableGen/IntrinsicFeatureChecksGuards.td",
-    deps = ["//llvm:CommonTargetTdFiles"],
-)
-
 cc_test(
     name = "option_tests",
     size = "small",
@@ -882,14 +867,9 @@ cc_test(
     ),
     deps = [
         ":automata_gen",
-        ":intrinsic_feature_checks_guards_gen",
-        "//llvm:CodeGen",
-        "//llvm:CodeGenTypes",
-        "//llvm:Core",
         "//llvm:Support",
         "//llvm:TableGen",
         "//llvm:TableGenGlobalISel",
-        "//llvm:TargetParser",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
