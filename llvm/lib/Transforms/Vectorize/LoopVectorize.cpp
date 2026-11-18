@@ -6285,7 +6285,7 @@ LoopVectorizationPlanner::tryToBuildVPlan1(LoopVectorizationCostModel &PlanCM) {
     }
   } else {
     RUN_VPLAN_PASS(VPlanTransforms::handleCountableEarlyExits, *VPlan0,
-                   CM->isEpilogueAllowed());
+                   PlanCM.isEpilogueAllowed());
   }
 
   RUN_VPLAN_PASS(VPlanTransforms::createLoopRegions, *VPlan0,
