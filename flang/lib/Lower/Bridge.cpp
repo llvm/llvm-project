@@ -13,6 +13,7 @@
 #include "flang/Lower/Bridge.h"
 
 #include "flang/Evaluate/tools.h"
+#include "flang/Evaluate/traverse.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CUDA.h"
 #include "flang/Lower/CallInterface.h"
@@ -86,6 +87,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
+#include <set>
 
 #define DEBUG_TYPE "flang-lower-bridge"
 
@@ -552,6 +554,25 @@ using IncrementLoopNestInfo = llvm::SmallVector<IncrementLoopInfo, 8>;
 //===----------------------------------------------------------------------===//
 
 namespace {
+
+/// Find the first component reference of an expression that designates the
+/// given component symbol.
+struct CUDAComponentFinder
+    : public Fortran::evaluate::AnyTraverse<CUDAComponentFinder> {
+  using Base = Fortran::evaluate::AnyTraverse<CUDAComponentFinder>;
+  explicit CUDAComponentFinder(const Fortran::semantics::Symbol &sym)
+      : Base{*this}, sym{sym} {}
+  using Base::operator();
+  bool operator()(const Fortran::evaluate::Component &component) const {
+    if (&component.GetLastSymbol().GetUltimate() == &sym) {
+      found = &component;
+      return true;
+    }
+    return (*this)(component.base());
+  }
+  const Fortran::semantics::Symbol &sym;
+  mutable const Fortran::evaluate::Component *found{nullptr};
+};
 
 /// Traverse the pre-FIR tree (PFT) to generate the FIR dialect of MLIR.
 class FirConverter : public Fortran::lower::AbstractConverter {
@@ -2512,6 +2533,60 @@ private:
     for (const Fortran::semantics::Symbol *sym : info.sharedSymList) {
       const auto *hostDetails =
           sym->detailsIf<Fortran::semantics::HostAssocDetails>();
+
+      // When using delayed privatization (the OpenMP conversion path), create
+      // a fir.local {type = shared} op at the module level. This serves as
+      // explicit documentation that the programmer marked this variable as
+      // SHARED, and prepares for future DEFAULT(NONE) support where we need
+      // to distinguish "explicitly shared" from "implicitly shared" variables.
+      //
+      // Note: the fir.local {type = shared} op is NOT added to local_vars on
+      // the fir.do_concurrent.loop. SHARED variables remain as implicit
+      // live-ins to the loop, which maps correctly to OpenMP's default(shared)
+      // semantics. Adding them to local_vars would require changes to the
+      // block arg remapping logic in DoConcurrentConversion, which assumes a
+      // 1:1 correspondence between local_vars entries and the privatizer
+      // block args on omp.wsloop (host) or omp.parallel (device). Since
+      // SHARED variables need no privatizer, including them in local_vars
+      // would break this correspondence.
+      //
+      // The fir.local op is cleaned up by DoConcurrentSpecifierOpConversion
+      // in CodeGen.cpp, which erases all unreferenced fir.local ops.
+      if (useDelayedPriv) {
+        const Fortran::semantics::Symbol &ultimate = sym->GetUltimate();
+        Fortran::lower::SymbolBox hsb = lookupSymbol(ultimate);
+        assert(hsb && "Host symbol box not found for shared variable");
+
+        mlir::Value hostAddr = hsb.getAddr();
+        mlir::Type allocType = fir::unwrapRefType(hostAddr.getType());
+        mlir::Location symLoc = hostAddr.getLoc();
+
+        // Build a unique name for the fir.local op, following the same
+        // naming convention as privatizeSymbol (mangled name + suffix + type).
+        // Use a dot separator (".shared") rather than underscore to avoid
+        // potential collisions with user symbol names — dots cannot appear
+        // in Fortran identifiers.
+        std::string sharedPrefix = mangleName(ultimate) + ".shared";
+        std::string uniqueName =
+            fir::getTypeAsString(allocType, getKindMap(), sharedPrefix);
+
+        // Only create the op if it doesn't already exist (e.g., for the same
+        // type used in multiple do concurrent loops).
+        auto moduleOp = builder->getModule();
+        if (!moduleOp.lookupSymbol<fir::LocalitySpecifierOp>(uniqueName)) {
+          mlir::OpBuilder::InsertionGuard guard(*builder);
+          builder->setInsertionPointToStart(moduleOp.getBody());
+          fir::LocalitySpecifierOp::create(*builder, symLoc, uniqueName,
+                                           /*sym_visibility=*/nullptr,
+                                           allocType,
+                                           fir::LocalitySpecifierType::Shared);
+        }
+      }
+
+      // Regardless of delayed privatization mode, keep the existing behavior:
+      // alias the inner (host-associated) symbol to the host variable's MLIR
+      // value. This makes the SHARED variable a regular live-in to the loop
+      // body, which becomes implicitly shared in the OpenMP parallel region.
       copySymbolBinding(hostDetails->symbol(), *sym);
     }
 
@@ -4417,13 +4492,15 @@ private:
         std::get<Fortran::parser::Scalar<Fortran::parser::Expr>>(stmt.t));
     // Semantics already turned enumeration CASE values into ordinals.
     std::optional<Fortran::lower::SomeExpr> enumOrdinal;
-    if (const auto *derived = std::get_if<
-            Fortran::evaluate::Expr<Fortran::evaluate::SomeDerived>>(&expr->u))
+    if (const auto *derived = std::get_if<Fortran::evaluate::Expr<
+            Fortran::evaluate::Type<Fortran::common::TypeCategory::Derived>>>(
+            &expr->u))
       if (const auto *spec =
               Fortran::evaluate::GetDerivedTypeSpec(derived->GetType());
           spec && Fortran::semantics::IsEnumerationType(spec->typeSymbol())) {
         enumOrdinal = Fortran::evaluate::MakeEnumerationIntCall(
-            Fortran::evaluate::Expr<Fortran::evaluate::SomeDerived>{*derived});
+            Fortran::evaluate::Expr<Fortran::evaluate::Type<
+                Fortran::common::TypeCategory::Derived>>{*derived});
         expr = &*enumOrdinal;
       }
     bool isCharSelector = isCharacterCategory(expr->GetType()->category());
@@ -4465,13 +4542,9 @@ private:
           Fortran::semantics::GetExpr(caseValue.thing);
       if (isCharSelector)
         valueList.push_back(charValue(expr));
-      else if (isLogicalSelector)
+      else
         valueList.push_back(builder->createConvert(
             loc, selectType, createFIRExpr(toLocation(), expr, stmtCtx)));
-      else {
-        valueList.push_back(builder->createIntegerConstant(
-            loc, selectType, *Fortran::evaluate::ToInt64(*expr)));
-      }
     };
     for (Fortran::lower::pft::Evaluation *e = eval.controlSuccessor; e;
          e = e->controlSuccessor) {
@@ -5731,8 +5804,13 @@ private:
     auto transferKindAttr = cuf::DataTransferKindAttr::get(
         builder.getContext(), cuf::DataTransferKind::DeviceHost);
     [[maybe_unused]] unsigned nbDeviceResidentObject = 0;
+    // The attribute of a component hides the one of its base.
+    Fortran::semantics::UnorderedSymbolSet effectiveSymbols{
+        Fortran::evaluate::CollectEffectiveCudaSymbols(assign.rhs)};
     for (const Fortran::semantics::Symbol &sym :
          Fortran::evaluate::CollectSymbols(assign.rhs)) {
+      if (!effectiveSymbols.count(sym.GetUltimate()))
+        continue;
       if (const auto *details =
               sym.GetUltimate()
                   .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
@@ -5741,10 +5819,28 @@ private:
           assert(
               nbDeviceResidentObject <= 1 &&
               "Only one reference to the device resident object is supported");
-          auto addr = getSymbolAddress(sym);
+          // A component has no address of its own: lower the component
+          // reference of the expression, and later override that reference
+          // with the temporary.
+          const Fortran::evaluate::Component *component = nullptr;
+          mlir::Value addr;
+          Fortran::lower::StatementContext stmtCtx;
+          if (sym.GetUltimate().owner().IsDerivedType()) {
+            CUDAComponentFinder finder{sym.GetUltimate()};
+            finder(assign.rhs);
+            component = finder.found;
+            if (!component)
+              continue;
+            addr = Fortran::lower::convertDataRefToHLFIRVariable(
+                       loc, *this, Fortran::evaluate::DataRef{*component},
+                       localSymbols, stmtCtx)
+                       .getBase();
+          } else {
+            addr = getSymbolAddress(sym);
+          }
           mlir::Value baseValue;
-          if (auto declareOp =
-                  llvm::dyn_cast<hlfir::DeclareOp>(addr.getDefiningOp()))
+          if (auto declareOp = mlir::dyn_cast_or_null<hlfir::DeclareOp>(
+                  addr.getDefiningOp()))
             baseValue = declareOp.getBase();
           else
             baseValue = addr;
@@ -5759,12 +5855,21 @@ private:
             else
               temps.push_back(temp);
           }
-          addSymbol(sym,
-                    hlfir::translateToExtendedValue(loc, builder, temp).first,
-                    /*forced=*/true);
+          if (component) {
+            auto tempVar =
+                mlir::dyn_cast_or_null<fir::FortranVariableOpInterface>(
+                    temp.getDefiningOp());
+            assert(tempVar && "implicit data transfer of a device component");
+            localSymbols.addComponentOverride(*component, tempVar);
+          } else {
+            addSymbol(sym,
+                      hlfir::translateToExtendedValue(loc, builder, temp).first,
+                      /*forced=*/true);
+          }
           cuf::DataTransferOp::create(builder, loc, addr, temp,
                                       /*shape=*/mlir::Value{},
                                       transferKindAttr);
+          stmtCtx.finalizeAndPop();
           ++nbDeviceResidentObject;
         }
       }
@@ -6508,26 +6613,57 @@ private:
 
   void setOpenMPAssumptionAttributes(mlir::func::FuncOp func,
                                      const Fortran::semantics::Scope &scope) {
-    if (bridge.getSemanticsContext().langOptions().OpenMPSimd)
+    const auto &langOptions = bridge.getSemanticsContext().langOptions();
+    if (langOptions.OpenMPSimd)
       return;
+    bool noOpenmp = false;
+    bool noParallelism = false;
     const auto *assumptionScopeEnd =
         &Fortran::semantics::omp::GetProgramUnit(scope).parent();
+    llvm::omp::Directives absent;
     for (const auto *assumptionScope = &scope;
          !assumptionScope->IsGlobal() && assumptionScope != assumptionScopeEnd;
          assumptionScope = &assumptionScope->parent()) {
-      if (const auto *symbol = assumptionScope->symbol();
-          !symbol ||
-          !symbol->test(Fortran::semantics::Symbol::Flag::OmpAssumesNoOpenmp))
-        continue;
-      llvm::SmallVector<mlir::Attribute> llvmAttrs;
-      if (auto existing =
-              func->getAttrOfType<mlir::ArrayAttr>("llvm.passthrough"))
-        llvm::append_range(llvmAttrs, existing);
-      llvmAttrs.push_back(
-          builder->getStrArrayAttr({llvm::AssumptionAttrKey, "omp_no_openmp"}));
-      func->setAttr("llvm.passthrough", builder->getArrayAttr(llvmAttrs));
-      break;
+      if (const auto *symbol = assumptionScope->symbol()) {
+        Fortran::common::visit(
+            [&](const auto &details) {
+              if constexpr (std::is_convertible_v<decltype(details),
+                                                  const Fortran::semantics::
+                                                      WithOmpDeclarative &>) {
+                noOpenmp |= details.ompAssumes().test(
+                    llvm::omp::Clause::OMPC_no_openmp);
+                noParallelism |= details.ompAssumes().test(
+                    llvm::omp::Clause::OMPC_no_parallelism);
+                absent |= details.ompAssumesAbsent();
+              }
+            },
+            symbol->details());
+      }
     }
+    if (!noOpenmp && !noParallelism && absent.empty())
+      return;
+    std::string assumptions = noOpenmp ? "omp_no_openmp" : "";
+    if (noParallelism) {
+      if (!assumptions.empty())
+        assumptions += ',';
+      assumptions += "omp_no_parallelism";
+    }
+    for (llvm::omp::Directive directive : absent) {
+      if (!assumptions.empty())
+        assumptions += ',';
+      assumptions += "absent(";
+      assumptions += llvm::omp::getOpenMPDirectiveName(
+                         directive, langOptions.getOpenMPVersion())
+                         .str();
+      assumptions += ')';
+    }
+    llvm::SmallVector<mlir::Attribute> llvmAttrs;
+    if (auto existing =
+            func->getAttrOfType<mlir::ArrayAttr>("llvm.passthrough"))
+      llvm::append_range(llvmAttrs, existing);
+    llvmAttrs.push_back(
+        builder->getStrArrayAttr({llvm::AssumptionAttrKey, assumptions}));
+    func->setAttr("llvm.passthrough", builder->getArrayAttr(llvmAttrs));
   }
 
   /// Start translation of a function.
@@ -6616,31 +6752,42 @@ private:
 
     // Map function equivalences and variables.
     mlir::Value primaryFuncResultStorage;
-    for (const Fortran::lower::pft::Variable &var :
-         Fortran::lower::pft::getScopeVariableList(scope)) {
-      // Always instantiate aggregate storage blocks.
-      if (var.isAggregateStore()) {
-        instantiateVar(var, storeMap);
-        continue;
+    {
+      // Reuse the host list to avoid repeating dependency analysis.
+      Fortran::lower::pft::VariableList localVariables;
+      const Fortran::lower::pft::VariableList *variables;
+      if (funit.getHostAssoc().hasGlobalAssociations()) {
+        variables = &Fortran::lower::pft::getScopeVariableList(
+            scope, Fortran::lower::pft::getScopeVariableListMap(funit));
+      } else {
+        localVariables = Fortran::lower::pft::getScopeVariableList(scope);
+        variables = &localVariables;
       }
-      const Fortran::semantics::Symbol &sym = var.getSymbol();
-      if (funit.parentHasHostAssoc()) {
-        // Never instantiate host associated variables, as they are already
-        // instantiated from an argument tuple. Instead, just bind the symbol
-        // to the host variable, which must be in the map.
-        const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
-        if (funit.parentHostAssoc().isAssociated(ultimate)) {
-          copySymbolBinding(ultimate, sym);
+      for (const Fortran::lower::pft::Variable &var : *variables) {
+        // Always instantiate aggregate storage blocks.
+        if (var.isAggregateStore()) {
+          instantiateVar(var, storeMap);
           continue;
         }
-      }
-      if (!sym.IsFuncResult() || !funit.primaryResult) {
-        instantiateVar(var, storeMap);
-      } else if (&sym == funit.primaryResult) {
-        instantiateVar(var, storeMap);
-        primaryFuncResultStorage = getSymbolAddress(sym);
-      } else {
-        deferredFuncResultList.push_back(var);
+        const Fortran::semantics::Symbol &sym = var.getSymbol();
+        if (funit.parentHasHostAssoc()) {
+          // Never instantiate host associated variables, as they are already
+          // instantiated from an argument tuple. Instead, just bind the symbol
+          // to the host variable, which must be in the map.
+          const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
+          if (funit.parentHostAssoc().isAssociated(ultimate)) {
+            copySymbolBinding(ultimate, sym);
+            continue;
+          }
+        }
+        if (!sym.IsFuncResult() || !funit.primaryResult) {
+          instantiateVar(var, storeMap);
+        } else if (&sym == funit.primaryResult) {
+          instantiateVar(var, storeMap);
+          primaryFuncResultStorage = getSymbolAddress(sym);
+        } else {
+          deferredFuncResultList.push_back(var);
+        }
       }
     }
 
@@ -7028,6 +7175,10 @@ private:
 
   /// Lower a procedure (nest).
   void lowerFunc(Fortran::lower::pft::FunctionLikeUnit &funit) {
+    auto &hostAssociations = funit.getHostAssoc();
+    const bool hasGlobals = hostAssociations.hasGlobalAssociations();
+    if (hasGlobals)
+      hostAssociations.prepareGlobalBindings(funit);
     setCurrentPosition(funit.getStartingSourceLoc());
     setCurrentFunctionUnit(&funit);
     assert(visibleCrayPointerTargets.empty() &&
@@ -7061,6 +7212,8 @@ private:
     for (Fortran::lower::pft::ContainedUnit &unit : funit.containedUnitList)
       if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
         lowerFunc(*f); // internal procedure
+    if (hasGlobals)
+      hostAssociations.releaseGlobalBindings(funit);
   }
 
   /// Lower module variable definitions to fir::globalOp and OpenMP/OpenACC
@@ -7154,30 +7307,23 @@ private:
                             T, Fortran::lower::CategoryExpression>) {
             if constexpr (T::Result::category ==
                           Fortran::common::TypeCategory::Derived) {
-              if (const auto *constant =
-                      std::get_if<Fortran::evaluate::Constant<
-                          Fortran::evaluate::SomeDerived>>(&x.u))
+              if (const auto *constant = std::get_if<
+                      Fortran::evaluate::Constant<Fortran::evaluate::Type<
+                          Fortran::common::TypeCategory::Derived>>>(&x.u))
                 return Fortran::lower::mangle::mangleArrayLiteral(eleTy,
                                                                   *constant);
               fir::emitFatalError(loc,
                                   "non a constant derived type expression");
             } else {
-              return Fortran::common::visit(
-                  [&](const auto &someKind) -> std::string {
-                    using T = std::decay_t<decltype(someKind)>;
-                    using TK = Fortran::evaluate::Type<T::Result::category,
-                                                       T::Result::kind>;
-                    if (const auto *constant =
-                            std::get_if<Fortran::evaluate::Constant<TK>>(
-                                &someKind.u)) {
-                      return Fortran::lower::mangle::mangleArrayLiteral(
-                          nullptr, *constant);
-                    }
-                    fir::emitFatalError(
-                        loc, "not a Fortran::evaluate::Constant<T> expression");
-                    return {};
-                  },
-                  x.u);
+              using TK = typename T::Result;
+              if (const auto *constant =
+                      std::get_if<Fortran::evaluate::Constant<TK>>(&x.u)) {
+                return Fortran::lower::mangle::mangleArrayLiteral(nullptr,
+                                                                  *constant);
+              }
+              fir::emitFatalError(
+                  loc, "not a Fortran::evaluate::Constant<T> expression");
+              return {};
             }
           } else {
             fir::emitFatalError(loc, "unexpected expression");
@@ -7469,7 +7615,7 @@ Fortran::lower::LoweringBridge::~LoweringBridge() {
 void Fortran::lower::genCleanUpInRegionIfAny(
     mlir::Location loc, fir::FirOpBuilder &builder, mlir::Region &region,
     Fortran::lower::StatementContext &context) {
-  if (!context.hasCode())
+  if (!context.hasCodeInCurrentScope())
     return;
   mlir::OpBuilder::InsertPoint insertPt = builder.saveInsertionPoint();
   if (region.empty())

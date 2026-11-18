@@ -8,7 +8,8 @@
 
 #include "TestOpsSyntax.h"
 #include "TestDialect.h"
-#include "TestOps.h"
+#include "TestOpsConversion.h"
+#include "TestOpsCore.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/Support/Base64.h"
 

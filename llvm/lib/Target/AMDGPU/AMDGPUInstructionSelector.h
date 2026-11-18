@@ -28,6 +28,7 @@ namespace {
 namespace llvm {
 
 namespace AMDGPU {
+struct BufferIntrinsicInfo;
 struct ImageDimIntrinsicInfo;
 }
 
@@ -143,7 +144,8 @@ private:
   bool selectG_PTRMASK(MachineInstr &I) const;
   bool selectG_EXTRACT_VECTOR_ELT(MachineInstr &I) const;
   bool selectG_INSERT_VECTOR_ELT(MachineInstr &I) const;
-  bool selectBufferLoadLds(MachineInstr &MI) const;
+  bool selectBufferLoadLds(MachineInstr &MI,
+                           const AMDGPU::BufferIntrinsicInfo &Info) const;
   bool selectGlobalLoadLds(MachineInstr &MI) const;
   bool selectTensorLoadStore(MachineInstr &MI, Intrinsic::ID IID) const;
   bool selectBVHIntersectRayIntrinsic(MachineInstr &I) const;
@@ -191,15 +193,21 @@ private:
   selectVOP3BMods(MachineOperand &Root) const;
 
   ComplexRendererFns selectVOP3NoMods(MachineOperand &Root) const;
+  ComplexRendererFns selectVOP3NoOpSelMods(MachineOperand &Root) const;
 
   std::pair<Register, unsigned>
   selectVOP3PModsImpl(Register RootReg, const MachineRegisterInfo &MRI,
-                      bool IsDOT = false) const;
+                      bool IsDOT = false, bool NoOpSel0 = false) const;
   InstructionSelector::ComplexRendererFns
-  selectVOP3PRetHelper(MachineOperand &Root, bool IsDOT = false) const;
+  selectVOP3PRetHelper(MachineOperand &Root, bool IsDOT = false,
+                       bool NoOpSel0 = false) const;
 
   InstructionSelector::ComplexRendererFns
   selectVOP3PMods(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3PModsPkFmaOpSel0(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3PModsPkAddMulOpSel0(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectVOP3PModsDOT(MachineOperand &Root) const;
@@ -236,8 +244,8 @@ private:
   InstructionSelector::ComplexRendererFns
   selectVINTERPModsHi(MachineOperand &Root) const;
 
-  bool selectScaleOffset(MachineOperand &Root, Register &Offset,
-                         bool IsSigned) const;
+  bool selectScaleOffset(MachineOperand &Root, Register &Offset, bool IsSigned,
+                         bool IsSMEM = false) const;
   bool selectSmrdOffset(MachineOperand &Root, Register &Base, Register *SOffset,
                         int64_t *Offset, bool *ScaleOffset) const;
   InstructionSelector::ComplexRendererFns
@@ -359,6 +367,8 @@ private:
 
   void renderTruncTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
+  void renderPrefetchLen(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                         int OpIdx) const;
   void renderZextBoolTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                           int OpIdx) const;
 

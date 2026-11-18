@@ -95,6 +95,7 @@ obj2yaml userland24 | sed "$clean"
 
 #--- arm64e.yaml
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C
@@ -347,6 +348,7 @@ LinkEditData:
 ...
 #--- userland24.yaml
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C

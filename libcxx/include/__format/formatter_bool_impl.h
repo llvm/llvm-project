@@ -30,7 +30,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // required to provide in other headers where we need formatter<bool> itself to be complete.
 
 template <__fmt_char_type _CharT, class _ParseContext>
-_LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator
+constexpr typename _ParseContext::iterator
 __formatter_bool_parse(__format_spec::__parser_data<_CharT>& __parser_data, _ParseContext& __ctx) {
   __format_spec::__parser<_CharT> __parser(__parser_data);
 
@@ -41,7 +41,7 @@ __formatter_bool_parse(__format_spec::__parser_data<_CharT>& __parser_data, _Par
 }
 
 template <__fmt_char_type _CharT, class _FormatContext>
-_LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
+typename _FormatContext::iterator
 __formatter_bool_format(bool __value, __format_spec::__parser_data<_CharT> __parser_data, _FormatContext& __ctx) {
   __format_spec::__parser<_CharT> __parser(__parser_data);
 
