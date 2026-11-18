@@ -107,6 +107,40 @@ LIBC_INLINE constexpr NumberPair<T> add(const NumberPair<T> &a, T b) {
   return exact_add<FAST2SUM>(r.hi, r_lo);
 }
 
+// Assumption: when FAST2SUM = true, |a| >= |b.hi|.
+template <bool FAST2SUM = true, typename T>
+LIBC_INLINE constexpr NumberPair<T> add(T a, const NumberPair<T> &b) {
+  NumberPair<T> r = exact_add<FAST2SUM>(a, b.hi);
+  T r_lo = r.lo + b.lo;
+  return exact_add<FAST2SUM>(r.hi, r_lo);
+}
+
+// Assumption: when FAST2SUM = true, |a.hi| >= |b.hi|.
+template <bool FAST2SUM = true, typename T>
+LIBC_INLINE constexpr NumberPair<T> sub(const NumberPair<T> &a,
+                                        const NumberPair<T> &b) {
+  NumberPair<T> r = exact_sub<FAST2SUM>(a.hi, b.hi);
+  T lo = a.lo - b.lo;
+  T r_lo = r.lo + lo;
+  return exact_add<FAST2SUM>(r.hi, r_lo);
+}
+
+// Assumption: when FAST2SUM = true, |a.hi| >= |b|.
+template <bool FAST2SUM = true, typename T>
+LIBC_INLINE constexpr NumberPair<T> sub(const NumberPair<T> &a, T b) {
+  NumberPair<T> r = exact_sub<FAST2SUM>(a.hi, b);
+  T r_lo = r.lo + a.lo;
+  return exact_add<FAST2SUM>(r.hi, r_lo);
+}
+
+// Assumption: when FAST2SUM = true, |a| >= |b.hi|.
+template <bool FAST2SUM = true, typename T>
+LIBC_INLINE constexpr NumberPair<T> sub(T a, const NumberPair<T> &b) {
+  NumberPair<T> r = exact_sub<FAST2SUM>(a, b.hi);
+  T r_lo = r.lo - b.lo;
+  return exact_add<FAST2SUM>(r.hi, r_lo);
+}
+
 // Veltkamp's Splitting for double precision.
 // Note: This is proved to be correct for all rounding modes:
 //   Zimmermann, P., "Note on the Veltkamp/Dekker Algorithms with Directed
@@ -174,11 +208,11 @@ LIBC_INLINE LIBC_CONSTEXPR NumberPair<T> exact_mult(T a, T b) {
 
   if constexpr (TargetHasFmaInstruction<T>::VALUE) {
     r.hi = a * b;
-    // Prevent `-r.hi` below from being rewritten into `a * (-b)` when `a * b`
-    // is duplicated (e.g. by SLP vectorization), which breaks directed
-    // rounding modes (`RU(a * (-b)) != -RU(a * b)`).
+    // Prevent `-r.hi` inside `multiply_sub` from being rewritten into
+    // `a * (-b)` when `a * b` is duplicated (e.g. by SLP vectorization), which
+    // breaks directed rounding modes (`RU(a * (-b)) != -RU(a * b)`).
     LIBC_DO_NOT_OPTIMIZE_ROUNDING(r.hi);
-    r.lo = fputil::multiply_add(a, b, -r.hi);
+    r.lo = fputil::multiply_sub(a, b, r.hi);
   } else {
     // Dekker's Product.
     NumberPair<T> as = split(a);
@@ -214,6 +248,22 @@ LIBC_INLINE DoubleDouble multiply_add<DoubleDouble>(const DoubleDouble &a,
   return add(c, quick_mult(a, b));
 }
 
+// Assuming |a * b| >= |c|.
+template <>
+LIBC_INLINE DoubleDouble multiply_sub<DoubleDouble>(const DoubleDouble &a,
+                                                    const DoubleDouble &b,
+                                                    const DoubleDouble &c) {
+  return sub(quick_mult(a, b), c);
+}
+
+// Assuming |a| >= |b * c|.
+template <>
+LIBC_INLINE DoubleDouble sub_multiply<DoubleDouble>(const DoubleDouble &a,
+                                                    const DoubleDouble &b,
+                                                    const DoubleDouble &c) {
+  return sub(a, quick_mult(b, c));
+}
+
 // Accurate double-double division, following Karp-Markstein's trick for
 // division, implemented in the CORE-MATH project at:
 // https://gitlab.inria.fr/core-math/core-math/-/blob/master/src/binary64/tan/tan.c#L1855
@@ -239,8 +289,8 @@ LIBC_INLINE NumberPair<T> div(const NumberPair<T> &a, const NumberPair<T> &b) {
   LIBC_DO_NOT_OPTIMIZE_ROUNDING(r.hi);
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA
-  T e_hi = fputil::multiply_add(b.hi, -r.hi, a.hi);
-  T e_lo = fputil::multiply_add(b.lo, -r.hi, a.lo);
+  T e_hi = fputil::sub_multiply(a.hi, b.hi, r.hi);
+  T e_lo = fputil::sub_multiply(a.lo, b.lo, r.hi);
 #else
   NumberPair<T> b_hi_r_hi = fputil::exact_mult(b.hi, -r.hi);
   NumberPair<T> b_lo_r_hi = fputil::exact_mult(b.lo, -r.hi);

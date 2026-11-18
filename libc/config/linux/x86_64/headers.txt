@@ -32,6 +32,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.net_if
     libc.include.netinet_ether
     libc.include.netinet_in
+    libc.include.netinet_ip
     libc.include.netinet_tcp
     libc.include.netinet_udp
     libc.include.nl_types

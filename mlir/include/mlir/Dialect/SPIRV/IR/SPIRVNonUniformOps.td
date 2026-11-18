@@ -18,6 +18,7 @@
 
 class SPIRV_GroupNonUniformArithmeticOp<string mnemonic, Type type,
       list<Trait> traits = []> : SPIRV_Op<mnemonic, !listconcat([
+        AllTypesMatch<["value", "result"]>,
         SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Subgroup"]>
       ], traits)> {
 

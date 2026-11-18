@@ -381,6 +381,20 @@ add_generic_entrypoint_object(
 )
 
 add_generic_entrypoint_object(
+  putc_unlocked
+  SRCS
+    putc_unlocked.cpp
+  HDRS
+    ../putc_unlocked.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.hdr.types.size_t
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.errno.errno
+)
+
+add_generic_entrypoint_object(
   putchar
   SRCS
     putchar.cpp
