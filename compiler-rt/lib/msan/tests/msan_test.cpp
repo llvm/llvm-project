@@ -105,18 +105,18 @@ void *mempcpy(void *dest, const void *src, size_t n);
 #endif
 
 #if defined __GLIBC__
-# define MSAN_TEST_UCHAR __GLIBC_PREREQ(2, 16)
-# define MSAN_TEST_UCHAR_C8 __GLIBC_PREREQ(2, 36)
+#  define MSAN_TEST_UCHAR __GLIBC_PREREQ(2, 16)
+#  define MSAN_TEST_UCHAR_C8 __GLIBC_PREREQ(2, 36)
 #elif defined __APPLE__
-# define MSAN_TEST_UCHAR 0
-# define MSAN_TEST_UCHAR_C8 0
+#  define MSAN_TEST_UCHAR 0
+#  define MSAN_TEST_UCHAR_C8 0
 #else
-# define MSAN_TEST_UCHAR 1
-# define MSAN_TEST_UCHAR_C8 0
+#  define MSAN_TEST_UCHAR 1
+#  define MSAN_TEST_UCHAR_C8 0
 #endif
 
 #if MSAN_TEST_UCHAR
-# include <uchar.h>
+#  include <uchar.h>
 #endif
 
 #if defined(__i386__) || defined(__x86_64__)
@@ -2153,7 +2153,7 @@ TEST(MemorySanitizer, wcrtomb) {
 }
 
 #if MSAN_TEST_UCHAR
-# if MSAN_TEST_UCHAR_C8
+#  if MSAN_TEST_UCHAR_C8
 TEST(MemorySanitizer, c8rtomb) {
   char8_t x = U'a';
   char buff[10];
@@ -2163,7 +2163,7 @@ TEST(MemorySanitizer, c8rtomb) {
   EXPECT_EQ(res, (size_t)1);
   EXPECT_EQ(buff[0], 'a');
 }
-# endif
+#  endif
 
 TEST(MemorySanitizer, c16rtomb) {
   char16_t x = U'a';
@@ -2227,7 +2227,7 @@ TEST(MemorySanitizer, mbrtowc) {
 }
 
 #if MSAN_TEST_UCHAR
-# if MSAN_TEST_UCHAR_C8
+#  if MSAN_TEST_UCHAR_C8
 TEST(MemorySanitizer, mbrtoc8) {
   mbstate_t mbs = {};
 
@@ -2239,7 +2239,7 @@ TEST(MemorySanitizer, mbrtoc8) {
   EXPECT_GT(res, 0ULL);
   EXPECT_NOT_POISONED(c8);
 }
-# endif
+#  endif
 
 TEST(MemorySanitizer, mbrtoc16) {
   mbstate_t mbs = {};

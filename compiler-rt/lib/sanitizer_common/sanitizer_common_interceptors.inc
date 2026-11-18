@@ -4056,8 +4056,8 @@ INTERCEPTOR(SIZE_T, wcrtomb, char *dest, wchar_t src, void *ps) {
 #endif
 
 #if SANITIZER_INTERCEPT_C8RTOMB
-INTERCEPTOR(SIZE_T, c8rtomb, char *dest, char8_t src, void *ps) {
-  void *ctx;
+INTERCEPTOR(SIZE_T, c8rtomb, char* dest, char8_t src, void* ps) {
+  void* ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, c8rtomb, dest, src, ps);
   if (ps)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, ps, mbstate_t_sz);
@@ -4075,14 +4075,14 @@ INTERCEPTOR(SIZE_T, c8rtomb, char *dest, char8_t src, void *ps) {
   return res;
 }
 
-#define INIT_C8RTOMB COMMON_INTERCEPT_FUNCTION(c8rtomb);
+#  define INIT_C8RTOMB COMMON_INTERCEPT_FUNCTION(c8rtomb);
 #else
-#define INIT_C8RTOMB
+#  define INIT_C8RTOMB
 #endif
 
 #if SANITIZER_INTERCEPT_C16RTOMB
-INTERCEPTOR(SIZE_T, c16rtomb, char *dest, char16_t src, void *ps) {
-  void *ctx;
+INTERCEPTOR(SIZE_T, c16rtomb, char* dest, char16_t src, void* ps) {
+  void* ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, c16rtomb, dest, src, ps);
   if (ps)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, ps, mbstate_t_sz);
@@ -4100,14 +4100,14 @@ INTERCEPTOR(SIZE_T, c16rtomb, char *dest, char16_t src, void *ps) {
   return res;
 }
 
-#define INIT_C16RTOMB COMMON_INTERCEPT_FUNCTION(c16rtomb);
+#  define INIT_C16RTOMB COMMON_INTERCEPT_FUNCTION(c16rtomb);
 #else
-#define INIT_C16RTOMB
+#  define INIT_C16RTOMB
 #endif
 
 #if SANITIZER_INTERCEPT_C32RTOMB
-INTERCEPTOR(SIZE_T, c32rtomb, char *dest, wchar_t src, void *ps) {
-  void *ctx;
+INTERCEPTOR(SIZE_T, c32rtomb, char* dest, wchar_t src, void* ps) {
+  void* ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, c32rtomb, dest, src, ps);
   if (ps)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, ps, mbstate_t_sz);
@@ -4125,9 +4125,9 @@ INTERCEPTOR(SIZE_T, c32rtomb, char *dest, wchar_t src, void *ps) {
   return res;
 }
 
-#define INIT_C32RTOMB COMMON_INTERCEPT_FUNCTION(c32rtomb);
+#  define INIT_C32RTOMB COMMON_INTERCEPT_FUNCTION(c32rtomb);
 #else
-#define INIT_C32RTOMB
+#  define INIT_C32RTOMB
 #endif
 
 #if SANITIZER_INTERCEPT_WCTOMB

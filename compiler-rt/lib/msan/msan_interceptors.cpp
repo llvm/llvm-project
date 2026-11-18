@@ -668,30 +668,35 @@ INTERCEPTOR(SIZE_T, mbrtowc, wchar_t *dest, const char *src, SIZE_T n,
             void *ps) {
   ENSURE_MSAN_INITED();
   SIZE_T res = REAL(mbrtowc)(dest, src, n, ps);
-  if (res < (SIZE_T)-2 && dest) __msan_unpoison(dest, sizeof(wchar_t));
+  if (res < (SIZE_T)-2 && dest)
+    __msan_unpoison(dest, sizeof(wchar_t));
   return res;
 }
 
-INTERCEPTOR(SIZE_T, mbrtoc8, char8_t *dest, const char *src, SIZE_T n, void* ps) {
+INTERCEPTOR(SIZE_T, mbrtoc8, char8_t* dest, const char* src, SIZE_T n,
+            void* ps) {
   ENSURE_MSAN_INITED();
   SIZE_T res = REAL(mbrtoc8)(dest, src, n, ps);
-  if (res < (SIZE_T)-2 && dest) __msan_unpoison(dest, sizeof(char8_t));
+  if (res < (SIZE_T)-2 && dest)
+    __msan_unpoison(dest, sizeof(char8_t));
   return res;
 }
 
-INTERCEPTOR(SIZE_T, mbrtoc16, char16_t *dest, const char *src, SIZE_T n,
+INTERCEPTOR(SIZE_T, mbrtoc16, char16_t* dest, const char* src, SIZE_T n,
             void* ps) {
   ENSURE_MSAN_INITED();
   SIZE_T res = REAL(mbrtoc16)(dest, src, n, ps);
-  if (res < (SIZE_T)-2 && dest) __msan_unpoison(dest, sizeof(char16_t));
+  if (res < (SIZE_T)-2 && dest)
+    __msan_unpoison(dest, sizeof(char16_t));
   return res;
 }
 
-INTERCEPTOR(SIZE_T, mbrtoc32, char32_t *dest, const char *src, SIZE_T n,
+INTERCEPTOR(SIZE_T, mbrtoc32, char32_t* dest, const char* src, SIZE_T n,
             void* ps) {
   ENSURE_MSAN_INITED();
   SIZE_T res = REAL(mbrtoc32)(dest, src, n, ps);
-  if (res < (SIZE_T)-2 && dest) __msan_unpoison(dest, sizeof(char32_t));
+  if (res < (SIZE_T)-2 && dest)
+    __msan_unpoison(dest, sizeof(char32_t));
   return res;
 }
 
