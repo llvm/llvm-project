@@ -1,5 +1,5 @@
 // # RUN: mlir-opt -test-print-invalid %s | FileCheck %s
-// # RUN: mlir-opt -test-print-invalid %s --mlir-print-assume-verified  | FileCheck %s --check-prefix=ASSUME-VERIFIED
+// # RUN: mlir-opt -test-print-invalid %s --mlir-unsafe-print-assume-verified  | FileCheck %s --check-prefix=ASSUME-VERIFIED
 
 // The pass creates some ops and prints them to stdout, the input is just an
 // empty module.
