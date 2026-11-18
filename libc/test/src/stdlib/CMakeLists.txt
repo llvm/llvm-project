@@ -84,6 +84,7 @@ add_libc_test(
   SRCS
     strtof128_test.cpp
   DEPENDS
+    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.uint128
     libc.src.stdlib.strtof128
     libc.test.UnitTest.ErrnoCheckingTest
