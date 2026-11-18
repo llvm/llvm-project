@@ -626,6 +626,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          Legal);
       setOperationAction({ISD::SELECT, ISD::VSELECT}, {MVT::v4i16, MVT::v8i8},
                          Custom);
+      setOperationAction(ISD::VSELECT, MVT::v2i32, Custom);
       setOperationAction({ISD::MUL, ISD::MULHS, ISD::MULHU},
                          {MVT::v4i16, MVT::v8i8}, Custom);
       setOperationAction(ISD::MUL, P32VecVTs, Custom);
@@ -9566,6 +9567,26 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerToScalableOp(Op, DAG);
   case ISD::VSELECT: {
     EVT VT = Op.getValueType();
+    // Lower v2i32 VSELECT on RV32 with P extension to (T & M) | (F & ~M) on
+    // each i32 element. The mask elements are all ones or all zeros.
+    if (Subtarget.hasStdExtP() && !Subtarget.is64Bit() && VT == MVT::v2i32) {
+      SDLoc DL(Op);
+      SDValue Elts[2];
+      for (unsigned I = 0; I != 2; ++I) {
+        SDValue Idx = DAG.getVectorIdxConstant(I, DL);
+        SDValue M = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32,
+                                Op.getOperand(0), Idx);
+        SDValue T = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32,
+                                Op.getOperand(1), Idx);
+        SDValue F = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32,
+                                Op.getOperand(2), Idx);
+        SDValue NotM = DAG.getNOT(DL, M, MVT::i32);
+        Elts[I] = DAG.getNode(ISD::OR, DL, MVT::i32,
+                              DAG.getNode(ISD::AND, DL, MVT::i32, T, M),
+                              DAG.getNode(ISD::AND, DL, MVT::i32, F, NotM));
+      }
+      return DAG.getBuildVector(VT, DL, {Elts[0], Elts[1]});
+    }
     // Split 64-bit vector VSELECT on RV32 with P extension for v4i16 and v8i8
     if (Subtarget.hasStdExtP() && !Subtarget.is64Bit() &&
         (VT == MVT::v4i16 || VT == MVT::v8i8)) {
@@ -9676,8 +9697,13 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
         SDValue ShAmtVec = Op.getOperand(1);
         SDValue SplatVal = DAG.getSplatValue(ShAmtVec, /*LegalTypes=*/true);
 
-        if (!SplatVal)
+        if (!SplatVal) {
+          // Unroll non-splat v2i32 SSHLSAT on RV32 to scalar SSHLSAT (ssha).
+          if (Op.getOpcode() == ISD::SSHLSAT && !Subtarget.is64Bit() &&
+              Op.getValueType() == MVT::v2i32)
+            return DAG.UnrollVectorOp(Op.getNode());
           return SDValue();
+        }
 
         unsigned Opc;
         switch (Op.getOpcode()) {
