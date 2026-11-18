@@ -28052,14 +28052,8 @@ static SDValue replaceStoreOfVectorInsertAt(StoreSDNode *ST, SDValue Val,
       return SDValue();
   }
 
-  // Bail out if the element is not an integer or peeks through bitcasts to a
-  // constant/vector-build/extract node that DAGCombiner::mergeConsecutiveStores
-  // could re-merge into a vector store, which would cause a combine loop.
-  SDValue Inner = peekThroughBitcasts(Elt);
   if (!Elt.getValueType().isInteger() ||
-      Inner.getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
-      Inner.getOpcode() == ISD::EXTRACT_SUBVECTOR ||
-      Inner.getOpcode() == ISD::BUILD_VECTOR || isa<ConstantFPSDNode>(Inner))
+      Elt.getOpcode() == ISD::EXTRACT_VECTOR_ELT)
     return SDValue();
 
   // Generate the new store of the element
