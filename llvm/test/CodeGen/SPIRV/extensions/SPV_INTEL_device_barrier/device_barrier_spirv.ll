@@ -15,11 +15,6 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_device_barrier %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_device_barrier %s -o - -filetype=obj | spirv-val %}
 
-;; TODO: Consider adding an error check when the extension is not enabled in the future.
-; RUNx: not llc -O0 -mtriple=spirv64-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
-; CHECK-ERRORx: RequiresExtension: Feature requires the following SPIR-V extension:
-; CHECK-ERROR-NEXTx: SPV_INTEL_device_barrier
-
 ; ModuleID = 'device_barrier_spirv.cl'
 source_filename = "device_barrier_spirv.cl"
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024"
