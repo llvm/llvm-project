@@ -17,6 +17,7 @@
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "ScalarOptions.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
@@ -3951,6 +3952,72 @@ bool GVNPassImpl::processBlock(BasicBlock *BB) {
   return ChangedFunction;
 }
 
+/// Recursively drop all poison-generating flags in the defining chain of \p V.
+static void
+dropPoisonGeneratingFlagsFromChain(Value *V, SmallPtrSetImpl<Value *> &Visited) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I || !Visited.insert(I).second)
+    return;
+  I->dropPoisonGeneratingFlags();
+  for (Value *Op : I->operands())
+    dropPoisonGeneratingFlagsFromChain(Op, Visited);
+}
+
+/// Weaken the poison-generating flags along the defining chain of \p V so that
+/// reusing \p V in place of \p C does not produce a more poisonous value.
+///
+/// Value numbering ignores poison-generating flags, so the leader \p V can be
+/// built from instructions with stronger flags than \p C, arbitrarily deep in
+/// the chain (e.g. an inbounds GEP feeding a ptrtoint, or a samesign icmp
+/// feeding a zext). Corresponding instruction pairs have their flags
+/// intersected; when the chains are equivalent but structurally unrelated
+/// (e.g. a binary operator vs. an extractvalue of a with.overflow intrinsic),
+/// all poison-generating flags below \p V are dropped instead. A phi stands in
+/// for its incoming values, so those are walked as well.
+static void patchLeaderChainFlags(
+    Value *V, Value *C,
+    SmallDenseSet<std::pair<Value *, Value *>, 16> &Visited) {
+  if (V == C || !Visited.insert({V, C}).second)
+    return;
+
+  auto *VI = dyn_cast<Instruction>(V);
+  if (!VI)
+    return;
+
+  // A phi used as a leader (.pre-phi) stands for its incoming values.
+  if (auto *VP = dyn_cast<PHINode>(VI)) {
+    for (Value *Incoming : VP->incoming_values())
+      patchLeaderChainFlags(Incoming, C, Visited);
+    return;
+  }
+
+  auto *CI = dyn_cast<Instruction>(C);
+  if (!CI)
+    return;
+
+  // A phi in the reference chain stands for its incoming values.
+  if (auto *CP = dyn_cast<PHINode>(CI)) {
+    for (Value *Incoming : CP->incoming_values())
+      patchLeaderChainFlags(VI, Incoming, Visited);
+    return;
+  }
+
+  VI->andIRFlags(CI);
+  if (VI->getOpcode() == CI->getOpcode() &&
+      VI->getNumOperands() == CI->getNumOperands()) {
+    for (unsigned I = 0, E = VI->getNumOperands(); I != E; ++I)
+      patchLeaderChainFlags(VI->getOperand(I), CI->getOperand(I), Visited);
+    return;
+  }
+
+  // The chains are equivalent by value numbering but do not have the same
+  // shape, so the correspondence is unknown. Conservatively drop all
+  // poison-generating flags below VI.
+  SmallPtrSet<Value *, 8> DropVisited;
+  for (Value *Op : VI->operands())
+    dropPoisonGeneratingFlagsFromChain(Op, DropVisited);
+}
+
 // Instantiate an expression in a predecessor that lacked it.
 bool GVNPassImpl::performScalarPREInsertion(Instruction *Instr,
                                             BasicBlock *Pred, BasicBlock *Curr,
@@ -4134,11 +4201,17 @@ bool GVNPassImpl::performScalarPRE(Instruction *CurInst) {
   PHINode *Phi = PHINode::Create(CurInst->getType(), PredMap.size(),
                                  CurInst->getName() + ".pre-phi");
   Phi->insertBefore(CurrentBlock->begin());
+  SmallDenseSet<std::pair<Value *, Value *>, 16> Visited;
   for (auto &[V, BB] : PredMap) {
     if (V) {
       // If we use an existing value in this phi, we have to patch the original
       // value because the phi will be used to replace a later value.
       patchReplacementInstruction(CurInst, V);
+      // Value numbering ignores poison-generating flags, so the leader can be
+      // built from instructions with stronger flags than CurInst, arbitrarily
+      // deep in its defining chain. Drop them, as reusing the leader would
+      // otherwise make the phi more poisonous than the value it replaces.
+      patchLeaderChainFlags(V, CurInst, Visited);
       Phi->addIncoming(V, BB);
     } else
       Phi->addIncoming(PREInstr, PREPred);
