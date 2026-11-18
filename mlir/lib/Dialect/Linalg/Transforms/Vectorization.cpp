@@ -2761,7 +2761,7 @@ protected:
 /// sure that the original padding value %cst was never used.
 ///
 /// This rewrite is possible if:
-/// - `xferOp` has no out-of-bounds dims or mask.
+/// - `xferOp` has no out-of-bounds dims or mask, and is not in `vector.mask`.
 /// - Low padding is static 0.
 /// - Single, scalar padding value.
 struct PadOpVectorizationWithTransferReadPattern
@@ -2781,6 +2781,9 @@ struct PadOpVectorizationWithTransferReadPattern
     // Padding value of existing `xferOp` is unused.
     if (xferOp.hasOutOfBoundsDim() || xferOp.getMask())
       return failure();
+    // In `vector.mask`, the masked-off lanes may take the padding of `xferOp`.
+    if (xferOp.isMasked())
+      return rewriter.notifyMatchFailure(xferOp, "read is in vector.mask");
 
     rewriter.modifyOpInPlace(xferOp, [&]() {
       SmallVector<bool> inBounds(xferOp.getVectorType().getRank(), false);
