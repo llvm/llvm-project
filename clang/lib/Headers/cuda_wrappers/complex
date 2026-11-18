@@ -36,6 +36,37 @@
 #include <cmath>
 #include <sstream>
 
+#ifdef _MSVC_STL_VERSION
+// MSVC's <complex> calls C functions declared in <ymath.h> (_Exp, _Cosh, ...).
+// Include it here, so that they stay __host__; __clang_hip_cmath.h defines
+// their __device__ versions for HIP.
+#if __has_include(<ymath.h>)
+#include <ymath.h>
+#endif
+
+// MSVC's <complex> also calls std::swap on its value type. std::swap is
+// constexpr, and thus implicitly __host__ __device__, only from C++20 on.
+#if !_HAS_CXX20
+namespace std {
+inline __device__ void swap(float &__a, float &__b) noexcept {
+  float __t = __a;
+  __a = __b;
+  __b = __t;
+}
+inline __device__ void swap(double &__a, double &__b) noexcept {
+  double __t = __a;
+  __a = __b;
+  __b = __t;
+}
+inline __device__ void swap(long double &__a, long double &__b) noexcept {
+  long double __t = __a;
+  __a = __b;
+  __b = __t;
+}
+} // namespace std
+#endif // !_HAS_CXX20
+#endif // _MSVC_STL_VERSION
+
 // Next, include our <algorithm> wrapper, to ensure that device overloads of
 // std::min/max are available.
 #include <algorithm>

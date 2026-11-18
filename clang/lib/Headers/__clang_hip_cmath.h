@@ -801,16 +801,27 @@ _GLIBCXX_END_NAMESPACE_VERSION
 #endif // !defined(__HIPCC_RTC__)
 
 // Define device-side math functions from <ymath.h> on MSVC.
-#if !defined(__HIPCC_RTC__)
 #if defined(_MSC_VER)
-
+#if !defined(__HIPCC_RTC__)
 // Before VS2019, `<ymath.h>` is also included in `<limits>` and other headers.
 // But, from VS2019, it's only included in `<complex>`. Need to include
 // `<ymath.h>` here to ensure C functions declared there won't be markded as
 // `__host__` and `__device__` through `<complex>` wrapper.
 #include <ymath.h>
+#endif // !defined(__HIPCC_RTC__)
 
 #if defined(__cplusplus)
+// MSVC's long double has the same format as double. MSVC's <complex> calls
+// std::signbit, and its <cmath> std::fma, with long double arguments, which
+// must not be ambiguous between the float and double overloads.
+__DEVICE__ __CONSTEXPR__ bool signbit(long double __x) {
+  return ::__signbit(__x);
+}
+__DEVICE__ __CONSTEXPR__ long double fma(long double __x, long double __y,
+                                         long double __z) {
+  return ::fma((double)__x, (double)__y, (double)__z);
+}
+
 extern "C" {
 #endif // defined(__cplusplus)
 __DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) double _Cosh(double x,
@@ -821,11 +832,14 @@ __DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) float _FCosh(float x,
                                                                     float y) {
   return coshf(x) * y;
 }
+// The <ymath.h> classification codes: _NANCODE (2), _INFCODE (1), _FINITE
+// (-1), _DENORM (-2) and 0 for zero, the FP_* values of MSVC's <math.h>, which
+// hipRTC does not include.
 __DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) short _Dtest(double *p) {
-  return fpclassify(*p);
+  return __builtin_fpclassify(2, 1, -1, -2, 0, *p);
 }
 __DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) short _FDtest(float *p) {
-  return fpclassify(*p);
+  return __builtin_fpclassify(2, 1, -1, -2, 0, *p);
 }
 __DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) double _Sinh(double x,
                                                                     double y) {
@@ -835,11 +849,43 @@ __DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) float _FSinh(float x,
                                                                     float y) {
   return sinhf(x) * y;
 }
+// Store __y * e^(*__px) * 2^__eoff in *__px and return its classification.
+// e^(*__px) may overflow where the product does not; then use e^(*__px / 2)
+// twice.
+__DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) short
+_Exp(double *__px, double __y, short __eoff) {
+  if (__y == 0) {
+    *__px = __y;
+  } else {
+    double __e = exp(*__px);
+    if (__builtin_isinf(__e)) {
+      double __h = exp(*__px / 2);
+      *__px = ldexp(__h * __y * __h, __eoff);
+    } else {
+      *__px = ldexp(__e * __y, __eoff);
+    }
+  }
+  return _Dtest(__px);
+}
+__DEVICE__ __CONSTEXPR__ __attribute__((overloadable)) short
+_FExp(float *__px, float __y, short __eoff) {
+  if (__y == 0) {
+    *__px = __y;
+  } else {
+    float __e = expf(*__px);
+    if (__builtin_isinf(__e)) {
+      float __h = expf(*__px / 2);
+      *__px = ldexpf(__h * __y * __h, __eoff);
+    } else {
+      *__px = ldexpf(__e * __y, __eoff);
+    }
+  }
+  return _FDtest(__px);
+}
 #if defined(__cplusplus)
 }
 #endif // defined(__cplusplus)
 #endif // defined(_MSC_VER)
-#endif // !defined(__HIPCC_RTC__)
 #endif // ifndef __OPENMP_AMDGCN__
 
 #pragma pop_macro("__DEVICE__")
