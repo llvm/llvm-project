@@ -7,7 +7,6 @@
 
 ---
 name: vfmadd_partner_op3
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: vfmadd_partner_op3
   ; CHECK: bb.0:
