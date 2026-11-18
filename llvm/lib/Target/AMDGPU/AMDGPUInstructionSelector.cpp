@@ -1087,10 +1087,12 @@ bool AMDGPUInstructionSelector::selectG_SBFX_UBFX(MachineInstr &MI) const {
   if (IsSigned && STI.hasTrue16BitInsts()) {
     std::optional<ValueAndVReg> Offset =
         getIConstantVRegValWithLookThrough(OffsetReg, *MRI);
-    std::optional<ValueAndVReg> Width =
-        getIConstantVRegValWithLookThrough(WidthReg, *MRI);
-    if (Offset && Offset->Value == 0 && Width && Width->Value == 16)
-      return selectI16SignExtend(MI, SrcReg);
+    if (Offset && Offset->Value.isZero()) {
+      std::optional<ValueAndVReg> Width =
+          getIConstantVRegValWithLookThrough(WidthReg, *MRI);
+      if (Width && Width->Value == 16)
+        return selectI16SignExtend(MI, SrcReg);
+    }
   }
   unsigned Opc = IsSigned ? AMDGPU::V_BFE_I32_e64 : AMDGPU::V_BFE_U32_e64;
   auto MIB = BuildMI(*MBB, &MI, DL, TII.get(Opc), DstReg)
