@@ -3995,6 +3995,25 @@ lowerVectorStrictFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   return DAG.getMergeValues({Truncated, Chain}, DL);
 }
 
+static RTLIB::Libcall getRoundingLibcall(unsigned Opc, MVT VT) {
+  switch (Opc) {
+  case ISD::FTRUNC:
+    return RTLIB::getTRUNC(VT);
+  case ISD::FFLOOR:
+    return RTLIB::getFLOOR(VT);
+  case ISD::FCEIL:
+    return RTLIB::getCEIL(VT);
+  case ISD::FRINT:
+    return RTLIB::getRINT(VT);
+  case ISD::FROUND:
+    return RTLIB::getROUND(VT);
+  case ISD::FROUNDEVEN:
+    return RTLIB::getROUNDEVEN(VT);
+  default:
+    return RTLIB::UNKNOWN_LIBCALL;
+  }
+}
+
 static SDValue
 lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
                                 const RISCVSubtarget &Subtarget) {
@@ -4002,8 +4021,14 @@ lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   if (VT.isVector())
     return lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
 
-  if (DAG.shouldOptForSize())
-    return SDValue();
+  // Only fall back to libcall expansion for size optimization if a libcall is
+  // actually available (e.g. f16 has no standard math libcalls).
+  if (DAG.shouldOptForSize()) {
+    RTLIB::Libcall LC = getRoundingLibcall(Op.getOpcode(), VT);
+    if (LC != RTLIB::UNKNOWN_LIBCALL &&
+        DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::Unsupported)
+      return SDValue();
+  }
 
   SDLoc DL(Op);
   SDValue Src = Op.getOperand(0);
