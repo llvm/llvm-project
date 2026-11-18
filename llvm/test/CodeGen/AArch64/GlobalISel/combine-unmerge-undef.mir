@@ -68,3 +68,92 @@ body:             |
     %15:_(<8 x i16>) = G_BUILD_VECTOR %30(i16), %31(i16), %32(i16), %33(i16), %14(i16), %14(i16), %14(i16), %14(i16)
     RET_ReallyLR implicit %15
 ...
+---
+name:            toshuffle_1src
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $q0
+
+    ; CHECK-LABEL: name: toshuffle_1src
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x i32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SHUF:%[0-9]+]]:_(<4 x i32>) = G_SHUFFLE_VECTOR [[COPY]](<4 x i32>), [[DEF]], shufflemask(0, 0, 1, 1)
+    ; CHECK-NEXT: RET_ReallyLR implicit [[SHUF]](<4 x i32>)
+    %1:_(<4 x i32>) = COPY $q0
+    %30:_(i32), %31:_(i32), %32:_(i32), %33:_(i32) = G_UNMERGE_VALUES %1(<4 x i32>)
+    %5:_(<4 x i32>) = G_BUILD_VECTOR %30(i32), %30(i32), %31(i32), %31(i32)
+    RET_ReallyLR implicit %5
+...
+---
+name:            toshuffle_2src
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $q0, $q1
+
+    ; CHECK-LABEL: name: toshuffle_2src
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[SHUF:%[0-9]+]]:_(<4 x i32>) = G_SHUFFLE_VECTOR [[COPY]](<4 x i32>), [[COPY1]], shufflemask(0, 1, 4, 5)
+    ; CHECK-NEXT: RET_ReallyLR implicit [[SHUF]](<4 x i32>)
+    %1:_(<4 x i32>) = COPY $q0
+    %2:_(<4 x i32>) = COPY $q1
+    %30:_(i32), %31:_(i32), %32:_(i32), %33:_(i32) = G_UNMERGE_VALUES %1(<4 x i32>)
+    %40:_(i32), %41:_(i32), %42:_(i32), %43:_(i32) = G_UNMERGE_VALUES %2(<4 x i32>)
+    %5:_(<4 x i32>) = G_BUILD_VECTOR %30(i32), %31(i32), %40(i32), %41(i32)
+    RET_ReallyLR implicit %5
+...
+---
+name:            toshuffle_2src_undef
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $d0, $d1
+
+    ; CHECK-LABEL: name: toshuffle_2src_undef
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i16>) = COPY $d1
+    ; CHECK-NEXT: [[SHUF:%[0-9]+]]:_(<4 x i16>) = G_SHUFFLE_VECTOR [[COPY]](<4 x i16>), [[COPY1]], shufflemask(0, 5, undef, 1)
+    ; CHECK-NEXT: RET_ReallyLR implicit [[SHUF]](<4 x i16>)
+    %1:_(<4 x i16>) = COPY $d0
+    %2:_(<4 x i16>) = COPY $d1
+    %3:_(i16) = G_IMPLICIT_DEF
+    %30:_(i16), %31:_(i16), %32:_(i16), %33:_(i16) = G_UNMERGE_VALUES %1(<4 x i16>)
+    %40:_(i16), %41:_(i16), %42:_(i16), %43:_(i16) = G_UNMERGE_VALUES %2(<4 x i16>)
+    %5:_(<4 x i16>) = G_BUILD_VECTOR %30(i16), %41(i16), %3(i16), %31(i16)
+    RET_ReallyLR implicit %5
+...
+---
+name:            toshuffle_3src
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $d0, $d1, $d2
+
+    ; CHECK-LABEL: name: toshuffle_3src
+    ; CHECK: liveins: $d0, $d1, $d2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i16>) = COPY $d1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<4 x i16>) = COPY $d2
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i16), [[UV1:%[0-9]+]]:_(i16), [[UV2:%[0-9]+]]:_(i16), [[UV3:%[0-9]+]]:_(i16) = G_UNMERGE_VALUES [[COPY]](<4 x i16>)
+    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(i16), [[UV5:%[0-9]+]]:_(i16), [[UV6:%[0-9]+]]:_(i16), [[UV7:%[0-9]+]]:_(i16) = G_UNMERGE_VALUES [[COPY1]](<4 x i16>)
+    ; CHECK-NEXT: [[UV8:%[0-9]+]]:_(i16), [[UV9:%[0-9]+]]:_(i16), [[UV10:%[0-9]+]]:_(i16), [[UV11:%[0-9]+]]:_(i16) = G_UNMERGE_VALUES [[COPY2]](<4 x i16>)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i16>) = G_BUILD_VECTOR [[UV]](i16), [[UV5]](i16), [[UV10]](i16), [[UV5]](i16)
+    ; CHECK-NEXT: RET_ReallyLR implicit [[BUILD_VECTOR]](<4 x i16>)
+    %1:_(<4 x i16>) = COPY $d0
+    %2:_(<4 x i16>) = COPY $d1
+    %3:_(<4 x i16>) = COPY $d2
+    %30:_(i16), %31:_(i16), %32:_(i16), %33:_(i16) = G_UNMERGE_VALUES %1(<4 x i16>)
+    %40:_(i16), %41:_(i16), %42:_(i16), %43:_(i16) = G_UNMERGE_VALUES %2(<4 x i16>)
+    %50:_(i16), %51:_(i16), %52:_(i16), %53:_(i16) = G_UNMERGE_VALUES %3(<4 x i16>)
+    %5:_(<4 x i16>) = G_BUILD_VECTOR %30(i16), %41(i16), %52(i16), %41(i16)
+    RET_ReallyLR implicit %5
+...
