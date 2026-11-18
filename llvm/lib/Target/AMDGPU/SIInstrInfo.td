@@ -957,7 +957,7 @@ def VOP3PModsNegs : SDNodeXForm<timm, [{
 }]>;
 
 def VOP3PModsNegAbs : SDNodeXForm<timm, [{
-  unsigned Val = N->getZExtValue();
+  uint64_t Val = N->getZExtValue();
   unsigned Mods = SISrcMods::OP_SEL_1; // default: none
   if (Val == 1) // neg
     Mods ^= SISrcMods::NEG;
@@ -1032,7 +1032,7 @@ class build_vector_fpimm_pos_zero_v2<VTVec vec> : PatLeaf<
                      (vec.ElementType fpimm_pos_zero)))>;
 
 def MFMALdScaleXForm : SDNodeXForm<timm, [{
-  unsigned Val = N->getZExtValue();
+  uint64_t Val = N->getZExtValue();
   unsigned New = 0;
   if (Val & 0x1)
     New |= SISrcMods::OP_SEL_0;
