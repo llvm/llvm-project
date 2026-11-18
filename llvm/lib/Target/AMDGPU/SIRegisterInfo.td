@@ -1177,6 +1177,7 @@ def AV_32 : SIRegisterClass<"AMDGPU", VGPR_32.RegTypes, 32, (add VGPR_32, AGPR_3
   let HasAGPR = 1;
   let BaseClassPriority = 0;
   let Size = 32;
+  let Weight = 1;
 }
 
 def VS_64_Lo256 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32,

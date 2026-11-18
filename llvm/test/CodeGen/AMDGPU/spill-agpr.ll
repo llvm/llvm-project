@@ -78,25 +78,25 @@ define amdgpu_kernel void @max_12regs_13a_used(i32 %cond, ptr addrspace(1) %arg,
 ; GFX90A-NEXT:    s_endpgm
 ; GFX90A-NEXT:  .LBB0_2: ; %use
 ; GFX90A-NEXT:    s_nop 3
-; GFX90A-NEXT:    v_accvgpr_read_b32 v9, a7
-; GFX90A-NEXT:    v_accvgpr_read_b32 v8, a6
-; GFX90A-NEXT:    v_accvgpr_read_b32 v7, a5
-; GFX90A-NEXT:    v_accvgpr_read_b32 v6, a4
+; GFX90A-NEXT:    v_accvgpr_read_b32 v2, a4
+; GFX90A-NEXT:    v_accvgpr_read_b32 v3, a5
+; GFX90A-NEXT:    v_accvgpr_read_b32 v4, a6
+; GFX90A-NEXT:    v_accvgpr_read_b32 v5, a7
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a4, 4
-; GFX90A-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a8, 5
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a9, 1
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a10, 2
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a11, 3
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_accvgpr_write_b32 a4, v6
-; GFX90A-NEXT:    v_accvgpr_write_b32 a5, v7
-; GFX90A-NEXT:    v_accvgpr_write_b32 a6, v8
-; GFX90A-NEXT:    v_accvgpr_write_b32 a7, v9
+; GFX90A-NEXT:    v_accvgpr_write_b32 a7, v5
+; GFX90A-NEXT:    v_accvgpr_write_b32 a6, v4
+; GFX90A-NEXT:    v_accvgpr_write_b32 a5, v3
+; GFX90A-NEXT:    v_accvgpr_write_b32 a4, v2
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX90A-NEXT:    v_mov_b32_e32 v3, v0
+; GFX90A-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX90A-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    ;;#ASMSTART

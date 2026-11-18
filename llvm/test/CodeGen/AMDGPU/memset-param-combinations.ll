@@ -484,9 +484,6 @@ define void @memset_p0_sz1055_align_4_varsetval(ptr addrspace(0) align 4 %dst, i
 ; GFX942-SDAG-NEXT:    s_mov_b32 s0, 0x4040404
 ; GFX942-SDAG-NEXT:    v_perm_b32 v4, v2, v2, s0
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[0:1], 0
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v5, v4
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v6, v4
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v7, v4
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[2:3], 0x70
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[4:5], 0x60
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[6:7], 0x50
@@ -497,6 +494,9 @@ define void @memset_p0_sz1055_align_4_varsetval(ptr addrspace(0) align 4 %dst, i
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[16:17], 0xb0
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[18:19], 0xa0
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[20:21], 0x90
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v5, v4
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v6, v4
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v7, v4
 ; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[8:9], 0x400
 ; GFX942-SDAG-NEXT:  .LBB4_1: ; %static-memset-expansion-main-body
 ; GFX942-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -619,9 +619,6 @@ define void @memset_p0_sz2048_align_4_varsetval(ptr addrspace(0) align 4 %dst, i
 ; GFX942-SDAG-NEXT:    s_mov_b32 s0, 0x4040404
 ; GFX942-SDAG-NEXT:    v_perm_b32 v2, v2, v2, s0
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[0:1], 0
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v3, v2
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v4, v2
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[2:3], 0x70
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[4:5], 0x60
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[6:7], 0x50
@@ -632,6 +629,9 @@ define void @memset_p0_sz2048_align_4_varsetval(ptr addrspace(0) align 4 %dst, i
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[16:17], 0xb0
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[18:19], 0xa0
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[20:21], 0x90
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v3, v2
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v4, v2
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[6:7], 0x800
 ; GFX942-SDAG-NEXT:  .LBB5_1: ; %static-memset-expansion-main-body
 ; GFX942-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
