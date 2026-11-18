@@ -465,15 +465,15 @@ define void @test_bitint_200_to_float(ptr %in, ptr %out) nounwind {
 ; RV32-NEXT:    lw a4, 16(a0)
 ; RV32-NEXT:    lw a3, 20(a0)
 ; RV32-NEXT:    lbu a2, 24(a0)
-; RV32-NEXT:    lw t0, 8(a0)
-; RV32-NEXT:    lw t1, 0(a0)
+; RV32-NEXT:    lw a7, 8(a0)
+; RV32-NEXT:    lw t2, 0(a0)
 ; RV32-NEXT:    lw t5, 4(a0)
-; RV32-NEXT:    lw t2, 12(a0)
-; RV32-NEXT:    or a0, t0, a2
-; RV32-NEXT:    or a5, t1, a4
+; RV32-NEXT:    lw t1, 12(a0)
+; RV32-NEXT:    or a0, a7, a2
+; RV32-NEXT:    or a5, t2, a4
 ; RV32-NEXT:    or a6, t5, a3
 ; RV32-NEXT:    or a0, a5, a0
-; RV32-NEXT:    or a5, a6, t2
+; RV32-NEXT:    or a5, a6, t1
 ; RV32-NEXT:    or a0, a0, a5
 ; RV32-NEXT:    beqz a0, .LBB1_37
 ; RV32-NEXT:  # %bb.1: # %itofp-if-end
@@ -486,61 +486,61 @@ define void @test_bitint_200_to_float(ptr %in, ptr %out) nounwind {
 ; RV32-NEXT:    sw s5, 200(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s6, 196(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s7, 192(sp) # 4-byte Folded Spill
-; RV32-NEXT:    slli a2, a2, 24
-; RV32-NEXT:    srai a2, a2, 24
 ; RV32-NEXT:    slli a0, a2, 24
-; RV32-NEXT:    srai s2, a0, 31
 ; RV32-NEXT:    srai a0, a0, 24
+; RV32-NEXT:    slli a2, a0, 24
+; RV32-NEXT:    srai s2, a2, 31
+; RV32-NEXT:    srai a2, a2, 24
 ; RV32-NEXT:    slli a6, s2, 25
-; RV32-NEXT:    srli a0, a0, 7
-; RV32-NEXT:    xor a5, t0, s2
-; RV32-NEXT:    or a0, a0, a6
+; RV32-NEXT:    srli a2, a2, 7
+; RV32-NEXT:    xor a5, a7, s2
+; RV32-NEXT:    or a2, a2, a6
 ; RV32-NEXT:    sltu a6, a5, s2
-; RV32-NEXT:    xor a7, t2, s2
+; RV32-NEXT:    xor t0, t1, s2
 ; RV32-NEXT:    mv t6, a6
-; RV32-NEXT:    beqz t2, .LBB1_3
+; RV32-NEXT:    beqz t1, .LBB1_3
 ; RV32-NEXT:  # %bb.2: # %itofp-if-end
-; RV32-NEXT:    sltu t6, a7, s2
+; RV32-NEXT:    sltu t6, t0, s2
 ; RV32-NEXT:  .LBB1_3: # %itofp-if-end
-; RV32-NEXT:    xor t4, t1, a0
-; RV32-NEXT:    sltu t3, t4, a0
+; RV32-NEXT:    xor t4, t2, a2
+; RV32-NEXT:    sltu t3, t4, a2
 ; RV32-NEXT:    xor s3, t5, s2
-; RV32-NEXT:    mv t1, t3
+; RV32-NEXT:    mv t2, t3
 ; RV32-NEXT:    beqz t5, .LBB1_5
 ; RV32-NEXT:  # %bb.4: # %itofp-if-end
-; RV32-NEXT:    sltu t1, s3, s2
+; RV32-NEXT:    sltu t2, s3, s2
 ; RV32-NEXT:  .LBB1_5: # %itofp-if-end
-; RV32-NEXT:    or t2, t0, t2
-; RV32-NEXT:    mv t0, t1
-; RV32-NEXT:    beqz t2, .LBB1_7
+; RV32-NEXT:    or a7, a7, t1
+; RV32-NEXT:    mv t1, t2
+; RV32-NEXT:    beqz a7, .LBB1_7
 ; RV32-NEXT:  # %bb.6: # %itofp-if-end
-; RV32-NEXT:    mv t0, t6
+; RV32-NEXT:    mv t1, t6
 ; RV32-NEXT:  .LBB1_7: # %itofp-if-end
 ; RV32-NEXT:    xor a4, a4, s2
 ; RV32-NEXT:    xor s1, a3, s2
 ; RV32-NEXT:    sltu s0, a4, s2
-; RV32-NEXT:    sub t2, s1, s2
+; RV32-NEXT:    sub a7, s1, s2
 ; RV32-NEXT:    sub a4, a4, s2
-; RV32-NEXT:    sub t2, t2, s0
-; RV32-NEXT:    sltu t5, a4, t0
-; RV32-NEXT:    seqz t6, t2
-; RV32-NEXT:    and t6, t6, t5
+; RV32-NEXT:    sub t5, a7, s0
+; RV32-NEXT:    sltu t6, a4, t1
+; RV32-NEXT:    seqz a7, t5
+; RV32-NEXT:    and a7, a7, t6
 ; RV32-NEXT:    beqz a3, .LBB1_9
 ; RV32-NEXT:  # %bb.8: # %itofp-if-end
 ; RV32-NEXT:    sltu s0, s1, s2
 ; RV32-NEXT:  .LBB1_9: # %itofp-if-end
-; RV32-NEXT:    xor a3, a2, s2
+; RV32-NEXT:    xor a3, a0, s2
 ; RV32-NEXT:    add s0, s2, s0
-; RV32-NEXT:    sub s1, a7, s2
+; RV32-NEXT:    sub t0, t0, s2
 ; RV32-NEXT:    sub a3, a3, s0
 ; RV32-NEXT:    sub s0, a5, s2
-; RV32-NEXT:    sub a7, a3, t6
-; RV32-NEXT:    sub a3, s1, a6
-; RV32-NEXT:    sltu a5, s0, t1
+; RV32-NEXT:    sub a7, a3, a7
+; RV32-NEXT:    sub a3, t0, a6
+; RV32-NEXT:    sltu a5, s0, t2
 ; RV32-NEXT:    sub a5, a3, a5
-; RV32-NEXT:    sub a3, t2, t5
-; RV32-NEXT:    sub a4, a4, t0
-; RV32-NEXT:    sub a6, s0, t1
+; RV32-NEXT:    sub a3, t5, t6
+; RV32-NEXT:    sub a4, a4, t1
+; RV32-NEXT:    sub a6, s0, t2
 ; RV32-NEXT:    srli t0, a4, 8
 ; RV32-NEXT:    slli t1, a3, 24
 ; RV32-NEXT:    or t1, t0, t1
@@ -678,7 +678,7 @@ define void @test_bitint_200_to_float(ptr %in, ptr %out) nounwind {
 ; RV32-NEXT:  .LBB1_15: # %itofp-if-end
 ; RV32-NEXT:    or s5, t1, t2
 ; RV32-NEXT:    sub t3, s3, t3
-; RV32-NEXT:    sub t4, t4, a0
+; RV32-NEXT:    sub t4, t4, a2
 ; RV32-NEXT:    bnez s5, .LBB1_17
 ; RV32-NEXT:  # %bb.16: # %itofp-if-end
 ; RV32-NEXT:    addi t0, s4, 64
@@ -924,22 +924,22 @@ define void @test_bitint_200_to_float(ptr %in, ptr %out) nounwind {
 ; RV32-NEXT:    lw s6, 196(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s7, 192(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 224
-; RV32-NEXT:    bgez a2, .LBB1_35
+; RV32-NEXT:    bgez a0, .LBB1_35
 ; RV32-NEXT:  # %bb.33: # %itofp-if-end26
-; RV32-NEXT:    li a2, 127
-; RV32-NEXT:    bgeu a2, t1, .LBB1_36
+; RV32-NEXT:    li a0, 127
+; RV32-NEXT:    bgeu a0, t1, .LBB1_36
 ; RV32-NEXT:  .LBB1_34: # %itofp-return
 ; RV32-NEXT:    sw a4, 0(a1)
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB1_35: # %itofp-if-end26
 ; RV32-NEXT:    lui a4, 522240
-; RV32-NEXT:    li a2, 127
-; RV32-NEXT:    bltu a2, t1, .LBB1_34
+; RV32-NEXT:    li a0, 127
+; RV32-NEXT:    bltu a0, t1, .LBB1_34
 ; RV32-NEXT:  .LBB1_36: # %itofp-if-end26
-; RV32-NEXT:    lui a2, 524288
+; RV32-NEXT:    lui a0, 524288
 ; RV32-NEXT:    slli a3, a3, 9
 ; RV32-NEXT:    slli t2, t2, 23
-; RV32-NEXT:    and a0, a0, a2
+; RV32-NEXT:    and a0, a2, a0
 ; RV32-NEXT:    lui a2, 260096
 ; RV32-NEXT:    srli a3, a3, 9
 ; RV32-NEXT:    add a2, t2, a2
