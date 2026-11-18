@@ -15,6 +15,8 @@
 
 #include "L0Kernel.h"
 
+#include "llvm/ADT/StringMap.h"
+
 namespace llvm::omp::target::plugin {
 
 class L0DeviceTy;
@@ -64,7 +66,7 @@ class L0ProgramTy : public DeviceImageTy {
   llvm::SmallVector<ze_module_handle_t> Modules;
 
   /// Map of kernel names to Modules
-  std::unordered_map<std::string, ze_module_handle_t> KernelsToModuleMap;
+  llvm::StringMap<ze_module_handle_t> KernelsToModuleMap;
 
   /// List of kernels built for this image.
   /// We need to delete them ourselves as the main library is not doing
@@ -124,7 +126,7 @@ public:
 
   /// Returns the handle of a module that contains a given Kernel name.
   ze_module_handle_t findModuleFromKernelName(const char *KernelName) const {
-    auto K = KernelsToModuleMap.find(std::string(KernelName));
+    auto K = KernelsToModuleMap.find(KernelName);
     if (K == KernelsToModuleMap.end())
       return nullptr;
 

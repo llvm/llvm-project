@@ -107,6 +107,11 @@ public:
     });
   }
 
+  /// Does the stack top list, which finalizeAndPop() would run, have cleanups?
+  bool hasCodeInCurrentScope() const {
+    return !cufs.empty() && cufs.back().has_value();
+  }
+
 private:
   // A statement context should never be copied or moved.
   StatementContext(const StatementContext &) = delete;
@@ -117,8 +122,9 @@ private:
   llvm::SmallVector<std::optional<CleanupFunction>> cufs;
 };
 
-/// If \p context contains any cleanups, ensure \p region has a block, and
-/// generate the cleanup inside that block.
+/// If the current scope of \p context contains any cleanups, ensure \p region
+/// has a block, and generate the cleanup of that scope inside that block. The
+/// scope is popped only in that case.
 void genCleanUpInRegionIfAny(mlir::Location loc, fir::FirOpBuilder &builder,
                              mlir::Region &region, StatementContext &context);
 

@@ -58,6 +58,7 @@
 
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/DWARF.h"
+#include "lld/Common/Parallel.h"
 #include "lld/Common/Reproduce.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -1232,7 +1233,7 @@ void ObjFile::parseDeferredRelocations() {
 
 void macho::parseDeferredRelocations() {
   TimeTraceScope timeScope("Parse relocations");
-  parallelForEach(inputFiles, [](InputFile *file) {
+  parallelForEachFineGrained(inputFiles, [](InputFile *file) {
     if (auto *objFile = dyn_cast<ObjFile>(file))
       objFile->parseDeferredRelocations();
   });
@@ -1495,8 +1496,8 @@ targetSymFromCanonicalSubtractor(const InputSection *isec,
   // Note: pcSym may *not* be exactly at the PC; there's usually a non-zero
   // addend.
   auto *pcSym = cast<Defined>(cast<macho::Symbol *>(subtrahend.referent));
-  Defined *target =
-      cast_or_null<Defined>(minuend.referent.dyn_cast<macho::Symbol *>());
+  Defined *target = cast_or_null<Defined>(
+      dyn_cast_if_present<macho::Symbol *>(minuend.referent));
   if (!pcSym) {
     auto *targetIsec =
         cast<ConcatInputSection>(cast<InputSection *>(minuend.referent));

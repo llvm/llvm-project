@@ -68,6 +68,9 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
 
   // Set `ModuleOp` as legal for `spirv.module` conversion.
   target.addLegalOp<ModuleOp>();
-  if (failed(applyPartialConversion(module, target, std::move(patterns))))
+  ConversionConfig config;
+  config.allowPatternRollback = allowPatternRollback;
+  if (failed(
+          applyPartialConversion(module, target, std::move(patterns), config)))
     signalPassFailure();
 }

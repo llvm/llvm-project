@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -triple i386-linux-gnu -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm -triple i386-linux-gnu -o - %s | FileCheck %s %}
 
 // CHECK: declare extern_weak void @test1_f()
 void test1_f(void);

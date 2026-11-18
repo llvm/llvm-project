@@ -372,6 +372,41 @@ entry:
   ret void
 }
 
+; Do not tail call a function without arguments from an sret function,
+; since the callee would not return past the caller's unimp.
+
+declare void @void_func_noargs()
+
+define void @sret_tail_noargs(ptr noalias sret(%struct.a) %agg.result) #0 {
+; V8-LABEL: sret_tail_noargs:
+; V8:       ! %bb.0: ! %entry
+; V8-NEXT:    save %sp, -96, %sp
+; V8-NEXT:    call void_func_noargs
+; V8-NEXT:    ld [%fp+64], %i0
+; V8-NEXT:    jmp %i7+12
+; V8-NEXT:    restore
+;
+; V9-LABEL: sret_tail_noargs:
+; V9:       ! %bb.0: ! %entry
+; V9-NEXT:    save %sp, -176, %sp
+; V9-NEXT:    call void_func_noargs
+; V9-NEXT:    nop
+; V9-NEXT:    ret
+; V9-NEXT:    restore
+;
+; V9-O0-LABEL: sret_tail_noargs:
+; V9-O0:       ! %bb.0: ! %entry
+; V9-O0-NEXT:    save %sp, -176, %sp
+; V9-O0-NEXT:    call void_func_noargs
+; V9-O0-NEXT:    nop
+; V9-O0-NEXT:    restore
+; V9-O0-NEXT:    retl
+; V9-O0-NEXT:    nop
+entry:
+  tail call void @void_func_noargs()
+  ret void
+}
+
 ; Test register + immediate pattern.
 
 define void @addri_test(i32 %ptr) #0 {

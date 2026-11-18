@@ -33,7 +33,6 @@
 ---
 name:            test_aligna_expansion
 alignment:       16
-tracksRegLiveness: true
 machineFunctionInfo:
   stackAlignBaseReg: '$r16'
 frameInfo:

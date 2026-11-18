@@ -621,6 +621,15 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
       return false;
   }
 
+  Value *OrigDest = DeadIntrinsic->getRawDest();
+  const DataLayout &DL = DeadI->getDataLayout();
+  Type *IndexTy = DL.getIndexType(OrigDest->getType());
+
+  // The GEP index for the new begin must fit as signed.
+  if (!IsOverwriteEnd &&
+      !isUIntN(IndexTy->getIntegerBitWidth() - 1, ToRemoveSize))
+    return false;
+
   LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  OW "
                     << (IsOverwriteEnd ? "END" : "BEGIN") << ": " << *DeadI
                     << "\n  KILLER [" << ToRemoveStart << ", "
@@ -629,10 +638,8 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
   DeadIntrinsic->setLength(NewSize);
   DeadIntrinsic->setDestAlignment(PrefAlign);
 
-  Value *OrigDest = DeadIntrinsic->getRawDest();
   if (!IsOverwriteEnd) {
-    Value *Indices[1] = {
-        ConstantInt::get(DeadIntrinsic->getLength()->getType(), ToRemoveSize)};
+    Value *Indices[1] = {ConstantInt::get(IndexTy, ToRemoveSize)};
     Instruction *NewDestGEP = GetElementPtrInst::CreateInBounds(
         Type::getInt8Ty(DeadIntrinsic->getContext()), OrigDest, Indices, "",
         DeadI->getIterator());
