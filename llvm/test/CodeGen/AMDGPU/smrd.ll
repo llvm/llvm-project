@@ -361,7 +361,7 @@ main_body:
 ; GCN-NEXT: %bb.
 ; SICI-NEXT: v_add_{{i|u}}32_e32 v0, {{(vcc, )?}}0x1000, v0
 ; SICI-NEXT: buffer_load_dword v{{[0-9]}}, v0, s[0:3], 0 offen ;
-; VIGFX9_10-NEXT: buffer_load_dword v{{[0-9]}}, v0, s[0:3], 4 offen offset:4092 ;
+; VIGFX9_10-NEXT: buffer_load_dword v{{[0-9]}}, v0, s[0:3], 1 offen offset:4095 ;
 define amdgpu_ps float @smrd_vgpr_offset_imm_too_large(<4 x i32> inreg %desc, i32 %offset) #0 {
 main_body:
   %off = add i32 %offset, 4096
@@ -573,10 +573,10 @@ main_body:
 ; SICI-DAG: buffer_load_dwordx4 v[4:7], v{{[0-9]+}}, s[0:3], 0 offen offset:16 ;
 ; SICI-DAG: buffer_load_dwordx4 v[8:11], v{{[0-9]+}}, s[0:3], 0 offen offset:32 ;
 ; SICI-DAG: buffer_load_dwordx4 v[12:15], v{{[0-9]+}}, s[0:3], 0 offen offset:48 ;
-; VIGFX9_10-DAG: buffer_load_dwordx4 v[0:3], v{{[0-9]+}}, s[0:3], 56 offen offset:4032 ;
-; VIGFX9_10-DAG: buffer_load_dwordx4 v[4:7], v{{[0-9]+}}, s[0:3], 56 offen offset:4048 ;
-; VIGFX9_10-DAG: buffer_load_dwordx4 v[8:11], v{{[0-9]+}}, s[0:3], 56 offen offset:4064 ;
-; VIGFX9_10-DAG: buffer_load_dwordx4 v[12:15], v{{[0-9]+}}, s[0:3], 56 offen offset:4080 ;
+; VIGFX9_10-DAG: buffer_load_dwordx4 v[0:3], v{{[0-9]+}}, s[0:3], 41 offen offset:4047 ;
+; VIGFX9_10-DAG: buffer_load_dwordx4 v[4:7], v{{[0-9]+}}, s[0:3], 41 offen offset:4063 ;
+; VIGFX9_10-DAG: buffer_load_dwordx4 v[8:11], v{{[0-9]+}}, s[0:3], 41 offen offset:4079 ;
+; VIGFX9_10-DAG: buffer_load_dwordx4 v[12:15], v{{[0-9]+}}, s[0:3], 41 offen offset:4095 ;
 ; GCN: ; return to shader part epilog
 define amdgpu_ps <16 x float> @smrd_load_nonconst4(<4 x i32> inreg %rsrc, i32 %off) #0 {
 main_body:
@@ -587,20 +587,20 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}smrd_load_nonconst5:
-; SICI: v_add_i32_e32 v{{[0-9]+}}, vcc, 0x1004, v0
+; SICI: v_add_i32_e32 v{{[0-9]+}}, vcc, 0x1014, v0
 ; SICI-DAG: buffer_load_dwordx4 v[0:3], v{{[0-9]+}}, s[0:3], 0 offen ;
 ; SICI-DAG: buffer_load_dwordx4 v[4:7], v{{[0-9]+}}, s[0:3], 0 offen offset:16 ;
 ; SICI-DAG: buffer_load_dwordx4 v[8:11], v{{[0-9]+}}, s[0:3], 0 offen offset:32 ;
 ; SICI-DAG: buffer_load_dwordx4 v[12:15], v{{[0-9]+}}, s[0:3], 0 offen offset:48 ;
-; VIGFX9_10: s_movk_i32 s4, 0xfc0
-; VIGFX9_10-DAG: buffer_load_dwordx4 v[0:3], v{{[0-9]+}}, s[0:3], s4 offen offset:68 ;
-; VIGFX9_10-DAG: buffer_load_dwordx4 v[4:7], v{{[0-9]+}}, s[0:3], s4 offen offset:84 ;
-; VIGFX9_10-DAG: buffer_load_dwordx4 v[8:11], v{{[0-9]+}}, s[0:3], s4 offen offset:100 ;
-; VIGFX9_10-DAG: buffer_load_dwordx4 v[12:15], v{{[0-9]+}}, s[0:3], s4 offen offset:116 ;
+; VIGFX9_10: s_movk_i32 s4, 0xfff
+; VIGFX9_10-DAG: buffer_load_dwordx4 v[0:3], v{{[0-9]+}}, s[0:3], s4 offen offset:21 ;
+; VIGFX9_10-DAG: buffer_load_dwordx4 v[4:7], v{{[0-9]+}}, s[0:3], s4 offen offset:37 ;
+; VIGFX9_10-DAG: buffer_load_dwordx4 v[8:11], v{{[0-9]+}}, s[0:3], s4 offen offset:53 ;
+; VIGFX9_10-DAG: buffer_load_dwordx4 v[12:15], v{{[0-9]+}}, s[0:3], s4 offen offset:69 ;
 ; GCN: ; return to shader part epilog
 define amdgpu_ps <16 x float> @smrd_load_nonconst5(<4 x i32> inreg %rsrc, i32 %off) #0 {
 main_body:
-  %off.2 = add i32 %off, 4100
+  %off.2 = add i32 %off, 4116
   %ld = call <16 x i32> @llvm.amdgcn.s.buffer.load.v16i32(<4 x i32> %rsrc, i32 %off.2, i32 0)
   %bc = bitcast <16 x i32> %ld to <16 x float>
   ret <16 x float> %bc

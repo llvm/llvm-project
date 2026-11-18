@@ -126,7 +126,8 @@ private:
 
   unsigned setBufferOffsets(MachineIRBuilder &B, Register CombinedOffset,
                             Register &VOffsetReg, Register &SOffsetReg,
-                            int64_t &InstOffsetVal, Align Alignment);
+                            int64_t &InstOffsetVal, unsigned ExtraBytes,
+                            Align Alignment);
 
   bool splitLoad(MachineInstr &MI, ArrayRef<LLT> LLTBreakdown,
                  LLT MergeTy = LLT());
