@@ -309,6 +309,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.symlinkat
     libc.src.unistd.sync
     libc.src.unistd.syncfs
+    libc.src.unistd.syscall
     libc.src.unistd.tcgetpgrp
     libc.src.unistd.tcsetpgrp
     libc.src.unistd.truncate
