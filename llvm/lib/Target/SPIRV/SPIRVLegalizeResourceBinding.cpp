@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass legalizes the @llvm.spv.resource.handlefromimplicitbinding
+// This pass legalizes the @llvm.spv.resource.handlefromimplicitbinding.mdname
 // and @llvm.spv.resource.handlefromheap intrinsics by replacing them with a
-// call to @llvm.spv.resource.handlefrombinding.
+// call to @llvm.spv.resource.handlefrombinding.mdname.
 // It also replaces any @llvm.spv.resource.counterhandlefromimplicitbinding and
 // @llvm.spv.resource.counterhandlefromheap intrinsics with calls to
 // @llvm.spv.resource.counterhandlefrombinding.
@@ -329,10 +329,10 @@ bool SPIRVLegalizeResourceBindingImpl::replaceHeapBindingCalls(Module &M) {
     // ResourceDescriptorHeap name for each unique resource type. They will all
     // share the same binding and will overlap.
     uint32_t Binding = getAndReserveFirstUnusedBinding(DescSet);
-    unsigned HeapID = 1;
+    unsigned HeapID = 0;
     for (Function *F : CbvSrvUavs) {
-      Value *HeapName =
-          createHeapNameMetadata(M.getContext(), "BufferHeap", HeapID++);
+      Value *HeapName = createHeapNameMetadata(
+          M.getContext(), "ResourceDescriptorHeap", HeapID++);
 
       for (User *U : make_early_inc_range(F->users())) {
         if (CallInst *CI = dyn_cast<CallInst>(U)) {
@@ -353,7 +353,8 @@ bool SPIRVLegalizeResourceBindingImpl::replaceHeapBindingCalls(Module &M) {
     [[maybe_unused]] TargetExtType *SamplerHandleType =
         cast<TargetExtType>(Samplers.front()->getReturnType());
 
-    Value *HeapName = createHeapNameMetadata(M.getContext(), "SamplerHeap", 1);
+    Value *HeapName =
+        createHeapNameMetadata(M.getContext(), "SamplerDescriptorHeap", 0);
     for (Function *F : Samplers) {
       assert(F->getReturnType() == SamplerHandleType &&
              "sampler handle type mismatch");

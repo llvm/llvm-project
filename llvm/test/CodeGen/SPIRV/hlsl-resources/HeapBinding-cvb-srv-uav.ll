@@ -18,15 +18,15 @@ target datalayout = "e-ve-i64:64-n8:16:32:64-G10"
 ; CHECK-DAG: OpDecorate [[Buf]] DescriptorSet 0
 ; CHECK-DAG: OpDecorate [[Buf]] Binding 1
 
-; CHECK-DAG: OpName [[Heap0:%[0-9]+]] ".BufferHeap.1"
+; CHECK-DAG: OpName [[Heap0:%[0-9]+]] ".ResourceDescriptorHeap.0"
 ; CHECK-DAG: OpDecorate [[Heap0]] DescriptorSet 0
 ; CHECK-DAG: OpDecorate [[Heap0]] Binding 0
 
-; CHECK-DAG: OpName [[Heap1:%[0-9]+]] ".BufferHeap.2"
+; CHECK-DAG: OpName [[Heap1:%[0-9]+]] ".ResourceDescriptorHeap.1"
 ; CHECK-DAG: OpDecorate [[Heap1]] DescriptorSet 0
 ; CHECK-DAG: OpDecorate [[Heap1]] Binding 0
 
-; CHECK-DAG: OpName [[Heap2:%[0-9]+]] ".BufferHeap.3"
+; CHECK-DAG: OpName [[Heap2:%[0-9]+]] ".ResourceDescriptorHeap.2"
 ; CHECK-DAG: OpDecorate [[Heap2]] DescriptorSet 0
 ; CHECK-DAG: OpDecorate [[Heap2]] Binding 0
 

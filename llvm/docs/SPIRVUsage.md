@@ -559,7 +559,9 @@ SPIR-V backend, along with their descriptions and argument details.
    * - `int_spv_resource_handlefromimplicitbinding_mdname`
      - Resource type
      - `[32-bit Integer orderId, 32-bit Integer space, 32-bit Integer arraySize, 32-bit Integer index, metadata name]`
-     - Metadata-name
+     - Backend form of `int_spv_resource_handlefromimplicitbinding`, produced by
+       name lowering. The name is a metadata string
+       literal as to not emit a real spirv constant.
    * - `int_spv_typeBufferLoad`
      - Scalar or vector
      - `[spirv.Image ImageBuffer, 32-bit Integer coordinate]`

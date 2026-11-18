@@ -182,10 +182,6 @@ void addStringImm(StringRef Str, MachineInstrBuilder &MIB);
 // the reverse of the logic in addStringImm.
 std::string getStringImm(const MachineInstr &MI, unsigned StartIndex);
 
-// Returns the string constant that the register refers to. It is assumed that
-// Reg is a global value that contains a string.
-std::string getStringValueFromReg(Register Reg, MachineRegisterInfo &MRI);
-
 // Add the given numerical immediate to MIB.
 void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB);
 
