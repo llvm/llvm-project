@@ -121,6 +121,13 @@ static void emitProperty(const Record *Property, raw_ostream &OS) {
   } else {
     OS << "\"\"";
   }
+  OS << ", ";
+
+  // Emit whether the property is deprecated. Check the value, not just whether
+  // the field exists, so that "let Deprecated = 0" works.
+  const bool deprecated =
+      Property->getValue("Deprecated") && Property->getValueAsBit("Deprecated");
+  OS << (deprecated ? "true" : "false");
 
   OS << "},\n";
 }

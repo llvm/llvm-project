@@ -74,6 +74,15 @@ let Command = "settings show" in {
   def setshow_changed : Option<"changed", "c">,
                         Desc<"Only show settings whose value differs from the "
                              "default.">;
+  def setshow_include_deprecated
+      : Option<"include-deprecated", "D">,
+        Desc<"Include ${D}eprecated settings.">;
+}
+
+let Command = "settings list" in {
+  def setlist_include_deprecated
+      : Option<"include-deprecated", "D">,
+        Desc<"Include ${D}eprecated settings.">;
 }
 
 let Command = "breakpoint list" in {

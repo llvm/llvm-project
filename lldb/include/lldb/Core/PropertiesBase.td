@@ -16,6 +16,15 @@ class Global {
   bit Global = 1;
 }
 
+// Marks the property as deprecated. Deprecated properties can still be set and
+// shown by name, but setting them prints a warning, and they are tagged as
+// deprecated wherever they are shown. Unless deprecated settings are explicitly
+// requested, they are hidden from "settings list", and from "settings show" and
+// "settings write" while they have their default value.
+class Deprecated {
+  bit Deprecated = 1;
+}
+
 class DefaultTrue {
   int DefaultUnsignedValue = 1;
   bit HasDefaultUnsignedValue = 1;

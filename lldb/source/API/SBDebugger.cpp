@@ -1293,6 +1293,12 @@ SBError SBDebugger::SetInternalVariable(const char *var_name, const char *value,
         debugger_sp->GetCommandInterpreter().GetExecutionContext());
     error = debugger_sp->SetPropertyValue(&exe_ctx, eVarSetOperationAssign,
                                           var_name, value);
+    // There's no command output to add the warning to, so report it as a
+    // diagnostic event for the client to show.
+    if (error.Success())
+      if (std::optional<std::string> warning =
+              debugger_sp->GetDeprecationWarning(var_name))
+        Debugger::ReportWarning(std::move(*warning), debugger_sp->GetID());
   } else {
     error = Status::FromErrorStringWithFormat(
         "invalid debugger instance name '%s'", debugger_instance_name);
@@ -1317,7 +1323,10 @@ SBDebugger::GetInternalVariableValue(const char *var_name,
         debugger_sp->GetPropertyValue(&exe_ctx, var_name, error));
     if (value_sp) {
       StreamString value_strm;
-      value_sp->DumpValue(&exe_ctx, value_strm, OptionValue::eDumpOptionValue);
+      // Like GetSetting, include deprecated settings.
+      value_sp->DumpValue(&exe_ctx, value_strm,
+                          OptionValue::eDumpOptionValue |
+                              OptionValue::eDumpOptionIncludeDeprecated);
       const std::string &value_str = std::string(value_strm.GetString());
       if (!value_str.empty()) {
         StringList string_list;
