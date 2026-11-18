@@ -1,0 +1,232 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32 -run-pass=machine-scheduler -verify-machineinstrs -verify-misched -debug-only=machine-scheduler %s -o %t.legacy 2> %t.legacy.log
+# RUN: FileCheck %s --check-prefix=DBG --enable-var-scope < %t.legacy.log
+# RUN: FileCheck %s --check-prefix=SCHED < %t.legacy
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32 -passes=machine-scheduler -verify-machineinstrs -verify-misched -debug-only=machine-scheduler %s -o %t.new 2> %t.new.log
+# RUN: FileCheck %s --check-prefix=DBG --enable-var-scope < %t.new.log
+# RUN: FileCheck %s --check-prefix=SCHED < %t.new
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32 -run-pass=machine-scheduler -misched-cluster=false -verify-machineinstrs -verify-misched -debug-only=machine-scheduler %s -o /dev/null 2> %t.off.log
+# RUN: FileCheck %s --check-prefix=OFF --implicit-check-not="Cluster ld/st" < %t.off.log
+
+# OFF: Before MISched:
+
+# Exercise the existing load-clustering DAG mutation on predicated RA pseudos.
+# Dead SCC definitions do not create output dependencies between the loads.
+# Check actual cluster edges, rather than inferring clustering from adjacency.
+# Real register and EXEC dependencies must still prevent clustering.
+
+# A use of the first result moves after the clustered pair.
+# DBG-LABEL: same_predicate_gv:%bb.0
+# DBG: Cluster ld/st SU([[FIRST:[0-9]+]]) - SU([[SECOND:[0-9]+]])
+# DBG: Curr cluster length: 2, Curr cluster bytes: 8
+# DBG: {{^}}SU([[FIRST]]): {{.*}}PRED_GLOBAL_LOAD_DWORD_RA
+# DBG: SU([[SECOND]]): Ord  Latency=0 Cluster
+# DBG: {{^}}SU([[USE:[0-9]+]]): {{.*}}V_ADD_F32_e64
+# DBG: SU([[SECOND]]): Ord  Latency=0 Artificial
+# DBG: {{^}}SU([[SECOND]]): {{.*}}PRED_GLOBAL_LOAD_DWORD_RA
+# DBG: SU([[FIRST]]): Ord  Latency=0 Cluster
+# DBG-NOT: Cluster ld/st
+# SCHED-LABEL: name: same_predicate_gv
+# SCHED: PRED_GLOBAL_LOAD_DWORD_RA %0, 0
+# SCHED: PRED_GLOBAL_LOAD_DWORD_RA %0, 4
+# SCHED: V_ADD_F32_e64
+---
+name: same_predicate_gv
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:sreg_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32, dead early-clobber %4:sreg_32 = PRED_GLOBAL_LOAD_DWORD_RA %0, 0, %1, %2, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    %5:vgpr_32 = V_ADD_F32_e64 0, %2, 0, 1, 0, 0, implicit $mode, implicit $exec
+    %3:vgpr_32, dead early-clobber %6:sreg_32 = PRED_GLOBAL_LOAD_DWORD_RA %0, 4, %1, %3, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    S_ENDPGM 0, implicit %3, implicit %5
+...
+
+# GVS addressing; pair occupies 16 bytes.
+# DBG-LABEL: same_predicate_gvs_b64:%bb.0
+# DBG: Cluster ld/st SU([[FIRST:[0-9]+]]) - SU([[SECOND:[0-9]+]])
+# DBG: Curr cluster length: 2, Curr cluster bytes: 16
+# DBG: {{^}}SU([[FIRST]]): {{.*}}PRED_GLOBAL_LOAD_DWORDX2_RA_SADDR
+# DBG: SU([[SECOND]]): Ord  Latency=0 Cluster
+# DBG: {{^}}SU([[SECOND]]): {{.*}}PRED_GLOBAL_LOAD_DWORDX2_RA_SADDR
+# DBG: SU([[FIRST]]): Ord  Latency=0 Cluster
+# DBG-NOT: Cluster ld/st
+---
+name: same_predicate_gvs_b64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_64_xexec_xnull = IMPLICIT_DEF
+    %1:sreg_32 = IMPLICIT_DEF
+    %2:vreg_64 = IMPLICIT_DEF
+    %3:vreg_64 = IMPLICIT_DEF
+    %7:vgpr_32 = IMPLICIT_DEF
+    %2:vreg_64, dead early-clobber %4:sreg_32 = PRED_GLOBAL_LOAD_DWORDX2_RA_SADDR %0, %7, 0, 0, %1, %2, implicit-def dead $scc, implicit $exec :: (load (s64), addrspace 1)
+    %3:vreg_64, dead early-clobber %6:sreg_32 = PRED_GLOBAL_LOAD_DWORDX2_RA_SADDR %0, %7, 8, 0, %1, %3, implicit-def dead $scc, implicit $exec :: (load (s64), addrspace 1)
+    S_ENDPGM 0, implicit %2, implicit %3
+...
+
+# GVS addressing; pair occupies 32 bytes.
+# DBG-LABEL: same_predicate_gvs_b128:%bb.0
+# DBG: Cluster ld/st SU([[FIRST:[0-9]+]]) - SU([[SECOND:[0-9]+]])
+# DBG: Curr cluster length: 2, Curr cluster bytes: 32
+# DBG: {{^}}SU([[FIRST]]): {{.*}}PRED_GLOBAL_LOAD_DWORDX4_RA_SADDR
+# DBG: SU([[SECOND]]): Ord  Latency=0 Cluster
+# DBG: {{^}}SU([[SECOND]]): {{.*}}PRED_GLOBAL_LOAD_DWORDX4_RA_SADDR
+# DBG: SU([[FIRST]]): Ord  Latency=0 Cluster
+# DBG-NOT: Cluster ld/st
+---
+name: same_predicate_gvs_b128
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_64_xexec_xnull = IMPLICIT_DEF
+    %1:sreg_32 = IMPLICIT_DEF
+    %2:vreg_128 = IMPLICIT_DEF
+    %3:vreg_128 = IMPLICIT_DEF
+    %7:vgpr_32 = IMPLICIT_DEF
+    %2:vreg_128, dead early-clobber %4:sreg_32 = PRED_GLOBAL_LOAD_DWORDX4_RA_SADDR %0, %7, 0, 0, %1, %2, implicit-def dead $scc, implicit $exec :: (load (s128), addrspace 1)
+    %3:vreg_128, dead early-clobber %6:sreg_32 = PRED_GLOBAL_LOAD_DWORDX4_RA_SADDR %0, %7, 16, 0, %1, %3, implicit-def dead $scc, implicit $exec :: (load (s128), addrspace 1)
+    S_ENDPGM 0, implicit %2, implicit %3
+...
+
+# A 32-byte pair exceeds the function limit of four DWORDs.
+# DBG-LABEL: cluster_size_limit:%bb.0
+# DBG-NOT: Cluster ld/st
+---
+name: cluster_size_limit
+tracksRegLiveness: true
+machineFunctionInfo:
+  maxMemoryClusterDWords: 4
+body: |
+  bb.0:
+    %0:sreg_64_xexec_xnull = IMPLICIT_DEF
+    %1:sreg_32 = IMPLICIT_DEF
+    %2:vreg_128 = IMPLICIT_DEF
+    %3:vreg_128 = IMPLICIT_DEF
+    %7:vgpr_32 = IMPLICIT_DEF
+    %2:vreg_128, dead early-clobber %4:sreg_32 = PRED_GLOBAL_LOAD_DWORDX4_RA_SADDR %0, %7, 0, 0, %1, %2, implicit-def dead $scc, implicit $exec :: (load (s128), addrspace 1)
+    %3:vreg_128, dead early-clobber %6:sreg_32 = PRED_GLOBAL_LOAD_DWORDX4_RA_SADDR %0, %7, 16, 0, %1, %3, implicit-def dead $scc, implicit $exec :: (load (s128), addrspace 1)
+    S_ENDPGM 0, implicit %2, implicit %3
+...
+
+# Matching addresses do not suffice when predicate registers differ.
+# DBG-LABEL: different_predicates:%bb.0
+# DBG-NOT: Cluster ld/st
+---
+name: different_predicates
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:sreg_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    %7:sreg_32 = IMPLICIT_DEF
+    %2:vgpr_32, dead early-clobber %4:sreg_32 = PRED_GLOBAL_LOAD_DWORD_RA %0, 0, %1, %2, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    %5:vgpr_32 = V_ADD_F32_e64 0, %2, 0, 1, 0, 0, implicit $mode, implicit $exec
+    %3:vgpr_32, dead early-clobber %6:sreg_32 = PRED_GLOBAL_LOAD_DWORD_RA %0, 4, %7, %3, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    S_ENDPGM 0, implicit %3, implicit %5
+...
+
+# Ordinary and predicated loads must not share a cluster.
+# DBG-LABEL: mixed_loads:%bb.0
+# DBG-NOT: Cluster ld/st
+---
+name: mixed_loads
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:sreg_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32, dead early-clobber %4:sreg_32 = PRED_GLOBAL_LOAD_DWORD_RA %0, 0, %1, %2, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    %5:vgpr_32 = V_ADD_F32_e64 0, %2, 0, 1, 0, 0, implicit $mode, implicit $exec
+    %3:vgpr_32 = GLOBAL_LOAD_DWORD %0, 4, 0, implicit $exec :: (load (s32), addrspace 1)
+    S_ENDPGM 0, implicit %3, implicit %5
+...
+
+# The second load reads the first result as its inactive-lane passthrough.
+# DBG-LABEL: passthru_raw:%bb.0
+# DBG-NOT: Cluster ld/st
+# SCHED-LABEL: name: passthru_raw
+# SCHED: PRED_GLOBAL_LOAD_DWORD_RA %0, 0
+# SCHED: PRED_GLOBAL_LOAD_DWORD_RA %0, 4
+---
+name: passthru_raw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:sreg_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32, dead early-clobber %4:sreg_32 = PRED_GLOBAL_LOAD_DWORD_RA %0, 0, %1, %2, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    %2:vgpr_32, dead early-clobber %6:sreg_32 = PRED_GLOBAL_LOAD_DWORD_RA %0, 4, %1, %2, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    S_ENDPGM 0, implicit %2
+...
+
+# The predicate register is identical but the incoming EXEC values differ.
+# DBG-LABEL: exec_change:%bb.0
+# DBG-NOT: Cluster ld/st
+# SCHED-LABEL: name: exec_change
+# SCHED: PRED_GLOBAL_LOAD_DWORD_RA %0, 0
+# SCHED: $exec_lo = S_MOV_B32 1
+# SCHED: PRED_GLOBAL_LOAD_DWORD_RA %0, 4
+---
+name: exec_change
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:sreg_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32, dead early-clobber %4:sreg_32 = PRED_GLOBAL_LOAD_DWORD_RA %0, 0, %1, %2, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    $exec_lo = S_MOV_B32 1
+    %3:vgpr_32, dead early-clobber %6:sreg_32 = PRED_GLOBAL_LOAD_DWORD_RA %0, 4, %1, %3, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    S_ENDPGM 0, implicit %2, implicit %3
+...
+
+# Preserve the RAW/anti chain through a live SCC consumer.
+# DBG-LABEL: live_scc_use:%bb.0
+# DBG-NOT: Cluster ld/st
+# SCHED-LABEL: name: live_scc_use
+# SCHED: PRED_GLOBAL_LOAD_DWORD_RA %0, 0
+# SCHED: S_CSELECT_B32
+# SCHED: PRED_GLOBAL_LOAD_DWORD_RA %0, 4
+---
+name: live_scc_use
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:sreg_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32, dead early-clobber %4:sreg_32 = PRED_GLOBAL_LOAD_DWORD_RA %0, 0, %1, %2, implicit-def $scc, implicit $exec :: (load (s32), addrspace 1)
+    %7:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
+    %3:vgpr_32, dead early-clobber %6:sreg_32 = PRED_GLOBAL_LOAD_DWORD_RA %0, 4, %1, %3, implicit-def dead $scc, implicit $exec :: (load (s32), addrspace 1)
+    S_ENDPGM 0, implicit %2, implicit %3, implicit %7
+...
+
+# Ordered memory dependencies remain effective.
+# DBG-LABEL: volatile_loads:%bb.0
+# DBG-NOT: Cluster ld/st
+---
+name: volatile_loads
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:sreg_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32, dead early-clobber %4:sreg_32 = PRED_GLOBAL_LOAD_DWORD_RA %0, 0, %1, %2, implicit-def dead $scc, implicit $exec :: (volatile load (s32), addrspace 1)
+    %3:vgpr_32, dead early-clobber %6:sreg_32 = PRED_GLOBAL_LOAD_DWORD_RA %0, 4, %1, %3, implicit-def dead $scc, implicit $exec :: (volatile load (s32), addrspace 1)
+    S_ENDPGM 0, implicit %2, implicit %3
+...
