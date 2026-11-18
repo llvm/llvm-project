@@ -12,8 +12,8 @@
 #include <cstdint>
 #include <variant>
 
-#include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
 #include "RISCVInstructions.h"
+#include "Register/Arch/lldb-riscv-register-enums.h"
 
 namespace lldb_private {
 

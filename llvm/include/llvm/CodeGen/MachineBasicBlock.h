@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
@@ -512,6 +513,11 @@ public:
   LLVM_ABI bool isLiveIn(MCRegister Reg,
                          LaneBitmask LaneMask = LaneBitmask::getAll()) const;
 
+  /// Return true if any part of \p Reg is live in, accounting for live-ins of
+  /// overlapping registers and their lane masks.
+  LLVM_ABI bool isLiveInOverlappedWith(MCRegister Reg,
+                                       const TargetRegisterInfo &TRI) const;
+
   // Iteration support for live in sets.  These sets are kept in sorted
   // order by their register number.
   using livein_iterator = LiveInVector::const_iterator;
@@ -1003,10 +1009,16 @@ public:
   ///
   /// This function updates LiveIntervals, MachineDominatorTree, and
   /// MachineLoopInfo, as applicable.
+  ///
+  /// If \p LiveOutSets is provided, it must hold the indexes of the virtual
+  /// registers live out of each block, indexed by block number. Only those
+  /// registers are considered when updating LiveIntervals, and the set for the
+  /// new block is added.
   struct SplitCriticalEdgeAnalyses {
     LiveIntervals *LIS;
     SlotIndexes *SI;
     MachineLoopInfo *MLI;
+    std::vector<SparseBitVector<>> *LiveOutSets = nullptr;
   };
 
   MachineBasicBlock *

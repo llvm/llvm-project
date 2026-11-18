@@ -114,7 +114,7 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GCN-NEXT:    s_setpc_b64 s[2:3]
 ; GCN-NEXT:  .LBB2_1: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:     ; 32 bytes
+; GCN-NEXT:    ; 32 bytes
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64
@@ -171,7 +171,7 @@ define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-NEXT:    s_setpc_b64 s[6:7]
 ; GCN-NEXT:  .LBB3_1: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:     ; 32 bytes
+; GCN-NEXT:    ; 32 bytes
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64

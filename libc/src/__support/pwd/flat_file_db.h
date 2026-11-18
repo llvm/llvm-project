@@ -53,7 +53,7 @@ ErrorOr<void> parse_line(cpp::span<char> line, cpp::span<char> scratch,
 // Generic flat colon-delimited database engine.
 template <typename EntryType> class FlatFileDatabase {
 public:
-  using Matcher = cpp::function<bool(const EntryType &)>;
+  using Matcher = cpp::function_ref<bool(const EntryType &)>;
 
 private:
   const char *file_path;

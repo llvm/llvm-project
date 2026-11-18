@@ -19,4 +19,4 @@ void f1() {
 
 void f2() {
   FILE *f = fopen("file", "r");
-} // expected-warning {{Opened stream never closed. Potential resource leak}}
+} // expected-warning {{Opened stream never closed; potential resource leak}}

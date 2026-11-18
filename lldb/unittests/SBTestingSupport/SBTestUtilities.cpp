@@ -34,8 +34,8 @@ bool lldb_private::DebuggerSupportsLLVMTarget(llvm::StringRef target) {
                                     .GetValueForKey("value");
   for (size_t i = 0; i < data.GetSize(); i++) {
     char buf[100] = {0};
-    size_t size = data.GetItemAtIndex(i).GetStringValue(buf, sizeof(buf));
-    if (llvm::StringRef(buf, size) == target)
+    data.GetItemAtIndex(i).GetStringValue(buf, sizeof(buf));
+    if (llvm::StringRef(buf) == target)
       return true;
   }
 

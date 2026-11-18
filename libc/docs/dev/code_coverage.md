@@ -170,19 +170,19 @@ export LLVM_PROFDATA="$PWD/build-clang/bin/llvm-profdata"
 export LLVM_COV="$PWD/build-clang/bin/llvm-cov"
 ```
 
-### 4. Build and Execute Hermetic Tests
+### 4. Build and Execute Tests
 
-Compiles and executes the full hermetic test suite:
+Compiles and executes the test suite:
 
 ```bash
-ninja -k 0 -C build-cov libc-hermetic-tests
+ninja -k 0 -C build-cov libc-tests
 ```
 
 :::{note}
 The `-k 0` flag ensures Ninja continues executing all remaining test targets
 even if an individual edge-case test encounters an error. To only compile test
 binaries without executing them, use
-`ninja -C build-cov libc-hermetic-tests-build`.
+`ninja -C build-cov libc-tests-build`.
 :::
 
 ### 5. Merge Profile Counters
@@ -295,13 +295,13 @@ export LLVM_PROFDATA="$PWD/build-clang/bin/llvm-profdata"
 export LLVM_COV="$PWD/build-clang/bin/llvm-cov"
 ```
 
-### 4. Build and Execute Hermetic Tests
+### 4. Build and Execute Tests
 
 Compiles and executes test executables in parallel with MC/DC instrumentation
 enabled:
 
 ```bash
-ninja -k 0 -C build-cov-mcdc libc-hermetic-tests
+ninja -k 0 -C build-cov-mcdc libc-tests
 ```
 
 ### 5. Merge Profile Counters

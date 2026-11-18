@@ -187,10 +187,10 @@ define void @narrow_widen_store_user(i32 %x, ptr noalias %A, ptr noalias %B) {
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC2-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[A]], i32 [[INDEX]]
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[B]], i32 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[TMP2]], i64 2
+; VF2IC2-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP2]], i64 8
 ; VF2IC2-NEXT:    store <2 x i32> [[TMP1]], ptr [[TMP2]], align 4
 ; VF2IC2-NEXT:    store <2 x i32> [[TMP1]], ptr [[TMP4]], align 4
-; VF2IC2-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP3]], i64 2
+; VF2IC2-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP3]], i64 8
 ; VF2IC2-NEXT:    store <2 x i32> [[TMP7]], ptr [[TMP3]], align 4
 ; VF2IC2-NEXT:    store <2 x i32> [[TMP7]], ptr [[TMP5]], align 4
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -357,10 +357,10 @@ define void @narrow_scatter_with_uniform_addr_to_scalar_unroll(ptr noalias %src,
 ; VF2IC2-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP10]], align 4
 ; VF2IC2-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i16> poison, i16 [[TMP13]], i64 0
 ; VF2IC2-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT1]], <2 x i16> poison, <2 x i32> zeroinitializer
+; VF2IC2-NEXT:    [[TMP11:%.*]] = trunc <2 x i16> [[BROADCAST_SPLAT]] to <2 x i8>
 ; VF2IC2-NEXT:    [[TMP6:%.*]] = trunc <2 x i16> [[BROADCAST_SPLAT1]] to <2 x i8>
 ; VF2IC2-NEXT:    [[TMP7:%.*]] = extractelement <2 x i8> [[TMP6]], i64 1
 ; VF2IC2-NEXT:    store i8 [[TMP7]], ptr [[DST2]], align 4
-; VF2IC2-NEXT:    [[TMP11:%.*]] = trunc <2 x i16> [[BROADCAST_SPLAT]] to <2 x i8>
 ; VF2IC2-NEXT:    [[TMP12:%.*]] = extractelement <2 x i8> [[TMP11]], i64 1
 ; VF2IC2-NEXT:    store i8 [[TMP12]], ptr [[TMP3]], align 4
 ; VF2IC2-NEXT:    store i8 [[TMP7]], ptr [[TMP4]], align 4
@@ -483,7 +483,7 @@ define void @dont_narrow_select_with_live_in_condition(i1 %c, ptr noalias %dst) 
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 2
+; VF2IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 8
 ; VF2IC2-NEXT:    store <2 x i32> [[BROADCAST_SPLAT]], ptr [[TMP1]], align 4
 ; VF2IC2-NEXT:    store <2 x i32> [[BROADCAST_SPLAT]], ptr [[TMP2]], align 4
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -547,7 +547,7 @@ define void @dont_narrow_select_with_uniform_load_condition(ptr noalias %src, pt
 ; VF2IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP1]], i64 0
 ; VF2IC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; VF2IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 2
+; VF2IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 8
 ; VF2IC2-NEXT:    store <2 x i32> [[BROADCAST_SPLAT]], ptr [[TMP2]], align 4
 ; VF2IC2-NEXT:    store <2 x i32> [[BROADCAST_SPLAT]], ptr [[TMP3]], align 4
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

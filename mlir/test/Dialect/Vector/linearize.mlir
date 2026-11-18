@@ -1,4 +1,6 @@
-// RUN: mlir-opt %s -split-input-file -test-vector-linearize -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s -split-input-file \
+// RUN:   -transform-preload-library='transform-library-paths=%p/td/linearize.mlir' \
+// RUN:   -transform-interpreter=entry-point=linearize -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL: test_linearize
 // CHECK-SAME: (%[[ORIG_ARG:.*]]: vector<2x2xf32>)

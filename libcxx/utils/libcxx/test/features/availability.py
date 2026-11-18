@@ -179,14 +179,6 @@ features += [
             cfg.available_features,
         ),
     ),
-    # Tests that require support for <print> and std::print in <ostream> in the built library.
-    Feature(
-        name="availability-print-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-18)",
-            cfg.available_features,
-        ),
-    ),
     # Tests that require time zone database support in the built library
     Feature(
         name="availability-tzdb-missing",

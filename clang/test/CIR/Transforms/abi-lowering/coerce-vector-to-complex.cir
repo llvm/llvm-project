@@ -13,7 +13,7 @@ module attributes {
 } {
 
   cir.func @takes_complex(%arg0: !cir.complex<!cir.float>)
-      attributes { test_classify = #coerce_complex_to_vec2 } {
+      requires_call_conv_lowering attributes { test_classify = #coerce_complex_to_vec2 } {
     cir.return
   }
 
@@ -25,7 +25,7 @@ module attributes {
   // CHECK:   %{{.*}} = cir.load %[[CAST]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 
   cir.func @caller(%arg0: !cir.complex<!cir.float>)
-      attributes { test_classify = #coerce_complex_to_vec2 } {
+      requires_call_conv_lowering attributes { test_classify = #coerce_complex_to_vec2 } {
     cir.call @takes_complex(%arg0) : (!cir.complex<!cir.float>) -> ()
     cir.return
   }

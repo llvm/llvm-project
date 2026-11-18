@@ -57,10 +57,10 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
   llvm::scope_exit UnlockGuard([&KEnv]() { KEnv.Lock.unlock(); });
 
   bool AppendLaunchKernelWithArgsAvailable =
-      Device.getL0Context().LaunchKernelWithArguments.available();
+      Device.getL0Driver().LaunchKernelWithArguments.available();
 
   if (AppendLaunchKernelWithArgsAvailable &&
-      Device.getL0Context().AppendLaunchKernelWithArgsSupported.load(
+      Device.getL0Driver().AppendLaunchKernelWithArgsSupported.load(
           std::memory_order_acquire)) {
     auto Err = CmdList->appendLaunchKernelWithArgs(
         Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, KEnv.ArgPtrs, SignalEvent,
@@ -70,14 +70,8 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
       return Plugin::success();
 
     // Check if Err is ErrorCode::UNSUPPORTED, if so consume it
-    Err = llvm::handleErrors(
-        std::move(Err),
-        [&](std::unique_ptr<error::OffloadError> E) -> llvm::Error {
-          if (E->convertToErrorCode() ==
-              error::make_error_code(error::ErrorCode::UNSUPPORTED))
-            return llvm::Error::success(); // Swallow error
-          return llvm::Error(std::move(E));
-        });
+    Err = error::consumeErrorIfCode(std::move(Err),
+                                    error::ErrorCode::UNSUPPORTED);
 
     if (Err)
       // Err is still here, so it was not ErrorCode::UNSUPPORTED

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/SelectOptimize.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -64,45 +65,10 @@ namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 }
 
-static cl::opt<unsigned> ColdOperandThreshold(
-    "cold-operand-threshold",
-    cl::desc("Maximum frequency of path for an operand to be considered cold."),
-    cl::init(20), cl::Hidden);
-
-static cl::opt<unsigned> ColdOperandMaxCostMultiplier(
-    "cold-operand-max-cost-multiplier",
-    cl::desc("Maximum cost multiplier of TCC_expensive for the dependence "
-             "slice of a cold operand to be considered inexpensive."),
-    cl::init(1), cl::Hidden);
-
-static cl::opt<unsigned>
-    GainGradientThreshold("select-opti-loop-gradient-gain-threshold",
-                          cl::desc("Gradient gain threshold (%)."),
-                          cl::init(25), cl::Hidden);
-
-static cl::opt<unsigned>
-    GainCycleThreshold("select-opti-loop-cycle-gain-threshold",
-                       cl::desc("Minimum gain per loop (in cycles) threshold."),
-                       cl::init(4), cl::Hidden);
-
-static cl::opt<unsigned> GainRelativeThreshold(
-    "select-opti-loop-relative-gain-threshold",
-    cl::desc(
-        "Minimum relative gain per loop threshold (1/X). Defaults to 12.5%"),
-    cl::init(8), cl::Hidden);
-
-static cl::opt<unsigned> MispredictDefaultRate(
-    "mispredict-default-rate", cl::Hidden, cl::init(25),
-    cl::desc("Default mispredict rate (initialized to 25%)."));
-
-static cl::opt<bool>
-    DisableLoopLevelHeuristics("disable-loop-level-heuristics", cl::Hidden,
-                               cl::init(false),
-                               cl::desc("Disable loop-level heuristics."));
-
 namespace {
 
 class SelectOptimizeImpl {
+  const CodeGenOptions *Opts = nullptr;
   const TargetMachine *TM = nullptr;
   const TargetSubtargetInfo *TSI = nullptr;
   const TargetLowering *TLI = nullptr;
@@ -266,9 +232,11 @@ private:
 
   // For a given source instruction, collect its backwards dependence slice
   // consisting of instructions exclusively computed for producing the operands
-  // of the source instruction.
+  // of the source instruction. When sinking, the slice stops at members of
+  // \p Group.
   void getExclBackwardsSlice(Instruction *I, std::stack<Instruction *> &Slice,
-                             Instruction *SI, bool ForSinking = false);
+                             Instruction *SI, bool ForSinking = false,
+                             const SelectGroup *Group = nullptr);
 
   // Returns true if the condition of the select is highly predictable.
   bool isSelectHighlyPredictable(const SelectLike SI);
@@ -422,6 +390,7 @@ bool SelectOptimizeImpl::runOnFunction(Function &F, Pass &P) {
 }
 
 bool SelectOptimizeImpl::optimizeSelects(Function &F) {
+  Opts = &getCodeGenOptions(F);
   // Determine for which select groups it is profitable converting to branches.
   SelectGroups ProfSIGroups;
   // Base heuristics apply only to non-loops and outer loops.
@@ -573,14 +542,14 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       // false operands.
       if (auto *TI = dyn_cast_or_null<Instruction>(SI.getTrueValue())) {
         std::stack<Instruction *> TrueSlice;
-        getExclBackwardsSlice(TI, TrueSlice, SI.getI(), true);
+        getExclBackwardsSlice(TI, TrueSlice, SI.getI(), true, &ASI);
         maxTrueSliceLen = std::max(maxTrueSliceLen, TrueSlice.size());
         TrueSlices.push_back(TrueSlice);
       }
       if (auto *FI = dyn_cast_or_null<Instruction>(SI.getFalseValue())) {
         if (isa<SelectInst>(SI.getI()) || !FI->hasOneUse()) {
           std::stack<Instruction *> FalseSlice;
-          getExclBackwardsSlice(FI, FalseSlice, SI.getI(), true);
+          getExclBackwardsSlice(FI, FalseSlice, SI.getI(), true, &ASI);
           maxFalseSliceLen = std::max(maxFalseSliceLen, FalseSlice.size());
           FalseSlices.push_back(FalseSlice);
         }
@@ -640,21 +609,20 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     // Delete the unconditional branch that was just created by the split.
     StartBlock->getTerminator()->eraseFromParent();
 
-    // Move any debug/pseudo and auxiliary instructions that were in-between the
-    // select group to the newly-created end block.
-    SmallVector<Instruction *, 2> SinkInstrs;
+    // Hoist any pseudo and auxiliary instructions that were in-between the
+    // select group before the group, since the true/false values may use them.
+    SmallVector<Instruction *, 2> HoistInstrs;
     auto DIt = SI.getI()->getIterator();
     auto NIt = ASI.Selects.begin();
     while (&*DIt != LastSI.getI()) {
       if (NIt != ASI.Selects.end() && &*DIt == NIt->getI())
         ++NIt;
       else
-        SinkInstrs.push_back(&*DIt);
+        HoistInstrs.push_back(&*DIt);
       DIt++;
     }
-    auto InsertionPoint = EndBlock->getFirstInsertionPt();
-    for (auto *DI : SinkInstrs)
-      DI->moveBeforePreserving(InsertionPoint);
+    for (auto *HI : HoistInstrs)
+      HI->moveBefore(SI.getI()->getIterator());
 
     // Duplicate implementation for DbgRecords, the non-instruction debug-info
     // format. Helper lambda for moving DbgRecords to the end block.
@@ -742,7 +710,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     // Use reverse iterator because later select may use the value of the
     // earlier select, and we need to propagate value through earlier select
     // to get the PHI operand.
-    InsertionPoint = EndBlock->begin();
+    auto InsertionPoint = EndBlock->begin();
     for (SelectLike &SI : ASI.Selects) {
       // The select itself is replaced with a PHI Node.
       PHINode *PN = PHINode::Create(SI.getType(), 2, "");
@@ -898,7 +866,7 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
   DenseMap<Value *, SelectLikeInfo>::iterator It;
   while (BBIt != BB.end()) {
     Instruction *I = &*BBIt++;
-    if (I->isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(I))
       continue;
 
     if (!AlreadyProcessed)
@@ -928,9 +896,9 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
 
     while (BBIt != BB.end()) {
       Instruction *NI = &*BBIt;
-      // Debug/pseudo instructions should be skipped and not prevent the
+      // Pseudo instructions should be skipped and not prevent the
       // formation of a select group.
-      if (NI->isDebugOrPseudoInst()) {
+      if (isa<PseudoProbeInst>(NI)) {
         ++BBIt;
         continue;
       }
@@ -1105,7 +1073,7 @@ bool SelectOptimizeImpl::hasExpensiveColdOperand(const SelectGroup &ASI) {
     uint64_t MinWeight = std::min(TrueWeight, FalseWeight);
     TotalWeight = TrueWeight + FalseWeight;
     // Is there a path with frequency <ColdOperandThreshold% (default:20%) ?
-    ColdOperand = TotalWeight * ColdOperandThreshold > 100 * MinWeight;
+    ColdOperand = TotalWeight * Opts->cold_operand_threshold > 100 * MinWeight;
   } else if (PSI->hasProfileSummary()) {
     OptimizationRemarkMissed ORmiss(DEBUG_TYPE, "SelectOpti",
                                     ASI.Selects.front().getI());
@@ -1142,8 +1110,8 @@ bool SelectOptimizeImpl::hasExpensiveColdOperand(const SelectGroup &ASI) {
       // Get nearest integer cost adjusted for coldness.
       InstructionCost AdjSliceCost =
           divideNearest(SliceCost * HotWeight, TotalWeight);
-      if (AdjSliceCost >=
-          ColdOperandMaxCostMultiplier * TargetTransformInfo::TCC_Expensive)
+      if (AdjSliceCost >= Opts->cold_operand_max_cost_multiplier *
+                              TargetTransformInfo::TCC_Expensive)
         return true;
     }
   }
@@ -1174,8 +1142,8 @@ static bool isSafeToSinkLoad(Instruction *LoadI, Instruction *SI) {
 // form an one-use chain that leads to the source instruction.
 void SelectOptimizeImpl::getExclBackwardsSlice(Instruction *I,
                                                std::stack<Instruction *> &Slice,
-                                               Instruction *SI,
-                                               bool ForSinking) {
+                                               Instruction *SI, bool ForSinking,
+                                               const SelectGroup *Group) {
   SmallPtrSet<Instruction *, 2> Visited;
   std::queue<Instruction *> Worklist;
   Worklist.push(I);
@@ -1195,6 +1163,12 @@ void SelectOptimizeImpl::getExclBackwardsSlice(Instruction *I,
     // Avoid sinking other select instructions (should be handled separetely).
     if (ForSinking && (II->isTerminator() || II->mayHaveSideEffects() ||
                        isa<SelectInst>(II) || isa<PHINode>(II)))
+      continue;
+
+    // Select-like members of the group are replaced separately, and their
+    // operands may still be needed on the other branch.
+    if (ForSinking && Group &&
+        llvm::any_of(Group->Selects, [&](auto &S) { return S.getI() == II; }))
       continue;
 
     // Avoid sinking loads in order not to skip state-modifying instructions,
@@ -1238,7 +1212,7 @@ bool SelectOptimizeImpl::checkLoopHeuristics(const Loop *L,
   // Loop-level checks to determine if a non-predicated version (with branches)
   // of the loop is more profitable than its predicated version.
 
-  if (DisableLoopLevelHeuristics)
+  if (!Opts->select_opti_loop_level_heuristics)
     return true;
 
   OptimizationRemarkMissed ORmissL(DEBUG_TYPE, "SelectOpti",
@@ -1258,8 +1232,9 @@ bool SelectOptimizeImpl::checkLoopHeuristics(const Loop *L,
   // Profitably converting to branches need to reduce the loop's critical path
   // by at least some threshold (absolute gain of GainCycleThreshold cycles and
   // relative gain of 12.5%).
-  if (Gain[1] < Scaled64::get(GainCycleThreshold) ||
-      Gain[1] * Scaled64::get(GainRelativeThreshold) < LoopCost[1].PredCost) {
+  if (Gain[1] < Scaled64::get(Opts->select_opti_loop_cycle_gain_threshold) ||
+      Gain[1] * Scaled64::get(Opts->select_opti_loop_relative_gain_threshold) <
+          LoopCost[1].PredCost) {
     Scaled64 RelativeGain = Scaled64::get(100) * Gain[1] / LoopCost[1].PredCost;
     ORmissL << "No select conversion in the loop due to small reduction of "
                "loop's critical path. Gain="
@@ -1277,7 +1252,8 @@ bool SelectOptimizeImpl::checkLoopHeuristics(const Loop *L,
   if (Gain[1] > Gain[0]) {
     Scaled64 GradientGain = Scaled64::get(100) * (Gain[1] - Gain[0]) /
                             (LoopCost[1].PredCost - LoopCost[0].PredCost);
-    if (GradientGain < Scaled64::get(GainGradientThreshold)) {
+    if (GradientGain <
+        Scaled64::get(Opts->select_opti_loop_gradient_gain_threshold)) {
       ORmissL << "No select conversion in the loop due to small gradient gain. "
                  "GradientGain="
               << GradientGain.toString() << "%. ";
@@ -1317,7 +1293,7 @@ bool SelectOptimizeImpl::computeLoopCosts(
     CostInfo &MaxCost = LoopCost[Iter];
     for (BasicBlock *BB : L->getBlocks()) {
       for (const Instruction &I : *BB) {
-        if (I.isDebugOrPseudoInst())
+        if (isa<PseudoProbeInst>(I))
           continue;
         // Compute the predicated and non-predicated cost of the instruction.
         Scaled64 IPredCost = Scaled64::getZero(),
@@ -1418,7 +1394,7 @@ SelectOptimizeImpl::getMispredictionCost(const SelectLike SI,
 
   // Account for the default misprediction rate when using a branch
   // (conservatively set to 25% by default).
-  uint64_t MispredictRate = MispredictDefaultRate;
+  uint64_t MispredictRate = Opts->mispredict_default_rate;
   // If the select condition is obviously predictable, then the misprediction
   // rate is zero.
   if (isSelectHighlyPredictable(SI))

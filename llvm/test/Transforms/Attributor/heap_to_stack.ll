@@ -137,7 +137,7 @@ define void @test3() {
 ; CHECK-LABEL: define {{[^@]+}}@test3() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I_H2S:%.*]] = alloca i8, i64 4, align 1
-; CHECK-NEXT:    tail call void @no_sync_func(ptr noalias nofree captures(none) [[I_H2S]])
+; CHECK-NEXT:    call void @no_sync_func(ptr noalias nofree captures(none) [[I_H2S]])
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -152,7 +152,7 @@ define void @test3a(ptr %p) {
 ; CHECK-SAME: (ptr captures(none) [[P:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I_H2S:%.*]] = alloca i8, i64 4, align 1
-; CHECK-NEXT:    tail call void @nofree_arg_only(ptr noalias nofree captures(none) [[I_H2S]], ptr captures(none) [[P]])
+; CHECK-NEXT:    call void @nofree_arg_only(ptr noalias nofree captures(none) [[I_H2S]], ptr captures(none) [[P]])
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -169,7 +169,7 @@ define void @test3b(ptr %p) {
 ; CHECK-SAME: (ptr captures(none) [[P:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I_H2S:%.*]] = alloca i8, i64 128, align 32
-; CHECK-NEXT:    tail call void @nofree_arg_only(ptr noalias nofree captures(none) [[I_H2S]], ptr captures(none) [[P]])
+; CHECK-NEXT:    call void @nofree_arg_only(ptr noalias nofree captures(none) [[I_H2S]], ptr captures(none) [[P]])
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -218,7 +218,7 @@ define void @test0() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I_H2S:%.*]] = alloca i8, i64 8, align 1
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[I_H2S]], i8 0, i64 8, i1 false)
-; CHECK-NEXT:    tail call void @no_sync_func(ptr noalias nofree captures(none) [[I_H2S]])
+; CHECK-NEXT:    call void @no_sync_func(ptr noalias nofree captures(none) [[I_H2S]])
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -233,7 +233,7 @@ define void @test4() {
 ; CHECK-LABEL: define {{[^@]+}}@test4() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I_H2S:%.*]] = alloca i8, i64 4, align 1
-; CHECK-NEXT:    tail call void @nofree_func(ptr noalias nofree captures(none) [[I_H2S]])
+; CHECK-NEXT:    call void @nofree_func(ptr noalias nofree captures(none) [[I_H2S]])
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -253,10 +253,10 @@ define void @test5(i32 %arg, ptr %p) {
 ; CHECK-NEXT:    [[I1:%.*]] = icmp eq i32 [[ARG]], 0
 ; CHECK-NEXT:    br i1 [[I1]], label [[BB3:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    tail call void @nofree_func(ptr noalias nofree captures(none) [[I_H2S]])
+; CHECK-NEXT:    call void @nofree_func(ptr noalias nofree captures(none) [[I_H2S]])
 ; CHECK-NEXT:    br label [[BB4:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    tail call void @nofree_arg_only(ptr noalias nofree captures(none) [[I_H2S]], ptr captures(none) [[P]])
+; CHECK-NEXT:    call void @nofree_arg_only(ptr noalias nofree captures(none) [[I_H2S]], ptr captures(none) [[P]])
 ; CHECK-NEXT:    br label [[BB4]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    ret void
@@ -289,7 +289,7 @@ define void @test6(i32 %arg) {
 ; CHECK-NEXT:    [[I1:%.*]] = icmp eq i32 [[ARG]], 0
 ; CHECK-NEXT:    br i1 [[I1]], label [[BB3:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    tail call void @nofree_func(ptr noalias nofree captures(none) [[I_H2S]])
+; CHECK-NEXT:    call void @nofree_func(ptr noalias nofree captures(none) [[I_H2S]])
 ; CHECK-NEXT:    br label [[BB4:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    br label [[BB4]]
@@ -320,7 +320,7 @@ define void @test7() {
 ; CHECK-LABEL: define {{[^@]+}}@test7() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I_H2S:%.*]] = alloca i8, i64 4, align 1
-; CHECK-NEXT:    [[I1:%.*]] = tail call i32 @no_return_call() #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    [[I1:%.*]] = call i32 @no_return_call() #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ;
 bb:
@@ -379,7 +379,7 @@ define i32 @test10() {
 ; CHECK-LABEL: define {{[^@]+}}@test10() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I_H2S:%.*]] = alloca i8, i64 4, align 1
-; CHECK-NEXT:    tail call void @no_sync_func(ptr noalias nofree captures(none) [[I_H2S]])
+; CHECK-NEXT:    call void @no_sync_func(ptr noalias nofree captures(none) [[I_H2S]])
 ; CHECK-NEXT:    store i32 10, ptr [[I_H2S]], align 4
 ; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr [[I_H2S]], align 4
 ; CHECK-NEXT:    ret i32 [[I2]]
@@ -399,7 +399,7 @@ define void @test11() {
 ; CHECK-LABEL: define {{[^@]+}}@test11() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I_H2S:%.*]] = alloca i8, i64 4, align 1
-; CHECK-NEXT:    tail call void @sync_will_return(ptr [[I_H2S]]) #[[ATTR11]]
+; CHECK-NEXT:    call void @sync_will_return(ptr [[I_H2S]]) #[[ATTR11]]
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -615,7 +615,7 @@ define void @test16a(i8 %v, ptr %P) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I_H2S:%.*]] = alloca i8, i64 4, align 1
 ; CHECK-NEXT:    store i8 [[V]], ptr [[I_H2S]], align 1
-; CHECK-NEXT:    tail call void @no_sync_func(ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[I_H2S]])
+; CHECK-NEXT:    call void @no_sync_func(ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[I_H2S]])
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -650,7 +650,7 @@ define void @test16c(i8 %v, ptr %P) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I_H2S:%.*]] = alloca i8, i64 4, align 1
 ; CHECK-NEXT:    store ptr [[I_H2S]], ptr [[P]], align 8
-; CHECK-NEXT:    tail call void @no_sync_func(ptr nofree captures(none) [[I_H2S]]) #[[ATTR11]]
+; CHECK-NEXT:    call void @no_sync_func(ptr nofree captures(none) [[I_H2S]]) #[[ATTR11]]
 ; CHECK-NEXT:    ret void
 ;
 bb:

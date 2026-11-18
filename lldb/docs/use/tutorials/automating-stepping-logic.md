@@ -6,7 +6,7 @@ simple state machine that runs the plans. You can create a Python class that
 works as a thread plan, and responds to the requests the state machine makes to
 run its operations.
 
-The base class for the [ScriptedThreadPlan](https://lldb.llvm.org/python_api/lldb.plugins.scripted_thread_plan.ScriptedThreadPlan.html) is provided as part of the lldb python module, making it easy to derive a new class from it.
+The base class for the {py:class}`ScriptedThreadPlan <lldb.plugins.scripted_thread_plan.ScriptedThreadPlan>` is provided as part of the lldb python module, making it easy to derive a new class from it.
 
 There is a longer discussion of scripted thread plans and the state machine,
 and several interesting examples of their use in [scripted_step.py](https://github.com/llvm/llvm-project/blob/main/lldb/examples/python/scripted_step.py)

@@ -14,11 +14,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-extern "C" void (*const __asan_dso_reg_hook)();
+#include "sanitizer_common/sanitizer_win_defs.h"
+
+#if !defined(__GNUC__) || defined(__clang__)
+#  pragma section(".CRT$XCU", long, read)
+#endif
+extern "C" IN_SECTION(".CRT$XCU") void (*const __asan_dso_reg_hook)();
 
 #if defined(SANITIZER_STATIC_RUNTIME_THUNK) || \
     defined(SANITIZER_DYNAMIC_RUNTIME_THUNK)
-#  include "sanitizer_common/sanitizer_win_defs.h"
 
 #  if !defined(__GNUC__) || defined(__clang__)
 #    pragma section(".CRT$XIB", long, \

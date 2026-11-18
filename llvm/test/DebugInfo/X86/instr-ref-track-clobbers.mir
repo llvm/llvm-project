@@ -81,7 +81,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 callsEHReturn:   false
 callsUnwindInit: false
@@ -91,7 +90,6 @@ hasEHFunclets:   false
 failsVerification: false
 tracksDebugUserValues: true
 debugInstrRef: true
-registers:       []
 liveins:
   - { reg: '$rdi', virtual-reg: '' }
   - { reg: '$rsi', virtual-reg: '' }

@@ -18,6 +18,10 @@
 #include <memory>
 #include <string>
 
+namespace llvm {
+class Triple;
+} // namespace llvm
+
 namespace cir {
 
 class TargetLoweringInfo {
@@ -33,10 +37,16 @@ public:
   };
 };
 
+/// Select target lowering rules without constructing language or ABI state.
+std::unique_ptr<TargetLoweringInfo>
+createTargetLoweringInfo(const llvm::Triple &triple);
+
 // Target-specific factory functions.
 std::unique_ptr<TargetLoweringInfo> createAMDGPUTargetLoweringInfo();
 
 std::unique_ptr<TargetLoweringInfo> createNVPTXTargetLoweringInfo();
+
+std::unique_ptr<TargetLoweringInfo> createCommonSPIRTargetLoweringInfo();
 
 std::unique_ptr<TargetLoweringInfo> createSPIRVTargetLoweringInfo();
 

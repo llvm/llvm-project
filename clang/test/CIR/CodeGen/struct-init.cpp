@@ -5,8 +5,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
-// CIR-DAG: cir.global "private"{{.*}}constant cir_private @[[INIT_S1:.*]] = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i}> : !rec_S
-// CIR-DAG: cir.global "private"{{.*}}constant cir_private @[[INIT_S2:.*]] = #cir.const_record<{#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<0> : !s32i}> : !rec_S
+// CIR-DAG: cir.global "private"{{.*}}constant cir_private unnamed_addr @[[INIT_S1:.*]] = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i}> : !rec_S
+// CIR-DAG: cir.global "private"{{.*}}constant cir_private unnamed_addr @[[INIT_S2:.*]] = #cir.const_record<{#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<0> : !s32i}> : !rec_S
 
 struct BitfieldStruct {
   unsigned int a:4;

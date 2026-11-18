@@ -1,0 +1,105 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=amdgpu | FileCheck %s
+
+// Big returns and non-trivial arguments are passed through a pointer in
+// addrspace(5) on AMDGPU, as in classic CodeGen, without extra copies.
+
+!s32i = !cir.int<s, 32>
+!rec_Big = !cir.struct<"Big" {data !cir.array<!s32i x 17>}>
+!rec_NT = !cir.struct<"NT" {data !s32i}>
+
+module attributes {
+  cir.record_layouts = {NT = #cir.record_layout<
+    arg_passing_kind = cannot_pass_in_regs, has_trivial_dtor = false,
+    record_align = 4>},
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui64>>
+} {
+
+  cir.func private @fill(!cir.ptr<!rec_Big>)
+  cir.func private @make_big() -> !rec_Big requires_call_conv_lowering
+  cir.func private @copy_nt(!cir.ptr<!rec_NT>, !cir.ptr<!rec_NT>)
+  cir.func private @use_nt(!cir.ptr<!rec_NT>)
+
+  // CHECK: cir.func private @make_big(!cir.ptr<!rec_Big, target_address_space(5)> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable})
+
+  // The callee builds its result directly in the caller's sret memory.
+  cir.func @ret_big() -> !rec_Big requires_call_conv_lowering {
+    %0 = cir.alloca "__retval" align(4) : !cir.ptr<!rec_Big, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_Big, target_address_space(5)> -> !cir.ptr<!rec_Big>
+    cir.call @fill(%1) : (!cir.ptr<!rec_Big>) -> ()
+    %2 = cir.load %0 : !cir.ptr<!rec_Big, target_address_space(5)>, !rec_Big
+    cir.return %2 : !rec_Big
+  }
+
+  // CHECK:      cir.func @ret_big(%[[SRET:.*]]: !cir.ptr<!rec_Big, target_address_space(5)> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Big, llvm.writable}) {
+  // CHECK-NEXT:   %[[SRET_VIEW:.*]] = cir.cast address_space %[[SRET]] : !cir.ptr<!rec_Big, target_address_space(5)> -> !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.call @fill(%[[SRET_VIEW]]) : (!cir.ptr<!rec_Big>) -> ()
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // The callee writes straight into `b`, with no temporary copy.
+  cir.func @use_big() requires_call_conv_lowering {
+    %0 = cir.alloca "b" align(4) init : !cir.ptr<!rec_Big, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_Big, target_address_space(5)> -> !cir.ptr<!rec_Big>
+    %2 = cir.call @make_big() : () -> !rec_Big
+    cir.store %2, %1 : !rec_Big, !cir.ptr<!rec_Big>
+    cir.call @fill(%1) : (!cir.ptr<!rec_Big>) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func @use_big() {
+  // CHECK-NEXT:   %[[B_SLOT:.*]] = cir.alloca "b" align(4) init : !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK-NEXT:   %[[B_VIEW:.*]] = cir.cast address_space %[[B_SLOT]] : !cir.ptr<!rec_Big, target_address_space(5)> -> !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.call @make_big(%[[B_SLOT]]) : (!cir.ptr<!rec_Big, target_address_space(5)> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}) -> ()
+  // CHECK-NEXT:   cir.call @fill(%[[B_VIEW]]) : (!cir.ptr<!rec_Big>) -> ()
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // A discarded result still gets sret memory from the caller.
+  cir.func @discard_big() requires_call_conv_lowering {
+    %0 = cir.call @make_big() : () -> !rec_Big
+    cir.return
+  }
+
+  // CHECK:      cir.func @discard_big() {
+  // CHECK-NEXT:   %[[SLOT:.*]] = cir.alloca "sret" align(4) : !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK-NEXT:   cir.call @make_big(%[[SLOT]]) : (!cir.ptr<!rec_Big, target_address_space(5)> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}) -> ()
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // The callee works on the caller's object in place, not on a copy.
+  cir.func @take_nt(%arg0: !rec_NT) requires_call_conv_lowering {
+    %0 = cir.alloca "n" align(4) init : !cir.ptr<!rec_NT, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_NT, target_address_space(5)> -> !cir.ptr<!rec_NT>
+    cir.store %arg0, %1 : !rec_NT, !cir.ptr<!rec_NT>
+    cir.call @use_nt(%1) : (!cir.ptr<!rec_NT>) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func @take_nt(%[[N_PTR:.*]]: !cir.ptr<!rec_NT, target_address_space(5)> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}) {
+  // CHECK-NEXT:   %[[N_VIEW:.*]] = cir.cast address_space %[[N_PTR]] : !cir.ptr<!rec_NT, target_address_space(5)> -> !cir.ptr<!rec_NT>
+  // CHECK-NEXT:   cir.call @use_nt(%[[N_VIEW]]) : (!cir.ptr<!rec_NT>) -> ()
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // The callee gets the copy-constructed temporary itself, not a byte copy.
+  cir.func @call_nt(%arg0: !cir.ptr<!rec_NT>) requires_call_conv_lowering {
+    %0 = cir.alloca "agg.tmp0" align(4) : !cir.ptr<!rec_NT, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_NT, target_address_space(5)> -> !cir.ptr<!rec_NT>
+    cir.call @copy_nt(%1, %arg0) : (!cir.ptr<!rec_NT>, !cir.ptr<!rec_NT>) -> ()
+    %2 = cir.load %1 : !cir.ptr<!rec_NT>, !rec_NT
+    cir.call @take_nt(%2) : (!rec_NT) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func @call_nt(%[[SRC:.*]]: !cir.ptr<!rec_NT>) {
+  // CHECK-NEXT:   %[[TMP:.*]] = cir.alloca "agg.tmp0" align(4) : !cir.ptr<!rec_NT, target_address_space(5)>
+  // CHECK-NEXT:   %[[TMP_VIEW:.*]] = cir.cast address_space %[[TMP]] : !cir.ptr<!rec_NT, target_address_space(5)> -> !cir.ptr<!rec_NT>
+  // CHECK-NEXT:   cir.call @copy_nt(%[[TMP_VIEW]], %[[SRC]]) : (!cir.ptr<!rec_NT>, !cir.ptr<!rec_NT>) -> ()
+  // CHECK-NEXT:   cir.call @take_nt(%[[TMP]]) : (!cir.ptr<!rec_NT, target_address_space(5)> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+}

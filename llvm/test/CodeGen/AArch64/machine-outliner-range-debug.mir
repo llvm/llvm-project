@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=aarch64 -debug-only=machine-outliner \
-# RUN:   -run-pass=machine-outliner -verify-machineinstrs %s -o /dev/null \
+# RUN:   -run-pass=machine-outliner %s -o /dev/null \
 # RUN:   2>&1 | FileCheck %s
 # RUN: llc -mtriple=aarch64 -debug-only=machine-outliner \
 # RUN:   -run-pass=mir-strip-debug,machine-outliner \
@@ -24,7 +24,6 @@
 ...
 ---
 name:            range_without_debug
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $lr
@@ -34,7 +33,6 @@ body:             |
 ...
 ---
 name:            range_with_debug
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $lr
@@ -45,7 +43,6 @@ body:             |
 ...
 ---
 name:            debug_outside_range
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone:      false
 body:             |

@@ -14,6 +14,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 #include "IR/LLVMOps.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlowDialectInterface.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Attributes.h"
@@ -474,6 +475,42 @@ LogicalResult AllocaOp::canonicalize(AllocaOp op, PatternRewriter &rewriter) {
 // LLVM::BrOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult BrOp::canonicalize(BrOp op, PatternRewriter &rewriter) {
+  // Merge a branch to a block that has a single predecessor, the same
+  // transform as cf::BranchOp; the successor block is inlined into the
+  // branch block and the branch is erased.
+  Block *succ = op.getDest();
+  Block *opParent = op->getBlock();
+  if (succ == opParent || !llvm::hasSingleElement(succ->getPredecessors()))
+    return failure();
+
+  // If any branch operand is itself a block argument of the successor,
+  // merging would replace uses of that argument with itself and leave
+  // dangling uses after the successor block is erased.
+  for (Value operand : op.getDestOperands())
+    if (auto arg = dyn_cast<BlockArgument>(operand))
+      if (arg.getOwner() == succ)
+        return failure();
+
+  // The successor must be mergeable. A landing pad must stay the first
+  // operation of its block, a block tag means the block address is taken,
+  // and merging would silently drop a loop annotation on the branch.
+  if (!succ->empty()) {
+    if (isa<LandingpadOp>(succ->front()))
+      return failure();
+    if (llvm::any_of(succ->without_terminator(),
+                     [](Operation &inner) { return isa<BlockTagOp>(inner); }))
+      return failure();
+  }
+  if (op.getLoopAnnotationAttr())
+    return failure();
+
+  SmallVector<Value> brOperands(op.getDestOperands());
+  rewriter.eraseOp(op);
+  rewriter.mergeBlocks(succ, opParent, brOperands);
+  return success();
+}
+
 SuccessorOperands BrOp::getSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
   return SuccessorOperands(getDestOperandsMutable());
@@ -928,12 +965,13 @@ LogicalResult LoadOp::verify() {
 void LoadOp::build(OpBuilder &builder, OperationState &state, Type type,
                    Value addr, unsigned alignment, bool isVolatile,
                    bool isNonTemporal, bool isInvariant, bool isInvariantGroup,
-                   AtomicOrdering ordering, StringRef syncscope) {
+                   bool isNoundef, AtomicOrdering ordering,
+                   StringRef syncscope) {
   build(builder, state, type, addr,
         alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
         isNonTemporal, isInvariant, isInvariantGroup, ordering,
         syncscope.empty() ? nullptr : builder.getStringAttr(syncscope),
-        /*dereferenceable=*/nullptr,
+        /*dereferenceable=*/nullptr, isNoundef, /*range=*/nullptr,
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr,
         /*tbaa=*/nullptr);
@@ -2182,7 +2220,7 @@ namespace {
 ///   ...
 ///   %e999 = llvm.extractvalue %i999[999]
 struct ResolveExtractValueSource : public OpRewritePattern<InsertValueOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(InsertValueOp insertOp,
                                 PatternRewriter &rewriter) const override {
@@ -3034,8 +3072,8 @@ LogicalResult IFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   Operation *symbol =
       symbolTable.lookupSymbolIn(parentLLVMModule(*this), getResolverAttr());
   // This matches LLVM IR verification logic, see llvm/lib/IR/Verifier.cpp
-  auto resolver = dyn_cast<LLVMFuncOp>(symbol);
-  auto alias = dyn_cast<AliasOp>(symbol);
+  auto resolver = dyn_cast_if_present<LLVMFuncOp>(symbol);
+  auto alias = dyn_cast_if_present<AliasOp>(symbol);
   while (alias) {
     Block &initBlock = alias.getInitializerBlock();
     auto returnOp = cast<ReturnOp>(initBlock.getTerminator());
@@ -3180,9 +3218,9 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
     result.addAttribute(getComdatAttrName(result.name), comdat);
   if (functionEntryCount)
     result.addAttribute(getFunctionEntryCountAttrName(result.name),
-                        FunctionEntryCountAttr::get(
-                            builder.getContext(), *functionEntryCount,
-                            ProfileCountType::Real, ArrayRef<uint64_t>{}));
+                        FunctionEntryCountAttr::get(builder.getContext(),
+                                                    *functionEntryCount,
+                                                    ArrayRef<uint64_t>{}));
 #ifndef NDEBUG
   std::optional<NamedAttribute> duplicate = result.attributes.findDuplicate();
   if (duplicate.has_value()) {
@@ -3848,22 +3886,19 @@ OpFoldResult LLVM::ConstantOp::fold(FoldAdaptor) { return getValue(); }
 void AtomicRMWOp::build(OpBuilder &builder, OperationState &state,
                         AtomicBinOp binOp, Value ptr, Value val,
                         AtomicOrdering ordering, StringRef syncscope,
-                        unsigned alignment, bool isVolatile) {
+                        unsigned alignment, bool isVolatile,
+                        bool ignoreDenormalMode) {
   build(builder, state, val.getType(), binOp, ptr, val, ordering,
         !syncscope.empty() ? builder.getStringAttr(syncscope) : nullptr,
         alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
+        ignoreDenormalMode,
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
 
 LogicalResult AtomicRMWOp::verify() {
   auto valType = getVal().getType();
-  if (getBinOp() == AtomicBinOp::fadd || getBinOp() == AtomicBinOp::fsub ||
-      getBinOp() == AtomicBinOp::fmin || getBinOp() == AtomicBinOp::fmax ||
-      getBinOp() == AtomicBinOp::fminimum ||
-      getBinOp() == AtomicBinOp::fmaximum ||
-      getBinOp() == AtomicBinOp::fminimumnum ||
-      getBinOp() == AtomicBinOp::fmaximumnum) {
+  if (isFloatingPointOperation()) {
     if (isCompatibleVectorType(valType)) {
       if (isScalableVectorType(valType))
         return emitOpError("expected LLVM IR fixed vector type");
@@ -3885,6 +3920,10 @@ LogicalResult AtomicRMWOp::verify() {
         intBitWidth != 64)
       return emitOpError("expected LLVM IR integer type");
   }
+
+  if (getIgnoreDenormalMode() && !isFloatingPointOperation())
+    return emitOpError(
+        "expected floating-point operation with 'ignore_denormal_mode'");
 
   if (static_cast<unsigned>(getOrdering()) <
       static_cast<unsigned>(AtomicOrdering::monotonic))
@@ -4673,10 +4712,51 @@ Speculation::Speculatability SDivOp::getSpeculatability() {
 }
 
 //===----------------------------------------------------------------------===//
+// URemOp
+//===----------------------------------------------------------------------===//
+
+Speculation::Speculatability URemOp::getSpeculatability() {
+  // urem(x, 0) => UB
+  Value divisor = getRhs();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroU()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
+}
+
+//===----------------------------------------------------------------------===//
+// SRemOp
+//===----------------------------------------------------------------------===//
+
+Speculation::Speculatability SRemOp::getSpeculatability() {
+  // srem(x, 0) => UB
+  // srem(INT_MIN, -1) => UB
+  Value divisor = getRhs();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
+      matchPattern(divisor, m_IntRangeWithoutNegOneS()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
+}
+
+//===----------------------------------------------------------------------===//
 // LLVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
+namespace {
+struct LLVMSCFToControlFlowInterface : SCFToControlFlowDialectInterface {
+  using SCFToControlFlowDialectInterface::SCFToControlFlowDialectInterface;
+
+  bool shouldPropagateLoopAttribute(NamedAttribute attr) const override {
+    // Preserve the existing policy of forwarding LLVM-valued attributes,
+    // including loop annotations, during SCF-to-CF conversion.
+    return true;
+  }
+};
+} // namespace
+
 void LLVMDialect::initialize() {
+  addInterfaces<LLVMSCFToControlFlowInterface>();
   registerAttributes();
 
   // clang-format off
@@ -4804,7 +4884,8 @@ LogicalResult LLVMDialect::verifyParameterAttribute(Operation *op,
 
   // Check a unit attribute that is attached to an integer value.
   if (name == LLVMDialect::getSExtAttrName() ||
-      name == LLVMDialect::getZExtAttrName()) {
+      name == LLVMDialect::getZExtAttrName() ||
+      name == LLVMDialect::getNoExtAttrName()) {
     if (failed(checkUnitAttrType()))
       return failure();
     if (verifyValueType && failed(checkIntegerType()))
