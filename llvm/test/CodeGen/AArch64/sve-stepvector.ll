@@ -371,16 +371,13 @@ define <vscale x 8 x i8> @promote_sub_stepvector_nxv8i8() {
 define <vscale x 16 x i32> @split_sub_stepvector_nxv16i32() {
 ; CHECK-LABEL: split_sub_stepvector_nxv16i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cntw x8
 ; CHECK-NEXT:    index z0.s, #0, #-1
-; CHECK-NEXT:    neg x8, x8
-; CHECK-NEXT:    mov z1.s, w8
-; CHECK-NEXT:    cnth x8
-; CHECK-NEXT:    neg x8, x8
-; CHECK-NEXT:    mov z3.s, w8
-; CHECK-NEXT:    add z1.s, z0.s, z1.s
-; CHECK-NEXT:    add z2.s, z0.s, z3.s
-; CHECK-NEXT:    add z3.s, z1.s, z3.s
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    decw z1.s
+; CHECK-NEXT:    decw z2.s, all, mul #2
+; CHECK-NEXT:    mov z3.d, z1.d
+; CHECK-NEXT:    decw z3.s, all, mul #2
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
   %2 = sub <vscale x 16 x i32> zeroinitializer, %1
