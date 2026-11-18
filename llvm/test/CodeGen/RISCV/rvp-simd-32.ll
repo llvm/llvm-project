@@ -1490,8 +1490,7 @@ define <2 x i16> @test_pssha_s_i16x2_neg_imm_max(<2 x i16> %a) {
 define <2 x i16> @test_pssha_s_i16x2_neg_imm_too_large(<2 x i16> %a) {
 ; CHECK-LABEL: test_pssha_s_i16x2_neg_imm_too_large:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, -16
-; CHECK-NEXT:    pssha.hs a0, a0, a1
+; CHECK-NEXT:    psrai.h a0, a0, 15
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.riscv.pssha.v2i16.i32(<2 x i16> %a, i32 -16)
   ret <2 x i16> %res
@@ -1500,8 +1499,7 @@ define <2 x i16> @test_pssha_s_i16x2_neg_imm_too_large(<2 x i16> %a) {
 define <2 x i16> @test_psshar_s_i16x2_neg_imm_too_large(<2 x i16> %a) {
 ; CHECK-LABEL: test_psshar_s_i16x2_neg_imm_too_large:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, -16
-; CHECK-NEXT:    psshar.hs a0, a0, a1
+; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.riscv.psshar.v2i16.i32(<2 x i16> %a, i32 -16)
   ret <2 x i16> %res
@@ -1510,8 +1508,7 @@ define <2 x i16> @test_psshar_s_i16x2_neg_imm_too_large(<2 x i16> %a) {
 define <2 x i16> @test_psshl_s_u16x2_neg_imm_too_large(<2 x i16> %a) {
 ; CHECK-LABEL: test_psshl_s_u16x2_neg_imm_too_large:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, -16
-; CHECK-NEXT:    psshl.hs a0, a0, a1
+; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.riscv.psshl.v2i16.i32(<2 x i16> %a, i32 -16)
   ret <2 x i16> %res
@@ -1520,8 +1517,7 @@ define <2 x i16> @test_psshl_s_u16x2_neg_imm_too_large(<2 x i16> %a) {
 define <2 x i16> @test_psshlr_s_u16x2_neg_imm_too_large(<2 x i16> %a) {
 ; CHECK-LABEL: test_psshlr_s_u16x2_neg_imm_too_large:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, -16
-; CHECK-NEXT:    psshlr.hs a0, a0, a1
+; CHECK-NEXT:    psrli.h a0, a0, 15
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.riscv.psshlr.v2i16.i32(<2 x i16> %a, i32 -16)
   ret <2 x i16> %res

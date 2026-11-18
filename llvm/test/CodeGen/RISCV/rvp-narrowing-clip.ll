@@ -239,8 +239,7 @@ define <4 x i8> @pnclipru_v4i8_17(<4 x i16> %x) {
 ;
 ; RV64-LABEL: pnclipru_v4i8_17:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, -17
-; RV64-NEXT:    psshlr.hs a0, a0, a1
+; RV64-NEXT:    psrli.h a0, a0, 15
 ; RV64-NEXT:    pnclipup.b a0, a0, zero
 ; RV64-NEXT:    ret
   %r = call <4 x i8> @llvm.riscv.pnclipru.v4i8.v4i16(<4 x i16> %x, i32 17)

@@ -25790,16 +25790,53 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     }
     break;
   }
-  case RISCVISD::PSLL:
+  case RISCVISD::PSLL: {
+    if (isNullConstant(N->getOperand(1)))
+      return N->getOperand(0);
+    break;
+  }
   case RISCVISD::SSHA:
   case RISCVISD::SSHAR:
   case RISCVISD::SSHL:
   case RISCVISD::SSHLR:
+  case RISCVISD::SHA:
   case RISCVISD::SHAR:
+  case RISCVISD::SHL:
   case RISCVISD::SHLR: {
-    if (isNullConstant(N->getOperand(1)))
+    // TODO: Use known-bits analysis for non-constant shift amounts if
+    // motivated by real-world cases.
+    auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
+    if (!C2)
+      break;
+
+    // The shift amount is a signed value encoded in the low 8 bits.
+    int64_t ShAmt = C2->getAPIntValue().trunc(8).getSExtValue();
+    if (ShAmt == 0)
       return N->getOperand(0);
-    break;
+
+    EVT VT = N->getValueType(0);
+    int64_t EltBits = VT.getScalarSizeInBits();
+    unsigned Opc = N->getOpcode();
+    if (ShAmt >= EltBits) {
+      if (Opc == RISCVISD::SHA || Opc == RISCVISD::SHAR ||
+          Opc == RISCVISD::SHL || Opc == RISCVISD::SHLR)
+        return DAG.getConstant(0, DL, VT);
+      break;
+    }
+
+    if (ShAmt > -EltBits)
+      break;
+
+    bool IsSignFill = Opc == RISCVISD::SSHA || Opc == RISCVISD::SHA;
+    bool IsHighBit = Opc == RISCVISD::SSHLR || Opc == RISCVISD::SHLR;
+    if (!IsSignFill && !IsHighBit)
+      return DAG.getConstant(0, DL, VT);
+
+    unsigned ShiftOpc = IsSignFill ? ISD::SRA : ISD::SRL;
+    if (VT.isVector())
+      ShiftOpc = IsSignFill ? RISCVISD::PSRA : RISCVISD::PSRL;
+    return DAG.getNode(ShiftOpc, DL, VT, N->getOperand(0),
+                       DAG.getConstant(EltBits - 1, DL, XLenVT));
   }
   case RISCVISD::PSRL:
   case RISCVISD::PSRA: {
