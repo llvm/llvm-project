@@ -13856,6 +13856,7 @@ def err_hlsl_builtin_resource_coordinate_dimension_mismatch : Error<
   "builtin %0 resource coordinate dimension mismatch: expected %1, found %2">;
 
 // HLSL Diagnostics
+def err_hlsl_exceptions : Error<"cannot use '%select{throw|try}0' in HLSL">;
 def err_hlsl_mult_inheritance : Error<"HLSL does not support multiple inheritance">;
 def err_hlsl_cstor_dstor : Error<"HLSL does not support constructors or destructors">;
 def err_hlsl_langstd_unimplemented : Error<"support for HLSL language version %0 is incomplete">;
