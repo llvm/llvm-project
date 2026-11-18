@@ -211,7 +211,6 @@ body: |
 # %0 is read after the asm, so it is copied into the tied def's $eax. %1 must
 # not be assigned $eax, or the copy would overwrite it.
 name: tied_physreg_def_other_use
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $ecx, $rdi
@@ -231,7 +230,6 @@ body: |
 ---
 # %0 is tied to both $eax and $ecx. Neither may go to %1 or %2.
 name: tied_physreg_def_twice
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edx, $rdi
@@ -254,7 +252,6 @@ body: |
 # The untied read of %0 is allocated first, so the tied use is copied into $eax.
 # %1 must not be assigned $eax.
 name: untied_read_before_tied_physreg_def
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $ecx, $rdi
