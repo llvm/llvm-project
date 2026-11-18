@@ -45,6 +45,7 @@ LLVM_ABI bool opt(const Config &Conf, TargetMachine *TM, unsigned Task,
 /// Runs a regular LTO backend. The regular LTO backend can also act as the
 /// regular LTO phase of ThinLTO, which may need to access the combined index.
 LLVM_ABI Error backend(const Config &C, AddStreamFn AddStream,
+                       FileCache &PartitionsFC,
                        unsigned ParallelCodeGenParallelismLevel, Module &M,
                        ModuleSummaryIndex &CombinedIndex,
                        ArrayRef<StringRef> BitcodeLibFuncs);
