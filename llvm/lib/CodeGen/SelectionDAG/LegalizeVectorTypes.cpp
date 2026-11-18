@@ -5458,9 +5458,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
         *DAG.getContext(), WideResVT.getVectorElementCount());
 
     if (!TLI.isOperationLegalOrCustomOrPromote(N->getOpcode(), WideVecVT) &&
-        TLI.isOperationExpandOrLibCall(N->getOpcode(),
-                                      VT0.getScalarType())) {
-
+        TLI.isOperationExpandOrLibCall(N->getOpcode(), VT0.getScalarType())) {
       SDValue Unrolled =
           DAG.UnrollVectorOp(N, WideVecVT.getVectorNumElements());
       Res = Unrolled.getValue(ResNo);
