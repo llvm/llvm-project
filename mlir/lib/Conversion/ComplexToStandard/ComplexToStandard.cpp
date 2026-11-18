@@ -795,11 +795,11 @@ struct TanTanhOpConversion : public OpConversionPattern<Op> {
     Value inf = cst(APFloat::getInf(floatSemantics));
     Value four = arith::ConstantOp::create(b, elementType,
                                            b.getFloatAttr(elementType, 4.0));
-    Value twoReal = arith::AddFOp::create(b, real, real, fmf);
-    Value negTwoReal = arith::NegFOp::create(b, twoReal, fmf);
-    // Intermediate expm1s may overflow.
+    // Intermediate sums and expm1s may overflow.
     arith::FastMathFlags fmfWithInf =
         arith::bitEnumClear(fmf, arith::FastMathFlags::ninf);
+    Value twoReal = arith::AddFOp::create(b, real, real, fmfWithInf);
+    Value negTwoReal = arith::NegFOp::create(b, twoReal, fmfWithInf);
     Value expTwoRealMinusOne = math::ExpM1Op::create(b, twoReal, fmfWithInf);
     Value expNegTwoRealMinusOne =
         math::ExpM1Op::create(b, negTwoReal, fmfWithInf);

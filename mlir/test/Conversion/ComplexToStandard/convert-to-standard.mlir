@@ -1572,8 +1572,8 @@ func.func @complex_tanh_ninf(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[IMAG:.*]] = complex.im %[[ARG]] : complex<f32>
 // CHECK: %[[INF:.*]] = arith.constant 0x7F800000 : f32
 // CHECK: %[[FOUR:.*]] = arith.constant 4.000000e+00 : f32
-// CHECK: %[[TWO_REAL:.*]] = arith.addf %[[REAL]], %[[REAL]] fastmath<ninf> : f32
-// CHECK: %[[NEG_TWO_REAL:.*]] = arith.negf %[[TWO_REAL]] fastmath<ninf> : f32
+// CHECK: %[[TWO_REAL:.*]] = arith.addf %[[REAL]], %[[REAL]] : f32
+// CHECK: %[[NEG_TWO_REAL:.*]] = arith.negf %[[TWO_REAL]] : f32
 // CHECK: %[[EXP_TWO_REAL_M1:.*]] = math.expm1 %[[TWO_REAL]] : f32
 // CHECK: %[[EXP_NEG_TWO_REAL_M1:.*]] = math.expm1 %[[NEG_TWO_REAL]] : f32
 // CHECK: %[[REAL_NUM:.*]] = arith.subf %[[EXP_TWO_REAL_M1]], %[[EXP_NEG_TWO_REAL_M1]] fastmath<ninf> : f32
