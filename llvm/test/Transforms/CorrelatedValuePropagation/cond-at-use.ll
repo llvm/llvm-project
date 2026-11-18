@@ -361,9 +361,13 @@ define i16 @urem_expand(i16 noundef %x) {
 
 define i16 @urem_narrow(i16 noundef %x) {
 ; CHECK-LABEL: @urem_narrow(
-; CHECK-NEXT:    [[UREM_LHS_TRUNC:%.*]] = trunc i16 [[X:%.*]] to i8
-; CHECK-NEXT:    [[UREM1:%.*]] = urem i8 [[UREM_LHS_TRUNC]], 42
-; CHECK-NEXT:    [[UREM_ZEXT:%.*]] = zext i8 [[UREM1]] to i16
+; CHECK-NEXT:    [[UREM_HALFX:%.*]] = lshr i16 [[X:%.*]], 1
+; CHECK-NEXT:    [[UREM_CMP1:%.*]] = icmp uge i16 [[X]], 42
+; CHECK-NEXT:    [[UREM_CMP2:%.*]] = icmp uge i16 [[UREM_HALFX]], 42
+; CHECK-NEXT:    [[UREM_SUB1:%.*]] = sub i16 [[X]], 42
+; CHECK-NEXT:    [[UREM_SUB2:%.*]] = sub i16 [[UREM_SUB1]], 42
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[UREM_CMP1]], i16 [[UREM_SUB1]], i16 [[X]]
+; CHECK-NEXT:    [[UREM_ZEXT:%.*]] = select i1 [[UREM_CMP2]], i16 [[UREM_SUB2]], i16 [[TMP1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X]], 85
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[UREM_ZEXT]], i16 24
 ; CHECK-NEXT:    ret i16 [[SEL]]
