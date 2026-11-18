@@ -8,10 +8,15 @@
 ; CHECK-NEXT: .long {{[0-9]+}}
 ; CHECK-NEXT: .long 3
 ; CHECK-NEXT: .long 32
-; CHECK: BTF_KIND_FWD
+; D keeps its non-virtual base. V (virtual base) and W (base V) have no fixed
+; layout: neither they nor their variables are emitted.
+; CHECK-NOT: BTF_KIND_FWD
+; CHECK:     BTF_KIND_VAR(id = 4)
+; CHECK-NOT: BTF_KIND_{{VAR|FWD}}
 
 @d = global i64 0, !dbg !0
 @v = global i64 0, !dbg !12
+@w = global i64 0, !dbg !20
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!8, !9, !10}
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -25,7 +30,7 @@
 !8 = !{i32 7, !"Dwarf Version", i32 5}
 !9 = !{i32 2, !"Debug Info Version", i32 3}
 !10 = !{i32 7, !"BTF", i32 1}
-!11 = !{!0, !12}
+!11 = !{!0, !12, !20}
 !12 = !DIGlobalVariableExpression(var: !13, expr: !DIExpression())
 !13 = distinct !DIGlobalVariable(name: "v", scope: !2, file: !3, type: !17, isLocal: false, isDefinition: true)
 !14 = !DICompositeType(tag: DW_TAG_structure_type, name: "B", file: !3, size: 32, elements: !15)
@@ -34,3 +39,8 @@
 !17 = !DICompositeType(tag: DW_TAG_structure_type, name: "V", file: !3, size: 64, elements: !18)
 !18 = !{!19}
 !19 = !DIDerivedType(tag: DW_TAG_inheritance, scope: !17, baseType: !14, flags: DIFlagVirtual)
+!20 = !DIGlobalVariableExpression(var: !21, expr: !DIExpression())
+!21 = distinct !DIGlobalVariable(name: "w", scope: !2, file: !3, type: !22, isLocal: false, isDefinition: true)
+!22 = !DICompositeType(tag: DW_TAG_structure_type, name: "W", file: !3, size: 64, elements: !23)
+!23 = !{!24}
+!24 = !DIDerivedType(tag: DW_TAG_inheritance, scope: !22, baseType: !17)

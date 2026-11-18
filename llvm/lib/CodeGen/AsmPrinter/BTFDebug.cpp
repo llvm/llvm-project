@@ -786,17 +786,31 @@ int BTFDebug::genBTFTypeTags(const DIDerivedType *DTy, int BaseTypeId) {
   return TmpTypeId;
 }
 
+// A record with a virtual base, directly or through a base, has no fixed
+// layout that BTF can describe.
+static bool hasVirtualBase(const DICompositeType *CTy) {
+  for (const DINode *Element : CTy->getElements()) {
+    if (Element->getTag() != dwarf::DW_TAG_inheritance)
+      continue;
+    const auto *Base = cast<DIDerivedType>(Element);
+    if (Base->isVirtual())
+      return true;
+    if (const auto *BaseTy = dyn_cast_or_null<DICompositeType>(
+            getBTFValueType(Base->getBaseType())))
+      if (hasVirtualBase(BaseTy))
+        return true;
+  }
+  return false;
+}
+
 /// Handle structure/union types.
 void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
                                uint32_t &TypeId) {
   DINodeArray DIElements = CTy->getElements();
   SmallVector<const DINode *, 8> Elements(DIElements.begin(), DIElements.end());
   bool IsBPF = Asm->TM.getTargetTriple().isBPF();
-  if (!IsBPF && llvm::any_of(Elements, [](const DINode *Element) {
-        return Element->getTag() == dwarf::DW_TAG_inheritance &&
-               cast<DIDerivedType>(Element)->isVirtual();
-      })) {
-    visitFwdDeclType(CTy, !IsStruct, TypeId);
+  if (!IsBPF && hasVirtualBase(CTy)) {
+    UnrepresentableTypes.insert(CTy);
     return;
   }
   if (!IsBPF || CTy->getTag() == dwarf::DW_TAG_class_type)
