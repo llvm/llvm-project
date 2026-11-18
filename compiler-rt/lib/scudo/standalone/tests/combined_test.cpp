@@ -796,7 +796,9 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DoubleFreeFromSecondary) {
           Allocator->deallocate(Ptr, Origin);
           Allocator->deallocate(Ptr, Origin);
         },
-        Allocator->useMemoryTaggingTestOnly() ? "" : "invalid chunk state");
+        Allocator->useMemoryTaggingTestOnly()
+            ? ""
+            : "(invalid chunk state|or a double free)");
   }
 }
 

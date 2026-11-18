@@ -434,6 +434,7 @@ libc_support_library(
         "//libc/src/__support:common",
         "//libc/src/__support:number_pair",
         "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
         "//libc/src/__support/macros/properties:cpu_features",
     ],
 )

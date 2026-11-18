@@ -199,3 +199,58 @@ body: |
   bb.3:
     S_ENDPGM 0
 ...
+
+# The exec range is computed while checking the else block. The folded copy
+# of exec has an implicit def of exec that must be removed from it.
+
+---
+name: fold_exec_copy_implicit_def_exec
+tracksRegLiveness: true
+body: |
+  ; GCN-LABEL: name: fold_exec_copy_implicit_def_exec
+  ; GCN: bb.0:
+  ; GCN-NEXT:   successors: %bb.1(0x80000000)
+  ; GCN-NEXT:   liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
+  ; GCN-NEXT:   S_BRANCH %bb.1
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.1:
+  ; GCN-NEXT:   successors: %bb.2(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[S_OR_SAVEEXEC_B64_:%[0-9]+]]:sreg_64 = S_OR_SAVEEXEC_B64 [[COPY]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GCN-NEXT:   $exec = S_XOR_B64_term $exec, [[S_OR_SAVEEXEC_B64_]], implicit-def dead $scc
+  ; GCN-NEXT:   S_BRANCH %bb.2
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   successors: %bb.3(0x80000000)
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   dead [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, [[COPY1]], implicit-def $scc
+  ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.3, implicit $scc
+  ; GCN-NEXT:   S_BRANCH %bb.3
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: bb.3:
+  ; GCN-NEXT:   SI_RETURN
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
+
+    %0:sreg_64 = COPY $sgpr0_sgpr1
+    %1:sreg_64 = COPY $sgpr2_sgpr3
+    S_BRANCH %bb.1
+
+  bb.1:
+    %2:sreg_64 = S_OR_SAVEEXEC_B64 %0, implicit-def $exec, implicit-def $scc, implicit $exec
+    %3:sreg_64 = S_AND_B64 $exec, %2, implicit-def dead $scc
+    $exec = S_XOR_B64_term $exec, %3, implicit-def dead $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    %4:sreg_64 = COPY $exec, implicit-def $exec
+    %5:sreg_64 = S_AND_B64 %4, %1, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.3, implicit $scc
+    S_BRANCH %bb.3
+
+  bb.3:
+    SI_RETURN
+...

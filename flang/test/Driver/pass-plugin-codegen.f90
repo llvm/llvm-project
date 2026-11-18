@@ -17,6 +17,13 @@
 ! RUN: %flang_fc1 -S %s -o - %loadbye -mllvm -last-words \
 ! RUN: | FileCheck %s --check-prefix=CHECK-ACTIVE
 
+! With split DWARF output to a separate file, the pass receives the .dwo stream
+! and writes to it as well.
+! RUN: %flang_fc1 -S %s -o - %loadbye -mllvm -last-words \
+! RUN: -debug-info-kind=standalone -split-dwarf-file %t.dwo \
+! RUN: -split-dwarf-output %t.dwo | FileCheck %s --check-prefix=CHECK-ACTIVE
+! RUN: FileCheck %s --check-prefix=CHECK-DWO < %t.dwo
+
 ! When emitting LLVM IR, no back-end is executed and therefore no
 ! pre-codegen hook of LLVM pass plugins are executed.
 ! RUN: %flang_fc1 -emit-llvm %s -o - %loadbye -mllvm -last-words \
@@ -30,6 +37,8 @@
 ! CHECK-INACTIVE-NOT: Bye
 ! CHECK-INACTIVE: empty_:
 ! CHECK-ACTIVE: CodeGen Bye
+! CHECK-ACTIVE-NOT: DwoGen
+! CHECK-DWO: DwoGen Bye
 ! CHECK-LLVM-NOT: Bye
 ! CHECK-LLVM: define{{.*}} void @empty_
 ! CHECK-ERR: error: last words unsupported for binary output
