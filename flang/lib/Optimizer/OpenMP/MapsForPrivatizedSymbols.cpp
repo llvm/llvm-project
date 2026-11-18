@@ -33,6 +33,7 @@
 #include "flang/Utils/OpenMP.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/SymbolTable.h"

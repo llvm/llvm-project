@@ -440,6 +440,12 @@ LogicalResult mlir::tosa::mxint8Type::convertFromAttribute(
 LogicalResult mlir::tosa::verifyBlockScaledTensorType(
     mlir::Type type, llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
     bool allowScaleValues) {
+  if (!llvm::isa<ShapedType>(type)) {
+    if (emitError)
+      emitError() << "non tensor type " << type << " is not allowed";
+    return failure();
+  }
+
   const auto tensorType = llvm::cast<ShapedType>(type);
   const BlockScaledType elemType =
       llvm::dyn_cast<BlockScaledType>(tensorType.getElementType());

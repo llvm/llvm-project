@@ -38,6 +38,12 @@ struct MemcmpOrBcmpConfiguration {
   llvm::StringRef name;
 };
 
+using MemchrFunction = void *(*)(const void *, int, size_t);
+struct MemchrConfiguration {
+  MemchrFunction function;
+  llvm::StringRef name;
+};
+
 } // namespace libc_benchmarks
 } // namespace llvm
 

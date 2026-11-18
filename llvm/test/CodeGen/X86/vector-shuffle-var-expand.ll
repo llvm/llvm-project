@@ -54,22 +54,29 @@ define <4 x i32> @shuffle_v4i32(<4 x i32> %v, <4 x i32> %mask) nounwind {
 define <2 x i64> @shuffle_v2i64(<2 x i64> %v, <2 x i64> %mask) nounwind {
 ; SSE-LABEL: shuffle_v2i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
-; SSE-NEXT:    movq %xmm2, %rax
-; SSE-NEXT:    andl $1, %eax
-; SSE-NEXT:    movq %xmm1, %rcx
-; SSE-NEXT:    andl $1, %ecx
-; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,0,3,2]
+; SSE-NEXT:    pand %xmm1, %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pandn %xmm1, %xmm2
+; SSE-NEXT:    por %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: shuffle_v2i64:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddq %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX2-LABEL: shuffle_v2i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[2,3,0,1]
+; AVX2-NEXT:    vblendvpd %xmm1, %xmm0, %xmm2, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: shuffle_v2i64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %k1
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm1 {%k1}
+; AVX512-NEXT:    vmovdqa %xmm1, %xmm0
+; AVX512-NEXT:    retq
   %res = call <2 x i64> @llvm.vector.shuffle.v2i64.v2i64(<2 x i64> %v, <2 x i64> %mask)
   ret <2 x i64> %res
 }

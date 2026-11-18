@@ -16152,8 +16152,8 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(
 
     const SCEV *visit(const SCEV *Expr) {
       if (isa<SCEVUnknown, SCEVPtrToAddrExpr, SCEVZeroExtendExpr,
-              SCEVSignExtendExpr, SCEVUMinExpr, SCEVSMinExpr, SCEVAddExpr>(
-              Expr))
+              SCEVSignExtendExpr, SCEVUMinExpr, SCEVSMinExpr, SCEVAddExpr,
+              SCEVMulExpr>(Expr))
         if (const SCEV *S = lookup(Expr))
           return S;
       return SCEVRewriteVisitor::visit(Expr);
