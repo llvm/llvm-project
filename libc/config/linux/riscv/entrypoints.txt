@@ -109,6 +109,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sched.sched_setparam
     libc.src.sched.sched_setscheduler
     libc.src.sched.sched_yield
+    libc.src.sched.unshare
 
     # string.h entrypoints
     libc.src.string.memccpy
