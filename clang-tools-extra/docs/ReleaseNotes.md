@@ -302,6 +302,10 @@ infrastructure are described first, followed by tool-specific sections.
   {option}`IgnoreHeaders` patterns containing `/` against header paths on
   Windows.
 
+- Improved {doc}`misc-include-cleaner
+  <clang-tidy/checks/misc/include-cleaner>` check by fixing a crash when a
+  `.clang-format` file contains invalid configuration, such as duplicate keys.
+
 - Fixed an infinite loop in {doc}`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
   inherits from itself or has a circular inheritance graph.
