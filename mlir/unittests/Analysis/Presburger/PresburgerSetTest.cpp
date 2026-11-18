@@ -860,6 +860,20 @@ TEST(SetTest, computeReprWithOnlyDivLocals) {
                   PresburgerSet(parseIntegerPolyhedron(
                       {"(x) : (x - 3*(x floordiv 3) == 0)"})),
                   /*numToProject=*/2);
+
+  testComputeRepr(
+      parseIntegerPolyhedron("(e, a, b, c)[] : ("
+                             "a >= 0,"
+                             "b >= 0,"
+                             "c >= 0,"
+                             "e >= 0,"
+                             "15 - a >= 0,"
+                             "7 - b >= 0,"
+                             "5 - c >= 0,"
+                             "e - a * 192 - c * 32 - b * 4 >= 0,"
+                             "3 - e + a * 192 + c * 32 + b * 4 >= 0)"),
+      parsePresburgerSet({"(i) : (i >= 0, i <= 3071)"}),
+      /*numToProject=*/3);
 }
 
 TEST(SetTest, subtractOutputSizeRegression) {
