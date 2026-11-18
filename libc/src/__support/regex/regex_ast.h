@@ -35,6 +35,10 @@ inline constexpr uint16_t REPEAT_INF = 0xFFFF;
 /// Compile-time guard against nested repetition bombs (e.g. (a{255}){255});
 /// ExprPool::MAX_NODE_LIMIT bounds lazy runtime state growth.
 inline constexpr uint16_t MAX_REPEAT_EXPANSION = 32768;
+static_assert(MAX_REPEAT_EXPANSION < REPEAT_INF,
+              "MAX_REPEAT_EXPANSION must leave headroom below REPEAT_INF");
+static_assert(RE_DUP_MAX < REPEAT_INF,
+              "RE_DUP_MAX must not collide with REPEAT_INF");
 
 /// One bit per possible byte value (2^CHAR_BIT = 256), allowing O(1)
 /// membership tests for wildcards and bracket expressions.
