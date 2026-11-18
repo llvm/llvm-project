@@ -1,0 +1,8 @@
+; RUN: llvm-c-test --targets-list | FileCheck %s
+;
+; Check that we can list available targets.
+; At minimum, we should have the host target.
+
+; CHECK: {{[a-zA-Z0-9_]+}}
+; CHECK-SAME: {{( \(\+jit\))?}}
+; CHECK: - {{.+}}

@@ -1,0 +1,19 @@
+; RUN: llvm-c-test --calc < %s 2>&1 | FileCheck %s
+;
+; Test calc command error handling
+
+; Test stack underflow on binary operation
+underflow_binop +
+; CHECK: stack underflow
+
+; Test stack underflow on single operand (return with empty stack)
+underflow_empty
+; CHECK: stack underflow at return
+
+; Test stack underflow on memory load (@)
+underflow_load @
+; CHECK: stack underflow
+
+; Test invalid number parsing
+bad_number xyz
+; CHECK: error parsing number
