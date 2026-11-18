@@ -2253,50 +2253,6 @@ static AArch64CC::CondCode findCondCodeUsedByInstr(const MachineInstr &Instr) {
                     : AArch64CC::Invalid;
 }
 
-static UsedNZCV getUsedNZCV(AArch64CC::CondCode CC) {
-  assert(CC != AArch64CC::Invalid);
-  UsedNZCV UsedFlags;
-  switch (CC) {
-  default:
-    break;
-
-  case AArch64CC::EQ: // Z set
-  case AArch64CC::NE: // Z clear
-    UsedFlags.Z = true;
-    break;
-
-  case AArch64CC::HI: // Z clear and C set
-  case AArch64CC::LS: // Z set   or  C clear
-    UsedFlags.Z = true;
-    [[fallthrough]];
-  case AArch64CC::HS: // C set
-  case AArch64CC::LO: // C clear
-    UsedFlags.C = true;
-    break;
-
-  case AArch64CC::MI: // N set
-  case AArch64CC::PL: // N clear
-    UsedFlags.N = true;
-    break;
-
-  case AArch64CC::VS: // V set
-  case AArch64CC::VC: // V clear
-    UsedFlags.V = true;
-    break;
-
-  case AArch64CC::GT: // Z clear, N and V the same
-  case AArch64CC::LE: // Z set,   N and V differ
-    UsedFlags.Z = true;
-    [[fallthrough]];
-  case AArch64CC::GE: // N and V the same
-  case AArch64CC::LT: // N and V differ
-    UsedFlags.N = true;
-    UsedFlags.V = true;
-    break;
-  }
-  return UsedFlags;
-}
-
 /// \returns Conditions flags used after \p CmpInstr in its MachineBB if NZCV
 /// flags are not alive in successors of the same \p CmpInstr and \p MI parent.
 /// \returns std::nullopt otherwise.

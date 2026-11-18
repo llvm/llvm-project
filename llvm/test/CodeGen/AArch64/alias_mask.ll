@@ -221,7 +221,6 @@ define <8 x i1> @whilewr_32_expand(i64 %a, i64 %b) {
 ; CHECK-NEXT:    subs x8, x1, x0
 ; CHECK-NEXT:    add x9, x8, #3
 ; CHECK-NEXT:    csel x8, x9, x8, mi
-; CHECK-NEXT:    cmp x1, x0
 ; CHECK-NEXT:    asr x8, x8, #2
 ; CHECK-NEXT:    csinv x8, x8, xzr, hi
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
@@ -239,7 +238,6 @@ define <16 x i1> @whilewr_32_expand2(i64 %a, i64 %b) {
 ; CHECK-NEXT:    subs x8, x1, x0
 ; CHECK-NEXT:    add x9, x8, #3
 ; CHECK-NEXT:    csel x8, x9, x8, mi
-; CHECK-NEXT:    cmp x1, x0
 ; CHECK-NEXT:    asr x8, x8, #2
 ; CHECK-NEXT:    csinv x8, x8, xzr, hi
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
@@ -257,7 +255,6 @@ define <32 x i1> @whilewr_32_expand3(i64 %a, i64 %b) {
 ; CHECK-NEXT:    subs x9, x1, x0
 ; CHECK-NEXT:    add x10, x9, #3
 ; CHECK-NEXT:    csel x9, x10, x9, mi
-; CHECK-NEXT:    cmp x1, x0
 ; CHECK-NEXT:    mov w10, #16 // =0x10
 ; CHECK-NEXT:    asr x9, x9, #2
 ; CHECK-NEXT:    csinv x9, x9, xzr, hi
@@ -289,7 +286,6 @@ define <4 x i1> @whilewr_64_expand(i64 %a, i64 %b) {
 ; CHECK-NEXT:    subs x8, x1, x0
 ; CHECK-NEXT:    add x9, x8, #7
 ; CHECK-NEXT:    csel x8, x9, x8, mi
-; CHECK-NEXT:    cmp x1, x0
 ; CHECK-NEXT:    asr x8, x8, #3
 ; CHECK-NEXT:    csinv x8, x8, xzr, hi
 ; CHECK-NEXT:    whilelo p0.h, xzr, x8
@@ -307,7 +303,6 @@ define <8 x i1> @whilewr_64_expand2(i64 %a, i64 %b) {
 ; CHECK-NEXT:    subs x8, x1, x0
 ; CHECK-NEXT:    add x9, x8, #7
 ; CHECK-NEXT:    csel x8, x9, x8, mi
-; CHECK-NEXT:    cmp x1, x0
 ; CHECK-NEXT:    asr x8, x8, #3
 ; CHECK-NEXT:    csinv x8, x8, xzr, hi
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
@@ -325,7 +320,6 @@ define <16 x i1> @whilewr_64_expand3(i64 %a, i64 %b) {
 ; CHECK-NEXT:    subs x8, x1, x0
 ; CHECK-NEXT:    add x9, x8, #7
 ; CHECK-NEXT:    csel x8, x9, x8, mi
-; CHECK-NEXT:    cmp x1, x0
 ; CHECK-NEXT:    asr x8, x8, #3
 ; CHECK-NEXT:    csinv x8, x8, xzr, hi
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
@@ -343,7 +337,6 @@ define <32 x i1> @whilewr_64_expand4(i64 %a, i64 %b) {
 ; CHECK-NEXT:    subs x9, x1, x0
 ; CHECK-NEXT:    add x10, x9, #7
 ; CHECK-NEXT:    csel x9, x10, x9, mi
-; CHECK-NEXT:    cmp x1, x0
 ; CHECK-NEXT:    mov w10, #16 // =0x10
 ; CHECK-NEXT:    asr x9, x9, #3
 ; CHECK-NEXT:    csinv x9, x9, xzr, hi

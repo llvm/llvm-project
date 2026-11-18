@@ -29387,13 +29387,33 @@ SDValue performCONDCombine(SDNode *N,
                            TargetLowering::DAGCombinerInfo &DCI,
                            SelectionDAG &DAG, unsigned CCIndex,
                            unsigned CmpIndex) {
-  unsigned CC = cast<ConstantSDNode>(N->getOperand(CCIndex))->getSExtValue();
+  AArch64CC::CondCode CC =
+      (AArch64CC::CondCode)N->getConstantOperandVal(CCIndex);
   SDNode *SubsNode = N->getOperand(CmpIndex).getNode();
   unsigned CondOpcode = SubsNode->getOpcode();
 
   if (CondOpcode != AArch64ISD::SUBS || SubsNode->hasAnyUseOfValue(0) ||
       !SubsNode->hasOneUse())
     return SDValue();
+
+  // SUBS(sub(x,y), 0) -> SUBS(x,y)
+  if (SubsNode->getOperand(0).getOpcode() == ISD::SUB &&
+      isNullConstant(SubsNode->getOperand(1))) {
+    // N and Z flags are always valid. C and V flags are valid providing the
+    // relevant wrap flags are present.
+    UsedNZCV NZCV = getUsedNZCV(CC);
+    if ((!NZCV.V || SubsNode->getOperand(0)->getFlags().hasNoSignedWrap()) &&
+        (!NZCV.C || SubsNode->getOperand(0)->getFlags().hasNoUnsignedWrap())) {
+      SDValue Sub =
+          DAG.getNode(AArch64ISD::SUBS, SubsNode, SubsNode->getVTList(),
+                      {SubsNode->getOperand(0).getOperand(0),
+                       SubsNode->getOperand(0).getOperand(1)},
+                      SubsNode->getOperand(0)->getFlags());
+      DAG.ReplaceAllUsesWith(SubsNode->getOperand(0), Sub);
+      DCI.CombineTo(SubsNode, Sub, Sub.getValue(1));
+      return SDValue(N, 0);
+    }
+  }
 
   // There is a SUBS feeding this condition. Is it fed by a mask we can
   // use?
