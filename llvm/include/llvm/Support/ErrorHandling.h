@@ -155,7 +155,7 @@ LLVM_ABI void install_out_of_memory_new_handler();
 ///   support such hints, prints a reduced message instead and aborts the
 ///   program.
 /// * When "OFF", a builtin_trap is emitted instead of an
-//    optimizer hint or printing a reduced message.
+///   optimizer hint or printing a reduced message.
 ///
 /// Use this instead of assert(0). It conveys intent more clearly, suppresses
 /// diagnostics for unreachable code paths, and allows compilers to omit
