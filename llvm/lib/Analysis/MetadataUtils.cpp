@@ -99,8 +99,8 @@ static const Value *getInvariantGroupPointer(const Value *V) {
   }
 }
 
-static void copyNonnullMetadata(const LoadInst &OldLI, MDNode *N,
-                                LoadInst &NewLI) {
+static void copyNonnullMetadataForAccess(const LoadInst &OldLI, MDNode *N,
+                                         LoadInst &NewLI) {
   auto *OldTy = cast<PointerType>(OldLI.getType());
   auto *NewTy = NewLI.getType();
 
@@ -123,30 +123,6 @@ static void copyNonnullMetadata(const LoadInst &OldLI, MDNode *N,
   auto *NonNullInt = ConstantExpr::getAdd(NullInt, ConstantInt::get(ITy, 1));
   NewLI.setMetadata(LLVMContext::MD_range,
                     MDB.createRange(NonNullInt, NullInt));
-}
-
-static void copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI,
-                              MDNode *N, LoadInst &NewLI) {
-  auto *NewTy = NewLI.getType();
-  // Simply copy the metadata if the type did not change.
-  if (NewTy == OldLI.getType()) {
-    NewLI.setMetadata(LLVMContext::MD_range, N);
-    return;
-  }
-
-  // Give up unless it is converted to a pointer where there is a single very
-  // valuable mapping we can do reliably.
-  // FIXME: It would be nice to propagate this in more ways, but the type
-  // conversions make it hard.
-  if (!NewTy->isPointerTy())
-    return;
-
-  unsigned BitWidth = DL.getPointerTypeSizeInBits(NewTy);
-  if (BitWidth == OldLI.getType()->getScalarSizeInBits() &&
-      !getConstantRangeFromMetadata(*N).contains(APInt(BitWidth, 0))) {
-    MDNode *NN = MDNode::get(OldLI.getContext(), {});
-    NewLI.setMetadata(LLVMContext::MD_nonnull, NN);
-  }
 }
 
 void llvm::copyMetadataForMemoryAccess(Instruction &Dest,
@@ -240,7 +216,8 @@ void llvm::copyMetadataForMemoryAccess(Instruction &Dest,
       break;
     case LLVMContext::MD_nonnull:
       if (IsWholeAccess && isa<LoadInst>(Source) && isa<LoadInst>(Dest))
-        copyNonnullMetadata(cast<LoadInst>(Source), MD, cast<LoadInst>(Dest));
+        copyNonnullMetadataForAccess(cast<LoadInst>(Source), MD,
+                                     cast<LoadInst>(Dest));
       break;
     case LLVMContext::MD_range:
       // Ranges apply per integer element. Other type changes require the
@@ -306,21 +283,6 @@ void llvm::copyMetadataForMemoryAccess(Instruction &Dest,
   Dest.setAAMetadata(AA);
   setMemCacheHint(Dest, DestInfo->PointerOperand,
                   getMemCacheHint(Source, SourceInfo->PointerOperand));
-}
-
-void llvm::copyMetadataForScalarizedInstruction(
-    Instruction &Dest, const Instruction &Source,
-    std::optional<int64_t> DestByteOffset) {
-  if (auto DestInfo = getMemoryAccessInfo(Dest))
-    if (getMemoryAccessInfo(Source, DestInfo->IsRead)) {
-      copyMetadataForMemoryAccess(Dest, Source, DestByteOffset);
-      return;
-    }
-  if (Dest.getType()->getScalarType() == Source.getType()->getScalarType() &&
-      Dest.getType()->isFPOrFPVectorTy())
-    Dest.copyMetadata(Source, {LLVMContext::MD_fpmath});
-  if (!Dest.getDebugLoc())
-    Dest.setDebugLoc(Source.getDebugLoc());
 }
 
 /// Add all access groups in @p AccGroups to @p List.
@@ -674,4 +636,117 @@ void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
 
 void llvm::combineAAMetadata(Instruction *K, const Instruction *J) {
   combineMetadata(K, J, /*DoesKMove=*/true, /*AAOnly=*/true);
+}
+
+void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
+  SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
+  Source.getAllMetadata(MD);
+  MDBuilder MDB(Dest.getContext());
+  Type *NewType = Dest.getType();
+  const DataLayout &DL = Source.getDataLayout();
+  for (const auto &MDPair : MD) {
+    unsigned ID = MDPair.first;
+    MDNode *N = MDPair.second;
+    // Note, essentially every kind of metadata should be preserved here! This
+    // routine is supposed to clone a load instruction changing *only its type*.
+    // The only metadata it makes sense to drop is metadata which is invalidated
+    // when the pointer type changes. This should essentially never be the case
+    // in LLVM, but we explicitly switch over only known metadata to be
+    // conservatively correct. If you are adding metadata to LLVM which pertains
+    // to loads, you almost certainly want to add it here.
+    switch (ID) {
+    case LLVMContext::MD_dbg:
+    case LLVMContext::MD_tbaa:
+    case LLVMContext::MD_prof:
+    case LLVMContext::MD_fpmath:
+    case LLVMContext::MD_tbaa_struct:
+    case LLVMContext::MD_invariant_load:
+    case LLVMContext::MD_alias_scope:
+    case LLVMContext::MD_noalias:
+    case LLVMContext::MD_nontemporal:
+    case LLVMContext::MD_mem_cache_hint:
+    case LLVMContext::MD_mem_parallel_loop_access:
+    case LLVMContext::MD_access_group:
+    case LLVMContext::MD_noundef:
+    case LLVMContext::MD_noalias_addrspace:
+    case LLVMContext::MD_invariant_group:
+    case LLVMContext::MD_mmra:
+      // All of these directly apply.
+      Dest.setMetadata(ID, N);
+      break;
+
+    case LLVMContext::MD_nonnull:
+      copyNonnullMetadata(Source, N, Dest);
+      break;
+
+    case LLVMContext::MD_align:
+    case LLVMContext::MD_dereferenceable:
+    case LLVMContext::MD_dereferenceable_or_null:
+      // These only directly apply if the new type is also a pointer.
+      if (NewType->isPointerTy())
+        Dest.setMetadata(ID, N);
+      break;
+
+    case LLVMContext::MD_range:
+      copyRangeMetadata(DL, Source, N, Dest);
+      break;
+
+    case LLVMContext::MD_nofpclass:
+      // This only applies if the floating-point type interpretation. This
+      // should handle degenerate cases like casting between a scalar and single
+      // element vector.
+      if (NewType->getScalarType() == Source.getType()->getScalarType())
+        Dest.setMetadata(ID, N);
+      break;
+    }
+  }
+}
+
+void llvm::copyNonnullMetadata(const LoadInst &OldLI, MDNode *N,
+                               LoadInst &NewLI) {
+  auto *NewTy = NewLI.getType();
+
+  // This only directly applies if the new type is also a pointer.
+  if (NewTy->isPointerTy()) {
+    NewLI.setMetadata(LLVMContext::MD_nonnull, N);
+    return;
+  }
+
+  // The only other translation we can do is to integral loads with !range
+  // metadata.
+  if (!NewTy->isIntegerTy())
+    return;
+
+  MDBuilder MDB(NewLI.getContext());
+  const Value *Ptr = OldLI.getPointerOperand();
+  auto *ITy = cast<IntegerType>(NewTy);
+  auto *NullInt = ConstantExpr::getPtrToInt(
+      ConstantPointerNull::get(cast<PointerType>(Ptr->getType())), ITy);
+  auto *NonNullInt = ConstantExpr::getAdd(NullInt, ConstantInt::get(ITy, 1));
+  NewLI.setMetadata(LLVMContext::MD_range,
+                    MDB.createRange(NonNullInt, NullInt));
+}
+
+void llvm::copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI,
+                             MDNode *N, LoadInst &NewLI) {
+  auto *NewTy = NewLI.getType();
+  // Simply copy the metadata if the type did not change.
+  if (NewTy == OldLI.getType()) {
+    NewLI.setMetadata(LLVMContext::MD_range, N);
+    return;
+  }
+
+  // Give up unless it is converted to a pointer where there is a single very
+  // valuable mapping we can do reliably.
+  // FIXME: It would be nice to propagate this in more ways, but the type
+  // conversions make it hard.
+  if (!NewTy->isPointerTy())
+    return;
+
+  unsigned BitWidth = DL.getPointerTypeSizeInBits(NewTy);
+  if (BitWidth == OldLI.getType()->getScalarSizeInBits() &&
+      !getConstantRangeFromMetadata(*N).contains(APInt(BitWidth, 0))) {
+    MDNode *NN = MDNode::get(OldLI.getContext(), {});
+    NewLI.setMetadata(LLVMContext::MD_nonnull, NN);
+  }
 }

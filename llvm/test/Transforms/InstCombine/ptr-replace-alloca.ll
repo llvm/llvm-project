@@ -514,7 +514,9 @@ define i8 @call_readonly_keep_alloca2() {
   ret i8 %v
 }
 
-; Only the pointer changes, so preserve all metadata on the load.
+; The pointer changes but the load type doesn't, so all metadata (here
+; !annotation, which the type-changing copyMetadataForLoad would drop) must be
+; preserved.
 @g3 = external constant [32 x i8], align 16
 
 define i8 @preserve_load_metadata(i64 %idx) {

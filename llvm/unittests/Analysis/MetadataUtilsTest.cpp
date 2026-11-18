@@ -270,18 +270,6 @@ TEST_F(MetadataUtilsTest, StoreTypeChangePreservesHints) {
   EXPECT_TRUE(New->hasMetadata(LLVMContext::MD_invariant_group));
 }
 
-TEST_F(MetadataUtilsTest, NonMemoryScalarizationPreservesFPMath) {
-  auto *Ty = FixedVectorType::get(B.getFloatTy(), 2);
-  auto *Old =
-      cast<Instruction>(B.CreateFAdd(B.CreateLoad(Ty, P), B.CreateLoad(Ty, Q)));
-  auto *New = cast<Instruction>(B.CreateFAdd(B.CreateLoad(B.getFloatTy(), P),
-                                             B.CreateLoad(B.getFloatTy(), Q)));
-  auto *Tag = MDNode::get(
-      C, {ConstantAsMetadata::get(ConstantFP::get(B.getFloatTy(), 2.5))});
-  Old->setMetadata(LLVMContext::MD_fpmath, Tag);
-  copyMetadataForScalarizedInstruction(*New, *Old);
-  EXPECT_EQ(New->getMetadata(LLVMContext::MD_fpmath), Tag);
-}
 
 TEST_F(MetadataUtilsTest, CSEIntersectsCacheHints) {
   auto *A = B.CreateLoad(B.getInt32Ty(), P);

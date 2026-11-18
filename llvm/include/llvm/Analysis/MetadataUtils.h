@@ -17,6 +17,8 @@
 #include <utility>
 
 namespace llvm {
+class DataLayout;
+class LoadInst;
 class Instruction;
 class MDNode;
 class Value;
@@ -36,13 +38,23 @@ LLVM_ABI void
 copyMetadataForMemoryAccess(Instruction &Dest, const Instruction &Source,
                             std::optional<int64_t> DestByteOffset = 0);
 
-/// Copy metadata valid after splitting a vector instruction into scalar or
-/// smaller vector parts.
-/// For memory accesses, DestByteOffset is the destination's byte offset within
-/// the source access.
-LLVM_ABI void copyMetadataForScalarizedInstruction(
-    Instruction &Dest, const Instruction &Source,
-    std::optional<int64_t> DestByteOffset = std::nullopt);
+/// Copy the metadata from the source instruction to the destination (the
+/// replacement for the source instruction).
+LLVM_ABI void copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source);
+
+/// Copy a nonnull metadata node to a new load instruction.
+///
+/// This handles mapping it to range metadata if the new load is an integer
+/// load instead of a pointer load.
+LLVM_ABI void copyNonnullMetadata(const LoadInst &OldLI, MDNode *N,
+                                  LoadInst &NewLI);
+
+/// Copy a range metadata node to a new load instruction.
+///
+/// This handles mapping it to nonnull metadata if the new load is a pointer
+/// load instead of an integer load and the range doesn't cover null.
+LLVM_ABI void copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI,
+                                MDNode *N, LoadInst &NewLI);
 
 /// Combine the metadata of two instructions so that K can replace J. This
 /// specifically handles the case of CSE-like transformations. Some
