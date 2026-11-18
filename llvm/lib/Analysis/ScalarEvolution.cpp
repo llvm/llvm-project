@@ -3367,6 +3367,9 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
   assert(LHS->getType() == RHS->getType() &&
          "SCEVUDivExpr operand types don't match!");
 
+  // Use flags may not hold where the division executes, so drop them.
+  RHS = RHS.getCanonical();
+
   if (SCEV *S = findExistingSCEVInCache(scUDivExpr, {LHS, RHS}))
     return S;
 
