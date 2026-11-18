@@ -16,6 +16,7 @@
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_unsigned.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/remove_cv.h>
@@ -35,15 +36,24 @@ template <class _Tp>
   requires(is_integral_v<_Tp> && !is_same_v<remove_cv_t<_Tp>, bool>)
 [[nodiscard]]
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp midpoint(_Tp __a, _Tp __b) noexcept _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK {
-  using _Up                = make_unsigned_t<_Tp>;
-  constexpr _Up __bitshift = numeric_limits<_Up>::digits - 1;
+#  if defined(_LIBCPP_COMPILER_CLANG_BASED)
+  // Some architecture don't support _BitInt greater than 128 bits
+  if constexpr (is_unsigned_v<_Tp> && sizeof(_Tp) < 16) {
+    using _Ip = unsigned _BitInt(sizeof(_Tp) * 8 + 1);
+    return (_Ip(__a) + _Ip(__b) + _Ip(__a > __b)) / 2;
+  } else
+#  endif
+  {
+    using _Up                = make_unsigned_t<_Tp>;
+    constexpr _Up __bitshift = numeric_limits<_Up>::digits - 1;
 
-  _Up __diff     = _Up(__b) - _Up(__a);
-  _Up __sign_bit = __b < __a;
+    _Up __diff     = _Up(__b) - _Up(__a);
+    _Up __sign_bit = __b < __a;
 
-  _Up __half_diff = (__diff / 2) + (__sign_bit << __bitshift) + (__sign_bit & __diff);
+    _Up __half_diff = (__diff / 2) + (__sign_bit << __bitshift) + (__sign_bit & __diff);
 
-  return __a + __half_diff;
+    return __a + __half_diff;
+  }
 }
 
 template <class _Tp>
