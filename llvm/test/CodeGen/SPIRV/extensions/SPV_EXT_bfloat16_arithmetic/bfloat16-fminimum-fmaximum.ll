@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bfloat16_arithmetic,+SPV_KHR_bfloat16 %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_bfloat16_arithmetic,+SPV_KHR_bfloat16 %s -o - | FileCheck %s
 
 ; The expansion of llvm.minimum/llvm.maximum must use bfloat types and
 ; constants.
