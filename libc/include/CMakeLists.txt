@@ -1254,6 +1254,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  netinet_ip
+  ../libc/include/netinet/ip.yaml
+  netinet/ip.h
+  DEPENDS
+    .llvm-libc-types.struct_iphdr
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   netinet_tcp
   ../libc/include/netinet/tcp.yaml
   netinet/tcp.h

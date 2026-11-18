@@ -1402,6 +1402,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.perror
     libc.src.stdio.popen
     libc.src.stdio.putc
+    libc.src.stdio.putc_unlocked
     libc.src.stdio.putchar
     libc.src.stdio.putchar_unlocked
     libc.src.stdio.puts
@@ -1517,6 +1518,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.gmtime
     libc.src.time.gmtime_r
     libc.src.time.mktime
+    libc.src.time.timegm
     libc.src.time.clock_nanosleep
     libc.src.time.nanosleep
     libc.src.time.time

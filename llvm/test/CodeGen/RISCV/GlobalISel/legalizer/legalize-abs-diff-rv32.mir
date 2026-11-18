@@ -134,11 +134,11 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $x11
     ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[COPY]], [[COPY2]]
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[COPY]](s32), [[COPY2]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(ult), [[COPY]](s32), [[COPY2]]
     ; CHECK-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[COPY1]], [[COPY3]]
     ; CHECK-NEXT: [[SUB2:%[0-9]+]]:_(s32) = G_SUB [[SUB1]], [[ICMP]]
     ; CHECK-NEXT: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[COPY2]], [[COPY]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[COPY2]](s32), [[COPY]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i32) = G_ICMP intpred(ult), [[COPY2]](s32), [[COPY]]
     ; CHECK-NEXT: [[SUB4:%[0-9]+]]:_(s32) = G_SUB [[COPY3]], [[COPY1]]
     ; CHECK-NEXT: [[SUB5:%[0-9]+]]:_(s32) = G_SUB [[SUB4]], [[ICMP1]]
     ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[COPY]](s32), [[COPY2]]
@@ -292,11 +292,11 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $x11
     ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[COPY]], [[COPY2]]
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[COPY]](s32), [[COPY2]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(ult), [[COPY]](s32), [[COPY2]]
     ; CHECK-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[COPY1]], [[COPY3]]
     ; CHECK-NEXT: [[SUB2:%[0-9]+]]:_(s32) = G_SUB [[SUB1]], [[ICMP]]
     ; CHECK-NEXT: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[COPY2]], [[COPY]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[COPY2]](s32), [[COPY]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i32) = G_ICMP intpred(ult), [[COPY2]](s32), [[COPY]]
     ; CHECK-NEXT: [[SUB4:%[0-9]+]]:_(s32) = G_SUB [[COPY3]], [[COPY1]]
     ; CHECK-NEXT: [[SUB5:%[0-9]+]]:_(s32) = G_SUB [[SUB4]], [[ICMP1]]
     ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[COPY]](s32), [[COPY2]]
