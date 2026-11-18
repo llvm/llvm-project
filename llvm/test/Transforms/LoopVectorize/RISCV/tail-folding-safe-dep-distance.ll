@@ -490,3 +490,107 @@ for.end:
   ret void
 }
 
+; With Zbb, umin is a single instruction.
+define i32 @recurrence_safe_dist_zbb(ptr %p, i32 %n) vscale_range(2, 8) "target-features"="+v,+zbb" {
+; IF-EVL-LABEL: @recurrence_safe_dist_zbb(
+; IF-EVL-NEXT:  entry:
+; IF-EVL-NEXT:    [[N_ZERO:%.*]] = icmp eq i32 [[N:%.*]], 0
+; IF-EVL-NEXT:    br i1 [[N_ZERO]], label [[EXIT:%.*]], label [[LOOP_PREHEADER:%.*]]
+; IF-EVL:       loop.preheader:
+; IF-EVL-NEXT:    br label [[LOOP:%.*]]
+; IF-EVL:       loop:
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
+; IF-EVL-NEXT:    [[FOR:%.*]] = phi i32 [ [[L:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
+; IF-EVL-NEXT:    [[IV_EXT:%.*]] = zext i32 [[IV]] to i64
+; IF-EVL-NEXT:    [[GEP_LOAD:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IV_EXT]]
+; IF-EVL-NEXT:    [[L]] = load i32, ptr [[GEP_LOAD]], align 4
+; IF-EVL-NEXT:    [[IV_OFF:%.*]] = add i64 [[IV_EXT]], 8
+; IF-EVL-NEXT:    [[GEP_STORE:%.*]] = getelementptr i32, ptr [[P]], i64 [[IV_OFF]]
+; IF-EVL-NEXT:    [[SUB:%.*]] = sub i32 [[L]], [[FOR]]
+; IF-EVL-NEXT:    store i32 [[SUB]], ptr [[GEP_STORE]], align 4
+; IF-EVL-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; IF-EVL-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
+; IF-EVL-NEXT:    br i1 [[EC]], label [[EXIT_LOOPEXIT:%.*]], label [[LOOP]]
+; IF-EVL:       exit.loopexit:
+; IF-EVL-NEXT:    [[FOR_LCSSA:%.*]] = phi i32 [ [[FOR]], [[LOOP]] ]
+; IF-EVL-NEXT:    br label [[EXIT]]
+; IF-EVL:       exit:
+; IF-EVL-NEXT:    [[RES:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[FOR_LCSSA]], [[EXIT_LOOPEXIT]] ]
+; IF-EVL-NEXT:    ret i32 [[RES]]
+;
+; NO-VP-LABEL: @recurrence_safe_dist_zbb(
+; NO-VP-NEXT:  entry:
+; NO-VP-NEXT:    [[N_ZERO:%.*]] = icmp eq i32 [[N:%.*]], 0
+; NO-VP-NEXT:    br i1 [[N_ZERO]], label [[EXIT:%.*]], label [[LOOP_PREHEADER:%.*]]
+; NO-VP:       loop.preheader:
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 8
+; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; NO-VP:       vector.ph:
+; NO-VP-NEXT:    [[TMP0:%.*]] = and i32 [[N]], 7
+; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[TMP0]]
+; NO-VP-NEXT:    br label [[VECTOR_BODY:%.*]]
+; NO-VP:       vector.body:
+; NO-VP-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; NO-VP-NEXT:    [[VECTOR_RECUR:%.*]] = phi <8 x i32> [ <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0>, [[VECTOR_PH]] ], [ [[WIDE_LOAD:%.*]], [[VECTOR_BODY]] ]
+; NO-VP-NEXT:    [[TMP1:%.*]] = zext i32 [[INDEX]] to i64
+; NO-VP-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[TMP1]]
+; NO-VP-NEXT:    [[WIDE_LOAD]] = load <8 x i32>, ptr [[TMP2]], align 4
+; NO-VP-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[VECTOR_RECUR]], <8 x i32> [[WIDE_LOAD]], <8 x i32> <i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
+; NO-VP-NEXT:    [[TMP4:%.*]] = add i64 [[TMP1]], 8
+; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[P]], i64 [[TMP4]]
+; NO-VP-NEXT:    [[TMP6:%.*]] = sub <8 x i32> [[WIDE_LOAD]], [[TMP3]]
+; NO-VP-NEXT:    store <8 x i32> [[TMP6]], ptr [[TMP5]], align 4
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
+; NO-VP-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; NO-VP-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; NO-VP:       middle.block:
+; NO-VP-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <8 x i32> [[WIDE_LOAD]], i64 6
+; NO-VP-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <8 x i32> [[WIDE_LOAD]], i64 7
+; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
+; NO-VP-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; NO-VP:       scalar.ph:
+; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_PREHEADER]] ]
+; NO-VP-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_PREHEADER]] ]
+; NO-VP-NEXT:    br label [[LOOP:%.*]]
+; NO-VP:       loop:
+; NO-VP-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; NO-VP-NEXT:    [[FOR:%.*]] = phi i32 [ [[L:%.*]], [[LOOP]] ], [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ]
+; NO-VP-NEXT:    [[IV_EXT:%.*]] = zext i32 [[IV]] to i64
+; NO-VP-NEXT:    [[GEP_LOAD:%.*]] = getelementptr i32, ptr [[P]], i64 [[IV_EXT]]
+; NO-VP-NEXT:    [[L]] = load i32, ptr [[GEP_LOAD]], align 4
+; NO-VP-NEXT:    [[IV_OFF:%.*]] = add i64 [[IV_EXT]], 8
+; NO-VP-NEXT:    [[GEP_STORE:%.*]] = getelementptr i32, ptr [[P]], i64 [[IV_OFF]]
+; NO-VP-NEXT:    [[SUB:%.*]] = sub i32 [[L]], [[FOR]]
+; NO-VP-NEXT:    store i32 [[SUB]], ptr [[GEP_STORE]], align 4
+; NO-VP-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; NO-VP-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
+; NO-VP-NEXT:    br i1 [[EC]], label [[EXIT_LOOPEXIT]], label [[LOOP]], !llvm.loop [[LOOP11:![0-9]+]]
+; NO-VP:       exit.loopexit:
+; NO-VP-NEXT:    [[FOR_LCSSA:%.*]] = phi i32 [ [[FOR]], [[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI]], [[MIDDLE_BLOCK]] ]
+; NO-VP-NEXT:    br label [[EXIT]]
+; NO-VP:       exit:
+; NO-VP-NEXT:    [[RES:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[FOR_LCSSA]], [[EXIT_LOOPEXIT]] ]
+; NO-VP-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %n.zero = icmp eq i32 %n, 0
+  br i1 %n.zero, label %exit, label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %for = phi i32 [ 0, %entry ], [ %l, %loop ]
+  %iv.ext = zext i32 %iv to i64
+  %gep.load = getelementptr i32, ptr %p, i64 %iv.ext
+  %l = load i32, ptr %gep.load
+  %iv.off = add i64 %iv.ext, 8
+  %gep.store = getelementptr i32, ptr %p, i64 %iv.off
+  %sub = sub i32 %l, %for
+  store i32 %sub, ptr %gep.store
+  %iv.next = add i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %res = phi i32 [ 0, %entry ], [ %for, %loop ]
+  ret i32 %res
+}
