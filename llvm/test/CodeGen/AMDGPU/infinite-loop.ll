@@ -163,7 +163,7 @@ define amdgpu_kernel void @infinite_loop_ret_callbr(ptr addrspace(1) %out) {
 ; IR-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; IR-NEXT:    [[COND:%.*]] = icmp eq i32 [[TMP]], 1
 ; IR-NEXT:    [[COND32:%.*]] = zext i1 [[COND]] to i32
-; IR-NEXT:    callbr void asm "", "r,!i"(i32 [[COND32]])
+; IR-NEXT:    callbr void asm "", "v,!i"(i32 [[COND32]])
 ; IR-NEXT:            to label %[[LOOP:.*]] [label %[[RETURN:.*]]]
 ; IR:       [[LOOP]]:
 ; IR-NEXT:    store volatile i32 999, ptr addrspace(1) [[OUT]], align 4
@@ -179,7 +179,7 @@ entry:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %cond = icmp eq i32 %tmp, 1
   %cond32 = zext i1 %cond to i32
-  callbr void asm "", "r,!i"(i32 %cond32) to label %loop [label %return]
+  callbr void asm "", "v,!i"(i32 %cond32) to label %loop [label %return]
 
 loop:
   store volatile i32 999, ptr addrspace(1) %out, align 4
@@ -440,7 +440,7 @@ define amdgpu_kernel void @infinite_loop_nest_ret_callbr(ptr addrspace(1) %out) 
 ; IR-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; IR-NEXT:    [[COND1:%.*]] = icmp ne i32 [[TMP]], 1
 ; IR-NEXT:    [[COND1_32:%.*]] = zext i1 [[COND1]] to i32
-; IR-NEXT:    callbr void asm "", "r,!i"(i32 [[COND1_32]])
+; IR-NEXT:    callbr void asm "", "v,!i"(i32 [[COND1_32]])
 ; IR-NEXT:            to label %[[OUTER_LOOP:.*]] [label %[[RETURN:.*]]]
 ; IR:       [[OUTER_LOOP]]:
 ; IR-NEXT:    callbr void asm "", ""()
@@ -451,7 +451,7 @@ define amdgpu_kernel void @infinite_loop_nest_ret_callbr(ptr addrspace(1) %out) 
 ; IR-NEXT:    [[COND3_32:%.*]] = zext i1 [[COND3]] to i32
 ; IR-NEXT:    br i1 true, label %[[TRANSITIONBLOCK:.*]], label %[[DUMMYRETURNBLOCK:.*]]
 ; IR:       [[TRANSITIONBLOCK]]:
-; IR-NEXT:    callbr void asm "", "r,!i"(i32 [[COND3_32]])
+; IR-NEXT:    callbr void asm "", "v,!i"(i32 [[COND3_32]])
 ; IR-NEXT:            to label %[[INNER_LOOP]] [label %[[OUTER_LOOP]]]
 ; IR:       [[RETURN]]:
 ; IR-NEXT:    ret void
@@ -461,7 +461,7 @@ entry:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %cond1 = icmp ne i32 %tmp, 1  ; avoid following BB optimizing away through the domination
   %cond1_32 = zext i1 %cond1 to i32
-  callbr void asm "", "r,!i"(i32 %cond1_32) to label %outer_loop [label %return]
+  callbr void asm "", "v,!i"(i32 %cond1_32) to label %outer_loop [label %return]
 
 outer_loop:
   ; %cond2 = icmp eq i32 %tmp, 2
@@ -472,7 +472,7 @@ inner_loop:                                     ; preds = %LeafBlock, %LeafBlock
   store volatile i32 999, ptr addrspace(1) %out, align 4
   %cond3 = icmp eq i32 %tmp, 3
   %cond3_32 = zext i1 %cond3 to i32
-  callbr void asm "", "r,!i"(i32 %cond3_32) to label %inner_loop [label %outer_loop]
+  callbr void asm "", "v,!i"(i32 %cond3_32) to label %inner_loop [label %outer_loop]
 
 return:
   ret void

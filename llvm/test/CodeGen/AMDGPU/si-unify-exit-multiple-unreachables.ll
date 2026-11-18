@@ -140,11 +140,13 @@ define amdgpu_kernel void @kernel_callbr(i32 %a, ptr addrspace(1) %x, i32 nounde
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_cmpk_eq_i32 s1, 0x100
 ; CHECK-NEXT:    s_cselect_b32 s1, 1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, s1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:  ; %bb.1: ; %if.then
 ; CHECK-NEXT:    s_cmp_eq_u32 s0, 0
 ; CHECK-NEXT:    s_cselect_b32 s1, 1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, s1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:  .LBB1_2: ; %if.end6.sink.split
@@ -169,6 +171,7 @@ define amdgpu_kernel void @kernel_callbr(i32 %a, ptr addrspace(1) %x, i32 nounde
 ; CHECK-NEXT:  ; %bb.5: ; %if.then3
 ; CHECK-NEXT:    s_cmp_eq_u32 s0, 0
 ; CHECK-NEXT:    s_cselect_b32 s1, 1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, s1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_branch .LBB1_2
@@ -185,12 +188,12 @@ define amdgpu_kernel void @kernel_callbr(i32 %a, ptr addrspace(1) %x, i32 nounde
 ; UNIFY-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; UNIFY-NEXT:    [[CMP:%.*]] = icmp eq i32 [[N]], 256
 ; UNIFY-NEXT:    [[CMP32:%.*]] = zext i1 [[CMP]] to i32
-; UNIFY-NEXT:    callbr void asm "", "r,!i"(i32 [[CMP32]])
+; UNIFY-NEXT:    callbr void asm "", "v,!i"(i32 [[CMP32]])
 ; UNIFY-NEXT:            to label %[[IF_THEN:.*]] [label %[[IF_ELSE:.*]]]
 ; UNIFY:       [[IF_THEN]]:
 ; UNIFY-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[A]], 0
 ; UNIFY-NEXT:    [[CMP1_32:%.*]] = zext i1 [[CMP1]] to i32
-; UNIFY-NEXT:    callbr void asm "", "r,!i"(i32 [[CMP1_32]])
+; UNIFY-NEXT:    callbr void asm "", "v,!i"(i32 [[CMP1_32]])
 ; UNIFY-NEXT:            to label %[[IF_END6_SINK_SPLIT:.*]] [label %[[COND_FALSE:.*]]]
 ; UNIFY:       [[COND_FALSE]]:
 ; UNIFY-NEXT:    call void @llvm.trap()
@@ -198,12 +201,12 @@ define amdgpu_kernel void @kernel_callbr(i32 %a, ptr addrspace(1) %x, i32 nounde
 ; UNIFY:       [[IF_ELSE]]:
 ; UNIFY-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[TID]], 10
 ; UNIFY-NEXT:    [[CMP2_32:%.*]] = zext i1 [[CMP2]] to i32
-; UNIFY-NEXT:    callbr void asm "", "r,!i"(i32 [[CMP2_32]])
+; UNIFY-NEXT:    callbr void asm "", "v,!i"(i32 [[CMP2_32]])
 ; UNIFY-NEXT:            to label %[[IF_THEN3:.*]] [label %[[IF_END6:.*]]]
 ; UNIFY:       [[IF_THEN3]]:
 ; UNIFY-NEXT:    [[CMP1_I7:%.*]] = icmp eq i32 [[A]], 0
 ; UNIFY-NEXT:    [[CMP1_I7_32:%.*]] = zext i1 [[CMP1_I7]] to i32
-; UNIFY-NEXT:    callbr void asm "", "r,!i"(i32 [[CMP1_I7_32]])
+; UNIFY-NEXT:    callbr void asm "", "v,!i"(i32 [[CMP1_I7_32]])
 ; UNIFY-NEXT:            to label %[[IF_END6_SINK_SPLIT]] [label %[[COND_FALSE_I8:.*]]]
 ; UNIFY:       [[COND_FALSE_I8]]:
 ; UNIFY-NEXT:    call void @llvm.trap()
@@ -220,12 +223,12 @@ entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %cmp = icmp eq i32 %n, 256
   %cmp32 = zext i1 %cmp to i32
-  callbr void asm "", "r,!i"(i32 %cmp32) to label %if.then [label %if.else]
+  callbr void asm "", "v,!i"(i32 %cmp32) to label %if.then [label %if.else]
 
 if.then:
   %cmp1 = icmp eq i32 %a, 0
   %cmp1_32 = zext i1 %cmp1 to i32
-  callbr void asm "", "r,!i"(i32 %cmp1_32) to label %if.end6.sink.split [label %cond.false]
+  callbr void asm "", "v,!i"(i32 %cmp1_32) to label %if.end6.sink.split [label %cond.false]
 
 cond.false:
   call void @llvm.trap()
@@ -234,12 +237,12 @@ cond.false:
 if.else:
   %cmp2 = icmp ult i32 %tid, 10
   %cmp2_32 = zext i1 %cmp2 to i32
-  callbr void asm "", "r,!i"(i32 %cmp2_32) to label %if.then3 [label %if.end6]
+  callbr void asm "", "v,!i"(i32 %cmp2_32) to label %if.then3 [label %if.end6]
 
 if.then3:
   %cmp1.i7 = icmp eq i32 %a, 0
   %cmp1.i7_32 = zext i1 %cmp1.i7 to i32
-  callbr void asm "", "r,!i"(i32 %cmp1.i7_32) to label %if.end6.sink.split [label %cond.false.i8]
+  callbr void asm "", "v,!i"(i32 %cmp1.i7_32) to label %if.end6.sink.split [label %cond.false.i8]
 
 cond.false.i8:
   call void @llvm.trap()

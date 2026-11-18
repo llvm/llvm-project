@@ -628,15 +628,16 @@ define void @s_minimum_f16(half inreg %src0, half inreg %src1) {
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GFX12-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:    ; use s0
-; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    ;;#ASMSTART
+; GFX12-NEXT:    ; use v0
+; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call half @llvm.minimum.f16(half %src0, half %src1)
   %cast = bitcast half %op to i16
   %zext = zext i16 %cast to i32
-  call void asm sideeffect "; use $0", "s"(i32 %zext)
+  call void asm sideeffect "; use $0", "v"(i32 %zext)
   ret void
 }
 
@@ -1046,7 +1047,7 @@ define void @s_minimum_v2f16(<2 x half> inreg %src0, <2 x half> inreg %src1) {
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <2 x half> @llvm.minimum.v2f16(<2 x half> %src0, <2 x half> %src1)
   %cast = bitcast <2 x half> %op to i32
-  call void asm sideeffect "; use $0", "s"(i32 %cast)
+  call void asm sideeffect "; use $0", "v"(i32 %cast)
   ret void
 }
 

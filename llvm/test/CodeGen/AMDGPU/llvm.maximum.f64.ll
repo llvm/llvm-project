@@ -560,7 +560,7 @@ define void @s_maximum_f64(double inreg %src0, double inreg %src1) #0 {
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call double @llvm.maximum.f64(double %src0, double %src1)
-  call void asm sideeffect "; use $0", "s"(double %op)
+  call void asm sideeffect "; use $0", "v"(double %op)
   ret void
 }
 

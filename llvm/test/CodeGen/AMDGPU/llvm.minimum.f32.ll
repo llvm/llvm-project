@@ -500,13 +500,15 @@ define void @s_minimum_f32(float inreg %src0, float inreg %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_minimum_f32 s0, s0, s1
-; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:    ; use s0
-; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
+; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    ;;#ASMSTART
+; GFX12-NEXT:    ; use v0
+; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call float @llvm.minimum.f32(float %src0, float %src1)
-  call void asm sideeffect "; use $0", "s"(float %op)
+  call void asm sideeffect "; use $0", "v"(float %op)
   ret void
 }
 

@@ -560,7 +560,7 @@ define void @s_minimum_f64(double inreg %src0, double inreg %src1) #0 {
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call double @llvm.minimum.f64(double %src0, double %src1)
-  call void asm sideeffect "; use $0", "s"(double %op)
+  call void asm sideeffect "; use $0", "v"(double %op)
   ret void
 }
 
@@ -1033,7 +1033,7 @@ define void @s_minimum_v2f64(<2 x double> inreg %src0, <2 x double> inreg %src1)
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <2 x double> @llvm.minimum.v2f64(<2 x double> %src0, <2 x double> %src1)
-  call void asm sideeffect "; use $0", "s"(<2 x double> %op)
+  call void asm sideeffect "; use $0", "v"(<2 x double> %op)
   ret void
 }
 

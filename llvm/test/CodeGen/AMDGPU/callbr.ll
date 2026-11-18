@@ -23,7 +23,7 @@ define void @callbr_inline_asm(ptr %src, ptr %dst1, ptr %dst2, i32 %c) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 	%a = load i32, ptr %src, align 4
-	callbr void asm "v_cmp_gt_i32_e64 vcc, $0, 42\0As_cbranch_vccnz ${1:l}", "r,!i"(i32 %c) to label %fallthrough [label %indirect]
+	callbr void asm "v_cmp_gt_i32_e64 vcc, $0, 42\0As_cbranch_vccnz ${1:l}", "v,!i"(i32 %c) to label %fallthrough [label %indirect]
 fallthrough:
 	store i32 %a, ptr %dst1, align 4
 	br label %ret
