@@ -336,6 +336,9 @@ public:
   common::Restorer<bool> WithDataStmtValue() {
     return common::ScopedSet(inDataStmtValue_, true);
   }
+  common::Restorer<bool> WithoutDataStmtValue() {
+    return common::ScopedSet(inDataStmtValue_, false);
+  }
 
   common::Restorer<std::string> SetRealFlagWarningContext(std::string str) {
     return common::ScopedSet(realFlagWarningContext_, str);
@@ -358,6 +361,11 @@ private:
   // named-constant or type-parameter initializer).  Used to promote certain
   // deferred-to-runtime conditions into compile-time diagnostics.
   bool inConstantContext_{false};
+  // True only while a DATA statement value (or a legacy /.../ initializer) is
+  // analyzed or converted to the type of its object.  Folding then leaves a
+  // structure constructor larger than maxDataInitBytes unexpanded so that the
+  // DATA size check can report it.  Work that is not part of the value, such
+  // as derived type instantiation, must not see it.
   bool inDataStmtValue_{false};
   std::optional<parser::CharBlock> moduleFileName_;
   std::map<parser::CharBlock, ConstantSubscript> impliedDos_;

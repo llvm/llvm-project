@@ -59,3 +59,21 @@ subroutine mismatched_object
   !ERROR: DATA statement value could not be converted to the type 'INTEGER(4)' of the object 'small'
   data small / pair(-1.1, (1.0, 2.0)) /
 end
+
+subroutine legacy_variable
+  type t
+    real values(250000001)
+  end type
+  !ERROR: not yet implemented: 'x' is too large to initialize with a DATA statement
+  type(t) :: x / t(1.0) /
+end
+
+module legacy_component
+  type t
+    real values(250000001)
+  end type
+  type outer
+    !ERROR: not yet implemented: 'c' is too large to initialize with a DATA statement
+    type(t) :: c / t(1.0) /
+  end type
+end module
