@@ -2014,17 +2014,9 @@ void CFGBuilder::addAutomaticObjDestruction(LocalScope::const_iterator B,
 
     autoCreateBlock();
 
-    // Add LifetimeEnd after automatic obj with non-trivial destructors,
-    // as they end their lifetime when the destructor returns. For trivial
-    // objects, we end lifetime with scope end. Since the SCOPE_END CFG
-    // marker has the value of LifetimeEnds, the LifetimeEnds marker also
-    // covers trivial destructors and local variables. See #201123.
-
     // LifetimeEnds is emitted for every variable leaving the scope in
     // reverse order of declaration, covering automatic objects with
-    // non-trivial destructors as they end their lifetime when the
-    // destructor returns and trivial objects whose lifetime ends with
-    // scope end.
+    // non-trivial destructors and trivial objects.
     if (BuildOpts.AddLifetime)
       appendLifetimeEnds(Block, VD, S);
     if (BuildOpts.AddImplicitDtors && !hasTrivialDestructor(VD))
