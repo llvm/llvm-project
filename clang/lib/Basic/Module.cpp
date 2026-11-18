@@ -374,8 +374,9 @@ void Module::markUnavailable(bool Unimportable) {
 }
 
 ModuleRef Module::findSubmodule(StringRef Name) const {
-  if (auto It = SubModuleIndex.find(Name); It != SubModuleIndex.end())
-    return SubModules[It->second];
+  const SubmoduleMembers &S = SubmoduleList.get();
+  if (auto It = S.SubModuleIndex.find(Name); It != S.SubModuleIndex.end())
+    return S.SubModules[It->second];
 
   return nullptr;
 }

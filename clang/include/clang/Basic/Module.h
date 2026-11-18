@@ -428,13 +428,6 @@ public:
   bool isModuleMapModule() const { return Kind == ModuleMapModule; }
 
 private:
-  /// The submodules of this module, indexed by name.
-  SmallVector<ModuleRef, 0> SubModules;
-
-  /// A mapping from the submodule name to the index into the
-  /// \c SubModules vector at which that submodule resides.
-  llvm::StringMap<unsigned> SubModuleIndex;
-
   /// top-level header filenames that aren't resolved to FileEntries yet.
   SmallVector<std::string, 1> TopHeaderNames;
 
@@ -806,6 +799,19 @@ private:
   /// Mutable because the visible modules cache is built lazily.
   mutable LazyMembers<ColdMembers> Cold;
 
+  /// The submodules of this module, kept out of line because most modules
+  /// don't have any.
+  struct SubmoduleMembers {
+    /// The submodules of this module, indexed by name.
+    SmallVector<ModuleRef, 0> SubModules;
+
+    /// A mapping from the submodule name to the index into the
+    /// \c SubModules vector at which that submodule resides.
+    llvm::StringMap<unsigned> SubModuleIndex;
+  };
+
+  LazyMembers<SubmoduleMembers> SubmoduleList;
+
 public:
   using UmbrellaStorage =
       std::variant<std::monostate, FileEntryRef, DirectoryEntryRef>;
@@ -1130,25 +1136,28 @@ public:
   void setParent(Module *M) {
     assert(!Parent);
     Parent = M;
-    Parent->SubModuleIndex[M->Name] = Parent->SubModules.size();
-    Parent->SubModules.push_back(this);
+    SubmoduleMembers &S = Parent->SubmoduleList.getOrCreate();
+    S.SubModuleIndex[M->Name] = S.SubModules.size();
+    S.SubModules.push_back(this);
   }
 
   /// Add a child submodule.
   void addSubmodule(StringRef Name, Module *Submodule) {
-    auto [It, New] = SubModuleIndex.insert({Name, SubModules.size()});
+    SubmoduleMembers &S = SubmoduleList.getOrCreate();
+    auto [It, New] = S.SubModuleIndex.insert({Name, S.SubModules.size()});
     if (New)
-      SubModules.emplace_back();
-    SubModules[It->second].setExisting(Submodule);
+      S.SubModules.emplace_back();
+    S.SubModules[It->second].setExisting(Submodule);
   }
 
   /// Add the external part of a submodule ModuleRef.
   void addSubmodule(StringRef Name, ExternalSubmoduleSource *ExternalSource,
                     uint64_t SubmoduleID) {
-    auto [It, New] = SubModuleIndex.insert({Name, SubModules.size()});
+    SubmoduleMembers &S = SubmoduleList.getOrCreate();
+    auto [It, New] = S.SubModuleIndex.insert({Name, S.SubModules.size()});
     if (New)
-      SubModules.emplace_back();
-    SubModules[It->second].setExternal(ExternalSource, SubmoduleID);
+      S.SubModules.emplace_back();
+    S.SubModules[It->second].setExternal(ExternalSource, SubmoduleID);
   }
 
   /// Is this module have similar semantics as headers.
@@ -1365,9 +1374,16 @@ public:
   using submodule_const_iterator = SmallVectorImpl<ModuleRef>::const_iterator;
 
   llvm::iterator_range<submodule_iterator> submodules() {
+    // Don't allocate the storage just to iterate over no submodules.
+    if (!SubmoduleList.allocated())
+      return llvm::make_range(submodule_iterator(), submodule_iterator());
+    SmallVectorImpl<ModuleRef> &SubModules =
+        SubmoduleList.getOrCreate().SubModules;
     return llvm::make_range(SubModules.begin(), SubModules.end());
   }
   llvm::iterator_range<submodule_const_iterator> submodules() const {
+    const SmallVectorImpl<ModuleRef> &SubModules =
+        SubmoduleList.get().SubModules;
     return llvm::make_range(SubModules.begin(), SubModules.end());
   }
 
