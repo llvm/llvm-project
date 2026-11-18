@@ -57,8 +57,10 @@ void CoverageMappingIterator::increment() {
     handleAllErrors(std::move(E), [&](const CoverageMapError &CME) {
       if (CME.get() == coveragemap_error::eof)
         *this = CoverageMappingIterator();
-      else
+      else {
         ReadErr = CME.get();
+        ReadErrMsg = CME.getMessage();
+      }
     });
 }
 
