@@ -3015,8 +3015,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   // Without one, disabling unsafe math leaves precise/strict models unchanged.
   std::optional<StringRef> FPContractFallback;
   StringRef LastFpContractOverrideOption;
-  if (!JA.isDeviceOffloading(Action::OFK_Cuda) &&
-      !JA.isOffloading(Action::OFK_HIP))
+  const bool UseFrontendFPContractDefault =
+      JA.isDeviceOffloading(Action::OFK_Cuda) ||
+      JA.isOffloading(Action::OFK_HIP);
+  if (!UseFrontendFPContractDefault)
     FPContract = "on";
   bool StrictFPModel = false;
   StringRef Float16ExcessPrecision = "";
@@ -3065,8 +3067,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     // the -ffp-contract option or "on" if we have not seen the -ffp-contract
     // option. If we have not seen an unsafe-math option or -ffp-contract,
     // we leave the FPContract state unchanged.
-    if (!JA.isDeviceOffloading(Action::OFK_Cuda) &&
-        !JA.isOffloading(Action::OFK_HIP) && FPContractFallback)
+    if (!UseFrontendFPContractDefault && FPContractFallback)
       FPContract = *FPContractFallback;
     // In this case, we're reverting to the last explicit fp-contract option
     // or the platform default
