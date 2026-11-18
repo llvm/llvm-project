@@ -4,16 +4,15 @@
 
 For code:
 
- * LLM usage must be disclosed in the PR description, or via an
-   Assisted-by/Co-authored-by trailer.
+ * LLM usage must be disclosed in the PR description.
  * There must be a **human in the loop**, who reviews all LLM-generated code
    and takes full responsibility for their contribution.
 
 For text:
 
  * Pull request descriptions must be human-written, not LLM-generated.
- * Otherwise, LLM-generated text must be clearly marked, not mixed with
-   human-written text, and auxiliary in nature.
+ * In other textual communication, LLM-generated text must be clearly marked,
+   not mixed with human-written text, and auxiliary in nature.
 
 ## Policy for code contributions
 
@@ -67,7 +66,7 @@ is not).
 
 "Textual communication" includes, but is not limited to, RFCs and Discourse
 threads, issues (including security issues), and issue/PR comments. It does not
-currently include code comments or documentation.
+include code comments or documentation.
 
 Here are two examples of appropriate labelling and separation of LLM-generated
 text.
