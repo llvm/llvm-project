@@ -1,0 +1,12 @@
+// Test that parallel object loading produces the same results as serial loading.
+// Coverage/profile data recycled from the multiple-objects test.
+//
+// RUN: llvm-cov export -instr-profile %S/Inputs/multiple_objects/merged.profdata \
+// RUN:   %S/Inputs/multiple_objects/use_2.covmapping \
+// RUN:   -object %S/Inputs/multiple_objects/use_1.covmapping \
+// RUN:   -max-load-threads=1 > %t.serial
+// RUN: llvm-cov export -instr-profile %S/Inputs/multiple_objects/merged.profdata \
+// RUN:   %S/Inputs/multiple_objects/use_2.covmapping \
+// RUN:   -object %S/Inputs/multiple_objects/use_1.covmapping \
+// RUN:   -max-load-threads=3 > %t.parallel
+// RUN: diff %t.serial %t.parallel
