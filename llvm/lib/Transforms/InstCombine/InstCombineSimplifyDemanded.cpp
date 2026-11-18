@@ -1212,6 +1212,48 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
   return nullptr;
 }
 
+/// Return true if \p V is a tree of 'or', constant 'shl' and 'zext' whose
+/// leaves are at least two simple loads from the same base pointer, i.e. a
+/// value assembled from loaded pieces that later passes can turn into a single
+/// wide load. Every node below \p V must have one use; otherwise the loads
+/// cannot be combined anyway.
+static bool isOrOfLoadsFromSameBase(Value *V, const DataLayout &DL) {
+  SmallVector<Value *, 8> Worklist = {V};
+  const Value *Base = nullptr;
+  unsigned NumLoads = 0;
+  unsigned NumVisited = 0;
+  while (!Worklist.empty()) {
+    Value *Cur = Worklist.pop_back_val();
+    if (++NumVisited > 32)
+      return false;
+    if (Cur != V && !Cur->hasOneUse())
+      return false;
+    Value *A, *B;
+    if (match(Cur, m_Or(m_Value(A), m_Value(B)))) {
+      Worklist.push_back(A);
+      Worklist.push_back(B);
+      continue;
+    }
+    if (match(Cur, m_CombineOr(m_Shl(m_Value(A), m_ConstantInt()),
+                               m_ZExt(m_Value(A))))) {
+      Worklist.push_back(A);
+      continue;
+    }
+    auto *LI = dyn_cast<LoadInst>(Cur);
+    if (!LI || !LI->isSimple())
+      return false;
+    Value *Ptr = LI->getPointerOperand();
+    APInt Offset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+    const Value *LoadBase = Ptr->stripAndAccumulateConstantOffsets(
+        DL, Offset, /*AllowNonInbounds=*/true);
+    if (Base && LoadBase != Base)
+      return false;
+    Base = LoadBase;
+    ++NumLoads;
+  }
+  return NumLoads >= 2;
+}
+
 /// Helper routine of SimplifyDemandedUseBits. It computes Known
 /// bits. It also tries to handle simplifications that can be done based on
 /// DemandedMask, but without modifying the Instruction.
@@ -1266,12 +1308,21 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     // only bits from X or Y are demanded.
     // If all of the demanded bits are known zero on one side, return the other.
     // These bits cannot contribute to the result of the 'or' in this context.
+    unsigned OpNo;
     if (DemandedMask.isSubsetOf(LHSKnown.One | RHSKnown.Zero))
-      return I->getOperand(0);
-    if (DemandedMask.isSubsetOf(RHSKnown.One | LHSKnown.Zero))
-      return I->getOperand(1);
+      OpNo = 0;
+    else if (DemandedMask.isSubsetOf(RHSKnown.One | LHSKnown.Zero))
+      OpNo = 1;
+    else
+      break;
 
-    break;
+    // If the user of this 'or' reads part of the value assembled from the
+    // loads, then that part will have more than one use. This stops the loads
+    // from being combined into a wide load, which costs far more than the
+    // savings here.
+    if (isOrOfLoadsFromSameBase(I, DL))
+      break;
+    return I->getOperand(OpNo);
   }
   case Instruction::Xor: {
     llvm::computeKnownBits(I->getOperand(1), RHSKnown, Q, Depth + 1);

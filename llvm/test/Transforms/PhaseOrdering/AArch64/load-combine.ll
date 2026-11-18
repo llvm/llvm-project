@@ -33,8 +33,8 @@ define i1 @nocombine_load8_test_two_parts_in_branch(ptr %p, ptr %out, i1 %cond) 
 ; CHECK-NEXT:    [[HI_B3:%.*]] = load i8, ptr [[HI_P3]], align 1
 ; CHECK-NEXT:    [[HI_B3_EXT:%.*]] = zext i8 [[HI_B3]] to i64
 ; CHECK-NEXT:    [[HI_OR1:%.*]] = or disjoint i64 [[HI_B1_SHL]], [[HI_B0_SHL]]
-; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[HI_B2_SHL]], [[HI_B3_EXT]]
-; CHECK-NEXT:    [[HI:%.*]] = or disjoint i64 [[TMP0]], [[HI_OR1]]
+; CHECK-NEXT:    [[HI_OR2:%.*]] = or disjoint i64 [[HI_OR1]], [[HI_B2_SHL]]
+; CHECK-NEXT:    [[HI:%.*]] = or disjoint i64 [[HI_OR2]], [[HI_B3_EXT]]
 ; CHECK-NEXT:    [[LO_P0:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
 ; CHECK-NEXT:    [[LO_B0:%.*]] = load i8, ptr [[LO_P0]], align 1
 ; CHECK-NEXT:    [[LO_B0_EXT:%.*]] = zext i8 [[LO_B0]] to i64
@@ -53,13 +53,13 @@ define i1 @nocombine_load8_test_two_parts_in_branch(ptr %p, ptr %out, i1 %cond) 
 ; CHECK-NEXT:    [[LO_OR1:%.*]] = or disjoint i64 [[LO_B1_SHL]], [[LO_B0_SHL]]
 ; CHECK-NEXT:    [[HI_SHL:%.*]] = shl nuw i64 [[HI]], 32
 ; CHECK-NEXT:    [[LO_OR2:%.*]] = or disjoint i64 [[LO_OR1]], [[HI_SHL]]
-; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i64 [[LO_B2_SHL]], [[LO_B3_EXT]]
-; CHECK-NEXT:    [[X:%.*]] = or disjoint i64 [[TMP1]], [[LO_OR2]]
+; CHECK-NEXT:    [[LO:%.*]] = or disjoint i64 [[LO_OR2]], [[LO_B2_SHL]]
+; CHECK-NEXT:    [[X:%.*]] = or disjoint i64 [[LO]], [[LO_B3_EXT]]
 ; CHECK-NEXT:    store i64 [[X]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    br i1 [[COND]], label %[[TEST:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[TEST]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[HI_OR1]], 2146435072
-; CHECK-NEXT:    [[HI_SET:%.*]] = icmp eq i64 [[TMP2]], 2146435072
+; CHECK-NEXT:    [[HI_MASKED:%.*]] = and i64 [[X]], 9218868437227405312
+; CHECK-NEXT:    [[HI_SET:%.*]] = icmp eq i64 [[HI_MASKED]], 9218868437227405312
 ; CHECK-NEXT:    [[LO_MASKED:%.*]] = and i64 [[X]], 4503599627370495
 ; CHECK-NEXT:    [[LO_NONZERO:%.*]] = icmp ne i64 [[LO_MASKED]], 0
 ; CHECK-NEXT:    [[C:%.*]] = and i1 [[HI_SET]], [[LO_NONZERO]]
@@ -292,32 +292,17 @@ define i1 @combine_load8_test_bits_52_62_in_branch(ptr %p, ptr %out, i1 %cond) {
 ; CHECK-LABEL: define i1 @combine_load8_test_bits_52_62_in_branch(
 ; CHECK-SAME: ptr nofree readonly captures(none) [[P:%.*]], ptr nofree writeonly captures(none) initializes((0, 8)) [[OUT:%.*]], i1 [[COND:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[HI_B0:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[HI_B0_EXT:%.*]] = zext i8 [[HI_B0]] to i64
-; CHECK-NEXT:    [[HI_B0_SHL:%.*]] = shl nuw nsw i64 [[HI_B0_EXT]], 24
-; CHECK-NEXT:    [[HI_P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[HI_B1:%.*]] = load i8, ptr [[HI_P1]], align 1
-; CHECK-NEXT:    [[HI_B1_EXT:%.*]] = zext i8 [[HI_B1]] to i64
-; CHECK-NEXT:    [[HI_B1_SHL:%.*]] = shl nuw nsw i64 [[HI_B1_EXT]], 16
-; CHECK-NEXT:    [[HI_P2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 2
-; CHECK-NEXT:    [[HI_B2:%.*]] = load i8, ptr [[HI_P2]], align 1
-; CHECK-NEXT:    [[HI_B2_EXT:%.*]] = zext i8 [[HI_B2]] to i64
-; CHECK-NEXT:    [[HI_B2_SHL:%.*]] = shl nuw nsw i64 [[HI_B2_EXT]], 8
-; CHECK-NEXT:    [[HI_P3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 3
-; CHECK-NEXT:    [[HI_B3:%.*]] = load i8, ptr [[HI_P3]], align 1
-; CHECK-NEXT:    [[HI_B3_EXT:%.*]] = zext i8 [[HI_B3]] to i64
-; CHECK-NEXT:    [[HI_OR1:%.*]] = or disjoint i64 [[HI_B1_SHL]], [[HI_B0_SHL]]
-; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[HI_B2_SHL]], [[HI_B3_EXT]]
-; CHECK-NEXT:    [[HI:%.*]] = or disjoint i64 [[TMP0]], [[HI_OR1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[P]], align 1
 ; CHECK-NEXT:    [[LO_P0:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[LO_P0]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[HI:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[HI_SHL:%.*]] = shl nuw i64 [[HI]], 32
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = or disjoint i64 [[HI_SHL]], [[TMP3]]
-; CHECK-NEXT:    store i64 [[OP_RDX]], ptr [[OUT]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[HI_OR1]], 2146435072
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[TMP4]], 2146435072
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[OP_RDX]])
+; CHECK-NEXT:    store i64 [[OP_RDX1]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[HI_MASKED:%.*]] = and i64 [[OP_RDX1]], 9218868437227405312
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[HI_MASKED]], 9218868437227405312
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND]], i1 [[C]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -386,33 +371,18 @@ define i1 @combine_load8_test_two_parts(ptr %p, ptr %out) {
 ; CHECK-LABEL: define i1 @combine_load8_test_two_parts(
 ; CHECK-SAME: ptr nofree readonly captures(none) [[P:%.*]], ptr nofree writeonly captures(none) initializes((0, 8)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[HI_B0:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[HI_B0_EXT:%.*]] = zext i8 [[HI_B0]] to i64
-; CHECK-NEXT:    [[HI_B0_SHL:%.*]] = shl nuw nsw i64 [[HI_B0_EXT]], 24
-; CHECK-NEXT:    [[HI_P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[HI_B1:%.*]] = load i8, ptr [[HI_P1]], align 1
-; CHECK-NEXT:    [[HI_B1_EXT:%.*]] = zext i8 [[HI_B1]] to i64
-; CHECK-NEXT:    [[HI_B1_SHL:%.*]] = shl nuw nsw i64 [[HI_B1_EXT]], 16
-; CHECK-NEXT:    [[HI_P2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 2
-; CHECK-NEXT:    [[HI_B2:%.*]] = load i8, ptr [[HI_P2]], align 1
-; CHECK-NEXT:    [[HI_B2_EXT:%.*]] = zext i8 [[HI_B2]] to i64
-; CHECK-NEXT:    [[HI_B2_SHL:%.*]] = shl nuw nsw i64 [[HI_B2_EXT]], 8
-; CHECK-NEXT:    [[HI_P3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 3
-; CHECK-NEXT:    [[HI_B3:%.*]] = load i8, ptr [[HI_P3]], align 1
-; CHECK-NEXT:    [[HI_B3_EXT:%.*]] = zext i8 [[HI_B3]] to i64
-; CHECK-NEXT:    [[HI_OR1:%.*]] = or disjoint i64 [[HI_B1_SHL]], [[HI_B0_SHL]]
-; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[HI_B2_SHL]], [[HI_B3_EXT]]
-; CHECK-NEXT:    [[HI:%.*]] = or disjoint i64 [[TMP0]], [[HI_OR1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[P]], align 1
 ; CHECK-NEXT:    [[LO_P0:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[LO_P0]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[HI:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[HI_SHL:%.*]] = shl nuw i64 [[HI]], 32
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = or disjoint i64 [[HI_SHL]], [[TMP3]]
-; CHECK-NEXT:    store i64 [[OP_RDX]], ptr [[OUT]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[HI_OR1]], 2146435072
-; CHECK-NEXT:    [[HI_SET:%.*]] = icmp eq i64 [[TMP4]], 2146435072
-; CHECK-NEXT:    [[LO_MASKED:%.*]] = and i64 [[OP_RDX]], 4503599627370495
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[OP_RDX]])
+; CHECK-NEXT:    store i64 [[OP_RDX1]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[HI_MASKED:%.*]] = and i64 [[OP_RDX1]], 9218868437227405312
+; CHECK-NEXT:    [[HI_SET:%.*]] = icmp eq i64 [[HI_MASKED]], 9218868437227405312
+; CHECK-NEXT:    [[LO_MASKED:%.*]] = and i64 [[OP_RDX1]], 4503599627370495
 ; CHECK-NEXT:    [[LO_NONZERO:%.*]] = icmp ne i64 [[LO_MASKED]], 0
 ; CHECK-NEXT:    [[C:%.*]] = and i1 [[HI_SET]], [[LO_NONZERO]]
 ; CHECK-NEXT:    ret i1 [[C]]
@@ -472,25 +442,10 @@ entry:
 define i1 @combine_load4_test_bytes_01(ptr %p, ptr %out) {
 ; CHECK-LABEL: define i1 @combine_load4_test_bytes_01(
 ; CHECK-SAME: ptr nofree readonly captures(none) [[P:%.*]], ptr nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[B0:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[B1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 2
-; CHECK-NEXT:    [[B2:%.*]] = load i8, ptr [[P2]], align 1
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 3
-; CHECK-NEXT:    [[B3:%.*]] = load i8, ptr [[P3]], align 1
-; CHECK-NEXT:    [[E0:%.*]] = zext i8 [[B0]] to i32
-; CHECK-NEXT:    [[E1:%.*]] = zext i8 [[B1]] to i32
-; CHECK-NEXT:    [[E2:%.*]] = zext i8 [[B2]] to i32
-; CHECK-NEXT:    [[E3:%.*]] = zext i8 [[B3]] to i32
-; CHECK-NEXT:    [[S0:%.*]] = shl nuw i32 [[E0]], 24
-; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw i32 [[E1]], 16
-; CHECK-NEXT:    [[S2:%.*]] = shl nuw nsw i32 [[E2]], 8
-; CHECK-NEXT:    [[OR1:%.*]] = or disjoint i32 [[S1]], [[S0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i32 [[S2]], [[E3]]
-; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[TMP1]], [[OR1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[P]], align 1
+; CHECK-NEXT:    [[X:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP1]])
 ; CHECK-NEXT:    store i32 [[X]], ptr [[OUT]], align 4
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[OR1]], 2139095040
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[X]], 2139095040
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[MASKED]], 2139095040
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -522,25 +477,10 @@ define i1 @combine_load4_test_bytes_01(ptr %p, ptr %out) {
 define i1 @combine_load4_test_bit_31(ptr %p, ptr %out) {
 ; CHECK-LABEL: define i1 @combine_load4_test_bit_31(
 ; CHECK-SAME: ptr nofree readonly captures(none) [[P:%.*]], ptr nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[B0:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[B1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 2
-; CHECK-NEXT:    [[B2:%.*]] = load i8, ptr [[P2]], align 1
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 3
-; CHECK-NEXT:    [[B3:%.*]] = load i8, ptr [[P3]], align 1
-; CHECK-NEXT:    [[E0:%.*]] = zext i8 [[B0]] to i32
-; CHECK-NEXT:    [[E1:%.*]] = zext i8 [[B1]] to i32
-; CHECK-NEXT:    [[E2:%.*]] = zext i8 [[B2]] to i32
-; CHECK-NEXT:    [[E3:%.*]] = zext i8 [[B3]] to i32
-; CHECK-NEXT:    [[S0:%.*]] = shl nuw i32 [[E0]], 24
-; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw i32 [[E1]], 16
-; CHECK-NEXT:    [[S2:%.*]] = shl nuw nsw i32 [[E2]], 8
-; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i32 [[S1]], [[E3]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i32 [[TMP1]], [[S2]]
-; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[TMP2]], [[S0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[P]], align 1
+; CHECK-NEXT:    [[X:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP1]])
 ; CHECK-NEXT:    store i32 [[X]], ptr [[OUT]], align 4
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[S0]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %b0 = load i8, ptr %p, align 1
@@ -573,25 +513,10 @@ define i1 @combine_load4_test_bit_31(ptr %p, ptr %out) {
 define i1 @combine_load4_balanced_test_bytes_01(ptr %p, ptr %out) {
 ; CHECK-LABEL: define i1 @combine_load4_balanced_test_bytes_01(
 ; CHECK-SAME: ptr nofree readonly captures(none) [[P:%.*]], ptr nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[B0:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[B1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 2
-; CHECK-NEXT:    [[B2:%.*]] = load i8, ptr [[P2]], align 1
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 3
-; CHECK-NEXT:    [[B3:%.*]] = load i8, ptr [[P3]], align 1
-; CHECK-NEXT:    [[E0:%.*]] = zext i8 [[B0]] to i32
-; CHECK-NEXT:    [[E1:%.*]] = zext i8 [[B1]] to i32
-; CHECK-NEXT:    [[E2:%.*]] = zext i8 [[B2]] to i32
-; CHECK-NEXT:    [[E3:%.*]] = zext i8 [[B3]] to i32
-; CHECK-NEXT:    [[S0:%.*]] = shl nuw i32 [[E0]], 24
-; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw i32 [[E1]], 16
-; CHECK-NEXT:    [[S2:%.*]] = shl nuw nsw i32 [[E2]], 8
-; CHECK-NEXT:    [[HI:%.*]] = or disjoint i32 [[S1]], [[S0]]
-; CHECK-NEXT:    [[LO:%.*]] = or disjoint i32 [[S2]], [[E3]]
-; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[LO]], [[HI]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[P]], align 1
+; CHECK-NEXT:    [[X:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP1]])
 ; CHECK-NEXT:    store i32 [[X]], ptr [[OUT]], align 4
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[HI]], 2139095040
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[X]], 2139095040
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[MASKED]], 2139095040
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -624,25 +549,10 @@ define i1 @combine_load4_balanced_test_bytes_01(ptr %p, ptr %out) {
 define i1 @combine_load4_add_test_bytes_01(ptr %p, ptr %out) {
 ; CHECK-LABEL: define i1 @combine_load4_add_test_bytes_01(
 ; CHECK-SAME: ptr nofree readonly captures(none) [[P:%.*]], ptr nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[B0:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[B1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 2
-; CHECK-NEXT:    [[B2:%.*]] = load i8, ptr [[P2]], align 1
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 3
-; CHECK-NEXT:    [[B3:%.*]] = load i8, ptr [[P3]], align 1
-; CHECK-NEXT:    [[E0:%.*]] = zext i8 [[B0]] to i32
-; CHECK-NEXT:    [[E1:%.*]] = zext i8 [[B1]] to i32
-; CHECK-NEXT:    [[E2:%.*]] = zext i8 [[B2]] to i32
-; CHECK-NEXT:    [[E3:%.*]] = zext i8 [[B3]] to i32
-; CHECK-NEXT:    [[S0:%.*]] = shl nuw i32 [[E0]], 24
-; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw i32 [[E1]], 16
-; CHECK-NEXT:    [[S2:%.*]] = shl nuw nsw i32 [[E2]], 8
-; CHECK-NEXT:    [[ADD1:%.*]] = or disjoint i32 [[S1]], [[S0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i32 [[S2]], [[E3]]
-; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[TMP1]], [[ADD1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[P]], align 1
+; CHECK-NEXT:    [[X:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP1]])
 ; CHECK-NEXT:    store i32 [[X]], ptr [[OUT]], align 4
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[ADD1]], 2139095040
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[X]], 2139095040
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[MASKED]], 2139095040
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -678,25 +588,10 @@ define i1 @combine_load4_test_bytes_01_in_branch(ptr %p, ptr %out, i1 %cond) {
 ; CHECK-LABEL: define i1 @combine_load4_test_bytes_01_in_branch(
 ; CHECK-SAME: ptr nofree readonly captures(none) [[P:%.*]], ptr nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]], i1 [[COND:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[B0:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[B1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 2
-; CHECK-NEXT:    [[B2:%.*]] = load i8, ptr [[P2]], align 1
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 3
-; CHECK-NEXT:    [[B3:%.*]] = load i8, ptr [[P3]], align 1
-; CHECK-NEXT:    [[E0:%.*]] = zext i8 [[B0]] to i32
-; CHECK-NEXT:    [[E1:%.*]] = zext i8 [[B1]] to i32
-; CHECK-NEXT:    [[E2:%.*]] = zext i8 [[B2]] to i32
-; CHECK-NEXT:    [[E3:%.*]] = zext i8 [[B3]] to i32
-; CHECK-NEXT:    [[S0:%.*]] = shl nuw i32 [[E0]], 24
-; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw i32 [[E1]], 16
-; CHECK-NEXT:    [[S2:%.*]] = shl nuw nsw i32 [[E2]], 8
-; CHECK-NEXT:    [[OR1:%.*]] = or disjoint i32 [[S1]], [[S0]]
-; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i32 [[S2]], [[E3]]
-; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[TMP0]], [[OR1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[P]], align 1
+; CHECK-NEXT:    [[X:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP0]])
 ; CHECK-NEXT:    store i32 [[X]], ptr [[OUT]], align 4
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[OR1]], 2139095040
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[X]], 2139095040
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[MASKED]], 2139095040
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND]], i1 [[C]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -759,12 +654,12 @@ define i1 @nocombine_load4_test_two_parts_in_branch(ptr %p, ptr %out, i1 %cond) 
 ; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw i32 [[E1]], 16
 ; CHECK-NEXT:    [[S2:%.*]] = shl nuw nsw i32 [[E2]], 8
 ; CHECK-NEXT:    [[OR1:%.*]] = or disjoint i32 [[S1]], [[S0]]
-; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i32 [[S2]], [[E3]]
-; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[TMP0]], [[OR1]]
+; CHECK-NEXT:    [[OR2:%.*]] = or disjoint i32 [[OR1]], [[S2]]
+; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[OR2]], [[E3]]
 ; CHECK-NEXT:    store i32 [[X]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    br i1 [[COND]], label %[[TEST:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[TEST]]:
-; CHECK-NEXT:    [[HI_MASKED:%.*]] = and i32 [[OR1]], 2139095040
+; CHECK-NEXT:    [[HI_MASKED:%.*]] = and i32 [[X]], 2139095040
 ; CHECK-NEXT:    [[HI_SET:%.*]] = icmp eq i32 [[HI_MASKED]], 2139095040
 ; CHECK-NEXT:    [[LO_MASKED:%.*]] = and i32 [[X]], 8388607
 ; CHECK-NEXT:    [[LO_NONZERO:%.*]] = icmp ne i32 [[LO_MASKED]], 0
@@ -1013,7 +908,7 @@ define i1 @combine_load6_test_bytes_34(ptr %p, ptr %out) {
 ; CHECK-NEXT:    [[OR4:%.*]] = or disjoint i64 [[S4]], [[TMP1]]
 ; CHECK-NEXT:    [[X:%.*]] = or disjoint i64 [[OR4]], [[S5]]
 ; CHECK-NEXT:    store i64 [[X]], ptr [[OUT]], align 8
-; CHECK-NEXT:    [[MASKED:%.*]] = and i64 [[OR4]], 1099494850560
+; CHECK-NEXT:    [[MASKED:%.*]] = and i64 [[X]], 1099494850560
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[MASKED]], 1099494850560
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -1057,20 +952,21 @@ define i1 @combine_load6_test_bytes_34(ptr %p, ptr %out) {
 define i1 @combine_load6_test_bytes_01(ptr %p, ptr %out) {
 ; CHECK-LABEL: define i1 @combine_load6_test_bytes_01(
 ; CHECK-SAME: ptr nofree readonly captures(none) [[P:%.*]], ptr nofree writeonly captures(none) initializes((0, 8)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[B0:%.*]] = load i16, ptr [[P]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[B0]] to i64
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 2
-; CHECK-NEXT:    [[B2:%.*]] = load i16, ptr [[P2]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[B2]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 16
+; CHECK-NEXT:    [[B0:%.*]] = load i32, ptr [[P]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[B0]] to i64
 ; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
-; CHECK-NEXT:    [[B4:%.*]] = load i16, ptr [[P4]], align 1
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[B4]] to i64
+; CHECK-NEXT:    [[B4:%.*]] = load i8, ptr [[P4]], align 1
+; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 5
+; CHECK-NEXT:    [[B5:%.*]] = load i8, ptr [[P5]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[B4]] to i64
+; CHECK-NEXT:    [[E5:%.*]] = zext i8 [[B5]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[TMP4]], 32
-; CHECK-NEXT:    [[TMP6:%.*]] = or disjoint i64 [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[E5]], 40
+; CHECK-NEXT:    [[TMP6:%.*]] = or disjoint i64 [[TMP5]], [[TMP2]]
 ; CHECK-NEXT:    [[X:%.*]] = or disjoint i64 [[TMP6]], [[TMP1]]
 ; CHECK-NEXT:    store i64 [[X]], ptr [[OUT]], align 8
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i16 [[B0]], -1
+; CHECK-NEXT:    [[MASKED:%.*]] = and i64 [[X]], 65535
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[MASKED]], 65535
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %b0 = load i8, ptr %p, align 1

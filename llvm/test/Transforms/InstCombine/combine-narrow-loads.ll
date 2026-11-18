@@ -34,10 +34,10 @@ define i1 @load4_test_bytes_01_nonarrow(ptr %p, ptr %out) {
 ; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw i32 [[E1]], 16
 ; CHECK-NEXT:    [[S2:%.*]] = shl nuw nsw i32 [[E2]], 8
 ; CHECK-NEXT:    [[OR1:%.*]] = or disjoint i32 [[S0]], [[S1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i32 [[S2]], [[E3]]
-; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[TMP1]], [[OR1]]
+; CHECK-NEXT:    [[OR2:%.*]] = or disjoint i32 [[OR1]], [[S2]]
+; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[OR2]], [[E3]]
 ; CHECK-NEXT:    store i32 [[X]], ptr [[OUT:%.*]], align 4
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[OR1]], 2139095040
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[X]], 2139095040
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[MASKED]], 2139095040
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -83,10 +83,10 @@ define i1 @load4_test_bit_31_nonarrow(ptr %p, ptr %out) {
 ; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw i32 [[E1]], 16
 ; CHECK-NEXT:    [[S2:%.*]] = shl nuw nsw i32 [[E2]], 8
 ; CHECK-NEXT:    [[OR1:%.*]] = or disjoint i32 [[S0]], [[S1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i32 [[S2]], [[E3]]
-; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[TMP1]], [[OR1]]
+; CHECK-NEXT:    [[OR2:%.*]] = or disjoint i32 [[OR1]], [[S2]]
+; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[OR2]], [[E3]]
 ; CHECK-NEXT:    store i32 [[X]], ptr [[OUT:%.*]], align 4
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[S0]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %b0 = load i8, ptr %p, align 1
@@ -124,8 +124,8 @@ define i1 @load8_test_hi_half_nonarrow(ptr %p, ptr %out) {
 ; CHECK-NEXT:    [[LO_EXT:%.*]] = zext i32 [[LO]] to i64
 ; CHECK-NEXT:    [[X:%.*]] = or disjoint i64 [[HI_SHL]], [[LO_EXT]]
 ; CHECK-NEXT:    store i64 [[X]], ptr [[OUT:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[HI_EXT]], 2146435072
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[TMP1]], 2146435072
+; CHECK-NEXT:    [[MASKED:%.*]] = and i64 [[X]], 9218868437227405312
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[MASKED]], 9218868437227405312
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %hi = load i32, ptr %p, align 1
@@ -166,7 +166,7 @@ define i1 @load4_balanced_test_bytes_01_nonarrow(ptr %p, ptr %out) {
 ; CHECK-NEXT:    [[LO:%.*]] = or disjoint i32 [[S2]], [[E3]]
 ; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[HI]], [[LO]]
 ; CHECK-NEXT:    store i32 [[X]], ptr [[OUT:%.*]], align 4
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[HI]], 2139095040
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[X]], 2139095040
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[MASKED]], 2139095040
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -216,12 +216,12 @@ define i1 @load4_test_bytes_01_in_branch_nonarrow(ptr %p, ptr %out, i1 %cond) {
 ; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw i32 [[E1]], 16
 ; CHECK-NEXT:    [[S2:%.*]] = shl nuw nsw i32 [[E2]], 8
 ; CHECK-NEXT:    [[OR1:%.*]] = or disjoint i32 [[S0]], [[S1]]
-; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i32 [[S2]], [[E3]]
-; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[TMP0]], [[OR1]]
+; CHECK-NEXT:    [[OR2:%.*]] = or disjoint i32 [[OR1]], [[S2]]
+; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[OR2]], [[E3]]
 ; CHECK-NEXT:    store i32 [[X]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[TEST:%.*]], label [[EXIT:%.*]]
 ; CHECK:       test:
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[OR1]], 2139095040
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[X]], 2139095040
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[MASKED]], 2139095040
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -283,12 +283,12 @@ define i1 @load4_test_two_parts_in_branch_nonarrow(ptr %p, ptr %out, i1 %cond) {
 ; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw i32 [[E1]], 16
 ; CHECK-NEXT:    [[S2:%.*]] = shl nuw nsw i32 [[E2]], 8
 ; CHECK-NEXT:    [[OR1:%.*]] = or disjoint i32 [[S0]], [[S1]]
-; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i32 [[S2]], [[E3]]
-; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[TMP0]], [[OR1]]
+; CHECK-NEXT:    [[OR2:%.*]] = or disjoint i32 [[OR1]], [[S2]]
+; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[OR2]], [[E3]]
 ; CHECK-NEXT:    store i32 [[X]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[TEST:%.*]], label [[EXIT:%.*]]
 ; CHECK:       test:
-; CHECK-NEXT:    [[HI_MASKED:%.*]] = and i32 [[OR1]], 2139095040
+; CHECK-NEXT:    [[HI_MASKED:%.*]] = and i32 [[X]], 2139095040
 ; CHECK-NEXT:    [[HI_SET:%.*]] = icmp eq i32 [[HI_MASKED]], 2139095040
 ; CHECK-NEXT:    [[LO_MASKED:%.*]] = and i32 [[X]], 8388607
 ; CHECK-NEXT:    [[LO_NONZERO:%.*]] = icmp ne i32 [[LO_MASKED]], 0
@@ -352,10 +352,10 @@ define i1 @load4_add_test_bytes_01_nonarrow(ptr %p, ptr %out) {
 ; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw i32 [[E1]], 16
 ; CHECK-NEXT:    [[S2:%.*]] = shl nuw nsw i32 [[E2]], 8
 ; CHECK-NEXT:    [[ADD1:%.*]] = or disjoint i32 [[S0]], [[S1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i32 [[S2]], [[E3]]
-; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[TMP1]], [[ADD1]]
+; CHECK-NEXT:    [[ADD2:%.*]] = or disjoint i32 [[ADD1]], [[S2]]
+; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[ADD2]], [[E3]]
 ; CHECK-NEXT:    store i32 [[X]], ptr [[OUT:%.*]], align 4
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[ADD1]], 2139095040
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[X]], 2139095040
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[MASKED]], 2139095040
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -649,7 +649,7 @@ define i1 @load6_test_bytes_34_nonarrow(ptr %p, ptr %out) {
 ; CHECK-NEXT:    [[OR4:%.*]] = or disjoint i64 [[OR3]], [[S4]]
 ; CHECK-NEXT:    [[X:%.*]] = or i64 [[OR4]], [[S5]]
 ; CHECK-NEXT:    store i64 [[X]], ptr [[OUT:%.*]], align 8
-; CHECK-NEXT:    [[MASKED:%.*]] = and i64 [[OR4]], 1099494850560
+; CHECK-NEXT:    [[MASKED:%.*]] = and i64 [[X]], 1099494850560
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[MASKED]], 1099494850560
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -714,12 +714,13 @@ define i1 @load6_test_bytes_01_nonarrow(ptr %p, ptr %out) {
 ; CHECK-NEXT:    [[S3:%.*]] = shl nuw nsw i64 [[E3]], 24
 ; CHECK-NEXT:    [[S4:%.*]] = shl nuw nsw i64 [[E4]], 32
 ; CHECK-NEXT:    [[S5:%.*]] = shl nuw nsw i64 [[E5]], 40
-; CHECK-NEXT:    [[OR1:%.*]] = or disjoint i64 [[S1]], [[E0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i64 [[S2]], [[S3]]
-; CHECK-NEXT:    [[OR3:%.*]] = or disjoint i64 [[TMP1]], [[OR1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[S4]], [[S5]]
-; CHECK-NEXT:    [[X:%.*]] = or disjoint i64 [[TMP2]], [[OR3]]
+; CHECK-NEXT:    [[OR5:%.*]] = or disjoint i64 [[S1]], [[E0]]
+; CHECK-NEXT:    [[OR2:%.*]] = or disjoint i64 [[OR5]], [[S2]]
+; CHECK-NEXT:    [[OR3:%.*]] = or disjoint i64 [[OR2]], [[S3]]
+; CHECK-NEXT:    [[OR4:%.*]] = or disjoint i64 [[OR3]], [[S4]]
+; CHECK-NEXT:    [[X:%.*]] = or i64 [[OR4]], [[S5]]
 ; CHECK-NEXT:    store i64 [[X]], ptr [[OUT:%.*]], align 8
+; CHECK-NEXT:    [[OR1:%.*]] = and i64 [[X]], 65535
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[OR1]], 65535
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -781,7 +782,7 @@ define i1 @load4_test_bit_31_inner_or_extra_use_narrow(ptr %p, ptr %out) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i32 [[S2]], [[S3]]
 ; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[TMP1]], [[OR1]]
 ; CHECK-NEXT:    store i32 [[X]], ptr [[OUT:%.*]], align 4
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[S3]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %b0 = load i8, ptr %p, align 1
@@ -819,10 +820,10 @@ define i1 @test_bit_31_non_load_leaf_narrow(ptr %p, i8 %b3, ptr %out) {
 ; CHECK-NEXT:    [[E3:%.*]] = zext i8 [[B3:%.*]] to i32
 ; CHECK-NEXT:    [[S0:%.*]] = shl nuw i32 [[E0]], 24
 ; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw i32 [[E1]], 16
-; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i32 [[S1]], [[E3]]
-; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[TMP1]], [[S0]]
+; CHECK-NEXT:    [[OR1:%.*]] = or disjoint i32 [[S0]], [[S1]]
+; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[OR1]], [[E3]]
 ; CHECK-NEXT:    store i32 [[X]], ptr [[OUT:%.*]], align 4
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[S0]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[OR1]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %b0 = load i8, ptr %p, align 1
@@ -854,10 +855,10 @@ define i1 @test_bit_31_different_bases_narrow(ptr %p, ptr %q, ptr %out) {
 ; CHECK-NEXT:    [[E3:%.*]] = zext i8 [[B3]] to i32
 ; CHECK-NEXT:    [[S0:%.*]] = shl nuw i32 [[E0]], 24
 ; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw i32 [[E1]], 16
-; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i32 [[S1]], [[E3]]
-; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[TMP1]], [[S0]]
+; CHECK-NEXT:    [[OR1:%.*]] = or disjoint i32 [[S0]], [[S1]]
+; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[OR1]], [[E3]]
 ; CHECK-NEXT:    store i32 [[X]], ptr [[OUT:%.*]], align 4
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[S0]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[OR1]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %b0 = load i8, ptr %p, align 1
