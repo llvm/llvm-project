@@ -11992,6 +11992,37 @@ static void initializeM0ToZeroForClusterLoad(SDValue Op, SelectionDAG &DAG,
   DAG.UpdateNodeOperands(N, Ops);
 }
 
+// Try to resolve a named barrier object to a constant barrier ID.
+// Named barrier IDs are encoded at bits [5:0] of a BARRIER address space
+// address - other bits of that address are ignored as reserved.
+static std::optional<uint32_t>
+getConstantNamedBarrierNumber(SDValue BarOp, SelectionDAG &DAG) {
+  std::optional<uint64_t> BarVal;
+  if (auto *C = dyn_cast<ConstantSDNode>(BarOp)) {
+    BarVal = C->getZExtValue();
+  } else if (BarOp->isUndef()) {
+    // Refine poison to the 0 barrier to turn things into noops, thus reducing
+    // the risk of hitting an unallocated barrier.
+    BarVal = 0;
+  } else if (auto *GA = dyn_cast<GlobalAddressSDNode>(BarOp)) {
+    const auto *GV = cast<GlobalVariable>(GA->getGlobal());
+    if (AMDGPU::isNamedBarrier(*GV) &&
+        AMDGPUMachineFunctionInfo::get32BitAbsoluteAddress(*GV,
+                                                           AMDGPUAS::BARRIER)) {
+      auto *MFI = DAG.getMachineFunction().getInfo<SIMachineFunctionInfo>();
+      // Record the use of the manualy-specified barrier address to make sure
+      // this function has the right number of resources. This function is named
+      // weird, and we're calling it here since we're skipping the GlobalAddress
+      // lowering with this pattern match.
+      BarVal = MFI->allocateBarrierGlobal(DAG.getDataLayout(), *GV) +
+               GA->getOffset();
+    }
+  }
+  if (BarVal)
+    return *BarVal & 0x3F;
+  return std::nullopt;
+}
+
 SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                                  SelectionDAG &DAG) const {
   unsigned IntrID = Op.getConstantOperandVal(1);
@@ -12369,12 +12400,15 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     SmallVector<SDValue, 2> Ops;
     unsigned Opc;
 
-    if (isa<ConstantSDNode>(Op->getOperand(2))) {
-      uint64_t BarID = cast<ConstantSDNode>(Op->getOperand(2))->getZExtValue();
-      if (IntrID == Intrinsic::amdgcn_s_get_named_barrier_state)
-        BarID = BarID & 0x3F;
+    std::optional<uint32_t> BarID;
+    if (IntrID == Intrinsic::amdgcn_s_get_named_barrier_state)
+      BarID = getConstantNamedBarrierNumber(Op->getOperand(2), DAG);
+    else if (auto *C = dyn_cast<ConstantSDNode>(Op->getOperand(2)))
+      BarID = C->getZExtValue();
+
+    if (BarID) {
       Opc = AMDGPU::S_GET_BARRIER_STATE_IMM;
-      SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
+      SDValue K = DAG.getTargetConstant(*BarID, DL, MVT::i32);
       Ops.push_back(K);
       Ops.push_back(Chain);
     } else {
@@ -12883,20 +12917,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     if (CntC && CntC->isZero()) {
       SDValue Chain = Op->getOperand(0);
       SDValue BarOp = Op->getOperand(2);
-      SmallVector<SDValue, 2> Ops;
 
-      std::optional<uint64_t> BarVal;
-      if (auto *C = dyn_cast<ConstantSDNode>(BarOp))
-        BarVal = C->getZExtValue();
-      else if (auto *GA = dyn_cast<GlobalAddressSDNode>(BarOp))
-        if (auto Addr = AMDGPUMachineFunctionInfo::get32BitAbsoluteAddress(
-                *GA->getGlobal(), AMDGPUAS::BARRIER))
-          BarVal = *Addr + GA->getOffset();
-
-      if (BarVal) {
-        unsigned BarID = *BarVal & 0x3F;
-        Ops.push_back(DAG.getTargetConstant(BarID, DL, MVT::i32));
-        Ops.push_back(Chain);
+      if (auto BarID = getConstantNamedBarrierNumber(BarOp, DAG)) {
+        std::array<SDValue, 2> Ops = {
+            DAG.getTargetConstant(*BarID, DL, MVT::i32), Chain};
         auto *NewMI = DAG.getMachineNode(AMDGPU::S_BARRIER_SIGNAL_IMM, DL,
                                          Op->getVTList(), Ops);
         return SDValue(NewMI, 0);
@@ -12946,8 +12970,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     SDValue BarOp = Op->getOperand(2);
     unsigned Opc;
 
-    if (isa<ConstantSDNode>(BarOp)) {
-      uint64_t BarVal = cast<ConstantSDNode>(BarOp)->getZExtValue();
+    if (auto BarID = getConstantNamedBarrierNumber(BarOp, DAG)) {
       switch (IntrinsicID) {
       default:
         return SDValue();
@@ -12958,9 +12981,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         Opc = AMDGPU::S_WAKEUP_BARRIER_IMM;
         break;
       }
-      // extract the BarrierID from bits 0-5 of the immediate
-      unsigned BarID = BarVal & 0x3F;
-      SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
+      SDValue K = DAG.getTargetConstant(*BarID, DL, MVT::i32);
       Ops.push_back(K);
       Ops.push_back(Chain);
     } else {
@@ -13379,11 +13400,12 @@ static bool addressMayBeAccessedAsPrivate(const MachineMemOperand *MMO,
 SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   LoadSDNode *Load = cast<LoadSDNode>(Op);
-  ISD::LoadExtType ExtType = Load->getExtensionType();
+  assert(Load->getExtensionType() == ISD::NON_EXTLOAD &&
+         "Unexpected custom extending load!");
   EVT MemVT = Load->getMemoryVT();
   MachineMemOperand *MMO = Load->getMemOperand();
 
-  if (ExtType == ISD::NON_EXTLOAD && MemVT.getSizeInBits() < 32) {
+  if (MemVT.getSizeInBits() < 32) {
     // Legalize uniform 16-bit loads to i16 = trunc (zextload i16->i32)
     // to match subword load patterns.
     // Only do this for loads that can use scalar subword load instructions.
@@ -13443,10 +13465,8 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getMergeValues(Ops, DL);
   }
 
-  if (!MemVT.isVector())
-    return SDValue();
-
-  assert(Op.getValueType().getVectorElementType() == MVT::i32 &&
+  assert(MemVT.isVector() &&
+         Op.getValueType().getVectorElementType() == MVT::i32 &&
          "Custom lowering for non-i32 vectors hasn't been implemented.");
 
   Align Alignment = Load->getAlign();
@@ -13530,8 +13550,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
         Fast > 1)
       return SDValue();
 
-    if (MemVT.isVector())
-      return SplitVectorLoad(Op, DAG);
+    return SplitVectorLoad(Op, DAG);
   }
 
   if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
@@ -14077,6 +14096,7 @@ SDValue SITargetLowering::LowerFFREXP(SDValue Op, SelectionDAG &DAG) const {
 SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   StoreSDNode *Store = cast<StoreSDNode>(Op);
+  assert(!Store->isTruncatingStore() && "Unexpected custom truncating store!");
   EVT VT = Store->getMemoryVT();
 
   if (VT == MVT::i1) {
@@ -14145,10 +14165,7 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
         Fast > 1)
       return SDValue();
 
-    if (VT.isVector())
-      return SplitVectorStore(Op, DAG);
-
-    return expandUnalignedStore(Store, DAG);
+    return SplitVectorStore(Op, DAG);
   }
 
   // Probably an invalid store. If so we'll end up emitting a selection error.
@@ -14734,6 +14751,12 @@ bool llvm::isBoolSGPR(SDValue V) {
   }
   }
   return false;
+}
+
+static bool isBoolSGPRExt(SDValue V) {
+  return (V.getOpcode() == ISD::SIGN_EXTEND ||
+          V.getOpcode() == ISD::ANY_EXTEND) &&
+         isBoolSGPR(V.getOperand(0));
 }
 
 // If a constant has all zeroes or all ones within each byte return it.
@@ -15635,6 +15658,28 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
     }
 
     return SDValue();
+  }
+
+  if (VT == MVT::i32 && !DCI.isBeforeLegalize()) {
+    for (unsigned I : {1u, 0u}) {
+      SDValue Ext = N->getOperand(I);
+      // The select may need an e64 cndmask, so only fold when it eliminates
+      // the extension.
+      if (!Ext.hasOneUse() || !isBoolSGPRExt(Ext))
+        continue;
+      // A divergent select still needs to materialize a uniform condition.
+      // Sharing that condition can also require converting it back to SCC.
+      SDValue Cond = Ext.getOperand(0);
+      if (N->isDivergent() && !Cond->isDivergent() && !Cond.hasOneUse())
+        continue;
+
+      // or x, (sext/anyext cc from i1) => select cc, -1, x
+      // Any-extended bits can be chosen to match sign extension.
+      SDLoc DL(N);
+      return DAG.getSelect(DL, MVT::i32, Cond,
+                           DAG.getAllOnesConstant(DL, MVT::i32),
+                           N->getOperand(1 - I));
+    }
   }
 
   // or (perm x, y, c1), c2 -> perm x, y, permute_mask(c1, c2)
@@ -16691,8 +16736,6 @@ static bool supportsMin3Max3(const GCNSubtarget &Subtarget, unsigned Opc,
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM:
-  case AMDGPUISD::FMIN_LEGACY:
-  case AMDGPUISD::FMAX_LEGACY:
     return (VT == MVT::f32) || (VT == MVT::f16 && Subtarget.hasMin3Max3_16()) ||
            (VT == MVT::v2f16 && Subtarget.hasMin3Max3PKF16());
   case ISD::FMINIMUM:

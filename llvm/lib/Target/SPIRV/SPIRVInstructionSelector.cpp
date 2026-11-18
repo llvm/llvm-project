@@ -329,6 +329,9 @@ private:
   bool selectQuadSwap(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
                       unsigned Direction) const;
 
+  bool selectQuadAll(Register ResVReg, SPIRVTypeInst ResType,
+                     MachineInstr &I) const;
+
   bool selectConst(Register ResVReg, SPIRVTypeInst ResType,
                    MachineInstr &I) const;
 
@@ -600,12 +603,14 @@ void SPIRVInstructionSelector::resetVRegsType(MachineFunction &MF) {
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     Register Reg = Register::index2VirtReg(I);
     LLT RegType = MRI.getType(Reg);
+    LLT ScalarTy =
+        RegType.isFloatOrFloatVector() ? LLT::float64() : LLT::integer(64);
     if (RegType.isScalar())
-      MRI.setType(Reg, LLT::scalar(64));
+      MRI.setType(Reg, ScalarTy);
     else if (RegType.isPointer())
       MRI.setType(Reg, LLT::pointer(0, 64));
     else if (RegType.isVector())
-      MRI.setType(Reg, LLT::fixed_vector(2, LLT::scalar(64)));
+      MRI.setType(Reg, LLT::fixed_vector(2, ScalarTy));
   }
   for (const auto &MBB : MF) {
     for (const auto &MI : MBB) {
@@ -4139,6 +4144,28 @@ bool SPIRVInstructionSelector::selectQuadSwap(Register ResVReg,
   return true;
 }
 
+bool SPIRVInstructionSelector::selectQuadAll(Register ResVReg,
+                                             SPIRVTypeInst ResType,
+                                             MachineInstr &I) const {
+  if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_quad_control))
+    return selectOpWithSrcs(ResVReg, ResType, I, {I.getOperand(2).getReg()},
+                            SPIRV::OpGroupNonUniformQuadAllKHR);
+
+  Register Result = I.getOperand(2).getReg();
+  for (unsigned Direction = 0; Direction != 3; ++Direction) {
+    Register QuadValue = createVirtualRegister(ResType, &GR, MRI, MRI->getMF());
+    Register Next =
+        Direction == 2 ? ResVReg
+                       : createVirtualRegister(ResType, &GR, MRI, MRI->getMF());
+    if (!selectQuadSwap(QuadValue, ResType, I, Direction) ||
+        !selectOpWithSrcs(Next, ResType, I, {Result, QuadValue},
+                          SPIRV::OpLogicalAnd))
+      return false;
+    Result = Next;
+  }
+  return true;
+}
+
 bool SPIRVInstructionSelector::selectBitreverseViaI32(Register ResVReg,
                                                       SPIRVTypeInst ResType,
                                                       MachineInstr &I,
@@ -5923,12 +5950,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_prefix_product:
     return selectWaveExclusiveScanProduct(ResVReg, ResType, I);
   case Intrinsic::spv_quad_all:
-    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpGroupNonUniformQuadAllKHR))
-        .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(ResType))
-        .addUse(I.getOperand(2).getReg())
-        .constrainAllUses(TII, TRI, RBI);
-    return true;
+    return selectQuadAll(ResVReg, ResType, I);
   case Intrinsic::spv_quad_read_across_x: {
     return selectQuadSwap(ResVReg, ResType, I, /*Direction*/ 0);
   }

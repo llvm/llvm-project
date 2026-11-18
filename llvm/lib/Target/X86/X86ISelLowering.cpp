@@ -32759,9 +32759,7 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
 /// the corresponding cmpxchg8b or cmpxchg16b instruction is available.
 /// Used to know whether to use cmpxchg8/16b when expanding atomic operations
 /// (otherwise we leave them alone to become __sync_fetch_and_... calls).
-bool X86TargetLowering::needsCmpXchgNb(Type *MemType) const {
-  unsigned OpWidth = MemType->getPrimitiveSizeInBits();
-
+bool X86TargetLowering::needsCmpXchgNb(unsigned OpWidth) const {
   if (OpWidth == 64)
     return Subtarget.canUseCMPXCHG8B() && !Subtarget.is64Bit();
   if (OpWidth == 128)
@@ -32772,45 +32770,44 @@ bool X86TargetLowering::needsCmpXchgNb(Type *MemType) const {
 
 TargetLoweringBase::AtomicExpansionKind
 X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
-  Type *MemType = SI->getValueOperand()->getType();
+  unsigned Size =
+      SI->getDataLayout().getTypeSizeInBits(SI->getValueOperand()->getType());
 
   if (!SI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat) &&
       !Subtarget.useSoftFloat()) {
-    if (MemType->getPrimitiveSizeInBits() == 64 && !Subtarget.is64Bit() &&
+    if (Size == 64 && !Subtarget.is64Bit() &&
         (Subtarget.hasSSE1() || Subtarget.hasX87()))
       return AtomicExpansionKind::None;
 
-    if (MemType->getPrimitiveSizeInBits() == 128 && Subtarget.is64Bit() &&
-        Subtarget.hasAVX())
+    if (Size == 128 && Subtarget.is64Bit() && Subtarget.hasAVX())
       return AtomicExpansionKind::None;
   }
 
-  return needsCmpXchgNb(MemType) ? AtomicExpansionKind::Expand
-                                 : AtomicExpansionKind::None;
+  return needsCmpXchgNb(Size) ? AtomicExpansionKind::Expand
+                              : AtomicExpansionKind::None;
 }
 
 // Note: this turns large loads into lock cmpxchg8b/16b.
 TargetLowering::AtomicExpansionKind
 X86TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
-  Type *MemType = LI->getType();
+  unsigned Size = LI->getDataLayout().getTypeSizeInBits(LI->getType());
 
   if (!LI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat) &&
       !Subtarget.useSoftFloat()) {
     // If this a 64 bit atomic load on a 32-bit target and SSE2 is enabled, we
     // can use movq to do the load. If we have X87 we can load into an 80-bit
     // X87 register and store it to a stack temporary.
-    if (MemType->getPrimitiveSizeInBits() == 64 && !Subtarget.is64Bit() &&
+    if (Size == 64 && !Subtarget.is64Bit() &&
         (Subtarget.hasSSE1() || Subtarget.hasX87()))
       return AtomicExpansionKind::None;
 
     // If this is a 128-bit load with AVX, 128-bit SSE loads/stores are atomic.
-    if (MemType->getPrimitiveSizeInBits() == 128 && Subtarget.is64Bit() &&
-        Subtarget.hasAVX())
+    if (Size == 128 && Subtarget.is64Bit() && Subtarget.hasAVX())
       return AtomicExpansionKind::None;
   }
 
-  return needsCmpXchgNb(MemType) ? AtomicExpansionKind::CmpXChg
-                                 : AtomicExpansionKind::None;
+  return needsCmpXchgNb(Size) ? AtomicExpansionKind::CmpXChg
+                              : AtomicExpansionKind::None;
 }
 
 enum BitTestKind : unsigned {
@@ -33263,16 +33260,43 @@ void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
   AI->eraseFromParent();
 }
 
+void X86TargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
+  assert(AI->getType()->isVectorTy() && AI->use_empty() &&
+         "Only unused vector logical atomicrmw is custom expanded");
+  IRBuilder<> Builder(AI);
+  const DataLayout &DL = AI->getDataLayout();
+  Type *IntTy = Builder.getIntNTy(DL.getTypeSizeInBits(AI->getType()));
+  Value *Val = Builder.CreateBitCast(AI->getValOperand(), IntTy);
+  AtomicRMWInst *NewAI = Builder.CreateAtomicRMW(
+      AI->getOperation(), AI->getPointerOperand(), Val, AI->getAlign(),
+      AI->getOrdering(), AI->getSyncScopeID());
+  NewAI->setVolatile(AI->isVolatile());
+  NewAI->copyMetadata(*AI);
+  AI->eraseFromParent();
+}
+
 TargetLowering::AtomicExpansionKind
 X86TargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   unsigned NativeWidth = Subtarget.is64Bit() ? 64 : 32;
-  Type *MemType = AI->getType();
+  unsigned Size = AI->getDataLayout().getTypeSizeInBits(AI->getType());
+
+  // x86 has no native atomic RMW operations for vectors. An unused and/or/xor
+  // that fits a GPR is bitcast to an integer so it can select to a lock
+  // prefixed instruction; everything else is expanded to a CmpXChg loop.
+  if (AI->getType()->isVectorTy()) {
+    AtomicRMWInst::BinOp Op = AI->getOperation();
+    if ((Op == AtomicRMWInst::And || Op == AtomicRMWInst::Or ||
+         Op == AtomicRMWInst::Xor) &&
+        AI->use_empty() && Size <= NativeWidth)
+      return AtomicExpansionKind::CustomExpand;
+    return AtomicExpansionKind::CmpXChg;
+  }
 
   // If the operand is too big, we must see if cmpxchg8/16b is available
   // and default to library calls otherwise.
-  if (MemType->getPrimitiveSizeInBits() > NativeWidth) {
-    return needsCmpXchgNb(MemType) ? AtomicExpansionKind::CmpXChg
-                                   : AtomicExpansionKind::None;
+  if (Size > NativeWidth) {
+    return needsCmpXchgNb(Size) ? AtomicExpansionKind::CmpXChg
+                                : AtomicExpansionKind::None;
   }
 
   AtomicRMWInst::BinOp Op = AI->getOperation();
@@ -46574,6 +46598,10 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   case X86ISD::SHUFP:
   case X86ISD::UNPCKL:
   case X86ISD::UNPCKH:
+  case X86ISD::PALIGNR:
+  case X86ISD::VSHLDQ:
+  case X86ISD::VSRLDQ:
+  case X86ISD::VPERM2X128:
   case X86ISD::VPERMILPV:
   case X86ISD::VPERMILPI:
   case X86ISD::VPERMI:
@@ -46663,6 +46691,10 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case X86ISD::SHUFP:
   case X86ISD::UNPCKL:
   case X86ISD::UNPCKH:
+  case X86ISD::PALIGNR:
+  case X86ISD::VSHLDQ:
+  case X86ISD::VSRLDQ:
+  case X86ISD::VPERM2X128:
   case X86ISD::VPERMILPV:
   case X86ISD::VPERMILPI:
   case X86ISD::VPERMI:
@@ -61191,6 +61223,45 @@ static SDValue combineSubABS(EVT VT, const SDLoc &DL, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+// Try to fold, keeping the same CC and Flags:
+//   (sub X, (cmov Q, 0, CC, Flags)) -> (cmov (X-Q), X, CC, Flags)
+//   (sub X, (cmov 0, Q, CC, Flags)) -> (cmov X, (X-Q), CC, Flags)
+// X-Q and Flags are results 0 and 1 of the same X86ISD::SUB(X, Q).
+// The original CMOV must have one use.
+static SDValue combineConditionalSub(EVT VT, const SDLoc &DL, SDValue N0,
+                                     SDValue N1, SelectionDAG &DAG) {
+  // Match the single-use (cmov ..., CC, Flags).
+  if (N1.getOpcode() != X86ISD::CMOV || !N1.hasOneUse())
+    return SDValue();
+
+  // Match Flags from result 1 of X86ISD::SUB.
+  SDValue Flags = N1.getOperand(3);
+  if (Flags.getOpcode() != X86ISD::SUB)
+    return SDValue();
+  assert(Flags.getResNo() == 1 && "Expected FLAGS");
+
+  // Match X in SUB(X, Q) with the outer subtraction's X.
+  if (Flags.getOperand(0) != N0)
+    return SDValue();
+
+  SDValue Q = Flags.getOperand(1);
+  SDValue FalseOp = N1.getOperand(0);
+  SDValue TrueOp = N1.getOperand(1);
+
+  SDValue Sub = Flags.getValue(0);
+  SDValue CC = N1.getOperand(2);
+
+  // Match (cmov Q, 0, CC, Flags).
+  if (FalseOp == Q && isNullConstant(TrueOp))
+    return DAG.getNode(X86ISD::CMOV, DL, VT, Sub, N0, CC, Flags);
+
+  // Match (cmov 0, Q, CC, Flags).
+  if (isNullConstant(FalseOp) && TrueOp == Q)
+    return DAG.getNode(X86ISD::CMOV, DL, VT, N0, Sub, CC, Flags);
+
+  return SDValue();
+}
+
 static SDValue combineSubSetcc(SDNode *N, SelectionDAG &DAG) {
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
@@ -61298,6 +61369,9 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   }
 
   if (SDValue V = combineSubABS(VT, DL, Op0, Op1, DAG))
+    return V;
+
+  if (SDValue V = combineConditionalSub(VT, DL, Op0, Op1, DAG))
     return V;
 
   // Try to synthesize horizontal subs from subs of shuffles.
@@ -64600,6 +64674,16 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
 
   // Any legal type not explicitly accounted for above here is desirable.
   return true;
+}
+
+bool X86TargetLowering::isTypeDesirableForOp(SDNode *N, EVT VT) const {
+  unsigned Opc = N->getOpcode();
+  // There are no vXi64 to f32 or f64 conversions without AVX512DQ.
+  if ((Opc == ISD::SINT_TO_FP || Opc == ISD::UINT_TO_FP) &&
+      VT.isVectorOf(MVT::i64) && !Subtarget.hasDQI() &&
+      !(Subtarget.hasFP16() && N->getValueType(0).isVectorOf(MVT::f16)))
+    return false;
+  return isTypeDesirableForOp(Opc, VT);
 }
 
 SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc &dl,
