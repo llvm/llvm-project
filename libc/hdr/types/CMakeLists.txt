@@ -655,6 +655,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_in6_pktinfo
+  HDRS
+    struct_in6_pktinfo.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_in6_pktinfo
+)
+
+add_proxy_header_library(
   struct_ipv6_mreq
   HDRS
     struct_ipv6_mreq.h
@@ -744,6 +752,14 @@ add_proxy_header_library(
     struct_sockaddr_in6.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_sockaddr_in6
+)
+
+add_proxy_header_library(
+  struct_iphdr
+  HDRS
+    struct_iphdr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_iphdr
 )
 
 add_proxy_header_library(

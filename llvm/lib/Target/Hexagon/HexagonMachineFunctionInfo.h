@@ -45,6 +45,8 @@ class HexagonMachineFunctionInfo : public MachineFunctionInfo {
   DenseMap<int, int> VTCMMap;
   // Size of the largest outgoing HLX argument area on the VTCM stack.
   unsigned MaxVTCMCallFrameSize = 0;
+  // Scalar stack slot holding the caller's VSP, or -1.
+  int VSPFrameIndex = -1;
   std::map<const MachineInstr*, unsigned> PacketInfo;
   virtual void anchor();
 
@@ -100,6 +102,9 @@ public:
 
   void setStackAlignBaseReg(Register R) { StackAlignBaseReg = R; }
   Register getStackAlignBaseReg() const { return StackAlignBaseReg; }
+
+  void setVSPFrameIndex(int FI) { VSPFrameIndex = FI; }
+  int getVSPFrameIndex() const { return VSPFrameIndex; }
 
   MachineFrameInfo &getVTCMFrameInfo() { return VTCMFrameInfo; }
   const MachineFrameInfo &getVTCMFrameInfo() const { return VTCMFrameInfo; }

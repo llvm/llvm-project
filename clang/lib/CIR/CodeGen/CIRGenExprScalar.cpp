@@ -887,8 +887,11 @@ public:
 
     mlir::Location loc = cgf.getLoc(e->getSourceRange().getBegin());
 
-    if (cir::isFPOrVectorOfFPType(operand.getType()))
-      return builder.createOrFold<cir::FNegOp>(loc, operand);
+    if (cir::isFPOrVectorOfFPType(operand.getType())) {
+      CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
+      return builder.createOrFold<cir::FNegOp>(loc, operand,
+                                               builder.getFastMathFlagsAttr());
+    }
 
     // Saturated negation must saturate (-min for signed, any nonzero value for
     // unsigned), as in classic codegen.
@@ -1289,6 +1292,26 @@ public:
       llvm_unreachable("unsupported comparison kind for cir.cmp");
     }
   }
+  /// Returns <Signaling, Kind>.
+  std::pair<bool, cir::FCmpOpKind>
+  clangCmpToCIRFCmp(clang::BinaryOperatorKind clangCmp) {
+    switch (clangCmp) {
+    case BO_LT:
+      return std::make_pair(/*Signaling=*/true, cir::FCmpOpKind::olt);
+    case BO_GT:
+      return std::make_pair(/*Signaling=*/true, cir::FCmpOpKind::ogt);
+    case BO_LE:
+      return std::make_pair(/*Signaling=*/true, cir::FCmpOpKind::ole);
+    case BO_GE:
+      return std::make_pair(/*Signaling=*/true, cir::FCmpOpKind::oge);
+    case BO_EQ:
+      return std::make_pair(/*Signaling=*/false, cir::FCmpOpKind::oeq);
+    case BO_NE:
+      return std::make_pair(/*Signaling=*/false, cir::FCmpOpKind::une);
+    default:
+      llvm_unreachable("unsupported comparison kind");
+    }
+  }
 
   mlir::Value emitCmp(const BinaryOperator *e) {
     ignoreResultAssign = false;
@@ -1317,9 +1340,19 @@ public:
         } else {
           // Other kinds of vectors. Element-wise comparison returning
           // a vector.
-          result = cir::VecCmpOp::create(builder, cgf.getLoc(boInfo.loc),
-                                         cgf.convertType(boInfo.fullType), kind,
-                                         boInfo.lhs, boInfo.rhs);
+          auto resultTy =
+              mlir::cast<cir::VectorType>(cgf.convertType(boInfo.fullType));
+          if (cir::isFPOrVectorOfFPType(lhs.getType())) {
+            std::pair<bool, cir::FCmpOpKind> fpInfo =
+                clangCmpToCIRFCmp(e->getOpcode());
+            CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
+            result = builder.createVecFCompare(cgf.getLoc(boInfo.loc), resultTy,
+                                               fpInfo.second, lhs, rhs,
+                                               fpInfo.first);
+          } else {
+            result = builder.createVecCompare(cgf.getLoc(boInfo.loc), resultTy,
+                                              kind, lhs, rhs);
+          }
         }
       } else if (boInfo.isFixedPointOp()) {
         result = emitFixedPointBinOp(boInfo);
@@ -2129,9 +2162,9 @@ static mlir::Value buildFMulAdd(mlir::Location addLoc, cir::FMulOp mulOp,
 
   // Carry the mul's fenv attribute so a constrained fmul yields a constrained
   // fmuladd; the builder is under the add's FP options, not the mul's.
-  mlir::Value fmuladd =
-      cir::FMulAddOp::create(builder, loc, addend.getType(), mulOp0, mulOp1,
-                             addend, mulOp.getFenvAttr());
+  mlir::Value fmuladd = cir::FMulAddOp::create(
+      builder, loc, addend.getType(), mulOp0, mulOp1, addend,
+      mulOp.getFenvAttr(), builder.getFastMathFlagsAttr());
   mulOp.erase();
   return fmuladd;
 }
