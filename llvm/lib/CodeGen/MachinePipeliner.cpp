@@ -59,6 +59,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/ModuloSchedule.h"
+#include "llvm/CodeGen/ProcessImplicitDefs.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
@@ -1788,6 +1789,28 @@ private:
            MRI.getDefBlock(VRegOrUnit.asVirtualReg()) == OrigMBB;
   }
 
+  // Returns true if \p MO is a use that ProcessImplicitDefs makes undef, or a
+  // def that it erases.
+  bool isUndefOrErased(const MachineOperand &MO,
+                       const ImplicitDefInfo &ImpDefs) const {
+    // On targets that require disjoint early-clobber and undef operands,
+    // InitUndef runs first and may give the untied undef uses of an
+    // instruction with an early-clobber def a register, so keep counting them.
+    bool RunsInitUndef = OrigMBB->getParent()
+                             ->getSubtarget()
+                             .requiresDisjointEarlyClobberAndUndef();
+    auto GetsInitUndef = [&](const MachineOperand &Use) {
+      return RunsInitUndef && !Use.isTied() &&
+             any_of(Use.getParent()->all_defs(), [](const MachineOperand &Def) {
+               return Def.isEarlyClobber();
+             });
+    };
+    if (MO.isUse())
+      return ImpDefs.isUndef(MO) && !GetsInitUndef(MO);
+    return ImpDefs.isErased(*MO.getParent()) &&
+           none_of(MRI.use_nodbg_operands(MO.getReg()), GetsInitUndef);
+  }
+
   // Search for live-in variables. They are factored into the register pressure
   // from the begining. Live-in variables used by every iteration should be
   // considered as alive throughout the loop. For example, the variable `c` in
@@ -1998,6 +2021,25 @@ public:
       if (MI.isDebugInstr())
         continue;
       ROMap[&MI].collect(MI, *TRI, MRI, false, true);
+    }
+
+    ImplicitDefInfo ImpDefs(*OrigMBB->getParent());
+    for (MachineInstr &MI : *OrigMBB) {
+      if (MI.isDebugInstr())
+        continue;
+      // Leave out the reads that ProcessImplicitDefs marks undef and the
+      // definitions it deletes. Otherwise, for example, an IMPLICIT_DEF hoisted
+      // out of the loop would count as a register live in the whole loop.
+      auto IsUndef = [&](const VRegMaskOrUnit &RegOrUnit) {
+        return RegOrUnit.VRegOrUnit.isVirtualReg() &&
+               all_of(MI.operands(), [&](const MachineOperand &MO) {
+                 return !MO.isReg() ||
+                        MO.getReg() != RegOrUnit.VRegOrUnit.asVirtualReg() ||
+                        isUndefOrErased(MO, ImpDefs);
+               });
+      };
+      erase_if(ROMap[&MI].Uses, IsUndef);
+      erase_if(ROMap[&MI].Defs, IsUndef);
     }
 
     computeLiveIn();
