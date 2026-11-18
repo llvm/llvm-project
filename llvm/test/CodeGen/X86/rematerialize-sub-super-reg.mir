@@ -238,3 +238,4 @@ body:             |
     FAKE_USE implicit killed $al
     $eax = MOV32r0 implicit-def dead $eflags
     RET 0, killed $eax
+...

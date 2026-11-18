@@ -606,7 +606,7 @@ define void @test_add_i512_rmw(ptr %p0) nounwind {
 ; AVX512F-NEXT:    leal (%rcx,%rax,2), %eax
 ; AVX512F-NEXT:    xorl %ecx, %eax
 ; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1 {%k1}
+; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1 {%k1} # [10,1,1,1,1,1,1,1]
 ; AVX512F-NEXT:    vmovdqu64 %zmm1, (%rdi)
 ; AVX512F-NEXT:    retq
 ;
@@ -623,7 +623,7 @@ define void @test_add_i512_rmw(ptr %p0) nounwind {
 ; AVX512VL-NEXT:    leal (%rcx,%rax,2), %eax
 ; AVX512VL-NEXT:    xorl %ecx, %eax
 ; AVX512VL-NEXT:    kmovd %eax, %k1
-; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1 {%k1}
+; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1 {%k1} # [10,1,1,1,1,1,1,1]
 ; AVX512VL-NEXT:    vmovdqu64 %zmm1, (%rdi)
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq

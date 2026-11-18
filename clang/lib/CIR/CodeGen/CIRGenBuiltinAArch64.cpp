@@ -172,7 +172,8 @@ emitNeonCallToOp(CIRGenModule &cgm, CIRGenBuilderTy &builder,
   if constexpr (std::is_same_v<Operation, cir::FMAOp>) {
     assert(args.size() == 3 && "fma expects three operands");
     return Operation::create(builder, loc, funcResTy, args[0], args[1], args[2],
-                             builder.getConstrainedFPAttr())
+                             builder.getConstrainedFPAttr(),
+                             builder.getFastMathFlagsAttr())
         .getResult();
   }
   if constexpr (std::is_same_v<Operation, cir::SqrtOp>) {

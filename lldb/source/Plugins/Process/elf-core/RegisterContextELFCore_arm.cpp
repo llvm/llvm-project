@@ -46,7 +46,7 @@ bool RegisterContextELFCore_arm::WriteFPR() {
 }
 
 bool RegisterContextELFCore_arm::ReadRegister(const RegisterInfo *reg_info,
-                                                RegisterValue &value) {
+                                              RegisterValue &value) {
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
   if (reg == LLDB_INVALID_REGNUM)
     return false;
@@ -75,7 +75,7 @@ bool RegisterContextELFCore_arm::ReadAllRegisterValues(
 }
 
 bool RegisterContextELFCore_arm::WriteRegister(const RegisterInfo *reg_info,
-                                                 const RegisterValue &value) {
+                                               const RegisterValue &value) {
   return false;
 }
 

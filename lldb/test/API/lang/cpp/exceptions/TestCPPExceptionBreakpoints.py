@@ -40,17 +40,9 @@ class CPPBreakpointTestCase(TestBase):
         self.assertTrue(exception_bkpt, "Made an exception breakpoint")
 
         # Now run, and make sure we hit our breakpoint:
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, "Got a valid process")
-
-        stopped_threads = []
-        stopped_threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, exception_bkpt
+        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, exception_bkpt
         )
-        self.assertEqual(
-            len(stopped_threads), 1, "Stopped at our exception breakpoint."
-        )
-        thread = stopped_threads[0]
         # Make sure our throw function is still above us on the stack:
 
         frame_functions = lldbutil.get_function_names(thread)

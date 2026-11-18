@@ -13,12 +13,12 @@
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
@@ -174,7 +174,7 @@ LIBC_INLINE bfloat16 expbf16(bfloat16 x) {
   int x_hi = x_hi_mid >> 5;
   int x_mid = x_hi_mid & 0b11111;
   // lo = x - (hi + mid) = round(x * 4) / (-4) + x
-  float lo = fputil::multiply_add(kf, -0.25f, xf);
+  float lo = fputil::sub_multiply(xf, kf, 0.25f);
 
   float exp_hi = expbf16_internal::EXP_HI[x_hi + 12];
   float exp_mid = expbf16_internal::EXP_MID[x_mid];

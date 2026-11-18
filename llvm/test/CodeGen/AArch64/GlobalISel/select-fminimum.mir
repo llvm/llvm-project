@@ -69,3 +69,4 @@ body:             |
     %select_me:fpr(f64) = G_FMINIMUM %a, %b
     $d0 = COPY %select_me(f64)
     RET_ReallyLR implicit $d0
+...

@@ -77,3 +77,4 @@ body:             |
     DBG_VALUE $q9, $noreg, !9, !DIExpression(DW_OP_LLVM_fragment, 0, 56), debug-location !20
     t2Bcc %bb.2.for.body, 0, killed $cpsr, debug-location !20
     tB %bb.2.for.body, 14, $noreg
+...

@@ -338,8 +338,8 @@ LIBC_MATH_SMALL_TABLES_INLINE double tanh_eval(double x) {
   double y_hi = 1.0 / d.hi;
   double q_hi = two_m_hi * y_hi;
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-  double rem_hi = fputil::multiply_add(-q_hi, d.hi, two_m_hi);
-  double rem_lo = fputil::multiply_add(-q_hi, d_lo, two_m_lo);
+  double rem_hi = fputil::sub_multiply(two_m_hi, q_hi, d.hi);
+  double rem_lo = fputil::sub_multiply(two_m_lo, q_hi, d_lo);
 #else
   // Split q_hi into 26 + 27 bits and d.hi into 27 + 26 bits via bit-masks so
   // that q_hi_hi * d_hi_hi (53 bits) and q_hi_hi * d_hi_lo (52 bits) are exact
@@ -427,11 +427,11 @@ LIBC_INLINE double tanh_small_eval(double x, uint64_t x_abs) {
     if (LIBC_UNLIKELY(x_abs == 0))
       return x;
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-    double res = fputil::multiply_add(x, -0x1.0p-55, x);
+    double res = fputil::sub_multiply(x, x, 0x1.0p-55);
 #else
     // Avoid spurious FE_UNDERFLOW on x * -2^-55 when 2^-1022 < |x| < 2^-967,
     // and preserve directed rounding for subnormal |x| <= 2^-1022:
-    double x_scaled = fputil::multiply_add(x, 0x1.0p55, -x);
+    double x_scaled = fputil::multiply_sub(x, 0x1.0p55, x);
     double res = x_scaled * 0x1.0p-55;
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
     if (LIBC_UNLIKELY(x_abs <= 0x0010'0000'0000'0000ULL)) {
@@ -485,7 +485,7 @@ LIBC_INLINE double tanh_small_eval(double x, uint64_t x_abs) {
   // The error of y_hi + y_lo is bounded by |y_hi| * 0x1.8p-54, and the rounding
   // error of r.lo + y_lo is bounded by |x| * 2^-103.
   double x_err = x * 0x1.0p-103;
-  double err = fputil::multiply_add(y_hi, -0x1.8p-54, x_err);
+  double err = fputil::sub_multiply(x_err, y_hi, 0x1.8p-54);
 
   // Low tail bounds lo_{u,l} ~ r.lo + (y_lo +/- err):
   double y_lo_u = y_lo + err;
