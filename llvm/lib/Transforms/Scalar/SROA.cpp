@@ -287,6 +287,7 @@ private:
   bool splitAlloca(AllocaInst &AI, AllocaSlices &AS);
   bool propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS);
   std::pair<bool /*Changed*/, bool /*CFGChanged*/> runOnAlloca(AllocaInst &AI);
+  bool splitCopyFromSelect(AllocaInst &AI);
   void clobberUse(Use &U);
   bool deleteDeadInstructions(AllocaInst *AI,
                               SmallPtrSetImpl<AllocaInst *> &DeletedAllocas);
@@ -6402,6 +6403,318 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
   return true;
 }
 
+namespace {
+/// A load or store of a whole first-class value at [Begin, End) of an alloca.
+struct CopySplitTypedAccess {
+  uint64_t Begin;
+  uint64_t End;
+  Type *Ty;
+};
+/// A piece of a copy that is being split.
+struct CopySplitPiece {
+  uint64_t Begin;
+  Type *Ty;
+};
+} // end anonymous namespace
+
+/// Upper bound on the number of pieces a copy is split into.
+static constexpr unsigned MaxCopySplitPieces = 8;
+/// Upper bound on the size of a byte-vector piece covering an untyped gap.
+static constexpr uint64_t MaxCopySplitGapBytes = 16;
+
+/// Whether a load or store of \p Ty can be a piece of a split copy: a plain
+/// integer, floating-point or pointer value (or vector of those) that occupies
+/// exactly its store size.
+static bool isCopySplitPieceType(Type *Ty, const DataLayout &DL) {
+  Type *ScalarTy = Ty->getScalarType();
+  return (ScalarTy->isIntegerTy() || ScalarTy->isFloatingPointTy() ||
+          ScalarTy->isPointerTy()) &&
+         !DL.getTypeStoreSize(Ty).isScalable() &&
+         DL.typeSizeEqualsStoreSize(Ty);
+}
+
+/// Collect the accesses of \p AI that are relevant for splitting \p Copy,
+/// whose source is \p Sel. Loads and stores are added to \p Typed, the ranges
+/// of other memory intrinsics to \p Untyped. \p Sel and \p Copy themselves are
+/// skipped. Returns false if \p AI has any use that is not understood, in
+/// particular any use that may let the pointer escape.
+static bool collectCopySplitAccesses(
+    AllocaInst &AI, const DataLayout &DL, const SelectInst *Sel,
+    const MemCpyInst *Copy, SmallVectorImpl<CopySplitTypedAccess> &Typed,
+    SmallVectorImpl<std::pair<uint64_t, uint64_t>> &Untyped) {
+  unsigned IdxWidth = DL.getIndexTypeSizeInBits(AI.getType());
+  SmallVector<std::pair<Instruction *, APInt>, 8> Worklist;
+  Worklist.emplace_back(&AI, APInt(IdxWidth, 0));
+  while (!Worklist.empty()) {
+    auto [V, Off] = Worklist.pop_back_val();
+    if (Off.isNegative())
+      return false;
+    uint64_t Begin = Off.getZExtValue();
+
+    auto AddTyped = [&](Type *Ty) {
+      if (!isCopySplitPieceType(Ty, DL))
+        return false;
+      Typed.push_back(
+          {Begin, Begin + DL.getTypeStoreSize(Ty).getFixedValue(), Ty});
+      return true;
+    };
+
+    for (User *U : V->users()) {
+      auto *I = cast<Instruction>(U);
+      if (I == Sel || I == Copy) {
+        // The select is only allowed as a direct user of the alloca, and the
+        // copy only as a direct user of its destination; any other route
+        // means an offset the plan does not account for.
+        if (V != &AI)
+          return false;
+        continue;
+      }
+      if (auto *LI = dyn_cast<LoadInst>(I)) {
+        if (!LI->isSimple() || !AddTyped(LI->getType()))
+          return false;
+        continue;
+      }
+      if (auto *SI = dyn_cast<StoreInst>(I)) {
+        if (SI->getValueOperand() == V || !SI->isSimple() ||
+            !AddTyped(SI->getValueOperand()->getType()))
+          return false;
+        continue;
+      }
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
+        APInt GEPOff(IdxWidth, 0);
+        if (!GEP->accumulateConstantOffset(DL, GEPOff))
+          return false;
+        Worklist.emplace_back(GEP, Off + GEPOff);
+        continue;
+      }
+      if (auto *MI = dyn_cast<MemIntrinsic>(I)) {
+        auto *Len = dyn_cast<ConstantInt>(MI->getLength());
+        if (MI->isVolatile() || !Len)
+          return false;
+        Untyped.emplace_back(Begin, Begin + Len->getZExtValue());
+        continue;
+      }
+      if (auto *II = dyn_cast<IntrinsicInst>(I))
+        if (II->isLifetimeStartOrEnd() || II->isDroppable())
+          continue;
+      return false;
+    }
+  }
+  return true;
+}
+
+/// Split `memcpy(Dst, select(C, X, Y), N)`, where X, Y and Dst are allocas
+/// and Dst may be X or Y, into per-piece loads through pointer selects
+/// followed by stores:
+///
+///   %p0 = select i1 %c, ptr %x, ptr %y          ; per piece, at its offset
+///   %v0 = load T0, ptr %p0
+///   ...                                         ; all loads first
+///   store T0 %v0, ptr %dst
+///   ...
+///
+/// The copy itself blocks SROA on X and Y, because a select feeding anything
+/// other than loads and stores is not speculated. When Dst is a separate
+/// alloca, rewriting Dst performs this split as a side effect; when Dst is X
+/// or Y nothing does, and the whole group stays in memory. After this
+/// rewrite, the existing select speculation decides whether X and Y can be
+/// promoted.
+///
+/// Pieces follow the typed accesses of X, Y and Dst, which must not partially
+/// overlap. Bytes covered by no typed access are copied as byte vectors, which
+/// preserve poison per byte. All loads are emitted before any store, so the
+/// rewrite is also correct when the select picks Dst itself.
+bool SROA::splitCopyFromSelect(AllocaInst &AI) {
+  const DataLayout &DL = AI.getDataLayout();
+
+  // Collect candidate copies reachable from AI as a select operand or as the
+  // destination.
+  SmallSetVector<MemCpyInst *, 4> Candidates;
+  auto AddCandidate = [&](User *U) {
+    auto *MCI = dyn_cast<MemCpyInst>(U);
+    if (MCI && MCI->getIntrinsicID() == Intrinsic::memcpy &&
+        isa<SelectInst>(MCI->getRawSource()))
+      Candidates.insert(MCI);
+  };
+  for (User *U : AI.users()) {
+    if (auto *SI = dyn_cast<SelectInst>(U)) {
+      for (User *SU : SI->users())
+        AddCandidate(SU);
+      continue;
+    }
+    AddCandidate(U);
+  }
+
+  for (MemCpyInst *Copy : Candidates) {
+    auto *Len = dyn_cast<ConstantInt>(Copy->getLength());
+    if (Copy->isVolatile() || !Len || Len->isZero())
+      continue;
+    uint64_t N = Len->getZExtValue();
+
+    auto *Sel = cast<SelectInst>(Copy->getRawSource());
+    auto *X = dyn_cast<AllocaInst>(Sel->getTrueValue());
+    auto *Y = dyn_cast<AllocaInst>(Sel->getFalseValue());
+    auto *Dst = dyn_cast<AllocaInst>(Copy->getRawDest());
+    if (!X || !Y || !Dst || X == Y ||
+        Sel->getCondition()->getType() != Type::getInt1Ty(AI.getContext()))
+      continue;
+
+    // Each alloca must be fully analyzable and large enough for the copy, so
+    // that every piece pointer is in bounds. Allocas already queued for
+    // promotion must not gain new non-promotable uses.
+    SmallSetVector<AllocaInst *, 3> Allocas;
+    Allocas.insert_range(ArrayRef<AllocaInst *>{X, Y, Dst});
+    bool Valid = all_of(Allocas, [&](AllocaInst *A) {
+      std::optional<TypeSize> Size = A->getAllocationSize(DL);
+      return A->isStaticAlloca() && Size && !Size->isScalable() &&
+             Size->getFixedValue() >= N && !PromotableAllocas.contains(A);
+    });
+    if (!Valid)
+      continue;
+
+    SmallVector<CopySplitTypedAccess, 16> Typed;
+    SmallVector<std::pair<uint64_t, uint64_t>, 8> Untyped;
+    for (AllocaInst *A : Allocas)
+      Valid &= collectCopySplitAccesses(*A, DL, Sel, Copy, Typed, Untyped);
+    if (!Valid)
+      continue;
+
+    // Other users of the select read X or Y at offset zero.
+    for (User *U : Sel->users()) {
+      if (U == Copy)
+        continue;
+      auto *LI = dyn_cast<LoadInst>(U);
+      if (!LI || !LI->isSimple() || !isCopySplitPieceType(LI->getType(), DL)) {
+        Valid = false;
+        break;
+      }
+      Typed.push_back({0, DL.getTypeStoreSize(LI->getType()).getFixedValue(),
+                       LI->getType()});
+    }
+    if (!Valid)
+      continue;
+
+    // Merge identical typed ranges inside the copy. Accesses with different
+    // types share a range only if none of them is a pointer, in which case an
+    // integer of the same size is used.
+    llvm::sort(Typed, [](const CopySplitTypedAccess &A,
+                         const CopySplitTypedAccess &B) {
+      return std::tie(A.Begin, A.End) < std::tie(B.Begin, B.End);
+    });
+    SmallVector<CopySplitTypedAccess, 8> Ranges;
+    for (const CopySplitTypedAccess &A : Typed) {
+      // A typed access crossing the end of the copy cannot be preserved.
+      if (A.Begin < N && A.End > N) {
+        Valid = false;
+        break;
+      }
+      if (A.Begin >= N)
+        continue;
+      if (!Ranges.empty() && Ranges.back().Begin == A.Begin &&
+          Ranges.back().End == A.End) {
+        CopySplitTypedAccess &R = Ranges.back();
+        if (R.Ty == A.Ty)
+          continue;
+        if (R.Ty->isPtrOrPtrVectorTy() || A.Ty->isPtrOrPtrVectorTy()) {
+          Valid = false;
+          break;
+        }
+        R.Ty = IntegerType::get(AI.getContext(), (R.End - R.Begin) * 8);
+        continue;
+      }
+      // Distinct ranges must not overlap.
+      if (!Ranges.empty() && A.Begin < Ranges.back().End) {
+        Valid = false;
+        break;
+      }
+      Ranges.push_back(A);
+    }
+    if (!Valid)
+      continue;
+
+    // A memory intrinsic must not write or read part of a typed range.
+    auto IsInside = [](uint64_t P, const CopySplitTypedAccess &R) {
+      return R.Begin < P && P < R.End;
+    };
+    for (auto [B, E] : Untyped)
+      for (const CopySplitTypedAccess &R : Ranges)
+        if (IsInside(B, R) || IsInside(E, R))
+          Valid = false;
+    if (!Valid)
+      continue;
+
+    // Build the pieces, covering gaps with byte vectors.
+    SmallVector<CopySplitPiece, 8> Pieces;
+    Type *I8Ty = Type::getInt8Ty(AI.getContext());
+    auto AddGap = [&](uint64_t B, uint64_t E) {
+      if (B == E)
+        return true;
+      if (E - B > MaxCopySplitGapBytes)
+        return false;
+      Pieces.push_back(
+          {B, E - B == 1 ? I8Ty : FixedVectorType::get(I8Ty, E - B)});
+      return true;
+    };
+    uint64_t Pos = 0;
+    for (const CopySplitTypedAccess &R : Ranges) {
+      Valid &= AddGap(Pos, R.Begin);
+      Pieces.push_back({R.Begin, R.Ty});
+      Pos = R.End;
+    }
+    Valid &= AddGap(Pos, N);
+    if (!Valid || Pieces.size() > MaxCopySplitPieces)
+      continue;
+
+    LLVM_DEBUG(dbgs() << "  Splitting copy from select into " << Pieces.size()
+                      << " pieces: " << *Copy << "\n");
+
+    IRBuilderTy IRB(Copy);
+    Align SrcAlign = Copy->getSourceAlign().valueOrOne();
+    Align DstAlign = Copy->getDestAlign().valueOrOne();
+    AAMDNodes AATags = Copy->getAAMetadata();
+    auto PtrAt = [&](Value *Base, uint64_t Off) -> Value * {
+      if (Off == 0)
+        return Base;
+      return IRB.CreateInBoundsPtrAdd(
+          Base, ConstantInt::get(DL.getIndexType(Base->getType()), Off),
+          Base->getName() + ".sroa.copy");
+    };
+    auto CopyMD = [&](Instruction *I, uint64_t Off, Type *Ty) {
+      I->copyMetadata(*Copy, {LLVMContext::MD_mem_parallel_loop_access,
+                              LLVMContext::MD_access_group});
+      if (AATags)
+        I->setAAMetadata(AATags.adjustForAccess(Off, Ty, DL));
+    };
+
+    // Load every piece before storing any, as Dst may be the selected source.
+    SmallVector<Value *, 8> Values;
+    for (const CopySplitPiece &P : Pieces) {
+      Value *Ptr = IRB.CreateSelect(Sel->getCondition(), PtrAt(X, P.Begin),
+                                    PtrAt(Y, P.Begin),
+                                    Sel->getName() + ".sroa.copy", Sel);
+      LoadInst *Load =
+          IRB.CreateAlignedLoad(P.Ty, Ptr, commonAlignment(SrcAlign, P.Begin),
+                                Sel->getName() + ".sroa.copyload");
+      CopyMD(Load, P.Begin, P.Ty);
+      Values.push_back(Load);
+    }
+    for (auto [P, V] : zip_equal(Pieces, Values)) {
+      Value *Ptr = PtrAt(Dst, P.Begin);
+      StoreInst *Store =
+          IRB.CreateAlignedStore(V, Ptr, commonAlignment(DstAlign, P.Begin));
+      CopyMD(Store, P.Begin, P.Ty);
+      migrateDebugInfo(Dst, /*IsSplit=*/Pieces.size() > 1, P.Begin * 8,
+                       DL.getTypeStoreSizeInBits(P.Ty).getFixedValue(), Copy,
+                       Store, Ptr, V, DL);
+    }
+
+    DeadInsts.push_back(Copy);
+    Worklist.insert_range(Allocas);
+    return true;
+  }
+  return false;
+}
+
 /// Analyze an alloca for SROA.
 ///
 /// This analyzes the alloca to ensure we can reason about it, builds
@@ -6434,6 +6747,11 @@ SROA::runOnAlloca(AllocaInst &AI) {
   IRB.disableGEPCanonicalization();
   AggLoadStoreRewriter AggRewriter(DL, IRB);
   Changed |= AggRewriter.rewrite(AI);
+
+  // Split copies from a select of allocas so that the select only feeds
+  // loads. The affected allocas are re-queued and analyzed afresh.
+  if (splitCopyFromSelect(AI))
+    return {true, CFGChanged};
 
   // Build the slices using a recursive instruction-visiting builder.
   AllocaSlices AS(DL, AI);

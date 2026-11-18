@@ -39,22 +39,13 @@ define { i64, i64 } @select_memcpy_to_other_alloca(i64 %a0, i64 %a1, i64 %b0, i6
 }
 
 ; `a = c ? b : a;` The memcpy writes back into %a, which is also a select
-; operand. FIXME: this should be promoted like the case above.
+; operand. It is split into per-field loads through selects, then promoted
+; like the case above.
 define { i64, i64 } @select_memcpy_to_select_operand(i64 %a0, i64 %a1, i64 %b0, i64 %b1, i1 %c) {
 ; CHECK-LABEL: define { i64, i64 } @select_memcpy_to_select_operand(
 ; CHECK-SAME: i64 [[A0:%.*]], i64 [[A1:%.*]], i64 [[B0:%.*]], i64 [[B1:%.*]], i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = alloca [16 x i8], align 8
-; CHECK-NEXT:    [[B:%.*]] = alloca [16 x i8], align 8
-; CHECK-NEXT:    store i64 [[A0]], ptr [[A]], align 8
-; CHECK-NEXT:    [[A_HI:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
-; CHECK-NEXT:    store i64 [[A1]], ptr [[A_HI]], align 8
-; CHECK-NEXT:    store i64 [[B0]], ptr [[B]], align 8
-; CHECK-NEXT:    [[B_HI:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 8
-; CHECK-NEXT:    store i64 [[B1]], ptr [[B_HI]], align 8
-; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], ptr [[B]], ptr [[A]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[A]], ptr align 8 [[P]], i64 16, i1 false)
-; CHECK-NEXT:    [[R0:%.*]] = load i64, ptr [[A]], align 8
-; CHECK-NEXT:    [[R1:%.*]] = load i64, ptr [[A_HI]], align 8
+; CHECK-NEXT:    [[R0:%.*]] = select i1 [[C]], i64 [[B0]], i64 [[A0]]
+; CHECK-NEXT:    [[R1:%.*]] = select i1 [[C]], i64 [[B1]], i64 [[A1]]
 ; CHECK-NEXT:    [[I0:%.*]] = insertvalue { i64, i64 } poison, i64 [[R0]], 0
 ; CHECK-NEXT:    [[I1:%.*]] = insertvalue { i64, i64 } [[I0]], i64 [[R1]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[I1]]
@@ -112,6 +103,517 @@ define { i64, i64 } @select_volatile_memcpy_to_select_operand(i64 %a0, i64 %a1, 
   %i1 = insertvalue { i64, i64 } %i0, i64 %r1, 1
   ret { i64, i64 } %i1
 }
+; `b = c ? b : a;` The destination is the true operand.
+define { i64, i64 } @select_memcpy_to_true_operand(i64 %a0, i64 %a1, i64 %b0, i64 %b1, i1 %c) {
+; CHECK-LABEL: define { i64, i64 } @select_memcpy_to_true_operand(
+; CHECK-SAME: i64 [[A0:%.*]], i64 [[A1:%.*]], i64 [[B0:%.*]], i64 [[B1:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[P_SROA_COPYLOAD_SROA_SPECULATED:%.*]] = select i1 [[C]], i64 [[B0]], i64 [[A0]]
+; CHECK-NEXT:    [[P_SROA_COPYLOAD2_SROA_SPECULATED:%.*]] = select i1 [[C]], i64 [[B1]], i64 [[A1]]
+; CHECK-NEXT:    [[I0:%.*]] = insertvalue { i64, i64 } poison, i64 [[P_SROA_COPYLOAD_SROA_SPECULATED]], 0
+; CHECK-NEXT:    [[I1:%.*]] = insertvalue { i64, i64 } [[I0]], i64 [[P_SROA_COPYLOAD2_SROA_SPECULATED]], 1
+; CHECK-NEXT:    ret { i64, i64 } [[I1]]
+;
+  %a = alloca [16 x i8], align 8
+  %b = alloca [16 x i8], align 8
+  store i64 %a0, ptr %a, align 8
+  %a.hi = getelementptr inbounds i8, ptr %a, i64 8
+  store i64 %a1, ptr %a.hi, align 8
+  store i64 %b0, ptr %b, align 8
+  %b.hi = getelementptr inbounds i8, ptr %b, i64 8
+  store i64 %b1, ptr %b.hi, align 8
+  %p = select i1 %c, ptr %b, ptr %a
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %b, ptr align 8 %p, i64 16, i1 false)
+  %r0 = load i64, ptr %b, align 8
+  %r1 = load i64, ptr %b.hi, align 8
+  %i0 = insertvalue { i64, i64 } poison, i64 %r0, 0
+  %i1 = insertvalue { i64, i64 } %i0, i64 %r1, 1
+  ret { i64, i64 } %i1
+}
+
+; Fields of different widths, { i32, i32, i64 }: the pieces follow the
+; accesses rather than a fixed chunk size.
+define { i32, i32, i64 } @select_memcpy_mixed_fields(i32 %x0, i32 %x1, i64 %x2, i32 %y0, i32 %y1, i64 %y2, i1 %c) {
+; CHECK-LABEL: define { i32, i32, i64 } @select_memcpy_mixed_fields(
+; CHECK-SAME: i32 [[X0:%.*]], i32 [[X1:%.*]], i64 [[X2:%.*]], i32 [[Y0:%.*]], i32 [[Y1:%.*]], i64 [[Y2:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[P_SROA_COPYLOAD_SROA_SPECULATED:%.*]] = select i1 [[C]], i32 [[Y0]], i32 [[X0]]
+; CHECK-NEXT:    [[P_SROA_COPYLOAD2_SROA_SPECULATED:%.*]] = select i1 [[C]], i32 [[Y1]], i32 [[X1]]
+; CHECK-NEXT:    [[P_SROA_COPYLOAD6_SROA_SPECULATED:%.*]] = select i1 [[C]], i64 [[Y2]], i64 [[X2]]
+; CHECK-NEXT:    [[I0:%.*]] = insertvalue { i32, i32, i64 } poison, i32 [[P_SROA_COPYLOAD_SROA_SPECULATED]], 0
+; CHECK-NEXT:    [[I1:%.*]] = insertvalue { i32, i32, i64 } [[I0]], i32 [[P_SROA_COPYLOAD2_SROA_SPECULATED]], 1
+; CHECK-NEXT:    [[I2:%.*]] = insertvalue { i32, i32, i64 } [[I1]], i64 [[P_SROA_COPYLOAD6_SROA_SPECULATED]], 2
+; CHECK-NEXT:    ret { i32, i32, i64 } [[I2]]
+;
+  %a = alloca [16 x i8], align 8
+  %b = alloca [16 x i8], align 8
+  %a4 = getelementptr inbounds i8, ptr %a, i64 4
+  %a8 = getelementptr inbounds i8, ptr %a, i64 8
+  %b4 = getelementptr inbounds i8, ptr %b, i64 4
+  %b8 = getelementptr inbounds i8, ptr %b, i64 8
+  store i32 %x0, ptr %a, align 8
+  store i32 %x1, ptr %a4, align 4
+  store i64 %x2, ptr %a8, align 8
+  store i32 %y0, ptr %b, align 8
+  store i32 %y1, ptr %b4, align 4
+  store i64 %y2, ptr %b8, align 8
+  %p = select i1 %c, ptr %b, ptr %a
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a, ptr align 8 %p, i64 16, i1 false)
+  %r0 = load i32, ptr %a, align 8
+  %r4 = load i32, ptr %a4, align 4
+  %r8 = load i64, ptr %a8, align 8
+  %i0 = insertvalue { i32, i32, i64 } poison, i32 %r0, 0
+  %i1 = insertvalue { i32, i32, i64 } %i0, i32 %r4, 1
+  %i2 = insertvalue { i32, i32, i64 } %i1, i64 %r8, 2
+  ret { i32, i32, i64 } %i2
+}
+
+; { i32, i64 } with padding at [4, 8): the gap is copied as a byte vector, so
+; padding bytes keep their per-byte value.
+define { i32, i64 } @select_memcpy_padding(i32 %x0, i64 %x1, i32 %y0, i64 %y1, i1 %c) {
+; CHECK-LABEL: define { i32, i64 } @select_memcpy_padding(
+; CHECK-SAME: i32 [[X0:%.*]], i64 [[X1:%.*]], i32 [[Y0:%.*]], i64 [[Y1:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[P_SROA_COPYLOAD_SROA_SPECULATED:%.*]] = select i1 [[C]], i32 [[Y0]], i32 [[X0]]
+; CHECK-NEXT:    [[P_SROA_COPYLOAD2_SROA_SPECULATED:%.*]] = select i1 [[C]], <4 x i8> undef, <4 x i8> undef
+; CHECK-NEXT:    [[P_SROA_COPYLOAD6_SROA_SPECULATED:%.*]] = select i1 [[C]], i64 [[Y1]], i64 [[X1]]
+; CHECK-NEXT:    [[I0:%.*]] = insertvalue { i32, i64 } poison, i32 [[P_SROA_COPYLOAD_SROA_SPECULATED]], 0
+; CHECK-NEXT:    [[I1:%.*]] = insertvalue { i32, i64 } [[I0]], i64 [[P_SROA_COPYLOAD6_SROA_SPECULATED]], 1
+; CHECK-NEXT:    ret { i32, i64 } [[I1]]
+;
+  %a = alloca [16 x i8], align 8
+  %b = alloca [16 x i8], align 8
+  %a8 = getelementptr inbounds i8, ptr %a, i64 8
+  %b8 = getelementptr inbounds i8, ptr %b, i64 8
+  store i32 %x0, ptr %a, align 8
+  store i64 %x1, ptr %a8, align 8
+  store i32 %y0, ptr %b, align 8
+  store i64 %y1, ptr %b8, align 8
+  %p = select i1 %c, ptr %b, ptr %a
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a, ptr align 8 %p, i64 16, i1 false)
+  %r0 = load i32, ptr %a, align 8
+  %r8 = load i64, ptr %a8, align 8
+  %i0 = insertvalue { i32, i64 } poison, i32 %r0, 0
+  %i1 = insertvalue { i32, i64 } %i0, i64 %r8, 1
+  ret { i32, i64 } %i1
+}
+
+; A pointer field is copied as a pointer.
+define { ptr, i64 } @select_memcpy_ptr_field(ptr %x0, i64 %x1, ptr %y0, i64 %y1, i1 %c) {
+; CHECK-LABEL: define { ptr, i64 } @select_memcpy_ptr_field(
+; CHECK-SAME: ptr [[X0:%.*]], i64 [[X1:%.*]], ptr [[Y0:%.*]], i64 [[Y1:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[P_SROA_COPYLOAD_SROA_SPECULATED:%.*]] = select i1 [[C]], ptr [[Y0]], ptr [[X0]]
+; CHECK-NEXT:    [[P_SROA_COPYLOAD2_SROA_SPECULATED:%.*]] = select i1 [[C]], i64 [[Y1]], i64 [[X1]]
+; CHECK-NEXT:    [[I0:%.*]] = insertvalue { ptr, i64 } poison, ptr [[P_SROA_COPYLOAD_SROA_SPECULATED]], 0
+; CHECK-NEXT:    [[I1:%.*]] = insertvalue { ptr, i64 } [[I0]], i64 [[P_SROA_COPYLOAD2_SROA_SPECULATED]], 1
+; CHECK-NEXT:    ret { ptr, i64 } [[I1]]
+;
+  %a = alloca [16 x i8], align 8
+  %b = alloca [16 x i8], align 8
+  %a8 = getelementptr inbounds i8, ptr %a, i64 8
+  %b8 = getelementptr inbounds i8, ptr %b, i64 8
+  store ptr %x0, ptr %a, align 8
+  store i64 %x1, ptr %a8, align 8
+  store ptr %y0, ptr %b, align 8
+  store i64 %y1, ptr %b8, align 8
+  %p = select i1 %c, ptr %b, ptr %a
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a, ptr align 8 %p, i64 16, i1 false)
+  %r0 = load ptr, ptr %a, align 8
+  %r8 = load i64, ptr %a8, align 8
+  %i0 = insertvalue { ptr, i64 } poison, ptr %r0, 0
+  %i1 = insertvalue { ptr, i64 } %i0, i64 %r8, 1
+  ret { ptr, i64 } %i1
+}
+
+; The select also feeds a load, which is read before the copy.
+define { i64, i64 } @select_memcpy_and_load(i64 %a0, i64 %a1, i64 %b0, i64 %b1, i1 %c, ptr %out) {
+; CHECK-LABEL: define { i64, i64 } @select_memcpy_and_load(
+; CHECK-SAME: i64 [[A0:%.*]], i64 [[A1:%.*]], i64 [[B0:%.*]], i64 [[B1:%.*]], i1 [[C:%.*]], ptr [[OUT:%.*]]) {
+; CHECK-NEXT:    [[L_SROA_SPECULATED:%.*]] = select i1 [[C]], i64 [[B0]], i64 [[A0]]
+; CHECK-NEXT:    store i64 [[L_SROA_SPECULATED]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[P_SROA_COPYLOAD_SROA_SPECULATED:%.*]] = select i1 [[C]], i64 [[B0]], i64 [[A0]]
+; CHECK-NEXT:    [[P_SROA_COPYLOAD2_SROA_SPECULATED:%.*]] = select i1 [[C]], i64 [[B1]], i64 [[A1]]
+; CHECK-NEXT:    [[I0:%.*]] = insertvalue { i64, i64 } poison, i64 [[P_SROA_COPYLOAD_SROA_SPECULATED]], 0
+; CHECK-NEXT:    [[I1:%.*]] = insertvalue { i64, i64 } [[I0]], i64 [[P_SROA_COPYLOAD2_SROA_SPECULATED]], 1
+; CHECK-NEXT:    ret { i64, i64 } [[I1]]
+;
+  %a = alloca [16 x i8], align 8
+  %b = alloca [16 x i8], align 8
+  store i64 %a0, ptr %a, align 8
+  %a.hi = getelementptr inbounds i8, ptr %a, i64 8
+  store i64 %a1, ptr %a.hi, align 8
+  store i64 %b0, ptr %b, align 8
+  %b.hi = getelementptr inbounds i8, ptr %b, i64 8
+  store i64 %b1, ptr %b.hi, align 8
+  %p = select i1 %c, ptr %b, ptr %a
+  %l = load i64, ptr %p, align 8
+  store i64 %l, ptr %out, align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a, ptr align 8 %p, i64 16, i1 false)
+  %r0 = load i64, ptr %a, align 8
+  %r1 = load i64, ptr %a.hi, align 8
+  %i0 = insertvalue { i64, i64 } poison, i64 %r0, 0
+  %i1 = insertvalue { i64, i64 } %i0, i64 %r1, 1
+  ret { i64, i64 } %i1
+}
+
+; Negative test: %a escapes, so splitting the copy would not help.
+define { i64, i64 } @select_memcpy_dst_escapes(i64 %a0, i64 %a1, i64 %b0, i64 %b1, i1 %c) {
+; CHECK-LABEL: define { i64, i64 } @select_memcpy_dst_escapes(
+; CHECK-SAME: i64 [[A0:%.*]], i64 [[A1:%.*]], i64 [[B0:%.*]], i64 [[B1:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = alloca [16 x i8], align 8
+; CHECK-NEXT:    [[B:%.*]] = alloca [16 x i8], align 8
+; CHECK-NEXT:    store i64 [[A0]], ptr [[A]], align 8
+; CHECK-NEXT:    [[A_HI:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
+; CHECK-NEXT:    store i64 [[A1]], ptr [[A_HI]], align 8
+; CHECK-NEXT:    store i64 [[B0]], ptr [[B]], align 8
+; CHECK-NEXT:    [[B_HI:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 8
+; CHECK-NEXT:    store i64 [[B1]], ptr [[B_HI]], align 8
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], ptr [[B]], ptr [[A]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[A]], ptr align 8 [[P]], i64 16, i1 false)
+; CHECK-NEXT:    call void @use(ptr [[A]])
+; CHECK-NEXT:    [[R0:%.*]] = load i64, ptr [[A]], align 8
+; CHECK-NEXT:    [[R1:%.*]] = load i64, ptr [[A_HI]], align 8
+; CHECK-NEXT:    [[I0:%.*]] = insertvalue { i64, i64 } poison, i64 [[R0]], 0
+; CHECK-NEXT:    [[I1:%.*]] = insertvalue { i64, i64 } [[I0]], i64 [[R1]], 1
+; CHECK-NEXT:    ret { i64, i64 } [[I1]]
+;
+  %a = alloca [16 x i8], align 8
+  %b = alloca [16 x i8], align 8
+  store i64 %a0, ptr %a, align 8
+  %a.hi = getelementptr inbounds i8, ptr %a, i64 8
+  store i64 %a1, ptr %a.hi, align 8
+  store i64 %b0, ptr %b, align 8
+  %b.hi = getelementptr inbounds i8, ptr %b, i64 8
+  store i64 %b1, ptr %b.hi, align 8
+  %p = select i1 %c, ptr %b, ptr %a
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a, ptr align 8 %p, i64 16, i1 false)
+  call void @use(ptr %a)
+  %r0 = load i64, ptr %a, align 8
+  %r1 = load i64, ptr %a.hi, align 8
+  %i0 = insertvalue { i64, i64 } poison, i64 %r0, 0
+  %i1 = insertvalue { i64, i64 } %i0, i64 %r1, 1
+  ret { i64, i64 } %i1
+}
+
+; Negative test: one select operand is not an alloca.
+define { i64, i64 } @select_memcpy_operand_not_alloca(i64 %a0, i64 %a1, ptr %q, i1 %c) {
+; CHECK-LABEL: define { i64, i64 } @select_memcpy_operand_not_alloca(
+; CHECK-SAME: i64 [[A0:%.*]], i64 [[A1:%.*]], ptr [[Q:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = alloca [16 x i8], align 8
+; CHECK-NEXT:    store i64 [[A0]], ptr [[A]], align 8
+; CHECK-NEXT:    [[A_HI:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
+; CHECK-NEXT:    store i64 [[A1]], ptr [[A_HI]], align 8
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], ptr [[Q]], ptr [[A]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[A]], ptr align 8 [[P]], i64 16, i1 false)
+; CHECK-NEXT:    [[R0:%.*]] = load i64, ptr [[A]], align 8
+; CHECK-NEXT:    [[R1:%.*]] = load i64, ptr [[A_HI]], align 8
+; CHECK-NEXT:    [[I0:%.*]] = insertvalue { i64, i64 } poison, i64 [[R0]], 0
+; CHECK-NEXT:    [[I1:%.*]] = insertvalue { i64, i64 } [[I0]], i64 [[R1]], 1
+; CHECK-NEXT:    ret { i64, i64 } [[I1]]
+;
+  %a = alloca [16 x i8], align 8
+  store i64 %a0, ptr %a, align 8
+  %a.hi = getelementptr inbounds i8, ptr %a, i64 8
+  store i64 %a1, ptr %a.hi, align 8
+  %p = select i1 %c, ptr %q, ptr %a
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a, ptr align 8 %p, i64 16, i1 false)
+  %r0 = load i64, ptr %a, align 8
+  %r1 = load i64, ptr %a.hi, align 8
+  %i0 = insertvalue { i64, i64 } poison, i64 %r0, 0
+  %i1 = insertvalue { i64, i64 } %i0, i64 %r1, 1
+  ret { i64, i64 } %i1
+}
+
+; Negative test: the destination is not an alloca.
+define void @select_memcpy_dst_not_alloca(i64 %a0, i64 %a1, i64 %b0, i64 %b1, i1 %c, ptr %out) {
+; CHECK-LABEL: define void @select_memcpy_dst_not_alloca(
+; CHECK-SAME: i64 [[A0:%.*]], i64 [[A1:%.*]], i64 [[B0:%.*]], i64 [[B1:%.*]], i1 [[C:%.*]], ptr [[OUT:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = alloca [16 x i8], align 8
+; CHECK-NEXT:    [[B:%.*]] = alloca [16 x i8], align 8
+; CHECK-NEXT:    store i64 [[A0]], ptr [[A]], align 8
+; CHECK-NEXT:    [[A_HI:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
+; CHECK-NEXT:    store i64 [[A1]], ptr [[A_HI]], align 8
+; CHECK-NEXT:    store i64 [[B0]], ptr [[B]], align 8
+; CHECK-NEXT:    [[B_HI:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 8
+; CHECK-NEXT:    store i64 [[B1]], ptr [[B_HI]], align 8
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], ptr [[B]], ptr [[A]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[OUT]], ptr align 8 [[P]], i64 16, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %a = alloca [16 x i8], align 8
+  %b = alloca [16 x i8], align 8
+  store i64 %a0, ptr %a, align 8
+  %a.hi = getelementptr inbounds i8, ptr %a, i64 8
+  store i64 %a1, ptr %a.hi, align 8
+  store i64 %b0, ptr %b, align 8
+  %b.hi = getelementptr inbounds i8, ptr %b, i64 8
+  store i64 %b1, ptr %b.hi, align 8
+  %p = select i1 %c, ptr %b, ptr %a
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %out, ptr align 8 %p, i64 16, i1 false)
+  ret void
+}
+
+; Negative test: [0, 8) is accessed both as a pointer and as an integer.
+define i64 @select_memcpy_ptr_int_conflict(ptr %x0, ptr %y0, i1 %c) {
+; CHECK-LABEL: define i64 @select_memcpy_ptr_int_conflict(
+; CHECK-SAME: ptr [[X0:%.*]], ptr [[Y0:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = alloca [8 x i8], align 8
+; CHECK-NEXT:    [[B:%.*]] = alloca [8 x i8], align 8
+; CHECK-NEXT:    store ptr [[X0]], ptr [[A]], align 8
+; CHECK-NEXT:    store ptr [[Y0]], ptr [[B]], align 8
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], ptr [[B]], ptr [[A]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[A]], ptr align 8 [[P]], i64 8, i1 false)
+; CHECK-NEXT:    [[R:%.*]] = load i64, ptr [[A]], align 8
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %a = alloca [8 x i8], align 8
+  %b = alloca [8 x i8], align 8
+  store ptr %x0, ptr %a, align 8
+  store ptr %y0, ptr %b, align 8
+  %p = select i1 %c, ptr %b, ptr %a
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a, ptr align 8 %p, i64 8, i1 false)
+  %r = load i64, ptr %a, align 8
+  ret i64 %r
+}
+
+; Negative test: accesses [0, 8) and [4, 8) partially overlap.
+define i32 @select_memcpy_partial_overlap(i64 %x, i64 %y, i1 %c) {
+; CHECK-LABEL: define i32 @select_memcpy_partial_overlap(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = alloca [8 x i8], align 8
+; CHECK-NEXT:    [[B:%.*]] = alloca [8 x i8], align 8
+; CHECK-NEXT:    store i64 [[X]], ptr [[A]], align 8
+; CHECK-NEXT:    store i64 [[Y]], ptr [[B]], align 8
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], ptr [[B]], ptr [[A]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[A]], ptr align 8 [[P]], i64 8, i1 false)
+; CHECK-NEXT:    [[A4:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 4
+; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[A4]], align 4
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = alloca [8 x i8], align 8
+  %b = alloca [8 x i8], align 8
+  store i64 %x, ptr %a, align 8
+  store i64 %y, ptr %b, align 8
+  %p = select i1 %c, ptr %b, ptr %a
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a, ptr align 8 %p, i64 8, i1 false)
+  %a4 = getelementptr inbounds i8, ptr %a, i64 4
+  %r = load i32, ptr %a4, align 4
+  ret i32 %r
+}
+
+; Negative test: the copy ends inside the i64 at [8, 16).
+define i64 @select_memcpy_ends_inside_access(i64 %x0, i64 %x1, i64 %y0, i64 %y1, i1 %c) {
+; CHECK-LABEL: define i64 @select_memcpy_ends_inside_access(
+; CHECK-SAME: i64 [[X0:%.*]], i64 [[X1:%.*]], i64 [[Y0:%.*]], i64 [[Y1:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = alloca [16 x i8], align 8
+; CHECK-NEXT:    [[B:%.*]] = alloca [16 x i8], align 8
+; CHECK-NEXT:    [[A8:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[B8:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 8
+; CHECK-NEXT:    store i64 [[X0]], ptr [[A]], align 8
+; CHECK-NEXT:    store i64 [[X1]], ptr [[A8]], align 8
+; CHECK-NEXT:    store i64 [[Y0]], ptr [[B]], align 8
+; CHECK-NEXT:    store i64 [[Y1]], ptr [[B8]], align 8
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], ptr [[B]], ptr [[A]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[A]], ptr align 8 [[P]], i64 12, i1 false)
+; CHECK-NEXT:    [[R:%.*]] = load i64, ptr [[A8]], align 8
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %a = alloca [16 x i8], align 8
+  %b = alloca [16 x i8], align 8
+  %a8 = getelementptr inbounds i8, ptr %a, i64 8
+  %b8 = getelementptr inbounds i8, ptr %b, i64 8
+  store i64 %x0, ptr %a, align 8
+  store i64 %x1, ptr %a8, align 8
+  store i64 %y0, ptr %b, align 8
+  store i64 %y1, ptr %b8, align 8
+  %p = select i1 %c, ptr %b, ptr %a
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a, ptr align 8 %p, i64 12, i1 false)
+  %r = load i64, ptr %a8, align 8
+  ret i64 %r
+}
+
+; Negative test: a memset writes part of the i64 at [0, 8).
+define i64 @select_memcpy_memset_inside_access(i64 %x, i64 %y, i1 %c) {
+; CHECK-LABEL: define i64 @select_memcpy_memset_inside_access(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = alloca [8 x i8], align 8
+; CHECK-NEXT:    [[B:%.*]] = alloca [8 x i8], align 8
+; CHECK-NEXT:    store i64 [[X]], ptr [[A]], align 8
+; CHECK-NEXT:    store i64 [[Y]], ptr [[B]], align 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[B]], i8 0, i64 4, i1 false)
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], ptr [[B]], ptr [[A]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[A]], ptr align 8 [[P]], i64 8, i1 false)
+; CHECK-NEXT:    [[R:%.*]] = load i64, ptr [[A]], align 8
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %a = alloca [8 x i8], align 8
+  %b = alloca [8 x i8], align 8
+  store i64 %x, ptr %a, align 8
+  store i64 %y, ptr %b, align 8
+  call void @llvm.memset.p0.i64(ptr align 8 %b, i8 0, i64 4, i1 false)
+  %p = select i1 %c, ptr %b, ptr %a
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a, ptr align 8 %p, i64 8, i1 false)
+  %r = load i64, ptr %a, align 8
+  ret i64 %r
+}
+
+; Negative test: the copy length is not a constant.
+define i64 @select_memcpy_variable_length(i64 %x, i64 %y, i1 %c, i64 %n) {
+; CHECK-LABEL: define i64 @select_memcpy_variable_length(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i1 [[C:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = alloca [8 x i8], align 8
+; CHECK-NEXT:    [[B:%.*]] = alloca [8 x i8], align 8
+; CHECK-NEXT:    store i64 [[X]], ptr [[A]], align 8
+; CHECK-NEXT:    store i64 [[Y]], ptr [[B]], align 8
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], ptr [[B]], ptr [[A]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[A]], ptr align 8 [[P]], i64 [[N]], i1 false)
+; CHECK-NEXT:    [[R:%.*]] = load i64, ptr [[A]], align 8
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %a = alloca [8 x i8], align 8
+  %b = alloca [8 x i8], align 8
+  store i64 %x, ptr %a, align 8
+  store i64 %y, ptr %b, align 8
+  %p = select i1 %c, ptr %b, ptr %a
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a, ptr align 8 %p, i64 %n, i1 false)
+  %r = load i64, ptr %a, align 8
+  ret i64 %r
+}
+
+; Negative test: memmove is not handled yet.
+define i64 @select_memmove_to_select_operand(i64 %x, i64 %y, i1 %c) {
+; CHECK-LABEL: define i64 @select_memmove_to_select_operand(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = alloca [8 x i8], align 8
+; CHECK-NEXT:    [[B:%.*]] = alloca [8 x i8], align 8
+; CHECK-NEXT:    store i64 [[X]], ptr [[A]], align 8
+; CHECK-NEXT:    store i64 [[Y]], ptr [[B]], align 8
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], ptr [[B]], ptr [[A]]
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 8 [[A]], ptr align 8 [[P]], i64 8, i1 false)
+; CHECK-NEXT:    [[R:%.*]] = load i64, ptr [[A]], align 8
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %a = alloca [8 x i8], align 8
+  %b = alloca [8 x i8], align 8
+  store i64 %x, ptr %a, align 8
+  store i64 %y, ptr %b, align 8
+  %p = select i1 %c, ptr %b, ptr %a
+  call void @llvm.memmove.p0.p0.i64(ptr align 8 %a, ptr align 8 %p, i64 8, i1 false)
+  %r = load i64, ptr %a, align 8
+  ret i64 %r
+}
+
+; Negative test: a phi source is not handled yet.
+define i64 @phi_memcpy_to_operand(i64 %x, i64 %y, i1 %c) {
+; CHECK-LABEL: define i64 @phi_memcpy_to_operand(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[A:%.*]] = alloca [8 x i8], align 8
+; CHECK-NEXT:    [[B:%.*]] = alloca [8 x i8], align 8
+; CHECK-NEXT:    store i64 [[X]], ptr [[A]], align 8
+; CHECK-NEXT:    store i64 [[Y]], ptr [[B]], align 8
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[JOIN:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[B]], %[[THEN]] ], [ [[A]], %[[ENTRY]] ]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[A]], ptr align 8 [[P]], i64 8, i1 false)
+; CHECK-NEXT:    [[R:%.*]] = load i64, ptr [[A]], align 8
+; CHECK-NEXT:    ret i64 [[R]]
+;
+entry:
+  %a = alloca [8 x i8], align 8
+  %b = alloca [8 x i8], align 8
+  store i64 %x, ptr %a, align 8
+  store i64 %y, ptr %b, align 8
+  br i1 %c, label %then, label %join
+
+then:
+  br label %join
+
+join:
+  %p = phi ptr [ %b, %then ], [ %a, %entry ]
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a, ptr align 8 %p, i64 8, i1 false)
+  %r = load i64, ptr %a, align 8
+  ret i64 %r
+}
+
+; Negative test: the untyped gap at [8, 64) is too large.
+define i64 @select_memcpy_large_gap(i64 %x, i64 %y, i1 %c) {
+; CHECK-LABEL: define i64 @select_memcpy_large_gap(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = alloca [64 x i8], align 8
+; CHECK-NEXT:    [[B:%.*]] = alloca [64 x i8], align 8
+; CHECK-NEXT:    store i64 [[X]], ptr [[A]], align 8
+; CHECK-NEXT:    store i64 [[Y]], ptr [[B]], align 8
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], ptr [[B]], ptr [[A]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[A]], ptr align 8 [[P]], i64 64, i1 false)
+; CHECK-NEXT:    [[R:%.*]] = load i64, ptr [[A]], align 8
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %a = alloca [64 x i8], align 8
+  %b = alloca [64 x i8], align 8
+  store i64 %x, ptr %a, align 8
+  store i64 %y, ptr %b, align 8
+  %p = select i1 %c, ptr %b, ptr %a
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a, ptr align 8 %p, i64 64, i1 false)
+  %r = load i64, ptr %a, align 8
+  ret i64 %r
+}
+
+; Negative test: nine i8 fields need more pieces than allowed.
+define i8 @select_memcpy_too_many_pieces(i8 %x, i8 %y, i1 %c) {
+; CHECK-LABEL: define i8 @select_memcpy_too_many_pieces(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = alloca [9 x i8], align 1
+; CHECK-NEXT:    [[B:%.*]] = alloca [9 x i8], align 1
+; CHECK-NEXT:    store i8 [[X]], ptr [[A]], align 1
+; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 1
+; CHECK-NEXT:    store i8 [[X]], ptr [[A1]], align 1
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 2
+; CHECK-NEXT:    store i8 [[X]], ptr [[A2]], align 1
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 3
+; CHECK-NEXT:    store i8 [[X]], ptr [[A3]], align 1
+; CHECK-NEXT:    [[A4:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 4
+; CHECK-NEXT:    store i8 [[X]], ptr [[A4]], align 1
+; CHECK-NEXT:    [[A5:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 5
+; CHECK-NEXT:    store i8 [[X]], ptr [[A5]], align 1
+; CHECK-NEXT:    [[A6:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 6
+; CHECK-NEXT:    store i8 [[X]], ptr [[A6]], align 1
+; CHECK-NEXT:    [[A7:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 7
+; CHECK-NEXT:    store i8 [[X]], ptr [[A7]], align 1
+; CHECK-NEXT:    [[A8:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
+; CHECK-NEXT:    store i8 [[X]], ptr [[A8]], align 1
+; CHECK-NEXT:    store i8 [[Y]], ptr [[B]], align 1
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], ptr [[B]], ptr [[A]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[A]], ptr align 1 [[P]], i64 9, i1 false)
+; CHECK-NEXT:    [[R:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = alloca [9 x i8], align 1
+  %b = alloca [9 x i8], align 1
+  store i8 %x, ptr %a, align 1
+  %a1 = getelementptr inbounds i8, ptr %a, i64 1
+  store i8 %x, ptr %a1, align 1
+  %a2 = getelementptr inbounds i8, ptr %a, i64 2
+  store i8 %x, ptr %a2, align 1
+  %a3 = getelementptr inbounds i8, ptr %a, i64 3
+  store i8 %x, ptr %a3, align 1
+  %a4 = getelementptr inbounds i8, ptr %a, i64 4
+  store i8 %x, ptr %a4, align 1
+  %a5 = getelementptr inbounds i8, ptr %a, i64 5
+  store i8 %x, ptr %a5, align 1
+  %a6 = getelementptr inbounds i8, ptr %a, i64 6
+  store i8 %x, ptr %a6, align 1
+  %a7 = getelementptr inbounds i8, ptr %a, i64 7
+  store i8 %x, ptr %a7, align 1
+  %a8 = getelementptr inbounds i8, ptr %a, i64 8
+  store i8 %x, ptr %a8, align 1
+  store i8 %y, ptr %b, align 1
+  %p = select i1 %c, ptr %b, ptr %a
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %a, ptr align 1 %p, i64 9, i1 false)
+  %r = load i8, ptr %a, align 1
+  ret i8 %r
+}
+
+declare void @use(ptr)
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK-MODIFY-CFG: {{.*}}
 ; CHECK-PRESERVE-CFG: {{.*}}
