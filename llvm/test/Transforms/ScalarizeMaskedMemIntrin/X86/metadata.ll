@@ -26,7 +26,7 @@ define <2 x i64> @masked_load_variable(ptr %p, <2 x i1> %mask, <2 x i64> %passth
 ; CHECK-NEXT:    [[RES_PHI_ELSE3:%.*]] = phi <2 x i64> [ [[TMP10]], [[COND_LOAD1]] ], [ [[RES_PHI_ELSE]], [[ELSE]] ]
 ; CHECK-NEXT:    ret <2 x i64> [[RES_PHI_ELSE3]]
 ;
-  %ret = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr %p, i32 8, <2 x i1> %mask, <2 x i64> %passthru), !tbaa !3, !prof !16, !range !12, !invariant.load !14, !alias.scope !6, !noalias !6, !nontemporal !11, !llvm.mem.parallel_loop_access !9, !llvm.access.group !9, !annotation !13, !nosanitize !14, !mmra !10, !noalias.addrspace !15, !mem.cache_hint !0
+  %ret = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr %p, i32 8, <2 x i1> %mask, <2 x i64> %passthru), !tbaa !3, !prof !16, !range !12, !invariant.load !14, !alias.scope !6, !noalias !6, !nontemporal !11, !llvm.mem.parallel_loop_access !9, !llvm.access.group !9, !annotation !13, !nosanitize !14, !mmra !10, !noalias.addrspace !15, !mem.cache_hint !0, !pcsections !999
   ret <2 x i64> %ret
 }
 
@@ -392,6 +392,8 @@ declare <2 x float> @llvm.masked.load.v2f32.p0(ptr, i32, <2 x i1>, <2 x float>)
 !27 = !{i64 0, i64 8, !3, i64 8, i64 8, !28}
 !28 = !{!29, !29, i64 0}
 !29 = !{!"second long", !5, i64 0}
+
+!999 = !{!"metadata_section"}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(read) }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
