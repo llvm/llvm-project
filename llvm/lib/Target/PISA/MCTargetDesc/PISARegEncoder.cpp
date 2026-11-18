@@ -27,8 +27,7 @@ const char *RegEncoder::getPrefixFromBank(RegBank Bank) {
       "%v5w", "%v6w", "%v7w", "%v8w", "%v16w", "%v32w", "%v64w"};
 
   size_t Index = static_cast<size_t>(Bank);
-  if (Index >= NumBanks)
-    llvm_unreachable("Unknown register bank!");
+  assert(Index < NumBanks && "Unknown register bank!");
 
   return BankPrefixes[Index];
 }
