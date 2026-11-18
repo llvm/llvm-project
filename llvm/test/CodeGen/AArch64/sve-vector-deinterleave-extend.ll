@@ -21,18 +21,13 @@ define void @deinterleave_i32(<vscale x 4 x i32> %interleaved) {
 ; NO-NEON-NEXT:    // fake_use: $z0
 ; NO-NEON-NEXT:    ret
 entry:
-
   %deinterleaved = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave2.nxv4i32(<vscale x 4 x i32> %interleaved)
-
   %a = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>} %deinterleaved, 0
   %b = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>} %deinterleaved, 1
-
   %a.i64 = zext <vscale x 2 x i32> %a to <vscale x 2 x i64>
   %b.i64 = zext <vscale x 2 x i32> %b to <vscale x 2 x i64>
-
   call void (...) @llvm.fake.use(<vscale x 2 x i64> %a.i64)
   call void (...) @llvm.fake.use(<vscale x 2 x i64> %b.i64)
-
   ret void
 }
 
@@ -61,18 +56,13 @@ define void @deinterleave_i16(<vscale x 8 x i16> %interleaved) {
 ; NO-NEON-NEXT:    // fake_use: $z0
 ; NO-NEON-NEXT:    ret
 entry:
-
   %deinterleaved = call { <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.vector.deinterleave2.nxv8i16(<vscale x 8 x i16> %interleaved)
-
   %a = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>} %deinterleaved, 0
   %b = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>} %deinterleaved, 1
-
   %a.f32 = uitofp <vscale x 4 x i16> %a to <vscale x 4 x float>
   %b.f32 = uitofp <vscale x 4 x i16> %b to <vscale x 4 x float>
-
   call void (...) @llvm.fake.use(<vscale x 4 x float> %a.f32)
   call void (...) @llvm.fake.use(<vscale x 4 x float> %b.f32)
-
   ret void
 }
 
@@ -95,17 +85,12 @@ define void @deinterleave_i8(<vscale x 16 x i8> %interleaved) {
 ; NO-NEON-NEXT:    // fake_use: $z0
 ; NO-NEON-NEXT:    ret
 entry:
-
   %deinterleaved = call { <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.vector.deinterleave2.nxv16i8(<vscale x 16 x i8> %interleaved)
-
   %a = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>} %deinterleaved, 0
   %b = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>} %deinterleaved, 1
-
   %a.i16 = zext <vscale x 8 x i8> %a to <vscale x 8 x i16>
   %b.i16 = zext <vscale x 8 x i8> %b to <vscale x 8 x i16>
-
   call void (...) @llvm.fake.use(<vscale x 8 x i16> %a.i16)
   call void (...) @llvm.fake.use(<vscale x 8 x i16> %b.i16)
-
   ret void
 }
