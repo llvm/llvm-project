@@ -3097,7 +3097,8 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE_VAR(SDNode *N, SDValue &Lo,
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   EVT IdxVT = VT.changeVectorElementTypeToInteger();
-  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VT);
+  EVT LoVT, HiVT;
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
   EVT PartVT = TLI.getLegalTypeToTransformTo(*DAG.getContext(), LoVT);
   // Splitting into K parts makes K^2 part shuffles, so only do so when that is
   // small next to the element count and the target shuffles the parts.
