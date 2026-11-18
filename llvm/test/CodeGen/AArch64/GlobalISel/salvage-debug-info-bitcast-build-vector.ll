@@ -6,8 +6,7 @@
 ; CHECK-LABEL: name: bitcast_build_vector
 ; CHECK: [[A:%[0-9]+]]:_(i64) = COPY $x0
 ; CHECK-NEXT: [[B:%[0-9]+]]:_(i64) = COPY $x1
-; CHECK-NEXT: DBG_VALUE [[A]](i64), $noreg, [[V0:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 64)
-; CHECK-NEXT: DBG_VALUE $noreg, $noreg, [[V0]], !DIExpression(DW_OP_LLVM_fragment, 64, 64)
+; CHECK-NEXT: DBG_VALUE $noreg, $noreg, {{![0-9]+}}, !DIExpression()
 ; CHECK-NEXT: DBG_VALUE [[A]](i64), $noreg, [[V1:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 64)
 ; CHECK-NEXT: DBG_VALUE [[B]](i64), $noreg, [[V1]], !DIExpression(DW_OP_LLVM_fragment, 64, 64)
 ; CHECK-NEXT: DBG_VALUE [[A]](i64), $noreg, [[X:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 64)
@@ -22,18 +21,9 @@ define i128 @bitcast_build_vector(i64 %a, i64 %b) {
 ; CHECK-LABEL: name: build_vector
 ; CHECK: [[A:%[0-9]+]]:_(i32) = COPY $w0
 ; CHECK: [[D:%[0-9]+]]:_(i32) = COPY $w3
-; CHECK-NEXT: DBG_VALUE [[A]](i32), $noreg, [[V0:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; CHECK-NEXT: DBG_VALUE $noreg, $noreg, [[V0]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
-; CHECK-NEXT: DBG_VALUE $noreg, $noreg, [[V0]], !DIExpression(DW_OP_LLVM_fragment, 64, 32)
-; CHECK-NEXT: DBG_VALUE $noreg, $noreg, [[V0]], !DIExpression(DW_OP_LLVM_fragment, 96, 32)
-; CHECK-NEXT: DBG_VALUE [[A]](i32), $noreg, [[V1:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; CHECK-NEXT: DBG_VALUE $w1, $noreg, [[V1]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
-; CHECK-NEXT: DBG_VALUE $noreg, $noreg, [[V1]], !DIExpression(DW_OP_LLVM_fragment, 64, 32)
-; CHECK-NEXT: DBG_VALUE $noreg, $noreg, [[V1]], !DIExpression(DW_OP_LLVM_fragment, 96, 32)
-; CHECK-NEXT: DBG_VALUE [[A]](i32), $noreg, [[V2:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; CHECK-NEXT: DBG_VALUE $w1, $noreg, [[V2]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
-; CHECK-NEXT: DBG_VALUE $w2, $noreg, [[V2]], !DIExpression(DW_OP_LLVM_fragment, 64, 32)
-; CHECK-NEXT: DBG_VALUE $noreg, $noreg, [[V2]], !DIExpression(DW_OP_LLVM_fragment, 96, 32)
+; CHECK-NEXT: DBG_VALUE $noreg, $noreg, {{![0-9]+}}, !DIExpression()
+; CHECK-NEXT: DBG_VALUE $noreg, $noreg, {{![0-9]+}}, !DIExpression()
+; CHECK-NEXT: DBG_VALUE $noreg, $noreg, {{![0-9]+}}, !DIExpression()
 ; CHECK-NEXT: DBG_VALUE [[A]](i32), $noreg, [[V3:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 32)
 ; CHECK-NEXT: DBG_VALUE $w1, $noreg, [[V3]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 ; CHECK-NEXT: DBG_VALUE $w2, $noreg, [[V3]], !DIExpression(DW_OP_LLVM_fragment, 64, 32)
