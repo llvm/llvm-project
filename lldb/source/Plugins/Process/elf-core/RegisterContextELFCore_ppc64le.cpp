@@ -12,8 +12,8 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/RegisterValue.h"
 
-#include "Register/Arch/lldb-ppc64le-register-enums.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
+#include "Register/Arch/lldb-ppc64le-register-enums.h"
 
 #include <memory>
 
@@ -61,8 +61,8 @@ size_t RegisterContextELFCore_ppc64le::GetVSXSize() const {
   return k_num_vsx_registers_ppc64le * sizeof(uint64_t) * 2;
 }
 
-bool RegisterContextELFCore_ppc64le::ReadRegister(
-    const RegisterInfo *reg_info, RegisterValue &value) {
+bool RegisterContextELFCore_ppc64le::ReadRegister(const RegisterInfo *reg_info,
+                                                  RegisterValue &value) {
   lldb::offset_t offset = reg_info->byte_offset;
 
   if (IsFPR(reg_info->kinds[lldb::eRegisterKindLLDB])) {
@@ -127,7 +127,7 @@ bool RegisterContextELFCore_ppc64le::ReadRegister(
   return false;
 }
 
-bool RegisterContextELFCore_ppc64le::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &value) {
+bool RegisterContextELFCore_ppc64le::WriteRegister(const RegisterInfo *reg_info,
+                                                   const RegisterValue &value) {
   return false;
 }
