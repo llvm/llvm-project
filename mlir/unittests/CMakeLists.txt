@@ -1,5 +1,8 @@
-# To silence warning caused by Wundef.
-add_definitions(-DGTEST_NO_LLVM_SUPPORT=0)
+# To silence warnings caused by -Wundef in gtest/gmock headers.
+add_definitions(
+  -DGTEST_NO_LLVM_SUPPORT=0
+  -DGTEST_LINKED_AS_SHARED_LIBRARY=0
+  -DGTEST_CREATE_SHARED_LIBRARY=0)
 
 function(add_mlir_unittest test_dirname)
   add_unittest(MLIRUnitTests ${test_dirname} ${ARGN})
