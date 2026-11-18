@@ -24,7 +24,6 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/Analysis.h"
@@ -439,21 +438,33 @@ static unsigned canMergeParamLoadStoresStartingAt(
   return NumElts;
 }
 
-// Group the registers of a parameter or return value for loading or storing.
-// ValueVTs and Offsets describe their types and byte offsets. ParamAlignment
-// gives the alignment in bytes. Return the number of registers in each group.
-// Keep each packed Boolean vector in its own group.
-template <typename T>
+template <typename Part>
+static EVT getParamPartVT(ArrayRef<Part> Parts, unsigned I) {
+  return Parts.empty() ? EVT(MVT::Other) : Parts[I].ArgVT;
+}
+
+// A libcall can already have its result split into registers. Recover the
+// effective return type, or the original field type for an aggregate.
+static EVT getParamPartVT(const TargetLowering::CallLoweringInfo &CLI,
+                          unsigned I) {
+  const ISD::InputArg &Part = CLI.Ins[I];
+  if (!CLI.IsPostTypeLegalization)
+    return Part.ArgVT;
+  Type *Ty = CLI.RetTy->isAggregateType() ? Part.OrigTy : CLI.RetTy;
+  return CLI.DAG.getTargetLoweringInfo().getValueType(CLI.DAG.getDataLayout(),
+                                                      Ty);
+}
+
+// Return the number of registers in each load or store. When argument parts
+// are available, keep the registers of each packed Boolean vector together.
+template <typename T, typename PartsT = ArrayRef<ISD::InputArg>>
 static SmallVector<unsigned, 16>
 VectorizePTXValueVTs(const SmallVectorImpl<EVT> &ValueVTs,
                      const SmallVectorImpl<T> &Offsets, Align ParamAlignment,
-                     bool IsVAArg = false,
-                     function_ref<EVT(unsigned)> GetArgVT = nullptr) {
+                     bool IsVAArg = false, const PartsT &Parts = {}) {
   SmallVector<unsigned, 16> VectorInfo;
   const auto GetPackedWidth = [&](unsigned I) -> unsigned {
-    if (!GetArgVT)
-      return 0;
-    EVT VT = GetArgVT(I);
+    EVT VT = getParamPartVT(Parts, I);
     return VT.isFixedLengthVectorOf(MVT::i1) ? VT.getVectorNumElements() : 0;
   };
 
@@ -1490,8 +1501,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
       unsigned J = 0;
       const auto VI =
-          VectorizePTXValueVTs(VTs, Offsets, ArgAlign, IsVAArg,
-                               [&](unsigned I) { return ArgOuts[I].ArgVT; });
+          VectorizePTXValueVTs(VTs, Offsets, ArgAlign, IsVAArg, ArgOuts);
       for (const unsigned NumElts : VI) {
         const EVT ArgVT = ArgOuts[J].ArgVT;
         const bool IsPacked = ArgVT.isFixedLengthVectorOf(MVT::i1);
@@ -1640,16 +1650,11 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     const bool ExtendIntegerRetVal =
         RetTy->isIntegerTy() && DL.getTypeAllocSizeInBits(RetTy) < 32;
 
-    // A libcall can already have its registers split. Use the return type
-    // for a single value and the original field type for an aggregate.
-    const auto GetResultVT = [&](unsigned I) {
-      return getValueType(DL, RetTy->isAggregateType() ? Ins[I].OrigTy : RetTy);
-    };
     unsigned I = 0;
     const auto VI =
-        VectorizePTXValueVTs(VTs, Offsets, RetAlign, false, GetResultVT);
+        VectorizePTXValueVTs(VTs, Offsets, RetAlign, /*IsVAArg=*/false, CLI);
     for (const unsigned NumElts : VI) {
-      const EVT ResultVT = GetResultVT(I);
+      const EVT ResultVT = getParamPartVT(CLI, I);
       const bool IsPacked = ResultVT.isFixedLengthVectorOf(MVT::i1);
       const MaybeAlign CurrentAlign =
           ExtendIntegerRetVal ? MaybeAlign(std::nullopt)
@@ -4416,9 +4421,8 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
           &F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
 
       unsigned I = 0;
-      const auto VI =
-          VectorizePTXValueVTs(VTs, Offsets, ArgAlign, /*IsVAArg=*/false,
-                               [&](unsigned I) { return ArgIns[I].ArgVT; });
+      const auto VI = VectorizePTXValueVTs(VTs, Offsets, ArgAlign,
+                                           /*IsVAArg=*/false, ArgIns);
       for (const unsigned NumElts : VI) {
         const EVT ArgVT = ArgIns[I].ArgVT;
         const bool IsPacked = ArgVT.isFixedLengthVectorOf(MVT::i1);
@@ -4500,12 +4504,11 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     return correctParamType(RetVal, StoreVT, Outs[I].Flags, DAG, dl);
   };
 
-  const auto GetResultVT = [&](unsigned I) { return Outs[I].ArgVT; };
   unsigned I = 0;
-  const auto VI =
-      VectorizePTXValueVTs(VTs, Offsets, RetAlign, false, GetResultVT);
+  const auto VI = VectorizePTXValueVTs(VTs, Offsets, RetAlign,
+                                       /*IsVAArg=*/false, ArrayRef(Outs));
   for (const unsigned NumElts : VI) {
-    const EVT ResultVT = GetResultVT(I);
+    const EVT ResultVT = Outs[I].ArgVT;
     const MaybeAlign CurrentAlign = ExtendIntegerRetVal
                                         ? MaybeAlign(std::nullopt)
                                         : commonAlignment(RetAlign, Offsets[I]);
