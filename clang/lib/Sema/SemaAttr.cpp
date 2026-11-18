@@ -1467,7 +1467,8 @@ void Sema::ActOnPragmaMap(IdentifierInfo *IdentId, SourceLocation NameLoc,
   assert(!MappedName.empty());
 
   // All identifiers must be in UTF-8. On z/OS the mapped name was parsed with
-  // CA_ToLiteralEncodingForAsm, so it is in IBM-1047 and must be converted back.
+  // CA_ToLiteralEncodingForAsm, so it is in IBM-1047 and must be converted
+  // back.
   llvm::SmallString<16> MappedNameUTF;
   if (llvm::TextEncodingConverter *Conv =
           PP.getTextEncoding().getzOSFromAsmLiteralEncodingConverter()) {
@@ -1492,15 +1493,14 @@ void Sema::ActOnPragmaMap(IdentifierInfo *IdentId, SourceLocation NameLoc,
       lookupExternCFunctionOrVariable(IdentId, NameLoc, curScope);
   if (!PrevDecl) {
     LoadExternalMappedUndeclaredIdentifiers();
-    auto PendingName = PendingMappedNames.find(IdentId);
-    if (PendingName != PendingMappedNames.end()) {
-      auto &Info = PendingName->second;
-      if (!Info.Attr->isEquivalent(Attr)) {
+    auto [It, Inserted] = PendingMappedNames.try_emplace(IdentId, Info);
+    if (!Inserted) {
+      if (!It->second.Attr->isEquivalent(Attr)) {
         Diag(NameLoc, diag::warn_pragma_different_asm_label) << IdentId;
         return;
       }
+      It->second = Info;
     }
-    PendingMappedNames[IdentId] = Info;
     return;
   }
 
