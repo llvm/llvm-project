@@ -21,8 +21,9 @@ define dso_local void @m() local_unnamed_addr #1 {
 ; CHECK-NEXT:    ic %r1, 6(%r2)
 ; CHECK-NEXT:    larl %r2, e
 ; CHECK-NEXT:    lb %r0, 3(%r2)
-; CHECK-NEXT:    vlvgp %v0, %r0, %r1
-; CHECK-NEXT:    vlvgp %v1, %r1, %r0
+; CHECK-NEXT:    # freeze: $r2l
+; CHECK-NEXT:    vlvgp %v0, %r2, %r1
+; CHECK-NEXT:    vlvgp %v1, %r1, %r2
 ; CHECK-NEXT:    vlvgf %v1, %r1, 0
 ; CHECK-NEXT:    vlvgf %v1, %r1, 2
 ; CHECK-NEXT:    vlvgp %v2, %r1, %r1
@@ -31,8 +32,8 @@ define dso_local void @m() local_unnamed_addr #1 {
 ; CHECK-NEXT:    chi %r1, 128
 ; CHECK-NEXT:    ipm %r1
 ; CHECK-NEXT:    risbg %r1, %r1, 63, 191, 36
-; CHECK-NEXT:    vlvgf %v0, %r0, 0
-; CHECK-NEXT:    vlvgf %v0, %r0, 2
+; CHECK-NEXT:    vlvgf %v0, %r2, 0
+; CHECK-NEXT:    vlvgf %v0, %r2, 2
 ; CHECK-NEXT:    vgbm %v3, 30583
 ; CHECK-NEXT:    vn %v0, %v0, %v3
 ; CHECK-NEXT:    vn %v1, %v1, %v3
@@ -74,6 +75,7 @@ define dso_local void @m() local_unnamed_addr #1 {
 ; CHECK-NEXT:    rosbg %r2, %r3, 32, 61, 2
 ; CHECK-NEXT:    rosbg %r2, %r5, 32, 62, 1
 ; CHECK-NEXT:    or %r2, %r14
+; CHECK-NEXT:    # freeze: $r3l
 ; CHECK-NEXT:    xilf %r3, 4294967295
 ; CHECK-NEXT:    or %r3, %r2
 ; CHECK-NEXT:    tmll %r3, 65535

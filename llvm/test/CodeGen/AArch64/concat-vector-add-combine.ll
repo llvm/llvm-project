@@ -94,6 +94,7 @@ define i32 @combine_undef_add_8xi32(i32 %a, i32 %b, i32 %c, i32 %d) local_unname
 ; CHECK-LABEL: combine_undef_add_8xi32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    // freeze: $w8
 ; CHECK-NEXT:    dup v0.4s, w8
 ; CHECK-NEXT:    mov v1.s[1], w1
 ; CHECK-NEXT:    mov v1.s[2], w2

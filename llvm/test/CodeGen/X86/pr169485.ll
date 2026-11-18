@@ -9,8 +9,9 @@ define <8 x float> @widget(<2 x float> %arg) #0 {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    callq *%rax
-; CHECK-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,0],zero
+; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    # freeze: $xmm0
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],zero
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
