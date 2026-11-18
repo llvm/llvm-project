@@ -7,7 +7,7 @@ define i16 @PR40793(<8 x i16> %t1) {
 ; CHECK-LABEL: PR40793:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpextrw $5, %xmm0, %ecx
-; CHECK-NEXT:    andb $15, %cl
+; CHECK-NEXT:    andl $15, %ecx
 ; CHECK-NEXT:    movl $32733, %eax # imm = 0x7FDD
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shrl %cl, %eax
