@@ -3566,44 +3566,79 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
 
   for (InputSectionBase *s : inputs) {
     ArrayRef<uint8_t> data = s->content();
-    Expected<uint32_t> idBase = builder.merge(toStringRef(data), isLE);
-    if (!idBase) {
-      std::string reason = toString(idBase.takeError());
-      if (s->relSecIdx)
-        ErrAlways(ctx) << s << ": cannot validate .BTF relocations: " << reason;
-      else
-        Warn(ctx) << s << ": failed to parse .BTF section: " << reason;
-      continue;
-    }
-
     auto *file = dyn_cast<ObjFile<ELFT>>(s->file);
     DenseMap<uint64_t, size_t> offsetToVar;
     struct Entry {
       Var var;
-      StringRef sectionName;
+      // Later blobs can grow the builder's string table and invalidate views.
+      uint32_t sectionNameOff;
     };
     SmallVector<Entry, 0> vars;
-    uint64_t offset =
-        uint64_t(read32(ctx, data.data() + offsetof(BTF::Header, HdrLen))) +
-        read32(ctx, data.data() + offsetof(BTF::Header, TypeOff));
-    for (uint32_t id = *idBase; id <= builder.typesCount(); ++id) {
-      const auto *type = builder.findType(id);
-      if (type->getKind() == BTF::BTF_KIND_DATASEC) {
-        hasDataSecs = true;
-        StringRef sectionName = builder.findString(type->NameOff);
-        auto *entries = reinterpret_cast<const BTF::BTFDataSec *>(type + 1);
-        for (uint32_t i = 0; i != type->getVlen(); ++i) {
-          if (s->relSecIdx)
-            offsetToVar.try_emplace(offset + sizeof(*type) +
-                                        i * sizeof(*entries) +
-                                        offsetof(BTF::BTFDataSec, Offset),
-                                    vars.size());
-          const auto &entry = entries[i];
-          vars.push_back(
-              {{nullptr, nullptr, 0, entry.Type, entry.Size}, sectionName});
+    // A relocatable link concatenates BTF blobs and combines their
+    // relocations into one section-relative table.
+    auto mergeBlobs = [&]() -> Error {
+      uint64_t blobOffset = 0;
+      do {
+        ArrayRef<uint8_t> remaining = data.drop_front(blobOffset);
+        if (remaining.size() < sizeof(BTF::Header))
+          return createStringError("truncated .BTF header");
+        const uint8_t *hdr = remaining.data();
+        if (uint16_t magic = read16(ctx, hdr); magic != BTF::MAGIC)
+          return createStringError("invalid .BTF magic: 0x%x", unsigned(magic));
+        uint64_t hdrLen = read32(ctx, hdr + offsetof(BTF::Header, HdrLen));
+        uint64_t typeOff = read32(ctx, hdr + offsetof(BTF::Header, TypeOff));
+        uint64_t typeEnd =
+            typeOff + read32(ctx, hdr + offsetof(BTF::Header, TypeLen));
+        uint64_t strEnd =
+            uint64_t(read32(ctx, hdr + offsetof(BTF::Header, StrOff))) +
+            read32(ctx, hdr + offsetof(BTF::Header, StrLen));
+        uint64_t size = hdrLen + std::max(typeEnd, strEnd);
+        if (hdrLen < sizeof(BTF::Header) || size > remaining.size())
+          return createStringError("invalid .BTF blob size");
+
+        uint64_t end = blobOffset + size;
+        uint64_t next =
+            std::min<uint64_t>(alignTo(end, s->addralign), data.size());
+        if (llvm::any_of(data.slice(end, next - end),
+                         [](uint8_t byte) { return byte != 0; }))
+          return createStringError("non-zero .BTF padding");
+
+        Expected<uint32_t> idBase =
+            builder.merge(toStringRef(remaining.take_front(size)), isLE);
+        if (!idBase)
+          return idBase.takeError();
+
+        uint64_t offset = blobOffset + hdrLen + typeOff;
+        for (uint32_t id = *idBase; id <= builder.typesCount(); ++id) {
+          const auto *type = builder.findType(id);
+          if (type->getKind() == BTF::BTF_KIND_DATASEC) {
+            hasDataSecs = true;
+            auto *entries = reinterpret_cast<const BTF::BTFDataSec *>(type + 1);
+            for (uint32_t i = 0; i != type->getVlen(); ++i) {
+              if (s->relSecIdx)
+                offsetToVar.try_emplace(offset + sizeof(*type) +
+                                            i * sizeof(*entries) +
+                                            offsetof(BTF::BTFDataSec, Offset),
+                                        vars.size());
+              const auto &entry = entries[i];
+              vars.push_back({{nullptr, nullptr, 0, entry.Type, entry.Size},
+                              type->NameOff});
+            }
+          }
+          offset += builder.getTypeBytes(id).size();
         }
+        blobOffset = next;
+      } while (blobOffset != data.size());
+      return Error::success();
+    };
+
+    if (Error e = mergeBlobs()) {
+      std::string reason = toString(std::move(e));
+      if (s->relSecIdx) {
+        ErrAlways(ctx) << s << ": cannot validate .BTF relocations: " << reason;
+        continue;
       }
-      offset += builder.getTypeBytes(id).size();
+      Warn(ctx) << s << ": failed to parse .BTF section: " << reason;
     }
 
     if (s->relSecIdx) {
@@ -3617,9 +3652,9 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
                            << " does not target a DATASEC VarSecinfo offset";
             continue;
           }
-          auto &[var, sectionName] = vars[it->second];
+          auto &[var, sectionNameOff] = vars[it->second];
           offsetToVar.erase(it);
-          sectionName = {};
+          sectionNameOff = 0;
           Symbol &sym = file->getRelocTargetSym(rel);
           RelType type = rel.getType(ctx.arg.isMips64EL);
           const uint8_t *bufLoc = data.data() + loc;
@@ -3651,7 +3686,8 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
     // symbols: either can hide an ambiguous placeholder.
     std::optional<DenseMap<std::pair<StringRef, StringRef>, const Defined *>>
         definitions;
-    for (auto &[var, sectionName] : vars) {
+    for (auto &[var, sectionNameOff] : vars) {
+      StringRef sectionName = builder.findString(sectionNameOff);
       if (file && !sectionName.empty()) {
         const auto *type = builder.findType(var.type);
         if (!type || type->getKind() != BTF::BTF_KIND_VAR)

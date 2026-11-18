@@ -6,6 +6,21 @@
 # RUN: ld.lld --btf-merge --gc-sections --emit-relocs a.o b.o -o out
 # RUN: llvm-readelf -S out | FileCheck %s --check-prefix=SECTIONS
 # RUN: llvm-readelf -x .BTF out | FileCheck %s
+
+## A relocatable link leaves both BTF blobs and their relocations in one section.
+## Leave the COMDAT unreferenced so GC discards it in both links: -r can retarget
+## the discarded definition's relocation to the prevailing symbol.
+# RUN: llvm-mc -filetype=obj -triple=x86_64 --defsym=NO_GROUP_REF=1 a.s -o a-nogroup.o
+# RUN: ld.lld --btf-merge --gc-sections a-nogroup.o b.o -o direct
+# RUN: ld.lld -r --btf-merge a-nogroup.o b.o -o partial.o
+# RUN: ld.lld --btf-merge --gc-sections partial.o -o from-partial
+# RUN: llvm-objcopy --dump-section=.BTF=direct.btf direct direct-copy
+# RUN: llvm-objcopy --dump-section=.BTF=partial.btf from-partial partial-copy
+# RUN: cmp direct.btf partial.btf
+# RUN: llvm-mc -filetype=obj -triple=x86_64 --defsym=BAD_PADDING=1 a.s -o bad.o
+# RUN: ld.lld -r bad.o b.o -o bad-partial.o
+# RUN: not ld.lld --btf-merge bad-partial.o -o bad 2>&1 | FileCheck %s --check-prefix=BAD-PADDING
+
 # RUN: ld.lld --btf-merge -T discard.lds a.o b.o -o discard
 # RUN: llvm-readelf -x .BTF discard | FileCheck %s
 # RUN: llvm-readelf -p .BTF discard | FileCheck %s --check-prefix=RENAMED
@@ -17,6 +32,7 @@
 
 # SECTIONS: .BTF PROGBITS
 # SECTIONS-NOT: .rela.BTF
+# BAD-PADDING: error: bad-partial.o:(.BTF): cannot validate .BTF relocations: non-zero .BTF padding
 # RENAMED:      .xdat
 # RENAMED-NEXT: .bss
 # REL: Relocation section '.rel.BTF'
@@ -44,7 +60,10 @@
 .globl _start, first, group
 .text
 _start:
-  .long first, bssvar, second, group
+  .long first, bssvar, second
+.ifndef NO_GROUP_REF
+  .long group
+.endif
 
 .data
 first: .long 1
@@ -58,6 +77,7 @@ dead: .long 3
 group: .long 4
 
 .section .BTF,"",@progbits
+.p2align 2
 .short 0xeb9f
 .byte 1, 0
 .long 24, 0, .Lstr - .Ltypes, .Lstr - .Ltypes, .Lend - .Lstr
@@ -74,6 +94,9 @@ group: .long 4
 .Lstr:
 .asciz "", "int", "local", "first", "bss01", "dead", ".data", ".bss", ".unused"
 .Lend:
+.ifdef BAD_PADDING
+.byte 1
+.endif
 
 #--- b.s
 .globl second, group
@@ -84,6 +107,7 @@ second: .long 5
 group: .long 6
 
 .section .BTF,"",@progbits
+.p2align 2
 .short 0xeb9f
 .byte 1, 0
 .long 24, 0, .Lstr - .Ltypes, .Lstr - .Ltypes, .Lend - .Lstr

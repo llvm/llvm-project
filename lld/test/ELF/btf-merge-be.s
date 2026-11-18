@@ -6,6 +6,9 @@
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux b.s -o b.o
 # RUN: ld.lld --btf-merge a.o b.o -o merged
 # RUN: llvm-readelf -x .BTF merged | FileCheck %s
+# RUN: ld.lld -r a.o b.o -o partial.o
+# RUN: ld.lld --btf-merge partial.o -o from-partial
+# RUN: llvm-readelf -x .BTF from-partial | FileCheck %s
 
 ## Check the big-endian header, both INT records, and their string table.
 # CHECK: Hex dump of section '.BTF':
@@ -22,6 +25,7 @@ _start:
   blr
 
 .section .BTF,"",@progbits
+.p2align 2
 .short 0xeb9f           # magic
 .byte 1                 # version
 .byte 0                 # flags
@@ -48,6 +52,7 @@ bar:
   blr
 
 .section .BTF,"",@progbits
+.p2align 2
 .short 0xeb9f           # magic
 .byte 1                 # version
 .byte 0                 # flags
