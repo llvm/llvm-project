@@ -30,6 +30,7 @@ struct MacroOccurrence {
   bool IsDefinition;
   // True if the occurence is used in a conditional directive, e.g. #ifdef MACRO
   bool InConditionalDirective;
+  bool IsFunctionLike;
 
   CharSourceRange toSourceRange(const SourceManager &SM) const;
   Range toRange(const SourceManager &SM) const;

@@ -1110,6 +1110,8 @@ getSemanticHighlightings(ParsedAST &AST, bool IncludeInactiveRegionTokens) {
     T.addModifier(HighlightingModifier::GlobalScope);
     if (M.IsDefinition)
       T.addModifier(HighlightingModifier::Declaration);
+    if (M.IsFunctionLike)
+      T.addModifier(HighlightingModifier::FunctionLike);
   };
   for (const auto &SIDToRefs : AST.getMacros().MacroRefs)
     for (const auto &M : SIDToRefs.second)
@@ -1237,6 +1239,7 @@ highlightingModifierFromString(llvm::StringRef Name) {
       {"ConstructorOrDestructor",
        HighlightingModifier::ConstructorOrDestructor},
       {"UserDefined", HighlightingModifier::UserDefined},
+      {"FunctionLike", HighlightingModifier::FunctionLike},
       {"FunctionScope", HighlightingModifier::FunctionScope},
       {"ClassScope", HighlightingModifier::ClassScope},
       {"FileScope", HighlightingModifier::FileScope},
@@ -1407,6 +1410,8 @@ llvm::StringRef toSemanticTokenModifier(HighlightingModifier Modifier) {
     return "constructorOrDestructor"; // nonstandard
   case HighlightingModifier::UserDefined:
     return "userDefined"; // nonstandard
+  case HighlightingModifier::FunctionLike:
+    return "functionLike"; // nonstandard
   case HighlightingModifier::FunctionScope:
     return "functionScope"; // nonstandard
   case HighlightingModifier::ClassScope:

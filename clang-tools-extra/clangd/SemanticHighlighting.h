@@ -80,6 +80,7 @@ enum class HighlightingModifier {
   UsedAsMutablePointer,
   ConstructorOrDestructor,
   UserDefined,
+  FunctionLike,
 
   FunctionScope,
   ClassScope,
