@@ -551,8 +551,8 @@ ASTContext &Decl::getASTContext() const {
   if (const auto *TUD = dyn_cast<TranslationUnitDecl>(this))
     return TUD->getASTContext();
 
-  // This is called a lot, e.g. for every attribute lookup. Only walk up to the
-  // TranslationUnitDecl once per DeclContext.
+  // This is called a lot, e.g. by every DeclContext::lookup(). Only walk up to
+  // the TranslationUnitDecl once per DeclContext.
   const DeclContext *DC = getDeclContext();
   if (!DC->CachedASTContext)
     DC->CachedASTContext = &getTranslationUnitDecl()->getASTContext();
