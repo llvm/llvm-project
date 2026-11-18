@@ -1647,6 +1647,9 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   normalize `cfi-icall` and `kcfi` function type metadata, leaving C++ class
   vtable, member-pointer, and `-fexperimental-call-graph-section` metadata
   canonical so whole-program devirtualization works reliably. (#GH242466)
+- `-fsanitize=alloc-token` now also infers the allocated type from a placement
+  `new` into the result of an untyped allocation call, e.g. `new (malloc(n)) T`
+  or `void *p = malloc(n); new (p) T;`.
 
 ### Python Binding Changes
 
