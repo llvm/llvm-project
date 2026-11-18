@@ -27,6 +27,8 @@
 ! FACADE-DAG: {{^}}use mf91_other,only:z=>y{{$}}
 ! FACADE2-DAG: {{^}}use mf91_m1,only:z=>x{{$}}
 ! FACADE2-DAG: {{^}}use mf91_other,only:z=>y{{$}}
+! FACADE2-DAG: {{^}}use mf91_m1{{$}}
+! FACADE2-DAG: {{^}}use mf91_m1,only:y{{$}}
 ! FACADE2-DAG: private::z
 ! BAD: error: No explicit type declared for 'x'
 ! HOST2: error: Reference to 'z' is ambiguous
