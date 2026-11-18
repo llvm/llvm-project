@@ -790,19 +790,6 @@ cir::PtrSpecAttr getPointerSpec(mlir::DataLayoutEntryListRef params,
                                kDefaultPointerSizeBits);
 }
 
-/// The vector alignment cap in bits, or 0 when the module has no
-/// #cir.vector_spec entry. The entry holds TargetInfo::getMaxVectorAlign().
-/// Zero means the target does not set a limit.
-uint64_t getVectorMaxAlignBits(mlir::DataLayoutEntryListRef params) {
-  for (mlir::DataLayoutEntryInterface entry : params) {
-    if (!entry.isTypeEntry())
-      continue;
-    if (auto spec = mlir::dyn_cast<cir::VectorSpecAttr>(entry.getValue()))
-      return spec.getMaxAlign();
-  }
-  return 0;
-}
-
 // TargetInfo::getBitIntMaxAlign() when the module has no #cir.bitint_spec
 // entry. That is LongLongAlign's initial value.
 constexpr static uint64_t kDefaultBitIntMaxAlignBits = 64;
@@ -1630,13 +1617,19 @@ uint64_t
 cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                                  ::mlir::DataLayoutEntryListRef params) const {
   // This hook answers in bytes, not bits.
-  uint64_t byteSize = llvm::divideCeil(
-      dataLayout.getTypeSizeInBits(*this).getKnownMinValue(), uint64_t{8});
-  uint64_t align = llvm::PowerOf2Ceil(byteSize);
-  uint64_t maxAlignBits = getVectorMaxAlignBits(params);
-  if (maxAlignBits)
-    align = std::min(align, maxAlignBits / 8);
-  return align;
+  return llvm::PowerOf2Ceil(llvm::divideCeil(
+      dataLayout.getTypeSizeInBits(*this).getKnownMinValue(), uint64_t{8}));
+}
+
+/// The #cir.vector_spec entry holds TargetInfo::getMaxVectorAlign().
+uint64_t cir::VectorType::getMaxAlignBits(mlir::DataLayoutEntryListRef params) {
+  for (mlir::DataLayoutEntryInterface entry : params) {
+    if (!entry.isTypeEntry())
+      continue;
+    if (auto spec = mlir::dyn_cast<cir::VectorSpecAttr>(entry.getValue()))
+      return spec.getMaxAlign();
+  }
+  return 0;
 }
 
 bool cir::VectorType::areCompatible(
@@ -1645,7 +1638,7 @@ bool cir::VectorType::areCompatible(
     const mlir::DataLayoutIdentifiedEntryMap &) const {
   // A nested spec may only repeat the vector alignment cap already in
   // effect. No entry means the target imposes no limit.
-  uint64_t oldMax = getVectorMaxAlignBits(oldLayout);
+  uint64_t oldMax = getMaxAlignBits(oldLayout);
   for (mlir::DataLayoutEntryInterface newEntry : newLayout) {
     if (!newEntry.isTypeEntry())
       continue;

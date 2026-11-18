@@ -535,8 +535,8 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     `!cir.vector<17 x !cir.bool>` occupies four.
 
     A vector's ABI alignment is its size in bytes, rounded up to a power of
-    two. When the module carries a `#cir.vector_spec` entry, that alignment
-    is capped at `max_align` bits.
+    two. Its language alignment is the same, capped at `max_align` bits when
+    the module carries a `#cir.vector_spec` entry.
 
     Scalable vectors are indicated by enclosing size in square brackets.
 
@@ -588,6 +588,10 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
       return getFixed(IntType::get(ctx, /*width=*/8, /*isSigned=*/false),
                       /*size=*/1);
     }
+
+    /// The vector alignment cap, in bits, held by the #cir.vector_spec entry
+    /// in \p params, or 0 when there is no entry and the target sets no cap.
+    static uint64_t getMaxAlignBits(mlir::DataLayoutEntryListRef params);
   }];
 
   let extraClassDefinition = [{
