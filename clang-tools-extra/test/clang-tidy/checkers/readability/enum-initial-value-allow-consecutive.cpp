@@ -33,6 +33,24 @@ enum class EConsecutiveMinimal {
   EConsecutiveMinimal_size,
 };
 
+// OK: constant expression initializers with consecutive values.
+enum class EConsecutiveConstExpr {
+  EConsecutiveConstExpr_a = 1 << 0,
+  EConsecutiveConstExpr_b = 1 << 1,
+  EConsecutiveConstExpr_size,
+};
+
+// Error: constant expression initializers with non-consecutive values.
+enum class EConstExprBreak {
+  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum 'EConstExprBreak' are not consistent
+  EConstExprBreak_a = 1 << 0,
+  EConstExprBreak_b = 1 << 1,
+  EConstExprBreak_c = 1 << 2,
+  EConstExprBreak_size,
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: note: uninitialized enumerator 'EConstExprBreak_size' defined here
+  // CHECK-FIXES: EConstExprBreak_size = 5,
+};
+
 // Error: not consecutive (gap between b and c).
 enum class EConsecutiveBreak {
   // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum 'EConsecutiveBreak' are not consistent
@@ -44,8 +62,7 @@ enum class EConsecutiveBreak {
   // CHECK-FIXES: EConsecutiveBreak_size = 4,
 };
 
-// Error: one of the "except last" enumerators is left uninitialized, so the
-// remaining explicit values are not consecutive with each other.
+// Error: an enumerator other than the last is uninitialized.
 enum class EConsecutiveGap {
   // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum 'EConsecutiveGap' are not consistent
   EConsecutiveGap_a = 0,
@@ -58,10 +75,7 @@ enum class EConsecutiveGap {
   // CHECK-FIXES: EConsecutiveGap_size = 3,
 };
 
-// Error: the last enumerator is also explicitly initialized (the
-// "consecutive except last" pattern requires the last enumerator to be
-// implicit), and not every other enumerator is explicit either, so this
-// matches none of the accepted styles.
+// Error: the last enumerator is explicitly initialized.
 enum class EConsecutiveLastMismatch {
   // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum 'EConsecutiveLastMismatch' are not consistent
   EConsecutiveLastMismatch_a = 0,

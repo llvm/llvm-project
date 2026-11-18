@@ -109,10 +109,11 @@ enum H {
 
 ````{option} AllowConsecutiveInitialValuesExceptLast
 When `true`, enums where all but the last enumerator are explicitly
-initialized with consecutive integer literal values, and the last
-enumerator is left uninitialized, are allowed. This is a common pattern
-for enumerations that use the last enumerator as a count/sentinel value.
-Default is `false`.
+initialized with consecutive values, and the last enumerator is left
+uninitialized, are allowed. The initializers may be any integer constant
+expressions (e.g. `1 << 1`), as long as their values are consecutive. This is
+a common pattern for enumerations that use the last enumerator as a
+count/sentinel value. Default is `false`.
 
 ```c++
 enum I {
@@ -120,6 +121,12 @@ enum I {
   i1 = 1,
   i2 = 2,
   i_size, // Allowed if AllowConsecutiveInitialValuesExceptLast is true.
+};
+
+enum J {
+  j0 = 1 << 0,
+  j1 = 1 << 1,
+  j_size, // Allowed: the values 1, 2 and 3 are consecutive.
 };
 ```
 ````

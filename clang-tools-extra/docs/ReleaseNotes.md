@@ -403,8 +403,8 @@ infrastructure are described first, followed by tool-specific sections.
 
   - Added the {option}`AllowConsecutiveInitialValuesExceptLast`, allowing
     enums where all but the last enumerator are explicitly initialized with
-    consecutive integer literal values and the last enumerator's value is
-    left implicit (e.g., a trailing count/sentinel enumerator).
+    consecutive integer constant expression values and the last enumerator's
+    value is left implicit (e.g., a trailing count/sentinel enumerator).
 
 - Improved {doc}`readability-function-cognitive-complexity
   <clang-tidy/checks/readability/function-cognitive-complexity>` check by fixing
