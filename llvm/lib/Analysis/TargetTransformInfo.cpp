@@ -41,8 +41,8 @@ static cl::opt<unsigned> CacheLineSize(
 static cl::opt<int> StoreLoadForwardingConflictCost(
     "store-load-forwarding-conflict-cost", cl::init(-1), cl::Hidden,
     cl::desc("Override the per-occurrence cost the SLP vectorizer adds for a "
-             "store-to-load forwarding conflict (negative = use target "
-             "value)."));
+             "store-to-load forwarding conflict (0 disables the check, "
+             "negative = use target value)."));
 
 static cl::opt<unsigned> MinPageSize(
     "min-page-size", cl::init(0), cl::Hidden,

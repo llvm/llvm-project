@@ -135,8 +135,9 @@ exit:
   ret void
 }
 
-; The loop step is a runtime value, so the store has no constant stride. The
-; check falls back to the tiled predicate instead of using the stride.
+; The loop step is a runtime value, so the store has no constant stride and
+; nothing shows that a later iteration re-reads the stored bytes. No penalty,
+; and the load is widened.
 define void @stride_unknown(ptr noalias %A, i64 %step, i64 %n) {
 ; CHECK-LABEL: define void @stride_unknown(
 ; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[STEP:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
@@ -145,16 +146,8 @@ define void @stride_unknown(ptr noalias %A, i64 %step, i64 %n) {
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[A]], %[[ENTRY]] ], [ [[P_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[K:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[K_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 2
 ; CHECK-NEXT:    [[Q0:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 5
-; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[G1]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[G2]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[L0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[L1]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[P]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP4]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[Q0]], align 4
 ; CHECK-NEXT:    [[P_NEXT]] = getelementptr inbounds i8, ptr [[P]], i64 [[STEP]]

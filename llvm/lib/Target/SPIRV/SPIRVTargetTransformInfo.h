@@ -39,6 +39,12 @@ public:
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
+  // A failed store-to-load forward is a CPU store-buffer stall. SPIR-V has no
+  // such model, so do not inherit the scheduling-model default.
+  InstructionCost getStoreLoadForwardingConflictCost() const override {
+    return 0;
+  }
+
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override {
     // SPIR-V natively supports OpBitcount, per 3.53.14 in the spec, as such it
     // is reasonable to assume the Op is fast / preferable to the expanded loop.
