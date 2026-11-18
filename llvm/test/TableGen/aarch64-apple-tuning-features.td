@@ -287,3 +287,34 @@
 // CHECK-NEXT:    FeatureZCZeroingGPR64];
 // CHECK-NEXT:    InlineBehavior InlineBehavior = InlineIgnore;
 // CHECK-NEXT: }
+// CHECK-LABEL: def TuneAppleM6 {       // SubtargetFeature
+// CHECK-NEXT:    string Name = "apple-m6";
+// CHECK-NEXT:    string FieldName = "ARMProcFamily";
+// CHECK-NEXT:    string Value = "AppleM6";
+// CHECK-NEXT:    string Desc = "Apple M6";
+// CHECK-NEXT:    list<SubtargetFeature> Implies = [
+// CHECK-NEXT:    FeatureAlignCmpCSelPairs,
+// CHECK-NEXT:    FeatureAlternateSExtLoadCVTF32Pattern,
+// CHECK-NEXT:    FeatureArithmeticBccFusion,
+// CHECK-NEXT:    FeatureArithmeticCbzFusion,
+// CHECK-NEXT:    FeatureDisableLatencySchedHeuristic,
+// CHECK-NEXT:    FeatureFastLD1Single,
+// CHECK-NEXT:    FeatureFuseAdrpAdd,
+// CHECK-NEXT:    FeatureFuseAES,
+// CHECK-NEXT:    FeatureFuseAppleSMECompute,
+// CHECK-NEXT:    FeatureFuseArithmeticLogic,
+// CHECK-NEXT:    FeatureFuseCryptoEOR,
+// CHECK-NEXT:    FeatureFuseCmpCSel,
+// CHECK-NEXT:    FeatureFuseFCmpFCSel,
+// CHECK-NEXT:    FeatureFuseFMinFMax,
+// CHECK-NEXT:    FeatureFuseLiterals,
+// CHECK-NEXT:    FeatureMaxInterleaveFactor4,
+// CHECK-NEXT:    FeatureNoZCZeroingFPR64,
+// CHECK-NEXT:    FeatureShiftMaddSlow,
+// CHECK-NEXT:    FeatureZCRegMoveFPR128,
+// CHECK-NEXT:    FeatureZCRegMoveGPR64,
+// CHECK-NEXT:    FeatureZCZeroingFPR128,
+// CHECK-NEXT:    FeatureZCZeroingGPR32,
+// CHECK-NEXT:    FeatureZCZeroingGPR64];
+// CHECK-NEXT:    InlineBehavior InlineBehavior = InlineIgnore;
+// CHECK-NEXT: }

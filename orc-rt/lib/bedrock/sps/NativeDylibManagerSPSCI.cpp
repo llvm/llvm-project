@@ -12,6 +12,7 @@
 
 #include "orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h"
 #include "orc-rt/bedrock/NativeDylibManager.h"
+#include "orc-rt/support/sps/SPSSymbolLookupResult.h"
 #include "orc-rt/support/sps/SPSSymbolLookupSet.h"
 
 namespace orc_rt::sps::ci {

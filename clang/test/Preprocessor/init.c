@@ -596,7 +596,7 @@
 // MSP430:#define __WCHAR_MAX__ 32767
 // MSP430:#define __WCHAR_TYPE__ int
 // MSP430:#define __WCHAR_WIDTH__ 16
-// MSP430:#define __WINT_TYPE__ int
+// MSP430:#define __WINT_TYPE__ unsigned int
 // MSP430:#define __WINT_WIDTH__ 16
 // MSP430:#define __clang__ 1
 //

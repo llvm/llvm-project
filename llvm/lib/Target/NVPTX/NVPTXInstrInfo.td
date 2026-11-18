@@ -198,6 +198,9 @@ def hasCLMAD : SubtargetPredicate;
 def hasTcgen05InstSupport : SubtargetPredicate;
 def hasTensormapReplaceSupport : SubtargetPredicate;
 
+def hasTensormapAllocClassSupport
+  : PredAnd<[PTX95, PredOr<[SM90a, SM100f, SM110f, SM120f]>]>;
+
 // Checks Rubin family extensions support.
 //  - TMA S2G im2col_w mode support
 //  - tcgen05.commit shared mem A variants.
@@ -209,7 +212,7 @@ def hasRubinFamilySupport : PredOr<[SM107f]>;
 def hasSPCompress : PredOr<[SM107a]>;
 
 // Checks tcgen05.shift instruction support.
-def hasTcgen05ShiftSupport : PredOr<[SM100a, SM103a, SM110a]>;
+def hasTcgen05ShiftSupport : PredOr<[SM100a, SM103a, SM110a, SM107a]>;
 
 def hasTcgen05MMAScaleInputDImm : PredOr<[SM100f]>;
 def hasTcgen05MMAI8Kind : PredOr<[SM100a, SM110a]>;
