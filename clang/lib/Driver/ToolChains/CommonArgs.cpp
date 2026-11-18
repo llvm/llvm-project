@@ -2004,6 +2004,42 @@ void tools::linkXRayRuntimeDeps(const ToolChain &TC,
     CmdArgs.push_back("-ldl");
 }
 
+bool FloatingPointValueOptions::apply(const Arg &A, bool OFastEnabled) {
+  switch (A.getOption().getID()) {
+  default:
+    return false;
+  case options::OPT_ffp_model_EQ:
+    HonorInfs = HonorNaNs = StringRef(A.getValue()) != "aggressive";
+    break;
+  case options::OPT_Ofast:
+    if (!OFastEnabled)
+      return false;
+    [[fallthrough]];
+  case options::OPT_ffast_math:
+  case options::OPT_cl_fast_relaxed_math:
+  case options::OPT_ffinite_math_only:
+    HonorInfs = HonorNaNs = false;
+    break;
+  case options::OPT_fno_fast_math:
+  case options::OPT_fno_finite_math_only:
+    HonorInfs = HonorNaNs = true;
+    break;
+  case options::OPT_fhonor_infinities:
+    HonorInfs = true;
+    break;
+  case options::OPT_fno_honor_infinities:
+    HonorInfs = false;
+    break;
+  case options::OPT_fhonor_nans:
+    HonorNaNs = true;
+    break;
+  case options::OPT_fno_honor_nans:
+    HonorNaNs = false;
+    break;
+  }
+  return true;
+}
+
 bool tools::areOptimizationsEnabled(const ArgList &Args) {
   // Find the last -O arg and see if it is non-zero.
   if (Arg *A = Args.getLastArg(options::OPT_O_Group))

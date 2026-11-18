@@ -166,6 +166,17 @@ llvm::StringRef getLTOParallelism(const llvm::opt::ArgList &Args,
 
 bool areOptimizationsEnabled(const llvm::opt::ArgList &Args);
 
+/// NaN and infinity options shared by frontend jobs and device library
+/// selection.
+struct FloatingPointValueOptions {
+  bool HonorInfs = true;
+  bool HonorNaNs = true;
+
+  /// Apply the next argument and return whether it affects these options.
+  bool apply(const llvm::opt::Arg &A, bool OFastEnabled);
+  bool isFiniteOnly() const { return !HonorInfs && !HonorNaNs; }
+};
+
 bool isUseSeparateSections(const llvm::Triple &Triple);
 /// Append -ffunction-sections / -fdata-sections to \p CmdArgs when the
 /// corresponding flags are enabled (explicitly or by target default).
