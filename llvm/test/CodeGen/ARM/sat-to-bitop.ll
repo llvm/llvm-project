@@ -180,7 +180,7 @@ define i16 @sat1_base_16bit(i16 %x) #0 {
 ; CHECK-T2-LABEL: sat1_base_16bit:
 ; CHECK-T2:       @ %bb.0: @ %entry
 ; CHECK-T2-NEXT:    sxth r1, r0
-; CHECK-T2-NEXT:    cmp.w r1, #-1
+; CHECK-T2-NEXT:    adds r1, #1
 ; CHECK-T2-NEXT:    it lt
 ; CHECK-T2-NEXT:    movlt.w r0, #-1
 ; CHECK-T2-NEXT:    bx lr
@@ -218,7 +218,7 @@ define i8 @sat1_base_8bit(i8 %x) #0 {
 ; CHECK-T2-LABEL: sat1_base_8bit:
 ; CHECK-T2:       @ %bb.0: @ %entry
 ; CHECK-T2-NEXT:    sxtb r1, r0
-; CHECK-T2-NEXT:    cmp.w r1, #-1
+; CHECK-T2-NEXT:    adds r1, #1
 ; CHECK-T2-NEXT:    it lt
 ; CHECK-T2-NEXT:    movlt.w r0, #-1
 ; CHECK-T2-NEXT:    bx lr

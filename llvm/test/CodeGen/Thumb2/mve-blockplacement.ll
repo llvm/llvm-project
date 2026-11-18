@@ -456,7 +456,7 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:  .LBB1_9: @ %for.cond.cleanup17.us
 ; CHECK-NEXT:    @ in Loop: Header=BB1_10 Depth=2
 ; CHECK-NEXT:    adds r7, r0, #7
-; CHECK-NEXT:    cmn.w r0, #4
+; CHECK-NEXT:    adds r0, #4
 ; CHECK-NEXT:    mov.w r5, #0
 ; CHECK-NEXT:    mov r0, r7
 ; CHECK-NEXT:    bge .LBB1_5
@@ -549,7 +549,7 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:  @ %bb.23: @ %for.cond.cleanup17.us63.3
 ; CHECK-NEXT:    @ in Loop: Header=BB1_19 Depth=2
 ; CHECK-NEXT:    add.w r7, r0, #28
-; CHECK-NEXT:    cmn.w r0, #25
+; CHECK-NEXT:    adds r0, #25
 ; CHECK-NEXT:    mov.w r5, #0
 ; CHECK-NEXT:    mov r0, r7
 ; CHECK-NEXT:    blt .LBB1_19

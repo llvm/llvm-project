@@ -337,7 +337,7 @@ define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ;
 ; CHECK7M-LABEL: icmpasrne:
 ; CHECK7M:       @ %bb.0:
-; CHECK7M-NEXT:    cmp.w r0, #-1
+; CHECK7M-NEXT:    adds r0, #1
 ; CHECK7M-NEXT:    it le
 ; CHECK7M-NEXT:    movle r1, r2
 ; CHECK7M-NEXT:    mov r0, r1
@@ -345,7 +345,7 @@ define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ;
 ; CHECK81M-LABEL: icmpasrne:
 ; CHECK81M:       @ %bb.0:
-; CHECK81M-NEXT:    cmp.w r0, #-1
+; CHECK81M-NEXT:    adds r0, #1
 ; CHECK81M-NEXT:    csel r0, r1, r2, gt
 ; CHECK81M-NEXT:    bx lr
   %sh = ashr i32 %input, 31

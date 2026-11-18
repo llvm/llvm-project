@@ -78,6 +78,7 @@ namespace {
     unsigned AvoidMovs: 1; // Avoid movs with shifter operand (for Swift)
   };
 
+  // clang-format off
   static const ReduceEntry ReduceTable[] = {
   // Wide,        Narrow1,      Narrow2,     imm1,imm2, lo1, lo2, P/C,PF,S,AM
   { ARM::t2ADCrr, 0,            ARM::tADC,     0,   0,   0,   1,  0,0, 0,0,0 },
@@ -89,6 +90,7 @@ namespace {
   { ARM::t2ASRri, ARM::tASRri,  0,             5,   0,   1,   0,  0,0, 1,0,1 },
   { ARM::t2ASRrr, 0,            ARM::tASRrr,   0,   0,   0,   1,  0,0, 1,0,1 },
   { ARM::t2BICrr, 0,            ARM::tBIC,     0,   0,   0,   1,  0,0, 1,0,0 },
+  { ARM::t2CMNri, ARM::tADDi8,  0,             8,   0,   1,   0,  2,0, 0,1,0 },
   { ARM::t2CMNrr, ARM::tCMN,    0,             0,   0,   1,   0,  2,0, 0,0,0 },
   { ARM::t2CMPri, ARM::tCMPi8,  0,             8,   0,   1,   0,  2,0, 0,0,0 },
   { ARM::t2CMPrr, ARM::tCMPhir, 0,             0,   0,   0,   0,  2,0, 0,1,0 },
@@ -153,6 +155,7 @@ namespace {
   { ARM::t2STMIA_UPD,ARM::tSTMIA_UPD, 0,       0,   0,   1,   1,  1,1, 0,1,0 },
   { ARM::t2STMDB_UPD, 0,        ARM::tPUSH,    0,   0,   1,   1,  1,1, 0,1,0 }
   };
+  // clang-format on
 
   class Thumb2SizeReduce : public MachineFunctionPass {
   public:
@@ -726,13 +729,14 @@ Thumb2SizeReduce::ReduceSpecial(MachineBasicBlock &MBB, MachineInstr *MI,
       return true;
     return ReduceToNarrow(MBB, MI, Entry, LiveCPSR, IsSelfLoop);
   }
+  case ARM::t2CMNri:
   case ARM::t2TEQrr: {
     Register PredReg;
-    // Can only convert to eors if we're not in an IT block.
+    // Can only convert to adds/eors if we're not in an IT block.
     if (getInstrPredicate(*MI, PredReg) != ARMCC::AL)
       break;
-    // TODO if Operand 0 is not killed but Operand 1 is, then we could write
-    // to Op1 instead.
+    // TODO for TEQ, if Operand 0 is not killed but Operand 1 is,
+    // then we could write to Op1 instead.
     if (MI->getOperand(0).isKill())
       return ReduceToNarrow(MBB, MI, Entry, LiveCPSR, IsSelfLoop);
   }
@@ -925,10 +929,10 @@ Thumb2SizeReduce::ReduceToNarrow(MachineBasicBlock &MBB, MachineInstr *MI,
   DebugLoc dl = MI->getDebugLoc();
   MachineInstrBuilder MIB = BuildMI(MBB, MI, dl, NewMCID);
 
-  // TEQ is special in that it doesn't define a register but we're converting
-  // it into an EOR which does. So add the first operand as a def and then
-  // again as a use.
-  if (MCID.getOpcode() == ARM::t2TEQrr) {
+  // CMN/TEQ are special in that they don't define a register but we're
+  // converting them into an ADD/EOR which does. So add the first operand
+  // as a def and then again as a use.
+  if (MCID.getOpcode() == ARM::t2CMNri || MCID.getOpcode() == ARM::t2TEQrr) {
     MIB.add(MI->getOperand(0));
     MIB->getOperand(0).setIsKill(false);
     MIB->getOperand(0).setIsDef(true);
