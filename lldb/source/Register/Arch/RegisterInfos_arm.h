@@ -210,14 +210,6 @@ static uint32_t g_d18_invalidates[] = {lldb_private::registers::arm32::id::fpu_q
                                        LLDB_INVALID_REGNUM};
 static uint32_t g_d19_invalidates[] = {lldb_private::registers::arm32::id::fpu_q9,
                                        LLDB_INVALID_REGNUM};
-static uint32_t g_d14_invalidates[] = {lldb_private::registers::arm32::id::fpu_q7, lldb_private::registers::arm32::id::fpu_s28, lldb_private::registers::arm32::id::fpu_s29,
-                                       LLDB_INVALID_REGNUM};
-static uint32_t g_d15_invalidates[] = {lldb_private::registers::arm32::id::fpu_q7, lldb_private::registers::arm32::id::fpu_s30, lldb_private::registers::arm32::id::fpu_s31,
-                                       LLDB_INVALID_REGNUM};
-static uint32_t g_d16_invalidates[] = {lldb_private::registers::arm32::id::fpu_q8, LLDB_INVALID_REGNUM};
-static uint32_t g_d17_invalidates[] = {lldb_private::registers::arm32::id::fpu_q8, LLDB_INVALID_REGNUM};
-static uint32_t g_d18_invalidates[] = {lldb_private::registers::arm32::id::fpu_q9, LLDB_INVALID_REGNUM};
-static uint32_t g_d19_invalidates[] = {lldb_private::registers::arm32::id::fpu_q9, LLDB_INVALID_REGNUM};
 static uint32_t g_d20_invalidates[] = {lldb_private::registers::arm32::id::fpu_q10, LLDB_INVALID_REGNUM};
 static uint32_t g_d21_invalidates[] = {lldb_private::registers::arm32::id::fpu_q10, LLDB_INVALID_REGNUM};
 static uint32_t g_d22_invalidates[] = {lldb_private::registers::arm32::id::fpu_q11, LLDB_INVALID_REGNUM};
