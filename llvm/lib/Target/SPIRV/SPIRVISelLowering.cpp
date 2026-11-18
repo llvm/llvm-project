@@ -517,9 +517,6 @@ static void validateVec1Ops(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
 // TODO: the logic of inserting additional bitcast's is to be moved
 // to pre-IRTranslation passes eventually
 void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
-  if (MF.getRegInfo().reservedRegsFrozen())
-    return;
-
   MachineRegisterInfo *MRI = &MF.getRegInfo();
   SPIRVGlobalRegistry &GR = *STI.getSPIRVGlobalRegistry();
   GR.setCurrentFunc(MF);

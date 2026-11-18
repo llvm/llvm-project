@@ -465,6 +465,13 @@ public:
   // structures referring this instruction.
   void invalidateMachineInstr(MachineInstr *MI);
 
+  // Rebuild the state of MF after loading MIR.
+  void restoreFromMIR(MachineFunction &MF);
+
+  // (VReg, type ID) pairs of non-type VRegs, sorted by VReg.
+  SmallVector<std::pair<Register, Register>>
+  getVRegTypeIDs(const MachineFunction &MF) const;
+
 private:
   SPIRVTypeInst getOpTypeBool(MachineIRBuilder &MIRBuilder);
 

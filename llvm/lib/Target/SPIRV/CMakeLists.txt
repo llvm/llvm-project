@@ -37,6 +37,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVMergeRegionExitTargets.cpp
   SPIRVISelLowering.cpp
   SPIRVLegalizerInfo.cpp
+  SPIRVMachineFunctionInfo.cpp
   SPIRVMCInstLower.cpp
   SPIRVMetadata.cpp
   SPIRVModuleAnalysis.cpp
@@ -73,6 +74,7 @@ add_llvm_target(SPIRVCodeGen
   FrontendHLSL
   IPO
   MC
+  MIRParser
   Option
   Passes
   SPIRVAnalysis
