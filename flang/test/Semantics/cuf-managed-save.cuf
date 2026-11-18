@@ -20,3 +20,16 @@ subroutine s3()
   save
   a = 1.0
 end subroutine
+
+subroutine s3()
+  real, managed :: a(10)
+  save ! blanket SAVE is accepted
+  a = 1.0
+end subroutine
+
+subroutine s4()
+  real, managed :: a(10)
+  !ERROR: Saved object 'a' in host code may not have ATTRIBUTES(MANAGED) unless allocatable
+  save :: a
+  a = 1.0
+end subroutine
