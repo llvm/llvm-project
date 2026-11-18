@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify=expected,cxx11 %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++14 -verify=expected,since-cxx14 %s
-
 struct A {
   template<typename T>
   void f0();
@@ -32,11 +31,9 @@ constexpr void A::f1<long>(); // since-cxx14-error {{no function template matche
 // instantiated specialization of that template.
 template<typename T>
 struct B { // #defined-here
-  void g0(); // since-cxx14-note {{previous declaration is here}}
-             // cxx11-note@-1 {{member declaration does not match because it is not const qualified}}
+  void g0(); // cxx11-note {{member declaration does not match because it is not const qualified}}
 
   void g1() const; // since-cxx14-note {{member declaration does not match because it is const qualified}}
-                   // cxx11-note@-1 {{previous declaration is here}}
 
   template<typename U>
   void h0(); // since-cxx14-note {{previous declaration is here}}
@@ -46,15 +43,13 @@ struct B { // #defined-here
 };
 
 template<>
-constexpr void B<short>::g0(); // since-cxx14-error {{constexpr declaration of 'g0' follows non-constexpr declaration}}
-                               // cxx11-error@-1 {{out-of-line declaration of 'g0' does not match any declaration in 'B<short>'}}
-                               // cxx11-warning@-2 {{'constexpr' non-static member function will not be implicitly 'const' in C++14; add 'const'}}
+constexpr void B<short>::g0(); // cxx11-error {{out-of-line declaration of 'g0' does not match any declaration in 'B<short>'}}
+                               // cxx11-warning@-1 {{'constexpr' non-static member function will not be implicitly 'const' in C++14; add 'const'}}
                                // expected-note@#defined-here {{defined here}}
 
 template<>
 constexpr void B<short>::g1(); // since-cxx14-error {{out-of-line declaration of 'g1' does not match any declaration in 'B<short>'}}
-                               // cxx11-error@-1 {{constexpr declaration of 'g1' follows non-constexpr declaration}}
-                               // cxx11-warning@-2 {{'constexpr' non-static member function will not be implicitly 'const' in C++14; add 'const'}}
+                               // cxx11-warning@-1 {{'constexpr' non-static member function will not be implicitly 'const' in C++14; add 'const'}}
                                // expected-note@#defined-here {{defined here}}
 
 template<>
