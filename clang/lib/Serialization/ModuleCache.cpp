@@ -192,6 +192,11 @@ clang::writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer, off_t &Size,
     OS << Buffer.getBuffer();
     // Make sure all contents reach the file before querying its status.
     OS.flush();
+    if ((EC = OS.error())) {
+      // Prevent the destructor from reporting a fatal error.
+      OS.clear_error();
+      return EC;
+    }
     // Using the status from an open file descriptor ensures this is not racy.
     if ((EC = llvm::sys::fs::status(FD, Status)))
       return EC;
@@ -203,6 +208,13 @@ clang::writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer, off_t &Size,
       if (!Buf)
         return Buf.getError();
       Written = std::move(*Buf);
+    }
+    // Close explicitly, so that we can handle any errors ourselves.
+    OS.close();
+    if ((EC = OS.error())) {
+      // Prevent the destructor from reporting a fatal error.
+      OS.clear_error();
+      return EC;
     }
   }
 

@@ -1043,14 +1043,15 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  __llvm_libc_syscall
+  syscall
   SRCS
     syscall.cpp
   HDRS
     ../syscall.h
   DEPENDS
-    libc.include.unistd
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.arg_list
+    libc.src.__support.error_or
     libc.src.errno.errno
 )
 

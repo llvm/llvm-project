@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRABIRewriteContext.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dominance.h"
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
@@ -500,8 +500,10 @@ static cir::AllocaOp createCoercionSlot(
     SmallPtrSetImpl<mlir::Operation *> &createdOps, unsigned offset) {
   assert(srcTy != dstTy && "callers must pre-check that the types differ");
 
-  uint64_t srcAlign = dl.getTypeABIAlignment(srcTy);
-  uint64_t dstAlign = dl.getTypeABIAlignment(dstTy);
+  cir::CIRDataLayout cirDataLayout(
+      slotBlock->getParentOp()->getParentOfType<mlir::ModuleOp>());
+  uint64_t srcAlign = cirDataLayout.getTypeLanguageAlignment(srcTy);
+  uint64_t dstAlign = cirDataLayout.getTypeLanguageAlignment(dstTy);
   uint64_t allocaAlign = std::max(srcAlign, dstAlign);
   mlir::Type slotTy = coercionByteSize(srcTy, dl) >= coercionByteSize(dstTy, dl)
                           ? srcTy
@@ -517,7 +519,8 @@ static cir::AllocaOp createCoercionSlot(
   assert((offset == 0 ||
           offset + dl.getTypeSize(coercedTy) <= dl.getTypeSize(slotTy)) &&
          "coerce slot too small for offset access");
-  assert((offset == 0 || offset % dl.getTypeABIAlignment(coercedTy) == 0) &&
+  assert((offset == 0 ||
+          offset % cirDataLayout.getTypeLanguageAlignment(coercedTy) == 0) &&
          "a direct offset must be aligned for the coerced access");
 
   mlir::OpBuilder::InsertionGuard guard(builder);
@@ -738,7 +741,9 @@ emitCopiedCoercionSlot(mlir::OpBuilder &builder, mlir::Location loc,
   if (cir::AllocaOp src = cir::getUnderlyingAlloca(load.getAddr()))
     srcAlign = src.getAlignment();
   else
-    srcAlign = load.getAlignment().value_or(dl.getTypeABIAlignment(recTy));
+    srcAlign = load.getAlignment().value_or(
+        cir::CIRDataLayout(load->getParentOfType<mlir::ModuleOp>())
+            .getTypeLanguageAlignment(recTy));
   SmallPtrSet<mlir::Operation *, 4> ignored;
   cir::AllocaOp slot = createCoercionSlot(builder, loc, recTy, coercedTy,
                                           slotBlock, dl, ignored, offset);
@@ -869,11 +874,13 @@ rewireRecordUses(mlir::OpBuilder &builder, mlir::Location loc, mlir::Value val,
   }
 
   mlir::IntegerAttr srcAlign = builder.getI64IntegerAttr(addrAlign);
+  cir::CIRDataLayout cirDataLayout(
+      val.getParentRegion()->getParentOfType<mlir::ModuleOp>());
   for (cir::StoreOp store : stores) {
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.setInsertionPoint(store);
-    uint64_t dstAlign =
-        store.getAlignment().value_or(dl.getTypeABIAlignment(recTy));
+    uint64_t dstAlign = store.getAlignment().value_or(
+        cirDataLayout.getTypeLanguageAlignment(recTy));
     auto copy =
         cir::CopyOp::create(builder, store.getLoc(), store.getAddr(), addr,
                             builder.getI64IntegerAttr(dstAlign), srcAlign);
@@ -1299,7 +1306,9 @@ insertArgCoercion(mlir::FunctionOpInterface funcOp,
         slot = cir::AllocaOp::create(
             builder, loc, getAllocaPtrTy(flatTy, dl),
             builder.getStringAttr("coerce"),
-            builder.getI64IntegerAttr(dl.getTypeABIAlignment(flatTy)));
+            builder.getI64IntegerAttr(
+                cir::CIRDataLayout(funcOp->getParentOfType<mlir::ModuleOp>())
+                    .getTypeLanguageAlignment(flatTy)));
         flattenOps.insert(slot);
       } else {
         slot = createCoercionSlot(builder, loc, flatTy, origTy, &entry, dl,
@@ -2577,18 +2586,10 @@ mlir::LogicalResult classifyRegisterPair(cir::VAArgOp op,
   return mlir::success();
 }
 
-/// The alignment an argument is placed at.  A record can require more than
-/// the types of its members imply, from an `aligned` attribute on the record
-/// or on one of its fields, and neither raises the alignment of any type.
-/// Only the record layout knows, so the member-derived value alone can be too
-/// small.
-uint64_t argumentAreaAlign(mlir::Type ty, mlir::ModuleOp modOp,
-                           const mlir::DataLayout &dl) {
-  uint64_t align = dl.getTypeABIAlignment(ty);
-  if (auto recTy = mlir::dyn_cast<cir::RecordType>(ty))
-    if (auto layout = cir::tryGetRecordLayout(modOp, recTy.getName()))
-      align = std::max<uint64_t>(align, layout.getRecordAlign());
-  return align;
+/// The alignment an argument is placed at, which is the language alignment of
+/// its type.
+uint64_t argumentAreaAlign(mlir::Type ty, mlir::ModuleOp modOp) {
+  return cir::CIRDataLayout(modOp).getTypeLanguageAlignment(ty);
 }
 
 mlir::Value roundPointerUpToAlignment(CIRBaseBuilderTy &b, mlir::Location loc,
@@ -2619,7 +2620,7 @@ mlir::Value buildOverflowAddrAndAdvance(CIRBaseBuilderTy &b,
   mlir::Value overflow = b.createLoad(f.loc, overflowP);
   mlir::Value bytePtr = b.createPtrBitcast(overflow, byteTy);
 
-  uint64_t tyAlign = argumentAreaAlign(f.resultTy, f.module, f.dl);
+  uint64_t tyAlign = argumentAreaAlign(f.resultTy, f.module);
   if (tyAlign > 8)
     bytePtr = roundPointerUpToAlignment(b, f.loc, bytePtr, tyAlign, f.dl);
 
@@ -2717,7 +2718,7 @@ bool needsTempCopy(const VAArgFetch &f, unsigned neededInt,
   // A slot is only as aligned as its class, 8 for a GP register and 16 for an
   // SSE one, so a fetch the ABI places more strictly is copied through a temp.
   uint64_t slotAlign = neededSse ? 16 : 8;
-  return argumentAreaAlign(f.resultTy, f.module, f.dl) > slotAlign;
+  return argumentAreaAlign(f.resultTy, f.module) > slotAlign;
 }
 
 /// Copies what the registers carry into \p temp, which is the size of the
@@ -2751,7 +2752,7 @@ mlir::Value copyRegisterToTemp(CIRBaseBuilderTy &b, mlir::Location loc,
   if (mlir::isa<cir::RecordType>(f.resultTy))
     cir::CopyOp::create(
         b, loc, temp, regView,
-        b.getI64IntegerAttr(argumentAreaAlign(f.resultTy, f.module, f.dl)),
+        b.getI64IntegerAttr(argumentAreaAlign(f.resultTy, f.module)),
         b.getI64IntegerAttr(8));
   else
     b.createStore(loc, b.createAlignedLoad(loc, regView, 8), temp);
@@ -2860,18 +2861,17 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
       regPairTemp = builder.createAlloca(
           loc, builder.getPointerTo(ac.coercedType), "vaarg.reg",
           clang::CharUnits::fromQuantity(
-              std::max(dl.getTypeABIAlignment(ac.coercedType),
-                       argumentAreaAlign(resultTy, module, dl))));
+              std::max(cirDataLayout.getTypeLanguageAlignment(ac.coercedType),
+                       argumentAreaAlign(resultTy, module))));
     }
 
     mlir::Value regTemp;
     bool copyThroughTemp =
         !pairNeedsReassembly && needsTempCopy(fetch, neededInt, neededSse);
     if (copyThroughTemp) {
-      regTemp =
-          builder.createAlloca(loc, builder.getPointerTo(resultTy), "vaarg.reg",
-                               clang::CharUnits::fromQuantity(
-                                   argumentAreaAlign(resultTy, module, dl)));
+      regTemp = builder.createAlloca(
+          loc, builder.getPointerTo(resultTy), "vaarg.reg",
+          clang::CharUnits::fromQuantity(argumentAreaAlign(resultTy, module)));
     }
 
     addr = cir::TernaryOp::create(
@@ -2913,7 +2913,7 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
 
   // Every path above places the result at least this well aligned.
   mlir::Value resultAddr = builder.createPtrBitcast(addr, resultTy);
-  uint64_t resultAlign = argumentAreaAlign(resultTy, module, dl);
+  uint64_t resultAlign = argumentAreaAlign(resultTy, module);
   if (mlir::isa<cir::RecordType>(resultTy)) {
     SmallPtrSet<mlir::Operation *, 1> noExceptions;
     if (failed(rewireRecordUses(builder, loc, op.getResult(), resultAddr,

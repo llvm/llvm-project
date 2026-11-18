@@ -23,6 +23,21 @@ let MetaVarName = "<filename>" in
 defm : ValueField<"sample-profile-supplement-remapping-file", "StringRef", "",
   "Symbol remapping file for -sample-profile-supplement">;
 
+// BranchFolding.cpp
+defm : OptionalBoolField<"branch-folder-hoist-common-code",
+  "Override common-code hoisting in the BranchFolding pass">;
+defm : OptionalBoolField<"branch-folder-reorder-blocks",
+  "Override basic-block reordering in the BranchFolding pass">;
+defm : OptionalBoolField<"tail-merge", "">;
+// Heuristic for tail merging (and, inversely, tail duplication).
+defm : OptionalValueField<"tail-merge-size", "unsigned",
+  "Min number of instructions to consider tail merging">;
+// Throttle for huge numbers of predecessors (compile speed problems)
+defm : ValueField<"tail-merge-threshold", "unsigned", "150",
+  "Max number of predecessors to consider tail merging">;
+// TODO: Remove the old spelling after 2027-05.
+def : AliasOf<"enable-tail-merge", "tail-merge">;
+
 // CodeGenPrepare.cpp
 defm : BoolField<"bbsections-guided-section-prefix", "true",
   "Use the basic-block-sections profile to determine the text section prefix for hot functions. "
@@ -144,12 +159,46 @@ defm : BoolField<"ifcvt-triangle-false", "true", "">;
 defm : BoolField<"ifcvt-triangle-rev", "true", "">;
 // TODO: Remove the old spellings after 2027-05.
 def : AliasOf<"disable-ifcvt-diamond", "ifcvt-diamond=false">;
-def : AliasOf<"disable-ifcvt-forked-diamond", "ifcvt-forked-diamond=false">;
-def : AliasOf<"disable-ifcvt-simple", "ifcvt-simple=false">;
-def : AliasOf<"disable-ifcvt-simple-false", "ifcvt-simple-false=false">;
-def : AliasOf<"disable-ifcvt-triangle", "ifcvt-triangle=false">;
 def : AliasOf<"disable-ifcvt-triangle-false", "ifcvt-triangle-false=false">;
-def : AliasOf<"disable-ifcvt-triangle-rev", "ifcvt-triangle-rev=false">;
+
+// MachineCSE.cpp
+defm : BoolField<"machine-cse-aggressive", "false",
+  "Override the profitability heuristics for Machine CSE">;
+// Threshold to avoid excessive cost to compute isProfitableToCSE.
+defm : ValueField<"machine-cse-csuses-threshold", "int", "1024",
+  "Threshold for the size of CSUses">;
+
+// MachineCombiner.cpp
+defm : BoolField<"machine-combiner-dump-subst-intrs", "false",
+  "Dump all substituted intrs">;
+defm : ValueField<"machine-combiner-inc-threshold", "unsigned", "500",
+  "Incremental depth computation will be used for basic blocks with more instructions">;
+defm : BoolField<"machine-combiner-verify-pattern-order", "MachineCombinerVerifyPatternOrderDefault",
+  "Verify that the generated patterns are ordered by increasing latency">;
+
+// MachineCopyPropagation.cpp
+defm : OptionalBoolField<"mcp-spill-copy-elim", "">;
+defm : BoolField<"mcp-use-is-copy-instr", "false", "">;
+// TODO: Remove the old spelling after 2027-05.
+def : AliasOf<"enable-spill-copy-elim", "mcp-spill-copy-elim">;
+
+// MachineLICM.cpp
+defm : BoolField<"machine-licm-avoid-speculation", "true",
+  "MachineLICM should avoid speculation">;
+// The default threshold of 100 (i.e. if target block is 100 times hotter)
+// is based on empirical data on a single target and is subject to tuning.
+defm : ValueField<"machine-licm-block-freq-ratio-threshold", "unsigned", "100",
+  "Do not hoist instructions if target block is N times hotter than the source">;
+defm : BoolField<"machine-licm-hoist-cheap-insts", "false",
+  "MachineLICM should hoist even cheap instructions">;
+defm : BoolField<"machine-licm-hoist-const-loads", "true",
+  "Hoist invariant loads">;
+defm : BoolField<"machine-licm-hoist-const-stores", "true",
+  "Hoist invariant stores">;
+// TODO: Remove the old spellings after 2027-05.
+def : AliasOf<"block-freq-ratio-threshold", "machine-licm-block-freq-ratio-threshold">;
+def : AliasOf<"hoist-const-loads", "machine-licm-hoist-const-loads">;
+def : AliasOf<"hoist-const-stores", "machine-licm-hoist-const-stores">;
 
 // MachineOutliner.cpp
 defm : BoolField<"append-content-hash-outlined-name", "true",
@@ -188,6 +237,16 @@ defm : ValueField<"machine-sink-split-probability-threshold", "unsigned", "40",
 defm : BoolField<"sink-insts-to-avoid-spills", "false",
   "Sink instructions into cycles to avoid register spills">;
 
+// PHIElimination.cpp
+defm : BoolField<"phi-elim-edge-splitting", "true",
+  "Enable critical edge splitting during PHI elimination">;
+defm : BoolField<"phi-elim-live-out-early-exit", "true",
+  "Use an early exit if isLiveOutPastPHIs returns true">;
+defm : BoolField<"phi-elim-split-all-critical-edges", "false",
+  "Split all critical edges during PHI elimination">;
+// TODO: Remove the old spelling after 2027-05.
+def : AliasOf<"no-phi-elim-live-out-early-exit", "phi-elim-live-out-early-exit=false">;
+
 // PeepholeOptimizer.cpp
 // Specify whether or not the value tracking looks through complex
 // instructions. When this is false, the value tracker bails on everything that
@@ -202,9 +261,7 @@ defm : ValueField<"recurrence-chain-limit", "unsigned", "3",
   "Maximum length of recurrence chain when evaluating the benefit of commuting operands">;
 defm : ValueField<"rewrite-phi-limit", "unsigned", "10",
   "Limit the length of PHI chains to lookup">;
-// TODO: Remove the old spellings after 2027-05.
-def : AliasOf<"disable-adv-copy-opt", "adv-copy-opt=false">;
-def : AliasOf<"disable-non-allocatable-phys-copy-opt", "non-allocatable-phys-copy-opt=false">;
+// TODO: Remove the old spelling after 2027-05.
 def : AliasOf<"disable-peephole", "peephole=false">;
 
 // RegisterCoalescer.cpp
@@ -244,6 +301,40 @@ defm : ValueField<"select-opti-loop-relative-gain-threshold", "unsigned", "8",
   "Minimum relative gain per loop threshold (1/X). Defaults to 12.5%">;
 // TODO: Remove the old spelling after 2027-05.
 def : AliasOf<"disable-loop-level-heuristics", "select-opti-loop-level-heuristics=false">;
+
+// ShrinkWrap.cpp
+defm : OptionalBoolField<"shrink-wrap",
+  "Enable the shrink-wrapping pass">;
+defm : BoolField<"shrink-wrap-region-split", "true",
+  "Enable splitting of the restore block if possible">;
+// TODO: Remove the old spelling after 2027-05.
+def : AliasOf<"enable-shrink-wrap", "shrink-wrap">;
+
+// StackColoring.cpp
+defm : BoolField<"stack-coloring", "true",
+  "Enable stack coloring">;
+// Enable enhanced dataflow scheme for lifetime analysis (treat first use of
+// stack slot as start of slot lifetime, as opposed to looking for
+// LIFETIME_START marker). See "Implementation notes" in StackColoring.cpp for
+// more info.
+defm : BoolField<"stackcoloring-lifetime-start-on-first-use", "true",
+  "Treat stack lifetimes as starting on first use, not on START marker">;
+// The user may write code that uses allocas outside of the declared lifetime
+// zone. This can happen when the user returns a reference to a local
+// data-structure. We can detect these cases and decide not to optimize the
+// code. If this flag is enabled, we try to save the user. This option is
+// treated as overriding -stackcoloring-lifetime-start-on-first-use.
+defm : BoolField<"stackcoloring-protect-from-escaped-allocas", "false",
+  "Do not optimize lifetime zones that are broken">;
+// TODO: Remove the old spelling after 2027-05.
+def : AliasOf<"no-stack-coloring", "stack-coloring=false">;
+
+// StackSlotColoring.cpp
+defm : ValueField<"ssc-dce-limit", "int", "-1", "">;
+defm : BoolField<"stack-slot-sharing", "true",
+  "Enable slot sharing during stack slot coloring">;
+// TODO: Remove the old spelling after 2027-05.
+def : AliasOf<"no-stack-slot-sharing", "stack-slot-sharing=false">;
 
 // TailDuplicator.cpp
 defm : ValueField<"tail-dup-indirect-size", "unsigned", "20",
@@ -393,3 +484,12 @@ defm : ValueField<"stop-before", "StringRef", "",
   "Stop compilation before a specific pass">;
 defm : OptionalBoolField<"verify-machineinstrs",
   "Verify generated machine code">;
+
+// TwoAddressInstructionPass.cpp
+defm : BoolField<"twoaddr-analyze-revcopy-tied", "true",
+  "Analyze tied operands when looking for reversed copy chain">;
+defm : ValueField<"twoaddr-dataflow-edge-limit", "unsigned", "10",
+  "Maximum number of dataflow edges to traverse when evaluating the benefit of commuting operands">;
+// Temporary flag to disable rescheduling.
+defm : BoolField<"twoaddr-reschedule", "true",
+  "Coalesce copies by rescheduling">;
