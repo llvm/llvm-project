@@ -19,6 +19,7 @@
 #include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
+#include "src/__support/File/file_impl.h"
 #include "src/__support/File/file_mode.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/dup3.h"
@@ -31,8 +32,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-FileIOResult linux_file_write(File *f, const void *data, size_t size) {
-  auto *lf = reinterpret_cast<LinuxFile *>(f);
+FileIOResult FilePlatform::write(File *f, const void *data, size_t size) {
+  auto *lf = static_cast<LinuxFile *>(f);
   auto ret = linux_syscalls::write(lf->get_fd(), data, size);
   if (!ret) {
     return {0, ret.error()};
@@ -40,8 +41,8 @@ FileIOResult linux_file_write(File *f, const void *data, size_t size) {
   return static_cast<size_t>(ret.value());
 }
 
-FileIOResult linux_file_read(File *f, void *buf, size_t size) {
-  auto *lf = reinterpret_cast<LinuxFile *>(f);
+FileIOResult FilePlatform::read(File *f, void *buf, size_t size) {
+  auto *lf = static_cast<LinuxFile *>(f);
   auto ret = linux_syscalls::read(lf->get_fd(), buf, size);
   if (!ret) {
     return {0, ret.error()};
@@ -49,8 +50,8 @@ FileIOResult linux_file_read(File *f, void *buf, size_t size) {
   return static_cast<size_t>(ret.value());
 }
 
-ErrorOr<off_t> linux_file_seek(File *f, off_t offset, int whence) {
-  auto *lf = reinterpret_cast<LinuxFile *>(f);
+ErrorOr<off_t> FilePlatform::seek(File *f, off_t offset, int whence) {
+  auto *lf = static_cast<LinuxFile *>(f);
   return linux_syscalls::lseek(lf->get_fd(), offset, whence);
 }
 
@@ -66,13 +67,18 @@ int LinuxFile::close_fd() {
   return 0;
 }
 
-int linux_file_close(File *f) {
+int FilePlatform::close(File *f) {
   File::remove_file(f);
-  auto *lf = reinterpret_cast<LinuxFile *>(f);
+  auto *lf = static_cast<LinuxFile *>(f);
   int retval = lf->close_fd();
   delete lf;
   return retval;
 }
+
+template class FileImpl<FilePlatform>;
+
+static_assert(sizeof(void *) < 8 || sizeof(LinuxFile) == sizeof(File),
+              "LinuxFile::fd must pack into FileImpl's 64-bit tail padding");
 
 static int map_c_mode_flags_to_linux_open_flags(const FileMode &file_mode) {
   int open_flags = 0;
@@ -186,11 +192,24 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
 }
 
 int LinuxFile::reopen_unlocked(const char *path, const char *mode) {
-  flush_unlocked();
-
   const FileMode file_mode(mode);
 
+  // GNU fopencookie streams (DispatchKind::COOKIE) carry CookieOps rather
+  // than FileOps and are not backed by an OS file descriptor.
+  if (get_dispatch_kind() == DispatchKind::COOKIE)
+    return file_mode.is_valid() ? EBADF : EINVAL;
+
   if (path != nullptr) {
+    flush_unlocked();
+
+    // Tear down CustomFile-specific state (such as fmemopen's buffer ownership
+    // or popen's pipe list registration) and rebind I/O to FilePlatform
+    // while preserving the derived class's close deleter.
+    if (get_dispatch_kind() == DispatchKind::CUSTOM) {
+      static_cast<CustomFile *>(this)->rebind_ops(
+          &FilePlatform::write, &FilePlatform::read, &FilePlatform::seek);
+    }
+
     int old_fd = get_fd();
 
     if (!file_mode.is_valid()) {
@@ -268,6 +287,8 @@ int LinuxFile::reopen_unlocked(const char *path, const char *mode) {
     return EBADF;
   }
 
+  flush_unlocked();
+
   bool do_seek = false;
   bool has_append_flag = LinuxFileFlags::file_has_append_flag(fd_flags);
 
@@ -289,31 +310,19 @@ int LinuxFile::reopen_unlocked(const char *path, const char *mode) {
   reset_stream_state_unlocked(file_mode);
 
   if (do_seek) {
-    auto seek_result = linux_file_seek(this, 0, SEEK_END);
+    auto seek_result = FilePlatform::seek(this, 0, SEEK_END);
     if (!seek_result.has_value())
       return seek_result.error();
   }
   return 0;
 }
 
-bool is_linux_file(const File *f) {
-  // Any LinuxFile (including subtypes like the popen stream, which only swaps
-  // the close callback) registers at least one of these linux_file_* callbacks,
-  // and no non-Linux File (CookieFile/MemoryFile) uses any of them. So a match
-  // on any single callback positively identifies a LinuxFile that has an fd.
-  return f->get_read_func() == &linux_file_read ||
-         f->get_write_func() == &linux_file_write ||
-         f->get_seek_func() == &linux_file_seek ||
-         f->get_close_func() == &linux_file_close;
-}
-
 ErrorOr<int> get_fileno(File *f) {
-  if (!is_linux_file(f))
-    return Error(EBADF);
-  auto *lf = reinterpret_cast<LinuxFile *>(f);
+  auto *lf = static_cast<LinuxFile *>(f);
   int fd = lf->get_fd();
-  // freopen can fail and leave an otherwise-normal LinuxFile with fd == -1.
-  if (fd == -1)
+  // Dynamic non-fd streams (MemoryFile, CookieFile) initialize fd to -1, and
+  // freopen can also fail and leave a LinuxFile with fd == -1.
+  if (fd < 0)
     return Error(EBADF);
   return fd;
 }
@@ -324,7 +333,7 @@ int reopenfile(File *f, const char *path, const char *mode) {
 }
 
 int reopenfile_unlocked(File *f, const char *path, const char *mode) {
-  auto *lf = reinterpret_cast<LinuxFile *>(f);
+  auto *lf = static_cast<LinuxFile *>(f);
   return lf->reopen_unlocked(path, mode);
 }
 

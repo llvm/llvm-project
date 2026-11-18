@@ -37,10 +37,8 @@ void PopenFile::close_popen_list_fds_unlocked() {
     f->close_fd();
 }
 
-int PopenFile::popen_file_close(File *f) {
-  File::remove_file(f);
-
-  auto *pf = reinterpret_cast<PopenFile *>(f);
+int PopenFile::popen_file_detach_impl(File *f) {
+  auto *pf = static_cast<PopenFile *>(f);
   lock_popen_list();
   if (pf->popen_prev != nullptr)
     pf->popen_prev->popen_next = pf->popen_next;
@@ -48,12 +46,22 @@ int PopenFile::popen_file_close(File *f) {
     pf->popen_next->popen_prev = pf->popen_prev;
   if (popen_list == pf)
     popen_list = pf->popen_next;
+  pf->popen_prev = nullptr;
+  pf->popen_next = nullptr;
   // Close the fd before unlocking so a concurrent popen cannot fork and
   // inherit an fd that has already been removed from popen_list.
   int retval = pf->close_fd();
+  pf->set_fd(-1);
   unlock_popen_list();
+  return retval;
+}
 
-  delete pf;
+void PopenFile::popen_file_detach(File *f) { (void)popen_file_detach_impl(f); }
+
+int PopenFile::popen_file_close(File *f) {
+  File::remove_file(f);
+  int retval = popen_file_detach_impl(f);
+  delete static_cast<PopenFile *>(f);
   return retval;
 }
 

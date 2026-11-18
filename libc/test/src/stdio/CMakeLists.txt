@@ -10,6 +10,7 @@ add_libc_test(
     libc.include.stdio
     libc.hdr.fcntl_macros
     libc.hdr.stdio_macros
+    libc.hdr.types.ssize_t
     libc.src.__support.CPP.scope
     libc.src.__support.macros.properties.os
     libc.src.fcntl.fcntl
@@ -19,7 +20,9 @@ add_libc_test(
     libc.src.stdio.ferror
     libc.src.stdio.fflush
     libc.src.stdio.fileno
+    libc.src.stdio.fmemopen
     libc.src.stdio.fopen
+    libc.src.stdio.fopencookie
     libc.src.stdio.fread
     libc.src.stdio.freopen
     libc.src.stdio.fwrite
@@ -149,6 +152,7 @@ add_libc_test(
     fmemopen_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.hdr.errno_macros
     libc.hdr.stdio_macros
     libc.hdr.types.off_t
     libc.src.__support.CPP.limits
@@ -184,6 +188,7 @@ add_libc_test(
     libc.hdr.types.off_t
     libc.hdr.types.size_t
     libc.hdr.types.ssize_t
+    libc.src.__support.CPP.scope
     libc.src.stdio.clearerr
     libc.src.stdio.fclose
     libc.src.stdio.feof
@@ -195,6 +200,7 @@ add_libc_test(
     libc.src.stdio.fseek
     libc.src.stdio.fwrite
     libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
     libc.test.UnitTest.MemoryMatcher
 )
 
@@ -657,12 +663,17 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.hdr.fcntl_macros
       libc.hdr.sys_wait_macros
       libc.hdr.types.FILE
+      libc.src.__support.CPP.scope
       libc.src.fcntl.fcntl
+      libc.src.stdio.fclose
       libc.src.stdio.fgets
       libc.src.stdio.fileno
+      libc.src.stdio.fopen
       libc.src.stdio.fputs
+      libc.src.stdio.freopen
       libc.src.stdio.pclose
       libc.src.stdio.popen
+      libc.src.stdio.remove
       libc.src.stdio.snprintf
       libc.src.sys.wait.wait
       libc.test.UnitTest.ErrnoCheckingTest
@@ -753,6 +764,7 @@ add_libc_test(
     libc.src.__support.CPP.string_view
     libc.src.__support.File.file
     libc.src.__support.File.file_io_result
+    libc.src.__support.File.platform_file
     libc.src.__support.error_or
     libc.src.stdio.generic.getdelim_impl
     libc.src.string.memory_utils.inline_memcpy

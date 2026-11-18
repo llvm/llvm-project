@@ -25,6 +25,7 @@
 #include "src/__support/File/file.h"
 #include "src/__support/File/file_io_result.h"
 #include "src/__support/File/file_mode.h"
+#include "src/__support/File/platform_file.h"
 #include "src/__support/error_or.h"
 #include "src/stdio/generic/getdelim_impl.h"
 #include "src/string/memory_utils/inline_memcpy.h"
@@ -32,6 +33,7 @@
 
 namespace {
 
+using LIBC_NAMESPACE::CustomFile;
 using LIBC_NAMESPACE::File;
 using LIBC_NAMESPACE::FileIOResult;
 using LIBC_NAMESPACE::FileMode;
@@ -39,7 +41,7 @@ using LIBC_NAMESPACE::cpp::scope_exit;
 using LIBC_NAMESPACE::cpp::span;
 using LIBC_NAMESPACE::cpp::string_view;
 
-class TestFile : public File {
+class TestFile : public CustomFile {
   span<const char> data;
   size_t pos = 0;
   size_t fail_at_byte = LIBC_NAMESPACE::cpp::numeric_limits<size_t>::max();
@@ -68,10 +70,10 @@ class TestFile : public File {
 
 public:
   explicit TestFile(span<const char> bytes, int bufmode = _IOFBF)
-      : File(/*wf=*/nullptr, &read_func, /*sf=*/nullptr, &close_func,
-             bufmode == _IONBF ? nullptr : stream_buf,
-             bufmode == _IONBF ? 0 : sizeof(stream_buf), bufmode,
-             /*owned=*/false, FileMode("r")),
+      : CustomFile({/*w=*/nullptr, &read_func, /*s=*/nullptr, &close_func},
+                   bufmode == _IONBF ? nullptr : stream_buf,
+                   bufmode == _IONBF ? 0 : sizeof(stream_buf), bufmode,
+                   /*owned=*/false, FileMode("r")),
         data(bytes) {}
 
   explicit TestFile(string_view str, int bufmode = _IOFBF)

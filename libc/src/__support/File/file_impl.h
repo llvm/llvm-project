@@ -7,14 +7,13 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implementation of a platform independent file data structure.
+/// Out-of-line method definitions for FileImpl<Platform>.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "file.h"
+#ifndef LLVM_LIBC_SRC___SUPPORT_FILE_FILE_IMPL_H
+#define LLVM_LIBC_SRC___SUPPORT_FILE_FILE_IMPL_H
 
-#include "file_io_result.h"
-#include "file_mode.h"
 #include "hdr/errno_macros.h"
 #include "hdr/func/realloc.h"
 #include "hdr/stdint_proxy.h"
@@ -27,6 +26,9 @@
 #include "hdr/wchar_macros.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/span.h"
+#include "src/__support/File/file.h"
+#include "src/__support/File/file_io_result.h"
+#include "src/__support/File/file_mode.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/error_or.h"
 #include "src/__support/libc_assert.h"
@@ -40,40 +42,100 @@
 #include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
-File *File::list_all = nullptr;
-Mutex File::list_lock(/*timed=*/false, /*recursive=*/false, /*robust=*/false,
-                      /*pshared=*/false);
+
+template <typename Platform>
+FileImpl<Platform> *FileImpl<Platform>::list_all = nullptr;
+
+template <typename Platform>
+Mutex FileImpl<Platform>::list_lock(/*timed=*/false,
+                                    /*recursive=*/false,
+                                    /*robust=*/false,
+                                    /*pshared=*/false);
 
 // Adds a file to the global list of all open files.
-void File::add_file(File *f) {
-  File::list_lock.lock();
-  f->next = File::list_all;
+template <typename Platform> void FileImpl<Platform>::add_file(FileImpl *f) {
+  list_lock.lock();
+  f->next = list_all;
   f->prev = nullptr;
-  if (File::list_all != nullptr)
-    File::list_all->prev = f;
-  File::list_all = f;
-  File::list_lock.unlock();
+  if (list_all != nullptr)
+    list_all->prev = f;
+  list_all = f;
+  list_lock.unlock();
 }
 
 // Removes a file from the global list of all open files.
-void File::remove_file(File *f) {
-  File::list_lock.lock();
+template <typename Platform> void FileImpl<Platform>::remove_file(FileImpl *f) {
+  list_lock.lock();
   if (f->prev != nullptr)
     f->prev->next = f->next;
   if (f->next != nullptr)
     f->next->prev = f->prev;
-  if (File::list_all == f)
-    File::list_all = f->next;
+  if (list_all == f)
+    list_all = f->next;
   f->prev = nullptr;
   f->next = nullptr;
-  File::list_lock.unlock();
+  list_lock.unlock();
 }
 
-File *File::get_first_file() { return File::list_all; }
-void File::lock_list() { File::list_lock.lock(); }
-void File::unlock_list() { File::list_lock.unlock(); }
+template <typename Platform>
+FileImpl<Platform> *FileImpl<Platform>::get_first_file() {
+  return list_all;
+}
 
-FileIOResult File::write_unlocked(const void *data, size_t len) {
+template <typename Platform> void FileImpl<Platform>::lock_list() {
+  list_lock.lock();
+}
+
+template <typename Platform> void FileImpl<Platform>::unlock_list() {
+  list_lock.unlock();
+}
+
+template <typename Platform>
+FileIOResult FileImpl<Platform>::platform_write_dynamic(FileImpl *f,
+                                                        const void *data,
+                                                        size_t len) {
+  using StreamBase = typename Platform::StreamBase;
+  if (f->kind == DispatchKind::CUSTOM)
+    return static_cast<CustomFileImpl<StreamBase> *>(f)->custom_write(data,
+                                                                      len);
+  LIBC_ASSERT(f->kind == DispatchKind::COOKIE);
+  return static_cast<CookieFileImpl<StreamBase> *>(f)->cookie_write(data, len);
+}
+
+template <typename Platform>
+FileIOResult FileImpl<Platform>::platform_read_dynamic(FileImpl *f, void *data,
+                                                       size_t len) {
+  using StreamBase = typename Platform::StreamBase;
+  if (f->kind == DispatchKind::CUSTOM)
+    return static_cast<CustomFileImpl<StreamBase> *>(f)->custom_read(data, len);
+  LIBC_ASSERT(f->kind == DispatchKind::COOKIE);
+  return static_cast<CookieFileImpl<StreamBase> *>(f)->cookie_read(data, len);
+}
+
+template <typename Platform>
+ErrorOr<off_t> FileImpl<Platform>::platform_seek_dynamic(FileImpl *f,
+                                                         off_t offset,
+                                                         int whence) {
+  using StreamBase = typename Platform::StreamBase;
+  if (f->kind == DispatchKind::CUSTOM)
+    return static_cast<CustomFileImpl<StreamBase> *>(f)->custom_seek(offset,
+                                                                     whence);
+  LIBC_ASSERT(f->kind == DispatchKind::COOKIE);
+  return static_cast<CookieFileImpl<StreamBase> *>(f)->cookie_seek(offset,
+                                                                   whence);
+}
+
+template <typename Platform>
+int FileImpl<Platform>::platform_close_dynamic(FileImpl *f) {
+  using StreamBase = typename Platform::StreamBase;
+  if (f->kind == DispatchKind::CUSTOM)
+    return static_cast<CustomFileImpl<StreamBase> *>(f)->custom_close();
+  LIBC_ASSERT(f->kind == DispatchKind::COOKIE);
+  return static_cast<CookieFileImpl<StreamBase> *>(f)->cookie_close();
+}
+
+template <typename Platform>
+FileIOResult FileImpl<Platform>::write_unlocked(const void *data, size_t len) {
   switch (orientation) {
   case Orientation::WIDE:
     err = true;
@@ -87,7 +149,9 @@ FileIOResult File::write_unlocked(const void *data, size_t len) {
   return write_unlocked_impl(data, len);
 }
 
-FileIOResult File::write_unlocked_impl(const void *data, size_t len) {
+template <typename Platform>
+FileIOResult FileImpl<Platform>::write_unlocked_impl(const void *data,
+                                                     size_t len) {
   if (!write_allowed()) {
     err = true;
     return {0, EBADF};
@@ -100,7 +164,7 @@ FileIOResult File::write_unlocked_impl(const void *data, size_t len) {
   }
 
   if (bufmode == _IONBF) { // unbuffered.
-    size_t ret_val =
+    FileIOResult ret_val =
         write_unlocked_nbf(static_cast<const uint8_t *>(data), len);
     flush_unlocked();
     return ret_val;
@@ -111,7 +175,9 @@ FileIOResult File::write_unlocked_impl(const void *data, size_t len) {
                             len); // line buffered
 }
 
-FileIOResult File::write_unlocked_nbf(const uint8_t *data, size_t len) {
+template <typename Platform>
+FileIOResult FileImpl<Platform>::write_unlocked_nbf(const uint8_t *data,
+                                                    size_t len) {
   if (pos > 0) { // If the buffer is not empty
     // Flush the buffer
     const size_t write_size = pos;
@@ -131,7 +197,9 @@ FileIOResult File::write_unlocked_nbf(const uint8_t *data, size_t len) {
   return write_result;
 }
 
-FileIOResult File::write_unlocked_fbf(const uint8_t *data, size_t len) {
+template <typename Platform>
+FileIOResult FileImpl<Platform>::write_unlocked_fbf(const uint8_t *data,
+                                                    size_t len) {
   const size_t init_pos = pos;
   const size_t bufspace = bufsize - pos;
 
@@ -189,7 +257,6 @@ FileIOResult File::write_unlocked_fbf(const uint8_t *data, size_t len) {
     inline_memcpy(bufref.data(), remainder.data(), remainder.size());
     pos = remainder.size();
   } else {
-
     FileIOResult result =
         platform_write(this, remainder.data(), remainder.size());
     bytes_written = result.value;
@@ -205,7 +272,9 @@ FileIOResult File::write_unlocked_fbf(const uint8_t *data, size_t len) {
   return len;
 }
 
-FileIOResult File::write_unlocked_lbf(const uint8_t *data, size_t len) {
+template <typename Platform>
+FileIOResult FileImpl<Platform>::write_unlocked_lbf(const uint8_t *data,
+                                                    size_t len) {
   constexpr uint8_t NEWLINE_CHAR = '\n';
   size_t last_newline = len;
   for (size_t i = len; i >= 1; --i) {
@@ -252,7 +321,8 @@ FileIOResult File::write_unlocked_lbf(const uint8_t *data, size_t len) {
   return len;
 }
 
-FileIOResult File::read_unlocked(void *data, size_t len) {
+template <typename Platform>
+FileIOResult FileImpl<Platform>::read_unlocked(void *data, size_t len) {
   switch (orientation) {
   case Orientation::WIDE:
     err = true;
@@ -266,13 +336,18 @@ FileIOResult File::read_unlocked(void *data, size_t len) {
   return read_unlocked_impl(data, len);
 }
 
-FileIOResult File::read_unlocked_impl(void *data, size_t len) {
+template <typename Platform>
+FileIOResult FileImpl<Platform>::read_unlocked_impl(void *data, size_t len) {
   if (!read_allowed()) {
     err = true;
     return {0, EBADF};
   }
 
-  prev_op = FileOp::READ;
+  if (prev_op != FileOp::READ) {
+    pos = 0;
+    read_limit = 0;
+    prev_op = FileOp::READ;
+  }
 
   if (bufmode == _IONBF) { // unbuffered.
     return read_unlocked_nbf(static_cast<uint8_t *>(data), len);
@@ -284,7 +359,8 @@ FileIOResult File::read_unlocked_impl(void *data, size_t len) {
   }
 }
 
-size_t File::copy_data_from_buf(uint8_t *data, size_t len) {
+template <typename Platform>
+size_t FileImpl<Platform>::copy_data_from_buf(uint8_t *data, size_t len) {
   cpp::span<uint8_t> bufref(static_cast<uint8_t *>(buf), bufsize);
   cpp::span<uint8_t> dataref(static_cast<uint8_t *>(data), len);
 
@@ -304,8 +380,10 @@ size_t File::copy_data_from_buf(uint8_t *data, size_t len) {
   return available_data;
 }
 
-FileIOResult File::read_from_platform(uint8_t *dst, size_t min_bytes,
-                                      size_t max_bytes) {
+template <typename Platform>
+FileIOResult FileImpl<Platform>::read_from_platform(uint8_t *dst,
+                                                    size_t min_bytes,
+                                                    size_t max_bytes) {
   LIBC_ASSERT(min_bytes <= max_bytes);
   size_t total_read = 0;
   cpp::span<uint8_t> dstref(dst, max_bytes);
@@ -326,7 +404,8 @@ FileIOResult File::read_from_platform(uint8_t *dst, size_t min_bytes,
   return total_read;
 }
 
-FileIOResult File::read_unlocked_fbf(uint8_t *data, size_t len) {
+template <typename Platform>
+FileIOResult FileImpl<Platform>::read_unlocked_fbf(uint8_t *data, size_t len) {
   // Read data from the buffer first.
   size_t available_data = copy_data_from_buf(data, len);
   if (available_data == len)
@@ -351,7 +430,8 @@ FileIOResult File::read_unlocked_fbf(uint8_t *data, size_t len) {
   return {available_data, result.error};
 }
 
-FileIOResult File::read_unlocked_nbf(uint8_t *data, size_t len) {
+template <typename Platform>
+FileIOResult FileImpl<Platform>::read_unlocked_nbf(uint8_t *data, size_t len) {
   // Check whether there is a character in the ungetc buffer.
   size_t available_data = copy_data_from_buf(data, len);
   if (available_data == len)
@@ -364,7 +444,7 @@ FileIOResult File::read_unlocked_nbf(uint8_t *data, size_t len) {
   return {available_data + result.value, result.error};
 }
 
-int File::ungetc_unlocked(int c) {
+template <typename Platform> int FileImpl<Platform>::ungetc_unlocked(int c) {
   // There is no meaning to unget if:
   // 1. You are trying to push back EOF.
   // 2. Read operations are not allowed on this file.
@@ -414,7 +494,8 @@ int File::ungetc_unlocked(int c) {
   return c;
 }
 
-ErrorOr<int> File::seek_unlocked(off_t offset, int whence) {
+template <typename Platform>
+ErrorOr<int> FileImpl<Platform>::seek_unlocked(off_t offset, int whence) {
   if (prev_op == FileOp::WRITE && pos > 0) {
     FileIOResult buf_result = platform_write(this, buf, pos);
     if (buf_result.has_error() || buf_result.value < pos) {
@@ -444,7 +525,8 @@ ErrorOr<int> File::seek_unlocked(off_t offset, int whence) {
   return 0;
 }
 
-ErrorOr<off_t> File::tell_unlocked() {
+template <typename Platform>
+ErrorOr<off_t> FileImpl<Platform>::tell_unlocked() {
   int seek_target = (eof || (mode.is_append() && prev_op == FileOp::WRITE))
                         ? SEEK_END
                         : SEEK_CUR;
@@ -461,7 +543,9 @@ ErrorOr<off_t> File::tell_unlocked() {
   return platform_offset;
 }
 
-ErrorOr<File::Position> File::get_pos_unlocked() {
+template <typename Platform>
+ErrorOr<typename FileImpl<Platform>::Position>
+FileImpl<Platform>::get_pos_unlocked() {
   auto pos_result = tell_unlocked();
   if (!pos_result.has_value())
     return Error(pos_result.error());
@@ -472,7 +556,8 @@ ErrorOr<File::Position> File::get_pos_unlocked() {
   };
 }
 
-ErrorOr<int> File::set_pos_unlocked(const Position &fpos) {
+template <typename Platform>
+ErrorOr<int> FileImpl<Platform>::set_pos_unlocked(const Position &fpos) {
   auto result = seek_unlocked(fpos.offset, SEEK_SET);
   if (!result.has_value())
     return Error(result.error());
@@ -481,7 +566,7 @@ ErrorOr<int> File::set_pos_unlocked(const Position &fpos) {
   return 0;
 }
 
-int File::flush_unlocked() {
+template <typename Platform> int FileImpl<Platform>::flush_unlocked() {
   if (prev_op == FileOp::WRITE && pos > 0) {
     FileIOResult buf_result = platform_write(this, buf, pos);
     if (buf_result.has_error() || buf_result.value < pos) {
@@ -506,7 +591,7 @@ int File::flush_unlocked() {
 // 1. If in write mode, Write out any data present in the buffer.
 // 2. Call platform_close.
 // platform_close is expected to cleanup the complete file object.
-int File::close() {
+template <typename Platform> int FileImpl<Platform>::close() {
   {
     FileLock lock(this);
     if (prev_op == FileOp::WRITE && pos > 0) {
@@ -531,7 +616,8 @@ int File::close() {
   return platform_close(this);
 }
 
-int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
+template <typename Platform>
+int FileImpl<Platform>::set_buffer(void *buffer, size_t size, int buffer_mode) {
   // We do not need to lock the file as this method should be called before
   // other operations are performed on the file.
   if (buffer != nullptr && size == 0)
@@ -587,7 +673,8 @@ int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
   return 0;
 }
 
-FileIOResult File::write_unlocked(const wchar_t *ws, size_t len) {
+template <typename Platform>
+FileIOResult FileImpl<Platform>::write_unlocked(const wchar_t *ws, size_t len) {
   switch (orientation) {
   case Orientation::BYTE:
     err = true;
@@ -632,7 +719,8 @@ FileIOResult File::write_unlocked(const wchar_t *ws, size_t len) {
   return {written, 0};
 }
 
-FileIOResult File::read_unlocked(wchar_t *ws, size_t len) {
+template <typename Platform>
+FileIOResult FileImpl<Platform>::read_unlocked(wchar_t *ws, size_t len) {
   switch (orientation) {
   case Orientation::BYTE:
     err = true;
@@ -675,7 +763,8 @@ FileIOResult File::read_unlocked(wchar_t *ws, size_t len) {
   return {read_count, 0};
 }
 
-ErrorOr<wint_t> File::ungetwc_unlocked(wint_t wc) {
+template <typename Platform>
+ErrorOr<wint_t> FileImpl<Platform>::ungetwc_unlocked(wint_t wc) {
   // There is no meaning to unget if:
   // 1. You are trying to push back EOF.
   // 2. Read operations are not allowed on this file.
@@ -723,3 +812,5 @@ ErrorOr<wint_t> File::ungetwc_unlocked(wint_t wc) {
 }
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC___SUPPORT_FILE_FILE_IMPL_H

@@ -11,12 +11,12 @@ if(NOT (TARGET libc.src.__support.threads.mutex)
   return()
 endif()
 
-add_object_library(
+add_header_library(
   file
-  SRCS
-    file.cpp
   HDRS
     file.h
+    file_impl.h
+    file_mode.h
   DEPENDS
     .file_io_result
     libc.hdr.errno_macros
@@ -26,15 +26,19 @@ add_object_library(
     libc.hdr.types.char32_t
     libc.hdr.types.char8_t
     libc.hdr.types.off_t
+    libc.hdr.types.ssize_t
     libc.hdr.types.wchar_t
     libc.hdr.types.wint_t
     libc.hdr.wchar_macros
     libc.src.__support.alloc_checker
     libc.src.__support.CPP.new
     libc.src.__support.CPP.span
+    libc.src.__support.CPP.type_traits
     libc.src.__support.error_or
     libc.src.__support.libc_assert
     libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
     libc.src.__support.threads.mutex
     libc.src.__support.wchar.character_converter
     libc.src.__support.wchar.mbstate
