@@ -2760,6 +2760,12 @@ public:
     case Intrinsic::usub_sat:
       ISD = ISD::USUBSAT;
       break;
+    case Intrinsic::sshl_sat:
+      ISD = ISD::SSHLSAT;
+      break;
+    case Intrinsic::ushl_sat:
+      ISD = ISD::USHLSAT;
+      break;
     case Intrinsic::smul_fix:
       ISD = ISD::SMULFIX;
       break;
@@ -3050,6 +3056,27 @@ public:
       Cost +=
           thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
                                       CmpInst::BAD_ICMP_PREDICATE, CostKind);
+      return Cost;
+    }
+    case Intrinsic::sshl_sat:
+    case Intrinsic::ushl_sat: {
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      bool IsSigned = IID == Intrinsic::sshl_sat;
+      InstructionCost Cost = 0;
+      Cost +=
+          thisT()->getArithmeticInstrCost(Instruction::Shl, RetTy, CostKind);
+      Cost += thisT()->getArithmeticInstrCost(
+          IsSigned ? Instruction::AShr : Instruction::LShr, RetTy, CostKind);
+      if (IsSigned) {
+        Cost += thisT()->getCmpSelInstrCost(Instruction::ICmp, RetTy, CondTy,
+                                            CmpInst::ICMP_SLT, CostKind);
+        Cost += thisT()->getCmpSelInstrCost(Instruction::Select, RetTy, CondTy,
+                                            CmpInst::ICMP_SLT, CostKind);
+      }
+      Cost += thisT()->getCmpSelInstrCost(Instruction::ICmp, RetTy, CondTy,
+                                          CmpInst::ICMP_NE, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(Instruction::Select, RetTy, CondTy,
+                                          CmpInst::ICMP_NE, CostKind);
       return Cost;
     }
     case Intrinsic::smul_fix:

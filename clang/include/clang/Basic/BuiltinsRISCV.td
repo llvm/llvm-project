@@ -274,12 +274,29 @@ def asubu_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 // Scalar Shift-Add
 def ssh1sadd_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
 
+// Scalar Comparison
+def mseq_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def mslt_i32 : RISCVBuiltin<"uint32_t(int32_t, int32_t)">;
+def msltu_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+
 // Scalar Saturation
 def sati_i32 : RISCVBuiltin<"int32_t(int32_t, _Constant unsigned int)">;
 def usati_u32 : RISCVBuiltin<"uint32_t(int32_t, _Constant unsigned int)">;
 let Features = "experimental-p,64bit" in {
 def sati_i64 : RISCVBuiltin<"int64_t(int64_t, _Constant unsigned int)">;
 def usati_u64 : RISCVBuiltin<"uint64_t(int64_t, _Constant unsigned int)">;
+} // Features = "experimental-p,64bit"
+
+// Scalar Saturating and Rounding Shift
+def ssha_i32 : RISCVBuiltin<"int32_t(int32_t, int)">;
+def sshar_i32 : RISCVBuiltin<"int32_t(int32_t, int)">;
+def sshl_u32 : RISCVBuiltin<"uint32_t(uint32_t, int)">;
+def sshlr_u32 : RISCVBuiltin<"uint32_t(uint32_t, int)">;
+let Features = "experimental-p,64bit" in {
+def sha_i64 : RISCVBuiltin<"int64_t(int64_t, int)">;
+def shar_i64 : RISCVBuiltin<"int64_t(int64_t, int)">;
+def shl_u64 : RISCVBuiltin<"uint64_t(uint64_t, int)">;
+def shlr_u64 : RISCVBuiltin<"uint64_t(uint64_t, int)">;
 } // Features = "experimental-p,64bit"
 
 // Scalar Narrowing Clip
@@ -304,6 +321,11 @@ def mhaccu_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t, uint32_t)">;
 def mhraccu_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t, uint32_t)">;
 def mhaccsu_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, uint32_t)">;
 def mhraccsu_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, uint32_t)">;
+
+def mhacc_h0_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, _Vector<2, short>)">;
+def mhacc_h1_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, _Vector<2, short>)">;
+def mhaccsu_h0_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, _Vector<2, unsigned short>)">;
+def mhaccsu_h1_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, _Vector<2, unsigned short>)">;
 
 // Scalar "Q-format" Multiplication
 def mulq_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;

@@ -892,6 +892,7 @@ void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
     }
     ThreadStopInfo stop_info;
     stop_info.reason = lldb::eStopReasonNone;
+    stop_info.signo = 0;
     thread->SetStopReason(stop_info, "");
   }
 

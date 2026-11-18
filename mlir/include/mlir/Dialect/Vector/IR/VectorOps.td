@@ -54,7 +54,7 @@ def Vector_ContractionOp :
                   TCresVTEtIsSameAsOpBase<0, 2>>,
       DeclareOpInterfaceMethods<ArithFastMathInterface>,
       DeclareOpInterfaceMethods<MaskableOpInterface>,
-      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>
+      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>
     ]>,
     Arguments<(ins AnyVectorOfNonZeroRankNonI0Elem:$lhs, AnyVectorOfNonZeroRankNonI0Elem:$rhs, AnyType:$acc,
                ArrayAttr:$indexing_maps,
@@ -275,7 +275,7 @@ def Vector_ReductionOp :
                             "result", "acc", "::llvm::cast<Type>($_self)">,
      DeclareOpInterfaceMethods<ArithFastMathInterface>,
      DeclareOpInterfaceMethods<MaskableOpInterface>,
-     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>
+     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>
     ]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
                AnyVectorOfNonI0Elem:$vector,
@@ -611,7 +611,7 @@ def ResultIsDoubleSourceVectorType : TypesMatchWith<
 def Vector_InterleaveOp :
   Vector_Op<"interleave", [Pure, AllTypesMatch<["lhs", "rhs"]>,
     ResultIsDoubleSourceVectorType,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>]> {
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>]> {
   let summary = "constructs a vector by interleaving two input vectors";
   let description = [{
     The interleave operation constructs a new vector by interleaving the
@@ -690,7 +690,7 @@ def Vector_DeinterleaveOp :
     SourceVectorEvenElementCount,
     ResultIsHalfSourceVectorType<"resultEven">,
     AllTypesMatch<["resultEven", "resultOdd"]>,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>
     ]> {
       let summary = "constructs two vectors by deinterleaving an input vector";
       let description = [{
@@ -2561,7 +2561,7 @@ def Vector_CompressStoreOp :
 
 def Vector_ShapeCastOp :
   Vector_Op<"shape_cast", [Pure,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>,
     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>
   ]>,
     Arguments<(ins AnyVectorOfAnyRank:$source)>,
@@ -2607,7 +2607,7 @@ def Vector_ShapeCastOp :
 
 def Vector_BitCastOp :
   Vector_Op<"bitcast", [Pure, AllRanksMatch<["source", "result"]>,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>]>,
     Arguments<(ins AnyVectorOfNonI0Elem:$source)>,
     Results<(outs AnyVectorOfNonI0Elem:$result)>{
   let summary = "bitcast casts between vectors";
@@ -2689,7 +2689,7 @@ def Vector_TypeCastOp :
 
 def Vector_ConstantMaskOp :
   Vector_Op<"constant_mask", [Pure,
-   DeclareOpInterfaceMethods<VectorUnrollOpInterface>
+   DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getDefaultUnrollTargetShape"]>
    ]>,
     Arguments<(ins DenseI64ArrayAttr:$mask_dim_sizes)>,
     Results<(outs VectorOfAnyRankOf<[I1]>)> {
@@ -2749,7 +2749,7 @@ def Vector_ConstantMaskOp :
 
 def Vector_CreateMaskOp :
   Vector_Op<"create_mask", [Pure,
-   DeclareOpInterfaceMethods<VectorUnrollOpInterface>
+   DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getDefaultUnrollTargetShape"]>
    ]>,
     Arguments<(ins Variadic<Index>:$mask_dim_sizes)>,
     Results<(outs VectorOfAnyRankOf<[I1]>)> {
@@ -2901,7 +2901,7 @@ def Vector_MaskOp : Vector_Op<"mask", [
 def Vector_TransposeOp :
   Vector_Op<"transpose", [Pure,
     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>,
     PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]> {
   let summary = "vector transpose operation";
@@ -3147,7 +3147,7 @@ def VectorStepElementType : Type<
 
 def Vector_StepOp : Vector_Op<"step", [
     Pure,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getDefaultUnrollTargetShape"]>,
     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>
   ]> {
   let summary = "A linear sequence of values from 0 to N";
