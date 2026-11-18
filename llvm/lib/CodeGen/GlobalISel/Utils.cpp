@@ -1837,6 +1837,10 @@ void llvm::eraseInstr(MachineInstr &MI, MachineRegisterInfo &MRI,
 void llvm::salvageDebugInfo(const MachineRegisterInfo &MRI, MachineInstr &MI) {
   for (auto &Def : MI.defs()) {
     assert(Def.isReg() && "Must be a reg");
+    // MRI.replaceRegWith can leave a dead MI defining a register that is
+    // still defined elsewhere; its debug uses are still valid.
+    if (Def.getReg().isVirtual() && !MRI.hasOneDef(Def.getReg()))
+      continue;
 
     SmallVector<MachineOperand *, 16> DbgUsers;
     for (auto &MOUse : MRI.use_operands(Def.getReg())) {
