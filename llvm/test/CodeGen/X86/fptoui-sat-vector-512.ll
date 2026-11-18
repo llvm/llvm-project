@@ -1998,48 +1998,57 @@ define <8 x i1> @test_unsigned_v8i1_v8f64(<8 x double> %f) nounwind {
 ;
 ; AVX512-LABEL: test_unsigned_v8i1_v8f64:
 ; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm1
 ; AVX512-NEXT:    vfpclasssd $215, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveZero(xmm0) | isNegativeZero(xmm0) | isNegativeInfinity(xmm0) | isNegative(xmm0) | isSignalingNaN(xmm0)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm1 {%k1} {z}
-; AVX512-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX512-NEXT:    vfpclasssd $215, %xmm2, %k0 # k0 = isQuietNaN(xmm2) | isPositiveZero(xmm2) | isNegativeZero(xmm2) | isNegativeInfinity(xmm2) | isNegative(xmm2) | isSignalingNaN(xmm2)
+; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1,1,1,1]
+; AVX512-NEXT:    vpminud %xmm2, %xmm1, %xmm1 {%k1} {z}
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
+; AVX512-NEXT:    vcvttpd2udq %xmm3, %xmm4
+; AVX512-NEXT:    vfpclasssd $215, %xmm3, %k0 # k0 = isQuietNaN(xmm3) | isPositiveZero(xmm3) | isNegativeZero(xmm3) | isNegativeInfinity(xmm3) | isNegative(xmm3) | isSignalingNaN(xmm3)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm2 {%k1} {z}
-; AVX512-NEXT:    vmovd %xmm2, %eax
-; AVX512-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX512-NEXT:    vfpclasssd $215, %xmm2, %k0 # k0 = isQuietNaN(xmm2) | isPositiveZero(xmm2) | isNegativeZero(xmm2) | isNegativeInfinity(xmm2) | isNegative(xmm2) | isSignalingNaN(xmm2)
-; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm3 {%k1} {z}
+; AVX512-NEXT:    vpminud %xmm2, %xmm4, %xmm3 {%k1} {z}
 ; AVX512-NEXT:    vmovd %xmm3, %eax
+; AVX512-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
+; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX512-NEXT:    vcvttpd2udq %xmm3, %xmm4
+; AVX512-NEXT:    vfpclasssd $215, %xmm3, %k0 # k0 = isQuietNaN(xmm3) | isPositiveZero(xmm3) | isNegativeZero(xmm3) | isNegativeInfinity(xmm3) | isNegative(xmm3) | isSignalingNaN(xmm3)
+; AVX512-NEXT:    knotw %k0, %k1
+; AVX512-NEXT:    vpminud %xmm2, %xmm4, %xmm4 {%k1} {z}
+; AVX512-NEXT:    vmovd %xmm4, %eax
 ; AVX512-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
-; AVX512-NEXT:    vfpclasssd $215, %xmm2, %k0 # k0 = isQuietNaN(xmm2) | isPositiveZero(xmm2) | isNegativeZero(xmm2) | isNegativeInfinity(xmm2) | isNegative(xmm2) | isSignalingNaN(xmm2)
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm3 = xmm3[1,0]
+; AVX512-NEXT:    vcvttpd2udq %xmm3, %xmm4
+; AVX512-NEXT:    vfpclasssd $215, %xmm3, %k0 # k0 = isQuietNaN(xmm3) | isPositiveZero(xmm3) | isNegativeZero(xmm3) | isNegativeInfinity(xmm3) | isNegative(xmm3) | isSignalingNaN(xmm3)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm2 {%k1} {z}
-; AVX512-NEXT:    vmovd %xmm2, %eax
+; AVX512-NEXT:    vpminud %xmm2, %xmm4, %xmm3 {%k1} {z}
+; AVX512-NEXT:    vmovd %xmm3, %eax
 ; AVX512-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vextractf32x4 $2, %zmm0, %xmm2
-; AVX512-NEXT:    vfpclasssd $215, %xmm2, %k0 # k0 = isQuietNaN(xmm2) | isPositiveZero(xmm2) | isNegativeZero(xmm2) | isNegativeInfinity(xmm2) | isNegative(xmm2) | isSignalingNaN(xmm2)
+; AVX512-NEXT:    vextractf32x4 $2, %zmm0, %xmm3
+; AVX512-NEXT:    vcvttpd2udq %xmm3, %xmm4
+; AVX512-NEXT:    vfpclasssd $215, %xmm3, %k0 # k0 = isQuietNaN(xmm3) | isPositiveZero(xmm3) | isNegativeZero(xmm3) | isNegativeInfinity(xmm3) | isNegative(xmm3) | isSignalingNaN(xmm3)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm3 {%k1} {z}
-; AVX512-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
-; AVX512-NEXT:    vfpclasssd $215, %xmm2, %k0 # k0 = isQuietNaN(xmm2) | isPositiveZero(xmm2) | isNegativeZero(xmm2) | isNegativeInfinity(xmm2) | isNegative(xmm2) | isSignalingNaN(xmm2)
+; AVX512-NEXT:    vpminud %xmm2, %xmm4, %xmm4 {%k1} {z}
+; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm3 = xmm3[1,0]
+; AVX512-NEXT:    vcvttpd2udq %xmm3, %xmm4
+; AVX512-NEXT:    vfpclasssd $215, %xmm3, %k0 # k0 = isQuietNaN(xmm3) | isPositiveZero(xmm3) | isNegativeZero(xmm3) | isNegativeInfinity(xmm3) | isNegative(xmm3) | isSignalingNaN(xmm3)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm2 {%k1} {z}
-; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
-; AVX512-NEXT:    vmovd %xmm2, %eax
+; AVX512-NEXT:    vpminud %xmm2, %xmm4, %xmm3 {%k1} {z}
+; AVX512-NEXT:    vmovd %xmm3, %eax
 ; AVX512-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
 ; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
+; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm3
 ; AVX512-NEXT:    vfpclasssd $215, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveZero(xmm0) | isNegativeZero(xmm0) | isNegativeInfinity(xmm0) | isNegative(xmm0) | isSignalingNaN(xmm0)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm2 {%k1} {z}
-; AVX512-NEXT:    vmovd %xmm2, %eax
+; AVX512-NEXT:    vpminud %xmm2, %xmm3, %xmm3 {%k1} {z}
+; AVX512-NEXT:    vmovd %xmm3, %eax
 ; AVX512-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm3
 ; AVX512-NEXT:    vfpclasssd $215, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveZero(xmm0) | isNegativeZero(xmm0) | isNegativeInfinity(xmm0) | isNegative(xmm0) | isSignalingNaN(xmm0)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vpminud %xmm2, %xmm3, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm0
 ; AVX512-NEXT:    vpmovzxbq {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero,xmm0[4],zero,zero,zero,zero,zero,zero,zero,xmm0[5],zero,zero,zero,zero,zero,zero,zero,xmm0[6],zero,zero,zero,zero,zero,zero,zero,xmm0[7],zero,zero,zero,zero,zero,zero,zero
@@ -2099,49 +2108,57 @@ define <8 x i8> @test_unsigned_v8i8_v8f64(<8 x double> %f) nounwind {
 ;
 ; AVX512-LABEL: test_unsigned_v8i8_v8f64:
 ; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm1
 ; AVX512-NEXT:    vfpclasssd $215, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveZero(xmm0) | isNegativeZero(xmm0) | isNegativeInfinity(xmm0) | isNegative(xmm0) | isSignalingNaN(xmm0)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm1 {%k1} {z}
+; AVX512-NEXT:    vpmovusdb %xmm1, %xmm1 {%k1} {z}
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm3
 ; AVX512-NEXT:    vfpclasssd $215, %xmm2, %k0 # k0 = isQuietNaN(xmm2) | isPositiveZero(xmm2) | isNegativeZero(xmm2) | isNegativeInfinity(xmm2) | isNegative(xmm2) | isSignalingNaN(xmm2)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm2 {%k1} {z}
+; AVX512-NEXT:    vpmovusdb %xmm3, %xmm2 {%k1} {z}
 ; AVX512-NEXT:    vmovd %xmm2, %eax
 ; AVX512-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm3
 ; AVX512-NEXT:    vfpclasssd $215, %xmm2, %k0 # k0 = isQuietNaN(xmm2) | isPositiveZero(xmm2) | isNegativeZero(xmm2) | isNegativeInfinity(xmm2) | isNegative(xmm2) | isSignalingNaN(xmm2)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm3 {%k1} {z}
+; AVX512-NEXT:    vpmovusdb %xmm3, %xmm3 {%k1} {z}
 ; AVX512-NEXT:    vmovd %xmm3, %eax
 ; AVX512-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
+; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm3
 ; AVX512-NEXT:    vfpclasssd $215, %xmm2, %k0 # k0 = isQuietNaN(xmm2) | isPositiveZero(xmm2) | isNegativeZero(xmm2) | isNegativeInfinity(xmm2) | isNegative(xmm2) | isSignalingNaN(xmm2)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm2 {%k1} {z}
+; AVX512-NEXT:    vpmovusdb %xmm3, %xmm2 {%k1} {z}
 ; AVX512-NEXT:    vmovd %xmm2, %eax
 ; AVX512-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
 ; AVX512-NEXT:    vextractf32x4 $2, %zmm0, %xmm2
+; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm3
 ; AVX512-NEXT:    vfpclasssd $215, %xmm2, %k0 # k0 = isQuietNaN(xmm2) | isPositiveZero(xmm2) | isNegativeZero(xmm2) | isNegativeInfinity(xmm2) | isNegative(xmm2) | isSignalingNaN(xmm2)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm3 {%k1} {z}
+; AVX512-NEXT:    vpmovusdb %xmm3, %xmm3 {%k1} {z}
 ; AVX512-NEXT:    vmovd %xmm3, %eax
 ; AVX512-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
+; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm3
 ; AVX512-NEXT:    vfpclasssd $215, %xmm2, %k0 # k0 = isQuietNaN(xmm2) | isPositiveZero(xmm2) | isNegativeZero(xmm2) | isNegativeInfinity(xmm2) | isNegative(xmm2) | isSignalingNaN(xmm2)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm2 {%k1} {z}
+; AVX512-NEXT:    vpmovusdb %xmm3, %xmm2 {%k1} {z}
 ; AVX512-NEXT:    vmovd %xmm2, %eax
 ; AVX512-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
 ; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
+; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm2
 ; AVX512-NEXT:    vfpclasssd $215, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveZero(xmm0) | isNegativeZero(xmm0) | isNegativeInfinity(xmm0) | isNegative(xmm0) | isSignalingNaN(xmm0)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm2 {%k1} {z}
+; AVX512-NEXT:    vpmovusdb %xmm2, %xmm2 {%k1} {z}
 ; AVX512-NEXT:    vmovd %xmm2, %eax
 ; AVX512-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm2
 ; AVX512-NEXT:    vfpclasssd $215, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveZero(xmm0) | isNegativeZero(xmm0) | isNegativeInfinity(xmm0) | isNegative(xmm0) | isSignalingNaN(xmm0)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vpmovusdb %xmm2, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm0
 ; AVX512-NEXT:    vzeroupper
@@ -2198,48 +2215,56 @@ define <8 x i16> @test_unsigned_v8i16_v8f64(<8 x double> %f) nounwind {
 ;
 ; AVX512-LABEL: test_unsigned_v8i16_v8f64:
 ; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm1
 ; AVX512-NEXT:    vfpclasssd $215, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveZero(xmm0) | isNegativeZero(xmm0) | isNegativeInfinity(xmm0) | isNegative(xmm0) | isSignalingNaN(xmm0)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm1 {%k1} {z}
+; AVX512-NEXT:    vpmovusdw %xmm1, %xmm1 {%k1} {z}
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm3
 ; AVX512-NEXT:    vfpclasssd $215, %xmm2, %k0 # k0 = isQuietNaN(xmm2) | isPositiveZero(xmm2) | isNegativeZero(xmm2) | isNegativeInfinity(xmm2) | isNegative(xmm2) | isSignalingNaN(xmm2)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm2 {%k1} {z}
+; AVX512-NEXT:    vpmovusdw %xmm3, %xmm2 {%k1} {z}
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX512-NEXT:    vcvttpd2udq %xmm3, %xmm4
+; AVX512-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
 ; AVX512-NEXT:    vfpclasssd $215, %xmm3, %k0 # k0 = isQuietNaN(xmm3) | isPositiveZero(xmm3) | isNegativeZero(xmm3) | isNegativeInfinity(xmm3) | isNegative(xmm3) | isSignalingNaN(xmm3)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm3, %xmm4 {%k1} {z}
-; AVX512-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
-; AVX512-NEXT:    vmovd %xmm4, %eax
+; AVX512-NEXT:    vpmovusdw %xmm4, %xmm2 {%k1} {z}
+; AVX512-NEXT:    vmovd %xmm2, %eax
 ; AVX512-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm2 = xmm3[1,0]
+; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm3
 ; AVX512-NEXT:    vfpclasssd $215, %xmm2, %k0 # k0 = isQuietNaN(xmm2) | isPositiveZero(xmm2) | isNegativeZero(xmm2) | isNegativeInfinity(xmm2) | isNegative(xmm2) | isSignalingNaN(xmm2)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm2 {%k1} {z}
+; AVX512-NEXT:    vpmovusdw %xmm3, %xmm2 {%k1} {z}
 ; AVX512-NEXT:    vmovd %xmm2, %eax
 ; AVX512-NEXT:    vpinsrw $3, %eax, %xmm1, %xmm1
 ; AVX512-NEXT:    vextractf32x4 $2, %zmm0, %xmm2
+; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm3
 ; AVX512-NEXT:    vfpclasssd $215, %xmm2, %k0 # k0 = isQuietNaN(xmm2) | isPositiveZero(xmm2) | isNegativeZero(xmm2) | isNegativeInfinity(xmm2) | isNegative(xmm2) | isSignalingNaN(xmm2)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm3 {%k1} {z}
+; AVX512-NEXT:    vpmovusdw %xmm3, %xmm3 {%k1} {z}
 ; AVX512-NEXT:    vmovd %xmm3, %eax
 ; AVX512-NEXT:    vpinsrw $4, %eax, %xmm1, %xmm1
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
+; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm3
 ; AVX512-NEXT:    vfpclasssd $215, %xmm2, %k0 # k0 = isQuietNaN(xmm2) | isPositiveZero(xmm2) | isNegativeZero(xmm2) | isNegativeInfinity(xmm2) | isNegative(xmm2) | isSignalingNaN(xmm2)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm2, %xmm2 {%k1} {z}
+; AVX512-NEXT:    vpmovusdw %xmm3, %xmm2 {%k1} {z}
 ; AVX512-NEXT:    vmovd %xmm2, %eax
 ; AVX512-NEXT:    vpinsrw $5, %eax, %xmm1, %xmm1
 ; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
+; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm2
 ; AVX512-NEXT:    vfpclasssd $215, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveZero(xmm0) | isNegativeZero(xmm0) | isNegativeInfinity(xmm0) | isNegative(xmm0) | isSignalingNaN(xmm0)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm2 {%k1} {z}
+; AVX512-NEXT:    vpmovusdw %xmm2, %xmm2 {%k1} {z}
 ; AVX512-NEXT:    vmovd %xmm2, %eax
 ; AVX512-NEXT:    vpinsrw $6, %eax, %xmm1, %xmm1
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm2
 ; AVX512-NEXT:    vfpclasssd $215, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveZero(xmm0) | isNegativeZero(xmm0) | isNegativeInfinity(xmm0) | isNegative(xmm0) | isSignalingNaN(xmm0)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vpmovusdw %xmm2, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    vpinsrw $7, %eax, %xmm1, %xmm0
 ; AVX512-NEXT:    vzeroupper

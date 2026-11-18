@@ -22661,7 +22661,7 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
       }
 
       if (SatWidth <= 32) {
-        if (SrcVT == MVT::f64) {
+        if (SatWidth == 32 && SrcVT == MVT::f64) {
           SDValue VMask = getMaskNode(InvMask8, MVT::v2i1, Subtarget, DAG, dl);
           SDValue Zero = DAG.getConstant(0, dl, MVT::v4i32);
           SDValue VSelect = DAG.getNode(X86ISD::MCVTTP2UI, dl, MVT::v4i32,
