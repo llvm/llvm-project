@@ -81,3 +81,18 @@ libc_support_library(
         "//libc/src/__support/macros:config",
     ],
 )
+
+libc_support_library(
+    name = "linux_cpu_clock",
+    hdrs = ["linux/cpu_clock.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//libc/hdr/types:clockid_t",
+        "//libc/hdr/types:pid_t",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
