@@ -183,6 +183,19 @@ int __tsan_get_report_thread(void *report, uptr idx, int *tid, ThreadID *os_id,
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_get_report_unique_tid(void *report, uptr idx, int *tid);
 
+// Writes uncolored, single-line descriptions of report components into a
+// caller-provided buffer. Output is truncated to fit. The describe_loc and
+// describe_thread variants return whether a stack trace logically follows
+// the description; describe_mop and describe_mutex return 1 on success.
+SANITIZER_INTERFACE_ATTRIBUTE
+int __tsan_describe_mop(void* report, uptr idx, char* out, uptr outlen);
+SANITIZER_INTERFACE_ATTRIBUTE
+int __tsan_describe_loc(void* report, uptr idx, char* out, uptr outlen);
+SANITIZER_INTERFACE_ATTRIBUTE
+int __tsan_describe_mutex(void* report, uptr idx, char* out, uptr outlen);
+SANITIZER_INTERFACE_ATTRIBUTE
+int __tsan_describe_thread(void* report, uptr idx, char* out, uptr outlen);
+
 // Returns the type of the pointer (heap, stack, global, ...) and if possible
 // also the starting address (e.g. of a heap allocation) and size.
 SANITIZER_INTERFACE_ATTRIBUTE
