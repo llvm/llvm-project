@@ -493,6 +493,18 @@ For comprehensive analysis, especially before merging significant changes,
 consider running :program:`clang-tidy` on the entire affected files or the
 whole project using :program:`run-clang-tidy.py`.
 
+Validating ``analyze_as_*`` attributes
+======================================
+
+:program:`clang-tidy` reports ``[[clang::analyze_as_class]]`` and
+``[[clang::analyze_as_method]]`` strings that match nothing in the standard
+library header they refer to. The header is located by a required pragma;
+without it nothing is validated:
+
+.. code-block:: c++
+
+   #pragma clang_tidy_analyze_as_header sysroot("/path/to/sdk") header("<optional>") std("c++23")
+
 .. _clang-tidy-nolint:
 
 Suppressing Undesired Diagnostics

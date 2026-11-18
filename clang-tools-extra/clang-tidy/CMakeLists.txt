@@ -9,6 +9,7 @@ configure_file(
 include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 
 add_clang_library(clangTidy STATIC
+  AnalyzeAsAttrValidator.cpp
   ClangTidy.cpp
   ClangTidyCheck.cpp
   ClangTidyModule.cpp

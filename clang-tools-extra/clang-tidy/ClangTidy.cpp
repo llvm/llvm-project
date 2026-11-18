@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangTidy.h"
+#include "AnalyzeAsAttrValidator.h"
 #include "ClangTidyCheck.h"
 #include "ClangTidyDiagnosticConsumer.h"
 #include "ClangTidyModule.h"
@@ -468,6 +469,7 @@ ClangTidyASTConsumerFactory::createASTConsumer(CompilerInstance &Compiler,
   }
 
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
+  Consumers.push_back(createAnalyzeAsAttrValidationConsumer(Context, *PP));
   if (!Checks.empty())
     Consumers.push_back(Finder->newASTConsumer());
 
