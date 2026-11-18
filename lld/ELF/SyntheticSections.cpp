@@ -3548,15 +3548,21 @@ BtfSection<ELFT>::BtfSection(Ctx &ctx)
   // Also discard .BTF.ext sections: they reference per-object type IDs
   // that are invalidated by the merge and dedup.
   for (InputSectionBase *s : ctx.inputSections) {
-    if (!s->isLive())
-      continue;
-    if (s->name == ".BTF.ext") {
-      s->markDead();
-      continue;
-    }
-    if (s->name != ".BTF")
+    if (!s->isLive() || (s->name != ".BTF" && s->name != ".BTF.ext"))
       continue;
     s->markDead();
+    if (s->relSecIdx) {
+      // Under --emit-relocs the input relocation section is also live.
+      if (auto *rel = s->file->getSections()[s->relSecIdx])
+        rel->markDead();
+      if (s->name == ".BTF")
+        ErrAlways(ctx) << s
+                       << ": --btf-merge does not support .BTF sections "
+                          "with relocations";
+      continue;
+    }
+    if (s->name == ".BTF.ext")
+      continue;
     ArrayRef<uint8_t> data = s->content();
     StringRef raw(reinterpret_cast<const char *>(data.data()), data.size());
     Expected<uint32_t> idBase = builder.merge(raw, isLE);

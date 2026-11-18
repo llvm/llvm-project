@@ -255,7 +255,7 @@ TEST(BTFDedupTest, dataSecDifferentOffsets) {
   }
 
   ASSERT_SUCCEEDED(BTF::dedup(B));
-  ASSERT_EQ(B.typesCount(), 4u);
+  ASSERT_EQ(B.typesCount(), 5u);
   auto Entries = [&](uint32_t Id) {
     return reinterpret_cast<const BTF::BTFDataSec *>(B.getTypeBytes(Id).data() +
                                                      sizeof(BTF::CommonType));
@@ -264,6 +264,8 @@ TEST(BTFDedupTest, dataSecDifferentOffsets) {
   EXPECT_EQ(Entries(4)->Offset, 4u);
   EXPECT_EQ(Entries(3)->Type, 2u);
   EXPECT_EQ(Entries(4)->Type, 2u);
+  EXPECT_EQ(Entries(5)->Offset, 0u);
+  EXPECT_EQ(Entries(5)->Type, 2u);
 }
 
 TEST(BTFDedupTest, dataSecDifferentVariables) {
@@ -420,21 +422,78 @@ TEST(BTFDedupTest, selfReferentialStruct) {
 }
 
 TEST(BTFDedupTest, fwdDeclResolution) {
+  for (uint32_t Kind : {BTF::BTF_KIND_STRUCT, BTF::BTF_KIND_UNION}) {
+    SCOPED_TRACE(Kind);
+    BTFBuilder B;
+    uint32_t Name = B.addString("item");
+    uint32_t Flag = Kind == BTF::BTF_KIND_UNION ? BTF::FWD_UNION_FLAG : 0;
+    uint32_t Fwd = B.addType({Name, mkInfo(BTF::BTF_KIND_FWD) | Flag, {0}});
+    B.addType({0, mkInfo(BTF::BTF_KIND_PTR), {Fwd}});
+    uint32_t Def = B.addType({Name, mkInfo(Kind), {0}});
+    B.addType({0, mkInfo(BTF::BTF_KIND_PTR), {Def}});
+
+    ASSERT_SUCCEEDED(BTF::dedup(B));
+    ASSERT_EQ(B.typesCount(), 2u);
+    EXPECT_EQ(B.findType(1)->getKind(), BTF::BTF_KIND_PTR);
+    EXPECT_EQ(B.findType(1)->Type, 2u);
+    EXPECT_EQ(B.findType(2)->getKind(), Kind);
+  }
+}
+
+TEST(BTFDedupTest, ambiguousFwdDeclResolution) {
   BTFBuilder B;
-  uint32_t FooS = B.addString("foo");
-
-  // Type 1: forward declaration of struct foo
-  B.addType({FooS, mkInfo(BTF::BTF_KIND_FWD), {0}});
-
-  // Type 2: full struct foo {}
-  uint32_t FooS2 = B.addString("foo");
-  B.addType({FooS2, mkInfo(BTF::BTF_KIND_STRUCT), {0}});
-
-  // FWD and STRUCT are different kinds, so they shouldn't be deduped
-  // by the basic algorithm (FWD resolution is a separate concern).
-  // Both should survive dedup.
+  uint32_t Name = B.addString("item");
+  B.addType({Name, mkInfo(BTF::BTF_KIND_FWD), {0}});
+  B.addType({Name, mkInfo(BTF::BTF_KIND_STRUCT), {4}});
+  B.addType({Name, mkInfo(BTF::BTF_KIND_STRUCT), {8}});
   ASSERT_SUCCEEDED(BTF::dedup(B));
-  EXPECT_EQ(B.typesCount(), 2u);
+  ASSERT_EQ(B.typesCount(), 3u);
+  EXPECT_EQ(B.findType(1)->getKind(), BTF::BTF_KIND_FWD);
+}
+
+TEST(BTFDedupTest, nestedFwdDeclResolution) {
+  BTFBuilder B;
+  uint32_t Item = B.addString("item");
+  uint32_t Holder = B.addString("holder");
+  uint32_t Member = B.addString("p");
+  uint32_t Fwd = B.addType({Item, mkInfo(BTF::BTF_KIND_FWD), {0}});
+  uint32_t Def = B.addType({Item, mkInfo(BTF::BTF_KIND_STRUCT), {4}});
+  // A second definition prevents resolving the FWD by name alone.
+  B.addType({Item, mkInfo(BTF::BTF_KIND_STRUCT), {8}});
+  for (uint32_t Target : {Fwd, Def}) {
+    uint32_t Ptr = B.addType({0, mkInfo(BTF::BTF_KIND_PTR), {Target}});
+    B.addType({Holder, mkInfo(BTF::BTF_KIND_STRUCT) | 1, {8}});
+    B.addTail(BTF::BTFMember({Member, Ptr, 0}));
+  }
+  ASSERT_SUCCEEDED(BTF::dedup(B));
+  ASSERT_EQ(B.typesCount(), 4u);
+  EXPECT_EQ(B.findType(3)->getKind(), BTF::BTF_KIND_PTR);
+  EXPECT_EQ(B.findType(3)->Type, 1u);
+  auto Bytes = B.getTypeBytes(4).drop_front(sizeof(BTF::CommonType));
+  EXPECT_EQ(reinterpret_cast<const BTF::BTFMember *>(Bytes.data())->Type, 3u);
+}
+
+TEST(BTFDedupTest, sharedPointerInTypeGraph) {
+  BTFBuilder B;
+  uint32_t Outer = B.addString("outer");
+  uint32_t A = B.addString("a"), C = B.addString("b");
+  uint32_t Leaf = B.addType({0, mkInfo(BTF::BTF_KIND_STRUCT), {0}});
+  uint32_t First = B.addType({0, mkInfo(BTF::BTF_KIND_PTR), {Leaf}});
+  uint32_t Second = B.addType({0, mkInfo(BTF::BTF_KIND_PTR), {Leaf}});
+  // One graph has duplicate pointer records; the other shares a record.
+  uint32_t Shared = B.addType({0, mkInfo(BTF::BTF_KIND_PTR), {Leaf}});
+  for (auto [LHS, RHS] :
+       {std::pair{First, Second}, std::pair{Shared, Shared}}) {
+    B.addType({Outer, mkInfo(BTF::BTF_KIND_STRUCT) | 2, {16}});
+    B.addTail(BTF::BTFMember({A, LHS, 0}));
+    B.addTail(BTF::BTFMember({C, RHS, 64}));
+  }
+  ASSERT_SUCCEEDED(BTF::dedup(B));
+  ASSERT_EQ(B.typesCount(), 3u);
+  auto Bytes = B.getTypeBytes(3).drop_front(sizeof(BTF::CommonType));
+  auto *Members = reinterpret_cast<const BTF::BTFMember *>(Bytes.data());
+  EXPECT_EQ(Members[0].Type, 2u);
+  EXPECT_EQ(Members[1].Type, 2u);
 }
 
 TEST(BTFDedupTest, funcProtoDedup) {
@@ -625,6 +684,36 @@ TEST(BTFDedupTest, differentEnum64Values) {
   EXPECT_EQ(B.typesCount(), 2u);
 }
 
+TEST(BTFDedupTest, enumFwdAcrossWidths) {
+  for (uint32_t DefKind : {BTF::BTF_KIND_ENUM, BTF::BTF_KIND_ENUM64}) {
+    for (bool FwdFirst : {false, true}) {
+      SCOPED_TRACE(DefKind);
+      SCOPED_TRACE(FwdFirst);
+      BTFBuilder B;
+      uint32_t Name = B.addString("e"), Value = B.addString("VALUE");
+      bool IsWide = DefKind == BTF::BTF_KIND_ENUM64;
+      for (bool Fwd : {FwdFirst, !FwdFirst}) {
+        uint32_t Id;
+        if (Fwd) {
+          uint32_t Kind = IsWide ? BTF::BTF_KIND_ENUM : BTF::BTF_KIND_ENUM64;
+          Id = B.addType({Name, mkInfo(Kind), {IsWide ? 4u : 8u}});
+        } else {
+          Id = B.addType({Name, mkInfo(DefKind) | 1, {IsWide ? 8u : 4u}});
+          if (IsWide)
+            B.addTail(BTF::BTFEnum64({Value, 0, 2}));
+          else
+            B.addTail(BTF::BTFEnum({Value, 2}));
+        }
+        B.addType({0, mkInfo(BTF::BTF_KIND_PTR), {Id}});
+      }
+      ASSERT_SUCCEEDED(BTF::dedup(B));
+      ASSERT_EQ(B.typesCount(), 2u);
+      EXPECT_EQ(B.findType(FwdFirst ? 2 : 1)->getKind(), DefKind);
+      EXPECT_EQ(B.findType(FwdFirst ? 1 : 2)->Type, FwdFirst ? 2u : 1u);
+    }
+  }
+}
+
 TEST(BTFDedupTest, duplicateTypedefChain) {
   BTFBuilder B;
   uint32_t IntS = B.addString("int");
@@ -771,6 +860,43 @@ TEST(BTFDedupTest, duplicateFuncAndFuncProto) {
   EXPECT_EQ(B.typesCount(), 3u);
 }
 
+TEST(BTFDedupTest, funcsWithDifferentCanonicalTargets) {
+  BTFBuilder B;
+  uint32_t Node = B.addString("node"), Member = B.addString("p");
+  uint32_t Func = B.addString("fn");
+  auto AddPtr = [&](uint32_t Target) {
+    B.addType({0, mkInfo(BTF::BTF_KIND_PTR), {Target}});
+  };
+  auto AddNode = [&](uint32_t Ptr) {
+    B.addType({Node, mkInfo(BTF::BTF_KIND_STRUCT) | 1, {8}});
+    B.addTail(BTF::BTFMember({Member, Ptr, 0}));
+  };
+  auto AddFunc = [&](uint32_t Proto, uint32_t Result) {
+    B.addType({Func, mkInfo(BTF::BTF_KIND_FUNC), {Proto}});
+    B.addType({0, mkInfo(BTF::BTF_KIND_FUNC_PROTO), {Result}});
+  };
+
+  // A self-cycle and a two-node cycle don't match in the composite pass.
+  // Even with identical function names, their prototypes target different
+  // canonical types and should not be merged in the reference pass.
+  AddPtr(2);
+  AddNode(1);
+  AddFunc(4, 1);
+  AddPtr(7);
+  AddPtr(8);
+  AddNode(6);
+  AddNode(5);
+  AddFunc(10, 5);
+
+  ASSERT_SUCCEEDED(BTF::dedup(B));
+  ASSERT_EQ(B.typesCount(), 8u);
+  for (uint32_t Fn : {3u, 7u}) {
+    EXPECT_EQ(B.findType(Fn)->getKind(), BTF::BTF_KIND_FUNC);
+    EXPECT_EQ(B.findType(Fn)->Type, Fn + 1);
+    EXPECT_EQ(B.findType(Fn + 1)->Type, Fn - 2);
+  }
+}
+
 TEST(BTFDedupTest, duplicateVar) {
   BTFBuilder B;
   uint32_t IntS = B.addString("int");
@@ -795,7 +921,47 @@ TEST(BTFDedupTest, duplicateVar) {
 
   EXPECT_EQ(B.typesCount(), 4u);
   ASSERT_SUCCEEDED(BTF::dedup(B));
-  EXPECT_EQ(B.typesCount(), 2u);
+  EXPECT_EQ(B.typesCount(), 3u);
+}
+
+TEST(BTFDedupTest, staticVarsAndDataSecsRemainDistinct) {
+  BTFBuilder B;
+  uint32_t Name = B.addString("count"), Section = B.addString(".data");
+  for (unsigned I = 0; I < 2; ++I) {
+    uint32_t Int =
+        B.addType({B.addString("int"), mkInfo(BTF::BTF_KIND_INT), {4}});
+    B.addTail(uint32_t(32));
+    uint32_t Var = B.addType({Name, mkInfo(BTF::BTF_KIND_VAR), {Int}});
+    B.addTail(uint32_t(BTF::VAR_STATIC));
+    B.addType({Section, mkInfo(BTF::BTF_KIND_DATASEC) | 1, {4}});
+    B.addTail(BTF::BTFDataSec({Var, 0, 4}));
+  }
+  ASSERT_SUCCEEDED(BTF::dedup(B));
+  ASSERT_EQ(B.typesCount(), 5u);
+  for (uint32_t Var : {2u, 4u}) {
+    EXPECT_EQ(B.findType(Var)->Type, 1u);
+    auto Bytes = B.getTypeBytes(Var + 1).drop_front(sizeof(BTF::CommonType));
+    EXPECT_EQ(reinterpret_cast<const BTF::BTFDataSec *>(Bytes.data())->Type,
+              Var);
+  }
+}
+
+TEST(BTFDedupTest, declTagsOnDistinctStaticVars) {
+  BTFBuilder B;
+  uint32_t Int =
+      B.addType({B.addString("int"), mkInfo(BTF::BTF_KIND_INT), {4}});
+  B.addTail(uint32_t(32));
+  uint32_t Name = B.addString("count"), Tag = B.addString("tag");
+  for (unsigned I = 0; I < 2; ++I) {
+    uint32_t Var = B.addType({Name, mkInfo(BTF::BTF_KIND_VAR), {Int}});
+    B.addTail(uint32_t(BTF::VAR_STATIC));
+    B.addType({Tag, mkInfo(BTF::BTF_KIND_DECL_TAG), {Var}});
+    B.addTail(uint32_t(-1));
+  }
+  ASSERT_SUCCEEDED(BTF::dedup(B));
+  ASSERT_EQ(B.typesCount(), 5u);
+  EXPECT_EQ(B.findType(3)->Type, 2u);
+  EXPECT_EQ(B.findType(5)->Type, 4u);
 }
 
 TEST(BTFDedupTest, duplicateTypeTag) {
@@ -1079,7 +1245,7 @@ TEST(BTFDedupTest, enumMembersPreservedAfterDedup) {
 
 TEST(BTFDedupTest, allKindsDedup) {
   // Build a BTF with one of each type kind, then duplicate all of them.
-  // After dedup, should end up with exactly 19 types.
+  // Keep both VARs and DATASECs; the FWD has an ambiguous name.
   auto BuildAllKinds = [](BTFBuilder &B, uint32_t BaseId) {
     uint32_t S = B.addString("t");
     uint32_t M = B.addString("m");
@@ -1124,12 +1290,17 @@ TEST(BTFDedupTest, allKindsDedup) {
 
   EXPECT_EQ(B.typesCount(), 38u);
   ASSERT_SUCCEEDED(BTF::dedup(B));
-  EXPECT_EQ(B.typesCount(), 19u);
-
-  // Verify all 19 type kinds survive.
-  for (uint32_t Id = 1; Id <= 19; ++Id) {
-    ASSERT_TRUE(B.findType(Id)) << "Type " << Id << " missing after dedup";
+  ASSERT_EQ(B.typesCount(), 21u);
+  unsigned Counts[20] = {};
+  for (uint32_t Id = 1; Id <= B.typesCount(); ++Id) {
+    uint32_t Kind = B.findType(Id)->getKind();
+    ASSERT_LT(Kind, std::size(Counts));
+    ++Counts[Kind];
   }
+  for (uint32_t Kind = 1; Kind < std::size(Counts); ++Kind)
+    EXPECT_EQ(Counts[Kind],
+              Kind == BTF::BTF_KIND_VAR || Kind == BTF::BTF_KIND_DATASEC ? 2u
+                                                                         : 1u);
 }
 
 TEST(BTFDedupTest, unionDedup) {

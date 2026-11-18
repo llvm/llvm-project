@@ -7,9 +7,13 @@
 # RUN: ld.lld --btf-merge a.o b.o -o merged
 # RUN: llvm-readelf -x .BTF merged | FileCheck %s
 
-## Big-endian BTF magic is 0xeb9f stored as eb9f (not byte-swapped).
+## Check the big-endian header, both INT records, and their string table.
 # CHECK: Hex dump of section '.BTF':
-# CHECK: 0x{{[0-9a-f]+}} eb9f0100
+# CHECK-NEXT: 0x00000000 eb9f0100 00000018 00000000 00000020
+# CHECK-NEXT: 0x00000010 00000020 0000000a 00000001 01000000
+# CHECK-NEXT: 0x00000020 00000004 00000020 00000005 01000000
+# CHECK-NEXT: 0x00000030 00000008 00000040 00696e74 006c6f6e
+# CHECK-NEXT: 0x00000040 6700
 
 #--- a.s
 .text

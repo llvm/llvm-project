@@ -47,6 +47,8 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 btfext.s -o btfext.o
 # RUN: ld.lld --btf-merge a.o btfext.o -o btfext
 # RUN: llvm-readelf -S btfext | FileCheck %s --check-prefix=NO-BTFEXT
+# RUN: ld.lld --btf-merge --emit-relocs a.o btfext.o -o btfext-emit
+# RUN: llvm-readelf -S btfext-emit | FileCheck %s --check-prefix=NO-BTFEXT
 
 ## Without --btf-merge, .BTF.ext passes through.
 # RUN: ld.lld a.o btfext.o -o btfext-pass
@@ -54,6 +56,12 @@
 
 # NO-BTFEXT-NOT: .BTF.ext
 # HAS-BTFEXT:    .BTF.ext
+
+## A DATASEC entry with a relocated variable offset must not be merged as-is.
+# RUN: llvm-mc -filetype=obj -triple=x86_64 btfrel.s -o btfrel.o
+# RUN: not ld.lld --btf-merge a.o btfrel.o -o btfrel 2>&1 | FileCheck %s --check-prefix=BTFREL
+# RUN: not ld.lld --btf-merge --emit-relocs a.o btfrel.o -o btfrel 2>&1 | FileCheck %s --check-prefix=BTFREL
+# BTFREL: error: btfrel.o:(.BTF): --btf-merge does not support .BTF sections with relocations
 
 ## isLive: a .BTF section in a discarded COMDAT group should be skipped.
 ## Both comdat files define the same group "grp". The second is discarded,
@@ -198,6 +206,27 @@ btfext_fn:
 .long 0                 # func_info_len
 .long 0                 # line_info_off
 .long 0                 # line_info_len
+.long btfext_fn         # relocation against the input .BTF.ext
+
+#--- btfrel.s
+.data
+.long 0
+count:
+.long 1
+
+.section .BTF,"",@progbits
+.short 0xeb9f
+.byte 1, 0
+.long 24, 0, .Ltypes_end - .Ltypes, .Ltypes_end - .Ltypes, .Lend - .Lstr
+.Ltypes:
+.long 1, 0x01000000, 4, 32  # INT
+.long 5, 0x0e000000, 1, 0   # VAR
+.long 11, 0x0f000001, 8     # DATASEC
+.long 2, count, 4           # Type, relocated offset, size
+.Ltypes_end:
+.Lstr:
+.asciz "", "int", "count", ".data"
+.Lend:
 
 #--- comdat1.s
 ## COMDAT group "grp" with a .BTF section containing INT "int".
