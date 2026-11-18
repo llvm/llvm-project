@@ -301,30 +301,42 @@ void TextOutputSection::finalize() {
     }
     finalizeOne(isec);
 
-    // TODO: Remove this check and the assert below. In fact, I don't believe
-    // the relocation iteration order matters for correctness.
     bool hasCallsite = llvm::any_of(isec->relocs, [](Relocation &r) {
       return target->hasAttr(r.type, RelocAttrBits::BRANCH);
     });
     if (!hasCallsite)
       continue;
 
-    // Process relocs by ascending address, i.e., ascending offset within isec
-    // FIXME: This property does not hold for object files produced by ld64's
-    // `-r` mode.
-    assert(is_sorted(isec->relocs, [](Relocation &a, Relocation &b) {
-      return a.offset > b.offset;
-    }));
-    for (Relocation &r : reverse(isec->relocs)) {
+    auto processBranch = [&](Relocation &r) {
       if (!target->hasAttr(r.type, RelocAttrBits::BRANCH))
-        continue;
+        return;
       if (isTargetKnownInRange(*isec, r))
-        continue;
+        return;
       if (auto *thunk = findThunkInRange(*isec, r)) {
         deferredBranchRedirects.emplace_back(isec, &r, thunk);
-        continue;
+        return;
       }
       branchesToProcess.emplace_back(isec, &r);
+    };
+    // Process relocs by ascending address, i.e., ascending offset within isec.
+    // Relocations in object files produced by `ld -r` are not in
+    // descending order.
+    auto byDescendingOffset = [](const Relocation *a, const Relocation *b) {
+      return a->offset > b->offset;
+    };
+    assert(!isec->relocsDescending ||
+           is_sorted(make_pointer_range(isec->relocs), byDescendingOffset));
+    if (isec->relocsDescending) {
+      for (auto &r : reverse(isec->relocs))
+        processBranch(r);
+    } else {
+      SmallVector<Relocation *, 0> sorted;
+      sorted.reserve(isec->relocs.size());
+      for (auto &r : isec->relocs)
+        sorted.push_back(&r);
+      llvm::stable_sort(sorted, byDescendingOffset);
+      for (auto *r : reverse(sorted))
+        processBranch(*r);
     }
   }
 

@@ -671,7 +671,7 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
       subsec = subsecIt->isec;
       r.offset -= subsecIt->offset;
     }
-    subsec->relocs.push_back(r);
+    subsec->addReloc(r);
 
     if (isSubtrahend) {
       relocation_info minuendInfo = relInfos[++i];
@@ -694,7 +694,7 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
             *sections[minuendInfo.r_symbolnum - 1], &referentOffset);
         p.setAddend(referentOffset);
       }
-      subsec->relocs.push_back(p);
+      subsec->addReloc(p);
     }
   }
 }
