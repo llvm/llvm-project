@@ -743,11 +743,6 @@ void LiveIntervals::shrinkSubRangeToUses(LiveInterval::SubRange &SR,
     if (!VNI)
       continue;
 
-    // Special case: An early-clobber tied operand reads and writes the
-    // register one slot early.
-    if (VNInfo *DefVNI = LRQ.valueDefined())
-      Idx = DefVNI->def;
-
     WorkList.push_back(std::make_pair(Idx, VNI));
   }
 
