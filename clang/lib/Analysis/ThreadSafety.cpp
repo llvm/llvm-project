@@ -2963,7 +2963,7 @@ struct JoinContext {
   /// whose results are branched on somewhere inside the loop, and so are
   /// (or will be, on the next iteration) checked around it. A conditional
   /// try fact of any other call reaching the back edge is re-executed or
-  /// discarded unchecked (LocksetJoin::joinTryFactsAtLoop()). Null where
+  /// discarded unchecked (LocksetJoin::warnUncheckedAtLoop()). Null where
   /// the information is not computed, which exempts every try fact.
   const llvm::SmallPtrSetImpl<const Expr *> *CheckedAroundLoop = nullptr;
   /// The entry set belongs to an already-analyzed loop head (the back-edge
@@ -2971,20 +2971,27 @@ struct JoinContext {
   /// rewritten in place -- the head's edges were processed long ago.
   bool SealedEntry = false;
 
-  /// A loop join compares a back edge's exit set against an entry set
-  /// analyzed previously: it diagnoses, but must not rewrite that set --
-  /// except at a continue latch, a loop-kind join still accumulating a
-  /// block's entry set (isUnsealedLoopJoin()).
+  /// What the join writes into the entry set.
+  enum class Writes {
+    /// The merged state: a branch join, or the end-of-function comparison
+    /// (whose merged set nothing reads).
+    Merge,
+    /// The entry set, rewritten only by the latch rules: a continue latch,
+    /// a loop-kind join still accumulating a block's entry set.
+    KeepEntry,
+    /// Nothing: the back-edge comparison against a loop head analyzed long
+    /// ago.
+    None,
+  };
   bool isLoopJoin() const { return EntryLEK == LEK_LockedSomeLoopIterations; }
-  bool canModify() const { return !isLoopJoin(); }
-  bool isUnsealedLoopJoin() const { return isLoopJoin() && !SealedEntry; }
-  /// Whether the join may keep a stale result as evidence: only the joins
-  /// still accumulating a block's entry set -- a branch join, or a continue
-  /// latch whose head is not sealed yet. The end-of-function comparison is
-  /// not one of them: nothing after it can read the evidence.
-  bool mayKeepReleasedTryFact() const {
-    return EntryLEK == LEK_LockedSomePredecessors || isUnsealedLoopJoin();
+  Writes writes() const {
+    if (!isLoopJoin())
+      return Writes::Merge;
+    return SealedEntry ? Writes::None : Writes::KeepEntry;
   }
+  /// Whether the join's merge rules decide the entry set: not at a loop
+  /// join, which diagnoses against an entry set analyzed previously.
+  bool canModify() const { return writes() == Writes::Merge; }
 };
 
 /// Class which implements the core thread safety analysis routines.
@@ -6661,14 +6668,20 @@ namespace {
 /// conditional level models a try-acquire over a hold, which fails at runtime.
 ///
 /// A loop join compares against an entry set analyzed previously: it diagnoses,
-/// but must not rewrite that set, so a hold that demotes is reported lost
-/// there -- except at a continue latch, whose head is still accumulating its
-/// entry set. A latch takes the exit side's Released try facts, so that a
-/// release inside the loop body reaches the post-loop resolution; and it
-/// takes the same-origin reconstitution: an entry NotHeld or Proved try fact
-/// meeting the exit side's Cond or Proved one becomes Cond where the join
-/// allows it, and an entry hold that demotes against the exit side's Cond
-/// try fact demotes in place.
+/// but the merge rules do not decide that set, so a hold that demotes is
+/// reported lost there. A back edge writes nothing. A continue latch, whose
+/// head is still accumulating its entry set, keeps the entry side -- its
+/// definite fact, and each try fact -- except:
+///
+///   exit Released, entry other   the exit's Released, so that a release
+///                                inside the loop body reaches the post-loop
+///                                resolution; one exit-only is added
+///   entry NotHeld, exit Cond or  Cond, where the same-origin reconstitution
+///   Proved                       applies
+///   entry Proved, exit Cond      the exit's Cond, where the entry hold
+///                                demotes against the exit side's Cond
+///
+/// No other exit-only fact comes in.
 class LocksetJoin {
   ThreadSafetyAnalyzer &Analyzer;
   FactManager &FactMan;
@@ -6700,9 +6713,7 @@ private:
   Side sideOf(const FactSet &Set, bool IsEntry,
               const CapabilityExpr &Cap) const;
   void joinCapability(const Side &E, const Side &X);
-  void joinTryFactsAtLoop(const Side &E, const Side &X);
-  void demoteAtLatch(const FactEntry &Def, const Expr *Origin,
-                     LockErrorKind LEK);
+  void warnUncheckedAtLoop(const Side &E, const Side &X);
 
   /// \name Reading a side
   /// \{
@@ -7107,7 +7118,7 @@ void LocksetJoin::warnNeverChecked(const TryFactEntry &W, LockErrorKind LEK) {
   // Only at the end of the function, where the guard may have escaped its
   // scope, can the guard fail to check it. (A loop join reaches here now
   // that the exemption there is narrowed to the results the loop really
-  // checks -- the caller's decision still, joinTryFactsAtLoop().)
+  // checks -- the caller's decision still, warnUncheckedAtLoop().)
   if (W.managed() && !isEndOfFunctionLEK(LEK))
     return;
   if (!Analyzer.NeverCheckedWarned
@@ -7154,8 +7165,12 @@ void LocksetJoin::joinCapability(const Side &E, const Side &X) {
   auto Demote = [&](const Side &S, const Demotion &Dm) {
     const FactEntry &D = *def(S);
     if (!Ctx.canModify()) {
-      // A sealed join cannot record the demotion: the hold is gone from the
-      // merged state either way, so it is reported like any other lost hold.
+      // A loop join does not record the demotion: a back edge cannot, and a
+      // continue latch keeps its entry side, so the hold is gone from the
+      // merged state either way and is reported like any other lost hold.
+      // Recording it at the latch would be wrong besides: the same-origin
+      // gate is open at every loop join, so a hold a `continue` carries into
+      // the next iteration would go unreported without beta.
       warnLost(S);
       return;
     }
@@ -7165,9 +7180,17 @@ void LocksetJoin::joinCapability(const Side &E, const Side &X) {
     DemotedBy = Dm.Origin;
     KeepRest = cast<LockableFactEntry>(D).leaveReentrant(FactMan);
   };
-  // At a continue latch: \p S's hold, which demotes against the exit side's
-  // Cond try fact, is demoted in place.
-  std::optional<std::pair<const FactEntry *, const Expr *>> LatchDemote;
+  // At a continue latch: the entry's hold demotes under \p Dm to the exit
+  // side's Cond try fact of its call (under the same-origin exemption the
+  // latch's merged state is the conditional one).
+  auto DemoteAtLatch = [&](const Demotion &Dm) {
+    const FactEntry &D = *def(E);
+    if (reentrancyDepth(D) != 0)
+      warnReentrancyMismatch(D, lostLEK(E));
+    Demoted = &D;
+    DemotedBy = Dm.Origin;
+    KeepRest = cast<LockableFactEntry>(D).leaveReentrant(FactMan);
+  };
   if (def(E) && def(X) && crossKindPairOfOneCall(E, X)) {
     // The two kinds one cross-kind try-acquire promises, each proved on its
     // own side by that call's try fact of that kind: not two acquisitions in
@@ -7229,11 +7252,8 @@ void LocksetJoin::joinCapability(const Side &E, const Side &X) {
           warnReentrancyMismatch(KD, Ctx.EntryLEK);
       } else if (Ctx.canModify() && levels(E) + CE != levels(X) + CX) {
         warnReentrancyMismatch(*def(X), Ctx.EntryLEK);
-      } else if (Ctx.isUnsealedLoopJoin() && CX) {
-        // Under the same-origin exemption the latch's merged state is the
-        // conditional one: the entry's hold demotes to the exit side's
-        // Cond try fact.
-        LatchDemote.emplace(def(E), Dm->Origin);
+      } else if (Ctx.writes() == JoinContext::Writes::KeepEntry && CX) {
+        DemoteAtLatch(*Dm);
       }
       KeepDef = K.DefID;
     }
@@ -7248,8 +7268,8 @@ void LocksetJoin::joinCapability(const Side &E, const Side &X) {
     } else if (Dm->AgainstCond) {
       if (Ctx.canModify() && reentrancyDepth(D) != 0)
         warnReentrancyMismatch(D, lostLEK(S));
-      else if (Ctx.isUnsealedLoopJoin() && S.IsEntry)
-        LatchDemote.emplace(&D, Dm->Origin);
+      else if (Ctx.writes() == JoinContext::Writes::KeepEntry && S.IsEntry)
+        DemoteAtLatch(*Dm);
     } else {
       // The terminator rebranches on the try-acquire that proved it (or gave
       // it up), and getEdgeLockset() re-resolves it on the outgoing edges,
@@ -7267,12 +7287,14 @@ void LocksetJoin::joinCapability(const Side &E, const Side &X) {
     }
   }
 
-  if (!Ctx.canModify()) {
-    joinTryFactsAtLoop(E, X);
-    if (LatchDemote)
-      demoteAtLatch(*LatchDemote->first, LatchDemote->second, lostLEK(E));
+  const bool Latch = Ctx.writes() == JoinContext::Writes::KeepEntry;
+  if (Ctx.isLoopJoin())
+    warnUncheckedAtLoop(E, X);
+  if (Ctx.writes() == JoinContext::Writes::None)
     return;
-  }
+  // A latch keeps the entry's definite fact, unless it demoted it.
+  if (Latch && !Demoted)
+    KeepDef = E.DefID;
 
   // The merged state: the definite fact, then the try facts by identity.
   if (KeepDef)
@@ -7378,16 +7400,41 @@ void LocksetJoin::joinCapability(const Side &E, const Side &X) {
     else
       Keep(ID);
   };
+  // The latch rules (see the class comment).
+  auto LatchPair = [&](FactID EID, FactID XID) {
+    const TryFactEntry &EW = tryFact(EID), &XW = tryFact(XID);
+    if (XW.released() && !EW.released())
+      Keep(XID);
+    else if (EW.provedNotHeld() && !XW.released() && !XW.provedNotHeld() &&
+             sameOriginReconstitutes(EW, XW))
+      Keep(XW.conditional() ? XID : EID,
+           XW.conditional() ? nullptr
+                            : EW.withState(FactMan, State::Conditional));
+    else if (EW.provedHeld() && XW.conditional() && coveredByCond(E, X))
+      Keep(XID);
+    else
+      Keep(EID);
+  };
+  auto LatchOneSided = [&](FactID ID, const TryFactEntry &W, const Side &S) {
+    if (S.IsEntry || W.released())
+      Keep(ID);
+  };
   for (FactID ID : E.TryIDs) {
     const TryFactEntry &W = tryFact(ID);
     if (const auto XID = findTry(X, W.origin(), W.kind()))
-      Pair(ID, *XID);
+      Latch ? LatchPair(ID, *XID) : Pair(ID, *XID);
+    else if (Latch)
+      LatchOneSided(ID, W, E);
     else
       OneSided(ID, W, E, X);
   }
   for (FactID ID : X.TryIDs) {
     const TryFactEntry &W = tryFact(ID);
-    if (!findTry(E, W.origin(), W.kind()))
+    if (findTry(E, W.origin(), W.kind()))
+      continue;
+    if (Latch)
+      LatchOneSided(ID, W, X);
+    else
       OneSided(ID, W, X, E);
   }
   if (Demoted && !DemotedKept)
@@ -7395,80 +7442,26 @@ void LocksetJoin::joinCapability(const Side &E, const Side &X) {
                                 FactMan, DemotedBy));
 }
 
-// The try facts at a loop join, which rewrites no merged state.
-//
-// A Cond try fact of the exit side only is reported when the result is not
-// branched on anywhere inside the loop (CheckedAroundLoop): then the next
-// iteration re-executes the call (or the loop discards the result) while
-// this iteration's possible success was never checked -- a check after the
-// loop sees only the last result and cannot make this sound. Joins without
+// At a loop join, a Cond try fact of the exit side only is reported when the
+// result is not branched on anywhere inside the loop (CheckedAroundLoop): then
+// the next iteration re-executes the call (or the loop discards the result)
+// while this iteration's possible success was never checked -- a check after
+// the loop sees only the last result and cannot make this sound. Joins without
 // that information (continue joins, see runAnalysis()) stay exempt, and so
 // does a try fact the pre-loop state holds definitely (the depth mismatch is
 // diagnosed instead); another call's Cond try fact there is no check of this
 // one. The entry side's is deliberately not reported: a try fact missing from
 // the back edge was released inside the loop, which is diagnosed at the
-// release itself unless an assert claimed the hold -- and the entry set is
-// left unmodified, so the try fact is diagnosed again wherever it is finally
-// lost.
-//
-// A continue latch, whose head is still accumulating its entry set, takes the
-// exit side's stale results: a Released try fact replaces the entry side's
-// try fact of its identity, or joins the set. (The entry side keeps its own
-// try facts: a may-be-released Cond try fact one-sided there covers the exit
-// side as at any join.)
-void LocksetJoin::joinTryFactsAtLoop(const Side &E, const Side &X) {
-  using State = TryFactEntry::State;
+// release itself unless an assert claimed the hold -- and the entry set keeps
+// it, so the try fact is diagnosed again wherever it is finally lost.
+void LocksetJoin::warnUncheckedAtLoop(const Side &E, const Side &X) {
   for (FactID ID : X.TryIDs) {
     const TryFactEntry &W = tryFact(ID);
-    const auto EID = findTry(E, W.origin(), W.kind());
-    if (W.conditional() && !EID && !def(E) && !isRebranchedCall(W.origin()) &&
-        Ctx.CheckedAroundLoop && !Ctx.CheckedAroundLoop->count(W.origin()))
+    if (W.conditional() && !def(E) && !isRebranchedCall(W.origin()) &&
+        !findTry(E, W.origin(), W.kind()) && Ctx.CheckedAroundLoop &&
+        !Ctx.CheckedAroundLoop->count(W.origin()))
       warnNeverChecked(W, Ctx.EntryLEK);
-    if (!Ctx.isUnsealedLoopJoin())
-      continue;
-    if (!EID) {
-      if (W.released())
-        EntrySet.addLockByID(ID);
-      continue;
-    }
-    const TryFactEntry &EW = tryFact(*EID);
-    if (W.released() && !EW.released()) {
-      *EntrySet.findFactIter(FactMan, EW) = ID;
-    } else if (EW.provedNotHeld() && !W.released() && !W.provedNotHeld()) {
-      // The same-origin reconstitution.
-      if (sameOriginReconstitutes(EW, W))
-        EntrySet.replaceFact(
-            FactMan, EW,
-            W.conditional() ? &W : EW.withState(FactMan, State::Conditional));
-    } else if (EW.provedHeld() && W.conditional()) {
-      // The same-origin mixed exemption: the entry's hold demotes (below), and
-      // the exit side's Cond try fact is the merged one.
-      if (def(E) && coveredByCond(E, X))
-        EntrySet.replaceFact(FactMan, EW, &W);
-    }
   }
-}
-
-// Demote the entry set's own hold \p Def in place, at a continue latch: the
-// levels below it take its slot, and the call \p Origin's try fact of it
-// is conditional (turned so, or added).
-void LocksetJoin::demoteAtLatch(const FactEntry &Def, const Expr *Origin,
-                                LockErrorKind LEK) {
-  const auto &LDef = cast<LockableFactEntry>(Def);
-  if (LDef.getReentrancyDepth() != 0)
-    warnReentrancyMismatch(Def, LEK);
-  if (const TryFactEntry *W =
-          EntrySet.findTryFact(FactMan, Def, Origin, Def.kind())) {
-    if (!W->conditional())
-      EntrySet.replaceFact(
-          FactMan, *W, W->withState(FactMan, TryFactEntry::State::Conditional));
-  } else {
-    EntrySet.addLock(FactMan, LDef.asConditional(FactMan, Origin));
-  }
-  if (const FactEntry *Rest = LDef.leaveReentrant(FactMan))
-    EntrySet.replaceFact(FactMan, Def, Rest);
-  else
-    EntrySet.removeFact(FactMan, Def);
 }
 
 void LocksetJoin::run() {
@@ -7484,7 +7477,7 @@ void LocksetJoin::run() {
   for (const FactEntry *Cap : Caps)
     joinCapability(sideOf(EntrySet, /*IsEntry=*/true, *Cap),
                    sideOf(ExitSet, /*IsEntry=*/false, *Cap));
-  if (Ctx.canModify())
+  if (Ctx.writes() != JoinContext::Writes::None)
     EntrySet = std::move(Result);
 }
 
@@ -7829,7 +7822,7 @@ void ThreadSafetyAnalyzer::collectNaturalLoop(
 /// that did not release leaves the capability held whether or not anything
 /// branched on the result. A *bare* conditional is carried only where the
 /// loop checks it, since one the loop never checks is reported at the loop
-/// join instead (LocksetJoin::joinTryFactsAtLoop()) and would otherwise be
+/// join instead (LocksetJoin::warnUncheckedAtLoop()) and would otherwise be
 /// reported twice.
 ///
 /// Split from the walk so that the caller can decide from this scan alone
