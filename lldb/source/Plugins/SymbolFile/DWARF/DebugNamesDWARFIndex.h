@@ -70,6 +70,10 @@ public:
       const RegularExpression &regex,
       llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
 
+  StatsDuration::Duration GetIndexTime() override {
+    return m_fallback.GetIndexTime();
+  }
+
   void Dump(Stream &s) override;
 
 private:
