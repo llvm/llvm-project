@@ -5,6 +5,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 ; Test with inline immediate
 
 ; SI-LABEL: {{^}}shl_2_add_9_i32:
+; SI: v_lshlrev_b32_e32 v{{[0-9]+}}, 2, v{{[0-9]+}}
 ; SI: v_lshlrev_b32_e32  [[REG:v[0-9]+]], 2, {{v[0-9]+}}
 ; SI: v_add_i32_e32 [[RESULT:v[0-9]+]], vcc, 36, [[REG]]
 ; SI: buffer_store_dword [[RESULT]]
@@ -20,6 +21,7 @@ define amdgpu_kernel void @shl_2_add_9_i32(ptr addrspace(1) %out, ptr addrspace(
 }
 
 ; SI-LABEL: {{^}}shl_2_add_9_i32_2_add_uses:
+; SI: v_lshlrev_b32_e32 v{{[0-9]+}}, 2, v{{[0-9]+}}
 ; SI-DAG: v_add_i32_e32 [[ADDREG:v[0-9]+]], vcc, 9, {{v[0-9]+}}
 ; SI-DAG: v_lshlrev_b32_e32 [[SHLREG:v[0-9]+]], 2, {{v[0-9]+}}
 ; SI-DAG: buffer_store_dword [[ADDREG]]
@@ -39,6 +41,7 @@ define amdgpu_kernel void @shl_2_add_9_i32_2_add_uses(ptr addrspace(1) %out0, pt
 ; Test with add literal constant
 
 ; SI-LABEL: {{^}}shl_2_add_999_i32:
+; SI: v_lshlrev_b32_e32 v{{[0-9]+}}, 2, v{{[0-9]+}}
 ; SI: v_lshlrev_b32_e32  [[REG:v[0-9]+]], 2, {{v[0-9]+}}
 ; SI: v_add_i32_e32 [[RESULT:v[0-9]+]], vcc, 0xf9c, [[REG]]
 ; SI: buffer_store_dword [[RESULT]]

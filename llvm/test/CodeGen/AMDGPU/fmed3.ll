@@ -6219,13 +6219,13 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0(ptr addrspace(1) %out, ptr 
 ; VI-SDAG-NEXT:    v_add_u32_e32 v2, vcc, s4, v4
 ; VI-SDAG-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v5, s7
+; VI-SDAG-NEXT:    v_add_u32_e32 v8, vcc, s6, v4
 ; VI-SDAG-NEXT:    flat_load_dword v6, v[0:1] glc
 ; VI-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; VI-SDAG-NEXT:    flat_load_dword v2, v[2:3] glc
 ; VI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; VI-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s6, v4
-; VI-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v5, vcc
-; VI-SDAG-NEXT:    flat_load_dword v3, v[0:1] glc
+; VI-SDAG-NEXT:    v_addc_u32_e32 v9, vcc, 0, v5, vcc
+; VI-SDAG-NEXT:    flat_load_dword v3, v[8:9] glc
 ; VI-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; VI-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s0, v4
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
@@ -6255,13 +6255,13 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0(ptr addrspace(1) %out, ptr 
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v4, s6
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v5, s7
+; VI-GISEL-NEXT:    v_add_u32_e32 v8, vcc, v4, v6
 ; VI-GISEL-NEXT:    flat_load_dword v7, v[0:1] glc
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; VI-GISEL-NEXT:    flat_load_dword v2, v[2:3] glc
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; VI-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v4, v6
-; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v5, vcc
-; VI-GISEL-NEXT:    flat_load_dword v3, v[0:1] glc
+; VI-GISEL-NEXT:    v_addc_u32_e32 v9, vcc, 0, v5, vcc
+; VI-GISEL-NEXT:    flat_load_dword v3, v[8:9] glc
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
@@ -7137,13 +7137,13 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod0_mismatch(pt
 ; VI-SDAG-NEXT:    v_add_u32_e32 v2, vcc, s4, v4
 ; VI-SDAG-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v5, s7
+; VI-SDAG-NEXT:    v_add_u32_e32 v8, vcc, s6, v4
 ; VI-SDAG-NEXT:    flat_load_dword v6, v[0:1] glc
 ; VI-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; VI-SDAG-NEXT:    flat_load_dword v2, v[2:3] glc
 ; VI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; VI-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s6, v4
-; VI-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v5, vcc
-; VI-SDAG-NEXT:    flat_load_dword v3, v[0:1] glc
+; VI-SDAG-NEXT:    v_addc_u32_e32 v9, vcc, 0, v5, vcc
+; VI-SDAG-NEXT:    flat_load_dword v3, v[8:9] glc
 ; VI-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; VI-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s0, v4
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
@@ -7170,13 +7170,13 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod0_mismatch(pt
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v4, s6
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v5, s7
+; VI-GISEL-NEXT:    v_add_u32_e32 v8, vcc, v4, v6
 ; VI-GISEL-NEXT:    flat_load_dword v7, v[0:1] glc
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; VI-GISEL-NEXT:    flat_load_dword v2, v[2:3] glc
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; VI-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v4, v6
-; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v5, vcc
-; VI-GISEL-NEXT:    flat_load_dword v3, v[0:1] glc
+; VI-GISEL-NEXT:    v_addc_u32_e32 v9, vcc, 0, v5, vcc
+; VI-GISEL-NEXT:    flat_load_dword v3, v[8:9] glc
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
@@ -7832,20 +7832,20 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f16_pat0(ptr addrspace(1) %out, pt
 ; GFX11-SDAG-TRUE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; GFX11-SDAG-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 1, v0
+; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 1, v0
+; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v0.h, 2.0, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3] glc dlc
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_b16 v0, v5, s[2:3] glc dlc
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v2, s[4:5] glc dlc
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_b16 v3, v5, s[4:5] glc dlc
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_b16 v1, v2, s[6:7] glc dlc
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_b16 v1, v5, s[6:7] glc dlc
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
-; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v0.h, 2.0, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v1.l, 4.0, v1.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_med3_f16 v0.l, v0.l, v0.h, v1.l
-; GFX11-SDAG-TRUE16-NEXT:    global_store_b16 v2, v0, s[0:1]
+; GFX11-SDAG-TRUE16-NEXT:    global_store_b16 v5, v0, s[0:1]
 ; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-GISEL-TRUE16-LABEL: v_nnan_inputs_med3_f16_pat0:
@@ -7853,20 +7853,20 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f16_pat0(ptr addrspace(1) %out, pt
 ; GFX11-GISEL-TRUE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; GFX11-GISEL-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 1, v0
+; GFX11-GISEL-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 1, v0
+; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.h, 2.0, v0.h
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-GISEL-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3] glc dlc
+; GFX11-GISEL-TRUE16-NEXT:    global_load_d16_b16 v0, v5, s[2:3] glc dlc
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GISEL-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v2, s[4:5] glc dlc
+; GFX11-GISEL-TRUE16-NEXT:    global_load_d16_b16 v3, v5, s[4:5] glc dlc
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GISEL-TRUE16-NEXT:    global_load_d16_b16 v1, v2, s[6:7] glc dlc
+; GFX11-GISEL-TRUE16-NEXT:    global_load_d16_b16 v1, v5, s[6:7] glc dlc
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
-; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.h, 2.0, v0.h
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v1.l, 4.0, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-TRUE16-NEXT:    v_med3_f16 v0.l, v0.l, v0.h, v1.l
-; GFX11-GISEL-TRUE16-NEXT:    global_store_b16 v2, v0, s[0:1]
+; GFX11-GISEL-TRUE16-NEXT:    global_store_b16 v5, v0, s[0:1]
 ; GFX11-GISEL-TRUE16-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr half, ptr addrspace(1) %aptr, i32 %tid

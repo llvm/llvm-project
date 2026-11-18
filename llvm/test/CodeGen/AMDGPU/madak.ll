@@ -159,23 +159,23 @@ define amdgpu_kernel void @madak_2_use_f32(ptr addrspace(1) noalias %out, ptr ad
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v6, 2, v0
+; GFX8-NEXT:    v_mov_b32_e32 v5, 0x41200000
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s2, v6
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 4, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 8, v0
-; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v10, vcc, 8, v0
+; GFX8-NEXT:    v_addc_u32_e32 v11, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dword v7, v[0:1] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    flat_load_dword v8, v[2:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    flat_load_dword v4, v[4:5] glc
+; GFX8-NEXT:    flat_load_dword v4, v[10:11] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s0, v6
-; GFX8-NEXT:    v_mov_b32_e32 v5, 0x41200000
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    v_madak_f32 v6, v7, v8, 0x41200000
 ; GFX8-NEXT:    v_mac_f32_e32 v5, v7, v4

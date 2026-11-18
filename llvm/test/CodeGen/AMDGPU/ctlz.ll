@@ -1823,9 +1823,9 @@ define amdgpu_kernel void @v_ctlz_i17_sel_ne_bitwidth(ptr addrspace(1) noalias %
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    v_add_u32_e32 v2, vcc, 2, v0
-; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_ubyte v2, v[2:3]
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 2, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_load_ubyte v2, v[4:5]
 ; VI-NEXT:    flat_load_ushort v0, v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v1, 0x1ffff
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
