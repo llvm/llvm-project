@@ -444,10 +444,12 @@ endif ()
 
 # Determine HOST_LINK_VERSION on Darwin.
 set(HOST_LINK_VERSION "" CACHE STRING "Host linker version on Darwin")
-if (APPLE AND NOT HOST_LINK_VERSION AND NOT CMAKE_LINKER MATCHES ".*lld.*")
+get_filename_component(CLANG_LINKER_NAME "${CMAKE_LINKER}" NAME)
+if (APPLE AND NOT HOST_LINK_VERSION AND NOT CLANG_LINKER_NAME MATCHES "lld")
   get_darwin_linker_version(HOST_LINK_VERSION)
   set(HOST_LINK_VERSION "${HOST_LINK_VERSION}" CACHE STRING "Host linker version on Darwin" FORCE)
 endif()
+unset(CLANG_LINKER_NAME)
 if (HOST_LINK_VERSION)
   message(STATUS "Host linker version: ${HOST_LINK_VERSION}")
 endif()

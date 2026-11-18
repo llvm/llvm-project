@@ -16,6 +16,7 @@
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/Utils/Utils.h"
 #include "mlir/IR/SymbolTable.h"
 #include "clang/AST/ASTContext.h"
@@ -413,6 +414,14 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
   case llvm::Triple::spirv64:
     theTargetCIRGenInfo = createCommonSPIRTargetCIRGenInfo(genTypes);
     return *theTargetCIRGenInfo;
+  case llvm::Triple::systemz: {
+    // z/OS XPLINK target info is not implemented yet.
+    // We just default to SystemZ ELF Target for now.
+    if (triple.isOSzOS())
+      assert(!cir::MissingFeatures::targetCIRGenInfoOS());
+    theTargetCIRGenInfo = createSystemZTargetCIRGenInfo(genTypes);
+    return *theTargetCIRGenInfo;
+  }
   }
 }
 
@@ -2216,14 +2225,9 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
   assert(!cir::MissingFeatures::opFuncExceptions());
   assert(!cir::MissingFeatures::opFuncParameterAttributes());
   assert(!cir::MissingFeatures::opFuncOperandBundles());
-  unsigned numInherentAttrs = 0;
-  oldFn->getName().walkInherentAttrs(
-      oldFn, [&](llvm::StringRef, mlir::Attribute &attr) {
-        numInherentAttrs += bool(attr);
-      });
-  if (numInherentAttrs <= 1)
-    errorNYI(old->getLoc(),
-             "replaceUsesOfNonProtoTypeWithRealFunction: Attribute forwarding");
+  // The caller sets function attributes from the replacement's declaration.
+  // Copying the old attributes could retain incompatible assumptions from a
+  // different declaration that happens to share the same symbol name.
 
   // Mark new function as originated from a no-proto declaration.
   newFn.setNoProto(oldFn.getNoProto());
@@ -2285,7 +2289,11 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
         realCallOp = builder.createIndirectCallOp(
             noProtoCallOp.getLoc(), casted, callFnType, callOperands);
       }
-      realCallOp.setCallingConv(noProtoCallOp.getCallingConv());
+      // The argument and result types are unchanged, so preserve their
+      // attributes and the call semantics. The new callee is already set.
+      for (mlir::NamedAttribute attr : noProtoCallOp->getAttrs())
+        if (attr.getName() != cir::CIRDialect::getCalleeAttrName())
+          realCallOp->setAttr(attr.getName(), attr.getValue());
 
       // Replace old no proto call with fixed call.
       noProtoCallOp.replaceAllUsesWith(realCallOp);
@@ -3480,6 +3488,14 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
     setCIRFunctionAttributes(globalDecl,
                              getTypes().arrangeGlobalDeclaration(globalDecl),
                              func, isThunk);
+
+  // Add the Returned attribute for "this", except for iOS 5 and earlier
+  // where substantial code, including the libstdc++ dylib, was compiled with
+  // GCC and does not actually return "this".
+  if (!isThunk && getCXXABI().hasThisReturn(globalDecl) &&
+      !(getTriple().isiOS() && getTriple().isOSVersionLT(6)))
+    func.setArgAttr(0, mlir::LLVM::LLVMDialect::getReturnedAttrName(),
+                    mlir::UnitAttr::get(&getMLIRContext()));
 
   if (!isIncompleteFunction && func.isDeclaration())
     getTargetCIRGenInfo().setTargetAttributes(funcDecl, func, *this);

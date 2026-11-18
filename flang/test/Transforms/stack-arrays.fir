@@ -209,8 +209,8 @@ func.func @placement3() {
 // CHECK-NEXT:   %[[C2:.*]] = arith.constant 2 : index
 // CHECK-NEXT:   %[[C10:.*]] = arith.constant 10 : index
 // CHECK-NEXT:   fir.do_loop
-// CHECK-NEXT:     %[[SUM:.*]] = arith.addi %[[C1]], %[[C2]] : index
 // CHECK-NEXT:     %[[SP:.*]] = llvm.intr.stacksave : !llvm.ptr
+// CHECK-NEXT:     %[[SUM:.*]] = arith.addi %[[C1]], %[[C2]] : index
 // CHECK-NEXT:     %[[MEM:.*]] = fir.alloca !fir.array<?xi32>, %[[SUM]]
 // CHECK:     llvm.intr.stackrestore %[[SP]] : !llvm.ptr
 // CHECK-NEXT:     fir.result
@@ -246,8 +246,8 @@ func.func @placement4(%arg0 : i1) {
 // CHECK-NEXT:   %[[C10:.*]] = arith.constant 10 : index
 // CHECK-NEXT:   cf.br ^bb1
 // CHECK-NEXT: ^bb1:
-// CHECK-NEXT:   %[[C3:.*]] = arith.constant 3 : index
 // CHECK-NEXT:   %[[SP:.*]] = llvm.intr.stacksave : !llvm.ptr
+// CHECK-NEXT:   %[[C3:.*]] = arith.constant 3 : index
 // CHECK-NEXT:   %[[MEM:.*]] = fir.alloca !fir.array<?xi32>, %[[C3]]
 // CHECK:   llvm.intr.stackrestore %[[SP]] : !llvm.ptr
 // CHECK-NEXT:   cf.cond_br %arg0, ^bb1, ^bb2
@@ -446,8 +446,8 @@ func.func @placement_loop_declare() {
 // CHECK-NEXT:   %[[C2:.*]] = arith.constant 2 : index
 // CHECK-NEXT:   %[[C10:.*]] = arith.constant 10 : index
 // CHECK-NEXT:   fir.do_loop
-// CHECK-NEXT:     %[[SUM:.*]] = arith.addi %[[C1]], %[[C2]] : index
 // CHECK-NEXT:     %[[SP:.*]] = llvm.intr.stacksave : !llvm.ptr
+// CHECK-NEXT:     %[[SUM:.*]] = arith.addi %[[C1]], %[[C2]] : index
 // CHECK-NEXT:     %[[MEM:.*]] = fir.alloca !fir.array<?xi32>, %[[SUM]]
 // CHECK:          llvm.intr.stackrestore %[[SP]] : !llvm.ptr
 // CHECK-NEXT:     fir.result
@@ -570,7 +570,7 @@ func.func @constant_length_char(%arg0: i1) {
 // CHECK-NOT:     fir.allocmem
 // CHECK-NOT:     fir.freemem
 
-// A dynamic-length scalar character temporary stays on the heap.
+// A dynamic-length scalar character temporary is moved to the stack.
 func.func @dynamic_length_char(%len: index) {
   %mem = fir.allocmem !fir.char<1,?>(%len : index) {bindc_name = ".tmp.trim", uniq_name = ""}
   %box = fir.emboxchar %mem, %len : (!fir.heap<!fir.char<1,?>>, index) -> !fir.boxchar<1>
@@ -579,9 +579,9 @@ func.func @dynamic_length_char(%len: index) {
   return
 }
 // CHECK-LABEL: func.func @dynamic_length_char(
-// CHECK-NOT:     fir.alloca
-// CHECK:         fir.allocmem !fir.char<1,?>(%{{.*}} : index)
-// CHECK:         fir.freemem
+// CHECK-NEXT:    fir.alloca !fir.char<1,?>(%{{.*}} : index) {{.*}}.tmp.trim
+// CHECK-NOT:     fir.allocmem
+// CHECK-NOT:     fir.freemem
 
 // Other scalars are not candidates.
 func.func @scalar_int() {

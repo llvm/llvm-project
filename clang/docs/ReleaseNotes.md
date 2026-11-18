@@ -174,6 +174,27 @@ features cannot lower the translation-unit ABI level;
 
 - On MSP430, `wint_t` is now `unsigned int`, matching msp430-gcc.
 
+- On 32-bit x86 excluding Darwin and Playstation and 64-bit x86 excluding
+  Darwin, Playstation and Windows, small integer arguments are now passed in
+  a way that is compatible with both the platform ABI and old Clang versions,
+  by extending them in the caller, but not assuming extension in the callee.
+  On affected targets, the behavior can be controlled using the new
+  `-msmall-int-abi-compat` option:
+
+  * `-msmall-int-abi-compat=platform`: Compatible with platform ABI (and thus
+    other compilers such as GCC), but not with old Clang-built objects. Does
+    not extend in the caller and does not assume extension in the callee.
+  * `-msmall-int-abi-compat=clang`: Compatible with old Clang objects, but
+    potentially not the platform ABI. Extends in the caller and assumes
+    extension in the callee.
+  * `-msmall-int-abi-compat=both` (default): Compatible with both the platform
+    ABI and old Clang-built objects. Extends in the caller and does not assume
+    extension in the callee.
+
+  The default has the widest compatibility, but the other options can be used
+  to generate more efficient code, if compatibility with either the platform
+  ABI or old Clang-built objects is not necessary. (#GH236450)
+
 ### AST Dumping Potentially Breaking Changes
 
 - The AST printer (`-ast-print`) now prints a floating-point literal as the
@@ -446,6 +467,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   extensions that DXC implements, as `-fspv-extension=DXC` does, instead of all
   extensions. `-fspv-extension=all` restores the previous behavior.
 
+- `-fdevirtualize-speculatively` can now also be used to enable speculative
+  devirtualization when using LTO, with the exception of Distributed ThinLTO.
+
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
@@ -510,6 +534,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   object is reachable.
 
 ### Improvements to Clang's diagnostics
+
+- Errors for invalid element types during instantiation of an `ext_vector_type`
+  now include a source location, including in alias templates. (#GH229300)
 
 - Fixed `-Wheader-guard` warnings pointing at `if` instead of the macro name
   in `#if !defined(...)` header guards.
@@ -1564,6 +1591,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Improvements
 
+- The user can opt in to analyze functions coming from files participating in
+  unity or jumbo builds as analysis entry points with
+  `-analyzer-config unitybuild-file-extensions=<file-extensions>`.
+  The default behavior is unchanged.
+
 - `unix.StdCLibraryFunctions` now ignores `restrict` qualifiers in C library
   declarations such as `fopen` when targeting MSVC to avoid false negatives in
   C99 and later C standards.
@@ -1585,6 +1617,11 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 ### Sanitizers
 
+- Sanitizer Special Case Lists (`-fsanitize-ignorelist`) and warning
+  suppression mappings (`--warning-suppression-mappings`) now recognize version
+  6 of the Special Case List format (indicated by `#!special-case-list-v6`),
+  which disallows entries without a preceding section header instead of placing
+  them in the implicit `[*]` section.
 - Added the `typefunchash` and `typefunchashpointersplit` token assignment
   modes for `-fsanitize=alloc-token`, selected with
   `-Xclang -falloc-token-mode=<mode>`. These modes derive token IDs from both

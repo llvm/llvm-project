@@ -457,6 +457,10 @@ defm : HWWriteResPair<WriteVarShuffle, [HWPort5], 1, [1], 1, 5>;
 defm : HWWriteResPair<WriteVarShuffleX,[HWPort5], 1, [1], 1, 6>;
 defm : HWWriteResPair<WriteVarShuffleY,[HWPort5], 1, [1], 1, 7>;
 defm : HWWriteResPair<WriteVarShuffleZ,[HWPort5], 1, [1], 1, 7>; // Unsupported = 1
+defm : HWWriteResPair<WritePack,   [HWPort5], 3, [2], 2, 4>;
+defm : HWWriteResPair<WritePackX,  [HWPort5], 1, [1], 1, 6>;
+defm : HWWriteResPair<WritePackY,  [HWPort5], 1, [1], 1, 7>;
+defm : HWWriteResPair<WritePackZ,  [HWPort5], 1, [1], 1, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteBlend,  [HWPort5], 1, [1], 1, 6>;
 defm : HWWriteResPair<WriteBlendY, [HWPort5], 1, [1], 1, 7>;
 defm : HWWriteResPair<WriteBlendZ, [HWPort5], 1, [1], 1, 7>; // Unsupported = 1
@@ -1131,15 +1135,6 @@ def HWWriteResGroup35 : SchedWriteRes<[HWPort06,HWPort0156]> {
 }
 def: InstRW<[HWWriteResGroup35], (instrs CWD, JCXZ, JECXZ, JRCXZ)>;
 
-def HWWriteResGroup36_2 : SchedWriteRes<[HWPort5,HWPort23]> {
-  let Latency = 7;
-  let NumMicroOps = 3;
-  let ReleaseAtCycles = [2,1];
-}
-def: InstRW<[HWWriteResGroup36_2], (instrs MMX_PACKSSDWrm,
-                                           MMX_PACKSSWBrm,
-                                           MMX_PACKUSWBrm)>;
-
 def HWWriteResGroup37 : SchedWriteRes<[HWPort23,HWPort0156]> {
   let Latency = 7;
   let NumMicroOps = 3;
@@ -1238,15 +1233,6 @@ def: InstRW<[HWWriteResGroup53_1], (instrs VPMOVSXBWYrm,
                                            VPMOVSXDQYrm,
                                            VPMOVSXWDYrm,
                                            VPMOVZXWDYrm)>;
-
-def HWWriteResGroup57 : SchedWriteRes<[HWPort5]> {
-  let Latency = 3;
-  let NumMicroOps = 2;
-  let ReleaseAtCycles = [2];
-}
-def: InstRW<[HWWriteResGroup57], (instrs MMX_PACKSSDWrr,
-                                         MMX_PACKSSWBrr,
-                                         MMX_PACKUSWBrr)>;
 
 def HWWriteResGroup58 : SchedWriteRes<[HWPort6,HWPort0156]> {
   let Latency = 3;

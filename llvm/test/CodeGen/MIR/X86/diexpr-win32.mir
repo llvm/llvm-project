@@ -159,7 +159,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
 liveins:
 frameInfo:
   isFrameAddressTaken: false
@@ -216,7 +215,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
 liveins:
 frameInfo:
   isFrameAddressTaken: false
