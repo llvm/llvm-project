@@ -1278,8 +1278,7 @@ define void @interleaved_stores_after_early_exit(ptr noalias %dst, ptr align 2 d
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 8 x i16> @llvm.vp.load.nxv8i16.p0(ptr align 2 [[TMP2]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <vscale x 8 x i16> [[WIDE_LOAD]], splat (i16 500)
-; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 8 x i1> @llvm.vp.merge.nxv8i1(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x i1> [[TMP3]], <vscale x 8 x i1> zeroinitializer, i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze <vscale x 8 x i1> [[TMP5]]
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze <vscale x 8 x i1> [[TMP3]]
 ; CHECK-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <vscale x 8 x i1> @llvm.mask.beforefirst.nxv8i1(<vscale x 8 x i1> [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP6]]
@@ -1287,8 +1286,7 @@ define void @interleaved_stores_after_early_exit(ptr noalias %dst, ptr align 2 d
 ; CHECK-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 16 x i1> @llvm.vector.interleave2.nxv16i1(<vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]], <vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]])
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x i16> @llvm.vector.interleave2.nxv16i16(<vscale x 8 x i16> splat (i16 1), <vscale x 8 x i16> splat (i16 2))
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv16i16.p0(<vscale x 16 x i16> [[INTERLEAVED_VEC]], ptr align 2 [[TMP7]], <vscale x 16 x i1> [[INTERLEAVED_MASK]], i32 [[INTERLEAVE_EVL]])
-; CHECK-NEXT:    [[TMP10:%.*]] = freeze <vscale x 8 x i1> [[TMP3]]
-; CHECK-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vp.reduce.or.nxv8i1(i1 false, <vscale x 8 x i1> [[TMP10]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vp.reduce.or.nxv8i1(i1 false, <vscale x 8 x i1> [[TMP4]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP9]], false
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP11]], [[INDEX]]
