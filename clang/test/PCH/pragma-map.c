@@ -4,15 +4,15 @@
 // RUN: %clang_cc1 -triple s390x-ibm-zos -include %S/pragma-map.h %s -emit-llvm -o - | FileCheck %s
 
 /// Test with pch.
-// RUN: %clang_cc1 -triple s390x-ibm-zos -x c-header -emit-pch -o %t %S/pragma-map.h
+// RUN: %clang_cc1 -source-date-epoch 1613676318 -triple s390x-ibm-zos -x c-header -emit-pch -o %t %S/pragma-map.h
 // RUN: %clang_cc1 -triple s390x-ibm-zos -include-pch %t %s -emit-llvm -o - | FileCheck %s
 
 /// Compile it a few times to check that the PCH file is deterministic.
-// RUN: %clang_cc1 -triple s390x-ibm-zos -x c-header -emit-pch -o %t.cmp %S/pragma-map.h
+// RUN: %clang_cc1 -source-date-epoch 1613676318 -triple s390x-ibm-zos -x c-header -emit-pch -o %t.cmp %S/pragma-map.h
 // RUN: diff %t %t.cmp >/dev/null
-// RUN: %clang_cc1 -triple s390x-ibm-zos -x c-header -emit-pch -o %t.cmp %S/pragma-map.h
+// RUN: %clang_cc1 -source-date-epoch 1613676318 -triple s390x-ibm-zos -x c-header -emit-pch -o %t.cmp %S/pragma-map.h
 // RUN: diff %t %t.cmp >/dev/null
-// RUN: %clang_cc1 -triple s390x-ibm-zos -x c-header -emit-pch -o %t.cmp %S/pragma-map.h
+// RUN: %clang_cc1 -source-date-epoch 1613676318 -triple s390x-ibm-zos -x c-header -emit-pch -o %t.cmp %S/pragma-map.h
 // RUN: diff %t %t.cmp >/dev/null
 
 /// Check that #pragma map is exported into PCHs even if the header contains no
