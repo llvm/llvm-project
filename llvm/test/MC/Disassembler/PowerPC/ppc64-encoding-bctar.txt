@@ -1,0 +1,62 @@
+# RUN: llvm-mc --disassemble %s -triple powerpc64-unknown-unknown -mcpu=pwr8 | FileCheck %s
+
+# ISA 2.07 (POWER8) Branch Conditional to Target Address Register.
+# Paired with llvm/test/MC/PowerPC/ppc64-encoding-bctar.s
+#
+# The disassembler emits the generic bctar/bctarl form (BO, BI[, BH]); it does
+# not reconstruct the simple or extended branch mnemonics. The BH operand is
+# printed only when nonzero. Instruction bytes are in big-endian order.
+
+# Generic bctar / bctarl, 3-operand and 2-operand (BH == 0) forms.
+# CHECK: bctar 4, 10, 3
+0x4c 0x8a 0x1c 0x60
+# CHECK: bctar 4, 10
+0x4c 0x8a 0x04 0x60
+# CHECK: bctarl 4, 10, 3
+0x4c 0x8a 0x1c 0x61
+# CHECK: bctarl 4, 10
+0x4c 0x8a 0x04 0x61
+
+# BO encodings assembled from the bttar / bftar simple mnemonics.
+# CHECK: bctar 12, 2
+0x4d 0x82 0x04 0x60
+# CHECK: bctar 4, 2
+0x4c 0x82 0x04 0x60
+# CHECK: bctarl 12, 2
+0x4d 0x82 0x04 0x61
+# CHECK: bctarl 4, 2
+0x4c 0x82 0x04 0x61
+
+# Prediction-hint BO values decode to plain bctar BO, BI.
+# CHECK: bctar 15, 2
+0x4d 0xe2 0x04 0x60
+# CHECK: bctar 14, 2
+0x4d 0xc2 0x04 0x60
+# CHECK: bctar 7, 2
+0x4c 0xe2 0x04 0x60
+# CHECK: bctar 6, 2
+0x4c 0xc2 0x04 0x60
+
+# Condition-bit BI values assembled from blttar / bgttar / beqtar.
+# CHECK: bctar 12, 0
+0x4d 0x80 0x04 0x60
+# CHECK: bctar 12, 8
+0x4d 0x88 0x04 0x60
+# CHECK: bctarl 12, 0
+0x4d 0x80 0x04 0x61
+# CHECK: bctarl 12, 8
+0x4d 0x88 0x04 0x61
+# CHECK: bctar 12, 9
+0x4d 0x89 0x04 0x60
+# CHECK: bctar 12, 10
+0x4d 0x8a 0x04 0x60
+
+# bdnztar / bdztar decode as generic bctar/bctarl with BO={16,18}, BI=0.
+# CHECK: bctar 16, 0
+0x4e 0x00 0x04 0x60
+# CHECK: bctar 18, 0
+0x4e 0x40 0x04 0x60
+# CHECK: bctarl 16, 0
+0x4e 0x00 0x04 0x61
+# CHECK: bctarl 18, 0
+0x4e 0x40 0x04 0x61
