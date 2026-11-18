@@ -27,8 +27,10 @@ static size_t numElementsInSubstring(const SuffixTreeNode *N) {
 }
 
 SuffixTree::SuffixTree(const ArrayRef<unsigned> &Str,
-                       bool OutlinerLeafDescendants)
-    : Str(Str), OutlinerLeafDescendants(OutlinerLeafDescendants) {
+                       bool OutlinerLeafDescendants,
+                       std::optional<unsigned> BoundaryStart)
+    : Str(Str), OutlinerLeafDescendants(OutlinerLeafDescendants),
+      BoundaryStart(BoundaryStart) {
   Root = insertRoot();
   Active.Node = Root;
 
@@ -126,6 +128,12 @@ void SuffixTree::setLeafNodes() {
       } else {
         // This is the second time we visit this node.
         // All of its children have already been processed.
+        // With MinLength == 2, pruning can leave empty internal nodes with path
+        // length 1. Only the root can have such children, so skip computing its
+        // unused leaf range.
+        if (CurrInternalNode->isRoot())
+          continue;
+
         // Now, we can set its LeftLeafIdx and RightLeafIdx;
         auto [FirstChild, LastChild] = I->second;
         // Get the first child to use its RightLeafIdx.
@@ -167,10 +175,16 @@ unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
     unsigned FirstChar = Str[Active.Idx];
 
     // Have we inserted anything starting with FirstChar at the current node?
-    if (auto It = Active.Node->Children.find(FirstChar);
+    // Each boundary symbol is unique, so no child has this key.
+    // Skip the child lookup.
+    if (auto It = isBoundary(FirstChar) ? Active.Node->Children.end()
+                                        : Active.Node->Children.find(FirstChar);
         It == Active.Node->Children.end()) {
       // If not, then we can just insert a leaf and move to the next step.
-      insertLeaf(*Active.Node, EndIdx, FirstChar);
+      // Short boundary leaves cannot contribute to repeated substrings,
+      // so prune them on paths shorter than MinLength.
+      if (!isBoundary(FirstChar) || Active.Node->getConcatLen() >= MinLength)
+        insertLeaf(*Active.Node, EndIdx, FirstChar);
 
       // The active node is an internal node, and we visited it, so it must
       // need a link if it doesn't have one.
@@ -236,12 +250,15 @@ unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
 
       // Insert the new node representing the new substring into the tree as
       // a child of the split node. This is the node l from the diagram.
-      insertLeaf(*SplitNode, EndIdx, LastChar);
+      if (!isBoundary(LastChar) || SplitNode->getConcatLen() >= MinLength)
+        insertLeaf(*SplitNode, EndIdx, LastChar);
 
       // Make the old node a child of the split node and update its start
       // index. This is the node n from the diagram.
       NextNode->incrementStartIdx(Active.Len);
-      SplitNode->Children[Str[NextNode->getStartIdx()]] = NextNode;
+      unsigned Edge = Str[NextNode->getStartIdx()];
+      if (!isBoundary(Edge) || SplitNode->getConcatLen() >= MinLength)
+        SplitNode->Children[Edge] = NextNode;
 
       // SplitNode is an internal node, update the suffix link.
       if (NeedsLink)

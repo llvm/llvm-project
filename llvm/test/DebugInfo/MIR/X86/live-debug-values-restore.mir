@@ -266,7 +266,6 @@ selected:        false
 failedISel:      false
 debugInstrRef: true
 hasWinCFI:       false
-registers:       []
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
 frameInfo:       

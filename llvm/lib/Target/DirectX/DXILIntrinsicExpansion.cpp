@@ -242,6 +242,9 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::vector_reduce_or:
     return F.getParent()->getTargetTriple().getDXILVersion() <
            VersionTuple(1, 9);
+  case Intrinsic::dx_quad_all:
+    return F.getParent()->getTargetTriple().getDXILVersion() <
+           VersionTuple(1, 7);
   case Intrinsic::dx_fdot:
     return shouldExpandFloatDotIntrinsic(F);
   case Intrinsic::dx_resource_load_rawbuffer:
@@ -1261,6 +1264,24 @@ static Value *expandLoadInput(CallInst *Orig) {
   return Vec;
 }
 
+static Value *expandQuadAll(CallInst *Orig) {
+  IRBuilder<> Builder(Orig);
+  SmallVector<OperandBundleDef, 1> Bundles;
+  Orig->getOperandBundlesAsDefs(Bundles);
+
+  Value *Cond =
+      Builder.CreateSExt(Orig->getArgOperand(0), Builder.getInt32Ty());
+  Value *Result = Cond;
+  for (Intrinsic::ID ID :
+       {Intrinsic::dx_quad_read_across_x, Intrinsic::dx_quad_read_across_y,
+        Intrinsic::dx_quad_read_across_diagonal}) {
+    Value *QuadValue = Builder.CreateIntrinsic(ID, {Builder.getInt32Ty()}, Cond,
+                                               nullptr, "", Bundles);
+    Result = Builder.CreateAnd(Result, QuadValue);
+  }
+  return Builder.CreateTrunc(Result, Builder.getInt1Ty());
+}
+
 static bool expandIntrinsic(Function &F, CallInst *Orig) {
   Value *Result = nullptr;
   Intrinsic::ID IntrinsicId = F.getIntrinsicID();
@@ -1326,6 +1347,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_sign:
     Result = expandSignIntrinsic(Orig);
+    break;
+  case Intrinsic::dx_quad_all:
+    Result = expandQuadAll(Orig);
     break;
   case Intrinsic::dx_load_input:
     Result = expandLoadInput(Orig);

@@ -80,7 +80,7 @@ void applyFoldFPZeroStore(MachineInstr &MI, MachineRegisterInfo &MRI,
                           Register &MatchInfo) {
   const unsigned XLen = STI.getXLen();
 
-  auto Zero = B.buildConstant(LLT::scalar(XLen), 0);
+  auto Zero = B.buildConstant(LLT::integer(XLen), 0);
   MI.getOperand(0).setReg(Zero.getReg(0));
 
   MachineInstr *Def = MRI.getVRegDef(MatchInfo);

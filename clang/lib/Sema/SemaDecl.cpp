@@ -967,9 +967,9 @@ Sema::NameClassification Sema::ClassifyName(Scope *S, CXXScopeSpec &SS,
 Corrected:
   switch (Result.getResultKind()) {
   case LookupResultKind::NotFound:
-    // If an unqualified-id is followed by a '(', then we have a function
-    // call.
-    if (SS.isEmpty() && NextToken.is(tok::l_paren)) {
+    // If an unqualified-id is followed by '(' or '<<<', then we have a
+    // function call or kernel launch.
+    if (SS.isEmpty() && NextToken.isOneOf(tok::l_paren, tok::lesslessless)) {
       // In C++, this is an ADL-only call.
       // FIXME: Reference?
       if (getLangOpts().CPlusPlus)
@@ -1289,7 +1289,8 @@ Corrected:
   // that declaration directly. Defer resolving even non-overloaded class
   // member accesses, as we need to defer certain access checks until we know
   // the context.
-  bool ADL = UseArgumentDependentLookup(SS, Result, NextToken.is(tok::l_paren));
+  bool ADL = UseArgumentDependentLookup(
+      SS, Result, NextToken.isOneOf(tok::l_paren, tok::lesslessless));
   if (Result.isSingleResult() && !ADL &&
       (!FirstDecl->isCXXClassMember() || isa<EnumConstantDecl>(FirstDecl)))
     return NameClassification::NonType(Result.getRepresentativeDecl());
@@ -1335,7 +1336,8 @@ ExprResult Sema::ActOnNameClassifiedAsNonType(Scope *S, const CXXScopeSpec &SS,
   Result.addDecl(Found);
   Result.resolveKind();
 
-  bool ADL = UseArgumentDependentLookup(SS, Result, NextToken.is(tok::l_paren));
+  bool ADL = UseArgumentDependentLookup(
+      SS, Result, NextToken.isOneOf(tok::l_paren, tok::lesslessless));
   return BuildDeclarationNameExpr(SS, Result, ADL, /*AcceptInvalidDecl=*/true);
 }
 

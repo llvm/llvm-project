@@ -55,18 +55,16 @@ class TlsGlobalTestCase(TestBase):
         env = self.registerSharedLibrariesWithTarget(target, ["a_dylib"])
 
         line1 = line_number("main.c", "// thread breakpoint")
-        lldbutil.run_break_set_by_file_and_line(
+        bkpt_id = lldbutil.run_break_set_by_file_and_line(
             self, "main.c", line1, num_expected_locations=1, loc_exact=True
         )
-        target.LaunchSimple(None, env, self.get_process_working_directory())
-
-        # The stop reason of the thread should be breakpoint.
-        self.runCmd("process status", "Get process status")
-        self.expect(
-            "thread list",
-            STOPPED_DUE_TO_BREAKPOINT,
-            substrs=["stopped", "stop reason = breakpoint"],
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetEnvironmentEntries(env, False)
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        lldbutil.run_to_breakpoint_do_run(
+            self, target, target.FindBreakpointByID(bkpt_id), launch_info
         )
+        self.runCmd("process status", "Get process status")
 
         # BUG: sometimes lldb doesn't change threads to the stopped thread.
         # (unrelated to this test).
