@@ -1,4 +1,4 @@
-//===-- DumpRegisterInfoTest.cpp ------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/DumpRegisterInfo.h"
+#include "lldb/Register/DumpRegisterInfo.h"
+#include "lldb/Register/RegisterDescription.h"
 #include "lldb/Register/RegisterType.h"
 #include "lldb/Register/RegisterTypeFlags.h"
 #include "lldb/Utility/StreamString.h"
@@ -16,21 +17,21 @@
 
 using namespace lldb_private;
 
-TEST(DoDumpRegisterInfoTest, MinimumInfo) {
+TEST(DumpRegisterDescriptionTest, MinimumDescription) {
   StreamString strm;
   DoDumpRegisterInfo(strm, "foo", nullptr, 4, {}, {}, {}, nullptr, 0);
   ASSERT_EQ(strm.GetString(), "       Name: foo\n"
                               "       Size: 4 bytes (32 bits)");
 }
 
-TEST(DoDumpRegisterInfoTest, AltName) {
+TEST(DumpRegisterDescriptionTest, AltName) {
   StreamString strm;
   DoDumpRegisterInfo(strm, "foo", "bar", 4, {}, {}, {}, nullptr, 0);
   ASSERT_EQ(strm.GetString(), "       Name: foo (bar)\n"
                               "       Size: 4 bytes (32 bits)");
 }
 
-TEST(DoDumpRegisterInfoTest, Invalidates) {
+TEST(DumpRegisterDescriptionTest, Invalidates) {
   StreamString strm;
   DoDumpRegisterInfo(strm, "foo", nullptr, 4, {"foo2"}, {}, {}, nullptr, 0);
   ASSERT_EQ(strm.GetString(), "       Name: foo\n"
@@ -45,7 +46,7 @@ TEST(DoDumpRegisterInfoTest, Invalidates) {
                               "Invalidates: foo2, foo3, foo4");
 }
 
-TEST(DoDumpRegisterInfoTest, ReadFrom) {
+TEST(DumpRegisterDescriptionTest, ReadFrom) {
   StreamString strm;
   DoDumpRegisterInfo(strm, "foo", nullptr, 4, {}, {"foo1"}, {}, nullptr, 0);
   ASSERT_EQ(strm.GetString(), "       Name: foo\n"
@@ -60,7 +61,7 @@ TEST(DoDumpRegisterInfoTest, ReadFrom) {
                               "  Read from: foo1, foo2, foo3");
 }
 
-TEST(DoDumpRegisterInfoTest, InSets) {
+TEST(DumpRegisterDescriptionTest, InGroups) {
   StreamString strm;
   DoDumpRegisterInfo(strm, "foo", nullptr, 4, {}, {}, {{"set1", 101}}, nullptr,
                      0);
@@ -77,7 +78,7 @@ TEST(DoDumpRegisterInfoTest, InSets) {
             "    In sets: set1 (index 0), set2 (index 1), set3 (index 2)");
 }
 
-TEST(DoDumpRegisterInfoTest, MaxInfo) {
+TEST(DumpRegisterDescriptionTest, CompleteDescription) {
   StreamString strm;
   DoDumpRegisterInfo(strm, "foo", nullptr, 4, {"foo2", "foo3"},
                      {"foo3", "foo4"}, {{"set1", 1}, {"set2", 2}}, nullptr, 0);
@@ -88,7 +89,7 @@ TEST(DoDumpRegisterInfoTest, MaxInfo) {
                               "    In sets: set1 (index 1), set2 (index 2)");
 }
 
-TEST(DoDumpRegisterInfoTest, FieldsTable) {
+TEST(DumpRegisterDescriptionTest, FieldsTable) {
   // This is thoroughly tested in RegisterTypeFlags itself, only checking the
   // integration here.
   StreamString strm;
@@ -108,7 +109,7 @@ TEST(DoDumpRegisterInfoTest, FieldsTable) {
                               "|   A   |   B   |  C   |  D  |");
 }
 
-TEST(DoDumpRegisterInfoTest, Enumerators) {
+TEST(DumpRegisterDescriptionTest, Enumerators) {
   StreamString strm;
 
   RegisterTypeEnum enum_one("enum_one", {{0, "an_enumerator"}});
@@ -135,7 +136,7 @@ TEST(DoDumpRegisterInfoTest, Enumerators) {
             "C: 1 = another_enumerator, 2 = another_enumerator_2");
 }
 
-TEST(DoDumpRegisterInfoTest, VectorElements) {
+TEST(DumpRegisterDescriptionTest, VectorElements) {
   StreamString strm;
   RegisterTypeBuiltin element_type("ieee_single", lldb::eEncodingIEEE754,
                                    lldb::eFormatFloat, 4);
@@ -148,7 +149,7 @@ TEST(DoDumpRegisterInfoTest, VectorElements) {
                               "  Vector elements: 4");
 }
 
-TEST(DoDumpRegisterInfoTest, UnionMembers) {
+TEST(DumpRegisterDescriptionTest, UnionMembers) {
   StreamString strm;
   RegisterTypeBuiltin float_type("ieee_single", lldb::eEncodingIEEE754,
                                  lldb::eFormatFloat, 4);
@@ -165,4 +166,17 @@ TEST(DoDumpRegisterInfoTest, UnionMembers) {
                               "  Union members:\n"
                               "    f32 (ieee_single, 4 bytes)\n"
                               "    pointer (data_ptr)");
+}
+
+TEST(DumpRegisterDescriptionTest, EmptyAlternateNameIsNotPrinted) {
+  RegisterDescriptor reg;
+  reg.id = 42;
+  reg.name = "foo";
+  reg.byte_size = 4;
+  auto description = RegisterDescription::Create({reg});
+  ASSERT_TRUE(bool(description));
+  StreamString strm;
+  DumpRegisterInfo(strm, *description, *description->Find(42), 0);
+  EXPECT_EQ(strm.GetString(), "       Name: foo\n"
+                              "       Size: 4 bytes (32 bits)");
 }

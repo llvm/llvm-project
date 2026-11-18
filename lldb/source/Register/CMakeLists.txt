@@ -10,6 +10,7 @@ add_lldb_library(lldbRegister NO_PLUGIN_DEPENDENCIES
   Common/RegisterInfo_riscv32.cpp
   Common/RegisterInfo_riscv64.cpp
   Common/RegisterTypeDetector_arm64.cpp
+  DumpRegisterInfo.cpp
   FreeBSD/RegisterInfoFreeBSD_i386.cpp
   FreeBSD/RegisterInfoFreeBSD_powerpc.cpp
   FreeBSD/RegisterInfoFreeBSD_x86_64.cpp
