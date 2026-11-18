@@ -1351,3 +1351,39 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   EXPECT_DEATH(Sched.trySchedule(Ret), ".*Wrong scheduling direction.*");
 #endif
 }
+
+// Creating an instr will add it to the DAG, but trySchedule() used to miss it.
+// This test makes sure that the scheduler handles such cases correctly.
+TEST_F(SchedulerTest, TryScheduleAfterInstrCreation) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr0) {
+  %ptr1 = getelementptr i8, ptr %ptr0, i32 1
+  %ld0 = load i8, ptr %ptr0
+  %ld1 = load i8, ptr %ptr1
+  store i8 %ld0, ptr %ptr0
+  store i8 %ld1, ptr %ptr1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  [[maybe_unused]] auto *Gep = &*It++;
+  auto *L0 = &*It++;
+  auto *L1 = &*It++;
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::TopDown);
+  Sched.trySchedule({L0, L1});
+  // Create a new vector load just before the store.
+  sandboxir::Type *VecTy = sandboxir::FixedVectorType::get(L0->getType(), 2);
+  [[maybe_unused]] auto *VecL = sandboxir::LoadInst::create(
+      VecTy, Gep, Align(1), S0->getIterator(), Ctx, "VecL");
+  // Now try to schedule the stores.
+  EXPECT_TRUE(Sched.trySchedule({S0, S1}));
+}

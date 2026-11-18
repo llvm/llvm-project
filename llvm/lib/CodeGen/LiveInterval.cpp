@@ -503,12 +503,6 @@ void LiveRange::addSegments(ArrayRef<Segment> NewSegs) {
   if (NewSegs.empty())
     return;
 
-  if (segmentSet != nullptr) {
-    for (const Segment &S : NewSegs)
-      addSegmentToSet(S);
-    return;
-  }
-
   size_t NumOld = segments.size();
   segments.resize(NumOld + NewSegs.size());
   iterator First = mergeBackward(begin(), begin() + NumOld, NewSegs);

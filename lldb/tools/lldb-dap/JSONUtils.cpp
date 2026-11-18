@@ -386,7 +386,8 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
   }
   // The program path must be the first entry in the "args" field
   std::vector<std::string> req_args = {DAP::debug_adapter_path.str(),
-                                       "--comm-file", comm_file.str()};
+                                       "--launch-target", "--comm-file",
+                                       comm_file.str()};
   if (debugger_pid != LLDB_INVALID_PROCESS_ID) {
     req_args.push_back("--debugger-pid");
     req_args.push_back(std::to_string(debugger_pid));
@@ -409,9 +410,8 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
     req_args.push_back(ss.str());
   }
 
-  // WARNING: Any argument added after `launch-target` is passed to to the
-  // target.
-  req_args.emplace_back("--launch-target");
+  // Place the target and its arguments after `--`.
+  req_args.emplace_back("--");
   req_args.push_back(program.str());
   req_args.insert(req_args.end(), args.begin(), args.end());
   run_in_terminal_args.try_emplace("args", req_args);

@@ -6676,10 +6676,8 @@ llvm::Error driver::expandResponseFiles(SmallVectorImpl<const char *> &Args,
   if (MarkEOLs && Args.size() > 1 && StringRef(Args[1]).starts_with("-cc1"))
     MarkEOLs = false;
 
-  llvm::cl::ExpansionContext ECtx(Alloc, Tokenizer);
+  llvm::cl::ExpansionContext ECtx(Alloc, Tokenizer, FS);
   ECtx.setMarkEOLs(MarkEOLs);
-  if (FS)
-    ECtx.setVFS(FS);
 
   if (llvm::Error Err = ECtx.expandResponseFiles(Args))
     return Err;
