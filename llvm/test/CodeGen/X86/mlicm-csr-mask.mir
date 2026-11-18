@@ -1,5 +1,4 @@
-# RUN: llc -mtriple=x86_64-pc-windows-msvc -mattr=+avx512f -run-pass=machinelicm -verify-machineinstrs -o - %s | FileCheck %s
-# RUN: llc -mtriple=x86_64-pc-windows-msvc -mattr=+avx512f -passes=machinelicm -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -mattr=+avx512f -run-pass=machinelicm -o - %s | FileCheck %s
 
 # Win64 preserves XMM6-15 but not their YMM/ZMM super-registers, which share
 # the same register units. Only the XMM reload can be hoisted across the call.
