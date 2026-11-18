@@ -951,6 +951,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(SEMA_DECL_REFS);
   RECORD(WEAK_UNDECLARED_IDENTIFIERS);
   RECORD(EXTNAME_UNDECLARED_IDENTIFIERS);
+  RECORD(MAPPED_UNDECLARED_IDENTIFIERS);
   RECORD(PENDING_IMPLICIT_INSTANTIATIONS);
   RECORD(UPDATE_VISIBLE);
   RECORD(DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD);
@@ -6212,6 +6213,28 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
     }
   }
 
+  // Write the set of #pragma map'd identifiers that have not been resolved to a
+  // declaration yet. The map is keyed by pointer, so sort by name to keep the
+  // output deterministic.
+  RecordData MappedUndeclaredIdentifiers;
+  if (SemaPtr && !isWritingStdCXXNamedModules()) {
+    ASTContext &Context = SemaPtr->Context;
+    SmallVector<std::pair<IdentifierInfo *, Sema::PendingPragmaMapInfo>, 4>
+        Pending;
+    for (const auto &[II, Info] : SemaPtr->PendingMappedNames)
+      if (!Info.Used)
+        Pending.emplace_back(II, Info);
+    llvm::sort(Pending, [](const auto &L, const auto &R) {
+      return L.first->getName() < R.first->getName();
+    });
+    ASTRecordWriter MappedWriter(Context, *this, MappedUndeclaredIdentifiers);
+    for (const auto &[II, Info] : Pending) {
+      MappedWriter.AddIdentifierRef(II);
+      MappedWriter.AddIdentifierRef(&Context.Idents.get(Info.Attr->getLabel()));
+      MappedWriter.AddSourceLocation(Info.NameLoc);
+    }
+  }
+
   // Form the record of special types.
   RecordData SpecialTypes;
   if (SemaPtr) {
@@ -6364,6 +6387,11 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
   if (!ExtnameUndeclaredIdentifiers.empty())
     Stream.EmitRecord(EXTNAME_UNDECLARED_IDENTIFIERS,
                       ExtnameUndeclaredIdentifiers);
+
+  // Write the record containing #pragma map'd undeclared identifiers.
+  if (!MappedUndeclaredIdentifiers.empty())
+    Stream.EmitRecord(MAPPED_UNDECLARED_IDENTIFIERS,
+                      MappedUndeclaredIdentifiers);
 
   if (!WritingModule) {
     // Write the submodules that were imported, if any.

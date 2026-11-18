@@ -968,6 +968,9 @@ public:
   /// source.
   void LoadExternalExtnameUndeclaredIdentifiers();
 
+  /// Load #pragma map'd undeclared identifiers from the external source.
+  void LoadExternalMappedUndeclaredIdentifiers();
+
   /// Determine if VD, which must be a variable or function, is an external
   /// symbol that nonetheless can't be referenced from outside this translation
   /// unit because its type has no linkage and it's not extern "C".

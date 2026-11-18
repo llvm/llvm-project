@@ -7789,6 +7789,7 @@ void Sema::ProcessPragmaExport(DeclaratorDecl *NewD) {
 }
 
 void Sema::ProcessPragmaMap(DeclaratorDecl *NewD) {
+  LoadExternalMappedUndeclaredIdentifiers();
   if (PendingMappedNames.empty())
     return;
   IdentifierInfo *IdentName = NewD->getIdentifier();

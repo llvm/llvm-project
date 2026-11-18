@@ -173,6 +173,16 @@ public:
   virtual void ReadExtnameUndeclaredIdentifiers(
       SmallVectorImpl<std::pair<IdentifierInfo *, AsmLabelAttr *>> &EI) {}
 
+  /// Read the set of #pragma map'd, undeclared identifiers known to the
+  /// external Sema source.
+  ///
+  /// The external source should append its own #pragma map'd, undeclared
+  /// identifiers to the given vector. Note that this routine may be invoked
+  /// multiple times; the external source should take care not to introduce the
+  /// same identifiers repeatedly.
+  virtual void ReadMappedUndeclaredIdentifiers(
+      SmallVectorImpl<std::pair<IdentifierInfo *, AsmLabelAttr *>> &MI) {}
+
   /// Read the set of used vtables known to the external Sema source.
   ///
   /// The external source should append its own used vtables to the given

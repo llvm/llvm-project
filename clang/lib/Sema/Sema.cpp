@@ -1116,6 +1116,22 @@ void Sema::LoadExternalExtnameUndeclaredIdentifiers() {
     ExtnameUndeclaredIdentifiers[ExtnameID.first] = ExtnameID.second;
 }
 
+void Sema::LoadExternalMappedUndeclaredIdentifiers() {
+  if (!ExternalSource)
+    return;
+
+  SmallVector<std::pair<IdentifierInfo *, AsmLabelAttr *>, 4> MappedIDs;
+  ExternalSource->ReadMappedUndeclaredIdentifiers(MappedIDs);
+  for (auto &[II, Attr] : MappedIDs) {
+    PendingPragmaMapInfo Info;
+    Info.NameLoc = Attr->getLocation();
+    Info.Used = false;
+    Info.Attr = Attr;
+    // A pragma seen in this translation unit takes precedence.
+    (void)PendingMappedNames.try_emplace(II, Info);
+  }
+}
+
 typedef llvm::DenseMap<const CXXRecordDecl*, bool> RecordCompleteMap;
 
 /// Returns true, if all methods and nested classes of the given
@@ -1587,6 +1603,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   }
 
   // Visit all pending #pragma map.
+  LoadExternalMappedUndeclaredIdentifiers();
   for (const PendingPragmaMapInfo &Mapped : PendingMappedNames.values()) {
     if (!Mapped.Used)
       Diag(Mapped.NameLoc, diag::warn_failed_to_resolve_pragma) << "map";

@@ -1491,6 +1491,7 @@ void Sema::ActOnPragmaMap(IdentifierInfo *IdentId, SourceLocation NameLoc,
   NamedDecl *PrevDecl =
       lookupExternCFunctionOrVariable(IdentId, NameLoc, curScope);
   if (!PrevDecl) {
+    LoadExternalMappedUndeclaredIdentifiers();
     auto PendingName = PendingMappedNames.find(IdentId);
     if (PendingName != PendingMappedNames.end()) {
       auto &Info = PendingName->second;
