@@ -1331,7 +1331,7 @@ Expected<XCOFFCsectAuxRef> XCOFFSymbolRef::getXCOFFCsectAuxRef() const {
   }
 
   if (!getObject()->is64Bit()) {
-    // In XCOFF32, the csect auxilliary entry is always the last auxiliary
+    // In XCOFF32, the csect auxiliary entry is always the last auxiliary
     // entry for the symbol.
     uintptr_t AuxAddr = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
         getEntryAddress(), NumberOfAuxEntries);
