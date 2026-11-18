@@ -74,26 +74,27 @@ define <4 x i8> @load_v4i8_v16i8_multiuse(ptr %q, ptr %p) {
 define void @load_v4i8_v16i8_volatile(ptr %q, ptr %p) {
 ; CHECK-LABEL: load_v4i8_v16i8_volatile:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    ldrb w9, [x0, #1]
-; CHECK-NEXT:    ldrb w10, [x0, #2]
-; CHECK-NEXT:    ldrb w11, [x0, #3]
-; CHECK-NEXT:    strb w10, [x1, #14]
-; CHECK-NEXT:    strb w11, [x1, #15]
-; CHECK-NEXT:    strb w9, [x1, #13]
-; CHECK-NEXT:    strb w8, [x1, #12]
-; CHECK-NEXT:    strb w11, [x1, #11]
-; CHECK-NEXT:    strb w10, [x1, #10]
-; CHECK-NEXT:    strb w9, [x1, #9]
-; CHECK-NEXT:    strb w8, [x1, #8]
-; CHECK-NEXT:    strb w11, [x1, #7]
-; CHECK-NEXT:    strb w10, [x1, #6]
-; CHECK-NEXT:    strb w9, [x1, #5]
-; CHECK-NEXT:    strb w8, [x1, #4]
-; CHECK-NEXT:    strb w11, [x1, #3]
-; CHECK-NEXT:    strb w10, [x1, #2]
-; CHECK-NEXT:    strb w9, [x1, #1]
-; CHECK-NEXT:    strb w8, [x1]
+; CHECK-NEXT:    ldrb w8, [x0, #3]
+; CHECK-NEXT:    ldrb w9, [x0, #2]
+; CHECK-NEXT:    ldrb w10, [x0, #1]
+; CHECK-NEXT:    ldrb w11, [x0]
+; CHECK-NEXT:    fmov s0, w11
+; CHECK-NEXT:    mov v0.b[1], w10
+; CHECK-NEXT:    mov v0.b[2], w9
+; CHECK-NEXT:    mov v0.b[3], w8
+; CHECK-NEXT:    mov v0.b[4], w11
+; CHECK-NEXT:    mov v0.b[5], w10
+; CHECK-NEXT:    mov v0.b[6], w9
+; CHECK-NEXT:    mov v0.b[7], w8
+; CHECK-NEXT:    mov v0.b[8], w11
+; CHECK-NEXT:    mov v0.b[9], w10
+; CHECK-NEXT:    mov v0.b[10], w9
+; CHECK-NEXT:    mov v0.b[11], w8
+; CHECK-NEXT:    mov v0.b[12], w11
+; CHECK-NEXT:    mov v0.b[13], w10
+; CHECK-NEXT:    mov v0.b[14], w9
+; CHECK-NEXT:    mov v0.b[15], w8
+; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
   %x = load volatile <4 x i8>, ptr %q
   %r = shufflevector <4 x i8> %x, <4 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
