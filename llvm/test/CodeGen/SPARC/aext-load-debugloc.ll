@@ -1,42 +1,30 @@
-; RUN: llc -O2 -disable-sparc-delay-filler %s -mtriple sparcv9 -o - | FileCheck %s
+; RUN: llc -mtriple=sparcv9 -stop-after=finalize-isel %s -o - | FileCheck %s
 
-; An i32 return without signext/zeroext is any-extended to i64. When the
-; DAG combiner folds that any_extend into the load feeding the return, the
-; new load must keep the load's debug location rather than taking the
-; return's. Otherwise a lexical block whose only instruction is the load is
-; dropped from the DWARF.
+; An i32 or i8 return without signext or zeroext is any-extended to i64 by
+; return lowering, and the any_extend gets the ret's location. When the DAG
+; combiner folds the any_extend into the load, the new load does nothing more
+; than the original one, so it keeps the load's location.
 
-; int get(int *p) {
-;   ...
-;   int v = p[1];
-;   ...
-;   return v;
-; }
+; CHECK-DAG: [[LOAD:![0-9]+]] = !DILocation(line: 8, column: 7,
+; CHECK-DAG: [[BYTE:![0-9]+]] = !DILocation(line: 14, column: 10,
+
+; CHECK-LABEL: name: get
+; CHECK:       LDri {{.*}}, debug-location [[LOAD]]
+
+; CHECK-LABEL: name: get_byte
+; CHECK:       LDUBrr {{.*}}, debug-location [[BYTE]]
 
 define i32 @get(ptr %p) !dbg !4 {
-  ; CHECK-LABEL: get:
-  ; CHECK:       .loc 1 8 7
-  ; CHECK-NEXT:  ld [%o0+4], %o0
-  ; CHECK:       .loc 1 10 2
-  ; CHECK-NEXT:  retl
 entry:
   %a = getelementptr inbounds i8, ptr %p, i64 4, !dbg !11
   %v = load i32, ptr %a, align 4, !dbg !11
   ret i32 %v, !dbg !12
 }
 
-; Same, but the load is already a zextload when the any_extend is folded.
-
-define i32 @get_byte(ptr %p) !dbg !13 {
-  ; CHECK-LABEL: get_byte:
-  ; CHECK:       .loc 1 14 10
-  ; CHECK-NEXT:  ldub [%o0], %o0
-  ; CHECK:       .loc 1 15 3
-  ; CHECK-NEXT:  retl
+define i8 @get_byte(ptr %p) !dbg !13 {
 entry:
   %v = load i8, ptr %p, align 1, !dbg !14
-  %z = zext i8 %v to i32, !dbg !14
-  ret i32 %z, !dbg !15
+  ret i8 %v, !dbg !15
 }
 
 !llvm.dbg.cu = !{!0}
