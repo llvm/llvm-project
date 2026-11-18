@@ -26,8 +26,8 @@ namespace {
 // ConvertIndexCeilDivS
 //===----------------------------------------------------------------------===//
 
-/// Convert `ceildivs(n, m)` into `x = m > 0 ? -1 : 1` and then
-/// `n*m > 0 ? (n+x)/m + 1 : -(-n/m)`.
+/// Round the truncated quotient up when division is inexact and the operands
+/// have the same sign.
 struct ConvertIndexCeilDivS : mlir::ConvertOpToLLVMPattern<CeilDivSOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
@@ -38,34 +38,18 @@ struct ConvertIndexCeilDivS : mlir::ConvertOpToLLVMPattern<CeilDivSOp> {
     Value n = adaptor.getLhs();
     Value m = adaptor.getRhs();
     Value zero = LLVM::ConstantOp::create(rewriter, loc, n.getType(), 0);
-    Value posOne = LLVM::ConstantOp::create(rewriter, loc, n.getType(), 1);
-    Value negOne = LLVM::ConstantOp::create(rewriter, loc, n.getType(), -1);
+    Value one = LLVM::ConstantOp::create(rewriter, loc, n.getType(), 1);
+    Value quotient = LLVM::SDivOp::create(rewriter, loc, n, m);
+    Value remainder = LLVM::SRemOp::create(rewriter, loc, n, m);
+    Value inexact = LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::ne,
+                                         remainder, zero);
 
-    // Compute `x`.
-    Value mPos =
-        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::sgt, m, zero);
-    Value x = LLVM::SelectOp::create(rewriter, loc, mPos, negOne, posOne);
-
-    // Compute the positive result.
-    Value nPlusX = LLVM::AddOp::create(rewriter, loc, n, x);
-    Value nPlusXDivM = LLVM::SDivOp::create(rewriter, loc, nPlusX, m);
-    Value posRes = LLVM::AddOp::create(rewriter, loc, nPlusXDivM, posOne);
-
-    // Compute the negative result.
-    Value negN = LLVM::SubOp::create(rewriter, loc, zero, n);
-    Value negNDivM = LLVM::SDivOp::create(rewriter, loc, negN, m);
-    Value negRes = LLVM::SubOp::create(rewriter, loc, zero, negNDivM);
-
-    // Pick the positive result if `n` and `m` have the same sign and `n` is
-    // non-zero, i.e. `(n > 0) == (m > 0) && n != 0`.
-    Value nPos =
-        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::sgt, n, zero);
-    Value sameSign = LLVM::ICmpOp::create(rewriter, loc,
-                                          LLVM::ICmpPredicate::eq, nPos, mPos);
-    Value nNonZero =
-        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::ne, n, zero);
-    Value cmp = LLVM::AndOp::create(rewriter, loc, sameSign, nNonZero);
-    rewriter.replaceOpWithNewOp<LLVM::SelectOp>(op, cmp, posRes, negRes);
+    Value signs = LLVM::XOrOp::create(rewriter, loc, n, m);
+    Value sameSign = LLVM::ICmpOp::create(
+        rewriter, loc, LLVM::ICmpPredicate::sge, signs, zero);
+    Value roundUp = LLVM::AndOp::create(rewriter, loc, sameSign, inexact);
+    Value increment = LLVM::SelectOp::create(rewriter, loc, roundUp, one, zero);
+    rewriter.replaceOpWithNewOp<LLVM::AddOp>(op, quotient, increment);
     return success();
   }
 };
