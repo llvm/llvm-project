@@ -48,6 +48,263 @@ exit:
   ret void
 }
 
+; Needs LoopInfo to prove the capture can't reach the loop past the large loop.
+define void @captured_after_loop_before_large_loop(ptr %pp, i64 %n, i64 %m) {
+; CHECK-LABEL: define void @captured_after_loop_before_large_loop(
+; CHECK-SAME: ptr [[PP:%.*]], i64 [[N:%.*]], i64 [[M:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 3, ptr [[A]], align 4
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[Q:%.*]] = load ptr, ptr [[PP]], align 8
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 [[I]]
+; CHECK-NEXT:    store i32 [[V]], ptr [[G]], align 4
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[C]], label %[[CAPTURE:.*]], label %[[LOOP]]
+; CHECK:       [[CAPTURE]]:
+; CHECK-NEXT:    call void @capture(ptr [[A]])
+; CHECK-NEXT:    br label %[[LARGE_LOOP:.*]]
+; CHECK:       [[LARGE_LOOP]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[CAPTURE]] ], [ [[J_NEXT:%.*]], %[[LARGE_LATCH:.*]] ]
+; CHECK-NEXT:    switch i64 [[J]], label %[[LARGE_LATCH]] [
+; CHECK-NEXT:      i64 0, label %[[BB0:.*]]
+; CHECK-NEXT:      i64 1, label %[[BB1:.*]]
+; CHECK-NEXT:      i64 2, label %[[BB2:.*]]
+; CHECK-NEXT:      i64 3, label %[[BB3:.*]]
+; CHECK-NEXT:      i64 4, label %[[BB4:.*]]
+; CHECK-NEXT:      i64 5, label %[[BB5:.*]]
+; CHECK-NEXT:      i64 6, label %[[BB6:.*]]
+; CHECK-NEXT:      i64 7, label %[[BB7:.*]]
+; CHECK-NEXT:      i64 8, label %[[BB8:.*]]
+; CHECK-NEXT:      i64 9, label %[[BB9:.*]]
+; CHECK-NEXT:      i64 10, label %[[BB10:.*]]
+; CHECK-NEXT:      i64 11, label %[[BB11:.*]]
+; CHECK-NEXT:      i64 12, label %[[BB12:.*]]
+; CHECK-NEXT:      i64 13, label %[[BB13:.*]]
+; CHECK-NEXT:      i64 14, label %[[BB14:.*]]
+; CHECK-NEXT:      i64 15, label %[[BB15:.*]]
+; CHECK-NEXT:      i64 16, label %[[BB16:.*]]
+; CHECK-NEXT:      i64 17, label %[[BB17:.*]]
+; CHECK-NEXT:      i64 18, label %[[BB18:.*]]
+; CHECK-NEXT:      i64 19, label %[[BB19:.*]]
+; CHECK-NEXT:      i64 20, label %[[BB20:.*]]
+; CHECK-NEXT:      i64 21, label %[[BB21:.*]]
+; CHECK-NEXT:      i64 22, label %[[BB22:.*]]
+; CHECK-NEXT:      i64 23, label %[[BB23:.*]]
+; CHECK-NEXT:      i64 24, label %[[BB24:.*]]
+; CHECK-NEXT:      i64 25, label %[[BB25:.*]]
+; CHECK-NEXT:      i64 26, label %[[BB26:.*]]
+; CHECK-NEXT:      i64 27, label %[[BB27:.*]]
+; CHECK-NEXT:      i64 28, label %[[BB28:.*]]
+; CHECK-NEXT:      i64 29, label %[[BB29:.*]]
+; CHECK-NEXT:      i64 30, label %[[BB30:.*]]
+; CHECK-NEXT:      i64 31, label %[[BB31:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[BB0]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB3]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB4]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB5]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB6]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB7]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB8]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB9]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB10]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB11]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB12]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB13]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB14]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB15]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB16]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB17]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB18]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB19]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB20]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB21]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB22]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB23]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB24]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB25]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB26]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB27]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB28]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB29]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB30]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[BB31]]:
+; CHECK-NEXT:    br label %[[LARGE_LATCH]]
+; CHECK:       [[LARGE_LATCH]]:
+; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J]], 1
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i64 [[J_NEXT]], [[M]]
+; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT:.*]], label %[[LARGE_LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = alloca i32
+  store i32 3, ptr %a
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
+  %q = load ptr, ptr %pp
+  %v = load i32, ptr %a
+  %g = getelementptr inbounds i32, ptr %q, i64 %i
+  store i32 %v, ptr %g
+  %i.next = add nuw nsw i64 %i, 1
+  %c = icmp eq i64 %i.next, %n
+  br i1 %c, label %capture, label %loop
+
+capture:
+  call void @capture(ptr %a)
+  br label %large.loop
+
+large.loop:
+  %j = phi i64 [ 0, %capture ], [ %j.next, %large.latch ]
+  switch i64 %j, label %large.latch [
+  i64 0, label %case0
+  i64 1, label %case1
+  i64 2, label %case2
+  i64 3, label %case3
+  i64 4, label %case4
+  i64 5, label %case5
+  i64 6, label %case6
+  i64 7, label %case7
+  i64 8, label %case8
+  i64 9, label %case9
+  i64 10, label %case10
+  i64 11, label %case11
+  i64 12, label %case12
+  i64 13, label %case13
+  i64 14, label %case14
+  i64 15, label %case15
+  i64 16, label %case16
+  i64 17, label %case17
+  i64 18, label %case18
+  i64 19, label %case19
+  i64 20, label %case20
+  i64 21, label %case21
+  i64 22, label %case22
+  i64 23, label %case23
+  i64 24, label %case24
+  i64 25, label %case25
+  i64 26, label %case26
+  i64 27, label %case27
+  i64 28, label %case28
+  i64 29, label %case29
+  i64 30, label %case30
+  i64 31, label %case31
+  ]
+
+case0:
+  br label %large.latch
+case1:
+  br label %large.latch
+case2:
+  br label %large.latch
+case3:
+  br label %large.latch
+case4:
+  br label %large.latch
+case5:
+  br label %large.latch
+case6:
+  br label %large.latch
+case7:
+  br label %large.latch
+case8:
+  br label %large.latch
+case9:
+  br label %large.latch
+case10:
+  br label %large.latch
+case11:
+  br label %large.latch
+case12:
+  br label %large.latch
+case13:
+  br label %large.latch
+case14:
+  br label %large.latch
+case15:
+  br label %large.latch
+case16:
+  br label %large.latch
+case17:
+  br label %large.latch
+case18:
+  br label %large.latch
+case19:
+  br label %large.latch
+case20:
+  br label %large.latch
+case21:
+  br label %large.latch
+case22:
+  br label %large.latch
+case23:
+  br label %large.latch
+case24:
+  br label %large.latch
+case25:
+  br label %large.latch
+case26:
+  br label %large.latch
+case27:
+  br label %large.latch
+case28:
+  br label %large.latch
+case29:
+  br label %large.latch
+case30:
+  br label %large.latch
+case31:
+  br label %large.latch
+
+large.latch:
+  %j.next = add nuw nsw i64 %j, 1
+  %c2 = icmp eq i64 %j.next, %m
+  br i1 %c2, label %exit, label %large.loop
+
+exit:
+  ret void
+}
+
 define void @captured_in_eh_cleanup(ptr noalias %obj, ptr %pp, i64 %n) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define void @captured_in_eh_cleanup(
 ; CHECK-SAME: ptr noalias [[OBJ:%.*]], ptr [[PP:%.*]], i64 [[N:%.*]]) personality ptr @__gxx_personality_v0 {
