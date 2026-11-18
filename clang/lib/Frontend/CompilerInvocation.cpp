@@ -1506,9 +1506,11 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
     else
       Opts.CXXVTTVTablePointers =
           PointerAuthSchema(Key::ASDA, false, Discrimination::None);
-
-    Opts.CXXVirtualFunctionPointers = Opts.CXXVirtualVariadicFunctionPointers =
-        PointerAuthSchema(Key::ASIA, true, Discrimination::Decl);
+    if (!LangOpts.RelativeCXXABIVTables) {
+      Opts.CXXVirtualFunctionPointers =
+        Opts.CXXVirtualVariadicFunctionPointers =
+          PointerAuthSchema(Key::ASIA, true, Discrimination::Decl);
+    }
     Opts.CXXMemberFunctionPointers =
         PointerAuthSchema(Key::ASIA, false, Discrimination::Type);
 

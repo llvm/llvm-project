@@ -2300,6 +2300,7 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
 
   CGPointerAuthInfo PointerAuth;
   if (Schema) {
+    assert(!CGM.getLangOpts().RelativeCXXABIVTables);
     assert(VTableSlotPtr && "virtual function pointer not set");
     GD = CGM.getItaniumVTableContext().findOriginalMethod(GD.getCanonicalDecl());
     PointerAuth = CGF.EmitPointerAuthInfo(Schema, VTableSlotPtr, GD, QualType());
