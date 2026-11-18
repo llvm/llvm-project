@@ -2932,16 +2932,16 @@ process). The client can receive `AcceleratorActions` at three points:
    native connection can return actions when the native process stops, and an
    accelerator process can return actions for the client to perform in its
    associated native process. The field value is hex-encoded JSON, and the
-   field can occur more than once when several plugins return actions. These
-   fields are currently emitted only in all-stop mode; action providers are not
-   called while the connection is in non-stop mode.
+   field can occur more than once when several plugins return actions. The
+   field can be emitted in both all-stop replies and non-stop notifications.
 
 Each set of `AcceleratorActions` is tagged with a `plugin_name` and an
 `identifier` that is not reused by any source or connection for that plugin
 during the debugging session, so the client can ignore a set it has already
-processed if the same actions are delivered again. The client records the
-identifier before applying the actions, so delivery is at most once: replaying
-an action after a partial failure does not retry it.
+processed if the same actions are delivered again. The client remembers only
+the last identifier for each plugin and records it before applying the actions.
+Repeating that identifier does not retry the actions, including after a partial
+failure; replaying an older identifier after a newer one is handled again.
 
 ### jAcceleratorPluginInitialize
 

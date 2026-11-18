@@ -112,8 +112,8 @@ class MockAcceleratorPacketsTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         )
 
     @add_test_categories(["llgs"])
-    def test_stop_reply_actions_are_all_stop_only(self):
-        """Non-stop replies do not consume actions needed by all-stop."""
+    def test_stop_notification_actions_in_non_stop_mode(self):
+        """A non-stop notification invokes the native action provider."""
         self.set_mock_env("LLDB_MOCK_ACCELERATOR_NATIVE_STOP_ACTIONS", "1")
         self.build()
         server = self.connect_to_debug_monitor()
@@ -122,7 +122,6 @@ class MockAcceleratorPacketsTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         exe_path = lldbutil.install_to_target(self, self.getBuildArtifact("a.out"))
         hex_path = seven.hexlify(exe_path)
-        no_action_reply = r"^\$T(?!.*accelerator-actions:).*$"
         self.test_sequence.add_log_lines(
             [
                 "read packet: $QNonStop:1#00",
@@ -132,17 +131,20 @@ class MockAcceleratorPacketsTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
                 "read packet: $qLaunchSuccess#00",
                 "send packet: $OK#00",
                 "read packet: $?#00",
-                {"direction": "send", "regex": no_action_reply},
-                "read packet: $QNonStop:0#00",
+                {"direction": "send", "regex": r"^\$T.*$"},
+                "read packet: $vStopped#00",
                 "send packet: $OK#00",
-                "read packet: $?#00",
+                "read packet: $vCont;s#00",
+                "send packet: $OK#00",
                 {
                     "direction": "send",
                     "regex": (
-                        r"^\$T[0-9a-fA-F]+.*accelerator-actions:" r"([0-9a-fA-F]+);"
+                        r"^%Stop:T[0-9a-fA-F]+.*accelerator-actions:" r"([0-9a-fA-F]+);"
                     ),
                     "capture": {1: "actions"},
                 },
+                "read packet: $vStopped#00",
+                "send packet: $OK#00",
             ],
             True,
         )

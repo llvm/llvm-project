@@ -2747,9 +2747,8 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         queue_kind, queue_serial_number, added_binaries,
         detailed_binaries_info);
 
-    // Apply the complete stop reply before dispatching actions. Later
-    // synchronization fields in the packet must take effect before an action
-    // can wait on that state.
+    // Dispatch after validating the reply and applying stop information so
+    // action side effects cannot affect classification of the original stop.
     for (const AcceleratorActions &actions : accelerator_actions) {
       if (llvm::Error error = HandleAcceleratorActions(actions))
         Debugger::ReportError(llvm::formatv(
@@ -4436,23 +4435,23 @@ ProcessGDBRemote::HandleAcceleratorActions(const AcceleratorActions &actions) {
         ->HandleAcceleratorActions(actions);
   }
 
-  // Native and accelerator communication threads can both deliver actions to
+  // Native and accelerator private state threads can both deliver actions to
   // this CPU process. Serialize the deduplication check and all action side
   // effects as one operation.
   std::lock_guard<std::recursive_mutex> guard(m_accelerator_actions_mutex);
 
-  // Record before executing for deliberate at-most-once delivery: retrying an
-  // action that failed partway through could repeat an earlier side effect.
-  bool inserted = m_processed_accelerator_actions
-                      .emplace(actions.plugin_name, actions.identifier)
-                      .second;
-  if (!inserted) {
+  auto it = m_processed_accelerator_actions.find(actions.plugin_name);
+  if (it != m_processed_accelerator_actions.end() &&
+      it->second == actions.identifier) {
     LLDB_LOG(log,
              "ProcessGDBRemote::HandleAcceleratorActions skipping already "
              "processed actions for plugin '{0}' with identifier {1}",
              actions.plugin_name, actions.identifier);
     return llvm::Error::success();
   }
+  // Remember the latest identifier before executing its actions so receiving
+  // it again does not retry partially completed work.
+  m_processed_accelerator_actions[actions.plugin_name] = actions.identifier;
 
   // Handle each kind of action. More action kinds will be handled here in the
   // future, so only return early on error; otherwise fall through so the next

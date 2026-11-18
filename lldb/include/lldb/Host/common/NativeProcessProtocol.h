@@ -104,10 +104,10 @@ public:
 
   /// Return accelerator actions to include in this process's next stop reply.
   /// This lets an accelerator process request work in its associated native
-  /// process. Returning std::nullopt adds no actions. LLGS calls this only for
-  /// all-stop replies. The call can occur on a process state-notification
-  /// thread, so implementations must be thread-safe. If an action is returned
-  /// more than once for the same event, it must reuse its identifier.
+  /// process. Returning std::nullopt adds no actions. The call can occur on a
+  /// process state-notification thread, so implementations must be thread-safe.
+  /// If an action is returned more than once for the same event, it must reuse
+  /// its identifier.
   virtual std::optional<AcceleratorActions> GetAcceleratorActions() {
     return std::nullopt;
   }

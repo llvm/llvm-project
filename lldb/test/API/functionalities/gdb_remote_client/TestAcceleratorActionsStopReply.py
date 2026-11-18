@@ -9,11 +9,14 @@ def hex_json(value):
 
 
 class TestAcceleratorActionsStopReply(GDBRemoteTestBase):
-    def test_actions_are_parsed_and_deduplicated_from_stop_reply(self):
+    def test_actions_use_last_identifier_from_stop_reply(self):
         actions = []
         for plugin_name, identifier, address in (
             ("mock", 1, 0x1000),
+            ("mock", 1, 0x1000),
             ("mock", 2, 0x2000),
+            ("mock", 2, 0x2000),
+            ("mock", 1, 0x1000),
             ("mock", 1, 0x1000),
         ):
             actions.append(
@@ -41,6 +44,9 @@ class TestAcceleratorActionsStopReply(GDBRemoteTestBase):
                 return "PacketSize=3fff;QStartNoAckMode+;accelerator-plugins+"
 
             def haltReason(self):
+                return "T05thread:1;"
+
+            def cont(self):
                 fields = "".join(
                     "accelerator-actions:%s;" % hex_json(action) for action in actions
                 )
@@ -63,17 +69,21 @@ class TestAcceleratorActionsStopReply(GDBRemoteTestBase):
         target = self.dbg.CreateTargetWithFileAndTargetTriple("", "x86_64-pc-linux")
         process = self.connect(target)
         self.assertTrue(process.IsValid())
+        self.assertSuccess(process.Continue())
 
         self.assertEqual(len(self.server.responder.breakpoint_packets), 2)
-        self.assertTrue(
-            any(
-                packet.startswith("Z0,1000,")
-                for packet in self.server.responder.breakpoint_packets
+        for address in (0x1000, 0x2000):
+            self.assertTrue(
+                any(
+                    packet.startswith("Z0,%x," % address)
+                    for packet in self.server.responder.breakpoint_packets
+                )
             )
-        )
-        self.assertTrue(
-            any(
-                packet.startswith("Z0,2000,")
-                for packet in self.server.responder.breakpoint_packets
-            )
+
+        # Repeating the current ID is suppressed, but an older ID is accepted
+        # after another action has replaced it as the plugin's last ID. Count
+        # logical breakpoints because equal addresses share a breakpoint site.
+        self.runCmd("breakpoint list --internal")
+        self.assertEqual(
+            self.res.GetOutput().count("Kind: accelerator-plugin (mock)"), 3
         )

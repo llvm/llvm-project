@@ -52,11 +52,10 @@ public:
   virtual std::optional<AcceleratorActions> GetInitializeActions() = 0;
 
   /// Return accelerator actions to include when the native process stops.
-  /// Returning std::nullopt adds no actions to the stop reply. LLGS calls this
-  /// only for all-stop replies. The call can occur on a process
-  /// state-notification thread, so implementations must be thread-safe. If an
-  /// action is returned more than once for the same event, it must reuse its
-  /// identifier.
+  /// Returning std::nullopt adds no actions to the stop reply. The call can
+  /// occur on a process state-notification thread, so implementations must be
+  /// thread-safe. If an action is returned more than once for the same event,
+  /// it must reuse its identifier.
   virtual std::optional<AcceleratorActions> NativeProcessIsStopping() {
     return std::nullopt;
   }
