@@ -2552,3 +2552,13 @@ func.func @test_reduce_sum_invalid_scalar_output(%arg0: tensor<5x4xf32>) {
       : (tensor<5x4xf32>) -> f32
   return
 }
+
+// -----
+
+// CHECK-LABEL: test_reshape_invalid_static_size
+func.func @test_reshape_invalid_static_size(%arg0: tensor<2x4xf32>) -> tensor<3x5xf32> {
+  %shape = tosa.const_shape values(dense<[3, 5]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.reshape' op cannot reshape 8 elements into 15}}
+  %0 = tosa.reshape %arg0, %shape : (tensor<2x4xf32>, !tosa.shape<2>) -> tensor<3x5xf32>
+  return %0 : tensor<3x5xf32>
+}
