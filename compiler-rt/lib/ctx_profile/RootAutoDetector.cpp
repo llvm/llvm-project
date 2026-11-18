@@ -53,7 +53,7 @@ void RootAutoDetector::start() {
         }
         DenseMap<uptr, uint64_t> AllRoots;
         for (uptr I = 0; I < SamplesSnapshot.Size(); ++I) {
-          GenericScopedLock<SpinMutex>(&SamplesSnapshot[I]->M);
+          GenericScopedLock<SpinMutex> L(&SamplesSnapshot[I]->M);
           SamplesSnapshot[I]->TrieRoot.determineRoots().forEach([&](auto &KVP) {
             auto [FAddr, Count] = KVP;
             AllRoots[FAddr] += Count;
