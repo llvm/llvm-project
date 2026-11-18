@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(WindowsResourceMetadata NONE)
+project(WindowsResourceMetadata C)
 list(APPEND CMAKE_MODULE_PATH
   "${LLVM_SRC_ROOT}/cmake/modules"
   "${LLVM_SRC_ROOT}/../cmake/Modules")
