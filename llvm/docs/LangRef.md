@@ -1324,13 +1324,13 @@ Optimization attributes do not have to match between call-site and function:
 The intersection of their implied semantics applies. Optimization attributes
 can also be freely dropped.
 
-ABI attributes should usually match between the function declaration/definition
-and the call-site, and can usually not be safely dropped. Similar to a mismatch
+ABI attributes should match between the function declaration/definition and the
+call-site, and generally cannot be safely dropped. Similar to a mismatch
 in function types, a mismatch in ABI attributes between caller and callee will
 often result in undefined behavior, but can be well-defined if the effective
-ABI after lowering is compatible. Whether this is the case depends on unstable,
-target-specific lowering details, so the use of matching function types and ABI
-attributes is recommended.
+ABI after lowering is compatible. As this depends on target-specific lowering
+details that may change, the use of matching function types and ABI attributes
+is recommended.
 
 If an integer argument to a function is not marked signext/zeroext/noext, the
 kind of extension used is target-specific. Some targets depend for
