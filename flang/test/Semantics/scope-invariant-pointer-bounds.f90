@@ -157,3 +157,44 @@ contains
     print *, size(a, kind=8)
   end subroutine
 end module
+
+! A fixed shape does not make SIZE invariant when DIM can change.
+module size_dim
+contains
+  ! CHECK-LABEL: SUBROUTINE pointer_dim
+  ! CHECK: PRINT *, size(a,dim=1,kind=8)
+  subroutine pointer_dim(d, m, a)
+    integer, pointer, intent(in) :: d
+    real, intent(in) :: m(2, 4)
+    real :: a(size(m, dim=d))
+    d = 2
+    print *, size(a, kind=8)
+  end subroutine
+
+  ! CHECK-LABEL: SUBROUTINE mutable_dim
+  ! CHECK: PRINT *, size(a,dim=1,kind=8)
+  subroutine mutable_dim(d, m, a)
+    integer :: d
+    real, intent(in) :: m(2, 4)
+    real :: a(size(m, dim=d))
+    d = 2
+    print *, size(a, kind=8)
+  end subroutine
+
+  ! CHECK-LABEL: SUBROUTINE invariant_dim
+  ! CHECK: PRINT *, max(0_8,__builtin_int(size(m,dim=d),kind=8))
+  subroutine invariant_dim(d, m, a)
+    integer, intent(in) :: d
+    real, intent(in) :: m(2, 4)
+    real :: a(size(m, dim=d))
+    print *, size(a, kind=8)
+  end subroutine
+
+  ! CHECK-LABEL: SUBROUTINE absent_dim
+  ! CHECK: PRINT *, 8_8
+  subroutine absent_dim(m, a)
+    real, intent(in) :: m(2, 4)
+    real :: a(size(m))
+    print *, size(a, kind=8)
+  end subroutine
+end module

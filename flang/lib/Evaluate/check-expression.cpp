@@ -181,6 +181,14 @@ bool IsConstantExprHelper<INVARIANT>::operator()(
       auto base{ExtractNamedEntity(call.arguments()[0]->UnwrapExpr())};
       return base && IsConstantExprShape(GetUBOUNDs(*base));
     } else if (intrinsic->name == "shape" || intrinsic->name == "size") {
+      if (intrinsic->name == "size" && call.arguments().size() > 1 &&
+          call.arguments()[1]) {
+        // A fixed shape does not make SIZE invariant if DIM can change.
+        const auto *dim{call.arguments()[1]->UnwrapExpr()};
+        if (!dim || !(*this)(*dim)) {
+          return false;
+        }
+      }
       auto shape{GetShape(call.arguments()[0]->UnwrapExpr())};
       return shape && IsConstantExprShape(*shape);
     } else if (proc.IsPure()) {
