@@ -281,9 +281,7 @@ void GlobalDCEPass::AddVirtualFunctionDependencies(Module &M) {
 PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   bool Changed = false;
 
-  // Only the analyses of the deleted functions need to be cleared, as the
-  // remaining functions cannot use anything that is deleted. The legacy pass
-  // does not have a function analysis manager.
+  // Only the analyses of the deleted functions need to be cleared.
   FunctionAnalysisManager *FAM = nullptr;
   if (MAM.isPassRegistered<FunctionAnalysisManagerModuleProxy>()) {
     if (auto *FAMProxy =
