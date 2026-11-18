@@ -296,18 +296,20 @@ LIBC_INLINE Header *get_nlmsg_header(struct nlmsghdr &nh) {
   return static_cast<Header *>(NLMSG_DATA(&nh));
 }
 
-/// Calls `fn(type, payload)` for every attribute (struct rtattr) following the
-/// fixed-size header in the message.
-template <typename Header, typename Fn>
-LIBC_INLINE void for_each_rtattr(struct nlmsghdr &nh, Fn fn) {
-  if (nh.nlmsg_len < NLMSG_SPACE(sizeof(Header)))
-    return;
+/// Calls `fn(type, payload)` for every attribute (struct rtattr) in the `len`
+/// bytes starting at `rta`. These should come from the macros for the type of
+/// the message, e.g.:
+///
+///   for_each_rtattr(IFLA_RTA(ifm), IFLA_PAYLOAD(&nh), fn);
+///
+/// The message must be large enough to contain the fixed-size header (see
+/// get_nlmsg_header), as the *_PAYLOAD macros don't check that.
+template <typename Fn>
+LIBC_INLINE void for_each_rtattr(struct rtattr *rta, size_t len, Fn fn) {
   // The RTA_* macros expect a signed length, as RTA_NEXT can take it below
   // zero if the message length is not aligned.
-  int len = static_cast<int>(NLMSG_PAYLOAD(&nh, sizeof(Header)));
-  for (auto *rta = reinterpret_cast<struct rtattr *>(
-           static_cast<char *>(NLMSG_DATA(&nh)) + NLMSG_ALIGN(sizeof(Header)));
-       RTA_OK(rta, len); rta = RTA_NEXT(rta, len)) {
+  int attr_len = static_cast<int>(len);
+  for (; RTA_OK(rta, attr_len); rta = RTA_NEXT(rta, attr_len)) {
     fn(rta->rta_type,
        cpp::span<const uint8_t>(static_cast<uint8_t *>(RTA_DATA(rta)),
                                 RTA_PAYLOAD(rta)));

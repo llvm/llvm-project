@@ -50,16 +50,17 @@ struct InterfaceEntry {
 /// are ignored. Returns ENOBUFS if the store cannot grow.
 LIBC_INLINE ErrorOr<void> add_interface(struct nlmsghdr &nh,
                                         BlockStore<InterfaceEntry, 16> &store) {
-  const auto *ifm = get_nlmsg_header<struct ifinfomsg>(nh);
+  auto *ifm = get_nlmsg_header<struct ifinfomsg>(nh);
   if (!ifm)
     return {};
 
   cpp::optional<cpp::string_view> name;
-  for_each_rtattr<struct ifinfomsg>(
-      nh, [&](unsigned short type, cpp::span<const uint8_t> payload) {
-        if (type == IFLA_IFNAME && !name)
-          name = cpp::optional<cpp::string_view>(parse_ifname(payload));
-      });
+  for_each_rtattr(IFLA_RTA(ifm), IFLA_PAYLOAD(&nh),
+                  [&](unsigned short type, cpp::span<const uint8_t> payload) {
+                    if (type == IFLA_IFNAME && !name)
+                      name = cpp::optional<cpp::string_view>(
+                          parse_ifname(payload));
+                  });
   if (!name)
     return {};
 
