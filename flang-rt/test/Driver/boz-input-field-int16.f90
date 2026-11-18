@@ -2,6 +2,7 @@
 ! field, including trailing blanks, so that the next edit descriptor starts
 ! after the field.
 !
+! https://github.com/llvm/llvm-project/issues/243701
 ! UNSUPPORTED: system-windows
 !
 ! RUN: %flang %isysroot -L"%libdir" %s -o %t
