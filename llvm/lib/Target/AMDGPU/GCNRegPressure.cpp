@@ -142,11 +142,29 @@ struct RegExcess {
     // AGPR excess pressure conditions
     AGPR = std::max(static_cast<int>(RP.getAGPRNum() - ArchVGPRLimit), 0);
   }
+
+  /// Measures the vector register excess from the banked \p Peaks instead.
+  RegExcess(const MachineFunction &MF, const GCNRegPressure &RP,
+            const GCNRegPressure::BankedVGPRPeaks &Peaks,
+            const GCNRegPressure::BankedComparison &Limits)
+      : RegExcess(MF, RP) {
+    unsigned VGPRForSGPRSpills =
+        divideCeil(SGPR, MF.getSubtarget<GCNSubtarget>().getWavefrontSize());
+    VGPR =
+        std::max(static_cast<int>(Peaks.getUnifiedVGPRNum() +
+                                  VGPRForSGPRSpills - Limits.UnifiedVGPRLimit),
+                 0);
+    ArchVGPR = std::max(static_cast<int>(Peaks.ArchVGPRs + VGPRForSGPRSpills -
+                                         Limits.ArchVGPRLimit),
+                        0);
+    AGPR = std::max(static_cast<int>(Peaks.AGPRs - Limits.AGPRLimit), 0);
+  }
 };
 } // namespace
 
 bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
-                          unsigned MaxOccupancy) const {
+                          unsigned MaxOccupancy,
+                          const BankedComparison *Banked) const {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   unsigned DynamicVGPRBlockSize =
       MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
@@ -172,8 +190,10 @@ bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
 
   unsigned MaxVGPRs = ST.getMaxNumVGPRs(MF);
 
-  RegExcess Excess(MF, *this);
-  RegExcess OtherExcess(MF, O);
+  RegExcess Excess = Banked ? RegExcess(MF, *this, Banked->Peaks, *Banked)
+                            : RegExcess(MF, *this);
+  RegExcess OtherExcess =
+      Banked ? RegExcess(MF, O, Banked->OtherPeaks, *Banked) : RegExcess(MF, O);
 
   unsigned MaxArchVGPRs = ST.getAddressableNumArchVGPRs();
 
@@ -183,6 +203,11 @@ bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
   // Give second precedence to the reduced number of spills to hold the register
   // pressure.
   if (ExcessRP || OtherExcessRP) {
+    // The allocator can move excess in one bank into free registers of the
+    // other, so only excess in the combined file is sure to spill.
+    if (Banked && Excess.VGPR != OtherExcess.VGPR)
+      return Excess.VGPR < OtherExcess.VGPR;
+
     // The difference in excess VGPR pressure, after including VGPRs used for
     // SGPR spills
     int VGPRDiff =

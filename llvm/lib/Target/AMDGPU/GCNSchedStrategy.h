@@ -416,7 +416,19 @@ protected:
   // RP after scheduling the current region.
   GCNRegPressure PressureAfter;
 
+  // Banked VGPR peaks before and after scheduling the current region, for
+  // mayCauseSpilling(). Only set if useBankedSpillCheck().
+  GCNRegPressure::BankedVGPRPeaks BankedPeaksBefore;
+  GCNRegPressure::BankedVGPRPeaks BankedPeaksAfter;
+
   std::vector<std::unique_ptr<ScheduleDAGMutation>> SavedMutations;
+
+  /// \returns true if mayCauseSpilling() compares banked VGPR pressure.
+  bool useBankedSpillCheck() const;
+
+  /// \returns the ArchVGPR and AGPR limits that mayCauseSpilling() distributes
+  /// AVGPR pressure against.
+  std::pair<unsigned, unsigned> getSpillCheckBankLimits() const;
 
   GCNSchedStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG);
 

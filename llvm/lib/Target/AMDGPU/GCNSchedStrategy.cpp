@@ -1638,6 +1638,21 @@ bool GCNSchedStage::initGCNRegion() {
 
   PressureBefore = DAG.Pressure[RegionIdx];
 
+  BankedPeaksBefore = {};
+  if (useBankedSpillCheck()) {
+    unsigned ArchLimit, AccLimit;
+    std::tie(ArchLimit, AccLimit) = getSpillCheckBankLimits();
+    // If no point has AVGPRs beyond the ArchVGPR bank, banking the region
+    // maximum is exact. Otherwise bank each point.
+    if (PressureBefore.getArchVGPRNum() <= ArchLimit) {
+      BankedPeaksBefore.add(PressureBefore, ArchLimit, AccLimit);
+    } else {
+      DAG.getRealRegPressure(RegionIdx, [&](const GCNRegPressure &RP) {
+        BankedPeaksBefore.add(RP, ArchLimit, AccLimit);
+      });
+    }
+  }
+
   LLVM_DEBUG(
       dbgs() << "Pressure before scheduling:\nRegion live-ins:"
              << print(DAG.LiveIns[RegionIdx], DAG.MRI)
@@ -1766,6 +1781,10 @@ void GCNSchedStage::checkScheduling() {
   unsigned ArchVGPRBankLimit, AGPRBankLimit;
   std::tie(ArchVGPRBankLimit, AGPRBankLimit) = S.getBankLimits();
   unsigned BankedArchVGPRPeak = 0, BankedAGPRPeak = 0, BankedUnifiedPeak = 0;
+  BankedPeaksAfter = {};
+  bool BankedSpillCheck = useBankedSpillCheck();
+  unsigned SpillCheckArchLimit, SpillCheckAccLimit;
+  std::tie(SpillCheckArchLimit, SpillCheckAccLimit) = getSpillCheckBankLimits();
   std::function<void(const GCNRegPressure &)> TrackBankedPeaks;
   if (AVGPRBanking) {
     TrackBankedPeaks = [&](const GCNRegPressure &RP) {
@@ -1776,6 +1795,8 @@ void GCNSchedStage::checkScheduling() {
       BankedUnifiedPeak =
           std::max(BankedUnifiedPeak,
                    GCNRegPressure::getBankedUnifiedVGPRNum(ArchNum, AccNum));
+      if (BankedSpillCheck)
+        BankedPeaksAfter.add(RP, SpillCheckArchLimit, SpillCheckAccLimit);
     };
   }
 
@@ -1792,6 +1813,10 @@ void GCNSchedStage::checkScheduling() {
       UnifiedVGPRFile ? S.UnifiedVGPRCriticalLimit : S.VGPRCriticalLimit;
   // Fitting the combined occupancy budget does not rule out spilling in one
   // bank. Keep the per-bank excess checks before taking this early exit.
+  // These checks are not banked: when they pass, all AVGPRs fit in the
+  // ArchVGPR bank, so banking would not change any count. Banking them would
+  // only take the exit, skipping the revert checks below, for regions whose
+  // AVGPRs need the AGPR bank.
   if (PressureAfter.getSGPRNum() <= S.SGPRCriticalLimit &&
       PressureAfter.getVGPRNum(UnifiedVGPRFile) <= VectorCriticalLimit &&
       (!UnifiedVGPRFile ||
@@ -2151,14 +2176,35 @@ void LiveIntervalRPStage::finalizeGCNRegion() {
   GCNSchedStage::finalizeGCNRegion();
 }
 
-bool GCNSchedStage::mayCauseSpilling(unsigned WavesAfter) {
-  if (WavesAfter <= MFI.getMinWavesPerEU() && isRegionWithExcessRP() &&
-      !PressureAfter.less(MF, PressureBefore)) {
-    LLVM_DEBUG(dbgs() << "New pressure will result in more spilling.\n");
-    return true;
-  }
+bool GCNSchedStage::useBankedSpillCheck() const {
+  return ST.getCLOpts().avgpr_banking && ST.hasGFX90AInsts();
+}
 
-  return false;
+std::pair<unsigned, unsigned> GCNSchedStage::getSpillCheckBankLimits() const {
+  auto [ArchLimit, AccLimit] = S.getBankLimits();
+  return {ArchLimit - std::min(S.ErrorMargin, ArchLimit),
+          AccLimit - std::min(S.ErrorMargin, AccLimit)};
+}
+
+bool GCNSchedStage::mayCauseSpilling(unsigned WavesAfter) {
+  if (WavesAfter > MFI.getMinWavesPerEU() || !isRegionWithExcessRP())
+    return false;
+
+  std::optional<GCNRegPressure::BankedComparison> Banked;
+  if (useBankedSpillCheck()) {
+    auto [ArchLimit, AccLimit] = getSpillCheckBankLimits();
+    unsigned MaxVGPRs = ST.getMaxNumVGPRs(MF);
+    Banked = GCNRegPressure::BankedComparison{
+        BankedPeaksAfter, BankedPeaksBefore, ArchLimit, AccLimit,
+        MaxVGPRs - std::min(S.ErrorMargin, MaxVGPRs)};
+  }
+  if (PressureAfter.less(MF, PressureBefore,
+                         std::numeric_limits<unsigned>::max(),
+                         Banked ? &*Banked : nullptr))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "New pressure will result in more spilling.\n");
+  return true;
 }
 
 void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
