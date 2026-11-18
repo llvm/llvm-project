@@ -155,15 +155,25 @@ static void walkRegionBackward(Region &region,
   SmallVector<Block *> blocks(rpot.begin(), rpot.end());
   for (Block *block : llvm::reverse(blocks)) {
     for (Operation &op : llvm::reverse(*block)) {
-      for (Region *nested : getBackwardRegionOrder(&op))
-        walkRegionBackward(*nested, visitor);
+      auto walkNestedRegions = [&]() {
+        for (Region *nested : getBackwardRegionOrder(&op))
+          walkRegionBackward(*nested, visitor);
+      };
+      walkNestedRegions();
       auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(&op);
-      if (terminator && isa<RegionBranchOpInterface>(op.getParentOp()))
+      if (terminator && isa<RegionBranchOpInterface>(op.getParentOp())) {
         visitor.visitTerminator(terminator);
-      else if (auto regionOp = dyn_cast<RegionBranchOpInterface>(&op))
+      } else if (auto regionOp = dyn_cast<RegionBranchOpInterface>(&op)) {
         visitor.visitRegionOp(regionOp);
-      else
+        for (unsigned i = 0; i < xegpu::kMaxRegionRevisits &&
+                             visitor.shouldRevisitRegions(regionOp);
+             ++i) {
+          walkNestedRegions();
+          visitor.visitRegionOp(regionOp);
+        }
+      } else {
         visitor.visitRegularOp(&op);
+      }
     }
   }
 }
@@ -303,7 +313,7 @@ static void propagateResultsToRegularOperands(Operation *op) {
 
 void xegpu::propagateRegionResultsToYieldOperands(
     RegionBranchTerminatorOpInterface terminator,
-    GetLayoutFnTy getLayoutOfValue) {
+    GetLayoutFnTy getLayoutOfValue, SetOperandLayoutFnTy setOperandLayout) {
   auto regionOp = dyn_cast<RegionBranchOpInterface>(terminator->getParentOp());
   if (!regionOp)
     return;
@@ -323,7 +333,7 @@ void xegpu::propagateRegionResultsToYieldOperands(
       for (Value input : successorInputs)
         if (isa<OpResult>(input))
           layout = getLayoutOfValue(input);
-    xegpu::setTemporaryLayout(*successorOperand, layout);
+    setOperandLayout(*successorOperand, layout);
   }
 }
 
@@ -331,7 +341,9 @@ void xegpu::propagateRegionResultsToYieldOperands(
 // sets the temporary layout for region arguments and init operands.
 LogicalResult
 xegpu::propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp,
-                                  xegpu::GetLayoutFnTy getLayoutOfValue) {
+                                  xegpu::GetLayoutFnTy getLayoutOfValue,
+                                  SetOperandLayoutFnTy setOperandLayout,
+                                  SetTDescArgLayoutFnTy setTDescArgLayout) {
   // Iterate all regions of the region op. For each block argument that has a
   // layout (obtained via `getLayoutOfValue`), trace back to find the
   // corresponding init operand of the regionOp and set the layout on it.
@@ -348,12 +360,12 @@ xegpu::propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp,
       if (!layout)
         continue;
 
-      // Recover layout for tensor_desc block args by updating the type.
+      // Pass on the layout of tensor_desc block args (it ends up in the type).
       if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(regionArg.getType());
           tdescTy && !tdescTy.getLayoutAttr())
-        xegpu::setTensorDescLayout(regionArg, layout);
+        setTDescArgLayout(cast<BlockArgument>(regionArg), layout);
 
-      // Recover layout for region op operands, like scf.for's init operands.
+      // Pass on the layout of region op operands, like scf.for's init operands.
       // Find all predecessor values that flow into this block argument.
       SmallVector<Value> predValues;
       regionOp.getPredecessorValues(regionSuccessor, inputIdx, predValues);
@@ -361,7 +373,7 @@ xegpu::propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp,
         // Match predecessor value to an operand of the regionOp.
         for (OpOperand &operand : regionOp->getOpOperands()) {
           if (operand.get() == predVal)
-            xegpu::setTemporaryLayout(operand, layout);
+            setOperandLayout(operand, layout);
         }
       }
     }
@@ -397,8 +409,9 @@ namespace {
 /// Recover temporary layouts through the shared backward walk.
 struct LayoutRecovery final : public xegpu::BackwardLayoutVisitor {
   void visitTerminator(RegionBranchTerminatorOpInterface terminator) override {
-    xegpu::propagateRegionResultsToYieldOperands(terminator,
-                                                 getLayoutFromUsePoints);
+    xegpu::propagateRegionResultsToYieldOperands(
+        terminator, getLayoutFromUsePoints,
+        xegpu::setTemporaryLayout<OpOperand>);
   }
   void visitRegionOp(RegionBranchOpInterface regionOp) override {
     // The region results take the layout of their uses.
@@ -411,7 +424,9 @@ struct LayoutRecovery final : public xegpu::BackwardLayoutVisitor {
           tdescTy && !tdescTy.getLayoutAttr())
         xegpu::setTensorDescLayout(result, layout);
     }
-    (void)xegpu::propagateRegionArgsToInits(regionOp, getLayoutFromUsePoints);
+    (void)xegpu::propagateRegionArgsToInits(
+        regionOp, getLayoutFromUsePoints, xegpu::setTemporaryLayout<OpOperand>,
+        xegpu::setTensorDescLayout);
   }
   void visitRegularOp(Operation *op) override {
     if (!isa<xegpu::AnchorLayoutInterface>(op))

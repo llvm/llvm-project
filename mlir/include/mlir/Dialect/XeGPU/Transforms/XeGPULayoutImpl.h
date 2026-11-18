@@ -50,21 +50,42 @@ void sinkElementwiseConversions(OpBuilder &builder, Operation *target);
 /// layout-propagation helpers below.
 using GetLayoutFnTy = llvm::function_ref<DistributeLayoutAttr(Value)>;
 
+/// The region helpers below choose layouts and pass each one to a callback;
+/// the caller decides when it reaches the IR. Layout recovery writes it at
+/// once; layout propagation keeps it and writes it after its walk.
+///
+/// Called with the layout chosen for a use, which ends up as the operand's
+/// temporary layout (layout_operand_N). A null layout means none was chosen.
+using SetOperandLayoutFnTy =
+    llvm::function_ref<void(OpOperand &, DistributeLayoutAttr)>;
+/// Called with the layout chosen for a tensor_desc region argument (e.g. an
+/// scf.for iter_arg), which ends up in the argument's type.
+using SetTDescArgLayoutFnTy =
+    llvm::function_ref<void(BlockArgument, DistributeLayoutAttr)>;
+
 /// Propagate layouts from a region branch op's region entry block arguments
 /// back to its init operands. The block argument's layout is obtained via
-/// `getLayoutOfValue`; the matching layout is then recorded on each init
-/// operand that flows into that block argument (e.g. scf.for's iter_args
-/// inits), and on tensor descriptor block argument types.
-LogicalResult propagateRegionArgsToInits(RegionBranchOpInterface regionOp,
-                                         GetLayoutFnTy getLayoutOfValue);
+/// `getLayoutOfValue`; the matching layout is then recorded, via
+/// `setOperandLayout`, on each init operand that flows into that block
+/// argument (e.g. scf.for's iter_args inits), and, via
+/// `setTDescArgLayout`, for tensor descriptor block arguments.
+LogicalResult
+propagateRegionArgsToInits(RegionBranchOpInterface regionOp,
+                           GetLayoutFnTy getLayoutOfValue,
+                           SetOperandLayoutFnTy setOperandLayout,
+                           SetTDescArgLayoutFnTy setTDescArgLayout);
 
 /// Propagate layouts to the operands of a region branch terminator: each
 /// operand gets, via `getLayoutOfValue`, the layout of the region argument it
-/// feeds, or else of the region result it feeds, recorded as the operand's
-/// temporary layout.
+/// feeds, or else of the region result it feeds, recorded via
+/// `setOperandLayout`.
 void propagateRegionResultsToYieldOperands(
     RegionBranchTerminatorOpInterface terminator,
-    GetLayoutFnTy getLayoutOfValue);
+    GetLayoutFnTy getLayoutOfValue, SetOperandLayoutFnTy setOperandLayout);
+
+/// Upper bound on how often walkBackward walks the regions of one region op
+/// again for a single visit of that op (see shouldRevisitRegions).
+constexpr unsigned kMaxRegionRevisits = 2;
 
 /// Callbacks for walkBackward.
 class BackwardLayoutVisitor {
@@ -77,6 +98,12 @@ public:
   virtual void visitRegionOp(RegionBranchOpInterface regionOp) = 0;
   /// Any other op.
   virtual void visitRegularOp(Operation *op) = 0;
+  /// Called after visitRegionOp. Return true when a region argument of
+  /// `regionOp` now has a requested layout that differs from the layout the
+  /// terminator feeding it gave its operand.
+  virtual bool shouldRevisitRegions(RegionBranchOpInterface regionOp) {
+    return false;
+  }
 };
 
 /// Walk function bodies under `root` in CFG post-order, visiting ops within
@@ -84,10 +111,13 @@ public:
 ///
 /// Region successors are visited before predecessors where possible. To
 /// break cycles, prefer a region that exits to the parent op; this visits
-/// scf.while's before region before its after region. Regions are not
-/// revisited. The only consumers visited after the producer of their value
-/// are those across a loop back edge (scf.for's yield -> iter_args) and, for
-/// scf.while, the uses in its after region of what scf.condition passes on.
+/// scf.while's before region before its after region. The only consumers
+/// visited after the producer of their value are those across a loop back
+/// edge (scf.for's yield -> iter_args) and, for scf.while, the uses in its
+/// after region of what scf.condition passes on. A visitor can ask for the
+/// regions of a region op to be walked again (shouldRevisitRegions) once such
+/// a consumer has been seen; this happens at most kMaxRegionRevisits times per
+/// visit of the op.
 void walkBackward(Operation *root, BackwardLayoutVisitor &visitor);
 
 /// Attach layout attributes to all vector-type operands of operations within
@@ -129,9 +159,10 @@ void dropInstDataOnInherentAttrs(Operation *op);
 //===----------------------------------------------------------------------===//
 //
 // The infer*SourceLayout helpers below derive the layout of an operation's
-// source operand from the layout of its result. They implement the per-op
-// transfer functions used by the backward layout propagation analysis, which
-// flows layouts from anchor ops (dpas, store_nd, ...) back to their producers.
+// source operand from the layout of its result. They are the layout rules
+// that the per-op propagation functions of the backward layout propagation
+// apply; it flows layouts from anchor ops (dpas, store_nd, ...) back to their
+// producers.
 
 /// Infers the source layout attribute for a broadcast operation given the
 /// result layout attribute, result shape, and source shape.

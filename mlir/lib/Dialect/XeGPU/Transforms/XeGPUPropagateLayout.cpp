@@ -30,6 +30,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
@@ -76,19 +77,20 @@ namespace {
 ///     Requests are kept in one value -> layout map (requestedLayouts), which
 ///     each consumer overwrites. Because consumers are visited from farthest to
 ///     nearest, no program-order numbering is needed.
-///   - Transfer functions (visit*Op) do not modify the IR. They take the
+///   - Propagation functions (visit*Op) do not modify the IR. They take the
 ///     layouts requested for the op's results, return the layouts the op
 ///     requests of its operands, and may replace a result layout the op
-///     requires (e.g. a reduction). Anchor transfer functions also return the
-///     layout attributes they decide for the op (AnchorLayouts). The driver
-///     (visitRegularOp) writes all of these into the IR: anchor attributes,
-///     result layouts and tensor_desc types, including the scalar result of a
-///     reduction.
-///   - Anchors decide once. Load rules do not need a consumer layout: without
-///     one, load_nd, load_gather and load_matrix take their own instruction's
-///     default layout. That default logic (setupDefault2DBlockIOLayout,
-///     setupDefaultScatterIOLayout) is shared with store_nd, prefetch_nd,
-///     store_scatter and store_matrix.
+///     requires (e.g. a reduction). Anchor propagation functions also return
+///     the layout attributes they decide for the op (AnchorLayouts). The driver
+///     keeps all of these and writes them into the IR after the walk
+///     (commitDecisions): anchor attributes, temporary layouts and tensor_desc
+///     types, including the scalar result of a reduction.
+///   - Anchor ops (AnchorLayoutInterface) honour an anchor layout given in the
+///     input IR and at most complete it. Otherwise, anchor ops with results
+///     (loads and dpas) decide from the layout requested for their result.
+///     Their decisions are written into the IR only after the walk, so a loop
+///     body walked again revises them with the layouts requested across the
+///     back edge.
 ///
 /// Region boundaries, in the backward scan:
 ///   - Terminators (visitTerminator): each operand takes the layout of the
@@ -128,13 +130,63 @@ public:
   void print(llvm::raw_ostream &os);
 
 private:
+  // Propagation functions fill `operands` with requested layouts. `results`
+  // starts with layouts requested by consumers and may be overridden by the op.
+  using LayoutsMutRef = MutableArrayRef<xegpu::DistributeLayoutAttr>;
+  // Anchor propagation functions only read the layouts requested for their
+  // results; an anchor's decision is returned in AnchorLayouts instead.
+  using LayoutsRef = ArrayRef<xegpu::DistributeLayoutAttr>;
+  // Layout attributes an anchor propagation function decides for its op, by
+  // attribute name. The driver writes them into the IR after the walk (see
+  // anchorDecisions), so the propagation functions themselves do not modify the
+  // IR.
+  using AnchorLayouts =
+      SmallVector<std::pair<StringAttr, xegpu::DistributeLayoutAttr>, 3>;
+
   Operation *scopeRoot;
   xegpu::LayoutKind layoutKind;
 
   // Latest non-null layout requested by consumers of each value.
   DenseMap<Value, xegpu::DistributeLayoutAttr> requestedLayouts;
-  // Collects failures from the void visitor callbacks.
-  bool propagationFailed = false;
+  // Layout attributes decided for each anchor op, written into the IR only
+  // after the walk.
+  DenseMap<Operation *, AnchorLayouts> anchorDecisions;
+  // Layouts decided for uses (terminator and init operands, written as
+  // layout_operand_N) and for values (op results, written as layout_result_N
+  // or into a tensor_desc type, and tensor_desc region arguments).
+  DenseMap<OpOperand *, xegpu::DistributeLayoutAttr> operandDecisions;
+  DenseMap<Value, xegpu::DistributeLayoutAttr> valueDecisions;
+
+  // A decision replaces the one from any earlier visit. A null (empty) one
+  // means no decision on this visit and keeps the earlier one.
+  void setOperandDecision(OpOperand &operand,
+                          xegpu::DistributeLayoutAttr layout) {
+    if (layout)
+      operandDecisions[&operand] = layout;
+  }
+  void setValueDecision(Value value, xegpu::DistributeLayoutAttr layout) {
+    if (layout)
+      valueDecisions[value] = layout;
+  }
+  void setAnchorDecision(Operation *op, AnchorLayouts layouts) {
+    if (!layouts.empty())
+      anchorDecisions[op] = std::move(layouts);
+  }
+  xegpu::DistributeLayoutAttr getOperandDecision(OpOperand &operand) const {
+    return operandDecisions.lookup(&operand);
+  }
+  // Writes all decisions into the IR.
+  void commitDecisions();
+  // Diagnostics reported by the visits of each op, emitted only after the
+  // walk: a later visit of the op replaces them, like its decisions.
+  struct PendingDiagnostic {
+    DiagnosticSeverity severity;
+    std::string message;
+  };
+  llvm::MapVector<Operation *, SmallVector<PendingDiagnostic, 1>>
+      pendingDiagnostics;
+  // Emits the pending diagnostics; returns failure if any of them is an error.
+  LogicalResult emitPendingDiagnostics();
 
   //===--------------------------------------------------------------------===//
   // Backward scan
@@ -148,22 +200,11 @@ private:
   void visitRegularOp(Operation *op) override;
   void visitTerminator(RegionBranchTerminatorOpInterface terminator) override;
   void visitRegionOp(RegionBranchOpInterface regionOp) override;
+  bool shouldRevisitRegions(RegionBranchOpInterface regionOp) override;
 
   //===--------------------------------------------------------------------===//
-  // Transfer functions
+  // Propagation functions
   //===--------------------------------------------------------------------===//
-
-  // Transfer functions fill `operands` with requested layouts. `results` starts
-  // with layouts requested by consumers and may be overridden by the op.
-  using LayoutsMutRef = MutableArrayRef<xegpu::DistributeLayoutAttr>;
-  // Anchor transfer functions only read the layouts requested for their
-  // results; an anchor's decision is returned in AnchorLayouts instead.
-  using LayoutsRef = ArrayRef<xegpu::DistributeLayoutAttr>;
-  // Layout attributes an anchor transfer function decides for its op, by
-  // attribute name. The driver (visitRegularOp) writes them into the IR, so
-  // the transfer functions themselves do not modify the IR.
-  using AnchorLayouts =
-      SmallVector<std::pair<StringAttr, xegpu::DistributeLayoutAttr>, 3>;
 
   void visitOperation(Operation *op, LayoutsMutRef operands,
                       LayoutsMutRef results, AnchorLayouts &anchorLayouts);
@@ -218,8 +259,13 @@ private:
 
   // Report a fatal propagation error.
   void markFailure(Operation *op, const llvm::Twine &message) {
-    op->emitError(message);
-    propagationFailed = true;
+    pendingDiagnostics[op].push_back(
+        {DiagnosticSeverity::Error, message.str()});
+  }
+  // Report a propagation warning.
+  void markWarning(Operation *op, const llvm::Twine &message) {
+    pendingDiagnostics[op].push_back(
+        {DiagnosticSeverity::Warning, message.str()});
   }
 };
 } // namespace
@@ -366,7 +412,8 @@ void LayoutPropagation::visitPrefetchNdOp(xegpu::PrefetchNdOp prefetch,
           anchorLayout, prefetch.getTensorDescType().getElementType(),
           uArchInstruction, uArch->getSubgroupSize());
       if (!completed) {
-        prefetch.emitWarning(
+        markWarning(
+            prefetch,
             "Failed to identify lane layouts for the specified inst_data.");
         return;
       }
@@ -383,8 +430,8 @@ void LayoutPropagation::visitPrefetchNdOp(xegpu::PrefetchNdOp prefetch,
     auto layoutAttr = xegpu::setupPrefetchNdAnchorLayout(
         layoutKind, tdescTy, numSgOrErr.value_or(0), uArch);
     if (!layoutAttr) {
-      prefetch.emitWarning(
-          "Failed to determine required layout for prefetch_nd.");
+      markWarning(prefetch,
+                  "Failed to determine required layout for prefetch_nd.");
       return;
     }
     prefetchLayout = layoutAttr;
@@ -498,9 +545,9 @@ void LayoutPropagation::visitShapeCastOp(vector::ShapeCastOp shapeCast,
   // is not an anchor op, so warn and leave the value un-laid-out instead of
   // propagating a layout that would move data between lanes.
   if (!requiredResLayoutAttr) {
-    shapeCast.emitWarning("Failed to infer source layout for shape_cast; the "
-                          "result layout required by its consumers cannot be "
-                          "collapsed onto the source shape.");
+    markWarning(shapeCast, "Failed to infer source layout for shape_cast; the "
+                           "result layout required by its consumers cannot be "
+                           "collapsed onto the source shape.");
     return;
   }
   results[0] = requiredResLayoutAttr;
@@ -510,8 +557,8 @@ void LayoutPropagation::visitShapeCastOp(vector::ShapeCastOp shapeCast,
   // shape_cast is not an anchor op: another consumer of the source value may
   // still supply a valid layout, so warn instead of stopping the propagation.
   if (!srcLayoutAttr) {
-    shapeCast.emitWarning("Failed to infer source layout for shape_cast; "
-                          "unsupported shape-cast pattern.");
+    markWarning(shapeCast, "Failed to infer source layout for shape_cast; "
+                           "unsupported shape-cast pattern.");
     return;
   }
 
@@ -829,7 +876,8 @@ void LayoutPropagation::visitLoadNdOp(xegpu::LoadNdOp load,
           anchorLayout, consumerLayoutAttr, load.getType().getElementType(),
           uArchInstruction, uArch->getSubgroupSize());
       if (!completed) {
-        load.emitWarning(
+        markWarning(
+            load,
             "Failed to identify lane layouts for the specified inst_data.");
         return;
       }
@@ -845,7 +893,7 @@ void LayoutPropagation::visitLoadNdOp(xegpu::LoadNdOp load,
         layoutKind, load.getType(), consumerLayoutAttr, numSgOrErr.value_or(0),
         uArch);
     if (!layoutAttr) {
-      load.emitWarning("Failed to determine required layout for load_nd.");
+      markWarning(load, "Failed to determine required layout for load_nd.");
       return;
     }
     loadLayout = layoutAttr;
@@ -1058,7 +1106,8 @@ void LayoutPropagation::visitLoadGatherOp(xegpu::LoadGatherOp load,
           anchorLayoutAttr, consumerLayoutAttr, resVecTy.getElementType(),
           uArchInstruction, uArch->getSubgroupSize());
       if (!completed) {
-        load.emitWarning(
+        markWarning(
+            load,
             "Failed to identify lane layouts for the specified inst_data.");
         return;
       }
@@ -1067,7 +1116,7 @@ void LayoutPropagation::visitLoadGatherOp(xegpu::LoadGatherOp load,
                                  requiredAnchorLayoutAttr);
     }
   } else if (!resVecTy) {
-    load.emitWarning("Not propagating, non-vector payload supplied.");
+    markWarning(load, "Not propagating, non-vector payload supplied.");
     return;
   } else {
     auto numSgOrErr =
@@ -1130,7 +1179,8 @@ void LayoutPropagation::visitStoreScatterOp(xegpu::StoreScatterOp storeScatter,
     }
   } else {
     if (!srcVecTy) {
-      storeScatter.emitWarning("Not propagating, non-vector payload supplied.");
+      markWarning(storeScatter,
+                  "Not propagating, non-vector payload supplied.");
       return;
     }
     auto numSgOrErr =
@@ -1245,13 +1295,56 @@ void LayoutPropagation::visitStoreMatrixOp(xegpu::StoreMatrixOp storeMatrix,
 // LayoutPropagation: backward scan
 //===----------------------------------------------------------------------===//
 
+/// Writes the decisions of the walk into the IR. anchorDecisions honours the
+/// user's input: an anchor layout given in the input IR is not recorded there,
+/// so it stays as the user wrote it. If that layout is incomplete (it has
+/// inst_data but no lane layout), anchorDecisions carries the completed
+/// layout, which keeps the user's inst_data and adds the lane layout derived
+/// from the consumer's request.
+void LayoutPropagation::commitDecisions() {
+  for (auto &[op, layouts] : anchorDecisions) {
+    for (auto [name, layout] : layouts) {
+      if (layout)
+        op->setAttr(name, layout);
+      else
+        op->removeAttr(name);
+    }
+  }
+  for (auto [operand, layout] : operandDecisions)
+    xegpu::setTemporaryLayout(*operand, layout);
+  for (auto [value, layout] : valueDecisions) {
+    if (isa<xegpu::TensorDescType>(value.getType()))
+      xegpu::setTensorDescLayout(value, layout);
+    else if (auto result = dyn_cast<OpResult>(value))
+      xegpu::setTemporaryLayout(result, layout);
+  }
+}
+
+LogicalResult LayoutPropagation::emitPendingDiagnostics() {
+  bool failed = false;
+  for (auto &[op, diagnostics] : pendingDiagnostics) {
+    for (const PendingDiagnostic &diag : diagnostics) {
+      if (diag.severity == DiagnosticSeverity::Error) {
+        op->emitError(diag.message);
+        failed = true;
+      } else {
+        op->emitWarning(diag.message);
+      }
+    }
+  }
+  return failure(failed);
+}
+
 LogicalResult LayoutPropagation::run() {
   xegpu::walkBackward(scopeRoot, *this);
+  // Write the decisions into the IR now that no visit can revise them.
+  commitDecisions();
   // Stop before forward filling if any visitor reported a fatal error.
-  return failure(propagationFailed);
+  return emitPendingDiagnostics();
 }
 
 void LayoutPropagation::visitRegularOp(Operation *op) {
+  pendingDiagnostics.erase(op);
   SmallVector<xegpu::DistributeLayoutAttr> resultLayouts =
       llvm::map_to_vector(op->getResults(), [&](Value result) {
         return getRequestedLayout(result);
@@ -1264,33 +1357,23 @@ void LayoutPropagation::visitRegularOp(Operation *op) {
        llvm::zip_equal(op->getOperands(), operandLayouts))
     recordRequestedLayout(operand, layout);
 
-  // An anchor's decision lives in its layout attributes, not in result
-  // layouts.
   if (isa<xegpu::AnchorLayoutInterface>(op)) {
-    for (auto [name, layout] : anchorLayouts) {
-      if (layout)
-        op->setAttr(name, layout);
-      else
-        op->removeAttr(name);
-    }
+    setAnchorDecision(op, std::move(anchorLayouts));
     return;
   }
   // Scalar reductions also need a result layout: conflict resolution uses it
   // to derive operand layouts and insert an anchor convert_layout.
   for (auto [result, layout] :
        llvm::zip_equal(op->getResults(), resultLayouts)) {
-    if (!layout)
-      continue;
-    if (isa<xegpu::TensorDescType>(result.getType()))
-      xegpu::setTensorDescLayout(result, layout);
-    else if (isa<VectorType>(result.getType()) ||
-             isa<vector::MultiDimReductionOp, vector::ReductionOp>(op))
-      xegpu::setTemporaryLayout(result, layout);
+    if (isa<xegpu::TensorDescType, VectorType>(result.getType()) ||
+        isa<vector::MultiDimReductionOp, vector::ReductionOp>(op))
+      setValueDecision(result, layout);
   }
 }
 
 void LayoutPropagation::visitTerminator(
     RegionBranchTerminatorOpInterface terminator) {
+  pendingDiagnostics.erase(terminator);
   auto regionOp = cast<RegionBranchOpInterface>(terminator->getParentOp());
   RegionBranchSuccessorMapping mapping;
   regionOp.getSuccessorOperandInputMapping(mapping,
@@ -1299,9 +1382,12 @@ void LayoutPropagation::visitTerminator(
   // value it feeds. For scf.condition, the after region has not been visited,
   // so only the parent's requested result layout is known.
   xegpu::propagateRegionResultsToYieldOperands(
-      terminator, [&](Value val) { return getRequestedLayout(val); });
+      terminator, [&](Value val) { return getRequestedLayout(val); },
+      [&](OpOperand &operand, xegpu::DistributeLayoutAttr layout) {
+        setOperandDecision(operand, layout);
+      });
   for (OpOperand &operand : llvm::reverse(terminator->getOpOperands()))
-    recordRequestedLayout(operand.get(), xegpu::getTemporaryLayout(operand));
+    recordRequestedLayout(operand.get(), getOperandDecision(operand));
 
   for (const auto &[successorOperand, successorInputs] : mapping) {
     // Layout lookup for scf.while's after arguments follows pass-through
@@ -1320,13 +1406,53 @@ void LayoutPropagation::visitTerminator(
   }
 }
 
+/// Returns true when a region argument of `regionOp` now has a requested
+/// layout that differs from the layout given to the terminator operand that
+/// feeds it. The walk visits the terminator before the ops that read the
+/// argument, so the terminator could not see their request. Walking the
+/// regions again lets the terminator, and the ops before it, use the request.
+bool LayoutPropagation::shouldRevisitRegions(RegionBranchOpInterface regionOp) {
+  for (Region &region : regionOp->getRegions()) {
+    for (Block &block : region) {
+      auto terminator =
+          dyn_cast<RegionBranchTerminatorOpInterface>(block.getTerminator());
+      if (!terminator)
+        continue;
+      RegionBranchSuccessorMapping mapping;
+      regionOp.getSuccessorOperandInputMapping(mapping,
+                                               RegionBranchPoint(terminator));
+      // operand: a terminator operand.
+      for (const auto &[operand, inputs] : mapping) {
+        if (!xegpu::isLayoutCarrierType(operand->get().getType()))
+          continue;
+        // arg: the region argument it feeds.
+        for (auto arg : llvm::make_isa_range<BlockArgument>(inputs)) {
+          if (arg.getOwner()->getParentOp() != regionOp.getOperation())
+            continue;
+          xegpu::DistributeLayoutAttr requested = getRequestedLayout(arg);
+          xegpu::DistributeLayoutAttr given = getOperandDecision(*operand);
+          if (requested && (!given || !given.isEqualTo(requested)))
+            return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 void LayoutPropagation::visitRegionOp(RegionBranchOpInterface regionOp) {
   // Propagate layouts requested for region arguments to init operands. The
   // region results are filled by the forward pass.
   (void)xegpu::propagateRegionArgsToInits(
-      regionOp, [&](Value val) { return getRequestedLayout(val); });
+      regionOp, [&](Value val) { return getRequestedLayout(val); },
+      [&](OpOperand &operand, xegpu::DistributeLayoutAttr layout) {
+        setOperandDecision(operand, layout);
+      },
+      [&](BlockArgument arg, xegpu::DistributeLayoutAttr layout) {
+        setValueDecision(arg, layout);
+      });
   for (OpOperand &operand : llvm::reverse(regionOp->getOpOperands()))
-    recordRequestedLayout(operand.get(), xegpu::getTemporaryLayout(operand));
+    recordRequestedLayout(operand.get(), getOperandDecision(operand));
 }
 
 void LayoutPropagation::print(llvm::raw_ostream &os) {
