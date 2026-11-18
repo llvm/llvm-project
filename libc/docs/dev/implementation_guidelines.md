@@ -28,7 +28,9 @@ an explicit goal alongside correctness.
 Microbenchmarks are useful for finding a direction but are not a goal in and of
 themselves. The ideal performance measurement is from sampling real systems,
 though that's impractical for most changes. The project does not have a settled
-benchmarking setup today.
+benchmarking setup today. LLVM's
+[benchmarking tips](https://llvm.org/docs/Benchmarking.html) describe how to
+take more meaningful measurements.
 
 ## Memory
 
@@ -48,8 +50,24 @@ LLVM-libc does not aim to provide its own general-purpose allocator for hosted
 systems. On Linux the supported allocator is
 [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html), and users with
 specific performance requirements are expected to bring the allocator they
-already prefer. On baremetal targets LLVM-libc provides an optimized allocator
-in `src/__support/freelist_heap.h`.
+already prefer.
+
+Scudo is not used on baremetal targets. It is designed for hosted systems and
+gets its memory from the operating system by mapping pages. A baremetal target
+has no operating system to ask, and usually has a small, fixed region of
+memory. On baremetal targets LLVM-libc instead provides an optimized allocator
+in `src/__support/freelist_heap.h`, which manages the memory between two
+symbols that the linker script provides.
+
+## Assembly
+
+LLVM-libc is written in C++. Assembly is used only in the few places where
+the stack or individual registers must be controlled exactly, or where an
+instruction has no compiler builtin. Assembly written for performance is not
+accepted, because it gives up what the compiler provides for C++ code:
+diagnostics, sanitizers, coverage and profile instrumentation, and debug
+information. {ref}`assembly_policy` has the full policy, including how
+patches that contain assembly are reviewed.
 
 ## Runtime checks
 

@@ -15,8 +15,8 @@ The libc can be built and tested in two different modes:
    $> ninja check-libc
    ```
 
-   Note that, tests for only those functions which are part of the overlay
-   static archive will be run with the above command.
+   Note that only the tests for functions that are part of the overlay static
+   archive are run by the above command.
 
 2. **The full build mode** - In this mode, the libc is used as the only libc
    for the user's application. See {ref}`full_host_build` for more details on

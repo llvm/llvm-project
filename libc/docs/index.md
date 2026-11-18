@@ -102,6 +102,7 @@ compiler_support
 contributing
 design_philosophy
 abi_policy
+roadmap
 build_and_test
 dev/index
 math/index

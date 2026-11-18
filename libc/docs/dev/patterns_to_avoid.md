@@ -11,6 +11,11 @@ often and the old patterns that should not be copied.
 This applies with particular force to changes written with AI assistance,
 because a tool that imitates nearby code will imitate its outdated parts too.
 
+Larger areas of the tree that are known to need rework are listed in
+{ref}`roadmap`. Do not model new code on them. Issues for LLVM-libc are filed
+under the `libc` label in the
+[issue tracker](https://github.com/llvm/llvm-project/labels/libc).
+
 ## Most common mistakes
 
 1. **Calling one entrypoint from another.** It is the natural way to write

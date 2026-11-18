@@ -271,6 +271,8 @@ defines. Code under `libc/src/` should `#include` a proxy header from
 our header from `libc/include/` (fullbuild) or the corresponding underlying
 system header (overlay).
 
+(assembly_policy)=
+
 ## Policy on Assembly sources
 
 Coding in high level languages such as C++ provides benefits relative to low

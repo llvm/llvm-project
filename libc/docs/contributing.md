@@ -45,7 +45,8 @@ a list of open projects that one can start with:
 ## Before you start
 
 Read {ref}`design_philosophy` and {ref}`abi_policy` to understand what the
-project is and is not trying to do. Read {ref}`patterns_to_avoid` before
+project is and is not trying to do. Read {ref}`implementation_guidelines` for
+how code is expected to be written, and {ref}`patterns_to_avoid` before
 modelling new code on something that is already in the tree, because older
 code does not always follow the current conventions.
 
@@ -58,7 +59,7 @@ implementation:
 - a function that is not in the C or POSIX standards,
 - a new configuration option,
 - new code under `libc/shared/`, or a new user of it,
-- any code written in assembly,
+- any code written in assembly (see {ref}`assembly_policy`),
 - any intentional deviation from a standard.
 
 The easiest way to reach out is to ask in the `#libc` channel on the
@@ -92,11 +93,7 @@ forward. When relanding, describe what went wrong and how it was fixed.
 ## AI-assisted contributions
 
 LLVM's [AI Tool Use Policy](https://llvm.org/docs/AIToolPolicy.html) applies
-to LLVM-libc. In short: a person must read, understand, and be able to answer
-questions about everything they submit; contributions with substantial
-tool-generated content are labelled, for example with an `Assisted-by:`
-trailer; the policy strongly recommends writing the pull request description
-yourself; and AI tools must not be used on issues labelled "good first issue".
+to LLVM-libc. Read it before using AI tools on a contribution.
 
 Tools make some mistakes in this project more often than people do:
 

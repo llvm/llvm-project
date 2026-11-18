@@ -58,19 +58,13 @@ complete Linux system built with LLVM and no GNU components.
 - **Bug-for-bug compatibility.** Where a standard defines the behavior,
   LLVM-libc follows the standard even if a widely used libc does not. See
   {ref}`undefined_behavior`.
-- **32-bit `time_t`.** `time_t` is 64 bits wide on every target.
 - **"POSIX everywhere".** On platforms that are not POSIX systems, the API
   should be shaped for the target and not be an emulation of Linux.
 
-The following are *not* non-goals. They are missing or incomplete today:
-
-| Feature | Status |
-| --- | --- |
-| Dynamic loading | Under development. Never intended to be the primary use case. |
-| Time zone database | Planned. The intent is to base the implementation on the one in libc++. |
-| Thread cancellation | Low priority. When added, it must not significantly slow down code that does not use it. |
-| Message catalogs, Annex K | Low priority. |
-| Locales | See the next section. |
+A feature that is missing today is not necessarily a non-goal. Dynamic
+loading, a time zone database, and thread cancellation, for example, are
+planned or in progress. {ref}`roadmap` lists the planned features and their
+status.
 
 ## Text, encodings, and locales
 
@@ -146,13 +140,16 @@ needs it. An extension needs a specific user: a named program or library that
 calls it.
 
 A function that is declared and linkable but not fully implemented goes behind
-the `LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS` CMake option. The bar for
-adding a stub there is low, with two conditions:
+the `LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS` CMake option. This applies to
+standard functions as well as extensions:
 
-- It has a specific user, as above.
-- A call that the stub cannot handle fails clearly. A stub that silently
-  reports success hides the missing functionality from the people who would
-  otherwise report or fix it.
+- A stub or partial implementation of a standard function may be added there
+  when the function cannot be completed yet. For this purpose the GNU
+  extensions may be treated like a standard.
+- A stub of any other non-standard function needs a good reason.
+- In both cases, a call that the stub cannot handle fails clearly. A stub that
+  silently reports success hides the missing functionality from the people
+  who would otherwise report or fix it.
 
 An entrypoint leaves the experimental list when it implements all of the
 functionality its specification requires. Some incomplete entrypoints predate
@@ -167,7 +164,16 @@ C. Code translated from C rarely fits the conventions described in the
 {ref}`developer guides <developer_guides>`.
 
 Standards documents, manual pages, and observing the behavior of another
-implementation as a black box are all appropriate references.
+implementation as a black box are all appropriate references. Reading another
+implementation to understand how it approaches a problem is generally
+acceptable too, as long as the code you contribute is newly written. This is
+not legal advice. Contributors are responsible for having the right to
+contribute their code; see LLVM's policy on
+[copyright, license, and patents](https://llvm.org/docs/DeveloperPolicy.html#copyright-license-and-patents).
+
+The same applies to code written with AI tools: it must be new code and not a
+reproduction of existing code. See the copyright section of LLVM's
+[AI Tool Use Policy](https://llvm.org/docs/AIToolPolicy.html).
 
 If you own an existing implementation of a libc function that you would like to
 contribute, that is likely fine assuming it is updated to match the LLVM-libc

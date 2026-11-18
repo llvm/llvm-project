@@ -33,7 +33,7 @@ is still a bug, but contributors are not expected to be able to test them.
 | Baremetal Hexagon | Newer target (as of 2026) but hopefully an area of growth. |
 | FreeBSD | A port is in progress. It has a maintainer and presubmit CI. |
 | macOS and Windows | Overlay mode only. The overlay tests run in presubmit, but both ports need significant work, and a full build for these systems has not been designed. |
-| Linux on 32-bit Arm | Primarily used to test the 32-bit Arm code that the baremetal target also uses. Baremetal Arm has no postcommit builder, and presubmit runs the baremetal tests for Armv7-M only, so the Linux tests add coverage for the architecture. |
+| Linux on 32-bit Arm | Primarily used to test the 32-bit Arm code that the baremetal target also uses, alongside the baremetal Arm tests that are being rolled out in CI. |
 | Linux on PowerPC | Minimal. It exists mainly so that the code shared with libc++ keeps building there. |
 | Linux on i386 | Theoretically [in the works](https://github.com/llvm/llvm-project/issues/93709), though it may be sunset. |
 | UEFI | Experimental and incomplete. See {doc}`the UEFI docs <uefi/index>`. |

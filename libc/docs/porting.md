@@ -98,10 +98,17 @@ configuration. It is not widely used yet.
 
 ### Building without `-Werror`
 
-LLVM-libc is compiled with `-Werror`. While bringing up a new target or
-compiler, before the build is free of warnings, pass `-DLIBC_WNO_ERROR=ON` to
-keep the warnings without treating them as errors. This should not be considered
-a long term solution, the warnings should be fixed before landing upstream.
+LLVM-libc's library code is compiled with `-Werror`. While bringing up a new
+target or compiler, before the build is free of warnings, pass
+`-DLIBC_WNO_ERROR=ON` to keep the warnings without treating them as errors.
+This should not be considered a long term solution, the warnings should be
+fixed before landing upstream.
+
+The tests are currently compiled without `-Werror`, because they do not all
+build cleanly with it yet. Turning it back on for the tests is planned; see
+{ref}`roadmap`. A build can apply `-Werror` to the library and the tests alike
+by setting `LLVM_ENABLE_WERROR`, as the baremetal CMake cache
+(`libc/cmake/caches/baremetal_common.cmake`) does.
 
 ## Upstreaming
 
