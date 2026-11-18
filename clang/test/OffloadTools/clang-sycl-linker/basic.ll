@@ -109,17 +109,17 @@
 ;
 ; Test AOT compilation for an Intel GPU.
 ; Test that IMG_Object image kind is set for AOT compilation (Intel GPU).
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=xe-bmg-g21 %t/input1.bc %t/input2.bc -o %t/aot-gpu.out 2>&1 \
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=igca_40r --code=xe-bmg-g21 %t/input1.bc %t/input2.bc -o %t/aot-gpu.out 2>&1 \
 ; RUN:     --ocloc-options="-a -b" \
 ; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-GPU
 ; AOT-INTEL-GPU:      link: inputs: {{.*}}.bc, {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
 ; AOT-INTEL-GPU-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: [[SPVSTEM:.*]].spv
 ; AOT-INTEL-GPU-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-device xe-bmg-g21 -a -b {{.*}}-output [[SPVSTEM]].out -file [[SPVSTEM]].spv
-; AOT-INTEL-GPU-NEXT: sycl-bundle: image kind: o, triple: spirv64-unknown-unknown, arch: xe-bmg-g21
+; AOT-INTEL-GPU-NEXT: sycl-bundle: image kind: o, triple: spirv64-unknown-unknown, arch: igca_40r
 ; AOT-INTEL-GPU-NOT:  {{.+}}
 ;
 ; Test that all --ocloc-options are passed to ocloc, even if they contain spaces or quotes.
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=xe-bmg-g21 %t/input1.bc -o %t/aot-gpu.out 2>&1 \
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=igca_40r --code=xe-bmg-g21 %t/input1.bc -o %t/aot-gpu.out 2>&1 \
 ; RUN:     --ocloc-options="-a -b" --ocloc-options=-c --ocloc-options="d" --ocloc-options='"-e -f"' \
 ; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-OCLOC-OPTIONS
 ; AOT-INTEL-OCLOC-OPTIONS: "{{.*}}ocloc{{.*}}" {{.*}}-device xe-bmg-g21 -a -b -c d "-e -f"
@@ -158,10 +158,23 @@
 ; current directory (with a unique suffix to avoid collisions between
 ; concurrent invocations sharing an output basename).
 ; RUN: rm -rf %t/outdir && mkdir -p %t/outdir
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=xe-bmg-g21 %t/input1.bc -o %t/outdir/nested.out 2>&1 \
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=igca_40r --code=xe-bmg-g21 %t/input1.bc -o %t/outdir/nested.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=AOT-STEM-BASENAME
 ; AOT-STEM-BASENAME:      LLVM backend: input: {{.*}}.bc, output: [[SPVSTEM:nested.*]].spv
 ; AOT-STEM-BASENAME-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-output [[SPVSTEM]].out -file [[SPVSTEM]].spv
+;
+; Check that an Intel GPU is not accepted in --arch: its IGCA target goes in
+; --arch and the Intel GPU in --code.
+; RUN: not clang-sycl-linker --dry-run -arch=xe-bmg-g21 %t/input1.bc -o %t/gpu-arch.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=GPU-ARCH
+; GPU-ARCH: error: '--arch=xe-bmg-g21' names an Intel GPU; pass its IGCA target in --arch and the Intel GPU in --code, e.g. '--arch=igca_40r --code=xe-bmg-g21'
+;
+; Check that --code needs an IGCA target in --arch.
+; RUN: not clang-sycl-linker --dry-run -arch=graniterapids --code=xe-bmg-g21 %t/input1.bc -o %t/code-no-igca.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CODE-NO-IGCA
+; RUN: not clang-sycl-linker --dry-run --code=xe-bmg-g21 %t/input1.bc -o %t/code-no-igca.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CODE-NO-IGCA
+; CODE-NO-IGCA: error: --code requires an IGCA target in --arch
 ;
 ; Check that the output file must be specified.
 ; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc 2>&1 \

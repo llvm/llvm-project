@@ -714,12 +714,9 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
   CmdArgs.push_back("-output_no_suffix");
   CmdArgs.push_back("-spirv_input");
 
-  // Compile for the --code list, e.g. "xe-mtl-u,xe-mtl-h" for an IGCA target,
-  // or else for the Intel GPU in --arch.
+  // Compile for the --code list, e.g. "xe-mtl-u,xe-mtl-h" for an IGCA target.
   std::string Devices = llvm::join(Args.getAllArgValues(OPT_code_EQ), ",");
-  if (Devices.empty())
-    Devices = Args.getLastArgValue(OPT_arch_EQ);
-  assert(!Devices.empty() && "a device must be specified for AOT compilation");
+  assert(!Devices.empty() && "--code must be specified for AOT compilation");
   CmdArgs.push_back("-device");
   CmdArgs.push_back(Devices);
 
@@ -747,7 +744,7 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
 static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
                            const ArgList &Args) {
   OffloadArch OA = StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ));
-  if (OA.isIntelGPU() || OA.isIntelIGCA())
+  if (OA.isIntelIGCA())
     return runAOTCompileIntelGPU(InputFile, OutputFile, Args);
   if (OA.isIntelCPU())
     return runAOTCompileIntelCPU(InputFile, OutputFile, Args);
@@ -1002,10 +999,11 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     SplitModules = std::move(*SplitModulesOrErr);
   }
 
-  // An IGCA target is compiled ahead of time only for its --code list.
+  // SYCL device code for an IGCA target is compiled ahead of time only for the
+  // Intel GPUs in --code, and SYCL device code for an Intel CPU always.
   OffloadArch OA = StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ));
   bool IsAOTCompileNeeded =
-      OA.isIntelIGCA() ? Args.hasArg(OPT_code_EQ) : OA.isIntel();
+      OA.isIntelIGCA() ? Args.hasArg(OPT_code_EQ) : OA.isIntelCPU();
 
   StringRef OutputFileNameExt = ".spv";
 
@@ -1120,6 +1118,20 @@ int main(int argc, char **argv) {
   if (!Args.hasArg(OPT_o))
     reportError(createStringError("output file must be specified"));
   OutputFile = Args.getLastArgValue(OPT_o);
+
+  // SYCL device code for Intel GPUs is compiled ahead of time for the IGCA
+  // target in --arch and the Intel GPUs in --code.
+  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
+  OffloadArch OA = StringToOffloadArch(Arch);
+  if (OA.isIntelGPU())
+    reportError(createStringError(
+        "'--arch=" + Arch +
+        "' names an Intel GPU; pass its IGCA target in --arch and the Intel "
+        "GPU in --code, e.g. '--arch=" +
+        OffloadArchToString(OA.intelGPUIGCATarget()) + " --code=" + Arch +
+        "'"));
+  if (Args.hasArg(OPT_code_EQ) && !OA.isIntelIGCA())
+    reportError(createStringError("--code requires an IGCA target in --arch"));
 
   // Get the input buffers to pass to the linking stage.
   auto ResolvedInputsOrErr = getInput(Args);

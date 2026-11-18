@@ -49,10 +49,9 @@ def arch_EQ : Joined<["--", "-"], "arch=">,
 def code_EQ : Joined<["--", "-"], "code=">,
               Flags<[LinkerOnlyOption]>,
               MetaVarName<"<code>">,
-              HelpText<"Specify a real device to compile ahead of time for. "
-                       "Can be repeated. Without it, a real --arch is compiled "
-                       "ahead of time and a virtual one is kept for "
-                       "just-in-time compilation.">;
+              HelpText<"Specify a real device to compile the virtual --arch "
+                       "for ahead of time. Can be repeated. Without it, the "
+                       "SPIR-V is kept for just-in-time compilation.">;
 def triple_EQ : Joined<["--", "-"], "triple=">,
                 Flags<[LinkerOnlyOption]>,
                 MetaVarName<"<triple>">,
