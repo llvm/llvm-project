@@ -4811,12 +4811,10 @@ define <16 x i8> @load_v16i8_v16i8(<16 x i8> %trigger, ptr %addr, <16 x i8> %dst
 ; SSE2-NEXT:    testl $32768, %eax ## imm = 0x8000
 ; SSE2-NEXT:    je LBB30_32
 ; SSE2-NEXT:  LBB30_31: ## %cond.load43
-; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
-; SSE2-NEXT:    pand %xmm0, %xmm1
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    movzbl 15(%rdi), %eax
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    pslldq {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0]
-; SSE2-NEXT:    pandn %xmm2, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0]
 ; SSE2-NEXT:    por %xmm0, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -5413,12 +5411,10 @@ define <32 x i8> @load_v32i8_v32i8(<32 x i8> %trigger, ptr %addr, <32 x i8> %dst
 ; SSE2-NEXT:    testl $-2147483648, %eax ## imm = 0x80000000
 ; SSE2-NEXT:    je LBB31_64
 ; SSE2-NEXT:  LBB31_63: ## %cond.load91
-; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
-; SSE2-NEXT:    pand %xmm0, %xmm3
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSE2-NEXT:    movzbl 31(%rdi), %eax
-; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0]
-; SSE2-NEXT:    pandn %xmm1, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0]
 ; SSE2-NEXT:    por %xmm0, %xmm3
 ; SSE2-NEXT:  LBB31_64: ## %else92
 ; SSE2-NEXT:    movdqa %xmm2, %xmm0
@@ -5574,12 +5570,10 @@ define <32 x i8> @load_v32i8_v32i8(<32 x i8> %trigger, ptr %addr, <32 x i8> %dst
 ; SSE2-NEXT:    testw %ax, %ax
 ; SSE2-NEXT:    jns LBB31_32
 ; SSE2-NEXT:  LBB31_31: ## %cond.load43
-; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
-; SSE2-NEXT:    pand %xmm0, %xmm2
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE2-NEXT:    movzbl 15(%rdi), %ecx
-; SSE2-NEXT:    movd %ecx, %xmm1
-; SSE2-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0]
-; SSE2-NEXT:    pandn %xmm1, %xmm0
+; SSE2-NEXT:    movd %ecx, %xmm0
+; SSE2-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0]
 ; SSE2-NEXT:    por %xmm0, %xmm2
 ; SSE2-NEXT:    testl $65536, %eax ## imm = 0x10000
 ; SSE2-NEXT:    je LBB31_34

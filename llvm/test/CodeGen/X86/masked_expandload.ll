@@ -3592,12 +3592,10 @@ define <16 x i8> @expandload_v16i8_v16i8(ptr %base, <16 x i8> %src0, <16 x i8> %
 ; SSE2-NEXT:    testl $32768, %eax ## imm = 0x8000
 ; SSE2-NEXT:    je LBB12_32
 ; SSE2-NEXT:  LBB12_31: ## %cond.load57
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
-; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    movzbl (%rdi), %eax
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    pslldq {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0]
-; SSE2-NEXT:    pandn %xmm2, %xmm1
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0]
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
