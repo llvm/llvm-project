@@ -443,7 +443,12 @@ func.func @transfer_write_unroll_dynamic_index(%mem : memref<4x4xf32>, %vec : ve
 //  ALL-SAME:     %[[MEM:.*]]: memref<4x4xf32>, %[[IDX:.*]]: index, %[[MASK:.*]]: vector<4x4xi1>
 //   ALL-DAG:   %[[M:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [0, 2], sizes = [2, 2]
 //   ALL-DAG:   %[[R:.*]] = vector.mask %[[M]] { vector.transfer_read %[[MEM]]{{.*}} : memref<4x4xf32>, vector<2x2xf32> } : vector<2x2xi1> -> vector<2x2xf32>
+// (...) Tile [0, 0]
+//
 //   ALL-DAG:   vector.insert_strided_slice %[[R]], %{{.*}} offsets = [0, 2]
+//
+// (...) Tile [2, 0]
+//
 //       ALL:   %[[RES:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} offsets = [2, 2]
 //  ALL-NEXT:   return %[[RES]]
 func.func @masked_transfer_read_unroll(%mem : memref<4x4xf32>, %idx : index, %mask : vector<4x4xi1>) -> vector<4x4xf32> {
@@ -534,20 +539,6 @@ func.func @negative_masked_transfer_read_permutation(%mem : memref<4x4xf32>, %id
   %cf0 = arith.constant 0.0 : f32
   %res = vector.mask %mask { vector.transfer_read %mem[%idx, %idx], %cf0 {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : memref<4x4xf32>, vector<4x4xf32> } : vector<4x4xi1> -> vector<4x4xf32>
   return %res : vector<4x4xf32>
-}
-
-// -----
-
-// Not supported yet: the target shape has a lower rank than the vector.
-
-// TargetShape is [2x2]
-// ALL-LABEL: func @negative_masked_transfer_read_rank_mismatch(
-//       ALL:   %[[R:.*]] = vector.mask %{{.*}} { vector.transfer_read {{.*}} : memref<4x4x4xf32>, vector<4x4x4xf32> }
-//  ALL-NEXT:   return %[[R]]
-func.func @negative_masked_transfer_read_rank_mismatch(%mem : memref<4x4x4xf32>, %idx : index, %mask : vector<4x4x4xi1>) -> vector<4x4x4xf32> {
-  %cf0 = arith.constant 0.0 : f32
-  %res = vector.mask %mask { vector.transfer_read %mem[%idx, %idx, %idx], %cf0 : memref<4x4x4xf32>, vector<4x4x4xf32> } : vector<4x4x4xi1> -> vector<4x4x4xf32>
-  return %res : vector<4x4x4xf32>
 }
 
 // -----

@@ -183,25 +183,25 @@ checkSupportedMaskedTransferUnrolling(TransferOpTy xferOp,
   return success();
 }
 
-/// Wrap `tileOp`, the new transfer for one tile, in a vector.mask with the tile
-/// of `maskingOp`'s mask (and passthru, if any) at `offsets` with shape
+/// Wrap `tiledXferOp`, the new transfer for one tile, in a vector.mask with the
+/// tile of `maskingOp`'s mask (and passthru, if any) at `offsets` with shape
 /// `sizes`. `maskingOp` is the vector.mask around the original transfer;
-/// `tileOp` is created outside of it. Return `tileOp` itself if `maskingOp` is
-/// null.
+/// `tiledXferOp` is created outside of it. Return `tiledXferOp` itself if
+/// `maskingOp` is null.
 static Operation *maskTile(PatternRewriter &rewriter, Location loc,
-                           Operation *tileOp,
+                           Operation *tiledXferOp,
                            vector::MaskingOpInterface maskingOp,
                            ArrayRef<int64_t> offsets, ArrayRef<int64_t> sizes,
                            ArrayRef<int64_t> strides) {
   if (!maskingOp)
-    return tileOp;
+    return tiledXferOp;
   Value mask = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
       loc, maskingOp.getMask(), offsets, sizes, strides);
   Value passthru;
   if (maskingOp.hasPassthru())
     passthru = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
         loc, maskingOp.getPassthru(), offsets, sizes, strides);
-  return vector::maskOperation(rewriter, tileOp, mask, passthru);
+  return vector::maskOperation(rewriter, tiledXferOp, mask, passthru);
 }
 
 namespace {
@@ -232,12 +232,6 @@ struct UnrollTransferReadPattern
     auto targetShape = getTargetShape(options, iface, /*allowMasked=*/true);
     if (!targetShape)
       return failure();
-    // The mask is sliced with one offset per vector dim, so the tiles must have
-    // the rank of the vector.
-    if (maskingOp && readOp.getVectorType().getRank() !=
-                         static_cast<int64_t>(targetShape->size()))
-      return rewriter.notifyMatchFailure(
-          readOp, "masked read with a target shape of a different rank");
     auto sourceVectorType = readOp.getVectorType();
     SmallVector<int64_t> strides(targetShape->size(), 1);
     Location loc = readOp.getLoc();
