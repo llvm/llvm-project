@@ -27,6 +27,13 @@
 ; CHECK-NEXT: DW_AT_artificial	(0x01)
 ; CHECK-NEXT: DW_AT_external	(0x01)
 
+; Both foo and bar call an external function without a visible definition so
+; the BL is classified as LegalTerminator and the outliner does not bail out
+; because of CFI instructions in a non-tail-call candidate. The specific
+; callee does not matter for this test; it only checks that the outlined
+; function gets valid DWARF.
+declare void @baz()
+
 define void @foo() #0 !dbg !8 {
 entry:
   %p = alloca ptr, align 8
@@ -34,7 +41,7 @@ entry:
   %0 = load ptr, ptr %p, align 8, !dbg !15
   %incdec.ptr = getelementptr inbounds i32, ptr %0, i32 1, !dbg !15
   store ptr %incdec.ptr, ptr %p, align 8, !dbg !15
-  call void @foo(), !dbg !16
+  call void @baz(), !dbg !16
   ret void, !dbg !17
 }
 
@@ -47,7 +54,7 @@ entry:
   %0 = load ptr, ptr %p, align 8, !dbg !21
   %incdec.ptr = getelementptr inbounds i32, ptr %0, i32 1, !dbg !21
   store ptr %incdec.ptr, ptr %p, align 8, !dbg !21
-  call void @foo(), !dbg !22
+  call void @baz(), !dbg !22
   ret void, !dbg !23
 }
 
