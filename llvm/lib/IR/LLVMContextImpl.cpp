@@ -110,6 +110,8 @@ LLVMContextImpl::~LLVMContextImpl() {
     I->dropAllReferences();
   for (auto *I : VectorConstants)
     I->dropAllReferences();
+  for (auto *I : ConstantPtrAuths)
+    I->dropAllReferences();
   ExprConstants.freeConstants();
   ArrayConstants.freeConstants();
   StructConstants.freeConstants();
@@ -133,6 +135,7 @@ LLVMContextImpl::~LLVMContextImpl() {
   FPConstants.clear();
   FPSplatConstants.clear();
   CDSConstants.clear();
+  TheNoneToken.reset();
 
   // Destroy attribute node lists.
   for (FoldingSetIterator<AttributeSetNode> I = AttrsSetNodes.begin(),

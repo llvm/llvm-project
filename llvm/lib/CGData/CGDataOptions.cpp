@@ -12,4 +12,4 @@
 #define OPTIONS_STRUCT_DEFS
 #include "CGDataOptions.inc"
 
-static llvm::opt::RegisterLibraryOptions<llvm::CGDataOptions> Registration;
+LLVM_REGISTER_LIBRARY_OPTIONS(llvm::CGDataOptions)

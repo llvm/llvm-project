@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux -std=c++14 %s -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux -std=c++14 %s -emit-llvm -o - | FileCheck %s %}
 // RUN: %clang_cc1 -triple x86_64-linux -std=c++17 %s -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux -std=c++17 %s -emit-llvm -o - | FileCheck %s %}
 
 namespace std {
   template<typename T> class initializer_list {

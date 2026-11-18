@@ -42,6 +42,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -721,50 +722,19 @@ template <> struct MDNodeKeyImpl<DISubrangeType> {
         Bias(N->getRawBias()) {}
 
   bool isKeyOf(const DISubrangeType *RHS) const {
-    auto BoundsEqual = [=](Metadata *Node1, Metadata *Node2) -> bool {
-      if (Node1 == Node2)
-        return true;
-
-      ConstantAsMetadata *MD1 = dyn_cast_or_null<ConstantAsMetadata>(Node1);
-      ConstantAsMetadata *MD2 = dyn_cast_or_null<ConstantAsMetadata>(Node2);
-      if (MD1 && MD2) {
-        ConstantInt *CV1 = cast<ConstantInt>(MD1->getValue());
-        ConstantInt *CV2 = cast<ConstantInt>(MD2->getValue());
-        if (CV1->getSExtValue() == CV2->getSExtValue())
-          return true;
-      }
-      return false;
-    };
-
     return Name == RHS->getRawName() && File == RHS->getRawFile() &&
            Line == RHS->getLine() && Scope == RHS->getRawScope() &&
            SizeInBits == RHS->getRawSizeInBits() &&
            AlignInBits == RHS->getAlignInBits() && Flags == RHS->getFlags() &&
            BaseType == RHS->getRawBaseType() &&
-           BoundsEqual(LowerBound, RHS->getRawLowerBound()) &&
-           BoundsEqual(UpperBound, RHS->getRawUpperBound()) &&
-           BoundsEqual(Stride, RHS->getRawStride()) &&
-           BoundsEqual(Bias, RHS->getRawBias());
+           LowerBound == RHS->getRawLowerBound() &&
+           UpperBound == RHS->getRawUpperBound() &&
+           Stride == RHS->getRawStride() && Bias == RHS->getRawBias();
   }
 
   unsigned getHashValue() const {
-    unsigned val = 0;
-    auto HashBound = [&](Metadata *Node) -> void {
-      ConstantAsMetadata *MD = dyn_cast_or_null<ConstantAsMetadata>(Node);
-      if (MD) {
-        ConstantInt *CV = cast<ConstantInt>(MD->getValue());
-        val = hash_combine(val, CV->getSExtValue());
-      } else {
-        val = hash_combine(val, Node);
-      }
-    };
-
-    HashBound(LowerBound);
-    HashBound(UpperBound);
-    HashBound(Stride);
-    HashBound(Bias);
-
-    return hash_combine(val, Name, File, Line, Scope, BaseType, Flags);
+    return hash_combine(Name, File, Line, Scope, BaseType, Flags, LowerBound,
+                        UpperBound, Stride, Bias);
   }
 };
 
@@ -1660,6 +1630,9 @@ public:
   /// never directly.
   std::unique_ptr<remarks::RemarkStreamer> MainRemarkStreamer;
 
+  /// The virtual file system used for inputs.
+  IntrusiveRefCntPtr<vfs::FileSystem> FS;
+
   std::unique_ptr<DiagnosticHandler> DiagHandler;
   bool RespectDiagnosticFilters = false;
   bool DiagnosticsHotnessRequested = false;
@@ -1860,11 +1833,6 @@ public:
 
   DenseMap<const GlobalValue *, GlobalValue::SanitizerMetadata>
       GlobalValueSanitizerMetadata;
-
-  /// DiscriminatorTable - This table maps file:line locations to an
-  /// integer representing the next DWARF path discriminator to assign to
-  /// instructions in different blocks at the same location.
-  DenseMap<std::pair<const char *, unsigned>, unsigned> DiscriminatorTable;
 
   /// A set of interned tags for operand bundles.  The StringMap maps
   /// bundle tags to their IDs.

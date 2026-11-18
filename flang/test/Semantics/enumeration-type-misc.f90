@@ -1,19 +1,16 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -fenumeration-type
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Miscellaneous enumeration-type use cases: a single-enumerator type, MERGE over
 ! enumeration values, and enumeration-type argument association.
 
 module enum_misc_mod
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: color
     enumerator :: red, green, blue
   end enumeration type
 
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: direction
     enumerator :: north, south
   end enumeration type
 
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: single
     enumerator :: only
   end enumeration type

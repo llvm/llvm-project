@@ -2,7 +2,8 @@
 
 // DEFINE: %{vectorize} = mlir-opt -transform-interpreter
 // DEFINE: %{lower} = mlir-opt -one-shot-bufferize=bufferize-function-boundaries \
-// DEFINE:   -test-lower-to-llvm -test-transform-dialect-erase-schedule
+// DEFINE:   -buffer-deallocation-pipeline -test-lower-to-llvm \
+// DEFINE:   -test-transform-dialect-erase-schedule
 // DEFINE: %{run} = mlir-runner -e %{entry_point} -entry-point-result=void \
 // DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
 

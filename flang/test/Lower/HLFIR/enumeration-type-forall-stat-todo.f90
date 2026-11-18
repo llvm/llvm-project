@@ -1,5 +1,5 @@
 ! Test that NEXT/PREVIOUS with STAT= inside FORALL hits the TODO diagnostic.
-! RUN: %not_todo_cmd %flang_fc1 -fenumeration-type -emit-hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -o - %s 2>&1 | FileCheck %s
 
 ! CHECK: not yet implemented: NEXT/PREVIOUS with STAT= inside FORALL
 module enum_forall_mod

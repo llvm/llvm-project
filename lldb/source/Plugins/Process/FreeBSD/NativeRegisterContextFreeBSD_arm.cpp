@@ -15,7 +15,7 @@
 #include "lldb/Utility/Status.h"
 
 #include "Plugins/Process/FreeBSD/NativeProcessFreeBSD.h"
-#include "Plugins/Process/Utility/RegisterInfo_arm.h"
+#include "Register/Common/RegisterInfo_arm.h"
 
 // clang-format off
 #include <sys/param.h>
@@ -35,11 +35,10 @@ NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
 
 NativeRegisterContextFreeBSD_arm::NativeRegisterContextFreeBSD_arm(
     const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread)
-    : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfo_arm(target_arch)) {}
+    : NativeRegisterContextRegisterInfo(native_thread,
+                                        new RegisterInfo_arm(target_arch)) {}
 
-RegisterInfo_arm &
-NativeRegisterContextFreeBSD_arm::GetRegisterInfo() const {
+RegisterInfo_arm &NativeRegisterContextFreeBSD_arm::GetRegisterInfo() const {
   return static_cast<RegisterInfo_arm &>(*m_register_info_interface_up);
 }
 

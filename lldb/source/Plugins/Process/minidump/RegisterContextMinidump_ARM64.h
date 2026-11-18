@@ -11,7 +11,7 @@
 
 #include "MinidumpTypes.h"
 
-#include "Plugins/Process/Utility/RegisterInfoInterface.h"
+#include "Register/RegisterInfoInterface.h"
 #include "lldb/Target/RegisterContext.h"
 
 #include "llvm/ADT/ArrayRef.h"

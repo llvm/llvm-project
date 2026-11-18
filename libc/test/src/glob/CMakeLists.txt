@@ -1,4 +1,4 @@
-add_custom_target(libc-glob-tests)
+add_libc_testsuite(libc-glob-tests)
 
 add_libc_test(
   glob_test

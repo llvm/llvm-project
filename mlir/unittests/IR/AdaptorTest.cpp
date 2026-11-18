@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../../test/lib/Dialect/Test/TestDialect.h"
-#include "../../test/lib/Dialect/Test/TestOps.h"
-#include "../../test/lib/Dialect/Test/TestOpsSyntax.h"
+#include "TestOpsCore.h"
+#include "TestOpsSyntax.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

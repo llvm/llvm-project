@@ -2046,6 +2046,8 @@ enum class BroadcastReduceKind {
   MinUI,
   AndI,
   OrI,
+  MaximumF,
+  MinimumF,
 };
 
 /// Match a supported reduction body and return its reduction kind.
@@ -2092,6 +2094,10 @@ matchBroadcastReduceBody(ReduceOp reduceOp) {
       .Case<arith::AndIOp>(
           [](arith::AndIOp) { return BroadcastReduceKind::AndI; })
       .Case<arith::OrIOp>([](arith::OrIOp) { return BroadcastReduceKind::OrI; })
+      .Case<arith::MaximumFOp>(
+          [](arith::MaximumFOp) { return BroadcastReduceKind::MaximumF; })
+      .Case<arith::MinimumFOp>(
+          [](arith::MinimumFOp) { return BroadcastReduceKind::MinimumF; })
       .Default([](Operation *) -> std::optional<BroadcastReduceKind> {
         return std::nullopt;
       });
@@ -2102,6 +2108,17 @@ static bool hasBroadcastReduceIdentity(Value init, BroadcastReduceKind kind) {
   auto initAttr = getScalarConstantAttrFromDenseSplat(init);
   if (!initAttr)
     return false;
+
+  // Float kinds: identity is the corresponding infinity.
+  if (kind == BroadcastReduceKind::MaximumF ||
+      kind == BroadcastReduceKind::MinimumF) {
+    auto floatAttr = dyn_cast<FloatAttr>(*initAttr);
+    if (!floatAttr)
+      return false;
+    const APFloat &value = floatAttr.getValue();
+    return kind == BroadcastReduceKind::MaximumF ? value.isNegInfinity()
+                                                 : value.isPosInfinity();
+  }
 
   auto integerAttr = dyn_cast<IntegerAttr>(*initAttr);
   if (!integerAttr)
@@ -2120,6 +2137,9 @@ static bool hasBroadcastReduceIdentity(Value init, BroadcastReduceKind kind) {
     return value.isAllOnes();
   case BroadcastReduceKind::OrI:
     return value.isZero();
+  case BroadcastReduceKind::MaximumF:
+  case BroadcastReduceKind::MinimumF:
+    llvm_unreachable("float kinds handled by the branch above");
   }
   llvm_unreachable("unknown broadcast reduction kind");
 }
@@ -2130,6 +2150,8 @@ static bool hasBroadcastReduceIdentity(Value init, BroadcastReduceKind kind) {
 ///  minsi(broadcast(y)) -> y
 ///  andi(broadcast(z)) -> z
 ///  ori(broadcast(w)) -> w
+///  maximumf(broadcast(x)) -> x
+///  minimumf(broadcast(y)) -> y
 ///
 /// provided the reduction init is the identity value of the combiner.
 struct FoldReduceBroadcast : public OpRewritePattern<linalg::ReduceOp> {
@@ -4830,15 +4852,12 @@ verifyContractionDims(size_t iterationSpaceDims, ArrayRef<size_t> inOccurrences,
     //     for the output. In terms of einsum semantics such dims have a
     //     sensible meaning - namely an additional reduction per each such dim.
     //     By contrast, the ContractionOpInterface does not know about this
-    //     iter type - cf. inferContractionDims' supported dim kinds. Similarly,
-    //     while vector.contract's verifier accepts dims of this kind many of
-    //     its lowerings give up on encountering these dims.
+    //     iter type - cf. inferContractionDims' supported dim kinds.
     // TODO: Remove following once we have comprehensive support for input-only
     //       reduction dims, at both the linalg- and vector-dialect levels.
     if (inOccCount == 1 && outOccCount != 1)
-      return emitError()
-             << "iteration space dim at index " << dimIndex
-             << " is neither a contracting dim nor of parallel iteration type";
+      return emitError() << "reduction dim at index " << dimIndex
+                         << " must appear in both LHS and RHS";
   }
 
   if (!hasContractingDim)

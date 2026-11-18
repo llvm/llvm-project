@@ -441,6 +441,51 @@ void inst_templ1() {
 // OMP50: ret void
 //
 
+// OMP45: call void @__kmpc_for_static_init_8(ptr {{[^,]+}}, i32 %{{[^,]+}}, i32 34, ptr %{{[^,]+}}, ptr [[LB:%[^,]+]], ptr [[UB:%[^,]+]], ptr [[STRIDE:%[^,]+]], i64 1, i64 1)
+// OMP45: [[UB_VAL:%.+]] = load i64, ptr [[UB]],
+// OMP45: [[CMP:%.+]] = icmp sgt i64 [[UB_VAL]], 15
+// OMP45: br i1 [[CMP]], label %[[TRUE:.+]], label %[[FALSE:[^,]+]]
+// OMP45: [[TRUE]]:
+// OMP45: br label %[[SWITCH:[^,]+]]
+// OMP45: [[FALSE]]:
+// OMP45: [[UB_VAL:%.+]] = load i64, ptr [[UB]],
+// OMP45: br label %[[SWITCH]]
+// OMP45: [[SWITCH]]:
+// OMP45: [[UP:%.+]] = phi i64 [ 15, %[[TRUE]] ], [ [[UB_VAL]], %[[FALSE]] ]
+// OMP45: store i64 [[UP]], ptr [[UB]],
+// OMP45: [[LB_VAL:%.+]] = load i64, ptr [[LB]],
+// OMP45: store i64 [[LB_VAL]], ptr [[T1_OMP_IV:%[^,]+]],
+
+// ...
+// OMP45: [[IV:%.+]] = load i64, ptr [[T1_OMP_IV]]
+// OMP45-NEXT: [[UB_VAL:%.+]] = load i64, ptr [[UB]]
+// OMP45-NEXT: [[CMP1:%.+]] = icmp sle i64 [[IV]], [[UB_VAL]]
+// OMP45-NEXT: br i1 [[CMP1]], label %[[T1_BODY:.+]], label %[[T1_END:[^,]+]]
+// OMP45: [[T1_BODY]]:
+// Loop counters i and j updates:
+// OMP45: [[IV1:%.+]] = load i64, ptr [[T1_OMP_IV]]
+// OMP45-NEXT: [[I_1:%.+]] = sdiv i64 [[IV1]], 4
+// OMP45-NEXT: [[I_1_MUL1:%.+]] = mul nsw i64 [[I_1]], 1
+// OMP45-NEXT: [[I_1_ADD0:%.+]] = add nsw i64 0, [[I_1_MUL1]]
+// OMP45-NEXT: [[I_2:%.+]] = trunc i64 [[I_1_ADD0]] to i32
+// OMP45-NEXT: store i32 [[I_2]], ptr
+// OMP45: [[IV2:%.+]] = load i64, ptr [[T1_OMP_IV]]
+// OMP45: [[IV2_1:%.+]] = load i64, ptr [[T1_OMP_IV]]
+// OMP45-NEXT: [[DIV_1:%.+]] = sdiv i64 [[IV2_1]], 4
+// OMP45-NEXT: [[MUL_1:%.+]] = mul nsw i64 [[DIV_1]], 4
+// OMP45-NEXT: [[J_1:%.+]] = sub nsw i64 [[IV2]], [[MUL_1]]
+// OMP45-NEXT: [[J_2:%.+]] = mul nsw i64 [[J_1]], 2
+// OMP45-NEXT: [[J_2_ADD0:%.+]] = add nsw i64 0, [[J_2]]
+// OMP45-NEXT: store i64 [[J_2_ADD0]], ptr
+// simd.for.inc:
+// OMP45: [[IV3:%.+]] = load i64, ptr [[T1_OMP_IV]]
+// OMP45-NEXT: [[INC:%.+]] = add nsw i64 [[IV3]], 1
+// OMP45-NEXT: store i64 [[INC]], ptr
+// OMP45-NEXT: br label {{%.+}}
+// OMP45: [[T1_END]]:
+// OMP45: call void @__kmpc_for_static_fini(ptr {{.+}}, i32 %{{.+}})
+// OMP45: ret void
+
 typedef int MyIdx;
 
 class IterDouble {
@@ -743,51 +788,6 @@ for (int i = 0; i < 10; ++i);
 // OMP50: [[ELSE]]:
 // OMP50: br label {{.+}}, !llvm.loop ![[NOVECT:.+]]
 // CHECK: call void @__kmpc_for_static_fini(
-
-// OMP45: call void @__kmpc_for_static_init_8(ptr {{[^,]+}}, i32 %{{[^,]+}}, i32 34, ptr %{{[^,]+}}, ptr [[LB:%[^,]+]], ptr [[UB:%[^,]+]], ptr [[STRIDE:%[^,]+]], i64 1, i64 1)
-// OMP45: [[UB_VAL:%.+]] = load i64, ptr [[UB]],
-// OMP45: [[CMP:%.+]] = icmp sgt i64 [[UB_VAL]], 15
-// OMP45: br i1 [[CMP]], label %[[TRUE:.+]], label %[[FALSE:[^,]+]]
-// OMP45: [[TRUE]]:
-// OMP45: br label %[[SWITCH:[^,]+]]
-// OMP45: [[FALSE]]:
-// OMP45: [[UB_VAL:%.+]] = load i64, ptr [[UB]],
-// OMP45: br label %[[SWITCH]]
-// OMP45: [[SWITCH]]:
-// OMP45: [[UP:%.+]] = phi i64 [ 15, %[[TRUE]] ], [ [[UB_VAL]], %[[FALSE]] ]
-// OMP45: store i64 [[UP]], ptr [[UB]],
-// OMP45: [[LB_VAL:%.+]] = load i64, ptr [[LB]],
-// OMP45: store i64 [[LB_VAL]], ptr [[T1_OMP_IV:%[^,]+]],
-
-// ...
-// OMP45: [[IV:%.+]] = load i64, ptr [[T1_OMP_IV]]
-// OMP45-NEXT: [[UB_VAL:%.+]] = load i64, ptr [[UB]]
-// OMP45-NEXT: [[CMP1:%.+]] = icmp sle i64 [[IV]], [[UB_VAL]]
-// OMP45-NEXT: br i1 [[CMP1]], label %[[T1_BODY:.+]], label %[[T1_END:[^,]+]]
-// OMP45: [[T1_BODY]]:
-// Loop counters i and j updates:
-// OMP45: [[IV1:%.+]] = load i64, ptr [[T1_OMP_IV]]
-// OMP45-NEXT: [[I_1:%.+]] = sdiv i64 [[IV1]], 4
-// OMP45-NEXT: [[I_1_MUL1:%.+]] = mul nsw i64 [[I_1]], 1
-// OMP45-NEXT: [[I_1_ADD0:%.+]] = add nsw i64 0, [[I_1_MUL1]]
-// OMP45-NEXT: [[I_2:%.+]] = trunc i64 [[I_1_ADD0]] to i32
-// OMP45-NEXT: store i32 [[I_2]], ptr
-// OMP45: [[IV2:%.+]] = load i64, ptr [[T1_OMP_IV]]
-// OMP45: [[IV2_1:%.+]] = load i64, ptr [[T1_OMP_IV]]
-// OMP45-NEXT: [[DIV_1:%.+]] = sdiv i64 [[IV2_1]], 4
-// OMP45-NEXT: [[MUL_1:%.+]] = mul nsw i64 [[DIV_1]], 4
-// OMP45-NEXT: [[J_1:%.+]] = sub nsw i64 [[IV2]], [[MUL_1]]
-// OMP45-NEXT: [[J_2:%.+]] = mul nsw i64 [[J_1]], 2
-// OMP45-NEXT: [[J_2_ADD0:%.+]] = add nsw i64 0, [[J_2]]
-// OMP45-NEXT: store i64 [[J_2_ADD0]], ptr
-// simd.for.inc:
-// OMP45: [[IV3:%.+]] = load i64, ptr [[T1_OMP_IV]]
-// OMP45-NEXT: [[INC:%.+]] = add nsw i64 [[IV3]], 1
-// OMP45-NEXT: store i64 [[INC]], ptr
-// OMP45-NEXT: br label {{%.+}}
-// OMP45: [[T1_END]]:
-// OMP45: call void @__kmpc_for_static_fini(ptr {{.+}}, i32 %{{.+}})
-// OMP45: ret void
 
 // OMP50-LABEL: parallel_simd_atomic
 // OMP50: call i32 @__kmpc_global_thread_num

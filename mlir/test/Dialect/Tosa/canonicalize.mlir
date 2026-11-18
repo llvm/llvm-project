@@ -874,6 +874,17 @@ func.func @slice_fold_static_dynamic(%arg0: tensor<?x4xf32>) -> tensor<?x4xf32> 
 
 // -----
 
+// CHECK-LABEL: @slice_nofold_static_to_dynamic
+func.func @slice_nofold_static_to_dynamic(%arg0: tensor<3x4xf32>) -> tensor<?x4xf32> {
+  %start = tosa.const_shape values(dense<0> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %size = tosa.const_shape values(dense<[3, 4]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // CHECK: tosa.slice
+  %slice = tosa.slice %arg0, %start, %size : (tensor<3x4xf32>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x4xf32>
+  return %slice : tensor<?x4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @slice_nofold_static
 func.func @slice_nofold_static(%arg0: tensor<3x4xf32>) -> tensor<3x2xf32> {
   %0 = tosa.const_shape values(dense<[0, 0]> : tensor<2xindex>) : () -> !tosa.shape<2>
@@ -1458,6 +1469,39 @@ func.func @fold_mul_no_shift() -> tensor<i32> {
     %2 = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
     %3 = tosa.mul %0, %1, %2 : (tensor<i32>, tensor<i32>, tensor<1xi8>) -> tensor<i32>
     return %3 : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_mul_max_shift
+// CHECK: tosa.const values(dense<0> : tensor<i32>)
+func.func @fold_mul_max_shift() -> tensor<i32> {
+  %c = tosa.const values(dense<2147483647> : tensor<i32>) : () -> tensor<i32>
+  %shift = tosa.const values(dense<63> : tensor<1xi8>) : () -> tensor<1xi8>
+  %result = tosa.mul %c, %c, %shift : (tensor<i32>, tensor<i32>, tensor<1xi8>) -> tensor<i32>
+  return %result : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: @no_fold_mul_negative_shift
+// CHECK: tosa.mul
+func.func @no_fold_mul_negative_shift() -> tensor<i32> {
+  %c = tosa.const values(dense<2> : tensor<i32>) : () -> tensor<i32>
+  %shift = tosa.const values(dense<-1> : tensor<1xi8>) : () -> tensor<1xi8>
+  %result = tosa.mul %c, %c, %shift : (tensor<i32>, tensor<i32>, tensor<1xi8>) -> tensor<i32>
+  return %result : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: @no_fold_mul_shift_64
+// CHECK: tosa.mul
+func.func @no_fold_mul_shift_64() -> tensor<i32> {
+  %c = tosa.const values(dense<1> : tensor<i32>) : () -> tensor<i32>
+  %shift = tosa.const values(dense<64> : tensor<1xi8>) : () -> tensor<1xi8>
+  %result = tosa.mul %c, %c, %shift : (tensor<i32>, tensor<i32>, tensor<1xi8>) -> tensor<i32>
+  return %result : tensor<i32>
 }
 
 // -----
@@ -2181,6 +2225,19 @@ func.func @canonicalize_tile_broadcast_mul(%arg0: tensor<1x197x768xf32>, %arg1: 
   return %mul : tensor<1x197x768xf32>
 }
 
+
+// -----
+
+// CHECK-LABEL: @dont_canonicalize_tile_negative_multiple
+// CHECK: %[[TILE:.+]] = tosa.tile
+// CHECK: %[[ADD:.+]] = tosa.add %[[TILE]],
+// CHECK: return %[[ADD]]
+func.func @dont_canonicalize_tile_negative_multiple(%arg0: tensor<1xf32>, %arg1: tensor<4xf32>) -> tensor<4xf32> {
+  %multiples = tosa.const_shape values(dense<-2> : tensor<1xindex>) : () -> !tosa.shape<1>
+  %tile = tosa.tile %arg0, %multiples : (tensor<1xf32>, !tosa.shape<1>) -> tensor<4xf32>
+  %add = tosa.add %tile, %arg1 : (tensor<4xf32>, tensor<4xf32>) -> tensor<4xf32>
+  return %add : tensor<4xf32>
+}
 
 // -----
 

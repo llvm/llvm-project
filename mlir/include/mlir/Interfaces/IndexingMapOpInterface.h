@@ -12,7 +12,6 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/OpDefinition.h"
 
 /// Include the generated interface declarations.
 #include "mlir/Interfaces/IndexingMapOpInterface.h.inc"

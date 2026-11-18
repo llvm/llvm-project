@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple aarch64-windows -verify-machineinstrs -filetype asm -o - %s | FileCheck %s
+; RUN: llc -mtriple aarch64-unknown-uefi -verify-machineinstrs -filetype asm -o - %s | FileCheck %s
 
 define void @func(i64 %a) "no-stack-arg-probe" {
 entry:

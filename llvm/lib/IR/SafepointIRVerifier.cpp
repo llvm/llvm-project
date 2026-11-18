@@ -31,6 +31,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/SafepointIRVerifier.h"
+#include "IROptions.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetOperations.h"
@@ -44,19 +45,12 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "safepoint-ir-verifier"
 
 using namespace llvm;
-
-/// This option is used for writing test cases.  Instead of crashing the program
-/// when verification fails, report a message to the console (for FileCheck
-/// usage) and continue execution as if nothing happened.
-static cl::opt<bool> PrintOnly("safepoint-ir-verifier-print-only",
-                               cl::init(false));
 
 namespace {
 
@@ -880,7 +874,7 @@ void InstructionVerifier::reportInvalidUse(const Value &V,
   errs() << "Illegal use of unrelocated value found!\n";
   errs() << "Def: " << V << "\n";
   errs() << "Use: " << I << "\n";
-  if (!PrintOnly)
+  if (!getIROptions(I.getContext()).safepoint_ir_verifier_print_only)
     abort();
   AnyInvalidUses = true;
 }
@@ -889,6 +883,8 @@ static void Verify(const Function &F, const DominatorTree &DT,
                    const CFGDeadness &CD) {
   LLVM_DEBUG(dbgs() << "Verifying gc pointers in function: " << F.getName()
                     << "\n");
+  bool PrintOnly =
+      getIROptions(F.getContext()).safepoint_ir_verifier_print_only;
   if (PrintOnly)
     dbgs() << "Verifying gc pointers in function: " << F.getName() << "\n";
 

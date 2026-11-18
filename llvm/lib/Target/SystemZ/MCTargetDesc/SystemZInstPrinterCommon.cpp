@@ -291,5 +291,8 @@ void SystemZInstPrinterCommon::printCond4Operand(const MCInst *MI, int OpNum,
                                           "nl", "le", "nh",  "no"};
   uint64_t Imm = MI->getOperand(OpNum).getImm();
   assert(Imm > 0 && Imm < 15 && "Invalid condition");
+  if (MAI.getAssemblerDialect() == AD_HLASM)
+    assert(Imm != 3 && Imm != 5 && Imm != 6 && Imm != 9 && Imm != 10 &&
+           Imm != 12 && "Restricted HLASM dialect");
   O << CondNames[Imm - 1];
 }

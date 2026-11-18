@@ -78,6 +78,9 @@ public:
   /// \return true if and only if the queue is in order.
   bool isInOrder() const { return MIsInOrder; }
 
+  /// \return the property list this queue was constructed with.
+  const property_list &getPropList() const { return MPropList; }
+
   /// Waits for completion of all commands submitted to this queue.
   void wait();
 

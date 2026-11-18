@@ -16,8 +16,8 @@
 
 #include "Plugins/Process/FreeBSD/NativeProcessFreeBSD.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "Plugins/Process/Utility/RegisterInfo_arm64.h"
-#include "Plugins/Process/Utility/RegisterTypeDetector_arm64.h"
+#include "Register/Common/RegisterInfo_arm64.h"
+#include "Register/Common/RegisterTypeDetector_arm64.h"
 
 // clang-format off
 #include <sys/param.h>
@@ -53,8 +53,8 @@ NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
 
 NativeRegisterContextFreeBSD_arm64::NativeRegisterContextFreeBSD_arm64(
     const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread)
-    : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfo_arm64(target_arch, 0)),
+    : NativeRegisterContextRegisterInfo(native_thread,
+                                        new RegisterInfo_arm64(target_arch, 0)),
       m_read_dbreg(false) {
   g_register_type_detector.UpdateRegisterInfo(
       GetRegisterInfoInterface().GetRegisterInfo(),
