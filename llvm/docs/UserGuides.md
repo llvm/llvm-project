@@ -42,6 +42,7 @@ InstrRefDebugInfo
 RemoveDIsDebugInfo
 KeyInstructionsDebugInfo
 DynamicDebugging
+StronglyTypedDIExpressionDebugInfo
 InstrProfileFormat
 InstCombineContributorGuide
 WritingAnLLVMBackend
@@ -244,6 +245,10 @@ yaml2obj
 
   This document explains how the dynamic debugging feature is implemented in
   LLVM.
+
+- {doc}`StronglyTypedDIExpressionDebugInfo`
+
+  A design document for a rework of the `DIExpression` API.
 
 - {doc}`InstrProfileFormat`
 
