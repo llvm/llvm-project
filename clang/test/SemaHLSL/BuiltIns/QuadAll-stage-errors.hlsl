@@ -9,12 +9,6 @@
 // RUN:   -fsyntax-only -verify=dxil
 // RUN: %clang_cc1 -finclude-default-header -triple \
 // RUN:   spirv-pc-vulkan-library %s -fsyntax-only -verify=spirv
-// RUN: %clang_cc1 -finclude-default-header -triple \
-// RUN:   spirv-pc-vulkan-library %s -emit-llvm -disable-llvm-passes -o - \
-// RUN:   | FileCheck %s --check-prefix=SPIRV
-
-// SPIRV: call i1 @llvm.spv.quad.all
-
 // spirv-no-diagnostics
 
 bool shared(bool cond) {

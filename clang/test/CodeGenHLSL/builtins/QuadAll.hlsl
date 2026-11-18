@@ -5,7 +5,8 @@
 // RUN:   dxil-pc-shadermodel6.0-library %s -emit-llvm \
 // RUN:   -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,DXIL
 // RUN: %clang_cc1 -finclude-default-header -triple \
-// RUN:   spirv-pc-vulkan-library %s -emit-llvm -disable-llvm-passes -o - | \
+// RUN:   spirv-pc-vulkan-library %s -DSPIRV_STAGE_TEST \
+// RUN:   -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,SPIRV
 
 // CHECK-LABEL: define {{.*}}test_quad_all{{.*}}(
@@ -25,3 +26,12 @@ bool test_quad_all(bool cond) {
 bool test_builtin(bool cond) {
   return __builtin_hlsl_quad_all(cond);
 }
+
+#ifdef SPIRV_STAGE_TEST
+// SPIRV-LABEL: define {{.*}}vertex{{.*}}(
+// SPIRV: call {{.*}}test_quad_all
+[shader("vertex")]
+void vertex() {
+  (void)test_quad_all(true);
+}
+#endif
