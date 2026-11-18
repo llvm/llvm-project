@@ -7,9 +7,13 @@ Finds virtual classes whose destructor is neither public and virtual
 nor protected and non-virtual. A virtual class's destructor should be specified
 in one of these ways to prevent undefined behavior.
 
-This check implements
+This check implements the first enforcement rule of
 `C.35 <http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rc-dtor-virtual>`_
-from the C++ Core Guidelines.
+from the C++ Core Guidelines: a class with any virtual functions should have a
+destructor that is either public and virtual or else protected and non-virtual.
+
+It does not currently enforce the second rule of C.35, which requires that a
+base class of a publicly derived class also have such a destructor.
 
 Note that this check will diagnose a class with a virtual method regardless of
 whether the class is used as a base class or not.
@@ -24,7 +28,7 @@ Example
 -------
 
 For example, the following classes/structs get flagged by the check since they
-violate guideline **C.35**:
+violate the first enforcement rule of **C.35**:
 
 .. code-block:: c++
 
