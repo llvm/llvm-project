@@ -115,15 +115,23 @@ define void @goal_debug_records(i32 %idx) !dbg !2 {
 ; CHECK-NEXT:      i32 0, label %[[CALL0:.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       [[CALL0]]:
+; CHECK-NEXT:      #dbg_value(i32 2, [[META5]], !DIExpression(), [[META6]])
+; CHECK-NEXT:      #dbg_value(i32 3, [[META5]], !DIExpression(), [[META6]])
 ; CHECK-NEXT:    [[INRANGE1:%.*]] = icmp ult i32 [[IDX]], 2
+; CHECK-NEXT:      #dbg_value(i32 4, [[META5]], !DIExpression(), [[META6]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[INRANGE1]])
+; CHECK-NEXT:      #dbg_value(i32 5, [[META5]], !DIExpression(), [[META6]])
 ; CHECK-NEXT:      #dbg_value(i32 6, [[META5]], !DIExpression(), [[META6]])
 ; CHECK-NEXT:    call void @fun0(i32 [[IDX]])
 ; CHECK-NEXT:      #dbg_value(i32 7, [[META5]], !DIExpression(), [[META6]])
 ; CHECK-NEXT:    br label %[[DONE]]
 ; CHECK:       [[CALL1]]:
+; CHECK-NEXT:      #dbg_value(i32 2, [[META5]], !DIExpression(), [[META6]])
+; CHECK-NEXT:      #dbg_value(i32 3, [[META5]], !DIExpression(), [[META6]])
 ; CHECK-NEXT:    [[INRANGE2:%.*]] = icmp ult i32 [[IDX]], 2
+; CHECK-NEXT:      #dbg_value(i32 4, [[META5]], !DIExpression(), [[META6]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[INRANGE2]])
+; CHECK-NEXT:      #dbg_value(i32 5, [[META5]], !DIExpression(), [[META6]])
 ; CHECK-NEXT:      #dbg_value(i32 8, [[META5]], !DIExpression(), [[META6]])
 ; CHECK-NEXT:    call void @fun1(i32 [[IDX]])
 ; CHECK-NEXT:      #dbg_value(i32 9, [[META5]], !DIExpression(), [[META6]])
