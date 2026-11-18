@@ -297,3 +297,58 @@ define ptr @f(ptr %p) {
   EXPECT_EQ(Expr.Offset.getBitWidth(), 64u);
   EXPECT_EQ(Expr.Offset.getSExtValue(), -4);
 }
+
+// With a single GEP keep the `nusw` flag. With multiple GEPs, each GEP needs
+// `inbounds` for `nusw` to be preserved.
+TEST(LoadsTest, DecomposeLinearExpressionNUSW) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+define ptr @single_gep_no_inbounds(ptr %p, i64 %i) {
+  %g = getelementptr nusw i32, ptr %p, i64 %i
+  ret ptr %g
+}
+
+define ptr @single_gep_inbounds(ptr %p, i64 %i) {
+  %g = getelementptr inbounds i32, ptr %p, i64 %i
+  ret ptr %g
+}
+
+define ptr @two_geps_no_inbounds(ptr %p, i64 %i) {
+  %g0 = getelementptr nusw i32, ptr %p, i64 %i
+  %g1 = getelementptr nusw i32, ptr %g0, i64 1
+  ret ptr %g1
+}
+
+define ptr @two_geps_one_inbounds_1(ptr %p, i64 %i) {
+  %g0 = getelementptr inbounds i32, ptr %p, i64 %i
+  %g1 = getelementptr nusw i32, ptr %g0, i64 1
+  ret ptr %g1
+}
+
+define ptr @two_geps_one_inbounds_2(ptr %p, i64 %i) {
+  %g0 = getelementptr nusw i32, ptr %p, i64 %i
+  %g1 = getelementptr inbounds i32, ptr %g0, i64 1
+  ret ptr %g1
+}
+
+define ptr @two_geps_two_inbounds(ptr %p, i64 %i) {
+  %g0 = getelementptr inbounds i32, ptr %p, i64 %i
+  %g1 = getelementptr inbounds i32, ptr %g0, i64 1
+  ret ptr %g1
+}
+)IR");
+  const DataLayout &DL = M->getDataLayout();
+  auto CheckNUSW = [&](StringRef FnName, bool ExpectNUSW) {
+    auto *F = cast<Function>(M->getNamedValue(FnName));
+    LinearExpression Expr = decomposeLinearExpression(
+        DL, F->front().getTerminator()->getOperand(0));
+    EXPECT_EQ(Expr.Flags.hasNoUnsignedSignedWrap(), ExpectNUSW) << FnName;
+  };
+
+  CheckNUSW("single_gep_no_inbounds", true);
+  CheckNUSW("single_gep_inbounds", true);
+  CheckNUSW("two_geps_no_inbounds", false);
+  CheckNUSW("two_geps_one_inbounds_1", false);
+  CheckNUSW("two_geps_one_inbounds_2", false);
+  CheckNUSW("two_geps_two_inbounds", true);
+}

@@ -1,0 +1,13 @@
+add_entrypoint_object(
+  timerfd_create
+  SRCS
+    timerfd_create.cpp
+  HDRS
+    ../timerfd_create.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.timerfd_create
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)

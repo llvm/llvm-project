@@ -31,3 +31,4 @@ body:             |
     %9:fpr128 = LD1i32 %8, 3, %4
     $q0 = COPY %9
     RET_ReallyLR implicit $q0
+...

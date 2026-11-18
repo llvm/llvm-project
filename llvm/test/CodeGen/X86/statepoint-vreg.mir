@@ -123,7 +123,6 @@ name:            test_basic
 alignment:       16
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64, preferred-register: '' }
   - { id: 1, class: gr64, preferred-register: '' }
