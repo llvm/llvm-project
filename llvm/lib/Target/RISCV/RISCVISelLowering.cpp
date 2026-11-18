@@ -19838,7 +19838,7 @@ static SDValue
 combineAddOfExtsAlreadyExtended(SDNode *N, SelectionDAG &DAG,
                                 const RISCVSubtarget &Subtarget) {
   EVT VT = N->getValueType(0);
-  if (!VT.isVector() || !Subtarget.hasVInstructions())
+  if (!VT.isVector() || !Subtarget.hasVInstructions() || !VT.isInteger())
     return SDValue();
 
   // Ensure the user has a widening variant so the extend can be moved after
@@ -19868,12 +19868,6 @@ combineAddOfExtsAlreadyExtended(SDNode *N, SelectionDAG &DAG,
   SDValue RHSSrc = RHS.getOperand(0);
   EVT LHSSrcVT = LHSSrc.getValueType();
   EVT RHSSrcVT = RHSSrc.getValueType();
-  if (!LHSSrcVT.isInteger() || !RHSSrcVT.isInteger() ||
-      (LHSSrcVT.isVector() != RHSSrcVT.isVector()) ||
-      (LHSSrcVT.isVector() &&
-       (LHSSrcVT.getVectorElementCount() != RHSSrcVT.getVectorElementCount())))
-    return SDValue();
-
   if (!DAG.getTargetLoweringInfo().isTypeLegal(LHSSrcVT) ||
       !DAG.getTargetLoweringInfo().isTypeLegal(RHSSrcVT))
     return SDValue();
