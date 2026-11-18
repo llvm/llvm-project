@@ -16,8 +16,6 @@ namespace std_example {
   float &k2 = g2(f1());
   float &l2 = g2(f2());
 
-  // FIXME: We don't support ref-qualifiers yet.
-#if 0
   struct A { 
     A& operator<<(int); 
     void p() &; 
@@ -25,14 +23,15 @@ namespace std_example {
   };
 
   A& operator<<(A&&, char); 
-  A() << 1; 
-  A() << 'c'; 
-  A a; 
-  a << 1; 
-  a << 'c'; 
-  A().p(); 
-  a.p();
-#endif
+  void test() {
+    A() << 1;
+    A() << 'c';
+    A a;
+    a << 1;
+    a << 'c';
+    A().p();
+    a.p();
+  }
 }
 
 template<typename T>
