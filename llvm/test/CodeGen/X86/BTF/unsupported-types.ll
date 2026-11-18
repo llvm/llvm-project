@@ -1,22 +1,36 @@
 ; RUN: llc -mtriple=x86_64-linux-gnu %s -o - | FileCheck %s
-; A class is a struct; an unsupported complex parameter is void (type id 0).
+; A class is a struct; complex types use FLOAT with their full size.
+; CHECK: BTF_KIND_FLOAT(id = 1)
+; CHECK-NEXT: .long 268435456
+; CHECK-NEXT: .long 16
 ; CHECK: BTF_KIND_FUNC_PROTO
 ; CHECK-NEXT: .long 218103809
 ; CHECK-NEXT: .long 0
 ; CHECK-NEXT: .long 0
-; CHECK-NEXT: .long 0
+; CHECK-NEXT: .long 1
 ; CHECK: BTF_KIND_STRUCT
 ; CHECK-NEXT: .long 67108865
 ; CHECK-NEXT: .long 16
 ; CHECK-NEXT: .long {{[0-9]+}}
-; CHECK-NEXT: .long 0
+; CHECK-NEXT: .long 1
 ; CHECK-NEXT: .long 0
 ; CHECK: BTF_KIND_VAR
-; CHECK-NOT: BTF_KIND_VAR
+; CHECK: BTF_KIND_VAR
+; CHECK: BTF_KIND_FLOAT
+; CHECK-NEXT: .long 268435456
+; CHECK-NEXT: .long 8
+; CHECK: BTF_KIND_FLOAT
+; CHECK-NEXT: .long 268435456
+; CHECK-NEXT: .long 32
+; CHECK: .ascii "complex double"
 ; CHECK: .byte 67
+; CHECK: .ascii "complex float"
+; CHECK: .ascii "complex long double"
 
 @c = global [2 x double] zeroinitializer, !dbg !0
 @complex = global [2 x double] zeroinitializer, !dbg !17
+@cf = global [2 x float] zeroinitializer, !dbg !21
+@cl = global [2 x x86_fp80] zeroinitializer, !dbg !24
 define void @f(double %x) !dbg !8 {
   ret void, !dbg !13
 }
@@ -27,7 +41,7 @@ define void @f(double %x) !dbg !8 {
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, emissionKind: FullDebug, globals: !5)
 !3 = !DIFile(filename: "test.cc", directory: "/")
 !4 = !DICompositeType(tag: DW_TAG_class_type, name: "C", file: !3, line: 1, size: 128, elements: !15)
-!5 = !{!0, !17}
+!5 = !{!0, !17, !21, !24}
 !6 = !{i32 7, !"Dwarf Version", i32 5}
 !7 = !{i32 2, !"Debug Info Version", i32 3}
 !8 = distinct !DISubprogram(name: "f", scope: !3, file: !3, line: 2, type: !9, unit: !2, spFlags: DISPFlagDefinition)
@@ -41,3 +55,9 @@ define void @f(double %x) !dbg !8 {
 !17 = !DIGlobalVariableExpression(var: !18, expr: !DIExpression())
 !18 = distinct !DIGlobalVariable(name: "complex", scope: !2, file: !3, line: 1, type: !11, isLocal: false, isDefinition: true)
 !19 = !DIDerivedType(tag: DW_TAG_member, name: "member", scope: !4, baseType: !11, size: 128)
+!21 = !DIGlobalVariableExpression(var: !22, expr: !DIExpression())
+!22 = distinct !DIGlobalVariable(name: "cf", scope: !2, file: !3, type: !23, isLocal: false, isDefinition: true)
+!23 = !DIBasicType(name: "complex float", size: 64, encoding: DW_ATE_complex_float)
+!24 = !DIGlobalVariableExpression(var: !25, expr: !DIExpression())
+!25 = distinct !DIGlobalVariable(name: "cl", scope: !2, file: !3, type: !26, isLocal: false, isDefinition: true)
+!26 = !DIBasicType(name: "complex long double", size: 256, encoding: DW_ATE_complex_float)

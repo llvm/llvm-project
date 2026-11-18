@@ -348,6 +348,7 @@ void BTFTypeStruct::completeType(BTFDebug &BDebug) {
     struct BTF::BTFMember BTFMember;
 
     switch (Element->getTag()) {
+    case dwarf::DW_TAG_inheritance:
     case dwarf::DW_TAG_member: {
       const auto *DDTy = cast<DIDerivedType>(Element);
 
@@ -622,6 +623,12 @@ void BTFDebug::visitBasicType(const DIBasicType *BTy, uint32_t &TypeId) {
     TypeEntry = std::make_unique<BTFTypeInt>(
         Encoding, BTy->getSizeInBits(), BTy->getOffsetInBits(), BTy->getName());
     break;
+  case dwarf::DW_ATE_complex_float:
+    if (Asm->TM.getTargetTriple().isBPF()) {
+      UnrepresentableTypes.insert(BTy);
+      return;
+    }
+    [[fallthrough]];
   case dwarf::DW_ATE_float:
     TypeEntry =
         std::make_unique<BTFTypeFloat>(BTy->getSizeInBits(), BTy->getName());
@@ -632,6 +639,24 @@ void BTFDebug::visitBasicType(const DIBasicType *BTy, uint32_t &TypeId) {
   }
 
   TypeId = addType(std::move(TypeEntry), BTy);
+}
+
+// Strip only by-value wrappers; a pointer to an unsupported type is valid.
+static const DIType *getBTFValueType(const DIType *Ty) {
+  while (const auto *DTy = dyn_cast_or_null<DIDerivedType>(Ty)) {
+    switch (DTy->getTag()) {
+    case dwarf::DW_TAG_typedef:
+    case dwarf::DW_TAG_const_type:
+    case dwarf::DW_TAG_volatile_type:
+    case dwarf::DW_TAG_restrict_type:
+    case dwarf::DW_TAG_atomic_type:
+      Ty = DTy->getBaseType();
+      break;
+    default:
+      return Ty;
+    }
+  }
+  return Ty;
 }
 
 /// Handle subprogram or subroutine types.
@@ -646,6 +671,19 @@ void BTFDebug::visitSubroutineType(
     if (!ForSubprog)
       UnrepresentableTypes.insert(STy);
     return;
+  }
+  if (!Asm->TM.getTargetTriple().isBPF()) {
+    for (unsigned I = 1; I < Elements.size(); ++I) {
+      if (!Elements[I] && I + 1 == Elements.size())
+        continue; // Variadic marker.
+      uint32_t ParamTypeId = 0;
+      visitTypeEntry(getBTFValueType(Elements[I]), ParamTypeId, false, false);
+      if (!ParamTypeId) {
+        if (!ForSubprog)
+          UnrepresentableTypes.insert(STy);
+        return;
+      }
+    }
   }
 
   // Subprogram has a valid non-zero-length name, and the pointee of
@@ -753,17 +791,30 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
                                uint32_t &TypeId) {
   DINodeArray DIElements = CTy->getElements();
   SmallVector<const DINode *, 8> Elements(DIElements.begin(), DIElements.end());
-  if (!Asm->TM.getTargetTriple().isBPF() ||
-      CTy->getTag() == dwarf::DW_TAG_class_type)
-    llvm::erase_if(Elements, [](const DINode *Element) {
+  bool IsBPF = Asm->TM.getTargetTriple().isBPF();
+  if (!IsBPF && llvm::any_of(Elements, [](const DINode *Element) {
+        return Element->getTag() == dwarf::DW_TAG_inheritance &&
+               cast<DIDerivedType>(Element)->isVirtual();
+      })) {
+    visitFwdDeclType(CTy, !IsStruct, TypeId);
+    return;
+  }
+  if (!IsBPF || CTy->getTag() == dwarf::DW_TAG_class_type)
+    llvm::erase_if(Elements, [IsBPF](const DINode *Element) {
       return Element->getTag() != dwarf::DW_TAG_member &&
-             Element->getTag() != dwarf::DW_TAG_variant_part;
+             Element->getTag() != dwarf::DW_TAG_variant_part &&
+             (IsBPF || Element->getTag() != dwarf::DW_TAG_inheritance);
     });
   // Structure elements must have nondecreasing offsets in BTF. Preserve DI
   // order for union and variant-part records.
   if (IsStruct)
     llvm::stable_sort(Elements, [](const DINode *LHS, const DINode *RHS) {
-      return getBTFRecordElementOffset(LHS) < getBTFRecordElementOffset(RHS);
+      auto Offset = [](const DINode *Element) {
+        return Element->getTag() == dwarf::DW_TAG_inheritance
+                   ? cast<DIDerivedType>(Element)->getOffsetInBits()
+                   : getBTFRecordElementOffset(Element);
+      };
+      return Offset(LHS) < Offset(RHS);
     });
   uint32_t VLen = Elements.size();
   if (CTy->getTag() == dwarf::DW_TAG_variant_part) {
@@ -802,6 +853,11 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
   int FieldNo = 0;
   for (const auto *Element : Elements) {
     switch (Element->getTag()) {
+    case dwarf::DW_TAG_inheritance: {
+      const auto *Elem = cast<DIDerivedType>(Element);
+      visitTypeEntry(Elem->getBaseType());
+      break;
+    }
     case dwarf::DW_TAG_member: {
       const auto Elem = cast<DIDerivedType>(Element);
       visitTypeEntry(Elem);
@@ -1434,6 +1490,12 @@ void BTFDebug::processGlobals() {
     for (auto *GVE : GVs) {
       DIGlobal = GVE->getVariable();
       const DIType *Ty = tryRemoveAtomicType(DIGlobal->getType());
+      if (!Asm->TM.getTargetTriple().isBPF()) {
+        uint32_t ValueTypeId = 0;
+        visitTypeEntry(getBTFValueType(Ty), ValueTypeId, false, false);
+        if (!ValueTypeId)
+          break;
+      }
       visitTypeEntry(Ty, GVTypeId, false, false);
       break;
     }

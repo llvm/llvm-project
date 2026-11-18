@@ -1,4 +1,6 @@
 // Test the -gbtf flag behavior in the Clang driver.
+// RUN: %clang --target=x86_64-pc-windows-msvc -gbtf -Werror -x assembler -c /dev/null -o %t
+// RUN: %clang --target=x86_64-linux-gnu -gbtf -Werror -x assembler -c /dev/null -o %t
 //
 // -gbtf forwards to cc1.
 // RUN: %clang --target=x86_64-linux-gnu -gbtf -### %s 2>&1 \
