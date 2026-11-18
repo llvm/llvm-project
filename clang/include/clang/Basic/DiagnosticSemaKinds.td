@@ -9834,6 +9834,9 @@ def warn_kern_is_inline : Warning<
 def err_variadic_device_fn : Error<
   "%enum_select<OffloadLang>{%CUDA{CUDA}|%SYCL{SYCL}}0 device code does not "
   "support variadic functions">;
+def err_sycl_device_target_attr : Error<
+  "SYCL device code cannot call %0, which requires "
+  "%select{the '%2' host feature|a '%2' host}1">;
 def err_va_arg_in_device : Error<
 "CUDA device code does not support va_arg">;
 def err_alias_not_supported_on_nvptx : Error<"CUDA older than 10.0 does not support .alias">;
