@@ -32,6 +32,17 @@
 ; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-icp.prof --binary=%S/Inputs/fs-discriminator-probe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=0 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --profile-summary-hot-count=601 --output=%t-hot-count
 ; RUN: FileCheck %s --input-file %t-hot-count --check-prefix=CHECK-NOPROM --implicit-check-not="[quick_sort:4 @"
 
+; A call probe need not have its own samples. quick_sort is selected for
+; decoding, so its indirect probe 4 still identifies the site when the profile
+; has only the callee contexts. The two colder targets must remain outlined.
+; RUN: sed '/^ 4:/d' %S/Inputs/cs-preinline-icp.prof > %t-no-call-samples.prof
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%t-no-call-samples.prof --binary=%S/Inputs/fs-discriminator-probe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=0 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --profile-summary-hot-count=250 --output=%t-no-call-samples
+; RUN: FileCheck %s --input-file %t-no-call-samples --check-prefix=CHECK-NO-CALL-SAMPLES --implicit-check-not="[quick_sort:4 @ t2]" --implicit-check-not="[quick_sort:4 @ t3]"
+
+; CHECK-NO-CALL-SAMPLES-DAG: [quick_sort:4 @ t1]:6000:600
+; CHECK-NO-CALL-SAMPLES-DAG: [t2]:2000:200
+; CHECK-NO-CALL-SAMPLES-DAG: [t3]:2000:200
+
 ; CHECK-MAXPROM-DAG: [quick_sort:4 @ t1]:6000:600
 ; CHECK-MAXPROM-DAG: [quick_sort:4 @ t2]:2000:200
 ; CHECK-MAXPROM-DAG: [t3]:2000:200
@@ -40,11 +51,10 @@
 ; CHECK-NOPROM-DAG: [t2]:2000:200
 ; CHECK-NOPROM-DAG: [t3]:2000:200
 
-; A site without an indirect call probe is a direct call, even with several
-; targets: a direct call site can show several functions when the binary lost
-; the inline frames between them. inline-cs-pseudoprobe.perfbin has no function
-; quick_sort, so quick_sort:4 has no call probe there and all three targets are
-; pre-inlined.
+; Multiple targets alone do not identify an indirect call: a direct call can
+; show several functions when inline frames are lost. Without a matching
+; indirect call probe, skip ICP checks. inline-cs-pseudoprobe.perfbin has no
+; quick_sort, so all three targets follow the normal pre-inline checks.
 ; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-icp.prof --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=0 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --output=%t-noprobe
 ; RUN: FileCheck %s --input-file %t-noprobe --check-prefix=CHECK-ALL
 

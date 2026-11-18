@@ -12,6 +12,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Transforms/IPO/SampleProfile.h"
 #include <cstdint>
+#include <limits>
 #include <map>
 
 #define DEBUG_TYPE "cs-preinliner"
@@ -46,18 +47,18 @@ cl::opt<bool> EnableCSPreInliner(
 cl::opt<bool> UseContextCostForPreInliner(
     "use-context-cost-for-preinliner", cl::Hidden, cl::init(true),
     cl::desc("Use context-sensitive byte size cost for preinliner decisions"));
+
+cl::opt<bool> CSPreinlHonorICPLimits(
+    "csspgo-preinliner-honor-icp-limits", cl::Hidden, cl::init(true),
+    cl::desc("Apply indirect-call promotion checks when selecting contexts "
+             "for pre-inlining (see "
+             "-sample-profile-icp-relative-hotness)."));
 } // namespace llvm
 
 static cl::opt<bool> SamplePreInlineReplay(
     "csspgo-replay-preinline", cl::Hidden, cl::init(false),
     cl::desc(
         "Replay previous inlining and adjust context profile accordingly"));
-
-static cl::opt<bool> CSPreinlHonorICPLimits(
-    "csspgo-preinliner-honor-icp-limits", cl::Hidden, cl::init(true),
-    cl::desc("Apply indirect-call promotion checks when selecting contexts "
-             "for pre-inlining (see "
-             "-sample-profile-icp-relative-hotness)."));
 
 static cl::opt<int> CSPreinlMultiplierForPrevInl(
     "csspgo-preinliner-multiplier-for-previous-inlining", cl::Hidden,
@@ -142,11 +143,10 @@ std::vector<FunctionId> CSPreInliner::buildTopDownOrder() {
 // out of the caller's inline size budget and leave their contexts for merging
 // into their base profiles.
 //
-// One wrinkle: nesting a target under the caller makes convertCSProfiles drop
-// its call-target entry, so the loader counts its head samples instead and the
-// site total moves. Before accepting a target, we re-check it and every target
-// accepted so far against the new total; if that fails, it and all colder
-// targets are rejected.
+// Inlining a target in the profile replaces its call-target count with its
+// head-sample estimate. This can change the total used by the percentage check.
+// Accept the target only if it and all previously accepted targets still pass.
+// Otherwise, reject this target and the remaining, colder targets.
 DenseSet<const ContextTrieNode *>
 CSPreInliner::getICPRejectedCallees(ContextTrieNode *CallerNode,
                                     const FunctionSamples *CallerSamples) {
@@ -171,18 +171,15 @@ CSPreInliner::getICPRejectedCallees(ContextTrieNode *CallerNode,
           {CalleeNode, CalleeSamples->getHeadSamplesEstimate()});
   }
 
-  for (auto &Entry : CallSites) {
-    const LineLocation &CallSite = Entry.first;
-    // Only indirect calls are subject to ICP, so check the call probe type. It
-    // comes from the source call, and ICP keeps the original indirect call as
-    // the fallback, so a promoted site keeps its indirect call probe. A site
-    // without one is a direct call, even if several functions are recorded
-    // there (e.g. when the binary lost the inline frames between them).
+  for (auto &[CallSite, Callees] : CallSites) {
+    // Apply ICP checks only when a decoded probe identifies an indirect call.
+    // Multiple targets alone are not enough: a direct call can record several
+    // functions when inline frames are lost. Without a matching probe, leave
+    // the inline decision to the existing size and hotness checks.
     if (!Binary.isIndirectCallProbe(CallerNode->getFuncName().getHashCode(),
                                     CallSite.LineOffset))
       continue;
 
-    auto &Callees = Entry.second;
     // Site total with every target outlined, i.e. the raw call target map.
     uint64_t SiteTotal = 0;
     if (auto CallTargets = CallerSamples->findCallTargetMapAt(CallSite)) {
@@ -201,31 +198,25 @@ CSPreInliner::getICPRejectedCallees(ContextTrieNode *CallerNode,
       return L.Node->getFunctionSamples()->getGUID() <
              R.Node->getFunctionSamples()->getGUID();
     });
-    auto CanPromoteAll = [&](size_t NumCandidates, uint64_t NewTotal) {
-      for (size_t I = 0; I < NumCandidates; ++I) {
-        uint64_t HeadCount = Callees[I].HeadCount;
-        if (HeadCount < HotCountThreshold)
-          return false;
-        // The first few targets are exempt only from the percentage check.
-        if (I < ProfileICPRelativeHotnessSkip)
-          continue;
-        if (HeadCount * 100 < NewTotal * ProfileICPRelativeHotness)
-          return false;
-      }
-      return true;
-    };
     LLVM_DEBUG(dbgs() << "  Indirect call site " << CallSite.LineOffset << "."
                       << CallSite.Discriminator << ": " << Callees.size()
                       << " profiled targets, total count " << SiteTotal
                       << "\n");
     size_t MaxAccepted = std::min<size_t>(Callees.size(), ProfileICPMaxProm);
     size_t NumAccepted = 0;
+    uint64_t MinScaledHeadCount = std::numeric_limits<uint64_t>::max();
     for (; NumAccepted < MaxAccepted; ++NumAccepted) {
       const Target &T = Callees[NumAccepted];
-      uint64_t NewTotal = SiteTotal - T.CallTargetCount + T.HeadCount;
-      // The new total must keep this target and the accepted prefix eligible.
-      if (!CanPromoteAll(NumAccepted + 1, NewTotal))
+      if (T.HeadCount < HotCountThreshold)
         break;
+      uint64_t NewTotal = SiteTotal - T.CallTargetCount + T.HeadCount;
+      if (NumAccepted >= ProfileICPRelativeHotnessSkip) {
+        // All non-exempt targets use the same total, so checking the smallest
+        // scaled count is enough to keep every accepted target eligible.
+        MinScaledHeadCount = std::min(MinScaledHeadCount, T.HeadCount * 100);
+        if (MinScaledHeadCount < NewTotal * ProfileICPRelativeHotness)
+          break;
+      }
       SiteTotal = NewTotal;
     }
     for (size_t I = NumAccepted; I < Callees.size(); ++I) {
