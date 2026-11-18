@@ -361,12 +361,17 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
                    /*Title=*/"clang LLVM compiler", VFS);
   auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(ProgName);
   TheDriver.setTargetAndMode(TargetAndMode);
-  // If -canonical-prefixes is set, GetExecutablePath will have resolved Path
-  // to the llvm driver binary, not clang. In this case, we need to use
-  // PrependArg which should be clang-*. Checking just CanonicalPrefixes is
-  // safe even in the normal case because PrependArg will be null so
-  // setPrependArg will be a no-op.
-  if (ToolContext.NeedsPrependArg || CanonicalPrefixes)
+  // If -canonical-prefixes is set, GetExecutablePath may resolve Path to the
+  // llvm multicall driver binary, not clang. In that case we need to prepend
+  // clang-* so llvm-driver dispatches into the clang entrypoint before cc1
+  // handling. Do not prepend when the resolved executable is already clang,
+  // since that would shift -cc1 out of argv[1].
+  const bool ResolvedExecutableIsLLVMDriver =
+      llvm::sys::path::stem(Path).equals_insensitive("llvm");
+  const bool ShouldSetPrependArg =
+      ToolContext.NeedsPrependArg ||
+      (CanonicalPrefixes && ResolvedExecutableIsLLVMDriver);
+  if (ShouldSetPrependArg)
     TheDriver.setPrependArg(ToolContext.PrependArg);
 
   insertTargetAndModeArgs(TargetAndMode, Args, SavedStrings);
