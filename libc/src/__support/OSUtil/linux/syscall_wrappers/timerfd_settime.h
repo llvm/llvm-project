@@ -37,9 +37,8 @@ LIBC_INLINE ErrorOr<int> timerfd_settime(int fd, int flags,
 #elif defined(SYS_timerfd_settime)
   static_assert(
       sizeof(timespec::tv_nsec) == sizeof(long),
-      "This legacy syscall fallback is only safe on platforms where tv_nsec "
-      "matches the register size (long). It is unsafe on 32-bit platforms "
-      "with 64-bit tv_nsec.");
+      "SYS_timerfd_settime requires struct timespec::tv_nsec to match long; "
+      "use SYS_timerfd_settime64 on 32-bit platforms with 64-bit time_t.");
   return syscall_checked<int>(SYS_timerfd_settime, fd, flags, new_value,
                               old_value);
 #else

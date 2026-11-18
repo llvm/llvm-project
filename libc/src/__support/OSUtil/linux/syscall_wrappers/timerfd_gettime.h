@@ -35,9 +35,8 @@ LIBC_INLINE ErrorOr<int> timerfd_gettime(int fd,
 #elif defined(SYS_timerfd_gettime)
   static_assert(
       sizeof(timespec::tv_nsec) == sizeof(long),
-      "This legacy syscall fallback is only safe on platforms where tv_nsec "
-      "matches the register size (long). It is unsafe on 32-bit platforms "
-      "with 64-bit tv_nsec.");
+      "SYS_timerfd_gettime requires struct timespec::tv_nsec to match long; "
+      "use SYS_timerfd_gettime64 on 32-bit platforms with 64-bit time_t.");
   return syscall_checked<int>(SYS_timerfd_gettime, fd, curr_value);
 #else
 #error "SYS_timerfd_gettime and SYS_timerfd_gettime64 syscalls not available."
