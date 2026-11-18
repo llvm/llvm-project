@@ -2739,14 +2739,6 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/AArch64/AArch64GenInstrInfo.inc",
             ),
             (
-                [
-                    "-gen-intrinsic-feature-checks",
-                    "-intrinsic-feature-prefix=aarch64",
-                    "-intrinsic-feature-namespace=AArch64",
-                ],
-                "lib/Target/AArch64/AArch64GenIntrinsicFeatureChecks.inc",
-            ),
-            (
                 ["-gen-emitter"],
                 "lib/Target/AArch64/AArch64GenMCCodeEmitter.inc",
             ),
