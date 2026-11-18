@@ -458,6 +458,19 @@ public:
   LLVM_ABI Instruction *
   findCountableComparisonInCombinedCondition(Value *Cond) const;
 
+  /// Returns true if every widened exit condition load is
+  /// dereferenceable for the complete trip count.
+  bool exitLoadsAreDereferenceable() const {
+    return AllExitLoadsDereferenceable;
+  }
+
+  /// Returns true if this early exit loop would use the check first strategy if
+  /// enabled. Whether the strategy is then safe to apply is a separate
+  /// question, answered by exitLoadsAreDereferenceable().
+  bool wouldUseCheckFirstStyle() const {
+    return hasUncountableExitWithSideEffects();
+  }
+
   /// Return true if there is store-load forwarding dependencies.
   bool isSafeForAnyStoreLoadForwardDistances() const {
     return LAI->getDepChecker().isSafeForAnyStoreLoadForwardDistances();
@@ -683,6 +696,11 @@ private:
   /// Maps a pointer to its maximum fixed access size and safe alignment.
   using SafeAccessesTy = SmallDenseMap<Value *, SafeAccessInfo, 8>;
 
+  /// Returns true if the exit conditions can be safely speculated.
+  bool canCheckFirstSpeculateExitConditions(
+      ArrayRef<BasicBlock *> ExitingBlocks,
+      SmallVectorImpl<LoadInst *> &CondSliceLoads);
+
   /// Return true if all of the instructions in the block can be speculatively
   /// executed, and record the loads/stores that require masking.
   /// \p SafeAccesses records pointers that can be accessed unconditionally,
@@ -811,6 +829,10 @@ private:
   /// Records whether we have an uncountable early exit in a loop that's
   /// either read-only or read-write.
   UncountableExitTrait UncountableExitType = UncountableExitTrait::None;
+
+  /// Records whether every widened exit condition load is
+  /// dereferenceable for the complete trip count.
+  bool AllExitLoadsDereferenceable = true;
 };
 
 } // namespace llvm
