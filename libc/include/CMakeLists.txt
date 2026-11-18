@@ -1057,6 +1057,7 @@ add_header_macro(
     .llvm_libc_common_h
     .llvm-libc-macros.sys_timerfd_macros
     .llvm-libc-macros.time_macros
+    .llvm-libc-types.struct_itimerspec
 )
 
 add_header_macro(
