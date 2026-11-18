@@ -21113,6 +21113,32 @@ static SDValue combineOrAndToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(RISCVISD::QC_INSB, DL, MVT::i32, Ops);
 }
 
+// Fold (or (and X, C), (and Y, ~C)) -> (merge C, Y, X) for the P extension's
+// bitwise merge instruction.
+// TODO: Support vector types too.
+static SDValue combineOrOfMaskedToMerge(SDNode *N, SelectionDAG &DAG,
+                                        const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasStdExtP())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (VT != Subtarget.getXLenVT())
+    return SDValue();
+
+  using namespace SDPatternMatch;
+  SDValue X, Y, Mask;
+  APInt MaskVal, InvMaskVal;
+  if (!sd_match(N, m_Or(m_OneUse(m_And(m_Value(X),
+                                       m_Value(Mask, m_ConstInt(MaskVal)))),
+                        m_OneUse(m_And(m_Value(Y), m_ConstInt(InvMaskVal))))) ||
+      MaskVal != ~InvMaskVal)
+    return SDValue();
+
+  SDLoc DL(N);
+  // MERGE computes (~mask & op1) | (mask & op2).
+  return DAG.getNode(RISCVISD::MERGE, DL, VT, Mask, Y, X);
+}
+
 static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const RISCVSubtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
@@ -21122,6 +21148,9 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
+    return V;
+
+  if (SDValue V = combineOrOfMaskedToMerge(N, DAG, Subtarget))
     return V;
 
   if (DCI.isAfterLegalizeDAG()) {
