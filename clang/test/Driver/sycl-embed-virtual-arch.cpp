@@ -17,13 +17,16 @@
 // RUN:   | FileCheck -check-prefix=NO-EMBED %s
 // NO-EMBED: "--image=file={{[^"]*}},triple=spirv64-unknown-unknown,arch=igca_30r,kind=sycl,code=xe-mtl-u,no-embed-virtual-arch=1"{{$}}
 
-/// It has no effect for an IGCA target given directly, which is compiled just
-/// in time, also when one of its Intel GPUs is given as well.
+/// It has no effect for an IGCA target in --offload-arch, which is compiled
+/// just in time.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-arch=igca_30r --no-offload-embed-virtual-arch -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=DIRECT %s
 // DIRECT-NOT: warning:
 // DIRECT: "--image=file={{[^"]*}},triple=spirv64-unknown-unknown,arch=igca_30r,kind=sycl"{{$}}
+
+/// It still has no effect when one of the IGCA target's Intel GPUs is also
+/// given.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-arch=xe-mtl-u,igca_30r --no-offload-embed-virtual-arch \
 // RUN:   -c %s 2>&1 | FileCheck -check-prefix=EMBED %s

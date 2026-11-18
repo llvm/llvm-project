@@ -1112,9 +1112,8 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
         DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_code_EQ),
                          Args.MakeArgString(Device));
 
-  // Drop the SPIR-V from the device image compiled ahead of time only if every
-  // device image that lists real devices in "code" asks for it. Generic
-  // archive members list none.
+  // Drop the SPIR-V only if every device image that lists real devices in
+  // "code" asks for it. Generic archive members list none, so they don't count.
   if (Binary.getOffloadKind() == OFK_SYCL) {
     auto HasKey = [](StringRef Key) {
       return [=](const OffloadFile &File) {

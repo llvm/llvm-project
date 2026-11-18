@@ -1010,7 +1010,8 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
   OffloadArch OA = StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ));
   bool IsAOTCompileNeeded =
       OA.isIntelIGCA() ? Args.hasArg(OPT_code_EQ) : OA.isIntel();
-  // ocloc drops the SPIR-V for an Intel GPU; opencl-aot for a CPU keeps it.
+  // Only ocloc, for an Intel GPU, can drop the SPIR-V; opencl-aot, for an
+  // Intel CPU, cannot.
   bool NoEmbedVirtualArch = IsAOTCompileNeeded && !OA.isIntelCPU() &&
                             Args.hasArg(OPT_no_embed_virtual_arch);
 

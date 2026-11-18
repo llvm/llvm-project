@@ -106,8 +106,8 @@ class Compilation {
                  llvm::SmallVector<StringRef, 2>>
       SYCLIGCADevices;
 
-  /// For SYCL, the --offload-arch values given directly, e.g. igca_30r, rather
-  /// than mapped from an Intel GPU.
+  /// For SYCL, the --offload-arch values that are not Intel GPUs, e.g.
+  /// igca_30r. An IGCA target in this set keeps its SPIR-V.
   llvm::DenseSet<std::pair<const ToolChain *, StringRef>> SYCLDirectArchs;
 
   /// Temporary files which should be removed on exit.
@@ -278,13 +278,13 @@ public:
   ArrayRef<StringRef> getSYCLIGCADevices(const ToolChain *TC,
                                          StringRef Target) const;
 
-  /// Record that \p Arch was given in --offload-arch directly, e.g. igca_30r,
-  /// rather than mapped from an Intel GPU.
+  /// Record \p Arch as an --offload-arch value that is not an Intel GPU.
   void addSYCLDirectArch(const ToolChain *TC, StringRef Arch) {
     SYCLDirectArchs.insert({TC, Arch});
   }
 
-  /// \return true if \p Arch was given in --offload-arch directly.
+  /// \return true if \p Arch is an --offload-arch value that is not an Intel
+  /// GPU.
   bool isSYCLDirectArch(const ToolChain *TC, StringRef Arch) const {
     return SYCLDirectArchs.contains({TC, Arch});
   }

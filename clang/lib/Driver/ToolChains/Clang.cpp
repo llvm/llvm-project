@@ -9778,8 +9778,8 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
       for (StringRef Device : Devices)
         Parts.emplace_back("code=" + Device.str());
 
-      // The SPIR-V can only be dropped from a device image compiled ahead of
-      // time, and is kept if the IGCA target is also given directly.
+      // Drop the SPIR-V only from a device image compiled ahead of time, and
+      // keep it if its IGCA target is also in --offload-arch.
       bool EmbedVirtualArch =
           TCArgs.hasFlag(options::OPT_offload_embed_virtual_arch,
                          options::OPT_no_offload_embed_virtual_arch, true);

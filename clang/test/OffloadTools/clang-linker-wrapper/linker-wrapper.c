@@ -188,7 +188,7 @@ __attribute__((visibility("protected"), used)) int x;
 
 // The replayed extraction of an image without "code" does not also match one
 // with "code" for the same architecture.
-// The SPIR-V is dropped only if all device images that list Intel GPUs ask
+// The SPIR-V is dropped only if all device images that list real devices ask
 // for it. A generic archive member does not count.
 // SYCL-NO-EMBED-NOT: warning:
 // SYCL-NO-EMBED: clang{{.*}} -march=igca_30r {{.*}} --sycl-link -Xlinker --code=xe-mtl-u -Xlinker --no-embed-virtual-arch{{$}}
