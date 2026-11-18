@@ -201,6 +201,35 @@ void printCommands(ArrayRef<StringRef> CmdArgs) {
   exit(EXIT_FAILURE);
 }
 
+/// Parse the wrapper's command line. Expanded response file strings are owned
+/// by \p Saver, which must outlive the returned list.
+InputArgList parseWrapperArgs(int Argc, char **Argv, StringSaver &Saver) {
+  SmallVector<const char *, 0> ArgStrings;
+  cl::expandResponseFiles(Argc, Argv, /*EnvVar=*/nullptr, Saver, ArgStrings);
+
+  // link.exe does not accept GNU -l or -L. The Clang driver already
+  // rewrites -lfoo as foo.lib and -L<dir> as -libpath:<dir>. Parsing those
+  // options here would read -link as library "ink" and split -LTCG into "-L"
+  // and "TCG". The host triple selects the visible options, so it is read
+  // before parsing.
+  std::string HostTriple = sys::getDefaultTargetTriple();
+  for (StringRef Arg : ArgStrings) {
+    if (Arg.consume_front("--host-triple="))
+      HostTriple = Arg.str();
+  }
+  unsigned VisibilityMask = DefaultVis;
+  if (!llvm::Triple(HostTriple).isWindowsMSVCEnvironment())
+    VisibilityMask |= GNULinkerVis;
+
+  unsigned MissingArgIndex, MissingArgCount;
+  InputArgList Args = getOptTable().ParseArgs(
+      ArgStrings, MissingArgIndex, MissingArgCount, Visibility(VisibilityMask));
+  if (MissingArgCount)
+    reportError(createStringError(Twine(Args.getArgString(MissingArgIndex)) +
+                                  ": missing argument"));
+  return Args;
+}
+
 std::string getExecutableDir(const char *Name) {
   if (!CanonicalPrefixes)
     return sys::path::parent_path(LinkerExecutable).str();
@@ -1124,13 +1153,9 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
 
     // Each thread needs its own copy of the base arguments to maintain
     // per-device argument storage of synthetic strings.
-    const OptTable &Tbl = getOptTable();
     BumpPtrAllocator Alloc;
     StringSaver Saver(Alloc);
-    auto BaseArgs =
-        Tbl.parseArgs(Argc, Argv, OPT_INVALID, Saver, [](StringRef Err) {
-          reportError(createStringError(Err));
-        });
+    auto BaseArgs = parseWrapperArgs(Argc, Argv, Saver);
     auto LinkerArgs = getLinkerArgs(Input, BaseArgs);
 
     uint16_t ActiveOffloadKindMask = 0u;
@@ -1539,29 +1564,7 @@ int main(int Argc, char **Argv) {
   const OptTable &Tbl = getOptTable();
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
-  SmallVector<const char *, 0> ArgStrings;
-  cl::expandResponseFiles(Argc, Argv, /*EnvVar=*/nullptr, Saver, ArgStrings);
-
-  // link.exe does not accept GNU -l or -L. The Clang driver already
-  // rewrites -lfoo as foo.lib and -L<dir> as -libpath:<dir>. Parsing those
-  // options here would read -link as library "ink" and split -LTCG into "-L"
-  // and "TCG". The host triple selects the visible options, so it is read
-  // before parsing.
-  std::string HostTriple = sys::getDefaultTargetTriple();
-  for (StringRef Arg : ArgStrings) {
-    if (Arg.consume_front("--host-triple="))
-      HostTriple = Arg.str();
-  }
-  unsigned VisibilityMask = DefaultVis;
-  if (!llvm::Triple(HostTriple).isWindowsMSVCEnvironment())
-    VisibilityMask |= GNULinkerVis;
-
-  unsigned MissingArgIndex, MissingArgCount;
-  auto Args = Tbl.ParseArgs(ArgStrings, MissingArgIndex, MissingArgCount,
-                            Visibility(VisibilityMask));
-  if (MissingArgCount)
-    reportError(createStringError(Twine(Args.getArgString(MissingArgIndex)) +
-                                  ": missing argument"));
+  auto Args = parseWrapperArgs(Argc, Argv, Saver);
 
   if (Args.hasArg(OPT_help) || Args.hasArg(OPT_help_hidden)) {
     Tbl.printHelp(
