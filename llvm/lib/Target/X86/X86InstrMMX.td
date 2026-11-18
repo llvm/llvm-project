@@ -465,11 +465,11 @@ defm MMX_PUNPCKLDQ : MMXI_binop_rm_int<0x62, "punpckldq",
 
 // -- Pack Instructions
 defm MMX_PACKSSWB : MMXI_binop_rm_int<0x63, "packsswb", int_x86_mmx_packsswb,
-                                      SchedWriteShuffle.MMX>;
+                                      SchedWritePack.MMX>;
 defm MMX_PACKSSDW : MMXI_binop_rm_int<0x6B, "packssdw", int_x86_mmx_packssdw,
-                                      SchedWriteShuffle.MMX>;
+                                      SchedWritePack.MMX>;
 defm MMX_PACKUSWB : MMXI_binop_rm_int<0x67, "packuswb", int_x86_mmx_packuswb,
-                                      SchedWriteShuffle.MMX>;
+                                      SchedWritePack.MMX>;
 
 // -- Shuffle Instructions
 defm MMX_PSHUFB : SS3I_binop_rm_int_mm<0x00, "pshufb", int_x86_ssse3_pshuf_b,

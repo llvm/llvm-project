@@ -11,38 +11,55 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "hdr/regex_macros.h"
 #include "src/regex/regerror.h"
 #include "test/UnitTest/Test.h"
-
-#include "hdr/regex_macros.h"
 
 TEST(LlvmLibcRegexTest, RegerrorBasicCodes) {
   char buf[128];
 
-  ASSERT_GT(LIBC_NAMESPACE::regerror(REG_NOMATCH, nullptr, buf, sizeof(buf)),
-            size_t(0));
-  ASSERT_STREQ("No match", buf);
+  EXPECT_EQ(LIBC_NAMESPACE::regerror(REG_NOMATCH, nullptr, buf, sizeof(buf)),
+            size_t(9));
+  EXPECT_STREQ(buf, "No match");
 
-  ASSERT_GT(LIBC_NAMESPACE::regerror(REG_ESPACE, nullptr, buf, sizeof(buf)),
-            size_t(0));
-  ASSERT_STREQ("Out of memory", buf);
+  EXPECT_EQ(LIBC_NAMESPACE::regerror(REG_ESPACE, nullptr, buf, sizeof(buf)),
+            size_t(14));
+  EXPECT_STREQ(buf, "Out of memory");
+
+  EXPECT_EQ(LIBC_NAMESPACE::regerror(-1, nullptr, buf, sizeof(buf)),
+            size_t(14));
+  EXPECT_STREQ(buf, "Unknown error");
 }
 
 TEST(LlvmLibcRegexTest, RegerrorTruncation) {
   char buf[5];
   size_t needed =
       LIBC_NAMESPACE::regerror(REG_NOMATCH, nullptr, buf, sizeof(buf));
-  ASSERT_EQ(needed, size_t(9)); // strlen("No match") + 1
-  ASSERT_STREQ("No m", buf); // "No match" truncated to 5 bytes (including NUL)
+  EXPECT_EQ(needed, size_t(9)); // strlen("No match") + 1
+  EXPECT_STREQ(buf, "No m"); // "No match" truncated to 5 bytes (including NUL)
+
+  char single[1] = {'x'};
+  EXPECT_EQ(
+      LIBC_NAMESPACE::regerror(REG_NOMATCH, nullptr, single, sizeof(single)),
+      size_t(9));
+  EXPECT_STREQ(single, "");
 }
 
 TEST(LlvmLibcRegexTest, RegerrorZeroBuffer) {
   size_t needed = LIBC_NAMESPACE::regerror(REG_NOMATCH, nullptr, nullptr, 0);
-  ASSERT_GT(needed, size_t(0));
+  EXPECT_EQ(needed, size_t(9));
 }
 
 TEST(LlvmLibcRegexTest, RegerrorSuccess) {
   char buf[128];
-  LIBC_NAMESPACE::regerror(0, nullptr, buf, sizeof(buf));
-  ASSERT_STREQ("Success", buf);
+  EXPECT_EQ(LIBC_NAMESPACE::regerror(0, nullptr, buf, sizeof(buf)), size_t(8));
+  EXPECT_STREQ(buf, "Success");
 }
+
+#if defined(LIBC_ADD_NULL_CHECKS)
+TEST(LlvmLibcRegexTest, RegerrorNullPointerCrash) {
+  ASSERT_DEATH(
+      [] { LIBC_NAMESPACE::regerror(REG_NOMATCH, nullptr, nullptr, 1); },
+      WITH_SIGNAL(-1));
+}
+#endif // defined(LIBC_ADD_NULL_CHECKS)

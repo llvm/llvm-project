@@ -3297,18 +3297,18 @@ BugReporter::generateDiagnosticForConsumerMap(
 
 static PathDiagnosticCallPiece *
 getFirstStackedCallToHeaderFile(PathDiagnosticCallPiece *CP,
-                                const SourceManager &SMgr) {
+                                const AnalysisManager &AMgr) {
   SourceLocation CallLoc = CP->callEnter.asLocation();
 
   // If the call is within a macro, don't do anything (for now).
   if (CallLoc.isMacroID())
     return nullptr;
 
-  assert(AnalysisManager::isInCodeFile(CallLoc, SMgr) &&
+  assert(AMgr.isInCodeFile(CallLoc) &&
          "The call piece should not be in a header file.");
 
   // Check if CP represents a path through a function outside of the main file.
-  if (!AnalysisManager::isInCodeFile(CP->callEnterWithin.asLocation(), SMgr))
+  if (!AMgr.isInCodeFile(CP->callEnterWithin.asLocation()))
     return CP;
 
   const PathPieces &Path = CP->path;
@@ -3318,24 +3318,24 @@ getFirstStackedCallToHeaderFile(PathDiagnosticCallPiece *CP,
   // Check if the last piece in the callee path is a call to a function outside
   // of the main file.
   if (auto *CPInner = dyn_cast<PathDiagnosticCallPiece>(Path.back().get()))
-    return getFirstStackedCallToHeaderFile(CPInner, SMgr);
+    return getFirstStackedCallToHeaderFile(CPInner, AMgr);
 
   // Otherwise, the last piece is in the main file.
   return nullptr;
 }
 
-static void resetDiagnosticLocationToMainFile(PathDiagnostic &PD) {
+static void resetDiagnosticLocationToMainFile(PathDiagnostic &PD,
+                                              const AnalysisManager &AMgr) {
   if (PD.path.empty())
     return;
 
   PathDiagnosticPiece *LastP = PD.path.back().get();
   assert(LastP);
-  const SourceManager &SMgr = LastP->getLocation().getManager();
 
   // We only need to check if the report ends inside headers, if the last piece
   // is a call piece.
   if (auto *CP = dyn_cast<PathDiagnosticCallPiece>(LastP)) {
-    CP = getFirstStackedCallToHeaderFile(CP, SMgr);
+    CP = getFirstStackedCallToHeaderFile(CP, AMgr);
     if (CP) {
       // Mark the piece.
        CP->setAsLastInMainSourceFile();
@@ -3391,7 +3391,7 @@ PathSensitiveBugReporter::generateDiagnosticForConsumerMap(
   const AnalyzerOptions &Opts = getAnalyzerOptions();
   for (auto const &P : *Out)
     if (Opts.ShouldReportIssuesInMainSourceFile && !Opts.AnalyzeAll)
-      resetDiagnosticLocationToMainFile(*P.second);
+      resetDiagnosticLocationToMainFile(*P.second, Eng.getAnalysisManager());
 
   return Out;
 }

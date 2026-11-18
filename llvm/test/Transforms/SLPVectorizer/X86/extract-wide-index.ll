@@ -16,3 +16,55 @@ entry:
   %c = and i1 %a, %b
   ret i1 %c
 }
+
+define void @same_vector(<4 x float> %v, float %s, float %t, ptr %p) {
+; CHECK-LABEL: define void @same_vector(
+; CHECK-SAME: <4 x float> [[V:%.*]], float [[S:%.*]], float [[T:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = extractelement <4 x float> [[V]], i128 18446744073709551616
+; CHECK-NEXT:    [[B:%.*]] = extractelement <4 x float> [[V]], i128 18446744073709551617
+; CHECK-NEXT:    [[X0:%.*]] = fadd float [[A]], [[S]]
+; CHECK-NEXT:    [[X1:%.*]] = fadd float [[B]], [[T]]
+; CHECK-NEXT:    store float [[X0]], ptr [[P]], align 4
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr float, ptr [[P]], i64 1
+; CHECK-NEXT:    store float [[X1]], ptr [[P1]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = extractelement <4 x float> %v, i128 18446744073709551616
+  %b = extractelement <4 x float> %v, i128 18446744073709551617
+  %x0 = fadd float %a, %s
+  %x1 = fadd float %b, %t
+  store float %x0, ptr %p
+  %p1 = getelementptr float, ptr %p, i64 1
+  store float %x1, ptr %p1
+  ret void
+}
+
+define void @same_scalable_vector(<vscale x 4 x float> %v, float %s, float %t, float %u, float %w, ptr %p) {
+; CHECK-LABEL: define void @same_scalable_vector(
+; CHECK-SAME: <vscale x 4 x float> [[V:%.*]], float [[S:%.*]], float [[T:%.*]], float [[U:%.*]], float [[W:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = extractelement <vscale x 4 x float> [[V]], i128 18446744073709551616
+; CHECK-NEXT:    [[B:%.*]] = extractelement <vscale x 4 x float> [[V]], i128 18446744073709551617
+; CHECK-NEXT:    [[Y0:%.*]] = fadd float [[A]], [[S]]
+; CHECK-NEXT:    [[Y1:%.*]] = fadd float [[B]], [[T]]
+; CHECK-NEXT:    [[X0:%.*]] = fmul float [[Y0]], [[U]]
+; CHECK-NEXT:    [[X1:%.*]] = fmul float [[W]], [[Y1]]
+; CHECK-NEXT:    store float [[X0]], ptr [[P]], align 4
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr float, ptr [[P]], i64 1
+; CHECK-NEXT:    store float [[X1]], ptr [[P1]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = extractelement <vscale x 4 x float> %v, i128 18446744073709551616
+  %b = extractelement <vscale x 4 x float> %v, i128 18446744073709551617
+  %y0 = fadd float %a, %s
+  %y1 = fadd float %b, %t
+  %x0 = fmul float %y0, %u
+  %x1 = fmul float %w, %y1
+  store float %x0, ptr %p
+  %p1 = getelementptr float, ptr %p, i64 1
+  store float %x1, ptr %p1
+  ret void
+}

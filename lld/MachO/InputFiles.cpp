@@ -58,6 +58,7 @@
 
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/DWARF.h"
+#include "lld/Common/Parallel.h"
 #include "lld/Common/Reproduce.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -1232,7 +1233,7 @@ void ObjFile::parseDeferredRelocations() {
 
 void macho::parseDeferredRelocations() {
   TimeTraceScope timeScope("Parse relocations");
-  parallelForEach(inputFiles, [](InputFile *file) {
+  parallelForEachFineGrained(inputFiles, [](InputFile *file) {
     if (auto *objFile = dyn_cast<ObjFile>(file))
       objFile->parseDeferredRelocations();
   });

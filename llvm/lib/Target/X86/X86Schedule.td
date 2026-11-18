@@ -392,6 +392,10 @@ defm WriteVarShuffle  : X86SchedWritePair<ReadAfterVecLd>;  // Vector variable s
 defm WriteVarShuffleX : X86SchedWritePair<ReadAfterVecXLd>; // Vector variable shuffles (XMM).
 defm WriteVarShuffleY : X86SchedWritePair<ReadAfterVecYLd>; // Vector variable shuffles (YMM).
 defm WriteVarShuffleZ : X86SchedWritePair<ReadAfterVecYLd>; // Vector variable shuffles (ZMM).
+defm WritePack  : X86SchedWritePair<ReadAfterVecXLd>; // Vector packs.
+defm WritePackX : X86SchedWritePair<ReadAfterVecYLd>; // Vector packs (XMM).
+defm WritePackY : X86SchedWritePair<ReadAfterVecYLd>; // Vector packs (YMM).
+defm WritePackZ : X86SchedWritePair<ReadAfterVecYLd>; // Vector packs (ZMM).
 defm WriteBlend  : X86SchedWritePair<ReadAfterVecXLd>; // Vector blends.
 defm WriteBlendY : X86SchedWritePair<ReadAfterVecYLd>; // Vector blends (YMM).
 defm WriteBlendZ : X86SchedWritePair<ReadAfterVecYLd>; // Vector blends (ZMM).
@@ -690,6 +694,8 @@ def SchedWriteShuffle
 def SchedWriteVarShuffle
  : X86SchedWriteWidths<WriteVarShuffle, WriteVarShuffleX,
                        WriteVarShuffleY, WriteVarShuffleZ>;
+def SchedWritePack
+ : X86SchedWriteWidths<WritePack, WritePackX, WritePackY, WritePackZ>;
 def SchedWriteBlend
  : X86SchedWriteWidths<WriteBlend, WriteBlend, WriteBlendY, WriteBlendZ>;
 def SchedWriteVarBlend
