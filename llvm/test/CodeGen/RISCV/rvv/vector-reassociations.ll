@@ -227,3 +227,94 @@ entry:
   ret <vscale x 1 x i8> %c
 }
 
+define <vscale x 4 x i32> @vadd_vv_mask_chain_different_masks(<vscale x 4 x i32> %init, <vscale x 4 x i32> %j, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, <vscale x 4 x i32> %d, i32 zeroext %evl) {
+; CHECK-LABEL: vadd_vv_mask_chain_different_masks:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vmsgtu.vi v0, v10, 3
+; CHECK-NEXT:    vmv2r.v v20, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, mu
+; CHECK-NEXT:    vadd.vv v20, v12, v8, v0.t
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmsgtu.vi v0, v10, 2
+; CHECK-NEXT:    vmv2r.v v12, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, mu
+; CHECK-NEXT:    vadd.vv v12, v16, v14, v0.t
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmsgtu.vi v0, v10, 1
+; CHECK-NEXT:    vmv2r.v v14, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, mu
+; CHECK-NEXT:    vadd.vv v14, v12, v20, v0.t
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmsne.vi v0, v10, 0
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, mu
+; CHECK-NEXT:    vadd.vv v8, v18, v14, v0.t
+; CHECK-NEXT:    ret
+  %m0 = icmp ugt <vscale x 4 x i32> %j, splat (i32 3)
+  %m1 = icmp ugt <vscale x 4 x i32> %j, splat (i32 2)
+  %m2 = icmp ugt <vscale x 4 x i32> %j, splat (i32 1)
+  %m3 = icmp ugt <vscale x 4 x i32> %j, splat (i32 0)
+  %s0 = add <vscale x 4 x i32> %a, %init
+  %x0 = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> %m0, <vscale x 4 x i32> %s0, <vscale x 4 x i32> %init, i32 %evl)
+  %s1 = add <vscale x 4 x i32> %b, %x0
+  %x1 = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> %m1, <vscale x 4 x i32> %s1, <vscale x 4 x i32> %init, i32 %evl)
+  %s2 = add <vscale x 4 x i32> %c, %x1
+  %x2 = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> %m2, <vscale x 4 x i32> %s2, <vscale x 4 x i32> %init, i32 %evl)
+  %s3 = add <vscale x 4 x i32> %d, %x2
+  %x3 = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> %m3, <vscale x 4 x i32> %s3, <vscale x 4 x i32> %init, i32 %evl)
+  ret <vscale x 4 x i32> %x3
+}
+
+define <vscale x 4 x i32> @vadd_vv_mask_chain_same_mask(<vscale x 4 x i32> %init, <vscale x 4 x i32> %j, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, <vscale x 4 x i32> %d, i32 zeroext %evl) {
+; CHECK-LABEL: vadd_vv_mask_chain_same_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vmsgtu.vi v0, v10, 3
+; CHECK-NEXT:    vmv2r.v v10, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, mu
+; CHECK-NEXT:    vadd.vv v10, v12, v8, v0.t
+; CHECK-NEXT:    vmv2r.v v12, v8
+; CHECK-NEXT:    vadd.vv v12, v16, v14, v0.t
+; CHECK-NEXT:    vmv2r.v v14, v8
+; CHECK-NEXT:    vadd.vv v14, v12, v10, v0.t
+; CHECK-NEXT:    vadd.vv v8, v18, v14, v0.t
+; CHECK-NEXT:    ret
+  %m = icmp ugt <vscale x 4 x i32> %j, splat (i32 3)
+  %s0 = add <vscale x 4 x i32> %a, %init
+  %x0 = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> %m, <vscale x 4 x i32> %s0, <vscale x 4 x i32> %init, i32 %evl)
+  %s1 = add <vscale x 4 x i32> %b, %x0
+  %x1 = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> %m, <vscale x 4 x i32> %s1, <vscale x 4 x i32> %init, i32 %evl)
+  %s2 = add <vscale x 4 x i32> %c, %x1
+  %x2 = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> %m, <vscale x 4 x i32> %s2, <vscale x 4 x i32> %init, i32 %evl)
+  %s3 = add <vscale x 4 x i32> %d, %x2
+  %x3 = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> %m, <vscale x 4 x i32> %s3, <vscale x 4 x i32> %init, i32 %evl)
+  ret <vscale x 4 x i32> %x3
+}
+
+define <vscale x 4 x i32> @vadd_vv_mask_chain_different_mask_args(<vscale x 4 x i32> %init, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, <vscale x 4 x i32> %d, <vscale x 4 x i1> %m0, <vscale x 4 x i1> %m1, <vscale x 4 x i1> %m2, <vscale x 4 x i1> %m3, i32 zeroext %evl) {
+; CHECK-LABEL: vadd_vv_mask_chain_different_mask_args:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, mu
+; CHECK-NEXT:    vmv2r.v v22, v8
+; CHECK-NEXT:    vadd.vv v22, v10, v8, v0.t
+; CHECK-NEXT:    vmv1r.v v0, v18
+; CHECK-NEXT:    vmv2r.v v10, v8
+; CHECK-NEXT:    vadd.vv v10, v14, v12, v0.t
+; CHECK-NEXT:    vmv2r.v v12, v8
+; CHECK-NEXT:    vmv1r.v v0, v19
+; CHECK-NEXT:    vadd.vv v12, v10, v22, v0.t
+; CHECK-NEXT:    vmv1r.v v0, v20
+; CHECK-NEXT:    vadd.vv v8, v16, v12, v0.t
+; CHECK-NEXT:    ret
+  %s0 = add <vscale x 4 x i32> %a, %init
+  %x0 = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> %m0, <vscale x 4 x i32> %s0, <vscale x 4 x i32> %init, i32 %evl)
+  %s1 = add <vscale x 4 x i32> %b, %x0
+  %x1 = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> %m1, <vscale x 4 x i32> %s1, <vscale x 4 x i32> %init, i32 %evl)
+  %s2 = add <vscale x 4 x i32> %c, %x1
+  %x2 = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> %m2, <vscale x 4 x i32> %s2, <vscale x 4 x i32> %init, i32 %evl)
+  %s3 = add <vscale x 4 x i32> %d, %x2
+  %x3 = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> %m3, <vscale x 4 x i32> %s3, <vscale x 4 x i32> %init, i32 %evl)
+  ret <vscale x 4 x i32> %x3
+}
+
+declare <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>, i32)
