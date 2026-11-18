@@ -2082,6 +2082,46 @@ define float @fsub__no_psub_nnorm__no_zero_psub_nnorm(float nofpclass(psub nnorm
   ret float %sub
 }
 
+define float @fadd__no_pzero_nsub_pnorm__no_pzero_nsub_pnorm(float nofpclass(pzero nsub pnorm) %lhs, float nofpclass(pzero nsub pnorm) %rhs) {
+; CHECK-LABEL: define float @fadd__no_pzero_nsub_pnorm__no_pzero_nsub_pnorm(
+; CHECK-SAME: float nofpclass(pzero nsub pnorm) [[LHS:%.*]], float nofpclass(pzero nsub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %lhs, %rhs
+  ret float %add
+}
+
+define float @fadd__no_pzero_psub_nnorm__no_pzero_psub_nnorm(float nofpclass(pzero psub nnorm) %lhs, float nofpclass(pzero psub nnorm) %rhs) {
+; CHECK-LABEL: define float @fadd__no_pzero_psub_nnorm__no_pzero_psub_nnorm(
+; CHECK-SAME: float nofpclass(pzero psub nnorm) [[LHS:%.*]], float nofpclass(pzero psub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %lhs, %rhs
+  ret float %add
+}
+
+define float @fsub__no_pzero_psub_pnorm__no_nzero_nsub_nnorm(float nofpclass(pzero psub pnorm) %lhs, float nofpclass(nzero nsub nnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(psub pnorm) float @fsub__no_pzero_psub_pnorm__no_nzero_nsub_nnorm(
+; CHECK-SAME: float nofpclass(pzero psub pnorm) [[LHS:%.*]], float nofpclass(nzero nsub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float %lhs, %rhs
+  ret float %sub
+}
+
+define float @fsub__no_pzero_nsub_nnorm__no_nzero_psub_pnorm(float nofpclass(pzero nsub nnorm) %lhs, float nofpclass(nzero psub pnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(nsub nnorm) float @fsub__no_pzero_nsub_nnorm__no_nzero_psub_pnorm(
+; CHECK-SAME: float nofpclass(pzero nsub nnorm) [[LHS:%.*]], float nofpclass(nzero psub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float %lhs, %rhs
+  ret float %sub
+}
+
 ;-------------------------------------------------------------------------------
 
 attributes #0 = { denormal_fpenv(preservesign) }
