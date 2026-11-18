@@ -31,7 +31,6 @@
 ...
 ---
 name: commute
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: commute
   ; CHECK: bb.0:
