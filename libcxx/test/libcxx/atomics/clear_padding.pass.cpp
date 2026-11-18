@@ -10,8 +10,9 @@
 
 // Older versions of Clang don't support __builtin_clear_padding
 // UNSUPPORTED: clang-21, clang-22, apple-clang-21
-// Android's Clang 23 prebuilt predates __builtin_clear_padding
-// UNSUPPORTED: clang-23 && LIBCXX-ANDROID-FIXME
+// Android's r614150 prebuilt predates __builtin_clear_padding.
+// TODO: Re-enable after upgrading Android CI to the next compiler update.
+// UNSUPPORTED: LIBCXX-ANDROID-FIXME
 
 // Older Clang doesn't handle __builtin_clear_padding correctly on Windows
 // (see https://github.com/llvm/llvm-project/issues/209787)
