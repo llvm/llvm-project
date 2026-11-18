@@ -1483,7 +1483,15 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     break;
   }
 
-  case Builtin::BImemccpy:
+  case Builtin::BImemccpy: {
+    // Whether memccpy overflows depends on whether the stop character appears
+    // in the source buffer before reaching n, not just the buffer size.
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(3);
+    BufferSize = Checker.ComputeSizeArgument(0);
+    break;
+  }
+
   case Builtin::BIstrncat:
   case Builtin::BI__builtin_strncat:
   case Builtin::BIstrncpy:
@@ -1495,14 +1503,12 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BIstrlcpy:
   case Builtin::BI__builtin_strlcpy: {
     // Whether these functions overflow depends on the runtime strlen of the
-    // string (or stop character for memccpy), not just the buffer size, so
-    // emitting the "always overflow" diagnostic isn't quite right. We should
-    // still diagnose passing a buffer size larger than the destination buffer
-    // though; this is a runtime abort in _FORTIFY_SOURCE mode, and is quite
-    // suspicious otherwise.
+    // string, not just the buffer size, so emitting the "always overflow"
+    // diagnostic isn't quite right. We should still diagnose passing a buffer
+    // size larger than the destination buffer though; this is a runtime abort
+    // in _FORTIFY_SOURCE mode, and is quite suspicious otherwise.
     DiagID = diag::warn_fortify_source_size_mismatch;
-    unsigned SizeIdx = BuiltinID == Builtin::BImemccpy ? 3 : 2;
-    AccessSize = Checker.ComputeExplicitObjectSizeArgument(SizeIdx);
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(2);
     BufferSize = Checker.ComputeSizeArgument(0);
     break;
   }
@@ -1564,7 +1570,13 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
 
   case Builtin::BIbzero:
   case Builtin::BI__builtin_bzero:
-  case Builtin::BIexplicit_bzero:
+  case Builtin::BIexplicit_bzero: {
+    DiagID = diag::warn_fortify_source_overflow;
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(1);
+    BufferSize = Checker.ComputeSizeArgument(0);
+    break;
+  }
+
   case Builtin::BImemcpy:
   case Builtin::BI__builtin_memcpy:
   case Builtin::BImemmove:
@@ -1575,14 +1587,11 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BImempcpy:
   case Builtin::BI__builtin_mempcpy: {
     DiagID = diag::warn_fortify_source_overflow;
-    bool IsBZero = BuiltinID == Builtin::BIbzero ||
-                   BuiltinID == Builtin::BI__builtin_bzero ||
-                   BuiltinID == Builtin::BIexplicit_bzero;
-    AccessSize = Checker.ComputeExplicitObjectSizeArgument(IsBZero ? 1 : 2);
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(2);
     BufferSize = Checker.ComputeSizeArgument(0);
 
-    // Buffer overread doesn't make sense for memset/bzero.
-    if (!IsBZero && BuiltinID != Builtin::BImemset &&
+    // Buffer overread doesn't make sense for memset.
+    if (BuiltinID != Builtin::BImemset &&
         BuiltinID != Builtin::BI__builtin_memset &&
         BuiltinID != Builtin::BImemset_explicit) {
       Checker.checkSourceOverread(/*SrcArgIdx=*/1, /*SizeArgIdx=*/2);
