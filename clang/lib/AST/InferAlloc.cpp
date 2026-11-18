@@ -207,24 +207,6 @@ static const Expr *stripFields(const Expr *E) {
   return E;
 }
 
-/// Finds the allocation call an initializer consists of, looking through
-/// parentheses, casts, temporaries, and the trivial copy or move a class-typed
-/// value may carry.
-static const CallExpr *initializingCall(const Expr *Init) {
-  while (Init) {
-    Init = Init->IgnoreImplicit()->IgnoreParenCasts();
-    const auto *CE = dyn_cast<CXXConstructExpr>(Init);
-    // A non-trivial copy or move may not be elided (-fno-elide-constructors)
-    // and could replace the pointer.
-    if (!CE || CE->getNumArgs() != 1 ||
-        !CE->getConstructor()->isCopyOrMoveConstructor() ||
-        !CE->getConstructor()->isTrivial())
-      break;
-    Init = CE->getArg(0);
-  }
-  return dyn_cast_or_null<CallExpr>(Init);
-}
-
 namespace {
 /// Implements collectPlacementNewTypes(). A variable qualifies if every
 /// reference to it other than its initializer is an lvalue-to-rvalue read.
@@ -240,8 +222,10 @@ public:
   }
 
   bool VisitVarDecl(const VarDecl *VD) override {
-    if (VD->hasLocalStorage() && !isa<ParmVarDecl>(VD))
-      if (const CallExpr *CE = initializingCall(VD->getInit()))
+    const Expr *Init = VD->getInit();
+    if (Init && VD->hasLocalStorage() && !isa<ParmVarDecl>(VD))
+      if (const auto *CE =
+              dyn_cast<CallExpr>(Init->IgnoreImplicit()->IgnoreParenCasts()))
         Defs.try_emplace(VD, CE);
     return true;
   }
