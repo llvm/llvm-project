@@ -2657,3 +2657,54 @@ define <16 x i128> @test_unsigned_v16i128_v16f16(<16 x half> %f) nounwind {
   %x = call <16 x i128> @llvm.fptoui.sat.v16i128.v16f16(<16 x half> %f)
   ret <16 x i128> %x
 }
+
+;
+; 16-bit bfloat to unsigned integer
+;
+
+define <16 x i32> @test_unsigned_v16i32_v16bf16(<16 x bfloat> %f) nounwind {
+; AVX2-LABEL: test_unsigned_v16i32_v16bf16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX2-NEXT:    vpslld $16, %ymm0, %ymm0
+; AVX2-NEXT:    vmaxps %ymm2, %ymm0, %ymm3
+; AVX2-NEXT:    vcvttps2dq %ymm3, %ymm4
+; AVX2-NEXT:    vpsrad $31, %ymm4, %ymm5
+; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm6 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
+; AVX2-NEXT:    vsubps %ymm6, %ymm3, %ymm7
+; AVX2-NEXT:    vcvttps2dq %ymm7, %ymm7
+; AVX2-NEXT:    vpand %ymm5, %ymm7, %ymm5
+; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm7 = [4.2949673E+9,4.2949673E+9,4.2949673E+9,4.2949673E+9,4.2949673E+9,4.2949673E+9,4.2949673E+9,4.2949673E+9]
+; AVX2-NEXT:    vcmpleps %ymm3, %ymm7, %ymm3
+; AVX2-NEXT:    vpor %ymm3, %ymm4, %ymm3
+; AVX2-NEXT:    vpor %ymm5, %ymm3, %ymm3
+; AVX2-NEXT:    vcmpunordps %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vandnps %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX2-NEXT:    vpslld $16, %ymm1, %ymm1
+; AVX2-NEXT:    vmaxps %ymm2, %ymm1, %ymm2
+; AVX2-NEXT:    vcvttps2dq %ymm2, %ymm3
+; AVX2-NEXT:    vpsrad $31, %ymm3, %ymm4
+; AVX2-NEXT:    vsubps %ymm6, %ymm2, %ymm5
+; AVX2-NEXT:    vcvttps2dq %ymm5, %ymm5
+; AVX2-NEXT:    vpand %ymm4, %ymm5, %ymm4
+; AVX2-NEXT:    vcmpleps %ymm2, %ymm7, %ymm2
+; AVX2-NEXT:    vpor %ymm2, %ymm3, %ymm2
+; AVX2-NEXT:    vpor %ymm4, %ymm2, %ymm2
+; AVX2-NEXT:    vcmpunordps %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vandnps %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_v16i32_v16bf16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; AVX512-NEXT:    vpslld $16, %zmm0, %zmm0
+; AVX512-NEXT:    vfpclassps $215, %zmm0, %k0 # k0 = isQuietNaN(zmm0) | isPositiveZero(zmm0) | isNegativeZero(zmm0) | isNegativeInfinity(zmm0) | isNegative(zmm0) | isSignalingNaN(zmm0)
+; AVX512-NEXT:    knotw %k0, %k1
+; AVX512-NEXT:    vcvttps2udq %zmm0, %zmm0 {%k1} {z}
+; AVX512-NEXT:    retq
+  %x = call <16 x i32> @llvm.fptoui.sat.v16i32.v16bf16(<16 x bfloat> %f)
+  ret <16 x i32> %x
+}

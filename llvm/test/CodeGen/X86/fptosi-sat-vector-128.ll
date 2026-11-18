@@ -3944,5 +3944,203 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
   %x = call <8 x i128> @llvm.fptosi.sat.v8i128.v8f16(<8 x half> %f)
   ret <8 x i128> %x
 }
+
+;
+; 16-bit bfloat to signed integer
+;
+
+define <8 x i32> @test_signed_v8i32_v8bf16(<8 x bfloat> %f) nounwind {
+; SSE2-LABEL: test_signed_v8i32_v8bf16:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    punpckhqdq {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE2-NEXT:    movq %xmm1, %rdx
+; SSE2-NEXT:    movq %rdx, %rsi
+; SSE2-NEXT:    shrq $32, %rsi
+; SSE2-NEXT:    movq %xmm0, %r10
+; SSE2-NEXT:    movq %r10, %r9
+; SSE2-NEXT:    movdqa %xmm0, %xmm3
+; SSE2-NEXT:    pslld $16, %xmm3
+; SSE2-NEXT:    cvttss2si %xmm3, %edi
+; SSE2-NEXT:    shrq $32, %r9
+; SSE2-NEXT:    movss {{.*#+}} xmm2 = [2.14748352E+9,0.0E+0,0.0E+0,0.0E+0]
+; SSE2-NEXT:    ucomiss %xmm2, %xmm3
+; SSE2-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE2-NEXT:    cmoval %ecx, %edi
+; SSE2-NEXT:    xorl %eax, %eax
+; SSE2-NEXT:    ucomiss %xmm3, %xmm3
+; SSE2-NEXT:    cmovpl %eax, %edi
+; SSE2-NEXT:    psrld $16, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm0
+; SSE2-NEXT:    cvttss2si %xmm0, %r8d
+; SSE2-NEXT:    ucomiss %xmm2, %xmm0
+; SSE2-NEXT:    cmoval %ecx, %r8d
+; SSE2-NEXT:    ucomiss %xmm0, %xmm0
+; SSE2-NEXT:    cmovpl %eax, %r8d
+; SSE2-NEXT:    shrq $48, %r10
+; SSE2-NEXT:    movd %r10d, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm0
+; SSE2-NEXT:    cvttss2si %xmm0, %r10d
+; SSE2-NEXT:    ucomiss %xmm2, %xmm0
+; SSE2-NEXT:    cmoval %ecx, %r10d
+; SSE2-NEXT:    ucomiss %xmm0, %xmm0
+; SSE2-NEXT:    movd %r9d, %xmm0
+; SSE2-NEXT:    cmovpl %eax, %r10d
+; SSE2-NEXT:    pslld $16, %xmm0
+; SSE2-NEXT:    cvttss2si %xmm0, %r9d
+; SSE2-NEXT:    ucomiss %xmm2, %xmm0
+; SSE2-NEXT:    cmoval %ecx, %r9d
+; SSE2-NEXT:    ucomiss %xmm0, %xmm0
+; SSE2-NEXT:    cmovpl %eax, %r9d
+; SSE2-NEXT:    movdqa %xmm1, %xmm4
+; SSE2-NEXT:    pslld $16, %xmm4
+; SSE2-NEXT:    cvttss2si %xmm4, %r11d
+; SSE2-NEXT:    ucomiss %xmm2, %xmm4
+; SSE2-NEXT:    cmoval %ecx, %r11d
+; SSE2-NEXT:    movd %esi, %xmm3
+; SSE2-NEXT:    movd %edi, %xmm0
+; SSE2-NEXT:    ucomiss %xmm4, %xmm4
+; SSE2-NEXT:    cmovpl %eax, %r11d
+; SSE2-NEXT:    psrld $16, %xmm1
+; SSE2-NEXT:    pslld $16, %xmm1
+; SSE2-NEXT:    cvttss2si %xmm1, %esi
+; SSE2-NEXT:    ucomiss %xmm2, %xmm1
+; SSE2-NEXT:    movd %r8d, %xmm4
+; SSE2-NEXT:    cmoval %ecx, %esi
+; SSE2-NEXT:    ucomiss %xmm1, %xmm1
+; SSE2-NEXT:    cmovpl %eax, %esi
+; SSE2-NEXT:    movd %r10d, %xmm1
+; SSE2-NEXT:    shrq $48, %rdx
+; SSE2-NEXT:    movd %edx, %xmm5
+; SSE2-NEXT:    pslld $16, %xmm5
+; SSE2-NEXT:    cvttss2si %xmm5, %edx
+; SSE2-NEXT:    ucomiss %xmm2, %xmm5
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1]
+; SSE2-NEXT:    cmoval %ecx, %edx
+; SSE2-NEXT:    movd %r9d, %xmm4
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
+; SSE2-NEXT:    ucomiss %xmm5, %xmm5
+; SSE2-NEXT:    movd %r11d, %xmm1
+; SSE2-NEXT:    cmovpl %eax, %edx
+; SSE2-NEXT:    pslld $16, %xmm3
+; SSE2-NEXT:    cvttss2si %xmm3, %edi
+; SSE2-NEXT:    ucomiss %xmm2, %xmm3
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm4[0]
+; SSE2-NEXT:    cmoval %ecx, %edi
+; SSE2-NEXT:    movd %esi, %xmm2
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; SSE2-NEXT:    ucomiss %xmm3, %xmm3
+; SSE2-NEXT:    movd %edx, %xmm2
+; SSE2-NEXT:    cmovpl %eax, %edi
+; SSE2-NEXT:    movd %edi, %xmm3
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm3[0]
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: test_signed_v8i32_v8bf16:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pextrq $1, %xmm0, %rax
+; SSE42-NEXT:    movq %rax, %rsi
+; SSE42-NEXT:    shrq $32, %rsi
+; SSE42-NEXT:    movq %xmm0, %r8
+; SSE42-NEXT:    movq %r8, %r9
+; SSE42-NEXT:    pxor %xmm1, %xmm1
+; SSE42-NEXT:    movdqa %xmm0, %xmm2
+; SSE42-NEXT:    pblendw {{.*#+}} xmm2 = xmm1[0],xmm2[1],xmm1[2],xmm2[3],xmm1[4],xmm2[5],xmm1[6],xmm2[7]
+; SSE42-NEXT:    cvttss2si %xmm2, %edi
+; SSE42-NEXT:    shrq $32, %r9
+; SSE42-NEXT:    movss {{.*#+}} xmm3 = [2.14748352E+9,0.0E+0,0.0E+0,0.0E+0]
+; SSE42-NEXT:    ucomiss %xmm3, %xmm2
+; SSE42-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE42-NEXT:    cmoval %ecx, %edi
+; SSE42-NEXT:    xorl %edx, %edx
+; SSE42-NEXT:    ucomiss %xmm2, %xmm2
+; SSE42-NEXT:    cmovpl %edx, %edi
+; SSE42-NEXT:    movdqa %xmm0, %xmm2
+; SSE42-NEXT:    pslld $16, %xmm2
+; SSE42-NEXT:    cvttss2si %xmm2, %r10d
+; SSE42-NEXT:    ucomiss %xmm3, %xmm2
+; SSE42-NEXT:    cmoval %ecx, %r10d
+; SSE42-NEXT:    ucomiss %xmm2, %xmm2
+; SSE42-NEXT:    movd %r9d, %xmm2
+; SSE42-NEXT:    cmovpl %edx, %r10d
+; SSE42-NEXT:    pslld $16, %xmm2
+; SSE42-NEXT:    cvttss2si %xmm2, %r9d
+; SSE42-NEXT:    ucomiss %xmm3, %xmm2
+; SSE42-NEXT:    cmoval %ecx, %r9d
+; SSE42-NEXT:    ucomiss %xmm2, %xmm2
+; SSE42-NEXT:    cmovpl %edx, %r9d
+; SSE42-NEXT:    shrq $48, %r8
+; SSE42-NEXT:    movd %r8d, %xmm4
+; SSE42-NEXT:    pslld $16, %xmm4
+; SSE42-NEXT:    cvttss2si %xmm4, %r8d
+; SSE42-NEXT:    ucomiss %xmm3, %xmm4
+; SSE42-NEXT:    movd %r10d, %xmm2
+; SSE42-NEXT:    cmoval %ecx, %r8d
+; SSE42-NEXT:    pinsrd $1, %edi, %xmm2
+; SSE42-NEXT:    ucomiss %xmm4, %xmm4
+; SSE42-NEXT:    cmovpl %edx, %r8d
+; SSE42-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; SSE42-NEXT:    cvttss2si %xmm1, %edi
+; SSE42-NEXT:    ucomiss %xmm3, %xmm1
+; SSE42-NEXT:    cmoval %ecx, %edi
+; SSE42-NEXT:    pinsrd $2, %r9d, %xmm2
+; SSE42-NEXT:    ucomiss %xmm1, %xmm1
+; SSE42-NEXT:    cmovpl %edx, %edi
+; SSE42-NEXT:    pshufb {{.*#+}} xmm0 = zero,zero,xmm0[10,11,u,u,u,u,u,u,u,u,u,u,u,u]
+; SSE42-NEXT:    cvttss2si %xmm0, %r9d
+; SSE42-NEXT:    ucomiss %xmm3, %xmm0
+; SSE42-NEXT:    cmoval %ecx, %r9d
+; SSE42-NEXT:    pinsrd $3, %r8d, %xmm2
+; SSE42-NEXT:    ucomiss %xmm0, %xmm0
+; SSE42-NEXT:    movd %esi, %xmm0
+; SSE42-NEXT:    cmovpl %edx, %r9d
+; SSE42-NEXT:    pslld $16, %xmm0
+; SSE42-NEXT:    cvttss2si %xmm0, %esi
+; SSE42-NEXT:    ucomiss %xmm3, %xmm0
+; SSE42-NEXT:    movd %edi, %xmm1
+; SSE42-NEXT:    cmoval %ecx, %esi
+; SSE42-NEXT:    pinsrd $1, %r9d, %xmm1
+; SSE42-NEXT:    ucomiss %xmm0, %xmm0
+; SSE42-NEXT:    cmovpl %edx, %esi
+; SSE42-NEXT:    pinsrd $2, %esi, %xmm1
+; SSE42-NEXT:    shrq $48, %rax
+; SSE42-NEXT:    movd %eax, %xmm0
+; SSE42-NEXT:    pslld $16, %xmm0
+; SSE42-NEXT:    cvttss2si %xmm0, %eax
+; SSE42-NEXT:    ucomiss %xmm3, %xmm0
+; SSE42-NEXT:    cmoval %ecx, %eax
+; SSE42-NEXT:    ucomiss %xmm0, %xmm0
+; SSE42-NEXT:    cmovpl %edx, %eax
+; SSE42-NEXT:    pinsrd $3, %eax, %xmm1
+; SSE42-NEXT:    movdqa %xmm2, %xmm0
+; SSE42-NEXT:    retq
+;
+; AVX2-LABEL: test_signed_v8i32_v8bf16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX2-NEXT:    vpslld $16, %ymm0, %ymm0
+; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm1 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
+; AVX2-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
+; AVX2-NEXT:    vcvttps2dq %ymm0, %ymm2
+; AVX2-NEXT:    vxorps %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vcmpunordps %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vandnps %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_signed_v8i32_v8bf16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX512-NEXT:    vpslld $16, %ymm0, %ymm0
+; AVX512-NEXT:    vcmpgeps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %k1
+; AVX512-NEXT:    vcvttps2dq %ymm0, %ymm1
+; AVX512-NEXT:    vpbroadcastd {{.*#+}} ymm1 {%k1} = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
+; AVX512-NEXT:    vcmpunordps %ymm0, %ymm0, %k0
+; AVX512-NEXT:    knotb %k0, %k1
+; AVX512-NEXT:    vmovdqa32 %ymm1, %ymm0 {%k1} {z}
+; AVX512-NEXT:    retq
+  %x = call <8 x i32> @llvm.fptosi.sat.v8i32.v8bf16(<8 x bfloat> %f)
+  ret <8 x i32> %x
+}
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK: {{.*}}

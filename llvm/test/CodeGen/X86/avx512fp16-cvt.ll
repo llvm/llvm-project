@@ -1053,4 +1053,114 @@ define void @f16tou32(ptr %ptr) {
   ret void
 }
 
+define <8 x i32> @fptosi_sat_v8i32_v8f16(<8 x half> %f) nounwind {
+; X64-LABEL: fptosi_sat_v8i32_v8f16:
+; X64:       # %bb.0:
+; X64-NEXT:    vcmpgeph {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %xmm0, %k1
+; X64-NEXT:    vcvttph2dq %xmm0, %ymm1
+; X64-NEXT:    vpbroadcastd {{.*#+}} ymm1 {%k1} = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
+; X64-NEXT:    vcmpunordph %xmm0, %xmm0, %k0
+; X64-NEXT:    knotw %k0, %k1
+; X64-NEXT:    vmovdqa32 %ymm1, %ymm0 {%k1} {z}
+; X64-NEXT:    retq
+;
+; X86-LABEL: fptosi_sat_v8i32_v8f16:
+; X86:       # %bb.0:
+; X86-NEXT:    vcmpgeph {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %xmm0, %k1
+; X86-NEXT:    vcvttph2dq %xmm0, %ymm1
+; X86-NEXT:    vpbroadcastd {{.*#+}} ymm1 {%k1} = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
+; X86-NEXT:    vcmpunordph %xmm0, %xmm0, %k0
+; X86-NEXT:    knotw %k0, %k1
+; X86-NEXT:    vmovdqa32 %ymm1, %ymm0 {%k1} {z}
+; X86-NEXT:    retl
+  %x = call <8 x i32> @llvm.fptosi.sat.v8i32.v8f16(<8 x half> %f)
+  ret <8 x i32> %x
+}
+
+define <8 x i32> @fptoui_sat_v8i32_v8f16(<8 x half> %f) nounwind {
+; CHECK-LABEL: fptoui_sat_v8i32_v8f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfpclassph $215, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveZero(xmm0) | isNegativeZero(xmm0) | isNegativeInfinity(xmm0) | isNegative(xmm0) | isSignalingNaN(xmm0)
+; CHECK-NEXT:    knotw %k0, %k1
+; CHECK-NEXT:    vcvttph2udq %xmm0, %ymm0 {%k1} {z}
+; CHECK-NEXT:    ret{{[l|q]}}
+  %x = call <8 x i32> @llvm.fptoui.sat.v8i32.v8f16(<8 x half> %f)
+  ret <8 x i32> %x
+}
+
+define <16 x i32> @fptosi_sat_v16i32_v16f16(<16 x half> %f) nounwind {
+; X64-LABEL: fptosi_sat_v16i32_v16f16:
+; X64:       # %bb.0:
+; X64-NEXT:    vcmpgeph {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %ymm0, %k1
+; X64-NEXT:    vcvttph2dq %ymm0, %zmm1
+; X64-NEXT:    vpbroadcastd {{.*#+}} zmm1 {%k1} = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
+; X64-NEXT:    vcmpunordph %ymm0, %ymm0, %k0
+; X64-NEXT:    knotw %k0, %k1
+; X64-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+;
+; X86-LABEL: fptosi_sat_v16i32_v16f16:
+; X86:       # %bb.0:
+; X86-NEXT:    vcmpgeph {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %ymm0, %k1
+; X86-NEXT:    vcvttph2dq %ymm0, %zmm1
+; X86-NEXT:    vpbroadcastd {{.*#+}} zmm1 {%k1} = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
+; X86-NEXT:    vcmpunordph %ymm0, %ymm0, %k0
+; X86-NEXT:    knotw %k0, %k1
+; X86-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1} {z}
+; X86-NEXT:    retl
+  %x = call <16 x i32> @llvm.fptosi.sat.v16i32.v16f16(<16 x half> %f)
+  ret <16 x i32> %x
+}
+
+define <16 x i32> @fptoui_sat_v16i32_v16f16(<16 x half> %f) nounwind {
+; CHECK-LABEL: fptoui_sat_v16i32_v16f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfpclassph $215, %ymm0, %k0 # k0 = isQuietNaN(ymm0) | isPositiveZero(ymm0) | isNegativeZero(ymm0) | isNegativeInfinity(ymm0) | isNegative(ymm0) | isSignalingNaN(ymm0)
+; CHECK-NEXT:    knotw %k0, %k1
+; CHECK-NEXT:    vcvttph2udq %ymm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    ret{{[l|q]}}
+  %x = call <16 x i32> @llvm.fptoui.sat.v16i32.v16f16(<16 x half> %f)
+  ret <16 x i32> %x
+}
+
+define <32 x i32> @fptosi_sat_v32i32_v32f16(<32 x half> %f) nounwind {
+; CHECK-LABEL: fptosi_sat_v32i32_v32f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} ymm1 = [+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf]
+; CHECK-NEXT:    vcmpleph %ymm0, %ymm1, %k1
+; CHECK-NEXT:    vcvttph2dq %ymm0, %zmm2
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm3 = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
+; CHECK-NEXT:    vmovdqa32 %zmm3, %zmm2 {%k1}
+; CHECK-NEXT:    vcmpunordph %ymm0, %ymm0, %k0
+; CHECK-NEXT:    knotw %k0, %k1
+; CHECK-NEXT:    vmovdqa32 %zmm2, %zmm2 {%k1} {z}
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; CHECK-NEXT:    vcmpleph %ymm0, %ymm1, %k1
+; CHECK-NEXT:    vcvttph2dq %ymm0, %zmm1
+; CHECK-NEXT:    vmovdqa32 %zmm3, %zmm1 {%k1}
+; CHECK-NEXT:    vcmpunordph %ymm0, %ymm0, %k0
+; CHECK-NEXT:    knotw %k0, %k1
+; CHECK-NEXT:    vmovdqa32 %zmm1, %zmm1 {%k1} {z}
+; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %x = call <32 x i32> @llvm.fptosi.sat.v32i32.v32f16(<32 x half> %f)
+  ret <32 x i32> %x
+}
+
+define <32 x i32> @fptoui_sat_v32i32_v32f16(<32 x half> %f) nounwind {
+; CHECK-LABEL: fptoui_sat_v32i32_v32f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfpclassph $215, %ymm0, %k0 # k0 = isQuietNaN(ymm0) | isPositiveZero(ymm0) | isNegativeZero(ymm0) | isNegativeInfinity(ymm0) | isNegative(ymm0) | isSignalingNaN(ymm0)
+; CHECK-NEXT:    knotw %k0, %k1
+; CHECK-NEXT:    vcvttph2udq %ymm0, %zmm2 {%k1} {z}
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; CHECK-NEXT:    vfpclassph $215, %ymm0, %k0 # k0 = isQuietNaN(ymm0) | isPositiveZero(ymm0) | isNegativeZero(ymm0) | isNegativeInfinity(ymm0) | isNegative(ymm0) | isSignalingNaN(ymm0)
+; CHECK-NEXT:    knotw %k0, %k1
+; CHECK-NEXT:    vcvttph2udq %ymm0, %zmm1 {%k1} {z}
+; CHECK-NEXT:    vmovaps %zmm2, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %x = call <32 x i32> @llvm.fptoui.sat.v32i32.v32f16(<32 x half> %f)
+  ret <32 x i32> %x
+}
+
 attributes #0 = { "min-legal-vector-width"="256" "prefer-vector-width"="256" }

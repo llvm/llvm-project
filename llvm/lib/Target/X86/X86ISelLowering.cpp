@@ -22593,17 +22593,19 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
   assert(SatWidth <= 32 &&
          "Expected saturation width no wider than result element");
 
-  if (SrcVT.getScalarType() == MVT::f16 || SrcVT.getScalarType() == MVT::bf16) {
-    SrcVT = SrcVT.changeVectorElementType(MVT::f32);
+  MVT SrcEltVT = SrcVT.getScalarType();
+  if (SrcEltVT == MVT::bf16 ||
+      (SrcEltVT == MVT::f16 && (!Subtarget.hasFP16() || !Subtarget.hasVLX()))) {
+    SrcEltVT = MVT::f32;
+    SrcVT = SrcVT.changeVectorElementType(SrcEltVT);
     Src = DAG.getNode(ISD::FP_EXTEND, dl, SrcVT, Src);
   }
 
-  if (SatWidth == 32 && (SrcVT.getScalarType() == MVT::f32 ||
-                         SrcVT.getScalarType() == MVT::f64)) {
+  if (SatWidth == 32) {
     if (IsSigned) {
       EVT CCVT =
           TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
-      if (SrcVT.getScalarType() == MVT::f64) {
+      if (SrcEltVT == MVT::f64) {
         SDValue Clamped = DAG.getNode(ISD::PSEUDO_FMIN, dl, SrcVT, Src,
                                       DAG.getConstantFP(INT32_MAX, dl, SrcVT));
         SDValue NotNaN = DAG.getSetCC(dl, CCVT, Src, Src, ISD::SETO);
@@ -22614,9 +22616,10 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
       // Use X86ISD::CVTTP2SI (CVTTPS2DQ/CVTTPD2DQ) which has defined
       // out-of-range behavior: maps overflow and NaN to 0x80000000 (INT_MIN).
       SDValue Cvt = DAG.getNode(X86ISD::CVTTP2SI, dl, DstVT, Src);
-      APFloat PosOvfBoundFlt(SrcVT.getScalarType().getFltSemantics());
+      APFloat PosOvfBoundFlt(SrcEltVT.getFltSemantics());
       PosOvfBoundFlt.convertFromAPInt(APInt::getSignedMinValue(32),
-                                      /*IsSigned=*/true, APFloat::rmTowardZero);
+                                      /*IsSigned=*/true,
+                                      APFloat::rmNearestTiesToEven);
       PosOvfBoundFlt.changeSign();
       SDValue PosOvfBound = DAG.getConstantFP(PosOvfBoundFlt, dl, SrcVT);
       SDValue PosOvf = DAG.getSetCC(dl, CCVT, Src, PosOvfBound, ISD::SETOGE);
@@ -22638,7 +22641,8 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
       return DAG.getSelect(dl, DstVT, IsNaN, Zero, Fixed);
     }
 
-    if ((SrcVT.is512BitVector() || Subtarget.hasVLX()) && Subtarget.hasDQI()) {
+    if ((SrcVT.is512BitVector() || Subtarget.hasVLX()) &&
+        (Subtarget.hasDQI() || SrcEltVT == MVT::f16)) {
       // VCVTTP(S|D)2UDQ maps positive overflow to 0xFFFFFFFF (UINT_MAX), so
       // only negative values, zero, and NaN need to be clamped to 0.
       EVT CCVT =
@@ -22656,7 +22660,7 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
 
     SDValue ZeroFP = DAG.getConstantFP(0.0, dl, SrcVT);
     SDValue Clamped = DAG.getNode(X86ISD::FMAXC, dl, SrcVT, Src, ZeroFP);
-    APFloat OvfBoundFlt(SrcVT.getScalarType().getFltSemantics());
+    APFloat OvfBoundFlt(SrcEltVT.getFltSemantics());
     OvfBoundFlt.convertFromAPInt(APInt::getOneBitSet(33, 32),
                                  /*IsSigned=*/false, APFloat::rmTowardZero);
     SDValue OvfBound = DAG.getConstantFP(OvfBoundFlt, dl, SrcVT);
