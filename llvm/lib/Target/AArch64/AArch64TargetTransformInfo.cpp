@@ -5115,6 +5115,11 @@ AArch64TTIImpl::getBuildVectorContextHint(
       Scalars.size() * ScalarTy->getPrimitiveSizeInBits().getFixedValue() > 128)
     return VectorInstrContext::None;
 
+  // Same use limit as SLP, bounds the walk over the users of the scalar.
+  constexpr unsigned MaxUses = 64;
+  if ((*SplatIt)->hasNUsesOrMore(MaxUses))
+    return VectorInstrContext::None;
+
   SmallVector<TargetTransformInfo::BuildVectorUseOp, 4> UserOps;
   if (!GatherUseOps(UserOps) || UserOps.empty() ||
       any_of(UserOps, [](const TargetTransformInfo::BuildVectorUseOp &UserOp) {
@@ -5129,15 +5134,16 @@ AArch64TTIImpl::getBuildVectorContextHint(
   // is not fused.
   std::optional<unsigned> FusedOpcode;
   if (all_of((*SplatIt)->users(), [&](const User *U) {
-        if (!match(U, m_FMul(m_Value(), m_Value())))
+        const auto *FMul = dyn_cast<BinaryOperator>(U);
+        if (!FMul || FMul->getOpcode() != Instruction::FMul)
           return true;
-        if (!match(U, m_OneUse(m_AllowContract(m_FMul(m_Value(), m_Value())))))
+        if (!FMul->hasOneUse() || !FMul->hasAllowContract())
           return false;
-        const auto *FAddSub = cast<Instruction>(U->user_back());
-        if (FAddSub->getParent() != cast<Instruction>(U)->getParent() ||
-            !match(FAddSub,
-                   m_AllowContract(m_CombineOr(m_FAdd(m_Value(), m_Value()),
-                                               m_FSub(m_Value(), m_Value())))))
+        const auto *FAddSub = dyn_cast<BinaryOperator>(FMul->user_back());
+        if (!FAddSub || FAddSub->getParent() != FMul->getParent() ||
+            !FAddSub->hasAllowContract() ||
+            (FAddSub->getOpcode() != Instruction::FAdd &&
+             FAddSub->getOpcode() != Instruction::FSub))
           return false;
         if (!FusedOpcode)
           FusedOpcode = FAddSub->getOpcode();
