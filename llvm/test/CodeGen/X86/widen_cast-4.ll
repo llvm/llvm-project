@@ -8,7 +8,7 @@ define void @update(ptr %dst_i, ptr %src_i, i32 %n) nounwind {
 ; WIDE:       # %bb.0: # %entry
 ; WIDE-NEXT:    subl $12, %esp
 ; WIDE-NEXT:    movl $0, (%esp)
-; WIDE-NEXT:    pcmpeqd %xmm0, %xmm0
+; WIDE-NEXT:    movq {{.*#+}} xmm0 = [1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0]
 ; WIDE-NEXT:    movdqa {{.*#+}} xmm1 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
 ; WIDE-NEXT:    movdqa {{.*#+}} xmm2 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
 ; WIDE-NEXT:    .p2align 4
@@ -27,7 +27,7 @@ define void @update(ptr %dst_i, ptr %src_i, i32 %n) nounwind {
 ; WIDE-NEXT:    addl {{[0-9]+}}(%esp), %edx
 ; WIDE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; WIDE-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
-; WIDE-NEXT:    psubb %xmm0, %xmm3
+; WIDE-NEXT:    paddb %xmm0, %xmm3
 ; WIDE-NEXT:    psrlw $2, %xmm3
 ; WIDE-NEXT:    pand %xmm1, %xmm3
 ; WIDE-NEXT:    pxor %xmm2, %xmm3

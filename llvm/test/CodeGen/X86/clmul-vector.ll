@@ -822,9 +822,9 @@ define <2 x i64> @clmul_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 define <16 x i8> @clmulr_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; SSE2-LABEL: clmulr_v16i8:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; SSE2-NEXT:    movdqa %xmm1, %xmm4
 ; SSE2-NEXT:    psrlw $4, %xmm4
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; SSE2-NEXT:    pand %xmm2, %xmm4
 ; SSE2-NEXT:    pand %xmm2, %xmm1
 ; SSE2-NEXT:    psllw $4, %xmm1
@@ -835,6 +835,8 @@ define <16 x i8> @clmulr_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; SSE2-NEXT:    pand %xmm1, %xmm3
 ; SSE2-NEXT:    pand %xmm1, %xmm4
 ; SSE2-NEXT:    psllw $2, %xmm4
+; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
+; SSE2-NEXT:    pand %xmm7, %xmm4
 ; SSE2-NEXT:    por %xmm3, %xmm4
 ; SSE2-NEXT:    movdqa %xmm4, %xmm5
 ; SSE2-NEXT:    psrlw $1, %xmm5
@@ -845,18 +847,19 @@ define <16 x i8> @clmulr_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; SSE2-NEXT:    pand %xmm3, %xmm5
 ; SSE2-NEXT:    movdqa %xmm5, %xmm6
 ; SSE2-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE2-NEXT:    movdqa %xmm0, %xmm7
-; SSE2-NEXT:    psrlw $4, %xmm7
-; SSE2-NEXT:    pand %xmm2, %xmm7
+; SSE2-NEXT:    movdqa %xmm0, %xmm8
+; SSE2-NEXT:    psrlw $4, %xmm8
+; SSE2-NEXT:    pand %xmm2, %xmm8
 ; SSE2-NEXT:    pand %xmm2, %xmm0
 ; SSE2-NEXT:    psllw $4, %xmm0
-; SSE2-NEXT:    por %xmm7, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm7
-; SSE2-NEXT:    psrlw $2, %xmm7
-; SSE2-NEXT:    pand %xmm1, %xmm7
+; SSE2-NEXT:    por %xmm8, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm8
+; SSE2-NEXT:    psrlw $2, %xmm8
+; SSE2-NEXT:    pand %xmm1, %xmm8
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    psllw $2, %xmm0
-; SSE2-NEXT:    por %xmm7, %xmm0
+; SSE2-NEXT:    pand %xmm7, %xmm0
+; SSE2-NEXT:    por %xmm8, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm9
 ; SSE2-NEXT:    pand %xmm3, %xmm9
 ; SSE2-NEXT:    paddb %xmm9, %xmm9
@@ -2416,9 +2419,9 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 define <16 x i8> @clmulh_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; SSE2-LABEL: clmulh_v16i8:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; SSE2-NEXT:    movdqa %xmm1, %xmm4
 ; SSE2-NEXT:    psrlw $4, %xmm4
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; SSE2-NEXT:    pand %xmm2, %xmm4
 ; SSE2-NEXT:    pand %xmm2, %xmm1
 ; SSE2-NEXT:    psllw $4, %xmm1
@@ -2429,6 +2432,8 @@ define <16 x i8> @clmulh_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; SSE2-NEXT:    pand %xmm1, %xmm3
 ; SSE2-NEXT:    pand %xmm1, %xmm4
 ; SSE2-NEXT:    psllw $2, %xmm4
+; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
+; SSE2-NEXT:    pand %xmm7, %xmm4
 ; SSE2-NEXT:    por %xmm3, %xmm4
 ; SSE2-NEXT:    movdqa %xmm4, %xmm5
 ; SSE2-NEXT:    psrlw $1, %xmm5
@@ -2439,18 +2444,19 @@ define <16 x i8> @clmulh_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; SSE2-NEXT:    pand %xmm3, %xmm5
 ; SSE2-NEXT:    movdqa %xmm5, %xmm6
 ; SSE2-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE2-NEXT:    movdqa %xmm0, %xmm7
-; SSE2-NEXT:    psrlw $4, %xmm7
-; SSE2-NEXT:    pand %xmm2, %xmm7
+; SSE2-NEXT:    movdqa %xmm0, %xmm8
+; SSE2-NEXT:    psrlw $4, %xmm8
+; SSE2-NEXT:    pand %xmm2, %xmm8
 ; SSE2-NEXT:    pand %xmm2, %xmm0
 ; SSE2-NEXT:    psllw $4, %xmm0
-; SSE2-NEXT:    por %xmm7, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm7
-; SSE2-NEXT:    psrlw $2, %xmm7
-; SSE2-NEXT:    pand %xmm1, %xmm7
+; SSE2-NEXT:    por %xmm8, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm8
+; SSE2-NEXT:    psrlw $2, %xmm8
+; SSE2-NEXT:    pand %xmm1, %xmm8
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    psllw $2, %xmm0
-; SSE2-NEXT:    por %xmm7, %xmm0
+; SSE2-NEXT:    pand %xmm7, %xmm0
+; SSE2-NEXT:    por %xmm8, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm9
 ; SSE2-NEXT:    pand %xmm3, %xmm9
 ; SSE2-NEXT:    paddb %xmm9, %xmm9

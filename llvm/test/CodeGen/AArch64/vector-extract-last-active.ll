@@ -494,9 +494,13 @@ define i8 @extract_last_active_split(<vscale x 32 x i8> %data, <vscale x 32 x i1
 ; CHECK-NEXT:    index z2.b, #0, #1
 ; CHECK-NEXT:    ptest p1, p1.b
 ; CHECK-NEXT:    rdvl x10, #1
-; CHECK-NEXT:    str z1, [sp, #1, mul vl]
-; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    ptrue p2.b
+; CHECK-NEXT:    mov x11, sp
+; CHECK-NEXT:    cset w12, ne
+; CHECK-NEXT:    st1b { z1.b }, p2, [x11, x10]
+; CHECK-NEXT:    tst w12, #0x1
 ; CHECK-NEXT:    lastb w8, p1, z2.b
+; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    lastb w9, p0, z2.b
 ; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-NEXT:    add x8, x8, x10
@@ -505,8 +509,7 @@ define i8 @extract_last_active_split(<vscale x 32 x i8> %data, <vscale x 32 x i1
 ; CHECK-NEXT:    sub x9, x10, #1
 ; CHECK-NEXT:    ptest p0, p0.b
 ; CHECK-NEXT:    and x8, x8, x9
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    ldrb w8, [x9, x8]
+; CHECK-NEXT:    ldrb w8, [x11, x8]
 ; CHECK-NEXT:    csel w0, w8, w0, ne
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
