@@ -7,16 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/GlobalStatus.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -112,22 +116,56 @@ static bool analyzeGlobalAux(const Value *V, GlobalStatus &GS,
         // value, not an aggregate), keep more specific information about
         // stores.
         if (GS.StoredType != GlobalStatus::Stored) {
-          const Value *Ptr = SI->getPointerOperand()->stripPointerCasts();
-          if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(Ptr)) {
-            Value *StoredVal = SI->getOperand(0);
+          const DataLayout &DL = SI->getModule()->getDataLayout();
+          const Value *StorePtr = SI->getPointerOperand();
+          const GlobalVariable *GV = nullptr;
+          APInt Offset(64, 0);
+          bool HasConstantOffset = false;
 
-            if (Constant *C = dyn_cast<Constant>(StoredVal)) {
-              if (C->isThreadDependent()) {
-                // The stored value changes between threads; don't track it.
-                return true;
+          if (auto *PTy = dyn_cast<PointerType>(StorePtr->getType())) {
+            if (const auto *StoreGV = dyn_cast<GlobalVariable>(
+                    StorePtr->stripPointerCasts())) {
+              GV = StoreGV;
+              Offset = APInt(64, 0);
+              HasConstantOffset = true;
+            } else {
+              APInt APOffset(DL.getIndexTypeSizeInBits(PTy), 0);
+              const Value *Base = StorePtr->stripAndAccumulateConstantOffsets(
+                  DL, APOffset, /*AllowNonInbounds=*/true);
+              if (const auto *StoreGV = dyn_cast<GlobalVariable>(Base)) {
+                GV = StoreGV;
+                if (APOffset.getActiveBits() < 64) {
+                  Offset = APOffset.zextOrTrunc(64);
+                  HasConstantOffset = true;
+                }
+              }
+            }
+          }
+
+          if (GV) {
+            Value *StoredVal = SI->getOperand(0);
+            Constant *StoredC = dyn_cast<Constant>(StoredVal);
+
+            if (StoredC && StoredC->isThreadDependent()) {
+              // The stored value changes between threads; don't track it.
+              return true;
+            }
+
+            bool IsInitializerStore = false;
+            if (GV->hasInitializer()) {
+              if (StoredVal == GV->getInitializer()) {
+                IsInitializerStore = true;
+              } else if (StoredC && HasConstantOffset) {
+                if (Constant *InitSlice = ConstantFoldLoadFromConst(
+                        const_cast<Constant *>(GV->getInitializer()),
+                        StoredC->getType(), Offset, DL))
+                  IsInitializerStore = (InitSlice == StoredC);
               }
             }
 
-            if (GV->hasInitializer() && StoredVal == GV->getInitializer()) {
-              if (GS.StoredType < GlobalStatus::InitializerStored)
-                GS.StoredType = GlobalStatus::InitializerStored;
-            } else if (isa<LoadInst>(StoredVal) &&
-                       cast<LoadInst>(StoredVal)->getOperand(0) == GV) {
+            if (IsInitializerStore ||
+                (isa<LoadInst>(StoredVal) &&
+                 cast<LoadInst>(StoredVal)->getOperand(0) == GV)) {
               if (GS.StoredType < GlobalStatus::InitializerStored)
                 GS.StoredType = GlobalStatus::InitializerStored;
             } else if (GS.StoredType < GlobalStatus::StoredOnce) {
