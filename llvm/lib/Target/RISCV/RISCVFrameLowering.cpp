@@ -1121,6 +1121,12 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     return;
 
+  // The CFA is the SP before the Smip/Ssip hardware push, so describe it
+  // before any other prologue code.
+  if (needsDwarfCFI(MF) && RVFI->isACLICPushPopInterrupt(MF))
+    CFIInstBuilder(MBB, MBBI, MachineInstr::FrameSetup)
+        .buildDefCFAOffset(RVFI->getACLICInterruptStackSize());
+
   // SiFive CLIC needs to swap `sp` into `sf.mscratchcsw`
   emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL, MachineInstr::FrameSetup);
 
@@ -1149,12 +1155,6 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
                 getUnmanagedInterruptCSI(MF, CSI, PreferAscendingLS).size());
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
   bool NeedsDwarfCFI = needsDwarfCFI(MF);
-
-  // Smip/Ssip have already adjusted SP before the first handler instruction.
-  // The locations of the six saved registers are implementation-defined, so
-  // only describe the CFA adjustment here.
-  if (NeedsDwarfCFI && RVFI->isACLICPushPopInterrupt(MF))
-    CFIBuilder.buildDefCFAOffset(RVFI->getACLICInterruptStackSize());
 
   if (unsigned LibCallFrameSize = RVFI->getLibCallStackSize()) {
     if (NeedsDwarfCFI) {

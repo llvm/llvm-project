@@ -1576,10 +1576,10 @@ define void @m_push_pop_fp() #8 {
 define void @m_push_pop_scs() #9 {
 ; RV32-LABEL: m_push_pop_scs:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    .cfi_def_cfa_offset 32
 ; RV32-NEXT:    addi gp, gp, 4
 ; RV32-NEXT:    sw ra, -4(gp)
 ; RV32-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
-; RV32-NEXT:    .cfi_def_cfa_offset 32
 ; RV32-NEXT:    addi sp, sp, -48
 ; RV32-NEXT:    .cfi_def_cfa_offset 80
 ; RV32-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
@@ -1632,10 +1632,10 @@ define void @m_push_pop_scs() #9 {
 ;
 ; RV32E-LABEL: m_push_pop_scs:
 ; RV32E:       # %bb.0:
+; RV32E-NEXT:    .cfi_def_cfa_offset 24
 ; RV32E-NEXT:    addi gp, gp, 4
 ; RV32E-NEXT:    sw ra, -4(gp)
 ; RV32E-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
-; RV32E-NEXT:    .cfi_def_cfa_offset 24
 ; RV32E-NEXT:    addi sp, sp, -16
 ; RV32E-NEXT:    .cfi_def_cfa_offset 40
 ; RV32E-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -1664,10 +1664,10 @@ define void @m_push_pop_scs() #9 {
 ;
 ; RV64-LABEL: m_push_pop_scs:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    .cfi_def_cfa_offset 48
 ; RV64-NEXT:    addi gp, gp, 8
 ; RV64-NEXT:    sd ra, -8(gp)
 ; RV64-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
-; RV64-NEXT:    .cfi_def_cfa_offset 48
 ; RV64-NEXT:    addi sp, sp, -80
 ; RV64-NEXT:    .cfi_def_cfa_offset 128
 ; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
@@ -1720,10 +1720,10 @@ define void @m_push_pop_scs() #9 {
 ;
 ; RV64E-LABEL: m_push_pop_scs:
 ; RV64E:       # %bb.0:
+; RV64E-NEXT:    .cfi_def_cfa_offset 48
 ; RV64E-NEXT:    addi gp, gp, 8
 ; RV64E-NEXT:    sd ra, -8(gp)
 ; RV64E-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
-; RV64E-NEXT:    .cfi_def_cfa_offset 48
 ; RV64E-NEXT:    addi sp, sp, -32
 ; RV64E-NEXT:    .cfi_def_cfa_offset 80
 ; RV64E-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
