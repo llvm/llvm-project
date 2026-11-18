@@ -398,7 +398,6 @@ foreach index = !range(0, 32) in {
 // Inline PTX op definition
 //===----------------------------------------------------------------------===//
 
-let partition = NVVM_MiscPartition in {
 def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx", 
   [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>, 
     AttrSizedOperandSegments]>
@@ -449,6 +448,7 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
       : (!llvm.ptr, i32, i1) -> ()
     ```
   }];
+  let partition = NVVM_MiscPartition;
 
   let arguments = (ins Variadic<AnyType>:$readOnlyArgs,
                        Variadic<AnyType>:$readWriteArgs,
@@ -480,7 +480,6 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
     bool hasMemoryClobber() { return getMemoryClobber(); }
   }];
 }
-} // let partition = NVVM_MiscPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM approximate op definitions
@@ -590,7 +589,6 @@ def NVVM_RsqrtOp
 // NVVM redux op definitions
 //===----------------------------------------------------------------------===//
 
-let partition = NVVM_SyncPartition in {
 def NVVM_ReduxOp :
   NVVM_Op<"redux.sync", [NVVMRequiresSM<80>, AllTypesMatch<["res", "val"]>]>,
   Results<(outs AnyTypeOf<[I32, F32]>:$res)>,
@@ -612,6 +610,7 @@ def NVVM_ReduxOp :
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-redux-sync)
   }];
+  let partition = NVVM_SyncPartition;
   let hasVerifier = 1;
 
   string llvmBuilder = [{
@@ -624,7 +623,6 @@ def NVVM_ReduxOp :
     ) attr-dict `:` type($val) `->` type($res)
    }];   
 }
-} // let partition = NVVM_SyncPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM nanosleep
@@ -1720,8 +1718,8 @@ def SetMaxRegisterAction : I32EnumAttr<"SetMaxRegisterAction", "NVVM set max reg
 }
 def SetMaxRegisterActionAttr : EnumAttr<NVVM_Dialect, SetMaxRegisterAction, "action">;
 
-let partition = NVVM_MiscPartition in {
 def NVVM_SetMaxRegisterOp : NVVM_Op<"setmaxregister"> {
+  let partition = NVVM_MiscPartition;
   let arguments = (ins I32Attr:$regCount, SetMaxRegisterActionAttr:$action);
   let assemblyFormat = "enum($action) $regCount attr-dict";
   let hasVerifier = 1;
@@ -1733,7 +1731,6 @@ def NVVM_SetMaxRegisterOp : NVVM_Op<"setmaxregister"> {
     createIntrinsicCall(builder, intId, builder.getInt32($regCount));
   }];
 }
-} // let partition = NVVM_MiscPartition
 
 def ShflKindBfly : I32EnumAttrCase<"bfly", 0>;
 def ShflKindUp   : I32EnumAttrCase<"up", 1>;
@@ -1748,7 +1745,6 @@ def ShflKind : I32EnumAttr<"ShflKind", "NVVM shuffle kind",
 }
 def ShflKindAttr : EnumAttr<NVVM_Dialect, ShflKind, "shfl_kind">;
 
-let partition = NVVM_DataMovementPartition in {
 def NVVM_ShflOp :
   NVVM_Op<"shfl.sync", [NVVMRequiresSM<30>, InferTypeOpAdaptor]>,
   Results<(outs AnyTypeOf<[I32, F32, LLVMStructType]>:$res)>,
@@ -1776,6 +1772,7 @@ def NVVM_ShflOp :
     
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-shfl-sync)
   }];
+  let partition = NVVM_DataMovementPartition;
   string llvmBuilder = [{
       auto intId = getShflIntrinsicId(
           $_resultType, $kind, static_cast<bool>($return_value_and_is_valid));
@@ -1789,7 +1786,6 @@ def NVVM_ShflOp :
    }];
    let hasVerifier = 1;
 }
-} // let partition = NVVM_DataMovementPartition
 
 def VoteSyncKindAny : I32EnumAttrCase<"any", 0>;
 def VoteSyncKindAll : I32EnumAttrCase<"all", 1>;
@@ -1919,7 +1915,6 @@ def PermuteMode : I32EnumAttr<"PermuteMode", "NVVM permute mode",
 
 def PermuteModeAttr : EnumAttr<NVVM_Dialect, PermuteMode, "permute_mode">;
 
-let partition = NVVM_DataMovementPartition in {
 def NVVM_PermuteOp : NVVM_SingleResultIntrinsicOp<"prmt", [Pure]>,
                      Results<(outs I32:$res)>,
                      Arguments<(ins I32:$lo, Optional<I32>:$hi, I32:$selector,
@@ -2002,6 +1997,7 @@ def NVVM_PermuteOp : NVVM_SingleResultIntrinsicOp<"prmt", [Pure]>,
     [For more information, see PTX ISA]
     (https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prmt)
   }];
+  let partition = NVVM_DataMovementPartition;
 
   let assemblyFormat = [{
     $mode $selector `,` $lo  (`,` $hi^)?  attr-dict `:` type($res)
@@ -2009,7 +2005,6 @@ def NVVM_PermuteOp : NVVM_SingleResultIntrinsicOp<"prmt", [Pure]>,
 
   let hasVerifier = 1;
 }
-} // let partition = NVVM_DataMovementPartition
 
 def LoadCacheModifierCA : I32EnumAttrCase<"CA", 0, "ca">;
 def LoadCacheModifierCG : I32EnumAttrCase<"CG", 1, "cg">;
@@ -2078,7 +2073,6 @@ def NVVM_CpAsyncWaitGroupOp : NVVM_Op<"cp.async.wait.group">,
 }
 } // let partition = NVVM_AsyncCopyPartition
 
-let partition = NVVM_MBarrierPartition in {
 def NVVM_CpAsyncMBarrierArriveOp : NVVM_VoidIntrinsicOp<"cp.async.mbarrier.arrive"> {
   let summary = "NVVM Dialect Op for cp.async.mbarrier.arrive";
   let description = [{
@@ -2092,6 +2086,7 @@ def NVVM_CpAsyncMBarrierArriveOp : NVVM_VoidIntrinsicOp<"cp.async.mbarrier.arriv
     
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-cp-async-mbarrier-arrive)
   }];
+  let partition = NVVM_MBarrierPartition;
 
   let arguments = (ins
     AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
@@ -2101,7 +2096,6 @@ def NVVM_CpAsyncMBarrierArriveOp : NVVM_VoidIntrinsicOp<"cp.async.mbarrier.arriv
     $addr oilist(`noinc` `=` $noinc) attr-dict `:` type(operands)
   }];
 }
-} // let partition = NVVM_MBarrierPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Conversion Ops (for "cvt.*" family of PTX instructions)
@@ -3996,9 +3990,7 @@ class MMA_SP_SYNC_INTR {
   string id = !foldl("", f3, acc, el, acc # "\n" # el);
 }
 
-let partition = NVVM_MmaPartition in {
 def NVVM_MmaSpOp : NVVM_Op<"mma.sp.sync", [AttrSizedOperandSegments]> {
-
   let summary = "cooperative sparse matrix-multiply and accumulate";
 
   let description = [{
@@ -4042,6 +4034,8 @@ def NVVM_MmaSpOp : NVVM_Op<"mma.sp.sync", [AttrSizedOperandSegments]> {
         : (vector<2xf16>, vector<2xf16>, vector<2xf16>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
     ```
   }];
+
+  let partition = NVVM_MmaPartition;
 
   let results = (outs LLVM_AnyStruct:$res);
   let arguments = (ins NVVM_MMAShapeAttr:$shape,
@@ -4102,7 +4096,6 @@ def NVVM_MmaSpOp : NVVM_Op<"mma.sp.sync", [AttrSizedOperandSegments]> {
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
-} // let partition = NVVM_MmaPartition
 
 def ScaleVecSize1X  : I32EnumAttrCase<"X1", 0, "x1">;
 def ScaleVecSize2X  : I32EnumAttrCase<"X2", 1, "x2">;
@@ -5484,7 +5477,6 @@ def WGMMATypes : I32EnumAttr<"WGMMATypes", "NVVM WGMMA types",
 def WGMMATypesAttr : EnumAttr<NVVM_Dialect, WGMMATypes, "wgmma_type">;
 
 
-let partition = NVVM_WgmmaPartition in {
 def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async", 
               [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>,
                 PredOpTrait<"input struct and result struct must be the same type",
@@ -5573,6 +5565,8 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
     
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#asynchronous-warpgroup-level-matrix-instructions)
   }];
+
+  let partition = NVVM_WgmmaPartition;
   
   let hasVerifier = 1;
 
@@ -5580,7 +5574,6 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
     bool getAsmValues(RewriterBase &, llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &);
   }];
 }
-} // let partition = NVVM_WgmmaPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Griddepcontrol Ops
@@ -5596,7 +5589,6 @@ def GridDepActionKind : I32Enum<"GridDepActionKind", "Action kind for grid depen
 
 def GridDepActionAttr : EnumAttr<NVVM_Dialect, GridDepActionKind, "grid_dep_action">;
 
-let partition = NVVM_SyncPartition in {
 def NVVM_GriddepcontrolOp : NVVM_Op<"griddepcontrol", []> {
   let description = [{
     If the $kind attribute is set to `wait`, it causes the 
@@ -5611,6 +5603,7 @@ def NVVM_GriddepcontrolOp : NVVM_Op<"griddepcontrol", []> {
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-griddepcontrol)
   }];
+  let partition = NVVM_SyncPartition;
 
   let arguments = (ins GridDepActionAttr:$kind);
 
@@ -5629,17 +5622,16 @@ def NVVM_GriddepcontrolOp : NVVM_Op<"griddepcontrol", []> {
       createIntrinsicCall(builder, id);
   }];
 }
-} // let partition = NVVM_SyncPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Mapa Op
 //===----------------------------------------------------------------------===//
 
-let partition = NVVM_DataMovementPartition in {
 def NVVM_MapaOp: NVVM_Op<"mapa",
   [InputAddressIsCombinationOf<["a", "res"],
     [[LLVM_PointerShared, LLVM_PointerSharedCluster], [LLVM_PointerGeneric, LLVM_PointerGeneric]],
     "Valid address-space check(or mapping) for mapa Op">, NVVMRequiresSM<90>]> {
+  let partition = NVVM_DataMovementPartition;
   let results = (outs AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerSharedCluster]>:$res);
   let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$a, I32:$b);
 
@@ -5654,7 +5646,6 @@ def NVVM_MapaOp: NVVM_Op<"mapa",
   
   let assemblyFormat = "$a`,` $b attr-dict `:` type($a) `->` type($res)";
 }
-} // let partition = NVVM_DataMovementPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM match.sync Op
@@ -5671,7 +5662,6 @@ def MatchSyncKind : I32EnumAttr<"MatchSyncKind", "NVVM match sync kind",
 
 def MatchSyncKindAttr : EnumAttr<NVVM_Dialect, MatchSyncKind, "match_sync_kind">;
 
-let partition = NVVM_SyncPartition in {
 def NVVM_MatchSyncOp : NVVM_Op<"match.sync", [InferTypeOpAdaptor]>,
   Results<(outs AnyTypeOf<[I32, LLVMStructType]>:$res)>,
   Arguments<(ins I32:$thread_mask,
@@ -5693,6 +5683,7 @@ def NVVM_MatchSyncOp : NVVM_Op<"match.sync", [InferTypeOpAdaptor]>,
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-match-sync)
   }];
+  let partition = NVVM_SyncPartition;
   string llvmBuilder = [{
     auto intId = getMatchSyncIntrinsicId(
         op.getVal().getType(), $kind);
@@ -5703,7 +5694,6 @@ def NVVM_MatchSyncOp : NVVM_Op<"match.sync", [InferTypeOpAdaptor]>,
                        "type($val) `->` type($res)";
   let hasVerifier = 1;
 }
-} // let partition = NVVM_SyncPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Bulk Store Op
@@ -6584,7 +6574,6 @@ def NVVM_DotAccumulate2WayOp : NVVM_SingleResultIntrinsicOp<"dot.accumulate.2way
 // NVVM clusterlaunchcontrol Ops.
 //===----------------------------------------------------------------------===//
 
-let partition = NVVM_SyncPartition in {
 def NVVM_ClusterLaunchControlTryCancelOp
     : NVVM_Op<"clusterlaunchcontrol.try.cancel", [NVVMRequiresSM<100>]> {
   let summary = "Request atomically canceling the launch of a cluster that has not started running yet";
@@ -6606,6 +6595,7 @@ def NVVM_ClusterLaunchControlTryCancelOp
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-try-cancel)
   }];
+  let partition = NVVM_SyncPartition;
 
   let arguments = (ins UnitAttr:$multicast, 
                        LLVM_PointerShared: $smemAddress,
@@ -6626,7 +6616,6 @@ def NVVM_ClusterLaunchControlTryCancelOp
     createIntrinsicCall(builder, id, args);
   }];
 }
-} // let partition = NVVM_SyncPartition
 
 def ClusterLaunchControlIsCanceled
   : I32EnumCase<"IS_CANCELED", 0, "is_canceled">;
@@ -6649,7 +6638,6 @@ def ClusterLaunchControlQueryTypeAttr
   : EnumAttr<NVVM_Dialect,
       ClusterLaunchControlQueryType, "cluster_launch_control_query_type">;
 
-let partition = NVVM_SyncPartition in {
 def NVVM_ClusterLaunchControlQueryCancelOp
     : NVVM_Op<"clusterlaunchcontrol.query.cancel",
               [NVVMRequiresSM<100>, InferTypeOpAdaptor]> {
@@ -6669,6 +6657,7 @@ def NVVM_ClusterLaunchControlQueryCancelOp
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-query-cancel)
   }];
+  let partition = NVVM_SyncPartition;
 
   let arguments = (ins ClusterLaunchControlQueryTypeAttr:$query_type, 
                        I128:$try_cancel_response);
@@ -6692,7 +6681,6 @@ def NVVM_ClusterLaunchControlQueryCancelOp
     $res = createIntrinsicCall(builder, id, args);
   }];
 }
-} // let partition = NVVM_SyncPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM tcgen05.mma Ops
@@ -7366,7 +7354,6 @@ defvar Tcgen05MMABlockScaleDecompressBScaleAttr =
     [EnumAttrIsOneOf<Tcgen05MMABlockScaleAttr,
                      Tcgen05MMABlockScaleDecompressBScaleList>]>;
 
-let partition = NVVM_Tcgen05Partition in {
 def NVVM_Tcgen05MMABlockScaleDecompressBOp :
     NVVM_VoidIntrinsicOp<"tcgen05.mma.block_scale.decompress_b",
                          [NVVMRequiresSMf<[107]>]> {
@@ -7399,6 +7386,7 @@ def NVVM_Tcgen05MMABlockScaleDecompressBOp :
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma)
   }];
+  let partition = NVVM_Tcgen05Partition;
 
   let arguments = (ins
       LLVM_PointerTensor:$matrixD,
@@ -7429,7 +7417,6 @@ def NVVM_Tcgen05MMABlockScaleDecompressBOp :
     ) attr-dict `:` `(` type(operands) `)`
   }];
 }
-} // let partition = NVVM_Tcgen05Partition
 
 //===----------------------------------------------------------------------===//
 // NVVM sparse.compress and sparse.decompress Ops
@@ -7954,7 +7941,6 @@ def TensormapFieldValueAttr :
     TensormapSwizzleModeAttr, TensormapSwizzleAtomicityAttr, 
     TensormapFillModeAttr]>;
 
-let partition = NVVM_AsyncCopyPartition in {
 def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace",
     [NVVMRequiresSMaOrSMf<[90, 103], [100, 101, 110, 120]>]> {
   let summary = "Modifies a field of the tensor-map object";
@@ -7988,6 +7974,7 @@ def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace",
 
     [For more information, see PTX ISA.](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-tensormap-replace)
   }];
+  let partition = NVVM_AsyncCopyPartition;
 
   let hasVerifier = 1;
   let arguments = (ins
@@ -8003,7 +7990,6 @@ def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace",
     ($new_value_attr^):($new_value)? `in` $addr attr-dict `:` type(operands)
   }];
 }
-} // let partition = NVVM_AsyncCopyPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM target attribute.
