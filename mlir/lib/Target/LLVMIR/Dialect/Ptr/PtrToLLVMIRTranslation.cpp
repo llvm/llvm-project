@@ -259,6 +259,13 @@ translateMaskedLoadOp(MaskedLoadOp maskedLoadOp, llvm::IRBuilderBase &builder,
   llvm::Value *result = builder.CreateMaskedLoad(
       resultType, ptr, alignment.valueOrOne(), mask, passthrough);
 
+  if (maskedLoadOp.getNontemporal()) {
+    llvm::MDNode *metadata =
+        llvm::MDNode::get(result->getContext(),
+                          llvm::ConstantAsMetadata::get(builder.getInt32(1)));
+    llvm::cast<llvm::Instruction>(result)->setMetadata(
+        llvm::LLVMContext::MD_nontemporal, metadata);
+  }
   moduleTranslation.mapValue(maskedLoadOp.getResult(), result);
   return success();
 }
