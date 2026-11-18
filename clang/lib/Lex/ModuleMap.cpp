@@ -319,7 +319,7 @@ void ModuleMap::resolveHeader(Module *Mod,
   } else {
     // If we find a module that has a missing header, we mark this module as
     // unavailable and store the header directive for displaying diagnostics.
-    Mod->addMissingHeaders(Header);
+    Mod->MissingHeaders.push_back(Header);
     // A missing header with stat information doesn't make the module
     // unavailable; this keeps our behavior consistent as headers are lazily
     // resolved. (Such a module still can't be built though, except from
@@ -1407,7 +1407,7 @@ void ModuleMap::addUnresolvedHeader(Module *Mod,
       LazyHeadersByModTime[*Header.ModTime].push_back(Mod);
     else
       LazyHeadersBySize[*Header.Size].push_back(Mod);
-    Mod->addUnresolvedHeader(std::move(Header));
+    Mod->UnresolvedHeaders.push_back(Header);
     return;
   }
 
@@ -1435,21 +1435,20 @@ void ModuleMap::resolveHeaderDirectives(const FileEntry *File) const {
 void ModuleMap::resolveHeaderDirectives(
     Module *Mod, std::optional<const FileEntry *> File) const {
   bool NeedsFramework = false;
-  SmallVector<Module::UnresolvedHeaderDirective, 1> NewHeaders;
+  SmallVector<Module::UnresolvedHeaderDirective, 0> NewHeaders;
   const auto Size = File ? (*File)->getSize() : 0;
   const auto ModTime = File ? (*File)->getModificationTime() : 0;
 
-  for (auto &Header : Mod->takeUnresolvedHeaders()) {
+  for (auto &Header : Mod->UnresolvedHeaders) {
     if (File && ((Header.ModTime && Header.ModTime != ModTime) ||
                  (Header.Size && Header.Size != Size)))
-      NewHeaders.push_back(std::move(Header));
+      NewHeaders.push_back(Header);
     else
       // This operation is logically const; we're just changing how we represent
       // the header information for this file.
       const_cast<ModuleMap *>(this)->resolveHeader(Mod, Header, NeedsFramework);
   }
-  for (auto &Header : NewHeaders)
-    Mod->addUnresolvedHeader(std::move(Header));
+  Mod->UnresolvedHeaders.swap(NewHeaders);
 }
 
 void ModuleMap::addHeader(Module *Mod, Module::Header Header,
@@ -1680,39 +1679,45 @@ LLVM_DUMP_METHOD void ModuleMap::dump() {
 }
 
 bool ModuleMap::resolveExports(Module *Mod, bool Complain) {
-  for (auto &UE : Mod->takeUnresolvedExports()) {
+  auto Unresolved = std::move(Mod->UnresolvedExports);
+  Mod->UnresolvedExports.clear();
+  for (auto &UE : Unresolved) {
     Module::ExportDecl Export = resolveExport(Mod, UE, Complain);
     if (Export.first || Export.second)
       Mod->Exports.push_back(Export);
     else
-      Mod->addUnresolvedExport(std::move(UE));
+      Mod->UnresolvedExports.push_back(UE);
   }
-  return !Mod->getUnresolvedExports().empty();
+  return !Mod->UnresolvedExports.empty();
 }
 
 bool ModuleMap::resolveUses(Module *Mod, bool Complain) {
   auto *Top = Mod->getTopLevelModule();
-  for (auto &UDU : Top->takeUnresolvedDirectUses()) {
+  auto Unresolved = std::move(Top->UnresolvedDirectUses);
+  Top->UnresolvedDirectUses.clear();
+  for (auto &UDU : Unresolved) {
     Module *DirectUse = resolveModuleId(UDU, Top, Complain);
     if (DirectUse)
       Top->DirectUses.push_back(DirectUse);
     else
-      Top->addUnresolvedDirectUse(std::move(UDU));
+      Top->UnresolvedDirectUses.push_back(UDU);
   }
-  return !Top->getUnresolvedDirectUses().empty();
+  return !Top->UnresolvedDirectUses.empty();
 }
 
 bool ModuleMap::resolveConflicts(Module *Mod, bool Complain) {
-  for (auto &UC : Mod->takeUnresolvedConflicts()) {
+  auto Unresolved = std::move(Mod->UnresolvedConflicts);
+  Mod->UnresolvedConflicts.clear();
+  for (auto &UC : Unresolved) {
     if (Module *OtherMod = resolveModuleId(UC.Id, Mod, Complain)) {
       Module::Conflict Conflict;
       Conflict.Other = OtherMod;
       Conflict.Message = UC.Message;
       Mod->Conflicts.push_back(Conflict);
     } else
-      Mod->addUnresolvedConflict(std::move(UC));
+      Mod->UnresolvedConflicts.push_back(UC);
   }
-  return !Mod->getUnresolvedConflicts().empty();
+  return !Mod->UnresolvedConflicts.empty();
 }
 
 //----------------------------------------------------------------------------//
@@ -2043,8 +2048,8 @@ void ModuleMapLoader::handleModuleDecl(const modulemap::ModuleDecl &MD) {
   if (!ActiveModule->IsAvailable && !ActiveModule->IsUnimportable &&
       ActiveModule->Parent) {
     ActiveModule->getTopLevelModule()->markUnavailable(/*Unimportable=*/false);
-    ActiveModule->getTopLevelModule()->addMissingHeaders(
-        ActiveModule->getMissingHeaders());
+    ActiveModule->getTopLevelModule()->MissingHeaders.append(
+      ActiveModule->MissingHeaders.begin(), ActiveModule->MissingHeaders.end());
   }
 
   // We're done parsing this module. Pop back to the previous module.
@@ -2266,7 +2271,7 @@ void ModuleMapLoader::handleUmbrellaDirDecl(
 
 void ModuleMapLoader::handleExportDecl(const modulemap::ExportDecl &ED) {
   Module::UnresolvedExportDecl Unresolved = {ED.Location, ED.Id, ED.Wildcard};
-  ActiveModule->addUnresolvedExport(std::move(Unresolved));
+  ActiveModule->UnresolvedExports.push_back(Unresolved);
 }
 
 void ModuleMapLoader::handleExportAsDecl(const modulemap::ExportAsDecl &EAD) {
@@ -2291,7 +2296,7 @@ void ModuleMapLoader::handleUseDecl(const modulemap::UseDecl &UD) {
   if (ActiveModule->Parent)
     Diags.Report(UD.Location, diag::err_mmap_use_decl_submodule);
   else
-    ActiveModule->addUnresolvedDirectUse(UD.Id);
+    ActiveModule->UnresolvedDirectUses.push_back(UD.Id);
 }
 
 void ModuleMapLoader::handleLinkDecl(const modulemap::LinkDecl &LD) {
@@ -2322,7 +2327,7 @@ void ModuleMapLoader::handleConflict(const modulemap::ConflictDecl &CD) {
   Conflict.Message = CD.Message;
 
   // FIXME: when we move to C++20 we should consider using emplace_back
-  ActiveModule->addUnresolvedConflict(std::move(Conflict));
+  ActiveModule->UnresolvedConflicts.push_back(std::move(Conflict));
 }
 
 void ModuleMapLoader::handleInferredModuleDecl(

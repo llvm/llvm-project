@@ -371,11 +371,11 @@ bool ModularizeUtilities::collectModuleHeaders(const clang::Module &Mod) {
   for (const auto &Header : Mod.getHeaders(clang::Module::HK_Normal))
     HeaderFileNames.push_back(getCanonicalPath(Header.Entry.getName()));
 
-  int MissingCountThisModule = Mod.getMissingHeaders().size();
+  int MissingCountThisModule = Mod.MissingHeaders.size();
 
   for (int Index = 0; Index < MissingCountThisModule; ++Index) {
-    std::string MissingFile = Mod.getMissingHeaders()[Index].FileName;
-    SourceLocation Loc = Mod.getMissingHeaders()[Index].FileNameLoc;
+    std::string MissingFile = Mod.MissingHeaders[Index].FileName;
+    SourceLocation Loc = Mod.MissingHeaders[Index].FileNameLoc;
     errs() << Loc.printToString(*SourceMgr)
       << ": error : Header not found: " << MissingFile << "\n";
   }

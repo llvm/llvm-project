@@ -2266,7 +2266,7 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
 
       // If the file didn't exist, we can still create a module if we were given
       // enough information in the module map.
-      for (const auto &U : M->getMissingHeaders()) {
+      for (const auto &U : M->MissingHeaders) {
         // Check that we were given enough information to build a module
         // without this file existing on disk.
         if (!U.Size || (!U.ModTime && IncludeTimestamps)) {

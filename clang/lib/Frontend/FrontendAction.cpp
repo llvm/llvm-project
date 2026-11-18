@@ -614,8 +614,8 @@ static std::error_code collectModuleHeaderIncludes(
   // if explicit stat information was provided.
   // FIXME: If the name resolves to a file with different stat information,
   // produce a better diagnostic.
-  if (!Module->getMissingHeaders().empty()) {
-    auto &MissingHeader = Module->getMissingHeaders().front();
+  if (!Module->MissingHeaders.empty()) {
+    auto &MissingHeader = Module->MissingHeaders.front();
     Diag.Report(MissingHeader.FileNameLoc, diag::err_module_header_missing)
       << MissingHeader.IsUmbrella << MissingHeader.FileName;
     return std::error_code();

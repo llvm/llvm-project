@@ -32,7 +32,6 @@
 #include <cstdint>
 #include <ctime>
 #include <iterator>
-#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
@@ -536,6 +535,14 @@ public:
     std::optional<time_t> ModTime;
   };
 
+  /// Headers that are mentioned in the module map file but that we have not
+  /// yet attempted to resolve to a file on the file system.
+  SmallVector<UnresolvedHeaderDirective, 0> UnresolvedHeaders;
+
+  /// Headers that are mentioned in the module map file but could not be
+  /// found on the file system.
+  SmallVector<UnresolvedHeaderDirective, 0> MissingHeaders;
+
   struct Requirement {
     std::string FeatureName;
     bool RequiredState;
@@ -681,8 +688,14 @@ public:
     bool Wildcard;
   };
 
+  /// The set of export declarations that have yet to be resolved.
+  SmallVector<UnresolvedExportDecl, 1> UnresolvedExports;
+
   /// The directly used modules.
   SmallVector<Module *, 2> DirectUses;
+
+  /// The set of use declarations that have yet to be resolved.
+  SmallVector<ModuleId, 0> UnresolvedDirectUses;
 
   /// When \c NoUndeclaredIncludes is true, the set of modules this module tried
   /// to import but didn't because they are not direct uses.
@@ -726,6 +739,10 @@ public:
     std::string Message;
   };
 
+  /// The list of conflicts for which the module-id has not yet been
+  /// resolved.
+  SmallVector<UnresolvedConflict, 0> UnresolvedConflicts;
+
   /// A conflict between two modules.
   struct Conflict {
     /// The module that this module conflicts with.
@@ -737,159 +754,6 @@ public:
 
   /// The list of conflicts.
   std::vector<Conflict> Conflicts;
-
-private:
-  /// Out-of-line storage for a group of members that are empty in the vast
-  /// majority of modules, to keep \c Module small.
-  ///
-  /// The storage is allocated on the first write through \c getOrCreate() or
-  /// \c set(), and freed again as soon as \c take(), \c clear() or \c set()
-  /// leave it empty. That's determined by \c T::empty(), which therefore has to
-  /// check every member of \c T.
-  template <typename T> class LazyMembers {
-    std::unique_ptr<T> Storage;
-
-    void releaseIfEmpty() {
-      if (Storage && Storage->empty())
-        Storage.reset();
-    }
-
-  public:
-    /// The members, or an empty instance if they haven't been allocated.
-    const T &get() const {
-      if (Storage)
-        return *Storage;
-      static const T Empty;
-      return Empty;
-    }
-
-    /// The members, allocated if needed.
-    T &getOrCreate() {
-      if (!Storage)
-        Storage = std::make_unique<T>();
-      return *Storage;
-    }
-
-    /// Moves the member \p M out, leaving it empty.
-    template <typename MemberT> MemberT take(MemberT T::*M) {
-      if (!Storage)
-        return MemberT();
-      MemberT Value = std::exchange((*Storage).*M, MemberT());
-      releaseIfEmpty();
-      return Value;
-    }
-
-    /// Empties the member \p M.
-    template <typename MemberT> void clear(MemberT T::*M) { (void)take(M); }
-
-    /// Sets the member \p M to \p Value, without allocating the storage if
-    /// \p Value is empty.
-    template <typename MemberT, typename ValueT>
-    void set(MemberT T::*M, ValueT &&Value) {
-      if (!Storage && Value.empty())
-        return;
-      getOrCreate().*M = std::forward<ValueT>(Value);
-      releaseIfEmpty();
-    }
-  };
-
-  /// Module map directives that have not been resolved (yet), plus headers
-  /// that could not be found.
-  ///
-  /// These can only be non-empty for modules defined by a parsed module map
-  /// (most of the time only the unresolved exports are).
-  struct UnresolvedDirectives {
-    /// Headers that are mentioned in the module map file but that we have not
-    /// yet attempted to resolve to a file on the file system.
-    SmallVector<UnresolvedHeaderDirective, 0> Headers;
-
-    /// Headers that are mentioned in the module map file but could not be
-    /// found on the file system.
-    SmallVector<UnresolvedHeaderDirective, 0> MissingHeaders;
-
-    /// The set of export declarations that have yet to be resolved.
-    SmallVector<UnresolvedExportDecl, 1> Exports;
-
-    /// The set of use declarations that have yet to be resolved.
-    SmallVector<ModuleId, 0> DirectUses;
-
-    /// The list of conflicts for which the module-id has not yet been
-    /// resolved.
-    SmallVector<UnresolvedConflict, 0> Conflicts;
-
-    bool empty() const {
-      return Headers.empty() && MissingHeaders.empty() && Exports.empty() &&
-             DirectUses.empty() && Conflicts.empty();
-    }
-  };
-
-  LazyMembers<UnresolvedDirectives> Unresolved;
-
-public:
-  /// Headers that are mentioned in the module map file but that we have not
-  /// yet attempted to resolve to a file on the file system.
-  ArrayRef<UnresolvedHeaderDirective> getUnresolvedHeaders() const {
-    return Unresolved.get().Headers;
-  }
-  void addUnresolvedHeader(UnresolvedHeaderDirective Header) {
-    Unresolved.getOrCreate().Headers.push_back(std::move(Header));
-  }
-  SmallVector<UnresolvedHeaderDirective, 0> takeUnresolvedHeaders() {
-    return Unresolved.take(&UnresolvedDirectives::Headers);
-  }
-
-  /// Headers that are mentioned in the module map file but could not be
-  /// found on the file system.
-  ArrayRef<UnresolvedHeaderDirective> getMissingHeaders() const {
-    return Unresolved.get().MissingHeaders;
-  }
-  void addMissingHeaders(ArrayRef<UnresolvedHeaderDirective> Headers) {
-    if (!Headers.empty())
-      llvm::append_range(Unresolved.getOrCreate().MissingHeaders, Headers);
-  }
-  void clearMissingHeaders() {
-    Unresolved.clear(&UnresolvedDirectives::MissingHeaders);
-  }
-
-  /// The set of export declarations that have yet to be resolved.
-  ArrayRef<UnresolvedExportDecl> getUnresolvedExports() const {
-    return Unresolved.get().Exports;
-  }
-  void addUnresolvedExport(UnresolvedExportDecl Export) {
-    Unresolved.getOrCreate().Exports.push_back(std::move(Export));
-  }
-  SmallVector<UnresolvedExportDecl, 1> takeUnresolvedExports() {
-    return Unresolved.take(&UnresolvedDirectives::Exports);
-  }
-  void clearUnresolvedExports() {
-    Unresolved.clear(&UnresolvedDirectives::Exports);
-  }
-
-  /// The set of use declarations that have yet to be resolved.
-  ArrayRef<ModuleId> getUnresolvedDirectUses() const {
-    return Unresolved.get().DirectUses;
-  }
-  void addUnresolvedDirectUse(ModuleId Use) {
-    Unresolved.getOrCreate().DirectUses.push_back(std::move(Use));
-  }
-  SmallVector<ModuleId, 0> takeUnresolvedDirectUses() {
-    return Unresolved.take(&UnresolvedDirectives::DirectUses);
-  }
-
-  /// The list of conflicts for which the module-id has not yet been
-  /// resolved.
-  ArrayRef<UnresolvedConflict> getUnresolvedConflicts() const {
-    return Unresolved.get().Conflicts;
-  }
-  void addUnresolvedConflict(UnresolvedConflict Conflict) {
-    Unresolved.getOrCreate().Conflicts.push_back(std::move(Conflict));
-  }
-  SmallVector<UnresolvedConflict, 0> takeUnresolvedConflicts() {
-    return Unresolved.take(&UnresolvedDirectives::Conflicts);
-  }
-  void clearUnresolvedConflicts() {
-    Unresolved.clear(&UnresolvedDirectives::Conflicts);
-  }
 
   /// Construct a new module or submodule.
   Module(ModuleConstructorTag, StringRef Name, SourceLocation DefinitionLoc,
