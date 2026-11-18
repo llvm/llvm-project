@@ -437,3 +437,16 @@ void f(Alias<T> s) {
   // CHECK-TEMPLATE-ALIAS-NESTED: [#int#]b
 }
 }
+
+template <bool>
+struct IntOrChar { using type = int; };
+
+template <>
+struct IntOrChar<false> { using type = char; };
+
+template <bool V>
+void test4(typename IntOrChar<V>::type X) {
+  X.
+  // Make sure this doesn't crash
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-2):5 %s
+}
