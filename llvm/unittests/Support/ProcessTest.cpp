@@ -11,6 +11,7 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
+#include <cstdlib>
 #include <optional>
 
 #ifdef _WIN32
@@ -37,6 +38,19 @@ TEST(ProcessTest, GetRandomNumberTest) {
   const unsigned r2 = Process::GetRandomNumber();
   // It should be extremely unlikely that both r1 and r2 are 0.
   EXPECT_NE((r1 | r2), 0u);
+}
+
+TEST(ProcessTest, GetRandomNumberKeepsRandState) {
+  // GetRandomNumber must not reseed or advance the C library's rand() state,
+  // which belongs to the program.
+  ::srand(42);
+  const int Expected1 = ::rand();
+  const int Expected2 = ::rand();
+  ::srand(42);
+  (void)Process::GetRandomNumber();
+  EXPECT_EQ(::rand(), Expected1);
+  (void)Process::GetRandomNumber();
+  EXPECT_EQ(::rand(), Expected2);
 }
 
 #ifdef _MSC_VER
