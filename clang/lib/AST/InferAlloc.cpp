@@ -264,6 +264,17 @@ public:
     return true;
   }
 
+  // The integer field of a span (its size) cannot hold the storage pointer, so
+  // any use of it, such as binding it to a reference in std::min(res.n, max),
+  // is as harmless as a read.
+  bool VisitMemberExpr(const MemberExpr *ME) override {
+    if (!ME->isArrow() && ME->getType()->isIntegerType())
+      if (const auto *DRE =
+              dyn_cast<DeclRefExpr>(ME->getBase()->IgnoreParenImpCasts()))
+        Reads.insert(DRE);
+    return true;
+  }
+
   bool VisitCXXNewExpr(const CXXNewExpr *NE) override {
     // Only the reserved placement form is known to construct into its
     // argument; dependent new-expressions have no operator new yet.

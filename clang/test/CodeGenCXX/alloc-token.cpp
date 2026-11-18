@@ -308,6 +308,17 @@ void test_placement_new_read_only_var(bool c) {
   sink = reinterpret_cast<void *>(s.n);
 }
 
+// The size field of a span cannot hold the storage, so a use of it other than
+// a read, such as binding it to a reference, keeps the variable.
+const size_t &min_ref(const size_t &a, const size_t &b);
+// CHECK-LABEL: define dso_local void @_Z29test_placement_new_size_fieldv(
+// CHECK: call { ptr, i64 } @_Z13alloc_storagem(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDNOPTR]]
+void test_placement_new_size_field() {
+  Storage s = alloc_storage(64);
+  sink = new (s.p) PlacedNoPtr();
+  sink = reinterpret_cast<void *>(min_ref(s.n, 32));
+}
+
 // Any use of the variable other than a read may change its value and
 // disqualifies it: assignment (so the storage the placement new ends up in
 // would depend on control flow, and the sizeof or cast of the other
