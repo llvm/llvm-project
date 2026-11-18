@@ -15,9 +15,11 @@
 // REQUIRES: locale.en_US.UTF-8
 // XFAIL: win32-broken-utf8-wchar-ctype
 
-// Prior to Android O (API 26), in the "en_US.UTF-8" locale, towlower(L'\xDA')
-// returned 0xDA instead of 0xFA.
-// XFAIL: LIBCXX-ANDROID-FIXME && android-device-api={{21|22|23|24|25}}
+// Prior to Android O (API 26), Bionic's towlower(L'\xDA') in "en_US.UTF-8"
+// only case-folded ASCII and returned 0xDA instead of 0xFA. Remove once Android CI
+// drops pre-API-26 device testing (or drop LIBCXX-ANDROID-FIXME if kept as a
+// permanent OS bug XFAIL).
+// XFAIL: LIBCXX-ANDROID-FIXME && android-device-api={{23|24|25}}
 
 #include <regex>
 #include <cassert>

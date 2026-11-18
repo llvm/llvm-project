@@ -78,6 +78,8 @@ features = [
         name=lambda cfg: "android-device-api={}".format(_getAndroidDeviceApi(cfg)),
         when=lambda cfg: "__ANDROID__" in compilerMacros(cfg),
     ),
+    # Temporary carveout feature for Android test failures/exclusions that need
+    # follow-up investigation or fixes (as opposed to permanent `android` exclusions).
     Feature(
         name="LIBCXX-ANDROID-FIXME",
         when=lambda cfg: "__ANDROID__" in compilerMacros(cfg),

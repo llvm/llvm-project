@@ -1,7 +1,6 @@
 # This testing configuration handles running the test suite against LLVM's
 # libc++ using adb on Android.
 
-import re
 import site
 
 site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
@@ -15,13 +14,13 @@ config.substitutions.append(('%{flags}',
 ))
 
 compile_flags = '-nostdinc++ -I %{target-include-dir} -I %{include-dir} -I %{libcxx-dir}/test/support'
-if re.match(r'i686-linux-android(21|22|23)$', config.target_triple):
-    # 32-bit x86 Android has a bug where the stack is sometimes misaligned.
-    # The problem appears limited to versions before Android N (API 24) and only
-    # __attribute__((constructor)) functions. Compile with -mstackrealign to
-    # work around the bug.
-    # TODO: Consider automatically doing something like this in Clang itself (LIBCXX-ANDROID-FIXME)
-    # See https://github.com/android/ndk/issues/693.
+if config.target_triple == 'i686-linux-android23':
+    # 32-bit x86 Android before Android N (API 24) has a bug where the stack is
+    # sometimes misaligned in __attribute__((constructor)) functions. Compile
+    # with -mstackrealign to work around the bug.
+    # LIBCXX-ANDROID-FIXME: Have the Clang driver pass -mstackrealign
+    # automatically for i686-linux-android23 (or remove once API 23 testing is
+    # dropped); see https://github.com/android/ndk/issues/693.
     compile_flags += ' -mstackrealign'
 config.substitutions.append(('%{compile_flags}', compile_flags))
 

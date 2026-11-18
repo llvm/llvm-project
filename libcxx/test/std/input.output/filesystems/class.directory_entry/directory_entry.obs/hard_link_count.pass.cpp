@@ -14,8 +14,9 @@
 // XFAIL: using-built-library-before-llvm-13
 
 // Starting in Android N (API 24), SELinux policy prevents the shell user from
-// creating a hard link.
-// XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api={{21|22|23}}
+// creating a hard link in /data/local/tmp. Resolve by guarding hard-link
+// subtests behind a Lit/helper feature check (similar to can-create-symlinks).
+// XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api=23
 
 // <filesystem>
 

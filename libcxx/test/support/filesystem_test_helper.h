@@ -188,14 +188,12 @@ struct scoped_test_env
         // the assert, despite being able to delete everything with the following
         // `rm -r` command.
         //
-        // Android's chmod was buggy in old OSs, but skipping this assert is
-        // sufficient to ensure that the `rm -rf` succeeds for almost all tests:
-        //  - Android L: chmod aborts after one error
-        //  - Android L and M: chmod -R tries to set permissions of a symlink
-        //    target.
-        // LIBCXX-ANDROID-FIXME: Other fixes to consider: place a toybox chmod
-        // onto old devices, re-enable this assert for devices running Android N
-        // and up, rewrite this chmod+rm in C or C++.
+        // On Android M (API 23), `chmod -R` tries to set permissions on a
+        // dangling symlink target and returns non-zero, though skipping this
+        // assert allows the `rm -rf` below to succeed.
+        // LIBCXX-ANDROID-FIXME: Re-enable this assert on Android N (API 24) and
+        // up (via `android_get_device_api_level()`), or replace the shell
+        // `chmod` + `rm` cleanup with C/C++ directory removal.
         assert(ret == 0);
 #  endif
 

@@ -18,7 +18,10 @@
 
 // XFAIL: availability-fp_to_chars-missing
 
-// The error exception has no system error string.
+// Writing to a read-only FILE* in Bionic fails without setting the stream error
+// flag, and __handle_output_error in <print> passes std::ferror(stream) (0) instead
+// of errno to __throw_system_error, omitting the error message. Resolve by fixing
+// __handle_output_error to use errno rather than ferror()'s boolean return.
 // XFAIL: LIBCXX-ANDROID-FIXME
 
 // <print>

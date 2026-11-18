@@ -11,9 +11,11 @@
 // https://gitlab.com/qemu-project/qemu/-/issues/1963
 // UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
 
-// This test hangs on Android devices that lack shell_v2, which was added in
-// Android N (API 24).
-// UNSUPPORTED: LIBCXX-ANDROID-FIXME && android-device-api={{2[1-3]}}
+// This test pipes stdin via adb_run.py and hangs on Android M (API 23) because
+// adbd before Android N (API 24) lacks shell_v2 stdin EOF propagation. Resolve
+// by redirecting stdin from a pushed file in adb_run.py on pre-N devices, or
+// remove once API 23 testing is dropped.
+// UNSUPPORTED: LIBCXX-ANDROID-FIXME && android-device-api=23
 
 // UNSUPPORTED: no-wide-characters
 
