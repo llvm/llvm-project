@@ -21,6 +21,7 @@
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCStreamer.h"
+#include <cassert>
 #include <tuple>
 #include <utility>
 #include <variant>
@@ -182,9 +183,7 @@ public:
   void insertInfo(DataType DT, TypeInfo TI) {
     std::pair<TypeInfoMap::iterator, bool> InsertResult =
         TypeInfos.try_emplace(tupleDT(DT), std::move(TI));
-    if (!InsertResult.second)
-      llvm_unreachable("Expect that inserted DataType is not already present "
-                       "in the TypeInfos map");
+    assert(InsertResult.second);
   }
 
   // Once all function parameter declarations have been processed, call this
