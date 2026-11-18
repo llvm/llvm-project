@@ -80,7 +80,7 @@ FunctionPass *createAArch64CleanupLocalDynamicTLSPass();
 FunctionPass *createAArch64CollectLOHPass();
 Pass *createAArch64PredicateAsCounterLoopRewritesPass();
 FunctionPass *createSMEPeepholeOptPass();
-FunctionPass *createMachineSMEABIPass(CodeGenOptLevel);
+FunctionPass *createMachineSMEABIPass();
 FunctionPass *createAArch64SRLTDefineSuperRegsLegacyPass();
 Pass *createSVEShuffleOptsPass();
 InstructionSelector *

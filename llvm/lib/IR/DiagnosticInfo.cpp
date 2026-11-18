@@ -525,7 +525,8 @@ void llvm::diagnoseDontCall(const CallInst &CI) {
           if (auto *Scope = Loc->getScope())
             if (auto *SP = Scope->getSubprogram())
               DebugChain.push_back({SP->getName(), Loc->getFilename(),
-                                    Loc->getLine(), Loc->getColumn()});
+                                    Loc->getLine(), Loc->getColumn(),
+                                    Loc->getFile()});
         };
         if (const DILocation *Loc = DL.get()) {
           AddLocation(Loc);

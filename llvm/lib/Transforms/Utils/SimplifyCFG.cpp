@@ -6395,22 +6395,21 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   if (hasBranchWeightMD(*SI) && isa<CondBrInst>(NewBI)) {
     SmallVector<uint64_t, 8> Weights;
     getBranchWeights(SI, Weights);
-    if (Weights.size() == 1 + SI->getNumCases()) {
-      uint64_t TrueWeight = 0;
-      uint64_t FalseWeight = 0;
-      for (size_t I = 0, E = Weights.size(); I != E; ++I) {
-        if (SI->getSuccessor(I) == Dest)
-          TrueWeight += Weights[I];
-        else
-          FalseWeight += Weights[I];
-      }
-      while (TrueWeight > UINT32_MAX || FalseWeight > UINT32_MAX) {
-        TrueWeight /= 2;
-        FalseWeight /= 2;
-      }
-      setFittedBranchWeights(*NewBI, {TrueWeight, FalseWeight},
-                             /*IsExpected=*/false, /*ElideAllZero=*/true);
+    assert(Weights.size() == 1 + SI->getNumCases() &&
+           "expected number of branch weights to be equal to the number of "
+           "switch destinations");
+    uint64_t TrueWeight = 0;
+    uint64_t FalseWeight = 0;
+    for (size_t I = 0, E = Weights.size(); I != E; ++I) {
+      if (SI->getSuccessor(I) == Dest)
+        TrueWeight += Weights[I];
+      else
+        FalseWeight += Weights[I];
     }
+    setFittedBranchWeights(*NewBI, {TrueWeight, FalseWeight},
+                           /*IsExpected=*/false, /*ElideAllZero=*/true);
+  } else if (isa<CondBrInst>(NewBI)) {
+    setExplicitlyUnknownBranchWeightsIfProfiled(*NewBI, DEBUG_TYPE);
   }
 
   // Prune obsolete incoming values off the successors' PHI nodes.
