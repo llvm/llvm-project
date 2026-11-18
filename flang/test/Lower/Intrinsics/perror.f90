@@ -35,7 +35,7 @@ subroutine test_perror()
 end subroutine test_perror
 
 ! CHECK-LABEL: func @_QPtest_perror_unknown_length(
-! CHECK-SAME: %[[ARG0:.*]]:  !fir.boxchar<1> {fir.bindc_name = "str"}
+! CHECK-SAME: %[[ARG0:.*]]:  !fir.boxchar<1> {fir.bindc_name = "str", fir.fortran_attrs = #fir.var_attrs<intent_in>}
 subroutine test_perror_unknown_length(str)
     implicit none
     character(len=*), intent(in) :: str

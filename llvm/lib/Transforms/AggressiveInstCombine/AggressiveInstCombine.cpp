@@ -465,21 +465,14 @@ static bool foldAnyOrAllBitsSet(Instruction &I) {
 }
 
 /// Helper function to replace an instruction with a popcount intrinsic.
-/// This creates the ctpop intrinsic with an optional truncation appended at the
-/// end, and replaces all uses of the instruction.
+/// This creates the ctpop intrinsic with an optional zero-extension or
+/// truncation appended at the end, and replaces all uses of the instruction.
 static void replaceWithPopCount(Instruction &I, Value *Root) {
   LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
-  Type *RootTy = Root->getType();
-  Type *OrigTy = I.getType();
-
   IRBuilder<> Builder(&I);
-  Value *NewVal = Builder.CreateIntrinsic(Intrinsic::ctpop, RootTy, {Root});
-  if (OrigTy != RootTy) {
-    assert(RootTy->getScalarSizeInBits() > OrigTy->getScalarSizeInBits() &&
-           "Only truncation is supported for now");
-    NewVal = Builder.CreateTrunc(NewVal, OrigTy);
-  }
-  I.replaceAllUsesWith(NewVal);
+  Value *NewVal =
+      Builder.CreateIntrinsic(Intrinsic::ctpop, Root->getType(), {Root});
+  I.replaceAllUsesWith(Builder.CreateZExtOrTrunc(NewVal, I.getType()));
   ++NumPopCountRecognized;
 }
 
@@ -1024,6 +1017,39 @@ static bool tryToRecognizeTableBasedCttz(LoadInst *LI, Type *AccessType,
   return true;
 }
 
+// Recognise ctpop table lookups:
+//
+// %gep = getelementptr [256 x i8], ptr @ctpop.table, i32 0, i8 %x
+// %ctpop = load i8, ptr %gep
+// ->
+// %ctpop = call i8 llvm.ctpop(i8 %x)
+static bool tryToRecognizeTableBasedCtpop(LoadInst *LI, Type *AccessType,
+                                          GlobalVariable *GVTable,
+                                          Value *GepIdx, const APInt &GEPScale,
+                                          const DataLayout &DL,
+                                          const TargetTransformInfo &TTI) {
+  Type *IdxTy = GepIdx->getType();
+  unsigned IdxBits = IdxTy->getIntegerBitWidth();
+  if (!LI->isSimple() || !isPowerOf2_32(IdxBits) ||
+      TTI.getPopcntSupport(IdxBits) != TargetTransformInfo::PSK_FastHardware)
+    return false;
+
+  uint64_t TableSize = DL.getTypeAllocSize(GVTable->getValueType());
+  unsigned AccessSize = DL.getTypeStoreSize(AccessType);
+  if (GEPScale != AccessSize)
+    return false;
+  uint64_t NumEntries = TableSize / AccessSize;
+  for (uint64_t I = 0; I < NumEntries; I++) {
+    auto *C = dyn_cast_or_null<ConstantInt>(ConstantFoldLoadFromConst(
+        GVTable->getInitializer(), AccessType, I * GEPScale, DL));
+    if (!C || C->getValue() != popcount(I))
+      return false;
+  }
+
+  replaceWithPopCount(*LI, GepIdx);
+  return true;
+}
+
 // Check if this array of constants represents a log2 table.
 // Iterate over the elements from \p Table by trying to find/match all
 // the numbers from 0 to \p InputBits that should represent log2 results.
@@ -1356,6 +1382,10 @@ static bool tryToRecognizeTableBasedPatterns(Instruction &I,
 
   if (tryToRecognizeTableBasedCttz(LI, AccessType, GVTable, GepIdx, GEPScale,
                                    DL))
+    return true;
+
+  if (tryToRecognizeTableBasedCtpop(LI, AccessType, GVTable, GepIdx, GEPScale,
+                                    DL, TTI))
     return true;
 
   if (tryToRecognizeTableBasedLog2(LI, AccessType, GVTable, GepIdx, GEPScale,
@@ -2040,7 +2070,7 @@ bool StrNCmpInliner::optimizeStrNCmp() {
 void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
                                    bool Swapped) {
   auto &Ctx = CI->getContext();
-  IRBuilder<> B(Ctx);
+  IRBuilder<> B(*CI->getModule());
   // We want these instructions to be recognized as inlined instructions for the
   // compare call, but we don't have a source location for the definition of
   // that function, since we're generating that code now. Because the generated
@@ -2070,7 +2100,8 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
     B.SetInsertPoint(BBSubs[i]);
     Value *VL =
         B.CreateZExt(B.CreateLoad(B.getInt8Ty(),
-                                  B.CreateInBoundsPtrAdd(Base, B.getInt64(i))),
+                                  B.CreatePtrAddWithUnsignedOffset(
+                                      Base, i, "", GEPNoWrapFlags::inBounds())),
                      CI->getType());
     Value *VR =
         ConstantInt::get(CI->getType(), static_cast<unsigned char>(RHS[i]));
@@ -2635,26 +2666,50 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
     // TODO: It would be more efficient if we removed dead instructions
     // iteratively in this loop rather than waiting until the end.
     for (Instruction &I : make_early_inc_range(llvm::reverse(BB))) {
-      MadeChange |= foldAnyOrAllBitsSet(I);
-      MadeChange |= foldGuardedFunnelShift(I, DT);
-      MadeChange |= foldSelectSplitCTLZCTTZ(I);
-      MadeChange |= tryToRecognizePopCount(I);
-      MadeChange |= tryToRecognizePopCount1(I);
-      MadeChange |= tryToRecognizePopCount2n3(I);
-      MadeChange |= tryToFPToSat(I, TTI);
-      MadeChange |= tryToRecognizeTableBasedPatterns(I, DL, TTI);
-      MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);
-      MadeChange |= foldPatternedLoads(I, DL);
-      MadeChange |= foldICmpOrChain(I, DL, TTI, AA, DT);
-      MadeChange |= foldMulHigh(I);
-      // These folds can erase the instruction `I`, so they need to be called
-      // at the end of this sequence.
-      if (foldLibCalls(I, TTI, TLI, AC, DT, DL, MadeCFGChange)) {
-        MadeChange = true;
-        continue;
+      switch (I.getOpcode()) {
+      case Instruction::And:
+        MadeChange |= foldAnyOrAllBitsSet(I);
+        MadeChange |= tryToRecognizePopCount2n3(I);
+        break;
+      case Instruction::Trunc:
+        MadeChange |= foldAnyOrAllBitsSet(I);
+        break;
+      case Instruction::PHI:
+        MadeChange |= foldGuardedFunnelShift(I, DT);
+        break;
+      case Instruction::Select:
+        MadeChange |= foldSelectSplitCTLZCTTZ(I);
+        break;
+      case Instruction::LShr:
+        MadeChange |= tryToRecognizePopCount(I);
+        break;
+      case Instruction::Add:
+        MadeChange |= tryToRecognizePopCount1(I);
+        MadeChange |= foldMulHigh(I);
+        break;
+      case Instruction::Load:
+        MadeChange |= tryToRecognizeTableBasedPatterns(I, DL, TTI);
+        MadeChange |= foldPatternedLoads(I, DL);
+        break;
+      case Instruction::Or:
+        MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);
+        break;
+      case Instruction::ICmp:
+        MadeChange |= foldICmpOrChain(I, DL, TTI, AA, DT);
+        break;
+      case Instruction::Call:
+        MadeChange |= tryToFPToSat(I, TTI);
+        // These folds can erase the instruction `I`, so they need to be called
+        // at the end of this sequence.
+        if (foldLibCalls(I, TTI, TLI, AC, DT, DL, MadeCFGChange)) {
+          MadeChange = true;
+          break;
+        }
+        if (foldMemSetZeroOrOneLength(I, DL, TLI, AC, DT, MadeCFGChange))
+          MadeChange = true;
+        break;
+      default:;
       }
-      if (foldMemSetZeroOrOneLength(I, DL, TLI, AC, DT, MadeCFGChange))
-        MadeChange = true;
     }
 
     // Do this separately to avoid redundantly scanning stores multiple times.

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/LazyValueInfo.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -27,6 +28,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
@@ -59,11 +61,6 @@ INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(LazyValueInfoWrapperPass, "lazy-value-info",
                 "Lazy Value Information Analysis", false, true)
-
-static cl::opt<bool> PerPredRanges(
-    "lvi-per-pred-ranges", cl::Hidden, cl::init(false),
-    cl::desc("Enable tracking of ranges for a value in a block for"
-             "each block predecessor (default = false)"));
 
 namespace llvm {
 FunctionPass *createLazyValueInfoPass() {
@@ -133,6 +130,8 @@ class LazyValueInfoCache {
     std::optional<PredecessorValueLatticeMap> PredecessorLatticeElements;
   };
 
+  const bool PerPredRanges;
+
   /// Cached information per basic block, indexed by block number.
   SmallVector<std::unique_ptr<BlockCacheEntry>> BlockCache;
   /// Set of value handles used to erase values from the cache on deletion.
@@ -171,8 +170,9 @@ class LazyValueInfoCache {
   }
 
 public:
-  LazyValueInfoCache(const Function *F)
-      : BlockNumberEpoch(F->getBlockNumberEpoch()) {}
+  LazyValueInfoCache(const Function *F, bool PerPredRanges)
+      : PerPredRanges(PerPredRanges),
+        BlockNumberEpoch(F->getBlockNumberEpoch()) {}
 
   void insertResult(Value *Val, BasicBlock *BB,
                     const ValueLatticeElement &Result) {
@@ -374,6 +374,7 @@ public:
 } // namespace
 // The actual implementation of the lazy analysis and update.
 class LazyValueInfoImpl {
+  const bool PerPredRanges;
 
   /// Cached results from previous queries
   LazyValueInfoCache TheCache;
@@ -491,7 +492,9 @@ public:
                                      BasicBlock *ToBB,
                                      Instruction *CtxI = nullptr);
 
-  ValueLatticeElement getValueAtUse(const Use &U);
+  ValueLatticeElement
+  getValueAtUse(const Use &U,
+                SmallVectorImpl<DbgVariableRecord *> *DebugUsers = nullptr);
 
   /// Complete flush all previously computed values
   void clear() {
@@ -520,7 +523,8 @@ public:
 
   LazyValueInfoImpl(Function *F, AssumptionCache *AC, const DataLayout &DL,
                     Function *GuardDecl)
-      : TheCache(F), AC(AC), DL(DL), GuardDecl(GuardDecl) {}
+      : PerPredRanges(getAnalysisOptions(*F).lvi_per_pred_ranges),
+        TheCache(F, PerPredRanges), AC(AC), DL(DL), GuardDecl(GuardDecl) {}
 };
 } // namespace llvm
 
@@ -856,10 +860,21 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
       continue;
 
     if (AssumeVH.Index != AssumptionCache::ExprResultIdx) {
-      if (assumeBundleImpliesNonNull(Val, BBI->getFunction(),
-                                     I->getOperandBundleAt(AssumeVH.Index)))
-        BBLV = BBLV.intersect(ValueLatticeElement::getNot(
-            Constant::getNullValue(Val->getType())));
+      auto OBU = I->getOperandBundleAt(AssumeVH.Index);
+      switch (getBundleAttrFromOBU(OBU)) {
+      case BundleAttr::Range: {
+        auto [V, Range] = getAssumeRangeInfo(OBU);
+        if (Val == V) {
+          BBLV =
+              BBLV.intersect(ValueLatticeElement::getRange(std::move(Range)));
+        }
+      } break;
+      default:
+        if (assumeBundleImpliesNonNull(Val, BBI->getFunction(),
+                                       I->getOperandBundleAt(AssumeVH.Index)))
+          BBLV = BBLV.intersect(ValueLatticeElement::getNot(
+              Constant::getNullValue(Val->getType())));
+      }
     } else {
       BBLV = BBLV.intersect(*getValueFromCondition(Val, I->getArgOperand(0),
                                                    /*IsTrueDest*/ true,
@@ -1662,7 +1677,10 @@ LazyValueInfoImpl::getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
         // instructions with many operands.
         if (isa<IntegerType>(Usr->getType()) && isOperationFoldable(Usr)) {
           const DataLayout &DL = BBTo->getDataLayout();
-          if (usesOperand(Usr, Condition)) {
+          Value *TempCond = Condition;
+          if (usesOperand(Usr, Condition) ||
+              (match(Condition, m_Not(m_Value(TempCond))) &&
+               usesOperand(Usr, TempCond))) {
             // If Val has Condition as an operand and Val can be folded into a
             // constant with either Condition == true or Condition == false,
             // propagate the constant.
@@ -1670,8 +1688,8 @@ LazyValueInfoImpl::getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
             //   ; %Val is true on the edge to %then.
             //   %Val = and i1 %Condition, true.
             //   br %Condition, label %then, label %else
-            APInt ConditionVal(1, isTrueDest ? 1 : 0);
-            Result = constantFoldUser(Usr, Condition, ConditionVal, DL);
+            APInt ConditionVal(1, isTrueDest ^ (TempCond != Condition) ? 1 : 0);
+            Result = constantFoldUser(Usr, TempCond, ConditionVal, DL);
           } else if (isa<TruncInst, ZExtInst, SExtInst>(Usr)) {
             ValueLatticeElement OpLatticeVal =
                 *getValueFromCondition(Usr->getOperand(0), Condition,
@@ -1864,7 +1882,8 @@ getValueOnEdge(Value *V, BasicBlock *FromBB, BasicBlock *ToBB,
   return *Result;
 }
 
-ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
+ValueLatticeElement LazyValueInfoImpl::getValueAtUse(
+    const Use &U, SmallVectorImpl<DbgVariableRecord *> *DebugUsers) {
   Value *V = U.get();
   auto *CtxI = cast<Instruction>(U.getUser());
   ValueLatticeElement VL = getValueInBlock(V, CtxI->getParent(), CtxI);
@@ -1878,6 +1897,10 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
   for (unsigned I = 0; I < MaxUsesToInspect; ++I) {
     std::optional<ValueLatticeElement> CondVal;
     auto *CurrI = cast<Instruction>(CurrU->getUser());
+
+    // Collect debug users of this value that isn't the starting value
+    if (DebugUsers && CurrU != &U)
+      findDbgUsers(CurrU->get(), *DebugUsers);
 
     // All instructions on the one-use chain between the original use and CurrI
     // are speculatable and have a single user each, so they could be sunk to
@@ -2043,9 +2066,10 @@ ConstantRange LazyValueInfo::getConstantRange(Value *V, Instruction *CtxI,
   return Result.asConstantRange(V->getType(), UndefAllowed);
 }
 
-ConstantRange LazyValueInfo::getConstantRangeAtUse(const Use &U,
-                                                   bool UndefAllowed) {
-  ValueLatticeElement Result = getOrCreateImpl().getValueAtUse(U);
+ConstantRange LazyValueInfo::getConstantRangeAtUse(
+    const Use &U, bool UndefAllowed,
+    SmallVectorImpl<DbgVariableRecord *> *DebugUsers) {
+  ValueLatticeElement Result = getOrCreateImpl().getValueAtUse(U, DebugUsers);
   return Result.asConstantRange(U->getType(), UndefAllowed);
 }
 

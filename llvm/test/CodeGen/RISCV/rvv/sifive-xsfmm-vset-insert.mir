@@ -94,13 +94,6 @@
 ---
 name:            xsfmm_same_state
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: vrm8 }
-  - { id: 1, class: vrm8 }
-  - { id: 2, class: gprnox0 }
-  - { id: 3, class: gprnox0 }
-  - { id: 4, class: gprnox0 }
 liveins:
   - { reg: '$v8m8', virtual-reg: '%0' }
   - { reg: '$v8m8', virtual-reg: '%1' }
@@ -141,13 +134,6 @@ body:             |
 ---
 name:            xsfmm_different_state
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: vrm8 }
-  - { id: 1, class: vrm8 }
-  - { id: 2, class: gprnox0 }
-  - { id: 3, class: gprnox0 }
-  - { id: 4, class: gprnox0 }
 liveins:
   - { reg: '$v8m8', virtual-reg: '%0' }
   - { reg: '$v8m8', virtual-reg: '%1' }
@@ -189,13 +175,6 @@ body:             |
 ---
 name:            xsfmm_different_state_bf
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: vrm8 }
-  - { id: 1, class: vrm8 }
-  - { id: 2, class: gprnox0 }
-  - { id: 3, class: gprnox0 }
-  - { id: 4, class: gprnox0 }
 liveins:
   - { reg: '$v8m8', virtual-reg: '%0' }
   - { reg: '$v8m8', virtual-reg: '%1' }
@@ -242,14 +221,6 @@ body:             |
 ---
 name:            interleave_rvv_and_xsfmm
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: vrm8 }
-  - { id: 1, class: gprnox0 }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gpr }
-  - { id: 4, class: vrm8 }
-  - { id: 5, class: vrm8 }
 liveins:
   - { reg: '$v8m8', virtual-reg: '%0' }
   - { reg: '$x10', virtual-reg: '%1' }
@@ -280,7 +251,7 @@ body:             |
     %0:vrm8 = COPY $v8m8
     %3:gpr = ADDI $x0, 1
     %4:vrm8 = PseudoSF_VTMV_V_T %3:gpr, %1:gprnox0, 3, 1
-    %5:vrm8 = PseudoVADD_VV_M8 $noreg, %0:vrm8, killed %4:vrm8, %1:gprnox0, 3, 0
+    %5:vrm8 = PseudoVADD_VV_M8 $noreg, %0:vrm8, %4:vrm8, %1:gprnox0, 3, 0
     PseudoSF_VSTE16 %3:gpr, %2:gpr, %1:gprnox0, 4, 1
     $v8m8 = COPY %5:vrm8
     PseudoRET implicit $v8m8
@@ -288,14 +259,6 @@ body:             |
 ---
 name:            interleave_rvv_and_xsfmm2
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: vrm8 }
-  - { id: 1, class: gprnox0 }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gpr }
-  - { id: 4, class: vrm8 }
-  - { id: 5, class: vrm8 }
 liveins:
   - { reg: '$v8m8', virtual-reg: '%0' }
   - { reg: '$x10', virtual-reg: '%1' }
@@ -327,9 +290,9 @@ body:             |
     %1:gprnox0 = COPY $x10
     %0:vrm8 = COPY $v8m8
     %3:gpr = ADDI $x0, 1
-    %4:vrm8 = PseudoVADD_VV_M8 $noreg, %0:vrm8, killed %0:vrm8, %1:gprnox0, 3, 0
+    %4:vrm8 = PseudoVADD_VV_M8 $noreg, %0:vrm8, %0:vrm8, %1:gprnox0, 3, 0
     %5:vrm8 = PseudoSF_VTMV_V_T %3:gpr, %1:gprnox0, 3, 1
-    %6:vrm8 = PseudoVADD_VV_M8 $noreg, %4:vrm8, killed %4:vrm8, %1:gprnox0, 3, 0
+    %6:vrm8 = PseudoVADD_VV_M8 $noreg, %4:vrm8, %4:vrm8, %1:gprnox0, 3, 0
     PseudoSF_VSTE16 %3:gpr, %2:gpr, %1:gprnox0, 4, 1
     $v8m8 = COPY %6:vrm8
     PseudoRET implicit $v8m8
@@ -337,13 +300,6 @@ body:             |
 ---
 name:            consecutive_xsfmm
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: vrm8 }
-  - { id: 1, class: gprnox0 }
-  - { id: 2, class: gprnox0 }
-  - { id: 3, class: gprnox0 }
-  - { id: 4, class: gprnox0 }
 liveins:
   - { reg: '$v8m8', virtual-reg: '%0' }
   - { reg: '$x10', virtual-reg: '%1' }
@@ -383,9 +339,6 @@ body:             |
 ---
 name:            vsettnt_max
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gprnox0 }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 frameInfo:
@@ -414,9 +367,6 @@ body:             |
 ---
 name:            single_vsettm
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gprnox0 }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 frameInfo:
@@ -441,9 +391,6 @@ body:             |
 ---
 name:            single_vsettn
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gprnox0 }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 frameInfo:
@@ -467,9 +414,6 @@ body:             |
 ---
 name:            single_vsettk
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gprnox0 }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 frameInfo:
@@ -494,10 +438,6 @@ body:             |
 ---
 name:            sf_vtzero
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gprnox0 }
-  - { id: 1, class: gprnox0 }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }

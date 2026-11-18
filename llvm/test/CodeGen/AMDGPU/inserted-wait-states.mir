@@ -37,6 +37,7 @@
 # GCN: S_NOP 3
 # GCN: V_DIV_FMAS_F32
 name: div_fmas
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -85,6 +86,7 @@ body: |
 # GCN-NEXT: S_GETREG
 
 name: s_getreg
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -130,6 +132,7 @@ body: |
 # GCN-NEXT: S_SETREG
 
 name: s_setreg
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -187,6 +190,7 @@ body: |
 # GCN: V_MOV_B32
 
 name: vmem_gt_8dw_store
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -247,6 +251,7 @@ body: |
 # GCN: V_WRITELANE_B32
 
 name: readwrite_lane
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -287,6 +292,7 @@ body: |
 # GCN-NEXT: S_RFE_B64
 
 name: rfe
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -327,6 +333,7 @@ body: |
 # GCN-NEXT: S_MOVRELD_B64
 
 name: s_movrel
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -376,6 +383,7 @@ body: |
 # GCN-NEXT: V_INTERP_MOV_F32
 
 name: v_interp
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -415,6 +423,7 @@ body: |
 # VI-NEXT: V_MOV_B32_dpp
 
 name: dpp
+tracksRegLiveness: false
 
 body: |
   bb.0:

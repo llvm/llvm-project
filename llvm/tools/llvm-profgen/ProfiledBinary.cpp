@@ -16,15 +16,11 @@
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
-#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
-#include "llvm/Demangle/Demangle.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
@@ -200,10 +196,12 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
   ProbeContext.pop_back();
 }
 
-ProfiledBinary::ProfiledBinary(const StringRef ExeBinPath,
+ProfiledBinary::ProfiledBinary(const cl::LibraryOptionsContext &LibraryOptions,
+                               const StringRef ExeBinPath,
                                const StringRef DebugBinPath)
-    : Path(ExeBinPath), DebugBinaryPath(DebugBinPath),
-      SymbolizerOpts(getSymbolizerOpts()), ProEpilogTracker(this),
+    : LibraryOptions(LibraryOptions), Path(ExeBinPath),
+      DebugBinaryPath(DebugBinPath), SymbolizerOpts(getSymbolizerOpts()),
+      ProEpilogTracker(this),
       Symbolizer(std::make_unique<symbolize::LLVMSymbolizer>(SymbolizerOpts)),
       TrackFuncContextSize(EnableCSPreInliner && UseContextCostForPreInliner) {
   // Point to executable binary if debug info binary is not specified.
@@ -751,6 +749,7 @@ void ProfiledBinary::setUpDisassembler(const ObjectFile *Obj) {
     exitWithError("no register info for target " + TheTriple.str(), FileName);
 
   MCTargetOptions MCOptions;
+  MCOptions.LibraryOptions = &LibraryOptions;
   AsmInfo.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!AsmInfo)
     exitWithError("no assembly info for target " + TheTriple.str(), FileName);

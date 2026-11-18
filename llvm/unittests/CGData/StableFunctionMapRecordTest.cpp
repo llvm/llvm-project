@@ -98,6 +98,45 @@ TEST(StableFunctionMapRecordTest, Serialize) {
   EXPECT_EQ(MapDump1, MapDump2);
 }
 
+TEST(StableFunctionMapRecordTest, DeserializeUnaligned) {
+  StableFunctionMapRecord MapRecord1;
+  StableFunction Func1{1, "Func1", "Mod1", 2, {{{0, 1}, 3}, {{1, 2}, 4}}};
+  StableFunction Func2{2, "Func2", "Mod1", 3, {{{0, 1}, 2}}};
+  StableFunction Func3{2, "Func3", "Mod1", 3, {{{0, 1}, 3}}};
+  MapRecord1.FunctionMap->insert(Func1);
+  MapRecord1.FunctionMap->insert(Func2);
+  MapRecord1.FunctionMap->insert(Func3);
+
+  SmallVector<char> Out;
+  raw_svector_ostream OS(Out);
+  std::vector<CGDataPatchItem> PatchItems;
+  MapRecord1.serialize(OS, PatchItems);
+  CGDataOStream COS(OS);
+  COS.patch(PatchItems);
+
+  std::string MapDump1;
+  raw_string_ostream OS1(MapDump1);
+  MapRecord1.print(OS1);
+
+  // Deserialize at each offset from a 4-byte boundary.
+  for (unsigned Offset = 0; Offset < 4; ++Offset) {
+    SCOPED_TRACE(Offset);
+    std::vector<uint32_t> Storage(Out.size() / 4 + 2); // 4-byte aligned.
+    auto *Buffer = reinterpret_cast<uint8_t *>(Storage.data()) + Offset;
+    memcpy(Buffer, Out.data(), Out.size());
+
+    StableFunctionMapRecord MapRecord2;
+    const uint8_t *Data = Buffer;
+    MapRecord2.deserialize(Data);
+    EXPECT_EQ(Data, Buffer + Out.size());
+
+    std::string MapDump2;
+    raw_string_ostream OS2(MapDump2);
+    MapRecord2.print(OS2);
+    EXPECT_EQ(MapDump1, MapDump2);
+  }
+}
+
 TEST(StableFunctionMapRecordTest, SerializeYAML) {
   StableFunctionMapRecord MapRecord1;
   StableFunction Func1{1, "Func1", "Mod1", 2, {{{0, 1}, 3}, {{1, 2}, 4}}};

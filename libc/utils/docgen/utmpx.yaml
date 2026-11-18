@@ -1,0 +1,38 @@
+posix: posix-2024
+macros:
+  BOOT_TIME:
+    in-latest-posix: ''
+  DEAD_PROCESS:
+    in-latest-posix: ''
+  EMPTY:
+    in-latest-posix: ''
+  INIT_PROCESS:
+    in-latest-posix: ''
+  LOGIN_PROCESS:
+    in-latest-posix: ''
+  NEW_TIME:
+    in-latest-posix: ''
+  OLD_TIME:
+    in-latest-posix: ''
+  USER_PROCESS:
+    in-latest-posix: ''
+functions:
+  endutxent:
+    in-latest-posix: ''
+  getutxent:
+    in-latest-posix: ''
+  getutxid:
+    in-latest-posix: ''
+  getutxline:
+    in-latest-posix: ''
+  pututxline:
+    in-latest-posix: ''
+  setutxent:
+    in-latest-posix: ''
+types:
+  pid_t:
+    in-latest-posix: ''
+  struct timeval:
+    in-latest-posix: ''
+  struct utmpx:
+    in-latest-posix: ''

@@ -664,8 +664,6 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
     config.SkipConvertComplexPow = targetMachine.getTargetTriple().isAMDGCN();
     if (enableOpenMP)
       config.EnableOpenMP = true;
-    if (enableOpenMPDevice)
-      config.EnableOpenMPIsTargetDevice = true;
     config.NSWOnLoopVarInc = !integerWrapAround;
     fir::registerDefaultInlinerPass(config);
     fir::createDefaultFIROptimizerPassPipeline(pm, config);
@@ -799,6 +797,8 @@ int main(int argc, char **argv) {
     llvm::errs() << "failed to create target machine: " << error << "\n";
     return mlir::failed(mlir::failure());
   }
+  semanticsContext.set_targetTriple(targetMachine->getTargetTriple().str())
+      .set_targetFeatures(targetMachine->getTargetFeatureString().str());
   std::string compilerVersion = Fortran::common::getFlangToolFullVersion("bbc");
   std::string compilerOptions = "";
   Fortran::tools::setUpTargetCharacteristics(

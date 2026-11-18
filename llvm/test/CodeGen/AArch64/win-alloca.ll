@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple aarch64-windows -verify-machineinstrs -filetype asm -o - %s | FileCheck %s -check-prefixes=CHECK,CHECK-OPT
 ; RUN: llc -mtriple aarch64-windows -verify-machineinstrs -filetype asm -o - %s -O0 | FileCheck %s
+; RUN: llc -mtriple aarch64-unknown-uefi -verify-machineinstrs -filetype asm -o - %s | FileCheck %s -check-prefixes=CHECK,CHECK-OPT
+; RUN: llc -mtriple aarch64-unknown-uefi -verify-machineinstrs -filetype asm -o - %s -O0 | FileCheck %s
 ; RUN: llc -mtriple arm64ec-windows-msvc -verify-machineinstrs -filetype asm -o - %s | FileCheck -check-prefix=CHECK-ARM64EC %s
 
 define void @func(i64 %a) {

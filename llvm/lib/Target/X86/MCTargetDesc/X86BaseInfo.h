@@ -1379,7 +1379,7 @@ inline bool isKMergeMasked(uint64_t TSFlags) {
   return isKMasked(TSFlags) && (TSFlags & X86II::EVEX_Z) == 0;
 }
 
-/// \returns true if the intruction needs a SIB.
+/// \returns true if the instruction needs a SIB.
 inline bool needSIB(MCRegister BaseReg, MCRegister IndexReg, bool In64BitMode) {
   // The SIB byte must be used if there is an index register.
   if (IndexReg)

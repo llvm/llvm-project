@@ -29,6 +29,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -411,7 +412,7 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
   }
 
   if (isa<ConstantInt>(Divisor)) {
-    // If the divisor is not a constant, DAGCombiner will convert it to a
+    // If the divisor is a constant, DAGCombiner will convert it to a
     // multiplication by a magic constant.  It isn't clear if it is worth
     // introducing control flow to get a narrower multiply.
     return std::nullopt;
@@ -450,7 +451,8 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
     QuotRemWithBB Fast = createFastBB(SuccessorBB);
     QuotRemPair Result = createDivRemPhiNodes(Fast, Long, SuccessorBB);
     Value *CmpV = Builder.CreateICmpUGE(Dividend, Divisor);
-    Builder.CreateCondBr(CmpV, Fast.BB, SuccessorBB);
+    CondBrInst *CB = Builder.CreateCondBr(CmpV, Fast.BB, SuccessorBB);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*CB, DEBUG_TYPE);
 
     if (DTU)
       DTU->applyUpdates({{DominatorTree::Insert, MainBB, Fast.BB},
@@ -473,7 +475,8 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
   QuotRemPair Result = createDivRemPhiNodes(Fast, Slow, SuccessorBB);
   Value *CmpV = insertOperandRuntimeCheck(DividendShort ? nullptr : Dividend,
                                           DivisorShort ? nullptr : Divisor);
-  Builder.CreateCondBr(CmpV, Fast.BB, Slow.BB);
+  CondBrInst *CB = Builder.CreateCondBr(CmpV, Fast.BB, Slow.BB);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CB, DEBUG_TYPE);
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, MainBB, Fast.BB},
                        {DominatorTree::Insert, MainBB, Slow.BB},

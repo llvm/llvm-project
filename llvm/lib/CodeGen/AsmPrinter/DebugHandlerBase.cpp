@@ -108,8 +108,6 @@ DebugHandlerBase::~DebugHandlerBase() = default;
 void DebugHandlerBase::beginModule(Module *M) {
   if (M->debug_compile_units().empty())
     Asm = nullptr;
-  else
-    LScopes.initialize(*M);
 }
 
 // Each LexicalScope has first instruction and last instruction to mark
@@ -227,7 +225,8 @@ bool DebugHandlerBase::isUnsignedDIType(const DIType *Ty) {
            T == dwarf::DW_TAG_volatile_type ||
            T == dwarf::DW_TAG_restrict_type || T == dwarf::DW_TAG_atomic_type ||
            T == dwarf::DW_TAG_immutable_type ||
-           T == dwarf::DW_TAG_template_alias);
+           T == dwarf::DW_TAG_template_alias ||
+           T == dwarf::DW_TAG_LLVM_ptrauth_type);
     assert(DTy->getBaseType() && "Expected valid base type");
     return isUnsignedDIType(DTy->getBaseType());
   }
@@ -290,10 +289,12 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
   assert(DbgLabels.empty() && "DbgLabels map wasn't cleaned!");
   calculateDbgEntityHistory(MF, Asm->MF->getSubtarget().getRegisterInfo(),
                             DbgValues, DbgLabels);
-  InstOrdering.initialize(*MF);
-  if (TrimVarLocs)
-    DbgValues.trimLocationRanges(*MF, LScopes, InstOrdering);
-  LLVM_DEBUG(DbgValues.dump(MF->getName()));
+  if (!DbgValues.empty()) {
+    InstOrdering.initialize(*MF);
+    if (TrimVarLocs)
+      DbgValues.trimLocationRanges(*MF, LScopes, InstOrdering);
+    LLVM_DEBUG(DbgValues.dump(MF->getName()));
+  }
 
   // Request labels for the full history.
   for (const auto &I : DbgValues) {

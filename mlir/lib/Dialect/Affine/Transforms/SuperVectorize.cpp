@@ -808,16 +808,14 @@ void VectorizationState::registerOpVectorReplacement(Operation *replaced,
 /// scalar version still exists after vectorization), like uniforms.
 ///
 /// Example:
-///   * 'replaced': block argument or operation outside of the vectorized loop.
+///   * 'replaced': block argument or operation result defined outside of the
+///     vectorized loop.
 ///   * 'replacement': %0 = vector.broadcast %1 : f32 to vector<128xf32>
 void VectorizationState::registerValueVectorReplacement(
     Value replaced, Operation *replacement) {
   assert(replacement->getNumResults() == 1 &&
          "Expected single-result replacement");
-  if (Operation *defOp = replaced.getDefiningOp())
-    registerOpVectorReplacement(defOp, replacement);
-  else
-    registerValueVectorReplacementImpl(replaced, replacement->getResult(0));
+  registerValueVectorReplacementImpl(replaced, replacement->getResult(0));
 }
 
 /// Registers the vector replacement of a block argument (e.g., iter_args).

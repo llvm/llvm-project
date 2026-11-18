@@ -22,126 +22,12 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-static const EHPersonality &getCPersonality(const TargetInfo &target,
-                                            const CodeGenOptions &cgOpts) {
-  const llvm::Triple &triple = target.getTriple();
-  if (triple.isWindowsMSVCEnvironment())
-    return EHPersonality::MSVC_CxxFrameHandler3;
-  if (cgOpts.hasSjLjExceptions())
-    return EHPersonality::GNU_C_SJLJ;
-  if (cgOpts.hasDWARFExceptions())
-    return EHPersonality::GNU_C;
-  if (cgOpts.hasSEHExceptions())
-    return EHPersonality::GNU_C_SEH;
-  return EHPersonality::GNU_C;
-}
-
-static const EHPersonality &getObjCPersonality(const TargetInfo &target,
-                                               const LangOptions &langOpts,
-                                               const CodeGenOptions &cgOpts) {
-  const llvm::Triple &triple = target.getTriple();
-  if (triple.isWindowsMSVCEnvironment())
-    return EHPersonality::MSVC_CxxFrameHandler3;
-
-  switch (langOpts.ObjCRuntime.getKind()) {
-  case ObjCRuntime::FragileMacOSX:
-    return getCPersonality(target, cgOpts);
-  case ObjCRuntime::MacOSX:
-  case ObjCRuntime::iOS:
-  case ObjCRuntime::WatchOS:
-    return EHPersonality::NeXT_ObjC;
-  case ObjCRuntime::GNUstep:
-    if (langOpts.ObjCRuntime.getVersion() >= VersionTuple(1, 7))
-      return EHPersonality::GNUstep_ObjC;
-    [[fallthrough]];
-  case ObjCRuntime::GCC:
-  case ObjCRuntime::ObjFW:
-    if (cgOpts.hasSjLjExceptions())
-      return EHPersonality::GNU_ObjC_SJLJ;
-    if (cgOpts.hasSEHExceptions())
-      return EHPersonality::GNU_ObjC_SEH;
-    return EHPersonality::GNU_ObjC;
-  }
-  llvm_unreachable("bad runtime kind");
-}
-
-static const EHPersonality &getCXXPersonality(const TargetInfo &target,
-                                              const CodeGenOptions &cgOpts) {
-  const llvm::Triple &triple = target.getTriple();
-  if (triple.isWindowsMSVCEnvironment())
-    return EHPersonality::MSVC_CxxFrameHandler3;
-  if (triple.isOSAIX())
-    return EHPersonality::XL_CPlusPlus;
-  if (cgOpts.hasSjLjExceptions())
-    return EHPersonality::GNU_CPlusPlus_SJLJ;
-  if (cgOpts.hasDWARFExceptions())
-    return EHPersonality::GNU_CPlusPlus;
-  if (cgOpts.hasSEHExceptions())
-    return EHPersonality::GNU_CPlusPlus_SEH;
-  if (cgOpts.hasWasmExceptions())
-    return EHPersonality::GNU_Wasm_CPlusPlus;
-  return EHPersonality::GNU_CPlusPlus;
-}
-
-/// Determines the personality function to use when both C++
-/// and Objective-C exceptions are being caught.
-static const EHPersonality &getObjCXXPersonality(const TargetInfo &target,
-                                                 const LangOptions &langOpts,
-                                                 const CodeGenOptions &cgOpts) {
-  if (target.getTriple().isWindowsMSVCEnvironment())
-    return EHPersonality::MSVC_CxxFrameHandler3;
-
-  switch (langOpts.ObjCRuntime.getKind()) {
-  // In the fragile ABI, just use C++ exception handling and hope
-  // they're not doing crazy exception mixing.
-  case ObjCRuntime::FragileMacOSX:
-    return getCXXPersonality(target, cgOpts);
-
-  // The ObjC personality defers to the C++ personality for non-ObjC
-  // handlers.  Unlike the C++ case, we use the same personality
-  // function on targets using (backend-driven) SJLJ EH.
-  case ObjCRuntime::MacOSX:
-  case ObjCRuntime::iOS:
-  case ObjCRuntime::WatchOS:
-    return getObjCPersonality(target, langOpts, cgOpts);
-
-  case ObjCRuntime::GNUstep:
-    return EHPersonality::GNU_ObjCXX;
-
-  // The GCC runtime's personality function inherently doesn't support
-  // mixed EH.  Use the ObjC personality just to avoid returning null.
-  case ObjCRuntime::GCC:
-  case ObjCRuntime::ObjFW:
-    return getObjCPersonality(target, langOpts, cgOpts);
-  }
-  llvm_unreachable("bad runtime kind");
-}
-
-static const EHPersonality &getSEHPersonalityMSVC(const llvm::Triple &triple) {
-  return triple.getArch() == llvm::Triple::x86
-             ? EHPersonality::MSVC_except_handler
-             : EHPersonality::MSVC_C_specific_handler;
-}
-
 namespace clang::CIRGen {
 
 const EHPersonality &getEHPersonality(CIRGenModule &cgm,
                                       const FunctionDecl *fd) {
-  const llvm::Triple &triple = cgm.getTarget().getTriple();
-  const LangOptions &langOpts = cgm.getLangOpts();
-  const CodeGenOptions &cgOpts = cgm.getCodeGenOpts();
-  const TargetInfo &target = cgm.getTarget();
-
-  // Functions using SEH get an SEH personality.
-  if (fd && fd->usesSEHTry())
-    return getSEHPersonalityMSVC(triple);
-
-  if (langOpts.ObjC) {
-    return langOpts.CPlusPlus ? getObjCXXPersonality(target, langOpts, cgOpts)
-                              : getObjCPersonality(target, langOpts, cgOpts);
-  }
-  return langOpts.CPlusPlus ? getCXXPersonality(target, cgOpts)
-                            : getCPersonality(target, cgOpts);
+  return CodeGenUtils::getEHPersonality(cgm.getTarget(), cgm.getLangOpts(),
+                                        cgm.getCodeGenOpts(), fd);
 }
 
 const EHPersonality &getEHPersonality(CIRGenFunction &cgf) {
@@ -512,16 +398,16 @@ static void initCatchParam(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
   CanQualType catchType =
       cgf.cgm.getASTContext().getCanonicalType(catchParam.getType());
   cir::InitCatchKind kind;
-  bool shouldInitFromExnDirectly = false;
 
-  // If we're catching by reference, we can just cast the object
-  // pointer to the appropriate pointer.
   if (isa<ReferenceType>(catchType)) {
     QualType caughtType = cast<ReferenceType>(catchType)->getPointeeType();
-    if (const PointerType *ptr = dyn_cast<PointerType>(caughtType)) {
-      shouldInitFromExnDirectly = !ptr->getPointeeType()->isRecordType();
-    }
-    kind = cir::InitCatchKind::Reference;
+    const PointerType *ptr = dyn_cast<PointerType>(caughtType);
+    if (!ptr)
+      kind = cir::InitCatchKind::Reference;
+    else if (ptr->getPointeeType()->isRecordType())
+      kind = cir::InitCatchKind::ReferenceToRecordPointer;
+    else
+      kind = cir::InitCatchKind::ReferenceToPointer;
   } else {
     cir::TypeEvaluationKind tek = cgf.getEvaluationKind(catchType);
     if (tek == cir::TEK_Aggregate) {
@@ -555,7 +441,7 @@ static void initCatchParam(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
   mlir::Location mloc = cgf.getLoc(loc);
 
   if (kind == cir::InitCatchKind::NonTrivialCopy ||
-      (kind == cir::InitCatchKind::Reference && shouldInitFromExnDirectly)) {
+      kind == cir::InitCatchKind::ReferenceToPointer) {
     // Sanitizer-checked construction (UBSan vptr/derived-class checks, etc.)
     // would require additional adornments that cir.construct_catch_param does
     // not yet carry.
@@ -609,9 +495,8 @@ void CIRGenFunction::emitBeginCatch(const CXXCatchStmt *catchStmt,
                  catchStmt->getBeginLoc());
 }
 
-mlir::LogicalResult
-CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s,
-                               cxxTryBodyEmitter &bodyCallback) {
+mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(
+    const CXXTryStmt &s, cxxTryBodyEmitter &bodyCallback, bool isFnTryBlock) {
   mlir::Location loc = getLoc(s.getSourceRange());
 
   // Create a scope to hold try local storage for catch params.
@@ -700,6 +585,12 @@ CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s,
   tryOp.setHandlerTypesAttr(
       mlir::ArrayAttr::get(&getMLIRContext(), handlerAttrs));
 
+  // Determine if we need an implicit rethrow for all these catch handlers;
+  // see the comment below.
+  const bool doImplicitRethrow =
+      isFnTryBlock && (isa<CXXConstructorDecl>(curCodeDecl) ||
+                       isa<CXXDestructorDecl>(curCodeDecl));
+
   // Emit the catch handler bodies. This has to be done after the try op is
   // created and in place so that we can find the insertion point for the
   // catch parameter alloca.
@@ -736,8 +627,13 @@ CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s,
     //   The currently handled exception is rethrown if control
     //   reaches the end of a handler of the function-try-block of a
     //   constructor or destructor.
-
-    // TODO(cir): Handle implicit rethrow?
+    //
+    // It is important that we only do this on fallthrough and not on
+    // return.  Note that it's illegal to put a return in a
+    // constructor function-try-block's catch handler (p14), so this
+    // really only applies to destructors.
+    if (doImplicitRethrow && insertionPointIsReachable())
+      cgm.getCXXABI().emitRethrow(*this, /*isNoReturn=*/true);
 
     // Fall out through the catch cleanups.
     handlerScope.forceCleanup();

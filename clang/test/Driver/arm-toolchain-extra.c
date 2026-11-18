@@ -15,7 +15,7 @@
 // RUN: ln -s %clang %t/arm-nogcc/bin/clang
 // RUN: ln -s %S/Inputs/basic_arm_nogcc_tree/armv6m-none-eabi %t/arm-nogcc/armv6m-none-eabi
 // RUN: ln -s %S/Inputs/basic_arm_nogcc_tree/bin/armv6m-none-eabi-ld %t/arm-nogcc/bin/armv6m-none-eabi-ld
-// RUN: %t/arm-nogcc/bin/clang %s -### -no-canonical-prefixes \
+// RUN: %t/arm-nogcc/bin/clang %s --sysroot= -### -no-canonical-prefixes \
 // RUN:    --gcc-toolchain=%t/arm-nogcc/invalid \
 // RUN:    --target=armv6m-none-eabi --rtlib=libgcc --unwindlib=platform -fuse-ld=ld 2>&1 \
 // RUN:    | FileCheck -check-prefix=C-ARM-BAREMETAL-NOGCC %s

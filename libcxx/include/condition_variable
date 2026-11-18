@@ -249,13 +249,13 @@ condition_variable_any::wait_until(_Lock& __lock, const chrono::time_point<_Cloc
 
 template <class _Lock, class _Rep, class _Period>
 inline cv_status condition_variable_any::wait_for(_Lock& __lock, const chrono::duration<_Rep, _Period>& __d) {
-  return wait_until(__lock, chrono::steady_clock::now() + __d);
+  return wait_until(__lock, std::__rel_to_abs(__d));
 }
 
 template <class _Lock, class _Rep, class _Period, class _Predicate>
 inline bool
 condition_variable_any::wait_for(_Lock& __lock, const chrono::duration<_Rep, _Period>& __d, _Predicate __pred) {
-  return wait_until(__lock, chrono::steady_clock::now() + __d, std::move(__pred));
+  return wait_until(__lock, std::__rel_to_abs(__d), std::move(__pred));
 }
 
 #    if _LIBCPP_STD_VER >= 20
@@ -336,7 +336,7 @@ bool condition_variable_any::wait_until(
 template <class _Lock, class _Rep, class _Period, class _Predicate>
 bool condition_variable_any::wait_for(
     _Lock& __lock, stop_token __stoken, const chrono::duration<_Rep, _Period>& __rel_time, _Predicate __pred) {
-  return wait_until(__lock, std::move(__stoken), chrono::steady_clock::now() + __rel_time, std::move(__pred));
+  return wait_until(__lock, std::move(__stoken), std::__rel_to_abs(__rel_time), std::move(__pred));
 }
 
 #    endif // _LIBCPP_STD_VER >= 20

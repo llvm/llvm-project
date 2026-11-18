@@ -40,18 +40,22 @@ add_offload_unittest("memory"
     memory/olMemPrefetch.cpp
     memory/olGetMemInfo.cpp
     memory/olGetMemInfoSize.cpp
-    memory/olMemRegister.cpp)
+    memory/olMemRegister.cpp
+    memory/olMemIsAccessible.cpp)
 
 add_offload_unittest("platform"
     platform/olGetPlatformInfo.cpp
     platform/olGetPlatformInfoSize.cpp
+    platform/olRegisterRPCCallback.cpp
     platform/olIteratePlatforms.cpp)
 
 add_offload_unittest("program"
     program/olCreateProgram.cpp
     program/olIsValidBinary.cpp
     program/olIterateCompatibleDevices.cpp
-    program/olDestroyProgram.cpp)
+    program/olDestroyProgram.cpp
+    program/olGetProgramInfo.cpp
+    program/olGetProgramInfoSize.cpp)
 
 add_offload_unittest("queue"
     queue/olCreateQueue.cpp

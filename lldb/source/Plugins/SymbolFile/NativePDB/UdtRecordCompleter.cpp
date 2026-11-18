@@ -37,14 +37,11 @@ using Error = llvm::Error;
 UdtRecordCompleter::UdtRecordCompleter(
     PdbTypeSymId id, CompilerType &derived_ct, clang::TagDecl &tag_decl,
     PdbAstBuilderClang &ast_builder, PdbIndex &index,
-    llvm::DenseMap<clang::Decl *, DeclStatus> &decl_to_status,
-    llvm::DenseMap<lldb::opaque_compiler_type_t,
-                   llvm::SmallSet<std::pair<llvm::StringRef, CompilerType>, 8>>
-        &cxx_record_map)
+    llvm::DenseMap<clang::Decl *, DeclStatus> &decl_to_status)
     : m_cv_tag_record(CVTagRecord::create(index.tpi().getType(id.index))),
       m_id(id), m_derived_ct(derived_ct), m_tag_decl(tag_decl),
       m_ast_builder(ast_builder), m_index(index),
-      m_decl_to_status(decl_to_status), m_cxx_record_map(cxx_record_map) {
+      m_decl_to_status(decl_to_status) {
   switch (m_cv_tag_record.kind()) {
   case CVTagRecord::Enum:
     break;
@@ -96,26 +93,15 @@ void UdtRecordCompleter::AddMethod(llvm::StringRef name, TypeIndex type_idx,
     return;
   CompilerType method_ct = m_ast_builder.ToCompilerType(method_qt);
   TypeSystemClang::RequireCompleteType(method_ct);
-  lldb::opaque_compiler_type_t derived_opaque_ty =
-      m_derived_ct.GetOpaqueQualType();
-  auto iter = m_cxx_record_map.find(derived_opaque_ty);
-  if (iter != m_cxx_record_map.end()) {
-    if (iter->getSecond().contains({name, method_ct})) {
-      return;
-    }
-  }
-
   bool is_artificial = (options & MethodOptions::CompilerGenerated) ==
                        MethodOptions::CompilerGenerated;
   auto *pdb = static_cast<SymbolFileNativePDB *>(
       m_ast_builder.clang().GetSymbolFile()->GetBackingSymbolFile());
   std::string asm_label = pdb->GetMethodCallLabel(
       type_idx, (m_cv_tag_record.name() + "::" + name).str());
-  m_ast_builder.clang().AddMethodToCXXRecordType(
-      derived_opaque_ty, name.data(), asm_label, method_ct, attrs.isVirtual(),
-      attrs.isStatic(), false, false, false, is_artificial);
-
-  m_cxx_record_map[derived_opaque_ty].insert({name, method_ct});
+  m_ast_builder.GetOrCreateMethodDecl(m_derived_ct.GetOpaqueQualType(), name,
+                                      asm_label, method_ct, attrs.isVirtual(),
+                                      attrs.isStatic(), is_artificial);
 }
 
 Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
