@@ -103,3 +103,60 @@ int test_musttail(int cond) {
   s = cond ? (struct foo){.x = 1} : (struct foo){.x = 2};
   [[clang::musttail]] return callee(s.x);
 }
+
+// GH237441: a compound literal in a VLA bound used to leave its lifetime cleanup
+// queued and FinishFunction asserted. It lives until the end of the enclosing
+// block, which for a parameter is the whole function.
+int size(int *);
+void use(char *);
+void other(void);
+
+// CHECK-LABEL: define dso_local void @GH237441_param(
+// CHECK: call void @llvm.lifetime.start.p0(ptr nonnull %[[CL:.*]])
+// CHECK: call i32 @size(ptr noundef nonnull %[[CL]])
+// CHECK: call void @llvm.lifetime.end.p0(ptr nonnull %[[CL]])
+// CHECK-NEXT: ret void
+void GH237441_param(char *c[size((int[]){})]) {}
+
+// CHECK-LABEL: define dso_local void @GH237441_init(
+// CHECK: call void @llvm.lifetime.start.p0(ptr nonnull %[[CL:.*]])
+// CHECK: call i32 @side_effect()
+// CHECK: call i32 @size(ptr noundef nonnull %[[CL]])
+// CHECK: call void @llvm.lifetime.end.p0(ptr nonnull %[[CL]])
+// CHECK-NEXT: ret void
+void GH237441_init(char (*p)[size((int[]){side_effect(), 2})]) {}
+
+// CHECK-LABEL: define dso_local void @GH237441_local(
+// CHECK: call void @llvm.lifetime.start.p0(ptr nonnull %[[CL:.*]])
+// CHECK: call i32 @size(ptr noundef nonnull %[[CL]])
+// CHECK: call void @use(
+// CHECK: call void @llvm.lifetime.end.p0(ptr nonnull %[[CL]])
+// CHECK: ret void
+void GH237441_local(void) {
+  char c[size((int[]){1})];
+  use(c);
+}
+
+// The literal's lifetime ends with its block, before the next statement.
+// CHECK-LABEL: define dso_local void @GH237441_nested(
+// CHECK: call void @llvm.lifetime.start.p0(ptr nonnull %[[CL:.*]])
+// CHECK: call i32 @size(ptr noundef nonnull %[[CL]])
+// CHECK: call void @use(
+// CHECK: call void @llvm.lifetime.end.p0(ptr nonnull %[[CL]])
+// CHECK: call void @other()
+// CHECK: ret void
+void GH237441_nested(void) {
+  {
+    char c[size((int[]){1})];
+    use(c);
+  }
+  other();
+}
+
+// A bound without a compound literal gets no lifetime markers.
+// CHECK-LABEL: define dso_local void @GH237441_control(
+// CHECK-NOT: llvm.lifetime
+// CHECK: call i32 @size(
+// CHECK-NOT: llvm.lifetime
+// CHECK: ret void
+void GH237441_control(int n, char *c[size(&n)]) {}

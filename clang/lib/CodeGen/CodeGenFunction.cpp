@@ -2653,7 +2653,16 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
         // e.g. with a typedef and a pointer to it.
         llvm::Value *&entry = VLASizeMap[sizeExpr];
         if (!entry) {
-          llvm::Value *size = EmitScalarExpr(sizeExpr);
+          // The bound is never wrapped in an ExprWithCleanups, so provide the
+          // full-expression scope here: cleanups queued while evaluating it,
+          // such as the lifetime end of a C compound literal, must be handed
+          // to the enclosing scope rather than left queued.
+          llvm::Value *size;
+          {
+            RunCleanupsScope BoundScope(*this);
+            size = EmitScalarExpr(sizeExpr);
+            BoundScope.ForceCleanup({&size});
+          }
 
           // C11 6.7.6.2p5:
           //   If the size is an expression that is not an integer constant
