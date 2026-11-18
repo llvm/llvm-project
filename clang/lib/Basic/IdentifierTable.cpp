@@ -63,7 +63,7 @@ IdentifierIterator *IdentifierInfoLookup::getIdentifiers() {
 }
 
 IdentifierTable::IdentifierTable(IdentifierInfoLookup *ExternalLookup)
-    : HashTable(8192), // Start with space for 8K identifiers.
+    : HashTable(2048), // Start with space for 2K identifiers.
       ExternalLookup(ExternalLookup) {}
 
 IdentifierTable::IdentifierTable(const LangOptions &LangOpts,
@@ -72,6 +72,15 @@ IdentifierTable::IdentifierTable(const LangOptions &LangOpts,
   // Populate the identifier table with info about keywords for the current
   // language.
   AddKeywords(LangOpts);
+}
+
+void IdentifierTable::setBuiltinInfo(const Builtin::Context &Builtins,
+                                     const LangOptions &LangOpts) {
+  this->Builtins = &Builtins;
+  BuiltinLangOpts = &LangOpts;
+  for (auto &Entry : HashTable)
+    if (Entry.second)
+      assignBuiltinID(*Entry.second);
 }
 
 //===----------------------------------------------------------------------===//

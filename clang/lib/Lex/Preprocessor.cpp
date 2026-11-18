@@ -210,12 +210,18 @@ void Preprocessor::Initialize(const TargetInfo &Target,
          "Invalid override of aux target information.");
   this->AuxTarget = AuxTarget;
 
-  // Initialize information about built-ins.
-  BuiltinInfo->InitializeTarget(Target, AuxTarget);
+  // Initialize information about built-ins. The context is replaced rather
+  // than created here because an ASTContext may already refer to it.
+  *BuiltinInfo = Builtin::Context(Target, AuxTarget);
   HeaderInfo.setTarget(Target);
 
   // Populate the identifier table with info about keywords for the current language.
   Identifiers.AddKeywords(LangOpts);
+
+  // Make the identifier table assign builtin IDs. This is done before any AST
+  // file gets loaded, so that the identifiers read from AST files get their
+  // builtin IDs from this compilation rather than from the AST file.
+  Identifiers.setBuiltinInfo(*BuiltinInfo, LangOpts);
 
   // Initialize the __FTL_EVAL_METHOD__ macro to the TargetInfo.
   setTUFPEvalMethod(getTargetInfo().getFPEvalMethod());

@@ -2,6 +2,7 @@
 # distinct target enables faster iteration times at low cost.
 add_distinct_clang_unittest(BasicTests
   AtomicLineLoggerTest.cpp
+  BuiltinsTest.cpp
   CharInfoTest.cpp
   DarwinSDKInfoTest.cpp
   DiagnosticTest.cpp

@@ -1284,8 +1284,20 @@ IdentifierInfo *ASTIdentifierLookupTrait::ReadData(const internal_key_type& k,
   // Token IDs are read-only.
   if (HasRevertedTokenIDToIdentifier && II->getTokenID() != tok::identifier)
     II->revertTokenIDToIdentifier();
-  if (!F.isModule())
+  if (!F.isModule()) {
+    // Restore the Objective-C keyword or notable identifier ID, but not the
+    // builtin ID: the identifier table assigns builtin IDs based on this
+    // compilation's target and language options, which may disable builtins
+    // differently from the AST file's (-fno-builtin-foo isn't validated).
+    // TODO: Simplify this to: if the identifier has no builtin ID, restore
+    // ObjCOrBuiltinID, then clear it if it's a builtin ID.
+    unsigned BuiltinID = II->getBuiltinID();
     II->setObjCOrBuiltinID(ObjCOrBuiltinID);
+    if (BuiltinID != Builtin::NotBuiltin)
+      II->setBuiltinID(BuiltinID);
+    else if (II->getBuiltinID() != Builtin::NotBuiltin)
+      II->clearBuiltinID();
+  }
   assert(II->isExtensionToken() == ExtensionToken &&
          "Incorrect extension token flag");
   (void)ExtensionToken;
@@ -5256,8 +5268,8 @@ ASTReader::ASTReadResult ASTReader::ReadAST(ModuleFileName FileName,
     }
   }
 
-  // Builtins and library builtins have already been initialized. Mark all
-  // identifiers as out-of-date, so that they are deserialized on first use.
+  // Mark all identifiers as out-of-date, so that they are deserialized on
+  // first use.
   if (Type == MK_PCH || Type == MK_Preamble || Type == MK_MainFile)
     for (auto &Id : PP.getIdentifierTable())
       Id.second->setOutOfDate(true);

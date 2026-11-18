@@ -5449,6 +5449,9 @@ std::unique_ptr<TypoCorrectionConsumer> Sema::makeTypoCorrectionConsumer(
     // FIXME: Re-add the ability to skip very unlikely potential corrections.
     for (const auto &I : Context.Idents)
       Consumer->FoundName(I.getKey());
+    // Builtins only get added to the identifier table once used.
+    Context.BuiltinInfo.forEachBuiltinName(
+        getLangOpts(), [&](StringRef Name) { Consumer->FoundName(Name); });
 
     // Walk through identifiers in external identifier sources.
     // FIXME: Re-add the ability to skip very unlikely potential corrections.
