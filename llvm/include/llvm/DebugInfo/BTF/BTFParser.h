@@ -63,14 +63,14 @@ class BTFParser {
   std::vector<const BTF::CommonType *> Types;
 
   struct ParseContext;
-  Error parseBTF(ParseContext &Ctx, SectionRef BTF);
+  Error parseBTF(DataExtractor &Extractor, bool LoadTypes, bool Validate);
   Error parseBTFExt(ParseContext &Ctx, SectionRef BTFExt);
   Error parseLineInfo(ParseContext &Ctx, DataExtractor &Extractor,
                       uint64_t LineInfoStart, uint64_t LineInfoEnd);
   Error parseRelocInfo(ParseContext &Ctx, DataExtractor &Extractor,
                        uint64_t RelocInfoStart, uint64_t RelocInfoEnd);
-  Error parseTypesInfo(ParseContext &Ctx, uint64_t TypesInfoStart,
-                       StringRef RawData);
+  Error parseTypesInfo(bool IsLittleEndian, uint64_t TypesInfoStart,
+                       StringRef RawData, bool Validate);
 
 public:
   // Looks-up a string in the .BTF section's string table.
@@ -124,6 +124,10 @@ public:
   //   might be unavailable;
   LLVM_ABI Error parse(const ObjectFile &Obj, const ParseOptions &Opts);
   Error parse(const ObjectFile &Obj) { return parse(Obj, {true, true, true}); }
+
+  /// Parse a BTF type section. The caller must keep Data alive while using
+  /// the parser, as strings refer directly to its contents.
+  LLVM_ABI Error parseTypes(StringRef Data, bool IsLittleEndian);
 
   // Return true if `Obj` has .BTF and .BTF.ext sections.
   LLVM_ABI static bool hasBTFSections(const ObjectFile &Obj);

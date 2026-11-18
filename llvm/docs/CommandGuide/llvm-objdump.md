@@ -24,6 +24,14 @@ combined with other commands:
 Display the information contained within an archive's headers.
 :::
 
+:::{option} --btf[=<section>]
+Display BTF type records in bpftool raw format from the named ELF section, or
+`.BTF` if no section is specified. The section name must be joined to the option
+with `=`. The BTF payload byte order must match the ELF byte order; it is not
+auto-detected. BTF extension information is not displayed, and relocations are
+not applied.
+:::
+
 :::{option} -d, --disassemble
 Disassemble all executable sections found in the input files. On some
 architectures (AArch64, PowerPC, x86), all known instructions are disassembled by

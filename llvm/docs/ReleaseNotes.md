@@ -555,6 +555,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM tools
 
+* `llvm-objdump` now supports `--btf[=<section>]` to dump ELF BTF type records,
+  defaulting to the `.BTF` section.
+
 * `llvm-mc` now supports `--verify[=<prefixes>]` to check diagnostics against `<prefix>-<kind> {{...}}` comments in the input instead of printing them.
 
 * `opt` and `llc` load `-load-pass-plugin` plugins after parsing the command line, so a loaded plugin's options are no longer accepted as ordinary options.
