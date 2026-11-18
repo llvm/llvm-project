@@ -14,6 +14,8 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_UNWINDINFOMANAGER_H
 #define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_UNWINDINFOMANAGER_H
 
+#ifdef __APPLE__
+
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
@@ -73,5 +75,7 @@ private:
 };
 
 } // namespace llvm::orc
+
+#endif // __APPLE__
 
 #endif // LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_UNWINDINFOMANAGER_H
