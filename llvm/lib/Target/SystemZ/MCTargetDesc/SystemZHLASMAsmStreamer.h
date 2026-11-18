@@ -73,6 +73,7 @@ public:
   void AddComment(const Twine &T, bool EOL = true) override;
 
   void emitBytes(StringRef Data) override;
+  void emitBinaryData(StringRef Data) override;
   void emitIntValue(uint64_t Value, unsigned Size) override;
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                 SMLoc Loc = SMLoc()) override;
@@ -118,6 +119,9 @@ public:
   /// @}
 
   void finishImpl() override;
+
+protected:
+  void emitBytes(StringRef Data, bool MayBeString);
 };
 } // namespace llvm
 

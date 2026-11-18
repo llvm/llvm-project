@@ -379,28 +379,44 @@ static void emitQuotedText(raw_ostream &OS, StringRef Text) {
   }
 }
 
-void SystemZHLASMAsmStreamer::emitBytes(StringRef Data) {
+void SystemZHLASMAsmStreamer::emitBytes(StringRef Data, bool MayBeString) {
   assert(getCurrentSectionOnly() &&
          "Cannot emit contents before setting section!");
-  for (size_t I = 0, E = Data.size(); I < E; I += MaxXLLen) {
-    StringRef Chunk = Data.substr(I, MaxXLLen);
-    // Printable text is emitted as a character constant: CE for EBCDIC-1047
-    // (converted to ASCII for the output) or CA for ASCII.
+
+  // Printable text is emitted as a character constant: CE for EBCDIC-1047
+  // (converted to ASCII for the output) or CA for ASCII.
+  auto EmitAsString = [this](StringRef Data) {
     SmallString<MaxXLLen> EBCDICText;
-    ConverterEBCDIC::convertToUTF8(Chunk, EBCDICText);
+    ConverterEBCDIC::convertToUTF8(Data, EBCDICText);
     if (isPrintableText(EBCDICText)) {
       OS << " DC CE'";
       emitQuotedText(OS, EBCDICText);
       OS << '\'';
-    } else if (isPrintableText(Chunk)) {
-      OS << " DC CA'";
-      emitQuotedText(OS, Chunk);
-      OS << '\'';
-    } else {
-      OS << " DC XL" << Chunk.size() << '\'' << toHex(Chunk) << '\'';
+      return true;
     }
+    if (isPrintableText(Data)) {
+      OS << " DC CA'";
+      emitQuotedText(OS, Data);
+      OS << '\'';
+      return true;
+    }
+    return false;
+  };
+
+  for (size_t I = 0, E = Data.size(); I < E; I += MaxXLLen) {
+    StringRef Chunk = Data.substr(I, MaxXLLen);
+    if (!(MayBeString && Chunk.size() > 1 && EmitAsString(Chunk)))
+      OS << " DC XL" << Chunk.size() << '\'' << toHex(Chunk) << '\'';
     EmitEOL();
   }
+}
+
+void SystemZHLASMAsmStreamer::emitBytes(StringRef Data) {
+  emitBytes(Data, /*MayBeString=*/true);
+}
+
+void SystemZHLASMAsmStreamer::emitBinaryData(StringRef Data) {
+  emitBytes(Data, /*MayBeString=*/false);
 }
 
 void SystemZHLASMAsmStreamer::emitIntValue(uint64_t Value, unsigned Size) {
