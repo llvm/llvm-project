@@ -160,9 +160,14 @@ static bool mergeConstants(Module &M) {
       // If this GV is dead, remove it.
       GV.removeDeadConstantUsers();
       if (GV.use_empty() && GV.hasLocalLinkage()) {
-        GV.eraseFromParent();
-        ++ChangesMade;
-        continue;
+        // Don't remove a comdat key; it would strand the group's associative
+        // members. Comdat-aware DCE handles dead keys.
+        const Comdat *C = GV.getComdat();
+        if (!C || C->getName() != GV.getName()) {
+          GV.eraseFromParent();
+          ++ChangesMade;
+          continue;
+        }
       }
 
       if (isUnmergeableGlobal(&GV, UsedGlobals))
