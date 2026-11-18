@@ -121,16 +121,16 @@ static SmallVector<Region *> getBackwardRegionOrder(Operation *op) {
 
   SetVector<Region *> visitedRegions;
   while (visitedRegions.size() < regions.size()) {
-    auto unvisited = llvm::make_filter_range(regions, [&](Region *region) {
-      return !visitedRegions.contains(region);
-    });
     // If no region is ready, every unvisited region is on a cycle (e.g.
     // scf.while before <-> after). Break it at an exit region when possible:
     // its consumers outside the op are already visited, and its in-cycle
     // successor is then visited after it, like a use across a loop back edge.
+    // Returns the first unvisited region that satisfies `pred`, or null.
     auto findFirst = [&](auto pred) -> Region * {
-      auto it = llvm::find_if(unvisited, pred);
-      return it == unvisited.end() ? nullptr : *it;
+      for (Region *region : regions)
+        if (!visitedRegions.contains(region) && pred(region))
+          return region;
+      return nullptr;
     };
     Region *chosen = findFirst([&](Region *region) {
       return isReady(region, targets, visitedRegions);
@@ -139,7 +139,7 @@ static SmallVector<Region *> getBackwardRegionOrder(Operation *op) {
       chosen =
           findFirst([&](Region *region) { return exits.contains(region); });
     if (!chosen)
-      chosen = *unvisited.begin();
+      chosen = findFirst([](Region *) { return true; });
     visitedRegions.insert(chosen);
   }
   return visitedRegions.takeVector();
