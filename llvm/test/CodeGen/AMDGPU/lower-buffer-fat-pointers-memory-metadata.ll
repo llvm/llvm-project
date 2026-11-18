@@ -7,7 +7,7 @@ target triple = "amdgpu9.00--"
 define {ptr addrspace(7), i32} @load_fat_pointer_aggregate(ptr %p) {
 ; CHECK-LABEL: define { { ptr addrspace(8), i32 }, i32 } @load_fat_pointer_aggregate(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V_0:%.*]] = load i160, ptr [[P]], align 32, !nontemporal [[META0:![0-9]+]], !mem.cache_hint [[META1:![0-9]+]]
+; CHECK-NEXT:    [[V_0:%.*]] = load i160, ptr [[P]], align 32, !nontemporal [[META0:![0-9]+]], !annotation [[META1:![0-9]+]], !pcsections [[META2:![0-9]+]], !mem.cache_hint [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i160 [[V_0]], 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i160 [[TMP1]] to i128
 ; CHECK-NEXT:    [[V_0_PTR_RSRC:%.*]] = inttoptr i128 [[TMP2]] to ptr addrspace(8)
@@ -16,7 +16,7 @@ define {ptr addrspace(7), i32} @load_fat_pointer_aggregate(ptr %p) {
 ; CHECK-NEXT:    [[V_0_PTR:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP3]], i32 [[V_0_PTR_OFF]], 1
 ; CHECK-NEXT:    [[V_0_AGG:%.*]] = insertvalue { { ptr addrspace(8), i32 }, i32 } poison, { ptr addrspace(8), i32 } [[V_0_PTR]], 0
 ; CHECK-NEXT:    [[P_OFF_32:%.*]] = getelementptr nuw i8, ptr [[P]], i64 32
-; CHECK-NEXT:    [[V_1:%.*]] = load i32, ptr [[P_OFF_32]], align 32, !nontemporal [[META0]], !mem.cache_hint [[META1]]
+; CHECK-NEXT:    [[V_1:%.*]] = load i32, ptr [[P_OFF_32]], align 32, !nontemporal [[META0]], !annotation [[META1]], !pcsections [[META2]], !mem.cache_hint [[META3]]
 ; CHECK-NEXT:    [[V_1_AGG:%.*]] = insertvalue { { ptr addrspace(8), i32 }, i32 } [[V_0_AGG]], i32 [[V_1]], 1
 ; CHECK-NEXT:    ret { { ptr addrspace(8), i32 }, i32 } [[V_1_AGG]]
 ;
@@ -30,11 +30,11 @@ define <8 x i32> @load_wide_buffer(ptr addrspace(7) %p) {
 ; CHECK-SAME: { ptr addrspace(8), i32 } [[P:%.*]]) {
 ; CHECK-NEXT:    [[P_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[P]], 0
 ; CHECK-NEXT:    [[P_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[P]], 1
-; CHECK-NEXT:    [[V_OFF_0:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[P_RSRC]], i32 [[P_OFF]], i32 0, i32 0), !nontemporal [[META0]], !mem.cache_hint [[META1]]
+; CHECK-NEXT:    [[V_OFF_0:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[P_RSRC]], i32 [[P_OFF]], i32 0, i32 0), !nontemporal [[META0]], !annotation [[META1]], !pcsections [[META2]], !mem.cache_hint [[META3]]
 ; CHECK-NEXT:    [[V_EXT_0:%.*]] = shufflevector <4 x i32> [[V_OFF_0]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[V_PARTS_0:%.*]] = shufflevector <8 x i32> poison, <8 x i32> [[V_EXT_0]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[P_OFF_PTR_16:%.*]] = add i32 [[P_OFF]], 16
-; CHECK-NEXT:    [[V_OFF_16:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[P_RSRC]], i32 [[P_OFF_PTR_16]], i32 0, i32 0), !nontemporal [[META0]], !mem.cache_hint [[META1]]
+; CHECK-NEXT:    [[V_OFF_16:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[P_RSRC]], i32 [[P_OFF_PTR_16]], i32 0, i32 0), !nontemporal [[META0]], !annotation [[META1]], !pcsections [[META2]], !mem.cache_hint [[META3]]
 ; CHECK-NEXT:    [[V_EXT_4:%.*]] = shufflevector <4 x i32> [[V_OFF_16]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[V:%.*]] = shufflevector <8 x i32> [[V_PARTS_0]], <8 x i32> [[V_EXT_4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    ret <8 x i32> [[V]]
@@ -50,6 +50,8 @@ define <8 x i32> @load_wide_buffer(ptr addrspace(7) %p) {
 !4 = !{!"metadata_section"}
 ;.
 ; CHECK: [[META0]] = !{i32 1}
-; CHECK: [[META1]] = !{i32 0, [[META2:![0-9]+]]}
-; CHECK: [[META2]] = !{!"test.cache", i32 1}
+; CHECK: [[META1]] = !{!"memory access"}
+; CHECK: [[META2]] = !{!"metadata_section"}
+; CHECK: [[META3]] = !{i32 0, [[META4:![0-9]+]]}
+; CHECK: [[META4]] = !{!"test.cache", i32 1}
 ;.
