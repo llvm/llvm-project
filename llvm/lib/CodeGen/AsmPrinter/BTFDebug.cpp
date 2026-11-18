@@ -639,6 +639,10 @@ void BTFDebug::visitBasicType(const DIBasicType *BTy, uint32_t &TypeId) {
   case dwarf::DW_ATE_unsigned:
   case dwarf::DW_ATE_unsigned_char:
   case dwarf::DW_ATE_UTF:
+    if (!Asm->TM.getTargetTriple().isBPF() && BTy->getSizeInBits() > 128) {
+      UnrepresentableTypes.insert(BTy);
+      return;
+    }
     // Create a BTF type instance for this DIBasicType and put it into
     // DIToIdMap for cross-type reference check.
     TypeEntry = std::make_unique<BTFTypeInt>(
@@ -831,6 +835,7 @@ bool BTFDebug::isRepresentableValueType(const DIType *Ty) {
     case dwarf::DW_ATE_unsigned:
     case dwarf::DW_ATE_unsigned_char:
     case dwarf::DW_ATE_UTF:
+      return BTy->getSizeInBits() <= 128;
     case dwarf::DW_ATE_float:
       return true;
     case dwarf::DW_ATE_complex_float:
@@ -849,7 +854,7 @@ bool BTFDebug::isRepresentableValueType(const DIType *Ty) {
     return llvm::all_of(Elements, getBTFArrayCount) &&
            isRepresentableValueType(CTy->getBaseType());
   case dwarf::DW_TAG_enumeration_type:
-    return Elements.size() <= BTF::MAX_VLEN &&
+    return CTy->getSizeInBits() <= 64 && Elements.size() <= BTF::MAX_VLEN &&
            (!CTy->getBaseType() ||
             isSupportedEnumBase(dyn_cast_or_null<DIBasicType>(
                 getBTFValueType(CTy->getBaseType()))));
@@ -880,6 +885,8 @@ bool BTFDebug::isRepresentableValueType(const DIType *Ty) {
       }
       [[fallthrough]];
     case dwarf::DW_TAG_member:
+      if (cast<DIDerivedType>(Element)->isStaticMember())
+        continue;
       Member = cast<DIDerivedType>(Element)->getBaseType();
       break;
     case dwarf::DW_TAG_variant_part:
@@ -909,6 +916,9 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
   SmallVector<const DINode *, 8> Elements(DIElements.begin(), DIElements.end());
   if (!IsBPF || CTy->getTag() == dwarf::DW_TAG_class_type)
     llvm::erase_if(Elements, [IsBPF](const DINode *Element) {
+      if (!IsBPF && Element->getTag() == dwarf::DW_TAG_member &&
+          cast<DIDerivedType>(Element)->isStaticMember())
+        return true;
       return Element->getTag() != dwarf::DW_TAG_member &&
              Element->getTag() != dwarf::DW_TAG_variant_part &&
              (IsBPF || Element->getTag() != dwarf::DW_TAG_inheritance);
@@ -1057,7 +1067,8 @@ void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
 void BTFDebug::visitEnumType(const DICompositeType *CTy, uint32_t &TypeId) {
   DINodeArray Elements = CTy->getElements();
   uint32_t VLen = Elements.size();
-  if (VLen > BTF::MAX_VLEN) {
+  if (VLen > BTF::MAX_VLEN ||
+      (!Asm->TM.getTargetTriple().isBPF() && CTy->getSizeInBits() > 64)) {
     UnrepresentableTypes.insert(CTy);
     return;
   }
@@ -1784,7 +1795,7 @@ void BTFDebug::endModule() {
         StructTypeId = ODRRecordIds.lookup(CTy->getRawIdentifier());
     }
 
-    if (!StructTypeId && (IsBPF || isRepresentableValueType(CTy))) {
+    if (!StructTypeId) {
       auto FwdTypeEntry = std::make_unique<BTFTypeFwd>(TypeName, IsUnion);
       StructTypeId = addType(std::move(FwdTypeEntry));
     }

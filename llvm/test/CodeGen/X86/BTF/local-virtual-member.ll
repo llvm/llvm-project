@@ -1,11 +1,12 @@
 ; RUN: llc -mtriple=x86_64-linux-gnu -filetype=obj %s -o %t
-; RUN: llvm-objcopy --dump-section .BTF=- %t | %python %p/../../BPF/BTF/print_btf.py - | FileCheck %s --implicit-check-not="STRUCT 'Wrapper'" --implicit-check-not="STRUCT 'V'" --implicit-check-not="FWD 'Wrapper'" --implicit-check-not="ARRAY"
+; RUN: llvm-objcopy --dump-section .BTF=- %t | %python %p/../../BPF/BTF/print_btf.py - | FileCheck %s --implicit-check-not="STRUCT 'Wrapper'" --implicit-check-not="STRUCT 'V'" --implicit-check-not="ARRAY"
 
 ; A virtual-base record cannot appear by value, even inside an array and
 ; behind a typedef and qualifier. Pointers to the wrapper still work.
 ; CHECK: STRUCT 'Holder' size=8 vlen=1
 ; CHECK-NEXT: 'p' type_id=[[PTR:[0-9]+]] bits_offset=0
-; CHECK-NEXT: {{\[}}[[PTR]]] PTR '(anon)' type_id=0
+; CHECK-NEXT: {{\[}}[[PTR]]] PTR '(anon)' type_id=[[FWD:[0-9]+]]
+; CHECK: {{\[}}[[FWD]]] FWD 'Wrapper' fwd_kind=struct
 
 define void @f() !dbg !4 { ret void }
 
