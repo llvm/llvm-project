@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/windows/HostThreadWindows.h"
-#include "lldb/Host/windows/windows.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-types.h"
@@ -184,4 +183,9 @@ bool RegisterContextWindows::ApplyAllRegisterValues() {
   TargetThreadWindows &wthread = static_cast<TargetThreadWindows &>(m_thread);
   return ::SetThreadContext(
       wthread.GetHostThread().GetNativeThread().GetSystemHandle(), &m_context);
+}
+
+lldb::thread_t RegisterContextWindows::GetThreadHandle() const {
+  auto wthread = static_cast<TargetThreadWindows *>(&m_thread);
+  return wthread->GetHostThread().GetNativeThread().GetSystemHandle();
 }
