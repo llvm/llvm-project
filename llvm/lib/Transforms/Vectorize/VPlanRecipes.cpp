@@ -1512,7 +1512,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     }
 
     // Add on the cost of extracting the element.
-    auto *VecTy = toVectorTy(getOperand(0)->getScalarType(), VF);
+    auto *VecTy = toVectorTy(getScalarType(), VF);
     return Ctx.TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy,
                                       Ctx.CostKind);
   }
@@ -1873,25 +1873,16 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   }
 }
 
-bool VPInstruction::usesFirstPartOnly(const VPValue *Op) const {
-  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
-  if (Instruction::isBinaryOp(getOpcode()))
-    return vputils::onlyFirstPartUsed(this);
-
+bool VPInstruction::usesFirstPartOnly() const {
   switch (getOpcode()) {
   default:
     return false;
-  case Instruction::FCmp:
-  case Instruction::ICmp:
-  case Instruction::Select:
-    return vputils::onlyFirstPartUsed(this);
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::CanonicalIVIncrementForPart:
     return true;
   };
-  llvm_unreachable("switch should return");
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

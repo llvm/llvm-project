@@ -418,7 +418,7 @@ Error L0ProgramTy::loadModuleKernels() {
     CALL_ZE_RET_ERROR(zeModuleGetKernelNames, Module, &Count, Names.data());
 
     for (auto *Name : Names) {
-      KernelsToModuleMap.emplace(Name, Module);
+      KernelsToModuleMap.try_emplace(Name, Module);
     }
   }
 

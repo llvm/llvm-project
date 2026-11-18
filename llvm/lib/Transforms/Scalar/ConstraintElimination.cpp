@@ -774,28 +774,15 @@ static Decomposition decompose(Value *V, ConstraintInfo &Info, bool IsSigned,
 
 static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
                                    bool IsSigned, const DataLayout &DL) {
-  auto MergeResults = [&Info, IsSigned, &DL](
-                          Value *A, Value *B, bool IsSignedB,
-                          bool IsSub = false) -> std::optional<Decomposition> {
+  auto MergeResults = [&Info, IsSigned,
+                       &DL](Value *A, Value *B,
+                            bool IsSignedB) -> std::optional<Decomposition> {
     auto ResA = decompose(A, Info, IsSigned, DL);
     auto ResB = decompose(B, Info, IsSignedB, DL);
-    if (IsSub ? ResA.sub(ResB) : ResA.add(ResB))
+    if (ResA.add(ResB))
       return std::nullopt;
     return ResA;
   };
-
-  // An add/sub.with.overflow is only decomposed for the fact queued on its
-  // no-overflow edge, where it does not overflow.
-  if (auto *WO = dyn_cast<WithOverflowInst>(V)) {
-    Instruction::BinaryOps Opc = WO->getBinaryOp();
-    if ((Opc == Instruction::Add || Opc == Instruction::Sub) &&
-        isKnownNoWrap(Opc, WO->getLHS(), WO->getRHS(), WO->getNoWrapKind(),
-                      Info, IsSigned))
-      if (auto Decomp = MergeResults(WO->getLHS(), WO->getRHS(), IsSigned,
-                                     Opc == Instruction::Sub))
-        return *Decomp;
-    return V;
-  }
 
   Type *Ty = V->getType()->getScalarType();
   if (Ty->isPointerTy() && !IsSigned) {
@@ -1839,17 +1826,6 @@ void State::addInfoFor(BasicBlock &BB) {
     return;
 
   Value *Cond = Br->getCondition();
-
-  // On the false successor of a branch on the overflow bit of an add/sub
-  // overflow intrinsic, its results equal the plain add/sub.
-  WithOverflowInst *WO;
-  if (match(Cond, m_ExtractValue<1>(m_WithOverflowInst(WO))) &&
-      WO->getBinaryOp() != Instruction::Mul &&
-      canAddSuccessor(BB, Br->getSuccessor(1)))
-    for (User *U : WO->users())
-      if (match(U, m_ExtractValue<0>(m_Value())))
-        WorkList.push_back(FactOrCheck::getConditionFact(
-            DT.getNode(Br->getSuccessor(1)), CmpInst::ICMP_EQ, U, WO));
 
   // If the condition is a chain of ORs/AND and the successor only has the
   // current block as predecessor, queue conditions for the successor.

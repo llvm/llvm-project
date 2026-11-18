@@ -153,6 +153,7 @@ bool DeadArgumentEliminationPass::deleteDeadVarargs(Function &F) {
     CallBase *CB = dyn_cast<CallBase>(U);
     if (!CB)
       continue;
+    ChangedFunctions.insert(CB->getFunction());
 
     // Pass all the same arguments.
     Args.assign(CB->arg_begin(), CB->arg_begin() + NumArgs);
@@ -223,7 +224,7 @@ bool DeadArgumentEliminationPass::deleteDeadVarargs(Function &F) {
   // appear to be address-taken.
   NF->removeDeadConstantUsers();
   // Finally, nuke the old function.
-  F.eraseFromParent();
+  eraseReplacedFunction(F, *NF);
   return true;
 }
 
@@ -280,12 +281,14 @@ bool DeadArgumentEliminationPass::removeDeadArgumentsFromCallers(Function &F) {
 
   if (UnusedArgs.empty())
     return false;
+  ChangedFunctions.insert(&F);
 
   for (Use &U : F.uses()) {
     CallBase *CB = dyn_cast<CallBase>(U.getUser());
     if (!CB || !CB->isCallee(&U) ||
         CB->getFunctionType() != F.getFunctionType())
       continue;
+    ChangedFunctions.insert(CB->getFunction());
 
     // Now go through all unused args and replace them with poison.
     for (unsigned ArgNo : UnusedArgs) {
@@ -870,6 +873,7 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
   std::vector<Value *> Args;
   while (!F->use_empty()) {
     CallBase &CB = cast<CallBase>(*F->user_back());
+    ChangedFunctions.insert(CB.getFunction());
 
     ArgAttrVec.clear();
     const AttributeList &CallPAL = CB.getAttributes();
@@ -1077,13 +1081,22 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
   }
 
   // Now that the old function is dead, delete it.
-  F->eraseFromParent();
+  eraseReplacedFunction(*F, *NF);
 
   return true;
 }
 
+void DeadArgumentEliminationPass::eraseReplacedFunction(Function &F,
+                                                        const Function &NF) {
+  ChangedFunctions.remove(&F);
+  // The replacement took the name of F.
+  FAM->clear(F, NF.getName());
+  F.eraseFromParent();
+}
+
 PreservedAnalyses DeadArgumentEliminationPass::run(Module &M,
-                                                   ModuleAnalysisManager &) {
+                                                   ModuleAnalysisManager &MAM) {
+  FAM = &MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   bool Changed = false;
 
   // First pass: Do a simple check to see if any functions can have their "..."
@@ -1113,7 +1126,17 @@ PreservedAnalyses DeadArgumentEliminationPass::run(Module &M,
   for (auto &F : M)
     Changed |= removeDeadArgumentsFromCallers(F);
 
+  // Only the analyses of the changed functions are invalid. The ones of the
+  // replaced functions were already cleared.
+  for (Function *F : ChangedFunctions)
+    FAM->invalidate(*F, PreservedAnalyses::none());
+  ChangedFunctions.clear();
+  FAM = nullptr;
+
   if (!Changed)
     return PreservedAnalyses::all();
-  return PreservedAnalyses::none();
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
 }

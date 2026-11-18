@@ -14,6 +14,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_REGEX_REGEX_EXPR_POOL_H
 #define LLVM_LIBC_SRC___SUPPORT_REGEX_REGEX_EXPR_POOL_H
 
+#include "hdr/types/size_t.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/unique_ptr.h"
@@ -21,7 +22,6 @@
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/regex/regex_ast.h"
-#include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace regex {
@@ -57,9 +57,10 @@ class ExprPool {
   static constexpr size_t INITIAL_HASH_CAPACITY = 64;
   /// Scaling factor used when growing dynamic pool arrays and hash tables.
   static constexpr size_t GROWTH_FACTOR = 2;
-  /// Grow the hash table when occupancy reaches 70% to keep linear-probing
-  /// chains short.
-  static constexpr double MAX_LOAD_FACTOR = 0.7;
+  /// Grow the hash table when occupancy reaches 70% (7 / 10) to keep
+  /// linear-probing chains short without floating-point arithmetic.
+  static constexpr size_t MAX_LOAD_NUMERATOR = 7;
+  static constexpr size_t MAX_LOAD_DENOMINATOR = 10;
 
   /// Directory of allocated blocks.
   cpp::unique_ptr<cpp::unique_ptr<Block>[]> blocks;
@@ -86,9 +87,8 @@ class ExprPool {
   }
 
   /// Maximum number of nodes the current hash table can hold before rehashing.
-  size_t max_hashtable_nodes() const {
-    return static_cast<size_t>(static_cast<double>(hashtable_capacity) *
-                               MAX_LOAD_FACTOR);
+  constexpr size_t max_hashtable_nodes() const {
+    return (hashtable_capacity * MAX_LOAD_NUMERATOR) / MAX_LOAD_DENOMINATOR;
   }
 
   /// Single choke point mapping a 1-based ExprId to its 2D block/node slot.
@@ -98,7 +98,7 @@ class ExprPool {
     return blocks[idx / NODES_PER_BLOCK]->nodes[idx % NODES_PER_BLOCK];
   }
 
-  ExprId &find_bucket(cpp::span<ExprId> table, const Expr &e) const;
+  ExprId &find_bucket(cpp::span<ExprId> table, Expr e) const;
   bool ensure_initialized();
   bool allocate_block();
   bool grow_hashtable();
@@ -119,6 +119,8 @@ public:
   /// exhaustion during compilation of highly complex or maliciously crafted
   /// regular expressions.
   static constexpr size_t MAX_NODE_LIMIT = 10000;
+  static_assert(MAX_NODE_LIMIT < UINT32_MAX,
+                "MAX_NODE_LIMIT must fit in 32-bit ExprId");
 
   constexpr ExprPool() = default;
   // The implicit move operations would move the arrays, but copy their sizes,
