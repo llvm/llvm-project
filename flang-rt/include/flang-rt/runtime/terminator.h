@@ -128,9 +128,12 @@ void SetErrorCallback(void (*callback)(int));
 
 #ifdef FLANG_RT_HAVE_CSIGNAL
 // Host only. Device and native GPU builds do not include <csignal>.
-// Print a stack trace when -fbacktrace is enabled. heading may be null.
+// Print a stack trace when -fbacktrace is enabled and backtrace(3) is
+// available. heading may be null. Does nothing when backtrace(3) is not
+// available; CALL BACKTRACE() still reports that it is unsupported.
 void PrintFatalBacktrace(const char *heading);
-// Install handlers for deadly signals.
+// Install handlers for deadly signals. Does nothing when backtrace(3) is
+// not available.
 void InstallFatalBacktraceHandlers();
 #endif
 

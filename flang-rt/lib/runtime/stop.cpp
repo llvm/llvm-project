@@ -320,13 +320,18 @@ RT_EXT_API_GROUP_END
 
 #ifdef FLANG_RT_HAVE_CSIGNAL
 void Fortran::runtime::PrintFatalBacktrace(const char *heading) {
+#ifndef HAVE_BACKTRACE
+  return;
+#else
   if (!Fortran::runtime::executionEnvironment.backtrace)
     return;
   if (heading)
     std::fputs(heading, stderr);
   PrintBacktrace();
+#endif
 }
 
+#ifdef HAVE_BACKTRACE
 static volatile std::sig_atomic_t fatalErrorInProgress{0};
 
 static const char *SignalDescription(int signum) {
@@ -411,4 +416,7 @@ void Fortran::runtime::InstallFatalBacktraceHandlers() {
   InstallOneBacktraceHandler(SIGXFSZ);
 #endif
 }
-#endif
+#else
+void Fortran::runtime::InstallFatalBacktraceHandlers() {}
+#endif // HAVE_BACKTRACE
+#endif // FLANG_RT_HAVE_CSIGNAL
