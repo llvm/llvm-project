@@ -2791,3 +2791,27 @@ add_header_library(
     libc.src.__support.error_or
     libc.src.__support.macros.config
 )
+
+add_header_library(
+  swapoff
+  HDRS
+    swapoff.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  swapon
+  HDRS
+    swapon.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
