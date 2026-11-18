@@ -648,6 +648,7 @@ endif()
 add_type_header(mcontext_t HDR mcontext_t.h)
 add_type_header(ucontext_t HDR ucontext_t.h)
 add_type_header(struct_user_regs_struct HDR struct_user_regs_struct.h)
+add_header(struct_ar_hdr HDR struct_ar_hdr.h)
 
 # UEFI
 add_header(EFI_GUID HDR EFI_GUID.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
