@@ -286,3 +286,36 @@ entry:
   ret void
 }
 
+define i32 @fn_no_args() {
+; CHECK-LABEL: define i32 @fn_no_args() {
+; CHECK-NEXT:    ret i32 0
+;
+  ret i32 0
+}
+
+define i32 @call_fn_no_args_via_varargs() {
+; CHECK-LABEL: define i32 @call_fn_no_args_via_varargs() {
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn_no_args()
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+  %call = call i32 (...) @fn_no_args()
+  ret i32 %call
+}
+
+define i32 @fn_one_arg(i32 %x) {
+; CHECK-LABEL: define i32 @fn_one_arg
+; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  ret i32 %x
+}
+
+define i32 @call_fn_one_arg_via_varargs(i32 %x) {
+; CHECK-LABEL: define i32 @call_fn_one_arg_via_varargs
+; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn_one_arg(i32 [[X]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+  %call = call i32 (i32, ...) @fn_one_arg(i32 %x)
+  ret i32 %call
+}
