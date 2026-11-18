@@ -22,7 +22,7 @@
 ; IR: @unused = external addrspace(3) global [0 x i8]
 ; IR: @sized = internal addrspace(3) global [4 x i32] poison
 ; IR: @__spirv_dynamic_local_memory = internal unnamed_addr addrspace(3) global ptr addrspace(3) poison, align 8
-; IR: @__spirv_dynamic_local_memory_present = addrspace(1) global i8 1
+; IR: @__spirv_dynamic_local_memory_present = addrspace(1) constant i8 1
 
 ; IR-LABEL: define spir_func i32 @load(
 ; IR: %[[PTR:.*]] = load ptr addrspace(3), ptr addrspace(3) @__spirv_dynamic_local_memory
