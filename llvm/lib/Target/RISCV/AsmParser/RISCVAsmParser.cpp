@@ -371,10 +371,6 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     RegReg,
   } Kind;
 
-  struct RegOp {
-    MCRegister Reg;
-  };
-
   struct ExprOp {
     const MCExpr *Expr;
     bool IsRV64;
@@ -424,7 +420,7 @@ struct RISCVOperand final : public MCParsedAsmOperand {
   SMLoc StartLoc, EndLoc;
   union {
     StringRef Tok;
-    RegOp Reg;
+    MCRegister Reg;
     ExprOp Expr;
     FPImmOp FPImm;
     SysRegOp SysReg;
@@ -487,19 +483,17 @@ public:
   bool isToken() const override { return Kind == KindTy::Token; }
   bool isReg() const override { return Kind == KindTy::Register; }
   bool isExpr() const { return Kind == KindTy::Expression; }
-  bool isV0Reg() const {
-    return Kind == KindTy::Register && Reg.Reg == RISCV::V0;
-  }
+  bool isV0Reg() const { return Kind == KindTy::Register && Reg == RISCV::V0; }
   bool isAnyReg() const {
     return Kind == KindTy::Register &&
-           (getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(Reg.Reg) ||
-            getRISCVMCRegisterClass(RISCV::FPR64RegClassID).contains(Reg.Reg) ||
-            getRISCVMCRegisterClass(RISCV::VRRegClassID).contains(Reg.Reg));
+           (getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(Reg) ||
+            getRISCVMCRegisterClass(RISCV::FPR64RegClassID).contains(Reg) ||
+            getRISCVMCRegisterClass(RISCV::VRRegClassID).contains(Reg));
   }
   bool isAnyRegC() const {
     return Kind == KindTy::Register &&
-           (getRISCVMCRegisterClass(RISCV::GPRCRegClassID).contains(Reg.Reg) ||
-            getRISCVMCRegisterClass(RISCV::FPR64CRegClassID).contains(Reg.Reg));
+           (getRISCVMCRegisterClass(RISCV::GPRCRegClassID).contains(Reg) ||
+            getRISCVMCRegisterClass(RISCV::FPR64CRegClassID).contains(Reg));
   }
   bool isImm() const override { return isExpr(); }
   bool isMem() const override { return false; }
@@ -513,7 +507,7 @@ public:
 
   bool isGPR() const {
     return Kind == KindTy::Register &&
-           getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(Reg.Reg);
+           getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(Reg);
   }
 
   bool isGPRForFP(const MCSubtargetInfo &STI) const {
@@ -533,7 +527,7 @@ public:
   }
 
   bool isEvenGPRForFP64(const MCSubtargetInfo &STI) const {
-    return isGPR() && (Reg.Reg - RISCV::X0) % 2 == 0 &&
+    return isGPR() && (Reg - RISCV::X0) % 2 == 0 &&
            !STI.hasFeature(RISCV::Feature64Bit) &&
            !STI.hasFeature(RISCV::FeatureStdExtF);
   }
@@ -1029,7 +1023,7 @@ public:
 
   MCRegister getReg() const override {
     assert(Kind == KindTy::Register && "Invalid type access!");
-    return Reg.Reg;
+    return Reg;
   }
 
   StringRef getSysReg() const {
@@ -1091,7 +1085,7 @@ public:
       OS << "<fpimm: " << FPImm.Val << ">";
       break;
     case KindTy::Register:
-      OS << "<reg: " << RegName(Reg.Reg) << " (" << Reg.Reg.id() << ")>";
+      OS << "<reg: " << RegName(Reg) << " (" << Reg.id() << ")>";
       break;
     case KindTy::Token:
       OS << "'" << getToken() << "'";
@@ -1147,7 +1141,7 @@ public:
   static std::unique_ptr<RISCVOperand> createReg(MCRegister Reg, SMLoc S,
                                                  SMLoc E) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::Register);
-    Op->Reg.Reg = Reg;
+    Op->Reg = Reg;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
