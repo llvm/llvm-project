@@ -5,3 +5,4 @@ add_subdirectory(bedrock)
 # Each connect library builds on the ones listed before it.
 add_subdirectory(connect)
 add_subdirectory(connect-socket)
+add_subdirectory(connect-tcp)

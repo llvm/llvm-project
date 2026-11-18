@@ -29,14 +29,27 @@ typedef union { char c[32]; } __attribute__((aligned(32))) UBigOverAligned;
 // Narrow signed integer sign-extended in a register.
 signed char ext_schar(signed char c) { return c; }
 
-// CIR: cir.func {{.*}}@ext_schar(%arg0: !s8i {{.*}}llvm.signext{{.*}}) -> (!s8i {{.*}}llvm.signext
-// LLVM: define dso_local signext i8 @ext_schar(i8 noundef signext %{{.+}})
+// CIR: cir.func {{.*}}@ext_schar(%arg0: !s8i {llvm.noundef}{{.*}}) -> !s8i
+// LLVM: define dso_local i8 @ext_schar(i8 noundef %{{.+}})
 
 // Narrow unsigned integer zero-extended in a register.
 unsigned char ext_uchar(unsigned char c) { return c; }
 
-// CIR: cir.func {{.*}}@ext_uchar(%arg0: !u8i {{.*}}llvm.zeroext{{.*}}) -> (!u8i {{.*}}llvm.zeroext
-// LLVM: define dso_local zeroext i8 @ext_uchar(i8 noundef zeroext %{{.+}})
+// CIR: cir.func {{.*}}@ext_uchar(%arg0: !u8i {llvm.noundef}{{.*}}) -> !u8i
+// LLVM: define dso_local i8 @ext_uchar(i8 noundef %{{.+}})
+
+// The caller extends a narrow integer argument, but the callee does not get to
+// assume that it did, so only the call site carries signext/zeroext.
+int call_ext(signed char c, unsigned char uc) {
+  return ext_schar(c) + ext_uchar(uc);
+}
+
+// CIR-LABEL: cir.func {{.*}}@call_ext(%arg0: !s8i {llvm.noundef}{{.*}}, %arg1: !u8i {llvm.noundef}{{.*}}) -> !s32i
+// CIR: cir.call @ext_schar(%{{.+}}) : (!s8i {llvm.noundef, llvm.signext}) -> !s8i
+// CIR: cir.call @ext_uchar(%{{.+}}) : (!u8i {llvm.noundef, llvm.zeroext}) -> !u8i
+// LLVM-LABEL: define dso_local i32 @call_ext(i8 noundef %{{.+}}, i8 noundef %{{.+}})
+// LLVM: call i8 @ext_schar(i8 noundef signext %{{.+}})
+// LLVM: call i8 @ext_uchar(i8 noundef zeroext %{{.+}})
 
 // Floating-point scalar passed/returned in an SSE register.
 double sse_double(double d) { return d; }
@@ -166,7 +179,7 @@ UBytes12 ret_union_bytes(char c) {
   return u;
 }
 
-// CIR: cir.func {{.*}}@ret_union_bytes(%arg0: !s8i {llvm.noundef, llvm.signext}{{.*}}) -> ![[I64I32]]
+// CIR: cir.func {{.*}}@ret_union_bytes(%arg0: !s8i {llvm.noundef}{{.*}}) -> ![[I64I32]]
 // CIR:   %[[SLOT:.+]] = cir.alloca "coerce" align(8) : !cir.ptr<![[I64I32]]>
 // CIR:   %[[U:.+]] = cir.alloca "__retval" align(4) : !cir.ptr<!rec_UBytes12>
 // CIR:   %[[SLOT_U:.+]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<![[I64I32]]> -> !cir.ptr<!rec_UBytes12>
@@ -174,7 +187,7 @@ UBytes12 ret_union_bytes(char c) {
 // CIR-NEXT:   %[[RET:.+]] = cir.load align(8) %[[SLOT]] : !cir.ptr<![[I64I32]]>, ![[I64I32]]
 // CIR-NEXT:   cir.return %[[RET]] : ![[I64I32]]
 
-// LLVM: define dso_local { i64, i32 } @ret_union_bytes(i8 noundef signext %{{.+}})
+// LLVM: define dso_local { i64, i32 } @ret_union_bytes(i8 noundef %{{.+}})
 // LLVM:   getelementptr inbounds nuw %struct.CharIntInt, ptr %[[U:.+]], i32 0, i32 0
 // LLVM:   %[[B1:.+]] = getelementptr inbounds nuw %struct.TwoChars, ptr %[[U]], i32 0, i32 1
 // LLVM-NEXT:   store i8 %{{.+}}, ptr %[[B1]], align 1
@@ -286,12 +299,10 @@ _Complex float complex_float(_Complex float c) { return c; }
 // LLVM: define dso_local <2 x float> @complex_float(<2 x float> noundef %{{.+}})
 
 // _Complex double needs two SSE eightbytes, so it flattens into a pair.
-// Flattening drops the parameter's noundef, which classic keeps on each half.
 _Complex double complex_double(_Complex double c) { return c; }
 
-// CIR: cir.func {{.*}}@complex_double(%arg0: !cir.double{{.*}}, %arg1: !cir.double{{.*}}) -> ![[F64PAIR]]
-// LLVM-CIR: define dso_local { double, double } @complex_double(double %{{[^,)]+}}, double %{{[^,)]+}})
-// LLVM-OGCG: define dso_local { double, double } @complex_double(double noundef %{{[^,)]+}}, double noundef %{{[^,)]+}})
+// CIR: cir.func {{.*}}@complex_double(%arg0: !cir.double {llvm.noundef} loc({{.+}}), %arg1: !cir.double {llvm.noundef} loc({{.+}})) -> ![[F64PAIR]]
+// LLVM: define dso_local { double, double } @complex_double(double noundef %{{[^,)]+}}, double noundef %{{[^,)]+}})
 
 // A _Complex of integers packs both halves into one INTEGER eightbyte.
 _Complex int complex_int(_Complex int c) { return c; }
@@ -316,9 +327,8 @@ _Complex _Float16 complex_half(_Complex _Float16 c) { return c; }
 // into a register pair instead of coercing to one value.
 _Complex long long complex_longlong(_Complex long long c) { return c; }
 
-// CIR: cir.func {{.*}}@complex_longlong(%arg0: !u64i {{.*}}, %arg1: !u64i {{.*}}) -> ![[I64PAIR]]
-// LLVM-CIR: define dso_local { i64, i64 } @complex_longlong(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
-// LLVM-OGCG: define dso_local { i64, i64 } @complex_longlong(i64 noundef %{{[^,)]+}}, i64 noundef %{{[^,)]+}})
+// CIR: cir.func {{.*}}@complex_longlong(%arg0: !u64i {llvm.noundef} loc({{.+}}), %arg1: !u64i {llvm.noundef} loc({{.+}})) -> ![[I64PAIR]]
+// LLVM: define dso_local { i64, i64 } @complex_longlong(i64 noundef %{{[^,)]+}}, i64 noundef %{{[^,)]+}})
 
 // A 128-bit vector fills one xmm register and passes in its own type.
 typedef float v4f __attribute__((vector_size(16)));

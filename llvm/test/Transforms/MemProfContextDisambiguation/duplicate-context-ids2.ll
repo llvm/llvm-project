@@ -1,5 +1,5 @@
 ;; Test callsite context graph generation for call graph with with MIBs
-;; that have pruned contexts that partially match multiple inlined
+;; that have trimmed contexts that partially match multiple inlined
 ;; callsite contexts, requiring duplication of context ids and nodes
 ;; while matching callsite nodes onto the graph. This test requires more
 ;; complex duplication due to multiple contexts for different allocations
@@ -83,8 +83,8 @@
 ;; without any other inlining or optimizations. Since both allocation contexts
 ;; via A for each allocation in D have the same allocation type (cold via
 ;; A1 and A2 for the first new in D, and non-cold via A3 and A4 for the second
-;; new in D, the contexts for those respective allocations are pruned above A.
-;; The allocations via E and F are to ensure we don't prune above B.
+;; new in D, the contexts for those respective allocations are trimmed above A.
+;; The allocations via E and F are to ensure we don't trim above B.
 ;;
 ;; The matching onto the inlined A[1234]->A sequences will require duplication
 ;; of the context id assigned to the context from A for each allocation in D.
@@ -263,7 +263,7 @@ attributes #7 = { builtin allocsize(0) }
 ;; ids coming from node A (2 and 3) 4 times, for the 4 different callers of A,
 ;; and used those on new nodes for those callers. Note that while in reality
 ;; we only have cold edges coming from A1 and A2 and noncold from A3 and A4,
-;; due to the pruning we have lost this information and thus end up duplicating
+;; due to the trimming we have lost this information and thus end up duplicating
 ;; both of A's contexts to all of the new nodes (which could result in some
 ;; unnecessary cloning.
 

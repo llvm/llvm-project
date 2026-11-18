@@ -61,8 +61,10 @@ add_orc_rt_unittest(SupportTests
   support/ProxyTest.cpp
   support/RTTICrossDylibTest.cpp
   support/RTTITest.cpp
+  support/RemoteSymbolLookupSetTest.cpp
   support/StringExtrasTest.cpp
   support/StringPoolTest.cpp
+  support/SymbolLookupResultTest.cpp
   support/SymbolLookupSetTest.cpp
   support/WrapperFunctionBufferTest.cpp
   support/bind-test.cpp
@@ -73,7 +75,9 @@ add_orc_rt_unittest(SupportTests
   support/span-test.cpp
 
   support/sps/SPSAllocActionTest.cpp
+  support/sps/SPSJITDylibLookupFlagsTest.cpp
   support/sps/SPSMemoryFlagsTest.cpp
+  support/sps/SPSSymbolLookupResultTest.cpp
   support/sps/SPSSymbolLookupSetTest.cpp
   support/sps/SPSWrapperFunctionBufferTest.cpp
   support/sps/SPSWrapperFunctionTest.cpp
@@ -105,6 +109,8 @@ endif()
 # going unnoticed.
 add_orc_rt_unittest(BedrockTests
   bedrock/BootstrapInfoTest.cpp
+  bedrock/ControllerHandlerTagCTest.c
+  bedrock/ControllerHandlerTagTest.cpp
   bedrock/ExecutorProcessInfoTest.cpp
   bedrock/InProcessControllerAccessTest.cpp
   bedrock/NativeDylibManagerTest.cpp
@@ -116,6 +122,7 @@ add_orc_rt_unittest(BedrockTests
   bedrock/ThreadPoolRunnerTest.cpp
 
   bedrock/sps/CallSPSCITest.cpp
+  bedrock/sps/LookupInJITDylibSPSTest.cpp
   bedrock/sps/MemoryAccessSPSCITest.cpp
   bedrock/sps/NativeDylibManagerSPSCITest.cpp
   bedrock/sps/SessionSPSCITest.cpp
@@ -139,8 +146,8 @@ add_orc_rt_unittest(ConnectTests
             orc-rt-support-objects
   )
 
-# The socket helpers and transport are POSIX-only for now, so the socket tests
-# are too.
+# The socket helpers, the socket transport and TCP are POSIX-only for now, so
+# their tests are too.
 if (ORC_RT_TARGET_POSIX)
   add_orc_rt_unittest(ConnectSocketTests
     connect-socket/SocketHandleTest.cpp
@@ -152,6 +159,20 @@ if (ORC_RT_TARGET_POSIX)
 
     LINK_LIBS orc-rt-connect-socket-objects orc-rt-connect-objects
               orc-rt-bedrock-objects orc-rt-support-objects
+    )
+
+  add_orc_rt_unittest(ConnectTCPTests
+    connect-tcp/TCPConnectorTest.cpp
+    connect-tcp/TCPTest.cpp
+
+    connect-tcp/sys/posix/TCPCloseOnExecTest.cpp
+    connect-tcp/sys/posix/TCPTestUtils.cpp
+
+    connect-socket/sys/posix/SocketTestUtils.cpp
+
+    LINK_LIBS orc-rt-connect-tcp-objects orc-rt-connect-socket-objects
+              orc-rt-connect-objects orc-rt-bedrock-objects
+              orc-rt-support-objects
     )
 endif()
 

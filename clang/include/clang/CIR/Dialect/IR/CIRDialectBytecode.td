@@ -87,8 +87,8 @@ def AddressPointAttr : DialectAttribute<(attr
 )>;
 
 def OpenCLVersionAttr : DialectAttribute<(attr
-  CheckedInt32:$major,
-  CheckedInt32:$minor
+  CheckedInt32:$majorVersion,
+  CheckedInt32:$minorVersion
 )>;
 
 def BlockAddrInfoAttr : DialectAttribute<(attr
@@ -129,9 +129,11 @@ def FPAttr : DialectAttribute<(attr
 }
 
 // BoolType is a singleton, so the type is rebuilt on read rather than stored.
+// Qualified, as the name is ambiguous with mlir::BoolAttr otherwise.
 def BoolAttr : DialectAttribute<(attr
   Bool:$value
 )> {
+  let cType = "::cir::BoolAttr";
   let cBuilder = "get<$_resultType>(context, cir::BoolType::get(context), value)";
 }
 
@@ -203,7 +205,8 @@ def CXXAssignAttr : DialectAttribute<(attr
 
 def VTableAttr : DialectAttribute<(attr
   Type:$type,
-  Attr<"mlir::ArrayAttr">:$data
+  Attr<"mlir::ArrayAttr">:$data,
+  Attr<"mlir::ArrayAttr">:$address_points
 )>;
 
 def BlockAddrDiffAttr : DialectAttribute<(attr

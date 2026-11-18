@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 %s -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux-gnu -std=c++20 %s -emit-llvm -o - | FileCheck %s %}
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 %s -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux-gnu -std=c++20 %s -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s %}
 
 struct S { char buf[32]; };
 template<S s> constexpr const char* f() { return s.buf; }

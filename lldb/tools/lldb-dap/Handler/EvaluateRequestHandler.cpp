@@ -118,13 +118,15 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
                          /*add_to_history=*/true);
 
     if (!result.Succeeded()) {
+      const char *error = result.GetError(/*only_if_no_immediate=*/true);
       return llvm::make_error<DAPError>(
-          std::string(result.GetError(), result.GetErrorSize()),
+          error ? std::string(error) : "error: evaluate failed",
           /**error_code=*/llvm::inconvertibleErrorCode(),
           /**show_user= */ false);
     }
 
-    body.result = std::string(result.GetOutput(), result.GetOutputSize());
+    const char *output = result.GetOutput(/*only_if_no_immediate=*/true);
+    body.result = output ? std::string(output) : std::string();
     return body;
   }
 

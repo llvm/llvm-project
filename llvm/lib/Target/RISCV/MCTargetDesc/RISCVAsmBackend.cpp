@@ -30,8 +30,8 @@ RISCVAsmBackend::RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI,
                                  const MCTargetOptions &Options)
     : MCAsmBackend(IsLittleEndian ? llvm::endianness::little
                                   : llvm::endianness::big),
-      CLOpts(RISCVMCOptions::Global), STI(STI), OSABI(OSABI), Is64Bit(Is64Bit),
-      TargetOptions(Options) {
+      CLOpts(RISCV_MC::getCLOpts(Options)), STI(STI), OSABI(OSABI),
+      Is64Bit(Is64Bit), TargetOptions(Options) {
   RISCVFeatures::validate(STI.getTargetTriple(), STI.getFeatureBits());
 }
 

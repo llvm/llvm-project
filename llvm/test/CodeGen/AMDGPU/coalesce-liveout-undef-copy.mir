@@ -45,7 +45,7 @@ body:             |
 
   bb.1:
     %2:vreg_128_align2 = IMPLICIT_DEF
-    %3:vreg_128_align2 = COPY killed %0
+    %3:vreg_128_align2 = COPY %0
     %3.sub0:vreg_128_align2 = IMPLICIT_DEF
 
   bb.2:

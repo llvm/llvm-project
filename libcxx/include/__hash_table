@@ -171,7 +171,7 @@ public:
 inline _LIBCPP_HIDE_FROM_ABI bool __is_hash_power2(size_t __bc) { return __bc > 2 && !(__bc & (__bc - 1)); }
 
 inline _LIBCPP_HIDE_FROM_ABI size_t __constrain_hash(size_t __h, size_t __bc) {
-  return !(__bc & (__bc - 1)) ? __h & (__bc - 1) : (__h < __bc ? __h : __h % __bc);
+  return !(__bc & (__bc - 1)) ? __h & (__bc - 1) : __h % __bc;
 }
 
 inline _LIBCPP_HIDE_FROM_ABI size_t __next_hash_pow2(size_t __n) {

@@ -167,6 +167,27 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
   if (!Subtarget.useSoftFloat()) {
     addRegisterClass(MVT::f32, &Mips::FGR32RegClass);
 
+    // RINT uses the current rounding mode and may raise inexact.
+    if (Subtarget.hasMips32r6() && !Subtarget.inMicroMipsMode()) {
+      setOperationAction(ISD::FRINT, MVT::f32, Legal);
+      setOperationAction(ISD::STRICT_FRINT, MVT::f32, Legal);
+      if (!Subtarget.isSingleFloat()) {
+        setOperationAction(ISD::FRINT, MVT::f64, Legal);
+        setOperationAction(ISD::STRICT_FRINT, MVT::f64, Legal);
+      }
+    }
+
+    // Standard r6 has a fused multiply-add with a tied accumulator. Scalar
+    // FMA selection for the microMIPS encodings is not implemented here.
+    if (Subtarget.hasMips32r6() && !Subtarget.inMicroMipsMode()) {
+      // Keep strict nodes intact so their exception chains survive selection.
+      for (auto Op : {ISD::FMA, ISD::STRICT_FMA}) {
+        setOperationAction(Op, MVT::f32, Legal);
+        if (!Subtarget.isSingleFloat() && Subtarget.isFP64bit())
+          setOperationAction(Op, MVT::f64, Legal);
+      }
+    }
+
     // When dealing with single precision only, use libcalls
     if (!Subtarget.isSingleFloat()) {
       if (Subtarget.isFP64bit())
@@ -1133,7 +1154,7 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG) {
   if ((Ty != MVT::v2i16) && (Ty != MVT::v4i8))
     return SDValue();
 
-  if (!isLegalDSPCondCode(Ty, cast<CondCodeSDNode>(N->getOperand(2))->get()))
+  if (!isLegalDSPCondCode(Ty, N->getOperandCondCode(2)))
     return SDValue();
 
   return DAG.getNode(MipsISD::SETCC_DSP, SDLoc(N), Ty, N->getOperand(0),
@@ -1169,9 +1190,9 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
     SDValue Op1 = N->getOperand(1);
     SDValue NotOp;
 
-    if (ISD::isBuildVectorAllOnes(Op0.getNode()))
+    if (ISD::isBuildVectorAllOnes(Op0))
       NotOp = Op1;
-    else if (ISD::isBuildVectorAllOnes(Op1.getNode()))
+    else if (ISD::isBuildVectorAllOnes(Op1))
       NotOp = Op0;
     else
       return SDValue();
@@ -3266,13 +3287,15 @@ MipsSETargetLowering::emitBPOSGE32(MachineInstr &MI,
   // Fill $FBB.
   Register VR2 = RegInfo.createVirtualRegister(RC);
   BuildMI(*FBB, FBB->end(), DL, TII->get(Mips::ADDiu), VR2)
-    .addReg(Mips::ZERO).addImm(0);
+      .addReg(Mips::R0)
+      .addImm(0);
   BuildMI(*FBB, FBB->end(), DL, TII->get(Mips::B)).addMBB(Sink);
 
   // Fill $TBB.
   Register VR1 = RegInfo.createVirtualRegister(RC);
   BuildMI(*TBB, TBB->end(), DL, TII->get(Mips::ADDiu), VR1)
-    .addReg(Mips::ZERO).addImm(1);
+      .addReg(Mips::R0)
+      .addImm(1);
 
   // Insert phi function to $Sink.
   BuildMI(*Sink, Sink->begin(), DL, TII->get(Mips::PHI),
@@ -3335,13 +3358,15 @@ MachineBasicBlock *MipsSETargetLowering::emitMSACBranchPseudo(
   // Fill $FBB.
   Register RD1 = RegInfo.createVirtualRegister(RC);
   BuildMI(*FBB, FBB->end(), DL, TII->get(Mips::ADDiu), RD1)
-    .addReg(Mips::ZERO).addImm(0);
+      .addReg(Mips::R0)
+      .addImm(0);
   BuildMI(*FBB, FBB->end(), DL, TII->get(Mips::B)).addMBB(Sink);
 
   // Fill $TBB.
   Register RD2 = RegInfo.createVirtualRegister(RC);
   BuildMI(*TBB, TBB->end(), DL, TII->get(Mips::ADDiu), RD2)
-    .addReg(Mips::ZERO).addImm(1);
+      .addReg(Mips::R0)
+      .addImm(1);
 
   // Insert phi function to $Sink.
   BuildMI(*Sink, Sink->begin(), DL, TII->get(Mips::PHI),
@@ -3615,7 +3640,7 @@ MachineBasicBlock *MipsSETargetLowering::emitINSERT_DF_VIDX(
   Register LaneTmp2 = RegInfo.createVirtualRegister(GPRRC);
   BuildMI(*BB, MI, DL, TII->get(Subtarget.isABI_N64() ? Mips::DSUB : Mips::SUB),
           LaneTmp2)
-      .addReg(Subtarget.isABI_N64() ? Mips::ZERO_64 : Mips::ZERO)
+      .addReg(Subtarget.isABI_N64() ? Mips::R0_64 : Mips::R0)
       .addReg(LaneReg);
   BuildMI(*BB, MI, DL, TII->get(Mips::SLD_B), Wd)
       .addReg(WdTmp2)

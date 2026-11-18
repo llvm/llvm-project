@@ -865,7 +865,8 @@ ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
   QualType OriginalBaseTy = ArraySectionExpr::getBaseOriginalType(Base);
   QualType ResultTy;
   if (!Base->isTypeDependent()) {
-    if (OriginalBaseTy->isAnyPointerType()) {
+    // 'AnyPointerType' would be wrong here, because it includes ObjC types.
+    if (OriginalBaseTy->isPointerType()) {
       ResultTy = OriginalBaseTy->getPointeeType();
     } else if (OriginalBaseTy->isArrayType()) {
       ResultTy = OriginalBaseTy->getAsArrayTypeUnsafe()->getElementType();
@@ -1223,9 +1224,10 @@ bool isValidLoopVariableType(QualType LoopVarTy) {
 
       // We can also support tag-types inherited from the
       // random_access_iterator_tag.
-      for (CXXBaseSpecifier BS : ItrCategoryDecl->bases())
-        if (IsRandomAccessIteratorTag(BS.getType()->getAsCXXRecordDecl()))
-          return true;
+      if (ItrCategoryDecl->isCompleteDefinition())
+        for (CXXBaseSpecifier BS : ItrCategoryDecl->bases())
+          if (IsRandomAccessIteratorTag(BS.getType()->getAsCXXRecordDecl()))
+            return true;
 
       return false;
     }
@@ -2719,7 +2721,8 @@ Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
     // no-initializer.
     return nullptr;
   } else {
-    assert(Ty->isScalarType());
+    assert(Ty->isScalarType() && !Ty->isObjCObjectPointerType() &&
+           !Ty->isBlockPointerType() && !Ty->isFixedPointType());
 
     if (const auto *Cplx = Ty->getAs<ComplexType>()) {
       // we can get here in error cases, so make sure we generate something that

@@ -375,25 +375,24 @@ protected:
       // to set or collect command callback.  Otherwise, call the methods
       // associated with this object.
       if (m_options.m_use_script_language) {
-        Status error;
         ScriptInterpreter *script_interp = GetDebugger().GetScriptInterpreter(
             /*can_create=*/true, m_options.m_script_language);
-        // Special handling for one-liner specified inline.
-        if (m_options.m_use_one_liner) {
-          error = script_interp->SetBreakpointCommandCallback(
-              m_bp_options_vec, m_options.m_one_liner.c_str());
-        } else if (!m_func_options.GetName().empty()) {
-          error = script_interp->SetBreakpointCommandCallbackFunction(
-              m_bp_options_vec, m_func_options.GetName().c_str(),
-              m_func_options.GetStructuredData());
-        } else {
+        if (!m_options.m_use_one_liner && m_func_options.GetName().empty()) {
           script_interp->CollectDataForBreakpointCommandCallback(
               m_bp_options_vec, result);
           // Still gathering input; the IOHandler will set the final status.
-          result.SetStatus(eReturnStatusStarted);
+          if (result.GetStatus() != eReturnStatusFailed)
+            result.SetStatus(eReturnStatusStarted);
           return;
         }
-        if (!error.Success())
+        llvm::Error error =
+            m_options.m_use_one_liner
+                ? script_interp->SetBreakpointCommandCallback(
+                      m_bp_options_vec, m_options.m_one_liner.c_str())
+                : script_interp->SetBreakpointCommandCallbackFunction(
+                      m_bp_options_vec, m_func_options.GetName().c_str(),
+                      m_func_options.GetStructuredData());
+        if (error)
           result.SetError(std::move(error));
         else
           result.SetStatus(eReturnStatusSuccessFinishNoResult);

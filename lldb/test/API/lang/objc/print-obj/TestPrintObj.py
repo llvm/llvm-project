@@ -31,26 +31,15 @@ class PrintObjTestCase(TestBase):
         d = {"EXE": "b.out"}
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
-        exe = self.getBuildArtifact("b.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateByLocation(self.source, self.line)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-        self.runCmd("breakpoint list")
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        self.runCmd("thread backtrace all")
 
         # Let's get the current stopped thread.  We'd like to switch to the
         # other thread to issue our 'po lock_me' command.
-        import lldbsuite.test.lldbutil as lldbutil
+        _, process, this_thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec(self.source, False), self.line, exe_name="b.out"
+        )
+        self.runCmd("breakpoint list")
 
-        this_thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(this_thread)
+        self.runCmd("thread backtrace all")
 
         # Find the other thread.  The iteration protocol of SBProcess and the
         # rich comparison methods (__eq__/__ne__) of SBThread come in handy.

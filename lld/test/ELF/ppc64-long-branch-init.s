@@ -1,7 +1,8 @@
 # REQUIRES: ppc
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-pc-freebsd13.0 %s -o %t.o
-# RUN: ld.lld %t.o -o %t
+# RUN: echo 'SECTIONS { .text 0x10000 : { *(.text) } .init 0x2010000 : { *(.init) } }' > %t.lds
+# RUN: ld.lld -T %t.lds %t.o -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 ## .init consists of sections from several object files. Sections other than the
@@ -15,13 +16,11 @@
 # CHECK-LABEL: <_init>:
 # CHECK:         blr
 # CHECK-NEXT:    trap
-# CHECK-NEXT:    trap
 # CHECK-EMPTY:
 # CHECK-LABEL: <__long_branch_foo>:
 
 .globl foo
 foo:
-  .space 0x2000000
   blr
 
 .section .init,"ax",@progbits,unique,0

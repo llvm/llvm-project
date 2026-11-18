@@ -47,7 +47,7 @@ void collapse_into_stacked_tiles() {
 void collapse_simd_over_tile() {
   // Rejected by the pre-existing restriction on nesting inside a 'simd' region.
 #pragma omp simd collapse(2)
-  // expected-error@+1 {{OpenMP constructs may not be nested inside a simd region except for ordered simd, simd, scan, or atomic directive}}
+  // expected-error@+1 {{OpenMP constructs may not be nested inside a simd region except for ordered simd, simd, scan, atomic, or loop directive}}
 #pragma omp tile sizes(4)
   for (int i = 0; i < 6; ++i)
     body(i);

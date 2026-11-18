@@ -56,7 +56,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f80 = dense<128> : vector<2xi64>
 
 // CHECK-LABEL: llvm.func @_QQmain()
 // CHECK: llvm.call @_FortranACUFMemAlloc
-// CHECK: llvm.call @_FortranACUFAllocDescriptor
+// CHECK-NOT: llvm.call @_FortranACUFAllocDescriptor
 
 // -----
 
@@ -126,7 +126,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f80 = dense<128> : vector<2xi64>
 }
 
 // CHECK-LABEL: llvm.func @_QQmain()
-// CHECK-COUNT-3: llvm.call @_FortranACUFAllocDescriptor
+// CHECK-COUNT-2: llvm.call @_FortranACUFAllocDescriptor
+// CHECK-NOT: llvm.call @_FortranACUFAllocDescriptor
 
 // -----
 
@@ -170,7 +171,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 }
 
 // CHECK-LABEL: llvm.func @_QQmain()
-// CHECK-COUNT-2: llvm.call @_FortranACUFAllocDescriptor
+// CHECK-COUNT-1: llvm.call @_FortranACUFAllocDescriptor
+// CHECK-NOT: llvm.call @_FortranACUFAllocDescriptor
 
 // -----
 
@@ -187,9 +189,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 }
 
 // CHECK-LABEL: llvm.func @_QPouter
-// CHECK: _FortranACUFAllocDescriptor
-// CUSTOM-LABEL: llvm.func @_QPouter
-// CUSTOM: custom_alloc_desc
+// CHECK-NOT: _FortranACUFAllocDescriptor
 
 // -----
 
@@ -200,9 +200,7 @@ func.func @_QMm1Psub1(%arg0: !fir.box<!fir.array<?xi32>> {cuf.data_attr = #cuf.c
 }
 
 // CHECK-LABEL: llvm.func @_QMm1Psub1
-// CHECK-COUNT-2: _FortranACUFAllocDescriptor
-// CUSTOM-LABEL: llvm.func @_QMm1Psub1
-// CUSTOM-COUNT-2: custom_alloc_desc
+// CHECK-NOT: _FortranACUFAllocDescriptor
 
 // -----
 
@@ -433,6 +431,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
 // CHECK: llvm.call @_FortranACUFAllocDescriptor(
 // CHECK: gpu.launch_func @cuda_device_mod::@_QMtestmePmykernel
 
+// CUSTOM-LABEL: llvm.func @_QQmain()
+// CUSTOM: llvm.call @custom_alloc_desc(
+// CUSTOM: gpu.launch_func @cuda_device_mod::@_QMtestmePmykernel
+
 // -----
 
 // Test that an embox whose converted result is passed to gpu.launch_func gets a
@@ -465,13 +467,92 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
 
 // -----
 
-// A rebox of a device-resident global (isDeviceAllocation == true) whose result
-// is consumed by an OpenACC data-clause op (here acc.present) must NOT be placed
-// in managed memory. The box is host-side descriptor metadata for the data
-// clause; a managed descriptor created here is never freed and leaves a stale
-// descriptor behind when its address is reused. The descriptor storage should
-// therefore be a plain stack alloca and no _FortranACUFAllocDescriptor call
-// should be emitted for it.
+// A rebox that reaches gpu.launch_func through a branch to a block argument
+// (as for an OPTIONAL dummy) or through arith.select still gets a managed
+// descriptor.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, gpu.container_module} {
+  func.func @_QPopt_branch(%arg0: !fir.box<!fir.array<?xf32>>, %present: i1) {
+    %c0_i32 = arith.constant 0 : i32
+    %c1 = arith.constant 1 : index
+    cf.cond_br %present, ^bb1, ^bb2
+  ^bb1:
+    %0 = fircg.ext_rebox %arg0 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
+    cf.br ^bb3(%0 : !fir.box<!fir.array<?xf32>>)
+  ^bb2:
+    %1 = fir.absent !fir.box<!fir.array<?xf32>>
+    cf.br ^bb3(%1 : !fir.box<!fir.array<?xf32>>)
+  ^bb3(%2: !fir.box<!fir.array<?xf32>>):
+    gpu.launch_func @cuda_device_mod::@kernel blocks in (%c1, %c1, %c1) threads in (%c1, %c1, %c1) dynamic_shared_memory_size %c0_i32 args(%2 : !fir.box<!fir.array<?xf32>>) {cuf.proc_attr = #cuf.cuda_proc<global>}
+    return
+  }
+  func.func @_QPopt_select(%arg0: !fir.box<!fir.array<?xf32>>, %present: i1) {
+    %c0_i32 = arith.constant 0 : i32
+    %c1 = arith.constant 1 : index
+    %0 = fircg.ext_rebox %arg0 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
+    %1 = fir.absent !fir.box<!fir.array<?xf32>>
+    %2 = arith.select %present, %0, %1 : !fir.box<!fir.array<?xf32>>
+    gpu.launch_func @cuda_device_mod::@kernel blocks in (%c1, %c1, %c1) threads in (%c1, %c1, %c1) dynamic_shared_memory_size %c0_i32 args(%2 : !fir.box<!fir.array<?xf32>>) {cuf.proc_attr = #cuf.cuda_proc<global>}
+    return
+  }
+  gpu.module @cuda_device_mod {
+    gpu.func @kernel(%arg0: !fir.box<!fir.array<?xf32>>) kernel {
+      gpu.return
+    }
+  }
+}
+
+// CHECK-LABEL: llvm.func @_QPopt_branch(
+// CHECK: llvm.call @_FortranACUFAllocDescriptor(
+// CHECK: gpu.launch_func @cuda_device_mod::@kernel
+// CHECK-LABEL: llvm.func @_QPopt_select(
+// CHECK: llvm.call @_FortranACUFAllocDescriptor(
+// CHECK: gpu.launch_func @cuda_device_mod::@kernel
+
+// -----
+
+// A descriptor passed to a device dummy of a BIND(C) procedure, directly or
+// through a procedure pointer, gets a managed descriptor, since foreign code
+// may launch a kernel on it. A host dummy of a BIND(C) procedure keeps a stack
+// descriptor.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
+  func.func @_QPbindc_device(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
+    %0 = fir.load %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %1 = fircg.ext_rebox %0 : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.box<!fir.array<?xf32>>
+    fir.call @claunch(%1) proc_attrs<bind_c> : (!fir.box<!fir.array<?xf32>> {cuf.data_attr = #cuf.cuda<device>}) -> ()
+    return
+  }
+  func.func @_QPbindc_indirect(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, %f: (!fir.box<!fir.array<?xf32>>) -> ()) {
+    %0 = fir.load %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %1 = fircg.ext_rebox %0 : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.box<!fir.array<?xf32>>
+    fir.call %f(%1) proc_attrs<bind_c> : (!fir.box<!fir.array<?xf32>> {cuf.data_attr = #cuf.cuda<device>}) -> ()
+    return
+  }
+  func.func @_QPbindc_host(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
+    %0 = fir.load %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %1 = fircg.ext_rebox %0 : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.box<!fir.array<?xf32>>
+    fir.call @chost(%1) proc_attrs<bind_c> : (!fir.box<!fir.array<?xf32>>) -> ()
+    return
+  }
+  func.func private @claunch(!fir.box<!fir.array<?xf32>> {cuf.data_attr = #cuf.cuda<device>}) attributes {fir.proc_attrs = #fir.proc_attrs<bind_c>}
+  func.func private @chost(!fir.box<!fir.array<?xf32>>) attributes {fir.proc_attrs = #fir.proc_attrs<bind_c>}
+}
+
+// CHECK-LABEL: llvm.func @_QPbindc_device(
+// CHECK: llvm.call @_FortranACUFAllocDescriptor(
+// CHECK: llvm.call @claunch(
+// CHECK-LABEL: llvm.func @_QPbindc_indirect(
+// CHECK: llvm.call @_FortranACUFAllocDescriptor(
+// CHECK: llvm.call %{{.*}}(
+// CHECK-LABEL: llvm.func @_QPbindc_host(
+// CHECK-NOT: llvm.call @_FortranACUFAllocDescriptor
+// CHECK: llvm.call @chost(
+
+// -----
+
+// A rebox of a device-resident global consumed by an OpenACC data-clause op
+// (here acc.present) is host-side metadata and stays on the stack.
 
 module attributes {gpu.container_module} {
   fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
@@ -504,10 +585,9 @@ module attributes {gpu.container_module} {
 
 // -----
 
-// fircg.ext_declare, which survives until codegen when debug info is requested,
-// must not hide the device-resident memory it declares. The descriptor for an
-// embox of a managed allocation goes to managed memory whether or not the
-// allocation is reached through a declare.
+// A descriptor for device-resident data that is only passed to a host
+// procedure stays on the stack: placing it in managed memory would leak it at
+// every call, since nothing frees it.
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
   func.func @_QPtesti4() {
@@ -534,7 +614,6 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
 }
 
 // CHECK-LABEL: llvm.func @_QPtesti4()
-// CHECK: llvm.call @_FortranACUFAllocDescriptor(
-
-// CUSTOM-LABEL: llvm.func @_QPtesti4()
-// CUSTOM: llvm.call @custom_alloc_desc(
+// CHECK: llvm.alloca {{.*}} x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
+// CHECK-NOT: llvm.call @_FortranACUFAllocDescriptor
+// CHECK: llvm.call @_QPcallee(

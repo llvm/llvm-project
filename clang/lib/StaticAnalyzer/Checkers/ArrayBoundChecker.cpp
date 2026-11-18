@@ -13,6 +13,7 @@
 
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/ParentMapContext.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/StaticAnalyzer/Checkers/BoundsChecking.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Checkers/Taint.h"
@@ -200,10 +201,12 @@ static bool isDeterminedByInterestingSymbol(SVal SV,
   return false;
 }
 
-static int64_t getElementSize(const ElementRegion *ER, SValBuilder &SVB) {
+static std::optional<int64_t> getElementSize(const ElementRegion *ER,
+                                             SValBuilder &SVB) {
   QualType ElemType = ER->getElementType();
 
-  assert(!ElemType->isIncompleteType() && "ElemType cannot be incomplete");
+  if (ElemType->isIncompleteType())
+    return std::nullopt;
 
   return SVB.getContext().getTypeSizeInChars(ElemType).getQuantity();
 }
@@ -230,9 +233,14 @@ computeOffset(ProgramStateRef State, SValBuilder &SVB,
     if (!Index)
       return std::nullopt;
 
+    // The size of an incomplete type (e.g forward declaration) is unknown, so
+    // the offset cannot be calculated.
+    std::optional<int64_t> ElemSize = getElementSize(CurRegion, SVB);
+    if (!ElemSize)
+      return std::nullopt;
+
     // Calculate Delta = Index * sizeof(ElemType).
-    NonLoc Size = SVB.makeArrayIndex(getElementSize(CurRegion, SVB));
-    auto Delta = EvalBinOp(BO_Mul, *Index, Size);
+    auto Delta = EvalBinOp(BO_Mul, *Index, SVB.makeArrayIndex(*ElemSize));
     if (!Delta)
       return std::nullopt;
 
@@ -538,7 +546,7 @@ void ArrayBoundChecker::reportOOB(CheckerContext &C, ProgramStateRef ErrorState,
                                   std::optional<NonLoc> Extent,
                                   bool IsTaintBug /*=false*/) const {
 
-  ExplodedNode *ErrorNode = C.generateErrorNode(ErrorState);
+  ExplodedNode *ErrorNode = C.addSink(ErrorState);
   if (!ErrorNode)
     return;
 

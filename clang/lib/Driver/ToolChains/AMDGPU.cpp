@@ -1393,6 +1393,9 @@ SanitizerMask AMDGPUToolChain::getSupportedSanitizers(
   // arch xnack support.
   if (!BA || isXnackAvailable(getTriple(), BA.ArchName))
     SupportedMask |= SanitizerKind::Address;
+  // Watchpoint probes do not require xnack, but the runtime requires HSA.
+  if (getTriple().isAMDGCN() && getTriple().getOS() == llvm::Triple::AMDHSA)
+    SupportedMask |= SanitizerKind::Concurrency;
 
   return SupportedMask;
 }

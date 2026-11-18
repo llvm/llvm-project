@@ -4,8 +4,11 @@
 name:            test_fadd_v2s64
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_fadd_v2s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f64>) = COPY $q1
     ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(<2 x f64>) = G_FADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $q0 = COPY [[FADD]](<2 x f64>)
@@ -19,8 +22,11 @@ body:             |
 name:            test_fdiv_v2s32
 body:             |
   bb.0.entry:
+    liveins: $d0, $d1
     ; CHECK-LABEL: name: test_fdiv_v2s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $d0
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f32>) = COPY $d1
     ; CHECK-NEXT: [[FDIV:%[0-9]+]]:_(<2 x f32>) = G_FDIV [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $d0 = COPY [[FDIV]](<2 x f32>)
@@ -34,8 +40,11 @@ body:             |
 name:            test_fsub_v2s32
 body:             |
   bb.0.entry:
+    liveins: $d0, $d1
     ; CHECK-LABEL: name: test_fsub_v2s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $d0
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f32>) = COPY $d1
     ; CHECK-NEXT: [[FSUB:%[0-9]+]]:_(<2 x f32>) = G_FSUB [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $d0 = COPY [[FSUB]](<2 x f32>)
@@ -49,8 +58,11 @@ body:             |
 name:            test_fneg_v2s32
 body:             |
   bb.0.entry:
+    liveins: $d0
     ; CHECK-LABEL: name: test_fneg_v2s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $d0
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $d0
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(<2 x f32>) = G_FNEG [[COPY]]
     ; CHECK-NEXT: $d0 = COPY [[FNEG]](<2 x f32>)
     %0:_(<2 x f32>) = COPY $d0
@@ -62,8 +74,11 @@ body:             |
 name:            test_fmul_v4s32
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_fmul_v4s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x f32>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x f32>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x f32>) = COPY $q1
     ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(<4 x f32>) = G_FMUL [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $q0 = COPY [[FMUL]](<4 x f32>)

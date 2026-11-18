@@ -26,6 +26,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
@@ -51,40 +52,6 @@
 using namespace llvm;
 
 namespace {
-
-static cl::opt<bool>
-    DisablePromoteAllocaToVector("disable-promote-alloca-to-vector",
-                                 cl::desc("Disable promote alloca to vector"),
-                                 cl::init(false));
-
-static cl::opt<bool>
-    DisablePromoteAllocaToLDS("disable-promote-alloca-to-lds",
-                              cl::desc("Disable promote alloca to LDS"),
-                              cl::init(false));
-
-static cl::opt<unsigned> PromoteAllocaToVectorLimit(
-    "amdgpu-promote-alloca-to-vector-limit",
-    cl::desc("Maximum byte size to consider promote alloca to vector"),
-    cl::init(0));
-
-static cl::opt<unsigned> PromoteAllocaToVectorMaxRegs(
-    "amdgpu-promote-alloca-to-vector-max-regs",
-    cl::desc(
-        "Maximum vector size (in 32b registers) to use when promoting alloca"),
-    cl::init(32));
-
-// Use up to 1/4 of available register budget for vectorization.
-// FIXME: Increase the limit for whole function budgets? Perhaps x2?
-static cl::opt<unsigned> PromoteAllocaToVectorVGPRRatio(
-    "amdgpu-promote-alloca-to-vector-vgpr-ratio",
-    cl::desc("Ratio of VGPRs to budget for promoting alloca to vectors"),
-    cl::init(4));
-
-static cl::opt<unsigned>
-    LoopUserWeight("promote-alloca-vector-loop-user-weight",
-                   cl::desc("The bonus weight of users of allocas within loop "
-                            "when sorting profitable allocas"),
-                   cl::init(4));
 
 // We support vector indices of the form ((A * stride) >> shift) + B
 // VarIndex is A, VarMul is stride, VarShift is shift and ConstIndex is B. All
@@ -127,6 +94,7 @@ struct AllocaAnalysis {
 // Shared implementation which can do both promotion to vector and to LDS.
 class AMDGPUPromoteAllocaImpl {
 private:
+  const AMDGPUOptions &CLOpts;
   const TargetMachine &TM;
   LoopInfo &LI;
   Module &Mod;
@@ -173,7 +141,8 @@ private:
 
 public:
   AMDGPUPromoteAllocaImpl(TargetMachine &TM, Module &M, LoopInfo &LI)
-      : TM(TM), LI(LI), Mod(M), DL(M.getDataLayout()) {
+      : CLOpts(static_cast<const AMDGPUTargetMachine &>(TM).getCLOpts()),
+        TM(TM), LI(LI), Mod(M), DL(M.getDataLayout()) {
     const Triple &TT = M.getTargetTriple();
     IsAMDGCN = TT.isAMDGCN();
     IsAMDHSA = TT.getOS() == Triple::AMDHSA;
@@ -341,8 +310,8 @@ void AMDGPUPromoteAllocaImpl::scoreAlloca(AllocaAnalysis &AA) const {
     if (isa<GetElementPtrInst>(Inst) || isa<SelectInst>(Inst) ||
         isa<PHINode>(Inst))
       continue;
-    unsigned UserScore =
-        1 + (LoopUserWeight * LI.getLoopDepth(Inst->getParent()));
+    unsigned UserScore = 1 + (CLOpts.promote_alloca_vector_loop_user_weight *
+                              LI.getLoopDepth(Inst->getParent()));
     LLVM_DEBUG(dbgs() << "  [+" << UserScore << "]:\t" << *Inst << "\n");
     Score += UserScore;
   }
@@ -355,20 +324,17 @@ void AMDGPUPromoteAllocaImpl::setFunctionLimits(const Function &F) {
   // R600 register tuples/aliasing are fragile with large vector promotions so
   // apply architecture specific limit here.
   const int R600MaxVectorRegs = 16;
-  MaxVectorRegs = F.getFnAttributeAsParsedInteger(
-      "amdgpu-promote-alloca-to-vector-max-regs",
-      IsAMDGCN ? PromoteAllocaToVectorMaxRegs : R600MaxVectorRegs);
-  if (PromoteAllocaToVectorMaxRegs.getNumOccurrences())
-    MaxVectorRegs = PromoteAllocaToVectorMaxRegs;
-  VGPRBudgetRatio = F.getFnAttributeAsParsedInteger(
-      "amdgpu-promote-alloca-to-vector-vgpr-ratio",
-      PromoteAllocaToVectorVGPRRatio);
-  if (PromoteAllocaToVectorVGPRRatio.getNumOccurrences())
-    VGPRBudgetRatio = PromoteAllocaToVectorVGPRRatio;
+  MaxVectorRegs = CLOpts.promote_alloca_to_vector_max_regs.value_or(
+      F.getFnAttributeAsParsedInteger(
+          "amdgpu-promote-alloca-to-vector-max-regs",
+          IsAMDGCN ? 32 : R600MaxVectorRegs));
+  VGPRBudgetRatio = CLOpts.promote_alloca_to_vector_vgpr_ratio.value_or(
+      F.getFnAttributeAsParsedInteger(
+          "amdgpu-promote-alloca-to-vector-vgpr-ratio", 4));
 }
 
 bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
-  if (DisablePromoteAllocaToLDS && DisablePromoteAllocaToVector)
+  if (!CLOpts.promote_alloca_to_lds && !CLOpts.promote_alloca_to_vector)
     return false;
 
   bool SufficientLDS = PromoteToLDS && hasSufficientLocalMem(F);
@@ -376,8 +342,9 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   setFunctionLimits(F);
 
   unsigned VectorizationBudget =
-      (PromoteAllocaToVectorLimit ? PromoteAllocaToVectorLimit * 8
-                                  : (MaxVGPRs * 32)) /
+      (CLOpts.promote_alloca_to_vector_limit
+           ? CLOpts.promote_alloca_to_vector_limit * 8
+           : (MaxVGPRs * 32)) /
       VGPRBudgetRatio;
 
   std::vector<AllocaAnalysis> Allocas;
@@ -939,7 +906,7 @@ static Type *peelAggregateToElementType(Type *Ty, uint64_t &NumElems) {
 
 FixedVectorType *
 AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
-  if (DisablePromoteAllocaToVector) {
+  if (!CLOpts.promote_alloca_to_vector) {
     LLVM_DEBUG(dbgs() << "  Promote alloca to vectors is disabled\n");
     return nullptr;
   }
@@ -1402,7 +1369,7 @@ bool AMDGPUPromoteAllocaImpl::binaryOpIsDerivedFromSameAlloca(
 }
 
 void AMDGPUPromoteAllocaImpl::analyzePromoteToLDS(AllocaAnalysis &AA) const {
-  if (DisablePromoteAllocaToLDS) {
+  if (!CLOpts.promote_alloca_to_lds) {
     LLVM_DEBUG(dbgs() << "  Promote alloca to LDS is disabled\n");
     return;
   }

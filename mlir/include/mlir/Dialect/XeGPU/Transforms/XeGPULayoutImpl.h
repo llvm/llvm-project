@@ -18,7 +18,6 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 
 namespace mlir {
-
 class VectorType;
 class OpOperand;
 class OpResult;
@@ -34,12 +33,14 @@ class TensorDescType;
 } // namespace xegpu
 
 namespace xegpu {
-
 LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
                                LayoutKind layoutKind, unsigned indexBitWidth,
                                bool printOnly = false);
 
 LogicalResult resolveLayoutConflicts(Operation *target);
+
+/// Replace layout conversions of cheap producer chains by recomputation.
+void rematerializeConversionSources(OpBuilder &builder, Operation *target);
 
 /// Sink `xegpu.convert_layout` ops past the elementwise operations they feed,
 /// so that an elementwise op runs in the coarser layout.
@@ -465,14 +466,18 @@ completeDpasMxLaneLayoutFromInstData(DistributeLayoutAttr aLayout,
 /// users and determine the expected layout accordingly.
 DistributeLayoutAttr getConsumerLayoutAt(OpOperand &operand);
 
-/// Returns true if `op` is safe and cheap to clone: it has no side effects,
-/// no regions, and all of its operands are themselves trivially
-/// rematerializable (e.g. `vector.step`, splat `arith.constant`, or
-/// `vector.create_mask` whose operands are constants).
+/// Returns true if the vector produced by `op` is cheap to recompute in any
+/// layout, i.e. `rematerialize` would succeed: a bounded chain of pure vector
+/// generators (`vector.step`, splat `arith.constant`, `vector.create_mask`,
+/// scalar `vector.broadcast`) and layout-preserving elementwise ops.
 bool isTriviallyRematerializable(Operation *op);
 
+/// Clone a bounded chain of pure vector generators and layout-preserving
+/// elementwise ops without layout attributes. Each producer is cloned once,
+/// immediately after its original; scalar operands remain shared. Return null
+/// if the chain is ineligible, without modifying the IR.
+Value rematerialize(OpBuilder &builder, Value value);
 } // namespace xegpu
-
 } // namespace mlir
 
 #endif // MLIR_DIALECT_XEGPU_UTILS_XEGPUUTILS_H_

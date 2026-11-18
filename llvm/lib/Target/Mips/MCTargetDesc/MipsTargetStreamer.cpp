@@ -293,21 +293,21 @@ void MipsTargetStreamer::emitEmptyDelaySlot(bool hasShortDelaySlot, SMLoc IDLoc,
   unsigned Opc = Mips::SLL;
   if (isMicroMips(STI) && hasShortDelaySlot) {
     Opc = isMips32r6(STI) ? Mips::MOVE16_MMR6 : Mips::MOVE16_MM;
-    emitRR(Opc, Mips::ZERO, Mips::ZERO, IDLoc, STI);
+    emitRR(Opc, Mips::R0, Mips::R0, IDLoc, STI);
     return;
   }
 
   if (isMicroMips(STI))
     Opc = isMips32r6(STI) ? Mips::SLL_MMR6 : Mips::SLL_MM;
 
-  emitRRI(Opc, Mips::ZERO, Mips::ZERO, 0, IDLoc, STI);
+  emitRRI(Opc, Mips::R0, Mips::R0, 0, IDLoc, STI);
 }
 
 void MipsTargetStreamer::emitNop(SMLoc IDLoc, const MCSubtargetInfo *STI) {
   if (isMicroMips(STI))
-    emitRR(Mips::MOVE16_MM, Mips::ZERO, Mips::ZERO, IDLoc, STI);
+    emitRR(Mips::MOVE16_MM, Mips::R0, Mips::R0, IDLoc, STI);
   else
-    emitRRI(Mips::SLL, Mips::ZERO, Mips::ZERO, 0, IDLoc, STI);
+    emitRRI(Mips::SLL, Mips::R0, Mips::R0, 0, IDLoc, STI);
 }
 
 /// Emit the $gp restore operation for .cprestore.
@@ -344,7 +344,7 @@ void MipsTargetStreamer::emitStoreWithImmOffset(
 
   // Generate the base address in ATReg.
   emitRI(Mips::LUi, ATReg, HiOffset, IDLoc, STI);
-  if (BaseReg != Mips::ZERO)
+  if (BaseReg != Mips::R0)
     emitRRR(Mips::ADDu, ATReg, ATReg, BaseReg, IDLoc, STI);
   // Emit the store with the adjusted base and offset.
   emitRRI(Opcode, SrcReg, ATReg, LoOffset, IDLoc, STI);
@@ -379,7 +379,7 @@ void MipsTargetStreamer::emitLoadWithImmOffset(
 
   // Generate the base address in TmpReg.
   emitRI(Mips::LUi, TmpReg, HiOffset, IDLoc, STI);
-  if (BaseReg != Mips::ZERO)
+  if (BaseReg != Mips::R0)
     emitRRR(Mips::ADDu, TmpReg, TmpReg, BaseReg, IDLoc, STI);
   // Emit the load with the adjusted base and offset.
   emitRRI(Opcode, DstReg, TmpReg, LoOffset, IDLoc, STI);
@@ -860,12 +860,15 @@ MipsTargetELFStreamer::getISAMode(const MCSubtargetInfo &STI) {
     return ISAMode::Mips16;
   if (STI.hasFeature(Mips::FeatureMicroMips))
     return ISAMode::MicroMips;
+  if (STI.hasFeature(Mips::FeatureNanoMips))
+    return ISAMode::NanoMips;
   return ISAMode::Standard;
 }
 
 MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
                                              const MCSubtargetInfo &STI)
-    : MipsTargetStreamer(S), CLOpts(MipsMCOptions::Global),
+    : MipsTargetStreamer(S),
+      CLOpts(MIPS_MC::getCLOpts(S.getContext().getTargetOptions())),
       Mode(getISAMode(STI)), STI(STI) {
   MCAssembler &MCA = getStreamer().getAssembler();
   ELFObjectWriter &W = getStreamer().getWriter();
@@ -899,8 +902,9 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
   // fully, but any external user of the API that uses the MCTargetStreamer
   // would otherwise crash on assertion failure.
 
-  ABI = MipsABIInfo(STI.getTargetTriple().isMIPS32() ? MipsABIInfo::O32()
-                                                     : MipsABIInfo::N64());
+  ABI = MipsABIInfo(STI.getTargetTriple().isNanoMips() ? MipsABIInfo::P32()
+                    : STI.getTargetTriple().isMIPS32() ? MipsABIInfo::O32()
+                                                       : MipsABIInfo::N64());
 
   // Architecture
   if (Features[Mips::FeatureMips64r6])
@@ -941,6 +945,11 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
     EFlags |= ELF::EF_MIPS_ARCH_ASE_M16;
   if (Features[Mips::FeatureNaN2008])
     EFlags |= ELF::EF_MIPS_NAN2008;
+
+  if (STI.getTargetTriple().isNanoMips()) {
+    Mode = ISAMode::NanoMips;
+    Pic = false; // PIC not supported yet on nanoMIPS
+  }
 
   W.setELFHeaderEFlags(EFlags);
 }
@@ -1005,6 +1014,8 @@ void MipsTargetELFStreamer::finish() {
     EFlags |= ELF::EF_MIPS_ABI_O32;
   else if (getABI().IsN32())
     EFlags |= ELF::EF_MIPS_ABI2;
+  else if (getABI().IsP32())
+    EFlags |= ELF::EF_NANOMIPS_ABI_P32;
 
   if (Features[Mips::FeatureGP64Bit]) {
     if (getABI().IsO32())
@@ -1012,21 +1023,27 @@ void MipsTargetELFStreamer::finish() {
   } else if (Features[Mips::FeatureMips64r2] || Features[Mips::FeatureMips64])
     EFlags |= ELF::EF_MIPS_32BITMODE;
 
-  // -mplt is not implemented but we should act as if it was
-  // given.
-  if (!Features[Mips::FeatureNoABICalls])
-    EFlags |= ELF::EF_MIPS_CPIC;
-
-  if (Pic)
-    EFlags |= ELF::EF_MIPS_PIC | ELF::EF_MIPS_CPIC;
+  if (!isNanoMipsEnabled()) {
+    // -mplt is not implemented but we should act as if it was
+    // given.
+    if (!Features[Mips::FeatureNoABICalls])
+      EFlags |= ELF::EF_MIPS_CPIC;
+    if (Pic)
+      EFlags |= ELF::EF_MIPS_PIC | ELF::EF_MIPS_CPIC;
+  } else {
+    if (Pic)
+      EFlags |= ELF::EF_NANOMIPS_PIC;
+  }
 
   W.setELFHeaderEFlags(EFlags);
 
-  // Emit all the option records.
-  // At the moment we are only emitting .Mips.options (ODK_REGINFO) and
-  // .reginfo.
-  MipsELFStreamer &MEF = static_cast<MipsELFStreamer &>(Streamer);
-  MEF.EmitMipsOptionRecords();
+  if (!isNanoMipsEnabled()) {
+    // Emit all the option records.
+    // At the moment we are only emitting .Mips.options (ODK_REGINFO) and
+    // .reginfo.
+    MipsELFStreamer &MEF = static_cast<MipsELFStreamer &>(Streamer);
+    MEF.EmitMipsOptionRecords();
+  }
 
   emitMipsAbiFlags();
 }
@@ -1152,30 +1169,33 @@ void MipsTargetELFStreamer::emitDirectiveEnd(StringRef Name) {
   MCContext &Context = MCA.getContext();
   MCStreamer &OS = getStreamer();
 
-  OS.pushSection();
-  MCSectionELF *Sec = Context.getELFSection(".pdr", ELF::SHT_PROGBITS, 0);
-  OS.switchSection(Sec);
-  Sec->setAlignment(Align(4));
-
   MCSymbol *Sym = Context.getOrCreateSymbol(Name);
   const auto *ExprRef = MCSymbolRefExpr::create(Sym, Context);
-  OS.emitValueImpl(ExprRef, 4);
 
-  OS.emitIntValue(GPRInfoSet ? GPRBitMask : 0, 4); // reg_mask
-  OS.emitIntValue(GPRInfoSet ? GPROffset : 0, 4);  // reg_offset
+  if (!isNanoMipsEnabled()) {
+    OS.pushSection();
+    MCSectionELF *Sec = Context.getELFSection(".pdr", ELF::SHT_PROGBITS, 0);
+    OS.switchSection(Sec);
+    Sec->setAlignment(Align(4));
 
-  OS.emitIntValue(FPRInfoSet ? FPRBitMask : 0, 4); // fpreg_mask
-  OS.emitIntValue(FPRInfoSet ? FPROffset : 0, 4);  // fpreg_offset
+    OS.emitValueImpl(ExprRef, 4);
 
-  OS.emitIntValue(FrameInfoSet ? FrameOffset : 0, 4); // frame_offset
-  OS.emitIntValue(FrameInfoSet ? FrameReg : 0, 4);    // frame_reg
-  OS.emitIntValue(FrameInfoSet ? ReturnReg : 0, 4);   // return_reg
+    OS.emitIntValue(GPRInfoSet ? GPRBitMask : 0, 4); // reg_mask
+    OS.emitIntValue(GPRInfoSet ? GPROffset : 0, 4);  // reg_offset
+
+    OS.emitIntValue(FPRInfoSet ? FPRBitMask : 0, 4); // fpreg_mask
+    OS.emitIntValue(FPRInfoSet ? FPROffset : 0, 4);  // fpreg_offset
+
+    OS.emitIntValue(FrameInfoSet ? FrameOffset : 0, 4); // frame_offset
+    OS.emitIntValue(FrameInfoSet ? FrameReg : 0, 4);    // frame_reg
+    OS.emitIntValue(FrameInfoSet ? ReturnReg : 0, 4);   // return_reg
+
+    OS.popSection();
+  }
 
   // The .end directive marks the end of a procedure. Invalidate
   // the information gathered up until this point.
   GPRInfoSet = FPRInfoSet = FrameInfoSet = false;
-
-  OS.popSection();
 
   // .end also implicitly sets the size.
   MCSymbol *CurPCSym = Context.createTempSymbol();
@@ -1366,12 +1386,11 @@ void MipsTargetELFStreamer::emitDirectiveCpsetup(MCRegister Reg,
   forbidModuleDirective();
 
   MCAssembler &MCA = getStreamer().getAssembler();
-  MCInst Inst;
 
   // Either store the old $gp in a register or on the stack
   if (IsReg) {
     // move $save, $gpreg
-    emitRRR(Mips::OR64, RegOrOffset, GPReg, Mips::ZERO, SMLoc(), &STI);
+    emitRRR(Mips::OR64, RegOrOffset, GPReg, Mips::R0, SMLoc(), &STI);
   } else {
     // sd $gpreg, offset($sp)
     emitRRI(Mips::SD, GPReg, Mips::SP, RegOrOffset, SMLoc(), &STI);
@@ -1410,7 +1429,7 @@ void MipsTargetELFStreamer::emitDirectiveCpreturn(unsigned SaveLocation,
     Inst.setOpcode(Mips::OR);
     Inst.addOperand(MCOperand::createReg(GPReg));
     Inst.addOperand(MCOperand::createReg(SaveLocation));
-    Inst.addOperand(MCOperand::createReg(Mips::ZERO));
+    Inst.addOperand(MCOperand::createReg(Mips::R0));
   } else {
     Inst.setOpcode(Mips::LD);
     Inst.addOperand(MCOperand::createReg(GPReg));

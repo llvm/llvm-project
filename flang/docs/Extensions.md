@@ -282,6 +282,15 @@ end
 * $ and \ edit descriptors are supported in FORMAT to suppress newline
   output on user prompts.
 * Tabs in format strings (not `FORMAT` statements) are allowed on output.
+* A tab in a numeric or logical input field is treated as a blank, so it is
+  subject to the blank interpretation mode: it is ignored by default (`BN`)
+  and read as a zero under `BZ`. A tab also separates values in
+  list-directed and namelist input. Character (`A`) input transfers a tab
+  unchanged. A tab is not a blank in standard Fortran, so this is a
+  non-conforming extension; gfortran, for example, rejects `I3` input of
+  `1<tab>2`. The tab is in the input data, not in the program, so no
+  compile-time option such as `-pedantic` can diagnose it, and the runtime
+  does not warn about it.
 * REAL and DOUBLE PRECISION variable and bounds in DO loops
 * Integer literals without explicit kind specifiers that are out of range
   for the default kind of INTEGER are assumed to have the least larger kind
@@ -360,6 +369,21 @@ end
   before its explicit type declaration in a scope with IMPLICIT NONE(TYPE);
   it acquires the type it would have had under implicit typing rules (F2023 8.7),
   and a later explicit declaration must specify that same type (F2023 8.6.11 p2).
+* An inquiry function whose result depends only on the declared type, kind
+  type parameters, or rank of its argument, such as `KIND` or `DIGITS`, can
+  appear in a constant expression when that argument is a conditional
+  argument, as in `integer, parameter :: k = kind((flag ? a : b))`.
+  F2023 10.1.12 item (6) admits only a constant expression or a variable as
+  the argument of such a specification inquiry, and a conditional argument
+  is neither. All consequent-args have the same declared type and kind type
+  parameters (C1538) and, unless all are assumed-rank, the same rank
+  (C1539), so the result doesn't depend on the condition. Flang accepts
+  `kind(a + b)` in a constant expression on the same terms.
+  `IS_CONTIGUOUS` of a conditional argument can appear in a constant
+  expression too, when every consequent-arg is known to be contiguous or
+  every one is known not to be, so that the result can't depend on the
+  condition. In all of these cases, a condition can be any logical
+  expression, including a function reference, and it isn't evaluated.
 * OPEN(ACCESS='APPEND') is interpreted as OPEN(POSITION='APPEND')
   to ease porting from Sun Fortran.
 * Intrinsic subroutines EXIT([status]) and ABORT()
@@ -546,6 +570,11 @@ print *, is_contiguous(a(::2))                   ! prints T in Flang
 * A local data object may appear in a specification expression, even
   when it is not a dummy argument or in COMMON, so long as it is
   has the SAVE attribute and was initialized.
+* A nonallocatable nonpointer function result may be declared with a
+  rank-1 integer array as its bounds (F2023 R818 `explicit-shape-bounds-spec`),
+  e.g. `real :: res(shape_of_input)`.  F2023 C816 permits only an
+  `explicit-shape-spec-list` there, although R814 allows the rank-1 form
+  for other entities.
 * `PRINT namelistname` is accepted and interpreted as
   `WRITE(*,NML=namelistname)`, a near-universal extension.
 * A character length specifier in a component or entity declaration
@@ -586,6 +615,11 @@ end program
 * When the argument to intrinsic `ALLOCATED(p)` is actually a pointer
   rather than an allocatable, it is interpreted as `ASSOCIATED(p)` with a
   stern warning.
+* In formatted I/O, an item of enumeration type may correspond to a `G`
+  edit descriptor, which is processed like an `I` edit descriptor (the
+  value written or read is the ordinal position).  F2023 12.6.3 permits
+  only the `I`, `B`, `O`, and `Z` edit descriptors for enumeration type
+  items.  No diagnostic is issued.
 
 ### `SIMPLE` classification of extensions
 
@@ -744,6 +778,14 @@ The following extensions are not classified as `SIMPLE`: `CHDIR`, `DSECNDS`, `ET
   derived type not processed by defined I/O -- in unformatted I/O with an
   error.  This can be a temporary flang limitation while enumeration-type
   support is incomplete, not a standard requirement.
+
+* F2023 C712 prohibits only an assumed-type or intrinsic-type data-ref
+  in a `CLASSOF` type specifier, so it does not exclude a data-ref of a
+  non-extensible type, such as a `SEQUENCE` or `BIND(C)` derived type or
+  an enumeration type.  A polymorphic entity of such a type could never
+  have a dynamic type other than its declared type, and C705 prohibits
+  the equivalent `CLASS` type specifier.  Flang requires the data-ref of
+  `CLASSOF` to be of an extensible type and reports an error otherwise.
 
 ## Standard features that might as well not be
 

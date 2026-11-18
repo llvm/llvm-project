@@ -67,14 +67,14 @@
 //
 // CHECK-NEXT:    %[[T36:[0-9]+]] = vector.scalable.insert %[[PACK_RES_00]], %[[P0]][0] : vector<[4]xi32> into vector<[8]xi32>
 // CHECK-NEXT:    %[[T37:[0-9]+]] = vector.scalable.insert %[[PACK_RES_01]], %[[T36]][4] : vector<[4]xi32> into vector<[8]xi32>
-// CHECK-NEXT:    %[[UNPACK_RES_0:[_a-z0-9]+]], %[[UNPACK_RES_1:[_a-z0-9]+]] = vector.deinterleave %[[T37]] : vector<[8]xi32> -> vector<[4]xi32>
+// CHECK-NEXT:    %[[UNPACK_RES_0:[a-zA-Z]+]], %[[UNPACK_RES_1:[a-zA-Z]+]] = vector.deinterleave %[[T37]] : vector<[8]xi32> -> vector<[4]xi32>
 // CHECK-NEXT:    %[[TMP_OUT_0:[0-9]+]] = vector.insert %[[UNPACK_RES_0]], %[[P1]] [0] : vector<[4]xi32> into vector<4x[4]xi32>
 // CHECK-NEXT:    %[[TMP_OUT_1:[0-9]+]] = vector.insert %[[UNPACK_RES_1]], %[[TMP_OUT_0]] [1] : vector<[4]xi32> into vector<4x[4]xi32>
 
 // Same for result rows 2 and 3
 // CHECK-NEXT:    %[[T43:[0-9]+]] = vector.scalable.insert %[[PACK_RES_10]], %[[P0]][0] : vector<[4]xi32> into vector<[8]xi32>
 // CHECK-NEXT:    %[[T44:[0-9]+]] = vector.scalable.insert %[[PACK_RES_11]], %[[T43]][4] : vector<[4]xi32> into vector<[8]xi32>
-// CHECK-NEXT:    %[[UNPACK_RES_2:[_a-z0-9]+]], %[[UNPACK_RES_3:[_a-z0-9]+]] = vector.deinterleave %[[T44]] : vector<[8]xi32> -> vector<[4]xi32>
+// CHECK-NEXT:    %[[UNPACK_RES_2:[a-zA-Z_0-9]+]], %[[UNPACK_RES_3:[a-zA-Z_0-9]+]] = vector.deinterleave %[[T44]] : vector<[8]xi32> -> vector<[4]xi32>
 // CHECK-NEXT:    %[[TMP_OUT_2:[0-9]+]] = vector.insert %[[UNPACK_RES_2]], %[[TMP_OUT_1]] [2] : vector<[4]xi32> into vector<4x[4]xi32>
 // CHECK-NEXT:    %[[OUT:[0-9]+]] = vector.insert %[[UNPACK_RES_3]], %[[TMP_OUT_2]] [3] : vector<[4]xi32> into vector<4x[4]xi32>
 

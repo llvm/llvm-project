@@ -315,9 +315,7 @@ void var_ld3(void) { var(1, src_ld3()); }
 // LLVM-AVX: call void (i32, ...) @var(i32 noundef 1, ptr noundef byval(<3 x x86_fp80>) align 64 %{{[^,)]+}})
 // LLVM-AVX512: call void (i32, ...) @var(i32 noundef 1, <3 x x86_fp80> noundef %{{[^,)]+}})
 
-// A long double stores its first 10 bytes, so it can share a union with
-// members whose data ends within them, counting neither a record's tail
-// padding nor an empty array.
+// A long double next to an integer member classifies MEMORY.
 struct __attribute__((aligned(16))) C16 { char c; };
 union LDPad { long double ld; struct C16 s; };
 union LDPad take_ldpad(union LDPad u) { return u; }
@@ -325,6 +323,7 @@ union LDPad take_ldpad(union LDPad u) { return u; }
 // CIR: cir.func {{.*}}@take_ldpad(%arg0: !cir.ptr<!rec_LDPad> {llvm.align = 16 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_LDPad, llvm.writable} loc({{[^)]+}}), %arg1: !cir.ptr<!rec_LDPad> {llvm.align = 16 : i64, llvm.byval = !rec_LDPad, llvm.noundef} loc({{[^)]+}}))
 // LLVM: define dso_local void @take_ldpad(ptr dead_on_unwind noalias writable sret(%union.LDPad) align 16 %{{[^,)]+}}, ptr noundef byval(%union.LDPad) align 16 %{{[^,)]+}})
 
+// A zero-length array leaves the union X87.
 union LDZero { long double ld; int z[0]; };
 union LDZero take_ldzero(union LDZero u) { return u; }
 
