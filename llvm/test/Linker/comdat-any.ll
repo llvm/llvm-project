@@ -32,6 +32,9 @@ define void @bar() comdat($foo) {
 ;--- 2.ll
 $c1 = comdat any
 
+@will_be_undefined = external global i32
+@keep_decl = global ptr @will_be_undefined
+
 @v1 = weak_odr global i32 42, comdat($c1)
 define weak_odr i32 @f1(ptr) comdat($c1) {
 bb10:
@@ -53,7 +56,7 @@ bb11:
 ; CHECK2: $c1 = comdat any
 ; CHECK2: $c2 = comdat any
 
-; CHECK2-DAG: @will_be_undefined = external global i32
+; CHECK2-DAG: @will_be_undefined = external global i32{{$}}
 
 ; CHECK2-DAG: @v1 = weak_odr global i32 42, comdat($c1)
 
@@ -96,9 +99,9 @@ bb11:
 $c2 = comdat any
 $c1 = comdat any
 
-; This is only present in this file. The linker will keep $c1 from the first
-; file and this will be undefined.
-@will_be_undefined = global i32 1, comdat($c1)
+; Only this file defines the variable. The $c1 from 2.ll prevails, so the
+; declaration does not get this definition's !dbg.
+@will_be_undefined = global i32 1, comdat($c1), !dbg !0
 @use = global ptr @will_be_undefined
 
 @v1 = weak_odr global i32 41, comdat($c2)
@@ -119,6 +122,15 @@ bb21:
 @a23 = alias i32(ptr), ptr @f1
 @a24 = alias i16, ptr @f1
 @a25 = alias i16, ptr @a24
+
+!llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!4}
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!1 = distinct !DIGlobalVariable(name: "will_be_undefined", scope: !2, file: !3, type: !5, isLocal: false, isDefinition: true)
+!2 = distinct !DICompileUnit(language: DW_LANG_C, file: !3, runtimeVersion: 0, emissionKind: FullDebug, globals: !{!0})
+!3 = !DIFile(filename: "src.c", directory: "/")
+!4 = !{i32 2, !"Debug Info Version", i32 3}
+!5 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 
 ;--- 3.ll
 ; CHECK3: @bar = global i32 0, comdat($a1)

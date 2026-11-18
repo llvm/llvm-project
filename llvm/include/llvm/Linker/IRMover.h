@@ -63,6 +63,8 @@ public:
     LLVM_ABI bool hasType(StructType *Ty);
   };
 
+  enum class MoveKind { FullLink, OnlyNeeded, ThinLTOImport };
+
   LLVM_ABI IRMover(Module &M);
 
   typedef std::function<void(GlobalValue &)> ValueAdder;
@@ -80,11 +82,10 @@ public:
   ///   are passed as an argument, and the callback is expected to be called
   ///   if the GlobalValue needs to be added to the \p ValuesToLink and linked.
   ///   Pass nullptr if there's no work to be done in such cases.
-  /// - \p IsPerformingImport is true when this IR link is to perform ThinLTO
-  ///   function importing from Src.
+  /// - \p Kind distinguishes a full link from a selective link or import.
   LLVM_ABI Error move(std::unique_ptr<Module> Src,
                       ArrayRef<GlobalValue *> ValuesToLink,
-                      LazyCallback AddLazyFor, bool IsPerformingImport);
+                      LazyCallback AddLazyFor, MoveKind Kind);
   Module &getModule() { return Composite; }
 
 private:

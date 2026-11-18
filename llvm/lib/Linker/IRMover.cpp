@@ -326,6 +326,7 @@ class IRLinker {
   /// source module. This currently causes us to not link retained types in
   /// debug info metadata and module inline asm.
   bool IsPerformingImport;
+  bool IsFullLink;
 
   /// Set to true when all global value body linking is complete (including
   /// lazy linking). Used to prevent metadata linking from creating new
@@ -437,12 +438,13 @@ public:
   IRLinker(Module &DstM, MDMapT &SharedMDs,
            IRMover::IdentifiedStructTypeSet &Set, std::unique_ptr<Module> SrcM,
            ArrayRef<GlobalValue *> ValuesToLink,
-           IRMover::LazyCallback AddLazyFor, bool IsPerformingImport,
+           IRMover::LazyCallback AddLazyFor, IRMover::MoveKind Kind,
            IRMover::NamedMDNodesT &NamedMDNodes)
       : DstM(DstM), SrcM(std::move(SrcM)), NamedMDNodes(NamedMDNodes),
         AddLazyFor(std::move(AddLazyFor)), TypeMap(Set),
         GValMaterializer(*this), LValMaterializer(*this), SharedMDs(SharedMDs),
-        IsPerformingImport(IsPerformingImport),
+        IsPerformingImport(Kind == IRMover::MoveKind::ThinLTOImport),
+        IsFullLink(Kind == IRMover::MoveKind::FullLink),
         Mapper(ValueMap,
                RF_ReuseAndMutateDistinctMDs | RF_IgnoreMissingLocals |
                    (IsPerformingImport ? RF_Importing : RF_None),
@@ -944,7 +946,8 @@ Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
     NewGV = DGV;
 
     if (auto *GV = dyn_cast<GlobalVariable>(SGV);
-        GV && GV->hasMetadata(LLVMContext::MD_dbg))
+        GV && IsFullLink && !DGV->isDeclarationForLinker() &&
+        GV->hasMetadata(LLVMContext::MD_dbg))
       PendingGlobalDebugInfo.push_back(GV);
 
     // If the source is an exact definition, optimizations may have modified
@@ -1106,7 +1109,7 @@ void IRLinker::flushRAUWWorklist() {
     std::tie(Old, New) = Elem;
 
     // Preserve the debug descriptions of the replaced definition.
-    if (auto *OldGV = dyn_cast<GlobalVariable>(Old))
+    if (auto *OldGV = dyn_cast<GlobalVariable>(Old); OldGV && IsFullLink)
       if (auto *NewGV = dyn_cast<GlobalVariable>(New->stripPointerCasts()))
         linkGlobalVariableDebugInfo(*NewGV, *OldGV, /*Remap=*/false);
 
@@ -1725,9 +1728,9 @@ IRMover::IRMover(Module &M) : Composite(M) {
 
 Error IRMover::move(std::unique_ptr<Module> Src,
                     ArrayRef<GlobalValue *> ValuesToLink,
-                    LazyCallback AddLazyFor, bool IsPerformingImport) {
+                    LazyCallback AddLazyFor, MoveKind Kind) {
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
                        std::move(Src), ValuesToLink, std::move(AddLazyFor),
-                       IsPerformingImport, NamedMDNodes);
+                       Kind, NamedMDNodes);
   return TheIRLinker.run();
 }
