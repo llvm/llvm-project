@@ -9886,7 +9886,7 @@ void SIInstrInfo::splitScalar64BitBFE(SIInstrWorklist &Worklist,
     Extend.addReg(Inst.getOperand(1).getReg(), {}, AMDGPU::sub0);
     if (Opcode == AMDGPU::V_BFE_I32_e64)
       Extend.addImm(0).addImm(BitWidth);
-    else if (ST.useRealTrue16Insts())
+    if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::op_sel))
       Extend.addImm(0);
     legalizeOperandsVALUt16(*Extend, MRI);
 

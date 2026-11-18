@@ -2732,10 +2732,10 @@ bool AMDGPUInstructionSelector::selectI16SignExtend(MachineInstr &I,
                                : AMDGPU::V_CVT_I32_I16_fake16_e64;
   auto Extend = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode),
                         I.getOperand(0).getReg());
-  if (RealTrue16)
-    Extend.addImm(0);
+  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src0_modifiers))
+    Extend.addImm(SISrcMods::NONE);
   Extend.addReg(SrcReg, {}, SubReg);
-  if (RealTrue16)
+  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::op_sel))
     Extend.addImm(0);
   I.eraseFromParent();
   return RBI.constrainGenericRegister(Extend->getOperand(0).getReg(),
