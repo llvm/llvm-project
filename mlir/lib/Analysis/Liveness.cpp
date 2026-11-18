@@ -200,6 +200,7 @@ Liveness::OperationListT Liveness::resolveLiveness(Value value) const {
     // Get block and block liveness information.
     Block *block = toProcess.pop_back_val();
     const LivenessBlockInfo *blockInfo = getLiveness(block);
+    assert(blockInfo && "expected block to be covered by the analysis");
 
     // Note that start and end will be in the same block.
     Operation *start = blockInfo->getStartOperation(value);
@@ -212,8 +213,10 @@ Liveness::OperationListT Liveness::resolveLiveness(Value value) const {
     }
 
     for (Block *successor : block->getSuccessors()) {
-      if (getLiveness(successor)->isLiveIn(value) &&
-          visited.insert(successor).second)
+      const LivenessBlockInfo *successorInfo = getLiveness(successor);
+      assert(successorInfo &&
+             "expected successor to be covered by the analysis");
+      if (successorInfo->isLiveIn(value) && visited.insert(successor).second)
         toProcess.push_back(successor);
     }
   }
@@ -229,18 +232,23 @@ const LivenessBlockInfo *Liveness::getLiveness(Block *block) const {
 
 /// Returns a reference to a set containing live-in values.
 const Liveness::ValueSetT &Liveness::getLiveIn(Block *block) const {
-  return getLiveness(block)->in();
+  const LivenessBlockInfo *blockInfo = getLiveness(block);
+  assert(blockInfo && "expected block to be covered by the analysis");
+  return blockInfo->in();
 }
 
 /// Returns a reference to a set containing live-out values.
 const Liveness::ValueSetT &Liveness::getLiveOut(Block *block) const {
-  return getLiveness(block)->out();
+  const LivenessBlockInfo *blockInfo = getLiveness(block);
+  assert(blockInfo && "expected block to be covered by the analysis");
+  return blockInfo->out();
 }
 
 /// Returns true if `value` is not live after `operation`.
 bool Liveness::isDeadAfter(Value value, Operation *operation) const {
   Block *block = operation->getBlock();
   const LivenessBlockInfo *blockInfo = getLiveness(block);
+  assert(blockInfo && "expected block to be covered by the analysis");
 
   // The given value escapes the associated block.
   if (blockInfo->isLiveOut(value))
