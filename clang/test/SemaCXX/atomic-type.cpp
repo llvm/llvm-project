@@ -111,3 +111,12 @@ namespace non_trivially_copyable {
   _Atomic S s;  // expected-error {{_Atomic cannot be applied to type 'S' which is not trivially copyable}} \
                 // expected-warning {{'_Atomic' is a C11 extension}}
 }
+
+namespace static_cast_crash {
+  struct S { char a; };
+  void static_cast_non_atomic_to_atomic() {
+    _Atomic struct S a; // expected-warning {{'_Atomic' is a C11 extension}}
+    a = static_cast<_Atomic(struct S)>(S()); // expected-warning {{'_Atomic' is a C11 extension}}
+  }
+}
+
