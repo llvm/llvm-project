@@ -473,6 +473,67 @@ __packed_binary_builtin(asubu_u32, uint32_t, __builtin_riscv_asubu_u32)
 /* Scalar Shift-Add */
 __packed_binary_builtin(ssh1sadd_i32, int32_t, __builtin_riscv_ssh1sadd_i32)
 
+/* Scalar Comparison */
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_mseq_i32_u32(int32_t __rs1, int32_t __rs2) {
+  return __builtin_riscv_mseq_u32((uint32_t)__rs1, (uint32_t)__rs2);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_mseq_u32_u32(uint32_t __rs1, uint32_t __rs2) {
+  return __builtin_riscv_mseq_u32(__rs1, __rs2);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_mslt_u32(int32_t __rs1, int32_t __rs2) {
+  return __builtin_riscv_mslt_i32(__rs1, __rs2);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_msgt_u32(int32_t __rs1, int32_t __rs2) {
+  return __builtin_riscv_mslt_i32(__rs2, __rs1);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_msltu_u32(uint32_t __rs1, uint32_t __rs2) {
+  return __builtin_riscv_msltu_u32(__rs1, __rs2);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_msgtu_u32(uint32_t __rs1, uint32_t __rs2) {
+  return __builtin_riscv_msltu_u32(__rs2, __rs1);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_msne_i32_u32(int32_t __rs1, int32_t __rs2) {
+  return ~__builtin_riscv_mseq_u32((uint32_t)__rs1, (uint32_t)__rs2);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_msne_u32_u32(uint32_t __rs1, uint32_t __rs2) {
+  return ~__builtin_riscv_mseq_u32(__rs1, __rs2);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_msge_u32(int32_t __rs1, int32_t __rs2) {
+  return ~__builtin_riscv_mslt_i32(__rs1, __rs2);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_msle_u32(int32_t __rs1, int32_t __rs2) {
+  return ~__builtin_riscv_mslt_i32(__rs2, __rs1);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_msgeu_u32(uint32_t __rs1, uint32_t __rs2) {
+  return ~__builtin_riscv_msltu_u32(__rs1, __rs2);
+}
+
+static __inline__ uint32_t __DEFAULT_FN_ATTRS
+__riscv_msleu_u32(uint32_t __rs1, uint32_t __rs2) {
+  return ~__builtin_riscv_msltu_u32(__rs2, __rs1);
+}
+
 /* Scalar Saturating Addition and Subtraction */
 __packed_binary_builtin(sadd_i32, int32_t, __builtin_elementwise_add_sat)
 __packed_binary_builtin(saddu_u32, uint32_t, __builtin_elementwise_add_sat)
@@ -491,6 +552,18 @@ __packed_pabs(abs_u64, int64_t, uint64_t)
 #if __riscv_xlen == 64
 #define __riscv_sati_i64(rs1, width) __builtin_riscv_sati_i64(rs1, width)
 #define __riscv_usati_u64(rs1, width) __builtin_riscv_usati_u64(rs1, width)
+#endif
+
+/* Scalar Saturating and Rounding Shift */
+__packed_binary_builtin_mixed(ssha_i32, int32_t, int32_t, int, __builtin_riscv_ssha_i32)
+__packed_binary_builtin_mixed(sshar_i32, int32_t, int32_t, int, __builtin_riscv_sshar_i32)
+__packed_binary_builtin_mixed(sshl_u32, uint32_t, uint32_t, int, __builtin_riscv_sshl_u32)
+__packed_binary_builtin_mixed(sshlr_u32, uint32_t, uint32_t, int, __builtin_riscv_sshlr_u32)
+#if __riscv_xlen == 64
+__packed_binary_builtin_mixed(sha_i64, int64_t, int64_t, int, __builtin_riscv_sha_i64)
+__packed_binary_builtin_mixed(shar_i64, int64_t, int64_t, int, __builtin_riscv_shar_i64)
+__packed_binary_builtin_mixed(shl_u64, uint64_t, uint64_t, int, __builtin_riscv_shl_u64)
+__packed_binary_builtin_mixed(shlr_u64, uint64_t, uint64_t, int, __builtin_riscv_shlr_u64)
 #endif
 
 /* Scalar Narrowing Clip */
@@ -526,6 +599,10 @@ __packed_ternary_builtin(mhaccu_u32, uint32_t, __builtin_riscv_mhaccu_u32)
 __packed_ternary_builtin(mhraccu_u32, uint32_t, __builtin_riscv_mhraccu_u32)
 __packed_ternary_builtin_mixed(mhaccsu_i32, int32_t, int32_t, uint32_t, __builtin_riscv_mhaccsu_i32)
 __packed_ternary_builtin_mixed(mhraccsu_i32, int32_t, int32_t, uint32_t, __builtin_riscv_mhraccsu_i32)
+__packed_ternary_builtin_mixed(mhacc_h0_i32, int32_t, int32_t, int16x2_t, __builtin_riscv_mhacc_h0_i32)
+__packed_ternary_builtin_mixed(mhacc_h1_i32, int32_t, int32_t, int16x2_t, __builtin_riscv_mhacc_h1_i32)
+__packed_ternary_builtin_mixed(mhaccsu_h0_i32, int32_t, int32_t, uint16x2_t, __builtin_riscv_mhaccsu_h0_i32)
+__packed_ternary_builtin_mixed(mhaccsu_h1_i32, int32_t, int32_t, uint16x2_t, __builtin_riscv_mhaccsu_h1_i32)
 
 /* Scalar "Q-format" Multiplication */
 __packed_binary_builtin(mulq_i32, int32_t, __builtin_riscv_mulq_i32)
