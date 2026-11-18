@@ -23737,7 +23737,7 @@ ProcessOpenMPDoacrossClauseCommon(Sema &SemaRef, bool IsSource,
     TotalDepCount = OrderedCountExpr->EvaluateKnownConstInt(SemaRef.Context);
     TotalDepCount.setIsUnsigned(/*Val=*/true);
   }
-  llvm::APSInt DepCounter(TotalDepCount.getBitWidth());
+  llvm::APSInt DepCounter(TotalDepCount.getBitWidth(), /*isUnsigned=*/true);
 
   for (Expr *RefExpr : VarList) {
     assert(RefExpr && "NULL expr in OpenMP doacross clause.");
