@@ -34,10 +34,7 @@ add_entrypoint_object(
     nl_langinfo.h
   DEPENDS
     .langinfo_utils
-    libc.hdr.locale_macros
-    libc.hdr.types.locale_t
     libc.hdr.types.nl_item
     libc.src.__support.common
     libc.src.__support.macros.config
-    libc.src.locale.locale
 )

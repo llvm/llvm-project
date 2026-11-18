@@ -24,28 +24,10 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LIBC_INLINE const char *get_langinfo_string(nl_item item,
-                                            [[maybe_unused]] locale_t loc) {
-  const LcCtypeData *ctype_data;
-  const LcNumericData *numeric_data;
-  const LcTimeData *time_data;
-  const LcMonetaryData *monetary_data;
-  const LcMessagesData *messages_data;
-
-  if constexpr (ENABLE_RUNTIME_LOCALE) {
-    ctype_data = loc->ctype();
-    numeric_data = loc->numeric();
-    time_data = loc->time();
-    monetary_data = loc->monetary();
-    messages_data = loc->messages();
-  } else {
-    ctype_data = DEFAULT_LOCALE_IS_UTF8 ? &UTF8_CTYPE_DATA : &C_CTYPE_DATA;
-    numeric_data = &C_NUMERIC_DATA;
-    time_data = &C_TIME_DATA;
-    monetary_data = &C_MONETARY_DATA;
-    messages_data = &C_MESSAGES_DATA;
-  }
-
+LIBC_INLINE const char *get_langinfo_string_from_tables(
+    nl_item item, const LcCtypeData *ctype_data,
+    const LcNumericData *numeric_data, const LcTimeData *time_data,
+    const LcMonetaryData *monetary_data, const LcMessagesData *messages_data) {
   switch (item) {
   case CODESET:
     return ctype_data->codeset;
@@ -125,6 +107,23 @@ LIBC_INLINE const char *get_langinfo_string(nl_item item,
     return messages_data->noexpr;
   default:
     return "";
+  }
+}
+
+LIBC_INLINE const char *get_default_langinfo_string(nl_item item) {
+  return get_langinfo_string_from_tables(
+      item, DEFAULT_LOCALE_IS_UTF8 ? &UTF8_CTYPE_DATA : &C_CTYPE_DATA,
+      &C_NUMERIC_DATA, &C_TIME_DATA, &C_MONETARY_DATA, &C_MESSAGES_DATA);
+}
+
+LIBC_INLINE const char *get_langinfo_string(nl_item item,
+                                            [[maybe_unused]] locale_t loc) {
+  if constexpr (ENABLE_RUNTIME_LOCALE) {
+    return get_langinfo_string_from_tables(item, loc->ctype(), loc->numeric(),
+                                           loc->time(), loc->monetary(),
+                                           loc->messages());
+  } else {
+    return get_default_langinfo_string(item);
   }
 }
 
