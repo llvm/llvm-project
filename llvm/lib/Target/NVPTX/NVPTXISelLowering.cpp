@@ -446,7 +446,7 @@ VectorizePTXValueVTs(const SmallVectorImpl<EVT> &ValueVTs,
                      const SmallVectorImpl<T> &Offsets, Align ParamAlignment,
                      bool IsVAArg = false, ArrayRef<Part> Parts = {}) {
   SmallVector<unsigned, 16> VectorInfo;
-  const auto GetPackedWidth = [&](unsigned I) -> unsigned {
+  const auto GetBoolVectorWidth = [&](unsigned I) -> unsigned {
     if (Parts.empty())
       return 0;
     EVT VT = Parts[I].ArgVT;
@@ -454,7 +454,7 @@ VectorizePTXValueVTs(const SmallVectorImpl<EVT> &ValueVTs,
   };
 
   const auto GetNumElts = [&](unsigned I) -> unsigned {
-    if (unsigned Width = GetPackedWidth(I)) {
+    if (unsigned Width = GetBoolVectorWidth(I)) {
       assert(Width <= ValueVTs.size() - I &&
              "Too few argument parts for packed Boolean vector");
       return Width;
@@ -466,7 +466,7 @@ VectorizePTXValueVTs(const SmallVectorImpl<EVT> &ValueVTs,
           I, AccessSize, ValueVTs, Offsets, ParamAlignment);
       assert((NumElts == 1 || NumElts == 2 || NumElts == 4) &&
              "Unexpected vectorization size");
-      if (NumElts != 1 && none_of(seq(I + 1, I + NumElts), GetPackedWidth))
+      if (NumElts != 1 && none_of(seq(I + 1, I + NumElts), GetBoolVectorWidth))
         return NumElts;
     }
     return 1;
