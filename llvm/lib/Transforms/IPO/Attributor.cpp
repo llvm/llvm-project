@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/Attributor.h"
+#include "IPOOptions.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -39,7 +40,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/FileSystem.h"
@@ -88,103 +88,6 @@ STATISTIC(NumAttributesValidFixpoint,
           "Number of abstract attributes in a valid fixpoint state");
 STATISTIC(NumAttributesManifested,
           "Number of abstract attributes manifested in IR");
-
-// TODO: Determine a good default value.
-//
-// In the LLVM-TS and SPEC2006, 32 seems to not induce compile time overheads
-// (when run with the first 5 abstract attributes). The results also indicate
-// that we never reach 32 iterations but always find a fixpoint sooner.
-//
-// This will become more evolved once we perform two interleaved fixpoint
-// iterations: bottom-up and top-down.
-static cl::opt<unsigned>
-    SetFixpointIterations("attributor-max-iterations", cl::Hidden,
-                          cl::desc("Maximal number of fixpoint iterations."),
-                          cl::init(32));
-
-static cl::opt<unsigned>
-    MaxSpecializationPerCB("attributor-max-specializations-per-call-base",
-                           cl::Hidden,
-                           cl::desc("Maximal number of callees specialized for "
-                                    "a call base"),
-                           cl::init(UINT32_MAX));
-
-static cl::opt<unsigned, true> MaxInitializationChainLengthX(
-    "attributor-max-initialization-chain-length", cl::Hidden,
-    cl::desc(
-        "Maximal number of chained initializations (to avoid stack overflows)"),
-    cl::location(MaxInitializationChainLength), cl::init(1024));
-unsigned llvm::MaxInitializationChainLength;
-
-static cl::opt<bool> AnnotateDeclarationCallSites(
-    "attributor-annotate-decl-cs", cl::Hidden,
-    cl::desc("Annotate call sites of function declarations."), cl::init(false));
-
-static cl::opt<bool> EnableHeapToStack("enable-heap-to-stack-conversion",
-                                       cl::init(true), cl::Hidden);
-
-static cl::opt<bool>
-    AllowShallowWrappers("attributor-allow-shallow-wrappers", cl::Hidden,
-                         cl::desc("Allow the Attributor to create shallow "
-                                  "wrappers for non-exact definitions."),
-                         cl::init(false));
-
-static cl::opt<bool>
-    AllowDeepWrapper("attributor-allow-deep-wrappers", cl::Hidden,
-                     cl::desc("Allow the Attributor to use IP information "
-                              "derived from non-exact functions via cloning"),
-                     cl::init(false));
-
-// These options can only used for debug builds.
-#ifndef NDEBUG
-static cl::list<std::string>
-    SeedAllowList("attributor-seed-allow-list", cl::Hidden,
-                  cl::desc("Comma separated list of attribute names that are "
-                           "allowed to be seeded."),
-                  cl::CommaSeparated);
-
-static cl::list<std::string> FunctionSeedAllowList(
-    "attributor-function-seed-allow-list", cl::Hidden,
-    cl::desc("Comma separated list of function names that are "
-             "allowed to be seeded."),
-    cl::CommaSeparated);
-#endif
-
-static cl::opt<bool>
-    DumpDepGraph("attributor-dump-dep-graph", cl::Hidden,
-                 cl::desc("Dump the dependency graph to dot files."),
-                 cl::init(false));
-
-static cl::opt<std::string> DepGraphDotFileNamePrefix(
-    "attributor-depgraph-dot-filename-prefix", cl::Hidden,
-    cl::desc("The prefix used for the CallGraph dot file names."));
-
-static cl::opt<bool> ViewDepGraph("attributor-view-dep-graph", cl::Hidden,
-                                  cl::desc("View the dependency graph."),
-                                  cl::init(false));
-
-static cl::opt<bool> PrintDependencies("attributor-print-dep", cl::Hidden,
-                                       cl::desc("Print attribute dependencies"),
-                                       cl::init(false));
-
-static cl::opt<bool> EnableCallSiteSpecific(
-    "attributor-enable-call-site-specific-deduction", cl::Hidden,
-    cl::desc("Allow the Attributor to do call site specific analysis"),
-    cl::init(false));
-
-static cl::opt<bool>
-    PrintCallGraph("attributor-print-call-graph", cl::Hidden,
-                   cl::desc("Print Attributor's internal call graph"),
-                   cl::init(false));
-
-static cl::opt<bool> SimplifyAllLoads("attributor-simplify-all-loads",
-                                      cl::Hidden,
-                                      cl::desc("Try to simplify all loads."),
-                                      cl::init(true));
-
-static cl::opt<bool> CloseWorldAssumption(
-    "attributor-assume-closed-world", cl::Hidden,
-    cl::desc("Should a closed world be assumed, or not. Default if not set."));
 
 /// Logic operators for the change status enum class.
 ///
@@ -1112,8 +1015,12 @@ ChangeStatus AbstractAttribute::update(Attributor &A) {
 Attributor::Attributor(SetVector<Function *> &Functions,
                        InformationCache &InfoCache,
                        AttributorConfig Configuration)
-    : Allocator(InfoCache.Allocator), Functions(Functions),
-      InfoCache(InfoCache), Configuration(Configuration) {
+    : Opts(getIPOOptions(InfoCache.getModule())),
+      Allocator(InfoCache.Allocator), Functions(Functions),
+      InfoCache(InfoCache),
+      MaxInitializationChainLength(
+          Opts.attributor_max_initialization_chain_length),
+      Configuration(Configuration) {
   if (!isClosedWorldModule())
     return;
   for (Function *Fn : Functions)
@@ -2065,7 +1972,7 @@ bool Attributor::shouldPropagateCallBaseContext(const IRPosition &IRP) {
   // TODO: Maintain a cache of Values that are
   // on the pathway from a Argument to a Instruction that would effect the
   // liveness/return state etc.
-  return EnableCallSiteSpecific;
+  return Opts.attributor_enable_call_site_specific_deduction;
 }
 
 bool Attributor::checkForAllReturnedValues(function_ref<bool(Value &)> Pred,
@@ -2197,8 +2104,8 @@ void Attributor::runTillFixpoint() {
   // the abstract analysis.
 
   unsigned IterationCounter = 1;
-  unsigned MaxIterations =
-      Configuration.MaxFixpointIterations.value_or(SetFixpointIterations);
+  unsigned MaxIterations = Configuration.MaxFixpointIterations.value_or(
+      Opts.attributor_max_iterations);
 
   SmallVector<AbstractAttribute *, 32> ChangedAAs;
   SetVector<AbstractAttribute *> Worklist, InvalidAAs;
@@ -2731,20 +2638,20 @@ ChangeStatus Attributor::run() {
   TimeTraceScope TimeScope("Attributor::run");
   AttributorCallGraph ACallGraph(*this);
 
-  if (PrintCallGraph)
+  if (Opts.attributor_print_call_graph)
     ACallGraph.populateAll();
 
   Phase = AttributorPhase::UPDATE;
   runTillFixpoint();
 
   // dump graphs on demand
-  if (DumpDepGraph)
-    DG.dumpGraph();
+  if (Opts.attributor_dump_dep_graph)
+    DG.dumpGraph(Opts.attributor_depgraph_dot_filename_prefix);
 
-  if (ViewDepGraph)
+  if (Opts.attributor_view_dep_graph)
     DG.viewGraph();
 
-  if (PrintDependencies)
+  if (Opts.attributor_print_dep)
     DG.print();
 
   Phase = AttributorPhase::MANIFEST;
@@ -2753,7 +2660,7 @@ ChangeStatus Attributor::run() {
   Phase = AttributorPhase::CLEANUP;
   ChangeStatus CleanupChange = cleanupIR();
 
-  if (PrintCallGraph)
+  if (Opts.attributor_print_call_graph)
     ACallGraph.print();
 
   return ManifestChange | CleanupChange;
@@ -2865,7 +2772,7 @@ bool Attributor::isInternalizable(Function &F) {
 }
 
 Function *Attributor::internalizeFunction(Function &F, bool Force) {
-  if (!AllowDeepWrapper && !Force)
+  if (!getIPOOptions(F).attributor_allow_deep_wrappers && !Force)
     return nullptr;
   if (!isInternalizable(F))
     return nullptr;
@@ -3050,11 +2957,12 @@ bool Attributor::registerFunctionSignatureRewrite(
 bool Attributor::shouldSeedAttribute(AbstractAttribute &AA) {
   bool Result = true;
 #ifndef NDEBUG
-  if (SeedAllowList.size() != 0)
-    Result = llvm::is_contained(SeedAllowList, AA.getName());
+  if (Opts.attributor_seed_allow_list.size() != 0)
+    Result = llvm::is_contained(Opts.attributor_seed_allow_list, AA.getName());
   Function *Fn = AA.getAnchorScope();
-  if (FunctionSeedAllowList.size() != 0 && Fn)
-    Result &= llvm::is_contained(FunctionSeedAllowList, Fn->getName());
+  if (Opts.attributor_function_seed_allow_list.size() != 0 && Fn)
+    Result &= llvm::is_contained(Opts.attributor_function_seed_allow_list,
+                                 Fn->getName());
 #endif
   return Result;
 }
@@ -3270,6 +3178,18 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
   return Changed;
 }
 
+/// The opcodes of the instructions recorded in FunctionInfo::OpcodeInstMap.
+static constexpr unsigned InterestingOpcodes[] = {
+    Instruction::Call,          Instruction::CallBr,
+    Instruction::Invoke,        Instruction::CleanupRet,
+    Instruction::CatchSwitch,   Instruction::AtomicRMW,
+    Instruction::AtomicCmpXchg, Instruction::UncondBr,
+    Instruction::CondBr,        Instruction::Resume,
+    Instruction::Ret,           Instruction::Load,
+    Instruction::Store,         Instruction::Alloca,
+    Instruction::AddrSpaceCast,
+};
+
 void InformationCache::initializeInformationCache(const Function &CF,
                                                   FunctionInfo &FI) {
   // As we do not modify the function here we can remove the const
@@ -3329,6 +3249,8 @@ void InformationCache::initializeInformationCache(const Function &CF,
       IsInterestingOpcode = true;
     }
     if (IsInterestingOpcode) {
+      assert(is_contained(InterestingOpcodes, I.getOpcode()) &&
+             "Interesting opcode missing from InterestingOpcodes");
       auto *&Insts = FI.OpcodeInstMap[I.getOpcode()];
       if (!Insts)
         Insts = new (Allocator) InstructionVectorTy();
@@ -3383,8 +3305,8 @@ void InformationCache::collectAssumeOnlyValues(FunctionInfo &FI) {
 InformationCache::FunctionInfo::~FunctionInfo() {
   // The instruction vectors are allocated using a BumpPtrAllocator, we need to
   // manually destroy them.
-  for (InstructionVectorTy *Insts : OpcodeInstMap) {
-    if (Insts)
+  for (unsigned Opcode : InterestingOpcodes) {
+    if (InstructionVectorTy *Insts = OpcodeInstMap[Opcode])
       Insts->~InstructionVectorTy();
   }
 }
@@ -3472,7 +3394,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   getOrCreateAAFor<AAUndefinedBehavior>(FPos);
 
   // Every function might be applicable for Heap-To-Stack conversion.
-  if (EnableHeapToStack)
+  if (Opts.enable_heap_to_stack_conversion)
     getOrCreateAAFor<AAHeapToStack>(FPos);
 
   // Every function might be "must-progress".
@@ -3638,7 +3560,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
     // Skip declarations except if annotations on their call sites were
     // explicitly requested.
-    if (!AnnotateDeclarationCallSites && Callee->isDeclaration() &&
+    if (!Opts.attributor_annotate_decl_cs && Callee->isDeclaration() &&
         !Callee->hasMetadata(LLVMContext::MD_callback))
       return true;
 
@@ -3720,7 +3642,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   auto LoadStorePred = [&](Instruction &I) -> bool {
     if (auto *LI = dyn_cast<LoadInst>(&I)) {
       getOrCreateAAFor<AAAlign>(IRPosition::value(*LI->getPointerOperand()));
-      if (SimplifyAllLoads)
+      if (Opts.attributor_simplify_all_loads)
         getAssumedSimplified(IRPosition::value(I), nullptr,
                              UsedAssumedInformation, AA::Intraprocedural);
       getOrCreateAAFor<AAInvariantLoadPointer>(
@@ -3761,9 +3683,8 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 }
 
 bool Attributor::isClosedWorldModule() const {
-  if (CloseWorldAssumption.getNumOccurrences())
-    return CloseWorldAssumption;
-  return isModulePass() && Configuration.IsClosedWorldModule;
+  return valueOr(Opts.attributor_assume_closed_world,
+                 isModulePass() && Configuration.IsClosedWorldModule);
 }
 
 /// Helpers to ease debugging through output streams and print calls.
@@ -3915,6 +3836,7 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   if (Functions.empty())
     return false;
 
+  const IPOOptions &Opts = getIPOOptions(InfoCache.getModule());
   LLVM_DEBUG({
     dbgs() << "[Attributor] Run on module with " << Functions.size()
            << " functions:\n";
@@ -3936,16 +3858,16 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   /// Tracking callback for specialization of indirect calls.
   DenseMap<CallBase *, std::unique_ptr<SmallPtrSet<Function *, 8>>>
       IndirectCalleeTrackingMap;
-  if (MaxSpecializationPerCB.getNumOccurrences()) {
+  if (Opts.attributor_max_specializations_per_call_base) {
     AC.IndirectCalleeSpecializationCallback =
         [&](Attributor &, const AbstractAttribute &AA, CallBase &CB,
             Function &Callee, unsigned) {
-          if (MaxSpecializationPerCB == 0)
+          if (*Opts.attributor_max_specializations_per_call_base == 0)
             return false;
           auto &Set = IndirectCalleeTrackingMap[&CB];
           if (!Set)
             Set = std::make_unique<SmallPtrSet<Function *, 8>>();
-          if (Set->size() >= MaxSpecializationPerCB)
+          if (Set->size() >= *Opts.attributor_max_specializations_per_call_base)
             return Set->contains(&Callee);
           Set->insert(&Callee);
           return true;
@@ -3955,7 +3877,7 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   Attributor A(Functions, InfoCache, AC);
 
   // Create shallow wrappers for all functions that are not IPO amendable
-  if (AllowShallowWrappers)
+  if (Opts.attributor_allow_shallow_wrappers)
     for (Function *F : Functions)
       if (!A.isFunctionIPOAmendable(*F))
         Attributor::createShallowWrapper(*F);
@@ -3964,7 +3886,7 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   // TODO: for now we eagerly internalize functions without calculating the
   //       cost, we need a cost interface to determine whether internalizing
   //       a function is "beneficial"
-  if (AllowDeepWrapper) {
+  if (Opts.attributor_allow_deep_wrappers) {
     unsigned FunSize = Functions.size();
     for (unsigned u = 0; u < FunSize; u++) {
       Function *F = Functions[u];
@@ -4123,12 +4045,12 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
 
 void AADepGraph::viewGraph() { llvm::ViewGraph(this, "Dependency Graph"); }
 
-void AADepGraph::dumpGraph() {
+void AADepGraph::dumpGraph(StringRef DotFileNamePrefix) {
   static std::atomic<int> CallTimes;
   std::string Prefix;
 
-  if (!DepGraphDotFileNamePrefix.empty())
-    Prefix = DepGraphDotFileNamePrefix;
+  if (!DotFileNamePrefix.empty())
+    Prefix = DotFileNamePrefix;
   else
     Prefix = "dep_graph";
   std::string Filename =

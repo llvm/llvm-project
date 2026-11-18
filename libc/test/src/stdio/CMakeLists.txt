@@ -523,6 +523,28 @@ add_libc_test(
     libc.src.stdio.fread
 )
 
+add_libc_test(
+  putchar_unlocked_test
+  SUITE
+    libc-stdio-tests
+  SRCS
+    putchar_unlocked_test.cpp
+  DEPENDS
+    libc.hdr.stdio_macros
+    libc.src.__support.CPP.scope
+    libc.src.stdio.fclose
+    libc.src.stdio.ferror
+    libc.src.stdio.fflush
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.stdio.freopen
+    libc.src.stdio.putchar_unlocked
+    libc.src.stdio.stdout
+    libc.src.string.memcmp
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_libc_test(
     remove_test
@@ -684,6 +706,65 @@ add_libc_test(
     libc.src.stdio.fgets
     libc.src.stdio.fopen
     libc.src.stdio.fwrite
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  getdelim_impl_test
+  SUITE
+    libc-stdio-tests
+  SRCS
+    getdelim_impl_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.func.free
+    libc.hdr.func.malloc
+    libc.hdr.stdint_proxy
+    libc.hdr.stdio_macros
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.scope
+    libc.src.__support.CPP.span
+    libc.src.__support.CPP.string_view
+    libc.src.__support.File.file
+    libc.src.__support.File.file_io_result
+    libc.src.__support.error_or
+    libc.src.stdio.generic.getdelim_impl
+    libc.src.string.memory_utils.inline_memcpy
+)
+
+add_libc_test(
+  getline_test
+  SUITE
+    libc-stdio-tests
+  SRCS
+    getline_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.func.free
+    libc.hdr.func.malloc
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
+    libc.src.__support.CPP.scope
+    libc.src.__support.CPP.string_view
+    libc.src.__support.libc_errno
+    libc.src.stdio.clearerr
+    libc.src.stdio.fclose
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.fmemopen
+    libc.src.stdio.fopen
+    libc.src.stdio.fseek
+    libc.src.stdio.fwrite
+    libc.src.stdio.getline
+    libc.src.stdio.remove
+    libc.src.stdio.setvbuf
+    libc.src.stdio.ungetc
+    libc.src.wchar.fwide
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

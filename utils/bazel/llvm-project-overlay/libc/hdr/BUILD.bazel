@@ -30,7 +30,7 @@ libc_support_library(
     hdrs = ["fcntl_macros.h"],
     deps = select({
         "//libc:full_build": [
-            "//libc:llvm_libc_macros_fcntl_macros",
+            "//libc/include:llvm_libc_macros_fcntl_macros",
         ],
         "//conditions:default": [":fcntl_overlay"],
     }),
@@ -73,7 +73,7 @@ libc_support_library(
     hdrs = ["netinet_tcp_macros.h"],
     deps = select({
         "//libc:full_build": [
-            "//libc:llvm_libc_macros_netinet_tcp_macros",
+            "//libc/include:llvm_libc_macros_netinet_tcp_macros",
         ],
         "//conditions:default": [],
     }),
@@ -84,7 +84,7 @@ libc_support_library(
     hdrs = ["offsetof_macros.h"],
     deps = select({
         "//libc:full_build": [
-            "//libc:llvm_libc_macros_offsetof_macro",
+            "//libc/include:llvm_libc_macros_offsetof_macro",
         ],
         "//conditions:default": [],
     }),
@@ -95,7 +95,7 @@ libc_support_library(
     hdrs = ["pthread_macros.h"],
     deps = select({
         "//libc:full_build": [
-            "//libc:llvm_libc_macros_pthread_macros",
+            "//libc/include:llvm_libc_macros_pthread_macros",
         ],
         "//conditions:default": [],
     }),
@@ -106,7 +106,7 @@ libc_support_library(
     hdrs = ["signal_macros.h"],
     deps = select({
         "//libc:full_build": [
-            "//libc:llvm_libc_macros_signal_macros",
+            "//libc/include:llvm_libc_macros_signal_macros",
         ],
         "//conditions:default": [],
     }),
@@ -117,7 +117,7 @@ libc_support_library(
     hdrs = ["sched_macros.h"],
     deps = select({
         "//libc:full_build": [
-            "//libc:llvm_libc_macros_sched_macros",
+            "//libc/include:llvm_libc_macros_sched_macros",
         ],
         "//conditions:default": [],
     }),
@@ -142,7 +142,7 @@ libc_support_library(
     name = "sys_ipc_macros",
     hdrs = ["sys_ipc_macros.h"],
     deps = select({
-        "//libc:full_build": ["//libc:llvm_libc_macros_sys_ipc_macros"],
+        "//libc:full_build": ["//libc/include:llvm_libc_macros_sys_ipc_macros"],
         "//conditions:default": [],
     }),
 )
@@ -151,7 +151,7 @@ libc_support_library(
     name = "sys_sem_macros",
     hdrs = ["sys_sem_macros.h"],
     deps = select({
-        "//libc:full_build": ["//libc:llvm_libc_macros_sys_sem_macros"],
+        "//libc:full_build": ["//libc/include:llvm_libc_macros_sys_sem_macros"],
         "//conditions:default": [],
     }),
 )
@@ -161,7 +161,7 @@ libc_support_library(
     hdrs = ["sys_socket_macros.h"],
     deps = select({
         "//libc:full_build": [
-            "//libc:llvm_libc_macros_sys_socket_macros",
+            "//libc/include:llvm_libc_macros_sys_socket_macros",
         ],
         "//conditions:default": [":sys_socket_overlay"],
     }),
@@ -171,7 +171,7 @@ libc_support_library(
     name = "sys_stat_macros",
     hdrs = ["sys_stat_macros.h"],
     deps = [
-        "//libc:llvm_libc_macros_sys_stat_macros",
+        "//libc/include:llvm_libc_macros_sys_stat_macros",
     ],
 )
 
@@ -179,7 +179,7 @@ libc_support_library(
     name = "inet_address_macros",
     hdrs = ["inet-address-macros.h"],
     deps = [
-        "//libc:llvm_libc_macros_inet_address_macros",
+        "//libc/include:llvm_libc_macros_inet_address_macros",
     ],
 )
 
@@ -188,7 +188,7 @@ libc_support_library(
     hdrs = ["errno_macros.h"],
     deps = select({
         "//libc:full_build": [
-            "//libc:llvm_libc_macros_error_number_macros",
+            "//libc/include:llvm_libc_macros_error_number_macros",
         ],
         "//conditions:default": [],
     }),
@@ -204,7 +204,7 @@ libc_support_library(
     hdrs = ["float_macros.h"],
     deps = select({
         "//libc:full_build": [
-            "//libc:llvm_libc_macros_float_macros",
+            "//libc/include:llvm_libc_macros_float_macros",
         ],
         "//conditions:default": [],
     }),
@@ -215,8 +215,8 @@ libc_support_library(
     hdrs = ["stdio_macros.h"],
     deps = select({
         "//libc:full_build": [
-            "//libc:llvm_libc_macros_file_seek_macros",
-            "//libc:llvm_libc_macros_stdio_macros",
+            "//libc/include:llvm_libc_macros_file_seek_macros",
+            "//libc/include:llvm_libc_macros_stdio_macros",
         ],
         "//conditions:default": [
             ":stdio_overlay",
@@ -229,7 +229,7 @@ libc_support_library(
     hdrs = ["unistd_macros.h"],
     deps = select({
         "//libc:full_build": [
-            "//libc:llvm_libc_macros_unistd_macros",
+            "//libc/include:llvm_libc_macros_unistd_macros",
         ],
         "//conditions:default": [
             ":unistd_overlay",
@@ -242,7 +242,7 @@ libc_support_library(
     hdrs = ["limits_macros.h"],
     deps = select({
         "//libc:full_build": [
-            "//libc:llvm_libc_macros_limits_macros",
+            "//libc/include:llvm_libc_macros_limits_macros",
         ],
         "//conditions:default": [],
     }),
@@ -288,7 +288,7 @@ libc_support_library(
     name = "wchar_macros",
     hdrs = ["wchar_macros.h"],
     deps = select({
-        "//libc:full_build": ["//libc:llvm_libc_macros_wchar_macros"],
+        "//libc:full_build": ["//libc/include:llvm_libc_macros_wchar_macros"],
         "//conditions:default": [":wchar_overlay"],
     }),
 )
@@ -339,7 +339,7 @@ libc_support_library(
     name = "sys_wait_macros",
     hdrs = ["sys_wait_macros.h"],
     deps = select({
-        "//libc:full_build": ["//libc:llvm_libc_macros_sys_wait_macros"],
+        "//libc:full_build": ["//libc/include:llvm_libc_macros_sys_wait_macros"],
         "//conditions:default": [],
     }),
 )
@@ -347,7 +347,7 @@ libc_support_library(
 libc_support_library(
     name = "elf_proxy",
     hdrs = ["elf_proxy.h"],
-    textual_hdrs = ["//libc:include_llvm-libc-proxy_elf_proxy_h"],
+    textual_hdrs = ["//libc/include:llvm-libc-proxy_elf_proxy_h"],
 )
 
 libc_support_library(
