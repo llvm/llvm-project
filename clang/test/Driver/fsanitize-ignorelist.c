@@ -58,6 +58,12 @@
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-ignorelist=%t.v6_implicit %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-V6-IMPLICIT
 // CHECK-V6-IMPLICIT: error: malformed sanitizer ignorelist: 'error parsing file '{{.*}}.v6_implicit': entry without section header on line 2: 'fun:foo''
 
+// Older versions still accept entries without a section header.
+// RUN: printf "#!special-case-list-v5\nfun:foo\n" > %t.v5_implicit
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-ignorelist=%t.v5_implicit %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-V5-IMPLICIT
+// CHECK-V5-IMPLICIT-NOT: error:
+// CHECK-V5-IMPLICIT: -fsanitize-ignorelist={{.*}}.v5_implicit
+
 // -fno-sanitize-ignorelist disables all ignorelists specified earlier.
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-ignorelist=%t.good -fno-sanitize-ignorelist -fsanitize-ignorelist=%t.second %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ONLY-FIRST-DISABLED --implicit-check-not=-fsanitize-ignorelist=
 // CHECK-ONLY_FIRST-DISABLED-NOT: good
