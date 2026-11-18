@@ -133,14 +133,13 @@ bool Module::isUnimportable(const LangOptions &LangOpts,
     return false;
 
   for (const Module *Current = this; Current; Current = Current->Parent) {
-    if (Current->ShadowingModule) {
-      ShadowingModule = Current->ShadowingModule;
+    if (Module *Shadowing = Current->getShadowingModule()) {
+      ShadowingModule = Shadowing;
       return true;
     }
-    for (unsigned I = 0, N = Current->Requirements.size(); I != N; ++I) {
-      if (hasFeature(Current->Requirements[I].FeatureName, LangOpts, Target) !=
-          Current->Requirements[I].RequiredState) {
-        Req = Current->Requirements[I];
+    for (const Requirement &R : Current->getRequirements()) {
+      if (hasFeature(R.FeatureName, LangOpts, Target) != R.RequiredState) {
+        Req = R;
         return true;
       }
     }
@@ -184,8 +183,8 @@ bool Module::isAvailable(const LangOptions &LangOpts, const TargetInfo &Target,
   // FIXME: All missing headers are listed on the top-level module. Should we
   // just look there?
   for (const Module *Current = this; Current; Current = Current->Parent) {
-    if (!Current->MissingHeaders.empty()) {
-      MissingHeader = Current->MissingHeaders.front();
+    if (!Current->getMissingHeaders().empty()) {
+      MissingHeader = Current->getMissingHeaders().front();
       return false;
     }
   }
@@ -264,9 +263,9 @@ bool Module::fullModuleNameIs(ArrayRef<StringRef> nameParts) const {
 }
 
 OptionalDirectoryEntryRef Module::getEffectiveUmbrellaDir() const {
-  if (const auto *Hdr = std::get_if<FileEntryRef>(&Umbrella))
+  if (const auto *Hdr = std::get_if<FileEntryRef>(&getUmbrella()))
     return Hdr->getDir();
-  if (const auto *Dir = std::get_if<DirectoryEntryRef>(&Umbrella))
+  if (const auto *Dir = std::get_if<DirectoryEntryRef>(&getUmbrella()))
     return *Dir;
   return std::nullopt;
 }
@@ -294,17 +293,18 @@ void Module::addDirectoryDependency(StringRef Path) {
 
 void Module::addTopHeader(FileEntryRef File) {
   assert(File);
-  TopHeaders.insert(File);
+  Cold.getOrCreate().TopHeaders.insert(File);
 }
 
 ArrayRef<FileEntryRef> Module::getTopHeaders(FileManager &FileMgr) {
   if (!TopHeaderNames.empty()) {
     for (StringRef TopHeaderName : TopHeaderNames)
       if (auto FE = FileMgr.getOptionalFileRef(TopHeaderName))
-        TopHeaders.insert(*FE);
+        Cold.getOrCreate().TopHeaders.insert(*FE);
     TopHeaderNames.clear();
   }
 
+  const auto &TopHeaders = Cold.get().TopHeaders;
   return llvm::ArrayRef(TopHeaders.begin(), TopHeaders.end());
 }
 
@@ -315,7 +315,7 @@ bool Module::directlyUses(const Module *Requested) {
   if (Requested->isSubModuleOf(Top))
     return true;
 
-  for (auto *Use : Top->DirectUses)
+  for (auto *Use : Top->getDirectUses())
     if (Requested->isSubModuleOf(Use))
       return true;
 
@@ -329,7 +329,7 @@ bool Module::directlyUses(const Module *Requested) {
     return true;
 
   if (NoUndeclaredIncludes)
-    UndeclaredUses.insert(Requested);
+    Cold.getOrCreate().UndeclaredUses.insert(Requested);
 
   return false;
 }
@@ -337,7 +337,8 @@ bool Module::directlyUses(const Module *Requested) {
 void Module::addRequirement(StringRef Feature, bool RequiredState,
                             const LangOptions &LangOpts,
                             const TargetInfo &Target) {
-  Requirements.push_back(Requirement{std::string(Feature), RequiredState});
+  Cold.getOrCreate().Requirements.push_back(
+      Requirement{std::string(Feature), RequiredState});
 
   // If this feature is currently available, we're done.
   if (hasFeature(Feature, LangOpts, Target) == RequiredState)
@@ -460,6 +461,7 @@ void Module::getExportedModules(SmallVectorImpl<Module *> &Exported) const {
 }
 
 void Module::buildVisibleModulesCache() const {
+  auto &VisibleModulesCache = Cold.getOrCreate().VisibleModulesCache;
   assert(VisibleModulesCache.empty() && "cache does not need building");
 
   // This module is visible to itself.
@@ -495,6 +497,7 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
 
   OS << " {\n";
 
+  ArrayRef<Requirement> Requirements = getRequirements();
   if (!Requirements.empty()) {
     OS.indent(Indent + 2);
     OS << "requires ";
@@ -552,8 +555,8 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
          << " mtime " << H.Entry.getModificationTime() << " }\n";
     }
   }
-  for (auto *Unresolved : {&UnresolvedHeaders, &MissingHeaders}) {
-    for (auto &U : *Unresolved) {
+  for (auto Unresolved : {getUnresolvedHeaders(), getMissingHeaders()}) {
+    for (auto &U : Unresolved) {
       OS.indent(Indent + 2);
       OS << Kinds[U.Kind].Prefix << "header \"";
       OS.write_escaped(U.FileName);
@@ -570,7 +573,7 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     }
   }
 
-  if (!ExportAsModule.empty()) {
+  if (StringRef ExportAsModule = getExportAsModule(); !ExportAsModule.empty()) {
     OS.indent(Indent + 2);
     OS << "export_as" << ExportAsModule << "\n";
   }
@@ -612,6 +615,7 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     }
   }
 
+  ArrayRef<Module *> DirectUses = getDirectUses();
   for (unsigned I = 0, N = DirectUses.size(); I != N; ++I) {
     OS.indent(Indent + 2);
     OS << "use ";
@@ -619,6 +623,7 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     OS << "\n";
   }
 
+  ArrayRef<ModuleId> UnresolvedDirectUses = getUnresolvedDirectUses();
   for (unsigned I = 0, N = UnresolvedDirectUses.size(); I != N; ++I) {
     OS.indent(Indent + 2);
     OS << "use ";
@@ -626,6 +631,7 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     OS << "\n";
   }
 
+  ArrayRef<LinkLibrary> LinkLibraries = getLinkLibraries();
   for (unsigned I = 0, N = LinkLibraries.size(); I != N; ++I) {
     OS.indent(Indent + 2);
     OS << "link ";
@@ -636,6 +642,7 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     OS << "\"";
   }
 
+  ArrayRef<UnresolvedConflict> UnresolvedConflicts = getUnresolvedConflicts();
   for (unsigned I = 0, N = UnresolvedConflicts.size(); I != N; ++I) {
     OS.indent(Indent + 2);
     OS << "conflict ";
@@ -645,6 +652,7 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     OS << "\"\n";
   }
 
+  ArrayRef<Conflict> Conflicts = getConflicts();
   for (unsigned I = 0, N = Conflicts.size(); I != N; ++I) {
     OS.indent(Indent + 2);
     OS << "conflict ";
@@ -713,7 +721,7 @@ void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
       }
     }
 
-    for (auto &C : V.M->Conflicts) {
+    for (auto &C : V.M->getConflicts()) {
       if (isVisible(C.Other)) {
         llvm::SmallVector<Module*, 8> Path;
         for (Visiting *I = &V; I; I = I->ExportedBy)
