@@ -15,6 +15,13 @@ void sycl_kernel_launch(const char *, Ts &&...) {}
 struct S1; // expected-note 6{{forward declaration of 'S1'}}
 struct S2 { int val; };
 
+[[clang::sycl_external]]
+[[clang::sycl_kernel_entry_point(KN<0>)]]
+void ok0(S1 &);
+void test_ok0(S1 &s) {
+    ok0(s);
+}
+
 [[clang::sycl_kernel_entry_point(KN<1>)]]
 void bad1(S1) {} // expected-error {{variable has incomplete type 'S1'}}
 
