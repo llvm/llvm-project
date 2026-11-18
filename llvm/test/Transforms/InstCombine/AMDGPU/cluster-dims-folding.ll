@@ -155,13 +155,11 @@ define amdgpu_kernel void @unknown_dims(ptr addrspace(1) %out) {
 define i32 @non_kernel() #0 {
 ; CHECK-LABEL: define i32 @non_kernel(
 ; CHECK-SAME: ) #[[ATTR1]] {
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.max.id.x()
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 3
 ;
 ; INLINE-LABEL: define i32 @non_kernel(
 ; INLINE-SAME: ) #[[ATTR1]] {
-; INLINE-NEXT:    [[X:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.max.id.x()
-; INLINE-NEXT:    ret i32 [[X]]
+; INLINE-NEXT:    ret i32 3
 ;
   %x = call i32 @llvm.amdgcn.cluster.workgroup.max.id.x()
   ret i32 %x
