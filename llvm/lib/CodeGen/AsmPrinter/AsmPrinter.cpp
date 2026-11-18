@@ -4061,12 +4061,24 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
                                    Ctx);
   }
 
-  case Instruction::Trunc:
+  case Instruction::Trunc: {
     // We emit the value and depend on the assembler to truncate the generated
     // expression properly.  This is important for differences between
     // blockaddress labels.  Since the two labels are in the same function, it
     // is reasonable to treat their delta as a 32-bit value.
-    [[fallthrough]];
+    //
+    // The assembler only truncates to the emitted size, which is a whole
+    // number of bytes, so for an integer type that is not byte-sized mask the
+    // expression to the type's width to keep the padding bits zero.
+    const MCExpr *OpExpr = lowerConstant(CE->getOperand(0), BaseCV, Offset);
+    Type *Ty = CE->getType();
+    unsigned BitWidth = Ty->getScalarSizeInBits();
+    if (!Ty->isIntegerTy() || BitWidth % 8 == 0 || BitWidth > 64)
+      return OpExpr;
+    return MCBinaryExpr::createAnd(
+        OpExpr,
+        MCConstantExpr::create(maskTrailingOnes<uint64_t>(BitWidth), Ctx), Ctx);
+  }
   case Instruction::BitCast:
     return lowerConstant(CE->getOperand(0), BaseCV, Offset);
 
