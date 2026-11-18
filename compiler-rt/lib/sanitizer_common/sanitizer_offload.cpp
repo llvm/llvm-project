@@ -62,52 +62,20 @@ void CheckHsa(hsa_status_t S) {
   Die();
 }
 
-// PM4 type-3 header. Count is the body size minus one.
-u32 Pm4Header(u32 Opcode, u32 Dwords) {
-  return (Opcode << 8) | ((Dwords - 2) << 16) | (3u << 30);
-}
+// Barrier-and, system acquire and release. Agent scope leaves GL2.
+constexpr u16 kSystemBarrier = (3u /* BARRIER_AND */) | (1u << 8) |
+                               (2u /* SYSTEM */ << 9) | (2u /* SYSTEM */ << 11);
 
-// PRED_EXEC is two dwords and can cover 16383. The write stops short of that
-// so a chunk stays a multiple of eight bytes.
-constexpr u32 kPredDwords = 2;
-constexpr u32 kWritePacketDwords = 16382;
-constexpr u32 kIbDwords = kPredDwords + kWritePacketDwords;
-constexpr uptr kPm4IbBytes = static_cast<uptr>(kIbDwords) * sizeof(u32);
-constexpr uptr kWriteChunkBytes = (kWritePacketDwords - 4) * sizeof(u32);
-
-// The WRITE_DATA packet allows the device to perform the write on our behalf.
-u32 EmitWriteData(u32* Out, uptr Addr, const void* Src, uptr Bytes) {
-  u32 DataDwords = Bytes / sizeof(u32);
-  u32 PacketDwords = DataDwords + 4;
-  Out[0] = Pm4Header(0x37, PacketDwords);
-  Out[1] = (2u << 8) | (1u << 20);
-  Out[2] = static_cast<u32>(Addr);
-  Out[3] = static_cast<u32>(Addr >> 32);
-  if (Src)
-    internal_memcpy(Out + 4, Src, Bytes);
-  else
-    internal_memset(Out + 4, 0, Bytes);
-  return PacketDwords;
-}
-
-// The PRED_EXEC packet targets a single XCC for the following packet.
-u32 EmitPredExec(u32* Out, u32 Follow, u32 Xcc) {
-  Out[0] = Pm4Header(0x23, kPredDwords);
-  Out[1] = (Follow & 0x3FFFu) | (1u << (24 + Xcc));
-  return kPredDwords;
-}
-
-// Vendor AQL packet that jumps to a PM4 indirect buffer.
-struct AmdAqlPm4Ib {
+struct AqlBarrier {
   u16 Header;
-  u16 VenHdr;
-  u32 IbJump[4];
-  u32 DwCntRemain;
-  u32 Reserved[8];
+  u16 Reserved0;
+  u32 Reserved1;
+  hsa_signal_t Dep[5];
+  u64 Reserved2;
   hsa_signal_t Completion;
 };
-static_assert(sizeof(AmdAqlPm4Ib) == 64, "vendor PM4 packet");
-static_assert(offsetof(AmdAqlPm4Ib, Completion) == 56, "vendor PM4 packet");
+static_assert(sizeof(AqlBarrier) == 64, "barrier packet");
+static_assert(offsetof(AqlBarrier, Completion) == 56, "barrier packet");
 
 }  // namespace
 
@@ -212,10 +180,6 @@ bool Offload::Discover() {
       // The RPC interface is deliberately sized to the hardware parallel
       // limits of the device to make deadlock impossible.
       D.MaxWaves = CUs * WavesPerCU;
-      u32 Xcds = 1;
-      if (!Info(Agent, HSA_AMD_AGENT_INFO_NUM_XCC, &Xcds) || !Xcds)
-        Xcds = 1;
-      D.XCCs = Xcds;
       DeviceList.push_back(D);
     }
     return HSA_STATUS_SUCCESS;
@@ -348,12 +312,7 @@ void Offload::Teardown() {
   for (Device& D : DeviceList) {
     if (D.Queue)
       Api.hsa_queue_destroy(D.Queue);
-    if (D.Signal.handle)
-      DestroySignal(D.Signal);
   }
-  if (Ib)
-    Free(Ib);
-  Ib = nullptr;
   DeviceList.clear();
   CpuList.clear();
   PoolList.clear();
@@ -683,24 +642,7 @@ bool Offload::SetAccess(uptr Addr, uptr Size,
                                      Count) == HSA_STATUS_SUCCESS;
 }
 
-// One queue per GPU, at the agent's minimum depth, and one executable
-// fine-grained buffer. Both stay until shutdown. A store fills the buffer
-// and rings the queue.
 bool Offload::CreateCommands() {
-  const MemoryPool* Fine = nullptr;
-  for (const MemoryPool& P : PoolList) {
-    if (IsCpu(P.Agent) && P.HostAccess &&
-        (P.Flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED)) {
-      Fine = &P;
-      break;
-    }
-  }
-  if (!Fine ||
-      !Alloc(*Fine, kPm4IbBytes, &Ib, HSA_AMD_MEMORY_POOL_EXECUTABLE_FLAG)) {
-    Report("%s: device write buffer unavailable\n", SanitizerToolName);
-    return false;
-  }
-
   auto Callback = [](hsa_status_t Status, hsa_queue_t*, void*) {
     Report("ERROR: %s: device write queue failed with HSA status %u",
            SanitizerToolName, Status);
@@ -712,13 +654,11 @@ bool Offload::CreateCommands() {
                                &Packets) != HSA_STATUS_SUCCESS ||
         !Packets ||
         Api.hsa_queue_create(D.Agent, Packets, HSA_QUEUE_TYPE_SINGLE, Callback,
-                             nullptr, 0, 0, &D.Queue) != HSA_STATUS_SUCCESS ||
-        !CreateSignal(&D.Signal)) {
+                             nullptr, 0, 0, &D.Queue) != HSA_STATUS_SUCCESS) {
       if (D.Queue) {
         Api.hsa_queue_destroy(D.Queue);
         D.Queue = nullptr;
       }
-      D.Signal = {};
       Report("%s: device write queue unavailable\n", SanitizerToolName);
       return false;
     }
@@ -726,42 +666,38 @@ bool Offload::CreateCommands() {
   return true;
 }
 
-void Offload::SubmitIb(Device& D, u32 Dwords) {
-  AmdAqlPm4Ib Pkt = {};
-  Pkt.VenHdr = 1;
-  uptr Base = reinterpret_cast<uptr>(Ib);
-  Pkt.IbJump[0] = Pm4Header(0x3F, 4);
-  Pkt.IbJump[1] = static_cast<u32>(Base);
-  Pkt.IbJump[2] = static_cast<u32>(Base >> 32);
-  Pkt.IbJump[3] = (Dwords & 0xFFFFFu) | (1u << 23);
-  Pkt.DwCntRemain = 0xA;
-  Pkt.Completion = D.Signal;
+void Offload::FlushDevice(Device& D, hsa_signal_t Done) {
+  AqlBarrier Pkt = {};
+  Pkt.Header = kSystemBarrier;
+  Pkt.Completion = Done;
 
-  Api.hsa_signal_store_screlease(D.Signal, 1);
+  Api.hsa_signal_store_screlease(Done, 1);
   u64 Index = Api.hsa_queue_add_write_index_screlease(D.Queue, 1);
   auto* Slot = static_cast<u8*>(D.Queue->base_address) +
                (Index % D.Queue->size) * sizeof(Pkt);
   internal_memcpy(Slot + sizeof(u32), reinterpret_cast<u8*>(&Pkt) + sizeof(u32),
                   sizeof(Pkt) - sizeof(u32));
   __atomic_store_n(reinterpret_cast<u32*>(Slot),
-                   u32(Pkt.VenHdr) << 16 | Pkt.Header, __ATOMIC_RELEASE);
+                   u32(Pkt.Reserved0) << 16 | Pkt.Header, __ATOMIC_RELEASE);
   Api.hsa_signal_store_screlease(D.Queue->doorbell_signal, Index);
 }
 
-void Offload::Await(Device& D) {
+void Offload::Await(hsa_signal_t Done) {
   // The runtime may wake before the value meets the condition.
-  while (Api.hsa_signal_wait_scacquire(D.Signal, HSA_SIGNAL_CONDITION_EQ, 0,
+  while (Api.hsa_signal_wait_scacquire(Done, HSA_SIGNAL_CONDITION_EQ, 0,
                                        UINT64_MAX,
                                        HSA_WAIT_STATE_BLOCKED) != 0);
 }
 
-// Publish a metadata write through the owning GPU's command processor.
+// The blit fence is on the runtime's queue. The next kernel is agent scope
+// and does not invalidate GL2.
 bool Offload::PublishDeviceBytes(uptr Addr, const void* Src, uptr Bytes,
-                                 hsa_agent_t Agent) {
+                                 hsa_agent_t Agent, hsa_signal_t Done) {
   Lock L(&OffloadMtx);
   if (!Bytes)
     return true;
-  if (!Ready() || !Ib || (Addr % sizeof(u64)) || (Bytes % sizeof(u64))) {
+  if (!Ready() || !Done.handle || (Addr % sizeof(u64)) ||
+      (Bytes % sizeof(u64))) {
     Report("ERROR: %s: device write rejected\n", SanitizerToolName);
     Die();
   }
@@ -775,25 +711,27 @@ bool Offload::PublishDeviceBytes(uptr Addr, const void* Src, uptr Bytes,
     Die();
   }
 
-  // Publish a WRITE_DATA into the indirect buffer to update the metadata. If
-  // the machine has multiple XCCs we need to send the write to each one.
-  const u32 Xcds = Target->XCCs ? Target->XCCs : 1;
-  const u32 Pred = Xcds > 1 ? kPredDwords : 0;
-  for (uptr Off = 0; Off < Bytes;) {
-    const uptr Step = Min(Bytes - Off, kWriteChunkBytes);
-    const void* Part = Src ? static_cast<const u8*>(Src) + Off : nullptr;
-    for (u32 Xcc = 0; Xcc < Xcds; ++Xcc) {
-      u32* Out = static_cast<u32*>(Ib);
-      u32 At = Pred;
-      At += EmitWriteData(Out + At, Addr + Off, Part, Step);
-      if (Pred)
-        EmitPredExec(Out, At - Pred, Xcc);
-      CHECK_LE(At, kIbDwords);
-      SubmitIb(*Target, At);
-      Await(*Target);
+  const MemoryPool* Fine = nullptr;
+  for (const MemoryPool& P : PoolList) {
+    if (IsCpu(P.Agent) && P.HostAccess &&
+        (P.Flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED)) {
+      Fine = &P;
+      break;
     }
-    Off += Step;
   }
+  void* Staging = nullptr;
+  if (!Fine || !Alloc(*Fine, Bytes, &Staging))
+    return false;
+  if (Src)
+    internal_memcpy(Staging, Src, Bytes);
+  else
+    internal_memset(Staging, 0, Bytes);
+  const bool Ok = Copy(reinterpret_cast<void*>(Addr), Staging, Bytes);
+  Free(Staging);
+  if (!Ok)
+    return false;
+  FlushDevice(*Target, Done);
+  Await(Done);
   return true;
 }
 
