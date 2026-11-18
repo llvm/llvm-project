@@ -73,6 +73,14 @@ public:
     return nullptr;
   }
 
+  /// Returns whether this runtime is the preferred runtime for \p in_value, an
+  /// object of another language, for example because code in this runtime's
+  /// language uses it. The runtime of the object's language can then return
+  /// this runtime from GetPreferredLanguageRuntime().
+  virtual bool IsPreferredLanguageRuntimeFor(ValueObject &in_value) {
+    return false;
+  }
+
   virtual llvm::Error GetObjectDescription(Stream &str,
                                            ValueObject &object) = 0;
 
@@ -135,6 +143,16 @@ public:
   // type and the discovered dynamic type
   virtual TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
                                          ValueObject &static_value) = 0;
+
+  /// Returns the address of the instance that \p pointer refers to, where
+  /// \p pointer is the value of an object of \p type, whose instances are
+  /// pointers (see eTypeInstanceIsPointer). A runtime can remove information
+  /// that it stores in the spare bits of such pointers, or follow a reference
+  /// that refers to the instance indirectly.
+  virtual llvm::Expected<lldb::addr_t> FixupPointerValue(lldb::addr_t pointer,
+                                                         CompilerType type) {
+    return pointer;
+  }
 
   /// This allows a language runtime to adjust the location of \p variable
   /// computed from its debug info, for storage whose indirection is only

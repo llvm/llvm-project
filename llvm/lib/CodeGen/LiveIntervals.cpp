@@ -558,7 +558,8 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
         continue;
       Tag = ShrinkTag;
       SlotIndex Stop = Indexes->getMBBEndIdx(Pred);
-      if (VNInfo *OldVNI = OldRange.getVNInfoBefore(Stop)) {
+      if (VNInfo *OldVNI =
+              LaneMask.none() ? VNI : OldRange.getVNInfoBefore(Stop)) {
         assert(OldVNI == VNI && "Wrong value out of predecessor");
         (void)OldVNI;
         WorkList.push_back(std::make_pair(Stop, VNI));
@@ -566,8 +567,6 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
 #ifndef NDEBUG
         // There was no old VNI. Verify that Stop is jointly dominated
         // by <undef>s for this live range.
-        assert(LaneMask.any() &&
-               "Missing value out of predecessor for main range");
         SmallVector<SlotIndex,8> Undefs;
         LI.computeSubRangeUndefs(Undefs, LaneMask, *MRI, *Indexes);
         assert(LiveRangeCalc::isJointlyDominated(Pred, Undefs, *Indexes) &&
@@ -585,19 +584,27 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
 }
 
 bool LiveIntervals::shrinkToUses(LiveInterval *li,
-                                 SmallVectorImpl<MachineInstr*> *dead) {
+                                 SmallVectorImpl<MachineInstr *> *dead,
+                                 LaneBitmask SubRangeMask) {
   LLVM_DEBUG(dbgs() << "Shrink: " << *li << '\n');
   assert(li->reg().isVirtual() && "Can only shrink virtual registers");
 
   // Shrink subregister live ranges.
-  bool NeedsCleanup = false;
-  for (LiveInterval::SubRange &S : li->subranges()) {
-    shrinkToUses(S, li->reg());
-    if (S.empty())
-      NeedsCleanup = true;
+  if (li->hasSubRanges() && SubRangeMask.any()) {
+    SubRangeUseList Uses;
+    collectSubRangeUses(li->reg(), Uses);
+    bool NeedsCleanup = false;
+    for (LiveInterval::SubRange &S : li->subranges()) {
+      if ((S.LaneMask & SubRangeMask).none())
+        continue;
+      shrinkSubRangeToUses(S, li->reg(), Uses);
+      if (S.empty())
+        NeedsCleanup = true;
+    }
+
+    if (NeedsCleanup)
+      li->removeEmptySubRanges();
   }
-  if (NeedsCleanup)
-    li->removeEmptySubRanges();
 
   // Find all the values used, including PHI kills.
   ShrinkToUsesWorkList WorkList;
@@ -687,31 +694,44 @@ bool LiveIntervals::computeDeadValues(LiveInterval &LI,
 }
 
 void LiveIntervals::shrinkToUses(LiveInterval::SubRange &SR, Register Reg) {
+  SubRangeUseList Uses;
+  collectSubRangeUses(Reg, Uses);
+  shrinkSubRangeToUses(SR, Reg, Uses);
+}
+
+void LiveIntervals::collectSubRangeUses(Register Reg,
+                                        SubRangeUseList &Uses) const {
+  for (const MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
+    // Skip "undef" uses.
+    if (!MO.readsReg())
+      continue;
+    unsigned SubReg = MO.getSubReg();
+    LaneBitmask LaneMask =
+        SubReg ? TRI->getSubRegIndexLaneMask(SubReg) : LaneBitmask::getAll();
+    // Merge adjacent operands of the same instruction.
+    SlotIndex Idx = getInstructionIndex(*MO.getParent()).getRegSlot();
+    if (!Uses.empty() && Uses.back().first == Idx) {
+      Uses.back().second |= LaneMask;
+      continue;
+    }
+    Uses.emplace_back(Idx, LaneMask);
+  }
+}
+
+void LiveIntervals::shrinkSubRangeToUses(LiveInterval::SubRange &SR,
+                                         Register Reg,
+                                         ArrayRef<SubRangeUse> Uses) {
   LLVM_DEBUG(dbgs() << "Shrink: " << SR << '\n');
   assert(Reg.isVirtual() && "Can only shrink virtual registers");
   // Find all the values used, including PHI kills.
   ShrinkToUsesWorkList WorkList;
 
-  // Visit all instructions reading Reg.
-  SlotIndex LastIdx;
-  for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
-    // Skip "undef" uses.
-    if (!MO.readsReg())
+  for (const SubRangeUse &Use : Uses) {
+    // Maybe the instruction only reads subregisters we don't care about.
+    if ((Use.second & SR.LaneMask).none())
       continue;
-    // Maybe the operand is for a subregister we don't care about.
-    unsigned SubReg = MO.getSubReg();
-    if (SubReg != 0) {
-      LaneBitmask LaneMask = TRI->getSubRegIndexLaneMask(SubReg);
-      if ((LaneMask & SR.LaneMask).none())
-        continue;
-    }
-    // We only need to visit each instruction once.
-    MachineInstr *UseMI = MO.getParent();
-    SlotIndex Idx = getInstructionIndex(*UseMI).getRegSlot();
-    if (Idx == LastIdx)
-      continue;
-    LastIdx = Idx;
 
+    SlotIndex Idx = Use.first;
     LiveQueryResult LRQ = SR.Query(Idx);
     VNInfo *VNI = LRQ.valueIn();
     // For Subranges it is possible that only undef values are left in that

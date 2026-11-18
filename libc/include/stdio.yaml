@@ -330,6 +330,15 @@ functions:
       - posix
     return_type: int
     arguments: []
+  - name: getdelim
+    standards:
+      - posix
+    return_type: ssize_t
+    arguments:
+      - type: char **__restrict
+      - type: size_t *__restrict
+      - type: int
+      - type: FILE *__restrict
   - name: getline
     standards:
       - posix
@@ -376,6 +385,12 @@ functions:
   - name: putchar
     standards:
       - stdc
+    return_type: int
+    arguments:
+      - type: int
+  - name: putchar_unlocked
+    standards:
+      - posix
     return_type: int
     arguments:
       - type: int
