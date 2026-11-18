@@ -1288,13 +1288,6 @@ void ClusteredRelaxation::buildLayout() {
     return ClusterRanges;
   };
 
-  // Function symbols are emitted before the first block's alignment,
-  // so they may point to padding instead of the block's BTI landing.
-  auto needsAlignment = [&](const BinaryBasicBlock &BB) {
-    return (BC.AlignBlocks || BC.PreserveBlocksAlignment) &&
-           BB.getAlignment() > 1;
-  };
-
   uint64_t LayoutOffset = 0;
   auto addFragmentToCluster = [&](const OutputFragment &Fragment) {
     FragmentCluster &FC = Clusters.back();
@@ -1318,7 +1311,9 @@ void ClusteredRelaxation::buildLayout() {
       BinaryBasicBlock *BB = FF.empty() ? nullptr : FF.front();
       for (const MCSymbol *Symbol : BF.getSymbols()) {
         SymLayout[Symbol] = {ClusterNum, FragmentOffset};
-        if (BC.usesBTI() && BB && !needsAlignment(*BB))
+        // Function symbols are emitted before the first block's alignment,
+        // so they may point to padding instead of the block's BTI landing.
+        if (BC.usesBTI() && BB && !BC.shouldEmitBlockAlignment(*BB))
           SymbolToBB[Symbol] = BB;
       }
     }
