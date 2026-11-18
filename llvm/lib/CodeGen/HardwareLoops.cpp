@@ -113,8 +113,6 @@ namespace {
     ORE->emit(createHWLoopAnalysis(ORETag, TheLoop, I) << Msg);
   }
 
-  using TTI = TargetTransformInfo;
-
   class HardwareLoopsLegacy : public FunctionPass {
   public:
     static char ID;
