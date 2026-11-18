@@ -1039,8 +1039,6 @@ KnownBits KnownBits::sshl_sat(const KnownBits &LHS, const KnownBits &RHS) {
   if (MinLHS.isNegative() && MaxShiftAmount >= MinLHS.countl_one())
     Known = Known.intersectWith(
         KnownBits::makeConstant(APInt::getSignedMinValue(BitWidth)));
-  if (Known.isUnknown())
-    return Known;
 
   return Known.intersectWith(
       KnownBits::shl(LHS, RHS, /*NUW=*/false, /*NSW=*/true));
