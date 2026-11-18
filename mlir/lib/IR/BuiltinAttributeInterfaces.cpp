@@ -77,6 +77,9 @@ uint64_t ElementsAttr::getFlattenedIndex(Type type, ArrayRef<uint64_t> index) {
 LogicalResult mlir::detail::verifyAffineMapAsLayout(
     AffineMap m, ArrayRef<int64_t> shape,
     function_ref<InFlightDiagnostic()> emitError) {
+  if (!m) {
+    return success();
+  }
   if (m.getNumDims() != shape.size())
     return emitError() << "memref layout mismatch between rank and affine map: "
                        << shape.size() << " != " << m.getNumDims();
@@ -204,7 +207,8 @@ LogicalResult mlir::detail::getAffineMapStridesAndOffset(
     int64_t &offset) {
   AffineExpr offsetExpr;
   SmallVector<AffineExpr, 4> strideExprs;
-  if (failed(::getStridesAndOffset(map, shape, strideExprs, offsetExpr)))
+  if (!map ||
+      failed(::getStridesAndOffset(map, shape, strideExprs, offsetExpr)))
     return failure();
   if (auto cst = llvm::dyn_cast<AffineConstantExpr>(offsetExpr))
     offset = cst.getValue();
