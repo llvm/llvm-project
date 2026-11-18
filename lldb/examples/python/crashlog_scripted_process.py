@@ -1,4 +1,4 @@
-import os, json, struct, signal, uuid, tempfile
+import copy, os, json, struct, signal, uuid, tempfile
 
 from typing import Any, Dict
 
@@ -113,7 +113,22 @@ class CrashLogScriptedProcess(ScriptedProcess):
 
     def get_loaded_images(self):
         if len(self.loaded_images) == 0:
+            # First, load images for the crashed thread with full resolution
+            # (dsym lookup).
             self.crashlog.load_images(self.options, self.loaded_images)
+            # Then, load images for all other threads using JSON object files
+            # only (no dsym resolution). This lets users see symbolicated
+            # stackframes for non-crashed threads and pull dsyms later with
+            # `add-dsym`.
+            options = copy.deepcopy(self.options)
+            options.crashed_only = False
+            for scripted_thread in self.threads.values():
+                self.crashlog.load_images(
+                    options,
+                    self.loaded_images,
+                    scripted_thread.backing_thread,
+                    resolve=False,
+                )
         return self.loaded_images
 
     def should_stop(self) -> bool:
@@ -179,9 +194,6 @@ class CrashLogScriptedThread(ScriptedThread):
         return frames
 
     def create_stackframes(self):
-        if not (self.originating_process.options.load_all_images or self.has_crashed):
-            return None
-
         if not self.backing_thread or not len(self.backing_thread.frames):
             return None
 

@@ -1,0 +1,27 @@
+# Test that non-crashed threads get stackframes even without -a (load all images).
+
+# REQUIRES: python, native && system-darwin
+
+# RUN: %lldb -o 'command script import lldb.macosx.crashlog' \
+# RUN:   -o 'crashlog -i %S/Inputs/objcpp_multithread_different_module.ips' \
+# RUN:   -o 'thread list' -o 'bt all' 2>&1 | FileCheck %s
+
+# CHECK: "crashlog" {{.*}} commands have been installed, use the "--help" options on these commands
+
+# CHECK: (lldb) thread list
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK:   thread #1
+# CHECK:   thread #2
+# CHECK: * thread #3: {{.*}}stop reason = EXC_BAD_ACCESS
+# CHECK:   thread #4
+
+# Verify that bt all shows frames for non-crashed threads, not just the crashed one.
+# CHECK: (lldb) bt all
+# CHECK:  thread #1
+# CHECK:    frame #0
+# CHECK:  thread #2
+# CHECK:    frame #0
+# CHECK:* thread #3, stop reason = EXC_BAD_ACCESS
+# CHECK:  * frame #0
+# CHECK:  thread #4
+# CHECK:    frame #0
