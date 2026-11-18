@@ -5767,6 +5767,30 @@ mlir::LogicalResult CIRToLLVMVTableGetVirtualFnOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult
+CIRToLLVMVTableGetVirtualFnByOffsetOpLowering::matchAndRewrite(
+    cir::VTableGetVirtualFnByOffsetOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(!cir::MissingFeatures::vtableRelativeLayout());
+  if (usesRelativeVTables(op->getParentOfType<mlir::ModuleOp>()))
+    return op.emitError(
+        "NYI: virtual function lookup by offset in a relative layout vtable");
+
+  mlir::Type resultType = getTypeConverter()->convertType(op.getType());
+  if (!resultType)
+    return emitTypeConversionError(op, op.getType());
+
+  // The entry is the function pointer itself: load it from its slot, addressed
+  // by its byte offset.
+  auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  mlir::Value slot = mlir::LLVM::GEPOp::create(
+      rewriter, op.getLoc(), ptrTy, rewriter.getI8Type(), adaptor.getVptr(),
+      llvm::ArrayRef<mlir::LLVM::GEPArg>{adaptor.getOffset()});
+  rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(
+      op, resultType, slot, dataLayout.getTypeABIAlignment(ptrTy));
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMVTableGetOffsetOpLowering::matchAndRewrite(
     cir::VTableGetOffsetOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -5894,21 +5918,6 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
         rewriter, op.getLoc(),
         convertCmpKindToICmpPredicate(op.getKind(), /*isSigned=*/false),
         adaptor.getLhs(), adaptor.getRhs());
-  } else if (mlir::isa<cir::FPTypeInterface>(elementType)) {
-    if (cir::FenvAttr fenv = op.getFenvAttr()) {
-      llvm::ElementCount size = op.getLhs().getType().getSize();
-      auto i1VecTy = mlir::VectorType::get(
-          size.getKnownMinValue(), rewriter.getI1Type(), {size.isScalable()});
-      bitResult = createConstrainedFCmpCall(
-                      rewriter, op.getLoc(), adaptor.getLhs(), adaptor.getRhs(),
-                      op.getKind(), isSignalingConstrainedFCmp(op.getKind()),
-                      fenv, i1VecTy)
-                      .getResult(0);
-    } else {
-      bitResult = mlir::LLVM::FCmpOp::create(
-          rewriter, op.getLoc(), convertCmpKindToFCmpPredicate(op.getKind()),
-          adaptor.getLhs(), adaptor.getRhs());
-    }
   } else {
     return op.emitError() << "unsupported type for VecCmpOp: " << elementType;
   }

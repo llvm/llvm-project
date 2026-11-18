@@ -345,6 +345,30 @@ func.func @group_non_uniform_iadd_clustered_reduce(%val: vector<2xi32>) -> vecto
 
 // -----
 
+func.func @group_non_uniform_iadd_mismatched_width(%val: i32) -> i64 {
+  // expected-error @+1 {{failed to verify that all of {value, result} have same type}}
+  %0 = spirv.GroupNonUniformIAdd <Subgroup> <Reduce> %val : i32 -> i64
+  return %0: i64
+}
+
+// -----
+
+func.func @group_non_uniform_iadd_mismatched_vector_length(%val: vector<2xi32>) -> vector<4xi32> {
+  // expected-error @+1 {{failed to verify that all of {value, result} have same type}}
+  %0 = spirv.GroupNonUniformIAdd <Subgroup> <Reduce> %val : vector<2xi32> -> vector<4xi32>
+  return %0: vector<4xi32>
+}
+
+// -----
+
+func.func @group_non_uniform_iadd_mismatched_shape(%val: i32) -> vector<2xi32> {
+  // expected-error @+1 {{failed to verify that all of {value, result} have same type}}
+  %0 = spirv.GroupNonUniformIAdd <Subgroup> <Reduce> %val : i32 -> vector<2xi32>
+  return %0: vector<2xi32>
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.GroupNonUniformIMul
 //===----------------------------------------------------------------------===//

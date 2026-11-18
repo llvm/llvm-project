@@ -747,6 +747,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_iphdr
+  HDRS
+    struct_iphdr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_iphdr
+)
+
+add_proxy_header_library(
   struct_udphdr
   HDRS
     struct_udphdr.h

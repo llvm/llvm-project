@@ -101,6 +101,9 @@ functions:
   time:
     c-definition: 7.27.2.4
     in-latest-posix: ''
+  timegm:
+    c-definition: 7.29.2.4
+    in-latest-posix: ''
   timespec_get:
     c-definition: 7.27.2.5
   timer_create:
