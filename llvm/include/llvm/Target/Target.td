@@ -1753,11 +1753,10 @@ class AsmParser {
   bit ShouldEmitMatchRegisterAltNameWithIndex = false;
 
   // Set to true if MatchRegisterName and MatchRegisterAltName functions
-  // should be generated even if there are duplicate register names. The
-  // target is responsible for coercing aliased registers as necessary
-  // (e.g. via CoerceFromRegClass or in validateTargetOperandClass), and there
-  // are no guarantees about which numeric register identifier will be returned
-  // in the case of multiple matches.
+  // should be generated even if there are duplicate register names. For
+  // duplicate names, these functions return the first matching register in
+  // enum order. The target is responsible for coercing aliased registers as
+  // necessary (e.g. via CoerceFromRegClass or in validateTargetOperandClass).
   bit AllowDuplicateRegisterNames = false;
 
   // HasMnemonicFirst - Set to false if target instructions don't always
