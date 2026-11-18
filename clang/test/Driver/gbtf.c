@@ -1,6 +1,12 @@
 // Test the -gbtf flag behavior in the Clang driver.
-// RUN: %clang --target=x86_64-pc-windows-msvc -gbtf -Werror -x assembler -c /dev/null -o %t
-// RUN: %clang --target=x86_64-linux-gnu -gbtf -Werror -x assembler -c /dev/null -o %t
+// -gbtf is claimed and ignored for assembler input.
+// RUN: %clang --target=x86_64-pc-windows-msvc -gbtf -x assembler -c -### /dev/null 2>&1 \
+// RUN:   | FileCheck -check-prefix=ASM %s
+// RUN: %clang --target=x86_64-linux-gnu -gbtf -x assembler -c -### /dev/null 2>&1 \
+// RUN:   | FileCheck -check-prefix=ASM %s
+// ASM: "-cc1as"
+// ASM-NOT: warning: argument unused
+// ASM-NOT: -debug-info-kind
 //
 // -gbtf forwards to cc1.
 // RUN: %clang --target=x86_64-linux-gnu -gbtf -### %s 2>&1 \
