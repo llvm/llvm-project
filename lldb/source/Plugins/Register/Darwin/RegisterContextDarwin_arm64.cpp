@@ -8,9 +8,8 @@
 
 #include "RegisterContextDarwin_arm64.h"
 
-#include "lldb/Register/Arch/lldb-arm64-register-enums.h"
 #include "lldb/Register/Arch/lldb-arm64-dwarf-register-enums.h"
-#include "lldb/Register/Descriptions/RegisterDescription_arm64.h"
+#include "lldb/Register/Arch/lldb-arm64-register-enums.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-types.h"
@@ -51,128 +50,11 @@ using namespace lldb_private;
    sizeof(RegisterContextDarwin_arm64::FPU) +                                  \
    sizeof(RegisterContextDarwin_arm64::EXC))
 
-static const RegisterLayout &RegisterMetadata() {
-  static const auto info = [] {
-    auto cpu = std::make_shared<RegisterDescription_arm64>(
-        RegisterDescription_arm64::Config{0});
-    std::vector<RegisterDescriptor> regs(cpu->GetRegisters().begin(),
-                                         cpu->GetRegisters().end());
-    RegisterLayout layout;
-    llvm::cantFail(layout.AddBank(0, sizeof(RegisterContextDarwin_arm64::GPR)));
-    llvm::cantFail(layout.AddBank(1, sizeof(RegisterContextDarwin_arm64::FPU)));
-    llvm::cantFail(layout.AddBank(2, sizeof(RegisterContextDarwin_arm64::EXC)));
-    llvm::cantFail(layout.AddBank(3, sizeof(RegisterContextDarwin_arm64::DBG)));
-
-    auto location = [&](RegisterID id, RegisterBankID bank, uint32_t offset,
-                        uint32_t size) {
-      RegisterLocation loc;
-      loc.kind = RegisterLocation::Stored;
-      loc.pieces.push_back({bank, offset, size});
-
-      llvm::cantFail(layout.Add(id, std::move(loc)));
-    };
-
-    for (const auto &reg : regs) {
-      uint32_t offset;
-      RegisterBankID bank = reg.id <= reg_ids::gpr_w28 ? 0 : 1;
-      if (reg.id <= reg_ids::gpr_cpsr)
-        offset = 8 * reg.id;
-      else if (reg.id <= reg_ids::gpr_w28)
-        offset = 8 * (reg.id - reg_ids::gpr_w0);
-      else if (reg.id == reg_ids::fpu_fpsr)
-        offset = offsetof(RegisterContextDarwin_arm64::FPU, fpsr);
-      else if (reg.id == reg_ids::fpu_fpcr)
-        offset = offsetof(RegisterContextDarwin_arm64::FPU, fpcr);
-      else if (reg.id >= reg_ids::fpu_d0)
-        offset = 16 * (reg.id - reg_ids::fpu_d0);
-      else if (reg.id >= reg_ids::fpu_s0)
-        offset = 16 * (reg.id - reg_ids::fpu_s0);
-      else
-        offset = 16 * (reg.id - reg_ids::fpu_v0);
-
-      location(reg.id, bank, offset, reg.byte_size);
-    }
-
-    auto extra = [&](const std::string &name, RegisterID id,
-                     RegisterBankID bank, uint32_t offset, uint32_t size) {
-      RegisterDescriptor reg;
-      reg.id = id;
-      reg.name = name;
-      reg.byte_size = size;
-      reg.numbers[eRegisterKindLLDB] = id;
-      regs.push_back(std::move(reg));
-      location(id, bank, offset, size);
-    };
-
-    extra("far", reg_ids::exc_far, 2,
-          offsetof(RegisterContextDarwin_arm64::EXC, far), 8);
-    extra("esr", reg_ids::exc_esr, 2,
-          offsetof(RegisterContextDarwin_arm64::EXC, esr), 4);
-    extra("exception", reg_ids::exc_exception, 2,
-          offsetof(RegisterContextDarwin_arm64::EXC, exception), 4);
-
-    for (uint32_t i = 0; i < 16; ++i)
-      extra("bvr" + std::to_string(i), reg_ids::dbg_bvr0 + i, 3,
-            offsetof(RegisterContextDarwin_arm64::DBG, bvr) + 8 * i, 8);
-
-    for (uint32_t i = 0; i < 16; ++i)
-      extra("bcr" + std::to_string(i), reg_ids::dbg_bcr0 + i, 3,
-            offsetof(RegisterContextDarwin_arm64::DBG, bcr) + 8 * i, 8);
-
-    for (uint32_t i = 0; i < 16; ++i)
-      extra("wvr" + std::to_string(i), reg_ids::dbg_wvr0 + i, 3,
-            offsetof(RegisterContextDarwin_arm64::DBG, wvr) + 8 * i, 8);
-
-    for (uint32_t i = 0; i < 16; ++i)
-      extra("wcr" + std::to_string(i), reg_ids::dbg_wcr0 + i, 3,
-            offsetof(RegisterContextDarwin_arm64::DBG, wcr) + 8 * i, 8);
-
-    auto description = std::make_shared<RegisterDescription>(
-        llvm::cantFail(RegisterDescription::Create(std::move(regs))));
-
-    llvm::cantFail(layout.Finalize(std::move(description), eByteOrderLittle));
-    return layout;
-  }();
-
-  return info;
-}
-
-// General purpose registers
-static uint32_t g_gpr_regnums[] = {
-    reg_ids::gpr_x0,  reg_ids::gpr_x1,  reg_ids::gpr_x2,  reg_ids::gpr_x3,
-    reg_ids::gpr_x4,  reg_ids::gpr_x5,  reg_ids::gpr_x6,  reg_ids::gpr_x7,
-    reg_ids::gpr_x8,  reg_ids::gpr_x9,  reg_ids::gpr_x10, reg_ids::gpr_x11,
-    reg_ids::gpr_x12, reg_ids::gpr_x13, reg_ids::gpr_x14, reg_ids::gpr_x15,
-    reg_ids::gpr_x16, reg_ids::gpr_x17, reg_ids::gpr_x18, reg_ids::gpr_x19,
-    reg_ids::gpr_x20, reg_ids::gpr_x21, reg_ids::gpr_x22, reg_ids::gpr_x23,
-    reg_ids::gpr_x24, reg_ids::gpr_x25, reg_ids::gpr_x26, reg_ids::gpr_x27,
-    reg_ids::gpr_x28, reg_ids::gpr_fp,  reg_ids::gpr_lr,  reg_ids::gpr_sp,
-    reg_ids::gpr_pc,  reg_ids::gpr_cpsr};
-
-// Floating point registers
-static uint32_t g_fpu_regnums[] = {
-    reg_ids::fpu_v0,   reg_ids::fpu_v1,  reg_ids::fpu_v2,  reg_ids::fpu_v3,
-    reg_ids::fpu_v4,   reg_ids::fpu_v5,  reg_ids::fpu_v6,  reg_ids::fpu_v7,
-    reg_ids::fpu_v8,   reg_ids::fpu_v9,  reg_ids::fpu_v10, reg_ids::fpu_v11,
-    reg_ids::fpu_v12,  reg_ids::fpu_v13, reg_ids::fpu_v14, reg_ids::fpu_v15,
-    reg_ids::fpu_v16,  reg_ids::fpu_v17, reg_ids::fpu_v18, reg_ids::fpu_v19,
-    reg_ids::fpu_v20,  reg_ids::fpu_v21, reg_ids::fpu_v22, reg_ids::fpu_v23,
-    reg_ids::fpu_v24,  reg_ids::fpu_v25, reg_ids::fpu_v26, reg_ids::fpu_v27,
-    reg_ids::fpu_v28,  reg_ids::fpu_v29, reg_ids::fpu_v30, reg_ids::fpu_v31,
-    reg_ids::fpu_fpsr, reg_ids::fpu_fpcr};
-
-// Exception registers
-
-static uint32_t g_exc_regnums[] = {reg_ids::exc_far, reg_ids::exc_esr,
-                                   reg_ids::exc_exception};
-
-static std::shared_ptr<const RegisterDescription> CreateContextDescription();
-
 RegisterContextDarwin_arm64::RegisterContextDarwin_arm64(
     Thread &thread, uint32_t concrete_frame_idx)
     : ThreadRegisterContext(thread, concrete_frame_idx), gpr(), fpu(), exc(),
       dbg() {
-  SetRegisterDescription(CreateContextDescription());
+  SetRegisterLayout(RegisterLayoutDarwin_arm64::GetShared());
 
   uint32_t i;
   for (i = 0; i < kNumErrors; i++) {
@@ -186,51 +68,6 @@ RegisterContextDarwin_arm64::~RegisterContextDarwin_arm64() = default;
 
 void RegisterContextDarwin_arm64::InvalidateAllRegisters() {
   InvalidateAllRegisterStates();
-}
-
-// Number of registers in each register set
-const size_t k_num_gpr_registers = std::size(g_gpr_regnums);
-const size_t k_num_fpu_registers = std::size(g_fpu_regnums);
-const size_t k_num_exc_registers = std::size(g_exc_regnums);
-
-// Register set definitions. The first definitions at register set index of
-// zero is for all registers, followed by other registers sets. The register
-// information for the all register set need not be filled in.
-static const RegisterGroup g_reg_sets[] = {
-    {"General Purpose Registers", "gpr",
-     std::vector<RegisterID>(g_gpr_regnums,
-                             g_gpr_regnums + k_num_gpr_registers)},
-    {"Floating Point Registers", "fpu",
-     std::vector<RegisterID>(g_fpu_regnums,
-                             g_fpu_regnums + k_num_fpu_registers)},
-    {"Exception State Registers", "exc",
-     std::vector<RegisterID>(g_exc_regnums,
-                             g_exc_regnums + k_num_exc_registers)}};
-
-static std::shared_ptr<const RegisterDescription> CreateContextDescription() {
-  static const auto description = [] {
-    auto registers = RegisterMetadata().GetDescription()->GetRegisters();
-
-    return std::make_shared<RegisterDescription>(
-        llvm::cantFail(RegisterDescription::Create(
-            {registers.begin(), registers.end()},
-            {std::begin(g_reg_sets), std::end(g_reg_sets)},
-            {RegisterMetadata().GetDescription()->GetOwnedTypes().begin(),
-             RegisterMetadata().GetDescription()->GetOwnedTypes().end()})));
-  }();
-
-  return description;
-}
-
-// Register information definitions for arm64
-int RegisterContextDarwin_arm64::GetSetForNativeRegNum(uint32_t reg) {
-  if (reg < reg_ids::fpu_v0)
-    return GPRRegSet;
-  else if (reg < reg_ids::exc_far)
-    return FPURegSet;
-  else if (reg < reg_ids::k_num_registers)
-    return EXCRegSet;
-  return -1;
 }
 
 int RegisterContextDarwin_arm64::ReadGPR(bool force) {
@@ -357,375 +194,59 @@ void RegisterContextDarwin_arm64::LogDBGRegisters(Log *log, const DBG &dbg) {
 
 llvm::Expected<RegisterValue>
 RegisterContextDarwin_arm64::ReadRegister(RegisterID id) {
-  auto description = GetDescription();
-  const auto *reg_info = description ? description->Find(id) : nullptr;
-  if (!reg_info)
+  if (!GetDescription()->Find(id))
     return llvm::createStringError("unknown register ID");
-
-  RegisterValue value;
-  const uint32_t reg = reg_info->numbers[eRegisterKindLLDB];
-  int set = RegisterContextDarwin_arm64::GetSetForNativeRegNum(reg);
-
-  if (set == -1)
+  // Preserve the register views supported by the Darwin context.
+  if (id >= reg_ids::fpu_s13 && id <= reg_ids::fpu_s15)
     return llvm::createStringError("register value is unavailable");
 
-  if (ReadRegisterSet(set, false) != KERN_SUCCESS)
-    return llvm::createStringError("register value is unavailable");
+  auto required = GetLayout().GetRequiredBanks(id);
+  if (!required)
+    return required.takeError();
+  for (RegisterBankID bank : *required)
+    if (bank == DBGRegSet || ReadRegisterSet(bank, false) != 0)
+      return llvm::createStringError("register value is unavailable");
 
-  switch (reg) {
-  case reg_ids::gpr_x0:
-  case reg_ids::gpr_x1:
-  case reg_ids::gpr_x2:
-  case reg_ids::gpr_x3:
-  case reg_ids::gpr_x4:
-  case reg_ids::gpr_x5:
-  case reg_ids::gpr_x6:
-  case reg_ids::gpr_x7:
-  case reg_ids::gpr_x8:
-  case reg_ids::gpr_x9:
-  case reg_ids::gpr_x10:
-  case reg_ids::gpr_x11:
-  case reg_ids::gpr_x12:
-  case reg_ids::gpr_x13:
-  case reg_ids::gpr_x14:
-  case reg_ids::gpr_x15:
-  case reg_ids::gpr_x16:
-  case reg_ids::gpr_x17:
-  case reg_ids::gpr_x18:
-  case reg_ids::gpr_x19:
-  case reg_ids::gpr_x20:
-  case reg_ids::gpr_x21:
-  case reg_ids::gpr_x22:
-  case reg_ids::gpr_x23:
-  case reg_ids::gpr_x24:
-  case reg_ids::gpr_x25:
-  case reg_ids::gpr_x26:
-  case reg_ids::gpr_x27:
-  case reg_ids::gpr_x28:
-    value.SetUInt64(gpr.x[reg - reg_ids::gpr_x0]);
-    break;
-  case reg_ids::gpr_fp:
-    value.SetUInt64(gpr.fp);
-    break;
-  case reg_ids::gpr_sp:
-    value.SetUInt64(gpr.sp);
-    break;
-  case reg_ids::gpr_lr:
-    value.SetUInt64(gpr.lr);
-    break;
-  case reg_ids::gpr_pc:
-    value.SetUInt64(gpr.pc);
-    break;
-  case reg_ids::gpr_cpsr:
-    value.SetUInt64(gpr.cpsr);
-    break;
-
-  case reg_ids::gpr_w0:
-  case reg_ids::gpr_w1:
-  case reg_ids::gpr_w2:
-  case reg_ids::gpr_w3:
-  case reg_ids::gpr_w4:
-  case reg_ids::gpr_w5:
-  case reg_ids::gpr_w6:
-  case reg_ids::gpr_w7:
-  case reg_ids::gpr_w8:
-  case reg_ids::gpr_w9:
-  case reg_ids::gpr_w10:
-  case reg_ids::gpr_w11:
-  case reg_ids::gpr_w12:
-  case reg_ids::gpr_w13:
-  case reg_ids::gpr_w14:
-  case reg_ids::gpr_w15:
-  case reg_ids::gpr_w16:
-  case reg_ids::gpr_w17:
-  case reg_ids::gpr_w18:
-  case reg_ids::gpr_w19:
-  case reg_ids::gpr_w20:
-  case reg_ids::gpr_w21:
-  case reg_ids::gpr_w22:
-  case reg_ids::gpr_w23:
-  case reg_ids::gpr_w24:
-  case reg_ids::gpr_w25:
-  case reg_ids::gpr_w26:
-  case reg_ids::gpr_w27:
-  case reg_ids::gpr_w28: {
-    ProcessSP process_sp(m_thread.GetProcess());
-    if (process_sp.get()) {
-      DataExtractor regdata(&gpr.x[reg - reg_ids::gpr_w0], 8,
-                            process_sp->GetByteOrder(),
-                            process_sp->GetAddressByteSize());
-      offset_t offset = 0;
-      uint64_t retval = regdata.GetMaxU64(&offset, 8);
-      uint32_t retval_lower32 = static_cast<uint32_t>(retval & 0xffffffff);
-      value.SetUInt32(retval_lower32);
-    }
-  } break;
-
-  case reg_ids::fpu_v0:
-  case reg_ids::fpu_v1:
-  case reg_ids::fpu_v2:
-  case reg_ids::fpu_v3:
-  case reg_ids::fpu_v4:
-  case reg_ids::fpu_v5:
-  case reg_ids::fpu_v6:
-  case reg_ids::fpu_v7:
-  case reg_ids::fpu_v8:
-  case reg_ids::fpu_v9:
-  case reg_ids::fpu_v10:
-  case reg_ids::fpu_v11:
-  case reg_ids::fpu_v12:
-  case reg_ids::fpu_v13:
-  case reg_ids::fpu_v14:
-  case reg_ids::fpu_v15:
-  case reg_ids::fpu_v16:
-  case reg_ids::fpu_v17:
-  case reg_ids::fpu_v18:
-  case reg_ids::fpu_v19:
-  case reg_ids::fpu_v20:
-  case reg_ids::fpu_v21:
-  case reg_ids::fpu_v22:
-  case reg_ids::fpu_v23:
-  case reg_ids::fpu_v24:
-  case reg_ids::fpu_v25:
-  case reg_ids::fpu_v26:
-  case reg_ids::fpu_v27:
-  case reg_ids::fpu_v28:
-  case reg_ids::fpu_v29:
-  case reg_ids::fpu_v30:
-  case reg_ids::fpu_v31:
-    value.SetBytes(fpu.v[reg - reg_ids::fpu_v0].bytes, reg_info->byte_size,
-                   endian::InlHostByteOrder());
-    break;
-
-  case reg_ids::fpu_s0:
-  case reg_ids::fpu_s1:
-  case reg_ids::fpu_s2:
-  case reg_ids::fpu_s3:
-  case reg_ids::fpu_s4:
-  case reg_ids::fpu_s5:
-  case reg_ids::fpu_s6:
-  case reg_ids::fpu_s7:
-  case reg_ids::fpu_s8:
-  case reg_ids::fpu_s9:
-  case reg_ids::fpu_s10:
-  case reg_ids::fpu_s11:
-  case reg_ids::fpu_s12:
-  case reg_ids::fpu_s13:
-  case reg_ids::fpu_s14:
-  case reg_ids::fpu_s15:
-  case reg_ids::fpu_s16:
-  case reg_ids::fpu_s17:
-  case reg_ids::fpu_s18:
-  case reg_ids::fpu_s19:
-  case reg_ids::fpu_s20:
-  case reg_ids::fpu_s21:
-  case reg_ids::fpu_s22:
-  case reg_ids::fpu_s23:
-  case reg_ids::fpu_s24:
-  case reg_ids::fpu_s25:
-  case reg_ids::fpu_s26:
-  case reg_ids::fpu_s27:
-  case reg_ids::fpu_s28:
-  case reg_ids::fpu_s29:
-  case reg_ids::fpu_s30:
-  case reg_ids::fpu_s31: {
-    ProcessSP process_sp(m_thread.GetProcess());
-    if (process_sp.get()) {
-      DataExtractor regdata(&fpu.v[reg - reg_ids::fpu_s0], 4,
-                            process_sp->GetByteOrder(),
-                            process_sp->GetAddressByteSize());
-      offset_t offset = 0;
-      value.SetFloat(regdata.GetFloat(&offset));
-    }
-  } break;
-
-  case reg_ids::fpu_d0:
-  case reg_ids::fpu_d1:
-  case reg_ids::fpu_d2:
-  case reg_ids::fpu_d3:
-  case reg_ids::fpu_d4:
-  case reg_ids::fpu_d5:
-  case reg_ids::fpu_d6:
-  case reg_ids::fpu_d7:
-  case reg_ids::fpu_d8:
-  case reg_ids::fpu_d9:
-  case reg_ids::fpu_d10:
-  case reg_ids::fpu_d11:
-  case reg_ids::fpu_d12:
-  case reg_ids::fpu_d13:
-  case reg_ids::fpu_d14:
-  case reg_ids::fpu_d15:
-  case reg_ids::fpu_d16:
-  case reg_ids::fpu_d17:
-  case reg_ids::fpu_d18:
-  case reg_ids::fpu_d19:
-  case reg_ids::fpu_d20:
-  case reg_ids::fpu_d21:
-  case reg_ids::fpu_d22:
-  case reg_ids::fpu_d23:
-  case reg_ids::fpu_d24:
-  case reg_ids::fpu_d25:
-  case reg_ids::fpu_d26:
-  case reg_ids::fpu_d27:
-  case reg_ids::fpu_d28:
-  case reg_ids::fpu_d29:
-  case reg_ids::fpu_d30:
-  case reg_ids::fpu_d31: {
-    ProcessSP process_sp(m_thread.GetProcess());
-    if (process_sp.get()) {
-      DataExtractor regdata(&fpu.v[reg - reg_ids::fpu_d0], 8,
-                            process_sp->GetByteOrder(),
-                            process_sp->GetAddressByteSize());
-      offset_t offset = 0;
-      value.SetDouble(regdata.GetDouble(&offset));
-    }
-  } break;
-
-  case reg_ids::fpu_fpsr:
-    value.SetUInt32(fpu.fpsr);
-    break;
-
-  case reg_ids::fpu_fpcr:
-    value.SetUInt32(fpu.fpcr);
-    break;
-
-  case reg_ids::exc_exception:
-    value.SetUInt32(exc.exception);
-    break;
-  case reg_ids::exc_esr:
-    value.SetUInt32(exc.esr);
-    break;
-  case reg_ids::exc_far:
-    value.SetUInt64(exc.far);
-    break;
-
-  default:
-    value.SetValueToInvalid();
-    return llvm::createStringError("register value is unavailable");
-}
-
-return value;
+  const RegisterData banks[] = {
+      {GPRRegSet, {reinterpret_cast<const uint8_t *>(&gpr), sizeof(gpr)}},
+      {FPURegSet, {reinterpret_cast<const uint8_t *>(&fpu), sizeof(fpu)}},
+      {EXCRegSet, {reinterpret_cast<const uint8_t *>(&exc), sizeof(exc)}},
+      {DBGRegSet, {reinterpret_cast<const uint8_t *>(&dbg), sizeof(dbg)}},
+  };
+  return GetLayout().Read(id, banks);
 }
 
 llvm::Error
 RegisterContextDarwin_arm64::WriteRegister(RegisterID id,
-                                                const RegisterValue &value) {
-  auto description = GetDescription();
-  const auto *reg_info = description ? description->Find(id) : nullptr;
-  if (!reg_info)
+                                           const RegisterValue &value) {
+  if (!GetDescription()->Find(id))
     return llvm::createStringError("unknown register ID");
-
-  const uint32_t reg = reg_info->numbers[eRegisterKindLLDB];
-  int set = GetSetForNativeRegNum(reg);
-
-  if (set == -1)
+  // Preserve the existing restriction on writes through subregister views.
+  if ((id >= reg_ids::gpr_w0 && id <= reg_ids::gpr_w28) ||
+      (id >= reg_ids::fpu_s0 && id <= reg_ids::fpu_d31))
     return llvm::createStringError("register write is unavailable");
 
-  if (ReadRegisterSet(set, false) != KERN_SUCCESS)
-    return llvm::createStringError("register write is unavailable");
+  auto required = GetLayout().GetRequiredBanks(id, true);
+  if (!required)
+    return required.takeError();
+  for (RegisterBankID bank : *required)
+    if (bank == DBGRegSet || ReadRegisterSet(bank, false) != 0)
+      return llvm::createStringError("register write is unavailable");
 
-  switch (reg) {
-  case reg_ids::gpr_x0:
-  case reg_ids::gpr_x1:
-  case reg_ids::gpr_x2:
-  case reg_ids::gpr_x3:
-  case reg_ids::gpr_x4:
-  case reg_ids::gpr_x5:
-  case reg_ids::gpr_x6:
-  case reg_ids::gpr_x7:
-  case reg_ids::gpr_x8:
-  case reg_ids::gpr_x9:
-  case reg_ids::gpr_x10:
-  case reg_ids::gpr_x11:
-  case reg_ids::gpr_x12:
-  case reg_ids::gpr_x13:
-  case reg_ids::gpr_x14:
-  case reg_ids::gpr_x15:
-  case reg_ids::gpr_x16:
-  case reg_ids::gpr_x17:
-  case reg_ids::gpr_x18:
-  case reg_ids::gpr_x19:
-  case reg_ids::gpr_x20:
-  case reg_ids::gpr_x21:
-  case reg_ids::gpr_x22:
-  case reg_ids::gpr_x23:
-  case reg_ids::gpr_x24:
-  case reg_ids::gpr_x25:
-  case reg_ids::gpr_x26:
-  case reg_ids::gpr_x27:
-  case reg_ids::gpr_x28:
-  case reg_ids::gpr_fp:
-  case reg_ids::gpr_sp:
-  case reg_ids::gpr_lr:
-  case reg_ids::gpr_pc:
-  case reg_ids::gpr_cpsr:
-    gpr.x[reg - reg_ids::gpr_x0] = value.GetAsUInt64();
-    break;
+  const MutableRegisterData banks[] = {
+      {GPRRegSet, {reinterpret_cast<uint8_t *>(&gpr), sizeof(gpr)}},
+      {FPURegSet, {reinterpret_cast<uint8_t *>(&fpu), sizeof(fpu)}},
+      {EXCRegSet, {reinterpret_cast<uint8_t *>(&exc), sizeof(exc)}},
+      {DBGRegSet, {reinterpret_cast<uint8_t *>(&dbg), sizeof(dbg)}},
+  };
+  if (auto error = GetLayout().Write(id, value, banks))
+    return error;
 
-  case reg_ids::fpu_v0:
-  case reg_ids::fpu_v1:
-  case reg_ids::fpu_v2:
-  case reg_ids::fpu_v3:
-  case reg_ids::fpu_v4:
-  case reg_ids::fpu_v5:
-  case reg_ids::fpu_v6:
-  case reg_ids::fpu_v7:
-  case reg_ids::fpu_v8:
-  case reg_ids::fpu_v9:
-  case reg_ids::fpu_v10:
-  case reg_ids::fpu_v11:
-  case reg_ids::fpu_v12:
-  case reg_ids::fpu_v13:
-  case reg_ids::fpu_v14:
-  case reg_ids::fpu_v15:
-  case reg_ids::fpu_v16:
-  case reg_ids::fpu_v17:
-  case reg_ids::fpu_v18:
-  case reg_ids::fpu_v19:
-  case reg_ids::fpu_v20:
-  case reg_ids::fpu_v21:
-  case reg_ids::fpu_v22:
-  case reg_ids::fpu_v23:
-  case reg_ids::fpu_v24:
-  case reg_ids::fpu_v25:
-  case reg_ids::fpu_v26:
-  case reg_ids::fpu_v27:
-  case reg_ids::fpu_v28:
-  case reg_ids::fpu_v29:
-  case reg_ids::fpu_v30:
-  case reg_ids::fpu_v31:
-    ::memcpy(fpu.v[reg - reg_ids::fpu_v0].bytes, value.GetBytes(),
-             value.GetByteSize());
-    break;
-
-  case reg_ids::fpu_fpsr:
-    fpu.fpsr = value.GetAsUInt32();
-    break;
-
-  case reg_ids::fpu_fpcr:
-    fpu.fpcr = value.GetAsUInt32();
-    break;
-
-  case reg_ids::exc_exception:
-    exc.exception = value.GetAsUInt32();
-    break;
-  case reg_ids::exc_esr:
-    exc.esr = value.GetAsUInt32();
-    break;
-  case reg_ids::exc_far:
-    exc.far = value.GetAsUInt64();
-    break;
-
-  default:
-    return llvm::createStringError("register write is unavailable");
-  }
-
-  {
-    if (!(WriteRegisterSet(set) == KERN_SUCCESS))
+  for (RegisterBankID bank : *required)
+    if (WriteRegisterSet(bank) != 0)
       return llvm::createStringError("register write failed");
 
-    return llvm::Error::success();
-  }
+  return llvm::Error::success();
 }
 
 bool RegisterContextDarwin_arm64::ReadAllRegisterValues(

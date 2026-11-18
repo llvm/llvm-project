@@ -208,6 +208,7 @@ public:
     // Do nothing... registers are always valid...
   }
 
+  // RegisterLayoutDarwin interprets saved banks as little-endian Mach bytes.
   void SetRegisterDataFrom_LC_THREAD(const DataExtractor &data) {
     lldb::offset_t offset = 0;
     SetError(GPRRegSet, Read, -1);
@@ -221,9 +222,13 @@ public:
       uint32_t count = data.GetU32(&offset);
       switch (flavor) {
       case GPRRegSet: {
-        uint32_t *gpr_data = reinterpret_cast<uint32_t *>(&gpr.rax);
-        for (uint32_t i = 0; i < count && offset < data.GetByteSize(); ++i)
-          gpr_data[i] = data.GetU32(&offset);
+        auto *gpr_data = reinterpret_cast<uint8_t *>(&gpr);
+        for (uint32_t i = 0;
+             i < count && i < GPRWordCount && offset < data.GetByteSize(); ++i)
+          llvm::support::endian::write32le(gpr_data + i * sizeof(uint32_t),
+                                           data.GetU32(&offset));
+        if (count > GPRWordCount)
+          offset += (count - GPRWordCount) * sizeof(uint32_t);
         SetError(GPRRegSet, Read, 0);
       } break;
       case FPURegSet:
@@ -231,9 +236,9 @@ public:
         SetError(FPURegSet, Read, -1);
         break;
       case EXCRegSet:
-        exc.trapno = data.GetU32(&offset);
-        exc.err = data.GetU32(&offset);
-        exc.faultvaddr = data.GetU64(&offset);
+        llvm::support::endian::write32le(&exc.trapno, data.GetU32(&offset));
+        llvm::support::endian::write32le(&exc.err, data.GetU32(&offset));
+        llvm::support::endian::write64le(&exc.faultvaddr, data.GetU64(&offset));
         SetError(EXCRegSet, Read, 0);
         break;
       default:
@@ -416,9 +421,9 @@ public:
         uint32_t gpr_buf_count = (sizeof(gpr.r) / sizeof(gpr.r[0])) + 1;
         if (count == gpr_buf_count) {
           for (uint32_t i = 0; i < (count - 1); ++i) {
-            gpr.r[i] = data.GetU32(&offset);
+            llvm::support::endian::write32le(&gpr.r[i], data.GetU32(&offset));
           }
-          gpr.cpsr = data.GetU32(&offset);
+          llvm::support::endian::write32le(&gpr.cpsr, data.GetU32(&offset));
 
           SetError(GPRRegSet, Read, 0);
         }
@@ -430,16 +435,17 @@ public:
         if (data.ExtractBytes(offset, fpu_reg_buf_size, eByteOrderLittle,
                               fpu_reg_buf) == fpu_reg_buf_size) {
           offset += fpu_reg_buf_size;
-          fpu.fpscr = data.GetU32(&offset);
+          llvm::support::endian::write32le(&fpu.fpscr, data.GetU32(&offset));
           SetError(FPURegSet, Read, 0);
         }
       } break;
 
       case EXCRegSet:
         if (count == 3) {
-          exc.exception = data.GetU32(&offset);
-          exc.fsr = data.GetU32(&offset);
-          exc.far = data.GetU32(&offset);
+          llvm::support::endian::write32le(&exc.exception,
+                                           data.GetU32(&offset));
+          llvm::support::endian::write32le(&exc.fsr, data.GetU32(&offset));
+          llvm::support::endian::write32le(&exc.far, data.GetU32(&offset));
           SetError(EXCRegSet, Read, 0);
         }
         break;
@@ -537,12 +543,12 @@ public:
         // 32-bit register)
         if (count >= (33 * 2) + 1) {
           for (uint32_t i = 0; i < 29; ++i)
-            gpr.x[i] = data.GetU64(&offset);
-          gpr.fp = data.GetU64(&offset);
-          gpr.lr = data.GetU64(&offset);
-          gpr.sp = data.GetU64(&offset);
-          gpr.pc = data.GetU64(&offset);
-          gpr.cpsr = data.GetU32(&offset);
+            llvm::support::endian::write64le(&gpr.x[i], data.GetU64(&offset));
+          llvm::support::endian::write64le(&gpr.fp, data.GetU64(&offset));
+          llvm::support::endian::write64le(&gpr.lr, data.GetU64(&offset));
+          llvm::support::endian::write64le(&gpr.sp, data.GetU64(&offset));
+          llvm::support::endian::write64le(&gpr.pc, data.GetU64(&offset));
+          llvm::support::endian::write32le(&gpr.cpsr, data.GetU32(&offset));
           SetError(GPRRegSet, Read, 0);
         }
         break;
@@ -557,9 +563,10 @@ public:
       } break;
       case EXCRegSet:
         if (count == 4) {
-          exc.far = data.GetU64(&offset);
-          exc.esr = data.GetU32(&offset);
-          exc.exception = data.GetU32(&offset);
+          llvm::support::endian::write64le(&exc.far, data.GetU64(&offset));
+          llvm::support::endian::write32le(&exc.esr, data.GetU32(&offset));
+          llvm::support::endian::write32le(&exc.exception,
+                                           data.GetU32(&offset));
           SetError(EXCRegSet, Read, 0);
         }
         break;
@@ -676,8 +683,10 @@ public:
         // x0-x31 + pc
         if (count >= 32) {
           for (uint32_t i = 0; i < 32; ++i)
-            ((uint32_t *)&gpr.x0)[i] = data.GetU32(&offset);
-          gpr.pc = data.GetU32(&offset);
+            llvm::support::endian::write32le(reinterpret_cast<uint8_t *>(&gpr) +
+                                                 i * sizeof(uint32_t),
+                                             data.GetU32(&offset));
+          llvm::support::endian::write32le(&gpr.pc, data.GetU32(&offset));
           SetError(GPRRegSet, Read, 0);
         }
         break;
@@ -685,16 +694,19 @@ public:
         // f0-f31 + fcsr
         if (count >= 32) {
           for (uint32_t i = 0; i < 32; ++i)
-            ((uint32_t *)&fpr.f0)[i] = data.GetU32(&offset);
-          fpr.fcsr = data.GetU32(&offset);
+            llvm::support::endian::write32le(reinterpret_cast<uint8_t *>(&fpr) +
+                                                 i * sizeof(uint32_t),
+                                             data.GetU32(&offset));
+          llvm::support::endian::write32le(&fpr.fcsr, data.GetU32(&offset));
           SetError(FPURegSet, Read, 0);
         }
       } break;
       case EXCRegSet:
         if (count == 3) {
-          exc.exception = data.GetU32(&offset);
-          exc.fsr = data.GetU32(&offset);
-          exc.far = data.GetU32(&offset);
+          llvm::support::endian::write32le(&exc.exception,
+                                           data.GetU32(&offset));
+          llvm::support::endian::write32le(&exc.fsr, data.GetU32(&offset));
+          llvm::support::endian::write32le(&exc.far, data.GetU32(&offset));
           SetError(EXCRegSet, Read, 0);
         }
         break;

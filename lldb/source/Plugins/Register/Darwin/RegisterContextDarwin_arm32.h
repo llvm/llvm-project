@@ -9,6 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_ARM32_H
 #define LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_ARM32_H
 
+#include "lldb/Register/Layouts/Darwin/RegisterLayoutDarwin_arm32.h"
 #include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/lldb-private.h"
 
@@ -76,61 +77,21 @@ public:
 
   bool ClearHardwareWatchpoint(uint32_t hw_index) override;
 
-  struct GPR {
-    uint32_t r[16]; // R0-R15
-    uint32_t cpsr;  // CPSR
-  };
-
-  struct QReg {
-    uint8_t bytes[16];
-  };
-
-  struct FPU {
-    union {
-      uint32_t s[32];
-      uint64_t d[32];
-      QReg q[16]; // the 128-bit NEON registers
-    } floats;
-    uint32_t fpscr;
-  };
-
-  //  struct NeonReg
-  //  {
-  //      uint8_t bytes[16];
-  //  };
-  //
-  //  struct VFPv3
-  //  {
-  //      union {
-  //          uint32_t s[32];
-  //          uint64_t d[32];
-  //          NeonReg  q[16];
-  //      } v3;
-  //      uint32_t fpscr;
-  //  };
-
-  struct EXC {
-    uint32_t exception;
-    uint32_t fsr; /* Fault status */
-    uint32_t far; /* Virtual Fault Address */
-  };
-
-  struct DBG {
-    uint32_t bvr[16];
-    uint32_t bcr[16];
-    uint32_t wvr[16];
-    uint32_t wcr[16];
-  };
+  using GPR = lldb_private::RegisterLayoutDarwin_arm32::GPR;
+  using QReg = lldb_private::RegisterLayoutDarwin_arm32::QReg;
+  using FPU = lldb_private::RegisterLayoutDarwin_arm32::FPU;
+  using EXC = lldb_private::RegisterLayoutDarwin_arm32::EXC;
+  using DBG = lldb_private::RegisterLayoutDarwin_arm32::DBG;
 
   static void LogDBGRegisters(lldb_private::Log *log, const DBG &dbg);
 
 protected:
   enum {
-    GPRRegSet = 1,    // ARM_THREAD_STATE
-    GPRAltRegSet = 9, // ARM_THREAD_STATE32
-    FPURegSet = 2,    // ARM_VFP_STATE
-    EXCRegSet = 3,    // ARM_EXCEPTION_STATE
-    DBGRegSet = 4     // ARM_DEBUG_STATE
+    GPRRegSet = lldb_private::RegisterLayoutDarwin_arm32::GPRRegSet,
+    GPRAltRegSet = lldb_private::RegisterLayoutDarwin_arm32::GPRAltRegSet,
+    FPURegSet = lldb_private::RegisterLayoutDarwin_arm32::FPURegSet,
+    EXCRegSet = lldb_private::RegisterLayoutDarwin_arm32::EXCRegSet,
+    DBGRegSet = lldb_private::RegisterLayoutDarwin_arm32::DBGRegSet
   };
 
   enum {
@@ -243,8 +204,6 @@ protected:
   int WriteRegisterSet(uint32_t set);
 
   static uint32_t GetRegisterNumber(uint32_t reg_kind, uint32_t reg_num);
-
-  static int GetSetForNativeRegNum(int reg_num);
 };
 
 #endif // LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_ARM32_H

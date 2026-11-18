@@ -10,6 +10,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_ARM64_H
 #define LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_ARM64_H
 
+#include "lldb/Register/Layouts/Darwin/RegisterLayoutDarwin_arm64.h"
 #include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/lldb-private.h"
 
@@ -52,58 +53,27 @@ public:
 
   bool ClearHardwareWatchpoint(uint32_t hw_index) override;
 
-  // mirrors <mach/arm/thread_status.h> arm_thread_state64_t
-  struct GPR {
-    uint64_t x[29]; // x0-x28
-    uint64_t fp;    // x29
-    uint64_t lr;    // x30
-    uint64_t sp;    // x31
-    uint64_t pc;    // pc
-    uint32_t cpsr;  // cpsr
-  };
-
-  struct VReg {
-    alignas(16) char bytes[16];
-  };
-
-  // mirrors <mach/arm/thread_status.h> arm_neon_state64_t
-  struct FPU {
-    VReg v[32];
-    uint32_t fpsr;
-    uint32_t fpcr;
-  };
-
-  // mirrors <mach/arm/thread_status.h> arm_exception_state64_t
-  struct EXC {
-    uint64_t far;       // Virtual Fault Address
-    uint32_t esr;       // Exception syndrome
-    uint32_t exception; // number of arm exception token
-  };
-
-  // mirrors <mach/arm/thread_status.h> arm_debug_state64_t
-  struct DBG {
-    uint64_t bvr[16];
-    uint64_t bcr[16];
-    uint64_t wvr[16];
-    uint64_t wcr[16];
-    uint64_t mdscr_el1;
-  };
+  using GPR = lldb_private::RegisterLayoutDarwin_arm64::GPR;
+  using VReg = lldb_private::RegisterLayoutDarwin_arm64::VReg;
+  using FPU = lldb_private::RegisterLayoutDarwin_arm64::FPU;
+  using EXC = lldb_private::RegisterLayoutDarwin_arm64::EXC;
+  using DBG = lldb_private::RegisterLayoutDarwin_arm64::DBG;
 
   static void LogDBGRegisters(lldb_private::Log *log, const DBG &dbg);
 
 protected:
   enum {
-    GPRRegSet = 6,  // ARM_THREAD_STATE64
-    FPURegSet = 17, // ARM_NEON_STATE64
-    EXCRegSet = 7,  // ARM_EXCEPTION_STATE64
-    DBGRegSet = 15  // ARM_DEBUG_STATE64
+    GPRRegSet = lldb_private::RegisterLayoutDarwin_arm64::GPRRegSet,
+    FPURegSet = lldb_private::RegisterLayoutDarwin_arm64::FPURegSet,
+    EXCRegSet = lldb_private::RegisterLayoutDarwin_arm64::EXCRegSet,
+    DBGRegSet = lldb_private::RegisterLayoutDarwin_arm64::DBGRegSet
   };
 
   enum {
     GPRWordCount = sizeof(GPR) / sizeof(uint32_t), // ARM_THREAD_STATE64_COUNT
     FPUWordCount = sizeof(FPU) / sizeof(uint32_t), // ARM_NEON_STATE64_COUNT
-    EXCWordCount =
-        sizeof(EXC) / sizeof(uint32_t),           // ARM_EXCEPTION_STATE64_COUNT
+    EXCWordCount = sizeof(EXC) /
+        sizeof(uint32_t),                         // ARM_EXCEPTION_STATE64_COUNT
     DBGWordCount = sizeof(DBG) / sizeof(uint32_t) // ARM_DEBUG_STATE64_COUNT
   };
 
@@ -210,8 +180,6 @@ protected:
   int WriteRegisterSet(uint32_t set);
 
   static uint32_t GetRegisterNumber(uint32_t reg_kind, uint32_t reg_num);
-
-  static int GetSetForNativeRegNum(uint32_t reg_num);
 };
 
 #endif // LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_ARM64_H

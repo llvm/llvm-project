@@ -9,7 +9,6 @@
 #include "RegisterContextDarwin_arm32.h"
 #include "RegisterContextDarwinConstants.h"
 
-#include "lldb/Register/Descriptions/RegisterDescription_arm32.h"
 #include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -27,170 +26,16 @@
 using namespace lldb;
 using namespace lldb_private;
 
-enum {
-  gpr_r0 = 0,
-  gpr_r1,
-  gpr_r2,
-  gpr_r3,
-  gpr_r4,
-  gpr_r5,
-  gpr_r6,
-  gpr_r7,
-  gpr_r8,
-  gpr_r9,
-  gpr_r10,
-  gpr_r11,
-  gpr_r12,
-  gpr_r13,
-  gpr_sp = gpr_r13,
-  gpr_r14,
-  gpr_lr = gpr_r14,
-  gpr_r15,
-  gpr_pc = gpr_r15,
-  gpr_cpsr,
-
-  fpu_s0,
-  fpu_s1,
-  fpu_s2,
-  fpu_s3,
-  fpu_s4,
-  fpu_s5,
-  fpu_s6,
-  fpu_s7,
-  fpu_s8,
-  fpu_s9,
-  fpu_s10,
-  fpu_s11,
-  fpu_s12,
-  fpu_s13,
-  fpu_s14,
-  fpu_s15,
-  fpu_s16,
-  fpu_s17,
-  fpu_s18,
-  fpu_s19,
-  fpu_s20,
-  fpu_s21,
-  fpu_s22,
-  fpu_s23,
-  fpu_s24,
-  fpu_s25,
-  fpu_s26,
-  fpu_s27,
-  fpu_s28,
-  fpu_s29,
-  fpu_s30,
-  fpu_s31,
-  fpu_fpscr,
-
-  exc_exception,
-  exc_fsr,
-  exc_far,
-
-  dbg_bvr0,
-  dbg_bvr1,
-  dbg_bvr2,
-  dbg_bvr3,
-  dbg_bvr4,
-  dbg_bvr5,
-  dbg_bvr6,
-  dbg_bvr7,
-  dbg_bvr8,
-  dbg_bvr9,
-  dbg_bvr10,
-  dbg_bvr11,
-  dbg_bvr12,
-  dbg_bvr13,
-  dbg_bvr14,
-  dbg_bvr15,
-
-  dbg_bcr0,
-  dbg_bcr1,
-  dbg_bcr2,
-  dbg_bcr3,
-  dbg_bcr4,
-  dbg_bcr5,
-  dbg_bcr6,
-  dbg_bcr7,
-  dbg_bcr8,
-  dbg_bcr9,
-  dbg_bcr10,
-  dbg_bcr11,
-  dbg_bcr12,
-  dbg_bcr13,
-  dbg_bcr14,
-  dbg_bcr15,
-
-  dbg_wvr0,
-  dbg_wvr1,
-  dbg_wvr2,
-  dbg_wvr3,
-  dbg_wvr4,
-  dbg_wvr5,
-  dbg_wvr6,
-  dbg_wvr7,
-  dbg_wvr8,
-  dbg_wvr9,
-  dbg_wvr10,
-  dbg_wvr11,
-  dbg_wvr12,
-  dbg_wvr13,
-  dbg_wvr14,
-  dbg_wvr15,
-
-  dbg_wcr0,
-  dbg_wcr1,
-  dbg_wcr2,
-  dbg_wcr3,
-  dbg_wcr4,
-  dbg_wcr5,
-  dbg_wcr6,
-  dbg_wcr7,
-  dbg_wcr8,
-  dbg_wcr9,
-  dbg_wcr10,
-  dbg_wcr11,
-  dbg_wcr12,
-  dbg_wcr13,
-  dbg_wcr14,
-  dbg_wcr15,
-
-  k_num_registers
-};
-
 #define REG_CONTEXT_SIZE                                                       \
   (sizeof(RegisterContextDarwin_arm32::GPR) +                                  \
    sizeof(RegisterContextDarwin_arm32::FPU) +                                  \
    sizeof(RegisterContextDarwin_arm32::EXC))
 
 // General purpose registers
-static uint32_t g_gpr_regnums[] = {
-    gpr_r0, gpr_r1,  gpr_r2,  gpr_r3,  gpr_r4, gpr_r5, gpr_r6, gpr_r7,  gpr_r8,
-    gpr_r9, gpr_r10, gpr_r11, gpr_r12, gpr_sp, gpr_lr, gpr_pc, gpr_cpsr};
-
-// Floating point registers
-static uint32_t g_fpu_regnums[] = {
-    fpu_s0,  fpu_s1,  fpu_s2,  fpu_s3,  fpu_s4,    fpu_s5,  fpu_s6,
-    fpu_s7,  fpu_s8,  fpu_s9,  fpu_s10, fpu_s11,   fpu_s12, fpu_s13,
-    fpu_s14, fpu_s15, fpu_s16, fpu_s17, fpu_s18,   fpu_s19, fpu_s20,
-    fpu_s21, fpu_s22, fpu_s23, fpu_s24, fpu_s25,   fpu_s26, fpu_s27,
-    fpu_s28, fpu_s29, fpu_s30, fpu_s31, fpu_fpscr,
-};
-
-// Exception registers
-
-static uint32_t g_exc_regnums[] = {
-    exc_exception,
-    exc_fsr,
-    exc_far,
-};
-
-static std::shared_ptr<const RegisterDescription> CreateContextDescription();
-
 RegisterContextDarwin_arm32::RegisterContextDarwin_arm32(
     Thread &thread, uint32_t concrete_frame_idx)
     : ThreadRegisterContext(thread, concrete_frame_idx), gpr(), fpu(), exc() {
-  SetRegisterDescription(CreateContextDescription());
+  SetRegisterLayout(RegisterLayoutDarwin_arm32::GetShared());
 
   uint32_t i;
   for (i = 0; i < kNumErrors; i++) {
@@ -204,108 +49,6 @@ RegisterContextDarwin_arm32::~RegisterContextDarwin_arm32() = default;
 
 void RegisterContextDarwin_arm32::InvalidateAllRegisters() {
   InvalidateAllRegisterStates();
-}
-
-// Number of registers in each register set
-const size_t k_num_gpr_registers = std::size(g_gpr_regnums);
-const size_t k_num_fpu_registers = std::size(g_fpu_regnums);
-const size_t k_num_exc_registers = std::size(g_exc_regnums);
-
-// Register set definitions. The first definitions at register set index of
-// zero is for all registers, followed by other registers sets. The register
-// information for the all register set need not be filled in.
-static const RegisterGroup g_reg_sets[] = {
-    {"General Purpose Registers", "gpr",
-     std::vector<RegisterID>(g_gpr_regnums,
-                             g_gpr_regnums + k_num_gpr_registers)},
-    {"Floating Point Registers", "fpu",
-     std::vector<RegisterID>(g_fpu_regnums,
-                             g_fpu_regnums + k_num_fpu_registers)},
-    {"Exception State Registers", "exc",
-     std::vector<RegisterID>(g_exc_regnums,
-                             g_exc_regnums + k_num_exc_registers)}};
-
-static std::shared_ptr<const RegisterDescription> CreateContextDescription() {
-  static const auto description = [] {
-    auto cpu = RegisterDescription_arm32::GetShared();
-    std::vector<RegisterDescriptor> registers;
-
-    // Mach selectors are an explicit projection of the CPU catalog. These
-    // contexts expose complete independent values, without the catalog's
-    // unexposed subregister aliases.
-    auto append =
-        [&](uint32_t selector,
-            const RegisterDescriptor &definition) -> RegisterDescriptor & {
-      auto reg = definition;
-      reg.id = selector;
-      reg.numbers[eRegisterKindLLDB] = selector;
-      reg.numbers[eRegisterKindProcessPlugin] = LLDB_INVALID_REGNUM;
-      reg.value_registers.clear();
-      reg.invalidate_registers.clear();
-      reg.value_byte_offset = 0;
-      reg.zero_extend_parent = LLDB_INVALID_REGNUM;
-      registers.push_back(std::move(reg));
-
-      return registers.back();
-    };
-
-    for (uint32_t i = 0; i <= gpr_cpsr; ++i) {
-      auto &reg = append(i, *cpu->GetRegisterAtIndex(i));
-
-      // Mach uses r7 as its frame pointer and does not expose argument roles.
-      reg.numbers[eRegisterKindGeneric] = i == gpr_r7   ? LLDB_REGNUM_GENERIC_FP
-                                          : i == gpr_sp ? LLDB_REGNUM_GENERIC_SP
-                                          : i == gpr_lr ? LLDB_REGNUM_GENERIC_RA
-                                          : i == gpr_pc ? LLDB_REGNUM_GENERIC_PC
-                                          : i == gpr_cpsr
-                                              ? LLDB_REGNUM_GENERIC_FLAGS
-                                              : LLDB_INVALID_REGNUM;
-    }
-
-    for (uint32_t i = 0; i < 32; ++i)
-      append(fpu_s0 + i, *cpu->Find("s" + std::to_string(i)));
-
-    append(fpu_fpscr, *cpu->Find("fpscr"));
-
-    for (auto entry :
-         {std::make_pair(exc_exception, "exception"),
-          std::make_pair(exc_fsr, "fsr"), std::make_pair(exc_far, "far")})
-      registers.emplace_back(
-          entry.first, entry.second, nullptr, 4, eEncodingUint, eFormatHex,
-          RegisterDescriptor::Numbering{
-              LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-              LLDB_INVALID_REGNUM, static_cast<uint32_t>(entry.first)});
-
-    for (auto entry :
-         {std::make_pair(dbg_bvr0, "bvr"), std::make_pair(dbg_bcr0, "bcr"),
-          std::make_pair(dbg_wvr0, "wvr"), std::make_pair(dbg_wcr0, "wcr")})
-      for (uint32_t i = 0; i < 16; ++i)
-        registers.emplace_back(entry.first + i, entry.second, nullptr, 4,
-                               eEncodingUint, eFormatHex,
-                               RegisterDescriptor::Numbering{
-                                   LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-                                   LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-                                   LLDB_INVALID_REGNUM});
-
-    return std::make_shared<RegisterDescription>(
-        llvm::cantFail(RegisterDescription::Create(
-            std::move(registers),
-            {std::begin(g_reg_sets), std::end(g_reg_sets)},
-            {cpu->GetOwnedTypes().begin(), cpu->GetOwnedTypes().end()})));
-  }();
-
-  return description;
-}
-
-// Register information definitions for 32 bit i386.
-int RegisterContextDarwin_arm32::GetSetForNativeRegNum(int reg) {
-  if (reg < fpu_s0)
-    return GPRRegSet;
-  else if (reg < exc_exception)
-    return FPURegSet;
-  else if (reg < k_num_registers)
-    return EXCRegSet;
-  return -1;
 }
 
 int RegisterContextDarwin_arm32::ReadGPR(bool force) {
@@ -435,197 +178,52 @@ void RegisterContextDarwin_arm32::LogDBGRegisters(Log *log, const DBG &dbg) {
 
 llvm::Expected<RegisterValue>
 RegisterContextDarwin_arm32::ReadRegister(RegisterID id) {
-  auto description = GetDescription();
-  const auto *reg_info = description ? description->Find(id) : nullptr;
-  if (!reg_info)
+  if (!GetDescription()->Find(id))
     return llvm::createStringError("unknown register ID");
 
-  RegisterValue value;
-  const uint32_t reg = reg_info->numbers[eRegisterKindLLDB];
-  int set = RegisterContextDarwin_arm32::GetSetForNativeRegNum(reg);
+  auto required = GetLayout().GetRequiredBanks(id);
+  if (!required)
+    return required.takeError();
+  for (RegisterBankID bank : *required)
+    if (ReadRegisterSet(bank, false) != 0)
+      return llvm::createStringError("register value is unavailable");
 
-  if (set == -1)
-    return llvm::createStringError("register value is unavailable");
-
-  if (ReadRegisterSet(set, false) != KERN_SUCCESS)
-    return llvm::createStringError("register value is unavailable");
-
-  switch (reg) {
-  case gpr_r0:
-  case gpr_r1:
-  case gpr_r2:
-  case gpr_r3:
-  case gpr_r4:
-  case gpr_r5:
-  case gpr_r6:
-  case gpr_r7:
-  case gpr_r8:
-  case gpr_r9:
-  case gpr_r10:
-  case gpr_r11:
-  case gpr_r12:
-  case gpr_sp:
-  case gpr_lr:
-  case gpr_pc:
-    value.SetUInt32(gpr.r[reg - gpr_r0]);
-    break;
-  case gpr_cpsr:
-    value.SetUInt32(gpr.cpsr);
-    break;
-  case fpu_s0:
-  case fpu_s1:
-  case fpu_s2:
-  case fpu_s3:
-  case fpu_s4:
-  case fpu_s5:
-  case fpu_s6:
-  case fpu_s7:
-  case fpu_s8:
-  case fpu_s9:
-  case fpu_s10:
-  case fpu_s11:
-  case fpu_s12:
-  case fpu_s13:
-  case fpu_s14:
-  case fpu_s15:
-  case fpu_s16:
-  case fpu_s17:
-  case fpu_s18:
-  case fpu_s19:
-  case fpu_s20:
-  case fpu_s21:
-  case fpu_s22:
-  case fpu_s23:
-  case fpu_s24:
-  case fpu_s25:
-  case fpu_s26:
-  case fpu_s27:
-  case fpu_s28:
-  case fpu_s29:
-  case fpu_s30:
-  case fpu_s31:
-    value.SetUInt32(fpu.floats.s[reg], RegisterValue::eTypeFloat);
-    break;
-
-  case fpu_fpscr:
-    value.SetUInt32(fpu.fpscr);
-    break;
-
-  case exc_exception:
-    value.SetUInt32(exc.exception);
-    break;
-  case exc_fsr:
-    value.SetUInt32(exc.fsr);
-    break;
-  case exc_far:
-    value.SetUInt32(exc.far);
-    break;
-
-  default:
-    value.SetValueToInvalid();
-    return llvm::createStringError("register value is unavailable");
-  }
-
-  return value;
+  const RegisterData banks[] = {
+      {GPRRegSet, {reinterpret_cast<const uint8_t *>(&gpr), sizeof(gpr)}},
+      {FPURegSet, {reinterpret_cast<const uint8_t *>(&fpu), sizeof(fpu)}},
+      {EXCRegSet, {reinterpret_cast<const uint8_t *>(&exc), sizeof(exc)}},
+      {DBGRegSet, {reinterpret_cast<const uint8_t *>(&dbg), sizeof(dbg)}},
+  };
+  return GetLayout().Read(id, banks);
 }
 
 llvm::Error
 RegisterContextDarwin_arm32::WriteRegister(RegisterID id,
                                            const RegisterValue &value) {
-  auto description = GetDescription();
-  const auto *reg_info = description ? description->Find(id) : nullptr;
-  if (!reg_info)
+  if (!GetDescription()->Find(id))
     return llvm::createStringError("unknown register ID");
 
-  const uint32_t reg = reg_info->numbers[eRegisterKindLLDB];
-  int set = GetSetForNativeRegNum(reg);
+  auto required = GetLayout().GetRequiredBanks(id, true);
+  if (!required)
+    return required.takeError();
+  for (RegisterBankID bank : *required)
+    if (ReadRegisterSet(bank, false) != 0)
+      return llvm::createStringError("register write is unavailable");
 
-  if (set == -1)
-    return llvm::createStringError("register write is unavailable");
+  const MutableRegisterData banks[] = {
+      {GPRRegSet, {reinterpret_cast<uint8_t *>(&gpr), sizeof(gpr)}},
+      {FPURegSet, {reinterpret_cast<uint8_t *>(&fpu), sizeof(fpu)}},
+      {EXCRegSet, {reinterpret_cast<uint8_t *>(&exc), sizeof(exc)}},
+      {DBGRegSet, {reinterpret_cast<uint8_t *>(&dbg), sizeof(dbg)}},
+  };
+  if (auto error = GetLayout().Write(id, value, banks))
+    return error;
 
-  if (ReadRegisterSet(set, false) != KERN_SUCCESS)
-    return llvm::createStringError("register write is unavailable");
-
-  switch (reg) {
-  case gpr_r0:
-  case gpr_r1:
-  case gpr_r2:
-  case gpr_r3:
-  case gpr_r4:
-  case gpr_r5:
-  case gpr_r6:
-  case gpr_r7:
-  case gpr_r8:
-  case gpr_r9:
-  case gpr_r10:
-  case gpr_r11:
-  case gpr_r12:
-  case gpr_sp:
-  case gpr_lr:
-  case gpr_pc:
-  case gpr_cpsr:
-    gpr.r[reg - gpr_r0] = value.GetAsUInt32();
-    break;
-
-  case fpu_s0:
-  case fpu_s1:
-  case fpu_s2:
-  case fpu_s3:
-  case fpu_s4:
-  case fpu_s5:
-  case fpu_s6:
-  case fpu_s7:
-  case fpu_s8:
-  case fpu_s9:
-  case fpu_s10:
-  case fpu_s11:
-  case fpu_s12:
-  case fpu_s13:
-  case fpu_s14:
-  case fpu_s15:
-  case fpu_s16:
-  case fpu_s17:
-  case fpu_s18:
-  case fpu_s19:
-  case fpu_s20:
-  case fpu_s21:
-  case fpu_s22:
-  case fpu_s23:
-  case fpu_s24:
-  case fpu_s25:
-  case fpu_s26:
-  case fpu_s27:
-  case fpu_s28:
-  case fpu_s29:
-  case fpu_s30:
-  case fpu_s31:
-    fpu.floats.s[reg] = value.GetAsUInt32();
-    break;
-
-  case fpu_fpscr:
-    fpu.fpscr = value.GetAsUInt32();
-    break;
-
-  case exc_exception:
-    exc.exception = value.GetAsUInt32();
-    break;
-  case exc_fsr:
-    exc.fsr = value.GetAsUInt32();
-    break;
-  case exc_far:
-    exc.far = value.GetAsUInt32();
-    break;
-
-  default:
-    return llvm::createStringError("register write is unavailable");
-  }
-
-  {
-    if (!(WriteRegisterSet(set) == KERN_SUCCESS))
+  for (RegisterBankID bank : *required)
+    if (WriteRegisterSet(bank) != 0)
       return llvm::createStringError("register write failed");
 
-    return llvm::Error::success();
-  }
+  return llvm::Error::success();
 }
 
 bool RegisterContextDarwin_arm32::ReadAllRegisterValues(
