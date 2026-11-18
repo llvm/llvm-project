@@ -102,15 +102,20 @@ LLVM_ABI Libcall getUINTTOFP(EVT OpVT, EVT RetVT);
 /// UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getSYNC(unsigned Opc, MVT VT);
 
-/// Return the outline atomics value for the given atomic ordering, access
-/// size and set of libcalls for a given atomic, or UNKNOWN_LIBCALL if there
-/// is none.
-LLVM_ABI Libcall getOutlineAtomicHelper(const Libcall (&LC)[5][4],
-                                        AtomicOrdering Order, uint64_t MemSize);
-
 /// Return the outline atomics value for the given opcode, atomic ordering
 /// and type, or UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getOUTLINE_ATOMIC(unsigned Opc, AtomicOrdering Order, MVT VT);
+
+struct AtomicLibcall {
+  LibcallImpl Impl = Unsupported;
+  bool IsOutline = false;
+};
+
+/// Lower to outline atomic libcall if outline atomics enabled, or to sync
+/// libcall otherwise.
+LLVM_ABI AtomicLibcall selectAtomicLibcall(const LibcallLoweringInfo &Libcalls,
+                                           unsigned Opc, AtomicOrdering Order,
+                                           MVT VT);
 
 /// getMEMCPY_ELEMENT_UNORDERED_ATOMIC - Return
 /// MEMCPY_ELEMENT_UNORDERED_ATOMIC_* value for the given element size or

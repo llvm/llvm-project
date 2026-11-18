@@ -1,4 +1,4 @@
-; RUN: llc -x86-tile-ra=0 -verify-machineinstrs -O3 -use-registers-for-deopt-values -restrict-statepoint-remat=true -pass-remarks-filter=regalloc -pass-remarks-output=%t.yaml -stop-after=greedy -o - < %s 2>&1 | FileCheck %s
+; RUN: llc -x86-tile-ra=0 -O3 -use-registers-for-deopt-values -restrict-statepoint-remat=true -pass-remarks-filter=regalloc -pass-remarks-output=%t.yaml -stop-after=greedy -o - < %s 2>&1 | FileCheck %s
 ; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
 
 target triple = "x86_64-unknown-linux-gnu"
@@ -153,3 +153,4 @@ declare token @llvm.experimental.gc.statepoint.p0(i64 , i32 , ptr, i32 , i32 , .
 ;CHECK:     RET 0
 ;CHECK:   bb.7.bb25:
 ;CHECK:     RET 0
+;CHECK: ...

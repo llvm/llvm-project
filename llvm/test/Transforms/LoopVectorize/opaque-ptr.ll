@@ -90,8 +90,8 @@ exit:
 define void @test_ptr_iv_with_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end) {
 ; CHECK-LABEL: @test_ptr_iv_with_inbounds(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P1_END1:%.*]] = ptrtoaddr ptr [[P1_END:%.*]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoaddr ptr [[P1_START:%.*]] to i64
+; CHECK-NEXT:    [[P1_END1:%.*]] = ptrtoaddr ptr [[P1_END:%.*]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[P1_END1]], -4
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP5]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2

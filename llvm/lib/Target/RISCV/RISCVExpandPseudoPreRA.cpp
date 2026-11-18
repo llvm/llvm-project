@@ -182,7 +182,8 @@ bool RISCVExpandPseudoPreRAImpl::expandLoadTLSDescAddress(
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::PseudoTLSDESCCall), RISCV::X5)
       .addReg(DestReg)
       .addImm(0)
-      .addSym(AUIPCSymbol, RISCVII::MO_TLSDESC_CALL);
+      .addSym(AUIPCSymbol, RISCVII::MO_TLSDESC_CALL)
+      ->setPhysRegsDeadExcept(Register(RISCV::X10), *STI.getRegisterInfo());
 
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADD), FinalReg)
       .addReg(RISCV::X10)

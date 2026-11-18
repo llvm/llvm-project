@@ -695,6 +695,12 @@ json::Value toJSON(const ExceptionInfoResponseBody &ERB) {
     result.insert({"description", ERB.description});
   if (ERB.details.has_value())
     result.insert({"details", *ERB.details});
+  if (ERB.lldbExtStopReasonExtendedInfo)
+    result.insert(
+        {"$__lldb_stopReasonExtendedInfo", *ERB.lldbExtStopReasonExtendedInfo});
+  if (ERB.lldbExtExtendedCrashInformation)
+    result.insert({"$__lldb_extendedCrashInformation",
+                   *ERB.lldbExtExtendedCrashInformation});
   return result;
 }
 

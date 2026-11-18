@@ -169,6 +169,7 @@ Sel.  Mnemonic                         Stack Effect                             
 0x25  ``get_pointee_type``             ``(Type @get_pointee_type -> Type)``                                  ``SBType::GetPointeeType``
 0x26  ``get_byte_size``                ``(Type @get_byte_size -> Integer)``                                  ``SBType::GetByteSize``
 0x27  ``create_child_at_offset``       ``(Object String Integer Type @create_child_at_offset -> Object)``    ``SBValue::CreateChildAtOffset``
+0x28  ``get_byte_stride``              ``(Type @get_byte_stride -> Integer)``                                ``SBType::GetByteStride``
 0x40  ``read_memory_byte``             ``(UInt @read_memory_byte -> UInt)``                                  ``Target::ReadMemory``
 0x41  ``read_memory_uint32``           ``(UInt @read_memory_uint32 -> UInt)``                                ``Target::ReadMemory``
 0x42  ``read_memory_int32``            ``(UInt @read_memory_int32 -> Int)``                                  ``Target::ReadMemory``
@@ -176,11 +177,31 @@ Sel.  Mnemonic                         Stack Effect                             
 0x44  ``read_memory_int64``            ``(UInt @read_memory_int64 -> Int)``                                  ``Target::ReadMemory``
 0x45  ``read_memory_address``          ``(UInt @read_memory_uint64 -> UInt)``                                ``Target::ReadMemory``
 0x46  ``read_memory``                  ``(UInt Type @read_memory -> Object)``                                ``Target::ReadMemory``
-0x50  ``fmt``                          ``(String arg0 ... @fmt -> String)``                                  ``llvm::format``
+0x50  ``fmt``                          ``(arg0 ... argN String @fmt -> String)``                             ``llvm::formatv``
 0x51  ``sprintf``                      ``(String arg0 ... sprintf -> String)``                               ``sprintf``
 0x52  ``strlen``                       ``(String strlen -> Integer)``                                        ``strlen in bytes``
 ====  ===============================  ====================================================================  ======================================
 ```
+
+### Formatting strings
+
+`@fmt` formats its arguments using an `llvm::formatv` format string, which is on top of the stack, above the arguments. The arguments are consumed, and only the resulting string is left on the stack.
+
+The format string may contain literal text, escaped braces (`{{`, a literal `{`), and replacements. A replacement has no index, and an optional layout and options:
+
+```
+"{" [ "," layout ] [ ":" options ] "}"
+```
+
+The layout may not contain `{`, `}`, or `:`, and the options may not contain `{` or `}`. For example, `{}`, `{,8}`, `{:x}`, and `{,8:x}` are all replacements.
+
+Each replacement is replaced with the next argument, in stack order, so the first argument is the deepest one on the stack, and the number of arguments is the number of replacements. Explicit indexes, such as `{0}`, are an error. To reorder or reuse arguments, use the stack operations before calling `@fmt`. For example, this formats `"(1, 2)"`:
+
+```
+1 2 "({}, {})" @fmt call
+```
+
+Layouts and options are hints, which are applied on a best effort basis. Support for them may vary between versions of LLDB, and a layout or option that is not supported is ignored, so that the replacement is formatted like `{}`. Layouts and options never change which arguments are used. Currently, no layouts or options are supported.
 
 ### Dictionary objects
 

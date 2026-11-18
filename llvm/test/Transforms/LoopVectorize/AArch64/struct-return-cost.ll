@@ -16,12 +16,12 @@ target triple = "aarch64--linux-gnu"
 ; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
 ;
 ; CHECK-COST: Cost of 58 for VF 4: REPLICATE ir<%call> = call @foo(ir<%in_val>)
-; CHECK-COST: Cost of 0 for VF 4: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
-; CHECK-COST: Cost of 0 for VF 4: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+; CHECK-COST: Cost of 0 for VF 4: REPLICATE ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF 4: REPLICATE ir<%extract_b> = extractvalue ir<%call>, ir<1>
 ;
 ; CHECK-COST: Cost of 122 for VF 8: REPLICATE ir<%call> = call @foo(ir<%in_val>)
-; CHECK-COST: Cost of 0 for VF 8: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
-; CHECK-COST: Cost of 0 for VF 8: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+; CHECK-COST: Cost of 0 for VF 8: REPLICATE ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF 8: REPLICATE ir<%extract_b> = extractvalue ir<%call>, ir<1>
 
 define void @struct_return_widen(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
 ; CHECK-LABEL: define void @struct_return_widen(
@@ -31,7 +31,7 @@ define void @struct_return_widen(ptr noalias %in, ptr noalias writeonly %out_a, 
 ; CHECK:  [[VECTOR_BODY:.*:]]
 ; CHECK:    [[TMP2:%.*]] = call { <2 x half>, <2 x half> } @fixed_vec_foo(<2 x half> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[TMP3:%.*]] = call { <2 x half>, <2 x half> } @fixed_vec_foo(<2 x half> [[WIDE_LOAD1:%.*]])
-; CHECK:  [[FOR_BODY:.*:]]
+; CHECK:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK:  [[EXIT:.*:]]
 ;
 entry:
@@ -62,16 +62,16 @@ exit:
 ; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %extract_b = extractvalue { half, half } %call, 1
 ;
 ; CHECK-COST: Cost of 26 for VF 2: REPLICATE ir<%call> = call @foo(ir<%in_val>)
-; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
-; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+; CHECK-COST: Cost of 0 for VF 2: REPLICATE ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF 2: REPLICATE ir<%extract_b> = extractvalue ir<%call>, ir<1>
 ;
 ; CHECK-COST: Cost of 58 for VF 4: REPLICATE ir<%call> = call @foo(ir<%in_val>)
-; CHECK-COST: Cost of 0 for VF 4: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
-; CHECK-COST: Cost of 0 for VF 4: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+; CHECK-COST: Cost of 0 for VF 4: REPLICATE ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF 4: REPLICATE ir<%extract_b> = extractvalue ir<%call>, ir<1>
 ;
 ; CHECK-COST: Cost of 122 for VF 8: REPLICATE ir<%call> = call @foo(ir<%in_val>)
-; CHECK-COST: Cost of 0 for VF 8: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
-; CHECK-COST: Cost of 0 for VF 8: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+; CHECK-COST: Cost of 0 for VF 8: REPLICATE ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF 8: REPLICATE ir<%extract_b> = extractvalue ir<%call>, ir<1>
 
 define void @struct_return_replicate(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
 ; CHECK-LABEL: define void @struct_return_replicate(
@@ -79,8 +79,8 @@ define void @struct_return_replicate(ptr noalias %in, ptr noalias writeonly %out
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP3:%.*]] = tail call { half, half } @foo(half [[TMP1:%.*]]) #[[ATTR2:[0-9]+]]
-; CHECK:    [[TMP4:%.*]] = tail call { half, half } @foo(half [[TMP2:%.*]]) #[[ATTR2]]
+; CHECK:    [[TMP2:%.*]] = tail call { half, half } @foo(half [[TMP1:%.*]]) #[[ATTR2:[0-9]+]]
+; CHECK:    [[TMP4:%.*]] = tail call { half, half } @foo(half [[TMP3:%.*]]) #[[ATTR2]]
 ; CHECK:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK:  [[EXIT:.*:]]
 ;
@@ -113,28 +113,28 @@ exit:
 ; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %extract_b = extractvalue { half, half } %call, 1
 ;
 ; CHECK-COST: Cost of 26 for VF 2: REPLICATE ir<%call> = call @foo(ir<%in_val>)
-; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
-; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+; CHECK-COST: Cost of 0 for VF 2: REPLICATE ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF 2: REPLICATE ir<%extract_b> = extractvalue ir<%call>, ir<1>
 ;
 ; CHECK-COST: Cost of 58 for VF 4: REPLICATE ir<%call> = call @foo(ir<%in_val>)
-; CHECK-COST: Cost of 0 for VF 4: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
-; CHECK-COST: Cost of 0 for VF 4: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+; CHECK-COST: Cost of 0 for VF 4: REPLICATE ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF 4: REPLICATE ir<%extract_b> = extractvalue ir<%call>, ir<1>
 ;
 ; CHECK-COST: Cost of 122 for VF 8: REPLICATE ir<%call> = call @foo(ir<%in_val>)
-; CHECK-COST: Cost of 0 for VF 8: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
-; CHECK-COST: Cost of 0 for VF 8: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+; CHECK-COST: Cost of 0 for VF 8: REPLICATE ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF 8: REPLICATE ir<%extract_b> = extractvalue ir<%call>, ir<1>
 ;
 ; CHECK-COST: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @foo(ir<%in_val>)
-; CHECK-COST: Cost of 0 for VF vscale x 1: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
-; CHECK-COST: Cost of 0 for VF vscale x 1: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+; CHECK-COST: Cost of Invalid for VF vscale x 1: REPLICATE ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of Invalid for VF vscale x 1: REPLICATE ir<%extract_b> = extractvalue ir<%call>, ir<1>
 ;
 ; CHECK-COST: Cost of Invalid for VF vscale x 2: REPLICATE ir<%call> = call @foo(ir<%in_val>)
-; CHECK-COST: Cost of 0 for VF vscale x 2: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
-; CHECK-COST: Cost of 0 for VF vscale x 2: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+; CHECK-COST: Cost of Invalid for VF vscale x 2: REPLICATE ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of Invalid for VF vscale x 2: REPLICATE ir<%extract_b> = extractvalue ir<%call>, ir<1>
 ;
 ; CHECK-COST: Cost of Invalid for VF vscale x 4: REPLICATE ir<%call> = call @foo(ir<%in_val>)
-; CHECK-COST: Cost of 0 for VF vscale x 4: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
-; CHECK-COST: Cost of 0 for VF vscale x 4: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+; CHECK-COST: Cost of Invalid for VF vscale x 4: REPLICATE ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of Invalid for VF vscale x 4: REPLICATE ir<%extract_b> = extractvalue ir<%call>, ir<1>
 ;
 ; CHECK-COST: Cost of 10 for VF vscale x 8: WIDEN-CALL ir<%call> = call @foo(ir<%in_val>, ir<true>) (using library function: scalable_vec_masked_foo)
 ; CHECK-COST: Cost of 0 for VF vscale x 8: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
@@ -143,16 +143,13 @@ exit:
 define void @struct_return_scalable(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) #2 {
 ; CHECK-LABEL: define void @struct_return_scalable(
 ; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK:  [[VECTOR_PH1:.*:]]
-; CHECK:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK:  [[ENTRY:.*:]]
+; CHECK:  [[VECTOR_PH:.*:]]
+; CHECK:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:  [[VECTOR_BODY1:.*:]]
-; CHECK:    [[TMP12:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half> } @scalable_vec_masked_foo(<vscale x 8 x half> [[WIDE_LOAD:%.*]], <vscale x 8 x i1> splat (i1 true))
-; CHECK:    [[TMP13:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half> } @scalable_vec_masked_foo(<vscale x 8 x half> [[WIDE_LOAD1:%.*]], <vscale x 8 x i1> splat (i1 true))
+; CHECK:    [[TMP5:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half> } @scalable_vec_masked_foo(<vscale x 8 x half> [[WIDE_LOAD:%.*]], <vscale x 8 x i1> splat (i1 true))
+; CHECK:    [[TMP6:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half> } @scalable_vec_masked_foo(<vscale x 8 x half> [[WIDE_LOAD1:%.*]], <vscale x 8 x i1> splat (i1 true))
 ; CHECK:  [[MIDDLE_BLOCK:.*:]]
-; CHECK:  [[SCALAR_PH:.*:]]
-; CHECK:  [[FOR_BODY:.*:]]
-; CHECK:    [[CALL:%.*]] = tail call { half, half } @foo(half [[IN_VAL:%.*]]) #[[ATTR2]]
 ; CHECK:  [[EXIT:.*:]]
 ;
 entry:
@@ -185,4 +182,4 @@ declare { <vscale x 8 x half>, <vscale x 8 x half> } @scalable_vec_masked_foo(<v
 
 attributes #0 = { nounwind "vector-function-abi-variant"="_ZGVnN2v_foo(fixed_vec_foo)" }
 attributes #1 = { nounwind "vector-function-abi-variant"="_ZGVsMxv_foo(scalable_vec_masked_foo)" }
-attributes #2 = { "target-features"="+sve" }
+attributes #2 = { "target-features"="+sve" vscale_range(1,16) }

@@ -5,7 +5,7 @@ Test lldb-dap launch request.
 import os
 import re
 
-from lldbsuite.test.tools.lldb_dap.types import InitializedEvent, LaunchArgs
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
@@ -17,7 +17,7 @@ class TestDAP_launch_failing_launch_commands(DAPTestCaseBase):
     def test(self):
         session = self.build_and_create_session()
         program = self.getBuildArtifact("a.out")
-        init_response = session.initialize_sequence(session.initialize_args)
+        session.initialize_sequence(session.initialize_args)
 
         # Run an invalid launch command, in this case a bad path.
         bad_path = os.path.join("bad", "path")
@@ -33,8 +33,7 @@ class TestDAP_launch_failing_launch_commands(DAPTestCaseBase):
                 launchCommands=launchCommands,
             )
         )
-        session.wait_for_event(InitializedEvent, after=init_response)
-        session.configuration_done().result_or_error()
+        session.verify_configuration_done(expected_success=False)
         err_response = launch_handle.error()
 
         error_msg = self.expect_not_none(

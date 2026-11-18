@@ -39,9 +39,9 @@ define i32 @test_explicit_pred(i64 %len) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <4 x i64> [[STEP_ADD1]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt <4 x i64> [[STEP_ADD2]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i64 4
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i64 8
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i64 12
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 16
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 32
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i32>, ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x i32>, ptr [[TMP14]], align 4
@@ -170,9 +170,9 @@ define i32 @test_explicit_pred_generic(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <4 x i1> [[TMP61]], i1 [[TMP58]], i64 2
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i64 3
 ; CHECK-NEXT:    [[TMP64:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr inbounds i32, ptr [[TMP64]], i64 4
-; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr inbounds i32, ptr [[TMP64]], i64 8
-; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr inbounds i32, ptr [[TMP64]], i64 12
+; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr inbounds i8, ptr [[TMP64]], i64 16
+; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr inbounds i8, ptr [[TMP64]], i64 32
+; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr inbounds i8, ptr [[TMP64]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP64]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i32>, ptr [[TMP69]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP70]], align 4
@@ -233,14 +233,9 @@ define i32 @test_invariant_address(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    call void @init(ptr [[ALLOCA]])
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ALLOCA]], align 4
-; CHECK-NEXT:    [[TMP64:%.*]] = load i32, ptr [[ALLOCA]], align 4
-; CHECK-NEXT:    [[TMP65:%.*]] = load i32, ptr [[ALLOCA]], align 4
 ; CHECK-NEXT:    [[TMP66:%.*]] = load i32, ptr [[ALLOCA]], align 4
-; CHECK-NEXT:    [[TMP67:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP68:%.*]] = insertelement <4 x i32> [[TMP67]], i32 [[TMP64]], i64 1
-; CHECK-NEXT:    [[TMP69:%.*]] = insertelement <4 x i32> [[TMP68]], i32 [[TMP65]], i64 2
-; CHECK-NEXT:    [[TMP71:%.*]] = insertelement <4 x i32> [[TMP69]], i32 [[TMP66]], i64 3
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP66]], i64 0
+; CHECK-NEXT:    [[TMP71:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -690,9 +685,9 @@ define i32 @test_max_trip_count(i64 %len, ptr %test_base, i64 %n) {
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i64 2
 ; CHECK-NEXT:    [[TMP64:%.*]] = insertelement <4 x i1> [[TMP63]], i1 [[TMP60]], i64 3
 ; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i32, ptr [[TMP65]], i64 4
-; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i32, ptr [[TMP65]], i64 8
-; CHECK-NEXT:    [[TMP72:%.*]] = getelementptr i32, ptr [[TMP65]], i64 12
+; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i8, ptr [[TMP65]], i64 16
+; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i8, ptr [[TMP65]], i64 32
+; CHECK-NEXT:    [[TMP72:%.*]] = getelementptr i8, ptr [[TMP65]], i64 48
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP65]], <4 x i1> [[TMP40]], <4 x i32> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD4:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP70]], <4 x i1> [[TMP48]], <4 x i32> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP71]], <4 x i1> [[TMP56]], <4 x i32> poison)
@@ -848,9 +843,9 @@ define i32 @test_non_zero_start(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <4 x i1> [[TMP61]], i1 [[TMP58]], i64 2
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i64 3
 ; CHECK-NEXT:    [[TMP64:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr inbounds i32, ptr [[TMP64]], i64 4
-; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr inbounds i32, ptr [[TMP64]], i64 8
-; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr inbounds i32, ptr [[TMP64]], i64 12
+; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr inbounds i8, ptr [[TMP64]], i64 16
+; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr inbounds i8, ptr [[TMP64]], i64 32
+; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr inbounds i8, ptr [[TMP64]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP64]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i32>, ptr [[TMP69]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP70]], align 4
@@ -1200,9 +1195,9 @@ define i32 @neg_off_by_many(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <4 x i1> [[TMP61]], i1 [[TMP58]], i64 2
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i64 3
 ; CHECK-NEXT:    [[TMP64:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i32, ptr [[TMP64]], i64 4
-; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i32, ptr [[TMP64]], i64 8
-; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i32, ptr [[TMP64]], i64 12
+; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i8, ptr [[TMP64]], i64 16
+; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i8, ptr [[TMP64]], i64 32
+; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i8, ptr [[TMP64]], i64 48
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP64]], <4 x i1> [[TMP39]], <4 x i32> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD4:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP69]], <4 x i1> [[TMP47]], <4 x i32> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP70]], <4 x i1> [[TMP55]], <4 x i32> poison)
@@ -1330,9 +1325,9 @@ define i32 @neg_off_by_one_iteration(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <4 x i1> [[TMP61]], i1 [[TMP58]], i64 2
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i64 3
 ; CHECK-NEXT:    [[TMP64:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i32, ptr [[TMP64]], i64 4
-; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i32, ptr [[TMP64]], i64 8
-; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i32, ptr [[TMP64]], i64 12
+; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i8, ptr [[TMP64]], i64 16
+; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i8, ptr [[TMP64]], i64 32
+; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i8, ptr [[TMP64]], i64 48
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP64]], <4 x i1> [[TMP39]], <4 x i32> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD4:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP69]], <4 x i1> [[TMP47]], <4 x i32> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP70]], <4 x i1> [[TMP55]], <4 x i32> poison)
@@ -1460,9 +1455,9 @@ define i32 @neg_off_by_one_byte(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <4 x i1> [[TMP61]], i1 [[TMP58]], i64 2
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i64 3
 ; CHECK-NEXT:    [[TMP64:%.*]] = getelementptr i32, ptr [[ALLOCA]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i32, ptr [[TMP64]], i64 4
-; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i32, ptr [[TMP64]], i64 8
-; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i32, ptr [[TMP64]], i64 12
+; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i8, ptr [[TMP64]], i64 16
+; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i8, ptr [[TMP64]], i64 32
+; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i8, ptr [[TMP64]], i64 48
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP64]], <4 x i1> [[TMP39]], <4 x i32> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD4:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP69]], <4 x i1> [[TMP47]], <4 x i32> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP70]], <4 x i1> [[TMP55]], <4 x i32> poison)
@@ -1599,9 +1594,9 @@ define i32 @test_constant_max(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i64 2
 ; CHECK-NEXT:    [[TMP64:%.*]] = insertelement <4 x i1> [[TMP63]], i1 [[TMP60]], i64 3
 ; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr inbounds i32, ptr [[ALLOCA]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr inbounds i32, ptr [[TMP65]], i64 4
-; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr inbounds i32, ptr [[TMP65]], i64 8
-; CHECK-NEXT:    [[TMP72:%.*]] = getelementptr inbounds i32, ptr [[TMP65]], i64 12
+; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr inbounds i8, ptr [[TMP65]], i64 16
+; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr inbounds i8, ptr [[TMP65]], i64 32
+; CHECK-NEXT:    [[TMP72:%.*]] = getelementptr inbounds i8, ptr [[TMP65]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP65]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i32>, ptr [[TMP70]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP71]], align 4
@@ -1758,9 +1753,9 @@ define i32 @test_allocsize(i64 %len, ptr %test_base) nofree nosync {
 ; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <4 x i1> [[TMP61]], i1 [[TMP58]], i64 2
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i64 3
 ; CHECK-NEXT:    [[TMP64:%.*]] = getelementptr i32, ptr [[ALLOCATION]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i32, ptr [[TMP64]], i64 4
-; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i32, ptr [[TMP64]], i64 8
-; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i32, ptr [[TMP64]], i64 12
+; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i8, ptr [[TMP64]], i64 16
+; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i8, ptr [[TMP64]], i64 32
+; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i8, ptr [[TMP64]], i64 48
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP64]], <4 x i1> [[TMP39]], <4 x i32> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD4:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP69]], <4 x i1> [[TMP47]], <4 x i32> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP70]], <4 x i1> [[TMP55]], <4 x i32> poison)
@@ -1889,9 +1884,9 @@ define i32 @test_allocsize_array(i64 %len, ptr %test_base) nofree nosync {
 ; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <4 x i1> [[TMP61]], i1 [[TMP58]], i64 2
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i64 3
 ; CHECK-NEXT:    [[TMP64:%.*]] = getelementptr i32, ptr [[ALLOCATION]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i32, ptr [[TMP64]], i64 4
-; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i32, ptr [[TMP64]], i64 8
-; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i32, ptr [[TMP64]], i64 12
+; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i8, ptr [[TMP64]], i64 16
+; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i8, ptr [[TMP64]], i64 32
+; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i8, ptr [[TMP64]], i64 48
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP64]], <4 x i1> [[TMP39]], <4 x i32> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD4:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP69]], <4 x i1> [[TMP47]], <4 x i32> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP70]], <4 x i1> [[TMP55]], <4 x i32> poison)
@@ -2030,9 +2025,9 @@ define i32 @test_allocsize_cond_deref(i1 %allzero, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <4 x i1> [[TMP61]], i1 [[TMP58]], i64 2
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i1> [[TMP62]], i1 [[TMP59]], i64 3
 ; CHECK-NEXT:    [[TMP64:%.*]] = getelementptr i32, ptr [[ALLOCATION]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i32, ptr [[TMP64]], i64 4
-; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i32, ptr [[TMP64]], i64 8
-; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i32, ptr [[TMP64]], i64 12
+; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i8, ptr [[TMP64]], i64 16
+; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i8, ptr [[TMP64]], i64 32
+; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i8, ptr [[TMP64]], i64 48
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP64]], <4 x i1> [[TMP39]], <4 x i32> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD4:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP69]], <4 x i1> [[TMP47]], <4 x i32> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP70]], <4 x i1> [[TMP55]], <4 x i32> poison)

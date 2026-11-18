@@ -277,8 +277,7 @@ getInstNeededZAState(const TargetRegisterInfo &TRI, MachineInstr &MI,
 struct MachineSMEABI : public MachineFunctionPass {
   inline static char ID = 0;
 
-  MachineSMEABI(CodeGenOptLevel OptLevel = CodeGenOptLevel::Default)
-      : MachineFunctionPass(ID), OptLevel(OptLevel) {}
+  MachineSMEABI() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -401,8 +400,6 @@ struct MachineSMEABI : public MachineFunctionPass {
                          MachineBasicBlock::iterator MBBI, DebugLoc DL);
 
 private:
-  CodeGenOptLevel OptLevel = CodeGenOptLevel::Default;
-
   MachineFunction *MF = nullptr;
   const AArch64Subtarget *Subtarget = nullptr;
   const AArch64RegisterInfo *TRI = nullptr;
@@ -412,7 +409,6 @@ private:
 
   MachineOptimizationRemarkEmitter *ORE = nullptr;
   MachineRegisterInfo *MRI = nullptr;
-  MachineLoopInfo *MLI = nullptr;
 };
 
 static LiveRegs getPhysLiveRegs(LiveRegUnits const &LiveUnits) {
@@ -887,8 +883,8 @@ void MachineSMEABI::emitAllocateLazySaveBuffer(
     // will always allocate the lazy save buffer (even if the function contains
     // no lazy saves). If we want to handle Windows here, we'll need to
     // implement something similar to LowerWindowsDYNAMIC_STACKALLOC.
-    assert(!Subtarget->isTargetWindows() &&
-           "Lazy ZA save is not yet supported on Windows");
+    assert(!Subtarget->isTargetWindowsOrUEFI() &&
+           "Lazy ZA save is not yet supported on Windows or UEFI");
     Buffer = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
     // Get original stack pointer.
     BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::COPY), SP)
@@ -1242,6 +1238,4 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-FunctionPass *llvm::createMachineSMEABIPass(CodeGenOptLevel OptLevel) {
-  return new MachineSMEABI(OptLevel);
-}
+FunctionPass *llvm::createMachineSMEABIPass() { return new MachineSMEABI(); }

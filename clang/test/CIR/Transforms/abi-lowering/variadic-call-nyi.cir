@@ -21,13 +21,13 @@ module attributes {
 } {
 
   cir.func private @variadic(!s8i, ...) -> !s32i
-      attributes { test_classify = #one_direct }
+      requires_call_conv_lowering attributes { test_classify = #one_direct }
 
   // A fixed per-function classification attribute covers the declared
   // parameter only, so the argument at the ellipsis is unclassified.  The call
   // is rejected even though nothing in the declared signature needs a rewrite.
   cir.func @caller(%arg0: !s8i, %arg1: !s32i) -> !s32i
-      attributes { test_classify = #two_direct } {
+      requires_call_conv_lowering attributes { test_classify = #two_direct } {
     %0 = cir.call @variadic(%arg0, %arg1) : (!s8i, !s32i) -> !s32i
     cir.return %0 : !s32i
   }

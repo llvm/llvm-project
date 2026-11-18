@@ -240,6 +240,15 @@ public:
     return false;
   }
 
+  /// Notify the external source that Sema started a qualified name lookup
+  /// into \p DC (e.g. the lookup of \c B in \c A::B or of \c A in \c ::A).
+  virtual void StartedQualifiedLookup(const DeclContext *DC) {}
+
+  /// Notify the external source that Sema finished the qualified name lookup
+  /// into \p DC that was started by the last call to
+  /// \c StartedQualifiedLookup.
+  virtual void FinishedQualifiedLookup(const DeclContext *DC) {}
+
   /// LLVM-style RTTI.
   /// \{
   bool isA(const void *ClassID) const override {

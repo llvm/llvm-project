@@ -70,6 +70,13 @@ public:
                                           cir::LangAddressSpace::Default);
   }
 
+  /// Get the CIR address space attribute for a global in AST address space
+  /// \p as.
+  virtual mlir::ptr::MemorySpaceAttrInterface
+  getGlobalCIRAddressSpace(clang::LangAS as) const {
+    return cir::toCIRAddressSpaceAttr(info->cgt.getMLIRContext(), as);
+  }
+
   /// Get the CIR value of a null pointer of type \p ptrTy, where \p qt is the
   /// source pointer type.
   virtual mlir::Value getNullPointer(CIRGenModule &cgm, cir::PointerType ptrTy,
@@ -193,6 +200,9 @@ std::unique_ptr<TargetCIRGenInfo> createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt);
 
 std::unique_ptr<TargetCIRGenInfo>
 createCommonSPIRTargetCIRGenInfo(CIRGenTypes &cgt);
+
+std::unique_ptr<TargetCIRGenInfo>
+createSystemZTargetCIRGenInfo(CIRGenTypes &cgt);
 
 } // namespace clang::CIRGen
 

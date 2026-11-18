@@ -185,68 +185,13 @@ private:
   std::atomic<bool> Disconnected{false};
 };
 
-struct RemoteSymbolLookupSetElement {
-  std::string Name;
-  bool Required;
-};
-
-using RemoteSymbolLookupSet = std::vector<RemoteSymbolLookupSetElement>;
-
-struct RemoteSymbolLookup {
-  uint64_t H;
-  RemoteSymbolLookupSet Symbols;
-};
-
 namespace shared {
-
-using SPSRemoteSymbolLookupSetElement = SPSTuple<SPSString, bool>;
-
-using SPSRemoteSymbolLookupSet = SPSSequence<SPSRemoteSymbolLookupSetElement>;
-
-using SPSRemoteSymbolLookup = SPSTuple<uint64_t, SPSRemoteSymbolLookupSet>;
 
 /// Tuple containing target triple, page size, and bootstrap symbols.
 using SPSSimpleRemoteEPCExecutorInfo =
     SPSTuple<SPSString, uint64_t,
              SPSSequence<SPSTuple<SPSString, SPSSequence<char>>>,
              SPSSequence<SPSTuple<SPSString, SPSExecutorAddr>>>;
-
-template <>
-class SPSSerializationTraits<SPSRemoteSymbolLookupSetElement,
-                             RemoteSymbolLookupSetElement> {
-public:
-  static size_t size(const RemoteSymbolLookupSetElement &V) {
-    return SPSArgList<SPSString, bool>::size(V.Name, V.Required);
-  }
-
-  static size_t serialize(SPSOutputBuffer &OB,
-                          const RemoteSymbolLookupSetElement &V) {
-    return SPSArgList<SPSString, bool>::serialize(OB, V.Name, V.Required);
-  }
-
-  static size_t deserialize(SPSInputBuffer &IB,
-                            RemoteSymbolLookupSetElement &V) {
-    return SPSArgList<SPSString, bool>::deserialize(IB, V.Name, V.Required);
-  }
-};
-
-template <>
-class SPSSerializationTraits<SPSRemoteSymbolLookup, RemoteSymbolLookup> {
-public:
-  static size_t size(const RemoteSymbolLookup &V) {
-    return SPSArgList<uint64_t, SPSRemoteSymbolLookupSet>::size(V.H, V.Symbols);
-  }
-
-  static size_t serialize(SPSOutputBuffer &OB, const RemoteSymbolLookup &V) {
-    return SPSArgList<uint64_t, SPSRemoteSymbolLookupSet>::serialize(OB, V.H,
-                                                                     V.Symbols);
-  }
-
-  static size_t deserialize(SPSInputBuffer &IB, RemoteSymbolLookup &V) {
-    return SPSArgList<uint64_t, SPSRemoteSymbolLookupSet>::deserialize(
-        IB, V.H, V.Symbols);
-  }
-};
 
 template <>
 class SPSSerializationTraits<SPSSimpleRemoteEPCExecutorInfo,
@@ -268,13 +213,6 @@ public:
         IB, SI.TargetTriple, SI.PageSize, SI.BootstrapMap, SI.BootstrapSymbols);
   }
 };
-
-using SPSLoadDylibSignature = SPSExpected<SPSExecutorAddr>(SPSExecutorAddr,
-                                                           SPSString, uint64_t);
-
-using SPSLookupSymbolsSignature =
-    SPSExpected<SPSSequence<SPSSequence<SPSExecutorAddr>>>(
-        SPSExecutorAddr, SPSSequence<SPSRemoteSymbolLookup>);
 
 } // end namespace shared
 } // end namespace orc

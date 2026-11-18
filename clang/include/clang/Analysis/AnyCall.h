@@ -166,7 +166,8 @@ public:
   /// \returns actual arguments for expression-backed calls, or an empty list
   /// for declaration-backed calls and call kinds with implicit or synthesized
   /// argument lists, such as allocators and destructors. For instance member
-  /// calls, the implicit object argument is included as argument 0.
+  /// calls, the implicit object argument is included as argument 0. For static
+  /// member operator calls, the object expression is omitted.
   llvm::SmallVector<const Expr *, 4> arguments() const {
     if (!E)
       return {};
@@ -179,12 +180,12 @@ public:
         Args.push_back(MCE->getImplicitObjectArgument());
       Args.append(CE->arg_begin(), CE->arg_end());
 
-      if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(CE))
-        // For `static operator()`, the first argument is the object argument,
-        // remove it from the argument list to avoid off-by-one errors.
-        if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
-            FD && FD->isStatic() && OCE->getOperator() == OO_Call)
-          Args.erase(Args.begin());
+      // A static member operator (`operator()` or `operator[]`) is called with
+      // the object expression as argument 0; drop it so arguments match
+      // parameters.
+      if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(D);
+          isa<CXXOperatorCallExpr>(CE) && MD && MD->isStatic())
+        Args.erase(Args.begin());
       return Args;
     }
     case Block: {

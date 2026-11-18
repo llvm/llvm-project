@@ -8,7 +8,11 @@
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMTerminatorOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dominance.h"
@@ -361,9 +365,7 @@ private:
   // Get the (compile-time constant) size of varType as per the
   // given DataLayout dl.
   std::int64_t getSizeInBytes(const DataLayout &dl, Type varType) const {
-    llvm::TypeSize size = dl.getTypeSize(varType);
-    unsigned short alignment = dl.getTypeABIAlignment(varType);
-    return llvm::alignTo(size, alignment);
+    return dl.getTypeAllocSize(varType);
   }
 
   LLVM::LLVMFuncOp getMalloc(ModuleOp mod, IRRewriter &rewriter) const {

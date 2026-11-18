@@ -10,30 +10,21 @@
 #include "Mips.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
-// Note: this option is defined here to be visible from libLLVMMipsAsmParser
-//       and libLLVMMipsCodeGen
-cl::opt<bool>
-EmitJalrReloc("mips-jalr-reloc", cl::Hidden,
-              cl::desc("MIPS: Emit R_{MICRO}MIPS_JALR relocation with jalr"),
-              cl::init(true));
-cl::opt<bool>
-    NoZeroDivCheck("mno-check-zero-division", cl::Hidden,
-                   cl::desc("MIPS: Don't trap on integer division by zero."),
-                   cl::init(false));
-
 namespace {
-static constexpr MCPhysReg O32IntRegs[] = {Mips::A0, Mips::A1, Mips::A2,
-                                           Mips::A3};
-static constexpr MCPhysReg NABIIntRegs[] = {Mips::A0, Mips::A1, Mips::A2,
-                                            Mips::A3, Mips::T0, Mips::T1,
-                                            Mips::T2, Mips::T3};
+static constexpr MCPhysReg O32IntRegs[] = {Mips::R4, Mips::R5, Mips::R6,
+                                           Mips::R7};
+static constexpr MCPhysReg NABIIntRegs[] = {Mips::R4,  Mips::R5, Mips::R6,
+                                            Mips::R7,  Mips::R8, Mips::R9,
+                                            Mips::R10, Mips::R11};
+static const MCPhysReg P32IntRegs[] = {Mips::R4,  Mips::R5, Mips::R6,
+                                       Mips::R7,  Mips::R8, Mips::R9,
+                                       Mips::R10, Mips::R11};
 static constexpr MCPhysReg Mips64IntRegs[] = {
-    Mips::A0_64, Mips::A1_64, Mips::A2_64, Mips::A3_64,
-    Mips::T0_64, Mips::T1_64, Mips::T2_64, Mips::T3_64};
+    Mips::R4_64, Mips::R5_64, Mips::R6_64,  Mips::R7_64,
+    Mips::R8_64, Mips::R9_64, Mips::R10_64, Mips::R11_64};
 
 struct GPR {
   MCPhysReg Reg32;
@@ -41,47 +32,54 @@ struct GPR {
 };
 
 static constexpr GPR OABITempRegs[] = {
-    {Mips::T0, Mips::T0_64}, {Mips::T1, Mips::T1_64}, {Mips::T2, Mips::T2_64},
-    {Mips::T3, Mips::T3_64}, {Mips::T4, Mips::T4_64}, {Mips::T5, Mips::T5_64},
-    {Mips::T6, Mips::T6_64}, {Mips::T7, Mips::T7_64}, {Mips::T8, Mips::T8_64},
-    {Mips::T9, Mips::T9_64},
+    {Mips::R8, Mips::R8_64},   {Mips::R9, Mips::R9_64},
+    {Mips::R10, Mips::R10_64}, {Mips::R11, Mips::R11_64},
+    {Mips::R12, Mips::R12_64}, {Mips::R13, Mips::R13_64},
+    {Mips::R14, Mips::R14_64}, {Mips::R15, Mips::R15_64},
+    {Mips::R24, Mips::R24_64}, {Mips::R25, Mips::R25_64},
 };
 
 static constexpr GPR NABITempRegs[] = {
-    {Mips::T4, Mips::T4_64},
-    {Mips::T5, Mips::T5_64},
-    {Mips::T6, Mips::T6_64},
-    {Mips::T7, Mips::T7_64},
+    {Mips::R12, Mips::R12_64},
+    {Mips::R13, Mips::R13_64},
+    {Mips::R14, Mips::R14_64},
+    {Mips::R15, Mips::R15_64},
     {Mips::NoRegister, Mips::NoRegister},
     {Mips::NoRegister, Mips::NoRegister},
     {Mips::NoRegister, Mips::NoRegister},
     {Mips::NoRegister, Mips::NoRegister},
-    {Mips::T8, Mips::T8_64},
-    {Mips::T9, Mips::T9_64},
+    {Mips::R24, Mips::R24_64},
+    {Mips::R25, Mips::R25_64},
 };
 
 static constexpr GPR PABITempRegs[] = {
-    {Mips::T4, Mips::T4_64},
-    {Mips::T5, Mips::T5_64},
-    {Mips::T6, Mips::T6_64},
-    {Mips::T7, Mips::T7_64},
-    {Mips::V0, Mips::V0_64},
-    {Mips::V1, Mips::V1_64},
+    {Mips::R12, Mips::R12_64},
+    {Mips::R13, Mips::R13_64},
+    {Mips::R14, Mips::R14_64},
+    {Mips::R15, Mips::R15_64},
+    {Mips::R2, Mips::R2_64},
+    {Mips::R3, Mips::R3_64},
     {Mips::NoRegister, Mips::NoRegister},
     {Mips::NoRegister, Mips::NoRegister},
-    {Mips::T8, Mips::T8_64},
-    {Mips::T9, Mips::T9_64},
+    {Mips::R24, Mips::R24_64},
+    {Mips::R25, Mips::R25_64},
 };
 
 static constexpr GPR SavedRegs[] = {
-    {Mips::S0, Mips::S0_64}, {Mips::S1, Mips::S1_64}, {Mips::S2, Mips::S2_64},
-    {Mips::S3, Mips::S3_64}, {Mips::S4, Mips::S4_64}, {Mips::S5, Mips::S5_64},
-    {Mips::S6, Mips::S6_64}, {Mips::S7, Mips::S7_64},
+    {Mips::R16, Mips::R16_64}, {Mips::R17, Mips::R17_64},
+    {Mips::R18, Mips::R18_64}, {Mips::R19, Mips::R19_64},
+    {Mips::R20, Mips::R20_64}, {Mips::R21, Mips::R21_64},
+    {Mips::R22, Mips::R22_64}, {Mips::R23, Mips::R23_64},
 };
 
 static constexpr GPR ReturnRegs[] = {
-    {Mips::V0, Mips::V0_64},
-    {Mips::V1, Mips::V1_64},
+    {Mips::R2, Mips::R2_64},
+    {Mips::R3, Mips::R3_64},
+};
+
+static constexpr GPR PABIReturnRegs[] = {
+    {Mips::R4, Mips::R4_64},
+    {Mips::R5, Mips::R5_64},
 };
 
 MCRegister getReg(ArrayRef<GPR> Regs, unsigned I, bool Is64Bit) {
@@ -96,7 +94,9 @@ ArrayRef<MCPhysReg> MipsABIInfo::getArgRegs(bool Is64Bit) const {
   assert(IsKnown() && "Unknown ABI");
   if (Is64Bit)
     return ArrayRef(Mips64IntRegs).take_front(IsO32() ? 4 : 8);
-  return IsO32() ? ArrayRef(O32IntRegs) : ArrayRef(NABIIntRegs);
+  return IsO32()   ? ArrayRef(O32IntRegs)
+         : IsP32() ? ArrayRef(P32IntRegs)
+                   : ArrayRef(NABIIntRegs);
 }
 
 ArrayRef<MCPhysReg> MipsABIInfo::GetByValArgRegs() const {
@@ -110,6 +110,8 @@ unsigned MipsABIInfo::getRegAltNameIndex() const {
   case ABI::N32:
   case ABI::N64:
     return Mips::NABIRegAltName;
+  case ABI::P32:
+    return Mips::PABIRegAltName;
   case ABI::Unknown:
     llvm_unreachable("Unknown ABI");
   }
@@ -146,6 +148,8 @@ MCRegister MipsABIInfo::getReturnReg(unsigned I, bool Is64Bit) const {
   case ABI::N32:
   case ABI::N64:
     return getReg(ReturnRegs, I, Is64Bit);
+  case ABI::P32:
+    return getReg(PABIReturnRegs, I, Is64Bit);
   case ABI::Unknown:
     llvm_unreachable("Unknown ABI");
   }
@@ -161,13 +165,15 @@ ArrayRef<MCPhysReg> MipsABIInfo::getVarArgRegs(bool isGP64bit) const {
   }
   if (IsN32() || IsN64())
     return ArrayRef(Mips64IntRegs);
+  if (IsP32())
+    return ArrayRef(P32IntRegs);
   llvm_unreachable("Unhandled ABI");
 }
 
 unsigned MipsABIInfo::GetCalleeAllocdArgSizeInBytes(CallingConv::ID CC) const {
   if (IsO32())
     return CC != CallingConv::Fast ? 16 : 0;
-  if (IsN32() || IsN64())
+  if (IsN32() || IsN64() || IsP32())
     return 0;
   llvm_unreachable("Unhandled ABI");
 }
@@ -179,12 +185,16 @@ MipsABIInfo MipsABIInfo::computeTargetABI(const Triple &TT, StringRef ABIName) {
     return MipsABIInfo::N32();
   if (ABIName.starts_with("n64"))
     return MipsABIInfo::N64();
+  if (ABIName.starts_with("p32"))
+    return MipsABIInfo::P32();
   if (TT.isABIN32())
     return MipsABIInfo::N32();
   assert(ABIName.empty() && "Unknown ABI option for MIPS");
 
   if (TT.isMIPS64())
     return MipsABIInfo::N64();
+  if (TT.isNanoMips())
+    return MipsABIInfo::P32();
   return MipsABIInfo::O32();
 }
 
@@ -203,31 +213,31 @@ unsigned MipsABIInfo::GetGlobalPtr() const {
 }
 
 unsigned MipsABIInfo::GetNullPtr() const {
-  return ArePtrs64bit() ? Mips::ZERO_64 : Mips::ZERO;
+  return ArePtrs64bit() ? Mips::R0_64 : Mips::R0;
 }
 
 unsigned MipsABIInfo::GetZeroReg() const {
-  return AreGprs64bit() ? Mips::ZERO_64 : Mips::ZERO;
+  return AreGprs64bit() ? Mips::R0_64 : Mips::R0;
 }
 
 unsigned MipsABIInfo::GetPtrAdduOp() const {
-  return ArePtrs64bit() ? Mips::DADDu : Mips::ADDu;
+  return ArePtrs64bit() ? Mips::DADDu : IsP32() ? Mips::ADDu_NM : Mips::ADDu;
 }
 
 unsigned MipsABIInfo::GetPtrAddiuOp() const {
-  return ArePtrs64bit() ? Mips::DADDiu : Mips::ADDiu;
+  return ArePtrs64bit() ? Mips::DADDiu : IsP32() ? Mips::ADDIU_NM : Mips::ADDiu;
 }
 
 unsigned MipsABIInfo::GetPtrSubuOp() const {
-  return ArePtrs64bit() ? Mips::DSUBu : Mips::SUBu;
+  return ArePtrs64bit() ? Mips::DSUBu : IsP32() ? Mips::SUBu_NM : Mips::SUBu;
 }
 
 unsigned MipsABIInfo::GetPtrAndOp() const {
-  return ArePtrs64bit() ? Mips::AND64 : Mips::AND;
+  return ArePtrs64bit() ? Mips::AND64 : IsP32() ? Mips::AND_NM : Mips::AND;
 }
 
 unsigned MipsABIInfo::GetGPRMoveOp() const {
-  return ArePtrs64bit() ? Mips::OR64 : Mips::OR;
+  return ArePtrs64bit() ? Mips::OR64 : IsP32() ? Mips::OR_NM : Mips::OR;
 }
 
 unsigned MipsABIInfo::GetEhDataReg(unsigned I) const {
