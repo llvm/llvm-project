@@ -17,17 +17,21 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Frontend/ASTUnit.h"
-#include "clang/Lex/LiteralSupport.h"
-#include "clang/Lex/Pragma.h"
-#include "clang/Lex/Preprocessor.h"
-#include "clang/Tooling/Tooling.h"
-#include "llvm/Support/FileSystem.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <atomic>
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <map>
 #include <memory>
 #include <mutex>
@@ -38,28 +42,17 @@ using namespace clang::ast_matchers;
 namespace clang::tidy {
 
 /// How to build the header AST (the throw-away AST of the standard library
-/// header that the annotated types are supposed to mimic). Both fields come
-/// verbatim from the pragma; there are no defaults.
+/// header that the annotated types are supposed to mimic).
+///
+/// Nothing here is configured by the user: it is a copy of the compiler
+/// invocation of the TU being analysed, so the header is found exactly where
+/// the project's own build finds it (sysroot, -isystem, -stdlib, target, ...).
 struct HeaderASTConfig {
-  /// Passed as -isysroot. Empty means "not configured".
-  std::string Sysroot;
-  /// Header to include as spelled (`<optional>` verbatim, anything else as a
-  /// quoted include). Empty means "not configured".
-  std::string Header;
-  /// Language standard of the header AST, passed as -std= (e.g. `c++23`).
-  /// Empty means "not configured".
-  std::string Std;
-  /// Malformed pragmas; reported at the end of the TU.
-  std::vector<SourceLocation> BadPragmaLocs;
-
-  bool isConfigured() const {
-    return !Sysroot.empty() && !Header.empty() && !Std.empty();
-  }
-
-  friend bool operator<(const HeaderASTConfig &L, const HeaderASTConfig &R) {
-    return std::tie(L.Sysroot, L.Header, L.Std) <
-           std::tie(R.Sysroot, R.Header, R.Std);
-  }
+  /// Copy of the analysed TU's invocation, taken before parsing starts.
+  std::shared_ptr<CompilerInvocation> Invocation;
+  /// Working directory of the analysed TU (relative include paths in a
+  /// compilation database are relative to it).
+  std::string WorkingDir;
 };
 
 namespace {
@@ -304,29 +297,72 @@ private:
   unsigned Pending = 0;
 };
 
-std::unique_ptr<ASTUnit> buildHeaderAST(const HeaderASTConfig &Cfg) {
-  if (!Cfg.isConfigured())
-    return nullptr;
-
-  std::string Code = Cfg.Header.front() == '<'
-                         ? "#include " + Cfg.Header + "\n"
-                         : "#include \"" + Cfg.Header + "\"\n";
-  std::vector<std::string> Args = {
-      "-std=" + Cfg.Std, "-fsyntax-only", "-x", "c++", "-isysroot", Cfg.Sysroot,
+/// The standard library header that declares each supported target class.
+/// Sema only accepts `std::optional` for now.
+std::optional<llvm::StringRef> headerForTarget(llvm::StringRef Target) {
+  static const llvm::StringMap<llvm::StringRef> Headers = {
+      {"std::optional", "<optional>"},
   };
+  auto It = Headers.find(Target);
+  if (It == Headers.end())
+    return std::nullopt;
+  return It->second;
+}
+
+/// Derives the invocation for the header AST from the analysed TU's one:
+/// same header search, target and macros; the main file replaced by `Path`;
+/// anything that would write files or pull in project code dropped.
+std::shared_ptr<CompilerInvocation>
+makeHeaderInvocation(const CompilerInvocation &TU, llvm::StringRef Path) {
+  auto CI = std::make_shared<CompilerInvocation>(TU);
+
+  FrontendOptions &FE = CI->getFrontendOpts();
+  FE.Inputs = {FrontendInputFile(Path, Language::CXX)};
+  FE.ProgramAction = frontend::ParseSyntaxOnly;
+  FE.OutputFile.clear();
+  CI->getDependencyOutputOpts() = DependencyOutputOptions();
+  CI->getCodeGenOpts().MainFileName.clear();
+
+  PreprocessorOptions &PP = CI->getPreprocessorOpts();
+  PP.Includes.clear(); // -include of project headers
+  PP.ImplicitPCHInclude.clear();
+
+  // The target class may not exist below its standard (std::optional is
+  // C++17), so raise the standard of the header AST only.
+  LangOptions &LO = CI->getLangOpts();
+  if (!LO.CPlusPlus17) {
+    std::vector<std::string> Ignored;
+    LangOptions::setLangDefaults(LO, Language::CXX,
+                                 llvm::Triple(CI->getTargetOpts().Triple),
+                                 Ignored, LangStandard::lang_cxx17);
+  }
+  return CI;
+}
+
+std::unique_ptr<ASTUnit> buildHeaderAST(std::shared_ptr<CompilerInvocation> CI,
+                                        llvm::StringRef Path,
+                                        llvm::StringRef Code,
+                                        llvm::StringRef WorkingDir) {
+  // The main file only exists in memory; everything else comes from disk.
+  auto Overlay = llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+      llvm::vfs::getRealFileSystem());
+  auto InMemory = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  Overlay->pushOverlay(InMemory);
+  if (!WorkingDir.empty())
+    Overlay->setCurrentWorkingDirectory(WorkingDir);
+  InMemory->addFile(Path, 0, llvm::MemoryBuffer::getMemBufferCopy(Code));
+
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(CI->getFileSystemOpts(),
+                                                      Overlay);
   // Fail open and silently: problems in the header AST are not the user's.
-  IgnoringDiagConsumer Ignore;
-  // The driver locates its resource dir (builtin headers) relative to the tool
-  // path, so it must be the real executable, not a bare name that would be
-  // resolved against the current directory.
-  static int Anchor;
-  std::string ToolPath =
-      llvm::sys::fs::getMainExecutable("clang-tidy", &Anchor);
-  std::unique_ptr<ASTUnit> AST = tooling::buildASTFromCodeWithArgs(
-      Code, Args, "clang_tidy_analyze_as_header.cc", ToolPath,
-      std::make_shared<PCHContainerOperations>(),
-      tooling::getClangStripDependencyFileAdjuster(), tooling::FileContentMappings(),
-      &Ignore);
+  auto DiagOpts = std::make_shared<DiagnosticOptions>();
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+      CompilerInstance::createDiagnostics(*Overlay, *DiagOpts,
+                                          new IgnoringDiagConsumer(),
+                                          /*ShouldOwnClient=*/true);
+  std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCompilerInvocation(
+      std::move(CI), std::make_shared<PCHContainerOperations>(), DiagOpts,
+      Diags, Files);
   if (!AST || AST->getDiagnostics().hasUncompilableErrorOccurred())
     return nullptr;
   return AST;
@@ -334,17 +370,27 @@ std::unique_ptr<ASTUnit> buildHeaderAST(const HeaderASTConfig &Cfg) {
 
 } // namespace
 
-/// Checks every query against its target class in a header AST built from
-/// `Config` (cached per distinct config). Returns one bool per query (true =
-/// matched something), or std::nullopt if the config is incomplete or the
+/// Checks every query against its target class in a header AST built with the
+/// analysed TU's own compiler settings (cached per distinct setting). Returns
+/// one bool per query (true = matched something), or std::nullopt if the
 /// header AST could not be built.
 static std::optional<std::vector<bool>>
 validateAgainstHeaderAST(const HeaderASTConfig &Config,
                          llvm::ArrayRef<AttrQuery> Queries) {
   if (Queries.empty())
     return std::vector<bool>();
-  if (!Config.isConfigured())
-    return std::nullopt; // no (complete) pragma: nothing to validate against
+  if (!Config.Invocation || !Config.Invocation->getLangOpts().CPlusPlus)
+    return std::nullopt;
+
+  // One #include per distinct header the queries need.
+  std::string Code;
+  llvm::StringSet<> Seen;
+  for (const AttrQuery &Q : Queries)
+    if (std::optional<llvm::StringRef> H = headerForTarget(Q.Target))
+      if (Seen.insert(*H).second)
+        Code += ("#include " + *H + "\n").str();
+  if (Code.empty())
+    return std::nullopt; // no known target: nothing to validate against
 
   // Translate each distinct attribute to a matcher exactly once.
   std::vector<Entry> Entries;
@@ -368,10 +414,27 @@ validateAgainstHeaderAST(const HeaderASTConfig &Config,
   }
 
   {
-    static std::map<HeaderASTConfig, std::unique_ptr<ASTUnit>> Cache;
-    auto It = Cache.find(Config);
+    llvm::SmallString<256> Path(Config.WorkingDir);
+    llvm::sys::path::append(Path, "__clang_tidy_analyze_as_header.cpp");
+    std::shared_ptr<CompilerInvocation> CI =
+        makeHeaderInvocation(*Config.Invocation, Path);
+
+    // Key: everything that affects how the header is found and parsed.
+    std::string Key = Config.WorkingDir + '\n' + Code;
+    for (const std::string &Arg : CI->getCC1CommandLine())
+      Key += '\n' + Arg;
+
+    // clang-tidy may run TUs on several threads (e.g. inside clangd), and the
+    // cached ASTs are shared, so both the cache and the traversal are locked.
+    static std::mutex CacheMutex;
+    static std::map<std::string, std::unique_ptr<ASTUnit>> Cache;
+    std::lock_guard<std::mutex> Lock(CacheMutex);
+    auto It = Cache.find(Key);
     if (It == Cache.end())
-      It = Cache.emplace(Config, buildHeaderAST(Config)).first;
+      It = Cache
+               .emplace(Key, buildHeaderAST(std::move(CI), Path, Code,
+                                            Config.WorkingDir))
+               .first;
     ASTUnit *AST = It->second.get();
     if (!AST)
       return std::nullopt;
@@ -388,53 +451,6 @@ validateAgainstHeaderAST(const HeaderASTConfig &Config,
 }
 
 namespace {
-
-/// `#pragma clang_tidy_analyze_as_header sysroot("<dir>") header("<optional>") std("c++23")`
-/// All parameters are mandatory and must appear in this order; nothing is
-/// defaulted or inferred. They tell the attribute validator how to build its
-/// header AST. Anything else is reported by the check.
-class AnalyzeAsHeaderPragmaHandler : public PragmaHandler {
-public:
-  AnalyzeAsHeaderPragmaHandler(std::shared_ptr<HeaderASTConfig> Config)
-      : PragmaHandler("clang_tidy_analyze_as_header"), Config(std::move(Config)) {}
-
-  void HandlePragma(Preprocessor &PP, PragmaIntroducer,
-                    Token &FirstToken) override {
-    HeaderASTConfig NewConfig;
-    Token Tok;
-    if (lexParam(PP, Tok, "sysroot", NewConfig.Sysroot) &&
-        lexParam(PP, Tok, "header", NewConfig.Header) &&
-        lexParam(PP, Tok, "std", NewConfig.Std)) {
-      PP.LexUnexpandedToken(Tok);
-      if (Tok.is(tok::eod)) {
-        *Config = std::move(NewConfig);
-        return;
-      }
-    }
-    // Reported by the check (a tidy diagnostic) once matching starts.
-    Config->BadPragmaLocs.push_back(FirstToken.getLocation());
-  }
-
-private:
-  /// Lexes `Name("<string>")` into `Value`.
-  static bool lexParam(Preprocessor &PP, Token &Tok, StringRef Name,
-                       std::string &Value) {
-    PP.LexUnexpandedToken(Tok);
-    if (!Tok.is(tok::identifier) || Tok.getIdentifierInfo()->getName() != Name)
-      return false;
-    PP.LexUnexpandedToken(Tok);
-    if (Tok.isNot(tok::l_paren))
-      return false;
-    PP.LexUnexpandedToken(Tok);
-    if (!tok::isStringLiteral(Tok.getKind()))
-      return false;
-    Value = StringLiteralParser(Tok, PP).GetString().str();
-    PP.LexUnexpandedToken(Tok);
-    return Tok.is(tok::r_paren);
-  }
-
-  std::shared_ptr<HeaderASTConfig> Config;
-};
 
 /// Collects the `analyze_as_*` attributes written in user code, in one walk.
 class AnalyzeAsAttrCollector : public RecursiveASTVisitor<AnalyzeAsAttrCollector> {
@@ -486,17 +502,12 @@ private:
 class AnalyzeAsAttrValidationConsumer : public ASTConsumer {
 public:
   AnalyzeAsAttrValidationConsumer(ClangTidyContext &Context,
-                                  std::shared_ptr<HeaderASTConfig> Config)
+                                  HeaderASTConfig Config)
       : Context(Context), Config(std::move(Config)) {}
 
   void HandleTranslationUnit(ASTContext &Ctx) override {
     if (Ctx.getDiagnostics().hasUncompilableErrorOccurred())
       return;
-    for (SourceLocation Loc : Config->BadPragmaLocs)
-      report(Loc,
-             "malformed 'clang_tidy_analyze_as_header'; expected "
-             "sysroot(\"...\") header(\"...\") std(\"...\"); pragma ignored");
-
     AnalyzeAsAttrCollector Collector(Ctx.getSourceManager());
     Collector.TraverseDecl(Ctx.getTranslationUnitDecl());
     if (Collector.Results.empty())
@@ -508,7 +519,7 @@ public:
 
     // Fails open: no header AST means no diagnostics.
     std::optional<std::vector<bool>> Matched =
-        validateAgainstHeaderAST(*Config, Queries);
+        validateAgainstHeaderAST(Config, Queries);
     if (!Matched)
       return;
 
@@ -528,16 +539,22 @@ private:
   }
 
   ClangTidyContext &Context;
-  std::shared_ptr<HeaderASTConfig> Config;
+  HeaderASTConfig Config;
 };
 
 } // namespace
 
 std::unique_ptr<ASTConsumer>
 createAnalyzeAsAttrValidationConsumer(ClangTidyContext &Context,
-                                      Preprocessor &PP) {
-  auto Config = std::make_shared<HeaderASTConfig>();
-  PP.AddPragmaHandler(new AnalyzeAsHeaderPragmaHandler(Config));
+                                      CompilerInstance &Compiler) {
+  // Snapshot the TU's settings now; the header AST is built (lazily, only if
+  // the TU has annotations) from a copy of them.
+  HeaderASTConfig Config;
+  Config.Invocation =
+      std::make_shared<CompilerInvocation>(Compiler.getInvocation());
+  if (llvm::ErrorOr<std::string> CWD =
+          Compiler.getVirtualFileSystem().getCurrentWorkingDirectory())
+    Config.WorkingDir = *CWD;
   return std::make_unique<AnalyzeAsAttrValidationConsumer>(Context,
                                                            std::move(Config));
 }

@@ -1,0 +1,35 @@
+// Minimal stand-in for <optional>, so the analyze_as attribute validator is
+// tested without depending on the host's standard library.
+#ifndef ANALYZE_AS_TEST_OPTIONAL
+#define ANALYZE_AS_TEST_OPTIONAL
+
+// Only declared from C++17, like the real header: the validator must raise
+// the standard of its header AST when the analysed file is older.
+#if __cplusplus >= 201703L
+
+namespace std {
+
+struct nullopt_t {
+  constexpr explicit nullopt_t(int) {}
+};
+
+template <typename T> class optional {
+public:
+  constexpr optional() noexcept;
+  constexpr optional(nullopt_t) noexcept;
+  optional &operator=(nullopt_t) noexcept;
+
+  constexpr bool has_value() const noexcept;
+  constexpr explicit operator bool() const noexcept;
+  constexpr T &value() &;
+  constexpr const T &value() const &;
+
+  template <typename... Args> T &emplace(Args &&...args);
+  void reset() noexcept;
+  void swap(optional &other) noexcept;
+};
+
+} // namespace std
+
+#endif // __cplusplus >= 201703L
+#endif // ANALYZE_AS_TEST_OPTIONAL

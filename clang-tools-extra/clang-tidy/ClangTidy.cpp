@@ -469,7 +469,7 @@ ClangTidyASTConsumerFactory::createASTConsumer(CompilerInstance &Compiler,
   }
 
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
-  Consumers.push_back(createAnalyzeAsAttrValidationConsumer(Context, *PP));
+  Consumers.push_back(createAnalyzeAsAttrValidationConsumer(Context, Compiler));
   if (!Checks.empty())
     Consumers.push_back(Finder->newASTConsumer());
 

@@ -1,7 +1,12 @@
-// RUN: clang-tidy %s -checks='-*,llvm-namespace-comment' -- -std=c++17 | FileCheck %s
-
-#pragma clang_tidy_analyze_as_header sysroot("/path/to/sysroot") header("<optional>") std("c++23")
-#pragma clang_tidy_analyze_as_header sysroot("/path/to/sysroot") header("<vector>") std("c++23")
+// The validator parses <optional> with this file's own compile flags, so the
+// test supplies its own <optional> through -isystem; no path is hardcoded.
+// RUN: clang-tidy %s -checks='-*,llvm-namespace-comment' -- -std=c++17 -nostdinc++ -isystem %S/Inputs/analyze-as | FileCheck %s --implicit-check-not=warning:
+//
+// The header AST is raised to C++17 even if this file is compiled as C++14.
+// RUN: clang-tidy %s -checks='-*,llvm-namespace-comment' -- -std=c++14 -nostdinc++ -isystem %S/Inputs/analyze-as | FileCheck %s --implicit-check-not=warning:
+//
+// If <optional> cannot be found, nothing is validated (and nothing reported).
+// RUN: clang-tidy %s -checks='-*,llvm-namespace-comment' -- -std=c++17 -nostdinc++ | count 0
 
 struct nothing_t {};
 
@@ -28,4 +33,9 @@ public:
   [[clang::analyze_as_method("emplace(oops))")]] void c();
   // CHECK: :[[@LINE-1]]:5: warning: 'analyze_as_method' argument "emplace(oops))" does not match anything in std::optional; the attribute is likely malformed [clang-tidy-config]
   [[clang::analyze_as_method("value")]] void d(); // fine
+};
+
+class NotAnnotated {
+public:
+  [[clang::analyze_as_method("emplaceTYPO")]] void a(); // no target: skipped
 };

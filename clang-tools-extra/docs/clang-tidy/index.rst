@@ -498,12 +498,10 @@ Validating ``analyze_as_*`` attributes
 
 :program:`clang-tidy` reports ``[[clang::analyze_as_class]]`` and
 ``[[clang::analyze_as_method]]`` strings that match nothing in the standard
-library header they refer to. The header is located by a required pragma;
-without it nothing is validated:
-
-.. code-block:: c++
-
-   #pragma clang_tidy_analyze_as_header sysroot("/path/to/sdk") header("<optional>") std("c++23")
+library header they refer to (``<optional>`` for ``std::optional``). The
+header is found with the analysed file's own compile flags (sysroot,
+include paths, standard library), so nothing needs to be configured. If the
+header cannot be parsed, nothing is validated.
 
 .. _clang-tidy-nolint:
 
