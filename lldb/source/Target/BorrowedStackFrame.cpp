@@ -139,6 +139,11 @@ bool BorrowedStackFrame::IsArtificial() const {
 
 bool BorrowedStackFrame::IsHidden() { return m_borrowed_frame_sp->IsHidden(); }
 
+llvm::Expected<lldb::ThreadPlanSP>
+BorrowedStackFrame::GetThreadPlanForStepType(lldb::StepType step_type) {
+  return m_borrowed_frame_sp->GetThreadPlanForStepType(step_type);
+}
+
 const char *BorrowedStackFrame::GetFunctionName() {
   return m_borrowed_frame_sp->GetFunctionName();
 }

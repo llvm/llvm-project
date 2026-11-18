@@ -18,17 +18,18 @@ def isX86 : RuntimeLibcallAvailability<(all_of IsX86)>;
 def Libc : LibcallLibrary<"libc", (add memcpy)>;
 def Libm : LibcallLibrary<"libm", (add sqrt)>;
 
-def X86System : SystemRuntimeLibrary<isX86, (add Libc, Libm)>;
+def X86System : SystemRuntimeLibrary<isX86, ["libc", "libm"]>;
 
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libc(
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libm(
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
-// CHECK:   if (TT.isX86()) {
-// CHECK-NEXT:     if (isLibraryAvailable("libc"))
-// CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
-// CHECK-NEXT:     if (isLibraryAvailable("libm"))
-// CHECK-NEXT:       setAvailableLibFuncs_libm(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
-// CHECK-EMPTY:
-// CHECK-NEXT:     return;
+// CHECK-LABEL: ArrayRef<RTLIB::RuntimeLibrary> llvm::RTLIB::RuntimeLibcallsInfo::getDefaultRuntimeLibraries(const llvm::Triple &TT) {
+// CHECK-NEXT:   if (TT.isX86()) {
+// CHECK-NEXT:     static constexpr RTLIB::RuntimeLibrary Libs[] = {
+// CHECK-NEXT:       RTLIB::RuntimeLibrary::libc,
+// CHECK-NEXT:       RTLIB::RuntimeLibrary::libm,
+// CHECK-NEXT:     };
+// CHECK-NEXT:     return Libs;
 // CHECK-NEXT:   }
+// CHECK-NEXT:   return {};
+// CHECK-NEXT: }

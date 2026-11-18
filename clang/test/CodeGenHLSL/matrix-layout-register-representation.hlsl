@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.3-library \
 // RUN:   -emit-llvm -disable-llvm-passes -fmatrix-memory-layout=row-major -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 export float2x2 load_row_major(row_major float2x2 matrix) {
   return matrix;
 }

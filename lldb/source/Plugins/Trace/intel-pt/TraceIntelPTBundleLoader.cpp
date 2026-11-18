@@ -330,7 +330,7 @@ Error TraceIntelPTBundleLoader::AugmentThreadsFromContextSwitches(
                              "context switch information is provided.");
 
   DenseMap<lldb::pid_t, JSONProcess *> indexed_processes;
-  DenseMap<JSONProcess *, DenseSet<tid_t>> indexed_threads;
+  DenseMap<JSONProcess *, DenseSet<lldb::tid_t>> indexed_threads;
 
   for (JSONProcess &process : *bundle_description.processes) {
     indexed_processes[process.pid] = &process;
@@ -338,7 +338,7 @@ Error TraceIntelPTBundleLoader::AugmentThreadsFromContextSwitches(
       indexed_threads[&process].insert(thread.tid);
   }
 
-  auto on_thread_seen = [&](lldb::pid_t pid, tid_t tid) {
+  auto on_thread_seen = [&](lldb::pid_t pid, lldb::tid_t tid) {
     auto proc = indexed_processes.find(pid);
     if (proc == indexed_processes.end())
       return;

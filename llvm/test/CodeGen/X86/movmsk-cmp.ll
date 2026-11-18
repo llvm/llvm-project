@@ -3713,8 +3713,6 @@ define i1 @movmsk_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; SSE-NEXT:    shrl $15, %ecx
 ; SSE-NEXT:    movl %eax, %edx
 ; SSE-NEXT:    shrl $8, %edx
-; SSE-NEXT:    andl $1, %edx
-; SSE-NEXT:    andl $8, %eax
 ; SSE-NEXT:    shrl $3, %eax
 ; SSE-NEXT:    xorl %edx, %eax
 ; SSE-NEXT:    andl %ecx, %eax
@@ -3729,8 +3727,6 @@ define i1 @movmsk_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; AVX1OR2-NEXT:    shrl $15, %ecx
 ; AVX1OR2-NEXT:    movl %eax, %edx
 ; AVX1OR2-NEXT:    shrl $8, %edx
-; AVX1OR2-NEXT:    andl $1, %edx
-; AVX1OR2-NEXT:    andl $8, %eax
 ; AVX1OR2-NEXT:    shrl $3, %eax
 ; AVX1OR2-NEXT:    xorl %edx, %eax
 ; AVX1OR2-NEXT:    andl %ecx, %eax
@@ -4483,7 +4479,7 @@ define i32 @pr67287(<2 x i64> %broadcast.splatinsert25) {
 ; SSE2-NEXT:    testl %eax, %eax
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    movd %xmm1, %ecx
-; SSE2-NEXT:    xorb $1, %cl
+; SSE2-NEXT:    notb %cl
 ; SSE2-NEXT:    testb %cl, %al
 ; SSE2-NEXT:    jne .LBB97_2
 ; SSE2-NEXT:  # %bb.1:
@@ -4501,7 +4497,7 @@ define i32 @pr67287(<2 x i64> %broadcast.splatinsert25) {
 ; SSE41-NEXT:    testl %eax, %eax
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    movd %xmm0, %ecx
-; SSE41-NEXT:    xorb $1, %cl
+; SSE41-NEXT:    notb %cl
 ; SSE41-NEXT:    testb %cl, %al
 ; SSE41-NEXT:    jne .LBB97_2
 ; SSE41-NEXT:  # %bb.1:
@@ -4518,7 +4514,7 @@ define i32 @pr67287(<2 x i64> %broadcast.splatinsert25) {
 ; AVX1-NEXT:    vtestpd %xmm0, %xmm0
 ; AVX1-NEXT:    sete %al
 ; AVX1-NEXT:    vmovd %xmm0, %ecx
-; AVX1-NEXT:    xorb $1, %cl
+; AVX1-NEXT:    notb %cl
 ; AVX1-NEXT:    testb %cl, %al
 ; AVX1-NEXT:    jne .LBB97_2
 ; AVX1-NEXT:  # %bb.1:
@@ -4535,7 +4531,7 @@ define i32 @pr67287(<2 x i64> %broadcast.splatinsert25) {
 ; AVX2-NEXT:    vtestpd %xmm0, %xmm0
 ; AVX2-NEXT:    sete %al
 ; AVX2-NEXT:    vmovd %xmm0, %ecx
-; AVX2-NEXT:    xorb $1, %cl
+; AVX2-NEXT:    notb %cl
 ; AVX2-NEXT:    testb %cl, %al
 ; AVX2-NEXT:    jne .LBB97_2
 ; AVX2-NEXT:  # %bb.1:
@@ -4553,7 +4549,7 @@ define i32 @pr67287(<2 x i64> %broadcast.splatinsert25) {
 ; KNL-NEXT:    kmovw %k0, %ecx
 ; KNL-NEXT:    testb $3, %cl
 ; KNL-NEXT:    sete %cl
-; KNL-NEXT:    xorb $1, %al
+; KNL-NEXT:    notb %al
 ; KNL-NEXT:    testb %al, %cl
 ; KNL-NEXT:    jne .LBB97_2
 ; KNL-NEXT:  # %bb.1:
@@ -4571,7 +4567,7 @@ define i32 @pr67287(<2 x i64> %broadcast.splatinsert25) {
 ; SKX-NEXT:    kortestb %k0, %k0
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    kmovd %k0, %ecx
-; SKX-NEXT:    xorb $1, %cl
+; SKX-NEXT:    notb %cl
 ; SKX-NEXT:    testb %cl, %al
 ; SKX-NEXT:    jne .LBB97_2
 ; SKX-NEXT:  # %bb.1:

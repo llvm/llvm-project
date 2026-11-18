@@ -17,18 +17,10 @@
 #include "MipsTargetMachine.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "mips-lower"
-
-static cl::opt<bool> DontExpandCondPseudos16(
-  "mips16-dont-expand-cond-pseudo",
-  cl::init(false),
-  cl::desc("Don't expand conditional move related "
-           "pseudos for Mips 16"),
-  cl::Hidden);
 
 namespace {
 struct Mips16IntrinsicHelperType{
@@ -78,18 +70,12 @@ Mips16TargetLowering::Mips16TargetLowering(const MipsTargetMachine &TM,
   addRegisterClass(MVT::i32, &Mips::CPU16RegsRegClass);
 
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, LibCall);
-  setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i32, LibCall);
-  setOperationAction(ISD::ATOMIC_SWAP, MVT::i32, LibCall);
-  setOperationAction(ISD::ATOMIC_LOAD_ADD, MVT::i32, LibCall);
-  setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, LibCall);
-  setOperationAction(ISD::ATOMIC_LOAD_AND, MVT::i32, LibCall);
-  setOperationAction(ISD::ATOMIC_LOAD_OR, MVT::i32, LibCall);
-  setOperationAction(ISD::ATOMIC_LOAD_XOR, MVT::i32, LibCall);
-  setOperationAction(ISD::ATOMIC_LOAD_NAND, MVT::i32, LibCall);
-  setOperationAction(ISD::ATOMIC_LOAD_MIN, MVT::i32, LibCall);
-  setOperationAction(ISD::ATOMIC_LOAD_MAX, MVT::i32, LibCall);
-  setOperationAction(ISD::ATOMIC_LOAD_UMIN, MVT::i32, LibCall);
-  setOperationAction(ISD::ATOMIC_LOAD_UMAX, MVT::i32, LibCall);
+  setOperationAction(
+      {ISD::ATOMIC_CMP_SWAP, ISD::ATOMIC_SWAP, ISD::ATOMIC_LOAD_ADD,
+       ISD::ATOMIC_LOAD_SUB, ISD::ATOMIC_LOAD_AND, ISD::ATOMIC_LOAD_OR,
+       ISD::ATOMIC_LOAD_XOR, ISD::ATOMIC_LOAD_NAND, ISD::ATOMIC_LOAD_MIN,
+       ISD::ATOMIC_LOAD_MAX, ISD::ATOMIC_LOAD_UMIN, ISD::ATOMIC_LOAD_UMAX},
+      {MVT::i8, MVT::i16, MVT::i32}, LibCall);
 
   setOperationAction(ISD::ROTR, MVT::i32,  Expand);
   setOperationAction(ISD::ROTR, MVT::i64,  Expand);
@@ -426,7 +412,7 @@ void Mips16TargetLowering::getOpndList(
   // T9 should contain the address of the callee function if
   // -relocation-model=pic or it is an indirect call.
   if (IsPICCall || !GlobalOrExternal) {
-    unsigned V0Reg = Mips::V0;
+    unsigned V0Reg = Mips::R2;
     if (NeedMips16Helper) {
       RegsToPass.push_front(std::make_pair(V0Reg, Callee));
       JumpTarget = DAG.getExternalSymbol(Mips16HelperFunction,
@@ -436,7 +422,7 @@ void Mips16TargetLowering::getOpndList(
                                  MipsII::MO_GOT, Chain,
                                  FuncInfo->callPtrInfo(MF, S->getSymbol()));
     } else
-      RegsToPass.push_front(std::make_pair((unsigned)Mips::T9, Callee));
+      RegsToPass.push_front(std::make_pair((unsigned)Mips::R25, Callee));
   }
 
   Ops.push_back(JumpTarget);
@@ -449,7 +435,7 @@ void Mips16TargetLowering::getOpndList(
 MachineBasicBlock *
 Mips16TargetLowering::emitSel16(unsigned Opc, MachineInstr &MI,
                                 MachineBasicBlock *BB) const {
-  if (DontExpandCondPseudos16)
+  if (Subtarget.getCLOpts().mips16_dont_expand_cond_pseudo)
     return BB;
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
@@ -512,7 +498,7 @@ Mips16TargetLowering::emitSel16(unsigned Opc, MachineInstr &MI,
 MachineBasicBlock *
 Mips16TargetLowering::emitSelT16(unsigned Opc1, unsigned Opc2, MachineInstr &MI,
                                  MachineBasicBlock *BB) const {
-  if (DontExpandCondPseudos16)
+  if (Subtarget.getCLOpts().mips16_dont_expand_cond_pseudo)
     return BB;
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
@@ -578,7 +564,7 @@ MachineBasicBlock *
 Mips16TargetLowering::emitSeliT16(unsigned Opc1, unsigned Opc2,
                                   MachineInstr &MI,
                                   MachineBasicBlock *BB) const {
-  if (DontExpandCondPseudos16)
+  if (Subtarget.getCLOpts().mips16_dont_expand_cond_pseudo)
     return BB;
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
@@ -644,7 +630,7 @@ MachineBasicBlock *
 Mips16TargetLowering::emitFEXT_T8I816_ins(unsigned BtOpc, unsigned CmpOpc,
                                           MachineInstr &MI,
                                           MachineBasicBlock *BB) const {
-  if (DontExpandCondPseudos16)
+  if (Subtarget.getCLOpts().mips16_dont_expand_cond_pseudo)
     return BB;
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   Register regX = MI.getOperand(0).getReg();
@@ -661,7 +647,7 @@ Mips16TargetLowering::emitFEXT_T8I816_ins(unsigned BtOpc, unsigned CmpOpc,
 MachineBasicBlock *Mips16TargetLowering::emitFEXT_T8I8I16_ins(
     unsigned BtOpc, unsigned CmpiOpc, unsigned CmpiXOpc, bool ImmSigned,
     MachineInstr &MI, MachineBasicBlock *BB) const {
-  if (DontExpandCondPseudos16)
+  if (Subtarget.getCLOpts().mips16_dont_expand_cond_pseudo)
     return BB;
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   Register regX = MI.getOperand(0).getReg();
@@ -694,7 +680,7 @@ static unsigned Mips16WhichOp8uOr16simm
 MachineBasicBlock *
 Mips16TargetLowering::emitFEXT_CCRX16_ins(unsigned SltOpc, MachineInstr &MI,
                                           MachineBasicBlock *BB) const {
-  if (DontExpandCondPseudos16)
+  if (Subtarget.getCLOpts().mips16_dont_expand_cond_pseudo)
     return BB;
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   Register CC = MI.getOperand(0).getReg();
@@ -704,7 +690,7 @@ Mips16TargetLowering::emitFEXT_CCRX16_ins(unsigned SltOpc, MachineInstr &MI,
       .addReg(regX)
       .addReg(regY);
   BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(Mips::MoveR3216), CC)
-      .addReg(Mips::T8);
+      .addReg(Mips::R24);
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }
@@ -713,7 +699,7 @@ MachineBasicBlock *
 Mips16TargetLowering::emitFEXT_CCRXI16_ins(unsigned SltiOpc, unsigned SltiXOpc,
                                            MachineInstr &MI,
                                            MachineBasicBlock *BB) const {
-  if (DontExpandCondPseudos16)
+  if (Subtarget.getCLOpts().mips16_dont_expand_cond_pseudo)
     return BB;
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   Register CC = MI.getOperand(0).getReg();
@@ -722,7 +708,7 @@ Mips16TargetLowering::emitFEXT_CCRXI16_ins(unsigned SltiOpc, unsigned SltiXOpc,
   unsigned SltOpc = Mips16WhichOp8uOr16simm(SltiOpc, SltiXOpc, Imm);
   BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(SltOpc)).addReg(regX).addImm(Imm);
   BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(Mips::MoveR3216), CC)
-      .addReg(Mips::T8);
+      .addReg(Mips::R24);
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 

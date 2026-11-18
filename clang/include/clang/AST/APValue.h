@@ -112,7 +112,7 @@ public:
     DynamicAllocLValue V;
     uintptr_t Combined =
         reinterpret_cast<uintptr_t>(Value) >> NumLowBitsAvailable;
-    V.AllocKind = Combined & (1 << NumAllocKindBits) - 1;
+    V.AllocKind = Combined & ((1 << NumAllocKindBits) - 1);
     V.Index = Combined >> NumAllocKindBits;
     return V;
   }
@@ -569,6 +569,10 @@ public:
                    const ASTContext *Ctx = nullptr) const;
 
   std::string getAsString(const ASTContext &Ctx, QualType Ty) const;
+
+  /// Returns the contents of an array of integers (e.g. an evaluated character
+  /// array) as a string, with each element truncated to a char.
+  std::string getCharArrayAsString() const;
 
   APSInt &getInt() {
     assert(isInt() && "Invalid accessor");

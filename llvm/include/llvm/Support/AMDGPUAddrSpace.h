@@ -65,6 +65,10 @@ enum : unsigned {
 
   RESERVED_ADDRESS_SPACE_18 = 18, ///< Reserved for downstream use.
 
+  RESERVED_ADDRESS_SPACE_19 = 19, ///< Reserved for downstream use.
+
+  RESERVED_ADDRESS_SPACE_20 = 20, ///< Reserved for downstream use.
+
   /// Internal address spaces. Can be freely renumbered.
   STREAMOUT_REGISTER = 128, ///< Address space for GS NGG Streamout registers.
   /// end Internal address spaces.
@@ -106,6 +110,23 @@ namespace AMDGPU {
 // Identifies which FLAT address-space segment an instruction operates on.
 // Passed to helpers like isLegalFLATOffset / splitFlatOffset.
 enum class FlatAddrSpace : unsigned { FLAT, FlatGlobal, FlatScratch };
+
+inline bool isReservedAddressSpace(unsigned AS) {
+  switch (AS) {
+    using namespace AMDGPUAS;
+  case RESERVED_ADDRESS_SPACE_10:
+  case RESERVED_ADDRESS_SPACE_11:
+  case RESERVED_ADDRESS_SPACE_14:
+  case RESERVED_ADDRESS_SPACE_16:
+  case RESERVED_ADDRESS_SPACE_17:
+  case RESERVED_ADDRESS_SPACE_18:
+  case RESERVED_ADDRESS_SPACE_19:
+  case RESERVED_ADDRESS_SPACE_20:
+    return true;
+  default:
+    return false;
+  }
+}
 
 inline bool isFlatGlobalAddrSpace(unsigned AS) {
   return AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS ||
@@ -176,7 +197,7 @@ static constexpr unsigned LLVMToDWARFAddrSpaceMapping[] = {
 ///
 /// This maps private/scratch to the focused lane view.
 ///
-/// These mappings must be kept in sync with llvm/docs/AMDGPUUsage.rst
+/// These mappings must be kept in sync with llvm/docs/AMDGPUUsage.md
 /// table "AMDGPU DWARF Address Space Mapping".
 ///
 /// Note: This could return std::optional<int> but that would require

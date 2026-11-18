@@ -35,16 +35,16 @@ def : GINodeEquiv<G_UNMERGE_VALUES, RISCVSplitF64>;
 
 def GPRPairAsFPR : AsmOperandClass {
   let Name = "GPRPairAsFPR";
-  let ParserMethod = "parseGPRPairAsFPR64";
-  let PredicateMethod = "isGPRPairAsFPR64";
-  let RenderMethod = "addRegOperands";
+  let PredicateMethod = "isEvenGPRForFP64";
+  let PredicateUsesSubtarget = true;
+  let RenderMethod = "addGPRPairOperands";
   let DiagnosticString = "register must be an even-numbered GPR when used as an FP operand";
 }
 
 def GPRF64AsFPR : AsmOperandClass {
   let Name = "GPRF64AsFPR";
-  let PredicateMethod = "isGPRAsFPR";
-  let ParserMethod = "parseGPRAsFPR64";
+  let PredicateMethod = "isGPRForFP64";
+  let PredicateUsesSubtarget = true;
   let RenderMethod = "addRegOperands";
   let DiagnosticString = "register must be a GPR when used as an FP operand";
 }

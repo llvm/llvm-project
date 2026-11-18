@@ -534,6 +534,11 @@ bool isVOPC64DPP(unsigned Opc);
 LLVM_READONLY
 bool isVOPCAsmOnly(unsigned Opc);
 
+/// Returns true if this VOP3P opcode has no op_sel_hi field, in which case
+/// those bits are encoded as zero instead of defaulting to one.
+LLVM_READONLY
+bool hasNoOpSelHi(unsigned Opc);
+
 /// Returns true if MAI operation is a double precision GEMM.
 LLVM_READONLY
 bool getMAIIsDGEMM(unsigned Opc);
@@ -1548,7 +1553,8 @@ bool hasPrivateApertureRegs(const MCSubtargetInfo &STI);
 bool hasVOPD(const MCSubtargetInfo &STI);
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
 
-int getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR, int32_t ArgNumVGPR);
+uint32_t getTotalNumVGPRs(bool has90AInsts, uint32_t ArgNumAGPR,
+                          uint32_t ArgNumVGPR);
 unsigned hasKernargPreload(const MCSubtargetInfo &STI);
 bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
 
@@ -1669,8 +1675,8 @@ bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi);
 LLVM_READNONE
 bool isInlinableLiteral32(int32_t Literal, bool HasInv2Pi);
 
-LLVM_READNONE
-bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi);
+bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi,
+                            bool *IsBF16 = nullptr);
 
 LLVM_READNONE
 bool isInlinableLiteralFP16(int16_t Literal, bool HasInv2Pi);
@@ -1782,6 +1788,27 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
+
+/// Return true if we can easily prove that \p V is uniform at \p CtxI.
+bool isTriviallyUniform(const Value *V, const Instruction *CtxI);
+
+/// Return true if we can easily prove that use \p U is uniform.
+bool isTriviallyUniform(const Use &U);
+
+/// \returns true if the intrinsic executes an LDSDMA operation
+bool isLDSDMAIntrinsic(unsigned IntrID);
+
+/// \returns the index of the f32 scale argument of a V_CVT_SCALEF32_*
+/// conversion to a narrow format, or std::nullopt for any other intrinsic.
+/// These instructions only read the bits of the scale given by
+/// getExponentOnlyScaleDemandedBits().
+std::optional<unsigned> getExponentOnlyScaleArgIdx(unsigned IntrID);
+
+/// \returns the bits of an exponent-only scale argument that are read: the
+/// exponent field of the f32 value.
+inline APInt getExponentOnlyScaleDemandedBits() {
+  return APInt::getBitsSet(32, 23, 31);
+}
 
 /// \returns a register class for the physical register \p Reg if it is a VGPR
 /// or nullptr otherwise.

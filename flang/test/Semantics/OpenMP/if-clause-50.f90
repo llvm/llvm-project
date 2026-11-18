@@ -545,7 +545,6 @@ program main
   !$omp end teams
 
   !ERROR: IF clause is not allowed on TEAMS directive in OpenMP v5.0, try -fopenmp-version=52 [-Wopenmp-future]
-  !ERROR: IF clause is not allowed on TEAMS directive in OpenMP v5.0, try -fopenmp-version=52 [-Wopenmp-future]
   !ERROR: TEAMS is not allowed as 'directive-name-modifier' in OpenMP v5.0, try -fopenmp-version=52
   !$omp teams if(.true.) if(teams: .false.)
   !$omp end teams
@@ -553,23 +552,27 @@ program main
   ! ----------------------------------------------------------------------------
   ! TEAMS DISTRIBUTE
   ! ----------------------------------------------------------------------------
+  !ERROR: IF clause is not allowed on TEAMS DISTRIBUTE directive in OpenMP v5.0, try -fopenmp-version=52 [-Wopenmp-future]
   !$omp teams distribute if(.true.)
   do i = 1, 10
   end do
   !$omp end teams distribute
 
+  !ERROR: IF clause is not allowed on TEAMS DISTRIBUTE directive in OpenMP v5.0, try -fopenmp-version=52 [-Wopenmp-future]
   !ERROR: TEAMS is not allowed as 'directive-name-modifier' in OpenMP v5.0, try -fopenmp-version=52
   !$omp teams distribute if(teams: .true.)
   do i = 1, 10
   end do
   !$omp end teams distribute
 
+  !ERROR: IF clause is not allowed on TEAMS DISTRIBUTE directive in OpenMP v5.0, try -fopenmp-version=52 [-Wopenmp-future]
   !ERROR: TARGET is not a constituent of the TEAMS DISTRIBUTE directive
   !$omp teams distribute if(target: .true.)
   do i = 1, 10
   end do
   !$omp end teams distribute
 
+  !ERROR: IF clause is not allowed on TEAMS DISTRIBUTE directive in OpenMP v5.0, try -fopenmp-version=52 [-Wopenmp-future]
   !ERROR: TEAMS is not allowed as 'directive-name-modifier' in OpenMP v5.0, try -fopenmp-version=52
   !$omp teams distribute if(.true.) if(teams: .true.)
   do i = 1, 10

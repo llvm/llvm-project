@@ -36,29 +36,29 @@ def dup1 : RuntimeLibcallImpl<ANOTHER_DUP>;
 // CHECK-NEXT:    };
 
 def LibA : LibcallLibrary<"liba", (add func_b, func_a)>;
-def TheSystemLibraryA : SystemRuntimeLibrary<isTargetArchA, (add LibA)>;
+def TheSystemLibraryA : SystemRuntimeLibrary<isTargetArchA, ["liba"]>;
 
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libb(
 // CHECK:    static const RTLIB::LibcallImpl LibraryCalls[] = {
-// CHECK-NEXT:        RTLIB::impl_other_func, // other_func
 // CHECK-NEXT:        RTLIB::impl_func_a, // func_a
 // CHECK-NEXT:        RTLIB::impl_func_b, // func_b
+// CHECK-NEXT:        RTLIB::impl_other_func, // other_func
 // CHECK-NEXT:    };
 
 def LibB : LibcallLibrary<"libb", (add func_a, other_func, func_b)>;
-def TheSystemLibraryB : SystemRuntimeLibrary<isTargetArchB, (add LibB)>;
+def TheSystemLibraryB : SystemRuntimeLibrary<isTargetArchB, ["libb"]>;
 
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libc(
 // CHECK:     static const RTLIB::LibcallImpl LibraryCalls[] = {
 // CHECK-NEXT:         RTLIB::impl_dup0, // dup0
 // CHECK-NEXT:         RTLIB::impl_dup1, // dup1
-// CHECK-NEXT:         RTLIB::impl_other_func, // other_func
 // CHECK-NEXT:         RTLIB::impl_func_a, // func_a
 // CHECK-NEXT:         RTLIB::impl_func_b, // func_b
 // CHECK-NEXT:         RTLIB::impl_func_c, // func_c
+// CHECK-NEXT:         RTLIB::impl_other_func, // other_func
 // CHECK-NEXT:     };
 
 def LibC : LibcallLibrary<"libc",
   (add func_a, dup1, other_func, func_b, func_c, dup0)
 >;
-def TheSystemLibraryC : SystemRuntimeLibrary<isTargetArchC, (add LibC)>;
+def TheSystemLibraryC : SystemRuntimeLibrary<isTargetArchC, ["libc"]>;

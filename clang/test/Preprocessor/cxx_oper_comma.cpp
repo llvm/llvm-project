@@ -3,8 +3,8 @@
 // RUN: %clang_cc1 -E -pedantic-errors %s -verify -std=c++14
 // RUN: %clang_cc1 -E -pedantic-errors %s -verify -std=c++17
 // RUN: %clang_cc1 -E -pedantic-errors %s -verify -std=c++20
-// RUN: %clang_cc1 -E -pedantic-errors %s -verify=expected,since-cxx23 -std=c++23 -Wno-c23-extensions
-// RUN: %clang_cc1 -E -pedantic-errors %s -verify=expected,since-cxx23 -std=c++2c -Wno-c23-extensions
+// RUN: %clang_cc1 -E -pedantic-errors %s -verify=expected,since-cxx23 -std=c++23 -Wno-c++26-extensions
+// RUN: %clang_cc1 -E -pedantic-errors %s -verify=expected,since-cxx23 -std=c++2c -Wno-c++26-extensions
 
 // Test 1: Top-level comma
 // expected-error@+1 {{expected end of line in preprocessor expression}}

@@ -22,11 +22,20 @@ class OptionsStruct<string namespace = "llvm", string prefix = ""> {
   string MemberPrefix = prefix;
 }
 
+// The builds an option exists in, as a preprocessor expression.
+class BuildCondition<code expr> {
+  code Expr = expr;
+}
+def AssertsOnly : BuildCondition<"!defined(NDEBUG)">;
+
 // The member an option sets, and the member's type and default value.
+// `let Condition = AssertsOnly in` makes the option unknown, and removes the
+// member, in other builds.
 class Field<string name, string type, code default> {
   string FieldName = name;
   string FieldType = type;
   code FieldDefault = default;
+  BuildCondition Condition = ?;
 }
 
 // The value a FlagOrEq row assigns when given without one.
@@ -109,4 +118,13 @@ multiclass ListField<string name, string type, string help> {
 multiclass EnumListField<string name, string type, string values,
                          list<code> enumerators, string help> {
   defm NAME : ListField<name, type, help>, EnumValues<values, enumerators>;
+}
+
+// Another spelling of an option, e.g.
+//   AliasOf<"x-limit", "x-threshold">: -x-limit=8 means -x-threshold=8
+//   AliasOf<"disable-x", "x=false">: -disable-x means -x=false
+class AliasOf<string name, string target> : Flag<["-", "--"], name> {
+  int Eq = !find(target, "=");
+  string AliasTarget = !if(!lt(Eq, 0), target, !substr(target, 0, Eq));
+  let AliasArgs = !if(!lt(Eq, 0), []<string>, [!substr(target, !add(Eq, 1))]);
 }

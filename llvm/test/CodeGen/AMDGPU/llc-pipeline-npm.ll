@@ -221,7 +221,6 @@
 ; GCN-O2-NEXT:       init-undef
 ; GCN-O2-NEXT:       process-implicit-defs
 ; GCN-O2-NEXT:       unreachable-mbb-elimination
-; GCN-O2-NEXT:       require<live-vars>
 ; GCN-O2-NEXT:       require<live-intervals>
 ; GCN-O2-NEXT:       require<machine-loops>
 ; GCN-O2-NEXT:       si-opt-vgpr-liverange
@@ -410,7 +409,6 @@
 ; GCN-O3-NEXT:       init-undef
 ; GCN-O3-NEXT:       process-implicit-defs
 ; GCN-O3-NEXT:       unreachable-mbb-elimination
-; GCN-O3-NEXT:       require<live-vars>
 ; GCN-O3-NEXT:       require<live-intervals>
 ; GCN-O3-NEXT:       require<machine-loops>
 ; GCN-O3-NEXT:       si-opt-vgpr-liverange

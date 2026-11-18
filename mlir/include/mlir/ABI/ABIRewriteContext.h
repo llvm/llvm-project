@@ -48,6 +48,10 @@ enum class ArgKind : uint8_t {
   /// Pass indirectly via a pointer (sret for returns, byval for args).
   Indirect,
 
+  /// Pass a pointer to the caller's object with no copy implied (byref).  The
+  /// callee must not write through it.  Arguments only.
+  IndirectAliased,
+
   /// Ignore (void return, empty struct).
   Ignore,
 
@@ -64,11 +68,17 @@ struct ArgClassification {
   /// use the original type.
   Type coercedType = nullptr;
 
-  /// For Indirect: alignment of the pointed-to object.
+  /// For Indirect and IndirectAliased: alignment of the pointed-to object.
   llvm::Align indirectAlign = llvm::Align(1);
 
   /// For Extend: whether to sign-extend (true) or zero-extend (false).
   bool signExtend = false;
+
+  /// For Extend: Whether the extension is conservative, i.e. the sender
+  /// extends, but the receiver does not assume the extension. Currently only
+  /// supported for arguments, i.e. caller extends, but callee does not assume
+  /// extension.
+  bool conservative = false;
 
   /// For Direct: whether a struct coercion can be flattened into
   /// individual register-width arguments.
@@ -77,10 +87,18 @@ struct ArgClassification {
   /// For Indirect: whether the callee gets ownership (byval).
   bool byVal = false;
 
+  /// For Indirect and IndirectAliased: target address space of the pointer
+  /// passed in place of the value.  Zero is the default address space.
+  unsigned indirectAddrSpace = 0;
+
   /// For Direct with coercion: the byte offset within the original aggregate
   /// at which the coerced value lives.  Non-zero when the low eightbyte is
   /// NO_CLASS and the value is carried in a later eightbyte (x86-64 SysV).
   unsigned directOffset = 0;
+
+  /// For Direct: the alignment of the argument's stack slot when the value
+  /// is passed in memory, if the ABI sets one apart from the type's.
+  llvm::MaybeAlign directAlign;
 
   /// How many integer and vector argument registers the value occupies.  Both
   /// zero means it travels in memory, which is also what a target whose
@@ -89,18 +107,26 @@ struct ArgClassification {
   unsigned neededSseRegs = 0;
 
   /// Whether the value is passed as-is, so a rewriter can leave it alone.
-  /// Only an uncoerced Direct qualifies.  Extend counts as needing a rewrite
-  /// even though it only adds an attribute, because the attribute changes
-  /// observable behavior.
-  bool isPassThrough() const { return kind == ArgKind::Direct && !coercedType; }
+  /// Only an uncoerced Direct with no stack-slot alignment qualifies.
+  /// Extend counts as needing a rewrite even though it only adds an
+  /// attribute, because the attribute changes observable behavior, and a
+  /// Direct with a stack-slot alignment does too because it needs
+  /// llvm.alignstack.
+  bool isPassThrough() const {
+    return kind == ArgKind::Direct && !coercedType && !directAlign;
+  }
 
   /// Whether two classifications describe the same wire format.  Every field
   /// participates, so a field added above must be added here as well.
   bool operator==(const ArgClassification &other) const {
     return kind == other.kind && coercedType == other.coercedType &&
            indirectAlign == other.indirectAlign &&
-           signExtend == other.signExtend && canFlatten == other.canFlatten &&
-           byVal == other.byVal && directOffset == other.directOffset &&
+           signExtend == other.signExtend &&
+           conservative == other.conservative &&
+           canFlatten == other.canFlatten && byVal == other.byVal &&
+           indirectAddrSpace == other.indirectAddrSpace &&
+           directOffset == other.directOffset &&
+           directAlign == other.directAlign &&
            neededIntRegs == other.neededIntRegs &&
            neededSseRegs == other.neededSseRegs;
   }
@@ -109,8 +135,9 @@ struct ArgClassification {
     return getDirect(/*coerced=*/nullptr, /*offset=*/0);
   }
 
-  static ArgClassification getDirect(Type coerced, unsigned offset) {
-    // isPassThrough reads only coercedType, so an offset with no coerced
+  static ArgClassification getDirect(Type coerced, unsigned offset,
+                                     llvm::MaybeAlign align = std::nullopt) {
+    // isPassThrough ignores directOffset, so an offset with no coerced
     // type to read at it would be silently ignored.
     assert((!offset || coerced) &&
            "a direct offset needs a coerced type to read at it");
@@ -118,6 +145,7 @@ struct ArgClassification {
     c.kind = ArgKind::Direct;
     c.coercedType = coerced;
     c.directOffset = offset;
+    c.directAlign = align;
     return c;
   }
 
@@ -127,19 +155,32 @@ struct ArgClassification {
     return c;
   }
 
-  static ArgClassification getIndirect(llvm::Align align, bool byVal = true) {
+  static ArgClassification getIndirect(llvm::Align align, bool byVal,
+                                       unsigned addrSpace) {
     ArgClassification c;
     c.kind = ArgKind::Indirect;
     c.indirectAlign = align;
     c.byVal = byVal;
+    c.indirectAddrSpace = addrSpace;
     return c;
   }
 
-  static ArgClassification getExtend(Type coerced, bool signExt) {
+  static ArgClassification getIndirectAliased(llvm::Align align,
+                                              unsigned addrSpace) {
+    ArgClassification c;
+    c.kind = ArgKind::IndirectAliased;
+    c.indirectAlign = align;
+    c.indirectAddrSpace = addrSpace;
+    return c;
+  }
+
+  static ArgClassification getExtend(Type coerced, bool signExt,
+                                     bool conservative = false) {
     ArgClassification c;
     c.kind = ArgKind::Extend;
     c.coercedType = coerced;
     c.signExtend = signExt;
+    c.conservative = conservative;
     return c;
   }
 };

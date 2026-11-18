@@ -62,7 +62,26 @@ public:
     target.addIllegalOp<tosa::AvgPool2dOp>();
     target.addIllegalOp<tosa::AvgPool2dAdaptiveOp>();
     target.addIllegalOp<tosa::MatMulOp>();
+    // Linalg has a quantized batch matmul, but no quantized transpose-B
+    // variant. Defer nonzero zero points to the generic pass's adjusted
+    // contraction.
+    target.addDynamicallyLegalOp<tosa::MatMulTOp>([](tosa::MatMulTOp op) {
+      FailureOr<int64_t> aZp = op.getAZeroPoint();
+      FailureOr<int64_t> bZp = op.getBZeroPoint();
+      return succeeded(aZp) && succeeded(bZp) && (*aZp != 0 || *bZp != 0);
+    });
     target.addIllegalOp<tosa::TransposeOp>();
+
+    // TOSA elementwise ops are legal unless they can be lowered to a
+    // linalg.elementwise named op.
+    target.addDynamicallyLegalOp<
+        tosa::AbsOp, tosa::CeilOp, tosa::FloorOp, tosa::ExpOp, tosa::LogOp,
+        tosa::RsqrtOp, tosa::SinOp, tosa::CosOp, tosa::TanhOp, tosa::ErfOp,
+        tosa::ReciprocalOp, tosa::PowOp, tosa::AddOp, tosa::SubOp,
+        tosa::IntDivOp, tosa::MulOp, tosa::NegateOp, tosa::MaximumOp,
+        tosa::MinimumOp, tosa::SelectOp>([](Operation *op) {
+      return !tosa::isConvertibleToLinalgElementwise(op).has_value();
+    });
 
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
