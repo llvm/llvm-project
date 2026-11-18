@@ -7345,7 +7345,7 @@ static SrcType getSrcType(SDValue Op, SelectionDAG &DAG, EVT VT,
   while (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op.getOperand(0).isUndef())
     Op = Op.getOperand(1);
 
-  if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) || Op.isUndef())
+  if (ISD::isBuildVectorOfConstantSDNodes(Op) || Op.isUndef())
     return SrcType::CONST;
 
   return SrcType::UNPACK;
