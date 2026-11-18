@@ -708,17 +708,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     break;
   }
 
-  ParsedAttributes DeclAttrs(AttrFactory);
-  ParsedAttributes DeclSpecAttrs(AttrFactory);
-  // GNU attributes are applied to the declaration specification while the
-  // standard attributes are applied to the declaration.  We parse the two
-  // attribute sets into different containters so we can apply them during
-  // the regular parsing process.
-  while (MaybeParseCXX11Attributes(DeclAttrs) ||
-         MaybeParseGNUAttributes(DeclSpecAttrs))
-    ;
-
-  Result = ParseExternalDeclaration(DeclAttrs, DeclSpecAttrs);
+  Result = ParseExternalDeclarationWithAttrs();
   // An empty Result might mean a line with ';' or some parsing error, ignore
   // it.
   if (Result) {
@@ -736,10 +726,38 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
   return false;
 }
 
-Parser::DeclGroupPtrTy
-Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
-                                 ParsedAttributes &DeclSpecAttrs,
-                                 ParsingDeclSpec *DS) {
+Parser::DeclGroupPtrTy Parser::ParseExternalDeclarationWithAttrs() {
+  ParsedAttributes DeclAttrs(AttrFactory);
+  ParsedAttributes DeclSpecAttrs(AttrFactory);
+  // Delay access and availability checks in leading attributes so out-of-line
+  // member declarations/definitions evaluate them in class scope once the
+  // declarator is parsed. Stop delaying immediately after parsing the leading
+  // attributes so non-declarator constructs (e.g. static_assert or nested
+  // namespaces) are unaffected.
+  ParsingDeclRAIIObject LeadingAttrDiags(*this,
+                                         ParsingDeclRAIIObject::NoParent);
+  // GNU attributes are applied to the declaration specification while the
+  // standard attributes are applied to the declaration.  We parse the two
+  // attribute sets into different containers so we can apply them during
+  // the regular parsing process.
+  while (MaybeParseCXX11Attributes(DeclAttrs) ||
+         MaybeParseGNUAttributes(DeclSpecAttrs))
+    ;
+  LeadingAttrDiags.abortAndRemember();
+
+  DeclGroupPtrTy Result = ParseExternalDeclaration(
+      DeclAttrs, DeclSpecAttrs, /*DS=*/nullptr, &LeadingAttrDiags);
+  if (!LeadingAttrDiags.getDelayedDiagnosticPool().pool_empty() && Result &&
+      !Result.get().isNull()) {
+    ParsingDeclRAIIObject FlushDiags(*this, &LeadingAttrDiags);
+    FlushDiags.complete(*Result.get().begin());
+  }
+  return Result;
+}
+
+Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(
+    ParsedAttributes &Attrs, ParsedAttributes &DeclSpecAttrs,
+    ParsingDeclSpec *DS, ParsingDeclRAIIObject *LeadingAttrDiags) {
   DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(*this);
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
@@ -838,7 +856,7 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     // __extension__ silences extension warnings in the subexpression.
     ExtensionRAIIObject O(Diags);  // Use RAII to do this.
     ConsumeToken();
-    return ParseExternalDeclaration(Attrs, DeclSpecAttrs);
+    return ParseExternalDeclaration(Attrs, DeclSpecAttrs, DS, LeadingAttrDiags);
   }
   case tok::kw_asm: {
     ProhibitAttributes(Attrs);
@@ -1009,7 +1027,8 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
 
     // We can't tell whether this is a function-definition or declaration yet.
     if (!SingleDecl)
-      return ParseDeclarationOrFunctionDefinition(Attrs, DeclSpecAttrs, DS);
+      return ParseDeclarationOrFunctionDefinition(Attrs, DeclSpecAttrs, DS,
+                                                  AS_none, LeadingAttrDiags);
   }
 
   // This routine returns a DeclGroup, if the thing we parsed only contains a
@@ -1164,7 +1183,8 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
 
 Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
     ParsedAttributes &Attrs, ParsedAttributes &DeclSpecAttrs,
-    ParsingDeclSpec *DS, AccessSpecifier AS) {
+    ParsingDeclSpec *DS, AccessSpecifier AS,
+    ParsingDeclRAIIObject *LeadingAttrDiags) {
   // Add an enclosing time trace scope for a bunch of small scopes with
   // "EvaluateAsConstExpr".
   llvm::TimeTraceScope TimeScope("ParseDeclarationOrFunctionDefinition", [&]() {
@@ -1173,9 +1193,12 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
   });
 
   if (DS) {
+    if (LeadingAttrDiags &&
+        !LeadingAttrDiags->getDelayedDiagnosticPool().pool_empty())
+      Actions.redelayDiagnostics(LeadingAttrDiags->getDelayedDiagnosticPool());
     return ParseDeclOrFunctionDefInternal(Attrs, DeclSpecAttrs, *DS, AS);
   } else {
-    ParsingDeclSpec PDS(*this);
+    ParsingDeclSpec PDS(*this, LeadingAttrDiags);
     // Must temporarily exit the objective-c container scope for
     // parsing c constructs and re-enter objc container scope
     // afterwards.
