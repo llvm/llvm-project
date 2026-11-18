@@ -162,6 +162,11 @@ def NoMemory : MemoryEffects<NoModRef>;
 def ArgMemOnly : MemoryEffects<NoModRef> { let ArgMem = ModRef; }
 def ArgMemReadOnly : MemoryEffects<NoModRef> { let ArgMem = Ref; }
 def ArgMemWriteOnly : MemoryEffects<NoModRef> { let ArgMem = Mod; }
+def ArgOrErrnoMemWriteOnly : MemoryEffects<NoModRef> {
+  let ArgMem = Mod;
+  let ErrnoMem = Mod;
+}
+
 def ErrnoMemWriteOnly : MemoryEffects<NoModRef> { let ErrnoMem = Mod; }
 def InaccessibleOrErrnoMem : MemoryEffects<NoModRef> {
   let InaccessibleMem = ModRef;

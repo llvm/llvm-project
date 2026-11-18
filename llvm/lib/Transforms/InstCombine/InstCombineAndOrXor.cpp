@@ -4144,20 +4144,15 @@ Instruction *InstCombinerImpl::FoldOrOfLogicalAnds(Value *Op0, Value *Op1) {
                                m_Not(m_Specific(SelOp0->getTrueValue())));
     if (MayNeedFreeze)
       C = Builder.CreateFreeze(C);
-    if (!ProfcheckDisableMetadataFixes) {
-      Value *C2 = nullptr, *A2 = nullptr, *B2 = nullptr;
-      if (match(Op0, m_LogicalAnd(m_Specific(C), m_Value(A2))) && SelOp0) {
-        return SelectInst::Create(C, A, B, "", nullptr, SelOp0);
-      } else if (match(Op1, m_LogicalAnd(m_Not(m_Value(C2)), m_Value(B2))) &&
-                 SelOp1) {
-        SelectInst *NewSI = SelectInst::Create(C, A, B, "", nullptr, SelOp1);
-        NewSI->swapProfMetadata();
-        return NewSI;
-      } else {
-        return createSelectInstWithUnknownProfile(C, A, B);
-      }
+    Value *C2 = nullptr, *A2 = nullptr, *B2 = nullptr;
+    if (match(Op0, m_LogicalAnd(m_Specific(C), m_Value(A2))) && SelOp0)
+      return SelectInst::Create(C, A, B, "", nullptr, SelOp0);
+    if (match(Op1, m_LogicalAnd(m_Not(m_Value(C2)), m_Value(B2))) && SelOp1) {
+      SelectInst *NewSI = SelectInst::Create(C, A, B, "", nullptr, SelOp1);
+      NewSI->swapProfMetadata();
+      return NewSI;
     }
-    return SelectInst::Create(C, A, B);
+    return createSelectInstWithUnknownProfile(C, A, B);
   }
 
   // (!C && A) || (C && B)
@@ -4175,20 +4170,15 @@ Instruction *InstCombinerImpl::FoldOrOfLogicalAnds(Value *Op0, Value *Op1) {
                                m_Not(m_Specific(SelOp1->getTrueValue())));
     if (MayNeedFreeze)
       C = Builder.CreateFreeze(C);
-    if (!ProfcheckDisableMetadataFixes) {
-      Value *C2 = nullptr, *A2 = nullptr, *B2 = nullptr;
-      if (match(Op0, m_LogicalAnd(m_Not(m_Value(C2)), m_Value(A2))) && SelOp0) {
-        SelectInst *NewSI = SelectInst::Create(C, B, A, "", nullptr, SelOp0);
-        NewSI->swapProfMetadata();
-        return NewSI;
-      } else if (match(Op1, m_LogicalAnd(m_Specific(C), m_Value(B2))) &&
-                 SelOp1) {
-        return SelectInst::Create(C, B, A, "", nullptr, SelOp1);
-      } else {
-        return createSelectInstWithUnknownProfile(C, B, A);
-      }
+    Value *C2 = nullptr, *A2 = nullptr, *B2 = nullptr;
+    if (match(Op0, m_LogicalAnd(m_Not(m_Value(C2)), m_Value(A2))) && SelOp0) {
+      SelectInst *NewSI = SelectInst::Create(C, B, A, "", nullptr, SelOp0);
+      NewSI->swapProfMetadata();
+      return NewSI;
     }
-    return SelectInst::Create(C, B, A);
+    if (match(Op1, m_LogicalAnd(m_Specific(C), m_Value(B2))) && SelOp1)
+      return SelectInst::Create(C, B, A, "", nullptr, SelOp1);
+    return createSelectInstWithUnknownProfile(C, B, A);
   }
 
   return nullptr;
@@ -4553,6 +4543,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // be simplified by a later pass either, so we try swapping the inner/outer
   // ORs in the hopes that we'll be able to simplify it this way.
   // (X|C) | V --> (X|V) | C
+  // V | (X|C) --> (X|V) | C
   // Pass the disjoint flag in the following two patterns:
   // 1. or-disjoint (or-disjoint X, C), V -->
   //    or-disjoint (or-disjoint X, V), C
@@ -4560,12 +4551,16 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // 2. or-disjoint (or X, C), V -->
   //    or (or-disjoint X, V), C
   ConstantInt *CI;
-  if (Op0->hasOneUse() && !match(Op1, m_ConstantInt()) &&
-      match(Op0, m_Or(m_Value(A), m_ConstantInt(CI)))) {
+  Instruction *InnerOr;
+  Value *V;
+  if (match(&I, m_c_Or(m_OneUse(m_Instruction(
+                           InnerOr, m_Or(m_Value(A), m_ConstantInt(CI)))),
+                       m_Value(V))) &&
+      !match(V, m_ConstantInt())) {
     bool IsDisjointOuter = cast<PossiblyDisjointInst>(I).isDisjoint();
-    bool IsDisjointInner = cast<PossiblyDisjointInst>(Op0)->isDisjoint();
-    Value *Inner = Builder.CreateOr(A, Op1, "", /*IsDisjoint=*/IsDisjointOuter);
-    Inner->takeName(Op0);
+    bool IsDisjointInner = cast<PossiblyDisjointInst>(InnerOr)->isDisjoint();
+    Value *Inner = Builder.CreateOr(A, V, "", /*IsDisjoint=*/IsDisjointOuter);
+    Inner->takeName(InnerOr);
     return IsDisjointOuter && IsDisjointInner
                ? BinaryOperator::CreateDisjointOr(Inner, CI)
                : BinaryOperator::CreateOr(Inner, CI);

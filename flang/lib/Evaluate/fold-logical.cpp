@@ -611,13 +611,7 @@ Expr<Type<TypeCategory::Logical>> FoldIntrinsicFunction(FoldingContext &context,
     }
   } else if (name == "is_contiguous") {
     if (args.at(0)) {
-      std::optional<bool> knownContiguous;
-      if (auto *expr{args[0]->UnwrapExpr()}) {
-        knownContiguous = IsContiguous(*expr, context);
-      } else if (auto *assumedType{args[0]->GetAssumedTypeDummy()}) {
-        knownContiguous = IsContiguous(*assumedType, context);
-      }
-      if (knownContiguous) {
+      if (auto knownContiguous{IsContiguous(*args[0], context)}) {
         if (*knownContiguous) {
           if (auto source{args[0]->sourceLocation()}) {
             context.Warn(common::UsageWarning::ConstantIsContiguous, *source,
@@ -708,7 +702,7 @@ Expr<Type<TypeCategory::Logical>> FoldIntrinsicFunction(FoldingContext &context,
               const Expr<SomeType> &value{values.begin()->second.value()};
               if (auto flag{ToInt64(value)}) {
                 if (flag != _FORTRAN_RUNTIME_IEEE_DENORM) {
-                  // Check for suppport for standard exceptions.
+                  // Check for support for standard exceptions.
                   return MakeConstantExpr<T>(kind,
                       context.targetCharacteristics().ieeeFeatures().test(
                           IeeeFeature::Flags));

@@ -510,6 +510,7 @@ body:             |
     %res:gpr(i32) = G_SUB %sub_lhs, %ext
     $w3 = COPY %res(i32)
     RET_ReallyLR implicit $w3
+...
 ---
 name:            sub_sext_s8_to_s32
 alignment:       4
@@ -519,6 +520,14 @@ machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $w1, $w2, $x2
+    ; CHECK-LABEL: name: sub_sext_s8_to_s32
+    ; CHECK: liveins: $w1, $w2, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %wide_1:gpr32 = COPY $w1
+    ; CHECK-NEXT: %sub_lhs:gpr32sp = COPY $w2
+    ; CHECK-NEXT: %res:gpr32 = SUBSWrx %sub_lhs, %wide_1, 32, implicit-def dead $nzcv
+    ; CHECK-NEXT: $w3 = COPY %res
+    ; CHECK-NEXT: RET_ReallyLR implicit $w3
     %wide_1:gpr(i32) = COPY $w1
     %1:gpr(i8) = G_TRUNC %wide_1
     %ext:gpr(i32) = G_SEXT %1(i8)
@@ -576,6 +585,7 @@ body:             |
     %res:gpr(i32) = G_SUB %sub_lhs, %ext
     $w3 = COPY %res(i32)
     RET_ReallyLR implicit $w3
+...
 ---
 ...
 ---

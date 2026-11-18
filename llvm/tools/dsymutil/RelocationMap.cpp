@@ -21,8 +21,14 @@ void RelocationMap::print(raw_ostream &OS) const {
 void RelocationMap::dump() const { print(errs()); }
 #endif
 
-void RelocationMap::addRelocationMapEntry(const ValidReloc &Relocation) {
-  Relocations.push_back(Relocation);
+void RelocationMap::addDebugInfoRelocationMapEntry(
+    const ValidReloc &Relocation) {
+  DebugInfoRelocations.push_back(Relocation);
+}
+
+void RelocationMap::addDebugAddrRelocationMapEntry(
+    const ValidReloc &Relocation) {
+  DebugAddrRelocations.push_back(Relocation);
 }
 
 namespace {
@@ -75,7 +81,8 @@ void MappingTraits<dsymutil::RelocationMap>::mapping(
   io.mapRequired("binary-path", RM.BinaryPath);
   if (void *Ctxt = io.getContext())
     reinterpret_cast<YAMLContext *>(Ctxt)->BinaryTriple = RM.BinaryTriple;
-  io.mapRequired("relocations", RM.Relocations);
+  io.mapRequired("relocations", RM.DebugInfoRelocations);
+  io.mapOptional("debug-addr-relocations", RM.DebugAddrRelocations);
 }
 
 void MappingTraits<std::unique_ptr<dsymutil::RelocationMap>>::mapping(
@@ -86,7 +93,8 @@ void MappingTraits<std::unique_ptr<dsymutil::RelocationMap>>::mapping(
   io.mapRequired("binary-path", RM->BinaryPath);
   if (void *Ctxt = io.getContext())
     reinterpret_cast<YAMLContext *>(Ctxt)->BinaryTriple = RM->BinaryTriple;
-  io.mapRequired("relocations", RM->Relocations);
+  io.mapRequired("relocations", RM->DebugInfoRelocations);
+  io.mapOptional("debug-addr-relocations", RM->DebugAddrRelocations);
 }
 } // end namespace yaml
 } // end namespace llvm

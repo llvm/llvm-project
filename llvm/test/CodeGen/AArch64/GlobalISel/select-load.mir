@@ -50,9 +50,6 @@ name:            load_s64_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
 
 body:             |
   bb.0:
@@ -64,8 +61,8 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[COPY]], 0 :: (load (i64) from %ir.addr)
     ; CHECK-NEXT: $x0 = COPY [[LDRXui]]
-    %0(p0) = COPY $x0
-    %1(i64) = G_LOAD  %0 :: (load (i64) from %ir.addr)
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(i64) = G_LOAD  %0 :: (load (i64) from %ir.addr)
     $x0 = COPY %1(i64)
 ...
 
@@ -74,9 +71,6 @@ name:            load_s32_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
 
 body:             |
   bb.0:
@@ -88,8 +82,8 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 0 :: (load (i32) from %ir.addr)
     ; CHECK-NEXT: $w0 = COPY [[LDRWui]]
-    %0(p0) = COPY $x0
-    %1(i32) = G_LOAD  %0 :: (load (i32) from %ir.addr)
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(i32) = G_LOAD  %0 :: (load (i32) from %ir.addr)
     $w0 = COPY %1(i32)
 ...
 
@@ -118,9 +112,6 @@ name:            load_s16_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
 
 body:             |
   bb.0:
@@ -133,8 +124,8 @@ body:             |
     ; CHECK-NEXT: [[LDRHHui:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 0 :: (load (i16) from %ir.addr)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRHHui]]
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
-    %0(p0) = COPY $x0
-    %1(i16) = G_LOAD  %0 :: (load (i16) from %ir.addr)
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(i16) = G_LOAD  %0 :: (load (i16) from %ir.addr)
     %2:gpr(i32) = G_ANYEXT %1
     $w0 = COPY %2(i32)
 ...
@@ -164,9 +155,6 @@ name:            load_s8_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
 
 body:             |
   bb.0:
@@ -179,8 +167,8 @@ body:             |
     ; CHECK-NEXT: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load (i8) from %ir.addr)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRBBui]]
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
-    %0(p0) = COPY $x0
-    %1(i8) = G_LOAD  %0 :: (load (i8) from %ir.addr)
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(i8) = G_LOAD  %0 :: (load (i8) from %ir.addr)
     %2:gpr(i32) = G_ANYEXT %1
     $w0 = COPY %2(i32)
 ...
@@ -190,9 +178,6 @@ name:            load_fi_s64_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
 
 stack:
   - { id: 0, name: ptr0, offset: 0, size: 8, alignment: 8 }
@@ -206,8 +191,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui %stack.0.ptr0, 0 :: (load (i64))
     ; CHECK-NEXT: $x0 = COPY [[LDRXui]]
-    %0(p0) = G_FRAME_INDEX %stack.0.ptr0
-    %1(i64) = G_LOAD %0 :: (load (i64))
+    %0:gpr(p0) = G_FRAME_INDEX %stack.0.ptr0
+    %1:gpr(i64) = G_LOAD %0 :: (load (i64))
     $x0 = COPY %1(i64)
 ...
 
@@ -216,11 +201,6 @@ name:            load_gep_128_s64_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gpr }
 
 body:             |
   bb.0:
@@ -232,10 +212,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[COPY]], 16 :: (load (i64) from %ir.addr)
     ; CHECK-NEXT: $x0 = COPY [[LDRXui]]
-    %0(p0) = COPY $x0
-    %1(i64) = G_CONSTANT i64 128
-    %2(p0) = G_PTR_ADD %0, %1
-    %3(i64) = G_LOAD %2 :: (load (i64) from %ir.addr)
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(i64) = G_CONSTANT i64 128
+    %2:gpr(p0) = G_PTR_ADD %0, %1
+    %3:gpr(i64) = G_LOAD %2 :: (load (i64) from %ir.addr)
     $x0 = COPY %3
 ...
 
@@ -244,11 +224,6 @@ name:            load_gep_512_s32_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gpr }
 
 body:             |
   bb.0:
@@ -260,10 +235,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 128 :: (load (i32) from %ir.addr)
     ; CHECK-NEXT: $w0 = COPY [[LDRWui]]
-    %0(p0) = COPY $x0
-    %1(i64) = G_CONSTANT i64 512
-    %2(p0) = G_PTR_ADD %0, %1
-    %3(i32) = G_LOAD %2 :: (load (i32) from %ir.addr)
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(i64) = G_CONSTANT i64 512
+    %2:gpr(p0) = G_PTR_ADD %0, %1
+    %3:gpr(i32) = G_LOAD %2 :: (load (i32) from %ir.addr)
     $w0 = COPY %3
 ...
 
@@ -272,11 +247,6 @@ name:            load_gep_64_s16_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gpr }
 
 body:             |
   bb.0:
@@ -289,10 +259,10 @@ body:             |
     ; CHECK-NEXT: [[LDRHHui:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 32 :: (load (i16) from %ir.addr)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRHHui]]
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
-    %0(p0) = COPY $x0
-    %1(i64) = G_CONSTANT i64 64
-    %2(p0) = G_PTR_ADD %0, %1
-    %3(i16) = G_LOAD %2 :: (load (i16) from %ir.addr)
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(i64) = G_CONSTANT i64 64
+    %2:gpr(p0) = G_PTR_ADD %0, %1
+    %3:gpr(i16) = G_LOAD %2 :: (load (i16) from %ir.addr)
     %4:gpr(i32) = G_ANYEXT %3
     $w0 = COPY %4
 ...
@@ -302,11 +272,6 @@ name:            load_gep_1_s8_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gpr }
 
 body:             |
   bb.0:
@@ -319,10 +284,10 @@ body:             |
     ; CHECK-NEXT: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 1 :: (load (i8) from %ir.addr)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRBBui]]
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
-    %0(p0) = COPY $x0
-    %1(i64) = G_CONSTANT i64 1
-    %2(p0) = G_PTR_ADD %0, %1
-    %3(i8) = G_LOAD %2 :: (load (i8) from %ir.addr)
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(i64) = G_CONSTANT i64 1
+    %2:gpr(p0) = G_PTR_ADD %0, %1
+    %3:gpr(i8) = G_LOAD %2 :: (load (i8) from %ir.addr)
     %4:gpr(i32) = G_ANYEXT %3
     $w0 = COPY %4
 ...
@@ -332,9 +297,6 @@ name:            load_s64_fpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: fpr }
 
 body:             |
   bb.0:
@@ -346,8 +308,8 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY]], 0 :: (load (i64) from %ir.addr)
     ; CHECK-NEXT: $d0 = COPY [[LDRDui]]
-    %0(p0) = COPY $x0
-    %1(i64) = G_LOAD  %0 :: (load (i64) from %ir.addr)
+    %0:gpr(p0) = COPY $x0
+    %1:fpr(i64) = G_LOAD  %0 :: (load (i64) from %ir.addr)
     $d0 = COPY %1(i64)
 ...
 
@@ -356,9 +318,6 @@ name:            load_s32_fpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: fpr }
 
 body:             |
   bb.0:
@@ -370,8 +329,8 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRSui:%[0-9]+]]:fpr32 = LDRSui [[COPY]], 0 :: (load (i32) from %ir.addr)
     ; CHECK-NEXT: $s0 = COPY [[LDRSui]]
-    %0(p0) = COPY $x0
-    %1(i32) = G_LOAD  %0 :: (load (i32) from %ir.addr)
+    %0:gpr(p0) = COPY $x0
+    %1:fpr(i32) = G_LOAD  %0 :: (load (i32) from %ir.addr)
     $s0 = COPY %1(i32)
 ...
 
@@ -380,9 +339,6 @@ name:            load_s16_fpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: fpr }
 
 body:             |
   bb.0:
@@ -394,8 +350,8 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRHui:%[0-9]+]]:fpr16 = LDRHui [[COPY]], 0 :: (load (i16) from %ir.addr)
     ; CHECK-NEXT: $h0 = COPY [[LDRHui]]
-    %0(p0) = COPY $x0
-    %1(i16) = G_LOAD  %0 :: (load (i16) from %ir.addr)
+    %0:gpr(p0) = COPY $x0
+    %1:fpr(i16) = G_LOAD  %0 :: (load (i16) from %ir.addr)
     $h0 = COPY %1(i16)
 ...
 
@@ -404,9 +360,6 @@ name:            load_s8_fpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: fpr }
 
 body:             |
   bb.0:
@@ -418,8 +371,8 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRBui:%[0-9]+]]:fpr8 = LDRBui [[COPY]], 0 :: (load (i8) from %ir.addr)
     ; CHECK-NEXT: $b0 = COPY [[LDRBui]]
-    %0(p0) = COPY $x0
-    %1(i8) = G_LOAD  %0 :: (load (i8) from %ir.addr)
+    %0:gpr(p0) = COPY $x0
+    %1:fpr(i8) = G_LOAD  %0 :: (load (i8) from %ir.addr)
     $b0 = COPY %1(i8)
 ...
 
@@ -428,11 +381,6 @@ name:            load_gep_8_s64_fpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: fpr }
 
 body:             |
   bb.0:
@@ -444,10 +392,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY]], 1 :: (load (i64) from %ir.addr)
     ; CHECK-NEXT: $d0 = COPY [[LDRDui]]
-    %0(p0) = COPY $x0
-    %1(i64) = G_CONSTANT i64 8
-    %2(p0) = G_PTR_ADD %0, %1
-    %3(i64) = G_LOAD %2 :: (load (i64) from %ir.addr)
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(i64) = G_CONSTANT i64 8
+    %2:gpr(p0) = G_PTR_ADD %0, %1
+    %3:fpr(i64) = G_LOAD %2 :: (load (i64) from %ir.addr)
     $d0 = COPY %3
 ...
 
@@ -456,11 +404,6 @@ name:            load_gep_16_s32_fpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: fpr }
 
 body:             |
   bb.0:
@@ -472,10 +415,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRSui:%[0-9]+]]:fpr32 = LDRSui [[COPY]], 4 :: (load (i32) from %ir.addr)
     ; CHECK-NEXT: $s0 = COPY [[LDRSui]]
-    %0(p0) = COPY $x0
-    %1(i64) = G_CONSTANT i64 16
-    %2(p0) = G_PTR_ADD %0, %1
-    %3(i32) = G_LOAD %2 :: (load (i32) from %ir.addr)
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(i64) = G_CONSTANT i64 16
+    %2:gpr(p0) = G_PTR_ADD %0, %1
+    %3:fpr(i32) = G_LOAD %2 :: (load (i32) from %ir.addr)
     $s0 = COPY %3
 ...
 
@@ -484,11 +427,6 @@ name:            load_gep_64_s16_fpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: fpr }
 
 body:             |
   bb.0:
@@ -500,10 +438,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRHui:%[0-9]+]]:fpr16 = LDRHui [[COPY]], 32 :: (load (i16) from %ir.addr)
     ; CHECK-NEXT: $h0 = COPY [[LDRHui]]
-    %0(p0) = COPY $x0
-    %1(i64) = G_CONSTANT i64 64
-    %2(p0) = G_PTR_ADD %0, %1
-    %3(i16) = G_LOAD %2 :: (load (i16) from %ir.addr)
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(i64) = G_CONSTANT i64 64
+    %2:gpr(p0) = G_PTR_ADD %0, %1
+    %3:fpr(i16) = G_LOAD %2 :: (load (i16) from %ir.addr)
     $h0 = COPY %3
 ...
 
@@ -512,11 +450,6 @@ name:            load_gep_32_s8_fpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: fpr }
 
 body:             |
   bb.0:
@@ -528,10 +461,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRBui:%[0-9]+]]:fpr8 = LDRBui [[COPY]], 32 :: (load (i8) from %ir.addr)
     ; CHECK-NEXT: $b0 = COPY [[LDRBui]]
-    %0(p0) = COPY $x0
-    %1(i64) = G_CONSTANT i64 32
-    %2(p0) = G_PTR_ADD %0, %1
-    %3(i8) = G_LOAD %2 :: (load (i8) from %ir.addr)
+    %0:gpr(p0) = COPY $x0
+    %1:gpr(i64) = G_CONSTANT i64 32
+    %2:gpr(p0) = G_PTR_ADD %0, %1
+    %3:fpr(i8) = G_LOAD %2 :: (load (i8) from %ir.addr)
     $b0 = COPY %3
 ...
 ---
@@ -539,9 +472,6 @@ name:            load_v2s32
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: fpr }
 
 body:             |
   bb.0:
@@ -553,8 +483,8 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY]], 0 :: (load (<2 x i32>) from %ir.addr)
     ; CHECK-NEXT: $d0 = COPY [[LDRDui]]
-    %0(p0) = COPY $x0
-    %1(<2 x i32>) = G_LOAD %0 :: (load (<2 x i32>) from %ir.addr)
+    %0:gpr(p0) = COPY $x0
+    %1:fpr(<2 x i32>) = G_LOAD %0 :: (load (<2 x i32>) from %ir.addr)
     $d0 = COPY %1(<2 x i32>)
 ...
 ---
@@ -562,9 +492,6 @@ name:            load_v2s64
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: fpr }
 
 body:             |
   bb.0:
@@ -576,8 +503,8 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (load (<2 x i64>) from %ir.addr)
     ; CHECK-NEXT: $q0 = COPY [[LDRQui]]
-    %0(p0) = COPY $x0
-    %1(<2 x i64>) = G_LOAD %0 :: (load (<2 x i64>) from %ir.addr)
+    %0:gpr(p0) = COPY $x0
+    %1:fpr(<2 x i64>) = G_LOAD %0 :: (load (<2 x i64>) from %ir.addr)
     $q0 = COPY %1(<2 x i64>)
 ...
 ---
@@ -585,9 +512,6 @@ name:            load_4xi16
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -611,9 +535,6 @@ name:            load_4xi32
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -637,9 +558,6 @@ name:            load_8xi16
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -663,9 +581,6 @@ name:            load_16xi8
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
