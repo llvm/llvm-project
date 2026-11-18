@@ -134,7 +134,7 @@ static bool eliminateAvailableExternally(Module &M, bool Convert,
     if (F.isDeclaration() || !F.hasAvailableExternallyLinkage())
       continue;
 
-    if (Convert || Opts.avail_extern_to_local) {
+    if (Convert) {
       convertToLocalCopy(M, F);
     } else {
       FAM.clear(F, F.getName());
@@ -157,13 +157,14 @@ EliminateAvailableExternallyPass::run(Module &M, ModuleAnalysisManager &MAM) {
   // that's imported, its optimizations will, thus, differ, and be specialized
   // for this contextual information. Eliding it in favor of the original would
   // undo these optimizations.
-  bool Convert = CtxProf && CtxProf->isInSpecializedModule();
+  bool Convert = (CtxProf && CtxProf->isInSpecializedModule()) ||
+                 getIPOOptions(M).avail_extern_to_local;
   FunctionAnalysisManager &FAM =
       MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   if (!eliminateAvailableExternally(M, Convert, FAM))
     return PreservedAnalyses::all();
 
-  if (Convert || getIPOOptions(M).avail_extern_to_local)
+  if (Convert)
     return PreservedAnalyses::none();
 
   // Only function bodies were deleted, and their analyses were cleared.
