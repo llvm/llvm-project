@@ -399,7 +399,7 @@ def TestRecursiveAlias
   let extraClassDeclaration = [{
     Type getBody() const;
 
-    void setBody(Type type);
+    llvm::LogicalResult setBody(Type type);
   }];
 }
 
