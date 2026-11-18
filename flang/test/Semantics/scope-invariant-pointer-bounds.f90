@@ -48,3 +48,88 @@ contains
     print *, size(a, kind=8)
   end subroutine
 end module
+
+! Descriptor inquiries depend on association, not on target values.
+
+module descriptor_bounds
+  type inner_t
+    integer, pointer :: q(:)
+  end type
+  type outer_t
+    type(inner_t), pointer :: p
+  end type
+  integer, pointer :: host_pointer(:)
+contains
+  ! CHECK-LABEL: SUBROUTINE nested_size
+  ! Don't fold SIZE at compile time. b%p%q could be reassociated.
+  ! CHECK: PRINT *, size(a,dim=1,kind=8)
+  subroutine nested_size(b, a)
+    type(outer_t), intent(in) :: b
+    real :: a(size(b%p%q))
+    print *, size(a, kind=8)
+  end subroutine
+
+  ! CHECK-LABEL: SUBROUTINE nested_bounds
+  ! Don't fold SIZE at compile time. b%p%q's bounds could change.
+  ! CHECK: PRINT *, size(a,dim=1,kind=8), size(c,dim=1,kind=8)
+  subroutine nested_bounds(b, a, c)
+    type(outer_t), intent(in) :: b
+    real :: a(lbound(b%p%q, 1)), c(ubound(b%p%q, 1))
+    print *, size(a, kind=8), size(c, kind=8)
+  end subroutine
+
+  ! CHECK-LABEL: SUBROUTINE pointer_base
+  ! Don't fold SIZE at compile time. b%q could be reassociated.
+  ! CHECK: PRINT *, size(a,dim=1,kind=8)
+  subroutine pointer_base(b, a)
+    type(inner_t), pointer, intent(in) :: b
+    real :: a(size(b%q))
+    print *, size(a, kind=8)
+  end subroutine
+
+  ! CHECK-LABEL: SUBROUTINE mutable_subscript
+  ! Don't fold SIZE at compile time. i could be mutated.
+  ! CHECK: PRINT *, size(a,dim=1,kind=8)
+  subroutine mutable_subscript(b, i, a)
+    type(inner_t), intent(in) :: b(:)
+    integer :: i
+    real :: a(size(b(i)%q))
+    print *, size(a, kind=8)
+  end subroutine
+
+  ! CHECK-LABEL: SUBROUTINE host_pointer_bound
+  ! Don't fold SIZE at compile time. host_pointer could be reassociated.
+  ! CHECK: PRINT *, size(a,dim=1,kind=8)
+  subroutine host_pointer_bound(a)
+    real :: a(size(host_pointer))
+    print *, size(a, kind=8)
+  end subroutine
+
+  ! CHECK-LABEL: SUBROUTINE invariant_pointer
+  ! Safe to fold SIZE at compile time. p cannot be reassociated.
+  ! CHECK: PRINT *, max(0_8,size(p,dim=1,kind=8))
+  subroutine invariant_pointer(p, a)
+    integer, pointer, intent(in) :: p(:)
+    real :: a(size(p))
+    print *, size(a, kind=8)
+  end subroutine
+
+  ! CHECK-LABEL: SUBROUTINE invariant_component
+  ! Safe to fold SIZE at compile time. b%q cannot be reassociated.
+  ! CHECK: PRINT *, max(0_8,size(b%q,dim=1,kind=8))
+  subroutine invariant_component(b, a)
+    type(inner_t), intent(in) :: b
+    real :: a(size(b%q))
+    print *, size(a, kind=8)
+  end subroutine
+
+  ! CHECK-LABEL: SUBROUTINE invariant_subscript
+  ! Safe to fold SIZE at compile time. Neither i nor b(i)%q can change.
+  ! CHECK: PRINT *, max(0_8,size(b({{.*}}i{{.*}})%q,dim=1,kind=8))
+  subroutine invariant_subscript(b, i, a)
+    type(inner_t), intent(in) :: b(:)
+    integer, intent(in) :: i
+    real :: a(size(b(i)%q))
+    print *, size(a, kind=8)
+  end subroutine
+end module

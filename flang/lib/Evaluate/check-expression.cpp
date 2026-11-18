@@ -87,10 +87,19 @@ public:
   }
   bool operator()(const DescriptorInquiry &x) const {
     const Symbol &sym{x.base().GetLastSymbol()};
-    return INVARIANT && !IsAllocatable(sym) &&
-        (!IsDummy(sym) ||
-            (IsIntentIn(sym) && !IsOptional(sym) &&
-                !sym.attrs().test(semantics::Attr::VALUE)));
+    if (!INVARIANT || IsAllocatable(sym)) {
+      return false;
+    } else if (const auto *component{x.base().UnwrapComponent()}) {
+      // The descriptor can change through a pointer in the component's base,
+      // even when the first symbol is INTENT(IN). Check subscripts as well.
+      return (*this)(component->base());
+    } else if (IsDummy(sym)) {
+      return IsIntentIn(sym) && !IsOptional(sym) &&
+          !sym.attrs().test(semantics::Attr::VALUE);
+    } else {
+      // INTENT(IN) protects a pointer's association, not its target's value.
+      return !IsPointer(sym);
+    }
   }
   bool operator()(const RankOneBoundElement &x) const {
     return (*this)(x.base());
