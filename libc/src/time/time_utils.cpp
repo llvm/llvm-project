@@ -68,9 +68,13 @@ cpp::optional<time_t> mktime_internal(const tm *tm_out) {
 
   // TODO: https://github.com/llvm/llvm-project/issues/121962
   // Need to handle timezone and update of tm_isdst.
+
+  // Widen before multiplying so large tm_min/tm_hour values cannot overflow
+  // int.
   time_t seconds = static_cast<time_t>(
-      tm_out->tm_sec + tm_out->tm_min * time_constants::SECONDS_PER_MIN +
-      tm_out->tm_hour * time_constants::SECONDS_PER_HOUR +
+      static_cast<int64_t>(tm_out->tm_sec) +
+      static_cast<int64_t>(tm_out->tm_min) * time_constants::SECONDS_PER_MIN +
+      static_cast<int64_t>(tm_out->tm_hour) * time_constants::SECONDS_PER_HOUR +
       total_days * time_constants::SECONDS_PER_DAY);
   return seconds;
 }
