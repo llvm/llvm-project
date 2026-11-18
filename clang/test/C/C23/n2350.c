@@ -47,11 +47,10 @@ int struct_in_second_param(void) {
 
 int macro(void) {
   return offsetof(struct A // cpp-error {{'A' cannot be defined in a type specifier}} \
-                              expected-warning 2 {{defining a type within 'offsetof' is a C23 extension}}
+                              expected-warning {{defining a type within 'offsetof' is a C23 extension}}
   {
     int a;
-    struct B // verifier seems to think the error is emitted by the macro
-             // In fact the location of the error is "B" on the line above
+    struct B // expected-warning {{defining a type within 'offsetof' is a C23 extension}}
     {
       int c;
       int d;
