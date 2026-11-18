@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_JITTARGETMACHINEBUILDER_H
 #define LLVM_EXECUTIONENGINE_ORC_JITTARGETMACHINEBUILDER_H
 
+#include "llvm/IR/DataLayout.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
@@ -62,15 +63,9 @@ public:
 
   /// Get the default DataLayout for the target.
   ///
-  /// Note: This is reasonably expensive, as it creates a temporary
-  /// TargetMachine instance under the hood. It is only suitable for use during
+  /// Note: This is reasonably expensive. It is only suitable for use during
   /// JIT setup.
-  Expected<DataLayout> getDefaultDataLayoutForTarget() {
-    auto TM = createTargetMachine();
-    if (!TM)
-      return TM.takeError();
-    return (*TM)->createDataLayout();
-  }
+  LLVM_ABI Expected<DataLayout> getDefaultDataLayoutForTarget() const;
 
   /// Set the CPU string.
   JITTargetMachineBuilder &setCPU(std::string CPU) {

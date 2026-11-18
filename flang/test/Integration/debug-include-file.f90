@@ -3,9 +3,9 @@
 
 ! Anything read through an INCLUDE gets a location that is fused with the
 ! inclusion information. Check that a module, a derived type, a module
-! variable, a procedure, its dummy argument and an internal procedure all
-! still get debug information, and that it points at the file and line where
-! each is written rather than at the INCLUDE statement.
+! variable, a procedure, its dummy argument, an internal procedure, a common
+! block and its members all still get debug information, and that it points at
+! the file and line where each is written rather than at the INCLUDE statement.
 
 !--- body.f90
 ! Nothing here starts on line 1 on purpose. 1 is also the line that is reported
@@ -28,6 +28,14 @@ subroutine inner()
 end subroutine
 end subroutine
 
+subroutine common_sub()
+  real :: cx
+  real :: cy
+  common /blk/ cx, cy
+  cx = 1.0
+  cy = 2.0
+end subroutine
+
 !--- main.f90
 include 'body.f90'
 program p
@@ -35,6 +43,7 @@ program p
   integer :: i
   type(point) :: pt
   call included_sub(i)
+  call common_sub()
   pt%x = modvar
   print *, i, pt%x
 end program
@@ -46,5 +55,8 @@ end program
 ! CHECK-DAG: ![[SUB:[0-9]+]] = distinct !DISubprogram(name: "included_sub", linkageName: "included_sub_", {{.*}}file: ![[BODY]], line: 11, {{.*}}scopeLine: 11
 ! CHECK-DAG: !DILocalVariable(name: "i", arg: 1, scope: ![[SUB]], file: ![[BODY]], line: 12
 ! CHECK-DAG: !DISubprogram(name: "inner", linkageName: "_QFincluded_subPinner", scope: ![[SUB]], file: ![[BODY]], line: 16, {{.*}}scopeLine: 16
+! CHECK-DAG: ![[CB:[0-9]+]] = !DICommonBlock({{.*}}name: "blk", file: ![[BODY]], line: 24)
+! CHECK-DAG: !DIGlobalVariable(name: "cx", {{.*}}scope: ![[CB]], file: ![[BODY]], line: 22
+! CHECK-DAG: !DIGlobalVariable(name: "cy", {{.*}}scope: ![[CB]], file: ![[BODY]], line: 23
 ! CHECK-DAG: !DISubprogram(name: "p", linkageName: "_QQmain", {{.*}}file: ![[MAIN:[0-9]+]], line: 2
 ! CHECK-DAG: ![[MAIN]] = !DIFile(filename: "main.f90"

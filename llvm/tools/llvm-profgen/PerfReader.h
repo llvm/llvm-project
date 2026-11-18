@@ -533,8 +533,6 @@ private:
   void collectSamplesFromFrameTrie(UnwindState::ProfiledFrame *Cur, T &Stack);
   void collectSamplesFromFrameTrie(UnwindState::ProfiledFrame *Cur);
 
-  void recordRangeCount(uint64_t Start, uint64_t End, UnwindState &State,
-                        uint64_t Repeat);
   void recordBranchCount(const LBREntry &Branch, UnwindState &State,
                          uint64_t Repeat);
 

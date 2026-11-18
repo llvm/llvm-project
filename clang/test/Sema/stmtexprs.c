@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -Wno-gnu-statement-expression
+// RUN: %clang_cc1 %s -verify -fsyntax-only
 
 int stmtexpr_fn(void);
 void stmtexprs(int i) {

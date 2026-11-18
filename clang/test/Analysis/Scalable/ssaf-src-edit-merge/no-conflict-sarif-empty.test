@@ -6,9 +6,8 @@
 # RUN: mkdir -p %t.dir
 # RUN: printf '%%80s' '' > %t.dir/foo.cpp
 
-# RUN: cp %S/Inputs/non-overlapping-a.tpl.yaml %t.dir/a.yaml
-# RUN: cp %S/Inputs/non-overlapping-b.tpl.yaml %t.dir/b.yaml
-# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" %t.dir/a.yaml %t.dir/b.yaml
+# RUN: sed "s|@FOO@|%/t.dir/foo.cpp|g" %S/Inputs/non-overlapping-a.tpl.yaml > %t.dir/a.yaml
+# RUN: sed "s|@FOO@|%/t.dir/foo.cpp|g" %S/Inputs/non-overlapping-b.tpl.yaml > %t.dir/b.yaml
 
 # RUN: clang-ssaf-src-edit-merge \
 # RUN:     -o %t.dir/merged.yaml \

@@ -47,7 +47,7 @@ Derived::~Derived() { some_function(); }
 // CIR-NEXT:     cir.call @_Z13some_functionv()
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   } cleanup normal {
-// CIR-NEXT:     %[[BASE_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR-NEXT:     %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS]] [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
 // CIR-NEXT:     cir.call @_ZN4BaseD2Ev(%[[BASE_ADDR]])
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   }
@@ -81,7 +81,7 @@ FinalDerived::~FinalDerived() { some_function(); }
 // CIR-NEXT:     cir.call @_Z13some_functionv()
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   } cleanup normal {
-// CIR-NEXT:     %[[BASE_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_FinalDerived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR-NEXT:     %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS]] [0] : !cir.ptr<!rec_FinalDerived> -> !cir.ptr<!rec_Base>
 // CIR-NEXT:     cir.call @_ZN4BaseD2Ev(%[[BASE_ADDR]])
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   }
@@ -110,7 +110,7 @@ TrivialDtor::~TrivialDtor() {}
 // CIR-NEXT:   cir.cleanup.scope {
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   } cleanup normal {
-// CIR-NEXT:     %[[BASE_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_TrivialDtor> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR-NEXT:     %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS]] [0] : !cir.ptr<!rec_TrivialDtor> -> !cir.ptr<!rec_Base>
 // CIR-NEXT:     cir.call @_ZN4BaseD2Ev(%[[BASE_ADDR]])
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   }
@@ -147,19 +147,19 @@ MultiBase::~MultiBase() { some_function(); }
 // CIR-NEXT:       %[[MOTHER_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_MultiBase> -> !cir.ptr<!cir.vptr>
 // CIR-NEXT:       cir.store{{.*}} %[[MOTHER_VPTR]], %[[MOTHER_VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 // CIR-NEXT:       %[[FATHER_VPTR:.*]] = cir.vtable.address_point(@_ZTV9MultiBase, address_point = <index = 1, offset = 2>) : !cir.vptr
-// CIR-NEXT:       %[[FATHER_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_MultiBase> nonnull [8] -> !cir.ptr<!rec_Father>
+// CIR-NEXT:       %[[FATHER_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS]] [8] : !cir.ptr<!rec_MultiBase> -> !cir.ptr<!rec_Father>
 // CIR-NEXT:       %[[FATHER_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[FATHER_ADDR]] : !cir.ptr<!rec_Father> -> !cir.ptr<!cir.vptr>
 // CIR-NEXT:       cir.store{{.*}} %[[FATHER_VPTR]], %[[FATHER_VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 // CIR-NEXT:       cir.call @_Z13some_functionv()
 // CIR-NEXT:       cir.yield
 // CIR-NEXT:     } cleanup normal {
-// CIR-NEXT:       %[[FATHER_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_MultiBase> nonnull [8] -> !cir.ptr<!rec_Father>
+// CIR-NEXT:       %[[FATHER_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS]] [8] : !cir.ptr<!rec_MultiBase> -> !cir.ptr<!rec_Father>
 // CIR-NEXT:       cir.call @_ZN6FatherD2Ev(%[[FATHER_ADDR]])
 // CIR-NEXT:       cir.yield
 // CIR-NEXT:     }
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   } cleanup normal {
-// CIR-NEXT:     %[[MOTHER_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_MultiBase> nonnull [0] -> !cir.ptr<!rec_Mother>
+// CIR-NEXT:     %[[MOTHER_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS]] [0] : !cir.ptr<!rec_MultiBase> -> !cir.ptr<!rec_Mother>
 // CIR-NEXT:     cir.call @_ZN6MotherD2Ev(%[[MOTHER_ADDR]])
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   }

@@ -85,7 +85,8 @@ void IncrementalAction::EndSourceFile() {
 void IncrementalAction::FinalizeAction() {
   assert(!IsTerminating && "Already finalized!");
   IsTerminating = true;
-  EndSourceFile();
+  if (!getCurrentInput().isEmpty())
+    EndSourceFile();
 }
 
 void IncrementalAction::CacheCodeGenModule() {

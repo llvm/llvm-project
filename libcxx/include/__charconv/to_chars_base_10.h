@@ -28,51 +28,50 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __itoa {
 
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char* __append1(char* __first, uint32_t __value) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX23 inline char* __append1(char* __first, uint32_t __value) _NOEXCEPT {
   *__first = '0' + static_cast<char>(__value);
   return __first + 1;
 }
 
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char* __append2(char* __first, uint32_t __value) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX23 inline char* __append2(char* __first, uint32_t __value) _NOEXCEPT {
   return std::copy_n(&__digits_base_10[__value * 2], 2, __first);
 }
 
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char* __append3(char* __first, uint32_t __value) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX23 inline char* __append3(char* __first, uint32_t __value) _NOEXCEPT {
   return __itoa::__append2(__itoa::__append1(__first, __value / 100), __value % 100);
 }
 
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char* __append4(char* __first, uint32_t __value) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX23 inline char* __append4(char* __first, uint32_t __value) _NOEXCEPT {
   return __itoa::__append2(__itoa::__append2(__first, __value / 100), __value % 100);
 }
 
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char* __append5(char* __first, uint32_t __value) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX23 inline char* __append5(char* __first, uint32_t __value) _NOEXCEPT {
   return __itoa::__append4(__itoa::__append1(__first, __value / 10000), __value % 10000);
 }
 
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char* __append6(char* __first, uint32_t __value) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX23 inline char* __append6(char* __first, uint32_t __value) _NOEXCEPT {
   return __itoa::__append4(__itoa::__append2(__first, __value / 10000), __value % 10000);
 }
 
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char* __append7(char* __first, uint32_t __value) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX23 inline char* __append7(char* __first, uint32_t __value) _NOEXCEPT {
   return __itoa::__append6(__itoa::__append1(__first, __value / 1000000), __value % 1000000);
 }
 
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char* __append8(char* __first, uint32_t __value) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX23 inline char* __append8(char* __first, uint32_t __value) _NOEXCEPT {
   return __itoa::__append6(__itoa::__append2(__first, __value / 1000000), __value % 1000000);
 }
 
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char* __append9(char* __first, uint32_t __value) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX23 inline char* __append9(char* __first, uint32_t __value) _NOEXCEPT {
   return __itoa::__append8(__itoa::__append1(__first, __value / 100000000), __value % 100000000);
 }
 
 template <class _Tp>
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI char* __append10(char* __first, _Tp __value) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX23 char* __append10(char* __first, _Tp __value) _NOEXCEPT {
   return __itoa::__append8(__itoa::__append2(__first, static_cast<uint32_t>(__value / 100000000)),
                            static_cast<uint32_t>(__value % 100000000));
 }
 
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char*
-__base_10_u32(char* __first, uint32_t __value) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX23 inline char* __base_10_u32(char* __first, uint32_t __value) _NOEXCEPT {
   if (__value < 1000000) {
     if (__value < 10000) {
       if (__value < 100) {
@@ -107,8 +106,7 @@ __base_10_u32(char* __first, uint32_t __value) _NOEXCEPT {
   return __itoa::__append10(__first, __value);
 }
 
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char*
-__base_10_u64(char* __buffer, uint64_t __value) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX23 inline char* __base_10_u64(char* __buffer, uint64_t __value) _NOEXCEPT {
   if (__value <= UINT32_MAX)
     return __itoa::__base_10_u32(__buffer, static_cast<uint32_t>(__value));
 
@@ -122,7 +120,7 @@ __base_10_u64(char* __buffer, uint64_t __value) _NOEXCEPT {
   return __itoa::__append10(__buffer, __value);
 }
 
-#  if _LIBCPP_HAS_INT128
+#if _LIBCPP_HAS_INT128
 /// \returns 10^\a exp
 ///
 /// \pre \a exp [19, 39]
@@ -130,13 +128,12 @@ __base_10_u64(char* __buffer, uint64_t __value) _NOEXCEPT {
 /// \note The lookup table contains a partial set of exponents limiting the
 /// range that can be used. However the range is sufficient for
 /// \ref __base_10_u128.
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline __uint128_t __pow_10(int __exp) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX23 inline __uint128_t __pow_10(int __exp) _NOEXCEPT {
   _LIBCPP_ASSERT_INTERNAL(__exp >= __pow10_128_offset, "Index out of bounds");
   return __pow10_128[__exp - __pow10_128_offset];
 }
 
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char*
-__base_10_u128(char* __buffer, __uint128_t __value) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX23 inline char* __base_10_u128(char* __buffer, __uint128_t __value) _NOEXCEPT {
   _LIBCPP_ASSERT_INTERNAL(
       __value > numeric_limits<uint64_t>::max(), "The optimizations for this algorithm fails when this isn't true.");
 
@@ -174,7 +171,7 @@ __base_10_u128(char* __buffer, __uint128_t __value) _NOEXCEPT {
 
   return __buffer;
 }
-#  endif
+#endif
 } // namespace __itoa
 
 _LIBCPP_END_NAMESPACE_STD

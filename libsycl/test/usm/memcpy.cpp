@@ -1,12 +1,23 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 // REQUIRES: any-device
 // RUN: %clangxx -fsycl %s -o %t.out
 // RUN: %t.out
 
 #include <sycl/sycl.hpp>
 
+#include <cassert>
 #include <cstddef>
+#include <memory>
 #include <numeric>
 #include <tuple>
+#include <vector>
 
 using namespace sycl;
 
@@ -17,9 +28,9 @@ constexpr std::size_t NumBytes = DataSize * sizeof(int);
 // performing a sequence of copies from one allocation to the next,
 // using MemCpyFunc to specify dependencies.
 // Assumes that the first and the last allocations are accessible on host.
-template <typename MemcpyFuncT, typename... AllocFuncssT>
+template <typename MemcpyFuncT, typename... AllocFuncsT>
 void test(queue &Q, MemcpyFuncT MemCpyFunc,
-          std::tuple<AllocFuncssT...> AllocFs) {
+          std::tuple<AllocFuncsT...> AllocFs) {
   constexpr std::size_t NAllocations = std::tuple_size_v<decltype(AllocFs)>;
   static_assert(NAllocations > 1);
 
@@ -104,6 +115,46 @@ int main() {
   runTestsForMemCpyFunc<true>([&](queue &Q, event Dep, auto... OtherArgs) {
     return Q.memcpy(OtherArgs..., std::vector<event>({Dep}));
   });
+  runTestsForMemCpyFunc<false>([&](queue &Q, event Dep, auto... OtherArgs) {
+    (void)Dep;
+    return Q.submit([&](sycl::handler &CGH) { CGH.memcpy(OtherArgs...); });
+  });
+  runTestsForMemCpyFunc<true>([&](queue &Q, event Dep, auto... OtherArgs) {
+    return Q.submit([&](sycl::handler &CGH) {
+      CGH.depends_on(Dep);
+      CGH.memcpy(OtherArgs...);
+    });
+  });
+
+  // copy takes (src, dest, count) in elements rather than memcpy's
+  // (dest, src, numBytes).
+  runTestsForMemCpyFunc<false>(
+      [&](queue &Q, event Dep, int *Dst, const int *Src, std::size_t Bytes) {
+        (void)Dep;
+        return Q.copy(Src, Dst, Bytes / sizeof(int));
+      });
+  runTestsForMemCpyFunc<true>(
+      [&](queue &Q, event Dep, int *Dst, const int *Src, std::size_t Bytes) {
+        return Q.copy(Src, Dst, Bytes / sizeof(int), Dep);
+      });
+  runTestsForMemCpyFunc<true>(
+      [&](queue &Q, event Dep, int *Dst, const int *Src, std::size_t Bytes) {
+        return Q.copy(Src, Dst, Bytes / sizeof(int), std::vector<event>({Dep}));
+      });
+  runTestsForMemCpyFunc<false>(
+      [&](queue &Q, event Dep, int *Dst, const int *Src, std::size_t Bytes) {
+        (void)Dep;
+        return Q.submit([&](sycl::handler &CGH) {
+          CGH.copy(Src, Dst, Bytes / sizeof(int));
+        });
+      });
+  runTestsForMemCpyFunc<true>(
+      [&](queue &Q, event Dep, int *Dst, const int *Src, std::size_t Bytes) {
+        return Q.submit([&](sycl::handler &CGH) {
+          CGH.depends_on(Dep);
+          CGH.copy(Src, Dst, Bytes / sizeof(int));
+        });
+      });
 
   return 0;
 }

@@ -10,6 +10,7 @@
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVInstPrinter.h"
 #include "MCTargetDesc/RISCVMCAsmInfo.h"
+#include "MCTargetDesc/RISCVMCOptions.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "MCTargetDesc/RISCVTargetStreamer.h"
@@ -36,7 +37,6 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
@@ -54,9 +54,6 @@ using namespace llvm;
 STATISTIC(RISCVNumInstrsCompressed,
           "Number of RISC-V Compressed instructions emitted");
 
-static cl::opt<bool> AddBuildAttributes("riscv-add-build-attributes",
-                                        cl::init(false));
-
 namespace {
 struct RISCVOperand;
 
@@ -65,6 +62,8 @@ struct ParserOptionsSet {
 };
 
 class RISCVAsmParser : public MCTargetAsmParser {
+  const RISCVMCOptions &CLOpts;
+
   // This tracks the parsing of the 4 optional operands that make up the vtype
   // portion of vset(i)vli instructions which are separated by commas.
   enum class VTypeState {
@@ -93,9 +92,6 @@ class RISCVAsmParser : public MCTargetAsmParser {
     MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
     return static_cast<RISCVTargetStreamer &>(TS);
   }
-
-  unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
-                                      unsigned Kind) override;
 
   bool generateImmOutOfRangeError(SMLoc ErrorLoc, int64_t Lower, int64_t Upper,
                                   const Twine &Msg);
@@ -226,11 +222,6 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseTileLambda(OperandVector &Operands);
   ParseStatus parseInsnDirectiveOpcode(OperandVector &Operands);
   ParseStatus parseInsnCDirectiveOpcode(OperandVector &Operands);
-  ParseStatus parseGPRAsFPR(OperandVector &Operands);
-  ParseStatus parseGPRAsFPR64(OperandVector &Operands);
-  ParseStatus parseGPRPairAsFPR64(OperandVector &Operands);
-  template <bool IsRV64Inst> ParseStatus parseGPRPair(OperandVector &Operands);
-  ParseStatus parseGPRPair(OperandVector &Operands, bool IsRV64Inst);
   ParseStatus parseFRMArg(OperandVector &Operands);
   ParseStatus parseSMTVType(OperandVector &Operands);
   ParseStatus parseFenceArg(OperandVector &Operands);
@@ -323,7 +314,8 @@ public:
 
   RISCVAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                  const MCInstrInfo &MII)
-      : MCTargetAsmParser(STI, MII) {
+      : MCTargetAsmParser(STI, MII),
+        CLOpts(RISCV_MC::getCLOpts(Parser.getContext().getTargetOptions())) {
     MCAsmParserExtension::Initialize(Parser);
 
     Parser.addAliasForDirective(".half", ".2byte");
@@ -335,7 +327,7 @@ public:
     const MCObjectFileInfo *MOFI = Parser.getContext().getObjectFileInfo();
     ParserOptions.IsPicEnabled = MOFI->isPositionIndependent();
 
-    if (AddBuildAttributes)
+    if (CLOpts.add_build_attributes)
       getTargetStreamer().emitTargetAttributes(STI, /*EmitStackAlign*/ false);
   }
 
@@ -378,11 +370,6 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     StackAdj,
     RegReg,
   } Kind;
-
-  struct RegOp {
-    MCRegister Reg;
-    bool IsGPRAsFPR;
-  };
 
   struct ExprOp {
     const MCExpr *Expr;
@@ -433,7 +420,7 @@ struct RISCVOperand final : public MCParsedAsmOperand {
   SMLoc StartLoc, EndLoc;
   union {
     StringRef Tok;
-    RegOp Reg;
+    MCRegister Reg;
     ExprOp Expr;
     FPImmOp FPImm;
     SysRegOp SysReg;
@@ -496,19 +483,17 @@ public:
   bool isToken() const override { return Kind == KindTy::Token; }
   bool isReg() const override { return Kind == KindTy::Register; }
   bool isExpr() const { return Kind == KindTy::Expression; }
-  bool isV0Reg() const {
-    return Kind == KindTy::Register && Reg.Reg == RISCV::V0;
-  }
+  bool isV0Reg() const { return Kind == KindTy::Register && Reg == RISCV::V0; }
   bool isAnyReg() const {
     return Kind == KindTy::Register &&
-           (getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(Reg.Reg) ||
-            getRISCVMCRegisterClass(RISCV::FPR64RegClassID).contains(Reg.Reg) ||
-            getRISCVMCRegisterClass(RISCV::VRRegClassID).contains(Reg.Reg));
+           (getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(Reg) ||
+            getRISCVMCRegisterClass(RISCV::FPR64RegClassID).contains(Reg) ||
+            getRISCVMCRegisterClass(RISCV::VRRegClassID).contains(Reg));
   }
   bool isAnyRegC() const {
     return Kind == KindTy::Register &&
-           (getRISCVMCRegisterClass(RISCV::GPRCRegClassID).contains(Reg.Reg) ||
-            getRISCVMCRegisterClass(RISCV::FPR64CRegClassID).contains(Reg.Reg));
+           (getRISCVMCRegisterClass(RISCV::GPRCRegClassID).contains(Reg) ||
+            getRISCVMCRegisterClass(RISCV::FPR64CRegClassID).contains(Reg));
   }
   bool isImm() const override { return isExpr(); }
   bool isMem() const override { return false; }
@@ -522,44 +507,30 @@ public:
 
   bool isGPR() const {
     return Kind == KindTy::Register &&
-           getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(Reg.Reg);
+           getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(Reg);
   }
 
-  bool isYGPR() const {
-    return Kind == KindTy::Register &&
-           getRISCVMCRegisterClass(RISCV::YGPRRegClassID).contains(Reg.Reg);
+  bool isGPRForFP(const MCSubtargetInfo &STI) const {
+    // Check !F rather than Zfinx/Zdinx/Zhinx so GPR operands still match *inx
+    // variants when no FP extension is enabled, letting the matcher report the
+    // missing *inx extension instead of an invalid operand.
+    return isGPR() && !STI.hasFeature(RISCV::FeatureStdExtF);
   }
 
-  bool isGPRPair() const {
-    return Kind == KindTy::Register &&
-           getRISCVMCRegisterClass(RISCV::GPRPairRegClassID).contains(Reg.Reg);
+  bool isGPRForFP64(const MCSubtargetInfo &STI) const {
+    // Accept single GPRs on RV32 Zdinx as well so RV64-only instructions (which
+    // have no GPRPairAsFPR variant) report the missing RV64 feature rather than
+    // an invalid operand.
+    return isGPR() && !STI.hasFeature(RISCV::FeatureStdExtF) &&
+           (STI.hasFeature(RISCV::Feature64Bit) ||
+            STI.hasFeature(RISCV::FeatureStdExtZdinx));
   }
 
-  bool isGPRPairC() const {
-    return Kind == KindTy::Register &&
-           getRISCVMCRegisterClass(RISCV::GPRPairCRegClassID).contains(Reg.Reg);
+  bool isEvenGPRForFP64(const MCSubtargetInfo &STI) const {
+    return isGPR() && (Reg - RISCV::X0) % 2 == 0 &&
+           !STI.hasFeature(RISCV::Feature64Bit) &&
+           !STI.hasFeature(RISCV::FeatureStdExtF);
   }
-
-  bool isGPRPairNoX0() const {
-    return Kind == KindTy::Register &&
-           getRISCVMCRegisterClass(RISCV::GPRPairNoX0RegClassID)
-               .contains(Reg.Reg);
-  }
-
-  bool isGPRF16() const {
-    return Kind == KindTy::Register &&
-           getRISCVMCRegisterClass(RISCV::GPRF16RegClassID).contains(Reg.Reg);
-  }
-
-  bool isGPRF32() const {
-    return Kind == KindTy::Register &&
-           getRISCVMCRegisterClass(RISCV::GPRF32RegClassID).contains(Reg.Reg);
-  }
-
-  bool isGPRAsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
-  bool isGPRAsFPR16() const { return isGPRF16() && Reg.IsGPRAsFPR; }
-  bool isGPRAsFPR32() const { return isGPRF32() && Reg.IsGPRAsFPR; }
-  bool isGPRPairAsFPR64() const { return isGPRPair() && Reg.IsGPRAsFPR; }
 
   static bool evaluateConstantExpr(const MCExpr *Expr, int64_t &Imm) {
     if (auto CE = dyn_cast<MCConstantExpr>(Expr)) {
@@ -825,11 +796,6 @@ public:
     });
   }
 
-  bool isUImm7EqXLen() const {
-    return isUImmPred(
-        [this](int64_t Imm) { return isRV64Expr() ? Imm == 64 : Imm == 32; });
-  }
-
   bool isUImm8GE32() const {
     return isUImmPred([](int64_t Imm) { return isUInt<8>(Imm) && Imm >= 32; });
   }
@@ -1057,7 +1023,7 @@ public:
 
   MCRegister getReg() const override {
     assert(Kind == KindTy::Register && "Invalid type access!");
-    return Reg.Reg;
+    return Reg;
   }
 
   StringRef getSysReg() const {
@@ -1101,9 +1067,10 @@ public:
   }
 
   void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
-    auto RegName = [](MCRegister Reg) {
+    const RISCVMCOptions &CLOpts = RISCV_MC::getCLOpts(MAI.getTargetOptions());
+    auto RegName = [&](MCRegister Reg) {
       if (Reg)
-        return RISCVInstPrinter::getRegisterName(Reg);
+        return RISCVInstPrinter::getRegisterName(CLOpts, Reg);
       else
         return "noreg";
     };
@@ -1118,8 +1085,7 @@ public:
       OS << "<fpimm: " << FPImm.Val << ">";
       break;
     case KindTy::Register:
-      OS << "<reg: " << RegName(Reg.Reg) << " (" << Reg.Reg.id()
-         << (Reg.IsGPRAsFPR ? ") GPRasFPR>" : ")>");
+      OS << "<reg: " << RegName(Reg) << " (" << Reg.id() << ")>";
       break;
     case KindTy::Token:
       OS << "'" << getToken() << "'";
@@ -1172,11 +1138,10 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<RISCVOperand>
-  createReg(MCRegister Reg, SMLoc S, SMLoc E, bool IsGPRAsFPR = false) {
+  static std::unique_ptr<RISCVOperand> createReg(MCRegister Reg, SMLoc S,
+                                                 SMLoc E) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::Register);
-    Op->Reg.Reg = Reg;
-    Op->Reg.IsGPRAsFPR = IsGPRAsFPR;
+    Op->Reg = Reg;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -1288,6 +1253,18 @@ public:
     Inst.addOperand(MCOperand::createReg(getReg()));
   }
 
+  void addGPRAsFPR16Operands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(getReg() - RISCV::X0 + RISCV::X0_H));
+  }
+
+  void addGPRAsFPR32Operands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(getReg() - RISCV::X0 + RISCV::X0_W));
+  }
+
+  void addGPRPairOperands(MCInst &Inst, unsigned N) const;
+
   void addImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     addExpr(Inst, getExpr(), isRV64Expr());
@@ -1374,112 +1351,9 @@ public:
 #define GET_MNEMONIC_SPELL_CHECKER
 #include "RISCVGenAsmMatcher.inc"
 
-static MCRegister convertFPR64ToFPR16(MCRegister Reg) {
-  assert(Reg >= RISCV::F0_D && Reg <= RISCV::F31_D && "Invalid register");
-  return Reg - RISCV::F0_D + RISCV::F0_H;
-}
-
-static MCRegister convertFPR64ToFPR32(MCRegister Reg) {
-  assert(Reg >= RISCV::F0_D && Reg <= RISCV::F31_D && "Invalid register");
-  return Reg - RISCV::F0_D + RISCV::F0_F;
-}
-
-static MCRegister convertFPR64ToFPR128(MCRegister Reg) {
-  assert(Reg >= RISCV::F0_D && Reg <= RISCV::F31_D && "Invalid register");
-  return Reg - RISCV::F0_D + RISCV::F0_Q;
-}
-
-static MCRegister convertGPRToYGPR(MCRegister Reg) {
-  assert(Reg >= RISCV::X0 && Reg <= RISCV::X31 && "Invalid register");
-  return Reg - RISCV::X0 + RISCV::X0_Y;
-}
-
-static MCRegister convertVRToVRMx(const MCRegisterInfo &RI, MCRegister Reg,
-                                  unsigned Kind) {
-  unsigned RegClassID;
-  if (Kind == MCK_VRM2)
-    RegClassID = RISCV::VRM2RegClassID;
-  else if (Kind == MCK_VRM4)
-    RegClassID = RISCV::VRM4RegClassID;
-  else if (Kind == MCK_VRM8)
-    RegClassID = RISCV::VRM8RegClassID;
-  else
-    return MCRegister();
-  return RI.getMatchingSuperReg(Reg, RISCV::sub_vrm1_0,
-                                &getRISCVMCRegisterClass(RegClassID));
-}
-
-static MCRegister convertFPR64ToFPR256(MCRegister Reg) {
-  assert(Reg >= RISCV::F0_D && Reg <= RISCV::F31_D && "Invalid register");
-  return Reg - RISCV::F0_D + RISCV::F0_Q2;
-}
-
-unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
-                                                    unsigned Kind) {
-  RISCVOperand &Op = static_cast<RISCVOperand &>(AsmOp);
-  if (!Op.isReg())
-    return Match_InvalidOperand;
-
-  MCRegister Reg = Op.getReg();
-  bool IsRegFPR64 =
-      getRISCVMCRegisterClass(RISCV::FPR64RegClassID).contains(Reg);
-  bool IsRegFPR64C =
-      getRISCVMCRegisterClass(RISCV::FPR64CRegClassID).contains(Reg);
-  bool IsRegVR = getRISCVMCRegisterClass(RISCV::VRRegClassID).contains(Reg);
-
-  if (Op.isGPR() && Kind == MCK_YGPR) {
-    // GPR and capability GPR use the same register names, convert if required.
-    Op.Reg.Reg = convertGPRToYGPR(Reg);
-    return Match_Success;
-  }
-  if (IsRegFPR64 && Kind == MCK_FPR256) {
-    Op.Reg.Reg = convertFPR64ToFPR256(Reg);
-    return Match_Success;
-  }
-  if (IsRegFPR64 && Kind == MCK_FPR128) {
-    Op.Reg.Reg = convertFPR64ToFPR128(Reg);
-    return Match_Success;
-  }
-  // As the parser couldn't differentiate an FPR32 from an FPR64, coerce the
-  // register from FPR64 to FPR32 or FPR64C to FPR32C if necessary.
-  if ((IsRegFPR64 && Kind == MCK_FPR32) ||
-      (IsRegFPR64C && Kind == MCK_FPR32C)) {
-    Op.Reg.Reg = convertFPR64ToFPR32(Reg);
-    return Match_Success;
-  }
-  // As the parser couldn't differentiate an FPR16 from an FPR64, coerce the
-  // register from FPR64 to FPR16 if necessary.
-  if (IsRegFPR64 && Kind == MCK_FPR16) {
-    Op.Reg.Reg = convertFPR64ToFPR16(Reg);
-    return Match_Success;
-  }
-  if (Kind == MCK_GPRAsFPR16 && Op.isGPRAsFPR()) {
-    Op.Reg.Reg = Reg - RISCV::X0 + RISCV::X0_H;
-    return Match_Success;
-  }
-  if (Kind == MCK_GPRAsFPR32 && Op.isGPRAsFPR()) {
-    Op.Reg.Reg = Reg - RISCV::X0 + RISCV::X0_W;
-    return Match_Success;
-  }
-
-  // There are some GPRF64AsFPR instructions that have no RV32 equivalent. We
-  // reject them at parsing thinking we should match as GPRPairAsFPR for RV32.
-  // So we explicitly accept them here for RV32 to allow the generic code to
-  // report that the instruction requires RV64.
-  if (getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(Reg) &&
-      Kind == MCK_GPRF64AsFPR && STI->hasFeature(RISCV::FeatureStdExtZdinx) &&
-      !isRV64())
-    return Match_Success;
-
-  // As the parser couldn't differentiate an VRM2/VRM4/VRM8 from an VR, coerce
-  // the register from VR to VRM2/VRM4/VRM8 if necessary.
-  if (IsRegVR && (Kind == MCK_VRM2 || Kind == MCK_VRM4 || Kind == MCK_VRM8)) {
-    Op.Reg.Reg = convertVRToVRMx(*getContext().getRegisterInfo(), Reg, Kind);
-    if (!Op.Reg.Reg)
-      return Match_InvalidOperand;
-    return Match_Success;
-  }
-  return Match_InvalidOperand;
+void RISCVOperand::addGPRPairOperands(MCInst &Inst, unsigned N) const {
+  assert(N == 1 && "Invalid number of operands!");
+  Inst.addOperand(MCOperand::createReg(convertToGPRPair(getReg())));
 }
 
 bool RISCVAsmParser::generateImmOutOfRangeError(
@@ -1709,10 +1583,6 @@ std::string RISCVAsmParser::getCustomOperandDiag(unsigned MatchError) {
     return "immediate must be an integer in the range "
            "[1, 255], a multiple of 8 in the range [256, 504], "
            "or a multiple of 16 in the range [512, 4096]";
-  case Match_InvalidUImm7EqXLen:
-    return ("immediate must be an integer equal to XLEN (" +
-            Twine(isRV64() ? "64" : "32") + ")")
-        .str();
   }
 }
 
@@ -2702,109 +2572,6 @@ ParseStatus RISCVAsmParser::parseTileLambda(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-ParseStatus RISCVAsmParser::parseGPRAsFPR64(OperandVector &Operands) {
-  if (!isRV64() || getSTI().hasFeature(RISCV::FeatureStdExtF))
-    return ParseStatus::NoMatch;
-
-  return parseGPRAsFPR(Operands);
-}
-
-ParseStatus RISCVAsmParser::parseGPRAsFPR(OperandVector &Operands) {
-  if (getLexer().isNot(AsmToken::Identifier))
-    return ParseStatus::NoMatch;
-
-  StringRef Name = getLexer().getTok().getIdentifier();
-  MCRegister Reg = matchRegisterNameHelper(Name);
-
-  if (!Reg)
-    return ParseStatus::NoMatch;
-  SMLoc S = getLoc();
-  SMLoc E = getTok().getEndLoc();
-  getLexer().Lex();
-  Operands.push_back(RISCVOperand::createReg(
-      Reg, S, E, !getSTI().hasFeature(RISCV::FeatureStdExtF)));
-  return ParseStatus::Success;
-}
-
-ParseStatus RISCVAsmParser::parseGPRPairAsFPR64(OperandVector &Operands) {
-  if (isRV64() || getSTI().hasFeature(RISCV::FeatureStdExtF))
-    return ParseStatus::NoMatch;
-
-  if (getLexer().isNot(AsmToken::Identifier))
-    return ParseStatus::NoMatch;
-
-  StringRef Name = getLexer().getTok().getIdentifier();
-  MCRegister Reg = matchRegisterNameHelper(Name);
-
-  if (!Reg)
-    return ParseStatus::NoMatch;
-
-  if (!getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(Reg))
-    return ParseStatus::NoMatch;
-
-  if ((Reg - RISCV::X0) & 1) {
-    // Only report the even register error if we have at least Zfinx so we know
-    // some FP is enabled. We already checked F earlier.
-    if (getSTI().hasFeature(RISCV::FeatureStdExtZfinx))
-      return TokError("double precision floating point operands must use even "
-                      "numbered X register");
-    return ParseStatus::NoMatch;
-  }
-
-  SMLoc S = getLoc();
-  SMLoc E = getTok().getEndLoc();
-  getLexer().Lex();
-
-  const MCRegisterInfo *RI = getContext().getRegisterInfo();
-  MCRegister Pair = RI->getMatchingSuperReg(
-      Reg, RISCV::sub_gpr_even,
-      &getRISCVMCRegisterClass(RISCV::GPRPairRegClassID));
-  Operands.push_back(RISCVOperand::createReg(Pair, S, E, /*isGPRAsFPR=*/true));
-  return ParseStatus::Success;
-}
-
-template <bool IsRV64>
-ParseStatus RISCVAsmParser::parseGPRPair(OperandVector &Operands) {
-  return parseGPRPair(Operands, IsRV64);
-}
-
-ParseStatus RISCVAsmParser::parseGPRPair(OperandVector &Operands,
-                                         bool IsRV64Inst) {
-  // If this is not an RV64 GPRPair instruction, don't parse as a GPRPair on
-  // RV64 as it will prevent matching the RV64 version of the same instruction
-  // that doesn't use a GPRPair.
-  // If this is an RV64 GPRPair instruction, there is no RV32 version so we can
-  // still parse as a pair.
-  if (!IsRV64Inst && isRV64())
-    return ParseStatus::NoMatch;
-
-  if (getLexer().isNot(AsmToken::Identifier))
-    return ParseStatus::NoMatch;
-
-  StringRef Name = getLexer().getTok().getIdentifier();
-  MCRegister Reg = matchRegisterNameHelper(Name);
-
-  if (!Reg)
-    return ParseStatus::NoMatch;
-
-  if (!getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(Reg))
-    return ParseStatus::NoMatch;
-
-  if ((Reg - RISCV::X0) & 1)
-    return TokError("register must be even");
-
-  SMLoc S = getLoc();
-  SMLoc E = getTok().getEndLoc();
-  getLexer().Lex();
-
-  const MCRegisterInfo *RI = getContext().getRegisterInfo();
-  MCRegister Pair = RI->getMatchingSuperReg(
-      Reg, RISCV::sub_gpr_even,
-      &getRISCVMCRegisterClass(RISCV::GPRPairRegClassID));
-  Operands.push_back(RISCVOperand::createReg(Pair, S, E));
-  return ParseStatus::Success;
-}
-
 ParseStatus RISCVAsmParser::parseSMTVType(OperandVector &Operands) {
   if (getLexer().isNot(AsmToken::Identifier))
     return TokError(
@@ -3255,11 +3022,6 @@ ParseStatus RISCVAsmParser::parseDirective(AsmToken DirectiveID) {
 
 bool RISCVAsmParser::resetToArch(StringRef Arch, SMLoc Loc, std::string &Result,
                                  bool FromOptionDirective) {
-  const auto &AllFeatures = getSTI().getAllProcessorFeatures();
-  for (auto &Feature : AllFeatures)
-    if (llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.key()))
-      clearFeatureBits(Feature.Value, Feature.key());
-
   auto ParseResult = llvm::RISCVISAInfo::parseArchString(
       Arch, /*EnableExperimentalExtension=*/true,
       /*ExperimentalExtensionVersionCheck=*/true);
@@ -3275,23 +3037,29 @@ bool RISCVAsmParser::resetToArch(StringRef Arch, SMLoc Loc, std::string &Result,
   }
   auto &ISAInfo = *ParseResult;
 
-  for (auto &Feature : AllFeatures)
-    if (ISAInfo->hasExtension(Feature.key()))
-      setFeatureBits(Feature.Value, Feature.key());
-
   if (FromOptionDirective) {
     if (ISAInfo->getXLen() == 32 && isRV64())
       return Error(Loc, "bad arch string switching from rv64 to rv32");
     else if (ISAInfo->getXLen() == 64 && !isRV64())
       return Error(Loc, "bad arch string switching from rv32 to rv64");
   }
-
-  if (ISAInfo->getXLen() == 32)
-    clearFeatureBits(RISCV::Feature64Bit, "64bit");
-  else if (ISAInfo->getXLen() == 64)
-    setFeatureBits(RISCV::Feature64Bit, "64bit");
-  else
+  if (ISAInfo->getXLen() != 32 && ISAInfo->getXLen() != 64)
     return Error(Loc, "bad arch string " + Arch);
+
+  // RISCVISAInfo::parseArchString already expands all implied extensions
+  // (including conditional C/Zce implications like Zcd and Zcf), so we can
+  // toggle the feature bits directly without calling setFeatureBits() (which
+  // would run updateCZceFeatureImplications() on an incomplete feature set).
+  MCSubtargetInfo &STI = copySTI();
+  for (auto &Feature : STI.getAllProcessorFeatures()) {
+    if (!llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.key()))
+      continue;
+    if (ISAInfo->hasExtension(Feature.key()) != STI.hasFeature(Feature.Value))
+      STI.ToggleFeature(Feature.Value);
+  }
+  if ((ISAInfo->getXLen() == 64) != STI.hasFeature(RISCV::Feature64Bit))
+    STI.ToggleFeature(RISCV::Feature64Bit);
+  setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
   Result = ISAInfo->toString();
   return false;
@@ -3375,6 +3143,10 @@ bool RISCVAsmParser::parseDirectiveOption() {
       auto Ext = llvm::lower_bound(AllFeatures, Feature);
       if (Ext == std::end(AllFeatures) || StringRef(Ext->key()) != Feature)
         return Error(Loc, "unknown extension feature");
+
+      if (Ext->Value == RISCV::FeatureStdExtY)
+        return Error(Loc, "passing '+y'/'-y' is not supported yet; specify a "
+                          "full arch string instead");
 
       Args.emplace_back(Type, Arch.str());
 
@@ -3777,7 +3549,8 @@ void RISCVAsmParser::emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc,
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   if (STI->hasFeature(RISCV::Feature32Bit) &&
-      STI->hasFeature(RISCV::FeatureVendorXqcili))
+      STI->hasFeature(RISCV::FeatureVendorXqcili) &&
+      !ParserOptions.IsPicEnabled)
     emitToStreamer(
         Out, MCInstBuilder(RISCV::QC_E_LI).addReg(DestReg).addExpr(Symbol));
   else
@@ -4325,12 +4098,13 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     // FIXME: Is there a better way to do this?
     ParsedOp = Operands[2].get();
   }
-  assert(ParsedOp->getReg() == DestReg && "Can't find parsed dest operand");
+  const MCRegisterInfo *RI = getContext().getRegisterInfo();
+  unsigned DestEncoding = RI->getEncodingValue(DestReg);
+  assert(RI->getEncodingValue(ParsedOp->getReg()) == DestEncoding &&
+         "Can't find parsed dest operand");
   SMLoc Loc = ParsedOp->getStartLoc();
 
   unsigned Lmul = getLMULFromVectorRegister(DestReg);
-  const MCRegisterInfo *RI = getContext().getRegisterInfo();
-  unsigned DestEncoding = RI->getEncodingValue(DestReg);
   if (MCID.TSFlags & RISCVII::VS2Constraint) {
     int VS2Idx =
         RISCV::getNamedOperandIdx(Inst.getOpcode(), RISCV::OpName::vs2);
@@ -4406,8 +4180,9 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
       for (unsigned i = 0; i < RegLmul; i++) {
         if ((RegEnc + i) == MaskEnc) {
           SMLoc Loc = Operands[Idx]->getStartLoc();
-          return Error(Loc, Twine("register conflicts with vmask register ") +
-                                RISCVInstPrinter::getRegisterName(MaskReg));
+          return Error(Loc,
+                       Twine("register conflicts with vmask register ") +
+                           RISCVInstPrinter::getRegisterName(CLOpts, MaskReg));
         }
       }
     }

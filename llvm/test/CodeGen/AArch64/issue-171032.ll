@@ -4,8 +4,8 @@
 define <64 x i1> @func_20(<2 x i1> %0) {
 ; CHECK-LABEL: func_20:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov v0.b[1], v0.b[4]
+; CHECK-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    str d0, [x8]
 ; CHECK-NEXT:    ret
 entry:

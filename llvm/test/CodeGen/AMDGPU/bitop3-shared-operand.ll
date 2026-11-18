@@ -609,7 +609,7 @@ define i32 @bitop3_absorb_xor_not_or(i32 %a, i32 %b, i32 %c) {
 ;
 ; O0-LABEL: bitop3_absorb_xor_not_or:
 ; O0:       ; %bb.0:
-; O0:         s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; O0-NEXT:    v_mov_b32_e32 v3, v0
 ; O0-NEXT:    v_bitop3_b32 v0, v2, v1, v3 bitop3:0x3c
 ; O0-NEXT:    v_bitop3_b32 v1, v2, v1, v3 bitop3:0xff

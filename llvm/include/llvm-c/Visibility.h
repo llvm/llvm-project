@@ -27,7 +27,7 @@
 #if defined(LLVM_ENABLE_LLVM_C_EXPORT_ANNOTATIONS) &&                          \
     !defined(LLVM_BUILD_STATIC)
 #if defined(_WIN32) && !defined(__MINGW32__)
-#if defined(LLVM_EXPORTS)
+#if defined(LLVM_C_EXPORTS)
 #define LLVM_C_ABI __declspec(dllexport)
 #else
 #define LLVM_C_ABI __declspec(dllimport)

@@ -308,17 +308,19 @@ class ValueAPITestCase(TestBase):
                     and reg_name == "sp"
                 ):
                     # x86 has "rsp", and "sp" which is a subset of "rsp". Then there is
-                    # the ABI name "sp", which LLDB resolves to "rsp", not to the
-                    # architectural register "sp".
+                    # the ABI name "sp", which LLDB resolves to "rsp" ("esp" on i386),
+                    # not to the architectural register "sp".
                     # See https://github.com/llvm/llvm-project/issues/212778.
+                    full_sp = "esp" if self.getArchitecture() == "i386" else "rsp"
                     sp_with_name_index = reg_set.GetIndexOfChildWithName(reg_name)
                     self.assertTrue(sp_with_name_index < num_registers)
-                    rsp_with_name_index = reg_set.GetIndexOfChildWithName("rsp")
-                    if rsp_with_name_index < num_registers:
-                        self.assertEqual(sp_with_name_index, rsp_with_name_index)
+                    full_sp_with_name_index = reg_set.GetIndexOfChildWithName(full_sp)
+                    if full_sp_with_name_index < num_registers:
+                        self.assertEqual(sp_with_name_index, full_sp_with_name_index)
                     else:
-                        # "rsp" is not in this set, so we get the architectural
-                        # "sp" instead.
+                        # The full width register is not in this set (on Windows,
+                        # "sp" is in "supplementary registers"), so we get the
+                        # architectural "sp" instead.
                         self.assertEqual(sp_with_name_index, child_idx)
 
                     continue

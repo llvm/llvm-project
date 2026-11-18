@@ -15,8 +15,10 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ParentMapContext.h"
+#include "clang/AST/StmtObjC.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -76,10 +78,10 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
       return false;
     unsigned ArgIndex = 0;
     for (auto *Arg : CE->arguments()) {
-      ParmVarDecl *Parm = nullptr;
+      QualType ParamType;
       if (ArgIndex < Ctor->getNumParams())
-        Parm = Ctor->getParamDecl(ArgIndex);
-      if (mutatesGuardian(Arg, Parm))
+        ParamType = Ctor->getParamDecl(ArgIndex)->getType();
+      if (mutatesGuardian(Arg, ParamType))
         return false;
       ArgIndex++;
     }
@@ -89,23 +91,31 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
   bool VisitCallExpr(CallExpr *CE) override {
     auto *Callee = CE->getDirectCallee();
     if (!Callee)
-      return false;
+      return !indirectCallMutatesGuardian(CE);
     if (isPtrConversion(Callee))
       return true;
     if (auto *Method = dyn_cast<CXXMethodDecl>(Callee)) {
       if (isGetterOfSafePtr(Method).value_or(false))
         return true;
     }
+    // For a member operator call, the first argument is the implicit object.
+    auto *OperatorMethod = dyn_cast<CXXMethodDecl>(Callee);
+    if (!isa<CXXOperatorCallExpr>(CE) || !OperatorMethod ||
+        !OperatorMethod->isImplicitObjectMemberFunction())
+      OperatorMethod = nullptr;
     unsigned ArgIndex = 0;
-    unsigned ArgOffset = isa<CXXOperatorCallExpr>(CE);
+    unsigned ArgOffset = OperatorMethod ? 1 : 0;
     for (auto *Arg : CE->arguments()) {
-      ParmVarDecl *Parm = nullptr;
+      QualType ParamType;
       if (ArgIndex >= ArgOffset) {
         unsigned ParmIndex = ArgIndex - ArgOffset;
         if (ParmIndex < Callee->getNumParams())
-          Parm = Callee->getParamDecl(ParmIndex);
+          ParamType = Callee->getParamDecl(ParmIndex)->getType();
+      } else if (OperatorMethod->isConst()) {
+        ArgIndex++;
+        continue;
       }
-      if (mutatesGuardian(Arg, Parm))
+      if (mutatesGuardian(Arg, ParamType))
         return false;
       ArgIndex++;
     }
@@ -119,18 +129,64 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
     auto ObjType = MCE->getObjectType();
     if (ObjType.isConstQualified())
       return true;
+    // A call through a pointer to member function has no method declaration.
+    if (!Method) {
+      if (auto *Prototype = getCalleePrototype(MCE);
+          Prototype && Prototype->getMethodQuals().hasConst())
+        return true;
+    }
     auto *ThisArg = MCE->getImplicitObjectArgument()->IgnoreParenCasts();
+    if (auto *UO = dyn_cast<UnaryOperator>(ThisArg);
+        UO && UO->getOpcode() == UO_AddrOf)
+      ThisArg = UO->getSubExpr()->IgnoreParenCasts();
     if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
-      if (!isa<CXXConversionDecl>(Method) && VarRef->getDecl() == Guardian)
+      if (!isa_and_nonnull<CXXConversionDecl>(Method) &&
+          VarRef->getDecl() == Guardian)
         return false;
     }
     return true;
   }
 
 private:
-  bool mutatesGuardian(const Expr *Arg, const ParmVarDecl *ParmDecl) {
+  // Returns the prototype of the callee of a call through a function pointer,
+  // a block, or a pointer to member function.
+  static const FunctionProtoType *getCalleePrototype(const CallExpr *CE) {
+    auto *CalleeExpr = CE->getCallee();
+    if (!CalleeExpr)
+      return nullptr;
+    CalleeExpr = CalleeExpr->IgnoreParens();
+    QualType CalleeType = CalleeExpr->getType();
+    if (auto *BO = dyn_cast<BinaryOperator>(CalleeExpr); BO && BO->isPtrMemOp())
+      CalleeType = BO->getRHS()->getType();
+    if (QualType PointeeType = CalleeType->getPointeeType();
+        !PointeeType.isNull())
+      CalleeType = PointeeType;
+    return CalleeType->getAs<FunctionProtoType>();
+  }
+
+  // A call through a function pointer, a block, or a pointer to member function
+  // can only mutate the guardian if the guardian is passed to it, or if the
+  // guardian is a __block variable that a block could have captured by
+  // reference.
+  bool indirectCallMutatesGuardian(const CallExpr *CE) {
+    if (Guardian->hasAttr<BlocksAttr>())
+      return true;
+    auto *Prototype = getCalleePrototype(CE);
+    unsigned ArgIndex = 0;
+    for (auto *Arg : CE->arguments()) {
+      QualType ParamType;
+      if (Prototype && ArgIndex < Prototype->getNumParams())
+        ParamType = Prototype->getParamType(ArgIndex);
+      if (mutatesGuardian(Arg, ParamType))
+        return true;
+      ArgIndex++;
+    }
+    return false;
+  }
+
+  bool mutatesGuardian(const Expr *Arg, QualType ParamType) {
     Arg = Arg->IgnoreParenCasts();
-    auto ArgType = ParmDecl ? ParmDecl->getType() : Arg->getType();
+    auto ArgType = !ParamType.isNull() ? ParamType : Arg->getType();
     bool IsAddressOf = false;
     if (auto *UO = dyn_cast<UnaryOperator>(Arg);
         UO && UO->getOpcode() == UO_AddrOf) {
@@ -140,7 +196,7 @@ private:
     auto *VarRef = dyn_cast<DeclRefExpr>(Arg);
     if (!VarRef || VarRef->getDecl() != Guardian)
       return false;
-    if (GuardianIsRawPtrOrRef && !Guardian->getType()->isPointerType())
+    if (GuardianIsRawPtrOrRef && !Guardian->getType()->isAnyPointerType())
       return false;
     if (IsAddressOf) {
       if (!ArgType->isPointerType())
@@ -152,7 +208,7 @@ private:
         return false;
       return !ArgType.getNonReferenceType().isConstQualified();
     }
-    return !ArgType.isConstQualified();
+    return !ArgType.getNonReferenceType().isConstQualified();
   }
 };
 
@@ -212,6 +268,24 @@ bool isGuardedScopeEmbeddedInGuardianScope(const VarDecl *Guarded,
   }
 
   return false;
+}
+
+// Returns the fast enumeration statement whose element is declared as V as in
+// "for (T *V in Collection)".
+static const ObjCForCollectionStmt *
+findObjCForCollectionStmtOfElement(const VarDecl *V) {
+  ASTContext &Ctx = V->getASTContext();
+  for (auto &VarParent : Ctx.getParents(*V)) {
+    auto *DS = VarParent.get<DeclStmt>();
+    if (!DS || !DS->isSingleDecl())
+      continue;
+    for (auto &DeclStmtParent : Ctx.getParents(*DS)) {
+      auto *FCS = DeclStmtParent.get<ObjCForCollectionStmt>();
+      if (FCS && FCS->getElement() == DS)
+        return FCS;
+    }
+  }
+  return nullptr;
 }
 
 static const VarDecl *findAssignedVar(const Expr *DestExpr) {
@@ -339,12 +413,15 @@ public:
 
       bool TraverseIfStmt(IfStmt *IS) override {
         if (IS->getConditionVariable()) {
-          // This code currently does not explicitly check the "else" statement
-          // since getConditionVariable returns nullptr when there is a
-          // condition defined after ";" as in "if (auto foo = ~; !foo)". If
-          // this semantics change, we should add an explicit check for "else".
-          if (auto *Then = IS->getThen(); !Then || TFA.isTrivial(Then))
+          // This code does not check the condition variable in the "else"
+          // statement since getConditionVariable returns nullptr when there
+          // is a condition defined after ";" as in "if (auto foo = ~; !foo)".
+          // If this semantics change, we should check it in "else" as well.
+          if (auto *Then = IS->getThen(); !Then || TFA.isTrivial(Then)) {
+            if (auto *Else = IS->getElse(); Else && !TFA.isTrivial(Else))
+              return TraverseStmt(Else);
             return true;
+          }
         }
         if (!TFA.isTrivial(IS))
           return DynamicRecursiveASTVisitor::TraverseIfStmt(IS);
@@ -412,7 +489,8 @@ public:
         const Expr *Origin = nullptr;
         if (Model->checksForInteriorDestruction()) {
           const Expr *Source = InitList ? InitList->getInit(Index) : Value;
-          if (isPtrOriginSafe(V, Source, DeclWithIssue, Origin))
+          if (isPtrOriginSafe(V, Source, DeclWithIssue, Origin,
+                              Binding->getType()))
             continue;
         }
         reportBug(V, V->getType(), nullptr, BD, DeclWithIssue, Origin);
@@ -422,8 +500,15 @@ public:
     std::optional<bool> IsUncountedPtr = isUnsafePtr(SinkType);
     if (IsUncountedPtr && *IsUncountedPtr) {
       const Expr *Origin = nullptr;
+      // The element of a fast enumeration is kept alive by the collection,
+      // which can't be mutated during the enumeration. Treat the collection as
+      // the initial value of the element.
+      if (!Value) {
+        if (auto *FCS = findObjCForCollectionStmtOfElement(V))
+          Value = FCS->getCollection();
+      }
       if (Value) {
-        if (isPtrOriginSafe(V, Value, DeclWithIssue, Origin))
+        if (isPtrOriginSafe(V, Value, DeclWithIssue, Origin, SinkType))
           return;
       } else if (Model->checksForInteriorDestruction())
         return;
@@ -432,7 +517,8 @@ public:
   }
 
   bool isPtrOriginSafe(const VarDecl *V, const Expr *Value,
-                       const Decl *DeclWithIssue, const Expr *&Origin) const {
+                       const Decl *DeclWithIssue, const Expr *&Origin,
+                       QualType SinkType = QualType()) const {
     return tryToFindPtrOrigin(
         Value, /*StopAtFirstRefCountedObj=*/false,
         Model->checksForInteriorDestruction(),
@@ -472,7 +558,8 @@ public:
           if (EFA.isACallToEnsureFn(InitArgOrigin))
             return true;
 
-          if (Model->isSafeExpr(InitArgOrigin, PtrIsLifetimeBoundToOrigin))
+          if (Model->isSafeExpr(InitArgOrigin, PtrIsLifetimeBoundToOrigin,
+                                SinkType, /*SinkMayEscape=*/false))
             return true;
 
           if (!Model->checksForInteriorDestruction() &&
@@ -496,13 +583,31 @@ public:
       return false;
 
     QualType GuardianType = MaybeGuardian->getType();
+    // The collection of a fast enumeration is evaluated before the loop body is
+    // entered and keeps its elements alive. A raw pointer local variable or
+    // parameter holding the collection is checked on its own, so it only needs
+    // to be left untouched by the loop body.
+    if (auto *FCS = findObjCForCollectionStmtOfElement(V);
+        FCS && !GuardianType.isNull() && GuardianType->isAnyPointerType() &&
+        (MaybeGuardian->isLocalVarDecl() || isa<ParmVarDecl>(MaybeGuardian))) {
+      GuardianVisitor Visitor(MaybeGuardian, /*GuardianIsRawPtrOrRef=*/true);
+      return Visitor.TraverseStmt(const_cast<Stmt *>(FCS->getBody()));
+    }
+
     if (!GuardianType.isNull()) {
       if (auto *Record = GuardianType->getAsCXXRecordDecl()) {
         if (MaybeGuardian->isLocalVarDecl() &&
             (Model->isSafePtr(Record) ||
-             isRefcountedStringsHack(MaybeGuardian)) &&
-            isGuardedScopeEmbeddedInGuardianScope(V, MaybeGuardian))
-          return true;
+             isRefcountedStringsHack(MaybeGuardian))) {
+          // The collection of a fast enumeration is evaluated before the loop
+          // body is entered so the guardian only needs to outlive the body.
+          if (auto *FCS = findObjCForCollectionStmtOfElement(V)) {
+            GuardianVisitor Visitor(MaybeGuardian);
+            return Visitor.TraverseStmt(const_cast<Stmt *>(FCS->getBody()));
+          }
+          if (isGuardedScopeEmbeddedInGuardianScope(V, MaybeGuardian))
+            return true;
+        }
       }
     }
 
@@ -599,8 +704,8 @@ public:
 class UnborrowedLocalVarsChecker final : public RawPtrRefLocalVarsChecker {
 public:
   UnborrowedLocalVarsChecker()
-      : RawPtrRefLocalVarsChecker("Loan on a CanBorrow object not guarded by "
-                                  "a Borrow",
+      : RawPtrRefLocalVarsChecker("Unborrowed raw pointer or reference not "
+                                  "provably backed by a Borrow",
                                   makeBorrowSafetyModel()) {}
 };
 

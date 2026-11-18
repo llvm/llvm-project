@@ -75,6 +75,7 @@ module LLVM_BinaryFormat {
     textual header "llvm/BinaryFormat/Dwarf.def"
     textual header "llvm/BinaryFormat/DXContainerConstants.def"
     textual header "llvm/BinaryFormat/DynamicTags.def"
+    textual header "llvm/BinaryFormat/ELF.def"
     textual header "llvm/BinaryFormat/MachO.def"
     textual header "llvm/BinaryFormat/MinidumpConstants.def"
     textual header "llvm/BinaryFormat/SFrameConstants.def"
@@ -93,6 +94,7 @@ module LLVM_BinaryFormat {
     textual header "llvm/BinaryFormat/ELFRelocs/M68k.def"
     textual header "llvm/BinaryFormat/ELFRelocs/Mips.def"
     textual header "llvm/BinaryFormat/ELFRelocs/MSP430.def"
+    textual header "llvm/BinaryFormat/ELFRelocs/NanoMips.def"
     textual header "llvm/BinaryFormat/ELFRelocs/PowerPC64.def"
     textual header "llvm/BinaryFormat/ELFRelocs/PowerPC.def"
     textual header "llvm/BinaryFormat/ELFRelocs/RISCV.def"
@@ -438,6 +440,7 @@ module LLVM_Utils {
     // These are intended for textual inclusion.
     textual header "llvm/TargetParser/ARMTargetParser.def"
     textual header "llvm/TargetParser/CSKYTargetParser.def"
+    textual header "llvm/TargetParser/IntelGPUTargetParser.def"
     textual header "llvm/TargetParser/X86TargetParser.def"
     textual header "llvm/TargetParser/LoongArchTargetParser.def"
     textual header "llvm/TargetParser/NVPTXTargetParser.def"

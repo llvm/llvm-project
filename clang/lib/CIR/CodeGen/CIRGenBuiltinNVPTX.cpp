@@ -14,9 +14,12 @@
 
 #include "mlir/IR/Value.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
+
+#include <algorithm>
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -69,11 +72,11 @@ static mlir::Value emitUnaryNVVMIntrinsic(CIRGenFunction &cgf,
       .getResult();
 }
 
-/// Emit a CIR LLVMIntrinsicCallOp for an NVVM fadd intrinsic, which takes the
-/// rounding mode as a trailing operand.
-static mlir::Value emitNVVMFAdd(CIRGenFunction &cgf, const CallExpr *expr,
-                                llvm::StringRef intrinsicName,
-                                llvm::APFloat::roundingMode rm) {
+/// Emit a CIR LLVMIntrinsicCallOp for an NVVM fadd/fmul intrinsic, which takes
+/// the rounding mode as a trailing operand.
+static mlir::Value emitNVVMFPArith(CIRGenFunction &cgf, const CallExpr *expr,
+                                   llvm::StringRef intrinsicName,
+                                   llvm::APFloat::roundingMode rm) {
   auto &builder = cgf.getBuilder();
   mlir::Location loc = cgf.getLoc(expr->getExprLoc());
   mlir::Value lhs = cgf.emitScalarExpr(expr->getArg(0));
@@ -83,6 +86,24 @@ static mlir::Value emitNVVMFAdd(CIRGenFunction &cgf, const CallExpr *expr,
   return cir::LLVMIntrinsicCallOp::create(builder, loc,
                                           builder.getStringAttr(intrinsicName),
                                           lhs.getType(), {lhs, rhs, rnd})
+      .getResult();
+}
+
+/// Emit a CIR LLVMIntrinsicCallOp for an NVVM fma intrinsic, which takes the
+/// rounding mode as a trailing operand.
+static mlir::Value emitNVVMFMA(CIRGenFunction &cgf, const CallExpr *expr,
+                               llvm::StringRef intrinsicName,
+                               llvm::APFloat::roundingMode rm) {
+  auto &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
+  mlir::Value a = cgf.emitScalarExpr(expr->getArg(0));
+  mlir::Value b = cgf.emitScalarExpr(expr->getArg(1));
+  mlir::Value c = cgf.emitScalarExpr(expr->getArg(2));
+  mlir::Value rnd =
+      builder.getConstInt(loc, builder.getSInt32Ty(), static_cast<int>(rm));
+  return cir::LLVMIntrinsicCallOp::create(builder, loc,
+                                          builder.getStringAttr(intrinsicName),
+                                          a.getType(), {a, b, c, rnd})
       .getResult();
 }
 
@@ -129,6 +150,182 @@ static mlir::Value makeScopedAtomicXchg(CIRGenFunction &cgf,
       builder, cgf.getLoc(expr->getSourceRange()), destValue, val,
       cir::MemOrder::Relaxed, scope, /*is_volatile=*/false);
   return xchg.getResult();
+}
+
+// Mirrors the WMMA load mappings in classic CodeGen.
+struct NVPTXMmaLdstInfo {
+  unsigned NumResults; // Number of elements to load/store
+  // Intrinsic IDs for row/col variants. 0 if particular layout is unsupported.
+  unsigned IID_col;
+  unsigned IID_row;
+};
+
+#define MMA_INTR(geom_op_type, layout)                                         \
+  llvm::Intrinsic::nvvm_wmma_##geom_op_type##_##layout##_stride
+#define MMA_LDST(n, geom_op_type)                                              \
+  {n, MMA_INTR(geom_op_type, col), MMA_INTR(geom_op_type, row)}
+
+static NVPTXMmaLdstInfo getNVPTXMmaLdstInfo(unsigned BuiltinID) {
+  switch (BuiltinID) {
+  // FP MMA loads
+  case NVPTX::BI__hmma_m16n16k16_ld_a:
+    return MMA_LDST(8, m16n16k16_load_a_f16);
+  case NVPTX::BI__hmma_m16n16k16_ld_b:
+    return MMA_LDST(8, m16n16k16_load_b_f16);
+  case NVPTX::BI__hmma_m16n16k16_ld_c_f16:
+    return MMA_LDST(4, m16n16k16_load_c_f16);
+  case NVPTX::BI__hmma_m16n16k16_ld_c_f32:
+    return MMA_LDST(8, m16n16k16_load_c_f32);
+  case NVPTX::BI__hmma_m32n8k16_ld_a:
+    return MMA_LDST(8, m32n8k16_load_a_f16);
+  case NVPTX::BI__hmma_m32n8k16_ld_b:
+    return MMA_LDST(8, m32n8k16_load_b_f16);
+  case NVPTX::BI__hmma_m32n8k16_ld_c_f16:
+    return MMA_LDST(4, m32n8k16_load_c_f16);
+  case NVPTX::BI__hmma_m32n8k16_ld_c_f32:
+    return MMA_LDST(8, m32n8k16_load_c_f32);
+  case NVPTX::BI__hmma_m8n32k16_ld_a:
+    return MMA_LDST(8, m8n32k16_load_a_f16);
+  case NVPTX::BI__hmma_m8n32k16_ld_b:
+    return MMA_LDST(8, m8n32k16_load_b_f16);
+  case NVPTX::BI__hmma_m8n32k16_ld_c_f16:
+    return MMA_LDST(4, m8n32k16_load_c_f16);
+  case NVPTX::BI__hmma_m8n32k16_ld_c_f32:
+    return MMA_LDST(8, m8n32k16_load_c_f32);
+
+  // Integer MMA loads
+  case NVPTX::BI__imma_m16n16k16_ld_a_s8:
+    return MMA_LDST(2, m16n16k16_load_a_s8);
+  case NVPTX::BI__imma_m16n16k16_ld_a_u8:
+    return MMA_LDST(2, m16n16k16_load_a_u8);
+  case NVPTX::BI__imma_m16n16k16_ld_b_s8:
+    return MMA_LDST(2, m16n16k16_load_b_s8);
+  case NVPTX::BI__imma_m16n16k16_ld_b_u8:
+    return MMA_LDST(2, m16n16k16_load_b_u8);
+  case NVPTX::BI__imma_m16n16k16_ld_c:
+    return MMA_LDST(8, m16n16k16_load_c_s32);
+  case NVPTX::BI__imma_m32n8k16_ld_a_s8:
+    return MMA_LDST(4, m32n8k16_load_a_s8);
+  case NVPTX::BI__imma_m32n8k16_ld_a_u8:
+    return MMA_LDST(4, m32n8k16_load_a_u8);
+  case NVPTX::BI__imma_m32n8k16_ld_b_s8:
+    return MMA_LDST(1, m32n8k16_load_b_s8);
+  case NVPTX::BI__imma_m32n8k16_ld_b_u8:
+    return MMA_LDST(1, m32n8k16_load_b_u8);
+  case NVPTX::BI__imma_m32n8k16_ld_c:
+    return MMA_LDST(8, m32n8k16_load_c_s32);
+  case NVPTX::BI__imma_m8n32k16_ld_a_s8:
+    return MMA_LDST(1, m8n32k16_load_a_s8);
+  case NVPTX::BI__imma_m8n32k16_ld_a_u8:
+    return MMA_LDST(1, m8n32k16_load_a_u8);
+  case NVPTX::BI__imma_m8n32k16_ld_b_s8:
+    return MMA_LDST(4, m8n32k16_load_b_s8);
+  case NVPTX::BI__imma_m8n32k16_ld_b_u8:
+    return MMA_LDST(4, m8n32k16_load_b_u8);
+  case NVPTX::BI__imma_m8n32k16_ld_c:
+    return MMA_LDST(8, m8n32k16_load_c_s32);
+
+  // Sub-integer MMA loads.
+  // Only row/col layout is supported by A/B fragments.
+  case NVPTX::BI__imma_m8n8k32_ld_a_s4:
+    return {1, 0, MMA_INTR(m8n8k32_load_a_s4, row)};
+  case NVPTX::BI__imma_m8n8k32_ld_a_u4:
+    return {1, 0, MMA_INTR(m8n8k32_load_a_u4, row)};
+  case NVPTX::BI__imma_m8n8k32_ld_b_s4:
+    return {1, MMA_INTR(m8n8k32_load_b_s4, col), 0};
+  case NVPTX::BI__imma_m8n8k32_ld_b_u4:
+    return {1, MMA_INTR(m8n8k32_load_b_u4, col), 0};
+  case NVPTX::BI__imma_m8n8k32_ld_c:
+    return MMA_LDST(2, m8n8k32_load_c_s32);
+  case NVPTX::BI__bmma_m8n8k128_ld_a_b1:
+    return {1, 0, MMA_INTR(m8n8k128_load_a_b1, row)};
+  case NVPTX::BI__bmma_m8n8k128_ld_b_b1:
+    return {1, MMA_INTR(m8n8k128_load_b_b1, col), 0};
+  case NVPTX::BI__bmma_m8n8k128_ld_c:
+    return MMA_LDST(2, m8n8k128_load_c_s32);
+
+  // Double MMA loads
+  case NVPTX::BI__dmma_m8n8k4_ld_a:
+    return MMA_LDST(1, m8n8k4_load_a_f64);
+  case NVPTX::BI__dmma_m8n8k4_ld_b:
+    return MMA_LDST(1, m8n8k4_load_b_f64);
+  case NVPTX::BI__dmma_m8n8k4_ld_c:
+    return MMA_LDST(2, m8n8k4_load_c_f64);
+
+  // Alternate float MMA loads
+  case NVPTX::BI__mma_bf16_m16n16k16_ld_a:
+    return MMA_LDST(4, m16n16k16_load_a_bf16);
+  case NVPTX::BI__mma_bf16_m16n16k16_ld_b:
+    return MMA_LDST(4, m16n16k16_load_b_bf16);
+  case NVPTX::BI__mma_bf16_m8n32k16_ld_a:
+    return MMA_LDST(2, m8n32k16_load_a_bf16);
+  case NVPTX::BI__mma_bf16_m8n32k16_ld_b:
+    return MMA_LDST(8, m8n32k16_load_b_bf16);
+  case NVPTX::BI__mma_bf16_m32n8k16_ld_a:
+    return MMA_LDST(8, m32n8k16_load_a_bf16);
+  case NVPTX::BI__mma_bf16_m32n8k16_ld_b:
+    return MMA_LDST(2, m32n8k16_load_b_bf16);
+  case NVPTX::BI__mma_tf32_m16n16k8_ld_a:
+    return MMA_LDST(4, m16n16k8_load_a_tf32);
+  case NVPTX::BI__mma_tf32_m16n16k8_ld_b:
+    return MMA_LDST(4, m16n16k8_load_b_tf32);
+  case NVPTX::BI__mma_tf32_m16n16k8_ld_c:
+    return MMA_LDST(8, m16n16k8_load_c_f32);
+
+  default:
+    llvm_unreachable("Unknown WMMA load builtin");
+  }
+}
+#undef MMA_LDST
+#undef MMA_INTR
+
+static void storeWMMAFragment(CIRGenBuilderTy &builder, mlir::Location loc,
+                              mlir::Value result, Address dst,
+                              unsigned numRegisters) {
+  CharUnits alignment =
+      std::min(dst.getAlignment(), CharUnits::fromQuantity(4));
+  if (numRegisters == 1) {
+    builder.createStore(loc, result, dst.withAlignment(alignment));
+    return;
+  }
+
+  // FP16 intrinsic registers are <2 x half>, stored in i32 fragment slots.
+  for (unsigned i = 0; i < numRegisters; ++i) {
+    mlir::Value value = cir::ExtractMemberOp::create(builder, loc, result, i);
+    value = builder.createBitcast(loc, value, dst.getElementType());
+    mlir::Value ptr = builder.createPtrStride(loc, dst.emitRawPointer(),
+                                              builder.getSInt32(i, loc));
+    builder.createStore(loc, value, Address(ptr, alignment));
+  }
+}
+
+static std::optional<mlir::Value>
+emitWMMALoad(CIRGenFunction &cgf, const CallExpr *expr, unsigned builtinId) {
+  auto &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
+  Address dst = cgf.emitPointerWithAlignment(expr->getArg(0));
+  mlir::Value src = cgf.emitScalarExpr(expr->getArg(1));
+  mlir::Value ldm = cgf.emitScalarExpr(expr->getArg(2));
+  std::optional<llvm::APSInt> isColMajorArg =
+      expr->getArg(3)->getIntegerConstantExpr(cgf.getContext());
+  if (!isColMajorArg)
+    return std::nullopt;
+  bool isColMajor = isColMajorArg->getSExtValue();
+
+  NVPTXMmaLdstInfo info = getNVPTXMmaLdstInfo(builtinId);
+  unsigned intrinsicId = isColMajor ? info.IID_col : info.IID_row;
+  if (!intrinsicId)
+    return std::nullopt;
+
+  cir::FuncType intrinsicType =
+      cgf.getIntrinsicType(intrinsicId, {src.getType()});
+  llvm::StringRef name = llvm::Intrinsic::getBaseName(intrinsicId);
+  assert(name.starts_with("llvm.") && "Not an LLVM intrinsic!");
+  name = name.drop_front(5);
+  mlir::Value result = builder.emitIntrinsicCallOp(
+      loc, name, intrinsicType.getReturnType(), mlir::ValueRange{src, ldm});
+  storeWMMAFragment(builder, loc, result, dst, info.NumResults);
+  return mlir::Value{};
 }
 
 std::optional<mlir::Value>
@@ -413,7 +610,7 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
                  std::string("unimplemented NVPTX builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
-  // FP MMA loads
+  // WMMA fragment loads.
   case NVPTX::BI__hmma_m16n16k16_ld_a:
   case NVPTX::BI__hmma_m16n16k16_ld_b:
   case NVPTX::BI__hmma_m16n16k16_ld_c_f16:
@@ -426,10 +623,6 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__hmma_m8n32k16_ld_b:
   case NVPTX::BI__hmma_m8n32k16_ld_c_f16:
   case NVPTX::BI__hmma_m8n32k16_ld_c_f32:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
   case NVPTX::BI__imma_m16n16k16_ld_a_s8:
   case NVPTX::BI__imma_m16n16k16_ld_a_u8:
   case NVPTX::BI__imma_m16n16k16_ld_b_s8:
@@ -445,10 +638,6 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__imma_m8n32k16_ld_b_s8:
   case NVPTX::BI__imma_m8n32k16_ld_b_u8:
   case NVPTX::BI__imma_m8n32k16_ld_c:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
   case NVPTX::BI__imma_m8n8k32_ld_a_s4:
   case NVPTX::BI__imma_m8n8k32_ld_a_u4:
   case NVPTX::BI__imma_m8n8k32_ld_b_s4:
@@ -457,17 +646,9 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__bmma_m8n8k128_ld_a_b1:
   case NVPTX::BI__bmma_m8n8k128_ld_b_b1:
   case NVPTX::BI__bmma_m8n8k128_ld_c:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
   case NVPTX::BI__dmma_m8n8k4_ld_a:
   case NVPTX::BI__dmma_m8n8k4_ld_b:
   case NVPTX::BI__dmma_m8n8k4_ld_c:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
   case NVPTX::BI__mma_bf16_m16n16k16_ld_a:
   case NVPTX::BI__mma_bf16_m16n16k16_ld_b:
   case NVPTX::BI__mma_bf16_m8n32k16_ld_a:
@@ -477,10 +658,7 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__mma_tf32_m16n16k8_ld_a:
   case NVPTX::BI__mma_tf32_m16n16k8_ld_b:
   case NVPTX::BI__mma_tf32_m16n16k8_ld_c:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitWMMALoad(*this, expr, builtinId);
   case NVPTX::BI__hmma_m16n16k16_st_c_f16:
   case NVPTX::BI__hmma_m16n16k16_st_c_f32:
   case NVPTX::BI__hmma_m32n8k16_st_c_f16:
@@ -553,43 +731,76 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   case NVPTX::BI__nvvm_fma_rn_f16:
-    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.f16")
-        .getValue();
   case NVPTX::BI__nvvm_fma_rn_f16x2:
-    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.f16x2")
-        .getValue();
+  case NVPTX::BI__nvvm_fma_rn_bf16:
+  case NVPTX::BI__nvvm_fma_rn_bf16x2:
+  case NVPTX::BI__nvvm_fma_rn_f:
+  case NVPTX::BI__nvvm_fma_rn_d:
+    return emitNVVMFMA(*this, expr, "nvvm.fma",
+                       llvm::APFloat::rmNearestTiesToEven);
+  case NVPTX::BI__nvvm_fma_rz_f:
+  case NVPTX::BI__nvvm_fma_rz_d:
+    return emitNVVMFMA(*this, expr, "nvvm.fma", llvm::APFloat::rmTowardZero);
+  case NVPTX::BI__nvvm_fma_rm_f:
+  case NVPTX::BI__nvvm_fma_rm_d:
+    return emitNVVMFMA(*this, expr, "nvvm.fma",
+                       llvm::APFloat::rmTowardNegative);
+  case NVPTX::BI__nvvm_fma_rp_f:
+  case NVPTX::BI__nvvm_fma_rp_d:
+    return emitNVVMFMA(*this, expr, "nvvm.fma",
+                       llvm::APFloat::rmTowardPositive);
   case NVPTX::BI__nvvm_fma_rn_ftz_f16:
-    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.ftz.f16")
-        .getValue();
   case NVPTX::BI__nvvm_fma_rn_ftz_f16x2:
-    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.ftz.f16x2")
-        .getValue();
-  case NVPTX::BI__nvvm_fma_rn_ftz_relu_f16:
-    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.ftz.relu.f16")
-        .getValue();
-  case NVPTX::BI__nvvm_fma_rn_ftz_relu_f16x2:
-    return emitBuiltinWithOneOverloadedType<3>(expr,
-                                               "nvvm.fma.rn.ftz.relu.f16x2")
-        .getValue();
-  case NVPTX::BI__nvvm_fma_rn_ftz_sat_f16:
-    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.ftz.sat.f16")
-        .getValue();
-  case NVPTX::BI__nvvm_fma_rn_ftz_sat_f16x2:
-    return emitBuiltinWithOneOverloadedType<3>(expr,
-                                               "nvvm.fma.rn.ftz.sat.f16x2")
-        .getValue();
-  case NVPTX::BI__nvvm_fma_rn_relu_f16:
-    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.relu.f16")
-        .getValue();
-  case NVPTX::BI__nvvm_fma_rn_relu_f16x2:
-    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.relu.f16x2")
-        .getValue();
+  case NVPTX::BI__nvvm_fma_rn_ftz_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.ftz",
+                       llvm::APFloat::rmNearestTiesToEven);
+  case NVPTX::BI__nvvm_fma_rz_ftz_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.ftz",
+                       llvm::APFloat::rmTowardZero);
+  case NVPTX::BI__nvvm_fma_rm_ftz_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.ftz",
+                       llvm::APFloat::rmTowardNegative);
+  case NVPTX::BI__nvvm_fma_rp_ftz_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.ftz",
+                       llvm::APFloat::rmTowardPositive);
   case NVPTX::BI__nvvm_fma_rn_sat_f16:
-    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.sat.f16")
-        .getValue();
   case NVPTX::BI__nvvm_fma_rn_sat_f16x2:
-    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.sat.f16x2")
-        .getValue();
+  case NVPTX::BI__nvvm_fma_rn_sat_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.sat",
+                       llvm::APFloat::rmNearestTiesToEven);
+  case NVPTX::BI__nvvm_fma_rz_sat_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.sat",
+                       llvm::APFloat::rmTowardZero);
+  case NVPTX::BI__nvvm_fma_rm_sat_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.sat",
+                       llvm::APFloat::rmTowardNegative);
+  case NVPTX::BI__nvvm_fma_rp_sat_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.sat",
+                       llvm::APFloat::rmTowardPositive);
+  case NVPTX::BI__nvvm_fma_rn_ftz_sat_f16:
+  case NVPTX::BI__nvvm_fma_rn_ftz_sat_f16x2:
+  case NVPTX::BI__nvvm_fma_rn_ftz_sat_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.ftz.sat",
+                       llvm::APFloat::rmNearestTiesToEven);
+  case NVPTX::BI__nvvm_fma_rz_ftz_sat_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.ftz.sat",
+                       llvm::APFloat::rmTowardZero);
+  case NVPTX::BI__nvvm_fma_rm_ftz_sat_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.ftz.sat",
+                       llvm::APFloat::rmTowardNegative);
+  case NVPTX::BI__nvvm_fma_rp_ftz_sat_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.ftz.sat",
+                       llvm::APFloat::rmTowardPositive);
+  case NVPTX::BI__nvvm_fma_rn_relu_f16:
+  case NVPTX::BI__nvvm_fma_rn_relu_f16x2:
+  case NVPTX::BI__nvvm_fma_rn_relu_bf16:
+  case NVPTX::BI__nvvm_fma_rn_relu_bf16x2:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.relu",
+                       llvm::APFloat::rmNearestTiesToEven);
+  case NVPTX::BI__nvvm_fma_rn_ftz_relu_f16:
+  case NVPTX::BI__nvvm_fma_rn_ftz_relu_f16x2:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.ftz.relu",
+                       llvm::APFloat::rmNearestTiesToEven);
   case NVPTX::BI__nvvm_fma_rn_oob_f16:
   case NVPTX::BI__nvvm_fma_rn_oob_f16x2:
   case NVPTX::BI__nvvm_fma_rn_oob_bf16:
@@ -735,59 +946,96 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
     return emitUnaryNVVMIntrinsic(*this, expr, "nvvm.ex2.approx.ftz");
   case NVPTX::BI__nvvm_add_rn_f:
   case NVPTX::BI__nvvm_add_rn_d:
-    return emitNVVMFAdd(*this, expr, "nvvm.fadd",
-                        llvm::APFloat::rmNearestTiesToEven);
+    return emitNVVMFPArith(*this, expr, "nvvm.fadd",
+                           llvm::APFloat::rmNearestTiesToEven);
   case NVPTX::BI__nvvm_add_rz_f:
   case NVPTX::BI__nvvm_add_rz_d:
-    return emitNVVMFAdd(*this, expr, "nvvm.fadd", llvm::APFloat::rmTowardZero);
+    return emitNVVMFPArith(*this, expr, "nvvm.fadd",
+                           llvm::APFloat::rmTowardZero);
   case NVPTX::BI__nvvm_add_rm_f:
   case NVPTX::BI__nvvm_add_rm_d:
-    return emitNVVMFAdd(*this, expr, "nvvm.fadd",
-                        llvm::APFloat::rmTowardNegative);
+    return emitNVVMFPArith(*this, expr, "nvvm.fadd",
+                           llvm::APFloat::rmTowardNegative);
   case NVPTX::BI__nvvm_add_rp_f:
   case NVPTX::BI__nvvm_add_rp_d:
-    return emitNVVMFAdd(*this, expr, "nvvm.fadd",
-                        llvm::APFloat::rmTowardPositive);
+    return emitNVVMFPArith(*this, expr, "nvvm.fadd",
+                           llvm::APFloat::rmTowardPositive);
   case NVPTX::BI__nvvm_add_rn_ftz_f:
-    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz",
-                        llvm::APFloat::rmNearestTiesToEven);
+    return emitNVVMFPArith(*this, expr, "nvvm.fadd.ftz",
+                           llvm::APFloat::rmNearestTiesToEven);
   case NVPTX::BI__nvvm_add_rz_ftz_f:
-    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz",
-                        llvm::APFloat::rmTowardZero);
+    return emitNVVMFPArith(*this, expr, "nvvm.fadd.ftz",
+                           llvm::APFloat::rmTowardZero);
   case NVPTX::BI__nvvm_add_rm_ftz_f:
-    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz",
-                        llvm::APFloat::rmTowardNegative);
+    return emitNVVMFPArith(*this, expr, "nvvm.fadd.ftz",
+                           llvm::APFloat::rmTowardNegative);
   case NVPTX::BI__nvvm_add_rp_ftz_f:
-    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz",
-                        llvm::APFloat::rmTowardPositive);
+    return emitNVVMFPArith(*this, expr, "nvvm.fadd.ftz",
+                           llvm::APFloat::rmTowardPositive);
   case NVPTX::BI__nvvm_add_rn_sat_f:
   case NVPTX::BI__nvvm_add_rn_sat_f16:
   case NVPTX::BI__nvvm_add_rn_sat_v2f16:
-    return emitNVVMFAdd(*this, expr, "nvvm.fadd.sat",
-                        llvm::APFloat::rmNearestTiesToEven);
+    return emitNVVMFPArith(*this, expr, "nvvm.fadd.sat",
+                           llvm::APFloat::rmNearestTiesToEven);
   case NVPTX::BI__nvvm_add_rz_sat_f:
-    return emitNVVMFAdd(*this, expr, "nvvm.fadd.sat",
-                        llvm::APFloat::rmTowardZero);
+    return emitNVVMFPArith(*this, expr, "nvvm.fadd.sat",
+                           llvm::APFloat::rmTowardZero);
   case NVPTX::BI__nvvm_add_rm_sat_f:
-    return emitNVVMFAdd(*this, expr, "nvvm.fadd.sat",
-                        llvm::APFloat::rmTowardNegative);
+    return emitNVVMFPArith(*this, expr, "nvvm.fadd.sat",
+                           llvm::APFloat::rmTowardNegative);
   case NVPTX::BI__nvvm_add_rp_sat_f:
-    return emitNVVMFAdd(*this, expr, "nvvm.fadd.sat",
-                        llvm::APFloat::rmTowardPositive);
+    return emitNVVMFPArith(*this, expr, "nvvm.fadd.sat",
+                           llvm::APFloat::rmTowardPositive);
   case NVPTX::BI__nvvm_add_rn_ftz_sat_f:
   case NVPTX::BI__nvvm_add_rn_ftz_sat_f16:
   case NVPTX::BI__nvvm_add_rn_ftz_sat_v2f16:
-    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz.sat",
-                        llvm::APFloat::rmNearestTiesToEven);
+    return emitNVVMFPArith(*this, expr, "nvvm.fadd.ftz.sat",
+                           llvm::APFloat::rmNearestTiesToEven);
   case NVPTX::BI__nvvm_add_rz_ftz_sat_f:
-    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz.sat",
-                        llvm::APFloat::rmTowardZero);
+    return emitNVVMFPArith(*this, expr, "nvvm.fadd.ftz.sat",
+                           llvm::APFloat::rmTowardZero);
   case NVPTX::BI__nvvm_add_rm_ftz_sat_f:
-    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz.sat",
-                        llvm::APFloat::rmTowardNegative);
+    return emitNVVMFPArith(*this, expr, "nvvm.fadd.ftz.sat",
+                           llvm::APFloat::rmTowardNegative);
   case NVPTX::BI__nvvm_add_rp_ftz_sat_f:
-    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz.sat",
-                        llvm::APFloat::rmTowardPositive);
+    return emitNVVMFPArith(*this, expr, "nvvm.fadd.ftz.sat",
+                           llvm::APFloat::rmTowardPositive);
+  case NVPTX::BI__nvvm_mul_rn_f:
+  case NVPTX::BI__nvvm_mul_rn_d:
+    return emitNVVMFPArith(*this, expr, "nvvm.fmul",
+                           llvm::APFloat::rmNearestTiesToEven);
+  case NVPTX::BI__nvvm_mul_rz_f:
+  case NVPTX::BI__nvvm_mul_rz_d:
+    return emitNVVMFPArith(*this, expr, "nvvm.fmul",
+                           llvm::APFloat::rmTowardZero);
+  case NVPTX::BI__nvvm_mul_rm_f:
+  case NVPTX::BI__nvvm_mul_rm_d:
+    return emitNVVMFPArith(*this, expr, "nvvm.fmul",
+                           llvm::APFloat::rmTowardNegative);
+  case NVPTX::BI__nvvm_mul_rp_f:
+  case NVPTX::BI__nvvm_mul_rp_d:
+    return emitNVVMFPArith(*this, expr, "nvvm.fmul",
+                           llvm::APFloat::rmTowardPositive);
+  case NVPTX::BI__nvvm_mul_rn_ftz_f:
+    return emitNVVMFPArith(*this, expr, "nvvm.fmul.ftz",
+                           llvm::APFloat::rmNearestTiesToEven);
+  case NVPTX::BI__nvvm_mul_rz_ftz_f:
+    return emitNVVMFPArith(*this, expr, "nvvm.fmul.ftz",
+                           llvm::APFloat::rmTowardZero);
+  case NVPTX::BI__nvvm_mul_rm_ftz_f:
+    return emitNVVMFPArith(*this, expr, "nvvm.fmul.ftz",
+                           llvm::APFloat::rmTowardNegative);
+  case NVPTX::BI__nvvm_mul_rp_ftz_f:
+    return emitNVVMFPArith(*this, expr, "nvvm.fmul.ftz",
+                           llvm::APFloat::rmTowardPositive);
+  case NVPTX::BI__nvvm_mul_rn_sat_f16:
+  case NVPTX::BI__nvvm_mul_rn_sat_v2f16:
+    return emitNVVMFPArith(*this, expr, "nvvm.fmul.sat",
+                           llvm::APFloat::rmNearestTiesToEven);
+  case NVPTX::BI__nvvm_mul_rn_ftz_sat_f16:
+  case NVPTX::BI__nvvm_mul_rn_ftz_sat_v2f16:
+    return emitNVVMFPArith(*this, expr, "nvvm.fmul.ftz.sat",
+                           llvm::APFloat::rmNearestTiesToEven);
   case NVPTX::BI__nvvm_ldg_h:
   case NVPTX::BI__nvvm_ldg_h2:
     cgm.errorNYI(expr->getSourceRange(),
@@ -988,108 +1236,4 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   default:
     return std::nullopt;
   }
-}
-
-// vprintf takes two args: A format string, and a pointer to a buffer containing
-// the varargs.
-//
-// For example, the call
-//
-//   printf("format string", arg1, arg2, arg3);
-//
-// is converted into something resembling
-//
-//   struct Tmp {
-//     Arg1 a1;
-//     Arg2 a2;
-//     Arg3 a3;
-//   };
-//   char* buf = alloca(sizeof(Tmp));
-//   *(Tmp*)buf = {a1, a2, a3};
-//   vprintf("format string", buf);
-//
-// `buf` is aligned to the max of {alignof(Arg1), ...}. Furthermore, each of
-// the args is itself aligned to its preferred alignment.
-//
-// Note that by the time this function runs, the arguments have already
-// undergone the standard C vararg promotion (short -> int, float -> double
-// etc). In this function we pack the arguments into the buffer described above.
-static mlir::Value packArgsIntoNVPTXFormatBuffer(CIRGenFunction &cgf,
-                                                 const CallArgList &args,
-                                                 mlir::Location loc) {
-  const cir::CIRDataLayout dataLayout = cgf.cgm.getDataLayout();
-  CIRGenBuilderTy &builder = cgf.getBuilder();
-
-  if (args.size() <= 1)
-    // If there are no arguments other than the format string,
-    // pass a nullptr to vprintf.
-    return builder.getNullPtr(builder.getVoidPtrTy(), loc);
-
-  llvm::SmallVector<mlir::Type> argTypes;
-  for (const auto &arg : llvm::drop_begin(args))
-    argTypes.push_back(arg.getKnownRValue().getValue().getType());
-
-  // We can directly store the arguments into a struct, and the alignment
-  // would automatically be correct. That's because vprintf does not
-  // accept aggregates.
-  mlir::Type allocaTy = builder.getAnonRecordTy(
-      argTypes, /*packed=*/false, cir::RecordType::getAllDataKinds(argTypes));
-  auto allocaAlign = clang::CharUnits::fromQuantity(
-      dataLayout.getABITypeAlign(allocaTy).value());
-  Address allocaAddr =
-      cgf.createTempAlloca(allocaTy, allocaAlign, loc, "printf_args");
-  mlir::Value alloca = allocaAddr.getPointer();
-
-  for (auto [i, arg] : llvm::enumerate(llvm::drop_begin(args))) {
-    mlir::Value member = builder.createGetMember(
-        loc, cir::PointerType::get(argTypes[i]), alloca, /*name=*/"",
-        /*index=*/i);
-    auto abiAlign = clang::CharUnits::fromQuantity(
-        dataLayout.getABITypeAlign(argTypes[i]).value());
-    cir::StoreOp::create(builder, loc, arg.getKnownRValue().getValue(), member,
-                         /*is_volatile=*/false,
-                         /*isNontemporal=*/false,
-                         builder.getAlignmentAttr(abiAlign),
-                         /*sync_scope=*/cir::SyncScopeKindAttr{},
-                         /*mem_order=*/cir::MemOrderAttr{});
-  }
-
-  return builder.createBitcast(alloca, builder.getVoidPtrTy());
-}
-
-mlir::Value
-CIRGenFunction::emitNVPTXDevicePrintfCallExpr(const CallExpr *expr) {
-  assert(cgm.getTriple().isNVPTX());
-  assert(expr->getBuiltinCallee() == Builtin::BIprintf ||
-         expr->getBuiltinCallee() == Builtin::BI__builtin_printf);
-  assert(expr->getNumArgs() >= 1); // printf always has at least one arg.
-  CallArgList args;
-  emitCallArgs(args,
-               expr->getDirectCallee()->getType()->getAs<FunctionProtoType>(),
-               expr->arguments(), expr->getDirectCallee());
-
-  mlir::Location loc = getLoc(expr->getBeginLoc());
-
-  // We don't know how to emit non-scalar varargs.
-  bool hasNonScalar =
-      llvm::any_of(llvm::drop_begin(args), [&](const CallArg &a) {
-        return a.hasLValue() || !a.getKnownRValue().isScalar();
-      });
-  if (hasNonScalar) {
-    cgm.errorUnsupported(expr, "non-scalar args to printf");
-    return builder.getConstInt(loc, builder.getSInt32Ty(), 0);
-  }
-
-  mlir::Value packedData = packArgsIntoNVPTXFormatBuffer(*this, args, loc);
-
-  // int vprintf(char *format, void *packedData);
-  auto vprintf = cgm.createRuntimeFunction(
-      cir::FuncType::get(
-          {cir::PointerType::get(builder.getSInt8Ty()), builder.getVoidPtrTy()},
-          builder.getSInt32Ty()),
-      "vprintf");
-  auto formatString = args[0].getKnownRValue().getValue();
-  return builder
-      .createCallOp(loc, vprintf, mlir::ValueRange{formatString, packedData})
-      .getResult();
 }

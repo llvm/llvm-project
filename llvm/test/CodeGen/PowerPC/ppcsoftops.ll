@@ -313,10 +313,7 @@ define zeroext i1 @ppcf128_soften(ppc_fp128 %a) #0 {
 ; PPC-LABEL: ppcf128_soften:
 ; PPC:       # %bb.0: # %entry
 ; PPC-NEXT:    stwu 1, -16(1)
-; PPC-NEXT:    stw 5, 8(1) # 4-byte Folded Spill
-; PPC-NEXT:    mr 5, 4
-; PPC-NEXT:    lwz 4, 8(1) # 4-byte Folded Reload
-; PPC-NEXT:    stw 5, 12(1) # 4-byte Folded Spill
+; PPC-NEXT:    stw 4, 12(1) # 4-byte Folded Spill
 ; PPC-NEXT:    mr 5, 3
 ; PPC-NEXT:    lwz 3, 12(1) # 4-byte Folded Reload
 ; PPC-NEXT:    xoris 4, 5, 65520

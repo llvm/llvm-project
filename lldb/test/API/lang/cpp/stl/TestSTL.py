@@ -34,6 +34,7 @@ class STLTestCase(TestBase):
         bugnumber="ICC (13.1, 14-beta) do not emit DW_TAG_template_type_parameter.",
     )
     @add_test_categories(["pyapi"])
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_SBType_template_aspects(self):
         """Test APIs for getting template arguments from an SBType."""
         self.build()

@@ -163,7 +163,8 @@ struct HeaderMergeContinueBlocks {
 };
 
 // Do a preorder traversal of the CFG starting from the BB |Start|.
-// point. Calls |op| on each basic block encountered during the traversal.
+// Calls |op| on each basic block encountered during the traversal. Returning
+// false prunes that block's successors without stopping other pending paths.
 static void visit(BasicBlock &Start, std::function<bool(BasicBlock *)> op) {
   std::stack<BasicBlock *> ToVisit;
   SmallPtrSet<BasicBlock *, 8> Seen;
@@ -289,7 +290,6 @@ class SPIRVStructurizerImpl {
   // the boundary of multiple constructs.
   struct Splitter {
     Function &F;
-    DomTreeBuilder::BBDomTree DT;
     DomTreeBuilder::BBPostDomTree PDT;
     std::optional<PartialOrderingVisitor> POV;
 
@@ -311,7 +311,7 @@ class SPIRVStructurizerImpl {
       const DomTreeBuilder::BBDomTree &DT = getDT();
       assert(DT.dominates(Header, Merge));
       std::vector<BasicBlock *> Output;
-      POV->partialOrderVisit(*Header, [&](BasicBlock *BB) {
+      visit(*Header, [&](BasicBlock *BB) {
         if (BB == Merge)
           return false;
         if (DT.dominates(Merge, BB) || !DT.dominates(Header, BB))
@@ -338,7 +338,7 @@ class SPIRVStructurizerImpl {
       }
 
       std::vector<BasicBlock *> Output;
-      POV->partialOrderVisit(*Node->Header, [&](BasicBlock *BB) {
+      visit(*Node->Header, [&](BasicBlock *BB) {
         if (OutsideBlocks.count(BB) != 0)
           return false;
         if (DT.dominates(Node->Merge, BB) || !DT.dominates(Node->Header, BB))

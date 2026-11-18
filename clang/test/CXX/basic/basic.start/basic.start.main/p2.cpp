@@ -17,6 +17,8 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DTEST12
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DTEST13
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DTEST14
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DTEST15
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DTEST16
 
 #if TEST1
 
@@ -111,6 +113,23 @@ template <typename T>
 int main(void); // expected-error{{'main' cannot be a template}}
 
 int main(void) {}
+
+#elif TEST15
+template <int I> struct S {
+  template <class C> friend int main() { return I; } // expected-error {{'main' cannot be a template}}
+};
+template struct S<1>;
+
+int main() {}
+
+#elif TEST16
+
+template <int I> struct S {
+  template <class C> friend int main(); // expected-error {{'main' cannot be a template}}
+};
+template struct S<1>;
+
+int main() {}
 
 #else
 

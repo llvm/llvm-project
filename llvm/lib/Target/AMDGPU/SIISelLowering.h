@@ -28,6 +28,7 @@ class SIMachineFunctionInfo;
 class SIRegisterInfo;
 
 namespace AMDGPU {
+struct BufferIntrinsicInfo;
 struct ImageDimIntrinsicInfo;
 }
 
@@ -53,6 +54,8 @@ public:
     unsigned &NumIntermediates, MVT &RegisterVT) const override;
 
   MachinePointerInfo getKernargSegmentPtrInfo(MachineFunction &MF) const;
+
+  bool isUniformLoad(const LoadSDNode *Load) const;
 
 private:
   SDValue lowerKernArgParameterPtr(SelectionDAG &DAG, const SDLoc &SL,
@@ -96,10 +99,17 @@ private:
                        SDValue Offset, SDValue CachePolicy, SelectionDAG &DAG,
                        MachineMemOperand *MMO = nullptr) const;
 
-  SDValue lowerRawBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
-                                     unsigned NewOpcode) const;
-  SDValue lowerStructBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
-                                        unsigned NewOpcode) const;
+  SmallVector<SDValue, 10>
+  getBufferIntrinsicOps(SDValue Op, const AMDGPU::BufferIntrinsicInfo &Info,
+                        SelectionDAG &DAG, SDValue VData = SDValue()) const;
+  SDValue lowerBufferIntrinsicWithChain(SDValue Op,
+                                        const AMDGPU::BufferIntrinsicInfo &Info,
+                                        SelectionDAG &DAG) const;
+  SDValue lowerBufferIntrinsicVoid(SDValue Op,
+                                   const AMDGPU::BufferIntrinsicInfo &Info,
+                                   SelectionDAG &DAG) const;
+  SDValue lowerBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
+                                  unsigned NewOpcode) const;
 
   SDValue lowerWaveID(SelectionDAG &DAG, SDValue Op) const;
   SDValue lowerConstHwRegRead(SelectionDAG &DAG, SDValue Op,
@@ -227,6 +237,7 @@ private:
   SDValue performOrCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performXorCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performZeroOrAnyExtendCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performExtendTruncShiftCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSignExtendInRegCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performClassCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue getCanonicalConstantFP(SelectionDAG &DAG, const SDLoc &SL, EVT VT,
@@ -242,6 +253,8 @@ private:
   SDValue performMinMaxCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFMed3Combine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performCvtPkRTZCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performExponentOnlyScaleCombine(SDNode *N,
+                                          DAGCombinerInfo &DCI) const;
   SDValue performExtractVectorEltCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performInsertVectorEltCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFPRoundCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -403,7 +416,8 @@ public:
 
   static bool isNonGlobalAddrSpace(unsigned AS);
 
-  bool isFreeAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
+  bool isFreeAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                           unsigned DestAS) const override;
 
   TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(MVT VT) const override;
@@ -416,6 +430,7 @@ public:
   bool isExtractVecEltCheap(EVT VT, unsigned Index) const override;
 
   bool isTypeDesirableForOp(unsigned Op, EVT VT) const override;
+  bool isTypeDesirableForOp(SDNode *N, EVT VT) const override;
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
@@ -547,6 +562,8 @@ public:
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
   ConstraintType getConstraintType(StringRef Constraint) const override;
+  InlineAsm::ConstraintCode
+  getInlineAsmMemConstraint(StringRef ConstraintCode) const override;
   void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
@@ -625,7 +642,9 @@ public:
                                             bool isDivergent) const override;
   bool requiresUniformRegister(MachineFunction &MF,
                                const Value *V) const override;
-  Align getPrefLoopAlignment(MachineLoop *ML) const override;
+  Align
+  getPrefLoopAlignment(MachineLoop *ML,
+                       const MachineBasicBlock *BlockToAlign) const override;
   unsigned
   getMaxPermittedBytesForAlignment(MachineBasicBlock *MBB) const override;
 
@@ -661,10 +680,6 @@ public:
     const SIRegisterInfo &TRI,
     SIMachineFunctionInfo &Info) const;
 
-  void allocateSpecialInputVGPRs(CCState &CCInfo,
-                                 MachineFunction &MF,
-                                 const SIRegisterInfo &TRI,
-                                 SIMachineFunctionInfo &Info) const;
   void allocateSpecialInputVGPRsFixed(CCState &CCInfo,
                                       MachineFunction &MF,
                                       const SIRegisterInfo &TRI,

@@ -41,7 +41,7 @@ class ClangdLSPServer : private ClangdServer::Callbacks,
 public:
   struct Options : ClangdServer::Options {
     /// Supplies configuration (overrides ClangdServer::ContextProvider).
-    config::Provider *ConfigProvider = nullptr;
+    std::unique_ptr<config::Provider> ConfigProvider;
     /// Look for compilation databases, rather than using compile commands
     /// set via LSP (extensions) only.
     bool UseDirBasedCDB = true;
@@ -69,7 +69,7 @@ public:
   };
 
   ClangdLSPServer(Transport &Transp, const ThreadsafeFS &TFS,
-                  const ClangdLSPServer::Options &Opts);
+                  ClangdLSPServer::Options &&Opts);
   /// The destructor blocks on any outstanding background tasks.
   ~ClangdLSPServer();
 

@@ -27,3 +27,20 @@ func.func @fpclass_scalar(%arg: f32) -> (i1, i1, i1) {
   %nan = math.isnan %arg : f32
   return %inf, %finite, %nan : i1, i1, i1
 }
+
+// libdevice's __nv_powif takes an i32 exponent. A narrower exponent is
+// sign-extended; a wider or index exponent is not lowered.
+
+// CHECK-LABEL:   func.func @fpowi(
+func.func @fpowi(%x: f32, %e16: i16, %e32: i32, %e64: i64, %idx: index) -> (f32, f32, f32, f32) {
+  // CHECK: %[[EXT:.*]] = llvm.sext %{{.*}} : i16 to i32
+  // CHECK: llvm.call @__nv_powif(%{{.*}}, %[[EXT]]) : (f32, i32) -> f32
+  %a = math.fpowi %x, %e16 : f32, i16
+  // CHECK: llvm.call @__nv_powif(%{{.*}}, %{{.*}}) : (f32, i32) -> f32
+  %b = math.fpowi %x, %e32 : f32, i32
+  // CHECK: math.fpowi %{{.*}}, %{{.*}} : f32, i64
+  %c = math.fpowi %x, %e64 : f32, i64
+  // CHECK: math.fpowi %{{.*}}, %{{.*}} : f32, index
+  %d = math.fpowi %x, %idx : f32, index
+  return %a, %b, %c, %d : f32, f32, f32, f32
+}

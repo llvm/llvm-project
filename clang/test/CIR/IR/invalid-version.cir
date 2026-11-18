@@ -71,3 +71,18 @@ module {
   // expected-error @below {{cir.cl.cxx.version attribute must be attached to a module}}
   cir.func private @not_module_cxx_result() -> (!cir.int<s, 32> {cir.cl.cxx.version = #cir.cl.version<2021, 0>})
 }
+
+// -----
+
+// expected-error @below {{expected cir.cl.spir.version to be #cir.cl.version}}
+module attributes {cir.cl.spir.version = "bad"} {
+}
+
+// -----
+
+module {
+  // expected-error @below {{cir.cl.spir.version attribute must be attached to a module}}
+  cir.func @not_module_attr() attributes {cir.cl.spir.version = #cir.cl.version<1, 2>} {
+    cir.return
+  }
+}

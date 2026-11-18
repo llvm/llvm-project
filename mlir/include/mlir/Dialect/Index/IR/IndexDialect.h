@@ -9,8 +9,6 @@
 #ifndef MLIR_DIALECT_INDEX_IR_INDEXDIALECT_H
 #define MLIR_DIALECT_INDEX_IR_INDEXDIALECT_H
 
-#include "mlir/IR/Dialect.h"
-
 //===----------------------------------------------------------------------===//
 // ODS-Generated Declarations
 //===----------------------------------------------------------------------===//

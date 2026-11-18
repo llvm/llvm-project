@@ -194,9 +194,12 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
 
     // The header mask is a prefix mask. Before being materialized it is the
     // loop region's abstract header mask; afterwards it is an active lane mask
-    // (an intrinsic or a phi), or the icmp checked below.
-    if (match(Mask, m_HeaderMask()) || isa<VPActiveLaneMaskPHIRecipe>(Mask) ||
-        match(Mask, m_VPInstruction<VPInstruction::ActiveLaneMask>()))
+    // (an intrinsic, phi, or an extract from a phi), or the icmp checked below.
+    if (match(Mask, m_CombineOr(
+                        m_HeaderMask(), m_Isa<VPActiveLaneMaskPHIRecipe>(),
+                        m_VPInstruction<VPInstruction::ActiveLaneMask>(),
+                        m_ExtractVectorForPart(
+                            m_Isa<VPActiveLaneMaskPHIRecipe>(), m_VPValue()))))
       continue;
 
     CmpPredicate Pred;
@@ -248,11 +251,6 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         return false;
       }
 
-      // MaskedCond may be used from blocks it don't dominate; the block will be
-      // linearized and it will dominate its users after linearization.
-      if (match(&R, m_VPInstruction<VPInstruction::MaskedCond>()))
-        continue;
-
       for (const VPUser *U : V->users()) {
         auto *UI = cast<VPRecipeBase>(U);
         if (isa<VPIRPhi>(UI) &&
@@ -293,7 +291,11 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
           if (RecipeNumbering[UI] >= RecipeNumbering[&R])
             continue;
         } else {
-          if (VPDT.dominates(VPBB, UI->getParent()))
+          // MaskedCond may be used from blocks it don't dominate; the block
+          // will be linearized and it will dominate its users after
+          // linearization.
+          if (match(&R, m_VPInstruction<VPInstruction::MaskedCond>()) ||
+              VPDT.dominates(VPBB, UI->getParent()))
             continue;
         }
 

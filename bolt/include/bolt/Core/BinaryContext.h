@@ -42,7 +42,6 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/RWMutex.h"
@@ -320,6 +319,13 @@ public:
     MIB = std::move(TargetBuilder);
   }
 
+  /// Set up target-specific relocation handling.
+  void initializeRelocationHandler(std::unique_ptr<RelocationHandler> Handler) {
+    assert(Handler && "expected a relocation handler");
+    assert(!RelocHandler && "relocation handler is already initialized");
+    RelocHandler = std::move(Handler);
+  }
+
   /// Return function fragments to skip.
   const std::unordered_set<BinaryFunction *> &getFragmentsToSkip() {
     return FragmentsToSkip;
@@ -418,6 +424,9 @@ public:
   using binary_data_iterator = BinaryDataMapType::iterator;
   using binary_data_const_iterator = BinaryDataMapType::const_iterator;
   BinaryDataMapType BinaryDataMap;
+
+  /// Subset of BinaryDataMap holding vtables, see BinaryData::isVTable().
+  BinaryDataMapType VTableMap;
 
   using FilteredBinaryDataConstIterator =
       FilterIterator<binary_data_const_iterator>;
@@ -729,7 +738,6 @@ public:
   std::unique_ptr<DWARFContext> DwCtx;
 
   std::unique_ptr<Triple> TheTriple;
-
   std::shared_ptr<orc::SymbolStringPool> SSP;
 
   const Target *TheTarget;
@@ -751,6 +759,8 @@ public:
   std::unique_ptr<const MCInstrAnalysis> MIA;
 
   std::unique_ptr<MCPlusBuilder> MIB;
+
+  std::unique_ptr<RelocationHandler> RelocHandler;
 
   std::unique_ptr<const MCRegisterInfo> MRI;
 
@@ -987,6 +997,11 @@ public:
 
   bool isMachO() const { return TheTriple->isOSBinFormatMachO(); }
 
+  const RelocationHandler &getRelocationHandler() const {
+    assert(RelocHandler && "relocation handler is not initialized");
+    return *RelocHandler;
+  }
+
   bool isAArch64() const {
     return TheTriple->getArch() == llvm::Triple::aarch64;
   }
@@ -1052,6 +1067,7 @@ public:
     for (auto &Entry : BinaryDataMap)
       delete Entry.second;
     BinaryDataMap.clear();
+    VTableMap.clear();
   }
 
   /// Process \p Address reference from code in function \BF.
@@ -1126,6 +1142,11 @@ public:
     return const_cast<BinaryData *>(
         getBinaryDataContainingAddressImpl(Address));
   }
+
+  /// Return the vtable containing \p Address or nullptr. Unlike
+  /// getBinaryDataContainingAddress(), symbols that start inside the vtable,
+  /// such as WPD __typeid_* aliases, do not hide it.
+  const BinaryData *getVTableContainingAddress(uint64_t Address) const;
 
   /// Return BinaryData for the given \p Name or nullptr if no
   /// global symbol with that name exists.
@@ -1211,6 +1232,9 @@ public:
   const char *getInjectedColdCodeSectionName() const {
     return ".text.injected.cold";
   }
+
+  /// Return true if \p A should be emitted before \p B in code section order.
+  bool compareSectionNames(StringRef A, StringRef B) const;
 
   ErrorOr<BinarySection &> getGdbIndexSection() const {
     return getUniqueSectionByName(".gdb_index");
@@ -1662,7 +1686,7 @@ public:
   createStreamer(llvm::raw_pwrite_stream &OS) const {
     MCCodeEmitter *MCE = TheTarget->createMCCodeEmitter(*MII, *Ctx);
     MCAsmBackend *MAB =
-        TheTarget->createMCAsmBackend(*STI, *MRI, MCTargetOptions());
+        TheTarget->createMCAsmBackend(*STI, *MRI, Ctx->getTargetOptions());
     std::unique_ptr<MCObjectWriter> OW = MAB->createObjectWriter(OS);
     std::unique_ptr<MCStreamer> Streamer(TheTarget->createMCObjectStreamer(
         *TheTriple, *Ctx, std::unique_ptr<MCAsmBackend>(MAB), std::move(OW),

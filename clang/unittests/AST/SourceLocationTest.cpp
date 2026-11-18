@@ -230,6 +230,53 @@ TEST(TypeLoc, LongRange) {
   EXPECT_TRUE(Verifier.match("long a;", typeLoc()));
 }
 
+TEST(TypeLoc, VectorSourceInfo) {
+  llvm::Annotations Code(R"cpp(
+    typedef int (__attribute__(($Vector^vector_size($VectorSize[[8 * 2]]))) Vector);
+    typedef int (__attribute__(($Extended^ext_vector_type($ExtendedSize[[4]]))) Extended);
+    template <int N> struct V {
+      typedef int __attribute__((vector_size(N))) DependentVector;
+      typedef int __attribute__((ext_vector_type(N))) DependentExtended;
+    };
+  )cpp");
+  auto AST = tooling::buildASTFromCodeWithArgs(Code.code(), /*Args=*/{});
+  ASSERT_TRUE(AST);
+
+  ASTContext &Ctx = AST->getASTContext();
+  const SourceManager &SM = Ctx.getSourceManager();
+  auto Matches = match(
+      typedefNameDecl(hasAnyName("Vector", "Extended")).bind("decl"), Ctx);
+  ASSERT_EQ(Matches.size(), 2u);
+  for (const auto &Match : Matches) {
+    const auto *Decl = Match.getNodeAs<TypedefNameDecl>("decl");
+    std::string Name = Decl->getNameAsString();
+    auto TL = Decl->getTypeSourceInfo()->getTypeLoc().getAs<VectorTypeLoc>();
+    ASSERT_TRUE(TL) << Name;
+    ASSERT_TRUE(TL.getAttrNameLoc().isValid()) << Name;
+    EXPECT_EQ(SM.getFileOffset(TL.getAttrNameLoc()), Code.point(Name)) << Name;
+    ASSERT_TRUE(TL.getSizeExpr()) << Name;
+    auto Range = Lexer::getAsCharRange(TL.getSizeExpr()->getSourceRange(), SM,
+                                       Ctx.getLangOpts());
+    auto Expected = Code.range(Name + "Size");
+    EXPECT_EQ(SM.getFileOffset(Range.getBegin()), Expected.Begin) << Name;
+    EXPECT_EQ(SM.getFileOffset(Range.getEnd()), Expected.End) << Name;
+  }
+
+  auto DependentMatches =
+      match(typedefNameDecl(hasAnyName("DependentVector", "DependentExtended"))
+                .bind("decl"),
+            Ctx);
+  ASSERT_EQ(DependentMatches.size(), 2u);
+  for (const auto &Match : DependentMatches) {
+    const auto *Decl = Match.getNodeAs<TypedefNameDecl>("decl");
+    TypeLoc TL = Decl->getTypeSourceInfo()->getTypeLoc();
+    if (auto VTL = TL.getAs<DependentVectorTypeLoc>())
+      EXPECT_TRUE(VTL.getSizeExpr());
+    else
+      EXPECT_TRUE(TL.castAs<DependentSizedExtVectorTypeLoc>().getSizeExpr());
+  }
+}
+
 TEST(TypeLoc, DecltypeTypeLocRange) {
   llvm::Annotations Code(R"(
     $full1[[decltype(1)]] a;
@@ -1089,6 +1136,46 @@ template <X::CCC<int> T> void print(T object);
 )cpp";
   Verifier.expectRange(4, 11, 4, 21);
   EXPECT_TRUE(Verifier.match(Code3, templateTypeParmDecl(), Lang_CXX20));
+}
+
+class PackIndexingTypeLocVerifier : public RangeVerifier<TypeLoc> {
+protected:
+  SourceRange getRange(const TypeLoc &Node) override {
+    PackIndexingTypeLoc TL = Node.getAs<PackIndexingTypeLoc>();
+    assert(!TL.isNull());
+    return SourceRange(TL.getPatternLoc().getBeginLoc(), TL.getEllipsisLoc());
+  }
+};
+
+TEST(PackIndexingTypeLoc, PatternAndEllipsisLoc) {
+  PackIndexingTypeLocVerifier Verifier;
+  // FIXME: There's no packIndexingType matcher yet.
+  Verifier.expectRange(2, 8, 2, 9);
+  EXPECT_TRUE(Verifier.match(
+      R"cpp(template <class... T> void foo() {
+       T...[0] x;
+  })cpp",
+      typeLoc(hasParent(varDecl(hasName("x")))), Lang_CXX26));
+}
+
+TEST(PackIndexingTypeLoc, PatternIsTraversed) {
+  RangeVerifier<TypeLoc> Verifier;
+  Verifier.expectRange(2, 8, 2, 8);
+  EXPECT_TRUE(Verifier.match(
+      R"cpp(template <class... T> void foo() {
+       T...[0] x;
+  })cpp",
+      typeLoc(loc(templateTypeParmType())), Lang_CXX26));
+}
+
+TEST(PackIndexingTypeLoc, PatternIsTraversedInAlias) {
+  RangeVerifier<TypeLoc> Verifier;
+  Verifier.expectRange(2, 18, 2, 18);
+  EXPECT_TRUE(Verifier.match(
+      R"cpp(template <class... T> void foo() {
+       using U = T...[0];
+  })cpp",
+      typeLoc(loc(templateTypeParmType())), Lang_CXX26));
 }
 
 class ConceptSpecializationExprConceptReferenceRangeVerifier

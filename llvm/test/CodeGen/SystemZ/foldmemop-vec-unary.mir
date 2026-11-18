@@ -20,7 +20,6 @@
 ---
 name:            fun0
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fp32bit }
   - { id: 1, class: vr64bit }
@@ -49,7 +48,6 @@ body:             |
 ---
 name:            fun1
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fp32bit }
   - { id: 1, class: vr64bit }
@@ -79,7 +77,6 @@ body:             |
 ---
 name:            fun2
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fp32bit }
   - { id: 1, class: fp64bit }
@@ -106,7 +103,6 @@ body:             |
 ---
 name:            fun3
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fp64bit }
   - { id: 1, class: vr64bit }
@@ -135,7 +131,6 @@ body:             |
 ---
 name:            fun4
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fp64bit }
   - { id: 1, class: vr64bit }
@@ -163,7 +158,6 @@ body:             |
 ---
 name:            fun5
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fp32bit }
   - { id: 1, class: vr32bit }
@@ -192,7 +186,6 @@ body:             |
 ---
 name:            fun6
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fp32bit }
   - { id: 1, class: vr32bit }

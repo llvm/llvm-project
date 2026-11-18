@@ -7,7 +7,7 @@
 ! optional, and the AArch64 CI hardware does not deliver SIGFPE, so restrict
 ! this run-time test to x86 glibc.
 ! REQUIRES: target=x86_64{{.*}}-linux-gnu
-! UNSUPPORTED: offload-cuda
+! UNSUPPORTED: offload-cuda, wsl1
 
 ! Built without traps: the division by zero yields infinity and the program
 ! exits normally.
