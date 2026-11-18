@@ -72,7 +72,9 @@ std::string ExeRelativeCandidate() {
 }
 #endif // ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
 
-#ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+// MinGW builds link against a MinGW Python, so a PEP 514 registered install
+// (built with MSVC) would not be compatible.
+#if defined(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME) && !defined(__MINGW32__)
 /// PEP 514 tag suffix for installs matching this process' architecture.
 const wchar_t *RegistryTagSuffix() {
 #if defined(_M_ARM64) || defined(__aarch64__)
@@ -86,14 +88,14 @@ const wchar_t *RegistryTagSuffix() {
 #endif
 }
 
-struct RegisteredInstall {
+struct RegistryInstall {
   unsigned long major;
   unsigned long minor;
   std::wstring install_path;
 };
 
-void CollectRegisteredInstalls(HKEY root, REGSAM view, const wchar_t *suffix,
-                               std::vector<RegisteredInstall> &installs) {
+void CollectRegistryInstalls(HKEY root, REGSAM view, const wchar_t *suffix,
+                             std::vector<RegistryInstall> &installs) {
   HKEY core;
   if (::RegOpenKeyExW(root, L"Software\\Python\\PythonCore", 0, KEY_READ | view,
                       &core) != ERROR_SUCCESS)
@@ -138,25 +140,25 @@ void CollectRegisteredInstalls(HKEY root, REGSAM view, const wchar_t *suffix,
 /// Runtime DLLs of the Python installs registered per PEP 514, which is
 /// where the py launcher finds interpreters that are not on PATH. Newest
 /// version first.
-std::vector<std::string> RegisteredInstallCandidates() {
+std::vector<std::string> RegistryInstallCandidates() {
   std::vector<std::string> candidates;
   const wchar_t *suffix = RegistryTagSuffix();
   if (!suffix)
     return candidates;
 
-  std::vector<RegisteredInstall> installs;
-  CollectRegisteredInstalls(HKEY_CURRENT_USER, 0, suffix, installs);
-  CollectRegisteredInstalls(HKEY_LOCAL_MACHINE, KEY_WOW64_64KEY, suffix,
-                            installs);
-  CollectRegisteredInstalls(HKEY_LOCAL_MACHINE, KEY_WOW64_32KEY, suffix,
-                            installs);
+  std::vector<RegistryInstall> installs;
+  CollectRegistryInstalls(HKEY_CURRENT_USER, 0, suffix, installs);
+  CollectRegistryInstalls(HKEY_LOCAL_MACHINE, KEY_WOW64_64KEY, suffix,
+                          installs);
+  CollectRegistryInstalls(HKEY_LOCAL_MACHINE, KEY_WOW64_32KEY, suffix,
+                          installs);
   std::stable_sort(installs.begin(), installs.end(),
-                   [](const RegisteredInstall &a, const RegisteredInstall &b) {
+                   [](const RegistryInstall &a, const RegistryInstall &b) {
                      return std::tie(a.major, a.minor) >
                             std::tie(b.major, b.minor);
                    });
 
-  for (const RegisteredInstall &install : installs) {
+  for (const RegistryInstall &install : installs) {
     std::string dir;
     if (!llvm::convertWideToUTF8(install.install_path, dir))
       continue;
@@ -170,7 +172,7 @@ std::vector<std::string> RegisteredInstallCandidates() {
   }
   return candidates;
 }
-#endif // ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+#endif // defined(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME) && !defined(__MINGW32__)
 
 } // namespace
 
@@ -190,8 +192,8 @@ void ForEachPythonRuntimeCandidate(
     return;
 #endif
 
-#ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
-  for (const std::string &candidate : RegisteredInstallCandidates())
+#if defined(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME) && !defined(__MINGW32__)
+  for (const std::string &candidate : RegistryInstallCandidates())
     if (callback(candidate.c_str()))
       return;
 #endif
