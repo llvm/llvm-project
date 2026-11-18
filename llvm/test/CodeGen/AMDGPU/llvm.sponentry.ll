@@ -422,7 +422,7 @@ define amdgpu_gfx ptr addrspace(5) @sponentry_gfx_dyn_alloc(i32 %val) #0 {
   ret ptr addrspace(5) %stack.base
 }
 
-; CHECK: ScratchSize: 16
+; CHECK: ScratchSize: 4112
 
 define amdgpu_cs_chain void @sponentry_cs_chain(i32 %val, ptr addrspace(5) %ptr) #0 {
 ; DAGISEL-LABEL: sponentry_cs_chain:
@@ -607,7 +607,7 @@ define amdgpu_cs_chain void @sponentry_cs_chain_dyn_alloc(i32 %val) #0 {
   ret void
 }
 
-; CHECK: ScratchSize: 16
+; CHECK: ScratchSize: 4112
 
 attributes #0 = { nounwind "amdgpu-dynamic-vgpr-block-size"="16" }
 attributes #1 = { nounwind "amdgpu-dynamic-vgpr-block-size"="32" }

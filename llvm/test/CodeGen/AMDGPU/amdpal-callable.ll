@@ -152,7 +152,7 @@ attributes #0 = { nounwind }
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x14{{$}}
 ; GCN-NEXT:        .vgpr_count:     0x2{{$}}
 ; GCN-NEXT:      dynamic_stack_loop:
-; GCN-NEXT:        .backend_stack_size: 0x10{{$}}
+; GCN-NEXT:        .backend_stack_size: 0x1010{{$}}
 ; GCN-NEXT:        .lds_size:       0{{$}}
 ; GCN-NEXT:        .sgpr_count:     0x25{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x10{{$}}
