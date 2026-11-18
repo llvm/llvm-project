@@ -8,13 +8,12 @@
 using namespace llvm;
 using namespace orc;
 
-// Descriptor for the call-controller handler that the ORC runtime calls to
+// Spec for the call-controller handler that the ORC runtime calls to
 // request reoptimization.
 namespace llvm::orc::reoptimize_sps_handlers {
-struct Reoptimize {
+struct Reoptimize : sps::HandlerSpec<shared::SPSError(uint64_t, uint32_t)> {
   static constexpr SymbolNameSpec Name =
       SymbolNameSpec::c("__orc_rt_reoptimize_tag");
-  using SPSSig = shared::SPSError(uint64_t, uint32_t);
 };
 } // namespace llvm::orc::reoptimize_sps_handlers
 
@@ -142,9 +141,9 @@ Error ReOptimizeLayer::addOrcRTLiteSupport(JITDylib &PlatformJD,
 
 Error ReOptimizeLayer::registerRuntimeFunctions(JITDylib &PlatformJD) {
   return ES.registerCallControllerHandlers(
-      PlatformJD, bindCallControllerHandler<
-                      sps::HandlerSpec<reoptimize_sps_handlers::Reoptimize>>(
-                      this, &ReOptimizeLayer::rt_reoptimize));
+      PlatformJD,
+      bindCallControllerHandler<reoptimize_sps_handlers::Reoptimize>(
+          this, &ReOptimizeLayer::rt_reoptimize));
 }
 
 void ReOptimizeLayer::emit(std::unique_ptr<MaterializationResponsibility> R,

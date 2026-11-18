@@ -100,7 +100,7 @@ static lto::Config createConfig(Ctx &ctx) {
   c.Options.UniqueBasicBlockSectionNames =
       ctx.arg.ltoUniqueBasicBlockSectionNames;
 
-  if (auto relocModel = getRelocModelFromCMModel())
+  if (auto relocModel = getRelocModelFromCMModel(ctx.arg.libraryOptions))
     c.RelocModel = *relocModel;
   else if (ctx.arg.relocatable)
     c.RelocModel = std::nullopt;
@@ -109,12 +109,12 @@ static lto::Config createConfig(Ctx &ctx) {
   else
     c.RelocModel = Reloc::Static;
 
-  c.CodeModel = getCodeModelFromCMModel();
+  c.CodeModel = getCodeModelFromCMModel(ctx.arg.libraryOptions);
   c.DisableVerify = ctx.arg.disableVerify;
   c.DiagHandler = diagnosticHandler;
   c.OptLevel = ctx.arg.ltoo;
-  c.CPU = getCPUStr();
-  c.MAttrs = getMAttrs();
+  c.CPU = getCPUStr(ctx.arg.libraryOptions);
+  c.MAttrs = getMAttrs(ctx.arg.libraryOptions);
   c.CGOptLevel = ctx.arg.ltoCgo;
 
   c.PTO.LoopVectorization = c.OptLevel > 1;

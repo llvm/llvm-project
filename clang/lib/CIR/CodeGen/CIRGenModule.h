@@ -657,6 +657,11 @@ public:
   /// necessary, caching the result for the given function.
   cir::FuncOp getFunctionPointer(GlobalDecl GD);
 
+  /// Return true if a vtable with the given linkage may have more than one
+  /// address in the program, in which case its address is insignificant and it
+  /// can be marked unnamed_addr.
+  bool mayVTableBeDuplicated(cir::GlobalLinkageKind linkage) const;
+
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool forEH = false) {
     return (forEH || getLangOpts().RTTI) &&
@@ -1005,6 +1010,13 @@ public:
   /// Emits AMDGPU specific Metadata.
   void emitAMDGPUMetadata();
 
+  /// Build (or fetch from the dedup cache) the args ArrayAttr for an
+  /// annotation. Returns the empty ArrayAttr when the annotation has none.
+  mlir::ArrayAttr getOrCreateAnnotationArgs(const clang::AnnotateAttr *attr);
+
+  /// Create cir::AnnotationAttr for a single AnnotateAttr.
+  cir::AnnotationAttr emitAnnotateAttr(const clang::AnnotateAttr *aa);
+
   /// Add global annotations for a global value (GlobalOp or FuncOp).
   void addGlobalAnnotations(const clang::ValueDecl *d, mlir::Operation *gv);
 
@@ -1034,13 +1046,6 @@ private:
 
   /// Emit all the global annotations.
   void emitGlobalAnnotations();
-
-  /// Build (or fetch from the dedup cache) the args ArrayAttr for an
-  /// annotation. Returns the empty ArrayAttr when the annotation has none.
-  mlir::ArrayAttr getOrCreateAnnotationArgs(const clang::AnnotateAttr *attr);
-
-  /// Create cir::AnnotationAttr for a single AnnotateAttr on a global.
-  cir::AnnotationAttr emitAnnotateAttr(const clang::AnnotateAttr *aa);
 };
 } // namespace CIRGen
 

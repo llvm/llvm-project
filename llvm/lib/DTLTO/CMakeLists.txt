@@ -11,6 +11,5 @@ add_llvm_component_library(LLVMDTLTO
   Core
   LTO
   Object
-  Passes
   Support
   )

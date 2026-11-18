@@ -227,6 +227,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_statx
+  HDRS
+    struct_statx.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_statx
+)
+
+add_proxy_header_library(
   struct_statfs
   HDRS
     struct_statfs.h
@@ -676,6 +684,14 @@ add_proxy_header_library(
     struct_if_nameindex.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_if_nameindex
+)
+
+add_proxy_header_library(
+  struct_ifaddrs
+  HDRS
+    struct_ifaddrs.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_ifaddrs
 )
 
 add_proxy_header_library(
@@ -1316,6 +1332,14 @@ add_proxy_header_library(
     VISIT.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.VISIT
+)
+
+add_proxy_header_library(
+  struct_hsearch_data
+  HDRS
+    struct_hsearch_data.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_hsearch_data
 )
 
 add_proxy_header_library(

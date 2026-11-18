@@ -2119,8 +2119,18 @@ Expected<bool> FunctionImporter::importFunctions(
 
   IRMover Mover(DestModule);
 
+  // Import from the source modules in module hash order. The IRMover appends
+  // imported globals and named metadata (e.g. llvm.linker.options) in import
+  // order, so this must not depend on the module paths, which the ThinLTO
+  // cache key (see computeLTOCacheKey) leaves out. Modules with the same hash
+  // keep the alphabetical order.
+  SmallVector<std::pair<ModuleHash, StringRef>, 0> SourceModules;
+  for (StringRef ModName : ImportList.getSourceModules())
+    SourceModules.emplace_back(Index.getModuleHash(ModName), ModName);
+  llvm::sort(SourceModules);
+
   // Do the actual import of functions now, one Module at a time
-  for (const auto &ModName : ImportList.getSourceModules()) {
+  for (const auto &[ModHash, ModName] : SourceModules) {
     llvm::TimeTraceScope timeScope("Import", ModName);
     // Get the module for the import
     Expected<std::unique_ptr<Module>> SrcModuleOrErr = ModuleLoader(ModName);

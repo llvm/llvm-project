@@ -7,14 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseConcisePreprocessorDirectivesCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Lex/Lexer.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 
 #include <array>
 
 namespace clang::tidy::readability {
+
+using utils::lexer::getTokenName;
 
 namespace {
 
@@ -37,50 +39,47 @@ public:
 private:
   void impl(SourceLocation DirectiveLoc, SourceRange ConditionRange,
             const std::array<StringRef, 2> &Replacements) {
-    // Lexer requires its input range to be null-terminated.
-    SmallString<128> Condition =
-        Lexer::getSourceText(CharSourceRange::getTokenRange(ConditionRange),
-                             PP.getSourceManager(), PP.getLangOpts());
-    Condition.push_back('\0');
-    Lexer Lex(DirectiveLoc, PP.getLangOpts(), Condition.data(),
-              Condition.data(), Condition.data() + Condition.size() - 1);
-    Token Tok;
+    const std::vector<Token> Tokens = utils::lexer::getRawTokens(
+        CharSourceRange::getTokenRange(ConditionRange), PP.getSourceManager(),
+        PP.getLangOpts());
     bool Inverted = false; // The inverted form of #*def is #*ndef.
     std::size_t ParensNestingDepth = 0;
-    for (;;) {
-      if (Lex.LexFromRawLexer(Tok))
-        return;
-
+    std::size_t Index = 0;
+    while (Index < Tokens.size()) {
+      const Token &Tok = Tokens[Index];
       if (Tok.is(tok::TokenKind::exclaim) ||
           (PP.getLangOpts().CPlusPlus &&
            Tok.is(tok::TokenKind::raw_identifier) &&
-           Tok.getRawIdentifier() == "not"))
+           getTokenName(Tok) == "not")) {
         Inverted = !Inverted;
-      else if (Tok.is(tok::TokenKind::l_paren))
+        ++Index;
+      } else if (Tok.is(tok::TokenKind::l_paren)) {
         ++ParensNestingDepth;
-      else
+        ++Index;
+      } else {
         break;
+      }
     }
 
-    if (Tok.isNot(tok::TokenKind::raw_identifier) ||
-        Tok.getRawIdentifier() != "defined")
+    if (Index >= Tokens.size() ||
+        Tokens[Index].isNot(tok::TokenKind::raw_identifier) ||
+        getTokenName(Tokens[Index]) != "defined")
       return;
+    ++Index;
 
-    bool NoMoreTokens = Lex.LexFromRawLexer(Tok);
-    if (Tok.is(tok::TokenKind::l_paren)) {
-      if (NoMoreTokens)
-        return;
+    if (Index < Tokens.size() && Tokens[Index].is(tok::TokenKind::l_paren)) {
       ++ParensNestingDepth;
-      NoMoreTokens = Lex.LexFromRawLexer(Tok);
+      ++Index;
     }
 
-    if (Tok.isNot(tok::TokenKind::raw_identifier))
+    if (Index >= Tokens.size() ||
+        Tokens[Index].isNot(tok::TokenKind::raw_identifier))
       return;
-    const StringRef Macro = Tok.getRawIdentifier();
+    const StringRef Macro = getTokenName(Tokens[Index++]);
 
-    while (!NoMoreTokens) {
-      NoMoreTokens = Lex.LexFromRawLexer(Tok);
-      if (Tok.isNot(tok::TokenKind::r_paren))
+    while (Index < Tokens.size()) {
+      if (Tokens[Index++].isNot(tok::TokenKind::r_paren) ||
+          ParensNestingDepth == 0)
         return;
       --ParensNestingDepth;
     }

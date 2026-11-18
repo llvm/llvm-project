@@ -17,7 +17,6 @@
 #include <unordered_map>
 
 #include "Shared/Debug.h"
-#include "Shared/Environment.h"
 
 #include "GlobalHandler.h"
 #include "OffloadAPI.h"
@@ -597,7 +596,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory on the device or related to the device.
-  Expected<void *> allocate(size_t Size, void *, ol_alloc_type_t Kind,
+  Expected<void *> allocate(size_t Size, ol_alloc_type_t Kind,
                             size_t Alignment = 0) override {
     if (Size == 0)
       return nullptr;
@@ -1415,7 +1414,7 @@ private:
     // Allocate a buffer to store all of the known constructor / destructor
     // functions in so we can iterate them on the device.
     auto BufferOrErr =
-        allocate(Funcs.size() * sizeof(void *), nullptr, OL_ALLOC_TYPE_DEVICE);
+        allocate(Funcs.size() * sizeof(void *), OL_ALLOC_TYPE_DEVICE);
     if (!BufferOrErr)
       return BufferOrErr.takeError();
 
@@ -1692,6 +1691,13 @@ struct CUDAPluginContextTy final : public PluginContextTy {
                                               Attrs, Data, CUPtr))
       return Plugin::error(error::ErrorCode::NOT_FOUND,
                            "cuPointerGetAttributes failed: %d", Res);
+
+    // For pointers CUDA does not know about (e.g. plain host memory), some
+    // driver versions report success but leave the attributes unset. A valid
+    // CUmemorytype is never 0.
+    if (MemType == 0)
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "pointer is not a known allocation in this context");
 
     ol_alloc_type_t Kind = OL_ALLOC_TYPE_DEVICE;
     if (IsManaged)

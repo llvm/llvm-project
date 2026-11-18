@@ -37,7 +37,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: true
-registers:       []
 liveins:
   - { reg: '$x10', virtual-reg: '' }
 frameInfo:
