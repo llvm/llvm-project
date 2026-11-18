@@ -6837,11 +6837,17 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
       Builder.SetInsertPoint(&I);
       Builder.SetCurrentDebugLocation(I.getDebugLoc());
 
-      // Calculate costs of old and new ops.
       Type *ElemTy = OldLoadTy->getElementType();
       FixedVectorType *NewLoadTy = FixedVectorType::get(ElemTy, NewNumElements);
+      // Padding in the original type can change lane positions on big-endian
+      // targets, while padding in the narrowed type can introduce poison.
+      if (!DL->typeSizeEqualsStoreSize(OldLoadTy) ||
+          !DL->typeSizeEqualsStoreSize(NewLoadTy))
+        return false;
+
       Value *PtrOp = OldLoad->getPointerOperand();
 
+      // Calculate costs of old and new ops.
       InstructionCost OldCost = TTI.getMemoryOpCost(
           Instruction::Load, OldLoad->getType(), OldLoad->getAlign(),
           OldLoad->getPointerAddressSpace(), CostKind);
