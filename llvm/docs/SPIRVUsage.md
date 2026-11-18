@@ -399,8 +399,6 @@ This will be lowered to:
 
 See [Target Extension Types for Inline SPIR-V and Decorated Types] for further details.
 
-(spirv-intrinsics)=
-
 ### Shared Local Memory Model
 
 SPIR-V objects can use the `Workgroup` storage class to be visible to all invocations
@@ -422,6 +420,8 @@ Whenever a kernel from the module is run, the global slot is initialized with th
 value passed through the trailing kernel argument. Runtimes can detect whether
 the pass was used by checking the module for the
 `__spirv_dynamic_local_memory_present` global variable.
+
+(spirv-intrinsics)=
 
 ### Target Intrinsics
 
