@@ -6349,10 +6349,15 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   return true;
 }
 
+/// Returns the offset and width packed into an S_BFE_* src1 immediate.
+static std::pair<unsigned, unsigned> unpackScalarBFEImm(uint32_t Imm) {
+  return {Imm & 0x3f, (Imm >> 16) & 0x7f};
+}
+
 unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
   if (MI.getOpcode() == AMDGPU::S_BFE_I32 && ST.hasTrue16BitInsts() &&
       MI.getOperand(2).isImm() &&
-      (MI.getOperand(2).getImm() & 0x7f003f) == 0x100000)
+      unpackScalarBFEImm(MI.getOperand(2).getImm()) == std::pair(0u, 16u))
     return ST.useRealTrue16Insts() ? AMDGPU::V_CVT_I32_I16_t16_e64
                                    : AMDGPU::V_CVT_I32_I16_fake16_e64;
 
@@ -9075,10 +9080,7 @@ void SIInstrInfo::moveToVALUImpl(
       // operand back into the 2 separate ones for bit offset and width.
       assert(OffsetWidthOp.isImm() &&
              "Scalar BFE is only implemented for constant width and offset");
-      uint32_t Imm = OffsetWidthOp.getImm();
-
-      uint32_t Offset = Imm & 0x3f;               // Extract bits [5:0].
-      uint32_t BitWidth = (Imm & 0x7f0000) >> 16; // Extract bits [22:16].
+      auto [Offset, BitWidth] = unpackScalarBFEImm(OffsetWidthOp.getImm());
       NewInstr.addImm(Offset);
       NewInstr.addImm(BitWidth);
     } else {
@@ -9863,11 +9865,8 @@ void SIInstrInfo::splitScalar64BitBFE(SIInstrWorklist &Worklist,
   const DebugLoc &DL = Inst.getDebugLoc();
 
   MachineOperand &Dest = Inst.getOperand(0);
-  uint32_t Imm = Inst.getOperand(2).getImm();
-  uint32_t Offset = Imm & 0x3f; // Extract bits [5:0].
-  uint32_t BitWidth = (Imm & 0x7f0000) >> 16; // Extract bits [22:16].
-
-  (void) Offset;
+  auto [Offset, BitWidth] = unpackScalarBFEImm(Inst.getOperand(2).getImm());
+  (void)Offset;
 
   // Only sext_inreg cases handled.
   assert(Inst.getOpcode() == AMDGPU::S_BFE_I64 && BitWidth <= 32 &&
