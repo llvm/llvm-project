@@ -23,7 +23,7 @@ jobs:
         runs-on:
           - hlsl-windows
 
-    uses: ./.github/workflows/hlsl-test-all.yaml
+    uses: llvm/llvm-project/.github/workflows/hlsl-test-all.yaml@main
     with:
       SKU: ${{ matrix.runs-on }}
       TestTarget: check-hlsl-clang-warp-d3d12
