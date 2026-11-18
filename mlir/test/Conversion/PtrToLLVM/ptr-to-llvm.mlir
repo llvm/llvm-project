@@ -330,3 +330,22 @@ func.func @test_constant_address_ops() -> (!ptr.ptr<#ptr.generic_space>, !ptr.pt
   %null = ptr.constant #ptr.null : !ptr.ptr<#ptr.generic_space> 
   return %addr_0, %null : !ptr.ptr<#ptr.generic_space>, !ptr.ptr<#ptr.generic_space>
 }
+
+// CHECK-LABEL:  func @test_masked_load_ops(
+//  CHECK-SAME:    %[[ARG0:.*]]: !llvm.ptr,
+//  CHECK-SAME:    %[[ARG1:.*]]: vector<4xi1>,
+//  CHECK-SAME:    %[[ARG2:.*]]: vector<4xf32>
+//       CHECK:    %[[LOAD_0:.*]] = llvm.intr.masked.load %[[ARG0]], %[[ARG1]], %[[ARG2]] {alignment = 0 : i32} : (!llvm.ptr, vector<4xi1>, vector<4xf32>) -> vector<4xf32>
+//       CHECK:    %[[LOAD_1:.*]] = llvm.intr.masked.load %[[ARG0]], %[[ARG1]], %[[ARG2]] {alignment = 16 : i32} : (!llvm.ptr, vector<4xi1>, vector<4xf32>) -> vector<4xf32>
+//       CHECK:    %[[LOAD_2:.*]] = llvm.intr.masked.load %[[ARG0]], %[[ARG1]], %[[ARG2]] {alignment = 16 : i32, nontemporal} : (!llvm.ptr, vector<4xi1>, vector<4xf32>) -> vector<4xf32>
+//       CHECK:    %[[RET_0:.*]] = llvm.mlir.poison : !llvm.struct<(vector<4xf32>, vector<4xf32>, vector<4xf32>)>
+//       CHECK:    %[[RET_1:.*]] = llvm.insertvalue %[[LOAD_0]], %[[RET_0]][0] : !llvm.struct<(vector<4xf32>, vector<4xf32>, vector<4xf32>)>
+//       CHECK:    %[[RET_2:.*]] = llvm.insertvalue %[[LOAD_1]], %[[RET_1]][1] : !llvm.struct<(vector<4xf32>, vector<4xf32>, vector<4xf32>)>
+//       CHECK:    %[[RET_3:.*]] = llvm.insertvalue %[[LOAD_2]], %[[RET_2]][2] : !llvm.struct<(vector<4xf32>, vector<4xf32>, vector<4xf32>)>
+//       CHECK:    llvm.return %[[RET_3]] : !llvm.struct<(vector<4xf32>, vector<4xf32>, vector<4xf32>)>
+func.func @test_masked_load_ops(%ptr: !ptr.ptr<#ptr.generic_space>, %mask: vector<4xi1>, %passthrough: vector<4xf32>) -> (vector<4xf32>, vector<4xf32>, vector<4xf32>) {
+  %0 = ptr.masked_load %ptr, %mask, %passthrough : !ptr.ptr<#ptr.generic_space> -> vector<4xf32>
+  %1 = ptr.masked_load %ptr, %mask, %passthrough alignment = 16 : !ptr.ptr<#ptr.generic_space> -> vector<4xf32>
+  %2 = ptr.masked_load %ptr, %mask, %passthrough alignment = 16 nontemporal : !ptr.ptr<#ptr.generic_space> -> vector<4xf32> 
+  return %0, %1, %2 : vector<4xf32>, vector<4xf32>, vector<4xf32>
+}
