@@ -2930,6 +2930,11 @@ void TargetLoweringObjectFileGOFF::initialize(MCContext &Ctx,
   ADAPR->setName(DefaultADAPRName);
   if (HasCsectStaticName)
     ADAPR->setBindingScope(GOFF::ESD_BSC_Library);
+  // Without a CSECT name, write a single blank as the external name.
+  if (!HasCsectCodeName)
+    RootSD->setExternalName(" ");
+  if (!HasCsectStaticName)
+    ADAPR->setExternalName(" ");
   // Initialize the label for the text section.
   MCSymbolGOFF *TextLD = static_cast<MCSymbolGOFF *>(
       getContext().getOrCreateSymbol(RootSD->getName()));
@@ -2939,6 +2944,8 @@ void TargetLoweringObjectFileGOFF::initialize(MCContext &Ctx,
   // hidden symbol, so external and hidden are set.
   TextLD->setExternal(HasCsectCodeName);
   TextLD->setHidden(HasCsectCodeName);
+  if (!HasCsectCodeName)
+    TextLD->setExternalName(" ");
   TextLD->setWeak(false);
   TextLD->setADA(ADAPR);
   TextSection->setBeginSymbol(TextLD);

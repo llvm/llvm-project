@@ -6,5 +6,5 @@ entry:
   ret i32 0
 }
 
-; CHECK: t csect-default#C
-; CHECK: d csect-default#S
+; CHECK:     {{[0-9a-f]+}} t {{ *$}}
+; CHECK:     {{[0-9a-f]+}} d {{ *$}}
