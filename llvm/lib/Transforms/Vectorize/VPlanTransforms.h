@@ -381,6 +381,12 @@ struct VPlanTransforms {
                                        PredicatedScalarEvolution &PSE, Loop &L,
                                        VPCostContext &Ctx, VFRange &Range);
 
+  /// Expand mask.beforefirst into an active-lane-mask of its first active lane
+  /// for the VFs in \p Range where it is expensive, clamping \p Range so the
+  /// decision is the same for all of its VFs.
+  static void expandMaskBeforeFirst(VPlan &Plan, VPCostContext &Ctx,
+                                    VFRange &Range);
+
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
 
@@ -660,6 +666,11 @@ struct VPlanTransforms {
   static void narrowInductionTruncates(VPlan &Plan, VFRange &Range,
                                        const TargetTransformInfo &TTI,
                                        PredicatedScalarEvolution &PSE);
+
+  /// Wrap reduction operations and their vp.merge in expression recipes when
+  /// the merge is expected to be folded, to better model the cost and register
+  /// pressure of the \p Plan.
+  static void foldPredicateMerge(VPlan &Plan, VPCostContext &CostCtx);
 };
 
 } // namespace llvm

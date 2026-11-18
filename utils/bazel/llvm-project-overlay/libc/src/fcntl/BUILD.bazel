@@ -24,8 +24,8 @@ libc_function(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_fcntl_macros",
-        "//libc:types_mode_t",
+        "//libc/hdr:fcntl_macros",
+        "//libc/hdr/types:mode_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:open",
@@ -60,8 +60,8 @@ libc_function(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:hdr_fcntl_macros",
-        "//libc:types_mode_t",
+        "//libc/hdr:fcntl_macros",
+        "//libc/hdr/types:mode_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:openat",
@@ -75,7 +75,7 @@ libc_function(
     srcs = ["linux/creat.cpp"],
     hdrs = ["creat.h"],
     deps = [
-        "//libc:hdr_fcntl_macros",
+        "//libc/hdr:fcntl_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil:syscall",

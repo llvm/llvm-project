@@ -46,6 +46,7 @@ using namespace llvm;
 namespace llvm::AMDGPU {
 #define GET_ImageDimIntrinsicTable_IMPL
 #define GET_RsrcIntrinsics_IMPL
+#define GET_BufferIntrinsicsTable_IMPL
 #define GET_GFX1250BlockingCyclesTable_DECL
 #define GET_GFX1250BlockingCyclesTable_IMPL
 
@@ -5518,7 +5519,7 @@ static Register findImplicitSGPRRead(const MachineInstr &MI) {
 }
 
 static bool shouldReadExec(const MachineInstr &MI) {
-  if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true)) {
+  if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false)) {
     switch (MI.getOpcode()) {
     case AMDGPU::V_READLANE_B32:
     case AMDGPU::SI_RESTORE_S32_FROM_VGPR:
@@ -7916,29 +7917,6 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
   if (isFLAT(MI)) {
     legalizeOperandsFLAT(MRI, MI);
     return CreatedBB;
-  }
-
-  // Legalize PHI
-  // The register class of the operands must be the same type as the register
-  // class of the output.
-  if (MI.getOpcode() == AMDGPU::PHI) {
-    const TargetRegisterClass *VRC = getOpRegClass(MI, 0);
-    assert(!RI.isSGPRClass(VRC));
-
-    // Update all the operands so they have the same type.
-    for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
-      MachineOperand &Op = MI.getOperand(I);
-      if (!Op.isReg() || !Op.getReg().isVirtual())
-        continue;
-
-      // MI is a PHI instruction.
-      MachineBasicBlock *InsertBB = MI.getOperand(I + 1).getMBB();
-      MachineBasicBlock::iterator Insert = InsertBB->getFirstTerminator();
-
-      // Avoid creating no-op copies with the same src and dst reg class.  These
-      // confuse some of the machine passes.
-      legalizeGenericOperand(*InsertBB, Insert, VRC, Op, MRI, MI.getDebugLoc());
-    }
   }
 
   // REG_SEQUENCE doesn't really require operand legalization, but if one has a

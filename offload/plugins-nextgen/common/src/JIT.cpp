@@ -14,7 +14,6 @@
 #include "Shared/Utils.h"
 
 #include "PluginInterface.h"
-#include "omptarget.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CommandFlags.h"
@@ -81,7 +80,7 @@ OptimizationLevel getOptLevel(unsigned OptLevel) {
 }
 
 Expected<std::unique_ptr<TargetMachine>>
-createTargetMachine(Module &M, std::string CPU, unsigned OptLevel) {
+createTargetMachine(Module &M, StringRef CPU, unsigned OptLevel) {
   Triple TT(M.getTargetTriple());
   std::optional<CodeGenOptLevel> CGOptLevelOrNone =
       CodeGenOpt::getLevel(OptLevel);
@@ -175,10 +174,10 @@ void JITEngine::codegen(TargetMachine *TM, TargetLibraryInfoImpl *TLII,
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(*TLII));
   MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(TM);
-  TM->addPassesToEmitFile(PM, OS, nullptr,
-                          TT.isNVPTX() ? CodeGenFileType::AssemblyFile
-                                       : CodeGenFileType::ObjectFile,
-                          /*DisableVerify=*/false, MMIWP);
+  (void)TM->addPassesToEmitFile(PM, OS, nullptr,
+                                TT.isNVPTX() ? CodeGenFileType::AssemblyFile
+                                             : CodeGenFileType::ObjectFile,
+                                /*DisableVerify=*/false, MMIWP);
 
   PM.run(M);
 }
@@ -299,7 +298,8 @@ JITEngine::process(StringRef Image, target::plugin::GenericDeviceTy &Device) {
     return Device.doJITPostProcessing(std::move(MB));
   };
 
-  auto ImageOrError = compile(Image, ComputeUnitKind, PostProcessing);
+  auto ImageOrError =
+      compile(Image, ComputeUnitKind, std::move(PostProcessing));
 
   if (SaveImageFileName.isPresent() && ImageOrError) {
     std::error_code EC;

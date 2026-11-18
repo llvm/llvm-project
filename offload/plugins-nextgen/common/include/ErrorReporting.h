@@ -143,6 +143,7 @@ class ErrorReporter {
         continue;
       }
       unsigned FrameIdx = std::stoi(Parts[0].drop_front(1).str());
+      assert(FrameIdx > 0 && "Unexpected underflow!");
       if (Start)
         FrameIdx -= 1;
       print(DarkPurple, "    %s", Parts[0].take_front().str().c_str());

@@ -13,10 +13,6 @@
 ...
 ---
 name:            test
-registers:
-  - { id: 0, class: gr32 }
-  - { id: 1, class: gr32 }
-  - { id: 2, class: gr32 }
 # CHECK: liveins:
 # CHECK-NEXT: - { reg: '$edi', virtual-reg: '%0' }
 # CHECK-NEXT: - { reg: '$esi', virtual-reg: '%1' }
@@ -27,9 +23,9 @@ body: |
   bb.0.body:
     liveins: $edi, $esi
 
-    %1 = COPY $esi
-    %0 = COPY $edi
-    %2 = ADD32rr %0, %1, implicit-def dead $eflags
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    %2:gr32 = ADD32rr %0, %1, implicit-def dead $eflags
     $eax = COPY %2
     RET64 $eax
 ...
