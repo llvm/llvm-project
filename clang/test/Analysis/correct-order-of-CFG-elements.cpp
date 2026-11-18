@@ -3,8 +3,8 @@
 
 // Check the correct order of the CFG elements when AddLifetime is enabled.
 // The CFG elements in a basic block should appear in reverse order of
-// declaration. This test file also enabled cfg-scopes to ensure that
-// none of the elements appear as a duplicate in the give basic block.
+// declaration. This test file also enables cfg-scopes to ensure that
+// none of the elements appear as a duplicate in the given basic block.
 
 struct NonTrivial {
   ~NonTrivial();
@@ -14,9 +14,11 @@ struct Trivial {
   int x;
 };
 
-// CHECK:       [B2 (ENTRY)]
+// CHECK-LABEL: void test_trivial_and_nontrivial_order()
+// CHECK-NEXT:  [B2 (ENTRY)]
 // CHECK-NEXT:    Succs (1): B1
-// CHECK:       [B1]
+// CHECK-EMPTY:
+// CHECK-NEXT:  [B1]
 // CHECK-NEXT:    1: CFGScopeBegin(a)
 // CHECK-NEXT:    2:  (CXXConstructExpr, [B1.3], NonTrivial)
 // CHECK-NEXT:    3: NonTrivial a;
@@ -35,7 +37,8 @@ struct Trivial {
 // CHECK-NEXT:   16: CFGScopeEnd(a)
 // CHECK-NEXT:    Preds (1): B2
 // CHECK-NEXT:    Succs (1): B0
-// CHECK:       [B0 (EXIT)]
+// CHECK-EMPTY:
+// CHECK-NEXT:  [B0 (EXIT)]
 // CHECK-NEXT:    Preds (1): B1
 void test_trivial_and_nontrivial_order() {
   NonTrivial a;
@@ -44,9 +47,11 @@ void test_trivial_and_nontrivial_order() {
   Trivial u;
 }
 
-// CHECK:       [B2 (ENTRY)]
+// CHECK-LABEL: void test_nested_scope()
+// CHECK-NEXT:  [B2 (ENTRY)]
 // CHECK-NEXT:    Succs (1): B1
-// CHECK:       [B1]
+// CHECK-EMPTY:
+// CHECK-NEXT:  [B1]
 // CHECK-NEXT:    1: CFGScopeBegin(a)
 // CHECK-NEXT:    2:  (CXXConstructExpr, [B1.3], A)
 // CHECK-NEXT:    3: A a;
@@ -65,7 +70,8 @@ void test_trivial_and_nontrivial_order() {
 // CHECK-NEXT:   16: CFGScopeEnd(a)
 // CHECK-NEXT:    Preds (1): B2
 // CHECK-NEXT:    Succs (1): B0
-// CHECK:       [B0 (EXIT)]
+// CHECK-EMPTY:
+// CHECK-NEXT:  [B0 (EXIT)]
 // CHECK-NEXT:    Preds (1): B1
 struct A {};
 void test_nested_scope() {
