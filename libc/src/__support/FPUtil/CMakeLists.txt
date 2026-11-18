@@ -174,7 +174,11 @@ add_header_library(
     polyeval.h
   DEPENDS
     .multiply_add
+    libc.hdr.types.size_t
     libc.src.__support.common
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
