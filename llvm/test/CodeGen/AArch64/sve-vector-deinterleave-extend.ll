@@ -4,6 +4,23 @@
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=+sve,+sme --force-streaming-compatible | FileCheck %s --check-prefix=STREAMING-COMPATIBLE
 
 define void @deinterleave_i32(<vscale x 4 x i32> %interleaved) {
+; NONSTREAMING-LABEL: deinterleave_i32:
+; NONSTREAMING:       // %bb.0: // %entry
+; NONSTREAMING-NEXT:    movi v1.2d, #0000000000000000
+; NONSTREAMING-NEXT:    trn1 z2.s, z0.s, z1.s
+; NONSTREAMING-NEXT:    trn2 z0.s, z0.s, z1.s
+; NONSTREAMING-NEXT:    // fake_use: $z2
+; NONSTREAMING-NEXT:    // fake_use: $z0
+; NONSTREAMING-NEXT:    ret
+;
+; STREAMING-COMPATIBLE-LABEL: deinterleave_i32:
+; STREAMING-COMPATIBLE:       // %bb.0: // %entry
+; STREAMING-COMPATIBLE-NEXT:    mov z1.b, #0 // =0x0
+; STREAMING-COMPATIBLE-NEXT:    trn1 z2.s, z0.s, z1.s
+; STREAMING-COMPATIBLE-NEXT:    trn2 z0.s, z0.s, z1.s
+; STREAMING-COMPATIBLE-NEXT:    // fake_use: $z2
+; STREAMING-COMPATIBLE-NEXT:    // fake_use: $z0
+; STREAMING-COMPATIBLE-NEXT:    ret
 entry:
   %deinterleaved = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave2.nxv4i32(<vscale x 4 x i32> %interleaved)
   %a = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>} %deinterleaved, 0
@@ -16,6 +33,29 @@ entry:
 }
 
 define void @deinterleave_i16(<vscale x 8 x i16> %interleaved) {
+; NONSTREAMING-LABEL: deinterleave_i16:
+; NONSTREAMING:       // %bb.0: // %entry
+; NONSTREAMING-NEXT:    movi v1.2d, #0000000000000000
+; NONSTREAMING-NEXT:    ptrue p0.s
+; NONSTREAMING-NEXT:    trn1 z2.h, z0.h, z1.h
+; NONSTREAMING-NEXT:    trn2 z0.h, z0.h, z1.h
+; NONSTREAMING-NEXT:    ucvtf z2.s, p0/m, z2.s
+; NONSTREAMING-NEXT:    ucvtf z0.s, p0/m, z0.s
+; NONSTREAMING-NEXT:    // fake_use: $z2
+; NONSTREAMING-NEXT:    // fake_use: $z0
+; NONSTREAMING-NEXT:    ret
+;
+; STREAMING-COMPATIBLE-LABEL: deinterleave_i16:
+; STREAMING-COMPATIBLE:       // %bb.0: // %entry
+; STREAMING-COMPATIBLE-NEXT:    mov z1.b, #0 // =0x0
+; STREAMING-COMPATIBLE-NEXT:    ptrue p0.s
+; STREAMING-COMPATIBLE-NEXT:    trn1 z2.h, z0.h, z1.h
+; STREAMING-COMPATIBLE-NEXT:    trn2 z0.h, z0.h, z1.h
+; STREAMING-COMPATIBLE-NEXT:    ucvtf z2.s, p0/m, z2.s
+; STREAMING-COMPATIBLE-NEXT:    ucvtf z0.s, p0/m, z0.s
+; STREAMING-COMPATIBLE-NEXT:    // fake_use: $z2
+; STREAMING-COMPATIBLE-NEXT:    // fake_use: $z0
+; STREAMING-COMPATIBLE-NEXT:    ret
 entry:
   %deinterleaved = call { <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.vector.deinterleave2.nxv8i16(<vscale x 8 x i16> %interleaved)
   %a = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>} %deinterleaved, 0
@@ -28,6 +68,23 @@ entry:
 }
 
 define void @deinterleave_i8(<vscale x 16 x i8> %interleaved) {
+; NONSTREAMING-LABEL: deinterleave_i8:
+; NONSTREAMING:       // %bb.0: // %entry
+; NONSTREAMING-NEXT:    movi v1.2d, #0000000000000000
+; NONSTREAMING-NEXT:    trn1 z2.b, z0.b, z1.b
+; NONSTREAMING-NEXT:    trn2 z0.b, z0.b, z1.b
+; NONSTREAMING-NEXT:    // fake_use: $z2
+; NONSTREAMING-NEXT:    // fake_use: $z0
+; NONSTREAMING-NEXT:    ret
+;
+; STREAMING-COMPATIBLE-LABEL: deinterleave_i8:
+; STREAMING-COMPATIBLE:       // %bb.0: // %entry
+; STREAMING-COMPATIBLE-NEXT:    mov z1.b, #0 // =0x0
+; STREAMING-COMPATIBLE-NEXT:    trn1 z2.b, z0.b, z1.b
+; STREAMING-COMPATIBLE-NEXT:    trn2 z0.b, z0.b, z1.b
+; STREAMING-COMPATIBLE-NEXT:    // fake_use: $z2
+; STREAMING-COMPATIBLE-NEXT:    // fake_use: $z0
+; STREAMING-COMPATIBLE-NEXT:    ret
 entry:
   %deinterleaved = call { <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.vector.deinterleave2.nxv16i8(<vscale x 16 x i8> %interleaved)
   %a = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>} %deinterleaved, 0
