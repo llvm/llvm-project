@@ -23,6 +23,7 @@
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/fp_bitwise.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
@@ -230,21 +231,6 @@ LIBC_INLINE_VAR constexpr double TANH_SMALL_P_COEFFS[6] = {
     0x1.ce2449b1b72dcp-9,   // c_5 ~ 21844/6081075
 };
 
-// Evaluate P_rem(x^2) ~ (tanh(x) - x) / x^3 - (-0x1.554p-2) using Estrin's
-// scheme:
-LIBC_ALWAYS_INLINE double tanh_small_poly(double x2) {
-  double x4 = x2 * x2;
-  double x8 = x4 * x4;
-  double c0 =
-      fputil::multiply_add(x2, TANH_SMALL_P_COEFFS[1], TANH_SMALL_P_COEFFS[0]);
-  double c1 =
-      fputil::multiply_add(x2, TANH_SMALL_P_COEFFS[3], TANH_SMALL_P_COEFFS[2]);
-  double c2 =
-      fputil::multiply_add(x2, TANH_SMALL_P_COEFFS[5], TANH_SMALL_P_COEFFS[4]);
-  double c01 = fputil::multiply_add(x4, c1, c0);
-  return fputil::multiply_add(x8, c2, c01);
-}
-
 // Evaluate tanh(x) in double-double precision for
 // 2^-3 <= |x| < 0x1.30fc1931f09cap+4, falling back to tanh_accurate_128(x) when
 // Ziv's rounding test fails.
@@ -308,7 +294,7 @@ LIBC_MATH_SMALL_TABLES_INLINE double tanh_eval(double x) {
   // where:
   //   exp_lo = t2 + u^2 * P(u).
   double u2 = u * u;
-  double p = exp_poly(u, u2);
+  double p = fputil::estrin_polyeval(u, EXP_P_COEFFS);
   double exp_lo = fputil::multiply_add(u2, p, t2);
 
   // Denominator D = e^u + m ~ (1.0 + m.hi + t1 + exp_lo) + m.lo:
@@ -338,8 +324,8 @@ LIBC_MATH_SMALL_TABLES_INLINE double tanh_eval(double x) {
   double y_hi = 1.0 / d.hi;
   double q_hi = two_m_hi * y_hi;
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-  double rem_hi = fputil::multiply_add(-q_hi, d.hi, two_m_hi);
-  double rem_lo = fputil::multiply_add(-q_hi, d_lo, two_m_lo);
+  double rem_hi = fputil::sub_multiply(two_m_hi, q_hi, d.hi);
+  double rem_lo = fputil::sub_multiply(two_m_lo, q_hi, d_lo);
 #else
   // Split q_hi into 26 + 27 bits and d.hi into 27 + 26 bits via bit-masks so
   // that q_hi_hi * d_hi_hi (53 bits) and q_hi_hi * d_hi_lo (52 bits) are exact
@@ -427,11 +413,11 @@ LIBC_INLINE double tanh_small_eval(double x, uint64_t x_abs) {
     if (LIBC_UNLIKELY(x_abs == 0))
       return x;
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-    double res = fputil::multiply_add(x, -0x1.0p-55, x);
+    double res = fputil::sub_multiply(x, x, 0x1.0p-55);
 #else
     // Avoid spurious FE_UNDERFLOW on x * -2^-55 when 2^-1022 < |x| < 2^-967,
     // and preserve directed rounding for subnormal |x| <= 2^-1022:
-    double x_scaled = fputil::multiply_add(x, 0x1.0p55, -x);
+    double x_scaled = fputil::multiply_sub(x, 0x1.0p55, x);
     double res = x_scaled * 0x1.0p-55;
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
     if (LIBC_UNLIKELY(x_abs <= 0x0010'0000'0000'0000ULL)) {
@@ -472,7 +458,7 @@ LIBC_INLINE double tanh_small_eval(double x, uint64_t x_abs) {
   //   x^3 * (TANH_C0_HI_11 + P_rem(x^2)) = y_hi + y_lo
   // where:
   //   y_lo ~ x_hi^3 * P_rem(x^2) + x3_lo * (TANH_C0_HI_11 + P_rem(x^2))
-  double p_rem = tanh_small_poly(x2);
+  double p_rem = fputil::estrin_polyeval(x2, TANH_SMALL_P_COEFFS);
   double p_full = TANH_C0_HI_11 + p_rem;
   double y_lo_t = x3_lo * p_full;
   double y_lo = fputil::multiply_add(x3_hi, p_rem, y_lo_t);
@@ -485,7 +471,7 @@ LIBC_INLINE double tanh_small_eval(double x, uint64_t x_abs) {
   // The error of y_hi + y_lo is bounded by |y_hi| * 0x1.8p-54, and the rounding
   // error of r.lo + y_lo is bounded by |x| * 2^-103.
   double x_err = x * 0x1.0p-103;
-  double err = fputil::multiply_add(y_hi, -0x1.8p-54, x_err);
+  double err = fputil::sub_multiply(x_err, y_hi, 0x1.8p-54);
 
   // Low tail bounds lo_{u,l} ~ r.lo + (y_lo +/- err):
   double y_lo_u = y_lo + err;

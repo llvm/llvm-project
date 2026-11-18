@@ -15,6 +15,7 @@
 #include "hdr/types/struct_group_req.h"
 #include "hdr/types/struct_group_source_req.h"
 #include "hdr/types/struct_in6_addr.h"
+#include "hdr/types/struct_in6_pktinfo.h"
 #include "hdr/types/struct_ip_mreq.h"
 #include "hdr/types/struct_ip_mreq_source.h"
 #include "hdr/types/struct_ip_mreqn.h"
@@ -105,6 +106,7 @@ TEST(LlvmLibcNetinetInTest, IpOptionLayout) {
   EXPECT_EQ(sizeof(struct ip_msfilter), static_cast<size_t>(20));
   EXPECT_EQ(sizeof(struct ip_opts), static_cast<size_t>(44));
   EXPECT_EQ(sizeof(struct ipv6_mreq), static_cast<size_t>(20));
+  EXPECT_EQ(sizeof(struct in6_pktinfo), static_cast<size_t>(20));
 
   EXPECT_EQ(offsetof(struct ip_mreq, imr_multiaddr), static_cast<size_t>(0));
   EXPECT_EQ(offsetof(struct ip_mreq, imr_interface), static_cast<size_t>(4));
@@ -134,6 +136,10 @@ TEST(LlvmLibcNetinetInTest, IpOptionLayout) {
   EXPECT_EQ(offsetof(struct ipv6_mreq, ipv6mr_multiaddr),
             static_cast<size_t>(0));
   EXPECT_EQ(offsetof(struct ipv6_mreq, ipv6mr_interface),
+            static_cast<size_t>(16));
+
+  EXPECT_EQ(offsetof(struct in6_pktinfo, ipi6_addr), static_cast<size_t>(0));
+  EXPECT_EQ(offsetof(struct in6_pktinfo, ipi6_ifindex),
             static_cast<size_t>(16));
 }
 

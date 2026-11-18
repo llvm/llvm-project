@@ -11,6 +11,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/Scalar.h"
@@ -124,7 +125,23 @@ bool ValueObjectChild::UpdateValue() {
               .AnySet(lldb::eTypeInstanceIsPointer);
 
       if (parent->GetCompilerType().ShouldTreatScalarValueAsAddress()) {
-        m_value.GetScalar() = parent->GetPointerValue().address;
+        lldb::addr_t addr = parent->GetPointerValue().address;
+        // The language runtime knows how a pointer that is an instance of the
+        // parent's type refers to the instance.
+        if (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer))
+          if (lldb::ProcessSP process_sp = GetProcessSP())
+            if (LanguageRuntime *runtime = process_sp->GetLanguageRuntime(
+                    parent_type.GetMinimumLanguage())) {
+              if (llvm::Expected<lldb::addr_t> instance_addr =
+                      runtime->FixupPointerValue(addr, parent_type)) {
+                addr = *instance_addr;
+                // The runtime returns an address in the target.
+                parent->SetAddressTypeOfChildren(eAddressTypeLoad);
+              } else {
+                m_error = Status::FromError(instance_addr.takeError());
+              }
+            }
+        m_value.GetScalar() = addr;
 
         switch (parent->GetAddressTypeOfChildren()) {
         case eAddressTypeFile: {
