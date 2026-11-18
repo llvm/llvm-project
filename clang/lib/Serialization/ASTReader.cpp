@@ -6583,7 +6583,8 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
 
         F.DidReadTopLevelSubmodule = true;
         CurrentModule->setASTFileNameAndKey(F.FileName, F.FileKey);
-        CurrentModule->PresumedModuleMapFile = F.ModuleMapPath;
+        CurrentModule->setPresumedModuleMapFile(F.ModuleMapPath);
+        CurrentModule->setSignature(F.Signature);
       }
 
       CurrentModule->Kind = Kind;
@@ -6594,7 +6595,6 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
       // location to be marked as "unaffecting" when writing and avoid creating
       // duplicate locations for the same module map file.
       CurrentModule->DefinitionLoc = DefinitionLoc;
-      CurrentModule->Signature = F.Signature;
       CurrentModule->IsFromModuleFile = true;
       if (InferredAllowedBy.isValid())
         ModMap.setInferredModuleAllowedBy(CurrentModule, InferredAllowedBy);
@@ -6622,7 +6622,7 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
 
       // Clear out data that will be replaced by what is in the module file.
       CurrentModule->clearLinkLibraries();
-      CurrentModule->ConfigMacros.clear();
+      CurrentModule->clearConfigMacros();
       CurrentModule->clearUnresolvedConflicts();
       CurrentModule->clearConflicts();
 
@@ -6728,7 +6728,7 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
       break;
 
     case SUBMODULE_CONFIG_MACRO:
-      CurrentModule->ConfigMacros.push_back(Blob.str());
+      CurrentModule->addConfigMacro(Blob);
       break;
 
     case SUBMODULE_CONFLICT: {
