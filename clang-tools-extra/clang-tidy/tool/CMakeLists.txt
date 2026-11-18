@@ -3,9 +3,14 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsDescs
   AllTargetsInfos
   FrontendOpenMP
+  Option
   TargetParser
   support
   )
+
+set(LLVM_TARGET_DEFINITIONS Opts.td)
+tablegen(LLVM Opts.inc -gen-opt-parser-defs)
+add_public_tablegen_target(ClangTidyOptsTableGen)
 
 # Needed by LLVM's CMake checks because this file defines multiple targets.
 set(LLVM_OPTIONAL_SOURCES ClangTidyMain.cpp ClangTidyToolMain.cpp)
@@ -20,6 +25,7 @@ add_clang_library(clangTidyMain STATIC
   DEPENDS
   omp_gen
   ClangDriverOptions
+  ClangTidyOptsTableGen
   )
 
 clang_target_link_libraries(clangTidyMain
@@ -42,6 +48,8 @@ add_clang_tool(clang-tidy
   DEPENDS
   clang-resource-headers
   ${support_plugins}
+
+  GENERATE_DRIVER
   )
 clang_target_link_libraries(clang-tidy
   PRIVATE
