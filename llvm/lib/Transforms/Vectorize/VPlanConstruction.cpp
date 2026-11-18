@@ -1245,13 +1245,18 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
 
       CurrentLink->replaceAllUsesWith(RedRecipe);
       // Move any store recipes using the RedRecipe that appear before it in the
-      // same block to just after the RedRecipe.
+      // same block to just after the RedRecipe. With a blend, the RedRecipe is
+      // placed in the blend's block, after stores in earlier blocks, so move
+      // all of them.
       for (VPRecipeBase *UserR : make_early_inc_range(
                make_isa_range<VPRecipeBase>(RedRecipe->users()))) {
-        if (UserR->getParent() != LinkVPBB)
+        if (!BlendVPBB && UserR->getParent() != LinkVPBB)
           continue;
         if (!match(UserR, m_VPInstruction<Instruction::Store>()))
           continue;
+        assert(UserR->getOperand(0) == RedRecipe &&
+               UserR->getOperand(1)->isDefinedOutsideLoopRegions() &&
+               "only invariant stores of the reduction can be moved");
         UserR->moveAfter(RedRecipe);
       }
       ToDelete.push_back(CurrentLink);
