@@ -2488,6 +2488,10 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     }
     break;
   }
+  case TargetOpcode::FREEZE:
+    if (!MI->getOperand(0).isReg() || !MI->getOperand(1).isReg())
+      report("FREEZE operands must be registers", MI);
+    break;
   case TargetOpcode::COPY_LANEMASK: {
     const MachineOperand &DstOp = MI->getOperand(0);
     const MachineOperand &SrcOp = MI->getOperand(1);
