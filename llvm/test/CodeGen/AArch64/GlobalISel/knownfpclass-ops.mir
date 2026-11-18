@@ -1586,3 +1586,47 @@ body:             |
     %fmad:_(f32) = G_FMAD %x, %y, %z
     %copy:_(f32) = COPY %fmad
 ...
+---
+name:            VecReduceFMax
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @VecReduceFMax
+  ; CHECK-NEXT: %ptr:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %load:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %canon:_ FPClasses:(qnan inf zero sub norm) SignBitKnown:?
+  ; CHECK-NEXT: %vec:_ FPClasses:(qnan pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %reduce:_ FPClasses:(qnan zero sub norm) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(qnan zero sub norm) SignBitKnown:?
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %load:_(<4 x f32>) = G_LOAD %ptr(p0) :: (load (<4 x f32>))
+    %canon:_(<4 x f32>) = G_FCANONICALIZE %load
+    %vec:_(<4 x f32>) = ninf G_FABS %canon
+    %reduce:_(f32) = G_VECREDUCE_FMAX %vec
+    %copy:_(f32) = COPY %reduce
+...
+---
+name:            VecReduceFMin
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @VecReduceFMin
+  ; CHECK-NEXT: %ptr:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %cond:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %mask:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %pos_snan:_ FPClasses:(snan) SignBitKnown:0
+  ; CHECK-NEXT: %pos_snan_vec:_ FPClasses:(snan) SignBitKnown:0
+  ; CHECK-NEXT: %load:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %pos_vec:_ FPClasses:(pinf pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %vec:_ FPClasses:(snan pinf pzero psub pnorm) SignBitKnown:?
+  ; CHECK-NEXT: %reduce:_ FPClasses:(snan inf zero sub norm) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(snan inf zero sub norm) SignBitKnown:?
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %cond:_(<4 x s32>) = G_LOAD %ptr(p0) :: (load (<4 x s32>))
+    %mask:_(<4 x s1>) = G_TRUNC %cond
+    %pos_snan:_(f32) = G_FCONSTANT float 0x7FF4000000000000
+    %pos_snan_vec:_(<4 x f32>) = G_BUILD_VECTOR %pos_snan, %pos_snan, %pos_snan, %pos_snan
+    %load:_(<4 x f32>) = G_LOAD %ptr(p0) :: (load (<4 x f32>))
+    %pos_vec:_(<4 x f32>) = nnan G_FABS %load
+    %vec:_(<4 x f32>) = G_SELECT %mask, %pos_snan_vec, %pos_vec
+    %reduce:_(f32) = G_VECREDUCE_FMIN %vec
+    %copy:_(f32) = COPY %reduce
+...
