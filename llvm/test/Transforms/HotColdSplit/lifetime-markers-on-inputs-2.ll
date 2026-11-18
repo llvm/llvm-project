@@ -72,8 +72,7 @@ exit:
 }
 
 ; In this CFG, splitting will extract the block extract1. I.e., it will extract
-; a lifetime.end marker, but not the corresponding lifetime.start marker. Do
-; not emit a lifetime.end marker after the call to the split function.
+; a lifetime.end marker, The lifetime.start marker will be sunk into the split function.
 ;
 ;            entry
 ;         (lt.start)
@@ -86,23 +85,20 @@ exit:
 ; After splitting, we should see:
 ;
 ;            entry
-;         (lt.start)
 ;        /          \
 ;   no-extract1  codeRepl
-;    (lt.end)
+;               (lt.start)
+;                (lt.end)
 ;        \         /
 ;            exit
 define void @only_lifetime_end_is_cold(i1 %arg) {
 ; CHECK-LABEL: @only_lifetime_end_is_cold(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LOCAL1:%.*]] = alloca i256, align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[LOCAL1]])
 ; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[NO_EXTRACT1:%.*]], label [[CODEREPL:%.*]]
 ; CHECK:       no-extract1:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[LOCAL1]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       codeRepl:
-; CHECK-NEXT:    call void @only_lifetime_end_is_cold.cold.1(ptr [[LOCAL1]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @only_lifetime_end_is_cold.cold.1() #[[ATTR3]]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -173,3 +169,49 @@ extract3:
 exit:
   ret void
 }
+
+; CHECK-LABEL: define internal i1 @only_lifetime_start_is_cold.cold.1(
+; CHECK-SAME: ptr [[LOCAL1:%.*]], i1 [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:  [[NEWFUNCROOT:.*:]]
+; CHECK-NEXT:    br label %[[EXTRACT1:.*]]
+; CHECK:       [[EXTRACT1]]:
+; CHECK-NEXT:    call void @cold_use(ptr [[LOCAL1]])
+; CHECK-NEXT:    br i1 [[ARG]], label %[[EXTRACT2:.*]], label %[[NO_EXTRACT1_EXITSTUB:.*]]
+; CHECK:       [[EXTRACT2]]:
+; CHECK-NEXT:    br label %[[EXIT_EXITSTUB:.*]]
+; CHECK:       [[NO_EXTRACT1_EXITSTUB]]:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       [[EXIT_EXITSTUB]]:
+; CHECK-NEXT:    ret i1 false
+;
+;
+; CHECK-LABEL: define internal void @only_lifetime_end_is_cold.cold.1(
+; CHECK-SAME: ) #[[ATTR2]] {
+; CHECK-NEXT:  [[NEWFUNCROOT:.*:]]
+; CHECK-NEXT:    [[LOCAL1:%.*]] = alloca i256, align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[LOCAL1]])
+; CHECK-NEXT:    br label %[[EXTRACT1:.*]]
+; CHECK:       [[EXTRACT1]]:
+; CHECK-NEXT:    call void @cold_use(ptr [[LOCAL1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[LOCAL1]])
+; CHECK-NEXT:    br label %[[EXIT_EXITSTUB:.*]]
+; CHECK:       [[EXIT_EXITSTUB]]:
+; CHECK-NEXT:    ret void
+;
+;
+; CHECK-LABEL: define internal i1 @do_not_lift_lifetime_end.cold.1(
+; CHECK-SAME: ptr [[LOCAL1:%.*]], i1 [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:  [[NEWFUNCROOT:.*:]]
+; CHECK-NEXT:    br label %[[EXTRACT1:.*]]
+; CHECK:       [[EXTRACT1]]:
+; CHECK-NEXT:    call void @cold_use(ptr [[LOCAL1]])
+; CHECK-NEXT:    br i1 [[ARG]], label %[[EXTRACT2:.*]], label %[[EXTRACT3:.*]]
+; CHECK:       [[EXTRACT2]]:
+; CHECK-NEXT:    br label %[[HEADER_EXITSTUB:.*]]
+; CHECK:       [[EXTRACT3]]:
+; CHECK-NEXT:    br label %[[EXIT_EXITSTUB:.*]]
+; CHECK:       [[HEADER_EXITSTUB]]:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       [[EXIT_EXITSTUB]]:
+; CHECK-NEXT:    ret i1 false
+;
