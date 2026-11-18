@@ -109,10 +109,10 @@ libc_test(
     name = "sendmsg_recvmsg_test",
     srcs = ["linux/sendmsg_recvmsg_test.cpp"],
     deps = [
-        "//libc:llvm_libc_macros_sys_socket_macros",
         "//libc/hdr:fcntl_macros",
         "//libc/hdr:sys_socket_macros",
         "//libc/hdr/types:struct_cmsghdr",
+        "//libc/include:llvm_libc_macros_sys_socket_macros",
         "//libc/src/__support/CPP:scope",
         "//libc/src/fcntl",
         "//libc/src/string:memcpy",

@@ -52,6 +52,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -302,6 +303,11 @@ static cl::opt<bool> EliminateFramePointer("hexagon-fp-elim", cl::init(true),
 static cl::opt<bool> OptimizeSpillSlots("hexagon-opt-spill", cl::Hidden,
     cl::init(true), cl::desc("Optimize spill slots"));
 
+static cl::opt<bool> SaveParentVSP(
+    "hexagon-save-parent-vsp", cl::Hidden, cl::init(false),
+    cl::desc("Save the caller's VSP on the stack in functions with an HLX "
+             "vector stack frame, for debuggers"));
+
 #ifndef NDEBUG
 static cl::opt<unsigned> SpillOptMax("spill-opt-max", cl::Hidden,
     cl::init(std::numeric_limits<unsigned>::max()));
@@ -509,6 +515,10 @@ void HexagonFrameLowering::findShrunkPrologEpilog(MachineFunction &MF,
 
   if (MF.getSubtarget<HexagonSubtarget>().isEnvironmentMusl() &&
       MF.getFunction().isVarArg())
+    return;
+  // The caller's VSP is saved through R7, which is only known to be free
+  // in the entry block.
+  if (MF.getSubtarget<HexagonSubtarget>().useHLXOps())
     return;
   if (ShrinkLimit.getPosition()) {
     if (ShrinkCounter >= ShrinkLimit)
@@ -912,10 +922,22 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
           .setMIFlag(MachineInstr::FrameSetup);
     }
   }
-  if (VTCMFrameSize)
-    BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::V2_vallocframe_imm))
-        .addImm(VTCMFrameSize / 2048)
+  if (!VTCMFrameSize)
+    return;
+  if (int VSPFI = HMFI.getVSPFrameIndex(); VSPFI >= 0) {
+    // Save the caller's VSP before allocating the vector frame. R7 is not
+    // an argument register, and the prologue is in the entry block (see
+    // findShrunkPrologEpilog).
+    BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::A2_tfrcrr), Hexagon::R7)
+        .addReg(Hexagon::VSP)
         .setMIFlag(MachineInstr::FrameSetup);
+    HII.storeRegToStackSlot(MBB, InsertPt, Hexagon::R7, /*isKill=*/true, VSPFI,
+                            &Hexagon::IntRegsRegClass, Register());
+    std::prev(InsertPt)->setFlag(MachineInstr::FrameSetup);
+  }
+  BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::V2_vallocframe_imm))
+      .addImm(VTCMFrameSize / 2048)
+      .setMIFlag(MachineInstr::FrameSetup);
 }
 
 void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
@@ -1466,6 +1488,54 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
           .addCFIIndex(MF.addFrameInst(OffLo));
     }
   }
+
+  // HLX callee-saved registers are spilled to the VTCM stack, which is
+  // addressed by VSP, not by the CFA. Describe them as
+  //   DW_CFA_expression <reg>, DW_OP_bregx <vsp>, <offset>
+  // where the offset is relative to the VSP after vallocframe, which stays
+  // the same in the function body. Preserved registers that are not spilled
+  // keep their value.
+  auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
+  unsigned DwVSPReg = HRI.getDwarfRegNum(Hexagon::VSP, true);
+  int64_t VTCMFrameSize = HMFI.getVTCMFrameInfo().getStackSize();
+  for (const MCPhysReg *R = HRI.getCalleeSavedRegs(&MF); *R; ++R) {
+    if (!Hexagon::HlxLRRegClass.contains(*R))
+      continue;
+    unsigned DwarfReg = HRI.getDwarfRegNum(*R, true);
+    auto F = find_if(
+        CSI, [R](const CalleeSavedInfo &C) { return C.getReg() == *R; });
+    if (F == CSI.end()) {
+      auto Same = MCCFIInstruction::createSameValue(FrameLabel, DwarfReg);
+      BuildMI(MBB, At, DL, CFID).addCFIIndex(MF.addFrameInst(Same));
+      continue;
+    }
+    assert(HMFI.isVTCMStackIndex(F->getFrameIdx()) &&
+           "HLX register not spilled to the VTCM stack");
+    int64_t Offset =
+        VTCMFrameSize + HMFI.getMappedVTCMObjectOffset(F->getFrameIdx());
+    uint8_t Buf[16];
+    SmallString<16> Expr, Vals;
+    Expr.push_back(dwarf::DW_OP_bregx);
+    Expr.append(Buf, Buf + encodeULEB128(DwVSPReg, Buf));
+    Expr.append(Buf, Buf + encodeSLEB128(Offset, Buf));
+    Vals.push_back(dwarf::DW_CFA_expression);
+    Vals.append(Buf, Buf + encodeULEB128(DwarfReg, Buf));
+    Vals.append(Buf, Buf + encodeULEB128(Expr.size(), Buf));
+    Vals.append(Expr);
+    std::string Comment =
+        (Twine(HRI.getRegAsmName(*R)) + " at vsp + " + Twine(Offset)).str();
+    auto Esc =
+        MCCFIInstruction::createEscape(FrameLabel, Vals, SMLoc(), Comment);
+    BuildMI(MBB, At, DL, CFID).addCFIIndex(MF.addFrameInst(Esc));
+  }
+
+  // The caller's VSP, saved by insertPrologueInBlock.
+  if (int VSPFI = HMFI.getVSPFrameIndex(); VSPFI >= 0) {
+    assert(HasFP && "A VTCM frame requires a frame pointer");
+    auto OffVSP = MCCFIInstruction::createOffset(
+        FrameLabel, DwVSPReg, MFI.getObjectOffset(VSPFI) - 8);
+    BuildMI(MBB, At, DL, CFID).addCFIIndex(MF.addFrameInst(OffVSP));
+  }
 }
 
 bool HexagonFrameLowering::hasFPImpl(const MachineFunction &MF) const {
@@ -1890,8 +1960,13 @@ void HexagonFrameLowering::computeVTCMStackOffsets(MachineFunction &MF) const {
 void HexagonFrameLowering::processFunctionBeforeFrameFinalized(
     MachineFunction &MF, RegScavenger *RS) const {
   const auto &HST = MF.getSubtarget<HexagonSubtarget>();
-  if (HST.hasV85OpsOnly() && HST.useHLXOps())
-    computeVTCMStackOffsets(MF);
+  if (!HST.hasV85OpsOnly() || !HST.useHLXOps())
+    return;
+  computeVTCMStackOffsets(MF);
+  auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
+  if (SaveParentVSP && HMFI.getVTCMFrameInfo().getStackSize())
+    HMFI.setVSPFrameIndex(
+        MF.getFrameInfo().CreateSpillStackObject(4, Align(4)));
 }
 
 Align HexagonFrameLowering::getMaxStackAlign(const MachineFunction &MF) const {
