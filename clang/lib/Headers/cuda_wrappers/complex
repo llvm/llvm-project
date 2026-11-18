@@ -44,27 +44,9 @@
 #include <ymath.h>
 #endif
 
-// MSVC's <complex> also calls std::swap on its value type. std::swap is
-// constexpr, and thus implicitly __host__ __device__, only from C++20 on.
-#if !_HAS_CXX20
-namespace std {
-inline __device__ void swap(float &__a, float &__b) noexcept {
-  float __t = __a;
-  __a = __b;
-  __b = __t;
-}
-inline __device__ void swap(double &__a, double &__b) noexcept {
-  double __t = __a;
-  __a = __b;
-  __b = __t;
-}
-inline __device__ void swap(long double &__a, long double &__b) noexcept {
-  long double __t = __a;
-  __a = __b;
-  __b = __t;
-}
-} // namespace std
-#endif // !_HAS_CXX20
+// MSVC's <complex> also calls std::swap on its value type. Our <utility>
+// wrapper makes it usable in device code before C++20.
+#include <utility>
 #endif // _MSVC_STL_VERSION
 
 // Next, include our <algorithm> wrapper, to ensure that device overloads of

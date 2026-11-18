@@ -58,6 +58,7 @@
 // so before it makes the functions of the wrapped <complex> __host__
 // __device__.
 #include <complex>
+#include <utility>
 
 #pragma clang force_cuda_host_device begin
 
@@ -127,7 +128,8 @@ extern "C" double test_cosh(double x, double y) { return _Cosh(x, y); }
 // HOST: call{{.*}} float @_FSinh(
 extern "C" float test_fsinh(float x, float y) { return _FSinh(x, y); }
 
-// MSVC's std::swap is constexpr only from C++20 on.
+// MSVC's std::swap is constexpr only from C++20 on. Before, device code gets
+// a __device__ std::swap for types whose moves are trivial.
 // DEV-LABEL: define{{.*}} void @test_swap(
 // DEV-NOT: call{{.*}} @{{[^l]}}
 // DEV: ret void
@@ -135,7 +137,48 @@ extern "C" float test_fsinh(float x, float y) { return _FSinh(x, y); }
 // HOST: call void @"??$swap@N@std@@YAXAEAN0@Z"(
 extern "C" void test_swap(double &x, double &y) { std::swap(x, y); }
 
+// DEV-LABEL: define{{.*}} void @test_swap_int(
+// DEV-NOT: call{{.*}} @{{[^l]}}
+// DEV: ret void
+// HOST-LABEL: define{{.*}} void @test_swap_int(
+// HOST: call void @"??$swap@H@std@@YAXAEAH0@Z"(
+extern "C" void test_swap_int(int &x, int &y) {
+  using std::swap;
+  swap(x, y);
+}
+
+struct Trivial {
+  int i;
+  float f;
+};
+// DEV-LABEL: define{{.*}} void @test_swap_struct(
+// DEV-NOT: call{{.*}} @{{[^l]}}
+// DEV: ret void
+// HOST-LABEL: define{{.*}} void @test_swap_struct(
+// HOST: call void @"??$swap@UTrivial@@@std@@YAXAEAUTrivial@@0@Z"(
+extern "C" void test_swap_struct(Trivial &x, Trivial &y) { std::swap(x, y); }
+
+// DEV-LABEL: define{{.*}} void @test_swap_complex(
+// DEV-NOT: call{{.*}} @{{[^l]}}
+// DEV: ret void
+// HOST-LABEL: define{{.*}} void @test_swap_complex(
+// HOST: call void @"??$swap@V?$complex@M@std@@@std@@YAXAEAV?$complex@M@0@0@Z"(
+extern "C" void test_swap_complex(std::complex<float> &x,
+                                  std::complex<float> &y) {
+  std::swap(x, y);
+}
+
 #pragma clang force_cuda_host_device end
+
+// The moves of NonTrivial are __host__ functions. Device code cannot swap it,
+// but a __host__ __device__ function that is not emitted for the device may.
+struct NonTrivial {
+  NonTrivial(NonTrivial &&);
+  NonTrivial &operator=(NonTrivial &&);
+};
+inline __host__ __device__ void swap_non_trivial(NonTrivial &x, NonTrivial &y) {
+  std::swap(x, y);
+}
 
 // DEV-NOT: @_Exp(
 // DEV-NOT: @_FExp(

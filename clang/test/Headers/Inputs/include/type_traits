@@ -50,9 +50,9 @@ template <class _Tp>
 constexpr
 #endif
 void swap(_Tp &__a, _Tp &__b) noexcept {
-  _Tp __t = __a;
-  __a = __b;
-  __b = __t;
+  _Tp __t = static_cast<_Tp &&>(__a);
+  __a = static_cast<_Tp &&>(__b);
+  __b = static_cast<_Tp &&>(__t);
 }
 }
 #endif
