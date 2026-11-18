@@ -25,7 +25,7 @@
 // of a module alike.
 //
 // The lowering changes the kernel signatures, so it is limited to
-// OpenCL/Unknown OS triple whose runtime sets the argument.
+// triples with an OpenCL or unknown OS whose runtime sets the argument.
 //
 //===----------------------------------------------------------------------===//
 
@@ -124,9 +124,7 @@ void updateMemoryEffects(Function *F, MemoryEffects NewEffects) {
 bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
   // Shaders have no kernel arguments, so the pass is disabled.
   // It is only used for OpenCL/Level Zero runtimes, because they
-  // have no API to size extern workgroup array. Runtimes can check
-  // global variable `__spirv_dynamic_local_memory_present` to check
-  // if module contains the additional SLM argument.
+  // have no API to size extern workgroup array.
   // UnknownOS implies OpenCL
   // https://llvm.org/docs/SPIRVUsage.html#target-triples.
   if (TM.getSubtargetImpl()->isShader() ||
@@ -158,7 +156,7 @@ bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
   Slot->setAlignment(M.getDataLayout().getPointerABIAlignment(LocalAS));
   Slot->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 
-  // Marker detected by liboffload to add SLM argument
+  // Marker detected by the Level Zero plugin to add SLM argument.
   auto *MarkerTy = Type::getInt8Ty(M.getContext());
   new GlobalVariable(
       M, MarkerTy, /*isConstant=*/true, GlobalValue::ExternalLinkage,
@@ -188,9 +186,9 @@ bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
       for (Use *U : Uses)
         U->set(LoadedSlot);
 
-      // Modify memory effects of the function and it's callers, a function that
-      // would reference SLM pointer might have ModeRefInfo::NoModRef, but
-      // adding the load requires change it to at least ModRefInfo::Ref
+      // Modify memory effects of the function and its callers, a function that
+      // would reference SLM pointer might have ModRefInfo::NoModRef, but
+      // adding the load requires changing it to at least ModRefInfo::Ref.
       updateMemoryEffects(F, MemoryEffects::otherMemOnly(ModRefInfo::Ref));
     }
 
@@ -219,7 +217,7 @@ bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
     Instruction *ThenTerm =
         SplitBlockAndInsertIfThen(IsFirst, InsertBefore, false);
 
-    // Insert store on thead [0][0][0]
+    // Insert store on thread [0][0][0]
     Builder.SetInsertPoint(ThenTerm);
     Builder.CreateStore(NewF->getArg(NewF->arg_size() - 1), Slot);
 
