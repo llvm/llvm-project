@@ -137,6 +137,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Description
    * - ``SPV_EXT_arithmetic_fence``
      - Adds an instruction that prevents fast-math optimizations between its argument and the expression that contains it.
+   * - ``SPV_EXT_bfloat16_arithmetic``
+     - Allows the use of 16-bit bfloat16 values in arithmetic and relational operators.
    * - ``SPV_EXT_demote_to_helper_invocation``
      - Adds an instruction that demotes a fragment shader invocation to a helper invocation.
    * - ``SPV_EXT_long_vector``
@@ -161,8 +163,6 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bindless_images``
      - Adds instructions to convert convert unsigned integer handles to images, samplers and sampled images.
-   * - ``SPV_INTEL_bfloat16_arithmetic``
-     - Allows the use of 16-bit bfloat16 values in arithmetic and relational operators.
    * - ``SPV_INTEL_bfloat16_conversion``
      - Adds instructions to convert between single-precision 32-bit floating-point values and 16-bit bfloat16 values.
    * - ``SPV_INTEL_cache_controls``
@@ -242,6 +242,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds the quad vote instruction for HLSL `QuadAll` and the
        `QuadDerivativesKHR` and `RequireFullQuadsKHR` execution modes.
        These features also require `SPV_KHR_maximal_reconvergence`.
+       Without `SPV_KHR_quad_control`, `QuadAll` uses quad-read emulation.
+       This path requires SPIR-V 1.3 but not maximal reconvergence.
    * - ``SPV_ALTERA_blocking_pipes``
      - Adds new pipe read and write functions that have blocking semantics instead of the non-blocking semantics of the existing pipe read/write functions.
    * - ``SPV_ALTERA_arbitrary_precision_fixed_point``

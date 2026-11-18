@@ -57,3 +57,322 @@ entry:
   ret void
 }
 
+
+; A uniform 16-bit value is held in a 32-bit SGPR. Make sure a uniform
+; scalar_to_vector of it is not selected as a VGPR_32 REG_SEQUENCE with the
+; SGPR in the lo16 slot. That made DetectDeadLanes treat the low half as
+; unused, so the loads feeding the PHI were deleted.
+
+define amdgpu_kernel void @uniform_phi_lo_d16_hi_f16(ptr addrspace(1) noalias %p, ptr addrspace(1) noalias %q, ptr addrspace(1) noalias %out, i32 %c) {
+  ; GFX11-REAL16-LABEL: name: uniform_phi_lo_d16_hi_f16
+  ; GFX11-REAL16: bb.0.entry:
+  ; GFX11-REAL16-NEXT:   successors: %bb.1(0x30000000), %bb.2(0x50000000)
+  ; GFX11-REAL16-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; GFX11-REAL16-NEXT: {{  $}}
+  ; GFX11-REAL16-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+  ; GFX11-REAL16-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
+  ; GFX11-REAL16-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX11-REAL16-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset + 16, align 4, addrspace 4)
+  ; GFX11-REAL16-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 60, 0 :: (dereferenceable invariant load (s32) from %ir.c.kernarg.offset, addrspace 4)
+  ; GFX11-REAL16-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
+  ; GFX11-REAL16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+  ; GFX11-REAL16-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
+  ; GFX11-REAL16-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
+  ; GFX11-REAL16-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
+  ; GFX11-REAL16-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
+  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_192 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY6]], %subreg.sub1, [[COPY5]], %subreg.sub2, [[COPY4]], %subreg.sub3, [[COPY3]], %subreg.sub4, [[COPY2]], %subreg.sub5
+  ; GFX11-REAL16-NEXT:   [[COPY8:%[0-9]+]]:sgpr_192 = COPY [[REG_SEQUENCE]]
+  ; GFX11-REAL16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; GFX11-REAL16-NEXT:   S_CMP_LG_U32 [[S_LOAD_DWORD_IMM]], [[S_MOV_B32_]], implicit-def $scc
+  ; GFX11-REAL16-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
+  ; GFX11-REAL16-NEXT:   S_BRANCH %bb.1
+  ; GFX11-REAL16-NEXT: {{  $}}
+  ; GFX11-REAL16-NEXT: bb.1.a:
+  ; GFX11-REAL16-NEXT:   successors: %bb.3(0x80000000)
+  ; GFX11-REAL16-NEXT: {{  $}}
+  ; GFX11-REAL16-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub1
+  ; GFX11-REAL16-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub0
+  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY10]], %subreg.sub0, [[COPY9]], %subreg.sub1
+  ; GFX11-REAL16-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; GFX11-REAL16-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 12
+  ; GFX11-REAL16-NEXT:   [[S_ADD_U:%[0-9]+]]:sreg_64 = nuw S_ADD_U64_PSEUDO [[REG_SEQUENCE1]], [[S_MOV_B64_]], implicit-def dead $scc
+  ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 [[REG_SEQUENCE1]], [[V_MOV_B32_e32_]], 12, 0, implicit $exec :: ("amdgpu-noclobber" load (s16) from %ir.pa, !alias.scope !1, !noalias !4, addrspace 1)
+  ; GFX11-REAL16-NEXT:   [[COPY11:%[0-9]+]]:sreg_32 = COPY [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]]
+  ; GFX11-REAL16-NEXT:   S_BRANCH %bb.3
+  ; GFX11-REAL16-NEXT: {{  $}}
+  ; GFX11-REAL16-NEXT: bb.2.b:
+  ; GFX11-REAL16-NEXT:   successors: %bb.3(0x80000000)
+  ; GFX11-REAL16-NEXT: {{  $}}
+  ; GFX11-REAL16-NEXT:   [[COPY12:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub3
+  ; GFX11-REAL16-NEXT:   [[COPY13:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub2
+  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY13]], %subreg.sub0, [[COPY12]], %subreg.sub1
+  ; GFX11-REAL16-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; GFX11-REAL16-NEXT:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 12
+  ; GFX11-REAL16-NEXT:   [[S_ADD_U1:%[0-9]+]]:sreg_64 = nuw S_ADD_U64_PSEUDO [[REG_SEQUENCE2]], [[S_MOV_B64_1]], implicit-def dead $scc
+  ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_1:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 [[REG_SEQUENCE2]], [[V_MOV_B32_e32_1]], 12, 0, implicit $exec :: ("amdgpu-noclobber" load (s16) from %ir.qa, !alias.scope !7, !noalias !8, addrspace 1)
+  ; GFX11-REAL16-NEXT:   [[COPY14:%[0-9]+]]:sreg_32 = COPY [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_1]]
+  ; GFX11-REAL16-NEXT: {{  $}}
+  ; GFX11-REAL16-NEXT: bb.3.join:
+  ; GFX11-REAL16-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec_xnull = PHI [[S_ADD_U1]], %bb.2, [[S_ADD_U]], %bb.1
+  ; GFX11-REAL16-NEXT:   [[PHI1:%[0-9]+]]:sreg_32 = PHI [[COPY14]], %bb.2, [[COPY11]], %bb.1
+  ; GFX11-REAL16-NEXT:   [[COPY15:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub5
+  ; GFX11-REAL16-NEXT:   [[COPY16:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub4
+  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY16]], %subreg.sub0, [[COPY15]], %subreg.sub1
+  ; GFX11-REAL16-NEXT:   [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; GFX11-REAL16-NEXT:   [[COPY17:%[0-9]+]]:sreg_32 = COPY [[PHI1]]
+  ; GFX11-REAL16-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[COPY17]]
+  ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_SHORT_D16_HI_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_SHORT_D16_HI_SADDR [[PHI]], [[V_MOV_B32_e32_2]], 2, 0, [[COPY18]], implicit $exec :: ("amdgpu-noclobber" load (s16) from %ir.hip, !alias.scope !9, !noalias !10, addrspace 1)
+  ; GFX11-REAL16-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
+  ; GFX11-REAL16-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), [[S_MOV_B32_1]], implicit $exec
+  ; GFX11-REAL16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 2
+  ; GFX11-REAL16-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[S_MOV_B32_2]], [[V_AND_B32_e64_]], implicit $exec
+  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_LSHLREV_B32_e64_]], [[GLOBAL_LOAD_SHORT_D16_HI_SADDR]], [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s32) into %ir.o, !alias.scope !10, !noalias !9, addrspace 1)
+  ; GFX11-REAL16-NEXT:   S_ENDPGM 0
+  ;
+  ; GFX11-FAKE16-LABEL: name: uniform_phi_lo_d16_hi_f16
+  ; GFX11-FAKE16: bb.0.entry:
+  ; GFX11-FAKE16-NEXT:   successors: %bb.1(0x30000000), %bb.2(0x50000000)
+  ; GFX11-FAKE16-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; GFX11-FAKE16-NEXT: {{  $}}
+  ; GFX11-FAKE16-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+  ; GFX11-FAKE16-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
+  ; GFX11-FAKE16-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX11-FAKE16-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset + 16, align 4, addrspace 4)
+  ; GFX11-FAKE16-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 60, 0 :: (dereferenceable invariant load (s32) from %ir.c.kernarg.offset, addrspace 4)
+  ; GFX11-FAKE16-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
+  ; GFX11-FAKE16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+  ; GFX11-FAKE16-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
+  ; GFX11-FAKE16-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
+  ; GFX11-FAKE16-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
+  ; GFX11-FAKE16-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
+  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_192 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY6]], %subreg.sub1, [[COPY5]], %subreg.sub2, [[COPY4]], %subreg.sub3, [[COPY3]], %subreg.sub4, [[COPY2]], %subreg.sub5
+  ; GFX11-FAKE16-NEXT:   [[COPY8:%[0-9]+]]:sgpr_192 = COPY [[REG_SEQUENCE]]
+  ; GFX11-FAKE16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; GFX11-FAKE16-NEXT:   S_CMP_LG_U32 [[S_LOAD_DWORD_IMM]], [[S_MOV_B32_]], implicit-def $scc
+  ; GFX11-FAKE16-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
+  ; GFX11-FAKE16-NEXT:   S_BRANCH %bb.1
+  ; GFX11-FAKE16-NEXT: {{  $}}
+  ; GFX11-FAKE16-NEXT: bb.1.a:
+  ; GFX11-FAKE16-NEXT:   successors: %bb.3(0x80000000)
+  ; GFX11-FAKE16-NEXT: {{  $}}
+  ; GFX11-FAKE16-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub1
+  ; GFX11-FAKE16-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub0
+  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY10]], %subreg.sub0, [[COPY9]], %subreg.sub1
+  ; GFX11-FAKE16-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; GFX11-FAKE16-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 12
+  ; GFX11-FAKE16-NEXT:   [[S_ADD_U:%[0-9]+]]:sreg_64 = nuw S_ADD_U64_PSEUDO [[REG_SEQUENCE1]], [[S_MOV_B64_]], implicit-def dead $scc
+  ; GFX11-FAKE16-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR [[REG_SEQUENCE1]], [[V_MOV_B32_e32_]], 12, 0, implicit $exec :: ("amdgpu-noclobber" load (s16) from %ir.pa, !alias.scope !1, !noalias !4, addrspace 1)
+  ; GFX11-FAKE16-NEXT:   [[COPY11:%[0-9]+]]:sreg_32 = COPY [[GLOBAL_LOAD_USHORT_SADDR]]
+  ; GFX11-FAKE16-NEXT:   S_BRANCH %bb.3
+  ; GFX11-FAKE16-NEXT: {{  $}}
+  ; GFX11-FAKE16-NEXT: bb.2.b:
+  ; GFX11-FAKE16-NEXT:   successors: %bb.3(0x80000000)
+  ; GFX11-FAKE16-NEXT: {{  $}}
+  ; GFX11-FAKE16-NEXT:   [[COPY12:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub3
+  ; GFX11-FAKE16-NEXT:   [[COPY13:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub2
+  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY13]], %subreg.sub0, [[COPY12]], %subreg.sub1
+  ; GFX11-FAKE16-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; GFX11-FAKE16-NEXT:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 12
+  ; GFX11-FAKE16-NEXT:   [[S_ADD_U1:%[0-9]+]]:sreg_64 = nuw S_ADD_U64_PSEUDO [[REG_SEQUENCE2]], [[S_MOV_B64_1]], implicit-def dead $scc
+  ; GFX11-FAKE16-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR [[REG_SEQUENCE2]], [[V_MOV_B32_e32_1]], 12, 0, implicit $exec :: ("amdgpu-noclobber" load (s16) from %ir.qa, !alias.scope !7, !noalias !8, addrspace 1)
+  ; GFX11-FAKE16-NEXT:   [[COPY14:%[0-9]+]]:sreg_32 = COPY [[GLOBAL_LOAD_USHORT_SADDR1]]
+  ; GFX11-FAKE16-NEXT: {{  $}}
+  ; GFX11-FAKE16-NEXT: bb.3.join:
+  ; GFX11-FAKE16-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec_xnull = PHI [[S_ADD_U1]], %bb.2, [[S_ADD_U]], %bb.1
+  ; GFX11-FAKE16-NEXT:   [[PHI1:%[0-9]+]]:sreg_32 = PHI [[COPY14]], %bb.2, [[COPY11]], %bb.1
+  ; GFX11-FAKE16-NEXT:   [[COPY15:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub5
+  ; GFX11-FAKE16-NEXT:   [[COPY16:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub4
+  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY16]], %subreg.sub0, [[COPY15]], %subreg.sub1
+  ; GFX11-FAKE16-NEXT:   [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; GFX11-FAKE16-NEXT:   [[COPY17:%[0-9]+]]:sreg_32 = COPY [[PHI1]]
+  ; GFX11-FAKE16-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[COPY17]]
+  ; GFX11-FAKE16-NEXT:   [[GLOBAL_LOAD_SHORT_D16_HI_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_SHORT_D16_HI_SADDR [[PHI]], [[V_MOV_B32_e32_2]], 2, 0, [[COPY18]], implicit $exec :: ("amdgpu-noclobber" load (s16) from %ir.hip, !alias.scope !9, !noalias !10, addrspace 1)
+  ; GFX11-FAKE16-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
+  ; GFX11-FAKE16-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), [[S_MOV_B32_1]], implicit $exec
+  ; GFX11-FAKE16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 2
+  ; GFX11-FAKE16-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[S_MOV_B32_2]], [[V_AND_B32_e64_]], implicit $exec
+  ; GFX11-FAKE16-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_LSHLREV_B32_e64_]], [[GLOBAL_LOAD_SHORT_D16_HI_SADDR]], [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s32) into %ir.o, !alias.scope !10, !noalias !9, addrspace 1)
+  ; GFX11-FAKE16-NEXT:   S_ENDPGM 0
+entry:
+  %cmp = icmp eq i32 %c, 0
+  br i1 %cmp, label %a, label %b
+
+a:
+  %pa = getelementptr inbounds i8, ptr addrspace(1) %p, i64 12
+  %la = load half, ptr addrspace(1) %pa, align 2
+  br label %join
+
+b:
+  %qa = getelementptr inbounds i8, ptr addrspace(1) %q, i64 12
+  %lb = load half, ptr addrspace(1) %qa, align 2
+  br label %join
+
+join:
+  %ptr = phi ptr addrspace(1) [ %pa, %a ], [ %qa, %b ]
+  %lo = phi half [ %la, %a ], [ %lb, %b ]
+  %hip = getelementptr inbounds i8, ptr addrspace(1) %ptr, i64 2
+  %hi = load half, ptr addrspace(1) %hip, align 2
+  %v0 = insertelement <2 x half> poison, half %lo, i64 0
+  %v1 = insertelement <2 x half> %v0, half %hi, i64 1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %o = getelementptr inbounds <2 x half>, ptr addrspace(1) %out, i32 %tid
+  store <2 x half> %v1, ptr addrspace(1) %o
+  ret void
+}
+
+define amdgpu_kernel void @uniform_phi_lo_d16_hi_i16(ptr addrspace(1) noalias %p, ptr addrspace(1) noalias %q, ptr addrspace(1) noalias %out, i32 %c) {
+  ; GFX11-REAL16-LABEL: name: uniform_phi_lo_d16_hi_i16
+  ; GFX11-REAL16: bb.0.entry:
+  ; GFX11-REAL16-NEXT:   successors: %bb.1(0x30000000), %bb.2(0x50000000)
+  ; GFX11-REAL16-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; GFX11-REAL16-NEXT: {{  $}}
+  ; GFX11-REAL16-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+  ; GFX11-REAL16-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
+  ; GFX11-REAL16-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX11-REAL16-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset + 16, align 4, addrspace 4)
+  ; GFX11-REAL16-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 60, 0 :: (dereferenceable invariant load (s32) from %ir.c.kernarg.offset, addrspace 4)
+  ; GFX11-REAL16-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
+  ; GFX11-REAL16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+  ; GFX11-REAL16-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
+  ; GFX11-REAL16-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
+  ; GFX11-REAL16-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
+  ; GFX11-REAL16-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
+  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_192 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY6]], %subreg.sub1, [[COPY5]], %subreg.sub2, [[COPY4]], %subreg.sub3, [[COPY3]], %subreg.sub4, [[COPY2]], %subreg.sub5
+  ; GFX11-REAL16-NEXT:   [[COPY8:%[0-9]+]]:sgpr_192 = COPY [[REG_SEQUENCE]]
+  ; GFX11-REAL16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; GFX11-REAL16-NEXT:   S_CMP_LG_U32 [[S_LOAD_DWORD_IMM]], [[S_MOV_B32_]], implicit-def $scc
+  ; GFX11-REAL16-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
+  ; GFX11-REAL16-NEXT:   S_BRANCH %bb.1
+  ; GFX11-REAL16-NEXT: {{  $}}
+  ; GFX11-REAL16-NEXT: bb.1.a:
+  ; GFX11-REAL16-NEXT:   successors: %bb.3(0x80000000)
+  ; GFX11-REAL16-NEXT: {{  $}}
+  ; GFX11-REAL16-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub1
+  ; GFX11-REAL16-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub0
+  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY10]], %subreg.sub0, [[COPY9]], %subreg.sub1
+  ; GFX11-REAL16-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; GFX11-REAL16-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 12
+  ; GFX11-REAL16-NEXT:   [[S_ADD_U:%[0-9]+]]:sreg_64 = nuw S_ADD_U64_PSEUDO [[REG_SEQUENCE1]], [[S_MOV_B64_]], implicit-def dead $scc
+  ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 [[REG_SEQUENCE1]], [[V_MOV_B32_e32_]], 12, 0, implicit $exec :: ("amdgpu-noclobber" load (s16) from %ir.pa, !alias.scope !11, !noalias !14, addrspace 1)
+  ; GFX11-REAL16-NEXT:   [[COPY11:%[0-9]+]]:sreg_32 = COPY [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]]
+  ; GFX11-REAL16-NEXT:   S_BRANCH %bb.3
+  ; GFX11-REAL16-NEXT: {{  $}}
+  ; GFX11-REAL16-NEXT: bb.2.b:
+  ; GFX11-REAL16-NEXT:   successors: %bb.3(0x80000000)
+  ; GFX11-REAL16-NEXT: {{  $}}
+  ; GFX11-REAL16-NEXT:   [[COPY12:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub3
+  ; GFX11-REAL16-NEXT:   [[COPY13:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub2
+  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY13]], %subreg.sub0, [[COPY12]], %subreg.sub1
+  ; GFX11-REAL16-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; GFX11-REAL16-NEXT:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 12
+  ; GFX11-REAL16-NEXT:   [[S_ADD_U1:%[0-9]+]]:sreg_64 = nuw S_ADD_U64_PSEUDO [[REG_SEQUENCE2]], [[S_MOV_B64_1]], implicit-def dead $scc
+  ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_1:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 [[REG_SEQUENCE2]], [[V_MOV_B32_e32_1]], 12, 0, implicit $exec :: ("amdgpu-noclobber" load (s16) from %ir.qa, !alias.scope !17, !noalias !18, addrspace 1)
+  ; GFX11-REAL16-NEXT:   [[COPY14:%[0-9]+]]:sreg_32 = COPY [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_1]]
+  ; GFX11-REAL16-NEXT: {{  $}}
+  ; GFX11-REAL16-NEXT: bb.3.join:
+  ; GFX11-REAL16-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec_xnull = PHI [[S_ADD_U1]], %bb.2, [[S_ADD_U]], %bb.1
+  ; GFX11-REAL16-NEXT:   [[PHI1:%[0-9]+]]:sreg_32 = PHI [[COPY14]], %bb.2, [[COPY11]], %bb.1
+  ; GFX11-REAL16-NEXT:   [[COPY15:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub5
+  ; GFX11-REAL16-NEXT:   [[COPY16:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub4
+  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY16]], %subreg.sub0, [[COPY15]], %subreg.sub1
+  ; GFX11-REAL16-NEXT:   [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; GFX11-REAL16-NEXT:   [[COPY17:%[0-9]+]]:sreg_32 = COPY [[PHI1]]
+  ; GFX11-REAL16-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[COPY17]]
+  ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_SHORT_D16_HI_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_SHORT_D16_HI_SADDR [[PHI]], [[V_MOV_B32_e32_2]], 2, 0, [[COPY18]], implicit $exec :: ("amdgpu-noclobber" load (s16) from %ir.hip, !alias.scope !19, !noalias !20, addrspace 1)
+  ; GFX11-REAL16-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
+  ; GFX11-REAL16-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), [[S_MOV_B32_1]], implicit $exec
+  ; GFX11-REAL16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 2
+  ; GFX11-REAL16-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[S_MOV_B32_2]], [[V_AND_B32_e64_]], implicit $exec
+  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_LSHLREV_B32_e64_]], [[GLOBAL_LOAD_SHORT_D16_HI_SADDR]], [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s32) into %ir.o, !alias.scope !20, !noalias !19, addrspace 1)
+  ; GFX11-REAL16-NEXT:   S_ENDPGM 0
+  ;
+  ; GFX11-FAKE16-LABEL: name: uniform_phi_lo_d16_hi_i16
+  ; GFX11-FAKE16: bb.0.entry:
+  ; GFX11-FAKE16-NEXT:   successors: %bb.1(0x30000000), %bb.2(0x50000000)
+  ; GFX11-FAKE16-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; GFX11-FAKE16-NEXT: {{  $}}
+  ; GFX11-FAKE16-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+  ; GFX11-FAKE16-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
+  ; GFX11-FAKE16-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX11-FAKE16-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset + 16, align 4, addrspace 4)
+  ; GFX11-FAKE16-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 60, 0 :: (dereferenceable invariant load (s32) from %ir.c.kernarg.offset, addrspace 4)
+  ; GFX11-FAKE16-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
+  ; GFX11-FAKE16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+  ; GFX11-FAKE16-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
+  ; GFX11-FAKE16-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
+  ; GFX11-FAKE16-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
+  ; GFX11-FAKE16-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
+  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_192 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY6]], %subreg.sub1, [[COPY5]], %subreg.sub2, [[COPY4]], %subreg.sub3, [[COPY3]], %subreg.sub4, [[COPY2]], %subreg.sub5
+  ; GFX11-FAKE16-NEXT:   [[COPY8:%[0-9]+]]:sgpr_192 = COPY [[REG_SEQUENCE]]
+  ; GFX11-FAKE16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; GFX11-FAKE16-NEXT:   S_CMP_LG_U32 [[S_LOAD_DWORD_IMM]], [[S_MOV_B32_]], implicit-def $scc
+  ; GFX11-FAKE16-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
+  ; GFX11-FAKE16-NEXT:   S_BRANCH %bb.1
+  ; GFX11-FAKE16-NEXT: {{  $}}
+  ; GFX11-FAKE16-NEXT: bb.1.a:
+  ; GFX11-FAKE16-NEXT:   successors: %bb.3(0x80000000)
+  ; GFX11-FAKE16-NEXT: {{  $}}
+  ; GFX11-FAKE16-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub1
+  ; GFX11-FAKE16-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub0
+  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY10]], %subreg.sub0, [[COPY9]], %subreg.sub1
+  ; GFX11-FAKE16-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; GFX11-FAKE16-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 12
+  ; GFX11-FAKE16-NEXT:   [[S_ADD_U:%[0-9]+]]:sreg_64 = nuw S_ADD_U64_PSEUDO [[REG_SEQUENCE1]], [[S_MOV_B64_]], implicit-def dead $scc
+  ; GFX11-FAKE16-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR [[REG_SEQUENCE1]], [[V_MOV_B32_e32_]], 12, 0, implicit $exec :: ("amdgpu-noclobber" load (s16) from %ir.pa, !alias.scope !11, !noalias !14, addrspace 1)
+  ; GFX11-FAKE16-NEXT:   [[COPY11:%[0-9]+]]:sreg_32 = COPY [[GLOBAL_LOAD_USHORT_SADDR]]
+  ; GFX11-FAKE16-NEXT:   S_BRANCH %bb.3
+  ; GFX11-FAKE16-NEXT: {{  $}}
+  ; GFX11-FAKE16-NEXT: bb.2.b:
+  ; GFX11-FAKE16-NEXT:   successors: %bb.3(0x80000000)
+  ; GFX11-FAKE16-NEXT: {{  $}}
+  ; GFX11-FAKE16-NEXT:   [[COPY12:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub3
+  ; GFX11-FAKE16-NEXT:   [[COPY13:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub2
+  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY13]], %subreg.sub0, [[COPY12]], %subreg.sub1
+  ; GFX11-FAKE16-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; GFX11-FAKE16-NEXT:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 12
+  ; GFX11-FAKE16-NEXT:   [[S_ADD_U1:%[0-9]+]]:sreg_64 = nuw S_ADD_U64_PSEUDO [[REG_SEQUENCE2]], [[S_MOV_B64_1]], implicit-def dead $scc
+  ; GFX11-FAKE16-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR [[REG_SEQUENCE2]], [[V_MOV_B32_e32_1]], 12, 0, implicit $exec :: ("amdgpu-noclobber" load (s16) from %ir.qa, !alias.scope !17, !noalias !18, addrspace 1)
+  ; GFX11-FAKE16-NEXT:   [[COPY14:%[0-9]+]]:sreg_32 = COPY [[GLOBAL_LOAD_USHORT_SADDR1]]
+  ; GFX11-FAKE16-NEXT: {{  $}}
+  ; GFX11-FAKE16-NEXT: bb.3.join:
+  ; GFX11-FAKE16-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec_xnull = PHI [[S_ADD_U1]], %bb.2, [[S_ADD_U]], %bb.1
+  ; GFX11-FAKE16-NEXT:   [[PHI1:%[0-9]+]]:sreg_32 = PHI [[COPY14]], %bb.2, [[COPY11]], %bb.1
+  ; GFX11-FAKE16-NEXT:   [[COPY15:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub5
+  ; GFX11-FAKE16-NEXT:   [[COPY16:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub4
+  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY16]], %subreg.sub0, [[COPY15]], %subreg.sub1
+  ; GFX11-FAKE16-NEXT:   [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; GFX11-FAKE16-NEXT:   [[COPY17:%[0-9]+]]:sreg_32 = COPY [[PHI1]]
+  ; GFX11-FAKE16-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[COPY17]]
+  ; GFX11-FAKE16-NEXT:   [[GLOBAL_LOAD_SHORT_D16_HI_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_SHORT_D16_HI_SADDR [[PHI]], [[V_MOV_B32_e32_2]], 2, 0, [[COPY18]], implicit $exec :: ("amdgpu-noclobber" load (s16) from %ir.hip, !alias.scope !19, !noalias !20, addrspace 1)
+  ; GFX11-FAKE16-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
+  ; GFX11-FAKE16-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), [[S_MOV_B32_1]], implicit $exec
+  ; GFX11-FAKE16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 2
+  ; GFX11-FAKE16-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[S_MOV_B32_2]], [[V_AND_B32_e64_]], implicit $exec
+  ; GFX11-FAKE16-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_LSHLREV_B32_e64_]], [[GLOBAL_LOAD_SHORT_D16_HI_SADDR]], [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s32) into %ir.o, !alias.scope !20, !noalias !19, addrspace 1)
+  ; GFX11-FAKE16-NEXT:   S_ENDPGM 0
+entry:
+  %cmp = icmp eq i32 %c, 0
+  br i1 %cmp, label %a, label %b
+
+a:
+  %pa = getelementptr inbounds i8, ptr addrspace(1) %p, i64 12
+  %la = load i16, ptr addrspace(1) %pa, align 2
+  br label %join
+
+b:
+  %qa = getelementptr inbounds i8, ptr addrspace(1) %q, i64 12
+  %lb = load i16, ptr addrspace(1) %qa, align 2
+  br label %join
+
+join:
+  %ptr = phi ptr addrspace(1) [ %pa, %a ], [ %qa, %b ]
+  %lo = phi i16 [ %la, %a ], [ %lb, %b ]
+  %hip = getelementptr inbounds i8, ptr addrspace(1) %ptr, i64 2
+  %hi = load i16, ptr addrspace(1) %hip, align 2
+  %v0 = insertelement <2 x i16> poison, i16 %lo, i64 0
+  %v1 = insertelement <2 x i16> %v0, i16 %hi, i64 1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %o = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i32 %tid
+  store <2 x i16> %v1, ptr addrspace(1) %o
+  ret void
+}

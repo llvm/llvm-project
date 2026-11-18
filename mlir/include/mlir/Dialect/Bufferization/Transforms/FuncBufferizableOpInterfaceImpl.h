@@ -65,6 +65,10 @@ struct FuncAnalysisState : public OneShotAnalysisState::Extension {
   /// A set of all written-to BlockArguments of FuncOps.
   DenseMap<FuncOp, BbArgIndexSet> writtenBbArgs;
 
+  /// Indices of tensor return values whose buffers are writable at every
+  /// func.return, including all aliases of the returned values.
+  DenseMap<FuncOp, DenseSet<int64_t>> writableReturnVals;
+
   /// Keep track of which FuncOps are fully analyzed or currently being
   /// analyzed.
   DenseMap<FuncOp, FuncOpAnalysisState> analyzedFuncOps;

@@ -46,6 +46,7 @@ using namespace llvm;
 namespace llvm::AMDGPU {
 #define GET_ImageDimIntrinsicTable_IMPL
 #define GET_RsrcIntrinsics_IMPL
+#define GET_BufferIntrinsicsTable_IMPL
 #define GET_GFX1250BlockingCyclesTable_DECL
 #define GET_GFX1250BlockingCyclesTable_IMPL
 
@@ -3947,28 +3948,6 @@ static unsigned getNewFMAMKInst(const GCNSubtarget &ST, unsigned Opc) {
   }
 }
 
-// Return true if \p Opc is a mad/fma family which can be converted to to a
-// madmk/madak form with a folded literal constant.
-static bool isMADFMA(unsigned Opc) {
-  switch (Opc) {
-  case AMDGPU::V_MAD_F32_e64:
-  case AMDGPU::V_MAC_F32_e64:
-  case AMDGPU::V_MAD_F16_e64:
-  case AMDGPU::V_MAC_F16_e64:
-  case AMDGPU::V_FMA_F32_e64:
-  case AMDGPU::V_FMAC_F32_e64:
-  case AMDGPU::V_FMA_F16_e64:
-  case AMDGPU::V_FMAC_F16_e64:
-  case AMDGPU::V_FMAC_F16_t16_e64:
-  case AMDGPU::V_FMAC_F16_fake16_e64:
-  case AMDGPU::V_FMA_F64_e64:
-  case AMDGPU::V_FMAC_F64_e64:
-    return true;
-  default:
-    return false;
-  }
-}
-
 bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                 Register Reg, MachineRegisterInfo *MRI) const {
   int64_t Imm;
@@ -4094,10 +4073,16 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     return true;
   }
 
-  if (isMADFMA(Opc)) {
-    if (HasMultipleUses)
-      return false;
+  if (HasMultipleUses)
+    return false;
 
+  if (Opc == AMDGPU::V_MAD_F32_e64 || Opc == AMDGPU::V_MAC_F32_e64 ||
+      Opc == AMDGPU::V_MAD_F16_e64 || Opc == AMDGPU::V_MAC_F16_e64 ||
+      Opc == AMDGPU::V_FMA_F32_e64 || Opc == AMDGPU::V_FMAC_F32_e64 ||
+      Opc == AMDGPU::V_FMA_F16_e64 || Opc == AMDGPU::V_FMAC_F16_e64 ||
+      Opc == AMDGPU::V_FMAC_F16_t16_e64 ||
+      Opc == AMDGPU::V_FMAC_F16_fake16_e64 || Opc == AMDGPU::V_FMA_F64_e64 ||
+      Opc == AMDGPU::V_FMAC_F64_e64) {
     // Don't fold if we are using source or output modifiers. The new VOP2
     // instructions don't have them.
     if (hasAnyModifiersSet(UseMI))
@@ -4297,41 +4282,9 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
 
       return true;
     }
-
-    return false;
   }
 
-  // Early exit for generic instructions which will never fold an immediate.
-  if (!isTargetSpecificOpcode(UseMI.getOpcode()))
-    return false;
-
-  // Directly fold inline immediates into the uses. These should be free-ish
-  // regardless of the uses.
-  bool FoldedInlineImm = false;
-
-  for (MachineOperand &UseMO : UseMI.explicit_uses()) {
-    if (!UseMO.isReg() || UseMO.getReg() != Reg)
-      continue;
-
-    unsigned UseOpIdx = UseMO.getOperandNo();
-
-    int64_t ImmVal = Imm;
-    if (unsigned UseSubReg = UseMO.getSubReg()) {
-      std::optional<int64_t> SubImm = extractSubregFromImm(Imm, UseSubReg);
-      if (!SubImm)
-        continue;
-      ImmVal = *SubImm;
-    }
-
-    if (!isInlineConstant(UseMI, UseOpIdx, ImmVal))
-      continue;
-
-    UseMO.ChangeToImmediate(ImmVal);
-    FoldedInlineImm = true;
-  }
-
-  // TODO: Consider applying tryConstantFoldOp here
-  return FoldedInlineImm;
+  return false;
 }
 
 static bool
@@ -5566,7 +5519,7 @@ static Register findImplicitSGPRRead(const MachineInstr &MI) {
 }
 
 static bool shouldReadExec(const MachineInstr &MI) {
-  if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true)) {
+  if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false)) {
     switch (MI.getOpcode()) {
     case AMDGPU::V_READLANE_B32:
     case AMDGPU::SI_RESTORE_S32_FROM_VGPR:
@@ -7964,29 +7917,6 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
   if (isFLAT(MI)) {
     legalizeOperandsFLAT(MRI, MI);
     return CreatedBB;
-  }
-
-  // Legalize PHI
-  // The register class of the operands must be the same type as the register
-  // class of the output.
-  if (MI.getOpcode() == AMDGPU::PHI) {
-    const TargetRegisterClass *VRC = getOpRegClass(MI, 0);
-    assert(!RI.isSGPRClass(VRC));
-
-    // Update all the operands so they have the same type.
-    for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
-      MachineOperand &Op = MI.getOperand(I);
-      if (!Op.isReg() || !Op.getReg().isVirtual())
-        continue;
-
-      // MI is a PHI instruction.
-      MachineBasicBlock *InsertBB = MI.getOperand(I + 1).getMBB();
-      MachineBasicBlock::iterator Insert = InsertBB->getFirstTerminator();
-
-      // Avoid creating no-op copies with the same src and dst reg class.  These
-      // confuse some of the machine passes.
-      legalizeGenericOperand(*InsertBB, Insert, VRC, Op, MRI, MI.getDebugLoc());
-    }
   }
 
   // REG_SEQUENCE doesn't really require operand legalization, but if one has a
