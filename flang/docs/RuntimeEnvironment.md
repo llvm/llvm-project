@@ -113,9 +113,17 @@ Any other value is ignored. When the variable is unset, the trace is enabled.
 
 `-fbacktrace` is the compiler default and does not set the variable.
 `-fno-backtrace` sets `FLANG_ERROR_BACKTRACE=0` only when the variable is not
-already set, so a value in the environment wins over the option. The variable
-is not read when the runtime is built for a GPU, and signal handlers are not
-installed there.
+already set, so a value in the environment wins over the option. The option
+takes effect only for the file that contains the main program, because the
+compiler sets the variable from the main program's startup code. Programs
+started with `EXECUTE_COMMAND_LINE` inherit the variable. With a non-Fortran
+`main()`, no signal handlers are installed and `-fno-backtrace` has no effect,
+so `ERROR STOP` still prints a trace.
+
+This one variable controls both the traces for fatal runtime errors and the
+traces for deadly signals. `gfortran`'s `GFORTRAN_ERROR_BACKTRACE` controls only
+the former. The variable is not read when the runtime is built for a GPU, and
+signal handlers are not installed there.
 
 ## `FLANG_RT_COPYOUT_MODIFIED_ONLY`
 
