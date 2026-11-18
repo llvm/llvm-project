@@ -2,29 +2,28 @@
 
 ; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_bfloat16 %t/bf16_result_operand.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=RESULT-OPERAND-ERROR
 ; RESULT-OPERAND-ERROR:      error: <unknown>:0:0: in function test_fabs bfloat (bfloat): OpenCL Extended instructions with bfloat16 require the
-; RESULT-OPERAND-ERROR-SAME:   following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic
+; RESULT-OPERAND-ERROR-SAME:   following SPIR-V extension: SPV_EXT_bfloat16_arithmetic
 
 ; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_bfloat16 %t/bf16_result.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=RESULT-ERROR
 ; RESULT-ERROR:      error: <unknown>:0:0: in function test_nan bfloat (i16): OpenCL Extended instructions with bfloat16 require the
-; RESULT-ERROR-SAME:   following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic
+; RESULT-ERROR-SAME:   following SPIR-V extension: SPV_EXT_bfloat16_arithmetic
 
 ; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_bfloat16 %t/bf16_operand.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=OPERAND-ERROR
 ; OPERAND-ERROR:      error: <unknown>:0:0: in function test_ilogb i32 (bfloat): OpenCL Extended instructions with bfloat16 require the
-; OPERAND-ERROR-SAME:   following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic
+; OPERAND-ERROR-SAME:   following SPIR-V extension: SPV_EXT_bfloat16_arithmetic
 
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bfloat16_arithmetic,+SPV_KHR_bfloat16 %t/bf16_result_operand.ll -o - | FileCheck %s --check-prefixes=COMMON,BF16_RESULT_OPERAND
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bfloat16_arithmetic,+SPV_KHR_bfloat16 %t/bf16_result.ll -o - | FileCheck %s --check-prefixes=COMMON,BF16_RESULT
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bfloat16_arithmetic,+SPV_KHR_bfloat16 %t/bf16_operand.ll -o - | FileCheck %s --check-prefixes=COMMON,BF16_OPERAND
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_bfloat16_arithmetic,+SPV_KHR_bfloat16 %t/bf16_result_operand.ll -o - | FileCheck %s --check-prefixes=COMMON,BF16_RESULT_OPERAND
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_bfloat16_arithmetic,+SPV_KHR_bfloat16 %t/bf16_result.ll -o - | FileCheck %s --check-prefixes=COMMON,BF16_RESULT
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_bfloat16_arithmetic,+SPV_KHR_bfloat16 %t/bf16_operand.ll -o - | FileCheck %s --check-prefixes=COMMON,BF16_OPERAND
 
-; TODO: re-enable spirv-val once it can verify SPV_INTEL_bfloat16_arithmetic with bfloat16 type on ExtInst
-; RUNx: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bfloat16_arithmetic,+SPV_KHR_bfloat16 %t/bf16_result_operand.ll -o - -filetype=obj | spirv-val %}
-; RUNx: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bfloat16_arithmetic,+SPV_KHR_bfloat16 %t/bf16_result.ll -o - -filetype=obj | spirv-val %}
-; RUNx: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bfloat16_arithmetic,+SPV_KHR_bfloat16 %t/bf16_operand.ll -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_bfloat16_arithmetic,+SPV_KHR_bfloat16 %t/bf16_result_operand.ll -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_bfloat16_arithmetic,+SPV_KHR_bfloat16 %t/bf16_result.ll -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_bfloat16_arithmetic,+SPV_KHR_bfloat16 %t/bf16_operand.ll -o - -filetype=obj | spirv-val %}
 
-; COMMON-DAG: OpCapability BFloat16ArithmeticINTEL
+; COMMON-DAG: OpCapability BFloat16ArithmeticEXT
 ; COMMON-DAG: OpCapability BFloat16TypeKHR
 ; COMMON-DAG: OpExtension "SPV_KHR_bfloat16"
-; COMMON-DAG: OpExtension "SPV_INTEL_bfloat16_arithmetic"
+; COMMON-DAG: OpExtension "SPV_EXT_bfloat16_arithmetic"
 ; COMMON-DAG: [[EXTSET:%.*]] = OpExtInstImport "OpenCL.std"
 ; COMMON-DAG: [[BFLOAT:%.*]] = OpTypeFloat 16 0
 ; COMMON-DAG: [[BFLOATV:%.*]] = OpTypeVector [[BFLOAT]] 4

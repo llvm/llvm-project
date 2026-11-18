@@ -1,13 +1,13 @@
 ; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_bfloat16 %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bfloat16_arithmetic,+SPV_KHR_bfloat16 %s -o - | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bfloat16_arithmetic,+SPV_KHR_bfloat16 %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_bfloat16_arithmetic,+SPV_KHR_bfloat16 %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_bfloat16_arithmetic,+SPV_KHR_bfloat16 %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-ERROR: LLVM ERROR: Arithmetic instructions with bfloat16 arguments require the following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic
+; CHECK-ERROR: LLVM ERROR: Arithmetic instructions with bfloat16 arguments require the following SPIR-V extension: SPV_EXT_bfloat16_arithmetic
 
 ; CHECK-DAG: OpCapability BFloat16TypeKHR
-; CHECK-DAG: OpCapability BFloat16ArithmeticINTEL
+; CHECK-DAG: OpCapability BFloat16ArithmeticEXT
 ; CHECK-DAG: OpExtension "SPV_KHR_bfloat16"
-; CHECK-DAG: OpExtension "SPV_INTEL_bfloat16_arithmetic"
+; CHECK-DAG: OpExtension "SPV_EXT_bfloat16_arithmetic"
 ; CHECK-DAG: OpName [[NEG:%.*]] "neg"
 ; CHECK-DAG: OpName [[NEGV:%.*]] "negv"
 ; CHECK-DAG: OpName [[ADD:%.*]] "add"
