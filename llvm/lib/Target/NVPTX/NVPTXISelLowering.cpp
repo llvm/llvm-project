@@ -263,29 +263,41 @@ getVectorLoweringShape(EVT VectorEVT, const NVPTXSubtarget &STI,
   return std::pair(NumElts / NPerReg, MVT::getVectorVT(EltVT, NPerReg));
 }
 
-/// ComputePTXValueVTs - For the given Type \p Ty, returns the set of primitive
-/// legal-ish MVTs that compose it. Unlike ComputeValueVTs, this will legalize
-/// the types as required by the calling convention (with special handling for
-/// i8s).
-/// NOTE: This is a band-aid for code that expects ComputeValueVTs to return the
-/// same number of types as the Ins/Outs arrays in LowerFormalArguments,
-/// LowerCall, and LowerReturn.
+/// Split \p Ty into the types and byte offsets used for arguments and returns.
+/// The number of entries must match the Ins/Outs arrays used during lowering.
+/// Keep i8 memory accesses byte-sized. When lowering arguments, record each
+/// Boolean vector's memory type at its first register index in OriginalMemVTs.
+/// Use MVT::Other for the remaining entries.
 static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                                LLVMContext &Ctx, CallingConv::ID CallConv,
                                Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
                                SmallVectorImpl<uint64_t> &Offsets,
+                               SmallVectorImpl<EVT> *OriginalMemVTs = nullptr,
                                uint64_t StartingOffset = 0) {
-  SmallVector<EVT, 16> TempVTs;
+  SmallVector<EVT, 16> TempVTs, TempMemVTs;
   SmallVector<uint64_t, 16> TempOffsets;
-  ComputeValueVTs(TLI, DL, Ty, TempVTs, /*MemVTs=*/nullptr, &TempOffsets,
+  ComputeValueVTs(TLI, DL, Ty, TempVTs, &TempMemVTs, &TempOffsets,
                   StartingOffset);
 
-  for (const auto [VT, Off] : zip(TempVTs, TempOffsets)) {
+  for (const auto [VT, MemVT, Off] : zip(TempVTs, TempMemVTs, TempOffsets)) {
     MVT RegisterVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, VT);
     unsigned NumRegs = TLI.getNumRegistersForCallingConv(Ctx, CallConv, VT);
 
-    // Since we actually can load/store b8, we need to ensure that we'll use
-    // the original sized type for any i8s or i8 vectors.
+    // Boolean lanes use one bit each in memory, but have separate registers.
+    // Keep the vector's memory type so the legalizer can choose its loads and
+    // stores without treating each lane as a byte.
+    if (OriginalMemVTs && VT.isVector() &&
+        VT.getVectorElementType() == MVT::i1) {
+      assert(RegisterVT == MVT::i1 && NumRegs == VT.getVectorNumElements() &&
+             "Expected one predicate register per Boolean vector element");
+      ValueVTs.append(NumRegs, RegisterVT);
+      Offsets.append(NumRegs, Off);
+      OriginalMemVTs->push_back(MemVT);
+      OriginalMemVTs->append(NumRegs - 1, MVT::Other);
+      continue;
+    }
+
+    // Keep i8 loads and stores byte-sized, even when registers are wider.
     if (VT.getScalarType() == MVT::i8) {
       if (RegisterVT == MVT::i16)
         RegisterVT = MVT::i8;
@@ -296,13 +308,12 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                "Expected v4i8, v2i16, or i16 for i8 RegisterVT");
     }
 
-    // TODO: This is horribly incorrect for cases where the vector elements are
-    // not a multiple of bytes (ex i1) and legal or i8. However, this problem
-    // has existed for as long as NVPTX has and no one has complained, so we'll
-    // leave it for now.
+    // TODO: Also handle Boolean vector returns and other sub-byte elements.
     for (unsigned I : seq(NumRegs)) {
       ValueVTs.push_back(RegisterVT);
       Offsets.push_back(Off + I * RegisterVT.getStoreSize());
+      if (OriginalMemVTs)
+        OriginalMemVTs->push_back(MVT::Other);
     }
   }
 }
@@ -438,34 +449,30 @@ static unsigned canMergeParamLoadStoresStartingAt(
   return NumElts;
 }
 
-// Computes whether and how we can vectorize the loads/stores of a
-// flattened function parameter or return value.
-//
-// The flattened parameter is represented as the list of ValueVTs and
-// Offsets, and is aligned to ParamAlignment bytes. We return a vector
-// of the same size as ValueVTs indicating how each piece should be
-// loaded/stored (i.e. as a scalar, or as part of a vector
-// load/store).
+// Group the registers of a parameter or return value for loading or storing.
+// ValueVTs and Offsets describe their types and byte offsets. ParamAlignment
+// gives the alignment in bytes. Return the number of registers in each group.
+// Keep each vector marked by OriginalMemVTs in its own group.
 template <typename T>
 static SmallVector<unsigned, 16>
 VectorizePTXValueVTs(const SmallVectorImpl<EVT> &ValueVTs,
                      const SmallVectorImpl<T> &Offsets, Align ParamAlignment,
-                     bool IsVAArg = false) {
-  // Set vector size to match ValueVTs and mark all elements as
-  // scalars by default.
-
-  if (IsVAArg)
-    return SmallVector<unsigned>(ValueVTs.size(), 1);
-
+                     bool IsVAArg = false, ArrayRef<EVT> OriginalMemVTs = {}) {
   SmallVector<unsigned, 16> VectorInfo;
 
   const auto GetNumElts = [&](unsigned I) -> unsigned {
+    if (!OriginalMemVTs.empty() && OriginalMemVTs[I].isVector())
+      return OriginalMemVTs[I].getVectorNumElements();
+    if (IsVAArg)
+      return 1;
     for (const unsigned AccessSize : {16, 8, 4, 2}) {
       const unsigned NumElts = canMergeParamLoadStoresStartingAt(
           I, AccessSize, ValueVTs, Offsets, ParamAlignment);
       assert((NumElts == 1 || NumElts == 2 || NumElts == 4) &&
              "Unexpected vectorization size");
-      if (NumElts != 1)
+      if (NumElts != 1 && (OriginalMemVTs.empty() ||
+                           none_of(OriginalMemVTs.slice(I, NumElts),
+                                   [](EVT VT) { return VT.isVector(); })))
         return NumElts;
     }
     return 1;
@@ -1458,8 +1465,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     } else {
       SmallVector<EVT, 16> VTs;
       SmallVector<uint64_t, 16> Offsets;
+      SmallVector<EVT, 16> OriginalMemVTs;
       ComputePTXValueVTs(*this, DL, Ctx, CLI.CallConv, Arg.Ty, VTs, Offsets,
-                         VAOffset);
+                         &OriginalMemVTs, VAOffset);
       assert(VTs.size() == Offsets.size() && "Size mismatch");
       assert(VTs.size() == ArgOuts.size() && "Size mismatch");
 
@@ -1484,15 +1492,18 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       };
 
       unsigned J = 0;
-      const auto VI = VectorizePTXValueVTs(VTs, Offsets, ArgAlign, IsVAArg);
+      const auto VI =
+          VectorizePTXValueVTs(VTs, Offsets, ArgAlign, IsVAArg, OriginalMemVTs);
       for (const unsigned NumElts : VI) {
-        const EVT EltVT = promoteScalarIntegerPTX(VTs[J]);
+        const bool HasOriginalMemVT = OriginalMemVTs[J].isVector();
+        const EVT EltVT = HasOriginalMemVT ? OriginalMemVTs[J]
+                                           : promoteScalarIntegerPTX(VTs[J]);
 
         unsigned Offset;
         if (IsVAArg) {
           // TODO: We may need to support vector types that can be passed
           // as scalars in variadic arguments.
-          assert(NumElts == 1 &&
+          assert((NumElts == 1 || HasOriginalMemVT) &&
                  "Vectorization should be disabled for vaargs.");
 
           // Align each part of the variadic argument to their type.
@@ -1514,9 +1525,12 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                             : commonAlignment(ArgAlign, Offset);
 
         SDValue Val =
-            getBuildVectorizedValue(NumElts, dl, DAG, [&](unsigned K) {
-              return GetStoredValue(J + K);
-            });
+            HasOriginalMemVT
+                ? DAG.getBuildVector(OriginalMemVTs[J], dl,
+                                     ArgOutVals.slice(J, NumElts))
+                : getBuildVectorizedValue(NumElts, dl, DAG, [&](unsigned K) {
+                    return GetStoredValue(J + K);
+                  });
 
         SDValue StoreParam = DAG.getStore(
             ArgDeclare, dl, Val, Ptr,
@@ -4387,7 +4401,9 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
     } else {
       SmallVector<EVT, 16> VTs;
       SmallVector<uint64_t, 16> Offsets;
-      ComputePTXValueVTs(*this, DL, Ctx, CallConv, Ty, VTs, Offsets);
+      SmallVector<EVT, 16> OriginalMemVTs;
+      ComputePTXValueVTs(*this, DL, Ctx, CallConv, Ty, VTs, Offsets,
+                         &OriginalMemVTs);
       assert(VTs.size() == ArgIns.size() && "Size mismatch");
       assert(VTs.size() == Offsets.size() && "Size mismatch");
 
@@ -4395,11 +4411,15 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
           &F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
 
       unsigned I = 0;
-      const auto VI = VectorizePTXValueVTs(VTs, Offsets, ArgAlign);
+      const auto VI =
+          VectorizePTXValueVTs(VTs, Offsets, ArgAlign, false, OriginalMemVTs);
       for (const unsigned NumElts : VI) {
-        // i1 is loaded/stored as i8
+        const bool HasOriginalMemVT = OriginalMemVTs[I].isVector();
+        // Scalar i1 values use byte loads. Boolean vectors keep their own type.
         const EVT LoadVT = VTs[I] == MVT::i1 ? MVT::i8 : VTs[I];
-        const EVT VecVT = getVectorizedVT(LoadVT, NumElts, Ctx);
+        const EVT VecVT = HasOriginalMemVT
+                              ? OriginalMemVTs[I]
+                              : getVectorizedVT(LoadVT, NumElts, Ctx);
 
         SDValue VecAddr = DAG.getObjectPtrOffset(
             dl, ArgSymbol, TypeSize::getFixed(Offsets[I]));
@@ -4413,7 +4433,8 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
                                     MachineMemOperand::MOInvariant);
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
         for (const unsigned J : llvm::seq(NumElts)) {
-          SDValue Elt = getExtractVectorizedValue(P, J, LoadVT, dl, DAG);
+          SDValue Elt = getExtractVectorizedValue(
+              P, J, HasOriginalMemVT ? VTs[I] : LoadVT, dl, DAG);
 
           Elt = correctParamType(Elt, ArgIns[I + J].VT, ArgIns[I + J].Flags,
                                  DAG, dl);

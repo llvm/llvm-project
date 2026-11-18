@@ -59,16 +59,15 @@ define signext i1 @test_i1s(i1 signext %a) {
        ret i1 %r;
 }
 
-; Make sure that i1 loads are vectorized as i8 loads, respecting each element alignment.
+; Pack Boolean vector arguments into bytes, even when the last
+; byte is only partly used.
 ; CHECK: .func  (.param .align 1 .b8 func_retval0[1])
 ; CHECK-LABEL: test_v3i1(
 ; CHECK-NEXT: .param .align 1 .b8 test_v3i1_param_0[1]
-; CHECK-DAG:  ld.param.b8     [[E2:%rs[0-9]+]], [test_v3i1_param_0+2];
-; CHECK-DAG:  ld.param.b8     [[E0:%rs[0-9]+]], [test_v3i1_param_0]
+; CHECK:      ld.param.b8 [[IN:%rs[0-9]+]], [test_v3i1_param_0];
 ; CHECK:      .param .align 1 .b8 param0[1];
 ; CHECK:      .param .align 1 .b8 retval0[1];
-; CHECK-DAG:  st.param.b8     [param0], [[E0]];
-; CHECK-DAG:  st.param.b8     [param0+2], [[E2]];
+; CHECK:      st.param.b8 [param0], [[IN]];
 ; CHECK:      call.uni (retval0), test_v3i1,
 ; CHECK-DAG:  ld.param.b8     [[RE0:%rs[0-9]+]], [retval0];
 ; CHECK-DAG:  ld.param.b8     [[RE2:%rs[0-9]+]], [retval0+2];
@@ -83,10 +82,10 @@ define <3 x i1> @test_v3i1(<3 x i1> %a) {
 ; CHECK: .func  (.param .align 1 .b8 func_retval0[1])
 ; CHECK-LABEL: test_v4i1(
 ; CHECK-NEXT: .param .align 1 .b8 test_v4i1_param_0[1]
-; CHECK:      ld.param.b8 [[E0:%rs[0-9]+]], [test_v4i1_param_0]
+; CHECK:      ld.param.b8 [[IN:%rs[0-9]+]], [test_v4i1_param_0];
 ; CHECK:      .param .align 1 .b8 param0[1];
 ; CHECK:      .param .align 1 .b8 retval0[1];
-; CHECK:      st.param.b8  [param0], [[E0]];
+; CHECK:      st.param.b8 [param0], [[IN]];
 ; CHECK:      call.uni (retval0), test_v4i1,
 ; CHECK:      ld.param.b8  [[RE0:%rs[0-9]+]], [retval0];
 ; CHECK:      ld.param.b8  [[RE1:%rs[0-9]+]], [retval0+1];
@@ -105,12 +104,10 @@ define <4 x i1> @test_v4i1(<4 x i1> %a) {
 ; CHECK: .func  (.param .align 1 .b8 func_retval0[1])
 ; CHECK-LABEL: test_v5i1(
 ; CHECK-NEXT: .param .align 1 .b8 test_v5i1_param_0[1]
-; CHECK-DAG:  ld.param.b8     [[E4:%rs[0-9]+]], [test_v5i1_param_0+4];
-; CHECK-DAG:  ld.param.b8     [[E0:%rs[0-9]+]], [test_v5i1_param_0]
+; CHECK:      ld.param.b8 [[IN:%rs[0-9]+]], [test_v5i1_param_0];
 ; CHECK:      .param .align 1 .b8 param0[1];
 ; CHECK:      .param .align 1 .b8 retval0[1];
-; CHECK-DAG:  st.param.b8     [param0], [[E0]];
-; CHECK-DAG:  st.param.b8     [param0+4], [[E4]];
+; CHECK:      st.param.b8 [param0], [[IN]];
 ; CHECK:      call.uni (retval0), test_v5i1,
 ; CHECK-DAG:  ld.param.b8  [[RE0:%rs[0-9]+]], [retval0];
 ; CHECK-DAG:  ld.param.b8     [[RE4:%rs[0-9]+]], [retval0+4];

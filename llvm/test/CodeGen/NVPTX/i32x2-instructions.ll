@@ -1370,26 +1370,30 @@ define <2 x i32> @test_zext_2xi8_to_2xi32(<2 x i8> %a) #0 {
 define <2 x i32> @test_zext_2xi1_to_2xi32(<2 x i1> %a) #0 {
 ; CHECK-NOI32X2-LABEL: test_zext_2xi1_to_2xi32(
 ; CHECK-NOI32X2:       {
-; CHECK-NOI32X2-NEXT:    .reg .b32 %r<5>;
+; CHECK-NOI32X2-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.b8 %r1, [test_zext_2xi1_to_2xi32_param_0+1];
-; CHECK-NOI32X2-NEXT:    and.b32 %r2, %r1, 1;
-; CHECK-NOI32X2-NEXT:    ld.param.b8 %r3, [test_zext_2xi1_to_2xi32_param_0];
-; CHECK-NOI32X2-NEXT:    and.b32 %r4, %r3, 1;
-; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r2};
+; CHECK-NOI32X2-NEXT:    ld.param.b8 %rs1, [test_zext_2xi1_to_2xi32_param_0];
+; CHECK-NOI32X2-NEXT:    and.b16 %rs2, %rs1, 1;
+; CHECK-NOI32X2-NEXT:    shr.u16 %rs3, %rs1, 1;
+; CHECK-NOI32X2-NEXT:    cvt.u32.u16 %r1, %rs3;
+; CHECK-NOI32X2-NEXT:    cvt.u32.u16 %r2, %rs2;
+; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r1};
 ; CHECK-NOI32X2-NEXT:    ret;
 ;
 ; CHECK-I32X2-LABEL: test_zext_2xi1_to_2xi32(
 ; CHECK-I32X2:       {
-; CHECK-I32X2-NEXT:    .reg .b32 %r<5>;
+; CHECK-I32X2-NEXT:    .reg .b16 %rs<4>;
+; CHECK-I32X2-NEXT:    .reg .b32 %r<3>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param::func.b8 %r1, [test_zext_2xi1_to_2xi32_param_0+1];
-; CHECK-I32X2-NEXT:    and.b32 %r2, %r1, 1;
-; CHECK-I32X2-NEXT:    ld.param::func.b8 %r3, [test_zext_2xi1_to_2xi32_param_0];
-; CHECK-I32X2-NEXT:    and.b32 %r4, %r3, 1;
-; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r2};
+; CHECK-I32X2-NEXT:    ld.param::func.b8 %rs1, [test_zext_2xi1_to_2xi32_param_0];
+; CHECK-I32X2-NEXT:    and.b16 %rs2, %rs1, 1;
+; CHECK-I32X2-NEXT:    shr.u16 %rs3, %rs1, 1;
+; CHECK-I32X2-NEXT:    cvt.u32.u16 %r1, %rs3;
+; CHECK-I32X2-NEXT:    cvt.u32.u16 %r2, %rs2;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r1};
 ; CHECK-I32X2-NEXT:    ret;
   %r = zext <2 x i1> %a to <2 x i32>
   ret <2 x i32> %r
