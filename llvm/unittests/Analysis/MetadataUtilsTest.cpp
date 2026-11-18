@@ -270,7 +270,6 @@ TEST_F(MetadataUtilsTest, StoreTypeChangePreservesHints) {
   EXPECT_TRUE(New->hasMetadata(LLVMContext::MD_invariant_group));
 }
 
-
 TEST_F(MetadataUtilsTest, CSEIntersectsCacheHints) {
   auto *A = B.CreateLoad(B.getInt32Ty(), P);
   auto *BLoad = B.CreateLoad(B.getInt32Ty(), P);
