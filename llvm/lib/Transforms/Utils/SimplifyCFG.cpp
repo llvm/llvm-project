@@ -3153,16 +3153,23 @@ public:
 };
 } // namespace
 
-/// Return whether all instructions in \p BB other than the terminator,
-/// \p Cond, and pseudo probes are ephemeral. Collects ephemeral instructions
-/// in \b EphInsts.
+/// Returns whether we can duplicate this block into the successors, with the
+/// goal of merging the condition in the predecessor.
+///
+/// This ignores pseudo probe instructions and the condition (which will already
+/// be tested in the predecessor block). Ephemeral instructions are collected in
+/// \p EphInsts, to be cloned into the successors. Returns false when the block
+/// instructions with side effects, or `noduplicate` or `convergent` calls.
 static bool
-onlyEphemeralInstsBeforeTerminator(BasicBlock *BB, const Value *Cond,
-                                   SmallVectorImpl<Instruction *> &EphInsts) {
+blockCheapToDuplicateInSuccessors(BasicBlock *BB, const Value *Cond,
+                                  SmallVectorImpl<Instruction *> &EphInsts) {
   EphemeralValueTracker EphTracker;
   for (Instruction &I : reverse(drop_end(*BB))) {
     if (isa<PseudoProbeInst>(I) || &I == Cond)
       continue;
+    if (CallInst *CI = dyn_cast<CallInst>(&I))
+      if (CI->cannotDuplicate() || CI->isConvergent())
+        return false;
     if (isa<PHINode>(I) || !EphTracker.track(&I))
       return false;
     EphInsts.push_back(&I);
@@ -8795,7 +8802,7 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
     // If the block only contains the switch (ignoring pseudo probes and
     // ephemeral values), see if we can fold the block away into any preds.
     SmallVector<Instruction *, 4> EphInsts;
-    if (onlyEphemeralInstsBeforeTerminator(BB, /*Cond=*/nullptr, EphInsts) &&
+    if (blockCheapToDuplicateInSuccessors(BB, /*Cond=*/nullptr, EphInsts) &&
         foldValueComparisonIntoPredecessors(SI, Builder, EphInsts))
       return requestResimplify();
   }
@@ -9176,7 +9183,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(CondBrInst *BI, IRBuilder<> &Builder) {
     // Pseudo instrinsics are dropped when folding the block into the
     // predecessors, and ephemerals are copied to the successors.
     SmallVector<Instruction *, 4> EphInsts;
-    if (onlyEphemeralInstsBeforeTerminator(BB, BI->getCondition(), EphInsts) &&
+    if (blockCheapToDuplicateInSuccessors(BB, BI->getCondition(), EphInsts) &&
         foldValueComparisonIntoPredecessors(BI, Builder, EphInsts))
       return requestResimplify();
   }

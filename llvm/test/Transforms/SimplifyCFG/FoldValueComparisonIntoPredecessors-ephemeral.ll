@@ -7,6 +7,7 @@
 declare void @fun0(i32)
 declare void @fun1(i32)
 declare i1 @dynamic_cond()
+declare void @side_effect_free(i32) memory(none) nounwind willreturn
 
 define void @goal(i32 %idx) {
 ; CHECK-LABEL: define void @goal(
@@ -19,11 +20,13 @@ define void @goal(i32 %idx) {
 ; CHECK:       [[CALL0]]:
 ; CHECK-NEXT:    [[INRANGE1:%.*]] = icmp ult i32 [[IDX]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[INRANGE1]])
+; CHECK-NEXT:    call void @side_effect_free()
 ; CHECK-NEXT:    call void @fun0(i32 [[IDX]])
 ; CHECK-NEXT:    br label %[[DONE]]
 ; CHECK:       [[CALL1]]:
 ; CHECK-NEXT:    [[INRANGE2:%.*]] = icmp ult i32 [[IDX]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[INRANGE2]])
+; CHECK-NEXT:    call void @side_effect_free()
 ; CHECK-NEXT:    call void @fun1(i32 [[IDX]])
 ; CHECK-NEXT:    br label %[[DONE]]
 ; CHECK:       [[DONE]]:
@@ -37,6 +40,7 @@ dispatch:
   %is0 = icmp eq i32 %idx, 0
   %inrange = icmp ult i32 %idx, 2
   call void @llvm.assume(i1 %inrange)
+  call void @side_effect_free()
   br i1 %is0, label %call0, label %call1
 
 call0:
@@ -206,6 +210,86 @@ dispatch:
     #dbg_value(i1 %inrange, !6, !DIExpression(), !7)
   call void @llvm.assume(i1 %inrange)
     #dbg_value(i1 %inrange, !6, !DIExpression(), !7)
+  br i1 %is0, label %call0, label %call1
+
+call0:
+  call void @fun0(i32 %idx)
+  br label %done
+
+call1:
+  call void @fun1(i32 %idx)
+  br label %done
+
+done:
+  ret void
+}
+
+define void @noduplicate_call(i32 %idx) {
+; CHECK-LABEL: define void @noduplicate_call(
+; CHECK-SAME: i32 [[IDX:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TEST:%.*]] = icmp eq i32 [[IDX]], -1
+; CHECK-NEXT:    br i1 [[TEST]], label %[[DONE:.*]], label %[[DISPATCH:.*]]
+; CHECK:       [[DISPATCH]]:
+; CHECK-NEXT:    [[IS0:%.*]] = icmp eq i32 [[IDX]], 0
+; CHECK-NEXT:    call void @side_effect_free() #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    br i1 [[IS0]], label %[[CALL0:.*]], label %[[CALL1:.*]]
+; CHECK:       [[CALL0]]:
+; CHECK-NEXT:    call void @fun0(i32 [[IDX]])
+; CHECK-NEXT:    br label %[[DONE]]
+; CHECK:       [[CALL1]]:
+; CHECK-NEXT:    call void @fun1(i32 [[IDX]])
+; CHECK-NEXT:    br label %[[DONE]]
+; CHECK:       [[DONE]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %test = icmp eq i32 %idx, -1
+  br i1 %test, label %done, label %dispatch
+
+dispatch:
+  %is0 = icmp eq i32 %idx, 0
+  call void @side_effect_free() noduplicate
+  br i1 %is0, label %call0, label %call1
+
+call0:
+  call void @fun0(i32 %idx)
+  br label %done
+
+call1:
+  call void @fun1(i32 %idx)
+  br label %done
+
+done:
+  ret void
+}
+
+define void @convergent_call(i32 %idx) {
+; CHECK-LABEL: define void @convergent_call(
+; CHECK-SAME: i32 [[IDX:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TEST:%.*]] = icmp eq i32 [[IDX]], -1
+; CHECK-NEXT:    br i1 [[TEST]], label %[[DONE:.*]], label %[[DISPATCH:.*]]
+; CHECK:       [[DISPATCH]]:
+; CHECK-NEXT:    [[IS0:%.*]] = icmp eq i32 [[IDX]], 0
+; CHECK-NEXT:    call void @side_effect_free() #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    br i1 [[IS0]], label %[[CALL0:.*]], label %[[CALL1:.*]]
+; CHECK:       [[CALL0]]:
+; CHECK-NEXT:    call void @fun0(i32 [[IDX]])
+; CHECK-NEXT:    br label %[[DONE]]
+; CHECK:       [[CALL1]]:
+; CHECK-NEXT:    call void @fun1(i32 [[IDX]])
+; CHECK-NEXT:    br label %[[DONE]]
+; CHECK:       [[DONE]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %test = icmp eq i32 %idx, -1
+  br i1 %test, label %done, label %dispatch
+
+dispatch:
+  %is0 = icmp eq i32 %idx, 0
+  call void @side_effect_free() convergent
   br i1 %is0, label %call0, label %call1
 
 call0:
