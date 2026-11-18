@@ -159,12 +159,7 @@ defm : BoolField<"ifcvt-triangle-false", "true", "">;
 defm : BoolField<"ifcvt-triangle-rev", "true", "">;
 // TODO: Remove the old spellings after 2027-05.
 def : AliasOf<"disable-ifcvt-diamond", "ifcvt-diamond=false">;
-def : AliasOf<"disable-ifcvt-forked-diamond", "ifcvt-forked-diamond=false">;
-def : AliasOf<"disable-ifcvt-simple", "ifcvt-simple=false">;
-def : AliasOf<"disable-ifcvt-simple-false", "ifcvt-simple-false=false">;
-def : AliasOf<"disable-ifcvt-triangle", "ifcvt-triangle=false">;
 def : AliasOf<"disable-ifcvt-triangle-false", "ifcvt-triangle-false=false">;
-def : AliasOf<"disable-ifcvt-triangle-rev", "ifcvt-triangle-rev=false">;
 
 // MachineCSE.cpp
 defm : BoolField<"machine-cse-aggressive", "false",
@@ -172,9 +167,6 @@ defm : BoolField<"machine-cse-aggressive", "false",
 // Threshold to avoid excessive cost to compute isProfitableToCSE.
 defm : ValueField<"machine-cse-csuses-threshold", "int", "1024",
   "Threshold for the size of CSUses">;
-// TODO: Remove the old spellings.
-def : AliasOf<"aggressive-machine-cse", "machine-cse-aggressive">;
-def : AliasOf<"csuses-threshold", "machine-cse-csuses-threshold">;
 
 // MachineCombiner.cpp
 defm : BoolField<"machine-combiner-dump-subst-intrs", "false",
@@ -207,9 +199,6 @@ defm : BoolField<"machine-licm-hoist-const-stores", "true",
 def : AliasOf<"block-freq-ratio-threshold", "machine-licm-block-freq-ratio-threshold">;
 def : AliasOf<"hoist-const-loads", "machine-licm-hoist-const-loads">;
 def : AliasOf<"hoist-const-stores", "machine-licm-hoist-const-stores">;
-// TODO: Remove the old spellings.
-def : AliasOf<"avoid-speculation", "machine-licm-avoid-speculation">;
-def : AliasOf<"hoist-cheap-insts", "machine-licm-hoist-cheap-insts">;
 
 // MachineOutliner.cpp
 defm : BoolField<"append-content-hash-outlined-name", "true",
@@ -257,8 +246,6 @@ defm : BoolField<"phi-elim-split-all-critical-edges", "false",
   "Split all critical edges during PHI elimination">;
 // TODO: Remove the old spelling after 2027-05.
 def : AliasOf<"no-phi-elim-live-out-early-exit", "phi-elim-live-out-early-exit=false">;
-// TODO: Remove the old spelling.
-def : AliasOf<"disable-phi-elim-edge-splitting", "phi-elim-edge-splitting=false">;
 
 // PeepholeOptimizer.cpp
 // Specify whether or not the value tracking looks through complex
@@ -274,9 +261,7 @@ defm : ValueField<"recurrence-chain-limit", "unsigned", "3",
   "Maximum length of recurrence chain when evaluating the benefit of commuting operands">;
 defm : ValueField<"rewrite-phi-limit", "unsigned", "10",
   "Limit the length of PHI chains to lookup">;
-// TODO: Remove the old spellings after 2027-05.
-def : AliasOf<"disable-adv-copy-opt", "adv-copy-opt=false">;
-def : AliasOf<"disable-non-allocatable-phys-copy-opt", "non-allocatable-phys-copy-opt=false">;
+// TODO: Remove the old spelling after 2027-05.
 def : AliasOf<"disable-peephole", "peephole=false">;
 
 // RegisterCoalescer.cpp
@@ -324,8 +309,6 @@ defm : BoolField<"shrink-wrap-region-split", "true",
   "Enable splitting of the restore block if possible">;
 // TODO: Remove the old spelling after 2027-05.
 def : AliasOf<"enable-shrink-wrap", "shrink-wrap">;
-// TODO: Remove the old spelling.
-def : AliasOf<"enable-shrink-wrap-region-split", "shrink-wrap-region-split">;
 
 // StackColoring.cpp
 defm : BoolField<"stack-coloring", "true",
@@ -345,8 +328,6 @@ defm : BoolField<"stackcoloring-protect-from-escaped-allocas", "false",
   "Do not optimize lifetime zones that are broken">;
 // TODO: Remove the old spelling after 2027-05.
 def : AliasOf<"no-stack-coloring", "stack-coloring=false">;
-// TODO: Remove the old spelling.
-def : AliasOf<"protect-from-escaped-allocas", "stackcoloring-protect-from-escaped-allocas">;
 
 // StackSlotColoring.cpp
 defm : ValueField<"ssc-dce-limit", "int", "-1", "">;
@@ -512,5 +493,3 @@ defm : ValueField<"twoaddr-dataflow-edge-limit", "unsigned", "10",
 // Temporary flag to disable rescheduling.
 defm : BoolField<"twoaddr-reschedule", "true",
   "Coalesce copies by rescheduling">;
-// TODO: Remove the old spelling.
-def : AliasOf<"dataflow-edge-limit", "twoaddr-dataflow-edge-limit">;
