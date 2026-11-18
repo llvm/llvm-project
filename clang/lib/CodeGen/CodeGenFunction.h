@@ -1900,25 +1900,19 @@ public:
     CXXDefaultInitExprScope(CodeGenFunction &CGF, const CXXDefaultInitExpr *E)
         : CGF(CGF), OldCXXThisValue(CGF.CXXThisValue),
           OldCXXThisAlignment(CGF.CXXThisAlignment),
-          OldCXXThisTypeOverride(CGF.CXXThisTypeOverride),
           SourceLocScope(E, CGF.CurSourceLocExprScope) {
       CGF.CXXThisValue = CGF.CXXDefaultInitExprThis.getBasePointer();
       CGF.CXXThisAlignment = CGF.CXXDefaultInitExprThis.getAlignment();
-      // [expr.prim.general]p4: 'this' is "pointer to X" in X's initializers.
-      CGF.CXXThisTypeOverride = CGF.getContext().getPointerType(
-          CGF.getContext().getCanonicalTagType(E->getField()->getParent()));
     }
     ~CXXDefaultInitExprScope() {
       CGF.CXXThisValue = OldCXXThisValue;
       CGF.CXXThisAlignment = OldCXXThisAlignment;
-      CGF.CXXThisTypeOverride = OldCXXThisTypeOverride;
     }
 
   public:
     CodeGenFunction &CGF;
     llvm::Value *OldCXXThisValue;
     CharUnits OldCXXThisAlignment;
-    QualType OldCXXThisTypeOverride;
     SourceLocExprScopeGuard SourceLocScope;
   };
 
@@ -1952,7 +1946,6 @@ public:
           OldCXXThisValue(CGF.CXXThisValue),
           OldCXXABIThisAlignment(CGF.CXXABIThisAlignment),
           OldCXXThisAlignment(CGF.CXXThisAlignment),
-          OldCXXThisTypeOverride(CGF.CXXThisTypeOverride),
           OldReturnValue(CGF.ReturnValue), OldFnRetTy(CGF.FnRetTy),
           OldCXXInheritedCtorInitExprArgs(
               std::move(CGF.CXXInheritedCtorInitExprArgs)) {
@@ -1964,7 +1957,6 @@ public:
       CGF.CXXThisValue = nullptr;
       CGF.CXXABIThisAlignment = CharUnits();
       CGF.CXXThisAlignment = CharUnits();
-      CGF.CXXThisTypeOverride = QualType();
       CGF.ReturnValue = Address::invalid();
       CGF.FnRetTy = QualType();
       CGF.CXXInheritedCtorInitExprArgs.clear();
@@ -1978,7 +1970,6 @@ public:
       CGF.CXXThisValue = OldCXXThisValue;
       CGF.CXXABIThisAlignment = OldCXXABIThisAlignment;
       CGF.CXXThisAlignment = OldCXXThisAlignment;
-      CGF.CXXThisTypeOverride = OldCXXThisTypeOverride;
       CGF.ReturnValue = OldReturnValue;
       CGF.FnRetTy = OldFnRetTy;
       CGF.CXXInheritedCtorInitExprArgs =
@@ -1995,7 +1986,6 @@ public:
     llvm::Value *OldCXXThisValue;
     CharUnits OldCXXABIThisAlignment;
     CharUnits OldCXXThisAlignment;
-    QualType OldCXXThisTypeOverride;
     Address OldReturnValue;
     QualType OldFnRetTy;
     CallArgList OldCXXInheritedCtorInitExprArgs;
@@ -2196,10 +2186,6 @@ private:
   /// The value of 'this' to use when evaluating CXXDefaultInitExprs within
   /// this expression.
   Address CXXDefaultInitExprThis = Address::invalid();
-
-  /// The type of 'this' while evaluating a CXXDefaultInitExpr: a pointer to
-  /// the class being initialized, which need not be CurFuncDecl's class.
-  QualType CXXThisTypeOverride;
 
   /// The current array initialization index when evaluating an
   /// ArrayInitIndexExpr within an ArrayInitLoopExpr.
@@ -3284,10 +3270,6 @@ public:
     return CXXThisValue;
   }
   Address LoadCXXThisAddress();
-
-  /// Return the type of the pointer LoadCXXThis() returns, or null if there is
-  /// no 'this' here.
-  QualType getCXXThisType() const;
 
   /// LoadCXXVTT - Load the VTT parameter to base constructors/destructors have
   /// virtual bases.

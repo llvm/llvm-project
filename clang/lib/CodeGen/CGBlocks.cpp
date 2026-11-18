@@ -582,10 +582,7 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
 
   // First, 'this'.
   if (block->capturesCXXThis()) {
-    assert(CGF && "Can't capture 'this' in a global block");
-    QualType thisType = CGF->getCXXThisType();
-    assert(!thisType.isNull() && "No 'this' to capture here");
-    info.CXXThisType = thisType;
+    QualType thisType = block->getCXXThisType();
 
     // Theoretically, this could be in a different address space, so
     // don't assume standard pointer size/align.

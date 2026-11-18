@@ -6048,7 +6048,7 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
 
     // If we have a null capture, this must be the C++ 'this' capture.
     if (!capture) {
-      fields.push_back(createFieldType("this", block.CXXThisType, loc,
+      fields.push_back(createFieldType("this", blockDecl->getCXXThisType(), loc,
                                        AS_public, offsetInBits, tunit, tunit));
       continue;
     }

@@ -291,6 +291,7 @@ namespace test11 {
     int func();
     int (^nested)() = ^{ return ^{ return func(); }(); };
     int viaLambda = [this] { return ^{ return func(); }(); }();
+    void m();
   };
   struct Other {
     int y;
@@ -347,6 +348,11 @@ namespace test11 {
   // CHECK-LABEL: define internal noundef i32 @___ZN6test112f3Ev_block_invoke_2(
   // CHECK:       [[THIS:%.*]] = load ptr, ptr
   // CHECK-NEXT:  call noundef i32 @_ZN6test111B4funcEv(ptr {{[^,]*}} [[THIS]])
+
+  // A block around a lambda that copies '*this' still captures the pointer.
+  // CHECK-LABEL: define{{.*}} void @_ZN6test111B1mEv(
+  // CHECK:       alloca <{ ptr, i32, i32, ptr, ptr, ptr }>,
+  void B::m() { ^{ return [*this]() mutable { return func(); }(); }(); }
 
   // CHECK-LABEL: define internal void @__cxx_global_var_init()
   // CHECK:       store ptr @_ZN6test112gaE, ptr

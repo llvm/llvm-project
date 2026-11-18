@@ -1395,13 +1395,14 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
   for (int idx = MaxFunctionScopesIndex; NumCapturingClosures;
        --idx, --NumCapturingClosures) {
     CapturingScopeInfo *CSI = cast<CapturingScopeInfo>(FunctionScopes[idx]);
+    bool CaptureByCopy = ByCopy && idx == MaxFunctionScopesIndex;
 
     // The type of the corresponding data member (not a 'this' pointer if 'by
     // copy').
-    QualType CaptureType = ByCopy ? ThisTy->getPointeeType() : ThisTy;
+    QualType CaptureType = CaptureByCopy ? ThisTy->getPointeeType() : ThisTy;
 
     bool isNested = NumCapturingClosures > 1;
-    CSI->addThisCapture(isNested, Loc, CaptureType, ByCopy);
+    CSI->addThisCapture(isNested, Loc, CaptureType, CaptureByCopy);
   }
   return false;
 }
