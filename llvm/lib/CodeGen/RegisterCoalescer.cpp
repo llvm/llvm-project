@@ -312,9 +312,10 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   /// This method does the proper fixing of the live-ranges when the afore
   /// mentioned method returns true.
   void shrinkToUses(LiveInterval *LI,
-                    SmallVectorImpl<MachineInstr *> *Dead = nullptr) {
+                    SmallVectorImpl<MachineInstr *> *Dead = nullptr,
+                    LaneBitmask SubRangeMask = LaneBitmask::getAll()) {
     NumShrinkToUses++;
-    if (LIS->shrinkToUses(LI, Dead)) {
+    if (LIS->shrinkToUses(LI, Dead, SubRangeMask)) {
       /// Check whether or not \p LI is composed by multiple connected
       /// components and if that is the case, fix that.
       SmallVector<LiveInterval *, 8> SplitLIs;
@@ -2207,8 +2208,10 @@ RegisterCoalescer::JoinResult RegisterCoalescer::joinCopy(
   // CP.getSrcReg()'s live interval has been merged into CP.getDstReg's live
   // interval. Since CP.getSrcReg() is in ToBeUpdated set and its live interval
   // is not up-to-date, need to update the merged live interval here.
-  if (ShrinkMainRange || ToBeUpdated.count(CP.getSrcReg()))
+  if (ToBeUpdated.count(CP.getSrcReg()))
     shrinkToUses(&LIS->getInterval(CP.getDstReg()));
+  else if (ShrinkMainRange)
+    shrinkToUses(&LIS->getInterval(CP.getDstReg()), nullptr, ShrinkMask);
 
   // SrcReg is guaranteed to be the register whose live interval that is
   // being merged.
