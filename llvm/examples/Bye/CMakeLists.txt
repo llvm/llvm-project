@@ -7,9 +7,15 @@ endif()
 # work with DLLs on Windows (where a shared library can't have undefined
 # references), so just skip this example on Windows.
 if (NOT WIN32 AND NOT CYGWIN)
+  set(LLVM_TARGET_DEFINITIONS ByeOptions.td)
+  llvm_tablegen(ByeOptions.inc -gen-opt-parser-defs)
+  add_public_tablegen_target(ByeOptionsTableGen)
+  include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
   add_llvm_pass_plugin(Bye
     Bye.cpp
     DEPENDS
+    ByeOptionsTableGen
     intrinsics_gen
     BUILDTREE_ONLY
    )
