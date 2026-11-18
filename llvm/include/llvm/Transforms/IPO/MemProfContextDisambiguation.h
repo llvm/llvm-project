@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implements support for context disambiguation of allocation calls for profile
-// guided heap optimization using memprof metadata. See implementation file for
-// details.
+// Implements support for context disambiguation of allocation calls for
+// profile-guided memory optimization (MemPGO) using memprof metadata. See
+// implementation file for details.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
@@ -29,6 +30,13 @@ class GlobalValueSummary;
 class LLVMContext;
 class Module;
 class OptimizationRemarkEmitter;
+
+inline constexpr StringLiteral MemProfCloneSuffix = ".memprof.";
+
+/// Returns true if \p GV is a MemProf context-disambiguated clone.
+inline bool isMemProfClone(const GlobalValue &GV) {
+  return GV.getName().contains(MemProfCloneSuffix);
+}
 
 class MemProfContextDisambiguation
     : public OptionalPassInfoMixin<MemProfContextDisambiguation> {

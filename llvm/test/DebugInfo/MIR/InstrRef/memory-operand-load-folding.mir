@@ -69,20 +69,6 @@
 name:            foo
 tracksRegLiveness: true
 debugInstrRef: true
-registers:
-  - { id: 0, class: gr32, preferred-register: '' }
-  - { id: 1, class: fr32, preferred-register: '' }
-  - { id: 2, class: gr32, preferred-register: '' }
-  - { id: 3, class: gr8, preferred-register: '' }
-  - { id: 4, class: gr64, preferred-register: '' }
-  - { id: 5, class: gr32, preferred-register: '' }
-  - { id: 6, class: gr32, preferred-register: '' }
-  - { id: 7, class: gr32, preferred-register: '' }
-  - { id: 8, class: gr8, preferred-register: '' }
-  - { id: 9, class: gr32, preferred-register: '' }
-  - { id: 10, class: gr8, preferred-register: '' }
-  - { id: 11, class: gr64, preferred-register: '' }
-  - { id: 12, class: gr32, preferred-register: '' }
 liveins:
   - { reg: '$edi', virtual-reg: '%0' }
   - { reg: '$xmm0', virtual-reg: '%1' }

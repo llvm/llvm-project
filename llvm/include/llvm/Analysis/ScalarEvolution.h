@@ -586,9 +586,6 @@ public:
 /// ScalarEvolution::Preds folding set.  This is why the \c add function is sound.
 class LLVM_ABI SCEVUnionPredicate final : public SCEVPredicate {
 private:
-  using PredicateMap =
-      DenseMap<const SCEV *, SmallVector<const SCEVPredicate *, 4>>;
-
   /// Vector with references to all predicates in this union.
   SmallVector<const SCEVPredicate *, 16> Preds;
 

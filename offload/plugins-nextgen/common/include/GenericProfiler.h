@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <functional>
 #include <tuple>
+#include <utility>
 
 struct __tgt_async_info;
 
@@ -73,7 +74,7 @@ public:
 
   /// Hook that is called when memory is allocated on the device.
   virtual void handleDataAlloc(uint64_t StartNanos, uint64_t EndNanos,
-                               void *HostPtr, uint64_t Size, void *Data) {}
+                               uint64_t Size, void *Data) {}
 
   /// Hook that is called when memory is freed on the device.
   virtual void handleDataDelete(uint64_t StartNanos, uint64_t EndNanos,
@@ -147,35 +148,30 @@ public:
   };
 
   template <typename ProfilerFuncTy, typename... ProfilerFuncArgsTy>
-  [[maybe_unused]]
-  ProfTimerTy(ProfilerFuncTy &&, GenericProfilerTy *, ProfilerFuncArgsTy...)
-      -> ProfTimerTy<ProfilerFuncTy, ProfilerFuncArgsTy...>;
-
-  template <typename ProfilerFuncTy, typename... ProfilerFuncArgsTy>
   friend class ProfTimerTy;
 
   /// Returns an RAII style timer, which handles data allocation timing.
   [[nodiscard]] auto getScopedDataAllocTimer(GenericDeviceTy *Dev,
-                                             void *HostPtr, uint64_t Size,
+                                             uint64_t Size,
                                              void *ProfData = nullptr) {
-    return ProfTimerTy(
-        [](GenericProfilerTy *P, auto... args) {
-          assert(P && "P was null");
-          P->handleDataAlloc(args...);
-        },
-        this, Dev, HostPtr, Size, ProfData);
+    auto F = [](GenericProfilerTy *P, auto... args) {
+      assert(P && "P was null");
+      P->handleDataAlloc(args...);
+    };
+    return ProfTimerTy<decltype(F), uint64_t, void *>(std::move(F), this, Dev,
+                                                      Size, ProfData);
   }
 
   /// Returns an RAII style timer, which handles data deletion timing.
   [[nodiscard]] auto getScopedDataDeleteTimer(GenericDeviceTy *Dev,
                                               void *TgtPtr,
                                               void *ProfData = nullptr) {
-    return ProfTimerTy(
-        [](GenericProfilerTy *P, auto... args) {
-          assert(P && "P was null");
-          P->handleDataDelete(args...);
-        },
-        this, Dev, TgtPtr, ProfData);
+    auto F = [](GenericProfilerTy *P, auto... args) {
+      assert(P && "P was null");
+      P->handleDataDelete(args...);
+    };
+    return ProfTimerTy<decltype(F), void *, void *>(std::move(F), this, Dev,
+                                                    TgtPtr, ProfData);
   }
 
 protected:

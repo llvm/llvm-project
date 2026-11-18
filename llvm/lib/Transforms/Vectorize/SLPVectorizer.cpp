@@ -96,6 +96,7 @@
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
@@ -154,6 +155,12 @@ namespace {
 /// A vectorized part of a split reduction, combined into the final reduction
 /// result by the horizontal reduction emitter.
 struct ReductionVectorPart {
+  ReductionVectorPart(Value *Vec, unsigned Scale, bool IsSigned,
+                      bool ReducedInTree, bool Negated,
+                      TTI::CastContextHint Ctx)
+      : Vec(Vec), Scale(Scale), IsSigned(IsSigned),
+        ReducedInTree(ReducedInTree), Negated(Negated), Ctx(Ctx) {}
+
   /// The vectorized value, tracked in case it is replaced while other parts
   /// are vectorized.
   WeakTrackingVH Vec;
@@ -168,6 +175,9 @@ struct ReductionVectorPart {
   /// the final reduction result. Used for reassociated fadd reductions,
   /// flattened through fsub/fneg operations.
   bool Negated = false;
+  /// Cast context hint of the vectorized tree root, selects the i1 reduction
+  /// form.
+  TTI::CastContextHint Ctx = TTI::CastContextHint::None;
 };
 } // namespace
 
@@ -489,7 +499,7 @@ public:
   }
 
   /// Returns true if the tree is a reduction tree.
-  bool isReductionTree() const { return UserIgnoreList != nullptr; }
+  bool isReductionTree() const { return !UserIgnoreSet.empty(); }
 
   /// Builds external uses of the vectorized scalars, i.e. the list of
   /// vectorized scalars to be extracted, their lanes and their scalar users. \p
@@ -539,7 +549,7 @@ public:
     CastMaxMinBWSizes.reset();
     ExtraBitWidthNodes.clear();
     InstrElementSize.clear();
-    UserIgnoreList = nullptr;
+    UserIgnoreSet.clear();
     NarrowedChainInsts.clear();
     PostponedGathers.clear();
     ExpandedOperandFreezes.clear();
@@ -1089,7 +1099,12 @@ public:
             return LookAheadHeuristics::ScoreConsecutiveExtracts;
           if (isUndefVector(EV2).all() && EV2->getType() == EV1->getType())
             return LookAheadHeuristics::ScoreConsecutiveExtracts;
-          if (EV2 == EV1) {
+          if (EV2 == EV1 && isa<FixedVectorType>(EV1->getType())) {
+            // Out-of-range indices produce poison, which is as profitable as
+            // undefs.
+            unsigned NumElts = getNumElements(EV1->getType());
+            if (Ex1Idx->uge(NumElts) || Ex2Idx->uge(NumElts))
+              return LookAheadHeuristics::ScoreConsecutiveExtracts;
             int Idx1 = Ex1Idx->getZExtValue();
             int Idx2 = Ex2Idx->getZExtValue();
             int Dist = Idx2 - Idx1;
@@ -2220,6 +2235,9 @@ public:
       eraseInstruction(VI);
       SE->forgetValue(VI);
     }
+    // The code emitted in place of the erased scalars may invalidate the cached
+    // analyses results.
+    Cache.clear();
   }
 
   /// Checks if the instruction was already analyzed for being possible
@@ -2620,8 +2638,7 @@ private:
   /// bitcast and bit pack roots are emitted as scalars, so their lanes cannot
   /// be extracted for other users.
   bool hasSingleReductionUse(Value *V) const {
-    return UserIgnoreList && V->hasOneUse() &&
-           UserIgnoreList->contains(*V->user_begin());
+    return V->hasOneUse() && UserIgnoreSet.contains(*V->user_begin());
   }
 
   /// Checks if the tree represents disjoint or reduction of shl(zext, (0, 8,
@@ -2770,6 +2787,10 @@ private:
 
     /// Checks if the current node is a gather node.
     bool isGather() const { return State == NeedToGather; }
+
+    bool isInOrder() const {
+      return ReorderIndices.empty() && ReuseShuffleIndices.empty();
+    }
 
     /// Checks if the current node is in reverse order.
     bool isReverse() const {
@@ -3001,6 +3022,16 @@ private:
 
     /// Returns true if any scalar in the list is a copyable element.
     bool hasCopyableElements() const { return !CopyableElements.empty(); }
+
+    /// Checks if the copyable lanes are valid only for the FP math user.
+    bool hasInexactCopyables() const {
+      return hasState() && S.getFPCopyables() == FPCopyables::Inexact;
+    }
+
+    /// Checks if the original values of the copyable lanes are blended in.
+    bool hasBlendedCopyables() const {
+      return hasState() && S.getFPCopyables() == FPCopyables::Blended;
+    }
 
     /// Adds \p V to the peeled reassociated scalars.
     void addReassocScalar(Value *V) { ReassocScalars.push_back(V); }
@@ -3386,12 +3417,13 @@ private:
     return It->getSecond();
   }
 
-  /// Returns first vector node for value \p V, matching values \p VL.
+  /// Returns first reusable vector node for value \p V, matching values \p VL.
   TreeEntry *getSameValuesTreeEntry(Value *V, ArrayRef<Value *> VL,
                                     bool SameVF = false) const {
     assert(V && "V cannot be nullptr.");
     for (TreeEntry *TE : ScalarToTreeEntries.lookup(V))
-      if ((!SameVF || TE->getVectorFactor() == VL.size()) && TE->isSame(VL))
+      if ((!SameVF || TE->getVectorFactor() == VL.size()) && TE->isSame(VL) &&
+          !TE->hasInexactCopyables())
         return TE;
     return nullptr;
   }
@@ -3418,6 +3450,15 @@ private:
     bool tryToFindDuplicates() const { return TryToFindDuplicates; }
     bool trySplitVectorize() const { return TrySplitVectorize; }
   };
+
+  /// Checks if the vector of the node with the user \p UserTreeIdx is used
+  /// only by FP math, which may quiet NaNs and flush input subnormals itself.
+  bool isUsedOnlyByFPMath(const EdgeInfo &UserTreeIdx) const;
+
+  /// Returns the masks, which blend the original values of the copyable lanes
+  /// of \p E from its operands into the result, with the operand indices.
+  SmallVector<std::pair<unsigned, SmallVector<int>>>
+  getCopyableBlendMasks(const TreeEntry &E) const;
 
   /// Checks if the specified list of the instructions/values can be vectorized
   /// in general.
@@ -4652,13 +4693,15 @@ private:
           // instruction. It may happen, if the chain of same copyable elements
           // appears in the tree. With the self-operand modeling (op(V, V)) the
           // user node may have the value on an operand column without copyable
-          // data, so its copyable data releases the instruction's schedule
-          // data directly and must stay a counted user.
+          // data in some lane, so its copyable data releases the instruction's
+          // schedule data directly and must stay a counted user.
           if (In == I) {
             unsigned NumCols = 0;
             for (unsigned OpIdx : seq<unsigned>(EI.UserTE->getNumOperands()))
-              NumCols += EI.UserTE->getOperand(OpIdx)[Lane] == I &&
-                         !getScheduleCopyableData({EI.UserTE, OpIdx}, I);
+              for (auto [OpV, V] :
+                   zip(EI.UserTE->getOperand(OpIdx), EI.UserTE->Scalars))
+                NumCols += OpV == I && V == I &&
+                           !getScheduleCopyableData({EI.UserTE, OpIdx}, I);
             if (NumCols == 0) {
               EdgeInfo UserEI = EI.UserTE->UserTreeIndex;
               if (ScheduleCopyableData *UserCD =
@@ -5020,9 +5063,6 @@ private:
                       Bundle->getTreeEntry()->isExpandedOperand(In, OpIdx),
                       /*CopyableDepsOnly=*/CopyableDepsOnly);
                 }
-              // If parent node is schedulable, it will be handled correctly.
-              if (Bundle->getTreeEntry()->isCopyableElement(In))
-                break;
             }
           }
           // A copyable element absorbed into its user modeling (e.g. a
@@ -5502,11 +5542,12 @@ private:
   /// performed in a basic block.
   void scheduleBlock(const BoUpSLP &R, BlockScheduling *BS);
 
-  /// List of users to ignore during scheduling and that don't need extracting.
-  const SmallDenseSet<Value *> *UserIgnoreList = nullptr;
+  /// Copy of the users to ignore during scheduling and that don't need
+  /// extracting. Non-empty for the reduction trees only.
+  SmallDenseSet<Value *> UserIgnoreSet;
 
   /// Narrowed reduction chain instructions, dropped together with the
-  /// reduction. Subset of UserIgnoreList.
+  /// reduction. Subset of UserIgnoreSet.
   SmallPtrSet<Value *, 4> NarrowedChainInsts;
 
   /// A DenseMapInfo implementation for holding DenseMaps and DenseSets of
@@ -6423,7 +6464,8 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
             VL, PointerOps, Order, *TTI, *DL, *SE, *AC, *DT, *TLI, CostKind,
             [&](Value *V) {
               return areAllUsersVectorized(cast<Instruction>(V),
-                                           UserIgnoreList);
+                                           isReductionTree() ? &UserIgnoreSet
+                                                             : nullptr);
             },
             Opts.slp_revec, Cache))
       return LoadsState::CompressVectorize;
@@ -7251,10 +7293,10 @@ void BoUpSLP::reorderTopToBottom() {
                    getValueType(TE->Scalars.front(), Opts.slp_revec));
       }))
     return;
-  // Compute IgnoreReorder once - it depends only on UserIgnoreList and
+  // Compute IgnoreReorder once - it depends only on UserIgnoreSet and
   // getRootNode(), which do not change during this loop.
   const bool IgnoreReorder =
-      !UserIgnoreList && getRootNode().hasState() &&
+      !isReductionTree() && getRootNode().hasState() &&
       (getRootNode().getOpcode() == Instruction::InsertElement ||
        getRootNode().getOpcode() == Instruction::InsertValue ||
        getRootNode().getOpcode() == Instruction::Store);
@@ -7604,8 +7646,7 @@ void BoUpSLP::buildReorderableOperands(
       // simply add to the list of gathered ops.
       // If there are reused scalars, process this node as a regular vectorize
       // node, just reorder reuses mask.
-      if (TE->State == TreeEntry::ScatterVectorize &&
-          TE->ReuseShuffleIndices.empty() && TE->ReorderIndices.empty())
+      if (TE->State == TreeEntry::ScatterVectorize && TE->isInOrder())
         GatherOps.push_back(TE);
       continue;
     }
@@ -7841,7 +7882,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
                 if (VecOp)
                   Op = VecOp;
               }
-              if (Op->ReorderIndices.empty() && Op->ReuseShuffleIndices.empty())
+              if (Op->isInOrder())
                 return false;
             }
             return true;
@@ -7850,8 +7891,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
           if (!Users.empty() && !all_of(Users, [&](TreeEntry *UTE) {
                 if (!RevisitedOps.insert(UTE).second)
                   return false;
-                return UTE == Data.first || !UTE->ReorderIndices.empty() ||
-                       !UTE->ReuseShuffleIndices.empty() ||
+                return UTE == Data.first || !UTE->isInOrder() ||
                        (UTE->UserTreeIndex &&
                         UTE->UserTreeIndex.UserTE == Data.first) ||
                        (Data.first->UserTreeIndex &&
@@ -7899,7 +7939,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         }
         auto Res = OrdersUses.try_emplace(OrdersType(), 0);
         const auto AllowsReordering = [&](const TreeEntry *TE) {
-          if (!TE->ReorderIndices.empty() || !TE->ReuseShuffleIndices.empty() ||
+          if (!TE->isInOrder() ||
               (TE->State == TreeEntry::Vectorize && TE->isAltShuffle()) ||
               (IgnoreReorder && TE->Idx == 0))
             return true;
@@ -8179,7 +8219,7 @@ void BoUpSLP::buildExternalUses(
           continue;
 
         // Ignore users in the user ignore list.
-        if (UserIgnoreList && UserIgnoreList->contains(UserInst))
+        if (UserIgnoreSet.contains(UserInst))
           continue;
 
         // Peeled reassociated scalars are subsumed by the flattened node and
@@ -8459,7 +8499,8 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
   deleteTree();
   assert(TreeEntryToStridedPtrInfoMap.empty() &&
          "TreeEntryToStridedPtrInfoMap is not cleared");
-  UserIgnoreList = &UserIgnoreLst;
+  assert(!UserIgnoreLst.empty() && "Expected non-empty list of ignored users.");
+  UserIgnoreSet = UserIgnoreLst;
   if (!allSameType(Roots))
     return;
   buildTreeRec(Roots, 0, EdgeInfo());
@@ -9918,7 +9959,8 @@ static bool tryToFindDuplicates(const VectorizeOptions &Opts,
   if (VL.size() == SmallVecWidth &&
       NumUniqueScalarValues == SmallVecUniqueThreshold && !BuildGatherOnly &&
       !(S && (S.getOpcode() == Instruction::Load ||
-              S.getOpcode() == Instruction::PHI))) {
+              S.getOpcode() == Instruction::PHI ||
+              S.getOpcode() == Instruction::Freeze))) {
     // Keep originals with identity reuse - no packing, no extra shuffle.
     ReuseShuffleIndices.clear();
     return true;
@@ -10147,7 +10189,9 @@ static bool tryToFindDuplicates(const VectorizeOptions &Opts,
   const auto [PackProfitable, UseOriginal] = EstimatePackPlusShuffleVsInserts();
 
   if (PackProfitable) {
-    if (UseOriginal) {
+    // The lanes of the vector freeze are frozen independently, the repeated
+    // freezes are packed to stay the same value.
+    if (UseOriginal && (!S || S.getOpcode() != Instruction::Freeze)) {
       // Prefer original scalars - avoid shuffling.
       ReuseShuffleIndices.clear();
     } else {
@@ -10356,7 +10400,8 @@ class InstructionsCompatibilityAnalysis {
   /// themselves. A scalar zext is supported: the copyable lanes are constants
   /// modeled as zexts of truncated constants. A freeze is supported: the
   /// copyable lanes are modeled as freezes of the lane values, which refine
-  /// them.
+  /// them. A scalar integer compare is supported: the copyable lanes are i1
+  /// constants modeled as compares of constants or of a value with itself.
   static bool isSupportedMainOp(Instruction *I) {
     return isSupportedOpcode(I->getOpcode()) ||
            isa<MinMaxIntrinsic, FreezeInst>(I) || isFMAOrFMulAdd(I) ||
@@ -10365,7 +10410,8 @@ class InstructionsCompatibilityAnalysis {
            (isa<GetElementPtrInst>(I) && I->getNumOperands() == 2 &&
             !I->getType()->isVectorTy()) ||
            (isa<ZExtInst>(I) && !I->getType()->isVectorTy() &&
-            !isa<Constant>(I->getOperand(0)));
+            !isa<Constant>(I->getOperand(0))) ||
+           (isa<ICmpInst>(I) && I->getOperand(0)->getType()->isIntegerTy());
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -10605,6 +10651,9 @@ class InstructionsCompatibilityAnalysis {
     if (MainOpcode == Instruction::ZExt)
       return {ConstantExpr::getTrunc(cast<Constant>(V),
                                      cast<CastInst>(MainOp)->getSrcTy())};
+    // icmp pred C1, C2 == V for the i1 constant lanes.
+    if (auto *Cmp = dyn_cast<ICmpInst>(MainOp))
+      return CmpSamePredicateHelper::getConstantLaneOperands(V, Cmp);
     // freeze(V) refines V.
     if (MainOpcode == Instruction::Freeze)
       return {V};
@@ -11111,7 +11160,8 @@ public:
   InstructionsState buildInstructionsState(ArrayRef<Value *> VL,
                                            const BoUpSLP &R,
                                            bool WithProfitabilityCheck = false,
-                                           bool SkipSameCodeCheck = false) {
+                                           bool SkipSameCodeCheck = false,
+                                           bool HasFPMathUser = false) {
     InstructionsState S = (SkipSameCodeCheck || !allSameBlock(VL))
                               ? InstructionsState::invalid()
                               : getSameOpcode(VL, TLI);
@@ -11190,16 +11240,40 @@ public:
       return S;
     InstructionsState OrigS = S;
     S = InstructionsState(MainOp, MainOp, /*HasCopyables=*/true);
-    // Cast nodes support only matching lanes from the main op block and
-    // copyable (round-trippable constant) lanes.
-    if (isa<CastInst>(MainOp) && any_of(VL, [&](Value *V) {
+    auto *Cmp = dyn_cast<ICmpInst>(MainOp);
+    // Cast and compare nodes support only matching lanes of the same operand
+    // type from the main op block and copyable (constant) lanes.
+    if ((Cmp || isa<CastInst>(MainOp)) && any_of(VL, [&](Value *V) {
           auto *I = dyn_cast<Instruction>(V);
           return !isa<PoisonValue>(V) &&
                  !(I && I->getOpcode() == MainOpcode &&
-                   I->getParent() == MainOp->getParent()) &&
+                   I->getParent() == MainOp->getParent() &&
+                   I->getOperand(0)->getType() ==
+                       MainOp->getOperand(0)->getType()) &&
                  !S.isCopyableElement(V);
         }))
       return OrigS;
+    // A compare node needs the constant lanes and a predicate shared by all
+    // the lanes, the main op must be a compare with this predicate.
+    if (Cmp) {
+      if (none_of(VL, [&](Value *V) { return S.isCopyableElement(V); }))
+        return OrigS;
+      CmpInst::Predicate Pred =
+          CmpSamePredicateHelper::getSharedPredicate(VL, Cmp);
+      if (Pred == CmpInst::BAD_ICMP_PREDICATE)
+        return OrigS;
+      if (Pred != Cmp->getPredicate()) {
+        auto Cmps = make_isa_range<ICmpInst>(VL);
+        auto It = find_if(Cmps, [&](ICmpInst *I) {
+          return I->getPredicate() == Pred &&
+                 (!doesNotNeedToBeScheduled(I) || !R.isVectorized(I));
+        });
+        if (It == Cmps.end())
+          return OrigS;
+        MainOp = Cmp = *It;
+        S = InstructionsState(MainOp, MainOp, /*HasCopyables=*/true);
+      }
+    }
     if (OrigS && !isCopyablePreferable(VL, R, OrigS, S))
       return OrigS;
     if (!WithProfitabilityCheck)
@@ -11219,22 +11293,56 @@ public:
     // Check if it is profitable to vectorize the instruction.
     unsigned CopyableNum =
         count_if(VL, [&](Value *V) { return S.isCopyableElement(V); });
-    // A cast copyable node just extends the sources of the matching lanes:
-    // the constant lanes are free in a gather of the original values, so it
-    // cannot be better unless the matching lanes are the majority and are not
-    // vectorized already (the gather reuses the vector otherwise).
-    if (isa<CastInst>(MainOp) &&
+    // A cast or compare copyable node just converts the operands of the
+    // matching lanes: the constant lanes are free in a gather of the original
+    // values, so it cannot be better unless the matching lanes are the
+    // majority and are not vectorized already (the gather reuses the vector
+    // otherwise).
+    if ((Cmp || isa<CastInst>(MainOp)) &&
         (CopyableNum * 2 >= VL.size() || none_of(VL, [&](Value *V) {
            return !S.isCopyableElement(V) && !isa<PoisonValue>(V) &&
                   !R.isVectorized(V);
          })))
       return OrigS;
+    // The constant lanes add only constants or the splat value to the compare
+    // operands, so the operand checks below are not needed.
+    if (Cmp)
+      return S;
     // Absorb copyable single-use fmuls/fadds as fmuladd(a, b, -0.0) or
     // fmuladd(1.0, a, b) when every copyable is such a binop: the binops die
     // instead of being computed and gathered.
     if (RecurrenceDescriptor::isFMulAddIntrinsic(MainOp) &&
         AbsorbCopyableFMulOrFAdds)
       S.setAbsorbCopyableFMulOrFAdd(true);
+    // The FP identity op of a copyable lane may quiet a NaN and, if the
+    // denormal mode is not IEEE, flush a subnormal. An FP math user may quiet
+    // the NaN and, if input subnormals are zero, flush the subnormal itself, so
+    // only its vector may keep such lanes. Otherwise the original values are
+    // blended into the result. Absorbed fmuls/fadds are not identities.
+    if (isa<FPMathOperator>(MainOp)) {
+      const DenormalMode Mode = MainOp->getFunction()->getDenormalMode(
+          MainOp->getType()->getScalarType()->getFltSemantics());
+      FPClassTest Inexact = fcNan;
+      if (Mode != DenormalMode::getIEEE())
+        Inexact |= fcSubnormal;
+      FPClassTest Observable = Inexact;
+      if (HasFPMathUser)
+        Observable = Mode.inputsAreZero() ? fcNone : Inexact & ~fcNan;
+      for (Value *V : VL) {
+        if (isa<UndefValue>(V) || !S.isCopyableElement(V) ||
+            (S.hasAbsorbedCopyableFMulOrFAdd() &&
+             isAbsorbableCopyableFMulOrFAdd(S, V)))
+          continue;
+        KnownFPClass Known =
+            computeKnownFPClass(V, Inexact, SimplifyQuery(DL, &TLI));
+        if (!Known.isKnownNever(Observable)) {
+          S.setFPCopyables(FPCopyables::Blended);
+          break;
+        }
+        if (!Known.isKnownNever(Inexact))
+          S.setFPCopyables(FPCopyables::Inexact);
+      }
+    }
     SmallVector<BoUpSLP::ValueList> Operands = buildOperands(S, VL, R);
     auto CheckOperand = [&](ArrayRef<Value *> Ops) {
       if (allConstant(Ops) || isSplat(Ops))
@@ -11488,6 +11596,50 @@ public:
               return isa<GetElementPtrInst>(V) && !S.isCopyableElement(V);
             },
             Operands[1]);
+      // The constant lanes, equal to the compare of the equal operands,
+      // compare the not undef or poison value of a splat operand column with
+      // itself. The constant lanes are not scheduled, so the value cannot be
+      // an instruction from the main op block or from a block of the other
+      // operands, where it may become a scheduled copyable element.
+      if (auto *Cmp = dyn_cast<ICmpInst>(MainOp)) {
+        const bool IsTrueWhenEqual =
+            ICmpInst::isTrueWhenEqual(Cmp->getPredicate());
+        auto IsSelfCmpLane = [&](Value *V) {
+          auto *CI = dyn_cast<ConstantInt>(V);
+          return S.isCopyableElement(V) &&
+                 (!CI || CI->isOne() == IsTrueWhenEqual);
+        };
+        auto GetSelfOperand = [&](ArrayRef<Value *> Ops,
+                                  ArrayRef<Value *> OtherOps) -> Value * {
+          Value *X = nullptr;
+          for (auto [V, Op] : zip(VL, Ops)) {
+            if (isa<PoisonValue>(V) || S.isCopyableElement(V))
+              continue;
+            if (X && X != Op)
+              return nullptr;
+            X = Op;
+          }
+          auto *XI = dyn_cast<Instruction>(X);
+          auto SameBlock = [&](Value *V) {
+            auto *I = dyn_cast<Instruction>(V);
+            return I && I->getParent() == XI->getParent();
+          };
+          if ((XI && (SameBlock(MainOp) || any_of(OtherOps, SameBlock))) ||
+              !isGuaranteedNotToBeUndefOrPoison(X, /*AC=*/nullptr, MainOp, &DT))
+            return nullptr;
+          return X;
+        };
+        if (any_of(VL, IsSelfCmpLane)) {
+          Value *X = GetSelfOperand(Operands[0], Operands[1]);
+          if (!X)
+            X = GetSelfOperand(Operands[1], Operands[0]);
+          if (X) {
+            for (auto [V, Op0, Op1] : zip(VL, Operands[0], Operands[1]))
+              if (IsSelfCmpLane(V))
+                Op0 = Op1 = X;
+          }
+        }
+      }
       // Operand-order normalization below swaps OpIdx 0 and OpIdx 1
       // of non-copyable lanes. That is only safe when the main op is
       // commutative (e.g. 0 - X is not X - 0, so `sub` must be
@@ -11658,7 +11810,7 @@ void BoUpSLP::tryToVectorizeSplatGatheredScalars() {
     if (!I ||
         isa<ExtractElementInst, InsertElementInst, ShuffleVectorInst>(I) ||
         I->getType()->isVoidTy() || isVectorized(I) || isDeleted(I) ||
-        (UserIgnoreList && UserIgnoreList->contains(I)))
+        UserIgnoreSet.contains(I))
       continue;
     // Scheduling new memory bundles in a to-be-versioned tree records extra
     // alias-check pairs and can push the region over the versioning limits.
@@ -11716,6 +11868,65 @@ void BoUpSLP::tryToVectorizeSplatGatheredScalars() {
   NumCanonicalSplatSubtreeEntries = VectorizableTree.size() - PrevTreeSize;
 }
 
+SmallVector<std::pair<unsigned, SmallVector<int>>>
+BoUpSLP::getCopyableBlendMasks(const TreeEntry &E) const {
+  SmallVector<std::pair<unsigned, SmallVector<int>>> Masks;
+  if (!E.hasBlendedCopyables())
+    return Masks;
+  const unsigned VF = E.Scalars.size();
+  // The copyable values are the addend of fma/fmuladd, if modeled there, and
+  // the first (possibly swapped) operand otherwise.
+  const bool InAddend = E.getOperations().getCopyableOpIdx() == 2;
+  for (unsigned Idx : seq<unsigned>(E.getNumOperands())) {
+    if ((Idx == 2) != InAddend)
+      continue;
+    SmallVector<int> Mask(VF);
+    std::iota(Mask.begin(), Mask.end(), 0);
+    for (auto [Lane, Scalar, Op] : enumerate(E.Scalars, E.getOperand(Idx))) {
+      if (Scalar != Op || isa<UndefValue>(Scalar) ||
+          !E.isCopyableElement(Scalar))
+        continue;
+      // The identity ops are exact for the constants other than NaNs and
+      // subnormals. The other values differ from the identity values, so each
+      // of them is in a single operand.
+      if (const auto *CFP = dyn_cast<ConstantFP>(Scalar);
+          CFP && !CFP->isNaN() && !CFP->getValueAPF().isDenormal())
+        continue;
+      Mask[Lane] += VF;
+    }
+    if (ShuffleVectorInst::isIdentityMask(Mask, VF))
+      continue;
+    if (auto *VecTy = dyn_cast<FixedVectorType>(E.Scalars.front()->getType()))
+      transformScalarShuffleIndiciesToVector(VecTy->getNumElements(), Mask);
+    Masks.emplace_back(Idx, std::move(Mask));
+  }
+  return Masks;
+}
+
+bool BoUpSLP::isUsedOnlyByFPMath(const EdgeInfo &UserTreeIdx) const {
+  auto IsFPMath = [](const Instruction *I) {
+    return (I->isBinaryOp() && I->getType()->isFPOrFPVectorTy()) ||
+           isa<FCmpInst, FPToSIInst, FPToUIInst>(I) || isFMAOrFMulAdd(I);
+  };
+  // A slice of a gather node is used only by the user of the gather node.
+  EdgeInfo EI = UserTreeIdx;
+  bool IsRoot = VectorizableTree.empty();
+  while (EI.UserTE && EI.EdgeIdx == UINT_MAX) {
+    IsRoot = EI.UserTE->Idx == 0;
+    EI = EI.UserTE->UserTreeIndex;
+  }
+  // A user with blended copyables passes their operand lanes through.
+  if (const TreeEntry *UserTE = EI.UserTE)
+    return UserTE->State == TreeEntry::Vectorize && UserTE->hasState() &&
+           !UserTE->hasBlendedCopyables() && IsFPMath(UserTE->getMainOp()) &&
+           IsFPMath(UserTE->getAltOp());
+  // The root vector of a reduction tree is used only by the reduction ops.
+  return IsRoot && isReductionTree() && all_of(UserIgnoreSet, [&](Value *V) {
+           auto *I = dyn_cast<Instruction>(V);
+           return I && IsFPMath(I);
+         });
+}
+
 BoUpSLP::ScalarsVectorizationLegality
 BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
                                          const EdgeInfo &UserTreeIdx) const {
@@ -11723,7 +11934,8 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
 
   InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
   InstructionsState S = Analysis.buildInstructionsState(
-      VL, *this, /*WithProfitabilityCheck=*/true);
+      VL, *this, /*WithProfitabilityCheck=*/true, /*SkipSameCodeCheck=*/false,
+      isUsedOnlyByFPMath(UserTreeIdx));
 
   bool AreScatterAllGEPSameBlock = false;
   if (!S) {
@@ -11911,7 +12123,9 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
           continue;
         if (isVectorized(I))
           Vectorized.clearBit(Idx);
-        else if (!I->hasOneUser() && !areAllUsersVectorized(I, UserIgnoreList))
+        else if (!I->hasOneUser() &&
+                 !areAllUsersVectorized(I, isReductionTree() ? &UserIgnoreSet
+                                                             : nullptr))
           Extracted.setBit(Idx);
       }
       return std::make_pair(Vectorized, Extracted);
@@ -11940,10 +12154,10 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
     }
   }
 
-  // The reduction nodes (stored in UserIgnoreList) also should stay scalar.
-  if (UserIgnoreList && !UserIgnoreList->empty()) {
+  // The reduction nodes (stored in UserIgnoreSet) also should stay scalar.
+  if (isReductionTree()) {
     for (Value *V : VL) {
-      if (UserIgnoreList->contains(V)) {
+      if (UserIgnoreSet.contains(V)) {
         LLVM_DEBUG(dbgs() << "SLP: Gathering due to gathered scalar.\n");
         return ScalarsVectorizationLegality(S, /*IsLegal=*/false);
       }
@@ -12283,9 +12497,9 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
 
   // Cmp nodes with interchangeable lanes (e.g. x == 0 mixed with x <u C)
   // try the split by the original predicates, like the alternate nodes. The
-  // trunc X to i1 lanes have no original predicate.
+  // trunc X to i1 and constant lanes have no original predicate.
   if (S.getOpcode() == Instruction::ICmp && !S.isAltShuffle() &&
-      none_of(VL, IsaPred<TruncInst>)) {
+      all_of(VL, IsaPred<ICmpInst, PoisonValue>)) {
     auto SameOrSwapped = [](const ICmpInst *CI, CmpInst::Predicate P) {
       return CI->getPredicate() == P ||
              CI->getPredicate() == CmpInst::getSwappedPredicate(P);
@@ -12522,7 +12736,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   SmallVector<ValueList> NaturalTwoColumns;
   std::tuple<unsigned, unsigned, unsigned, int> ReassocPeeledQuality;
   if (Opts.slp_reassociate_ops && Operands.size() == 2 &&
-      all_of(VL, [&](Value *V) {
+      S.getFPCopyables() != FPCopyables::Blended && all_of(VL, [&](Value *V) {
         if (!S.isAltShuffle() && S.isCopyableElement(V))
           return true;
         auto *I = dyn_cast<BinaryOperator>(V);
@@ -13340,7 +13554,7 @@ BoUpSLP::getFMulFusingUser(Instruction *I, bool InTree) const {
   // reduction operations itself. The lanes of the combined fmuladd node are
   // fused with its own fmul operand node, not with the other operand.
   if (getFusableFMulOperand(U, *TTI) != I ||
-      (InTree && ((UserIgnoreList && UserIgnoreList->contains(U)) ||
+      (InTree && (UserIgnoreSet.contains(U) ||
                   any_of(getTreeEntries(U), [](const TreeEntry *TE) {
                     return TE->CombinedOp == TreeEntry::FMulAdd;
                   }))))
@@ -13608,7 +13822,7 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
       // as a vector.
       if (!canVectorStoreInsertValue(&TE))
         Count += 2;
-      if (!TE.ReorderIndices.empty() || !TE.ReuseShuffleIndices.empty())
+      if (!TE.isInOrder())
         ++Count;
       Total = SaturatingMultiplyAdd<uint64_t>(Count, Scale, Total);
       continue;
@@ -13622,7 +13836,7 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
       Count += TE.getNumOperands() - 1;
     else
       ++Count;
-    if (!TE.ReorderIndices.empty() || !TE.ReuseShuffleIndices.empty())
+    if (!TE.isInOrder())
       ++Count;
     Total = SaturatingMultiplyAdd<uint64_t>(Count, Scale, Total);
   }
@@ -13992,8 +14206,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   IsBSwap = false;
   ForLoads = false;
   if (TE.State != TreeEntry::Vectorize || TE.isAltShuffle() ||
-      !TE.ReorderIndices.empty() || !TE.ReuseShuffleIndices.empty() ||
-      MinBWs.contains(&TE) ||
+      !TE.isInOrder() || MinBWs.contains(&TE) ||
       any_of(TE.Scalars, [&](Value *V) { return !hasSingleReductionUse(V); }))
     return false;
   Type *ScalarTy = TE.getMainOp()->getType();
@@ -14008,8 +14221,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   // Lhs should be zext i<stride> to I<sz>.
   if (!(LhsTE->State == TreeEntry::Vectorize &&
         LhsTE->getOpcode() == Instruction::ZExt && !LhsTE->isAltShuffle() &&
-        LhsTE->ReorderIndices.empty() && LhsTE->ReuseShuffleIndices.empty() &&
-        !MinBWs.contains(LhsTE) &&
+        LhsTE->isInOrder() && !MinBWs.contains(LhsTE) &&
         all_of(LhsTE->Scalars, [](Value *V) { return V->hasOneUse(); })))
     return false;
   Type *SrcScalarTy = cast<ZExtInst>(LhsTE->getMainOp())->getSrcTy();
@@ -14017,8 +14229,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   if (!isPowerOf2_64(Stride) || Stride >= Sz || Sz % Stride != 0 ||
       !isPowerOf2_64(LhsTE->getVectorFactor()))
     return false;
-  if (!(RhsTE->isGather() && RhsTE->ReorderIndices.empty() &&
-        RhsTE->ReuseShuffleIndices.empty() && !MinBWs.contains(RhsTE)))
+  if (!(RhsTE->isGather() && RhsTE->isInOrder() && !MinBWs.contains(RhsTE)))
     return false;
   Order.clear();
   unsigned CurrentValue = 0;
@@ -14110,8 +14321,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
       Order.clear();
       // Check for loads in the ZExt node.
       const TreeEntry *SrcTE = getOperandEntry(LhsTE, /*Idx=*/0);
-      if (SrcTE->State == TreeEntry::Vectorize &&
-          SrcTE->ReorderIndices.empty() && SrcTE->ReuseShuffleIndices.empty() &&
+      if (SrcTE->State == TreeEntry::Vectorize && SrcTE->isInOrder() &&
           SrcTE->getOpcode() == Instruction::Load && !SrcTE->isAltShuffle() &&
           all_of(SrcTE->Scalars, [](Value *V) { return V->hasOneUse(); })) {
         LoadInst *LI = SrcTE->getFirstLoad();
@@ -14134,8 +14344,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   } else if (Order.empty() && DL->getTypeSizeInBits(SrcScalarTy) == ByteSize) {
     // Check for loads in the ZExt node.
     const TreeEntry *SrcTE = getOperandEntry(LhsTE, /*Idx=*/0);
-    if (SrcTE->State == TreeEntry::Vectorize && SrcTE->ReorderIndices.empty() &&
-        SrcTE->ReuseShuffleIndices.empty() &&
+    if (SrcTE->State == TreeEntry::Vectorize && SrcTE->isInOrder() &&
         SrcTE->getOpcode() == Instruction::Load && !SrcTE->isAltShuffle() &&
         all_of(SrcTE->Scalars, [](Value *V) { return V->hasOneUse(); })) {
       LoadInst *LI = SrcTE->getFirstLoad();
@@ -14214,8 +14423,7 @@ const BoUpSLP::TreeEntry *BoUpSLP::getBitPackSource(const TreeEntry &LhsTE,
   auto IsChainNode = [](const TreeEntry &TE) {
     return (TE.State == TreeEntry::Vectorize ||
             TE.CombinedOp == TreeEntry::ReducedBitPack) &&
-           TE.ReorderIndices.empty() && TE.ReuseShuffleIndices.empty() &&
-           !TE.hasCopyableElements() &&
+           TE.isInOrder() && !TE.hasCopyableElements() &&
            all_of(TE.Scalars, [](Value *V) { return V->hasOneUse(); });
   };
   const TreeEntry *AndTE = &LhsTE;
@@ -14232,8 +14440,7 @@ const BoUpSLP::TreeEntry *BoUpSLP::getBitPackSource(const TreeEntry &LhsTE,
       !IsChainNode(*ShiftTE))
     return &LhsTE;
   const TreeEntry *SrcTE = getOperandEntry(ShiftTE, /*Idx=*/0);
-  if (SrcTE->State != TreeEntry::Vectorize || !SrcTE->ReorderIndices.empty() ||
-      !SrcTE->ReuseShuffleIndices.empty())
+  if (SrcTE->State != TreeEntry::Vectorize || !SrcTE->isInOrder())
     return &LhsTE;
   const unsigned SrcBW = SrcTE->getMainOp()->getType()->getScalarSizeInBits();
   const unsigned FieldWidth = Info.FieldWidth;
@@ -14277,8 +14484,8 @@ bool BoUpSLP::matchesBitPack(const TreeEntry &TE) const {
          "Expected And or Shl node.");
   auto IsVectorizedOneUseNode = [&](const TreeEntry *N) {
     return N->State == TreeEntry::Vectorize && !N->isAltShuffle() &&
-           N->ReorderIndices.empty() && N->ReuseShuffleIndices.empty() &&
-           !MinBWs.contains(N) && all_of(N->Scalars, [&](Value *V) {
+           N->isInOrder() && !MinBWs.contains(N) &&
+           all_of(N->Scalars, [&](Value *V) {
              return (N->hasCopyableElements() && N->isCopyableElement(V)) ||
                     (N == &TE ? hasSingleReductionUse(V) : V->hasOneUse());
            });
@@ -14309,8 +14516,7 @@ bool BoUpSLP::matchesBitPack(const TreeEntry &TE) const {
   // The operand must be emitted as a plain vector in lane order: a vectorized
   // node or a simple gather.
   if ((!LhsTE->isGather() && LhsTE->State != TreeEntry::Vectorize) ||
-      (LhsTE->hasState() && LhsTE->isAltShuffle()) ||
-      !LhsTE->ReorderIndices.empty() || !LhsTE->ReuseShuffleIndices.empty() ||
+      (LhsTE->hasState() && LhsTE->isAltShuffle()) || !LhsTE->isInOrder() ||
       MinBWs.contains(LhsTE))
     return false;
   std::optional<BitPackInfo> Info = computeBitPackLayout(TE);
@@ -14362,9 +14568,7 @@ bool BoUpSLP::matchesInversedZExtSelect(
   if (CmpTE->State != TreeEntry::Vectorize || !CmpTE->isAltShuffle() ||
       (CmpTE->getOpcode() != Instruction::ICmp &&
        CmpTE->getOpcode() != Instruction::FCmp) ||
-      !CmpTE->ReorderIndices.empty() || !CmpTE->ReuseShuffleIndices.empty() ||
-      !Op1TE->ReorderIndices.empty() || !Op1TE->ReuseShuffleIndices.empty() ||
-      !Op2TE->ReorderIndices.empty() || !Op2TE->ReuseShuffleIndices.empty())
+      !CmpTE->isInOrder() || !Op1TE->isInOrder() || !Op2TE->isInOrder())
     return false;
   // The operands must be buildvectors/copyables.
   if (!Op1TE->isGather() || !Op2TE->isGather())
@@ -14416,15 +14620,15 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
          "Expected select node.");
   if (DL->isBigEndian())
     return false;
-  if (!SelectTE.ReorderIndices.empty() || !SelectTE.ReuseShuffleIndices.empty())
+  if (!SelectTE.isInOrder())
     return false;
-  if (!UserIgnoreList || SelectTE.Idx != 0)
+  if (!isReductionTree() || SelectTE.Idx != 0)
     return false;
   if (any_of(SelectTE.Scalars,
              [&](Value *V) { return !hasSingleReductionUse(V); }))
     return false;
   // Check that all reduction operands are or instructions.
-  if (any_of(*UserIgnoreList,
+  if (any_of(UserIgnoreSet,
              [](Value *V) { return !match(V, m_Or(m_Value(), m_Value())); }))
     return false;
   const TreeEntry *Op1TE = getOperandEntry(&SelectTE, 1);
@@ -14432,8 +14636,7 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
   if (!Op1TE->isGather() || !Op2TE->isGather())
     return false;
   // No need to check for zeroes reordering.
-  if (!Op1TE->ReorderIndices.empty() || !Op1TE->ReuseShuffleIndices.empty() ||
-      !Op2TE->ReuseShuffleIndices.empty())
+  if (!Op1TE->isInOrder() || !Op2TE->ReuseShuffleIndices.empty())
     return false;
   Type *ScalarTy = Op1TE->Scalars.front()->getType();
   if (!ScalarTy->isIntegerTy())
@@ -14532,7 +14735,7 @@ void BoUpSLP::transformNodes() {
   // maps the reduced values to the lanes by the root scalars. Put the distinct
   // sub-fields of the same wider scalar in the natural order to emit them
   // without a permutation.
-  if (UserIgnoreList && getRootNode().isGather() &&
+  if (isReductionTree() && getRootNode().isGather() &&
       getRootNode().ReuseShuffleIndices.empty())
     if (std::optional<std::tuple<Value *, unsigned, SmallVector<int>>> Fields =
             matchGatheredExtractedFields(getRootNode().Scalars, *DL)) {
@@ -14621,15 +14824,15 @@ void BoUpSLP::transformNodes() {
     // operands, so bail out on reassociated (>2-operand) nodes.
     if (E.State != TreeEntry::Vectorize ||
         !E.getOperations().isAddSubLikeOp() ||
-        E.getOperations().isAltShuffle() || E.getNumOperands() != 2)
+        E.getOperations().isAltShuffle() || E.getNumOperands() != 2 ||
+        E.hasBlendedCopyables())
       return;
     const TreeEntry *LHS = getOperandEntry(&E, 0);
     const TreeEntry *RHS = getOperandEntry(&E, 1);
     auto IsOneUseVectorFMulOperand = [](const TreeEntry *TE) {
-      return TE->State == TreeEntry::Vectorize && TE->ReorderIndices.empty() &&
-             TE->ReuseShuffleIndices.empty() &&
+      return TE->State == TreeEntry::Vectorize && TE->isInOrder() &&
              TE->getOpcode() == Instruction::FMul && !TE->isAltShuffle() &&
-             all_of(TE->Scalars, [&](Value *V) {
+             !TE->hasBlendedCopyables() && all_of(TE->Scalars, [&](Value *V) {
                return (TE->hasCopyableElements() && TE->isCopyableElement(V)) ||
                       V->hasOneUse();
              });
@@ -14739,11 +14942,12 @@ void BoUpSLP::transformNodes() {
               };
               // Try to vectorize reduced values or if all users are vectorized.
               // For expensive instructions extra extracts might be profitable.
-              if ((!UserIgnoreList || E.Idx != 0) && IsMainOpCheap() &&
-                  !all_of(make_isa_range<Instruction>(Slice),
-                          [&](Instruction *I) {
-                            return areAllUsersVectorized(I, UserIgnoreList);
-                          }))
+              if ((!isReductionTree() || E.Idx != 0) && IsMainOpCheap() &&
+                  !all_of(
+                      make_isa_range<Instruction>(Slice), [&](Instruction *I) {
+                        return areAllUsersVectorized(
+                            I, isReductionTree() ? &UserIgnoreSet : nullptr);
+                      }))
                 continue;
               if (S.getOpcode() == Instruction::Load) {
                 OrdersType Order;
@@ -14761,7 +14965,7 @@ void BoUpSLP::transformNodes() {
                     registerNonVectorizableLoads(Slice);
                     // If reductions and the scalars from the root node are
                     // analyzed - mark as non-vectorizable reduction.
-                    if (UserIgnoreList && E.Idx == 0)
+                    if (isReductionTree() && E.Idx == 0)
                       analyzedReductionVals(Slice);
                   }
                   continue;
@@ -14813,7 +15017,7 @@ void BoUpSLP::transformNodes() {
               VectorizableTree[PrevSize]->getOpcode() !=
                   Instruction::ExtractElement &&
               !isSplat(Slice)) {
-            if (UserIgnoreList && E.Idx == 0 && VF == 2)
+            if (isReductionTree() && E.Idx == 0 && VF == 2)
               analyzedReductionVals(Slice);
             VectorizableTree.pop_back();
             assert(PrevEntriesSize == LoadEntriesToVectorize.size() &&
@@ -15021,11 +15225,11 @@ void BoUpSLP::transformNodes() {
         break;
       if (E.Idx != 0 || DL->isBigEndian())
         break;
-      if (!UserIgnoreList)
+      if (!isReductionTree())
         break;
       // Check that all reduction operands are disjoint or instructions.
       if (E.getOpcode() == Instruction::Shl &&
-          all_of(*UserIgnoreList, [](Value *V) {
+          all_of(UserIgnoreSet, [](Value *V) {
             return match(V, m_DisjointOr(m_Value(), m_Value()));
           })) {
         OrdersType Order;
@@ -15068,7 +15272,7 @@ void BoUpSLP::transformNodes() {
         }
       }
       // Check that all reduction operands are or instructions.
-      if (any_of(*UserIgnoreList, [](Value *V) {
+      if (any_of(UserIgnoreSet, [](Value *V) {
             return !match(V, m_Or(m_Value(), m_Value()));
           }))
         break;
@@ -15172,11 +15376,11 @@ void BoUpSLP::transformNodes() {
     constexpr unsigned SmallVF = 2;
     if ((VectorizableTree.size() <= SmallTree &&
          getRootNodeScalars().size() == SmallVF) ||
-        (VectorizableTree.size() <= 2 && UserIgnoreList))
+        (VectorizableTree.size() <= 2 && isReductionTree()))
       return;
 
     if (getRootNode().isNonPowOf2Vec() &&
-        getCanonicalGraphSize() != getTreeSize() && UserIgnoreList &&
+        getCanonicalGraphSize() != getTreeSize() && isReductionTree() &&
         getCanonicalGraphSize() <= SmallTree &&
         count_if(ArrayRef(VectorizableTree).drop_front(getCanonicalGraphSize()),
                  [](const std::unique_ptr<TreeEntry> &TE) {
@@ -16157,7 +16361,7 @@ public:
     // credited back for the gathers directly feeding the reduction.
     // Instructions vectorized elsewhere are skipped: their scalar cost is
     // already a part of the scalar baseline.
-    if (R.UserIgnoreList &&
+    if (R.isReductionTree() &&
         (!E.UserTreeIndex || E.UserTreeIndex.UserTE->Idx == 0)) {
       auto GetScalarCost = [&](Instruction *I) {
         return isa<CastInst>(I)
@@ -16635,7 +16839,8 @@ BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, Type *ScalarTy,
         TTI->getRegisterClassReloadCost(RegClass, CostKind);
     // No need to spill cost only for the root entry (Idx == 0), for reduction
     // and non-returning instructions, like void calls.
-    if (E->Idx > 0 || !UserIgnoreList || !E->Scalars[0]->getType()->isVoidTy())
+    if (E->Idx > 0 || !isReductionTree() ||
+        !E->Scalars[0]->getType()->isVoidTy())
       SingleRegSpillReload +=
           TTI->getRegisterClassSpillCost(RegClass, CostKind);
     SpillsReloads += SingleRegSpillReload * SpillCount;
@@ -16764,6 +16969,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                 cast<VectorType>(FinalVecTy), CostKind, Mask,
                                 /*Index=*/0, cast<VectorType>(VecTy));
   }
+  for (const auto &[Idx, BlendMask] : getCopyableBlendMasks(*E))
+    CommonCost += getShuffleCost(*TTI, TTI::SK_Select, cast<VectorType>(VecTy),
+                                 CostKind, BlendMask);
   assert((E->State == TreeEntry::Vectorize ||
           E->State == TreeEntry::ScatterVectorize ||
           E->State == TreeEntry::StridedVectorize ||
@@ -17281,8 +17489,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           VL0->getOpcode() == Opcode && VecOpcode == Opcode ? VL0 : nullptr;
 
       bool IsArithmeticExtendedReduction =
-          E->Idx == 0 && UserIgnoreList &&
-          all_of(*UserIgnoreList, [](Value *V) {
+          E->Idx == 0 && isReductionTree() &&
+          all_of(UserIgnoreSet, [](Value *V) {
             auto *I = cast<Instruction>(V);
             return is_contained({Instruction::Add, Instruction::FAdd,
                                  Instruction::Mul, Instruction::FMul,
@@ -17352,7 +17560,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     // The bit tests of trunc X to i1 lanes compare and A, B with a constant.
     const bool IsBitTest = any_of(E->Scalars, IsaPred<TruncInst>);
     auto GetScalarCost = [&](unsigned Idx) {
-      if (isa<PoisonValue>(UniqueValues[Idx]))
+      if (isa<PoisonValue>(UniqueValues[Idx]) ||
+          E->isCopyableElement(UniqueValues[Idx]))
         return InstructionCost(TTI::TCC_Free);
 
       if (!isa<SelectInst>(UniqueValues[Idx])) {
@@ -17644,9 +17853,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               TTI::getCastContextHint(I), CostKind, I);
           continue;
         }
+        // An interchangeable lane, like add %x, 0 in the shl node, is costed as
+        // its own scalar instruction.
         assert(is_contained(
                    {Instruction::And, Instruction::LShr, Instruction::Shl},
-                   I->getOpcode()) &&
+                   TE->getMatchingMainOpOrAltOp(I)->getOpcode()) &&
                "Expected and/shift in the bit pack.");
         ScalarCost += TTI.getArithmeticInstrCost(
             I->getOpcode(), I->getType(), CostKind,
@@ -18461,7 +18672,8 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
         (Front.getVectorFactor() == 2 ||
          all_of(make_isa_range<Instruction>(Front.Scalars),
                 [&](Instruction *I) {
-                  return !areAllUsersVectorized(I, UserIgnoreList);
+                  return !areAllUsersVectorized(
+                      I, isReductionTree() ? &UserIgnoreSet : nullptr);
                 })))
       return true;
   }
@@ -18630,9 +18842,7 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
         if (TE.Idx == 0 && ScalarsSize == 2 && Op == Instruction::ICmp &&
             TreeSize > LimitTreeSize)
           return true;
-        if (ScalarsSize == 2 &&
-            (!TE.ReuseShuffleIndices.empty() || !TE.ReorderIndices.empty() ||
-             TE.isAltShuffle()))
+        if (ScalarsSize == 2 && (!TE.isInOrder() || TE.isAltShuffle()))
           return true;
         if (TE.hasCopyableElements() &&
             static_cast<unsigned>(count_if(
@@ -19135,7 +19345,7 @@ InstructionCost BoUpSLP::getSpillCost() {
     // A reordered or reuse-shuffled match materializes a separate shuffled
     // vector that is itself live across the call; only an exact match reuses
     // the same vector value.
-    if (!SameTE->ReorderIndices.empty() || !SameTE->ReuseShuffleIndices.empty())
+    if (!SameTE->isInOrder())
       return false;
 
     // Only permit an ordinary vectorized user.
@@ -19396,7 +19606,7 @@ void BoUpSLP::detectBooleanizedNodes() {
                  return cast<Instruction>(V)->hasPoisonGeneratingFlags();
                }) ||
         // Reduction trees are handled by the reduction's own booleanization.
-        UserIgnoreList ||
+        isReductionTree() ||
         (TE->UserTreeIndex.UserTE &&
          !IsSafeBoolUser(TE->UserTreeIndex.UserTE,
                          TE->UserTreeIndex.EdgeIdx)) ||
@@ -19910,7 +20120,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     Worklist.emplace(VectorizableTree[Idx].get(), P);
 
   // Narrow store trees with non-profitable immediate values - exit.
-  if (!UserIgnoreList && getRootNode().getVectorFactor() < MinVF &&
+  if (!isReductionTree() && getRootNode().getVectorFactor() < MinVF &&
       getRootNode().hasState() &&
       getRootNode().getOpcode() == Instruction::Store &&
       (Worklist.top().first->Idx == 0 || Worklist.top().first->Idx == 1))
@@ -20426,7 +20636,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     return C * Scale;
   };
   Instruction *ReductionRoot = RdxRoot;
-  if (UserIgnoreList) {
+  if (isReductionTree()) {
     // Scale reduction cost to the factor of the loop nest trip count.
     ReductionCost = ScaleCost(ReductionCost, getRootNode(), /*Scalar=*/nullptr,
                               ReductionRoot);
@@ -20537,6 +20747,9 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
           if (PHI->getIncomingValue(Idx) != EU.Scalar)
             continue;
           BasicBlock *InBB = PHI->getIncomingBlock(Idx);
+          // An extract on an edge from an unreachable block never executes.
+          if (!DT->isReachableFromEntry(InBB))
+            continue;
           UseBlock =
               UseBlock ? DT->findNearestCommonDominator(UseBlock, InBB) : InBB;
         }
@@ -21074,7 +21287,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
 
   // Add the cost for reduced value resize (if required).
   if (ReductionBitWidth != 0) {
-    assert(UserIgnoreList && "Expected reduction tree.");
+    assert(isReductionTree() && "Expected reduction tree.");
     const TreeEntry &E = getRootNode();
     auto It = MinBWs.find(&E);
     if (It != MinBWs.end() && It->second.first != ReductionBitWidth) {
@@ -21083,7 +21296,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       unsigned Opcode = Instruction::Trunc;
       if (SrcSize < DstSize) {
         bool IsArithmeticExtendedReduction =
-            all_of(*UserIgnoreList, [](Value *V) {
+            all_of(UserIgnoreSet, [](Value *V) {
               auto *I = cast<Instruction>(V);
               return is_contained({Instruction::Add, Instruction::FAdd,
                                    Instruction::Mul, Instruction::FMul,
@@ -21500,10 +21713,16 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       // nodes, which are emitted with the user.
       GatherNodes.push_back(E);
     }
+    // A gather with inexact copyable lanes in its slices is valid only for its
+    // FP math user.
     for (const TreeEntry *TEPtr :
          make_filter_range(GatherNodes, [&](const TreeEntry *TEPtr) {
            return TEPtr != TE && TEPtr->Idx != 0 &&
-                  !DeletedNodes.contains(TEPtr);
+                  !DeletedNodes.contains(TEPtr) &&
+                  none_of(
+                      TEPtr->CombinedEntriesWithIndices, [&](const auto &P) {
+                        return VectorizableTree[P.first]->hasInexactCopyables();
+                      });
          })) {
       assert(any_of(TEPtr->Scalars,
                     [&](Value *V) { return GatheredScalars.contains(V); }) &&
@@ -21596,8 +21815,13 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         const TreeEntry *VTE = *It;
         if (none_of(TE->CombinedEntriesWithIndices,
                     [&](const auto &P) { return P.first == VTE->Idx; })) {
-          Instruction &LastBundleInst = getLastInstructionInBundle(VTE);
-          if (&LastBundleInst == TEInsertPt || !CheckOrdering(&LastBundleInst))
+          // The emitted split node goes after the vectors of its operands,
+          // which may follow its last instruction. Check the vector instead.
+          auto *LastBundleInst =
+              dyn_cast_if_present<Instruction>(VTE->VectorizedValue);
+          if (!LastBundleInst)
+            LastBundleInst = &getLastInstructionInBundle(VTE);
+          if (LastBundleInst == TEInsertPt || !CheckOrdering(LastBundleInst))
             continue;
         }
         // The node is reused - exit.
@@ -21614,7 +21838,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     if (!VTEs.empty()) {
       const auto *It = find_if(VTEs, [&, MainTE = TE](const TreeEntry *TE) {
         return TE != MainTE && !DeletedNodes.contains(TE) &&
-               !TransformedToGatherNodes.contains(TE);
+               !TransformedToGatherNodes.contains(TE) &&
+               !TE->hasInexactCopyables();
       });
       if (It != VTEs.end()) {
         const TreeEntry *VTE = *It;
@@ -21623,7 +21848,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           VTEs = VTEs.drop_front();
           // Iterate through all vectorized nodes.
           const auto *MIt = find_if(VTEs, [](const TreeEntry *MTE) {
-            return MTE->State == TreeEntry::Vectorize;
+            return MTE->State == TreeEntry::Vectorize &&
+                   !MTE->hasInexactCopyables();
           });
           if (MIt == VTEs.end())
             continue;
@@ -21825,7 +22051,9 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     auto *I = dyn_cast<Instruction>(V);
     bool Res = I && !IsSplatOrUndefs && !isVectorized(I) &&
                !isVectorLikeInstWithConstOps(I) &&
-               !areAllUsersVectorized(I, UserIgnoreList) && isSimple(I);
+               !areAllUsersVectorized(I, isReductionTree() ? &UserIgnoreSet
+                                                           : nullptr) &&
+               isSimple(I);
     It->second = Res;
     return Res;
   };
@@ -23321,14 +23549,14 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   auto FindReusedSplat = [&](MutableArrayRef<int> Mask, unsigned InputVF,
                              unsigned I, unsigned SliceSize,
                              bool IsNotPoisonous) {
+    TreeEntry *UserTE = E->UserTreeIndex.UserTE;
+    if (!UserTE || UserTE->getNumOperands() != 2)
+      return false;
     if (!isSplat(E->Scalars) || none_of(E->Scalars, [](Value *V) {
           return isa<UndefValue>(V) && !isa<PoisonValue>(V);
         }))
       return false;
-    TreeEntry *UserTE = E->UserTreeIndex.UserTE;
     unsigned EdgeIdx = E->UserTreeIndex.EdgeIdx;
-    if (UserTE->getNumOperands() != 2)
-      return false;
     if (!IsNotPoisonous) {
       auto *It = find_if(ArrayRef(VectorizableTree).drop_front(UserTE->Idx + 1),
                          [=](const std::unique_ptr<TreeEntry> &TE) {
@@ -23499,9 +23727,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         // nodes.
         ShuffleBuilder.resetForSameNode();
         // Full matched entry found, no need to insert subvectors.
-        if ((IsFullVectorMatch(FrontTE) &&
-             FrontTE->ReuseShuffleIndices.empty() &&
-             FrontTE->ReorderIndices.empty() &&
+        if ((IsFullVectorMatch(FrontTE) && FrontTE->isInOrder() &&
              E->getVectorFactor() == FrontTE->getVectorFactor()) ||
             (equal(E->Scalars, FrontTE->Scalars) &&
              equal(E->ReorderIndices, FrontTE->ReorderIndices) &&
@@ -23923,7 +24149,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
   auto *VecTy = getWidenedType(ScalarTy, E->Scalars.size());
   if (E->isGather() || TransformedToGatherNodes.contains(E)) {
     // Set insert point for non-reduction initial nodes.
-    if (E->hasState() && E->Idx == 0 && !UserIgnoreList)
+    if (E->hasState() && E->Idx == 0 && !isReductionTree())
       setInsertPointAfterBundle(E);
     Value *Vec = createBuildVector(E, ScalarTy);
     E->VectorizedValue = Vec;
@@ -24150,6 +24376,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         if (auto *Sh = dyn_cast<ShuffleVectorInst>(RHS))
           ExpandedOperandFreezes.emplace_back(Fr, Sh);
   };
+  auto BlendCopyables = [&](Value *V, ArrayRef<Value *> OpVecs) {
+    for (const auto &[Idx, Mask] : getCopyableBlendMasks(*E))
+      V = Builder.CreateShuffleVector(V, OpVecs[Idx], Mask);
+    return V;
+  };
   auto PropagateIRFlags = [&](Value *V, unsigned Opcode = 0,
                               ArrayRef<Value *> VL = {}) -> Value * {
     ArrayRef<Value *> Scalars = VL.empty() ? E->Scalars : VL;
@@ -24339,8 +24570,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       I->setHasNoSignedWrap(/*b=*/false);
     // Keep the intersected samesign unless narrowing changed the sign of some
     // compared operand (it neither sign-extends from the narrow type nor has
-    // a known-zero narrow sign bit), or a converted lane's adjusted constant
-    // flips the sign.
+    // a known-zero narrow sign bit), a converted lane's adjusted constant
+    // flips the sign, or a copyable lane compares different i1 constants.
     if (auto *ICmp = dyn_cast<ICmpInst>(I); ICmp && It == MinBWs.end()) {
       // The bit tests compare and L, R, which sign-extends from the narrow
       // type only if both L and R do.
@@ -24365,7 +24596,14 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                    match(Adj, m_APInt(AdjC)) &&
                    AdjC->isNegative() != OrigC->isNegative();
           });
-      if (SignChange || SignFlip)
+      bool CopyableSignFlip =
+          !SignChange && !SignFlip && E->hasCopyableElements() &&
+          ICmp->getOperand(0)->getType()->getScalarType()->isIntegerTy(1) &&
+          any_of(enumerate(E->Scalars), [&](const auto &P) {
+            return E->isCopyableElement(P.value()) &&
+                   E->getOperand(0)[P.index()] != E->getOperand(1)[P.index()];
+          });
+      if (SignChange || SignFlip || CopyableSignFlip)
         ICmp->setSameSign(/*B=*/false);
     }
     return I;
@@ -24449,7 +24687,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       // absence of a reuse shuffle are guaranteed when the node is created, so
       // a lane maps to its own index.
       if (E->hasCopyableElements()) {
-        assert(E->ReorderIndices.empty() && E->ReuseShuffleIndices.empty() &&
+        assert(E->isInOrder() &&
                "Copyable extract lanes require identity order and no reuse.");
         for (auto [Idx, Scalar] : enumerate(E->Scalars))
           if (E->isCopyableElement(Scalar))
@@ -25199,6 +25437,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         V = Builder.CreateBinOp(
             static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS, RHS);
       V = PropagateIRFlags(V);
+      V = BlendCopyables(V, {LHS, RHS});
 
       V = FinalShuffle(V, E);
 
@@ -25551,6 +25790,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 
       V = PropagateIRFlags(V);
       cast<CallInst>(V)->setCallingConv(CF->getCallingConv());
+      V = BlendCopyables(V, OpVecs);
       V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
@@ -25783,7 +26023,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
     case TreeEntry::ReducedBitcast:
     case TreeEntry::ReducedBitcastBSwap: {
-      assert(UserIgnoreList && "Expected reduction operations only.");
+      assert(isReductionTree() && "Expected reduction operations only.");
       setInsertPointAfterBundle(E);
       TreeEntry *ZExt = getOperandEntry(E, /*Idx=*/0);
       ZExt->VectorizedValue = PoisonValue::get(getWidenedType(
@@ -25815,7 +26055,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
     case TreeEntry::ReducedBitcastLoads:
     case TreeEntry::ReducedBitcastBSwapLoads: {
-      assert(UserIgnoreList && "Expected reduction operations only.");
+      assert(isReductionTree() && "Expected reduction operations only.");
       TreeEntry *ZExt = getOperandEntry(E, /*Idx=*/0);
       TreeEntry *Load = getOperandEntry(ZExt, /*Idx=*/0);
       setInsertPointAfterBundle(Load);
@@ -25848,7 +26088,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       return V;
     }
     case TreeEntry::ReducedBitPack: {
-      assert(UserIgnoreList && "Expected reduction operations only.");
+      assert(isReductionTree() && "Expected reduction operations only.");
       setInsertPointAfterBundle(E);
       TreeEntry *ShlTE = E->getOpcode() == Instruction::And
                              ? getOperandEntry(E, /*Idx=*/0)
@@ -25887,7 +26127,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       return V;
     }
     case TreeEntry::ReducedCmpBitcast: {
-      assert(UserIgnoreList && "Expected reduction operations only.");
+      assert(isReductionTree() && "Expected reduction operations only.");
       setInsertPointAfterBundle(E);
       TreeEntry *Op1TE = getOperandEntry(E, /*Idx=*/1);
       TreeEntry *Op2TE = getOperandEntry(E, /*Idx=*/2);
@@ -26995,8 +27235,8 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
         // narrowed reduction leaves) lose all users once the tree scalars are
         // erased; keep the replacement alive for the reduction epilogue.
         bool NeedsProtection =
-            UserIgnoreList && none_of(Scalar->users(), [&](llvm::User *U) {
-              return UserIgnoreList->contains(U);
+            isReductionTree() && none_of(Scalar->users(), [&](llvm::User *U) {
+              return UserIgnoreSet.contains(U);
             });
         Scalar->replaceAllUsesWith(NewInst);
         if (NeedsProtection)
@@ -27019,7 +27259,8 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
             auto *ScalarTy = FTy->getElementType();
             auto Key = std::make_pair(Vec, ScalarTy);
             auto VecIt = VectorCasts.find(Key);
-            if (VecIt == VectorCasts.end()) {
+            if (VecIt == VectorCasts.end() ||
+                !DT->dominates(VecIt->second, VU)) {
               IRBuilderBase::InsertPointGuard Guard(Builder);
               if (auto *IVec = dyn_cast<PHINode>(Vec)) {
                 if (IVec->getParent()->isLandingPad())
@@ -27029,7 +27270,12 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
                   Builder.SetInsertPoint(
                       IVec->getParent()->getFirstNonPHIOrLifetime());
               } else if (auto *IVec = dyn_cast<Instruction>(Vec)) {
-                Builder.SetInsertPoint(IVec->getNextNode());
+                // The result of callbr is available in several successors and
+                // has no single dominating insertion point, so emit the cast
+                // in the block of the vectorized scalars.
+                Builder.SetInsertPoint(
+                    IVec->getInsertionPointAfterDef().value_or(
+                        E->getMainOp()->getParent()->getFirstInsertionPt()));
               }
               Vec = Builder.CreateIntCast(
                   Vec,
@@ -27037,7 +27283,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
                       ScalarTy,
                       cast<FixedVectorType>(Vec->getType())->getNumElements()),
                   BWIt->second.second);
-              VectorCasts.try_emplace(Key, Vec);
+              VectorCasts.insert_or_assign(Key, Vec);
             } else {
               Vec = VecIt->second;
             }
@@ -27284,8 +27530,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
           LLVM_DEBUG(dbgs() << "SLP: \tvalidating user:" << *U << ".\n");
 
           // It is legal to delete users in the ignorelist.
-          assert((isVectorized(U) ||
-                  (UserIgnoreList && UserIgnoreList->contains(U)) ||
+          assert((isVectorized(U) || UserIgnoreSet.contains(U) ||
                   (isa_and_nonnull<Instruction>(U) &&
                    isDeleted(cast<Instruction>(U)))) &&
                  "Deleting out-of-tree value");
@@ -27308,8 +27553,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
         LLVM_DEBUG(dbgs() << "SLP: \tvalidating user:" << *U << ".\n");
         // Single-use peeled scalars are consumed by this entry or a sibling
         // in the same chain.
-        assert((isVectorized(U) ||
-                (UserIgnoreList && UserIgnoreList->contains(U)) ||
+        assert((isVectorized(U) || UserIgnoreSet.contains(U) ||
                 (isa_and_nonnull<Instruction>(U) &&
                  isDeleted(cast<Instruction>(U)))) &&
                "Deleting out-of-tree value");
@@ -27372,7 +27616,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
     V->mergeDIAssignID(RemovedInsts);
 
   // Clear up reduction references, if any.
-  if (UserIgnoreList) {
+  if (isReductionTree()) {
     for (Instruction *I : RemovedInsts) {
       ArrayRef<TreeEntry *> Entries = getTreeEntries(I);
       // Dead intermediate vector instructions collected above have no tree
@@ -27410,7 +27654,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
           LogicalOpSelects.push_back(cast<SelectInst>(U.getUser()));
           return false;
         }
-        return UserIgnoreList->contains(U.getUser());
+        return UserIgnoreSet.contains(U.getUser());
       });
       // Replace conditions of the poisoning logical ops with the non-poison
       // constant value.
@@ -27422,10 +27666,10 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   // gathered narrowed reduction leaves), may lose all users once the tree
   // scalars are erased; keep them alive for the reduction epilogue. Too many
   // users - keep conservatively.
-  if (UserIgnoreList)
+  if (isReductionTree())
     for (Instruction *I : make_isa_range<Instruction>(ExternallyUsedValues))
       if (I->hasNUsesOrMore(UsesLimit) || none_of(I->users(), [&](User *U) {
-            return UserIgnoreList->contains(U);
+            return UserIgnoreSet.contains(U);
           }))
         ExternalUseReplacements.insert(I);
   // Retain to-be-deleted instructions for some debug-info bookkeeping and alias
@@ -27433,9 +27677,6 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   // NOTE: removeInstructionAndOperands only marks the instruction for deletion
   // - instructions are not deleted until later.
   removeInstructionsAndOperands(ArrayRef(RemovedInsts), VectorValuesAndScales);
-  // The emitted vectorized code and the erased scalars may invalidate the
-  // cached analyses results.
-  Cache.clear();
 
   // The new vector code may capture pointers that were previously not captured
   // (e.g. the pointer operands of a masked gather), so the capture results
@@ -29187,9 +29428,7 @@ bool BoUpSLP::collectValuesToDemote(
 
   if (any_of(E.Scalars, [&](Value *V) {
         return !isa<Constant>(V) && !all_of(V->users(), [=](User *U) {
-          return isVectorized(U) ||
-                 (E.Idx == 0 && UserIgnoreList &&
-                  UserIgnoreList->contains(U)) ||
+          return isVectorized(U) || (E.Idx == 0 && UserIgnoreSet.contains(U)) ||
                  (!isa<CmpInst>(U) && U->getType()->isSized() &&
                   !U->getType()->isScalableTy() &&
                   DL->getTypeSizeInBits(U->getType()) <= BitWidth);
@@ -29533,7 +29772,7 @@ void BoUpSLP::computeMinimumValueSizes() {
       (getRootNode().getOpcode() == Instruction::Store ||
        getRootNode().getOpcode() == Instruction::InsertElement ||
        getRootNode().getOpcode() == Instruction::InsertValue);
-  if ((IsStoreOrInsertElt || UserIgnoreList) &&
+  if ((IsStoreOrInsertElt || isReductionTree()) &&
       ExtraBitWidthNodes.size() <= 1 &&
       (!CastMaxMinBWSizes || CastMaxMinBWSizes->second == 0 ||
        CastMaxMinBWSizes->first / CastMaxMinBWSizes->second <= 2))
@@ -29734,7 +29973,7 @@ void BoUpSLP::computeMinimumValueSizes() {
                                NeedToDemote, IsTruncRoot) ||
         (MaxDepthLevel <= Limit &&
          !(((Opcode == Instruction::SExt || Opcode == Instruction::ZExt) &&
-            (!IsTopRoot || !(IsStoreOrInsertElt || UserIgnoreList) ||
+            (!IsTopRoot || !(IsStoreOrInsertElt || isReductionTree()) ||
              DL->getTypeSizeInBits(TreeRootIT) /
                      DL->getTypeSizeInBits(
                          E.getMainOp()->getOperand(0)->getType()) >
@@ -29750,11 +29989,11 @@ void BoUpSLP::computeMinimumValueSizes() {
   // be demoted as a result. That is, those seeded by truncations we will
   // modify.
   // Add reduction ops sizes, if any.
-  if (UserIgnoreList &&
+  if (isReductionTree() &&
       isa<IntegerType>(getRootNodeScalars().front()->getType())) {
     // Convert vector_reduce_add(ZExt(<n x i1>)) to ZExtOrTrunc(ctpop(bitcast <n
     // x i1> to in)).
-    if (all_of(make_isa_range<Instruction>(*UserIgnoreList),
+    if (all_of(make_isa_range<Instruction>(UserIgnoreSet),
                [](Instruction *I) {
                  return I->getOpcode() == Instruction::Add;
                }) &&
@@ -29764,9 +30003,8 @@ void BoUpSLP::computeMinimumValueSizes() {
             Builder.getInt1Ty()) {
       ReductionBitWidth = 1;
     } else {
-      for (Value *V : make_filter_range(*UserIgnoreList, [](Value *V) {
-             return !isa<PoisonValue>(V);
-           })) {
+      for (Value *V : make_filter_range(
+               UserIgnoreSet, [](Value *V) { return !isa<PoisonValue>(V); })) {
         unsigned NumSignBits = ComputeNumSignBits(V, *DL, AC, nullptr, DT);
         TypeSize NumTypeBits = DL->getTypeSizeInBits(V->getType());
         unsigned BitWidth1 = NumTypeBits - NumSignBits;
@@ -29795,8 +30033,8 @@ void BoUpSLP::computeMinimumValueSizes() {
     IsTruncRoot = true;
   }
   bool IsSignedCmp = false;
-  if (UserIgnoreList &&
-      all_of(*UserIgnoreList,
+  if (isReductionTree() &&
+      all_of(UserIgnoreSet,
              match_fn(m_CombineOr(m_SMin(m_Value(), m_Value()),
                                   m_SMax(m_Value(), m_Value())))))
     IsSignedCmp = true;
@@ -29810,10 +30048,43 @@ void BoUpSLP::computeMinimumValueSizes() {
     unsigned MaxBitWidth = ComputeMaxBitWidth(
         *VectorizableTree[NodeIdx], IsTopRoot, IsProfitableToDemoteRoot, Limit,
         IsTruncRoot, IsSignedCmp);
+    auto IsDemotedUser = [&](const Instruction *UI) {
+      return isVectorized(UI) &&
+             all_of(getTreeEntries(UI), [&](const TreeEntry *TE) {
+               return MinBWs.contains(TE) || is_contained(ToDemote, TE->Idx);
+             });
+    };
+    // The extension, demoted below its source width, becomes a truncation of
+    // the source, which the vectorized users in the original type extend back.
+    // Keep such extensions in the original type.
+    if (MaxBitWidth != 0) {
+      SmallVector<unsigned> WideExts(
+          make_filter_range(ToDemote, [&](unsigned Idx) {
+            const TreeEntry &TE = *VectorizableTree[Idx];
+            Value *Src;
+            if (TE.State != TreeEntry::Vectorize || TE.isAltShuffle() ||
+                !match(TE.getMainOp(), m_ZExtOrSExt(m_Value(Src))) ||
+                Src->getType()->getScalarSizeInBits() <= MaxBitWidth)
+              return false;
+            return any_of(TE.Scalars, [&](Value *V) {
+              return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
+                       auto *UI = cast<Instruction>(U);
+                       return !isa<CmpInst>(UI) &&
+                              (!isa<CastInst>(UI) ||
+                               (UI->getType()->isIntOrIntVectorTy() &&
+                                UI->getType()->getScalarSizeInBits() >
+                                    MaxBitWidth)) &&
+                              isVectorized(UI) && !IsDemotedUser(UI);
+                     });
+            });
+          }));
+      erase_if(ToDemote,
+               [&](unsigned Idx) { return is_contained(WideExts, Idx); });
+    }
     // The extension of a demoted scalar, which does not fit into the demoted
     // type, restores only its demanded bits. Keep the original bitwidth if the
-    // scalar users may depend on the other bits via poison-generating
-    // annotations or there are too many users to check.
+    // users, not demoted with the scalar, may depend on the other bits via
+    // poison-generating annotations or there are too many users to check.
     auto HasUnsafeScalarUsers = [&](Value *V) {
       auto *I = dyn_cast<Instruction>(V);
       if (!I)
@@ -29832,10 +30103,9 @@ void BoUpSLP::computeMinimumValueSizes() {
           if (++NumUsers > UsesLimit)
             return true;
           auto *UI = cast<Instruction>(U);
-          if (isVectorized(UI) ||
-              (UserIgnoreList && UserIgnoreList->contains(UI)) ||
+          if (UserIgnoreSet.contains(UI) ||
               !UI->getType()->isIntOrIntVectorTy() ||
-              !Visited.insert(UI).second)
+              !Visited.insert(UI).second || IsDemotedUser(UI))
             continue;
           if (UI->hasPoisonGeneratingAnnotations())
             return true;
@@ -29915,7 +30185,7 @@ void BoUpSLP::computeMinimumValueSizes() {
         MaxBitWidth >=
             cast<IntegerType>(TreeRoot.front()->getType()->getScalarType())
                 ->getBitWidth()) {
-      if (UserIgnoreList) {
+      if (isReductionTree()) {
         unsigned Sz = getTreeSizeExcludingGathers();
         for (Value *V : TreeRoot)
           AnalyzedMinBWVals.insert_or_assign(V, Sz);
@@ -33493,10 +33763,11 @@ public:
                        getNumElements(P.Vec->getType()) == Cnt;
               })) {
             Value *Splat = Builder.CreateVectorSplat(Cnt, Candidates.front());
-            VectorValuesAndScales.push_back({Splat, /*Scale=*/1,
-                                             /*IsSigned=*/true,
-                                             /*ReducedInTree=*/false,
-                                             GroupNegated});
+            VectorValuesAndScales.emplace_back(Splat, /*Scale=*/1,
+                                               /*IsSigned=*/true,
+                                               /*ReducedInTree=*/false,
+                                               GroupNegated,
+                                               TTI::CastContextHint::None);
           } else if (NeedsOrigOrder(Candidates.front())) {
             // Left for the scalar remainder.
             Cnt = 0;
@@ -33835,7 +34106,10 @@ public:
           VectorizedRoot = Builder.CreateFreeze(VectorizedRoot);
 
         // Emit code to correctly handle reused reduced values, if required.
-        if (OptReusedScalars && !SameScaleFactor) {
+        // The roots, reduced in-tree, produce the scalar result of the or
+        // reduction, which is not affected by the reused values.
+        if (OptReusedScalars && !SameScaleFactor && !V.isReducedBitcastRoot() &&
+            !V.isReducedCmpBitcastRoot()) {
           // The reuse counters are stored in the deduplicated candidates
           // order, but the emitted reduction vector lane order is defined by
           // the root node, which may be reordered, split or have copyable
@@ -33909,19 +34183,20 @@ public:
         Type *ScalarTy = VL.front()->getType();
         Type *VecTy = VectorizedRoot->getType();
         Type *RedScalarTy = VecTy->getScalarType();
+        TTI::CastContextHint RootCtx = V.getCastContextHint(V.getRootNode());
         // A group of negated reduced values (from an fsub/fneg in the chain)
         // is subtracted in the final combine.
-        VectorValuesAndScales.push_back(
-            {VectorizedRoot,
-             OptReusedScalars && SameScaleFactor
-                 ? SameValuesCounter.front().second
-                 : 1,
-             RedScalarTy != ScalarTy->getScalarType()
-                 ? NarrowedLeafShifts.empty() && V.isSignedMinBitwidthRootNode()
-                 : true,
-             V.isReducedBitcastRoot() || V.isReducedCmpBitcastRoot() ||
-                 !VectorizedRoot->getType()->isVectorTy(),
-             GroupNegated});
+        VectorValuesAndScales.emplace_back(
+            VectorizedRoot,
+            OptReusedScalars && SameScaleFactor
+                ? SameValuesCounter.front().second
+                : 1,
+            RedScalarTy != ScalarTy->getScalarType()
+                ? NarrowedLeafShifts.empty() && V.isSignedMinBitwidthRootNode()
+                : true,
+            V.isReducedBitcastRoot() || V.isReducedCmpBitcastRoot() ||
+                !VectorizedRoot->getType()->isVectorTy(),
+            GroupNegated, RootCtx);
         LoopAccVectorized = UseLoopAccForm;
 
         // Count vectorized reduced values to exclude them from final reduction.
@@ -34001,9 +34276,8 @@ public:
     Value *AccV = LoopAcc.tryEmit(
         Builder, RdxFMF, LoopAccVectorized, VectorizedTree, LeftoverReductions,
         VectorValuesAndScales, RequiredExtract, ReducedValsToOps, ReductionOps,
-        [this, TTI = TTI, &V](Value *Vec, IRBuilderBase &B, Type *Ty) {
-          return emitReduction(Vec, B, TTI,
-                               V.getCastContextHint(V.getRootNode()), Ty);
+        [this, TTI = TTI](Value *Vec, IRBuilderBase &B, Type *Ty) {
+          return emitReduction(Vec, B, TTI, TTI::CastContextHint::None, Ty);
         });
     if (AccV)
       VectorizedTree = AccV;
@@ -34028,7 +34302,7 @@ public:
                                          V.getCostKind());
       if (!Res)
         std::tie(Res, ResNegated) = emitReduction(
-            Builder, *TTI, V.getCastContextHint(V.getRootNode()),
+            Builder, *TTI,
             BoolReduxWideTy ? BoolReduxWideTy : ReductionRoot->getType());
       Builder.setFastMathFlags(RdxFMF);
       // The reduction result of the all-negated parts is subtracted in the
@@ -34996,7 +35270,6 @@ private:
   /// combine.
   std::pair<Value *, bool> emitReduction(IRBuilderBase &Builder,
                                          const TargetTransformInfo &TTI,
-                                         TTI::CastContextHint Ctx,
                                          Type *DestTy) {
     Value *ReducedSubTree = nullptr;
     bool ResNegated = false;
@@ -35023,7 +35296,8 @@ private:
     // Creates reduction and combines with the previous reduction, respecting
     // the signs of the operands.
     auto CreateSingleOp = [&](Value *Vec, unsigned Scale, bool IsSigned,
-                              bool ReducedInTree, bool Negated) {
+                              bool ReducedInTree, bool Negated,
+                              TTI::CastContextHint Ctx) {
       Value *Rdx = createSingleOp(Builder, TTI, Ctx, Vec, Scale, IsSigned,
                                   DestTy, ReducedInTree);
       if (!ReducedSubTree) {
@@ -35037,7 +35311,8 @@ private:
     };
     if (VectorValuesAndScales.size() == 1) {
       const ReductionVectorPart &P = VectorValuesAndScales.front();
-      CreateSingleOp(P.Vec, P.Scale, P.IsSigned, P.ReducedInTree, P.Negated);
+      CreateSingleOp(P.Vec, P.Scale, P.IsSigned, P.ReducedInTree, P.Negated,
+                     P.Ctx);
       return {ReducedSubTree, ResNegated};
     }
     // Scales Vec using given Cnt scale factor and then performs vector combine
@@ -35048,7 +35323,8 @@ private:
     auto CreateVecOp = [&](Value *Vec, unsigned Cnt, bool IsSigned,
                            bool ReducedInTree, bool Negated) {
       if (ReducedInTree) {
-        CreateSingleOp(Vec, Cnt, IsSigned, ReducedInTree, Negated);
+        CreateSingleOp(Vec, Cnt, IsSigned, ReducedInTree, Negated,
+                       /*Ctx=*/TTI::CastContextHint::None);
         return;
       }
       Type *ScalarTy = Vec->getType()->getScalarType();
@@ -35205,7 +35481,8 @@ private:
     // to reduce.
     if (VecRes)
       CreateSingleOp(VecRes, /*Scale=*/1, VecResSignedness,
-                     /*ReducedInTree=*/false, VecResNegated);
+                     /*ReducedInTree=*/false, VecResNegated,
+                     /*Ctx=*/TTI::CastContextHint::None);
 
     return {ReducedSubTree, ResNegated};
   }

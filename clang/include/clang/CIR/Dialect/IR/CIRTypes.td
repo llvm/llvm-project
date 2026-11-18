@@ -37,7 +37,8 @@ class CIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
 //===----------------------------------------------------------------------===//
 
 def CIR_IntType : CIR_Type<"Int", "int", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+        ["areCompatible", "verifyEntries"]>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
     DeclareTypeInterfaceMethods<CIR_IntTypeInterface>,
 ]> {
@@ -88,6 +89,22 @@ def CIR_IntType : CIR_Type<"Int", "int", [
     bool isUnsignedFundamental() const {
       return isFundamentalUIntType(*this);
     }
+
+    /// Key of the data-layout entry that carries
+    /// TargetInfo::getBitIntMaxAlign(), in bits. The width is not a layout
+    /// input. Every _BitInt reads this one entry.
+    static IntType getBitIntMaxAlignKey(mlir::MLIRContext *ctx) {
+      return get(ctx, /*width=*/1, /*isSigned=*/false, /*isBitInt=*/true);
+    }
+
+    /// The _BitInt alignment cap, in bits, held by the #cir.bitint_spec entry
+    /// in \p params, or the default cap when there is no entry.
+    static uint64_t
+    getBitIntMaxAlignBits(mlir::DataLayoutEntryListRef params);
+
+    /// The alignment, in bytes, that C requires of this _BitInt when the
+    /// target caps _BitInt alignment at \p maxAlignBits bits.
+    uint64_t getBitIntAlignRequirement(uint64_t maxAlignBits) const;
 
     /// Returns a minimum bitwidth of cir::IntType
     static unsigned minBitwidth() { return 1; }
@@ -390,8 +407,8 @@ def CIR_VPtrType : CIR_Type<"VPtr", "vptr", [
     This type will be the element type of the 'vptr' member of structures that
     require a vtable pointer. The `cir.vtable.address_point` operation returns
     this type. The `cir.vtable.get_vptr` operations returns a pointer to this
-    type. This pointer may be passed to the `cir.vtable.get_virtual_fn_addr`
-    operation to get the address of a virtual function pointer.
+    type. This pointer may be passed to the `cir.vtable.get_virtual_fn`
+    operation to get a virtual function pointer.
 
     The pointer may also be cast to other pointer types in order to perform
     pointer arithmetic based on information encoded in the AST layout to get

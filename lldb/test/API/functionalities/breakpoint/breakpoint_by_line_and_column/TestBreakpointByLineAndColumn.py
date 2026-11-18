@@ -96,8 +96,9 @@ class BreakpointByLineAndColumnTestCase(TestBase):
             self.assertTrue(valid_bpkt, VALID_BREAKPOINT)
             self.assertEqual(valid_bpkt.GetNumLocations(), 1)
 
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
+        _, process, _, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, target.GetBreakpointAtIndex(0)
+        )
 
         nearest_column = [7, 17, 26]
 
