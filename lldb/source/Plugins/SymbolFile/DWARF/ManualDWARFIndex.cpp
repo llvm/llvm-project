@@ -88,7 +88,11 @@ void ManualDWARFIndex::IndexImpl() {
   // Share one thread pool across operations to avoid the overhead of
   // recreating the threads.
   llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
-  const size_t num_threads = Debugger::GetThreadPool().getMaxConcurrency();
+  // No more workers than units: a module with a few compile units (e.g. a GPU
+  // code object) would otherwise queue a task per pool thread, each with its
+  // own IndexSet to allocate and merge, for every for_each_unit call.
+  const size_t num_threads = std::min<size_t>(
+      Debugger::GetThreadPool().getMaxConcurrency(), units_to_index.size());
 
   // Run a function for each compile unit in parallel using as many threads as
   // are available. This is significantly faster than submiting a new task for
