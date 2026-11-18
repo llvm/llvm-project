@@ -6,7 +6,7 @@ module m
   integer :: x[*] = 5
 end module
 
-program m
+program main
   use m
   print *, x
 end program
