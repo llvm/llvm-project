@@ -15,6 +15,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Testing/Support/Error.h"
@@ -138,4 +139,99 @@ TEST(PluginsTests, LoadMultiplePlugins) {
     auto *CI = cast<ConstantInt>(Init);
     ASSERT_EQ(CI->getSExtValue(), 28);
   }
+}
+
+// Parses a module with the initializer 7, runs \p Pipeline on it and returns
+// the new initializer.
+static int64_t runOnSeven(const PassPlugin &Plugin, LLVMContext &C,
+                          StringRef Pipeline) {
+  PassBuilder PB(C);
+  Plugin.registerPassBuilderCallbacks(PB);
+  ModulePassManager PM;
+  if (Error E = PB.parsePassPipeline(PM, Pipeline)) {
+    consumeError(std::move(E));
+    return -1;
+  }
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M =
+      parseAssemblyString("@doubleme = constant i32 7", Err, C);
+  ModuleAnalysisManager MAM;
+  MAM.registerPass([&] { return PassInstrumentationAnalysis(); });
+  PM.run(*M, MAM);
+  auto *GV = cast<GlobalVariable>(M->getNamedValue("doubleme"));
+  return cast<ConstantInt>(GV->getInitializer())->getSExtValue();
+}
+
+// The options of a plugin live in the LLVMContext of a compilation and not in
+// the plugin library. One loaded plugin acts as an independent instance in
+// each context.
+TEST(PluginsTests, ConfigurePerContext) {
+#if !defined(LLVM_ENABLE_PLUGINS)
+  // Skip the test if plugins are disabled.
+  GTEST_SKIP();
+#endif
+
+  Expected<PassPlugin> Plugin = PassPlugin::load(LibPath("DoublerPlugin"));
+  ASSERT_THAT_EXPECTED(Plugin, Succeeded());
+
+  LLVMContext C1, C2, Unconfigured;
+  ASSERT_THAT_ERROR(passPluginArguments({Plugin->getInfo()},
+                                        {"DoublerPlugin,-doubler-factor=3"},
+                                        C1.getLibraryOptions()),
+                    Succeeded());
+  ASSERT_THAT_ERROR(
+      passPluginArguments({Plugin->getInfo()},
+                          {"DoublerPlugin,-doubler-factor=5",
+                           "DoublerPlugin,-doubler-pass-name=quintupler"},
+                          C2.getLibraryOptions()),
+      Succeeded());
+
+  // The option that the pass reads when it runs
+  EXPECT_EQ(runOnSeven(*Plugin, C1, "doubler-pass"), 21);
+  EXPECT_EQ(runOnSeven(*Plugin, C2, "quintupler"), 35);
+  EXPECT_EQ(runOnSeven(*Plugin, Unconfigured, "doubler-pass"), 14);
+
+  // The option that the plugin reads when it registers its callbacks
+  EXPECT_EQ(runOnSeven(*Plugin, C1, "quintupler"), -1);
+  EXPECT_EQ(runOnSeven(*Plugin, C2, "doubler-pass"), -1);
+
+  // Hosts copy their library options into each context they compile in, e.g.
+  // for the ThinLTO backends.
+  LLVMContext Backend;
+  Backend.getLibraryOptions().assign(C2.getLibraryOptions());
+  EXPECT_EQ(runOnSeven(*Plugin, Backend, "quintupler"), 35);
+}
+
+// Within one context there is a single set of options per plugin. Loading the
+// plugin twice doesn't give two configurations.
+TEST(PluginsTests, OneConfigurationPerContext) {
+#if !defined(LLVM_ENABLE_PLUGINS)
+  // Skip the test if plugins are disabled.
+  GTEST_SKIP();
+#endif
+
+  Expected<PassPlugin> Plugin1 = PassPlugin::load(LibPath("DoublerPlugin"));
+  ASSERT_THAT_EXPECTED(Plugin1, Succeeded());
+  Expected<PassPlugin> Plugin2 = PassPlugin::load(LibPath("DoublerPlugin"));
+  ASSERT_THAT_EXPECTED(Plugin2, Succeeded());
+
+  // Arguments are addressed by plugin name, which is ambiguous here
+  LLVMContext C;
+  EXPECT_THAT_ERROR(
+      passPluginArguments({Plugin1->getInfo(), Plugin2->getInfo()},
+                          {"DoublerPlugin,-doubler-factor=3"},
+                          C.getLibraryOptions()),
+      Failed());
+
+  // Configuring them one by one sets the same options, so the last one wins
+  ASSERT_THAT_ERROR(passPluginArguments({Plugin1->getInfo()},
+                                        {"DoublerPlugin,-doubler-factor=3"},
+                                        C.getLibraryOptions()),
+                    Succeeded());
+  ASSERT_THAT_ERROR(passPluginArguments({Plugin2->getInfo()},
+                                        {"DoublerPlugin,-doubler-factor=5"},
+                                        C.getLibraryOptions()),
+                    Succeeded());
+  EXPECT_EQ(runOnSeven(*Plugin1, C, "doubler-pass"), 35);
+  EXPECT_EQ(runOnSeven(*Plugin2, C, "doubler-pass"), 35);
 }
