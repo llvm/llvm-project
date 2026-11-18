@@ -111,7 +111,8 @@ public:
 
   template <class _OtherExtents>
     requires(is_constructible_v<extents_type, _OtherExtents>)
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit(extents_type::rank() > 0)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit(
+      !(extents_type::rank() == 0 && is_convertible_v<_OtherExtents, extents_type>))
       mapping(const layout_stride::mapping<_OtherExtents>& __other) noexcept
       : __extents_(__other.extents()) {
     if constexpr (extents_type::rank() > 0) {
