@@ -5,9 +5,9 @@ declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 define void @split_copy(ptr %dst, ptr %src) {
 ; CHECK-LABEL: define void @split_copy(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]]) {
-; CHECK-NEXT:    [[TMP_SROA_0_0_COPYLOAD:%.*]] = load i32, ptr [[SRC]], align 8
+; CHECK-NEXT:    [[TMP_SROA_0_0_COPYLOAD:%.*]] = load i32, ptr [[SRC]], align 8, !tbaa [[LONG_TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP_SROA_2_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 4
-; CHECK-NEXT:    [[TMP_SROA_2_0_COPYLOAD:%.*]] = load i32, ptr [[TMP_SROA_2_0_SRC_SROA_IDX]], align 4, !tbaa [[LONG_TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[TMP_SROA_2_0_COPYLOAD:%.*]] = load i32, ptr [[TMP_SROA_2_0_SRC_SROA_IDX]], align 4, !tbaa [[LONG_TBAA0]]
 ; CHECK-NEXT:    store volatile i32 [[TMP_SROA_0_0_COPYLOAD]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[DST_HI:%.*]] = getelementptr i8, ptr [[DST]], i64 4
 ; CHECK-NEXT:    store volatile i32 [[TMP_SROA_2_0_COPYLOAD]], ptr [[DST_HI]], align 4
