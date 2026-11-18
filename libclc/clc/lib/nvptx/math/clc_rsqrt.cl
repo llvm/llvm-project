@@ -8,15 +8,16 @@
 
 #include "clc/math/clc_rsqrt.h"
 
-float __nv_rsqrtf(float);
-double __nv_rsqrt(double);
-
-_CLC_OVERLOAD _CLC_DEF float __clc_rsqrt(float x) { return __nv_rsqrtf(x); }
+_CLC_OVERLOAD _CLC_DEF float __clc_rsqrt(float x) {
+  return __nvvm_rsqrt_approx_f(x);
+}
 
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-_CLC_OVERLOAD _CLC_DEF double __clc_rsqrt(double x) { return __nv_rsqrt(x); }
+_CLC_OVERLOAD _CLC_DEF double __clc_rsqrt(double x) {
+  return __nvvm_rsqrt_approx_d(x);
+}
 
 #endif
 
