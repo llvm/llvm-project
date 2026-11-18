@@ -88,21 +88,9 @@ LIBC_INLINE constexpr double nearest_integer(double x) {
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
-LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float nearest_integer(float x) {
-  if (cpp::is_constant_evaluated()) {
-    return generic::nearest_integer(x);
-  } else {
-    return __builtin_rintf(x);
-  }
-}
+LIBC_INLINE float nearest_integer(float x) { return __builtin_rintf(x); }
 
-LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double nearest_integer(double x) {
-  if (cpp::is_constant_evaluated()) {
-    return generic::nearest_integer(x);
-  } else {
-    return __builtin_rint(x);
-  }
-}
+LIBC_INLINE double nearest_integer(double x) { return __builtin_rint(x); }
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL

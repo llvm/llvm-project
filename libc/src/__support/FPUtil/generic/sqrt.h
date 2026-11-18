@@ -81,8 +81,8 @@ LIBC_INLINE LIBC_CONSTEXPR_DEFAULT static cpp::enable_if_t<
         sizeof(OutType) <= sizeof(InType),
     OutType>
 sqrt(InType x) {
-  if constexpr (internal::SpecialLongDouble<OutType>::VALUE &&
-                internal::SpecialLongDouble<InType>::VALUE) {
+  if constexpr (fputil::internal::SpecialLongDouble<OutType>::VALUE &&
+                fputil::internal::SpecialLongDouble<InType>::VALUE) {
 #ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
     // Special 80-bit long double.
     return x86::sqrt(x);
@@ -118,7 +118,7 @@ sqrt(InType x) {
       // Step 1a: Normalize denormal input and append hidden bit to the mantissa
       if (bits.is_subnormal()) {
         ++x_exp; // let x_exp be the correct exponent of ONE bit.
-        internal::normalize<InType>(x_exp, x_mant);
+        fputil::internal::normalize<InType>(x_exp, x_mant);
       } else {
         x_mant |= ONE;
       }
