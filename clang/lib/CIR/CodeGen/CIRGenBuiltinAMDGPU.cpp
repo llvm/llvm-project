@@ -657,12 +657,10 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   }
   case AMDGPU::BI__builtin_amdgcn_frexp_exp:
   case AMDGPU::BI__builtin_amdgcn_frexp_expf:
-  case AMDGPU::BI__builtin_amdgcn_frexp_exph: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_frexp_exph:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.frexp.exp",
+                                               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_fract:
   case AMDGPU::BI__builtin_amdgcn_fractf:
   case AMDGPU::BI__builtin_amdgcn_fracth:
@@ -1314,10 +1312,7 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     std::optional<std::pair<llvm::AtomicScope, bool>> parsed;
     if (std::optional<std::string> name =
             expr->getArg(1)->tryEvaluateString(getContext())) {
-      parsed = llvm::parseAtomicScopeIRString(
-          llvm::Triple(llvm::Triple::amdgpu, llvm::Triple::NoSubArch,
-                       llvm::Triple::AMD, llvm::Triple::AMDHSA),
-          *name);
+      parsed = llvm::parseAMDGPUAtomicScopeIRString(*name);
       if (!parsed && triple.isSPIRV())
         parsed = llvm::parseAtomicScopeIRString(triple, *name);
     }

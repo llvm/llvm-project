@@ -384,26 +384,6 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappingsIntrinsicWSideEffects(
     const MachineInstr &MI, const MachineRegisterInfo &MRI) const {
 
   switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
-  case Intrinsic::amdgcn_s_buffer_load:
-  case Intrinsic::amdgcn_ptr_s_buffer_load: {
-    static const OpRegBankEntry<2> Table[4] = {
-      // Perfectly legal.
-      { { AMDGPU::SGPRRegBankID, AMDGPU::SGPRRegBankID }, 1 },
-
-      // Only need 1 register in loop
-      { { AMDGPU::SGPRRegBankID, AMDGPU::VGPRRegBankID }, 300 },
-
-      // Have to waterfall the resource.
-      { { AMDGPU::VGPRRegBankID, AMDGPU::SGPRRegBankID }, 1000 },
-
-      // Have to waterfall the resource, and the offset.
-      { { AMDGPU::VGPRRegBankID, AMDGPU::VGPRRegBankID }, 1500 }
-    };
-
-    // rsrc, offset
-    const std::array<unsigned, 2> RegSrcOpIdx = { { 2, 3 } };
-    return addMappingFromTable<2>(MI, MRI, RegSrcOpIdx, Table);
-  }
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap: {
     // VGPR = M0, VGPR
@@ -1810,66 +1790,6 @@ Register AMDGPURegisterBankInfo::handleD16VData(MachineIRBuilder &B,
       .getReg(0);
 }
 
-static std::pair<Register, unsigned>
-getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg) {
-  int64_t Const;
-  if (mi_match(Reg, MRI, m_ICst(Const)))
-    return std::pair(Register(), Const);
-
-  Register Base;
-  if (mi_match(Reg, MRI, m_GAdd(m_Reg(Base), m_ICst(Const))))
-    return std::pair(Base, Const);
-
-  // TODO: Handle G_OR used for add case
-  return std::pair(Reg, 0);
-}
-
-std::pair<Register, unsigned>
-AMDGPURegisterBankInfo::splitBufferOffsets(MachineIRBuilder &B,
-                                           Register OrigOffset) const {
-  const unsigned MaxImm = SIInstrInfo::getMaxMUBUFImmOffset(Subtarget);
-  Register BaseReg;
-  unsigned ImmOffset;
-  const LLT S32 = LLT::scalar(32);
-
-  // TODO: Use AMDGPU::getBaseWithConstantOffset() instead.
-  std::tie(BaseReg, ImmOffset) = getBaseWithConstantOffset(*B.getMRI(),
-                                                           OrigOffset);
-
-  unsigned C1 = 0;
-  if (ImmOffset != 0) {
-    // If the immediate value is too big for the immoffset field, put only bits
-    // that would normally fit in the immoffset field. The remaining value that
-    // is copied/added for the voffset field is a large power of 2, and it
-    // stands more chance of being CSEd with the copy/add for another similar
-    // load/store.
-    // However, do not do that rounding down if that is a negative
-    // number, as it appears to be illegal to have a negative offset in the
-    // vgpr, even if adding the immediate offset makes it positive.
-    unsigned Overflow = ImmOffset & ~MaxImm;
-    ImmOffset -= Overflow;
-    if (static_cast<int32_t>(Overflow) < 0) {
-      Overflow += ImmOffset;
-      ImmOffset = 0;
-    }
-
-    C1 = ImmOffset;
-    if (Overflow != 0) {
-      if (!BaseReg)
-        BaseReg = B.buildConstant(S32, Overflow).getReg(0);
-      else {
-        auto OverflowVal = B.buildConstant(S32, Overflow);
-        BaseReg = B.buildAdd(S32, BaseReg, OverflowVal).getReg(0);
-      }
-    }
-  }
-
-  if (!BaseReg)
-    BaseReg = B.buildConstant(S32, 0).getReg(0);
-
-  return {BaseReg, C1};
-}
-
 bool AMDGPURegisterBankInfo::buildVCopy(MachineIRBuilder &B, Register DstReg,
                                         Register SrcReg) const {
   MachineRegisterInfo &MRI = *B.getMRI();
@@ -3271,6 +3191,22 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS:
   case AMDGPU::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS: {
     auto IntrID = cast<GIntrinsic>(MI).getIntrinsicID();
+    if (const AMDGPU::BufferIntrinsicInfo *BufInfo =
+            AMDGPU::lookupBufferIntrinsic(IntrID)) {
+      // The legalizer turns all other buffer intrinsics into
+      // G_AMDGPU_BUFFER_* and similar instructions.
+      assert(BufInfo->Kind == AMDGPU::BufferKindLoadToLDS &&
+             "buffer intrinsic should have been legalized");
+      auto OpIdx = [&](unsigned Arg) {
+        return AMDGPU::getMIROperandIdx(MI, Arg);
+      };
+      applyDefaultMapping(OpdMapper);
+      constrainOpWithReadfirstlane(B, MI, OpIdx(BufInfo->RsrcArg));
+      constrainOpWithReadfirstlane(B, MI,
+                                   OpIdx(*BufInfo->getLDSPtrArg())); // M0
+      constrainOpWithReadfirstlane(B, MI, OpIdx(*BufInfo->getSOffsetArg()));
+      return;
+    }
     switch (IntrID) {
     case Intrinsic::amdgcn_ds_ordered_add:
     case Intrinsic::amdgcn_ds_ordered_swap: {
@@ -3316,26 +3252,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     case Intrinsic::amdgcn_s_ttracedata:
       constrainOpWithReadfirstlane(B, MI, 1); // M0
       return;
-    case Intrinsic::amdgcn_raw_buffer_load_lds:
-    case Intrinsic::amdgcn_raw_buffer_load_async_lds:
-    case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
-    case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds: {
-      applyDefaultMapping(OpdMapper);
-      constrainOpWithReadfirstlane(B, MI, 1); // rsrc
-      constrainOpWithReadfirstlane(B, MI, 2); // M0
-      constrainOpWithReadfirstlane(B, MI, 5); // soffset
-      return;
-    }
-    case Intrinsic::amdgcn_struct_buffer_load_lds:
-    case Intrinsic::amdgcn_struct_buffer_load_async_lds:
-    case Intrinsic::amdgcn_struct_ptr_buffer_load_lds:
-    case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds: {
-      applyDefaultMapping(OpdMapper);
-      constrainOpWithReadfirstlane(B, MI, 1); // rsrc
-      constrainOpWithReadfirstlane(B, MI, 2); // M0
-      constrainOpWithReadfirstlane(B, MI, 6); // soffset
-      return;
-    }
     case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
     case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
     case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
@@ -4649,7 +4565,14 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
     default:
       return getInvalidInstructionMapping();
-    case Intrinsic::amdgcn_div_fmas:
+    case Intrinsic::amdgcn_div_fmas: {
+      // The unscaled IEEE-input case can select S_FMAC_F32.
+      if (Subtarget.hasSALUFloatInsts() &&
+          MRI.getType(MI.getOperand(0).getReg()) == LLT::scalar(32) &&
+          isSALUMapping(MI) && AMDGPU::isUnscaledIEEEDivFmas(MI, MRI))
+        return getDefaultMappingSOP(MI);
+      return getDefaultMappingVOP(MI);
+    }
     case Intrinsic::amdgcn_div_fixup:
     case Intrinsic::amdgcn_trig_preop:
     case Intrinsic::amdgcn_sin:
@@ -5389,6 +5312,26 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS:
   case AMDGPU::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS: {
     auto IntrID = cast<GIntrinsic>(MI).getIntrinsicID();
+    if (const AMDGPU::BufferIntrinsicInfo *BufInfo =
+            AMDGPU::lookupBufferIntrinsic(IntrID)) {
+      // The legalizer turns all other buffer intrinsics into
+      // G_AMDGPU_BUFFER_* and similar instructions.
+      if (BufInfo->Kind != AMDGPU::BufferKindLoadToLDS)
+        return getInvalidInstructionMapping();
+      auto MapArg = [&](unsigned Arg, bool IsSGPR) {
+        unsigned Idx = AMDGPU::getMIROperandIdx(MI, Arg);
+        Register Reg = MI.getOperand(Idx).getReg();
+        OpdsMapping[Idx] = IsSGPR ? getSGPROpMapping(Reg, MRI, *TRI)
+                                  : getVGPROpMapping(Reg, MRI, *TRI);
+      };
+      MapArg(BufInfo->RsrcArg, /*IsSGPR=*/true);
+      MapArg(*BufInfo->getLDSPtrArg(), /*IsSGPR=*/true); // M0
+      if (std::optional<unsigned> VIndexArg = BufInfo->getVIndexArg())
+        MapArg(*VIndexArg, /*IsSGPR=*/false);
+      MapArg(*BufInfo->getVOffsetArg(), /*IsSGPR=*/false);
+      MapArg(*BufInfo->getSOffsetArg(), /*IsSGPR=*/true);
+      break;
+    }
     switch (IntrID) {
     case Intrinsic::amdgcn_s_getreg:
     case Intrinsic::amdgcn_s_memtime:
@@ -5500,83 +5443,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_wqm_demote:
     case Intrinsic::amdgcn_kill: {
       OpdsMapping[1] = AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, 1);
-      break;
-    }
-    case Intrinsic::amdgcn_ptr_s_buffer_load: {
-      OpdsMapping[0] = getSGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
-      OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
-      OpdsMapping[3] = getSGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
-      break;
-    }
-    case Intrinsic::amdgcn_raw_buffer_load:
-    case Intrinsic::amdgcn_raw_ptr_buffer_load:
-    case Intrinsic::amdgcn_raw_atomic_buffer_load:
-    case Intrinsic::amdgcn_raw_ptr_atomic_buffer_load:
-    case Intrinsic::amdgcn_raw_tbuffer_load:
-    case Intrinsic::amdgcn_raw_ptr_tbuffer_load: {
-      // FIXME: Should make intrinsic ID the last operand of the instruction,
-      // then this would be the same as store
-      OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
-      OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
-      OpdsMapping[3] = getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
-      OpdsMapping[4] = getSGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
-      break;
-    }
-    case Intrinsic::amdgcn_raw_buffer_load_lds:
-    case Intrinsic::amdgcn_raw_buffer_load_async_lds:
-    case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
-    case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds: {
-      OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
-      OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
-      OpdsMapping[4] = getVGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
-      OpdsMapping[5] = getSGPROpMapping(MI.getOperand(5).getReg(), MRI, *TRI);
-      break;
-    }
-    case Intrinsic::amdgcn_raw_buffer_store:
-    case Intrinsic::amdgcn_raw_ptr_buffer_store:
-    case Intrinsic::amdgcn_raw_buffer_store_format:
-    case Intrinsic::amdgcn_raw_ptr_buffer_store_format:
-    case Intrinsic::amdgcn_raw_tbuffer_store:
-    case Intrinsic::amdgcn_raw_ptr_tbuffer_store: {
-      OpdsMapping[1] = getVGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
-      OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
-      OpdsMapping[3] = getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
-      OpdsMapping[4] = getSGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
-      break;
-    }
-    case Intrinsic::amdgcn_struct_buffer_load:
-    case Intrinsic::amdgcn_struct_ptr_buffer_load:
-    case Intrinsic::amdgcn_struct_tbuffer_load:
-    case Intrinsic::amdgcn_struct_ptr_tbuffer_load:
-    case Intrinsic::amdgcn_struct_atomic_buffer_load:
-    case Intrinsic::amdgcn_struct_ptr_atomic_buffer_load: {
-      OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
-      OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
-      OpdsMapping[3] = getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
-      OpdsMapping[4] = getVGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
-      OpdsMapping[5] = getSGPROpMapping(MI.getOperand(5).getReg(), MRI, *TRI);
-      break;
-    }
-    case Intrinsic::amdgcn_struct_buffer_load_lds:
-    case Intrinsic::amdgcn_struct_buffer_load_async_lds:
-    case Intrinsic::amdgcn_struct_ptr_buffer_load_lds:
-    case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds: {
-      OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
-      OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
-      OpdsMapping[4] = getVGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
-      OpdsMapping[5] = getVGPROpMapping(MI.getOperand(5).getReg(), MRI, *TRI);
-      OpdsMapping[6] = getSGPROpMapping(MI.getOperand(6).getReg(), MRI, *TRI);
-      break;
-    }
-    case Intrinsic::amdgcn_struct_buffer_store:
-    case Intrinsic::amdgcn_struct_ptr_buffer_store:
-    case Intrinsic::amdgcn_struct_tbuffer_store:
-    case Intrinsic::amdgcn_struct_ptr_tbuffer_store: {
-      OpdsMapping[1] = getVGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
-      OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
-      OpdsMapping[3] = getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
-      OpdsMapping[4] = getVGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
-      OpdsMapping[5] = getSGPROpMapping(MI.getOperand(5).getReg(), MRI, *TRI);
       break;
     }
     case Intrinsic::amdgcn_init_exec_from_input: {

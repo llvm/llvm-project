@@ -29,6 +29,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -1369,6 +1370,20 @@ static Intrinsic::ID shouldUpgradeNVPTXTMAReductionIntrinsics(StringRef Name) {
       .Default(Intrinsic::not_intrinsic);
 }
 
+static Intrinsic::ID
+shouldUpgradeNVVMBarrierMulticastIntrinsic(Function *F, StringRef Name) {
+  if (!Name.consume_front("mbarrier.") ||
+      !Name.consume_back(".space.cluster") || F->arg_size() != 2)
+    return Intrinsic::not_intrinsic;
+
+  Intrinsic::ID IID = F->getIntrinsicID();
+  if (IID == Intrinsic::not_intrinsic ||
+      Intrinsic::getType(F->getContext(), IID) == F->getFunctionType())
+    return Intrinsic::not_intrinsic;
+
+  return IID;
+}
+
 static Intrinsic::ID shouldUpgradeNVPTXSharedClusterIntrinsic(Function *F,
                                                               StringRef Name) {
   if (Name.consume_front("mapa.shared.cluster"))
@@ -1777,6 +1792,17 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       switch (F->getIntrinsicID()) {
       default:
         break;
+      // Legacy asyncmark intrinsics without the stage operand.
+      case Intrinsic::amdgcn_asyncmark:
+      case Intrinsic::amdgcn_wait_asyncmark: {
+        Intrinsic::ID ID = F->getIntrinsicID();
+        if (F->arg_size() == (ID == Intrinsic::amdgcn_asyncmark ? 0u : 1u)) {
+          rename(F);
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
+          return true;
+        }
+        break;
+      }
       // Legacy wmma iu intrinsics without the optional clamp operand.
       case Intrinsic::amdgcn_wmma_i32_16x16x64_iu8:
         if (F->arg_size() == 7) {
@@ -2126,6 +2152,15 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       // llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>* =>
       // llvm.nvvm.cp.async.bulk.tensor.reduce.<shape>*
       IID = shouldUpgradeNVPTXTMAReductionIntrinsics(Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        return true;
+      }
+
+      // Upgrade the shared::cluster mbarrier expect_tx/complete_tx/arrive*
+      // intrinsics to the forms carrying the 32-bit multicast CTA mask and
+      // the is-multicast flag.
+      IID = shouldUpgradeNVVMBarrierMulticastIntrinsic(F, Name);
       if (IID != Intrinsic::not_intrinsic) {
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
         return true;
@@ -6311,6 +6346,37 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     NewCall = Builder.CreateCall(NewFn, Args);
     break;
   }
+    // clang-format off
+  case Intrinsic::nvvm_mbarrier_expect_tx_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_expect_tx_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_complete_tx_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_complete_tx_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_expect_tx_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_expect_tx_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_relaxed_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_relaxed_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_expect_tx_relaxed_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_expect_tx_relaxed_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_relaxed_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_relaxed_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_relaxed_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_relaxed_scope_cluster_space_cluster: {
+    // clang-format on
+    SmallVector<Value *, 8> Args(CI->args());
+    Args.push_back(Builder.getInt32(0)); // cta-mask
+    Args.push_back(Builder.getFalse());  // is-multicast
+    NewCall = Builder.CreateCall(NewFn, Args);
+    NewCall->takeName(CI);
+    CI->replaceAllUsesWith(NewCall);
+    CI->eraseFromParent();
+    return;
+  }
   case Intrinsic::nvvm_mbarrier_init: {
     SmallVector<Value *, 3> Args(CI->args());
     // The .shared variant folded into the overloaded form without gaining an
@@ -6472,6 +6538,24 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
         Args[2], FixedVectorType::get(Builder.getBFloatTy(), NumElts));
 
     NewCall = Builder.CreateCall(NewFn, Args);
+    break;
+  }
+
+  case Intrinsic::amdgcn_asyncmark:
+  case Intrinsic::amdgcn_wait_asyncmark: {
+    // Legacy asyncmark intrinsics missed the stage mask operand. Append a zero
+    // mask, which names every stage and so preserves the behavior they had.
+    SmallVector<Value *, 2> Args(CI->args());
+    Args.push_back(Builder.getInt32(0));
+
+    SmallVector<OperandBundleDef, 1> Bundles;
+    CI->getOperandBundlesAsDefs(Bundles);
+
+    NewCall = Builder.CreateCall(NewFn, Args, Bundles);
+    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
+    NewCall->setCallingConv(CI->getCallingConv());
+    NewCall->setAttributes(CI->getAttributes());
+    NewCall->copyMetadata(*CI);
     break;
   }
 
@@ -6741,6 +6825,91 @@ MDNode *llvm::UpgradeTBAAStructNode(MDNode &MD) {
     Changed = true;
   }
   return Changed ? MDNode::get(MD.getContext(), Elts) : &MD;
+}
+
+/// Rebuild the alias scope or domain \p Old with \p Ops, keeping its identity:
+/// a self reference has to point at the replacement, and a distinct node must
+/// not be uniqued. The first operand of both a scope and a domain is its name,
+/// which is either a string or a self reference.
+static MDNode *rebuildScopeOrDomainNode(MDNode *Old,
+                                        SmallVectorImpl<Metadata *> &Ops) {
+  LLVMContext &Context = Old->getContext();
+  if (Ops[0] != Old)
+    return Old->isDistinct() ? MDNode::getDistinct(Context, Ops)
+                             : MDNode::get(Context, Ops);
+
+  Ops[0] = nullptr;
+  MDNode *New = MDNode::getDistinct(Context, Ops);
+  New->replaceOperandWith(0, New);
+  return New;
+}
+
+static MDNode *upgradeAliasScopeDomain(MDNode *Domain,
+                                       DenseMap<MDNode *, MDNode *> &Upgraded) {
+  unsigned NumOperands = Domain->getNumOperands();
+  bool HadDescription = NumOperands == 2;
+  // Already upgraded, or invalid and left to the verifier.
+  if (NumOperands == 0 || NumOperands > 2 ||
+      (HadDescription && mdconst::hasa<ConstantInt>(Domain->getOperand(1))))
+    return Domain;
+
+  MDNode *&Upgrade = Upgraded[Domain];
+  if (Upgrade)
+    return Upgrade;
+
+  LLVMContext &Context = Domain->getContext();
+  SmallVector<Metadata *, 3> Ops = {
+      Domain->getOperand(0),
+      ConstantAsMetadata::get(ConstantInt::getFalse(Context))};
+  if (HadDescription)
+    Ops.push_back(Domain->getOperand(1));
+
+  Upgrade = rebuildScopeOrDomainNode(Domain, Ops);
+  return Upgrade;
+}
+
+static MDNode *upgradeAliasScope(MDNode *Scope,
+                                 DenseMap<MDNode *, MDNode *> &Upgraded) {
+  if (MDNode *Upgrade = Upgraded.lookup(Scope))
+    return Upgrade;
+
+  // Extract domain, or leave invalid scope to the verifier.
+  if (Scope->getNumOperands() < 2 || !isa<MDNode>(Scope->getOperand(1)))
+    return Scope;
+  auto *Domain = cast<MDNode>(Scope->getOperand(1));
+
+  MDNode *UpgradedDomain = upgradeAliasScopeDomain(Domain, Upgraded);
+  if (UpgradedDomain == Domain)
+    return Scope;
+
+  SmallVector<Metadata *, 3> Ops(Scope->op_begin(), Scope->op_end());
+  Ops[1] = UpgradedDomain;
+  MDNode *Upgrade = rebuildScopeOrDomainNode(Scope, Ops);
+  Upgraded[Scope] = Upgrade;
+  return Upgrade;
+}
+
+MDNode *
+llvm::UpgradeAliasScopeList(MDNode &ScopeList,
+                            DenseMap<MDNode *, MDNode *> &UpgradedAliasScopes) {
+  if (MDNode *Upgrade = UpgradedAliasScopes.lookup(&ScopeList))
+    return Upgrade;
+
+  SmallVector<Metadata *, 4> Ops;
+  bool Changed = false;
+  for (const MDOperand &Op : ScopeList.operands()) {
+    Metadata *Scope = Op;
+    if (auto *ScopeNode = dyn_cast<MDNode>(Op))
+      Scope = upgradeAliasScope(ScopeNode, UpgradedAliasScopes);
+    Changed |= Scope != Op.get();
+    Ops.push_back(Scope);
+  }
+  if (!Changed)
+    return &ScopeList;
+
+  MDNode *Upgrade = MDNode::get(ScopeList.getContext(), Ops);
+  UpgradedAliasScopes[&ScopeList] = Upgrade;
+  return Upgrade;
 }
 
 Instruction *llvm::UpgradeBitCastInst(unsigned Opc, Value *V, Type *DestTy,
@@ -7241,6 +7410,7 @@ bool llvm::UpgradeModuleFlags(Module &M) {
     return Changed;
 
   bool HasObjCFlag = false, HasClassProperties = false;
+  bool HasClassROSigning = false;
   bool HasSwiftVersionFlag = false;
   uint8_t SwiftMajorVersion, SwiftMinorVersion;
   uint32_t SwiftABIVersion;
@@ -7267,6 +7437,8 @@ bool llvm::UpgradeModuleFlags(Module &M) {
       HasObjCFlag = true;
     if (ID->getString() == "Objective-C Class Properties")
       HasClassProperties = true;
+    if (ID->getString() == "Objective-C Enforce ClassRO Pointer Signing")
+      HasClassROSigning = true;
     // Upgrade PIC from Error/Max to Min.
     if (ID->getString() == "PIC Level") {
       if (auto *Behavior =
@@ -7393,6 +7565,16 @@ bool llvm::UpgradeModuleFlags(Module &M) {
     Changed = true;
   }
 
+  // Likewise, ObjC bitcode from before "Objective-C Enforce ClassRO Pointer
+  // Signing" was added does not sign class_ro_t pointers. Give it the flag with
+  // value 0, so that linking it with bitcode that signs them does not set
+  // SignedClassRO.
+  if (HasObjCFlag && !HasClassROSigning) {
+    M.addModuleFlag(Module::Override,
+                    "Objective-C Enforce ClassRO Pointer Signing", (uint32_t)0);
+    Changed = true;
+  }
+
   if (HasSwiftVersionFlag) {
     M.addModuleFlag(Module::Error, "Swift ABI Version",
                     SwiftABIVersion);
@@ -7477,6 +7659,33 @@ void llvm::UpgradeSectionAttributes(Module &M) {
     // __DATA,__objc_catlist,regular,no_dead_strip
     GV.setSection(TrimSpaces(Section));
   }
+}
+
+void llvm::UpgradeInstructionMetadata(Module &M) {
+  DenseMap<MDNode *, MDNode *> UpgradedAliasScopes;
+
+  for (Function &F : M)
+    for (Instruction &I : instructions(F)) {
+      for (auto Kind : {LLVMContext::MD_alias_scope, LLVMContext::MD_noalias}) {
+        if (MDNode *Old = I.getMetadata(Kind)) {
+          MDNode *New = UpgradeAliasScopeList(*Old, UpgradedAliasScopes);
+          if (New != Old)
+            I.setMetadata(Kind, New);
+        }
+      }
+      if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(&I)) {
+        unsigned ArgNo = Intrinsic::NoAliasScopeDeclScopeArg;
+        if (Decl->getNumOperands() > ArgNo)
+          if (auto *ListAsValue =
+                  dyn_cast<MetadataAsValue>(Decl->getOperand(ArgNo)))
+            if (auto *List = dyn_cast<MDNode>(ListAsValue->getMetadata())) {
+              MDNode *New = UpgradeAliasScopeList(*List, UpgradedAliasScopes);
+              if (New != List)
+                Decl->setOperand(ArgNo,
+                                 MetadataAsValue::get(Decl->getContext(), New));
+            }
+      }
+    }
 }
 
 namespace {

@@ -104,25 +104,23 @@ public:
   }
 };
 
-using FPBitwiseTypes = LIBC_NAMESPACE::testing::TypeList<float, double,
+using FPBitwiseTypes = LIBC_NAMESPACE::testing::Types<float, double,
 #ifdef LIBC_TYPES_HAS_FLOAT16
-                                                         float16,
+                                                      float16,
 #endif // LIBC_TYPES_HAS_FLOAT16
 #ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
-                                                         float128,
+                                                      float128,
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
-                                                         BFloat16>;
+                                                      BFloat16>;
 
-TYPED_TEST_F(LlvmLibcFPBitwiseTest, And, FPBitwiseTypes) { this->test_and(); }
-TYPED_TEST_F(LlvmLibcFPBitwiseTest, Or, FPBitwiseTypes) { this->test_or(); }
-TYPED_TEST_F(LlvmLibcFPBitwiseTest, Xor, FPBitwiseTypes) { this->test_xor(); }
-TYPED_TEST_F(LlvmLibcFPBitwiseTest, AndNot, FPBitwiseTypes) {
-  this->test_andnot();
-}
-TYPED_TEST_F(LlvmLibcFPBitwiseTest, Not, FPBitwiseTypes) { this->test_not(); }
-TYPED_TEST_F(LlvmLibcFPBitwiseTest, ScaleExp2, FPBitwiseTypes) {
-  this->test_scale_exp2();
-}
+TYPED_TEST_SUITE(LlvmLibcFPBitwiseTest, FPBitwiseTypes);
+
+TYPED_TEST(LlvmLibcFPBitwiseTest, And) { this->test_and(); }
+TYPED_TEST(LlvmLibcFPBitwiseTest, Or) { this->test_or(); }
+TYPED_TEST(LlvmLibcFPBitwiseTest, Xor) { this->test_xor(); }
+TYPED_TEST(LlvmLibcFPBitwiseTest, AndNot) { this->test_andnot(); }
+TYPED_TEST(LlvmLibcFPBitwiseTest, Not) { this->test_not(); }
+TYPED_TEST(LlvmLibcFPBitwiseTest, ScaleExp2) { this->test_scale_exp2(); }
 
 TEST(LlvmLibcFPBitwiseConstexprTest, ConstexprEval) {
   static_assert(FPBits<double>(fp_xor(-1.5, 1.5)).uintval() ==

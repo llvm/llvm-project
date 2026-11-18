@@ -103,3 +103,27 @@ func.func private @multiple_returns_with_non_alloc(%input: memref<4xf32>, %cond:
 ^else:
   return %input, %input : memref<4xf32>, memref<4xf32>
 }
+
+// -----
+
+// memref.realloc and bufferization.clone copy data into their result. They
+// must not be replaced by the out parameter; the result is copied instead.
+// CHECK-LABEL: func.func private @realloc_not_hoisted(
+// CHECK-SAME:    %[[SRC:.*]]: memref<4xf32>, %[[OUT:.*]]: memref<8xf32>) {
+// CHECK:         %[[REALLOC:.*]] = memref.realloc %[[SRC]] : memref<4xf32> to memref<8xf32>
+// CHECK:         memref.copy %[[REALLOC]], %[[OUT]] : memref<8xf32> to memref<8xf32>
+// CHECK:         return
+func.func private @realloc_not_hoisted(%src: memref<4xf32>) -> memref<8xf32> {
+  %0 = memref.realloc %src : memref<4xf32> to memref<8xf32>
+  return %0 : memref<8xf32>
+}
+
+// CHECK-LABEL: func.func private @clone_not_hoisted(
+// CHECK-SAME:    %[[SRC:.*]]: memref<4xf32>, %[[OUT:.*]]: memref<4xf32>) {
+// CHECK:         %[[CLONE:.*]] = bufferization.clone %[[SRC]] : memref<4xf32> to memref<4xf32>
+// CHECK:         memref.copy %[[CLONE]], %[[OUT]] : memref<4xf32> to memref<4xf32>
+// CHECK:         return
+func.func private @clone_not_hoisted(%src: memref<4xf32>) -> memref<4xf32> {
+  %0 = bufferization.clone %src : memref<4xf32> to memref<4xf32>
+  return %0 : memref<4xf32>
+}

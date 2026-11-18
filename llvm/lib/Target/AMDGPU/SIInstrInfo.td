@@ -1320,7 +1320,14 @@ def exp_vm : NamedBitOperand<"vm", "ExpVM", 1>;
 def exp_done : NamedBitOperand<"done", "Done", 1>;
 def exp_row_en : NamedBitOperand<"row_en", "RowEn", 1>;
 
-def FORMAT : CustomOperand<type=i8>;
+// The MTBUF format modifier, as in "s[0:3], s1 format:[BUF_FMT_32_FLOAT]".
+def format : CustomOperand<1, "Format", i8> {
+  let DefaultValue = "MTBUFFormat::getDefaultFormatEncoding(getSTI())";
+}
+
+// The legacy MTBUF format operand, as in "s[0:3], format:22, s1" or
+// "s[0:3], dfmt:15, nfmt:2, s1".
+def format_op : CustomOperand<0, "FormatOp", i8>;
 
 let PrintInHex = 1 in
 def DMask : NamedIntOperand<"dmask">;
@@ -1753,6 +1760,8 @@ def VOP3ModsNonCanonicalizing : ComplexPattern<untyped, 2,
   "SelectVOP3ModsNonCanonicalizing">;
 
 def VOP3NoMods : ComplexPattern<untyped, 1, "SelectVOP3NoMods">;
+
+def VOP3NoOpSelMods : ComplexPattern<untyped, 1, "SelectVOP3NoOpSelMods">;
 
 def VOP3OMods : ComplexPattern<untyped, 3, "SelectVOP3OMods">;
 
@@ -2743,11 +2752,11 @@ class getEquivalentAGPROperand<RegisterOperand RC> {
   defvar Size = !cast<SIRegisterClassLike>(RC.RegClass).Size;
   RegisterOperand ret =
     !cond(!eq(Size, 32)   : RegisterOperand<AGPR_32>,
-          !eq(Size, 64)   : RegisterOperand<AReg_64>,
-          !eq(Size, 96)   : RegisterOperand<AReg_96>,
-          !eq(Size, 128)  : RegisterOperand<AReg_128>,
-          !eq(Size, 160)  : RegisterOperand<AReg_160>,
-          !eq(Size, 1024) : RegisterOperand<AReg_1024>);
+          !eq(Size, 64)   : RegisterOperand<AReg_64_Align2>,
+          !eq(Size, 96)   : RegisterOperand<AReg_96_Align2>,
+          !eq(Size, 128)  : RegisterOperand<AReg_128_Align2>,
+          !eq(Size, 160)  : RegisterOperand<AReg_160_Align2>,
+          !eq(Size, 1024) : RegisterOperand<AReg_1024_Align2>);
 }
 
 class getEquivalentVGPROperand<RegisterOperand RC> {

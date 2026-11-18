@@ -50,8 +50,11 @@ def DecoratorEffectInterface
 // CHECK-NEXT: #undef GET_OP_CLASSES
 // CHECK-EMPTY:
 // CHECK-NEXT: #include "mlir/Bytecode/BytecodeOpInterface.h"
+// CHECK-NEXT: #include "mlir/IR/Attributes.h"
+// CHECK-NEXT: #include "mlir/IR/BuiltinAttributes.h"
 // CHECK-NEXT: #include "mlir/IR/OpDefinition.h"
 // CHECK-NEXT: #include "mlir/IR/OpImplementation.h"
+// CHECK-NEXT: #include "mlir/IR/Types.h"
 // CHECK-NEXT: #include "mlir/Interfaces/DerivedAttributeOpInterface.h"
 // CHECK-NEXT: #include "test/BaseOpInterface.h"
 // CHECK-NEXT: #include "test/DeclaredMethodsOpInterface.h"

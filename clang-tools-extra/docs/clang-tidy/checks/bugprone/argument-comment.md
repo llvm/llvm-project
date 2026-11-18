@@ -29,6 +29,14 @@ underscores and case when comparing names -- otherwise they are taken into
 account. Default is `false`.
 ```
 
+```{option} IgnoreMacros
+When `false`, the check also adds missing comments to calls in a macro
+argument, such as `ASSERT(f(0))`. It never adds them to calls in a macro body,
+or to arguments that you pass through another macro, such as `f(ID(0))`. The
+check compares argument comments with parameter names regardless of this
+option. Default is `true`.
+```
+
 ```{option} IgnoreSingleArgument
 When `true`, the check will ignore the single argument. Default is `false`.
 ```
@@ -66,8 +74,8 @@ foo(/*Dims=*/{});
 
 ```{option} CommentBoolLiterals
 When `true`, the check will add argument comments in the format
-`/*ParameterName=*/` right before the boolean literal argument.
-Default is `false`.
+`/*ParameterName=*/` right before the boolean literal argument and the macros
+in {option}`BoolLiteralMacros`. Default is `false`.
 ```
 
 Before:
@@ -131,9 +139,12 @@ foo(/*Pi=*/3.14159);
 ```
 
 ```{option} CommentIntegerLiterals
-When `true`, the check will add argument comments in the format
-`/*ParameterName=*/` right before the integer literal argument.
-Default is `false`.
+When `All`, the check will add argument comments in the format
+`/*ParameterName=*/` right before every integer literal argument. When
+`ZeroOnly`, it adds them before integer literal arguments with the value zero,
+such as `0`, `0x0` and `0UL`, which often stand for "none" or "default". When
+`None`, it adds no comments before integer literal arguments. The values `true`
+and `false` mean `All` and `None`. Default is `None`.
 ```
 
 Before:
@@ -144,7 +155,7 @@ void foo(int MeaningOfLife);
 foo(42);
 ```
 
-After:
+After, with `All`:
 
 ```c++
 void foo(int MeaningOfLife);
@@ -152,10 +163,28 @@ void foo(int MeaningOfLife);
 foo(/*MeaningOfLife=*/42);
 ```
 
+Before:
+
+```c
+int open_file(const char *Path, int Flags);
+
+open_file(Path, 0);
+open_file(Path, 1);
+```
+
+After, with `ZeroOnly`:
+
+```c
+int open_file(const char *Path, int Flags);
+
+open_file(Path, /*Flags=*/0);
+open_file(Path, 1);
+```
+
 ```{option} CommentNullPtrs
 When `true`, the check will add argument comments in the format
-`/*ParameterName=*/` right before the nullptr literal argument.
-Default is `false`.
+`/*ParameterName=*/` right before the nullptr literal argument and the macros
+in {option}`NullPtrMacros`. Default is `false`.
 ```
 
 Before:
@@ -280,4 +309,20 @@ void foo(double Distance);
 double operator"" _km(long double);
 
 foo(/*Distance=*/402.0_km);
+```
+
+```{option} NullPtrMacros
+A semicolon-separated list of macros that {option}`CommentNullPtrs` treats like
+`nullptr`. An argument matches when it is one of these macros, with or without
+a unary operator in front of it. A macro that expands to one of these macros,
+such as `#define MY_NULL NULL`, doesn't match. Default is `NULL`.
+```
+
+```{option} BoolLiteralMacros
+A semicolon-separated list of macros that {option}`CommentBoolLiterals` treats
+like boolean literals. An argument matches when it is one of these macros, with
+or without a unary operator in front of it, such as `!true`. A macro that
+expands to one of these macros, such as `#define MY_TRUE true`, doesn't match.
+Default is `true;false`, which covers `<stdbool.h>` in C before C23 and in GNU
+C++98.
 ```

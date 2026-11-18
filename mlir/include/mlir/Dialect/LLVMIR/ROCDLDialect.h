@@ -24,7 +24,6 @@
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialectDecl.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "mlir/Dialect/LLVMIR/ROCDLOpsEnums.h.inc"
 

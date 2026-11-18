@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineSink.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
@@ -67,48 +68,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "machine-sink"
 
-static cl::opt<bool>
-    SplitEdges("machine-sink-split",
-               cl::desc("Split critical edges during machine sinking"),
-               cl::init(true), cl::Hidden);
-
 static cl::opt<bool> UseBlockFreqInfo(
     "machine-sink-bfi",
     cl::desc("Use block frequency info to find successors to sink"),
     cl::init(true), cl::Hidden);
-
-static cl::opt<unsigned> SplitEdgeProbabilityThreshold(
-    "machine-sink-split-probability-threshold",
-    cl::desc(
-        "Percentage threshold for splitting single-instruction critical edge. "
-        "If the branch threshold is higher than this threshold, we allow "
-        "speculative execution of up to 1 instruction to avoid branching to "
-        "splitted critical edge"),
-    cl::init(40), cl::Hidden);
-
-static cl::opt<unsigned> SinkLoadInstsPerBlockThreshold(
-    "machine-sink-load-instrs-threshold",
-    cl::desc("Do not try to find alias store for a load if there is a in-path "
-             "block whose instruction number is higher than this threshold."),
-    cl::init(2000), cl::Hidden);
-
-static cl::opt<unsigned> SinkLoadBlocksThreshold(
-    "machine-sink-load-blocks-threshold",
-    cl::desc("Do not try to find alias store for a load if the block number in "
-             "the straight line is higher than this threshold."),
-    cl::init(20), cl::Hidden);
-
-static cl::opt<bool>
-    SinkInstsIntoCycle("sink-insts-to-avoid-spills",
-                       cl::desc("Sink instructions into cycles to avoid "
-                                "register spills"),
-                       cl::init(false), cl::Hidden);
-
-static cl::opt<unsigned> SinkIntoCycleLimit(
-    "machine-sink-cycle-limit",
-    cl::desc(
-        "The maximum number of instructions considered for cycle sinking."),
-    cl::init(50), cl::Hidden);
 
 STATISTIC(NumSunk, "Number of machine instructions sunk");
 STATISTIC(NumCycleSunk, "Number of machine instructions sunk into a cycle");
@@ -121,6 +84,7 @@ using RegSubRegPair = TargetInstrInfo::RegSubRegPair;
 namespace {
 
 class MachineSinking {
+  const CodeGenOptions &Opts;
   const TargetSubtargetInfo *STI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
@@ -153,7 +117,6 @@ class MachineSinking {
   // will be split.
   SetVector<std::pair<MachineBasicBlock *, MachineBasicBlock *>> ToSplit;
 
-  DenseSet<Register> RegsToClearKillFlags;
 
   using AllSuccsCache =
       SmallDenseMap<MachineBasicBlock *, SmallVector<MachineBasicBlock *, 4>>;
@@ -193,14 +156,14 @@ class MachineSinking {
   bool EnableSinkAndFold;
 
 public:
-  MachineSinking(bool EnableSinkAndFold, MachineDominatorTree *DT,
-                 MachinePostDominatorTree *PDT, MachineLoopInfo *MLI,
-                 MachineCycleInfo *CI, ProfileSummaryInfo *PSI,
-                 MachineBlockFrequencyInfo *MBFI,
+  MachineSinking(const CodeGenOptions &Opts, bool EnableSinkAndFold,
+                 MachineDominatorTree *DT, MachinePostDominatorTree *PDT,
+                 MachineLoopInfo *MLI, MachineCycleInfo *CI,
+                 ProfileSummaryInfo *PSI, MachineBlockFrequencyInfo *MBFI,
                  const MachineBranchProbabilityInfo *MBPI, AliasAnalysis *AA,
                  RegisterClassInfo *RegClassInfo)
-      : DT(DT), PDT(PDT), CI(CI), PSI(PSI), MBFI(MBFI), MBPI(MBPI), AA(AA),
-        RegClassInfo(RegClassInfo), MLI(MLI),
+      : Opts(Opts), DT(DT), PDT(PDT), CI(CI), PSI(PSI), MBFI(MBFI), MBPI(MBPI),
+        AA(AA), RegClassInfo(RegClassInfo), MLI(MLI),
         EnableSinkAndFold(EnableSinkAndFold) {}
 
   bool run(MachineFunction &MF);
@@ -392,10 +355,6 @@ bool MachineSinking::PerformTrivialForwardCoalescing(MachineInstr &MI,
   MRI->replaceRegWith(DstReg, SrcReg);
   MI.eraseFromParent();
 
-  // Conservatively, clear any kill flags, since it's possible that they are no
-  // longer correct.
-  MRI->clearKillFlags(SrcReg);
-
   ++NumCoalesces;
   return true;
 }
@@ -579,25 +538,9 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
       New = &*std::prev(InsertPt);
       if (!New->getDebugLoc())
         New->setDebugLoc(SinkDst->getDebugLoc());
-
-      // The operand registers of the "sunk" instruction have their live range
-      // extended and their kill flags may no longer be correct. Conservatively
-      // clear the kill flags.
-      if (UsedRegA)
-        MRI->clearKillFlags(UsedRegA);
-      if (UsedRegB)
-        MRI->clearKillFlags(UsedRegB);
     } else {
       // Fold instruction into the addressing mode of a memory instruction.
       New = TII->emitLdStWithAddr(*SinkDst, MaybeAM);
-
-      // The registers of the addressing mode may have their live range extended
-      // and their kill flags may no longer be correct. Conservatively clear the
-      // kill flags.
-      if (Register R = MaybeAM.BaseReg; R.isValid() && R.isVirtual())
-        MRI->clearKillFlags(R);
-      if (Register R = MaybeAM.ScaledReg; R.isValid() && R.isVirtual())
-        MRI->clearKillFlags(R);
     }
     LLVM_DEBUG(dbgs() << "yielding"; New->dump());
     // Clear the StoreInstrCache, since we may invalidate it by erasing.
@@ -777,8 +720,8 @@ MachineSinkingPass::run(MachineFunction &MF,
                   .getResult<AAManager>(MF.getFunction());
   auto *MLI = MFAM.getCachedResult<MachineLoopAnalysis>(MF);
   auto *RegClassInfo = &MFAM.getResult<MachineRegisterClassAnalysis>(MF);
-  MachineSinking Impl(EnableSinkAndFold, DT, PDT, MLI, CI, PSI, MBFI, MBPI, AA,
-                      RegClassInfo);
+  MachineSinking Impl(getCodeGenOptions(MF), EnableSinkAndFold, DT, PDT, MLI,
+                      CI, PSI, MBFI, MBPI, AA, RegClassInfo);
   bool Changed = Impl.run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
@@ -822,8 +765,8 @@ bool MachineSinkingLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto *RegClassInfo =
       &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
 
-  MachineSinking Impl(EnableSinkAndFold, DT, PDT, MLI, CI, PSI, MBFI, MBPI, AA,
-                      RegClassInfo);
+  MachineSinking Impl(getCodeGenOptions(MF), EnableSinkAndFold, DT, PDT, MLI,
+                      CI, PSI, MBFI, MBPI, AA, RegClassInfo);
   return Impl.run(MF);
 }
 
@@ -873,7 +816,7 @@ bool MachineSinking::run(MachineFunction &MF) {
     EverMadeChange = true;
   }
 
-  if (SinkInstsIntoCycle) {
+  if (Opts.sink_insts_to_avoid_spills) {
     SmallVector<CycleRef, 8> Cycles(CI->toplevel_cycles());
     SchedModel.init(STI);
     bool HasHighPressure;
@@ -902,7 +845,7 @@ bool MachineSinking::run(MachineFunction &MF) {
         for (MachineInstr *I : llvm::reverse(Candidates)) {
           // CycleSinkStage::COPY: Sink a limited number of copies
           if (Stage == CycleSinkStage::COPY) {
-            if (i++ == SinkIntoCycleLimit) {
+            if (i++ == Opts.machine_sink_cycle_limit) {
               LLVM_DEBUG(dbgs()
                          << "CycleSink:   Limit reached of instructions to "
                             "be analyzed.");
@@ -936,11 +879,6 @@ bool MachineSinking::run(MachineFunction &MF) {
 
   HasStoreCache.clear();
   StoreInstrCache.clear();
-
-  // Now clear any kill flags for recorded registers.
-  for (auto I : RegsToClearKillFlags)
-    MRI->clearKillFlags(I);
-  RegsToClearKillFlags.clear();
 
   releaseMemory();
   return EverMadeChange;
@@ -1064,7 +1002,7 @@ bool MachineSinking::isWorthBreakingCriticalEdge(
 
   if (From->isSuccessor(To) &&
       MBPI->getEdgeProbability(From, To) <=
-          BranchProbability(SplitEdgeProbabilityThreshold, 100))
+          BranchProbability(Opts.machine_sink_split_probability_threshold, 100))
     return true;
 
   // MI is cheap, we probably don't want to break the critical edge for it.
@@ -1103,7 +1041,7 @@ bool MachineSinking::isLegalToBreakCriticalEdge(MachineInstr &MI,
                                                 MachineBasicBlock *ToBB,
                                                 bool BreakPHIEdge) {
   // Avoid breaking back edge. From == To means backedge for single BB cycle.
-  if (!SplitEdges || FromBB == ToBB || !FromBB->isSuccessor(ToBB))
+  if (!Opts.machine_sink_split || FromBB == ToBB || !FromBB->isSuccessor(ToBB))
     return false;
 
   CycleRef FromCycle = CI->getCycle(FromBB);
@@ -1509,8 +1447,7 @@ MachineSinking::FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
 /// check optimization is legal over MI, and this returning false does not
 /// guarantee MI cannot possibly be used to do a null check.
 static bool SinkingPreventsImplicitNullCheck(MachineInstr &MI,
-                                             const TargetInstrInfo *TII,
-                                             const TargetRegisterInfo *TRI) {
+                                             const TargetInstrInfo *TII) {
   using MachineBranchPredicate = TargetInstrInfo::MachineBranchPredicate;
 
   auto *MBB = MI.getParent();
@@ -1691,8 +1628,9 @@ bool MachineSinking::hasStoreBetween(MachineBasicBlock *From,
 
       // If this BB is too big or the block number in straight line between From
       // and To is too big, stop searching to save compiling time.
-      if (BB->sizeWithoutDebugLargerThan(SinkLoadInstsPerBlockThreshold) ||
-          HandledDomBlocks.size() > SinkLoadBlocksThreshold) {
+      if (BB->sizeWithoutDebugLargerThan(
+              Opts.machine_sink_load_instrs_threshold) ||
+          HandledDomBlocks.size() > Opts.machine_sink_load_blocks_threshold) {
         for (auto *DomBB : HandledDomBlocks) {
           if (DomBB != BB && DT->dominates(DomBB, BB))
             HasStoreCache[std::make_pair(DomBB, To)] = true;
@@ -1808,12 +1746,6 @@ bool MachineSinking::aggressivelySinkIntoCycle(
       SunkInstrs.insert({MapEntry, NewMI});
     }
 
-    // Conservatively clear any kill flags on uses of sunk instruction
-    for (MachineOperand &MO : NewMI->all_uses()) {
-      assert(MO.isReg() && MO.isUse());
-      RegsToClearKillFlags.insert(MO.getReg());
-    }
-
     // The instruction is moved from its basic block, so do not retain the
     // debug information.
     assert(!NewMI->isDebugInstr() && "Should not sink debug inst");
@@ -1849,7 +1781,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
 
   // Don't break implicit null checks.  This is a performance heuristic, and not
   // required for correctness.
-  if (SinkingPreventsImplicitNullCheck(MI, TII, TRI))
+  if (SinkingPreventsImplicitNullCheck(MI, TII))
     return false;
 
   // FIXME: This should include support for sinking instructions within the
@@ -1980,14 +1912,6 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
     SalvageUnsunkDebugUsersOfCopy(MI, SuccToSinkTo);
 
   performSink(MI, *SuccToSinkTo, InsertPos, DbgUsersToSink);
-
-  // Conservatively, clear any kill flags, since it's possible that they are no
-  // longer correct.
-  // Note that we have to clear the kill flags for any register this instruction
-  // uses as we may sink over another instruction which currently kills the
-  // used registers.
-  for (MachineOperand &MO : MI.all_uses())
-    RegsToClearKillFlags.insert(MO.getReg()); // Remember to clear kill flags.
 
   return true;
 }

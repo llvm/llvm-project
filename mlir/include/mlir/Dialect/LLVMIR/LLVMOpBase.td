@@ -260,6 +260,9 @@ class LLVM_MemOpPatterns {
     moduleTranslation.setAliasScopeMetadata(op, inst);
     moduleTranslation.setTBAAMetadata(op, inst);
   }];
+  code setTBAAStructMetadataCode = [{
+    moduleTranslation.setTBAAStructMetadata(op.getTbaaStructAttr(), inst);
+  }];
 }
 
 //===----------------------------------------------------------------------===//
