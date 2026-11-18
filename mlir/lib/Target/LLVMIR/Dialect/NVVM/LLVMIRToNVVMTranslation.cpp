@@ -47,17 +47,17 @@ convertBarrierSyncIntrinsic(OpBuilder &odsBuilder, llvm::CallInst *inst,
   bool hasCount = (id == llvm::Intrinsic::nvvm_barrier_cta_sync_count ||
                    id == llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count);
 
+  Location loc = moduleImport.translateLoc(inst->getDebugLoc());
   SmallVector<Value> mlirOperands;
   SmallVector<NamedAttribute> mlirAttrs;
   if (failed(moduleImport.convertIntrinsicArguments(
-          llvmOperands, llvmOpBundles, /*requiresOpBundles=*/false, {}, {},
+          loc, llvmOperands, llvmOpBundles, /*requiresOpBundles=*/false, {}, {},
           mlirOperands, mlirAttrs)))
     return failure();
 
-  auto op = NVVM::BarrierOp::create(
-      odsBuilder, moduleImport.translateLoc(inst->getDebugLoc()),
-      mlirOperands.front(), hasCount ? mlirOperands.back() : Value{},
-      odsBuilder.getBoolAttr(aligned));
+  auto op = NVVM::BarrierOp::create(odsBuilder, loc, mlirOperands.front(),
+                                    hasCount ? mlirOperands.back() : Value{},
+                                    odsBuilder.getBoolAttr(aligned));
   moduleImport.mapNoResultOp(inst, op);
   return success();
 }

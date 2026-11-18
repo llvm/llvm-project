@@ -40,6 +40,7 @@
 
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -1449,14 +1450,15 @@ void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
 /// can be used to create an attribute or nullptr otherwise. If provided,
 /// `arrayShape` is added to the shape of the vector to create an attribute that
 /// matches an array of vectors.
-static Type getVectorTypeForAttr(Type type, ArrayRef<int64_t> arrayShape = {}) {
+static Type getVectorTypeForAttr(Type type, DiagnosticSeverity severity,
+                                 ArrayRef<int64_t> arrayShape = {}) {
   if (!LLVM::isCompatibleVectorType(type))
     return {};
 
   llvm::ElementCount numElements = LLVM::getVectorNumElements(type);
   if (numElements.isScalable()) {
-    emitError(UnknownLoc::get(type.getContext()))
-        << "scalable vectors not supported";
+    emitDiag(UnknownLoc::get(type.getContext()), severity,
+             "scalable vectors not supported");
     return {};
   }
 
@@ -1470,7 +1472,8 @@ static Type getVectorTypeForAttr(Type type, ArrayRef<int64_t> arrayShape = {}) {
   return VectorType::get(shape, elementType);
 }
 
-Type ModuleImport::getBuiltinTypeForAttr(Type type) {
+Type ModuleImport::getBuiltinTypeForAttr(Type type,
+                                         DiagnosticSeverity severity) {
   if (!type)
     return {};
 
@@ -1479,7 +1482,7 @@ Type ModuleImport::getBuiltinTypeForAttr(Type type) {
     return type;
 
   // Return builtin vectors of integer and floating-point types as is.
-  if (Type vectorType = getVectorTypeForAttr(type))
+  if (Type vectorType = getVectorTypeForAttr(type, severity))
     return vectorType;
 
   // Multi-dimensional array types are converted to tensors or vectors,
@@ -1491,13 +1494,14 @@ Type ModuleImport::getBuiltinTypeForAttr(Type type) {
   }
   if (type.isIntOrFloat())
     return RankedTensorType::get(arrayShape, type);
-  return getVectorTypeForAttr(type, arrayShape);
+  return getVectorTypeForAttr(type, severity, arrayShape);
 }
 
 /// Returns an integer or float attribute for the provided scalar constant
 /// `constScalar` or nullptr if the conversion fails.
-static TypedAttr getScalarConstantAsAttr(OpBuilder &builder,
-                                         llvm::Constant *constScalar) {
+static TypedAttr getScalarConstantAsAttr(
+    OpBuilder &builder, llvm::Constant *constScalar,
+    DiagnosticSeverity severity = DiagnosticSeverity::Error) {
   MLIRContext *context = builder.getContext();
 
   if (constScalar->getType()->isVectorTy())
@@ -1518,8 +1522,8 @@ static TypedAttr getScalarConstantAsAttr(OpBuilder &builder,
             ? BFloat16Type::get(context)
             : LLVM::detail::getFloatType(context, type->getScalarSizeInBits());
     if (!floatType) {
-      emitError(UnknownLoc::get(builder.getContext()))
-          << "unexpected floating-point type";
+      emitDiag(UnknownLoc::get(context), severity,
+               "unexpected floating-point type");
       return {};
     }
     return builder.getFloatAttr(floatType, constFloat->getValueAPF());
@@ -1531,25 +1535,29 @@ static TypedAttr getScalarConstantAsAttr(OpBuilder &builder,
 /// sequence `constSequence` or nullptr if the conversion fails.
 static SmallVector<Attribute>
 getSequenceConstantAsAttrs(OpBuilder &builder,
-                           llvm::ConstantDataSequential *constSequence) {
+                           llvm::ConstantDataSequential *constSequence,
+                           DiagnosticSeverity severity) {
   SmallVector<Attribute> elementAttrs;
   elementAttrs.reserve(constSequence->getNumElements());
   for (auto idx : llvm::seq<int64_t>(0, constSequence->getNumElements())) {
     llvm::Constant *constElement = constSequence->getElementAsConstant(idx);
-    elementAttrs.push_back(getScalarConstantAsAttr(builder, constElement));
+    elementAttrs.push_back(
+        getScalarConstantAsAttr(builder, constElement, severity));
   }
   return elementAttrs;
 }
 
-Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
+Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant,
+                                          DiagnosticSeverity severity) {
   // Convert scalar constants.
-  if (Attribute scalarAttr = getScalarConstantAsAttr(builder, constant))
+  if (Attribute scalarAttr =
+          getScalarConstantAsAttr(builder, constant, severity))
     return scalarAttr;
 
   // Returns the static shape of the provided type if possible.
   auto getConstantShape = [&](llvm::Type *type) {
     return llvm::dyn_cast_if_present<ShapedType>(
-        getBuiltinTypeForAttr(convertType(type)));
+        getBuiltinTypeForAttr(convertType(type), severity));
   };
 
   // Convert constant vector splat values.
@@ -1559,7 +1567,7 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
     if (!shape)
       return {};
     Attribute splatAttr =
-        getScalarConstantAsAttr(builder, constant->getSplatValue());
+        getScalarConstantAsAttr(builder, constant->getSplatValue(), severity);
     return SplatElementsAttr::get(shape, splatAttr);
   }
 
@@ -1576,12 +1584,12 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
     if (constVector && constVector->isSplat()) {
       // A vector is guaranteed to have at least size one.
       Attribute splatAttr = getScalarConstantAsAttr(
-          builder, constVector->getElementAsConstant(0));
+          builder, constVector->getElementAsConstant(0), severity);
       return SplatElementsAttr::get(shape, splatAttr);
     }
     // Convert non-splat constants to dense elements attributes.
     SmallVector<Attribute> elementAttrs =
-        getSequenceConstantAsAttrs(builder, constArray);
+        getSequenceConstantAsAttrs(builder, constArray, severity);
     return DenseElementsAttr::get(shape, elementAttrs);
   }
 
@@ -1608,13 +1616,14 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
       // 1/2/4/8-byte integer or half/bfloat/float/double values.
       if (auto *constArray = dyn_cast<llvm::ConstantDataSequential>(current)) {
         SmallVector<Attribute> attrs =
-            getSequenceConstantAsAttrs(builder, constArray);
+            getSequenceConstantAsAttrs(builder, constArray, severity);
         elementAttrs.append(attrs.begin(), attrs.end());
         continue;
       }
       // Append nested scalar constants that store all kinds of integer and
       // floating-point types.
-      if (Attribute scalarAttr = getScalarConstantAsAttr(builder, current)) {
+      if (Attribute scalarAttr =
+              getScalarConstantAsAttr(builder, current, severity)) {
         elementAttrs.push_back(scalarAttr);
         continue;
       }
@@ -1628,7 +1637,7 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
   // Convert zero aggregates.
   if (auto *constZero = dyn_cast<llvm::ConstantAggregateZero>(constant)) {
     auto shape = llvm::dyn_cast_if_present<ShapedType>(
-        getBuiltinTypeForAttr(convertType(constZero->getType())));
+        getBuiltinTypeForAttr(convertType(constZero->getType()), severity));
     if (!shape)
       return {};
     // Convert zero aggregates with a static shape to splat elements attributes.
@@ -2010,11 +2019,12 @@ ModuleImport::getConstantsToConvert(llvm::Constant *constant) {
   return orderedSet;
 }
 
-FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
+FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant,
+                                               DiagnosticSeverity severity) {
   Location loc = UnknownLoc::get(context);
 
   // Convert constants that can be represented as attributes.
-  if (Attribute attr = getConstantAsAttr(constant)) {
+  if (Attribute attr = getConstantAsAttr(constant, severity)) {
     Type type = convertType(constant->getType());
     if (auto symbolRef = dyn_cast<FlatSymbolRefAttr>(attr)) {
       return AddressOfOp::create(builder, loc, type, symbolRef.getValue())
@@ -2082,7 +2092,7 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
   // Convert constant expressions.
   if (auto *constExpr = dyn_cast<llvm::ConstantExpr>(constant)) {
     // Convert the constant expression to a temporary LLVM instruction and
-    // translate it using the `processInstruction` method. Delete the
+    // translate it using the `convertInstruction` method. Delete the
     // instruction after the translation and remove it from `valueMapping`,
     // since later calls to `getAsInstruction` may return the same address
     // resulting in a conflicting `valueMapping` entry.
@@ -2093,12 +2103,12 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
       valueMapping.erase(inst);
       inst->deleteValue();
     });
-    // Note: `processInstruction` does not call `convertConstant` recursively
+    // Note: `convertInstruction` does not call `convertConstant` recursively
     // since all constant dependencies have been converted before.
     assert(llvm::all_of(inst->operands(), [&](llvm::Value *value) {
       return valueMapping.contains(value);
     }));
-    if (failed(processInstruction(inst)))
+    if (failed(convertInstruction(inst, severity)))
       return failure();
     Value result = lookupValue(inst);
     // getAsInstruction() does not preserve GEP `inrange`, which exists only on
@@ -2194,11 +2204,13 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
   if (isa<llvm::GlobalValue>(constant))
     error = " since global value is unsupported";
 
-  return emitError(loc) << "unhandled constant: " << renderValue(*constant)
-                        << error;
+  return emitDiag(loc, severity, "unhandled constant: ")
+         << renderValue(*constant) << error;
 }
 
-FailureOr<Value> ModuleImport::convertConstantExpr(llvm::Constant *constant) {
+FailureOr<Value>
+ModuleImport::convertConstantExpr(llvm::Constant *constant,
+                                  DiagnosticSeverity severity) {
   // Only call the function for constants that have not been translated before
   // since it updates the constant insertion point assuming the converted
   // constant has been introduced at the end of the constant section.
@@ -2218,19 +2230,17 @@ FailureOr<Value> ModuleImport::convertConstantExpr(llvm::Constant *constant) {
   SetVector<llvm::Constant *> constantsToConvert =
       getConstantsToConvert(constant);
   for (llvm::Constant *constantToConvert : constantsToConvert) {
-    FailureOr<Value> converted = convertConstant(constantToConvert);
+    FailureOr<Value> converted = convertConstant(constantToConvert, severity);
     if (failed(converted))
       return failure();
     mapValue(constantToConvert, *converted);
+    constantInsertionOp = converted->getDefiningOp();
   }
-
-  // Update the constant insertion point and return the converted constant.
-  Value result = lookupValue(constant);
-  constantInsertionOp = result.getDefiningOp();
-  return result;
+  return lookupValue(constant);
 }
 
-FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
+FailureOr<Value> ModuleImport::convertValue(llvm::Value *value,
+                                            DiagnosticSeverity severity) {
   // Return the mapped value if it has been converted before.
   auto it = valueMapping.find(value);
   if (it != valueMapping.end())
@@ -2245,8 +2255,11 @@ FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
     llvm::Metadata *md = mdAsVal->getMetadata();
     Attribute mdAttr = convertMetadataToAttr(md);
     if (!mdAttr)
-      return emitError(mlirModule.getLoc())
-             << "unsupported metadata: " << renderMetadata(md);
+      return emitDiag(mlirModule.getLoc(), severity, "unsupported metadata: ")
+             << renderMetadata(md);
+    // The mapped metadata value may also be used in a sibling block.
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(constantInsertionBlock);
     Value result =
         MetadataAsValueOp::create(builder, UnknownLoc::get(context), mdAttr)
             .getRes();
@@ -2256,12 +2269,12 @@ FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
 
   // Convert constants such as immediate values that have no mapping yet.
   if (auto *constant = dyn_cast<llvm::Constant>(value))
-    return convertConstantExpr(constant);
+    return convertConstantExpr(constant, severity);
 
   Location loc = UnknownLoc::get(context);
   if (auto *inst = dyn_cast<llvm::Instruction>(value))
     loc = translateLoc(inst->getDebugLoc());
-  return emitError(loc) << "unhandled value: " << renderValue(*value);
+  return emitDiag(loc, severity, "unhandled value: ") << renderValue(*value);
 }
 
 FailureOr<Value> ModuleImport::convertMetadataValue(llvm::Value *value) {
@@ -2287,11 +2300,12 @@ FailureOr<Value> ModuleImport::convertMetadataValue(llvm::Value *value) {
 }
 
 FailureOr<SmallVector<Value>>
-ModuleImport::convertValues(ArrayRef<llvm::Value *> values) {
+ModuleImport::convertValues(ArrayRef<llvm::Value *> values,
+                            DiagnosticSeverity severity) {
   SmallVector<Value> remapped;
   remapped.reserve(values.size());
   for (llvm::Value *value : values) {
-    FailureOr<Value> converted = convertValue(value);
+    FailureOr<Value> converted = convertValue(value, severity);
     if (failed(converted))
       return failure();
     remapped.push_back(*converted);
@@ -2299,11 +2313,41 @@ ModuleImport::convertValues(ArrayRef<llvm::Value *> values) {
   return remapped;
 }
 
+FailureOr<ModuleImport::OperandBundles>
+ModuleImport::convertOperandBundles(Location loc,
+                                    ArrayRef<llvm::OperandBundleUse> bundles,
+                                    DiagnosticSeverity severity) {
+  SmallVector<Value> operands;
+  SmallVector<int32_t> sizes;
+  SmallVector<Attribute> tags;
+  sizes.reserve(bundles.size());
+  tags.reserve(bundles.size());
+  for (const llvm::OperandBundleUse &bundle : bundles) {
+    auto converted = convertValues(
+        llvm::to_vector_of<llvm::Value *>(bundle.Inputs), severity);
+    if (failed(converted)) {
+      if (severity == DiagnosticSeverity::Error)
+        return failure();
+      emitWarning(loc) << "dropping operand bundle '" << bundle.getTagName()
+                       << "'";
+      continue;
+    }
+    llvm::append_range(operands, *converted);
+    sizes.push_back(converted->size());
+    tags.push_back(builder.getStringAttr(bundle.getTagName()));
+  }
+  return OperandBundles{std::move(operands),
+                        builder.getDenseI32ArrayAttr(sizes),
+                        builder.getArrayAttr(tags)};
+}
+
 LogicalResult ModuleImport::convertIntrinsicArguments(
-    ArrayRef<llvm::Value *> values, ArrayRef<llvm::OperandBundleUse> opBundles,
-    bool requiresOpBundles, ArrayRef<unsigned> immArgPositions,
-    ArrayRef<StringLiteral> immArgAttrNames, SmallVectorImpl<Value> &valuesOut,
-    SmallVectorImpl<NamedAttribute> &attrsOut) {
+    Location loc, ArrayRef<llvm::Value *> values,
+    ArrayRef<llvm::OperandBundleUse> opBundles, bool requiresOpBundles,
+    ArrayRef<unsigned> immArgPositions, ArrayRef<StringLiteral> immArgAttrNames,
+    SmallVectorImpl<Value> &valuesOut,
+    SmallVectorImpl<NamedAttribute> &attrsOut,
+    DiagnosticSeverity bundleSeverity) {
   assert(immArgPositions.size() == immArgAttrNames.size() &&
          "LLVM `immArgPositions` and MLIR `immArgAttrNames` should have equal "
          "length");
@@ -2331,33 +2375,16 @@ LogicalResult ModuleImport::convertIntrinsicArguments(
     valuesOut.push_back(*mlirValue);
   }
 
-  SmallVector<int> opBundleSizes;
-  SmallVector<Attribute> opBundleTagAttrs;
   if (requiresOpBundles) {
-    opBundleSizes.reserve(opBundles.size());
-    opBundleTagAttrs.reserve(opBundles.size());
-
-    for (const llvm::OperandBundleUse &bundle : opBundles) {
-      opBundleSizes.push_back(bundle.Inputs.size());
-      opBundleTagAttrs.push_back(StringAttr::get(context, bundle.getTagName()));
-
-      for (const llvm::Use &opBundleOperand : bundle.Inputs) {
-        auto operandMlirValue = convertValue(opBundleOperand.get());
-        if (failed(operandMlirValue))
-          return failure();
-        valuesOut.push_back(*operandMlirValue);
-      }
-    }
-
-    auto opBundleSizesAttr = DenseI32ArrayAttr::get(context, opBundleSizes);
-    auto opBundleSizesAttrNameAttr =
-        StringAttr::get(context, LLVMDialect::getOpBundleSizesAttrName());
-    attrsOut.push_back({opBundleSizesAttrNameAttr, opBundleSizesAttr});
-
-    auto opBundleTagsAttr = ArrayAttr::get(context, opBundleTagAttrs);
-    auto opBundleTagsAttrNameAttr =
-        StringAttr::get(context, LLVMDialect::getOpBundleTagsAttrName());
-    attrsOut.push_back({opBundleTagsAttrNameAttr, opBundleTagsAttr});
+    FailureOr<OperandBundles> bundles =
+        convertOperandBundles(loc, opBundles, bundleSeverity);
+    if (failed(bundles))
+      return failure();
+    llvm::append_range(valuesOut, bundles->operands);
+    attrsOut.push_back(builder.getNamedAttr(
+        LLVMDialect::getOpBundleSizesAttrName(), bundles->sizes));
+    attrsOut.push_back(builder.getNamedAttr(
+        LLVMDialect::getOpBundleTagsAttrName(), bundles->tags));
   }
 
   return success();
@@ -2604,7 +2631,8 @@ ModuleImport::convertAsmInlineOperandAttrs(const llvm::CallBase &llvmCall) {
                      : nullptr;
 }
 
-LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
+LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst,
+                                               DiagnosticSeverity severity) {
   // Convert all instructions that do not provide an MLIR builder.
   Location loc = translateLoc(inst->getDebugLoc());
   if (auto *brInst = dyn_cast<llvm::UncondBrInst>(inst)) {
@@ -2689,6 +2717,8 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
 
     auto callOp = [&]() -> FailureOr<Operation *> {
       if (auto *asmI = dyn_cast<llvm::InlineAsm>(calledOperand)) {
+        if (callInst->hasOperandBundles())
+          emitWarning(loc, "dropping operand bundles on inline assembly");
         Type resultTy = convertType(callInst->getType());
         if (!resultTy)
           return failure();
@@ -2725,7 +2755,17 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
         // Regular direct call using callee name.
         callee = convertCalleeName(callInst);
       }
+      FailureOr<OperandBundles> bundles = convertOperandBundles(
+          loc, llvm::to_vector(callInst->operand_bundles()),
+          DiagnosticSeverity::Warning);
+      if (failed(bundles))
+        return failure();
       CallOp callOp = CallOp::create(builder, loc, *funcTy, callee, *operands);
+      if (!bundles->tags.empty()) {
+        callOp.getOpBundleOperandsMutable().join().assign(bundles->operands);
+        callOp.setOpBundleSizesAttr(bundles->sizes);
+        callOp.setOpBundleTagsAttr(bundles->tags);
+      }
 
       if (failed(convertCallAttributes(callInst, callOp)))
         return failure();
@@ -2817,12 +2857,23 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       // Regular direct invoke using callee name.
       calleeName = convertCalleeName(invokeInst);
     }
+    FailureOr<OperandBundles> bundles = convertOperandBundles(
+        loc, llvm::to_vector(invokeInst->operand_bundles()),
+        DiagnosticSeverity::Warning);
+    if (failed(bundles))
+      return failure();
+
     // Create the invoke operation. Normal destination block arguments will be
     // added later on to handle the case in which the operation result is
     // included in this list.
     auto invokeOp = InvokeOp::create(
         builder, loc, *funcTy, calleeName, *operands, directNormalDest,
         ValueRange(), lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
+    if (!bundles->tags.empty()) {
+      invokeOp.getOpBundleOperandsMutable().join().assign(bundles->operands);
+      invokeOp.setOpBundleSizesAttr(bundles->sizes);
+      invokeOp.setOpBundleTagsAttr(bundles->tags);
+    }
 
     if (failed(convertInvokeAttributes(invokeInst, invokeOp)))
       return failure();
@@ -2920,7 +2971,8 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
   if (succeeded(convertInstructionImpl(builder, inst, *this, iface)))
     return success();
 
-  return emitError(loc) << "unhandled instruction: " << renderValue(*inst);
+  return emitDiag(loc, severity, "unhandled instruction: ")
+         << renderValue(*inst);
 }
 
 LogicalResult ModuleImport::processInstruction(llvm::Instruction *inst) {

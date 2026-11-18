@@ -448,7 +448,7 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
     SmallVector<Value> mlirOperands;
     SmallVector<NamedAttribute> mlirAttrs;
     if (failed(moduleImport.convertIntrinsicArguments(
-        llvmOperands,
+        $_location, llvmOperands,
         llvmOpBundles,
         }] # !if(!gt(requiresOpBundles, 0), "true", "false") # [{,
         }] # immArgPositionsCpp # [{,
