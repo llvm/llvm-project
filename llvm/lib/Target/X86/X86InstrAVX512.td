@@ -5083,19 +5083,19 @@ multiclass avx512_packs_all_i32_i16<bits<8> opc, string OpcodeStr,
                                     SDNode OpNode> {
   let Predicates = [HasBWI] in
   defm NAME#Z : avx512_packs_rm<opc, OpcodeStr, OpNode, v16i32_info,
-                                 v32i16_info, SchedWriteShuffle.ZMM>,
+                                 v32i16_info, SchedWritePack.ZMM>,
                 avx512_packs_rmb<opc, OpcodeStr, OpNode, v16i32_info,
-                                 v32i16_info, SchedWriteShuffle.ZMM>, EVEX_V512;
+                                 v32i16_info, SchedWritePack.ZMM>, EVEX_V512;
   let Predicates = [HasBWI, HasVLX] in {
     defm NAME#Z256 : avx512_packs_rm<opc, OpcodeStr, OpNode, v8i32x_info,
-                                     v16i16x_info, SchedWriteShuffle.YMM>,
+                                     v16i16x_info, SchedWritePack.YMM>,
                      avx512_packs_rmb<opc, OpcodeStr, OpNode, v8i32x_info,
-                                      v16i16x_info, SchedWriteShuffle.YMM>,
+                                      v16i16x_info, SchedWritePack.YMM>,
                                       EVEX_V256;
     defm NAME#Z128 : avx512_packs_rm<opc, OpcodeStr, OpNode, v4i32x_info,
-                                     v8i16x_info, SchedWriteShuffle.XMM>,
+                                     v8i16x_info, SchedWritePack.XMM>,
                      avx512_packs_rmb<opc, OpcodeStr, OpNode, v4i32x_info,
-                                      v8i16x_info, SchedWriteShuffle.XMM>,
+                                      v8i16x_info, SchedWritePack.XMM>,
                                       EVEX_V128;
   }
 }
@@ -5103,13 +5103,13 @@ multiclass avx512_packs_all_i16_i8<bits<8> opc, string OpcodeStr,
                             SDNode OpNode> {
   let Predicates = [HasBWI] in
   defm NAME#Z : avx512_packs_rm<opc, OpcodeStr, OpNode, v32i16_info, v64i8_info,
-                                SchedWriteShuffle.ZMM>, EVEX_V512, WIG;
+                                SchedWritePack.ZMM>, EVEX_V512, WIG;
   let Predicates = [HasBWI, HasVLX] in {
     defm NAME#Z256 : avx512_packs_rm<opc, OpcodeStr, OpNode, v16i16x_info,
-                                     v32i8x_info, SchedWriteShuffle.YMM>,
+                                     v32i8x_info, SchedWritePack.YMM>,
                                      EVEX_V256, WIG;
     defm NAME#Z128 : avx512_packs_rm<opc, OpcodeStr, OpNode, v8i16x_info,
-                                     v16i8x_info, SchedWriteShuffle.XMM>,
+                                     v16i8x_info, SchedWritePack.XMM>,
                                      EVEX_V128, WIG;
   }
 }

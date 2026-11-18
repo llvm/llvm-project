@@ -24,14 +24,6 @@
 name:            foo
 alignment:       16
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: g8rc_and_g8rc_nox0 }
-  - { id: 1, class: gprc_and_gprc_nor0 }
-  - { id: 2, class: gprc_and_gprc_nor0 }
-  - { id: 3, class: crrc }
-  - { id: 4, class: gprc_and_gprc_nor0 }
-  - { id: 5, class: gprc }
-  - { id: 6, class: g8rc }
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
 frameInfo:

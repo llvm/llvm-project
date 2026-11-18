@@ -972,7 +972,7 @@ AnyValue Context::computePtrAdd(const Pointer &Ptr, const APInt &Offset,
     MO = checkProvenance(
         Ptr, [](const Provenance &) { return true; },
         /*HasSideEffect=*/false);
-    if (!MO || !MO->inBounds(NewAddr))
+    if (!MO || !MO->inBounds(Ptr.address()) || !MO->inBounds(NewAddr))
       return AnyValue::poison();
   }
 
@@ -1020,8 +1020,8 @@ AnyValue Context::computeScaledPtrAdd(const AnyValue &Ptr,
   return computePtrAdd(Ptr, ScaledOffset.asInteger(), Flags, AccumulatedOffset);
 }
 
-static AnyValue canonicalizeIndex(const AnyValue &Idx, unsigned IndexBitWidth,
-                                  GEPNoWrapFlags Flags) {
+AnyValue Context::canonicalizeIndex(const AnyValue &Idx, unsigned IndexBitWidth,
+                                    GEPNoWrapFlags Flags) {
   if (Idx.isPoison())
     return AnyValue::poison();
   auto &IdxInt = Idx.asInteger();
