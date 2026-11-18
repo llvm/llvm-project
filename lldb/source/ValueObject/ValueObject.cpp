@@ -3848,6 +3848,11 @@ bool ValueObject::CanProvideValue() {
   return (!type.IsValid()) || (0 != (type.GetTypeInfo() & eTypeHasValue));
 }
 
+bool ValueObject::HasNoStorage() {
+  std::optional<uint64_t> size = llvm::expectedToOptional(GetByteSize());
+  return size && *size == 0;
+}
+
 ValueObjectSP ValueObject::Persist() {
   if (!UpdateValueIfNeeded())
     return nullptr;
