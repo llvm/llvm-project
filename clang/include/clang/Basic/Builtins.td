@@ -1892,6 +1892,13 @@ def ElementwisePdep : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseMulh : Builtin {
+  let Spellings = ["__builtin_elementwise_mulh"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+
 def ReduceMax : Builtin {
   let Spellings = ["__builtin_reduce_max"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
