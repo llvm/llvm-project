@@ -18,16 +18,12 @@
 
 using namespace lldb_private;
 
-std::vector<std::pair<RegisterID, uint32_t>>
-lldb_private::GetRegisterStorageSizes(
-    llvm::ArrayRef<RegisterStorageField> fields) {
-  std::vector<std::pair<RegisterID, uint32_t>> sizes;
-  sizes.reserve(fields.size());
-
-  for (const auto &field : fields)
-    sizes.emplace_back(field.id, field.byte_size);
-
-  return sizes;
+RegisterLocation RegisterLocation::StoredAt(RegisterBankID bank,
+                                            uint64_t offset, uint32_t size) {
+  RegisterLocation location;
+  location.kind = Stored;
+  location.pieces.push_back({bank, offset, size});
+  return location;
 }
 
 llvm::Error RegisterLayout::AddBank(RegisterBankID id, uint64_t byte_size) {
@@ -46,6 +42,19 @@ llvm::Error RegisterLayout::Add(RegisterID id, RegisterLocation location) {
                                    "invalid or duplicate register location");
 
   m_description.reset();
+  return llvm::Error::success();
+}
+
+llvm::Error RegisterLayout::AddRegisterLocations(
+    const RegisterDescription &description,
+    llvm::function_ref<
+        std::optional<RegisterLocation>(const RegisterDescriptor &)>
+        get_location) {
+  for (const auto &reg : description.GetRegisters())
+    if (auto location = get_location(reg))
+      if (auto error = Add(reg.id, std::move(*location)))
+        return error;
+
   return llvm::Error::success();
 }
 

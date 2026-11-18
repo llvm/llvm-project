@@ -12,12 +12,15 @@ add_lldb_library(lldbPluginProcessElfCore PLUGIN
   RegisterContextELFCore_riscv64.cpp
   RegisterContextELFCore_loongarch64.cpp
   RegisterUtilities.cpp
+  RegisterLayoutOpenBSD_i386.cpp
+  RegisterLayoutOpenBSD_x86_64.cpp
 
   LINK_COMPONENTS
     BinaryFormat
     Support
   LINK_LIBS
     lldbCore
+    lldbRegister
     lldbTarget
     lldbPluginDynamicLoaderPosixDYLD
     lldbPluginObjectFilePlaceholder

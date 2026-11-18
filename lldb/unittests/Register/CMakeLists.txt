@@ -5,6 +5,16 @@ add_lldb_unittest(RegisterTests
   Descriptions/RegisterDescription_ppcTest.cpp
   Descriptions/RegisterDescription_riscvTest.cpp
   Descriptions/RegisterDescription_x86Test.cpp
+  Layouts/RegisterLayoutDarwinTest.cpp
+  Layouts/RegisterLayoutFreeBSD_arm32Test.cpp
+  Layouts/RegisterLayoutLinux_s390xTest.cpp
+  Layouts/RegisterLayoutWindows_x86Test.cpp
+  Layouts/RegisterLayout_arm64Test.cpp
+  Layouts/RegisterLayout_loongarch64Test.cpp
+  Layouts/RegisterLayout_ppcTest.cpp
+  Layouts/RegisterLayout_riscv64Test.cpp
+  Layouts/RegisterLayout_x86TagWordTest.cpp
+  Layouts/RegisterLayout_x86Test.cpp
   RegisterContextTest.cpp
   RegisterLayoutBankTest.cpp
   RegisterLayoutTest.cpp

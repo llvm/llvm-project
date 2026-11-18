@@ -16,24 +16,14 @@
 
 #include "lldb/Register/RegisterDescription.h"
 #include "lldb/Register/RegisterValue.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include <optional>
 #include <utility>
 
 namespace lldb_private {
 
 /// A bank identity scoped to one layout, not a register number or byte offset.
 using RegisterBankID = uint32_t;
-
-/// A physical field keyed by a logical register ID, independent of table order.
-struct RegisterStorageField {
-  RegisterID id = LLDB_INVALID_REGNUM;
-  uint32_t byte_size;
-  uint32_t byte_offset;
-};
-
-/// Extract requested value widths from physical field definitions. Description
-/// factories consume these widths before the layout is bound to metadata.
-std::vector<std::pair<RegisterID, uint32_t>>
-GetRegisterStorageSizes(llvm::ArrayRef<RegisterStorageField> fields);
 
 /// The declared byte extent of one independently acquired storage bank.
 struct RegisterBank {
@@ -82,6 +72,10 @@ struct RegisterLocation {
   std::vector<RegisterPiece> pieces;
   std::vector<uint8_t> constant;
 
+  /// Map the complete value to a single contiguous range in a bank.
+  static RegisterLocation StoredAt(RegisterBankID bank, uint64_t offset,
+                                   uint32_t size);
+
   /// Unmapped value bytes are zero (for example inactive vector lanes).
   bool zero_fill = false;
 
@@ -110,6 +104,14 @@ public:
   /// Add a draft location, rejecting invalid or duplicate logical IDs.
   /// Validation against the description is deferred until finalization.
   llvm::Error Add(RegisterID id, RegisterLocation location);
+
+  /// Add explicit mappings for the selected logical registers. A missing
+  /// location leaves derivation of aliases to Finalize().
+  llvm::Error
+  AddRegisterLocations(const RegisterDescription &description,
+                       llvm::function_ref<std::optional<RegisterLocation>(
+                           const RegisterDescriptor &)>
+                           get_location);
 
   /// Return the stored location for an ID, or nullptr if it is unmapped.
   const RegisterLocation *Find(RegisterID id) const;

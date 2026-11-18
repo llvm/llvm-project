@@ -26,6 +26,26 @@ add_lldb_library(lldbRegister NO_PLUGIN_DEPENDENCIES
   FreeBSD/RegisterInfoFreeBSD_i386.cpp
   FreeBSD/RegisterInfoFreeBSD_powerpc.cpp
   FreeBSD/RegisterInfoFreeBSD_x86_64.cpp
+  Layouts/Common/RegisterLayout_x86.cpp
+  Layouts/Darwin/RegisterLayoutDarwin_arm32.cpp
+  Layouts/Darwin/RegisterLayoutDarwin_arm64.cpp
+  Layouts/Darwin/RegisterLayoutDarwin_riscv32.cpp
+  Layouts/Darwin/RegisterLayoutDarwin_x86_64.cpp
+  Layouts/FreeBSD/RegisterLayoutFreeBSD_arm32.cpp
+  Layouts/FreeBSD/RegisterLayoutFreeBSD_arm64.cpp
+  Layouts/FreeBSD/RegisterLayoutFreeBSD_ppc.cpp
+  Layouts/FreeBSD/RegisterLayoutFreeBSD_x86_32.cpp
+  Layouts/FreeBSD/RegisterLayoutFreeBSD_x86_64.cpp
+  Layouts/Linux/RegisterLayoutLinux_arm32.cpp
+  Layouts/Linux/RegisterLayoutLinux_arm64.cpp
+  Layouts/Linux/RegisterLayoutLinux_loongarch64.cpp
+  Layouts/Linux/RegisterLayoutLinux_ppc64le.cpp
+  Layouts/Linux/RegisterLayoutLinux_riscv64.cpp
+  Layouts/Linux/RegisterLayoutLinux_s390x.cpp
+  Layouts/Linux/RegisterLayoutLinux_x86_32.cpp
+  Layouts/Linux/RegisterLayoutLinux_x86_64.cpp
+  Layouts/NetBSD/RegisterLayoutNetBSD_x86_32.cpp
+  Layouts/NetBSD/RegisterLayoutNetBSD_x86_64.cpp
   Linux/RegisterInfoLinux_i386.cpp
   Linux/RegisterInfoLinux_s390x.cpp
   Linux/RegisterInfoLinux_x86_64.cpp

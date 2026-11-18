@@ -442,4 +442,15 @@ enum : uint32_t {
 
 } // namespace lldb_private::registers::x86_64::id::with_base
 
+namespace lldb_private::registers::x86_64::darwin {
+
+// Register IDs for Mach thread-state fields outside the CPU catalog.
+enum : uint32_t {
+  exc_trapno = id::gs_base + 1,
+  exc_err,
+  exc_faultvaddr,
+};
+
+} // namespace lldb_private::registers::x86_64::darwin
+
 #endif // LLDB_REGISTER_ARCH_LLDB_X86_64_REGISTER_ENUMS_H

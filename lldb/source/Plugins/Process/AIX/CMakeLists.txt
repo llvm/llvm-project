@@ -3,11 +3,13 @@ add_lldb_library(lldbPluginProcessAIX
   NativeThreadAIX.cpp
   NativeRegisterContextAIX.cpp
   NativeRegisterContextAIX_ppc64.cpp
+  RegisterLayoutAIX_ppc64.cpp
 
   LINK_COMPONENTS
     Support
   LINK_LIBS
     lldbCore
+    lldbRegister
     lldbHost
     lldbSymbol
     lldbTarget

@@ -22,4 +22,16 @@ namespace id = lldb_private::registers::riscv::id;
 
 } // namespace lldb_private::registers::riscv32
 
+namespace lldb_private::registers::riscv32::darwin {
+
+// Register IDs for Mach thread-state fields outside the CPU catalog.
+enum : uint32_t {
+  exc_exception = id::csr_last + 1,
+  exc_fsr,
+  exc_far,
+  csr_bank,
+};
+
+} // namespace lldb_private::registers::riscv32::darwin
+
 #endif
