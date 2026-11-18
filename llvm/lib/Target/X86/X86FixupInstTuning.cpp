@@ -418,11 +418,9 @@ bool X86FixupInstTuningImpl::processInstruction(
       MI.removeOperand(1);
       // The destination is now tied to the sources.
       MI.getOperand(0).setIsRenamable(false);
-      MachineOperand Src = MachineOperand::CreateReg(
-          Reg, /*isDef=*/false, /*isImp=*/false, /*isKill=*/false,
-          /*isDead=*/false, /*isUndef=*/true);
-      MI.addOperand(Src);
-      MI.addOperand(Src);
+      MachineInstrBuilder(MF, MI)
+          .addReg(Reg, RegState::Undef)
+          .addReg(Reg, RegState::Undef);
       MI.addRegisterDead(X86::EFLAGS, TRI, /*AddIfNotFound=*/true);
     }
     LLVM_DEBUG(dbgs() << "     With: " << MI);
