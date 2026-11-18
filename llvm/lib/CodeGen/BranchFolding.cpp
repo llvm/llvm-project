@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/MBFIWrapper.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -77,6 +78,11 @@ STATISTIC(NumTailCalls,  "Number of tail calls optimized");
 static cl::opt<cl::boolOrDefault>
     FlagEnableTailMerge("enable-tail-merge",
                         cl::init(cl::boolOrDefault::BOU_UNSET), cl::Hidden);
+
+static cl::opt<bool> FlagFallthroughFolding(
+    "enable-fallthrough-folding", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Fold fallthrough blocks into conditional tailcalls when profitable"));
 
 // Override the common-code hoisting sub-phase of BranchFolding. Unset by
 // default, in which case the value configured by the caller is used.
@@ -1640,32 +1646,66 @@ ReoptimizeBlock:
     MachineInstr &TailCall = *MBB->getFirstNonDebugInstr();
     if (TII->isUnconditionalTailCall(TailCall)) {
       SmallVector<MachineBasicBlock *> PredsChanged;
-      for (auto &Pred : MBB->predecessors()) {
+      for (auto *Pred : MBB->predecessors()) {
+        bool PredHasHotSuccessor =
+            llvm::any_of(Pred->successors(), [&](auto *PredSucc) {
+              return MBPI.isEdgeHot(Pred, PredSucc);
+            });
+
         MachineBasicBlock *PredTBB = nullptr, *PredFBB = nullptr;
         SmallVector<MachineOperand, 4> PredCond;
         bool PredAnalyzable =
             !TII->analyzeBranch(*Pred, PredTBB, PredFBB, PredCond, true);
 
-        // Only eliminate if MBB == TBB (Taken Basic Block)
-        if (PredAnalyzable && !PredCond.empty() && PredTBB == MBB &&
-            PredTBB != PredFBB) {
-          // The predecessor has a conditional branch to this block which
-          // consists of only a tail call. Try to fold the tail call into the
-          // conditional branch.
+        bool IsEdgeCold = !MBPI.isEdgeHot(Pred, MBB);
+
+        // Disabled by default
+        bool CanFoldFallThrough =
+            FlagFallthroughFolding && PredHasHotSuccessor && IsEdgeCold &&
+            (MBB == PredFBB ||
+             (PredFBB == nullptr && Pred->getFallThrough() == MBB));
+
+        bool CanFoldTakenBlock =
+            (MBB == PredTBB && (!PredHasHotSuccessor || IsEdgeCold));
+
+        // When we have profile information we want to fold the
+        // fallthrough if it's cold.
+        // Alternatively if the taken block is cold we want to fold that.
+        // Folding a block puts it behind a conditional branch which isn't
+        // desirable if it's hot.
+        //
+        // When profile information isn't available we want to fold the
+        // taken block if it's possible and we never want to fold the
+        // fallthrough as we don't know if that is desirable.
+        if (PredAnalyzable && !PredCond.empty() && PredTBB != PredFBB &&
+            (CanFoldTakenBlock || CanFoldFallThrough)) {
+          if (CanFoldFallThrough) {
+            SmallVector<MachineOperand, 4> ReversedCond(PredCond);
+            DebugLoc Dl = MBB->findBranchDebugLoc();
+
+            // Returns true on failure. Doesn't mutate the underlying IR.
+            if (TII->reverseBranchCondition(ReversedCond))
+              continue;
+
+            if (!TII->canMakeTailCallConditional(ReversedCond, TailCall))
+              continue;
+
+            PredCond = ReversedCond;
+
+            TII->removeBranch(*Pred);
+            TII->insertBranch(*Pred, MBB, PredTBB, ReversedCond, Dl);
+          }
+
           if (TII->canMakeTailCallConditional(PredCond, TailCall)) {
-            // TODO: It would be nice if analyzeBranch() could provide a pointer
-            // to the branch instruction so replaceBranchWithTailCall() doesn't
-            // have to search for it.
+            // TODO: It would be nice if analyzeBranch() could provide a
+            // pointer to the branch instruction so
+            // replaceBranchWithTailCall() doesn't have to search for it.
             TII->replaceBranchWithTailCall(*Pred, PredCond, TailCall);
             PredsChanged.push_back(Pred);
           }
         }
-        // If the predecessor is falling through to this block, we could reverse
-        // the branch condition and fold the tail call into that. However, after
-        // that we might have to re-arrange the CFG to fall through to the other
-        // block and there is a high risk of regressing code size rather than
-        // improving it.
       }
+
       if (!PredsChanged.empty()) {
         NumTailCalls += PredsChanged.size();
         for (auto &Pred : PredsChanged)
