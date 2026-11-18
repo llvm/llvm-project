@@ -2713,19 +2713,18 @@ const RegisterBank *AMDGPUInstructionSelector::getArtifactRegBank(
 
 bool AMDGPUInstructionSelector::selectI16SignExtend(MachineInstr &I,
                                                     Register SrcReg) const {
+  assert(getArtifactRegBank(SrcReg, *MRI, TRI)->getID() ==
+             AMDGPU::VGPRRegBankID &&
+         "expected a VGPR source");
   bool RealTrue16 = STI.useRealTrue16Insts();
-  bool IsVGPR =
-      getArtifactRegBank(SrcReg, *MRI, TRI)->getID() == AMDGPU::VGPRRegBankID;
   unsigned SubReg = AMDGPU::NoSubRegister;
   bool UseVGPR16 =
-      RealTrue16 && IsVGPR && MRI->getType(SrcReg).getSizeInBits() == 16 &&
+      RealTrue16 && MRI->getType(SrcReg).getSizeInBits() == 16 &&
       RBI.constrainGenericRegister(SrcReg, AMDGPU::VGPR_16RegClass, *MRI);
   if (!UseVGPR16) {
-    const TargetRegisterClass &SourceRC =
-        IsVGPR ? AMDGPU::VGPR_32RegClass : AMDGPU::SReg_32RegClass;
-    if (!RBI.constrainGenericRegister(SrcReg, SourceRC, *MRI))
+    if (!RBI.constrainGenericRegister(SrcReg, AMDGPU::VGPR_32RegClass, *MRI))
       return false;
-    if (RealTrue16 && IsVGPR)
+    if (RealTrue16)
       SubReg = AMDGPU::lo16;
   }
 
@@ -2806,15 +2805,11 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
     }
 
     const unsigned BFE = Signed ? AMDGPU::V_BFE_I32_e64 : AMDGPU::V_BFE_U32_e64;
-    Register BFESource = SrcReg;
-    if (Signed && SrcTy.getSizeInBits() == 16 && STI.useRealTrue16Insts() &&
-        RBI.constrainGenericRegister(SrcReg, AMDGPU::VGPR_16RegClass, *MRI))
-      BFESource =
-          TII.buildVGPR32FromLo16(MBB, I, DL, SrcReg, AMDGPU::NoSubRegister);
-    MachineInstr *ExtI = BuildMI(MBB, I, DL, TII.get(BFE), DstReg)
-                             .addReg(BFESource)
-                             .addImm(0)        // Offset
-                             .addImm(SrcSize); // Width
+    MachineInstr *ExtI =
+      BuildMI(MBB, I, DL, TII.get(BFE), DstReg)
+      .addReg(SrcReg)
+      .addImm(0) // Offset
+      .addImm(SrcSize); // Width
     I.eraseFromParent();
     constrainSelectedInstRegOperands(*ExtI, TII, TRI, RBI);
     return true;
