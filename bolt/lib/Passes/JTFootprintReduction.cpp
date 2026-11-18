@@ -119,7 +119,7 @@ void JTFootprintReduction::checkOpportunities(BinaryFunction &Function,
     TotalJTScore += CurScore;
     if (!BlacklistedJTs.count(JT)) {
       OptimizedScore += CurScore;
-      if (JT->EntrySize == 8)
+      if (JT->getEntrySize() == 8)
         BytesSaved += JT->getSize() >> 1;
     }
   }
@@ -161,7 +161,7 @@ bool JTFootprintReduction::tryOptimizeNonPIC(
                            MCOperand::createReg(Index), Offset, RegOp);
   BC.MIB->setJumpTable(NewFrag.back(), JTAddr, Index);
 
-  JumpTable->OutputEntrySize = 4;
+  JumpTable->setOutputEntrySize(4);
 
   BB.replaceInstruction(Inst, NewFrag.begin(), NewFrag.end());
   return true;
@@ -200,7 +200,7 @@ bool JTFootprintReduction::tryOptimizePIC(BinaryContext &BC,
                            MCOperand::createReg(Index), JumpTableRef, RegOp);
   BC.MIB->setJumpTable(NewFrag.back(), JTAddr, Index);
 
-  JumpTable->OutputEntrySize = 4;
+  JumpTable->setOutputEntrySize(4);
   // DePICify
   JumpTable->Type = JumpTable::JTT_NORMAL;
 
