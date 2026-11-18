@@ -10,7 +10,7 @@ define void @foo(ptr %f) {
 }
 
 ; CHECK: call void %f(), !prof !1
-; CHECK !1 = !{!"VP", i32 0, i64 10, i64 19797, i64 2, i64 18770, i64 3}
+; CHECK: !1 = !{!"VP", i32 0, i64 10, i64 19797, i64 2, i64 18770, i64 3}
 
 ;--- verify-ok.ll
 define void @foo(ptr %f) !prof !0 {
