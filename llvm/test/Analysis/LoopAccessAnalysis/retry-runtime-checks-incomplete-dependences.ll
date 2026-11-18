@@ -13,26 +13,15 @@ define void @independent_pair_with_unknown_deps(ptr %a, i64 %offset, i64 %n) {
 ; DEFAULT-NEXT:      Check 0:
 ; DEFAULT-NEXT:        Comparing group GRP0:
 ; DEFAULT-NEXT:          %gep.a.0 = getelementptr inbounds i32, ptr %a, i64 %iv.2
+; DEFAULT-NEXT:          %gep.a.1 = getelementptr inbounds i32, ptr %gep.a.0, i64 1
 ; DEFAULT-NEXT:        Against group GRP1:
-; DEFAULT-NEXT:          %gep.a.1 = getelementptr inbounds i32, ptr %gep.a.0, i64 1
-; DEFAULT-NEXT:      Check 1:
-; DEFAULT-NEXT:        Comparing group GRP0:
-; DEFAULT-NEXT:          %gep.a.0 = getelementptr inbounds i32, ptr %a, i64 %iv.2
-; DEFAULT-NEXT:        Against group GRP2:
-; DEFAULT-NEXT:          %gep.a.off = getelementptr inbounds i32, ptr %a, i64 %iv.2.off
-; DEFAULT-NEXT:      Check 2:
-; DEFAULT-NEXT:        Comparing group GRP1:
-; DEFAULT-NEXT:          %gep.a.1 = getelementptr inbounds i32, ptr %gep.a.0, i64 1
-; DEFAULT-NEXT:        Against group GRP2:
 ; DEFAULT-NEXT:          %gep.a.off = getelementptr inbounds i32, ptr %a, i64 %iv.2.off
 ; DEFAULT-NEXT:      Grouped accesses:
 ; DEFAULT-NEXT:        Group GRP0:
-; DEFAULT-NEXT:          (Low: %a High: (-4 + (8 * %n) + %a))
+; DEFAULT-NEXT:          (Low: %a High: ((8 * %n) + %a))
 ; DEFAULT-NEXT:            Member: {%a,+,8}<nuw><%loop>
-; DEFAULT-NEXT:        Group GRP1:
-; DEFAULT-NEXT:          (Low: (4 + %a)<nuw> High: ((8 * %n) + %a))
 ; DEFAULT-NEXT:            Member: {(4 + %a)<nuw>,+,8}<nuw><%loop>
-; DEFAULT-NEXT:        Group GRP2:
+; DEFAULT-NEXT:        Group GRP1:
 ; DEFAULT-NEXT:          (Low: ((4 * %offset) + %a) High: (-4 + (4 * %offset) + (8 * %n) + %a))
 ; DEFAULT-NEXT:            Member: {((4 * %offset) + %a),+,8}<%loop>
 ; DEFAULT-EMPTY:
