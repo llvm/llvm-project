@@ -2039,7 +2039,8 @@ def UnsafeBufferUsageInStaticSizedArray : DiagGroup<"unsafe-buffer-usage-in-stat
 def UnsafeBufferUsageInFormatAttrCall : DiagGroup<"unsafe-buffer-usage-in-format-attr-call">;
 def UnsafeBufferUsageInStringView : DiagGroup<"unsafe-buffer-usage-in-string-view">;
 def UnsafeBufferUsageMainArgv : DiagGroup<"unsafe-buffer-usage-main-argv">;
-def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall, UnsafeBufferUsageInUniquePtrArrayAccess, UnsafeBufferUsageInStaticSizedArray, UnsafeBufferUsageInFormatAttrCall, UnsafeBufferUsageInStringView, UnsafeBufferUsageMainArgv]>;
+def UnsafeBufferUsageInDataCall : DiagGroup<"unsafe-buffer-usage-in-data-call">;
+def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall, UnsafeBufferUsageInUniquePtrArrayAccess, UnsafeBufferUsageInStaticSizedArray, UnsafeBufferUsageInFormatAttrCall, UnsafeBufferUsageInStringView, UnsafeBufferUsageMainArgv, UnsafeBufferUsageInDataCall]>;
 
 // Warnings and notes InstallAPI verification.
 def InstallAPIViolation : DiagGroup<"installapi-violation">;
