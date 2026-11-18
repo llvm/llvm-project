@@ -665,6 +665,30 @@ public:
   }
 };
 
+class SwitchConversionPattern : public SPIRVToLLVMConversion<spirv::SwitchOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::SwitchOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::SwitchOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Literals have the selector type, which may be signed or unsigned. Retype
+    // them to the signless converted selector type.
+    DenseIntElementsAttr caseValues;
+    if (std::optional<DenseIntElementsAttr> literals = op.getLiterals())
+      caseValues = cast<DenseIntElementsAttr>(
+          literals->bitcast(adaptor.getSelector().getType()));
+    if (!caseValues && !op.getTargets().empty())
+      return rewriter.notifyMatchFailure(op, "targets without literals");
+
+    rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(
+        op, adaptor.getSelector(), op.getDefaultTarget(),
+        adaptor.getDefaultOperands(), caseValues, op.getTargets(),
+        adaptor.getTargetOperands());
+    return success();
+  }
+};
+
 /// Converts `spirv.getCompositeExtract` to `llvm.extractvalue` if the container
 /// type is an aggregate type (struct or array). Otherwise, converts to
 /// `llvm.extractelement` that operates on vectors.
@@ -725,6 +749,19 @@ public:
     rewriter.replaceOpWithNewOp<LLVM::InsertValueOp>(
         op, adaptor.getComposite(), adaptor.getObject(),
         LLVM::convertArrayToIndices(op.getIndices()));
+    return success();
+  }
+};
+
+/// Converts `spirv.CopyObject` by forwarding its operand.
+class CopyObjectPattern : public SPIRVToLLVMConversion<spirv::CopyObjectOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::CopyObjectOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::CopyObjectOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOp(op, adaptor.getOperand());
     return success();
   }
 };
@@ -1479,11 +1516,10 @@ public:
   }
 };
 
-static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
-                                              StringRef name,
-                                              ArrayRef<Type> paramTypes,
-                                              Type resultType,
-                                              bool convergent = true) {
+static LLVM::LLVMFuncOp
+lookupOrCreateSPIRVFn(Operation *symbolTable, StringRef name,
+                      ArrayRef<Type> paramTypes, Type resultType,
+                      bool convergent = true, bool isVarArg = false) {
   auto func = dyn_cast_or_null<LLVM::LLVMFuncOp>(
       SymbolTable::lookupSymbolIn(symbolTable, name));
   if (func)
@@ -1492,7 +1528,7 @@ static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
   OpBuilder b(symbolTable->getRegion(0));
   func = LLVM::LLVMFuncOp::create(
       b, symbolTable->getLoc(), name,
-      LLVM::LLVMFunctionType::get(resultType, paramTypes));
+      LLVM::LLVMFunctionType::get(resultType, paramTypes, isVarArg));
   func.setCConv(LLVM::cconv::CConv::SPIR_FUNC);
   func.setConvergent(convergent);
   func.setNoUnwind(true);
@@ -2125,6 +2161,34 @@ public:
   }
 };
 
+/// Converts `spirv.CL.printf` to a call to the variadic OpenCL `printf`.
+class CLPrintfPattern : public SPIRVToLLVMConversion<spirv::CLPrintfOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::CLPrintfOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::CLPrintfOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Operation *symbolTable = op->getParentWithTrait<OpTrait::SymbolTable>();
+    Type formatType = adaptor.getFormat().getType();
+    LLVM::LLVMFuncOp func =
+        lookupOrCreateSPIRVFn(symbolTable, "printf", {formatType}, dstType,
+                              /*convergent=*/false, /*isVarArg=*/true);
+    // The module may already declare printf with another signature. Calling
+    // it would produce an invalid llvm.call.
+    if (func.getFunctionType() !=
+        LLVM::LLVMFunctionType::get(dstType, formatType, /*isVarArg=*/true))
+      return rewriter.notifyMatchFailure(op, "printf signature mismatch");
+    rewriter.replaceOp(op, createSPIRVBuiltinCall(op.getLoc(), rewriter, func,
+                                                  adaptor.getOperands()));
+    return success();
+  }
+};
+
 // Converts spirv.GL.Radians (scale = pi/180) and spirv.GL.Degrees
 // (scale = 180/pi) by multiplying the operand by a compile-time constant.
 template <typename SPIRVOp>
@@ -2540,8 +2604,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
 
       // Control Flow ops
       BranchConversionPattern, BranchConditionalConversionPattern,
-      FunctionCallPattern, LoopPattern, SelectionPattern,
-      ErasePattern<spirv::MergeOp>,
+      SwitchConversionPattern, FunctionCallPattern, LoopPattern,
+      SelectionPattern, ErasePattern<spirv::MergeOp>,
 
       // Entry points and execution mode are handled separately.
       ErasePattern<spirv::EntryPointOp>, ExecutionModePattern,
@@ -2630,6 +2694,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       ClampPattern<spirv::CLUClampOp, LLVM::UMinOp, LLVM::UMaxOp>,
       CountZerosPattern<spirv::CLClzOp, LLVM::CountLeadingZerosOp>,
       CountZerosPattern<spirv::CLCtzOp, LLVM::CountTrailingZerosOp>,
+      CLPrintfPattern,
 
       // Logical ops
       DirectConversionPattern<spirv::LogicalAndOp, LLVM::AndOp>,
@@ -2651,7 +2716,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       LoadStorePattern<spirv::StoreOp>, VariablePattern,
 
       // Miscellaneous ops
-      CompositeExtractPattern, CompositeInsertPattern,
+      CompositeExtractPattern, CompositeInsertPattern, CopyObjectPattern,
       DirectConversionPattern<spirv::SelectOp, LLVM::SelectOp>,
       DirectConversionPattern<spirv::UndefOp, LLVM::UndefOp>,
       VectorShufflePattern,

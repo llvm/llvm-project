@@ -782,6 +782,8 @@ libc_math_function(
     name = "ddivf128",
     additional_deps = [
         "//libc/src/__support/math:ddivf128",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:float128",
     ],
 )
 
@@ -794,7 +796,7 @@ libc_math_function(
     name = "dfmaf128",
     additional_deps = [
         "//libc/src/__support/math:dfmaf128",
-        "//libc:llvm_libc_types_float128",
+        "//libc/include:llvm_libc_types_float128",
     ],
 )
 
@@ -872,7 +874,7 @@ libc_math_function(
     name = "expf",
     additional_deps = [
         "//libc/src/__support/math:expf",
-        "//libc:__support_math_static_rounding_expf",
+        "//libc/shared:math_static_rounding_expf",
     ],
 )
 
@@ -901,7 +903,7 @@ libc_math_function(
 libc_math_function(
     name = "exp10f",
     additional_deps = [
-        "//libc:__support_math_static_rounding_exp10f",
+        "//libc/shared:math_static_rounding_exp10f",
         "//libc/src/__support/math:exp10f",
     ],
 )
@@ -934,7 +936,7 @@ libc_math_function(
     name = "exp2f",
     additional_deps = [
         "//libc/src/__support/math:exp2f",
-        "//libc:__support_math_static_rounding_exp2f",
+        "//libc/shared:math_static_rounding_exp2f",
     ],
 )
 

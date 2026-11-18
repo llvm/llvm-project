@@ -24,6 +24,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "llvm/ABI/FunctionInfo.h"
@@ -117,7 +118,7 @@ public:
 
 protected:
   CIRABIClassifierCommon(const mlir::DataLayout &dl, mlir::ModuleOp modOp)
-      : dl(dl), modOp(modOp), typeMapper(dl) {}
+      : dl(dl), modOp(modOp), cirDataLayout(modOp), typeMapper(dl) {}
 
   /// The library classifier for a function whose recorded target features
   /// may refine the ABI rules.
@@ -132,6 +133,7 @@ protected:
 
   const mlir::DataLayout &dl;
   mlir::ModuleOp modOp;
+  cir::CIRDataLayout cirDataLayout;
   mlir::abi::ABITypeMapper typeMapper;
 
 private:
