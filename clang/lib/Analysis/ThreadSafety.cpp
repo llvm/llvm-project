@@ -177,7 +177,7 @@ class LockableFactEntry;
 ///
 /// Branches are resolved in getEdgeLockset(). A resolved try fact stays
 /// beside the fact it resolved to, so later branches on the same result
-/// leave it as it is and the join
+/// re-resolve it (an edge contradicting it is infeasible) and the join
 /// demotion above can identify the hold its call proved. A proof one-sided
 /// at a join is dropped: the merged hold is not determined by that call.
 ///
@@ -286,7 +286,7 @@ public:
 ///                  proved is live: one level of the definite fact comes from
 ///                  branching on this call.
 ///   ProvedNotHeld  The result is falsy on every path here: the call acquired
-///                  nothing.
+///                  nothing, and its branch's success edge is infeasible.
 ///   Released       The result is truthy on some path here, but the hold it
 ///                  proved was released since: a branch on the stale result
 ///                  must not resurrect it.
@@ -327,6 +327,16 @@ private:
   /// held, and is diagnosed like any conditional try fact.
   bool MayBeReleased : 1;
 
+  /// For a Released try fact: the call's stored result is truthy on every
+  /// path here. The last release of a hold the call proved makes such a
+  /// record, and a join keeps the mark only where both sides have it -- one
+  /// that met the call's failure, or a side that knows nothing of the call,
+  /// describes a result that may be falsy, as does the release of a merely
+  /// possible hold. Only a marked record may be re-proved by a blocking
+  /// re-acquisition (ThreadSafetyAnalyzer::addLock()): re-proving claims the
+  /// result truthy, which rules out the edges where it is not.
+  bool ResultTruthy : 1;
+
   /// For a Released try fact, or a Conditional one marked MayBeReleased: where
   /// the hold was released (the note of a later unmatched unlock).
   SourceLocation ReleaseLoc;
@@ -334,7 +344,8 @@ private:
   TryFactEntry(const CapabilityExpr &CE, LockKind LK, SourceLocation Loc,
                SourceKind Src, const Expr *Origin)
       : FactEntry(TryFact, CE, LK, Loc, Src), Origin(Origin),
-        St(State::Conditional), ArmSplit(false), MayBeReleased(false) {
+        St(State::Conditional), ArmSplit(false), MayBeReleased(false),
+        ResultTruthy(false) {
     assert(Origin && "a try fact speaks about a call");
   }
 
@@ -359,6 +370,7 @@ public:
   bool released() const { return St == State::Released; }
   bool armSplit() const { return ArmSplit; }
   bool mayBeReleased() const { return MayBeReleased; }
+  bool resultTruthy() const { return ResultTruthy; }
   SourceLocation releaseLoc() const { return ReleaseLoc; }
 
   /// This try fact in state \p S, without marks: a ProvedNotHeld try fact's
@@ -367,9 +379,13 @@ public:
   const TryFactEntry *withState(FactManager &FactMan, State S) const;
   /// This ProvedNotHeld try fact with its `?:` split mark set.
   const TryFactEntry *withArmSplit(FactManager &FactMan) const;
-  /// This try fact released by a release at \p Loc.
+  /// This try fact released by a release at \p Loc. A ProvedHeld try fact's
+  /// record keeps its result truthy (see \c ResultTruthy).
   const TryFactEntry *asReleased(FactManager &FactMan,
                                  SourceLocation Loc) const;
+  /// This try fact without its ResultTruthy mark: the fact itself if it has
+  /// none.
+  const TryFactEntry *withResultUnknown(FactManager &FactMan) const;
   /// This Conditional try fact with its MayBeReleased mark set, the
   /// release at \p Loc.
   const TryFactEntry *asMayBeReleased(FactManager &FactMan,
@@ -544,6 +560,7 @@ inline const TryFactEntry *TryFactEntry::withState(FactManager &FactMan,
   NewFact->St = S;
   NewFact->ArmSplit = false;
   NewFact->MayBeReleased = false;
+  NewFact->ResultTruthy = false;
   return NewFact;
 }
 
@@ -562,7 +579,17 @@ const TryFactEntry *TryFactEntry::asReleased(FactManager &FactMan,
   NewFact->St = State::Released;
   NewFact->ArmSplit = false;
   NewFact->MayBeReleased = false;
+  NewFact->ResultTruthy = provedHeld();
   NewFact->ReleaseLoc = Loc;
+  return NewFact;
+}
+
+const TryFactEntry *
+TryFactEntry::withResultUnknown(FactManager &FactMan) const {
+  if (!ResultTruthy)
+    return this;
+  auto *NewFact = FactMan.createFact<TryFactEntry>(*this);
+  NewFact->ResultTruthy = false;
   return NewFact;
 }
 
@@ -835,6 +862,20 @@ public:
       const auto *W = dyn_cast<TryFactEntry>(&FM[ID]);
       if (W && W->matches(CapE) && P(*W))
         ID = FM.newFact(W->asReleased(FM, Loc));
+    }
+  }
+
+  /// Turn every Released try fact of \p CapE in \p Kind whose result is known
+  /// truthy (TryFactEntry::ResultTruthy) ProvedHeld again: the capability is
+  /// re-acquired, of that kind, on paths where the call's stored result is
+  /// truthy (ThreadSafetyAnalyzer::addLock()).
+  void reproveTryFacts(FactManager &FM, const CapabilityExpr &CapE,
+                       LockKind Kind) {
+    for (FactID &ID : FactIDs) {
+      const auto *W = dyn_cast<TryFactEntry>(&FM[ID]);
+      if (W && W->matches(CapE) && W->released() && W->resultTruthy() &&
+          W->kind() == Kind)
+        ID = FM.newFact(W->withState(FM, TryFactEntry::State::ProvedHeld));
     }
   }
 
@@ -3562,10 +3603,18 @@ void ThreadSafetyAnalyzer::addLock(FactSet &FSet, const FactEntry *Entry,
 
   checkAcquiredCapability(FSet, *Entry, ReqAttr);
 
-  // A stale result survives the re-acquisition, of either kind: it still
-  // records that the hold its call proved is gone. Erased, it would leave a
-  // merge with the call's conditional try fact on another path claiming the
-  // hold back on this one.
+  // The capability is acquired here, so a stale result whose call's result
+  // is known truthy (TryFactEntry::ResultTruthy) describes a hold again: of
+  // the same kind, it is re-proved -- the next last release makes it stale
+  // again -- so a branch on it resolves the hold this acquisition took;
+  // kept stale, it would make a release inside a loop that re-acquires
+  // look, at the loop's exit, like a release the loop left standing
+  // (injectLoopReleasedTryFacts()). Any other stale result stays as it is:
+  // erased, it would leave a merge with the call's conditional try fact on
+  // another path claiming the hold back on this one. An assert claims a
+  // hold rather than taking one, and leaves the record alone.
+  if (!Entry->asserted())
+    FSet.reproveTryFacts(FactMan, *Entry, Entry->kind());
 
   if (const FactEntry *Cp = FSet.findDefinite(FactMan, *Entry)) {
     // Held already: reacquire reentrantly or diagnose it.
@@ -5147,8 +5196,11 @@ ThreadSafetyAnalyzer::resolveTrylockEdge(const CFGBlock *PredBlock,
 /// as the ExitSet parameter) plus any trylocks, which are conditionally held.
 ///
 /// Returns true if the edge is infeasible: the branch decides a value the
-/// edge cannot have (a switch label the condition can never match). The
-/// caller skips such edges at joins, like unreachable predecessors.
+/// edge cannot have (a switch label the condition can never match), or a
+/// resolved try fact of the branched-on try-acquire says what its result is
+/// on every path into PredBlock, so the edge implying the opposite cannot be
+/// taken. The caller skips such edges at joins, like unreachable
+/// predecessors.
 bool ThreadSafetyAnalyzer::getEdgeLockset(FactSet &Result,
                                           const FactSet &ExitSet,
                                           const CFGBlock *PredBlock,
@@ -5235,22 +5287,62 @@ bool ThreadSafetyAnalyzer::getEdgeLockset(FactSet &Result,
   // capability (e.g. through a pointer reassigned since the call).
   //
   // A try fact already resolved by an earlier branch on the same result
-  // (ProvedHeld or ProvedNotHeld) is kept unchanged on both edges, with its
-  // definite fact: re-resolving is not a new acquisition, so the hold keeps
+  // says what the call's result is on every path into PredBlock: an edge
+  // implying the opposite result cannot be taken, so the caller skips it
+  // at joins like an unreachable predecessor (but still analyzes a block
+  // this leaves without feasible predecessors, see runAnalysis()); on
+  // other edges the resolved try fact and its definite fact are kept
+  // unchanged -- re-resolving is not a new acquisition, so the hold keeps
   // its reentrancy depth and source, and the acquisition checks do not run
-  // again. The edge implying the opposite result is taken like any other.
+  // again. A Released try fact says less: its result is truthy on only some
+  // paths, so it rules no edge out.
   SmallVector<const TryFactEntry *> Resolvable;
   // The branch tests "the result of that call" for the try facts of either
   // of two merged identical calls (Edge.MergedCall): a path that executed
   // the second holds only its try fact, and this branch resolves it.
+  bool Infeasible = false;
   for (const auto &Fact : Result) {
     const auto *W = dyn_cast<TryFactEntry>(&FactMan[Fact]);
-    if (W &&
-        (W->origin() == Exp ||
-         (Edge.MergedCall && W->origin() == Edge.MergedCall)) &&
-        (W->conditional() || W->released()))
+    if (!W || (W->origin() != Exp &&
+               !(Edge.MergedCall && W->origin() == Edge.MergedCall)))
+      continue;
+    switch (W->state()) {
+    case TryFactEntry::State::Conditional:
+    case TryFactEntry::State::Released:
       Resolvable.push_back(W);
+      break;
+    case TryFactEntry::State::ProvedHeld:
+      // The hold proved by this call's success: an edge on which the
+      // capability's own attribute reports failure cannot be taken -- unless
+      // the edge is ambiguous, where the branched-on value merges the call's
+      // result with a constant. The call having succeeded says nothing about
+      // which of the two the merge holds, so an edge the merge's constant
+      // makes falsy is feasible beside the proved hold.
+      if (!Ambiguous && ResolveFact(*W, W->kind()) == CapResolution::Failure)
+        Infeasible = true;
+      break;
+    case TryFactEntry::State::ProvedNotHeld:
+      // The call provably failed to acquire this try fact's capability on
+      // every path here, so an edge on which the capability's own
+      // attribute reports success cannot be taken; any other edge is
+      // simply consistent with it (attributes carry their own success
+      // values, so the test is per try fact, not per edge). An ambiguous
+      // edge cannot be ruled out at all, since it does not prove the call
+      // executed.
+      if (!Ambiguous && ResolveFact(*W, W->kind()) == CapResolution::Success)
+        Infeasible = true;
+      break;
+    }
   }
+  // An infeasible edge's lockset still seeds the analysis of a block left
+  // without feasible predecessors (runAnalysis()). It is deliberately left
+  // UNRESOLVED, contradictions and all: the infeasibility proof rests on
+  // the local-variable map, which can be stale (a captured mutation), and
+  // then the "dead" block is live with exactly this state
+  // (tryheld_recheck_after_captured_mutation). Genuinely dead arms pay
+  // with residual over-reports against the contradiction-preserving state.
+  if (Infeasible)
+    return true;
   for (const TryFactEntry *W : Resolvable) {
     const CapResolution R = ResolveFact(*W, W->kind());
     if (R == CapResolution::Unknown)
@@ -5340,9 +5432,10 @@ bool ThreadSafetyAnalyzer::getEdgeLockset(FactSet &Result,
       }
     } else {
       // Failure edge: the try fact records the failure, so a later branch
-      // on the same result re-resolves nothing. A failure proves nothing about
-      // whether the thread holds the capability -- a try-acquire fails for
-      // other reasons too -- so the edge keeps what preceded the call: the
+      // on the same result stays consistent (an edge implying success is
+      // infeasible, above). A failure proves nothing about whether the
+      // thread holds the capability -- a try-acquire fails for other
+      // reasons too -- so the edge keeps what preceded the call: the
       // negative fact the call consumed comes back where the function
       // declared it and no hold of the capability remains (no definite
       // hold, no other call's conditional try fact, no conditional try fact
@@ -7328,13 +7421,16 @@ void LocksetJoin::joinCapability(const Side &E, const Side &X) {
   auto Pair = [&](FactID EID, FactID XID) {
     const TryFactEntry &EW = tryFact(EID), &XW = tryFact(XID);
     if (EW.state() == XW.state()) {
-      // Release evidence on either side is release evidence at the join.
-      // The `?:` arm-split mark is an annotation on one edge, not a state: it
-      // is consumed at the join of the arms it marks, so a merged fact never
+      // Release evidence on either side is release evidence at the join; a
+      // stale result is known truthy only where both sides know it. The `?:`
+      // arm-split mark is an annotation on one edge, not a state: it is
+      // consumed at the join of the arms it marks, so a merged fact never
       // carries it -- else the exemption would follow whichever arm the walk
       // reached first.
       if (EW.conditional() && XW.mayBeReleased() && !EW.mayBeReleased())
         Keep(EID, EW.asMayBeReleased(FactMan, XW.releaseLoc()));
+      else if (EW.released() && !XW.resultTruthy())
+        Keep(EID, EW.withResultUnknown(FactMan));
       else if (EW.armSplit())
         Keep(EID, EW.withState(FactMan, EW.state()));
       else
@@ -7354,13 +7450,12 @@ void LocksetJoin::joinCapability(const Side &E, const Side &X) {
                       : CW.asMayBeReleased(FactMan, RW.releaseLoc()));
         return;
       }
-      if ((EW.provedNotHeld() || XW.provedNotHeld()) &&
-          !resultCanBeRebranched(EW))
+      // Beside the call's failure the result may be falsy.
+      const bool Failed = EW.provedNotHeld() || XW.provedNotHeld();
+      if (Failed && !resultCanBeRebranched(EW))
         return;
-      if (EW.released())
-        Keep(EID);
-      else
-        Keep(XID);
+      const FactID RID = EW.released() ? EID : XID;
+      Keep(RID, Failed ? tryFact(RID).withResultUnknown(FactMan) : nullptr);
       return;
     }
     if (EW.provedNotHeld() || XW.provedNotHeld()) {
@@ -7385,7 +7480,8 @@ void LocksetJoin::joinCapability(const Side &E, const Side &X) {
   auto OneSided = [&](FactID ID, const TryFactEntry &W, const Side &S,
                       const Side &Other) {
     if (W.released()) {
-      Keep(ID);
+      // The other side's result may be falsy.
+      Keep(ID, W.withResultUnknown(FactMan));
       return;
     }
     if (!W.conditional() || foldsIntoRebranch(W, S, Other))
@@ -7404,7 +7500,8 @@ void LocksetJoin::joinCapability(const Side &E, const Side &X) {
   auto LatchPair = [&](FactID EID, FactID XID) {
     const TryFactEntry &EW = tryFact(EID), &XW = tryFact(XID);
     if (XW.released() && !EW.released())
-      Keep(XID);
+      // The entry side's result is known truthy only where it was proved.
+      Keep(XID, EW.provedHeld() ? nullptr : XW.withResultUnknown(FactMan));
     else if (EW.provedNotHeld() && !XW.released() && !XW.provedNotHeld() &&
              sameOriginReconstitutes(EW, XW))
       Keep(XW.conditional() ? XID : EID,
@@ -7416,8 +7513,11 @@ void LocksetJoin::joinCapability(const Side &E, const Side &X) {
       Keep(EID);
   };
   auto LatchOneSided = [&](FactID ID, const TryFactEntry &W, const Side &S) {
-    if (S.IsEntry || W.released())
+    if (S.IsEntry)
       Keep(ID);
+    else if (W.released())
+      // The entry side's result may be falsy.
+      Keep(ID, W.withResultUnknown(FactMan));
   };
   for (FactID ID : E.TryIDs) {
     const TryFactEntry &W = tryFact(ID);
@@ -7939,7 +8039,12 @@ void ThreadSafetyAnalyzer::patchLoopExitSets(
               Existing->asMayBeReleased(FactMan, W->releaseLoc()));
         continue;
       }
-      Target.addLockByID(Fact);
+      // A stale result taken this way is not known truthy there: the target
+      // is reached by other paths too.
+      if (const TryFactEntry *New = W->withResultUnknown(FactMan); New != W)
+        Target.addLock(FactMan, New);
+      else
+        Target.addLockByID(Fact);
     }
   }
 }
@@ -8133,7 +8238,8 @@ void ThreadSafetyAnalyzer::joinPredecessors(const CFGBlock *CurrBlock,
     FactSet PrevLockset;
     if (getEdgeLockset(PrevLockset, PrevBlockInfo->ExitSet, *PI, CurrBlock) ||
         PrevBlockInfo->CoverageOnly) {
-      // The edge cannot be taken (its branch rules out its value), or
+      // The edge cannot be taken (its branch rules out its value, or a
+      // resolved try fact contradicts it), or
       // the predecessor itself was analyzed only for coverage and its exit
       // set is dead state either way: skip
       // the edge at the join like an unreachable predecessor. Remember
@@ -8179,7 +8285,9 @@ void ThreadSafetyAnalyzer::joinPredecessors(const CFGBlock *CurrBlock,
   }
 
   // A block reached only through infeasible edges is dynamically dead if
-  // the infeasibility proofs are right -- but even genuinely dead code
+  // the infeasibility proofs are right -- but the proof rests on the
+  // local-variable map, which can be stale (e.g. a result variable
+  // mutated through an escaped reference), and even genuinely dead code
   // gets its diagnostics. So analyze the block anyway, with one of the
   // infeasible edges' locksets: infeasibility prunes joins, never
   // analysis coverage. The block is marked coverage-only, which

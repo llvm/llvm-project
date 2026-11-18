@@ -2987,35 +2987,32 @@ struct TestTryLock {
 
   // The same shape with the assert spelled as a branch on the result. This
   // is the common `assert(havelock); ...; if (havelock) unlock();` shape.
-  // The second branch decides nothing the first did not: its failure edge
-  // cannot be taken, but it is analyzed like any other edge, so the join
-  // after it reports the hold the first branch proved.
   void tryheld_assert_if_then_branch() {
-    bool b = mu.TryLock(); // expected-note {{mutex acquired here}}
+    bool b = mu.TryLock();
     if (!b)
       fail();
     a = 1;
     if (b)
       mu.Unlock();
-  } // expected-warning {{mutex 'mu' is not held on every path through here}}
+  }
 
   // Same, with the assert spelled as a void conditional operator (glibc
   // before 2.32) and as a statement expression (glibc 2.32 and later).
   void tryheld_assert_ternary_then_branch() {
-    bool b = mu.TryLock(); // expected-note {{mutex acquired here}}
+    bool b = mu.TryLock();
     b ? static_cast<void>(0) : fail();
     a = 1;
     if (b)
       mu.Unlock();
-  } // expected-warning {{mutex 'mu' is not held on every path through here}}
+  }
 
   void tryheld_assert_stmtexpr_then_branch() {
-    bool b = mu.TryLock(); // expected-note {{mutex acquired here}}
+    bool b = mu.TryLock();
     ({ if (!b) fail(); });
     a = 1;
     if (b)
       mu.Unlock();
-  } // expected-warning {{mutex 'mu' is not held on every path through here}}
+  }
 
   void tryheld_assert_then_unconditional_release() {
     bool b = mu.TryLock();
@@ -3070,9 +3067,8 @@ struct TestTryLock {
   }
 
   // Rebranching on a result that a promoted fact already proves succeeded:
-  // the inner branch decides nothing new and both of its edges carry the
-  // hold, so a redundant re-check inside the guarded region causes no
-  // diagnostics.
+  // the inner failure edge is infeasible and skipped at the join, so a
+  // redundant re-check inside the guarded region causes no diagnostics.
   void tryheld_rebranch_in_success_region() {
     bool b = mu.TryLock();
     if (b) {
@@ -3083,9 +3079,11 @@ struct TestTryLock {
     }
   }
 
-  // A re-check of a decided result is analyzed like any other branch, so
-  // the diagnostics in its dead arm are reported. That matters both for
-  // genuinely dead code, which the analysis has always diagnosed...
+  // Infeasibility prunes joins, never analysis coverage: a block all of
+  // whose incoming edges are infeasible is still analyzed (with one of
+  // those edges' locksets), so its diagnostics are not silently
+  // suppressed. That matters both for genuinely dead code, which the
+  // analysis has always diagnosed...
   void tryheld_dead_recheck_still_analyzed() {
     bool b = mu.TryLock();
     if (b) {
@@ -5144,41 +5142,104 @@ struct TestTryLock {
     }
   }
 
-  // A release inside a loop that re-acquires before the latch: the stale
-  // result survives the re-acquisition, so the back edge carries it to the
-  // loop's exit edges, and the check after the loop resolves no hold -- a
-  // guarded write and a stray release that cannot happen at runtime. The
-  // loop join also meets the call's two outcomes, a proved hold and the
-  // failure, and reports the hold.
+  // A release inside a loop that re-acquires before the latch leaves
+  // nothing stale behind: the blocking acquisition re-proves the released
+  // result, so the body's paths are the call's two outcomes again, and the
+  // loop's exit edges resolve the result as they would without the loop.
+  // (Injected as released, the check after the loop drew a guarded write
+  // and a stray release.)
   void tryheld_loop_release_then_reacquire() {
     bool b = mu.TryLock();
-    while (cond) { // expected-warning {{mutex 'mu' is not held on every path through here}}
+    while (cond) {
       if (b) {
-        mu.Unlock(); // expected-note {{mutex released here}}
-        mu.Lock();   // expected-note {{mutex acquired here}}
+        mu.Unlock();
+        mu.Lock();
       }
     }
     if (b) {
-      a = 1;       // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
-      mu.Unlock(); // expected-warning {{releasing mutex 'mu' that was not held}}
+      a = 1;
+      mu.Unlock();
     }
   }
 
-  // A release, relock and release leave the result stale: the branch on it
-  // after them must not bring back the hold.
+  // A relock re-proves the stale result, and the next release makes it
+  // stale again: the branch on the result after a release, relock and
+  // release must not bring back the hold.
   void tryheld_relock_then_release_stays_stale(bool c) {
     bool ok = mu.TryLock();
     if (c) {
       if (ok) {
-        mu.Unlock(); // expected-note {{mutex released here}}
-        mu.Lock();
         mu.Unlock();
+        mu.Lock();
+        mu.Unlock(); // expected-note {{mutex released here}}
       }
     }
     if (ok) {
       a = 1;       // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
       mu.Unlock(); // expected-warning {{releasing mutex 'mu' that was not held}}
     }
+  }
+
+  // After a release and relock, the result proves the hold again.
+  void tryheld_relock_reproves() {
+    bool ok = mu.TryLock();
+    if (!ok)
+      return;
+    mu.Unlock();
+    mu.Lock();
+    if (ok)
+      mu.Unlock();
+  }
+
+  void tryheld_relock_reproves_merged(bool c) {
+    bool ok = mu.TryLock();
+    if (!ok)
+      return;
+    if (c) {
+      mu.Unlock();
+      mu.Lock();
+    }
+    if (ok)
+      mu.Unlock();
+  }
+
+  void tryheld_relock_reproves_short_circuit(bool c) {
+    bool ok = mu.TryLock();
+    if (ok && c) {
+      mu.Unlock();
+      mu.Lock();
+    }
+    if (ok)
+      mu.Unlock();
+  }
+
+  // A stale result that met the call's failure may be falsy: a relock does
+  // not re-prove it, so the branch on the result after it still decides
+  // both ways. (Re-proved, the failure edge looked infeasible, and the
+  // unguarded write and second release on it went unreported.)
+  void tryheld_relock_after_failure_merge() {
+    bool ok = mu.TryLock();
+    if (ok)
+      mu.Unlock(); // expected-note {{mutex released here}}
+    mu.Lock();     // expected-note {{mutex acquired here}}
+    if (!ok)
+      mu.Unlock();
+    a = 1;       // expected-warning {{mutex 'mu' is not held on every path through here}} \
+                 // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
+    mu.Unlock(); // expected-warning {{releasing mutex 'mu' that was not held}}
+  }
+
+  // Likewise for the record a release of a merely possible hold leaves.
+  void tryheld_relock_after_unchecked_release() {
+    bool ok = mu.TryLock();
+    mu.Unlock(); // expected-warning {{releasing mutex 'mu' that may not be held}} \
+                 // expected-note {{mutex released here}}
+    mu.Lock();   // expected-note {{mutex acquired here}}
+    if (!ok)
+      mu.Unlock();
+    a = 1;       // expected-warning {{mutex 'mu' is not held on every path through here}} \
+                 // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
+    mu.Unlock(); // expected-warning {{releasing mutex 'mu' that was not held}}
   }
 
   // The call's failure against a path that released its hold and then

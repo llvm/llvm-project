@@ -25,26 +25,27 @@ int b __attribute__((guarded_by(rmu)));
 bool cond;
 
 // The call's failure record survives a later acquisition by a blocking
-// call: the result is still falsy. A re-check inside the locked region
-// decides nothing new, but both of its edges are analyzed, so the dead
-// arm's release reaches the join: a lost-hold and a guarded-write warning,
-// and a release that may not be held, none of which can happen at runtime.
+// call: the result is still falsy, so a re-check inside the locked region
+// finds its success edge infeasible and the dead arm's release resolves
+// nothing at the join. (A negative fact consumed by the acquisition could
+// not carry the failure, and the dead arm then drew a lost-hold, a
+// guarded-write and a stray-release warning.)
 void failed_survives_lock() {
   bool ok = mu.TryLock();
   if (!ok) {
-    mu.Lock(); // expected-note {{mutex acquired here}}
+    mu.Lock();
     if (ok) {
       mu.Unlock();
     }
-    a = 1; // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}} \
-           // expected-warning {{mutex 'mu' is not held on every path through here}}
+    a = 1;
   }
-  mu.Unlock(); // expected-warning {{releasing mutex 'mu' that may not be held}}
+  mu.Unlock();
 }
 
-// A blocking acquisition leaves the call's released record stale beside
-// its own hold. The branch on the stale result resurrects nothing and does
-// not release that hold either.
+// A blocking acquisition over a released record that met the call's
+// failure: the result may be falsy, so the record is not re-proved, and
+// stays stale beside the blocking call's hold. The branch on the stale
+// result resurrects nothing and does not release that hold either.
 void stale_kept_by_lock() {
   bool ok = mu.TryLock();
   if (ok)
@@ -59,11 +60,10 @@ void stale_kept_by_lock() {
 // Two proved holds over one reentrant capability, one level released:
 // definite levels are interchangeable, so both try facts still prove the
 // remaining level and the second release leaves the capability released
-// on that path. The hold is reported lost twice at the three-way join --
-// the re-check's dead edge is analyzed like any other -- and the second
-// call's result reaches the end of the function unchecked.
+// on that path. The hold is lost once at the three-way join, and the
+// second call's result reaches the end of the function unchecked.
 void two_proofs_one_release() {
-  bool ok1 = rmu.TryLock(); // expected-note 2 {{mutex acquired here}}
+  bool ok1 = rmu.TryLock(); // expected-note {{mutex acquired here}}
   bool ok2 = rmu.TryLock(); // expected-note {{mutex acquired here}}
   if (ok1 && ok2) {
     rmu.Unlock();
@@ -72,7 +72,7 @@ void two_proofs_one_release() {
       rmu.Unlock();
     }
   }
-} // expected-warning 2 {{mutex 'rmu' is not held on every path through here}} \
+} // expected-warning {{mutex 'rmu' is not held on every path through here}} \
   // expected-warning {{unchecked result of try-acquire; mutex 'rmu' may still be held at the end of function}}
 
 // A stale result blocks per call: another call's release on the other
