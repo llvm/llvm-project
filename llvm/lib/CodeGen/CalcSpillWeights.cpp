@@ -336,8 +336,9 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI) {
       TotalWeight += Weight;
     }
 
-    // Get allocation hints from copies.
-    if (!TII.isCopyInstr(*MI))
+    // Get allocation hints from copies. A FREEZE lowers to a copy after
+    // register allocation.
+    if (!TII.isCopyInstr(*MI) && MI->getOpcode() != TargetOpcode::FREEZE)
       continue;
     Register HintReg = copyHint(MI, LI.reg(), TRI, MRI);
     if (HintReg && (HintReg.isVirtual() || MRI.isAllocatable(HintReg)))
