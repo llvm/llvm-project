@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=thumbv7 -mattr=+neon | FileCheck %s --check-prefixes=CHECK,CHECK-THUMB
 ; RUN: llc < %s -mtriple=armv8 -mattr=+neon | FileCheck %s --check-prefixes=CHECK,CHECK-ARM
 
-define void @zero(ptr %p) optsize {
+define void @zero(ptr %p) {
 ; CHECK-LABEL: zero:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i32 q8, #0x0
@@ -12,7 +12,7 @@ define void @zero(ptr %p) optsize {
   ret void
 }
 
-define void @one(ptr %p) optsize {
+define void @one(ptr %p) {
 ; CHECK-LABEL: one:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i32 q8, #0x1
@@ -22,7 +22,7 @@ define void @one(ptr %p) optsize {
   ret void
 }
 
-define void @small(ptr %p) optsize {
+define void @small(ptr %p) {
 ; CHECK-THUMB-LABEL: small:
 ; CHECK-THUMB:       @ %bb.0:
 ; CHECK-THUMB-NEXT:    mov.w r12, #4
@@ -47,7 +47,25 @@ define void @small(ptr %p) optsize {
   ret void
 }
 
-define void @repeated(ptr %p) optsize {
+define void @small_minsize(ptr %p) minsize optsize {
+; CHECK-LABEL: small_minsize:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    adr r1, .LCPI3_0
+; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
+; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 3
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI3_0:
+; CHECK-NEXT:    .long 1 @ 0x1
+; CHECK-NEXT:    .long 2 @ 0x2
+; CHECK-NEXT:    .long 3 @ 0x3
+; CHECK-NEXT:    .long 4 @ 0x4
+  store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %p, align 4
+  ret void
+}
+
+define void @repeated(ptr %p) {
 ; CHECK-THUMB-LABEL: repeated:
 ; CHECK-THUMB:       @ %bb.0:
 ; CHECK-THUMB-NEXT:    movw r1, #17767
@@ -71,20 +89,84 @@ define void @repeated(ptr %p) optsize {
 }
 
 
-define void @large(ptr %p) optsize {
+define void @large(ptr %p) {
 ; CHECK-LABEL: large:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    adr r1, .LCPI4_0
-; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
+; CHECK-NEXT:    adr r1, .LCPI5_0
+; CHECK-NEXT:    vld1.64 {d16, d17}, [r1:128]
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 3
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI4_0:
+; CHECK-NEXT:  .LCPI5_0:
 ; CHECK-NEXT:    .long 305419896 @ 0x12345678
 ; CHECK-NEXT:    .long 591751049 @ 0x23456789
 ; CHECK-NEXT:    .long 878082202 @ 0x3456789a
 ; CHECK-NEXT:    .long 1164413355 @ 0x456789ab
   store <4 x i32> <i32 305419896, i32 591751049, i32 878082202, i32 1164413355>, ptr %p, align 4
+  ret void
+}
+
+define void @i64(ptr %p) {
+; CHECK-THUMB-LABEL: i64:
+; CHECK-THUMB:       @ %bb.0:
+; CHECK-THUMB-NEXT:    movs r1, #0
+; CHECK-THUMB-NEXT:    mov.w r2, #364
+; CHECK-THUMB-NEXT:    movs r3, #1
+; CHECK-THUMB-NEXT:    strd r2, r1, [r0, #8]
+; CHECK-THUMB-NEXT:    strd r3, r1, [r0]
+; CHECK-THUMB-NEXT:    bx lr
+;
+; CHECK-ARM-LABEL: i64:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    mov r1, #0
+; CHECK-ARM-NEXT:    mov r3, #1
+; CHECK-ARM-NEXT:    mov r2, #364
+; CHECK-ARM-NEXT:    str r3, [r0]
+; CHECK-ARM-NEXT:    stmib r0, {r1, r2}
+; CHECK-ARM-NEXT:    str r1, [r0, #12]
+; CHECK-ARM-NEXT:    bx lr
+  store <2 x i64> <i64 1, i64 364>, ptr %p, align 8
+  ret void
+}
+
+define void @long(ptr %p) {
+; CHECK-THUMB-LABEL: long:
+; CHECK-THUMB:       @ %bb.0:
+; CHECK-THUMB-NEXT:    push {r4, r5, r6, lr}
+; CHECK-THUMB-NEXT:    mov.w r12, #4
+; CHECK-THUMB-NEXT:    movs r2, #3
+; CHECK-THUMB-NEXT:    movs r3, #2
+; CHECK-THUMB-NEXT:    movs r1, #1
+; CHECK-THUMB-NEXT:    mov.w lr, #8
+; CHECK-THUMB-NEXT:    movs r4, #7
+; CHECK-THUMB-NEXT:    movs r5, #6
+; CHECK-THUMB-NEXT:    movs r6, #5
+; CHECK-THUMB-NEXT:    strd r1, r3, [r0]
+; CHECK-THUMB-NEXT:    strd r2, r12, [r0, #8]
+; CHECK-THUMB-NEXT:    strd r6, r5, [r0, #16]
+; CHECK-THUMB-NEXT:    strd r4, lr, [r0, #24]
+; CHECK-THUMB-NEXT:    pop {r4, r5, r6, pc}
+;
+; CHECK-ARM-LABEL: long:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    push {r4, r5, r6, lr}
+; CHECK-ARM-NEXT:    mov r12, #4
+; CHECK-ARM-NEXT:    mov r2, #3
+; CHECK-ARM-NEXT:    mov lr, #8
+; CHECK-ARM-NEXT:    mov r4, #7
+; CHECK-ARM-NEXT:    mov r5, #6
+; CHECK-ARM-NEXT:    mov r6, #5
+; CHECK-ARM-NEXT:    mov r1, #1
+; CHECK-ARM-NEXT:    mov r3, #2
+; CHECK-ARM-NEXT:    stm r0, {r1, r3}
+; CHECK-ARM-NEXT:    str r2, [r0, #8]
+; CHECK-ARM-NEXT:    str r12, [r0, #12]
+; CHECK-ARM-NEXT:    str r6, [r0, #16]
+; CHECK-ARM-NEXT:    str r5, [r0, #20]
+; CHECK-ARM-NEXT:    str r4, [r0, #24]
+; CHECK-ARM-NEXT:    str lr, [r0, #28]
+; CHECK-ARM-NEXT:    pop {r4, r5, r6, pc}
+  store <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>, ptr %p, align 4
   ret void
 }

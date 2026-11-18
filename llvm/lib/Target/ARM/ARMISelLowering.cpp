@@ -17239,8 +17239,8 @@ static SDValue performSplitConstantStore(StoreSDNode *St, SelectionDAG &DAG,
   SDValue Val = St->getValue();
   EVT VT = Val.getValueType();
   if (!Subtarget->isLittle() || !VT.isVector() ||
-      VT.getScalarType() != MVT::i32 || St->isVolatile() ||
-      !ISD::isNormalStore(St) || !Val.hasOneUse() ||
+      VT.getVectorNumElements() > 4 || VT.getScalarType() != MVT::i32 ||
+      St->isVolatile() || !ISD::isNormalStore(St) || !Val.hasOneUse() ||
       Val.getOpcode() != ISD::BUILD_VECTOR)
     return SDValue();
 
@@ -17273,7 +17273,7 @@ static SDValue performSplitConstantStore(StoreSDNode *St, SelectionDAG &DAG,
   SDLoc DL(St);
 
   for (unsigned I = 0; I < VT.getVectorNumElements(); I++) {
-    unsigned Offset = I * VT.getScalarSizeInBits() / 8;
+    unsigned Offset = I * VT.getScalarStoreSize();
     SDValue OffsetPtr = DAG.getObjectPtrOffset(
         DL, St->getBasePtr(), DAG.getConstant(Offset, DL, MVT::i32));
     Chain = DAG.getStore(Chain, DL, Val.getOperand(I), OffsetPtr,
