@@ -925,7 +925,7 @@ namespace llvm {
       return false;
     }
 
-    bool needsCmpXchgNb(Type *MemType) const;
+    bool needsCmpXchgNb(unsigned OpWidth) const;
 
     void SetupEntryBlockForSjLj(MachineInstr &MI, MachineBasicBlock *MBB,
                                 MachineBasicBlock *DispatchBB, int FI) const;

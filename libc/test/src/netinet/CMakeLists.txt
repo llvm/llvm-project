@@ -1,6 +1,7 @@
 add_libc_testsuite(libc-netinet-tests)
 
 add_subdirectory(ether)
+add_subdirectory(ip)
 
 add_libc_test(
   in_test

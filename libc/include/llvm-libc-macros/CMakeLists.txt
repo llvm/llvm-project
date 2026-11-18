@@ -426,6 +426,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_timerfd_macros
+  HDR
+    sys-timerfd-macros.h
+)
+
+add_macro_header(
   sys_wait_macros
   HDR
     sys-wait-macros.h

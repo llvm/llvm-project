@@ -1773,6 +1773,8 @@ void AMDGPUAsmPrinter::EmitPALMetadata(
                                   MCConstantExpr::create(16, Ctx), Ctx),
       Ctx);
 
+  MD->setBackendStackSize(CC, CurrentProgramInfo.ScratchSize);
+
   if (MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS) {
     unsigned ExtraLDSSize = STM.getGeneration() >= AMDGPUSubtarget::GFX11
                                 ? divideCeil(CurrentProgramInfo.LDSBlocks, 2)
@@ -1822,7 +1824,8 @@ void AMDGPUAsmPrinter::emitPALFunctionMetadata(const MachineFunction &MF) {
   auto *MD = getTargetStreamer()->getPALMetadata();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   StringRef FnName = MF.getFunction().getName();
-  MD->setFunctionScratchSize(FnName, MFI.getStackSize());
+  MD->setFunctionStackFrameSize(FnName, MFI.getStackSize());
+  MD->setFunctionBackendStackSize(FnName, CurrentProgramInfo.ScratchSize);
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   MCContext &Ctx = MF.getContext();
 

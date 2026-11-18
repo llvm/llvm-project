@@ -5395,6 +5395,46 @@ TEST_F(FormatTest, DesignatedInitializers) {
                "         },\n"
                "     }) {\n"
                "}");
+
+  constexpr StringRef Nested("S s = {\n"
+                             "    .a = {\n"
+                             "        .x = 1 + 2,\n"
+                             "        .y = (3 * 4),\n"
+                             "    },\n"
+                             "    [0] = {\n"
+                             "        .x = 1,\n"
+                             "    },\n"
+                             "    .b.c[1] = {\n"
+                             "        .x = 1,\n"
+                             "    },\n"
+                             "    .f = []() {\n"
+                             "      int x = 0;\n"
+                             "      return x;\n"
+                             "    },\n"
+                             "};");
+  verifyFormat(Nested);
+
+  auto Style = getLLVMStyle();
+  Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
+  verifyFormat(Nested, Style);
+
+  Style = getWebKitStyle();
+  Style.ColumnLimit = 120;
+  verifyFormat("Source make()\n"
+               "{\n"
+               "    return Source {\n"
+               "        .layout = Layout {\n"
+               "            .a = 1,\n"
+               "            .b = 2,\n"
+               "        },\n"
+               "        .count = 3,\n"
+               "        .fn = []() {\n"
+               "            int x = 0;\n"
+               "            x = x + 1;\n"
+               "        },\n"
+               "    };\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, BracedInitializerIndentWidth) {

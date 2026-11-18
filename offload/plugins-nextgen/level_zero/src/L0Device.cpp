@@ -783,8 +783,7 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
     llvm::raw_string_ostream(Buffer)
         << "failed to call global " << (IsCtor ? "constructors" : "destructors")
         << " in the image";
-    return Plugin::error(ErrorCode::INVALID_BINARY, std::move(Err),
-                         Buffer.c_str());
+    return Plugin::error(ErrorCode::INVALID_BINARY, std::move(Err), Buffer);
   };
 
   // The SPIR-V backend cannot handle creating the ctor / dtor array
