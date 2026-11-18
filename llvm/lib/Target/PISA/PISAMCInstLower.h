@@ -55,11 +55,9 @@ class LLVM_LIBRARY_VISIBILITY PISAMCInstLower {
 public:
   static void setVariableRef(MCInst &MI, unsigned OpNo) {
     PISAMCInst *MC = static_cast<PISAMCInst *>(&MI);
-    SmallDenseMap<unsigned, PISAMCOpnd>::iterator It = MC->Opnds.find(OpNo);
-    if (It == MC->Opnds.end())
-      MC->Opnds[OpNo] = {true, 0};
-    else
-      It->second.IsVariable = true;
+    auto Pair = MC->Opnds.try_emplace(OpNo, PISAMCOpnd{true, 0});
+    if (!Pair.second)
+      Pair.first->second.IsVariable = true;
   }
 
   static bool isVariableRef(const MCInst &MI, unsigned int OpNo) {
@@ -74,11 +72,10 @@ public:
   static void setSwizzle(MCInst &MI, unsigned OpNo, PISA::Swizzle Swizzle) {
     static_assert(static_cast<unsigned>(PISA::Swizzle::NONE) <= 7);
     PISAMCInst *MC = static_cast<PISAMCInst *>(&MI);
-    SmallDenseMap<unsigned, PISAMCOpnd>::iterator It = MC->Opnds.find(OpNo);
-    if (It == MC->Opnds.end())
-      MC->Opnds[OpNo] = {false, static_cast<unsigned>(Swizzle)};
-    else
-      It->second.Swizzle = static_cast<unsigned>(Swizzle);
+    auto Pair = MC->Opnds.try_emplace(
+        OpNo, PISAMCOpnd{false, static_cast<unsigned>(Swizzle)});
+    if (!Pair.second)
+      Pair.first->second.Swizzle = static_cast<unsigned>(Swizzle);
   }
 
   static PISA::Swizzle getSwizzle(const MCInst &MI, unsigned OpNo) {
