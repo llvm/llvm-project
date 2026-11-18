@@ -673,6 +673,105 @@ define i32 @shl_and_lshr_comm(i32 %x, i32 %c, i32 %y) {
   ret i32 %lshr
 }
 
+; (X & (Y << Z)) >>u Z --> (X >>u Z) & Y
+
+define i32 @shl_and_lshr_no_nuw(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @shl_and_lshr_no_nuw(
+; CHECK-NEXT:    [[Y:%.*]] = shl i32 [[Y1:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = and i32 [[TMP1:%.*]], [[Y]]
+; CHECK-NEXT:    [[LSHR1:%.*]] = lshr i32 [[LSHR]], [[Z]]
+; CHECK-NEXT:    ret i32 [[LSHR1]]
+;
+  %shl = shl i32 %y, %z
+  %and = and i32 %x, %shl
+  %lshr = lshr i32 %and, %z
+  ret i32 %lshr
+}
+
+define i32 @shl_and_lshr_no_nuw_comm(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @shl_and_lshr_no_nuw_comm(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[Y1:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = and i32 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[LSHR1:%.*]] = lshr i32 [[LSHR]], [[Z]]
+; CHECK-NEXT:    ret i32 [[LSHR1]]
+;
+  %shl = shl i32 %y, %z
+  %and = and i32 %shl, %x
+  %lshr = lshr i32 %and, %z
+  ret i32 %lshr
+}
+
+define i32 @shl_and_lshr_const_mask(i32 %x, i32 %z) {
+; CHECK-LABEL: @shl_and_lshr_const_mask(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 3, [[Z:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[X1:%.*]], [[SHL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X]], [[Z]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %shl = shl i32 3, %z
+  %and = and i32 %x, %shl
+  %lshr = lshr i32 %and, %z
+  ret i32 %lshr
+}
+
+define <4 x i32> @shl_and_lshr_vec(<4 x i32> %x, <4 x i32> %z) {
+; CHECK-LABEL: @shl_and_lshr_vec(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i32> <i32 3, i32 7, i32 255, i32 65535>, [[Z:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = and <4 x i32> [[X1:%.*]], [[SHL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> [[X]], [[Z]]
+; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+;
+  %shl = shl <4 x i32> <i32 3, i32 7, i32 255, i32 65535>, %z
+  %and = and <4 x i32> %x, %shl
+  %lshr = lshr <4 x i32> %and, %z
+  ret <4 x i32> %lshr
+}
+
+define i32 @shl_and_lshr_no_nuw_exact(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @shl_and_lshr_no_nuw_exact(
+; CHECK-NEXT:    [[Y:%.*]] = shl i32 [[Y1:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = and i32 [[TMP1:%.*]], [[Y]]
+; CHECK-NEXT:    [[LSHR1:%.*]] = lshr exact i32 [[LSHR]], [[Z]]
+; CHECK-NEXT:    ret i32 [[LSHR1]]
+;
+  %shl = shl i32 %y, %z
+  %and = and i32 %x, %shl
+  %lshr = lshr exact i32 %and, %z
+  ret i32 %lshr
+}
+
+; Negative test: the 'and' has another use.
+
+define i32 @shl_and_lshr_no_nuw_and_use(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @shl_and_lshr_no_nuw_and_use(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[SHL]]
+; CHECK-NEXT:    call void @use(i32 [[AND]])
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[AND]], [[Z]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl i32 %y, %z
+  %and = and i32 %x, %shl
+  call void @use(i32 %and)
+  %lshr = lshr i32 %and, %z
+  ret i32 %lshr
+}
+
+; Negative test: an arithmetic shift brings in sign bits, not zeroes.
+
+define i32 @shl_and_ashr_no_nuw(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @shl_and_ashr_no_nuw(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[SHL]]
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i32 [[AND]], [[Z]]
+; CHECK-NEXT:    ret i32 [[ASHR]]
+;
+  %shl = shl i32 %y, %z
+  %and = and i32 %x, %shl
+  %ashr = ashr i32 %and, %z
+  ret i32 %ashr
+}
+
 define i32 @shl_lshr_and_exact(i32 %x, i32 %c, i32 %y) {
 ; CHECK-LABEL: @shl_lshr_and_exact(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[Y:%.*]], [[C:%.*]]
