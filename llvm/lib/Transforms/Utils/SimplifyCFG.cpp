@@ -2810,6 +2810,22 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
             NormalBB, {Invokes[0]->getParent(), Invokes[1]->getParent()},
             &EquivalenceSet))
       return false;
+
+    // Merging replaces all uses of each `invoke`'s result with the result of
+    // the merged `invoke`. This is only correct if each result is used solely
+    // by PHI nodes in the normal destination, on the edge from that same
+    // `invoke`. For example, if the second `invoke` is inside a loop that is
+    // entered through the first `invoke`'s normal destination, a use of the
+    // first result inside that loop would see the second result after merging.
+    auto HasOnlyIncomingPHIUses = [NormalBB](InvokeInst *II) {
+      return all_of(II->uses(), [NormalBB, II](const Use &U) {
+        auto *PN = dyn_cast<PHINode>(U.getUser());
+        return PN && PN->getParent() == NormalBB &&
+               PN->getIncomingBlock(U) == II->getParent();
+      });
+    };
+    if (!all_of(Invokes, HasOnlyIncomingPHIUses))
+      return false;
   }
 
 #ifndef NDEBUG
@@ -6379,22 +6395,21 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   if (hasBranchWeightMD(*SI) && isa<CondBrInst>(NewBI)) {
     SmallVector<uint64_t, 8> Weights;
     getBranchWeights(SI, Weights);
-    if (Weights.size() == 1 + SI->getNumCases()) {
-      uint64_t TrueWeight = 0;
-      uint64_t FalseWeight = 0;
-      for (size_t I = 0, E = Weights.size(); I != E; ++I) {
-        if (SI->getSuccessor(I) == Dest)
-          TrueWeight += Weights[I];
-        else
-          FalseWeight += Weights[I];
-      }
-      while (TrueWeight > UINT32_MAX || FalseWeight > UINT32_MAX) {
-        TrueWeight /= 2;
-        FalseWeight /= 2;
-      }
-      setFittedBranchWeights(*NewBI, {TrueWeight, FalseWeight},
-                             /*IsExpected=*/false, /*ElideAllZero=*/true);
+    assert(Weights.size() == 1 + SI->getNumCases() &&
+           "expected number of branch weights to be equal to the number of "
+           "switch destinations");
+    uint64_t TrueWeight = 0;
+    uint64_t FalseWeight = 0;
+    for (size_t I = 0, E = Weights.size(); I != E; ++I) {
+      if (SI->getSuccessor(I) == Dest)
+        TrueWeight += Weights[I];
+      else
+        FalseWeight += Weights[I];
     }
+    setFittedBranchWeights(*NewBI, {TrueWeight, FalseWeight},
+                           /*IsExpected=*/false, /*ElideAllZero=*/true);
+  } else if (isa<CondBrInst>(NewBI)) {
+    setExplicitlyUnknownBranchWeightsIfProfiled(*NewBI, DEBUG_TYPE);
   }
 
   // Prune obsolete incoming values off the successors' PHI nodes.

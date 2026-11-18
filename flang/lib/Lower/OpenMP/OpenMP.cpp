@@ -55,7 +55,7 @@
 #include "flang/Support/OpenMP-utils.h"
 #include "flang/Utils/OpenMP.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMGeneralIntrinsicOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Support/StateStack.h"
@@ -6081,6 +6081,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   for (const parser::OmpClause &clause : assumesConstruct.v.Clauses().v) {
     if (!std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u) &&
+        !std::holds_alternative<parser::OmpClause::NoParallelism>(clause.u) &&
         !std::holds_alternative<parser::OmpClause::Absent>(clause.u))
       TODO(converter.genLocation(clause.source),
            "assumption clauses on the assumes directive");
@@ -7344,7 +7345,7 @@ static bool isSupportedMetadirectiveLoopCompilerDirective(
       parser::CompilerDirective::ForceInline, parser::CompilerDirective::Inline,
       parser::CompilerDirective::NoInline,
       parser::CompilerDirective::InlineAlways, parser::CompilerDirective::IVDep,
-      parser::CompilerDirective::Simd>;
+      parser::CompilerDirective::Simd, parser::CompilerDirective::Align>;
 
   return common::visit(
       [](const auto &value) {

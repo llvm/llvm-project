@@ -420,7 +420,7 @@ class DocgenTest(unittest.TestCase):
         self.assertEqual(Header("unistd.h").fn_status("setuid"), "experimental")
         self.assertEqual(Header("unistd.h").fn_status("getuid"), "implemented")
         self.assertEqual(Header("grp.h").fn_status("initgroups"), "experimental")
-        self.assertEqual(Header("net/if.h").fn_status("if_nameindex"), "experimental")
+        self.assertEqual(Header("net/if.h").fn_status("if_nameindex"), "implemented")
         self.assertEqual(Header("fnmatch.h").fn_status("fnmatch"), "missing")
         self.assertEqual(Header("time.h").fn_status("strptime"), "missing")
         self.assertEqual(Header("time.h").fn_status("tzset"), "missing")
