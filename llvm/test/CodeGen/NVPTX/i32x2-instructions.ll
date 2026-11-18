@@ -838,37 +838,33 @@ define void @test_ldst_v4i32(ptr %a, ptr %b) {
 define void @test_ldst_v2i32_unaligned(ptr %a, ptr %b) {
 ; CHECK-NOI32X2-LABEL: test_ldst_v2i32_unaligned(
 ; CHECK-NOI32X2:       {
-; CHECK-NOI32X2-NEXT:    .reg .b32 %r<13>;
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<9>;
 ; CHECK-NOI32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
 ; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd1, [test_ldst_v2i32_unaligned_param_0];
-; CHECK-NOI32X2-NEXT:    ld.b8 %r1, [%rd1+2];
-; CHECK-NOI32X2-NEXT:    shl.b32 %r2, %r1, 16;
-; CHECK-NOI32X2-NEXT:    ld.b8 %r3, [%rd1+3];
-; CHECK-NOI32X2-NEXT:    shl.b32 %r4, %r3, 24;
-; CHECK-NOI32X2-NEXT:    or.b32 %r5, %r4, %r2;
-; CHECK-NOI32X2-NEXT:    ld.b8 %r6, [%rd1];
-; CHECK-NOI32X2-NEXT:    ld.b8 %r7, [%rd1+1];
-; CHECK-NOI32X2-NEXT:    ld.b8 %r8, [%rd1+4];
-; CHECK-NOI32X2-NEXT:    ld.b8 %r9, [%rd1+5];
-; CHECK-NOI32X2-NEXT:    ld.b8 %r10, [%rd1+6];
-; CHECK-NOI32X2-NEXT:    ld.b8 %r11, [%rd1+7];
+; CHECK-NOI32X2-NEXT:    ld.b8 %r1, [%rd1];
+; CHECK-NOI32X2-NEXT:    ld.b8 %r2, [%rd1+1];
+; CHECK-NOI32X2-NEXT:    ld.b8 %r3, [%rd1+2];
+; CHECK-NOI32X2-NEXT:    ld.b8 %r4, [%rd1+3];
+; CHECK-NOI32X2-NEXT:    ld.b8 %r5, [%rd1+4];
+; CHECK-NOI32X2-NEXT:    ld.b8 %r6, [%rd1+5];
+; CHECK-NOI32X2-NEXT:    ld.b8 %r7, [%rd1+6];
+; CHECK-NOI32X2-NEXT:    ld.b8 %r8, [%rd1+7];
 ; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd2, [test_ldst_v2i32_unaligned_param_1];
-; CHECK-NOI32X2-NEXT:    st.b8 [%rd2+7], %r11;
-; CHECK-NOI32X2-NEXT:    st.b8 [%rd2+6], %r10;
-; CHECK-NOI32X2-NEXT:    st.b8 [%rd2+5], %r9;
-; CHECK-NOI32X2-NEXT:    st.b8 [%rd2+4], %r8;
-; CHECK-NOI32X2-NEXT:    st.b8 [%rd2+1], %r7;
-; CHECK-NOI32X2-NEXT:    st.b8 [%rd2], %r6;
-; CHECK-NOI32X2-NEXT:    st.b8 [%rd2+3], %r3;
-; CHECK-NOI32X2-NEXT:    shr.u32 %r12, %r5, 16;
-; CHECK-NOI32X2-NEXT:    st.b8 [%rd2+2], %r12;
+; CHECK-NOI32X2-NEXT:    st.b8 [%rd2+7], %r8;
+; CHECK-NOI32X2-NEXT:    st.b8 [%rd2+6], %r7;
+; CHECK-NOI32X2-NEXT:    st.b8 [%rd2+5], %r6;
+; CHECK-NOI32X2-NEXT:    st.b8 [%rd2+4], %r5;
+; CHECK-NOI32X2-NEXT:    st.b8 [%rd2+3], %r4;
+; CHECK-NOI32X2-NEXT:    st.b8 [%rd2+2], %r3;
+; CHECK-NOI32X2-NEXT:    st.b8 [%rd2+1], %r2;
+; CHECK-NOI32X2-NEXT:    st.b8 [%rd2], %r1;
 ; CHECK-NOI32X2-NEXT:    ret;
 ;
 ; CHECK-I32X2-LABEL: test_ldst_v2i32_unaligned(
 ; CHECK-I32X2:       {
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<28>;
+; CHECK-I32X2-NEXT:    .reg .b64 %rd<27>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
 ; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd1, [test_ldst_v2i32_unaligned_param_0];
@@ -895,17 +891,16 @@ define void @test_ldst_v2i32_unaligned(ptr %a, ptr %b) {
 ; CHECK-I32X2-NEXT:    shl.b64 %rd22, %rd21, 32;
 ; CHECK-I32X2-NEXT:    or.b64 %rd23, %rd22, %rd11;
 ; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd24, [test_ldst_v2i32_unaligned_param_1];
+; CHECK-I32X2-NEXT:    st.b8 [%rd24+3], %rd8;
+; CHECK-I32X2-NEXT:    st.b8 [%rd24+2], %rd6;
+; CHECK-I32X2-NEXT:    st.b8 [%rd24+1], %rd3;
+; CHECK-I32X2-NEXT:    st.b8 [%rd24], %rd2;
 ; CHECK-I32X2-NEXT:    st.b8 [%rd24+6], %rd16;
 ; CHECK-I32X2-NEXT:    shr.u64 %rd25, %rd23, 56;
 ; CHECK-I32X2-NEXT:    st.b8 [%rd24+7], %rd25;
 ; CHECK-I32X2-NEXT:    st.b8 [%rd24+4], %rd12;
 ; CHECK-I32X2-NEXT:    shr.u64 %rd26, %rd23, 40;
 ; CHECK-I32X2-NEXT:    st.b8 [%rd24+5], %rd26;
-; CHECK-I32X2-NEXT:    st.b8 [%rd24+1], %rd3;
-; CHECK-I32X2-NEXT:    st.b8 [%rd24], %rd2;
-; CHECK-I32X2-NEXT:    st.b8 [%rd24+3], %rd8;
-; CHECK-I32X2-NEXT:    shr.u64 %rd27, %rd23, 16;
-; CHECK-I32X2-NEXT:    st.b8 [%rd24+2], %rd27;
 ; CHECK-I32X2-NEXT:    ret;
   %t1 = load <2 x i32>, ptr %a, align 1
   store <2 x i32> %t1, ptr %b, align 1
