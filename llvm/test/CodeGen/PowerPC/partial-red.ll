@@ -465,8 +465,7 @@ entry:
   ret i32 %red
 }
 
-; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) uwtable
-define dso_local signext range(i32 -262144, 262137) i32 @tsb3(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b) local_unnamed_addr {
+define dso_local signext range(i32 -262144, 262137) i32 @tsb3(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b) nounwind {
 ; CHECK-LABEL: tsb3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvd2x vs0, 0, r3

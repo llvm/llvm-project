@@ -12047,11 +12047,11 @@ SDValue PPCTargetLowering::LowerPartialReduce(SDValue Op,
   if (Acc.getValueType() != MVT::v4i32)
     return SDValue();
 
-  if (Op1.getValueType() != MVT::v16i32)
+  if (Op1.getValueType() != MVT::v16i32 || !llvm::isOneOrOneSplat(Op2))
     return SDValue();
 
   SDLoc dl(Op);
-  if (Op1.getOpcode() == ISD::SIGN_EXTEND && llvm::isOneOrOneSplat(Op2)) {
+  if (Op1.getOpcode() == ISD::SIGN_EXTEND) {
     SDValue Op1Input = Op1.getOperand(0);
     if (Op1Input.getValueType() != MVT::v16i8)
       return SDValue();
@@ -12061,7 +12061,8 @@ SDValue PPCTargetLowering::LowerPartialReduce(SDValue Op,
                        Ones);
   }
 
-  assert(Op1.getOpcode() == ISD::MUL && "Unexpected partial reduction type");
+  if (Op1.getOpcode() != ISD::MUL)
+    return SDValue();
 
   SDValue Left = Op1.getOperand(0);
   SDValue Right = Op1.getOperand(1);
