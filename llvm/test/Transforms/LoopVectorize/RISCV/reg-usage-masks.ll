@@ -7,7 +7,8 @@
 ; Test case from https://github.com/llvm/llvm-project/issues/243706.
 ; The loop has 12 i64 accumulators and several masks. With LMUL=2
 ; (VF=vscale x 2) the accumulators alone need 24 vector registers, and the
-; loop ends up spilling.
+; loop ends up spilling. Mask values must be accounted for in the register
+; pressure estimate, otherwise LV picks a VF that spills.
 
 ; CHECK-LABEL: 'accumulate_fit'
 ; CHECK:  LV(REG): Calculating max register usage:
@@ -21,17 +22,17 @@
 ; CHECK:  LV(REG): VF = vscale x 1
 ; CHECK:  LV(REG): Found max usage: 2 item
 ; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
-; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 17 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 20 registers
 ; CHECK:  LV(REG): Found invariant usage: 1 item
 ; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
 ; CHECK:  LV(REG): VF = vscale x 2
 ; CHECK:  LV(REG): Found max usage: 2 item
 ; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
-; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 34 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 37 registers
 ; CHECK:  LV(REG): Found invariant usage: 1 item
 ; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
-; CHECK:  LV(REG): Cost of 8 from 2 spills of RISCV::VRRC
-; CHECK:  LV: Selecting VF: vscale x 2.
+; CHECK:  LV(REG): Cost of 20 from 5 spills of RISCV::VRRC
+; CHECK:  LV: Selecting VF: vscale x 1.
 define signext i32 @accumulate_fit(ptr readonly %flr, ptr readonly %mdct,
                                    i32 signext %x0, i32 signext %x1, ptr %a,
                                    float %atten, i32 signext %fitweight)

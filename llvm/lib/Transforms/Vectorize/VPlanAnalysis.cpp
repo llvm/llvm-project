@@ -191,6 +191,11 @@ llvm::calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
 
   const auto &TTICapture = TTI;
   auto GetRegUsage = [&TTICapture](Type *Ty, ElementCount VF) -> unsigned {
+    // Mask values always need a register, even if the target does not consider
+    // i1 a legal element type for scalable vectors (e.g. RISC-V, where masks
+    // live in vector registers but i1 isn't a valid RVV element type).
+    if (VF.isScalable() && Ty->isIntegerTy(1))
+      return 1;
     if (Ty->isTokenTy() || !VectorType::isValidElementType(Ty) ||
         (VF.isScalable() &&
          !TTICapture.isElementTypeLegalForScalableVector(Ty)))
