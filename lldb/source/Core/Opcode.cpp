@@ -39,19 +39,20 @@ int Opcode::Dump(Stream *s, uint32_t min_byte_width) const {
     break;
 
   case Opcode::eType16_32Tuples: {
-    const bool format_as_words = (m_byte_buf.size() % 4) == 0;
+    const bool format_as_words = (m_data.byte_buf.size() % 4) == 0;
     uint32_t i = 0;
-    while (i < m_byte_buf.size()) {
+    while (i < m_data.byte_buf.size()) {
       if (i > 0)
         s->PutChar(' ');
       if (format_as_words) {
         // Format as words; print 1 or more UInt32 values.
-        s->Printf("%2.2x%2.2x%2.2x%2.2x", m_byte_buf[i + 3], m_byte_buf[i + 2],
-                  m_byte_buf[i + 1], m_byte_buf[i + 0]);
+        s->Printf("%2.2x%2.2x%2.2x%2.2x", m_data.byte_buf[i + 3],
+                  m_data.byte_buf[i + 2], m_data.byte_buf[i + 1],
+                  m_data.byte_buf[i + 0]);
         i += 4;
       } else {
         // Format as halfwords; print 1 or more UInt16 values.
-        s->Printf("%2.2x%2.2x", m_byte_buf[i + 1], m_byte_buf[i + 0]);
+        s->Printf("%2.2x%2.2x", m_data.byte_buf[i + 1], m_data.byte_buf[i + 0]);
         i += 2;
       }
     }
@@ -62,10 +63,10 @@ int Opcode::Dump(Stream *s, uint32_t min_byte_width) const {
     break;
 
   case Opcode::eTypeBytes:
-    for (uint32_t i = 0; i < m_byte_buf.size(); ++i) {
+    for (uint32_t i = 0; i < m_data.byte_buf.size(); ++i) {
       if (i > 0)
         s->PutChar(' ');
-      s->Printf("%2.2x", m_byte_buf[i]);
+      s->Printf("%2.2x", m_data.byte_buf[i]);
     }
     break;
   }

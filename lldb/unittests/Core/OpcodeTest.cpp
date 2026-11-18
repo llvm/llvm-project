@@ -167,3 +167,103 @@ TEST(OpcodeTest, CopyAndMoveSemantics) {
   EXPECT_EQ(memcmp(op_over_move_assign.GetOpcodeBytes(), over_bytes.data(), 48),
             0);
 }
+
+TEST(OpcodeTest, UnionSizeAndLifetimeTransitions) {
+  static_assert(sizeof(Opcode) <= 48,
+                "SmallVector should share union storage with scalar opcodes");
+  static_assert(sizeof(void *) != 8 || sizeof(Opcode) == 48,
+                "Expected 48-byte Opcode on 64-bit targets");
+
+  std::vector<uint8_t> over48(48, 0xa5);
+  std::vector<uint8_t> over64(64, 0x3c);
+  uint8_t inline8[] = {1, 2, 3, 4, 5, 6, 7, 8};
+
+  Opcode op;
+  // Heap-spilled bytes -> SetOpcode8 -> heap-spilled bytes -> SetOpcode16 ->
+  // heap-spilled tuples -> SetOpcode16_2 -> inline bytes -> SetOpcode32 ->
+  // heap-spilled bytes -> SetOpcode64 -> heap-spilled bytes -> Clear().
+  op.SetOpcodeBytes(over48.data(), over48.size());
+  EXPECT_EQ(op.GetType(), Opcode::eTypeBytes);
+  EXPECT_EQ(op.GetByteSize(), 48u);
+
+  op.SetOpcode8(0x7f, eByteOrderLittle);
+  EXPECT_EQ(op.GetType(), Opcode::eType8);
+  EXPECT_EQ(op.GetOpcode8(), 0x7fu);
+  EXPECT_EQ(op.GetOpcodeBytes(), nullptr);
+
+  op.SetOpcodeBytes(over64.data(), over64.size());
+  EXPECT_EQ(op.GetByteSize(), 64u);
+  EXPECT_EQ(memcmp(op.GetOpcodeBytes(), over64.data(), 64), 0);
+
+  op.SetOpcode16(0x1234, eByteOrderLittle);
+  EXPECT_EQ(op.GetType(), Opcode::eType16);
+  EXPECT_EQ(op.GetOpcode16(), 0x1234u);
+
+  op.SetOpcode16_32TupleBytes(over48.data(), over48.size(), eByteOrderLittle);
+  EXPECT_EQ(op.GetType(), Opcode::eType16_32Tuples);
+  EXPECT_EQ(op.GetByteSize(), 48u);
+
+  op.SetOpcode16_2(0xe92d41f0, eByteOrderLittle);
+  EXPECT_EQ(op.GetType(), Opcode::eType16_2);
+  EXPECT_EQ(op.GetOpcode32(), 0xe92d41f0u);
+
+  op.SetOpcodeBytes(inline8, sizeof(inline8));
+  EXPECT_EQ(op.GetByteSize(), 8u);
+  EXPECT_EQ(memcmp(op.GetOpcodeBytes(), inline8, 8), 0);
+
+  op.SetOpcode32(0xdeadbeef, eByteOrderLittle);
+  EXPECT_EQ(op.GetType(), Opcode::eType32);
+  EXPECT_EQ(op.GetOpcode32(), 0xdeadbeefu);
+
+  op.SetOpcodeBytes(over48.data(), over48.size());
+  op.SetOpcode64(0x0102030405060708ULL, eByteOrderLittle);
+  EXPECT_EQ(op.GetType(), Opcode::eType64);
+  EXPECT_EQ(op.GetOpcode64(), 0x0102030405060708ULL);
+
+  op.SetOpcodeBytes(over64.data(), over64.size());
+  op.SetOpcodeBytes(nullptr, 0);
+  EXPECT_EQ(op.GetType(), Opcode::eTypeInvalid);
+  EXPECT_EQ(op.GetByteSize(), 0u);
+  EXPECT_EQ(op.GetOpcodeBytes(), nullptr);
+
+  op.SetOpcodeBytes(over48.data(), over48.size());
+  op.Clear();
+  EXPECT_EQ(op.GetType(), Opcode::eTypeInvalid);
+  EXPECT_EQ(op.GetByteSize(), 0u);
+
+  // Cross-variant and byte-to-byte copy/move assignments.
+  Opcode bytes_a;
+  bytes_a.SetOpcodeBytes(over48.data(), over48.size());
+  Opcode bytes_b;
+  bytes_b.SetOpcode16_32TupleBytes(over64.data(), over64.size(),
+                                   eByteOrderLittle);
+  Opcode scalar32(uint32_t(0xcafebabe), eByteOrderLittle);
+  Opcode invalid_op;
+
+  // ByteBuf -> ByteBuf copy & move assignment.
+  bytes_a = bytes_b;
+  EXPECT_EQ(bytes_a.GetType(), Opcode::eType16_32Tuples);
+  EXPECT_EQ(bytes_a.GetByteSize(), 64u);
+  EXPECT_EQ(memcmp(bytes_a.GetOpcodeBytes(), over64.data(), 64), 0);
+
+  // Self copy & move assignment via aliases.
+  const Opcode &self_const = bytes_a;
+  bytes_a = self_const;
+  EXPECT_EQ(bytes_a.GetByteSize(), 64u);
+  Opcode &self_mut = bytes_a;
+  bytes_a = std::move(self_mut);
+  EXPECT_EQ(bytes_a.GetByteSize(), 64u);
+
+  // ByteBuf -> scalar -> ByteBuf -> invalid transitions via assignment.
+  bytes_a = scalar32;
+  EXPECT_EQ(bytes_a.GetType(), Opcode::eType32);
+  EXPECT_EQ(bytes_a.GetOpcode32(), 0xcafebabeu);
+
+  bytes_a = std::move(bytes_b);
+  EXPECT_EQ(bytes_a.GetType(), Opcode::eType16_32Tuples);
+  EXPECT_EQ(bytes_a.GetByteSize(), 64u);
+  EXPECT_EQ(bytes_b.GetType(), Opcode::eTypeInvalid);
+
+  bytes_a = invalid_op;
+  EXPECT_EQ(bytes_a.GetType(), Opcode::eTypeInvalid);
+}
