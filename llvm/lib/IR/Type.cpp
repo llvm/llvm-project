@@ -219,11 +219,6 @@ TypeSize Type::getPrimitiveSizeInBits() const {
   }
 }
 
-unsigned Type::getScalarSizeInBits() const {
-  // It is safe to assume that the scalar types have a fixed size.
-  return getScalarType()->getPrimitiveSizeInBits().getFixedValue();
-}
-
 int Type::getFPMantissaWidth() const {
   if (auto *VTy = dyn_cast<VectorType>(this))
     return VTy->getElementType()->getFPMantissaWidth();
@@ -1089,10 +1084,8 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   // Opaque types in the AMDGPU name space.
   // NOTE: If the size of the type is changed, it must be also updated in
   // AMDGPUMemoryUtils.h !
-  if (Name == "amdgcn.named.barrier") {
-    return TargetTypeInfo(FixedVectorType::get(Type::getInt32Ty(C), 4),
-                          TargetExtType::CanBeGlobal);
-  }
+  if (Name == "amdgcn.named.barrier")
+    return TargetTypeInfo(Type::getInt8Ty(C), TargetExtType::CanBeGlobal);
   if (Name == "amdgpu.stridemark")
     return TargetTypeInfo(Type::getVoidTy(C), TargetExtType::IsTokenLike);
 

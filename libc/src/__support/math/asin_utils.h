@@ -9,17 +9,33 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ASIN_UTILS_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_ASIN_UTILS_H
 
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/integer_literals.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 namespace asin_internal {
+
+// Single-precision approximation of asin(x) / x for |x| <= 0.5, evaluated
+// at xsq = x * x.  The coefficients are the same as those used by asinf16,
+// generated with Sollya:
+// > prec = 200;
+// > display = hexadecimal;
+// > P = fpminimax(asin(x)/x, [|0, 2, 4, 6, 8|], [|SG...|], [0, 0.5]);
+// > dirtyinfnorm(asin(x)/x - P, [0, 0.5]);
+//   0x1p-23
+// This approximation is intended for 16-bit results, not float results.
+LIBC_INLINE LIBC_CONSTEXPR float asin_eval_float(float xsq) {
+  float x4 = xsq * xsq;
+  float c0 = fputil::multiply_add(xsq, 0x1.554c2ap-3f, 0x1.000002p0f);
+  float c1 = fputil::multiply_add(xsq, 0x1.43b2d6p-5f, 0x1.3541ccp-4f);
+  return fputil::polyeval(x4, c0, c1, 0x1.a0d73ep-5f);
+}
 
 using DoubleDouble = fputil::DoubleDouble;
 using DFloat128 = fputil::DyadicFloat<128>;
@@ -221,7 +237,7 @@ LIBC_INLINE DoubleDouble asin_eval(const DoubleDouble &u, unsigned &idx,
   double k = fputil::nearest_integer(u.hi * 0x1.0p5);
   idx = static_cast<unsigned>(k);
   // y = u - k/32.
-  double y_hi = multiply_add(k, -0x1.0p-5, u.hi); // Exact
+  double y_hi = fputil::sub_multiply(u.hi, k, 0x1.0p-5); // Exact
   DoubleDouble y = fputil::exact_add(y_hi, u.lo);
   double y2 = y.hi * y.hi;
   // Add double-double errors in addition to the relative errors from y2.

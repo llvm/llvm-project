@@ -275,12 +275,10 @@ module @transforms attributes { transform.with_named_sequence } {
     %mmt4d_func = transform.get_parent_op %mmt4d <isolated_from_above> : (!transform.any_op) -> !transform.op<"func.func">
 
     // Step 1: Tile
-    // Tile parallel dims (note, the N dim is scalable!)
-    %tiled_mmt4d_parallel, %_:4 = transform.structured.tile_using_for %mmt4d tile_sizes [1, 1, 0, 8, [8], 0]
-      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-    // Tile reduction dims
-    %tiled_mmt4d, %_1:2 = transform.structured.tile_using_for %tiled_mmt4d_parallel tile_sizes [0, 0, 1, 0, 0, 1]
-      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    // Tile the outer dims (m, n, k) one at a time (note, the N dim is
+    // scalable!); the inner tile is kept whole.
+    %tiled_mmt4d, %_:3 = transform.structured.tile_using_for %mmt4d tile_sizes [1, 1, 1, 0, 0, 0]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
 
     // Step 2: Vectorize linalg.mmt4d (note, the N dim is scalable!)
     // TODO: Lower directly to named contractions: https://github.com/llvm/llvm-project/issues/159749

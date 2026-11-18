@@ -158,7 +158,7 @@ bool X86CmovConversionImpl::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   // If the SelectOptimize pass is enabled, cmovs have already been optimized.
-  if (!getCGPassBuilderOption().DisableSelectOptimize)
+  if (!getCGPassBuilderOption(MF.getTarget()).DisableSelectOptimize)
     return false;
 
   LLVM_DEBUG(dbgs() << "********** " << DEBUG_TYPE << " : " << MF.getName()

@@ -270,16 +270,15 @@ define float @frem_f32_imm1_normal(float %a) {
 define float @frem_f32_imm2(float %a) {
 ; CHECK-LABEL: frem_f32_imm2(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [frem_f32_imm2_param_0];
-; CHECK-NEXT:    mov.b32 %r2, 0f40E00000;
-; CHECK-NEXT:    div.rn.f32 %r3, %r2, %r1;
-; CHECK-NEXT:    cvt.rzi.f32.f32 %r4, %r3;
-; CHECK-NEXT:    neg.f32 %r5, %r4;
-; CHECK-NEXT:    fma.rn.f32 %r6, %r5, %r1, 0f40E00000;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-NEXT:    div.rn.f32 %r2, 0f40E00000, %r1;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r3, %r2;
+; CHECK-NEXT:    neg.f32 %r4, %r3;
+; CHECK-NEXT:    fma.rn.f32 %r5, %r4, %r1, 0f40E00000;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;
   %r = frem afn float 7.0, %a
   ret float %r
@@ -288,16 +287,15 @@ define float @frem_f32_imm2(float %a) {
 define float @frem_f32_imm2_fast(float %a) {
 ; CHECK-LABEL: frem_f32_imm2_fast(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [frem_f32_imm2_fast_param_0];
-; CHECK-NEXT:    mov.b32 %r2, 0f40E00000;
-; CHECK-NEXT:    div.rn.f32 %r3, %r2, %r1;
-; CHECK-NEXT:    cvt.rzi.f32.f32 %r4, %r3;
-; CHECK-NEXT:    neg.f32 %r5, %r4;
-; CHECK-NEXT:    fma.rn.f32 %r6, %r5, %r1, 0f40E00000;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-NEXT:    div.rn.f32 %r2, 0f40E00000, %r1;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r3, %r2;
+; CHECK-NEXT:    neg.f32 %r4, %r3;
+; CHECK-NEXT:    fma.rn.f32 %r5, %r4, %r1, 0f40E00000;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;
   %r = frem afn ninf float 7.0, %a
   ret float %r

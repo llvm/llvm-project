@@ -4,9 +4,7 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_variable_length_array %s -o - | FileCheck %s --check-prefixes=CHECK-COMMON,CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_variable_length_array %s -o - -filetype=obj | spirv-val %}
 
-; TODO: currently spirv-val mistakenly rejects Element Type as operand of OpUntypedVariableLengthArrayINTEL. Re-enable spirv-val once it's fixed.
-; Issue: https://github.com/KhronosGroup/SPIRV-Tools/issues/6921
-; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_variable_length_array,+SPV_KHR_untyped_pointers %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_variable_length_array,+SPV_KHR_untyped_pointers %s -o - -filetype=obj | spirv-val %}
 ; RUN: not llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_untyped_pointers %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_variable_length_array,+SPV_KHR_untyped_pointers %s -o - | FileCheck %s --check-prefixes=CHECK-COMMON,CHECK-SPIRV-UNTYPED
 
@@ -83,6 +81,42 @@ entry:
   %elem = load i32, ptr %arrayidx, align 4
   call void @llvm.stackrestore.p0(ptr %stack)
   ret i32 %elem
+}
+
+; A constant count outside the entry block keeps the variable-length lowering:
+; each execution allocates a new object.
+; CHECK-COMMON: Begin function constant_count_loop
+; CHECK-SPIRV: OpVariableLengthArrayINTEL %[[IntPtr]]
+; CHECK-SPIRV-UNTYPED: OpUntypedVariableLengthArrayINTEL %[[CharPtr]] %[[Int]]
+define spir_func void @constant_count_loop(i1 %repeat) {
+entry:
+  br label %loop
+
+loop:
+  %array = alloca i32, i32 4, align 4
+  store volatile i32 1, ptr %array, align 4
+  br i1 %repeat, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Lifetime markers on a VLA (non-static alloca) are dropped.
+; CHECK-COMMON: Begin function vla_lifetime
+; CHECK-SPIRV: OpVariableLengthArrayINTEL %[[IntPtr]]
+; CHECK-SPIRV-UNTYPED: OpUntypedVariableLengthArrayINTEL %[[CharPtr]] %[[Int]]
+; CHECK-COMMON-NOT: OpLifetimeStart
+; CHECK-COMMON-NOT: OpLifetimeStop
+; CHECK-COMMON: OpFunctionEnd
+define spir_func void @vla_lifetime(i64 %n) {
+entry:
+  %stack = call ptr @llvm.stacksave.p0()
+  %vla = alloca i32, i64 %n, align 4
+  call void @llvm.lifetime.start.p0(i64 -1, ptr nonnull %vla)
+  store volatile i32 1, ptr %vla, align 4
+  call void @llvm.lifetime.end.p0(i64 -1, ptr nonnull %vla)
+  call void @llvm.stackrestore.p0(ptr %stack)
+  ret void
 }
 
 declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)

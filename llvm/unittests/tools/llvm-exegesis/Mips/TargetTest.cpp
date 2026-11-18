@@ -42,7 +42,7 @@ Matcher<MCInst> OpcodeIs(unsigned Opcode) {
 }
 
 Matcher<MCInst> IsLoadLow16BitImm(unsigned Reg, int64_t Value, bool IsGPR32) {
-  const unsigned ZeroReg = IsGPR32 ? Mips::ZERO : Mips::ZERO_64;
+  const unsigned ZeroReg = IsGPR32 ? Mips::R0 : Mips::R0_64;
   const unsigned ORi = IsGPR32 ? Mips::ORi : Mips::ORi64;
   return AllOf(OpcodeIs(ORi),
                ElementsAre(IsReg(Reg), IsReg(ZeroReg), IsImm(Value)));
@@ -69,25 +69,25 @@ protected:
 
 TEST_F(MipsTargetTest, SetGPR32RegTo16BitValue) {
   const uint16_t Value = 0xFFFFU;
-  const unsigned Reg = Mips::T0;
+  const unsigned Reg = Mips::R8;
   EXPECT_THAT(setRegTo(Reg, APInt(16, Value)),
               ElementsAre(IsLoadLow16BitImm(Reg, Value, true)));
 }
 
 TEST_F(MipsTargetTest, SetGPR64RegTo16BitValue) {
   const uint16_t Value = 0xFFFFU;
-  const unsigned Reg = Mips::T0_64;
+  const unsigned Reg = Mips::R8_64;
   EXPECT_THAT(setRegTo(Reg, APInt(16, Value)),
               ElementsAre(IsLoadLow16BitImm(Reg, Value, false)));
 }
 
 TEST_F(MipsTargetTest, SetGPR32RegTo32BitValue) {
   const uint32_t Value0 = 0xFFFF0000UL;
-  const unsigned Reg0 = Mips::T0;
+  const unsigned Reg0 = Mips::R8;
   EXPECT_THAT(setRegTo(Reg0, APInt(32, Value0)),
               ElementsAre(IsLoadHigh16BitImm(Reg0, 0xFFFFU, true)));
   const uint32_t Value1 = 0xFFFFFFFFUL;
-  const unsigned Reg1 = Mips::T1;
+  const unsigned Reg1 = Mips::R9;
   EXPECT_THAT(setRegTo(Reg1, APInt(32, Value1)),
               ElementsAre(IsLoadHigh16BitImm(Reg1, 0xFFFFU, true),
                           IsLoadLow16BitImm(Reg1, 0xFFFFU, true)));
@@ -95,21 +95,21 @@ TEST_F(MipsTargetTest, SetGPR32RegTo32BitValue) {
 
 TEST_F(MipsTargetTest, SetGPR64RegTo32BitValue) {
   const uint32_t Value0 = 0x7FFF0000UL;
-  const unsigned Reg0 = Mips::T0_64;
+  const unsigned Reg0 = Mips::R8_64;
   EXPECT_THAT(setRegTo(Reg0, APInt(32, Value0)),
               ElementsAre(IsLoadHigh16BitImm(Reg0, 0x7FFFU, false)));
   const uint32_t Value1 = 0x7FFFFFFFUL;
-  const unsigned Reg1 = Mips::T1_64;
+  const unsigned Reg1 = Mips::R9_64;
   EXPECT_THAT(setRegTo(Reg1, APInt(32, Value1)),
               ElementsAre(IsLoadHigh16BitImm(Reg1, 0x7FFFU, false),
                           IsLoadLow16BitImm(Reg1, 0xFFFFU, false)));
   const uint32_t Value2 = 0xFFFF0000UL;
-  const unsigned Reg2 = Mips::T2_64;
+  const unsigned Reg2 = Mips::R10_64;
   EXPECT_THAT(setRegTo(Reg2, APInt(32, Value2)),
               ElementsAre(IsLoadLow16BitImm(Reg2, 0xFFFFU, false),
                           IsShift(Reg2, 16, false)));
   const uint32_t Value3 = 0xFFFFFFFFUL;
-  const unsigned Reg3 = Mips::T3_64;
+  const unsigned Reg3 = Mips::R11_64;
   EXPECT_THAT(setRegTo(Reg3, APInt(32, Value3)),
               ElementsAre(IsLoadLow16BitImm(Reg3, 0xFFFFU, false),
                           IsShift(Reg3, 16, false),

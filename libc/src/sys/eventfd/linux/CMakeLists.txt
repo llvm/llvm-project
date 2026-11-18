@@ -1,0 +1,47 @@
+add_entrypoint_object(
+  eventfd
+  SRCS
+    eventfd.cpp
+  HDRS
+    ../eventfd.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.eventfd
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  eventfd_read
+  SRCS
+    eventfd_read.cpp
+  HDRS
+    ../eventfd_read.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.eventfd_t
+    libc.hdr.types.ssize_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.read
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  eventfd_write
+  SRCS
+    eventfd_write.cpp
+  HDRS
+    ../eventfd_write.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.eventfd_t
+    libc.hdr.types.ssize_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.write
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)

@@ -166,6 +166,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case AppleA17:
   case AppleM4:
   case AppleM5:
+  case AppleM6:
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;
     MaxPrefetchIterationsAhead = 3;
@@ -208,7 +209,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case NeoverseN2:
   case NeoverseN3:
   case NeoverseV3AE:
-    PrefFunctionAlignment = Align(16);
+    PrefFunctionAlignment = Align(32);
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     VScaleForTuning = 1;
@@ -326,6 +327,10 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
       TLInfo(TM, *this) {
   if (AArch64::isX18ReservedByDefault(TT))
     ReserveXRegister.set(18);
+  if (isLFI()) {
+    ReserveXRegister.set(25, 29);
+    ReserveLRForRA = true;
+  }
 
   CallLoweringInfo.reset(new AArch64CallLowering(*getTargetLowering()));
   InlineAsmLoweringInfo.reset(new InlineAsmLowering(getTargetLowering()));
@@ -396,7 +401,7 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
     if (GV->hasDLLImportStorageClass()) {
       return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORT;
     }
-    if (getTargetTriple().isOSWindows())
+    if (getTargetTriple().isOSWindowsOrUEFI())
       return AArch64II::MO_GOT | AArch64II::MO_COFFSTUB;
     return AArch64II::MO_GOT;
   }
@@ -432,7 +437,7 @@ unsigned AArch64Subtarget::classifyGlobalFunctionReference(
       F->hasFnAttribute(Attribute::NonLazyBind) && !TM.shouldAssumeDSOLocal(GV))
     return AArch64II::MO_GOT;
 
-  if (getTargetTriple().isOSWindows()) {
+  if (getTargetTriple().isOSWindowsOrUEFI()) {
     if (isWindowsArm64EC() && GV->getValueType()->isFunctionTy()) {
       if (GV->hasDLLImportStorageClass()) {
         // On Arm64EC, if we're calling a symbol from the import table

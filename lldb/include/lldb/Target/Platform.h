@@ -24,7 +24,6 @@
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
@@ -833,7 +832,7 @@ public:
   ///
   /// \return
   ///     A list of symbol names.  The list may be empty.
-  virtual const std::vector<ConstString> &GetTrapHandlerSymbolNames();
+  virtual const std::vector<std::string> &GetTrapHandlerSymbolNames();
 
   /// Try to get a specific unwind plan for a named trap handler.
   /// The default is not to have specific unwind plans for trap handlers.
@@ -849,7 +848,7 @@ public:
   ///     shared pointer. The latter means there is no specific plan,
   ///     unwind as normal.
   virtual lldb::UnwindPlanSP GetTrapHandlerUnwindPlan(const ArchSpec &arch,
-                                                      ConstString name) {
+                                                      llvm::StringRef name) {
     return {};
   }
 
@@ -1075,7 +1074,6 @@ protected:
   llvm::VersionTuple m_os_version;
   ArchSpec
       m_system_arch; // The architecture of the kernel or the remote platform
-  typedef std::map<uint32_t, ConstString> IDToNameMap;
   // Mutex for modifying Platform data structures that should only be used for
   // non-reentrant code
   std::mutex m_mutex;
@@ -1088,7 +1086,7 @@ protected:
   std::string m_ssh_opts;
   bool m_ignores_remote_hostname;
   std::string m_local_cache_directory;
-  std::vector<ConstString> m_trap_handlers;
+  std::vector<std::string> m_trap_handlers;
   bool m_calculated_trap_handlers;
   const std::unique_ptr<ModuleCache> m_module_cache;
   LocateModuleCallback m_locate_module_callback;

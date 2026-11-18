@@ -535,6 +535,11 @@ The pass takes one of two driver modes via pass options:
 
 Exactly one of the two options must be set.
 
+Each driver is a `CIRABIClassifier` subclass under
+`clang/lib/CIR/Dialect/Transforms/`. The pass asks the classifier to classify
+each function, each call that passes arguments through an ellipsis, each
+indirect call, and each `cir.va_arg`.
+
 ### Enabling the Pass
 
 `cir-call-conv-lowering` runs by default whenever ClangIR code generation is

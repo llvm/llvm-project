@@ -246,7 +246,6 @@ add_entrypoint_object(
     libc.src.__support.libc_errno
 )
 
-
 add_entrypoint_object(
   mbrlen
   SRCS
@@ -764,7 +763,13 @@ add_entrypoint_object(
     libc.hdr.types.size_t
     libc.hdr.types.wchar_t
     libc.hdr.errno_macros
+    libc.src.__support.CPP.limits
+    libc.src.__support.arg_list
     libc.src.__support.common
     libc.src.__support.macros.config
+    libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.error_mapper
+    libc.src.__support.printf_core.printf_main
+    libc.src.__support.printf_core.writer
     libc.src.errno.errno
 )

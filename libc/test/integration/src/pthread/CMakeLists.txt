@@ -1,4 +1,4 @@
-add_libc_integration_test_suite(libc-pthread-integration-tests)
+add_libc_testsuite(libc-pthread-integration-tests PARENT libc-integration-tests)
 
 add_integration_test(
   pthread_mutex_test
@@ -10,10 +10,10 @@ add_integration_test(
     libc.hdr.errno_macros
     libc.hdr.stdint_proxy
     libc.include.pthread
-    libc.src.errno.errno
     libc.src.pthread.pthread_mutex_destroy
     libc.src.pthread.pthread_mutex_init
     libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_timedlock
     libc.src.pthread.pthread_mutex_trylock
     libc.src.pthread.pthread_mutex_unlock
     libc.src.pthread.pthread_mutexattr_destroy
@@ -31,7 +31,6 @@ add_integration_test(
     pthread_barrier_test.cpp
   DEPENDS
     libc.include.pthread
-    libc.src.errno.errno
     libc.src.__support.CPP.atomic
     libc.src.pthread.pthread_barrier_destroy
     libc.src.pthread.pthread_barrier_wait
@@ -172,7 +171,6 @@ add_integration_test(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.include.pthread
-    libc.src.errno.errno
     libc.src.pthread.pthread_mutex_destroy
     libc.src.pthread.pthread_mutex_init
     libc.src.pthread.pthread_mutex_lock
@@ -194,7 +192,6 @@ add_integration_test(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.include.pthread
-    libc.src.errno.errno
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_getname_np
     libc.src.pthread.pthread_join
@@ -217,6 +214,7 @@ add_integration_test(
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_exit
     libc.src.pthread.pthread_join
+    libc.src.stdlib.__cxa_thread_atexit_impl
 )
 
 add_integration_test(
@@ -267,7 +265,6 @@ add_integration_test(
     libc.src.__support.threads.thread
     libc.include.pthread
     libc.include.stdio
-    libc.src.errno.errno
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_join
     libc.src.pthread.pthread_self
@@ -295,9 +292,11 @@ add_integration_test(
   SRCS
     pthread_create_test.cpp
   DEPENDS
+    libc.hdr.pthread_macros
+    libc.hdr.sched_macros
     libc.hdr.sys_mman_macros
+    libc.hdr.types.struct_sched_param
     libc.include.pthread
-    libc.src.errno.errno
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_join
     libc.src.pthread.pthread_attr_getdetachstate
@@ -306,10 +305,14 @@ add_integration_test(
     libc.src.pthread.pthread_attr_getstacksize
     libc.src.pthread.pthread_attr_setdetachstate
     libc.src.pthread.pthread_attr_setguardsize
+    libc.src.pthread.pthread_attr_setinheritsched
+    libc.src.pthread.pthread_attr_setschedparam
+    libc.src.pthread.pthread_attr_setschedpolicy
     libc.src.pthread.pthread_attr_setstack
     libc.src.pthread.pthread_attr_setstacksize
     libc.src.pthread.pthread_attr_init
     libc.src.pthread.pthread_attr_destroy
+    libc.src.pthread.pthread_getschedparam
     libc.src.pthread.pthread_getunique_np
     libc.src.pthread.pthread_self
     libc.src.sys.mman.mmap
@@ -441,6 +444,7 @@ add_integration_test(
     libc.src.pthread.pthread_mutex_destroy
     libc.src.pthread.pthread_mutex_init
     libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_timedlock
     libc.src.pthread.pthread_mutex_trylock
     libc.src.pthread.pthread_mutex_unlock
 )

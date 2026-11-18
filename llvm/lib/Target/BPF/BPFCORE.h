@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/BTFUtils.h"
+#include "llvm/DebugInfo/BTF/BTF.h"
 #include "llvm/IR/Instructions.h"
 
 namespace llvm {
@@ -47,6 +48,14 @@ public:
   static constexpr StringRef AmaAttr = "btf_ama";
   /// The attribute attached to globals representing a type id
   static constexpr StringRef TypeIdAttr = "btf_type_id";
+
+  struct AmaRelocation {
+    BTF::PatchableRelocKind Kind;
+    int64_t PatchImm;
+    StringRef AccessString;
+
+    static AmaRelocation decode(StringRef Name);
+  };
 
   /// llvm.bpf.passthrough builtin seq number
   static uint32_t SeqNum;

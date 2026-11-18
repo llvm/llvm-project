@@ -24,6 +24,7 @@
 #include "LowerModule.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace cir {
@@ -150,11 +151,21 @@ std::unique_ptr<CIRCXXABI> createItaniumCXXABI(LowerModule &lm) {
   case clang::TargetCXXABI::GenericItanium:
     return std::make_unique<LowerItaniumCXXABI>(lm);
 
+  case clang::TargetCXXABI::GenericARM:
+  case clang::TargetCXXABI::iOS:
+  case clang::TargetCXXABI::WatchOS:
+  case clang::TargetCXXABI::Fuchsia:
+  case clang::TargetCXXABI::GenericMIPS:
+  case clang::TargetCXXABI::WebAssembly:
+  case clang::TargetCXXABI::XL:
+    // FIXME: these ABIS are not yet implemented by CIR. The error is reported
+    // by consumers of LowerModule/CIRCXXABI when missing CIRCXXABI is
+    // encountered.
+    return nullptr;
   case clang::TargetCXXABI::Microsoft:
     llvm_unreachable("Microsoft ABI is not Itanium-based");
-  default:
-    llvm_unreachable("Other Itanium ABI?");
   }
+  llvm_unreachable("bad ABI kind");
 }
 
 static cir::IntType getPtrDiffCIRTy(LowerModule &lm) {
@@ -468,15 +479,12 @@ static mlir::Value lowerDataMemberCast(mlir::Operation *op,
 
   cir::ConstantOp offsetValue = getConstantInt(offset);
   mlir::Value adjustedPtr;
-  if (isDerivedToBase) {
-    auto subOp = cir::SubOp::create(builder, loc, ty, loweredSrc, offsetValue);
-    subOp.setNoSignedWrap(true);
-    adjustedPtr = subOp;
-  } else {
-    auto addOp = cir::AddOp::create(builder, loc, ty, loweredSrc, offsetValue);
-    addOp.setNoSignedWrap(true);
-    adjustedPtr = addOp;
-  }
+  if (isDerivedToBase)
+    adjustedPtr = cir::SubOp::create(builder, loc, loweredSrc, offsetValue,
+                                     cir::OverflowFlags::NoSignedWrap);
+  else
+    adjustedPtr = cir::AddOp::create(builder, loc, loweredSrc, offsetValue,
+                                     cir::OverflowFlags::NoSignedWrap);
 
   return cir::SelectOp::create(builder, loc, ty, isNull, loweredSrc,
                                adjustedPtr);
@@ -518,17 +526,14 @@ static mlir::Value lowerMethodCast(mlir::Operation *op, mlir::Value loweredSrc,
   auto offsetValue = cir::ConstantOp::create(
       builder, op->getLoc(), cir::IntAttr::get(ptrdiffCIRTy, offset));
   mlir::Value adjustedAdjField;
-  if (isDerivedToBase) {
-    auto subOp = cir::SubOp::create(builder, op->getLoc(), ptrdiffCIRTy,
-                                    adjField, offsetValue);
-    subOp.setNoSignedWrap(true);
-    adjustedAdjField = subOp;
-  } else {
-    auto addOp = cir::AddOp::create(builder, op->getLoc(), ptrdiffCIRTy,
-                                    adjField, offsetValue);
-    addOp.setNoSignedWrap(true);
-    adjustedAdjField = addOp;
-  }
+  if (isDerivedToBase)
+    adjustedAdjField =
+        cir::SubOp::create(builder, op->getLoc(), adjField, offsetValue,
+                           cir::OverflowFlags::NoSignedWrap);
+  else
+    adjustedAdjField =
+        cir::AddOp::create(builder, op->getLoc(), adjField, offsetValue,
+                           cir::OverflowFlags::NoSignedWrap);
 
   return cir::InsertMemberOp::create(builder, op->getLoc(), loweredSrc, 1,
                                      adjustedAdjField);
@@ -777,70 +782,41 @@ static mlir::Value buildDynamicCastAfterNullCheck(cir::DynamicCastOp op,
 static mlir::Value buildDynamicCastToVoidAfterNullCheck(
     cir::DynamicCastOp op, cir::LowerModule &lm, mlir::OpBuilder &builder) {
   mlir::Location loc = op.getLoc();
-  bool vtableUsesRelativeLayout = op.getRelativeLayout();
 
-  // TODO(cir): consider address space in this function.
+  // TODO(cir): consider address space of the vtable pointer.
   assert(!cir::MissingFeatures::addressSpace());
-
-  mlir::Type vtableElemTy;
-  uint64_t vtableElemAlign;
-  if (vtableUsesRelativeLayout) {
-    vtableElemTy =
-        cir::IntType::get(builder.getContext(), 32, /*isSigned=*/true);
-    vtableElemAlign = 4;
-  } else {
-    vtableElemTy = getPtrDiffCIRTy(lm);
-    vtableElemAlign = llvm::divideCeil(
-        lm.getTarget().getPointerAlign(clang::LangAS::Default), 8);
-  }
-
-  mlir::Type vtableElemPtrTy = cir::PointerType::get(vtableElemTy);
-  mlir::Type i64Ty = cir::IntType::get(builder.getContext(), /*width=*/64,
-                                       /*isSigned=*/true);
 
   // Access vtable to get the offset from the given object to its containing
   // complete object.
-  // TODO: Add a specialized operation to get the object offset?
+  uint64_t vptrAlign = llvm::divideCeil(
+      lm.getTarget().getPointerAlign(clang::LangAS::Default), 8);
   auto vptrPtr = cir::VTableGetVPtrOp::create(builder, loc, op.getSrc());
-  mlir::Value vptr = cir::LoadOp::create(
-      builder, loc, vptrPtr,
-      /*isDeref=*/false,
-      /*is_volatile=*/false,
-      /*isNontemporal=*/false,
-      /*alignment=*/builder.getI64IntegerAttr(vtableElemAlign),
-      /*sync_scope=*/cir::SyncScopeKindAttr(),
-      /*mem_order=*/cir::MemOrderAttr(),
-      /*invariant=*/false);
-  mlir::Value elementPtr = cir::CastOp::create(builder, loc, vtableElemPtrTy,
-                                               cir::CastKind::bitcast, vptr);
-  mlir::Value minusTwo =
-      cir::ConstantOp::create(builder, loc, cir::IntAttr::get(i64Ty, -2));
-  mlir::Value offsetToTopSlotPtr = cir::PtrStrideOp::create(
-      builder, loc, vtableElemPtrTy, elementPtr, minusTwo);
-  mlir::Value offsetToTop = cir::LoadOp::create(
-      builder, loc, offsetToTopSlotPtr,
-      /*isDeref=*/false,
-      /*is_volatile=*/false,
-      /*isNontemporal=*/false,
-      /*alignment=*/builder.getI64IntegerAttr(vtableElemAlign),
-      /*sync_scope=*/cir::SyncScopeKindAttr(),
-      /*mem_order=*/cir::MemOrderAttr(),
-      /*invariant=*/false);
-
-  auto voidPtrTy =
-      cir::PointerType::get(cir::VoidType::get(builder.getContext()));
+  mlir::Value vptr =
+      cir::LoadOp::create(builder, loc, vptrPtr,
+                          /*isDeref=*/false,
+                          /*is_volatile=*/false,
+                          /*isNontemporal=*/false,
+                          /*alignment=*/builder.getI64IntegerAttr(vptrAlign),
+                          /*sync_scope=*/cir::SyncScopeKindAttr(),
+                          /*mem_order=*/cir::MemOrderAttr(),
+                          /*invariant=*/false);
+  // The Itanium ABI always places an offset to the complete object at entry -2
+  // in the vtable.
+  mlir::Value offsetToTop = cir::VTableGetOffsetOp::create(
+      builder, loc, getPtrDiffCIRTy(lm), vptr, /*index=*/-2);
 
   // Add the offset to the given pointer to get the cast result.
   // Cast the input pointer to a uint8_t* to allow pointer arithmetic.
   mlir::Type u8PtrTy =
       cir::PointerType::get(cir::IntType::get(builder.getContext(), /*width=*/8,
-                                              /*isSigned=*/false));
+                                              /*isSigned=*/false),
+                            op.getSrc().getType().getAddrSpace());
   mlir::Value srcBytePtr = cir::CastOp::create(
       builder, loc, u8PtrTy, cir::CastKind::bitcast, op.getSrc());
   auto dstBytePtr =
       cir::PtrStrideOp::create(builder, loc, u8PtrTy, srcBytePtr, offsetToTop);
   // Cast the result to a void*.
-  return cir::CastOp::create(builder, loc, voidPtrTy, cir::CastKind::bitcast,
+  return cir::CastOp::create(builder, loc, op.getType(), cir::CastKind::bitcast,
                              dstBytePtr);
 }
 
@@ -879,17 +855,10 @@ LowerItaniumCXXABI::lowerDynamicCast(cir::DynamicCastOp op,
 mlir::Value
 LowerItaniumCXXABI::lowerVTableGetTypeInfo(cir::VTableGetTypeInfoOp op,
                                            mlir::OpBuilder &builder) const {
-  mlir::Location loc = op->getLoc();
-  auto offset = cir::ConstantOp::create(
-      builder, op->getLoc(), cir::IntAttr::get(getPtrDiffCIRTy(lm), -1));
-
-  // Cast the vptr to type_info-ptr, so that we can go backwards 1 pointer.
-  auto vptrCast = cir::CastOp::create(builder, loc, op.getType(),
-                                      cir::CastKind::bitcast, op.getVptr());
-
-  return cir::PtrStrideOp::create(builder, loc, vptrCast.getType(), vptrCast,
-                                  offset)
-      .getResult();
+  // The Itanium ABI always places the pointer to the type_info at entry -1 in
+  // the vtable.
+  return cir::VTableGetEntryOp::create(builder, op->getLoc(), op.getType(),
+                                       op.getVptr(), /*index=*/-1);
 }
 
 clang::CharUnits LowerItaniumCXXABI::getArrayCookieSizeImpl(
@@ -906,7 +875,9 @@ mlir::Value LowerItaniumCXXABI::readArrayCookieImpl(
     clang::CharUnits cookieAlignment, const mlir::DataLayout &dataLayout,
     CIRBaseBuilderTy &builder) const {
   unsigned ptrSizeInBits = getPtrSizeInBits();
-  auto u8PtrTy = builder.getPointerTo(builder.getUIntNTy(8));
+  mlir::ptr::MemorySpaceAttrInterface addrSpace =
+      mlir::cast<cir::PointerType>(allocPtr.getType()).getAddrSpace();
+  auto u8PtrTy = builder.getPointerTo(builder.getUIntNTy(8), addrSpace);
   auto ptrDiffTy = builder.getSIntNTy(ptrSizeInBits);
   auto sizeTy = builder.getUIntNTy(ptrSizeInBits);
 
@@ -925,7 +896,7 @@ mlir::Value LowerItaniumCXXABI::readArrayCookieImpl(
     countAlignment = cookieAlignment.alignmentAtOffset(countOffset);
   }
 
-  auto countPtrTy = cir::PointerType::get(sizeTy);
+  auto countPtrTy = cir::PointerType::get(sizeTy, addrSpace);
   mlir::Value countPtr = cir::CastOp::create(
       builder, loc, countPtrTy, cir::CastKind::bitcast, countBytePtr);
   return cir::LoadOp::create(

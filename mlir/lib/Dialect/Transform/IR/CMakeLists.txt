@@ -13,6 +13,7 @@ add_mlir_dialect_library(MLIRTransformDialect
   MLIRTransformOpsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRCastInterfaces
   MLIRFunctionInterfaces
   MLIRIR

@@ -115,7 +115,7 @@ class TestDAP_evaluate(DAPTestCaseBase):
         elif is_result_summary:
             struct1_match = r"\{foo:15\}"
         else:
-            struct1_match = "my_struct"
+            struct1_match = r"^$"
         assert_eval("struct1", struct1_match, type="my_struct", has_var_ref=True)
 
         if is_result_expanded:
@@ -248,6 +248,16 @@ class TestDAP_evaluate(DAPTestCaseBase):
                     after=event_before_help_eval,
                 )
 
+                # `script print(...)` output goes to the console only, not the
+                # evaluate response.
+                marker = "lldb_dap_test_script_print_marker"
+                event_before_script_eval = session.last_event()
+                eval_body = session.evaluate(
+                    f"script print('{marker}')", context=context
+                )
+                session.verify_evaluate(eval_body, result="")
+                session.collect_console(until=marker, after=event_before_script_eval)
+
                 # A valid frame should add local lookup without preventing the same
                 # global from taking precedence over the LLDB command.
                 eval_body = a_frame.evaluate("help", context=context)
@@ -369,7 +379,7 @@ class TestDAP_evaluate(DAPTestCaseBase):
         elif is_result_summary:
             my_longs_match = r"\{5, 6, 7\}"
         else:
-            my_longs_match = r"long\[3\]"
+            my_longs_match = r"^$"
         assert_eval("my_longs", my_longs_match, has_var_ref=True)
 
         session.continue_to_exit()

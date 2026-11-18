@@ -1,0 +1,682 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load(
+    "//libc:libc_build_rules.bzl",
+    "libc_generated_headers",
+    "libc_hdrgen_spec",
+    "libc_header_info",
+    "libc_support_library",
+)
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+LLVM_LIBC_GENERATED_HEADERS = [
+    libc_header_info(
+        "assert",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "errno",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "link",
+    ),
+    libc_header_info(
+        "math",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "stdbit",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "stdfix",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "sys/prctl",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "sys/syscall",
+        has_def_template = True,
+    ),
+    libc_header_info(
+        "arpa/inet",
+        other_srcs = ["htons-family.yaml"],
+    ),
+    libc_header_info("complex"),
+    libc_header_info("ctype"),
+    libc_header_info("dirent"),
+    libc_header_info("dlfcn"),
+    libc_header_info("elf"),
+    libc_header_info("endian"),
+    libc_header_info("fcntl"),
+    libc_header_info("features"),
+    libc_header_info("fenv"),
+    libc_header_info("float"),
+    libc_header_info("inttypes"),
+    libc_header_info("limits"),
+    libc_header_info("locale"),
+    libc_header_info(
+        "netinet/in",
+        other_srcs = ["htons-family.yaml"],
+    ),
+    libc_header_info("nl_types"),
+    libc_header_info("poll"),
+    libc_header_info("llvm-libc-proxy/elf_proxy"),
+    libc_header_info("pthread"),
+    libc_header_info("sched"),
+    libc_header_info("search"),
+    libc_header_info("setjmp"),
+    libc_header_info("signal"),
+    libc_header_info("spawn"),
+    libc_header_info("stdckdint"),
+    libc_header_info("stdint"),
+    libc_header_info("stdio"),
+    libc_header_info(
+        "string",
+    ),
+    libc_header_info("strings"),
+    libc_header_info("sys/auxv"),
+    libc_header_info("sys/epoll"),
+    libc_header_info("sys/ioctl"),
+    libc_header_info("sys/ipc"),
+    libc_header_info("sys/mman"),
+    libc_header_info("sys/random"),
+    libc_header_info("sys/resource"),
+    libc_header_info(
+        "sys/select",
+        other_srcs = ["sys/select-time.yaml"],
+    ),
+    libc_header_info("sys/socket"),
+    libc_header_info("sys/stat"),
+    libc_header_info("sys/statvfs"),
+    libc_header_info(
+        "sys/time",
+        other_srcs = ["sys/select-time.yaml"],
+    ),
+    libc_header_info("sys/types"),
+    libc_header_info("sys/utsname"),
+    libc_header_info("sys/wait"),
+    libc_header_info("sysexits"),
+    libc_header_info("termios"),
+    libc_header_info("threads"),
+    libc_header_info("time"),
+    libc_header_info("uchar"),
+    libc_header_info("unistd"),
+    libc_header_info("wchar"),
+    libc_header_info("wctype"),
+    libc_header_info(
+        "stdlib",
+        other_srcs = [
+            "stdlib-alloca.yaml",
+            "stdlib-malloc.yaml",
+        ],
+    ),
+    libc_header_info(
+        "malloc",
+        other_srcs = ["stdlib-malloc.yaml"],
+    ),
+]
+
+[
+    libc_hdrgen_spec(
+        name = info.spec_name,
+        def_template = info.def_template,
+        install_path = info.install_path,
+        other_srcs = info.other_srcs,
+        proxy = info.proxy,
+        yaml_template = info.yaml_template,
+    )
+    for info in LLVM_LIBC_GENERATED_HEADERS
+]
+
+[
+    libc_generated_headers(
+        name = info.target_name,
+        output_dir = "staging/include",
+        specs = [":" + info.spec_name],
+    )
+    for info in LLVM_LIBC_GENERATED_HEADERS
+]
+
+# Static headers that need to be in staging/include
+STATIC_HEADERS = glob(
+    ["llvm-libc-types/**/*.h"],
+) + glob(
+    ["llvm-libc-macros/**/*.h"],
+    exclude = [
+        "llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h",
+        "llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF-disable.h",
+    ],
+) + ["__llvm-libc-common.h"]
+
+[
+    copy_file(
+        name = "copy_staging/" + f,
+        src = f,
+        out = "staging/include/" + f,
+    )
+    for f in STATIC_HEADERS
+]
+
+copy_file(
+    name = "copy_modular_format_header",
+    src = select({
+        "//libc:modular_format_enable": "llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h",
+        "//conditions:default": "llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF-disable.h",
+    }),
+    out = "staging/include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h",
+)
+
+STATIC_AND_CONDITIONAL_HEADERS = STATIC_HEADERS + ["llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h"]
+
+cc_library(
+    name = "public_headers",
+    hdrs = [header.target_name for header in LLVM_LIBC_GENERATED_HEADERS],
+    includes = ["staging/include"],
+    textual_hdrs = ["staging/include/" + f for f in STATIC_AND_CONDITIONAL_HEADERS],
+)
+
+# Textual versions of the static headers. These are taken from the source tree
+# and are separate from the generated headers above. They are used for
+# testing purposes.
+cc_library(
+    name = "public_headers_deps",
+    textual_hdrs = STATIC_AND_CONDITIONAL_HEADERS,
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_assert_macros",
+    hdrs = ["llvm-libc-macros/assert-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_stdbit_macros",
+    textual_hdrs = ["llvm-libc-macros/stdbit-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_stdckdint_macros",
+    hdrs = ["llvm-libc-macros/stdckdint-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_offsetof_macro",
+    hdrs = ["llvm-libc-macros/offsetof-macro.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_containerof_macro",
+    hdrs = ["llvm-libc-macros/containerof-macro.h"],
+    deps = [":llvm_libc_macros_offsetof_macro"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_null_macro",
+    hdrs = ["llvm-libc-macros/null-macro.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_sys_queue_macros",
+    hdrs = ["llvm-libc-macros/sys-queue-macros.h"],
+    deps = [
+        ":llvm_libc_macros_containerof_macro",
+        ":llvm_libc_macros_null_macro",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_common_h",
+    hdrs = ["__llvm-libc-common.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_complex_macros",
+    hdrs = [
+        "llvm-libc-macros/cfloat128-macros.h",
+        "llvm-libc-macros/cfloat16-macros.h",
+        "llvm-libc-macros/complex-macros.h",
+    ],
+    deps = [":llvm_libc_macros_float_macros"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_math_macros",
+    hdrs = ["llvm-libc-macros/math-macros.h"],
+    deps = [":llvm_libc_macros_limits_macros"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_math_function_macros",
+    hdrs = ["llvm-libc-macros/math-function-macros.h"],
+    deps = [
+        ":llvm_libc_macros_float16_macros",
+        ":llvm_libc_macros_math_macros",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_common_threads_macros",
+    hdrs = ["llvm-libc-macros/common-threads-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_threads_macros",
+    hdrs = ["llvm-libc-macros/threads-macros.h"],
+    deps = [":llvm_libc_macros_common_threads_macros"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_limits_macros",
+    hdrs = ["llvm-libc-macros/limits-macros.h"],
+    deps = [":llvm_libc_macros_common_threads_macros"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_float_macros",
+    hdrs = ["llvm-libc-macros/float-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_float16_macros",
+    hdrs = ["llvm-libc-macros/float16-macros.h"],
+    deps = [":llvm_libc_types_float128"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_file_seek_macros",
+    hdrs = ["llvm-libc-macros/file-seek-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_stdio_macros",
+    hdrs = ["llvm-libc-macros/stdio-macros.h"],
+    deps = [
+        ":llvm_libc_types_FILE",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_stdint_macros",
+    hdrs = ["llvm-libc-macros/stdint-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_stdfix_macros",
+    hdrs = ["llvm-libc-macros/stdfix-macros.h"],
+    deps = [":llvm_libc_macros_float_macros"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_sched_macros",
+    hdrs = [
+        "llvm-libc-macros/linux/sched-macros.h",
+        "llvm-libc-macros/sched-macros.h",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_poll_macros",
+    hdrs = [
+        "llvm-libc-macros/linux/poll-macros.h",
+        "llvm-libc-macros/poll-macros.h",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_pthread_macros",
+    hdrs = [
+        "llvm-libc-macros/pthread-macros.h",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_signal_macros",
+    hdrs = [
+        "llvm-libc-macros/linux/signal-macros.h",
+        "llvm-libc-macros/signal-macros.h",
+    ],
+    deps = [
+        ":llvm_libc_common_h",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_unistd_macros",
+    hdrs = [
+        "llvm-libc-macros/linux/unistd-macros.h",
+        "llvm-libc-macros/unistd-macros.h",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_float128",
+    hdrs = ["llvm-libc-types/float128.h"],
+    deps = [":llvm_libc_macros_float_macros"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_cfloat128",
+    hdrs = ["llvm-libc-types/cfloat128.h"],
+    deps = [
+        ":llvm_libc_macros_complex_macros",
+        ":llvm_libc_macros_float_macros",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_cfloat16",
+    hdrs = ["llvm-libc-types/cfloat16.h"],
+    deps = [":llvm_libc_macros_complex_macros"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_cpu_set_t",
+    hdrs = ["llvm-libc-types/cpu_set_t.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_mode_t",
+    hdrs = ["llvm-libc-types/mode_t.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_gid_t",
+    hdrs = ["llvm-libc-types/gid_t.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_key_t",
+    hdrs = ["llvm-libc-types/key_t.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_struct_ipc_perm",
+    hdrs = ["llvm-libc-types/struct_ipc_perm.h"],
+    deps = [
+        ":llvm_libc_types_gid_t",
+        ":llvm_libc_types_key_t",
+        ":llvm_libc_types_mode_t",
+        ":llvm_libc_types_uid_t",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_pid_t",
+    hdrs = ["llvm-libc-types/pid_t.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_uid_t",
+    hdrs = ["llvm-libc-types/uid_t.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_union_sigval",
+    hdrs = ["llvm-libc-types/union_sigval.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_off_t",
+    hdrs = ["llvm-libc-types/off_t.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_struct_cmsghdr",
+    hdrs = ["llvm-libc-types/struct_cmsghdr.h"],
+    deps = [
+        ":llvm_libc_types_size_t",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_struct___pthread_cleanup_frame",
+    hdrs = ["llvm-libc-types/struct___pthread_cleanup_frame.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_fcntl_macros",
+    hdrs = ["llvm-libc-macros/linux/fcntl-macros.h"],
+    deps = [
+        ":llvm_libc_macros_sys_stat_macros",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_time_macros",
+    hdrs = [
+        "llvm-libc-macros/linux/time-macros.h",
+        "llvm-libc-macros/time-macros.h",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_sys_ipc_macros",
+    hdrs = [
+        "llvm-libc-macros/linux/sys-ipc-macros.h",
+        "llvm-libc-macros/sys-ipc-macros.h",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_sys_sem_macros",
+    hdrs = [
+        "llvm-libc-macros/linux/sys-sem-macros.h",
+        "llvm-libc-macros/sys-sem-macros.h",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_sys_socket_macros",
+    hdrs = [
+        "llvm-libc-macros/linux/sys-socket-macros.h",
+        "llvm-libc-macros/sys-socket-macros.h",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_netinet_tcp_macros",
+    hdrs = [
+        "llvm-libc-macros/linux/netinet-tcp-macros.h",
+        "llvm-libc-macros/netinet-tcp-macros.h",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_sys_wait_macros",
+    hdrs = [
+        "llvm-libc-macros/linux/sys-wait-macros.h",
+        "llvm-libc-macros/sys-wait-macros.h",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_wchar_macros",
+    hdrs = ["llvm-libc-macros/wchar-macros.h"],
+    deps = [
+        ":llvm_libc_types_wint_t",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_size_t",
+    hdrs = ["llvm-libc-types/size_t.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_char8_t",
+    hdrs = ["llvm-libc-types/char8_t.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_fenv_macros",
+    hdrs = ["llvm-libc-macros/fenv-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_sigset_t",
+    hdrs = ["llvm-libc-types/sigset_t.h"],
+    deps = [
+        ":llvm_libc_macros_signal_macros",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_siginfo_t",
+    hdrs = ["llvm-libc-types/siginfo_t.h"],
+    deps = [
+        ":llvm_libc_types_clock_t",
+        ":llvm_libc_types_pid_t",
+        ":llvm_libc_types_uid_t",
+        ":llvm_libc_types_union_sigval",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_stack_t",
+    hdrs = ["llvm-libc-types/stack_t.h"],
+    deps = [":llvm_libc_types_size_t"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_struct_sigaction",
+    hdrs = ["llvm-libc-types/struct_sigaction.h"],
+    deps = [
+        ":llvm_libc_types_siginfo_t",
+        ":llvm_libc_types_sigset_t",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_nfds_t",
+    hdrs = ["llvm-libc-types/nfds_t.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_struct_pollfd",
+    hdrs = ["llvm-libc-types/struct_pollfd.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_clock_t",
+    hdrs = ["llvm-libc-types/clock_t.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_suseconds_t",
+    hdrs = ["llvm-libc-types/suseconds_t.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_time_t",
+    hdrs = [
+        "llvm-libc-types/time_t.h",
+        "llvm-libc-types/time_t_64.h",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_struct_timeval",
+    hdrs = ["llvm-libc-types/struct_timeval.h"],
+    deps = [
+        ":llvm_libc_types_suseconds_t",
+        ":llvm_libc_types_time_t",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_struct_rusage",
+    hdrs = ["llvm-libc-types/struct_rusage.h"],
+    deps = [
+        ":llvm_libc_types_struct_timeval",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_struct_sembuf",
+    hdrs = ["llvm-libc-types/struct_sembuf.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_struct_semid_ds",
+    hdrs = ["llvm-libc-types/struct_semid_ds.h"],
+    deps = [
+        ":llvm_libc_types_struct_ipc_perm",
+        ":llvm_libc_types_time_t",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_struct_seminfo",
+    hdrs = ["llvm-libc-types/struct_seminfo.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_struct_utsname",
+    hdrs = ["llvm-libc-types/struct_utsname.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_wchar_t",
+    hdrs = ["llvm-libc-types/wchar_t.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_wint_t",
+    hdrs = ["llvm-libc-types/wint_t.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_FILE",
+    hdrs = ["llvm-libc-types/FILE.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_char32_t",
+    hdrs = ["llvm-libc-types/char32_t.h"],
+    deps = [
+        ":llvm_libc_macros_stdint_macros",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_wctype_t",
+    hdrs = ["llvm-libc-types/wctype_t.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_sys_stat_macros",
+    hdrs = [
+        "llvm-libc-macros/linux/sys-stat-macros.h",
+        "llvm-libc-macros/sys-stat-macros.h",
+    ],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_inet_address_macros",
+    hdrs = ["llvm-libc-macros/inet-address-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_error_number_macros",
+    hdrs = [
+        "llvm-libc-macros/error-number-macros.h",
+    ] + select({
+        "@platforms//os:linux": ["llvm-libc-macros/linux/error-number-macros.h"],
+        "//conditions:default": [],
+    }),
+)

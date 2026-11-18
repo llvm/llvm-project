@@ -5,9 +5,9 @@
 define void @test_single_scalable_alloca() {
   ; CHECK-LABEL: name: test_single_scalable_alloca
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.local0
-  ; CHECK-NEXT:   G_STORE [[C]](s64), [[FRAME_INDEX]](p0) :: (volatile store (s64) into %ir.local0)
+  ; CHECK-NEXT:   G_STORE [[C]](i64), [[FRAME_INDEX]](p0) :: (volatile store (i64) into %ir.local0)
   ; CHECK-NEXT:   PseudoRET
   %local0 = alloca <vscale x 16 x i8>
   store volatile i64 1, ptr %local0

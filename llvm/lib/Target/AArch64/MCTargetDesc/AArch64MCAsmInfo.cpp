@@ -137,7 +137,7 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32,
   // We prefer NEON instructions to be printed in the short, Apple-specific
   // form when targeting Darwin.
   AssemblerDialect =
-      AArch64MCOptions::Global.neon_syntax.value_or(AArch64::Apple);
+      AArch64_MC::getCLOpts(Options).neon_syntax.value_or(AArch64::Apple);
 
   InternalSymbolPrefix = "L";
   SeparatorString = "%%";
@@ -149,7 +149,6 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32,
   UsesELFSectionDirectiveForBSS = true;
   SupportsDebugInformation = true;
   UseDataRegionDirectives = true;
-  ExceptionsType = ExceptionHandling::DwarfCFI;
 
   initializeAtSpecifiers(MachOAtSpecifiers);
   UseAtForSpecifier = false;
@@ -206,7 +205,7 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T,
   // We prefer NEON instructions to be printed in the generic form when
   // targeting ELF.
   AssemblerDialect =
-      AArch64MCOptions::Global.neon_syntax.value_or(AArch64::Generic);
+      AArch64_MC::getCLOpts(Options).neon_syntax.value_or(AArch64::Generic);
 
   CodePointerSize = T.getEnvironment() == Triple::GNUILP32 ? 4 : 8;
 
@@ -225,9 +224,6 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T,
   WeakRefDirective = "\t.weak\t";
 
   SupportsDebugInformation = true;
-
-  // Exceptions handling
-  ExceptionsType = ExceptionHandling::DwarfCFI;
 
   HasIdentDirective = true;
 
@@ -267,7 +263,6 @@ AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF(
   CodePointerSize = 8;
 
   CommentString = "//";
-  ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
 
   initializeAtSpecifiers(COFFAtSpecifiers);
@@ -297,7 +292,6 @@ AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF(const MCTargetOptions &Options)
   CodePointerSize = 8;
 
   CommentString = "//";
-  ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
 
   initializeAtSpecifiers(COFFAtSpecifiers);

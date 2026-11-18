@@ -299,8 +299,14 @@ PtrAddOpConversion::matchAndRewrite(ptr::PtrAddOp op, OpAdaptor adaptor,
                                     ConversionPatternRewriter &rewriter) const {
   // Get and check the base.
   Value base = adaptor.getBase();
-  if (!isa<LLVM::LLVMPointerType>(base.getType()))
+  if (!isa<LLVM::LLVMPointerType>(getElementTypeOrSelf(base.getType())))
     return rewriter.notifyMatchFailure(op, "Incompatible pointer type");
+
+  // A vector offset can broadcast a scalar base to a vector result.
+  Type resultType = getTypeConverter()->convertType(op.getType());
+  if (!resultType ||
+      !isa<LLVM::LLVMPointerType>(getElementTypeOrSelf(resultType)))
+    return rewriter.notifyMatchFailure(op, "Incompatible result type");
 
   // Get the offset.
   Value offset = adaptor.getOffset();
@@ -326,8 +332,8 @@ PtrAddOpConversion::matchAndRewrite(ptr::PtrAddOp op, OpAdaptor adaptor,
   }
 
   // Create the GEP operation with appropriate arguments
-  rewriter.replaceOpWithNewOp<LLVM::GEPOp>(op, base.getType(), elementType,
-                                           base, ValueRange{offset}, flags);
+  rewriter.replaceOpWithNewOp<LLVM::GEPOp>(op, resultType, elementType, base,
+                                           ValueRange{offset}, flags);
   return success();
 }
 
