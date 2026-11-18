@@ -3776,12 +3776,15 @@ template <class ELFT> void BtfSection<ELFT>::finalizeContents() {
 
 template <class ELFT> void BtfSection<ELFT>::writeTo(uint8_t *buf) {
   memcpy(buf, outputData.data(), outputData.size());
+  size_t removed = 0;
   for (const DataSec &ds : dataSecs) {
     if (ds.osec->size > UINT32_MAX) {
       ErrAlways(ctx) << ds.osec->name << ": section too large for BTF DATASEC";
       continue;
     }
-    uint8_t *record = buf + ds.offset;
+    uint8_t *record = buf + ds.offset - removed;
+    uint8_t *header = record;
+    memmove(record, buf + ds.offset, sizeof(BTF::CommonType));
     write32(ctx, record + offsetof(BTF::CommonType, Size), ds.osec->size);
     record += sizeof(BTF::CommonType);
 
@@ -3803,12 +3806,34 @@ template <class ELFT> void BtfSection<ELFT>::writeTo(uint8_t *buf) {
     llvm::stable_sort(entries, [](const auto &a, const auto &b) {
       return a.Offset < b.Offset;
     });
+    uint64_t end = 0;
+    uint32_t count = 0;
     for (const auto &entry : entries) {
+      // The kernel BTF verifier rejects empty or overlapping DATASEC entries.
+      if (!entry.Size || entry.Offset < end) {
+        removed += sizeof(entry);
+        continue;
+      }
+      end = uint64_t(entry.Offset) + entry.Size;
+      ++count;
       write32(ctx, record + offsetof(BTF::BTFDataSec, Type), entry.Type);
       write32(ctx, record + offsetof(BTF::BTFDataSec, Offset), entry.Offset);
       write32(ctx, record + offsetof(BTF::BTFDataSec, Size), entry.Size);
       record += sizeof(entry);
     }
+    write32(ctx, header + offsetof(BTF::CommonType, Info),
+            (BTF::BTF_KIND_DATASEC << 24) | count);
+  }
+  if (removed) {
+    uint32_t hdrLen = read32(ctx, buf + offsetof(BTF::Header, HdrLen));
+    uint32_t typeLen = read32(ctx, buf + offsetof(BTF::Header, TypeLen));
+    uint32_t strOff = read32(ctx, buf + offsetof(BTF::Header, StrOff));
+    uint32_t strLen = read32(ctx, buf + offsetof(BTF::Header, StrLen));
+    memmove(buf + hdrLen + strOff - removed, buf + hdrLen + strOff, strLen);
+    memset(buf + hdrLen + strOff + strLen - removed, 0, removed);
+    write32(ctx, buf + offsetof(BTF::Header, TypeLen), typeLen - removed);
+    write32(ctx, buf + offsetof(BTF::Header, StrOff), strOff - removed);
+    write32(ctx, buf + offsetof(BTF::Header, StrLen), strLen + removed);
   }
 }
 

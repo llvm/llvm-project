@@ -29,6 +29,16 @@
 # RUN: llvm-readelf -r a32.o | FileCheck %s --check-prefix=REL
 # RUN: ld.lld --btf-merge --gc-sections a32.o b32.o -o out32
 # RUN: llvm-readelf -x .BTF out32 | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=x86_64 overlap.s -o overlap.o
+# RUN: ld.lld --btf-merge overlap.o -o overlap
+# RUN: llvm-readelf -x .BTF overlap | FileCheck %s --check-prefix=OVERLAP
+
+## Keep the first of two aliases and the adjacent variable, but omit the empty.
+# OVERLAP:      0x00000000 9feb0100 18000000 00000000 74000000
+# OVERLAP-NEXT: 0x00000010 74000000 3a000000
+# OVERLAP:      0x00000060 01000000 00000000 1c000000 0200000f
+# OVERLAP-NEXT: 0x00000070 08000000 02000000 00000000 04000000
+# OVERLAP-NEXT: 0x00000080 05000000 04000000 04000000
 
 # SECTIONS: .BTF PROGBITS
 # SECTIONS-NOT: .rela.BTF
@@ -126,3 +136,27 @@ SECTIONS {
   .xdat : { *(.data) }
   /DISCARD/ : { *(.unused) }
 }
+
+#--- overlap.s
+.globl _start
+.text
+_start: ret
+.data
+first:
+alias: .long 1
+empty:
+next: .long 2
+.section .BTF,"",@progbits
+.short 0xeb9f
+.byte 1, 0
+.long 24, 0, .Lstr - .Ltypes, .Lstr - .Ltypes, .Lend - .Lstr
+.Ltypes:
+.long 1, 0x01000000, 4, 32
+.long 5, 0x0e000000, 1, 0
+.long 11, 0x0e000000, 1, 0
+.long 17, 0x0e000000, 1, 0
+.long 23, 0x0e000000, 1, 0
+.long 28, 0x0f000004, 0, 2, first, 4, 3, alias, 4, 4, empty, 0, 5, next, 4
+.Lstr:
+.asciz "", "int", "first", "alias", "empty", "next", ".data"
+.Lend:
