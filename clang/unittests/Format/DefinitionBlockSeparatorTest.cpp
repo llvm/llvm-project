@@ -172,6 +172,11 @@ TEST_F(DefinitionBlockSeparatorTest, Basic) {
                "enum Bar { FOOBAR, BARFOO };",
                Style);
 
+  verifyFormat("struct D {};\n"
+               "\n"
+               "enum class E : char { k };",
+               Style);
+
   FormatStyle BreakAfterReturnTypeStyle = Style;
   BreakAfterReturnTypeStyle.BreakAfterReturnType = FormatStyle::RTBS_All;
   // Test uppercased long typename
@@ -189,49 +194,6 @@ TEST_F(DefinitionBlockSeparatorTest, Basic) {
                "  }\n"
                "}",
                BreakAfterReturnTypeStyle);
-}
-
-TEST_F(DefinitionBlockSeparatorTest, ScopedEnums) {
-  FormatStyle Style = getLLVMStyle();
-  for (StringRef Enum :
-       {"enum class", "enum struct", "enum /* comment */ class",
-        "enum /* comment */ struct"}) {
-    for (bool WrapBrace : {false, true}) {
-      Style.BreakBeforeBraces = FormatStyle::BS_Custom;
-      Style.BraceWrapping.AfterEnum = WrapBrace;
-      Style.AllowShortEnumsOnASingleLine = false;
-      std::string Code = "struct A {};\n"
-                         "\n" +
-                         Enum.str() + " E : char" + (WrapBrace ? "\n" : " ") +
-                         "{\n"
-                         "  k\n"
-                         "};\n"
-                         "\n" +
-                         Enum.str() + " F" + (WrapBrace ? "\n" : " ") +
-                         "{\n"
-                         "  l\n"
-                         "};\n"
-                         "\n"
-                         "struct B {};";
-      Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
-      verifyFormat(Code, Style);
-      Style.SeparateDefinitionBlocks = FormatStyle::SDS_Never;
-      verifyFormat(Code, Style, removeEmptyLines(Code));
-    }
-
-    Style.BreakBeforeBraces = FormatStyle::BS_Attach;
-    Style.AllowShortEnumsOnASingleLine = true;
-    std::string Code = "int i;\n"
-                       "\n" +
-                       Enum.str() +
-                       " E { k };\n"
-                       "\n"
-                       "int j;";
-    Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
-    verifyFormat(Code, Style);
-    Style.SeparateDefinitionBlocks = FormatStyle::SDS_Never;
-    verifyFormat(Code, Style, removeEmptyLines(Code));
-  }
 }
 
 TEST_F(DefinitionBlockSeparatorTest, FormatConflict) {
