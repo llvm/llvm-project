@@ -25,7 +25,10 @@ define <16 x i8> @shuffle_v16i8(<16 x i8> %v, <16 x i8> %mask) nounwind {
 ;
 ; SVE-LE-LABEL: shuffle_v16i8:
 ; SVE-LE:       // %bb.0:
-; SVE-LE-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; SVE-LE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-LE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-LE-NEXT:    tbl z0.b, { z0.b }, z1.b
+; SVE-LE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-LE-NEXT:    ret
 ;
 ; SVE-BE-LABEL: shuffle_v16i8:
@@ -34,7 +37,7 @@ define <16 x i8> @shuffle_v16i8(<16 x i8> %v, <16 x i8> %mask) nounwind {
 ; SVE-BE-NEXT:    rev64 v0.16b, v0.16b
 ; SVE-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; SVE-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; SVE-BE-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; SVE-BE-NEXT:    tbl z0.b, { z0.b }, z1.b
 ; SVE-BE-NEXT:    rev64 v0.16b, v0.16b
 ; SVE-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; SVE-BE-NEXT:    ret
@@ -67,22 +70,19 @@ define <8 x i16> @shuffle_v8i16(<8 x i16> %v, <8 x i16> %mask) nounwind {
 ;
 ; SVE-LE-LABEL: shuffle_v8i16:
 ; SVE-LE:       // %bb.0:
-; SVE-LE-NEXT:    movi v2.16b, #2
-; SVE-LE-NEXT:    mul v1.8h, v1.8h, v2.8h
-; SVE-LE-NEXT:    add z1.h, z1.h, #256 // =0x100
-; SVE-LE-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; SVE-LE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-LE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-LE-NEXT:    tbl z0.h, { z0.h }, z1.h
+; SVE-LE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-LE-NEXT:    ret
 ;
 ; SVE-BE-LABEL: shuffle_v8i16:
 ; SVE-BE:       // %bb.0:
 ; SVE-BE-NEXT:    rev64 v1.8h, v1.8h
-; SVE-BE-NEXT:    movi v2.16b, #2
 ; SVE-BE-NEXT:    rev64 v0.8h, v0.8h
 ; SVE-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; SVE-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; SVE-BE-NEXT:    mul v1.8h, v1.8h, v2.8h
-; SVE-BE-NEXT:    add z1.h, z1.h, #256 // =0x100
-; SVE-BE-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; SVE-BE-NEXT:    tbl z0.h, { z0.h }, z1.h
 ; SVE-BE-NEXT:    rev64 v0.8h, v0.8h
 ; SVE-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; SVE-BE-NEXT:    ret
@@ -119,26 +119,19 @@ define <4 x i32> @shuffle_v4i32(<4 x i32> %v, <4 x i32> %mask) nounwind {
 ;
 ; SVE-LE-LABEL: shuffle_v4i32:
 ; SVE-LE:       // %bb.0:
-; SVE-LE-NEXT:    mov w8, #256 // =0x100
-; SVE-LE-NEXT:    movi v2.16b, #4
-; SVE-LE-NEXT:    movk w8, #770, lsl #16
-; SVE-LE-NEXT:    dup v3.4s, w8
-; SVE-LE-NEXT:    mla v3.4s, v1.4s, v2.4s
-; SVE-LE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
+; SVE-LE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-LE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-LE-NEXT:    tbl z0.s, { z0.s }, z1.s
+; SVE-LE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-LE-NEXT:    ret
 ;
 ; SVE-BE-LABEL: shuffle_v4i32:
 ; SVE-BE:       // %bb.0:
 ; SVE-BE-NEXT:    rev64 v1.4s, v1.4s
-; SVE-BE-NEXT:    mov w8, #256 // =0x100
-; SVE-BE-NEXT:    movi v2.16b, #4
 ; SVE-BE-NEXT:    rev64 v0.4s, v0.4s
-; SVE-BE-NEXT:    movk w8, #770, lsl #16
-; SVE-BE-NEXT:    dup v3.4s, w8
 ; SVE-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; SVE-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; SVE-BE-NEXT:    mla v3.4s, v1.4s, v2.4s
-; SVE-BE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
+; SVE-BE-NEXT:    tbl z0.s, { z0.s }, z1.s
 ; SVE-BE-NEXT:    rev64 v0.4s, v0.4s
 ; SVE-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; SVE-BE-NEXT:    ret
@@ -171,20 +164,17 @@ define <2 x i64> @shuffle_v2i64(<2 x i64> %v, <2 x i64> %mask) nounwind {
 ;
 ; SVE-LE-LABEL: shuffle_v2i64:
 ; SVE-LE:       // %bb.0:
-; SVE-LE-NEXT:    index z2.d, #0, #1
-; SVE-LE-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; SVE-LE-NEXT:    cmeq v1.2d, v1.2d, v2.2d
-; SVE-LE-NEXT:    bif v0.16b, v3.16b, v1.16b
+; SVE-LE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-LE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-LE-NEXT:    tbl z0.d, { z0.d }, z1.d
+; SVE-LE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-LE-NEXT:    ret
 ;
 ; SVE-BE-LABEL: shuffle_v2i64:
 ; SVE-BE:       // %bb.0:
-; SVE-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; SVE-BE-NEXT:    index z2.d, #0, #1
 ; SVE-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; SVE-BE-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; SVE-BE-NEXT:    cmeq v1.2d, v1.2d, v2.2d
-; SVE-BE-NEXT:    bif v0.16b, v3.16b, v1.16b
+; SVE-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; SVE-BE-NEXT:    tbl z0.d, { z0.d }, z1.d
 ; SVE-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; SVE-BE-NEXT:    ret
   %res = call <2 x i64> @llvm.vector.shuffle.v2i64.v2i64(<2 x i64> %v, <2 x i64> %mask)
@@ -220,26 +210,19 @@ define <4 x float> @shuffle_v4f32(<4 x float> %v, <4 x i32> %mask) nounwind {
 ;
 ; SVE-LE-LABEL: shuffle_v4f32:
 ; SVE-LE:       // %bb.0:
-; SVE-LE-NEXT:    mov w8, #256 // =0x100
-; SVE-LE-NEXT:    movi v2.16b, #4
-; SVE-LE-NEXT:    movk w8, #770, lsl #16
-; SVE-LE-NEXT:    dup v3.4s, w8
-; SVE-LE-NEXT:    mla v3.4s, v1.4s, v2.4s
-; SVE-LE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
+; SVE-LE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-LE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-LE-NEXT:    tbl z0.s, { z0.s }, z1.s
+; SVE-LE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-LE-NEXT:    ret
 ;
 ; SVE-BE-LABEL: shuffle_v4f32:
 ; SVE-BE:       // %bb.0:
 ; SVE-BE-NEXT:    rev64 v1.4s, v1.4s
-; SVE-BE-NEXT:    mov w8, #256 // =0x100
-; SVE-BE-NEXT:    movi v2.16b, #4
 ; SVE-BE-NEXT:    rev64 v0.4s, v0.4s
-; SVE-BE-NEXT:    movk w8, #770, lsl #16
-; SVE-BE-NEXT:    dup v3.4s, w8
 ; SVE-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; SVE-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; SVE-BE-NEXT:    mla v3.4s, v1.4s, v2.4s
-; SVE-BE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
+; SVE-BE-NEXT:    tbl z0.s, { z0.s }, z1.s
 ; SVE-BE-NEXT:    rev64 v0.4s, v0.4s
 ; SVE-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; SVE-BE-NEXT:    ret
@@ -272,22 +255,19 @@ define <8 x bfloat> @shuffle_v8bf16(<8 x bfloat> %v, <8 x i16> %mask) nounwind {
 ;
 ; SVE-LE-LABEL: shuffle_v8bf16:
 ; SVE-LE:       // %bb.0:
-; SVE-LE-NEXT:    movi v2.16b, #2
-; SVE-LE-NEXT:    mul v1.8h, v1.8h, v2.8h
-; SVE-LE-NEXT:    add z1.h, z1.h, #256 // =0x100
-; SVE-LE-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; SVE-LE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-LE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-LE-NEXT:    tbl z0.h, { z0.h }, z1.h
+; SVE-LE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-LE-NEXT:    ret
 ;
 ; SVE-BE-LABEL: shuffle_v8bf16:
 ; SVE-BE:       // %bb.0:
 ; SVE-BE-NEXT:    rev64 v1.8h, v1.8h
-; SVE-BE-NEXT:    movi v2.16b, #2
 ; SVE-BE-NEXT:    rev64 v0.8h, v0.8h
 ; SVE-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; SVE-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; SVE-BE-NEXT:    mul v1.8h, v1.8h, v2.8h
-; SVE-BE-NEXT:    add z1.h, z1.h, #256 // =0x100
-; SVE-BE-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; SVE-BE-NEXT:    tbl z0.h, { z0.h }, z1.h
 ; SVE-BE-NEXT:    rev64 v0.8h, v0.8h
 ; SVE-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; SVE-BE-NEXT:    ret
@@ -315,16 +295,17 @@ define <8 x i8> @shuffle_v8i8(<8 x i8> %v, <8 x i8> %mask) nounwind {
 ;
 ; SVE-LE-LABEL: shuffle_v8i8:
 ; SVE-LE:       // %bb.0:
-; SVE-LE-NEXT:    // kill: def $d0 killed $d0 def $q0
-; SVE-LE-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
+; SVE-LE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-LE-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE-LE-NEXT:    tbl z0.b, { z0.b }, z1.b
+; SVE-LE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-LE-NEXT:    ret
 ;
 ; SVE-BE-LABEL: shuffle_v8i8:
 ; SVE-BE:       // %bb.0:
-; SVE-BE-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; SVE-BE-NEXT:    rev64 v1.8b, v1.8b
-; SVE-BE-NEXT:    rev64 v0.16b, v0.16b
-; SVE-BE-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
+; SVE-BE-NEXT:    rev64 v0.8b, v0.8b
+; SVE-BE-NEXT:    tbl z0.b, { z0.b }, z1.b
 ; SVE-BE-NEXT:    rev64 v0.8b, v0.8b
 ; SVE-BE-NEXT:    ret
   %res = call <8 x i8> @llvm.vector.shuffle.v8i8.v8i8(<8 x i8> %v, <8 x i8> %mask)
@@ -354,21 +335,17 @@ define <4 x i16> @shuffle_v4i16(<4 x i16> %v, <4 x i16> %mask) nounwind {
 ;
 ; SVE-LE-LABEL: shuffle_v4i16:
 ; SVE-LE:       // %bb.0:
-; SVE-LE-NEXT:    movi v2.8b, #2
-; SVE-LE-NEXT:    // kill: def $d0 killed $d0 def $q0
-; SVE-LE-NEXT:    mul v1.4h, v1.4h, v2.4h
-; SVE-LE-NEXT:    add z1.h, z1.h, #256 // =0x100
-; SVE-LE-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
+; SVE-LE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-LE-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE-LE-NEXT:    tbl z0.h, { z0.h }, z1.h
+; SVE-LE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-LE-NEXT:    ret
 ;
 ; SVE-BE-LABEL: shuffle_v4i16:
 ; SVE-BE:       // %bb.0:
-; SVE-BE-NEXT:    movi v2.8b, #2
 ; SVE-BE-NEXT:    rev64 v1.4h, v1.4h
 ; SVE-BE-NEXT:    rev64 v0.4h, v0.4h
-; SVE-BE-NEXT:    mul v1.4h, v1.4h, v2.4h
-; SVE-BE-NEXT:    add z1.h, z1.h, #256 // =0x100
-; SVE-BE-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
+; SVE-BE-NEXT:    tbl z0.h, { z0.h }, z1.h
 ; SVE-BE-NEXT:    rev64 v0.4h, v0.4h
 ; SVE-BE-NEXT:    ret
   %res = call <4 x i16> @llvm.vector.shuffle.v4i16.v4i16(<4 x i16> %v, <4 x i16> %mask)
@@ -402,25 +379,17 @@ define <2 x i32> @shuffle_v2i32(<2 x i32> %v, <2 x i32> %mask) nounwind {
 ;
 ; SVE-LE-LABEL: shuffle_v2i32:
 ; SVE-LE:       // %bb.0:
-; SVE-LE-NEXT:    mov w8, #256 // =0x100
-; SVE-LE-NEXT:    movi v2.8b, #4
-; SVE-LE-NEXT:    // kill: def $d0 killed $d0 def $q0
-; SVE-LE-NEXT:    movk w8, #770, lsl #16
-; SVE-LE-NEXT:    dup v3.2s, w8
-; SVE-LE-NEXT:    mla v3.2s, v1.2s, v2.2s
-; SVE-LE-NEXT:    tbl v0.8b, { v0.16b }, v3.8b
+; SVE-LE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-LE-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE-LE-NEXT:    tbl z0.s, { z0.s }, z1.s
+; SVE-LE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-LE-NEXT:    ret
 ;
 ; SVE-BE-LABEL: shuffle_v2i32:
 ; SVE-BE:       // %bb.0:
-; SVE-BE-NEXT:    mov w8, #256 // =0x100
 ; SVE-BE-NEXT:    rev64 v1.2s, v1.2s
-; SVE-BE-NEXT:    movi v2.8b, #4
-; SVE-BE-NEXT:    movk w8, #770, lsl #16
 ; SVE-BE-NEXT:    rev64 v0.2s, v0.2s
-; SVE-BE-NEXT:    dup v3.2s, w8
-; SVE-BE-NEXT:    mla v3.2s, v1.2s, v2.2s
-; SVE-BE-NEXT:    tbl v0.8b, { v0.16b }, v3.8b
+; SVE-BE-NEXT:    tbl z0.s, { z0.s }, z1.s
 ; SVE-BE-NEXT:    rev64 v0.2s, v0.2s
 ; SVE-BE-NEXT:    ret
   %res = call <2 x i32> @llvm.vector.shuffle.v2i32.v2i32(<2 x i32> %v, <2 x i32> %mask)
@@ -462,28 +431,20 @@ define <4 x i32> @shuffle_v4i32_i8_mask(<4 x i32> %v, <4 x i8> %mask) nounwind {
 ; SVE-LE-LABEL: shuffle_v4i32_i8_mask:
 ; SVE-LE:       // %bb.0:
 ; SVE-LE-NEXT:    bic v1.4h, #255, lsl #8
-; SVE-LE-NEXT:    mov w8, #256 // =0x100
-; SVE-LE-NEXT:    movi v2.16b, #4
-; SVE-LE-NEXT:    movk w8, #770, lsl #16
-; SVE-LE-NEXT:    dup v3.4s, w8
+; SVE-LE-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; SVE-LE-NEXT:    ushll v1.4s, v1.4h, #0
-; SVE-LE-NEXT:    mla v3.4s, v1.4s, v2.4s
-; SVE-LE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
+; SVE-LE-NEXT:    tbl z0.s, { z0.s }, z1.s
+; SVE-LE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-LE-NEXT:    ret
 ;
 ; SVE-BE-LABEL: shuffle_v4i32_i8_mask:
 ; SVE-BE:       // %bb.0:
 ; SVE-BE-NEXT:    rev64 v1.4h, v1.4h
-; SVE-BE-NEXT:    mov w8, #256 // =0x100
-; SVE-BE-NEXT:    movi v2.16b, #4
 ; SVE-BE-NEXT:    rev64 v0.4s, v0.4s
-; SVE-BE-NEXT:    movk w8, #770, lsl #16
-; SVE-BE-NEXT:    dup v3.4s, w8
 ; SVE-BE-NEXT:    bic v1.4h, #255, lsl #8
 ; SVE-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; SVE-BE-NEXT:    ushll v1.4s, v1.4h, #0
-; SVE-BE-NEXT:    mla v3.4s, v1.4s, v2.4s
-; SVE-BE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
+; SVE-BE-NEXT:    tbl z0.s, { z0.s }, z1.s
 ; SVE-BE-NEXT:    rev64 v0.4s, v0.4s
 ; SVE-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; SVE-BE-NEXT:    ret
@@ -1238,28 +1199,19 @@ define <2 x i16> @shuffle_v2i16(<2 x i16> %v, <2 x i16> %mask) nounwind {
 ;
 ; SVE-LE-LABEL: shuffle_v2i16:
 ; SVE-LE:       // %bb.0:
-; SVE-LE-NEXT:    mov w8, #256 // =0x100
 ; SVE-LE-NEXT:    // kill: def $d1 killed $d1 def $z1
-; SVE-LE-NEXT:    movi v2.8b, #4
-; SVE-LE-NEXT:    // kill: def $d0 killed $d0 def $q0
-; SVE-LE-NEXT:    movk w8, #770, lsl #16
+; SVE-LE-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; SVE-LE-NEXT:    and z1.s, z1.s, #0xffff
-; SVE-LE-NEXT:    dup v3.2s, w8
-; SVE-LE-NEXT:    mla v3.2s, v1.2s, v2.2s
-; SVE-LE-NEXT:    tbl v0.8b, { v0.16b }, v3.8b
+; SVE-LE-NEXT:    tbl z0.s, { z0.s }, z1.s
+; SVE-LE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-LE-NEXT:    ret
 ;
 ; SVE-BE-LABEL: shuffle_v2i16:
 ; SVE-BE:       // %bb.0:
 ; SVE-BE-NEXT:    rev64 v1.2s, v1.2s
-; SVE-BE-NEXT:    mov w8, #256 // =0x100
-; SVE-BE-NEXT:    movi v2.8b, #4
-; SVE-BE-NEXT:    movk w8, #770, lsl #16
 ; SVE-BE-NEXT:    rev64 v0.2s, v0.2s
-; SVE-BE-NEXT:    dup v3.2s, w8
 ; SVE-BE-NEXT:    and z1.s, z1.s, #0xffff
-; SVE-BE-NEXT:    mla v3.2s, v1.2s, v2.2s
-; SVE-BE-NEXT:    tbl v0.8b, { v0.16b }, v3.8b
+; SVE-BE-NEXT:    tbl z0.s, { z0.s }, z1.s
 ; SVE-BE-NEXT:    rev64 v0.2s, v0.2s
 ; SVE-BE-NEXT:    ret
   %res = call <2 x i16> @llvm.vector.shuffle.v2i16.v2i16(<2 x i16> %v, <2 x i16> %mask)
@@ -1303,23 +1255,19 @@ define <4 x i8> @shuffle_v4i8(<4 x i8> %v, <4 x i8> %mask) nounwind {
 ;
 ; SVE-LE-LABEL: shuffle_v4i8:
 ; SVE-LE:       // %bb.0:
-; SVE-LE-NEXT:    movi v2.8b, #2
+; SVE-LE-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE-LE-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; SVE-LE-NEXT:    bic v1.4h, #255, lsl #8
-; SVE-LE-NEXT:    // kill: def $d0 killed $d0 def $q0
-; SVE-LE-NEXT:    mul v1.4h, v1.4h, v2.4h
-; SVE-LE-NEXT:    add z1.h, z1.h, #256 // =0x100
-; SVE-LE-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
+; SVE-LE-NEXT:    tbl z0.h, { z0.h }, z1.h
+; SVE-LE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE-LE-NEXT:    ret
 ;
 ; SVE-BE-LABEL: shuffle_v4i8:
 ; SVE-BE:       // %bb.0:
 ; SVE-BE-NEXT:    rev64 v1.4h, v1.4h
-; SVE-BE-NEXT:    movi v2.8b, #2
 ; SVE-BE-NEXT:    rev64 v0.4h, v0.4h
 ; SVE-BE-NEXT:    bic v1.4h, #255, lsl #8
-; SVE-BE-NEXT:    mul v1.4h, v1.4h, v2.4h
-; SVE-BE-NEXT:    add z1.h, z1.h, #256 // =0x100
-; SVE-BE-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
+; SVE-BE-NEXT:    tbl z0.h, { z0.h }, z1.h
 ; SVE-BE-NEXT:    rev64 v0.4h, v0.4h
 ; SVE-BE-NEXT:    ret
   %res = call <4 x i8> @llvm.vector.shuffle.v4i8.v4i8(<4 x i8> %v, <4 x i8> %mask)
@@ -1355,26 +1303,19 @@ define <3 x i32> @shuffle_v3i32(<3 x i32> %v, <3 x i32> %mask) nounwind {
 ;
 ; SVE-LE-LABEL: shuffle_v3i32:
 ; SVE-LE:       // %bb.0:
-; SVE-LE-NEXT:    mov w8, #256 // =0x100
-; SVE-LE-NEXT:    movi v2.16b, #4
-; SVE-LE-NEXT:    movk w8, #770, lsl #16
-; SVE-LE-NEXT:    dup v3.4s, w8
-; SVE-LE-NEXT:    mla v3.4s, v1.4s, v2.4s
-; SVE-LE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
+; SVE-LE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-LE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-LE-NEXT:    tbl z0.s, { z0.s }, z1.s
+; SVE-LE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-LE-NEXT:    ret
 ;
 ; SVE-BE-LABEL: shuffle_v3i32:
 ; SVE-BE:       // %bb.0:
 ; SVE-BE-NEXT:    rev64 v1.4s, v1.4s
-; SVE-BE-NEXT:    mov w8, #256 // =0x100
-; SVE-BE-NEXT:    movi v2.16b, #4
 ; SVE-BE-NEXT:    rev64 v0.4s, v0.4s
-; SVE-BE-NEXT:    movk w8, #770, lsl #16
-; SVE-BE-NEXT:    dup v3.4s, w8
 ; SVE-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; SVE-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; SVE-BE-NEXT:    mla v3.4s, v1.4s, v2.4s
-; SVE-BE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
+; SVE-BE-NEXT:    tbl z0.s, { z0.s }, z1.s
 ; SVE-BE-NEXT:    rev64 v0.4s, v0.4s
 ; SVE-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; SVE-BE-NEXT:    ret
@@ -1411,26 +1352,19 @@ define <4 x i24> @shuffle_v4i24_i32_mask(<4 x i24> %v, <4 x i32> %mask) nounwind
 ;
 ; SVE-LE-LABEL: shuffle_v4i24_i32_mask:
 ; SVE-LE:       // %bb.0:
-; SVE-LE-NEXT:    mov w8, #256 // =0x100
-; SVE-LE-NEXT:    movi v2.16b, #4
-; SVE-LE-NEXT:    movk w8, #770, lsl #16
-; SVE-LE-NEXT:    dup v3.4s, w8
-; SVE-LE-NEXT:    mla v3.4s, v1.4s, v2.4s
-; SVE-LE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
+; SVE-LE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-LE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-LE-NEXT:    tbl z0.s, { z0.s }, z1.s
+; SVE-LE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-LE-NEXT:    ret
 ;
 ; SVE-BE-LABEL: shuffle_v4i24_i32_mask:
 ; SVE-BE:       // %bb.0:
 ; SVE-BE-NEXT:    rev64 v1.4s, v1.4s
-; SVE-BE-NEXT:    mov w8, #256 // =0x100
-; SVE-BE-NEXT:    movi v2.16b, #4
 ; SVE-BE-NEXT:    rev64 v0.4s, v0.4s
-; SVE-BE-NEXT:    movk w8, #770, lsl #16
-; SVE-BE-NEXT:    dup v3.4s, w8
 ; SVE-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; SVE-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; SVE-BE-NEXT:    mla v3.4s, v1.4s, v2.4s
-; SVE-BE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
+; SVE-BE-NEXT:    tbl z0.s, { z0.s }, z1.s
 ; SVE-BE-NEXT:    rev64 v0.4s, v0.4s
 ; SVE-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; SVE-BE-NEXT:    ret

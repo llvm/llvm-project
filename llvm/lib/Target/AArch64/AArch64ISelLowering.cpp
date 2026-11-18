@@ -1607,6 +1607,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
       setOperationAction(ISD::VECTOR_SPLICE_LEFT, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Custom);
+      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
       setOperationAction(ISD::SELECT, VT, Custom);
       setOperationAction(ISD::SETCC, VT, Custom);
       setOperationAction(ISD::SDIV, VT, Custom);
@@ -1712,6 +1713,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
+      if (VT != MVT::nxv1i1)
+        setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
 
       // There are no legal MVT::nxv16f## based types.
       if (VT != MVT::nxv16i1) {
@@ -1809,6 +1812,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_FMUL, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE_LEFT, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Custom);
+      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
       setVectorInterleaveAction(
           {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3}, VT,
           Custom);
@@ -1886,6 +1890,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
             Custom);
       setOperationAction(ISD::VECTOR_SPLICE_LEFT, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Custom);
+      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
     }
 
     // Direct patterns exist for quad broadcasts.
@@ -2381,8 +2386,9 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setVectorInterleaveAction({ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
                             {3}, VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
-  // NEON has no 64-bit multiply to form the byte indices.
-  if (VT.getScalarSizeInBits() < 64)
+  // NEON has no 64-bit multiply to form the byte indices; SVE TBL needs none.
+  if (VT.getScalarSizeInBits() < 64 ||
+      Subtarget->isSVEorStreamingSVEAvailable())
     setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
   setOperationAction(ISD::SRA, VT, Custom);
@@ -2689,6 +2695,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::VECREDUCE_UMIN, VT, Default);
   setOperationAction(ISD::VECREDUCE_XOR, VT, Default);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Default);
+  setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Default);
   setOperationAction(ISD::VECTOR_SPLICE_LEFT, VT, Default);
   setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Default);
   setOperationAction(ISD::VSELECT, VT, Default);
@@ -16349,11 +16356,49 @@ AArch64TargetLowering::LowerVECTOR_SHUFFLE_VAR(SDValue Op,
   SDValue Mask = Op.getOperand(1);
   SDLoc DL(Op);
 
-  assert((VT.is64BitVector() || VT.is128BitVector()) &&
-         "Unexpected VECTOR_SHUFFLE_VAR");
+  if (VT.isScalableVector()) {
+    if (VT.getVectorElementType() == MVT::i1) {
+      EVT PromotedVT = getPromotedVTForPredicate(VT);
+      SDValue Ext = DAG.getNode(ISD::ZERO_EXTEND, DL, PromotedVT, V);
+      SDValue Shuf =
+          DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, DL, PromotedVT, Ext, Mask);
+      return DAG.getSetCC(DL, VT, Shuf, DAG.getConstant(0, DL, PromotedVT),
+                          ISD::SETNE);
+    }
+
+    // Shuffle unpacked elements as their containers.
+    EVT ContainerVT = getPackedSVEVectorVT(VT.getVectorElementCount());
+    EVT PackedVT = getPackedSVEVectorVT(VT.getVectorElementType());
+    SDValue Table = V;
+    if (VT != PackedVT)
+      Table = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, PackedVT, Table);
+    if (PackedVT != ContainerVT)
+      Table = DAG.getNode(AArch64ISD::NVCAST, DL, ContainerVT, Table);
+    SDValue Idx = DAG.getZExtOrTrunc(Mask, DL, ContainerVT);
+    SDValue Res = DAG.getNode(AArch64ISD::TBL, DL, ContainerVT, Table, Idx);
+    if (PackedVT != ContainerVT)
+      Res = DAG.getNode(AArch64ISD::NVCAST, DL, PackedVT, Res);
+    if (VT != PackedVT)
+      Res = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, Res);
+    return Res;
+  }
 
   EVT IdxVT = VT.changeVectorElementTypeToInteger();
   SDValue Idx = DAG.getZExtOrTrunc(Mask, DL, IdxVT);
+
+  // Prefer SVE TBL, which indexes elements rather than bytes.
+  if (Subtarget->isSVEorStreamingSVEAvailable()) {
+    EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+    EVT ContainerIdxVT = ContainerVT.changeVectorElementTypeToInteger();
+    SDValue Res =
+        DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, DL, ContainerVT,
+                    convertToScalableVector(DAG, ContainerVT, V),
+                    convertToScalableVector(DAG, ContainerIdxVT, Idx));
+    return convertFromScalableVector(DAG, VT, Res);
+  }
+
+  assert((VT.is64BitVector() || VT.is128BitVector()) &&
+         "Unexpected VECTOR_SHUFFLE_VAR");
 
   // TBL indexes bytes. Multiplying by EltBytes splatted into each byte puts
   // Idx * EltBytes in every byte of the lane; adding <0, 1, ...> gives the

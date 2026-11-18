@@ -9,233 +9,11 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @shuffle_v32i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: shuffle_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #32
-; CHECK-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK-NEXT:    .cfi_def_cfa w29, 96
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w21, -24
-; CHECK-NEXT:    .cfi_offset w22, -32
-; CHECK-NEXT:    .cfi_offset w23, -40
-; CHECK-NEXT:    .cfi_offset w24, -48
-; CHECK-NEXT:    .cfi_offset w25, -56
-; CHECK-NEXT:    .cfi_offset w26, -64
-; CHECK-NEXT:    .cfi_offset w27, -72
-; CHECK-NEXT:    .cfi_offset w28, -80
-; CHECK-NEXT:    .cfi_offset w30, -88
-; CHECK-NEXT:    .cfi_offset w29, -96
 ; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x1]
-; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x0]
-; CHECK-NEXT:    umov w8, v0.b[15]
-; CHECK-NEXT:    umov w9, v0.b[14]
-; CHECK-NEXT:    umov w10, v0.b[13]
-; CHECK-NEXT:    umov w11, v0.b[12]
-; CHECK-NEXT:    umov w12, v0.b[11]
-; CHECK-NEXT:    umov w13, v0.b[10]
-; CHECK-NEXT:    umov w14, v0.b[9]
-; CHECK-NEXT:    umov w15, v0.b[8]
-; CHECK-NEXT:    umov w16, v0.b[7]
-; CHECK-NEXT:    umov w17, v0.b[6]
-; CHECK-NEXT:    umov w18, v0.b[5]
-; CHECK-NEXT:    umov w1, v0.b[4]
-; CHECK-NEXT:    whilels p1.b, xzr, x8
-; CHECK-NEXT:    umov w2, v0.b[3]
-; CHECK-NEXT:    umov w3, v0.b[2]
-; CHECK-NEXT:    mov z2.b, z0.b[31]
-; CHECK-NEXT:    umov w4, v0.b[1]
-; CHECK-NEXT:    umov w5, v0.b[0]
-; CHECK-NEXT:    lastb w8, p1, z1.b
-; CHECK-NEXT:    mov z3.b, z0.b[30]
-; CHECK-NEXT:    mov z4.b, z0.b[19]
-; CHECK-NEXT:    whilels p1.b, xzr, x9
-; CHECK-NEXT:    fmov w6, s2
-; CHECK-NEXT:    mov z2.b, z0.b[29]
-; CHECK-NEXT:    fmov w7, s3
-; CHECK-NEXT:    mov z3.b, z0.b[28]
-; CHECK-NEXT:    fmov w26, s4
-; CHECK-NEXT:    lastb w9, p1, z1.b
-; CHECK-NEXT:    fmov w19, s2
-; CHECK-NEXT:    mov z2.b, z0.b[27]
-; CHECK-NEXT:    and x6, x6, #0xff
-; CHECK-NEXT:    whilels p1.b, xzr, x10
-; CHECK-NEXT:    fmov w20, s3
-; CHECK-NEXT:    mov z3.b, z0.b[26]
-; CHECK-NEXT:    and x7, x7, #0xff
-; CHECK-NEXT:    lastb w10, p1, z1.b
-; CHECK-NEXT:    fmov w21, s2
-; CHECK-NEXT:    mov z2.b, z0.b[25]
-; CHECK-NEXT:    and x19, x19, #0xff
-; CHECK-NEXT:    fmov w22, s3
-; CHECK-NEXT:    mov z3.b, z0.b[24]
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    and x20, x20, #0xff
-; CHECK-NEXT:    fmov w23, s2
-; CHECK-NEXT:    mov z2.b, z0.b[17]
-; CHECK-NEXT:    and x21, x21, #0xff
-; CHECK-NEXT:    lastb w11, p1, z1.b
-; CHECK-NEXT:    fmov w24, s3
-; CHECK-NEXT:    and x22, x22, #0xff
-; CHECK-NEXT:    mov z3.b, z0.b[23]
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    fmov w25, s2
-; CHECK-NEXT:    mov z2.b, z0.b[21]
-; CHECK-NEXT:    and x23, x23, #0xff
-; CHECK-NEXT:    and x24, x24, #0xff
-; CHECK-NEXT:    lastb w12, p1, z1.b
-; CHECK-NEXT:    fmov w27, s3
-; CHECK-NEXT:    mov z3.b, z0.b[22]
-; CHECK-NEXT:    fmov w28, s2
-; CHECK-NEXT:    fmov s2, w8
-; CHECK-NEXT:    whilels p1.b, xzr, x13
-; CHECK-NEXT:    and x8, x27, #0xff
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    stur b2, [sp, #15]
-; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    fmov w9, s3
-; CHECK-NEXT:    fmov s3, w11
-; CHECK-NEXT:    whilels p1.b, xzr, x14
-; CHECK-NEXT:    stur b2, [sp, #14]
-; CHECK-NEXT:    fmov s2, w10
-; CHECK-NEXT:    and x10, x28, #0xff
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    stur b3, [sp, #12]
-; CHECK-NEXT:    mov z3.b, z0.b[20]
-; CHECK-NEXT:    and x9, x9, #0xff
-; CHECK-NEXT:    whilels p1.b, xzr, x15
-; CHECK-NEXT:    stur b2, [sp, #13]
-; CHECK-NEXT:    fmov s2, w12
-; CHECK-NEXT:    fmov w11, s3
-; CHECK-NEXT:    and x12, x26, #0xff
-; CHECK-NEXT:    lastb w15, p1, z1.b
-; CHECK-NEXT:    stur b2, [sp, #11]
-; CHECK-NEXT:    fmov s2, w13
-; CHECK-NEXT:    whilels p1.b, xzr, x16
-; CHECK-NEXT:    and x11, x11, #0xff
-; CHECK-NEXT:    lastb w16, p1, z1.b
-; CHECK-NEXT:    stur b2, [sp, #10]
-; CHECK-NEXT:    fmov s2, w14
-; CHECK-NEXT:    and x14, x25, #0xff
-; CHECK-NEXT:    whilels p1.b, xzr, x17
-; CHECK-NEXT:    stur b2, [sp, #9]
-; CHECK-NEXT:    lastb w17, p1, z1.b
-; CHECK-NEXT:    fmov s2, w15
-; CHECK-NEXT:    whilels p1.b, xzr, x18
-; CHECK-NEXT:    stur b2, [sp, #8]
-; CHECK-NEXT:    lastb w18, p1, z1.b
-; CHECK-NEXT:    fmov s2, w16
-; CHECK-NEXT:    whilels p1.b, xzr, x1
-; CHECK-NEXT:    stur b2, [sp, #7]
-; CHECK-NEXT:    lastb w1, p1, z1.b
-; CHECK-NEXT:    fmov s3, w17
-; CHECK-NEXT:    whilels p1.b, xzr, x2
-; CHECK-NEXT:    stur b3, [sp, #6]
-; CHECK-NEXT:    mov z3.b, z0.b[18]
-; CHECK-NEXT:    mov z0.b, z0.b[16]
-; CHECK-NEXT:    lastb w2, p1, z1.b
-; CHECK-NEXT:    fmov s2, w18
-; CHECK-NEXT:    whilels p1.b, xzr, x3
-; CHECK-NEXT:    stur b2, [sp, #5]
-; CHECK-NEXT:    lastb w3, p1, z1.b
-; CHECK-NEXT:    fmov s2, w1
-; CHECK-NEXT:    whilels p1.b, xzr, x4
-; CHECK-NEXT:    stur b2, [sp, #4]
-; CHECK-NEXT:    lastb w4, p1, z1.b
-; CHECK-NEXT:    fmov s2, w2
-; CHECK-NEXT:    whilels p1.b, xzr, x5
-; CHECK-NEXT:    stur b2, [sp, #3]
-; CHECK-NEXT:    lastb w5, p1, z1.b
-; CHECK-NEXT:    fmov s2, w3
-; CHECK-NEXT:    whilels p1.b, xzr, x6
-; CHECK-NEXT:    stur b2, [sp, #2]
-; CHECK-NEXT:    lastb w6, p1, z1.b
-; CHECK-NEXT:    fmov s2, w4
-; CHECK-NEXT:    whilels p1.b, xzr, x7
-; CHECK-NEXT:    stur b2, [sp, #1]
-; CHECK-NEXT:    lastb w7, p1, z1.b
-; CHECK-NEXT:    fmov s2, w5
-; CHECK-NEXT:    whilels p1.b, xzr, x19
-; CHECK-NEXT:    str b2, [sp]
-; CHECK-NEXT:    lastb w19, p1, z1.b
-; CHECK-NEXT:    fmov s2, w6
-; CHECK-NEXT:    whilels p1.b, xzr, x20
-; CHECK-NEXT:    stur b2, [sp, #31]
-; CHECK-NEXT:    lastb w20, p1, z1.b
-; CHECK-NEXT:    fmov s2, w7
-; CHECK-NEXT:    whilels p1.b, xzr, x21
-; CHECK-NEXT:    stur b2, [sp, #30]
-; CHECK-NEXT:    lastb w21, p1, z1.b
-; CHECK-NEXT:    fmov s2, w19
-; CHECK-NEXT:    whilels p1.b, xzr, x22
-; CHECK-NEXT:    stur b2, [sp, #29]
-; CHECK-NEXT:    lastb w22, p1, z1.b
-; CHECK-NEXT:    fmov s2, w20
-; CHECK-NEXT:    whilels p1.b, xzr, x23
-; CHECK-NEXT:    stur b2, [sp, #28]
-; CHECK-NEXT:    lastb w23, p1, z1.b
-; CHECK-NEXT:    whilels p1.b, xzr, x24
-; CHECK-NEXT:    lastb w24, p1, z1.b
-; CHECK-NEXT:    whilels p1.b, xzr, x8
-; CHECK-NEXT:    lastb w8, p1, z1.b
-; CHECK-NEXT:    whilels p1.b, xzr, x9
-; CHECK-NEXT:    lastb w9, p1, z1.b
-; CHECK-NEXT:    whilels p1.b, xzr, x10
-; CHECK-NEXT:    lastb w10, p1, z1.b
-; CHECK-NEXT:    whilels p1.b, xzr, x11
-; CHECK-NEXT:    lastb w11, p1, z1.b
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    fmov w12, s3
-; CHECK-NEXT:    lastb w13, p1, z1.b
-; CHECK-NEXT:    and x12, x12, #0xff
-; CHECK-NEXT:    whilels p1.b, xzr, x12
-; CHECK-NEXT:    lastb w12, p1, z1.b
-; CHECK-NEXT:    whilels p1.b, xzr, x14
-; CHECK-NEXT:    fmov w14, s0
-; CHECK-NEXT:    fmov s0, w21
-; CHECK-NEXT:    lastb w15, p1, z1.b
-; CHECK-NEXT:    stur b0, [sp, #27]
-; CHECK-NEXT:    fmov s0, w22
-; CHECK-NEXT:    and x14, x14, #0xff
-; CHECK-NEXT:    whilels p1.b, xzr, x14
-; CHECK-NEXT:    stur b0, [sp, #26]
-; CHECK-NEXT:    fmov s0, w23
-; CHECK-NEXT:    lastb w14, p1, z1.b
-; CHECK-NEXT:    stur b0, [sp, #25]
-; CHECK-NEXT:    fmov s0, w24
-; CHECK-NEXT:    stur b0, [sp, #24]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    stur b0, [sp, #23]
-; CHECK-NEXT:    fmov s0, w9
-; CHECK-NEXT:    stur b0, [sp, #22]
-; CHECK-NEXT:    fmov s0, w10
-; CHECK-NEXT:    stur b0, [sp, #21]
-; CHECK-NEXT:    fmov s0, w11
-; CHECK-NEXT:    stur b0, [sp, #20]
-; CHECK-NEXT:    fmov s0, w13
-; CHECK-NEXT:    stur b0, [sp, #19]
-; CHECK-NEXT:    fmov s0, w12
-; CHECK-NEXT:    stur b0, [sp, #18]
-; CHECK-NEXT:    fmov s0, w15
-; CHECK-NEXT:    stur b0, [sp, #17]
-; CHECK-NEXT:    fmov s0, w14
-; CHECK-NEXT:    stur b0, [sp, #16]
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x8]
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x1]
+; CHECK-NEXT:    tbl z0.b, { z0.b }, z1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x28, x27, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x29, x30, [sp], #96 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %v = load <32 x i8>, ptr %a
   %mask = load <32 x i8>, ptr %b
@@ -247,117 +25,11 @@ define void @shuffle_v32i8(ptr %a, ptr %b) #0 {
 define void @shuffle_v16i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: shuffle_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK-NEXT:    .cfi_def_cfa w29, 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.h, vl16
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    umov w8, v1.h[7]
-; CHECK-NEXT:    umov w9, v1.h[6]
-; CHECK-NEXT:    umov w10, v1.h[5]
-; CHECK-NEXT:    umov w11, v1.h[4]
-; CHECK-NEXT:    umov w12, v1.h[3]
-; CHECK-NEXT:    umov w13, v1.h[2]
-; CHECK-NEXT:    mov z2.h, z1.h[15]
-; CHECK-NEXT:    umov w14, v1.h[1]
-; CHECK-NEXT:    umov w15, v1.h[0]
-; CHECK-NEXT:    whilels p1.h, xzr, x8
-; CHECK-NEXT:    fmov w16, s2
-; CHECK-NEXT:    mov z2.h, z1.h[14]
-; CHECK-NEXT:    lastb w8, p1, z0.h
-; CHECK-NEXT:    whilels p1.h, xzr, x9
-; CHECK-NEXT:    fmov w17, s2
-; CHECK-NEXT:    mov z2.h, z1.h[13]
-; CHECK-NEXT:    and x16, x16, #0xffff
-; CHECK-NEXT:    lastb w9, p1, z0.h
-; CHECK-NEXT:    fmov w18, s2
-; CHECK-NEXT:    mov z2.h, z1.h[12]
-; CHECK-NEXT:    and x17, x17, #0xffff
-; CHECK-NEXT:    whilels p1.h, xzr, x10
-; CHECK-NEXT:    lastb w10, p1, z0.h
-; CHECK-NEXT:    fmov w1, s2
-; CHECK-NEXT:    and x18, x18, #0xffff
-; CHECK-NEXT:    mov z2.h, z1.h[11]
-; CHECK-NEXT:    whilels p1.h, xzr, x11
-; CHECK-NEXT:    and x1, x1, #0xffff
-; CHECK-NEXT:    lastb w11, p1, z0.h
-; CHECK-NEXT:    whilels p1.h, xzr, x12
-; CHECK-NEXT:    lastb w12, p1, z0.h
-; CHECK-NEXT:    whilels p1.h, xzr, x13
-; CHECK-NEXT:    lastb w13, p1, z0.h
-; CHECK-NEXT:    whilels p1.h, xzr, x14
-; CHECK-NEXT:    lastb w14, p1, z0.h
-; CHECK-NEXT:    whilels p1.h, xzr, x15
-; CHECK-NEXT:    lastb w15, p1, z0.h
-; CHECK-NEXT:    whilels p1.h, xzr, x16
-; CHECK-NEXT:    lastb w16, p1, z0.h
-; CHECK-NEXT:    whilels p1.h, xzr, x17
-; CHECK-NEXT:    lastb w17, p1, z0.h
-; CHECK-NEXT:    whilels p1.h, xzr, x18
-; CHECK-NEXT:    lastb w18, p1, z0.h
-; CHECK-NEXT:    whilels p1.h, xzr, x1
-; CHECK-NEXT:    fmov w1, s2
-; CHECK-NEXT:    mov z2.h, z1.h[10]
-; CHECK-NEXT:    lastb w2, p1, z0.h
-; CHECK-NEXT:    and x1, x1, #0xffff
-; CHECK-NEXT:    whilels p1.h, xzr, x1
-; CHECK-NEXT:    fmov w1, s2
-; CHECK-NEXT:    mov z2.h, z1.h[9]
-; CHECK-NEXT:    mov z1.h, z1.h[8]
-; CHECK-NEXT:    lastb w3, p1, z0.h
-; CHECK-NEXT:    fmov w4, s2
-; CHECK-NEXT:    fmov s2, w8
-; CHECK-NEXT:    and x1, x1, #0xffff
-; CHECK-NEXT:    whilels p1.h, xzr, x1
-; CHECK-NEXT:    str h2, [sp, #14]
-; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    and x9, x4, #0xffff
-; CHECK-NEXT:    lastb w8, p1, z0.h
-; CHECK-NEXT:    whilels p1.h, xzr, x9
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    str h2, [sp, #12]
-; CHECK-NEXT:    fmov s2, w10
-; CHECK-NEXT:    fmov s1, w12
-; CHECK-NEXT:    lastb w10, p1, z0.h
-; CHECK-NEXT:    and x9, x9, #0xffff
-; CHECK-NEXT:    whilels p1.h, xzr, x9
-; CHECK-NEXT:    str h2, [sp, #10]
-; CHECK-NEXT:    fmov s2, w11
-; CHECK-NEXT:    str h1, [sp, #6]
-; CHECK-NEXT:    fmov s1, w14
-; CHECK-NEXT:    lastb w9, p1, z0.h
-; CHECK-NEXT:    fmov s0, w16
-; CHECK-NEXT:    str h2, [sp, #8]
-; CHECK-NEXT:    fmov s2, w13
-; CHECK-NEXT:    str h1, [sp, #2]
-; CHECK-NEXT:    fmov s1, w15
-; CHECK-NEXT:    str h0, [sp, #30]
-; CHECK-NEXT:    fmov s0, w17
-; CHECK-NEXT:    str h2, [sp, #4]
-; CHECK-NEXT:    str h1, [sp]
-; CHECK-NEXT:    str h0, [sp, #28]
-; CHECK-NEXT:    fmov s0, w18
-; CHECK-NEXT:    str h0, [sp, #26]
-; CHECK-NEXT:    fmov s0, w2
-; CHECK-NEXT:    str h0, [sp, #24]
-; CHECK-NEXT:    fmov s0, w3
-; CHECK-NEXT:    str h0, [sp, #22]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    str h0, [sp, #20]
-; CHECK-NEXT:    fmov s0, w10
-; CHECK-NEXT:    str h0, [sp, #18]
-; CHECK-NEXT:    fmov s0, w9
-; CHECK-NEXT:    str h0, [sp, #16]
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    tbl z0.h, { z0.h }, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %v = load <16 x i16>, ptr %a
   %mask = load <16 x i16>, ptr %b
@@ -369,55 +41,11 @@ define void @shuffle_v16i16(ptr %a, ptr %b) #0 {
 define void @shuffle_v8i32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: shuffle_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK-NEXT:    .cfi_def_cfa w29, 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.s, vl8
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x1]
-; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov z1.s, z0.s[6]
-; CHECK-NEXT:    mov w12, v0.s[3]
-; CHECK-NEXT:    mov w13, v0.s[2]
-; CHECK-NEXT:    mov w14, v0.s[1]
-; CHECK-NEXT:    whilels p1.s, xzr, x8
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov z1.s, z0.s[5]
-; CHECK-NEXT:    lastb w9, p1, z2.s
-; CHECK-NEXT:    whilels p1.s, xzr, x8
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov z1.s, z0.s[4]
-; CHECK-NEXT:    mov z0.s, z0.s[7]
-; CHECK-NEXT:    lastb w10, p1, z2.s
-; CHECK-NEXT:    whilels p1.s, xzr, x8
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    lastb w11, p1, z2.s
-; CHECK-NEXT:    str w9, [sp]
-; CHECK-NEXT:    whilels p1.s, xzr, x8
-; CHECK-NEXT:    lastb w8, p1, z2.s
-; CHECK-NEXT:    whilels p1.s, xzr, x12
-; CHECK-NEXT:    lastb w12, p1, z2.s
-; CHECK-NEXT:    stp w11, w10, [sp, #20]
-; CHECK-NEXT:    whilels p1.s, xzr, x13
-; CHECK-NEXT:    lastb w13, p1, z2.s
-; CHECK-NEXT:    whilels p1.s, xzr, x14
-; CHECK-NEXT:    fmov w14, s0
-; CHECK-NEXT:    lastb w15, p1, z2.s
-; CHECK-NEXT:    stp w12, w8, [sp, #12]
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    whilels p1.s, xzr, x14
-; CHECK-NEXT:    lastb w14, p1, z2.s
-; CHECK-NEXT:    stp w15, w13, [sp, #4]
-; CHECK-NEXT:    fmov s0, w14
-; CHECK-NEXT:    str s0, [sp, #28]
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    tbl z0.s, { z0.s }, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %v = load <8 x i32>, ptr %a
   %mask = load <8 x i32>, ptr %b
@@ -429,39 +57,11 @@ define void @shuffle_v8i32(ptr %a, ptr %b) #0 {
 define void @shuffle_v4i64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: shuffle_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK-NEXT:    .cfi_def_cfa w29, 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0]
-; CHECK-NEXT:    mov z2.d, z0.d[2]
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    mov x10, v0.d[1]
-; CHECK-NEXT:    mov z0.d, z0.d[3]
-; CHECK-NEXT:    fmov x9, d2
-; CHECK-NEXT:    whilels p1.d, xzr, x8
-; CHECK-NEXT:    fmov x11, d0
-; CHECK-NEXT:    lastb x8, p1, z1.d
-; CHECK-NEXT:    whilels p1.d, xzr, x9
-; CHECK-NEXT:    lastb x9, p1, z1.d
-; CHECK-NEXT:    whilels p1.d, xzr, x10
-; CHECK-NEXT:    lastb x10, p1, z1.d
-; CHECK-NEXT:    str x8, [sp]
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    whilels p1.d, xzr, x11
-; CHECK-NEXT:    lastb x11, p1, z1.d
-; CHECK-NEXT:    stp x10, x9, [sp, #8]
-; CHECK-NEXT:    fmov d0, x11
-; CHECK-NEXT:    str d0, [sp, #24]
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %v = load <4 x i64>, ptr %a
   %mask = load <4 x i64>, ptr %b
@@ -473,101 +73,11 @@ define void @shuffle_v4i64(ptr %a, ptr %b) #0 {
 define void @shuffle_v16f16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: shuffle_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK-NEXT:    .cfi_def_cfa w29, 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.h, vl16
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    umov w8, v1.h[7]
-; CHECK-NEXT:    umov w9, v1.h[6]
-; CHECK-NEXT:    umov w10, v1.h[5]
-; CHECK-NEXT:    mov z5.h, z1.h[8]
-; CHECK-NEXT:    umov w11, v1.h[4]
-; CHECK-NEXT:    mov z6.h, z1.h[9]
-; CHECK-NEXT:    umov w12, v1.h[3]
-; CHECK-NEXT:    mov z7.h, z1.h[10]
-; CHECK-NEXT:    mov z16.h, z1.h[15]
-; CHECK-NEXT:    umov w13, v1.h[2]
-; CHECK-NEXT:    umov w14, v1.h[1]
-; CHECK-NEXT:    mov z3.h, z1.h[14]
-; CHECK-NEXT:    whilels p1.h, xzr, x8
-; CHECK-NEXT:    fmov w8, s5
-; CHECK-NEXT:    mov z4.h, z1.h[11]
-; CHECK-NEXT:    whilels p2.h, xzr, x9
-; CHECK-NEXT:    fmov w9, s6
-; CHECK-NEXT:    mov z2.h, z1.h[12]
-; CHECK-NEXT:    lastb h5, p1, z0.h
-; CHECK-NEXT:    whilels p1.h, xzr, x10
-; CHECK-NEXT:    umov w10, v1.h[0]
-; CHECK-NEXT:    lastb h6, p2, z0.h
-; CHECK-NEXT:    whilels p2.h, xzr, x11
-; CHECK-NEXT:    fmov w15, s7
-; CHECK-NEXT:    fmov w11, s16
-; CHECK-NEXT:    lastb h7, p1, z0.h
-; CHECK-NEXT:    whilels p1.h, xzr, x12
-; CHECK-NEXT:    mov z1.h, z1.h[13]
-; CHECK-NEXT:    lastb h16, p2, z0.h
-; CHECK-NEXT:    and x9, x9, #0xffff
-; CHECK-NEXT:    whilels p2.h, xzr, x13
-; CHECK-NEXT:    str h5, [sp, #14]
-; CHECK-NEXT:    lastb h5, p1, z0.h
-; CHECK-NEXT:    whilels p1.h, xzr, x14
-; CHECK-NEXT:    fmov w12, s3
-; CHECK-NEXT:    str h6, [sp, #12]
-; CHECK-NEXT:    lastb h6, p2, z0.h
-; CHECK-NEXT:    whilels p2.h, xzr, x10
-; CHECK-NEXT:    and x10, x11, #0xffff
-; CHECK-NEXT:    fmov w13, s1
-; CHECK-NEXT:    str h7, [sp, #10]
-; CHECK-NEXT:    lastb h7, p1, z0.h
-; CHECK-NEXT:    whilels p1.h, xzr, x10
-; CHECK-NEXT:    fmov w11, s2
-; CHECK-NEXT:    and x12, x12, #0xffff
-; CHECK-NEXT:    fmov w10, s4
-; CHECK-NEXT:    str h16, [sp, #8]
-; CHECK-NEXT:    lastb h16, p2, z0.h
-; CHECK-NEXT:    lastb h4, p1, z0.h
-; CHECK-NEXT:    whilels p1.h, xzr, x12
-; CHECK-NEXT:    and x12, x13, #0xffff
-; CHECK-NEXT:    whilels p2.h, xzr, x12
-; CHECK-NEXT:    and x11, x11, #0xffff
-; CHECK-NEXT:    and x8, x8, #0xffff
-; CHECK-NEXT:    lastb h1, p1, z0.h
-; CHECK-NEXT:    whilels p1.h, xzr, x11
-; CHECK-NEXT:    and x10, x10, #0xffff
-; CHECK-NEXT:    lastb h2, p2, z0.h
-; CHECK-NEXT:    whilels p2.h, xzr, x10
-; CHECK-NEXT:    and x10, x15, #0xffff
-; CHECK-NEXT:    lastb h3, p1, z0.h
-; CHECK-NEXT:    whilels p1.h, xzr, x10
-; CHECK-NEXT:    str h4, [sp, #30]
-; CHECK-NEXT:    lastb h4, p2, z0.h
-; CHECK-NEXT:    whilels p2.h, xzr, x9
-; CHECK-NEXT:    str h5, [sp, #6]
-; CHECK-NEXT:    str h1, [sp, #28]
-; CHECK-NEXT:    lastb h1, p1, z0.h
-; CHECK-NEXT:    whilels p1.h, xzr, x8
-; CHECK-NEXT:    lastb h5, p2, z0.h
-; CHECK-NEXT:    str h6, [sp, #4]
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    lastb h0, p1, z0.h
-; CHECK-NEXT:    str h7, [sp, #2]
-; CHECK-NEXT:    str h16, [sp]
-; CHECK-NEXT:    str h2, [sp, #26]
-; CHECK-NEXT:    str h3, [sp, #24]
-; CHECK-NEXT:    str h4, [sp, #22]
-; CHECK-NEXT:    str h1, [sp, #20]
-; CHECK-NEXT:    str h5, [sp, #18]
-; CHECK-NEXT:    str h0, [sp, #16]
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    tbl z0.h, { z0.h }, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %v = load <16 x half>, ptr %a
   %mask = load <16 x i16>, ptr %b
@@ -579,53 +89,11 @@ define void @shuffle_v16f16(ptr %a, ptr %b) #0 {
 define void @shuffle_v8f32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: shuffle_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK-NEXT:    .cfi_def_cfa w29, 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.s, vl8
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x1]
-; CHECK-NEXT:    ld1w { z4.s }, p0/z, [x0]
-; CHECK-NEXT:    mov w8, v0.s[3]
-; CHECK-NEXT:    mov z1.s, z0.s[7]
-; CHECK-NEXT:    mov w9, v0.s[2]
-; CHECK-NEXT:    mov z2.s, z0.s[6]
-; CHECK-NEXT:    mov z3.s, z0.s[5]
-; CHECK-NEXT:    mov z5.s, z0.s[4]
-; CHECK-NEXT:    fmov w10, s1
-; CHECK-NEXT:    fmov w11, s2
-; CHECK-NEXT:    whilels p1.s, xzr, x8
-; CHECK-NEXT:    fmov w12, s3
-; CHECK-NEXT:    whilels p2.s, xzr, x9
-; CHECK-NEXT:    fmov w9, s5
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    lastb s1, p1, z4.s
-; CHECK-NEXT:    whilels p1.s, xzr, x10
-; CHECK-NEXT:    fmov w10, s0
-; CHECK-NEXT:    lastb s0, p2, z4.s
-; CHECK-NEXT:    whilels p2.s, xzr, x11
-; CHECK-NEXT:    lastb s2, p1, z4.s
-; CHECK-NEXT:    whilels p1.s, xzr, x12
-; CHECK-NEXT:    lastb s3, p2, z4.s
-; CHECK-NEXT:    whilels p2.s, xzr, x9
-; CHECK-NEXT:    lastb s5, p1, z4.s
-; CHECK-NEXT:    whilels p1.s, xzr, x10
-; CHECK-NEXT:    stp s0, s1, [sp, #8]
-; CHECK-NEXT:    lastb s1, p2, z4.s
-; CHECK-NEXT:    whilels p2.s, xzr, x8
-; CHECK-NEXT:    lastb s0, p1, z4.s
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    stp s3, s2, [sp, #24]
-; CHECK-NEXT:    lastb s2, p2, z4.s
-; CHECK-NEXT:    stp s1, s5, [sp, #16]
-; CHECK-NEXT:    stp s0, s2, [sp]
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    tbl z0.s, { z0.s }, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %v = load <8 x float>, ptr %a
   %mask = load <8 x i32>, ptr %b
@@ -637,37 +105,11 @@ define void @shuffle_v8f32(ptr %a, ptr %b) #0 {
 define void @shuffle_v4f64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: shuffle_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK-NEXT:    .cfi_def_cfa w29, 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
-; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x0]
-; CHECK-NEXT:    mov z1.d, z0.d[3]
-; CHECK-NEXT:    mov z2.d, z0.d[2]
-; CHECK-NEXT:    mov x8, v0.d[1]
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    fmov x10, d2
-; CHECK-NEXT:    whilels p1.d, xzr, x9
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    whilels p2.d, xzr, x10
-; CHECK-NEXT:    lastb d0, p1, z3.d
-; CHECK-NEXT:    whilels p1.d, xzr, x9
-; CHECK-NEXT:    lastb d1, p2, z3.d
-; CHECK-NEXT:    whilels p2.d, xzr, x8
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    lastb d2, p1, z3.d
-; CHECK-NEXT:    lastb d3, p2, z3.d
-; CHECK-NEXT:    stp d1, d0, [sp, #16]
-; CHECK-NEXT:    stp d2, d3, [sp]
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %v = load <4 x double>, ptr %a
   %mask = load <4 x i64>, ptr %b
@@ -681,53 +123,13 @@ define void @shuffle_v4f64(ptr %a, ptr %b) #0 {
 define void @shuffle_v8i32_i8_mask(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: shuffle_v8i32_i8_mask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK-NEXT:    .cfi_def_cfa w29, 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ldr d0, [x1]
 ; CHECK-NEXT:    ptrue p0.s, vl8
-; CHECK-NEXT:    ldrb w8, [x1, #6]
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    whilels p1.s, xzr, x8
-; CHECK-NEXT:    lastb w8, p1, z0.s
-; CHECK-NEXT:    str w8, [sp, #24]
-; CHECK-NEXT:    ldrb w8, [x1, #5]
-; CHECK-NEXT:    whilels p1.s, xzr, x8
-; CHECK-NEXT:    lastb w8, p1, z0.s
-; CHECK-NEXT:    str w8, [sp, #20]
-; CHECK-NEXT:    ldrb w8, [x1, #4]
-; CHECK-NEXT:    whilels p1.s, xzr, x8
-; CHECK-NEXT:    lastb w8, p1, z0.s
-; CHECK-NEXT:    str w8, [sp, #16]
-; CHECK-NEXT:    ldrb w8, [x1, #3]
-; CHECK-NEXT:    whilels p1.s, xzr, x8
-; CHECK-NEXT:    lastb w8, p1, z0.s
-; CHECK-NEXT:    str w8, [sp, #12]
-; CHECK-NEXT:    ldrb w8, [x1, #2]
-; CHECK-NEXT:    whilels p1.s, xzr, x8
-; CHECK-NEXT:    lastb w8, p1, z0.s
-; CHECK-NEXT:    str w8, [sp, #8]
-; CHECK-NEXT:    ldrb w8, [x1, #1]
-; CHECK-NEXT:    whilels p1.s, xzr, x8
-; CHECK-NEXT:    lastb w8, p1, z0.s
-; CHECK-NEXT:    str w8, [sp, #4]
-; CHECK-NEXT:    ldrb w8, [x1]
-; CHECK-NEXT:    whilels p1.s, xzr, x8
-; CHECK-NEXT:    lastb w8, p1, z0.s
-; CHECK-NEXT:    str w8, [sp]
-; CHECK-NEXT:    ldrb w8, [x1, #7]
-; CHECK-NEXT:    whilels p1.s, xzr, x8
-; CHECK-NEXT:    lastb w8, p1, z0.s
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    str s0, [sp, #28]
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    tbl z0.s, { z1.s }, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %v = load <8 x i32>, ptr %a
   %mask = load <8 x i8>, ptr %b
@@ -973,250 +375,13 @@ define void @shuffle_v32i8_i16_mask(ptr %a, ptr %b) #0 {
 ;
 ; VBITS_GE_512-LABEL: shuffle_v32i8_i16_mask:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #-96]! // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    sub x9, sp, #32
-; VBITS_GE_512-NEXT:    stp x28, x27, [sp, #16] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    mov x29, sp
-; VBITS_GE_512-NEXT:    stp x26, x25, [sp, #32] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x24, x23, [sp, #48] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x22, x21, [sp, #64] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    and sp, x9, #0xffffffffffffffe0
-; VBITS_GE_512-NEXT:    .cfi_def_cfa w29, 96
-; VBITS_GE_512-NEXT:    .cfi_offset w19, -8
-; VBITS_GE_512-NEXT:    .cfi_offset w20, -16
-; VBITS_GE_512-NEXT:    .cfi_offset w21, -24
-; VBITS_GE_512-NEXT:    .cfi_offset w22, -32
-; VBITS_GE_512-NEXT:    .cfi_offset w23, -40
-; VBITS_GE_512-NEXT:    .cfi_offset w24, -48
-; VBITS_GE_512-NEXT:    .cfi_offset w25, -56
-; VBITS_GE_512-NEXT:    .cfi_offset w26, -64
-; VBITS_GE_512-NEXT:    .cfi_offset w27, -72
-; VBITS_GE_512-NEXT:    .cfi_offset w28, -80
-; VBITS_GE_512-NEXT:    .cfi_offset w30, -88
-; VBITS_GE_512-NEXT:    .cfi_offset w29, -96
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
 ; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    ptrue p0.b, vl32
 ; VBITS_GE_512-NEXT:    ld1b { z1.b }, p0/z, [x0]
-; VBITS_GE_512-NEXT:    umov w8, v0.h[7]
-; VBITS_GE_512-NEXT:    umov w9, v0.h[6]
-; VBITS_GE_512-NEXT:    umov w10, v0.h[5]
-; VBITS_GE_512-NEXT:    umov w11, v0.h[4]
-; VBITS_GE_512-NEXT:    umov w12, v0.h[3]
-; VBITS_GE_512-NEXT:    umov w13, v0.h[2]
-; VBITS_GE_512-NEXT:    umov w14, v0.h[1]
-; VBITS_GE_512-NEXT:    mov z2.h, z0.h[31]
-; VBITS_GE_512-NEXT:    mov z3.h, z0.h[30]
-; VBITS_GE_512-NEXT:    mov z4.h, z0.h[11]
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x8
-; VBITS_GE_512-NEXT:    fmov w16, s2
-; VBITS_GE_512-NEXT:    mov z2.h, z0.h[29]
-; VBITS_GE_512-NEXT:    fmov w17, s3
-; VBITS_GE_512-NEXT:    lastb w8, p1, z1.b
-; VBITS_GE_512-NEXT:    mov z3.h, z0.h[28]
-; VBITS_GE_512-NEXT:    fmov w26, s4
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x9
-; VBITS_GE_512-NEXT:    and x16, x16, #0xffff
-; VBITS_GE_512-NEXT:    fmov w18, s2
-; VBITS_GE_512-NEXT:    and x17, x17, #0xffff
-; VBITS_GE_512-NEXT:    mov z2.h, z0.h[27]
-; VBITS_GE_512-NEXT:    fmov w1, s3
-; VBITS_GE_512-NEXT:    lastb w9, p1, z1.b
-; VBITS_GE_512-NEXT:    mov z3.h, z0.h[26]
-; VBITS_GE_512-NEXT:    and x18, x18, #0xffff
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x10
-; VBITS_GE_512-NEXT:    fmov w2, s2
-; VBITS_GE_512-NEXT:    mov z2.h, z0.h[25]
-; VBITS_GE_512-NEXT:    and x1, x1, #0xffff
-; VBITS_GE_512-NEXT:    fmov w3, s3
-; VBITS_GE_512-NEXT:    mov z3.h, z0.h[24]
-; VBITS_GE_512-NEXT:    lastb w10, p1, z1.b
-; VBITS_GE_512-NEXT:    and x2, x2, #0xffff
-; VBITS_GE_512-NEXT:    fmov w4, s2
-; VBITS_GE_512-NEXT:    mov z2.h, z0.h[23]
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x11
-; VBITS_GE_512-NEXT:    and x3, x3, #0xffff
-; VBITS_GE_512-NEXT:    fmov w5, s3
-; VBITS_GE_512-NEXT:    mov z3.h, z0.h[22]
-; VBITS_GE_512-NEXT:    lastb w11, p1, z1.b
-; VBITS_GE_512-NEXT:    fmov w6, s2
-; VBITS_GE_512-NEXT:    mov z2.h, z0.h[21]
-; VBITS_GE_512-NEXT:    and x4, x4, #0xffff
-; VBITS_GE_512-NEXT:    and x5, x5, #0xffff
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x12
-; VBITS_GE_512-NEXT:    fmov w7, s3
-; VBITS_GE_512-NEXT:    mov z3.h, z0.h[20]
-; VBITS_GE_512-NEXT:    fmov w19, s2
-; VBITS_GE_512-NEXT:    mov z2.h, z0.h[19]
-; VBITS_GE_512-NEXT:    and x6, x6, #0xffff
-; VBITS_GE_512-NEXT:    lastb w12, p1, z1.b
-; VBITS_GE_512-NEXT:    fmov w20, s3
-; VBITS_GE_512-NEXT:    mov z3.h, z0.h[18]
-; VBITS_GE_512-NEXT:    and x7, x7, #0xffff
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x13
-; VBITS_GE_512-NEXT:    fmov w21, s2
-; VBITS_GE_512-NEXT:    mov z2.h, z0.h[17]
-; VBITS_GE_512-NEXT:    and x19, x19, #0xffff
-; VBITS_GE_512-NEXT:    lastb w13, p1, z1.b
-; VBITS_GE_512-NEXT:    fmov w22, s3
-; VBITS_GE_512-NEXT:    mov z3.h, z0.h[16]
-; VBITS_GE_512-NEXT:    fmov w23, s2
-; VBITS_GE_512-NEXT:    mov z2.h, z0.h[9]
-; VBITS_GE_512-NEXT:    and x20, x20, #0xffff
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x14
-; VBITS_GE_512-NEXT:    umov w14, v0.h[0]
-; VBITS_GE_512-NEXT:    and x21, x21, #0xffff
-; VBITS_GE_512-NEXT:    fmov w24, s3
-; VBITS_GE_512-NEXT:    mov z3.h, z0.h[15]
-; VBITS_GE_512-NEXT:    and x22, x22, #0xffff
-; VBITS_GE_512-NEXT:    lastb w15, p1, z1.b
-; VBITS_GE_512-NEXT:    fmov w25, s2
-; VBITS_GE_512-NEXT:    mov z2.h, z0.h[13]
-; VBITS_GE_512-NEXT:    and x23, x23, #0xffff
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x14
-; VBITS_GE_512-NEXT:    fmov w27, s3
-; VBITS_GE_512-NEXT:    mov z3.h, z0.h[14]
-; VBITS_GE_512-NEXT:    fmov w28, s2
-; VBITS_GE_512-NEXT:    fmov s2, w8
-; VBITS_GE_512-NEXT:    and x24, x24, #0xffff
-; VBITS_GE_512-NEXT:    lastb w14, p1, z1.b
-; VBITS_GE_512-NEXT:    and x8, x27, #0xffff
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x16
-; VBITS_GE_512-NEXT:    stur b2, [sp, #7]
-; VBITS_GE_512-NEXT:    fmov s2, w9
-; VBITS_GE_512-NEXT:    fmov w9, s3
-; VBITS_GE_512-NEXT:    fmov s3, w11
-; VBITS_GE_512-NEXT:    lastb w16, p1, z1.b
-; VBITS_GE_512-NEXT:    stur b2, [sp, #6]
-; VBITS_GE_512-NEXT:    fmov s2, w10
-; VBITS_GE_512-NEXT:    and x10, x28, #0xffff
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x17
-; VBITS_GE_512-NEXT:    stur b3, [sp, #4]
-; VBITS_GE_512-NEXT:    mov z3.h, z0.h[12]
-; VBITS_GE_512-NEXT:    and x9, x9, #0xffff
-; VBITS_GE_512-NEXT:    lastb w17, p1, z1.b
-; VBITS_GE_512-NEXT:    stur b2, [sp, #5]
-; VBITS_GE_512-NEXT:    fmov s2, w12
-; VBITS_GE_512-NEXT:    fmov w11, s3
-; VBITS_GE_512-NEXT:    mov z3.h, z0.h[10]
-; VBITS_GE_512-NEXT:    and x12, x26, #0xffff
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x18
-; VBITS_GE_512-NEXT:    mov z0.h, z0.h[8]
-; VBITS_GE_512-NEXT:    stur b2, [sp, #3]
-; VBITS_GE_512-NEXT:    fmov s2, w13
-; VBITS_GE_512-NEXT:    lastb w18, p1, z1.b
-; VBITS_GE_512-NEXT:    and x11, x11, #0xffff
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x1
-; VBITS_GE_512-NEXT:    stur b2, [sp, #2]
-; VBITS_GE_512-NEXT:    fmov s2, w15
-; VBITS_GE_512-NEXT:    lastb w1, p1, z1.b
-; VBITS_GE_512-NEXT:    stur b2, [sp, #1]
-; VBITS_GE_512-NEXT:    fmov s2, w14
-; VBITS_GE_512-NEXT:    and x14, x25, #0xffff
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x2
-; VBITS_GE_512-NEXT:    lastb w2, p1, z1.b
-; VBITS_GE_512-NEXT:    str b2, [sp]
-; VBITS_GE_512-NEXT:    fmov s2, w16
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x3
-; VBITS_GE_512-NEXT:    stur b2, [sp, #31]
-; VBITS_GE_512-NEXT:    fmov s2, w17
-; VBITS_GE_512-NEXT:    lastb w3, p1, z1.b
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x4
-; VBITS_GE_512-NEXT:    stur b2, [sp, #30]
-; VBITS_GE_512-NEXT:    fmov s2, w18
-; VBITS_GE_512-NEXT:    lastb w4, p1, z1.b
-; VBITS_GE_512-NEXT:    stur b2, [sp, #29]
-; VBITS_GE_512-NEXT:    fmov s2, w1
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x5
-; VBITS_GE_512-NEXT:    lastb w5, p1, z1.b
-; VBITS_GE_512-NEXT:    stur b2, [sp, #28]
-; VBITS_GE_512-NEXT:    fmov s2, w2
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x6
-; VBITS_GE_512-NEXT:    stur b2, [sp, #27]
-; VBITS_GE_512-NEXT:    fmov s2, w3
-; VBITS_GE_512-NEXT:    lastb w6, p1, z1.b
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x7
-; VBITS_GE_512-NEXT:    stur b2, [sp, #26]
-; VBITS_GE_512-NEXT:    fmov s2, w4
-; VBITS_GE_512-NEXT:    lastb w7, p1, z1.b
-; VBITS_GE_512-NEXT:    stur b2, [sp, #25]
-; VBITS_GE_512-NEXT:    fmov s2, w5
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x19
-; VBITS_GE_512-NEXT:    lastb w19, p1, z1.b
-; VBITS_GE_512-NEXT:    stur b2, [sp, #24]
-; VBITS_GE_512-NEXT:    fmov s2, w6
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x20
-; VBITS_GE_512-NEXT:    stur b2, [sp, #23]
-; VBITS_GE_512-NEXT:    lastb w20, p1, z1.b
-; VBITS_GE_512-NEXT:    fmov s2, w7
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x21
-; VBITS_GE_512-NEXT:    stur b2, [sp, #22]
-; VBITS_GE_512-NEXT:    lastb w21, p1, z1.b
-; VBITS_GE_512-NEXT:    fmov s2, w19
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x22
-; VBITS_GE_512-NEXT:    stur b2, [sp, #21]
-; VBITS_GE_512-NEXT:    lastb w22, p1, z1.b
-; VBITS_GE_512-NEXT:    fmov s2, w20
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x23
-; VBITS_GE_512-NEXT:    stur b2, [sp, #20]
-; VBITS_GE_512-NEXT:    lastb w23, p1, z1.b
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x24
-; VBITS_GE_512-NEXT:    lastb w24, p1, z1.b
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x8
-; VBITS_GE_512-NEXT:    lastb w8, p1, z1.b
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x9
-; VBITS_GE_512-NEXT:    lastb w9, p1, z1.b
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x10
-; VBITS_GE_512-NEXT:    lastb w10, p1, z1.b
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x11
-; VBITS_GE_512-NEXT:    lastb w11, p1, z1.b
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x12
-; VBITS_GE_512-NEXT:    fmov w12, s3
-; VBITS_GE_512-NEXT:    lastb w13, p1, z1.b
-; VBITS_GE_512-NEXT:    and x12, x12, #0xffff
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x12
-; VBITS_GE_512-NEXT:    lastb w12, p1, z1.b
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x14
-; VBITS_GE_512-NEXT:    fmov w14, s0
-; VBITS_GE_512-NEXT:    fmov s0, w21
-; VBITS_GE_512-NEXT:    lastb w15, p1, z1.b
-; VBITS_GE_512-NEXT:    stur b0, [sp, #19]
-; VBITS_GE_512-NEXT:    fmov s0, w22
-; VBITS_GE_512-NEXT:    and x14, x14, #0xffff
-; VBITS_GE_512-NEXT:    whilels p1.b, xzr, x14
-; VBITS_GE_512-NEXT:    stur b0, [sp, #18]
-; VBITS_GE_512-NEXT:    fmov s0, w23
-; VBITS_GE_512-NEXT:    lastb w14, p1, z1.b
-; VBITS_GE_512-NEXT:    stur b0, [sp, #17]
-; VBITS_GE_512-NEXT:    fmov s0, w24
-; VBITS_GE_512-NEXT:    stur b0, [sp, #16]
-; VBITS_GE_512-NEXT:    fmov s0, w8
-; VBITS_GE_512-NEXT:    mov x8, sp
-; VBITS_GE_512-NEXT:    stur b0, [sp, #15]
-; VBITS_GE_512-NEXT:    fmov s0, w9
-; VBITS_GE_512-NEXT:    stur b0, [sp, #14]
-; VBITS_GE_512-NEXT:    fmov s0, w10
-; VBITS_GE_512-NEXT:    stur b0, [sp, #13]
-; VBITS_GE_512-NEXT:    fmov s0, w11
-; VBITS_GE_512-NEXT:    stur b0, [sp, #12]
-; VBITS_GE_512-NEXT:    fmov s0, w13
-; VBITS_GE_512-NEXT:    stur b0, [sp, #11]
-; VBITS_GE_512-NEXT:    fmov s0, w12
-; VBITS_GE_512-NEXT:    stur b0, [sp, #10]
-; VBITS_GE_512-NEXT:    fmov s0, w15
-; VBITS_GE_512-NEXT:    stur b0, [sp, #9]
-; VBITS_GE_512-NEXT:    fmov s0, w14
-; VBITS_GE_512-NEXT:    stur b0, [sp, #8]
-; VBITS_GE_512-NEXT:    ld1b { z0.b }, p0/z, [x8]
+; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
+; VBITS_GE_512-NEXT:    tbl z0.b, { z1.b }, z0.b
 ; VBITS_GE_512-NEXT:    st1b { z0.b }, p0, [x0]
-; VBITS_GE_512-NEXT:    mov sp, x29
-; VBITS_GE_512-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x22, x21, [sp, #64] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x24, x23, [sp, #48] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x26, x25, [sp, #32] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x28, x27, [sp, #16] // 16-byte Folded Reload
-; VBITS_GE_512-NEXT:    ldp x29, x30, [sp], #96 // 16-byte Folded Reload
 ; VBITS_GE_512-NEXT:    ret
   %v = load <32 x i8>, ptr %a
   %mask = load <32 x i16>, ptr %b
@@ -1228,32 +393,12 @@ define void @shuffle_v32i8_i16_mask(ptr %a, ptr %b) #0 {
 define void @shuffle_v4f64_i32_mask(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: shuffle_v4f64_i32_mask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK-NEXT:    .cfi_def_cfa w29, 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ldp w9, w8, [x1, #8]
+; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    whilels p1.d, xzr, x8
-; CHECK-NEXT:    ldp w10, w8, [x1]
-; CHECK-NEXT:    whilels p2.d, xzr, x9
-; CHECK-NEXT:    lastb d1, p1, z0.d
-; CHECK-NEXT:    whilels p1.d, xzr, x8
-; CHECK-NEXT:    lastb d2, p2, z0.d
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    whilels p2.d, xzr, x10
-; CHECK-NEXT:    lastb d3, p1, z0.d
-; CHECK-NEXT:    lastb d0, p2, z0.d
-; CHECK-NEXT:    stp d2, d1, [sp, #16]
-; CHECK-NEXT:    stp d0, d3, [sp]
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; CHECK-NEXT:    tbl z0.d, { z1.d }, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %v = load <4 x double>, ptr %a
   %mask = load <4 x i32>, ptr %b
@@ -1412,91 +557,11 @@ define void @shuffle_v16i32(ptr %a, ptr %b) #0 {
 ;
 ; VBITS_GE_512-LABEL: shuffle_v16i32:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_GE_512-NEXT:    sub x9, sp, #112
-; VBITS_GE_512-NEXT:    mov x29, sp
-; VBITS_GE_512-NEXT:    and sp, x9, #0xffffffffffffffc0
-; VBITS_GE_512-NEXT:    .cfi_def_cfa w29, 16
-; VBITS_GE_512-NEXT:    .cfi_offset w30, -8
-; VBITS_GE_512-NEXT:    .cfi_offset w29, -16
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
-; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x1]
-; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x0]
-; VBITS_GE_512-NEXT:    mov z2.s, z0.s[14]
-; VBITS_GE_512-NEXT:    fmov w8, s0
-; VBITS_GE_512-NEXT:    mov w2, v0.s[3]
-; VBITS_GE_512-NEXT:    mov w3, v0.s[2]
-; VBITS_GE_512-NEXT:    mov w4, v0.s[1]
-; VBITS_GE_512-NEXT:    fmov w9, s2
-; VBITS_GE_512-NEXT:    mov z2.s, z0.s[13]
-; VBITS_GE_512-NEXT:    whilels p1.s, xzr, x8
-; VBITS_GE_512-NEXT:    lastb w8, p1, z1.s
-; VBITS_GE_512-NEXT:    fmov w10, s2
-; VBITS_GE_512-NEXT:    mov z2.s, z0.s[12]
-; VBITS_GE_512-NEXT:    whilels p1.s, xzr, x9
-; VBITS_GE_512-NEXT:    fmov w11, s2
-; VBITS_GE_512-NEXT:    mov z2.s, z0.s[11]
-; VBITS_GE_512-NEXT:    lastb w9, p1, z1.s
-; VBITS_GE_512-NEXT:    whilels p1.s, xzr, x10
-; VBITS_GE_512-NEXT:    fmov w12, s2
-; VBITS_GE_512-NEXT:    mov z2.s, z0.s[10]
-; VBITS_GE_512-NEXT:    str w8, [sp]
-; VBITS_GE_512-NEXT:    mov x8, sp
-; VBITS_GE_512-NEXT:    lastb w10, p1, z1.s
-; VBITS_GE_512-NEXT:    whilels p1.s, xzr, x11
-; VBITS_GE_512-NEXT:    lastb w11, p1, z1.s
-; VBITS_GE_512-NEXT:    whilels p1.s, xzr, x12
-; VBITS_GE_512-NEXT:    fmov w12, s2
-; VBITS_GE_512-NEXT:    mov z2.s, z0.s[9]
-; VBITS_GE_512-NEXT:    lastb w13, p1, z1.s
-; VBITS_GE_512-NEXT:    stp w10, w9, [sp, #52]
-; VBITS_GE_512-NEXT:    whilels p1.s, xzr, x12
-; VBITS_GE_512-NEXT:    fmov w12, s2
-; VBITS_GE_512-NEXT:    mov z2.s, z0.s[8]
-; VBITS_GE_512-NEXT:    lastb w14, p1, z1.s
-; VBITS_GE_512-NEXT:    whilels p1.s, xzr, x12
-; VBITS_GE_512-NEXT:    fmov w12, s2
-; VBITS_GE_512-NEXT:    mov z2.s, z0.s[7]
-; VBITS_GE_512-NEXT:    lastb w15, p1, z1.s
-; VBITS_GE_512-NEXT:    stp w13, w11, [sp, #44]
-; VBITS_GE_512-NEXT:    whilels p1.s, xzr, x12
-; VBITS_GE_512-NEXT:    fmov w12, s2
-; VBITS_GE_512-NEXT:    mov z2.s, z0.s[6]
-; VBITS_GE_512-NEXT:    lastb w16, p1, z1.s
-; VBITS_GE_512-NEXT:    whilels p1.s, xzr, x12
-; VBITS_GE_512-NEXT:    fmov w12, s2
-; VBITS_GE_512-NEXT:    mov z2.s, z0.s[5]
-; VBITS_GE_512-NEXT:    lastb w17, p1, z1.s
-; VBITS_GE_512-NEXT:    stp w15, w14, [sp, #36]
-; VBITS_GE_512-NEXT:    whilels p1.s, xzr, x12
-; VBITS_GE_512-NEXT:    fmov w12, s2
-; VBITS_GE_512-NEXT:    mov z2.s, z0.s[4]
-; VBITS_GE_512-NEXT:    mov z0.s, z0.s[15]
-; VBITS_GE_512-NEXT:    lastb w18, p1, z1.s
-; VBITS_GE_512-NEXT:    whilels p1.s, xzr, x12
-; VBITS_GE_512-NEXT:    fmov w12, s2
-; VBITS_GE_512-NEXT:    fmov w9, s0
-; VBITS_GE_512-NEXT:    lastb w1, p1, z1.s
-; VBITS_GE_512-NEXT:    stp w17, w16, [sp, #28]
-; VBITS_GE_512-NEXT:    whilels p1.s, xzr, x12
-; VBITS_GE_512-NEXT:    lastb w12, p1, z1.s
-; VBITS_GE_512-NEXT:    whilels p1.s, xzr, x2
-; VBITS_GE_512-NEXT:    lastb w2, p1, z1.s
-; VBITS_GE_512-NEXT:    stp w1, w18, [sp, #20]
-; VBITS_GE_512-NEXT:    whilels p1.s, xzr, x3
-; VBITS_GE_512-NEXT:    lastb w3, p1, z1.s
-; VBITS_GE_512-NEXT:    whilels p1.s, xzr, x4
-; VBITS_GE_512-NEXT:    lastb w10, p1, z1.s
-; VBITS_GE_512-NEXT:    stp w2, w12, [sp, #12]
-; VBITS_GE_512-NEXT:    whilels p1.s, xzr, x9
-; VBITS_GE_512-NEXT:    lastb w9, p1, z1.s
-; VBITS_GE_512-NEXT:    stp w10, w3, [sp, #4]
-; VBITS_GE_512-NEXT:    fmov s0, w9
-; VBITS_GE_512-NEXT:    str s0, [sp, #60]
-; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    tbl z0.s, { z0.s }, z1.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
-; VBITS_GE_512-NEXT:    mov sp, x29
-; VBITS_GE_512-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; VBITS_GE_512-NEXT:    ret
   %v = load <16 x i32>, ptr %a
   %mask = load <16 x i32>, ptr %b
