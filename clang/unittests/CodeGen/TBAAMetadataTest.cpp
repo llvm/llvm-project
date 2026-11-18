@@ -1036,12 +1036,11 @@ TEST(TBAAMetadataTest, PolymorphicClass) {
   const BasicBlock *BB = Compiler.compile();
 
   auto ClassBase = MMTuple(
-    MMString("_ZTS4Base"),
-    MMTuple(
-      MMString("int"),
-      OmnipotentCharCXX,
-      MConstInt(0)),
-    MConstInt(Compiler.PtrSize));
+      MMString("_ZTS4Base"),
+      MMTuple(MMString("vtable pointer"), MMTuple(MMString("Simple C++ TBAA")),
+              MConstInt(0)),
+      MConstInt(0), MMTuple(MMString("int"), OmnipotentCharCXX, MConstInt(0)),
+      MConstInt(Compiler.PtrSize));
 
   auto ClassDerived =
       MMTuple(MMString("_ZTS7Derived"), ClassBase, MConstInt(0),
@@ -1118,12 +1117,11 @@ TEST(TBAAMetadataTest, VirtualBase) {
     MConstInt(0));
 
   auto ClassDerived = MMTuple(
-    MMString("_ZTS7Derived"),
-    MMTuple(
-      MMString("short"),
-      OmnipotentCharCXX,
-      MConstInt(0)),
-    MConstInt(Compiler.PtrSize));
+      MMString("_ZTS7Derived"),
+      MMTuple(MMString("vtable pointer"), MMTuple(MMString("Simple C++ TBAA")),
+              MConstInt(0)),
+      MConstInt(0), MMTuple(MMString("short"), OmnipotentCharCXX, MConstInt(0)),
+      MConstInt(Compiler.PtrSize));
 
   const Instruction *I = match(BB,
       MInstruction(Instruction::Store,
