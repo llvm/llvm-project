@@ -1206,10 +1206,9 @@ define i1 @test_unsigned_i1_f64(double %f) nounwind {
 ;
 ; AVX512-DQ-LABEL: test_unsigned_i1_f64:
 ; AVX512-DQ:       # %bb.0:
-; AVX512-DQ-NEXT:    vcvttpd2udq %xmm0, %xmm1
 ; AVX512-DQ-NEXT:    vfpclasssd $215, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveZero(xmm0) | isNegativeZero(xmm0) | isNegativeInfinity(xmm0) | isNegative(xmm0) | isSignalingNaN(xmm0)
 ; AVX512-DQ-NEXT:    knotw %k0, %k1
-; AVX512-DQ-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0 {%k1} {z}
+; AVX512-DQ-NEXT:    vcvttpd2udq %xmm0, %xmm0 {%k1} {z}
 ; AVX512-DQ-NEXT:    vmovd %xmm0, %eax
 ; AVX512-DQ-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-DQ-NEXT:    retq
@@ -1289,10 +1288,9 @@ define i8 @test_unsigned_i8_f64(double %f) nounwind {
 ;
 ; AVX512-DQ-LABEL: test_unsigned_i8_f64:
 ; AVX512-DQ:       # %bb.0:
-; AVX512-DQ-NEXT:    vcvttpd2udq %xmm0, %xmm1
 ; AVX512-DQ-NEXT:    vfpclasssd $215, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveZero(xmm0) | isNegativeZero(xmm0) | isNegativeInfinity(xmm0) | isNegative(xmm0) | isSignalingNaN(xmm0)
 ; AVX512-DQ-NEXT:    knotw %k0, %k1
-; AVX512-DQ-NEXT:    vpmovusdb %xmm1, %xmm0 {%k1} {z}
+; AVX512-DQ-NEXT:    vcvttpd2udq %xmm0, %xmm0 {%k1} {z}
 ; AVX512-DQ-NEXT:    vmovd %xmm0, %eax
 ; AVX512-DQ-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-DQ-NEXT:    retq
@@ -1441,15 +1439,14 @@ define i16 @test_unsigned_i16_f64(double %f) nounwind {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 ;
-; AVX512-DQ-NOFP16-LABEL: test_unsigned_i16_f64:
-; AVX512-DQ-NOFP16:       # %bb.0:
-; AVX512-DQ-NOFP16-NEXT:    vcvttpd2udq %xmm0, %xmm1
-; AVX512-DQ-NOFP16-NEXT:    vfpclasssd $215, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveZero(xmm0) | isNegativeZero(xmm0) | isNegativeInfinity(xmm0) | isNegative(xmm0) | isSignalingNaN(xmm0)
-; AVX512-DQ-NOFP16-NEXT:    knotw %k0, %k1
-; AVX512-DQ-NOFP16-NEXT:    vpmovusdw %xmm1, %xmm0 {%k1} {z}
-; AVX512-DQ-NOFP16-NEXT:    vmovd %xmm0, %eax
-; AVX512-DQ-NOFP16-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX512-DQ-NOFP16-NEXT:    retq
+; AVX512-DQ-LABEL: test_unsigned_i16_f64:
+; AVX512-DQ:       # %bb.0:
+; AVX512-DQ-NEXT:    vfpclasssd $215, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveZero(xmm0) | isNegativeZero(xmm0) | isNegativeInfinity(xmm0) | isNegative(xmm0) | isSignalingNaN(xmm0)
+; AVX512-DQ-NEXT:    knotw %k0, %k1
+; AVX512-DQ-NEXT:    vcvttpd2udq %xmm0, %xmm0 {%k1} {z}
+; AVX512-DQ-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-DQ-NEXT:    retq
 ;
 ; AVX512-FP16-NODQ-LABEL: test_unsigned_i16_f64:
 ; AVX512-FP16-NODQ:       # %bb.0:
@@ -1460,16 +1457,6 @@ define i16 @test_unsigned_i16_f64(double %f) nounwind {
 ; AVX512-FP16-NODQ-NEXT:    vcvttsd2si %xmm0, %eax
 ; AVX512-FP16-NODQ-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX512-FP16-NODQ-NEXT:    retq
-;
-; AVX512-FP16-DQ-LABEL: test_unsigned_i16_f64:
-; AVX512-FP16-DQ:       # %bb.0:
-; AVX512-FP16-DQ-NEXT:    vcvttpd2udq %xmm0, %xmm1
-; AVX512-FP16-DQ-NEXT:    vfpclasssd $215, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveZero(xmm0) | isNegativeZero(xmm0) | isNegativeInfinity(xmm0) | isNegative(xmm0) | isSignalingNaN(xmm0)
-; AVX512-FP16-DQ-NEXT:    knotw %k0, %k1
-; AVX512-FP16-DQ-NEXT:    vpmovusdw %xmm1, %xmm0 {%k1} {z}
-; AVX512-FP16-DQ-NEXT:    vmovw %xmm0, %eax
-; AVX512-FP16-DQ-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX512-FP16-DQ-NEXT:    retq
     %x = call i16 @llvm.fptoui.sat.i16.f64(double %f)
     ret i16 %x
 }
