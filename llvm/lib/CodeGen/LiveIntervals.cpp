@@ -708,15 +708,11 @@ void LiveIntervals::collectSubRangeUses(Register Reg,
     unsigned SubReg = MO.getSubReg();
     LaneBitmask LaneMask =
         SubReg ? TRI->getSubRegIndexLaneMask(SubReg) : LaneBitmask::getAll();
-    const MachineInstr &UseMI = *MO.getParent();
     // A use tied to an early-clobber def is read at the early-clobber slot.
     // Using the normal register slot can extend a subrange beyond the main
     // range when rebuilding it below.
-    unsigned DefIdx;
-    bool IsEarlyClobber =
-        UseMI.isRegTiedToDefOperand(MO.getOperandNo(), &DefIdx) &&
-        UseMI.getOperand(DefIdx).isEarlyClobber();
-    SlotIndex Idx = getInstructionIndex(UseMI).getRegSlot(IsEarlyClobber);
+    SlotIndex Idx = getInstructionIndex(*MO.getParent())
+                        .getRegSlot(MO.isEarlyClobberDefOrUse());
     // Merge adjacent operands of the same instruction.
     if (!Uses.empty() && Uses.back().first == Idx) {
       Uses.back().second |= LaneMask;
