@@ -1503,8 +1503,8 @@ define signext i32 @srli_1_sh2add(ptr %0, i64 %1) {
 ;
 ; RV64XTHEADBA-LABEL: srli_1_sh2add:
 ; RV64XTHEADBA:       # %bb.0:
-; RV64XTHEADBA-NEXT:    srli a1, a1, 1
-; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a1, 2
+; RV64XTHEADBA-NEXT:    andi a1, a1, -2
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a1, 1
 ; RV64XTHEADBA-NEXT:    lw a0, 0(a0)
 ; RV64XTHEADBA-NEXT:    ret
   %3 = lshr i64 %1, 1
@@ -1524,8 +1524,8 @@ define i64 @srli_2_sh3add(ptr %0, i64 %1) {
 ;
 ; RV64XTHEADBA-LABEL: srli_2_sh3add:
 ; RV64XTHEADBA:       # %bb.0:
-; RV64XTHEADBA-NEXT:    srli a1, a1, 2
-; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a1, 3
+; RV64XTHEADBA-NEXT:    andi a1, a1, -4
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a1, 1
 ; RV64XTHEADBA-NEXT:    ld a0, 0(a0)
 ; RV64XTHEADBA-NEXT:    ret
   %3 = lshr i64 %1, 2
