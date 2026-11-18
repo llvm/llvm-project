@@ -1178,8 +1178,8 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     if (MDestOffset == MForwardOffset)
       CopySource = M->getDest();
     else {
-      CopySource = Builder.CreateInBoundsPtrAdd(
-          CopySource, Builder.getInt64(MForwardOffset));
+      CopySource = Builder.CreatePtrAddWithSignedOffset(
+          CopySource, MForwardOffset, "", GEPNoWrapFlags::inBounds());
       NewCopySource = dyn_cast<Instruction>(CopySource);
     }
     // We need to update `MCopyLoc` if an offset exists.
@@ -1479,7 +1479,7 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
   Value *DestPtr = MemCpy->getRawDest();
   MaybeAlign Align = MemCpy->getDestAlign();
   if (MOffset < 0) {
-    DestPtr = Builder.CreatePtrAdd(DestPtr, Builder.getInt64(-MOffset));
+    DestPtr = Builder.CreatePtrAddWithSignedOffset(DestPtr, -MOffset);
     if (Align)
       Align = commonAlignment(*Align, -MOffset);
   }
@@ -1744,8 +1744,8 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   Value *NewDestPtr = SrcAlloca;
   if (*SrcOffset != *DestOffset) {
     IRBuilder<> Builder(DestAlloca);
-    NewDestPtr = Builder.CreateInBoundsPtrAdd(
-        SrcAlloca, Builder.getInt64(*SrcOffset - *DestOffset));
+    NewDestPtr = Builder.CreatePtrAddWithSignedOffset(
+        SrcAlloca, *SrcOffset - *DestOffset, "", GEPNoWrapFlags::inBounds());
   }
   DestAlloca->replaceAllUsesWith(NewDestPtr);
   eraseInstruction(DestAlloca);

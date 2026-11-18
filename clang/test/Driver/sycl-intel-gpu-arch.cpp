@@ -1,6 +1,6 @@
 /// Tests for Intel GPU names in --offload-arch.
 
-/// An Intel GPU is compiled for its IGCA target, e.g. xe-bmg-g21 for igca_40r.
+/// An Intel GPU is compiled for its IGCA target, e.g. igca_40r for xe-bmg-g21.
 // RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-bmg-g21 \
 // RUN:   --offload-arch=xe-dg2 -c %s 2>&1 \
@@ -27,6 +27,18 @@
 // RUN:   | FileCheck -check-prefixes=CHK-SORTED %s
 // CHK-SORTED: "--image=file={{[^"]*}},triple=spirv64-unknown-unknown,arch=igca_30r,kind=sycl,code=xe-mtl-h,code=xe-mtl-u"
 
+/// An IGCA target given directly together with one of its Intel GPUs gives one
+/// device compile, which lists that GPU.
+// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=igca_30r,xe-mtl-u -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-MIXED-PHASES %s
+// CHK-MIXED-PHASES: offload, "device-sycl (spirv64-unknown-unknown:igca_30r)"
+// CHK-MIXED-PHASES-NOT: device-sycl (spirv
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=igca_30r,xe-mtl-u -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-MIXED %s
+// CHK-MIXED: "--image=file={{[^"]*}},triple=spirv64-unknown-unknown,arch=igca_30r,kind=sycl,code=xe-mtl-u"{{$}}
+
 /// An IGCA target given directly lists no devices, so it is compiled just in
 /// time.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
@@ -39,6 +51,7 @@
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-arch=xe-pvc -Xarch_igca_20ca -DFOO -Xarch_xe-pvc -DBAR \
 // RUN:   -c %s 2>&1 | FileCheck -check-prefixes=CHK-XARCH %s
+// CHK-XARCH: warning: argument unused during compilation: '-Xarch_xe-pvc -DBAR'
 // CHK-XARCH-NOT: "-D" "BAR"
 // CHK-XARCH: "-cc1" "-triple" "spirv64-unknown-unknown"{{.*}} "-D" "FOO"
 // CHK-XARCH-NOT: "-D" "BAR"

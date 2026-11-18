@@ -109,7 +109,7 @@ static ArrayRef<options::ID> getUnsupportedOpts() {
   return UnsupportedOpts;
 }
 
-StringRef toolchains::getSYCLDeviceArch(StringRef Arch) {
+StringRef toolchains::getSYCLVirtualArch(StringRef Arch) {
   OffloadArch ID = StringToOffloadArch(Arch);
   return ID.isIntelGPU() ? OffloadArchToString(ID.intelGPUIGCATarget()) : Arch;
 }

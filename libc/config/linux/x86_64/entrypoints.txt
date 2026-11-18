@@ -275,7 +275,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.srand
     libc.src.stdlib.strfromd
     libc.src.stdlib.strfromf
-    libc.src.stdlib.strfromf128
     libc.src.stdlib.strfroml
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
@@ -386,6 +385,12 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/sendfile.h entrypoints
     libc.src.sys.sendfile.sendfile
+
+    # sys/shm.h entrypoints
+    libc.src.sys.shm.shmat
+    libc.src.sys.shm.shmctl
+    libc.src.sys.shm.shmdt
+    libc.src.sys.shm.shmget
 
     # sys/socket.h entrypoints
     libc.src.sys.socket.accept
@@ -507,6 +512,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.chroot
     libc.src.unistd.close
     libc.src.unistd.close_range
+    libc.src.unistd.copy_file_range
     libc.src.unistd.dup
     libc.src.unistd.dup2
     libc.src.unistd.dup3
@@ -549,6 +555,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.pause
     libc.src.unistd.pipe
     libc.src.unistd.pipe2
+    libc.src.unistd.posix_close
     libc.src.unistd.pread
     libc.src.unistd.pwrite
     libc.src.unistd.read
@@ -644,7 +651,15 @@ set(TARGET_LIBC_ENTRYPOINTS
 if(LLVM_LIBC_INCLUDE_SCUDO)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
     # malloc.h external entrypoints
+    libc.src.stdlib.mallinfo2
     libc.src.stdlib.mallopt
+  )
+endif()
+
+if (LIBC_TYPES_HAS_NATIVE_FLOAT128)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # stdlib.h _Float128 entrypoints
+    libc.src.stdlib.strfromf128
   )
 endif()
 
@@ -703,6 +718,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atanhf
     libc.src.math.canonicalize
     libc.src.math.canonicalizef
+    libc.src.math.canonicalizef128
     libc.src.math.canonicalizel
     libc.src.math.cbrt
     libc.src.math.cbrtf
@@ -721,11 +737,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cosh
     libc.src.math.coshf
     libc.src.math.cospif
+    libc.src.math.daddf128
     libc.src.math.daddl
     libc.src.math.ddivl
     libc.src.math.dfmal
     libc.src.math.dmull
     libc.src.math.dsqrtl
+    libc.src.math.dsubf128
     libc.src.math.dsubl
     libc.src.math.erff
     libc.src.math.exp
@@ -895,6 +913,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.lroundl
     libc.src.math.modf
     libc.src.math.modff
+    libc.src.math.modff128
     libc.src.math.modfl
     libc.src.math.nan
     libc.src.math.nanf
@@ -923,6 +942,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.remainderl
     libc.src.math.remquo
     libc.src.math.remquof
+    libc.src.math.remquof128
     libc.src.math.remquol
     libc.src.math.rint
     libc.src.math.rintf
@@ -1142,14 +1162,11 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
     libc.src.math.atan2l
-    libc.src.math.canonicalizef128
     libc.src.math.canonicalizef80
-    libc.src.math.daddf128
     libc.src.math.ddivf128
     libc.src.math.dfmaf128
     libc.src.math.dmulf128
     libc.src.math.dsqrtf128
-    libc.src.math.dsubf128
     libc.src.math.faddf128
     libc.src.math.fdivf128
     libc.src.math.ffmaf128
@@ -1159,12 +1176,10 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.fromfpxf128
     libc.src.math.fsqrtf128
     libc.src.math.fsubf128
-    libc.src.math.modff128
     libc.src.math.nextafterf128
     libc.src.math.nextdownf128
     libc.src.math.nextupf128
     libc.src.math.remainderf128
-    libc.src.math.remquof128
     libc.src.math.ufromfpf128
     libc.src.math.ufromfpxf128
   )
@@ -1174,6 +1189,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
   libc.src.math.atanbf16
   libc.src.math.acosbf16
+  libc.src.math.acoshbf16
   libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
@@ -1221,6 +1237,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.llogbbf16
   libc.src.math.llrintbf16
   libc.src.math.llroundbf16
+  libc.src.math.log10p1bf16
   libc.src.math.log_bf16
   libc.src.math.logbbf16
   libc.src.math.lrintbf16
@@ -1241,6 +1258,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.scalbnbf16
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
+  libc.src.math.sinbf16
   libc.src.math.sinhbf16
   libc.src.math.sqrtbf16
   libc.src.math.tanbf16
@@ -1273,6 +1291,8 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.absr
     libc.src.stdfix.exphk
     libc.src.stdfix.expk
+    libc.src.stdfix.expuhk
+    libc.src.stdfix.expuk
     libc.src.stdfix.roundhk
     libc.src.stdfix.roundhr
     libc.src.stdfix.roundk
@@ -1353,6 +1373,14 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.diviulr
     libc.src.stdfix.diviuk
     libc.src.stdfix.diviulk
+    libc.src.stdfix.mulir
+    libc.src.stdfix.mulilr
+    libc.src.stdfix.mulik
+    libc.src.stdfix.mulilk
+    libc.src.stdfix.muliur
+    libc.src.stdfix.muliulr
+    libc.src.stdfix.muliuk
+    libc.src.stdfix.muliulk
   )
 endif()
 
@@ -1465,6 +1493,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_mutex_destroy
     libc.src.pthread.pthread_mutex_init
     libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_timedlock
     libc.src.pthread.pthread_mutex_trylock
     libc.src.pthread.pthread_mutex_unlock
     libc.src.pthread.pthread_mutexattr_destroy
@@ -1628,6 +1657,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.signal.sigpending
     libc.src.signal.sigprocmask
     libc.src.signal.sigsuspend
+    libc.src.signal.sigtimedwait
+    libc.src.signal.sigwait
+    libc.src.signal.sigwaitinfo
 
     # spawn.h entrypoints
     libc.src.spawn.posix_spawn
@@ -1666,6 +1698,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.threads.mtx_destroy
     libc.src.threads.mtx_init
     libc.src.threads.mtx_lock
+    libc.src.threads.mtx_timedlock
     libc.src.threads.mtx_trylock
     libc.src.threads.mtx_unlock
     libc.src.threads.thrd_create
@@ -1697,6 +1730,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.localtime
     libc.src.time.localtime_r
     libc.src.time.mktime
+    libc.src.time.clock_nanosleep
     libc.src.time.nanosleep
     libc.src.time.strftime
     libc.src.time.strftime_l
@@ -1784,6 +1818,10 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       # grp.h entrypoints
       libc.src.grp.initgroups
       libc.src.grp.setgroups
+
+      # ifaddrs.h entrypoints
+      libc.src.ifaddrs.freeifaddrs
+      libc.src.ifaddrs.getifaddrs
 
       # libintl.h entrypoints
       libc.src.libintl.bind_textdomain_codeset

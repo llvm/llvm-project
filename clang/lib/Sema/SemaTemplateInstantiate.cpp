@@ -1168,6 +1168,13 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
         DiagFunc(Active->PointOfInstantiation,
                  PDiag(diag::note_comparison_synthesized_at)
                      << (int)DFK.asComparison() << RecordType);
+      } else if (DFK.isPostfixOperator()) {
+        // The declared return type of a defaulted postfix operator is the
+        // type for which it is defaulted.
+        DiagFunc(Active->PointOfInstantiation,
+                 PDiag(diag::note_postfix_operator_synthesized_at)
+                     << (int)DFK.asPostfixOperator()
+                     << FD->getReturnType().getUnqualifiedType());
       }
       break;
     }

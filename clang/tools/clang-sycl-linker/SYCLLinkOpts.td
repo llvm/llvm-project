@@ -46,15 +46,17 @@ def arch_EQ : Joined<["--", "-"], "arch=">,
               Flags<[LinkerOnlyOption]>,
               MetaVarName<"<arch>">,
               HelpText<"The device architecture">;
-def device_EQ : Joined<["--", "-"], "device=">,
-                Flags<[LinkerOnlyOption]>,
-                MetaVarName<"<device>">,
-                HelpText<"An Intel GPU to compile ahead of time for. Can be "
-                         "repeated. Defaults to --arch for an Intel GPU">;
+def code_EQ : Joined<["--", "-"], "code=">,
+              Flags<[LinkerOnlyOption]>,
+              MetaVarName<"<code>">,
+              HelpText<"Specify a real device to compile ahead of time for. "
+                       "Can be repeated. Without it, a real --arch is compiled "
+                       "ahead of time and a virtual one is kept for "
+                       "just-in-time compilation.">;
 def no_embed_virtual_arch : Flag<["--", "-"], "no-embed-virtual-arch">,
                             Flags<[LinkerOnlyOption]>,
                             HelpText<"Do not keep the SPIR-V in a device image "
-                                     "compiled ahead of time for an Intel GPU">;
+                                     "compiled ahead of time for --code">;
 def triple_EQ : Joined<["--", "-"], "triple=">,
                 Flags<[LinkerOnlyOption]>,
                 MetaVarName<"<triple>">,

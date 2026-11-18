@@ -17,7 +17,7 @@
 // reads the setting from the module's #cir.lowering_options.
 
 // NONOUNDEF-CIR: cir.lowering_options = #cir.lowering_options<
-// NONOUNDEF-CIR-SAME: enable_noundef_attrs = false>
+// NONOUNDEF-CIR-SAME: enable_noundef_attrs = false,
 
 struct Big {
   long a, b, c;

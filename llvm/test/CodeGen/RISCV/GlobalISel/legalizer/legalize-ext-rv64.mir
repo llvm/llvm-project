@@ -3,11 +3,13 @@
 # RUN: | FileCheck %s
 ---
 name:            sext_i32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: sext_i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[ADD]], 32
@@ -25,11 +27,13 @@ body:             |
 ...
 ---
 name:            zext_i32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: zext_i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[ADD]], 32
@@ -49,7 +53,6 @@ body:             |
 ...
 ---
 name:            anyext_16_i32
-tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: anyext_16_i32
   ; CHECK: bb.0.entry:
@@ -88,7 +91,6 @@ body:             |
 ...
 ---
 name:            sext_16_i32
-tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: sext_16_i32
   ; CHECK: bb.0.entry:
@@ -127,7 +129,6 @@ body:             |
 ...
 ---
 name:            zext_16_i32
-tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: zext_16_i32
   ; CHECK: bb.0.entry:

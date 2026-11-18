@@ -92,6 +92,11 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --linker-path=/usr/bin/ld %t.sycl-u.o %t.sycl-generic.a -o a.out 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=SYCL-GENERIC-ARCHIVE
+// RUN: rm -f %t.sycl-u.a
+// RUN: llvm-ar rcs %t.sycl-u.a %t.sycl-u.o
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld %t.sycl-generic.o %t.sycl-u.a -o a.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=SYCL-CODE-ARCHIVE
 // RUN: llvm-offload-binary -o %t.sycl-two.out \
 // RUN:   --image=file=%t.spirv.bc,kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=xe-mtl-u \
 // RUN:   --image=file=%t.spirv.bc,kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=xe-mtl-u,code=xe-mtl-h
@@ -136,25 +141,29 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   --linker-path=/usr/bin/ld %t.sycl-noembed.o %t.sycl-u.o -o a.out 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=SYCL-SOME-NO-EMBED
 
-// SYCL-SAME-CODE:     clang{{.*}} -march=igca_30r {{.*}}.o {{.*}}.o --sycl-link -Xlinker --device=xe-mtl-u -Xlinker --device=xe-mtl-h{{$}}
+// SYCL-SAME-CODE:     clang{{.*}} -march=igca_30r {{.*}}.o {{.*}}.o --sycl-link -Xlinker --code=xe-mtl-u -Xlinker --code=xe-mtl-h{{$}}
 // SYCL-SAME-CODE-NOT: --sycl-link
 
-// SYCL-DIFFERENT-CODE-DAG: clang{{.*}} -march=igca_30r {{.*}}.o --sycl-link -Xlinker --device=xe-mtl-u{{$}}
-// SYCL-DIFFERENT-CODE-DAG: clang{{.*}} -march=igca_30r {{.*}}.o --sycl-link -Xlinker --device=xe-mtl-u -Xlinker --device=xe-mtl-h{{$}}
+// SYCL-DIFFERENT-CODE-DAG: clang{{.*}} -march=igca_30r {{.*}}.o --sycl-link -Xlinker --code=xe-mtl-u{{$}}
+// SYCL-DIFFERENT-CODE-DAG: clang{{.*}} -march=igca_30r {{.*}}.o --sycl-link -Xlinker --code=xe-mtl-u -Xlinker --code=xe-mtl-h{{$}}
 
 // The devices are part of the output name, so the two images do not overwrite
 // each other with --save-temps.
-// SYCL-SAVE-TEMPS-DAG: clang{{.*}} -o a.out.spirv64.igca_30r.xe-mtl-u.img {{.*}}--device=xe-mtl-u{{$}}
-// SYCL-SAVE-TEMPS-DAG: clang{{.*}} -o a.out.spirv64.igca_30r.xe-mtl-u.xe-mtl-h.img {{.*}}--device=xe-mtl-h{{$}}
+// SYCL-SAVE-TEMPS-DAG: clang{{.*}} -o a.out.spirv64.igca_30r.xe-mtl-u.img {{.*}}--code=xe-mtl-u{{$}}
+// SYCL-SAVE-TEMPS-DAG: clang{{.*}} -o a.out.spirv64.igca_30r.xe-mtl-u.xe-mtl-h.img {{.*}}--code=xe-mtl-h{{$}}
 
 // A generic archive member is still linked into an image that lists devices.
-// SYCL-GENERIC-ARCHIVE: clang{{.*}} -march=igca_30r {{.*}}igca_30r{{.*}}.o {{.*}}generic{{.*}}.o --sycl-link -Xlinker --device=xe-mtl-u{{$}}
+// SYCL-GENERIC-ARCHIVE: clang{{.*}} -march=igca_30r {{.*}}igca_30r{{.*}}.o {{.*}}generic{{.*}}.o --sycl-link -Xlinker --code=xe-mtl-u{{$}}
+
+// An archive member that lists real devices is not linked into a generic group.
+// SYCL-CODE-ARCHIVE:     clang{{.*}} --target=spirv64-unknown-unknown {{[^ ]*}}generic{{[^ ]*}}.o --sycl-link{{$}}
+// SYCL-CODE-ARCHIVE-NOT: --sycl-link
 
 // Images that only differ in "code" are extracted to different files, also
 // when replaying the extraction.
 // SYCL-EXTRACT-DAG: llvm-offload-binary{{.*}} --image=kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=xe-mtl-u,file={{.*}}-igca_30r.xe-mtl-u.o --image=kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=xe-mtl-u,code=xe-mtl-h,file={{.*}}-igca_30r.xe-mtl-u.xe-mtl-h.o
-// SYCL-EXTRACT-DAG: clang{{.*}} -march=igca_30r {{.*}}-igca_30r.xe-mtl-u.o --sycl-link -Xlinker --device=xe-mtl-u{{$}}
-// SYCL-EXTRACT-DAG: clang{{.*}} -march=igca_30r {{.*}}-igca_30r.xe-mtl-u.xe-mtl-h.o --sycl-link -Xlinker --device=xe-mtl-u -Xlinker --device=xe-mtl-h{{$}}
+// SYCL-EXTRACT-DAG: clang{{.*}} -march=igca_30r {{.*}}-igca_30r.xe-mtl-u.o --sycl-link -Xlinker --code=xe-mtl-u{{$}}
+// SYCL-EXTRACT-DAG: clang{{.*}} -march=igca_30r {{.*}}-igca_30r.xe-mtl-u.xe-mtl-h.o --sycl-link -Xlinker --code=xe-mtl-u -Xlinker --code=xe-mtl-h{{$}}
 
 // The device images of SYCL images that are linked separately end up in a
 // single offload binary.
@@ -182,9 +191,9 @@ __attribute__((visibility("protected"), used)) int x;
 // The SPIR-V is dropped only if all device images that list Intel GPUs ask
 // for it. A generic archive member does not count.
 // SYCL-NO-EMBED-NOT: warning:
-// SYCL-NO-EMBED: clang{{.*}} -march=igca_30r {{.*}} --sycl-link -Xlinker --device=xe-mtl-u -Xlinker --no-embed-virtual-arch{{$}}
+// SYCL-NO-EMBED: clang{{.*}} -march=igca_30r {{.*}} --sycl-link -Xlinker --code=xe-mtl-u -Xlinker --no-embed-virtual-arch{{$}}
 // SYCL-SOME-NO-EMBED: warning: not all device code for 'igca_30r' was compiled with --no-offload-embed-virtual-arch; the SPIR-V is kept
-// SYCL-SOME-NO-EMBED: clang{{.*}} -march=igca_30r {{.*}} --sycl-link -Xlinker --device=xe-mtl-u{{$}}
+// SYCL-SOME-NO-EMBED: clang{{.*}} -march=igca_30r {{.*}} --sycl-link -Xlinker --code=xe-mtl-u{{$}}
 
 // SYCL-REPLAY: llvm-offload-binary{{.*}} --image=kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=,file={{[^ ]*}}-igca_30r.o --image=kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=xe-mtl-u,file={{[^ ]*}}-igca_30r.xe-mtl-u.o
 
@@ -233,6 +242,20 @@ __attribute__((visibility("protected"), used)) int x;
 // CUDA: clang{{.*}} -o [[IMG_SM52:.+]] -dumpdir a.out.nvptx64.sm_52.img. --target=nvptx64-nvidia-cuda -march=sm_52
 // CUDA: fatbinary{{.*}}-64 --create {{.*}}.fatbin --image3=kind=elf,sm=70,file=[[IMG_SM70]] --image3=kind=elf,sm=52,file=[[IMG_SM52]]
 // CUDA: usr/bin/ld{{.*}} {{.*}}.openmp.image.{{.*}}.o {{.*}}.cuda.image.{{.*}}.o
+
+// RUN: llvm-offload-binary -o %t.out \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70 \
+// RUN:   --image=file=%t.elf.o,kind=openacc,triple=nvptx64-nvidia-cuda,arch=sm_70
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
+// RUN:   -fembed-offload-object=%t.out
+// RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=OPENMP-OPENACC
+
+// The device images are linked together, and the result is registered with both
+// runtimes.
+// OPENMP-OPENACC: clang{{.*}} -o {{.*}}.img -dumpdir a.out.nvptx64.sm_70.img. --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.o {{.*}}.o
+// OPENMP-OPENACC-NOT: --target=nvptx64-nvidia-cuda
+// OPENMP-OPENACC: usr/bin/ld{{.*}} {{.*}}.openmp.image.{{.*}}.o {{.*}}.openacc.image.{{.*}}.o
 
 // RUN: llvm-offload-binary -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_80 \

@@ -125,8 +125,8 @@
 ; AOT-INTEL-OCLOC-OPTIONS: "{{.*}}ocloc{{.*}}" {{.*}}-device xe-bmg-g21 -a -b -c d "-e -f"
 ;
 ; Test that an IGCA target is compiled ahead of time with one ocloc call for its
-; --device list.
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=igca_30r --device=xe-mtl-u --device=xe-mtl-h %t/input1.bc %t/input2.bc -o %t/aot-igca.out 2>&1 \
+; --code list.
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=igca_30r --code=xe-mtl-u --code=xe-mtl-h %t/input1.bc %t/input2.bc -o %t/aot-igca.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=AOT-IGCA
 ; AOT-IGCA:      link: inputs: {{.*}}.bc, {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
 ; AOT-IGCA-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: [[SPVSTEM:.*]].spv
@@ -136,16 +136,16 @@
 ;
 ; Test that --no-embed-virtual-arch drops the SPIR-V from the ocloc output and
 ; is recorded on the device image.
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=igca_30r --device=xe-mtl-u --no-embed-virtual-arch %t/input1.bc %t/input2.bc -o %t/aot-igca-noembed.out 2>&1 \
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=igca_30r --code=xe-mtl-u --no-embed-virtual-arch %t/input1.bc %t/input2.bc -o %t/aot-igca-noembed.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=AOT-IGCA-NO-EMBED
 ; AOT-IGCA-NO-EMBED: "{{.*}}ocloc{{.*}}" {{.*}}-device xe-mtl-u -exclude_ir -output
 ; AOT-IGCA-NO-EMBED-NEXT: sycl-bundle: image kind: o, triple: spirv64-unknown-unknown, arch: igca_30r, no-embed-virtual-arch{{$}}
 ;
-; Test that --no-embed-virtual-arch has no effect without --device.
+; Test that --no-embed-virtual-arch has no effect without --code.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=igca_30r --no-embed-virtual-arch %t/input1.bc %t/input2.bc -o %t/jit-igca-noembed.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=JIT-IGCA
 ;
-; Test that an IGCA target without --device is compiled just in time.
+; Test that an IGCA target without --code is kept as SPIR-V.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=igca_30r %t/input1.bc %t/input2.bc -o %t/jit-igca.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=JIT-IGCA
 ; JIT-IGCA:      link: inputs: {{.*}}.bc, {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc

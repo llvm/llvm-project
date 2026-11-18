@@ -18,7 +18,7 @@
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --linker-path=/usr/bin/ld %t-uh-a.o %t-uh-b.o -o a.out 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=SAME-DEVICES
-// SAME-DEVICES:     clang{{.*}} -march=igca_30r {{.*}}.o {{.*}}.o --sycl-link -Xlinker --device=xe-mtl-h -Xlinker --device=xe-mtl-u{{$}}
+// SAME-DEVICES:     clang{{.*}} -march=igca_30r {{.*}}.o {{.*}}.o --sycl-link -Xlinker --code=xe-mtl-h -Xlinker --code=xe-mtl-u{{$}}
 // SAME-DEVICES-NOT: --sycl-link
 
 /// An object compiled for xe-mtl-u only has a different list of devices, so its
@@ -26,5 +26,5 @@
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --linker-path=/usr/bin/ld %t-u.o %t-uh-a.o -o a.out 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=DIFFERENT-DEVICES
-// DIFFERENT-DEVICES-DAG: clang{{.*}} -march=igca_30r {{.*}}.o --sycl-link -Xlinker --device=xe-mtl-u{{$}}
-// DIFFERENT-DEVICES-DAG: clang{{.*}} -march=igca_30r {{.*}}.o --sycl-link -Xlinker --device=xe-mtl-h -Xlinker --device=xe-mtl-u{{$}}
+// DIFFERENT-DEVICES-DAG: clang{{.*}} -march=igca_30r {{.*}}.o --sycl-link -Xlinker --code=xe-mtl-u{{$}}
+// DIFFERENT-DEVICES-DAG: clang{{.*}} -march=igca_30r {{.*}}.o --sycl-link -Xlinker --code=xe-mtl-h -Xlinker --code=xe-mtl-u{{$}}

@@ -4032,7 +4032,8 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
       options::OPT_fhlsl_spv_use_unknown_image_format,
       options::OPT_fhlsl_spv_use_legacy_buffer_matrix_order,
       options::OPT_fhlsl_spv_enable_maximal_reconvergence,
-      options::OPT_fhlsl_spv_preserve_interface};
+      options::OPT_fhlsl_spv_preserve_interface,
+      options::OPT_fhlsl_spv_support_nonzero_base_instance};
   if (!types::isHLSL(InputType))
     return;
   for (const auto &Arg : ForwardedArguments)
@@ -5127,6 +5128,8 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
     CmdArgs.push_back("-dwarf-explicit-import");
 
   renderDwarfFormat(D, T, Args, CmdArgs, EffectiveDWARFVersion);
+  if (useMachORelocatableDwarf(T, EffectiveDWARFVersion))
+    CmdArgs.push_back("-grelocatable-dwarf");
   renderDebugInfoCompressionArgs(Args, CmdArgs, D, TC);
 
   // This controls whether or not we perform JustMyCode instrumentation.
@@ -6957,6 +6960,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_relocatable_pch))
     CmdArgs.push_back("-relocatable-pch");
+  Args.AddLastArg(CmdArgs, options::OPT_fpch_base_dir_is_cwd);
 
   if (const Arg *A = Args.getLastArg(options::OPT_fcf_runtime_abi_EQ)) {
     static const char *kCFABIs[] = {
@@ -9236,6 +9240,9 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     // This option does not allow the user redefinitions for these macros.
     if (!HasNoDateTime)
       CmdArgs.push_back("-init-datetime-macros=literalone");
+    // Omit tool, current workdir and command line in COFF CV debug section.
+    CmdArgs.push_back("-gno-codeview-command-line");
+    CmdArgs.push_back("-gno-codeview-cwd");
   }
 }
 
@@ -9455,6 +9462,8 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   RenderDebugEnablingArgs(Args, CmdArgs, DebugInfoKind, DwarfVersion,
                           llvm::DebuggerKind::Default);
   renderDwarfFormat(D, Triple, Args, CmdArgs, DwarfVersion);
+  if (useMachORelocatableDwarf(Triple, DwarfVersion))
+    CmdArgs.push_back("-grelocatable-dwarf");
   renderDebugInfoCompressionArgs(Args, CmdArgs, D, getToolChain());
 
   // Handle -fPIC et al -- the relocation-model affects the assembler
@@ -9761,15 +9770,16 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
         "kind=" + Kind.str(),
     };
 
-    // Add one "code=" per Intel GPU of the IGCA target. llvm-offload-binary
-    // joins them, so the image gets "code=xe-mtl-h,xe-mtl-u".
+    // Add one "code=" per Intel GPU requested for this IGCA target.
+    // llvm-offload-binary joins them, so the image gets
+    // "code=xe-mtl-h,xe-mtl-u".
     if (OffloadAction->getOffloadingDeviceKind() == Action::OFK_SYCL) {
       ArrayRef<StringRef> Devices = C.getSYCLIGCADevices(TC, Arch.ArchName);
       for (StringRef Device : Devices)
         Parts.emplace_back("code=" + Device.str());
 
-      // The SPIR-V can only be dropped when the image is compiled ahead of
-      // time, and is kept when the IGCA target is also named directly.
+      // The SPIR-V can only be dropped from a device image compiled ahead of
+      // time, and is kept if the IGCA target is also given directly.
       bool EmbedVirtualArch =
           TCArgs.hasFlag(options::OPT_offload_embed_virtual_arch,
                          options::OPT_no_offload_embed_virtual_arch, true);
@@ -9977,7 +9987,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         // A SYCL device image for an Intel GPU is labeled with the GPU's IGCA
         // target.
         if (Kind == Action::OFK_SYCL)
-          Name = toolchains::getSYCLDeviceArch(Name);
+          Name = toolchains::getSYCLVirtualArch(Name);
         // Intel GPUs that share an IGCA target ask for it once.
         if (ShouldExtract.insert(Name).second)
           CmdArgs.emplace_back(Args.MakeArgString("--should-extract=" + Name));

@@ -87,8 +87,8 @@ LIBC_ALWAYS_INLINE uint64_t exp_b_scale(uint32_t x_u, uint32_t x_e,
 
 // Evaluate 2^(x * log2(b)) from u_bits = |x| * log2(b) (with binary point at
 // bit 54) and return the IEEE 754 single-precision bit representation.
-LIBC_ALWAYS_INLINE uint32_t exp2f_eval_bits(uint64_t u_bits, bool is_neg,
-                                            [[maybe_unused]] int rounding) {
+LIBC_INLINE uint32_t exp2f_eval_bits(uint64_t u_bits, bool is_neg,
+                                     [[maybe_unused]] int rounding) {
   // Negate in two's complement when x < 0 so that floor(x * log2(b)) is the
   // arithmetic right shift by 54, and the fractional part u in [0, 1) is the
   // low 54 bits.

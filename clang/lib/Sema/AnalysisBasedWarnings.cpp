@@ -1276,11 +1276,13 @@ public:
         continue; // Switch statement, good.
 
       const SwitchCase *SW = dyn_cast_or_null<SwitchCase>(P->getLabel());
-      if (SW && SW->getSubStmt() == B.getLabel() && P->begin() == P->end())
+      if (SW && stripAttributedStmt(SW->getSubStmt()) == B.getLabel() &&
+          P->begin() == P->end())
         continue; // Previous case label has no statements, good.
 
       const LabelStmt *L = dyn_cast_or_null<LabelStmt>(P->getLabel());
-      if (L && L->getSubStmt() == B.getLabel() && P->begin() == P->end())
+      if (L && stripAttributedStmt(L->getSubStmt()) == B.getLabel() &&
+          P->begin() == P->end())
         continue; // Case label is preceded with a normal label, good.
 
       if (!ReachableBlocks.count(P)) {
@@ -1354,6 +1356,13 @@ public:
     }
 
   private:
+    static const Stmt *stripAttributedStmt(const Stmt *S) {
+      if (const auto *AS = dyn_cast_or_null<AttributedStmt>(S)) {
+        assert(!isa<AttributedStmt>(AS->getSubStmt()));
+        return AS->getSubStmt();
+      }
+      return S;
+    }
 
     static const AttributedStmt *asFallThroughAttr(const Stmt *S) {
       if (const AttributedStmt *AS = dyn_cast_or_null<AttributedStmt>(S)) {
@@ -2437,6 +2446,41 @@ bool refersMainParam(const Expr *E) {
   return false;
 }
 
+// The base diagnostic comes first, so that the common case of checking whether
+// all of them are ignored needs one lookup.
+static constexpr unsigned UnsafeLibcCallDiagIDs[] = {
+    diag::warn_unsafe_buffer_libc_call,
+    diag::warn_unsafe_buffer_libc_call_numeric_conversion,
+    diag::warn_unsafe_buffer_libc_call_string_manipulation,
+    diag::warn_unsafe_buffer_libc_call_string_examination,
+    diag::warn_unsafe_buffer_libc_call_memory,
+    diag::warn_unsafe_buffer_libc_call_io,
+    diag::warn_unsafe_buffer_libc_call_printf,
+    diag::warn_unsafe_buffer_libc_call_scanf,
+};
+
+static unsigned getUnsafeLibcCallDiagID(UnsafeLibcFunctionFamily Family) {
+  switch (Family) {
+  case UnsafeLibcFunctionFamily::Other:
+    return diag::warn_unsafe_buffer_libc_call;
+  case UnsafeLibcFunctionFamily::NumericConversion:
+    return diag::warn_unsafe_buffer_libc_call_numeric_conversion;
+  case UnsafeLibcFunctionFamily::StringManipulation:
+    return diag::warn_unsafe_buffer_libc_call_string_manipulation;
+  case UnsafeLibcFunctionFamily::StringExamination:
+    return diag::warn_unsafe_buffer_libc_call_string_examination;
+  case UnsafeLibcFunctionFamily::Memory:
+    return diag::warn_unsafe_buffer_libc_call_memory;
+  case UnsafeLibcFunctionFamily::IO:
+    return diag::warn_unsafe_buffer_libc_call_io;
+  case UnsafeLibcFunctionFamily::Printf:
+    return diag::warn_unsafe_buffer_libc_call_printf;
+  case UnsafeLibcFunctionFamily::Scanf:
+    return diag::warn_unsafe_buffer_libc_call_scanf;
+  }
+  llvm_unreachable("unknown UnsafeLibcFunctionFamily");
+}
+
 class UnsafeBufferUsageReporter : public UnsafeBufferUsageHandler {
   Sema &S;
   bool SuggestSuggestions;  // Recommend -fsafe-buffer-usage-suggestions?
@@ -2586,9 +2630,9 @@ public:
   }
 
   void handleUnsafeLibcCall(const CallExpr *Call, unsigned PrintfInfo,
-                            ASTContext &Ctx,
+                            UnsafeLibcFunctionFamily Family, ASTContext &Ctx,
                             const Expr *UnsafeArg = nullptr) override {
-    unsigned DiagID = diag::warn_unsafe_buffer_libc_call;
+    unsigned DiagID = getUnsafeLibcCallDiagID(Family);
     if (PrintfInfo & 0x8) {
       // The callee is a function with the format attribute. See the
       // documentation of PrintfInfo in UnsafeBufferUsageHandler, and
@@ -2739,7 +2783,9 @@ public:
   }
 
   bool ignoreUnsafeBufferInLibcCall(const SourceLocation &Loc) const override {
-    return S.Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, Loc);
+    return llvm::all_of(UnsafeLibcCallDiagIDs, [&](unsigned ID) {
+      return S.Diags.isIgnored(ID, Loc);
+    });
   }
 
   bool
@@ -3064,7 +3110,9 @@ static bool shouldRunUnsafeBufferUsageAnalysis(const Sema &S,
          !Diags.isIgnored(diag::warn_unsafe_buffer_variable, Loc) ||
          !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container, Loc) ||
          (S.getLangOpts().CPlusPlus &&
-          (!Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, Loc) ||
+          (llvm::any_of(
+               UnsafeLibcCallDiagIDs,
+               [&](unsigned ID) { return !Diags.isIgnored(ID, Loc); }) ||
            !Diags.isIgnored(diag::warn_unsafe_buffer_format_attr_call, Loc)));
 }
 

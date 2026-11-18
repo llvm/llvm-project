@@ -664,16 +664,16 @@ body:             |
     ; CHECK-LABEL: name: copy_vgpr64_to_areg64_align2_coalesce_with_av128_align2_sub
     ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: undef [[COPY:%[0-9]+]].sub0:vreg_128 = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY:%[0-9]+]].sub1:vreg_128 = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: undef [[COPY1:%[0-9]+]].sub0_sub1:areg_128_align2 = COPY [[COPY]].sub0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]].sub2_sub3:areg_128_align2 = COPY [[COPY]].sub1
+    ; CHECK-NEXT: undef [[COPY:%[0-9]+]].sub0_sub1:vreg_128 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]].sub2_sub3:vreg_128 = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: undef [[COPY1:%[0-9]+]].sub0_sub1:areg_128_align2 = COPY [[COPY]].sub0_sub1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]].sub2_sub3:areg_128_align2 = COPY [[COPY]].sub2_sub3
     ; CHECK-NEXT: INLINEASM &"; use $0", attdialect, reguse:AReg_128_Align2, [[COPY1]]
     ; CHECK-NEXT: SI_RETURN
-    undef %0.sub0:vreg_128 =COPY $vgpr0_vgpr1
-    %0.sub1:vreg_128 = COPY $vgpr2_vgpr3
-    undef %2.sub0_sub1:areg_128_align2 = COPY %0.sub0
-    %2.sub2_sub3:areg_128_align2 = COPY %0.sub1
+    undef %0.sub0_sub1:vreg_128 = COPY $vgpr0_vgpr1
+    %0.sub2_sub3:vreg_128 = COPY $vgpr2_vgpr3
+    undef %2.sub0_sub1:areg_128_align2 = COPY %0.sub0_sub1
+    %2.sub2_sub3:areg_128_align2 = COPY %0.sub2_sub3
     INLINEASM &"; use $0", attdialect, reguse:AReg_128_Align2, %2
     SI_RETURN
 

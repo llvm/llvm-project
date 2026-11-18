@@ -122,7 +122,7 @@ protected:
     auto loc = UnknownLoc::get(&context);
     auto result =
         parseClassificationAttr(attr, [&]() { return mlir::emitError(loc); });
-    EXPECT_TRUE(result.has_value())
+    EXPECT_TRUE(succeeded(result))
         << "parseClassificationAttr failed: " << lastError;
     return result.value_or(FunctionClassification{});
   }
@@ -133,7 +133,7 @@ protected:
     lastError.clear();
     auto result =
         parseClassificationAttr(attr, [&]() { return mlir::emitError(loc); });
-    EXPECT_FALSE(result.has_value());
+    EXPECT_TRUE(failed(result));
     EXPECT_NE(lastError.find(expectedSubstr.str()), std::string::npos)
         << "expected error containing '" << expectedSubstr << "' but got '"
         << lastError << "'";
@@ -147,6 +147,40 @@ protected:
   OpBuilder builder;
   std::string lastError;
 };
+
+TEST_F(TestTargetParseTest, ParsesDirectAlign) {
+  auto aligned = makeArg({
+      builder.getNamedAttr("kind", builder.getStringAttr("direct")),
+      builder.getNamedAttr("direct_align", builder.getI64IntegerAttr(8)),
+  });
+  auto direct =
+      makeArg({builder.getNamedAttr("kind", builder.getStringAttr("direct"))});
+  auto attr = builder.getDictionaryAttr({
+      builder.getNamedAttr("return", direct),
+      builder.getNamedAttr("args", builder.getArrayAttr({aligned})),
+  });
+
+  auto fc = parseOk(attr);
+  ASSERT_EQ(fc.argInfos.size(), 1u);
+  EXPECT_EQ(fc.argInfos[0].kind, ArgKind::Direct);
+  ASSERT_TRUE(fc.argInfos[0].directAlign);
+  EXPECT_EQ(*fc.argInfos[0].directAlign, llvm::Align(8));
+  EXPECT_FALSE(fc.returnInfo.directAlign);
+}
+
+TEST_F(TestTargetParseTest, RejectsDirectWithNonPowerOfTwoAlign) {
+  auto bad = makeArg({
+      builder.getNamedAttr("kind", builder.getStringAttr("direct")),
+      builder.getNamedAttr("direct_align", builder.getI64IntegerAttr(7)),
+  });
+  auto direct =
+      makeArg({builder.getNamedAttr("kind", builder.getStringAttr("direct"))});
+  auto attr = builder.getDictionaryAttr({
+      builder.getNamedAttr("return", direct),
+      builder.getNamedAttr("args", builder.getArrayAttr({bad})),
+  });
+  parseError(attr, "'direct_align' must be a positive power of 2");
+}
 
 TEST_F(TestTargetParseTest, ParsesDirectReturnAndOneDirectArg) {
   auto direct =

@@ -245,4 +245,27 @@ TEST(LibraryOptionsTest, Values) {
   cl::ResetCommandLineParser();
 }
 
+// A parse recognizes the options of the libraries that its caller passes, until
+// a parse passes other libraries.
+TEST(LibraryOptionsTest, ToolOptions) {
+  cl::ResetCommandLineParser();
+  cl::opt<bool> Unrelated("tool-options-unrelated");
+  opt::LibraryOptionsParser L{std::in_place_type<TestLibraryOptions>};
+  cl::LibraryOptionsContext V;
+  const char *Args[] = {"prog", "-lib-count=5"};
+  EXPECT_TRUE(cl::parseCommandLineOptions(V, &L, Args, "", &nulls()));
+  EXPECT_EQ(TestLibraryOptions::Global.count, 5u);
+  unsigned N;
+  EXPECT_EQ(toString(V.parse(L, {"-lib-count", "7"}, N)), "");
+
+  EXPECT_FALSE(cl::parseCommandLineOptions(V, Args, "", &nulls()));
+
+  // assign() replays each argument with the library that parsed it.
+  cl::LibraryOptionsContext Copy;
+  Copy.assign(V);
+  EXPECT_EQ(Copy.get<TestLibraryOptions>().count, 7u);
+  L.reset();
+  cl::ResetCommandLineParser();
+}
+
 } // namespace

@@ -303,8 +303,8 @@ static Value *constructPointer(Value *Ptr, int64_t Offset,
                     << "-bytes\n");
 
   if (Offset)
-    Ptr = IRB.CreatePtrAdd(Ptr, IRB.getInt64(Offset),
-                           Ptr->getName() + ".b" + Twine(Offset));
+    Ptr = IRB.CreatePtrAddWithSignedOffset(
+        Ptr, Offset, Ptr->getName() + ".b" + Twine(Offset));
   return Ptr;
 }
 
@@ -6574,6 +6574,22 @@ struct AAValueSimplifyCallSiteArgument : AAValueSimplifyFloating {
 };
 } // namespace
 
+/// Collect the non-musttail tail calls in the function of \p QueryingAA. Tail
+/// calls cannot access allocas of the caller.
+/// TODO: Be smarter about new allocas escaping into tail calls.
+static bool collectTailCalls(Attributor &A, const AbstractAttribute &QueryingAA,
+                             SmallVectorImpl<CallInst *> &TailCalls) {
+  bool UsedAssumedInformation = false;
+  return A.checkForAllInstructions(
+      [&](Instruction &I) {
+        auto &CI = cast<CallInst>(I);
+        if (CI.isTailCall() && !CI.isMustTailCall())
+          TailCalls.push_back(&CI);
+        return true;
+      },
+      QueryingAA, {Instruction::Call}, UsedAssumedInformation);
+}
+
 /// ----------------------- Heap-To-Stack Conversion ---------------------------
 namespace {
 struct AAHeapToStackFunction final : public AAHeapToStack {
@@ -6735,6 +6751,15 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
     Function *F = getAnchorScope();
     const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
 
+    // The new allocas may escape into tail calls.
+    SmallVector<CallInst *, 16> TailCalls;
+    if (any_of(AllocationInfos,
+               [](const std::pair<CallBase *, AllocationInfo *> &It) {
+                 return It.second->Status != AllocationInfo::INVALID;
+               }) &&
+        !collectTailCalls(A, *this, TailCalls))
+      return ChangeStatus::UNCHANGED;
+
     for (auto &It : AllocationInfos) {
       AllocationInfo &AI = *It.second;
       if (AI.Status == AllocationInfo::INVALID)
@@ -6823,6 +6848,9 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       }
       HasChanged = ChangeStatus::CHANGED;
     }
+
+    for (CallInst *CI : TailCalls)
+      CI->setTailCall(false);
 
     return HasChanged;
   }
@@ -7031,6 +7059,14 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
         return true;
       }
       if (auto *CB = dyn_cast<CallBase>(UserI)) {
+        // A musttail call cannot access allocas of the caller, and its marker
+        // cannot be removed.
+        if (CB->isMustTailCall()) {
+          LLVM_DEBUG(dbgs() << "[H2S] musttail user: " << *UserI << "\n");
+          ValidUsesOnly = false;
+          return true;
+        }
+
         if (!CB->isArgOperand(&U) || CB->isLifetimeStartOrEnd())
           return true;
         if (DeallocationInfos.count(CB)) {
@@ -7556,21 +7592,6 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       return ChangeStatus::UNCHANGED;
     assert(*PrivatizableType && "Expected privatizable type!");
 
-    // Collect all tail calls in the function as we cannot allow new allocas to
-    // escape into tail recursion.
-    // TODO: Be smarter about new allocas escaping into tail calls.
-    SmallVector<CallInst *, 16> TailCalls;
-    bool UsedAssumedInformation = false;
-    if (!A.checkForAllInstructions(
-            [&](Instruction &I) {
-              CallInst &CI = cast<CallInst>(I);
-              if (CI.isTailCall())
-                TailCalls.push_back(&CI);
-              return true;
-            },
-            *this, {Instruction::Call}, UsedAssumedInformation))
-      return ChangeStatus::UNCHANGED;
-
     Argument *Arg = getAssociatedArgument();
     // Query AAAlign attribute for alignment of associated argument to
     // determine the best alignment of loads.
@@ -7597,8 +7618,13 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
                 AI, Arg->getType(), "", IP);
           Arg->replaceAllUsesWith(AI);
 
-          for (CallInst *CI : TailCalls)
-            CI->setTailCall(false);
+          // The new alloca may escape into tail calls. Find them here, as calls
+          // may have been replaced or deleted since manifest.
+          for (Instruction &I : instructions(ReplacementFn)) {
+            auto *CI = dyn_cast<CallInst>(&I);
+            if (CI && CI->isTailCall() && !CI->isMustTailCall())
+              CI->setTailCall(false);
+          }
         };
 
     // Callback to repair a call site of the associated function. The elements
@@ -7796,10 +7822,11 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
     IRPosition::Kind Kind = IRP.getPositionKind();
     if (Kind == IRPosition::IRP_CALL_SITE ||
         Kind == IRPosition::IRP_CALL_SITE_ARGUMENT) {
-      if (auto *I = dyn_cast<Instruction>(&IRP.getAnchorValue())) {
-        if (!I->mayReadFromMemory())
+      if (auto *CB = dyn_cast<CallBase>(&IRP.getAnchorValue())) {
+        ModRefInfo MR = CB->getMemoryEffects().getModRef();
+        if (!isRefSet(MR))
           State.addKnownBits(NO_READS);
-        if (!I->mayWriteToMemory())
+        if (!isModSet(MR))
           State.addKnownBits(NO_WRITES);
       }
     }
@@ -8806,6 +8833,20 @@ struct AAMemoryLocationFunction final : public AAMemoryLocationImpl {
 struct AAMemoryLocationCallSite final : AAMemoryLocationImpl {
   AAMemoryLocationCallSite(const IRPosition &IRP, Attributor &A)
       : AAMemoryLocationImpl(IRP, A) {}
+
+  void initialize(Attributor &A) override {
+    AAMemoryLocationImpl::initialize(A);
+
+    // Volatile calls may also access inaccessible memory, which the callee's
+    // attributes do not say.
+    auto &CB = cast<CallBase>(getAnchorValue());
+    if (CB.isVolatile()) {
+      bool Changed = false;
+      removeKnownBits(NO_INACCESSIBLE_MEM);
+      updateStateAndAccessesMap(getState(), NO_INACCESSIBLE_MEM, &CB, nullptr,
+                                Changed, getAccessKindFromInst(&CB));
+    }
+  }
 
   ChangeStatus updateImpl(Attributor &A) override {
     // TODO: Once we have call site specific value information we can provide

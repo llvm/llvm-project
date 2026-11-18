@@ -15,6 +15,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_SAMPLEPROFILEPROBE_H
 #define LLVM_TRANSFORMS_IPO_SAMPLEPROFILEPROBE_H
 
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/IRUnitRef.h"
 #include "llvm/IR/PassManager.h"
@@ -26,6 +27,7 @@ class BasicBlock;
 class Function;
 class Instruction;
 class Loop;
+class LLVMContext;
 class PassInstrumentationCallbacks;
 class TargetMachine;
 
@@ -46,12 +48,15 @@ using FuncProbeFactorMap = StringMap<ProbeFactorMap>;
 // function pass, the factor sum for a probe would be typically 100%.
 class PseudoProbeVerifier {
 public:
+  LLVM_ABI explicit PseudoProbeVerifier(const LLVMContext &C);
   LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
   // Implementation of pass instrumentation callbacks for new pass manager.
   LLVM_ABI void runAfterPass(StringRef PassID, IRUnitRef IR);
 
 private:
+  bool Enabled;
+  StringSet<> VerifyFuncNames;
   // Allow a little bias due the rounding to integral factors.
   constexpr static float DistributionFactorVariance = 0.02f;
   // Distribution factors from last pass.

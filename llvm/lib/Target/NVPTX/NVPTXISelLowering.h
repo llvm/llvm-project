@@ -113,6 +113,7 @@ public:
 
   // Get whether we should use instructions that flush floating-point denormals
   // to sign-preserving zero.
+  bool useF16FTZ(const MachineFunction &MF) const;
   bool useF32FTZ(const MachineFunction &MF) const;
 
   SDValue getSqrtEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
@@ -156,6 +157,12 @@ public:
     // There's rarely any point of packing something into a vector type if we
     // already have the source data.
     return true;
+  }
+
+  bool shouldConvertBoolToFPWithSelect(EVT VT) const override {
+    // A selp of the exact result replaces selp.b32 plus a conversion.
+    return VT == MVT::f16 || VT == MVT::bf16 || VT == MVT::f32 ||
+           VT == MVT::f64;
   }
 
   bool shouldInsertFencesForAtomic(const Instruction *) const override;

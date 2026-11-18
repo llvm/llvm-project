@@ -90,6 +90,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VECTOR_COMPRESS:
     Res = PromoteIntRes_VECTOR_COMPRESS(N);
     break;
+  case ISD::VECTOR_SHUFFLE_VAR:
+    Res = PromoteIntRes_VECTOR_SHUFFLE_VAR(N);
+    break;
   case ISD::SELECT:
   case ISD::VSELECT:
   case ISD::VP_MERGE:
@@ -1044,6 +1047,12 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_COMPRESS(SDNode *N) {
   SDValue Passthru = GetPromotedInteger(N->getOperand(2));
   return DAG.getNode(ISD::VECTOR_COMPRESS, SDLoc(N), Vec.getValueType(), Vec,
                      N->getOperand(1), Passthru);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_SHUFFLE_VAR(SDNode *N) {
+  SDValue V = GetPromotedInteger(N->getOperand(0));
+  return DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, SDLoc(N), V.getValueType(), V,
+                     N->getOperand(1));
 }
 
 /// Promote the overflow flag of an overflowing arithmetic node.
@@ -2057,6 +2066,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECTOR_COMPRESS:
     Res = PromoteIntOp_VECTOR_COMPRESS(N, OpNo);
     break;
+  case ISD::VECTOR_SHUFFLE_VAR:
+    Res = PromoteIntOp_VECTOR_SHUFFLE_VAR(N, OpNo);
+    break;
   case ISD::TRUNCATE:     Res = PromoteIntOp_TRUNCATE(N); break;
   case ISD::BF16_TO_FP:
   case ISD::FP16_TO_FP:
@@ -2714,6 +2726,15 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_COMPRESS(SDNode *N,
   return DAG.getNode(ISD::VECTOR_COMPRESS, SDLoc(N), VT, Vec, Mask, Passthru);
 }
 
+SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_SHUFFLE_VAR(SDNode *N,
+                                                          unsigned OpNo) {
+  assert(OpNo == 1 && "The source shares the result's type, so promoting it "
+                      "is a result promotion.");
+  // Mask elements are unsigned.
+  SDValue Mask = ZExtPromotedInteger(N->getOperand(1));
+  return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), Mask), 0);
+}
+
 SDValue DAGTypeLegalizer::PromoteIntOp_TRUNCATE(SDNode *N) {
   SDValue Op = GetPromotedInteger(N->getOperand(0));
   return DAG.getNode(ISD::TRUNCATE, SDLoc(N), N->getValueType(0), Op);
@@ -3360,26 +3381,21 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
 std::pair <SDValue, SDValue> DAGTypeLegalizer::ExpandAtomic(SDNode *Node) {
   unsigned Opc = Node->getOpcode();
   MVT VT = cast<AtomicSDNode>(Node)->getMemoryVT().getSimpleVT();
+  assert(TLI.getOperationAction(Opc, VT) == TargetLowering::LibCall &&
+         "expanded atomic requires a libcall action for the memory type");
   AtomicOrdering order = cast<AtomicSDNode>(Node)->getMergedOrdering();
-  // Lower to outline atomic libcall if outline atomics enabled,
-  // or to sync libcall otherwise
-  RTLIB::Libcall LC = RTLIB::getOUTLINE_ATOMIC(Opc, order, VT);
+  RTLIB::AtomicLibcall LC =
+      RTLIB::selectAtomicLibcall(DAG.getLibcalls(), Opc, order, VT);
   EVT RetVT = Node->getValueType(0);
   TargetLowering::MakeLibCallOptions CallOptions;
   SmallVector<SDValue, 4> Ops;
-
-  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
-  if (LCImpl != RTLIB::Unsupported) {
+  if (LC.IsOutline) {
     Ops.append(Node->op_begin() + 2, Node->op_end());
     Ops.push_back(Node->getOperand(1));
   } else {
-    LC = RTLIB::getSYNC(Opc, VT);
-    assert(LC != RTLIB::UNKNOWN_LIBCALL &&
-           "Unexpected atomic op or value type!");
     Ops.append(Node->op_begin() + 1, Node->op_end());
-    LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   }
-  return TLI.makeLibCall(DAG, LCImpl, RetVT, Ops, CallOptions, SDLoc(Node),
+  return TLI.makeLibCall(DAG, LC.Impl, RetVT, Ops, CallOptions, SDLoc(Node),
                          Node->getOperand(0));
 }
 

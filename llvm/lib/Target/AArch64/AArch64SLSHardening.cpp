@@ -528,7 +528,8 @@ FunctionPass *llvm::createAArch64SLSHardeningLegacyPass() {
   return new AArch64SLSHardeningLegacy();
 }
 
-AArch64SLSHardeningPass::AArch64SLSHardeningPass() {}
+AArch64SLSHardeningPass::AArch64SLSHardeningPass()
+    : Inserter(std::make_unique<SLSHardeningInserter>()) {}
 
 AArch64SLSHardeningPass::AArch64SLSHardeningPass(AArch64SLSHardeningPass &&) =
     default;
@@ -542,11 +543,6 @@ AArch64SLSHardeningPass::run(MachineFunction &MF,
           .getCachedResult<MachineModuleAnalysis>(
               *MF.getFunction().getParent());
   assert(MMI && "MachineModuleAnalysis must be available");
-
-  if (!Inserter) {
-    Inserter = std::make_unique<SLSHardeningInserter>();
-    Inserter->init(*MF.getFunction().getParent());
-  }
 
   if (Inserter->run(MMI->getMMI(), MF)) {
     PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();

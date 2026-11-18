@@ -242,9 +242,12 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   auto *NewRHS =
       Rewriter.expandCodeFor(InvariantRHS, IVOperand->getType(), PHTerm);
   LLVM_DEBUG(dbgs() << "INDVARS: Simplified comparison: " << *ICmp << '\n');
-  ICmp->setPredicate(InvariantPredicate);
-  ICmp->setOperand(0, NewLHS);
-  ICmp->setOperand(1, NewRHS);
+  IRBuilder<> Builder(ICmp);
+  Value *NewICmp = Builder.CreateICmp(InvariantPredicate, NewLHS, NewRHS, "",
+                                      ICmp->hasSameSign());
+  NewICmp->takeName(ICmp);
+  ICmp->replaceAllUsesWith(NewICmp);
+  DeadInsts.emplace_back(ICmp);
   RunUnswitching = true;
   return true;
 }

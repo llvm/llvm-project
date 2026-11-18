@@ -303,8 +303,6 @@ static bool CC_RISCVAssign2XLen(CCState &State, CCValAssign VA1,
                                 const RISCVSubtarget &Subtarget) {
   unsigned XLen = Subtarget.getXLen();
   unsigned XLenInBytes = XLen / 8;
-  RISCVABI::ABI ABI = Subtarget.getTargetABI();
-  bool EABI = RISCVABI::isRVE(ABI);
 
   ArrayRef<MCPhysReg> ArgGPRs = RISCV::getArgGPRs(Subtarget);
 
@@ -314,11 +312,12 @@ static bool CC_RISCVAssign2XLen(CCState &State, CCValAssign VA1,
                                      VA1.getLocVT(), CCValAssign::Full));
   } else {
     // Both halves must be passed on the stack, with proper alignment.
-    // TODO: To be compatible with GCC's behaviors, we force them to have 4-byte
-    // alignment. This behavior may be changed when RV32E/ILP32E is ratified.
-    Align StackAlign(XLenInBytes);
-    if (!EABI || XLen != 32)
-      StackAlign = std::max(StackAlign, ArgFlags1.getNonZeroOrigAlign());
+    // TODO: To be compatible with GCC's behaviors, we clamp the alignment by
+    // the ABI stack alignment. This behavior may be changed when RV32E/ILP32E
+    // is ratified.
+    Align StackAlign =
+        std::min(RISCVABI::getStackAlignment(Subtarget.getTargetABI()),
+                 std::max(Align(XLenInBytes), ArgFlags1.getNonZeroOrigAlign()));
     State.addLoc(
         CCValAssign::getMem(VA1.getValNo(), VA1.getValVT(),
                             State.AllocateStack(XLenInBytes, StackAlign),
@@ -440,23 +439,13 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   bool AllowFPRForF64 = false;
 
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
-  switch (ABI) {
-  default:
-    llvm_unreachable("Unexpected ABI");
-  case RISCVABI::ABI_ILP32:
-  case RISCVABI::ABI_ILP32E:
-  case RISCVABI::ABI_LP64:
-  case RISCVABI::ABI_LP64E:
-    break;
-  case RISCVABI::ABI_ILP32D:
-  case RISCVABI::ABI_LP64D:
-    AllowFPRForF64 = !ArgFlags.isVarArg();
-    [[fallthrough]];
-  case RISCVABI::ABI_ILP32F:
-  case RISCVABI::ABI_LP64F:
+  assert(ABI != RISCVABI::ABI::Unknown && !RISCVABI::isPurecap(ABI) &&
+         "Unexpected ABI");
+  bool IsDoubleFPABI = RISCVABI::isDoubleFP(ABI);
+  if (IsDoubleFPABI || RISCVABI::isSingleFP(ABI))
     AllowFPRForF16_F32 = !ArgFlags.isVarArg();
-    break;
-  }
+  if (IsDoubleFPABI)
+    AllowFPRForF64 = !ArgFlags.isVarArg();
 
   if ((LocVT == MVT::f16 || LocVT == MVT::bf16) && AllowFPRForF16_F32) {
     if (MCRegister Reg = State.AllocateReg(ArgFPR16s)) {
@@ -531,13 +520,14 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   // legalisation or not. The argument will not be passed by registers if the
   // original type is larger than 2*XLEN, so the register alignment rule does
   // not apply.
-  // TODO: To be compatible with GCC's behaviors, we don't align registers
-  // currently if we are using ILP32E calling convention. This behavior may be
-  // changed when RV32E/ILP32E is ratified.
+  // TODO: To be compatible with GCC's behaviors, we clamp the alignment by the
+  // ABI stack alignment, so registers are never aligned for ILP32E/LP64E. This
+  // behavior may be changed when RV32E/ILP32E is ratified.
   unsigned TwoXLenInBytes = (2 * XLen) / 8;
-  if (ArgFlags.isVarArg() && ArgFlags.getNonZeroOrigAlign() == TwoXLenInBytes &&
-      DL.getTypeAllocSize(OrigTy) == TwoXLenInBytes &&
-      ABI != RISCVABI::ABI_ILP32E) {
+  Align ArgAlign = std::min(ArgFlags.getNonZeroOrigAlign(),
+                            RISCVABI::getStackAlignment(ABI));
+  if (ArgFlags.isVarArg() && ArgAlign == TwoXLenInBytes &&
+      DL.getTypeAllocSize(OrigTy) == TwoXLenInBytes) {
     unsigned RegIdx = State.getFirstUnallocated(ArgGPRs);
     // Skip 'odd' register if necessary.
     if (RegIdx != std::size(ArgGPRs) && RegIdx % 2 == 1)
