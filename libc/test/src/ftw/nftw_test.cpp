@@ -14,6 +14,7 @@
 #include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
 #include "hdr/ftw_macros.h"
+#include "hdr/limits_macros.h"
 #include "hdr/sys_stat_macros.h"
 #include "hdr/types/mode_t.h"
 #include "hdr/types/struct_FTW.h"
@@ -140,9 +141,8 @@ int record_callback(const char *fpath, const struct stat *sb, int typeflag,
 
 int chdir_callback(const char *fpath, const struct stat *sb, int typeflag,
                    struct FTW *ftwbuf) {
-  (void)sb;
-  ++call_count;
-  if (typeflag != FTW_SL && typeflag != FTW_SLN) {
+  record_callback(fpath, sb, typeflag, ftwbuf);
+  if (typeflag != FTW_SL && typeflag != FTW_SLN && typeflag != FTW_NS) {
     // When FTW_CHDIR is set, every entry (including level 0 when the root path
     // contains a directory prefix) must resolve via its relative basename in
     // the current working directory.
@@ -411,10 +411,9 @@ TEST_F(LlvmLibcNftwTest, ConstrainedFdLimitAndChdir) {
   EXPECT_EQ(call_count, 2);
 }
 
-TEST_F(LlvmLibcNftwTest, BufferGrowthAndVanishedEntry) {
-  // Exercise PathBuffer growth (>256 bytes) and DirEntryNames growth (>256
-  // bytes under fd_limit == 1), plus ENOENT->FTW_NS when a sibling vanishes
-  // mid-walk.
+TEST_F(LlvmLibcNftwTest, LongPathAndVanishedEntry) {
+  // Exercise multi-component long paths (>256 bytes) under fd_limit == 1, plus
+  // ENOENT->FTW_NS when a sibling vanishes mid-walk.
   constexpr const char *RACE_ROOT = "nftw_race_root";
   constexpr const char *VANISH_A = "nftw_race_root/vanish_a.txt";
   constexpr const char *VANISH_B = "nftw_race_root/vanish_b.txt";
@@ -517,6 +516,18 @@ TEST_F(LlvmLibcNftwTest, CallbackReturnAndErrorCases) {
               Fails(EINVAL));
   EXPECT_THAT(LIBC_NAMESPACE::nftw(root, record_callback, 10, ~0),
               Fails(EINVAL));
+
+#ifdef PATH_MAX
+  constexpr size_t OVERLONG_LEN = PATH_MAX;
+#else
+  constexpr size_t OVERLONG_LEN = 16384;
+#endif
+  char overlong_path[OVERLONG_LEN + 1];
+  for (size_t i = 0; i < OVERLONG_LEN; ++i)
+    overlong_path[i] = 'a';
+  overlong_path[OVERLONG_LEN] = '\0';
+  EXPECT_THAT(LIBC_NAMESPACE::nftw(overlong_path, record_callback, 10, 0),
+              Fails(ENAMETOOLONG));
 }
 
 TEST_F(LlvmLibcNftwTest, PermissionErrors) {
@@ -648,6 +659,57 @@ TEST_F(LlvmLibcNftwTest, FlagsAndActionRetVal) {
         Succeeds<int>(FTW_STOP));
     EXPECT_EQ(call_count, 1);
   }
+}
+
+TEST_F(LlvmLibcNftwTest, DeepIterativeTraversal) {
+  // Build a 24-level nested tree (> INITIAL_FRAME_CAPACITY = 16) with a
+  // sibling file at each level to exercise FrameStack growth and lseek-based
+  // directory offset resumption when fd_limit == 1.
+  constexpr int DEPTH = 24;
+  auto root = libc_make_test_file_path("nftw_deep_root");
+
+  char cwd_before[4096];
+  char cwd_after[4096];
+  ASSERT_THAT(LIBC_NAMESPACE::getcwd(cwd_before, sizeof(cwd_before)),
+              Succeeds(cwd_before));
+
+  ASSERT_THAT(LIBC_NAMESPACE::mkdir(root, 0755), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::chdir(root), Succeeds(0));
+
+  int created_levels = 0;
+  auto cleanup = LIBC_NAMESPACE::cpp::scope_exit([&]() {
+    LIBC_NAMESPACE::chdir(root);
+    for (int i = 0; i < created_levels; ++i)
+      LIBC_NAMESPACE::chdir("d");
+    for (int i = created_levels; i > 0; --i) {
+      LIBC_NAMESPACE::unlink("sib.txt");
+      LIBC_NAMESPACE::chdir("..");
+      LIBC_NAMESPACE::rmdir("d");
+    }
+    LIBC_NAMESPACE::chdir(cwd_before);
+    LIBC_NAMESPACE::rmdir(root);
+  });
+
+  for (int i = 0; i < DEPTH; ++i) {
+    ASSERT_THAT(LIBC_NAMESPACE::mkdir("d", 0755), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::chdir("d"), Succeeds(0));
+    ++created_levels;
+    ASSERT_THAT(create_empty_file("sib.txt"), Succeeds(0));
+  }
+  ASSERT_THAT(LIBC_NAMESPACE::chdir(cwd_before), Succeeds(0));
+
+  reset_counts();
+  ASSERT_THAT(LIBC_NAMESPACE::nftw(root, chdir_callback, 1,
+                                   FTW_PHYS | FTW_CHDIR | FTW_DEPTH),
+              Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::getcwd(cwd_after, sizeof(cwd_after)),
+              Succeeds(cwd_after));
+  EXPECT_STREQ(cwd_before, cwd_after);
+  // 1 root dir + 24 nested dirs + 24 sibling files = 49 entries.
+  EXPECT_EQ(call_count, 1 + 2 * DEPTH);
+  EXPECT_EQ(dp_count, 1 + DEPTH);
+  EXPECT_EQ(file_count, DEPTH);
+  EXPECT_EQ(max_level, DEPTH + 1);
 }
 
 #if defined(LIBC_ADD_NULL_CHECKS)

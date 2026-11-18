@@ -10,6 +10,7 @@ add_libc_test(
     libc.hdr.errno_macros
     libc.hdr.fcntl_macros
     libc.hdr.ftw_macros
+    libc.hdr.limits_macros
     libc.hdr.sys_stat_macros
     libc.hdr.types.mode_t
     libc.hdr.types.struct_FTW

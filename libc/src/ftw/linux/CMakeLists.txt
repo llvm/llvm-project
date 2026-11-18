@@ -8,21 +8,26 @@ add_entrypoint_object(
     libc.hdr.errno_macros
     libc.hdr.fcntl_macros
     libc.hdr.ftw_macros
+    libc.hdr.limits_macros
     libc.hdr.sys_stat_macros
     libc.hdr.types.dev_t
     libc.hdr.types.ino_t
+    libc.hdr.types.off_t
     libc.hdr.types.struct_FTW
     libc.hdr.types.struct_dirent
     libc.hdr.types.struct_stat
+    libc.hdr.unistd_macros
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.new
     libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.unique_ptr
     libc.src.__support.File.dir
     libc.src.__support.File.platform_dir
     libc.src.__support.OSUtil.linux.stat.stat_via_statx
     libc.src.__support.OSUtil.linux.syscall_wrappers.chdir
     libc.src.__support.OSUtil.linux.syscall_wrappers.close
     libc.src.__support.OSUtil.linux.syscall_wrappers.fchdir
+    libc.src.__support.OSUtil.linux.syscall_wrappers.lseek
     libc.src.__support.OSUtil.linux.syscall_wrappers.open
     libc.src.__support.OSUtil.linux.syscall_wrappers.openat
     libc.src.__support.error_or
