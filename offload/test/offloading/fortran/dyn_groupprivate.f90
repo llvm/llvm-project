@@ -8,6 +8,11 @@
 ! RUN: %libomptarget-compile-fortran-generic -fopenmp-version=61 -O3
 ! RUN: %libomptarget-run-generic | %fcheck-generic
 ! XFAIL: intelgpu
+! Flang does not support -foffload-lto.
+! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+! nvlink rejects the first target region: its thread_limit caps the
+! register count of the kernel below that of __kmpc_parallel_60.
+! UNSUPPORTED: nvptx64-nvidia-cuda
 
 module dyn_gprivate_helpers
   use, intrinsic :: iso_c_binding, only : c_ptr, c_associated
