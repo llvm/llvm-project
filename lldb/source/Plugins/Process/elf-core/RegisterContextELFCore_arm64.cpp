@@ -10,9 +10,9 @@
 #include "Register/Common/RegisterInfo_arm64.h"
 
 #include "Plugins/Process/Utility/AuxVector.h"
-#include "Register/Common/RegisterTypeDetector_arm64.h"
 #include "Plugins/Process/elf-core/ProcessElfCore.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
+#include "Register/Common/RegisterTypeDetector_arm64.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/RegisterValue.h"
 
@@ -22,8 +22,8 @@ using namespace lldb_private;
 
 std::unique_ptr<RegisterContextELFCore_arm64>
 RegisterContextELFCore_arm64::Create(Thread &thread, const ArchSpec &arch,
-                                       const DataExtractor &gpregset,
-                                       llvm::ArrayRef<CoreNote> notes) {
+                                     const DataExtractor &gpregset,
+                                     llvm::ArrayRef<CoreNote> notes) {
   Flags opt_regsets = RegisterInfo_arm64::eRegsetMaskDefault;
 
   DataExtractor ssve_data =
@@ -89,7 +89,7 @@ RegisterContextELFCore_arm64::Create(Thread &thread, const ArchSpec &arch,
       std::make_unique<RegisterInfo_arm64>(arch, opt_regsets);
   return std::unique_ptr<RegisterContextELFCore_arm64>(
       new RegisterContextELFCore_arm64(thread, std::move(register_info_up),
-                                         gpregset, notes));
+                                       gpregset, notes));
 }
 
 RegisterContextELFCore_arm64::RegisterContextELFCore_arm64(
@@ -232,8 +232,8 @@ void RegisterContextELFCore_arm64::ConfigureRegisterContext() {
   }
 }
 
-uint32_t RegisterContextELFCore_arm64::CalculateSVEOffset(
-    const RegisterInfo *reg_info) {
+uint32_t
+RegisterContextELFCore_arm64::CalculateSVEOffset(const RegisterInfo *reg_info) {
   // Start of Z0 data is after GPRs plus 8 bytes of vg register
   uint32_t sve_reg_offset = LLDB_INVALID_INDEX32;
   if (m_sve_state == SVEState::FPSIMD) {
@@ -250,7 +250,7 @@ uint32_t RegisterContextELFCore_arm64::CalculateSVEOffset(
 }
 
 bool RegisterContextELFCore_arm64::ReadRegister(const RegisterInfo *reg_info,
-                                                  RegisterValue &value) {
+                                                RegisterValue &value) {
   Status error;
   lldb::offset_t offset;
 
@@ -432,7 +432,7 @@ bool RegisterContextELFCore_arm64::ReadAllRegisterValues(
 }
 
 bool RegisterContextELFCore_arm64::WriteRegister(const RegisterInfo *reg_info,
-                                                   const RegisterValue &value) {
+                                                 const RegisterValue &value) {
   return false;
 }
 

@@ -128,10 +128,13 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
           ExpressionResults result = process->RunThreadPlan(
               exe_ctx, call_plan_sp, options, diagnostics);
           if (result == eExpressionCompleted) {
+            ThreadPlanReturnValue return_value = call_plan_sp->GetReturnValue();
+            auto *returned = std::get_if<ReturnedValue>(&return_value);
+            if (!returned)
+              return false;
 
             allocated_addr =
-                call_plan_sp->GetReturnValueObject()->GetValueAsUnsigned(
-                    LLDB_INVALID_ADDRESS);
+                returned->valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
             if (process->GetAddressByteSize() == 4) {
               if (allocated_addr == UINT32_MAX)
                 return false;

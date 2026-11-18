@@ -208,20 +208,32 @@ X86TargetMachine::~X86TargetMachine() = default;
 
 const X86Subtarget *
 X86TargetMachine::getSubtargetImpl(const Function &F) const {
-  Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute TuneAttr = F.getFnAttribute("tune-cpu");
-  Attribute FSAttr = F.getFnAttribute("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const X86Subtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
+
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.TuneCPU = FnAttrs.getAttribute("tune-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+  Attrs.PreferVecWidth = FnAttrs.getAttribute("prefer-vector-width");
+  Attrs.MinLegalVecWidth = FnAttrs.getAttribute("min-legal-vector-width");
+  Attrs.SoftFloat = FnAttrs.getAttribute("use-soft-float");
+
+  if (const X86Subtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
 
   StringRef CPU =
-      CPUAttr.isValid() ? CPUAttr.getValueAsString() : (StringRef)TargetCPU;
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString() : (StringRef)TargetCPU;
   // "x86-64" is a default target setting for many front ends. In these cases,
   // they actually request for "generic" tuning unless the "tune-cpu" was
   // specified.
-  StringRef TuneCPU = TuneAttr.isValid() ? TuneAttr.getValueAsString()
-                      : CPU == "x86-64"  ? "generic"
-                                         : (StringRef)CPU;
+  StringRef TuneCPU = Attrs.TuneCPU.isValid() ? Attrs.TuneCPU.getValueAsString()
+                      : CPU == "x86-64"       ? "generic"
+                                              : (StringRef)CPU;
   StringRef FS =
-      FSAttr.isValid() ? FSAttr.getValueAsString() : (StringRef)TargetFS;
+      Attrs.FS.isValid() ? Attrs.FS.getValueAsString() : (StringRef)TargetFS;
 
   SmallString<512> Key;
   // The additions here are ordered so that the definitely short strings are
@@ -231,9 +243,8 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
 
   // Extract prefer-vector-width attribute.
   unsigned PreferVectorWidthOverride = 0;
-  Attribute PreferVecWidthAttr = F.getFnAttribute("prefer-vector-width");
-  if (PreferVecWidthAttr.isValid()) {
-    StringRef Val = PreferVecWidthAttr.getValueAsString();
+  if (Attrs.PreferVecWidth.isValid()) {
+    StringRef Val = Attrs.PreferVecWidth.getValueAsString();
     unsigned Width;
     if (!Val.getAsInteger(0, Width)) {
       Key += 'p';
@@ -244,9 +255,8 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
 
   // Extract min-legal-vector-width attribute.
   unsigned RequiredVectorWidth = UINT32_MAX;
-  Attribute MinLegalVecWidthAttr = F.getFnAttribute("min-legal-vector-width");
-  if (MinLegalVecWidthAttr.isValid()) {
-    StringRef Val = MinLegalVecWidthAttr.getValueAsString();
+  if (Attrs.MinLegalVecWidth.isValid()) {
+    StringRef Val = Attrs.MinLegalVecWidth.getValueAsString();
     unsigned Width;
     if (!Val.getAsInteger(0, Width)) {
       Key += 'm';
@@ -269,7 +279,7 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
   // function before we can generate a subtarget. We also need to use
   // it as a key for the subtarget since that can be the only difference
   // between two functions.
-  bool SoftFloat = F.getFnAttribute("use-soft-float").getValueAsBool();
+  bool SoftFloat = Attrs.SoftFloat.getValueAsBool();
   // If the soft float attribute is set on the function turn on the soft float
   // subtarget feature.
   if (SoftFloat)
@@ -288,6 +298,7 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
         MaybeAlign(F.getParent()->getOverrideStackAlignment()),
         PreferVectorWidthOverride, RequiredVectorWidth);
   }
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 
@@ -317,7 +328,10 @@ bool X86TargetMachine::isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
   return SrcAS < 256 && DestAS < 256;
 }
 
-void X86TargetMachine::reset() { SubtargetMap.clear(); }
+void X86TargetMachine::reset() {
+  SubtargetMap.clear();
+  LastSubtarget.clear();
+}
 
 ScheduleDAGInstrs *
 X86TargetMachine::createMachineScheduler(MachineSchedContext *C) const {

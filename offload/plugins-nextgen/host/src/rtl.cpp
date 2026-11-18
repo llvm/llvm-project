@@ -18,7 +18,6 @@
 #include <unordered_map>
 
 #include "Shared/Debug.h"
-#include "Shared/Environment.h"
 #include "Utils/ELF.h"
 
 #include "GlobalHandler.h"
@@ -220,7 +219,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory. Use std::malloc in all cases.
-  Expected<void *> allocate(size_t Size, void *, ol_alloc_type_t Kind,
+  Expected<void *> allocate(size_t Size, ol_alloc_type_t Kind,
                             size_t /* Alignment */) override {
     if (Size == 0)
       return nullptr;
@@ -345,8 +344,9 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     return Plugin::success();
   }
+  /// All operations are synchronous, so there is never pending work.
   Expected<bool> hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfo) override {
-    return true;
+    return false;
   }
   Expected<bool> isEventCompleteImpl(void *Event,
                                      AsyncInfoWrapperTy &AsyncInfo) override {
@@ -527,6 +527,9 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   /// This class should not be copied.
   GenELF64PluginTy(const GenELF64PluginTy &) = delete;
   GenELF64PluginTy(GenELF64PluginTy &&) = delete;
+  GenELF64PluginTy &operator=(const GenELF64PluginTy &) = delete;
+  GenELF64PluginTy &operator=(GenELF64PluginTy &&) = delete;
+  ~GenELF64PluginTy() = default;
   /// Initialize the plugin and return the number of devices.
   Expected<int32_t> initImpl() override {
     ODBG(OLDT_Init) << "GenELF64 plugin detected " << ODBG_IF_LEVEL(2)

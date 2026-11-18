@@ -2378,6 +2378,12 @@ public:
     case Intrinsic::ldexp:
       ISD = ISD::FLDEXP;
       break;
+    case Intrinsic::frexp:
+      ISD = ISD::FFREXP;
+      break;
+    case Intrinsic::powi:
+      ISD = ISD::FPOWI;
+      break;
     case Intrinsic::fabs:
       ISD = ISD::FABS;
       break;
@@ -2695,7 +2701,7 @@ public:
         break;
 
       // Scalar types are lowered as a not.
-      if (!LT.second.isVector())
+      if (!LT.second.isVector() || LT.second == MVT::v1i1)
         return LT.first *
                thisT()->getArithmeticInstrCost(
                    Instruction::Xor, RetTy->getScalarType(), CostKind);

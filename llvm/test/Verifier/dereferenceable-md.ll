@@ -126,3 +126,28 @@ define ptr @f_16(i8 %val) {
 }
 ; CHECK: dereferenceable, dereferenceable_or_null metadata value must be an i64!
 ; CHECK-NEXT: %ptr = inttoptr i8 %val to ptr, !dereferenceable_or_null !2
+
+define void @phi_node(ptr %p, i64 %i) {
+entry:
+  br i1 true, label %bb, label %bb2
+
+bb:
+  ; This one is valid
+  phi ptr [%p, %entry], !dereferenceable !{i32 2}
+  ; CHECK: dereferenceable, dereferenceable_or_null apply only to pointer types
+  phi i64 [%i, %entry], !dereferenceable !{i32 2}
+  ; CHECK: dereferenceable, dereferenceable_or_null take one operand
+  phi ptr [%p, %entry], !dereferenceable !{}
+
+  ret void
+
+bb2:
+  ; This one is valid
+  phi ptr [%p, %entry], !dereferenceable_or_null !{i32 2}
+  ; CHECK: dereferenceable, dereferenceable_or_null apply only to pointer types
+  phi i64 [%i, %entry], !dereferenceable_or_null !{i32 2}
+  ; CHECK: dereferenceable, dereferenceable_or_null take one operand
+  phi ptr [%p, %entry], !dereferenceable_or_null !{}
+
+  ret void
+}

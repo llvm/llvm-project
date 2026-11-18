@@ -340,10 +340,10 @@ Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
   return Plugin::success();
 }
 
-Expected<void *> L0DeviceTy::allocate(size_t Size, void *HstPtr,
-                                      ol_alloc_type_t Kind, size_t Alignment) {
+Expected<void *> L0DeviceTy::allocate(size_t Size, ol_alloc_type_t Kind,
+                                      size_t Alignment) {
   return dataAlloc(Size, Alignment, Kind,
-                   /*Offset=*/0, /*UserAlloc=*/HstPtr == nullptr,
+                   /*Offset=*/0, /*UserAlloc=*/true,
                    /*DevMalloc=*/false);
 }
 
@@ -783,8 +783,7 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
     llvm::raw_string_ostream(Buffer)
         << "failed to call global " << (IsCtor ? "constructors" : "destructors")
         << " in the image";
-    return Plugin::error(ErrorCode::INVALID_BINARY, std::move(Err),
-                         Buffer.c_str());
+    return Plugin::error(ErrorCode::INVALID_BINARY, std::move(Err), Buffer);
   };
 
   // The SPIR-V backend cannot handle creating the ctor / dtor array
@@ -827,9 +826,8 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
   llvm::sort(Funcs,
              [](const auto &X, const auto &Y) { return X.second < Y.second; });
 
-  auto BufferOrErr =
-      allocate(Funcs.size() * sizeof(void *),
-               /*HostPtr=*/nullptr, OL_ALLOC_TYPE_DEVICE, /*Alignment=*/0);
+  auto BufferOrErr = allocate(Funcs.size() * sizeof(void *),
+                              OL_ALLOC_TYPE_DEVICE, /*Alignment=*/0);
   if (!BufferOrErr)
     return HandleErr(BufferOrErr.takeError());
 

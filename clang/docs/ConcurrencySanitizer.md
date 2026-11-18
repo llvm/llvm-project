@@ -29,10 +29,11 @@ cmake ../llvm -G Ninja                       \
 
 CSan currently supports:
 
-- Linux on x86-64.
+- Linux on x86-64 and Hexagon.
 - AMDGPU devices on Linux through the HSA runtime.
 
 Support for other hosts and GPU targets is not currently implemented.
+
 
 ## Usage
 
