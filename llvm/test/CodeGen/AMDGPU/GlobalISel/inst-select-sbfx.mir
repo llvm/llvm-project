@@ -90,12 +90,12 @@ body:             |
 ...
 
 ---
-name: sbfx_s32_low_i16
+name: sbfx_i32_low_i16
 legalized: true
 regBankSelected: true
 body: |
   bb.0:
-    ; CHECK-LABEL: name: sbfx_s32_low_i16
+    ; CHECK-LABEL: name: sbfx_i32_low_i16
     ; CHECK: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 16, implicit $exec
@@ -103,21 +103,21 @@ body: |
     ; CHECK-NEXT: $vgpr0 = COPY [[V_BFE_I32_e64_]]
     ; CHECK-NEXT: S_ENDPGM 0
     ;
-    ; REAL16-LABEL: name: sbfx_s32_low_i16
+    ; REAL16-LABEL: name: sbfx_i32_low_i16
     ; REAL16: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; REAL16-NEXT: [[V_CVT_I32_I16_t16_e64_:%[0-9]+]]:vgpr_32 = V_CVT_I32_I16_t16_e64 0, [[DEF]].lo16, 0, implicit $exec
     ; REAL16-NEXT: $vgpr0 = COPY [[V_CVT_I32_I16_t16_e64_]]
     ; REAL16-NEXT: S_ENDPGM 0
     ;
-    ; FAKE16-LABEL: name: sbfx_s32_low_i16
+    ; FAKE16-LABEL: name: sbfx_i32_low_i16
     ; FAKE16: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; FAKE16-NEXT: [[V_CVT_I32_I16_fake16_e64_:%[0-9]+]]:vgpr_32 = V_CVT_I32_I16_fake16_e64 [[DEF]], implicit $exec
     ; FAKE16-NEXT: $vgpr0 = COPY [[V_CVT_I32_I16_fake16_e64_]]
     ; FAKE16-NEXT: S_ENDPGM 0
-    %0:vgpr(s32) = IMPLICIT_DEF
-    %1:vgpr(s32) = G_CONSTANT i32 0
-    %2:vgpr(s32) = G_CONSTANT i32 16
-    %3:vgpr(s32) = G_SBFX %0, %1, %2
+    %0:vgpr(i32) = IMPLICIT_DEF
+    %1:vgpr(i32) = G_CONSTANT i32 0
+    %2:vgpr(i32) = G_CONSTANT i32 16
+    %3:vgpr(i32) = G_SBFX %0, %1, %2
     $vgpr0 = COPY %3
     S_ENDPGM 0
 ...
