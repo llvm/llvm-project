@@ -83,7 +83,7 @@ body:             |
   ; CHECK-NEXT: %one_bits:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %mantissa:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %bits:_ FPClasses:(all) SignBitKnown:?
-  ; CHECK-NEXT: %result:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %result:_ FPClasses:(pnorm) SignBitKnown:0
     %input:_(s32) = COPY $w0
     %mantissa_mask:_(s32) = G_CONSTANT i32 8388607 ; 0x007fffff
     %one_bits:_(s32) = G_CONSTANT i32 1065353216 ; 0x3f800000
@@ -103,7 +103,7 @@ body:             |
   ; CHECK-NEXT: %one:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %mantissa:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %bits:_ FPClasses:(all) SignBitKnown:?
-  ; CHECK-NEXT: %result:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %result:_ FPClasses:(psub) SignBitKnown:0
     %input:_(s32) = COPY $w0
     %mantissa_mask:_(s32) = G_CONSTANT i32 8388607 ; 0x007fffff
     %one:_(s32) = G_CONSTANT i32 1
@@ -136,7 +136,7 @@ body:             |
   ; CHECK-NEXT: %mantissa:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %bits:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %vector:_ FPClasses:(all) SignBitKnown:?
-  ; CHECK-NEXT: %result:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %result:_ FPClasses:(pnorm) SignBitKnown:0
     %input:_(s32) = COPY $w0
     %mantissa_mask:_(s32) = G_CONSTANT i32 8388607 ; 0x007fffff
     %one_bits:_(s32) = G_CONSTANT i32 1065353216 ; 0x3f800000
