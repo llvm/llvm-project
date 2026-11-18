@@ -148,7 +148,7 @@ class SDValue {
   friend struct DenseMapInfo<SDValue>;
 
   SDNode *Node = nullptr; // The node defining the value we are using.
-  unsigned ResNo = 0;     // Which return value of the node we are using.
+  size_t ResNo = 0;       // Which return value of the node we are using.
 
 public:
   SDValue() = default;
