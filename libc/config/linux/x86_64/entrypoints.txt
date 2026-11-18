@@ -449,6 +449,8 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/timerfd.h entrypoints
     libc.src.sys.timerfd.timerfd_create
+    libc.src.sys.timerfd.timerfd_gettime
+    libc.src.sys.timerfd.timerfd_settime
 
     # sys/sysinfo.h entrypoints
     libc.src.sys.sysinfo.sysinfo
