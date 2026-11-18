@@ -43,6 +43,16 @@ bool4 test_and_bool4(bool4 x, bool4 y) {
   return and(x, y);
 }
 
+// CHECK-LABEL: define hidden noundef <7 x i1> @_Z14test_and_bool7Dv7_bS_(
+// CHECK-SAME: <7 x i1> noundef [[X:%.*]], <7 x i1> noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[HLSL_AND:%.*]] = and <7 x i1> [[X]], [[Y]]
+// CHECK-NEXT:    ret <7 x i1> [[HLSL_AND]]
+//
+vector<bool, 7> test_and_bool7(vector<bool, 7> x, vector<bool, 7> y) {
+  return and(x, y);
+}
+
 // CHECK-LABEL: define hidden noundef <4 x i1> @_Z13test_and_int4Dv4_iS_(
 // CHECK-SAME: <4 x i32> noundef [[X:%.*]], <4 x i32> noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
