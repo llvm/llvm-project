@@ -51,32 +51,21 @@ _CLC_DEF _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
       127 -
       (__clc_as_uint((float)(__clc_as_float(val_ui | 0x3f800000) - 1.0f)) >>
        23);
-  int dexponent = 25 - fbh;
-  uint dval_ui = (((val_ui << fbh) & 0x007fffff) | (dexponent << 23));
-  int ex = dexponent + n - multiplier;
-  dexponent = ex;
-  uint val = sign | (ex << 23) | (dval_ui & 0x007fffff);
-  int ex1 = dexponent + multiplier;
-  ex1 = -ex1 + 25;
-  dval_ui = (((dval_ui & 0x007fffff) | 0x800000) >> ex1);
-  dval_ui = dexponent > 0 ? val : dval_ui;
-  dval_ui = dexponent > 254 ? 0x7f800000 : dval_ui; /*overflow*/
-  dval_ui = dexponent < -multiplier ? 0 : dval_ui;  /*underflow*/
-  dval_ui = dval_ui | sign;
-  val_f = __clc_as_float(dval_ui);
+  fbh = dexp == 0 ? __clc_clamp(fbh, 1, 23) : 0;
+  exponent = dexp == 0 ? 1 - fbh : exponent;
+  uint mant = (val_ui << fbh) & 0x007fffff;
 
-  exponent += n;
+  exponent = __clc_add_sat(exponent, n);
 
-  val = sign | (exponent << 23) | (val_ui & 0x007fffff);
-  ex1 = exponent + multiplier;
-  ex1 = -ex1 + 25;
-  val_ui = (((val_ui & 0x007fffff) | 0x800000) >> ex1);
+  uint val = sign | ((uint)exponent << 23) | mant;
+  int ex1 = __clc_clamp(1 - exponent, 1, 25);
+  uint full_mant = mant | 0x00800000;
+  val_ui =
+      (full_mant + ((1u << (ex1 - 1)) - 1u) + ((full_mant >> ex1) & 1u)) >> ex1;
   val_ui = exponent > 0 ? val : val_ui;
   val_ui = exponent > 254 ? 0x7f800000 : val_ui; /*overflow*/
   val_ui = exponent < -multiplier ? 0 : val_ui;  /*underflow*/
   val_ui = val_ui | sign;
-
-  val_ui = dexp == 0 ? dval_ui : val_ui;
   val_f = __clc_as_float(val_ui);
 
   val_f = (__clc_isnan(x) || __clc_isinf(x) || val_x == 0) ? x : val_f;
@@ -99,7 +88,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_ldexp(double x, int n) {
 
   ux = c ? ux : l;
 
-  int v = e + n;
+  int v = __clc_add_sat(e, n);
   v = __clc_clamp(v, -0x7ff, 0x7ff);
 
   ux &= ~EXPBITS_DP64;

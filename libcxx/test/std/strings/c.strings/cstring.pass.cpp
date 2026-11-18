@@ -39,7 +39,11 @@ int main(int, char**) {
     ASSERT_SAME_TYPE(std::size_t, decltype(std::strxfrm(cp, cpc, s)));
     ASSERT_SAME_TYPE(std::size_t, decltype(std::strcspn(cpc, cpc)));
     ASSERT_SAME_TYPE(std::size_t, decltype(std::strspn(cpc, cpc)));
+    TEST_DIAGNOSTIC_PUSH
+    TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
+    TEST_GCC_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
     ASSERT_SAME_TYPE(char*, decltype(std::strtok(cp, cpc)));
+    TEST_DIAGNOSTIC_POP
     ASSERT_SAME_TYPE(void*, decltype(std::memset(vp, 0, s)));
     ASSERT_SAME_TYPE(char*, decltype(std::strerror(0)));
     ASSERT_SAME_TYPE(std::size_t, decltype(std::strlen(cpc)));

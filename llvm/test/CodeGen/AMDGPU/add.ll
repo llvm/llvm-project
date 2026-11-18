@@ -5,7 +5,9 @@
 ; RUN: llc -mtriple=amdgpu10.10 < %s | FileCheck -check-prefixes=GFX10 %s
 ; RUN: llc -mtriple=amdgpu11.00 < %s | FileCheck -check-prefixes=GFX11 %s
 ; RUN: llc -mtriple=amdgpu12.00 < %s | FileCheck -check-prefixes=GFX12,GFX12-DEFSCHED %s
+; RUN: llc -enable-new-pm -mtriple=amdgpu12.00 < %s | FileCheck -check-prefixes=GFX12,GFX12-DEFSCHED %s
 ; RUN: llc -mtriple=amdgpu12.00 -amdgpu-use-ssa-machine-scheduler=1 < %s | FileCheck -check-prefixes=GFX12,GFX12-SSASCHED %s
+; RUN: llc -enable-new-pm -mtriple=amdgpu12.00 -amdgpu-use-ssa-machine-scheduler=1 < %s | FileCheck -check-prefixes=GFX12,GFX12-SSASCHED %s
 
 define amdgpu_kernel void @s_add_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; GFX6-LABEL: s_add_i32:

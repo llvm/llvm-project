@@ -8,6 +8,7 @@
 
 #include "Utils/CodegenUtils.h"
 
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorStorageLayout.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
@@ -165,7 +166,7 @@ namespace {
 // (with a direct-out variant without the disassemble).
 //
 struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   SparseFuncAssembler(MLIRContext *context, bool dO)
       : OpRewritePattern(context), directOut(dO) {}

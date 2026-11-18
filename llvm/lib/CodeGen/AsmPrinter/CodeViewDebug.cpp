@@ -759,6 +759,15 @@ void CodeViewDebug::emitTypeInformation() {
   OS.switchSection(Asm->getObjFileLowering().getCOFFDebugTypesSection());
   emitCodeViewMagicVersion();
 
+  // The records in TypeTable are already serialized, and .debug$H hashes those
+  // exact bytes. Decoding and re-encoding them through TypeRecordMapping is
+  // only needed to produce readable, commented assembly.
+  if (!OS.isVerboseAsm()) {
+    for (ArrayRef<uint8_t> Record : TypeTable.records())
+      OS.emitBinaryData(toStringRef(Record));
+    return;
+  }
+
   TypeTableCollection Table(TypeTable.records());
   TypeVisitorCallbackPipeline Pipeline;
 
@@ -1194,7 +1203,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
       ProcFlags |= ProcSymFlags::HasFP;
     if (GV->hasFnAttribute(Attribute::NoReturn))
       ProcFlags |= ProcSymFlags::IsNoReturn;
-    if (GV->hasFnAttribute(Attribute::NoInline))
+    if (GV->isNoInline())
       ProcFlags |= ProcSymFlags::IsNoInline;
     OS.emitInt8(static_cast<uint8_t>(ProcFlags));
     // Emit the function display name as a null-terminated string.
@@ -3493,7 +3502,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     bool isUnsigned = isFloatDIType(DIGV->getType())
                           ? true
                           : DebugHandlerBase::isUnsignedDIType(DIGV->getType());
-    APSInt Value(APInt(/*BitWidth=*/64, DIE->getElement(1)), isUnsigned);
+    APSInt Value(APInt(/*BitWidth=*/64, DIE->getConstantValue()), isUnsigned);
     emitConstantSymbolRecord(DIGV->getType(), Value, QualifiedName);
   }
 }

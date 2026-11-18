@@ -40,9 +40,7 @@ double _Complex divd(double _Complex a, double _Complex b) { return a / b; }
 // CIR-LABEL: cir.func {{.*}}@divd
 // CIR: cir.call @__divdc3({{.*}}) : (!cir.double, !cir.double, !cir.double, !cir.double) -> [[REC_D]]{{[^0-9]}}
 
-// CIR does not carry noundef onto expanded parameters.
-// LLVMCIR: define dso_local { double, double } @divd(double %{{.+}}, double %{{.+}}, double %{{.+}}, double %{{.+}})
-// OGCG: define dso_local { double, double } @divd(double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}})
+// LLVM: define dso_local { double, double } @divd(double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}})
 
 // LLVMCIR: call { double, double } @__divdc3(double %{{.+}}, double %{{.+}}, double %{{.+}}, double %{{.+}})
 // OGCG: call { double, double } @__divdc3(double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}})

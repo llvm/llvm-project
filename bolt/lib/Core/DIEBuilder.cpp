@@ -960,6 +960,10 @@ void DIEBuilder::cloneAttribute(
     break;
   case dwarf::DW_FORM_addr:
   case dwarf::DW_FORM_addrx:
+  case dwarf::DW_FORM_addrx1:
+  case dwarf::DW_FORM_addrx2:
+  case dwarf::DW_FORM_addrx3:
+  case dwarf::DW_FORM_addrx4:
   case dwarf::DW_FORM_GNU_addr_index:
     cloneAddressAttribute(Die, U, AttrSpec, Val);
     break;

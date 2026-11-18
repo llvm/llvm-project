@@ -4,7 +4,6 @@
 # When the coalescer removes the COPY by commuting the operands of the AND, it should also update the `implicit-def` of the destination register.
 ---
 name: implicit_def_dst
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: implicit_def_dst
@@ -21,7 +20,6 @@ body: |
 # In case the MIR for some reason contains more than one implicit-def of the destination reg, then all should be updated.
 ---
 name: two_implicit_defs_dst
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: two_implicit_defs_dst
@@ -38,7 +36,6 @@ body: |
 # Commuting instruction with 3 ops is handled correctly.
 ---
 name: commuting_3_ops
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $ymm0, $ymm1

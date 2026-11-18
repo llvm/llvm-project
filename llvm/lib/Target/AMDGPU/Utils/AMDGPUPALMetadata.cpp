@@ -89,6 +89,24 @@ void AMDGPUPALMetadata::readFromIR(Module &M) {
   }
 }
 
+// Set PAL metadata from a binary blob from the applicable .note record.
+// Returns false if bad format.  Blob must remain valid for the lifetime of the
+// Metadata.
+bool AMDGPUPALMetadata::setFromBlob(unsigned Type, StringRef Blob) {
+  BlobType = Type;
+  if (Type == ELF::NT_AMD_PAL_METADATA)
+    return setFromLegacyBlob(Blob);
+  return setFromMsgPackBlob(Blob);
+}
+
+// Set PAL metadata from legacy (array of key=value pairs) blob.
+bool AMDGPUPALMetadata::setFromLegacyBlob(StringRef Blob) {
+  const auto *Data = reinterpret_cast<const uint32_t *>(Blob.data());
+  for (unsigned I = 0; I != Blob.size() / sizeof(uint32_t) / 2; ++I)
+    setRegister(Data[I * 2], Data[I * 2 + 1]);
+  return true;
+}
+
 // Set PAL metadata from msgpack blob.
 bool AMDGPUPALMetadata::setFromMsgPackBlob(StringRef Blob) {
   return MsgPackDoc.readFromBlob(Blob, /*Multi=*/false);
@@ -348,11 +366,21 @@ void AMDGPUPALMetadata::setScratchSize(unsigned CC, const MCExpr *Val,
   setHwStage(CC, ".scratch_memory_size", msgpack::Type::UInt, Val);
 }
 
-// Set the stack frame size of a function in the metadata.
-void AMDGPUPALMetadata::setFunctionScratchSize(StringRef FnName, unsigned Val) {
+void AMDGPUPALMetadata::setBackendStackSize(unsigned CC, const MCExpr *Val) {
+  setHwStage(CC, ".backend_stack_size", msgpack::Type::UInt, Val);
+}
+
+void AMDGPUPALMetadata::setFunctionStackFrameSize(StringRef FnName,
+                                                  uint64_t Val) {
   auto Node = getShaderFunction(FnName);
   Node[".stack_frame_size_in_bytes"] = MsgPackDoc.getNode(Val);
-  Node[".backend_stack_size"] = MsgPackDoc.getNode(Val);
+}
+
+void AMDGPUPALMetadata::setFunctionBackendStackSize(StringRef FnName,
+                                                    const MCExpr *Val) {
+  msgpack::MapDocNode Node = getShaderFunction(FnName);
+  DelayedExprs.assignDocNode(Node[".backend_stack_size"], msgpack::Type::UInt,
+                             Val);
 }
 
 // Set the amount of LDS used in bytes in the metadata.

@@ -62,7 +62,8 @@ static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
   if (BaseDesc->isPrimitiveArray()) {
     if (BasePtr.allElementsInitialized())
       return true;
-    DiagnoseUninitializedSubobject(S, Loc, BasePtr.getField());
+    if (const FieldDecl *F = BasePtr.getField())
+      DiagnoseUninitializedSubobject(S, Loc, F);
     return false;
   }
   const Descriptor *ElemDesc = BaseDesc->ElemDesc;
@@ -384,6 +385,11 @@ static bool lval(InterpState &S, const ASTContext &Ctx, const Pointer &Ptr,
   }
 
   if (const auto *VD = dyn_cast_if_present<VarDecl>(BaseVD)) {
+    // We might allow creating pointers into invalid records, but do not allow
+    // returning them from an evaluation.
+    if (const RecordDecl *TypeRD = VD->getType()->getAsRecordDecl();
+        TypeRD && TypeRD->isInvalidDecl())
+      return false;
     // Check if this is a thread-local variable.
     if (VD->getTLSKind()) {
       // FIXME: Diagnostic!
@@ -449,6 +455,7 @@ static bool lvalFields(InterpState &S, const ASTContext &Ctx, PtrView Ptr,
                        QualType PtrType, SourceInfo Info,
                        ConstantExprKind ConstexprKind,
                        llvm::SmallPtrSet<const Block *, 4> &CheckedBlocks) {
+  assert(Ptr.isLive());
   const Descriptor *FieldDesc = Ptr.getFieldDesc();
   if (const Record *R = Ptr.getRecord()) {
     if (!R->hasPtrField())
@@ -470,9 +477,6 @@ static bool lvalFields(InterpState &S, const ASTContext &Ctx, PtrView Ptr,
         continue;
 
       if (F.Desc->isPrimitive() && F.Desc->getPrimType() == PT_Ptr) {
-        if (!FieldPtr.isLive())
-          return false;
-
         Pointer Pointee = FieldPtr.deref<Pointer>();
         if (!Pointee.isBlockPointer() ||
             CheckedBlocks.insert(Pointee.block()).second) {
@@ -501,8 +505,6 @@ static bool lvalFields(InterpState &S, const ASTContext &Ctx, PtrView Ptr,
 
   if (FieldDesc->isPrimitiveArray() && FieldDesc->getPrimType() == PT_Ptr) {
     for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I) {
-      if (!Ptr.isLive())
-        return false;
       Pointer Pointee = Ptr.elem<Pointer>(I);
 
       if (!Pointee.isBlockPointer() ||

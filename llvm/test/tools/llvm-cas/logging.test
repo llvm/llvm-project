@@ -3,12 +3,12 @@ REQUIRES: !system-windows, !system-cygwin
 RUN: rm -rf %t
 RUN: split-file %s %t
 RUN: %python -c "with open(r'%t/input/large', 'w') as file: file.truncate(100000)"
-RUN: env LLVM_CAS_LOG=2 llvm-cas --cas %t/cas --make-blob --data %t/input/a
-RUN: env LLVM_CAS_LOG=2 llvm-cas --cas %t/cas --make-blob --data %t/input/large
-RUN: env LLVM_CAS_LOG=2 llvm-cas --cas %t/cas --validate-if-needed -check-hash
-RUN: env LLVM_CAS_LOG=2 llvm-cas --cas %t/cas --validate-if-needed -force -allow-recovery
+RUN: env LLVM_CAS_LOG=2 llvm-cas make-blob --cas %t/cas --data %t/input/a
+RUN: env LLVM_CAS_LOG=2 llvm-cas make-blob --cas %t/cas --data %t/input/large
+RUN: env LLVM_CAS_LOG=2 llvm-cas validate-if-needed --cas %t/cas -check-hash
+RUN: env LLVM_CAS_LOG=2 llvm-cas validate-if-needed --cas %t/cas -force -allow-recovery
 RUN: rm %t/cas/v1.1/data.v1
-RUN: env LLVM_CAS_LOG=2 llvm-cas --cas %t/cas --validate-if-needed -force -allow-recovery
+RUN: env LLVM_CAS_LOG=2 llvm-cas validate-if-needed --cas %t/cas -force -allow-recovery
 RUN: FileCheck %s --input-file %t/cas/v1.log
 RUN: FileCheck %s --input-file %t/cas/v1.log --check-prefix=STANDALONE
 

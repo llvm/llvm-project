@@ -53,6 +53,16 @@ let Defs = [R3D, CC], Uses = [R3D, R4D], hasNoSchedulingInfo = 1,
     hasSideEffects = 1 in
   def XPLINK_STACKALLOC : Pseudo<(outs), (ins), []>;
 
+// Call of the XPLINK stack restore stub (see SystemZXPLINKAsmPrinter): the new
+// stack pointer is passed in R1, the stub sets R4. Like the stack extension
+// routine, the stub does not follow the XPLINK calling convention and is
+// called with BASR 3,3. Expands to LARL 3, BASR 3,3 and the call information
+// (10 bytes).
+let Predicates = [IsTargetXPLINK64], Defs = [R1D, R3D, R4D],
+    Uses = [R1D, R4D], hasNoSchedulingInfo = 1, hasSideEffects = 1 in
+  def XPLINK_STACKRESTORE : Alias<10, (outs), (ins),
+                                  [(z_xplink_stackrestore)]>;
+
 //===----------------------------------------------------------------------===//
 // Branch instructions
 //===----------------------------------------------------------------------===//
@@ -441,8 +451,8 @@ let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in {
   def LTGR : UnaryRRE<"ltgr", 0xB902, null_frag, GR64, GR64>;
 }
 
-let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in
-  def PAIR128 : Pseudo<(outs GR128:$dst), (ins GR64:$hi, GR64:$lo), []>;
+def : Pat<(z_pair128 GR64:$hi, GR64:$lo),
+          (REG_SEQUENCE GR128Bit, GR64:$hi, subreg_h64, GR64:$lo, subreg_l64)>;
 
 // Immediate moves.
 let isAsCheapAsAMove = 1, isMoveImm = 1, isReMaterializable = 1 in {
@@ -481,8 +491,7 @@ let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1,
   // These instructions are split after register allocation, so we don't
   // want a custom inserter.
   let Has20BitOffset = 1, HasIndex = 1, Is128Bit = 1 in {
-    def L128 : Pseudo<(outs GR128:$dst), (ins bdxaddr20only128:$src),
-                      [(set GR128:$dst, (load bdxaddr20only128:$src))]>;
+    def L128 : Pseudo<(outs GR128:$dst), (ins bdxaddr20only128:$src), []>;
   }
 }
 let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in {
@@ -525,8 +534,7 @@ let SimpleBDXStore = 1, mayStore = 1 in {
   // These instructions are split after register allocation, so we don't
   // want a custom inserter.
   let Has20BitOffset = 1, HasIndex = 1, Is128Bit = 1 in {
-    def ST128 : Pseudo<(outs), (ins GR128:$src, bdxaddr20only128:$dst),
-                       [(store GR128:$src, bdxaddr20only128:$dst)]>;
+    def ST128 : Pseudo<(outs), (ins GR128:$src, bdxaddr20only128:$dst), []>;
   }
 }
 
@@ -834,9 +842,11 @@ let Predicates = [FeatureLoadAndTrap], hasSideEffects = 1 in {
   def LLGTAT : UnaryRXY<"llgtat", 0xE39C, null_frag, GR64, 4>;
 }
 
-// Extend GR64s to GR128s.
-let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in
-  def ZEXT128 : Pseudo<(outs GR128:$dst), (ins GR64:$src), []>;
+// Extend a GR64 to a GR128.
+def zext128 : OutPatFrag<(ops node:$op),
+  (v2i64 (REG_SEQUENCE GR128Bit,
+                       (i64 (LLILL 0)), subreg_h64,
+                       $op, subreg_l64))>;
 
 //===----------------------------------------------------------------------===//
 // "Any" extensions
@@ -846,9 +856,11 @@ let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in
 def : Pat<(i64 (anyext GR32:$src)),
           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$src, subreg_l32)>;
 
-// Extend GR64s to GR128s.
-let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in
-  def AEXT128 : Pseudo<(outs GR128:$dst), (ins GR64:$src), []>;
+// Extend a GR64 to a GR128, leaving the high part undefined.
+def aext128 : OutPatFrag<(ops node:$op),
+  (v2i64 (REG_SEQUENCE GR128Bit, (
+                       i64 (IMPLICIT_DEF)), subreg_h64,
+                        $op, subreg_l64))>;
 
 //===----------------------------------------------------------------------===//
 // Truncations
@@ -1521,7 +1533,7 @@ def MLGR : BinaryRRE<"mlgr", 0xB986, null_frag, GR128, GR64>;
 def : Pat<(z_smul_lohi GR64:$src1, GR64:$src2),
           (MGRK GR64:$src1, GR64:$src2)>;
 def : Pat<(z_umul_lohi GR64:$src1, GR64:$src2),
-          (MLGR (AEXT128 GR64:$src1), GR64:$src2)>;
+          (MLGR (aext128 GR64:$src1), GR64:$src2)>;
 
 // Multiplication of memory, producing two results.
 def M   : BinaryRX <"m",   0x5C,   null_frag, GR128, z_load, 4>;
@@ -1532,9 +1544,9 @@ def ML  : BinaryRXY<"ml",  0xE396, null_frag, GR128, z_load, 4>;
 def MLG : BinaryRXY<"mlg", 0xE386, null_frag, GR128, z_load, 8>;
 
 def : Pat<(z_smul_lohi GR64:$src1, (i64 (z_load bdxaddr20only:$src2))),
-          (MG (AEXT128 GR64:$src1), bdxaddr20only:$src2)>;
+          (MG (aext128 GR64:$src1), bdxaddr20only:$src2)>;
 def : Pat<(z_umul_lohi GR64:$src1, (i64 (z_load bdxaddr20only:$src2))),
-          (MLG (AEXT128 GR64:$src1), bdxaddr20only:$src2)>;
+          (MLG (aext128 GR64:$src1), bdxaddr20only:$src2)>;
 
 //===----------------------------------------------------------------------===//
 // Division and remainder
@@ -1556,24 +1568,24 @@ let hasSideEffects = 1 in {  // Do not speculatively execute.
   def DLG  : BinaryRXY<"dlg",  0xE387, null_frag, GR128, z_load, 8>;
 }
 def : Pat<(z_sdivrem GR64:$src1, GR32:$src2),
-          (DSGFR (AEXT128 GR64:$src1), GR32:$src2)>;
+          (DSGFR (aext128 GR64:$src1), GR32:$src2)>;
 def : Pat<(z_sdivrem GR64:$src1, (i32 (z_load bdxaddr20only:$src2))),
-          (DSGF (AEXT128 GR64:$src1), bdxaddr20only:$src2)>;
+          (DSGF (aext128 GR64:$src1), bdxaddr20only:$src2)>;
 def : Pat<(z_sdivrem GR64:$src1, GR64:$src2),
-          (DSGR (AEXT128 GR64:$src1), GR64:$src2)>;
+          (DSGR (aext128 GR64:$src1), GR64:$src2)>;
 def : Pat<(z_sdivrem GR64:$src1, (i64 (z_load bdxaddr20only:$src2))),
-          (DSG (AEXT128 GR64:$src1), bdxaddr20only:$src2)>;
+          (DSG (aext128 GR64:$src1), bdxaddr20only:$src2)>;
 
 def : Pat<(z_udivrem GR32:$src1, GR32:$src2),
-          (DLR (ZEXT128 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$src1,
+          (DLR (zext128 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$src1,
                                        subreg_l32)), GR32:$src2)>;
 def : Pat<(z_udivrem GR32:$src1, (i32 (z_load bdxaddr20only:$src2))),
-          (DL (ZEXT128 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$src1,
+          (DL (zext128 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$src1,
                                       subreg_l32)), bdxaddr20only:$src2)>;
 def : Pat<(z_udivrem GR64:$src1, GR64:$src2),
-          (DLGR (ZEXT128 GR64:$src1), GR64:$src2)>;
+          (DLGR (zext128 GR64:$src1), GR64:$src2)>;
 def : Pat<(z_udivrem GR64:$src1, (i64 (z_load bdxaddr20only:$src2))),
-          (DLG (ZEXT128 GR64:$src1), bdxaddr20only:$src2)>;
+          (DLG (zext128 GR64:$src1), bdxaddr20only:$src2)>;
 
 //===----------------------------------------------------------------------===//
 // Shifts
@@ -2756,6 +2768,28 @@ defm : BlockLoadStore<anyextloadi8, i64, MVCImm, NCImm, OCImm, XCImm, 0>;
 defm : BlockLoadStore<anyextloadi16, i64, MVCImm, NCImm, OCImm, XCImm, 1>;
 defm : BlockLoadStore<anyextloadi32, i64, MVCImm, NCImm, OCImm, XCImm, 3>;
 defm : BlockLoadStore<load, i64, MVCImm, NCImm, OCImm, XCImm, 7>;
+
+//===----------------------------------------------------------------------===//
+// GR128 vectors
+//===----------------------------------------------------------------------===//
+
+let Predicates = [FeatureNoVector] in {
+  def : Pat<(v2i64 (build_vector GR64:$hi, GR64:$lo)),
+            (REG_SEQUENCE GR128Bit, GR64:$hi, subreg_h64, GR64:$lo, subreg_l64)>;
+
+  def : Pat<(i64 (extractelt GR128:$src, (i32 0))),
+            (EXTRACT_SUBREG GR128:$src, subreg_h64)>;
+  def : Pat<(i64 (extractelt GR128:$src, (i32 1))),
+            (EXTRACT_SUBREG GR128:$src, subreg_l64)>;
+
+  def : Pat<(v2i64 (insertelt GR128:$src, GR64:$elt, (i32 0))),
+            (INSERT_SUBREG GR128:$src, GR64:$elt, subreg_h64)>;
+  def : Pat<(v2i64 (insertelt GR128:$src, GR64:$elt, (i32 1))),
+            (INSERT_SUBREG GR128:$src, GR64:$elt, subreg_l64)>;
+
+  def : Pat<(v2i64 (scalar_to_vector GR64:$src)),
+            (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), GR64:$src, subreg_h64)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Mnemonic Aliases

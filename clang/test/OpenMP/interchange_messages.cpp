@@ -220,6 +220,19 @@ static void templated_func_type_dependent() {
 }
 
 
+// Deferred interchange must not crash jump-scope checking
+template <typename T>
+static void interchange_in_switch() {
+  switch (T(0)) {
+    int a = 10;
+#pragma omp for collapse(2)
+#pragma omp interchange
+    for (int j = 0; j < 2; j++)
+      for (int k = 0; k < 2; k++)
+        ;
+  }
+}
+
 void template_inst() {
   // expected-note@+1 {{in instantiation of function template specialization 'templated_func<int>' requested here}}
   templated_func<int>();

@@ -33,7 +33,7 @@ protected:
   virtual void SetUp() {
     Context = new LLVMContext();
     MAM = new ModuleAnalysisManager();
-    PB = new PassBuilder();
+    PB = new PassBuilder(*Context);
     PB->registerModuleAnalyses(*MAM);
     MAM->registerPass([&] { return DXILResourceTypeAnalysis(); });
     MAM->registerPass([&] { return DXILResourceAnalysis(); });

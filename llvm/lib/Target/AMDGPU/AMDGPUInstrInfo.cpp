@@ -25,6 +25,11 @@ Intrinsic::ID AMDGPU::getIntrinsicID(const MachineInstr &I) {
   return I.getOperand(I.getNumExplicitDefs()).getIntrinsicID();
 }
 
+unsigned AMDGPU::getMIROperandIdx(const MachineInstr &MI, unsigned Arg) {
+  // The defs and the intrinsic ID precede the arguments.
+  return Arg + MI.getNumExplicitDefs() + 1;
+}
+
 // TODO: Should largely merge with AMDGPUTTIImpl::isSourceOfDivergence.
 bool AMDGPU::isUniformMMO(const MachineMemOperand *MMO) {
   const Value *Ptr = MMO->getValue();

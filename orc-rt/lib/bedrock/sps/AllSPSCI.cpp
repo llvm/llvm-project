@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implementation of sps_ci::addAll.
+// Implementation of sps::ci::addAll.
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,10 +16,11 @@
 #include "orc-rt/bedrock/sps/GDBJITRegistrarSPSCI.h"
 #include "orc-rt/bedrock/sps/MemoryAccessSPSCI.h"
 #include "orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h"
+#include "orc-rt/bedrock/sps/SessionSPSCI.h"
 #include "orc-rt/bedrock/sps/SimpleNativeMemoryMapSPSCI.h"
 #include "orc-rt/bedrock/sps/StandaloneMachOUnwindInfoRegistrarSPSCI.h"
 
-namespace orc_rt::sps_ci {
+namespace orc_rt::sps::ci {
 
 Error addAll(SimpleSymbolTable &ST) {
   using AdderFn = Error (*)(SimpleSymbolTable &);
@@ -28,6 +29,7 @@ Error addAll(SimpleSymbolTable &ST) {
       addGDBJITRegistrar,
       addMemoryAccess,
       addNativeDylibManager,
+      addSession,
       addSimpleNativeMemoryMap,
 #if defined(__APPLE__)
       // DWARFEHFrameRegistrar is also built on Darwin, but
@@ -45,4 +47,4 @@ Error addAll(SimpleSymbolTable &ST) {
   return Error::success();
 }
 
-} // namespace orc_rt::sps_ci
+} // namespace orc_rt::sps::ci

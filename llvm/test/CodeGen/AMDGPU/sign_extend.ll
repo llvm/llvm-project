@@ -418,18 +418,17 @@ define amdgpu_kernel void @v_sext_v4i8_to_v4i32(ptr addrspace(1) %out, ptr addrs
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_lshrrev_b16_e32 v1, 8, v0
-; VI-NEXT:    v_ashrrev_i32_e32 v2, 24, v0
-; VI-NEXT:    v_bfe_i32 v3, v0, 16, 8
+; VI-NEXT:    v_ashrrev_i32_e32 v1, 24, v0
+; VI-NEXT:    v_bfe_i32 v2, v0, 16, 8
+; VI-NEXT:    v_bfe_i32 v3, v0, 8, 8
 ; VI-NEXT:    v_bfe_i32 v0, v0, 0, 8
-; VI-NEXT:    v_bfe_i32 v1, v1, 0, 8
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_store_dword v2, off, s[0:3], 0
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    buffer_store_dword v1, off, s[0:3], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
