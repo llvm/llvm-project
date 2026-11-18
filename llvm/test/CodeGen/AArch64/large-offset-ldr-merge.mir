@@ -84,3 +84,4 @@ body:             |
     renamable $w8 = MOVKWi $w8, 15, 16, implicit-def $x8
     renamable $w0 = LDRBBroX killed renamable $x0, killed renamable $x8, 0, 0
     RET undef $lr, implicit $w0
+...

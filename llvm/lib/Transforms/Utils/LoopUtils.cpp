@@ -2191,7 +2191,7 @@ llvm::getRuntimeCheckBounds(const RuntimeCheckingPtrGroup *CG,
     auto *LowAR = cast<SCEVAddRecExpr>(Low);
     const Loop *OuterLoop = TheLoop->getParentLoop();
     const SCEV *Recur = LowAR->getStepRecurrence(SE);
-    if (Recur == HighAR->getStepRecurrence(SE) &&
+    if (LowAR->isAffine() && Recur == HighAR->getStepRecurrence(SE) &&
         HighAR->getLoop() == OuterLoop && LowAR->getLoop() == OuterLoop) {
       BasicBlock *OuterLoopLatch = OuterLoop->getLoopLatch();
       const SCEV *OuterExitCount = SE.getExitCount(OuterLoop, OuterLoopLatch);

@@ -254,3 +254,21 @@ define void @eh_sjlj_callsite(i32 %arg0) {
   call void @llvm.eh.sjlj.callsite(i32 %arg0)
   ret void
 }
+
+declare void @llvm.coro.end(ptr, i1, token)
+define void @coro_end(ptr %p, i1 %c) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i1 %c
+  ; CHECK-NEXT: call void @llvm.coro.end(ptr %p, i1 %c, token none)
+  call void @llvm.coro.end(ptr %p, i1 %c, token none)
+  ret void
+}
+
+declare void  @llvm.coro.end.async(ptr, i1, ...)
+define void @coro_end_async(ptr %p, i1 %c) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i1 %c
+  ; CHECK-NEXT: call void (ptr, i1, ...) @llvm.coro.end.async(ptr %p, i1 %c)
+  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %p, i1 %c)
+  ret void
+}
