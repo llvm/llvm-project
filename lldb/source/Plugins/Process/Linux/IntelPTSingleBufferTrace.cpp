@@ -152,7 +152,7 @@ GeneratePerfEventConfigValue(bool enable_tsc,
   if (enable_tsc) {
     if (Expected<uint32_t> offset = ReadIntelPTConfigFile(
             kTSCBitOffsetFile, IntelPTConfigFileType::BitOffset))
-      config |= 1 << *offset;
+      config |= 1ULL << *offset;
     else
       return offset.takeError();
   }
