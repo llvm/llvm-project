@@ -3419,8 +3419,7 @@ static bool InitializationHasSideEffects(const FieldDecl &FD) {
   const Type *T = FD.getType()->getBaseElementTypeUnsafe();
   // FIXME: Destruction of ObjC lifetime types has side-effects.
   if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
-    return !RD->isCompleteDefinition() ||
-           !RD->hasTrivialDefaultConstructor() ||
+    return !RD->isCompleteDefinition() || !RD->hasTrivialDefaultConstructor() ||
            !RD->hasTrivialDestructor();
   return false;
 }
