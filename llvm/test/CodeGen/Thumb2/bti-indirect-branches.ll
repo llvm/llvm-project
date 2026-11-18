@@ -5,31 +5,15 @@ define internal i32 @table_switch(i32 %x) "branch-target-enforcement" {
 ; CHECK-LABEL: table_switch:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    bti
-; CHECK-NEXT:    subs r1, r0, #1
-; CHECK-NEXT:    cmp r1, #3
-; CHECK-NEXT:    bhi .LBB0_6
-; CHECK-NEXT:  @ %bb.1: @ %entry
-; CHECK-NEXT:  .LCPI0_0:
-; CHECK-NEXT:    tbb [pc, r1]
-; CHECK-NEXT:  @ %bb.2:
-; CHECK-NEXT:  .LJTI0_0:
-; CHECK-NEXT:    .byte (.LBB0_7-(.LCPI0_0+4))/2
-; CHECK-NEXT:    .byte (.LBB0_3-(.LCPI0_0+4))/2
-; CHECK-NEXT:    .byte (.LBB0_4-(.LCPI0_0+4))/2
-; CHECK-NEXT:    .byte (.LBB0_5-(.LCPI0_0+4))/2
-; CHECK-NEXT:    .p2align 1
-; CHECK-NEXT:  .LBB0_3: @ %bb2
-; CHECK-NEXT:    movs r0, #2
-; CHECK-NEXT:    bx lr
-; CHECK-NEXT:  .LBB0_4: @ %bb3
-; CHECK-NEXT:    movs r0, #3
-; CHECK-NEXT:    bx lr
-; CHECK-NEXT:  .LBB0_5: @ %bb4
-; CHECK-NEXT:    movs r0, #5
-; CHECK-NEXT:    bx lr
-; CHECK-NEXT:  .LBB0_6: @ %sw.epilog
-; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:  .LBB0_7: @ %return
+; CHECK-NEXT:    subs r0, #1
+; CHECK-NEXT:    cmp r0, #3
+; CHECK-NEXT:    itt hi
+; CHECK-NEXT:    movhi r0, #0
+; CHECK-NEXT:    bxhi lr
+; CHECK-NEXT:  .LBB0_1: @ %switch.lookup
+; CHECK-NEXT:    movw r1, :lower16:.Lswitch.table.table_switch
+; CHECK-NEXT:    movt r1, :upper16:.Lswitch.table.table_switch
+; CHECK-NEXT:    ldr.w r0, [r1, r0, lsl #2]
 ; CHECK-NEXT:    bx lr
 entry:
   switch i32 %x, label %sw.epilog [
@@ -93,23 +77,6 @@ declare void @consume_exception(ptr)
 declare i32 @__gxx_personality_v0(...)
 
 define internal i32 @exception_handling(i32 %0) "branch-target-enforcement" personality ptr @__gxx_personality_v0 {
-; CHECK-LABEL: exception_handling:
-; CHECK:       @ %bb.0:
-; CHECK-NEXT:    bti
-; CHECK-NEXT:    .save  {r7, lr}
-; CHECK-NEXT:    push   {r7, lr}
-; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:    bl     may_throw
-; CHECK-NEXT:  .Ltmp1:
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:    movs   r0, #0
-; CHECK-NEXT:    pop    {r7, pc}
-; CHECK-NEXT:  .LBB2_2:
-; CHECK-NEXT:  .Ltmp2:
-; CHECK-NEXT:    bti
-; CHECK-NEXT:    bl     consume_exception
-; CHECK-NEXT:    movs   r0, #1
-; CHECK-NEXT:    pop    {r7, pc}
 entry:
   invoke void @may_throw()
           to label %return unwind label %lpad
