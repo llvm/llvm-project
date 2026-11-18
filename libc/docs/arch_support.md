@@ -6,7 +6,7 @@ The table below lists what is built and tested on every pull request.
 | --- | --- | --- |
 | x86-64 | Linux (overlay and full build), Windows (overlay), FreeBSD (overlay) | UEFI |
 | AArch64 | Linux (overlay and full build), macOS (overlay) | |
-| 32-bit Arm | Linux (overlay, under QEMU) | Baremetal |
+| 32-bit Arm | Linux (overlay, under QEMU), Baremetal Armv7-M (under QEMU) | Baremetal for the other Arm profiles |
 | 64-bit RISC-V | Linux (overlay, under QEMU) | |
 | 32-bit RISC-V | | Baremetal |
 | Hexagon | Baremetal | |

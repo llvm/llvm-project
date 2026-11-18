@@ -4,8 +4,9 @@
 
 {ref}`code_style` covers naming, macros, and formatting. This page covers the
 judgment calls that come up while writing an implementation: what to optimize
-for, how to use memory, when to check inputs, and which parts of the tree are
-known to need rework.
+for, how to use memory, when to check inputs, and how to handle headers.
+{ref}`patterns_to_avoid` lists the mistakes and outdated patterns that
+reviewers see most often.
 
 ## Priorities
 
@@ -57,7 +58,10 @@ in `src/__support/freelist_heap.h`.
   input, to `LIBC_CRASH_ON_NULLPTR` (`src/__support/macros/null_check.h`). The
   check is lightweight, is controlled by the `LIBC_ADD_NULL_CHECKS` option, and
   exists to make a crash easy to diagnose. Put it in the entrypoint only, not
-  in internal code.
+  in internal code. Do not add the check for a pointer that the libc only
+  passes on to the kernel without dereferencing it. The kernel checks such
+  pointers safely and returns `EFAULT` for any invalid address, not only for
+  a null pointer.
 - **Internal invariants.** Use `LIBC_ASSERT`. It compiles away in release
   builds.
 - **Hardening.** `LIBC_COPT_HARDENING_MODE` was added for the allocator's
@@ -67,18 +71,48 @@ in `src/__support/freelist_heap.h`.
 
 ## Headers
 
-- **Include what you use.** A `.cpp` file that names `mode_t` includes
-  `hdr/types/mode_t.h` itself and does not rely on another header to provide
-  it.
+- **Include what you use.** Every name a file uses must be made available by
+  a header that the file includes directly, not by a transitive inclusion. A
+  file that names `mode_t` includes `hdr/types/mode_t.h` itself, even if
+  another header it includes happens to provide the type. This applies to
+  header files as well as `.cpp` files. The exception is a header whose
+  purpose is to include another one, such as a proxy header or a header that
+  selects the implementation for the target: include that header, not the
+  file it forwards to.
 - **Use proxy headers** from `libc/hdr/` for every type and macro that the
   libc also provides publicly. See the header inclusion policy in
   {ref}`code_style`. Compiler-provided headers are tolerated but should also
   go through a proxy header where one exists. The existing `#include
   <pthread.h>` style includes under `libc/src/` are incorrect and should not
   be copied.
-- **Type traits** come from the umbrella header
-  `src/__support/CPP/type_traits.h`, not from the individual files under
-  `src/__support/CPP/type_traits/`.
+- **`src/__support/CPP/` headers** are included through the top-level header,
+  for example `src/__support/CPP/type_traits.h` or
+  `src/__support/CPP/utility.h`, not through the individual files in the
+  subdirectories of the same name. The top-level header is a forwarding
+  header of the kind the first point describes.
+
+(feature_test_macros)=
+
+## Feature-test macros in public headers
+
+Public headers do not use feature-test macros such as `_GNU_SOURCE` or
+`_POSIX_C_SOURCE` to hide declarations. Do not add `#ifdef` guards of that kind
+to a header. The exception is a macro that a standard itself defines for this
+purpose, such as `__STDC_WANT_LIB_EXT1__` for Annex K.
+
+Headers are generated from the YAML files in `libc/include/` (see
+{ref}`header_generation`), and a generated header declares only the functions
+that are enabled for the target. A user who wants a different API surface
+generates headers to match it, by pointing the `LIBC_CONFIG_PATH` CMake option
+at their own `entrypoints.txt`, `headers.txt`, and configuration (see
+{ref}`custom_config_directory`), instead of every user receiving one set of
+headers full of conditionals.
+
+Each function in the YAML files lists the `standards` it comes from (`stdc`,
+`posix`, `gnu`, `bsd`, `linux`, `llvm_libc_ext`, and so on). Keep that field
+accurate. It records where each declaration comes from.
+
+{ref}`writing_public_headers` has the other rules for public headers.
 
 ## File headers and comments
 
@@ -128,13 +162,22 @@ a function. The points below are the ones that most often need stating.
   correctly rounded in all rounding modes, and to support `errno`, floating
   point exceptions, and signaling NaNs. A signaling NaN input produces a quiet
   NaN and raises `FE_INVALID`.
+- The exceptions to that expectation are:
+  - a build that selects a different trade-off with the
+    `LIBC_CONF_MATH_OPTIMIZATIONS` option, for example
+    `LIBC_MATH_SKIP_ACCURATE_PASS`, `LIBC_MATH_NO_ERRNO`, or
+    `LIBC_MATH_NO_EXCEPT`. The baremetal and GPU configurations set several
+    of these by default;
+  - an implementation variant other than the default one (see
+    {ref}`math_function_structure`);
+  - the GPU-specific math implementations, which have different accuracy
+    bounds and are maintained by the GPU maintainers.
 - The {doc}`math.h status tables <../headers/math>` record the accuracy of
-  each function. The double precision `atan` and `atan2` entries currently
-  list 1 ULP. That is a known gap, and it is being fixed.
+  each function, including any that are not correctly rounded yet.
 - `errno` and floating point exceptions are reported only through
   `fputil::set_errno_if_required` and `fputil::raise_except_if_required`.
-- The GPU-specific math implementations have different accuracy bounds and
-  are maintained by the GPU maintainers.
+
+(math_function_structure)=
 
 ### Structure
 
@@ -145,8 +188,7 @@ a function. The points below are the ones that most often need stating.
   `LIBC_MATH_<FUNC>_IMPL` selecting the one to use. This is the intended
   structure for every function, although only some functions have been
   converted so far. Variants other than the default may make different
-  guarantees. Once more variants exist, the {ref}`math page <math>` will have
-  a table of what each one guarantees.
+  guarantees.
 - The functions in `math::static_rounding` take the rounding mode as an
   argument. They exist for callers that need a fixed rounding mode, such as
   compilers. They are not the primary implementation of a function. The
@@ -170,26 +212,4 @@ a function. The points below are the ones that most often need stating.
 - `libc/test/src/math/exhaustive/` contains hard-to-round inputs from the
   [CORE-MATH](https://core-math.gitlabpages.inria.fr/) project, as text files
   (`.wc`) and in a compact binary form (`.bin`). The two forms must stay
-  consistent. A CI check for that, and instructions for adding more
-  hard-to-round cases, are planned.
-
-## Areas that need rework
-
-The following parts of the tree are known to fall short of the guidelines on
-this page. Do not use them as models for new code. Improvements are welcome
-as separate, focused changes.
-
-- **The `File` abstraction.** The Linux implementation is in
-  `src/__support/File/`, while the baremetal and GPU implementations are in
-  `src/stdio/baremetal/` and `src/stdio/gpu/`. These should share one design.
-- **`src/__support/HashTable/`** needs a cleanup of its implementation style,
-  its header inclusion, and its architecture-specific dispatch.
-- **String to floating point conversion.** The layering between the parsers
-  and their fallbacks should be clearer. Today the original string has to be
-  passed along even after the first parser has consumed it.
-- **`src/__support/StringUtil/`** holds only the `strerror` and `strsignal`
-  text and should be renamed for what it contains.
-- **Separation by OS dependence.** See {ref}`code_organization`.
-- **`libc/benchmarks/`** is unmaintained, apart from the GPU benchmarks in
-  `libc/benchmarks/gpu/`, and will be removed or rewritten.
-- **`libc/fuzzing/`** is in use but covers less than it should.
+  consistent.

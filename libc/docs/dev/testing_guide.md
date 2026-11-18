@@ -113,14 +113,33 @@ buildbots, as different users.
   Where that is unavoidable, the test must pass both as root and as an
   ordinary user.
 - **System state.** Do not rely on `/proc` being mounted or on network access.
-- **Emulators.** A test that cannot work under user-mode emulation is guarded
-  with `LIBC_TEST_UNDER_EMULATOR` instead of having its expectations loosened.
+- **Emulators.** When the tests are run through an emulator, that is, when
+  `CMAKE_CROSSCOMPILING_EMULATOR` is set, the build defines
+  `LIBC_TEST_UNDER_EMULATOR` for test code (see
+  `libc/cmake/modules/LLVMLibCTestRules.cmake`). Guard a test that cannot
+  work under emulation with `#ifndef LIBC_TEST_UNDER_EMULATOR`, as
+  `libc/test/src/sys/mman/linux/mlock_test.cpp` does, instead of loosening
+  what it expects.
 
 ## Disabling a test
 
-A test that cannot pass on some target is disabled in CMake, with a condition
-that names the target and a link to an issue that tracks re-enabling it. Do
-not comment out a test body or wrap it in `#if 0`.
+Disable as little as possible, and say why. Which mechanism to use depends on
+how much of the test file is affected:
+
+- **A whole test cannot pass in some configuration.** Disable it in CMake with
+  a condition that names the configuration. The condition can be as specific
+  as CMake can express, for example one architecture on baremetal with a
+  particular math option enabled.
+- **A small part of a larger test file is affected.** Guard that part with
+  `#ifdef` on a macro that states the reason, so the rest of the file keeps
+  running. The `printf` tests are the model: the tests for an optional
+  feature are wrapped in checks such as `LIBC_COPT_PRINTF_DISABLE_FLOAT`,
+  which `libc/test/src/stdio/CMakeLists.txt` passes to the test under the
+  same condition as to the library.
+
+Which one fits is a judgment call. In both cases, link an issue that tracks
+re-enabling the test when the cause is a bug. Do not comment out a test body
+or wrap it in `#if 0`.
 
 ## Death tests and null checks
 

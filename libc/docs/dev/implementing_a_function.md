@@ -10,7 +10,8 @@ Adding a new function involves several steps, from updating the public specifica
 
 Before starting, read {ref}`code_organization` and {ref}`patterns_to_avoid`.
 The most common mistake in a new function is calling another public function
-from it, which is not allowed.
+from it, which is not allowed (see
+{ref}`entrypoints_do_not_call_entrypoints`).
 
 ## Step-by-Step Checklist
 
@@ -72,3 +73,22 @@ Create tests to verify the implementation.
 - Update the `CMakeLists.txt` in the test directory (`libc/test/src/<header>/CMakeLists.txt`) to include the new test target.
 - See {ref}`testing_guide` for what the test should cover and how to confirm
   that it ran.
+
+## Adding a New Public Type
+
+A function sometimes needs a public type that LLVM-libc does not define yet.
+A type is registered separately from the functions that use it:
+
+1. **Definition**: add `libc/include/llvm-libc-types/<type>.h` and an
+   `add_header` entry for it in `libc/include/llvm-libc-types/CMakeLists.txt`.
+   A structure such as `struct stat` is named `struct_stat` in file and target
+   names. See {ref}`choosing_type_layout` and {ref}`writing_public_headers`
+   before choosing the definition.
+2. **Public header**: list the type under `types` in
+   `libc/include/<header>.yaml` for every header that provides it, and add
+   `.llvm-libc-types.<type>` to the `DEPENDS` of that header's
+   `add_header_macro` rule in `libc/include/CMakeLists.txt`.
+3. **Proxy header**: add `libc/hdr/types/<type>.h` and an
+   `add_proxy_header_library` entry in `libc/hdr/types/CMakeLists.txt`.
+   Implementation and test code include the type through this header. See the
+   header inclusion policy in {ref}`code_style`.

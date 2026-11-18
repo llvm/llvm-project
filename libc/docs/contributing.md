@@ -107,6 +107,7 @@ Tools make some mistakes in this project more often than people do:
   passing build. See {ref}`making_existing_software_work`.
 - They reproduce code from other C libraries. That is not allowed, regardless
   of how the code was produced.
-- They call one public function from another. See {ref}`code_organization`.
+- They call one public function from another. See
+  {ref}`entrypoints_do_not_call_entrypoints`.
 
 Check for these before asking for review.

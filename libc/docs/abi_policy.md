@@ -82,25 +82,6 @@ file functions are not needed.
 A few related types (`ino_t`, `nlink_t`, `blkcnt_t`) are still pointer width.
 That is unfinished work and not a design decision.
 
-## Feature-test macros
-
-Public headers do not use feature-test macros such as `_GNU_SOURCE` or
-`_POSIX_C_SOURCE` to hide declarations. Do not add `#ifdef` guards of that kind
-to a header. The exception is a macro that a standard itself defines for this
-purpose, such as `__STDC_WANT_LIB_EXT1__` for Annex K.
-
-Headers are generated from the YAML files in `libc/include/` (see
-{ref}`header_generation`), and a generated header declares only the functions
-that are enabled for the target. A user who wants a different API surface
-generates headers to match it, by pointing the `LIBC_CONFIG_PATH` CMake option
-at their own `entrypoints.txt`, `headers.txt`, and configuration (see
-{ref}`custom_config_directory`), instead of every user receiving one set of
-headers full of conditionals.
-
-Each function in the YAML files lists the `standards` it comes from (`stdc`,
-`posix`, `gnu`, `bsd`, `linux`, `llvm_libc_ext`, and so on). Keep that field
-accurate. It records where each declaration comes from.
-
 ## Exported symbols
 
 Every public function is defined in the internal `LIBC_NAMESPACE` namespace and
@@ -159,11 +140,15 @@ whole C library. A full build for macOS or Windows has not been designed yet.
 The likely direction is for LLVM-libc to define its own API there too, shaped
 appropriately for the platform, and not to reproduce POSIX on every system.
 
+(writing_public_headers)=
+
 ## Writing public headers
 
 Public headers are read by every program and by compilers in every language
 mode, so they are held to stricter rules than implementation code:
 
+- Declarations are not hidden behind feature-test macros such as
+  `_GNU_SOURCE`. See {ref}`feature_test_macros`.
 - A header must be valid in every C and C++ standard mode. Do not use language
   features that some of those modes lack, such as attribute syntax (`[[...]]`),
   which C gained only in C23.

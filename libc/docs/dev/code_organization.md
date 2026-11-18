@@ -23,6 +23,8 @@ The source tree does not separate these three as cleanly as it should, and
 moving toward that separation is a long-term goal. When adding code, decide
 which kind it is and keep OS-specific details out of the first two.
 
+(entrypoints_do_not_call_entrypoints)=
+
 ## Entrypoints do not call entrypoints
 
 An entrypoint is the definition of one public function. It may contain its
@@ -58,6 +60,9 @@ it warns about any entrypoint or internal library that depends on an
 entrypoint. The few permitted exceptions, currently `errno` and `longjmp`, are
 listed in `check_entrypoint_deps` in
 `libc/cmake/modules/LLVMLibCObjectRules.cmake`.
+
+Some existing entrypoints break this rule. They are to be cleaned up and are
+not precedent for new code.
 
 Internal libraries may depend on *variable* entrypoints such as `environ` or
 `stdout` when they need the object itself. They may not depend on function
@@ -159,9 +164,9 @@ A new entrypoint should be enabled on every target where it works. In practice
 contributors cannot test every target, so the minimum is:
 
 - For a function that needs Linux, the `entrypoints.txt` files for `x86_64`,
-  `aarch64`, `arm`, and `riscv` under `libc/config/linux/`. The Linux
-  configuration for 32-bit Arm is also how that architecture is tested; see
-  {ref}`platform_support`.
+  `aarch64`, `arm`, and `riscv` under `libc/config/linux/`. Linux on 32-bit
+  Arm is included because its tests help cover the 32-bit Arm code that the
+  baremetal target also uses. See {ref}`platform_support`.
 - For an OS-independent function, the Linux configurations above plus the
   baremetal, GPU, and other OS configurations, as described for math functions
   in `libc/src/math/docs/add_math_function.md`.

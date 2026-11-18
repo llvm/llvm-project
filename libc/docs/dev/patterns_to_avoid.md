@@ -14,7 +14,9 @@ because a tool that imitates nearby code will imitate its outdated parts too.
 ## Most common mistakes
 
 1. **Calling one entrypoint from another.** It is the natural way to write
-   many functions and it is not allowed. See {ref}`code_organization`.
+   many functions and it is not allowed. Some existing code does it; that code
+   is to be cleaned up and is not an example to follow. See
+   {ref}`entrypoints_do_not_call_entrypoints`.
 2. **Mimicking another libc's interface.** Changing a type's layout, a
    function's observable behavior, or the set of exported symbols solely to
    match another libc is sometimes the quickest way to get an existing program
@@ -26,7 +28,8 @@ because a tool that imitates nearby code will imitate its outdated parts too.
    {ref}`design_philosophy`.
 5. **Leaving out part of the registration.** A new function needs an entry in
    `libc/include/<header>.yaml` and in the relevant `entrypoints.txt` files in
-   addition to its implementation. See {ref}`implementing_a_function`.
+   addition to its implementation. A new public type needs its own
+   registration as well. See {ref}`implementing_a_function`.
 
 ## Legacy patterns
 
@@ -50,11 +53,27 @@ reason about, and reviewers will ask for them to be rewritten.
 - **Deeply nested control flow.** An `if` inside a loop inside a loop inside
   an `if` is difficult to follow. Collapse conditions, return early, and move
   inner blocks into helper functions.
-- **`while (true)` with a single `break`.** The condition that triggers the
-  `break` is the loop condition. Write it there.
-- **Unnecessary lambdas.** Use a lambda when a callable is needed. For
-  ordinary code reuse, write a function.
-- **Templates and variadic forwarding where a fixed signature would do.**
+- **`while (true)` where the exit test is the first or last statement of the
+  body.** That test is the loop condition. Write it as a `while` or
+  `do`/`while` condition. The same applies to a body that ends in
+  `if (x) continue; else return;`. A loop whose exit test is in the middle of
+  the body is a different case, and `while (true)` with a `break` is a
+  reasonable way to write it.
+- **Lambdas used as local helper functions.** A lambda that captures local
+  variables has inputs that do not appear at the call site, so the call no
+  longer shows what the helper reads or changes. If the code is only being
+  factored out for reuse or readability, write a `static` function and pass
+  what it needs explicitly. A short lambda that is passed to another function
+  as a callable is fine.
+- **Templates that accept more than the code supports.** A function template
+  whose body only works for subclasses of one class, or for callables with
+  one signature, should say so in its declaration, so that the compiler
+  rejects an argument that makes no sense. Take the base class by reference,
+  or take a `cpp::function_ref` with the expected signature, instead of an
+  unconstrained `typename T`. Where a template is needed, constrain it, for
+  example with `cpp::enable_if_t` or a `static_assert`. Overloading a function
+  for the specific types it supports is fine, and so is a template that is
+  generic on purpose. The same applies to variadic argument forwarding.
 - **Magic constants.** A bare `7`, `61`, or `0xFFF` in an expression leaves
   the reader to work out what it stands for. Give every such constant a name
   that says what it means. Multiplying by `DAYS_PER_WEEK` explains itself;

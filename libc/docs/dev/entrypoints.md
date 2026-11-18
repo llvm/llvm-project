@@ -88,7 +88,8 @@ For redirecting entrypoints (e.g., when one function is a simple alias for
 another), the `REDIRECTED` option can be specified to the rule.
 
 Entrypoint objects are forbidden from depending on other entrypoint objects;
-see {ref}`code_organization` for what to do instead. The allowed exceptions
+see {ref}`entrypoints_do_not_call_entrypoints` for what to do instead. The
+allowed exceptions
 are listed in `check_entrypoint_deps` in
 `libc/cmake/modules/LLVMLibCObjectRules.cmake`. The one that matters in
 practice is `libc.src.errno.errno`: entrypoints
