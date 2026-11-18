@@ -49,11 +49,8 @@ define i32 @load_forward_over_memset_pattern(ptr %P, ptr noalias %Q) {
 
 define i32 @load_forward_over_memset_pattern2(ptr %P, ptr noalias %Q) nounwind ssp {
 ; CHECK-LABEL: @load_forward_over_memset_pattern2(
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[Q:%.*]], align 4
-; CHECK-NEXT:    tail call void @llvm.experimental.memset.pattern.p0.p0.i64(ptr [[P:%.*]], ptr [[Q]], i64 8, i1 false)
-; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[Q]], align 4
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[V1]], [[V2]]
-; CHECK-NEXT:    ret i32 [[SUB]]
+; CHECK-NEXT:    tail call void @llvm.experimental.memset.pattern.p0.p0.i64(ptr [[P:%.*]], ptr [[Q:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    ret i32 0
 ;
   %v1 = load i32, ptr %Q
   tail call void @llvm.experimental.memset.pattern(ptr %P, ptr %Q, i64 8, i1 false)
