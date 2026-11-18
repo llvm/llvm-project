@@ -7,6 +7,12 @@ module bounds
   type bounds_t
     integer, pointer :: n
   end type
+  type inner_t
+    integer :: n
+  end type
+  type outer_t
+    type(inner_t), pointer :: p
+  end type
 contains
   ! CHECK-LABEL: SUBROUTINE pointer_bound
   ! Don't fold SIZE at compile time. n could be mutated.
@@ -45,6 +51,24 @@ contains
     integer :: n
     integer :: a(n:n+42)
     call mutate(n)
+    print *, size(a, kind=8)
+  end subroutine
+
+  ! CHECK-LABEL: SUBROUTINE len_bound
+  ! Don't fold LEN at compile time. n could be mutated.
+  ! CHECK: PRINT *, len(s)
+  subroutine len_bound(n, s)
+    integer, pointer, intent(in) :: n
+    character(len=n) :: s
+    print *, len(s)
+  end subroutine
+
+  ! CHECK-LABEL: SUBROUTINE nested_component_bound
+  ! Don't fold SIZE at compile time. b%p%n could be mutated.
+  ! CHECK: PRINT *, size(a,dim=1,kind=8)
+  subroutine nested_component_bound(b, a)
+    type(outer_t), intent(in) :: b
+    real :: a(b%p%n)
     print *, size(a, kind=8)
   end subroutine
 end module
