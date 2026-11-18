@@ -204,10 +204,8 @@ void SPIRVPassConfig::addIRPasses() {
   }
 
   addPass(createSPIRVRegularizerPass());
-  // Before the global constructor kernels exist, which do not need the
-  // dynamic local memory.
-  addPass(createSPIRVLowerDynamicLocalMemoryPass(TM));
   addPass(createSPIRVCtorDtorLoweringLegacyPass());
+  addPass(createSPIRVLowerDynamicLocalMemoryPass(TM));
   addPass(createSPIRVPrepareFunctionsPass(TM));
   addPass(createSPIRVPrepareGlobalsPass());
 }
