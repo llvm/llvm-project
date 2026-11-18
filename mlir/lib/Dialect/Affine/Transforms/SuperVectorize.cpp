@@ -111,11 +111,6 @@ using namespace vector;
 ///     %v_a = vector.transfer_read A[%i] : memref<?xf32>, vector<128xf32>
 ///   }
 /// ```
-/// Each transfer is emitted under a `vector.mask` that enables the lanes inside
-/// the memref. The examples in this file leave the mask out. Run
-/// `-eliminate-vector-masks` to remove the masks that are provably all-true and
-/// `-lower-vector-mask` to lower the rest.
-///
 /// It is the responsibility of the implementation of vector.transfer_read to
 /// materialize vector registers from the original scalar memrefs. A later (more
 /// target-dependent) lowering pass will materialize to actual HW vector sizes.
@@ -130,6 +125,11 @@ using namespace vector;
 ///   3. a mix of both, e.g. based on a model.
 /// In the future, these operations will expose a contract to constrain the
 /// search on vectorization patterns and sizes.
+///
+/// Each transfer is emitted under a `vector.mask` that enables the lanes inside
+/// the memref. The examples in this file leave the mask out. Run
+/// `-eliminate-vector-masks` to remove the masks that are provably all-true and
+/// `-lower-vector-mask` to lower the rest.
 ///
 /// Occurrence of super-vectorization in the compiler flow:
 /// =======================================================
