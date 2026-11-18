@@ -39,6 +39,6 @@ entry:
 
 attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 
-; CHECK-DAG: ![[BUFFER]] = !{!".BufferHeap.2"}
-; CHECK-DAG: ![[IMAGE]] = !{!".BufferHeap.1"}
-; CHECK-DAG: ![[SAMPLER]] = !{!".SamplerHeap.1"}
+; CHECK-DAG: ![[BUFFER]] = !{!".ResourceDescriptorHeap.1"}
+; CHECK-DAG: ![[IMAGE]] = !{!".ResourceDescriptorHeap.0"}
+; CHECK-DAG: ![[SAMPLER]] = !{!".SamplerDescriptorHeap.0"}

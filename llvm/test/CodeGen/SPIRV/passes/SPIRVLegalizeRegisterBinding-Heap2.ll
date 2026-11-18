@@ -21,4 +21,4 @@ entry:
 
 attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 
-; CHECK: ![[NAME]] = !{!".BufferHeap.1"}
+; CHECK: ![[NAME]] = !{!".ResourceDescriptorHeap.0"}
