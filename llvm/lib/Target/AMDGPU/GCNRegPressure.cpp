@@ -588,7 +588,8 @@ void GCNRPTracker::reset(const MachineRegisterInfo &MRI, SlotIndex SI) {
   this->MRI = &MRI;
   LastTrackedMI = nullptr;
   LiveRegs = llvm::getLiveRegs(SI, LIS, MRI);
-  MaxPressure = CurPressure = getRegPressure(MRI, LiveRegs);
+  CurPressure = getRegPressure(MRI, LiveRegs);
+  resetMaxPressure();
 }
 
 void GCNRPTracker::reset(const MachineRegisterInfo &MRI,
@@ -597,7 +598,8 @@ void GCNRPTracker::reset(const MachineRegisterInfo &MRI,
   LastTrackedMI = nullptr;
   if (&this->LiveRegs != &LiveRegs)
     this->LiveRegs = LiveRegs;
-  MaxPressure = CurPressure = getRegPressure(MRI, LiveRegs);
+  CurPressure = getRegPressure(MRI, LiveRegs);
+  resetMaxPressure();
 }
 
 /// Mostly copy/paste from CodeGen/RegisterPressure.cpp

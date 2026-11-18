@@ -1059,24 +1059,21 @@ void GCNScheduleDAGMILive::schedule() {
 
 GCNRegPressure GCNScheduleDAGMILive::getRealRegPressure(
     unsigned RegionIdx,
-    std::function<void(const GCNRegPressure &)> PressureCallback) const {
+    MutableArrayRef<GCNRegPressure::BankedVGPRPeaks> BankedPeaks) const {
   if (Regions[RegionIdx].first == Regions[RegionIdx].second) {
     GCNRegPressure RP = llvm::getRegPressure(MRI, LiveIns[RegionIdx]);
-    if (PressureCallback)
-      PressureCallback(RP);
+    for (GCNRegPressure::BankedVGPRPeaks &Peaks : BankedPeaks) {
+      Peaks.clear();
+      Peaks.add(RP);
+    }
     return RP;
   }
   GCNDownwardRPTracker RPTracker(*LIS);
-  bool HasInstrs =
-      RPTracker.reset(*Regions[RegionIdx].first, Regions[RegionIdx].second,
-                      &LiveIns[RegionIdx]);
-  // reset() does not pass the live-in pressure to the callback.
-  if (PressureCallback) {
-    PressureCallback(RPTracker.getPressure());
-    RPTracker.setPressureCallback(std::move(PressureCallback));
-  }
-  if (HasInstrs)
+  RPTracker.trackBankedPeaks(BankedPeaks);
+  if (RPTracker.reset(*Regions[RegionIdx].first, Regions[RegionIdx].second,
+                      &LiveIns[RegionIdx]))
     RPTracker.advance(Regions[RegionIdx].second);
+  llvm::copy(RPTracker.getBankedPeaks(), BankedPeaks.begin());
   return RPTracker.moveMaxPressure();
 }
 
@@ -1640,17 +1637,14 @@ bool GCNSchedStage::initGCNRegion() {
 
   BankedPeaksBefore = {};
   if (useBankedSpillCheck()) {
-    unsigned ArchLimit, AccLimit;
-    std::tie(ArchLimit, AccLimit) = getSpillCheckBankLimits();
+    auto [ArchLimit, AccLimit] = getSpillCheckBankLimits();
+    BankedPeaksBefore = {ArchLimit, AccLimit};
     // If no point has AVGPRs beyond the ArchVGPR bank, banking the region
     // maximum is exact. Otherwise bank each point.
-    if (PressureBefore.getArchVGPRNum() <= ArchLimit) {
-      BankedPeaksBefore.add(PressureBefore, ArchLimit, AccLimit);
-    } else {
-      DAG.getRealRegPressure(RegionIdx, [&](const GCNRegPressure &RP) {
-        BankedPeaksBefore.add(RP, ArchLimit, AccLimit);
-      });
-    }
+    if (PressureBefore.getArchVGPRNum() <= ArchLimit)
+      BankedPeaksBefore.add(PressureBefore);
+    else
+      DAG.getRealRegPressure(RegionIdx, BankedPeaksBefore);
   }
 
   LLVM_DEBUG(
@@ -1778,30 +1772,24 @@ void GCNSchedStage::checkScheduling() {
   // distributing it across the banks can miss a rigid peak at another point.
   // Distribute the pressure of each point instead.
   bool AVGPRBanking = ST.getCLOpts().avgpr_banking;
-  unsigned ArchVGPRBankLimit, AGPRBankLimit;
-  std::tie(ArchVGPRBankLimit, AGPRBankLimit) = S.getBankLimits();
-  unsigned BankedArchVGPRPeak = 0, BankedAGPRPeak = 0, BankedUnifiedPeak = 0;
-  BankedPeaksAfter = {};
   bool BankedSpillCheck = useBankedSpillCheck();
-  unsigned SpillCheckArchLimit, SpillCheckAccLimit;
-  std::tie(SpillCheckArchLimit, SpillCheckAccLimit) = getSpillCheckBankLimits();
-  std::function<void(const GCNRegPressure &)> TrackBankedPeaks;
-  if (AVGPRBanking) {
-    TrackBankedPeaks = [&](const GCNRegPressure &RP) {
-      auto [ArchNum, AccNum] =
-          RP.getBankedVGPRNum(ArchVGPRBankLimit, AGPRBankLimit);
-      BankedArchVGPRPeak = std::max(BankedArchVGPRPeak, ArchNum);
-      BankedAGPRPeak = std::max(BankedAGPRPeak, AccNum);
-      BankedUnifiedPeak =
-          std::max(BankedUnifiedPeak,
-                   GCNRegPressure::getBankedUnifiedVGPRNum(ArchNum, AccNum));
-      if (BankedSpillCheck)
-        BankedPeaksAfter.add(RP, SpillCheckArchLimit, SpillCheckAccLimit);
-    };
+  auto [ArchVGPRBankLimit, AGPRBankLimit] = S.getBankLimits();
+  // The excess checks below use the bank limits, while mayCauseSpilling() uses
+  // the spill check limits.
+  SmallVector<GCNRegPressure::BankedVGPRPeaks, 2> BankedPeaks;
+  if (AVGPRBanking)
+    BankedPeaks.emplace_back(ArchVGPRBankLimit, AGPRBankLimit);
+  if (BankedSpillCheck) {
+    auto [ArchLimit, AccLimit] = getSpillCheckBankLimits();
+    BankedPeaks.emplace_back(ArchLimit, AccLimit);
   }
 
   // Check the results of scheduling.
-  PressureAfter = DAG.getRealRegPressure(RegionIdx, TrackBankedPeaks);
+  PressureAfter = DAG.getRealRegPressure(RegionIdx, BankedPeaks);
+  GCNRegPressure::BankedVGPRPeaks ExcessCheckPeaks =
+      AVGPRBanking ? BankedPeaks.front() : GCNRegPressure::BankedVGPRPeaks();
+  BankedPeaksAfter =
+      BankedSpillCheck ? BankedPeaks.back() : GCNRegPressure::BankedVGPRPeaks();
 
   LLVM_DEBUG(dbgs() << "Pressure after scheduling: " << print(PressureAfter));
   LLVM_DEBUG(dbgs() << "Region: " << RegionIdx << ".\n");
@@ -1862,13 +1850,13 @@ void GCNSchedStage::checkScheduling() {
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
 
   bool BankExcess = AVGPRBanking
-                        ? BankedArchVGPRPeak > ArchVGPRBankLimit ||
-                              BankedAGPRPeak > AGPRBankLimit
+                        ? ExcessCheckPeaks.ArchVGPRs > ArchVGPRBankLimit ||
+                              ExcessCheckPeaks.AGPRs > AGPRBankLimit
                         : PressureAfter.getArchVGPRNum() > MaxArchVGPRs ||
                               PressureAfter.getAGPRNum() > MaxArchVGPRs;
 
   unsigned VGPRNum = AVGPRBanking && UnifiedVGPRFile
-                         ? BankedUnifiedPeak
+                         ? ExcessCheckPeaks.PointUnifiedVGPRs
                          : PressureAfter.getVGPRNum(UnifiedVGPRFile);
   if (VGPRNum > MaxVGPRs || BankExcess ||
       PressureAfter.getSGPRNum() > MaxSGPRs) {
