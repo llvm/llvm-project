@@ -126,7 +126,6 @@ body:            |
     $vgpr1 = V_MOV_B16_fake16_e32 0, implicit $exec
 ...
 
-# FIXME: S_WAITCNT_DEPCTR is not needed for f32 case but we cannot detect it with fake32.
 ---
 name:            trans_f32_dpp_partial_def_no_hazard
 tracksRegLiveness: false
@@ -135,7 +134,6 @@ body:            |
     ; GCN-LABEL: name: trans_f32_dpp_partial_def_no_hazard
     ; GCN: $vgpr1 = V_SQRT_F32_dpp $vgpr1, 0, $vgpr0, 1, 15, 15, 1, implicit $mode, implicit $exec
     ; GCN-NEXT: V_NOP_e32 implicit $exec
-    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: $vgpr1 = V_MOV_B16_fake16_e32 0, implicit $exec
     $vgpr1 = V_SQRT_F32_dpp $vgpr1, 0, $vgpr0, 1, 15, 15, 1, implicit $mode, implicit $exec
     $vgpr1 = V_MOV_B16_fake16_e32 0, implicit $exec
@@ -154,7 +152,6 @@ body:            |
     $vgpr1 = V_MOV_B16_fake16_e32 0, implicit $exec
 ...
 
-# FIXME: S_WAITCNT_DEPCTR is not needed for f32 case but we cannot detect it with fake32.
 ---
 name:            trans_f32_dpp_e64_partial_def_no_hazard
 tracksRegLiveness: false
@@ -163,7 +160,6 @@ body:            |
     ; GCN-LABEL: name: trans_f32_dpp_e64_partial_def_no_hazard
     ; GCN: $vgpr1 = V_SQRT_F32_e64_dpp $vgpr1, 0, $vgpr0, 0, 0, 1, 15, 15, 1, implicit $mode, implicit $exec
     ; GCN-NEXT: V_NOP_e32 implicit $exec
-    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: $vgpr1 = V_MOV_B16_fake16_e32 0, implicit $exec
     $vgpr1 = V_SQRT_F32_e64_dpp $vgpr1, 0, $vgpr0, 0, 0, 1, 15, 15, 1, implicit $mode, implicit $exec
     $vgpr1 = V_MOV_B16_fake16_e32 0, implicit $exec

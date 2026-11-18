@@ -4602,24 +4602,11 @@ bool GCNHazardRecognizer::fixTransF16ToPartialVGPRWriteHazard(
 
     unsigned Opc = I.getOpcode();
     const MCInstrDesc &Desc = TII.get(Opc);
-    // Note: checking vdst does not work because it is a generic
-    // OPERAND_REGISTER.
-    switch (
-        Desc.operands()[AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0)]
-            .OperandType) {
-    case AMDGPU::OPERAND_REG_IMM_BF16:
-    case AMDGPU::OPERAND_REG_IMM_FP16:
-    case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
-    case AMDGPU::OPERAND_REG_INLINE_C_BF16:
-    case AMDGPU::OPERAND_REG_INLINE_C_FP16:
+    switch (Desc.operands()[0].OperandType) {
+    case AMDGPU::OPERAND_REG_BF16:
+    case AMDGPU::OPERAND_REG_FP16:
       break;
     default:
-      // DPP instructions have VGPR-only src0 with generic OPERAND_REGISTER
-      // type. The isDPP() check will catch any TRANS opcodes including f32.
-      // This is suboptimal but shall only affect fake16 compilation because
-      // of the Def size check below.
-      if (SIInstrInfo::isDPP(I))
-        break;
       return NoHazardFound;
     }
 
@@ -4635,10 +4622,6 @@ bool GCNHazardRecognizer::fixTransF16ToPartialVGPRWriteHazard(
       return MI->modifiesRegister(OffendingDef, nullptr) ? HazardFound
                                                          : NoHazardFound;
     }
-
-    // Bail for any non-16 bit DPP instructions catched in true16 mode.
-    if (ST.useRealTrue16Insts())
-      return NoHazardFound;
 
     // Fake16 case is suboptimal as it checks the whole 32-bit def overlap w/o
     // analyzing OPSEL bits.
