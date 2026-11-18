@@ -449,6 +449,8 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/timerfd.h entrypoints
     libc.src.sys.timerfd.timerfd_create
+    libc.src.sys.timerfd.timerfd_gettime
+    libc.src.sys.timerfd.timerfd_settime
 
     # sys/sysinfo.h entrypoints
     libc.src.sys.sysinfo.sysinfo
@@ -584,6 +586,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # wchar.h entrypoints
     libc.src.wchar.btowc
     libc.src.wchar.swprintf
+    libc.src.wchar.vswprintf
     libc.src.wchar.wcscasecmp
     libc.src.wchar.wcsncasecmp
     libc.src.wchar.wcslen
@@ -1740,6 +1743,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.localtime
     libc.src.time.localtime_r
     libc.src.time.mktime
+    libc.src.time.timegm
     libc.src.time.clock_nanosleep
     libc.src.time.nanosleep
     libc.src.time.strftime

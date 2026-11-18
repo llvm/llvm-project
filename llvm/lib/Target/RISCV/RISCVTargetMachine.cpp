@@ -112,6 +112,8 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
       TLOF(createTLOF(TT)) {
   initAsmInfo();
 
+  LLT::setUseExtended(true);
+
   // RISC-V supports the MachineOutliner.
   setMachineOutliner(true);
   setSupportsDefaultOutlining(true);

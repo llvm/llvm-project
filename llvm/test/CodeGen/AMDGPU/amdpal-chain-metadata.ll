@@ -23,19 +23,28 @@
 ; CHECK-LABEL: {{^}}chain_and_gfx:
 ; CHECK:         .set .Lchain_and_gfx.private_seg_size, 32+max(.Lgfx_alloca.private_seg_size){{$}}
 
+; CHECK-LABEL: {{^}}gfx_stack_only:
+; CHECK:         .set .Lgfx_stack_only.private_seg_size, 20{{$}}
+
 ; CHECK-LABEL: {{^}}cs_to_chain_and_wwf:
-; CHECK:         .set .Lcs_to_chain_and_wwf.private_seg_size, 12{{$}}
+; EXTSTACK0:     .set .Lcs_to_chain_and_wwf.private_seg_size, 16+max(.Lgfx_stack_only.private_seg_size){{$}}
+; EXTSTACK48:    .set .Lcs_to_chain_and_wwf.private_seg_size, 16+max(48, .Lgfx_stack_only.private_seg_size){{$}}
 
 ; Indirect chain calls don't contribute to the stack size.
-; CHECK-LABEL: {{^}}chain_indirect_and_wwf:
-; CHECK:         .set .Lchain_indirect_and_wwf.private_seg_size, 64+max(.Lwwf_alloca.private_seg_size){{$}}
-; CHECK:         .set .Lchain_indirect_and_wwf.has_indirect_call, 1{{$}}
+; CHECK-LABEL: {{^}}indirect_chain_and_wwf:
+; CHECK:         .set .Lindirect_chain_and_wwf.private_seg_size, 64+max(.Lwwf_alloca.private_seg_size){{$}}
+; CHECK:         .set .Lindirect_chain_and_wwf.has_indirect_call, 1{{$}}
 
 ; A non-chain indirect call does contribute the assumed external stack size.
 ; CHECK-LABEL: {{^}}chain_and_indirect_gfx:
 ; EXTSTACK0:     .set .Lchain_and_indirect_gfx.private_seg_size, 32{{$}}
 ; EXTSTACK48:    .set .Lchain_and_indirect_gfx.private_seg_size, 32+max(48){{$}}
 ; CHECK:         .set .Lchain_and_indirect_gfx.has_indirect_call, 1{{$}}
+
+; CHECK-LABEL: {{^}}chain_indirect_gfx_and_wwf:
+; EXTSTACK0:     .set .Lchain_indirect_gfx_and_wwf.private_seg_size, 64+max(.Lwwf_alloca.private_seg_size){{$}}
+; EXTSTACK48:    .set .Lchain_indirect_gfx_and_wwf.private_seg_size, 64+max(48, .Lwwf_alloca.private_seg_size){{$}}
+; CHECK:         .set .Lchain_indirect_gfx_and_wwf.has_indirect_call, 1{{$}}
 
 ; CHECK-LABEL: {{^}}chain_preserve_callee:
 ; CHECK:         .set .Lchain_preserve_callee.private_seg_size, 56{{$}}
@@ -44,26 +53,43 @@
 ; CHECK-LABEL: {{^}}chain_to_preserve_callee:
 ; CHECK:         .set .Lchain_to_preserve_callee.private_seg_size, 24{{$}}
 
+; CHECK-LABEL: {{^}}wwf_callee_stack_only:
+; EXTSTACK0:     .set .Lwwf_callee_stack_only.private_seg_size, 16+max(.Lgfx_stack_only.private_seg_size){{$}}
+; EXTSTACK48:    .set .Lwwf_callee_stack_only.private_seg_size, 16+max(48, .Lgfx_stack_only.private_seg_size){{$}}
+
+; CHECK-LABEL: {{^}}chain_own_and_callee_stack:
+; EXTSTACK0:     .set .Lchain_own_and_callee_stack.private_seg_size, 32+max(.Lwwf_callee_stack_only.private_seg_size){{$}}
+; EXTSTACK48:    .set .Lchain_own_and_callee_stack.private_seg_size, 32+max(48, .Lwwf_callee_stack_only.private_seg_size){{$}}
+
+; CHECK-LABEL: {{^}}chain_realign_stack:
+; EXTSTACK0:     .set .Lchain_realign_stack.private_seg_size, 256+max(.Lgfx_stack_only.private_seg_size){{$}}
+; EXTSTACK48:    .set .Lchain_realign_stack.private_seg_size, 256+max(48, .Lgfx_stack_only.private_seg_size){{$}}
+
 ; CHECK-LABEL: .amdgpu_pal_metadata
 ; CHECK-NEXT: ---
 ; CHECK-NEXT: amdpal.pipelines:
 ; CHECK-NEXT:   - .api:            Vulkan
 ; CHECK-LABEL:         .hardware_stages:
 ; CHECK:      .cs:
+; EXTSTACK0:         .backend_stack_size: 0x24{{$}}
+; EXTSTACK48:        .backend_stack_size: 0x40{{$}}
 ; CHECK:             .entry_point_symbol: cs_to_chain_and_wwf
-; CHECK:             .scratch_memory_size: 0x10{{$}}
+; EXTSTACK0:         .scratch_memory_size: 0x30{{$}}
+; EXTSTACK48:        .scratch_memory_size: 0x40{{$}}
 ; CHECK:         .shader_functions:
 ; CHECK-LABEL:      amdgpu_cs_chain_func:
-; CHECK:             .backend_stack_size: 0x10{{$}}
+; EXTSTACK0:         .backend_stack_size: 0x10{{$}}
+; EXTSTACK48:        .backend_stack_size: 0x40{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x10{{$}}
 ; CHECK-LABEL:      chain_and_gfx:
-; CHECK:             .backend_stack_size: 0x20{{$}}
+; CHECK:             .backend_stack_size: 0x3c{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x20{{$}}
 ; CHECK-LABEL:      chain_and_indirect_gfx:
-; CHECK:             .backend_stack_size: 0x20{{$}}
+; EXTSTACK0:         .backend_stack_size: 0x20{{$}}
+; EXTSTACK48:        .backend_stack_size: 0x50{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x20{{$}}
 ; CHECK-LABEL:      chain_and_wwf:
-; CHECK:             .backend_stack_size: 0x50{{$}}
+; CHECK:             .backend_stack_size: 0x6c{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x50{{$}}
 ; CHECK-LABEL:      chain_callee_larger_stack:
 ; CHECK:             .backend_stack_size: 0x8{{$}}
@@ -71,15 +97,31 @@
 ; CHECK-LABEL:      chain_callee_smaller_stack:
 ; CHECK:             .backend_stack_size: 0x24{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x24{{$}}
-; CHECK-LABEL:      chain_indirect_and_wwf:
-; CHECK:             .backend_stack_size: 0x40{{$}}
+; CHECK-LABEL:      chain_indirect_gfx_and_wwf:
+; EXTSTACK0:         .backend_stack_size: 0x5c{{$}}
+; EXTSTACK48:        .backend_stack_size: 0x70{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x40{{$}}
+; CHECK-LABEL:      chain_own_and_callee_stack:
+; EXTSTACK0:         .backend_stack_size: 0x44{{$}}
+; EXTSTACK48:        .backend_stack_size: 0x60{{$}}
+; CHECK:             .stack_frame_size_in_bytes: 0x20{{$}}
+; CHECK-LABEL:      chain_realign_stack:
+; EXTSTACK0:         .backend_stack_size: 0x114{{$}}
+; EXTSTACK48:        .backend_stack_size: 0x130{{$}}
+; FIXME: stack_frame_size_in_bytes would do well to include the realignment padding too...
+; CHECK:             .stack_frame_size_in_bytes: 0x80{{$}}
 ; CHECK-LABEL:      chain_to_preserve_callee:
 ; CHECK:             .backend_stack_size: 0x18{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x18{{$}}
 ; CHECK-LABEL:      gfx_alloca:
 ; CHECK:             .backend_stack_size: 0x1c{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x1c{{$}}
+; CHECK-LABEL:      gfx_stack_only:
+; CHECK:             .backend_stack_size: 0x14{{$}}
+; CHECK:             .stack_frame_size_in_bytes: 0x14{{$}}
+; CHECK-LABEL:      indirect_chain_and_wwf:
+; CHECK:             .backend_stack_size: 0x5c{{$}}
+; CHECK:             .stack_frame_size_in_bytes: 0x40{{$}}
 ; CHECK:amdpal.version:
 ; CHECK-NEXT:  - 0x3
 ; CHECK-NEXT:  - 0
@@ -146,11 +188,12 @@ define amdgpu_cs void @cs_to_chain_and_wwf(<40 x i32> %v) {
 .entry:
   %a = alloca [2 x i32], addrspace(5)
   store volatile i32 9, ptr addrspace(5) %a
+  call amdgpu_gfx void @gfx_stack_only()
   call void (ptr, i32, {}, <40 x i32>, i32, ...) @llvm.amdgcn.cs.chain.p0.i32.s.v40i32(ptr @chain_and_wwf, i32 -1, {} inreg poison, <40 x i32> %v, i32 0)
   unreachable
 }
 
-define amdgpu_cs_chain void @chain_indirect_and_wwf(ptr inreg %callee, <40 x i32> %v) {
+define amdgpu_cs_chain void @indirect_chain_and_wwf(ptr inreg %callee, <40 x i32> %v) {
 .entry:
   %a = alloca [12 x i32], addrspace(5)
   store i32 10, ptr addrspace(5) %a
@@ -166,6 +209,15 @@ define amdgpu_cs_chain void @chain_and_indirect_gfx(ptr inreg %fp, <40 x i32> %v
   call amdgpu_gfx void %fp(ptr addrspace(5) %a)
   call void (ptr, i32, {}, <40 x i32>, i32, ...) @llvm.amdgcn.cs.chain.p0.i32.s.v40i32(ptr @amdgpu_cs_chain_func, i32 -1, {} inreg poison, <40 x i32> %v, i32 0)
   unreachable
+}
+
+define amdgpu_cs_chain void @chain_indirect_gfx_and_wwf(ptr inreg %callee) {
+.entry:
+  %a = alloca [12 x i32], addrspace(5)
+  store i32 11, ptr addrspace(5) %a
+  call void (ptr, ...) @llvm.amdgcn.call.whole.wave(ptr @wwf_alloca, ptr addrspace(5) %a)
+  call amdgpu_gfx void %callee()
+  ret void
 }
 
 define amdgpu_cs_chain_preserve void @chain_preserve_callee() {
@@ -185,6 +237,35 @@ define amdgpu_cs_chain void @chain_to_preserve_callee(<40 x i32> %v) {
 
 define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_func() {
 .entry:
+  ret void
+}
+
+; Stack sizes accumulate transitively through non-chain callees, across calling
+; conventions.
+define amdgpu_gfx void @gfx_stack_only() {
+  %a = alloca [4 x i32], addrspace(5)
+  store volatile i32 12, ptr addrspace(5) %a
+  ret void
+}
+
+define amdgpu_gfx_whole_wave void @wwf_callee_stack_only(i1 %active) {
+  call amdgpu_gfx void @gfx_stack_only()
+  ret void
+}
+
+define amdgpu_cs_chain void @chain_own_and_callee_stack() {
+.entry:
+  %a = alloca [4 x i32], addrspace(5)
+  store volatile i32 13, ptr addrspace(5) %a
+  call void (ptr, ...) @llvm.amdgcn.call.whole.wave(ptr @wwf_callee_stack_only)
+  ret void
+}
+
+define amdgpu_cs_chain void @chain_realign_stack() {
+.entry:
+  %a = alloca i32, align 128, addrspace(5)
+  store volatile i32 13, ptr addrspace(5) %a
+  call amdgpu_gfx void @gfx_stack_only()
   ret void
 }
 

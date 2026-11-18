@@ -626,6 +626,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          Legal);
       setOperationAction({ISD::SELECT, ISD::VSELECT}, {MVT::v4i16, MVT::v8i8},
                          Custom);
+      setOperationAction(ISD::VSELECT, MVT::v2i32, Custom);
       setOperationAction({ISD::MUL, ISD::MULHS, ISD::MULHU},
                          {MVT::v4i16, MVT::v8i8}, Custom);
       setOperationAction(ISD::MUL, P32VecVTs, Custom);
@@ -9566,6 +9567,26 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerToScalableOp(Op, DAG);
   case ISD::VSELECT: {
     EVT VT = Op.getValueType();
+    // Lower v2i32 VSELECT on RV32 with P extension to (T & M) | (F & ~M) on
+    // each i32 element. The mask elements are all ones or all zeros.
+    if (Subtarget.hasStdExtP() && !Subtarget.is64Bit() && VT == MVT::v2i32) {
+      SDLoc DL(Op);
+      SDValue Elts[2];
+      for (unsigned I = 0; I != 2; ++I) {
+        SDValue Idx = DAG.getVectorIdxConstant(I, DL);
+        SDValue M = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32,
+                                Op.getOperand(0), Idx);
+        SDValue T = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32,
+                                Op.getOperand(1), Idx);
+        SDValue F = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32,
+                                Op.getOperand(2), Idx);
+        SDValue NotM = DAG.getNOT(DL, M, MVT::i32);
+        Elts[I] = DAG.getNode(ISD::OR, DL, MVT::i32,
+                              DAG.getNode(ISD::AND, DL, MVT::i32, T, M),
+                              DAG.getNode(ISD::AND, DL, MVT::i32, F, NotM));
+      }
+      return DAG.getBuildVector(VT, DL, {Elts[0], Elts[1]});
+    }
     // Split 64-bit vector VSELECT on RV32 with P extension for v4i16 and v8i8
     if (Subtarget.hasStdExtP() && !Subtarget.is64Bit() &&
         (VT == MVT::v4i16 || VT == MVT::v8i8)) {
@@ -9676,8 +9697,13 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
         SDValue ShAmtVec = Op.getOperand(1);
         SDValue SplatVal = DAG.getSplatValue(ShAmtVec, /*LegalTypes=*/true);
 
-        if (!SplatVal)
+        if (!SplatVal) {
+          // Unroll non-splat v2i32 SSHLSAT on RV32 to scalar SSHLSAT (ssha).
+          if (Op.getOpcode() == ISD::SSHLSAT && !Subtarget.is64Bit() &&
+              Op.getValueType() == MVT::v2i32)
+            return DAG.UnrollVectorOp(Op.getNode());
           return SDValue();
+        }
 
         unsigned Opc;
         switch (Op.getOpcode()) {
@@ -17376,13 +17402,18 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     assert(N->getValueType(0) == MVT::i32 && "Unexpected custom legalisation");
     if (getTypeAction(*DAG.getContext(), Op0.getValueType()) !=
         TargetLowering::TypeSoftenFloat) {
-      if (!isTypeLegal(Op0.getValueType()))
+      // [b]f16 that isn't legal can still be extended to f32 and converted with
+      // fcvt if f32 is legal.
+      bool PromoteViaF32 = ((Op0.getValueType() == MVT::f16 &&
+                             !Subtarget.hasStdExtZfhOrZhinx()) ||
+                            Op0.getValueType() == MVT::bf16) &&
+                           Subtarget.hasStdExtFOrZfinx();
+      if (!PromoteViaF32 && !isTypeLegal(Op0.getValueType()))
         return;
       if (IsStrict) {
         SDValue Chain = N->getOperand(0);
-        // In absence of Zfh, promote f16 to f32, then convert.
-        if (Op0.getValueType() == MVT::f16 &&
-            !Subtarget.hasStdExtZfhOrZhinx()) {
+        // In absence of Zfh, promote [b]f16 to f32, then convert.
+        if (PromoteViaF32) {
           Op0 = DAG.getNode(ISD::STRICT_FP_EXTEND, DL, {MVT::f32, MVT::Other},
                             {Chain, Op0});
           Chain = Op0.getValue(1);
@@ -17399,9 +17430,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       }
       // For bf16, or f16 in absence of Zfh, promote [b]f16 to f32 and then
       // convert.
-      if ((Op0.getValueType() == MVT::f16 &&
-           !Subtarget.hasStdExtZfhOrZhinx()) ||
-          Op0.getValueType() == MVT::bf16)
+      if (PromoteViaF32)
         Op0 = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op0);
 
       unsigned Opc = IsSigned ? RISCVISD::FCVT_W_RV64 : RISCVISD::FCVT_WU_RV64;
