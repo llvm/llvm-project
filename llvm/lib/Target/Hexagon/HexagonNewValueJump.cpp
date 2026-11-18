@@ -20,11 +20,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/InitializePasses.h"
 #include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -38,6 +39,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BranchProbability.h"
@@ -669,11 +671,40 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
           bool MO1IsKill = cmpPos->killsRegister(cmpReg1, QRI);
           bool MO2IsKill = isSecondOpReg && cmpPos->killsRegister(cmpOp2, QRI);
 
-          // A copy cannot follow the feeder, since the packetizer needs the
-          // feeder next to the jump. The jump is a terminator, so the helper
-          // copies nothing and only sets the debug values that read the
-          // feeder's register undef.
-          QII->moveDependentDebugValues(MI, *jmpInstr);
+          // The feeder moves down to the jump. Debug values between them that
+          // read its register would precede it, so set them undef. No copies:
+          // the packetizer needs the feeder next to the jump.
+          for (auto I = std::next(MI.getIterator());
+               I != jmpInstr->getIterator(); ++I)
+            if (I->isDebugValue() && I->readsRegister(feederReg, QRI))
+              I->setDebugValueUndef();
+
+          // The compare is removed, so the predicate it defines is no longer
+          // written. Debug values that read it after the compare are stale.
+          // Set them undef in the rest of the block, and in the blocks after
+          // it, until the predicate is written again or a call may clobber it.
+          auto UndefPredicateReaders = [&](MachineBasicBlock::iterator Begin,
+                                           MachineBasicBlock &Blk) {
+            for (auto I = Begin; I != Blk.end(); ++I) {
+              if (I->isDebugValue() && I->readsRegister(predReg, QRI))
+                I->setDebugValueUndef();
+              else if (!I->isDebugInstr() &&
+                       (I->isCall() || (I->modifiesRegister(predReg, QRI) &&
+                                        !QII->isPredicated(*I))))
+                return true;
+            }
+            return false;
+          };
+          SmallVector<MachineBasicBlock *, 4> Todo;
+          SmallPtrSet<MachineBasicBlock *, 8> Visited;
+          if (!UndefPredicateReaders(std::next(cmpInstr->getIterator()), *MBB))
+            Todo.append(MBB->succ_begin(), MBB->succ_end());
+          while (!Todo.empty()) {
+            MachineBasicBlock *Next = Todo.pop_back_val();
+            if (Visited.insert(Next).second &&
+                !UndefPredicateReaders(Next->begin(), *Next))
+              Todo.append(Next->succ_begin(), Next->succ_end());
+          }
 
           MBB->splice(jmpPos, MI.getParent(), MI);
           MBB->splice(jmpPos, MI.getParent(), cmpInstr);
