@@ -1,0 +1,111 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! The ranking of candidates of the same kind does not change: the distances of a
+! specific are compared lexicographically in the order of its dummy arguments,
+! and the passed object of a PASS binding is one of them, at the position of its
+! dummy. These results do not depend on the order in which the specifics are
+! declared.
+module pass_ranking
+  type :: t
+  contains
+    procedure :: device_first, managed_first
+    procedure, pass(this) :: device_last, managed_last
+    procedure, pass(this) :: managed_last_device, managed_last_unified
+    procedure, nopass :: device_argument, managed_argument
+    generic :: first => device_first, managed_first
+    generic :: first_reversed => managed_first, device_first
+    generic :: last => device_last, managed_last
+    generic :: last_reversed => managed_last, device_last
+    generic :: tied_objects => managed_last_device, managed_last_unified
+    generic :: no_object => device_argument, managed_argument
+  end type
+contains
+  subroutine device_first(this, x)
+    class(t), device :: this
+    integer, managed :: x
+  end subroutine
+  subroutine managed_first(this, x)
+    class(t), managed :: this
+    integer, device :: x
+  end subroutine
+  subroutine device_last(x, this, omitted)
+    integer, managed :: x
+    class(t), device :: this
+    real, optional :: omitted
+  end subroutine
+  subroutine managed_last(x, this)
+    integer, device :: x
+    class(t), managed :: this
+  end subroutine
+  subroutine managed_last_device(x, this)
+    integer, device :: x
+    class(t), managed :: this
+  end subroutine
+  subroutine managed_last_unified(x, this, omitted)
+    integer, unified :: x
+    class(t), managed :: this
+    real, optional :: omitted
+  end subroutine
+  subroutine device_argument(x)
+    integer, device :: x
+  end subroutine
+  subroutine managed_argument(x)
+    integer, managed :: x
+  end subroutine
+
+  ! CHECK-LABEL: func.func @_QMpass_rankingPcaller(
+  subroutine caller(obj, x)
+    type(t), managed :: obj
+    integer, managed :: x
+    ! The passed object is the first dummy, so it decides.
+    ! CHECK: fir.call @_QMpass_rankingPmanaged_first(
+    call obj%first(x)
+    ! CHECK: fir.call @_QMpass_rankingPmanaged_first(
+    call obj%first_reversed(x=x)
+    ! The explicit argument is the first dummy, so it decides, with an omitted
+    ! optional argument and with a keyword actual.
+    ! CHECK: fir.call @_QMpass_rankingPdevice_last(
+    call obj%last(x)
+    ! CHECK: fir.call @_QMpass_rankingPdevice_last(
+    call obj%last_reversed(x=x)
+    ! Equal passed objects are broken by the other arguments.
+    ! CHECK: fir.call @_QMpass_rankingPmanaged_last_unified(
+    call obj%tied_objects(x)
+    ! With NOPASS, only explicit arguments take part in the ranking.
+    ! CHECK: fir.call @_QMpass_rankingPmanaged_argument(
+    call obj%no_object(x)
+  end subroutine
+end module
+
+! A type-bound operator is ranked in the same dummy order as the equivalent
+! type-bound call.
+module operator_ranking
+  type :: t
+  contains
+    procedure, pass(this) :: device_obj, managed_obj
+    generic :: choose => device_obj, managed_obj
+    generic :: operator(.choose.) => device_obj, managed_obj
+  end type
+contains
+  integer function device_obj(x, this)
+    integer, managed, intent(in) :: x
+    class(t), device, intent(in) :: this
+    device_obj = 1
+  end function
+  integer function managed_obj(x, this)
+    integer, device, intent(in) :: x
+    class(t), managed, intent(in) :: this
+    managed_obj = 2
+  end function
+
+  ! CHECK-LABEL: func.func @_QMoperator_rankingPcaller(
+  subroutine caller(obj, x, r)
+    type(t), managed :: obj
+    integer, managed :: x
+    integer :: r
+    ! CHECK: fir.call @_QMoperator_rankingPdevice_obj(
+    r = obj%choose(x)
+    ! CHECK: fir.call @_QMoperator_rankingPdevice_obj(
+    r = x .choose. obj
+  end subroutine
+end module

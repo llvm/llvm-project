@@ -1,0 +1,123 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! A PASS and a NOPASS specific in one type-bound generic, called with one actual
+! argument, in the four ways the two can relate:
+!   1. both are viable and the PASS dummy is the closer match;
+!   2. both are viable and the NOPASS dummy is the closer match;
+!   3. only the PASS binding is viable;
+!   4. only the NOPASS binding is viable.
+! When both are viable the PASS binding is selected, and a binding that is not
+! viable for the actual is never selected. The distances of a PASS candidate
+! include its passed object, so they have a different length than those of a
+! NOPASS candidate; comparing them used to abort with
+! CHECK(x.perArg.size() == y.perArg.size()).
+!
+! The selected binding, by compiler:
+!
+!   case | sa dummy | sb dummy | actual  | 22.1.2 | before  | this change
+!   -----+----------+----------+---------+--------+---------+------------
+!    1   | device   | host     | managed | PASS   | abort   | PASS
+!    2   | host     | device   | managed | NOPASS | abort   | PASS
+!    3   | device   | host     | device  | PASS   | PASS    | PASS
+!    4   | host     | device   | device  | NOPASS | NOPASS  | NOPASS
+!
+! "22.1.2" is llvmorg-22.1.2, which compared the sum of all the distances, so the
+! binding with the closer dummy attribute won in case 2. "before" is commit
+! 8c3d123eb954. The distances come from GetMatchingDistance: for a MANAGED
+! actual a host dummy is 3 and a DEVICE dummy 2.
+
+module case1
+  type :: t
+  contains
+    procedure :: a => sa
+    procedure, nopass :: b => sb
+    generic :: g => a, b
+  end type
+contains
+  subroutine sa(x, n)
+    class(t) :: x
+    integer, device :: n
+  end subroutine
+  subroutine sb(n)
+    integer :: n
+  end subroutine
+  ! CHECK-LABEL: func.func @_QMcase1Puser(
+  subroutine user(v)
+    type(t) :: v
+    integer, managed :: mg
+    ! CHECK: fir.call @_QMcase1Psa(
+    call v%g(mg)
+  end subroutine
+end module
+
+module case2
+  type :: t
+  contains
+    procedure :: a => sa
+    procedure, nopass :: b => sb
+    generic :: g => a, b
+  end type
+contains
+  subroutine sa(x, n)
+    class(t) :: x
+    integer :: n
+  end subroutine
+  subroutine sb(n)
+    integer, device :: n
+  end subroutine
+  ! CHECK-LABEL: func.func @_QMcase2Puser(
+  subroutine user(v)
+    type(t) :: v
+    integer, managed :: mg
+    ! CHECK: fir.call @_QMcase2Psa(
+    call v%g(mg)
+  end subroutine
+end module
+
+module case3
+  type :: t
+  contains
+    procedure :: a => sa
+    procedure, nopass :: b => sb
+    generic :: g => a, b
+  end type
+contains
+  subroutine sa(x, n)
+    class(t) :: x
+    integer, device :: n
+  end subroutine
+  subroutine sb(n)
+    integer :: n
+  end subroutine
+  ! CHECK-LABEL: func.func @_QMcase3Puser(
+  subroutine user(v)
+    type(t) :: v
+    integer, device :: mg
+    ! CHECK: fir.call @_QMcase3Psa(
+    call v%g(mg)
+  end subroutine
+end module
+
+module case4
+  type :: t
+  contains
+    procedure :: a => sa
+    procedure, nopass :: b => sb
+    generic :: g => a, b
+  end type
+contains
+  subroutine sa(x, n)
+    class(t) :: x
+    integer :: n
+  end subroutine
+  subroutine sb(n)
+    integer, device :: n
+  end subroutine
+  ! CHECK-LABEL: func.func @_QMcase4Puser(
+  subroutine user(v)
+    type(t) :: v
+    integer, device :: mg
+    ! CHECK: fir.call @_QMcase4Psb(
+    call v%g(mg)
+  end subroutine
+end module
