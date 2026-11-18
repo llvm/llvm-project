@@ -2,9 +2,8 @@
 ; RUN: llc < %s | FileCheck %s -check-prefix=NOIPRA
 ; RUN: llc -enable-ipra < %s | FileCheck %s
 
-
 target triple = "x86_64-unknown-unknown"
-define void @bar1() {
+define internal void @bar1() {
 	ret void
 }
 define preserve_allcc void @foo()#0 {
@@ -26,7 +25,7 @@ define preserve_allcc void @foo()#0 {
 	call void @bar2()
 	ret void
 }
-define void @bar2() {
+define internal void @bar2() {
 	ret void
 }
 
