@@ -185,10 +185,12 @@ ptr2 = __alloc_token_my_malloc(size, token_id);
 ```
 
 Note: Even in the default mode (without `-fsanitize-alloc-token-extended`),
-an *inline* allocation wrapper marked with the [malloc][malloc-attribute] or
-[alloc_size][alloc-size-attribute] attribute is
+an *inline* allocation wrapper marked with the [malloc][malloc-attribute],
+`malloc_span`, or [alloc_size][alloc-size-attribute] attribute is
 supported if it is inlined into its caller: the inferred token is propagated to
-the allocation call the wrapper returns, which is then instrumented normally.
+the allocation call the wrapper returns (for `malloc_span`, the call whose
+result or `{pointer, size}` begin pointer is returned), which is then
+instrumented normally.
 Wrappers that are not inlined still require
 `-fsanitize-alloc-token-extended`.
 
