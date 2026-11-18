@@ -26,6 +26,265 @@
 
 using namespace llvm;
 
+namespace {
+struct MemoryAccessInfo {
+  Type *Ty;
+  unsigned PointerOperand;
+  bool IsRead;
+};
+} // namespace
+
+/// Get information about a memory instruction required to propagate metadata.
+/// Returns std::nullopt if the instruction is not supported and we will not
+/// propagate any metadata.
+///
+/// If IsRead is set and this is a instruction that reads and writes, mark it
+/// as reading or writing. This is used to make the source instruction in
+/// metadata propagation correspond with the dest.
+static std::optional<MemoryAccessInfo>
+getMemoryAccessInfo(const Instruction &I,
+                    std::optional<bool> IsRead = std::nullopt) {
+  if (const auto *LI = dyn_cast<LoadInst>(&I))
+    return MemoryAccessInfo{LI->getType(), 0, true};
+  if (const auto *SI = dyn_cast<StoreInst>(&I))
+    return MemoryAccessInfo{SI->getValueOperand()->getType(), 1, false};
+  if (const auto *MI = dyn_cast<AnyMemIntrinsic>(&I)) {
+    if (!IsRead || (*IsRead && !isa<AnyMemTransferInst>(MI)))
+      return std::nullopt;
+    return MemoryAccessInfo{nullptr, *IsRead ? 1u : 0u, *IsRead};
+  }
+  const auto *II = dyn_cast<IntrinsicInst>(&I);
+  if (!II)
+    return std::nullopt;
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::experimental_vector_histogram_add:
+  case Intrinsic::experimental_vector_histogram_uadd_sat:
+  case Intrinsic::experimental_vector_histogram_umin:
+  case Intrinsic::experimental_vector_histogram_umax:
+    if (IsRead)
+      return MemoryAccessInfo{II->getArgOperand(1)->getType(), 0, *IsRead};
+    return std::nullopt;
+  case Intrinsic::masked_load:
+  case Intrinsic::masked_gather:
+  case Intrinsic::masked_expandload:
+  case Intrinsic::vp_load:
+    return MemoryAccessInfo{II->getType(), 0, true};
+  case Intrinsic::masked_store:
+  case Intrinsic::masked_scatter:
+  case Intrinsic::masked_compressstore:
+    return MemoryAccessInfo{II->getArgOperand(0)->getType(), 1, false};
+  default:
+    return std::nullopt;
+  }
+}
+
+/// Get the pointer operand of `I` at operand index `Index`.
+static const Value *getMemoryPointer(const Instruction &I, unsigned Index) {
+  if (const auto *CB = dyn_cast<CallBase>(&I))
+    return CB->getArgOperand(Index);
+  return I.getOperand(Index);
+}
+
+// invariant.group ignores bitcasts and zero-offset GEPs, not address-space
+// casts.
+static const Value *getInvariantGroupPointer(const Value *V) {
+  while (true) {
+    if (const auto *Cast = dyn_cast<BitCastOperator>(V))
+      V = Cast->getOperand(0);
+    else if (const auto *GEP = dyn_cast<GEPOperator>(V);
+             GEP && GEP->hasAllZeroIndices())
+      V = GEP->getPointerOperand();
+    else
+      return V;
+  }
+}
+
+static void copyNonnullMetadataForAccess(const LoadInst &OldLI, MDNode *N,
+                                         LoadInst &NewLI) {
+  auto *OldTy = cast<PointerType>(OldLI.getType());
+  auto *NewTy = NewLI.getType();
+
+  // Preserve the pointer fact when the pointer type is unchanged.
+  if (NewTy == OldTy) {
+    NewLI.setMetadata(LLVMContext::MD_nonnull, N);
+    return;
+  }
+
+  // An integer range must describe the complete pointer representation.
+  if (!NewTy->isIntegerTy() ||
+      NewTy->getIntegerBitWidth() !=
+          OldLI.getDataLayout().getPointerTypeSizeInBits(OldTy))
+    return;
+
+  MDBuilder MDB(NewLI.getContext());
+  auto *ITy = cast<IntegerType>(NewTy);
+  auto *NullInt =
+      ConstantExpr::getPtrToInt(ConstantPointerNull::get(OldTy), ITy);
+  auto *NonNullInt = ConstantExpr::getAdd(NullInt, ConstantInt::get(ITy, 1));
+  NewLI.setMetadata(LLVMContext::MD_range,
+                    MDB.createRange(NonNullInt, NullInt));
+}
+
+void llvm::copyMetadataForMemoryAccess(Instruction &Dest,
+                                       const Instruction &Source,
+                                       std::optional<int64_t> DestByteOffset) {
+  auto DestInfo = getMemoryAccessInfo(Dest);
+  // Untyped memory intrinsics are supported only as sources.
+  assert(DestInfo && DestInfo->Ty &&
+         "expected a typed destination memory access");
+  auto SourceInfo = getMemoryAccessInfo(Source, DestInfo->IsRead);
+  assert(SourceInfo && SourceInfo->IsRead == DestInfo->IsRead &&
+         "expected corresponding memory reads or writes");
+  const DataLayout &DL = Source.getDataLayout();
+  TypeSize OldSize =
+      SourceInfo->Ty
+          ? DL.getTypeStoreSize(SourceInfo->Ty)
+          : TypeSize::getFixed(
+                cast<ConstantInt>(cast<AnyMemIntrinsic>(Source).getLength())
+                    ->getZExtValue());
+  TypeSize NewSize = DL.getTypeStoreSize(DestInfo->Ty);
+  // Is the destination access contained in the source access? If the size
+  // check succeeds but the offset is unknown, containment is a caller
+  // guarantee.
+  bool IsSubset = TypeSize::isKnownLE(NewSize, OldSize);
+  if (DestByteOffset)
+    IsSubset = IsSubset && *DestByteOffset >= 0 &&
+               uint64_t(*DestByteOffset) <=
+                   OldSize.getKnownMinValue() - NewSize.getKnownMinValue();
+  bool IsWholeAccess = IsSubset && DestByteOffset == 0 && OldSize == NewSize;
+  Type *SourceValueTy = SourceInfo->Ty;
+  // Allow unpacking a single-element aggregates.
+  if (IsWholeAccess) {
+    if (auto *ST = dyn_cast_or_null<StructType>(SourceValueTy);
+        ST && ST->getNumElements() == 1 &&
+        ST->getElementType(0) == DestInfo->Ty)
+      SourceValueTy = DestInfo->Ty;
+    else if (auto *AT = dyn_cast_or_null<ArrayType>(SourceValueTy);
+             AT && AT->getNumElements() == 1 &&
+             AT->getElementType() == DestInfo->Ty)
+      SourceValueTy = DestInfo->Ty;
+  }
+  bool SameElementType = SourceValueTy && SourceValueTy->getScalarType() ==
+                                              DestInfo->Ty->getScalarType();
+  bool SamePointer = getInvariantGroupPointer(getMemoryPointer(
+                         Source, SourceInfo->PointerOperand)) ==
+                     getInvariantGroupPointer(
+                         getMemoryPointer(Dest, DestInfo->PointerOperand));
+
+  // Now loop over all `Source` metadata, propagating what we can.
+  SmallVector<std::pair<unsigned, MDNode *>, 8> MDs;
+  Source.getAllMetadata(MDs);
+  for (auto [Kind, MD] : MDs) {
+    bool Keep = false;
+    switch (Kind) {
+    case LLVMContext::MD_dbg:
+    case LLVMContext::MD_nontemporal:
+    case LLVMContext::MD_annotation:
+    case LLVMContext::MD_nosanitize:
+    case LLVMContext::MD_pcsections:
+      Keep = true;
+      break;
+    case LLVMContext::MD_mmra:
+      Keep = canInstructionHaveMMRAs(Dest);
+      break;
+    case LLVMContext::MD_access_group:
+    case LLVMContext::MD_mem_parallel_loop_access:
+      Keep = IsSubset;
+      break;
+    case LLVMContext::MD_invariant_load:
+      Keep = IsSubset && DestInfo->IsRead;
+      break;
+    case LLVMContext::MD_invariant_group:
+      // TODO: Requiring `SamePointer` is too conservative.
+      Keep = IsSubset && SamePointer && !isa<CallBase>(Dest);
+      break;
+    case LLVMContext::MD_noundef:
+      // The value loaded remains defined if its element type is unchanged,
+      // or every source byte consists of defined value bits (i.e. the source
+      // doesn't have padding).
+      Keep = IsSubset && isa<LoadInst>(Dest) &&
+             (SameElementType ||
+              (SourceValueTy && !SourceValueTy->isAggregateType() &&
+               DL.typeSizeEqualsStoreSize(SourceValueTy)));
+      break;
+    case LLVMContext::MD_fpmath:
+    case LLVMContext::MD_nofpclass:
+      Keep = IsSubset && SameElementType &&
+             (Kind == LLVMContext::MD_fpmath
+                  ? FPMathOperator::isSupportedFloatingPointType(Dest.getType())
+                  : isa<LoadInst>(Dest));
+      break;
+    case LLVMContext::MD_nonnull:
+      if (IsWholeAccess && isa<LoadInst>(Source) && isa<LoadInst>(Dest))
+        copyNonnullMetadataForAccess(cast<LoadInst>(Source), MD,
+                                     cast<LoadInst>(Dest));
+      break;
+    case LLVMContext::MD_range:
+      // Ranges apply per integer element. Other type changes require the
+      // helper's explicit conversion from an integer range to nonnull.
+      if (IsSubset && SameElementType && DestInfo->Ty->isIntOrIntVectorTy())
+        Keep = true;
+      else if (IsWholeAccess && isa<LoadInst>(Source) && isa<LoadInst>(Dest))
+        copyRangeMetadata(DL, cast<LoadInst>(Source), MD, cast<LoadInst>(Dest));
+      break;
+    case LLVMContext::MD_align:
+    case LLVMContext::MD_dereferenceable:
+    case LLVMContext::MD_dereferenceable_or_null:
+      // These describe the loaded pointer value.
+      Keep = IsWholeAccess && SourceInfo->Ty == DestInfo->Ty &&
+             DestInfo->Ty->isPointerTy() && isa<LoadInst>(Dest);
+      break;
+    case LLVMContext::MD_DIAssignID: {
+      const auto *OldSI = dyn_cast<StoreInst>(&Source);
+      const auto *NewSI = dyn_cast<StoreInst>(&Dest);
+      // A new address requires updating the linked dbg.assign records.
+      Keep = IsWholeAccess && OldSI && NewSI &&
+             OldSI->getPointerOperand() == NewSI->getPointerOperand();
+      break;
+    }
+    case LLVMContext::MD_prof:
+      Keep =
+          IsWholeAccess && ((isa<LoadInst>(Source) && isa<LoadInst>(Dest)) ||
+                            (isa<StoreInst>(Source) && isa<StoreInst>(Dest)));
+      break;
+    case LLVMContext::MD_captures:
+      Keep =
+          IsWholeAccess && isa<StoreInst>(Dest) && DestInfo->Ty->isPointerTy();
+      break;
+    default:
+      break;
+    }
+    if (Keep)
+      Dest.setMetadata(Kind, MD);
+  }
+
+  // Adjust aliasing metadata.
+  AAMDNodes AA = Source.getAAMetadata();
+  if (!IsSubset) {
+    AA.TBAA = nullptr;
+    AA.TBAAStruct = nullptr;
+    AA.Scope = nullptr;
+    AA.NoAlias = nullptr;
+  } else if (!IsWholeAccess) {
+    if (DestByteOffset)
+      AA = AA.adjustForAccess(*DestByteOffset, DestInfo->Ty, DL);
+    else {
+      // A common tag for the whole source also describes any selected part.
+      if (!AA.TBAA && SourceInfo->Ty)
+        AA.TBAA = AA.adjustForAccess(0, SourceInfo->Ty, DL).TBAA;
+      AA.TBAAStruct = nullptr;
+    }
+  } else {
+    // Prefer !tbaa over !tbaa.struct.
+    AAMDNodes Adjusted = AA.adjustForAccess(0, DestInfo->Ty, DL);
+    if (!AA.TBAA && Adjusted.TBAA)
+      AA = Adjusted;
+  }
+  Dest.setAAMetadata(AA);
+  setMemCacheHint(Dest, DestInfo->PointerOperand,
+                  getMemCacheHint(Source, SourceInfo->PointerOperand));
+}
+
 /// Add all access groups in @p AccGroups to @p List.
 template <typename ListT>
 static void addToAccessGroupList(ListT &List, MDNode *AccGroups) {
