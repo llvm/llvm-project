@@ -1,23 +1,56 @@
 // REQUIRES: amdgpu-registered-target
 
-// Device versions of what MSVC's <complex> calls, with an MSVC host (_MSC_VER
-// and _MSVC_STL_VERSION), for HIP and hipRTC.
+// What MSVC's <complex> and <cmath> call, from __host__ __device__ functions
+// like those of <complex>, with an MSVC host (_MSC_VER and _MSVC_STL_VERSION):
+// device code, for HIP and hipRTC, gets the __device__ versions, host code
+// still the host functions of the MSVC STL and runtime.
 
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-pc-windows-msvc \
-// RUN:   -fms-extensions -fms-compatibility -fms-compatibility-version=19.33 \
+// RUN:   -fms-extensions -fms-compatibility -fms-compatibility-version=19.44 \
 // RUN:   -D_MSVC_STL_VERSION=144 -D_HAS_CXX20=0 -std=c++17 \
-// RUN:   -fcuda-is-device -O1 -emit-llvm %s -o - -verify | FileCheck %s
+// RUN:   -fcuda-is-device -O1 -emit-llvm %s -o - -verify \
+// RUN:   | FileCheck %s --check-prefix=DEV
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-pc-windows-msvc \
-// RUN:   -fms-extensions -fms-compatibility -fms-compatibility-version=19.33 \
+// RUN:   -fms-extensions -fms-compatibility -fms-compatibility-version=19.44 \
 // RUN:   -D_MSVC_STL_VERSION=144 -D_HAS_CXX20=0 -std=c++17 \
+// RUN:   -fcuda-is-device -O1 -emit-llvm %s -o - -verify -D__HIPCC_RTC__ \
+// RUN:   | FileCheck %s --check-prefix=DEV
+// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
+// RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
+// RUN:   -internal-isystem %S/Inputs/include \
+// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-pc-windows-msvc \
+// RUN:   -fms-extensions -fms-compatibility -fms-compatibility-version=19.44 \
+// RUN:   -D_MSVC_STL_VERSION=144 -D_HAS_CXX20=1 -std=c++20 \
 // RUN:   -fcuda-is-device -O1 -emit-llvm %s -o - -verify \
-// RUN:   -D__HIPCC_RTC__ | FileCheck %s
+// RUN:   | FileCheck %s --check-prefix=DEV
+// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
+// RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
+// RUN:   -internal-isystem %S/Inputs/include \
+// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-pc-windows-msvc \
+// RUN:   -fms-extensions -fms-compatibility -fms-compatibility-version=19.44 \
+// RUN:   -D_MSVC_STL_VERSION=144 -D_HAS_CXX20=1 -std=c++20 \
+// RUN:   -fcuda-is-device -O1 -emit-llvm %s -o - -verify -D__HIPCC_RTC__ \
+// RUN:   | FileCheck %s --check-prefix=DEV
+// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
+// RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
+// RUN:   -internal-isystem %S/Inputs/include \
+// RUN:   -triple x86_64-pc-windows-msvc -aux-triple amdgcn-amd-amdhsa \
+// RUN:   -fms-extensions -fms-compatibility -fms-compatibility-version=19.44 \
+// RUN:   -D_MSVC_STL_VERSION=144 -D_HAS_CXX20=0 -std=c++17 \
+// RUN:   -emit-llvm %s -o - -verify | FileCheck %s --check-prefix=HOST
+// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
+// RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
+// RUN:   -internal-isystem %S/Inputs/include \
+// RUN:   -triple x86_64-pc-windows-msvc -aux-triple amdgcn-amd-amdhsa \
+// RUN:   -fms-extensions -fms-compatibility -fms-compatibility-version=19.44 \
+// RUN:   -D_MSVC_STL_VERSION=144 -D_HAS_CXX20=1 -std=c++20 \
+// RUN:   -emit-llvm %s -o - -verify | FileCheck %s --check-prefix=HOST
 
 // expected-no-diagnostics
 
@@ -26,54 +59,85 @@
 // __device__.
 #include <complex>
 
-// CHECK-LABEL: define{{.*}} i1 @test_signbit_ld(
-// CHECK-NOT: call
-// CHECK: ret i1
-extern "C" __device__ bool test_signbit_ld(long double x) {
-  return signbit(x);
+#pragma clang force_cuda_host_device begin
+
+// DEV-LABEL: define{{.*}} i1 @test_signbit(
+// DEV-NOT: call{{.*}} @{{[^l]}}
+// DEV: ret i1
+// HOST-LABEL: define{{.*}} i1 @test_signbit(
+// HOST: call{{.*}} @"?signbit@@YA_NO@Z"(
+extern "C" bool test_signbit(long double x) { return std::signbit(x); }
+
+// DEV-LABEL: define{{.*}} i1 @test_isfinite(
+// DEV-NOT: call{{.*}} @{{[^l]}}
+// DEV: ret i1
+// HOST-LABEL: define{{.*}} i1 @test_isfinite(
+// HOST: call{{.*}} @"?isfinite@@YA_NO@Z"(
+extern "C" bool test_isfinite(long double x) { return std::isfinite(x); }
+
+// DEV-LABEL: define{{.*}} i1 @test_isinf(
+// DEV-NOT: call{{.*}} @{{[^l]}}
+// DEV: ret i1
+// HOST-LABEL: define{{.*}} i1 @test_isinf(
+// HOST: call{{.*}} @"?isinf@@YA_NO@Z"(
+extern "C" bool test_isinf(long double x) { return std::isinf(x); }
+
+// DEV-LABEL: define{{.*}} i1 @test_isnan(
+// DEV-NOT: call{{.*}} @{{[^l]}}
+// DEV: ret i1
+// HOST-LABEL: define{{.*}} i1 @test_isnan(
+// HOST: call{{.*}} @"?isnan@@YA_NO@Z"(
+extern "C" bool test_isnan(long double x) { return std::isnan(x); }
+
+// DEV-LABEL: define{{.*}} double @test_fma(
+// DEV: call{{.*}} double @llvm.fma.f64(
+// HOST-LABEL: define{{.*}} double @test_fma(
+// HOST: call{{.*}} @"?fma@@YAOOOO@Z"(
+extern "C" long double test_fma(long double x, long double y, long double z) {
+  return std::fma(x, y, z);
 }
 
-// CHECK-LABEL: define{{.*}} double @test_fma_ld(
-// CHECK: call{{.*}} double @llvm.fma.f64(
-extern "C" __device__ long double test_fma_ld(long double x, long double y,
-                                              long double z) {
-  return fma(x, y, z);
-}
-
-// CHECK-LABEL: define{{.*}} i16 @test_exp(
-// CHECK: call{{.*}} @llvm.exp.f64(
-// CHECK: call{{.*}} @llvm.ldexp.f64
-extern "C" __device__ short test_exp(double *x, double y, short e) {
+// DEV-LABEL: define{{.*}} i16 @test_exp(
+// DEV: call{{.*}} @llvm.exp.f64(
+// DEV: call{{.*}} @llvm.ldexp.f64
+// HOST-LABEL: define{{.*}} i16 @test_exp(
+// HOST: call{{.*}} i16 @_Exp(
+extern "C" short test_exp(double *x, double y, short e) {
   return _Exp(x, y, e);
 }
 
-// CHECK-LABEL: define{{.*}} i16 @test_fexp(
-// CHECK: call{{.*}} @llvm.exp.f32(
-// CHECK: call{{.*}} @llvm.ldexp.f32
-extern "C" __device__ short test_fexp(float *x, float y, short e) {
+// DEV-LABEL: define{{.*}} i16 @test_fexp(
+// DEV: call{{.*}} @llvm.exp.f32(
+// DEV: call{{.*}} @llvm.ldexp.f32
+// HOST-LABEL: define{{.*}} i16 @test_fexp(
+// HOST: call{{.*}} i16 @_FExp(
+extern "C" short test_fexp(float *x, float y, short e) {
   return _FExp(x, y, e);
 }
 
-// CHECK-LABEL: define{{.*}} double @test_cosh(
-// CHECK: call{{.*}} @__ocml_cosh_f64(
-extern "C" __device__ double test_cosh(double x, double y) {
-  return _Cosh(x, y);
-}
+// DEV-LABEL: define{{.*}} double @test_cosh(
+// DEV: call{{.*}} @__ocml_cosh_f64(
+// HOST-LABEL: define{{.*}} double @test_cosh(
+// HOST: call{{.*}} double @_Cosh(
+extern "C" double test_cosh(double x, double y) { return _Cosh(x, y); }
 
-// CHECK-LABEL: define{{.*}} float @test_fsinh(
-// CHECK: call{{.*}} @__ocml_sinh_f32(
-extern "C" __device__ float test_fsinh(float x, float y) {
-  return _FSinh(x, y);
-}
+// DEV-LABEL: define{{.*}} float @test_fsinh(
+// DEV: call{{.*}} @__ocml_sinh_f32(
+// HOST-LABEL: define{{.*}} float @test_fsinh(
+// HOST: call{{.*}} float @_FSinh(
+extern "C" float test_fsinh(float x, float y) { return _FSinh(x, y); }
 
-// CHECK-LABEL: define{{.*}} void @test_swap(
-// CHECK-NOT: call
-// CHECK: ret void
-extern "C" __device__ void test_swap(double &x, double &y) {
-  std::swap(x, y);
-}
+// MSVC's std::swap is constexpr only from C++20 on.
+// DEV-LABEL: define{{.*}} void @test_swap(
+// DEV-NOT: call{{.*}} @{{[^l]}}
+// DEV: ret void
+// HOST-LABEL: define{{.*}} void @test_swap(
+// HOST: call void @"??$swap@N@std@@YAXAEAN0@Z"(
+extern "C" void test_swap(double &x, double &y) { std::swap(x, y); }
 
-// CHECK-NOT: @_Exp(
-// CHECK-NOT: @_FExp(
-// CHECK-NOT: @_Cosh(
-// CHECK-NOT: @_FSinh(
+#pragma clang force_cuda_host_device end
+
+// DEV-NOT: @_Exp(
+// DEV-NOT: @_FExp(
+// DEV-NOT: @_Cosh(
+// DEV-NOT: @_FSinh(
