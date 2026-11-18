@@ -30,14 +30,11 @@ define <16 x i8> @do_not_crash(ptr, ptr, ptr, i32, i64, i8) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movb %al, (%ecx)
-; X86-NEXT:    movd %eax, %xmm0
-; X86-NEXT:    psllq $56, %xmm0
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255]
-; X86-NEXT:    movdqa %xmm1, %xmm2
-; X86-NEXT:    pandn %xmm0, %xmm2
-; X86-NEXT:    por %xmm1, %xmm2
+; X86-NEXT:    movd %eax, %xmm2
+; X86-NEXT:    psllq $56, %xmm2
 ; X86-NEXT:    pcmpeqd %xmm3, %xmm3
 ; X86-NEXT:    psllw $5, %xmm2
+; X86-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
 ; X86-NEXT:    pxor %xmm0, %xmm0
 ; X86-NEXT:    pcmpgtb %xmm2, %xmm0
 ; X86-NEXT:    paddb %xmm2, %xmm2
