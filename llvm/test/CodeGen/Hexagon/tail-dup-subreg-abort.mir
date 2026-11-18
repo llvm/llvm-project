@@ -1,0 +1,63 @@
+# RUN: llc -mtriple=hexagon -run-pass=early-tailduplication %s -o - | FileCheck %s
+# REQUIRES: asserts
+#
+# Tail duplication can ignore subregister information on PHI nodes, and as
+# a result, generate COPY instructions between registers of different classes.
+# This could lead to HexagonInstrInfo::copyPhysReg aborting on an unhandled
+# src/dst combination.
+#
+# CHECK: bb.5:
+# CHECK: %7:intregs = PHI %3.isub_lo, %bb.1, %6.isub_lo, %bb.4, %4.isub_lo, %bb.2
+
+--- |
+  define void @foo() {
+  entry:
+    unreachable
+  }
+...
+---
+name: foo
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: doubleregs }
+  - { id: 1, class: intregs }
+  - { id: 2, class: predregs }
+  - { id: 3, class: doubleregs }
+  - { id: 4, class: doubleregs }
+  - { id: 5, class: doubleregs }
+  - { id: 6, class: doubleregs }
+  - { id: 7, class: intregs }
+body: |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    %0:doubleregs = IMPLICIT_DEF
+    %1:intregs = IMPLICIT_DEF
+    %2:predregs = C2_cmpgti %1, 0
+    J2_jumpt %2, %bb.2, implicit-def dead $pc
+    J2_jump %bb.1, implicit-def dead $pc
+
+  bb.1:
+    successors: %bb.3(0x80000000)
+    %3:doubleregs = IMPLICIT_DEF
+    J2_jump %bb.3, implicit-def dead $pc
+
+  bb.2:
+    successors: %bb.3(0x80000000)
+    %4:doubleregs = IMPLICIT_DEF
+    J2_jump %bb.3, implicit-def dead $pc
+
+  bb.3:
+    successors: %bb.5(0x80000000)
+    %5:doubleregs = PHI %3, %bb.1, %4, %bb.2
+    J2_jump %bb.5, implicit-def dead $pc
+
+  bb.4:
+    successors: %bb.5(0x80000000)
+    %6:doubleregs = IMPLICIT_DEF
+    J2_jump %bb.5, implicit-def dead $pc
+
+  bb.5:
+    %7:intregs = PHI %5.isub_lo, %bb.3, %6.isub_lo, %bb.4
+    $r0 = COPY %7
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+...
