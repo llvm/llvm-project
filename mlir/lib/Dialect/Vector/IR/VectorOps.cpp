@@ -1297,12 +1297,11 @@ static int64_t getResultIndex(AffineMap map, AffineExpr targetExpr) {
 // returns a pair: <lhsIdx, rhsIdx>, where:
 //  * {lhs|rhs}Idx is the index of `dim` in the (result of) indexing map for
 //    {lhs|rhs}.
-// If `oneOperand` is false, only the dims indexed on both lhs and rhs are
-// returned. Otherwise only the dims indexed on exactly one of them are
-// returned, and the index for the other operand is -1.
+// If `oneSidedDim` is true, only dims indexed on exactly one of the `contract`
+// operands are returned.
 static std::vector<std::pair<int64_t, int64_t>>
 getDimPairForIterTy(ContractionOp *contract, IteratorType targetIteratorType,
-                    bool oneOperand = false) {
+                    bool oneSidedDim = false) {
   SmallVector<AffineMap, 4> indexingMaps(contract->getIndexingMapsArray());
   ArrayAttr iteratorTypes = contract->getIteratorTypes();
   std::vector<std::pair<int64_t, int64_t>> dimMap;
@@ -1314,9 +1313,9 @@ getDimPairForIterTy(ContractionOp *contract, IteratorType targetIteratorType,
     auto targetExpr = getAffineDimExpr(it.index(), contract->getContext());
     int64_t lhsDim = getResultIndex(indexingMaps[0], targetExpr);
     int64_t rhsDim = getResultIndex(indexingMaps[1], targetExpr);
-    bool isOneOperand = (lhsDim >= 0) != (rhsDim >= 0);
-    bool isBothOperands = lhsDim >= 0 && rhsDim >= 0;
-    if (oneOperand ? isOneOperand : isBothOperands)
+    bool isOneSidedDim = (lhsDim >= 0) != (rhsDim >= 0);
+    bool isTwoSidedDim = lhsDim >= 0 && rhsDim >= 0;
+    if (oneSidedDim ? isOneSidedDim : isTwoSidedDim)
       dimMap.emplace_back(lhsDim, rhsDim);
   }
   return dimMap;
@@ -1332,7 +1331,7 @@ std::vector<std::pair<int64_t, int64_t>> ContractionOp::getBatchDimMap() {
 
 std::vector<std::pair<int64_t, int64_t>> ContractionOp::getFreeDimMap() {
   return getDimPairForIterTy(this, IteratorType::parallel,
-                             /*oneOperand=*/true);
+                             /*oneSidedDim=*/true);
 }
 
 void ContractionOp::getIterationBounds(
