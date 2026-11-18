@@ -1,0 +1,172 @@
+# RUN: llc -mtriple=x86_64-- -run-pass=x86-compress-evex -mcpu=znver4 -o - %s | FileCheck %s --check-prefixes=CHECK,ZNVER
+# RUN: llc -mtriple=x86_64-- -run-pass=x86-compress-evex -mcpu=znver5 -o - %s | FileCheck %s --check-prefixes=CHECK,ZNVER
+# RUN: llc -mtriple=x86_64-- -run-pass=x86-compress-evex -mcpu=skx -o - %s | FileCheck %s --check-prefixes=CHECK,SKX
+
+# VCMP into a mask register feeding a masked move or blend becomes a VEX
+# VCMP + VBLENDV where the scheduler model says that is no slower (Zen 4/5),
+# but not on Intel where VBLENDV is slower than the masked move.
+
+---
+name:            vcmp_blendv_positive
+tracksRegLiveness: false
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: vcmp_blendv_positive
+    ; ZNVER: $xmm4 = nofpexcept VCMPPSrri $xmm0, $xmm1, 0, implicit $mxcsr
+    ; ZNVER-NEXT: $xmm4 = VBLENDVPSrrr $xmm2, $xmm3, killed $xmm4
+    ; SKX: $k1 = nofpexcept VCMPPSZ128rri $xmm0, $xmm1, 0, implicit $mxcsr
+    ; SKX-NEXT: $xmm4 = VBLENDMPSZ128rrk $k1, $xmm2, $xmm3
+    $k1 = nofpexcept VCMPPSZ128rri $xmm0, $xmm1, 0, implicit $mxcsr
+    $xmm4 = VBLENDMPSZ128rrk $k1, $xmm2, $xmm3
+
+    ; ZNVER: $ymm4 = nofpexcept VCMPPSYrri $ymm0, $ymm1, 1, implicit $mxcsr
+    ; ZNVER-NEXT: $ymm4 = VBLENDVPSYrrr $ymm2, $ymm3, killed $ymm4
+    ; SKX: $k1 = nofpexcept VCMPPSZ256rri $ymm0, $ymm1, 1, implicit $mxcsr
+    ; SKX-NEXT: $ymm4 = VPBLENDMDZ256rrk $k1, $ymm2, $ymm3
+    $k1 = nofpexcept VCMPPSZ256rri $ymm0, $ymm1, 1, implicit $mxcsr
+    $ymm4 = VPBLENDMDZ256rrk $k1, $ymm2, $ymm3
+
+    ; ZNVER: $xmm4 = nofpexcept VCMPPDrri $xmm0, $xmm1, 2, implicit $mxcsr
+    ; ZNVER-NEXT: $xmm4 = VBLENDVPDrrr $xmm2, $xmm3, killed $xmm4
+    ; SKX: $k1 = nofpexcept VCMPPDZ128rri $xmm0, $xmm1, 2, implicit $mxcsr
+    ; SKX-NEXT: $xmm4 = VBLENDMPDZ128rrk $k1, $xmm2, $xmm3
+    $k1 = nofpexcept VCMPPDZ128rri $xmm0, $xmm1, 2, implicit $mxcsr
+    $xmm4 = VBLENDMPDZ128rrk $k1, $xmm2, $xmm3
+
+    ; ZNVER: $ymm4 = nofpexcept VCMPPDYrri $ymm0, $ymm1, 4, implicit $mxcsr
+    ; ZNVER-NEXT: $ymm4 = VBLENDVPDYrrr $ymm2, $ymm3, killed $ymm4
+    ; SKX: $k1 = nofpexcept VCMPPDZ256rri $ymm0, $ymm1, 4, implicit $mxcsr
+    ; SKX-NEXT: $ymm4 = VPBLENDMQZ256rrk $k1, $ymm2, $ymm3
+    $k1 = nofpexcept VCMPPDZ256rri $ymm0, $ymm1, 4, implicit $mxcsr
+    $ymm4 = VPBLENDMQZ256rrk $k1, $ymm2, $ymm3
+
+    ; The destination is also a source, so reuse the killed compare source.
+    ; ZNVER: $xmm0 = nofpexcept VCMPPSrri killed $xmm0, $xmm1, 0, implicit $mxcsr
+    ; ZNVER-NEXT: $xmm2 = VBLENDVPSrrr $xmm2, $xmm3, killed $xmm0
+    ; SKX: $k1 = nofpexcept VCMPPSZ128rri killed $xmm0, $xmm1, 0, implicit $mxcsr
+    ; SKX-NEXT: $xmm2 = VBLENDMPSZ128rrk $k1, $xmm2, $xmm3
+    $k1 = nofpexcept VCMPPSZ128rri killed $xmm0, $xmm1, 0, implicit $mxcsr
+    $xmm2 = VBLENDMPSZ128rrk $k1, $xmm2, $xmm3
+
+    ; ZNVER: $ymm1 = nofpexcept VCMPPDYrri $ymm0, killed $ymm1, 1, implicit $mxcsr
+    ; ZNVER-NEXT: $ymm3 = VBLENDVPDYrrr $ymm2, $ymm3, killed $ymm1
+    ; SKX: $k1 = nofpexcept VCMPPDZ256rri $ymm0, killed $ymm1, 1, implicit $mxcsr
+    ; SKX-NEXT: $ymm3 = VBLENDMPDZ256rrk $k1, $ymm2, $ymm3
+    $k1 = nofpexcept VCMPPDZ256rri $ymm0, killed $ymm1, 1, implicit $mxcsr
+    $ymm3 = VBLENDMPDZ256rrk $k1, $ymm2, $ymm3
+
+    ; Scalar selects leave the upper elements of the masked move undefined.
+    ; ZNVER: $xmm0 = nofpexcept VCMPSSrri killed $xmm0, $xmm1, 0, implicit $mxcsr
+    ; ZNVER-NEXT: $xmm3 = VBLENDVPSrrr $xmm3, $xmm2, killed $xmm0
+    ; SKX: $k1 = nofpexcept VCMPSSZrri killed $xmm0, $xmm1, 0, implicit $mxcsr
+    ; SKX-NEXT: $xmm3 = VMOVSSZrrk $xmm3{{.*}}, $k1, undef $xmm3, $xmm2
+    $k1 = nofpexcept VCMPSSZrri killed $xmm0, $xmm1, 0, implicit $mxcsr
+    $xmm3 = VMOVSSZrrk $xmm3, $k1, undef $xmm3, $xmm2
+
+    ; ZNVER: $xmm1 = nofpexcept VCMPSDrri $xmm0, killed $xmm1, 1, implicit $mxcsr
+    ; ZNVER-NEXT: $xmm3 = VBLENDVPDrrr $xmm3, $xmm2, killed $xmm1
+    ; SKX: $k1 = nofpexcept VCMPSDZrri $xmm0, killed $xmm1, 1, implicit $mxcsr
+    ; SKX-NEXT: $xmm3 = VMOVSDZrrk $xmm3{{.*}}, $k1, undef $xmm3, $xmm2
+    $k1 = nofpexcept VCMPSDZrri $xmm0, killed $xmm1, 1, implicit $mxcsr
+    $xmm3 = VMOVSDZrrk $xmm3, $k1, undef $xmm3, $xmm2
+
+    RET64
+...
+
+---
+name:            vcmp_scalar_upper_elements_used
+tracksRegLiveness: false
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: vcmp_scalar_upper_elements_used
+    ; CHECK: $k1 = nofpexcept VCMPSSZrri killed $xmm0, $xmm1, 0, implicit $mxcsr
+    ; CHECK-NEXT: $xmm3 = VMOVSSZrrk $xmm3{{.*}}, $k1, $xmm4, $xmm2
+    ; CHECK-NOT: VBLENDVPSrrr
+    $k1 = nofpexcept VCMPSSZrri killed $xmm0, $xmm1, 0, implicit $mxcsr
+    $xmm3 = VMOVSSZrrk $xmm3, $k1, $xmm4, $xmm2
+    RET64
+...
+
+---
+name:            vcmp_no_free_register
+tracksRegLiveness: false
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: vcmp_no_free_register
+    ; CHECK: $k1 = nofpexcept VCMPPSZ128rri $xmm0, $xmm1, 0, implicit $mxcsr
+    ; CHECK-NEXT: $xmm2 = VBLENDMPSZ128rrk $k1, $xmm2, $xmm3
+    ; CHECK: $k1 = nofpexcept VCMPSSZrri $xmm0, $xmm1, 0, implicit $mxcsr
+    ; CHECK-NEXT: $xmm3 = VMOVSSZrrk $xmm3{{.*}}, $k1, undef $xmm3, $xmm2
+    ; CHECK-NOT: VBLENDVPSrrr
+    $k1 = nofpexcept VCMPPSZ128rri $xmm0, $xmm1, 0, implicit $mxcsr
+    $xmm2 = VBLENDMPSZ128rrk $k1, $xmm2, $xmm3
+    $k1 = nofpexcept VCMPSSZrri $xmm0, $xmm1, 0, implicit $mxcsr
+    $xmm3 = VMOVSSZrrk $xmm3, $k1, undef $xmm3, $xmm2
+    RET64
+...
+
+---
+name:            vcmp_free_register_used_before_blend
+tracksRegLiveness: false
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: vcmp_free_register_used_before_blend
+    ; CHECK: $k1 = nofpexcept VCMPPSZ128rri $xmm0, $xmm1, 0, implicit $mxcsr
+    ; CHECK-NEXT: $xmm5 = VMOVAPSrr $xmm4
+    ; CHECK-NEXT: $xmm4 = VBLENDMPSZ128rrk $k1, $xmm2, $xmm3
+    ; CHECK-NOT: VBLENDVPSrrr
+    $k1 = nofpexcept VCMPPSZ128rri $xmm0, $xmm1, 0, implicit $mxcsr
+    $xmm5 = VMOVAPSrr $xmm4
+    $xmm4 = VBLENDMPSZ128rrk $k1, $xmm2, $xmm3
+    RET64
+...
+
+---
+name:            vcmp_killed_source_redefined_before_blend
+tracksRegLiveness: false
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: vcmp_killed_source_redefined_before_blend
+    ; CHECK: $k1 = nofpexcept VCMPPSZ128rri killed $xmm0, $xmm1, 0, implicit $mxcsr
+    ; CHECK-NEXT: $xmm0 = VMOVAPSrr $xmm4
+    ; CHECK-NEXT: $xmm2 = VBLENDMPSZ128rrk $k1, $xmm2, $xmm3
+    ; CHECK-NOT: VBLENDVPSrrr
+    $k1 = nofpexcept VCMPPSZ128rri killed $xmm0, $xmm1, 0, implicit $mxcsr
+    $xmm0 = VMOVAPSrr $xmm4
+    $xmm2 = VBLENDMPSZ128rrk $k1, $xmm2, $xmm3
+    RET64
+...
+
+---
+name:            vcmp_mask_has_multiple_uses
+tracksRegLiveness: false
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: vcmp_mask_has_multiple_uses
+    ; CHECK: $k1 = nofpexcept VCMPPSZ128rri $xmm0, $xmm1, 0, implicit $mxcsr
+    ; CHECK-NEXT: $xmm4 = VBLENDMPSZ128rrk $k1, $xmm2, $xmm3
+    ; CHECK-NEXT: $xmm5 = VBLENDMPSZ128rrk $k1, $xmm2, $xmm3
+    ; CHECK-NOT: VBLENDVPSrrr
+    $k1 = nofpexcept VCMPPSZ128rri $xmm0, $xmm1, 0, implicit $mxcsr
+    $xmm4 = VBLENDMPSZ128rrk $k1, $xmm2, $xmm3
+    $xmm5 = VBLENDMPSZ128rrk $k1, $xmm2, $xmm3
+    RET64
+...
+
+---
+name:            vcmp_uses_extended_register
+tracksRegLiveness: false
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: vcmp_uses_extended_register
+    ; CHECK: $k1 = nofpexcept VCMPPSZ128rri $xmm0, $xmm1, 0, implicit $mxcsr
+    ; CHECK-NEXT: $xmm16 = VBLENDMPSZ128rrk $k1, $xmm2, $xmm3
+    ; CHECK: $k1 = nofpexcept VCMPPSZ128rri $xmm0, $xmm17, 0, implicit $mxcsr
+    ; CHECK-NEXT: $xmm4 = VBLENDMPSZ128rrk $k1, $xmm2, $xmm3
+    ; CHECK-NOT: VBLENDVPSrrr
+    $k1 = nofpexcept VCMPPSZ128rri $xmm0, $xmm1, 0, implicit $mxcsr
+    $xmm16 = VBLENDMPSZ128rrk $k1, $xmm2, $xmm3
+    $k1 = nofpexcept VCMPPSZ128rri $xmm0, $xmm17, 0, implicit $mxcsr
+    $xmm4 = VBLENDMPSZ128rrk $k1, $xmm2, $xmm3
+    RET64
+...
