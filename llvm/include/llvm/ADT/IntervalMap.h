@@ -934,7 +934,7 @@ public:
 template <typename KeyT, typename ValT,
           unsigned N = IntervalMapImpl::NodeSizer<KeyT, ValT>::LeafSize,
           typename Traits = IntervalMapInfo<KeyT>>
-class IntervalMap {
+class LLVM_ATTRIBUTE_WARN_UNUSED IntervalMap {
   using Sizer = IntervalMapImpl::NodeSizer<KeyT, ValT>;
   using Leaf = IntervalMapImpl::LeafNode<KeyT, ValT, Sizer::LeafSize, Traits>;
   using Branch =

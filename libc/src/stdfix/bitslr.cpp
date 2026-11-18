@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "bitslr.h"
+#include "src/stdfix/bitslr.h"
 #include "include/llvm-libc-macros/stdfix-macros.h" // long fract
 #include "include/llvm-libc-types/int_lr_t.h"       // int_lr_t
 #include "src/__support/common.h"                   // LLVM_LIBC_FUNCTION

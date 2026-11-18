@@ -45,8 +45,10 @@ void StallInfo::cycleEnd() {
 
 InOrderIssueStage::InOrderIssueStage(const MCSubtargetInfo &STI,
                                      RegisterFile &PRF, CustomBehaviour &CB,
-                                     LSUnitBase &LSU)
-    : STI(STI), PRF(PRF), RM(STI.getSchedModel()), CB(CB), LSU(LSU),
+                                     LSUnitBase &LSU,
+                                     float ReservationStationScaleFactor)
+    : STI(STI), PRF(PRF),
+      RM(STI.getSchedModel(), ReservationStationScaleFactor), CB(CB), LSU(LSU),
       NumIssued(), CarryOver(), Bandwidth(), LastWriteBackCycle() {}
 
 unsigned InOrderIssueStage::getIssueWidth() const {

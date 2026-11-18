@@ -2403,6 +2403,9 @@ following keys and values:
     the `description` key/value pair to describe the
     exceptional event the user should see as the stop
     reason.
+  * `dyld` - the dynamic loader has library changes for the client to process.
+    LLDB updates its loaded modules and automatically continues unless
+    `target.process.stop-on-sharedlibrary-events` is true.
   * `description` -
     An ASCII hex string that contains a more descriptive
     reason that the thread stopped. This is only needed
@@ -2705,6 +2708,8 @@ Request packet has the fields:
    3. binary-escaped-data to be written
 
 Response is `F`, followed by the number of bytes written (base 16).
+
+lldb-server ignores the offset for a file that cannot seek, such as a pipe.
 
 ### vFile:size
 

@@ -24,6 +24,7 @@ using CandidateInfo = ValueProfileCollector::CandidateInfo;
 
 ///--------------------------- MemIntrinsicPlugin ------------------------------
 class MemIntrinsicPlugin : public InstVisitor<MemIntrinsicPlugin> {
+  const InstrumentationOptions &Opts;
   Function &F;
   TargetLibraryInfo &TLI;
   std::vector<CandidateInfo> *Candidates;
@@ -32,7 +33,8 @@ public:
   static constexpr InstrProfValueKind Kind = IPVK_MemOPSize;
 
   MemIntrinsicPlugin(Function &Fn, TargetLibraryInfo &TLI)
-      : F(Fn), TLI(TLI), Candidates(nullptr) {}
+      : Opts(Fn.getContext().getLibraryOptions().get<InstrumentationOptions>()),
+        F(Fn), TLI(TLI), Candidates(nullptr) {}
 
   void run(std::vector<CandidateInfo> &Cs) {
     Candidates = &Cs;
@@ -50,7 +52,7 @@ public:
     Candidates->emplace_back(CandidateInfo{Length, InsertPt, AnnotatedInst});
   }
   void visitCallInst(CallInst &CI) {
-    if (!InstrumentationOptions::Global.pgo_memop_optimize_memcmp_bcmp)
+    if (!Opts.pgo_memop_optimize_memcmp_bcmp)
       return;
     auto *F = CI.getCalledFunction();
     if (!F)

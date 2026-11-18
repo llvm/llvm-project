@@ -275,7 +275,7 @@ std::optional<int> AArch64StackTaggingPreRAImpl::findFirstSlotCandidate() {
 
     while (!WorkList.empty()) {
       Register UseReg = WorkList.pop_back_val();
-      for (auto &UseI : MRI->use_instructions(UseReg)) {
+      for (auto &UseI : MRI->use_nodbg_instructions(UseReg)) {
         unsigned Opcode = UseI.getOpcode();
         if (Opcode == AArch64::STGi || Opcode == AArch64::ST2Gi ||
             Opcode == AArch64::STZGi || Opcode == AArch64::STZ2Gi ||

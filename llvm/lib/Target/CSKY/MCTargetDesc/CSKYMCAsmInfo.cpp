@@ -38,8 +38,6 @@ CSKYMCAsmInfo::CSKYMCAsmInfo(const Triple &TargetTriple,
   // Uses '.section' before '.bss' directive
   UsesELFSectionDirectiveForBSS = true;
 
-  ExceptionsType = ExceptionHandling::DwarfCFI;
-
   initializeAtSpecifiers(atSpecifiers);
 }
 

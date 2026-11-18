@@ -4,14 +4,13 @@
 define void @urem_with_scalar_udiv(ptr %p, i32 %x, i32 %n, i32 %m) {
 ; CHECK-LABEL: define void @urem_with_scalar_udiv(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]], i32 [[N:%.*]], i32 [[M:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[R0:%.*]] = urem i32 [[X]], [[N]]
 ; CHECK-NEXT:    [[Q0:%.*]] = udiv i32 [[X]], [[N]]
+; CHECK-NEXT:    [[R1:%.*]] = urem i32 [[Q0]], [[M]]
 ; CHECK-NEXT:    [[Q1:%.*]] = udiv i32 [[Q0]], [[M]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[Q0]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[N]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[M]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = urem <2 x i32> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr [[P]], align 4
+; CHECK-NEXT:    store i32 [[R0]], ptr [[P]], align 4
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
+; CHECK-NEXT:    store i32 [[R1]], ptr [[P1]], align 4
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 2
 ; CHECK-NEXT:    store i32 [[Q1]], ptr [[P2]], align 4
 ; CHECK-NEXT:    ret void
@@ -31,14 +30,13 @@ define void @urem_with_scalar_udiv(ptr %p, i32 %x, i32 %n, i32 %m) {
 define void @srem_with_scalar_sdiv(ptr %p, i32 %x, i32 %n, i32 %m) {
 ; CHECK-LABEL: define void @srem_with_scalar_sdiv(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]], i32 [[N:%.*]], i32 [[M:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[R0:%.*]] = srem i32 [[X]], [[N]]
 ; CHECK-NEXT:    [[Q0:%.*]] = sdiv i32 [[X]], [[N]]
+; CHECK-NEXT:    [[R1:%.*]] = srem i32 [[Q0]], [[M]]
 ; CHECK-NEXT:    [[Q1:%.*]] = sdiv i32 [[Q0]], [[M]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[Q0]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[N]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[M]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = srem <2 x i32> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr [[P]], align 4
+; CHECK-NEXT:    store i32 [[R0]], ptr [[P]], align 4
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
+; CHECK-NEXT:    store i32 [[R1]], ptr [[P1]], align 4
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 2
 ; CHECK-NEXT:    store i32 [[Q1]], ptr [[P2]], align 4
 ; CHECK-NEXT:    ret void
@@ -79,9 +77,9 @@ define void @udiv_urem_both_stored(ptr %p, ptr %q, ptr %a, ptr %b) {
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[B]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = urem <2 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv <2 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = urem <2 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr [[P]], align 4
 ; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[Q]], align 4
 ; CHECK-NEXT:    ret void
 ;

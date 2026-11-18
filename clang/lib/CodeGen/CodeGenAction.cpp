@@ -9,6 +9,7 @@
 #include "clang/CodeGen/CodeGenAction.h"
 #include "BackendConsumer.h"
 #include "CGCall.h"
+#include "CGDebugInfo.h"
 #include "CodeGenModule.h"
 #include "CoverageMappingGen.h"
 #include "MacroPPCallbacks.h"
@@ -40,7 +41,6 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTOBackend.h"
-#include "llvm/Linker/Linker.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -50,7 +50,6 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
 #include <optional>
@@ -174,39 +173,16 @@ void BackendConsumer::HandleInterestingDecl(DeclGroupRef D) {
 
 // Links each entry in LinkModules into our module. Returns true on error.
 bool BackendConsumer::LinkInModules(llvm::Module *M) {
-  for (auto &LM : LinkModules) {
-    assert(LM.Module && "LinkModule does not actually have a module");
+  // Builtin bitcode is internalized into the module that links it, so each
+  // PTU of an incremental session needs its own copy. Plain bitcode files are
+  // still linked once.
+  if (LangOpts.IncrementalExtensions && LinkModules.empty() &&
+      loadLinkModules(CI, M->getContext(), LinkModules,
+                      /*OnlyInternalized=*/true))
+    return true;
 
-    if (LM.PropagateAttrs)
-      for (Function &F : *LM.Module) {
-        // Skip intrinsics. Keep consistent with how intrinsics are created
-        // in LLVM IR.
-        if (F.isIntrinsic())
-          continue;
-        CodeGen::mergeDefaultFunctionDefinitionAttributes(
-          F, CodeGenOpts, LangOpts, TargetOpts, LM.Internalize);
-      }
-
-    DiagConsumer.setCurLinkModule(LM.Module.get());
-    bool Err;
-
-    if (LM.Internalize) {
-      Err = Linker::linkModules(
-          *M, std::move(LM.Module), LM.LinkFlags,
-          [](llvm::Module &M, const llvm::StringSet<> &GVS) {
-            internalizeModule(M, [&GVS](const llvm::GlobalValue &GV) {
-              return !GV.hasName() || (GVS.count(GV.getName()) == 0);
-            });
-          });
-    } else
-      Err = Linker::linkModules(*M, std::move(LM.Module), LM.LinkFlags);
-
-    if (Err)
-      return true;
-  }
-
-  LinkModules.clear();
-  return false; // success
+  return linkInModules(*M, LinkModules, CodeGenOpts, LangOpts, TargetOpts,
+                       DiagConsumer);
 }
 
 void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
@@ -235,6 +211,7 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
 
   Ctx.setDefaultTargetCPU(TargetOpts.CPU);
   Ctx.setDefaultTargetFeatures(llvm::join(TargetOpts.Features, ","));
+  Ctx.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
 
   Expected<LLVMRemarkFileHandle> OptRecordFileOrErr =
       setupLLVMOptimizationRemarks(
@@ -272,6 +249,8 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
       DiagConsumer.addFunctionSourceLocation(F.getName(), Loc);
     }
   }
+  if (CodeGen::CGDebugInfo *DI = Gen->CGM().getModuleDebugInfo())
+    DiagConsumer.setDIFileSources(DI->getDIFileSources());
 
   if (CodeGenOpts.ClearASTBeforeBackend) {
     LLVM_DEBUG(llvm::dbgs() << "Clearing AST...\n");
@@ -404,7 +383,8 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
     return nullptr;
 
   // Load bitcode modules to link with, if we need to.
-  if (clang::loadLinkModules(CI, *VMContext, LinkModules))
+  if (clang::loadLinkModules(CI, *VMContext, LinkModules,
+                             /*OnlyInternalized=*/false))
     return nullptr;
 
   CoverageSourceInfo *CoverageInfo = nullptr;
@@ -482,7 +462,8 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
   }
 
   // Load bitcode modules to link with, if we need to.
-  if (clang::loadLinkModules(CI, *VMContext, LinkModules))
+  if (clang::loadLinkModules(CI, *VMContext, LinkModules,
+                             /*OnlyInternalized=*/false))
     return nullptr;
 
   // Handle textual IR and bitcode file with one single module.
@@ -625,6 +606,7 @@ void CodeGenAction::ExecuteAction() {
 
   Ctx.setDefaultTargetCPU(TargetOpts.CPU);
   Ctx.setDefaultTargetFeatures(llvm::join(TargetOpts.Features, ","));
+  Ctx.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
 
   Expected<LLVMRemarkFileHandle> OptRecordFileOrErr =
       setupLLVMOptimizationRemarks(

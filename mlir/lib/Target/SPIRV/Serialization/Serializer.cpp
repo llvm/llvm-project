@@ -379,6 +379,7 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
                                 {static_cast<uint32_t>(attr.getValue())});
         });
   case spirv::Decoration::Alignment:
+  case spirv::Decoration::MaxByteOffset:
   case spirv::Decoration::Binding:
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Location:
@@ -420,6 +421,7 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
   case spirv::Decoration::Constant:
   case spirv::Decoration::Block:
   case spirv::Decoration::BufferBlock:
+  case spirv::Decoration::CPacked:
   case spirv::Decoration::Invariant:
   case spirv::Decoration::Patch:
   case spirv::Decoration::Coherent:
@@ -1047,6 +1049,10 @@ uint32_t Serializer::prepareConstant(Location loc, Type constType,
                                             /*dim=*/0, index);
   } else if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
     resultID = prepareArrayConstant(loc, constType, arrayAttr);
+  } else if (isa<spirv::NullAttr>(valueAttr)) {
+    resultID = getNextID();
+    encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpConstantNull,
+                          {typeID, resultID});
   }
 
   if (resultID == 0) {

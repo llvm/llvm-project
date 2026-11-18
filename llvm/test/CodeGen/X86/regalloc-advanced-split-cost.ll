@@ -58,7 +58,7 @@ if.else:                                          ; preds = %entry
   %7 = load i32, ptr %arrayidx5, align 4, !tbaa !7
   %arrayidx9 = getelementptr inbounds i32, ptr %array, i32 8
   store i32 %shl, ptr %arrayidx9, align 4, !tbaa !7
-  call void asm "nop", "=*m,{ax},{bx},{cx},{dx},{di},{si},{ebp},*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(ptr) nonnull %array.addr, i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %7, ptr undef, ptr elementtype(ptr) nonnull %array.addr) #1, !srcloc !10
+  call void asm "nop", "=*m,{ax},{bx},{cx},{dx},{di},{si},{ebp},*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(ptr) nonnull %array.addr, i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %7, ptr null, ptr elementtype(ptr) nonnull %array.addr) #1, !srcloc !10
   %8 = load ptr, ptr %array.addr, align 4, !tbaa !3
   %arrayidx10 = getelementptr inbounds i32, ptr %8, i32 9
   br label %if.end

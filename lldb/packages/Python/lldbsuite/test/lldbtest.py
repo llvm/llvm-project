@@ -300,6 +300,17 @@ def dump_value_obj(val: lldb.SBValue, max_children: int = 10000) -> str:
     return str(val)
 
 
+class _LazyValueErrorMsg:
+    """Lazily error message that only formats the SBValue when needed."""
+
+    def __init__(self, prefix: str, val: lldb.SBValue):
+        self.prefix = prefix
+        self.val = val
+
+    def __str__(self):
+        return self.prefix + "\nChecking SBValue: " + dump_value_obj(self.val)
+
+
 class ValueCheck:
     def __init__(
         self,
@@ -364,8 +375,7 @@ class ValueCheck:
         not errors in the child values).
         """
 
-        this_error_msg = error_msg if error_msg else ""
-        this_error_msg += "\nChecking SBValue: " + dump_value_obj(val)
+        this_error_msg = _LazyValueErrorMsg(error_msg, val)
 
         test_base.assertSuccess(val.GetError())
 
@@ -404,8 +414,7 @@ class ValueCheck:
         :param val: The SBValue to check.
         """
 
-        this_error_msg = error_msg if error_msg else ""
-        this_error_msg += "\nChecking SBValue: " + dump_value_obj(val)
+        this_error_msg = _LazyValueErrorMsg(error_msg, val)
 
         test_base.assertEqual(len(self.children), val.GetNumChildren(), this_error_msg)
 
@@ -899,7 +908,7 @@ class Base(unittest.TestCase):
             # pass just because Clang thinks it has a fix-it.
             "settings set target.auto-apply-fixits false",
             # Testsuite runs in parallel and the host can have also other load.
-            "settings set plugin.process.gdb-remote.packet-timeout 60",
+            "settings set plugin.process.gdb-remote.packet-timeout 600",
             # LLDB-internal utility expressions can take very long when the
             # host is under heavy load.
             "settings set target.process.utility-expression-timeout 600",

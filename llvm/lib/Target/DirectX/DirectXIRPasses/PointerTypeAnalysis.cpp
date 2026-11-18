@@ -112,7 +112,7 @@ Type *classifyFunctionType(const Function &F, PointerTypeMap &Map) {
   if (RetTy->isPointerTy()) {
     RetTy = nullptr;
     for (const auto &B : F) {
-      const auto *RetInst = dyn_cast_or_null<ReturnInst>(B.getTerminator());
+      const auto *RetInst = dyn_cast<ReturnInst>(B.getTerminator());
       if (!RetInst)
         continue;
 

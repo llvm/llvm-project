@@ -1,4 +1,4 @@
-; RUN: llvm-as %s -o /dev/null
+; RUN: llvm-as %s -disable-output
 ; RUN: verify-uselistorder %s
 ; Test that shift instructions can be used in constant expressions.
 

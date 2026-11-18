@@ -546,6 +546,70 @@ func.func @hoist_alloca(
 
 // -----
 
+// Each parallel OpenACC iteration must retain its own allocation.
+// CHECK-LABEL: func @no_hoist_acc_parallel_loop(
+// CHECK-NOT: memref.alloc
+// CHECK: acc.parallel
+// CHECK-NOT: memref.alloc
+// CHECK: acc.loop gang vector
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+// CHECK-NEXT: %[[VALUE:.*]] = memref.load %[[ALLOC]]
+// CHECK-NEXT: memref.store %[[VALUE]]
+func.func @no_hoist_acc_parallel_loop(%out: memref<2xindex>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  acc.parallel {
+    acc.loop gang vector control(%i : index) = (%c0 : index)
+        to (%c2 : index) step (%c1 : index) {
+      %buffer = memref.alloc() : memref<1xindex>
+      memref.store %i, %buffer[%c0] : memref<1xindex>
+      %value = memref.load %buffer[%c0] : memref<1xindex>
+      memref.store %value, %out[%i] : memref<2xindex>
+      acc.yield
+    } independent
+    acc.yield
+  }
+  return
+}
+
+// -----
+
+// Hoist out of an inner sequential loop, but keep the allocation private to
+// each parallel OpenACC iteration.
+// CHECK-LABEL: func @hoist_within_acc_parallel_loop(
+// CHECK-NOT: memref.alloc
+// CHECK: acc.parallel
+// CHECK-NOT: memref.alloc
+// CHECK: acc.loop gang vector
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: scf.for
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+// CHECK-NEXT: %[[VALUE:.*]] = memref.load %[[ALLOC]]
+// CHECK-NEXT: memref.store %[[VALUE]]
+func.func @hoist_within_acc_parallel_loop(%out: memref<2x2xindex>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  acc.parallel {
+    acc.loop gang vector control(%i : index) = (%c0 : index)
+        to (%c2 : index) step (%c1 : index) {
+      scf.for %j = %c0 to %c2 step %c1 {
+        %buffer = memref.alloc() : memref<1xindex>
+        memref.store %j, %buffer[%c0] : memref<1xindex>
+        %value = memref.load %buffer[%c0] : memref<1xindex>
+        memref.store %value, %out[%i, %j] : memref<2x2xindex>
+      }
+      acc.yield
+    } independent
+    acc.yield
+  }
+  return
+}
+
+// -----
+
 // A nested entry block can be reachable even when its enclosing block is not.
 // CHECK-LABEL: func @loop_unreachable_parent(
 // CHECK: return
@@ -920,18 +984,18 @@ func.func @while_exit_alias_parallel_parent(%condition: i1, %out: memref<2xindex
 
 // -----
 
-// Hoisting into acc.loop would allow a subsequent hoist to share the allocation
-// between parallel iterations. Keep it inside scf.while.
-// CHECK-LABEL: func @no_hoist_while_parallel_acc_parent(
+// Hoist out of scf.while, but keep the allocation private to each parallel
+// OpenACC iteration. HasParallelRegion prevents further hoisting out of acc.loop.
+// CHECK-LABEL: func @hoist_while_within_acc_parallel_loop(
 //  CHECK-NOT: memref.alloc
 //      CHECK: acc.parallel
 // CHECK-NEXT: acc.loop
-// CHECK-NEXT: %[[LAST:.*]] = scf.while
 // CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: %[[LAST:.*]] = scf.while
 // CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
 //      CHECK: scf.condition{{.*}} %[[ALLOC]]
 //      CHECK: memref.load %[[LAST]]
-func.func @no_hoist_while_parallel_acc_parent(%out: memref<2xindex>) {
+func.func @hoist_while_within_acc_parallel_loop(%out: memref<2xindex>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -1039,14 +1103,16 @@ func.func @hoist_with_unrelated_loop_effect(%out: memref<f32>, %value: f32) {
 
 // -----
 
-// Preserve dominator-based hoisting from sequential OpenACC loops.
-// CHECK-LABEL: func @hoist_sequential_acc_loop(
-//      CHECK: %[[ALLOC:.*]] = memref.alloc()
-// CHECK-NEXT: acc.loop
+// HasParallelRegion conservatively prevents hoisting out of acc.loop, even
+// when it is marked sequential.
+// CHECK-LABEL: func @no_hoist_sequential_acc_loop(
+//  CHECK-NOT: memref.alloc
+//      CHECK: acc.loop
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
 // CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
 // CHECK-NEXT: %[[VALUE:.*]] = memref.load %[[ALLOC]]
 // CHECK-NEXT: memref.store %[[VALUE]]
-func.func @hoist_sequential_acc_loop(%n: index, %out: memref<?xindex>) {
+func.func @no_hoist_sequential_acc_loop(%n: index, %out: memref<?xindex>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   acc.loop control(%i : index) = (%c0 : index) to (%n : index) step (%c1 : index) {
@@ -1083,19 +1149,152 @@ func.func @no_hoist_while_capture(%condition: i1) {
 
 // -----
 
-// The exit-alias fallback does not support stack allocations.
-// CHECK-LABEL: func @no_hoist_while_alloca(
-// CHECK-NOT: memref.alloca
-// CHECK: scf.while
-// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloca()
+// Hoisting preserves the function's automatic allocation scope.
+// CHECK-LABEL: func @hoist_while_alloca(
+// CHECK: %[[ALLOC:.*]] = memref.alloca()
+// CHECK-NEXT: scf.while
 // CHECK-NEXT: scf.condition{{.*}} %[[ALLOC]]
-func.func @no_hoist_while_alloca(%condition: i1) {
+func.func @hoist_while_alloca(%condition: i1) {
   %last = scf.while () : () -> memref<1xindex> {
     %buffer = memref.alloca() : memref<1xindex>
     scf.condition(%condition) %buffer : memref<1xindex>
   } do {
   ^bb0(%current: memref<1xindex>):
     scf.yield
+  }
+  return
+}
+
+// -----
+
+// Hoist an alloca whose dynamic size is loop-invariant, even when an alias
+// produced by a subview and a cast is forwarded to both loop results.
+// CHECK-LABEL: func.func @alloca_exit_dynamic(
+// CHECK-SAME: %{{.*}}: index, %[[SIZE:.*]]: index)
+// CHECK-NOT: scf.while
+// CHECK: %[[BUF:.*]] = memref.alloca(%[[SIZE]]) : memref<?xi32>
+// CHECK-NEXT: %[[LAST:.*]]:2 = scf.while
+// CHECK: memref.store %{{.*}}, %[[BUF]][%{{.*}}]
+// CHECK-NEXT: %[[VIEW:.*]] = memref.subview %[[BUF]]
+// CHECK-NEXT: %[[CAST:.*]] = memref.cast %[[VIEW]]
+// CHECK: scf.condition(%{{.*}}) %[[CAST]], %[[CAST]]
+// CHECK: } do {
+// CHECK-NEXT: ^bb0(%[[FIRST:.*]]: memref<?xi32>, %{{.*}}: memref<?xi32>):
+// CHECK-NEXT: %{{.*}} = memref.load %[[FIRST]]
+// CHECK: %[[VALUE:.*]] = memref.load %[[LAST]]#1
+// CHECK-NEXT: return %[[VALUE]] : i32
+func.func @alloca_exit_dynamic(%n: index, %size: index) -> i32 {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %last:2 = scf.while (%i = %c0) : (index) -> (memref<?xi32>, memref<?xi32>) {
+    %buffer = memref.alloca(%size) : memref<?xi32>
+    %v = arith.index_cast %i : index to i32
+    memref.store %v, %buffer[%c0] : memref<?xi32>
+    %view = memref.subview %buffer[0] [1] [1] : memref<?xi32> to memref<1xi32>
+    %cast = memref.cast %view : memref<1xi32> to memref<?xi32>
+    %continue = arith.cmpi slt, %i, %n : index
+    scf.condition(%continue) %cast, %cast : memref<?xi32>, memref<?xi32>
+  } do {
+  ^bb0(%first: memref<?xi32>, %second: memref<?xi32>):
+    %value = memref.load %first[%c0] : memref<?xi32>
+    %i = arith.index_cast %value : i32 to index
+    %next = arith.addi %i, %c1 : index
+    scf.yield %next : index
+  }
+  %result = memref.load %last#1[%c0] : memref<?xi32>
+  return %result : i32
+}
+
+// -----
+
+// Keep the alloca in the after region: hoisting would make the store
+// overwrite the previous iteration's buffer before it is read.
+// CHECK-LABEL: func.func @after_backedge(
+// CHECK-NOT: memref.alloca()
+// CHECK: scf.while
+// CHECK-NOT: memref.alloca()
+// CHECK: } do {
+// CHECK: %[[FRESH:.*]] = memref.alloca()
+// CHECK: memref.store %[[NEXT:.*]], %[[FRESH]]
+// CHECK: scf.yield %[[FRESH]], %[[NEXT]]
+func.func @after_backedge(%seed: memref<1xindex>, %out: memref<2xindex>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %result:2 = scf.while (%old = %seed, %i = %c0)
+      : (memref<1xindex>, index) -> (memref<1xindex>, index) {
+    %continue = arith.cmpi slt, %i, %c2 : index
+    scf.condition(%continue) %old, %i : memref<1xindex>, index
+  } do {
+  ^bb0(%previous: memref<1xindex>, %i: index):
+    %fresh = memref.alloca() : memref<1xindex>
+    %next = arith.addi %i, %c1 : index
+    memref.store %next, %fresh[%c0] : memref<1xindex>
+    %oldValue = memref.load %previous[%c0] : memref<1xindex>
+    memref.store %oldValue, %out[%i] : memref<2xindex>
+    scf.yield %fresh, %next : memref<1xindex>, index
+  }
+  return
+}
+
+// -----
+
+// Hoist before the while without crossing the explicit allocation scope.
+// CHECK-LABEL: func.func @alloca_exit_in_scope(
+// CHECK-NOT: memref.alloca()
+// CHECK: %[[RESULT:.*]] = memref.alloca_scope -> (i32) {
+// CHECK-NEXT: %[[BUF:.*]] = memref.alloca() : memref<1xi32>
+// CHECK-NEXT: %[[LAST:.*]] = scf.while
+// CHECK-NEXT: memref.store %{{.*}}, %[[BUF]]
+// CHECK-NEXT: scf.condition(%{{.*}}) %[[BUF]]
+// CHECK: %[[VALUE:.*]] = memref.load %[[LAST]]
+// CHECK-NEXT: memref.alloca_scope.return %[[VALUE]] : i32
+// CHECK: return %[[RESULT]] : i32
+func.func @alloca_exit_in_scope(%condition: i1, %value: i32) -> i32 {
+  %c0 = arith.constant 0 : index
+  %result = memref.alloca_scope -> i32 {
+    %last = scf.while () : () -> memref<1xi32> {
+      %buffer = memref.alloca() : memref<1xi32>
+      memref.store %value, %buffer[%c0] : memref<1xi32>
+      scf.condition(%condition) %buffer : memref<1xi32>
+    } do {
+    ^bb0(%current: memref<1xi32>):
+      scf.yield
+    }
+    %loaded = memref.load %last[%c0] : memref<1xi32>
+    memref.alloca_scope.return %loaded : i32
+  }
+  return %result : i32
+}
+
+// -----
+
+// Keep the hoisted alloca private to each parallel iteration.
+// CHECK-LABEL: func.func @alloca_exit_in_parallel(
+// CHECK-NOT: memref.alloca()
+// CHECK: scf.parallel (%[[I:.*]]) =
+// CHECK-NEXT: %[[BUF:.*]] = memref.alloca() : memref<1xindex>
+// CHECK-NEXT: %[[LAST:.*]] = scf.while
+// CHECK-NEXT: memref.store %[[I]], %[[BUF]]
+// CHECK-NEXT: scf.condition(%{{.*}}) %[[BUF]]
+// CHECK: %[[VALUE:.*]] = memref.load %[[LAST]]
+// CHECK-NEXT: memref.store %[[VALUE]], %{{.*}}[%[[I]]]
+func.func @alloca_exit_in_parallel(%condition: i1, %out: memref<2xindex>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  scf.parallel (%i) = (%c0) to (%c2) step (%c1) {
+    %last = scf.while () : () -> memref<1xindex> {
+      %buffer = memref.alloca() : memref<1xindex>
+      memref.store %i, %buffer[%c0] : memref<1xindex>
+      scf.condition(%condition) %buffer : memref<1xindex>
+    } do {
+    ^bb0(%current: memref<1xindex>):
+      scf.yield
+    }
+    %value = memref.load %last[%c0] : memref<1xindex>
+    memref.store %value, %out[%i] : memref<2xindex>
+    scf.reduce
   }
   return
 }
@@ -1173,4 +1372,33 @@ func.func @no_hoist_while_store_alias(%condition: i1, %holder: memref<memref<1xi
     scf.yield
   }
   return
+}
+
+// -----
+
+// Even without a memref exit alias, realloc must stay after the source store.
+// The loop runs once so that the source is not reused after reallocation.
+// CHECK-LABEL: func.func @realloc_after_store(
+// CHECK-SAME: %[[OLD:.*]]: memref<1xi32>)
+// CHECK-NOT: memref.realloc
+// CHECK: %[[RESULT:.*]] = scf.while {{.*}} {
+// CHECK-NEXT: memref.store %{{.*}}, %[[OLD]][%{{.*}}] : memref<1xi32>
+// CHECK-NEXT: %[[NEW:.*]] = memref.realloc %[[OLD]] : memref<1xi32> to memref<2xi32>
+// CHECK-NEXT: %[[READ:.*]] = memref.load %[[NEW]][%{{.*}}] : memref<2xi32>
+// CHECK-NEXT: scf.condition(%{{.*}}) %[[READ]] : i32
+// CHECK: return %[[RESULT]] : i32
+func.func @realloc_after_store(%old: memref<1xi32>) -> i32 {
+  %c0 = arith.constant 0 : index
+  %seven = arith.constant 7 : i32
+  %false = arith.constant false
+  %value = scf.while () : () -> i32 {
+    memref.store %seven, %old[%c0] : memref<1xi32>
+    %new = memref.realloc %old : memref<1xi32> to memref<2xi32>
+    %read = memref.load %new[%c0] : memref<2xi32>
+    scf.condition(%false) %read : i32
+  } do {
+  ^bb0(%unused: i32):
+    scf.yield
+  }
+  return %value : i32
 }

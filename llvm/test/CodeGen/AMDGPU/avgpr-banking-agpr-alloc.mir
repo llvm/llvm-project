@@ -1,0 +1,120 @@
+# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -run-pass=machine-scheduler \
+# RUN:     -amdgpu-avgpr-banking=1 -debug-only=machine-scheduler \
+# RUN:     -filetype=null %s 2>&1 | FileCheck %s -check-prefixes=CHECK,BANK
+# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -run-pass=machine-scheduler \
+# RUN:     -amdgpu-avgpr-banking=0 -debug-only=machine-scheduler \
+# RUN:     -filetype=null %s 2>&1 | FileCheck %s -check-prefixes=CHECK,NOBANK
+# REQUIRES: asserts
+
+# AVGPR pressure must be distributed against the allocatable AGPRs. With no
+# AGPRs, 300 AVGPRs exceed the ArchVGPR bank. With 64 AGPRs, 330 AVGPRs exceed
+# both banks. With the default split, 300 AVGPRs fit across the two banks.
+
+# CHECK-LABEL: no_agprs:%bb.1
+# CHECK: Region is known to spill
+# CHECK-LABEL: few_agprs:%bb.1
+# CHECK: Region is known to spill
+# CHECK-LABEL: default_split:%bb.1
+# BANK-NOT: Region is known to spill
+# NOBANK: Region is known to spill
+
+--- |
+  define amdgpu_kernel void @no_agprs() #0 {
+    ret void
+  }
+  define amdgpu_kernel void @few_agprs() #1 {
+    ret void
+  }
+  define amdgpu_kernel void @default_split() #2 {
+    ret void
+  }
+  attributes #0 = { "amdgpu-agpr-alloc"="0,0" "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,1" }
+  attributes #1 = { "amdgpu-agpr-alloc"="0,64" "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,1" }
+  attributes #2 = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,1" }
+...
+---
+name:            no_agprs
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       1
+body:             |
+  bb.0:
+    S_BRANCH %bb.1
+
+  bb.1:
+    %a0:av_1024_align2 = IMPLICIT_DEF
+    %a1:av_1024_align2 = IMPLICIT_DEF
+    %a2:av_1024_align2 = IMPLICIT_DEF
+    %a3:av_1024_align2 = IMPLICIT_DEF
+    %a4:av_1024_align2 = IMPLICIT_DEF
+    %a5:av_1024_align2 = IMPLICIT_DEF
+    %a6:av_1024_align2 = IMPLICIT_DEF
+    %a7:av_1024_align2 = IMPLICIT_DEF
+    %a8:av_1024_align2 = IMPLICIT_DEF
+    %a9:av_384_align2 = IMPLICIT_DEF
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0, implicit %a0, implicit %a1, implicit %a2, implicit %a3, implicit %a4, implicit %a5, implicit %a6, implicit %a7, implicit %a8, implicit %a9
+...
+---
+name:            few_agprs
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       1
+body:             |
+  bb.0:
+    S_BRANCH %bb.1
+
+  bb.1:
+    %a0:av_1024_align2 = IMPLICIT_DEF
+    %a1:av_1024_align2 = IMPLICIT_DEF
+    %a2:av_1024_align2 = IMPLICIT_DEF
+    %a3:av_1024_align2 = IMPLICIT_DEF
+    %a4:av_1024_align2 = IMPLICIT_DEF
+    %a5:av_1024_align2 = IMPLICIT_DEF
+    %a6:av_1024_align2 = IMPLICIT_DEF
+    %a7:av_1024_align2 = IMPLICIT_DEF
+    %a8:av_1024_align2 = IMPLICIT_DEF
+    %a9:av_1024_align2 = IMPLICIT_DEF
+    %a10:av_256_align2 = IMPLICIT_DEF
+    %a11:av_64_align2 = IMPLICIT_DEF
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0, implicit %a0, implicit %a1, implicit %a2, implicit %a3, implicit %a4, implicit %a5, implicit %a6, implicit %a7, implicit %a8, implicit %a9, implicit %a10, implicit %a11
+...
+---
+name:            default_split
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       1
+body:             |
+  bb.0:
+    S_BRANCH %bb.1
+
+  bb.1:
+    %a0:av_1024_align2 = IMPLICIT_DEF
+    %a1:av_1024_align2 = IMPLICIT_DEF
+    %a2:av_1024_align2 = IMPLICIT_DEF
+    %a3:av_1024_align2 = IMPLICIT_DEF
+    %a4:av_1024_align2 = IMPLICIT_DEF
+    %a5:av_1024_align2 = IMPLICIT_DEF
+    %a6:av_1024_align2 = IMPLICIT_DEF
+    %a7:av_1024_align2 = IMPLICIT_DEF
+    %a8:av_1024_align2 = IMPLICIT_DEF
+    %a9:av_384_align2 = IMPLICIT_DEF
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0, implicit %a0, implicit %a1, implicit %a2, implicit %a3, implicit %a4, implicit %a5, implicit %a6, implicit %a7, implicit %a8, implicit %a9
+...

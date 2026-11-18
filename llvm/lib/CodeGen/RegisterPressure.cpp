@@ -593,8 +593,9 @@ void RegisterOperands::adjustLaneLiveness(LiveIntervals &LIS,
                                           const MachineRegisterInfo &MRI,
                                           SlotIndex Pos) {
   for (auto *I = Defs.begin(); I != Defs.end(); /*empty*/) {
-    LaneBitmask LiveAfter = getLiveLanesAt(LIS, MRI, /*TrackLaneMasks=*/true,
-                                           I->VRegOrUnit, Pos.getDeadSlot());
+    LaneBitmask LiveAfter =
+        getLiveLanesAt(LIS, MRI, /*TrackLaneMasks=*/true, I->VRegOrUnit,
+                       Pos.getDeadSlot(), /*ComputePhysRegs=*/true);
     I = adjustDef(*I, LiveAfter);
   }
   adjustUses(LIS, MRI, Pos.getBaseIndex());
@@ -605,8 +606,9 @@ void RegisterOperands::adjustLaneLiveness(LiveIntervals &LIS,
                                           MachineInstr &MI) {
   SlotIndex Pos = LIS.getInstructionIndex(MI);
   for (auto *I = Defs.begin(); I != Defs.end(); /*empty*/) {
-    LaneBitmask LiveAfter = getLiveLanesAt(LIS, MRI, /*TrackLaneMasks=*/true,
-                                           I->VRegOrUnit, Pos.getDeadSlot());
+    LaneBitmask LiveAfter =
+        getLiveLanesAt(LIS, MRI, /*TrackLaneMasks=*/true, I->VRegOrUnit,
+                       Pos.getDeadSlot(), /*ComputePhysRegs=*/true);
     // If the def is all that is live after the instruction, then in case
     // of a subregister def we need a read-undef flag.
     VirtRegOrUnit VRegOrUnit = I->VRegOrUnit;
@@ -817,26 +819,29 @@ void RegPressureTracker::recede(const RegisterOperands &RegOpers,
   for (const VRegMaskOrUnit &Def : RegOpers.Defs) {
     VirtRegOrUnit VRegOrUnit = Def.VRegOrUnit;
 
-    LaneBitmask PreviousMask = LiveRegs.erase(Def);
-    LaneBitmask NewMask = PreviousMask & ~Def.LaneMask;
+    LaneBitmask LiveLanesAfterDef = LiveRegs.erase(Def);
+    LaneBitmask LiveLanesBeforeDef = LiveLanesAfterDef & ~Def.LaneMask;
 
-    LaneBitmask LiveOut = Def.LaneMask & ~PreviousMask;
-    if (LiveOut.any()) {
-      discoverLiveOut(VRegMaskOrUnit(VRegOrUnit, LiveOut));
-      // Retroactively model effects on pressure of the live out lanes.
-      increaseSetPressure(CurrSetPressure, *MRI, VRegOrUnit,
-                          LaneBitmask::getNone(), LiveOut);
-      PreviousMask = LiveOut;
+    // Conservatively treat defined lanes not known to be live as live out of
+    // the region. Account for them retroactively, increasing pressure only if
+    // the register was not already live.
+    LaneBitmask NewLiveOutLanes = Def.LaneMask & ~LiveLanesAfterDef;
+    if (NewLiveOutLanes.any()) {
+      discoverLiveOut(VRegMaskOrUnit(VRegOrUnit, NewLiveOutLanes));
+      increaseSetPressure(CurrSetPressure, *MRI, VRegOrUnit, LiveLanesAfterDef,
+                          LiveLanesAfterDef | NewLiveOutLanes);
+      // Preserve existing live lanes for the decrease below.
+      LiveLanesAfterDef |= NewLiveOutLanes;
     }
 
-    if (NewMask.none()) {
+    if (LiveLanesBeforeDef.none()) {
       // Add a 0 entry to LiveUses as a marker that the complete vreg has become
       // dead.
       if (TrackLaneMasks && LiveUses != nullptr)
         setRegZero(*LiveUses, VRegOrUnit);
     }
 
-    decreaseRegPressure(VRegOrUnit, PreviousMask, NewMask);
+    decreaseRegPressure(VRegOrUnit, LiveLanesAfterDef, LiveLanesBeforeDef);
   }
 
   SlotIndex SlotIdx;

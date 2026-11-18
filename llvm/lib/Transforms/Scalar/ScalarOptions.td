@@ -311,7 +311,7 @@ defm : BoolField<"loop-predication-insert-assumes-of-predicated-guards-condition
 // profitability analysis to find other exiting blocks that have a much higher
 // probability of exiting the loop instead of loop exiting via latch. This value
 // should be greater than 1 for a sane profitability check.
-defm : ValueField<"loop-predication-latch-probability-scale", "float", "2.0",
+defm : ValueField<"loop-predication-latch-probability-scale", "float", "2.0f",
   "scale factor for the latch probability. Value should be greater than 1. Lower values are ignored">;
 defm : BoolField<"loop-predication-predicate-widenable-branches-to-deopt", "true",
   "Whether or not we should predicate guards expressed as widenable branches to deoptimize blocks">;
@@ -403,6 +403,8 @@ defm : OptionalValueField<"unroll-max-count", "unsigned",
   "Set the max unroll count for partial and runtime unrolling, fortesting purposes">;
 defm : OptionalValueField<"unroll-max-iteration-count-to-analyze", "unsigned",
   "Don't allow loop unrolling to simulate more than this number of iterations when checking full unroll profitability">;
+defm : ValueField<"unroll-max-nest-loops", "unsigned", "128",
+  "Do not runtime-unroll, partially unroll, or peel a loop whose outermost nest contains more than this many loops (0 = no limit)">;
 defm : OptionalValueField<"unroll-max-percent-threshold-boost", "unsigned",
   "The maximum 'boost' (represented as a percentage >= 100) applied to the threshold when aggressively unrolling a loop due to the dynamic cost savings. If completely unrolling a loop will reduce the total runtime from X to Y, we boost the loop unroll threshold to DefaultThreshold*std::min(MaxPercentThresholdBoost, X/Y). This limit avoids excessive code bloat">;
 defm : OptionalValueField<"unroll-max-upperbound", "unsigned",
@@ -429,7 +431,7 @@ defm : ValueField<"unroll-threshold-default", "unsigned", "150",
 // LoopVersioningLICM.cpp
 // Threshold minimum allowed percentage for possible invariant instructions in a
 // loop.
-defm : ValueField<"licm-versioning-invariant-threshold", "float", "25",
+defm : ValueField<"licm-versioning-invariant-threshold", "float", "25.0f",
   "LoopVersioningLICM's minimum allowed percentage of possible invariant instructions per loop">;
 // Threshold for maximum allowed loop nest/depth.
 defm : ValueField<"licm-versioning-max-depth-threshold", "unsigned", "2",
@@ -585,8 +587,6 @@ defm : BoolField<"enable-poison-reuse-guard", "true",
   "Enable poison-reuse guard">;
 
 // StructurizeCFG.cpp
-defm : BoolField<"structurizecfg-relaxed-uniform-regions", "true",
-  "Allow relaxed uniform region checks">;
 defm : OptionalBoolField<"structurizecfg-skip-uniform-regions",
   "Force whether the StructurizeCFG pass skips uniform regions">;
 
