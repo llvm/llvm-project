@@ -1,6 +1,6 @@
 if(LIBC_CONF_PRINTF_DISABLE_STRERROR)
   libc_add_definition(syslog_internal_test_copts
-                      "LIBC_COPT_PRINTF_DISABLE_STRERROR")
+    "LIBC_COPT_PRINTF_DISABLE_STRERROR")
 endif()
 
 add_libc_test(
