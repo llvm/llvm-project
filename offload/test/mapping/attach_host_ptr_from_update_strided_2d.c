@@ -33,9 +33,8 @@ int main() {
             arr[1][2].p[0 : 1], arr[1][3].p[0 : 1])
 
 #pragma omp target
-  for (int i = 0; i < 2; ++i)
-    for (int j = 0; j < 4; ++j)
-      arr[i][j].x = 10 * i + j + 1;
+  for (int k = 0; k < 8; ++k)
+    arr[k / 4][k % 4].x = 10 * (k / 4) + k % 4 + 1;
   for (int i = 0; i < 2; ++i)
     for (int j = 0; j < 4; ++j)
       arr[i][j].p = &b[4 * i + j];
