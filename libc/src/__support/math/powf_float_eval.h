@@ -147,13 +147,13 @@ LIBC_INLINE float powf(float x, float y) {
   // The computation is exact: m_x = (1 + dx) / r.
   float r = powf_internal::R_16[idx_x];
 #if defined(LIBC_TARGET_CPU_HAS_FMA_FLOAT)
-  float dx = fputil::multiply_add(r, m_x.get_val(), -1.0f); // Exact
+  float dx = fputil::multiply_sub(r, m_x.get_val(), 1.0f); // Exact
 #else  // !LIBC_TARGET_CPU_HAS_FMA_FLOAT
   // Without FMA, split m_x = c + cd where c retains the high 14 bits
   // to perform exact multiplication: r * c - 1.0f and r * cd.
   float c = FPBits(m_x.uintval() & 0x3fff'e000U).get_val();
   float cd = m_x.get_val() - c;
-  float dx_hi = fputil::multiply_add(r, c, -1.0f);
+  float dx_hi = fputil::multiply_sub(r, c, 1.0f);
   float dx = fputil::multiply_add(r, cd, dx_hi); // Exact
 #endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
 

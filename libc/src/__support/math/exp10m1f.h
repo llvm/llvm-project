@@ -244,7 +244,7 @@ LIBC_INLINE float exp10m1f(float x) {
   double exp10_lo = fputil::polyeval(lo_sq, c0, c1, c2);
   // 10^x - 1 = 2^(mid + hi) * 10^lo - 1
   //          ~ mh * exp10_lo - 1
-  return static_cast<float>(fputil::multiply_add(exp10_lo, rr.mh, -1.0));
+  return static_cast<float>(fputil::multiply_sub(exp10_lo, rr.mh, 1.0));
 }
 
 } // namespace math

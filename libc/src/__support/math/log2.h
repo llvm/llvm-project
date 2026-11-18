@@ -921,7 +921,7 @@ LIBC_INLINE double log2(double x) {
 
   // Perform exact range reduction
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-  double u = fputil::multiply_add(r, m, -1.0); // exact
+  double u = fputil::multiply_sub(r, m, 1.0); // exact
 #else
   uint64_t c_m = x_m & 0x3FFF'E000'0000'0000ULL;
   double c = FPBits_t(c_m).get_val();

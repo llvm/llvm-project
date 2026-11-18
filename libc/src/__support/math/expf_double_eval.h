@@ -88,7 +88,7 @@ LIBC_INLINE float expf(float x) {
   // x_hi = (hi + mid) * 2^7 = round(x * 2^7).
   float kf = fputil::nearest_integer(x * 0x1.0p7f);
   // Subtract (hi + mid) from x to get lo.
-  double xd = static_cast<double>(fputil::multiply_add(kf, -0x1.0p-7f, x));
+  double xd = static_cast<double>(fputil::sub_multiply(x, kf, 0x1.0p-7f));
   int x_hi = static_cast<int>(kf);
   x_hi += 104 << 7;
   // hi = x_hi >> 7

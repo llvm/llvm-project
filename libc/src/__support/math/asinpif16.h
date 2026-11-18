@@ -124,9 +124,9 @@ LIBC_INLINE float16 asinpif16(float16 x) {
   //             = 0.5 - 0.5 * x
   //             = multiply_add(-0.5, x, 0.5)
 
-  double u = fputil::multiply_add(-0.5, x_abs, 0.5);
+  double u = fputil::sub_multiply(0.5, 0.5, x_abs);
   double asinpi_sqrt_u = asinpi_polyeval(fputil::sqrt<double>(u));
-  double result = fputil::multiply_add(-2.0, asinpi_sqrt_u, 0.5);
+  double result = fputil::sub_multiply(0.5, 2.0, asinpi_sqrt_u);
 
   return fputil::cast<float16>(signed_result(result));
 }

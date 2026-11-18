@@ -107,7 +107,7 @@ LIBC_INLINE constexpr float16 atanf16(float16 x) {
                        -0x1.e65492p-5f, 0x1.8c0c36p-6f, -0x1.32316ep-8f);
 
   return fputil::cast<float16>(sign *
-                               fputil::multiply_add(x_inv, -interm, PI_2));
+                               fputil::sub_multiply(PI_2, x_inv, interm));
 }
 
 } // namespace math

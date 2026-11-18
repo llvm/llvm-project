@@ -115,11 +115,11 @@ LIBC_INLINE_VAR constexpr DoubleDouble ATAN_I[65] = {
   p.hi = x.hi;
   double x_hi_sq = x.hi * x.hi;
   // c0 ~ x_hi^2 * 1/5 - 1/3
-  double c0 = fputil::multiply_add(x_hi_sq, 0x1.999999999999ap-3,
-                                   -0x1.5555555555555p-2);
+  double c0 =
+      fputil::multiply_sub(x_hi_sq, 0x1.999999999999ap-3, 0x1.5555555555555p-2);
   // c1 ~ x_hi^2 * 1/9 - 1/7
-  double c1 = fputil::multiply_add(x_hi_sq, 0x1.c71c71c71c71cp-4,
-                                   -0x1.2492492492492p-3);
+  double c1 =
+      fputil::multiply_sub(x_hi_sq, 0x1.c71c71c71c71cp-4, 0x1.2492492492492p-3);
   // x_hi^3
   double x_hi_3 = x_hi_sq * x.hi;
   // x_hi^4
@@ -340,7 +340,7 @@ LIBC_INLINE double atan_eval(double x, unsigned i) {
 //   atan(q) ~ q - q^3/3 + q^5/5 - q^7/7 + q^9/9
 LIBC_INLINE double atan_eval_no_table(double num, double den,
                                       double k_over_16) {
-  double num_r = fputil::multiply_add(den, -k_over_16, num);
+  double num_r = fputil::sub_multiply(num, den, k_over_16);
   double den_r = fputil::multiply_add(num, k_over_16, den);
   double q = num_r / den_r;
 

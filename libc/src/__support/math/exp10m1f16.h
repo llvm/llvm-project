@@ -172,7 +172,7 @@ LIBC_INLINE constexpr float16 exp10m1f16(float16 x) {
   auto [exp2_hi_mid, exp10_lo] = exp10_range_reduction(x);
   // exp10m1(x) = exp2((hi + mid) * log2(lo)) * exp10(lo) - 1
   return fputil::cast<float16>(
-      fputil::multiply_add(exp2_hi_mid, exp10_lo, -1.0f));
+      fputil::multiply_sub(exp2_hi_mid, exp10_lo, 1.0f));
 }
 
 } // namespace math

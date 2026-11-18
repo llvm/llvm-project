@@ -151,7 +151,7 @@ LIBC_INLINE float16 atanpif16(float16 x) {
     double x_recip_sq = x_recip * x_recip;
     double sqrt_term = fputil::sqrt<double>(1.0 + x_recip_sq);
     double x_prime = x_recip / (1.0 + sqrt_term);
-    result = fputil::multiply_add(-2.0, atanpi_eval(x_prime), 0.5);
+    result = fputil::sub_multiply(0.5, 2.0, atanpi_eval(x_prime));
   } else {
     // direct evaluation since 1/|x| <= 0.5
     result = 0.5 - atanpi_eval(x_recip);
