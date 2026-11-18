@@ -19,7 +19,6 @@
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/MIFCommon.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "mlir/IR/IRMapping.h"
@@ -483,7 +482,6 @@ mlir::Value Fortran::lower::genAllocateCoarray(
   if (const auto *details =
           sym.GetUltimate()
               .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
-    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     Fortran::lower::SymMap symMap;
     Fortran::lower::StatementContext stmtCtx;
     if (details->init()) {
@@ -493,6 +491,8 @@ mlir::Value Fortran::lower::genAllocateCoarray(
       base = hlfir::derefPointersAndAllocatables(loc, builder, base);
       hlfir::AssignOp::create(builder, loc, initVal, base);
       stmtCtx.finalizeAndPop();
+      mif::SyncAllOp::create(builder, loc, /*stat=*/mlir::Value{},
+                             /*errmsg=*/mlir::Value{});
     }
   }
   return stat;

@@ -618,6 +618,10 @@ fir::GlobalOp Fortran::lower::defineGlobal(
     }
   } else if (Fortran::evaluate::IsCoarray(sym)) {
     if (oeDetails && oeDetails->init() && var.isModuleOrSubmoduleVariable())
+      // A module coarray is currently allocated by the compilation unit
+      // using the module, and the .mod file does not carry the initializer.
+      // The defining unit will need to own allocation and initialization
+      // before this can be implemented.
       TODO(loc, "coarray: initialization of module or submodule variable.");
 
     createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
@@ -3496,10 +3500,8 @@ void Fortran::lower::mapSymbolAttributes(
   if (Fortran::evaluate::IsCoarray(sym) && !isHostAssociated) {
     assert(Fortran::semantics::IsSaved(sym) &&
            "Non-ALLOCATABLE coarray variable must be save.");
-    bool isNonAllocatableSaveCoarray =
-        sym.owner().kind() != Fortran::semantics::Scope::Kind::MainProgram ||
-        var.isModuleOrSubmoduleVariable();
-    if (isNonAllocatableSaveCoarray)
+    if (sym.owner().kind() != Fortran::semantics::Scope::Kind::MainProgram ||
+        var.isModuleOrSubmoduleVariable())
       Fortran::lower::genAllocateNonAllocatableSaveCoarray(converter, loc, sym,
                                                            addr);
     else
