@@ -1,5 +1,27 @@
 // RUN: mlir-opt %s -convert-complex-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | FileCheck %s
 
+// CHECK-LABEL: llvm.func @complex_conj_f32
+// CHECK-SAME: %[[ARG:.*]]: ![[C_TY:.*]])
+// CHECK:      %[[IMAG:.*]] = llvm.extractvalue %[[ARG]][1] : ![[C_TY:.*>]]
+// CHECK-DAG:  %[[IMAG_NEG:.*]] = llvm.fneg %[[IMAG]] : f32
+// CHECK-NEXT: %[[CPLX2:.*]] = llvm.insertvalue %[[IMAG_NEG]], %[[ARG]][1] : ![[C_TY:.*>]]
+// CHECK-NEXT: return %[[CPLX2]] : ![[C_TY:.*>]]
+func.func @complex_conj_f32(%cplx: complex<f32>) -> complex<f32> {
+  %conj = complex.conj %cplx : complex<f32>
+  return %conj : complex<f32>
+}
+
+// CHECK-LABEL: llvm.func @complex_conj_f64
+// CHECK-SAME: %[[ARG:.*]]: ![[C_TY:.*]])
+// CHECK:      %[[IMAG:.*]] = llvm.extractvalue %[[ARG]][1] : ![[C_TY:.*>]]
+// CHECK-DAG:  %[[IMAG_NEG:.*]] = llvm.fneg %[[IMAG]] : f64
+// CHECK-NEXT: %[[CPLX2:.*]] = llvm.insertvalue %[[IMAG_NEG]], %[[ARG]][1] : ![[C_TY:.*>]]
+// CHECK-NEXT: return %[[CPLX2]] : ![[C_TY:.*>]]
+func.func @complex_conj_f64(%cplx: complex<f64>) -> complex<f64> {
+  %conj = complex.conj %cplx : complex<f64>
+  return %conj : complex<f64>
+}
+
 // CHECK-LABEL: llvm.func @complex_div
 // CHECK-SAME:    %[[LHS:.*]]: ![[C_TY:.*>]], %[[RHS:.*]]: ![[C_TY]]) -> ![[C_TY]]
 func.func @complex_div(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {

@@ -1,5 +1,44 @@
 // RUN: mlir-opt %s -convert-complex-to-llvm | FileCheck %s
 
+// CHECK-LABEL: func @complex_conj_f32
+// CHECK-SAME:    (%[[CPLX:.*]]: complex<f32>)
+// CHECK-NEXT:    %[[CAST0:.*]] = builtin.unrealized_conversion_cast %[[CPLX]] : complex<f32> to !llvm.struct<(f32, f32)>
+// CHECK-NEXT:    %[[IMAG:.*]] = llvm.extractvalue %[[CAST0]][1] : !llvm.struct<(f32, f32)>
+// CHECK-DAG:     %[[IMAG_NEG:.*]] = llvm.fneg %[[IMAG]] : f32
+// CHECK-NEXT:    %[[CPLX2:.*]] = llvm.insertvalue %[[IMAG_NEG]], %[[CAST0]][1] : !llvm.struct<(f32, f32)>
+// CHECK-NEXT:    %[[CAST2:.*]] = builtin.unrealized_conversion_cast %[[CPLX2]] : !llvm.struct<(f32, f32)> to complex<f32>
+// CHECK-NEXT:    return %[[CAST2]] : complex<f32>
+func.func @complex_conj_f32(%cplx: complex<f32>) -> complex<f32> {
+  %conj = complex.conj %cplx : complex<f32>
+  return %conj : complex<f32>
+}
+
+// CHECK-LABEL: func @complex_conj_f64
+// CHECK-SAME:    (%[[CPLX:.*]]: complex<f64>)
+// CHECK-NEXT:    %[[CAST0:.*]]    = builtin.unrealized_conversion_cast %[[CPLX]] : complex<f64> to !llvm.struct<(f64, f64)>
+// CHECK-NEXT:    %[[IMAG:.*]]     = llvm.extractvalue %[[CAST0]][1] : !llvm.struct<(f64, f64)>
+// CHECK-DAG:     %[[IMAG_NEG:.*]] = llvm.fneg %[[IMAG]] : f64
+// CHECK-NEXT:    %[[CPLX2:.*]]    = llvm.insertvalue %[[IMAG_NEG]], %[[CAST0]][1] : !llvm.struct<(f64, f64)>
+// CHECK-NEXT:    %[[CAST2:.*]]    = builtin.unrealized_conversion_cast %[[CPLX2]] : !llvm.struct<(f64, f64)> to complex<f64>
+// CHECK-NEXT:    return %[[CAST2]] : complex<f64>
+func.func @complex_conj_f64(%cplx: complex<f64>) -> complex<f64> {
+  %conj = complex.conj %cplx : complex<f64>
+  return %conj : complex<f64>
+}
+
+// CHECK-LABEL: func @complex_conj_with_fmf
+// CHECK-SAME:    (%[[CPLX:.*]]: complex<f32>)
+// CHECK:         %[[CAST0:.*]] = builtin.unrealized_conversion_cast %[[CPLX]] : complex<f32> to ![[C_TY:.*>]]
+// CHECK-NEXT:    %[[IMAG:.*]] = llvm.extractvalue %[[CAST0]][1] : !llvm.struct<(f32, f32)>
+// CHECK-DAG:     %[[IMAG_NEG:.*]] = llvm.fneg %[[IMAG]] {fastmathFlags = #llvm.fastmath<contract>} : f32
+// CHECK-NEXT:    %[[CPLX2:.*]] = llvm.insertvalue %[[IMAG_NEG]], %[[CAST0]][1] : !llvm.struct<(f32, f32)>
+// CHECK-NEXT:    %[[CAST2:.*]] = builtin.unrealized_conversion_cast %[[CPLX2]] : !llvm.struct<(f32, f32)> to complex<f32>
+// CHECK-NEXT:    return %[[CAST2]] : complex<f32>
+func.func @complex_conj_with_fmf(%cplx: complex<f32>) -> complex<f32> {
+  %conj = complex.conj %cplx fastmath<contract> : complex<f32>
+  return %conj : complex<f32>
+}
+
 // Same below, but using the `ConvertToLLVMPatternInterface` entry point
 // and the generic `convert-to-llvm` pass.
 // RUN: mlir-opt --convert-to-llvm="filter-dialects=complex" --split-input-file %s | FileCheck %s
