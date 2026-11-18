@@ -77,6 +77,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  polyeval_test
+  SUITE
+    libc-fputil-tests
+  SRCS
+    polyeval_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.frac128
+)
+
+add_fp_unittest(
   rounding_mode_test
   SUITE
     libc-fputil-tests
