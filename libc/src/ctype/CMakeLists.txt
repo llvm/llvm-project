@@ -27,6 +27,10 @@ add_entrypoint_object(
     isascii.cpp
   HDRS
     isascii.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.ctype_utils
 )
 
 add_entrypoint_object(
@@ -35,6 +39,11 @@ add_entrypoint_object(
     isblank.cpp
   HDRS
     isblank.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.CPP.limits
+    libc.src.__support.ctype_utils
 )
 
 add_entrypoint_object(
@@ -43,6 +52,11 @@ add_entrypoint_object(
     iscntrl.cpp
   HDRS
     iscntrl.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.CPP.limits
+    libc.src.__support.ctype_utils
 )
 
 add_entrypoint_object(
@@ -84,6 +98,11 @@ add_entrypoint_object(
     isprint.cpp
   HDRS
     isprint.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.CPP.limits
+    libc.src.__support.ctype_utils
 )
 
 add_entrypoint_object(
