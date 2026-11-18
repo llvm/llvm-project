@@ -31,13 +31,13 @@ entry:
 ;  00 is type = SD
 ; The 01 at offset 0x57 is the id of the symbol.
 ; The 60 at offset 0x89 is the tasking behavior.
-; The 01 at offset 0x91 is the binding scope.
+; The 00 at offset 0x91 is the binding scope (unspecified).
 ; The name begins at offset 0x97, and is test#C.
 ; CHECK-NEXT: 000050 03 00 00 00 [[ROOTSD:00 00 00 01]] 00 00 00 00 00 00 00 00
 ; CHECK-NEXT: 000060 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 ; CHECK-NEXT: 000070 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 ; CHECK-NEXT: 000080 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 60
-; CHECK-NEXT: 000090 00 01 00 00 00 00 00 06 a3 85 a2 a3 7b c3 00 00
+; CHECK-NEXT: 000090 00 00 00 00 00 00 00 06 a3 85 a2 a3 7b c3 00 00
 
 ; ESD record, type ED.
 ; The name is C_CODE64.
