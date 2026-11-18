@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // void assign(size_type n, const_reference v);
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <vector>
 #include <algorithm>
@@ -34,7 +35,7 @@ TEST_CONSTEXPR_CXX20 void test(Vec& v) {
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
-    typedef std::vector<int> V;
+    typedef std::vector2<int> V;
     V d1;
     V d2;
     d2.reserve(10); // no reallocation during assign.
@@ -42,14 +43,14 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     test(d2);
   }
   {
-    std::vector<int> vec;
+    std::vector2<int> vec;
     vec.reserve(32);
     vec.resize(16); // destruction during assign
     test(vec);
   }
 #if TEST_STD_VER >= 11
   {
-    typedef std::vector<int, min_allocator<int>> V;
+    typedef std::vector2<int, min_allocator<int>> V;
     V d1;
     V d2;
     d2.reserve(10); // no reallocation during assign.
@@ -73,7 +74,7 @@ int main(int, char**) {
   {
     // Without reallocation (note the reserve call)
     int throw_after = 4; // x consumes 1, then 3 successful copies, 4th throws
-    std::vector<throwing_t> v;
+    std::vector2<throwing_t> v;
     v.reserve(10);
     try {
       throwing_t x(throw_after);
@@ -87,7 +88,7 @@ int main(int, char**) {
   {
     // With reallocation
     int throw_after = 4; // x consumes 1, then 3 successful copies, 4th throws
-    std::vector<throwing_t> v;
+    std::vector2<throwing_t> v;
     try {
       throwing_t x(throw_after);
       v.assign(5, x);

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 //       reference operator[](size_type __i);
@@ -114,10 +116,10 @@ TEST_CONSTEXPR_CXX20 void test() {
 }
 
 TEST_CONSTEXPR_CXX20 bool tests() {
-  test<std::vector<int> >();
+  test<std::vector2<int> >();
 #if TEST_STD_VER >= 11
-  test<std::vector<int, min_allocator<int> > >();
-  test<std::vector<int, safe_allocator<int> > >();
+  test<std::vector2<int, min_allocator<int> > >();
+  test<std::vector2<int, safe_allocator<int> > >();
 #endif
   return true;
 }

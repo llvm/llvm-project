@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // void shrink_to_fit();
@@ -21,7 +23,7 @@
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
-    std::vector<int> v(100);
+    std::vector2<int> v(100);
     v.push_back(1);
     assert(is_contiguous_container_asan_correct(v));
     v.shrink_to_fit();
@@ -30,7 +32,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     assert(is_contiguous_container_asan_correct(v));
   }
   {
-    std::vector<int, limited_allocator<int, 401> > v(100);
+    std::vector2<int, limited_allocator<int, 401> > v(100);
     v.push_back(1);
     assert(is_contiguous_container_asan_correct(v));
     v.shrink_to_fit();
@@ -40,7 +42,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
 #ifndef TEST_HAS_NO_EXCEPTIONS
   if (!TEST_IS_CONSTANT_EVALUATED) {
-    std::vector<int, limited_allocator<int, 400> > v(100);
+    std::vector2<int, limited_allocator<int, 400> > v(100);
     v.push_back(1);
     assert(is_contiguous_container_asan_correct(v));
     v.shrink_to_fit();
@@ -51,7 +53,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
 #endif
 #if TEST_STD_VER >= 11
   {
-    std::vector<int, min_allocator<int>> v(100);
+    std::vector2<int, min_allocator<int>> v(100);
     v.push_back(1);
     assert(is_contiguous_container_asan_correct(v));
     v.shrink_to_fit();
@@ -60,7 +62,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     assert(is_contiguous_container_asan_correct(v));
   }
   {
-    std::vector<int, safe_allocator<int>> v(100);
+    std::vector2<int, safe_allocator<int>> v(100);
     v.push_back(1);
     assert(is_contiguous_container_asan_correct(v));
     v.shrink_to_fit();
@@ -76,7 +78,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
 #if TEST_STD_VER >= 23
 // https://llvm.org/PR95161
 constexpr bool test_increasing_allocator() {
-  std::vector<int, increasing_allocator<int>> v;
+  std::vector2<int, increasing_allocator<int>> v;
   v.push_back(1);
   assert(is_contiguous_container_asan_correct(v));
   std::size_t capacity = v.capacity();

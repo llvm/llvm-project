@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
-// class vector
-// vector();
+// class vector2
+// vector2();
 
 #include <vector>
 
 #include "test_macros.h"
 
 struct X {
-  std::vector<X> q;
+  std::vector2<X> q;
 };
 
 int main(int, char**) { return 0; }

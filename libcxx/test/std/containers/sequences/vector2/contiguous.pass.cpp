@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
-// An vector is a contiguous container
+// An vector2 is a contiguous container
 
 #include <vector>
 #include <cassert>
@@ -26,7 +28,7 @@ TEST_CONSTEXPR_CXX20 void test_contiguous(const C& c) {
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
     typedef int T;
-    typedef std::vector<T> C;
+    typedef std::vector2<T> C;
     test_contiguous(C());
     test_contiguous(C(3, 5));
   }
@@ -34,7 +36,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   {
     typedef double T;
     typedef test_allocator<T> A;
-    typedef std::vector<T, A> C;
+    typedef std::vector2<T, A> C;
     test_contiguous(C(A(3)));
     test_contiguous(C(7, 9.0, A(5)));
   }
@@ -42,14 +44,14 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   {
     typedef double T;
     typedef min_allocator<T> A;
-    typedef std::vector<T, A> C;
+    typedef std::vector2<T, A> C;
     test_contiguous(C(A{}));
     test_contiguous(C(9, 11.0, A{}));
   }
   {
     typedef double T;
     typedef safe_allocator<T> A;
-    typedef std::vector<T, A> C;
+    typedef std::vector2<T, A> C;
     test_contiguous(C(A{}));
     test_contiguous(C(9, 11.0, A{}));
   }

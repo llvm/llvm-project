@@ -116,7 +116,7 @@ struct move_only_throwing_t {
 // successful constructions. Useful for tests that need to value construct
 // objects and ensure exception safety when construction throws.
 //
-// Has a non-throwing (const T&) constructor for setting up the vector with
+// Has a non-throwing (const T&) constructor for setting up the vector2 with
 // known content before the test starts.
 template <typename T>
 struct throwing_default_t {
@@ -245,7 +245,7 @@ inline void check_new_delete_called() {
 }
 
 template <class T, typename Alloc>
-void use_unspecified_but_valid_state_vector(std::vector<T, Alloc> const& v) {
+void use_unspecified_but_valid_state_vector(std::vector2<T, Alloc> const& v) {
   assert(v.size() >= 0); // make sure it can be called
   assert(v.capacity() >= 0);
   assert(v.empty() || !v.empty());
@@ -268,16 +268,16 @@ inline std::string getString(std::size_t n, std::size_t len) {
   return s;
 }
 
-inline std::vector<int> getIntegerInputs(std::size_t n) {
-  std::vector<int> v;
+inline std::vector2<int> getIntegerInputs(std::size_t n) {
+  std::vector2<int> v;
   v.reserve(n);
   for (std::size_t i = 0; i < n; ++i)
     v.push_back(static_cast<int>(i * i + n));
   return v;
 }
 
-inline std::vector<std::string> getStringInputsWithLength(std::size_t n, std::size_t len) {
-  std::vector<std::string> v;
+inline std::vector2<std::string> getStringInputsWithLength(std::size_t n, std::size_t len) {
+  std::vector2<std::string> v;
   v.reserve(n);
   for (std::size_t i = 0; i < n; ++i)
     v.push_back(getString(i, len));

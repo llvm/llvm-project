@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: std-at-least-c++29
 
 // <vector>
 
-// void swap(vector& c)
+// void swap(vector2& c)
 //     noexcept(!allocator_type::propagate_on_container_swap::value ||
 //              __is_nothrow_swappable<allocator_type>::value);
 //
@@ -55,21 +55,21 @@ struct some_alloc2 {
 
 void test() {
   {
-    typedef std::vector<MoveOnly> C;
+    typedef std::vector2<MoveOnly> C;
     static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
   }
 #if defined(_LIBCPP_VERSION)
   {
-    typedef std::vector<MoveOnly, test_allocator<MoveOnly>> C;
+    typedef std::vector2<MoveOnly, test_allocator<MoveOnly>> C;
     static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
   }
 #endif
   {
-    typedef std::vector<MoveOnly, other_allocator<MoveOnly>> C;
+    typedef std::vector2<MoveOnly, other_allocator<MoveOnly>> C;
     static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
   }
   {
-    typedef std::vector<MoveOnly, some_alloc<MoveOnly>> C;
+    typedef std::vector2<MoveOnly, some_alloc<MoveOnly>> C;
 #if TEST_STD_VER >= 14
     //  In C++14, if POCS is set, swapping the allocator is required not to throw
     static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
@@ -79,7 +79,7 @@ void test() {
   }
 #if TEST_STD_VER >= 14
   {
-    typedef std::vector<MoveOnly, some_alloc2<MoveOnly>> C;
+    typedef std::vector2<MoveOnly, some_alloc2<MoveOnly>> C;
     // If the allocators are always equal, then the swap can be noexcept
     static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
   }

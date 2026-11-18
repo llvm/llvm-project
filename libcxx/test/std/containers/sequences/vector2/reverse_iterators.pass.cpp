@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // reverse_iterator       rbegin();
@@ -68,9 +70,9 @@ TEST_CONSTEXPR_CXX20 void check_vector_reverse_iterators() {
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
-  check_vector_reverse_iterators<std::vector<int> >();
+  check_vector_reverse_iterators<std::vector2<int> >();
 #if TEST_STD_VER >= 11
-  check_vector_reverse_iterators<std::vector<int, min_allocator<int> > >();
+  check_vector_reverse_iterators<std::vector2<int, min_allocator<int> > >();
 #endif
 
   return true;

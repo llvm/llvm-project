@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: std-at-least-c++29
 
 #include <algorithm>
 #include <vector>
 
-std::vector<int> ca_allocs;
+std::vector2<int> ca_allocs;
 
 int main(int, char**) {
   ca_allocs.push_back(0);

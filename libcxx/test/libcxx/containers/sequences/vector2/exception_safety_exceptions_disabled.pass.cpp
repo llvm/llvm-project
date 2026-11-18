@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // ADDITIONAL_COMPILE_FLAGS: -fno-exceptions
 
-// UNSUPPORTED: c++03
 
 // <vector>
 
-// Test that vector always moves elements when exceptions are disabled.
-// vector is allowed to move or copy elements while resizing, so long as
+// Test that vector2 always moves elements when exceptions are disabled.
+// vector2 is allowed to move or copy elements while resizing, so long as
 // it still provides the strong exception safety guarantee.
 
 #include <vector>
@@ -36,9 +37,9 @@ public:
 };
 
 int main(int, char**) {
-  std::vector<A> v;
+  std::vector2<A> v;
 
-  // Create a vector containing some number of elements that will
+  // Create a vector2 containing some number of elements that will
   // have to be moved when it is resized.
   v.reserve(10);
   std::size_t old_cap = v.capacity();

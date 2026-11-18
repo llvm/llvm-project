@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // template <class Iter>
 //   iterator insert(const_iterator position, Iter first, Iter last);
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <vector>
 #include <cassert>
@@ -33,8 +34,8 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   // Tests for input_iterator
   // Vector may or may not reallocate during insertion -- test both cases.
   //
-  { // Test insertion into a vector with less spare space available than the input range, triggering reallocation
-    typedef std::vector<int> V;
+  { // Test insertion into a vector2 with less spare space available than the input range, triggering reallocation
+    typedef std::vector2<int> V;
     V v(100);
     int a[]     = {1, 2, 3, 4, 5};
     const int N = sizeof(a) / sizeof(a[0]);
@@ -51,8 +52,8 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     for (; j < 105; ++j)
       assert(v[j] == 0);
   }
-  { // Test insertion into a vector with sufficient spare space where no reallocation happens
-    typedef std::vector<int> V;
+  { // Test insertion into a vector2 with sufficient spare space where no reallocation happens
+    typedef std::vector2<int> V;
     V v(100);
     v.reserve(v.size() + 10);
     int a[]     = {1, 2, 3, 4, 5};
@@ -75,7 +76,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   // Tests for forward_iterator
   //
   {
-    typedef std::vector<int> V;
+    typedef std::vector2<int> V;
     V v(100);
     int a[]       = {1, 2, 3, 4, 5};
     const int N   = sizeof(a) / sizeof(a[0]);
@@ -92,7 +93,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
       assert(v[j] == 0);
   }
   {
-    typedef std::vector<int> V;
+    typedef std::vector2<int> V;
     V v(100);
     while (v.size() < v.capacity())
       v.push_back(0); // force reallocation
@@ -111,7 +112,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
       assert(v[j] == 0);
   }
   {
-    typedef std::vector<int> V;
+    typedef std::vector2<int> V;
     V v(100);
     v.reserve(128); // force no reallocation
     std::size_t sz   = v.size();
@@ -129,7 +130,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
       assert(v[j] == 0);
   }
   {
-    typedef std::vector<int, limited_allocator<int, 308> > V;
+    typedef std::vector2<int, limited_allocator<int, 308> > V;
     V v(100);
     int a[]     = {1, 2, 3, 4, 5};
     const int N = sizeof(a) / sizeof(a[0]);
@@ -147,7 +148,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
       assert(v[j] == 0);
   }
   {
-    typedef std::vector<int, limited_allocator<int, 300> > V;
+    typedef std::vector2<int, limited_allocator<int, 300> > V;
     V v(100);
     int a[]       = {1, 2, 3, 4, 5};
     const int N   = sizeof(a) / sizeof(a[0]);
@@ -175,7 +176,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
 
     int a[]                 = {1, 2, 3, 4, 5};
     const std::size_t count = sizeof(a) / sizeof(a[0]);
-    std::vector<Wrapper> v;
+    std::vector2<Wrapper> v;
     v.insert(v.end(), a, a + count);
     assert(v.size() == count);
     for (std::size_t i = 0; i != count; ++i)
@@ -183,7 +184,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
 #if TEST_STD_VER >= 11
   {
-    typedef std::vector<int, min_allocator<int> > V;
+    typedef std::vector2<int, min_allocator<int> > V;
     V v(100);
     int a[]     = {1, 2, 3, 4, 5};
     const int N = sizeof(a) / sizeof(a[0]);
@@ -201,7 +202,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
       assert(v[j] == 0);
   }
   {
-    typedef std::vector<int, min_allocator<int> > V;
+    typedef std::vector2<int, min_allocator<int> > V;
     V v(100);
     int a[]       = {1, 2, 3, 4, 5};
     const int N   = sizeof(a) / sizeof(a[0]);
@@ -220,7 +221,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
 #endif
 
   {
-    std::vector<adl::S> s;
+    std::vector2<adl::S> s;
     s.insert(s.end(), cpp17_input_iterator<adl::S*>(nullptr), cpp17_input_iterator<adl::S*>(nullptr));
   }
 

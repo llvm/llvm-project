@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++29
 
 // iterator, const_iterator, reverse_iterator, const_reverse_iterator
 
@@ -14,10 +14,10 @@
 
 #include <iterator>
 
-using iterator               = std::vector<int>::iterator;
-using const_iterator         = std::vector<int>::const_iterator;
-using reverse_iterator       = std::vector<int>::reverse_iterator;
-using const_reverse_iterator = std::vector<int>::const_reverse_iterator;
+using iterator               = std::vector2<int>::iterator;
+using const_iterator         = std::vector2<int>::const_iterator;
+using reverse_iterator       = std::vector2<int>::reverse_iterator;
+using const_reverse_iterator = std::vector2<int>::const_reverse_iterator;
 using value_type             = int;
 
 static_assert(std::contiguous_iterator<iterator>);

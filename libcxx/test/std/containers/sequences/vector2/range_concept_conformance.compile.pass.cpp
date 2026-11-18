@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++29
 
-// vector
+// vector2
 
 #include <vector>
 
 #include <concepts>
 #include <ranges>
 
-using range = std::vector<int>;
+using range = std::vector2<int>;
 
 static_assert(std::same_as<std::ranges::iterator_t<range>, range::iterator>);
 static_assert(std::ranges::common_range<range>);

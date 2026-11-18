@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
-// vector(const vector& v);
+// vector2(const vector2& v);
 
 #include <cassert>
 #include <cstddef>
@@ -102,11 +104,11 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   {
     int a[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 1, 0};
     int* an = a + sizeof(a) / sizeof(a[0]);
-    test(std::vector<int>(a, an));
+    test(std::vector2<int>(a, an));
   }
   {
-    std::vector<int, test_allocator<int> > v(3, 2, test_allocator<int>(5));
-    std::vector<int, test_allocator<int> > v2 = v;
+    std::vector2<int, test_allocator<int> > v(3, 2, test_allocator<int>(5));
+    std::vector2<int, test_allocator<int> > v2 = v;
     assert(is_contiguous_container_asan_correct(v));
     assert(is_contiguous_container_asan_correct(v2));
     assert(v2 == v);
@@ -116,8 +118,8 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
   {
     // Test copy ctor with empty source
-    std::vector<int, test_allocator<int> > v(test_allocator<int>(5));
-    std::vector<int, test_allocator<int> > v2 = v;
+    std::vector2<int, test_allocator<int> > v(test_allocator<int>(5));
+    std::vector2<int, test_allocator<int> > v2 = v;
     assert(is_contiguous_container_asan_correct(v));
     assert(is_contiguous_container_asan_correct(v2));
     assert(v2 == v);
@@ -128,8 +130,8 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
 #if TEST_STD_VER >= 11
   {
-    std::vector<int, other_allocator<int> > v(3, 2, other_allocator<int>(5));
-    std::vector<int, other_allocator<int> > v2 = v;
+    std::vector2<int, other_allocator<int> > v(3, 2, other_allocator<int>(5));
+    std::vector2<int, other_allocator<int> > v2 = v;
     assert(is_contiguous_container_asan_correct(v));
     assert(is_contiguous_container_asan_correct(v2));
     assert(v2 == v);
@@ -140,12 +142,12 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   {
     int a[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 1, 0};
     int* an = a + sizeof(a) / sizeof(a[0]);
-    test(std::vector<int, min_allocator<int>>(a, an));
-    test(std::vector<int, safe_allocator<int>>(a, an));
+    test(std::vector2<int, min_allocator<int>>(a, an));
+    test(std::vector2<int, safe_allocator<int>>(a, an));
   }
   {
-    std::vector<int, min_allocator<int> > v(3, 2, min_allocator<int>());
-    std::vector<int, min_allocator<int> > v2 = v;
+    std::vector2<int, min_allocator<int> > v(3, 2, min_allocator<int>());
+    std::vector2<int, min_allocator<int> > v2 = v;
     assert(is_contiguous_container_asan_correct(v));
     assert(is_contiguous_container_asan_correct(v2));
     assert(v2 == v);
@@ -154,8 +156,8 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     assert(is_contiguous_container_asan_correct(v2));
   }
   {
-    std::vector<int, safe_allocator<int> > v(3, 2, safe_allocator<int>());
-    std::vector<int, safe_allocator<int> > v2 = v;
+    std::vector2<int, safe_allocator<int> > v(3, 2, safe_allocator<int>());
+    std::vector2<int, safe_allocator<int> > v2 = v;
     assert(is_contiguous_container_asan_correct(v));
     assert(is_contiguous_container_asan_correct(v2));
     assert(v2 == v);
@@ -164,8 +166,8 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     assert(is_contiguous_container_asan_correct(v2));
   }
   {
-    std::vector<gh196645::Optional, gh196645::PoisoningAllocator<gh196645::Optional> > v(1);
-    std::vector<gh196645::Optional, gh196645::PoisoningAllocator<gh196645::Optional> > v2 = v;
+    std::vector2<gh196645::Optional, gh196645::PoisoningAllocator<gh196645::Optional> > v(1);
+    std::vector2<gh196645::Optional, gh196645::PoisoningAllocator<gh196645::Optional> > v2 = v;
     assert(!v2[0].hasValue());
   }
 #endif
@@ -175,7 +177,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
 
 void test_copy_from_volatile_src() {
   volatile int src[] = {1, 2, 3};
-  std::vector<int> v(src, src + 3);
+  std::vector2<int> v(src, src + 3);
   assert(v[0] == 1);
   assert(v[1] == 2);
   assert(v[2] == 3);

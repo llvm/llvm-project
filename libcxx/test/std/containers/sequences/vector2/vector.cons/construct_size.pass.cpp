@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
-// explicit vector(size_type n);
-// explicit vector(size_type n, const Allocator& alloc = Allocator());
+// explicit vector2(size_type n);
+// explicit vector2(size_type n, const Allocator& alloc = Allocator());
 
 #include <vector>
 #include <cassert>
@@ -52,13 +54,13 @@ test(typename C::size_type n, typename C::allocator_type const& a = typename C::
 }
 
 TEST_CONSTEXPR_CXX20 bool tests() {
-  test<std::vector<int> >(0);
-  test<std::vector<int> >(50);
+  test<std::vector2<int> >(0);
+  test<std::vector2<int> >(50);
 #if TEST_STD_VER >= 11
-  test<std::vector<int, min_allocator<int>>>(0);
-  test<std::vector<int, min_allocator<int>>>(50);
-  test<std::vector<int, safe_allocator<int>>>(0);
-  test<std::vector<int, safe_allocator<int>>>(50);
+  test<std::vector2<int, min_allocator<int>>>(0);
+  test<std::vector2<int, min_allocator<int>>>(50);
+  test<std::vector2<int, safe_allocator<int>>>(0);
+  test<std::vector2<int, safe_allocator<int>>>(50);
 #endif
 
   return true;
@@ -69,17 +71,17 @@ int main(int, char**) {
 #if TEST_STD_VER > 17
   static_assert(tests());
 #endif
-  test<std::vector<DefaultOnly> >(0);
-  test<std::vector<DefaultOnly> >(500);
+  test<std::vector2<DefaultOnly> >(0);
+  test<std::vector2<DefaultOnly> >(500);
   assert(DefaultOnly::count == 0);
 
 #if TEST_STD_VER >= 11
-  test<std::vector<DefaultOnly, min_allocator<DefaultOnly>>>(0);
-  test<std::vector<DefaultOnly, min_allocator<DefaultOnly>>>(500);
-  test<std::vector<DefaultOnly, safe_allocator<DefaultOnly>>>(0);
-  test<std::vector<DefaultOnly, safe_allocator<DefaultOnly>>>(500);
-  test<std::vector<DefaultOnly, test_allocator<DefaultOnly>>>(0, test_allocator<DefaultOnly>(23));
-  test<std::vector<DefaultOnly, test_allocator<DefaultOnly>>>(100, test_allocator<DefaultOnly>(23));
+  test<std::vector2<DefaultOnly, min_allocator<DefaultOnly>>>(0);
+  test<std::vector2<DefaultOnly, min_allocator<DefaultOnly>>>(500);
+  test<std::vector2<DefaultOnly, safe_allocator<DefaultOnly>>>(0);
+  test<std::vector2<DefaultOnly, safe_allocator<DefaultOnly>>>(500);
+  test<std::vector2<DefaultOnly, test_allocator<DefaultOnly>>>(0, test_allocator<DefaultOnly>(23));
+  test<std::vector2<DefaultOnly, test_allocator<DefaultOnly>>>(100, test_allocator<DefaultOnly>(23));
   assert(DefaultOnly::count == 0);
 #endif
 

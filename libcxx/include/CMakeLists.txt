@@ -494,6 +494,7 @@ set(files
   __fwd/tuple.h
   __fwd/variant.h
   __fwd/vector.h
+  __fwd/vector2.h
   __hash_table
   __ios/fpos.h
   __iterator/access.h
@@ -1008,6 +1009,13 @@ set(files
   __vector/pmr.h
   __vector/swap.h
   __vector/vector.h
+  __vector/vector2.h
+  __vector/vector2_comparison.h
+  __vector/vector2_container_traits.h
+  __vector/vector2_erase.h
+  __vector/vector2_layout.h
+  __vector/vector2_pmr.h
+  __vector/vector2_swap.h
   __vector/vector_bool.h
   __vector/vector_bool_formatter.h
   __verbose_abort

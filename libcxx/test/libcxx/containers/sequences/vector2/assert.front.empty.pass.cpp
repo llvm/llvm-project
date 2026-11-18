@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // Call front() on empty container.
@@ -21,20 +23,20 @@
 int main(int, char**) {
   {
     typedef int T;
-    typedef std::vector<T, min_allocator<T> > C;
+    typedef std::vector2<T, min_allocator<T> > C;
     C c(1);
     assert(c.front() == 0);
     c.clear();
-    TEST_LIBCPP_ASSERT_FAILURE(c.front(), "front() called on an empty vector");
+    TEST_LIBCPP_ASSERT_FAILURE(c.front(), "front() called on an empty vector2");
   }
 
   {
     typedef int T;
-    typedef std::vector<T> C;
+    typedef std::vector2<T> C;
     C c(1);
     assert(c.front() == 0);
     c.clear();
-    TEST_LIBCPP_ASSERT_FAILURE(c.front(), "front() called on an empty vector");
+    TEST_LIBCPP_ASSERT_FAILURE(c.front(), "front() called on an empty vector2");
   }
 
   return 0;

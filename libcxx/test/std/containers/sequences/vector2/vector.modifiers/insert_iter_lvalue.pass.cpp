@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // iterator insert(const_iterator position, const value_type& x);
@@ -21,9 +23,9 @@
 
 TEST_CONSTEXPR_CXX20 bool test() {
   {
-    std::vector<int> v(100);
+    std::vector2<int> v(100);
     const int lvalue             = 1;
-    std::vector<int>::iterator i = v.insert(v.cbegin() + 10, lvalue);
+    std::vector2<int>::iterator i = v.insert(v.cbegin() + 10, lvalue);
     assert(v.size() == 101);
     assert(is_contiguous_container_asan_correct(v));
     assert(i == v.begin() + 10);
@@ -36,12 +38,12 @@ TEST_CONSTEXPR_CXX20 bool test() {
   }
   {
     const std::size_t n = 100;
-    std::vector<int> v(n);
+    std::vector2<int> v(n);
     v.reserve(n + 1);
     const int lvalue = 1;
 
     // no reallocation expected
-    std::vector<int>::iterator it = v.insert(v.cbegin() + n, lvalue);
+    std::vector2<int>::iterator it = v.insert(v.cbegin() + n, lvalue);
 
     assert(v.size() == n + 1);
     assert(is_contiguous_container_asan_correct(v));
@@ -52,12 +54,12 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(v[n] == lvalue);
   }
   {
-    std::vector<int> v(100);
+    std::vector2<int> v(100);
     while (v.size() < v.capacity())
       v.push_back(0); // force reallocation
     std::size_t sz               = v.size();
     const int lvalue             = 1;
-    std::vector<int>::iterator i = v.insert(v.cbegin() + 10, lvalue);
+    std::vector2<int>::iterator i = v.insert(v.cbegin() + 10, lvalue);
     assert(v.size() == sz + 1);
     assert(is_contiguous_container_asan_correct(v));
     assert(i == v.begin() + 10);
@@ -69,14 +71,14 @@ TEST_CONSTEXPR_CXX20 bool test() {
       assert(v[j] == 0);
   }
   {
-    std::vector<int> v(100);
+    std::vector2<int> v(100);
     while (v.size() < v.capacity())
       v.push_back(0);
     v.pop_back();
     v.pop_back(); // force no reallocation
     std::size_t sz               = v.size();
     const int lvalue             = 1;
-    std::vector<int>::iterator i = v.insert(v.cbegin() + 10, lvalue);
+    std::vector2<int>::iterator i = v.insert(v.cbegin() + 10, lvalue);
     assert(v.size() == sz + 1);
     assert(is_contiguous_container_asan_correct(v));
     assert(i == v.begin() + 10);
@@ -88,9 +90,9 @@ TEST_CONSTEXPR_CXX20 bool test() {
       assert(v[j] == 0);
   }
   {
-    std::vector<int, limited_allocator<int, 300> > v(100);
+    std::vector2<int, limited_allocator<int, 300> > v(100);
     const int lvalue                                           = 1;
-    std::vector<int, limited_allocator<int, 300> >::iterator i = v.insert(v.cbegin() + 10, lvalue);
+    std::vector2<int, limited_allocator<int, 300> >::iterator i = v.insert(v.cbegin() + 10, lvalue);
     assert(v.size() == 101);
     assert(is_contiguous_container_asan_correct(v));
     assert(i == v.begin() + 10);
@@ -103,9 +105,9 @@ TEST_CONSTEXPR_CXX20 bool test() {
   }
 #if TEST_STD_VER >= 11
   {
-    std::vector<int, min_allocator<int>> v(100);
+    std::vector2<int, min_allocator<int>> v(100);
     const int lvalue                                 = 1;
-    std::vector<int, min_allocator<int>>::iterator i = v.insert(v.cbegin() + 10, lvalue);
+    std::vector2<int, min_allocator<int>>::iterator i = v.insert(v.cbegin() + 10, lvalue);
     assert(v.size() == 101);
     assert(is_contiguous_container_asan_correct(v));
     assert(i == v.begin() + 10);
@@ -117,9 +119,9 @@ TEST_CONSTEXPR_CXX20 bool test() {
       assert(v[j] == 0);
   }
   {
-    std::vector<int, safe_allocator<int>> v(100);
+    std::vector2<int, safe_allocator<int>> v(100);
     const int lvalue                                  = 1;
-    std::vector<int, safe_allocator<int>>::iterator i = v.insert(v.cbegin() + 10, lvalue);
+    std::vector2<int, safe_allocator<int>>::iterator i = v.insert(v.cbegin() + 10, lvalue);
     assert(v.size() == 101);
     assert(is_contiguous_container_asan_correct(v));
     assert(i == v.begin() + 10);

@@ -5,11 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++03
+
+// REQUIRES: std-at-least-c++29
 
 // <vector>
 
-// vector()
+// vector2()
 //        noexcept(is_nothrow_default_constructible<allocator_type>::value);
 
 // This *was* a conforming extension, but it was adopted in N4258.
@@ -30,19 +31,19 @@ struct some_alloc {
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
-    typedef std::vector<MoveOnly> C;
+    typedef std::vector2<MoveOnly> C;
     static_assert(std::is_nothrow_default_constructible<C>::value, "");
   }
   {
-    typedef std::vector<MoveOnly, test_allocator<MoveOnly>> C;
+    typedef std::vector2<MoveOnly, test_allocator<MoveOnly>> C;
     static_assert(std::is_nothrow_default_constructible<C>::value, "");
   }
   {
-    typedef std::vector<MoveOnly, other_allocator<MoveOnly>> C;
+    typedef std::vector2<MoveOnly, other_allocator<MoveOnly>> C;
     static_assert(!std::is_nothrow_default_constructible<C>::value, "");
   }
   {
-    typedef std::vector<MoveOnly, some_alloc<MoveOnly>> C;
+    typedef std::vector2<MoveOnly, some_alloc<MoveOnly>> C;
     static_assert(!std::is_nothrow_default_constructible<C>::value, "");
   }
 

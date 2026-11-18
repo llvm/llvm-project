@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 //   The container's value type must be the same as the allocator's value type
 
 #include <vector>
 
-std::vector<int, std::allocator<long> > v;
+std::vector2<int, std::allocator<long> > v;
 // expected-error-re@*:* {{static assertion failed{{.*}}Allocator::value_type must be same type as value_type}}

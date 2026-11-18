@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // REQUIRES: asan
 
 // <vector>
@@ -30,7 +32,7 @@ int main(int, char**) {
   {
     typedef int T;
     typedef cpp17_input_iterator<T*> MyInputIter;
-    std::vector<T, min_allocator<T>> v;
+    std::vector2<T, min_allocator<T>> v;
     v.reserve(1);
     int i[] = {42};
     v.insert(v.begin(), MyInputIter(i), MyInputIter(i + 1));
@@ -40,7 +42,7 @@ int main(int, char**) {
   {
     typedef char T;
     typedef cpp17_input_iterator<T*> MyInputIter;
-    std::vector<T, unaligned_allocator<T>> v;
+    std::vector2<T, unaligned_allocator<T>> v;
     v.reserve(1);
     char i[] = {'a', 'b'};
     v.insert(v.begin(), MyInputIter(i), MyInputIter(i + 2));
@@ -52,7 +54,7 @@ int main(int, char**) {
   {
     typedef cpp17_input_iterator<int*> MyInputIter;
     // Sould not trigger ASan.
-    std::vector<int> v;
+    std::vector2<int> v;
     v.reserve(1);
     int i[] = {42};
     v.insert(v.begin(), MyInputIter(i), MyInputIter(i + 1));
@@ -63,7 +65,7 @@ int main(int, char**) {
   __sanitizer_set_death_callback(do_exit);
   {
     typedef int T;
-    typedef std::vector<T> C;
+    typedef std::vector2<T> C;
     const T t[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     C c(std::begin(t), std::end(t));
     c.reserve(2 * c.size());

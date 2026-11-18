@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
-// pop_back() more than the number of elements in a vector
+// pop_back() more than the number of elements in a vector2
 
 // REQUIRES: can-test-hardening-assertions-fast
 
@@ -17,10 +19,10 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-  std::vector<int> v;
+  std::vector2<int> v;
   v.push_back(0);
   v.pop_back();
-  TEST_LIBCPP_ASSERT_FAILURE(v.pop_back(), "vector::pop_back called on an empty vector");
+  TEST_LIBCPP_ASSERT_FAILURE(v.pop_back(), "vector2::pop_back called on an empty vector2");
 
   return 0;
 }

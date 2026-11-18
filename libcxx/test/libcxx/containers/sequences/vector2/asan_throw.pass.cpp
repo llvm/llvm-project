@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // UNSUPPORTED: no-exceptions
-// Test asan vector annotations with a class that throws in a CTOR.
+// Test asan vector2 annotations with a class that throws in a CTOR.
 
 #include <vector>
 #include <cassert>
@@ -54,7 +56,7 @@ public:
 };
 
 void test_push_back() {
-  std::vector<X> v;
+  std::vector2<X> v;
   v.reserve(2);
   v.push_back(X(2));
   assert(v.size() == 1);
@@ -70,7 +72,7 @@ void test_push_back() {
 
 void test_emplace_back() {
 #if TEST_STD_VER >= 11
-  std::vector<X> v;
+  std::vector2<X> v;
   v.reserve(2);
   v.push_back(X(2));
   assert(v.size() == 1);
@@ -86,7 +88,7 @@ void test_emplace_back() {
 }
 
 void test_insert_range() {
-  std::vector<X> v;
+  std::vector2<X> v;
   v.reserve(4);
   v.push_back(X(1));
   v.push_back(X(2));
@@ -104,7 +106,7 @@ void test_insert_range() {
 }
 
 void test_insert() {
-  std::vector<X> v;
+  std::vector2<X> v;
   v.reserve(3);
   v.insert(v.end(), X(1));
   v.insert(v.begin(), X(2));
@@ -121,7 +123,7 @@ void test_insert() {
 
 void test_emplace() {
 #if TEST_STD_VER >= 11
-  std::vector<X> v;
+  std::vector2<X> v;
   v.reserve(3);
   v.insert(v.end(), X(1));
   v.insert(v.begin(), X(2));
@@ -138,7 +140,7 @@ void test_emplace() {
 }
 
 void test_insert_range2() {
-  std::vector<X> v;
+  std::vector2<X> v;
   v.reserve(4);
   v.insert(v.end(), X(1));
   v.insert(v.begin(), X(2));
@@ -157,7 +159,7 @@ void test_insert_range2() {
 }
 
 void test_insert_n() {
-  std::vector<X> v;
+  std::vector2<X> v;
   v.reserve(10);
   v.insert(v.end(), X(1));
   v.insert(v.begin(), X(2));
@@ -174,7 +176,7 @@ void test_insert_n() {
 }
 
 void test_insert_n2() {
-  std::vector<ThrowOnCopy> v(10);
+  std::vector2<ThrowOnCopy> v(10);
   v.reserve(100);
   assert(v.size() == 10);
   v[6].should_throw = true;
@@ -190,7 +192,7 @@ void test_insert_n2() {
 }
 
 void test_resize() {
-  std::vector<X> v;
+  std::vector2<X> v;
   v.reserve(3);
   v.push_back(X(0));
   try {
@@ -204,7 +206,7 @@ void test_resize() {
 }
 
 void test_resize_param() {
-  std::vector<X> v;
+  std::vector2<X> v;
   v.reserve(3);
   v.push_back(X(0));
   try {

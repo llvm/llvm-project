@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // template <class InputIt>
@@ -31,12 +33,12 @@ TEST_CONSTEXPR_CXX20 bool test() {
     using T  = EmplaceConstructibleMoveableAndAssignable<int>;
     using It = forward_iterator<int*>;
     {
-      std::vector<T> v;
+      std::vector2<T> v;
       v.assign(It(arr1), It(std::end(arr1)));
       assert(v[0].value == 42);
     }
     {
-      std::vector<T> v;
+      std::vector2<T> v;
       v.assign(It(arr2), It(std::end(arr2)));
       assert(v[0].value == 1);
       assert(v[1].value == 101);
@@ -47,13 +49,13 @@ TEST_CONSTEXPR_CXX20 bool test() {
     using T  = EmplaceConstructibleMoveableAndAssignable<int>;
     using It = cpp17_input_iterator<int*>;
     {
-      std::vector<T> v;
+      std::vector2<T> v;
       v.assign(It(arr1), It(std::end(arr1)));
       assert(v[0].copied == 0);
       assert(v[0].value == 42);
     }
     {
-      std::vector<T> v;
+      std::vector2<T> v;
       v.assign(It(arr2), It(std::end(arr2)));
       //assert(v[0].copied == 0);
       assert(v[0].value == 1);
@@ -68,7 +70,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     using T  = EmplaceConstructibleMoveableAndAssignable<int>;
     using It = forward_iterator<int*>;
     {
-      std::vector<T> v;
+      std::vector2<T> v;
       v.reserve(5);
       for (std::size_t i = 0; i < v.capacity(); ++i)
         v.emplace_back(99);
@@ -77,7 +79,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
       assert(v[0].value == 42);
     }
     {
-      std::vector<T> v;
+      std::vector2<T> v;
       v.reserve(5);
       for (std::size_t i = 0; i < v.capacity(); ++i)
         v.emplace_back(99);
@@ -92,7 +94,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     using T  = EmplaceConstructibleMoveableAndAssignable<int>;
     using It = cpp17_input_iterator<int*>;
     {
-      std::vector<T> v;
+      std::vector2<T> v;
       v.reserve(5);
       for (std::size_t i = 0; i < v.capacity(); ++i)
         v.emplace_back(99);
@@ -101,7 +103,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
       assert(v[0].value == 42);
     }
     {
-      std::vector<T> v;
+      std::vector2<T> v;
       v.reserve(5);
       for (std::size_t i = 0; i < v.capacity(); ++i)
         v.emplace_back(99);
@@ -117,14 +119,14 @@ TEST_CONSTEXPR_CXX20 bool test() {
     using T  = EmplaceConstructibleMoveableAndAssignable<int>;
     using It = forward_iterator<int*>;
     {
-      std::vector<T> v;
+      std::vector2<T> v;
       v.reserve(5);
       v.assign(It(arr1), It(std::end(arr1)));
       assert(v.size() == 1);
       assert(v[0].value == 42);
     }
     {
-      std::vector<T> v;
+      std::vector2<T> v;
       v.reserve(5);
       for (std::size_t i = 0; i < 2; ++i)
         v.emplace_back(99);
@@ -139,14 +141,14 @@ TEST_CONSTEXPR_CXX20 bool test() {
     using T  = EmplaceConstructibleMoveableAndAssignable<int>;
     using It = cpp17_input_iterator<int*>;
     {
-      std::vector<T> v;
+      std::vector2<T> v;
       v.reserve(5);
       v.assign(It(arr1), It(std::end(arr1)));
       assert(v.size() == 1);
       assert(v[0].value == 42);
     }
     {
-      std::vector<T> v;
+      std::vector2<T> v;
       v.reserve(5);
       for (std::size_t i = 0; i < 2; ++i)
         v.emplace_back(99);
@@ -163,10 +165,10 @@ TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef forward_iterator<int*> It;
 
-    std::vector<int> dst(10);
+    std::vector2<int> dst(10);
 
     std::size_t n = dst.capacity() * 2;
-    std::vector<int> src(n);
+    std::vector2<int> src(n);
 
     dst.assign(It(src.data()), It(src.data() + src.size()));
     assert(dst == src);

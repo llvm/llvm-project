@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Ensure that all the elements in the vector are destroyed, especially when reallocating the internal buffer
+// REQUIRES: std-at-least-c++29
 
-// UNSUPPORTED: c++03
+// Ensure that all the elements in the vector2 are destroyed, especially when reallocating the internal buffer
+
 
 #include <algorithm>
 #include <array>
@@ -37,7 +38,7 @@ TEST_CONSTEXPR_CXX20 void test(Operation operation) {
   std::vector<bool> all_destroyed;
 
   {
-    std::vector<DestroyTracker> v;
+    std::vector2<DestroyTracker> v;
     for (size_t i = 0; i != 100; ++i)
       operation(v, all_destroyed);
   }
@@ -46,17 +47,17 @@ TEST_CONSTEXPR_CXX20 void test(Operation operation) {
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
-  test([](std::vector<DestroyTracker>& vec, std::vector<bool>& tracker) { vec.emplace_back(tracker); });
-  test([](std::vector<DestroyTracker>& vec, std::vector<bool>& tracker) { vec.push_back(tracker); });
-  test([](std::vector<DestroyTracker>& vec, std::vector<bool>& tracker) { vec.emplace(vec.begin(), tracker); });
-  test([](std::vector<DestroyTracker>& vec, std::vector<bool>& tracker) { vec.insert(vec.begin(), tracker); });
-  test([](std::vector<DestroyTracker>& vec, std::vector<bool>& tracker) { vec.resize(vec.size() + 1, tracker); });
+  test([](std::vector2<DestroyTracker>& vec, std::vector<bool>& tracker) { vec.emplace_back(tracker); });
+  test([](std::vector2<DestroyTracker>& vec, std::vector<bool>& tracker) { vec.push_back(tracker); });
+  test([](std::vector2<DestroyTracker>& vec, std::vector<bool>& tracker) { vec.emplace(vec.begin(), tracker); });
+  test([](std::vector2<DestroyTracker>& vec, std::vector<bool>& tracker) { vec.insert(vec.begin(), tracker); });
+  test([](std::vector2<DestroyTracker>& vec, std::vector<bool>& tracker) { vec.resize(vec.size() + 1, tracker); });
 #if TEST_STD_VER >= 23
-  test([](std::vector<DestroyTracker>& vec, std::vector<bool>& tracker) {
+  test([](std::vector2<DestroyTracker>& vec, std::vector<bool>& tracker) {
     vec.insert_range(vec.begin(), std::array<DestroyTracker, 2>{tracker, tracker});
   });
 
-  test([](std::vector<DestroyTracker>& vec, std::vector<bool>& tracker) {
+  test([](std::vector2<DestroyTracker>& vec, std::vector<bool>& tracker) {
     vec.append_range(std::array<DestroyTracker, 2>{tracker, tracker});
   });
 #endif

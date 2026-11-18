@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___VECTOR_VECTOR_H
-#define _LIBCPP___VECTOR_VECTOR_H
+#ifndef _LIBCPP___VECTOR_VECTOR2_H
+#define _LIBCPP___VECTOR_VECTOR2_H
 
 #include <__algorithm/copy.h>
 #include <__algorithm/copy_n.h>
@@ -22,7 +22,7 @@
 #include <__config>
 #include <__debug_utils/sanitizers.h>
 #include <__format/enable_insertable.h>
-#include <__fwd/vector.h>
+#include <__fwd/vector2.h>
 #include <__iterator/bounded_iter.h>
 #include <__iterator/concepts.h>
 #include <__iterator/distance.h>
@@ -77,10 +77,14 @@
 #include <stdexcept>
 
 // These headers define parts of vectors definition, since they define ADL functions or class specializations.
-#include <__vector/comparison.h>
-#include <__vector/container_traits.h>
-#include <__vector/layout.h>
-#include <__vector/swap.h>
+#include <__vector/vector2_comparison.h>
+#include <__vector/vector2_container_traits.h>
+#include <__vector/vector2_layout.h>
+#include <__vector/vector2_swap.h>
+
+// PROTOTYPE: For std::__if_likely_else. A real implementation would share this helper (and much more) with
+// std::vector instead of depending on the other header.
+#include <__vector/vector.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -89,11 +93,13 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
+#if _LIBCPP_STD_VER >= 29
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
-class _LIBCPP_WARN_UNUSED vector {
-  using __base_type _LIBCPP_NODEBUG  = __vector_layout<_Tp, _Allocator>;
+class _LIBCPP_WARN_UNUSED vector2 {
+  using __base_type _LIBCPP_NODEBUG  = __vector2_layout<_Tp, _Allocator>;
   using __bound_type _LIBCPP_NODEBUG = typename __base_type::__bound_type;
   using _SplitBuffer _LIBCPP_NODEBUG = typename __base_type::_SplitBuffer;
 
@@ -123,13 +129,13 @@ public:
   using reverse_iterator       = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-  // A vector contains the following members which may be trivially relocatable:
+  // A vector2 contains the following members which may be trivially relocatable:
   // - pointer: may be trivially relocatable, so it's checked
   // - allocator_type: may be trivially relocatable, so it's checked
-  // vector doesn't contain any self-references, so it's trivially relocatable if its members are.
+  // vector2 doesn't contain any self-references, so it's trivially relocatable if its members are.
   using __trivially_relocatable _LIBCPP_NODEBUG =
       __conditional_t<__is_trivially_relocatable_v<pointer> && __is_trivially_relocatable_v<allocator_type>,
-                      vector,
+                      vector2,
                       void>;
 
   static_assert(__check_valid_allocator<allocator_type>::value, "");
@@ -137,11 +143,11 @@ public:
                 "Allocator::value_type must be same type as value_type");
 
   //
-  // [vector.cons], construct/copy/destroy
+  // [vector2.cons], construct/copy/destroy
   //
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector()
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector2()
       _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value) {}
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit vector(const allocator_type& __a)
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit vector2(const allocator_type& __a)
 #if _LIBCPP_STD_VER <= 14
       _NOEXCEPT_(is_nothrow_copy_constructible<allocator_type>::value)
 #else
@@ -150,7 +156,7 @@ public:
       : __layout_(__a) {
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit vector(size_type __n) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit vector2(size_type __n) {
     auto __guard = std::__make_exception_guard(__destroy_vector(*this));
     if (__n > 0) {
       __vallocate(__n);
@@ -159,7 +165,7 @@ public:
     __guard.__complete();
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit vector(size_type __n, const allocator_type& __a)
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit vector2(size_type __n, const allocator_type& __a)
       : __layout_(__a) {
     auto __guard = std::__make_exception_guard(__destroy_vector(*this));
     if (__n > 0) {
@@ -169,7 +175,7 @@ public:
     __guard.__complete();
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector(size_type __n, const value_type& __x) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector2(size_type __n, const value_type& __x) {
     auto __guard = std::__make_exception_guard(__destroy_vector(*this));
     if (__n > 0) {
       __vallocate(__n);
@@ -180,7 +186,7 @@ public:
 
   template <__enable_if_t<__is_allocator_v<_Allocator>, int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-  vector(size_type __n, const value_type& __x, const allocator_type& __a)
+  vector2(size_type __n, const value_type& __x, const allocator_type& __a)
       : __layout_(__a) {
     auto __guard = std::__make_exception_guard(__destroy_vector(*this));
     if (__n > 0) {
@@ -194,7 +200,7 @@ public:
             __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value &&
                               is_constructible<value_type, typename iterator_traits<_InputIterator>::reference>::value,
                           int> = 0>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector(_InputIterator __first, _InputIterator __last) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector2(_InputIterator __first, _InputIterator __last) {
     __init_with_sentinel(__first, __last);
   }
 
@@ -203,7 +209,7 @@ public:
                               is_constructible<value_type, typename iterator_traits<_InputIterator>::reference>::value,
                           int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-  vector(_InputIterator __first, _InputIterator __last, const allocator_type& __a)
+  vector2(_InputIterator __first, _InputIterator __last, const allocator_type& __a)
       : __layout_(__a) {
     __init_with_sentinel(__first, __last);
   }
@@ -213,7 +219,7 @@ public:
       __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value &&
                         is_constructible<value_type, typename iterator_traits<_ForwardIterator>::reference>::value,
                     int> = 0>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector(_ForwardIterator __first, _ForwardIterator __last) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector2(_ForwardIterator __first, _ForwardIterator __last) {
     __init_with_size(__first, std::distance(__first, __last));
   }
 
@@ -223,14 +229,14 @@ public:
                         is_constructible<value_type, typename iterator_traits<_ForwardIterator>::reference>::value,
                     int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-  vector(_ForwardIterator __first, _ForwardIterator __last, const allocator_type& __a)
+  vector2(_ForwardIterator __first, _ForwardIterator __last, const allocator_type& __a)
       : __layout_(__a) {
     __init_with_size(__first, std::distance(__first, __last));
   }
 
 #if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<_Tp> _Range>
-  _LIBCPP_HIDE_FROM_ABI constexpr vector(from_range_t, _Range&& __range, const allocator_type& __a = allocator_type())
+  _LIBCPP_HIDE_FROM_ABI constexpr vector2(from_range_t, _Range&& __range, const allocator_type& __a = allocator_type())
       : __layout_(__a) {
     if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
       __init_with_size(ranges::begin(__range), ranges::distance(__range));
@@ -243,7 +249,7 @@ public:
 private:
   class __destroy_vector {
   public:
-    _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI __destroy_vector(vector& __vec) : __vec_(__vec) {}
+    _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI __destroy_vector(vector2& __vec) : __vec_(__vec) {}
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void operator()() {
       if (__vec_.__layout_.__begin_ptr() != nullptr) {
@@ -254,25 +260,25 @@ private:
     }
 
   private:
-    vector& __vec_;
+    vector2& __vec_;
   };
 
   using __emplace_back_result_t _LIBCPP_NODEBUG = _If<(_LIBCPP_STD_VER < 17), void, reference>;
 
 public:
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI ~vector() { __destroy_vector (*this)(); }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI ~vector2() { __destroy_vector (*this)(); }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector(const vector& __x)
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector2(const vector2& __x)
       : __layout_(__alloc_traits::select_on_container_copy_construction(__x.__layout_.__alloc())) {
     __init_with_size(__x.__layout_.__begin_ptr(), __x.size());
   }
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-  vector(const vector& __x, const __type_identity_t<allocator_type>& __a)
+  vector2(const vector2& __x, const __type_identity_t<allocator_type>& __a)
       : __layout_(__a) {
     __init_with_size(__x.__layout_.__begin_ptr(), __x.size());
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector& operator=(const vector& __other) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector2& operator=(const vector2& __other) {
     if (this == std::addressof(__other))
       return *this;
 
@@ -291,23 +297,23 @@ public:
   }
 
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector(initializer_list<value_type> __il) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector2(initializer_list<value_type> __il) {
     __init_with_size(__il.begin(), __il.size());
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-  vector(initializer_list<value_type> __il, const allocator_type& __a)
+  vector2(initializer_list<value_type> __il, const allocator_type& __a)
       : __layout_(__a) {
     __init_with_size(__il.begin(), __il.size());
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector& operator=(initializer_list<value_type> __il) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector2& operator=(initializer_list<value_type> __il) {
     assign(__il.begin(), __il.end());
     return *this;
   }
 #endif // !_LIBCPP_CXX03_LANG
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector(vector&& __x)
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector2(vector2&& __x)
 #if _LIBCPP_STD_VER >= 17
       noexcept;
 #else
@@ -315,9 +321,9 @@ public:
 #endif
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20
-  _LIBCPP_HIDE_FROM_ABI vector(vector&& __x, const __type_identity_t<allocator_type>& __a);
+  _LIBCPP_HIDE_FROM_ABI vector2(vector2&& __x, const __type_identity_t<allocator_type>& __a);
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector& operator=(vector&& __other)
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector2& operator=(vector2&& __other)
       _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value) {
     if _LIBCPP_CONSTEXPR (__alloc_traits::propagate_on_container_move_assignment::value) {
       __vdeallocate();
@@ -421,7 +427,7 @@ public:
   }
 
   //
-  // [vector.capacity], capacity
+  // [vector2.capacity], capacity
   //
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type size() const _NOEXCEPT {
     return __layout_.__size();
@@ -443,12 +449,12 @@ public:
   // element access
   //
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI reference operator[](size_type __n) _NOEXCEPT {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n < size(), "vector[] index out of bounds");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n < size(), "vector2[] index out of bounds");
     return this->__layout_.__begin_ptr()[__n];
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reference
   operator[](size_type __n) const _NOEXCEPT {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n < size(), "vector[] index out of bounds");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n < size(), "vector2[] index out of bounds");
     return this->__layout_.__begin_ptr()[__n];
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI reference at(size_type __n) {
@@ -463,24 +469,24 @@ public:
   }
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI reference front() _NOEXCEPT {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "front() called on an empty vector");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "front() called on an empty vector2");
     return *this->__layout_.__begin_ptr();
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reference front() const _NOEXCEPT {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "front() called on an empty vector");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "front() called on an empty vector2");
     return *this->__layout_.__begin_ptr();
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI reference back() _NOEXCEPT {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "back() called on an empty vector");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "back() called on an empty vector2");
     return end()[-1];
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reference back() const _NOEXCEPT {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "back() called on an empty vector");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "back() called on an empty vector2");
     return end()[-1];
   }
 
   //
-  // [vector.data], data access
+  // [vector2.data], data access
   //
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI value_type* data() _NOEXCEPT {
     return __layout_.__data();
@@ -491,7 +497,7 @@ public:
   }
 
   //
-  // [vector.modifiers], modifiers
+  // [vector2.modifiers], modifiers
   //
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void push_back(const_reference __x) { emplace_back(__x); }
 
@@ -503,7 +509,7 @@ public:
   template <class... _Args>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __emplace_back_assume_capacity(_Args&&... __args) {
     _LIBCPP_ASSERT_INTERNAL(
-        size() < capacity(), "We assume that we have enough space to insert an element at the end of the vector");
+        size() < capacity(), "We assume that we have enough space to insert an element at the end of the vector2");
     _ConstructTransaction __tx(*this, 1);
     __alloc_traits::construct(
         this->__layout_.__alloc(), std::__to_address(__tx.__pos_), std::forward<_Args>(__args)...);
@@ -523,7 +529,7 @@ public:
         __layout_.__relocate(__buffer);
       }
     } else {
-      vector __buffer(__layout_.__alloc());
+      vector2 __buffer(__layout_.__alloc());
       for (auto&& __val : __range)
         __buffer.emplace_back(std::forward<decltype(__val)>(__val));
       append_range(ranges::as_rvalue_view(__buffer));
@@ -532,7 +538,7 @@ public:
 #endif
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void pop_back() {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "vector::pop_back called on an empty vector");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "vector2::pop_back called on an empty vector2");
     this->__destruct_at_end(__layout_.__end_ptr() - 1);
   }
 
@@ -590,20 +596,20 @@ public:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __position) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        __position != end(), "vector::erase(iterator) called with a non-dereferenceable iterator");
+        __position != end(), "vector2::erase(iterator) called with a non-dereferenceable iterator");
     return erase(__position, __position + 1);
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __first, const_iterator __last) {
-    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__first <= __last, "vector::erase(first, last) called with invalid range");
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__first <= __last, "vector2::erase(first, last) called with invalid range");
     pointer __pos    = this->__layout_.__begin_ptr() + (__first - begin());
     auto __hole_size = __last - __first;
     if (__first != __last) {
 #ifndef _LIBCPP_CXX03_LANG
       // If the value_type is trivially relocatable, we destroy the range being erased and we relocate the tail
-      // of the vector into the created gap. Otherwise, we use the standard technique with move-assignments.
+      // of the vector2 into the created gap. Otherwise, we use the standard technique with move-assignments.
       //
-      // We really only need is_nothrow_relocatable, but vector::erase is currently overspecified to use assignment.
+      // We really only need is_nothrow_relocatable, but vector2::erase is currently overspecified to use assignment.
       // We use is_trivially_relocatable unil that is relaxed.
       if constexpr (__is_trivially_relocatable_v<value_type> &&
                     __allocator_has_trivial_move_construct_v<allocator_type, value_type> &&
@@ -629,7 +635,7 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void resize(size_type __sz);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void resize(size_type __sz, const_reference __x);
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void swap(vector&)
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void swap(vector2&)
 #if _LIBCPP_STD_VER >= 14
       _NOEXCEPT;
 #else
@@ -655,17 +661,17 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __vallocate(size_type __n) {
     _LIBCPP_ASSERT_INTERNAL(
         __layout_.__begin_ptr() == nullptr,
-        "vector::__vallocate can only be called on a vector that hasn't allocated memory. This vector either already "
+        "vector2::__vallocate can only be called on a vector2 that hasn't allocated memory. This vector2 either already "
         "owns a buffer, or a deallocation function didn't reset the layout's begin pointer.");
     _LIBCPP_ASSERT_INTERNAL(
         size() == 0,
-        "vector::__vallocate can only be called on a vector that hasn't allocated memory. This vector either already "
+        "vector2::__vallocate can only be called on a vector2 that hasn't allocated memory. This vector2 either already "
         "owns a buffer, or a deallocation function didn't reset the layout's size.");
     _LIBCPP_ASSERT_INTERNAL(
         __layout_.__capacity() == 0,
-        "vector::__vallocate can only be called on a vector that hasn't allocated memory. This vector either already "
+        "vector2::__vallocate can only be called on a vector2 that hasn't allocated memory. This vector2 either already "
         "owns a buffer, or a deallocation function didn't reset the layout's capacity.");
-    _LIBCPP_ASSERT_INTERNAL(__n > 0, "vector::__vallocate cannot allocate 0 bytes");
+    _LIBCPP_ASSERT_INTERNAL(__n > 0, "vector2::__vallocate cannot allocate 0 bytes");
 
     if (__n > max_size())
       this->__throw_length_error();
@@ -807,7 +813,7 @@ private:
   }
 
   struct _ConstructTransaction {
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit _ConstructTransaction(vector& __v, size_type __n)
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit _ConstructTransaction(vector2& __v, size_type __n)
         : __v_(__v), __pos_(__v.__layout_.__end_ptr()), __new_end_(__pos_ + __n) {
       __v_.__annotate_set_size(__v.size() + __n);
     }
@@ -819,7 +825,7 @@ private:
       }
     }
 
-    vector& __v_;
+    vector2& __v_;
     pointer __pos_;
     const_pointer const __new_end_;
 
@@ -827,9 +833,9 @@ private:
     _ConstructTransaction& operator=(_ConstructTransaction const&) = delete;
   };
 
-  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI static void __throw_length_error() { std::__throw_length_error("vector"); }
+  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI static void __throw_length_error() { std::__throw_length_error("vector2"); }
 
-  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI static void __throw_out_of_range() { std::__throw_out_of_range("vector"); }
+  [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI static void __throw_out_of_range() { std::__throw_out_of_range("vector2"); }
 
   template <class _Ptr = pointer, __enable_if_t<is_pointer<_Ptr>::value, int> = 0>
   static _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI _Ptr
@@ -852,24 +858,24 @@ template <class _InputIterator,
           class _Alloc = allocator<__iterator_value_type<_InputIterator>>,
           class        = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
           class        = enable_if_t<__is_allocator_v<_Alloc>>>
-vector(_InputIterator, _InputIterator) -> vector<__iterator_value_type<_InputIterator>, _Alloc>;
+vector2(_InputIterator, _InputIterator) -> vector2<__iterator_value_type<_InputIterator>, _Alloc>;
 
 template <class _InputIterator,
           class _Alloc,
           class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
           class = enable_if_t<__is_allocator_v<_Alloc>>>
-vector(_InputIterator, _InputIterator, _Alloc) -> vector<__iterator_value_type<_InputIterator>, _Alloc>;
+vector2(_InputIterator, _InputIterator, _Alloc) -> vector2<__iterator_value_type<_InputIterator>, _Alloc>;
 #endif
 
 #if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range,
           class _Alloc = allocator<ranges::range_value_t<_Range>>,
           class        = enable_if_t<__is_allocator_v<_Alloc>>>
-vector(from_range_t, _Range&&, _Alloc = _Alloc()) -> vector<ranges::range_value_t<_Range>, _Alloc>;
+vector2(from_range_t, _Range&&, _Alloc = _Alloc()) -> vector2<ranges::range_value_t<_Range>, _Alloc>;
 #endif
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__vdeallocate() _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector2<_Tp, _Allocator>::__vdeallocate() _NOEXCEPT {
   if (this->__layout_.__begin_ptr() != nullptr) {
     clear();
     __annotate_delete();
@@ -880,8 +886,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__vdeallocate() _NOE
 
 //  Precondition:  __new_size > capacity()
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::size_type
-vector<_Tp, _Allocator>::__recommend(size_type __new_size) const {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector2<_Tp, _Allocator>::size_type
+vector2<_Tp, _Allocator>::__recommend(size_type __new_size) const {
   const size_type __ms = max_size();
   if (__new_size > __ms)
     this->__throw_length_error();
@@ -897,7 +903,7 @@ vector<_Tp, _Allocator>::__recommend(size_type __new_size) const {
 //  Precondition:  size() + __n <= capacity()
 //  Postcondition:  size() == size() + __n
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__construct_at_end(size_type __n) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector2<_Tp, _Allocator>::__construct_at_end(size_type __n) {
   _ConstructTransaction __tx(*this, __n);
   __tx.__pos_ = std::__uninitialized_allocator_value_construct_n(this->__layout_.__alloc(), __layout_.__end_ptr(), __n);
 }
@@ -910,20 +916,20 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__construct_at_end(s
 //  Postcondition:  [i] == __x for all i in [size() - __n, __n)
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline void
-vector<_Tp, _Allocator>::__construct_at_end(size_type __n, const_reference __x) {
+vector2<_Tp, _Allocator>::__construct_at_end(size_type __n, const_reference __x) {
   _ConstructTransaction __tx(*this, __n);
   __tx.__pos_ = std::__uninitialized_allocator_fill_n(this->__layout_.__alloc(), __layout_.__end_ptr(), __n, __x);
 }
 
 template <class _Tp, class _Allocator>
 template <class _InputIterator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__construct_at_end(_InputIterator __first, size_type __n) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector2<_Tp, _Allocator>::__construct_at_end(_InputIterator __first, size_type __n) {
   _ConstructTransaction __tx(*this, __n);
   __tx.__pos_ = std::__uninitialized_allocator_copy_n(this->__layout_.__alloc(), std::move(__first), __n, __tx.__pos_);
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI vector<_Tp, _Allocator>::vector(vector&& __x)
+_LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI vector2<_Tp, _Allocator>::vector2(vector2&& __x)
 #if _LIBCPP_STD_VER >= 17
     noexcept
 #else
@@ -934,7 +940,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI vector<_Tp, _Allocato
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI
-vector<_Tp, _Allocator>::vector(vector&& __x, const __type_identity_t<allocator_type>& __a)
+vector2<_Tp, _Allocator>::vector2(vector2&& __x, const __type_identity_t<allocator_type>& __a)
     : __layout_(__a) {
   if (__a == __x.__layout_.__alloc()) {
     __layout_.__move_assign_without_allocator(__x.__layout_);
@@ -946,7 +952,7 @@ vector<_Tp, _Allocator>::vector(vector&& __x, const __type_identity_t<allocator_
 template <class _Tp, class _Allocator>
 template <class _Iterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-vector<_Tp, _Allocator>::__assign_with_sentinel(_Iterator __first, _Sentinel __last) {
+vector2<_Tp, _Allocator>::__assign_with_sentinel(_Iterator __first, _Sentinel __last) {
   pointer __cur = __layout_.__begin_ptr();
   pointer __end = __layout_.__end_ptr();
   for (; __first != __last && __cur != __end; ++__first, (void)++__cur)
@@ -962,7 +968,7 @@ vector<_Tp, _Allocator>::__assign_with_sentinel(_Iterator __first, _Sentinel __l
 template <class _Tp, class _Allocator>
 template <class _AlgPolicy, class _Iterator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-vector<_Tp, _Allocator>::__assign_with_size(_Iterator __first, difference_type __n) {
+vector2<_Tp, _Allocator>::__assign_with_size(_Iterator __first, difference_type __n) {
   size_type __new_size = static_cast<size_type>(__n);
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -1002,7 +1008,7 @@ vector<_Tp, _Allocator>::__assign_with_size(_Iterator __first, difference_type _
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::assign(size_type __n, const_reference __u) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector2<_Tp, _Allocator>::assign(size_type __n, const_reference __u) {
   if (__n <= capacity()) {
     size_type __s = size();
     std::fill_n(this->__layout_.__begin_ptr(), std::min(__n, __s), __u);
@@ -1018,7 +1024,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::assign(size_type __n
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::reserve(size_type __n) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector2<_Tp, _Allocator>::reserve(size_type __n) {
   if (__n > capacity()) {
     if (__n > max_size())
       this->__throw_length_error();
@@ -1028,7 +1034,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::reserve(size_type __
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::shrink_to_fit() _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector2<_Tp, _Allocator>::shrink_to_fit() _NOEXCEPT {
   if (capacity() > size()) {
 #if _LIBCPP_HAS_EXCEPTIONS
     try {
@@ -1046,38 +1052,16 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::shrink_to_fit() _NOE
   }
 }
 
-// This makes the compiler inline `__else()` if `__cond` is known to be false. Currently LLVM doesn't do that without
-// the `__builtin_constant_p`, since it considers `__else` unlikely even through it's known to be run.
-// See https://llvm.org/PR154292
-template <class _If, class _Else, class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 decltype(std::declval<_If>()(std::declval<_Args&&>()...))
-__if_likely_else(bool __cond, _If __if, _Else __else, _Args&&... __args) {
-  static_assert(
-      is_same<decltype(__if(std::forward<_Args>(__args)...)), decltype(__else(std::forward<_Args>(__args)...))>::value,
-      "Return type of if and else branch have to be the same type");
-  if (__builtin_constant_p(__cond)) {
-    if (__cond)
-      return __if(std::forward<_Args>(__args)...);
-    else
-      return __else(std::forward<_Args>(__args)...);
-  } else {
-    if (__cond) [[__likely__]]
-      return __if(std::forward<_Args>(__args)...);
-    else
-      return __else(std::forward<_Args>(__args)...);
-  }
-}
-
 template <class _Tp, class _Alloc>
 template <class... _Args>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Alloc>::__emplace_back_result_t
-vector<_Tp, _Alloc>::emplace_back(_Args&&... __args) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector2<_Tp, _Alloc>::__emplace_back_result_t
+vector2<_Tp, _Alloc>::emplace_back(_Args&&... __args) {
   std::__if_likely_else(
       size() != capacity(),
-      [](vector& __self, _Args&&... __largs) static {
+      [](vector2& __self, _Args&&... __largs) static {
         __self.__emplace_back_assume_capacity(std::forward<_Args>(__largs)...);
       },
-      [](vector& __self, _Args&&... __largs) static {
+      [](vector2& __self, _Args&&... __largs) static {
         __self.__annotate_delete();
         auto __asan_guard  = std::__make_scope_guard([&] { __self.__annotate_new(__self.size()); });
         auto& __alloc      = __self.__layout_.__alloc();
@@ -1109,7 +1093,7 @@ vector<_Tp, _Alloc>::emplace_back(_Args&&... __args) {
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-vector<_Tp, _Allocator>::__move_range(pointer __from_s, pointer __from_e, pointer __to) {
+vector2<_Tp, _Allocator>::__move_range(pointer __from_s, pointer __from_e, pointer __to) {
   pointer __old_last  = __layout_.__end_ptr();
   difference_type __n = __old_last - __to;
   {
@@ -1122,8 +1106,8 @@ vector<_Tp, _Allocator>::__move_range(pointer __from_s, pointer __from_e, pointe
 
 template <class _Tp, class _Allocator>
 template <class... _Args>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
-vector<_Tp, _Allocator>::emplace(const_iterator __position, _Args&&... __args) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector2<_Tp, _Allocator>::iterator
+vector2<_Tp, _Allocator>::emplace(const_iterator __position, _Args&&... __args) {
   pointer __p = this->__layout_.__begin_ptr() + (__position - begin());
   if (size() != capacity()) {
     pointer __end = __layout_.__end_ptr();
@@ -1143,8 +1127,8 @@ vector<_Tp, _Allocator>::emplace(const_iterator __position, _Args&&... __args) {
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
-vector<_Tp, _Allocator>::insert(const_iterator __position, size_type __n, const_reference __x) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector2<_Tp, _Allocator>::iterator
+vector2<_Tp, _Allocator>::insert(const_iterator __position, size_type __n, const_reference __x) {
   pointer __p = this->__layout_.__begin_ptr() + (__position - begin());
   if (__n > 0) {
     if (__n <= __layout_.__remaining_capacity()) {
@@ -1174,8 +1158,8 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, size_type __n, const_
 
 template <class _Tp, class _Allocator>
 template <class _InputIterator, class _Sentinel>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::iterator
-vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _InputIterator __first, _Sentinel __last) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector2<_Tp, _Allocator>::iterator
+vector2<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _InputIterator __first, _Sentinel __last) {
   difference_type __off = __position - begin();
   pointer __p           = this->__layout_.__begin_ptr() + __off;
   pointer __old_last    = __layout_.__end_ptr();
@@ -1215,8 +1199,8 @@ vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _Inpu
 
 template <class _Tp, class _Allocator>
 template <class _AlgPolicy, class _Iterator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::iterator
-vector<_Tp, _Allocator>::__insert_with_size(const_iterator __position, _Iterator __first, difference_type __n) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector2<_Tp, _Allocator>::iterator
+vector2<_Tp, _Allocator>::__insert_with_size(const_iterator __position, _Iterator __first, difference_type __n) {
   pointer __p = this->__layout_.__begin_ptr() + (__position - begin());
   if (__n > 0) {
     if (__n <= static_cast<difference_type>(__layout_.__remaining_capacity())) {
@@ -1252,7 +1236,7 @@ vector<_Tp, _Allocator>::__insert_with_size(const_iterator __position, _Iterator
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::resize(size_type __new_size) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector2<_Tp, _Allocator>::resize(size_type __new_size) {
   size_type __current_size = size();
   if (__current_size < __new_size) {
     if (__new_size <= capacity()) {
@@ -1268,7 +1252,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::resize(size_type __n
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::resize(size_type __new_size, const_reference __x) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector2<_Tp, _Allocator>::resize(size_type __new_size, const_reference __x) {
   size_type __current_size = size();
   if (__current_size < __new_size) {
     if (__new_size <= capacity())
@@ -1284,7 +1268,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::resize(size_type __n
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::swap(vector& __x)
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector2<_Tp, _Allocator>::swap(vector2& __x)
 #if _LIBCPP_STD_VER >= 14
     _NOEXCEPT
 #else
@@ -1293,22 +1277,24 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::swap(vector& __x)
 {
   _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
       __alloc_traits::propagate_on_container_swap::value || __layout_.__alloc() == __x.__layout_.__alloc(),
-      "vector::swap: Either propagate_on_container_swap must be true"
+      "vector2::swap: Either propagate_on_container_swap must be true"
       " or the allocators must compare equal");
   __layout_.__swap(__x.__layout_);
 }
 
 #if _LIBCPP_STD_VER >= 20
 template <>
-inline constexpr bool __format::__enable_insertable<vector<char>> = true;
+inline constexpr bool __format::__enable_insertable<vector2<char>> = true;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
-inline constexpr bool __format::__enable_insertable<vector<wchar_t>> = true;
+inline constexpr bool __format::__enable_insertable<vector2<wchar_t>> = true;
 #  endif
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 
+#endif // _LIBCPP_STD_VER >= 29
+
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___VECTOR_VECTOR_H
+#endif // _LIBCPP___VECTOR_VECTOR2_H

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // void push_back(const value_type& x);
@@ -70,10 +72,10 @@ bool operator==(const CMyClass& lhs, const CMyClass& rhs) { return lhs.equal(rhs
 
 int main(int, char**) {
   CMyClass instance(42);
-  std::vector<CMyClass> vec;
+  std::vector2<CMyClass> vec;
 
   vec.push_back(instance);
-  std::vector<CMyClass> vec2(vec);
+  std::vector2<CMyClass> vec2(vec);
   assert(is_contiguous_container_asan_correct(vec));
   assert(is_contiguous_container_asan_correct(vec2));
 

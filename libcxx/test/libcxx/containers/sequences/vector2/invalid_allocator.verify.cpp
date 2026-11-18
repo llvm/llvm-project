@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Check that vector diagnoses an allocator which has to implement rebind with an appropriate error message
+// REQUIRES: std-at-least-c++29
+
+// Check that vector2 diagnoses an allocator which has to implement rebind with an appropriate error message
 
 #include <vector>
 
@@ -24,6 +26,6 @@ public:
 };
 
 void func() {
-  std::vector<int, FooAllocator>
+  std::vector2<int, FooAllocator>
       v; //expected-error-re@*:* {{static assertion failed {{.*}}This allocator has to implement rebind}}
 }

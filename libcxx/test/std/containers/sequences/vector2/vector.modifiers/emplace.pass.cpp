@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03 && !stdlib=libc++
+// REQUIRES: std-at-least-c++29
+
 // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=9000000
 
 // <vector>
@@ -34,7 +35,7 @@ struct has_moved_from_sentinel_value<MoveOnly> : std::true_type {};
 
 template <template <class...> class Allocator, class T>
 TEST_CONSTEXPR_CXX20 void test() {
-  using Vector   = std::vector<T, Allocator<T> >;
+  using Vector   = std::vector2<T, Allocator<T> >;
   using Iterator = typename Vector::iterator;
 
   // Check the return type
@@ -43,7 +44,7 @@ TEST_CONSTEXPR_CXX20 void test() {
     ASSERT_SAME_TYPE(decltype(v.emplace(v.cbegin(), 1)), Iterator);
   }
 
-  // Emplace at the end of a vector with increasing size
+  // Emplace at the end of a vector2 with increasing size
   {
     Vector v;
 
@@ -88,7 +89,7 @@ TEST_CONSTEXPR_CXX20 void test() {
     }
   }
 
-  // Emplace at the start of a vector with increasing size
+  // Emplace at the start of a vector2 with increasing size
   {
     Vector v;
 
@@ -133,17 +134,17 @@ TEST_CONSTEXPR_CXX20 void test() {
     }
   }
 
-  // Emplace somewhere inside the vector
+  // Emplace somewhere inside the vector2
   {
     Vector v;
     v.emplace_back(0);
     v.emplace_back(1);
     v.emplace_back(2);
-    // vector is {0, 1, 2}
+    // vector2 is {0, 1, 2}
 
     {
       Iterator it = v.emplace(v.cbegin() + 1, 3);
-      // vector is {0, 3, 1, 2}
+      // vector2 is {0, 3, 1, 2}
       assert(it == v.begin() + 1);
       assert(v.size() == 4);
       assert(v[0] == T(0));
@@ -155,7 +156,7 @@ TEST_CONSTEXPR_CXX20 void test() {
 
     {
       Iterator it = v.emplace(v.cbegin() + 2, 4);
-      // vector is {0, 3, 4, 1, 2}
+      // vector2 is {0, 3, 4, 1, 2}
       assert(it == v.begin() + 2);
       assert(v.size() == 5);
       assert(v[0] == T(0));
@@ -173,7 +174,7 @@ TEST_CONSTEXPR_CXX20 void test() {
     v.emplace_back(0);
     v.emplace_back(1);
     v.emplace_back(2);
-    // vector is {0, 1, 2}
+    // vector2 is {0, 1, 2}
 
     v.reserve(1000);
     Iterator it = v.emplace(v.cbegin() + 1, 3);
@@ -186,7 +187,7 @@ TEST_CONSTEXPR_CXX20 void test() {
     assert(is_contiguous_container_asan_correct(v));
   }
 
-  // Emplace with the same type that's stored in the vector (as opposed to just constructor arguments)
+  // Emplace with the same type that's stored in the vector2 (as opposed to just constructor arguments)
   {
     Vector v;
     Iterator it = v.emplace(v.cbegin(), T(1));
@@ -196,11 +197,11 @@ TEST_CONSTEXPR_CXX20 void test() {
     assert(is_contiguous_container_asan_correct(v));
   }
 
-  // Emplace from an element inside the vector itself. This is interesting for two reasons. First, if the
-  // vector must increase capacity, the implementation needs to make sure that it doesn't end up inserting
+  // Emplace from an element inside the vector2 itself. This is interesting for two reasons. First, if the
+  // vector2 must increase capacity, the implementation needs to make sure that it doesn't end up inserting
   // from a dangling reference.
   //
-  // Second, if the vector doesn't need to grow but its elements get shifted internally, the implementation
+  // Second, if the vector2 doesn't need to grow but its elements get shifted internally, the implementation
   // must make sure that it doesn't end up inserting from an element whose position has changed.
   {
     // When capacity must increase
@@ -213,13 +214,13 @@ TEST_CONSTEXPR_CXX20 void test() {
         v.emplace_back(3);
       }
       assert(v.size() == v.capacity());
-      // vector is {1, 2, 3...}
+      // vector2 is {1, 2, 3...}
 
       std::size_t old_cap = v.capacity();
       v.emplace(v.cbegin(), std::move(v[1]));
       assert(v.capacity() > old_cap); // test the test
 
-      // vector is {2, 1, 0, 3...}
+      // vector2 is {2, 1, 0, 3...}
       // Note that old v[1] has been set to 0 when it was moved-from
       assert(v.size() >= 3);
       assert(v[0] == T(2));
@@ -234,14 +235,14 @@ TEST_CONSTEXPR_CXX20 void test() {
       Vector v;
       v.emplace_back(1);
       v.emplace_back(2);
-      // vector is {1, 2}
+      // vector2 is {1, 2}
 
       v.reserve(3);
       std::size_t old_cap = v.capacity();
       v.emplace(v.cbegin(), std::move(v[1]));
       assert(v.capacity() == old_cap); // test the test
 
-      // vector is {2, 1, 0}
+      // vector2 is {2, 1, 0}
       // Note that old v[1] has been set to 0 when it was moved-from
       assert(v.size() == 3);
       assert(v[0] == T(2));
@@ -278,14 +279,14 @@ TEST_CONSTEXPR_CXX20 void test() {
 
   // Make sure that we correctly handle the case where an exception would be thrown if moving the element into place.
   // This is a very specific test that aims to validate that the implementation doesn't create a temporary object e.g.
-  // on the stack and then moves it into its final location inside the newly allocated vector storage.
+  // on the stack and then moves it into its final location inside the newly allocated vector2 storage.
   //
   // If that were the case, and if the element happened to throw upon move construction or move assignment into its
   // final location, we would have invalidated iterators, when a different approach would allow us to still provide
   // the strong exception safety guarantee.
   //
   // Instead of the naive approach, libc++ emplaces the new element into its final location immediately, and only
-  // after this has been done do we start making non-reversible changes to the vector's underlying storage. This
+  // after this has been done do we start making non-reversible changes to the vector2's underlying storage. This
   // test pins down that behavior, although that is something that we don't advertise widely and could potentially
   // change in the future.
 #if defined(_LIBCPP_VERSION) && !defined(TEST_HAS_NO_EXCEPTIONS)
@@ -296,7 +297,7 @@ TEST_CONSTEXPR_CXX20 void test() {
     static_assert(!std::is_nothrow_move_constructible<ThrowingMoveOnly>::value, "");
     static_assert(!std::is_copy_constructible<ThrowingMoveOnly>::value, "");
 
-    std::vector<ThrowingMoveOnly, Allocator<ThrowingMoveOnly> > v;
+    std::vector2<ThrowingMoveOnly, Allocator<ThrowingMoveOnly> > v;
     v.emplace_back(0, /* do throw */ false);
     v.emplace_back(1, /* do throw */ false);
 

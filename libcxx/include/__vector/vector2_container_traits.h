@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___VECTOR_CONTAINER_TRAITS_H
-#define _LIBCPP___VECTOR_CONTAINER_TRAITS_H
+#ifndef _LIBCPP___VECTOR_VECTOR2_CONTAINER_TRAITS_H
+#define _LIBCPP___VECTOR_VECTOR2_CONTAINER_TRAITS_H
 
 #include <__config>
-#include <__fwd/vector.h>
+#include <__fwd/vector2.h>
 #include <__type_traits/container_traits.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
@@ -19,11 +19,13 @@
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER >= 29
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator>
-struct __container_traits<vector<_Tp, _Allocator> > {
-  // http://eel.is/c++draft/vector.modifiers#2
+struct __container_traits<vector2<_Tp, _Allocator> > {
+  // http://eel.is/c++draft/vector2.modifiers#2
   //  If an exception is thrown other than by the copy constructor, move constructor, assignment operator, or move
   //  assignment operator of T or by any InputIterator operation, there are no effects. If an exception is thrown while
   //  inserting a single element at the end and T is Cpp17CopyInsertable or is_nothrow_move_constructible_v<T> is true,
@@ -41,4 +43,6 @@ struct __container_traits<vector<_Tp, _Allocator> > {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___VECTOR_CONTAINER_TRAITS_H
+#endif // _LIBCPP_STD_VER >= 29
+
+#endif // _LIBCPP___VECTOR_VECTOR2_CONTAINER_TRAITS_H

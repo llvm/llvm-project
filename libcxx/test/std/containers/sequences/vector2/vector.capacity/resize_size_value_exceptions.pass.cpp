@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // UNSUPPORTED: no-exceptions
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
-// Check that std::vector<T>::resize(size_type sz, const value_type& x) provides the strong exception guarantee
+// Check that std::vector2<T>::resize(size_type sz, const value_type& x) provides the strong exception guarantee
 // if T is Cpp17CopyInsertable.
 
 #include <cstddef>
@@ -28,7 +29,7 @@
 
 template <typename T, typename Alloc>
 void test_allocation_exception_for_strong_guarantee(
-    std::vector<T, Alloc>& v, const std::vector<T>& values, std::size_t new_size) {
+    std::vector2<T, Alloc>& v, const std::vector2<T>& values, std::size_t new_size) {
   assert(v.size() == values.size());
   T* old_data          = v.data();
   std::size_t old_size = v.size();
@@ -46,8 +47,8 @@ void test_allocation_exception_for_strong_guarantee(
 }
 
 template <typename T, typename Alloc>
-void test_copy_ctor_exception_for_strong_guarantee(std::vector<throwing_data<T>, Alloc>& v,
-                                                   const std::vector<T>& values) {
+void test_copy_ctor_exception_for_strong_guarantee(std::vector2<throwing_data<T>, Alloc>& v,
+                                                   const std::vector2<T>& values) {
   assert(v.empty() && !values.empty());
   int throw_after = values.size() + values.size() / 2; // Trigger an exception halfway through reallocation
   v.reserve(values.size());
@@ -77,7 +78,7 @@ void test_copy_ctor_exception_for_strong_guarantee(std::vector<throwing_data<T>,
 // through copying the new element.
 template <typename T, typename Alloc>
 void test_in_place_copy_ctor_exception_for_strong_guarantee(
-    std::vector<throwing_data<T>, Alloc>& v, const std::vector<T>& values) {
+    std::vector2<throwing_data<T>, Alloc>& v, const std::vector2<T>& values) {
   assert(v.empty() && !values.empty());
   std::size_t new_size = 2 * values.size();
   // Set the existing-elements counter high enough that fill never throws
@@ -112,54 +113,54 @@ void test_allocation_exceptions() {
   // Tests for std::length_error during reallocation failures
   //
   {
-    std::vector<int> v;
-    test_allocation_exception_for_strong_guarantee(v, std::vector<int>(), v.max_size() + 1);
+    std::vector2<int> v;
+    test_allocation_exception_for_strong_guarantee(v, std::vector2<int>(), v.max_size() + 1);
   }
   check_new_delete_called();
 
   {
     int a[] = {1, 2, 3, 4, 5};
-    std::vector<int> in(a, a + sizeof(a) / sizeof(a[0]));
-    std::vector<int> v(in.begin(), in.end());
+    std::vector2<int> in(a, a + sizeof(a) / sizeof(a[0]));
+    std::vector2<int> v(in.begin(), in.end());
     test_allocation_exception_for_strong_guarantee(v, in, v.max_size() + 1);
   }
   check_new_delete_called();
 
   {
     int a[] = {1, 2, 3, 4, 5};
-    std::vector<int> in(a, a + sizeof(a) / sizeof(a[0]));
-    std::vector<int, min_allocator<int> > v(in.begin(), in.end());
+    std::vector2<int> in(a, a + sizeof(a) / sizeof(a[0]));
+    std::vector2<int, min_allocator<int> > v(in.begin(), in.end());
     test_allocation_exception_for_strong_guarantee(v, in, v.max_size() + 1);
   }
   check_new_delete_called();
 
   {
     int a[] = {1, 2, 3, 4, 5};
-    std::vector<int> in(a, a + sizeof(a) / sizeof(a[0]));
-    std::vector<int, safe_allocator<int> > v(in.begin(), in.end());
+    std::vector2<int> in(a, a + sizeof(a) / sizeof(a[0]));
+    std::vector2<int, safe_allocator<int> > v(in.begin(), in.end());
     test_allocation_exception_for_strong_guarantee(v, in, v.max_size() + 1);
   }
   check_new_delete_called();
 
   {
     int a[] = {1, 2, 3, 4, 5};
-    std::vector<int> in(a, a + sizeof(a) / sizeof(a[0]));
-    std::vector<int, test_allocator<int> > v(in.begin(), in.end());
+    std::vector2<int> in(a, a + sizeof(a) / sizeof(a[0]));
+    std::vector2<int, test_allocator<int> > v(in.begin(), in.end());
     test_allocation_exception_for_strong_guarantee(v, in, v.max_size() + 1);
   }
   check_new_delete_called();
 
   {
-    std::vector<int> in(10, 42);
-    std::vector<int, limited_allocator<int, 100> > v(in.begin(), in.end());
+    std::vector2<int> in(10, 42);
+    std::vector2<int, limited_allocator<int, 100> > v(in.begin(), in.end());
     test_allocation_exception_for_strong_guarantee(v, in, v.max_size() + 1);
   }
   check_new_delete_called();
 
 #if TEST_STD_VER >= 23
   {
-    std::vector<int> in{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-    std::vector<int, increasing_allocator<int>> v(in.begin(), in.end());
+    std::vector2<int> in{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    std::vector2<int, increasing_allocator<int>> v(in.begin(), in.end());
     test_allocation_exception_for_strong_guarantee(v, in, v.max_size() + 1);
   }
   check_new_delete_called();
@@ -169,15 +170,15 @@ void test_allocation_exceptions() {
   // Tests for std::bad_alloc during reallocation failures
   //
   {
-    std::vector<int> in(10, 42);
-    std::vector<int, limited_allocator<int, 100> > v(in.begin(), in.end());
+    std::vector2<int> in(10, 42);
+    std::vector2<int, limited_allocator<int, 100> > v(in.begin(), in.end());
     test_allocation_exception_for_strong_guarantee(v, in, 91);
   }
   check_new_delete_called();
 
   {
-    std::vector<int> in(10, 42);
-    std::vector<int, limited_allocator<int, 100> > v(in.begin(), in.end());
+    std::vector2<int> in(10, 42);
+    std::vector2<int, limited_allocator<int, 100> > v(in.begin(), in.end());
     v.reserve(30);
     test_allocation_exception_for_strong_guarantee(v, in, 61);
   }
@@ -185,14 +186,14 @@ void test_allocation_exceptions() {
 
   { // Practical example: Testing with 100 integers.
     auto in = getIntegerInputs(100);
-    std::vector<int, limited_allocator<int, 299> > v(in.begin(), in.end());
+    std::vector2<int, limited_allocator<int, 299> > v(in.begin(), in.end());
     test_allocation_exception_for_strong_guarantee(v, in, 200);
   }
   check_new_delete_called();
 
   { // Practical example: Testing with 100 strings, each 256 characters long.
-    std::vector<std::string> in = getStringInputsWithLength(100, 256);
-    std::vector<std::string, limited_allocator<std::string, 299> > v(in.begin(), in.end());
+    std::vector2<std::string> in = getStringInputsWithLength(100, 256);
+    std::vector2<std::string, limited_allocator<std::string, 299> > v(in.begin(), in.end());
     test_allocation_exception_for_strong_guarantee(v, in, 200);
   }
   check_new_delete_called();
@@ -202,45 +203,45 @@ void test_allocation_exceptions() {
 void test_copy_ctor_exceptions() {
   {
     int a[] = {1, 2, 3, 4, 5};
-    std::vector<int> in(a, a + sizeof(a) / sizeof(a[0]));
-    std::vector<throwing_data<int> > v;
+    std::vector2<int> in(a, a + sizeof(a) / sizeof(a[0]));
+    std::vector2<throwing_data<int> > v;
     test_copy_ctor_exception_for_strong_guarantee(v, in);
   }
   check_new_delete_called();
 
   {
     int a[] = {1, 2, 3, 4, 5};
-    std::vector<int> in(a, a + sizeof(a) / sizeof(a[0]));
-    std::vector<throwing_data<int>, min_allocator<throwing_data<int> > > v;
+    std::vector2<int> in(a, a + sizeof(a) / sizeof(a[0]));
+    std::vector2<throwing_data<int>, min_allocator<throwing_data<int> > > v;
     test_copy_ctor_exception_for_strong_guarantee(v, in);
   }
   check_new_delete_called();
 
   {
-    std::vector<int> in(10, 42);
-    std::vector<throwing_data<int>, safe_allocator<throwing_data<int> > > v;
+    std::vector2<int> in(10, 42);
+    std::vector2<throwing_data<int>, safe_allocator<throwing_data<int> > > v;
     test_copy_ctor_exception_for_strong_guarantee(v, in);
   }
   check_new_delete_called();
 
   {
-    std::vector<int> in(10, 42);
-    std::vector<throwing_data<int>, test_allocator<throwing_data<int> > > v;
+    std::vector2<int> in(10, 42);
+    std::vector2<throwing_data<int>, test_allocator<throwing_data<int> > > v;
     test_copy_ctor_exception_for_strong_guarantee(v, in);
   }
   check_new_delete_called();
 
   {
-    std::vector<int> in(10, 42);
-    std::vector<throwing_data<int>, limited_allocator<throwing_data<int>, 100> > v;
+    std::vector2<int> in(10, 42);
+    std::vector2<throwing_data<int>, limited_allocator<throwing_data<int>, 100> > v;
     test_copy_ctor_exception_for_strong_guarantee(v, in);
   }
   check_new_delete_called();
 
 #if TEST_STD_VER >= 23
   {
-    std::vector<int> in{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-    std::vector<throwing_data<int>, increasing_allocator<throwing_data<int>>> v;
+    std::vector2<int> in{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    std::vector2<throwing_data<int>, increasing_allocator<throwing_data<int>>> v;
     test_copy_ctor_exception_for_strong_guarantee(v, in);
   }
   check_new_delete_called();
@@ -248,14 +249,14 @@ void test_copy_ctor_exceptions() {
 
   { // Practical example: Testing with 100 integers.
     auto in = getIntegerInputs(100);
-    std::vector<throwing_data<int> > v;
+    std::vector2<throwing_data<int> > v;
     test_copy_ctor_exception_for_strong_guarantee(v, in);
   }
   check_new_delete_called();
 
   { // Practical example: Testing with 100 strings, each 256 characters long.
-    std::vector<std::string> in = getStringInputsWithLength(100, 256);
-    std::vector<throwing_data<std::string> > v;
+    std::vector2<std::string> in = getStringInputsWithLength(100, 256);
+    std::vector2<throwing_data<std::string> > v;
     test_copy_ctor_exception_for_strong_guarantee(v, in);
   }
   check_new_delete_called();
@@ -265,45 +266,45 @@ void test_copy_ctor_exceptions() {
   {
     {
       int a[] = {1, 2, 3, 4, 5};
-      std::vector<int> in(a, a + sizeof(a) / sizeof(a[0]));
-      std::vector<throwing_data<int> > v;
+      std::vector2<int> in(a, a + sizeof(a) / sizeof(a[0]));
+      std::vector2<throwing_data<int> > v;
       test_in_place_copy_ctor_exception_for_strong_guarantee(v, in);
     }
     check_new_delete_called();
 
     {
       int a[] = {1, 2, 3, 4, 5};
-      std::vector<int> in(a, a + sizeof(a) / sizeof(a[0]));
-      std::vector<throwing_data<int>, min_allocator<throwing_data<int> > > v;
+      std::vector2<int> in(a, a + sizeof(a) / sizeof(a[0]));
+      std::vector2<throwing_data<int>, min_allocator<throwing_data<int> > > v;
       test_in_place_copy_ctor_exception_for_strong_guarantee(v, in);
     }
     check_new_delete_called();
 
     {
-      std::vector<int> in(10, 42);
-      std::vector<throwing_data<int>, safe_allocator<throwing_data<int> > > v;
+      std::vector2<int> in(10, 42);
+      std::vector2<throwing_data<int>, safe_allocator<throwing_data<int> > > v;
       test_in_place_copy_ctor_exception_for_strong_guarantee(v, in);
     }
     check_new_delete_called();
 
     {
-      std::vector<int> in(10, 42);
-      std::vector<throwing_data<int>, test_allocator<throwing_data<int> > > v;
+      std::vector2<int> in(10, 42);
+      std::vector2<throwing_data<int>, test_allocator<throwing_data<int> > > v;
       test_in_place_copy_ctor_exception_for_strong_guarantee(v, in);
     }
     check_new_delete_called();
 
     {
-      std::vector<int> in(10, 42);
-      std::vector<throwing_data<int>, limited_allocator<throwing_data<int>, 100> > v;
+      std::vector2<int> in(10, 42);
+      std::vector2<throwing_data<int>, limited_allocator<throwing_data<int>, 100> > v;
       test_in_place_copy_ctor_exception_for_strong_guarantee(v, in);
     }
     check_new_delete_called();
 
 #if TEST_STD_VER >= 23
     {
-      std::vector<int> in{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-      std::vector<throwing_data<int>, increasing_allocator<throwing_data<int>>> v;
+      std::vector2<int> in{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+      std::vector2<throwing_data<int>, increasing_allocator<throwing_data<int>>> v;
       test_in_place_copy_ctor_exception_for_strong_guarantee(v, in);
     }
     check_new_delete_called();

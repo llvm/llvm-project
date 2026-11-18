@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
-// class vector
+// class vector2
 
 // size_type size() const noexcept;
 
@@ -20,7 +22,7 @@
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
-    typedef std::vector<int> C;
+    typedef std::vector2<int> C;
     C c;
     ASSERT_NOEXCEPT(c.size());
     assert(c.size() == 0);
@@ -39,7 +41,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
 #if TEST_STD_VER >= 11
   {
-    typedef std::vector<int, min_allocator<int>> C;
+    typedef std::vector2<int, min_allocator<int>> C;
     C c;
     ASSERT_NOEXCEPT(c.size());
     assert(c.size() == 0);
@@ -57,7 +59,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     assert(c.size() == 0);
   }
   {
-    typedef std::vector<int, safe_allocator<int>> C;
+    typedef std::vector2<int, safe_allocator<int>> C;
     C c;
     ASSERT_NOEXCEPT(c.size());
     assert(c.size() == 0);

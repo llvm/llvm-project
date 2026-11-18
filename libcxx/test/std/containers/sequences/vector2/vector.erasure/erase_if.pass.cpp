@@ -5,13 +5,14 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// REQUIRES: std-at-least-c++29
 
 // <vector>
 
 // template <class T, class Allocator, class Predicate>
-//   typename vector<T, Allocator>::size_type
-//   erase_if(vector<T, Allocator>& c, Predicate pred);
+//   typename vector2<T, Allocator>::size_type
+//   erase_if(vector2<T, Allocator>& c, Predicate pred);
 
 #include <vector>
 
@@ -65,13 +66,13 @@ TEST_CONSTEXPR_CXX20 void test() {
 }
 
 TEST_CONSTEXPR_CXX20 bool tests() {
-  test<std::vector<int>>();
-  test<std::vector<int, min_allocator<int>>>();
-  test<std::vector<int, test_allocator<int>>>();
-  test<std::vector<int, safe_allocator<int>>>();
+  test<std::vector2<int>>();
+  test<std::vector2<int, min_allocator<int>>>();
+  test<std::vector2<int, test_allocator<int>>>();
+  test<std::vector2<int, safe_allocator<int>>>();
 
-  test<std::vector<long>>();
-  test<std::vector<double>>();
+  test<std::vector2<long>>();
+  test<std::vector2<double>>();
 
   return true;
 }

@@ -6,12 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // Test nested types and default template args:
 
 // template <class T, class Allocator = allocator<T> >
-// class vector
+// class vector2
 // {
 // public:
 //     typedef T                                        value_type;
@@ -38,12 +40,12 @@
 #include "min_allocator.h"
 
 struct A {
-  std::vector<A> v;
+  std::vector2<A> v;
 }; // incomplete type support
 
 template <class T, class Allocator>
 void test() {
-  typedef std::vector<T, Allocator> C;
+  typedef std::vector2<T, Allocator> C;
 
   //  TODO: These tests should use allocator_traits to get stuff, rather than
   //  blindly pulling typedefs out of the allocator. This is why we can't call
@@ -88,10 +90,10 @@ void test() {
   test<int, test_allocator<int> >();
   test<int*, std::allocator<int*> >();
   test<Copyable, test_allocator<Copyable> >();
-  static_assert((std::is_same<std::vector<char>::allocator_type, std::allocator<char> >::value), "");
+  static_assert((std::is_same<std::vector2<char>::allocator_type, std::allocator<char> >::value), "");
 #if TEST_STD_VER >= 11
   {
-    typedef std::vector<int, min_allocator<int> > C;
+    typedef std::vector2<int, min_allocator<int> > C;
     static_assert((std::is_same<C::value_type, int>::value), "");
     static_assert((std::is_same<C::allocator_type, min_allocator<int> >::value), "");
     static_assert((std::is_same<C::reference, int&>::value), "");

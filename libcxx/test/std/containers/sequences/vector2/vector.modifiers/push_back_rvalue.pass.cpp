@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03 && !stdlib=libc++
+// REQUIRES: std-at-least-c++29
 
 // <vector>
 
@@ -23,7 +23,7 @@
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
-    std::vector<MoveOnly> c;
+    std::vector2<MoveOnly> c;
     c.push_back(MoveOnly(0));
     assert(c.size() == 1);
     assert(is_contiguous_container_asan_correct(c));
@@ -54,7 +54,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     // libc++ needs 15 because it grows by 2x (1 + 2 + 4 + 8).
     // Use 17 for implementations that dynamically allocate a container proxy
     // and grow by 1.5x (1 for proxy + 1 + 2 + 3 + 4 + 6).
-    std::vector<MoveOnly, limited_allocator<MoveOnly, 17> > c;
+    std::vector2<MoveOnly, limited_allocator<MoveOnly, 17> > c;
     c.push_back(MoveOnly(0));
     assert(c.size() == 1);
     assert(is_contiguous_container_asan_correct(c));
@@ -82,7 +82,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
       assert(c[j] == MoveOnly(j));
   }
   {
-    std::vector<MoveOnly, min_allocator<MoveOnly> > c;
+    std::vector2<MoveOnly, min_allocator<MoveOnly> > c;
     c.push_back(MoveOnly(0));
     assert(c.size() == 1);
     assert(is_contiguous_container_asan_correct(c));

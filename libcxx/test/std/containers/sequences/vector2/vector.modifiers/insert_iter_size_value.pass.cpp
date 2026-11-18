@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // iterator insert(const_iterator position, size_type n, const value_type& x);
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <vector>
 #include <cassert>
@@ -25,8 +26,8 @@
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
-    std::vector<int> v(100);
-    std::vector<int>::iterator i = v.insert(v.cbegin() + 10, 5, 1);
+    std::vector2<int> v(100);
+    std::vector2<int>::iterator i = v.insert(v.cbegin() + 10, 5, 1);
     assert(v.size() == 105);
     assert(is_contiguous_container_asan_correct(v));
     assert(i == v.begin() + 10);
@@ -39,11 +40,11 @@ TEST_CONSTEXPR_CXX20 bool tests() {
       assert(v[j] == 0);
   }
   {
-    std::vector<int> v(100);
+    std::vector2<int> v(100);
     while (v.size() < v.capacity())
       v.push_back(0); // force reallocation
     std::size_t sz               = v.size();
-    std::vector<int>::iterator i = v.insert(v.cbegin() + 10, 5, 1);
+    std::vector2<int>::iterator i = v.insert(v.cbegin() + 10, 5, 1);
     assert(v.size() == sz + 5);
     assert(is_contiguous_container_asan_correct(v));
     assert(i == v.begin() + 10);
@@ -56,10 +57,10 @@ TEST_CONSTEXPR_CXX20 bool tests() {
       assert(v[j] == 0);
   }
   {
-    std::vector<int> v(100);
+    std::vector2<int> v(100);
     v.reserve(128); // force no reallocation
     std::size_t sz               = v.size();
-    std::vector<int>::iterator i = v.insert(v.cbegin() + 10, 5, 1);
+    std::vector2<int>::iterator i = v.insert(v.cbegin() + 10, 5, 1);
     assert(v.size() == sz + 5);
     assert(is_contiguous_container_asan_correct(v));
     assert(i == v.begin() + 10);
@@ -72,8 +73,8 @@ TEST_CONSTEXPR_CXX20 bool tests() {
       assert(v[j] == 0);
   }
   {
-    std::vector<int, limited_allocator<int, 300> > v(100);
-    std::vector<int, limited_allocator<int, 300> >::iterator i = v.insert(v.cbegin() + 10, 5, 1);
+    std::vector2<int, limited_allocator<int, 300> > v(100);
+    std::vector2<int, limited_allocator<int, 300> >::iterator i = v.insert(v.cbegin() + 10, 5, 1);
     assert(v.size() == 105);
     assert(is_contiguous_container_asan_correct(v));
     assert(i == v.begin() + 10);
@@ -87,8 +88,8 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
 #if TEST_STD_VER >= 11
   {
-    std::vector<int, min_allocator<int>> v(100);
-    std::vector<int, min_allocator<int>>::iterator i = v.insert(v.cbegin() + 10, 5, 1);
+    std::vector2<int, min_allocator<int>> v(100);
+    std::vector2<int, min_allocator<int>>::iterator i = v.insert(v.cbegin() + 10, 5, 1);
     assert(v.size() == 105);
     assert(is_contiguous_container_asan_correct(v));
     assert(i == v.begin() + 10);
@@ -101,8 +102,8 @@ TEST_CONSTEXPR_CXX20 bool tests() {
       assert(v[j] == 0);
   }
   {
-    std::vector<int, safe_allocator<int>> v(100);
-    std::vector<int, safe_allocator<int>>::iterator i = v.insert(v.cbegin() + 10, 5, 1);
+    std::vector2<int, safe_allocator<int>> v(100);
+    std::vector2<int, safe_allocator<int>>::iterator i = v.insert(v.cbegin() + 10, 5, 1);
     assert(v.size() == 105);
     assert(is_contiguous_container_asan_correct(v));
     assert(i == v.begin() + 10);
@@ -131,7 +132,7 @@ int main(int, char**) {
   {
     // Without reallocation (note the reserve call)
     int throw_after = 4; // x consumes 1, then 3 successful copies, 4th throws
-    std::vector<throwing_t> v;
+    std::vector2<throwing_t> v;
     v.reserve(10);
     try {
       throwing_t x(throw_after);
@@ -145,7 +146,7 @@ int main(int, char**) {
   {
     // With reallocation
     int throw_after = 4; // x consumes 1, then 3 successful copies, 4th throws
-    std::vector<throwing_t> v;
+    std::vector2<throwing_t> v;
     try {
       throwing_t x(throw_after);
       v.insert(v.begin(), 5, x);

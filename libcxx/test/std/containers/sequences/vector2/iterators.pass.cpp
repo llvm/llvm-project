@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // iterator       begin();
@@ -30,7 +32,7 @@ struct A {
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
     typedef int T;
-    typedef std::vector<T> C;
+    typedef std::vector2<T> C;
     C c;
     C::iterator i = c.begin();
     C::iterator j = c.end();
@@ -39,7 +41,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
   {
     typedef int T;
-    typedef std::vector<T> C;
+    typedef std::vector2<T> C;
     const C c;
     C::const_iterator i = c.begin();
     C::const_iterator j = c.end();
@@ -48,7 +50,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
   {
     typedef int T;
-    typedef std::vector<T> C;
+    typedef std::vector2<T> C;
     C c;
     C::const_iterator i = c.cbegin();
     C::const_iterator j = c.cend();
@@ -58,7 +60,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
   {
     typedef int T;
-    typedef std::vector<T> C;
+    typedef std::vector2<T> C;
     const T t[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     C c(std::begin(t), std::end(t));
     C::iterator i = c.begin();
@@ -71,7 +73,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
   {
     typedef int T;
-    typedef std::vector<T> C;
+    typedef std::vector2<T> C;
     C::iterator i;
     C::const_iterator j;
     (void)i;
@@ -80,7 +82,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
 #if TEST_STD_VER >= 11
   {
     typedef int T;
-    typedef std::vector<T, min_allocator<T>> C;
+    typedef std::vector2<T, min_allocator<T>> C;
     C c;
     C::iterator i = c.begin();
     C::iterator j = c.end();
@@ -109,7 +111,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
   {
     typedef int T;
-    typedef std::vector<T, min_allocator<T>> C;
+    typedef std::vector2<T, min_allocator<T>> C;
     const C c;
     C::const_iterator i = c.begin();
     C::const_iterator j = c.end();
@@ -137,7 +139,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
   {
     typedef int T;
-    typedef std::vector<T, min_allocator<T>> C;
+    typedef std::vector2<T, min_allocator<T>> C;
     C c;
     C::const_iterator i = c.cbegin();
     C::const_iterator j = c.cend();
@@ -147,7 +149,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
   {
     typedef int T;
-    typedef std::vector<T, min_allocator<T>> C;
+    typedef std::vector2<T, min_allocator<T>> C;
     const T t[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     C c(std::begin(t), std::end(t));
     C::iterator i = c.begin();
@@ -160,7 +162,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
   {
     typedef int T;
-    typedef std::vector<T, min_allocator<T>> C;
+    typedef std::vector2<T, min_allocator<T>> C;
     C::iterator i;
     C::const_iterator j;
     (void)i;
@@ -168,7 +170,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
   {
     typedef A T;
-    typedef std::vector<T, min_allocator<T>> C;
+    typedef std::vector2<T, min_allocator<T>> C;
     C c                 = {A{1, 2}};
     C::iterator i       = c.begin();
     i->first            = 3;
@@ -178,7 +180,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
 #endif
 #if TEST_STD_VER > 11
   { // N3644 testing
-    typedef std::vector<int> C;
+    typedef std::vector2<int> C;
     C::iterator ii1{}, ii2{};
     C::iterator ii4 = ii1;
     C::const_iterator cii{};

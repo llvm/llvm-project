@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // iterator erase(const_iterator position);
@@ -24,7 +26,7 @@ template <template <class> class Allocator, class T>
 TEST_CONSTEXPR_CXX20 void tests() {
   {
     T arr[]        = {T(1), T(2), T(3), T(4), T(5)};
-    using Vector   = std::vector<T, Allocator<T> >;
+    using Vector   = std::vector2<T, Allocator<T> >;
     using Iterator = typename Vector::iterator;
 
     {
@@ -52,11 +54,11 @@ TEST_CONSTEXPR_CXX20 void tests() {
     }
   }
 
-  // Make sure vector::erase works with move-only types
+  // Make sure vector2::erase works with move-only types
   {
     // When non-trivial
     {
-      std::vector<MoveOnly, Allocator<MoveOnly> > v;
+      std::vector2<MoveOnly, Allocator<MoveOnly> > v;
       v.emplace_back(1);
       v.emplace_back(2);
       v.emplace_back(3);
@@ -67,7 +69,7 @@ TEST_CONSTEXPR_CXX20 void tests() {
     }
     // When trivial
     {
-      std::vector<TrivialMoveOnly, Allocator<TrivialMoveOnly> > v;
+      std::vector2<TrivialMoveOnly, Allocator<TrivialMoveOnly> > v;
       v.emplace_back(1);
       v.emplace_back(2);
       v.emplace_back(3);
@@ -98,7 +100,7 @@ int main(int, char**) {
   // Throws: Nothing unless an exception is thrown by the assignment operator or move assignment operator of T.
   {
     Throws arr[] = {1, 2, 3};
-    std::vector<Throws> v(arr, arr + 3);
+    std::vector2<Throws> v(arr, arr + 3);
     Throws::sThrows = true;
     v.erase(v.begin());
     v.erase(--v.end());
@@ -115,9 +117,9 @@ int main(int, char**) {
 #ifdef _LIBCPP_VERSION
   {
     Tracker tracker;
-    std::vector<TrackedAssignment> v;
+    std::vector2<TrackedAssignment> v;
 
-    // Set up the vector with 5 elements.
+    // Set up the vector2 with 5 elements.
     for (int i = 0; i != 5; ++i) {
       v.emplace_back(&tracker);
     }

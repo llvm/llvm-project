@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___VECTOR_ERASE_H
-#define _LIBCPP___VECTOR_ERASE_H
+#ifndef _LIBCPP___VECTOR_VECTOR2_ERASE_H
+#define _LIBCPP___VECTOR_VECTOR2_ERASE_H
 
 #include <__algorithm/remove.h>
 #include <__algorithm/remove_if.h>
 #include <__config>
-#include <__fwd/vector.h>
+#include <__fwd/vector2.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -23,19 +23,21 @@ _LIBCPP_PUSH_MACROS
 
 #if _LIBCPP_STD_VER >= 20
 
+#if _LIBCPP_STD_VER >= 29
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator, class _Up>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::size_type
-erase(vector<_Tp, _Allocator>& __c, const _Up& __v) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector2<_Tp, _Allocator>::size_type
+erase(vector2<_Tp, _Allocator>& __c, const _Up& __v) {
   auto __old_size = __c.size();
   __c.erase(std::remove(__c.begin(), __c.end(), __v), __c.end());
   return __old_size - __c.size();
 }
 
 template <class _Tp, class _Allocator, class _Predicate>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::size_type
-erase_if(vector<_Tp, _Allocator>& __c, _Predicate __pred) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector2<_Tp, _Allocator>::size_type
+erase_if(vector2<_Tp, _Allocator>& __c, _Predicate __pred) {
   auto __old_size = __c.size();
   __c.erase(std::remove_if(__c.begin(), __c.end(), __pred), __c.end());
   return __old_size - __c.size();
@@ -43,8 +45,10 @@ erase_if(vector<_Tp, _Allocator>& __c, _Predicate __pred) {
 
 _LIBCPP_END_NAMESPACE_STD
 
+#endif // _LIBCPP_STD_VER >= 29
+
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___VECTOR_ERASE_H
+#endif // _LIBCPP___VECTOR_VECTOR2_ERASE_H

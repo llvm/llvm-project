@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
-// void swap(vector& x);
+// void swap(vector2& x);
 
 #include <vector>
 #include <cassert>
@@ -19,8 +21,8 @@
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
-    std::vector<int> v1(100);
-    std::vector<int> v2(200);
+    std::vector2<int> v1(100);
+    std::vector2<int> v2(200);
     assert(is_contiguous_container_asan_correct(v1));
     assert(is_contiguous_container_asan_correct(v2));
     v1.swap(v2);
@@ -33,8 +35,8 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
 #if TEST_STD_VER >= 11
   {
-    std::vector<int, min_allocator<int>> v1(100);
-    std::vector<int, min_allocator<int>> v2(200);
+    std::vector2<int, min_allocator<int>> v1(100);
+    std::vector2<int, min_allocator<int>> v2(200);
     assert(is_contiguous_container_asan_correct(v1));
     assert(is_contiguous_container_asan_correct(v2));
     v1.swap(v2);
@@ -46,8 +48,8 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     assert(is_contiguous_container_asan_correct(v2));
   }
   {
-    std::vector<int, safe_allocator<int>> v1(100);
-    std::vector<int, safe_allocator<int>> v2(200);
+    std::vector2<int, safe_allocator<int>> v1(100);
+    std::vector2<int, safe_allocator<int>> v2(200);
     assert(is_contiguous_container_asan_correct(v1));
     assert(is_contiguous_container_asan_correct(v2));
     v1.swap(v2);

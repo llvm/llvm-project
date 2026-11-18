@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: std-at-least-c++29
 
 // <vector>
 
@@ -33,13 +33,13 @@ struct MyAlloc {
 };
 
 int main(int, char**) {
-  std::vector<bool, MyAlloc<bool>> vb;
+  std::vector2<bool, MyAlloc<bool>> vb;
   (void)vb;
   // std::fill_n triggers ADL because __bit_iterator has the container type as a template argument
-  // std::vector<bool, MyAlloc<bool>> wb(100);
+  // std::vector2<bool, MyAlloc<bool>> wb(100);
 
-  std::vector<int, MyAlloc<int>> v;
-  std::vector<int, MyAlloc<int>> w(100);
+  std::vector2<int, MyAlloc<int>> v;
+  std::vector2<int, MyAlloc<int>> w(100);
   v.push_back(1);
   v.insert(v.end(), 2);
   v.insert(v.end(), w.begin(), w.end());
@@ -47,7 +47,7 @@ int main(int, char**) {
   v.erase(v.begin());
   v.erase(v.begin(), v.end());
 #if TEST_STD_VER >= 14
-  // TODO: vector::swap is not robust against ADL because we compare allocators, and that
+  // TODO: vector2::swap is not robust against ADL because we compare allocators, and that
   //       triggers ADL when looking up operator==.
   // v.swap(w);
 #endif

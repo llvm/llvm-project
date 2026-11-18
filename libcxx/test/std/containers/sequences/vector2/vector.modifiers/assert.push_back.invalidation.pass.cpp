@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // void push_back(const value_type& x);
@@ -24,7 +26,7 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-  std::vector<int> vec;
+  std::vector2<int> vec;
   vec.reserve(4);
   std::size_t old_capacity = vec.capacity();
   assert(old_capacity >= 4);

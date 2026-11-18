@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
-// UNSUPPORTED: c++03, c++11, c++14
 
 // template <class InputIterator, class Allocator = allocator<typename iterator_traits<InputIterator>::value_type>>
-//    vector(InputIterator, InputIterator, Allocator = Allocator())
-//    -> vector<typename iterator_traits<InputIterator>::value_type, Allocator>;
+//    vector2(InputIterator, InputIterator, Allocator = Allocator())
+//    -> vector2<typename iterator_traits<InputIterator>::value_type, Allocator>;
 //
 
 #include <cassert>
@@ -24,9 +25,9 @@ int main(int, char**) {
 
   //  Test the implicit deduction guides
   {
-    //  vector (allocator &)
-    // expected-error-re@+1 {{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}vector'}}
-    std::vector vec(std::allocator< int>{});
+    //  vector2 (allocator &)
+    // expected-error-re@+1 {{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}vector2'}}
+    std::vector2 vec(std::allocator< int>{});
   }
 
   return 0;

@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
-// vector(size_type n, const value_type& x, const allocator_type& a);
+// vector2(size_type n, const value_type& x, const allocator_type& a);
 
 #include <vector>
 #include <cassert>
@@ -30,13 +32,13 @@ test(typename C::size_type n, const typename C::value_type& x, const typename C:
 }
 
 TEST_CONSTEXPR_CXX20 bool tests() {
-  test<std::vector<int> >(0, 3, std::allocator<int>());
-  test<std::vector<int> >(50, 3, std::allocator<int>());
+  test<std::vector2<int> >(0, 3, std::allocator<int>());
+  test<std::vector2<int> >(50, 3, std::allocator<int>());
 #if TEST_STD_VER >= 11
-  test<std::vector<int, min_allocator<int>> >(0, 3, min_allocator<int>());
-  test<std::vector<int, min_allocator<int>> >(50, 3, min_allocator<int>());
-  test<std::vector<int, safe_allocator<int>> >(0, 3, safe_allocator<int>());
-  test<std::vector<int, safe_allocator<int>> >(50, 3, safe_allocator<int>());
+  test<std::vector2<int, min_allocator<int>> >(0, 3, min_allocator<int>());
+  test<std::vector2<int, min_allocator<int>> >(50, 3, min_allocator<int>());
+  test<std::vector2<int, safe_allocator<int>> >(0, 3, safe_allocator<int>());
+  test<std::vector2<int, safe_allocator<int>> >(50, 3, safe_allocator<int>());
 #endif
 
   return true;

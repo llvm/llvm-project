@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: std-at-least-c++29
 
 // <vector>
 
@@ -59,7 +59,7 @@ struct std::__asan_annotate_container_with_allocator<user_allocator<T>> : false_
 #endif
 
 int main(int, char**) {
-  using V = std::vector<int, user_allocator<int>>;
+  using V = std::vector2<int, user_allocator<int>>;
 
   {
     V* v = new (reuse_buffers.alloc()) V();

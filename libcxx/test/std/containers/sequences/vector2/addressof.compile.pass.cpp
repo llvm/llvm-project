@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03 && !stdlib=libc++
+// REQUIRES: std-at-least-c++29
 
 // <vector>
 
-// Validate various member functions of std::vector with an ADL-hijacking operator&
+// Validate various member functions of std::vector2 with an ADL-hijacking operator&
 
 #include <vector>
 #include <utility>
@@ -18,7 +18,7 @@
 #include "operator_hijacker.h"
 #include "test_iterators.h"
 
-using Vector = std::vector<operator_hijacker>;
+using Vector = std::vector2<operator_hijacker>;
 
 void test(
     Vector v, Vector::const_iterator it, cpp17_input_iterator<operator_hijacker*> other_it, operator_hijacker val) {

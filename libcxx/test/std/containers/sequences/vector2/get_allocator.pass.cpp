@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
-// class vector
+// class vector2
 
 // allocator_type get_allocator() const
 
@@ -21,12 +23,12 @@
 TEST_CONSTEXPR_CXX20 bool test() {
   {
     std::allocator<int> alloc;
-    const std::vector<int> v(alloc);
+    const std::vector2<int> v(alloc);
     assert(v.get_allocator() == alloc);
   }
   {
     other_allocator<int> alloc(1);
-    const std::vector<int, other_allocator<int> > v(alloc);
+    const std::vector2<int, other_allocator<int> > v(alloc);
     assert(v.get_allocator() == alloc);
   }
 

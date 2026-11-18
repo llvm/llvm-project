@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// REQUIRES: std-at-least-c++29
+
 // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=2000000
 
 // template<container-compatible-range<T> R>
@@ -25,20 +26,20 @@
 // - assigning move-only elements;
 // - an exception is thrown when copying the elements or when allocating new elements.
 constexpr bool test() {
-  static_assert(test_constraints_assign_range<std::vector, int, double>());
+  static_assert(test_constraints_assign_range<std::vector2, int, double>());
 
   for_all_iterators_and_allocators<int, const int*>([]<class Iter, class Sent, class Alloc>() {
-    test_sequence_assign_range<std::vector<int, Alloc>, Iter, Sent>([]([[maybe_unused]] auto&& c) {
+    test_sequence_assign_range<std::vector2<int, Alloc>, Iter, Sent>([]([[maybe_unused]] auto&& c) {
       LIBCPP_ASSERT(c.__invariants());
       LIBCPP_ASSERT(is_contiguous_container_asan_correct(c));
     });
   });
-  test_sequence_assign_range_move_only<std::vector>();
+  test_sequence_assign_range_move_only<std::vector2>();
 
   {   // Vector may or may not need to reallocate because of the assignment -- make sure to test both cases.
     { // Ensure reallocation happens.
       int in[]           = {-1, -2, -3, -4, -5, -6, -7, -8, -9, -10};
-      std::vector<int> v = {1, 2, 3, 4, 5, 6, 7, 8};
+      std::vector2<int> v = {1, 2, 3, 4, 5, 6, 7, 8};
       v.shrink_to_fit();
       assert(v.capacity() < v.size() + std::ranges::size(in));
 
@@ -46,17 +47,17 @@ constexpr bool test() {
       assert(std::ranges::equal(v, in));
     }
 
-    { // Ensure no reallocation happens -- the input range is shorter than the vector.
+    { // Ensure no reallocation happens -- the input range is shorter than the vector2.
       int in[]           = {-1, -2, -3, -4, -5};
-      std::vector<int> v = {1, 2, 3, 4, 5, 6, 7, 8};
+      std::vector2<int> v = {1, 2, 3, 4, 5, 6, 7, 8};
 
       v.assign_range(in);
       assert(std::ranges::equal(v, in));
     }
 
-    { // Ensure no reallocation happens -- the input range is longer than the vector but within capacity.
+    { // Ensure no reallocation happens -- the input range is longer than the vector2 but within capacity.
       int in[]           = {-1, -2, -3, -4, -5, -6, -7, -8};
-      std::vector<int> v = {1, 2, 3, 4, 5};
+      std::vector2<int> v = {1, 2, 3, 4, 5};
       v.reserve(std::ranges::size(in));
       assert(v.capacity() >= std::ranges::size(in));
 
@@ -67,9 +68,9 @@ constexpr bool test() {
     { // Ensure input-only sized ranges are accepted.
       using input_iter = cpp20_input_iterator<const int*>;
       const int in[]{1, 2, 3, 4};
-      std::vector<int> v;
+      std::vector2<int> v;
       v.assign_range(std::views::counted(input_iter{std::ranges::begin(in)}, std::ranges::ssize(in)));
-      assert(std::ranges::equal(v, std::vector<int>{1, 2, 3, 4}));
+      assert(std::ranges::equal(v, std::vector2<int>{1, 2, 3, 4}));
     }
   }
 
@@ -80,9 +81,9 @@ constexpr bool test() {
 void test_counted_istream_view() {
   std::istringstream is{"1 2 3 4"};
   auto vals = std::views::istream<int>(is);
-  std::vector<int> v;
+  std::vector2<int> v;
   v.assign_range(std::views::counted(vals.begin(), 3));
-  assert(v == (std::vector{1, 2, 3}));
+  assert(v == (std::vector2{1, 2, 3}));
 }
 #endif
 
@@ -90,8 +91,8 @@ int main(int, char**) {
   test();
   static_assert(test());
 
-  test_assign_range_exception_safety_throwing_copy<std::vector>();
-  test_assign_range_exception_safety_throwing_allocator<std::vector, int>();
+  test_assign_range_exception_safety_throwing_copy<std::vector2>();
+  test_assign_range_exception_safety_throwing_allocator<std::vector2, int>();
 
 #ifndef TEST_HAS_NO_LOCALIZATION
   test_counted_istream_view();

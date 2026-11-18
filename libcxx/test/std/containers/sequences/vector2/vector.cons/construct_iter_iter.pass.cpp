@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
-// template <class InputIter> vector(InputIter first, InputIter last);
+// template <class InputIter> vector2(InputIter first, InputIter last);
 
 #include <algorithm>
 #include <vector>
@@ -47,44 +49,44 @@ TEST_CONSTEXPR_CXX20 void test(Iterator first, Iterator last) {
 TEST_CONSTEXPR_CXX20 void basic_test_cases() {
   int a[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 1, 0};
   int* an = a + sizeof(a) / sizeof(a[0]);
-  test<std::vector<int> >(cpp17_input_iterator<const int*>(a), cpp17_input_iterator<const int*>(an));
-  test<std::vector<int> >(forward_iterator<const int*>(a), forward_iterator<const int*>(an));
-  test<std::vector<int> >(bidirectional_iterator<const int*>(a), bidirectional_iterator<const int*>(an));
-  test<std::vector<int> >(random_access_iterator<const int*>(a), random_access_iterator<const int*>(an));
-  test<std::vector<int> >(a, an);
+  test<std::vector2<int> >(cpp17_input_iterator<const int*>(a), cpp17_input_iterator<const int*>(an));
+  test<std::vector2<int> >(forward_iterator<const int*>(a), forward_iterator<const int*>(an));
+  test<std::vector2<int> >(bidirectional_iterator<const int*>(a), bidirectional_iterator<const int*>(an));
+  test<std::vector2<int> >(random_access_iterator<const int*>(a), random_access_iterator<const int*>(an));
+  test<std::vector2<int> >(a, an);
 
-  test<std::vector<int, limited_allocator<int, 63> > >(
+  test<std::vector2<int, limited_allocator<int, 63> > >(
       cpp17_input_iterator<const int*>(a), cpp17_input_iterator<const int*>(an));
   // Add 1 for implementations that dynamically allocate a container proxy.
-  test<std::vector<int, limited_allocator<int, 18 + 1> > >(
+  test<std::vector2<int, limited_allocator<int, 18 + 1> > >(
       forward_iterator<const int*>(a), forward_iterator<const int*>(an));
-  test<std::vector<int, limited_allocator<int, 18 + 1> > >(
+  test<std::vector2<int, limited_allocator<int, 18 + 1> > >(
       bidirectional_iterator<const int*>(a), bidirectional_iterator<const int*>(an));
-  test<std::vector<int, limited_allocator<int, 18 + 1> > >(
+  test<std::vector2<int, limited_allocator<int, 18 + 1> > >(
       random_access_iterator<const int*>(a), random_access_iterator<const int*>(an));
-  test<std::vector<int, limited_allocator<int, 18 + 1> > >(a, an);
+  test<std::vector2<int, limited_allocator<int, 18 + 1> > >(a, an);
 #if TEST_STD_VER >= 11
-  test<std::vector<int, min_allocator<int> > >(
+  test<std::vector2<int, min_allocator<int> > >(
       cpp17_input_iterator<const int*>(a), cpp17_input_iterator<const int*>(an));
-  test<std::vector<int, min_allocator<int> > >(forward_iterator<const int*>(a), forward_iterator<const int*>(an));
-  test<std::vector<int, min_allocator<int> > >(
+  test<std::vector2<int, min_allocator<int> > >(forward_iterator<const int*>(a), forward_iterator<const int*>(an));
+  test<std::vector2<int, min_allocator<int> > >(
       bidirectional_iterator<const int*>(a), bidirectional_iterator<const int*>(an));
-  test<std::vector<int, min_allocator<int> > >(
+  test<std::vector2<int, min_allocator<int> > >(
       random_access_iterator<const int*>(a), random_access_iterator<const int*>(an));
-  test<std::vector<int> >(a, an);
-  test<std::vector<int, safe_allocator<int> > >(
+  test<std::vector2<int> >(a, an);
+  test<std::vector2<int, safe_allocator<int> > >(
       cpp17_input_iterator<const int*>(a), cpp17_input_iterator<const int*>(an));
-  test<std::vector<int, safe_allocator<int> > >(forward_iterator<const int*>(a), forward_iterator<const int*>(an));
-  test<std::vector<int, safe_allocator<int> > >(
+  test<std::vector2<int, safe_allocator<int> > >(forward_iterator<const int*>(a), forward_iterator<const int*>(an));
+  test<std::vector2<int, safe_allocator<int> > >(
       bidirectional_iterator<const int*>(a), bidirectional_iterator<const int*>(an));
-  test<std::vector<int, safe_allocator<int> > >(
+  test<std::vector2<int, safe_allocator<int> > >(
       random_access_iterator<const int*>(a), random_access_iterator<const int*>(an));
 
   // Regression test for https://llvm.org/PR47497
   {
-    std::vector<int> v1({}, forward_iterator<const int*>{});
+    std::vector2<int> v1({}, forward_iterator<const int*>{});
     (void)v1;
-    std::vector<int> v2(forward_iterator<const int*>{}, {});
+    std::vector2<int> v2(forward_iterator<const int*>{}, {});
     (void)v2;
   }
 #endif
@@ -98,11 +100,11 @@ TEST_CONSTEXPR_CXX20 void emplaceable_concept_tests() {
     using T  = EmplaceConstructible<int>;
     using It = forward_iterator<int*>;
     {
-      std::vector<T> v(It(arr1), It(std::end(arr1)));
+      std::vector2<T> v(It(arr1), It(std::end(arr1)));
       assert(v[0].value == 42);
     }
     {
-      std::vector<T> v(It(arr2), It(std::end(arr2)));
+      std::vector2<T> v(It(arr2), It(std::end(arr2)));
       assert(v[0].value == 1);
       assert(v[1].value == 101);
       assert(v[2].value == 42);
@@ -112,12 +114,12 @@ TEST_CONSTEXPR_CXX20 void emplaceable_concept_tests() {
     using T  = EmplaceConstructibleAndMoveInsertable<int>;
     using It = cpp17_input_iterator<int*>;
     {
-      std::vector<T> v(It(arr1), It(std::end(arr1)));
+      std::vector2<T> v(It(arr1), It(std::end(arr1)));
       assert(v[0].copied == 0);
       assert(v[0].value == 42);
     }
     {
-      std::vector<T> v(It(arr2), It(std::end(arr2)));
+      std::vector2<T> v(It(arr2), It(std::end(arr2)));
       //assert(v[0].copied == 0);
       assert(v[0].value == 1);
       //assert(v[1].copied == 0);
@@ -134,7 +136,7 @@ void test_ctor_under_alloc() {
   int arr2[] = {1, 101, 42};
 #if TEST_STD_VER >= 11
   {
-    using C  = TCT::vector<>;
+    using C  = TCT::vector2<>;
     using It = forward_iterator<int*>;
     {
       ExpectConstructGuard<int&> G(1);
@@ -148,7 +150,7 @@ void test_ctor_under_alloc() {
     }
   }
   {
-    using C  = TCT::vector<>;
+    using C  = TCT::vector2<>;
     using It = cpp17_input_iterator<int*>;
     {
       ExpectConstructGuard<int&> G(1);
@@ -163,7 +165,7 @@ void test_ctor_under_alloc() {
 #endif
   // FIXME: This is mostly the same test as above, just worse. They should be merged.
   {
-    typedef std::vector<int, cpp03_allocator<int> > C;
+    typedef std::vector2<int, cpp03_allocator<int> > C;
     typedef C::allocator_type Alloc;
     {
       Alloc::construct_called = false;
@@ -179,7 +181,7 @@ void test_ctor_under_alloc() {
     }
   }
   {
-    typedef std::vector<int, cpp03_overload_allocator<int> > C;
+    typedef std::vector2<int, cpp03_overload_allocator<int> > C;
     typedef C::allocator_type Alloc;
     {
       Alloc::construct_called = false;
@@ -207,7 +209,7 @@ struct Der : B1, B2 {
   int z;
 };
 
-// Initialize a vector with a different value type.
+// Initialize a vector2 with a different value type.
 TEST_CONSTEXPR_CXX20 void test_ctor_with_different_value_type() {
   {
     // Make sure initialization is performed with each element value, not with
@@ -215,7 +217,7 @@ TEST_CONSTEXPR_CXX20 void test_ctor_with_different_value_type() {
     float array[3] = {0.0f, 1.0f, 2.0f};
     TEST_DIAGNOSTIC_PUSH
     TEST_MSVC_DIAGNOSTIC_IGNORED(4244) // conversion from 'float' to 'int', possible loss of data
-    std::vector<int> v(array, array + 3);
+    std::vector2<int> v(array, array + 3);
     TEST_DIAGNOSTIC_POP
     assert(v[0] == 0);
     assert(v[1] == 1);
@@ -226,13 +228,13 @@ TEST_CONSTEXPR_CXX20 void test_ctor_with_different_value_type() {
     Der* array[1] = {&z};
     // Though the types Der* and B2* are very similar, initialization still cannot
     // be done with `memcpy`.
-    std::vector<B2*> v(array, array + 1);
+    std::vector2<B2*> v(array, array + 1);
     assert(v[0] == &z);
   }
   {
     // Though the types are different, initialization can be done with `memcpy`.
     std::int32_t array[1] = {-1};
-    std::vector<std::uint32_t> v(array, array + 1);
+    std::vector2<std::uint32_t> v(array, array + 1);
     assert(v[0] == 4294967295U);
   }
 }

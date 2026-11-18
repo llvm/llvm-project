@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // const_pointer data() const;
@@ -31,48 +33,48 @@ struct Nasty {
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
-    const std::vector<int> v;
+    const std::vector2<int> v;
     assert(v.data() == 0);
     assert(is_contiguous_container_asan_correct(v));
   }
   {
-    const std::vector<int> v(100);
+    const std::vector2<int> v(100);
     assert(v.data() == std::addressof(v.front()));
     assert(is_contiguous_container_asan_correct(v));
   }
   {
-    const std::vector<Nasty> v(100);
+    const std::vector2<Nasty> v(100);
     assert(v.data() == std::addressof(v.front()));
     assert(is_contiguous_container_asan_correct(v));
   }
 #if TEST_STD_VER >= 11
   {
-    const std::vector<int, min_allocator<int>> v;
+    const std::vector2<int, min_allocator<int>> v;
     assert(v.data() == 0);
     assert(is_contiguous_container_asan_correct(v));
   }
   {
-    const std::vector<int, min_allocator<int>> v(100);
+    const std::vector2<int, min_allocator<int>> v(100);
     assert(v.data() == &v.front());
     assert(is_contiguous_container_asan_correct(v));
   }
   {
-    const std::vector<Nasty, min_allocator<Nasty>> v(100);
+    const std::vector2<Nasty, min_allocator<Nasty>> v(100);
     assert(v.data() == std::addressof(v.front()));
     assert(is_contiguous_container_asan_correct(v));
   }
   {
-    const std::vector<int, safe_allocator<int>> v;
+    const std::vector2<int, safe_allocator<int>> v;
     assert(v.data() == 0);
     assert(is_contiguous_container_asan_correct(v));
   }
   {
-    const std::vector<int, safe_allocator<int>> v(100);
+    const std::vector2<int, safe_allocator<int>> v(100);
     assert(v.data() == &v.front());
     assert(is_contiguous_container_asan_correct(v));
   }
   {
-    const std::vector<Nasty, safe_allocator<Nasty>> v(100);
+    const std::vector2<Nasty, safe_allocator<Nasty>> v(100);
     assert(v.data() == std::addressof(v.front()));
     assert(is_contiguous_container_asan_correct(v));
   }

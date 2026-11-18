@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // void resize(size_type sz, const value_type& x);
@@ -19,11 +21,11 @@
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
-    std::vector<int> v(100);
+    std::vector2<int> v(100);
     v.resize(50, 1);
     assert(v.size() == 50);
     assert(v.capacity() == 100);
-    assert(v == std::vector<int>(50));
+    assert(v == std::vector2<int>(50));
     v.resize(200, 1);
     assert(v.size() == 200);
     assert(v.capacity() >= 200);
@@ -35,7 +37,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
   {
     // Add 1 for implementations that dynamically allocate a container proxy.
-    std::vector<int, limited_allocator<int, 300 + 1> > v(100);
+    std::vector2<int, limited_allocator<int, 300 + 1> > v(100);
     v.resize(50, 1);
     assert(v.size() == 50);
     assert(v.capacity() == 100);
@@ -46,12 +48,12 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
 #if TEST_STD_VER >= 11
   {
-    std::vector<int, min_allocator<int>> v(100);
+    std::vector2<int, min_allocator<int>> v(100);
     v.resize(50, 1);
     assert(v.size() == 50);
     assert(v.capacity() == 100);
     assert(is_contiguous_container_asan_correct(v));
-    assert((v == std::vector<int, min_allocator<int>>(50)));
+    assert((v == std::vector2<int, min_allocator<int>>(50)));
     v.resize(200, 1);
     assert(v.size() == 200);
     assert(v.capacity() >= 200);
@@ -62,7 +64,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
       assert(v[i] == 1);
   }
   {
-    std::vector<int, min_allocator<int>> v(100);
+    std::vector2<int, min_allocator<int>> v(100);
     v.resize(50, 1);
     assert(v.size() == 50);
     assert(v.capacity() == 100);
@@ -73,12 +75,12 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     assert(is_contiguous_container_asan_correct(v));
   }
   {
-    std::vector<int, safe_allocator<int>> v(100);
+    std::vector2<int, safe_allocator<int>> v(100);
     v.resize(50, 1);
     assert(v.size() == 50);
     assert(v.capacity() == 100);
     assert(is_contiguous_container_asan_correct(v));
-    assert((v == std::vector<int, safe_allocator<int>>(50)));
+    assert((v == std::vector2<int, safe_allocator<int>>(50)));
     v.resize(200, 1);
     assert(v.size() == 200);
     assert(v.capacity() >= 200);
@@ -89,7 +91,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
       assert(v[i] == 1);
   }
   {
-    std::vector<int, safe_allocator<int>> v(100);
+    std::vector2<int, safe_allocator<int>> v(100);
     v.resize(50, 1);
     assert(v.size() == 50);
     assert(v.capacity() == 100);

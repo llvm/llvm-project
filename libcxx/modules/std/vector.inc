@@ -31,4 +31,13 @@ export namespace std {
   // [vector.bool.fmt], formatter specialization for vector<bool>
   using std::formatter;
 #endif
+
+#if _LIBCPP_STD_VER >= 29
+  // PROTOTYPE: std::vector2 from P3866R0
+  using std::vector2;
+
+  namespace pmr {
+    using std::pmr::vector2;
+  }
+#endif
 } // namespace std

@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// REQUIRES: std-at-least-c++29
+
 // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=2000000
 
 // template<container-compatible-range<T> R>
@@ -24,21 +25,21 @@
 // - appending move-only elements;
 // - an exception is thrown when copying the elements or when allocating new elements.
 constexpr bool test() {
-  static_assert(test_constraints_append_range<std::vector, int, double>());
+  static_assert(test_constraints_append_range<std::vector2, int, double>());
 
   for_all_iterators_and_allocators<int, const int*>([]<class Iter, class Sent, class Alloc>() {
-    test_sequence_append_range<std::vector<int, Alloc>, Iter, Sent>([]([[maybe_unused]] auto&& c) {
+    test_sequence_append_range<std::vector2<int, Alloc>, Iter, Sent>([]([[maybe_unused]] auto&& c) {
       LIBCPP_ASSERT(c.__invariants());
       LIBCPP_ASSERT(is_contiguous_container_asan_correct(c));
     });
   });
-  test_sequence_append_range_move_only<std::vector>();
-  test_sequence_append_range_emplace_constructible_and_move_insertable<std::vector>();
+  test_sequence_append_range_move_only<std::vector2>();
+  test_sequence_append_range_emplace_constructible_and_move_insertable<std::vector2>();
 
   {   // Vector may or may not need to reallocate because of the insertion -- make sure to test both cases.
     { // Ensure reallocation happens.
       int in[]           = {-1, -2, -3, -4, -5, -6, -7, -8, -9, -10};
-      std::vector<int> v = {1, 2, 3, 4, 5, 6, 7, 8};
+      std::vector2<int> v = {1, 2, 3, 4, 5, 6, 7, 8};
       v.shrink_to_fit();
       assert(v.capacity() < v.size() + std::ranges::size(in));
 
@@ -48,7 +49,7 @@ constexpr bool test() {
 
     { // Ensure no reallocation happens, and that we don't invalidate iterators-
       int in[]           = {-1, -2, -3, -4, -5, -6, -7, -8, -9, -10};
-      std::vector<int> v = {1, 2, 3, 4, 5, 6, 7, 8};
+      std::vector2<int> v = {1, 2, 3, 4, 5, 6, 7, 8};
       v.reserve(v.size() + std::ranges::size(in));
 
       auto ptr     = v.data();
@@ -58,7 +59,7 @@ constexpr bool test() {
       assert(v.capacity() == old_cap);
       assert(std::ranges::equal(v, std::array{1, 2, 3, 4, 5, 6, 7, 8, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10}));
 
-      // vector is allowed to overallocate. Make sure it doesn't reallocate until the new capacity is reached.
+      // vector2 is allowed to overallocate. Make sure it doesn't reallocate until the new capacity is reached.
       while (v.size() < old_cap) {
         int in2[] = {0};
         v.append_range(in2);
@@ -75,8 +76,8 @@ int main(int, char**) {
   test();
   static_assert(test());
 
-  test_append_range_exception_safety_throwing_copy<std::vector>();
-  test_append_range_exception_safety_throwing_allocator<std::vector, int>();
+  test_append_range_exception_safety_throwing_copy<std::vector2>();
+  test_append_range_exception_safety_throwing_allocator<std::vector2, int>();
 
   return 0;
 }

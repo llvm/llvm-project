@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // MSVC does not support [[clang::trivial_abi]], while GCC supports it only since GCC 17.
 // UNSUPPORTED: msvc
 // UNSUPPORTED: gcc-16
 
 // <vector>
 
-// Make sure we don't miscompile vector operations for types that shouldn't be considered
+// Make sure we don't miscompile vector2 operations for types that shouldn't be considered
 // trivially relocatable.
 
 #include <vector>
@@ -46,9 +48,9 @@ LIBCPP_NON_FROZEN_STATIC_ASSERT(!std::__is_trivially_relocatable_v<NotTriviallyM
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   Tracker track;
-  std::vector<NotTriviallyMovable> v;
+  std::vector2<NotTriviallyMovable> v;
 
-  // Fill the vector at its capacity, such that any subsequent push_back would require growing.
+  // Fill the vector2 at its capacity, such that any subsequent push_back would require growing.
   v.reserve(5);
   std::size_t const capacity = v.capacity(); // could technically be more than 5
   while (v.size() < v.capacity()) {
@@ -59,7 +61,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   assert(v.size() == capacity);
 
   // Force a reallocation of the buffer + relocalization of the elements.
-  // All the existing elements of the vector should be move-constructed to their new location.
+  // All the existing elements of the vector2 should be move-constructed to their new location.
   v.emplace_back(&track);
   assert(track.move_constructs == capacity);
 

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: std-at-least-c++29
 
 // <vector>
 
@@ -32,7 +32,7 @@ TEST_CONSTEXPR_CXX20 void test(Vec& v) {
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
-    typedef std::vector<int> V;
+    typedef std::vector2<int> V;
     V d1;
     V d2;
     d2.reserve(10); // no reallocation during assign.
@@ -40,7 +40,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     test(d2);
   }
   {
-    typedef std::vector<int, min_allocator<int>> V;
+    typedef std::vector2<int, min_allocator<int>> V;
     V d1;
     V d2;
     d2.reserve(10); // no reallocation during assign.

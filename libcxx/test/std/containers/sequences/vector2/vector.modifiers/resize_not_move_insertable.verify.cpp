@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03 && !stdlib=libc++
+// REQUIRES: std-at-least-c++29
 
 // <vector>
 
-// Test that vector produces a decent diagnostic for user types that explicitly
+// Test that vector2 produces a decent diagnostic for user types that explicitly
 // delete their move constructor. Such types don't meet the Cpp17CopyInsertable
 // requirements.
 
@@ -35,11 +35,11 @@ int main(int, char**) {
   // expected-error@* 0-2 {{call to deleted constructor}}
   // expected-error@* 0-2 {{no matching function for call to '__construct_at'}}
   {
-    std::vector<BadUserNoCookie<1> > x;
+    std::vector2<BadUserNoCookie<1> > x;
     x.emplace_back();
   }
   {
-    std::vector<BadUserNoCookie<2> > x;
+    std::vector2<BadUserNoCookie<2> > x;
     BadUserNoCookie<2> c;
     x.push_back(c);
   }

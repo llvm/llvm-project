@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // Dereference non-dereferenceable iterator.
@@ -22,7 +24,7 @@
 int main(int, char**) {
   {
     typedef int T;
-    typedef std::vector<T> C;
+    typedef std::vector2<T> C;
     C c(1);
     fill_to_capacity(c);
     C::iterator i = c.end();
@@ -31,7 +33,7 @@ int main(int, char**) {
 
   {
     typedef int T;
-    typedef std::vector<T, min_allocator<T> > C;
+    typedef std::vector2<T, min_allocator<T> > C;
     C c(1);
     fill_to_capacity(c);
     C::iterator i = c.end();

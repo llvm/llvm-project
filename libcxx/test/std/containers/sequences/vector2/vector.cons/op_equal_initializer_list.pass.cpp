@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: std-at-least-c++29
 
 // <vector>
 
-// vector& operator=(initializer_list<value_type> il);
+// vector2& operator=(initializer_list<value_type> il);
 
 #include <vector>
 #include <cassert>
@@ -21,7 +21,7 @@
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
-    std::vector<int> d;
+    std::vector2<int> d;
     d = {3, 4, 5, 6};
     assert(d.size() == 4);
     assert(is_contiguous_container_asan_correct(d));
@@ -31,7 +31,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     assert(d[3] == 6);
   }
   {
-    std::vector<int, min_allocator<int>> d;
+    std::vector2<int, min_allocator<int>> d;
     d = {3, 4, 5, 6};
     assert(d.size() == 4);
     assert(is_contiguous_container_asan_correct(d));

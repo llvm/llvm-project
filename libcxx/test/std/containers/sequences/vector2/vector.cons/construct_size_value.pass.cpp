@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
-// vector(size_type n, const value_type& x);
+// vector2(size_type n, const value_type& x);
 
 #include <vector>
 #include <cassert>
@@ -29,17 +31,17 @@ TEST_CONSTEXPR_CXX20 void test(typename C::size_type n, const typename C::value_
 }
 
 TEST_CONSTEXPR_CXX20 bool tests() {
-  test<std::vector<int> >(0, 3);
-  test<std::vector<int> >(50, 3);
+  test<std::vector2<int> >(0, 3);
+  test<std::vector2<int> >(50, 3);
   // Add 1 for implementations that dynamically allocate a container proxy.
-  test<std::vector<int, limited_allocator<int, 50 + 1> > >(0, 5);
-  test<std::vector<int, limited_allocator<int, 50 + 1> > >(50, 5);
-  test<std::vector<int, limited_allocator<int, 50 + 1> > >(50, 5);
+  test<std::vector2<int, limited_allocator<int, 50 + 1> > >(0, 5);
+  test<std::vector2<int, limited_allocator<int, 50 + 1> > >(50, 5);
+  test<std::vector2<int, limited_allocator<int, 50 + 1> > >(50, 5);
 #if TEST_STD_VER >= 11
-  test<std::vector<int, min_allocator<int>> >(0, 3);
-  test<std::vector<int, min_allocator<int>> >(50, 3);
-  test<std::vector<int, safe_allocator<int>> >(0, 3);
-  test<std::vector<int, safe_allocator<int>> >(50, 3);
+  test<std::vector2<int, min_allocator<int>> >(0, 3);
+  test<std::vector2<int, min_allocator<int>> >(50, 3);
+  test<std::vector2<int, safe_allocator<int>> >(0, 3);
+  test<std::vector2<int, safe_allocator<int>> >(50, 3);
 #endif
 
   return true;

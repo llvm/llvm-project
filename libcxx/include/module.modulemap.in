@@ -2353,6 +2353,28 @@ module std {
       export std.vector.swap
     }
 
+    // PROTOTYPE: std::vector2 from P3866R0
+    module fwd2                  { header "__fwd/vector2.h" }
+    module vector2_comparison    { header "__vector/vector2_comparison.h" }
+    module vector2_container_traits { header "__vector/vector2_container_traits.h" }
+    module vector2_erase         { header "__vector/vector2_erase.h" }
+    module vector2_layout        { header "__vector/vector2_layout.h" }
+    module vector2_pmr           {
+      header "__vector/vector2_pmr.h"
+
+      export std.memory_resource.polymorphic_allocator
+    }
+    module vector2_swap          { header "__vector/vector2_swap.h" }
+    module vector2               {
+      header "__vector/vector2.h"
+      export std.iterator.bounded_iter
+      export std.iterator.wrap_iter
+      export std.memory.allocator
+      export std.vector.vector2_comparison
+      export std.vector.fwd2
+      export std.vector.vector2_swap
+    }
+
     header "vector"
     export std.iterator.reverse_iterator
     export *

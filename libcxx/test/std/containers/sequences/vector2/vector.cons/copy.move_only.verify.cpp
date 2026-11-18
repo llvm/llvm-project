@@ -6,17 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Make sure that a std::vector containing move-only types can't be copied.
+// REQUIRES: std-at-least-c++29
 
-// UNSUPPORTED: c++03 && !stdlib=libc++
+// Make sure that a std::vector2 containing move-only types can't be copied.
+
 
 #include <vector>
 
 #include "MoveOnly.h"
 
 void f() {
-  std::vector<MoveOnly> v;
-  std::vector<MoveOnly> copy =
+  std::vector2<MoveOnly> v;
+  std::vector2<MoveOnly> copy =
       v; // expected-error-re@* {{{{(no matching function for call to '__construct_at')|(call to deleted constructor of 'MoveOnly')}}}}
   (void)copy;
 }

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: std-at-least-c++29
 
 // <vector>
 
@@ -40,7 +40,7 @@ struct ThrowSometimes {
 };
 
 void test_throwing() {
-  std::vector<ThrowSometimes> v;
+  std::vector2<ThrowSometimes> v;
   v.reserve(4);
   v.emplace_back();
   v.emplace_back();
@@ -56,8 +56,8 @@ void test_throwing() {
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
-    std::vector<int> d(10, 1);
-    std::vector<int>::iterator i = d.insert(d.cbegin() + 2, {3, 4, 5, 6});
+    std::vector2<int> d(10, 1);
+    std::vector2<int>::iterator i = d.insert(d.cbegin() + 2, {3, 4, 5, 6});
     assert(d.size() == 14);
     assert(is_contiguous_container_asan_correct(d));
     assert(i == d.begin() + 2);
@@ -77,8 +77,8 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     assert(d[13] == 1);
   }
   {
-    std::vector<int, min_allocator<int>> d(10, 1);
-    std::vector<int, min_allocator<int>>::iterator i = d.insert(d.cbegin() + 2, {3, 4, 5, 6});
+    std::vector2<int, min_allocator<int>> d(10, 1);
+    std::vector2<int, min_allocator<int>>::iterator i = d.insert(d.cbegin() + 2, {3, 4, 5, 6});
     assert(d.size() == 14);
     assert(is_contiguous_container_asan_correct(d));
     assert(i == d.begin() + 2);

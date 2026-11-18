@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // size_type capacity() const;
@@ -19,12 +21,12 @@
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
-    std::vector<int> v;
+    std::vector2<int> v;
     assert(v.capacity() == 0);
     assert(is_contiguous_container_asan_correct(v));
   }
   {
-    std::vector<int> v(100);
+    std::vector2<int> v(100);
     assert(v.capacity() == 100);
     v.push_back(0);
     assert(v.capacity() > 101);
@@ -32,12 +34,12 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
 #if TEST_STD_VER >= 11
   {
-    std::vector<int, min_allocator<int>> v;
+    std::vector2<int, min_allocator<int>> v;
     assert(v.capacity() == 0);
     assert(is_contiguous_container_asan_correct(v));
   }
   {
-    std::vector<int, min_allocator<int>> v(100);
+    std::vector2<int, min_allocator<int>> v(100);
     assert(v.capacity() == 100);
     v.push_back(0);
     assert(v.capacity() > 101);

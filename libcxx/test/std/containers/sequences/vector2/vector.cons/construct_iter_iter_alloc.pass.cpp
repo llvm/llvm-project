@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
-// template <class InputIter> vector(InputIter first, InputIter last,
+// template <class InputIter> vector2(InputIter first, InputIter last,
 //                                   const allocator_type& a);
 
 #include <algorithm>
@@ -53,49 +55,49 @@ TEST_CONSTEXPR_CXX20 void basic_tests() {
     int a[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 1, 0};
     int* an = a + sizeof(a) / sizeof(a[0]);
     std::allocator<int> alloc;
-    test<std::vector<int> >(cpp17_input_iterator<const int*>(a), cpp17_input_iterator<const int*>(an), alloc);
-    test<std::vector<int> >(forward_iterator<const int*>(a), forward_iterator<const int*>(an), alloc);
-    test<std::vector<int> >(bidirectional_iterator<const int*>(a), bidirectional_iterator<const int*>(an), alloc);
-    test<std::vector<int> >(random_access_iterator<const int*>(a), random_access_iterator<const int*>(an), alloc);
-    test<std::vector<int> >(a, an, alloc);
+    test<std::vector2<int> >(cpp17_input_iterator<const int*>(a), cpp17_input_iterator<const int*>(an), alloc);
+    test<std::vector2<int> >(forward_iterator<const int*>(a), forward_iterator<const int*>(an), alloc);
+    test<std::vector2<int> >(bidirectional_iterator<const int*>(a), bidirectional_iterator<const int*>(an), alloc);
+    test<std::vector2<int> >(random_access_iterator<const int*>(a), random_access_iterator<const int*>(an), alloc);
+    test<std::vector2<int> >(a, an, alloc);
   }
 #if TEST_STD_VER >= 11
   {
     int a[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 1, 0};
     int* an = a + sizeof(a) / sizeof(a[0]);
     min_allocator<int> alloc;
-    test<std::vector<int, min_allocator<int> > >(
+    test<std::vector2<int, min_allocator<int> > >(
         cpp17_input_iterator<const int*>(a), cpp17_input_iterator<const int*>(an), alloc);
-    test<std::vector<int, min_allocator<int> > >(
+    test<std::vector2<int, min_allocator<int> > >(
         forward_iterator<const int*>(a), forward_iterator<const int*>(an), alloc);
-    test<std::vector<int, min_allocator<int> > >(
+    test<std::vector2<int, min_allocator<int> > >(
         bidirectional_iterator<const int*>(a), bidirectional_iterator<const int*>(an), alloc);
-    test<std::vector<int, min_allocator<int> > >(
+    test<std::vector2<int, min_allocator<int> > >(
         random_access_iterator<const int*>(a), random_access_iterator<const int*>(an), alloc);
-    test<std::vector<int, min_allocator<int> > >(a, an, alloc);
-    test<std::vector<int, implicit_conv_allocator<int> > >(a, an, nullptr);
+    test<std::vector2<int, min_allocator<int> > >(a, an, alloc);
+    test<std::vector2<int, implicit_conv_allocator<int> > >(a, an, nullptr);
   }
   {
     int a[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 1, 0};
     int* an = a + sizeof(a) / sizeof(a[0]);
     safe_allocator<int> alloc;
-    test<std::vector<int, safe_allocator<int> > >(
+    test<std::vector2<int, safe_allocator<int> > >(
         cpp17_input_iterator<const int*>(a), cpp17_input_iterator<const int*>(an), alloc);
-    test<std::vector<int, safe_allocator<int> > >(
+    test<std::vector2<int, safe_allocator<int> > >(
         forward_iterator<const int*>(a), forward_iterator<const int*>(an), alloc);
-    test<std::vector<int, safe_allocator<int> > >(
+    test<std::vector2<int, safe_allocator<int> > >(
         bidirectional_iterator<const int*>(a), bidirectional_iterator<const int*>(an), alloc);
-    test<std::vector<int, safe_allocator<int> > >(
+    test<std::vector2<int, safe_allocator<int> > >(
         random_access_iterator<const int*>(a), random_access_iterator<const int*>(an), alloc);
-    test<std::vector<int, safe_allocator<int> > >(a, an, alloc);
+    test<std::vector2<int, safe_allocator<int> > >(a, an, alloc);
   }
 
   // Regression test for https://llvm.org/PR47497
   {
     min_allocator<int> alloc;
-    std::vector<int, min_allocator<int> > v1({}, forward_iterator<const int*>{}, alloc);
+    std::vector2<int, min_allocator<int> > v1({}, forward_iterator<const int*>{}, alloc);
     (void)v1;
-    std::vector<int, min_allocator<int> > v2(forward_iterator<const int*>{}, {}, alloc);
+    std::vector2<int, min_allocator<int> > v2(forward_iterator<const int*>{}, {}, alloc);
     (void)v2;
   }
 #endif
@@ -111,11 +113,11 @@ TEST_CONSTEXPR_CXX20 void emplaceable_concept_tests() {
     using Alloc = std::allocator<T>;
     Alloc a;
     {
-      std::vector<T> v(It(arr1), It(std::end(arr1)), a);
+      std::vector2<T> v(It(arr1), It(std::end(arr1)), a);
       assert(v[0].value == 42);
     }
     {
-      std::vector<T> v(It(arr2), It(std::end(arr2)), a);
+      std::vector2<T> v(It(arr2), It(std::end(arr2)), a);
       assert(v[0].value == 1);
       assert(v[1].value == 101);
       assert(v[2].value == 42);
@@ -127,12 +129,12 @@ TEST_CONSTEXPR_CXX20 void emplaceable_concept_tests() {
     using Alloc = std::allocator<T>;
     Alloc a;
     {
-      std::vector<T> v(It(arr1), It(std::end(arr1)), a);
+      std::vector2<T> v(It(arr1), It(std::end(arr1)), a);
       assert(v[0].copied == 0);
       assert(v[0].value == 42);
     }
     {
-      std::vector<T> v(It(arr2), It(std::end(arr2)), a);
+      std::vector2<T> v(It(arr2), It(std::end(arr2)), a);
       assert(v[0].value == 1);
       assert(v[1].value == 101);
       assert(v[2].copied == 0);
@@ -147,7 +149,7 @@ void test_ctor_under_alloc() {
   int arr2[] = {1, 101, 42};
 #if TEST_STD_VER >= 11
   {
-    using C     = TCT::vector<>;
+    using C     = TCT::vector2<>;
     using It    = forward_iterator<int*>;
     using Alloc = typename C::allocator_type;
     Alloc a;
@@ -163,7 +165,7 @@ void test_ctor_under_alloc() {
     }
   }
   {
-    using C     = TCT::vector<>;
+    using C     = TCT::vector2<>;
     using It    = cpp17_input_iterator<int*>;
     using Alloc = typename C::allocator_type;
     Alloc a;
@@ -180,7 +182,7 @@ void test_ctor_under_alloc() {
 #endif
   // FIXME: This is mostly the same test as above, just worse. They should be merged.
   {
-    typedef std::vector<int, cpp03_allocator<int> > C;
+    typedef std::vector2<int, cpp03_allocator<int> > C;
     typedef C::allocator_type Alloc;
     Alloc a;
     {
@@ -197,7 +199,7 @@ void test_ctor_under_alloc() {
     }
   }
   {
-    typedef std::vector<int, cpp03_overload_allocator<int> > C;
+    typedef std::vector2<int, cpp03_overload_allocator<int> > C;
     typedef C::allocator_type Alloc;
     Alloc a;
     {

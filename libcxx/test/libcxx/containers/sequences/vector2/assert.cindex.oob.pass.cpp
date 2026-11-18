@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
-// Index const vector out of bounds.
+// Index const vector2 out of bounds.
 
 // REQUIRES: can-test-hardening-assertions-fast
 
@@ -21,18 +23,18 @@
 int main(int, char**) {
   {
     typedef int T;
-    typedef std::vector<T, min_allocator<T> > C;
+    typedef std::vector2<T, min_allocator<T> > C;
     const C c(1);
     assert(c[0] == 0);
-    TEST_LIBCPP_ASSERT_FAILURE(c[1], "vector[] index out of bounds");
+    TEST_LIBCPP_ASSERT_FAILURE(c[1], "vector2[] index out of bounds");
   }
 
   {
     typedef int T;
-    typedef std::vector<T> C;
+    typedef std::vector2<T> C;
     const C c(1);
     assert(c[0] == 0);
-    TEST_LIBCPP_ASSERT_FAILURE(c[1], "vector[] index out of bounds");
+    TEST_LIBCPP_ASSERT_FAILURE(c[1], "vector2[] index out of bounds");
   }
 
   return 0;

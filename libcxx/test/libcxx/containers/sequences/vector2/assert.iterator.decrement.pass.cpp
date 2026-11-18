@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // Decrement iterator prior to begin.
@@ -22,7 +24,7 @@
 int main(int, char**) {
   {
     typedef int T;
-    typedef std::vector<T> C;
+    typedef std::vector2<T> C;
     C c(1);
     C::iterator i = c.end();
     --i;
@@ -32,7 +34,7 @@ int main(int, char**) {
 
   {
     typedef int T;
-    typedef std::vector<T, min_allocator<T> > C;
+    typedef std::vector2<T, min_allocator<T> > C;
     C c(1);
     C::iterator i = c.end();
     --i;

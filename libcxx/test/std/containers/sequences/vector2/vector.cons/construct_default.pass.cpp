@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
-// vector();
-// vector(const Alloc&);
+// vector2();
+// vector2(const Alloc&);
 
 #include <vector>
 #include <cassert>
@@ -60,36 +62,36 @@ TEST_CONSTEXPR_CXX20 void test1(const typename C::allocator_type& a) {
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
-    test0<std::vector<int> >();
-    test0<std::vector<NotConstructible> >();
-    test1<std::vector<int, test_allocator<int> > >(test_allocator<int>(3));
-    test1<std::vector<NotConstructible, test_allocator<NotConstructible> > >(test_allocator<NotConstructible>(5));
+    test0<std::vector2<int> >();
+    test0<std::vector2<NotConstructible> >();
+    test1<std::vector2<int, test_allocator<int> > >(test_allocator<int>(3));
+    test1<std::vector2<NotConstructible, test_allocator<NotConstructible> > >(test_allocator<NotConstructible>(5));
   }
   {
-    std::vector<int, limited_allocator<int, 10> > v;
+    std::vector2<int, limited_allocator<int, 10> > v;
     assert(v.empty());
   }
 #if TEST_STD_VER >= 11
   {
-    test0<std::vector<int, min_allocator<int>> >();
-    test0<std::vector<NotConstructible, min_allocator<NotConstructible>> >();
-    test1<std::vector<int, min_allocator<int> > >(min_allocator<int>{});
-    test1<std::vector<NotConstructible, min_allocator<NotConstructible> > >(min_allocator<NotConstructible>{});
+    test0<std::vector2<int, min_allocator<int>> >();
+    test0<std::vector2<NotConstructible, min_allocator<NotConstructible>> >();
+    test1<std::vector2<int, min_allocator<int> > >(min_allocator<int>{});
+    test1<std::vector2<NotConstructible, min_allocator<NotConstructible> > >(min_allocator<NotConstructible>{});
   }
   {
-    std::vector<int, min_allocator<int> > v;
+    std::vector2<int, min_allocator<int> > v;
     assert(v.empty());
   }
 
   {
-    test0<std::vector<int, explicit_allocator<int>> >();
-    test0<std::vector<NotConstructible, explicit_allocator<NotConstructible>> >();
-    test1<std::vector<int, explicit_allocator<int> > >(explicit_allocator<int>{});
-    test1<std::vector<NotConstructible, explicit_allocator<NotConstructible> > >(
+    test0<std::vector2<int, explicit_allocator<int>> >();
+    test0<std::vector2<NotConstructible, explicit_allocator<NotConstructible>> >();
+    test1<std::vector2<int, explicit_allocator<int> > >(explicit_allocator<int>{});
+    test1<std::vector2<NotConstructible, explicit_allocator<NotConstructible> > >(
         explicit_allocator<NotConstructible>{});
   }
   {
-    std::vector<int, explicit_allocator<int> > v;
+    std::vector2<int, explicit_allocator<int> > v;
     assert(v.empty());
   }
 #endif

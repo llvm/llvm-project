@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // iterator erase(const_iterator first, const_iterator last);
@@ -25,7 +27,7 @@ template <template <class> class Allocator, class T>
 TEST_CONSTEXPR_CXX20 void tests() {
   {
     T arr[]             = {T(1), T(2), T(3)};
-    using Vector        = std::vector<T, Allocator<T> >;
+    using Vector        = std::vector2<T, Allocator<T> >;
     using Iterator      = typename Vector::iterator;
     using ConstIterator = typename Vector::const_iterator;
 
@@ -109,8 +111,8 @@ TEST_CONSTEXPR_CXX20 void tests() {
     }
   }
   {
-    using InnerVector = std::vector<T, Allocator<T> >;
-    using Vector      = std::vector<InnerVector, Allocator<InnerVector> >;
+    using InnerVector = std::vector2<T, Allocator<T> >;
+    using Vector      = std::vector2<InnerVector, Allocator<InnerVector> >;
     Vector outer(2, InnerVector(1));
     outer.erase(outer.begin(), outer.begin());
     assert(outer.size() == 2);
@@ -121,11 +123,11 @@ TEST_CONSTEXPR_CXX20 void tests() {
     assert(is_contiguous_container_asan_correct(outer[1]));
   }
 
-  // Make sure vector::erase works with move-only types
+  // Make sure vector2::erase works with move-only types
   {
     // When non-trivial
     {
-      std::vector<MoveOnly, Allocator<MoveOnly> > v;
+      std::vector2<MoveOnly, Allocator<MoveOnly> > v;
       v.emplace_back(1);
       v.emplace_back(2);
       v.emplace_back(3);
@@ -135,7 +137,7 @@ TEST_CONSTEXPR_CXX20 void tests() {
     }
     // When trivial
     {
-      std::vector<TrivialMoveOnly, Allocator<TrivialMoveOnly> > v;
+      std::vector2<TrivialMoveOnly, Allocator<TrivialMoveOnly> > v;
       v.emplace_back(1);
       v.emplace_back(2);
       v.emplace_back(3);
@@ -165,7 +167,7 @@ int main(int, char**) {
   // Throws: Nothing unless an exception is thrown by the assignment operator or move assignment operator of T.
   {
     Throws arr[] = {1, 2, 3};
-    std::vector<Throws> v(arr, arr + 3);
+    std::vector2<Throws> v(arr, arr + 3);
     Throws::sThrows = true;
     v.erase(v.begin(), --v.end());
     assert(v.size() == 1);
@@ -176,16 +178,16 @@ int main(int, char**) {
 
   // Real world example with std::string, mostly intended to test trivial relocation
   {
-    std::vector<std::string> v;
+    std::vector2<std::string> v;
 
-    // fill the vector with half short string and half long strings
+    // fill the vector2 with half short string and half long strings
     std::string short_string = "short";
     std::string long_string(256, 'x');
     for (int i = 0; i != 10; ++i) {
       v.push_back(i % 2 == 0 ? short_string : long_string);
     }
 
-    std::vector<std::string> original = v;
+    std::vector2<std::string> original = v;
 
     auto it = v.erase(v.cbegin() + 2, v.cbegin() + 8);
     assert(v.size() == 4);
@@ -204,9 +206,9 @@ int main(int, char**) {
 #ifdef _LIBCPP_VERSION
   {
     Tracker tracker;
-    std::vector<TrackedAssignment> v;
+    std::vector2<TrackedAssignment> v;
 
-    // Set up the vector with 5 elements.
+    // Set up the vector2 with 5 elements.
     for (int i = 0; i != 5; ++i) {
       v.emplace_back(&tracker);
     }

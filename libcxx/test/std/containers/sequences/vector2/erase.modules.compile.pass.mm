@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Make sure that we don't get a compiler error when trying to use std::vector::erase
+// REQUIRES: std-at-least-c++29
+
+// Make sure that we don't get a compiler error when trying to use std::vector2::erase
 // from Objective-C++. This happened in Objective-C++ mode with modules enabled (rdar://106813461).
 
 // REQUIRES: objective-c++
 
 #include <vector>
 
-void f(std::vector<int> vec, std::vector<int>::iterator it) { (void)vec.erase(it); }
+void f(std::vector2<int> vec, std::vector2<int>::iterator it) { (void)vec.erase(it); }

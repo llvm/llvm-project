@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03 && !stdlib=libc++
+// REQUIRES: std-at-least-c++29
 
 // <vector>
 
@@ -50,7 +50,7 @@ public:
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
-    std::vector<A> c;
+    std::vector2<A> c;
 #if TEST_STD_VER > 14
     A& r1 = c.emplace_back(2, 3.5);
     assert(c.size() == 1);
@@ -77,7 +77,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     assert(is_contiguous_container_asan_correct(c));
   }
   {
-    std::vector<A, limited_allocator<A, 4> > c;
+    std::vector2<A, limited_allocator<A, 4> > c;
 #if TEST_STD_VER > 14
     A& r1 = c.emplace_back(2, 3.5);
     assert(c.size() == 1);
@@ -104,7 +104,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     assert(is_contiguous_container_asan_correct(c));
   }
   {
-    std::vector<A, min_allocator<A> > c;
+    std::vector2<A, min_allocator<A> > c;
 #if TEST_STD_VER > 14
     A& r1 = c.emplace_back(2, 3.5);
     assert(c.size() == 1);
@@ -131,7 +131,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     assert(is_contiguous_container_asan_correct(c));
   }
   {
-    std::vector<A, safe_allocator<A> > c;
+    std::vector2<A, safe_allocator<A> > c;
 #if TEST_STD_VER > 14
     A& r1 = c.emplace_back(2, 3.5);
     assert(c.size() == 1);
@@ -158,7 +158,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     assert(is_contiguous_container_asan_correct(c));
   }
   {
-    std::vector<Tag_X, TaggingAllocator<Tag_X> > c;
+    std::vector2<Tag_X, TaggingAllocator<Tag_X> > c;
     c.emplace_back();
     assert(c.size() == 1);
     c.emplace_back(1, 2, 3);
@@ -169,7 +169,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   { // LWG 2164
     int arr[] = {0, 1, 2, 3, 4};
     int sz    = 5;
-    std::vector<int> c(arr, arr + sz);
+    std::vector2<int> c(arr, arr + sz);
     while (c.size() < c.capacity())
       c.push_back(sz++);
     c.emplace_back(c.front());

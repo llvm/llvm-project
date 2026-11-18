@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // Check that functions are marked [[nodiscard]]
@@ -15,7 +17,7 @@
 #include "test_macros.h"
 
 void test() {
-  typedef std::vector<int> Container;
+  typedef std::vector2<int> Container;
   Container c;
   Container::iterator it        = c.begin();
   Container::const_iterator cit = c.cbegin();

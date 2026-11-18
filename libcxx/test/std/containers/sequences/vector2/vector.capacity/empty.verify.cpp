@@ -6,17 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
-// class vector
+// class vector2
 
 // bool empty() const noexcept;
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <vector>
 
 void f() {
-  std::vector<int> c;
+  std::vector2<int> c;
   c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

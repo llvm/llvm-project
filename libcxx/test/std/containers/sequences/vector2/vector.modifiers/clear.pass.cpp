@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // void clear() noexcept;
@@ -20,7 +22,7 @@
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
     int a[] = {1, 2, 3};
-    std::vector<int> c(a, a + 3);
+    std::vector2<int> c(a, a + 3);
     ASSERT_NOEXCEPT(c.clear());
     c.clear();
     assert(c.empty());
@@ -30,7 +32,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
 #if TEST_STD_VER >= 11
   {
     int a[] = {1, 2, 3};
-    std::vector<int, min_allocator<int>> c(a, a + 3);
+    std::vector2<int, min_allocator<int>> c(a, a + 3);
     ASSERT_NOEXCEPT(c.clear());
     c.clear();
     assert(c.empty());
@@ -39,7 +41,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
   {
     int a[] = {1, 2, 3};
-    std::vector<int, safe_allocator<int>> c(a, a + 3);
+    std::vector2<int, safe_allocator<int>> c(a, a + 3);
     ASSERT_NOEXCEPT(c.clear());
     c.clear();
     assert(c.empty());

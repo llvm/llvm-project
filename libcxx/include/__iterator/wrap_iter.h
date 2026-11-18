@@ -106,6 +106,11 @@ private:
   friend class basic_string_view;
   template <class _Tp, class _Alloc>
   friend class vector;
+#if _LIBCPP_STD_VER >= 29
+  // PROTOTYPE: P3866R0. Every component that befriends `vector` needs to befriend `vector2` as well.
+  template <class _Tp, class _Alloc>
+  friend class vector2;
+#endif
   template <class _Tp, size_t>
   friend class span;
   template <class _Tp, size_t _Size>

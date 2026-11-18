@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
-// ~vector() // implied noexcept;
+// ~vector2() // implied noexcept;
 
-// UNSUPPORTED: c++03
 
 #include <cassert>
 #include <vector>
@@ -30,20 +31,20 @@ struct some_alloc {
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
-    typedef std::vector<MoveOnly> C;
+    typedef std::vector2<MoveOnly> C;
     static_assert(std::is_nothrow_destructible<C>::value, "");
   }
   {
-    typedef std::vector<MoveOnly, test_allocator<MoveOnly>> C;
+    typedef std::vector2<MoveOnly, test_allocator<MoveOnly>> C;
     static_assert(std::is_nothrow_destructible<C>::value, "");
   }
   {
-    typedef std::vector<MoveOnly, other_allocator<MoveOnly>> C;
+    typedef std::vector2<MoveOnly, other_allocator<MoveOnly>> C;
     static_assert(std::is_nothrow_destructible<C>::value, "");
   }
 #if defined(_LIBCPP_VERSION)
   {
-    typedef std::vector<MoveOnly, some_alloc<MoveOnly>> C;
+    typedef std::vector2<MoveOnly, some_alloc<MoveOnly>> C;
     static_assert(!std::is_nothrow_destructible<C>::value, "");
   }
 #endif // _LIBCPP_VERSION

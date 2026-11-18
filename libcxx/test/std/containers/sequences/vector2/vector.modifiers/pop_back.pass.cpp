@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // void pop_back();
@@ -19,7 +21,7 @@
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
-    std::vector<int> c;
+    std::vector2<int> c;
     c.push_back(1);
     assert(c.size() == 1);
     c.pop_back();
@@ -27,7 +29,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   }
 #if TEST_STD_VER >= 11
   {
-    std::vector<int, min_allocator<int>> c;
+    std::vector2<int, min_allocator<int>> c;
     c.push_back(1);
     assert(c.size() == 1);
     c.pop_back();
@@ -38,7 +40,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   { // LWG 526
     int arr[] = {0, 1, 2, 3, 4};
     int sz    = 5;
-    std::vector<int> c(arr, arr + sz);
+    std::vector2<int> c(arr, arr + sz);
     while (c.size() < c.capacity())
       c.push_back(sz++);
     c.push_back(c.front());

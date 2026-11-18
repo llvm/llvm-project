@@ -6,12 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++29
+
 // <vector>
 
 // Subtract iterators from different containers.
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
+// UNSUPPORTED: !libcpp-has-legacy-debug-mode
 
 #include <vector>
 
@@ -21,7 +23,7 @@
 int main(int, char**) {
   {
     typedef int T;
-    typedef std::vector<T> C;
+    typedef std::vector2<T> C;
     C c1;
     C c2;
     TEST_LIBCPP_ASSERT_FAILURE(c1.begin() - c2.begin(), "Attempted to subtract incompatible iterators");
@@ -29,7 +31,7 @@ int main(int, char**) {
 
   {
     typedef int T;
-    typedef std::vector<T, min_allocator<T> > C;
+    typedef std::vector2<T, min_allocator<T> > C;
     C c1;
     C c2;
     TEST_LIBCPP_ASSERT_FAILURE(c1.begin() - c2.begin(), "Attempted to subtract incompatible iterators");

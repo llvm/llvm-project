@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03 && !stdlib=libc++
+// REQUIRES: std-at-least-c++29
 
 // <vector>
 
@@ -23,8 +23,8 @@
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
-    std::vector<MoveOnly> v(100);
-    std::vector<MoveOnly>::iterator i = v.insert(v.cbegin() + 10, MoveOnly(3));
+    std::vector2<MoveOnly> v(100);
+    std::vector2<MoveOnly>::iterator i = v.insert(v.cbegin() + 10, MoveOnly(3));
     assert(v.size() == 101);
     assert(is_contiguous_container_asan_correct(v));
     assert(i == v.begin() + 10);
@@ -36,8 +36,8 @@ TEST_CONSTEXPR_CXX20 bool tests() {
       assert(v[j] == MoveOnly());
   }
   {
-    std::vector<MoveOnly, limited_allocator<MoveOnly, 300> > v(100);
-    std::vector<MoveOnly, limited_allocator<MoveOnly, 300> >::iterator i = v.insert(v.cbegin() + 10, MoveOnly(3));
+    std::vector2<MoveOnly, limited_allocator<MoveOnly, 300> > v(100);
+    std::vector2<MoveOnly, limited_allocator<MoveOnly, 300> >::iterator i = v.insert(v.cbegin() + 10, MoveOnly(3));
     assert(v.size() == 101);
     assert(is_contiguous_container_asan_correct(v));
     assert(i == v.begin() + 10);
@@ -49,8 +49,8 @@ TEST_CONSTEXPR_CXX20 bool tests() {
       assert(v[j] == MoveOnly());
   }
   {
-    std::vector<MoveOnly, min_allocator<MoveOnly> > v(100);
-    std::vector<MoveOnly, min_allocator<MoveOnly> >::iterator i = v.insert(v.cbegin() + 10, MoveOnly(3));
+    std::vector2<MoveOnly, min_allocator<MoveOnly> > v(100);
+    std::vector2<MoveOnly, min_allocator<MoveOnly> >::iterator i = v.insert(v.cbegin() + 10, MoveOnly(3));
     assert(v.size() == 101);
     assert(is_contiguous_container_asan_correct(v));
     assert(i == v.begin() + 10);
@@ -62,8 +62,8 @@ TEST_CONSTEXPR_CXX20 bool tests() {
       assert(v[j] == MoveOnly());
   }
   {
-    std::vector<MoveOnly, safe_allocator<MoveOnly> > v(100);
-    std::vector<MoveOnly, safe_allocator<MoveOnly> >::iterator i = v.insert(v.cbegin() + 10, MoveOnly(3));
+    std::vector2<MoveOnly, safe_allocator<MoveOnly> > v(100);
+    std::vector2<MoveOnly, safe_allocator<MoveOnly> >::iterator i = v.insert(v.cbegin() + 10, MoveOnly(3));
     assert(v.size() == 101);
     assert(is_contiguous_container_asan_correct(v));
     assert(i == v.begin() + 10);

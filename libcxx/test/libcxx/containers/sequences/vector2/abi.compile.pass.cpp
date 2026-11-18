@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-abi-no-compressed-pair-padding
+// REQUIRES: std-at-least-c++29
 
 #include <cstdint>
 #include <vector>
@@ -68,40 +68,40 @@ struct common_base_allocator : allocator_base {
 };
 
 struct user_struct {
-  std::vector<int, common_base_allocator<int> > v;
+  std::vector2<int, common_base_allocator<int> > v;
   [[no_unique_address]] common_base_allocator<int> a;
 };
 
 #if __SIZE_WIDTH__ == 64
-// TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
-#  ifdef TEST_COMPILER_GCC
+// PROTOTYPE: std::vector2 uses the size-based layout, which stores the allocator as a plain [[no_unique_address]]
+// member instead of using _LIBCPP_COMPRESSED_PAIR. This means that it suffers from https://llvm.org/PR154146, which
+// was fixed for the pointer-based layout (std::vector has sizeof(user_struct) == 24). This is a pre-existing issue
+// with _LIBCPP_ABI_VECTOR_LAYOUT_SIZE_BASED, unrelated to P3866R0.
 static_assert(sizeof(user_struct) == 32, "");
-#  else
-static_assert(sizeof(user_struct) == 24, "");
-#  endif
 static_assert(TEST_ALIGNOF(user_struct) == 8, "");
 
-static_assert(sizeof(std::vector<int>) == 24, "");
-static_assert(sizeof(std::vector<int, min_allocator<int> >) == 24, "");
-static_assert(sizeof(std::vector<int, test_allocator<int> >) == 40, "");
-static_assert(sizeof(std::vector<int, small_iter_allocator<int> >) == 6, "");
+static_assert(sizeof(std::vector2<int>) == 24, "");
+static_assert(sizeof(std::vector2<int, min_allocator<int> >) == 24, "");
+static_assert(sizeof(std::vector2<int, test_allocator<int> >) == 32, ""); // std::vector: 40
+static_assert(sizeof(std::vector2<int, small_iter_allocator<int> >) == 6, "");
 
-static_assert(sizeof(std::vector<char>) == 24, "");
-static_assert(sizeof(std::vector<char, min_allocator<char> >) == 24, "");
-static_assert(sizeof(std::vector<char, test_allocator<char> >) == 40, "");
-static_assert(sizeof(std::vector<char, small_iter_allocator<char> >) == 6, "");
+static_assert(sizeof(std::vector2<char>) == 24, "");
+static_assert(sizeof(std::vector2<char, min_allocator<char> >) == 24, "");
+static_assert(sizeof(std::vector2<char, test_allocator<char> >) == 32, ""); // std::vector: 40
+static_assert(sizeof(std::vector2<char, small_iter_allocator<char> >) == 6, "");
 
-static_assert(TEST_ALIGNOF(std::vector<int>) == 8, "");
-static_assert(TEST_ALIGNOF(std::vector<int, min_allocator<int> >) == 8, "");
-static_assert(TEST_ALIGNOF(std::vector<int, test_allocator<int> >) == 8, "");
-static_assert(TEST_ALIGNOF(std::vector<int, small_iter_allocator<int> >) == 2, "");
+static_assert(TEST_ALIGNOF(std::vector2<int>) == 8, "");
+static_assert(TEST_ALIGNOF(std::vector2<int, min_allocator<int> >) == 8, "");
+static_assert(TEST_ALIGNOF(std::vector2<int, test_allocator<int> >) == 8, "");
+static_assert(TEST_ALIGNOF(std::vector2<int, small_iter_allocator<int> >) == 2, "");
 
-static_assert(TEST_ALIGNOF(std::vector<char>) == 8, "");
-static_assert(TEST_ALIGNOF(std::vector<char, min_allocator<char> >) == 8, "");
-static_assert(TEST_ALIGNOF(std::vector<char, test_allocator<char> >) == 8, "");
-static_assert(TEST_ALIGNOF(std::vector<char, small_iter_allocator<char> >) == 2, "");
+static_assert(TEST_ALIGNOF(std::vector2<char>) == 8, "");
+static_assert(TEST_ALIGNOF(std::vector2<char, min_allocator<char> >) == 8, "");
+static_assert(TEST_ALIGNOF(std::vector2<char, test_allocator<char> >) == 8, "");
+static_assert(TEST_ALIGNOF(std::vector2<char, small_iter_allocator<char> >) == 2, "");
 
 #elif __SIZE_WIDTH__ == 32
+// PROTOTYPE: These values were copied from std::vector and have not been verified for std::vector2.
 // TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
 #  ifdef TEST_COMPILER_GCC
 static_assert(sizeof(user_struct) == 16, "");
@@ -110,25 +110,25 @@ static_assert(sizeof(user_struct) == 12, "");
 #  endif
 static_assert(TEST_ALIGNOF(user_struct) == 4, "");
 
-static_assert(sizeof(std::vector<int>) == 12, "");
-static_assert(sizeof(std::vector<int, min_allocator<int> >) == 12, "");
-static_assert(sizeof(std::vector<int, test_allocator<int> >) == 24, "");
-static_assert(sizeof(std::vector<int, small_iter_allocator<int> >) == 6, "");
+static_assert(sizeof(std::vector2<int>) == 12, "");
+static_assert(sizeof(std::vector2<int, min_allocator<int> >) == 12, "");
+static_assert(sizeof(std::vector2<int, test_allocator<int> >) == 24, "");
+static_assert(sizeof(std::vector2<int, small_iter_allocator<int> >) == 6, "");
 
-static_assert(sizeof(std::vector<char>) == 12, "");
-static_assert(sizeof(std::vector<char, min_allocator<char> >) == 12, "");
-static_assert(sizeof(std::vector<char, test_allocator<char> >) == 24, "");
-static_assert(sizeof(std::vector<char, small_iter_allocator<char> >) == 6, "");
+static_assert(sizeof(std::vector2<char>) == 12, "");
+static_assert(sizeof(std::vector2<char, min_allocator<char> >) == 12, "");
+static_assert(sizeof(std::vector2<char, test_allocator<char> >) == 24, "");
+static_assert(sizeof(std::vector2<char, small_iter_allocator<char> >) == 6, "");
 
-static_assert(TEST_ALIGNOF(std::vector<int>) == 4, "");
-static_assert(TEST_ALIGNOF(std::vector<int, min_allocator<int> >) == 4, "");
-static_assert(TEST_ALIGNOF(std::vector<int, test_allocator<int> >) == 4, "");
-static_assert(TEST_ALIGNOF(std::vector<int, small_iter_allocator<int> >) == 2, "");
+static_assert(TEST_ALIGNOF(std::vector2<int>) == 4, "");
+static_assert(TEST_ALIGNOF(std::vector2<int, min_allocator<int> >) == 4, "");
+static_assert(TEST_ALIGNOF(std::vector2<int, test_allocator<int> >) == 4, "");
+static_assert(TEST_ALIGNOF(std::vector2<int, small_iter_allocator<int> >) == 2, "");
 
-static_assert(TEST_ALIGNOF(std::vector<char>) == 4, "");
-static_assert(TEST_ALIGNOF(std::vector<char, min_allocator<char> >) == 4, "");
-static_assert(TEST_ALIGNOF(std::vector<char, test_allocator<char> >) == 4, "");
-static_assert(TEST_ALIGNOF(std::vector<char, small_iter_allocator<char> >) == 2, "");
+static_assert(TEST_ALIGNOF(std::vector2<char>) == 4, "");
+static_assert(TEST_ALIGNOF(std::vector2<char, min_allocator<char> >) == 4, "");
+static_assert(TEST_ALIGNOF(std::vector2<char, test_allocator<char> >) == 4, "");
+static_assert(TEST_ALIGNOF(std::vector2<char, small_iter_allocator<char> >) == 2, "");
 
 #else
 #  error std::size_t has an unexpected size
