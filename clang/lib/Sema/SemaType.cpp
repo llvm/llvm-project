@@ -5980,6 +5980,26 @@ static void fillMatrixTypeLoc(MatrixTypeLoc MTL,
   llvm_unreachable("no matrix_type attribute found at the expected location!");
 }
 
+// FIXME: Also handle attributes on the decl-specifier, declarator and
+// declaration. Matrix type locations need the same handling.
+static void fillVectorTypeLoc(VectorTypeLoc VTL,
+                              const ParsedAttributesView &Attrs) {
+  auto Kind = isa<ExtVectorType>(VTL.getTypePtr())
+                  ? ParsedAttr::AT_ExtVectorType
+                  : ParsedAttr::AT_VectorSize;
+  for (const ParsedAttr &AL : Attrs) {
+    if (AL.getKind() == Kind && !AL.isInvalid() && AL.getNumArgs() == 1) {
+      VTL.setAttrNameLoc(AL.getLoc());
+      VTL.setSizeExpr(AL.getArgAsExpr(0));
+      return;
+    }
+  }
+
+  // The attribute may be on the declarator rather than this chunk, or the
+  // vector may use a target-specific attribute. Keep the default locations
+  // when no matching attribute is present.
+}
+
 static void fillAtomicQualLoc(AtomicTypeLoc ATL, const DeclaratorChunk &Chunk) {
   SourceLocation Loc;
   switch (Chunk.Kind) {
@@ -6382,19 +6402,19 @@ namespace {
     void VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
       TL.setExpansionLoc(Chunk.Loc);
     }
-    void VisitVectorTypeLoc(VectorTypeLoc TL) { TL.setNameLoc(Chunk.Loc); }
-    void VisitDependentVectorTypeLoc(DependentVectorTypeLoc TL) {
-      TL.setNameLoc(Chunk.Loc);
+    void VisitVectorTypeLoc(VectorTypeLoc TL) {
+      TL.initializeLocal(Context, Chunk.Loc);
+      fillVectorTypeLoc(TL, Chunk.getAttrs());
     }
-    void VisitExtVectorTypeLoc(ExtVectorTypeLoc TL) {
-      TL.setNameLoc(Chunk.Loc);
+    void VisitDependentVectorTypeLoc(DependentVectorTypeLoc TL) {
+      TL.initializeLocal(Context, Chunk.Loc);
     }
     void VisitAtomicTypeLoc(AtomicTypeLoc TL) {
       fillAtomicQualLoc(TL, Chunk);
     }
     void
     VisitDependentSizedExtVectorTypeLoc(DependentSizedExtVectorTypeLoc TL) {
-      TL.setNameLoc(Chunk.Loc);
+      TL.initializeLocal(Context, Chunk.Loc);
     }
     void VisitMatrixTypeLoc(MatrixTypeLoc TL) {
       fillMatrixTypeLoc(TL, Chunk.getAttrs());
@@ -9753,35 +9773,6 @@ static void assignInheritanceModel(Sema &S, CXXRecordDecl *RD) {
   }
 }
 
-/// If \p T is (or contains) a constant array type whose size in bytes cannot
-/// be represented within ConstantArrayType::getMaxSizeBits, return the
-/// offending array type. Nested arrays are checked from the inside out, since
-/// the size of an outer array can only be computed once its element's size is
-/// known to fit. BuildArrayType can only check the element count if the
-/// element type is still incomplete when the array type is formed, so the
-/// size has to be rechecked once the element type is completed.
-static const ConstantArrayType *
-getOversizedConstantArray(const ASTContext &Context, QualType T) {
-  if (T->isDependentType() || T->isVariablyModifiedType() ||
-      T->isUndeducedType())
-    return nullptr;
-
-  const ConstantArrayType *CAT = Context.getAsConstantArrayType(T);
-  if (!CAT)
-    return nullptr;
-
-  QualType ElementType = CAT->getElementType();
-  if (const ConstantArrayType *Inner =
-          getOversizedConstantArray(Context, ElementType))
-    return Inner;
-
-  if (ConstantArrayType::getNumAddressingBits(Context, ElementType,
-                                              CAT->getSize()) >
-      ConstantArrayType::getMaxSizeBits(Context))
-    return CAT;
-  return nullptr;
-}
-
 bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
                                    CompleteTypeKind Kind,
                                    TypeDiagnoser *Diagnoser) {
@@ -9832,19 +9823,6 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
         diagnoseMissingImport(Loc, Suggested, MissingImportKind::Definition,
                               /*Recover*/ TreatAsComplete);
       return !TreatAsComplete;
-    }
-
-    // The element type may have been incomplete when the array type was
-    // formed, in which case BuildArrayType could not check the array's size.
-    if (const ConstantArrayType *CAT = getOversizedConstantArray(Context, T)) {
-      if (Diagnoser) {
-        CharUnits ElementSize =
-            Context.getTypeSizeInChars(CAT->getElementType());
-        llvm::APInt SizeInBytes = CAT->getSize().zext(128) *
-                                  llvm::APInt(128, ElementSize.getQuantity());
-        Diag(Loc, diag::err_array_size_too_large) << SizeInBytes;
-      }
-      return true;
     }
     return false;
   }

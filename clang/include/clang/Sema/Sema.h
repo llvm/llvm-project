@@ -54,6 +54,7 @@
 #include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/TextEncoding.h"
 #include "clang/Sema/AnalysisBasedWarnings.h"
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/CleanupInfo.h"
@@ -1466,6 +1467,18 @@ public:
   /// compilation, this is currently only used for offload languages like CUDA,
   /// OpenMP, and SYCL.
   SemaDiagnosticBuilder::DeferredDiagnosticsType DeviceDeferredDiags;
+
+  /// An inverse call graph, mapping known-emitted functions to their
+  /// known-emitted callers (plus the location of the call).  It is populated
+  /// while emitting deferred diagnostics and is used to print call stack notes
+  /// for all offload languages.
+  ///
+  /// Functions that we can tell a priori must be emitted aren't added to this
+  /// map. A function may have multiple callers that force it into device
+  /// context, so we store all of them to produce complete diagnostics.
+  llvm::DenseMap</* Callee = */ CanonicalDeclPtr<const FunctionDecl>,
+                 /* Callers = */ llvm::SmallVector<FunctionDeclAndLoc, 1>>
+      DeviceKnownEmittedFns;
 
   /// CurContext - This is the current declaration context of parsing.
   DeclContext *CurContext;
@@ -7466,7 +7479,8 @@ public:
   /// from multiple tokens.  However, the common case is that StringToks points
   /// to one string.
   ExprResult ActOnStringLiteral(ArrayRef<Token> StringToks,
-                                Scope *UDLScope = nullptr);
+                                Scope *UDLScope = nullptr,
+                                ConversionAction Action = CA_ToLiteralEncoding);
 
   ExprResult ActOnUnevaluatedStringLiteral(ArrayRef<Token> StringToks);
 
@@ -7642,8 +7656,10 @@ public:
                            bool AllowRecovery = false);
 
   /// BuildBuiltinCallExpr - Create a call to a builtin function specified by Id
-  //  with the specified CallArgs
-  Expr *BuildBuiltinCallExpr(SourceLocation Loc, Builtin::ID Id,
+  /// with the specified CallArgs. Id is unsigned rather than Builtin::ID, so
+  /// that it can also be a target-specific builtin ID, which is not in
+  /// Builtin::ID, e.g., BPF::BI__builtin_preserve_enum_value.
+  Expr *BuildBuiltinCallExpr(SourceLocation Loc, unsigned Id,
                              MultiExprArg CallArgs);
 
   using ADLCallKind = CallExpr::ADLCallKind;
@@ -11511,7 +11527,8 @@ private:
   ///@{
 
 public:
-  ExprResult ActOnGCCAsmStmtString(Expr *Stm, bool ForAsmLabel);
+  ExprResult ActOnGCCAsmStmtString(Expr *Stm, bool ForAsmLabel,
+                                   bool IsConstexpr = false);
   StmtResult ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                              bool IsVolatile, unsigned NumOutputs,
                              unsigned NumInputs, IdentifierInfo **Names,
@@ -15797,8 +15814,7 @@ public:
   /// this routine then attempts to perform class template
   /// instantiation. If instantiation fails, or if @p T is incomplete
   /// and cannot be completed, issues the diagnostic @p diag (giving it
-  /// the type @p T) and returns true. The same applies to an array type
-  /// that turns out to be too large once its element type is complete.
+  /// the type @p T) and returns true.
   ///
   /// @param Loc  The location in the source that the incomplete type
   /// diagnostic should refer to.

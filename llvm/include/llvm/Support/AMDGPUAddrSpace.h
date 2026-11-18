@@ -111,6 +111,23 @@ namespace AMDGPU {
 // Passed to helpers like isLegalFLATOffset / splitFlatOffset.
 enum class FlatAddrSpace : unsigned { FLAT, FlatGlobal, FlatScratch };
 
+inline bool isReservedAddressSpace(unsigned AS) {
+  switch (AS) {
+    using namespace AMDGPUAS;
+  case RESERVED_ADDRESS_SPACE_10:
+  case RESERVED_ADDRESS_SPACE_11:
+  case RESERVED_ADDRESS_SPACE_14:
+  case RESERVED_ADDRESS_SPACE_16:
+  case RESERVED_ADDRESS_SPACE_17:
+  case RESERVED_ADDRESS_SPACE_18:
+  case RESERVED_ADDRESS_SPACE_19:
+  case RESERVED_ADDRESS_SPACE_20:
+    return true;
+  default:
+    return false;
+  }
+}
+
 inline bool isFlatGlobalAddrSpace(unsigned AS) {
   return AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS ||
          AS == AMDGPUAS::CONSTANT_ADDRESS || AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;

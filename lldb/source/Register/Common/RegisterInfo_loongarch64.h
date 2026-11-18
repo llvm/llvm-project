@@ -56,7 +56,7 @@ public:
   };
 
   RegisterInfo_loongarch64(const lldb_private::ArchSpec &target_arch,
-                                lldb_private::Flags flags);
+                           lldb_private::Flags flags);
 
   size_t GetGPRSize() const override;
 

@@ -129,7 +129,6 @@ add_header_library(
     libc.src.__support.sign
 )
 
-
 add_header_library(
   sqrt
   HDRS
@@ -159,6 +158,11 @@ add_header_library(
     multiply_add.h
   DEPENDS
     libc.src.__support.common
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.architectures
+    libc.src.__support.macros.properties.compiler
     libc.src.__support.macros.properties.cpu_features
   FLAGS
     FMA_OPT
@@ -167,10 +171,14 @@ add_header_library(
 add_header_library(
   polyeval
   HDRS
-    PolyEval.h
+    polyeval.h
   DEPENDS
     .multiply_add
+    libc.hdr.types.size_t
     libc.src.__support.common
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
@@ -193,6 +201,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.common
     libc.src.__support.number_pair
+    libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
     .multiply_add
 )

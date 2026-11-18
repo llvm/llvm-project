@@ -55,6 +55,7 @@
 ///
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/MachineOutliner.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -77,7 +78,6 @@
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SuffixTree.h"
 #include "llvm/Support/raw_ostream.h"
@@ -120,48 +120,6 @@ STATISTIC(NumPGOConservativeBlockedOutlined,
 STATISTIC(NumPGOOptimisticOutlined,
           "Number of times outlining was allowed optimistically when profile "
           "counts were missing");
-
-// Set to true if the user wants the outliner to run on linkonceodr linkage
-// functions. This is false by default because the linker can dedupe linkonceodr
-// functions. Since the outliner is confined to a single module (modulo LTO),
-// this is off by default. It should, however, be the default behaviour in
-// LTO.
-static cl::opt<bool> EnableLinkOnceODROutlining(
-    "enable-linkonceodr-outlining", cl::Hidden,
-    cl::desc("Enable the machine outliner on linkonceodr functions"),
-    cl::init(false));
-
-/// Number of times to re-run the outliner. This is not the total number of runs
-/// as the outliner will run at least one time. The default value is set to 0,
-/// meaning the outliner will run one time and rerun zero times after that.
-static cl::opt<unsigned> OutlinerReruns(
-    "machine-outliner-reruns", cl::init(0), cl::Hidden,
-    cl::desc(
-        "Number of times to rerun the outliner after the initial outline"));
-
-static cl::opt<unsigned> OutlinerBenefitThreshold(
-    "outliner-benefit-threshold", cl::init(1), cl::Hidden,
-    cl::desc(
-        "The minimum size in bytes before an outlining candidate is accepted"));
-
-static cl::opt<bool> OutlinerLeafDescendants(
-    "outliner-leaf-descendants", cl::init(true), cl::Hidden,
-    cl::desc("Consider all leaf descendants of internal nodes of the suffix "
-             "tree as candidates for outlining (if false, only leaf children "
-             "are considered)"));
-
-static cl::opt<bool>
-    DisableGlobalOutlining("disable-global-outlining", cl::Hidden,
-                           cl::desc("Disable global outlining only by ignoring "
-                                    "the codegen data generation or use"),
-                           cl::init(false));
-
-static cl::opt<bool> AppendContentHashToOutlinedName(
-    "append-content-hash-outlined-name", cl::Hidden,
-    cl::desc("This appends the content hash to the globally outlined function "
-             "name. It's beneficial for enhancing the precision of the stable "
-             "hash and for ordering the outlined functions."),
-    cl::init(true));
 
 namespace {
 
@@ -427,6 +385,7 @@ struct MachineOutliner : public ModulePass {
 
   static char ID;
 
+  const CodeGenOptions *Opts = nullptr;
   MachineModuleInfo *MMI = nullptr;
   const TargetMachine *TM = nullptr;
 
@@ -802,7 +761,7 @@ void MachineOutliner::createOutlinedFunctionIfBeneficial(
     return;
 
   // Is it better to outline this candidate than not?
-  if (OF.value()->getBenefit() < OutlinerBenefitThreshold) {
+  if (OF.value()->getBenefit() < Opts->outliner_benefit_threshold) {
     emitNotOutliningCheaperRemark(StringLen, Candidates, *OF.value());
     return;
   }
@@ -814,7 +773,7 @@ void MachineOutliner::findCandidates(
     InstructionMapper &Mapper,
     std::vector<std::unique_ptr<OutlinedFunction>> &FunctionList) {
   FunctionList.clear();
-  SuffixTree ST(Mapper.UnsignedVec, OutlinerLeafDescendants);
+  SuffixTree ST(Mapper.UnsignedVec, Opts->outliner_leaf_descendants);
 
   // First, find all of the repeated substrings in the tree of minimum length
   // 2.
@@ -946,7 +905,8 @@ void MachineOutliner::computeAndPublishHashSequence(MachineFunction &MF,
   }
 
   // Append a unique name based on the non-empty hash sequence.
-  if (AppendContentHashToOutlinedName && !OutlinedHashSequence.empty()) {
+  if (Opts->append_content_hash_outlined_name &&
+      !OutlinedHashSequence.empty()) {
     auto CombinedHash = stable_hash_combine(OutlinedHashSequence);
     auto NewName =
         MF.getName().str() + ".content." + std::to_string(CombinedHash);
@@ -1158,15 +1118,15 @@ bool MachineOutliner::outline(
 #endif
 
     // If we made it unbeneficial to outline this function, skip it.
-    if (OF->getBenefit() < OutlinerBenefitThreshold) {
+    if (OF->getBenefit() < Opts->outliner_benefit_threshold) {
       LLVM_DEBUG(dbgs() << "SKIP: Expected benefit (" << OF->getBenefit()
-                        << " B) < threshold (" << OutlinerBenefitThreshold
-                        << " B)\n");
+                        << " B) < threshold ("
+                        << Opts->outliner_benefit_threshold << " B)\n");
       continue;
     }
 
     LLVM_DEBUG(dbgs() << "OUTLINE: Expected benefit (" << OF->getBenefit()
-                      << " B) > threshold (" << OutlinerBenefitThreshold
+                      << " B) > threshold (" << Opts->outliner_benefit_threshold
                       << " B)\n");
 
     // Remove all Linker Optimization Hints from the candidates.
@@ -1544,7 +1504,7 @@ void MachineOutliner::emitInstrCountChangedRemark(
 }
 
 void MachineOutliner::initializeOutlinerMode(const Module &M) {
-  if (DisableGlobalOutlining)
+  if (!Opts->global_outlining)
     return;
 
   if (auto *IndexWrapperPass =
@@ -1604,6 +1564,8 @@ bool MachineOutliner::runOnModule(Module &M) {
   if (M.empty())
     return false;
 
+  Opts = &getCodeGenOptions(M);
+
   // Initialize the outliner mode.
   initializeOutlinerMode(M);
 
@@ -1617,13 +1579,13 @@ bool MachineOutliner::runOnModule(Module &M) {
   if (!doOutline(M, OutlinedFunctionNum))
     return false;
 
-  for (unsigned I = 0; I < OutlinerReruns; ++I) {
+  for (unsigned I = 0; I < Opts->machine_outliner_reruns; ++I) {
     OutlinedFunctionNum = 0;
     OutlineRepeatedNum++;
     if (!doOutline(M, OutlinedFunctionNum)) {
       LLVM_DEBUG({
         dbgs() << "Did not outline on iteration " << I + 2 << " out of "
-               << OutlinerReruns + 1 << "\n";
+               << Opts->machine_outliner_reruns + 1 << "\n";
       });
       break;
     }
@@ -1664,7 +1626,7 @@ bool MachineOutliner::doOutline(Module &M, unsigned &OutlinedFunctionNum) {
 
   // If the user specifies that they want to outline from linkonceodrs, set
   // it here.
-  OutlineFromLinkOnceODRs = EnableLinkOnceODROutlining;
+  OutlineFromLinkOnceODRs = Opts->enable_linkonceodr_outlining;
   InstructionMapper Mapper(*MMI);
 
   // Prepare instruction mappings for the suffix tree.

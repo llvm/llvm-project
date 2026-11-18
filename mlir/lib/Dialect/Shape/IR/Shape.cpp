@@ -1355,6 +1355,8 @@ OpFoldResult GetExtentOp::fold(FoldAdaptor adaptor) {
     return nullptr;
   if (dim.value() >= elements.getNumElements())
     return nullptr;
+  if (dim.value() < 0)
+    return nullptr;
   return elements.getValues<Attribute>()[(uint64_t)dim.value()];
 }
 

@@ -5,7 +5,6 @@
 # RUN: | FileCheck -check-prefixes=CHECK-XQCCMP64 %s
 ---
 name: push_rvlist15
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 body:                   |

@@ -197,25 +197,26 @@ body:             |
     ; LIBCALL-NEXT: {{  $}}
     ; LIBCALL-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; LIBCALL-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; LIBCALL-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
-    ; LIBCALL-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[COPY]], [[C]](s64)
-    ; LIBCALL-NEXT: [[ASHR1:%[0-9]+]]:_(s64) = G_ASHR [[COPY1]], [[C]](s64)
+    ; LIBCALL-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 63
+    ; LIBCALL-NEXT: [[ASHR:%[0-9]+]]:_(i64) = G_ASHR [[COPY]], [[C]](i64)
+    ; LIBCALL-NEXT: [[ASHR1:%[0-9]+]]:_(i64) = G_ASHR [[COPY1]], [[C]](i64)
     ; LIBCALL-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     ; LIBCALL-NEXT: $x10 = COPY [[COPY]](s64)
-    ; LIBCALL-NEXT: $x11 = COPY [[ASHR]](s64)
+    ; LIBCALL-NEXT: $x11 = COPY [[ASHR]](i64)
     ; LIBCALL-NEXT: $x12 = COPY [[COPY1]](s64)
-    ; LIBCALL-NEXT: $x13 = COPY [[ASHR1]](s64)
+    ; LIBCALL-NEXT: $x13 = COPY [[ASHR1]](i64)
     ; LIBCALL-NEXT: PseudoCALL target-flags(riscv-call) &__multi3, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
     ; LIBCALL-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-    ; LIBCALL-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x10
-    ; LIBCALL-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x11
-    ; LIBCALL-NEXT: [[ASHR2:%[0-9]+]]:_(s64) = G_ASHR [[COPY2]], [[C]](s64)
-    ; LIBCALL-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; LIBCALL-NEXT: [[COPY2:%[0-9]+]]:_(i64) = COPY $x10
+    ; LIBCALL-NEXT: [[COPY3:%[0-9]+]]:_(i64) = COPY $x11
+    ; LIBCALL-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
+    ; LIBCALL-NEXT: [[ASHR2:%[0-9]+]]:_(s64) = G_ASHR [[COPY2]], [[C1]](s64)
+    ; LIBCALL-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; LIBCALL-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[COPY2]], [[COPY2]]
     ; LIBCALL-NEXT: [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[COPY3]], [[ASHR2]]
     ; LIBCALL-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[XOR]], [[XOR1]]
-    ; LIBCALL-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ne), [[OR]](s64), [[C1]]
-    ; LIBCALL-NEXT: $x10 = COPY [[COPY2]](s64)
+    ; LIBCALL-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ne), [[OR]](s64), [[C2]]
+    ; LIBCALL-NEXT: $x10 = COPY [[COPY2]](i64)
     ; LIBCALL-NEXT: $x11 = COPY [[ICMP]](s64)
     ; LIBCALL-NEXT: PseudoRET implicit $x10, implicit $x11
     %0:_(s64) = COPY $x10
@@ -415,8 +416,8 @@ body:             |
     ; LIBCALL-NEXT: $x13 = COPY [[C]](s64)
     ; LIBCALL-NEXT: PseudoCALL target-flags(riscv-call) &__multi3, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
     ; LIBCALL-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-    ; LIBCALL-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x10
-    ; LIBCALL-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x11
+    ; LIBCALL-NEXT: [[COPY2:%[0-9]+]]:_(i64) = COPY $x10
+    ; LIBCALL-NEXT: [[COPY3:%[0-9]+]]:_(i64) = COPY $x11
     ; LIBCALL-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
     ; LIBCALL-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY2]], [[C1]]
     ; LIBCALL-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY3]], [[C]]
@@ -424,7 +425,7 @@ body:             |
     ; LIBCALL-NEXT: [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[COPY3]], [[AND1]]
     ; LIBCALL-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[XOR]], [[XOR1]]
     ; LIBCALL-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ne), [[OR]](s64), [[C]]
-    ; LIBCALL-NEXT: $x10 = COPY [[COPY2]](s64)
+    ; LIBCALL-NEXT: $x10 = COPY [[COPY2]](i64)
     ; LIBCALL-NEXT: $x11 = COPY [[ICMP]](s64)
     ; LIBCALL-NEXT: PseudoRET implicit $x10, implicit $x11
     %0:_(s64) = COPY $x10
