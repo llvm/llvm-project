@@ -21,6 +21,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 using namespace llvm::offload::debug;
 
@@ -69,6 +70,7 @@ DLWRAP(cuMemFreeHost, 1)
 DLWRAP(cuMemFreeAsync, 2)
 
 DLWRAP(cuMemPrefetchAsync, 4)
+DLWRAP(cuMemPrefetchBatchAsync, 8)
 DLWRAP(cuPointerGetAttribute, 3)
 DLWRAP(cuPointerGetAttributes, 4)
 
@@ -145,6 +147,9 @@ static bool resolveSymbols(llvm::sys::DynamicLibrary &Lib, const char *Name) {
       {"cuDevicePrimaryCtxSetFlags", "cuDevicePrimaryCtxSetFlags_v2"},
   };
 
+  // Set of APIs that might not be supported in older versions of CUDA
+  std::unordered_set<std::string> OptionalAPIs = {"cuMemPrefetchBatchAsync"};
+
   for (size_t I = 0; I < dlwrap::size(); I++) {
     const char *Sym = dlwrap::symbol(I);
 
@@ -163,8 +168,19 @@ static bool resolveSymbols(llvm::sys::DynamicLibrary &Lib, const char *Name) {
     void *P = Lib.getAddressOfSymbol(Sym);
     if (P == nullptr) {
       ODBG(OLDT_Init) << "Unable to find '" << Sym << "' in '" << Name << "'!";
-      return false;
+
+      // Check if the missing symbols is in optional list
+      if (OptionalAPIs.find(Sym) == OptionalAPIs.end())
+        return false;
+
+      ODBG(OLDT_Init) << "Symbol '" << Sym
+                      << "' is optional, continue without it";
+      // Leave the API as nullptr, should be guarded with
+      // api_helper::canCall<>()
+      *dlwrap::pointer(I) = nullptr;
+      continue;
     }
+
     ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
                     << ") -> " << P;
 

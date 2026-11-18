@@ -15,6 +15,12 @@ if (WIN32 AND NOT "cuda" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
 endif()
 
 if(CUDAToolkit_FOUND AND NOT "cuda" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS AND NOT WIN32)
+  if(CUDAToolkit_VERSION VERSION_LESS 13.0)
+    message(FATAL_ERROR "Linking the CUDA plugin against libcuda requires "
+                        "CUDA 13.0 or newer (found ${CUDAToolkit_VERSION}). "
+                        "Add 'cuda' to LIBOMPTARGET_DLOPEN_PLUGINS to use "
+                        "dlopened libcuda instead.")
+  endif()
   message(STATUS "Building CUDA plugin linked against libcuda")
   target_link_libraries(omptarget.rtl.cuda PRIVATE CUDA::cuda_driver)
 else()
