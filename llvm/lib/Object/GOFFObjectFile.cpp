@@ -680,10 +680,25 @@ Expected<StringRef> GOFFObjectFile::getSectionName(DataRefImpl Sec) const {
   return Name;
 }
 
+// Get unique names for ED/PR sections.
+// ED Sections: "sectionname/parent_sd_name".
+// PR Sections: "sectionname/parent_ed_name/grandparent_sd_name".
 Error GOFFObjectFile::getSectionUniqueName(
     DataRefImpl Sec, SmallVectorImpl<char> &Result) const {
-
   SectionEntryImpl EsdIds = SectionList[Sec.d.a];
+  if (EsdIds.d.b) {
+    Expected<StringRef> PrNameOrErr = getSymbolName(EsdIds.d.b);
+    if (!PrNameOrErr)
+      return PrNameOrErr.takeError();
+    Result.append(PrNameOrErr->begin(), PrNameOrErr->end());
+    Result.append(1, '/');
+  }
+
+  Expected<StringRef> NameOrErr = getSymbolName(EsdIds.d.a);
+  if (!NameOrErr)
+    return NameOrErr.takeError();
+  Result.append(NameOrErr->begin(), NameOrErr->end());
+  Result.append(1, '/');
 
   const uint8_t *EsdRecord = EsdPtrs[EsdIds.d.a];
   uint32_t ParentEsdId = 0;
@@ -700,24 +715,7 @@ Error GOFFObjectFile::getSectionUniqueName(
   Expected<StringRef> ParentNameOrErr = getSymbolName(ParentEdSym);
   if (!ParentNameOrErr)
     return ParentNameOrErr.takeError();
-
   Result.append(ParentNameOrErr->begin(), ParentNameOrErr->end());
-
-  Expected<StringRef> NameOrErr = getSymbolName(EsdIds.d.a);
-  if (!NameOrErr)
-    return NameOrErr.takeError();
-
-  Result.append(1, '.');
-  Result.append(NameOrErr->begin(), NameOrErr->end());
-
-  if (EsdIds.d.b) {
-    Expected<StringRef> PrNameOrErr = getSymbolName(EsdIds.d.b);
-    if (!PrNameOrErr)
-      return PrNameOrErr.takeError();
-
-    Result.append(1, '.');
-    Result.append(PrNameOrErr->begin(), PrNameOrErr->end());
-  }
 
   return Error::success();
 }
