@@ -388,9 +388,10 @@ int main(int, char**) {
                 // (iter, iter, size, alloc) - runtime check
                 if constexpr (std::is_same_v<UI, SizeType>) {
                   const P arr[] = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 1}, {3, 1}};
+                  const PC expected[] = {{1, 1}, {2, 2}, {3, 1}, {INT_MAX, 1}};
                   std::unordered_map m(std::begin(arr), std::end(arr), OnlyConvertibleTo<SizeType>{}, Alloc());
                   ASSERT_SAME_TYPE(decltype(m), std::unordered_map<int, long, Hash, std::equal_to<int>, Alloc>);
-                  assert(std::is_permutation(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
+                  assert(std::is_permutation(m.begin(), m.end(), std::begin(expected), std::end(expected)));
                 }
               }});
         }});

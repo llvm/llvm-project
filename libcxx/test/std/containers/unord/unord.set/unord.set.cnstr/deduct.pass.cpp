@@ -323,9 +323,10 @@ int main(int, char**) {
                 // (iter, iter, size, alloc) - runtime check
                 if constexpr (std::is_same_v<UI, SizeType>) {
                   const int arr[] = {1, 2, 1, INT_MAX, 3};
+                  const int expected[] = {1, 2, 3, INT_MAX};
                   std::unordered_set s(std::begin(arr), std::end(arr), OnlyConvertibleTo<SizeType>{}, Alloc());
                   ASSERT_SAME_TYPE(decltype(s), std::unordered_set<int, std::hash<int>, std::equal_to<int>, Alloc>);
-                  assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
+                  assert(std::is_permutation(s.begin(), s.end(), std::begin(expected), std::end(expected)));
                 }
               }});
         }});
