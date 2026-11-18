@@ -254,17 +254,16 @@ CaptureComponents EarliestEscapeAnalysis::getCapturesBefore(
     if (!I)
       return false;
 
-    // Handle longjmp during re-entry.
-    if (callsReturnsTwiceFn())
-      return false;
-
     if (I == CaptureInst) {
-      if (OrAt)
+      if (OrAt || !isNotInCycle(I, &DT, LI, CI))
         return false;
-      return isNotInCycle(I, &DT, LI, CI);
+    } else if (isPotentiallyReachable(CaptureInst, I, nullptr, &DT, LI, CI)) {
+      return false;
     }
 
-    return !isPotentiallyReachable(CaptureInst, I, nullptr, &DT, LI, CI);
+    // Handle longjmp during re-entry. Checked last, as it scans the whole
+    // function the first time it is queried.
+    return !callsReturnsTwiceFn();
   };
   if (IsNotCapturedBefore())
     return CaptureComponents::None;

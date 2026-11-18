@@ -2323,7 +2323,9 @@ define i64 @fcvt_l_h(half %a) nounwind {
 ; RV32ID-ILP32-NEXT:    addi sp, sp, -16
 ; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32ID-ILP32-NEXT:    call __extendhfsf2
-; RV32ID-ILP32-NEXT:    call __fixsfdi
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a0
+; RV32ID-ILP32-NEXT:    fcvt.w.s a0, fa5, rtz
+; RV32ID-ILP32-NEXT:    srai a1, a0, 31
 ; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32ID-ILP32-NEXT:    addi sp, sp, 16
 ; RV32ID-ILP32-NEXT:    ret
@@ -2344,7 +2346,8 @@ define i64 @fcvt_l_h(half %a) nounwind {
 ; RV32ID-NEXT:    addi sp, sp, -16
 ; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32ID-NEXT:    call __extendhfsf2
-; RV32ID-NEXT:    call __fixsfdi
+; RV32ID-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV32ID-NEXT:    srai a1, a0, 31
 ; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32ID-NEXT:    addi sp, sp, 16
 ; RV32ID-NEXT:    ret
@@ -3067,7 +3070,9 @@ define i64 @fcvt_lu_h(half %a) nounwind {
 ; RV32ID-ILP32-NEXT:    addi sp, sp, -16
 ; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32ID-ILP32-NEXT:    call __extendhfsf2
-; RV32ID-ILP32-NEXT:    call __fixunssfdi
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a0
+; RV32ID-ILP32-NEXT:    fcvt.wu.s a0, fa5, rtz
+; RV32ID-ILP32-NEXT:    li a1, 0
 ; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32ID-ILP32-NEXT:    addi sp, sp, 16
 ; RV32ID-ILP32-NEXT:    ret
@@ -3088,7 +3093,8 @@ define i64 @fcvt_lu_h(half %a) nounwind {
 ; RV32ID-NEXT:    addi sp, sp, -16
 ; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32ID-NEXT:    call __extendhfsf2
-; RV32ID-NEXT:    call __fixunssfdi
+; RV32ID-NEXT:    fcvt.wu.s a0, fa0, rtz
+; RV32ID-NEXT:    li a1, 0
 ; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32ID-NEXT:    addi sp, sp, 16
 ; RV32ID-NEXT:    ret
