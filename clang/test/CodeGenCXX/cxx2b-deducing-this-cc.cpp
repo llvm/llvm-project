@@ -1,3 +1,4 @@
+// RUN: %clang_cc1 -std=c++11 %s -emit-llvm -triple i386-windows-msvc -o - | FileCheck %s
 // RUN: %clang_cc1 -std=c++2b %s -emit-llvm -triple i386-windows-msvc -o - | FileCheck %s
 
 namespace CC {
