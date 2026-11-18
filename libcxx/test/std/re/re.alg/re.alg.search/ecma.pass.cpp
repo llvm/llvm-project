@@ -783,6 +783,21 @@ int main(int, char**)
         assert(m.position(0) == 0);
         assert(m.str(0) == s);
     }
+    {
+        std::cmatch m;
+        const char s[] = "a";
+        assert(std::regex_search(s, m, std::regex{"(a()|)\\2a"}));
+        assert(m.size() == 3);
+        assert(!m.prefix().matched);
+        assert(m.prefix().first == s);
+        assert(m.prefix().second == m[0].first);
+        assert(!m.suffix().matched);
+        assert(m.suffix().first == m[0].second);
+        assert(m.suffix().second == s + std::char_traits<char>::length(s));
+        assert(m.length(0) >= 0 && static_cast<std::size_t>(m.length(0)) == std::char_traits<char>::length(s));
+        assert(m.position(0) == 0);
+        assert(m.str(0) == s);
+    }
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
@@ -1535,6 +1550,21 @@ int main(int, char**)
         const wchar_t s[] = L"5%k";
         assert(std::regex_search(s, m, std::wregex(L"\\d[\\W]k")));
         assert(m.size() == 1);
+        assert(!m.prefix().matched);
+        assert(m.prefix().first == s);
+        assert(m.prefix().second == m[0].first);
+        assert(!m.suffix().matched);
+        assert(m.suffix().first == m[0].second);
+        assert(m.suffix().second == s + std::char_traits<wchar_t>::length(s));
+        assert(m.length(0) >= 0 && static_cast<std::size_t>(m.length(0)) == std::char_traits<wchar_t>::length(s));
+        assert(m.position(0) == 0);
+        assert(m.str(0) == s);
+    }
+    {
+        std::wcmatch m;
+        const wchar_t s[] = L"a";
+        assert(std::regex_search(s, m, std::wregex{L"(a()|)\\2a"}));
+        assert(m.size() == 3);
         assert(!m.prefix().matched);
         assert(m.prefix().first == s);
         assert(m.prefix().second == m[0].first);
