@@ -8304,6 +8304,9 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_HLSLVkExtBuiltinOutput:
     S.HLSL().handleVkExtBuiltinOutputAttr(D, AL);
     break;
+  case ParsedAttr::AT_HLSLVkBuiltIn:
+    S.HLSL().handleVkBuiltInAttr(D, AL);
+    break;
   case ParsedAttr::AT_HLSLVkPushConstant:
     S.HLSL().handleVkPushConstantAttr(D, AL);
     break;

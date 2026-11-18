@@ -24,7 +24,7 @@ extern "C" void construct() {
 // CIR-NEXT: %[[WC_ALLOCA:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!rec_WithCtor>
 // CIR-NEXT: %[[TMP_ALLOCA:.*]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!rec_WithCtor>
 // CIR-NEXT: %[[GET_GLOBAL:.*]] = cir.get_global @__const.construct.tmp : !cir.ptr<!rec_WithCtor>
-// CIR-NEXT: cir.copy %[[GET_GLOBAL]] align(8) to %[[TMP_ALLOCA]] align(8) : !cir.ptr<!rec_WithCtor>
+// CIR-NEXT: cir.copy %[[GET_GLOBAL]] to %[[TMP_ALLOCA]] : !cir.ptr<!rec_WithCtor>
 // CIR-NEXT: cir.copy %[[TMP_ALLOCA]] align(8) to %[[WC_ALLOCA]] align(8) skip_tail_padding : !cir.ptr<!rec_WithCtor>
 // CIR-NEXT: cir.return
 

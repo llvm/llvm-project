@@ -20,8 +20,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     container:
       image: ${{ (startsWith(matrix.os, 'ubuntu-26.04-arm') &&
-        'ghcr.io/llvm/arm64v8/libc-ubuntu-26.04:latest@sha256:d17a6266bd50c96c7c6bd03abf55cb70ae7b5aaa8743e656904d71f9470ed0be') ||
-        'ghcr.io/llvm/libc-ubuntu-26.04:latest@sha256:28aa84faf663cb4f4b9b01a0fd64e39a7701b6cf7844b8f24fcecdca680752f7' }}
+        'ghcr.io/llvm/arm64v8/libc-ubuntu-26.04:latest@sha256:850c44c5e6999c09375244732cc7eaf8a4f22c5d8c572255955d548d327013a6') ||
+        'ghcr.io/llvm/libc-ubuntu-26.04:latest@sha256:589c2eae73af31daa0b82b074da719f7fe8ffa87ea0b58f128770a826a16619d' }}
     strategy:
       fail-fast: false
       matrix:
@@ -39,13 +39,13 @@ jobs:
             -S runtimes \
             -DLLVM_ENABLE_RUNTIMES=compiler-rt \
             -G Ninja \
-            -DCMAKE_C_COMPILER=clang-23 \
-            -DCMAKE_CXX_COMPILER=clang++-23 \
+            -DCMAKE_C_COMPILER=clang-24 \
+            -DCMAKE_CXX_COMPILER=clang++-24 \
             -DCMAKE_BUILD_TYPE=Release \
             -DLLVM_ENABLE_ASSERTIONS=ON \
             -DCOMPILER_RT_STANDALONE_BUILD=ON \
             -DCOMPILER_RT_USE_LIBC_MATH=ON \
-            -DLLVM_EXTERNAL_LIT=$(which lit-23) \
+            -DLLVM_EXTERNAL_LIT=$(which lit-24) \
             -DCOMPILER_RT_INCLUDE_TESTS=ON
 
       - name: Test compiler-rt builtins

@@ -54,6 +54,7 @@
 #include "llvm/ABI/IRTypeMapper.h"
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -398,7 +399,8 @@ static void initializeCommonABICompatInfo(llvm::abi::ABICompatInfo &CompatInfo,
 
 static void initializeX86ABICompatInfo(llvm::abi::X86ABICompatInfo &CompatInfo,
                                        const llvm::Triple &T,
-                                       const LangOptions::ClangABI Compat) {
+                                       const LangOptions::ClangABI Compat,
+                                       const CodeGenOptions &CGOpts) {
   initializeCommonABICompatInfo(CompatInfo, Compat);
   CompatInfo.ClassifyIntegerMMXAsSSE = Compat > LangOptions::ClangABI::Ver3_8 &&
                                        !T.isOSDarwin() && !T.isPS() &&
@@ -412,6 +414,21 @@ static void initializeX86ABICompatInfo(llvm::abi::X86ABICompatInfo &CompatInfo,
   CompatInfo.Clang11Compat = Compat <= LangOptions::ClangABI::Ver11 || T.isPS();
   CompatInfo.ClassifyUnnamedBitFields =
       Compat > LangOptions::ClangABI::Ver23 && !T.isPS();
+  if (T.isOSDarwin() || T.isPS()) {
+    CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang;
+  } else {
+    switch (CGOpts.getSmallIntABICompat()) {
+    case CodeGenOptions::SmallIntABICompatKind::Platform:
+      CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Platform;
+      break;
+    case CodeGenOptions::SmallIntABICompatKind::Clang:
+      CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang;
+      break;
+    case CodeGenOptions::SmallIntABICompatKind::Both:
+      CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Both;
+      break;
+    }
+  }
 }
 
 const llvm::abi::TargetInfo &
@@ -476,8 +493,8 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
                         : llvm::abi::X86AVXABILevel::None;
 
     llvm::abi::X86ABICompatInfo CompatInfo;
-    initializeX86ABICompatInfo(CompatInfo, T,
-                               getLangOpts().getClangABICompat());
+    initializeX86ABICompatInfo(CompatInfo, T, getLangOpts().getClangABICompat(),
+                               getCodeGenOpts());
 
     bool Has64BitPointers = getTarget().getPointerWidth(LangAS::Default) == 64;
 
@@ -3509,6 +3526,17 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
   const auto *SD = FD ? FD->getAttr<CPUSpecificAttr>() : nullptr;
   const auto *TC = FD ? FD->getAttr<TargetClonesAttr>() : nullptr;
   bool AddedAttr = false;
+  auto GetTargetFeaturesAttr = [&](llvm::ArrayRef<std::string> Features) {
+    llvm::SmallVector<StringRef, 16> CanonicalFeatures;
+    for (StringRef Feature : Features)
+      if (!getTarget().isReadOnlyFeature(Feature.drop_front()))
+        CanonicalFeatures.push_back(Feature);
+    if (CanonicalFeatures.empty())
+      return llvm::Attribute();
+    llvm::sort(CanonicalFeatures);
+    return llvm::Attribute::get(getLLVMContext(), "target-features",
+                                llvm::join(CanonicalFeatures, ","));
+  };
   if (TD || TV || SD || TC) {
     llvm::StringMap<bool> FeatureMap;
     getContext().getFunctionFeatureMap(FeatureMap, GD);
@@ -3567,8 +3595,14 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
       // The AMDGCN-flavored SPIR-V target unions every GPU's features so it can
       // report all builtins as supported, but that union is meaningless in the
       // emitted IR.
-    } else {
-      Features = getTarget().getTargetOpts().Features;
+    } else if (SetTargetFeatures) {
+      if (!DefaultTargetFeatures)
+        DefaultTargetFeatures =
+            GetTargetFeaturesAttr(getTarget().getTargetOpts().Features);
+      if (DefaultTargetFeatures->isValid()) {
+        Attrs.addAttribute(*DefaultTargetFeatures);
+        AddedAttr = true;
+      }
     }
   }
 
@@ -3581,12 +3615,9 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     AddedAttr = true;
   }
   if (!Features.empty() && SetTargetFeatures) {
-    llvm::erase_if(Features, [&](const std::string& F) {
-       return getTarget().isReadOnlyFeature(F.substr(1));
-    });
-    if (!Features.empty()) {
-      llvm::sort(Features);
-      Attrs.addAttribute("target-features", llvm::join(Features, ","));
+    llvm::Attribute FeatureAttr = GetTargetFeaturesAttr(Features);
+    if (FeatureAttr.isValid()) {
+      Attrs.addAttribute(FeatureAttr);
       AddedAttr = true;
     }
   }
@@ -3742,14 +3773,12 @@ void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
   if (isa<CXXMethodDecl>(FD) && !cast<CXXMethodDecl>(FD)->isStatic())
     return;
 
-  QualType FnType = GeneralizeFunctionType(getContext(), FD->getType(),
-                                           /*GeneralizePointers=*/false);
-  llvm::Metadata *MD = CreateMetadataIdentifierForType(FnType);
+  llvm::Metadata *MD = CreateMetadataIdentifierForCFIFnType(
+      FD->getType(), /*GeneralizePointers=*/false);
   F->addTypeMetadata(0, MD);
 
-  QualType GenPtrFnType = GeneralizeFunctionType(getContext(), FD->getType(),
-                                                 /*GeneralizePointers=*/true);
-  F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(GenPtrFnType));
+  F->addTypeMetadata(0, CreateMetadataIdentifierForCFIFnType(
+                            FD->getType(), /*GeneralizePointers=*/true));
 
   // Emit a hash-based bit set entry for cross-DSO calls.
   if (CodeGenOpts.SanitizeCfiCrossDso)
@@ -8714,8 +8743,10 @@ void CodeGenModule::EmitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *D) {
   }
 }
 
-llvm::Metadata *CodeGenModule::CreateMetadataIdentifierImpl(
-    QualType T, MetadataTypeMap &Map, StringRef Suffix, bool ForceString) {
+llvm::Metadata *
+CodeGenModule::CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
+                                            StringRef Suffix, bool ForceString,
+                                            bool NormalizeIntegers) {
   if (auto *FnType = T->getAs<FunctionProtoType>())
     T = getContext().getFunctionType(
         FnType->getReturnType(), FnType->getParamTypes(),
@@ -8728,10 +8759,10 @@ llvm::Metadata *CodeGenModule::CreateMetadataIdentifierImpl(
   if (ForceString || isExternallyVisible(T->getLinkage())) {
     std::string OutName;
     llvm::raw_string_ostream Out(OutName);
-    getCXXABI().getMangleContext().mangleCanonicalTypeName(
-        T, Out, getCodeGenOpts().SanitizeCfiICallNormalizeIntegers);
+    getCXXABI().getMangleContext().mangleCanonicalTypeName(T, Out,
+                                                           NormalizeIntegers);
 
-    if (getCodeGenOpts().SanitizeCfiICallNormalizeIntegers)
+    if (NormalizeIntegers)
       Out << ".normalized";
 
     Out << Suffix;
@@ -8745,13 +8776,24 @@ llvm::Metadata *CodeGenModule::CreateMetadataIdentifierImpl(
   return InternalId;
 }
 
-llvm::Metadata *CodeGenModule::CreateMetadataIdentifierForFnType(QualType T) {
-  assert(isa<FunctionType>(T));
-  T = GeneralizeFunctionType(
-      getContext(), T, getCodeGenOpts().SanitizeCfiICallGeneralizePointers);
-  if (getCodeGenOpts().SanitizeCfiICallGeneralizePointers)
-    return CreateMetadataIdentifierGeneralized(T);
-  return CreateMetadataIdentifierForType(T);
+llvm::Metadata *
+CodeGenModule::CreateMetadataIdentifierForCFIFnType(QualType T,
+                                                    bool GeneralizePointers) {
+  assert(T->isFunctionType());
+  T = GeneralizeFunctionType(getContext(), T, GeneralizePointers);
+  bool NormalizeIntegers = getCodeGenOpts().SanitizeCfiICallNormalizeIntegers;
+  if (GeneralizePointers)
+    return CreateMetadataIdentifierImpl(T, GeneralizedMetadataIdMap,
+                                        ".generalized", /*ForceString=*/false,
+                                        NormalizeIntegers);
+  return CreateMetadataIdentifierImpl(T, CfiICallMetadataIdMap, "",
+                                      /*ForceString=*/false, NormalizeIntegers);
+}
+
+llvm::Metadata *
+CodeGenModule::CreateMetadataIdentifierForCFIFnType(QualType T) {
+  return CreateMetadataIdentifierForCFIFnType(
+      T, getCodeGenOpts().SanitizeCfiICallGeneralizePointers);
 }
 
 llvm::Metadata *CodeGenModule::CreateMetadataIdentifierForType(QualType T) {
@@ -8761,11 +8803,6 @@ llvm::Metadata *CodeGenModule::CreateMetadataIdentifierForType(QualType T) {
 llvm::Metadata *
 CodeGenModule::CreateMetadataIdentifierForVirtualMemPtrType(QualType T) {
   return CreateMetadataIdentifierImpl(T, VirtualMetadataIdMap, ".virtual");
-}
-
-llvm::Metadata *CodeGenModule::CreateMetadataIdentifierGeneralized(QualType T) {
-  return CreateMetadataIdentifierImpl(T, GeneralizedMetadataIdMap,
-                                      ".generalized", /*ForceString=*/false);
 }
 
 // Applies C default argument promotions to a parameter type.
@@ -9168,9 +9205,7 @@ CodeGenModule::getOrCreateMSVCGlobalDeleteWrapper(const FunctionDecl *GlobOD) {
     auto *BB = llvm::BasicBlock::Create(LLVMCtx, "", EmptyFn);
     llvm::Function *TrapFn =
         llvm::Intrinsic::getOrInsertDeclaration(&M, llvm::Intrinsic::trap);
-    auto *TrapCall = llvm::CallInst::Create(TrapFn, {}, "", BB);
-    TrapCall->setDoesNotReturn();
-    TrapCall->setDoesNotThrow();
+    llvm::CallInst::Create(TrapFn, {}, "", BB);
     new llvm::UnreachableInst(LLVMCtx, BB);
 
     // The empty is referenced only by the wrapper's weak alias. When this TU
