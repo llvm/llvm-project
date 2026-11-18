@@ -182,6 +182,8 @@ private:
   /// translation map entry
   const static uint32_t BRANCHENTRY = 0x1;
 
+  uint64_t NumInvalidEntries = 0;
+
 public:
   /// Map basic block input offset to a basic block index and hash pair.
   class BBHashMapTy {
@@ -283,6 +285,10 @@ public:
 
 private:
   FuncHashesTy FuncHashes;
+
+  /// Filters out invalid entries from the BAT map.
+  void dropInvalidEntries(MapTy &Map, uint64_t Address,
+                          const BBHashMapTy &BBHashMap);
 };
 } // namespace bolt
 

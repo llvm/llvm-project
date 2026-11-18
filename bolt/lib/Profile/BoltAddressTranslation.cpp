@@ -8,6 +8,7 @@
 
 #include "bolt/Profile/BoltAddressTranslation.h"
 #include "bolt/Core/BinaryFunction.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -145,6 +146,11 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
   uint64_t PrevAddress = 0;
   writeMaps</*Cold=*/false>(PrevAddress, OS);
   writeMaps</*Cold=*/true>(PrevAddress, OS);
+  if (NumInvalidEntries > 0) {
+    BC.errs() << "BOLT-WARNING: " << NumInvalidEntries
+              << " BAT entries were ignored due to missing metadata (possibly "
+                 "inserted by optimizations)\n";
+  }
 
   BC.outs() << "BOLT-INFO: Wrote " << Maps.size() << " BAT maps\n";
   BC.outs() << "BOLT-INFO: Wrote " << FuncHashes.getNumFunctions()
@@ -181,6 +187,28 @@ size_t BoltAddressTranslation::getNumEqualOffsets(const MapTy &Map,
   return EqualOffsets;
 }
 
+void BoltAddressTranslation::dropInvalidEntries(MapTy &Map, uint64_t Address,
+                                                const BBHashMapTy &BBHashMap) {
+  std::vector<uint32_t> OffsetsToRemove;
+
+  for (const auto &[OutputOffset, InputOffset] : Map) {
+    if (!(InputOffset & BoltAddressTranslation::BRANCHENTRY) &&
+        (!BBHashMap.isInputBlock(InputOffset >> 1))) {
+      NumInvalidEntries++;
+      OffsetsToRemove.push_back(OutputOffset);
+      if (opts::Verbosity >= 1) {
+        errs() << "BOLT-WARNING: ignoring BAT mapping: "
+               << "OutputOffset: 0x" << Twine::utohexstr(OutputOffset)
+               << ", InputOffset: 0x" << Twine::utohexstr(InputOffset >> 1)
+               << ", at Address: 0x" << Twine::utohexstr(Address) << "\n";
+      }
+    }
+  }
+  for (uint32_t Offset : OffsetsToRemove) {
+    Map.erase(Offset);
+  }
+}
+
 template <bool Cold>
 void BoltAddressTranslation::writeMaps(uint64_t &PrevAddress, raw_ostream &OS) {
   const uint32_t NumFuncs =
@@ -201,6 +229,8 @@ void BoltAddressTranslation::writeMaps(uint64_t &PrevAddress, raw_ostream &OS) {
     const uint64_t HotInputAddress =
         ReverseMap[Cold ? ColdPartSource[Address] : Address];
     MapTy &Map = MapEntry.second;
+    const BBHashMapTy &BBHashMap = getBBHashMap(HotInputAddress);
+    dropInvalidEntries(Map, Address, BBHashMap);
     const uint32_t NumEntries = Map.size();
     LLVM_DEBUG(dbgs() << "Writing " << NumEntries << " entries for 0x"
                       << Twine::utohexstr(Address) << ".\n");
@@ -253,7 +283,6 @@ void BoltAddressTranslation::writeMaps(uint64_t &PrevAddress, raw_ostream &OS) {
         dbgs() << BitMaskStr << '\n';
       });
     }
-    const BBHashMapTy &BBHashMap = getBBHashMap(HotInputAddress);
     size_t Index = 0;
     uint64_t InOffset = 0;
     size_t PrevBBIndex = 0;
