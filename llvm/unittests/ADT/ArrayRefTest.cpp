@@ -83,6 +83,7 @@ TEST(ArrayRefTest, AllocatorCopy) {
     virtual int get() const { return V; }
     bool operator==(const Polymorphic &RHS) const { return V == RHS.V; }
   };
+  Alloc.Reset();
   void *Dirty = Alloc.Allocate(64, 8);
   std::memset(Dirty, 0x5A, 64);
   Alloc.Reset();
