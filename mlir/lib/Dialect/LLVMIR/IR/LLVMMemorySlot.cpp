@@ -560,6 +560,30 @@ DeletionKind LLVM::AddrSpaceCastOp::removeBlockingUses(
   return DeletionKind::Delete;
 }
 
+bool LLVM::PtrToIntOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  return forwardToUsers(*this, newBlockingUses);
+}
+
+DeletionKind LLVM::PtrToIntOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+bool LLVM::IntToPtrOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  return forwardToUsers(*this, newBlockingUses);
+}
+
+DeletionKind LLVM::IntToPtrOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
 bool LLVM::LifetimeStartOp::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses,
