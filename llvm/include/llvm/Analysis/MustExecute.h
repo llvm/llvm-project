@@ -548,10 +548,10 @@ private:
     SmallPtrSet<const BasicBlock *, 8> BlockSet;
     const Instruction *LastStop = nullptr;
 
-    bool contains(const BasicBlock *BB) const;
+    LLVM_ABI bool contains(const BasicBlock *BB) const;
 
     /// Add \p BB to the context. Return false if it is already in it.
-    bool insert(const BasicBlock *BB);
+    LLVM_ABI bool insert(const BasicBlock *BB);
   };
 
   /// Map from blocks to the forward context after their terminator.
