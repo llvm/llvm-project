@@ -212,6 +212,8 @@ private:
                                                       StringRef ArchName,
                                                       StringRef FullPath);
 
+  Expected<DIContext *> createPDBContext(const ObjectFile &Obj);
+
   /// Update the LRU cache order when a binary is accessed.
   void recordAccess(CachedBinary &Bin);
 
