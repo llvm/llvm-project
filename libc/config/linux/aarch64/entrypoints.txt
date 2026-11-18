@@ -529,6 +529,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.symlinkat
     libc.src.unistd.sync
     libc.src.unistd.syncfs
+    libc.src.unistd.syscall
     libc.src.unistd.tcgetpgrp
     libc.src.unistd.tcsetpgrp
     libc.src.unistd.truncate
@@ -1275,6 +1276,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_equal
     libc.src.pthread.pthread_exit
     libc.src.pthread.pthread_getattr_np
+    libc.src.pthread.pthread_getcpuclockid
     libc.src.pthread.pthread_getname_np
     libc.src.pthread.pthread_getschedparam
     libc.src.pthread.pthread_getspecific
@@ -1533,7 +1535,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.timer_settime
 
     # unistd.h entrypoints
-    libc.src.unistd.__llvm_libc_syscall
     libc.src.unistd._exit
     libc.src.unistd.confstr
     libc.src.unistd.environ
