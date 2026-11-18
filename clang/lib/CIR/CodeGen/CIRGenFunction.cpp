@@ -549,6 +549,18 @@ void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
 
     if (paramVar->hasAttr<AnnotateAttr>())
       emitVarAnnotations(paramVar, addr.getPointer());
+
+    QualType paramTy = paramVar->getType();
+    if (paramTy->isRecordType() && !curFuncIsThunk &&
+        paramTy->castAsRecordDecl()->isParamDestroyedInCallee()) {
+      if (QualType::DestructionKind dtorKind =
+              paramVar->needsDestruction(getContext())) {
+        assert((dtorKind == QualType::DK_cxx_destructor ||
+                dtorKind == QualType::DK_nontrivial_c_struct) &&
+               "unexpected destructor type");
+        pushDestroy(dtorKind, addr, paramTy);
+      }
+    }
   }
   assert(builder.getInsertionBlock() && "Should be valid");
 }
