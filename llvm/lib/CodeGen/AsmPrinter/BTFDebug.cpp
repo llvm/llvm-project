@@ -24,6 +24,8 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugProgramInstruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
@@ -1336,6 +1338,23 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   }
   SkipInstruction = false;
 
+  if (!Asm->TM.getTargetTriple().isBPF()) {
+    processCompileUnitTypes(Unit);
+    for (const MDNode *DN : SP->getRetainedNodes())
+      if (const auto *DV = dyn_cast<DILocalVariable>(DN))
+        visitTypeEntry(DV->getType());
+      else if (const auto *Ty = dyn_cast<DIType>(DN))
+        visitTypeEntry(Ty);
+    for (const BasicBlock &BB : MF->getFunction())
+      for (const Instruction &I : BB) {
+        if (const auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
+          visitTypeEntry(DVI->getVariable()->getType());
+        for (const DbgRecord &DR : I.getDbgRecordRange())
+          if (const auto *DVR = dyn_cast<DbgVariableRecord>(&DR))
+            visitTypeEntry(DVR->getVariable()->getType());
+      }
+  }
+
   // Collect all types locally referenced in this function.
   // Use RetainedNodes so we can collect all argument names
   // even if the argument is not used.
@@ -1597,7 +1616,20 @@ void BTFDebug::processFuncPrototypes(const Function *F) {
   }
 }
 
+void BTFDebug::processCompileUnitTypes(const DICompileUnit *Unit) {
+  if (!Unit || !ProcessedCUs.insert(Unit).second)
+    return;
+  for (const DICompositeType *EnumTy : Unit->getEnumTypes())
+    visitTypeEntry(EnumTy);
+  for (const DIScope *Scope : Unit->getRetainedTypes())
+    if (const auto *Ty = dyn_cast<DIType>(Scope))
+      visitTypeEntry(Ty);
+}
+
 void BTFDebug::endModule() {
+  if (!Asm->TM.getTargetTriple().isBPF())
+    for (const DICompileUnit *Unit : MMI->getModule()->debug_compile_units())
+      processCompileUnitTypes(Unit);
   processGlobals();
 
   for (auto &DataSec : DataSecEntries)

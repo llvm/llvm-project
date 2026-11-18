@@ -327,6 +327,7 @@ protected:
       DataSecEntries;
   std::vector<BTFTypeStruct *> StructTypes;
   std::set<const Function *> ProtoFunctions;
+  DenseSet<const DICompileUnit *> ProcessedCUs;
   std::map<const DICompositeType *,
            std::vector<std::pair<const DIDerivedType *, BTFTypeDerived *>>>
       FixupDerivedTypes;
@@ -379,6 +380,8 @@ protected:
 
   /// Generate BTF types for extern function prototypes.
   void processFuncPrototypes(const Function *F);
+
+  void processCompileUnitTypes(const DICompileUnit *Unit);
 
   /// Generate types for decl annotations.
   void processDeclAnnotations(DINodeArray Annotations, uint32_t BaseTypeId,
