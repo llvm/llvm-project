@@ -190,7 +190,7 @@ bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
       SampleThreshold *= CSPreinlMultiplierForPrevInl;
   }
 
-  return (Candidate.SizeCost < SampleThreshold);
+  return (Candidate.SizeCost <= SampleThreshold);
 }
 
 void CSPreInliner::processFunction(const FunctionId Name) {
