@@ -23076,10 +23076,10 @@ static SDValue performConcatVectorsCombine(SDNode *N,
       all_equal(N->op_values()) && LD && ISD::isNormalLoad(LD) &&
       LD->isSimple() && N0.hasOneUser()) {
 
-    MVT IVT = MVT::getIntegerVT(SrcVT.getSizeInBits());
-    EVT NVT = EVT::getVectorVT(*DAG.getContext(), IVT, N->getNumOperands());
+    EVT FVT = SrcVT == MVT::v2i8 ? MVT::f16 : MVT::f32;
+    EVT NVT = EVT::getVectorVT(*DAG.getContext(), FVT, N->getNumOperands());
 
-    SDValue NewLoad = DAG.getLoad(IVT, DL, LD->getChain(), LD->getBasePtr(),
+    SDValue NewLoad = DAG.getLoad(FVT, DL, LD->getChain(), LD->getBasePtr(),
                                   LD->getMemOperand());
     DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), NewLoad.getValue(1));
 
