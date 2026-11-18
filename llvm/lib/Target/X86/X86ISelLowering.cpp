@@ -2631,7 +2631,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                                   Custom);
         setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, AccVT, I16VT,
                                   Custom);
-      } else if (Subtarget.hasSSE2() && !Subtarget.isPMADDWDSlow() &&
+      } else if (Subtarget.hasSSE2() &&
                  (AccVT != MVT::v16i32 || Subtarget.useBWIRegs())) {
         // Mark v8i32 on SSE targets too, as the combines only check the types
         // after one step of type legalization.
