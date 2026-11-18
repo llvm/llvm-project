@@ -1154,22 +1154,16 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   // Add C++ include arguments, if needed.
   if (types::isCXX(Inputs[0].getType())) {
 
-    /*
-     * Installs the directory for clang's C++ headers first to
-     * account for compatibility with libstdc++ when using meta header.
-     * When we use clang and link libstdc++ as the standard library,
-     * the meta header in libstdc++ only provides declarations
-     * of the metafunctions, and clang decided to pursue
-     * having builtins instead.
-     *
-     * With the clang's C++ headers installed first in the list of search paths,
-     * when linking libstdc++ and using the meta header, clang will find its own
-     * header first and ignore the one from libstdc++. Whether any new clang's
-     * C++ header will be in this directory as well will be a topic for
-     * discussion, no conrete plan has been made on this yet.
-     */
-
-    // Do nothing if either -nostdinc or -nobuiltininc is passed.
+    // We provide our own <meta> header since its contents are very
+    // compiler-specific: libstdc++'s version relies heavily on how 
+    // GCC has chosen to implement most meta functions, i.e. GCC simply
+    // treats them as builtins, which we don't want to do.
+    // 
+    // To make sure we always use our <meta> header irrespective of what
+    // STL we're using, we place it in a separate directory that is added
+    // first to the header search paths.
+    //
+    // Skip this if if either -nostdinc or -nobuiltininc is passed.
     if (!Args.hasArg(options::OPT_nostdinc, options::OPT_nobuiltininc)) {
       SmallString<128> ResourceDirInclude(D.ResourceDir);
       llvm::sys::path::append(ResourceDirInclude, "include", "cxx");
