@@ -547,8 +547,81 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   side, each resolved by the branch on its own result. A try-acquire that
   changes the kind (shared vs. exclusive) of a held or conditionally held
   capability now warns, as a blocking acquisition of the other kind already
-  did, and does so even for a re-entrant capability. Some diagnostics under
+  did, and does so even for a re-entrant capability -- unless the two kinds
+  are one call's own attributes, naming the capability exclusive on results
+  it is not also named shared on, which is tracked as one conditional
+  acquisition per kind and resolved on each attribute's own outcome. A scoped capability whose
+  constructor is a try-acquire (`std::unique_lock lock(mu, std::try_to_lock)`
+  style) now acquires conditionally in the same way: the guard's destructor
+  discharges that silently, while an explicit release member function on the
+  guard warns that the capability may not be held. Some diagnostics under
   `-Wthread-safety` change accordingly.
+
+- Thread safety analysis now resolves a try-acquire by the value of its
+  result where the attributes key their capabilities to specific result
+  codes: `TRY_ACQUIRE(1, mu1) TRY_ACQUIRE(2, mu2)` on a function returning
+  `int` names `mu1` for a result of 1 and `mu2` for a result of 2, and a
+  comparison against a constant or a `switch` case label decides each
+  capability. A function whose only success values are `1` or `true` -- the
+  same token in C before C23 -- names no such codes: it keeps promising each
+  acquisition on any nonzero result, as before. Previously every nonzero
+  result was read as acquiring every capability the call names, and every
+  other value as acquiring none of them.
+
+- Thread safety analysis now follows a try-acquire result through a
+  conditional operator. The operator's own condition is a branch like any
+  other, so `if (mu.TryLock() ? use() : false)` no longer diagnoses uses in
+  the body, and the value it produces is read as the merge it is: what a
+  later branch on that value proves depends on which arm can account for the
+  edge it tests. The GNU form `ok ?: 0` is decoded too. Conversely, a branch
+  on a stored `&&` or `||` is no longer read as proof that its right-hand
+  side was evaluated: `bool b = a || mu.TryLock(); if (b)` is read as the
+  merge it is -- `b` may be true because `a` was, with the call never made --
+  while `if (a || mu.TryLock())` still resolves the call exactly.
+
+- Thread safety analysis has a new `-Wthread-safety-beta` diagnostic for a
+  try-acquire whose result the analysis never sees checked: the capability may
+  be leaked, and the warning is reported where the analysis loses track of the
+  result, or at the end of the function. One acquisition is reported once.
+  Enabling it also makes a merge of two outcomes of the same try-acquire --
+  the hold its success proved meeting the record of its failure -- silent
+  rather than "not held on every path", since the merged state is again
+  conditionally held and the new diagnostic reports the leak if there is
+  one. That merge is silent at a loop merge in either mode.
+
+- Thread safety analysis now tracks a scoped capability initialized or
+  returned by value from a function annotated with an acquire attribute under
+  C++11/14, where the initialization goes through an elidable copy of the
+  returned temporary. The temporary's capabilities transfer to the
+  destination as if the copy were elided -- matching C++17 guaranteed copy
+  elision -- instead of being spuriously released at the end of the
+  full-expression. Where nothing takes the transferred capability over --
+  a guard temporary returned from a function with no acquire attribute, one
+  built into an array element or an aggregate member, or one initializing a
+  `static` guard -- C++11/14 now reports it as still held at the end of the
+  *function*, as C++17 already did: the analysis has no scope to end it at,
+  so accesses after the guard's own block are accepted until then.
+
+- Thread safety analysis now looks through the temporaries, conversions and
+  initializer lists a scoped capability's construction can be wrapped in,
+  wherever it looks one up: a guard from an annotated conversion operator, a
+  reference bound to a parenthesized temporary, one initialized through a
+  comma operator, and one list-initialized from a factory (`Guard g{lock()}`)
+  are recognized now, and a guard declared as a loop's condition variable is
+  no longer released before its body runs. The last two were already wrong
+  under C++17.
+
+- Thread safety analysis now carries a try-acquire result out of the loop
+  that acquired it. A loop whose body checks the result and keeps it may
+  leave with the capability held, and the code after the loop is now read
+  against that possibility: a release is "may not be held" rather than
+  "was not held", a blocking acquire is "may already be held", and a
+  branch (`if (ok) mu.Unlock();`) resolves it, all under plain
+  `-Wthread-safety`. Where nothing after the loop resolves it,
+  `-Wthread-safety-beta` reports the leak. Previously the loop's exit
+  edges were computed from the head's state as analyzed on the first
+  iteration, before the result existed, so the possible hold was invisible
+  after the loop.
 
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).

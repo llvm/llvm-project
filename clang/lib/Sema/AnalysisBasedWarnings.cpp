@@ -2074,6 +2074,23 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
                           makeLockedHereNote(LocLocked, Kind));
   }
 
+  void handleTryLockRegardlessOfResult(StringRef Kind, Name LockName,
+                                       SourceLocation Loc,
+                                       const NamedDecl *D) override {
+    if (Loc.isInvalid())
+      Loc = FunLocation;
+    PartialDiagnosticAt Warning(
+        Loc, S.PDiag(diag::warn_try_lock_regardless_of_result)
+                 << Kind << LockName);
+    // The attributes at fault are the callee's, which for a destructor or a
+    // cleanup function is nowhere near the location reported above.
+    Warnings.emplace_back(
+        std::move(Warning),
+        D ? getNotes(PartialDiagnosticAt(D->getLocation(),
+                                         S.PDiag(diag::note_declared_at)))
+          : getNotes());
+  }
+
   void handleDoubleLock(StringRef Kind, Name LockName, SourceLocation LocLocked,
                         SourceLocation LocDoubleLock, bool MaybeHeld) override {
     if (LocDoubleLock.isInvalid())
@@ -2108,11 +2125,33 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     if (LocEndOfScope.isInvalid())
       LocEndOfScope = FunEndLocation;
 
-    PartialDiagnosticAt Warning(LocEndOfScope, S.PDiag(DiagID)
-                                                   << Kind << LockName
-                                                   << ReentrancyMismatch);
+    // A capability the function is expected to hold at its end cannot be
+    // held at the wrong depth: the expected set is built from attributes,
+    // which record no depth, so warn_expecting_locked takes no select.
+    PartialDiagnosticAt Warning(LocEndOfScope,
+                                LEK == LEK_NotLockedAtEndOfFunction
+                                    ? S.PDiag(DiagID) << Kind << LockName
+                                    : S.PDiag(DiagID) << Kind << LockName
+                                                      << ReentrancyMismatch);
     Warnings.emplace_back(std::move(Warning),
                           makeLockedHereNote(LocLocked, Kind));
+  }
+
+  void handleTryAcquireNeverChecked(StringRef Kind, Name LockName,
+                                    SourceLocation LocAcquired,
+                                    SourceLocation Loc,
+                                    bool AtEndOfFunction) override {
+    if (Loc.isInvalid()) {
+      // A join block with no location; point at the end of the function,
+      // and word the diagnostic to match.
+      Loc = FunEndLocation;
+      AtEndOfFunction = true;
+    }
+    PartialDiagnosticAt Warning(Loc,
+                                S.PDiag(diag::warn_try_acquire_never_checked)
+                                    << Kind << LockName << AtEndOfFunction);
+    Warnings.emplace_back(std::move(Warning),
+                          makeLockedHereNote(LocAcquired, Kind));
   }
 
   void handleExclusiveAndShared(StringRef Kind, Name LockName,

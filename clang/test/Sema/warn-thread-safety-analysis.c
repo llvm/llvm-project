@@ -104,6 +104,9 @@ int get_value(int *p) SHARED_LOCKS_REQUIRED(foo_.mu_){
 
 void unlock_scope(struct Mutex *const *mu) __attribute__((release_capability(**mu)));
 void unlock_scope_type_erased(int **priv) __attribute__((release_capability(*(struct Mutex **)priv)));
+// Degenerate try-acquire attributes: acquired whatever the result.
+void try_lock_scope_either_way(struct Mutex *const *mu) // expected-note {{declared here}}
+    EXCLUSIVE_TRYLOCK_FUNCTION(1, **mu) EXCLUSIVE_TRYLOCK_FUNCTION(0, **mu);
 
 // Verify late parsing:
 #ifdef LATE_PARSING
@@ -192,6 +195,16 @@ int main(void) {
   mutex_shared_unlock(&mu1);    // expected-warning {{releasing mutex 'mu1' that was not held}}
 
   /// Cleanup functions
+  {
+    // A cleanup function has no result to branch on, so a capability its
+    // try-acquire attributes name under both success values is acquired
+    // unconditionally, as for any other expression-less call.
+    // expected-warning@+2 {{mutex 'mu1' is acquired regardless of the result of the try-acquire call; treating the acquisition as unconditional}}
+    struct Mutex *const __attribute__((cleanup(try_lock_scope_either_way)))
+        try_scope = &mu1;
+    (void)try_scope;
+  } // The cleanup runs here, acquiring mu1 unconditionally.
+  mutex_exclusive_unlock(&mu1);
   {
     struct Mutex* const __attribute__((cleanup(unlock_scope))) scope = &mu1;
     mutex_exclusive_lock(scope);  // Lock through scope works.
@@ -734,6 +747,202 @@ void test_trylock_void_conditional_via_var(void) {
   assert_trylock(got);
   work_data = 1;
   mutex_unlock(&mu1);
+}
+
+// A success value of 1 says no more than "acquired on any nonzero
+// result", however it is spelled: before C23 <stdbool.h> defines `true`
+// as the integer constant 1, and a wrapper macro can expand to a literal
+// one just as well. Only a call declaring some other value discriminates
+// its outcomes by value, so both of these resolve by truthiness and an
+// edge that merely excludes 1 proves nothing -- weaker than the reading
+// before this commit, which took the default edge below for a proved
+// failure. The comparison spellings keep that exact verdict (they are
+// the truthiness tests they always were), and so does a call declaring
+// a code other than 1.
+#define true 1
+int mutex_trylock_true(struct Mutex *mu) EXCLUSIVE_TRYLOCK_FUNCTION(true, mu);
+int mutex_trylock_one(struct Mutex *mu) EXCLUSIVE_TRYLOCK_FUNCTION(1, mu);
+void mutex_unlock_mu1(void) UNLOCK_FUNCTION(mu1);
+#undef true
+
+void test_trylock_true_is_not_a_code(void) {
+  switch (mutex_trylock_true(&mu1)) {
+  case 1:
+    mutex_unlock_mu1();
+    break;
+  default:
+    // The result is not 1, but the wrapper may return 2 on success, so
+    // the capability may well be held here.
+    mutex_unlock_mu1(); // expected-warning {{releasing mutex 'mu1' that may not be held}}
+    break;
+  }
+}
+
+void test_trylock_literal_one_is_not_a_code_either(void) {
+  switch (mutex_trylock_one(&mu1)) {
+  case 1:
+    mutex_unlock_mu1();
+    break;
+  default:
+    mutex_unlock_mu1(); // expected-warning {{releasing mutex 'mu1' that may not be held}}
+    break;
+  }
+}
+
+// A non-void conditional whose arms carry the result as constants resolves
+// where the value is branched on; with one non-constant arm, a truthy value
+// still proves the true arm ran and the try-lock succeeded, while the falsy
+// edge determines nothing and is reported as a possible leak.
+int get_data(void);
+void test_trylock_conditional_arm(void) {
+  if (mutex_exclusive_trylock(&mu1) ? get_data() : 0) { // expected-note{{mutex acquired here}}
+    work_data = 1;
+    mutex_unlock(&mu1);
+  }
+} // expected-warning{{unchecked result of try-acquire; mutex 'mu1' may still be held at the end of function}}
+
+// GNU `?:` with a falsy constant is the result itself: both edges resolve,
+// like a plain branch on the call.
+void test_trylock_gnu_conditional(void) {
+  if (mutex_exclusive_trylock(&mu1) ?: 0) {
+    work_data = 1;
+    mutex_unlock(&mu1);
+  }
+}
+
+// GNU `?:` with a non-constant right operand: a falsy value proves both
+// operands falsy -- the try-lock failed -- while a truthy value may be the
+// right operand's, so the result stays undetermined there.
+void test_trylock_gnu_conditional_nonconst(void) {
+  if (mutex_exclusive_trylock(&mu1) ?: get_data())
+    mutex_unlock(&mu1); // expected-warning{{releasing mutex 'mu1' that may not be held}}
+}
+
+// A switch on an int-typed but provably boolean condition (a comparison in
+// C) derives the default edge the same way as a _Bool condition: case 1 is
+// the success edge, so default implies the try-lock failed.
+void test_trylock_switch_comparison(void) {
+  switch (mutex_exclusive_trylock(&mu1) != 0) { // expected-warning {{switch condition has boolean value}}
+  case 1:
+    work_data = 1;
+    mutex_unlock(&mu1);
+    break;
+  default:
+    break;
+  }
+}
+
+// An increment or decrement mutates the stored result like a compound
+// assignment: the branch below no longer identifies the call, so the path
+// on which the mutex stays held is diagnosed rather than pruned as
+// infeasible.
+void test_trylock_result_decremented(void) {
+  int r = mutex_exclusive_trylock(&mu1); // expected-note {{mutex acquired here}}
+  if (!r)
+    return;
+  r--;
+  if (r) {
+    mutex_unlock(&mu1);
+    return;
+  }
+} // expected-warning {{mutex 'mu1' is not held on every path through here}}
+
+// A negation below a value comparison compares the negation's own boolean
+// (an int in C): `== 1` is the negation itself, and any other value is
+// impossible, so the branch resolves nothing rather than reading its
+// always-taken edge as a success.
+void test_trylock_negation_compared(void) {
+  int r = mutex_exclusive_trylock(&mu1);
+  int v = !r;
+  if (v == 1)
+    return;
+  work_data = 1;
+  mutex_unlock(&mu1);
+}
+
+void test_trylock_negation_compared_impossible(void) {
+  int r = mutex_exclusive_trylock(&mu1); // expected-note {{mutex acquired here}}
+  int v = !r;
+  if (v == 2) {
+  } else {
+    work_data = 1;          // expected-warning {{writing variable 'work_data' requires holding mutex 'mu1' exclusively}}
+    mutex_unlock(&mu1);     // expected-warning {{releasing mutex 'mu1' that may not be held}}
+  }
+} // expected-warning {{unchecked result of try-acquire; mutex 'mu1' may still be held at the end of function}}
+
+// A `&&` or `||` below a value comparison compares that operator's own
+// boolean, an int in C spelled exactly like a success code: `(c && r) == 1`
+// asks whether `c && r` is true, not whether the call returned 1. Reading
+// it as the code would call a result of 2 a match. Its case labels name
+// the same boolean, so a switch over it pins nothing either; both fall
+// back to the truthiness of the operand, which for a code-keyed call
+// resolves nothing at all.
+int mutex_trylock_codes(struct Mutex *mu, struct Mutex *mu2)
+    EXCLUSIVE_TRYLOCK_FUNCTION(1, mu) EXCLUSIVE_TRYLOCK_FUNCTION(2, mu2);
+
+void test_trylock_logical_compared(int c) {
+  int r = mutex_trylock_codes(&mu1, &mu2); // expected-note {{mutex acquired here}}
+  if ((c && r) == 1) {
+    work_data = 1;      // expected-warning {{writing variable 'work_data' requires holding mutex 'mu1' exclusively}}
+    mutex_unlock_mu1(); // expected-warning {{releasing mutex 'mu1' that may not be held}}
+  }
+} // expected-warning {{unchecked result of try-acquire; mutex 'mu2' may still be held at the end of function}}
+
+// A `&&` or `||` whose value is materialized is a merge of the right-hand
+// side's result with the left-hand side's constant: the edge the constant
+// can account for proves nothing, the other one carries the result. In C
+// the operator's own boolean is an int, so a case label on it pins no code
+// either.
+void test_trylock_logical_merge(int c) {
+  if (!(c || mutex_trylock_true(&mu1)))
+    return;
+  work_data = 1;      // expected-warning {{writing variable 'work_data' requires holding mutex 'mu1' exclusively}}
+  mutex_unlock_mu1(); // expected-warning {{releasing mutex 'mu1' that may not be held}}
+}
+
+// In situ the same operator resolves exactly.
+void test_trylock_logical_insitu(int c) {
+  if (c || !mutex_trylock_true(&mu1))
+    return;
+  work_data = 1;
+  mutex_unlock_mu1();
+}
+
+// A goto into a loop body from outside the loop: the loop is the blocks
+// its head dominates, so the check made before the jump (`if (ok)`, which
+// resolves nothing for a code-keyed capability) is not a check around the
+// loop and the result the jump carries in is reported at the loop join.
+int mutex_trylock_code2(struct Mutex *mu) EXCLUSIVE_TRYLOCK_FUNCTION(2, mu);
+
+void test_trylock_goto_into_loop(int e, int d) {
+  int ok2 = mutex_trylock_true(&mu1); // expected-note {{mutex acquired here}}
+  if (e) {
+    int ok = mutex_trylock_code2(&mu1); // expected-note {{mutex acquired here}}
+    if (ok)
+      goto inner;
+    return;
+  }
+  while (d) { // expected-warning {{unchecked result of try-acquire; mutex 'mu1' may still be held past this point}}
+  inner:;
+  }
+  if (ok2)
+    mutex_unlock_mu1();
+} // expected-warning {{unchecked result of try-acquire; mutex 'mu1' may still be held at the end of function}}
+
+// A cross-kind try-acquire in C: one conditional acquisition per kind,
+// each resolved on the outcome its own attribute names.
+int mutex_try_upgrade(struct Mutex *mu) EXCLUSIVE_TRYLOCK_FUNCTION(1, mu)
+    SHARED_TRYLOCK_FUNCTION(0, mu);
+
+void test_trylock_cross_kind(void) {
+  if (mutex_try_upgrade(&mu1)) {
+    work_data = 1;
+    mutex_unlock_mu1();
+  } else {
+    int r = work_data;
+    (void)r;
+    mutex_unlock_mu1();
+  }
 }
 
 // We had a problem where we'd skip all attributes that follow a late-parsed

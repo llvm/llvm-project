@@ -463,24 +463,39 @@ and destructor refer to the capability via different names; see the
 Scoped capabilities are treated as capabilities that are implicitly acquired
 on construction and released on destruction. They are associated with
 the set of (regular) capabilities named in thread safety attributes on the
-constructor or function returning them by value (using C++17 guaranteed copy
-elision). Acquire-type attributes on other member functions are treated as
+constructor or function returning them by value; initializing a variable from
+such a function works whether or not the copy is guaranteed to be elided, as
+does returning one from another. Acquire-type attributes on other member
+functions are treated as
 applying to that set of associated capabilities, while `RELEASE` implies that
 a function releases all associated capabilities in whatever mode they're held.
+A constructor may also be annotated with {ref}`try_acquire`.
 
-### TRY_ACQUIRE(\<bool>, ...), TRY_ACQUIRE_SHARED(\<bool>, ...)
+(try_acquire)=
+### TRY_ACQUIRE(\<success>, ...), TRY_ACQUIRE_SHARED(\<success>, ...)
 
 *Previously:* `EXCLUSIVE_TRYLOCK_FUNCTION`, `SHARED_TRYLOCK_FUNCTION`
 
 These are attributes on a function or method that tries to acquire the given
-capability, and returns a boolean value indicating success or failure.
-The first argument must be `true` or `false`, to specify which return value
-indicates success, and the remaining arguments are interpreted in the same way
-as `ACQUIRE`. See {ref}`mutexheader`, below, for example uses.
+capability, and returns a value indicating success or failure.
+The first argument is the return value that indicates success: `true` (any
+nonzero result) or `false` (a zero result), or an integer constant, which for
+a value other than `1` keys the acquisition to that exact result (see
+{ref}`trysuccesscodes`). The remaining arguments are interpreted in the same
+way as `ACQUIRE`. See {ref}`mutexheader`, below, for example uses.
 
 The capability is tracked as conditionally ("try") held from the call until a
 recognized branch on its return value: on the success path the capability is
-held, on the failure path it is not. A conditionally held capability does not
+held, on the failure path it is not. A branch is recognized when it tests the
+call's result directly or through a local variable, including a variable that
+merges the result with an earlier constant initializer
+(`bool ok = false; if (...) ok = mu.TryLock(); if (ok) ...`) -- when the
+variable is true despite the false initializer, the try-acquire must have
+succeeded. A branch on the result also revives an acquisition the analysis lost at a
+merge it could not carry the hold through, since the branch proves the call
+acquired the capability -- but only that acquisition, and only while nothing
+on the path contradicts the stored result: a release of the capability, or
+another acquisition of it, leaves the branch with nothing to revive. A conditionally held capability does not
 satisfy requirements such as `GUARDED_BY` or `REQUIRES` and it also violates
 `LOCKS_EXCLUDED` and negative requirements (`REQUIRES(!mu)`). Acquiring a
 non-reentrant lock again before branching on the return value warns that it may
@@ -489,10 +504,123 @@ may not be held. A try-acquire of a capability that is already held adds a
 further conditionally held level onto the hold -- the success branch may be
 statically unreachable, but the modeling doesn't assume that. An acquisition of
 the other kind (shared vs. exclusive) than the existing hold, blocking or try,
-generates a warning since a hold has one kind. A try-acquire of a capability
+generates a warning since a hold has one kind -- except where the two are one
+call's own attributes promising the capability in each kind on results the
+other does not name, which is tracked as one conditional acquisition per kind
+(see {ref}`try_acquire`). A try-acquire of a capability
 that is already conditionally held by another try-acquire is tracked separately:
 each is resolved by the branch on its own return value. Asserting the capability
 (`ASSERT_CAPABILITY`) upgrades it to held without a warning.
+
+A merge that brings together two outcomes of the *same* call -- the hold its
+success proved on one path, the record of its failure on the other -- loses
+nothing: taken together they are again "held if the call succeeded", so the
+capability is conditionally held after the merge and a later branch on the
+result resolves it. The same applies to a call that releases on success
+(`TRY_ACQUIRE(true, !mu)`), where the two outcomes differ by the level the
+release discharged, and to a merge where one path is one level deeper than
+the other for the same reason. At a loop merge this applies always; at a
+branch merge only under `-Wthread-safety-beta`, because without it the
+merge's eager "not held on every path" warning is the only report of a
+result that really is leaked, and the beta diagnostics below are what
+replace it. Turning `-Wthread-safety-beta` on therefore silences that
+warning on such merges while adding the leak reports -- the one place where
+the flag removes a warning rather than only adding some.
+
+Under `-Wthread-safety-beta`, a try-acquire additionally warns where the
+analysis loses track of its result -- at a branch merge with a path that does
+not hold the capability, or at the end of the function -- since the capability
+may then be leaked. That covers a result never used to determine success, and
+also one the analysis cannot follow to a branch: stored in a member or a
+parameter, or simply returned to the caller. One acquisition is reported once,
+at the first merge that loses it. A loop merge is exempt only while the result
+is branched on somewhere inside the loop -- in a block the loop's head
+dominates, so a check made before a `goto` into the body does not count; a
+result never checked anywhere warns at the loop merge too. Such a result --
+one the loop checks and keeps -- leaves the loop as a *possible* hold on
+every exit edge, since an iteration may have acquired the capability and
+none afterwards released it: a branch after the loop resolves it
+(`if (ok) mu.Unlock();` is clean), and otherwise it is reported at the
+end of the function. A result an iteration may have released leaves the
+loop the same way, whether or not the loop checks it, so a release after
+the loop is "may not be held" rather than "was not held" and a blocking
+acquire is "may already be held" -- those two are ordinary
+`-Wthread-safety` diagnostics and do not need the beta flag.
+
+(trysuccesscodes)=
+A success value that is a specific integer constant other than `1`
+(`TRY_ACQUIRE(1, mu1) TRY_ACQUIRE(2, mu2)` on a function returning `int`;
+enumerators and constexpr values work the same way) keys the acquisition to that
+exact return value, and so do the other success values of the same function. A
+branch comparing the result against a constant, or a `switch` case label, then
+resolves each capability by value: `result == 2` proves `mu2` was acquired and
+`mu1` was not, the other edge of that comparison proves only that `mu2` was not
+acquired (the result may still be any other value), and a `switch` default with
+all codes listed proves no capability was acquired. A plain truthiness branch
+(`if (result)`) resolves such a capability only on its falsy edge, where no code
+can have been returned: a nonzero result is one code or another, and the branch
+does not say which, so the acquisition stays unresolved until a comparison or a
+label decides it. A success value of `true`, or of `1`, promises acquisition on
+any nonzero result: the two are the same token in C before C23, where
+`<stdbool.h>` defines `true` as the integer `1`, and a wrapper macro can expand
+to either. A function that names no value beyond those is not discriminating
+between its outcomes, so all of its capabilities resolve by truthiness, as every
+try-acquire did before success codes. The same capability listed under a falsy
+and a specific truthy code of an integer result is *not* "acquired regardless"
+-- a result matching neither code acquires nothing -- so it stays a conditional
+acquisition resolved by value. Nor is a capability listed exclusive on
+one polarity and shared on the other (`TRY_ACQUIRE(true, mu)
+TRY_ACQUIRE_SHARED(false, mu)`): it is held in one kind on each outcome, and is
+tracked as one conditional acquisition per kind, each resolved by the branch on
+its own outcome and by that kind's own success values.
+
+Value resolution applies to the call's own result. A branch on a copy that a
+conversion may have changed (`bool ok = try_lock_codes();`) tests only whether
+the result was nonzero, so it resolves by truthiness; conversions that keep
+every value the result can have -- the integral promotions and widenings a
+comparison applies, including inside `__builtin_expect` -- do not lose the
+codes. Where the branched-on value merges the result with a constant, the edge
+that constant can account for proves nothing about any code, since the value
+there may be the constant rather than a result the call did produce; the other
+edge carries the result alone and still resolves exactly.
+
+A conditional operator is both a branch and a merge. Its own condition is a
+recognized branch, so the arms run under the state that condition resolves --
+a void `?:`, the pre-2.32 glibc spelling of `assert()`, is exactly an `if` --
+and the value it produces is a merge of the kind above. With both arms
+constant, the value's truthiness is the condition's while its magnitude is the
+arm's: a later branch on it reads as a branch on the condition, a comparison
+against an arm's own constant resolves the same way (`(ok ? 1 : 2) == 1` is
+`ok`), and a value neither arm carries determines nothing. With one arm
+constant, the other arm's own try-acquire is what a later branch resolves, on
+the edge whose truthiness the constant cannot account for; the constant's own
+edge determines nothing, since the value there may be the constant with the
+arm never evaluated. The GNU form `r ?: x` keeps `r` itself, magnitude
+included, when `x` is a falsy constant.
+
+A `&&` or `||` is read as a branch on its right-hand side where the branch
+tests it in place -- `if (a || mu.TryLock())`, whose right-hand side is
+evaluated only on the edge the branch tests. Anywhere else, its value has been
+materialized at a join the short-circuit edge also reaches (`bool b = a ||
+mu.TryLock(); if (b)`, `if (!(a || mu.TryLock()))`, the same under a
+comparison, an assignment, `__builtin_expect`, a statement expression, or a
+`?:` arm), and it is read as a merge with the left-hand side's own value --
+`true` for `||`, `false` for `&&` -- like any other merge above: `b` may be
+true because `a` was, with the call never made, so that edge determines
+nothing, while the other one carries the call's result. A left-hand side the
+compiler folds to a constant leaves no such join at all: either the operator
+is decided and the right-hand side never runs, or the value is the right-hand
+side's own.
+
+Two merges in one condition compose where they leave the same edge
+undetermined, and leave nothing determined at all where they do not; the
+branch still names the call either way, so the capability stays conditionally
+held rather than being lost.
+
+What a merge carries is the result's truthiness, not its magnitude, so an
+exact value an edge pins -- a `switch` case label -- resolves nothing through
+one: `switch (c && try_lock_codes())` selects its labels by the operator's own
+boolean, and `int v = (r != 0); switch (v)` by the comparison's.
 
 ```c++
 Mutex mu;
@@ -509,6 +637,21 @@ void foo() {
   }
 }
 ```
+
+On a {ref}`scoped_capability` constructor
+(`std::unique_lock lock(mu, std::try_to_lock)`-style), the named capabilities
+are likewise acquired conditionally, managed by the scoped object. A
+constructor has no return value to branch on, so uses under the guard remain
+diagnosed as unverified; but the destructor's conditional release -- it
+releases each capability only if the guard holds it -- pairs exactly with the
+conditional acquisition, so the guard's death discharges it silently (no
+unchecked-result warning) and establishes that the capability is no longer
+held. An explicit `RELEASE`
+member function, by contrast, demands an unconditional release (releasing a
+guard that does not hold the capability is a runtime error) and warns that the
+capability may not be held. A try-acquire made directly on the underlying
+capability while the guard is alive is not the guard's own: the destructor
+keeps that conditional hold for its stored result to resolve after the scope.
 
 ### ASSERT_CAPABILITY(...) and ASSERT_SHARED_CAPABILITY(...)
 
@@ -1009,7 +1152,7 @@ public:
   // Assume mu is not held, implicitly acquire *this and associate it with mu.
   MutexLocker(Mutex *mu, defer_lock_t) EXCLUDES(mu) : mut(mu), locked(false) {}
 
-  // Same as constructors, but without tag types. (Requires C++17 copy elision.)
+  // Same as constructors, but without tag types.
   static MutexLocker Lock(Mutex *mu) ACQUIRE(mu) {
     return MutexLocker(mu);
   }
