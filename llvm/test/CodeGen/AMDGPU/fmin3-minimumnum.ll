@@ -3691,24 +3691,11 @@ define bfloat @v_min3_bf16_minimumnum_minimumnum__v_v_v_0(bfloat %a, bfloat %b, 
 ; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX950-GISEL-NEXT:    v_min_f32_e32 v0, v0, v1
-; GFX950-GISEL-NEXT:    v_bfe_u32 v3, v0, 16, 1
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, 0x7fff
-; GFX950-GISEL-NEXT:    v_or_b32_e32 v1, 0x400000, v0
-; GFX950-GISEL-NEXT:    v_add3_u32 v3, v3, v0, v4
-; GFX950-GISEL-NEXT:    v_cmp_u_f32_e32 vcc, 0, v0
-; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
-; GFX950-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX950-GISEL-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v0
 ; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
 ; GFX950-GISEL-NEXT:    v_min_f32_e32 v0, v0, v1
-; GFX950-GISEL-NEXT:    v_bfe_u32 v2, v0, 16, 1
-; GFX950-GISEL-NEXT:    v_or_b32_e32 v1, 0x400000, v0
-; GFX950-GISEL-NEXT:    v_add3_u32 v2, v2, v0, v4
-; GFX950-GISEL-NEXT:    v_cmp_u_f32_e32 vcc, 0, v0
-; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
-; GFX950-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX950-GISEL-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v0
 ; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-GISEL-LABEL: v_min3_bf16_minimumnum_minimumnum__v_v_v_0:
@@ -4687,45 +4674,19 @@ define <2 x bfloat> @v_min3_v2bf16_minimumnum_minimumnum__v_v_v_0(<2 x bfloat> %
 ; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX950-GISEL-NEXT:    v_min_f32_e32 v0, v0, v1
-; GFX950-GISEL-NEXT:    v_bfe_u32 v5, v0, 16, 1
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v6, 0x7fff
-; GFX950-GISEL-NEXT:    v_or_b32_e32 v1, 0x400000, v0
-; GFX950-GISEL-NEXT:    v_add3_u32 v5, v5, v0, v6
-; GFX950-GISEL-NEXT:    v_cmp_u_f32_e32 vcc, 0, v0
-; GFX950-GISEL-NEXT:    s_mov_b32 s0, 0x7060302
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_cndmask_b32_e32 v0, v5, v1, vcc
 ; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v3
 ; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; GFX950-GISEL-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v0
 ; GFX950-GISEL-NEXT:    v_min_f32_e32 v1, v1, v3
-; GFX950-GISEL-NEXT:    v_bfe_u32 v4, v1, 16, 1
-; GFX950-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX950-GISEL-NEXT:    v_or_b32_e32 v3, 0x400000, v1
-; GFX950-GISEL-NEXT:    v_add3_u32 v4, v4, v1, v6
-; GFX950-GISEL-NEXT:    v_cmp_u_f32_e32 vcc, 0, v1
-; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
+; GFX950-GISEL-NEXT:    v_cvt_pk_bf16_f32 v1, v1, v0
 ; GFX950-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX950-GISEL-NEXT:    v_min_f32_e32 v0, v0, v2
-; GFX950-GISEL-NEXT:    v_bfe_u32 v4, v0, 16, 1
-; GFX950-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX950-GISEL-NEXT:    v_or_b32_e32 v2, 0x400000, v0
-; GFX950-GISEL-NEXT:    v_add3_u32 v4, v4, v0, v6
-; GFX950-GISEL-NEXT:    v_cmp_u_f32_e32 vcc, 0, v0
 ; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc
 ; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
 ; GFX950-GISEL-NEXT:    v_min_f32_e32 v1, v1, v2
-; GFX950-GISEL-NEXT:    v_bfe_u32 v3, v1, 16, 1
-; GFX950-GISEL-NEXT:    v_or_b32_e32 v2, 0x400000, v1
-; GFX950-GISEL-NEXT:    v_add3_u32 v3, v3, v1, v6
-; GFX950-GISEL-NEXT:    v_cmp_u_f32_e32 vcc, 0, v1
-; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_cndmask_b32_e32 v1, v3, v2, vcc
-; GFX950-GISEL-NEXT:    v_perm_b32 v0, v1, v0, s0
+; GFX950-GISEL-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
 ; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-GISEL-LABEL: v_min3_v2bf16_minimumnum_minimumnum__v_v_v_0:
