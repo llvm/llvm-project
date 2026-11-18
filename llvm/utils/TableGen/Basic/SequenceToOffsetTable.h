@@ -21,6 +21,7 @@
 #include <cassert>
 #include <functional>
 #include <map>
+#include <vector>
 
 namespace llvm {
 
@@ -59,6 +60,7 @@ class SequenceToOffsetTable {
   // Keep sequences ordered according to SeqLess so suffixes are easy to find.
   // Map each sequence to its offset in the table.
   using SeqMap = std::map<SeqT, unsigned, SeqLess>;
+  using SeqMapEntry = typename SeqMap::value_type;
 
   // Sequences added so far, with suffixes removed.
   SeqMap Seqs;
@@ -75,6 +77,18 @@ class SequenceToOffsetTable {
   // isSuffix - Returns true if A is a suffix of B.
   static bool isSuffix(const SeqT &A, const SeqT &B) {
     return A.size() <= B.size() && std::equal(A.rbegin(), A.rend(), B.rbegin());
+  }
+
+  std::vector<const SeqMapEntry *> getLayout() const {
+    std::vector<const SeqMapEntry *> Layout;
+    Layout.reserve(Seqs.size());
+    for (const auto &Entry : Seqs)
+      Layout.push_back(&Entry);
+    std::sort(Layout.begin(), Layout.end(),
+              [](const SeqMapEntry *A, const SeqMapEntry *B) {
+                return A->second < B->second;
+              });
+    return Layout;
   }
 
 public:
@@ -108,14 +122,28 @@ public:
 
   /// layout - Computes the final table layout.
   void layout() {
+    layout([](const SeqT &, const SeqT &) { return false; });
+  }
+
+  /// layout - Computes the final table layout using Compare to order the
+  /// retained sequences. Equal sequences retain their original stable order.
+  template <typename Compare> void layout(Compare CompareSequences) {
     assert(!IsLaidOut && "Can only call layout() once");
     IsLaidOut = true;
 
-    // Lay out the table in Seqs iteration order.
-    for (auto &[Seq, Offset] : Seqs) {
-      Offset = Size;
+    std::vector<SeqMapEntry *> Layout;
+    Layout.reserve(Seqs.size());
+    for (auto &Entry : Seqs)
+      Layout.push_back(&Entry);
+    std::stable_sort(Layout.begin(), Layout.end(),
+                     [&](const SeqMapEntry *A, const SeqMapEntry *B) {
+                       return CompareSequences(A->first, B->first);
+                     });
+
+    for (SeqMapEntry *Entry : Layout) {
+      Entry->second = Size;
       // Include space for a terminator.
-      Size += Seq.size() + Terminator.has_value();
+      Size += Entry->first.size() + Terminator.has_value();
     }
   }
 
@@ -146,7 +174,8 @@ public:
        << "#pragma GCC diagnostic ignored \"-Woverlength-strings\"\n"
        << "#endif\n"
        << Decl << " = {\n";
-    for (const auto &[Seq, Offset] : Seqs) {
+    for (const SeqMapEntry *Entry : getLayout()) {
+      const auto &[Seq, Offset] = *Entry;
       OS << "  /* " << Offset << " */ \"";
       OS.write_escaped(Seq);
       if (Terminator)
@@ -164,7 +193,8 @@ public:
   void emit(raw_ostream &OS,
             function_ref<void(raw_ostream &, ElemT)> Print) const {
     assert(IsLaidOut && "Call layout() before emit()");
-    for (const auto &[Seq, Offset] : Seqs) {
+    for (const SeqMapEntry *Entry : getLayout()) {
+      const auto &[Seq, Offset] = *Entry;
       OS << "  /* " << Offset << " */ ";
       for (const ElemT &Element : Seq) {
         Print(OS, Element);
