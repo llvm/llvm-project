@@ -409,11 +409,12 @@ struct VPlanTransforms {
   /// appropriate branching logic in the latch that handles early exits and the
   /// latch exit condition. Multiple exits are handled with a dispatch block
   /// that determines which exit to take based on lane-by-lane semantics.
+  /// \p Style is the preferred style, and is updated to the style used.
   LLVM_ABI_FOR_TEST static bool
   handleUncountableEarlyExits(VPlan &Plan, OptimizationRemarkEmitter *ORE,
                               Loop *TheLoop, PredicatedScalarEvolution &PSE,
                               DominatorTree &DT, AssumptionCache *AC,
-                              UncountableExitStyle Style);
+                              UncountableExitStyle &Style);
 
   /// Disconnect countable early exits from the loop.
   LLVM_ABI_FOR_TEST static void handleCountableEarlyExits(VPlan &Plan);
