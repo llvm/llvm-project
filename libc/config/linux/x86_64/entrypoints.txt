@@ -447,6 +447,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/time.h entrypoints
     libc.src.sys.time.utimes
 
+    # sys/timerfd.h entrypoints
+    libc.src.sys.timerfd.timerfd_create
+    libc.src.sys.timerfd.timerfd_gettime
+    libc.src.sys.timerfd.timerfd_settime
+
     # sys/sysinfo.h entrypoints
     libc.src.sys.sysinfo.sysinfo
 
@@ -581,6 +586,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # wchar.h entrypoints
     libc.src.wchar.btowc
     libc.src.wchar.swprintf
+    libc.src.wchar.vswprintf
     libc.src.wchar.wcscasecmp
     libc.src.wchar.wcsncasecmp
     libc.src.wchar.wcslen
@@ -1485,6 +1491,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_equal
     libc.src.pthread.pthread_exit
     libc.src.pthread.pthread_getattr_np
+    libc.src.pthread.pthread_getcpuclockid
     libc.src.pthread.pthread_getname_np
     libc.src.pthread.pthread_getschedparam
     libc.src.pthread.pthread_getspecific
@@ -1612,11 +1619,13 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.getc_unlocked
     libc.src.stdio.getchar
     libc.src.stdio.getchar_unlocked
+    libc.src.stdio.getdelim
     libc.src.stdio.getline
     libc.src.stdio.pclose
     libc.src.stdio.perror
     libc.src.stdio.popen
     libc.src.stdio.putc
+    libc.src.stdio.putc_unlocked
     libc.src.stdio.putchar
     libc.src.stdio.putchar_unlocked
     libc.src.stdio.puts
@@ -1739,6 +1748,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.localtime
     libc.src.time.localtime_r
     libc.src.time.mktime
+    libc.src.time.timegm
     libc.src.time.clock_nanosleep
     libc.src.time.nanosleep
     libc.src.time.strftime

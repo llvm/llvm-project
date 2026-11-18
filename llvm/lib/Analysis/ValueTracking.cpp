@@ -5956,11 +5956,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                           KnownSrc, Q, Depth + 1);
 
       const Function *F = II->getFunction();
-      DenormalMode DenormMode =
-          F ? F->getDenormalMode(
-                  II->getType()->getScalarType()->getFltSemantics())
-            : DenormalMode::getDynamic();
-      Known = KnownFPClass::canonicalize(KnownSrc, DenormMode);
+      const fltSemantics &Flt =
+          II->getType()->getScalarType()->getFltSemantics();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(Flt) : DenormalMode::getDynamic();
+      Known = KnownFPClass::canonicalize(KnownSrc, Flt, Mode);
       break;
     }
     case Intrinsic::vector_reduce_fmax:
@@ -11023,7 +11023,8 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
         computeConstantRange(SI->getTrueValue(), ForSigned, SQ, Depth + 1);
     ConstantRange CRFalse =
         computeConstantRange(SI->getFalseValue(), ForSigned, SQ, Depth + 1);
-    CR = CRTrue.unionWith(CRFalse);
+    CR = CRTrue.unionWith(CRFalse, ForSigned ? ConstantRange::Signed
+                                             : ConstantRange::Unsigned);
     CR = CR.intersectWith(getRangeForSelectPattern(*SI, SQ.IIQ));
   } else if (auto *TI = dyn_cast<TruncInst>(V)) {
     ConstantRange SrcCR =

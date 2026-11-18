@@ -21,6 +21,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
+#include <array>
 
 using namespace llvm;
 using namespace mir2vec;
@@ -89,7 +90,7 @@ MIRVocabulary::MIRVocabulary(VocabMap &&OpcodeMap, VocabMap &&CommonOperandMap,
   Layout.OpcodeBase = 0;
   Layout.CommonOperandBase = CanonicalOpcodeCount;
   // We expect same classes for physical and virtual registers
-  Layout.PhyRegBase = Layout.CommonOperandBase + std::size(CommonOperandNames);
+  Layout.PhyRegBase = Layout.CommonOperandBase + std::size(CommonOperands);
   Layout.VirtRegBase = Layout.PhyRegBase + RegisterOperandNames.size();
 
   generateStorage(OpcodeMap, CommonOperandMap, PhysicalRegisterMap,
@@ -165,12 +166,13 @@ unsigned MIRVocabulary::getCanonicalOpcodeIndex(unsigned Opcode) const {
 
 unsigned
 MIRVocabulary::getCanonicalIndexForOperandName(StringRef OperandName) const {
-  auto It = std::find(std::begin(CommonOperandNames),
-                      std::end(CommonOperandNames), OperandName);
-  assert(It != std::end(CommonOperandNames) &&
+  auto It = llvm::find_if(CommonOperands, [&](const CommonOperandEntry &E) {
+    return E.Name == OperandName;
+  });
+  assert(It != std::end(CommonOperands) &&
          "Operand name not found in common operands");
   return Layout.CommonOperandBase +
-         std::distance(std::begin(CommonOperandNames), It);
+         std::distance(std::begin(CommonOperands), It);
 }
 
 unsigned
@@ -206,10 +208,10 @@ std::string MIRVocabulary::getStringKey(unsigned Pos) const {
 
   // Handle common operands section
   if (Pos < Layout.PhyRegBase) {
-    unsigned LocalIndex = getLocalIndex(
-        Pos, Layout.CommonOperandBase, std::size(CommonOperandNames),
-        "Local index out of bounds in common operands");
-    return CommonOperandNames[LocalIndex].str();
+    unsigned LocalIndex =
+        getLocalIndex(Pos, Layout.CommonOperandBase, std::size(CommonOperands),
+                      "Local index out of bounds in common operands");
+    return CommonOperands[LocalIndex].Name.str();
   }
 
   // Handle physical registers section
@@ -260,15 +262,15 @@ void MIRVocabulary::generateStorage(const VocabMap &OpcodeMap,
   }
 
   // Initialize common operand embeddings section
-  std::vector<Embedding> CommonOperandEmbeddings(std::size(CommonOperandNames),
+  std::vector<Embedding> CommonOperandEmbeddings(std::size(CommonOperands),
                                                  Embedding(EmbeddingDim));
   unsigned OperandIndex = 0;
-  for (const auto &CommonOperandName : CommonOperandNames) {
-    if (auto It = CommonOperandsMap.find(CommonOperandName.str());
+  for (const CommonOperandEntry &Entry : CommonOperands) {
+    if (auto It = CommonOperandsMap.find(Entry.Name.str());
         It != CommonOperandsMap.end()) {
       CommonOperandEmbeddings[OperandIndex] = It->second;
     } else {
-      handleMissingEntity(CommonOperandName);
+      handleMissingEntity(Entry.Name);
     }
     ++OperandIndex;
   }
@@ -350,13 +352,25 @@ void MIRVocabulary::buildRegisterOperandMapping() {
   }
 }
 
-unsigned MIRVocabulary::getCommonOperandIndex(
+std::optional<unsigned> MIRVocabulary::getCommonOperandIndex(
     MachineOperand::MachineOperandType OperandType) const {
   assert(OperandType != MachineOperand::MO_Register &&
          "Expected non-register operand type");
-  assert(OperandType > MachineOperand::MO_Register &&
-         OperandType < MachineOperand::MO_Last && "Operand type out of bounds");
-  return static_cast<unsigned>(OperandType) - 1;
+  assert(OperandType <= MachineOperand::MO_Last &&
+         "Operand type out of bounds");
+  static constexpr unsigned InvalidIndex = ~0u;
+  static constexpr auto OperandTypeToIndex = [] {
+    std::array<unsigned, MachineOperand::MO_Last + 1> Map{};
+    for (unsigned &I : Map)
+      I = InvalidIndex;
+    for (unsigned I = 0; I < std::size(CommonOperands); ++I)
+      Map[CommonOperands[I].Type] = I;
+    return Map;
+  }();
+  unsigned Index = OperandTypeToIndex[OperandType];
+  if (Index == InvalidIndex)
+    return std::nullopt;
+  return Index;
 }
 
 std::optional<unsigned>
@@ -419,8 +433,8 @@ Expected<MIRVocabulary> MIRVocabulary::createDummyVocabForTest(
   }
 
   // Add common operands
-  for (const auto &CommonOperandName : CommonOperandNames) {
-    DummyOperandMap[CommonOperandName.str()] = Embedding(Dim, DummyVal);
+  for (const CommonOperandEntry &Entry : CommonOperands) {
+    DummyOperandMap[Entry.Name.str()] = Embedding(Dim, DummyVal);
     DummyVal += 0.1f;
   }
 
