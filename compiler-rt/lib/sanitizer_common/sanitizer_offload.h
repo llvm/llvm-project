@@ -120,10 +120,13 @@ class Offload {
         &F);
   }
 
-  // Confirmed L2 store of [Addr, Addr + Bytes) through the GPU that owns
-  // the pages. Src null stores zeros.
+  bool CreateSignal(hsa_signal_t* Out);
+  void DestroySignal(hsa_signal_t Sig);
+
+  // Copy [Addr, Addr + Bytes) to the owning GPU, then flush its queue.
+  // Src null stores zeros. Done is the caller's completion signal.
   bool PublishDeviceBytes(uptr Addr, const void* Src, uptr Bytes,
-                          hsa_agent_t Agent);
+                          hsa_agent_t Agent, hsa_signal_t Done);
 
  private:
   friend struct OffloadRpc;
@@ -136,9 +139,7 @@ class Offload {
     hsa_agent_t Agent;
     u32 Lanes;
     u32 MaxWaves;
-    u32 XCCs;
     hsa_queue_t* Queue;
-    hsa_signal_t Signal;
   };
 
   struct Api {
@@ -161,13 +162,11 @@ class Offload {
   void Free(void* P);
   bool Lookup(hsa_executable_t Exec, const char* Name, hsa_agent_t Agent,
               u64* Addr);
-  bool CreateSignal(hsa_signal_t* Out);
-  void DestroySignal(hsa_signal_t Sig);
   void WaitSignal(hsa_signal_t Sig);
   void StoreSignal(hsa_signal_t Sig);
 
-  void SubmitIb(Device& D, u32 Dwords);
-  void Await(Device& D);
+  void FlushDevice(Device& D, hsa_signal_t Done);
+  void Await(hsa_signal_t Done);
 
   void TrackImage(uptr LoadBase, uptr LoadSize, const void* Storage,
                   uptr StorageSize);
@@ -183,7 +182,6 @@ class Offload {
                         void (*Fn)(const CodeObject&, void*), void* Arg);
 
   u16 AmdExtMinor{};
-  void* Ib{};
 
   InternalMmapVectorNoCtor<Device> DeviceList{};
   InternalMmapVectorNoCtor<hsa_agent_t> CpuList{};

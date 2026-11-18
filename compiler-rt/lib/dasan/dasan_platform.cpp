@@ -51,6 +51,7 @@ struct State {
   uptr Granule;
   uptr MetaGranule;
   atomic_uint8_t Bound;
+  hsa_signal_t Completion;
 };
 State S;
 
@@ -146,6 +147,10 @@ bool PlatformInit() {
   }
   S.Granule = Granule;
   S.MetaGranule = Meta;
+  hsa_signal_t Done = {};
+  if (!Off.CreateSignal(&Done))
+    return false;
+  S.Completion = Done;
   VReport(1, "%s: %zu placeable pools, granule %zu, metadata %zu%s%s\n",
           SanitizerToolName, N, S.Granule, S.MetaGranule,
           CpuDirect ? "" : ", host copies metadata",
@@ -155,6 +160,10 @@ bool PlatformInit() {
 
 void PlatformShutdown() {
   atomic_store(&S.Bound, 0, memory_order_release);
+  if (S.Completion.handle) {
+    O().DestroySignal(S.Completion);
+    S.Completion = {};
+  }
   S.Mapped.clear();
   S.Granule = S.MetaGranule = 0;
 }
@@ -307,17 +316,15 @@ void VaPublish(uptr Addr, const void* Src, uptr N) {
     const MappedRange& M = S.Mapped[I];
     uptr Step = Min(N - Done, M.Addr + M.Size - Pos);
     const void* Part = Src ? static_cast<const u8*>(Src) + Done : nullptr;
-    // Pages belong to the pool's agent. A GPU owner is stored through its
-    // command processor; the host is stored directly. Access is not ownership.
+    // The pool's agent owns the pages. Access is not ownership.
     hsa_agent_t Owner = {};
     if (HasPool(M.Pool) && AgentForPool(M.Pool, &Owner) && O().IsGpu(Owner) &&
-        !O().PublishDeviceBytes(Pos, Part, Step, Owner)) {
+        !O().PublishDeviceBytes(Pos, Part, Step, Owner, S.Completion)) {
       Report("ERROR: %s: device write failed at 0x%zx\n", SanitizerToolName,
              Pos);
       Die();
     }
-    // The host check loads this mapping. The confirmed L2 store does not
-    // update the copy that load reads.
+    // The host check reads this alias. The device copy does not update it.
     if (M.CpuRw) {
       void* Dst = reinterpret_cast<void*>(Pos);
       if (Part)

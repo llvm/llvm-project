@@ -63,9 +63,8 @@ bool VaAllow(uptr Addr, uptr Size, hsa_amd_memory_pool_t Pool);
 bool VaAllowAgents(uptr Addr, uptr Size, const hsa_agent_t* Agents, u32 N);
 
 bool VaProbe(uptr Addr);
-// Store [Addr, Addr + N). A GPU-owned range goes through that agent's
-// command processor and is confirmed in L2. A host-owned range is stored
-// directly. Null Src stores zeros. A failed store is fatal.
+// Store [Addr, Addr + N). GPU-owned memory is copied and then flushed.
+// Host-owned memory is stored directly. A null Src stores zeros.
 void VaPublish(uptr Addr, const void* Src, uptr N);
 
 }  // namespace __dasan
