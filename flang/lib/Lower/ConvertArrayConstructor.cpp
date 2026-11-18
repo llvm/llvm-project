@@ -251,8 +251,11 @@ public:
     assert(elementalOp && "array constructor must contain an outer implied-do");
     // Turn variables into values before the implied-do body clean-ups, which
     // may release the storage of the variable.
-    mlir::Value elementResult =
+    auto [elementValue, copyCleanup] =
         hlfir::genElementalYieldValue(loc, builder, value);
+    mlir::Value elementResult = elementValue;
+    if (copyCleanup)
+      stmtCtx.attachCleanup(*copyCleanup);
     if (fir::isa_trivial(elementResult.getType()))
       elementResult =
           builder.createConvert(loc, exprType.getElementType(), elementResult);

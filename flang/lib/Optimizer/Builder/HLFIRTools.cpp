@@ -915,15 +915,18 @@ static hlfir::ExprType getArrayExprType(mlir::Type elementType,
                               isPolymorphic);
 }
 
-hlfir::Entity hlfir::genElementalYieldValue(mlir::Location loc,
-                                            fir::FirOpBuilder &builder,
-                                            hlfir::Entity entity) {
+std::pair<hlfir::Entity, std::optional<hlfir::CleanupFunction>>
+hlfir::genElementalYieldValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                              hlfir::Entity entity) {
   if (!entity.isVariable())
-    return entity;
+    return {entity, std::nullopt};
   entity = hlfir::loadTrivialScalar(loc, builder, entity);
-  if (entity.isVariable())
-    entity = hlfir::Entity{hlfir::AsExprOp::create(builder, loc, entity)};
-  return entity;
+  if (!entity.isVariable())
+    return {entity, std::nullopt};
+  mlir::Value copy = hlfir::AsExprOp::create(builder, loc, entity);
+  fir::FirOpBuilder *bldr = &builder;
+  return {hlfir::Entity{copy},
+          [=]() { hlfir::DestroyOp::create(*bldr, loc, copy); }};
 }
 
 hlfir::ElementalOp hlfir::genElementalOp(
@@ -938,7 +941,9 @@ hlfir::ElementalOp hlfir::genElementalOp(
   auto insertPt = builder.saveInsertionPoint();
   builder.setInsertionPointToStart(elementalOp.getBody());
   auto [element, cleanup] = genKernel(loc, builder, elementalOp.getIndices());
-  mlir::Value elementResult = genElementalYieldValue(loc, builder, element);
+  auto [elementValue, copyCleanup] =
+      genElementalYieldValue(loc, builder, element);
+  mlir::Value elementResult = elementValue;
   // Numerical and logical scalars may be lowered to another type than the
   // Fortran expression type (e.g i1 instead of fir.logical). Array expression
   // values are typed according to their Fortran type. Insert a cast if needed
@@ -946,9 +951,13 @@ hlfir::ElementalOp hlfir::genElementalOp(
   if (fir::isa_trivial(elementResult.getType()))
     elementResult = builder.createConvert(loc, elementType, elementResult);
   auto yield = hlfir::YieldElementOp::create(builder, loc, elementResult);
-  if (cleanup) {
+  if (cleanup || copyCleanup) {
     builder.createBlock(&yield.getCleanup());
-    (*cleanup)();
+    // The copy was created last, so it is destroyed first.
+    if (copyCleanup)
+      (*copyCleanup)();
+    if (cleanup)
+      (*cleanup)();
     if (yield.getCleanup().front().empty())
       yield.getCleanup().front().erase();
     else
