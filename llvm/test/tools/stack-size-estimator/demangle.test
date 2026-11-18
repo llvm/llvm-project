@@ -1,0 +1,6 @@
+; RUN: chmod +x %S/Inputs/mock-cxxfilt.py
+; RUN: %stack-size-estimator %S/Inputs/test_mangled.json --entry-function main --demangle --llvm-cxxfilt-path %S/Inputs/mock-cxxfilt.py | FileCheck %s
+
+; CHECK: --- Path Contributing to Max Stack Usage ---
+; CHECK-NEXT: - main (@0xc8): 5 bytes
+; CHECK-NEXT: - demangled_3foov (@0x64): 10 bytes

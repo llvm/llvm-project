@@ -1,0 +1,5 @@
+{
+  "exclude_functions": [
+    "ignored_func"
+  ]
+}
