@@ -167,6 +167,27 @@ static_assert(A<int>().f<int>() != 0, ""); // expected-error {{static assertion 
 }
 
 
+namespace GH238014 {
+
+void foo(int); // expected-note {{candidate function}}
+void extract(int*);
+
+template <typename T>
+void test() {
+    using Type = decltype(foo(T{}));
+    // expected-error@-1 {{no matching function for call to 'foo'}}
+
+    // The RecoveryExpr is always considered as instantiation dependent so we stopped here.
+    extract(Type{});
+}
+
+struct Bar {};
+
+void run() { test<Bar>(); } // expected-note-re {{instantiation {{.*}} requested here}}
+
+}
+
+
 #if __cplusplus >= 201703L
 namespace GH160497 {
 

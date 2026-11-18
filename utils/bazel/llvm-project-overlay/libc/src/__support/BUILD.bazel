@@ -1,0 +1,419 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "common",
+    hdrs = [
+        "common.h",
+        "endian_internal.h",
+    ],
+    deps = [
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:hardening",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:os",
+    ],
+)
+
+libc_support_library(
+    name = "blockstore",
+    hdrs = ["blockstore.h"],
+    deps = [
+        ":alloc_checker",
+        ":libc_assert",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support/CPP:array",
+        "//libc/src/__support/CPP:new",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "arg_list",
+    hdrs = ["arg_list.h"],
+    deps = [
+        ":common",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support/macros:config",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_support_library(
+    name = "c_string",
+    hdrs = ["c_string.h"],
+    deps = [
+        "//libc/src/__support/CPP:string",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "fixedvector",
+    hdrs = ["fixedvector.h"],
+    deps = [
+        ":libc_assert",
+        "//libc/src/__support/CPP:array",
+        "//libc/src/__support/CPP:iterator",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:config",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_support_library(
+    name = "char_vector",
+    hdrs = ["char_vector.h"],
+    deps = [
+        ":common",
+        "//libc/hdr/func:free",
+        "//libc/hdr/func:malloc",
+        "//libc/hdr/func:realloc",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "error_or",
+    hdrs = ["error_or.h"],
+    deps = [
+        ":common",
+        "//libc/src/__support/CPP:expected",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "float_to_string",
+    hdrs = [
+        "float_to_string.h",
+        "ryu_constants.h",
+        "ryu_long_double_constants.h",
+    ],
+    deps = [
+        ":big_int",
+        ":common",
+        ":libc_assert",
+        ":sign",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "number_pair",
+    hdrs = ["number_pair.h"],
+    deps = [
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "big_int",
+    hdrs = ["big_int.h"],
+    deps = [
+        ":math_extras",
+        ":number_pair",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support/CPP:array",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "frac64",
+    hdrs = ["frac64.h"],
+    deps = [
+        ":big_int",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "frac128",
+    hdrs = ["frac128.h"],
+    deps = [
+        ":big_int",
+        ":frac64",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "frac256",
+    hdrs = ["frac256.h"],
+    deps = [
+        ":big_int",
+        ":frac128",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "sign",
+    hdrs = ["sign.h"],
+    deps = [
+        "//libc/src/__support/macros:attributes",
+    ],
+)
+
+libc_support_library(
+    name = "uint128",
+    hdrs = ["uint128.h"],
+    deps = [
+        ":big_int",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "integer_literals",
+    hdrs = ["integer_literals.h"],
+    deps = [
+        ":ctype_utils",
+        ":uint128",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "str_to_num_result",
+    hdrs = ["str_to_num_result.h"],
+    deps = [
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "integer_operations",
+    hdrs = ["integer_operations.h"],
+    deps = [
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "integer_to_string",
+    hdrs = ["integer_to_string.h"],
+    deps = [
+        ":big_int",
+        ":common",
+        ":ctype_utils",
+        ":wctype_utils",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support/CPP:algorithm",
+        "//libc/src/__support/CPP:array",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "libc_assert",
+    hdrs = ["libc_assert.h"],
+    deps = [
+        ":common",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:hardening",
+        "//libc/src/__support/macros:macro_utils",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:os",
+    ] + select({
+        "//libc:full_build": [
+            ":integer_to_string",
+            "//libc/src/__support/OSUtil:exit_hdrs",
+            "//libc/src/__support/OSUtil:io",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "ctype_utils",
+    hdrs = ["ctype_utils.h"],
+    deps = [
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "str_to_integer",
+    hdrs = ["str_to_integer.h"],
+    deps = [
+        ":big_int",
+        ":common",
+        ":ctype_utils",
+        ":str_to_num_result",
+        ":uint128",
+        ":wctype_utils",
+        "//libc/hdr:errno_macros",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "str_to_float",
+    hdrs = [
+        "detailed_powers_of_ten.h",
+        "high_precision_decimal.h",
+        "str_to_float.h",
+    ],
+    deps = [
+        ":common",
+        ":ctype_utils",
+        ":math_extras",
+        ":str_to_integer",
+        ":str_to_num_result",
+        ":uint128",
+        ":wctype_utils",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
+    name = "complex_type",
+    hdrs = ["complex_type.h"],
+    deps = [
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:complex_types",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "complex_basic_ops",
+    hdrs = ["complex_basic_ops.h"],
+    deps = [
+        ":complex_type",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/FPUtil:fp_bits",
+    ],
+)
+
+libc_support_library(
+    name = "alloc_checker",
+    hdrs = ["alloc-checker.h"],
+    deps = [
+        ":common",
+        "//libc/hdr/func:aligned_alloc",
+        "//libc/hdr/func:malloc",
+        "//libc/hdr/types:size_t",
+        "//libc/src/__support/CPP:new",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:os",
+    ],
+)
+
+libc_support_library(
+    name = "checked_ptr",
+    hdrs = ["checked_ptr.h"],
+    deps = [
+        ":alloc_checker",
+        ":libc_assert",
+        "//libc/hdr/types:size_t",
+        "//libc/src/__support/CPP:nullptr_t",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/CPP:unique_ptr",
+        "//libc/src/__support/CPP:utility",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "math_extras",
+    hdrs = ["math_extras.h"],
+    deps = [
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "wctype_utils",
+    hdrs = ["wctype_utils.h"],
+    deps = [
+        "//libc/hdr/types:wchar_t",
+        "//libc/hdr/types:wctype_t",
+        "//libc/src/__support/CPP:array",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
+    name = "libc_errno",
+    hdrs = ["libc_errno.h"],
+    deps = [
+        "//libc/hdr:errno_macros",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)

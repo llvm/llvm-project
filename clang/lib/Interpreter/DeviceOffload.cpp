@@ -64,7 +64,6 @@ IncrementalHIPDeviceParser::GenerateDeviceObject() {
   auto &PTU = PTUs.back();
 
   CodeGenOptions CodeGenOptsForObj = DeviceCI.getCodeGenOpts();
-  CodeGenOptsForObj.DisableLLVMPasses = true;
 
   ObjectContent.clear();
   auto ObjOS = std::make_unique<llvm::raw_svector_ostream>(ObjectContent);

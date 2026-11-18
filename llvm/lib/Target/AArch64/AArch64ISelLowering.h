@@ -242,14 +242,6 @@ public:
                              ShuffleVectorInst *SVI, unsigned Factor,
                              const APInt &GapMask) const override;
 
-  bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
-                                        IntrinsicInst *DI,
-                                        const APInt &GapMask) const override;
-
-  bool lowerInterleaveIntrinsicToStore(
-      Instruction *Store, Value *Mask,
-      ArrayRef<Value *> InterleaveValues) const override;
-
   bool isLegalAddImmediate(int64_t) const override;
   bool isLegalAddScalableImmediate(int64_t) const override;
   bool isLegalICmpImmediate(int64_t) const override;
@@ -816,13 +808,13 @@ private:
   SDValue LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECREDUCE_MUL(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerATOMIC_LOAD_AND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerWindowsDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerInlineDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFCANONICALIZE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerAVG(SDValue Op, SelectionDAG &DAG, unsigned NewOp) const;
+  SDValue LowerFLDEXP(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerFPToIntToSVE(SDValue Op, SelectionDAG &DAG) const;
 

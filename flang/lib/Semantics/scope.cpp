@@ -266,8 +266,9 @@ const DeclTypeSpec *Scope::GetType(const SomeExpr &expr) {
         } else {
           auto lenExpr{dyType->GetCharLength()};
           if (!lenExpr) {
-            lenExpr =
-                std::get<evaluate::Expr<evaluate::SomeCharacter>>(expr.u).LEN();
+            lenExpr = std::get<evaluate::Expr<
+                evaluate::Type<common::TypeCategory::Character>>>(expr.u)
+                          .LEN();
           }
           if (lenExpr) {
             return &MakeCharacterType(

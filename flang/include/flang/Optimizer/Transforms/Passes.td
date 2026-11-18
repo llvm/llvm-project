@@ -359,6 +359,12 @@ def AllocationPlacement : Pass<"allocation-placement", "mlir::func::FuncOp"> {
 
     The policy normally comes from the fir.allocation_policy module attribute.
     These options override it field by field, and only when set explicitly.
+
+    In legacy mode, the size-based policy is not used and the pass instead
+    behaves like the stack-arrays pass under -fstack-arrays, and like the
+    memory-allocation-opt pass otherwise: heap allocations are left alone and
+    only allocations with a runtime size are moved to the heap, when
+    dynamic-array-on-heap is set.
   }];
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::DLTIDialect", "mlir::LLVM::LLVMDialect",
@@ -368,13 +374,22 @@ def AllocationPlacement : Pass<"allocation-placement", "mlir::func::FuncOp"> {
     Option<"stackArrays", "stack-arrays", "bool",
            /*default=*/"fir::AllocationPolicy::stackArraysDefault",
            "Place all array allocations on the stack (-fstack-arrays); "
-           "otherwise use the size-based placement policy.">,
+           "otherwise use the size-based placement policy, or behave like "
+           "the memory-allocation-opt pass in legacy mode.">,
     Option<"smallArrayThresholdBytes", "small-array-threshold", "uint64_t",
            /*default=*/"fir::AllocationPolicy::smallArrayThresholdBytesDefault",
            "Constant-size arrays up to this many bytes are considered small.">,
     Option<"totalStackLimitBytes", "total-stack-limit", "uint64_t",
            /*default=*/"fir::AllocationPolicy::totalStackLimitBytesDefault",
-           "Per-function budget (bytes) for small arrays placed on the stack.">
+           "Per-function budget (bytes) for small arrays placed on the stack.">,
+    Option<"legacy", "legacy", "bool", /*default=*/"false",
+           "Emulate the stack-arrays and memory-allocation-opt passes instead "
+           "of using the size-based placement policy.">,
+    Option<"dynamicArrayOnHeap", "dynamic-array-on-heap", "bool",
+           /*default=*/"false",
+           "In legacy mode without stack-arrays, move all allocations with a "
+           "runtime size to the heap (-fdynamic-heap-array). Ignored "
+           "otherwise.">
   ];
 }
 
