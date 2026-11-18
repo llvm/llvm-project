@@ -1147,19 +1147,30 @@ static bool isSavedLocal(const fir::AliasAnalysis::Source &src) {
   return false;
 }
 
-/// Whether \p func is the function of the procedure that owns the saved local
-/// variable whose global is named \p varName. The procedure is identified by
-/// the name of the function, or by its fir.internal_name if the function was
-/// renamed. The BLOCK construct of the variable, if any, does not matter.
+static bool isMainProgram(mlir::func::FuncOp func) {
+  return func.getSymName() == fir::NameUniquer::doProgramEntry();
+}
+
+/// Whether \p func is the function of the main program or of the procedure
+/// that owns the saved local variable whose global is named \p varName. The
+/// procedure is identified by the name of the function, or by its
+/// fir.internal_name if the function was renamed. The BLOCK construct of the
+/// variable, if any, does not matter.
 static bool isOwnerOf(mlir::func::FuncOp func, llvm::StringRef varName) {
+  auto [varKind, varParts] = fir::NameUniquer::deconstruct(varName);
+  if (varKind != fir::NameUniquer::NameKind::VARIABLE)
+    return false;
+  // The variables of the main program are named as if the main program was a
+  // procedure with an empty name.
+  if (isMainProgram(func))
+    return varParts.modules.empty() && varParts.procs.size() == 1 &&
+           varParts.procs.front().empty();
   llvm::StringRef funcName = func.getSymName();
   if (auto internalName = func->getAttrOfType<mlir::StringAttr>(
           fir::getInternalFuncNameAttrName()))
     funcName = internalName.getValue();
   auto [funcKind, funcParts] = fir::NameUniquer::deconstruct(funcName);
-  auto [varKind, varParts] = fir::NameUniquer::deconstruct(varName);
   if (funcKind != fir::NameUniquer::NameKind::PROCEDURE ||
-      varKind != fir::NameUniquer::NameKind::VARIABLE ||
       varParts.modules != funcParts.modules ||
       varParts.procs.size() != funcParts.procs.size() + 1)
     return false;
@@ -1195,11 +1206,15 @@ static bool callCannotReachSavedLocal(fir::CallOp call,
   //     call g()     ! may call work()
   //     call work()  ! inlined: x = x + 1
   //   end subroutine
+  //
+  // The main program cannot be referenced (F2023 14.1), so a call in its
+  // func.func cannot invoke it either.
   auto func = mlir::dyn_cast_or_null<mlir::func::FuncOp>(
       call->getParentOfType<mlir::FunctionOpInterface>());
   if (!func ||
-      !fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::non_recursive>(
-          func.getOperation()))
+      (!isMainProgram(func) &&
+       !fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::non_recursive>(
+           func.getOperation())))
     return false;
   auto symRef = llvm::dyn_cast<mlir::SymbolRefAttr>(src.origin.u);
   return symRef && isOwnerOf(func, symRef.getLeafReference().getValue());

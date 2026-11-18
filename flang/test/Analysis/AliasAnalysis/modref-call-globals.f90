@@ -135,3 +135,12 @@ end subroutine
 ! CHECK-LABEL: Testing : "_QPtest_module_allocatable"
 ! CHECK-DAG: test_effect_external -> test_var_alloc#0: ModRef
 ! CHECK-DAG: test_effect_external -> box_addr_1#0: ModRef
+
+program test_main_program
+  implicit none
+  real :: test_var_xmain(10)
+  ! The variable is saved, but the call cannot invoke the main program.
+  call test_effect_external()
+end program
+! CHECK-LABEL: Testing : "_QQmain"
+! CHECK: test_effect_external -> test_var_xmain#0: NoModRef

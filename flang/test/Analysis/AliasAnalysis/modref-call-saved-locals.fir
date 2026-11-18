@@ -6,7 +6,8 @@
 // instances of the procedure share the variable, so a call that may invoke
 // the procedure may access the variable. The call cannot invoke the procedure
 // if the callee is PURE, or if the call is in the function of the procedure
-// itself and the procedure is NON_RECURSIVE.
+// itself and the procedure is NON_RECURSIVE. The main program cannot be
+// referenced at all.
 
 // A RECURSIVE procedure: bump may invoke work, which may modify x. The PURE
 // pf cannot invoke the impure work.
@@ -256,6 +257,69 @@ module @other_host {
     return
   }
   func.func private @_QPother()
+  func.func private @_QPbump()
+}
+
+// -----
+
+// A variable of the main program, which has a single instance.
+// CHECK-LABEL: Testing : "main_program"
+// CHECK: bump_call -> x#0: NoModRef{{$}}
+module @main_program {
+  fir.global internal @_QFEx : i32 {
+    %0 = fir.zero_bits i32
+    fir.has_value %0 : i32
+  }
+  func.func @_QQmain() attributes {fir.bindc_name = "P"} {
+    %0 = fir.address_of(@_QFEx) : !fir.ref<i32>
+    %1 = fir.declare %0 uniq_name("_QFEx") {test.ptr = "x"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    fir.call @_QPbump() {test.ptr = "bump_call"} : () -> ()
+    %2 = fir.load %1 : !fir.ref<i32>
+    return
+  }
+  func.func private @_QPbump()
+}
+
+// -----
+
+// The NON_RECURSIVE work is inlined into the main program, and bump may invoke
+// work.
+// CHECK-LABEL: Testing : "inlined_into_main_program"
+// CHECK: bump_call -> x#0: ModRef{{$}}
+module @inlined_into_main_program {
+  fir.global internal @_QFworkEx : i32 {
+    %0 = fir.zero_bits i32
+    fir.has_value %0 : i32
+  }
+  func.func @_QQmain() attributes {fir.bindc_name = "P"} {
+    %0 = fir.address_of(@_QFworkEx) : !fir.ref<i32>
+    %1 = fir.declare %0 uniq_name("_QFworkEx") {test.ptr = "x"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    fir.call @_QPbump() {test.ptr = "bump_call"} : () -> ()
+    %2 = fir.load %1 : !fir.ref<i32>
+    return
+  }
+  func.func private @_QPwork() attributes {fir.proc_attrs = #fir.proc_attrs<non_recursive>}
+  func.func private @_QPbump()
+}
+
+// -----
+
+// The main program is inlined into another function.
+// CHECK-LABEL: Testing : "inlined_main_program"
+// CHECK: bump_call -> x#0: ModRef{{$}}
+module @inlined_main_program {
+  fir.global internal @_QFEx : i32 {
+    %0 = fir.zero_bits i32
+    fir.has_value %0 : i32
+  }
+  func.func @main(%arg0: i32, %arg1: !llvm.ptr, %arg2: !llvm.ptr) -> i32 {
+    %c0 = arith.constant 0 : i32
+    %0 = fir.address_of(@_QFEx) : !fir.ref<i32>
+    %1 = fir.declare %0 uniq_name("_QFEx") {test.ptr = "x"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    fir.call @_QPbump() {test.ptr = "bump_call"} : () -> ()
+    %2 = fir.load %1 : !fir.ref<i32>
+    return %c0 : i32
+  }
   func.func private @_QPbump()
 }
 
