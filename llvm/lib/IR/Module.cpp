@@ -633,6 +633,12 @@ bool Module::isDwarf64() const {
   return Val && cast<ConstantInt>(Val->getValue())->isOne();
 }
 
+bool Module::isMachORelocatableDwarf() const {
+  auto *Val = cast_or_null<ConstantAsMetadata>(
+      getModuleFlag("MachO Relocatable DWARF"));
+  return Val && cast<ConstantInt>(Val->getValue())->isOne();
+}
+
 unsigned Module::getCodeViewFlag() const {
   auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("CodeView"));
   if (!Val)

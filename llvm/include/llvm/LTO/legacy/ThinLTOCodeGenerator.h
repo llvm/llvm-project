@@ -29,6 +29,7 @@
 #include <string>
 
 namespace llvm {
+class Module;
 class StringRef;
 class TargetMachine;
 
@@ -48,7 +49,9 @@ struct ThinLTOCodeGeneratorImpl::TargetMachineBuilder {
   std::optional<Reloc::Model> RelocModel;
   CodeGenOptLevel CGOptLevel = CodeGenOptLevel::Aggressive;
 
-  LLVM_ABI std::unique_ptr<TargetMachine> create() const;
+  /// Create a TargetMachine for code generation of \p M, which may carry
+  /// module flags that adjust the options.
+  LLVM_ABI std::unique_ptr<TargetMachine> create(const Module &M) const;
 };
 
 /// This class define an interface similar to the LTOCodeGenerator, but adapted

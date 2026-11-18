@@ -1035,6 +1035,10 @@ public:
   /// Returns the DWARF format by checking module flags.
   bool isDwarf64() const;
 
+  /// Returns true if references between DWARF sections in a Mach-O object
+  /// should be relocations, by checking module flags.
+  bool isMachORelocatableDwarf() const;
+
   /// Returns the CodeView Version by checking module flags.
   /// Returns zero if not present in module.
   unsigned getCodeViewFlag() const;
