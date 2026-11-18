@@ -71,4 +71,5 @@ class TestPtrAuth(Arm64eTestBase):
         self.assertEqual(
             cast.Cast(unqualified_type).GetLocation(), special.GetLocation()
         )
-        self.assertFailure(cast.CanSet(), "cannot modify a value through a cast that drops __ptrauth")
+        self.assertFailure(
+            cast.CanSet(), "cannot modify a value through a cast that drops __ptrauth")
