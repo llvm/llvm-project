@@ -1,13 +1,15 @@
-; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa --stress-regalloc=10 < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel -mtriple=amdgpu9.00-amd-amdhsa --stress-regalloc=10 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa --stress-regalloc=10 < %s | FileCheck -check-prefixes=GCN,SDAG %s
+; RUN: llc -global-isel -mtriple=amdgpu9.00-amd-amdhsa --stress-regalloc=10 < %s | FileCheck -check-prefixes=GCN,GISEL %s
 
 ; Rematerialization test for fp64 constants (w/ intentionally high register pressure).
-; Check to make sure we have at least six constant MOVs, not necessarily consecutive, inside the loop.
+; Check to make sure we have enough constant MOVs, not necessarily consecutive, inside the loop.
+; With GlobalISel, the fadd constant is hoisted to a VGPR pair by MachineLICM.
 
 ; GCN-LABEL: {{^}}test_remat_sgpr:
 ; GCN-NOT:     v_writelane_b32
 ; GCN:         {{^}}[[LOOP:.LBB[0-9_]+]]:
-; GCN-COUNT-6: {{s_mov_b32|v_mov_b32_e32}} {{[sv]}}{{[0-9]+}}, 0x
+; SDAG-COUNT-6:  {{s_mov_b32|v_mov_b32_e32}} {{[sv]}}{{[0-9]+}}, 0x
+; GISEL-COUNT-4: {{s_mov_b32|v_mov_b32_e32}} {{[sv]}}{{[0-9]+}}, 0x
 ; GCN-NOT:     v_writelane_b32
 ; GCN:         s_cbranch_{{[^ ]+}} [[LOOP]]
 ; GCN: .sgpr_spill_count: 0
