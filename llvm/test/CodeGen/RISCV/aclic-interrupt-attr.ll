@@ -1573,6 +1573,186 @@ define void @m_push_pop_fp() #8 {
   ret void
 }
 
+define void @m_push_pop_scs() #9 {
+; RV32-LABEL: m_push_pop_scs:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi gp, gp, 4
+; RV32-NEXT:    sw ra, -4(gp)
+; RV32-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
+; RV32-NEXT:    .cfi_def_cfa_offset 32
+; RV32-NEXT:    addi sp, sp, -48
+; RV32-NEXT:    .cfi_def_cfa_offset 80
+; RV32-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw t0, 40(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw t1, 36(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw t2, 32(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw a6, 28(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw a7, 24(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw t3, 20(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw t4, 16(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw t5, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw t6, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -36
+; RV32-NEXT:    .cfi_offset t0, -40
+; RV32-NEXT:    .cfi_offset t1, -44
+; RV32-NEXT:    .cfi_offset t2, -48
+; RV32-NEXT:    .cfi_offset a6, -52
+; RV32-NEXT:    .cfi_offset a7, -56
+; RV32-NEXT:    .cfi_offset t3, -60
+; RV32-NEXT:    .cfi_offset t4, -64
+; RV32-NEXT:    .cfi_offset t5, -68
+; RV32-NEXT:    .cfi_offset t6, -72
+; RV32-NEXT:    call callee
+; RV32-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw t0, 40(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw t1, 36(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw t2, 32(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw a6, 28(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw a7, 24(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw t3, 20(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw t4, 16(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw t5, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw t6, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore t0
+; RV32-NEXT:    .cfi_restore t1
+; RV32-NEXT:    .cfi_restore t2
+; RV32-NEXT:    .cfi_restore a6
+; RV32-NEXT:    .cfi_restore a7
+; RV32-NEXT:    .cfi_restore t3
+; RV32-NEXT:    .cfi_restore t4
+; RV32-NEXT:    .cfi_restore t5
+; RV32-NEXT:    .cfi_restore t6
+; RV32-NEXT:    addi sp, sp, 48
+; RV32-NEXT:    .cfi_def_cfa_offset 32
+; RV32-NEXT:    lw ra, -4(gp)
+; RV32-NEXT:    addi gp, gp, -4
+; RV32-NEXT:    .cfi_restore gp
+; RV32-NEXT:    mipopret
+;
+; RV32E-LABEL: m_push_pop_scs:
+; RV32E:       # %bb.0:
+; RV32E-NEXT:    addi gp, gp, 4
+; RV32E-NEXT:    sw ra, -4(gp)
+; RV32E-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
+; RV32E-NEXT:    .cfi_def_cfa_offset 24
+; RV32E-NEXT:    addi sp, sp, -16
+; RV32E-NEXT:    .cfi_def_cfa_offset 40
+; RV32E-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32E-NEXT:    sw t0, 8(sp) # 4-byte Folded Spill
+; RV32E-NEXT:    sw t1, 4(sp) # 4-byte Folded Spill
+; RV32E-NEXT:    sw t2, 0(sp) # 4-byte Folded Spill
+; RV32E-NEXT:    .cfi_offset ra, -28
+; RV32E-NEXT:    .cfi_offset t0, -32
+; RV32E-NEXT:    .cfi_offset t1, -36
+; RV32E-NEXT:    .cfi_offset t2, -40
+; RV32E-NEXT:    call callee
+; RV32E-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32E-NEXT:    lw t0, 8(sp) # 4-byte Folded Reload
+; RV32E-NEXT:    lw t1, 4(sp) # 4-byte Folded Reload
+; RV32E-NEXT:    lw t2, 0(sp) # 4-byte Folded Reload
+; RV32E-NEXT:    .cfi_restore ra
+; RV32E-NEXT:    .cfi_restore t0
+; RV32E-NEXT:    .cfi_restore t1
+; RV32E-NEXT:    .cfi_restore t2
+; RV32E-NEXT:    addi sp, sp, 16
+; RV32E-NEXT:    .cfi_def_cfa_offset 24
+; RV32E-NEXT:    lw ra, -4(gp)
+; RV32E-NEXT:    addi gp, gp, -4
+; RV32E-NEXT:    .cfi_restore gp
+; RV32E-NEXT:    mipopret
+;
+; RV64-LABEL: m_push_pop_scs:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi gp, gp, 8
+; RV64-NEXT:    sd ra, -8(gp)
+; RV64-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
+; RV64-NEXT:    .cfi_def_cfa_offset 48
+; RV64-NEXT:    addi sp, sp, -80
+; RV64-NEXT:    .cfi_def_cfa_offset 128
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd t0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd t1, 56(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd t2, 48(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd a6, 40(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd a7, 32(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd t3, 24(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd t4, 16(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd t5, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd t6, 0(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -56
+; RV64-NEXT:    .cfi_offset t0, -64
+; RV64-NEXT:    .cfi_offset t1, -72
+; RV64-NEXT:    .cfi_offset t2, -80
+; RV64-NEXT:    .cfi_offset a6, -88
+; RV64-NEXT:    .cfi_offset a7, -96
+; RV64-NEXT:    .cfi_offset t3, -104
+; RV64-NEXT:    .cfi_offset t4, -112
+; RV64-NEXT:    .cfi_offset t5, -120
+; RV64-NEXT:    .cfi_offset t6, -128
+; RV64-NEXT:    call callee
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld t0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld t1, 56(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld t2, 48(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld a6, 40(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld a7, 32(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld t3, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld t4, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld t5, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld t6, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore t0
+; RV64-NEXT:    .cfi_restore t1
+; RV64-NEXT:    .cfi_restore t2
+; RV64-NEXT:    .cfi_restore a6
+; RV64-NEXT:    .cfi_restore a7
+; RV64-NEXT:    .cfi_restore t3
+; RV64-NEXT:    .cfi_restore t4
+; RV64-NEXT:    .cfi_restore t5
+; RV64-NEXT:    .cfi_restore t6
+; RV64-NEXT:    addi sp, sp, 80
+; RV64-NEXT:    .cfi_def_cfa_offset 48
+; RV64-NEXT:    ld ra, -8(gp)
+; RV64-NEXT:    addi gp, gp, -8
+; RV64-NEXT:    .cfi_restore gp
+; RV64-NEXT:    mipopret
+;
+; RV64E-LABEL: m_push_pop_scs:
+; RV64E:       # %bb.0:
+; RV64E-NEXT:    addi gp, gp, 8
+; RV64E-NEXT:    sd ra, -8(gp)
+; RV64E-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
+; RV64E-NEXT:    .cfi_def_cfa_offset 48
+; RV64E-NEXT:    addi sp, sp, -32
+; RV64E-NEXT:    .cfi_def_cfa_offset 80
+; RV64E-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd t0, 16(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd t1, 8(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd t2, 0(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    .cfi_offset ra, -56
+; RV64E-NEXT:    .cfi_offset t0, -64
+; RV64E-NEXT:    .cfi_offset t1, -72
+; RV64E-NEXT:    .cfi_offset t2, -80
+; RV64E-NEXT:    call callee
+; RV64E-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld t0, 16(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld t1, 8(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld t2, 0(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    .cfi_restore ra
+; RV64E-NEXT:    .cfi_restore t0
+; RV64E-NEXT:    .cfi_restore t1
+; RV64E-NEXT:    .cfi_restore t2
+; RV64E-NEXT:    addi sp, sp, 32
+; RV64E-NEXT:    .cfi_def_cfa_offset 48
+; RV64E-NEXT:    ld ra, -8(gp)
+; RV64E-NEXT:    addi gp, gp, -8
+; RV64E-NEXT:    .cfi_restore gp
+; RV64E-NEXT:    mipopret
+  call void @callee()
+  ret void
+}
+
 attributes #0 = { "frame-pointer"="none" "interrupt"="machine-preemptible" }
 attributes #1 = { "frame-pointer"="none" "interrupt"="supervisor-preemptible" }
 attributes #2 = { "frame-pointer"="none" "interrupt"="machine-push-pop" }
@@ -1582,3 +1762,4 @@ attributes #5 = { "frame-pointer"="none" "interrupt"="supervisor-preemptible-pus
 attributes #6 = { "frame-pointer"="none" "interrupt"="machine-push-pop" uwtable }
 attributes #7 = { "frame-pointer"="none" "interrupt"="supervisor-push-pop" uwtable }
 attributes #8 = { "frame-pointer"="all" "interrupt"="machine-push-pop" }
+attributes #9 = { "frame-pointer"="none" "interrupt"="machine-push-pop" shadowcallstack }
