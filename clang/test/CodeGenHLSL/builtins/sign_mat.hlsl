@@ -1,21 +1,7 @@
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
-// RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
-// RUN:   --check-prefixes=CHECK,NATIVE_HALF \
-// RUN:   -DTARGET=dx -DFNATTRS="hidden noundef"
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
-// RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF \
-// RUN:   -DTARGET=dx -DFNATTRS="hidden noundef"
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-library %s -fnative-half-type -fnative-int16-type \
-// RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
-// RUN:   --check-prefixes=CHECK,NATIVE_HALF \
-// RUN:   -DTARGET=spv -DFNATTRS="hidden spir_func noundef"
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-library %s -emit-llvm -disable-llvm-passes \
-// RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF \
-// RUN:   -DTARGET=spv -DFNATTRS="hidden spir_func noundef"
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,NATIVE_HALF -DTARGET=dx -DFNATTRS="hidden noundef"
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF -DTARGET=dx -DFNATTRS="hidden noundef"
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-library %s -fnative-half-type -fnative-int16-type -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,NATIVE_HALF -DTARGET=spv -DFNATTRS="hidden spir_func noundef"
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-library %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF -DTARGET=spv -DFNATTRS="hidden spir_func noundef"
 
 // CHECK-LABEL: test_sign_half2x3
 // NATIVE_HALF: call <6 x i32> @llvm.[[TARGET]].sign.v6f16(<6 x half> %{{.*}})
