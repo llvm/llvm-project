@@ -129,10 +129,10 @@ body:             |
     ; CHECK-NEXT: $x13 = COPY %hi2(s32)
     ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; CHECK-NEXT: $x10 = COPY [[COPY]](s32)
-    ; CHECK-NEXT: $x11 = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $x11
+    ; CHECK-NEXT: $x10 = COPY [[COPY]](i32)
+    ; CHECK-NEXT: $x11 = COPY [[COPY1]](i32)
     ; CHECK-NEXT: PseudoRET implicit $x10, implicit $x11
     %lo1:_(s32) = COPY $x10
     %hi1:_(s32) = COPY $x11
@@ -157,18 +157,18 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY]], [[C]](s32)
-    ; CHECK-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[COPY1]], [[C]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 31
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(i32) = G_ASHR [[COPY]], [[C]](i32)
+    ; CHECK-NEXT: [[ASHR1:%[0-9]+]]:_(i32) = G_ASHR [[COPY1]], [[C]](i32)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: $x10 = COPY [[COPY]](s32)
-    ; CHECK-NEXT: $x11 = COPY [[ASHR]](s32)
+    ; CHECK-NEXT: $x11 = COPY [[ASHR]](i32)
     ; CHECK-NEXT: $x12 = COPY [[COPY1]](s32)
-    ; CHECK-NEXT: $x13 = COPY [[ASHR1]](s32)
+    ; CHECK-NEXT: $x13 = COPY [[ASHR1]](i32)
     ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x11
-    ; CHECK-NEXT: $x10 = COPY [[COPY2]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $x11
+    ; CHECK-NEXT: $x10 = COPY [[COPY2]](i32)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s32) = COPY $x10
     %1:_(s32) = COPY $x11

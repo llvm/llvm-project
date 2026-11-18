@@ -2038,18 +2038,7 @@ CIRGenItaniumCXXABI::buildVirtualMethodAttr(cir::MethodType methodTy,
   assert(md->isVirtual() && "only deal with virtual member functions");
 
   uint64_t index = cgm.getItaniumVTableContext().getMethodVTableIndex(md);
-  uint64_t vtableOffset;
-  if (cgm.getLangOpts().RelativeCXXABIVTables) {
-    // Multiply by 4-byte relative offsets.
-    vtableOffset = index * 4;
-  } else {
-    const ASTContext &astContext = cgm.getASTContext();
-    CharUnits pointerWidth = astContext.toCharUnitsFromBits(
-        astContext.getTargetInfo().getPointerWidth(LangAS::Default));
-    vtableOffset = index * pointerWidth.getQuantity();
-  }
-
-  return cir::MethodAttr::get(methodTy, vtableOffset);
+  return cir::MethodAttr::get(methodTy, index);
 }
 /// The Itanium ABI always places an offset to the complete object
 /// at entry -2 in the vtable.
