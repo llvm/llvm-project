@@ -249,7 +249,7 @@ Add a missing header if there is any.  If there are multiple
 possible headers the user can select one of them to be included.
 Temporarily highlight the affected symbols.  Asynchronously call
 clang-include-fixer to insert the selected header."
-  (cl-check-type stdout buffer-live)
+  (cl-check-type stdout buffer)
   (let ((context (clang-include-fixer--parse-json stdout)))
     (let-alist context
       (cond
