@@ -24,5 +24,6 @@
 
 void f() {
   auto func = []() -> int { return 0; };
-  std::invoke_r<int&&>(func); // expected-error {{Returning from invoke_r would bind a temporary object}}
+  std::invoke_r<int&&>(func);
+  // expected-error@-1 {{static assertion failed{{.*}}Returning from invoke_r would bind a temporary object to the reference return type, which would result in a dangling reference.}}
 }
