@@ -4646,20 +4646,24 @@ TEST_F(TokenAnnotatorTest, VaOptWithTrailingComma) {
   auto Tokens =
       annotate("#define M(...) enum E { __VA_OPT__(FOO(a, b), ) kFirst };");
   ASSERT_EQ(Tokens.size(), 23u) << Tokens;
+  // Not TT_TrailingCommaVaOptRParen.
   EXPECT_TOKEN(Tokens[16], tok::r_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[18], tok::r_paren, TT_TrailingCommaVaOptRParen);
 
   Tokens = annotate("#define M(...) enum E { __VA_OPT__(FOO(a, )) kFirst };");
   ASSERT_EQ(Tokens.size(), 21u) << Tokens;
+  // Not TT_TrailingCommaVaOptRParen.
   EXPECT_TOKEN(Tokens[16], tok::r_paren, TT_Unknown);
 
   Tokens =
       annotate("#define M(...) enum E { kFirst __VA_OPT__(, __VA_ARGS__) };");
   ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  // Not TT_TrailingCommaVaOptRParen.
   EXPECT_TOKEN(Tokens[14], tok::r_paren, TT_Unknown);
 
   Tokens = annotate("#define M(...) foo(__VA_OPT__(x.operator, ) + y)");
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  // Not TT_TrailingCommaVaOptRParen.
   EXPECT_TOKEN(Tokens[14], tok::r_paren, TT_Unknown);
 
   Tokens = annotate(
@@ -4677,6 +4681,11 @@ TEST_F(TokenAnnotatorTest, VaOptWithTrailingComma) {
   EXPECT_TOKEN(Tokens[21], tok::minus, TT_UnaryOperator);
   EXPECT_TOKEN(Tokens[28], tok::r_paren, TT_TrailingCommaVaOptRParen);
   EXPECT_TOKEN(Tokens[29], tok::plusplus, TT_UnaryOperator);
+
+  Tokens = annotate("#define M(...) int x = foo(new T __VA_OPT__(, ) a * b);");
+  ASSERT_EQ(Tokens.size(), 23u) << Tokens;
+  EXPECT_TOKEN(Tokens[16], tok::r_paren, TT_TrailingCommaVaOptRParen);
+  EXPECT_TOKEN(Tokens[18], tok::star, TT_BinaryOperator);
 
   Tokens = annotate("#define M(...) S s = {__VA_OPT__(.a = 1, ) .b = 2};");
   ASSERT_EQ(Tokens.size(), 25u) << Tokens;
@@ -4697,6 +4706,7 @@ TEST_F(TokenAnnotatorTest, VaOptWithTrailingComma) {
   Tokens = annotate("enum E { __VA_OPT__(a, ) kFirst };",
                     getLLVMStyle(FormatStyle::LK_Java));
   ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  // Not TT_TrailingCommaVaOptRParen.
   EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_Unknown);
 }
 

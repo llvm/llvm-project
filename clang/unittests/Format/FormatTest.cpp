@@ -4313,12 +4313,15 @@ TEST_F(FormatTest, FormatsVaOptWithTrailingComma) {
                "             3000000000,     4, 5000000000, 6000000000};",
                Style);
 
-  FormatStyle Style58 = Style;
-  Style58.ColumnLimit = 58;
-  verifyFormat("#define M(...)                                        \\\n"
-               "  void f(__VA_OPT__(int very_long_first_param_here, ) \\\n"
+  FormatStyle Style40 = Style;
+  Style40.ColumnLimit = 40;
+  FormatStyle Style50 = Style;
+  Style50.ColumnLimit = 50;
+
+  verifyFormat("#define M(...)                       \\\n"
+               "  void f(__VA_OPT__(int first_arg, ) \\\n"
                "         int a, int b, int c);",
-               Style58);
+               Style40);
   FormatStyle OnePerLine = Style;
   OnePerLine.PackParameters.BinPack = FormatStyle::BPPS_AlwaysOnePerLine;
   verifyFormat("#define M(...)                 \\\n"
@@ -4328,13 +4331,12 @@ TEST_F(FormatTest, FormatsVaOptWithTrailingComma) {
                "           int c);             \\\n"
                "  };",
                OnePerLine);
-  FormatStyle AutoBinPack = Style;
-  AutoBinPack.ColumnLimit = 55;
+  FormatStyle AutoBinPack = Style50;
   AutoBinPack.ExperimentalAutoDetectBinPacking = true;
-  verifyNoChange("#define M(...)                                   \\\n"
-                 "  void f() {                                     \\\n"
-                 "    foo(__VA_OPT__(aaaaaaaaaaaa, ) bbbbbbbbbbbb, \\\n"
-                 "        cccccccccccc);                           \\\n"
+  verifyNoChange("#define M(...)                             \\\n"
+                 "  void f() {                               \\\n"
+                 "    foo(__VA_OPT__(aaaaaaaaa, ) bbbbbbbbb, \\\n"
+                 "        ccccccccc);                        \\\n"
                  "  }",
                  AutoBinPack);
   FormatStyle BreakDeclParams = Style;
@@ -4345,8 +4347,6 @@ TEST_F(FormatTest, FormatsVaOptWithTrailingComma) {
                "  };",
                BreakDeclParams);
 
-  FormatStyle Style40 = Style;
-  Style40.ColumnLimit = 40;
   verifyFormat("#define M(...)                       \\\n"
                "  class C {                          \\\n"
                "    C()                              \\\n"
@@ -4357,47 +4357,42 @@ TEST_F(FormatTest, FormatsVaOptWithTrailingComma) {
 
   verifyFormat("#define M(...)                         \\\n"
                "  SomeFunction(x, a + b __VA_OPT__(, ) \\\n"
-               "               ccccccccccccccc + ddddddddddddddd, y);",
-               Style58);
-  FormatStyle Style53 = Style;
-  Style53.ColumnLimit = 53;
-  verifyFormat("#define M(...)                                      \\\n"
-               "  int x = foo(cond ? a : __VA_OPT__(bbbbbbbbbbbb, ) \\\n"
-               "              cccccccccccc, dddddddddddd);",
-               Style53);
+               "               ccccccccccc + ddddddddddd, y);",
+               Style50);
+  verifyFormat("#define M(...)                                  \\\n"
+               "  int x = foo(cond ? a : __VA_OPT__(bbbbbbbb, ) \\\n"
+               "              ccccccccc, ddddddddd);",
+               Style50);
   // Malformed ternary with trailing-comma __VA_OPT__.
   verifyNoCrash("#define M(...) int x = foo(cond ? __VA_OPT__(a, ) b : c, d);");
   verifyNoCrash("#define M(...) int x = foo(__VA_OPT__(a, ) ? b : c + d, e);");
 
-  FormatStyle DontAlign = Style;
-  DontAlign.ColumnLimit = 55;
+  FormatStyle DontAlign = Style50;
   DontAlign.AlignAfterOpenBracket = false;
-  verifyFormat("#define M(...)                                        \\\n"
-               "  void g() {                                          \\\n"
-               "    foo(__VA_OPT__(a, ) bar(bbbbbbbbbbbbbbbbbbbbbb,   \\\n"
-               "                            cccccccccccccccccccccc)); \\\n"
+  verifyFormat("#define M(...)                                   \\\n"
+               "  void g() {                                     \\\n"
+               "    foo(__VA_OPT__(a, ) bar(bbbbbbbbbbbbbbbbb,   \\\n"
+               "                            ccccccccccccccccc)); \\\n"
                "  }",
                DontAlign);
 
-  FormatStyle Style45 = Style;
-  Style45.ColumnLimit = 45;
   verifyFormat("#define M(...)                       \\\n"
                "  template <__VA_OPT__(typename T, ) \\\n"
                "            typename U, typename V>  \\\n"
                "  struct S;",
-               Style45);
+               Style40);
 
   verifyFormat(
       "#define M(...) foo(__VA_OPT__(a, ) (b + c), __VA_OPT__(d, ) {1, 2})",
       Style);
   verifyFormat("#define M(...) S s = {.a = 1, __VA_OPT__(.b = 2, ) .c = 3};",
                Style);
-  FormatStyle Google35 = getGoogleStyle();
-  Google35.ColumnLimit = 35;
-  verifyFormat("#define M(...)                   \\\n"
-               "  long int aa = 1 __VA_OPT__(, ) \\\n"
-               "           *bb = nullptr;",
-               Google35);
+  FormatStyle Google40 = getGoogleStyle();
+  Google40.ColumnLimit = 40;
+  verifyFormat("#define M(...)                     \\\n"
+               "  long int aaaa = 1 __VA_OPT__(, ) \\\n"
+               "           *bbbb = nullptr;",
+               Google40);
 }
 
 TEST_F(FormatTest, FormatsNSEnums) {
