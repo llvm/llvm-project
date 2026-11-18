@@ -782,14 +782,18 @@ add_fp_unittest(
     ${swprintf_test_copts}
 )
 
-add_fp_unittest(
+add_libc_test(
   vswprintf_test
   SUITE
     libc-wchar-tests
   SRCS
     vswprintf_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.types.size_t
     libc.hdr.types.wchar_t
+    libc.hdr.wchar_macros
+    libc.src.__support.CPP.limits
     libc.src.wchar.vswprintf
+    libc.test.UnitTest.ErrnoCheckingTest
 )

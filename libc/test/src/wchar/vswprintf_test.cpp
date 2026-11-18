@@ -15,12 +15,18 @@
 // functions. This is because these functions are identical in every way except
 // for how the varargs are passed.
 
+#include "hdr/errno_macros.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
+#include "hdr/wchar_macros.h"
+#include "src/__support/CPP/limits.h"
 #include "src/wchar/vswprintf.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
 #include <stdarg.h>
+
+using LlvmLibcVSWPrintfTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 int call_vswprintf(wchar_t *__restrict buffer, size_t bufsz,
                    const wchar_t *__restrict format, ...) {
@@ -31,7 +37,7 @@ int call_vswprintf(wchar_t *__restrict buffer, size_t bufsz,
   return ret;
 }
 
-TEST(LlvmLibcVSWPrintfTest, SimpleNoConv) {
+TEST_F(LlvmLibcVSWPrintfTest, SimpleNoConv) {
   constexpr size_t N = 64;
   wchar_t buff[N];
   int written;
@@ -41,7 +47,7 @@ TEST(LlvmLibcVSWPrintfTest, SimpleNoConv) {
   ASSERT_STREQ(buff, L"A simple string with no conversions.");
 }
 
-TEST(LlvmLibcVSWPrintfTest, PercentConv) {
+TEST_F(LlvmLibcVSWPrintfTest, PercentConv) {
   constexpr size_t N = 64;
   wchar_t buff[N];
   int written;
@@ -59,7 +65,7 @@ TEST(LlvmLibcVSWPrintfTest, PercentConv) {
   ASSERT_STREQ(buff, L"%%%");
 }
 
-TEST(LlvmLibcVSWPrintfTest, CharConv) {
+TEST_F(LlvmLibcVSWPrintfTest, CharConv) {
   constexpr size_t N = 64;
   wchar_t buff[N];
   int written;
@@ -75,9 +81,17 @@ TEST(LlvmLibcVSWPrintfTest, CharConv) {
   written = call_vswprintf(buff, N, L"%*c", 2, '3');
   EXPECT_EQ(written, 2);
   ASSERT_STREQ(buff, L" 3");
+
+  // WEOF is not a valid wide character.
+  EXPECT_EQ(call_vswprintf(buff, N, L"%lc", WEOF), -1);
+  ASSERT_ERRNO_EQ(EILSEQ);
+
+  // Invalid narrow character (outside ASCII 0..127).
+  EXPECT_EQ(call_vswprintf(buff, N, L"%c", 128), -1);
+  ASSERT_ERRNO_EQ(EILSEQ);
 }
 
-TEST(LlvmLibcVSWPrintfTest, CutOff) {
+TEST_F(LlvmLibcVSWPrintfTest, CutOff) {
   constexpr size_t N = 100;
   wchar_t buff[N];
   int written;
@@ -111,7 +125,7 @@ TEST(LlvmLibcVSWPrintfTest, CutOff) {
   EXPECT_EQ(written, 19);
 }
 
-TEST(LlvmLibcVSWPrintfTest, NoCutOff) {
+TEST_F(LlvmLibcVSWPrintfTest, NoCutOff) {
   constexpr size_t N = 64;
   wchar_t buff[N];
   int written;
@@ -127,4 +141,15 @@ TEST(LlvmLibcVSWPrintfTest, NoCutOff) {
   written = call_vswprintf(buff, 20, L"%ls", L"1234567890");
   EXPECT_EQ(written, 10);
   ASSERT_STREQ(buff, L"1234567890");
+}
+
+TEST_F(LlvmLibcVSWPrintfTest, CharsWrittenOverflow) {
+  wchar_t buff[1];
+
+  // Trigger an overflow in the return value of vswprintf by writing more than
+  // INT_MAX wide characters.
+  int int_max = LIBC_NAMESPACE::cpp::numeric_limits<int>::max();
+  int written = call_vswprintf(buff, 0, L"%*stest", int_max, "");
+  EXPECT_LT(written, 0);
+  ASSERT_ERRNO_FAILURE();
 }
