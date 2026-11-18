@@ -49,10 +49,12 @@ void test() {
   {
     enum OpaqueE : int;
     OpaqueE opaqueE{};
-// With #include between forward declaration of the enum, and its definition,
-// this code block should be split into two DILexicalBlocks.
+// Entering and leaving included file changes the active scope through
+// DILexicalBlockFile wrappers. Debug info node for OpaqueE's should still be
+// in scope of its forward declaration.
 #include "Inputs/noop.inc"
     enum OpaqueE : int { a };
+    OpaqueE opaqueE2{};
   }
 
 #line 90
@@ -115,6 +117,10 @@ void test() {
 //
 // CHECK: !DILocalVariable(name: "u", scope: ![[LBSCOPE_4]]
 // CHECK-SAME:                        type: ![[UNION]]
+//
+// CHECK: !DILocalVariable(name: "opaqueE2", scope: ![[LBFSCOPE:[0-9]+]]
+// CHECK-SAME:                        type: ![[OPAQUE_ENUM]]
+// CHECK: ![[LBFSCOPE]] = !DILexicalBlockFile(scope: ![[LBSCOPE_5]]
 
 void test_unused() {
 #line 80
