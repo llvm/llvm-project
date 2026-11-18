@@ -16,7 +16,7 @@
 # NOPAD-NEXT:     8: eb 17           jmp 0x21 <foo>
 # NOPAD-NEXT:     a: eb 15           jmp 0x21 <foo>
 # NOPAD-NEXT:     c: eb 13           jmp 0x21 <foo>
-# NOPAD-NEXT:     e: 66 66 66 66 66 66 2e 0f 1f 84 00 00 00 00 00  nopw    %cs:(%rax,%rax)
+# NOPAD-NEXT:     e: 66 66 66 66 66 66 2e 0f 1f 84 00 00 00 00 00  nopw    (%rax,%rax)
 # NOPAD-NEXT:    1d: 0f 1f 00        nopl (%rax)
 # NOPAD-NEXT:    20: cc              int3
 
@@ -48,7 +48,7 @@ foo:
   # that would require a further round of relaxation
   # CHECK: <bar>:
   # CHECK: 22: eb fe                          jmp 0x22 <bar>
-  # CHECK: 24: 66 66 66 2e 0f 1f 84 00 00 00 00 00 nopw %cs:(%rax,%rax)
+  # CHECK: 24: 66 66 66 2e 0f 1f 84 00 00 00 00 00 nopw (%rax,%rax)
   # CHECK: 30: 0f 0b                          ud2
 
 bar:  
@@ -63,7 +63,7 @@ nobypass:
   # CHECK: <loop_preheader>:
   # CHECK: 45: 48 85 c0                       testq %rax, %rax
   # CHECK: 48: 0f 8e 22 00 00 00              jle 0x70 <loop_exit>
-  # CHECK: 4e: 66 66 66 66 66 66 2e 0f 1f 84 00 00 00 00 00 nopw %cs:(%rax,%rax)
+  # CHECK: 4e: 66 66 66 66 66 66 2e 0f 1f 84 00 00 00 00 00 nopw (%rax,%rax)
   # CHECK: 5d: 0f 1f 00                       nopl (%rax)
   # CHECK: <loop_header>:
   # CHECK: 60: 48 83 e8 01                    subq $1, %rax
