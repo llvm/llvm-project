@@ -55,8 +55,8 @@ def code_EQ : Joined<["--", "-"], "code=">,
                        "just-in-time compilation.">;
 def no_embed_virtual_arch : Flag<["--", "-"], "no-embed-virtual-arch">,
                             Flags<[LinkerOnlyOption]>,
-                            HelpText<"Do not keep the SPIR-V in a device image "
-                                     "compiled ahead of time for --code">;
+                            HelpText<"Drop the SPIR-V from a device image "
+                                     "compiled ahead of time for an Intel GPU">;
 def triple_EQ : Joined<["--", "-"], "triple=">,
                 Flags<[LinkerOnlyOption]>,
                 MetaVarName<"<triple>">,

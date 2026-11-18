@@ -722,6 +722,8 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
   assert(!Devices.empty() && "a device must be specified for AOT compilation");
   CmdArgs.push_back("-device");
   CmdArgs.push_back(Devices);
+  // Without -exclude_ir, ocloc keeps the SPIR-V in its output next to the
+  // native code.
   if (Args.hasArg(OPT_no_embed_virtual_arch))
     CmdArgs.push_back("-exclude_ir");
 

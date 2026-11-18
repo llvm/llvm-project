@@ -153,6 +153,12 @@
 ; JIT-IGCA-NEXT: sycl-bundle: image kind: spv, triple: spirv64-unknown-unknown, arch: igca_30r{{$}}
 ; JIT-IGCA-NOT:  {{.+}}
 ;
+; Test that --no-embed-virtual-arch has no effect for an Intel CPU.
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=graniterapids --no-embed-virtual-arch %t/input1.bc %t/input2.bc -o %t/aot-cpu-noembed.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-CPU-NO-EMBED
+; AOT-INTEL-CPU-NO-EMBED-NOT:  -exclude_ir
+; AOT-INTEL-CPU-NO-EMBED:      sycl-bundle: image kind: o, triple: spirv64-unknown-unknown, arch: graniterapids{{$}}
+;
 ; Test AOT compilation for an Intel CPU.
 ; Test that IMG_Object image kind is set for AOT compilation (Intel CPU).
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=graniterapids %t/input1.bc %t/input2.bc -o %t/aot-cpu.out 2>&1 \

@@ -47,7 +47,7 @@ OPTIONS:
                           - 'translation_unit' (default) emits one device image per translation unit that contains at least one entry point;
                           - 'kernel' emits one device image per kernel function;
                           - 'link_unit' emits one device image per linking unit.
-  --no-embed-virtual-arch Do not keep the SPIR-V in a device image compiled ahead of time for --code
+  --no-embed-virtual-arch Drop the SPIR-V from a device image compiled ahead of time for an Intel GPU
   --no-whole-archive      Disable --whole-archive for the following inputs (default state)
   --ocloc-options=<value> Options passed to ocloc for Intel GPU AOT compilation
   --opencl-aot-options=<value>
