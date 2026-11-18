@@ -64,8 +64,6 @@ struct _Unwind_FunctionContext {
 #endif
 
 
-#if !defined(FOR_DYLD)
-
 #if defined(__APPLE__)
 #include <System/pthread_machdep.h>
 #else
@@ -89,8 +87,6 @@ __Unwind_SjLj_SetTopOfFunctionStack(struct _Unwind_FunctionContext *fc) {
   stack = fc;
 #endif
 }
-
-#endif
 
 
 /// Called at start of each function that catches exceptions
