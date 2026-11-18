@@ -9,9 +9,7 @@
 ; CHECK-DAG: %[[#Double:]] = OpTypeFloat 64
 ; CHECK-DAG: %[[#Int32:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#Float4:]] = OpTypeVector %[[#Float]] 4
-; CHECK-DAG: %[[#Int4:]] = OpTypeVector %[[#Int32]] 4
 ; CHECK-DAG: %[[#Float8:]] = OpTypeVector %[[#Float]] 8
-; CHECK-DAG: %[[#Int8:]] = OpTypeVector %[[#Int32]] 8
 
 define spir_func void @test_ldexp(ptr %xh, ptr %xf, ptr %xd, ptr %xv,
                                   half %h, float %f, double %d, <4 x float> %vf,
@@ -34,7 +32,15 @@ entry:
 
 define spir_func void @test_ldexp_v8(ptr %xv, <8 x float> %vf, <8 x i32> %k) {
 entry:
-  %0 = call <8 x float> @llvm.ldexp.v8f32.i32(<8 x float> %vf, <8 x i32> %k)
+  %0 = call <8 x float> @llvm.ldexp.v8f32.v8i32(<8 x float> %vf, <8 x i32> %k)
+  store <8 x float> %0, ptr %xv
+; CHECK: %[[#]] = OpExtInst %[[#Float8]] %[[#ExtInstSetId]] ldexp
+  ret void
+}
+
+define spir_func void @test_constrained_ldexp_v8(ptr %xv, <8 x float> %vf, <8 x i32> %k) strictfp {
+entry:
+  %0 = call <8 x float> @llvm.experimental.constrained.ldexp.v8f32.v8i32(<8 x float> %vf, <8 x i32> %k, metadata !"round.tonearest", metadata !"fpexcept.strict") strictfp
   store <8 x float> %0, ptr %xv
 ; CHECK: %[[#]] = OpExtInst %[[#Float8]] %[[#ExtInstSetId]] ldexp
   ret void
@@ -45,3 +51,4 @@ declare float @llvm.ldexp.f32.i32(float, i32)
 declare double @llvm.ldexp.f64.i32(double, i32)
 declare <4 x float> @llvm.ldexp.v4f32.v4i32(<4 x float>, <4 x i32>)
 declare <8 x float> @llvm.ldexp.v8f32.v8i32(<8 x float>, <8 x i32>)
+declare <8 x float> @llvm.experimental.constrained.ldexp.v8f32.v8i32(<8 x float>, <8 x i32>, metadata, metadata)

@@ -1285,9 +1285,12 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
                                     RefOverloadIndex);
     }
 
+    auto Expected = formatv("scalar {}", Kind);
     if (ThisArgVecTy)
-      return PrintMsgInvalidDepType(false, Qualifier, Kind, RefOverloadIndex);
-    return PrintMsgInvalidDepType(ElemValid, Qualifier, Kind, RefOverloadIndex);
+      return PrintMsgInvalidDepType(false, Qualifier, Expected,
+                                    RefOverloadIndex);
+    return PrintMsgInvalidDepType(ElemValid, Qualifier, Expected,
+                                  RefOverloadIndex);
   }
   case IITDescriptor::VecElement: {
     unsigned OIdx = D.getOverloadIndex();

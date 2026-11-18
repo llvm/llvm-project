@@ -1712,9 +1712,6 @@ bool SPIRVInstructionSelector::selectLdexp(Register ResVReg,
                                            MachineInstr &I) const {
   Register XReg = I.getOperand(1).getReg();
   Register ExpReg = I.getOperand(2).getReg();
-
-  // Both OpenCL.std ldexp and GLSL.std.450 Ldexp require the exponent to have
-  // the same number of components as the result.
   return selectExtInst(ResVReg, ResType, I, CL::ldexp, GL::Ldexp,
                        /*setMIFlags=*/true, /*useMISrc=*/false, {XReg, ExpReg});
 }

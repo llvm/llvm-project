@@ -1499,7 +1499,7 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrStrictFP] in {
                                                       llvm_metadata_ty ]>;
   def int_experimental_constrained_ldexp : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
-                                                      llvm_anyint_ty,
+                                                      llvm_anyint_same_width_ty<0>,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
   def int_experimental_constrained_asin  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
