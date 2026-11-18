@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SINCOSF16_UTILS_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_SINCOSF16_UTILS_H
 
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/nearest_integer.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 

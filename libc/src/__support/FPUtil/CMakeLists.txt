@@ -171,7 +171,7 @@ add_header_library(
 add_header_library(
   polyeval
   HDRS
-    PolyEval.h
+    polyeval.h
   DEPENDS
     .multiply_add
     libc.src.__support.common

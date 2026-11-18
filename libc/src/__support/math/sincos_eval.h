@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SINCOS_EVAL_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_SINCOS_EVAL_H
 
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/integer_literals.h"
 #include "src/__support/macros/config.h"
 

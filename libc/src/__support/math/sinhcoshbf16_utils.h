@@ -16,9 +16,9 @@
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 

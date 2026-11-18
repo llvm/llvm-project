@@ -14,8 +14,8 @@
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
 #include "src/__support/CPP/array.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/nearest_integer.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
