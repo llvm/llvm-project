@@ -984,3 +984,39 @@ body: |
     $q6 = FADDv4f32 $q3, $q4, implicit $fpcr
     $s7 = FMINSrr $s5, $s2, implicit $fpcr
 ...
+
+## Registers of different width are not an exact match, even if they overlap, so
+## the pair should not be fused.
+
+---
+name: fmax_fmin_mixed_width_scalar
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $s0, $s1, $h2, $s3, $s4
+    ; CHECK-LABEL: fmax_fmin_mixed_width_scalar
+    ; CHECK: SU(0): $s5 = FMAXSrr
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $h5 = FMINHrr
+    $s5 = FMAXSrr $s0, $s1, implicit $fpcr
+    $s6 = FADDSrr $s3, $s4, implicit $fpcr
+    $h5 = FMINHrr $h5, $h2, implicit $fpcr
+...
+---
+name: fmax_fmin_mixed_width_vector
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0, $q1, $d2, $q3, $q4
+    ; CHECK-LABEL: fmax_fmin_mixed_width_vector
+    ; CHECK: SU(0): $q5 = FMAXv4f32
+    ; CHECK: Successors:
+    ; FUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $d5 = FMINv2f32
+    $q5 = FMAXv4f32 $q0, $q1, implicit $fpcr
+    $q6 = FADDv4f32 $q3, $q4, implicit $fpcr
+    $d5 = FMINv2f32 $d5, $d2, implicit $fpcr
+...

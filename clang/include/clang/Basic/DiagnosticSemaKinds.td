@@ -11162,6 +11162,12 @@ def warn_lifetime_safety_lifetimebound_violation
       InGroup<LifetimeSafetyLifetimeboundViolation>,
       DefaultIgnore;
 
+def warn_lifetime_safety_capture_by_violation
+    : Warning<"%0 is captured by %select{this object|global storage}1 but is "
+              "not marked [[clang::lifetime_capture_by_%select{this|global}1]]">,
+      InGroup<LifetimeSafetyCaptureByViolation>,
+      DefaultIgnore;
+
 def warn_lifetime_safety_intra_tu_misplaced_lifetimebound
     : Warning<"'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead">,
       InGroup<LifetimeSafetyIntraTUMisplacedLifetimebound>,
@@ -13641,6 +13647,13 @@ def err_preserve_enum_value_invalid : Error<
   "__builtin_preserve_enum_value argument %0 invalid">;
 def err_preserve_enum_value_not_const: Error<
   "__builtin_preserve_enum_value argument %0 not a constant">;
+def warn_preserve_access_index_anon_enum : Warning<
+  "%0 attribute has no effect on an anonymous enum without a typedef name">,
+  InGroup<IgnoredAttributes>, DefaultError;
+def warn_preserve_access_index_enumerator_not_relocated : Warning<
+  "enumerator %0 is not relocated where a constant is required, although %1 "
+  "has the 'preserve_access_index' attribute">,
+  InGroup<BPFEnumNotRelocated>, DefaultError;
 
 def err_bit_cast_non_trivially_copyable : Error<
   "'__builtin_bit_cast' %select{source|destination}0 type must be trivially copyable">;
@@ -13843,6 +13856,8 @@ def err_hlsl_builtin_resource_coordinate_dimension_mismatch : Error<
   "builtin %0 resource coordinate dimension mismatch: expected %1, found %2">;
 
 // HLSL Diagnostics
+def err_hlsl_exceptions : Error<"cannot use '%select{throw|try}0' in HLSL">;
+def err_hlsl_mult_inheritance : Error<"HLSL does not support multiple inheritance">;
 def err_hlsl_cstor_dstor : Error<"HLSL does not support constructors or destructors">;
 def err_hlsl_langstd_unimplemented : Error<"support for HLSL language version %0 is incomplete">;
 def err_hlsl_attr_unsupported_in_stage : Error<"attribute %0 is unsupported in '%1' shaders, requires %select{|one of the following: }2%3">;

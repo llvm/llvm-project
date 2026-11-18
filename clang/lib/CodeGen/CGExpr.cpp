@@ -1407,8 +1407,16 @@ void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
 }
 
 llvm::MDNode *CodeGenFunction::buildAllocToken(const CallExpr *E) {
-  return buildAllocToken(
-      infer_alloc::inferPossibleType(E, getContext(), CurCast));
+  // The placement news of the enclosing function body are collected once, on
+  // the first allocation call that is not already typed by a sizeof.
+  auto PlacementNewType = [this](const CallExpr *E) -> QualType {
+    if (!AllocTokenPlacementTypes)
+      AllocTokenPlacementTypes = infer_alloc::collectPlacementNewTypes(
+          CurCodeDecl ? CurCodeDecl->getBody() : nullptr);
+    return AllocTokenPlacementTypes->lookup(E);
+  };
+  return buildAllocToken(infer_alloc::inferPossibleType(
+      E, getContext(), CurCast, PlacementNewType));
 }
 
 void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, const CallExpr *E) {
@@ -4060,23 +4068,24 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
   // isIntegerType() never holds for scoped enums, and getAs<BitIntType> can't
   // see through the EnumType node to a __BitInt underlying type even for
   // unscoped enums.
-  QualType BackupT = T;
+  QualType UnderlyingT = T;
   if (const EnumType *ET = T->getAs<EnumType>())
     if (ET->getDecl()->isComplete())
-      T = ET->getDecl()->getIntegerType();
+      UnderlyingT = ET->getDecl()->getIntegerType();
 
-  if (T->isIntegerType()) {
+  if (UnderlyingT->isIntegerType()) {
     TypeKind = TK_Integer;
-    TypeInfo = (llvm::Log2_32(getContext().getTypeSize(T)) << 1) |
-               (T->isSignedIntegerType() ? 1 : 0);
+    TypeInfo = (llvm::Log2_32(getContext().getTypeSize(UnderlyingT)) << 1) |
+               (UnderlyingT->isSignedIntegerType() ? 1 : 0);
     // Follow suggestion from discussion of issue 64100.
     // So we can write the exact amount of bits in TypeName after '\0'
     // making it <diagnostic-like type name>.'\0'.<32-bit width>.
-    if (T->isSignedIntegerType() && T->getAs<BitIntType>()) {
+    if (UnderlyingT->isSignedIntegerType() &&
+        UnderlyingT->getAs<BitIntType>()) {
       // Do a sanity checks as we are using 32-bit type to store bit length.
-      assert(getContext().getTypeSize(T) > 0 &&
+      assert(getContext().getTypeSize(UnderlyingT) > 0 &&
              " non positive amount of bits in __BitInt type");
-      assert(getContext().getTypeSize(T) <= 0xFFFFFFFF &&
+      assert(getContext().getTypeSize(UnderlyingT) <= 0xFFFFFFFF &&
              " too many bits in __BitInt type");
 
       // Redefine TypeKind with the actual __BitInt type if we have signed
@@ -4084,23 +4093,23 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
       TypeKind = TK_BitInt;
       IsBitInt = true;
     }
-  } else if (T->isFloatingType()) {
+  } else if (UnderlyingT->isFloatingType()) {
     TypeKind = TK_Float;
-    TypeInfo = getContext().getTypeSize(T);
+    TypeInfo = getContext().getTypeSize(UnderlyingT);
   }
 
   // Format the type name as if for a diagnostic, including quotes and
   // optionally an 'aka'.
   SmallString<32> Buffer;
   CGM.getDiags().ConvertArgToString(DiagnosticsEngine::ak_qualtype,
-                                    (intptr_t)BackupT.getAsOpaquePtr(),
-                                    StringRef(), StringRef(), {}, Buffer, {});
+                                    (intptr_t)T.getAsOpaquePtr(), StringRef(),
+                                    StringRef(), {}, Buffer, {});
 
   if (IsBitInt) {
     // The Structure is: 0 to end the string, 32 bit unsigned integer in target
     // endianness, zero.
     char S[6] = {'\0', '\0', '\0', '\0', '\0', '\0'};
-    const auto *EIT = T->castAs<BitIntType>();
+    const auto *EIT = UnderlyingT->castAs<BitIntType>();
     uint32_t Bits = EIT->getNumBits();
     llvm::support::endian::write32(S + 1, Bits,
                                    getTarget().isBigEndian()
@@ -4123,7 +4132,7 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
   CGM.getSanitizerMetadata()->disableSanitizerForGlobal(GV);
 
   // Remember the descriptor for this type.
-  CGM.setTypeDescriptorInMap(BackupT, GV);
+  CGM.setTypeDescriptorInMap(T, GV);
 
   return GV;
 }
@@ -7226,7 +7235,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
     EmitSanitizerStatReport(llvm::SanStat_CFI_ICall);
 
     llvm::Metadata *MD =
-        CGM.CreateMetadataIdentifierForFnType(QualType(FnType, 0));
+        CGM.CreateMetadataIdentifierForCFIFnType(QualType(FnType, 0));
 
     llvm::Value *TypeId = llvm::MetadataAsValue::get(getLLVMContext(), MD);
 
@@ -7457,6 +7466,16 @@ static LValueOrRValue emitPseudoObjectExpr(CodeGenFunction &CGF,
   // Find the result expression, if any.
   const Expr *resultExpr = E->getResultExpr();
   LValueOrRValue result;
+
+  // Without debug info, e.g., in a nodebug function, an enumerator of a BPF
+  // preserve_access_index enum cannot be relocated, so use its value.
+  if (!forLValue && CGF.getTarget().getTriple().isBPF() &&
+      (!CGF.CGM.getCodeGenOpts().hasReducedDebugInfo() || !CGF.getDebugInfo()))
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(E->getSyntacticForm());
+        DRE && isa<EnumConstantDecl>(DRE->getDecl())) {
+      result.RV = RValue::get(CGF.EmitScalarExpr(DRE));
+      return result;
+    }
 
   for (PseudoObjectExpr::const_semantics_iterator
          i = E->semantics_begin(), e = E->semantics_end(); i != e; ++i) {

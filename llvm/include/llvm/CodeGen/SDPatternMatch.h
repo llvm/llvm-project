@@ -1253,8 +1253,7 @@ struct ConstantInt_match {
     }
 
     APInt Discard;
-    return ISD::isConstantSplatVector(N.getNode(),
-                                      BindVal ? *BindVal : Discard);
+    return ISD::isConstantSplatVector(N, BindVal ? *BindVal : Discard);
   }
 };
 

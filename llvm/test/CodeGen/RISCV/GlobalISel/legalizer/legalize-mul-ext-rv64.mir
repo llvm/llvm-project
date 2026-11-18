@@ -205,10 +205,10 @@ body:             |
     ; CHECK-NEXT: [[MUL1:%[0-9]+]]:_(s64) = G_MUL %lo1, %mid2
     ; CHECK-NEXT: [[MUL2:%[0-9]+]]:_(s64) = G_MUL %mid1, %lo2
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[UMULH]], [[MUL1]]
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ult), [[ADD]](s64), [[MUL1]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i64) = G_ICMP intpred(ult), [[ADD]](s64), [[MUL1]]
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY [[ADD]](s64)
     ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[MUL2]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s64) = G_ICMP intpred(ult), [[ADD1]](s64), [[MUL2]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i64) = G_ICMP intpred(ult), [[ADD1]](s64), [[MUL2]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY [[ADD1]](s64)
     ; CHECK-NEXT: [[ADD2:%[0-9]+]]:_(s64) = G_ADD [[ICMP]], [[ICMP1]]
     ; CHECK-NEXT: [[UMULH1:%[0-9]+]]:_(s64) = G_UMULH %mid1, %lo2
