@@ -84,6 +84,30 @@ between the threads in the parallel regions. Often, the optimizer is able to
 reduce the cost of `Generic` mode to the level of `Cuda` mode, but the flag,
 as well as other assumption flags, can be used for tuning.
 
+### Locks and critical regions on GPUs
+
+On a GPU, the threads of a warp (an AMD GPU wavefront) may execute a single
+instruction stream, so in OpenMP 6.0 terms a warp is a *progress unit*.
+Divergent threads in such a progress unit that synchronize with each other, e.g.
+by calling `omp_set_lock(lock)`, may deadlock. A `parallel` on the GPU behaves
+as if it had a `safesync` clause whose width is the warp size.
+
+- A `critical` region is run by the threads of each warp one at a time.
+- A sequence `omp_set_lock(lock); ...; omp_unset_lock(lock);` is also run one
+  thread at a time, if
+  - both calls are statements of the same block, with the same lock expression;
+  - the code between them can be entered only at the start and left only at
+    the end, contains no OpenMP directive and declares nothing at its top level;
+  - it uses the lock routines only in further such pairs, properly nested, at
+    the top level of the block.
+- Any other `omp_set_lock` that several threads of a warp reach together may
+  deadlock if they contend for the same lock. On AMD GPUs the device runtime
+  traps instead when they reach it together, with an explanatory message.
+
+Clang warns (`-Wopenmp-lockstep-lock`) about each call to `omp_set_lock` that
+cannot be handled this way and that is within a construct where multiple lanes
+may be active.
+
 ### Features not supported or with limited support for Cuda devices
 
 - Cancellation constructs are not supported.

@@ -588,10 +588,21 @@ CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
                                               bool GetLast,
                                               AggValueSlot AggSlot) {
 
+  // The OpenMP device runtime may need to emit a run of statements as a whole.
+  bool OpenMPDevice =
+      getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice;
   for (CompoundStmt::const_body_iterator I = S.body_begin(),
                                          E = S.body_end() - GetLast;
-       I != E; ++I)
+       I != E; ++I) {
+    if (OpenMPDevice) {
+      if (unsigned N = CGM.getOpenMPRuntime().emitStmtSequence(
+              *this, llvm::ArrayRef(I, E))) {
+        I += N - 1;
+        continue;
+      }
+    }
     EmitStmt(*I);
+  }
 
   Address RetAlloca = Address::invalid();
   if (GetLast) {
