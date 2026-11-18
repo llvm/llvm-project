@@ -36,6 +36,7 @@ https://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
 
 import argparse
 import asyncio
+import collections
 from dataclasses import dataclass
 import glob
 import json
@@ -675,7 +676,11 @@ async def main() -> None:
     # Load the database and extract all files.
     with open(os.path.join(build_path, db_path)) as f:
         database = json.load(f)
-    files = {os.path.abspath(os.path.join(e["directory"], e["file"])) for e in database}
+    # clang-tidy checks a file once for each of its compile commands.
+    commands = collections.Counter(
+        os.path.abspath(os.path.join(e["directory"], e["file"])) for e in database
+    )
+    files = set(commands)
     number_files_in_database = len(files)
 
     # Filter source files from compilation database.
@@ -697,11 +702,14 @@ async def main() -> None:
 
     # Build up a big regexy filter from all command line arguments.
     file_name_re = re.compile("|".join(args.files))
-    # Start the largest files first: they tend to take the longest, and the
-    # run cannot finish before the last of them does.
+    # Start the files with the most code to check first: they tend to take the
+    # longest, and the run cannot finish before the last of them does.
     files = sorted(
         (f for f in files if file_name_re.search(f)),
-        key=lambda f: (-os.path.getsize(f) if os.path.isfile(f) else 0, f),
+        key=lambda f: (
+            -commands[f] * (os.path.getsize(f) if os.path.isfile(f) else 0),
+            f,
+        ),
     )
 
     if not args.hide_progress:
