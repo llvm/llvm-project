@@ -19,10 +19,10 @@ class LetDummies {
   bit isAsCheapAsAMove;
   bit FPDPRounding;
   bit IsDPMACCInstruction;
-  bits<2> CoexecYoungerGFX942;
-  bits<2> CoexecOlderGFX942;
-  bits<2> CoexecYoungerGFX950;
-  bits<2> CoexecOlderGFX950;
+  bits<2> CoexecYounger;
+  bits<2> CoexecOlder;
+  bits<2> CoexecYounger64BitAndMul32;
+  bits<2> CoexecOlder64BitAndMul32;
   Predicate SubtargetPredicate;
   string Constraints;
   string DisableEncoding;
@@ -85,16 +85,17 @@ class VOP_Pseudo <string opName, string suffix, VOPProfile P, dag outs, dag ins,
   bit IsTrue16 = P.IsTrue16;
   bit IsDPMACCInstruction = 0;
   // How well the VALU can be co-issued with a VALU of another wave on the same
-  // SIMD on GFX942 and GFX950, as the younger and as the older wave: class
-  // CoexecA (best), CoexecB or CoexecC (never). See SIPreEmitPeephole.cpp.
-  bits<2> CoexecYoungerGFX942 = CoexecB;
-  bits<2> CoexecOlderGFX942 = CoexecB;
-  bits<2> CoexecYoungerGFX950 = CoexecYoungerGFX942;
-  bits<2> CoexecOlderGFX950 = CoexecOlderGFX942;
-  bit HasCoexecClass = !or(!ne(CoexecYoungerGFX942, CoexecB),
-                           !ne(CoexecOlderGFX942, CoexecB),
-                           !ne(CoexecYoungerGFX950, CoexecB),
-                           !ne(CoexecOlderGFX950, CoexecB));
+  // SIMD, as the younger and as the older wave, without and with
+  // FeatureCrossWaveVALUCoexec64BitAndMul32: class CoexecA (best), CoexecB or
+  // CoexecC (never). See SIPreEmitPeephole.cpp.
+  bits<2> CoexecYounger = CoexecB;
+  bits<2> CoexecOlder = CoexecB;
+  bits<2> CoexecYounger64BitAndMul32 = CoexecYounger;
+  bits<2> CoexecOlder64BitAndMul32 = CoexecOlder;
+  bit HasCoexecClass = !or(!ne(CoexecYounger, CoexecB),
+                           !ne(CoexecOlder, CoexecB),
+                           !ne(CoexecYounger64BitAndMul32, CoexecB),
+                           !ne(CoexecOlder64BitAndMul32, CoexecB));
   VOPProfile Pfl = P;
 
   string AsmOperands;
@@ -2526,8 +2527,8 @@ def VOPCoexecClassTable : GenericTable {
   let FilterClass = "VOP_Pseudo";
   let FilterClassField = "HasCoexecClass";
   let CppTypeName = "VOPCoexecClassInfo";
-  let Fields = ["Opcode", "CoexecYoungerGFX942", "CoexecOlderGFX942",
-                "CoexecYoungerGFX950", "CoexecOlderGFX950"];
+  let Fields = ["Opcode", "CoexecYounger", "CoexecOlder",
+                "CoexecYounger64BitAndMul32", "CoexecOlder64BitAndMul32"];
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getVOPCoexecClassInfo";

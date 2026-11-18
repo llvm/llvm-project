@@ -14,7 +14,6 @@
 # The same VALUs before the loop get no s_nop 0.
 ---
 name: nop_in_loop_only
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |
@@ -133,7 +132,6 @@ body: |
 # 11 of 15 instructions are of older class A or B.
 ---
 name: nop_older_class_a_b_73_percent
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |
@@ -226,7 +224,6 @@ body: |
 # 11 of 16 instructions are of older class A or B.
 ---
 name: no_nop_older_class_a_b_68_percent
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |
@@ -290,7 +287,6 @@ body: |
 # 10 of 20 instructions are of younger class A.
 ---
 name: nop_younger_class_a_50_percent
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |
@@ -398,7 +394,6 @@ body: |
 # 10 of 21 instructions are of younger class A.
 ---
 name: no_nop_younger_class_a_47_percent
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |
@@ -473,7 +468,6 @@ body: |
 # into the inner one.
 ---
 name: nop_in_inner_loop_only
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |
@@ -619,7 +613,6 @@ body: |
 # The inner loop does not qualify, the outer loop of 15 instructions does.
 ---
 name: nop_in_outer_loop_if_inner_loop_does_not_qualify
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |
@@ -738,7 +731,6 @@ body: |
 # The inner loop qualifies but has nowhere to insert s_nop 0.
 ---
 name: nop_in_outer_loop_if_inner_loop_gets_none
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |
@@ -882,7 +874,6 @@ body: |
 # VALUs that follow it in the outer loop.
 ---
 name: no_nop_across_inner_loop
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |

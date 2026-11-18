@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgpu9.42 < %s | FileCheck -check-prefix=GFX942 %s
 ; RUN: llc -mtriple=amdgpu9.42 -enable-new-pm < %s | FileCheck -check-prefix=GFX942 %s
 ; RUN: llc -mtriple=amdgpu9.50 < %s | FileCheck -check-prefix=GFX950 %s
-; RUN: llc -mtriple=amdgpu9.42 -amdgpu-gfx9-cross-wave-valu-coexec-opt-threshold=0 < %s | FileCheck -check-prefix=NONOP %s
+; RUN: llc -mtriple=amdgpu9.42 -mattr=-cross-wave-valu-coexecution < %s | FileCheck -check-prefix=NONOP %s
 ; RUN: llc -mtriple=amdgpu9.0a < %s | FileCheck -check-prefix=NONOP %s
 
 ; A younger wave's v_add_u32_sdwa cannot be co-issued next to any VALU of the

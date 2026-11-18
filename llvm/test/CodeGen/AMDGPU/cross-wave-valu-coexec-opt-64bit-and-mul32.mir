@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=amdgpu9.42 -run-pass=machine-loops,si-pre-emit-peephole -o - %s | FileCheck -check-prefix=GFX942 %s
 # RUN: llc -mtriple=amdgpu9.4 -run-pass=machine-loops,si-pre-emit-peephole -o - %s | FileCheck -check-prefix=GENERIC %s
 
-# VALUs whose class depends on GFX942CrossWaveVALUCoexecution. Unless stated
+# VALUs whose class depends on CrossWaveVALUCoexec64BitAndMul32. Unless stated
 # otherwise, a VALU X that is not of younger class A (V_BFE_U32) is followed by
 # 10 VALUs of younger class A and older class B, so that s_nop 0 is inserted
 # right after X.
@@ -10,7 +10,6 @@
 # V_ADD_F64 is of younger class A on gfx942 only.
 ---
 name: nop_after_f64_except_gfx942
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |
@@ -91,11 +90,10 @@ body: |
     S_ENDPGM 0, implicit $vgpr9, implicit $vgpr20
 ...
 
-# Without GFX942CrossWaveVALUCoexecution, V_ADD_F64 is of younger class B
+# Without CrossWaveVALUCoexec64BitAndMul32, V_ADD_F64 is of younger class B
 # and is followed by only 9 VALUs.
 ---
 name: class_a_seq_starts_with_f64_on_gfx942
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |
@@ -177,11 +175,10 @@ body: |
 ...
 
 # V_LSHLREV_B64 is one of the 10 VALUs after V_BFE_U32. It is of older class B
-# with GFX942CrossWaveVALUCoexecution and of older class C, not counted,
+# with CrossWaveVALUCoexec64BitAndMul32 and of older class C, not counted,
 # without it.
 ---
 name: older_64_bit_counted_on_gfx942
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |
@@ -263,11 +260,10 @@ body: |
 ...
 
 # V_MUL_HI_I32 is one of the 10 VALUs after V_BFE_U32. It is of older class B
-# with GFX942CrossWaveVALUCoexecution and of older class C, not counted,
+# with CrossWaveVALUCoexec64BitAndMul32 and of older class C, not counted,
 # without it.
 ---
 name: older_mul_hi_i32_counted_on_gfx942
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |

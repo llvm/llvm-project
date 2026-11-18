@@ -11,7 +11,6 @@
 
 ---
 name: blocking_9_valus
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |
@@ -64,7 +63,6 @@ body: |
 
 ---
 name: blocking_10_valus
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |
@@ -120,7 +118,6 @@ body: |
 
 ---
 name: blocking_10_valus_split_by_salu
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |
@@ -177,7 +174,6 @@ body: |
 
 ---
 name: class_b_count_stops_at_older_class_a
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |
@@ -234,7 +230,6 @@ body: |
 
 ---
 name: class_c_counts_older_class_a
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |
@@ -290,7 +285,6 @@ body: |
 
 ---
 name: older_class_c_not_counted
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |
@@ -349,7 +343,6 @@ body: |
 
 ---
 name: vop3p_is_younger_class_c
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |
@@ -405,7 +398,6 @@ body: |
 
 ---
 name: fma_f16_gfx9_is_younger_class_c
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |
@@ -461,7 +453,6 @@ body: |
 
 ---
 name: class_b_count_stops_at_older_mix
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |
@@ -518,7 +509,6 @@ body: |
 
 ---
 name: older_packed_16_bit_not_counted
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy: 8
 body: |

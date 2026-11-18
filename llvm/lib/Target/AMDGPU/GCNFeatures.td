@@ -109,12 +109,12 @@ defm FullRate64Ops : AMDGPUSubtargetFeature<"full-rate-64-ops",
   /*GenPredicate=*/0
 >;
 
-defm GFX9CrossWaveVALUCoexecution : AMDGPUSubtargetFeature<"gfx9-cross-wave-valu-coexecution",
+defm CrossWaveVALUCoexecution : AMDGPUSubtargetFeature<"cross-wave-valu-coexecution",
   "VALU instructions of two waves can co-execute on a SIMD",
   /*GenPredicate=*/0
 >;
 
-defm GFX942CrossWaveVALUCoexecution : AMDGPUSubtargetFeature<"gfx942-cross-wave-valu-coexecution",
+defm CrossWaveVALUCoexec64BitAndMul32 : AMDGPUSubtargetFeature<"cross-wave-valu-coexec-64bit-and-mul32",
   "VALU instructions with 64-bit operands and 32-bit integer multiplies can co-execute across waves",
   /*GenPredicate=*/0
 >;
@@ -2176,7 +2176,7 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeaturePackedTID,
    FeatureArchitectedFlatScratch,
    FeatureFullRate64Ops,
-   FeatureGFX9CrossWaveVALUCoexecution,
+   FeatureCrossWaveVALUCoexecution,
    FeatureBackOffBarrier,
    FeatureKernargPreload,
    FeatureAtomicFMinFMaxF64GlobalInsts,
@@ -2225,7 +2225,7 @@ def FeatureISAVersion9_4_2 : FeatureSet<
       FeatureCvtFP8SDWASrcSel,
       FeatureCvtFP8VOP1Bug,
       FeatureXF32Insts,
-      FeatureGFX942CrossWaveVALUCoexecution
+      FeatureCrossWaveVALUCoexec64BitAndMul32
     ])>;
 
 def FeatureISAVersion9_4_Generic : FeatureSet<

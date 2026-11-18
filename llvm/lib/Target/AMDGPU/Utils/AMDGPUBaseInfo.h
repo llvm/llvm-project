@@ -146,10 +146,10 @@ struct WMMAInstInfo {
 
 struct VOPCoexecClassInfo {
   uint32_t Opcode;
-  uint8_t CoexecYoungerGFX942;
-  uint8_t CoexecOlderGFX942;
-  uint8_t CoexecYoungerGFX950;
-  uint8_t CoexecOlderGFX950;
+  uint8_t CoexecYounger;
+  uint8_t CoexecOlder;
+  uint8_t CoexecYounger64BitAndMul32;
+  uint8_t CoexecOlder64BitAndMul32;
 };
 
 #define GET_MIMGBaseOpcode_DECL
