@@ -27208,12 +27208,12 @@ TEST_F(FormatTest, FormatsVaOptWithTrailingComma) {
                "               ccc + ddddddddddddddd, z);",
                Style50);
 
-  verifyFormat("#define M(...)                                   \\\n"
-               "  foo(x,                                         \\\n"
-               "      bbbbbbbbbbbbbb(cccccccccccc, dddddddddddd) \\\n"
-               "          __VA_OPT__(, )                         \\\n"
-               "      e);",
-               Style50);
+  verifyFormat("#define M(...)             \\\n"
+               "  foo(aaaa,                \\\n"
+               "      bbbb(cccccc, dddddd) \\\n"
+               "          __VA_OPT__(, )   \\\n"
+               "      eeee);",
+               Style40);
 
   verifyFormat("#define M(...)                        \\\n"
                "  foo(aaaaaaaaaaaa +                  \\\n"
@@ -27245,6 +27245,9 @@ TEST_F(FormatTest, FormatsVaOptWithTrailingComma) {
                "        bbbbbbbbbbbbbbbbbb();  \\\n"
                "  }",
                Style40);
+
+  verifyNoCrash("FOO([] {\n  x();\n");
+  verifyNoCrash("enum E { A = f([] { return 1;\n", NoShortEnums);
 }
 
 } // namespace

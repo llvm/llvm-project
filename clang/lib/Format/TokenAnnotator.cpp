@@ -1272,7 +1272,7 @@ private:
     // inside a bracket scope).
     if (Current->is(tok::l_brace) && Current->is(BK_Block))
       ++Left->BlockParameterCount;
-    FormatToken *Comma = nullptr;
+    const FormatToken *Comma = nullptr;
     if (Current->is(tok::comma))
       Comma = Current;
     else if (Current->Previous->is(TT_TrailingCommaVaOptRParen))

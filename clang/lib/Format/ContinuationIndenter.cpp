@@ -1955,8 +1955,7 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
                     !State.Stack.back().NoLineBreakInOperand;
   moveStatePastScopeOpener(State, Newline);
   moveStatePastFakeRParens(State);
-  // Operand fake parens end on ')', so reset here rather than at the comma
-  // check above.
+  // ')' first pops the __VA_OPT__(...) paren state, so reset here.
   if (Current.is(TT_TrailingCommaVaOptRParen))
     State.Stack.back().NoLineBreakInOperand = false;
 

@@ -2170,7 +2170,8 @@ void UnwrappedLineParser::parseStructuralElement(
             (Text.size() >= 5 ||
              (FunctionLike && FormatTok->isNot(tok::l_paren))) &&
             tokenCanStartNewLine(*FormatTok) && Text == Text.upper() &&
-            FormatTok->Previous->isNot(TT_TrailingCommaVaOptRParen)) {
+            (!FormatTok->Previous ||
+             FormatTok->Previous->isNot(TT_TrailingCommaVaOptRParen))) {
           if (PreviousToken->isNot(TT_UntouchableMacroFunc))
             PreviousToken->setFinalizedType(TT_FunctionLikeOrFreestandingMacro);
           addUnwrappedLine();
@@ -2654,6 +2655,7 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
         break;
       }
       if (IsEnum && !Style.AllowShortEnumsOnASingleLine &&
+          FormatTok->Previous &&
           FormatTok->Previous->is(TT_TrailingCommaVaOptRParen)) {
         addUnwrappedLine();
       }
@@ -2790,6 +2792,7 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
         } else if (IsCpp && Prev->is(Keywords.kw___VA_OPT__) &&
                    Prev->is(TT_Unknown) && RParen->Previous->is(tok::comma) &&
                    RParen->Previous->Previous->isNot(tok::kw_operator)) {
+          // TT_Unknown excludes configured macros; exclude `operator,`.
           RParen->setFinalizedType(TT_TrailingCommaVaOptRParen);
         } else if (Prev->is(tok::greater) && RParen->Previous == LParen) {
           Prev->setFinalizedType(TT_TemplateCloser);

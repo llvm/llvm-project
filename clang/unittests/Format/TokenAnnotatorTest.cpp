@@ -4647,6 +4647,7 @@ TEST_F(TokenAnnotatorTest, VaOptWithTrailingComma) {
       annotate("#define M(...) enum E { __VA_OPT__(FOO(a, )) kFirst };");
   ASSERT_EQ(Tokens.size(), 21u) << Tokens;
   // Not TT_TrailingCommaVaOptRParen.
+  EXPECT_TOKEN(Tokens[15], tok::r_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[16], tok::r_paren, TT_Unknown);
 
   Tokens =
@@ -4719,6 +4720,10 @@ TEST_F(TokenAnnotatorTest, VaOptWithTrailingComma) {
   Tokens = annotate("void g() { #error __VA_OPT__(a, ) x }");
   ASSERT_EQ(Tokens.size(), 15u) << Tokens;
   EXPECT_TOKEN(Tokens[11], tok::r_paren, TT_ImplicitStringLiteral);
+
+  Tokens = annotate("void g() { #pragma mark __VA_OPT__(a, ) x }");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[12], tok::r_paren, TT_ImplicitStringLiteral);
 
   FormatStyle AttrStyle = getLLVMStyle();
   AttrStyle.AttributeMacros.push_back("__VA_OPT__");
