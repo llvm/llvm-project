@@ -828,8 +828,9 @@ def LLVM_LandingpadOp : LLVM_Op<"landingpad"> {
 // VAArgOp
 //===----------------------------------------------------------------------===//
 
-let partition = LLVM_VarArgPartition in {
 def LLVM_VaArgOp : LLVM_Op<"va_arg"> {
+  let partition = LLVM_VarArgPartition;
+
   let arguments = (ins LLVM_AnyPointer:$arg);
   let results = (outs LLVM_Type:$res);
 
@@ -844,13 +845,11 @@ def LLVM_VaArgOp : LLVM_Op<"va_arg"> {
       $_location, $_resultType, $arg);
   }];
 }
-} // let partition = LLVM_VarArgPartition
 
 //===----------------------------------------------------------------------===//
 // CallOp
 //===----------------------------------------------------------------------===//
 
-let partition = LLVM_CallPartition in {
 def LLVM_CallOp
     : LLVM_MemAccessOpBase<
           "call", [AttrSizedOperandSegments,
@@ -900,6 +899,8 @@ def LLVM_CallOp
     llvm.call %1(%0) vararg(!llvm.func<void (...)>) : !llvm.ptr, (i32) -> ()
     ```
   }];
+
+  let partition = LLVM_CallPartition;
 
   dag args = (ins OptionalAttr<TypeAttrOf<LLVM_FunctionType>>:$var_callee_type,
       OptionalAttr<FlatSymbolRefAttr>:$callee,
@@ -954,7 +955,6 @@ def LLVM_CallOp
     LLVMFunctionType getCalleeFunctionType();
   }];
 }
-} // let partition = LLVM_CallPartition
 
 //===----------------------------------------------------------------------===//
 // ExtractElementOp
@@ -1367,7 +1367,6 @@ def LLVM_SwitchOp
 // to work correctly).
 ////////////////////////////////////////////////////////////////////////////////
 
-let partition = LLVM_ConstantPartition in {
 def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
     [Pure, ConstantLike, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let arguments = (ins FlatSymbolRefAttr:$global_name);
@@ -1411,6 +1410,8 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
     }
     ```
   }];
+
+  let partition = LLVM_ConstantPartition;
 
   let builders = [
     OpBuilder<(ins "GlobalOp":$global,
@@ -1459,7 +1460,6 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
 
   let hasFolder = 1;
 }
-} // let partition = LLVM_ConstantPartition
 
 let partition = LLVM_ModulePartition in {
 def LLVM_GlobalOp : LLVM_Op<"mlir.global",
@@ -1997,7 +1997,6 @@ def LLVM_BlockTagOp : LLVM_Op<"blocktag"> {
 }
 } // let partition = LLVM_ConstantPartition
 
-let partition = LLVM_TerminatorPartition in {
 //===----------------------------------------------------------------------===//
 // IndirectBrOp
 //===----------------------------------------------------------------------===//
@@ -2035,6 +2034,7 @@ def LLVM_IndirectBrOp : LLVM_TerminatorOp<"indirectbr",
       ...
     ```
   }];
+  let partition = LLVM_TerminatorPartition;
   let arguments = (ins LLVM_AnyPointer:$addr,
     VariadicOfVariadic<AnyType, "indbr_operand_segments">:$succOperands,
     DenseI32ArrayAttr:$indbr_operand_segments
@@ -2063,7 +2063,6 @@ def LLVM_IndirectBrOp : LLVM_TerminatorOp<"indirectbr",
     }
   }];
 }
-} // let partition = LLVM_TerminatorPartition
 
 let partition = LLVM_ModulePartition in {
 def LLVM_ComdatSelectorOp
@@ -2633,7 +2632,6 @@ def LLVM_FenceOp : LLVM_Op<"fence">, LLVM_MemOpPatterns {
 }
 } // let partition = LLVM_MemoryPartition
 
-let partition = LLVM_CallPartition in {
 def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let description = [{
     The InlineAsmOp mirrors the underlying LLVM semantics with a notable
@@ -2646,6 +2644,7 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
     tail call kind. The `musttail` kind it's not available for this operation,
     since it isn't supported by LLVM's inline asm.
   }];
+  let partition = LLVM_CallPartition;
   let arguments = (
     ins Variadic<LLVM_Type>:$operands,
         StrAttr:$asm_string,
@@ -2680,13 +2679,11 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
 
   let hasVerifier = 1;
 }
-} // let partition = LLVM_CallPartition
 
 //===--------------------------------------------------------------------===//
 // MetadataAsValueOp
 //===--------------------------------------------------------------------===//
 
-let partition = LLVM_ConstantPartition in {
 def LLVM_MetadataAsValueOp
     : LLVM_Op<"mlir.metadata_as_value", [Pure, ConstantLike]> {
   let summary =
@@ -2724,6 +2721,8 @@ def LLVM_MetadataAsValueOp
     ```
   }];
 
+  let partition = LLVM_ConstantPartition;
+
   let arguments = (ins LLVM_AnyMDAttr:$metadata);
   let results = (outs LLVM_MetadataType:$res);
 
@@ -2750,13 +2749,11 @@ def LLVM_MetadataAsValueOp
 
   let hasFolder = 1;
 }
-} // let partition = LLVM_ConstantPartition
 
 //===--------------------------------------------------------------------===//
 // CallIntrinsicOp
 //===--------------------------------------------------------------------===//
 
-let partition = LLVM_CallPartition in {
 def LLVM_CallIntrinsicOp
     : LLVM_Op<"call_intrinsic",
               [ArgAndResultAttrsOpInterface,
@@ -2767,6 +2764,7 @@ def LLVM_CallIntrinsicOp
     Call the specified llvm intrinsic. If the intrinsic is overloaded, use
     the MLIR function type of this op to determine which intrinsic to call.
   }];
+  let partition = LLVM_CallPartition;
   let arguments = (ins StrAttr:$intrin, Variadic<LLVM_Type>:$args,
                        DefaultValuedAttr<LLVM_FastmathFlagsAttr,
                                          "{}">:$fastmathFlags,
@@ -2791,7 +2789,6 @@ def LLVM_CallIntrinsicOp
 
   let hasVerifier = 1;
 }
-} // let partition = LLVM_CallPartition
 
 let partition = LLVM_ModulePartition in {
 def LLVM_LinkerOptionsOp

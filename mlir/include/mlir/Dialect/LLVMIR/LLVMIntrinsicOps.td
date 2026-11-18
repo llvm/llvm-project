@@ -103,24 +103,22 @@ class LLVM_CountZerosIntrOp<string func, list<Trait> traits = []> :
                    I1Attr:$is_zero_poison);
 }
 
-let partition = LLVM_IntegerIntrinsicPartition in {
 def LLVM_AbsOp : LLVM_OneResultIntrOp<"abs", [], [0], [Pure],
     /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
     /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
     /*immArgPositions=*/[1], /*immArgAttrNames=*/["is_int_min_poison"]> {
+  let partition = LLVM_IntegerIntrinsicPartition;
   let arguments = (ins LLVM_ScalarOrVectorOf<AnySignlessInteger>:$in,
                    I1Attr:$is_int_min_poison);
 }
-} // let partition = LLVM_IntegerIntrinsicPartition
 
-let partition = LLVM_GeneralIntrinsicPartition in {
 // Do not use LLVM_UnaryIntrOpF here: arithmetic.fence operates on floating
 // types, but the fence itself should not carry fastmath flags.
 def LLVM_ArithmeticFenceOp
     : LLVM_UnaryIntrOpBase<"arithmetic.fence", LLVM_AnyFloat> {
+  let partition = LLVM_GeneralIntrinsicPartition;
   let arguments = commonArgs;
 }
-} // let partition = LLVM_GeneralIntrinsicPartition
 
 let partition = LLVM_FloatIntrinsicPartition in {
 def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure],
@@ -163,15 +161,14 @@ def LLVM_Log10Op : LLVM_UnaryIntrOpF<"log10">;
 def LLVM_Log2Op : LLVM_UnaryIntrOpF<"log2">;
 def LLVM_LogOp : LLVM_UnaryIntrOpF<"log">;
 } // let partition = LLVM_FloatIntrinsicPartition
-let partition = LLVM_CodeGenIntrinsicPartition in {
 def LLVM_Prefetch : LLVM_ZeroResultIntrOp<"prefetch", [0],
   /*traits=*/[], /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
   /*requiresArgAndResultAttrs=*/0, /*requiresOpBundles=*/0,
   /*immArgPositions=*/[1, 2, 3], /*immArgAttrNames=*/["rw", "hint", "cache"]
 > {
+  let partition = LLVM_CodeGenIntrinsicPartition;
   let arguments = (ins LLVM_AnyPointer:$addr, I32Attr:$rw, I32Attr:$hint, I32Attr:$cache);
 }
-} // let partition = LLVM_CodeGenIntrinsicPartition
 let partition = LLVM_FloatIntrinsicPartition in {
 def LLVM_RoundEvenOp : LLVM_UnaryIntrOpF<"roundeven">;
 def LLVM_RoundOp : LLVM_UnaryIntrOpF<"round">;
@@ -1257,12 +1254,11 @@ def LLVM_VaEndOp : LLVM_ZeroResultIntrOp<"vaend", [0]>,
 // Exception handling intrinsics.
 //
 
-let partition = LLVM_GeneralIntrinsicPartition in {
 def LLVM_EhTypeidForOp : LLVM_OneResultIntrOp<"eh.typeid.for", [], [0]> {
+    let partition = LLVM_GeneralIntrinsicPartition;
     let arguments = (ins LLVM_AnyPointer:$type_info);
     let assemblyFormat = "$type_info attr-dict `:` functional-type(operands, results)";
 }
-} // let partition = LLVM_GeneralIntrinsicPartition
 
 //
 // Stack save/restore intrinsics.
@@ -1790,10 +1786,10 @@ def LLVM_UBSanTrap : LLVM_ZeroResultIntrOp<"ubsantrap",
 // Vector intrinsics.
 //
 
-let partition = LLVM_GeneralIntrinsicPartition in {
 /// Create a call to vscale intrinsic.
-def LLVM_vscale : LLVM_IntrOp<"vscale", [0], [], [], 1>;
-} // let partition = LLVM_GeneralIntrinsicPartition
+def LLVM_vscale : LLVM_IntrOp<"vscale", [0], [], [], 1> {
+  let partition = LLVM_GeneralIntrinsicPartition;
+}
 
 let partition = LLVM_VectorIntrinsicPartition in {
 /// Create a call to stepvector intrinsic.
