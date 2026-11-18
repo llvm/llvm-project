@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Checker.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
@@ -24,8 +25,11 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
+#include <optional>
 
 namespace clang::lifetimes::internal {
 
@@ -61,6 +65,17 @@ private:
   llvm::DenseMap<AnnotationTarget, EscapingTarget> AnnotationWarningsMap;
   llvm::DenseMap<const ParmVarDecl *, EscapingTarget> NoescapeWarningsMap;
   llvm::DenseMap<const FieldDecl *, const Expr *> FieldOriginEscapesMap;
+  struct CaptureByViolation {
+    /// The first written [[clang::lifetime_capture_by]] attribute.
+    const LifetimeCaptureByAttr *Attr;
+    /// The field or global it is captured by, if known.
+    const ValueDecl *CapturedBy;
+  };
+  /// Parameters captured by an entity their written
+  /// [[clang::lifetime_capture_by]] attributes do not name, keyed by the
+  /// parameter and the capturer index.
+  llvm::MapVector<std::pair<const ParmVarDecl *, int>, CaptureByViolation>
+      CaptureByViolations;
   llvm::DenseSet<const Decl *> VerifiedLiftimeboundEscapes;
   const LoanPropagationAnalysis &LoanPropagation;
   const MovedLoansAnalysis &MovedLoans;
@@ -112,6 +127,8 @@ public:
       reportNoescapeViolations();
     if (LSOpts.CheckLifetimeboundViolations)
       reportLifetimeboundViolations();
+    if (LSOpts.CheckCaptureByViolations)
+      reportCaptureByViolations();
     if (LSOpts.CheckMisplacedLifetimebound)
       reportMisplacedLifetimebound();
     if (LSOpts.CheckInapplicableLifetimebound)
@@ -124,8 +141,8 @@ public:
   }
 
   /// Checks if an escaping origin holds a placeholder loan, indicating a
-  /// missing [[clang::lifetimebound]] annotation or a violation of
-  /// [[clang::noescape]].
+  /// missing [[clang::lifetimebound]] annotation, or a violation of
+  /// [[clang::noescape]] or [[clang::lifetime_capture_by]].
   void checkAnnotations(const OriginEscapesFact *OEF) {
     OriginID EscapedOID = OEF->getEscapedOriginID();
     LoanSet EscapedLoans = LoanPropagation.getLoans(EscapedOID, OEF);
@@ -144,6 +161,8 @@ public:
       // obscures the lifetime relationship (e.g., shared_ptr from unique_ptr).
       if (IsMoved)
         return;
+      if (LSOpts.CheckCaptureByViolations)
+        checkCaptureBy(*PVD, *OEF);
       if (paramIsLifetimeBound(*PVD)) {
         // Track that this lifetimebound parameter correctly escapes
         // (via return or via field assignment in a constructor).
@@ -163,7 +182,7 @@ public:
             AnnotationWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
         }
       }
-      // TODO: Suggest lifetime_capture_by(this) for parameter escaping to a
+      // TODO: Suggest lifetime_capture_by_this for parameter escaping to a
       // field!
     };
     auto CheckImplicitThis = [&](const CXXMethodDecl *MD) {
@@ -205,6 +224,63 @@ public:
       else if (const auto *Field = PB->getFieldDecl())
         CheckField(Field);
     }
+  }
+
+  /// An entity that a parameter is captured by.
+  struct Capturer {
+    /// The index that a [[clang::lifetime_capture_by]] attribute uses for it.
+    int Index;
+    /// The field or global, if known.
+    const ValueDecl *CapturedBy;
+  };
+
+  /// Records \p PVD if it escapes through \p OEF into an entity that its
+  /// written [[clang::lifetime_capture_by]] attributes do not name. Inferred
+  /// attributes are not verified.
+  void checkCaptureBy(const ParmVarDecl &PVD, const OriginEscapesFact &OEF) {
+    std::optional<Capturer> C = getCapturer(OEF);
+    if (!C)
+      return;
+    // A lifetimebound constructor parameter is captured by the constructed
+    // object.
+    if (C->Index == LifetimeCaptureByAttr::This &&
+        isa<CXXConstructorDecl>(FD) && PVD.hasAttr<LifetimeBoundAttr>())
+      return;
+    const LifetimeCaptureByAttr *FirstWritten = nullptr;
+    for (const auto *A : PVD.specific_attrs<LifetimeCaptureByAttr>()) {
+      if (A->isImplicit())
+        continue;
+      if (!FirstWritten)
+        FirstWritten = A;
+      // FIXME: The capturers of a lambda's parameters are never resolved, so
+      // they stay invalid and are not verified.
+      if (llvm::any_of(A->params(), [&](int Idx) {
+            return Idx == C->Index || Idx == LifetimeCaptureByAttr::Unknown ||
+                   Idx == LifetimeCaptureByAttr::Invalid;
+          }))
+        return;
+    }
+    if (FirstWritten)
+      CaptureByViolations.try_emplace(
+          {&PVD, C->Index}, CaptureByViolation{FirstWritten, C->CapturedBy});
+  }
+
+  /// Returns the entity that a parameter escaping through \p OEF is captured
+  /// by, if a [[clang::lifetime_capture_by]] attribute can name it.
+  std::optional<Capturer> getCapturer(const OriginEscapesFact &OEF) const {
+    if (isa<FieldEscapeFact, ThisEscapeFact>(OEF)) {
+      // Index 0 names `this` only with an implicit object parameter;
+      // otherwise it names the first parameter.
+      const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+      if (!MD || !MD->isImplicitObjectMemberFunction())
+        return std::nullopt;
+      const auto *FieldEsc = dyn_cast<FieldEscapeFact>(&OEF);
+      return Capturer{LifetimeCaptureByAttr::This,
+                      FieldEsc ? FieldEsc->getFieldDecl() : nullptr};
+    }
+    if (const auto *GlobalEsc = dyn_cast<GlobalEscapeFact>(&OEF))
+      return Capturer{LifetimeCaptureByAttr::Global, GlobalEsc->getGlobal()};
+    return std::nullopt;
   }
 
   /// Checks for use-after-free & use-after-return errors when an access path
@@ -514,6 +590,14 @@ public:
       else
         llvm_unreachable("Unhandled EscapingTarget type");
     }
+  }
+
+  void reportCaptureByViolations() {
+    if (!SemaHelper)
+      return;
+    for (const auto &[Key, Violation] : CaptureByViolations)
+      SemaHelper->reportCaptureByViolation(Key.first, Violation.Attr,
+                                           Key.second, Violation.CapturedBy);
   }
 
   void reportLifetimeboundViolations() {

@@ -282,6 +282,15 @@ end
 * $ and \ edit descriptors are supported in FORMAT to suppress newline
   output on user prompts.
 * Tabs in format strings (not `FORMAT` statements) are allowed on output.
+* A tab in a numeric or logical input field is treated as a blank, so it is
+  subject to the blank interpretation mode: it is ignored by default (`BN`)
+  and read as a zero under `BZ`. A tab also separates values in
+  list-directed and namelist input. Character (`A`) input transfers a tab
+  unchanged. A tab is not a blank in standard Fortran, so this is a
+  non-conforming extension; gfortran, for example, rejects `I3` input of
+  `1<tab>2`. The tab is in the input data, not in the program, so no
+  compile-time option such as `-pedantic` can diagnose it, and the runtime
+  does not warn about it.
 * REAL and DOUBLE PRECISION variable and bounds in DO loops
 * Integer literals without explicit kind specifiers that are out of range
   for the default kind of INTEGER are assumed to have the least larger kind
@@ -370,6 +379,11 @@ end
   parameters (C1538) and, unless all are assumed-rank, the same rank
   (C1539), so the result doesn't depend on the condition. Flang accepts
   `kind(a + b)` in a constant expression on the same terms.
+  `IS_CONTIGUOUS` of a conditional argument can appear in a constant
+  expression too, when every consequent-arg is known to be contiguous or
+  every one is known not to be, so that the result can't depend on the
+  condition. In all of these cases, a condition can be any logical
+  expression, including a function reference, and it isn't evaluated.
 * OPEN(ACCESS='APPEND') is interpreted as OPEN(POSITION='APPEND')
   to ease porting from Sun Fortran.
 * Intrinsic subroutines EXIT([status]) and ABORT()
