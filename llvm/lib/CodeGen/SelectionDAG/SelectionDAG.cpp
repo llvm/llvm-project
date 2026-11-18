@@ -6277,6 +6277,33 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     Known = KnownFPClass::getEmpty();
     break;
   }
+  case ISD::FADD: {
+    if ((VT != MVT::f16 && VT != MVT::f32 && VT != MVT::f64) ||
+        !(InterestedClasses & fcSubnormal))
+      break;
+
+    const auto *C = dyn_cast<ConstantFPSDNode>(Op.getOperand(1));
+    if (!C)
+      break;
+
+    APFloat Magnitude = C->getValueAPF();
+    if (!Magnitude.isFinite() || Magnitude.isZero())
+      break;
+    if (Magnitude.isNegative())
+      Magnitude.changeSign();
+
+    APFloat Prev = Magnitude;
+    Prev.next(/*nextDown=*/true);
+
+    APFloat Gap = Magnitude;
+    Gap.subtract(Prev, APFloat::rmNearestTiesToEven);
+
+    const APFloat SmallestNormal =
+        APFloat::getSmallestNormalized(Magnitude.getSemantics());
+    if (Gap.compare(SmallestNormal) != APFloat::cmpLessThan)
+      Known.knownNot(fcSubnormal);
+    break;
+  }
   case ISD::FNEG: {
     Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
                                 InterestedClasses, Depth + 1);
