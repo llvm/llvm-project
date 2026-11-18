@@ -617,6 +617,3370 @@ define <8 x i32> @shuffle_v8i32(<8 x i32> %v, <8 x i32> %mask) nounwind {
   ret <8 x i32> %res
 }
 
+; Results split into two or four NEON vectors.
+
+define <32 x i8> @shuffle_v32i8(<32 x i8> %v, <32 x i8> %mask) nounwind {
+; LE-LABEL: shuffle_v32i8:
+; LE:       // %bb.0:
+; LE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; LE-NEXT:    stp q0, q1, [sp, #-1024]!
+; LE-NEXT:    umov w8, v2.b[0]
+; LE-NEXT:    umov w9, v2.b[1]
+; LE-NEXT:    stp q0, q1, [sp, #32]
+; LE-NEXT:    stp q0, q1, [sp, #64]
+; LE-NEXT:    umov w10, v2.b[2]
+; LE-NEXT:    mov x11, sp
+; LE-NEXT:    stp q0, q1, [sp, #96]
+; LE-NEXT:    add x12, sp, #64
+; LE-NEXT:    add x13, sp, #192
+; LE-NEXT:    stp q0, q1, [sp, #128]
+; LE-NEXT:    stp q0, q1, [sp, #160]
+; LE-NEXT:    and x8, x8, #0x1f
+; LE-NEXT:    and x9, x9, #0x1f
+; LE-NEXT:    stp q0, q1, [sp, #192]
+; LE-NEXT:    stp q0, q1, [sp, #224]
+; LE-NEXT:    stp q0, q1, [sp, #256]
+; LE-NEXT:    stp q0, q1, [sp, #288]
+; LE-NEXT:    stp q0, q1, [sp, #320]
+; LE-NEXT:    stp q0, q1, [sp, #352]
+; LE-NEXT:    stp q0, q1, [sp, #384]
+; LE-NEXT:    stp q0, q1, [sp, #416]
+; LE-NEXT:    stp q0, q1, [sp, #448]
+; LE-NEXT:    stp q0, q1, [sp, #480]
+; LE-NEXT:    stp q0, q1, [sp, #512]
+; LE-NEXT:    stp q0, q1, [sp, #544]
+; LE-NEXT:    stp q0, q1, [sp, #576]
+; LE-NEXT:    stp q0, q1, [sp, #608]
+; LE-NEXT:    stp q0, q1, [sp, #640]
+; LE-NEXT:    stp q0, q1, [sp, #672]
+; LE-NEXT:    stp q0, q1, [sp, #704]
+; LE-NEXT:    stp q0, q1, [sp, #736]
+; LE-NEXT:    stp q0, q1, [sp, #768]
+; LE-NEXT:    stp q0, q1, [sp, #800]
+; LE-NEXT:    stp q0, q1, [sp, #832]
+; LE-NEXT:    stp q0, q1, [sp, #864]
+; LE-NEXT:    stp q0, q1, [sp, #896]
+; LE-NEXT:    stp q0, q1, [sp, #928]
+; LE-NEXT:    stp q0, q1, [sp, #960]
+; LE-NEXT:    stp q0, q1, [sp, #992]
+; LE-NEXT:    ldr b0, [x11, x8]
+; LE-NEXT:    add x8, x12, x9
+; LE-NEXT:    umov w9, v2.b[3]
+; LE-NEXT:    umov w11, v3.b[0]
+; LE-NEXT:    ld1 { v0.b }[1], [x8]
+; LE-NEXT:    and x8, x10, #0x1f
+; LE-NEXT:    add x10, sp, #128
+; LE-NEXT:    add x8, x10, x8
+; LE-NEXT:    umov w10, v3.b[1]
+; LE-NEXT:    and x12, x9, #0x1f
+; LE-NEXT:    umov w9, v3.b[2]
+; LE-NEXT:    ld1 { v0.b }[2], [x8]
+; LE-NEXT:    add x13, x13, x12
+; LE-NEXT:    umov w12, v2.b[4]
+; LE-NEXT:    and x11, x11, #0x1f
+; LE-NEXT:    umov w8, v3.b[4]
+; LE-NEXT:    and x10, x10, #0x1f
+; LE-NEXT:    ld1 { v0.b }[3], [x13]
+; LE-NEXT:    add x13, sp, #992
+; LE-NEXT:    and x9, x9, #0x1f
+; LE-NEXT:    ldr b1, [x13, x11]
+; LE-NEXT:    add x11, sp, #32
+; LE-NEXT:    umov w13, v3.b[3]
+; LE-NEXT:    add x10, x11, x10
+; LE-NEXT:    umov w11, v2.b[5]
+; LE-NEXT:    and x12, x12, #0x1f
+; LE-NEXT:    ld1 { v1.b }[1], [x10]
+; LE-NEXT:    add x10, sp, #256
+; LE-NEXT:    and x8, x8, #0x1f
+; LE-NEXT:    add x10, x10, x12
+; LE-NEXT:    add x12, sp, #96
+; LE-NEXT:    add x9, x12, x9
+; LE-NEXT:    add x12, sp, #320
+; LE-NEXT:    ld1 { v0.b }[4], [x10]
+; LE-NEXT:    and x11, x11, #0x1f
+; LE-NEXT:    ld1 { v1.b }[2], [x9]
+; LE-NEXT:    umov w10, v2.b[6]
+; LE-NEXT:    add x9, x12, x11
+; LE-NEXT:    and x11, x13, #0x1f
+; LE-NEXT:    add x12, sp, #160
+; LE-NEXT:    add x11, x12, x11
+; LE-NEXT:    umov w13, v3.b[5]
+; LE-NEXT:    umov w12, v2.b[7]
+; LE-NEXT:    ld1 { v1.b }[3], [x11]
+; LE-NEXT:    ld1 { v0.b }[5], [x9]
+; LE-NEXT:    add x11, sp, #224
+; LE-NEXT:    and x9, x10, #0x1f
+; LE-NEXT:    add x10, sp, #384
+; LE-NEXT:    add x8, x11, x8
+; LE-NEXT:    add x9, x10, x9
+; LE-NEXT:    umov w11, v3.b[6]
+; LE-NEXT:    umov w10, v3.b[9]
+; LE-NEXT:    ld1 { v1.b }[4], [x8]
+; LE-NEXT:    ld1 { v0.b }[6], [x9]
+; LE-NEXT:    and x9, x13, #0x1f
+; LE-NEXT:    add x13, sp, #288
+; LE-NEXT:    umov w8, v2.b[8]
+; LE-NEXT:    and x12, x12, #0x1f
+; LE-NEXT:    add x9, x13, x9
+; LE-NEXT:    add x13, sp, #448
+; LE-NEXT:    add x12, x13, x12
+; LE-NEXT:    umov w13, v3.b[7]
+; LE-NEXT:    ld1 { v1.b }[5], [x9]
+; LE-NEXT:    and x9, x11, #0x1f
+; LE-NEXT:    add x11, sp, #352
+; LE-NEXT:    ld1 { v0.b }[7], [x12]
+; LE-NEXT:    add x9, x11, x9
+; LE-NEXT:    umov w11, v2.b[9]
+; LE-NEXT:    umov w12, v3.b[8]
+; LE-NEXT:    and x8, x8, #0x1f
+; LE-NEXT:    ld1 { v1.b }[6], [x9]
+; LE-NEXT:    add x9, sp, #512
+; LE-NEXT:    add x8, x9, x8
+; LE-NEXT:    and x9, x13, #0x1f
+; LE-NEXT:    add x13, sp, #416
+; LE-NEXT:    add x9, x13, x9
+; LE-NEXT:    add x13, sp, #576
+; LE-NEXT:    ld1 { v0.b }[8], [x8]
+; LE-NEXT:    and x11, x11, #0x1f
+; LE-NEXT:    ld1 { v1.b }[7], [x9]
+; LE-NEXT:    umov w8, v2.b[10]
+; LE-NEXT:    add x9, x13, x11
+; LE-NEXT:    and x11, x12, #0x1f
+; LE-NEXT:    add x12, sp, #480
+; LE-NEXT:    add x11, x12, x11
+; LE-NEXT:    umov w13, v3.b[10]
+; LE-NEXT:    umov w12, v2.b[11]
+; LE-NEXT:    ld1 { v1.b }[8], [x11]
+; LE-NEXT:    ld1 { v0.b }[9], [x9]
+; LE-NEXT:    and x10, x10, #0x1f
+; LE-NEXT:    add x11, sp, #544
+; LE-NEXT:    and x8, x8, #0x1f
+; LE-NEXT:    add x9, sp, #640
+; LE-NEXT:    add x10, x11, x10
+; LE-NEXT:    add x8, x9, x8
+; LE-NEXT:    umov w11, v3.b[11]
+; LE-NEXT:    ld1 { v1.b }[9], [x10]
+; LE-NEXT:    ld1 { v0.b }[10], [x8]
+; LE-NEXT:    and x8, x13, #0x1f
+; LE-NEXT:    add x13, sp, #608
+; LE-NEXT:    umov w10, v2.b[12]
+; LE-NEXT:    and x12, x12, #0x1f
+; LE-NEXT:    add x8, x13, x8
+; LE-NEXT:    add x13, sp, #704
+; LE-NEXT:    umov w9, v3.b[14]
+; LE-NEXT:    add x12, x13, x12
+; LE-NEXT:    umov w13, v3.b[12]
+; LE-NEXT:    ld1 { v1.b }[10], [x8]
+; LE-NEXT:    and x8, x11, #0x1f
+; LE-NEXT:    add x11, sp, #672
+; LE-NEXT:    ld1 { v0.b }[11], [x12]
+; LE-NEXT:    add x8, x11, x8
+; LE-NEXT:    umov w11, v2.b[13]
+; LE-NEXT:    umov w12, v3.b[13]
+; LE-NEXT:    and x10, x10, #0x1f
+; LE-NEXT:    ld1 { v1.b }[11], [x8]
+; LE-NEXT:    add x8, sp, #768
+; LE-NEXT:    add x8, x8, x10
+; LE-NEXT:    and x10, x13, #0x1f
+; LE-NEXT:    add x13, sp, #736
+; LE-NEXT:    add x10, x13, x10
+; LE-NEXT:    ld1 { v0.b }[12], [x8]
+; LE-NEXT:    umov w8, v2.b[14]
+; LE-NEXT:    and x11, x11, #0x1f
+; LE-NEXT:    add x13, sp, #832
+; LE-NEXT:    ld1 { v1.b }[12], [x10]
+; LE-NEXT:    add x10, x13, x11
+; LE-NEXT:    and x11, x12, #0x1f
+; LE-NEXT:    add x12, sp, #800
+; LE-NEXT:    add x11, x12, x11
+; LE-NEXT:    umov w13, v3.b[15]
+; LE-NEXT:    umov w12, v2.b[15]
+; LE-NEXT:    ld1 { v0.b }[13], [x10]
+; LE-NEXT:    ld1 { v1.b }[13], [x11]
+; LE-NEXT:    and x8, x8, #0x1f
+; LE-NEXT:    add x10, sp, #896
+; LE-NEXT:    and x9, x9, #0x1f
+; LE-NEXT:    add x11, sp, #864
+; LE-NEXT:    add x8, x10, x8
+; LE-NEXT:    add x9, x11, x9
+; LE-NEXT:    add x11, sp, #928
+; LE-NEXT:    ld1 { v0.b }[14], [x8]
+; LE-NEXT:    ld1 { v1.b }[14], [x9]
+; LE-NEXT:    and x8, x12, #0x1f
+; LE-NEXT:    add x9, sp, #960
+; LE-NEXT:    and x10, x13, #0x1f
+; LE-NEXT:    add x8, x9, x8
+; LE-NEXT:    add x9, x11, x10
+; LE-NEXT:    ld1 { v0.b }[15], [x8]
+; LE-NEXT:    ld1 { v1.b }[15], [x9]
+; LE-NEXT:    add sp, sp, #1024
+; LE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; LE-NEXT:    ret
+;
+; BE-LABEL: shuffle_v32i8:
+; BE:       // %bb.0:
+; BE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; BE-NEXT:    sub sp, sp, #1024
+; BE-NEXT:    rev64 v3.16b, v3.16b
+; BE-NEXT:    rev64 v2.16b, v2.16b
+; BE-NEXT:    stp q0, q1, [sp]
+; BE-NEXT:    stp q0, q1, [sp, #32]
+; BE-NEXT:    add x18, sp, #992
+; BE-NEXT:    add x0, sp, #608
+; BE-NEXT:    stp q0, q1, [sp, #64]
+; BE-NEXT:    stp q0, q1, [sp, #96]
+; BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; BE-NEXT:    stp q0, q1, [sp, #128]
+; BE-NEXT:    stp q0, q1, [sp, #160]
+; BE-NEXT:    stp q0, q1, [sp, #192]
+; BE-NEXT:    stp q0, q1, [sp, #224]
+; BE-NEXT:    umov w16, v3.b[0]
+; BE-NEXT:    umov w17, v3.b[8]
+; BE-NEXT:    umov w13, v2.b[0]
+; BE-NEXT:    umov w15, v3.b[1]
+; BE-NEXT:    stp q0, q1, [sp, #256]
+; BE-NEXT:    umov w14, v3.b[2]
+; BE-NEXT:    stp q0, q1, [sp, #288]
+; BE-NEXT:    umov w12, v3.b[3]
+; BE-NEXT:    umov w11, v2.b[8]
+; BE-NEXT:    stp q0, q1, [sp, #320]
+; BE-NEXT:    umov w10, v3.b[9]
+; BE-NEXT:    umov w9, v3.b[11]
+; BE-NEXT:    stp q0, q1, [sp, #352]
+; BE-NEXT:    and x16, x16, #0x1f
+; BE-NEXT:    umov w8, v3.b[12]
+; BE-NEXT:    stp q0, q1, [sp, #384]
+; BE-NEXT:    and x15, x15, #0x1f
+; BE-NEXT:    and x14, x14, #0x1f
+; BE-NEXT:    stp q0, q1, [sp, #416]
+; BE-NEXT:    and x12, x12, #0x1f
+; BE-NEXT:    and x11, x11, #0x1f
+; BE-NEXT:    stp q0, q1, [sp, #448]
+; BE-NEXT:    and x10, x10, #0x1f
+; BE-NEXT:    and x9, x9, #0x1f
+; BE-NEXT:    stp q0, q1, [sp, #480]
+; BE-NEXT:    and x8, x8, #0x1f
+; BE-NEXT:    stp q0, q1, [sp, #512]
+; BE-NEXT:    stp q0, q1, [sp, #544]
+; BE-NEXT:    stp q0, q1, [sp, #576]
+; BE-NEXT:    stp q0, q1, [sp, #608]
+; BE-NEXT:    stp q0, q1, [sp, #640]
+; BE-NEXT:    stp q0, q1, [sp, #672]
+; BE-NEXT:    stp q0, q1, [sp, #704]
+; BE-NEXT:    stp q0, q1, [sp, #736]
+; BE-NEXT:    stp q0, q1, [sp, #768]
+; BE-NEXT:    stp q0, q1, [sp, #800]
+; BE-NEXT:    stp q0, q1, [sp, #832]
+; BE-NEXT:    stp q0, q1, [sp, #864]
+; BE-NEXT:    stp q0, q1, [sp, #896]
+; BE-NEXT:    stp q0, q1, [sp, #928]
+; BE-NEXT:    stp q0, q1, [sp, #960]
+; BE-NEXT:    stp q0, q1, [sp, #992]
+; BE-NEXT:    ldr b0, [x18, x16]
+; BE-NEXT:    and x16, x17, #0x1f
+; BE-NEXT:    add x17, sp, #480
+; BE-NEXT:    ldr b1, [x17, x16]
+; BE-NEXT:    and x17, x13, #0x1f
+; BE-NEXT:    mov x18, sp
+; BE-NEXT:    ldr b4, [x18, x17]
+; BE-NEXT:    umov w17, v3.b[4]
+; BE-NEXT:    add x18, sp, #32
+; BE-NEXT:    umov w16, v3.b[5]
+; BE-NEXT:    add x15, x18, x15
+; BE-NEXT:    add x18, sp, #96
+; BE-NEXT:    add x14, x18, x14
+; BE-NEXT:    add x18, sp, #160
+; BE-NEXT:    ld1 { v0.b }[1], [x15]
+; BE-NEXT:    add x12, x18, x12
+; BE-NEXT:    add x18, sp, #512
+; BE-NEXT:    add x15, sp, #288
+; BE-NEXT:    and x17, x17, #0x1f
+; BE-NEXT:    ldr b5, [x18, x11]
+; BE-NEXT:    add x11, sp, #224
+; BE-NEXT:    umov w18, v3.b[10]
+; BE-NEXT:    add x11, x11, x17
+; BE-NEXT:    umov w17, v3.b[7]
+; BE-NEXT:    and x16, x16, #0x1f
+; BE-NEXT:    umov w13, v3.b[6]
+; BE-NEXT:    ld1 { v0.b }[2], [x14]
+; BE-NEXT:    add x15, x15, x16
+; BE-NEXT:    add x16, sp, #544
+; BE-NEXT:    add x14, sp, #416
+; BE-NEXT:    add x10, x16, x10
+; BE-NEXT:    add x16, sp, #352
+; BE-NEXT:    ld1 { v1.b }[1], [x10]
+; BE-NEXT:    and x17, x17, #0x1f
+; BE-NEXT:    and x18, x18, #0x1f
+; BE-NEXT:    add x10, x14, x17
+; BE-NEXT:    add x14, x0, x18
+; BE-NEXT:    ld1 { v0.b }[3], [x12]
+; BE-NEXT:    umov w12, v3.b[13]
+; BE-NEXT:    and x13, x13, #0x1f
+; BE-NEXT:    umov w17, v2.b[2]
+; BE-NEXT:    ld1 { v1.b }[2], [x14]
+; BE-NEXT:    add x14, sp, #672
+; BE-NEXT:    add x13, x16, x13
+; BE-NEXT:    umov w16, v3.b[14]
+; BE-NEXT:    add x9, x14, x9
+; BE-NEXT:    ld1 { v0.b }[4], [x11]
+; BE-NEXT:    add x14, sp, #736
+; BE-NEXT:    ld1 { v1.b }[3], [x9]
+; BE-NEXT:    and x11, x12, #0x1f
+; BE-NEXT:    add x12, sp, #800
+; BE-NEXT:    add x8, x14, x8
+; BE-NEXT:    umov w14, v3.b[15]
+; BE-NEXT:    add x11, x12, x11
+; BE-NEXT:    umov w12, v2.b[1]
+; BE-NEXT:    and x9, x16, #0x1f
+; BE-NEXT:    ld1 { v0.b }[5], [x15]
+; BE-NEXT:    add x15, sp, #864
+; BE-NEXT:    ld1 { v1.b }[4], [x8]
+; BE-NEXT:    add x8, sp, #928
+; BE-NEXT:    add x9, x15, x9
+; BE-NEXT:    umov w15, v2.b[9]
+; BE-NEXT:    add x16, sp, #128
+; BE-NEXT:    and x14, x14, #0x1f
+; BE-NEXT:    ld1 { v0.b }[6], [x13]
+; BE-NEXT:    umov w13, v2.b[3]
+; BE-NEXT:    ld1 { v1.b }[5], [x11]
+; BE-NEXT:    and x11, x12, #0x1f
+; BE-NEXT:    add x12, sp, #64
+; BE-NEXT:    add x8, x8, x14
+; BE-NEXT:    umov w14, v2.b[10]
+; BE-NEXT:    add x11, x12, x11
+; BE-NEXT:    and x12, x17, #0x1f
+; BE-NEXT:    and x15, x15, #0x1f
+; BE-NEXT:    ld1 { v4.b }[1], [x11]
+; BE-NEXT:    add x12, x16, x12
+; BE-NEXT:    add x16, sp, #576
+; BE-NEXT:    and x13, x13, #0x1f
+; BE-NEXT:    add x15, x16, x15
+; BE-NEXT:    umov w16, v2.b[11]
+; BE-NEXT:    ld1 { v1.b }[6], [x9]
+; BE-NEXT:    ld1 { v5.b }[1], [x15]
+; BE-NEXT:    and x11, x14, #0x1f
+; BE-NEXT:    add x14, sp, #640
+; BE-NEXT:    add x11, x14, x11
+; BE-NEXT:    umov w14, v2.b[4]
+; BE-NEXT:    umov w15, v2.b[12]
+; BE-NEXT:    ld1 { v4.b }[2], [x12]
+; BE-NEXT:    add x12, sp, #192
+; BE-NEXT:    ld1 { v0.b }[7], [x10]
+; BE-NEXT:    ld1 { v5.b }[2], [x11]
+; BE-NEXT:    and x16, x16, #0x1f
+; BE-NEXT:    add x11, sp, #704
+; BE-NEXT:    add x12, x12, x13
+; BE-NEXT:    umov w13, v2.b[5]
+; BE-NEXT:    add x11, x11, x16
+; BE-NEXT:    ld1 { v4.b }[3], [x12]
+; BE-NEXT:    umov w12, v2.b[13]
+; BE-NEXT:    and x14, x14, #0x1f
+; BE-NEXT:    ld1 { v5.b }[3], [x11]
+; BE-NEXT:    add x11, sp, #256
+; BE-NEXT:    umov w16, v2.b[14]
+; BE-NEXT:    add x11, x11, x14
+; BE-NEXT:    and x14, x15, #0x1f
+; BE-NEXT:    add x15, sp, #768
+; BE-NEXT:    add x14, x15, x14
+; BE-NEXT:    umov w15, v2.b[6]
+; BE-NEXT:    and x13, x13, #0x1f
+; BE-NEXT:    ld1 { v4.b }[4], [x11]
+; BE-NEXT:    add x11, sp, #320
+; BE-NEXT:    ld1 { v5.b }[4], [x14]
+; BE-NEXT:    add x11, x11, x13
+; BE-NEXT:    and x12, x12, #0x1f
+; BE-NEXT:    add x13, sp, #832
+; BE-NEXT:    add x12, x13, x12
+; BE-NEXT:    umov w14, v2.b[15]
+; BE-NEXT:    umov w13, v2.b[7]
+; BE-NEXT:    ld1 { v4.b }[5], [x11]
+; BE-NEXT:    ld1 { v5.b }[5], [x12]
+; BE-NEXT:    and x15, x15, #0x1f
+; BE-NEXT:    add x11, sp, #384
+; BE-NEXT:    and x12, x16, #0x1f
+; BE-NEXT:    add x16, sp, #896
+; BE-NEXT:    add x9, x11, x15
+; BE-NEXT:    add x11, x16, x12
+; BE-NEXT:    ld1 { v1.b }[7], [x8]
+; BE-NEXT:    ld1 { v4.b }[6], [x9]
+; BE-NEXT:    ld1 { v5.b }[6], [x11]
+; BE-NEXT:    and x12, x13, #0x1f
+; BE-NEXT:    add x9, sp, #448
+; BE-NEXT:    and x11, x14, #0x1f
+; BE-NEXT:    add x13, sp, #960
+; BE-NEXT:    add x9, x9, x12
+; BE-NEXT:    add x10, x13, x11
+; BE-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; BE-NEXT:    ld1 { v4.b }[7], [x9]
+; BE-NEXT:    ld1 { v5.b }[7], [x10]
+; BE-NEXT:    zip1 v1.2d, v4.2d, v5.2d
+; BE-NEXT:    rev64 v2.16b, v0.16b
+; BE-NEXT:    rev64 v1.16b, v1.16b
+; BE-NEXT:    ext v0.16b, v1.16b, v1.16b, #8
+; BE-NEXT:    ext v1.16b, v2.16b, v2.16b, #8
+; BE-NEXT:    add sp, sp, #1024
+; BE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; BE-NEXT:    ret
+  %res = call <32 x i8> @llvm.vector.shuffle(<32 x i8> %v, <32 x i8> %mask)
+  ret <32 x i8> %res
+}
+
+define <16 x i16> @shuffle_v16i16(<16 x i16> %v, <16 x i16> %mask) nounwind {
+; LE-LABEL: shuffle_v16i16:
+; LE:       // %bb.0:
+; LE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; LE-NEXT:    stp q0, q1, [sp, #-512]!
+; LE-NEXT:    umov w13, v2.h[1]
+; LE-NEXT:    umov w1, v2.h[0]
+; LE-NEXT:    add x4, sp, #64
+; LE-NEXT:    umov w3, v2.h[2]
+; LE-NEXT:    umov w2, v2.h[3]
+; LE-NEXT:    stp q0, q1, [sp, #32]
+; LE-NEXT:    umov w0, v2.h[5]
+; LE-NEXT:    umov w5, v2.h[4]
+; LE-NEXT:    stp q0, q1, [sp, #64]
+; LE-NEXT:    stp q0, q1, [sp, #96]
+; LE-NEXT:    umov w17, v3.h[1]
+; LE-NEXT:    umov w12, v3.h[5]
+; LE-NEXT:    and x13, x13, #0xf
+; LE-NEXT:    stp q0, q1, [sp, #128]
+; LE-NEXT:    umov w14, v3.h[4]
+; LE-NEXT:    stp q0, q1, [sp, #160]
+; LE-NEXT:    add x4, x4, x13, lsl #1
+; LE-NEXT:    and x13, x1, #0xf
+; LE-NEXT:    stp q0, q1, [sp, #192]
+; LE-NEXT:    mov x1, sp
+; LE-NEXT:    umov w15, v3.h[0]
+; LE-NEXT:    stp q0, q1, [sp, #224]
+; LE-NEXT:    and x0, x0, #0xf
+; LE-NEXT:    umov w10, v3.h[6]
+; LE-NEXT:    stp q0, q1, [sp, #256]
+; LE-NEXT:    umov w11, v3.h[2]
+; LE-NEXT:    umov w18, v2.h[6]
+; LE-NEXT:    stp q0, q1, [sp, #288]
+; LE-NEXT:    and x17, x17, #0xf
+; LE-NEXT:    and x14, x14, #0xf
+; LE-NEXT:    stp q0, q1, [sp, #320]
+; LE-NEXT:    and x15, x15, #0xf
+; LE-NEXT:    and x12, x12, #0xf
+; LE-NEXT:    stp q0, q1, [sp, #352]
+; LE-NEXT:    umov w8, v3.h[7]
+; LE-NEXT:    umov w9, v3.h[3]
+; LE-NEXT:    stp q0, q1, [sp, #384]
+; LE-NEXT:    umov w16, v2.h[7]
+; LE-NEXT:    and x18, x18, #0xf
+; LE-NEXT:    stp q0, q1, [sp, #416]
+; LE-NEXT:    and x11, x11, #0xf
+; LE-NEXT:    and x10, x10, #0xf
+; LE-NEXT:    stp q0, q1, [sp, #448]
+; LE-NEXT:    stp q0, q1, [sp, #480]
+; LE-NEXT:    and x9, x9, #0xf
+; LE-NEXT:    and x8, x8, #0xf
+; LE-NEXT:    ldr h0, [x1, x13, lsl #1]
+; LE-NEXT:    and x13, x3, #0xf
+; LE-NEXT:    add x1, sp, #128
+; LE-NEXT:    add x1, x1, x13, lsl #1
+; LE-NEXT:    and x13, x2, #0xf
+; LE-NEXT:    add x2, sp, #192
+; LE-NEXT:    add x13, x2, x13, lsl #1
+; LE-NEXT:    add x2, sp, #320
+; LE-NEXT:    and x3, x5, #0xf
+; LE-NEXT:    add x5, sp, #256
+; LE-NEXT:    ld1 { v0.h }[1], [x4]
+; LE-NEXT:    add x2, x2, x0, lsl #1
+; LE-NEXT:    ldr h1, [x5, x3, lsl #1]
+; LE-NEXT:    add x3, sp, #32
+; LE-NEXT:    add x0, sp, #384
+; LE-NEXT:    add x17, x3, x17, lsl #1
+; LE-NEXT:    add x3, sp, #288
+; LE-NEXT:    add x0, x0, x18, lsl #1
+; LE-NEXT:    ld1 { v0.h }[2], [x1]
+; LE-NEXT:    ld1 { v1.h }[1], [x2]
+; LE-NEXT:    add x1, sp, #480
+; LE-NEXT:    add x2, sp, #224
+; LE-NEXT:    ldr h2, [x1, x15, lsl #1]
+; LE-NEXT:    add x12, x3, x12, lsl #1
+; LE-NEXT:    ldr h3, [x2, x14, lsl #1]
+; LE-NEXT:    add x14, sp, #96
+; LE-NEXT:    add x15, sp, #352
+; LE-NEXT:    ld1 { v2.h }[1], [x17]
+; LE-NEXT:    add x11, x14, x11, lsl #1
+; LE-NEXT:    add x10, x15, x10, lsl #1
+; LE-NEXT:    ld1 { v3.h }[1], [x12]
+; LE-NEXT:    and x16, x16, #0xf
+; LE-NEXT:    add x18, sp, #448
+; LE-NEXT:    ld1 { v1.h }[2], [x0]
+; LE-NEXT:    add x12, sp, #160
+; LE-NEXT:    add x14, sp, #416
+; LE-NEXT:    ld1 { v2.h }[2], [x11]
+; LE-NEXT:    add x9, x12, x9, lsl #1
+; LE-NEXT:    add x8, x14, x8, lsl #1
+; LE-NEXT:    ld1 { v3.h }[2], [x10]
+; LE-NEXT:    add x10, x18, x16, lsl #1
+; LE-NEXT:    ld1 { v0.h }[3], [x13]
+; LE-NEXT:    ld1 { v1.h }[3], [x10]
+; LE-NEXT:    ld1 { v2.h }[3], [x9]
+; LE-NEXT:    ld1 { v3.h }[3], [x8]
+; LE-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; LE-NEXT:    zip1 v1.2d, v2.2d, v3.2d
+; LE-NEXT:    add sp, sp, #512
+; LE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; LE-NEXT:    ret
+;
+; BE-LABEL: shuffle_v16i16:
+; BE:       // %bb.0:
+; BE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; BE-NEXT:    sub sp, sp, #512
+; BE-NEXT:    rev64 v3.8h, v3.8h
+; BE-NEXT:    rev64 v2.8h, v2.8h
+; BE-NEXT:    add x0, sp, #32
+; BE-NEXT:    stp q0, q1, [sp]
+; BE-NEXT:    add x1, sp, #96
+; BE-NEXT:    stp q0, q1, [sp, #32]
+; BE-NEXT:    stp q0, q1, [sp, #64]
+; BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; BE-NEXT:    stp q0, q1, [sp, #96]
+; BE-NEXT:    stp q0, q1, [sp, #128]
+; BE-NEXT:    stp q0, q1, [sp, #160]
+; BE-NEXT:    stp q0, q1, [sp, #192]
+; BE-NEXT:    umov w13, v3.h[1]
+; BE-NEXT:    umov w15, v3.h[0]
+; BE-NEXT:    umov w14, v2.h[0]
+; BE-NEXT:    umov w16, v2.h[1]
+; BE-NEXT:    umov w17, v3.h[2]
+; BE-NEXT:    stp q0, q1, [sp, #224]
+; BE-NEXT:    stp q0, q1, [sp, #256]
+; BE-NEXT:    umov w12, v2.h[2]
+; BE-NEXT:    umov w11, v2.h[3]
+; BE-NEXT:    stp q0, q1, [sp, #288]
+; BE-NEXT:    umov w10, v2.h[4]
+; BE-NEXT:    umov w9, v2.h[5]
+; BE-NEXT:    and x18, x13, #0xf
+; BE-NEXT:    stp q0, q1, [sp, #320]
+; BE-NEXT:    and x15, x15, #0xf
+; BE-NEXT:    stp q0, q1, [sp, #352]
+; BE-NEXT:    add x18, x0, x18, lsl #1
+; BE-NEXT:    add x0, sp, #480
+; BE-NEXT:    stp q0, q1, [sp, #384]
+; BE-NEXT:    and x16, x16, #0xf
+; BE-NEXT:    and x14, x14, #0xf
+; BE-NEXT:    stp q0, q1, [sp, #416]
+; BE-NEXT:    umov w13, v3.h[3]
+; BE-NEXT:    and x12, x12, #0xf
+; BE-NEXT:    stp q0, q1, [sp, #448]
+; BE-NEXT:    and x11, x11, #0xf
+; BE-NEXT:    and x10, x10, #0xf
+; BE-NEXT:    stp q0, q1, [sp, #480]
+; BE-NEXT:    umov w8, v2.h[6]
+; BE-NEXT:    and x9, x9, #0xf
+; BE-NEXT:    ldr h0, [x0, x15, lsl #1]
+; BE-NEXT:    and x15, x17, #0xf
+; BE-NEXT:    add x17, sp, #64
+; BE-NEXT:    mov x0, sp
+; BE-NEXT:    add x16, x17, x16, lsl #1
+; BE-NEXT:    add x15, x1, x15, lsl #1
+; BE-NEXT:    ldr h1, [x0, x14, lsl #1]
+; BE-NEXT:    ld1 { v0.h }[1], [x18]
+; BE-NEXT:    umov w14, v3.h[4]
+; BE-NEXT:    and x13, x13, #0xf
+; BE-NEXT:    add x17, sp, #160
+; BE-NEXT:    and x8, x8, #0xf
+; BE-NEXT:    ld1 { v1.h }[1], [x16]
+; BE-NEXT:    add x16, sp, #128
+; BE-NEXT:    add x13, x17, x13, lsl #1
+; BE-NEXT:    add x12, x16, x12, lsl #1
+; BE-NEXT:    ld1 { v0.h }[2], [x15]
+; BE-NEXT:    umov w16, v3.h[5]
+; BE-NEXT:    and x14, x14, #0xf
+; BE-NEXT:    add x15, sp, #224
+; BE-NEXT:    ld1 { v1.h }[2], [x12]
+; BE-NEXT:    add x12, sp, #192
+; BE-NEXT:    add x11, x12, x11, lsl #1
+; BE-NEXT:    ld1 { v0.h }[3], [x13]
+; BE-NEXT:    add x13, x15, x14, lsl #1
+; BE-NEXT:    umov w12, v3.h[6]
+; BE-NEXT:    and x14, x16, #0xf
+; BE-NEXT:    add x15, sp, #288
+; BE-NEXT:    ld1 { v1.h }[3], [x11]
+; BE-NEXT:    add x11, sp, #256
+; BE-NEXT:    add x10, x11, x10, lsl #1
+; BE-NEXT:    ld1 { v0.h }[4], [x13]
+; BE-NEXT:    add x13, x15, x14, lsl #1
+; BE-NEXT:    umov w11, v3.h[7]
+; BE-NEXT:    add x14, sp, #352
+; BE-NEXT:    ld1 { v1.h }[4], [x10]
+; BE-NEXT:    add x10, sp, #320
+; BE-NEXT:    and x12, x12, #0xf
+; BE-NEXT:    add x9, x10, x9, lsl #1
+; BE-NEXT:    umov w10, v2.h[7]
+; BE-NEXT:    ld1 { v0.h }[5], [x13]
+; BE-NEXT:    add x12, x14, x12, lsl #1
+; BE-NEXT:    ld1 { v1.h }[5], [x9]
+; BE-NEXT:    add x9, sp, #384
+; BE-NEXT:    add x8, x9, x8, lsl #1
+; BE-NEXT:    ld1 { v0.h }[6], [x12]
+; BE-NEXT:    and x9, x11, #0xf
+; BE-NEXT:    add x11, sp, #416
+; BE-NEXT:    ld1 { v1.h }[6], [x8]
+; BE-NEXT:    and x8, x10, #0xf
+; BE-NEXT:    add x10, sp, #448
+; BE-NEXT:    add x9, x11, x9, lsl #1
+; BE-NEXT:    add x8, x10, x8, lsl #1
+; BE-NEXT:    ld1 { v0.h }[7], [x9]
+; BE-NEXT:    ld1 { v1.h }[7], [x8]
+; BE-NEXT:    rev64 v1.8h, v1.8h
+; BE-NEXT:    rev64 v2.8h, v0.8h
+; BE-NEXT:    ext v0.16b, v1.16b, v1.16b, #8
+; BE-NEXT:    ext v1.16b, v2.16b, v2.16b, #8
+; BE-NEXT:    add sp, sp, #512
+; BE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; BE-NEXT:    ret
+  %res = call <16 x i16> @llvm.vector.shuffle(<16 x i16> %v, <16 x i16> %mask)
+  ret <16 x i16> %res
+}
+
+define <8 x float> @shuffle_v8f32(<8 x float> %v, <8 x i32> %mask) nounwind {
+; LE-LABEL: shuffle_v8f32:
+; LE:       // %bb.0:
+; LE-NEXT:    sub sp, sp, #272
+; LE-NEXT:    mov w8, v2.s[1]
+; LE-NEXT:    mov w10, v3.s[1]
+; LE-NEXT:    add x14, sp, #64
+; LE-NEXT:    fmov w15, s2
+; LE-NEXT:    fmov w11, s3
+; LE-NEXT:    str x29, [sp, #256] // 8-byte Spill
+; LE-NEXT:    stp q0, q1, [sp]
+; LE-NEXT:    mov w9, v3.s[2]
+; LE-NEXT:    mov w13, v2.s[2]
+; LE-NEXT:    stp q0, q1, [sp, #32]
+; LE-NEXT:    mov w12, v2.s[3]
+; LE-NEXT:    add x16, sp, #128
+; LE-NEXT:    and x8, x8, #0x7
+; LE-NEXT:    stp q0, q1, [sp, #64]
+; LE-NEXT:    and x10, x10, #0x7
+; LE-NEXT:    stp q0, q1, [sp, #96]
+; LE-NEXT:    add x8, x14, x8, lsl #2
+; LE-NEXT:    and x14, x15, #0x7
+; LE-NEXT:    stp q0, q1, [sp, #128]
+; LE-NEXT:    mov x15, sp
+; LE-NEXT:    and x11, x11, #0x7
+; LE-NEXT:    stp q0, q1, [sp, #160]
+; LE-NEXT:    and x13, x13, #0x7
+; LE-NEXT:    and x9, x9, #0x7
+; LE-NEXT:    stp q0, q1, [sp, #192]
+; LE-NEXT:    ldr x29, [sp, #256] // 8-byte Reload
+; LE-NEXT:    stp q0, q1, [sp, #224]
+; LE-NEXT:    ldr s0, [x15, x14, lsl #2]
+; LE-NEXT:    add x14, sp, #32
+; LE-NEXT:    add x15, sp, #224
+; LE-NEXT:    add x10, x14, x10, lsl #2
+; LE-NEXT:    ldr s1, [x15, x11, lsl #2]
+; LE-NEXT:    mov w11, v3.s[3]
+; LE-NEXT:    ld1 { v0.s }[1], [x8]
+; LE-NEXT:    add x8, x16, x13, lsl #2
+; LE-NEXT:    ld1 { v1.s }[1], [x10]
+; LE-NEXT:    add x10, sp, #96
+; LE-NEXT:    add x9, x10, x9, lsl #2
+; LE-NEXT:    add x10, sp, #192
+; LE-NEXT:    ld1 { v0.s }[2], [x8]
+; LE-NEXT:    and x8, x12, #0x7
+; LE-NEXT:    ld1 { v1.s }[2], [x9]
+; LE-NEXT:    and x9, x11, #0x7
+; LE-NEXT:    add x11, sp, #160
+; LE-NEXT:    add x8, x10, x8, lsl #2
+; LE-NEXT:    add x9, x11, x9, lsl #2
+; LE-NEXT:    ld1 { v0.s }[3], [x8]
+; LE-NEXT:    ld1 { v1.s }[3], [x9]
+; LE-NEXT:    add sp, sp, #272
+; LE-NEXT:    ret
+;
+; BE-LABEL: shuffle_v8f32:
+; BE:       // %bb.0:
+; BE-NEXT:    sub sp, sp, #272
+; BE-NEXT:    rev64 v3.4s, v3.4s
+; BE-NEXT:    rev64 v2.4s, v2.4s
+; BE-NEXT:    add x8, sp, #32
+; BE-NEXT:    str x29, [sp, #256] // 8-byte Spill
+; BE-NEXT:    add x10, sp, #224
+; BE-NEXT:    stp q0, q1, [sp]
+; BE-NEXT:    ldr x29, [sp, #256] // 8-byte Reload
+; BE-NEXT:    stp q0, q1, [sp, #32]
+; BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; BE-NEXT:    stp q0, q1, [sp, #64]
+; BE-NEXT:    stp q0, q1, [sp, #96]
+; BE-NEXT:    stp q0, q1, [sp, #128]
+; BE-NEXT:    stp q0, q1, [sp, #160]
+; BE-NEXT:    mov w9, v3.s[1]
+; BE-NEXT:    mov w13, v2.s[1]
+; BE-NEXT:    fmov w16, s3
+; BE-NEXT:    mov w12, v2.s[2]
+; BE-NEXT:    stp q0, q1, [sp, #192]
+; BE-NEXT:    mov w15, v3.s[2]
+; BE-NEXT:    stp q0, q1, [sp, #224]
+; BE-NEXT:    mov w11, v2.s[3]
+; BE-NEXT:    mov w14, v3.s[3]
+; BE-NEXT:    and x16, x16, #0x7
+; BE-NEXT:    and x9, x9, #0x7
+; BE-NEXT:    ldr s0, [x10, x16, lsl #2]
+; BE-NEXT:    and x10, x13, #0x7
+; BE-NEXT:    add x8, x8, x9, lsl #2
+; BE-NEXT:    fmov w9, s2
+; BE-NEXT:    add x13, sp, #64
+; BE-NEXT:    mov x16, sp
+; BE-NEXT:    add x10, x13, x10, lsl #2
+; BE-NEXT:    add x13, sp, #128
+; BE-NEXT:    and x15, x15, #0x7
+; BE-NEXT:    ld1 { v0.s }[1], [x8]
+; BE-NEXT:    and x8, x12, #0x7
+; BE-NEXT:    and x9, x9, #0x7
+; BE-NEXT:    add x8, x13, x8, lsl #2
+; BE-NEXT:    and x12, x14, #0x7
+; BE-NEXT:    ldr s1, [x16, x9, lsl #2]
+; BE-NEXT:    add x9, sp, #96
+; BE-NEXT:    add x9, x9, x15, lsl #2
+; BE-NEXT:    ld1 { v1.s }[1], [x10]
+; BE-NEXT:    add x10, sp, #160
+; BE-NEXT:    ld1 { v0.s }[2], [x9]
+; BE-NEXT:    add x9, sp, #192
+; BE-NEXT:    add x10, x10, x12, lsl #2
+; BE-NEXT:    ld1 { v1.s }[2], [x8]
+; BE-NEXT:    and x8, x11, #0x7
+; BE-NEXT:    add x8, x9, x8, lsl #2
+; BE-NEXT:    ld1 { v0.s }[3], [x10]
+; BE-NEXT:    ld1 { v1.s }[3], [x8]
+; BE-NEXT:    rev64 v2.4s, v0.4s
+; BE-NEXT:    rev64 v1.4s, v1.4s
+; BE-NEXT:    ext v0.16b, v1.16b, v1.16b, #8
+; BE-NEXT:    ext v1.16b, v2.16b, v2.16b, #8
+; BE-NEXT:    add sp, sp, #272
+; BE-NEXT:    ret
+  %res = call <8 x float> @llvm.vector.shuffle(<8 x float> %v, <8 x i32> %mask)
+  ret <8 x float> %res
+}
+
+define <64 x i8> @shuffle_v64i8(<64 x i8> %v, <64 x i8> %mask) nounwind {
+; LE-LABEL: shuffle_v64i8:
+; LE:       // %bb.0:
+; LE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; LE-NEXT:    sub sp, sp, #1, lsl #12 // =4096
+; LE-NEXT:    umov w16, v4.b[0]
+; LE-NEXT:    umov w17, v4.b[8]
+; LE-NEXT:    stp q0, q1, [sp]
+; LE-NEXT:    umov w13, v5.b[0]
+; LE-NEXT:    umov w15, v4.b[1]
+; LE-NEXT:    stp q2, q3, [sp, #32]
+; LE-NEXT:    stp q0, q1, [sp, #64]
+; LE-NEXT:    umov w14, v4.b[2]
+; LE-NEXT:    mov x18, sp
+; LE-NEXT:    stp q0, q1, [sp, #256]
+; LE-NEXT:    umov w12, v5.b[8]
+; LE-NEXT:    umov w11, v6.b[0]
+; LE-NEXT:    stp q2, q3, [sp, #96]
+; LE-NEXT:    and x16, x16, #0x3f
+; LE-NEXT:    umov w10, v7.b[0]
+; LE-NEXT:    stp q0, q1, [sp, #128]
+; LE-NEXT:    and x15, x15, #0x3f
+; LE-NEXT:    umov w9, v7.b[8]
+; LE-NEXT:    stp q2, q3, [sp, #160]
+; LE-NEXT:    and x14, x14, #0x3f
+; LE-NEXT:    umov w8, v6.b[12]
+; LE-NEXT:    stp q0, q1, [sp, #192]
+; LE-NEXT:    and x12, x12, #0x3f
+; LE-NEXT:    and x11, x11, #0x3f
+; LE-NEXT:    stp q2, q3, [sp, #288]
+; LE-NEXT:    and x10, x10, #0x3f
+; LE-NEXT:    stp q0, q1, [sp, #320]
+; LE-NEXT:    and x9, x9, #0x3f
+; LE-NEXT:    str q3, [sp, #1072]
+; LE-NEXT:    and x8, x8, #0x3f
+; LE-NEXT:    stp q2, q3, [sp, #352]
+; LE-NEXT:    stp q0, q1, [sp, #512]
+; LE-NEXT:    stp q2, q3, [sp, #544]
+; LE-NEXT:    stp q0, q1, [sp, #576]
+; LE-NEXT:    stp q2, q3, [sp, #608]
+; LE-NEXT:    stp q0, q1, [sp, #768]
+; LE-NEXT:    stp q2, q3, [sp, #800]
+; LE-NEXT:    str q2, [sp, #1056]
+; LE-NEXT:    str q1, [sp, #1040]
+; LE-NEXT:    str q0, [sp, #1024]
+; LE-NEXT:    str q3, [sp, #1328]
+; LE-NEXT:    str q2, [sp, #1312]
+; LE-NEXT:    str q1, [sp, #1296]
+; LE-NEXT:    str q0, [sp, #1280]
+; LE-NEXT:    str q3, [sp, #1584]
+; LE-NEXT:    str q2, [sp, #1568]
+; LE-NEXT:    str q1, [sp, #1552]
+; LE-NEXT:    str q0, [sp, #1536]
+; LE-NEXT:    str q3, [sp, #1840]
+; LE-NEXT:    str q2, [sp, #1824]
+; LE-NEXT:    str q1, [sp, #1808]
+; LE-NEXT:    str q0, [sp, #1792]
+; LE-NEXT:    str q3, [sp, #2096]
+; LE-NEXT:    str q2, [sp, #2080]
+; LE-NEXT:    str q1, [sp, #2064]
+; LE-NEXT:    str q0, [sp, #2048]
+; LE-NEXT:    str q3, [sp, #2352]
+; LE-NEXT:    str q2, [sp, #2336]
+; LE-NEXT:    str q1, [sp, #2320]
+; LE-NEXT:    str q0, [sp, #2304]
+; LE-NEXT:    str q3, [sp, #2608]
+; LE-NEXT:    str q2, [sp, #2592]
+; LE-NEXT:    str q1, [sp, #2576]
+; LE-NEXT:    str q0, [sp, #2560]
+; LE-NEXT:    str q3, [sp, #2864]
+; LE-NEXT:    str q2, [sp, #2848]
+; LE-NEXT:    str q1, [sp, #2832]
+; LE-NEXT:    str q0, [sp, #2816]
+; LE-NEXT:    str q3, [sp, #3120]
+; LE-NEXT:    str q2, [sp, #3104]
+; LE-NEXT:    str q1, [sp, #3088]
+; LE-NEXT:    str q0, [sp, #3072]
+; LE-NEXT:    str q3, [sp, #3376]
+; LE-NEXT:    str q2, [sp, #3360]
+; LE-NEXT:    str q1, [sp, #3344]
+; LE-NEXT:    str q0, [sp, #3328]
+; LE-NEXT:    str q3, [sp, #3632]
+; LE-NEXT:    str q2, [sp, #3616]
+; LE-NEXT:    str q1, [sp, #3600]
+; LE-NEXT:    str q0, [sp, #3584]
+; LE-NEXT:    str q3, [sp, #3888]
+; LE-NEXT:    str q2, [sp, #3872]
+; LE-NEXT:    str q1, [sp, #3856]
+; LE-NEXT:    str q0, [sp, #3840]
+; LE-NEXT:    str q3, [sp, #3952]
+; LE-NEXT:    str q2, [sp, #3936]
+; LE-NEXT:    str q1, [sp, #3920]
+; LE-NEXT:    str q0, [sp, #3904]
+; LE-NEXT:    stp q2, q3, [sp, #224]
+; LE-NEXT:    stp q0, q1, [sp, #384]
+; LE-NEXT:    stp q2, q3, [sp, #416]
+; LE-NEXT:    stp q0, q1, [sp, #448]
+; LE-NEXT:    stp q2, q3, [sp, #480]
+; LE-NEXT:    stp q0, q1, [sp, #640]
+; LE-NEXT:    stp q2, q3, [sp, #672]
+; LE-NEXT:    stp q0, q1, [sp, #704]
+; LE-NEXT:    stp q2, q3, [sp, #736]
+; LE-NEXT:    stp q0, q1, [sp, #896]
+; LE-NEXT:    stp q2, q3, [sp, #928]
+; LE-NEXT:    stp q0, q1, [sp, #960]
+; LE-NEXT:    stp q2, q3, [sp, #992]
+; LE-NEXT:    str q3, [sp, #1264]
+; LE-NEXT:    str q2, [sp, #1248]
+; LE-NEXT:    str q1, [sp, #1232]
+; LE-NEXT:    str q0, [sp, #1216]
+; LE-NEXT:    str q3, [sp, #1520]
+; LE-NEXT:    str q2, [sp, #1504]
+; LE-NEXT:    str q1, [sp, #1488]
+; LE-NEXT:    str q0, [sp, #1472]
+; LE-NEXT:    str q3, [sp, #1776]
+; LE-NEXT:    str q2, [sp, #1760]
+; LE-NEXT:    str q1, [sp, #1744]
+; LE-NEXT:    str q0, [sp, #1728]
+; LE-NEXT:    str q3, [sp, #2032]
+; LE-NEXT:    str q2, [sp, #2016]
+; LE-NEXT:    str q1, [sp, #2000]
+; LE-NEXT:    str q0, [sp, #1984]
+; LE-NEXT:    str q3, [sp, #2288]
+; LE-NEXT:    str q2, [sp, #2272]
+; LE-NEXT:    str q1, [sp, #2256]
+; LE-NEXT:    str q0, [sp, #2240]
+; LE-NEXT:    str q3, [sp, #2544]
+; LE-NEXT:    str q2, [sp, #2528]
+; LE-NEXT:    str q1, [sp, #2512]
+; LE-NEXT:    str q0, [sp, #2496]
+; LE-NEXT:    str q3, [sp, #2800]
+; LE-NEXT:    str q2, [sp, #2784]
+; LE-NEXT:    str q1, [sp, #2768]
+; LE-NEXT:    str q0, [sp, #2752]
+; LE-NEXT:    str q3, [sp, #3056]
+; LE-NEXT:    str q2, [sp, #3040]
+; LE-NEXT:    str q1, [sp, #3024]
+; LE-NEXT:    str q0, [sp, #3008]
+; LE-NEXT:    str q3, [sp, #3312]
+; LE-NEXT:    str q2, [sp, #3296]
+; LE-NEXT:    str q1, [sp, #3280]
+; LE-NEXT:    str q0, [sp, #3264]
+; LE-NEXT:    str q3, [sp, #3568]
+; LE-NEXT:    str q2, [sp, #3552]
+; LE-NEXT:    str q1, [sp, #3536]
+; LE-NEXT:    str q0, [sp, #3520]
+; LE-NEXT:    str q3, [sp, #3824]
+; LE-NEXT:    str q2, [sp, #3808]
+; LE-NEXT:    str q1, [sp, #3792]
+; LE-NEXT:    str q0, [sp, #3776]
+; LE-NEXT:    str q3, [sp, #4016]
+; LE-NEXT:    str q2, [sp, #4000]
+; LE-NEXT:    str q1, [sp, #3984]
+; LE-NEXT:    str q0, [sp, #3968]
+; LE-NEXT:    str q3, [sp, #1200]
+; LE-NEXT:    str q2, [sp, #1184]
+; LE-NEXT:    str q1, [sp, #1168]
+; LE-NEXT:    str q0, [sp, #1152]
+; LE-NEXT:    str q3, [sp, #1456]
+; LE-NEXT:    str q2, [sp, #1440]
+; LE-NEXT:    str q1, [sp, #1424]
+; LE-NEXT:    str q0, [sp, #1408]
+; LE-NEXT:    str q3, [sp, #1712]
+; LE-NEXT:    str q2, [sp, #1696]
+; LE-NEXT:    str q1, [sp, #1680]
+; LE-NEXT:    str q0, [sp, #1664]
+; LE-NEXT:    str q3, [sp, #1968]
+; LE-NEXT:    str q2, [sp, #1952]
+; LE-NEXT:    str q1, [sp, #1936]
+; LE-NEXT:    str q0, [sp, #1920]
+; LE-NEXT:    str q3, [sp, #2224]
+; LE-NEXT:    str q2, [sp, #2208]
+; LE-NEXT:    str q1, [sp, #2192]
+; LE-NEXT:    str q0, [sp, #2176]
+; LE-NEXT:    str q3, [sp, #2480]
+; LE-NEXT:    str q2, [sp, #2464]
+; LE-NEXT:    str q1, [sp, #2448]
+; LE-NEXT:    str q0, [sp, #2432]
+; LE-NEXT:    str q3, [sp, #2736]
+; LE-NEXT:    str q2, [sp, #2720]
+; LE-NEXT:    str q1, [sp, #2704]
+; LE-NEXT:    str q0, [sp, #2688]
+; LE-NEXT:    str q3, [sp, #2992]
+; LE-NEXT:    str q2, [sp, #2976]
+; LE-NEXT:    str q1, [sp, #2960]
+; LE-NEXT:    str q0, [sp, #2944]
+; LE-NEXT:    str q3, [sp, #3248]
+; LE-NEXT:    str q2, [sp, #3232]
+; LE-NEXT:    str q1, [sp, #3216]
+; LE-NEXT:    str q0, [sp, #3200]
+; LE-NEXT:    str q3, [sp, #3504]
+; LE-NEXT:    str q2, [sp, #3488]
+; LE-NEXT:    str q1, [sp, #3472]
+; LE-NEXT:    str q0, [sp, #3456]
+; LE-NEXT:    str q3, [sp, #3760]
+; LE-NEXT:    str q2, [sp, #3744]
+; LE-NEXT:    str q1, [sp, #3728]
+; LE-NEXT:    str q0, [sp, #3712]
+; LE-NEXT:    str q3, [sp, #4080]
+; LE-NEXT:    str q2, [sp, #4064]
+; LE-NEXT:    str q1, [sp, #4048]
+; LE-NEXT:    str q0, [sp, #4032]
+; LE-NEXT:    stp q0, q1, [sp, #832]
+; LE-NEXT:    stp q2, q3, [sp, #864]
+; LE-NEXT:    str q3, [sp, #1136]
+; LE-NEXT:    str q2, [sp, #1120]
+; LE-NEXT:    str q1, [sp, #1104]
+; LE-NEXT:    str q0, [sp, #1088]
+; LE-NEXT:    str q3, [sp, #1392]
+; LE-NEXT:    str q2, [sp, #1376]
+; LE-NEXT:    str q1, [sp, #1360]
+; LE-NEXT:    str q0, [sp, #1344]
+; LE-NEXT:    str q3, [sp, #1648]
+; LE-NEXT:    str q2, [sp, #1632]
+; LE-NEXT:    str q1, [sp, #1616]
+; LE-NEXT:    str q0, [sp, #1600]
+; LE-NEXT:    str q3, [sp, #1904]
+; LE-NEXT:    str q2, [sp, #1888]
+; LE-NEXT:    str q1, [sp, #1872]
+; LE-NEXT:    str q0, [sp, #1856]
+; LE-NEXT:    str q3, [sp, #2160]
+; LE-NEXT:    str q2, [sp, #2144]
+; LE-NEXT:    str q1, [sp, #2128]
+; LE-NEXT:    str q0, [sp, #2112]
+; LE-NEXT:    str q3, [sp, #2416]
+; LE-NEXT:    str q2, [sp, #2400]
+; LE-NEXT:    str q1, [sp, #2384]
+; LE-NEXT:    str q0, [sp, #2368]
+; LE-NEXT:    str q3, [sp, #2672]
+; LE-NEXT:    str q2, [sp, #2656]
+; LE-NEXT:    str q1, [sp, #2640]
+; LE-NEXT:    str q0, [sp, #2624]
+; LE-NEXT:    str q3, [sp, #2928]
+; LE-NEXT:    str q2, [sp, #2912]
+; LE-NEXT:    str q1, [sp, #2896]
+; LE-NEXT:    str q0, [sp, #2880]
+; LE-NEXT:    str q3, [sp, #3184]
+; LE-NEXT:    str q2, [sp, #3168]
+; LE-NEXT:    str q1, [sp, #3152]
+; LE-NEXT:    str q0, [sp, #3136]
+; LE-NEXT:    str q3, [sp, #3440]
+; LE-NEXT:    str q2, [sp, #3424]
+; LE-NEXT:    str q1, [sp, #3408]
+; LE-NEXT:    str q0, [sp, #3392]
+; LE-NEXT:    str q3, [sp, #3696]
+; LE-NEXT:    str q2, [sp, #3680]
+; LE-NEXT:    str q1, [sp, #3664]
+; LE-NEXT:    str q0, [sp, #3648]
+; LE-NEXT:    ldr b0, [x18, x16]
+; LE-NEXT:    and x16, x17, #0x3f
+; LE-NEXT:    add x17, sp, #2048
+; LE-NEXT:    ldr b1, [x17, x16]
+; LE-NEXT:    and x17, x13, #0x3f
+; LE-NEXT:    add x18, sp, #3904
+; LE-NEXT:    ldr b2, [x18, x17]
+; LE-NEXT:    add x18, sp, #256
+; LE-NEXT:    umov w16, v4.b[9]
+; LE-NEXT:    add x15, x18, x15
+; LE-NEXT:    add x18, sp, #512
+; LE-NEXT:    umov w13, v4.b[10]
+; LE-NEXT:    add x14, x18, x14
+; LE-NEXT:    add x18, sp, #1984
+; LE-NEXT:    umov w17, v4.b[3]
+; LE-NEXT:    ldr b3, [x18, x12]
+; LE-NEXT:    umov w18, v4.b[4]
+; LE-NEXT:    add x12, sp, #3968
+; LE-NEXT:    ldr b16, [x12, x11]
+; LE-NEXT:    and x12, x16, #0x3f
+; LE-NEXT:    add x16, sp, #2304
+; LE-NEXT:    ld1 { v0.b }[1], [x15]
+; LE-NEXT:    add x12, x16, x12
+; LE-NEXT:    umov w16, v4.b[11]
+; LE-NEXT:    ld1 { v1.b }[1], [x12]
+; LE-NEXT:    add x12, sp, #1024
+; LE-NEXT:    and x13, x13, #0x3f
+; LE-NEXT:    and x18, x18, #0x3f
+; LE-NEXT:    and x17, x17, #0x3f
+; LE-NEXT:    add x11, sp, #768
+; LE-NEXT:    add x12, x12, x18
+; LE-NEXT:    add x18, sp, #2560
+; LE-NEXT:    ld1 { v0.b }[2], [x14]
+; LE-NEXT:    add x13, x18, x13
+; LE-NEXT:    umov w18, v4.b[12]
+; LE-NEXT:    add x17, x11, x17
+; LE-NEXT:    ld1 { v1.b }[2], [x13]
+; LE-NEXT:    umov w15, v4.b[5]
+; LE-NEXT:    and x14, x16, #0x3f
+; LE-NEXT:    add x16, sp, #2816
+; LE-NEXT:    ld1 { v0.b }[3], [x17]
+; LE-NEXT:    umov w13, v4.b[13]
+; LE-NEXT:    add x14, x16, x14
+; LE-NEXT:    umov w16, v4.b[6]
+; LE-NEXT:    add x17, sp, #1280
+; LE-NEXT:    and x18, x18, #0x3f
+; LE-NEXT:    ld1 { v1.b }[3], [x14]
+; LE-NEXT:    add x14, sp, #3072
+; LE-NEXT:    add x14, x14, x18
+; LE-NEXT:    umov w18, v4.b[14]
+; LE-NEXT:    ld1 { v0.b }[4], [x12]
+; LE-NEXT:    and x15, x15, #0x3f
+; LE-NEXT:    umov w12, v4.b[7]
+; LE-NEXT:    and x13, x13, #0x3f
+; LE-NEXT:    add x15, x17, x15
+; LE-NEXT:    and x16, x16, #0x3f
+; LE-NEXT:    ld1 { v1.b }[4], [x14]
+; LE-NEXT:    add x14, sp, #1536
+; LE-NEXT:    ld1 { v0.b }[5], [x15]
+; LE-NEXT:    umov w17, v6.b[8]
+; LE-NEXT:    add x14, x14, x16
+; LE-NEXT:    add x16, sp, #3328
+; LE-NEXT:    and x15, x18, #0x3f
+; LE-NEXT:    add x18, sp, #3584
+; LE-NEXT:    add x13, x16, x13
+; LE-NEXT:    umov w16, v4.b[15]
+; LE-NEXT:    add x15, x18, x15
+; LE-NEXT:    umov w18, v5.b[1]
+; LE-NEXT:    ld1 { v1.b }[5], [x13]
+; LE-NEXT:    umov w13, v5.b[2]
+; LE-NEXT:    ld1 { v0.b }[6], [x14]
+; LE-NEXT:    and x12, x12, #0x3f
+; LE-NEXT:    add x14, sp, #1792
+; LE-NEXT:    and x17, x17, #0x3f
+; LE-NEXT:    umov w11, v6.b[11]
+; LE-NEXT:    add x14, x14, x12
+; LE-NEXT:    and x16, x16, #0x3f
+; LE-NEXT:    ld1 { v1.b }[6], [x15]
+; LE-NEXT:    add x15, sp, #3840
+; LE-NEXT:    ld1 { v0.b }[7], [x14]
+; LE-NEXT:    and x14, x18, #0x3f
+; LE-NEXT:    add x18, sp, #192
+; LE-NEXT:    add x0, x15, x16
+; LE-NEXT:    umov w15, v5.b[9]
+; LE-NEXT:    add x14, x18, x14
+; LE-NEXT:    and x13, x13, #0x3f
+; LE-NEXT:    add x18, sp, #448
+; LE-NEXT:    add x13, x18, x13
+; LE-NEXT:    add x18, sp, #1920
+; LE-NEXT:    umov w12, v5.b[10]
+; LE-NEXT:    ldr b4, [x18, x17]
+; LE-NEXT:    umov w18, v5.b[4]
+; LE-NEXT:    add x17, sp, #4032
+; LE-NEXT:    ldr b17, [x17, x10]
+; LE-NEXT:    and x15, x15, #0x3f
+; LE-NEXT:    add x17, sp, #2240
+; LE-NEXT:    add x15, x17, x15
+; LE-NEXT:    umov w16, v5.b[3]
+; LE-NEXT:    umov w17, v5.b[11]
+; LE-NEXT:    ld1 { v2.b }[1], [x14]
+; LE-NEXT:    ld1 { v3.b }[1], [x15]
+; LE-NEXT:    add x15, sp, #960
+; LE-NEXT:    and x18, x18, #0x3f
+; LE-NEXT:    and x12, x12, #0x3f
+; LE-NEXT:    umov w14, v5.b[5]
+; LE-NEXT:    add x15, x15, x18
+; LE-NEXT:    add x18, sp, #2496
+; LE-NEXT:    add x10, sp, #704
+; LE-NEXT:    add x12, x18, x12
+; LE-NEXT:    umov w18, v5.b[12]
+; LE-NEXT:    ld1 { v2.b }[2], [x13]
+; LE-NEXT:    ld1 { v3.b }[2], [x12]
+; LE-NEXT:    and x16, x16, #0x3f
+; LE-NEXT:    and x13, x17, #0x3f
+; LE-NEXT:    add x17, sp, #2752
+; LE-NEXT:    add x16, x10, x16
+; LE-NEXT:    ld1 { v1.b }[7], [x0]
+; LE-NEXT:    add x12, x17, x13
+; LE-NEXT:    umov w13, v5.b[6]
+; LE-NEXT:    umov w0, v5.b[13]
+; LE-NEXT:    ld1 { v2.b }[3], [x16]
+; LE-NEXT:    ld1 { v3.b }[3], [x12]
+; LE-NEXT:    and x14, x14, #0x3f
+; LE-NEXT:    add x16, sp, #1216
+; LE-NEXT:    and x17, x18, #0x3f
+; LE-NEXT:    add x18, sp, #3008
+; LE-NEXT:    add x14, x16, x14
+; LE-NEXT:    add x16, x18, x17
+; LE-NEXT:    umov w17, v5.b[14]
+; LE-NEXT:    ld1 { v2.b }[4], [x15]
+; LE-NEXT:    and x13, x13, #0x3f
+; LE-NEXT:    ld1 { v3.b }[4], [x16]
+; LE-NEXT:    add x16, sp, #1472
+; LE-NEXT:    add x18, sp, #3264
+; LE-NEXT:    umov w15, v5.b[7]
+; LE-NEXT:    add x13, x16, x13
+; LE-NEXT:    and x16, x0, #0x3f
+; LE-NEXT:    umov w0, v6.b[2]
+; LE-NEXT:    add x16, x18, x16
+; LE-NEXT:    umov w18, v5.b[15]
+; LE-NEXT:    ld1 { v2.b }[5], [x14]
+; LE-NEXT:    ld1 { v3.b }[5], [x16]
+; LE-NEXT:    and x14, x17, #0x3f
+; LE-NEXT:    add x17, sp, #3520
+; LE-NEXT:    add x14, x17, x14
+; LE-NEXT:    umov w16, v6.b[1]
+; LE-NEXT:    and x15, x15, #0x3f
+; LE-NEXT:    ld1 { v2.b }[6], [x13]
+; LE-NEXT:    add x13, sp, #1728
+; LE-NEXT:    umov w10, v6.b[9]
+; LE-NEXT:    ld1 { v3.b }[6], [x14]
+; LE-NEXT:    and x17, x18, #0x3f
+; LE-NEXT:    add x14, sp, #3776
+; LE-NEXT:    umov w18, v6.b[3]
+; LE-NEXT:    add x13, x13, x15
+; LE-NEXT:    add x14, x14, x17
+; LE-NEXT:    umov w15, v6.b[5]
+; LE-NEXT:    ld1 { v2.b }[7], [x13]
+; LE-NEXT:    and x13, x16, #0x3f
+; LE-NEXT:    ld1 { v3.b }[7], [x14]
+; LE-NEXT:    add x14, sp, #128
+; LE-NEXT:    umov w17, v6.b[4]
+; LE-NEXT:    add x16, x14, x13
+; LE-NEXT:    and x13, x0, #0x3f
+; LE-NEXT:    add x14, sp, #384
+; LE-NEXT:    add x14, x14, x13
+; LE-NEXT:    and x13, x18, #0x3f
+; LE-NEXT:    add x18, sp, #640
+; LE-NEXT:    add x13, x18, x13
+; LE-NEXT:    add x18, sp, #1856
+; LE-NEXT:    and x15, x15, #0x3f
+; LE-NEXT:    ldr b5, [x18, x9]
+; LE-NEXT:    umov w18, v6.b[10]
+; LE-NEXT:    ld1 { v16.b }[1], [x16]
+; LE-NEXT:    add x16, sp, #1152
+; LE-NEXT:    and x10, x10, #0x3f
+; LE-NEXT:    and x17, x17, #0x3f
+; LE-NEXT:    add x15, x16, x15
+; LE-NEXT:    add x16, sp, #2176
+; LE-NEXT:    add x9, sp, #896
+; LE-NEXT:    add x10, x16, x10
+; LE-NEXT:    add x17, x9, x17
+; LE-NEXT:    umov w9, v6.b[7]
+; LE-NEXT:    ld1 { v16.b }[2], [x14]
+; LE-NEXT:    ld1 { v4.b }[1], [x10]
+; LE-NEXT:    and x18, x18, #0x3f
+; LE-NEXT:    add x10, sp, #2432
+; LE-NEXT:    umov w12, v6.b[6]
+; LE-NEXT:    add x14, sp, #1664
+; LE-NEXT:    add x10, x10, x18
+; LE-NEXT:    and x11, x11, #0x3f
+; LE-NEXT:    add x16, sp, #1408
+; LE-NEXT:    ld1 { v16.b }[3], [x13]
+; LE-NEXT:    umov w13, v6.b[13]
+; LE-NEXT:    ld1 { v4.b }[2], [x10]
+; LE-NEXT:    and x9, x9, #0x3f
+; LE-NEXT:    add x10, sp, #2688
+; LE-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; LE-NEXT:    add x9, x14, x9
+; LE-NEXT:    umov w14, v6.b[14]
+; LE-NEXT:    add x10, x10, x11
+; LE-NEXT:    and x12, x12, #0x3f
+; LE-NEXT:    ld1 { v4.b }[3], [x10]
+; LE-NEXT:    add x11, sp, #2944
+; LE-NEXT:    add x12, x16, x12
+; LE-NEXT:    and x13, x13, #0x3f
+; LE-NEXT:    add x16, sp, #3200
+; LE-NEXT:    add x8, x11, x8
+; LE-NEXT:    umov w11, v6.b[15]
+; LE-NEXT:    add x13, x16, x13
+; LE-NEXT:    umov w16, v7.b[1]
+; LE-NEXT:    ld1 { v16.b }[4], [x17]
+; LE-NEXT:    umov w17, v7.b[2]
+; LE-NEXT:    and x10, x14, #0x3f
+; LE-NEXT:    add x14, sp, #3456
+; LE-NEXT:    ld1 { v4.b }[4], [x8]
+; LE-NEXT:    add x10, x14, x10
+; LE-NEXT:    umov w14, v7.b[9]
+; LE-NEXT:    add x8, sp, #3712
+; LE-NEXT:    ld1 { v16.b }[5], [x15]
+; LE-NEXT:    and x11, x11, #0x3f
+; LE-NEXT:    add x15, sp, #64
+; LE-NEXT:    ld1 { v4.b }[5], [x13]
+; LE-NEXT:    and x13, x16, #0x3f
+; LE-NEXT:    add x8, x8, x11
+; LE-NEXT:    umov w11, v7.b[10]
+; LE-NEXT:    add x13, x15, x13
+; LE-NEXT:    and x15, x17, #0x3f
+; LE-NEXT:    add x16, sp, #320
+; LE-NEXT:    and x14, x14, #0x3f
+; LE-NEXT:    ld1 { v16.b }[6], [x12]
+; LE-NEXT:    add x15, x16, x15
+; LE-NEXT:    add x16, sp, #2112
+; LE-NEXT:    umov w12, v7.b[3]
+; LE-NEXT:    add x14, x16, x14
+; LE-NEXT:    umov w16, v7.b[11]
+; LE-NEXT:    ld1 { v17.b }[1], [x13]
+; LE-NEXT:    ld1 { v5.b }[1], [x14]
+; LE-NEXT:    and x11, x11, #0x3f
+; LE-NEXT:    add x13, sp, #2368
+; LE-NEXT:    add x11, x13, x11
+; LE-NEXT:    umov w13, v7.b[4]
+; LE-NEXT:    umov w14, v7.b[12]
+; LE-NEXT:    ld1 { v17.b }[2], [x15]
+; LE-NEXT:    and x12, x12, #0x3f
+; LE-NEXT:    add x15, sp, #576
+; LE-NEXT:    ld1 { v5.b }[2], [x11]
+; LE-NEXT:    and x16, x16, #0x3f
+; LE-NEXT:    add x11, sp, #2624
+; LE-NEXT:    add x12, x15, x12
+; LE-NEXT:    add x11, x11, x16
+; LE-NEXT:    umov w15, v7.b[5]
+; LE-NEXT:    ld1 { v17.b }[3], [x12]
+; LE-NEXT:    umov w12, v7.b[13]
+; LE-NEXT:    and x13, x13, #0x3f
+; LE-NEXT:    ld1 { v5.b }[3], [x11]
+; LE-NEXT:    add x11, sp, #832
+; LE-NEXT:    umov w16, v7.b[14]
+; LE-NEXT:    add x11, x11, x13
+; LE-NEXT:    and x13, x14, #0x3f
+; LE-NEXT:    add x14, sp, #2880
+; LE-NEXT:    add x13, x14, x13
+; LE-NEXT:    umov w14, v7.b[6]
+; LE-NEXT:    ld1 { v17.b }[4], [x11]
+; LE-NEXT:    ld1 { v5.b }[4], [x13]
+; LE-NEXT:    and x15, x15, #0x3f
+; LE-NEXT:    add x11, sp, #1088
+; LE-NEXT:    and x12, x12, #0x3f
+; LE-NEXT:    add x13, sp, #3136
+; LE-NEXT:    add x11, x11, x15
+; LE-NEXT:    add x12, x13, x12
+; LE-NEXT:    umov w15, v7.b[15]
+; LE-NEXT:    umov w13, v7.b[7]
+; LE-NEXT:    ld1 { v17.b }[5], [x11]
+; LE-NEXT:    ld1 { v5.b }[5], [x12]
+; LE-NEXT:    and x14, x14, #0x3f
+; LE-NEXT:    add x11, sp, #1344
+; LE-NEXT:    and x12, x16, #0x3f
+; LE-NEXT:    add x16, sp, #3392
+; LE-NEXT:    ld1 { v4.b }[6], [x10]
+; LE-NEXT:    add x10, x11, x14
+; LE-NEXT:    add x11, x16, x12
+; LE-NEXT:    ld1 { v17.b }[6], [x10]
+; LE-NEXT:    ld1 { v5.b }[6], [x11]
+; LE-NEXT:    and x12, x13, #0x3f
+; LE-NEXT:    add x10, sp, #1600
+; LE-NEXT:    and x11, x15, #0x3f
+; LE-NEXT:    add x13, sp, #3648
+; LE-NEXT:    ld1 { v16.b }[7], [x9]
+; LE-NEXT:    add x9, x10, x12
+; LE-NEXT:    add x10, x13, x11
+; LE-NEXT:    ld1 { v4.b }[7], [x8]
+; LE-NEXT:    ld1 { v17.b }[7], [x9]
+; LE-NEXT:    ld1 { v5.b }[7], [x10]
+; LE-NEXT:    zip1 v1.2d, v2.2d, v3.2d
+; LE-NEXT:    zip1 v2.2d, v16.2d, v4.2d
+; LE-NEXT:    zip1 v3.2d, v17.2d, v5.2d
+; LE-NEXT:    add sp, sp, #1, lsl #12 // =4096
+; LE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; LE-NEXT:    ret
+;
+; BE-LABEL: shuffle_v64i8:
+; BE:       // %bb.0:
+; BE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; BE-NEXT:    sub sp, sp, #1, lsl #12 // =4096
+; BE-NEXT:    rev64 v7.16b, v7.16b
+; BE-NEXT:    rev64 v6.16b, v6.16b
+; BE-NEXT:    str q3, [sp, #4080]
+; BE-NEXT:    rev64 v5.16b, v5.16b
+; BE-NEXT:    str q2, [sp, #4064]
+; BE-NEXT:    add x18, sp, #4032
+; BE-NEXT:    str q1, [sp, #4048]
+; BE-NEXT:    add x0, sp, #2112
+; BE-NEXT:    rev64 v4.16b, v4.16b
+; BE-NEXT:    str q0, [sp, #4032]
+; BE-NEXT:    ext v16.16b, v7.16b, v7.16b, #8
+; BE-NEXT:    ext v7.16b, v6.16b, v6.16b, #8
+; BE-NEXT:    stp q0, q1, [sp]
+; BE-NEXT:    ext v5.16b, v5.16b, v5.16b, #8
+; BE-NEXT:    stp q2, q3, [sp, #32]
+; BE-NEXT:    stp q0, q1, [sp, #64]
+; BE-NEXT:    ext v4.16b, v4.16b, v4.16b, #8
+; BE-NEXT:    stp q2, q3, [sp, #96]
+; BE-NEXT:    umov w16, v16.b[0]
+; BE-NEXT:    umov w17, v16.b[8]
+; BE-NEXT:    umov w13, v7.b[0]
+; BE-NEXT:    umov w15, v16.b[1]
+; BE-NEXT:    stp q0, q1, [sp, #128]
+; BE-NEXT:    umov w14, v16.b[2]
+; BE-NEXT:    stp q2, q3, [sp, #160]
+; BE-NEXT:    umov w12, v7.b[8]
+; BE-NEXT:    umov w11, v5.b[0]
+; BE-NEXT:    stp q0, q1, [sp, #192]
+; BE-NEXT:    umov w10, v4.b[0]
+; BE-NEXT:    umov w9, v4.b[8]
+; BE-NEXT:    stp q2, q3, [sp, #224]
+; BE-NEXT:    and x16, x16, #0x3f
+; BE-NEXT:    umov w8, v4.b[11]
+; BE-NEXT:    stp q0, q1, [sp, #256]
+; BE-NEXT:    and x15, x15, #0x3f
+; BE-NEXT:    and x14, x14, #0x3f
+; BE-NEXT:    stp q2, q3, [sp, #288]
+; BE-NEXT:    and x12, x12, #0x3f
+; BE-NEXT:    and x11, x11, #0x3f
+; BE-NEXT:    stp q0, q1, [sp, #320]
+; BE-NEXT:    and x10, x10, #0x3f
+; BE-NEXT:    and x9, x9, #0x3f
+; BE-NEXT:    stp q2, q3, [sp, #352]
+; BE-NEXT:    and x8, x8, #0x3f
+; BE-NEXT:    stp q0, q1, [sp, #384]
+; BE-NEXT:    stp q2, q3, [sp, #416]
+; BE-NEXT:    stp q0, q1, [sp, #448]
+; BE-NEXT:    stp q2, q3, [sp, #480]
+; BE-NEXT:    stp q0, q1, [sp, #512]
+; BE-NEXT:    stp q2, q3, [sp, #544]
+; BE-NEXT:    stp q0, q1, [sp, #576]
+; BE-NEXT:    stp q2, q3, [sp, #608]
+; BE-NEXT:    stp q0, q1, [sp, #640]
+; BE-NEXT:    stp q2, q3, [sp, #672]
+; BE-NEXT:    stp q0, q1, [sp, #704]
+; BE-NEXT:    stp q2, q3, [sp, #736]
+; BE-NEXT:    stp q0, q1, [sp, #768]
+; BE-NEXT:    stp q2, q3, [sp, #800]
+; BE-NEXT:    stp q0, q1, [sp, #832]
+; BE-NEXT:    stp q2, q3, [sp, #864]
+; BE-NEXT:    str q3, [sp, #1136]
+; BE-NEXT:    str q2, [sp, #1120]
+; BE-NEXT:    str q1, [sp, #1104]
+; BE-NEXT:    str q0, [sp, #1088]
+; BE-NEXT:    str q3, [sp, #1392]
+; BE-NEXT:    str q2, [sp, #1376]
+; BE-NEXT:    str q1, [sp, #1360]
+; BE-NEXT:    str q0, [sp, #1344]
+; BE-NEXT:    str q3, [sp, #1648]
+; BE-NEXT:    str q2, [sp, #1632]
+; BE-NEXT:    str q1, [sp, #1616]
+; BE-NEXT:    str q0, [sp, #1600]
+; BE-NEXT:    str q3, [sp, #1904]
+; BE-NEXT:    str q2, [sp, #1888]
+; BE-NEXT:    str q1, [sp, #1872]
+; BE-NEXT:    str q0, [sp, #1856]
+; BE-NEXT:    str q3, [sp, #2160]
+; BE-NEXT:    str q2, [sp, #2144]
+; BE-NEXT:    str q1, [sp, #2128]
+; BE-NEXT:    str q0, [sp, #2112]
+; BE-NEXT:    str q3, [sp, #2416]
+; BE-NEXT:    str q2, [sp, #2400]
+; BE-NEXT:    str q1, [sp, #2384]
+; BE-NEXT:    str q0, [sp, #2368]
+; BE-NEXT:    str q3, [sp, #2672]
+; BE-NEXT:    str q2, [sp, #2656]
+; BE-NEXT:    str q1, [sp, #2640]
+; BE-NEXT:    str q0, [sp, #2624]
+; BE-NEXT:    str q3, [sp, #2928]
+; BE-NEXT:    str q2, [sp, #2912]
+; BE-NEXT:    str q1, [sp, #2896]
+; BE-NEXT:    str q0, [sp, #2880]
+; BE-NEXT:    str q3, [sp, #3184]
+; BE-NEXT:    str q2, [sp, #3168]
+; BE-NEXT:    str q1, [sp, #3152]
+; BE-NEXT:    str q0, [sp, #3136]
+; BE-NEXT:    str q3, [sp, #3440]
+; BE-NEXT:    str q2, [sp, #3424]
+; BE-NEXT:    str q1, [sp, #3408]
+; BE-NEXT:    str q0, [sp, #3392]
+; BE-NEXT:    str q3, [sp, #3696]
+; BE-NEXT:    str q2, [sp, #3680]
+; BE-NEXT:    str q1, [sp, #3664]
+; BE-NEXT:    str q0, [sp, #3648]
+; BE-NEXT:    str q3, [sp, #4016]
+; BE-NEXT:    str q2, [sp, #4000]
+; BE-NEXT:    str q1, [sp, #3984]
+; BE-NEXT:    str q0, [sp, #3968]
+; BE-NEXT:    stp q0, q1, [sp, #896]
+; BE-NEXT:    stp q2, q3, [sp, #928]
+; BE-NEXT:    str q3, [sp, #1200]
+; BE-NEXT:    str q2, [sp, #1184]
+; BE-NEXT:    str q1, [sp, #1168]
+; BE-NEXT:    str q0, [sp, #1152]
+; BE-NEXT:    str q3, [sp, #1456]
+; BE-NEXT:    str q2, [sp, #1440]
+; BE-NEXT:    str q1, [sp, #1424]
+; BE-NEXT:    str q0, [sp, #1408]
+; BE-NEXT:    str q3, [sp, #1712]
+; BE-NEXT:    str q2, [sp, #1696]
+; BE-NEXT:    str q1, [sp, #1680]
+; BE-NEXT:    str q0, [sp, #1664]
+; BE-NEXT:    str q3, [sp, #1968]
+; BE-NEXT:    str q2, [sp, #1952]
+; BE-NEXT:    str q1, [sp, #1936]
+; BE-NEXT:    str q0, [sp, #1920]
+; BE-NEXT:    str q3, [sp, #2224]
+; BE-NEXT:    str q2, [sp, #2208]
+; BE-NEXT:    str q1, [sp, #2192]
+; BE-NEXT:    str q0, [sp, #2176]
+; BE-NEXT:    str q3, [sp, #2480]
+; BE-NEXT:    str q2, [sp, #2464]
+; BE-NEXT:    str q1, [sp, #2448]
+; BE-NEXT:    str q0, [sp, #2432]
+; BE-NEXT:    str q3, [sp, #2736]
+; BE-NEXT:    str q2, [sp, #2720]
+; BE-NEXT:    str q1, [sp, #2704]
+; BE-NEXT:    str q0, [sp, #2688]
+; BE-NEXT:    str q3, [sp, #2992]
+; BE-NEXT:    str q2, [sp, #2976]
+; BE-NEXT:    str q1, [sp, #2960]
+; BE-NEXT:    str q0, [sp, #2944]
+; BE-NEXT:    str q3, [sp, #3248]
+; BE-NEXT:    str q2, [sp, #3232]
+; BE-NEXT:    str q1, [sp, #3216]
+; BE-NEXT:    str q0, [sp, #3200]
+; BE-NEXT:    str q3, [sp, #3504]
+; BE-NEXT:    str q2, [sp, #3488]
+; BE-NEXT:    str q1, [sp, #3472]
+; BE-NEXT:    str q0, [sp, #3456]
+; BE-NEXT:    str q3, [sp, #3760]
+; BE-NEXT:    str q2, [sp, #3744]
+; BE-NEXT:    str q1, [sp, #3728]
+; BE-NEXT:    str q0, [sp, #3712]
+; BE-NEXT:    str q3, [sp, #3952]
+; BE-NEXT:    str q2, [sp, #3936]
+; BE-NEXT:    str q1, [sp, #3920]
+; BE-NEXT:    str q0, [sp, #3904]
+; BE-NEXT:    stp q0, q1, [sp, #960]
+; BE-NEXT:    stp q2, q3, [sp, #992]
+; BE-NEXT:    str q3, [sp, #1264]
+; BE-NEXT:    str q2, [sp, #1248]
+; BE-NEXT:    str q1, [sp, #1232]
+; BE-NEXT:    str q0, [sp, #1216]
+; BE-NEXT:    str q3, [sp, #1520]
+; BE-NEXT:    str q2, [sp, #1504]
+; BE-NEXT:    str q1, [sp, #1488]
+; BE-NEXT:    str q0, [sp, #1472]
+; BE-NEXT:    str q3, [sp, #1776]
+; BE-NEXT:    str q2, [sp, #1760]
+; BE-NEXT:    str q1, [sp, #1744]
+; BE-NEXT:    str q0, [sp, #1728]
+; BE-NEXT:    str q3, [sp, #2032]
+; BE-NEXT:    str q2, [sp, #2016]
+; BE-NEXT:    str q1, [sp, #2000]
+; BE-NEXT:    str q0, [sp, #1984]
+; BE-NEXT:    str q3, [sp, #2288]
+; BE-NEXT:    str q2, [sp, #2272]
+; BE-NEXT:    str q1, [sp, #2256]
+; BE-NEXT:    str q0, [sp, #2240]
+; BE-NEXT:    str q3, [sp, #2544]
+; BE-NEXT:    str q2, [sp, #2528]
+; BE-NEXT:    str q1, [sp, #2512]
+; BE-NEXT:    str q0, [sp, #2496]
+; BE-NEXT:    str q3, [sp, #2800]
+; BE-NEXT:    str q2, [sp, #2784]
+; BE-NEXT:    str q1, [sp, #2768]
+; BE-NEXT:    str q0, [sp, #2752]
+; BE-NEXT:    str q3, [sp, #3056]
+; BE-NEXT:    str q2, [sp, #3040]
+; BE-NEXT:    str q1, [sp, #3024]
+; BE-NEXT:    str q0, [sp, #3008]
+; BE-NEXT:    str q3, [sp, #3312]
+; BE-NEXT:    str q2, [sp, #3296]
+; BE-NEXT:    str q1, [sp, #3280]
+; BE-NEXT:    str q0, [sp, #3264]
+; BE-NEXT:    str q3, [sp, #3568]
+; BE-NEXT:    str q2, [sp, #3552]
+; BE-NEXT:    str q1, [sp, #3536]
+; BE-NEXT:    str q0, [sp, #3520]
+; BE-NEXT:    str q3, [sp, #3824]
+; BE-NEXT:    str q2, [sp, #3808]
+; BE-NEXT:    str q1, [sp, #3792]
+; BE-NEXT:    str q0, [sp, #3776]
+; BE-NEXT:    str q3, [sp, #1072]
+; BE-NEXT:    str q2, [sp, #1056]
+; BE-NEXT:    str q1, [sp, #1040]
+; BE-NEXT:    str q0, [sp, #1024]
+; BE-NEXT:    str q3, [sp, #1328]
+; BE-NEXT:    str q2, [sp, #1312]
+; BE-NEXT:    str q1, [sp, #1296]
+; BE-NEXT:    str q0, [sp, #1280]
+; BE-NEXT:    str q3, [sp, #1584]
+; BE-NEXT:    str q2, [sp, #1568]
+; BE-NEXT:    str q1, [sp, #1552]
+; BE-NEXT:    str q0, [sp, #1536]
+; BE-NEXT:    str q3, [sp, #1840]
+; BE-NEXT:    str q2, [sp, #1824]
+; BE-NEXT:    str q1, [sp, #1808]
+; BE-NEXT:    str q0, [sp, #1792]
+; BE-NEXT:    str q3, [sp, #2096]
+; BE-NEXT:    str q2, [sp, #2080]
+; BE-NEXT:    str q1, [sp, #2064]
+; BE-NEXT:    str q0, [sp, #2048]
+; BE-NEXT:    str q3, [sp, #2352]
+; BE-NEXT:    str q2, [sp, #2336]
+; BE-NEXT:    str q1, [sp, #2320]
+; BE-NEXT:    str q0, [sp, #2304]
+; BE-NEXT:    str q3, [sp, #2608]
+; BE-NEXT:    str q2, [sp, #2592]
+; BE-NEXT:    str q1, [sp, #2576]
+; BE-NEXT:    str q0, [sp, #2560]
+; BE-NEXT:    str q3, [sp, #2864]
+; BE-NEXT:    str q2, [sp, #2848]
+; BE-NEXT:    str q1, [sp, #2832]
+; BE-NEXT:    str q0, [sp, #2816]
+; BE-NEXT:    str q3, [sp, #3120]
+; BE-NEXT:    str q2, [sp, #3104]
+; BE-NEXT:    str q1, [sp, #3088]
+; BE-NEXT:    str q0, [sp, #3072]
+; BE-NEXT:    str q3, [sp, #3376]
+; BE-NEXT:    str q2, [sp, #3360]
+; BE-NEXT:    str q1, [sp, #3344]
+; BE-NEXT:    str q0, [sp, #3328]
+; BE-NEXT:    str q3, [sp, #3632]
+; BE-NEXT:    str q2, [sp, #3616]
+; BE-NEXT:    str q1, [sp, #3600]
+; BE-NEXT:    str q0, [sp, #3584]
+; BE-NEXT:    str q3, [sp, #3888]
+; BE-NEXT:    str q2, [sp, #3872]
+; BE-NEXT:    str q1, [sp, #3856]
+; BE-NEXT:    str q0, [sp, #3840]
+; BE-NEXT:    ldr b0, [x18, x16]
+; BE-NEXT:    and x16, x17, #0x3f
+; BE-NEXT:    add x17, sp, #1856
+; BE-NEXT:    ldr b1, [x17, x16]
+; BE-NEXT:    and x17, x13, #0x3f
+; BE-NEXT:    add x18, sp, #3968
+; BE-NEXT:    ldr b2, [x18, x17]
+; BE-NEXT:    add x18, sp, #64
+; BE-NEXT:    umov w16, v16.b[9]
+; BE-NEXT:    add x15, x18, x15
+; BE-NEXT:    add x18, sp, #320
+; BE-NEXT:    umov w17, v16.b[3]
+; BE-NEXT:    add x14, x18, x14
+; BE-NEXT:    add x18, sp, #1920
+; BE-NEXT:    umov w13, v16.b[10]
+; BE-NEXT:    ldr b3, [x18, x12]
+; BE-NEXT:    umov w18, v16.b[4]
+; BE-NEXT:    add x12, sp, #3904
+; BE-NEXT:    ldr b6, [x12, x11]
+; BE-NEXT:    and x12, x16, #0x3f
+; BE-NEXT:    add x11, sp, #576
+; BE-NEXT:    and x17, x17, #0x3f
+; BE-NEXT:    add x12, x0, x12
+; BE-NEXT:    ld1 { v0.b }[1], [x15]
+; BE-NEXT:    add x11, x11, x17
+; BE-NEXT:    umov w17, v16.b[11]
+; BE-NEXT:    ld1 { v1.b }[1], [x12]
+; BE-NEXT:    and x18, x18, #0x3f
+; BE-NEXT:    add x12, sp, #832
+; BE-NEXT:    and x13, x13, #0x3f
+; BE-NEXT:    add x12, x12, x18
+; BE-NEXT:    add x18, sp, #2368
+; BE-NEXT:    ld1 { v0.b }[2], [x14]
+; BE-NEXT:    add x13, x18, x13
+; BE-NEXT:    umov w18, v16.b[12]
+; BE-NEXT:    umov w15, v16.b[5]
+; BE-NEXT:    ld1 { v1.b }[2], [x13]
+; BE-NEXT:    and x14, x17, #0x3f
+; BE-NEXT:    add x17, sp, #2624
+; BE-NEXT:    add x14, x17, x14
+; BE-NEXT:    umov w17, v16.b[6]
+; BE-NEXT:    umov w13, v16.b[13]
+; BE-NEXT:    ld1 { v0.b }[3], [x11]
+; BE-NEXT:    add x11, sp, #1088
+; BE-NEXT:    umov w16, v5.b[8]
+; BE-NEXT:    ld1 { v1.b }[3], [x14]
+; BE-NEXT:    and x18, x18, #0x3f
+; BE-NEXT:    add x14, sp, #2880
+; BE-NEXT:    add x14, x14, x18
+; BE-NEXT:    umov w18, v16.b[14]
+; BE-NEXT:    and x15, x15, #0x3f
+; BE-NEXT:    and x17, x17, #0x3f
+; BE-NEXT:    ld1 { v0.b }[4], [x12]
+; BE-NEXT:    and x13, x13, #0x3f
+; BE-NEXT:    ld1 { v1.b }[4], [x14]
+; BE-NEXT:    add x14, sp, #1344
+; BE-NEXT:    add x15, x11, x15
+; BE-NEXT:    add x14, x14, x17
+; BE-NEXT:    add x17, sp, #3136
+; BE-NEXT:    umov w12, v16.b[7]
+; BE-NEXT:    add x13, x17, x13
+; BE-NEXT:    umov w17, v16.b[15]
+; BE-NEXT:    ld1 { v0.b }[5], [x15]
+; BE-NEXT:    ld1 { v1.b }[5], [x13]
+; BE-NEXT:    and x15, x18, #0x3f
+; BE-NEXT:    add x18, sp, #3392
+; BE-NEXT:    add x15, x18, x15
+; BE-NEXT:    umov w18, v7.b[1]
+; BE-NEXT:    umov w13, v7.b[2]
+; BE-NEXT:    and x12, x12, #0x3f
+; BE-NEXT:    ld1 { v0.b }[6], [x14]
+; BE-NEXT:    add x14, sp, #1600
+; BE-NEXT:    ld1 { v1.b }[6], [x15]
+; BE-NEXT:    and x17, x17, #0x3f
+; BE-NEXT:    add x15, sp, #3648
+; BE-NEXT:    add x0, x14, x12
+; BE-NEXT:    add x15, x15, x17
+; BE-NEXT:    umov w14, v7.b[4]
+; BE-NEXT:    umov w12, v7.b[5]
+; BE-NEXT:    umov w11, v7.b[9]
+; BE-NEXT:    umov w17, v7.b[3]
+; BE-NEXT:    ld1 { v1.b }[7], [x15]
+; BE-NEXT:    and x15, x18, #0x3f
+; BE-NEXT:    add x18, sp, #128
+; BE-NEXT:    add x15, x18, x15
+; BE-NEXT:    and x13, x13, #0x3f
+; BE-NEXT:    add x18, sp, #384
+; BE-NEXT:    ld1 { v2.b }[1], [x15]
+; BE-NEXT:    add x13, x18, x13
+; BE-NEXT:    and x16, x16, #0x3f
+; BE-NEXT:    add x18, sp, #1984
+; BE-NEXT:    and x14, x14, #0x3f
+; BE-NEXT:    add x15, sp, #896
+; BE-NEXT:    ldr b16, [x18, x16]
+; BE-NEXT:    umov w18, v7.b[10]
+; BE-NEXT:    add x14, x15, x14
+; BE-NEXT:    and x12, x12, #0x3f
+; BE-NEXT:    add x15, sp, #1152
+; BE-NEXT:    and x11, x11, #0x3f
+; BE-NEXT:    add x12, x15, x12
+; BE-NEXT:    add x15, sp, #2176
+; BE-NEXT:    ld1 { v2.b }[2], [x13]
+; BE-NEXT:    and x17, x17, #0x3f
+; BE-NEXT:    add x16, sp, #640
+; BE-NEXT:    add x11, x15, x11
+; BE-NEXT:    add x16, x16, x17
+; BE-NEXT:    umov w15, v7.b[11]
+; BE-NEXT:    ld1 { v3.b }[1], [x11]
+; BE-NEXT:    umov w17, v7.b[6]
+; BE-NEXT:    and x13, x18, #0x3f
+; BE-NEXT:    add x18, sp, #2432
+; BE-NEXT:    ld1 { v2.b }[3], [x16]
+; BE-NEXT:    add x13, x18, x13
+; BE-NEXT:    umov w18, v7.b[7]
+; BE-NEXT:    umov w11, v7.b[12]
+; BE-NEXT:    ld1 { v3.b }[2], [x13]
+; BE-NEXT:    ld1 { v0.b }[7], [x0]
+; BE-NEXT:    and x0, x15, #0x3f
+; BE-NEXT:    add x13, sp, #2688
+; BE-NEXT:    add x16, sp, #1408
+; BE-NEXT:    ld1 { v2.b }[4], [x14]
+; BE-NEXT:    umov w14, v7.b[13]
+; BE-NEXT:    and x17, x17, #0x3f
+; BE-NEXT:    add x13, x13, x0
+; BE-NEXT:    add x16, x16, x17
+; BE-NEXT:    umov w17, v7.b[14]
+; BE-NEXT:    and x18, x18, #0x3f
+; BE-NEXT:    ld1 { v3.b }[3], [x13]
+; BE-NEXT:    add x13, sp, #1664
+; BE-NEXT:    add x13, x13, x18
+; BE-NEXT:    and x11, x11, #0x3f
+; BE-NEXT:    add x18, sp, #2944
+; BE-NEXT:    ld1 { v2.b }[5], [x12]
+; BE-NEXT:    add x11, x18, x11
+; BE-NEXT:    umov w18, v7.b[15]
+; BE-NEXT:    and x12, x14, #0x3f
+; BE-NEXT:    add x14, sp, #3200
+; BE-NEXT:    ld1 { v3.b }[4], [x11]
+; BE-NEXT:    add x11, x14, x12
+; BE-NEXT:    umov w12, v5.b[1]
+; BE-NEXT:    umov w0, v5.b[2]
+; BE-NEXT:    and x14, x17, #0x3f
+; BE-NEXT:    ld1 { v2.b }[6], [x16]
+; BE-NEXT:    add x16, sp, #3456
+; BE-NEXT:    add x14, x16, x14
+; BE-NEXT:    umov w16, v5.b[3]
+; BE-NEXT:    and x17, x18, #0x3f
+; BE-NEXT:    ld1 { v3.b }[5], [x11]
+; BE-NEXT:    umov w18, v5.b[4]
+; BE-NEXT:    umov w15, v5.b[9]
+; BE-NEXT:    ld1 { v2.b }[7], [x13]
+; BE-NEXT:    and x12, x12, #0x3f
+; BE-NEXT:    add x13, sp, #192
+; BE-NEXT:    add x1, x13, x12
+; BE-NEXT:    and x12, x0, #0x3f
+; BE-NEXT:    add x13, sp, #448
+; BE-NEXT:    ld1 { v3.b }[6], [x14]
+; BE-NEXT:    add x14, x13, x12
+; BE-NEXT:    and x12, x16, #0x3f
+; BE-NEXT:    add x13, sp, #704
+; BE-NEXT:    add x16, sp, #960
+; BE-NEXT:    ld1 { v6.b }[1], [x1]
+; BE-NEXT:    add x13, x13, x12
+; BE-NEXT:    and x12, x18, #0x3f
+; BE-NEXT:    add x18, sp, #2048
+; BE-NEXT:    add x12, x16, x12
+; BE-NEXT:    mov x16, sp
+; BE-NEXT:    and x15, x15, #0x3f
+; BE-NEXT:    ldr b7, [x16, x10]
+; BE-NEXT:    umov w16, v5.b[10]
+; BE-NEXT:    ldr b17, [x18, x9]
+; BE-NEXT:    add x9, sp, #2240
+; BE-NEXT:    add x11, sp, #3712
+; BE-NEXT:    umov w18, v5.b[11]
+; BE-NEXT:    add x9, x9, x15
+; BE-NEXT:    umov w15, v5.b[7]
+; BE-NEXT:    ld1 { v6.b }[2], [x14]
+; BE-NEXT:    ld1 { v16.b }[1], [x9]
+; BE-NEXT:    add x11, x11, x17
+; BE-NEXT:    umov w17, v5.b[5]
+; BE-NEXT:    and x16, x16, #0x3f
+; BE-NEXT:    add x9, sp, #2496
+; BE-NEXT:    add x10, sp, #1216
+; BE-NEXT:    add x9, x9, x16
+; BE-NEXT:    ld1 { v6.b }[3], [x13]
+; BE-NEXT:    umov w13, v5.b[12]
+; BE-NEXT:    and x15, x15, #0x3f
+; BE-NEXT:    ld1 { v16.b }[2], [x9]
+; BE-NEXT:    add x9, sp, #1728
+; BE-NEXT:    add x9, x9, x15
+; BE-NEXT:    and x15, x18, #0x3f
+; BE-NEXT:    add x18, sp, #2752
+; BE-NEXT:    and x17, x17, #0x3f
+; BE-NEXT:    add x15, x18, x15
+; BE-NEXT:    umov w16, v5.b[13]
+; BE-NEXT:    add x10, x10, x17
+; BE-NEXT:    umov w17, v5.b[6]
+; BE-NEXT:    ld1 { v6.b }[4], [x12]
+; BE-NEXT:    ld1 { v16.b }[3], [x15]
+; BE-NEXT:    and x12, x13, #0x3f
+; BE-NEXT:    add x13, sp, #3008
+; BE-NEXT:    add x12, x13, x12
+; BE-NEXT:    umov w13, v4.b[1]
+; BE-NEXT:    umov w18, v5.b[14]
+; BE-NEXT:    umov w15, v4.b[9]
+; BE-NEXT:    ld1 { v6.b }[5], [x10]
+; BE-NEXT:    add x14, sp, #1472
+; BE-NEXT:    ld1 { v16.b }[4], [x12]
+; BE-NEXT:    and x17, x17, #0x3f
+; BE-NEXT:    and x16, x16, #0x3f
+; BE-NEXT:    add x10, sp, #3264
+; BE-NEXT:    add x14, x14, x17
+; BE-NEXT:    umov w17, v4.b[10]
+; BE-NEXT:    add x16, x10, x16
+; BE-NEXT:    ld1 { v6.b }[6], [x14]
+; BE-NEXT:    umov w14, v4.b[3]
+; BE-NEXT:    ld1 { v16.b }[5], [x16]
+; BE-NEXT:    and x13, x13, #0x3f
+; BE-NEXT:    add x16, sp, #256
+; BE-NEXT:    and x18, x18, #0x3f
+; BE-NEXT:    add x12, sp, #3520
+; BE-NEXT:    umov w0, v4.b[2]
+; BE-NEXT:    add x13, x16, x13
+; BE-NEXT:    and x15, x15, #0x3f
+; BE-NEXT:    add x16, sp, #2304
+; BE-NEXT:    add x10, x12, x18
+; BE-NEXT:    umov w12, v4.b[4]
+; BE-NEXT:    add x15, x16, x15
+; BE-NEXT:    ld1 { v17.b }[1], [x15]
+; BE-NEXT:    and x14, x14, #0x3f
+; BE-NEXT:    ld1 { v7.b }[1], [x13]
+; BE-NEXT:    add x13, sp, #768
+; BE-NEXT:    and x17, x17, #0x3f
+; BE-NEXT:    add x15, sp, #2560
+; BE-NEXT:    and x18, x0, #0x3f
+; BE-NEXT:    add x16, sp, #512
+; BE-NEXT:    add x13, x13, x14
+; BE-NEXT:    add x14, x15, x17
+; BE-NEXT:    add x16, x16, x18
+; BE-NEXT:    umov w15, v4.b[12]
+; BE-NEXT:    and x12, x12, #0x3f
+; BE-NEXT:    ld1 { v17.b }[2], [x14]
+; BE-NEXT:    add x14, sp, #1024
+; BE-NEXT:    ld1 { v7.b }[2], [x16]
+; BE-NEXT:    add x12, x14, x12
+; BE-NEXT:    add x14, sp, #2816
+; BE-NEXT:    add x8, x14, x8
+; BE-NEXT:    umov w14, v4.b[13]
+; BE-NEXT:    umov w16, v4.b[5]
+; BE-NEXT:    ld1 { v17.b }[3], [x8]
+; BE-NEXT:    umov w8, v4.b[14]
+; BE-NEXT:    ld1 { v16.b }[6], [x10]
+; BE-NEXT:    ld1 { v7.b }[3], [x13]
+; BE-NEXT:    and x13, x15, #0x3f
+; BE-NEXT:    add x15, sp, #3072
+; BE-NEXT:    add x13, x15, x13
+; BE-NEXT:    umov w15, v4.b[6]
+; BE-NEXT:    ld1 { v3.b }[7], [x11]
+; BE-NEXT:    ld1 { v17.b }[4], [x13]
+; BE-NEXT:    and x14, x14, #0x3f
+; BE-NEXT:    add x13, sp, #3328
+; BE-NEXT:    ld1 { v7.b }[4], [x12]
+; BE-NEXT:    and x16, x16, #0x3f
+; BE-NEXT:    add x12, sp, #1280
+; BE-NEXT:    add x13, x13, x14
+; BE-NEXT:    umov w14, v4.b[7]
+; BE-NEXT:    add x12, x12, x16
+; BE-NEXT:    umov w16, v4.b[15]
+; BE-NEXT:    and x15, x15, #0x3f
+; BE-NEXT:    ld1 { v17.b }[5], [x13]
+; BE-NEXT:    add x13, sp, #1536
+; BE-NEXT:    ld1 { v7.b }[5], [x12]
+; BE-NEXT:    umov w12, v5.b[15]
+; BE-NEXT:    add x13, x13, x15
+; BE-NEXT:    and x8, x8, #0x3f
+; BE-NEXT:    add x15, sp, #3584
+; BE-NEXT:    add x8, x15, x8
+; BE-NEXT:    and x10, x14, #0x3f
+; BE-NEXT:    ld1 { v6.b }[7], [x9]
+; BE-NEXT:    ld1 { v17.b }[6], [x8]
+; BE-NEXT:    add x8, sp, #1792
+; BE-NEXT:    ld1 { v7.b }[6], [x13]
+; BE-NEXT:    add x8, x8, x10
+; BE-NEXT:    and x10, x16, #0x3f
+; BE-NEXT:    add x13, sp, #3840
+; BE-NEXT:    and x12, x12, #0x3f
+; BE-NEXT:    add x10, x13, x10
+; BE-NEXT:    add x13, sp, #3776
+; BE-NEXT:    add x12, x13, x12
+; BE-NEXT:    ld1 { v7.b }[7], [x8]
+; BE-NEXT:    ld1 { v17.b }[7], [x10]
+; BE-NEXT:    ld1 { v16.b }[7], [x12]
+; BE-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; BE-NEXT:    zip1 v1.2d, v2.2d, v3.2d
+; BE-NEXT:    zip1 v4.2d, v7.2d, v17.2d
+; BE-NEXT:    zip1 v2.2d, v6.2d, v16.2d
+; BE-NEXT:    rev64 v5.16b, v0.16b
+; BE-NEXT:    rev64 v3.16b, v4.16b
+; BE-NEXT:    rev64 v4.16b, v1.16b
+; BE-NEXT:    rev64 v2.16b, v2.16b
+; BE-NEXT:    ext v0.16b, v3.16b, v3.16b, #8
+; BE-NEXT:    ext v3.16b, v5.16b, v5.16b, #8
+; BE-NEXT:    ext v1.16b, v2.16b, v2.16b, #8
+; BE-NEXT:    ext v2.16b, v4.16b, v4.16b, #8
+; BE-NEXT:    add sp, sp, #1, lsl #12 // =4096
+; BE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; BE-NEXT:    ret
+  %res = call <64 x i8> @llvm.vector.shuffle(<64 x i8> %v, <64 x i8> %mask)
+  ret <64 x i8> %res
+}
+
+define <32 x i16> @shuffle_v32i16(<32 x i16> %v, <32 x i16> %mask) nounwind {
+; LE-LABEL: shuffle_v32i16:
+; LE:       // %bb.0:
+; LE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; LE-NEXT:    sub sp, sp, #2048
+; LE-NEXT:    umov w12, v4.h[0]
+; LE-NEXT:    umov w14, v4.h[4]
+; LE-NEXT:    stp q0, q1, [sp]
+; LE-NEXT:    umov w15, v5.h[0]
+; LE-NEXT:    umov w16, v4.h[1]
+; LE-NEXT:    stp q2, q3, [sp, #32]
+; LE-NEXT:    stp q0, q1, [sp, #64]
+; LE-NEXT:    umov w13, v4.h[2]
+; LE-NEXT:    mov x17, sp
+; LE-NEXT:    stp q2, q3, [sp, #96]
+; LE-NEXT:    umov w11, v5.h[4]
+; LE-NEXT:    umov w10, v6.h[0]
+; LE-NEXT:    stp q0, q1, [sp, #128]
+; LE-NEXT:    and x12, x12, #0x1f
+; LE-NEXT:    umov w18, v6.h[4]
+; LE-NEXT:    stp q2, q3, [sp, #160]
+; LE-NEXT:    umov w9, v7.h[0]
+; LE-NEXT:    umov w8, v7.h[4]
+; LE-NEXT:    stp q0, q1, [sp, #192]
+; LE-NEXT:    and x13, x13, #0x1f
+; LE-NEXT:    stp q0, q1, [sp, #256]
+; LE-NEXT:    and x11, x11, #0x1f
+; LE-NEXT:    and x10, x10, #0x1f
+; LE-NEXT:    stp q2, q3, [sp, #288]
+; LE-NEXT:    stp q0, q1, [sp, #320]
+; LE-NEXT:    and x9, x9, #0x1f
+; LE-NEXT:    and x8, x8, #0x1f
+; LE-NEXT:    stp q0, q1, [sp, #768]
+; LE-NEXT:    stp q2, q3, [sp, #800]
+; LE-NEXT:    str q3, [sp, #1072]
+; LE-NEXT:    stp q2, q3, [sp, #352]
+; LE-NEXT:    stp q0, q1, [sp, #384]
+; LE-NEXT:    stp q2, q3, [sp, #416]
+; LE-NEXT:    stp q0, q1, [sp, #448]
+; LE-NEXT:    stp q2, q3, [sp, #480]
+; LE-NEXT:    stp q0, q1, [sp, #512]
+; LE-NEXT:    stp q2, q3, [sp, #544]
+; LE-NEXT:    str q2, [sp, #1056]
+; LE-NEXT:    str q1, [sp, #1040]
+; LE-NEXT:    str q0, [sp, #1024]
+; LE-NEXT:    str q3, [sp, #1328]
+; LE-NEXT:    str q2, [sp, #1312]
+; LE-NEXT:    str q1, [sp, #1296]
+; LE-NEXT:    str q0, [sp, #1280]
+; LE-NEXT:    str q3, [sp, #1584]
+; LE-NEXT:    str q2, [sp, #1568]
+; LE-NEXT:    str q1, [sp, #1552]
+; LE-NEXT:    str q0, [sp, #1536]
+; LE-NEXT:    str q3, [sp, #1840]
+; LE-NEXT:    str q2, [sp, #1824]
+; LE-NEXT:    str q1, [sp, #1808]
+; LE-NEXT:    str q0, [sp, #1792]
+; LE-NEXT:    str q3, [sp, #1904]
+; LE-NEXT:    str q2, [sp, #1888]
+; LE-NEXT:    str q1, [sp, #1872]
+; LE-NEXT:    str q0, [sp, #1856]
+; LE-NEXT:    stp q2, q3, [sp, #224]
+; LE-NEXT:    stp q0, q1, [sp, #640]
+; LE-NEXT:    stp q2, q3, [sp, #672]
+; LE-NEXT:    stp q0, q1, [sp, #704]
+; LE-NEXT:    stp q2, q3, [sp, #736]
+; LE-NEXT:    stp q0, q1, [sp, #896]
+; LE-NEXT:    stp q2, q3, [sp, #928]
+; LE-NEXT:    stp q0, q1, [sp, #960]
+; LE-NEXT:    stp q2, q3, [sp, #992]
+; LE-NEXT:    str q3, [sp, #1264]
+; LE-NEXT:    str q2, [sp, #1248]
+; LE-NEXT:    str q1, [sp, #1232]
+; LE-NEXT:    str q0, [sp, #1216]
+; LE-NEXT:    str q3, [sp, #1520]
+; LE-NEXT:    str q2, [sp, #1504]
+; LE-NEXT:    str q1, [sp, #1488]
+; LE-NEXT:    str q0, [sp, #1472]
+; LE-NEXT:    str q3, [sp, #1776]
+; LE-NEXT:    str q2, [sp, #1760]
+; LE-NEXT:    str q1, [sp, #1744]
+; LE-NEXT:    str q0, [sp, #1728]
+; LE-NEXT:    str q3, [sp, #1968]
+; LE-NEXT:    str q2, [sp, #1952]
+; LE-NEXT:    str q1, [sp, #1936]
+; LE-NEXT:    str q0, [sp, #1920]
+; LE-NEXT:    str q3, [sp, #1200]
+; LE-NEXT:    str q2, [sp, #1184]
+; LE-NEXT:    str q1, [sp, #1168]
+; LE-NEXT:    str q0, [sp, #1152]
+; LE-NEXT:    str q3, [sp, #1456]
+; LE-NEXT:    str q2, [sp, #1440]
+; LE-NEXT:    str q1, [sp, #1424]
+; LE-NEXT:    str q0, [sp, #1408]
+; LE-NEXT:    str q3, [sp, #1712]
+; LE-NEXT:    str q2, [sp, #1696]
+; LE-NEXT:    str q1, [sp, #1680]
+; LE-NEXT:    str q0, [sp, #1664]
+; LE-NEXT:    str q3, [sp, #2032]
+; LE-NEXT:    str q2, [sp, #2016]
+; LE-NEXT:    str q1, [sp, #2000]
+; LE-NEXT:    str q0, [sp, #1984]
+; LE-NEXT:    stp q0, q1, [sp, #576]
+; LE-NEXT:    stp q2, q3, [sp, #608]
+; LE-NEXT:    stp q0, q1, [sp, #832]
+; LE-NEXT:    stp q2, q3, [sp, #864]
+; LE-NEXT:    str q3, [sp, #1136]
+; LE-NEXT:    str q2, [sp, #1120]
+; LE-NEXT:    str q1, [sp, #1104]
+; LE-NEXT:    str q0, [sp, #1088]
+; LE-NEXT:    str q3, [sp, #1392]
+; LE-NEXT:    str q2, [sp, #1376]
+; LE-NEXT:    str q1, [sp, #1360]
+; LE-NEXT:    str q0, [sp, #1344]
+; LE-NEXT:    str q3, [sp, #1648]
+; LE-NEXT:    str q2, [sp, #1632]
+; LE-NEXT:    str q1, [sp, #1616]
+; LE-NEXT:    str q0, [sp, #1600]
+; LE-NEXT:    ldr h0, [x17, x12, lsl #1]
+; LE-NEXT:    and x12, x14, #0x1f
+; LE-NEXT:    add x14, sp, #1024
+; LE-NEXT:    ldr h1, [x14, x12, lsl #1]
+; LE-NEXT:    and x14, x15, #0x1f
+; LE-NEXT:    add x15, sp, #1856
+; LE-NEXT:    umov w17, v4.h[5]
+; LE-NEXT:    ldr h2, [x15, x14, lsl #1]
+; LE-NEXT:    and x15, x16, #0x1f
+; LE-NEXT:    add x16, sp, #256
+; LE-NEXT:    umov w12, v4.h[7]
+; LE-NEXT:    umov w14, v4.h[3]
+; LE-NEXT:    add x15, x16, x15, lsl #1
+; LE-NEXT:    add x16, sp, #512
+; LE-NEXT:    add x13, x16, x13, lsl #1
+; LE-NEXT:    add x16, sp, #960
+; LE-NEXT:    ldr h3, [x16, x11, lsl #1]
+; LE-NEXT:    add x11, sp, #1920
+; LE-NEXT:    umov w16, v4.h[6]
+; LE-NEXT:    ldr h4, [x11, x10, lsl #1]
+; LE-NEXT:    and x11, x17, #0x1f
+; LE-NEXT:    add x17, sp, #1280
+; LE-NEXT:    add x11, x17, x11, lsl #1
+; LE-NEXT:    ld1 { v0.h }[1], [x15]
+; LE-NEXT:    and x14, x14, #0x1f
+; LE-NEXT:    add x10, sp, #768
+; LE-NEXT:    umov w15, v5.h[2]
+; LE-NEXT:    and x12, x12, #0x1f
+; LE-NEXT:    and x16, x16, #0x1f
+; LE-NEXT:    ld1 { v1.h }[1], [x11]
+; LE-NEXT:    add x11, sp, #1536
+; LE-NEXT:    add x11, x11, x16, lsl #1
+; LE-NEXT:    umov w16, v5.h[1]
+; LE-NEXT:    ld1 { v0.h }[2], [x13]
+; LE-NEXT:    and x13, x18, #0x1f
+; LE-NEXT:    add x17, sp, #896
+; LE-NEXT:    add x14, x10, x14, lsl #1
+; LE-NEXT:    ld1 { v1.h }[2], [x11]
+; LE-NEXT:    add x11, sp, #1792
+; LE-NEXT:    ldr h16, [x17, x13, lsl #1]
+; LE-NEXT:    umov w17, v5.h[3]
+; LE-NEXT:    add x11, x11, x12, lsl #1
+; LE-NEXT:    ld1 { v0.h }[3], [x14]
+; LE-NEXT:    umov w14, v5.h[5]
+; LE-NEXT:    umov w12, v5.h[6]
+; LE-NEXT:    umov w13, v5.h[7]
+; LE-NEXT:    ld1 { v1.h }[3], [x11]
+; LE-NEXT:    and x11, x16, #0x1f
+; LE-NEXT:    add x16, sp, #192
+; LE-NEXT:    add x16, x16, x11, lsl #1
+; LE-NEXT:    and x11, x15, #0x1f
+; LE-NEXT:    add x15, sp, #448
+; LE-NEXT:    add x15, x15, x11, lsl #1
+; LE-NEXT:    and x11, x17, #0x1f
+; LE-NEXT:    add x17, sp, #704
+; LE-NEXT:    add x11, x17, x11, lsl #1
+; LE-NEXT:    add x17, sp, #1984
+; LE-NEXT:    and x14, x14, #0x1f
+; LE-NEXT:    ldr h5, [x17, x9, lsl #1]
+; LE-NEXT:    add x9, sp, #1216
+; LE-NEXT:    umov w17, v6.h[2]
+; LE-NEXT:    add x9, x9, x14, lsl #1
+; LE-NEXT:    umov w14, v6.h[1]
+; LE-NEXT:    and x12, x12, #0x1f
+; LE-NEXT:    ld1 { v2.h }[1], [x16]
+; LE-NEXT:    add x16, sp, #1472
+; LE-NEXT:    and x13, x13, #0x1f
+; LE-NEXT:    ld1 { v3.h }[1], [x9]
+; LE-NEXT:    add x9, sp, #1728
+; LE-NEXT:    add x12, x16, x12, lsl #1
+; LE-NEXT:    add x9, x9, x13, lsl #1
+; LE-NEXT:    umov w13, v6.h[5]
+; LE-NEXT:    umov w16, v6.h[6]
+; LE-NEXT:    umov w10, v6.h[7]
+; LE-NEXT:    ld1 { v2.h }[2], [x15]
+; LE-NEXT:    umov w15, v6.h[3]
+; LE-NEXT:    ld1 { v3.h }[2], [x12]
+; LE-NEXT:    and x12, x14, #0x1f
+; LE-NEXT:    add x14, sp, #128
+; LE-NEXT:    add x12, x14, x12, lsl #1
+; LE-NEXT:    and x14, x17, #0x1f
+; LE-NEXT:    add x17, sp, #384
+; LE-NEXT:    add x14, x17, x14, lsl #1
+; LE-NEXT:    add x17, sp, #832
+; LE-NEXT:    and x13, x13, #0x1f
+; LE-NEXT:    ldr h6, [x17, x8, lsl #1]
+; LE-NEXT:    add x8, sp, #1152
+; LE-NEXT:    umov w17, v7.h[5]
+; LE-NEXT:    add x8, x8, x13, lsl #1
+; LE-NEXT:    umov w13, v7.h[1]
+; LE-NEXT:    and x16, x16, #0x1f
+; LE-NEXT:    and x15, x15, #0x1f
+; LE-NEXT:    ld1 { v4.h }[1], [x12]
+; LE-NEXT:    add x12, sp, #640
+; LE-NEXT:    ld1 { v16.h }[1], [x8]
+; LE-NEXT:    add x8, sp, #1408
+; LE-NEXT:    add x12, x12, x15, lsl #1
+; LE-NEXT:    add x8, x8, x16, lsl #1
+; LE-NEXT:    umov w15, v7.h[2]
+; LE-NEXT:    umov w16, v7.h[6]
+; LE-NEXT:    ld1 { v4.h }[2], [x14]
+; LE-NEXT:    umov w14, v7.h[3]
+; LE-NEXT:    and x10, x10, #0x1f
+; LE-NEXT:    ld1 { v16.h }[2], [x8]
+; LE-NEXT:    and x8, x13, #0x1f
+; LE-NEXT:    add x13, sp, #64
+; LE-NEXT:    add x8, x13, x8, lsl #1
+; LE-NEXT:    and x13, x17, #0x1f
+; LE-NEXT:    add x17, sp, #1088
+; LE-NEXT:    add x13, x17, x13, lsl #1
+; LE-NEXT:    and x15, x15, #0x1f
+; LE-NEXT:    add x17, sp, #320
+; LE-NEXT:    ld1 { v5.h }[1], [x8]
+; LE-NEXT:    umov w8, v7.h[7]
+; LE-NEXT:    and x16, x16, #0x1f
+; LE-NEXT:    ld1 { v6.h }[1], [x13]
+; LE-NEXT:    add x13, sp, #1344
+; LE-NEXT:    add x15, x17, x15, lsl #1
+; LE-NEXT:    add x13, x13, x16, lsl #1
+; LE-NEXT:    add x16, sp, #1664
+; LE-NEXT:    and x14, x14, #0x1f
+; LE-NEXT:    ld1 { v5.h }[2], [x15]
+; LE-NEXT:    add x15, sp, #576
+; LE-NEXT:    add x10, x16, x10, lsl #1
+; LE-NEXT:    and x8, x8, #0x1f
+; LE-NEXT:    ld1 { v6.h }[2], [x13]
+; LE-NEXT:    add x13, sp, #1600
+; LE-NEXT:    add x14, x15, x14, lsl #1
+; LE-NEXT:    add x8, x13, x8, lsl #1
+; LE-NEXT:    ld1 { v2.h }[3], [x11]
+; LE-NEXT:    ld1 { v3.h }[3], [x9]
+; LE-NEXT:    ld1 { v4.h }[3], [x12]
+; LE-NEXT:    ld1 { v16.h }[3], [x10]
+; LE-NEXT:    ld1 { v5.h }[3], [x14]
+; LE-NEXT:    ld1 { v6.h }[3], [x8]
+; LE-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; LE-NEXT:    zip1 v1.2d, v2.2d, v3.2d
+; LE-NEXT:    zip1 v2.2d, v4.2d, v16.2d
+; LE-NEXT:    zip1 v3.2d, v5.2d, v6.2d
+; LE-NEXT:    add sp, sp, #2048
+; LE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; LE-NEXT:    ret
+;
+; BE-LABEL: shuffle_v32i16:
+; BE:       // %bb.0:
+; BE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; BE-NEXT:    sub sp, sp, #2048
+; BE-NEXT:    rev64 v7.8h, v7.8h
+; BE-NEXT:    str q3, [sp, #2032]
+; BE-NEXT:    rev64 v6.8h, v6.8h
+; BE-NEXT:    str q2, [sp, #2016]
+; BE-NEXT:    add x14, sp, #1984
+; BE-NEXT:    rev64 v5.8h, v5.8h
+; BE-NEXT:    str q1, [sp, #2000]
+; BE-NEXT:    rev64 v4.8h, v4.8h
+; BE-NEXT:    str q0, [sp, #1984]
+; BE-NEXT:    ext v7.16b, v7.16b, v7.16b, #8
+; BE-NEXT:    stp q0, q1, [sp]
+; BE-NEXT:    ext v6.16b, v6.16b, v6.16b, #8
+; BE-NEXT:    stp q2, q3, [sp, #32]
+; BE-NEXT:    ext v5.16b, v5.16b, v5.16b, #8
+; BE-NEXT:    stp q0, q1, [sp, #64]
+; BE-NEXT:    ext v4.16b, v4.16b, v4.16b, #8
+; BE-NEXT:    stp q2, q3, [sp, #96]
+; BE-NEXT:    umov w10, v7.h[0]
+; BE-NEXT:    umov w11, v7.h[1]
+; BE-NEXT:    umov w13, v7.h[4]
+; BE-NEXT:    umov w12, v7.h[5]
+; BE-NEXT:    stp q0, q1, [sp, #128]
+; BE-NEXT:    umov w15, v7.h[6]
+; BE-NEXT:    stp q2, q3, [sp, #160]
+; BE-NEXT:    umov w16, v7.h[2]
+; BE-NEXT:    umov w9, v6.h[0]
+; BE-NEXT:    stp q0, q1, [sp, #192]
+; BE-NEXT:    umov w17, v5.h[0]
+; BE-NEXT:    umov w8, v4.h[6]
+; BE-NEXT:    stp q2, q3, [sp, #224]
+; BE-NEXT:    and x10, x10, #0x1f
+; BE-NEXT:    and x11, x11, #0x1f
+; BE-NEXT:    stp q0, q1, [sp, #256]
+; BE-NEXT:    and x13, x13, #0x1f
+; BE-NEXT:    and x12, x12, #0x1f
+; BE-NEXT:    stp q2, q3, [sp, #288]
+; BE-NEXT:    and x9, x9, #0x1f
+; BE-NEXT:    stp q0, q1, [sp, #320]
+; BE-NEXT:    and x8, x8, #0x1f
+; BE-NEXT:    stp q2, q3, [sp, #352]
+; BE-NEXT:    stp q0, q1, [sp, #384]
+; BE-NEXT:    stp q2, q3, [sp, #416]
+; BE-NEXT:    stp q0, q1, [sp, #448]
+; BE-NEXT:    stp q2, q3, [sp, #480]
+; BE-NEXT:    stp q0, q1, [sp, #512]
+; BE-NEXT:    stp q2, q3, [sp, #544]
+; BE-NEXT:    stp q0, q1, [sp, #576]
+; BE-NEXT:    stp q2, q3, [sp, #608]
+; BE-NEXT:    stp q0, q1, [sp, #640]
+; BE-NEXT:    stp q2, q3, [sp, #672]
+; BE-NEXT:    stp q0, q1, [sp, #704]
+; BE-NEXT:    stp q2, q3, [sp, #736]
+; BE-NEXT:    str q3, [sp, #1264]
+; BE-NEXT:    str q2, [sp, #1248]
+; BE-NEXT:    str q1, [sp, #1232]
+; BE-NEXT:    str q0, [sp, #1216]
+; BE-NEXT:    str q3, [sp, #1520]
+; BE-NEXT:    str q2, [sp, #1504]
+; BE-NEXT:    str q1, [sp, #1488]
+; BE-NEXT:    str q0, [sp, #1472]
+; BE-NEXT:    str q3, [sp, #1776]
+; BE-NEXT:    str q2, [sp, #1760]
+; BE-NEXT:    str q1, [sp, #1744]
+; BE-NEXT:    str q0, [sp, #1728]
+; BE-NEXT:    stp q0, q1, [sp, #768]
+; BE-NEXT:    stp q2, q3, [sp, #800]
+; BE-NEXT:    stp q0, q1, [sp, #832]
+; BE-NEXT:    stp q2, q3, [sp, #864]
+; BE-NEXT:    str q3, [sp, #1136]
+; BE-NEXT:    str q2, [sp, #1120]
+; BE-NEXT:    str q1, [sp, #1104]
+; BE-NEXT:    str q0, [sp, #1088]
+; BE-NEXT:    str q3, [sp, #1392]
+; BE-NEXT:    str q2, [sp, #1376]
+; BE-NEXT:    str q1, [sp, #1360]
+; BE-NEXT:    str q0, [sp, #1344]
+; BE-NEXT:    str q3, [sp, #1648]
+; BE-NEXT:    str q2, [sp, #1632]
+; BE-NEXT:    str q1, [sp, #1616]
+; BE-NEXT:    str q0, [sp, #1600]
+; BE-NEXT:    str q3, [sp, #1968]
+; BE-NEXT:    str q2, [sp, #1952]
+; BE-NEXT:    str q1, [sp, #1936]
+; BE-NEXT:    str q0, [sp, #1920]
+; BE-NEXT:    stp q0, q1, [sp, #896]
+; BE-NEXT:    stp q2, q3, [sp, #928]
+; BE-NEXT:    str q3, [sp, #1200]
+; BE-NEXT:    str q2, [sp, #1184]
+; BE-NEXT:    str q1, [sp, #1168]
+; BE-NEXT:    str q0, [sp, #1152]
+; BE-NEXT:    str q3, [sp, #1456]
+; BE-NEXT:    str q2, [sp, #1440]
+; BE-NEXT:    str q1, [sp, #1424]
+; BE-NEXT:    str q0, [sp, #1408]
+; BE-NEXT:    str q3, [sp, #1712]
+; BE-NEXT:    str q2, [sp, #1696]
+; BE-NEXT:    str q1, [sp, #1680]
+; BE-NEXT:    str q0, [sp, #1664]
+; BE-NEXT:    str q3, [sp, #1904]
+; BE-NEXT:    str q2, [sp, #1888]
+; BE-NEXT:    str q1, [sp, #1872]
+; BE-NEXT:    str q0, [sp, #1856]
+; BE-NEXT:    stp q0, q1, [sp, #960]
+; BE-NEXT:    stp q2, q3, [sp, #992]
+; BE-NEXT:    str q3, [sp, #1072]
+; BE-NEXT:    str q2, [sp, #1056]
+; BE-NEXT:    str q1, [sp, #1040]
+; BE-NEXT:    str q0, [sp, #1024]
+; BE-NEXT:    str q3, [sp, #1328]
+; BE-NEXT:    str q2, [sp, #1312]
+; BE-NEXT:    str q1, [sp, #1296]
+; BE-NEXT:    str q0, [sp, #1280]
+; BE-NEXT:    str q3, [sp, #1584]
+; BE-NEXT:    str q2, [sp, #1568]
+; BE-NEXT:    str q1, [sp, #1552]
+; BE-NEXT:    str q0, [sp, #1536]
+; BE-NEXT:    str q3, [sp, #1840]
+; BE-NEXT:    str q2, [sp, #1824]
+; BE-NEXT:    str q1, [sp, #1808]
+; BE-NEXT:    str q0, [sp, #1792]
+; BE-NEXT:    ldr h0, [x14, x10, lsl #1]
+; BE-NEXT:    add x14, sp, #64
+; BE-NEXT:    umov w10, v7.h[3]
+; BE-NEXT:    add x11, x14, x11, lsl #1
+; BE-NEXT:    add x14, sp, #832
+; BE-NEXT:    ldr h1, [x14, x13, lsl #1]
+; BE-NEXT:    add x13, sp, #1088
+; BE-NEXT:    and x14, x16, #0x1f
+; BE-NEXT:    add x12, x13, x12, lsl #1
+; BE-NEXT:    umov w13, v7.h[7]
+; BE-NEXT:    add x16, sp, #320
+; BE-NEXT:    ld1 { v0.h }[1], [x11]
+; BE-NEXT:    and x11, x15, #0x1f
+; BE-NEXT:    add x15, sp, #1344
+; BE-NEXT:    ld1 { v1.h }[1], [x12]
+; BE-NEXT:    add x14, x16, x14, lsl #1
+; BE-NEXT:    add x11, x15, x11, lsl #1
+; BE-NEXT:    and x10, x10, #0x1f
+; BE-NEXT:    add x12, sp, #576
+; BE-NEXT:    umov w15, v6.h[1]
+; BE-NEXT:    add x10, x12, x10, lsl #1
+; BE-NEXT:    ld1 { v0.h }[2], [x14]
+; BE-NEXT:    and x12, x13, #0x1f
+; BE-NEXT:    add x13, sp, #1600
+; BE-NEXT:    ld1 { v1.h }[2], [x11]
+; BE-NEXT:    umov w14, v6.h[2]
+; BE-NEXT:    add x12, x13, x12, lsl #1
+; BE-NEXT:    umov w16, v6.h[3]
+; BE-NEXT:    umov w13, v6.h[4]
+; BE-NEXT:    ld1 { v0.h }[3], [x10]
+; BE-NEXT:    and x10, x15, #0x1f
+; BE-NEXT:    umov w15, v6.h[5]
+; BE-NEXT:    ld1 { v1.h }[3], [x12]
+; BE-NEXT:    add x12, sp, #128
+; BE-NEXT:    umov w11, v6.h[6]
+; BE-NEXT:    add x10, x12, x10, lsl #1
+; BE-NEXT:    add x12, sp, #1920
+; BE-NEXT:    ldr h2, [x12, x9, lsl #1]
+; BE-NEXT:    and x9, x14, #0x1f
+; BE-NEXT:    add x12, sp, #384
+; BE-NEXT:    and x14, x16, #0x1f
+; BE-NEXT:    add x16, sp, #640
+; BE-NEXT:    add x12, x12, x9, lsl #1
+; BE-NEXT:    add x9, x16, x14, lsl #1
+; BE-NEXT:    and x13, x13, #0x1f
+; BE-NEXT:    add x14, sp, #896
+; BE-NEXT:    ld1 { v2.h }[1], [x10]
+; BE-NEXT:    umov w16, v5.h[1]
+; BE-NEXT:    and x10, x15, #0x1f
+; BE-NEXT:    ldr h3, [x14, x13, lsl #1]
+; BE-NEXT:    add x13, sp, #1152
+; BE-NEXT:    and x11, x11, #0x1f
+; BE-NEXT:    add x14, sp, #1408
+; BE-NEXT:    add x13, x13, x10, lsl #1
+; BE-NEXT:    umov w15, v5.h[4]
+; BE-NEXT:    add x10, x14, x11, lsl #1
+; BE-NEXT:    umov w11, v5.h[5]
+; BE-NEXT:    ld1 { v2.h }[2], [x12]
+; BE-NEXT:    umov w12, v5.h[2]
+; BE-NEXT:    ld1 { v3.h }[1], [x13]
+; BE-NEXT:    and x13, x16, #0x1f
+; BE-NEXT:    add x14, sp, #192
+; BE-NEXT:    add x16, sp, #1856
+; BE-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; BE-NEXT:    add x13, x14, x13, lsl #1
+; BE-NEXT:    and x14, x17, #0x1f
+; BE-NEXT:    add x17, sp, #1216
+; BE-NEXT:    ldr h7, [x16, x14, lsl #1]
+; BE-NEXT:    and x14, x15, #0x1f
+; BE-NEXT:    add x15, sp, #960
+; BE-NEXT:    umov w16, v5.h[6]
+; BE-NEXT:    and x12, x12, #0x1f
+; BE-NEXT:    ldr h16, [x15, x14, lsl #1]
+; BE-NEXT:    add x14, sp, #448
+; BE-NEXT:    and x15, x11, #0x1f
+; BE-NEXT:    ld1 { v7.h }[1], [x13]
+; BE-NEXT:    add x12, x14, x12, lsl #1
+; BE-NEXT:    add x14, x17, x15, lsl #1
+; BE-NEXT:    umov w13, v4.h[1]
+; BE-NEXT:    umov w15, v4.h[0]
+; BE-NEXT:    ld1 { v3.h }[2], [x10]
+; BE-NEXT:    umov w10, v4.h[2]
+; BE-NEXT:    and x16, x16, #0x1f
+; BE-NEXT:    ld1 { v16.h }[1], [x14]
+; BE-NEXT:    add x14, sp, #1472
+; BE-NEXT:    add x14, x14, x16, lsl #1
+; BE-NEXT:    umov w16, v4.h[4]
+; BE-NEXT:    umov w11, v4.h[5]
+; BE-NEXT:    and x13, x13, #0x1f
+; BE-NEXT:    ld1 { v7.h }[2], [x12]
+; BE-NEXT:    umov w12, v4.h[3]
+; BE-NEXT:    ld1 { v16.h }[2], [x14]
+; BE-NEXT:    add x14, sp, #256
+; BE-NEXT:    and x10, x10, #0x1f
+; BE-NEXT:    add x13, x14, x13, lsl #1
+; BE-NEXT:    and x14, x15, #0x1f
+; BE-NEXT:    mov x15, sp
+; BE-NEXT:    ldr h17, [x15, x14, lsl #1]
+; BE-NEXT:    add x14, sp, #512
+; BE-NEXT:    add x15, sp, #1024
+; BE-NEXT:    add x10, x14, x10, lsl #1
+; BE-NEXT:    and x14, x16, #0x1f
+; BE-NEXT:    umov w16, v6.h[7]
+; BE-NEXT:    ldr h6, [x15, x14, lsl #1]
+; BE-NEXT:    and x11, x11, #0x1f
+; BE-NEXT:    add x15, sp, #1280
+; BE-NEXT:    add x11, x15, x11, lsl #1
+; BE-NEXT:    and x12, x12, #0x1f
+; BE-NEXT:    add x14, sp, #768
+; BE-NEXT:    umov w15, v4.h[7]
+; BE-NEXT:    add x12, x14, x12, lsl #1
+; BE-NEXT:    umov w14, v5.h[3]
+; BE-NEXT:    ld1 { v17.h }[1], [x13]
+; BE-NEXT:    umov w13, v5.h[7]
+; BE-NEXT:    ld1 { v6.h }[1], [x11]
+; BE-NEXT:    add x11, sp, #1536
+; BE-NEXT:    and x16, x16, #0x1f
+; BE-NEXT:    ld1 { v2.h }[3], [x9]
+; BE-NEXT:    add x8, x11, x8, lsl #1
+; BE-NEXT:    add x11, sp, #1664
+; BE-NEXT:    rev64 v5.8h, v0.8h
+; BE-NEXT:    and x15, x15, #0x1f
+; BE-NEXT:    and x14, x14, #0x1f
+; BE-NEXT:    ld1 { v17.h }[2], [x10]
+; BE-NEXT:    ld1 { v6.h }[2], [x8]
+; BE-NEXT:    add x8, sp, #1792
+; BE-NEXT:    add x10, sp, #704
+; BE-NEXT:    and x13, x13, #0x1f
+; BE-NEXT:    add x8, x8, x15, lsl #1
+; BE-NEXT:    add x15, sp, #1728
+; BE-NEXT:    add x11, x11, x16, lsl #1
+; BE-NEXT:    add x10, x10, x14, lsl #1
+; BE-NEXT:    add x13, x15, x13, lsl #1
+; BE-NEXT:    ld1 { v17.h }[3], [x12]
+; BE-NEXT:    ld1 { v6.h }[3], [x8]
+; BE-NEXT:    ld1 { v3.h }[3], [x11]
+; BE-NEXT:    ld1 { v7.h }[3], [x10]
+; BE-NEXT:    ld1 { v16.h }[3], [x13]
+; BE-NEXT:    zip1 v4.2d, v17.2d, v6.2d
+; BE-NEXT:    zip1 v1.2d, v2.2d, v3.2d
+; BE-NEXT:    zip1 v2.2d, v7.2d, v16.2d
+; BE-NEXT:    rev64 v3.8h, v4.8h
+; BE-NEXT:    rev64 v2.8h, v2.8h
+; BE-NEXT:    rev64 v4.8h, v1.8h
+; BE-NEXT:    ext v0.16b, v3.16b, v3.16b, #8
+; BE-NEXT:    ext v3.16b, v5.16b, v5.16b, #8
+; BE-NEXT:    ext v1.16b, v2.16b, v2.16b, #8
+; BE-NEXT:    ext v2.16b, v4.16b, v4.16b, #8
+; BE-NEXT:    add sp, sp, #2048
+; BE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; BE-NEXT:    ret
+  %res = call <32 x i16> @llvm.vector.shuffle(<32 x i16> %v, <32 x i16> %mask)
+  ret <32 x i16> %res
+}
+
+define <16 x i32> @shuffle_v16i32(<16 x i32> %v, <16 x i32> %mask) nounwind {
+; LE-LABEL: shuffle_v16i32:
+; LE:       // %bb.0:
+; LE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; LE-NEXT:    sub sp, sp, #1024
+; LE-NEXT:    mov w16, v4.s[1]
+; LE-NEXT:    mov w2, v4.s[3]
+; LE-NEXT:    add x4, sp, #256
+; LE-NEXT:    mov w3, v4.s[2]
+; LE-NEXT:    fmov w5, s4
+; LE-NEXT:    stp q0, q1, [sp]
+; LE-NEXT:    mov w0, v5.s[1]
+; LE-NEXT:    stp q2, q3, [sp, #32]
+; LE-NEXT:    mov w17, v5.s[3]
+; LE-NEXT:    stp q0, q1, [sp, #64]
+; LE-NEXT:    mov w18, v5.s[2]
+; LE-NEXT:    fmov w1, s5
+; LE-NEXT:    and x16, x16, #0xf
+; LE-NEXT:    stp q2, q3, [sp, #96]
+; LE-NEXT:    mov w12, v6.s[3]
+; LE-NEXT:    stp q0, q1, [sp, #128]
+; LE-NEXT:    add x16, x4, x16, lsl #2
+; LE-NEXT:    and x4, x5, #0xf
+; LE-NEXT:    stp q2, q3, [sp, #160]
+; LE-NEXT:    mov x5, sp
+; LE-NEXT:    mov w13, v6.s[2]
+; LE-NEXT:    stp q0, q1, [sp, #192]
+; LE-NEXT:    mov w15, v6.s[1]
+; LE-NEXT:    fmov w14, s6
+; LE-NEXT:    stp q2, q3, [sp, #224]
+; LE-NEXT:    and x2, x2, #0xf
+; LE-NEXT:    and x3, x3, #0xf
+; LE-NEXT:    stp q0, q1, [sp, #256]
+; LE-NEXT:    mov w8, v7.s[3]
+; LE-NEXT:    mov w9, v7.s[2]
+; LE-NEXT:    stp q2, q3, [sp, #288]
+; LE-NEXT:    mov w11, v7.s[1]
+; LE-NEXT:    fmov w10, s7
+; LE-NEXT:    stp q0, q1, [sp, #320]
+; LE-NEXT:    and x1, x1, #0xf
+; LE-NEXT:    and x18, x18, #0xf
+; LE-NEXT:    stp q2, q3, [sp, #352]
+; LE-NEXT:    and x17, x17, #0xf
+; LE-NEXT:    and x14, x14, #0xf
+; LE-NEXT:    stp q0, q1, [sp, #384]
+; LE-NEXT:    and x15, x15, #0xf
+; LE-NEXT:    and x13, x13, #0xf
+; LE-NEXT:    stp q2, q3, [sp, #416]
+; LE-NEXT:    and x12, x12, #0xf
+; LE-NEXT:    and x11, x11, #0xf
+; LE-NEXT:    stp q0, q1, [sp, #448]
+; LE-NEXT:    and x10, x10, #0xf
+; LE-NEXT:    and x9, x9, #0xf
+; LE-NEXT:    stp q2, q3, [sp, #480]
+; LE-NEXT:    and x8, x8, #0xf
+; LE-NEXT:    stp q0, q1, [sp, #512]
+; LE-NEXT:    stp q2, q3, [sp, #544]
+; LE-NEXT:    stp q0, q1, [sp, #576]
+; LE-NEXT:    stp q2, q3, [sp, #608]
+; LE-NEXT:    stp q0, q1, [sp, #640]
+; LE-NEXT:    stp q2, q3, [sp, #672]
+; LE-NEXT:    stp q0, q1, [sp, #704]
+; LE-NEXT:    stp q2, q3, [sp, #736]
+; LE-NEXT:    stp q0, q1, [sp, #768]
+; LE-NEXT:    stp q2, q3, [sp, #800]
+; LE-NEXT:    stp q0, q1, [sp, #832]
+; LE-NEXT:    stp q2, q3, [sp, #864]
+; LE-NEXT:    stp q0, q1, [sp, #896]
+; LE-NEXT:    stp q2, q3, [sp, #928]
+; LE-NEXT:    stp q0, q1, [sp, #960]
+; LE-NEXT:    stp q2, q3, [sp, #992]
+; LE-NEXT:    ldr s0, [x5, x4, lsl #2]
+; LE-NEXT:    add x4, sp, #768
+; LE-NEXT:    add x5, sp, #512
+; LE-NEXT:    add x2, x4, x2, lsl #2
+; LE-NEXT:    ldr s1, [x5, x3, lsl #2]
+; LE-NEXT:    add x3, sp, #832
+; LE-NEXT:    ld1 { v0.s }[1], [x16]
+; LE-NEXT:    and x16, x0, #0xf
+; LE-NEXT:    add x0, sp, #192
+; LE-NEXT:    ld1 { v1.s }[1], [x2]
+; LE-NEXT:    add x16, x0, x16, lsl #2
+; LE-NEXT:    ldr s2, [x3, x1, lsl #2]
+; LE-NEXT:    add x0, sp, #704
+; LE-NEXT:    add x1, sp, #448
+; LE-NEXT:    add x2, sp, #896
+; LE-NEXT:    add x17, x0, x17, lsl #2
+; LE-NEXT:    add x0, sp, #128
+; LE-NEXT:    ldr s3, [x1, x18, lsl #2]
+; LE-NEXT:    ldr s4, [x2, x14, lsl #2]
+; LE-NEXT:    add x14, sp, #384
+; LE-NEXT:    add x18, sp, #640
+; LE-NEXT:    add x15, x0, x15, lsl #2
+; LE-NEXT:    add x0, sp, #64
+; LE-NEXT:    add x12, x18, x12, lsl #2
+; LE-NEXT:    ldr s5, [x14, x13, lsl #2]
+; LE-NEXT:    add x13, sp, #960
+; LE-NEXT:    add x14, sp, #320
+; LE-NEXT:    add x18, sp, #576
+; LE-NEXT:    add x11, x0, x11, lsl #2
+; LE-NEXT:    ldr s6, [x13, x10, lsl #2]
+; LE-NEXT:    add x8, x18, x8, lsl #2
+; LE-NEXT:    ldr s7, [x14, x9, lsl #2]
+; LE-NEXT:    ld1 { v2.s }[1], [x16]
+; LE-NEXT:    ld1 { v3.s }[1], [x17]
+; LE-NEXT:    ld1 { v4.s }[1], [x15]
+; LE-NEXT:    ld1 { v5.s }[1], [x12]
+; LE-NEXT:    ld1 { v6.s }[1], [x11]
+; LE-NEXT:    ld1 { v7.s }[1], [x8]
+; LE-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; LE-NEXT:    zip1 v1.2d, v2.2d, v3.2d
+; LE-NEXT:    zip1 v2.2d, v4.2d, v5.2d
+; LE-NEXT:    zip1 v3.2d, v6.2d, v7.2d
+; LE-NEXT:    add sp, sp, #1024
+; LE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; LE-NEXT:    ret
+;
+; BE-LABEL: shuffle_v16i32:
+; BE:       // %bb.0:
+; BE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; BE-NEXT:    sub sp, sp, #1024
+; BE-NEXT:    rev64 v7.4s, v7.4s
+; BE-NEXT:    rev64 v6.4s, v6.4s
+; BE-NEXT:    add x4, sp, #64
+; BE-NEXT:    rev64 v4.4s, v4.4s
+; BE-NEXT:    rev64 v5.4s, v5.4s
+; BE-NEXT:    stp q0, q1, [sp]
+; BE-NEXT:    stp q2, q3, [sp, #32]
+; BE-NEXT:    stp q0, q1, [sp, #64]
+; BE-NEXT:    ext v7.16b, v7.16b, v7.16b, #8
+; BE-NEXT:    ext v6.16b, v6.16b, v6.16b, #8
+; BE-NEXT:    stp q2, q3, [sp, #96]
+; BE-NEXT:    ext v4.16b, v4.16b, v4.16b, #8
+; BE-NEXT:    ext v5.16b, v5.16b, v5.16b, #8
+; BE-NEXT:    stp q0, q1, [sp, #128]
+; BE-NEXT:    stp q2, q3, [sp, #160]
+; BE-NEXT:    stp q0, q1, [sp, #192]
+; BE-NEXT:    mov w16, v7.s[1]
+; BE-NEXT:    mov w2, v7.s[3]
+; BE-NEXT:    mov w3, v7.s[2]
+; BE-NEXT:    fmov w5, s7
+; BE-NEXT:    mov w17, v6.s[3]
+; BE-NEXT:    mov w0, v6.s[1]
+; BE-NEXT:    fmov w1, s6
+; BE-NEXT:    stp q2, q3, [sp, #224]
+; BE-NEXT:    mov w11, v4.s[1]
+; BE-NEXT:    stp q0, q1, [sp, #256]
+; BE-NEXT:    mov w15, v5.s[1]
+; BE-NEXT:    mov w18, v6.s[2]
+; BE-NEXT:    and x16, x16, #0xf
+; BE-NEXT:    stp q2, q3, [sp, #288]
+; BE-NEXT:    mov w8, v4.s[3]
+; BE-NEXT:    stp q0, q1, [sp, #320]
+; BE-NEXT:    add x16, x4, x16, lsl #2
+; BE-NEXT:    and x4, x5, #0xf
+; BE-NEXT:    stp q2, q3, [sp, #352]
+; BE-NEXT:    add x5, sp, #960
+; BE-NEXT:    mov w9, v4.s[2]
+; BE-NEXT:    stp q0, q1, [sp, #384]
+; BE-NEXT:    mov w12, v5.s[3]
+; BE-NEXT:    mov w13, v5.s[2]
+; BE-NEXT:    stp q2, q3, [sp, #416]
+; BE-NEXT:    and x2, x2, #0xf
+; BE-NEXT:    and x3, x3, #0xf
+; BE-NEXT:    stp q0, q1, [sp, #448]
+; BE-NEXT:    fmov w10, s4
+; BE-NEXT:    fmov w14, s5
+; BE-NEXT:    stp q2, q3, [sp, #480]
+; BE-NEXT:    and x1, x1, #0xf
+; BE-NEXT:    and x17, x17, #0xf
+; BE-NEXT:    stp q0, q1, [sp, #512]
+; BE-NEXT:    and x18, x18, #0xf
+; BE-NEXT:    and x15, x15, #0xf
+; BE-NEXT:    stp q2, q3, [sp, #544]
+; BE-NEXT:    and x11, x11, #0xf
+; BE-NEXT:    and x14, x14, #0xf
+; BE-NEXT:    stp q0, q1, [sp, #576]
+; BE-NEXT:    and x13, x13, #0xf
+; BE-NEXT:    and x12, x12, #0xf
+; BE-NEXT:    stp q2, q3, [sp, #608]
+; BE-NEXT:    and x10, x10, #0xf
+; BE-NEXT:    and x9, x9, #0xf
+; BE-NEXT:    stp q0, q1, [sp, #640]
+; BE-NEXT:    and x8, x8, #0xf
+; BE-NEXT:    stp q2, q3, [sp, #672]
+; BE-NEXT:    stp q0, q1, [sp, #704]
+; BE-NEXT:    stp q2, q3, [sp, #736]
+; BE-NEXT:    stp q0, q1, [sp, #768]
+; BE-NEXT:    stp q2, q3, [sp, #800]
+; BE-NEXT:    stp q0, q1, [sp, #832]
+; BE-NEXT:    stp q2, q3, [sp, #864]
+; BE-NEXT:    stp q0, q1, [sp, #896]
+; BE-NEXT:    stp q2, q3, [sp, #928]
+; BE-NEXT:    stp q0, q1, [sp, #960]
+; BE-NEXT:    stp q2, q3, [sp, #992]
+; BE-NEXT:    ldr s0, [x5, x4, lsl #2]
+; BE-NEXT:    add x4, sp, #576
+; BE-NEXT:    add x5, sp, #320
+; BE-NEXT:    add x2, x4, x2, lsl #2
+; BE-NEXT:    ldr s1, [x5, x3, lsl #2]
+; BE-NEXT:    add x3, sp, #896
+; BE-NEXT:    ld1 { v0.s }[1], [x16]
+; BE-NEXT:    and x16, x0, #0xf
+; BE-NEXT:    add x0, sp, #128
+; BE-NEXT:    ldr s2, [x3, x1, lsl #2]
+; BE-NEXT:    add x1, sp, #640
+; BE-NEXT:    ld1 { v1.s }[1], [x2]
+; BE-NEXT:    add x16, x0, x16, lsl #2
+; BE-NEXT:    add x0, sp, #384
+; BE-NEXT:    add x2, sp, #192
+; BE-NEXT:    add x17, x1, x17, lsl #2
+; BE-NEXT:    add x1, sp, #256
+; BE-NEXT:    ldr s3, [x0, x18, lsl #2]
+; BE-NEXT:    add x15, x2, x15, lsl #2
+; BE-NEXT:    add x18, sp, #832
+; BE-NEXT:    add x0, sp, #448
+; BE-NEXT:    add x2, sp, #704
+; BE-NEXT:    add x11, x1, x11, lsl #2
+; BE-NEXT:    mov x1, sp
+; BE-NEXT:    add x3, sp, #512
+; BE-NEXT:    add x4, sp, #768
+; BE-NEXT:    ldr s4, [x1, x10, lsl #2]
+; BE-NEXT:    add x8, x4, x8, lsl #2
+; BE-NEXT:    ldr s5, [x3, x9, lsl #2]
+; BE-NEXT:    ldr s6, [x18, x14, lsl #2]
+; BE-NEXT:    add x9, x2, x12, lsl #2
+; BE-NEXT:    ldr s7, [x0, x13, lsl #2]
+; BE-NEXT:    ld1 { v2.s }[1], [x16]
+; BE-NEXT:    ld1 { v4.s }[1], [x11]
+; BE-NEXT:    ld1 { v5.s }[1], [x8]
+; BE-NEXT:    ld1 { v3.s }[1], [x17]
+; BE-NEXT:    ld1 { v6.s }[1], [x15]
+; BE-NEXT:    ld1 { v7.s }[1], [x9]
+; BE-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; BE-NEXT:    zip1 v4.2d, v4.2d, v5.2d
+; BE-NEXT:    zip1 v1.2d, v2.2d, v3.2d
+; BE-NEXT:    zip1 v2.2d, v6.2d, v7.2d
+; BE-NEXT:    rev64 v5.4s, v0.4s
+; BE-NEXT:    rev64 v3.4s, v4.4s
+; BE-NEXT:    rev64 v4.4s, v1.4s
+; BE-NEXT:    rev64 v2.4s, v2.4s
+; BE-NEXT:    ext v0.16b, v3.16b, v3.16b, #8
+; BE-NEXT:    ext v3.16b, v5.16b, v5.16b, #8
+; BE-NEXT:    ext v1.16b, v2.16b, v2.16b, #8
+; BE-NEXT:    ext v2.16b, v4.16b, v4.16b, #8
+; BE-NEXT:    add sp, sp, #1024
+; BE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; BE-NEXT:    ret
+  %res = call <16 x i32> @llvm.vector.shuffle(<16 x i32> %v, <16 x i32> %mask)
+  ret <16 x i32> %res
+}
+
+define <4 x i64> @shuffle_v4i64(<4 x i64> %v, <4 x i64> %mask) nounwind {
+; LE-LABEL: shuffle_v4i64:
+; LE:       // %bb.0:
+; LE-NEXT:    stp q0, q1, [sp, #-128]!
+; LE-NEXT:    mov x8, v3.d[1]
+; LE-NEXT:    mov x9, v2.d[1]
+; LE-NEXT:    stp q0, q1, [sp, #32]
+; LE-NEXT:    fmov x11, d2
+; LE-NEXT:    fmov x13, d3
+; LE-NEXT:    stp q0, q1, [sp, #64]
+; LE-NEXT:    stp q0, q1, [sp, #96]
+; LE-NEXT:    mov x12, sp
+; LE-NEXT:    add x10, sp, #32
+; LE-NEXT:    and x11, x11, #0x3
+; LE-NEXT:    and x8, x8, #0x3
+; LE-NEXT:    and x9, x9, #0x3
+; LE-NEXT:    ldr d0, [x12, x11, lsl #3]
+; LE-NEXT:    add x11, sp, #64
+; LE-NEXT:    and x12, x13, #0x3
+; LE-NEXT:    add x13, sp, #96
+; LE-NEXT:    add x8, x10, x8, lsl #3
+; LE-NEXT:    add x9, x11, x9, lsl #3
+; LE-NEXT:    ldr d1, [x13, x12, lsl #3]
+; LE-NEXT:    ld1 { v0.d }[1], [x9]
+; LE-NEXT:    ld1 { v1.d }[1], [x8]
+; LE-NEXT:    add sp, sp, #128
+; LE-NEXT:    ret
+;
+; BE-LABEL: shuffle_v4i64:
+; BE:       // %bb.0:
+; BE-NEXT:    sub sp, sp, #128
+; BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; BE-NEXT:    stp q0, q1, [sp]
+; BE-NEXT:    stp q0, q1, [sp, #32]
+; BE-NEXT:    add x11, sp, #96
+; BE-NEXT:    add x10, sp, #64
+; BE-NEXT:    stp q0, q1, [sp, #64]
+; BE-NEXT:    stp q0, q1, [sp, #96]
+; BE-NEXT:    mov x8, v2.d[1]
+; BE-NEXT:    mov x9, v3.d[1]
+; BE-NEXT:    fmov x12, d3
+; BE-NEXT:    fmov x13, d2
+; BE-NEXT:    and x12, x12, #0x3
+; BE-NEXT:    ldr d1, [x11, x12, lsl #3]
+; BE-NEXT:    and x8, x8, #0x3
+; BE-NEXT:    and x9, x9, #0x3
+; BE-NEXT:    add x11, sp, #32
+; BE-NEXT:    and x12, x13, #0x3
+; BE-NEXT:    mov x13, sp
+; BE-NEXT:    add x8, x10, x8, lsl #3
+; BE-NEXT:    add x9, x11, x9, lsl #3
+; BE-NEXT:    ldr d0, [x13, x12, lsl #3]
+; BE-NEXT:    ld1 { v1.d }[1], [x9]
+; BE-NEXT:    ld1 { v0.d }[1], [x8]
+; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; BE-NEXT:    add sp, sp, #128
+; BE-NEXT:    ret
+  %res = call <4 x i64> @llvm.vector.shuffle(<4 x i64> %v, <4 x i64> %mask)
+  ret <4 x i64> %res
+}
+
+define <8 x i32> @shuffle_v8i32_i8_mask(<8 x i32> %v, <8 x i8> %mask) nounwind {
+; LE-LABEL: shuffle_v8i32_i8_mask:
+; LE:       // %bb.0:
+; LE-NEXT:    sub sp, sp, #272
+; LE-NEXT:    // kill: def $d2 killed $d2 def $q2
+; LE-NEXT:    umov w8, v2.b[1]
+; LE-NEXT:    umov w11, v2.b[0]
+; LE-NEXT:    add x14, sp, #32
+; LE-NEXT:    umov w10, v2.b[4]
+; LE-NEXT:    umov w12, v2.b[5]
+; LE-NEXT:    str x29, [sp, #256] // 8-byte Spill
+; LE-NEXT:    umov w13, v2.b[2]
+; LE-NEXT:    stp q0, q1, [sp]
+; LE-NEXT:    umov w9, v2.b[6]
+; LE-NEXT:    stp q0, q1, [sp, #32]
+; LE-NEXT:    umov w15, v2.b[3]
+; LE-NEXT:    add x16, sp, #64
+; LE-NEXT:    and x8, x8, #0x7
+; LE-NEXT:    stp q0, q1, [sp, #64]
+; LE-NEXT:    and x11, x11, #0x7
+; LE-NEXT:    stp q0, q1, [sp, #96]
+; LE-NEXT:    add x8, x14, x8, lsl #2
+; LE-NEXT:    mov x14, sp
+; LE-NEXT:    stp q0, q1, [sp, #128]
+; LE-NEXT:    and x12, x12, #0x7
+; LE-NEXT:    and x10, x10, #0x7
+; LE-NEXT:    stp q0, q1, [sp, #160]
+; LE-NEXT:    and x9, x9, #0x7
+; LE-NEXT:    ldr x29, [sp, #256] // 8-byte Reload
+; LE-NEXT:    stp q0, q1, [sp, #192]
+; LE-NEXT:    stp q0, q1, [sp, #224]
+; LE-NEXT:    ldr s0, [x14, x11, lsl #2]
+; LE-NEXT:    and x11, x13, #0x7
+; LE-NEXT:    add x13, sp, #160
+; LE-NEXT:    add x14, sp, #128
+; LE-NEXT:    add x12, x13, x12, lsl #2
+; LE-NEXT:    ldr s1, [x14, x10, lsl #2]
+; LE-NEXT:    umov w10, v2.b[7]
+; LE-NEXT:    ld1 { v0.s }[1], [x8]
+; LE-NEXT:    add x8, x16, x11, lsl #2
+; LE-NEXT:    add x11, sp, #192
+; LE-NEXT:    ld1 { v1.s }[1], [x12]
+; LE-NEXT:    add x9, x11, x9, lsl #2
+; LE-NEXT:    add x11, sp, #96
+; LE-NEXT:    ld1 { v0.s }[2], [x8]
+; LE-NEXT:    and x8, x15, #0x7
+; LE-NEXT:    add x8, x11, x8, lsl #2
+; LE-NEXT:    ld1 { v1.s }[2], [x9]
+; LE-NEXT:    and x9, x10, #0x7
+; LE-NEXT:    add x10, sp, #224
+; LE-NEXT:    add x9, x10, x9, lsl #2
+; LE-NEXT:    ld1 { v0.s }[3], [x8]
+; LE-NEXT:    ld1 { v1.s }[3], [x9]
+; LE-NEXT:    add sp, sp, #272
+; LE-NEXT:    ret
+;
+; BE-LABEL: shuffle_v8i32_i8_mask:
+; BE:       // %bb.0:
+; BE-NEXT:    sub sp, sp, #272
+; BE-NEXT:    rev64 v2.8b, v2.8b
+; BE-NEXT:    str x29, [sp, #256] // 8-byte Spill
+; BE-NEXT:    add x15, sp, #160
+; BE-NEXT:    stp q0, q1, [sp]
+; BE-NEXT:    add x16, sp, #128
+; BE-NEXT:    ldr x29, [sp, #256] // 8-byte Reload
+; BE-NEXT:    stp q0, q1, [sp, #32]
+; BE-NEXT:    stp q0, q1, [sp, #64]
+; BE-NEXT:    umov w8, v2.b[5]
+; BE-NEXT:    umov w10, v2.b[4]
+; BE-NEXT:    umov w12, v2.b[1]
+; BE-NEXT:    umov w13, v2.b[7]
+; BE-NEXT:    umov w14, v2.b[6]
+; BE-NEXT:    umov w9, v2.b[3]
+; BE-NEXT:    umov w11, v2.b[2]
+; BE-NEXT:    umov w17, v2.b[0]
+; BE-NEXT:    stp q0, q1, [sp, #96]
+; BE-NEXT:    stp q0, q1, [sp, #128]
+; BE-NEXT:    stp q0, q1, [sp, #160]
+; BE-NEXT:    and x8, x8, #0x7
+; BE-NEXT:    and x10, x10, #0x7
+; BE-NEXT:    stp q0, q1, [sp, #192]
+; BE-NEXT:    add x8, x15, x8, lsl #2
+; BE-NEXT:    and x13, x13, #0x7
+; BE-NEXT:    stp q0, q1, [sp, #224]
+; BE-NEXT:    add x15, sp, #224
+; BE-NEXT:    and x12, x12, #0x7
+; BE-NEXT:    ldr s0, [x16, x10, lsl #2]
+; BE-NEXT:    and x10, x14, #0x7
+; BE-NEXT:    add x14, sp, #192
+; BE-NEXT:    add x16, sp, #32
+; BE-NEXT:    add x13, x15, x13, lsl #2
+; BE-NEXT:    ldr s1, [x14, x10, lsl #2]
+; BE-NEXT:    add x10, x16, x12, lsl #2
+; BE-NEXT:    and x12, x17, #0x7
+; BE-NEXT:    mov x14, sp
+; BE-NEXT:    and x11, x11, #0x7
+; BE-NEXT:    add x15, sp, #64
+; BE-NEXT:    and x9, x9, #0x7
+; BE-NEXT:    add x16, sp, #96
+; BE-NEXT:    ldr s2, [x14, x12, lsl #2]
+; BE-NEXT:    ldr s3, [x15, x11, lsl #2]
+; BE-NEXT:    add x9, x16, x9, lsl #2
+; BE-NEXT:    ld1 { v0.s }[1], [x8]
+; BE-NEXT:    ld1 { v1.s }[1], [x13]
+; BE-NEXT:    ld1 { v2.s }[1], [x10]
+; BE-NEXT:    ld1 { v3.s }[1], [x9]
+; BE-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; BE-NEXT:    zip1 v1.2d, v2.2d, v3.2d
+; BE-NEXT:    rev64 v2.4s, v0.4s
+; BE-NEXT:    rev64 v1.4s, v1.4s
+; BE-NEXT:    ext v0.16b, v1.16b, v1.16b, #8
+; BE-NEXT:    ext v1.16b, v2.16b, v2.16b, #8
+; BE-NEXT:    add sp, sp, #272
+; BE-NEXT:    ret
+  %res = call <8 x i32> @llvm.vector.shuffle(<8 x i32> %v, <8 x i8> %mask)
+  ret <8 x i32> %res
+}
+
+define <8 x i32> @shuffle_v8i32_i64_mask(<8 x i32> %v, <8 x i64> %mask) nounwind {
+; LE-LABEL: shuffle_v8i32_i64_mask:
+; LE:       // %bb.0:
+; LE-NEXT:    sub sp, sp, #272
+; LE-NEXT:    mov x9, v4.d[1]
+; LE-NEXT:    mov x12, v3.d[1]
+; LE-NEXT:    add x13, sp, #64
+; LE-NEXT:    mov x14, v2.d[1]
+; LE-NEXT:    fmov x15, d3
+; LE-NEXT:    str x29, [sp, #256] // 8-byte Spill
+; LE-NEXT:    mov x8, v5.d[1]
+; LE-NEXT:    fmov x17, d2
+; LE-NEXT:    stp q0, q1, [sp]
+; LE-NEXT:    fmov x11, d5
+; LE-NEXT:    add x10, sp, #32
+; LE-NEXT:    stp q0, q1, [sp, #32]
+; LE-NEXT:    and x9, x9, #0x7
+; LE-NEXT:    and x12, x12, #0x7
+; LE-NEXT:    stp q0, q1, [sp, #64]
+; LE-NEXT:    add x9, x13, x9, lsl #2
+; LE-NEXT:    add x13, sp, #96
+; LE-NEXT:    and x14, x14, #0x7
+; LE-NEXT:    add x12, x13, x12, lsl #2
+; LE-NEXT:    and x13, x15, #0x7
+; LE-NEXT:    add x15, sp, #128
+; LE-NEXT:    add x14, x15, x14, lsl #2
+; LE-NEXT:    fmov x15, d4
+; LE-NEXT:    and x8, x8, #0x7
+; LE-NEXT:    stp q0, q1, [sp, #96]
+; LE-NEXT:    and x17, x17, #0x7
+; LE-NEXT:    mov x18, sp
+; LE-NEXT:    stp q0, q1, [sp, #128]
+; LE-NEXT:    and x11, x11, #0x7
+; LE-NEXT:    add x8, x10, x8, lsl #2
+; LE-NEXT:    stp q0, q1, [sp, #160]
+; LE-NEXT:    add x10, sp, #224
+; LE-NEXT:    add x16, sp, #160
+; LE-NEXT:    stp q0, q1, [sp, #192]
+; LE-NEXT:    and x15, x15, #0x7
+; LE-NEXT:    ldr x29, [sp, #256] // 8-byte Reload
+; LE-NEXT:    stp q0, q1, [sp, #224]
+; LE-NEXT:    ldr s0, [x18, x17, lsl #2]
+; LE-NEXT:    add x17, sp, #192
+; LE-NEXT:    ldr s1, [x16, x13, lsl #2]
+; LE-NEXT:    ldr s2, [x17, x15, lsl #2]
+; LE-NEXT:    ldr s3, [x10, x11, lsl #2]
+; LE-NEXT:    ld1 { v0.s }[1], [x14]
+; LE-NEXT:    ld1 { v1.s }[1], [x12]
+; LE-NEXT:    ld1 { v2.s }[1], [x9]
+; LE-NEXT:    ld1 { v3.s }[1], [x8]
+; LE-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; LE-NEXT:    zip1 v1.2d, v2.2d, v3.2d
+; LE-NEXT:    add sp, sp, #272
+; LE-NEXT:    ret
+;
+; BE-LABEL: shuffle_v8i32_i64_mask:
+; BE:       // %bb.0:
+; BE-NEXT:    sub sp, sp, #272
+; BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; BE-NEXT:    ext v4.16b, v4.16b, v4.16b, #8
+; BE-NEXT:    str x29, [sp, #256] // 8-byte Spill
+; BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; BE-NEXT:    ext v5.16b, v5.16b, v5.16b, #8
+; BE-NEXT:    stp q0, q1, [sp]
+; BE-NEXT:    stp q0, q1, [sp, #32]
+; BE-NEXT:    add x16, sp, #192
+; BE-NEXT:    add x12, sp, #128
+; BE-NEXT:    stp q0, q1, [sp, #64]
+; BE-NEXT:    add x13, sp, #64
+; BE-NEXT:    ldr x29, [sp, #256] // 8-byte Reload
+; BE-NEXT:    mov x8, v2.d[1]
+; BE-NEXT:    mov x9, v4.d[1]
+; BE-NEXT:    fmov x15, d4
+; BE-NEXT:    fmov x14, d2
+; BE-NEXT:    stp q0, q1, [sp, #96]
+; BE-NEXT:    fmov x11, d3
+; BE-NEXT:    stp q0, q1, [sp, #128]
+; BE-NEXT:    mov x10, v3.d[1]
+; BE-NEXT:    stp q0, q1, [sp, #160]
+; BE-NEXT:    and x15, x15, #0x7
+; BE-NEXT:    stp q0, q1, [sp, #192]
+; BE-NEXT:    and x8, x8, #0x7
+; BE-NEXT:    and x9, x9, #0x7
+; BE-NEXT:    stp q0, q1, [sp, #224]
+; BE-NEXT:    and x14, x14, #0x7
+; BE-NEXT:    add x8, x12, x8, lsl #2
+; BE-NEXT:    ldr s0, [x16, x15, lsl #2]
+; BE-NEXT:    mov x15, sp
+; BE-NEXT:    fmov x16, d5
+; BE-NEXT:    add x9, x13, x9, lsl #2
+; BE-NEXT:    ldr s1, [x15, x14, lsl #2]
+; BE-NEXT:    mov x12, v5.d[1]
+; BE-NEXT:    and x11, x11, #0x7
+; BE-NEXT:    add x13, sp, #160
+; BE-NEXT:    add x15, sp, #224
+; BE-NEXT:    and x14, x16, #0x7
+; BE-NEXT:    ld1 { v0.s }[1], [x9]
+; BE-NEXT:    ld1 { v1.s }[1], [x8]
+; BE-NEXT:    add x8, x13, x11, lsl #2
+; BE-NEXT:    add x9, x15, x14, lsl #2
+; BE-NEXT:    and x10, x10, #0x7
+; BE-NEXT:    add x11, sp, #96
+; BE-NEXT:    and x12, x12, #0x7
+; BE-NEXT:    add x13, sp, #32
+; BE-NEXT:    ld1 { v0.s }[2], [x9]
+; BE-NEXT:    ld1 { v1.s }[2], [x8]
+; BE-NEXT:    add x8, x11, x10, lsl #2
+; BE-NEXT:    add x9, x13, x12, lsl #2
+; BE-NEXT:    ld1 { v0.s }[3], [x9]
+; BE-NEXT:    ld1 { v1.s }[3], [x8]
+; BE-NEXT:    rev64 v1.4s, v1.4s
+; BE-NEXT:    rev64 v2.4s, v0.4s
+; BE-NEXT:    ext v0.16b, v1.16b, v1.16b, #8
+; BE-NEXT:    ext v1.16b, v2.16b, v2.16b, #8
+; BE-NEXT:    add sp, sp, #272
+; BE-NEXT:    ret
+  %res = call <8 x i32> @llvm.vector.shuffle(<8 x i32> %v, <8 x i64> %mask)
+  ret <8 x i32> %res
+}
+
+define <32 x i8> @shuffle_v32i8_i16_mask(<32 x i8> %v, <32 x i16> %mask) nounwind {
+; LE-LABEL: shuffle_v32i8_i16_mask:
+; LE:       // %bb.0:
+; LE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; LE-NEXT:    stp q0, q1, [sp, #-1024]!
+; LE-NEXT:    umov w8, v2.h[0]
+; LE-NEXT:    umov w9, v2.h[1]
+; LE-NEXT:    stp q0, q1, [sp, #32]
+; LE-NEXT:    stp q0, q1, [sp, #64]
+; LE-NEXT:    umov w10, v2.h[2]
+; LE-NEXT:    mov x11, sp
+; LE-NEXT:    stp q0, q1, [sp, #96]
+; LE-NEXT:    add x12, sp, #128
+; LE-NEXT:    add x13, sp, #384
+; LE-NEXT:    stp q0, q1, [sp, #128]
+; LE-NEXT:    stp q0, q1, [sp, #160]
+; LE-NEXT:    and x8, x8, #0x1f
+; LE-NEXT:    and x9, x9, #0x1f
+; LE-NEXT:    stp q0, q1, [sp, #192]
+; LE-NEXT:    stp q0, q1, [sp, #224]
+; LE-NEXT:    stp q0, q1, [sp, #256]
+; LE-NEXT:    stp q0, q1, [sp, #288]
+; LE-NEXT:    stp q0, q1, [sp, #320]
+; LE-NEXT:    stp q0, q1, [sp, #352]
+; LE-NEXT:    stp q0, q1, [sp, #384]
+; LE-NEXT:    stp q0, q1, [sp, #416]
+; LE-NEXT:    stp q0, q1, [sp, #448]
+; LE-NEXT:    stp q0, q1, [sp, #480]
+; LE-NEXT:    stp q0, q1, [sp, #512]
+; LE-NEXT:    stp q0, q1, [sp, #544]
+; LE-NEXT:    stp q0, q1, [sp, #576]
+; LE-NEXT:    stp q0, q1, [sp, #608]
+; LE-NEXT:    stp q0, q1, [sp, #640]
+; LE-NEXT:    stp q0, q1, [sp, #672]
+; LE-NEXT:    stp q0, q1, [sp, #704]
+; LE-NEXT:    stp q0, q1, [sp, #736]
+; LE-NEXT:    stp q0, q1, [sp, #768]
+; LE-NEXT:    stp q0, q1, [sp, #800]
+; LE-NEXT:    stp q0, q1, [sp, #832]
+; LE-NEXT:    stp q0, q1, [sp, #864]
+; LE-NEXT:    stp q0, q1, [sp, #896]
+; LE-NEXT:    stp q0, q1, [sp, #928]
+; LE-NEXT:    stp q0, q1, [sp, #960]
+; LE-NEXT:    stp q0, q1, [sp, #992]
+; LE-NEXT:    ldr b0, [x11, x8]
+; LE-NEXT:    add x8, x12, x9
+; LE-NEXT:    umov w9, v2.h[3]
+; LE-NEXT:    umov w11, v4.h[0]
+; LE-NEXT:    ld1 { v0.b }[1], [x8]
+; LE-NEXT:    and x8, x10, #0x1f
+; LE-NEXT:    add x10, sp, #256
+; LE-NEXT:    add x8, x10, x8
+; LE-NEXT:    umov w10, v4.h[1]
+; LE-NEXT:    and x12, x9, #0x1f
+; LE-NEXT:    umov w9, v4.h[2]
+; LE-NEXT:    ld1 { v0.b }[2], [x8]
+; LE-NEXT:    add x13, x13, x12
+; LE-NEXT:    umov w12, v2.h[4]
+; LE-NEXT:    and x11, x11, #0x1f
+; LE-NEXT:    umov w8, v4.h[4]
+; LE-NEXT:    and x10, x10, #0x1f
+; LE-NEXT:    ld1 { v0.b }[3], [x13]
+; LE-NEXT:    add x13, sp, #960
+; LE-NEXT:    and x9, x9, #0x1f
+; LE-NEXT:    ldr b1, [x13, x11]
+; LE-NEXT:    add x11, sp, #64
+; LE-NEXT:    umov w13, v4.h[3]
+; LE-NEXT:    add x10, x11, x10
+; LE-NEXT:    umov w11, v2.h[5]
+; LE-NEXT:    and x12, x12, #0x1f
+; LE-NEXT:    ld1 { v1.b }[1], [x10]
+; LE-NEXT:    add x10, sp, #512
+; LE-NEXT:    and x8, x8, #0x1f
+; LE-NEXT:    add x10, x10, x12
+; LE-NEXT:    add x12, sp, #192
+; LE-NEXT:    add x9, x12, x9
+; LE-NEXT:    add x12, sp, #640
+; LE-NEXT:    ld1 { v0.b }[4], [x10]
+; LE-NEXT:    and x11, x11, #0x1f
+; LE-NEXT:    ld1 { v1.b }[2], [x9]
+; LE-NEXT:    umov w10, v2.h[6]
+; LE-NEXT:    add x9, x12, x11
+; LE-NEXT:    and x11, x13, #0x1f
+; LE-NEXT:    add x12, sp, #320
+; LE-NEXT:    add x11, x12, x11
+; LE-NEXT:    umov w13, v4.h[5]
+; LE-NEXT:    umov w12, v2.h[7]
+; LE-NEXT:    ld1 { v1.b }[3], [x11]
+; LE-NEXT:    ld1 { v0.b }[5], [x9]
+; LE-NEXT:    add x11, sp, #448
+; LE-NEXT:    and x9, x10, #0x1f
+; LE-NEXT:    add x10, sp, #768
+; LE-NEXT:    add x8, x11, x8
+; LE-NEXT:    add x9, x10, x9
+; LE-NEXT:    umov w11, v4.h[6]
+; LE-NEXT:    umov w10, v5.h[1]
+; LE-NEXT:    ld1 { v1.b }[4], [x8]
+; LE-NEXT:    ld1 { v0.b }[6], [x9]
+; LE-NEXT:    and x9, x13, #0x1f
+; LE-NEXT:    add x13, sp, #576
+; LE-NEXT:    umov w8, v3.h[0]
+; LE-NEXT:    and x12, x12, #0x1f
+; LE-NEXT:    add x9, x13, x9
+; LE-NEXT:    add x13, sp, #896
+; LE-NEXT:    add x12, x13, x12
+; LE-NEXT:    umov w13, v4.h[7]
+; LE-NEXT:    ld1 { v1.b }[5], [x9]
+; LE-NEXT:    and x9, x11, #0x1f
+; LE-NEXT:    add x11, sp, #704
+; LE-NEXT:    ld1 { v0.b }[7], [x12]
+; LE-NEXT:    add x9, x11, x9
+; LE-NEXT:    umov w11, v3.h[1]
+; LE-NEXT:    umov w12, v5.h[0]
+; LE-NEXT:    and x8, x8, #0x1f
+; LE-NEXT:    ld1 { v1.b }[6], [x9]
+; LE-NEXT:    add x9, sp, #928
+; LE-NEXT:    add x8, x9, x8
+; LE-NEXT:    and x9, x13, #0x1f
+; LE-NEXT:    add x13, sp, #832
+; LE-NEXT:    add x9, x13, x9
+; LE-NEXT:    add x13, sp, #96
+; LE-NEXT:    ld1 { v0.b }[8], [x8]
+; LE-NEXT:    and x11, x11, #0x1f
+; LE-NEXT:    ld1 { v1.b }[7], [x9]
+; LE-NEXT:    umov w8, v3.h[2]
+; LE-NEXT:    add x9, x13, x11
+; LE-NEXT:    and x11, x12, #0x1f
+; LE-NEXT:    add x12, sp, #992
+; LE-NEXT:    add x11, x12, x11
+; LE-NEXT:    umov w13, v5.h[2]
+; LE-NEXT:    umov w12, v3.h[3]
+; LE-NEXT:    ld1 { v1.b }[8], [x11]
+; LE-NEXT:    ld1 { v0.b }[9], [x9]
+; LE-NEXT:    and x10, x10, #0x1f
+; LE-NEXT:    add x11, sp, #32
+; LE-NEXT:    and x8, x8, #0x1f
+; LE-NEXT:    add x9, sp, #224
+; LE-NEXT:    add x10, x11, x10
+; LE-NEXT:    add x8, x9, x8
+; LE-NEXT:    umov w11, v5.h[3]
+; LE-NEXT:    ld1 { v1.b }[9], [x10]
+; LE-NEXT:    ld1 { v0.b }[10], [x8]
+; LE-NEXT:    and x8, x13, #0x1f
+; LE-NEXT:    add x13, sp, #160
+; LE-NEXT:    umov w10, v3.h[4]
+; LE-NEXT:    and x12, x12, #0x1f
+; LE-NEXT:    add x8, x13, x8
+; LE-NEXT:    add x13, sp, #352
+; LE-NEXT:    umov w9, v5.h[6]
+; LE-NEXT:    add x12, x13, x12
+; LE-NEXT:    umov w13, v5.h[4]
+; LE-NEXT:    ld1 { v1.b }[10], [x8]
+; LE-NEXT:    and x8, x11, #0x1f
+; LE-NEXT:    add x11, sp, #288
+; LE-NEXT:    ld1 { v0.b }[11], [x12]
+; LE-NEXT:    add x8, x11, x8
+; LE-NEXT:    umov w11, v3.h[5]
+; LE-NEXT:    umov w12, v5.h[5]
+; LE-NEXT:    and x10, x10, #0x1f
+; LE-NEXT:    ld1 { v1.b }[11], [x8]
+; LE-NEXT:    add x8, sp, #480
+; LE-NEXT:    add x8, x8, x10
+; LE-NEXT:    and x10, x13, #0x1f
+; LE-NEXT:    add x13, sp, #416
+; LE-NEXT:    add x10, x13, x10
+; LE-NEXT:    ld1 { v0.b }[12], [x8]
+; LE-NEXT:    umov w8, v3.h[6]
+; LE-NEXT:    and x11, x11, #0x1f
+; LE-NEXT:    add x13, sp, #608
+; LE-NEXT:    ld1 { v1.b }[12], [x10]
+; LE-NEXT:    add x10, x13, x11
+; LE-NEXT:    and x11, x12, #0x1f
+; LE-NEXT:    add x12, sp, #544
+; LE-NEXT:    add x11, x12, x11
+; LE-NEXT:    umov w13, v5.h[7]
+; LE-NEXT:    umov w12, v3.h[7]
+; LE-NEXT:    ld1 { v0.b }[13], [x10]
+; LE-NEXT:    ld1 { v1.b }[13], [x11]
+; LE-NEXT:    and x8, x8, #0x1f
+; LE-NEXT:    add x10, sp, #736
+; LE-NEXT:    and x9, x9, #0x1f
+; LE-NEXT:    add x11, sp, #672
+; LE-NEXT:    add x8, x10, x8
+; LE-NEXT:    add x9, x11, x9
+; LE-NEXT:    add x11, sp, #800
+; LE-NEXT:    ld1 { v0.b }[14], [x8]
+; LE-NEXT:    ld1 { v1.b }[14], [x9]
+; LE-NEXT:    and x8, x12, #0x1f
+; LE-NEXT:    add x9, sp, #864
+; LE-NEXT:    and x10, x13, #0x1f
+; LE-NEXT:    add x8, x9, x8
+; LE-NEXT:    add x9, x11, x10
+; LE-NEXT:    ld1 { v0.b }[15], [x8]
+; LE-NEXT:    ld1 { v1.b }[15], [x9]
+; LE-NEXT:    add sp, sp, #1024
+; LE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; LE-NEXT:    ret
+;
+; BE-LABEL: shuffle_v32i8_i16_mask:
+; BE:       // %bb.0:
+; BE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; BE-NEXT:    sub sp, sp, #1024
+; BE-NEXT:    rev64 v4.8h, v4.8h
+; BE-NEXT:    rev64 v2.8h, v2.8h
+; BE-NEXT:    stp q0, q1, [sp]
+; BE-NEXT:    stp q0, q1, [sp, #32]
+; BE-NEXT:    add x11, sp, #960
+; BE-NEXT:    add x12, sp, #64
+; BE-NEXT:    stp q0, q1, [sp, #64]
+; BE-NEXT:    add x13, sp, #320
+; BE-NEXT:    rev64 v5.8h, v5.8h
+; BE-NEXT:    stp q0, q1, [sp, #96]
+; BE-NEXT:    ext v4.16b, v4.16b, v4.16b, #8
+; BE-NEXT:    stp q0, q1, [sp, #128]
+; BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; BE-NEXT:    stp q0, q1, [sp, #160]
+; BE-NEXT:    stp q0, q1, [sp, #192]
+; BE-NEXT:    ext v5.16b, v5.16b, v5.16b, #8
+; BE-NEXT:    stp q0, q1, [sp, #224]
+; BE-NEXT:    umov w8, v4.h[0]
+; BE-NEXT:    umov w9, v4.h[1]
+; BE-NEXT:    stp q0, q1, [sp, #256]
+; BE-NEXT:    stp q0, q1, [sp, #288]
+; BE-NEXT:    umov w10, v4.h[2]
+; BE-NEXT:    stp q0, q1, [sp, #320]
+; BE-NEXT:    stp q0, q1, [sp, #352]
+; BE-NEXT:    stp q0, q1, [sp, #384]
+; BE-NEXT:    and x8, x8, #0x1f
+; BE-NEXT:    and x9, x9, #0x1f
+; BE-NEXT:    stp q0, q1, [sp, #416]
+; BE-NEXT:    stp q0, q1, [sp, #448]
+; BE-NEXT:    stp q0, q1, [sp, #480]
+; BE-NEXT:    stp q0, q1, [sp, #512]
+; BE-NEXT:    stp q0, q1, [sp, #544]
+; BE-NEXT:    stp q0, q1, [sp, #576]
+; BE-NEXT:    stp q0, q1, [sp, #608]
+; BE-NEXT:    stp q0, q1, [sp, #640]
+; BE-NEXT:    stp q0, q1, [sp, #672]
+; BE-NEXT:    stp q0, q1, [sp, #704]
+; BE-NEXT:    stp q0, q1, [sp, #736]
+; BE-NEXT:    stp q0, q1, [sp, #768]
+; BE-NEXT:    stp q0, q1, [sp, #800]
+; BE-NEXT:    stp q0, q1, [sp, #832]
+; BE-NEXT:    stp q0, q1, [sp, #864]
+; BE-NEXT:    stp q0, q1, [sp, #896]
+; BE-NEXT:    stp q0, q1, [sp, #928]
+; BE-NEXT:    stp q0, q1, [sp, #960]
+; BE-NEXT:    stp q0, q1, [sp, #992]
+; BE-NEXT:    rev64 v1.8h, v3.8h
+; BE-NEXT:    ldr b0, [x11, x8]
+; BE-NEXT:    add x8, x12, x9
+; BE-NEXT:    umov w12, v4.h[3]
+; BE-NEXT:    add x9, sp, #192
+; BE-NEXT:    umov w11, v2.h[0]
+; BE-NEXT:    ld1 { v0.b }[1], [x8]
+; BE-NEXT:    and x8, x10, #0x1f
+; BE-NEXT:    umov w10, v2.h[1]
+; BE-NEXT:    add x8, x9, x8
+; BE-NEXT:    umov w9, v4.h[4]
+; BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; BE-NEXT:    and x12, x12, #0x1f
+; BE-NEXT:    ld1 { v0.b }[2], [x8]
+; BE-NEXT:    add x12, x13, x12
+; BE-NEXT:    and x11, x11, #0x1f
+; BE-NEXT:    umov w13, v2.h[2]
+; BE-NEXT:    and x10, x10, #0x1f
+; BE-NEXT:    umov w8, v2.h[5]
+; BE-NEXT:    and x9, x9, #0x1f
+; BE-NEXT:    ld1 { v0.b }[3], [x12]
+; BE-NEXT:    mov x12, sp
+; BE-NEXT:    ldr b3, [x12, x11]
+; BE-NEXT:    add x11, sp, #448
+; BE-NEXT:    add x12, sp, #128
+; BE-NEXT:    add x9, x11, x9
+; BE-NEXT:    umov w11, v4.h[5]
+; BE-NEXT:    add x10, x12, x10
+; BE-NEXT:    umov w12, v2.h[3]
+; BE-NEXT:    ld1 { v3.b }[1], [x10]
+; BE-NEXT:    ld1 { v0.b }[4], [x9]
+; BE-NEXT:    and x9, x13, #0x1f
+; BE-NEXT:    add x10, sp, #256
+; BE-NEXT:    umov w13, v2.h[4]
+; BE-NEXT:    add x9, x10, x9
+; BE-NEXT:    umov w10, v4.h[6]
+; BE-NEXT:    and x8, x8, #0x1f
+; BE-NEXT:    and x11, x11, #0x1f
+; BE-NEXT:    ld1 { v3.b }[2], [x9]
+; BE-NEXT:    add x9, sp, #576
+; BE-NEXT:    add x9, x9, x11
+; BE-NEXT:    and x11, x12, #0x1f
+; BE-NEXT:    add x12, sp, #384
+; BE-NEXT:    add x11, x12, x11
+; BE-NEXT:    umov w12, v4.h[7]
+; BE-NEXT:    ld1 { v0.b }[5], [x9]
+; BE-NEXT:    ld1 { v3.b }[3], [x11]
+; BE-NEXT:    and x11, x13, #0x1f
+; BE-NEXT:    add x13, sp, #512
+; BE-NEXT:    and x9, x10, #0x1f
+; BE-NEXT:    add x10, sp, #704
+; BE-NEXT:    add x11, x13, x11
+; BE-NEXT:    add x9, x10, x9
+; BE-NEXT:    umov w13, v2.h[6]
+; BE-NEXT:    umov w10, v1.h[1]
+; BE-NEXT:    ld1 { v3.b }[4], [x11]
+; BE-NEXT:    ld1 { v0.b }[6], [x9]
+; BE-NEXT:    add x9, sp, #640
+; BE-NEXT:    umov w11, v5.h[0]
+; BE-NEXT:    and x12, x12, #0x1f
+; BE-NEXT:    add x8, x9, x8
+; BE-NEXT:    add x9, sp, #832
+; BE-NEXT:    add x9, x9, x12
+; BE-NEXT:    umov w12, v2.h[7]
+; BE-NEXT:    ld1 { v3.b }[5], [x8]
+; BE-NEXT:    ld1 { v0.b }[7], [x9]
+; BE-NEXT:    and x8, x13, #0x1f
+; BE-NEXT:    add x9, sp, #768
+; BE-NEXT:    add x8, x9, x8
+; BE-NEXT:    umov w9, v5.h[1]
+; BE-NEXT:    umov w13, v1.h[0]
+; BE-NEXT:    and x11, x11, #0x1f
+; BE-NEXT:    ld1 { v3.b }[6], [x8]
+; BE-NEXT:    add x8, sp, #992
+; BE-NEXT:    add x8, x8, x11
+; BE-NEXT:    and x11, x12, #0x1f
+; BE-NEXT:    add x12, sp, #896
+; BE-NEXT:    add x11, x12, x11
+; BE-NEXT:    add x12, sp, #32
+; BE-NEXT:    ld1 { v0.b }[8], [x8]
+; BE-NEXT:    and x9, x9, #0x1f
+; BE-NEXT:    ld1 { v3.b }[7], [x11]
+; BE-NEXT:    umov w8, v5.h[2]
+; BE-NEXT:    add x9, x12, x9
+; BE-NEXT:    and x11, x13, #0x1f
+; BE-NEXT:    add x12, sp, #928
+; BE-NEXT:    add x11, x12, x11
+; BE-NEXT:    umov w13, v1.h[2]
+; BE-NEXT:    umov w12, v5.h[3]
+; BE-NEXT:    ld1 { v3.b }[8], [x11]
+; BE-NEXT:    ld1 { v0.b }[9], [x9]
+; BE-NEXT:    and x10, x10, #0x1f
+; BE-NEXT:    add x11, sp, #96
+; BE-NEXT:    and x8, x8, #0x1f
+; BE-NEXT:    add x9, sp, #160
+; BE-NEXT:    add x10, x11, x10
+; BE-NEXT:    add x8, x9, x8
+; BE-NEXT:    umov w11, v1.h[3]
+; BE-NEXT:    ld1 { v3.b }[9], [x10]
+; BE-NEXT:    ld1 { v0.b }[10], [x8]
+; BE-NEXT:    and x8, x13, #0x1f
+; BE-NEXT:    add x13, sp, #224
+; BE-NEXT:    umov w10, v5.h[4]
+; BE-NEXT:    and x12, x12, #0x1f
+; BE-NEXT:    add x8, x13, x8
+; BE-NEXT:    add x13, sp, #288
+; BE-NEXT:    umov w9, v1.h[6]
+; BE-NEXT:    add x12, x13, x12
+; BE-NEXT:    umov w13, v1.h[4]
+; BE-NEXT:    ld1 { v3.b }[10], [x8]
+; BE-NEXT:    and x8, x11, #0x1f
+; BE-NEXT:    add x11, sp, #352
+; BE-NEXT:    ld1 { v0.b }[11], [x12]
+; BE-NEXT:    add x8, x11, x8
+; BE-NEXT:    umov w11, v5.h[5]
+; BE-NEXT:    umov w12, v1.h[5]
+; BE-NEXT:    and x10, x10, #0x1f
+; BE-NEXT:    ld1 { v3.b }[11], [x8]
+; BE-NEXT:    add x8, sp, #416
+; BE-NEXT:    add x8, x8, x10
+; BE-NEXT:    and x10, x13, #0x1f
+; BE-NEXT:    add x13, sp, #480
+; BE-NEXT:    add x10, x13, x10
+; BE-NEXT:    ld1 { v0.b }[12], [x8]
+; BE-NEXT:    umov w8, v5.h[6]
+; BE-NEXT:    and x11, x11, #0x1f
+; BE-NEXT:    add x13, sp, #544
+; BE-NEXT:    ld1 { v3.b }[12], [x10]
+; BE-NEXT:    add x10, x13, x11
+; BE-NEXT:    and x11, x12, #0x1f
+; BE-NEXT:    add x12, sp, #608
+; BE-NEXT:    add x11, x12, x11
+; BE-NEXT:    umov w13, v1.h[7]
+; BE-NEXT:    umov w12, v5.h[7]
+; BE-NEXT:    ld1 { v0.b }[13], [x10]
+; BE-NEXT:    ld1 { v3.b }[13], [x11]
+; BE-NEXT:    and x8, x8, #0x1f
+; BE-NEXT:    add x10, sp, #672
+; BE-NEXT:    and x9, x9, #0x1f
+; BE-NEXT:    add x11, sp, #736
+; BE-NEXT:    add x8, x10, x8
+; BE-NEXT:    add x9, x11, x9
+; BE-NEXT:    add x11, sp, #864
+; BE-NEXT:    ld1 { v0.b }[14], [x8]
+; BE-NEXT:    ld1 { v3.b }[14], [x9]
+; BE-NEXT:    and x8, x12, #0x1f
+; BE-NEXT:    add x9, sp, #800
+; BE-NEXT:    and x10, x13, #0x1f
+; BE-NEXT:    add x8, x9, x8
+; BE-NEXT:    add x9, x11, x10
+; BE-NEXT:    ld1 { v0.b }[15], [x8]
+; BE-NEXT:    ld1 { v3.b }[15], [x9]
+; BE-NEXT:    rev64 v1.16b, v3.16b
+; BE-NEXT:    rev64 v2.16b, v0.16b
+; BE-NEXT:    ext v0.16b, v1.16b, v1.16b, #8
+; BE-NEXT:    ext v1.16b, v2.16b, v2.16b, #8
+; BE-NEXT:    add sp, sp, #1024
+; BE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; BE-NEXT:    ret
+  %res = call <32 x i8> @llvm.vector.shuffle(<32 x i8> %v, <32 x i16> %mask)
+  ret <32 x i8> %res
+}
+
 ; Illegal result types.
 
 define <2 x i16> @shuffle_v2i16(<2 x i16> %v, <2 x i16> %mask) nounwind {
