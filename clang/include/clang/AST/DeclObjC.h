@@ -2623,20 +2623,18 @@ class ObjCImplementationDecl : public ObjCImplDecl {
   LLVM_PREFERRED_TYPE(bool)
   bool HasDestructors : 1;
 
-  ObjCImplementationDecl(DeclContext *DC,
-                         ObjCInterfaceDecl *classInterface,
-                         ObjCInterfaceDecl *superDecl,
-                         SourceLocation nameLoc, SourceLocation atStartLoc,
+  ObjCImplementationDecl(DeclContext *DC, ObjCInterfaceDecl *classInterface,
+                         ObjCInterfaceDecl *superDecl, SourceLocation nameLoc,
+                         SourceLocation atStartLoc,
                          SourceLocation superLoc = SourceLocation(),
-                         SourceLocation IvarLBraceLoc=SourceLocation(),
-                         SourceLocation IvarRBraceLoc=SourceLocation())
+                         SourceLocation IvarLBraceLoc = SourceLocation(),
+                         SourceLocation IvarRBraceLoc = SourceLocation())
       : ObjCImplDecl(ObjCImplementation, DC, classInterface,
-                     classInterface ? classInterface->getIdentifier()
-                                    : nullptr,
+                     classInterface ? classInterface->getIdentifier() : nullptr,
                      nameLoc, atStartLoc),
-         SuperClass(superDecl), SuperLoc(superLoc),
-         IvarLBraceLoc(IvarLBraceLoc), IvarRBraceLoc(IvarRBraceLoc),
-         HasNonZeroConstructors(false), HasDestructors(false) {}
+        SuperClass(superDecl), SuperLoc(superLoc), IvarLBraceLoc(IvarLBraceLoc),
+        IvarRBraceLoc(IvarRBraceLoc), HasNonZeroConstructors(false),
+        HasDestructors(false) {}
 
   void anchor() override;
 
