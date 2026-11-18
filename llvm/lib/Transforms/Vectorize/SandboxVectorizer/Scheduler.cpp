@@ -115,9 +115,6 @@ void Scheduler::scheduleAndUpdateReadyList(SchedBundle &Bndl) {
     }
     N->setScheduled();
   }
-#ifndef NDEBUG
-  DAG.verify();
-#endif
 }
 
 void Scheduler::notifyCreateInstrBeforeDAGUpdates(DGNode *N) {
@@ -143,10 +140,12 @@ void Scheduler::notifyCreateInstrAfterDAGUpdates(DGNode *N) {
     if (Dir == SchedDirection::BottomUp) {
       for (auto *PredN : N->preds(DAG)) {
         ReadyList.remove(PredN);
+        PredN->incrUnscheduledDeps();
       }
     } else {
       for (auto *SuccN : N->succs(DAG)) {
         ReadyList.remove(SuccN);
+        SuccN->incrUnscheduledDeps();
       }
     }
   }
@@ -162,18 +161,20 @@ void Scheduler::notifyEraseInstr(Instruction *I) {
   ReadyList.remove(N);
   // Also decrement the unscheduledDep counter for the dependents and add them
   // to the ready list if they become ready.
-  auto TryAddToReadyList = [this](DGNode *DepN) {
+  auto UpdateNodeAndTryAddToReadyList = [this, N](DGNode *DepN) {
     if (DepN->scheduled())
       return;
+    if (!N->scheduled() && !DepN->ready())
+      DepN->decrUnscheduledDeps();
     if (DepN->ready() && !ReadyList.contains(DepN))
       ReadyList.insert(DepN);
   };
   if (Dir == SchedDirection::BottomUp) {
     for (auto *DepN : N->preds(DAG))
-      TryAddToReadyList(DepN);
+      UpdateNodeAndTryAddToReadyList(DepN);
   } else if (Dir == SchedDirection::TopDown) {
     for (auto *DepN : N->succs(DAG))
-      TryAddToReadyList(DepN);
+      UpdateNodeAndTryAddToReadyList(DepN);
   }
 }
 
@@ -319,9 +320,6 @@ bool Scheduler::tryScheduleUntil(ArrayRef<Instruction *> Instrs) {
     ReadyList.insert(RetryN);
 
   eraseBundle(InstrsSB);
-#ifndef NDEBUG
-  DAG.verify();
-#endif
   return false;
 }
 
