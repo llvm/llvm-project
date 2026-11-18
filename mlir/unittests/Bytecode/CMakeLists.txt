@@ -5,5 +5,6 @@ mlir_target_link_libraries(MLIRBytecodeTests
   PRIVATE
   MLIRBytecodeReader
   MLIRBytecodeWriter
+  MLIRBytecodeOpInterface
   MLIRParser
 )
