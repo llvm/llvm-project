@@ -1,0 +1,52 @@
+// RUN: not cir-opt %s -split-input-file -cir-call-conv-lowering=target=spirv 2>&1 | FileCheck %s
+
+// A SPIR-V OpenMP device module is rejected as a whole, on any SPIR-V triple
+// and whatever the signatures in it.
+
+!s8i = !cir.int<s, 8>
+
+module attributes {
+  cir.triple = "spirv64-intel",
+  cir.lowering_options = #cir.lowering_options<
+    exceptions = false, threadsafe_statics = true, cuda = false,
+    cuda_is_device = false, hip = false, hlsl = false, sycl_is_device = false,
+    gpu_rdc = false, openmp = true, openmp_is_target_device = true,
+    clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = true,
+    no_trapping_math = true, ssp_buffer_size = 8>,
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func @take_s8(%arg0: !s8i) cc(spir_function) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK: error: 'builtin.module' op OpenMP device code with SPIR-V target is not yet supported
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+
+module attributes {
+  cir.triple = "spirv64-unknown-unknown",
+  cir.lowering_options = #cir.lowering_options<
+    exceptions = false, threadsafe_statics = true, cuda = false,
+    cuda_is_device = false, hip = false, hlsl = false, sycl_is_device = false,
+    gpu_rdc = false, openmp = true, openmp_is_target_device = true,
+    clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = true,
+    no_trapping_math = true, ssp_buffer_size = 8>,
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func @take_s8(%arg0: !s8i) cc(spir_function) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK: error: 'builtin.module' op OpenMP device code with SPIR-V target is not yet supported
+}
