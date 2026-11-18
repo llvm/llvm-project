@@ -184,7 +184,7 @@ void TextOutputSection::createThunk(const ConcatInputSection &isec,
                    std::to_string(thunkInfo.sequence++));
   thunkInfo.sym = make<Defined>(
       thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0, thunkSize,
-      /*isWeakDef=*/false, /*isExternal=*/false, /*isPrivateExtern=*/true,
+      /*isWeakDef=*/false, /*isExternal=*/false, /*isPrivateExtern=*/false,
       /*includeInSymtab=*/true, /*isReferencedDynamically=*/false,
       /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
   thunkInfo.sym->used = true;

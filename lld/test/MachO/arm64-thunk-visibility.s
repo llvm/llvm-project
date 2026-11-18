@@ -15,14 +15,14 @@
 
 ## Every thunk is a local symbol, whether its target is local or external.
 # CHECK-LABEL: SYMBOL TABLE:
-# CHECK: l F __TEXT,__text .hidden _some_late_external.thunk.0
-# CHECK: l F __TEXT,__text .hidden _late_landing_local_fn.thunk.0
-# CHECK: l F __TEXT,__text .hidden _some_early_external.thunk.0
-# CHECK: l F __TEXT,__text .hidden _early_landing_local_fn.thunk.0
-# CHECK: l F __TEXT,__text .hidden _some_other_late_external.thunk.0
-# CHECK: l F __TEXT,__text .hidden _late_landing_local_fn.thunk.0
-# CHECK: l F __TEXT,__text .hidden _some_other_early_external.thunk.0
-# CHECK: l F __TEXT,__text .hidden _early_landing_local_fn.thunk.0
+# CHECK: l F __TEXT,__text _some_late_external.thunk.0
+# CHECK: l F __TEXT,__text _late_landing_local_fn.thunk.0
+# CHECK: l F __TEXT,__text _some_early_external.thunk.0
+# CHECK: l F __TEXT,__text _early_landing_local_fn.thunk.0
+# CHECK: l F __TEXT,__text _some_other_late_external.thunk.0
+# CHECK: l F __TEXT,__text _late_landing_local_fn.thunk.0
+# CHECK: l F __TEXT,__text _some_other_early_external.thunk.0
+# CHECK: l F __TEXT,__text _early_landing_local_fn.thunk.0
 
 #--- foo.s
 
