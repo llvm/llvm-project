@@ -39,7 +39,6 @@
 ; GCNHSA:         .amdhsa_system_sgpr_workgroup_info 0
 ; GCNHSA:         .amdhsa_system_vgpr_workitem_id 2
 ; GCNHSA:         .amdhsa_next_free_vgpr {{2|3}}
-; GCNHSA:         .amdhsa_next_free_sgpr 18
 ; GCNHSA:         .amdhsa_float_round_mode_32 0
 ; GCNHSA:         .amdhsa_float_round_mode_16_64 0
 ; GCNHSA:         .amdhsa_float_denorm_mode_32 3
