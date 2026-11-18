@@ -21,6 +21,20 @@ class Instruction;
 class MDNode;
 class Value;
 
+/// Combine the metadata of two instructions so that K can replace J. This
+/// specifically handles the case of CSE-like transformations. Some
+/// metadata can only be kept if K dominates J. For this to be correct,
+/// K cannot be hoisted.
+///
+/// Unknown metadata is removed.
+LLVM_ABI void combineMetadataForCSE(Instruction *K, const Instruction *J,
+                                    bool DoesKMove);
+
+/// Combine metadata of two instructions, where instruction J is a memory
+/// access that has been merged into K. This will intersect alias-analysis
+/// metadata, while preserving other known metadata.
+LLVM_ABI void combineAAMetadata(Instruction *K, const Instruction *J);
+
 /// Copy metadata valid for a replacement memory access.
 ///
 /// The destination must access the same bytes, a subset, or a wider byte range
@@ -43,20 +57,6 @@ copyMetadataForMemoryAccess(Instruction &Dest, const Instruction &Source,
 LLVM_ABI void copyMetadataForScalarizedInstruction(
     Instruction &Dest, const Instruction &Source,
     std::optional<int64_t> DestByteOffset = std::nullopt);
-
-/// Combine the metadata of two instructions so that K can replace J. This
-/// specifically handles the case of CSE-like transformations. Some
-/// metadata can only be kept if K dominates J. For this to be correct,
-/// K cannot be hoisted.
-///
-/// Unknown metadata is removed.
-LLVM_ABI void combineMetadataForCSE(Instruction *K, const Instruction *J,
-                                    bool DoesKMove);
-
-/// Combine metadata of two instructions, where instruction J is a memory
-/// access that has been merged into K. This will intersect alias-analysis
-/// metadata, while preserving other known metadata.
-LLVM_ABI void combineAAMetadata(Instruction *K, const Instruction *J);
 
 /// Compute the union of two access-group lists.
 ///
