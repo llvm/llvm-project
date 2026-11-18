@@ -31,9 +31,9 @@
 ; EXTSTACK48:    .set .Lcs_to_chain_and_wwf.private_seg_size, 16+max(48, .Lgfx_stack_only.private_seg_size){{$}}
 
 ; Indirect chain calls don't contribute to the stack size.
-; CHECK-LABEL: {{^}}chain_indirect_and_wwf:
-; CHECK:         .set .Lchain_indirect_and_wwf.private_seg_size, 64+max(.Lwwf_alloca.private_seg_size){{$}}
-; CHECK:         .set .Lchain_indirect_and_wwf.has_indirect_call, 1{{$}}
+; CHECK-LABEL: {{^}}indirect_chain_and_wwf:
+; CHECK:         .set .Lindirect_chain_and_wwf.private_seg_size, 64+max(.Lwwf_alloca.private_seg_size){{$}}
+; CHECK:         .set .Lindirect_chain_and_wwf.has_indirect_call, 1{{$}}
 
 ; A non-chain indirect call does contribute the assumed external stack size.
 ; CHECK-LABEL: {{^}}chain_and_indirect_gfx:
@@ -97,9 +97,6 @@
 ; CHECK-LABEL:      chain_callee_smaller_stack:
 ; CHECK:             .backend_stack_size: 0x24{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x24{{$}}
-; CHECK-LABEL:      chain_indirect_and_wwf:
-; CHECK:             .backend_stack_size: 0x5c{{$}}
-; CHECK:             .stack_frame_size_in_bytes: 0x40{{$}}
 ; CHECK-LABEL:      chain_indirect_gfx_and_wwf:
 ; EXTSTACK0:         .backend_stack_size: 0x5c{{$}}
 ; EXTSTACK48:        .backend_stack_size: 0x70{{$}}
@@ -122,6 +119,9 @@
 ; CHECK-LABEL:      gfx_stack_only:
 ; CHECK:             .backend_stack_size: 0x14{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x14{{$}}
+; CHECK-LABEL:      indirect_chain_and_wwf:
+; CHECK:             .backend_stack_size: 0x5c{{$}}
+; CHECK:             .stack_frame_size_in_bytes: 0x40{{$}}
 ; CHECK:amdpal.version:
 ; CHECK-NEXT:  - 0x3
 ; CHECK-NEXT:  - 0
@@ -193,7 +193,7 @@ define amdgpu_cs void @cs_to_chain_and_wwf(<40 x i32> %v) {
   unreachable
 }
 
-define amdgpu_cs_chain void @chain_indirect_and_wwf(ptr inreg %callee, <40 x i32> %v) {
+define amdgpu_cs_chain void @indirect_chain_and_wwf(ptr inreg %callee, <40 x i32> %v) {
 .entry:
   %a = alloca [12 x i32], addrspace(5)
   store i32 10, ptr addrspace(5) %a

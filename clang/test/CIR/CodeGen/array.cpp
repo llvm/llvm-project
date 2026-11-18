@@ -181,10 +181,10 @@ void func() {
 // LLVM-NEXT: %[[ARR:.*]] = alloca [10 x i32], align 16
 // LLVM-NEXT: %[[INIT:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[INIT_2:.*]] = alloca i32, align 4
-// LLVM-NEXT: %[[ELE_PTR:.*]] = getelementptr inbounds [10 x i32], ptr %[[ARR]], i32 0, i64 0
+// LLVM-NEXT: %[[ELE_PTR:.*]] = getelementptr inbounds [10 x i32], ptr %[[ARR]], i64 0, i64 0
 // LLVM-NEXT: %[[TMP_1:.*]] = load i32, ptr %[[ELE_PTR]], align 16
 // LLVM-NEXT: store i32 %[[TMP_1]], ptr %[[INIT]], align 4
-// LLVM-NEXT: %[[ELE_PTR:.*]] = getelementptr inbounds [10 x i32], ptr %[[ARR]], i32 0, i64 1
+// LLVM-NEXT: %[[ELE_PTR:.*]] = getelementptr inbounds [10 x i32], ptr %[[ARR]], i64 0, i64 1
 // LLVM-NEXT: %[[TMP_2:.*]] = load i32, ptr %[[ELE_PTR]], align 4
 // LLVM-NEXT: store i32 %[[TMP_2]], ptr %[[INIT_2]], align 4
 
@@ -241,7 +241,7 @@ void func3() {
 // LLVM:  store i32 1, ptr %[[IDX]], align 4
 // LLVM:  %[[TMP1:.*]] = load i32, ptr %[[IDX]], align 4
 // LLVM:  %[[IDX_I64:.*]] = sext i32 %[[TMP1]] to i64
-// LLVM:  %[[ELE:.*]] = getelementptr inbounds [2 x i32], ptr %[[ARR]], i32 0, i64 %[[IDX_I64]]
+// LLVM:  %[[ELE:.*]] = getelementptr inbounds [2 x i32], ptr %[[ARR]], i64 0, i64 %[[IDX_I64]]
 // LLVM:  %[[TMP2:.*]] = load i32, ptr %[[ELE]], align 4
 // LLVM:  store i32 %[[TMP2]], ptr %[[INIT]], align 4
 
@@ -276,8 +276,8 @@ void func4() {
 // LLVM:  %[[ARR:.*]] = alloca [2 x [1 x i32]], align 4
 // LLVM:  %[[INIT:.*]] = alloca i32, align 4
 // LLVM:  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[ARR]], ptr align 4 @[[FUNC4_ARR:.*]], i64 8, i1 false)
-// LLVM:  %[[ARR_1:.*]] = getelementptr inbounds [2 x [1 x i32]], ptr %[[ARR]], i32 0, i64 1
-// LLVM:  %[[ELE_PTR:.*]] = getelementptr inbounds [1 x i32], ptr %[[ARR_1]], i32 0, i64 0
+// LLVM:  %[[ARR_1:.*]] = getelementptr inbounds [2 x [1 x i32]], ptr %[[ARR]], i64 0, i64 1
+// LLVM:  %[[ELE_PTR:.*]] = getelementptr inbounds [1 x i32], ptr %[[ARR_1]], i64 0, i64 0
 // LLVM:  %[[TMP:.*]] = load i32, ptr %[[ELE_PTR]], align 4
 // LLVM:  store i32 %[[TMP]], ptr %[[INIT]], align 4
 
@@ -424,7 +424,7 @@ void func9(int arr[10][5]) {
 // LLVM:  store ptr %[[ARG]], ptr %[[ARR]], align 8
 // LLVM:  %[[TMP_1:.*]] = load ptr, ptr %[[ARR]], align 8
 // LLVM:  %[[ARR_1:.*]] = getelementptr [5 x i32], ptr %[[TMP_1]], i64 1
-// LLVM:  %[[ARR_1_2:.*]] = getelementptr inbounds [5 x i32], ptr %[[ARR_1]], i32 0, i64 2
+// LLVM:  %[[ARR_1_2:.*]] = getelementptr inbounds [5 x i32], ptr %[[ARR_1]], i64 0, i64 2
 // LLVM:  %[[TMP_2:.*]] = load i32, ptr %[[ARR_1_2]], align 4
 // LLVM:  store i32 %[[TMP_2]], ptr %[[INIT]], align 4
 
@@ -527,7 +527,7 @@ void boolean_index_access(int x) {
 // LLVM: %[[X:.*]] = load i32, ptr %[[X_ADDR]]
 // LLVM: %[[CMP:.*]] = icmp sgt i32 %[[X]], 4
 // LLVM: %[[IDX:.*]] = zext i1 %[[CMP]] to i64
-// LLVM: %[[ELE:.*]] = getelementptr inbounds nuw [2 x i32], ptr %[[ARR_ADDR]], i32 0, i64 %[[IDX]]
+// LLVM: %[[ELE:.*]] = getelementptr inbounds nuw [2 x i32], ptr %[[ARR_ADDR]], i64 0, i64 %[[IDX]]
 // LLVM: %[[VAL:.*]] = load i32, ptr %[[ELE]]
 // LLVM: store i32 %[[VAL]], ptr %[[N_ADDR]]
 
@@ -566,7 +566,7 @@ void bitint_index_access(_BitInt(7) i) {
 // LLVM:   %[[I:.*]] = load i8, ptr %[[I_ADDR]]
 // LLVM:   %[[I_CAST:.*]] = trunc i8 %[[I]] to i7
 // LLVM:   %[[IDX:.*]] = sext i7 %[[I_CAST]] to i64
-// LLVM:   %[[ELE:.*]] = getelementptr inbounds [10 x i32], ptr %[[ARR_ADDR]], i32 0, i64 %[[IDX]]
+// LLVM:   %[[ELE:.*]] = getelementptr inbounds [10 x i32], ptr %[[ARR_ADDR]], i64 0, i64 %[[IDX]]
 // LLVM:   %[[VAL:.*]] = load i32, ptr %[[ELE]]
 // LLVM:   store i32 %[[VAL]], ptr %[[N_ADDR]]
 

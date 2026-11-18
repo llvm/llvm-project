@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -emit-llvm \
 // RUN:     -o - %s | FileCheck %s --implicit-check-not=_ZTI \
 // RUN:     --implicit-check-not=__dynamic_cast
-// RUN: %clang_cc1 -x hip -triple amdgcn-amd-amdhsa -fcuda-is-device \
+// RUN: %clang_cc1 -x hip -triple amdgpu9.00-amd-amdhsa -fcuda-is-device \
 // RUN:     -emit-llvm -o - %s | FileCheck %s --implicit-check-not=_ZTI \
 // RUN:     --implicit-check-not=__dynamic_cast
 

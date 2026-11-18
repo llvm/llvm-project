@@ -242,6 +242,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds the quad vote instruction for HLSL `QuadAll` and the
        `QuadDerivativesKHR` and `RequireFullQuadsKHR` execution modes.
        These features also require `SPV_KHR_maximal_reconvergence`.
+       Without `SPV_KHR_quad_control`, `QuadAll` uses quad-read emulation.
+       This path requires SPIR-V 1.3 but not maximal reconvergence.
    * - ``SPV_ALTERA_blocking_pipes``
      - Adds new pipe read and write functions that have blocking semantics instead of the non-blocking semantics of the existing pipe read/write functions.
    * - ``SPV_ALTERA_arbitrary_precision_fixed_point``

@@ -661,3 +661,81 @@ define <4 x float> @select_trunc_as_icmp_eq_and_multi_use(i32 %flags, float %a, 
   %v3 = insertelement <4 x float> %v2, float %s3, i64 3
   ret <4 x float> %v3
 }
+
+define <2 x float> @select_trunc_as_icmp_eq_and_unswapped_arms(i32 %flags, float %a, float %b) {
+; CHECK-LABEL: define <2 x float> @select_trunc_as_icmp_eq_and_unswapped_arms(
+; CHECK-SAME: i32 [[FLAGS:%.*]], float [[A:%.*]], float [[B:%.*]]) {
+; CHECK-NEXT:    [[C0:%.*]] = trunc i32 [[FLAGS]] to i1
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], float [[A]], float 0.000000e+00
+; CHECK-NEXT:    [[M1:%.*]] = and i32 [[FLAGS]], 2
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[M1]], 0
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], float [[B]], float 0.000000e+00
+; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x float> poison, float [[S0]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[V0]], float [[S1]], i64 1
+; CHECK-NEXT:    ret <2 x float> [[TMP7]]
+;
+  %c0 = trunc i32 %flags to i1
+  %s0 = select i1 %c0, float %a, float 0.0
+  %m1 = and i32 %flags, 2
+  %c1 = icmp eq i32 %m1, 0
+  %s1 = select i1 %c1, float %b, float 0.0
+  %v0 = insertelement <2 x float> poison, float %s0, i64 0
+  %v1 = insertelement <2 x float> %v0, float %s1, i64 1
+  ret <2 x float> %v1
+}
+
+; The constant lane has no original predicate, the compares with the
+; interchangeable predicates are not split by them.
+define void @copyable_constant_lane_no_split(<8 x i64> %va, ptr %out) {
+; CHECK-LABEL: define void @copyable_constant_lane_no_split(
+; CHECK-SAME: <8 x i64> [[VA:%.*]], ptr [[OUT:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i64> [[VA]], <8 x i64> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i64> [[VA]], <8 x i64> <i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 0>, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 6, i32 15>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <6 x i64> [[TMP0]], <6 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> [[VA]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult <8 x i64> [[TMP3]], <i64 1, i64 1, i64 1, i64 5, i64 7, i64 9, i64 11, i64 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <8 x i1> [[TMP4]] to <8 x i8>
+; CHECK-NEXT:    store <8 x i8> [[TMP5]], ptr [[OUT]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a0 = extractelement <8 x i64> %va, i64 0
+  %a1 = extractelement <8 x i64> %va, i64 1
+  %a2 = extractelement <8 x i64> %va, i64 2
+  %a3 = extractelement <8 x i64> %va, i64 3
+  %a4 = extractelement <8 x i64> %va, i64 4
+  %a5 = extractelement <8 x i64> %va, i64 5
+  %a6 = extractelement <8 x i64> %va, i64 6
+  %c0 = icmp eq i64 %a0, 0
+  %c1 = icmp eq i64 %a1, 0
+  %c2 = icmp eq i64 %a2, 0
+  %c3 = icmp ult i64 %a3, 5
+  %c4 = icmp ult i64 %a4, 7
+  %c5 = icmp ult i64 %a5, 9
+  %c6 = icmp ult i64 %a6, 11
+  %z0 = zext i1 %c0 to i8
+  %z1 = zext i1 %c1 to i8
+  %z2 = zext i1 %c2 to i8
+  %z3 = zext i1 %c3 to i8
+  %z4 = zext i1 %c4 to i8
+  %z5 = zext i1 %c5 to i8
+  %z6 = zext i1 %c6 to i8
+  %z7 = zext i1 true to i8
+  store i8 %z0, ptr %out, align 1
+  %o1 = getelementptr inbounds nuw i8, ptr %out, i64 1
+  store i8 %z1, ptr %o1, align 1
+  %o2 = getelementptr inbounds nuw i8, ptr %out, i64 2
+  store i8 %z2, ptr %o2, align 1
+  %o3 = getelementptr inbounds nuw i8, ptr %out, i64 3
+  store i8 %z3, ptr %o3, align 1
+  %o4 = getelementptr inbounds nuw i8, ptr %out, i64 4
+  store i8 %z4, ptr %o4, align 1
+  %o5 = getelementptr inbounds nuw i8, ptr %out, i64 5
+  store i8 %z5, ptr %o5, align 1
+  %o6 = getelementptr inbounds nuw i8, ptr %out, i64 6
+  store i8 %z6, ptr %o6, align 1
+  %o7 = getelementptr inbounds nuw i8, ptr %out, i64 7
+  store i8 %z7, ptr %o7, align 1
+  ret void
+}

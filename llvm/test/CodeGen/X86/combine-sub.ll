@@ -246,13 +246,13 @@ define <4 x i32> @combine_vec_sub_xor_consts(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_sub_xor_consts:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2,3,4,5]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sub_xor_consts:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,3,4,5]
 ; AVX-NEXT:    retq
   %xor = xor <4 x i32> %x, <i32 28, i32 29, i32 -1, i32 -31>
   %sub = sub <4 x i32> <i32 1, i32 2, i32 3, i32 4>, %xor

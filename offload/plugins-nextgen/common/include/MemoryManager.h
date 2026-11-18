@@ -232,6 +232,9 @@ class MemoryManagerTy {
 public:
   static constexpr size_t DefaultSizeThreshold = 1U << 13;
 
+  MemoryManagerTy(const MemoryManagerTy &) = delete;
+  MemoryManagerTy &operator=(const MemoryManagerTy &) = delete;
+
   /// Constructor. If \p Threshold is non-zero, then the default threshold will
   /// be overwritten by \p Threshold.
   MemoryManagerTy(DeviceAllocatorTy &DeviceAllocator, size_t Threshold = 0,
