@@ -70,14 +70,14 @@ using `llvm-ar` and linked using the `-l` option:
 
 ```console
 llvm-ar rc libdevice.a func1.bc func2.bc func3.bc
-clang-sycl-linker input.bc -l device -L /path/to/libs
+clang-sycl-linker input.bc -l device -L /path/to/libs -o output.bin
 ```
 
 The linker supports standard archive library search semantics:
 
 - `-l <name>` searches for `lib<name>.a` in the directories specified by `-L`
 - `-l :<exact-name>` searches for the exact filename in the `-L` paths
-- Absolute paths can be passed as positional arguments: `clang-sycl-linker input.bc /path/to/libdevice.a`
+- Absolute paths can be passed as positional arguments: `clang-sycl-linker input.bc /path/to/libdevice.a -o output.bin`
 
 By default, archive linking is **lazy** - only archive members (individual `.bc` files)
 that resolve undefined symbols are extracted and linked. This happens at file
@@ -90,14 +90,14 @@ To force extraction of all archive members regardless of symbol resolution, use
 `--whole-archive`:
 
 ```console
-clang-sycl-linker input.bc --whole-archive -l device --no-whole-archive -l other
+clang-sycl-linker input.bc --whole-archive -l device --no-whole-archive -l other -o output.bin
 ```
 
 The `-u <symbol>` option can be used to force a symbol to be undefined, which
 can trigger extraction of archive members that define that symbol:
 
 ```console
-clang-sycl-linker input.bc -u my_init_function -l device
+clang-sycl-linker input.bc -u my_init_function -l device -o output.bin
 ```
 
 ## Examples
@@ -112,7 +112,7 @@ linked device images that are ready to be wrapped and linked with host code to
 generate the final executable.
 
 ```console
-clang-sycl-linker --triple spirv64 --arch xe-bmg-g21 input.bc
+clang-sycl-linker --triple=spirv64 --arch=xe-bmg-g21 input.bc -o output.bin
 ```
 
 ### Specifying a virtual architecture and real devices
@@ -127,7 +127,7 @@ ocloc call, or, if no `--code` is given, kept as SPIR-V to be compiled just in
 time by the runtime:
 
 ```console
-clang-sycl-linker --triple spirv64 --arch igca_30r --code=xe-mtl-u --code=xe-mtl-h input.bc
+clang-sycl-linker --triple=spirv64 --arch=igca_30r --code=xe-mtl-u --code=xe-mtl-h input.bc -o output.bin
 ```
 
 ### Linking with Device Libraries
@@ -140,12 +140,12 @@ llvm-ar rc libmath.a sin.bc cos.bc tan.bc
 llvm-ar rc libutils.a helper1.bc helper2.bc
 
 # Link with lazy loading (only needed members extracted)
-clang-sycl-linker --triple spirv64 kernel.bc -l math -l utils -L /path/to/libs -o kernel.spv
+clang-sycl-linker --triple=spirv64 kernel.bc -l math -l utils -L /path/to/libs -o kernel.spv
 
 # Force all members to be included from libmath.a
-clang-sycl-linker --triple spirv64 kernel.bc --whole-archive -l math --no-whole-archive -l utils -L /path/to/libs -o kernel.spv
+clang-sycl-linker --triple=spirv64 kernel.bc --whole-archive -l math --no-whole-archive -l utils -L /path/to/libs -o kernel.spv
 
 # Use exact archive filename or absolute path
-clang-sycl-linker --triple spirv64 kernel.bc -l :libmath.a -L /path/to/libs -o kernel.spv
-clang-sycl-linker --triple spirv64 kernel.bc /absolute/path/libmath.a -o kernel.spv
+clang-sycl-linker --triple=spirv64 kernel.bc -l :libmath.a -L /path/to/libs -o kernel.spv
+clang-sycl-linker --triple=spirv64 kernel.bc /absolute/path/libmath.a -o kernel.spv
 ```
