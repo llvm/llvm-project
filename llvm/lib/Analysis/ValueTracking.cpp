@@ -844,8 +844,16 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     assert((!DT || DT->dominates(AssumeBB, CurBB)) &&
            "Blocks between Assume and CtxI must be dominated by AssumeBB");
 
-    if (pred_empty(CurBB))
-      return false;
+    if (pred_empty(CurBB)) {
+      // Reaching the entry block means there is a path to CtxI that does not
+      // pass through Assume.
+      if (CurBB->isEntryBlock())
+        return false;
+
+      // CurBB is unreachable (for example, emptied by SimplifyCFG but not yet
+      // removed), so nothing in it can execute a free.
+      continue;
+    }
 
     // If CurBB == CtxBB (due to a loop backedge targeting CtxBB), check
     // instructions from CtxIter to the end of CtxBB (instructions before
@@ -5948,11 +5956,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                           KnownSrc, Q, Depth + 1);
 
       const Function *F = II->getFunction();
-      DenormalMode DenormMode =
-          F ? F->getDenormalMode(
-                  II->getType()->getScalarType()->getFltSemantics())
-            : DenormalMode::getDynamic();
-      Known = KnownFPClass::canonicalize(KnownSrc, DenormMode);
+      const fltSemantics &Flt =
+          II->getType()->getScalarType()->getFltSemantics();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(Flt) : DenormalMode::getDynamic();
+      Known = KnownFPClass::canonicalize(KnownSrc, Flt, Mode);
       break;
     }
     case Intrinsic::vector_reduce_fmax:

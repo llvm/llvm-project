@@ -128,11 +128,11 @@ llvm::Error DeviceTy::initGeometryProps() {
   return llvm::Error::success();
 }
 
-uint32_t DeviceTy::getThreadLimit() const {
+uint64_t DeviceTy::getThreadLimit() const {
   static Int32Envar OMP_TeamsThreadLimit("OMP_TEAMS_THREAD_LIMIT");
 
   if (OMP_TeamsThreadLimit > 0)
-    return std::min(GeometryProps.ThreadLimit, uint32_t(OMP_TeamsThreadLimit));
+    return std::min<uint64_t>(GeometryProps.ThreadLimit, OMP_TeamsThreadLimit);
   return GeometryProps.ThreadLimit;
 }
 
@@ -846,7 +846,19 @@ namespace {
 /// The launch configuration for a kernel.
 struct LaunchConfigTy {
   /// Launch geometry and the amount of dynamic shared memory to request.
-  ol_kernel_launch_size_args_t Size = {/*Dimensions=*/3, {}, {}, 0};
+  /// Mirrors ol_kernel_launch_size_args_t, but uses uint64_t so the values are
+  /// only narrowed when the kernel is launched.
+  struct {
+    struct DimensionsTy {
+      uint64_t x = 0, y = 0, z = 0;
+    };
+    /// Number of blocks in each dimension.
+    DimensionsTy NumGroups;
+    /// Number of threads per block in each dimension.
+    DimensionsTy GroupSize;
+    /// Amount of dynamic block memory, in bytes, to request.
+    uint64_t DynSharedMemory = 0;
+  } Size;
   /// Number of kernel arguments in \p Args.
   uint32_t NumArgs = 0;
   /// Array of \p NumArgs pointers, each pointing at one argument's value,
@@ -961,7 +973,7 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
                            const KernelLaunchInfoTy &KernelEnv,
                            const DynBlockMemConfTy &DynBlockMemConf,
                            uint32_t DynCGroupMem, void **DynPtrSlot,
-                           AsyncInfoTy &AsyncInfo, uint32_t NumBlocks0) {
+                           AsyncInfoTy &AsyncInfo, uint64_t NumBlocks0) {
   RecordReplayTy *RecordReplay = Device.getRecordReplay();
 
   // Ctor/Dtor have no arguments, replaying uses the original kernel launch
@@ -999,9 +1011,8 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
 
   if (NeedsReductionBuffer) {
     // Use number of teams many buffer elements.
-    auto ReductionAllocOrErr =
-        Device.allocCtxMem(uint64_t(KernelEnv.ReductionDataSize) * NumBlocks0,
-                           OL_ALLOC_TYPE_DEVICE);
+    auto ReductionAllocOrErr = Device.allocCtxMem(
+        KernelEnv.ReductionDataSize * NumBlocks0, OL_ALLOC_TYPE_DEVICE);
     if (!ReductionAllocOrErr)
       return ReductionAllocOrErr.takeError();
     LocalKLE.ReductionBuffer = *ReductionAllocOrErr;
@@ -1021,8 +1032,8 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
 
 /// Get the effective number of threads for the kernel based on the
 /// user-defined number of threads.
-static uint32_t getEffectiveNumThreads(const DeviceGeometryPropsTy &Props,
-                                       uint32_t UserThreadLimit,
+static uint64_t getEffectiveNumThreads(const DeviceGeometryPropsTy &Props,
+                                       uint64_t UserThreadLimit,
                                        const KernelLaunchInfoTy &KernelEnv) {
   assert(!KernelEnv.isBareMode() &&
          "bare kernel should not call this function");
@@ -1038,22 +1049,22 @@ static uint32_t getEffectiveNumThreads(const DeviceGeometryPropsTy &Props,
 /// Get the maximum number of blocks the device can launch for a kernel using
 /// \p NumThreads threads per block, further limited by OMP_NUM_TEAMS if the
 /// user set it.
-static uint32_t getDeviceBlockLimit(const DeviceGeometryPropsTy &Props,
-                                    uint32_t NumThreads) {
+static uint64_t getDeviceBlockLimit(const DeviceGeometryPropsTy &Props,
+                                    uint64_t NumThreads) {
   static Int32Envar OMP_NumTeams("OMP_NUM_TEAMS");
 
-  uint32_t BlockLimit = Props.MaxNumBlocks;
+  uint64_t BlockLimit = Props.MaxNumBlocks;
   // Some devices limit the total number of threads of a launch, which makes
   // the block limit depend on the thread count.
   if (Props.MaxGridSize && NumThreads > 0)
-    BlockLimit = std::min<uint64_t>(BlockLimit, Props.MaxGridSize / NumThreads);
+    BlockLimit = std::min(BlockLimit, Props.MaxGridSize / NumThreads);
   if (OMP_NumTeams > 0)
-    return std::min(BlockLimit, uint32_t(OMP_NumTeams));
+    return std::min<uint64_t>(BlockLimit, OMP_NumTeams);
   return BlockLimit;
 }
 
 /// Get the default number of blocks for a kernel in Generic-SPMD mode.
-static uint32_t
+static uint64_t
 getDefaultNumBlocksGenericSPMD(const DeviceGeometryPropsTy &Props) {
   // Envar to override the default number of teams per compute unit for a kernel
   // in Generic-SPMD mode. Zero uses the default number of blocks of kernels in
@@ -1061,7 +1072,7 @@ getDefaultNumBlocksGenericSPMD(const DeviceGeometryPropsTy &Props) {
   static UInt32Envar OMPX_GenericSPMDTeamsPerCU(
       "LIBOMPTARGET_GENERIC_SPMD_TEAMS_PER_CU", 0);
 
-  uint32_t TeamsPerCU =
+  uint64_t TeamsPerCU =
       OMPX_GenericSPMDTeamsPerCU.isPresent()
           ? OMPX_GenericSPMDTeamsPerCU.get()
           : llvm::omp::target::BackendConfig::get(Props.Backend)
@@ -1074,7 +1085,7 @@ getDefaultNumBlocksGenericSPMD(const DeviceGeometryPropsTy &Props) {
 
 /// Threshold for the reduction data size (in bytes) above which a cross-team
 /// reduction classifies as "large".
-static constexpr uint32_t LargeTeamsReductionBytes = 32;
+static constexpr uint64_t LargeTeamsReductionBytes = 32;
 
 /// Get the number of blocks (each having \p NumThreads threads) to launch a
 /// kernel with a cross-team reduction, or zero to handle it like a
@@ -1088,7 +1099,7 @@ static constexpr uint32_t LargeTeamsReductionBytes = 32;
 /// compute unit a block is handled like a non-reduction kernel.
 static uint64_t
 getXTeamReductionNumBlocks(const DeviceGeometryPropsTy &Props,
-                           uint32_t NumThreads, uint64_t LoopTripCount,
+                           uint64_t NumThreads, uint64_t LoopTripCount,
                            const KernelLaunchInfoTy &KernelEnv) {
   if (!KernelEnv.ReductionDataSize || !NumThreads)
     return 0;
@@ -1106,7 +1117,7 @@ getXTeamReductionNumBlocks(const DeviceGeometryPropsTy &Props,
   // kernel with a scalar cross-team reduction. Zero keeps the device's value.
   static UInt32Envar OMPX_TeamsReductionWavesPerCU(
       "LIBOMPTARGET_TEAMS_REDUCTION_WAVES_PER_CU", 0);
-  uint32_t ScalarWavesPerCU = OMPX_TeamsReductionWavesPerCU.get();
+  uint64_t ScalarWavesPerCU = OMPX_TeamsReductionWavesPerCU.get();
   // Scalar reductions with many iterations prefer more waves, ones with fewer
   // iterations or more memory traffic prefer less waves. 16 waves were never
   // far from the best.
@@ -1116,9 +1127,10 @@ getXTeamReductionNumBlocks(const DeviceGeometryPropsTy &Props,
   if (!ScalarWavesPerCU || !NumCUs)
     return 0;
 
-  uint32_t WavesPerBlock = llvm::divideCeil(NumThreads, Props.WarpSize);
+  uint64_t WavesPerBlock =
+      llvm::divideCeil(NumThreads, uint64_t(Props.WarpSize));
   uint64_t BlocksPerCU =
-      IsLarge ? 1 : std::max(1u, ScalarWavesPerCU / WavesPerBlock);
+      IsLarge ? 1 : std::max<uint64_t>(1, ScalarWavesPerCU / WavesPerBlock);
   uint64_t NumBlocks = NumCUs * BlocksPerCU;
   if (LoopTripCount > 0) {
     // No more blocks than there is work for.
@@ -1138,7 +1150,7 @@ getXTeamReductionNumBlocks(const DeviceGeometryPropsTy &Props,
 /// parallelism.
 static uint64_t getOneIterationPerThreadNumBlocks(uint64_t LoopTripCount,
                                                   uint64_t DefaultNumBlocks,
-                                                  uint32_t &EffectiveNumThreads,
+                                                  uint64_t &EffectiveNumThreads,
                                                   bool IsNumThreadsStrict,
                                                   bool IsNumThreadsFromUser) {
   assert(LoopTripCount > 0 && "Expected a known loop trip count");
@@ -1147,8 +1159,8 @@ static uint64_t getOneIterationPerThreadNumBlocks(uint64_t LoopTripCount,
   static UInt32Envar OMPX_MinThreadsForLowTripCount(
       "LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT", 32);
 
-  uint32_t MinThreads =
-      std::min(OMPX_MinThreadsForLowTripCount.get(), EffectiveNumThreads);
+  uint64_t MinThreads = std::min<uint64_t>(OMPX_MinThreadsForLowTripCount.get(),
+                                           EffectiveNumThreads);
 
   // Honor the thread_limit clause; only lower the number of threads.
   [[maybe_unused]] auto OldNumThreads = EffectiveNumThreads;
@@ -1172,7 +1184,7 @@ static uint64_t getOneIterationPerThreadNumBlocks(uint64_t LoopTripCount,
         llvm::PowerOf2Ceil(NumThreadsDefaultBlocks);
     // Do not increase a thread limit given be the user.
     EffectiveNumThreads =
-        std::min(EffectiveNumThreads, uint32_t(NumThreadsDefaultBlocksP2));
+        std::min(EffectiveNumThreads, NumThreadsDefaultBlocksP2);
     assert(EffectiveNumThreads >= MinThreads &&
            "Expected sufficient inner parallelism.");
     NumBlocks = ((LoopTripCount - 1) / EffectiveNumThreads) + 1;
@@ -1194,10 +1206,10 @@ static uint64_t getOneIterationPerThreadNumBlocks(uint64_t LoopTripCount,
 /// The number of threads \p EffectiveNumThreads can be adjusted by this
 /// method. \p IsNumThreadsFromUser is true if \p EffectiveNumThreads is
 /// defined by the user via the thread_limit clause.
-static uint32_t getEffectiveNumBlocks(const DeviceGeometryPropsTy &Props,
-                                      uint32_t UserNumBlocks,
+static uint64_t getEffectiveNumBlocks(const DeviceGeometryPropsTy &Props,
+                                      uint64_t UserNumBlocks,
                                       uint64_t LoopTripCount,
-                                      uint32_t &EffectiveNumThreads,
+                                      uint64_t &EffectiveNumThreads,
                                       bool IsNumThreadsStrict,
                                       bool IsNumThreadsFromUser,
                                       const KernelLaunchInfoTy &KernelEnv) {
@@ -1223,8 +1235,7 @@ static uint32_t getEffectiveNumBlocks(const DeviceGeometryPropsTy &Props,
 
   if (uint64_t NumBlocks = getXTeamReductionNumBlocks(
           Props, EffectiveNumThreads, LoopTripCount, KernelEnv))
-    return std::min(NumBlocks,
-                    uint64_t(getDeviceBlockLimit(Props, EffectiveNumThreads)));
+    return std::min(NumBlocks, getDeviceBlockLimit(Props, EffectiveNumThreads));
 
   uint64_t DefaultNumBlocks = KernelEnv.isGenericSPMDMode()
                                   ? getDefaultNumBlocksGenericSPMD(Props)
@@ -1259,7 +1270,7 @@ static uint32_t getEffectiveNumBlocks(const DeviceGeometryPropsTy &Props,
     }
   }
 
-  uint32_t PreferredNumBlocks = TripCountNumBlocks;
+  uint64_t PreferredNumBlocks = TripCountNumBlocks;
   // If the loops are long running we rather reuse blocks than spawn too many.
   static BoolEnvar OMPX_ReuseBlocksForHighTripCount(
       "LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
@@ -1277,9 +1288,9 @@ static uint32_t getEffectiveNumBlocks(const DeviceGeometryPropsTy &Props,
   if (KernelEnv.isGenericSPMDMode() && !IsNumThreadsFromUser &&
       !IsNumThreadsStrict) {
     while (EffectiveNumThreads > Props.WarpSize) {
-      uint64_t MaxNumBlocks = std::min<uint64_t>(
+      uint64_t MaxNumBlocks = std::min(
           LoopTripCount, getDeviceBlockLimit(Props, EffectiveNumThreads / 2));
-      if (uint64_t(PreferredNumBlocks) * 2 > MaxNumBlocks)
+      if (PreferredNumBlocks > MaxNumBlocks / 2)
         break;
       EffectiveNumThreads /= 2;
       PreferredNumBlocks *= 2;
@@ -1321,13 +1332,13 @@ buildRecordArgs(const KernelArgsTy &KernelArgs, const LaunchConfigTy &Config,
   // The value requested by the program, before adjustEffectiveGeometry()
   // computed the effective number of blocks.
   RecordArgs.RequestedNumBlocks = KernelArgs.UserNumBlocks[0];
-  RecordArgs.MaxNumThreads = KernelEnv.MaxNumThreads;
-  RecordArgs.NumBlocks[0] = Config.Size.NumGroups.x;
-  RecordArgs.NumBlocks[1] = Config.Size.NumGroups.y;
-  RecordArgs.NumBlocks[2] = Config.Size.NumGroups.z;
-  RecordArgs.NumThreads[0] = Config.Size.GroupSize.x;
-  RecordArgs.NumThreads[1] = Config.Size.GroupSize.y;
-  RecordArgs.NumThreads[2] = Config.Size.GroupSize.z;
+  RecordArgs.MaxNumThreads = uint32_t(KernelEnv.MaxNumThreads);
+  RecordArgs.NumBlocks[0] = uint32_t(Config.Size.NumGroups.x);
+  RecordArgs.NumBlocks[1] = uint32_t(Config.Size.NumGroups.y);
+  RecordArgs.NumBlocks[2] = uint32_t(Config.Size.NumGroups.z);
+  RecordArgs.NumThreads[0] = uint32_t(Config.Size.GroupSize.x);
+  RecordArgs.NumThreads[1] = uint32_t(Config.Size.GroupSize.y);
+  RecordArgs.NumThreads[2] = uint32_t(Config.Size.GroupSize.z);
   RecordArgs.DynCGroupMem = uint32_t(Config.Size.DynSharedMemory);
   RecordArgs.ReplayOutcome = ReplayOutcome;
   return RecordArgs;
@@ -1374,7 +1385,7 @@ static void adjustEffectiveGeometry(const DeviceGeometryPropsTy &Props,
   // computed effective value.
   const bool ThreadLimitFromUser = Config.Size.GroupSize.x > 0;
 
-  uint32_t EffectiveNumThreads = Config.Size.GroupSize.x;
+  uint64_t EffectiveNumThreads = Config.Size.GroupSize.x;
   if (!StrictThreads)
     EffectiveNumThreads =
         getEffectiveNumThreads(Props, EffectiveNumThreads, KernelEnv);
@@ -1492,6 +1503,22 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   checkLaunchInvariants(Config, KernelArgs, KernelLaunchInfo);
   adjustEffectiveGeometry(GeometryProps, Config, KernelArgs, KernelLaunchInfo);
 
+  // The geometry is final; validate it before any side effects (record/replay,
+  // dynamic memory), since liboffload takes 32-bit dimensions.
+  const auto &NumGroups = Config.Size.NumGroups;
+  const auto &GroupSize = Config.Size.GroupSize;
+  for (uint64_t Dim : {NumGroups.x, NumGroups.y, NumGroups.z, GroupSize.x,
+                       GroupSize.y, GroupSize.z}) {
+    if (Dim > std::numeric_limits<uint32_t>::max()) {
+      REPORT() << "Kernel launch geometry of " << KernelLaunchInfo.Name
+               << " exceeds the liboffload limits (blocks=[" << NumGroups.x
+               << "," << NumGroups.y << "," << NumGroups.z << "], threads=["
+               << GroupSize.x << "," << GroupSize.y << "," << GroupSize.z
+               << "])";
+      return OFFLOAD_FAIL;
+    }
+  }
+
   void **DynPtrSlot = resolveArgsAndDynPtrSlot(
       KernelArgs, TgtVarsPtr, TgtOffsets, Args, Ptrs, ArgSizes, Config);
 
@@ -1507,7 +1534,8 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   }
 
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceID,
-       "Launching kernel %s with [%u,%u,%u] blocks and [%u,%u,%u] threads in "
+       "Launching kernel %s with [%" PRIu64 ",%" PRIu64 ",%" PRIu64
+       "] blocks and [%" PRIu64 ",%" PRIu64 ",%" PRIu64 "] threads in "
        "%s mode with tripcount %" PRIu64 "\n",
        KernelLaunchInfo.Name, Config.Size.NumGroups.x, Config.Size.NumGroups.y,
        Config.Size.NumGroups.z, Config.Size.GroupSize.x,
@@ -1555,8 +1583,16 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
     Config.ArgSizes = PointerArgSizes.data();
   }
 
+  // Only here, at the liboffload boundary, are the uint64_t counts narrowed.
+  // The values have been checked before and are safe to narrow to uint32_t.
+  ol_kernel_launch_size_args_t LaunchSize = {
+      /*Dimensions=*/3,
+      {uint32_t(NumGroups.x), uint32_t(NumGroups.y), uint32_t(NumGroups.z)},
+      {uint32_t(GroupSize.x), uint32_t(GroupSize.y), uint32_t(GroupSize.z)},
+      Config.Size.DynSharedMemory};
+
   if (auto Res = olLaunchKernel(AsyncInfo.getQueue(), DeviceHandle,
-                                KernelHandle, &Config.Size, LaunchProps,
+                                KernelHandle, &LaunchSize, LaunchProps,
                                 Config.NumArgs, Config.Args, Config.ArgSizes)) {
     REPORT() << "Failure to run target region " << KernelLaunchInfo.Name
              << " in device " << DeviceID << ": " << Res->Details;

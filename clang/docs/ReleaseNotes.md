@@ -467,6 +467,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   extensions that DXC implements, as `-fspv-extension=DXC` does, instead of all
   extensions. `-fspv-extension=all` restores the previous behavior.
 
+- `-fdevirtualize-speculatively` can now also be used to enable speculative
+  devirtualization when using LTO, with the exception of Distributed ThinLTO.
+
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
@@ -640,6 +643,23 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   note: returned here
   int* p(int *in [[clang::noescape]]) { return in; }
                                                ^~
+  ```
+
+- Added `-Wlifetime-safety-capture-by-violation` to detect a parameter that the
+  body captures by the enclosing object or by global storage, while none of its
+  `[[clang::lifetime_capture_by]]` attributes names that entity or `unknown`.
+  For example:
+
+  ```c++
+  struct Cap { const int *p; };
+  struct S {
+    const int *field;
+    // warning: 'x' is captured by this object but is not marked
+    // [[clang::lifetime_capture_by_this]]
+    void store(Cap &c, const int &x [[clang::lifetime_capture_by(c)]]) {
+      field = &x;
+    }
+  };
   ```
 
 - Added `-Wlifetime-safety-dangling-field` to detect dangling field references
@@ -1614,6 +1634,11 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 ### Sanitizers
 
+- Sanitizer Special Case Lists (`-fsanitize-ignorelist`) and warning
+  suppression mappings (`--warning-suppression-mappings`) now recognize version
+  6 of the Special Case List format (indicated by `#!special-case-list-v6`),
+  which disallows entries without a preceding section header instead of placing
+  them in the implicit `[*]` section.
 - Added the `typefunchash` and `typefunchashpointersplit` token assignment
   modes for `-fsanitize=alloc-token`, selected with
   `-Xclang -falloc-token-mode=<mode>`. These modes derive token IDs from both

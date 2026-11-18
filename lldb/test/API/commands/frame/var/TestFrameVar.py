@@ -195,7 +195,7 @@ class TestFrameVar(TestBase):
         letting us know that this build option was enabled when trying to
         read variables.
         """
-        self.build(dictionary={"CFLAGS_EXTRAS": "-gline-tables-only"})
+        self.build(dictionary={"TEST_CFLAGS_EXTRAS": "-gline-tables-only"})
         exe = self.getBuildArtifact("a.out")
 
         # We have to set a named breakpoint because we don't have any debug info
@@ -215,7 +215,7 @@ class TestFrameVar(TestBase):
         set a file and line breakpoint successfully, and get an error
         letting us know we were unable to load the .dwo file.
         """
-        self.build(dictionary={"CFLAGS_EXTRAS": "-gsplit-dwarf"})
+        self.build(dictionary={"TEST_CFLAGS_EXTRAS": "-gsplit-dwarf"})
         exe = self.getBuildArtifact("a.out")
         main_dwo = self.getBuildArtifact("main.dwo")
 
@@ -245,7 +245,7 @@ class TestFrameVar(TestBase):
         letting us know we were unable to load the .dwo file because it
         existed, but it wasn't a valid object file.
         """
-        self.build(dictionary={"CFLAGS_EXTRAS": "-gsplit-dwarf"})
+        self.build(dictionary={"TEST_CFLAGS_EXTRAS": "-gsplit-dwarf"})
         exe = self.getBuildArtifact("a.out")
         main_dwo = self.getBuildArtifact("main.dwo")
 

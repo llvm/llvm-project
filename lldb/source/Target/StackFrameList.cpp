@@ -776,11 +776,6 @@ StackFrameList::GetFrameWithConcreteFrameIndex(uint32_t unwind_idx) {
   return frame_sp;
 }
 
-static bool CompareStackID(const StackFrameSP &stack_sp,
-                           const StackID &stack_id) {
-  return stack_sp->GetStackID().IsYoungerThan(stack_id);
-}
-
 StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
   StackFrameSP frame_sp;
 
@@ -791,8 +786,12 @@ StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
       // the shared mutex:
       llvm::sys::ScopedReader guard(m_list_mutex);
       // Do a binary search in case the stack frame is already in our cache
-      collection::const_iterator pos =
-          llvm::lower_bound(m_frames, stack_id, CompareStackID);
+      Process &process = *m_thread.GetProcess();
+      collection::const_iterator pos = llvm::lower_bound(
+          m_frames, stack_id,
+          [&](const StackFrameSP &frame_sp, const StackID &other) {
+            return frame_sp->GetStackID().IsYoungerThan(other, process);
+          });
       if (pos != m_frames.end() && (*pos)->GetStackID() == stack_id)
         return *pos;
     }

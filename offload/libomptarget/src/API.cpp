@@ -571,7 +571,7 @@ omp_target_memcpy_rect(void *Dst, const void *Src, size_t ElementSize,
     return OFFLOAD_FAIL;
   }
 
-  int Rc;
+  int Rc = OFFLOAD_SUCCESS;
   if (NumDims == 1) {
     Rc = omp_target_memcpy(Dst, Src, ElementSize * Volume[0],
                            ElementSize * DstOffsets[0],
