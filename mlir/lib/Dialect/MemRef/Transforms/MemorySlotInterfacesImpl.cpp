@@ -144,38 +144,16 @@ static VectorType getWholeParentVectorType(memref::SubViewOp subView) {
   return VectorType::get(parentType.getShape(), parentType.getElementType());
 }
 
-/// Follows the sources of `memref.expand_shape` and `memref.collapse_shape` to
-/// find the underlying value. Used to locate a dynamic subview whose bounds
-/// still apply after reshaping.
-static Value skipReassociativeReshapes(Value viewPtr) {
-  while (Operation *def = viewPtr.getDefiningOp()) {
-    if (auto expand = dyn_cast<memref::ExpandShapeOp>(def))
-      viewPtr = expand.getSrc();
-    else if (auto collapse = dyn_cast<memref::CollapseShapeOp>(def))
-      viewPtr = collapse.getSrc();
-    else
-      break;
-  }
-  return viewPtr;
-}
-
 /// Builds the mask of `subView`'s valid region: a `vector.create_mask` of the
 /// subview's sizes, in the shape of the whole parent that its alias holds.
-/// Supported reshapes preserve element order, so a single cast also handles a
-/// chain of reshapes.
 static Value buildSubViewMask(OpBuilder &builder, Location loc,
-                              memref::SubViewOp subView, VectorType vecType) {
+                              memref::SubViewOp subView) {
   VectorType parentVecType = getWholeParentVectorType(subView);
   SmallVector<Value> bounds =
       getValueOrCreateConstantIndexOp(builder, loc, subView.getMixedSizes());
-  Value mask = vector::CreateMaskOp::create(
+  return vector::CreateMaskOp::create(
       builder, loc,
       VectorType::get(parentVecType.getShape(), builder.getI1Type()), bounds);
-  if (parentVecType.getShape() != vecType.getShape())
-    mask = vector::ShapeCastOp::create(
-        builder, loc, VectorType::get(vecType.getShape(), builder.getI1Type()),
-        mask);
-  return mask;
 }
 
 /// Checks whether a reassociation group preserves the mapping of valid view
@@ -456,8 +434,7 @@ struct SubViewOpAliasModel
     // of the parent value untouched.
     if (isAliasableDynamicShapeSubView(subView)) {
       Location loc = op->getLoc();
-      VectorType parentVecType = getWholeParentVectorType(subView);
-      Value mask = buildSubViewMask(builder, loc, subView, parentVecType);
+      Value mask = buildSubViewMask(builder, loc, subView);
       return arith::SelectOp::create(builder, loc, mask, aliasValue,
                                      reachingDef);
     }
