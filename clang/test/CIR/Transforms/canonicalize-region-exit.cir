@@ -1,0 +1,118 @@
+// RUN: cir-opt %s -cir-canonicalize -o - | FileCheck %s
+// RUN: cir-opt %s -cir-canonicalize -cir-flatten-cfg -o - | FileCheck %s --check-prefix=FLAT
+
+// Merging a block that ends in a region exit into a predecessor that does not
+// directly precede it would move the exit out of the region's last block, where
+// CFG flattening looks for it.
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func private @ext()
+
+  // The cir.yield block does not directly follow the branch, so it stays the
+  // scope's last block. After flattening, the scope exit reaches the call
+  // after the scope instead of acting as the cleanup scope's exit.
+  cir.func @distant_yield() {
+    cir.cleanup.scope {
+      cir.scope {
+        cir.br ^bb2
+      ^bb1:  // pred: ^bb1
+        cir.label "L"
+        cir.br ^bb1
+      ^bb2:  // pred: ^bb0
+        cir.yield
+      }
+      cir.call @ext() : () -> ()
+      cir.yield
+    } cleanup normal {
+      cir.call @ext() : () -> ()
+      cir.yield
+    }
+    cir.return
+  }
+  // CHECK-LABEL: cir.func @distant_yield()
+  // CHECK:         cir.scope {
+  // CHECK-NEXT:      cir.br ^[[EXIT:bb[0-9]+]]
+  // CHECK-NEXT:    ^[[LOOP:bb[0-9]+]]:
+  // CHECK-NEXT:      cir.label "L"
+  // CHECK-NEXT:      cir.br ^[[LOOP]]
+  // CHECK-NEXT:    ^[[EXIT]]:
+  // CHECK-NEXT:      cir.yield
+  // CHECK-NEXT:    }
+  // CHECK-NEXT:    cir.call @ext()
+
+  // FLAT-LABEL: cir.func @distant_yield()
+  // FLAT-NEXT:    cir.br ^[[BODY:bb[0-9]+]]
+  // FLAT-NEXT:  ^[[BODY]]:
+  // FLAT-NEXT:    cir.br ^[[SCOPE:bb[0-9]+]]
+  // FLAT-NEXT:  ^[[SCOPE]]:
+  // FLAT-NEXT:    cir.br ^[[EXIT:bb[0-9]+]]
+  // FLAT-NEXT:  ^[[LOOP:bb[0-9]+]]:
+  // FLAT-NEXT:    cir.label "L"
+  // FLAT-NEXT:    cir.br ^[[LOOP]]
+  // FLAT-NEXT:  ^[[EXIT]]:
+  // FLAT-NEXT:    cir.br ^[[AFTER:bb[0-9]+]]
+  // FLAT-NEXT:  ^[[AFTER]]:
+  // FLAT-NEXT:    cir.call @ext()
+  // FLAT-NEXT:    cir.br ^[[CLEANUP:bb[0-9]+]]
+  // FLAT-NEXT:  ^[[CLEANUP]]:
+  // FLAT-NEXT:    cir.call @ext()
+
+  // The same holds for the cir.condition that ends a loop condition region.
+  cir.func @distant_condition(%arg0: !cir.bool) {
+    cir.while {
+      cir.br ^bb2
+    ^bb1:  // pred: ^bb1
+      cir.label "L"
+      cir.br ^bb1
+    ^bb2:  // pred: ^bb0
+      cir.condition(%arg0)
+    } do {
+      cir.call @ext() : () -> ()
+      cir.yield
+    }
+    cir.return
+  }
+  // CHECK-LABEL: cir.func @distant_condition(
+  // CHECK-NEXT:    cir.while {
+  // CHECK-NEXT:      cir.br ^[[EXIT:bb[0-9]+]]
+  // CHECK-NEXT:    ^[[LOOP:bb[0-9]+]]:
+  // CHECK-NEXT:      cir.label "L"
+  // CHECK-NEXT:      cir.br ^[[LOOP]]
+  // CHECK-NEXT:    ^[[EXIT]]:
+  // CHECK-NEXT:      cir.condition(%arg0)
+  // CHECK-NEXT:    } do {
+
+  // FLAT-LABEL: cir.func @distant_condition(
+  // FLAT-NEXT:    cir.br ^[[COND:bb[0-9]+]]
+  // FLAT-NEXT:  ^[[COND]]:
+  // FLAT-NEXT:    cir.br ^[[EXIT:bb[0-9]+]]
+  // FLAT-NEXT:  ^[[LOOP:bb[0-9]+]]:
+  // FLAT-NEXT:    cir.label "L"
+  // FLAT-NEXT:    cir.br ^[[LOOP]]
+  // FLAT-NEXT:  ^[[EXIT]]:
+  // FLAT-NEXT:    cir.brcond %arg0 ^[[BODY:bb[0-9]+]], ^[[AFTER:bb[0-9]+]]
+  // FLAT-NEXT:  ^[[BODY]]:
+  // FLAT-NEXT:    cir.call @ext()
+  // FLAT-NEXT:    cir.br ^[[COND]]
+  // FLAT-NEXT:  ^[[AFTER]]:
+  // FLAT-NEXT:    cir.return
+
+  // The cir.yield block directly follows the branch, so the merged block is
+  // still the scope's last one.
+  cir.func @next_yield() {
+    cir.scope {
+      cir.call @ext() : () -> ()
+      cir.br ^bb1
+    ^bb1:  // pred: ^bb0
+      cir.yield
+    }
+    cir.return
+  }
+  // CHECK-LABEL: cir.func @next_yield()
+  // CHECK-NEXT:    cir.scope {
+  // CHECK-NEXT:      cir.call @ext()
+  // CHECK-NEXT:    }
+  // CHECK-NEXT:    cir.return
+}
