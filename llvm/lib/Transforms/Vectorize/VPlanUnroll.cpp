@@ -292,15 +292,18 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
 
 /// Handle non-header-phi recipes.
 void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
-  if (match(&R, m_CombineOr(m_BranchOnCond(), m_BranchOnCount())))
+  if (match(&R, m_Branch()))
     return;
 
+  // VPInstructions with side-effects must be unrolled for all parts, regardless
+  // of how (or whether) their result is used.
   if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
-    if (vputils::onlyFirstPartUsed(VPI)) {
+    if (!VPI->mayHaveSideEffects() && vputils::onlyFirstPartUsed(VPI)) {
       addUniformForAllParts(VPI);
       return;
     }
   }
+
   if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
     if (isa<StoreInst>(RepR->getUnderlyingValue()) &&
         RepR->getOperand(1)->isDefinedOutsideLoopRegions()) {
