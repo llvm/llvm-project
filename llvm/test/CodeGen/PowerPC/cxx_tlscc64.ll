@@ -15,18 +15,19 @@ define cxx_fast_tlscc nonnull ptr @_ZTW2sg() nounwind {
 ; CHECK-LABEL: _ZTW2sg:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
+; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-NEXT:    stdu 1, -48(1)
+; CHECK-NEXT:    stdu 1, -64(1)
 ; CHECK-NEXT:    addis 3, 13, __tls_guard@tprel@ha
-; CHECK-NEXT:    std 0, 64(1)
+; CHECK-NEXT:    std 0, 80(1)
+; CHECK-NEXT:    addis 29, 13, sg@tprel@ha
 ; CHECK-NEXT:    lbz 4, __tls_guard@tprel@l(3)
 ; CHECK-NEXT:    andi. 4, 4, 1
 ; CHECK-NEXT:    bc 12, 1, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %init.i
 ; CHECK-NEXT:    li 4, 1
+; CHECK-NEXT:    addi 30, 29, sg@tprel@l
 ; CHECK-NEXT:    stb 4, __tls_guard@tprel@l(3)
-; CHECK-NEXT:    addis 3, 13, sg@tprel@ha
-; CHECK-NEXT:    addi 30, 3, sg@tprel@l
 ; CHECK-NEXT:    mr 3, 30
 ; CHECK-NEXT:    bl _ZN1SC1Ev
 ; CHECK-NEXT:    nop
@@ -38,11 +39,11 @@ define cxx_fast_tlscc nonnull ptr @_ZTW2sg() nounwind {
 ; CHECK-NEXT:    bl _tlv_atexit
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  .LBB0_2: # %__tls_init.exit
-; CHECK-NEXT:    addis 3, 13, sg@tprel@ha
-; CHECK-NEXT:    addi 3, 3, sg@tprel@l
-; CHECK-NEXT:    addi 1, 1, 48
+; CHECK-NEXT:    addi 3, 29, sg@tprel@l
+; CHECK-NEXT:    addi 1, 1, 64
 ; CHECK-NEXT:    ld 0, 16(1)
 ; CHECK-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
   %.b.i = load i1, ptr @__tls_guard, align 1
