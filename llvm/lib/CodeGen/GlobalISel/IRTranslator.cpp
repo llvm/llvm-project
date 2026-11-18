@@ -10,7 +10,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -29,6 +28,7 @@
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
@@ -106,57 +106,6 @@ static cl::opt<bool>
     EnableCSEInIRTranslator("enable-cse-in-ir-translator",
                             cl::desc("Should enable CSE in ir-translator"),
                             cl::init(false));
-
-namespace {
-/// One part of a value and where it lives: a vreg, a physreg, or a fixed stack
-/// object. Offset and size are in bits, in the value's memory layout.
-struct DbgValuePart {
-  MachineOperand MO;
-  uint64_t OffsetInBits;
-  uint64_t SizeInBits;
-};
-} // namespace
-
-/// Append one {operand, fragment expression} per part to \p SplitDbgValues.
-/// Parts are clipped to the variable, or to the fragment \p Expression already
-/// describes; parts past its end are skipped. A part covering all of it keeps
-/// \p Expression as is. Returns false if nothing is left or \p Expression
-/// cannot be fragmented, possibly after appending some parts.
-///
-/// Example, an i64 in two parts with an empty expression:
-///   {$vgpr0, 0, 32}  -> $vgpr0, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-///   {$vgpr1, 32, 32} -> $vgpr1, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
-static bool splitMultiPartDbgValue(
-    ArrayRef<DbgValuePart> Parts, const DILocalVariable *Variable,
-    const DIExpression *Expression,
-    SmallVectorImpl<std::pair<MachineOperand, const DIExpression *>>
-        &SplitDbgValues) {
-  std::optional<uint64_t> MaxSizeInBits = Variable->getSizeInBits();
-  if (std::optional<DIExpression::FragmentInfo> ExprFragmentInfo =
-          Expression->getFragmentInfo())
-    MaxSizeInBits = ExprFragmentInfo->SizeInBits;
-
-  for (const DbgValuePart &Part : Parts) {
-    uint64_t FragmentSizeInBits = Part.SizeInBits;
-    if (MaxSizeInBits) {
-      if (Part.OffsetInBits >= *MaxSizeInBits)
-        continue;
-      FragmentSizeInBits =
-          std::min(FragmentSizeInBits, *MaxSizeInBits - Part.OffsetInBits);
-      if (Part.OffsetInBits == 0 && FragmentSizeInBits == *MaxSizeInBits) {
-        SplitDbgValues.push_back({Part.MO, Expression});
-        continue;
-      }
-    }
-    std::optional<DIExpression *> FragmentExpr =
-        DIExpression::createFragmentExpression(Expression, Part.OffsetInBits,
-                                               FragmentSizeInBits);
-    if (!FragmentExpr)
-      return false;
-    SplitDbgValues.push_back({Part.MO, *FragmentExpr});
-  }
-  return !SplitDbgValues.empty();
-}
 
 namespace llvm {
 
@@ -248,10 +197,6 @@ class IRTranslatorImpl {
   SmallVector<std::pair<MachineInstr *, const Constant *>, 4>
       PendingConstDbgValues;
 
-  /// Arguments whose first parameter dbg.value was already hoisted to the
-  /// function start, as in FunctionLoweringInfo::DescribedArgs.
-  BitVector DescribedArgs;
-
   /// Record of what frame index has been allocated to specified allocas for
   /// this function.
   DenseMap<const AllocaInst *, int> FrameIndices;
@@ -304,6 +249,20 @@ class IRTranslatorImpl {
                                const DebugLoc &DL,
                                MachineIRBuilder &MIRBuilder);
 
+  /// If \p Arg was split across registers by the calling convention, emit one
+  /// fragment DBG_VALUE per part, as SelectionDAG does, and return true. The
+  /// value that call lowering reassembles is folded away by the legalizer.
+  ///
+  /// Example:
+  ///   %0:_(i64) = G_MERGE_VALUES %1(i32), %2(i32)
+  /// gives
+  ///   DBG_VALUE %1, $noreg, !x, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+  ///   DBG_VALUE %2, $noreg, !x, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+  bool translateSplitArgDbgValue(const Argument &Arg,
+                                 const DILocalVariable *Variable,
+                                 const DIExpression *Expression,
+                                 MachineIRBuilder &MIRBuilder);
+
   /// Translate a debug-info record of a variadic dbg.value (one using a
   /// DIArgList) into a DBG_VALUE_LIST instruction.
   void translateDbgValueListRecord(
@@ -312,56 +271,13 @@ class IRTranslatorImpl {
       const DebugLoc &DL, MachineIRBuilder &MIRBuilder);
 
   /// Translate a debug-info record of a dbg.declare into an indirect DBG_*
-  /// instruction, or a DBG_VALUE_LIST for a split argument. Pass in all the
-  /// contents of the record, rather than relying on how it's stored.
+  /// instruction. Pass in all the contents of the record, rather than relying
+  /// on how it's stored.
   void translateDbgDeclareRecord(Value *Address, bool HasArgList,
                                  const DILocalVariable *Variable,
                                  const DIExpression *Expression,
                                  const DebugLoc &DL,
                                  MachineIRBuilder &MIRBuilder);
-
-  /// One part per vreg of \p V, at that vreg's VMap byte offset times 8.
-  /// Empty if any size is scalable.
-  SmallVector<DbgValuePart, 4> getVRegParts(const Value &V);
-
-  /// Walk back from \p Reg to the incoming physregs and fixed stack objects it
-  /// is built from, appending one part each to \p ArgParts. Looks through
-  /// merges, builds, concats, casts, G_TRUNC and COPY; G_MERGE_VALUES only on
-  /// little-endian. \p TruncSizeInBits, set by G_TRUNC, overrides the part
-  /// size. Returns false on anything else, possibly after appending parts.
-  ///
-  /// Example:
-  ///   %lo:_(i32) = COPY $vgpr30
-  ///   %fi:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ///   %hi:_(i32) = G_LOAD %fi
-  ///   %v:_(p0) = G_MERGE_VALUES %lo, %hi
-  /// gives {$vgpr30, 0, 32} and {%fixed-stack.0, 32, 32}.
-  bool getUnderlyingArgParts(Register Reg, uint64_t OffsetInBits,
-                             std::optional<uint64_t> TruncSizeInBits,
-                             SmallVectorImpl<DbgValuePart> &ArgParts);
-
-  /// GlobalISel version of SelectionDAG's EmitFuncArgumentDbgValue. If \p V is
-  /// an argument split into two or more incoming parts, describe those parts
-  /// at the function start, where later passes cannot lose them with the vreg
-  /// that reassembles them, and return true. Otherwise emit nothing and
-  /// return false.
-  ///
-  /// dbg.value, only for the first non-inlined parameter description in the
-  /// IR entry block: one fragment per part.
-  ///   DBG_VALUE $vgpr1, $noreg, !x, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
-  ///   DBG_VALUE $vgpr0, $noreg, !x, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-  ///
-  /// dbg.declare of a pointer whose parts are registers, contiguous from bit 0
-  /// and no wider than the pointer, with no DW_OP_LLVM_arg in \p Expression:
-  /// rebuild the address.
-  ///   DBG_VALUE_LIST !x, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu,
-  ///       0xffffffff, DW_OP_and, DW_OP_LLVM_arg, 1, DW_OP_constu, 32,
-  ///       DW_OP_shl, DW_OP_or), $vgpr0, $vgpr1
-  bool translateFuncArgumentDbgValue(const Value &V, bool IsDeclare,
-                                     const DILocalVariable *Variable,
-                                     const DIExpression *Expression,
-                                     const DebugLoc &DL,
-                                     MachineIRBuilder &MIRBuilder);
 
   // Translate U as a copy of V.
   bool translateCopy(const User &U, const Value &V,
@@ -4761,177 +4677,83 @@ void IRTranslatorImpl::finishPendingPhis() {
   }
 }
 
-SmallVector<DbgValuePart, 4> IRTranslatorImpl::getVRegParts(const Value &V) {
-  SmallVector<DbgValuePart, 4> Parts;
-  for (auto [VReg, Offset] :
-       zip_equal(getOrCreateVRegs(V), *VMap.getOffsets(V))) {
-    TypeSize Size = MRI->getType(VReg).getSizeInBits();
+/// Append the registers that the merge-like instructions defining \p Reg
+/// combine to \p Parts, lowest offset first. Returns false for a
+/// G_MERGE_VALUES on a big-endian target, where the first source is not at
+/// offset 0.
+static bool getMergedParts(Register Reg, const MachineRegisterInfo &MRI,
+                           bool IsLittleEndian,
+                           SmallVectorImpl<Register> &Parts) {
+  auto *Merge = dyn_cast_if_present<GMergeLikeInstr>(MRI.getVRegDef(Reg));
+  if (!Merge) {
+    Parts.push_back(Reg);
+    return true;
+  }
+  if (isa<GMerge>(Merge) && !IsLittleEndian)
+    return false;
+  for (unsigned I = 0, E = Merge->getNumSources(); I != E; ++I)
+    if (!getMergedParts(Merge->getSourceReg(I), MRI, IsLittleEndian, Parts))
+      return false;
+  return true;
+}
+
+/// Return the frame index that \p Reg is loaded from in full, if any.
+static std::optional<int> getLoadedFrameIndex(Register Reg,
+                                              const MachineRegisterInfo &MRI) {
+  auto *Load = dyn_cast_if_present<GLoad>(MRI.getVRegDef(Reg));
+  if (!Load || Load->getMemSizeInBits() !=
+                   LocationSize::precise(MRI.getType(Reg).getSizeInBits()))
+    return std::nullopt;
+  MachineInstr *PtrDef = MRI.getVRegDef(Load->getPointerReg());
+  if (!PtrDef || PtrDef->getOpcode() != TargetOpcode::G_FRAME_INDEX)
+    return std::nullopt;
+  return PtrDef->getOperand(1).getIndex();
+}
+
+bool IRTranslatorImpl::translateSplitArgDbgValue(
+    const Argument &Arg, const DILocalVariable *Variable,
+    const DIExpression *Expression, MachineIRBuilder &MIRBuilder) {
+  ArrayRef<Register> VRegs = getOrCreateVRegs(Arg);
+  SmallVector<Register, 4> Parts;
+  if (VRegs.size() != 1 ||
+      !getMergedParts(VRegs.front(), *MRI, DL->isLittleEndian(), Parts) ||
+      Parts.size() < 2)
+    return false;
+
+  // As in SelectionDAG's splitMultiRegDbgValue, only the bits inside the
+  // fragment that the expression already describes are kept.
+  std::optional<DIExpression::FragmentInfo> ExprFragment =
+      Expression->getFragmentInfo();
+  SmallVector<std::pair<Register, DIExpression *>, 4> Fragments;
+  uint64_t OffsetInBits = 0;
+  for (Register Part : Parts) {
+    TypeSize Size = MRI->getType(Part).getSizeInBits();
     if (Size.isScalable())
-      return {};
-    Parts.push_back({MachineOperand::CreateReg(VReg, /*isDef=*/false),
-                     Offset * 8, Size.getFixedValue()});
-  }
-  return Parts;
-}
-
-bool IRTranslatorImpl::getUnderlyingArgParts(
-    Register Reg, uint64_t OffsetInBits,
-    std::optional<uint64_t> TruncSizeInBits,
-    SmallVectorImpl<DbgValuePart> &ArgParts) {
-  MachineInstr *DefMI = MRI->getVRegDef(Reg);
-  if (!DefMI)
-    return false;
-
-  auto AddArgPart = [&](MachineOperand MO) {
-    TypeSize Size = MRI->getType(Reg).getSizeInBits();
-    if (!TruncSizeInBits && Size.isScalable())
       return false;
-    ArgParts.push_back(
-        {MO, OffsetInBits,
-         TruncSizeInBits ? *TruncSizeInBits : Size.getFixedValue()});
-    return true;
-  };
-
-  switch (DefMI->getOpcode()) {
-  case TargetOpcode::G_MERGE_VALUES:
-    // Sources are low bits first, which matches memory order only on
-    // little-endian.
-    if (!DL->isLittleEndian())
-      return false;
-    [[fallthrough]];
-  case TargetOpcode::G_BUILD_VECTOR:
-  case TargetOpcode::G_CONCAT_VECTORS: {
-    uint64_t SrcOffsetInBits = OffsetInBits;
-    for (const MachineOperand &SrcMO : DefMI->uses()) {
-      if (!SrcMO.isReg() ||
-          !getUnderlyingArgParts(SrcMO.getReg(), SrcOffsetInBits, std::nullopt,
-                                 ArgParts))
-        return false;
-      TypeSize SrcSize = MRI->getType(SrcMO.getReg()).getSizeInBits();
-      if (SrcSize.isScalable())
-        return false;
-      SrcOffsetInBits += SrcSize.getFixedValue();
+    uint64_t SizeInBits = Size.getFixedValue();
+    if (ExprFragment) {
+      if (OffsetInBits >= ExprFragment->SizeInBits)
+        break;
+      SizeInBits =
+          std::min(SizeInBits, ExprFragment->SizeInBits - OffsetInBits);
     }
-    return true;
-  }
-  case TargetOpcode::G_BITCAST:
-  case TargetOpcode::G_INTTOPTR:
-  case TargetOpcode::G_PTRTOINT:
-  case TargetOpcode::G_ASSERT_ZEXT:
-  case TargetOpcode::G_ASSERT_SEXT:
-    return getUnderlyingArgParts(DefMI->getOperand(1).getReg(), OffsetInBits,
-                                 TruncSizeInBits, ArgParts);
-  case TargetOpcode::G_TRUNC: {
-    // The result is the low bits of the source. Record the destination width.
-    TypeSize DstSize = MRI->getType(Reg).getSizeInBits();
-    if (!TruncSizeInBits && DstSize.isScalable())
+    std::optional<DIExpression *> FragmentExpr =
+        DIExpression::createFragmentExpression(Expression, OffsetInBits,
+                                               SizeInBits);
+    if (!FragmentExpr)
       return false;
-    return getUnderlyingArgParts(
-        DefMI->getOperand(1).getReg(), OffsetInBits,
-        TruncSizeInBits.value_or(DstSize.getFixedValue()), ArgParts);
-  }
-  case TargetOpcode::COPY: {
-    Register SrcReg = DefMI->getOperand(1).getReg();
-    if (SrcReg.isVirtual())
-      return getUnderlyingArgParts(SrcReg, OffsetInBits, TruncSizeInBits,
-                                   ArgParts);
-    if (DefMI->getOperand(1).getSubReg())
-      return false;
-    return AddArgPart(MachineOperand::CreateReg(SrcReg, /*isDef=*/false));
-  }
-  case TargetOpcode::G_LOAD:
-  case TargetOpcode::G_SEXTLOAD:
-  case TargetOpcode::G_ZEXTLOAD: {
-    Register PtrReg = DefMI->getOperand(1).getReg();
-    MachineInstr *PtrDefMI = MRI->getVRegDef(PtrReg);
-    if (!PtrDefMI || PtrDefMI->getOpcode() != TargetOpcode::G_FRAME_INDEX)
-      return false;
-    return AddArgPart(
-        MachineOperand::CreateFI(PtrDefMI->getOperand(1).getIndex()));
-  }
-  default:
-    return false;
-  }
-}
-
-bool IRTranslatorImpl::translateFuncArgumentDbgValue(
-    const Value &V, bool IsDeclare, const DILocalVariable *Variable,
-    const DIExpression *Expression, const DebugLoc &DL,
-    MachineIRBuilder &MIRBuilder) {
-  const auto *Arg = dyn_cast<Argument>(&V);
-  if (!Arg)
-    return false;
-
-  // Hoist only the first dbg.value of a non-inlined parameter, and only from
-  // the IR entry block. That is not MF->front(), which lowers the arguments.
-  if (!IsDeclare && (MIRBuilder.getMBB().getBasicBlock() !=
-                         &MF->getFunction().getEntryBlock() ||
-                     !Variable->isParameter() || DL.getInlinedAt() ||
-                     DescribedArgs.test(Arg->getArgNo())))
-    return false;
-
-  ArrayRef<Register> VRegs = getOrCreateVRegs(V);
-  ArrayRef<uint64_t> Offsets;
-  if (VRegs.size() > 1)
-    Offsets = *VMap.getOffsets(V);
-  SmallVector<DbgValuePart, 4> ArgParts;
-  for (auto [Idx, VReg] : enumerate(VRegs))
-    if (!getUnderlyingArgParts(VReg, Offsets.empty() ? 0 : Offsets[Idx] * 8,
-                               std::nullopt, ArgParts))
-      return false;
-  // A single part stays on its vreg: salvage rewrites a COPY onto the physreg.
-  if (ArgParts.size() < 2)
-    return false;
-
-  const TargetInstrInfo &TII = *MF->getSubtarget().getInstrInfo();
-  MachineBasicBlock &EntryBB = MF->front();
-
-  if (IsDeclare) {
-    // Rebuild the address as (part0 & mask) | (part1 << 32). Fragments would
-    // put each part of the variable at its own address. The mask guards
-    // against a consumer sign-extending a breg.
-    auto *PtrTy = dyn_cast<PointerType>(V.getType());
-    if (!PtrTy ||
-        any_of(Expression->expr_ops(), [](const DIExpression::ExprOperand &Op) {
-          return Op.getOp() == dwarf::DW_OP_LLVM_arg;
-        }))
-      return false;
-    SmallVector<uint64_t, 16> Ops;
-    SmallVector<MachineOperand, 4> MOs;
-    uint64_t CoveredBits = 0;
-    for (auto [Idx, Part] : enumerate(ArgParts)) {
-      if (!Part.MO.isReg() || Part.OffsetInBits != CoveredBits)
-        return false;
-      Ops.append({dwarf::DW_OP_LLVM_arg, Idx});
-      if (Idx + 1 < ArgParts.size())
-        Ops.append({dwarf::DW_OP_constu,
-                    maskTrailingOnes<uint64_t>(Part.SizeInBits),
-                    dwarf::DW_OP_and});
-      if (CoveredBits)
-        Ops.append({dwarf::DW_OP_constu, CoveredBits, dwarf::DW_OP_shl,
-                    dwarf::DW_OP_or});
-      CoveredBits += Part.SizeInBits;
-      MOs.push_back(Part.MO);
-    }
-    // DL is the DebugLoc parameter, so it hides the data layout.
-    if (CoveredBits >
-        MF->getDataLayout().getPointerSizeInBits(PtrTy->getAddressSpace()))
-      return false;
-    append_range(Ops, Expression->getElements());
-    BuildMI(EntryBB, EntryBB.begin(), DL, TII.get(TargetOpcode::DBG_VALUE_LIST),
-            /*IsIndirect=*/false, MOs, Variable,
-            DIExpression::get(Variable->getContext(), Ops));
-    return true;
+    Fragments.push_back({Part, *FragmentExpr});
+    OffsetInBits += Size.getFixedValue();
   }
 
-  SmallVector<std::pair<MachineOperand, const DIExpression *>, 4>
-      SplitDbgValues;
-  if (!splitMultiPartDbgValue(ArgParts, Variable, Expression, SplitDbgValues))
-    return false;
-  for (auto [MO, FragmentExpr] : SplitDbgValues)
-    BuildMI(EntryBB, EntryBB.begin(), DL, TII.get(TargetOpcode::DBG_VALUE),
-            /*IsIndirect=*/MO.isFI(), MO, Variable, FragmentExpr);
-  DescribedArgs.set(Arg->getArgNo());
+  for (auto [Part, FragmentExpr] : Fragments) {
+    // A part passed on the stack is described by its slot, which stays valid
+    // after the loaded value is dead.
+    if (std::optional<int> FI = getLoadedFrameIndex(Part, *MRI))
+      MIRBuilder.buildFIDbgValue(*FI, Variable, FragmentExpr);
+    else
+      MIRBuilder.buildDirectDbgValue(Part, Variable, FragmentExpr);
+  }
   return true;
 }
 
@@ -4974,33 +4796,16 @@ void IRTranslatorImpl::translateDbgValueRecord(Value *V,
   if (translateIfEntryValueArgument(false, V, Variable, Expression, DL,
                                     MIRBuilder))
     return;
-  if (translateFuncArgumentDbgValue(*V, /*IsDeclare=*/false, Variable,
-                                    Expression, DL, MIRBuilder))
+  if (auto *Arg = dyn_cast<Argument>(V);
+      Arg && translateSplitArgDbgValue(*Arg, Variable, Expression, MIRBuilder))
     return;
-
-  ArrayRef<Register> VRegs = getOrCreateVRegs(*V);
-  if (VRegs.size() == 1) {
+  for (Register Reg : getOrCreateVRegs(*V)) {
     // FIXME: This does not handle register-indirect values at offset 0. The
     // direct/indirect thing shouldn't really be handled by something as
     // implicit as reg+noreg vs reg+imm in the first place, but it seems
     // pretty baked in right now.
-    MIRBuilder.buildDirectDbgValue(VRegs.front(), Variable, Expression);
-    return;
+    MIRBuilder.buildDirectDbgValue(Reg, Variable, Expression);
   }
-  if (VRegs.empty())
-    return;
-
-  // One fragment DBG_VALUE per vreg. If the expression cannot be split, emit
-  // an undef DBG_VALUE so the previous location ends.
-  SmallVector<std::pair<MachineOperand, const DIExpression *>, 4>
-      SplitDbgValues;
-  if (!splitMultiPartDbgValue(getVRegParts(*V), Variable, Expression,
-                              SplitDbgValues)) {
-    MIRBuilder.buildIndirectDbgValue(0, Variable, Expression);
-    return;
-  }
-  for (auto [MO, FragmentExpr] : SplitDbgValues)
-    MIRBuilder.buildDirectDbgValue(MO.getReg(), Variable, FragmentExpr);
 }
 
 void IRTranslatorImpl::translateDbgValueListRecord(
@@ -5077,9 +4882,6 @@ void IRTranslatorImpl::translateDbgDeclareRecord(
   if (translateIfEntryValueArgument(true, Address, Variable,
                                     Expression, DL,
                                     MIRBuilder))
-    return;
-  if (translateFuncArgumentDbgValue(*Address, /*IsDeclare=*/true, Variable,
-                                    Expression, DL, MIRBuilder))
     return;
 
   // A dbg.declare describes the address of a source variable, so lower it
@@ -5470,7 +5272,6 @@ void IRTranslatorImpl::finalizeFunction() {
   // needed during the translation.
   PendingPHIs.clear();
   PendingConstDbgValues.clear();
-  DescribedArgs.clear();
   VMap.reset();
   FrameIndices.clear();
   MachinePreds.clear();
@@ -5580,7 +5381,6 @@ bool IRTranslatorImpl::runOnMachineFunction(
 
   // Release the per-function state when we return, whether we succeeded or not.
   llvm::scope_exit FinalizeOnReturn([this]() { finalizeFunction(); });
-  DescribedArgs.resize(F.arg_size());
 
   // Setup a separate basic-block for the arguments and constants
   MachineBasicBlock *EntryBB = MF->CreateMachineBasicBlock();

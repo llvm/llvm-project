@@ -317,30 +317,18 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
 
   bool HasComplexExpression = isRemainingExpressionComplex(ExprCursor);
 
-  // Subregisters that all have DWARF numbers and together fit the code-pointer
-  // width can be combined into one stack value. Example, a 64-bit pointer in
-  // VGPR0 and VGPR1: (VGPR0 & 0xffffffff) | (VGPR1 << 32).
-  bool CanCombineSubRegisters = DwarfRegs.size() > 1 && [&] {
-    unsigned RegSize = 0;
-    for (const auto &Reg : DwarfRegs) {
-      if (Reg.DwarfRegNo < 0 || !Reg.isSubRegister())
-        return false;
-      RegSize += Reg.SubRegSize;
-    }
-    return RegSize <= CU.getAsmPrinter()->MAI.getCodePointerSize() * 8;
-  }();
-
-  // Uncombinable subregisters form a composite location, which pushes nothing,
-  // so an operation such as DW_OP_deref cannot follow.
+  // If the register can only be described by a complex expression (i.e.,
+  // multiple subregisters) it doesn't safely compose with another complex
+  // expression. For example, it is not possible to apply a DW_OP_deref
+  // operation to multiple DW_OP_pieces, since composite location descriptions
+  // do not push anything on the DWARF stack.
   //
   // DW_OP_entry_value operations can only hold a DWARF expression or a
   // register location description, so we can't emit a single entry value
   // covering a composite location description. In the future we may want to
   // emit entry value operations for each register location in the composite
   // location, but until that is supported do not emit anything.
-  if (((HasComplexExpression && !CanCombineSubRegisters) ||
-       IsEmittingEntryValue) &&
-      DwarfRegs.size() > 1) {
+  if ((HasComplexExpression || IsEmittingEntryValue) && DwarfRegs.size() > 1) {
     if (IsEmittingEntryValue)
       cancelEntryValue();
     DwarfRegs.clear();
@@ -392,12 +380,11 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
       return false;
     }
 
-  // Drop subregisters that cannot be combined: wider than the code pointer,
-  // a gap or missing DWARF number, or a full register in the set.
-  // TODO: Describe these too.
-  if (DwarfRegs.size() > 1 && !CanCombineSubRegisters) {
-    LLVM_DEBUG(dbgs() << "dropping multi-register location that is not a "
-                         "combinable subregister set\n");
+  // TODO: We should not give up here but the following code needs to be changed
+  //       to deal with multiple (sub)registers first.
+  if (DwarfRegs.size() > 1) {
+    LLVM_DEBUG(dbgs() << "TODO: giving up on debug information due to "
+                         "multi-register usage.\n");
     DwarfRegs.clear();
     LocationKind = Unknown;
     return false;
@@ -412,29 +399,6 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
       break;
     TagOffset = Tag.getTagOffset();
     ExprCursor.take();
-  }
-
-  if (DwarfRegs.size() > 1) {
-    // DW_OP_bregx R0 0, DW_OP_constu 0xffffffff, DW_OP_and,
-    // DW_OP_bregx R1 0, DW_OP_constu 32, DW_OP_shl, DW_OP_or
-    // Every subregister but the highest is masked, since a consumer may
-    // sign-extend a breg to the generic type.
-    unsigned ShiftBy = 0;
-    for (auto [I, Reg] : enumerate(DwarfRegs)) {
-      addBReg(Reg.DwarfRegNo, 0);
-      if (I + 1 < DwarfRegs.size()) {
-        emitConstu(maskTrailingOnes<uint64_t>(Reg.SubRegSize));
-        emitOp(dwarf::DW_OP_and);
-      }
-      if (ShiftBy) {
-        emitConstu(ShiftBy);
-        emitOp(dwarf::DW_OP_shl);
-        emitOp(dwarf::DW_OP_or);
-      }
-      ShiftBy += Reg.SubRegSize;
-    }
-    DwarfRegs.clear();
-    return true;
   }
 
   auto Op = ExprCursor.peek();
