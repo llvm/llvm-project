@@ -4124,8 +4124,9 @@ private:
   /// suffix.
   bool isPostfixExpressionSuffixStart() {
     tok::TokenKind K = Tok.getKind();
-    return (K == tok::l_square || K == tok::l_paren || K == tok::period ||
-            K == tok::arrow || K == tok::plusplus || K == tok::minusminus);
+    return (K == tok::l_square || K == tok::l_paren || K == tok::lesslessless ||
+            K == tok::period || K == tok::arrow || K == tok::plusplus ||
+            K == tok::minusminus);
   }
 
   /// Once the leading part of a postfix-expression is parsed, this

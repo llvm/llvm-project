@@ -15,7 +15,8 @@ define void @fma_zero_and_var_lanes(ptr noalias %pa, ptr noalias %pb, ptr noalia
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> <double poison, double poison, double -0.000000e+00, double -0.000000e+00>, <4 x double> [[TMP4]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double poison>, double [[X]], i64 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x double> @llvm.fma.v4f64(<4 x double> [[TMP3]], <4 x double> [[TMP5]], <4 x double> [[TMP6]])
-; CHECK-NEXT:    store <4 x double> [[TMP7]], ptr [[Q]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    store <4 x double> [[TMP8]], ptr [[Q]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

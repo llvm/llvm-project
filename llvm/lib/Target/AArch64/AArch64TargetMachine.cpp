@@ -78,6 +78,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64BranchTargetsLegacyPass(PR);
   initializeAArch64CollectLOHLegacyPass(PR);
   initializeAArch64CompressJumpTablesLegacyPass(PR);
+  initializeAArch64WinCFILegacyPass(PR);
   initializeAArch64ConditionalComparesLegacyPass(PR);
   initializeAArch64ConditionOptimizerLegacyPass(PR);
   initializeAArch64DeadRegisterDefinitionsLegacyPass(PR);
@@ -664,7 +665,7 @@ void AArch64PassConfig::addMachineSSAOptimization() {
     addPass(createAArch64CleanupLocalDynamicTLSPass());
 
   if (TM->getOptLevel() != CodeGenOptLevel::None)
-    addPass(createMachineSMEABIPass(TM->getOptLevel()));
+    addPass(createMachineSMEABIPass());
 
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       CLOpts.enable_aarch64_sme_peephole_opt)
@@ -700,7 +701,7 @@ bool AArch64PassConfig::addILPOpts() {
 
 void AArch64PassConfig::addPreRegAlloc() {
   if (TM->getOptLevel() == CodeGenOptLevel::None)
-    addPass(createMachineSMEABIPass(CodeGenOptLevel::None));
+    addPass(createMachineSMEABIPass());
 
   // Change dead register definitions to refer to the zero register.
   if (TM->getOptLevel() != CodeGenOptLevel::None && CLOpts.enable_dead_defs)
@@ -812,6 +813,8 @@ void AArch64PassConfig::addPreEmitPass2() {
   // SVE bundles move prefixes with destructive operations. BLR_RVMARKER pseudo
   // instructions are lowered to bundles as well.
   addPass(createUnpackMachineBundlesLegacy(nullptr));
+  if (TM->getTargetTriple().isOSWindows())
+    addPass(createAArch64WinCFIPass());
 }
 
 bool AArch64PassConfig::addRegAssignAndRewriteOptimized() {

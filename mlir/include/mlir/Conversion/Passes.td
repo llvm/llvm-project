@@ -1470,7 +1470,8 @@ def TosaToLinalg
            "infinite identity mandated by the TOSA specification. When "
            "disabled, the largest finite value is used instead. "
            "This controls only compiler-generated identity values; NaN "
-           "results required by nan_mode are unaffected.">
+           "results required by nan_mode are unaffected. Does not affect "
+           "IGNORE-mode NaN seeds.">
   ];
 }
 

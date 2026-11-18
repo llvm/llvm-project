@@ -851,9 +851,9 @@ bool HexagonPacketizerList::canPromoteToDotNew(const MachineInstr &MI,
   if (PI.isInlineAsm())
     return false;
 
-  // IMPLICIT_DEFs won't materialize as real instructions, so .new makes no
-  // sense.
-  if (PI.isImplicitDef())
+  // IMPLICIT_DEFs and FREEZEs won't materialize as real instructions, so .new
+  // makes no sense.
+  if (PI.isImplicitDef() || PI.getOpcode() == TargetOpcode::FREEZE)
     return false;
 
   // If dependency is through an implicitly defined register, we should not
@@ -1041,7 +1041,7 @@ bool HexagonPacketizerList::ignorePseudoInstruction(const MachineInstr &MI,
   if (MI.isInlineAsm())
     return false;
 
-  if (MI.isImplicitDef())
+  if (MI.isImplicitDef() || MI.getOpcode() == TargetOpcode::FREEZE)
     return false;
 
   // We check if MI has any functional units mapped to it. If it doesn't,
@@ -1745,7 +1745,7 @@ HexagonPacketizerList::addToPacket(MachineInstr &MI) {
   PacketStalls |= producesStall(MI);
   PacketStallCycles = std::max(PacketStallCycles, calcStall(MI));
 
-  if (MI.isImplicitDef()) {
+  if (MI.isImplicitDef() || MI.getOpcode() == TargetOpcode::FREEZE) {
     // Add to the packet to allow subsequent instructions to be checked
     // properly.
     CurrentPacketMIs.push_back(&MI);

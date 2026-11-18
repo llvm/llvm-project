@@ -227,6 +227,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         class MyResponder(MockGDBServerResponder):
             def __init__(self, *args, **kwargs):
                 self.started = False
+                self.halt_reason_queries = 0
                 return super().__init__(*args, **kwargs)
 
             def qC(self):
@@ -248,6 +249,10 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
                 self.started = True
                 return "OK"
 
+            def haltReason(self):
+                self.halt_reason_queries += 1
+                return "S02"
+
             def qLaunchSuccess(self):
                 if self.started:
                     return "OK"
@@ -262,9 +267,10 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         lldbutil.expect_state_changes(
             self, self.dbg.GetListener(), process, [lldb.eStateConnected]
         )
+        self.server.responder.halt_reason_queries = 0
 
         error = lldb.SBError()
-        target.Launch(
+        process = target.Launch(
             lldb.SBListener(),
             ["arg1", "arg2", "arg3"],  # argv
             [],  # envp
@@ -277,7 +283,9 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
             error,
         )  # error
         self.assertSuccess(error)
+        self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetProcessID(), 16)
+        self.assertEqual(self.server.responder.halt_reason_queries, 1)
 
         self.assertPacketLogReceived(
             [
@@ -287,9 +295,37 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         )
 
     def test_launch_vRun(self):
+        self.launch_vRun("T0b", lldb.eStateStopped)
+
+    def test_launch_vRun_exited(self):
+        description = "exited during launch"
+        self.launch_vRun(
+            "W2a;description:%s;" % description.encode().hex(),
+            lldb.eStateExited,
+            expected_exit_status=0x2A,
+            expected_exit_description=description,
+        )
+
+    def test_launch_vRun_terminated(self):
+        description = "terminated during launch"
+        self.launch_vRun(
+            "X09;description:%s;" % description.encode().hex(),
+            lldb.eStateExited,
+            expected_exit_status=9,
+            expected_exit_description=description,
+        )
+
+    def launch_vRun(
+        self,
+        stop_reply,
+        expected_state,
+        expected_exit_status=None,
+        expected_exit_description=None,
+    ):
         class MyResponder(MockGDBServerResponder):
             def __init__(self, *args, **kwargs):
                 self.started = False
+                self.halt_reason_queries = 0
                 return super().__init__(*args, **kwargs)
 
             def qC(self):
@@ -309,7 +345,11 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
 
             def vRun(self, packet):
                 self.started = True
-                return "T13"
+                return stop_reply
+
+            def haltReason(self):
+                self.halt_reason_queries += 1
+                return "S02"
 
             def A(self, packet):
                 return "E28"
@@ -323,6 +363,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         lldbutil.expect_state_changes(
             self, self.dbg.GetListener(), process, [lldb.eStateConnected]
         )
+        self.server.responder.halt_reason_queries = 0
 
         error = lldb.SBError()
         process = target.Launch(
@@ -337,8 +378,23 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
             True,  # stop_at_entry
             error,
         )  # error
-        self.assertSuccess(error)
+        if expected_state == lldb.eStateExited:
+            self.assertTrue(error.Fail())
+            self.assertRegex(error.GetCString(), "^process exited with status")
+        else:
+            self.assertSuccess(error)
+        self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetProcessID(), 16)
+        self.assertEqual(self.server.responder.halt_reason_queries, 0)
+        self.assertState(process.GetState(), expected_state)
+        if expected_state == lldb.eStateStopped:
+            thread = process.GetThreadAtIndex(0)
+            self.assertEqual(thread.GetStopReason(), lldb.eStopReasonSignal)
+            self.assertEqual(thread.GetStopReasonDataAtIndex(0), 0x0B)
+        if expected_exit_status is not None:
+            self.assertEqual(process.GetExitStatus(), expected_exit_status)
+        if expected_exit_description is not None:
+            self.assertEqual(process.GetExitDescription(), expected_exit_description)
 
         self.assertPacketLogReceived(
             ["vRun;%s;61726731;61726732;61726733" % (exe_hex,)]
@@ -370,7 +426,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
                 if num >= 2:
                     # We have launched our program
                     self.started = True
-                    return [resp, "T13"]
+                    return [resp, "T0b"]
 
                 return resp
 
@@ -396,6 +452,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
             self, self.dbg.GetListener(), process, [lldb.eStateConnected]
         )
 
+        error = lldb.SBError()
         process = target.Launch(
             lldb.SBListener(),
             ["arg1", "arg2", "arg3"],  # argv
@@ -406,8 +463,9 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
             None,  # working_directory
             0,  # launch_flags
             True,  # stop_at_entry
-            lldb.SBError(),
+            error,
         )  # error
+        self.assertSuccess(error)
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetProcessID(), 16)
 

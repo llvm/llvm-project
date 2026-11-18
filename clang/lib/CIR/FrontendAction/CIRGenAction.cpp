@@ -66,13 +66,13 @@ getBackendActionFromOutputType(CIRGenAction::OutputType Action) {
   llvm_unreachable("Unsupported output type!");
 }
 
-static std::unique_ptr<llvm::Module>
-lowerFromCIRToLLVMIR(mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx,
-                     bool EnableOpenMP,
-                     llvm::StringRef mlirSaveTempsOutFile = {},
-                     llvm::vfs::FileSystem *fs = nullptr) {
+static std::unique_ptr<llvm::Module> lowerFromCIRToLLVMIR(
+    mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx, bool EnableOpenMP,
+    llvm::StringRef mlirSaveTempsOutFile = {},
+    llvm::vfs::FileSystem *fs = nullptr, bool enableOptimizations = false) {
   return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx, EnableOpenMP,
-                                              mlirSaveTempsOutFile, fs);
+                                              mlirSaveTempsOutFile, fs,
+                                              enableOptimizations);
 }
 
 // Print \p MLIRModule the way -emit-cir does, so that CIR emitted from source
@@ -175,9 +175,12 @@ static void emitCIRModuleOutput(
     // sandbox.
     LLVMCtx.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
 
+    // Enable the llvm-simplify-cfg pass when optimizations are on
+    // (-O1 and up); at -O0 the lowered IR keeps its raw shape.
     std::unique_ptr<llvm::Module> LLVMModule =
         lowerFromCIRToLLVMIR(MlirModule, LLVMCtx, EnableOpenMP,
-                             mlirSaveTempsOutFile, &CI.getVirtualFileSystem());
+                             mlirSaveTempsOutFile, &CI.getVirtualFileSystem(),
+                             /*enableOptimizations=*/CGO.OptimizationLevel > 0);
     if (!LLVMModule) {
       // Lowering errors are already routed through the MLIR diagnostic
       // handler. Only emit the generic error if nothing was reported.

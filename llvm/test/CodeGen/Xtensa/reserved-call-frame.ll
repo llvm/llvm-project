@@ -18,11 +18,11 @@ define void @many_stack_args(ptr %buf, ptr %p) "frame-pointer"="all" {
 ; CALL0-NEXT:    addi a8, a1, -32
 ; CALL0-NEXT:    or a1, a8, a8
 ; CALL0-NEXT:    .cfi_def_cfa_offset 32
-; CALL0-NEXT:    s32i a0, a1, 20 # 4-byte Folded Spill
-; CALL0-NEXT:    s32i a12, a1, 16 # 4-byte Folded Spill
-; CALL0-NEXT:    s32i a13, a1, 12 # 4-byte Folded Spill
-; CALL0-NEXT:    s32i a14, a1, 8 # 4-byte Folded Spill
-; CALL0-NEXT:    s32i a15, a1, 4 # 4-byte Folded Spill
+; CALL0-NEXT:    s32i a0, a1, 28 # 4-byte Folded Spill
+; CALL0-NEXT:    s32i a12, a1, 24 # 4-byte Folded Spill
+; CALL0-NEXT:    s32i a13, a1, 20 # 4-byte Folded Spill
+; CALL0-NEXT:    s32i a14, a1, 16 # 4-byte Folded Spill
+; CALL0-NEXT:    s32i a15, a1, 12 # 4-byte Folded Spill
 ; CALL0-NEXT:    .cfi_offset a0, -4
 ; CALL0-NEXT:    .cfi_offset a12, -8
 ; CALL0-NEXT:    .cfi_offset a13, -12
@@ -43,7 +43,7 @@ define void @many_stack_args(ptr %buf, ptr %p) "frame-pointer"="all" {
 ; CALL0-NEXT:    l32i a14, a3, 40
 ; CALL0-NEXT:    l32i a3, a3, 44
 ; CALL0-NEXT:    s32i a2, a15, 0 # 4-byte Folded Spill
-; CALL0-NEXT:    addi a2, a1, -28
+; CALL0-NEXT:    addi a2, a1, -32
 ; CALL0-NEXT:    or a1, a2, a2
 ; CALL0-NEXT:    l32i a2, a15, 0 # 4-byte Folded Reload
 ; CALL0-NEXT:    s32i a3, a1, 24
@@ -56,14 +56,14 @@ define void @many_stack_args(ptr %buf, ptr %p) "frame-pointer"="all" {
 ; CALL0-NEXT:    l32r a9, .LCPI0_0
 ; CALL0-NEXT:    or a3, a8, a8
 ; CALL0-NEXT:    callx0 a9
-; CALL0-NEXT:    addi a8, a1, 28
+; CALL0-NEXT:    addi a8, a1, 32
 ; CALL0-NEXT:    or a1, a8, a8
 ; CALL0-NEXT:    or a1, a15, a15
-; CALL0-NEXT:    l32i a15, a1, 4 # 4-byte Folded Reload
-; CALL0-NEXT:    l32i a14, a1, 8 # 4-byte Folded Reload
-; CALL0-NEXT:    l32i a13, a1, 12 # 4-byte Folded Reload
-; CALL0-NEXT:    l32i a12, a1, 16 # 4-byte Folded Reload
-; CALL0-NEXT:    l32i a0, a1, 20 # 4-byte Folded Reload
+; CALL0-NEXT:    l32i a15, a1, 12 # 4-byte Folded Reload
+; CALL0-NEXT:    l32i a14, a1, 16 # 4-byte Folded Reload
+; CALL0-NEXT:    l32i a13, a1, 20 # 4-byte Folded Reload
+; CALL0-NEXT:    l32i a12, a1, 24 # 4-byte Folded Reload
+; CALL0-NEXT:    l32i a0, a1, 28 # 4-byte Folded Reload
 ; CALL0-NEXT:    addi a8, a1, 32
 ; CALL0-NEXT:    or a1, a8, a8
 ; CALL0-NEXT:    ret
@@ -88,7 +88,7 @@ define void @many_stack_args(ptr %buf, ptr %p) "frame-pointer"="all" {
 ; WINDOWED-NEXT:    l32i a2, a3, 40
 ; WINDOWED-NEXT:    l32i a3, a3, 44
 ; WINDOWED-NEXT:    s32i a10, a7, 0 # 4-byte Folded Spill
-; WINDOWED-NEXT:    addi a10, a1, -28
+; WINDOWED-NEXT:    addi a10, a1, -32
 ; WINDOWED-NEXT:    movsp a1, a10
 ; WINDOWED-NEXT:    l32i a10, a7, 0 # 4-byte Folded Reload
 ; WINDOWED-NEXT:    s32i a3, a1, 24
@@ -100,7 +100,7 @@ define void @many_stack_args(ptr %buf, ptr %p) "frame-pointer"="all" {
 ; WINDOWED-NEXT:    s32i a8, a1, 0
 ; WINDOWED-NEXT:    l32r a8, .LCPI0_0
 ; WINDOWED-NEXT:    callx8 a8
-; WINDOWED-NEXT:    addi a8, a1, 28
+; WINDOWED-NEXT:    addi a8, a1, 32
 ; WINDOWED-NEXT:    movsp a1, a8
 ; WINDOWED-NEXT:    retw
   %a = load [12 x i32], ptr %p
@@ -117,11 +117,11 @@ define void @dynamic_alloca(i32 %n, ptr %p) "frame-pointer"="all" {
 ; CALL0-NEXT:    addi a8, a1, -32
 ; CALL0-NEXT:    or a1, a8, a8
 ; CALL0-NEXT:    .cfi_def_cfa_offset 32
-; CALL0-NEXT:    s32i a0, a1, 20 # 4-byte Folded Spill
-; CALL0-NEXT:    s32i a12, a1, 16 # 4-byte Folded Spill
-; CALL0-NEXT:    s32i a13, a1, 12 # 4-byte Folded Spill
-; CALL0-NEXT:    s32i a14, a1, 8 # 4-byte Folded Spill
-; CALL0-NEXT:    s32i a15, a1, 4 # 4-byte Folded Spill
+; CALL0-NEXT:    s32i a0, a1, 28 # 4-byte Folded Spill
+; CALL0-NEXT:    s32i a12, a1, 24 # 4-byte Folded Spill
+; CALL0-NEXT:    s32i a13, a1, 20 # 4-byte Folded Spill
+; CALL0-NEXT:    s32i a14, a1, 16 # 4-byte Folded Spill
+; CALL0-NEXT:    s32i a15, a1, 12 # 4-byte Folded Spill
 ; CALL0-NEXT:    .cfi_offset a0, -4
 ; CALL0-NEXT:    .cfi_offset a12, -8
 ; CALL0-NEXT:    .cfi_offset a13, -12
@@ -129,8 +129,8 @@ define void @dynamic_alloca(i32 %n, ptr %p) "frame-pointer"="all" {
 ; CALL0-NEXT:    .cfi_offset a15, -20
 ; CALL0-NEXT:    or a15, a1, a1
 ; CALL0-NEXT:    .cfi_def_cfa_register a15
-; CALL0-NEXT:    addi a8, a2, 3
-; CALL0-NEXT:    movi a9, -4
+; CALL0-NEXT:    addi a8, a2, 15
+; CALL0-NEXT:    movi a9, -16
 ; CALL0-NEXT:    and a8, a8, a9
 ; CALL0-NEXT:    addi a8, a8, 31
 ; CALL0-NEXT:    movi a9, -32
@@ -150,7 +150,7 @@ define void @dynamic_alloca(i32 %n, ptr %p) "frame-pointer"="all" {
 ; CALL0-NEXT:    l32i a3, a3, 44
 ; CALL0-NEXT:    or a2, a1, a1
 ; CALL0-NEXT:    s32i a7, a15, 0 # 4-byte Folded Spill
-; CALL0-NEXT:    addi a7, a1, -28
+; CALL0-NEXT:    addi a7, a1, -32
 ; CALL0-NEXT:    or a1, a7, a7
 ; CALL0-NEXT:    l32i a7, a15, 0 # 4-byte Folded Reload
 ; CALL0-NEXT:    s32i a3, a1, 24
@@ -163,14 +163,14 @@ define void @dynamic_alloca(i32 %n, ptr %p) "frame-pointer"="all" {
 ; CALL0-NEXT:    l32r a9, .LCPI1_0
 ; CALL0-NEXT:    or a3, a8, a8
 ; CALL0-NEXT:    callx0 a9
-; CALL0-NEXT:    addi a8, a1, 28
+; CALL0-NEXT:    addi a8, a1, 32
 ; CALL0-NEXT:    or a1, a8, a8
 ; CALL0-NEXT:    or a1, a15, a15
-; CALL0-NEXT:    l32i a15, a1, 4 # 4-byte Folded Reload
-; CALL0-NEXT:    l32i a14, a1, 8 # 4-byte Folded Reload
-; CALL0-NEXT:    l32i a13, a1, 12 # 4-byte Folded Reload
-; CALL0-NEXT:    l32i a12, a1, 16 # 4-byte Folded Reload
-; CALL0-NEXT:    l32i a0, a1, 20 # 4-byte Folded Reload
+; CALL0-NEXT:    l32i a15, a1, 12 # 4-byte Folded Reload
+; CALL0-NEXT:    l32i a14, a1, 16 # 4-byte Folded Reload
+; CALL0-NEXT:    l32i a13, a1, 20 # 4-byte Folded Reload
+; CALL0-NEXT:    l32i a12, a1, 24 # 4-byte Folded Reload
+; CALL0-NEXT:    l32i a0, a1, 28 # 4-byte Folded Reload
 ; CALL0-NEXT:    addi a8, a1, 32
 ; CALL0-NEXT:    or a1, a8, a8
 ; CALL0-NEXT:    ret
@@ -181,8 +181,8 @@ define void @dynamic_alloca(i32 %n, ptr %p) "frame-pointer"="all" {
 ; WINDOWED-NEXT:    entry a1, 48
 ; WINDOWED-NEXT:    or a7, a1, a1
 ; WINDOWED-NEXT:    .cfi_def_cfa a7, 48
-; WINDOWED-NEXT:    addi a8, a2, 3
-; WINDOWED-NEXT:    movi a9, -4
+; WINDOWED-NEXT:    addi a8, a2, 15
+; WINDOWED-NEXT:    movi a9, -16
 ; WINDOWED-NEXT:    and a8, a8, a9
 ; WINDOWED-NEXT:    addi a8, a8, 31
 ; WINDOWED-NEXT:    movi a9, -32
@@ -203,7 +203,7 @@ define void @dynamic_alloca(i32 %n, ptr %p) "frame-pointer"="all" {
 ; WINDOWED-NEXT:    l32i a3, a3, 44
 ; WINDOWED-NEXT:    or a10, a1, a1
 ; WINDOWED-NEXT:    s32i a15, a7, 0 # 4-byte Folded Spill
-; WINDOWED-NEXT:    addi a15, a1, -28
+; WINDOWED-NEXT:    addi a15, a1, -32
 ; WINDOWED-NEXT:    movsp a1, a15
 ; WINDOWED-NEXT:    l32i a15, a7, 0 # 4-byte Folded Reload
 ; WINDOWED-NEXT:    s32i a3, a1, 24
@@ -215,7 +215,7 @@ define void @dynamic_alloca(i32 %n, ptr %p) "frame-pointer"="all" {
 ; WINDOWED-NEXT:    s32i a8, a1, 0
 ; WINDOWED-NEXT:    l32r a8, .LCPI1_0
 ; WINDOWED-NEXT:    callx8 a8
-; WINDOWED-NEXT:    addi a8, a1, 28
+; WINDOWED-NEXT:    addi a8, a1, 32
 ; WINDOWED-NEXT:    movsp a1, a8
 ; WINDOWED-NEXT:    retw
   %buf = alloca i8, i32 %n

@@ -198,7 +198,9 @@ def get_xcode_sdk(os, env):
 
 def get_xcode_sdk_version(sdk):
     return (
-        subprocess.check_output(["xcrun", "--sdk", sdk, "--show-sdk-version"])
+        subprocess.check_output(
+            ["xcrun", "--sdk", sdk, "--show-sdk-version"], stderr=subprocess.PIPE
+        )
         .rstrip()
         .decode("utf-8")
     )
@@ -206,7 +208,9 @@ def get_xcode_sdk_version(sdk):
 
 def get_xcode_sdk_root(sdk):
     return (
-        subprocess.check_output(["xcrun", "--sdk", sdk, "--show-sdk-path"])
+        subprocess.check_output(
+            ["xcrun", "--sdk", sdk, "--show-sdk-path"], stderr=subprocess.PIPE
+        )
         .rstrip()
         .decode("utf-8")
     )
@@ -214,7 +218,9 @@ def get_xcode_sdk_root(sdk):
 
 def get_xcode_clang(sdk):
     return (
-        subprocess.check_output(["xcrun", "-sdk", sdk, "-f", "clang"])
+        subprocess.check_output(
+            ["xcrun", "-sdk", sdk, "-f", "clang"], stderr=subprocess.PIPE
+        )
         .rstrip()
         .decode("utf-8")
     )
@@ -1949,7 +1955,9 @@ def get_latest_apple_simulator(platform_name, log=None):
     cmd_str = " ".join(cmd)
     if log:
         log(cmd_str)
-    sim_devices_str = subprocess.check_output(cmd).decode("utf-8")
+    sim_devices_str = subprocess.check_output(cmd, stderr=subprocess.PIPE).decode(
+        "utf-8"
+    )
     sim_devices = json.loads(sim_devices_str)["devices"]
 
     # Find an available simulator for the requested platform
@@ -1990,7 +1998,9 @@ def launch_exe_in_apple_simulator(
     exe_path = os.path.realpath(exe_path)
     # Resolve the path to simctl so we can launch it directly via spawnSubprocess.
     simctl_path = (
-        subprocess.check_output(["xcrun", "-f", "simctl"]).decode("utf-8").strip()
+        subprocess.check_output(["xcrun", "-f", "simctl"], stderr=subprocess.PIPE)
+        .decode("utf-8")
+        .strip()
     )
     args = [
         "spawn",
